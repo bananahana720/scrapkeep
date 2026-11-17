@@ -20,6 +20,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
 const Wordmark := preload("res://src/ui/wordmark.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 
 # The set stands far enough off the deck that no deck shot sees it, and the reverse.
 const SET_AT := Vector3(600.0, 0.0, 0.0)
@@ -60,6 +61,11 @@ const ROLLCALL_AT := Vector3(-300.0, 0.0, 0.0)
 # The stage is tonemapped bright for the deck; sky colours read true at this energy.
 const SKY_ENERGY := 0.5
 const ROLLCALL := [["runner_gunner", "RIVET", "Never misses."], ["demolitions_caster", "KEST", "Still deciding."], ["tarn", "TARN", "Very gentle. Machine isn't."]]
+const SABLE_POSTCARD_AT := Vector3(0.0, 0.0, -950.0)
+const SABLE_POSTCARD_SCALE := 3.2
+const PARK_DAM := "res://assets/models/park/landmark_dam.glb"
+# Deck at y=121, just inside the apron-side parapet at x=61 (park/landmarks.py).
+const SABLE_CREST := Vector3(61.0, 121.0, -71.0)
 
 var host: Node
 var camera: Camera3D
@@ -77,6 +83,8 @@ var _row := {}
 var _set: Node3D
 var _subject: Node3D
 var _subject_size := 1.0
+var _sable_postcard: Node3D
+var _sable_dawn: Environment
 var _props := {}
 var _layer: CanvasLayer
 var _overlay: Control
@@ -192,11 +200,14 @@ func _finish(skipped: bool) -> void:
 	environment.adjustment_saturation = _saved.saturation
 	environment.adjustment_brightness = _saved.brightness
 	camera.fov = _saved.fov
+	camera.environment = environment
 	environment.background_energy_multiplier = _saved.energy
 	if is_instance_valid(_set):
 		_set.queue_free()
 	_set = null
 	_subject = null
+	_sable_postcard = null
+	_sable_dawn = null
 	_props.clear()
 	_antics = null
 	if is_instance_valid(_layer):
@@ -274,6 +285,92 @@ func _build_set() -> void:
 			var mate := _shell(String(ROLLCALL[i][0]), "Mate%d" % i)
 			if mate != null:
 				mate.position = ROLLCALL_AT + Vector3(-2.6 + i * 2.6, 1.04, -0.2 * absf(i - 1))
+	if id == "sable":
+		_build_sable_postcard()
+
+
+func _build_sable_postcard() -> void:
+	var dam := _postcard_model(PARK_DAM)
+	if dam == null:
+		return
+	_sable_postcard = Node3D.new()
+	_sable_postcard.name = "SablePostcard"
+	_sable_postcard.position = SABLE_POSTCARD_AT
+	_sable_postcard.visible = false
+	_set.add_child(_sable_postcard)
+	# Use the park dam at its authored scale so the gates and upper arch establish the scale.
+	_sable_postcard.add_child(dam)
+	_postcard_rock("res://assets/models/park/anchor_hoodoo_c.glb", Vector3(-248, 5, -20), Vector3(32.0, 14.5, 23.0), 27.0)
+	_postcard_rock("res://assets/models/park/anchor_hoodoo_b.glb", Vector3(254, 4, -58), Vector3(27.0, 12.5, 22.0), 145.0)
+
+	var tailwater := MeshInstance3D.new()
+	tailwater.name = "Tailwater"
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(1600.0, 1000.0)
+	tailwater.mesh = plane
+	tailwater.position = Vector3(0.0, 5.0, 380.0)
+	var wave_noise := FastNoiseLite.new()
+	wave_noise.frequency = 0.018
+	var ripples := NoiseTexture2D.new()
+	ripples.noise = wave_noise
+	ripples.seamless = true
+	ripples.as_normal_map = true
+	var water_colors := Gradient.new()
+	water_colors.colors = PackedColorArray([Color("1a4d58"), Color("639294")])
+	var wave_tint := NoiseTexture2D.new()
+	wave_tint.noise = wave_noise
+	wave_tint.seamless = true
+	wave_tint.color_ramp = water_colors
+	var water := _flat(Color.WHITE)
+	water.albedo_texture = wave_tint
+	water.normal_enabled = true
+	water.normal_texture = ripples
+	water.uv1_scale = Vector3(4.0, 9.0, 1.0)
+	water.roughness = 0.38
+	tailwater.material_override = water
+	_sable_postcard.add_child(tailwater)
+
+	var dawn: Dictionary = WorldLook.TIME_ROWS.dawn.grade
+	var sky_material := ProceduralSkyMaterial.new()
+	sky_material.sky_top_color = dawn.top
+	sky_material.sky_horizon_color = dawn.horizon
+	sky_material.sky_curve = 0.45
+	sky_material.ground_horizon_color = dawn.horizon
+	var sky := Sky.new()
+	sky.sky_material = sky_material
+	_sable_dawn = environment.duplicate()
+	_sable_dawn.background_mode = Environment.BG_SKY
+	_sable_dawn.background_energy_multiplier = dawn.energy
+	_sable_dawn.sky = sky
+
+
+func _postcard_model(path: String) -> Node3D:
+	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
+	if packed == null:
+		host._warn(path)
+		return null
+	var model := packed.instantiate()
+	# Godot imports the park recipe's collision mesh and body together. Remove both off-tree.
+	var collision_mesh := model.find_child(path.get_file().get_basename() + "-col", true, false)
+	if collision_mesh != null:
+		collision_mesh.free()
+	if not (model is Node3D and host._visual_only(model)):
+		model.free()
+		host._warn(path)
+		return null
+	host._freeze_visual(model)
+	dress(model, path)
+	return model
+
+
+func _postcard_rock(path: String, at: Vector3, scale: Vector3, yaw: float) -> void:
+	var model := _postcard_model(path)
+	if model == null:
+		return
+	model.position = at
+	model.scale = scale
+	model.rotation_degrees.y = yaw
+	_sable_postcard.add_child(model)
 
 
 func _shell(class_id: String, label: String) -> Node3D:
@@ -430,6 +527,14 @@ func _enter_shot(shot: Dictionary) -> void:
 	_show_prop("UpIsland", kind == "up" and world != 3)
 	if _subject != null:
 		_subject.position = Vector3(0.0, 0.0 if _row.kind == "boss" else 1.04, 0.0)
+	if _sable_postcard != null:
+		_sable_postcard.visible = kind == "postcard"
+		camera.environment = _sable_dawn if _sable_postcard.visible else environment
+		_subject.scale = Vector3.ONE
+		if _sable_postcard.visible:
+			_subject.scale *= SABLE_POSTCARD_SCALE
+			_subject.position = SABLE_POSTCARD_AT + SABLE_CREST + Vector3.UP * 1.04 * SABLE_POSTCARD_SCALE
+			camera.fov = 40.0
 	var card: Array = _row.card
 	var lines: Array = _row.lines
 	var sfx: Array = _row.sfx
@@ -499,11 +604,15 @@ func _frame_shot(kind: String, t: float) -> void:
 	var roll := 0.0
 	match kind:
 		"postcard":
-			var world: int = int(_row.world)
-			var behind: float = WORLDS[world].behind
-			at = Vector3(-behind * 0.35, 3.0 + behind * 0.05, behind * 1.1)
-			look = Vector3(4.0, behind * 0.32, -behind)
-			at = at.lerp(look, 0.08 * push)
+			if _sable_postcard != null:
+				at = SABLE_POSTCARD_AT + Vector3(-53.0, 9.0, 364.0 - 20.0 * push)
+				look = SABLE_POSTCARD_AT + Vector3(-11.0, 77.0, -43.0)
+			else:
+				var world: int = int(_row.world)
+				var behind: float = WORLDS[world].behind
+				at = Vector3(-behind * 0.35, 3.0 + behind * 0.05, behind * 1.1)
+				look = Vector3(4.0, behind * 0.32, -behind)
+				at = at.lerp(look, 0.08 * push)
 		"hero":
 			at = Vector3(0.8, 0.25, 3.6) * s
 			look = Vector3(0.0, 1.7, 0.0) * s
@@ -573,7 +682,7 @@ func _track_pointer() -> void:
 	var pointer: Control = _overlay.get_node_or_null("Pointer") if _overlay != null else null
 	if pointer == null or _subject == null or not camera.is_inside_tree():
 		return
-	var spot: Vector3 = _subject.global_position + Vector3(0.0, _subject_size * 2.4, 0.0)
+	var spot: Vector3 = _subject.global_position + Vector3(0.0, _subject_size * 2.4 * _subject.scale.y, 0.0)
 	if camera.is_position_behind(spot):
 		return
 	var pixels := Vector2(host.viewport.size)

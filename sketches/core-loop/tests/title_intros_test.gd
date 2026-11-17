@@ -212,6 +212,16 @@ func _play_row(game: Node, display, id: String, capture: String) -> void:
 			# The arrow is drawn from its own left edge, so it must be no wider than a line.
 			_t.check(id + " pointer's arrow hangs under the middle of its words", arrow != null and pointer.size.x > 0.0
 				and arrow.size.x < 2.0 and absf(arrow.position.x - pointer.size.x * 0.5) < 2.0)
+			if id == "sable":
+				_check_sable_postcard(display)
+		if id == "sable" and i == 1:
+			var set_root: Node3D = display.stage.get_node("IntroSet")
+			var postcard := set_root.get_node_or_null("SablePostcard") as Node3D
+			var subject := set_root.get_node("Subject") as Node3D
+			_t.check("Sable's hero shot leaves the dam set and dawn behind", postcard != null and not postcard.visible
+				and display.camera.environment == display._environment)
+			_t.check("Sable's hero shot restores the normal subject pose", subject.position.is_equal_approx(Vector3.UP * 1.04)
+				and subject.scale.is_equal_approx(Vector3.ONE))
 		if capture != "":
 			for frame in 6:
 				await process_frame
@@ -240,6 +250,21 @@ func _play_row(game: Node, display, id: String, capture: String) -> void:
 	_t.check(id + " removes its set and layer", display.stage.get_node_or_null("IntroSet") == null
 		and display.get_node_or_null("TitleIntroPlayer/TitleIntro") == null)
 	_t.check(id + " cuts back to the deck", display.camera.position.distance_to(held.origin) < 1.5)
+
+
+func _check_sable_postcard(display: Node) -> void:
+	var set_root: Node3D = display.stage.get_node("IntroSet")
+	var postcard := set_root.get_node_or_null("SablePostcard") as Node3D
+	if not _t.check("Sable's postcard shows the dam set", postcard != null and postcard.visible):
+		return
+	var subject: Node3D = set_root.get_node("Subject")
+	var subject_at := postcard.to_local(subject.global_position)
+	# The landmark's arch deck is at 121 m; between the gate towers and the abutments it is open to the sky.
+	_t.check("Sable is on the open crest", absf(subject_at.x) > 24.0 and absf(subject_at.x) < 160.0
+		and subject_at.y >= 121.0 and subject_at.y <= 126.0)
+	var water: Node3D = postcard.get_node("Tailwater")
+	var camera_height: float = display.camera.global_position.y - water.global_position.y
+	_t.check("Sable's postcard looks up at the dam from just over the water", camera_height > 0.0 and camera_height < 10.0)
 
 
 # The workshop's companion key (M) runs before the title stage in tree order; the opening must
