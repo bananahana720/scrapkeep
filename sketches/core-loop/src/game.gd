@@ -7,6 +7,7 @@ const Context := preload("res://src/core/context.gd")
 const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 const Flow := preload("res://src/core/flow.gd")
 const SittingNotes := preload("res://src/core/sitting_notes.gd")
+const FrameLog := preload("res://src/core/frame_log.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const Secrets := preload("res://src/core/secrets.gd")
 const Codex := preload("res://src/core/codex.gd")
@@ -396,6 +397,9 @@ func _ready() -> void:
 		var sitting_notes := SittingNotes.new()
 		sitting_notes.game = self
 		add_child(sitting_notes)
+	# --frame-log=<file>: frame times for scripts/frametime-check.mjs where MangoHud is missing.
+	if FrameLog.wanted() and not test_mode:
+		add_child(FrameLog.new())
 	if _launch_flag("--boot-profile"):
 		for frame in 5:
 			await get_tree().process_frame
