@@ -155,16 +155,27 @@ func _bowl() -> void:
 			source.hold = {"move": Vector2.ZERO}
 		if mode == "charge":
 			boss.jump_to_phase(3)
+		var ramp_marks := [arena.point_at(deg_to_rad(-30), 49.0), arena.point_at(deg_to_rad(-5), 51.0),
+			arena.point_at(0, 50.0), arena.point_at(0, 24.0)]
+		var ramp_goal := 0
 		var first := -1
 		var held := false
-		for tick in (1080 if mode.begins_with("slag") or mode == "charge" else 330):
+		for tick in (1080 if mode.begins_with("slag") or mode in ["charge", "ramp"] else 330):
 			await physics_frame
 			var ball: Vector3 = game.player.ball_position()
 			var angle: float = arena.angle_of(ball)
 			var side := -1.0 if mode == "reverse" else 1.0
 			var track: Vector3 = ball + Arena.tangent(angle) * side * 14.0 - Arena.dir(angle) * (arena.radius_of(ball) - 48.0)
-			if mode == "ramp" and tick > 65:
-				track = arena.point_at(0, 42 if tick < 260 else 25)
+			if mode == "ramp":
+				track = ramp_marks[ramp_goal]
+				var gap := Vector2(track.x - ball.x, track.z - ball.z).length()
+				if gap < (1.3 if ramp_goal == 2 else 3.0) and ramp_goal < ramp_marks.size() - 1:
+					ramp_goal += 1
+				if ramp_goal == 3 and ball.y > arena.global_position.y + 4.0 and gap < 10.0:
+					await _shot("bowl-ramp-%04d" % tick)
+					_sample("bowl-ramp", tick)
+					extras["ramp_climb"] = _vec(ball - arena.global_position)
+					break
 			if mode == "mast" and tick > 22:
 				var mast: Vector3 = arena.point_at(deg_to_rad(315), Arena.MAST_R, 8.0)
 				var d: Vector3 = mast - game.camera.global_position
@@ -177,7 +188,11 @@ func _bowl() -> void:
 					source.hold.erase("harpoon_held")
 					source.press["harpoon_released"] = true
 			elif tick > 42 and mode != "slag-exposed":
-				_steer(track)
+				if mode == "ramp" and ramp_goal < 3:
+					var distance := Vector2(track.x - ball.x, track.z - ball.z).length()
+					_steer(track, clampf(distance * 1.3, 1.5, 15.0), 1.0)
+				else:
+					_steer(track)
 			if first < 0 and ((mode == "charge" and boss.charge_coming()) or (mode.begins_with("slag") and boss.active_hazards().any(func(h): return h.attack_id.begins_with("slag")))):
 				first = tick
 			if tick in [1, 30, 115, 260] or (first >= 0 and tick in [first, first + 65, first + 240, first + 405]):
@@ -224,13 +239,13 @@ func _start(p: Vector2, dir: Vector3, high := false) -> void:
 	game.camera.snap(dir)
 
 
-func _steer(point: Vector3) -> void:
+func _steer(point: Vector3, speed := 20.0, correction := 0.70) -> void:
 	var d: Vector3 = point - game.player.ball_position()
 	if Vector2(d.x, d.z).length() > 0.1:
 		_look(d, -0.3)
 	var velocity: Vector3 = game.player.planar_velocity()
-	var wanted := Vector3(d.x, 0, d.z).normalized() * 20.0
-	var drive := (wanted - velocity * 0.70).normalized()
+	var wanted := Vector3(d.x, 0, d.z).normalized() * speed
+	var drive := (wanted - velocity * correction).normalized()
 	var basis: Basis = game.camera.yaw_basis()
 	source.hold["move"] = Vector2(drive.dot(basis.x), -drive.dot(basis.z))
 
