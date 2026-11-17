@@ -30,6 +30,7 @@ var _age := 0.0
 static func mark(parent: Node, spots: Array, lead_s: float, hold_s := 0.0) -> Node3D:
 	var cross := Self.new()
 	cross.name = "ArenaWaveMarks"
+	cross.process_priority = 100
 	cross._lead_s = maxf(lead_s, 0.001)
 	cross._hold_s = hold_s
 	cross.shape = String(EventKinds.world_row(KIND).get("shape", ""))
@@ -53,7 +54,10 @@ func _physics_process(delta: float) -> void:
 	_age += delta
 	if _hold_s > 0.0 and _age >= _lead_s + _hold_s:
 		queue_free()
-		return
+
+
+# Reproject after the chase camera moves, including frames between physics ticks.
+func _process(_delta: float) -> void:
 	_close()
 
 

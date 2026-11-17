@@ -314,6 +314,7 @@ func _held_cross(game) -> void:
 	_t.check("all four near tips end clear of the middle", vertices.size() == 16
 		and Array(vertices).all(func(v): return v.length() > 0.6))
 	warning._physics_process(0.5)
+	warning._process(0.0)
 	_t.check("the capped mark still closes as the crew arrives", _height_share(camera, near_mark, view.y) < near_span * 0.8)
 	warning.free()
 	var held: Node3D = WaveCross.mark(game, [Vector3(0.0, 5.0, 0.0)], 0.0, 0.2)
