@@ -53,7 +53,7 @@ Each rule is one promise to the player. [references/coverage.md](references/cove
 
 A `broken-*` config that reports no break means the model can no longer see that fault. Fix the model before trusting any pass (VFM-03).
 
-The world 1 done read takes this check as two receipts, `run-always-ends` and `rewards-banked-once`. `node scripts/gate/model-receipts.mjs --out <dir>` writes them. It runs plain TLC on `today-store` with the `broken-vanish` and `broken-endguard` plants, and on `rewards-today-one` and `rewards-today-two-once` with the `rewards-broken-ledger` and `rewards-broken-midsave` plants, each with a timeout. A receipt fails while step 1 of "Is this change covered?" shows a changed file, and the script refuses a checkout with uncommitted changes under this skill or `sketches/core-loop/src`. The rewards receipt fails until finding R-2 closes, and it always says that the old-key loss route of W1-117 is not modelled.
+The world 1 done read takes this check as two receipts, `run-always-ends` and `rewards-banked-once`. `node scripts/gate/model-receipts.mjs --out <dir>` writes them. It runs plain TLC on `today-store` with the `broken-vanish` and `broken-endguard` plants, and on `rewards-today-one`, `rewards-today-two-once` and `rewards-today-two-lost` with the `rewards-broken-ledger`, `rewards-broken-midsave`, `rewards-broken-legacyrun`, `rewards-broken-stale` and `rewards-broken-nolock` plants, each with a timeout. A receipt fails while step 1 of "Is this change covered?" shows a changed file, and the script refuses a checkout with uncommitted changes under this skill or `sketches/core-loop/src`. The rewards receipt always names what the model cannot see: the save lock is taken as perfect, and ruling ea lets two games pay twice when both saves of the first game's earn fail.
 
 ## Read a result
 
@@ -76,7 +76,7 @@ A pass covers the model within its bounds and its time assumption (VFM-07). Not 
 
 ## The rewards model
 
-A second model, `models/Rewards.tla`, checks how an earned reward is banked: `sketches/core-loop/src/core/progress.gd`'s earn, settle, `grant_once` and `reconcile_settled`, the profile and run stores, and `sketches/core-loop/src/core/safe_store.gd`'s writes, with a crash between any two file writes, failed writes and two game processes on one profile. Its rules:
+A second model, `models/Rewards.tla`, checks how an earned reward is banked: `sketches/core-loop/src/core/progress.gd`'s earn, settle, `grant_once` and `reconcile_settled`, the profile and run stores, and `sketches/core-loop/src/core/safe_store.gd`'s writes, with a crash between any two file writes, failed writes, two game processes on one profile and a run file an older build left with the legacy reward key. Its rules:
 
 | Rule | The promise | What breaks for the player |
 | --- | --- | --- |
