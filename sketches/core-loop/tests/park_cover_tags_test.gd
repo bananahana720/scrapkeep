@@ -11,6 +11,13 @@ extends SceneTree
 #   - hard_rows_cover_share: the share of hard rows whose collider is on the layer a shell's cover ray hits
 #     (projectile.gd COVER_MASK), so what stops the ball also stops a shell; pass >= 1.00;
 #   - soft_cover_bodies: bodies under the ground scatter on that layer; pass <= 0.
+# What this does not show, plainly: it passes by construction today. Every park row body is put on layer 1
+# (park_recipes.gd _body), the shell's cover mask is 1 (projectile.gd COVER_MASK) and the scatter builds no bodies, so
+# the share of 1.00 and the 0 scatter bodies catch only a future layer change. "Hard" is read from the world bounding box
+# of a row's colliders, so a 2 m pole or banner counts as hard, a long sloped ramp counts as tall, and cover under 2 m
+# is missed; dressing built inside a park row that stops shells is never told apart. Tagged hard and soft rows and a
+# shell-path cast per row would close this; the map-standard receipt lists it as an open half of point 5.
+#
 # The picture half of point 5 (hostile marks never share a look with walls or dressing, safe ground shown, dressing
 # never hides a telegraph) is not read here: tools/danger_read_capture.gd and tools/mark_cover_capture.gd hold it,
 # and the blind "where is safe" read is Andrew's eye.

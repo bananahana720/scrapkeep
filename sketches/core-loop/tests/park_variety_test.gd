@@ -6,13 +6,19 @@ extends SceneTree
 # (PocketDraw.stage_sites, with the stage's trade pocket and modifier passed as activities.gd passes them), the rogue
 # site (RogueDirector.plan on the park's sites.json) and the stage modifier (StageModifier.pick). The (pockets, rogue
 # site, modifier) sets must number at least SETS_MIN, the audit's pass line, and the same seed must draw the same set.
+# The sets alone are almost all pocket placement, so each drawn part other than the pockets must also show at least
+# PART_MIN values: rogue_sites_drawn and modifiers_drawn. A pocket is told apart by its interior and its exact graph
+# node; the audit's wording gives no rule for when two nearby nodes are one place, so neighbouring nodes count apart.
 #
-# Data only: no scene, no physics. The game seeds the pocket draw with ctx.rng.seed and the rogue with a draw from the
-# stage stream (world.gd `_stage_seed`); here both come from the run seed (layout seed = the run seed, stage seed =
-# hash of the run seed and the stage), a stand-in for the flow's streams. Live routes (swaps) are not read: no world 1
-# map swaps a route per run today.
+# Data only: no scene, no physics. The layout seed is the game's session constant (game.gd SEED, set as ctx.rng.seed
+# and passed by activities.gd to the trade and pocket draws, which mix in the run seed and the stage themselves). The
+# rogue's stage seed is the stage stream's first draw after Flow.seed_stage_stream mixes the run seed and the stage
+# into it, as world.gd draws `_stage_seed` on entry; in the game other draws may come first, so this is a stand-in.
+# Live routes, in the standard's words, are not drawn per run on any map today: no world 1 map swaps a route per run,
+# so nothing about them is read here.
 #
-# Output: `MAPCHECK <stage> layout_sets <value> pass>=<line> PASS|FAIL`, plus `report INFO` lines naming the parts.
+# Output: `MAPCHECK <stage> <measure> <value> pass>=<line> PASS|FAIL` for layout_sets, rogue_sites_drawn and
+# modifiers_drawn, plus a `report INFO` line naming the pocket count.
 #
 # Planted: modifier chance 0, one rogue site and one fixed pocket draw (every run the same seed) give 1 set and fail.
 
@@ -29,6 +35,9 @@ const STAGES := {"park_dam": 1, "park_flume": 2}
 const WORLD := 1
 const RUNS := 50
 const SETS_MIN := 10
+const PART_MIN := 2
+# game.gd SEED: ctx.rng.seed for the whole session, the layout seed of every draw.
+const LAYOUT_SEED := 20260926
 
 var t := T.new("park_variety_test")
 
@@ -49,15 +58,25 @@ static func draw_set(g, map, map_id: String, stage: int, run_seed: int, prepared
 	run.stage = stage
 	run.run_seed = run_seed
 	var modifier := {} if plant else StageModifier.pick(run_seed, stage, StageModifier.authored(map))
-	var trade := TradePockets.stage_site(g, map, run, run_seed, pool)
+	var trade := TradePockets.stage_site(g, map, run, LAYOUT_SEED, pool)
 	var pockets := []
-	for spec in PocketDraw.stage_sites(g, map, run, run_seed, trade, prepared, modifier):
+	for spec in PocketDraw.stage_sites(g, map, run, LAYOUT_SEED, trade, prepared, modifier):
 		pockets.append("%s@%d" % [spec.interior.id, int(spec.node)])
 	pockets.sort()
-	var rogue := RogueDirector.plan(hash([run_seed, stage, "stage_seed"]) ^ 0x706e, WORLD, sites_doc)
+	var rogue := RogueDirector.plan(stage_seed(run_seed, stage) ^ 0x706e, WORLD, sites_doc)
 	var out := {"pockets": ",".join(pockets), "rogue": String(rogue.get("site", "none")), "modifier": String(modifier.get("id", "none"))}
 	out["key"] = "%s|%s|%s" % [out["pockets"], out["rogue"], out["modifier"]]
 	return out
+
+
+# Flow.seed_stage_stream's mix of the session seed, the run seed and the stage, then world.gd's draw of _stage_seed.
+static func stage_seed(run_seed: int, stage: int) -> int:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = LAYOUT_SEED
+	var mixed := RandomNumberGenerator.new()
+	mixed.seed = hash([LAYOUT_SEED, run_seed, stage, "stage"])
+	rng.state = mixed.state
+	return rng.randi()
 
 
 func _stage(map_id: String, stage: int) -> void:
@@ -80,7 +99,11 @@ func _stage(map_id: String, stage: int) -> void:
 	t.check("%s: the same seed draws the same set" % map_id, again["key"] == first["key"], again["key"])
 	var n := keys.size()
 	print("MAPCHECK %s layout_sets %d pass>=%d %s" % [map_id, n, SETS_MIN, "PASS" if n >= SETS_MIN else "FAIL"])
-	print("MAPCHECK %s variety_parts pockets=%d rogue=%d modifier=%d report INFO" % [map_id, parts["pockets"].size(), parts["rogue"].size(), parts["modifier"].size()])
+	for part in [["rogue", "rogue_sites_drawn"], ["modifier", "modifiers_drawn"]]:
+		var k: int = parts[part[0]].size()
+		print("MAPCHECK %s %s %d pass>=%d %s" % [map_id, part[1], k, PART_MIN, "PASS" if k >= PART_MIN else "FAIL"])
+		t.check("%s: %s >= %d" % [map_id, part[1], PART_MIN], k >= PART_MIN, "%d" % k)
+	print("MAPCHECK %s variety_parts pockets=%d (exact interior and node) report INFO" % [map_id, parts["pockets"].size()])
 	t.check("%s: %d run seeds draw >= %d distinct (pockets, rogue site, modifier) sets" % [map_id, RUNS, SETS_MIN], n >= SETS_MIN, "%d sets" % n)
 	if stage == 1:
 		_planted(g, map, map_id, stage, prepared, pool, sites_doc)

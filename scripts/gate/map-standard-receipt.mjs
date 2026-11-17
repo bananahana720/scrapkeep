@@ -7,9 +7,11 @@
 // Each MAPCHECK line is `MAPCHECK <map> <measure> ... PASS|FAIL|OWED`; `report INFO` lines carry detail only.
 // The receipt passes only when every test finished with no failed check, the gating lines for park_dam and park_flume
 // number the pinned count, every one of the ten map points (ruling ct) has at least one gating line on each map, every
-// gating line passes or is on WAITING (an item ruled to wait, with the line that parks it), no line is a measure this
-// file does not map to a point, and the plant was caught: every test printed its pinned number of PLANTED lines, each
-// one judged FAIL (the planted fault failed its pass line). An OWED line not on WAITING is a miss.
+// gating line passes or is on WAITING (an item ruled to wait, matched on its status and value, with the line that parks
+// it), no line is a measure this file does not map to a point, no half of a point is left open (OPEN_HALVES: a half no
+// MAPCHECK line checks is a miss unless a ruling parks it), and the plant was caught: every test printed its pinned
+// number of PLANTED lines, each one judged FAIL (the planted fault failed its pass line). An OWED line not on WAITING,
+// or one whose value moved, is a miss.
 //
 //   node scripts/gate/map-standard-receipt.mjs --out <file>
 //   node scripts/gate/map-standard-receipt.mjs --logs <dir of <test>.log files>   (a test hook: prints, never passes)
@@ -42,7 +44,7 @@ export const POINTS = {
   1: ["open_sight_share", "line_sight_share"],
   2: ["line_quiet_share"],
   3: ["rhythm_switches", "longest_heavy_s"],
-  4: ["layout_sets"],
+  4: ["layout_sets", "rogue_sites_drawn", "modifiers_drawn"],
   5: ["shell_cover", "hard_rows_cover_share", "soft_cover_bodies"],
   6: ["feature_count_near_line"],
   7: ["height_bands_populated", "ride_climb_rows"],
@@ -51,19 +53,30 @@ export const POINTS = {
   10: ["marker_sight", "furnace_sight", "scrap_on_lines"],
 };
 // Gating MAPCHECK lines for park_dam and park_flume on a full run; a lost or added check moves it.
-export const PINNED_LINES = 36;
+export const PINNED_LINES = 40;
 // Items ruled to wait. Each names the line that parks it.
 export const WAITING = [
   {
     map: "park_flume",
     measure: "yard_rim_median_m",
+    status: "OWED",
+    value: "-0.41",
     why: "the rebuilt concave flume yard is parked until after the sitting",
     cite: "project-guide/handoff/ROADMAP.md:27 (\"the rebuilt concave flume yard (the bowl test records it as OWED)\"); DECISIONS.md:320, ruling ct",
   },
 ];
+// Halves of a point that no MAPCHECK line checks. Each is a miss unless `parked` cites the ruling or line that parks
+// it; none is parked today. `closes` names the check that would close it.
+export const OPEN_HALVES = [
+  { point: 1, half: "1 picture (beam read from fixed chase-camera poses)", closes: "tools/map_sheet_capture.gd sheets read blind against a beam-hidden control" },
+  { point: 5, half: "5 picture (safe ground and hostile marks read blind)", closes: "a blind 'where is safe' read of tools/danger_read_capture.gd stills, scored against its HAZARD-striped control" },
+  { point: 5, half: "5 tagged cover (park_cover_tags_test reads layers only, so it passes by construction)", closes: "hard and soft tags on park rows and a shell-path cast per tagged row (audit unit 6)" },
+  { point: 8, half: "8b silhouettes", closes: "tools/map_sheet_capture.gd silhouette mode, one machine hidden counted short" },
+  { point: 8, half: "8c snags", closes: "a MAPCHECK line per map from tools/qa/snag_sweep.gd (0 snags per area)" },
+];
 
 const pointOf = (measure) => Number(Object.keys(POINTS).find((p) => POINTS[p].includes(measure)) ?? 0);
-const waiting = (line) => WAITING.find((w) => w.map === line.map && w.measure === line.measure);
+const waiting = (line) => WAITING.find((w) => w.map === line.map && w.measure === line.measure && w.status === line.status && w.value === line.value);
 
 // The gating MAPCHECK lines of one log: {map, measure, value, line, status, text}.
 export function mapLines(text) {
@@ -78,7 +91,8 @@ export function mapLines(text) {
 const plantLines = (text) => text.split("\n").filter((l) => l.startsWith("PLANTED ") && /\b(PASS|FAIL)\s*$/.test(l.trim()));
 
 // logs: {"<test>": "<log text>"}.
-export function buildReceipt(logs, head) {
+// halves is a seam for the node tests; the receipt itself always judges OPEN_HALVES.
+export function buildReceipt(logs, head, { halves = OPEN_HALVES } = {}) {
   const problems = [];
   let plantCaught = true;
   const plantNotes = [];
@@ -108,7 +122,8 @@ export function buildReceipt(logs, head) {
   const held = lines.filter((l) => l.status !== "PASS" && waiting(l));
   const misses = lines.filter((l) => l.status !== "PASS" && !waiting(l));
   const countedOk = lines.length === PINNED_LINES;
-  const pass = problems.length === 0 && countedOk && uncovered.length === 0 && misses.length === 0 && plantCaught && lines.length > 0;
+  const open = halves.filter((h) => !h.parked);
+  const pass = problems.length === 0 && countedOk && uncovered.length === 0 && misses.length === 0 && open.length === 0 && plantCaught && lines.length > 0;
 
   const perPoint = Object.keys(POINTS).map((p) => `${p}:${counts[p].join("/")}`).join(" ");
   let measured = lines.length === 0
@@ -117,6 +132,7 @@ export function buildReceipt(logs, head) {
   if (!countedOk && lines.length) measured += "; the line count is off the pin: a check was lost or added";
   if (uncovered.length) measured += `; no check for ${uncovered.join(", ")}`;
   if (misses.length) measured += `; misses: ${misses.map((l) => `${l.map} ${l.measure} ${l.value} ${l.line} ${l.status}`).join(", ")}`;
+  if (open.length) measured += `; open halves, no ruling parks them: ${open.map((h) => `${h.half} (closes with ${h.closes})`).join("; ")}`;
   if (held.length) measured += `; waiting: ${held.map((l) => `${l.map} ${l.measure} ${l.value} ${l.line} (${waiting(l).cite.split(" ")[0]})`).join(", ")}`;
   if (problems.length) measured += `; ${problems.join("; ")}`;
   if (!plantCaught) measured += `; plants not shown caught: ${plantNotes.join(", ")}`;

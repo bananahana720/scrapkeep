@@ -5,21 +5,24 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
-import { MAPS, PINNED_LINES, POINTS, TESTS, buildReceipt, mapLines, produce } from "./map-standard-receipt.mjs";
+import { MAPS, OPEN_HALVES, PINNED_LINES, POINTS, TESTS, buildReceipt as judge, mapLines, produce } from "./map-standard-receipt.mjs";
+
+// The receipt with no open halves, so each test judges the lines alone; the open halves have a test of their own.
+const buildReceipt = (logs, head) => judge(logs, head, { halves: [] });
 import { receiptRow } from "../world1-bands.mjs";
 
 const HEAD = "3adc2fd0e8563b13c87f921b2ae85763467fec03";
 const row = { id: "map-standard", plant: "every map test's planted fault must fail its line", producer: "x" };
 
 // A full set of logs: every point checked on both maps, padded with extra point 10 lines up to the pin.
-function logs({ status = {}, drop = [], plantPass = null, failCheck = null, extra = 0 } = {}) {
+function logs({ status = {}, value = {}, drop = [], plantPass = null, failCheck = null, extra = 0 } = {}) {
   const out = {};
   const tests = Object.keys(TESTS);
   for (const t of tests) out[t] = [`[${t} a check] ok -> PASS`];
   let n = 0;
   const add = (t, map, measure) => {
     if (drop.includes(`${map} ${measure}`)) return;
-    out[t].push(`MAPCHECK ${map} ${measure} 1.00 pass>=0.50 ${status[`${map} ${measure}`] ?? "PASS"}`);
+    out[t].push(`MAPCHECK ${map} ${measure} ${value[`${map} ${measure}`] ?? "1.00"} pass>=0.50 ${status[`${map} ${measure}`] ?? "PASS"}`);
     n += 1;
   };
   Object.values(POINTS).forEach((measures, i) => MAPS.forEach((m) => add(tests[i % tests.length], m, measures[0])));
@@ -46,9 +49,13 @@ test("map standard: an OWED line not ruled to wait is a miss, one on WAITING is 
   const owed = buildReceipt(logs({ status: { "park_flume height_bands_populated": "OWED" } }), HEAD);
   assert.equal(owed.pass, false);
   assert.match(owed.measured, /misses: park_flume height_bands_populated 1.00 pass>=0.50 OWED/);
-  const parked = buildReceipt(logs({ status: { "park_flume yard_rim_median_m": "OWED" } }), HEAD);
+  const yard = "park_flume yard_rim_median_m";
+  const parked = buildReceipt(logs({ status: { [yard]: "OWED" }, value: { [yard]: "-0.41" } }), HEAD);
   assert.equal(parked.pass, true, parked.measured);
-  assert.match(parked.measured, /waiting: park_flume yard_rim_median_m 1.00 pass>=0.50 \(project-guide\/handoff\/ROADMAP.md:27/);
+  assert.match(parked.measured, /waiting: park_flume yard_rim_median_m -0.41 pass>=0.50 \(project-guide\/handoff\/ROADMAP.md:27/);
+  // The wait is pinned to its value and status: a worse bowl, or a FAIL in place of OWED, is a miss.
+  assert.match(buildReceipt(logs({ status: { [yard]: "OWED" }, value: { [yard]: "-0.90" } }), HEAD).measured, /misses: park_flume yard_rim_median_m -0.90/);
+  assert.equal(buildReceipt(logs({ status: { [yard]: "FAIL" }, value: { [yard]: "-0.41" } }), HEAD).pass, false);
   assert.equal(buildReceipt(logs({ status: { "park_dam yard_rim_median_m": "OWED" } }), HEAD).pass, false);
 });
 
@@ -105,5 +112,14 @@ test("map standard: the producer refuses a dirty checkout and never runs the tes
   git("checkout", "-q", "tracked.txt");
   const r = produce({ cwd: dir, run: () => logs() });
   assert.equal(r.head, git("rev-parse", "HEAD").stdout.trim());
-  assert.equal(r.pass, true);
+  assert.equal(r.pass, false, "the open halves keep a clean run from passing");
+  assert.match(r.measured, /open halves/);
+});
+
+test("map standard: an open half no ruling parks is a miss and measured names it with what closes it", () => {
+  const r = judge(logs(), HEAD);
+  assert.equal(r.pass, false);
+  for (const h of OPEN_HALVES) assert.ok(r.measured.includes(`${h.half} (closes with ${h.closes})`), h.half);
+  const parked = judge(logs(), HEAD, { halves: [{ ...OPEN_HALVES[0], parked: "a ruling" }] });
+  assert.equal(parked.pass, true, parked.measured);
 });
