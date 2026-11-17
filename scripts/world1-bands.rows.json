@@ -583,7 +583,7 @@
       "label": "loudness, true peak and loop seams inside their limits",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "node scripts/gate/sound-levels-receipt.mjs --head <commit> --out <dir>/sound-levels.json runs scripts/audio-gate.mjs's checks over every music_ace clip: true peak and seams on every clip, loudness (EBU R 128 programme loudness) on clips of 10 s or more, and the stale checks, with five planted faults; with the gitignored stems absent it writes no data (scripts/music/mx stems-sync first)",
+      "producer": "node scripts/gate/sound-levels-receipt.mjs --out <dir>/sound-levels.json (on a clean checkout of the head; it takes the head from git) runs scripts/audio-gate.mjs's checks over every music_ace clip: true peak and seams on every clip, loudness (EBU R 128 programme loudness) on clips of 10 s or more, and the stale checks, with five planted faults; with the gitignored stems absent it writes no data (scripts/music/mx stems-sync first)",
       "plant": "a stem 6 LU too loud must fail",
       "basis": "audio-gate.mjs: -16 LUFS within 0.5 LU, true peak at or below -1 dBTP"
     },

@@ -17,7 +17,8 @@
 // The packed Oggs are gitignored. When a clip's stems are not on this machine the receipt does not
 // pass, and when none are it says "no data" first (scripts/music/mx stems-sync copies them in).
 //
-//   node scripts/gate/sound-levels-receipt.mjs --head <commit> [--out <file>] [--project <dir>]
+//   node scripts/gate/sound-levels-receipt.mjs [--out <file>] [--project <dir>]
+import { cleanHead } from "./sound-recipes-receipt.mjs";
 import { realpathSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -108,11 +109,10 @@ export function measure(project) {
 function main(argv) {
   const args = { project: path.join(root, "sketches/core-loop") };
   for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
-  if (!args.head) {
-    console.error("usage: sound-levels-receipt.mjs --head <commit> [--out <file>] [--project <dir>]");
-    return 2;
-  }
-  const receipt = { ...measure(path.resolve(args.project)), head: args.head };
+  // The head comes from the checkout, and only a clean one: an edited manifest or hash list judges no commit.
+  let head;
+  try { head = cleanHead(root); } catch (e) { console.error(String(e.message ?? e)); return 2; }
+  const receipt = { ...measure(path.resolve(args.project)), head };
   const ordered = { head: receipt.head, pass: receipt.pass, measured: receipt.measured, plant_caught: receipt.plant_caught };
   const text = JSON.stringify(ordered, null, 2) + "\n";
   if (args.out) writeFileSync(args.out, text);

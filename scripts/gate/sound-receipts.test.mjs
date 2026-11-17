@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
-import { buildReceipt as recipesReceipt, produce } from "./sound-recipes-receipt.mjs";
+import { buildReceipt as recipesReceipt, cleanHead, produce } from "./sound-recipes-receipt.mjs";
 import { PLANT_RATE, buildReceipt as levelsReceipt, measure, runPlants, tone } from "./sound-levels-receipt.mjs";
 import { hasFfmpeg } from "../audio-gate.mjs";
 import { receiptRow } from "../world1-bands.mjs";
@@ -78,6 +78,16 @@ test("recipes: the producer takes the head from git and refuses a checkout with 
   writeFileSync(path.join(repo, "a.txt"), "two");
   assert.throws(() => produce({ cwd: repo, run: () => { ran += 1; return recipesLog(); } }), /refusing: uncommitted changes/);
   assert.equal(ran, 1, "a dirty checkout never runs the test");
+  git("checkout", "-q", "--", "a.txt");
+  // An untracked file elsewhere is fine; one under the game's src or assets is refused (an uncommitted rendered sound
+  // would count as a cue's own sound for a head that lacks it).
+  writeFileSync(path.join(repo, "notes.txt"), "x");
+  assert.equal(cleanHead(repo), head);
+  mkdirSync(path.join(repo, "sketches/core-loop/assets/audio/sfx"), { recursive: true });
+  writeFileSync(path.join(repo, "sketches/core-loop/assets/audio/sfx/new.wav"), "x");
+  assert.throws(() => cleanHead(repo), /refusing: untracked files under the game's src or assets/);
+  assert.throws(() => produce({ cwd: repo, run: () => { ran += 1; return recipesLog(); } }), /refusing: untracked/);
+  assert.equal(ran, 1);
 });
 
 // --- sound-levels ---------------------------------------------------------------------------
