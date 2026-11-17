@@ -58,7 +58,7 @@ static func home_env(home: String) -> Array:
 
 # The folder inside a child's data folder that holds one folder per project (the child's user://).
 static func userdata_root(data: String) -> String:
-	return data.path_join("Library/Application Support/Godot/app_userdata" if OS.get_name() == "macOS" else "godot/app_userdata")
+	return data.path_join("Library/Application Support/godot/app_userdata" if OS.get_name() == "macOS" else "godot/app_userdata")
 
 
 # Launches the game itself (the main scene, no --script) once a job, at most `parallel` at a time, each

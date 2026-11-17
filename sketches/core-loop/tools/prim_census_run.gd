@@ -17,17 +17,23 @@ const PLANT_NAME := "PlantedStandIn"
 var _census := PrimCensus.new()
 var _pin: Array[Dictionary] = PrimCensus.load_pin()
 var _planted := false
+var _due := []
 
 
 func _physics_process(delta: float) -> bool:
+	# The scan a tick asked for runs at the start of the next one, when everything that tick built and
+	# queued has run. A deferred scan was not enough: this step runs before the game's nodes, so the scan
+	# was queued ahead of the dressing a node queues in the same tick (hero_assets dresses a reward gate
+	# by call_deferred from node_added), and a gate built on a scan tick was listed bare (wave 43 gate).
+	if not _due.is_empty():
+		_scan(_due[0], _due[1])
+		_due = []
 	var out := super._physics_process(delta)
 	if _game == null or _ticks % maxi(1, int(_settings.get("census-every", "30"))) != 0:
 		return out
 	if _settings.get("prim-plant", "0") == "1" and not _planted:
 		_plant()
-	# Deferred, so it runs after the dressing this tick queued (hero_assets dresses a reward gate by
-	# call_deferred from node_added): scanning at once listed gates as plain on their first tick.
-	_scan.call_deferred(_ticks, int(_game.run.stage) if _game.get("run") != null else 0)
+	_due = [_ticks, int(_game.run.stage) if _game.get("run") != null else 0]
 	return out
 
 
