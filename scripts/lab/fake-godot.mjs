@@ -13,7 +13,7 @@
 //
 //   node scripts/lab/fake-godot.mjs --io <dir> --scenario <name> [--seed N]
 import { appendFile, readFile, rename, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
@@ -340,7 +340,7 @@ function parseArgs(argv) {
   return options;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const code = await play(parseArgs(process.argv.slice(2)));
     process.exit(code);

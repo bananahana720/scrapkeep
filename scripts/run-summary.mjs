@@ -8,7 +8,7 @@
 // custom user dir at $XDG_DATA_HOME/godot/app_userdata/<config/name>/ (default
 // ~/.local/share/godot/...); with config/use_custom_user_dir=true it is
 // $XDG_DATA_HOME/<config/custom_user_dir_name>/ instead. Both come from the sketch's project.godot.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -159,6 +159,6 @@ function main(argv) {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main(process.argv.slice(2));
 }

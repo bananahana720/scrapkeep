@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -319,7 +319,7 @@ export async function main(argv = process.argv.slice(2)) {
   return failed ? 2 : args.gate && missed ? 1 : 0;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().then((code) => process.exit(code), (error) => {
     console.error(error instanceof PowerReadError ? `power-read: ${error.message}` : error);
     process.exit(2);

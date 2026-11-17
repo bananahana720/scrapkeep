@@ -13,7 +13,7 @@
 //
 // Produce the log with:
 //   Godot --headless --path sketches/core-loop --script res://tests/sitting_played_run_test.gd > <log>
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 export const LOOPS = ["heat", "overtime", "called_shot", "marked_hull", "moss_scale", "carry_core"];
@@ -64,4 +64,4 @@ function main(argv) {
   return receipt.pass ? 0 : 1;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) process.exit(main(process.argv.slice(2)));
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) process.exit(main(process.argv.slice(2)));
