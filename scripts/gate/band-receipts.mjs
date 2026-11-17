@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-// Turns a difficulty band read (scripts/challenge/run.mjs: its folder's runs.ndjson, and table.json for the early-stop
-// record) into the receipts that scripts/world1-bands.mjs reads for three rows: strong-build-shows, warden-fairness and
+// Turns a difficulty band read (scripts/challenge/run.mjs: its folder's runs.ndjson) into the receipts that scripts/world1-bands.mjs reads for three rows: strong-build-shows, warden-fairness and
 // novice-deaths. Each receipt is { head, pass, measured, plant_caught }. Each row's plant is applied to a copy of the same
 // read and graded by the same function; plant_caught is true only when the planted copy misses on every check the plant
 // targets. A receipt passes only when its own checks pass and its plant was caught.
@@ -10,7 +9,7 @@
 // Produce the band read with:
 //   npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48 --label=<name>
 // It writes <out>/strong-build-shows.json, <out>/warden-fairness.json and <out>/novice-deaths.json.
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -49,21 +48,18 @@ function select(read, head, cells) {
   const all = dedupeRuns(read.runs).filter((r) => cells.includes(r.cell));
   const other = all.find((r) => !sameHead(r.commit, head));
   if (other) return { error: `band read ran on ${String(other.commit ?? "no commit").slice(0, 9)}, not ${head.slice(0, 9)}` };
+  // The plan's targets are for default difficulty (difficulty-plan.md line 49): a tuned or tiered run is another game.
+  const tuned = all.find((r) => (r.args ?? []).some((a) => /^--(tune|run-tier)\b/.test(String(a))));
+  if (tuned) return { error: `band read is not default difficulty: ${tuned.cell} ${tuned.column} ran with ${tuned.args.filter((a) => /^--(tune|run-tier)\b/.test(String(a))).join(" ")}` };
   return { all, runs: all.filter(counted) };
 }
 
-// Whether one pool (cell and column) has the seeds it needs. Fewer counted runs pass only when the read's own record
-// (table.json early_stop, ruling dg) says the column stopped early, planned at least the seeds needed, and how many ran,
-// and those runs are all here.
-export function enough(sel, earlyStop, cell, column, need) {
+// Whether one pool (cell and column) has the seeds it needs. A column cut short by --early-stop is too few: ruling dg
+// settles only that column's win-rate mark, and the death share, the fight time and the fairness lines are not settled
+// when it stops. The producer command does not pass --early-stop.
+export function enough(sel, cell, column, need) {
   const n = sel.runs.filter((r) => r.cell === cell && r.column === column).length;
-  if (n >= need) return { ok: true, n, text: `${cell} ${column} n=${n}` };
-  const present = sel.all.filter((r) => r.cell === cell && r.column === column).length;
-  const stop = (earlyStop ?? []).find((s) => s.cell === cell && s.column === column);
-  if (stop && Number.isInteger(stop.ran) && Number.isInteger(stop.planned) && stop.planned >= need && present >= stop.ran && n > 0) {
-    return { ok: true, n, text: `${cell} ${column} n=${n} (stopped early: ${stop.ran} of ${stop.planned} ran, the rest could not change its mark)` };
-  }
-  return { ok: false, n, text: `${cell} ${column} n=${n} of ${need}` };
+  return { ok: n >= need, n, text: n >= need ? `${cell} ${column} n=${n}` : `${cell} ${column} n=${n} of ${need}` };
 }
 
 const tooFew = (counts) => `too few runs: ${counts.filter((c) => !c.ok).map((c) => c.text).join(", ")}`;
@@ -78,7 +74,7 @@ export function gradeStrongBuild(read, head) {
   const none = { parts: null, faster: null };
   const sel = select(read, head, ["brindle"]);
   if (sel.error) return { pass: false, measured: sel.error, checks: none };
-  const counts = ["expertTop", "expert"].map((c) => enough(sel, read.earlyStop, "brindle", c, SEEDS.expert));
+  const counts = ["expertTop", "expert"].map((c) => enough(sel, "brindle", c, SEEDS.expert));
   if (counts.some((c) => !c.ok)) return { pass: false, measured: `Brindle, Expert: ${tooFew(counts)}`, checks: none };
   const col = (id) => sel.runs.filter((r) => r.column === id);
   const top = col("expertTop");
@@ -117,7 +113,7 @@ export function gradeFairness(read, head) {
   const sel = select(read, head, W1_FIGHTS);
   if (sel.error) return { pass: false, measured: sel.error, checks: none };
   const keys = [...new Set(sel.all.map((r) => `${r.cell}\u0000${r.column}`))].map((k) => k.split("\u0000"));
-  const counts = keys.map(([cell, column]) => enough(sel, read.earlyStop, cell, column, SEEDS.fairness));
+  const counts = keys.map(([cell, column]) => enough(sel, cell, column, SEEDS.fairness));
   const noLearner = W1_FIGHTS.filter((c) => !keys.some(([cell, column]) => cell === c && column === "learner1"));
   if (noLearner.length) return { pass: false, measured: `no Learner attempt 1 runs for ${noLearner.join(", ")}`, checks: none };
   if (counts.some((c) => !c.ok)) return { pass: false, measured: tooFew(counts), checks: none };
@@ -174,7 +170,7 @@ export function plantFairness(read) {
 export function gradeNoviceDeaths(read, head) {
   const sel = select(read, head, NOVICE_CELLS);
   if (sel.error) return { pass: false, measured: sel.error, checks: { share: null } };
-  const counts = NOVICE_CELLS.map((cell) => enough(sel, read.earlyStop, cell, "novice", SEEDS.novice[cell]));
+  const counts = NOVICE_CELLS.map((cell) => enough(sel, cell, "novice", SEEDS.novice[cell]));
   if (counts.some((c) => !c.ok)) return { pass: false, measured: `Novice: ${tooFew(counts)}`, checks: { share: null } };
   const per = NOVICE_CELLS.map((cell, i) => {
     const gs = sel.runs.filter((r) => r.cell === cell && r.column === "novice").map(gradeOf);
@@ -208,7 +204,7 @@ export const ROWS = {
   "novice-deaths": { grade: gradeNoviceDeaths, plant: plantNoviceDeaths, targets: ["share"] },
 };
 
-// read: { runs: runs.ndjson rows, earlyStop: table.json early_stop entries (or none) }.
+// read: { runs: runs.ndjson rows }.
 export function buildReceipt(id, read, head) {
   if (typeof head !== "string" || !COMMIT.test(head)) throw new Error(`--head must be a commit of 7 to 40 hex characters, not ${JSON.stringify(head)}`);
   const { grade, plant, targets } = ROWS[id];
@@ -226,11 +222,7 @@ export function buildReceipts(read, head) {
 // One or more band read folders (shards may repeat a run; it is counted once).
 export function loadRead(dirs) {
   const runs = dirs.flatMap((d) => parseNdjson(readFileSync(path.join(d, "runs.ndjson"), "utf8")));
-  const earlyStop = dirs.flatMap((d) => {
-    const file = path.join(d, "table.json");
-    return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")).early_stop ?? [] : [];
-  });
-  return { runs, earlyStop };
+  return { runs };
 }
 
 function main(argv) {

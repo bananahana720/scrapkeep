@@ -33,7 +33,6 @@ const fair = (over = {}) => ({
 
 // A full read: 48 seeds in every column, so every pool has what the plan asks. novice(cell, i) gives the Novice grade.
 const band = ({ n = 48, topParts = 8, topFight = 70, novice = (_cell, i) => [loss, loss, loss, cap][i % 4], fairness = () => fair() } = {}) => ({
-  earlyStop: [],
   runs: [
     ...seeds(n).map((i) => run("brindle", "expertTop", i, win(topFight + (i % 3)), { boss: { entry_parts: topParts }, fairness: fairness() })),
     ...seeds(n).map((i) => run("brindle", "expert", i, win(85 + (i % 3)), { boss: { entry_parts: 3 }, fairness: fairness() })),
@@ -69,17 +68,26 @@ test("item 1: one run a column, or fewer seeds than the plan asks, is a miss wit
   assert.equal(SEEDS.expert, 48);
 });
 
-test("item 1: a column cut short by --early-stop counts only when the read's record says it stopped and how many ran", () => {
+test("a column cut short by --early-stop is too few runs, whatever the read's record says (ruling dg settles the win rate only)", () => {
   const short = mapRuns(band(), (r) => r);
   short.runs = short.runs.filter((r) => !(r.cell === "w1" && r.column === "novice" && r.seed >= 30));
-  assert.match(gradeNoviceDeaths(short, HEAD).measured, /too few runs: w1 novice n=30 of 48/);
   const recorded = { ...short, earlyStop: [{ cell: "w1", column: "novice", mark: true, planned: 48, ran: 30 }] };
   const g = gradeNoviceDeaths(recorded, HEAD);
-  assert.equal(g.pass, true, g.measured);
-  assert.match(g.measured, /w1 \d+ of \d+ \(\d+%, n=30\)/);
-  // A record that claims more runs than the folder holds, or a plan smaller than the plan's count, does not count.
-  assert.equal(gradeNoviceDeaths({ ...short, earlyStop: [{ cell: "w1", column: "novice", mark: true, planned: 48, ran: 40 }] }, HEAD).pass, false);
-  assert.equal(gradeNoviceDeaths({ ...short, earlyStop: [{ cell: "w1", column: "novice", mark: true, planned: 30, ran: 30 }] }, HEAD).pass, false);
+  assert.equal(g.pass, false);
+  assert.match(g.measured, /too few runs: w1 novice n=30 of 48/);
+});
+
+test("a tuned or tiered band read is refused by every row: the targets are for default difficulty", () => {
+  for (const flag of ["--tune=mobs.interval_scale=2", "--run-tier=3"]) {
+    const tuned = mapRuns(band(), (r) => ({ ...r, args: [flag, "--band=" + r.column] }));
+    for (const grade of [gradeStrongBuild, gradeFairness, gradeNoviceDeaths]) {
+      const g = grade(tuned, HEAD);
+      assert.equal(g.pass, false);
+      assert.match(g.measured, /not default difficulty/);
+    }
+  }
+  const plain = mapRuns(band(), (r) => ({ ...r, args: ["--band=" + r.column, "--cell=" + r.cell] }));
+  assert.equal(gradeNoviceDeaths(plain, HEAD).pass, true);
 });
 
 test("item 2: strong-build-shows misses when the top build is not faster, and the label swap plant makes both halves miss", () => {
@@ -168,13 +176,11 @@ test("item 7: two shard folders that repeat a run count it once, and a short --h
   }
 });
 
-test("the CLI reads a band read folder and its early-stop record and writes one receipt per row", () => {
+test("the CLI reads a band read folder and writes one receipt per row", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "band-receipts-"));
   try {
     const read = band();
-    read.runs = read.runs.filter((r) => !(r.cell === "w2" && r.column === "novice" && r.seed >= 20));
     writeFileSync(path.join(dir, "runs.ndjson"), read.runs.map((r) => JSON.stringify(r)).join("\n") + "\n");
-    writeFileSync(path.join(dir, "table.json"), JSON.stringify({ early_stop: [{ cell: "w2", column: "novice", mark: true, planned: 48, ran: 20 }] }));
     execFileSync(process.execPath, [script, "--band", dir, "--head", HEAD, "--out", path.join(dir, "receipts")], { encoding: "utf8" });
     for (const id of ["strong-build-shows", "warden-fairness", "novice-deaths"]) {
       const r = JSON.parse(readFileSync(path.join(dir, "receipts", `${id}.json`), "utf8"));
