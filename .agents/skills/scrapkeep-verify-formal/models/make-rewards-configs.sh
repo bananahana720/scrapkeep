@@ -59,6 +59,7 @@ rcfg broken-midsave "NeverLost" GrantSavesOnce=FALSE
 rcfg broken-legacyrun "NeverLost" LegacyFromProfile=FALSE
 rcfg broken-stale "AtMostOnce" "${TWO[@]}" MaxFails=0 PayAgainstFile=FALSE
 rcfg broken-nolock "AtMostOnce" "${TWO[@]}" MaxFails=0 SaveLock=FALSE
-# Reach probes: each MUST break, or an action has gone dead. Run them with TLC's -continue.
+# Reach probes: each MUST break, or an action has gone dead. Run each probe on its own: TLC stops at the first break,
+# and -continue crashed TLC 1.7.4 on rewards-reach.
 rcfg reach "ProbeLands ProbeContinue ProbeFail ProbeCrash ProbeTomb ProbeRunSettled ProbeOldEarn"
 rcfg reach-two "ProbeLockWait" "${TWO[@]}" MaxFails=0

@@ -163,7 +163,7 @@ test("the rewards receipt checks the old-key route and two games, fails on a bre
   const real = (second) => [
     { ...rw.real[0], parsed: out.rewardsClean },
     { ...rw.real[1], parsed: second },
-    { ...rw.real[2], parsed: out.rewardsClean },
+    { ...rw.real[2], parsed: { ...out.rewardsTwo, distinct: rw.real[2].minStates } },
   ];
   const r = buildReceipt({ head: HEAD, real: real(out.ledger), plants, drift: synced, gaps: rw.gaps });
   assert.equal(r.pass, false);
@@ -175,4 +175,23 @@ test("the rewards receipt checks the old-key route and two games, fails on a bre
   assert.match(held.measured, /finding R-2\), rewards-today-two-once: no break in 8,009,266 distinct states/);
   assert.match(held.measured, /not checked: the profile's save lock is taken as perfect/);
   assert.doesNotMatch(held.measured, /not modelled \(the model holds the old and new reward keys as one flag\)/);
+  assert.match(held.measured, /finding R-1\) stays unpaid: .* card W1-121/);
+});
+
+test("a code config with fewer distinct states than its pin is a miss, and every code config carries a pin", () => {
+  for (const row of Object.values(ROWS)) for (const r of row.real) assert.ok(Number.isInteger(r.minStates) && r.minStates > 0, r.cfg);
+  const rw = ROWS["rewards-banked-once"];
+  const plants = rw.plants.map((p) => ({ ...p, rules: cfg(p.cfg), parsed: p.rule === "AtMostOnce" ? out.ledger : out.midsave }));
+  const real = (one) => [
+    { ...rw.real[0], parsed: one },
+    { ...rw.real[1], parsed: out.rewardsTwo },
+    { ...rw.real[2], parsed: { ...out.rewardsTwo, distinct: rw.real[2].minStates } },
+  ];
+  assert.equal(buildReceipt({ head: HEAD, real: real(out.rewardsClean), plants, drift: synced, gaps: rw.gaps }).pass, true);
+  const shrunk = buildReceipt({ head: HEAD, real: real({ ...out.rewardsClean, distinct: rw.real[0].minStates - 1 }), plants, drift: synced, gaps: rw.gaps });
+  assert.equal(shrunk.pass, false);
+  assert.match(shrunk.measured, /rewards-today-one: no break in 98,318 distinct states \(fewer than the 98,319 pinned\)/);
+  assert.equal(out.clean.distinct, ROWS["run-always-ends"].real[0].minStates);
+  assert.equal(out.rewardsClean.distinct, rw.real[0].minStates);
+  assert.equal(out.rewardsTwo.distinct, rw.real[1].minStates);
 });
