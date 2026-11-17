@@ -1,0 +1,18 @@
+Three offers
+proof: display=headless preset=low state=gates start=(251.0, -12.0, 458.0)
+offer: spare_cell at=(300.0, 0.0, 466.0) facing=(1.0, 0.0, 0.0)
+offer: chain_arc at=(300.0, 0.0, 480.0) facing=(1.0, 0.0, 0.0)
+offer: riveted_shell at=(300.0, 0.0, 494.0) facing=(1.0, 0.0, 0.0)
+take: id=spare_cell at=(300.206, 1.000005, 467.1168) launch=(13.8268, 24.0, 2.195372) active=scrap_rocket
+uncovered: slide_seen=true boss=boss swipe_busy=false frozen=false at=(317.6396, 31.36792, 477.3706) after_input=(323.8381, 31.0, 474.5189)
+headless input: PASS
+
+Four offers
+proof: display=headless preset=low state=gates start=(251.0, -12.0, 458.0)
+offer: spare_cell at=(300.0, 0.0, 459.0) facing=(1.0, 0.0, 0.0)
+offer: chain_arc at=(300.0, 0.0, 473.0) facing=(1.0, 0.0, 0.0)
+offer: riveted_shell at=(300.0, 0.0, 487.0) facing=(1.0, 0.0, 0.0)
+offer: active:cutting_torch at=(300.0, 0.0, 501.0) facing=(1.0, 0.0, 0.0)
+take: id=spare_cell at=(300.2583, 1.000005, 460.6171) launch=(13.96132, 24.0, 1.03997) active=scrap_rocket
+uncovered: slide_seen=true boss=boss swipe_busy=false frozen=false at=(317.6396, 31.36792, 477.3706) after_input=(323.8381, 31.0, 474.5189)
+headless input: PASS

@@ -1,0 +1,14 @@
+Playback 2565a6a3f5734f886e158b59a27b210ae641b020, Mac Godot 4.7.2 arm64, headless Low fixed at 90 Hz.
+These paired fixtures isolated the gated flume drum and chose the crane’s E35 drop as its next attack. The filmed 24-damage event did not record an attack ID.
+Same rider and crane spawn. In the moving fixture W is held 12 ticks after the warning begins.
+
+hold
+wind 154 id E35 crane (262.2238, -10.39913, 458.8934) ball (268.6, -13.0, 458.8) mark (268.6, -13.8, 458.8) radius 6.0
+strike phase 309 ball (268.6, -13.0, 458.8)
+land 348 hit count 1 landed id E35 ball (268.6, -13.0, 458.8) flow gates pass true
+roll
+wind 154 id E35 crane (262.2238, -10.39913, 458.8934) ball (268.6, -13.0, 458.8) mark (268.6, -13.8, 458.8) radius 6.0
+strike phase 309 ball (283.7776, -3.834995, 458.7957)
+land 348 hit count 0 landed id  ball (286.8443, -1.688323, 458.7944) flow gates pass true
+
+Both fixture processes returned 0. Their dummy renderer reported pooled resources on shutdown.
