@@ -12,15 +12,20 @@ import path from "node:path";
 import test from "node:test";
 import {
   BUDGET,
+  ENGINE_LOG,
   FrametimeError,
+  captureMode,
+  engineLaunch,
   findOnPath,
   gameArgv,
+  logLabel,
   main,
   mangohudConfig,
   missingMangohudMessage,
   parseArgs,
   parseLog,
   parseSelfPlay,
+  report,
   resolveTarget,
   summarize,
   worstFrameNear,
@@ -314,4 +319,105 @@ test("main --self-play fails the check when the game stalls (3) or lacks tools/ 
   assert.deepEqual(stalled.summary.self_play.stalled, { stage: 6, what: "exit", launch_s: 90, pos: "1.0,2.0,3.0" });
   assert.match(stalled.lines.join("\n"), /STALLED at stage 6 exit/);
   assert.equal(selfPlayRun(2, []).code, 2);
+});
+
+// The engine capture (macOS): src/core/frame_log.gd's CSV, read by the same parser.
+const ENGINE_CSV = (frames) =>
+  "scrapkeep_frame_log,engine,driver,adapter,vsync\nscrapkeep_frame_log,4.7.2.stable,metal,Apple M2 Ultra,0\nframetime\n" +
+  frames.map((ms) => ms.toFixed(3)).join("\n") +
+  "\n";
+
+test("--capture picks engine or mangohud; without it MangoHud wins where installed, else the engine on macOS", () => {
+  assert.equal(parseArgs([]).capture, null);
+  assert.equal(parseArgs(["--capture=engine"]).capture, "engine");
+  assert.throws(() => parseArgs(["--capture=vulkan"]), /--capture takes engine or mangohud/);
+  const base = mkdtempSync(path.join(os.tmpdir(), "ft-mode-"));
+  const fake = path.join(base, "mangohud");
+  writeFileSync(fake, "#!/bin/sh\n");
+  chmodSync(fake, 0o755);
+  assert.equal(captureMode(parseArgs([]), "darwin", ""), "engine");
+  assert.equal(captureMode(parseArgs([]), "linux", ""), "mangohud");
+  assert.equal(captureMode(parseArgs([]), "darwin", base), "mangohud");
+  assert.equal(captureMode(parseArgs(["--capture=engine"]), "linux", base), "engine");
+  assert.equal(captureMode(parseArgs(["--capture=mangohud"]), "darwin", ""), "mangohud");
+});
+
+test("engineLaunch runs the editor on the project windowed, vsync off, with the frame log on the same warmup and seconds", () => {
+  const outDir = "/runs/x";
+  const self = engineLaunch(parseArgs(["--self-play", "--self-play-min=50", "--warmup=10", "--seconds=30"]), { outDir, godotBin: "/G/Godot", project: "/p" });
+  assert.equal(self.command, "/G/Godot");
+  assert.equal(self.csv, path.join(outDir, ENGINE_LOG));
+  assert.deepEqual(self.argv, [
+    "--path", "/p", "--windowed", "--disable-vsync", "--audio-driver", "Dummy", "--",
+    `--frame-log=${self.csv}`, "--frame-log-warmup=10", "--frame-log-seconds=30",
+    "--self-play", "--self-play-min=50",
+  ]);
+  const plain = engineLaunch(parseArgs(["--keep-vsync", "--", "--profile=sitting"]), { outDir, godotBin: "/G/Godot", project: "/p" });
+  assert.deepEqual(plain.argv, [
+    "--path", "/p", "--windowed", "--profile=sitting", "--",
+    `--frame-log=${plain.csv}`, "--frame-log-warmup=10", "--frame-log-seconds=300",
+  ]);
+  const packed = engineLaunch(parseArgs(["--exe=/b/Scrapkeep"]), { outDir, godotBin: "/G/Godot", project: "/p" });
+  assert.equal(packed.command, "/b/Scrapkeep");
+  assert.equal(packed.argv.includes("--path"), false);
+});
+
+test("the engine frame log reads through the MangoHud parser, and its label says which it is", () => {
+  const text = ENGINE_CSV([8, 8.5, 9, 61]);
+  assert.deepEqual(parseLog(text), [8, 8.5, 9, 61]);
+  assert.equal(logLabel(text), "Engine frame log");
+  assert.equal(logLabel(csv([8])), "MangoHud log");
+  assert.match(report(summarize([8]), "x.csv", logLabel(text)), /^Engine frame log: x.csv/);
+});
+
+test("main on macOS launches the engine capture under a scratch HOME and grades the game's own log", () => {
+  const base = mkdtempSync(path.join(os.tmpdir(), "ft-engine-"));
+  // A stand-in editor: writes the CSV where --frame-log= points, and the HOME it was given.
+  const fake = path.join(base, "Godot");
+  const rows = Array.from({ length: 200 }, () => "8.000").join("\\n");
+  writeFileSync(
+    fake,
+    `#!/bin/sh\nfor a in "$@"; do case "$a" in --frame-log=*) log="\${a#--frame-log=}";; esac; done\n` +
+      `printf '%s\\n' "$@" > "$(dirname "$log")/args.txt"\nprintf '%s\\n' "$HOME" > "$(dirname "$log")/home.txt"\n` +
+      `printf 'scrapkeep_frame_log,engine\\nscrapkeep_frame_log,4.7.2\\nframetime\\n${rows}\\n' > "$log"\n` +
+      `echo 'self-play: stage 1 entered at 12.00 s'\n`,
+  );
+  chmodSync(fake, 0o755);
+  const out = path.join(base, "out");
+  const write = process.stdout.write.bind(process.stdout);
+  const log = console.log;
+  const error = console.error;
+  const lines = [];
+  console.log = (line) => lines.push(line);
+  console.error = (line) => lines.push(line);
+  process.stdout.write = () => true;
+  let code;
+  let missing;
+  try {
+    code = main(["--self-play", "--seconds=1"], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, out, "darwin");
+    missing = main([], { PATH: "/usr/bin:/bin" }, path.join(base, "out2"), "darwin");
+  } finally {
+    console.log = log;
+    console.error = error;
+    process.stdout.write = write;
+  }
+  assert.equal(code, 0);
+  assert.equal(missing, 2);
+  assert.match(lines.join("\n"), /GODOT_BIN/);
+  const [stampDir] = readdirSync(out);
+  const dir = path.join(out, stampDir);
+  const args = readFileSync(path.join(dir, "args.txt"), "utf8").trim().split("\n");
+  assert.deepEqual(args.slice(0, 4), ["--path", path.resolve(import.meta.dirname, "../sketches/core-loop"), "--windowed", "--disable-vsync"]);
+  assert.ok(args.includes("--self-play"));
+  assert.equal(readFileSync(path.join(dir, "home.txt"), "utf8").trim(), path.join(dir, "home"));
+  assert.match(lines.join("\n"), /Engine frame log: .*frames\.csv/);
+  const summary = JSON.parse(readFileSync(path.join(dir, "summary.json"), "utf8"));
+  assert.equal(summary.frames, 200);
+  assert.equal(summary.self_play.stages[0].log_s, 2);
+});
+
+test("an engine reading says whether it measured a packed build and on what caches", async () => {
+  const { engineContext } = await import("./frametime-check.mjs");
+  assert.deepEqual(engineContext({ exe: null }, "darwin"), { target: "debug-editor", cache: "cold" });
+  assert.deepEqual(engineContext({ exe: "/b/game" }, "linux"), { target: "packed", cache: "shared" });
 });
