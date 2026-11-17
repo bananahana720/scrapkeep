@@ -14,7 +14,13 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
-## Now (16 Nov 2026, wave 43 open)
+## Now (17 Nov 2026, wave 43 closing)
+
+**Wave 43's gate is clean on b5fb45a7 (17 Nov), the first wave gate run on the Mac Studio** (ruling eb). It took 2 h 32 min with the fast lane. Every row passes: 1386 node tests, 1207 non-bot tests, 30 scoped bot tests and a fresh weekly sweep. Carried on the ledger, each failing the check its row names: posture_bands_test, bot_fairness_test, stage_modifier_test, posture_bands_mind_test and waking_fight_test. One load flake with no row: world1_run_test stalled at Brindle in one of three runs and passed twice alone (card MG-12). Receipts: branch `scratch/gate-receipts-w43-b5fb45a7`.
+
+The first gate, on 35e0fc83, was red on fourteen tests. PR 1103 settled them: two were faults in the game or its tools (a queued tread bonus struck an enemy already freed; the shape census scanned in the tick that built a reward gate), two were gaps in the Mac port (child runs wrote outside their scratch home; the gate read macOS shutdown lines as errors), and the rest were values that differ between the Mac and Linux, now pinned side by side (`tests/support/platform_pin.gd`). The Linux values were not changed. [DEVICES.md](DEVICES.md) has how the Mac runs; BACKLOG rows MG-01 to MG-12 hold what is still owed, first among them a Linux re-read of the swarm's first stagger (MG-03).
+
+### Earlier (16 Nov 2026, wave 43 open)
 
 **Wave 42 is on main** (a76ccfd3, PR 1075, 16 Nov). The wave gate ran on 52304036 and was red on two test-side faults, both fixed in the close commit 8c772605: pack_telegraph_record_test failed about 1 run in 11 because the held ball armed world 1's silt boils beside a recovering swarm (the test now holds the boils off; 48 of 48 after, 4 of 44 failing before), and lab-cable-bench.test.js committed with the machine's git identity, which the gate hides. A fresh weekly sweep ran on 52304036 (16 Nov) and carries until 23 Nov; its two reds, both already on the ledger, had one check each added to their rows in 1ccc1984.
 
