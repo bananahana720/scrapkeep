@@ -5,15 +5,13 @@ const Scenery := preload("res://src/presentation/spillway_scenery.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const PinHash := preload("res://tests/support/pin_hash.gd")
 var failures := 0
-# Recorded at base bcd0a7e; the round 2 slice changes neither. The collider hash was re-pinned when
-# the deleted loops took the parked drop lips (extra trimesh colliders) out of the Spillway.
-# Re-pinned 2026-10-04 for alpha unit ZS-A: zone 1-1 adds the halfpipe, relay mesa and causeway,
-# which reshape the terrain and its collider on purpose (spillway_zone_test checks the new pieces).
-const TERRAIN_HASH := 2890712666
-# Re-pinned 2026-10-04 for ZS-D: this hashes all default roots, now Spillway + Reach.
-# The Spillway terrain hash is unchanged; the third map and old gorge root are gone.
-const COLLIDER_HASH := 1738491003
+# Terrain samples and collider vertices, pinned through tests/support/pin_hash.gd (rounded, so the pin holds on the Linux
+# build and the Mac; record with PIN_RECORD=1). Until 16 Nov 2026 these were exact hashes, last re-pinned 2026-10-04 for
+# ZS-A and ZS-D (terrain 2890712666, collider 1738491003 over all default roots, Spillway + Reach).
+const TERRAIN_PIN := "res://tests/fixtures/pins/spillway_terrain.pin"
+const COLLIDER_PIN := "res://tests/fixtures/pins/spillway_collider.pin"
 
 
 func _initialize() -> void:
@@ -586,12 +584,11 @@ func _check_frozen(world: Node3D) -> void:
 	for xi in range(-260, 261, 4):
 		for zi in range(-260, 261, 4):
 			heights.append(map.sample(float(xi), float(zi))[0])
-	var terrain_hash := hash(heights.to_byte_array())
 	var collider := PackedVector3Array()
 	for shape_node in world.find_children("*", "CollisionShape3D", true, false):
 		var shape := (shape_node as CollisionShape3D).shape
 		if shape != null:
 			collider.append_array(shape.get_debug_mesh().surface_get_arrays(0)[Mesh.ARRAY_VERTEX])
-	var collider_hash := hash(collider.to_byte_array())
-	print("terrain hash %d collider hash %d (%d collider vertices)" % [terrain_hash, collider_hash, collider.size()])
-	_check(terrain_hash == TERRAIN_HASH and collider_hash == COLLIDER_HASH, "terrain samples and collider shapes unchanged from the pinned base")
+	var pin_error := PinHash.check(TERRAIN_PIN, heights) + PinHash.check(COLLIDER_PIN, collider)
+	print("%d collider vertices; rounding margin terrain %.2f collider %.2f %s" % [collider.size(), PinHash.margin(heights), PinHash.margin(collider), pin_error])
+	_check(pin_error.is_empty(), "terrain samples and collider shapes unchanged from the pinned base")

@@ -28,19 +28,14 @@ const ParkDefs := preload("res://src/core/park_defs.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const ParkStamps := preload("res://src/world/park/park_stamps.gd")
+const PinHash := preload("res://tests/support/pin_hash.gd")
 
-# SHA-256 of every old-map scatter transform (kind, seed, instance buffer, maps sorted). A change
-# here moves an old map's scatter. Two builds of the same Godot 4.7.2 give two stable values:
-#   5bdc8fba  Andrew's PC (Arch, local import), recorded 2026-10-11 on the base d204cea (KB5) and
-#             unchanged on every commit since (bisected 2026-10-19: 36ae3f38 and its 268 successors);
-#   a57519e6  the cloud lanes, re-pinned 2026-10-18 (coordinator call, 36ae3f38).
-# 36ae3f38 swapped one for the other, which turned the local run red without any scatter change.
-# Either value passes; any third value is a real move of an old map's scatter.
-const OLD_MAPS_HASHES := [
-	"a57519e6d2f7ff97671b7cb051b49fb168b2c550919fad2fe7e0ac2ec7610dd2",
-	"5bdc8fbaa2b82655daf9425a055b042a7b8ce55de12e01ce71e643a2a5ce7666",
-]
-# The rows that hash covers: Dig 4, Dig Deep 4, Spillway 4 (a missing batch must not pass).
+# Every old-map scatter transform (kind, seed, instance buffer, maps sorted) is pinned in OLD_MAPS_PIN through
+# tests/support/pin_hash.gd. A change there moves an old map's scatter. Until 16 Nov 2026 this was a SHA-256 of the
+# exact buffers, which needed one value per maths library (a57519e6 on the cloud lanes, 5bdc8fba on Andrew's Arch PC,
+# a third on the Mac); the pin rounds the floats so one pin holds on all of them. Record with PIN_RECORD=1.
+const OLD_MAPS_PIN := "res://tests/fixtures/pins/scatter_old_maps.pin"
+# The rows that pin covers: Dig 4, Dig Deep 4, Spillway 4 (a missing batch must not pass).
 const OLD_MAPS_ROWS := 12
 const PARK_TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}]}
 const FRAME_CAP_USEC := 8000
@@ -177,18 +172,18 @@ func _run() -> void:
 	t.check("scatter stays under %d visual verts per stage" % ScatterRows.VERTEX_BUDGET, worst > 0 and worst <= ScatterRows.VERTEX_BUDGET, "worst %d" % worst)
 	parent.free()
 
-	var old_hash := _old_maps_hash()
-	print("scatter_rows_test: old-map scatter hash ", old_hash)
-	t.check("the old maps' scatter transforms are byte-identical to a pin", old_hash in OLD_MAPS_HASHES, "got %s, want one of %s" % [old_hash, str(OLD_MAPS_HASHES)])
+	var old_maps := _old_maps()
+	print("scatter_rows_test: old-map scatter rounding margin %.2f" % PinHash.margin(old_maps))
+	var pin_error := PinHash.check(OLD_MAPS_PIN, old_maps)
+	t.check("the old maps' scatter transforms match their pin", pin_error.is_empty(), pin_error)
 
 	quit(t.verdict())
 
 
 # Every old map with scatter rows, built alone through terrain.gd as the game builds it; each batch's
-# kind, seed and submitted instance buffer go into one SHA-256, maps sorted, rows in table order.
-func _old_maps_hash() -> String:
-	var ctx := HashingContext.new()
-	ctx.start(HashingContext.HASH_SHA256)
+# kind, seed and submitted instance buffer, maps sorted, rows in table order.
+func _old_maps() -> Array:
+	var pinned := []
 	var ids: Array = Terrain.MAPS.keys()
 	ids.sort()
 	var hashed := 0
@@ -206,13 +201,13 @@ func _old_maps_hash() -> String:
 		var terrain := Terrain.new({"DEFS": [{"stage": 1, "world": 1, "map": map_id}]})
 		terrain.build(holder)
 		var scatter := terrain.geometry_root(1).get_node_or_null("GroundScatter")
-		ctx.update(map_id.to_utf8_buffer())
+		pinned.append(map_id)
 		for row: Dictionary in rows:
 			var batch: Node = scatter.get_node_or_null("Scatter_%s" % row["seed"]) if scatter != null else null
-			ctx.update(("%s|%s|" % [row["kind"], row["seed"]]).to_utf8_buffer())
+			pinned.append([row["kind"], row["seed"]])
 			if batch != null:
 				var buffer: PackedFloat32Array = batch.get_meta("instance_buffer")
-				ctx.update(buffer.to_byte_array())
+				pinned.append(buffer)
 				hashed += 1
 				if dump_path != "":
 					var aabb: AABB = Scatter._source(row["mesh"]).get("aabb", AABB())
@@ -230,7 +225,7 @@ func _old_maps_hash() -> String:
 		out.store_string("\n".join(dump) + "\n")
 		out.close()
 		print("scatter_rows_test: dumped ", dump.size(), " lines to ", dump_path)
-	return ctx.finish().hex_encode()
+	return pinned
 
 
 # The park fixture (park_test, KB4's bake): its stage built through terrain.gd, then its scatter
