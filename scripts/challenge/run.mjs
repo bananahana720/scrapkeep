@@ -17,6 +17,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { COLUMNS, MAX_RUN_TIER, fairnessByCell, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, maxJobs, aggregate, columnTarget, settledMark, jobKey, playerReport, qaRows, renderPlayerReport, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
 import { checkImportStamp, REIMPORT_HINT } from "../import-stamp.mjs";
+import { userDataEnv } from "../godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = process.env.GODOT_BIN;
@@ -145,7 +146,7 @@ async function pool(tasks, slots) {
 
 function stateEnv(dir) {
   for (const d of ["data", "config", "cache"]) mkdirSync(path.join(dir, d), { recursive: true });
-  return { XDG_DATA_HOME: path.join(dir, "data"), XDG_CONFIG_HOME: path.join(dir, "config"), XDG_CACHE_HOME: path.join(dir, "cache") };
+  return { ...userDataEnv(path.join(dir, "data")), XDG_CONFIG_HOME: path.join(dir, "config"), XDG_CACHE_HOME: path.join(dir, "cache") };
 }
 
 // --- the build library ----------------------------------------------------------------------

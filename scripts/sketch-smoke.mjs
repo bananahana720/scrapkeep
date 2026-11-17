@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
 import {
+  realpathSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -17,12 +18,19 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeImportStamp } from "./import-stamp.mjs";
+import { scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const recordedBinary =
   "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
 export const binary = process.env.GODOT_BIN || recordedBinary;
 const errorLine = /^(SCRIPT ERROR|ERROR|FAIL)\b/m;
+// On macOS the headless engine reports the dummy renderer's unreleased handles and the resources
+// still loaded as it shuts down, after the verdict line, on tests that end clean on Linux (13 tests
+// on the wave 43 stage, 16 Nov 2026). Only macOS skips them: on Linux an exit-leak line has named
+// real faults (docs/decisions.tsv, the HDRI sky cycle) and still fails the run.
+const TEARDOWN_NOISE = /^ERROR: \d+ (?:RID allocations of type '\w*RendererDummy\w*' were leaked|resources still in use) at exit\b.*\r?\n?/gm;
+export const withoutTeardownNoise = (output, platform = process.platform) => (platform === "darwin" ? output.replace(TEARDOWN_NOISE, "") : output);
 // 180 s since 2026-10-04: the solo bot bands (alpha_posture_bands_test, bot_chain_hand_test)
 // legitimately run 110 to 120 s on a loaded machine; a hang still fails, three minutes later.
 const TIMEOUT_MS = 180_000;
@@ -121,6 +129,12 @@ export function jobCount() {
   if (process.env.SMOKE_JOBS) return Math.max(1, Number(process.env.SMOKE_JOBS) || 1);
   const idle = os.cpus().length - os.loadavg()[0];
   return Math.min(8, Math.max(2, Math.floor(idle / 3)));
+}
+
+// Solo tests run one at a time unless SMOKE_SOLO_JOBS widens the phase. A machine with cores to
+// spare can run several side by side; a test whose verdict reads wall time still wants 1.
+export function soloWidth(env = process.env) {
+  return Math.max(1, Math.floor(Number(env.SMOKE_SOLO_JOBS)) || 1);
 }
 
 // A test that prints SKIP, or "N skipped" with N above zero, passed without checking
@@ -560,7 +574,8 @@ const failVerdictLine = /^[\w.-]+: FAIL\b/m;
 
 // A test ends with one verdict line. A skip line exempts it only when no check ran. A FAIL
 // verdict fails the test whatever the exit code. The reason names the cause that applies.
-export function judge({ test, status, output }) {
+export function judge({ test, status, output: raw, platform = process.platform }) {
+  const output = withoutTeardownNoise(raw, platform);
   // A script path binds the verdict to its file stem. Boolean callers retain the
   // legacy API until their owners supply the path (play.mjs and sketch-nightly.mjs).
   const verdict = test
@@ -589,9 +604,9 @@ const FAILING_LINE = /-> FAIL\b|^\s*(?:SCRIPT ERROR|ERROR|FAIL)\b|\btimed[ _]out
 const PASSING_LINE = /-> PASS\b/;
 const MAX_FAILING_LINES = 60;
 
-export function failingLines(output, limit = MAX_FAILING_LINES) {
+export function failingLines(output, limit = MAX_FAILING_LINES, platform = process.platform) {
   const counts = new Map();
-  for (const line of output.split("\n").map((text) => text.replace(/\r$/, "")).filter((text) => FAILING_LINE.test(text) && !PASSING_LINE.test(text))) counts.set(line, (counts.get(line) ?? 0) + 1);
+  for (const line of withoutTeardownNoise(output, platform).split("\n").map((text) => text.replace(/\r$/, "")).filter((text) => FAILING_LINE.test(text) && !PASSING_LINE.test(text))) counts.set(line, (counts.get(line) ?? 0) + 1);
   const lines = [...counts].map(([line, count]) => (count > 1 ? `${line} (x${count})` : line));
   if (lines.length <= limit) return lines;
   return [...lines.slice(0, limit), `... ${lines.length - limit} more failing lines (set SMOKE_LOG_DIR for the full output)`];
@@ -634,7 +649,7 @@ export const scriptErrorCount = (output) => (output.match(/^SCRIPT ERROR\b/gm) ?
 // Import writes the sketch's .godot cache, so it runs alone before anything reads it.
 function runSync(job) {
   const started = Date.now();
-  const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: TIMEOUT_MS });
+  const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: TIMEOUT_MS, env: { ...process.env, ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-smoke-"))) } });
   const output = (result.stdout || "") + (result.stderr || "");
   return { ...report(job, result.status, output, Date.now() - started, result.signal), scriptErrors: scriptErrorCount(output) };
 }
@@ -669,12 +684,13 @@ export function importWithRetry(name, base, run = runSync, log = console.log) {
   return { ok: false, results: tries, tries };
 }
 
-// Every test gets its own XDG_DATA_HOME, so user:// is never shared between parallel runs.
+// Every test gets its own data home (and on macOS its own HOME), so user:// is never shared
+// between parallel runs.
 function runAsync(job) {
   return new Promise((resolve) => {
     const started = Date.now();
     const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-smoke-"));
-    const child = spawn(binary, job.args, { env: { ...process.env, XDG_DATA_HOME: dataHome } });
+    const child = spawn(binary, job.args, { env: { ...process.env, ...userDataEnv(dataHome) } });
     let output = "";
     child.stdout.on("data", (chunk) => (output += chunk));
     child.stderr.on("data", (chunk) => (output += chunk));
@@ -793,7 +809,7 @@ async function main() {
   }
   results.push(...(await pool(jobs, width)));
   const soloStarted = Date.now();
-  for (const job of solo) results.push(await runAsync(job));
+  results.push(...(await pool(solo, soloWidth())));
   const soloSeconds = (Date.now() - soloStarted) / 1000;
   const ok = runPasses(results) && expired.length === 0;
   const slowest = [...results].sort((a, b) => b.ms - a.ms).slice(0, SLOWEST);
@@ -841,4 +857,6 @@ async function main() {
   process.exit(receiptFailure ?? (ok ? 0 : 1));
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+// Node resolves the module's own path through symlinks, so the launch path must be resolved too
+// (macOS keeps its temp folder behind one).
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) main();

@@ -30,7 +30,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 export const DEFAULT_DIR = "sketches/core-loop/design-v3/sound/briefs";
 export const PACK_DIR = "sketches/core-loop/assets/music_ace";
 export const STEM_HASHES = "STEMS.sha256";
-export const FFPROBE = "/usr/bin/ffprobe";
+// Linux pins the system binary; elsewhere (Homebrew on macOS) it is found on PATH.
+export const FFPROBE = process.platform === "linux" ? "/usr/bin/ffprobe" : "ffprobe";
 export const NATIVE_LENGTH_TOL = 0.25;
 export const EPS = 1e-6;
 

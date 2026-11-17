@@ -3,16 +3,19 @@ extends SceneTree
 
 # SWAP-HITCH-2 moved the set dressing's placement draw into a static plan() a worker can run. The
 # draw must stay the one the old builder made, draw for draw, or every park stage's clutter moves.
-# This test builds the dressing of every park stage on the park table and holds a hash of each
-# batch's exact submitted instance buffer (name and buffer, in build order) against PINS, recorded
-# with the builder at 7dbdebae (artifacts/local/alpha/push/w14/swaphitch2/dress-pin-base.log).
+# This test builds the dressing of every park stage on the park table and holds each batch's submitted
+# instance buffer (name and buffer, in build order) against a pin, first recorded with the builder at 7dbdebae
+# (artifacts/local/alpha/push/w14/swaphitch2/dress-pin-base.log). Since 16 Nov 2026 the buffers are pinned in
+# tests/fixtures/pins/park_dressing_<stage>.pin through tests/support/pin_hash.gd (rounded, so the pin holds on the
+# Linux build and the Mac; record with PIN_RECORD=1), and PINS keeps the map and batch count.
 # set_dressing_test covers the old maps on the default table; this covers the park maps.
 
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const PinHash := preload("res://tests/support/pin_hash.gd")
 
-# Stage -> [map, batch count, hash], from the 7dbdebae builder.
+# Stage -> [map, batch count], from the 7dbdebae builder; the hashes below are the old exact pins.
 # 2026-10-22 crown sentinel re-pin: stage 6 park_crown 74019119 -> 2943158398, because sentinel_50 moved from [-150, 420] to
 # [-185, 398] (its spire stamp rebakes the ground) and sentinel_50 and sentinel_36 ([-135, 438] -> [-156, 446]) both move their
 # scatter keep-outs; stages 1 to 5 unchanged.
@@ -45,12 +48,12 @@ const Intent := preload("res://src/movement/intent.gd")
 # washes now end 12 m short of the new east canyon wall's foot and the scatter reads the rebaked ground. The others
 # unchanged.
 const PINS := {
-	1: ["park_dam", 13, 3312363204],
-	2: ["park_flume", 13, 3830422007],
-	3: ["park_pit", 13, 2247843387],
-	4: ["park_sinkhole", 13, 2334293701],
-	5: ["park_islands", 13, 3681139656],
-	6: ["park_crown", 13, 2943158398],
+	1: ["park_dam", 13],
+	2: ["park_flume", 13],
+	3: ["park_pit", 13],
+	4: ["park_sinkhole", 13],
+	5: ["park_islands", 13],
+	6: ["park_crown", 13],
 }
 
 var _t := T.new("park_dressing_pin_test")
@@ -87,11 +90,12 @@ func _run() -> void:
 		var parts := []
 		for batch in dressing.batches:
 			parts.append([String(batch.name), batch.get_meta("instance_buffer")])
-		var got := [String(map.park.map), parts.size(), hash(var_to_bytes(parts))]
-		print("park_dressing_pin_test: stage %d %s" % [stage, var_to_str(got)])
+		var got := [String(map.park.map), parts.size()]
+		var pin_error := PinHash.check("res://tests/fixtures/pins/park_dressing_%d.pin" % stage, parts)
+		print("park_dressing_pin_test: stage %d %s rounding margin %.2f" % [stage, var_to_str(got), PinHash.margin(parts)])
 		checked += 1
-		_t.check("stage %d (%s) dressing equals the 7dbdebae builder" % [stage, got[0]], PINS.get(stage) == got,
-			"got %s, want %s" % [str(got), str(PINS.get(stage))])
+		_t.check("stage %d (%s) dressing equals the 7dbdebae builder" % [stage, got[0]], PINS.get(stage) == got and pin_error.is_empty(),
+			"got %s, want %s; %s" % [str(got), str(PINS.get(stage)), pin_error])
 	_t.check("every park stage was pinned", checked > 0 and checked == PINS.size(), "%d stages built, %d pinned" % [checked, PINS.size()])
 	game.queue_free()
 	await physics_frame

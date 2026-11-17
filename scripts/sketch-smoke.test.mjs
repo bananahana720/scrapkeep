@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { userDataEnv } from "./godot-home.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import {
@@ -95,7 +96,7 @@ function botTierFixture(args, check) {
   try {
     mkdirSync(path.join(dir, "scripts"));
     writeFileSync(path.join(dir, "scripts/sketch-smoke.mjs"), readFileSync(new URL("./sketch-smoke.mjs", import.meta.url)));
-    writeFileSync(path.join(dir, "scripts/import-stamp.mjs"), readFileSync(new URL("./import-stamp.mjs", import.meta.url)));
+    for (const module of ["import-stamp.mjs", "godot-home.mjs"]) writeFileSync(path.join(dir, "scripts", module), readFileSync(new URL(`./${module}`, import.meta.url)));
     const tests = path.join(dir, "sketches/core-loop/tests");
     mkdirSync(tests, { recursive: true });
     writeFileSync(path.join(dir, "sketches/core-loop/project.godot"), "config_version=5\n");
@@ -207,6 +208,25 @@ test("the runner reads the res:// script from the sketch directory", () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("a test's data home also moves HOME on macOS, where Godot ignores XDG_DATA_HOME", () => {
+  assert.deepEqual(userDataEnv("/t/a", "darwin"), { XDG_DATA_HOME: "/t/a", HOME: "/t/a" });
+  assert.deepEqual(userDataEnv("/t/a", "linux"), { XDG_DATA_HOME: "/t/a" });
+  assert.deepEqual(userDataEnv("/t/a", "win32"), { XDG_DATA_HOME: "/t/a" });
+});
+
+test("the engine's shutdown report is skipped on macOS only; on Linux it still fails the run", () => {
+  const x = "res://tests/x_test.gd";
+  const leak = "x_test: PASS (1 checks)\nERROR: 2 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.\n";
+  const inUse = "x_test: PASS\nERROR: 2 resources still in use at exit (run with --verbose for details).\n";
+  for (const output of [leak, inUse]) {
+    assert.equal(smoke.judge({ test: x, status: 0, output, platform: "darwin" }).ok, true);
+    assert.equal(smoke.judge({ test: x, status: 0, output, platform: "linux" }).ok, false);
+  }
+  assert.equal(smoke.judge({ test: x, status: 0, output: leak + "ERROR: 1 RID allocations of type 'P12GodotShape3D' were leaked at exit.\n", platform: "darwin" }).ok, false);
+  assert.deepEqual(smoke.failingLines(leak, 60, "darwin"), []);
+  assert.equal(smoke.failingLines(leak, 60, "linux").length, 1);
 });
 
 test("a glob matches a base name with or without .gd and * as the only wildcard", () => {
@@ -846,7 +866,7 @@ test("a script error inside an awaited part of a test cannot pass", { skip: !exi
     const run = spawnSync(binary, ["--headless", "--path", project, "--script", "hazard.gd"], {
       encoding: "utf8",
       timeout: 60_000,
-      env: { ...process.env, XDG_DATA_HOME: path.join(project, "data") },
+      env: { ...process.env, ...userDataEnv(path.join(project, "data")) },
     });
     const output = (run.stdout || "") + (run.stderr || "");
     assert.equal(run.status, 0);

@@ -23,6 +23,7 @@ import { fileURLToPath } from "node:url";
 
 import { chunks, gateLists, namedPool, testName } from "./shard.mjs";
 import { checkImportStamp, writeImportStamp } from "../import-stamp.mjs";
+import { userDataEnv } from "../godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
@@ -437,7 +438,7 @@ export function planFileText({ wave, head, persona, base = null, results, compar
 
 // One step's environment. Every step gets its own scratch homes and slot pool, and a data home
 // outside the gate root is refused, so a Godot run cannot reach the owner's real save.
-export function stepEnv({ root: gateRoot, id, godot, base = process.env }) {
+export function stepEnv({ root: gateRoot, id, godot, base = process.env, platform = process.platform }) {
   const rootAbs = path.resolve(gateRoot);
   const home = path.resolve(rootAbs, "xdg", id);
   if (!id || !home.startsWith(rootAbs + path.sep) || path.relative(path.join(rootAbs, "xdg"), home).startsWith("..")) throw new Error(`step ${id}: its XDG_DATA_HOME would be outside ${rootAbs}; refusing`);
@@ -446,7 +447,7 @@ export function stepEnv({ root: gateRoot, id, godot, base = process.env }) {
   return {
     ...base,
     GODOT_BIN: godot,
-    XDG_DATA_HOME: path.join(home, "data"),
+    ...userDataEnv(path.join(home, "data"), platform),
     XDG_CONFIG_HOME: path.join(home, "config"),
     XDG_CACHE_HOME: path.join(home, "cache"),
     SCRAPKEEP_LOCK_DIR: lockDir,

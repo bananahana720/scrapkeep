@@ -7,9 +7,11 @@
 //   node scripts/import-stamp.mjs check  [--sketch sketches/core-loop]
 //   node scripts/import-stamp.mjs import [--sketch sketches/core-loop]   imports twice, then stamps
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { scratchHomeEnv } from "./godot-home.mjs";
 
 export const DEFAULT_SKETCH = "sketches/core-loop";
 const STAMP = "scrapkeep-import.json";
@@ -68,7 +70,7 @@ function importTwice(root, sketch) {
   const godot = process.env.GODOT_BIN;
   if (!godot || !existsSync(godot)) throw new Error("set GODOT_BIN to the Godot 4.7.2 editor");
   for (let pass = 1; pass <= 2; pass++) {
-    const ran = spawnSync(godot, ["--headless", "--path", path.join(root, sketch), "--editor", "--import"], { encoding: "utf8", maxBuffer: 1 << 28 });
+    const ran = spawnSync(godot, ["--headless", "--path", path.join(root, sketch), "--editor", "--import"], { encoding: "utf8", maxBuffer: 1 << 28, env: { ...process.env, ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "import-stamp-"))) } });
     if (pass === 2 && (ran.status !== 0 || /SCRIPT ERROR/.test(`${ran.stdout}${ran.stderr}`))) {
       throw new Error(`the second import was not clean (exit ${ran.status ?? ran.signal}); no stamp written`);
     }

@@ -272,6 +272,9 @@ test("a band that moved, a missing base, a retimed shard and a missing persona e
 test("a step's environment keeps its data home and slot pool under the gate root and refuses anything else", () => {
   const env = stepEnv({ root: "/g", id: "tests-1-350", godot: "/bin/godot", base: { PATH: "/bin", XDG_DATA_HOME: "/home/real" } });
   assert.equal(env.XDG_DATA_HOME, "/g/xdg/tests-1-350/data");
+  const mac = stepEnv({ root: "/g", id: "a", godot: "g", base: { HOME: "/Users/real" }, platform: "darwin" });
+  assert.equal(mac.HOME, "/g/xdg/a/data", "Godot on macOS keeps user:// under HOME, so the step moves HOME too");
+  assert.equal(stepEnv({ root: "/g", id: "a", godot: "g", base: { HOME: "/home/real" }, platform: "linux" }).HOME, "/home/real");
   assert.equal(env.SCRAPKEEP_LOCK_DIR, "/g/locks/tests-1-350");
   assert.deepEqual([env.SMOKE_SLOTS, env.SMOKE_FULL, env.GODOT_BIN], ["4", "1", "/bin/godot"]);
   assert.throws(() => stepEnv({ root: "/g", id: "../../home/andrew", godot: "g" }), /outside \/g/);

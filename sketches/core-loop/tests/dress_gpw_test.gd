@@ -3,12 +3,17 @@ extends SceneTree
 const StageMap := preload("res://src/world/stage_map.gd")
 const Bay := preload("res://src/world/bay.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PinHash := preload("res://tests/support/pin_hash.gd")
 # 2026-10-09 swap-wave 12-F bay: fixture re-recorded once after both swaps. The jukebox cabinet and grille boxes and the
 # barge hull box and four jet cylinders gave way to the RecipeProps views of moss_jukebox and moss_hover_barge
 # (bay.gd _build_toys, _build_deck); colliders and every other geometry row are unchanged.
 # 2026-10-18 model polish (tools/blender/POLISH.md): re-recorded; only 11 mesh vertex hashes and 3 mesh bounds moved
 # (the polished jukebox and hover barge, up to 0.16 m inward); colliders and transforms are unchanged.
+# 2026-11-16: the floats (transforms, sizes, bounds, vertices, faces) moved out of BASELINE into GEOMETRY_PIN through
+# tests/support/pin_hash.gd, rounded so one pin holds on the Linux build and the Mac; BASELINE keeps every other field.
+# Record both with GPW_RECORD_BASELINE=1 PIN_RECORD=1.
 const BASELINE := "res://tests/fixtures/dress_gpw_geometry.json"
+const GEOMETRY_PIN := "res://tests/fixtures/pins/dress_gpw.pin"
 var _failures := 0
 
 
@@ -25,7 +30,10 @@ func _run() -> void:
 	scene.add_child(bay)
 	bay.setup(26.0, 14.0)
 	var snapshot: Array = []
-	_snapshot(scene, "root", snapshot)
+	var geometry: Array = []
+	_snapshot(scene, "root", snapshot, geometry)
+	var pin_error := PinHash.check(GEOMETRY_PIN, geometry)
+	print("gpw geometry rounding margin %.2f %s" % [PinHash.margin(geometry), pin_error])
 	if OS.get_environment("GPW_RECORD_BASELINE") == "1":
 		var file := FileAccess.open(BASELINE, FileAccess.WRITE)
 		file.store_string(JSON.stringify(snapshot, "\t") + "\n")
@@ -36,7 +44,7 @@ func _run() -> void:
 	var expected = JSON.parse_string(FileAccess.get_file_as_string(BASELINE))
 	# JSON decodes integers as floats, including layer and surface counts.
 	snapshot = JSON.parse_string(JSON.stringify(snapshot))
-	var geometry_same: bool = snapshot == expected
+	var geometry_same: bool = snapshot == expected and pin_error.is_empty()
 	_check("geometry count and transforms", geometry_same)
 	if not geometry_same and expected is Array:
 		for k in mini(snapshot.size(), expected.size()):
@@ -83,9 +91,11 @@ func _check(label: String, ok: bool) -> void:
 		print(label + " -> FAIL")
 
 
-func _snapshot(node: Node, at: String, rows: Array) -> void:
+# rows gets each geometry node's exact fields; geometry gets its floats, row for row.
+func _snapshot(node: Node, at: String, rows: Array, geometry: Array) -> void:
 	if node is CollisionObject3D or node is CollisionShape3D or node is MeshInstance3D:
-		var row := {"path": at, "type": node.get_class(), "transform": var_to_str(node.transform)}
+		var row := {"path": at, "type": node.get_class()}
+		var floats := [node.transform]
 		if node is CollisionObject3D:
 			row["layer"] = node.collision_layer
 			row["mask"] = node.collision_mask
@@ -93,16 +103,17 @@ func _snapshot(node: Node, at: String, rows: Array) -> void:
 			row["disabled"] = node.disabled
 			row["shape"] = node.shape.get_class()
 			if node.shape is BoxShape3D:
-				row["size"] = var_to_str(node.shape.size)
+				floats.append(node.shape.size)
 			elif node.shape is CylinderShape3D:
-				row["size"] = [node.shape.radius, node.shape.height]
+				floats.append([node.shape.radius, node.shape.height])
 			elif node.shape is ConcavePolygonShape3D:
-				row["faces"] = str(hash(node.shape.get_faces()))
+				floats.append(node.shape.get_faces())
 		if node is MeshInstance3D:
 			row["mesh"] = node.mesh.get_class()
-			row["bounds"] = var_to_str(node.mesh.get_aabb())
+			floats.append(node.mesh.get_aabb())
 			row["surfaces"] = node.mesh.get_surface_count()
-			row["vertices"] = str(hash(node.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]))
+			floats.append(node.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX])
 		rows.append(row)
+		geometry.append(floats)
 	for k in node.get_child_count():
-		_snapshot(node.get_child(k), at + "/" + str(k), rows)
+		_snapshot(node.get_child(k), at + "/" + str(k), rows, geometry)
