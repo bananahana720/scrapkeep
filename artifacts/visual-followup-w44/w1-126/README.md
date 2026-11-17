@@ -1,19 +1,21 @@
 # The Spillway's working tools
 
-The mag trapper now leaves a physical-looking disc at the centre of its live pit. The original warning and the two discs on the cart still carry their separate jobs. The planted disc is a mesh with no collider. The cart still hoists its top disc before release, and the pit takes the deployed mesh with it when it ends.
+The mag trapper raises a disc on its mast, then leaves the same tool at the centre of its live pit. The deployed casing sits on the floor and reads above the warning paint. It has no collider. The pit takes the disc with it when it ends.
 
 ## Read the magnet and the disc together
 
-The normal trapper loop provided the poses, transforms and committed geometry. Godot ran headless. Blender in background mode drew the exported meshes against the sampled park floor. The thin outline traces the committed radius. The plates omit the game's hazard fill, effects, other scenery and HUD. The sphere shows the ball's radius for scale.
+The normal trapper loop provided the poses, transforms and committed geometry. Godot ran headless. Blender in background mode drew the exported meshes against the sampled park floor. The thin outline traces the committed radius. The first two sheets isolate the tool silhouette. The live-fill sheet adds the exported static area, full warning fill and live scorch at their shipped opacity. Blender applies the game’s 0.30 m depth pull to those layers. The plates omit effects, surrounding scenery and HUD. The neutral sphere shows the ball’s radius for scale.
 
 | Place | Near views in reading order | Distant control |
 | --- | --- | --- |
-| Dam powerhouse toe apron | Stock wind-up, stock live, raised disc, seated disc. The lens is 14 m from the pit and 25 m from the cart. | 33 m to the pit, 44 m to the cart. |
+| Dam powerhouse toe apron | Stock wind-up, stock live, raised disc, original 0.20 m seated disc. The lens is 14 m from the pit and 25 m from the cart. | 33 m to the pit, 44 m to the cart. |
 | Flume bench landing | Same four states. The lens is 16 m from the pit and 25 m from the cart. | 33 m to the pit, 43 m to the cart. |
 
-[Dam comparison](dam.jpg) · [Flume comparison](flume.jpg) · [Distant stock and seated, dam above flume](distant.jpg)
+[Dam silhouette study](dam.jpg) · [Flume silhouette study](flume.jpg) · [Live fill, near](live-fill.jpg) · [Live fill, distant](distant.jpg)
 
-Stock loses the hoisted disc at release. Its live ring marks the danger, but there is no working tool on the ground. Raising the deployed disc by 0.92 m makes its profile stronger and leaves a visible space beneath it. It suggests a raised object the ball must clear. The seated disc reads as part of the floor and leaves the ring to carry the hazard's reach. The distant comparison keeps the low silhouette, though the final blend with the actual live fill still needs a drawn game pass.
+Stock loses the hoisted disc at release. Its live ring marks the danger, but there is no working tool on the ground. Raising the deployed disc by 0.92 m makes its profile stronger and leaves a visible space beneath it. It suggests a raised object the ball must clear. The original seated disc lost its dark casing under the live paint. At 0.25 m the core emerged before the casing. The 0.30 m profile is the first tested height that shows the dark rim and light centre together on both floors near the rider. The 0.35 m profile adds height without a clearer read. The shipped candidate scales the mesh vertically by 1.5 and leaves the underside on the ground. The disk’s width and the pit’s radius stay fixed.
+
+The near live-fill sheet shows stock, the 0.20 m version and the final 0.30 m version from left to right. The distant sheet shows stock and the final version. In both sheets the dam is the top row. The distant read is a thin dark rim under a bright centre. These are Blender comparisons of rendered geometry and composited warning layers. Godot’s final blend and movement through live cover still need a drawn game pass.
 
 Headless Godot drove light and grown balls into the committed pit at the same 16 m/s approach, using a regular spawner beside `(124, 481)` on the dam and `(-290, 442)` on the flume. The four runs entered the 4.5 m ring. It caught each light ball once and neither grown ball. The matching presentation-disabled runs reproduced all 36 sampled positions, velocities and hold states exactly. The live mark kept its 1.1 s warning, 3 s live time and 1.4 m reach. The approach test stages a single trapper at each worksite. It does not measure reinforcement placement or a live pack.
 

@@ -130,6 +130,7 @@ func _trace(enabled: bool) -> Array:
 	var live_shorter := true
 	var deployed_frames := 0
 	var seated := true
+	var profile_kept := true
 	var quiet := true
 	var deployed: WeakRef
 	var rest_after := false
@@ -162,6 +163,8 @@ func _trace(enabled: bool) -> Array:
 					var foot := disc.global_position - disc.global_basis.y * 0.10
 					seated = seated and foot.distance_to(tele.center) < TOLERANCE and disc.mesh == parts[1].mesh
 					seated = seated and disc.get_child_count() == 0 and disc.is_visible_in_tree()
+					profile_kept = profile_kept and is_equal_approx(disc.global_basis.y.length(), 1.5) \
+						and is_equal_approx(disc.global_basis.x.length(), 1.0) and is_equal_approx(disc.global_basis.z.length(), 1.0)
 			else:
 				quiet = quiet and disc == null
 			if not _strike_frames.is_empty() and enemy.phase == 0 and not saw_rest:
@@ -182,6 +185,7 @@ func _trace(enabled: bool) -> Array:
 		_test.check("WG-4 one disc leaves", live_shorter and not _strike_frames.is_empty(), "only top disc hidden throughout LIVE")
 		_test.check("W1-126 one disc seats at the committed centre", seated and deployed_frames >= 250,
 			"%d live frames with the original mesh, no collider" % deployed_frames)
+		_test.check("W1-126 the taller casing keeps its horizontal footprint", profile_kept and deployed_frames > 0)
 		_test.check("W1-126 the disc only exists during the live pit", quiet and deployed != null and deployed.get_ref() == null,
 			"no preview disc and no remnant after the pit expires")
 		_test.check("WG-6 unhit pivot identity", pivot_identity, "identity immediately after _pose over %d real physics frames" % FRAMES)

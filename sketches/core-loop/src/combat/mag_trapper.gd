@@ -49,8 +49,10 @@ const CORE_EMISSION := 0.6
 # top disc (the top face is at y 0.6) and its head in the lifted disc, so the disc never hangs free.
 const LINK_FOOT := 0.5
 const LINK_RADIUS := 0.16
-# The 0.20 m casing sits on the floor, with the lower half of the core set into it.
+# The seated 0.30 m profile exposes the casing above the live paint. Only the
+# vertical mesh axis grows. The floor contact and the disc's plan are preserved.
 const CASING_HALF_HEIGHT := 0.10
+const DEPLOYED_PROFILE := 1.5
 const DISC_RADIUS := 1.05
 
 static var _warned_asset := false
@@ -174,7 +176,8 @@ func _go_live() -> void:
 	var rise_x := Telegraph.ground_under(terrain, at + x) - Telegraph.ground_under(terrain, at - x)
 	var rise_z := Telegraph.ground_under(terrain, at + z) - Telegraph.ground_under(terrain, at - z)
 	var normal := Vector3(-rise_x, 2.0 * DISC_RADIUS, -rise_z).normalized()
-	disc.global_transform = Transform3D(Basis(Quaternion(Vector3.UP, normal)), at + normal * CASING_HALF_HEIGHT)
+	var basis := Basis(Quaternion(Vector3.UP, normal)).scaled_local(Vector3(1.0, DEPLOYED_PROFILE, 1.0))
+	disc.global_transform = Transform3D(basis, at + basis.y * CASING_HALF_HEIGHT)
 
 
 func _live(_delta: float) -> bool:
