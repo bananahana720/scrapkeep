@@ -36,7 +36,7 @@ None.
   [R-2 the second launch's backfill, loaded before it, pays nothing] granted 1 -> FAIL
   ```
 
-  The interleaving that needs the lock (B reads the file inside its save, A writes, B writes) cannot be made in one headless process; only the model checks it.
+  The interleaving that needs the lock (B reads the file inside its save, A writes, B writes) cannot be made in one headless process; only the model checks it. The skill's replays `replay/reward_twice_two_games.gd` and `replay/reward_lost_on_continue.gd` both print NOT REPRODUCED at `4aa18e666` (17 November 2026, copied into `sketches/core-loop/tests/` and run through `scripts/sketch-smoke.mjs`).
 - Rule: `AtMostOnce`. Configs: `rewards-broken-stale`, `rewards-guarded-two-once` (the code before the fix).
 - Steps: two game processes load the same profile before either earns the row. Game A earns the row, grants it and saves. Game B earns it too. B's own profile in memory has no settled key, so B grants again. B's save finds a newer generation on disk and merges (a union). The model needs no crash and no failed write for this.
 - Harm: both games announce the earn and run the grant. The file holds the unlock once, because every unlock is a set member, so nothing is doubled on disk. A reward that is not a set member would be paid twice.
