@@ -249,7 +249,7 @@ func _future_lock_broken() -> void:
 	DirAccess.make_dir_absolute(lock)
 	var out: Array = []
 	var touched := OS.execute("touch", ["-t", "203001010000", ProjectSettings.globalize_path(lock)], out, true)
-	if touched != 0 or FileAccess.get_modified_time(lock) < Time.get_unix_time_from_system() + 3600.0:
+	if touched != 0 or FileAccess.get_modified_time(lock) < 1880000000:
 		_t.skip("lock a lock dated in the future is broken", "touch could not date the lock: %s" % str(out))
 		DirAccess.remove_absolute(lock)
 		return
