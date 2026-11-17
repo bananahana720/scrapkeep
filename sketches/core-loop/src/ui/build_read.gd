@@ -16,7 +16,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const VIEW := Vector2i(300, 240)
 const TURN := 0.6
 # The pod faces -Z; open on the pilot almost head-on before the turn shows the panels.
-const OPEN_ANGLE := PI * 11.0 / 12.0
+const OPEN_ANGLE := deg_to_rad(175.0)
 const LABEL_LIFT := 1.75
 # A panel tag's letter height in the view's world units.
 const TAG_HEIGHT := 0.16
@@ -59,7 +59,7 @@ func _init() -> void:
 	var cam := Camera3D.new()
 	cam.position = Vector3(0.0, 0.6, 4.6)
 	cam.look_at_from_position(cam.position, Vector3.ZERO)
-	cam.fov = 40.0
+	cam.fov = 41.5
 	view.add_child(cam)
 	var sun := DirectionalLight3D.new()
 	sun.rotation = Vector3(-0.8, 0.6, 0.0)
