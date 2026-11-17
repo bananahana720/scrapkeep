@@ -21,7 +21,7 @@ ALL="TakeNamesHeldPart SeamOwned EndsOnce PickHeard StampOnlySeam LaunchLands Wa
 # A busy swipe can only meet a launch when the time assumption is off, so this one turns off two constants.
 ./mkcfg.sh broken-busy "SeamOwned StampOnlySeam LaunchLands" BusyRefuses=FALSE StageOutlastsSwipe=FALSE
 # Reach probes: each MUST break, or an action has gone dead (lesson VFM-10).
-./mkcfg.sh reach-store "ProbeContinue ProbeBossUnderSwipe ProbeSummary"
+./mkcfg.sh reach-store "ProbeContinue ProbeBossUnderSwipe ProbeSummary ProbeWonSave"
 ./mkcfg.sh reach-nostore "ProbeRetryUnderSwipe" Store=FALSE
 # The time assumption off: shows what the assumption hides.
 ./mkcfg.sh untimed "$ALL" StageOutlastsSwipe=FALSE

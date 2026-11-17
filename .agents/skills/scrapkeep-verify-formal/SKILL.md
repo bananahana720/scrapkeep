@@ -27,7 +27,7 @@ Each rule is one promise to the player. [references/coverage.md](references/cove
 
 ## Is this change covered?
 
-1. Run `git diff --stat <sync commit> -- sketches/core-loop/src/core/flow.gd sketches/core-loop/src/presentation/launch_take.gd sketches/core-loop/src/game.gd sketches/core-loop/src/ui/pause_menu.gd sketches/core-loop/src/ui/screens.gd`. The sync commit is the last line of [references/coverage.md](references/coverage.md). That form compares the sync commit with the working tree, so it sees uncommitted changes too (VFM-09). No output: the model still describes the code, go to "Run it".
+1. Run `git diff --stat <sync commit> -- <files>`, where `<files>` is every `sketches/core-loop/src` file that [references/coverage.md](references/coverage.md) cites (for the rewards model, [references/rewards-coverage.md](references/rewards-coverage.md)); `scripts/gate/model-receipts.mjs` reads the same list. A step that comes to read a new file must cite it there. The sync commit is the last line of the coverage page. That form compares the sync commit with the working tree, so it sees uncommitted changes too (VFM-09). No output: the model still describes the code, go to "Run it".
 2. With output, read the diff of every function named in the coverage table, and look for a new caller of a covered function or a new writer of `_seam_take`, `_taken_part`, `_launched`, `run.over` or the swipe's `phase`. A new way to interrupt a run is a new action even when no covered function changed (VFM-05).
 3. A change that removes or adds a guard the coverage table names: set that constant on the two `today-*` lines of `models/make-configs.sh` to what the code now does, so `today-*` stands for the code under check (VFM-09). Any other change: change the model from the code before you run it, never from what makes it pass. One call in the code is one action in the model; two handlers of one signal are one action with an order choice (VFM-06). Then move the sync commit.
 
@@ -52,6 +52,8 @@ Each rule is one promise to the player. [references/coverage.md](references/cove
 | `untimed` | the time assumption off | `TakeNamesHeldPart` breaks, by a path no player can make |
 
 A `broken-*` config that reports no break means the model can no longer see that fault. Fix the model before trusting any pass (VFM-03).
+
+The world 1 done read takes this check as two receipts, `run-always-ends` and `rewards-banked-once`. `node scripts/gate/model-receipts.mjs --out <dir>` writes them. It runs plain TLC on `today-store` with the `broken-vanish` and `broken-endguard` plants, and on `rewards-today-one` and `rewards-today-two-once` with the `rewards-broken-ledger` and `rewards-broken-midsave` plants, each with a timeout. A receipt fails while step 1 of "Is this change covered?" shows a changed file, and the script refuses a checkout with uncommitted changes under this skill or `sketches/core-loop/src`. The rewards receipt fails until finding R-2 closes, and it always says that the old-key loss route of W1-117 is not modelled.
 
 ## Read a result
 
