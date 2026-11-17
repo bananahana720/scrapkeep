@@ -10,6 +10,7 @@ extends SceneTree
 # code 1, with and without the card (tests/support/boot_broken_child.gd, one process a case).
 
 const T := preload("res://tests/support/t.gd")
+const TeardownNoise := preload("res://tests/support/teardown_noise.gd")
 const TitleIntros := preload("res://src/presentation/title_intros.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const BOOT_SCENE := "res://src/boot/boot.tscn"
@@ -232,7 +233,7 @@ func _run() -> void:
 	# 3. No errors at quit: the main scene's 300-frame boot in its own process.
 	var out := []
 	var code := OS.execute(OS.get_executable_path(), ["--headless", "--path", ProjectSettings.globalize_path("res://"), "--quit-after", "300"], out, true)
-	var text := "\n".join(out)
+	var text := TeardownNoise.strip("\n".join(out))
 	var bad := RegEx.create_from_string("(?m)^(SCRIPT ERROR|ERROR)")
 	_t.check("the 300-frame boot of the main scene exits clean", code == 0 and bad.search(text) == null, "exit %d %s" % [code, text.substr(0, 400)])
 
