@@ -544,6 +544,32 @@
       "basis": "ruling cu; 46% on the 10 Nov read"
     },
     {
+      "id": "brindle-worst-minute",
+      "area": "Wardens and bosses",
+      "source": "receipt",
+      "label": "Brindle's worst minute costs at least the dam Warden's",
+      "status": "gate",
+      "cadence": "sitting",
+      "floor": {
+        "learner5": 0.27,
+        "expert": 0.07
+      },
+      "producer": "the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: in the whole-clear cell (w1clear), Learner attempt 5 and Expert, the median share of max hull lost in Brindle's worst 60 s is at least the larger of the dam Warden's median in the same read and this row's floor; seed and fight counts are pinned in SEEDS in that file; a dam fight with no worst minute recorded reads 0 (no hit landed) when another dam fight in the read has one, and a Brindle fight reads 0 when its hit count is 0; any other fight with its worst minute unrecorded is no data and a miss",
+      "plant": "a Brindle that deals no damage must read as a miss in both columns",
+      "basis": "BACKLOG MG-11. floor: the dam's worst-minute medians on the W1-31 read (board issue 1106, comment 6935842041; branch head 3a8d440df on the Mac, 24 seeds an arm): Learner attempt 5 27%, Expert 7%, with Brindle 0% in both, so the dam cannot sink with Brindle to make a pass. The median is the lower middle (med in scripts/challenge/worst-window.mjs, the tool behind those figures). The worst minute is read on the whole-clear cell, which plays the skipper persona, while the fairness guards (warden-fairness, brindle-stop-tax) and the Brindle win floors read the Brindle cell, which plays the brawler: a Brindle lever is checked for fairness on a different bot from the one this row reads. A wave 45 gate row that misses until the Brindle pressure units land (ruling cu: harder, never easier)"
+    },
+    {
+      "id": "brindle-stop-tax",
+      "area": "Wardens and bosses",
+      "source": "receipt",
+      "label": "in the Slag Bowl a stopped ball pays at least double",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: F2 (hull lost per second below cruise over at or above cruise, line from scripts/challenge/fairness.json) in each column a default band read plays in the Brindle cell, one pool a column, each with the fairness seed count run and carrying a fairness record; a pool with no stop tax is a miss",
+      "plant": "a stopped ball that loses hull at the cruising ball's rate must read as a miss",
+      "basis": "BACKLOG MG-11; ruling cu fairness line F2. A narrower view of a check warden-fairness already makes on the Brindle pools, kept as the loop target for the Brindle pressure units. Read on the Brindle cell (the brawler persona; it enters the fight on its first tick, --to-boss=1, so its whole fairness record is the bowl), not the whole-clear cell that brindle-worst-minute reads. A wave 45 gate row; no band read on a wave 44 head has graded it yet"
+    },
+    {
       "id": "map-standard",
       "area": "Stages and world",
       "source": "receipt",
@@ -591,11 +617,11 @@
       "id": "models-render",
       "area": "Look",
       "source": "receipt",
-      "label": "every generated model passes the render check",
+      "label": "no generated enemy model renders darker than its authored one (6 enemy kinds, two views)",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "tools/model_render_check.gd, which has no pass line wired yet (wave 44)",
-      "plant": "the rejected dark hooker body must fail",
+      "producer": "node scripts/gate/model-render-receipt.mjs --out <dir>/models-render.json, on a clean checkout of the head: it judges the SUMMARY line of tools/model_render_check.gd's compare over the parts drawn from each model file (all 6 enemy kinds pinned, each loaded from its generated file, none darker than the authored model) and a planted compare with RENDER_PLANT=dark_models that must fail every kind. Every shoot and compare runs with a window through scripts/gate/display-run.mjs (a machine slot and a scratch HOME); with no display (the PC's gamescope lane is not built) the receipt fails with that reason. Pilots, item parts, the camp pet and props are not judged, nor a model brighter than its authored one",
+      "plant": "every generated enemy model painted near-black must fail, the fault of the rejected dark hooker body",
       "basis": "ruling dr: each Tripo model is accepted on its own"
     },
     {
@@ -605,7 +631,7 @@
       "label": "no code-built stand-in left in world 1",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "prim_census_test against tools/prim_census_pin.tsv, with the world 1 pin at zero (wave 44)",
+      "producer": "node scripts/gate/stand-ins-receipt.mjs --out <dir>/no-code-stand-ins.json, on a clean checkout of the head: it runs sketches/core-loop/tests/prim_census_test.gd alone through scripts/sketch-smoke.mjs, then again with PRIM_PLANT=dam_box, and passes only when the census counts at least 129 primitive surfaces with no new primitive, no stale pin row, the bot in stage 3, and no stand-in left except a pin row whose why names a ruling and cites its DECISIONS.md line (today the two W1-23 trade spot bodies, ruling ci), matched on its exact surface key; each one left is named by file and BACKLOG row",
       "plant": "a new code-built box in the dam must fail",
       "basis": "STATE.md: zero placeholders; the pin holds 89 lines today"
     },
