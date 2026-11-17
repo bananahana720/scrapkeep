@@ -23,6 +23,7 @@ static func applies(stage: int) -> bool:
 	return ChallengeDials.by_stage_or("hazard.hits_enemies_by_stage", stage, 0.0) > 0.0
 
 
+# A world whose context has no run (a test double) is off.
 static func applies_to(run) -> bool:
 	var stage = run.get("stage") if run != null else null
 	return stage != null and applies(int(stage))
