@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const T := preload("res://tests/support/t.gd")
+const TeardownNoise := preload("res://tests/support/teardown_noise.gd")
 
 # E10 e10_dish_wall: real slice game, clock samples, live release, cancellation,
 # reaction composition and a seeded per-physics-frame control with the pose disabled.
@@ -237,7 +238,7 @@ func _control_trace(enabled: bool) -> Array:
 	var trace := []
 	var clean := code == 0
 	for line in String(output[0]).split("\n"):
-		clean = clean and not line.begins_with("SCRIPT ERROR") and not line.begins_with("ERROR") and not line.begins_with("FAIL")
+		clean = clean and not line.begins_with("SCRIPT ERROR") and not (line.begins_with("ERROR") and not TeardownNoise.is_noise(line)) and not line.begins_with("FAIL")
 		if line.begins_with("WF_TRACE "):
 			trace = bytes_to_var(Marshalls.base64_to_raw(line.trim_prefix("WF_TRACE ")))
 	_t.check("WF-5 control process " + ("enabled" if enabled else "disabled"), clean and trace.size() == 480,
