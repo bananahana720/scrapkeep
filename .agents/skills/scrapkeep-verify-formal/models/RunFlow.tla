@@ -300,11 +300,13 @@ Retry ==
 
 \* flow._on_boss_defeated, then the victory clock: flow._end_run_won -> _end_run(true). With a store, the fall saves
 \* the run as it stands, cleared and marked boss_won (flow._save_boss_won, deferred to the end of the same frame).
+\* That save may not land: store.save fails and keeps the old file (flow._save), or the game closes before the
+\* deferred call runs. Then the saved document is still the one from the last gate.
 BossDefeated ==
   /\ fs = "BOSS" /\ fs' = "VICTORY"
-  /\ IF Store
-     THEN /\ svHeld' = held /\ svCleared' = TRUE /\ svStage' = stage /\ svWon' = TRUE
-     ELSE UNCHANGED <<svHeld, svCleared, svStage, svWon>>
+  /\ \/ /\ Store
+        /\ svHeld' = held /\ svCleared' = TRUE /\ svStage' = stage /\ svWon' = TRUE
+     \/ UNCHANGED <<svHeld, svCleared, svStage, svWon>>
   /\ UNCHANGED <<stage, run, over, ended, sealed, warden, launched, seam, taken, held, snap,
                  scrapless, tPhase, tKind, tWord, tCb, pickLost, resumed>>
 

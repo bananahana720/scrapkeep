@@ -9,7 +9,7 @@ Each action in the model (`RunFlow.tla`, in the `models` folder beside this one)
 | `TakeCover` with `choose` | the closure in `sketches/core-loop/src/game.gd` `pick_pilot`; `sketches/core-loop/src/core/flow.gd` `choose_class`, `_begin_run`, `enter_stage` | the run starts under full cover |
 | `NewRun` | `sketches/core-loop/src/core/flow.gd` `new_run`, `_begin_run`; callers `sketches/core-loop/src/game.gd` `_screen_key` (N on the death screen and summary), `sketches/core-loop/src/game.gd` restart latch (R held for `RESTART_HOLD`, with a store), `sketches/core-loop/src/ui/pause_menu.gd` Restart | a new run from any state in play |
 | `ShowTitle` | `sketches/core-loop/src/core/flow.gd` `show_title`; callers `sketches/core-loop/src/ui/screens.gd` `open_camp_from_summary` and `_input` (Escape) | back to the title |
-| `Resume` | `sketches/core-loop/src/core/flow.gd` `resume_run`; from a document marked `boss_won`, `_resume_after_boss` -> `_advance_from` -> `_end_run_won` | Continue: the saved run document comes back; a run saved at its boss's fall ends won |
+| `Resume` | `sketches/core-loop/src/core/flow.gd` `resume_run`, which reads the document back through `sketches/core-loop/src/core/run_state.gd` `from_entrance_doc` (the `boss_won` key returns in `extra`); from a document marked `boss_won`, `_resume_after_boss` -> `_advance_from` -> `_end_run_won` | Continue: the saved run document comes back; a run saved at its boss's fall ends won |
 | `QuitRelaunch` | `sketches/core-loop/src/ui/pause_menu.gd` Quit (`get_tree().quit()`), or the window closing, then a fresh start | memory is gone, the saved run document stays; the only way to a Continue with a store |
 | `ToBeacon` | `sketches/core-loop/src/core/flow.gd` tick | the ring starts to charge |
 | `WardenBroken` | `sketches/core-loop/src/core/flow.gd` `_on_enemy_killed`, `_unseal` | the Warden breaks, the gates open |
@@ -21,7 +21,7 @@ Each action in the model (`RunFlow.tla`, in the `models` folder beside this one)
 | `TakeCover` with `cut` | `sketches/core-loop/src/core/flow.gd` `_cut_under_cover`, `_finish_stage` | the cut under full cover |
 | `Death` | `sketches/core-loop/src/core/flow.gd` `_on_player_died`, `_end_run` | with a store the run ends; without one the death screen shows |
 | `Retry` | `sketches/core-loop/src/core/flow.gd` `retry_stage`, `_untake`, `_retry_arena` | store-less flows only: back to the stage's checkpoint. `replay_stage` (T on the death screen) also calls `retry_stage` after moving the stage index; it is not modelled |
-| `BossDefeated`, `VictoryEnds` | `sketches/core-loop/src/core/flow.gd` `_on_boss_defeated` with its deferred `_save_boss_won` (store only, pull request 1081), `_end_run_won`, `_end_run` | the boss falls and the run is saved past the arena (`svWon`), then the run ends as won |
+| `BossDefeated`, `VictoryEnds` | `sketches/core-loop/src/core/flow.gd` `_on_boss_defeated` with its deferred `_save_boss_won` (store only, pull request 1081), `_end_run_won`, `_end_run` | the boss falls and the run is saved past the arena (`svWon`), unless that save fails or the game closes before the deferred call; then the run ends as won |
 
 ## Guard constants
 

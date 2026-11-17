@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { ROWS, brokeRule, buildReceipt, cfgRules, parseTlc, syncCommit } from "./model-receipts.mjs";
+import { ROWS, brokeRule, buildReceipt, cfgRules, coveredFiles, parseTlc, syncCommit, timedOut } from "./model-receipts.mjs";
 import { receiptRow } from "../world1-bands.mjs";
 
 const HEAD = "3adc2fd0e8563b13c87f921b2ae85763467fec03";
@@ -63,7 +63,7 @@ test("a plant counts as caught only on the rule it names", () => {
 
 test("every config the producer runs exists and checks the rule it is read for", () => {
   for (const row of Object.values(ROWS)) {
-    assert.ok(cfg(row.real).invariants.length > 0, row.real);
+    for (const r of row.real) assert.ok(cfg(r.cfg).invariants.length > 0, r.cfg);
     for (const p of row.plants) {
       const r = cfg(p.cfg);
       assert.ok([...r.invariants, ...r.properties].includes(p.rule), `${p.cfg} checks ${p.rule}`);
@@ -85,7 +85,7 @@ const plantsOf = (vanish, endguard) => [
 ];
 const synced = { sync: "bbd157f44", files: [] };
 const row = { id: "run-always-ends", plant: "the model without the vanished-Warden fallback must show a run that never ends", producer: "x" };
-const receipt = (real, plants, drift = synced) => buildReceipt({ head: HEAD, real: { cfg: flow.real, parsed: real }, plants, drift });
+const receipt = (real, plants, drift = synced) => buildReceipt({ head: HEAD, real: [{ ...flow.real[0], parsed: real }], plants, drift });
 
 test("the code's config clean and both plants caught: a passing receipt the done table accepts", () => {
   const r = receipt(out.clean, plantsOf(out.vanish, out.endguard));
@@ -122,4 +122,40 @@ test("a covered file changed since the sync commit fails the receipt until the m
 test("a receipt for another head is stale", () => {
   const r = receipt(out.clean, plantsOf(out.vanish, out.endguard));
   assert.equal(receiptRow(row, r, "ffffffffffffffffffff").noData, true);
+});
+
+test("a run stopped by the timeout is a miss that says it did not finish", () => {
+  const r = receipt(timedOut(30), plantsOf(out.vanish, out.endguard));
+  assert.equal(r.pass, false);
+  assert.match(r.measured, /^today-store: stopped: did not finish in 30 min/);
+  assert.equal(receipt(out.clean, plantsOf(timedOut(30), out.endguard)).plant_caught, false);
+});
+
+test("the covered files are every source file the coverage page cites", () => {
+  assert.deepEqual(coveredFiles("`sketches/core-loop/src/core/flow.gd:12` and sketches/core-loop/src/build/build.gd, again `sketches/core-loop/src/core/flow.gd`"),
+    ["sketches/core-loop/src/build/build.gd", "sketches/core-loop/src/core/flow.gd"]);
+  const page = (row) => coveredFiles(readFileSync(new URL(ROWS[row].coverage, SKILL), "utf8"));
+  for (const f of ["core/flow.gd", "core/run_state.gd", "build/build.gd", "game.gd", "presentation/launch_take.gd", "ui/pause_menu.gd", "ui/screens.gd"]) {
+    assert.ok(page("run-always-ends").includes(`sketches/core-loop/src/${f}`), f);
+  }
+  for (const f of ["core/flow.gd", "core/run_state.gd", "game.gd", "core/profile.gd", "core/safe_store.gd", "core/run_store.gd", "core/progress.gd"]) {
+    assert.ok(page("rewards-banked-once").includes(`sketches/core-loop/src/${f}`), f);
+  }
+});
+
+test("the rewards receipt fails while two games each pay a reward, and always names both open gaps", () => {
+  const rw = ROWS["rewards-banked-once"];
+  const plants = [
+    { ...rw.plants[0], rules: cfg(rw.plants[0].cfg), parsed: out.ledger },
+    { ...rw.plants[1], rules: cfg(rw.plants[1].cfg), parsed: out.midsave },
+  ];
+  const r = buildReceipt({ head: HEAD, real: [{ ...rw.real[0], parsed: out.rewardsClean }, { ...rw.real[1], parsed: out.ledger }], plants, drift: synced, gaps: rw.gaps });
+  assert.equal(r.pass, false);
+  assert.equal(r.plant_caught, true);
+  assert.match(r.measured, /two games on one profile, each paying the reward \(finding R-2\), rewards-today-two-once: broke AtMostOnce/);
+  assert.match(r.measured, /not checked: the old-key loss route of W1-117 is not modelled/);
+  const held = buildReceipt({ head: HEAD, real: [{ ...rw.real[0], parsed: out.rewardsClean }, { ...rw.real[1], parsed: out.rewardsClean }], plants, drift: synced, gaps: rw.gaps });
+  assert.equal(held.pass, true);
+  assert.match(held.measured, /finding R-2\), rewards-today-two-once: no break/);
+  assert.match(held.measured, /W1-117 is not modelled/);
 });
