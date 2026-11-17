@@ -600,6 +600,7 @@ func _place_names() -> void:
 # HUD band's lower edge) drops straight down its own column to just under it, and returns to the point below the band.
 # Returns, per entry in order, {shown, rows, detail, rect}.
 static func fit_names(entries: Array, band_end := 0.0, view_size := Vector2.INF) -> Array:
+	var bottom := ScreenRegions.rect("bottom", view_size).position.y
 	var order: Array = range(entries.size())
 	order.sort_custom(func(a, b):
 		var ea: Dictionary = entries[a]
@@ -637,13 +638,13 @@ static func fit_names(entries: Array, band_end := 0.0, view_size := Vector2.INF)
 			if form["detail"]:
 				width = maxf(width, float(e["dw"]))
 				height += float(e["dh"])
-			if width > view_size.x or height > view_size.y - band_end:
+			if width > view_size.x or height > bottom - band_end:
 				continue
 			var column: Vector2 = e["col"]
 			var x := clampf(column.x - width * 0.5, 0.0, view_size.x - width)
 			var y := maxf(column.y + NAME_DROP, band_end)
-			if y + height > view_size.y:
-				y = maxf(column.y - NAME_DROP - height, band_end)
+			if y + height > bottom:
+				y = clampf(column.y - NAME_DROP - height, band_end, bottom - height)
 			var rect := Rect2(Vector2(x, y), Vector2(width, height))
 			if placed.all(func(r): return _overlap(rect, r) <= reach):
 				result = {"shown": true, "rows": form["rows"], "detail": form["detail"], "rect": rect}

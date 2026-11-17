@@ -90,6 +90,16 @@ func _fit_part() -> void:
 			edge["shown"] and edge["detail"] and rect.position.x <= x and x <= rect.end.x
 			and Rect2(0, 0, 1280, 720).encloses(rect), str(edge))
 	# Two gates 100 px apart: room is 88, the one-row name (140) does not fit, two rows (80) do, so both show.
+	# A crossbar can be inside the screen while its sign falls over the speed and armour readouts.
+	var lower_edge := _entry(0, 24.0, 25.0, 140.0, false, 80.0, 248.0)
+	lower_edge.col.y = 700.0
+	var viewport_size := Vector2(1280, 720)
+	var docked: Dictionary = RewardGates.fit_names([lower_edge], 90.0, viewport_size)[0]
+	var bottom_hud := ScreenRegions.rect("bottom", viewport_size)
+	_t.check("a low edge offer stays on its arch column and clears the bottom HUD", docked.detail
+		and docked.rect.end.y <= bottom_hud.position.y and docked.rect.position.x <= 24.0
+		and docked.rect.end.x >= 24.0, str(docked))
+
 	var rows := RewardGates.fit_names([_entry(0, 400.0, 50.0), _entry(1, 520.0, 80.0)])
 	_t.check("B. a name wider than its room takes two rows before anything hides", rows.all(func(r): return r["shown"] and r["rows"] == 2), str(rows))
 	# 40 px apart: two rows still overlap by 40 px, more than the hold: the farther gate hides its name only.
