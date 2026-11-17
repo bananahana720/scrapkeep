@@ -6,6 +6,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -373,14 +374,15 @@ export function engineContext(args, platform = process.platform) {
 }
 
 // The engine capture's scratch HOME: a fresh one in the run folder, or --home=<dir>, which must
-// already exist under artifacts/local/, so a reading never runs on the player's own HOME.
-export function engineHome(args, outDir, localRoot = path.join(root, "artifacts/local"), exists = existsSync) {
+// already exist under artifacts/local/, so a reading never runs on the player's own HOME. Both paths
+// are resolved through links first, so a link inside artifacts/local/ cannot lead out of it.
+export function engineHome(args, outDir, localRoot = path.join(root, "artifacts/local")) {
   if (!args.home) return path.join(outDir, "home");
-  const home = path.resolve(args.home);
-  const rel = path.relative(localRoot, home);
+  if (!existsSync(args.home)) throw new FrametimeError("no folder at --home=" + args.home);
+  const home = realpathSync(args.home);
+  const rel = path.relative(existsSync(localRoot) ? realpathSync(localRoot) : path.resolve(localRoot), home);
   if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel))
     throw new FrametimeError("--home must be a folder under artifacts/local/: " + args.home);
-  if (!exists(home)) throw new FrametimeError("no folder at --home=" + args.home);
   return home;
 }
 

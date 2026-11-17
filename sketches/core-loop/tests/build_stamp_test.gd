@@ -48,6 +48,12 @@ func _exports() -> void:
 	DirAccess.make_dir_recursive_absolute(app.path_join("MacOS"))
 	_t.eq("mac app stamp", BuildStamp.read_from(app.path_join("MacOS"), ""),
 		{"commit": OTHER, "dirty": false, "built": "20261108T190700", "source": "export"})
+	# The editor app (a project folder is passed) and a folder that is not a .app never read Resources.
+	_t.eq("editor app ignores Resources", BuildStamp.read_from(app.path_join("MacOS"), _dir.path_join("no-checkout/sketches/core-loop"))["source"], "none")
+	var loose_bin := _dir.path_join("bin/Contents")
+	_put(loose_bin.path_join("Resources/BUILD.txt"), BUILD_TXT % [OTHER, "false"])
+	DirAccess.make_dir_recursive_absolute(loose_bin.path_join("MacOS"))
+	_t.eq("not a .app ignores Resources", BuildStamp.read_from(loose_bin.path_join("MacOS"), "")["source"], "none")
 	_put(app.path_join("MacOS/BUILD.txt"), BUILD_TXT % [SHA, "false"])
 	_t.eq("beside the executable wins", BuildStamp.read_from(app.path_join("MacOS"), "")["commit"], SHA)
 	var none := BuildStamp.read_from(_dir.path_join("nowhere"), "")

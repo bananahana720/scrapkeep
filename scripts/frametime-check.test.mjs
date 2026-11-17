@@ -5,7 +5,9 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
@@ -440,10 +442,21 @@ test("--home reuses an existing scratch HOME under artifacts/local and refuses a
   const { engineHome, parseArgs } = await import("./frametime-check.mjs");
   assert.equal(parseArgs(["--home=/l/run/home"]).home, "/l/run/home");
   assert.equal(parseArgs([]).home, null);
-  const yes = () => true;
-  assert.equal(engineHome({ home: null }, "/out", "/l", yes), "/out/home");
-  assert.equal(engineHome({ home: "/l/frametime/a/home" }, "/out", "/l", yes), "/l/frametime/a/home");
-  for (const bad of ["/Users/someone", "/l", "/l/../elsewhere"])
-    assert.throws(() => engineHome({ home: bad }, "/out", "/l", yes), /under artifacts\/local/);
-  assert.throws(() => engineHome({ home: "/l/missing" }, "/out", "/l", () => false), /no folder/);
+  const base = realpathSync(mkdtempSync(path.join(os.tmpdir(), "home-")));
+  const local = path.join(base, "local");
+  const kept = path.join(local, "frametime/a/home");
+  const outside = path.join(base, "outside");
+  mkdirSync(kept, { recursive: true });
+  mkdirSync(outside);
+  assert.equal(engineHome({ home: null }, "/out", local), "/out/home");
+  assert.equal(engineHome({ home: kept }, "/out", local), kept);
+  for (const bad of [outside, local, path.join(local, "../outside")])
+    assert.throws(() => engineHome({ home: bad }, "/out", local), /under artifacts\/local/);
+  assert.throws(() => engineHome({ home: path.join(local, "missing") }, "/out", local), /no folder/);
+  // A link inside artifacts/local that points out of it is refused; one that stays inside is not.
+  symlinkSync(outside, path.join(local, "escape"));
+  assert.throws(() => engineHome({ home: path.join(local, "escape") }, "/out", local), /under artifacts\/local/);
+  symlinkSync(kept, path.join(local, "inside"));
+  assert.equal(engineHome({ home: path.join(local, "inside") }, "/out", local), kept);
+  rmSync(base, { recursive: true });
 });

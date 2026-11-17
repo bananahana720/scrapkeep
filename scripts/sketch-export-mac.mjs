@@ -86,6 +86,16 @@ export function astcProjectText(text) {
   return lines.join("\n");
 }
 
+// The files the export swaps must match git before it starts: a run killed with SIGKILL can leave
+// the ETC2/ASTC line in, and the restore would then write that back. porcelain is
+// `git status --porcelain -- <files>`; returns the problem, or null when both are clean.
+export const SWAPPED_FILES = ["sketches/core-loop/project.godot", "sketches/core-loop/export_presets.cfg"];
+export function swapFilesProblem(porcelain) {
+  const changed = porcelain.split("\n").filter((line) => line.trim()).map((line) => line.slice(3));
+  if (changed.length === 0) return null;
+  return `${changed.join(", ")} differ from git; an earlier export may have been killed mid-swap. Check with git diff and restore the file (git restore <path>) before exporting.`;
+}
+
 // Where Godot on macOS looks for export templates under a given HOME.
 export function templatesDir(home) {
   return path.join(home, "Library/Application Support/Godot/export_templates");
@@ -201,6 +211,11 @@ async function main() {
   if (!binary || !existsSync(binary)) fail("set GODOT_BIN to the Godot 4.7.2 editor binary: " + binary);
   const realTemplates = path.join(templatesDir(os.homedir()), TEMPLATE_VERSION);
   if (!existsSync(path.join(realTemplates, "macos.zip"))) fail("export template missing: " + path.join(realTemplates, "macos.zip"));
+
+  const swapStatus = run("git", ["-C", root, "status", "--porcelain", "--", ...SWAPPED_FILES]);
+  if (swapStatus.status !== 0) fail("git status failed\n" + swapStatus.stderr);
+  const swapProblem = swapFilesProblem(swapStatus.stdout);
+  if (swapProblem) fail(swapProblem);
 
   const presetPath = path.join(project, "export_presets.cfg");
   const presetText = await readFile(presetPath, "utf8");

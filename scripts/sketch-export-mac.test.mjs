@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  SWAPPED_FILES,
   stampFailures,
+  swapFilesProblem,
   withSwappedFiles,
   APP_NAME,
   ASTC_SETTING,
@@ -21,8 +23,14 @@ import {
 import { parsePresets, selfPlayPresetText } from "./sketch-export.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const presetsText = readFileSync(path.join(root, "sketches/core-loop/export_presets.cfg"), "utf8");
-const projectText = readFileSync(path.join(root, "sketches/core-loop/project.godot"), "utf8");
+// The committed text, not the working file: an export running beside npm test swaps both files.
+const committed = (rel) => {
+  const shown = spawnSync("git", ["-C", root, "show", "HEAD:" + rel], { encoding: "utf8" });
+  assert.equal(shown.status, 0, shown.stderr);
+  return shown.stdout;
+};
+const presetsText = committed("sketches/core-loop/export_presets.cfg");
+const projectText = committed("sketches/core-loop/project.godot");
 
 test("the committed Mac preset packs what the shipped Linux preset packs", () => {
   assert.deepEqual(macPresetDrift(parsePresets(presetsText)), []);
@@ -145,4 +153,23 @@ test("withSwappedFiles restores the file when the process gets SIGTERM", async (
   const code = await new Promise((resolve) => child.once("exit", resolve));
   assert.equal(code, 143);
   assert.equal(readFileSync(file, "utf8"), "original\n");
+});
+
+// A real repo: a leftover ETC2/ASTC line in project.godot, as a SIGKILLed export leaves it, stops
+// the next export; clean files let it start.
+test("swapFilesProblem refuses to start when a swapped file differs from git", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "swap-repo-"));
+  const git = (...args) => spawnSync("git", ["-C", repo, ...args], { encoding: "utf8" });
+  git("init", "-q");
+  for (const rel of SWAPPED_FILES) {
+    mkdirSync(path.dirname(path.join(repo, rel)), { recursive: true });
+    writeFileSync(path.join(repo, rel), "[rendering]\n");
+  }
+  git("add", ".");
+  git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "base");
+  assert.equal(swapFilesProblem(git("status", "--porcelain", "--", ...SWAPPED_FILES).stdout), null);
+  writeFileSync(path.join(repo, SWAPPED_FILES[0]), astcProjectText("[rendering]\n"));
+  const problem = swapFilesProblem(git("status", "--porcelain", "--", ...SWAPPED_FILES).stdout);
+  assert.match(problem, /sketches\/core-loop\/project\.godot differ from git/);
+  assert.doesNotMatch(problem, /export_presets/);
 });
