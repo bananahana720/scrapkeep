@@ -55,6 +55,7 @@ class Player:
 class Run:
 	extends RefCounted
 	var mass := 200
+	var stage := 1
 	var losses: Array = []
 	var clock := 0.0
 	func lose_scrap(amount: int, _at: Vector3, cause: String) -> int:
@@ -151,8 +152,9 @@ func _tick(w, handler, clock: float) -> void:
 
 
 func _run() -> void:
-	t.check("the dam is a park whose hazards hit enemies", HazardHits.applies({"map": "park_dam"}))
-	t.check("a parked world's park is not", not HazardHits.applies({"map": "park_crown"}))
+	t.check("world 1's stages have hazards that hit enemies", HazardHits.applies(1) and HazardHits.applies(2))
+	t.check("a parked world's stage does not", not HazardHits.applies(3))
+	t.check("a run with no stage does not", not HazardHits.applies_to(null))
 	_stalled()
 	_escape()
 	_rolling()

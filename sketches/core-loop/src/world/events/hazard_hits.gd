@@ -8,17 +8,24 @@ const SiltBoil := preload("res://src/combat/silt_boil.gd")
 # with the knock the silt boils give (silt_boil.gd _erupt): the flash comes with take_damage, the toss shows it
 # moved. A kill drops what any kill drops: take_damage ends in enemy.died, which combat files with
 # record_kill (assumption: no ruling sets hazard kills apart). Set pieces (the Warden, the vault, boss pieces)
-# are never struck, as the silt spares them. Only the Spillway's parks: worlds 2 and 3 are parked (ruling at).
+# are never struck, as the silt spares them. The stage dial hazard.hits_enemies_by_stage (ChallengeDials) turns
+# it on: world 1's two stages; worlds 2 and 3 are parked (ruling at). The same dial turns on the storm's seek and
+# the flood's tax (natural.gd), the pressure that pays for the easier fights.
 #
 # One plant for the pinned test (tests/hazards_hit_everyone_test.gd): SCRAPKEEP_PLANT_HAZARD=skip_enemies
 # makes every hazard pass over enemies, so that test must go red.
 
-const PARKS := ["park_dam", "park_flume"]
 const PLANT_ENV := "SCRAPKEEP_PLANT_HAZARD"
 
 
-static func applies(park: Dictionary) -> bool:
-	return PARKS.has(String(park.get("map", "")))
+# Whether the run's stage (run.stage, 1-based; 0 or unknown is off) has hazards that hit everyone.
+static func applies(stage: int) -> bool:
+	return ChallengeDials.by_stage_or("hazard.hits_enemies_by_stage", stage, 0.0) > 0.0
+
+
+static func applies_to(run) -> bool:
+	var stage = run.get("stage") if run != null else null
+	return stage != null and applies(int(stage))
 
 
 static func planted(name: String) -> bool:

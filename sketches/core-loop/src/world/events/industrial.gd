@@ -35,7 +35,7 @@ var _hits_enemies := false
 func setup(world_ref) -> void:
 	world = world_ref
 	name = "IndustrialEvents"
-	_hits_enemies = HazardHits.applies(world.terrain.map().park)
+	_hits_enemies = HazardHits.applies_to(world.ctx.run)
 	for site in world.terrain.map().park.park_rows:
 		_sites[site.id] = site
 	var items := []

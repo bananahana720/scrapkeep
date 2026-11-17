@@ -146,7 +146,7 @@ func setup(world_ref) -> void:
 			_prepare_overlay(row, record, entry)
 		_prepared[row.id] = record
 	_plan_marks(planned)
-	hits_enemies = HazardHits.applies(_original_map.park)
+	hits_enemies = HazardHits.applies_to(world.ctx.run)
 	world.terrain.flood = _water_field
 	# Replace the generic world's sound listener for this stage, preserving its other cues.
 	var presentation = world.ctx.root.get("presentation")
