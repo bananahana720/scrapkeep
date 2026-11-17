@@ -32,6 +32,7 @@ func _initialize() -> void:
 		_site_corridors()
 		_toe_vents_wake()
 		_water_lifetime()
+		_full_water_at_entry()
 		_overlap()
 		_held_announcements()
 		_corridors()
@@ -386,6 +387,33 @@ func _toe_vents_wake() -> void:
 			if f.kind == "world" and f.get("phase") in ["telegraph", "land"]:
 				observed[f.phase] += 1
 	_check("toe_vents_wake telegraphs and lands off all seven corridors", clear and observed.values().all(func(value): return value == 1), str(observed))
+
+
+# Enter on the last rise tick and again at the boundary, using the runtime physics step.
+func _full_water_at_entry() -> void:
+	var row := _row("boundary", "flash_flood")
+	row.effect = {"fill_s": 4.0, "material": "water"}
+	row.live_s = 20.0
+	var director = _director([row])
+	var occupied_steps := []
+	director.register_family("natural", func(action, _row, context):
+		if action == "step" and context.ball == Vector3.UP:
+			occupied_steps.append(context.rise_s))
+	var delta := 1.0 / 90.0
+	var started := false
+	for tick in 900:
+		if _step(director, delta).any(func(fact): return fact.kind == "started"):
+			started = true
+			break
+	_check("boundary flood starts on clear ground", started, "")
+	for tick in 359:
+		_step(director, delta)
+	_step(director, delta, Vector3.UP)
+	_check("one full tick of rise still waits under a grounded ball", occupied_steps.is_empty(), str(occupied_steps))
+	_step(director, delta)
+	_step(director, delta, Vector3.UP)
+	_step(director, delta, Vector3.UP)
+	_check("full flood keeps stepping under the ball", occupied_steps == [4.0, 4.0], str(occupied_steps))
 
 
 func _water_lifetime() -> void:

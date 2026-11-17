@@ -581,7 +581,11 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 	if not state.weather and state.row.kind in ["collapse", "cave_in"]:
 		state.collapse_s = minf(float(state.row.effect.get("fill_s", 0.0)), float(state.collapse_s) + dt)
 	if not state.weather and _park_rising(state):
-		state.rise_s = minf(float(state.row.effect.get("fill_s", 0.0)), float(state.rise_s) + dt)
+		var fill_s := float(state.row.effect.get("fill_s", 0.0))
+		var next_rise := float(state.rise_s) + dt
+		# Finish on the same clock tolerance as the live phase. A rounding remainder
+		# would otherwise hold already-full water as soon as the rider rolls in.
+		state.rise_s = fill_s if next_rise >= fill_s - 0.00000001 else next_rise
 	if live_s > 0.0 and state.live_elapsed_s >= live_s - 0.00000001 and _park_can_end(state):
 		_park_end(state, facts)
 
