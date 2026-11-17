@@ -304,6 +304,89 @@ function sweepStaleWaiters(directory, own) {
   }
 }
 
+// The quiet hold: a frame-time reading must have the machine to itself, so while one holds this file no runner takes
+// a slot (acquireSlot waits), and the reading starts only once every slot is empty. A written "check pgrep first" rule
+// was broken four times in one day (17 Nov 2026), each time voiding a reading. The holder is a process that blocks in
+// spawnSync and cannot heartbeat, so the hold is alive while its pid is and it is under QUIET_MAX_MS old.
+export const QUIET_HOLD = "quiet-hold";
+export const QUIET_MAX_MS = 2 * 60 * 60 * 1000;
+
+export function quietHolder(directory = slotRoot()) {
+  const file = path.join(directory, QUIET_HOLD);
+  try {
+    const pid = Number(readFileSync(file, "utf8"));
+    if (!Number.isSafeInteger(pid) || pid < 1) return null;
+    if (Date.now() - statSync(file).mtimeMs > QUIET_MAX_MS) return null;
+    try {
+      process.kill(pid, 0);
+    } catch (error) {
+      if (error.code === "ESRCH") return null;
+      if (error.code !== "EPERM") throw error;
+    }
+    return pid;
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+// Take the hold, then wait until no runner holds a slot. Synchronous, for scripts/frametime-check.mjs.
+export function holdQuietSync({
+  directory = slotRoot(),
+  pollMs = 2000,
+  timeoutMs = 45 * 60 * 1000,
+  pid = process.pid,
+  log = console.log,
+  sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms),
+} = {}) {
+  mkdirSync(directory, { recursive: true });
+  const file = path.join(directory, QUIET_HOLD);
+  const started = Date.now();
+  const late = () => Date.now() - started > timeoutMs;
+  const release = () => {
+    try {
+      if (Number(readFileSync(file, "utf8")) === pid) unlinkSync(file);
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+  };
+  let told = false;
+  for (;;) {
+    const other = quietHolder(directory);
+    if (other === pid) break;
+    if (other === null) {
+      try {
+        unlinkSync(file);
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+      try {
+        writeFileSync(file, String(pid), { flag: "wx" });
+        break;
+      } catch (error) {
+        if (error.code !== "EEXIST") throw error;
+      }
+    }
+    if (late()) throw new Error(`another frame reading (pid ${other}) still holds the machine after ${Math.round(timeoutMs / 60000)} min`);
+    if (!told) log(`waiting: another frame reading (pid ${other}) holds the machine quiet`);
+    told = true;
+    sleepSync(pollMs);
+  }
+  told = false;
+  for (;;) {
+    const busy = readdirSync(directory).filter((name) => name.startsWith("slot-") && slotOwner(path.join(directory, name))?.alive);
+    if (busy.length === 0) break;
+    if (late()) {
+      release();
+      throw new Error(`${busy.length} test runner(s) still hold the machine after ${Math.round(timeoutMs / 60000)} min; no frame reading taken`);
+    }
+    if (!told) log(`waiting for ${busy.length} test runner(s) to finish before the frame reading starts`);
+    told = true;
+    sleepSync(pollMs);
+  }
+  return { waitMs: Date.now() - started, release };
+}
+
 export async function acquireSlot({
   directory = slotRoot(),
   slots = machineSlotCount(),
@@ -324,6 +407,12 @@ export async function acquireSlot({
     for (;;) {
       sweepStaleWaiters(directory, owner);
       touch(claim);
+      if (quietHolder(directory) !== null) {
+        if (!told) log("sketch:smoke waiting: a frame reading holds the machine quiet");
+        told = true;
+        await sleep(pollMs);
+        continue;
+      }
       for (let index = 0; index < slots; index++) {
         const slot = path.join(directory, `slot-${index}`);
         const holder = slotOwner(slot);

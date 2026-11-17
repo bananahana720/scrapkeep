@@ -14,6 +14,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { userDataEnv } from "./godot-home.mjs";
+import { holdQuietSync } from "./sketch-smoke.mjs";
 
 // node scripts/frametime-check.mjs: plays the exported build under MangoHud, logs every frame and
 // reports whether frame times stay inside the alpha budget (sketches/core-loop/BUG-BAR.md).
@@ -531,6 +532,11 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
+  // A reading that launches the game holds the machine quiet: no test runner starts while it runs, and it starts only
+  // once the runners have finished (scripts/sketch-smoke.mjs, holdQuietSync). Grading an existing log needs no hold.
+  const launches = !process.argv.slice(2).some((arg) => arg.startsWith("--log")) && process.env.FRAMETIME_NO_QUIET !== "1";
+  const quiet = launches ? holdQuietSync() : null;
+  if (quiet) process.once("exit", quiet.release);
   try {
     process.exitCode = main();
   } catch (error) {
