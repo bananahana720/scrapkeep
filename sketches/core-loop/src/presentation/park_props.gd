@@ -1289,12 +1289,18 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 	return out
 
 
-# A hash of the instances' kinds, variants and exact placements, for the determinism pins.
+# A hash of the instances' kinds, variants and exact placements, for same-machine determinism checks.
 static func fingerprint(list: Array) -> int:
+	return hash(var_to_bytes(fingerprint_parts(list)))
+
+
+# What a fingerprint covers, per instance. The park pins hash these through tests/support/pin_hash.gd, which rounds the
+# floats so the pin holds on every platform's sin and cos.
+static func fingerprint_parts(list: Array) -> Array:
 	var parts := []
 	for inst: Dictionary in list:
 		parts.append([inst["vignette"], inst["kind"], inst["v"], inst["pos"], inst["basis"], inst["scale"]])
-	return hash(var_to_bytes(parts))
+	return parts
 
 
 # --- Build ----------------------------------------------------------------------------------------
