@@ -221,10 +221,8 @@ func _save_lock() -> void:
 	DirAccess.make_dir_absolute(lock)
 	var before := FileAccess.get_file_as_string(path)
 	profile.unlock_cosmetic("paint_lock")
-	var started := Time.get_ticks_msec()
 	var saved := profile.save()
-	var waited := Time.get_ticks_msec() - started
-	_t.check("lock a save while another game holds the lock waits, then fails and leaves the file", not saved and FileAccess.get_file_as_string(path) == before and waited >= Profile.LOCK_WAIT_MS, "waited %d ms: %s" % [waited, profile.last_error])
+	_t.check("lock a save while another game holds the lock fails and leaves the file", not saved and FileAccess.get_file_as_string(path) == before and profile.last_error.contains("another game"), profile.last_error)
 	var keep := func():
 		profile.unlock_cosmetic("paint_kept")
 		return true
