@@ -135,7 +135,10 @@ const VOICE_LIMIT := {"weapon_zap": 3, "scrap_tick": 3, "cog_tick": 3, "hit_thwa
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1, "rarity_tick": 2, "panel_note": 3, "clank": 2, "grapple_clink": 2,
 	"swarm_buzz": 2, "kill_chain_tier": 1, "achievement_chime": 1, "rescue_fanfare": 1,
 	"menu_move": 2, "menu_confirm": 1, "menu_back": 1, "verb_fail": 1, "gauge_dry_click": 1, "marble_tick_ladder": 3,
-	"drop_thud": 1, "drop_whiff": 1, "guard_creak": 1, "beacon_open_chime": 1, "callout_warden_chime": 1}
+	"drop_thud": 1, "drop_whiff": 1, "guard_creak": 1, "beacon_open_chime": 1, "callout_warden_chime": 1,
+	# World 1's own sounds keep the limits of the stand-ins they replace: the gauge's climb is one voice like the
+	# beacon hum it was, and a pin's double hit takes two where the single thwack took three.
+	"motif_accumulate": 1, "pin_double_thwack": 2}
 const MIN_GAP_MS := {"weapon_zap": 55, "scrap_tick": 40, "cog_tick": 40, "enemy_arrive": 200, "hit_thwack": 35, "land_thud": 80, "kill_pop": 45,
 	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600,
 	"grapple_clink": 60, "ride_cable_clink": 60, "ride_rolling_metal": 250, "ride_hop_lift": 60, "ride_ledge_scuff": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
@@ -143,7 +146,10 @@ const MIN_GAP_MS := {"weapon_zap": 55, "scrap_tick": 40, "cog_tick": 40, "enemy_
 	"achievement_chime": 400, "rescue_fanfare": 400, "clank": 90, "rarity_tick": 45,
 	# A menu move repeats as fast as a held d-pad; a failed verb repeats as fast as the button is mashed.
 	"menu_move": 45, "menu_confirm": 90, "menu_back": 90, "verb_fail": 150, "gauge_dry_click": 120, "marble_tick_ladder": 60,
-	"drop_thud": 120, "drop_whiff": 200, "guard_creak": 700, "beacon_open_chime": 400, "callout_warden_chime": 300}
+	"drop_thud": 120, "drop_whiff": 200, "guard_creak": 700, "beacon_open_chime": 400, "callout_warden_chime": 300,
+	# Each hazard landing keeps the shared slam's 60 ms, the line skill's motif the bite's 60, and the pin the thwack's clank-like 90.
+	"flood_drop": 60, "fleet_anvil_brass_drop": 60, "lightning_strike": 60, "rockfall_boom": 60, "crater_crump_sub_boom": 60,
+	"steam_whistle_percussion_drop": 60, "ancient_family_drop": 60, "motif_line": 60, "pin_double_thwack": 90}
 
 const MENU_FLOWS := ["title", "class_select"]
 const OVER_FLOWS := ["summary", "dead", "victory"]

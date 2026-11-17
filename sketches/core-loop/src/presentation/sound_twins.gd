@@ -275,6 +275,8 @@ const NOT_ACT := [
 		"facts": ["bank:ballast_brace_slam", "bank:boiler_burst", "bank:cave_in_debris", "bank:dispatcher_break", "bank:dispatcher_presence", "bank:dispatcher_spawn", "bank:fleet_anvil", "bank:foreman_break", "bank:foreman_presence", "bank:foreman_spawn", "bank:gap_net_charge_live", "bank:jolt_layer_break", "bank:jolt_layer_fizzle", "bank:jolt_layer_jam", "bank:jolt_layer_presence", "bank:linker_break", "bank:linker_presence", "bank:linker_spawn", "bank:prop_crew_collapse", "bank:splitter_break_clean", "bank:splitter_break_split", "bank:splitter_presence", "bank:splitter_spawn", "site:prop_crew.gd:_build_tool:prop_crew_presence"]},
 	{"why": "in the bank but no code in src/ plays it (checked by literal search): not heard today", "traced": true,
 		"facts": ["bank:ballast_brace_tell", "bank:gap_net_charge_tell"]},
+	{"why": "a stand-in no fact hears since wave 44: its rows (demo_slammed, skid_smashed, arc_slammed) now hear their own sound_next, and the stand-in stays as their `sound` fallback (own_sounds_test checks each row hears its own)", "traced": true,
+		"facts": ["bank:kest_demo_knock", "bank:rivet_skid_plate", "bank:zap_hum"]},
 	{"why": "the called shot is the player's own wager; its stamp and the Warden mark are on screen", "traced": false,
 		"facts": ["emit:call_met@called_shot.gd:settle", "emit:call_missed@called_shot.gd:settle", "emit:call_window@called_shot.gd:_on_engaged", "emit:shot_called@called_shot.gd:_release"]},
 	{"why": "the overtime bell and pot are world props that offer and pay: a reward", "traced": false,

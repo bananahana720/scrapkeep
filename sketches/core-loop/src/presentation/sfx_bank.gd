@@ -89,7 +89,11 @@ const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue",
 	# sluice_warning): each comes before a hit or a crew, as enemy_arrive does.
 	"prop_crew_strain", "cave_in_rumble", "arena_wave_whistle",
 	# Brindle's five wind-ups (audio.gd BRINDLE_TELEGRAPHS), each its own tell of the attack it warns of.
-	"tele_crane_sweep", "tele_slag_ring", "tele_charge", "tele_charge_wall", "tele_eject"]
+	"tele_crane_sweep", "tele_slag_ring", "tele_charge", "tele_charge_wall", "tele_eject",
+	# The park hazards' own warnings, each family's falling tone and the ground's grind: they took over the
+	# threat whistle and tick, so they pull the bass down as those do.
+	"flood_falling_pure", "fleet_falling_pure", "boiler_falling_pure", "lightning_falling_pure", "ancient_falling_pure",
+	"rock_grind_dust_hiss"]
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb). The combat
 # feedback percussion (feedback_set.py) has no key, so it is not here.
 const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "part_get", "core_socket", "found_chime", "gate_through",
@@ -112,6 +116,12 @@ const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_r
 	# The camp, the menus' rise and fall, and the ready and found sounds.
 	"lounge_flip", "bay_bell_ring", "marble_tick_ladder", "bay_lounge_in", "menu_move", "menu_confirm", "menu_back",
 	"ultimate_ready", "found_twinkle", "beacon_open_chime", "callout_warden_chime",
+	# World 1's own pitched sounds: the five falling warnings on the sinister degrees, the pitched landings, and the
+	# player cues built from a class motif or the spring and thwack ladders.
+	"flood_falling_pure", "fleet_falling_pure", "boiler_falling_pure", "lightning_falling_pure", "ancient_falling_pure",
+	"fleet_anvil_brass_drop", "steam_whistle_percussion_drop", "ancient_family_drop", "companion_chirp_escape",
+	"kest_falling_triad", "kest_muffled_thump", "line_load", "motif_accumulate", "motif_line", "motif_stinger",
+	"pin_double_thwack", "rebound_spring_snap", "sable_root_fifth",
 	# --- P-C Tally keyed sounds ---
 	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
 	# --- end Tally ---
@@ -213,6 +223,17 @@ const TRIM_DB := {
 	"found_twinkle": -8.0, "verb_fail": -9.0, "gauge_dry_click": -10.0,
 	# The fight facts that had no sound: a drop that threw enemies, a drop that threw none, the guard about to break, the beacon opening.
 	"drop_thud": -7.0, "drop_whiff": -11.0, "guard_creak": -6.0, "beacon_open_chime": -9.0, "callout_warden_chime": -8.0,
+	# World 1's own sounds for the 28 cues that played a shared one (sound-own-recipes). Each sits at or under the
+	# level of the sound it replaces: a hazard family's falling warning at the whistle's -8 (the grind at the tick's -7),
+	# its landing at the Highdraft drops' -3 (under the shared slam's -1), and each player cue at its stand-in's level.
+	"flood_falling_pure": -8.0, "fleet_falling_pure": -8.0, "boiler_falling_pure": -8.0, "lightning_falling_pure": -8.0,
+	"ancient_falling_pure": -8.0, "rock_grind_dust_hiss": -7.0,
+	"flood_drop": -3.0, "fleet_anvil_brass_drop": -3.0, "lightning_strike": -3.0, "rockfall_boom": -3.0,
+	"crater_crump_sub_boom": -3.0, "steam_whistle_percussion_drop": -3.0, "ancient_family_drop": -3.0,
+	"cracked_wall_crumble": -5.0, "kest_snare_crack": -5.0, "companion_chirp_escape": -9.0, "kest_blast_lift": -6.0,
+	"kest_falling_triad": -4.0, "kest_muffled_thump": -12.0, "line_load": -22.0, "motif_accumulate": -12.0,
+	"motif_line": -7.0, "motif_stinger": -4.0, "pin_double_thwack": -3.0, "rebound_spring_snap": -9.0,
+	"rivet_cymbal_choke": -4.0, "rivet_snare_flam": -4.0, "sable_root_fifth": -8.0,
 	# Durability prototype: the plate shed in three sizes and the reclaim chime.
 	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
 	"armor_deflect": -10.0,
@@ -1441,6 +1462,9 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _beacon_open_chime()
 		"callout_warden_chime":
 			return _callout_warden_chime()
+	var own := _world1_own(id)
+	if not own.is_empty():
+		return own
 	if id.begins_with(CAUSE_NOTE):
 		return _mix([[_cut(_n("mallet", int(id.trim_prefix(CAUSE_NOTE))), 0.6), 0, 1.0]])
 	if id.begins_with(GRID_NOTE):
@@ -3418,3 +3442,180 @@ static func _letter(voice: String, midi: int, length: float, bend: float) -> Pac
 		buf[i] = lerpf(note[j], note[j + 1], pos - j) * (1.0 - 0.6 * x)
 		pos += pow(2.0, (bend * (x - 1.0) if bend > 0.0 else bend * x) / 12.0)
 	return Synth.declick(buf, 8, 96)
+
+
+# --- World 1's own sounds (the world 1 done read's row sound-own-recipes) ---------------------
+# Each of these cues played a shared stand-in until now (its row's `sound`). The grammar is SOUND-STORY section 3:
+# a thrown or falling hazard warns with a falling pure tone on the sinister degrees, one register and texture per
+# family so the five are told apart by ear; a landing is that family's material; a player cue is its class's motif
+# material. Empty for any other id.
+static func _world1_own(id: String) -> PackedFloat32Array:
+	match id:
+		"flood_falling_pure":
+			# Low and wobbling, Bb4 to Eb4, over a rush of water.
+			return _mix([[_pure_fall(1.0, 70, 63, 1.4, 5.0, 0.25), 0, 1.0], [_noise(1.0, 250.0, 700.0, 2.0, 0.15), 0, 0.3]])
+		"fleet_falling_pure":
+			# The Fleet's stamp, stamp, then the tone falls an octave, Eb6 to Eb5.
+			return _mix([[_cut(Synth.drum("anvil"), 0.1), 0, 0.45], [_cut(Synth.drum("anvil"), 0.1), Synth.seconds(0.09), 0.4],
+				[_pure_fall(0.8, 87, 75, 1.8), Synth.seconds(0.15), 1.0]])
+		"boiler_falling_pure":
+			# A breath of steam, then a high whistle that sags Bb6 to Eb6 with the steam still under it.
+			return _mix([[_noise(0.3, 2500.0, 5200.0, 6.0, 0.02), 0, 0.5], [_pure_fall(0.75, 94, 87, 2.0, 7.0, 0.12), Synth.seconds(0.1), 1.0],
+				[_noise(0.75, 4000.0, 2600.0, 2.5, 0.05), Synth.seconds(0.1), 0.12]])
+		"lightning_falling_pure":
+			# Fast and wide, Bb6 to Eb5 in 0.6 s, with static crackling on it.
+			var parts: Array = [[_pure_fall(0.6, 94, 75, 3.0), 0, 1.0]]
+			var rng := RandomNumberGenerator.new()
+			rng.seed = 7311
+			for i in 6:
+				parts.append([_noise(0.008, 6000.0, 4000.0, 300.0, 0.0005), Synth.seconds(rng.randf_range(0.0, 0.5)), 0.35])
+			return _mix(parts)
+		"ancient_falling_pure":
+			# Two pure tones a perfect fifth apart sink together, Eb5 and Bb5 to Ab4 and Eb5, over an Ab sub: in tune, no noise.
+			return _mix([[_pure_fall(1.2, 75, 68, 1.2), 0, 0.7], [_pure_fall(1.2, 82, 75, 1.2), 0, 0.55],
+				[_tone(1.2, _hz(44), _hz(44), "sine", 1.5), 0, 0.4]])
+		"rock_grind_dust_hiss":
+			return _rock_grind_dust_hiss()
+		"flood_drop":
+			# The water lands: a low thud under a wash that falls away, and spray thrown up.
+			return _mix([[_tone(0.3, 80.0, 38.0, "sine", 9.0), 0, 1.0], [_noise(0.9, 2200.0, 300.0, 3.5, 0.01), 0, 0.8],
+				[_noise(0.4, 600.0, 1800.0, 6.0, 0.03), Synth.seconds(0.05), 0.4]], true)
+		"fleet_anvil_brass_drop":
+			# One anvil stamp on a boom, then the brass decree, Eb3 leaning down to D3.
+			var gap := 0.12
+			return _mix([[Synth.drum("anvil"), 0, 1.0], [Synth.drum("boom"), 0, 0.7], [_cut(_n("brass", 51), 0.25), Synth.seconds(gap), 0.6],
+				[_cut(_n("brass", 50), 0.5), Synth.seconds(gap + 0.22), 0.6]], true)
+		"lightning_strike":
+			# A white crack, a buzzing arc and thunder rolling under it.
+			return _mix([[_noise(0.05, 6000.0, 3000.0, 60.0, 0.0005), 0, 1.0], [_tone(0.25, _hz(45), _hz(43), "saw", 10.0), 0, 0.4],
+				[_noise(0.8, 300.0, 90.0, 4.0, 0.01), Synth.seconds(0.03), 0.7], [_tone(0.4, 70.0, 35.0, "sine", 8.0), 0, 0.7]], true)
+		"rockfall_boom":
+			return _rockfall_boom()
+		"crater_crump_sub_boom":
+			# A dull crump, then a sub that drops from 52 Hz to 27 Hz and holds.
+			return _mix([[_noise(0.18, 700.0, 140.0, 14.0, 0.001), 0, 1.0], [_tone(0.12, 160.0, 70.0, "square_dark", 25.0), 0, 0.5],
+				[_tone(0.95, 52.0, 27.0, "sine", 3.2), Synth.seconds(0.02), 1.0]], true)
+		"steam_whistle_percussion_drop":
+			# A boom and a snare on the burst, the steam blowing out, and a short whistle sagging Ab5 to Eb5.
+			return _mix([[Synth.drum("boom"), 0, 0.9], [_cut(Synth.drum("snare"), 0.25), 0, 0.6], [_noise(0.6, 4800.0, 2000.0, 4.0, 0.005), 0, 0.4],
+				[_pure_fall(0.55, 80, 75, 3.0), Synth.seconds(0.03), 0.45]], true)
+		"ancient_family_drop":
+			# A soft sub thump, then a chord in perfect tune, Ab4 Eb5 Ab5, over an Ab drone. Pure tones only.
+			var parts: Array = [[_tone(0.25, 90.0, 45.0, "sine", 10.0), 0, 0.8], [_tone(1.2, _hz(44), _hz(44), "sine", 2.2), 0, 0.6]]
+			for midi in [68, 75, 80]:
+				parts.append([_tone(1.2, _hz(midi), _hz(midi), "sine", 2.0), Synth.seconds(0.02), 0.35])
+			return _mix(parts)
+		"cracked_wall_crumble":
+			return _cracked_wall_crumble()
+		"kest_snare_crack":
+			# The cloak breaks and pays: a snare crack under a bright starburst.
+			return _mix([[_cut(Synth.drum("snare"), 0.18), 0, 1.0], [_fm(0.14, _hz(93), 3.0, 2.5, 22.0), 0, 0.6],
+				[_noise(0.02, 7000.0, 5000.0, 200.0), 0, 0.4]])
+		"companion_chirp_escape":
+			# The companion gets away: G5, D6, G6 up fast, and a puff of air.
+			return _mix([[_cut(_n("mallet", 79), 0.1), 0, 0.6], [_cut(_n("mallet", 86), 0.1), Synth.seconds(0.05), 0.65],
+				[_cut(_n("mallet", 91), 0.18), Synth.seconds(0.1), 0.7], [_noise(0.2, 1500.0, 5000.0, 12.0, 0.02), 0, 0.25]])
+		"kest_blast_lift":
+			# A charge goes off under her: a kick and a crack, then air rushing up and a sub that rises.
+			return _mix([[Synth.kick(), 0, 0.8], [_noise(0.05, 4000.0, 1500.0, 70.0, 0.001), 0, 0.6],
+				[_noise(0.45, 500.0, 3500.0, 6.0, 0.04), Synth.seconds(0.03), 0.8], [_tone(0.35, 55.0, 110.0, "sine", 6.0), Synth.seconds(0.03), 0.5]])
+		"kest_falling_triad":
+			# Kest's motif head on the floor tom: D4, A3, F3 falling, and the low D under the last.
+			return _mix([[_cut(_n("tom", 62), 0.3), 0, 0.8], [_cut(_n("tom", 57), 0.3), Synth.seconds(0.09), 0.85],
+				[_cut(_n("tom", 53), 0.35), Synth.seconds(0.18), 0.95], [_tone(0.35, _hz(38), _hz(36), "sine", 6.0), Synth.seconds(0.18), 0.6]])
+		"kest_muffled_thump":
+			# Hidden: one soft thump on D3 with the top taken off it.
+			return _mix([[_tone(0.17, _hz(50), _hz(45), "sine", 18.0), 0, 1.0], [_noise(0.05, 350.0, 200.0, 40.0), 0, 0.3]])
+		"line_load":
+			# The harpoon cocks: two small clicks and a soft A5 ping.
+			return _mix([[_noise(0.01, 2600.0, 1800.0, 250.0, 0.0005), 0, 0.6], [_noise(0.01, 2200.0, 1500.0, 250.0, 0.0005), Synth.seconds(0.04), 0.5],
+				[_fm(0.1, _hz(81), 1.0, 0.8, 40.0), Synth.seconds(0.04), 0.7]])
+		"motif_accumulate":
+			# The gauge fills: D4 F4 A4 C5 climb, each louder, over a soft low D.
+			var parts: Array = [[_tone(0.85, _hz(38), _hz(38), "sine", 1.0), 0, 0.25]]
+			var notes := [62, 65, 69, 72]
+			for i in notes.size():
+				parts.append([_cut(_n("mallet", notes[i]), 0.3), Synth.seconds(0.17 * i), 0.45 + 0.12 * i])
+			return _mix(parts)
+		"motif_line":
+			# The line skill fires: a bite click, then A4 up a fourth to D5.
+			return _mix([[_fm(0.05, _hz(81), 2.0, 3.0, 60.0), 0, 0.6], [_noise(0.015, 3000.0, 2000.0, 200.0), 0, 0.4],
+				[_cut(_n("mallet", 69), 0.15), Synth.seconds(0.02), 0.7], [_cut(_n("mallet", 74), 0.25), Synth.seconds(0.09), 0.8]])
+		"motif_stinger":
+			# The ultimate's peak: a rising sweep into the Dm9 struck at once on bells, a crash and a low D.
+			var parts: Array = [[_fm_sweep(0.3, 300.0, 2200.0, 1.0, 5.0), 0, 0.4], [_cut(Synth.crash(), 0.8, 2400), Synth.seconds(0.12), 0.3],
+				[_tone(0.6, _hz(38), _hz(38), "sine", 4.0), Synth.seconds(0.12), 0.5]]
+			var chord := [74, 77, 81, 84, 88]
+			for i in chord.size():
+				parts.append([_cut(_n("bell", chord[i]), 0.7, 2400), Synth.seconds(0.12 + 0.025 * i), 0.5])
+			return _mix(parts)
+		"pin_double_thwack":
+			# One enemy into another: two thwacks, the second a fourth up.
+			return _mix([[_noise(0.1, 1300.0, 700.0, 35.0), 0, 0.7], [_tone(0.1, 230.0, 85.0, "sine", 30.0), 0, 1.0],
+				[_noise(0.1, 1750.0, 900.0, 35.0), Synth.seconds(0.09), 0.7], [_tone(0.12, 307.0, 113.0, "sine", 28.0), Synth.seconds(0.09), 1.0]], true)
+		"rebound_spring_snap":
+			# A squash, then the spring snaps up an octave, D5 to D6, and rings.
+			return _mix([[_tone(0.05, 180.0, 120.0, "sine", 40.0), 0, 0.6], [_noise(0.04, 800.0, 400.0, 60.0), 0, 0.3],
+				[_tone(0.06, _hz(74), _hz(86), "sine", 25.0), Synth.seconds(0.04), 0.9], [_fm(0.14, _hz(86), 1.0, 0.6, 22.0), Synth.seconds(0.08), 0.5],
+				[_noise(0.015, 5000.0, 3500.0, 250.0), Synth.seconds(0.04), 0.3]])
+		"rivet_cymbal_choke":
+			# Something tried to hold her: a cymbal grabbed short, and the hat carries on.
+			return _mix([[_cut(Synth.crash(), 0.09, 900), 0, 0.9], [_cut(Synth.drum("hat"), 0.05), Synth.seconds(0.06), 0.4]])
+		"rivet_snare_flam":
+			# The skid: a snare flam, the grace note 30 ms ahead, over the scrape.
+			return _mix([[_cut(Synth.drum("snare"), 0.2), 0, 0.45], [_cut(Synth.drum("snare"), 0.25), Synth.seconds(0.03), 1.0],
+				[_noise(0.2, 3000.0, 900.0, 14.0, 0.005), 0, 0.3]])
+		"sable_root_fifth":
+			# The arc slam rings: D3 and A3 on the mallet, the octave over them.
+			return _mix([[_cut(_n("mallet", 50), 0.45, 1200), 0, 0.9], [_cut(_n("mallet", 57), 0.45, 1200), Synth.seconds(0.03), 0.8],
+				[_cut(_n("mallet", 62), 0.35), Synth.seconds(0.06), 0.35]])
+	return PackedFloat32Array()
+
+
+# A pure sine falling from one midi note to another (in the live key), with an optional wobble of
+# `wobble` semitones at wobble_hz. Every hazard family's falling warning is built on it.
+static func _pure_fall(length: float, from_midi: float, to_midi: float, decay: float, wobble_hz := 0.0, wobble := 0.0) -> PackedFloat32Array:
+	var n := Synth.seconds(length)
+	var buf := Synth.buffer(n)
+	var f0 := _hz(from_midi)
+	var f1 := _hz(to_midi)
+	var phase := 0.0
+	for i in n:
+		var t := i * Synth.INV_RATE
+		var f := f0 * pow(f1 / f0, float(i) / n) * Harmony.ratio(wobble * sin(TAU * wobble_hz * t))
+		phase = fposmod(phase + f * Synth.INV_RATE, 1.0)
+		buf[i] = sin(TAU * phase) * minf(1.0, t * 40.0) * exp(-t * decay)
+	return Synth.declick(buf, 8, 600)
+
+
+# Ground about to give: rock grinding in uneven surges, dust hissing in from above, and a dark Ab under it.
+static func _rock_grind_dust_hiss() -> PackedFloat32Array:
+	var grind := _noise(1.3, 150.0, 380.0, 0.8, 0.15)
+	for i in grind.size():
+		var t := i * Synth.INV_RATE
+		grind[i] *= 0.6 + 0.4 * sin(TAU * 7.0 * t + 2.0 * sin(TAU * 2.3 * t))
+	return _mix([[grind, 0, 1.0], [_noise(1.3, 3500.0, 6000.0, 0.5, 0.6), 0, 0.35], [_tone(1.2, _hz(44), _hz(43), "saw_dark", 2.0), 0, 0.25]])
+
+
+# A roof or a trestle comes down: a low boom, a crack, rocks knocking down over each other and dust settling.
+static func _rockfall_boom() -> PackedFloat32Array:
+	var parts: Array = [[_tone(0.6, 65.0, 30.0, "sine", 5.5), 0, 1.0], [_noise(0.12, 1400.0, 500.0, 25.0, 0.001), 0, 0.7],
+		[_noise(0.9, 3000.0, 1500.0, 3.0, 0.1), Synth.seconds(0.1), 0.15]]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5150
+	for i in 6:
+		var f := rng.randf_range(700.0, 1300.0)
+		parts.append([_noise(0.06, f, f * 0.6, 45.0, 0.001), Synth.seconds(0.05 + 0.1 * i + rng.randf_range(0.0, 0.04)), 0.5 - 0.04 * i])
+	return _mix(parts, true)
+
+
+# A cracked wall gives: one stone crack, a thud, chunks of masonry tumbling and a little dust. Stone, not glass.
+static func _cracked_wall_crumble() -> PackedFloat32Array:
+	var parts: Array = [[_noise(0.04, 3200.0, 1500.0, 70.0, 0.0005), 0, 0.9], [_tone(0.2, 110.0, 55.0, "sine", 14.0), Synth.seconds(0.06), 0.6],
+		[_noise(0.7, 2500.0, 1200.0, 3.5, 0.08), Synth.seconds(0.1), 0.2]]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2207
+	for i in 7:
+		var f := rng.randf_range(900.0, 1500.0)
+		parts.append([_noise(0.07, f, 400.0, 35.0, 0.001), Synth.seconds(0.04 + 0.07 * i + rng.randf_range(0.0, 0.03)), 0.55 - 0.04 * i])
+	return _mix(parts)
