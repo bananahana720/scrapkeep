@@ -45,6 +45,7 @@ const LandmarkBeam := preload("res://src/presentation/landmark_beam.gd")
 const WardenMind := preload("res://src/combat/warden_mind.gd")
 const IsleRig := preload("res://src/world/park/isle_rig.gd")
 const DamRig := preload("res://src/world/park/dam_rig.gd")
+const FlumePiers := preload("res://src/world/park/flume_piers.gd")
 
 const BUDGETS_PATH := "res://assets/asset_budgets.json"
 const GLB_DIR := "res://assets/models/park/"
@@ -817,22 +818,34 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 	# copies. A tile copy draws on its collider: an odd copy lifted over its joints left the deck between them over the
 	# collider the ball rides (park_park_flume_test intact top).
 	var fits := [[at_origin, "", 0.0]]
+	var tiles: Array[Transform3D] = []
 	if fits_tile(row) and not (parts.get("base", []) as Array).is_empty():
 		var lip := origin(String(row.get("recipe", ""))) == ORIGIN_ENTRY_LIP
 		var tile := tile_fit(row, authored_ends(parts["base"][0], lip), tile_ends(parts["base"][0], lip), ground)
 		if tile["ok"]:
 			baked = true
 			fits = []
-			var xfs := []
 			for k in (tile["copies"] as Array).size():
 				var xf: Transform3D = tile["copies"][k]["transform"]
 				fits.append([xf, "_tile%d" % k, 0.0])
-				xfs.append(xf)
-			node.set_meta("tile_fit", xfs)
+				tiles.append(xf)
+			node.set_meta("tile_fit", tiles)
 			node.set_meta("tile_count", tile["count"])
 			node.set_meta("tile_stretch", tile["stretch"])
 	var r :=ranges(String(row.get("budget", "landform")))
 	var base_end := float(r.get("base_end", 0.0))
+	if row.get("recipe") == FlumePiers.RECIPE and not tiles.is_empty() and ground.is_valid():
+		var pier_mesh := FlumePiers.fit(node.transform, tiles, ground)
+		if pier_mesh != null:
+			var piers := MeshInstance3D.new()
+			piers.name = "Piers"
+			piers.mesh = pier_mesh
+			_range(piers, 0.0, base_end, float(r.get("base_margin", 0.0)))
+			node.add_child(piers)
+			var pier_shape := CollisionShape3D.new()
+			pier_shape.name = "Piers"
+			pier_shape.shape = pier_mesh.create_trimesh_shape()
+			body.add_child(pier_shape)
 	var mid_end := float(r.get("mid_end", 0.0))
 	for scene: Node in parts.get("base", []):
 		for f: Array in fits:
