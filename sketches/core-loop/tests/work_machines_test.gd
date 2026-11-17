@@ -7,6 +7,8 @@ const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
+const Presets := preload("res://src/presentation/graphics_preset.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Looping workers (work_machines.gd, BACKLOG W1-93). The placement: every footing stands at least
@@ -70,6 +72,14 @@ class FakeCtx:
 	var events: Node
 	var stages := FakeStages.new()
 	var terrain := FakeTerrain.new()
+	var flow := FakeFlow.new()
+
+
+class FakeFlow:
+	extends RefCounted
+	var boss_active := false
+	func in_play() -> bool:
+		return true
 
 
 func _initialize() -> void:
@@ -84,6 +94,7 @@ func _main() -> void:
 	_placement("park_dam")
 	_placement("park_flume")
 	_cycle()
+	_tally_cycle()
 	await _view()
 	_source()
 	quit(_t.verdict())
@@ -157,6 +168,10 @@ func _placement(map_id: String) -> void:
 		_t.check("%s %s: no scatter prop stands inside it" % [map_id, row.id], j.props_inside.is_empty(), str(j.props_inside))
 		_t.check("%s %s: clear of every built row" % [map_id, row.id], j.rows.is_empty(), str(j.rows))
 		_t.check("%s %s: no tall row within %d m to hide it" % [map_id, row.id, int(TALL_CLEAR_M)], j.tall.is_empty(), str(j.tall))
+		if row.has("tally"):
+			var offset := Vector2(float(row.tally.offset[0]), float(row.tally.offset[1]))
+			var at: Vector2 = row.at + offset.rotated(-deg_to_rad(float(row.yaw_deg))) * float(WorkMachines.KINDS[row.kind].scale)
+			_t.check("%s tally station stays off every ride line" % map_id, _line_gap(at, lines) >= LINE_CLEAR_M + 1.0, str(at))
 
 
 var _scatter: Array = []
@@ -332,6 +347,64 @@ func _cycle() -> void:
 		_t.check("%s works every channel's whole range" % kind, full, str(seen))
 
 
+func _tally_cycle() -> void:
+	_t.eq("the clerk stamps when the sluice stops open", WorkMachines.tally_press(7.2), 1.0)
+	_t.eq("the clerk stamps when the sluice stops shut", WorkMachines.tally_press(22.2), 1.0)
+	_t.eq("the stamp stays up while the sluice is moving", WorkMachines.tally_press(17.0), 0.0)
+	_t.eq("the tally cycle closes", WorkMachines.tally_press(30.0), WorkMachines.tally_press(0.0))
+	var last := 0.0
+	var max_delta := 0.0
+	for tick in 1801:
+		var pose := WorkMachines.tally_press(tick / 60.0)
+		max_delta = maxf(max_delta, absf(pose - last))
+		last = pose
+	_t.check("the stamp stroke never snaps", max_delta <= 0.05, str(max_delta))
+
+
+func _tally_view(view: Node3D, ctx: FakeCtx, stage: int) -> void:
+	var staffed: Array = view.machines.filter(func(machine): return not machine.tally.is_empty())
+	if not _t.check("stage %d has one sluice clerk" % stage, staffed.size() == 1 and staffed[0].kind == "sluice"):
+		return
+	var machine: Dictionary = staffed[0]
+	var tally: Dictionary = machine.tally
+	var station: Node3D = tally.root
+	_t.check("the station has no body, light or sound", station.find_children("*", "CollisionObject3D").is_empty()
+			and station.find_children("*", "Light3D").is_empty() and station.find_children("*", "AudioStreamPlayer3D").is_empty())
+	_t.check("the clerk keeps its own scale and stays below enemy size", station.global_basis.get_scale().is_equal_approx(Vector3.ONE)
+			and station.find_child("ClerkAndBench", true, false).mesh.get_aabb().size.y <= 1.31, str(station.global_transform))
+	var at := station.global_position
+	var ground: Vector3 = ctx.terrain.ground_callable(stage).call(at.x, at.z, 0.0)
+	_t.check("the station sits on its own ground", at.is_equal_approx(ground))
+	_t.check("all three crew meshes have shadows off", tally.views.size() == 3 and tally.views.all(func(mesh): return mesh.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF))
+	Presets.apply("high")
+	for i in 4:
+		view._process(0.1)
+	_t.check("the clerk fades in on High", station.visible and is_equal_approx(tally.alpha, 1.0))
+	var before: float = tally.rest_y
+	machine.t = 7.2
+	view._process(0.0)
+	_t.near("the arm lowers the die to the page", tally.die.position.y, before - 0.165)
+	_t.near("the stamp arm moves with the die", tally.arm.rotation.x, -0.35)
+	EnemyMotion.motion_scale = 0.0
+	machine.t = 17.0
+	view._process(0.0)
+	_t.near("reduced motion holds a working pose", tally.die.position.y, before - 0.165)
+	EnemyMotion.motion_scale = 1.0
+	Presets.apply("low")
+	for i in 4:
+		view._process(0.1)
+	_t.check("Low fades the station and keeps its machine", not station.visible and machine.root.visible)
+	Presets.apply("high")
+	view._process(0.1)
+	ctx.events.warden_engaged.emit(stage)
+	for i in 4:
+		view._process(0.1)
+	_t.check("the clerk hides during the Warden fight", not station.visible)
+	ctx.events.stage_entered.emit(stage, true)
+	view._process(0.1)
+	_t.check("a retry lets the clerk return", station.visible)
+
+
 func _view() -> void:
 	var events := GameEvents.new()
 	root.add_child(events)
@@ -411,9 +484,11 @@ func _view() -> void:
 			found = found or a.full[i].origin.is_equal_approx(c.full[j].origin)
 		same = same and found
 	_t.check("a whole spacing of belt puts every bucket where another was", same)
+	_tally_view(view, ctx, 1)
 	ctx.stages.stage.map = "park_flume"
 	events.stage_entered.emit(2, false)
 	_t.eq("a new park rebuilds its own machines", view.machines.size(), WorkMachines.rows_for("park_flume").size())
+	_tally_view(view, ctx, 2)
 	events.stage_content_cleared.emit("clear")
 	_t.eq("a cleared stage holds no machine", view.machines.size(), 0)
 	await process_frame

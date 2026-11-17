@@ -1,6 +1,6 @@
 {
  "schema": "scrapkeep-work-machines/1",
- "note": "Looping workers per park map (work_machines.gd, BACKLOG W1-93): kind, ground point [x, z], yaw of the working side (Godot yaw, degrees) and a phase offset in seconds. tests/work_machines_test.gd judges every row; tools/work_machines_scan.gd finds spots that pass.",
+ "note": "A machine row gives its kind, ground point [x, z], working-side yaw and phase in seconds. A tally station gives its offset in machine metres [x, z] and its own world yaw. tests/work_machines_test.gd checks both.",
  "maps": {
   "park_dam": [
    {
@@ -21,7 +21,8 @@
      -280.0
     ],
     "yaw_deg": -90.0,
-    "phase_s": 4.0
+    "phase_s": 4.0,
+    "tally": {"offset": [20.0, 12.0], "yaw_deg": 130.0}
    },
    {
     "id": "rim_batch_conveyor",
@@ -53,7 +54,8 @@
      -80.0
     ],
     "yaw_deg": 0.0,
-    "phase_s": 17.0
+    "phase_s": 17.0,
+    "tally": {"offset": [-23.0, -4.0], "yaw_deg": 115.0}
    },
    {
     "id": "bench_batch_conveyor",

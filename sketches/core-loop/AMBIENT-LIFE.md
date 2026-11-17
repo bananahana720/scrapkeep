@@ -27,7 +27,9 @@ Critters and locals that make each park feel inhabited, with no effect on play. 
 | Highdraft | Canyon wren | critter | tiny ball, cocked tail | hops net-deck ropes | falling whistle | flies to the next island |
 | Highdraft | Net-weaver ringtail | local | round body, ringed tail (soft plum and lilac rings, never high-contrast stripes) | weaves and mends on net decks | humming, rope creak | curls up in its own tail like a hammock |
 
-The Fleet appears in the Highdraft as signs only (moored kites, an empty crew bench; Dressing-lane props). A live Fleet crew would read as the enemy faction (proposed on #149, building on it until the coordinator rules).
+In the Spillway, a Fleet clerk at each marked sluice records the leaf's open and shut stops in a ledger. Lilac overalls place the clerk in the ambient life band. One muted oxide cuff shows who requisitioned the sluice. `work_machine_rows.json` places each ledger bench beside its machine. `work_machines.gd` owns the stroke, shares the stage lifetime, and holds the stamp on the page with reduced motion. The bench and clerk are visual dressing on High.
+
+The Fleet appears in the Highdraft as signs only (moored kites and an empty crew bench).
 
 ## Code
 

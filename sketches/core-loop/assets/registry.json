@@ -38841,6 +38841,17 @@
    }
   },
   {
+   "id": "works_tally_clerk",
+   "path": "res://assets/models/world_one/works_tally_clerk.glb",
+   "class": "park_large",
+   "ships": true,
+   "loader": "src/presentation/work_machines.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/works_tally_clerk.py",
+    "note": "Procedural lilac Fleet clerk at a sluice ledger. The workbench and clerk share one mesh. The stamping arm and die move on their own pivots."
+   }
+  },
+  {
    "id": "enemy_anchor_crew",
    "path": "res://assets/models/world_three/enemy_anchor_crew.glb",
    "class": "enemy",
@@ -40975,6 +40986,7 @@
   "winch_drone_clips",
   "works_conveyor",
   "works_derrick",
-  "works_sluice"
+  "works_sluice",
+  "works_tally_clerk"
  ]
 }

@@ -1,5 +1,8 @@
 extends Node3D
 
+const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+
 # Looping workers (BACKLOG W1-93; DECISIONS machine lore, 22 Oct 2026): the works machines that kept
 # doing their old jobs after the people left, set beside the lines a pilot rides so a park reads as a
 # place that is still running. They are neither friend nor foe: no event, no damage, no target, no
@@ -18,6 +21,9 @@ const SWAY_STEP_S := 1.0 / 60.0
 const GRAVITY := 9.8
 const SWAY_DAMP := 0.6
 const SWAY_MAX := 0.25
+const TALLY_CLERK := "res://assets/models/world_one/works_tally_clerk.glb"
+const TALLY_RANGE_M := 130.0
+const TALLY_FADE_S := 0.35
 
 # The conveyor's buckets ride a MultiMesh each way, built from the GLB's CupFull and CupEmpty.
 const CONVEYOR := {
@@ -98,10 +104,11 @@ static var _rows := {}
 
 var ctx
 var map_id := ""
-# Built machines: {row, kind, root, nodes, t, sway, sway_v, last_slew, last_rate}. last_rate is NAN until two
-# frames have posed the boom, so a machine that starts mid-slew does not read its whole rate as a kick.
+# Built machines carry the moving nodes and, at the crewed sluices, the tally station. last_rate is NAN
+# until two frames have posed the boom, so a machine that starts mid-slew does not read its whole rate as a kick.
 var machines: Array = []
 var _built_for := -1
+var _tally_sheltered := false
 static var _scenes := {}
 
 
@@ -195,11 +202,13 @@ func setup(context) -> void:
 	name = "WorkMachines"
 	ctx.events.stage_entered.connect(_stage_entered)
 	ctx.events.stage_content_cleared.connect(_stage_cleared)
+	ctx.events.warden_engaged.connect(func(_stage: int): _tally_sheltered = true)
 	if ctx.terrain.is_ready(ctx.terrain.stage):
 		_build_stage(ctx.terrain.stage)
 
 
 func _stage_entered(stage: int, _retry: bool) -> void:
+	_tally_sheltered = false
 	_build_stage(stage)
 
 
@@ -268,10 +277,39 @@ func _build(row: Dictionary, ground: Callable) -> Dictionary:
 		var node := root.find_child(node_name, true, false)
 		if node != null:
 			nodes[node_name] = node
+	var tally := _build_tally(root, row, ground)
 	return {
-		"row": row, "kind": String(row.kind), "root": root, "nodes": nodes,
+		"row": row, "kind": String(row.kind), "root": root, "nodes": nodes, "tally": tally,
 		"t": float(row.get("phase_s", 0.0)), "sway": 0.0, "sway_v": 0.0, "last_slew": NAN, "last_rate": NAN,
 	}
+
+
+func _build_tally(machine: Node3D, row: Dictionary, ground: Callable) -> Dictionary:
+	if not row.has("tally"):
+		return {}
+	var scene := _scene(TALLY_CLERK)
+	if scene == null:
+		return {}
+	var station := scene.instantiate() as Node3D
+	station.name = "TallyStation"
+	var arm := station.find_child("StampArm", true, false) as Node3D
+	var die := station.find_child("StampDie", true, false) as Node3D
+	if arm == null or die == null:
+		station.free()
+		return {}
+	machine.add_child(station)
+	var spec: Dictionary = row.tally
+	var offset: Array = spec.offset
+	var at := machine.to_global(Vector3(float(offset[0]), 0.0, float(offset[1])))
+	# Seat the station separately so the machine's footing height and scale never stretch the clerk.
+	station.global_transform = Transform3D(Basis(Vector3.UP, deg_to_rad(float(spec.yaw_deg))), ground.call(at.x, at.z, 0.0))
+	var views := station.find_children("*", "MeshInstance3D", true, false)
+	for view: MeshInstance3D in views:
+		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		view.visibility_range_end = TALLY_RANGE_M
+		view.transparency = 1.0
+	station.hide()
+	return {"root": station, "arm": arm, "die": die, "rest_y": die.position.y, "views": views, "alpha": 0.0}
 
 
 # A conveyor's two runs of buckets: one MultiMesh per run from the GLB's CupFull and CupEmpty, which
@@ -347,6 +385,31 @@ func _apply(m: Dictionary, delta: float) -> void:
 		_derrick(m, p, delta)
 	if p.has("run_m"):
 		_conveyor(m, float(p.run_m))
+	if not m.tally.is_empty():
+		_pose_tally(m.tally, m.t, delta)
+
+
+# File the reading when the leaf stops at each end, with time to read the ledger between strokes.
+static func tally_press(t: float) -> float:
+	var phase := fposmod(t, cycle_s("sluice"))
+	var from_contact := minf(absf(phase - 7.2), absf(phase - 22.2))
+	return 1.0 - _ease((from_contact - 0.18) / 0.67)
+
+
+func _pose_tally(tally: Dictionary, time: float, delta: float) -> void:
+	var spec: Dictionary = GraphicsPreset.PRESETS[GraphicsPreset.current]
+	var show_clerk: bool = spec.get("set_dressing", false) and ctx.flow.in_play() and not ctx.flow.boss_active and not _tally_sheltered
+	var alpha := move_toward(float(tally.alpha), 1.0 if show_clerk else 0.0, delta / TALLY_FADE_S)
+	if alpha != float(tally.alpha):
+		tally.alpha = alpha
+		tally.root.visible = alpha > 0.0
+		for view: MeshInstance3D in tally.views:
+			view.transparency = 1.0 - alpha
+	if not tally.root.visible:
+		return
+	var press := tally_press(time) if EnemyMotion.motion_scale > 0.0 else 1.0
+	tally.arm.rotation.x = -0.35 * press
+	tally.die.position.y = tally.rest_y - 0.165 * press
 
 
 # Each bucket sits spacing_m behind the next: up the carrying run loaded, back down under it empty.
