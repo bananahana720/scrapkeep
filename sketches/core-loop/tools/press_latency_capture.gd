@@ -33,8 +33,13 @@ extends SceneTree
 # --plant=slow holds one named press (jump) for PLANT_HOLD_US inside the tool before it is released to the
 # game: that case must fail, and the run exits 1. Real run: exit 0 pass, 1 fail. Both: 2 with no display or
 # no --out. 3 when the plant run's control reports a false change.
-#   gpu-run.sh <worktree> ua08 --path sketches/core-loop --script res://tools/press_latency_capture.gd -- \
+# haul and interact are pressed with no line out and nothing in reach (each case's `context`); their answer with a
+# line or a pylon is not measured here. The menu cases run with the prologue off (see _boot_menu).
+#   PC:  gpu-run.sh <worktree> ua08 --path sketches/core-loop --script res://tools/press_latency_capture.gd -- \
 #     --out=<abs dir> [--part=verbs|menu|all] [--cases=a,b] [--trials=N] [--plant=slow]
+#   Mac (in a window; HOME and XDG_DATA_HOME point at a scratch folder, as Godot on macOS ignores XDG_DATA_HOME):
+#     HOME=<scratch> XDG_DATA_HOME=<scratch> "$GODOT_BIN" --path sketches/core-loop --resolution 1280x720 \
+#     --script res://tools/press_latency_capture.gd -- --out=<abs dir> [same options]
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -47,7 +52,7 @@ const DIFFER := 8
 const MIN_PX := 60
 const MENU_MIN_PX := 300
 const TRIALS := 5
-const WINDOW_FRAMES := 12
+const MAX_WINDOW_FRAMES := 240
 const WINDOW_US := 125000
 const PLANT_HOLD_US := 150000
 const PLANT_CASE := "jump"
@@ -63,8 +68,8 @@ const VERBS := [
 	{"name": "boost", "kind": "key", "code": KEY_SHIFT},
 	{"name": "fire", "kind": "mouse", "code": MOUSE_BUTTON_LEFT},
 	{"name": "harpoon", "kind": "mouse", "code": MOUSE_BUTTON_RIGHT},
-	{"name": "haul", "kind": "key", "code": KEY_CTRL},
-	{"name": "interact", "kind": "key", "code": KEY_E},
+	{"name": "haul", "kind": "key", "code": KEY_CTRL, "context": "no line out, ball at rest: Ctrl is the brake"},
+	{"name": "interact", "kind": "key", "code": KEY_E, "context": "nothing in reach to mount or take"},
 	{"name": "slot2", "kind": "key", "code": KEY_2},
 	{"name": "ultimate", "kind": "key", "code": KEY_Q},
 	{"name": "active", "kind": "key", "code": KEY_F},
@@ -310,10 +315,10 @@ func _rest_ball() -> bool:
 
 func _menu() -> void:
 	_min_px = MENU_MIN_PX
-	await _boot_game(true)
-	await _wait_title()
+	await _boot_menu()
 	if _wanted("title_move"):
-		await _case({"name": "title_move", "kind": "alternate", "codes": [KEY_DOWN, KEY_UP]}, "menu", Callable(self, "_focus_play"))
+		# The title's buttons are one row, so the move is Right, from Play (focused again before each press) to Camp.
+		await _case({"name": "title_move", "kind": "key", "code": KEY_RIGHT}, "menu", Callable(self, "_focus_play"))
 	if _wanted("help_open") or _wanted("help_back"):
 		await _case({"name": "help_open", "kind": "key", "code": KEY_H, "undo": KEY_ESCAPE}, "menu", Callable(self, "_title_idle"))
 		await _case({"name": "help_back", "kind": "key", "code": KEY_ESCAPE, "setup_key": KEY_H}, "menu", Callable(self, "_title_idle"))
@@ -324,6 +329,15 @@ func _menu() -> void:
 	await _drop_game()
 	if _wanted("pilot_confirm"):
 		await _pilot_confirm_case()
+
+
+# A played-mode game on its title. A fresh profile's first pilot select plays the prologue (screens.gd) instead of
+# the cards, and Esc does not leave it, so every later menu press would land on the prologue card. The prologue is
+# switched off as a bot-driven game does: these cases time the menu's own pages.
+func _boot_menu() -> void:
+	await _boot_game(true)
+	game.screens.prologue_enabled = false
+	await _wait_title()
 
 
 func _wait_title() -> void:
@@ -368,9 +382,10 @@ func _pilot_confirm_case() -> void:
 	var results: Array = []
 	var controls: Array = []
 	var keep := {}
+	var windows := 0
+	var noisy := 0
 	for i in trials:
-		await _boot_game(true)
-		await _wait_title()
+		await _boot_menu()
 		game.flow.press_start()
 		await _frames(90)
 		var cards: Array = game.screens.class_cards()
@@ -380,13 +395,22 @@ func _pilot_confirm_case() -> void:
 			continue
 		cards[0].grab_focus()
 		await _frames(30)
+		# As in _case: a control that is not still is settled and run again, at most RETRIES times, and reported.
 		var control := await _window(spec, false, 0)
+		var tries := 0
+		windows += 1
+		while false_changes(control["frames"], _min_px) > 0 and tries < RETRIES:
+			tries += 1
+			noisy += 1
+			windows += 1
+			await _frames(30)
+			control = await _window(spec, false, 0)
 		controls.append(false_changes(control["frames"], _min_px))
 		var trial := await _window(spec, true, 0)
 		results.append(trial["result"])
 		_keep_worst(keep, trial)
 		await _drop_game()
-	_add_case("pilot_confirm", "menu", results, controls, keep)
+	_add_case("pilot_confirm", "menu", results, controls, keep, windows, noisy)
 
 
 # --- one case ---
@@ -436,6 +460,7 @@ func _case(spec: Dictionary, group: String, settle: Callable) -> void:
 		if s == false:
 			print("press_latency: %s trial %d: the ball did not settle" % [spec["name"], i])
 	_add_case(spec["name"], group, results, controls, keep, windows, noisy)
+	cases[-1]["context"] = spec.get("context", "")
 
 
 func _dead_case(name: String, group: String, why: String) -> Dictionary:
@@ -514,8 +539,10 @@ func _event(spec: Dictionary, pressed: bool) -> InputEvent:
 	return k
 
 
-# One window of WINDOW_FRAMES frames, with the press injected at its start when `press`, and none when
-# not (the control). Returns the frames as the analysis wants them and the first change.
+# One window of WINDOW_US (plus any plant hold) of real time, with the press injected at its start when `press`, and
+# none when not (the control). It is timed, not counted in frames: a machine that draws a frame in 5 ms would end a
+# counted window long before the line. MAX_WINDOW_FRAMES only guards against a runaway loop. Returns the frames as the
+# analysis wants them and the first change.
 func _window(spec: Dictionary, press: bool, hold_us: int) -> Dictionary:
 	await RenderingServer.frame_post_draw
 	var before := root.get_texture().get_image()
@@ -530,7 +557,7 @@ func _window(spec: Dictionary, press: bool, hold_us: int) -> Dictionary:
 	_let_go()
 	var grabs: Array = []
 	var injected := not press
-	while grabs.size() < WINDOW_FRAMES + hold_us / FRAME_US and Time.get_ticks_usec() - t0 < WINDOW_US + hold_us:
+	while Time.get_ticks_usec() - t0 < WINDOW_US + hold_us and grabs.size() < MAX_WINDOW_FRAMES:
 		if press and not injected and Time.get_ticks_usec() - t0 >= hold_us:
 			Input.parse_input_event(_event(spec, true))
 			injected = true
