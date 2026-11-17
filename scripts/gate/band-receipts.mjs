@@ -13,8 +13,8 @@ import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { EXCLUDED, FAIRNESS, fairnessPool, gradeRun, median, parseNdjson } from "../challenge/lib.mjs";
-import { worstWindows } from "../challenge/worst-window.mjs";
+import { COLUMNS, EXCLUDED, FAIRNESS, fairnessPool, gradeRun, median, parseNdjson } from "../challenge/lib.mjs";
+import { fightMaxHp, fightNotes, med } from "../challenge/worst-window.mjs";
 
 // World 1's fight cells in the band table: the dam Warden, the flume Warden and Admiral Brindle.
 export const W1_FIGHTS = ["w1", "w2", "brindle"];
@@ -25,7 +25,12 @@ export const SEEDS = {
   expert: 48, // line 54, "Expert on each fight cell"; the Expert fight time reads the same runs (line 58)
   fairness: 24, // lines 59 to 61, F1 to F3
   novice: { w1: 48, w2: 24, w1clear: 24 }, // lines 51, 52 and 56; the death share reads the same runs (line 57)
-  worstMinute: 48, // whole clear, Learner attempt 5 and Expert: lines 53 (dam Learner attempt 5) and 55 (whole clear Expert)
+  // Whole-clear Learner attempt 5 and Expert runs. Line 55 asks 48 of the whole-clear Expert; the plan names no whole-clear
+  // Learner attempt 5 row, so it takes the same 48, the producer command's --seeds=48.
+  worstMinute: 48,
+  // Fights each side of brindle-worst-minute needs in a column, the dam's and Brindle's: a pin, not a plan line (the
+  // coordinator's review of PR 1118), half the column's 48 runs. A run that never reached a fight has no reading of it.
+  worstMinuteFights: 24,
 };
 // The Novice cells the plan names (lines 51, 52, 56). It names no Novice row for Brindle, so Brindle is not graded here.
 export const NOVICE_CELLS = ["w1", "w2", "w1clear"];
@@ -65,6 +70,13 @@ export function enough(sel, cell, column, need) {
 }
 
 const tooFew = (counts) => `too few runs: ${counts.filter((c) => !c.ok).map((c) => c.text).join(", ")}`;
+
+// A fairness pool is graded only when the plan's seeds carry a fairness record (fairnessPool's measured count): enough runs
+// with only a few records would grade the few. pools: [{ key, measured }]. Returns the miss text, or null.
+function thinMeasured(pools) {
+  const thin = pools.filter((p) => p.measured < SEEDS.fairness);
+  return thin.length ? `too few runs with a fairness record: ${thin.map((p) => `${p.key} ${p.measured} of ${SEEDS.fairness}`).join(", ")}` : null;
+}
 
 // --- strong-build-shows: a strong build beats Brindle faster and with more parts than a plain one ----------------------
 
@@ -120,6 +132,8 @@ export function gradeFairness(read, head) {
   if (noLearner.length) return { pass: false, measured: `no Learner attempt 1 runs for ${noLearner.join(", ")}`, checks: none };
   if (counts.some((c) => !c.ok)) return { pass: false, measured: tooFew(counts), checks: none };
   const pools = keys.map(([cell, column]) => ({ key: `${cell} ${column}`, cell, column, ...fairnessPool(sel.runs.filter((r) => r.cell === cell && r.column === column)) }));
+  const unmeasured = thinMeasured(pools);
+  if (unmeasured) return { pass: false, measured: unmeasured, checks: none };
   const f1Fails = (p) => p.telegraphShare == null || !p.shareMarked || p.telegraphShare < FAIRNESS.telegraphShare - 1e-9 || p.killsShown !== p.kills || p.killsOther > 0;
   const f1Bad = pools.filter(f1Fails);
   // F1 judged only where it carries a mark: what the plant must be seen to move.
@@ -200,12 +214,31 @@ export function plantNoviceDeaths(read) {
 // --- brindle-worst-minute: Brindle's worst minute costs at least the dam Warden's (BACKLOG MG-11) ----------------------
 
 // The whole-clear cell (w1clear) plays the dam, the flume and Brindle in one run, so both fights are read off the same
-// runs. Per column, the median share of max hull lost in the fight's worst 60 s (worst_60s_hull, tools/bot_driver.gd,
-// W1-31; read by worstWindows in scripts/challenge/worst-window.mjs) at Brindle must be above zero and at least the dam's.
-// A fight no run reached, or one whose notes never carry worst_60s_hull (a record from before the field, or a Brindle
-// that landed no hit in any run), is no data and a miss: worstWindows reads a missing field as 0, which would let an
-// unrecorded fight look calm.
+// runs; fightNotes (scripts/challenge/worst-window.mjs) picks each fight's note. Per column, the share of max hull lost in a
+// fight's worst 60 s (worst_60s_hull over fightMaxHp, tools/bot_driver.gd, W1-31) is taken per fight, and its lower-middle
+// median (med, the worst-window read's own) at Brindle must reach the bar: the larger of the dam's median in the same read
+// and the column's floor in the rows file (the row's "floor"), so the two fights cannot sink together.
+// A column needs SEEDS.worstMinute runs and SEEDS.worstMinuteFights fights on each side. Every dam fight must carry
+// worst_60s_hull. A Brindle note without it reads 0 when its "hits" count is 0 (the boss note starts at hits 0 and every
+// hit in the fight writes the window, so no hit landed); with no hit count, or hits counted but no window, it is no data.
+// No data is a miss.
 export const WORST_COLUMNS = ["learner5", "expert"];
+const ROWS_FILE = JSON.parse(readFileSync(new URL("../world1-bands.rows.json", import.meta.url), "utf8"));
+export const WORST_FLOOR = ROWS_FILE.rows.find((r) => r.id === "brindle-worst-minute")?.floor ?? {};
+
+// One side's per-fight shares, or why the side cannot be read. zeroWhenNoHit: read a note with a hit count and no window as 0.
+function worstSide(pairs, zeroWhenNoHit) {
+  const vals = [];
+  let unread = 0;
+  let noHit = 0;
+  for (const { note, row } of pairs) {
+    if (typeof note.worst_60s_hull === "number") vals.push(note.worst_60s_hull / fightMaxHp(note, row).maxHp);
+    else if (zeroWhenNoHit && note.hits === 0) (vals.push(0), noHit++);
+    else unread++;
+  }
+  return { n: pairs.length, unread, noHit, median: unread ? null : med(vals) };
+}
+
 export function gradeWorstMinute(read, head) {
   const none = Object.fromEntries(WORST_COLUMNS.map((c) => [c, null]));
   const sel = select(read, head, ["w1clear"]);
@@ -214,47 +247,55 @@ export function gradeWorstMinute(read, head) {
   if (counts.some((c) => !c.ok)) return { pass: false, measured: `Brindle against the dam, whole clear: ${tooFew(counts)}`, checks: none };
   const checks = {};
   const texts = WORST_COLUMNS.map((column) => {
-    const runs = sel.runs.filter((r) => r.column === column);
-    const fights = worstWindows(runs)[column] ?? { dam: [], brindle: [] };
-    const damNotes = runs.map((r) => (r.row.stages ?? []).find((s) => s.stage === 1)).filter((n) => n?.warden_engaged_s != null);
-    const bossNotes = runs.map((r) => r.row.boss).filter((n) => n != null);
-    const recorded = (notes) => notes.some((n) => typeof n.worst_60s_hull === "number");
-    const side = (name, list, notes) => (!list.length ? `${name} no data (no run reached it)` : !recorded(notes) ? `${name} no data (worst_60s_hull not recorded)` : null);
-    const gap = side("dam", fights.dam, damNotes) ?? side("Brindle", fights.brindle, bossNotes);
+    const fought = (key) => sel.runs.filter((r) => r.column === column).map((r) => ({ note: fightNotes(r.row)[key], row: r.row })).filter((p) => p.note);
+    const dam = worstSide(fought("dam"), false);
+    const boss = worstSide(fought("brindle"), true);
+    const floor = WORST_FLOOR[column];
+    const need = SEEDS.worstMinuteFights;
+    const gap = dam.n < need ? `too few dam fights: ${dam.n} of ${need}`
+      : boss.n < need ? `too few Brindle fights: ${boss.n} of ${need}`
+      : dam.unread ? `dam no data (worst_60s_hull not recorded on ${dam.unread} of ${dam.n} fights)`
+      : boss.unread ? `Brindle no data (no worst_60s_hull and no hit count of 0 on ${boss.unread} of ${boss.n} fights)`
+      : typeof floor !== "number" ? "no data (no floor for this column in the rows file)"
+      : dam.median == null || boss.median == null ? "no data (no median)" : null;
     if (gap) {
       checks[column] = false;
       return `${column} ${gap}`;
     }
-    const dam = median(fights.dam.map((x) => x.hull));
-    const boss = median(fights.brindle.map((x) => x.hull));
-    checks[column] = boss > 0 && boss >= dam - 1e-9;
-    return `${column} Brindle ${pct(boss)} (n=${fights.brindle.length}) against dam ${pct(dam)} (n=${fights.dam.length})`;
+    const bar = Math.max(dam.median, floor);
+    checks[column] = boss.median >= bar - 1e-9;
+    const hits = boss.noHit === boss.n ? `no hit landed, n=${boss.n}` : boss.noHit ? `n=${boss.n}, ${boss.noHit} with no hit landed` : `n=${boss.n}`;
+    return `${column} Brindle ${pct(boss.median)} (${hits}) against ${pct(bar)} (dam ${pct(dam.median)}, n=${dam.n}; floor ${pct(floor)})`;
   });
   return { pass: WORST_COLUMNS.every((c) => checks[c] === true), measured: `median worst-minute hull lost, share of max hull: ${texts.join("; ")} (${counts.map((c) => c.text).join(", ")})`, checks };
 }
 
-// The plant: Brindle deals no damage. Every whole-clear boss note keeps its fields but reads 0 hull and 0 hits in its
-// worst minute, so every column must miss.
+// The plant: Brindle deals no damage. Every whole-clear boss note loses its worst-window fields and lands no hit, so it
+// reads 0 and every column must miss its floor.
 export function plantWorstMinute(read) {
   return { ...clone(read), runs: clone(read.runs).map((r) => {
     if (r.cell !== "w1clear" || !r.row?.boss) return r;
-    const { hit_sources, ...boss } = r.row.boss;
-    return { ...r, row: { ...r.row, boss: { ...boss, worst_60s_hull: 0, worst_60s_hp: 0 } } };
+    const { hit_sources, worst_60s_hull, worst_60s_hp, worst_60s_max_hp, ...boss } = r.row.boss;
+    return { ...r, row: { ...r.row, boss: { ...boss, hits: 0 } } };
   }) };
 }
 
 // --- brindle-stop-tax: in the Slag Bowl a stopped ball pays at least double (F2, BACKLOG MG-11) -------------------------
 
-// F2 from warden-fairness (fairnessPool's stop tax against FAIRNESS.stopTax), read on the Brindle cell alone: one pool per
-// column, each needing the fairness count of seeds. A pool with no stop tax is a miss, and so is a read with no Brindle run.
+// F2 from warden-fairness (fairnessPool's stop tax against FAIRNESS.stopTax), read on the Brindle cell alone: one pool for
+// each column a default band read plays at Brindle (every id in COLUMNS, the default of planCells in
+// scripts/challenge/lib.mjs), never pooled across columns. Each pool needs the fairness count of seeds, both run and
+// carrying a fairness record. A pool with no stop tax is a miss.
+export const BOWL_COLUMNS = COLUMNS.map((c) => c.id);
 export function gradeBowlStopTax(read, head) {
   const sel = select(read, head, ["brindle"]);
   if (sel.error) return { pass: false, measured: sel.error, checks: { tax: null } };
-  const columns = [...new Set(sel.all.map((r) => r.column))];
-  if (!columns.length) return { pass: false, measured: "Slag Bowl stop tax: no data (no Brindle runs)", checks: { tax: false } };
+  const columns = BOWL_COLUMNS;
   const counts = columns.map((c) => enough(sel, "brindle", c, SEEDS.fairness));
-  if (counts.some((c) => !c.ok)) return { pass: false, measured: `Slag Bowl stop tax: ${tooFew(counts)}`, checks: { tax: null } };
-  const pools = columns.map((column) => ({ column, ...fairnessPool(sel.runs.filter((r) => r.column === column)) }));
+  if (counts.some((c) => !c.ok)) return { pass: false, measured: `Slag Bowl stop tax: ${tooFew(counts)}`, checks: { tax: false } };
+  const pools = columns.map((column) => ({ column, key: `brindle ${column}`, ...fairnessPool(sel.runs.filter((r) => r.column === column)) }));
+  const unmeasured = thinMeasured(pools);
+  if (unmeasured) return { pass: false, measured: `Slag Bowl stop tax: ${unmeasured}`, checks: { tax: false } };
   const bad = pools.filter((p) => p.stopTax == null || p.stopTax < FAIRNESS.stopTax - 1e-9);
   const show = (p) => `${p.column} ${p.stopTax == null ? `no data (${p.stopTaxNote})` : p.stopTax.toFixed(2)}`;
   const text = `Slag Bowl stop tax, line ${FAIRNESS.stopTax.toFixed(1)}: ${pools.map(show).join(", ")}${bad.length ? `; under the line: ${bad.map((p) => p.column).join(", ")}` : ""} (${counts.map((c) => c.text).join(", ")})`;

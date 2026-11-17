@@ -23,21 +23,25 @@ export function fightMaxHp(note, row) {
   return { maxHp: row.max_hp ?? 120, from: "run_end" };
 }
 
+// The note of each fight one bot record fought, or null for a fight it never reached: the dam is stage 1's note once its
+// Warden was engaged, the flume stage 2's, Brindle the boss note.
+export function fightNotes(row) {
+  const stage = (n) => (row?.stages ?? []).find((s) => s.stage === n);
+  const fought = (n) => (n?.warden_engaged_s != null ? n : null);
+  return { dam: fought(stage(1)), flume: fought(stage(2)), brindle: row?.boss ?? null };
+}
+
 // rows: runs.ndjson lines. Returns {column: {dam|flume|brindle: [{hull, hp, from}]}}.
 export function worstWindows(rows) {
   const out = {};
   for (const column of [...new Set(rows.map((r) => r.column))]) {
     const fights = { dam: [], flume: [], brindle: [] };
     for (const r of rows.filter((x) => x.column === column && x.row)) {
-      const note = (n) => (r.row.stages ?? []).find((s) => s.stage === n);
-      const add = (key, n, engaged) => {
-        if (!n || !engaged) return;
+      for (const [key, n] of Object.entries(fightNotes(r.row))) {
+        if (!n) continue;
         const { maxHp, from } = fightMaxHp(n, r.row);
         fights[key].push({ hull: (n.worst_60s_hull ?? 0) / maxHp, hp: (n.worst_60s_hp ?? 0) / maxHp, from });
-      };
-      add("dam", note(1), note(1)?.warden_engaged_s != null);
-      add("flume", note(2), note(2)?.warden_engaged_s != null);
-      add("brindle", r.row.boss, r.row.boss != null);
+      }
     }
     out[column] = fights;
   }
