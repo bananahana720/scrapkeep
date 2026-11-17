@@ -86,8 +86,7 @@ test("BUILD.txt names the stems, the self-play pack and what was not checked", (
   assert.doesNotMatch(macBuildStamp({ sha: "a", dirty: false, stamp: "s", godot: "g", stems: "x", selfPlay: false, boot: "b" }), /self-play/);
 });
 
-test("the stamp goes beside the executable and appExecutable skips it", () => {
-  assert.equal(appExecutable("/o/" + APP_NAME, () => ["BUILD.txt", "Scrapkeep"]), "/o/Scrapkeep.app/Contents/MacOS/Scrapkeep");
+test("the stamp written into the app carries the fields build_stamp.gd reads and no check lines", () => {
   const inside = macBuildStamp({ sha: "abc", dirty: false, stamp: "s", godot: "g", stems: "x", selfPlay: false });
   assert.match(inside, /^commit: abc\ndirty: false\nbuilt: s\n/);
   assert.doesNotMatch(inside, /checked:/);

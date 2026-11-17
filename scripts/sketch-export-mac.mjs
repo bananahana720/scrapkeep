@@ -16,7 +16,7 @@ import {
 } from "./sketch-export.mjs";
 
 // npm run sketch:export-mac: a macOS release of sketches/core-loop on the Mac Studio, as
-// artifacts/local/core-loop-export-mac/<run>/Scrapkeep.app with BUILD.txt in Contents/MacOS, ad-hoc
+// artifacts/local/core-loop-export-mac/<run>/Scrapkeep.app with BUILD.txt in Contents/Resources, ad-hoc
 // signed (no Apple identity, no notarization), then booted headless for 300 frames, which must report
 // this commit. Every Godot launch runs with HOME
 // in a scratch folder under the run (Godot on macOS ignores XDG_DATA_HOME; scripts/godot-home.mjs),
@@ -91,16 +91,17 @@ export function templatesDir(home) {
   return path.join(home, "Library/Application Support/Godot/export_templates");
 }
 
-// The one file in Contents/MacOS that is not the stem folder or the build stamp is the executable.
+// The one file in Contents/MacOS that is not the stem folder is the game's executable.
 export function appExecutable(app, list = readdirSync) {
   const dir = path.join(app, "Contents/MacOS");
-  const files = list(dir).filter((name) => name !== "music_ace" && name !== "BUILD.txt");
+  const files = list(dir).filter((name) => name !== "music_ace");
   if (files.length !== 1) throw new Error(`expected one executable in ${dir}, found ${files.length}`);
   return path.join(dir, files[0]);
 }
 
-// BUILD.txt. src/core/build_stamp.gd reads it beside the executable, so one copy goes in
-// Contents/MacOS (boot null: written before the boot) and the full one beside the app.
+// BUILD.txt. In a .app src/core/build_stamp.gd reads Contents/Resources/BUILD.txt (codesign refuses
+// a data file in Contents/MacOS), so one copy goes there (boot null: written before the boot) and
+// the full one beside the app.
 export function macBuildStamp({ sha, dirty, stamp, godot, stems, selfPlay, boot = null }) {
   return (
     [
@@ -237,14 +238,15 @@ async function main() {
   const stemsFrom = path.resolve(args.stemsFrom ?? defaultStemsFrom(common.stdout.trim()));
   const stemResult = await stems(stemsFrom, app);
 
-  // The stamp goes in Contents/MacOS, where the game reads it. Adding files after Godot signed the
-  // bundle breaks its seal, so the app is signed again, ad-hoc (no identity), keeping Godot's
-  // entitlements and hardened-runtime flags, and the seal is verified.
+  // The stamp goes in Contents/Resources, where the game reads it in a .app. Adding files after
+  // Godot signed the bundle breaks its seal, so the app is signed again, ad-hoc (no identity),
+  // keeping Godot's entitlements and hardened-runtime flags, and the seal is verified. Stems in
+  // Contents/MacOS/music_ace have not been tried; codesign may refuse them as it did BUILD.txt there.
   const sha = run("git", ["-C", root, "rev-parse", "HEAD"]).stdout.trim();
   const dirty = run("git", ["-C", root, "status", "--porcelain", "--untracked-files=no"]).stdout.trim() !== "";
   const godot = run(binary, ["--version"], { env }).stdout.trim();
   const stampFields = { sha, dirty, stamp, godot, stems: stemResult.line, selfPlay: args.selfPlay };
-  await writeFile(path.join(app, "Contents/MacOS/BUILD.txt"), macBuildStamp(stampFields));
+  await writeFile(path.join(app, "Contents/Resources/BUILD.txt"), macBuildStamp(stampFields));
   const signed = run("codesign", ["--force", "--sign", "-", "--preserve-metadata=entitlements,flags,runtime", app]);
   if (signed.status !== 0) fail("ad-hoc re-sign failed\n" + signed.stderr);
   const verified = run("codesign", ["--verify", "--strict", app]);

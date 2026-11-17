@@ -42,6 +42,14 @@ func _exports() -> void:
 	_t.eq("export line", BuildStamp.line(clean), "SCRAPKEEP_BUILD commit=%s dirty=false built=20261108T190700 source=export" % SHA)
 	_put(exe.path_join("BUILD.txt"), BUILD_TXT % [SHA, "true"])
 	_t.eq("dirty label", BuildStamp.label(BuildStamp.read_from(exe, "")), "Build 8180ec6-dirty · 8 Nov 2026")
+	# A macOS .app: the executable in Contents/MacOS, the stamp in Contents/Resources.
+	var app := _dir.path_join("Scrapkeep.app/Contents")
+	_put(app.path_join("Resources/BUILD.txt"), BUILD_TXT % [OTHER, "false"])
+	DirAccess.make_dir_recursive_absolute(app.path_join("MacOS"))
+	_t.eq("mac app stamp", BuildStamp.read_from(app.path_join("MacOS"), ""),
+		{"commit": OTHER, "dirty": false, "built": "20261108T190700", "source": "export"})
+	_put(app.path_join("MacOS/BUILD.txt"), BUILD_TXT % [SHA, "false"])
+	_t.eq("beside the executable wins", BuildStamp.read_from(app.path_join("MacOS"), "")["commit"], SHA)
 	var none := BuildStamp.read_from(_dir.path_join("nowhere"), "")
 	_t.eq("no stamp", none, {"commit": "", "dirty": false, "built": "", "source": "none"})
 	_t.eq("no stamp label", BuildStamp.label(none), "Build unknown")
