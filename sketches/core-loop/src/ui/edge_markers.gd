@@ -52,6 +52,7 @@ const Interactables := preload("res://src/world/interactables.gd")
 
 const SIDE_INSET := 0.035
 const BAND_CLEARANCE := 16.0
+const ICON_BACK := 1.9
 const MIN_SIZE := 13.0
 const MAX_SIZE := 30.0
 const NEAR := 25.0
@@ -426,6 +427,9 @@ func markers(size: Vector2) -> Array[Dictionary]:
 		taken.append(mark_rect(box, tag, under, shift))
 		out.append({"box": box, "color": group["color"], "tag": tag, "under": under, "shift": shift})
 	var view := view_rect(size)
+	var signs: Array[Rect2] = []
+	if not gate_points.is_empty():
+		signs = game.build.gates.keep_clear_rects()
 	var ball: Vector3 = game.player.shown_position()
 	for target in away:
 		var at: Vector3 = target["at"]
@@ -439,9 +443,25 @@ func markers(size: Vector2) -> Array[Dictionary]:
 			dir = cam.unproject_position(at) - centre
 		dir = dir.normalized()
 		var near := clampf((ball.distance_to(at) - NEAR) / (FAR - NEAR), 0.0, 1.0)
-		out.append({"at": _on_edge(view, centre, dir), "dir": dir, "size": lerpf(MAX_SIZE, MIN_SIZE, near),
+		var tip := _on_edge(view, centre, dir)
+		var span := lerpf(MAX_SIZE, MIN_SIZE, near)
+		# Both the arrowhead and the glyph behind it yield to the choice written on the arch.
+		if not signs.is_empty():
+			var footprint := edge_footprint(tip, dir, span)
+			if signs.any(func(sign: Rect2): return sign.intersects(footprint)):
+				continue
+		out.append({"at": tip, "dir": dir, "size": span,
 			"color": marker_color(target), "icon": target["icon"]})
 	return out
+
+
+# Viewport bounds of the arrow tip, its two fins and the square objective glyph.
+static func edge_footprint(tip: Vector2, dir: Vector2, span: float) -> Rect2:
+	var icon := tip - dir * span * ICON_BACK
+	var fin := Vector2(-dir.y, dir.x) * span * 0.8
+	var root := tip - dir * span
+	var bounds := Rect2(icon - Vector2.ONE * span * 0.5, Vector2.ONE * span)
+	return bounds.expand(tip).expand(root + fin).expand(root - fin).grow(1.0)
 
 
 # Whether the camera sees the thing at `at`: the world ray to it (Hitscan.WORLD; the ball is on
@@ -626,7 +646,7 @@ func _draw() -> void:
 			tip - dir * s - side * s * 0.8])
 		draw_colored_polygon(chevron, color)
 		draw_polyline(PackedVector2Array([chevron[0], chevron[1], chevron[2], chevron[3], chevron[0]]), Color(0.0, 0.0, 0.0, 0.7), 1.5)
-		var icon_at := tip - dir * s * 1.9
+		var icon_at := tip - dir * s * ICON_BACK
 		draw_texture_rect(Icons.texture(marker["icon"]), Rect2(icon_at - Vector2(s, s) * 0.5, Vector2(s, s)), false, Icons.tint(marker["icon"], color))
 
 
