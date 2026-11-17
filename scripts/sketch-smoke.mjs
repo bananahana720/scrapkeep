@@ -26,10 +26,11 @@ const recordedBinary =
 export const binary = process.env.GODOT_BIN || recordedBinary;
 const errorLine = /^(SCRIPT ERROR|ERROR|FAIL)\b/m;
 // On macOS the headless engine reports the dummy renderer's unreleased handles and the resources
-// still loaded as it shuts down, after the verdict line; Linux prints nothing for the same run
-// (13 tests on the wave 43 stage, 16 Nov 2026). The lines name no game fault.
+// still loaded as it shuts down, after the verdict line, on tests that end clean on Linux (13 tests
+// on the wave 43 stage, 16 Nov 2026). Only macOS skips them: on Linux an exit-leak line has named
+// real faults (docs/decisions.tsv, the HDRI sky cycle) and still fails the run.
 const TEARDOWN_NOISE = /^ERROR: \d+ (?:RID allocations of type '\w*RendererDummy\w*' were leaked|resources still in use) at exit\b.*\r?\n?/gm;
-export const withoutTeardownNoise = (output) => output.replace(TEARDOWN_NOISE, "");
+export const withoutTeardownNoise = (output, platform = process.platform) => (platform === "darwin" ? output.replace(TEARDOWN_NOISE, "") : output);
 // 180 s since 2026-10-04: the solo bot bands (alpha_posture_bands_test, bot_chain_hand_test)
 // legitimately run 110 to 120 s on a loaded machine; a hang still fails, three minutes later.
 const TIMEOUT_MS = 180_000;
@@ -573,8 +574,8 @@ const failVerdictLine = /^[\w.-]+: FAIL\b/m;
 
 // A test ends with one verdict line. A skip line exempts it only when no check ran. A FAIL
 // verdict fails the test whatever the exit code. The reason names the cause that applies.
-export function judge({ test, status, output: raw }) {
-  const output = withoutTeardownNoise(raw);
+export function judge({ test, status, output: raw, platform = process.platform }) {
+  const output = withoutTeardownNoise(raw, platform);
   // A script path binds the verdict to its file stem. Boolean callers retain the
   // legacy API until their owners supply the path (play.mjs and sketch-nightly.mjs).
   const verdict = test
@@ -603,9 +604,9 @@ const FAILING_LINE = /-> FAIL\b|^\s*(?:SCRIPT ERROR|ERROR|FAIL)\b|\btimed[ _]out
 const PASSING_LINE = /-> PASS\b/;
 const MAX_FAILING_LINES = 60;
 
-export function failingLines(output, limit = MAX_FAILING_LINES) {
+export function failingLines(output, limit = MAX_FAILING_LINES, platform = process.platform) {
   const counts = new Map();
-  for (const line of withoutTeardownNoise(output).split("\n").map((text) => text.replace(/\r$/, "")).filter((text) => FAILING_LINE.test(text) && !PASSING_LINE.test(text))) counts.set(line, (counts.get(line) ?? 0) + 1);
+  for (const line of withoutTeardownNoise(output, platform).split("\n").map((text) => text.replace(/\r$/, "")).filter((text) => FAILING_LINE.test(text) && !PASSING_LINE.test(text))) counts.set(line, (counts.get(line) ?? 0) + 1);
   const lines = [...counts].map(([line, count]) => (count > 1 ? `${line} (x${count})` : line));
   if (lines.length <= limit) return lines;
   return [...lines.slice(0, limit), `... ${lines.length - limit} more failing lines (set SMOKE_LOG_DIR for the full output)`];

@@ -216,12 +216,17 @@ test("a test's data home also moves HOME on macOS, where Godot ignores XDG_DATA_
   assert.deepEqual(userDataEnv("/t/a", "win32"), { XDG_DATA_HOME: "/t/a" });
 });
 
-test("the dummy renderer's shutdown report on macOS is not an error line; any other error still is", () => {
+test("the engine's shutdown report is skipped on macOS only; on Linux it still fails the run", () => {
+  const x = "res://tests/x_test.gd";
   const leak = "x_test: PASS (1 checks)\nERROR: 2 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.\n";
-  assert.equal(smoke.judge({ test: "res://tests/x_test.gd", status: 0, output: leak }).ok, true);
-  assert.equal(smoke.judge({ test: "res://tests/x_test.gd", status: 0, output: leak + "ERROR: 1 RID allocations of type 'P12GodotShape3D' were leaked at exit.\n" }).ok, false);
-  assert.deepEqual(smoke.failingLines(leak), []);
-  assert.equal(smoke.judge({ test: "res://tests/x_test.gd", status: 0, output: "x_test: PASS\nERROR: 2 resources still in use at exit (run with --verbose for details).\n" }).ok, true);
+  const inUse = "x_test: PASS\nERROR: 2 resources still in use at exit (run with --verbose for details).\n";
+  for (const output of [leak, inUse]) {
+    assert.equal(smoke.judge({ test: x, status: 0, output, platform: "darwin" }).ok, true);
+    assert.equal(smoke.judge({ test: x, status: 0, output, platform: "linux" }).ok, false);
+  }
+  assert.equal(smoke.judge({ test: x, status: 0, output: leak + "ERROR: 1 RID allocations of type 'P12GodotShape3D' were leaked at exit.\n", platform: "darwin" }).ok, false);
+  assert.deepEqual(smoke.failingLines(leak, 60, "darwin"), []);
+  assert.equal(smoke.failingLines(leak, 60, "linux").length, 1);
 });
 
 test("a glob matches a base name with or without .gd and * as the only wildcard", () => {

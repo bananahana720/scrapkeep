@@ -41,7 +41,7 @@ static func check(path: String, value: Variant) -> String:
 	if floats.size() != want.size():
 		return "%d floats, pinned %d" % [floats.size(), want.size()]
 	for k in floats.size():
-		if absf(floats[k] / STEP - want[k]) > TOLERANCE:
+		if is_nan(floats[k]) or absf(floats[k] / STEP - want[k]) > TOLERANCE:
 			return "float %d is %.4f, pinned %.4f" % [k, floats[k], want[k] * STEP]
 	return ""
 
