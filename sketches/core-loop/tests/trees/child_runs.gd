@@ -1,5 +1,7 @@
 extends RefCounted
 
+const TeardownNoise := preload("res://tests/support/teardown_noise.gd")
+
 
 # A clock regression can elapse wall time without advancing the caller's scene tree.
 static func elapse_wall(msec: int) -> void:
@@ -173,7 +175,7 @@ static func summary(result: Dictionary) -> Dictionary:
 	for line in String(result["log"]).split("\n"):
 		if line.begins_with("["):
 			checks.append(line)
-		elif line.contains("SCRIPT ERROR") or line.begins_with("ERROR"):
+		elif (line.contains("SCRIPT ERROR") or line.begins_with("ERROR")) and not TeardownNoise.is_noise(line):
 			errors.append(line.strip_edges())
 		elif verdict_line.search(line) != null:
 			# A trailing note after PASS is dropped, so callers can still test ends_with(": PASS").

@@ -3,7 +3,6 @@ extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const T := preload("res://tests/support/t.gd")
-const TeardownNoise := preload("res://tests/support/teardown_noise.gd")
 const BOT_TICKS := 30
 const TRAVERSAL_TICKS := 180
 
@@ -36,7 +35,7 @@ func _initialize() -> void:
 	var traces: Array = []
 	for i in jobs.size():
 		var result: Dictionary = results[i]
-		var errors: Array = ChildRuns.summary(result)["errors"].filter(func(line: String) -> bool: return not TeardownNoise.is_noise(line))
+		var errors: Array = ChildRuns.summary(result)["errors"]
 		t.check("child %d completed" % i, result["code"] == 0 and not result["timed_out"] and errors.is_empty(),
 			"exit %s, timeout %s, errors %s" % [result["code"], result["timed_out"], errors])
 		var mode: String = ["batch", "isolated", "bot-batch", "bot-isolated"][i]
