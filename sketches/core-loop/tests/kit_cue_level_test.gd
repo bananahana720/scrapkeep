@@ -17,8 +17,9 @@ const CHECKS_PER_PATH := 3
 const EXPECTED_CHECKS := 99
 const CORE_KINDS := ["line_skill_fired", "special_used", "ultimate_peak", "ultimate_landed"]
 # Shared, non-kit exception: audio.gd:1027 -> on_beat at :966 schedules the generic
-# ultimate_peak/special_fire at bank trim. A kit override never receives this offset.
-const SHARED_DB_MODIFIERS := {"ultimate_peak|special_fire": 3.0}
+# ultimate_peak cue at bank trim. A kit override never receives this offset. Since wave 44 that generic
+# cue is the row's own motif_stinger (it was the shared special_fire).
+const SHARED_DB_MODIFIERS := {"ultimate_peak|motif_stinger": 3.0}
 
 class Ctx:
 	extends RefCounted
