@@ -303,6 +303,14 @@ test("brindle-worst-minute: no data on either side is a miss, and a dam fight no
   assert.match(bossGap.measured, /learner5 Brindle no data \(no worst_60s_hull and no hit count of 0 on 48 of 48 fights\)/);
   // Hits counted but no window is a broken record: no data.
   assert.match(worst(() => ({ ...clearRow(), boss: { entry_parts: 3, hits: 5 } })).measured, /Brindle no data/);
+  // The dam's rule is not Brindle's: one broken Brindle record among recorded ones is still no data, never a 0.
+  const oneBroken = worst((_c, i) => (i === 0 ? { ...clearRow(), boss: { entry_parts: 3, hits: 5 } } : clearRow({ boss: 90 })));
+  assert.deepEqual(cols(oneBroken), [false, false, false]);
+  assert.match(oneBroken.measured, /learner5 Brindle no data \(no worst_60s_hull and no hit count of 0 on 1 of 48 fights\)/);
+  // One column's dam fights all clean: the other column shows the build records the field, so the clean column reads 0.
+  const cleanColumn = worst((c) => clearRow({ dam: c === "expert" ? "unrecorded" : 20, boss: 90 }));
+  assert.deepEqual(cols(cleanColumn), [true, true, true]);
+  assert.match(cleanColumn.measured, /expert Brindle 90% \(n=48\) against 7% \(dam 0%, n=48, 48 with no hit landed; floor 7%\)/);
 });
 
 test("brindle-stop-tax: a stopped ball that loses the same as a cruising one misses, and that is the plant", () => {
