@@ -279,11 +279,17 @@ function selfPlayRun(exitCode, stdoutLines) {
   console.log = (line) => lines.push(line);
   process.stdout.write = () => true;
   let code;
+  const held = [];
   try {
     code = main(
       [`--exe=${game}`, "--seconds=1", "--self-play", "--self-play-from=6", "--self-play-stall=100"],
       { PATH: [bin, "/usr/bin", "/bin"].join(path.delimiter), XDG_DATA_HOME: base },
       out,
+      undefined,
+      () => {
+        held.push("taken");
+        return { release: () => held.push("released") };
+      },
     );
   } finally {
     console.log = log;
@@ -291,6 +297,8 @@ function selfPlayRun(exitCode, stdoutLines) {
   }
   const [stampDir] = readdirSync(out);
   const dir = path.join(out, stampDir);
+  // The MangoHud launch takes the quiet hold once and gives it back.
+  assert.deepEqual(held, ["taken", "released"]);
   return { code, lines, dir, summary: JSON.parse(readFileSync(path.join(dir, "summary.json"), "utf8")) };
 }
 
@@ -397,14 +405,27 @@ test("main on macOS launches the engine capture under a scratch HOME and grades 
   let code;
   let missing;
   let reused;
+  const held = [];
   // --home lives elsewhere, so the run folder must still be made for the frame log and self-play.log.
   const localRoot = path.resolve(import.meta.dirname, "../artifacts/local");
   mkdirSync(localRoot, { recursive: true });
   const keptHome = mkdtempSync(path.join(localRoot, "frametime-test-home-"));
   const outReused = path.join(base, "out3");
   try {
-    code = main(["--self-play", "--seconds=1"], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, out, "darwin");
-    missing = main([], { PATH: "/usr/bin:/bin" }, path.join(base, "out2"), "darwin");
+    // The launch takes the quiet hold once and gives it back; a run that never launches does not take it.
+    const quiet = () => {
+      held.push("taken");
+      return { release: () => held.push("released") };
+    };
+    code = main(["--self-play", "--seconds=1"], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, out, "darwin", quiet);
+    missing = main([], { PATH: "/usr/bin:/bin" }, path.join(base, "out2"), "darwin", () => assert.fail("no launch, no hold"));
+    assert.throws(
+      () =>
+        main(["--self-play", "--seconds=1"], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, path.join(base, "out4"), "darwin", () => {
+          throw new Error("no frame reading taken");
+        }),
+      (thrown) => thrown instanceof FrametimeError && /no frame reading taken/.test(thrown.message),
+    );
     reused = main(["--self-play", "--seconds=1", "--home=" + keptHome], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, outReused, "darwin");
   } finally {
     console.log = log;
@@ -412,6 +433,7 @@ test("main on macOS launches the engine capture under a scratch HOME and grades 
     process.stdout.write = write;
   }
   assert.equal(code, 0);
+  assert.deepEqual(held, ["taken", "released"]);
   assert.equal(missing, 2);
   assert.match(lines.join("\n"), /GODOT_BIN/);
   const [stampDir] = readdirSync(out);
