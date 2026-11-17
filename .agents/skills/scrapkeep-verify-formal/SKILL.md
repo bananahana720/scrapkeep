@@ -87,7 +87,7 @@ Run it with `bash $F/models/make-rewards-configs.sh`, then each `rewards-*.cfg` 
 
 ## The hazard model
 
-A third model, `models/HazardCycle.tla`, checks a storm's sought strike in the Spillway (W44): `sketches/core-loop/src/world/events/storm_seek.gd`, stepped by `natural.gd`, and the enemies it strikes through `hazard_hits.gd`. One tick at a time the ball and one enemy go anywhere, the ball rolls, slows or stalls, a storm breaks or runs down, and the hazard goes idle, tell, strike, cool. Its rules:
+A third model, `models/HazardCycle.tla`, checks a storm's sought strike in the Spillway (W44): `sketches/core-loop/src/world/events/storm_seek.gd`, stepped by `sketches/core-loop/src/world/events/natural.gd`, and the enemies it strikes through `sketches/core-loop/src/world/events/hazard_hits.gd`. One tick at a time the ball and one enemy go anywhere, the ball rolls, slows or stalls, a storm breaks or runs down, and the hazard goes idle, tell, strike, cool. Its rules:
 
 | Rule | The promise | What breaks for the player |
 | --- | --- | --- |
