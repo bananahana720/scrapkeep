@@ -1,5 +1,6 @@
-cef512431058ec5d73548241047bd2f1e519c08e
-self-play: skipper seed 1 until win started at 4.35 s
-self-play: hand called shot is idle () (stage 2, 0 s)
-self-play: run won at 87.76 s
-self-play: watch stuck=0 hung=0 wedged=0 fell=0 objectives=17 blank_max=1.0 bar_off_max=0.0 stages=1,2
+568ebe86a0186e34a8a938c77e658e7599af4a90
+self-play: skipper seed 1 until win started at 6.05 s
+self-play: run won at 113.72 s
+self-play: watch stuck=0 hung=0 wedged=0 fell=0 objectives=16 blank_max=1.0 bar_off_max=0.0 stages=1,2
+ERROR: 3 resources still in use at exit (run with --verbose for details).
+ERROR: 11 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.

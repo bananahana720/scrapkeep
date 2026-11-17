@@ -1,0 +1,142 @@
+{
+  "schema": "scrapkeep-smoke-receipt/1",
+  "head": "568ebe86a0186e34a8a938c77e658e7599af4a90",
+  "argv": [
+    "--sketch",
+    "core-loop",
+    "--test",
+    "work_machines_test",
+    "--test",
+    "asset_registry_test",
+    "--test",
+    "park_events_test",
+    "--test",
+    "hazards_hit_everyone_test",
+    "--test",
+    "enemy_mag_trapper_windup_test",
+    "--test",
+    "hud_phase_read_test",
+    "--test",
+    "park_grapple_footing_test",
+    "--test",
+    "park_flume_lip_notch_probe_test"
+  ],
+  "godot": {
+    "version": "4.7.2.stable.official.ed1daf0bf",
+    "platform": "macOS arm64",
+    "display": "headless"
+  },
+  "results": [
+    {
+      "label": "sketches/core-loop import",
+      "ok": true,
+      "exit": 0,
+      "ms": 3749,
+      "solo": false,
+      "passes": 0,
+      "fails": 0,
+      "verdict_line": null,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/asset_registry_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 3158,
+      "solo": false,
+      "passes": 0,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/hazards_hit_everyone_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 1405,
+      "solo": false,
+      "passes": 28,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/hud_phase_read_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 6446,
+      "solo": false,
+      "passes": 93,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/park_events_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 1209,
+      "solo": false,
+      "passes": 61,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/enemy_mag_trapper_windup_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 31388,
+      "solo": false,
+      "passes": 25,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/park_flume_lip_notch_probe_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 27801,
+      "solo": false,
+      "passes": 25,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": [
+        "SKIP control Fin.L",
+        "SKIP control Fin.R"
+      ]
+    },
+    {
+      "label": "sketches/core-loop res://tests/work_machines_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 1514,
+      "solo": false,
+      "passes": 140,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/park_grapple_footing_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 11990,
+      "solo": false,
+      "passes": 55,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    }
+  ],
+  "totals": {
+    "runs": 9,
+    "failed": 0,
+    "skipped": 1,
+    "missing_verdict": 0,
+    "quarantined_red": [],
+    "quarantine_stale": []
+  },
+  "ok": true
+}

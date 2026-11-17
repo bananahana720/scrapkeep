@@ -1,5 +1,5 @@
 {
-  "head": "66398b9b85f0150f5dcee8474d7519d6ddb92807",
+  "head": "568ebe86a0186e34a8a938c77e658e7599af4a90",
   "pass": true,
   "measured": "a storm's sought strike, one ball and one enemy (W44), hazard-today: no break in 45,981 distinct states; plants: hazard-broken-notell broke TellBeforeStrike in 272 states; hazard-broken-seekrolling broke RollingNeverSought in 56 states; hazard-broken-strikeatball broke TellBeforeStrike in 1,379 states; hazard-broken-skipenemies broke EnemyStruck in 1,325 states; hazard-broken-noseek broke StalledSought in 569 states; not checked: the model counts in ticks with a shortened rest and storm; seconds, the dome's own fixed strike, floods and the industrial cone and ring are left to tests/hazards_hit_everyone_test.gd and the park event tests",
   "plant_caught": true
