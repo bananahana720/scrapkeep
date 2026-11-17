@@ -10,7 +10,7 @@ The claws form the contact plane. The wedge draws back and the fin opens on wind
 
 - Each chase panel retains its original 1280 × 720 frame. The second strip compares the old and grounded scraper across windup, lunge and recovery. [Rider sequence](chaser-rider.jpg) · [Before and after](bank-before-after.jpg)
 - Front, side and rear use the same orthographic scale on the live windup and lunge. The next strip compares High with Low plus reduced motion and reduced flashes. [Working end](chaser-angles.jpg) · [Quality and comfort](comfort.jpg)
-- The call, windup, strike and recovery show two chasers in the moving rider’s frame. The last two images show a grown ram cancelling the scraper and the view down its exit. At the flume runout pier, one of five shoulder-width sight rays hit the actual pier and four cleared it for each machine. [Pair and grown ram](pair-and-ram.jpg) · [Chaser and lobber behind the pier](pier.jpg)
+- The call, windup, strike and recovery show two chasers in the moving rider’s frame. The last two images show a grown ram cancelling the scraper and the view down its exit. At the flume runout pier, one of five shoulder-width sight rays hit the actual pier and four cleared it for each machine. The near foliage and first-run controls still mask the body on screen. This frame fails the working-end read even though the collision rays are mostly clear. [Pair and grown ram](pair-and-ram.jpg) · [Chaser and lobber behind the pier](pier.jpg)
 
 ## Which moving encounters earned their placement?
 
