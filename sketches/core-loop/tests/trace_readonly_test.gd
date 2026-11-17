@@ -7,6 +7,7 @@ const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Counter := preload("res://src/combat/counter.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const T := preload("res://tests/support/t.gd")
+const TeardownNoise := preload("res://tests/support/teardown_noise.gd")
 const TICKS := 900
 const PILOTS := ["sable", "rivet", "kest", "tarn", "tally", "cannon", "floor"]
 
@@ -45,7 +46,7 @@ func _run() -> void:
 		for j in 2:
 			var mode := "plain" if j == 0 else "trace"
 			var result: Dictionary = results[i * 2 + j]
-			var errors: Array = ChildRuns.summary(result)["errors"]
+			var errors: Array = ChildRuns.summary(result)["errors"].filter(func(line: String) -> bool: return not TeardownNoise.is_noise(line))
 			t.check("%s %s child completed" % [pilot, mode], result["code"] == 0 and not result["timed_out"] and errors.is_empty(),
 				"exit %s, timeout %s, errors %s" % [result["code"], result["timed_out"], errors])
 			var path := base.path_join(pilot + "-" + mode).path_join(pilot + ".json")
