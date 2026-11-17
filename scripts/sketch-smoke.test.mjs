@@ -17,6 +17,9 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import * as smoke from "./sketch-smoke.mjs";
+
+// Slot tests never see a real frame reading's hold on this machine.
+process.env.SCRAPKEEP_QUIET_DIR = mkdtempSync(path.join(os.tmpdir(), "smoke-no-quiet-"));
 import {
   HEARTBEAT_MS,
   STALE_CLAIM_MS,
@@ -930,46 +933,115 @@ test("a test's kept log is named after the test, whatever its sketch", () => {
 
 // Rule: a frame reading holds the machine quiet. No runner takes a slot while the hold stands, the reading starts
 // only once the slots are empty, and a hold whose process died or that is too old does not block anyone.
-test("a runner waits while a frame reading holds the machine quiet", async () => {
+const quietDir = () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-quiet-"));
+  return { directory, quietDirectory: directory, log: () => {} };
+};
+const slotNames = (directory) => readdirSync(directory).filter((name) => name.startsWith("slot-"));
+
+test("a runner waits while a frame reading holds the machine quiet", async () => {
+  const at = quietDir();
   try {
-    const hold = smoke.holdQuietSync({ directory, log: () => {}, sleepSync: () => assert.fail("nothing to wait for") });
-    assert.equal(smoke.quietHolder(directory), process.pid);
+    const hold = smoke.holdQuietSync({ ...at, sleepSync: () => assert.fail("nothing to wait for") });
+    assert.equal(smoke.quietHolder(at.directory), process.pid);
     let sleeps = 0;
     const lines = [];
     const lease = await acquireSlot({
-      directory,
+      ...at,
       slots: 2,
       pollMs: 5,
       log: (line) => lines.push(line),
       sleep: async () => {
         sleeps += 1;
-        assert.deepEqual(readdirSync(directory).filter((name) => name.startsWith("slot-")), []);
+        assert.deepEqual(slotNames(at.directory), []);
         if (sleeps === 3) hold.release();
       },
     });
     assert.equal(sleeps, 3);
     assert.equal(lines.length, 1);
-    assert.match(lines[0], /frame reading/);
-    assert.equal(smoke.quietHolder(directory), null);
+    assert.match(lines[0], new RegExp(`frame reading \\(pid ${process.pid}\\).*${smoke.QUIET_HOLD}`));
+    assert.equal(smoke.quietHolder(at.directory), null);
     lease.release();
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    rmSync(at.directory, { recursive: true, force: true });
+  }
+});
+
+// The hold is machine-wide: a runner on a private slot pool (a gate step) waits for it too.
+test("a runner on another slot pool waits for the hold", async () => {
+  const at = quietDir();
+  const pool = mkdtempSync(path.join(os.tmpdir(), "smoke-pool-"));
+  try {
+    const hold = smoke.holdQuietSync({ ...at, sleepSync: () => assert.fail("nothing to wait for") });
+    let sleeps = 0;
+    const lease = await acquireSlot({
+      directory: pool,
+      quietDirectory: at.quietDirectory,
+      slots: 1,
+      log: () => {},
+      sleep: async () => {
+        sleeps += 1;
+        hold.release();
+      },
+    });
+    assert.equal(sleeps, 1);
+    lease.release();
+  } finally {
+    rmSync(at.directory, { recursive: true, force: true });
+    rmSync(pool, { recursive: true, force: true });
+  }
+});
+
+// The race: the runner saw no hold, then the reading took the hold and found no slots, then the runner published.
+// The runner checks again after it publishes and gives the slot back.
+test("a runner that published its slot just after the reading took the hold gives it back", async () => {
+  const at = quietDir();
+  try {
+    let hold;
+    let reads = 0;
+    let sleeps = 0;
+    const real = smoke.quietHolder;
+    const lease = await acquireSlot({
+      ...at,
+      slots: 1,
+      // The claim is touched once per pass before the hold is read; the reading arrives after the first pass's read.
+      sleep: async () => {
+        sleeps += 1;
+        assert.deepEqual(slotNames(at.directory), [], "the slot was given back");
+        hold.release();
+      },
+      log: (line) => {
+        reads += 1;
+        assert.match(line, /frame reading/);
+      },
+      pollMs: 1,
+      heartbeatMs: 1000,
+      beforePublish: () => {
+        if (!hold) hold = smoke.holdQuietSync({ ...at, pid: process.ppid, sleepSync: () => assert.fail("no slot is published yet") });
+      },
+    });
+    assert.ok(real(at.directory) === null);
+    assert.equal(sleeps, 1);
+    assert.equal(reads, 1);
+    assert.deepEqual(slotNames(at.directory), ["slot-0"]);
+    lease.release();
+  } finally {
+    rmSync(at.directory, { recursive: true, force: true });
   }
 });
 
 test("a frame reading waits for running tests to finish, and gives up without holding the machine", async () => {
-  const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-quiet-"));
+  const at = quietDir();
   try {
-    const lease = await acquireSlot({ directory, slots: 2, log: () => {} });
+    const lease = await acquireSlot({ ...at, slots: 2 });
     let sleeps = 0;
     const lines = [];
     const hold = smoke.holdQuietSync({
-      directory,
+      ...at,
       log: (line) => lines.push(line),
       sleepSync: () => {
         sleeps += 1;
-        assert.equal(smoke.quietHolder(directory), process.pid, "the hold stands while it waits, so no new runner starts");
+        assert.equal(smoke.quietHolder(at.directory), process.pid, "the hold stands while it waits, so no new runner starts");
         if (sleeps === 2) lease.release();
       },
     });
@@ -977,32 +1049,42 @@ test("a frame reading waits for running tests to finish, and gives up without ho
     assert.match(lines[0], /1 test runner/);
     hold.release();
 
-    const busy = await acquireSlot({ directory, slots: 2, log: () => {} });
-    assert.throws(
-      () => smoke.holdQuietSync({ directory, timeoutMs: -1, log: () => {}, sleepSync: () => {} }),
-      /no frame reading taken/,
-    );
-    assert.equal(smoke.quietHolder(directory), null, "a reading that gave up leaves no hold behind");
+    const busy = await acquireSlot({ ...at, slots: 2 });
+    assert.throws(() => smoke.holdQuietSync({ ...at, timeoutMs: -1, sleepSync: () => {} }), /no frame reading taken/);
+    assert.equal(smoke.quietHolder(at.directory), null, "a reading that gave up leaves no hold behind");
     busy.release();
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    rmSync(at.directory, { recursive: true, force: true });
+  }
+});
+
+// A slot whose runner crashed (dead pid) is not a running test.
+test("a frame reading does not wait for a crashed runner's slot", () => {
+  const at = quietDir();
+  try {
+    const slot = path.join(at.directory, "slot-0");
+    mkdirSync(slot);
+    writeFileSync(path.join(slot, "claim-dead"), String(spawnSync(process.execPath, ["-e", ""]).pid));
+    const hold = smoke.holdQuietSync({ ...at, sleepSync: () => assert.fail("a dead slot is not busy") });
+    hold.release();
+  } finally {
+    rmSync(at.directory, { recursive: true, force: true });
   }
 });
 
 test("a dead or stale quiet hold blocks nobody and is replaced", () => {
-  const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-quiet-"));
-  const file = path.join(directory, smoke.QUIET_HOLD);
+  const at = quietDir();
+  const file = path.join(at.directory, smoke.QUIET_HOLD);
   try {
-    const dead = spawnSync(process.execPath, ["-e", ""]).pid;
-    writeFileSync(file, String(dead));
-    assert.equal(smoke.quietHolder(directory), null);
+    writeFileSync(file, String(spawnSync(process.execPath, ["-e", ""]).pid));
+    assert.equal(smoke.quietHolder(at.directory), null);
     writeFileSync(file, "not a pid");
-    assert.equal(smoke.quietHolder(directory), null);
+    assert.equal(smoke.quietHolder(at.directory), null);
     writeFileSync(file, String(process.pid));
     const old = new Date(Date.now() - smoke.QUIET_MAX_MS - 1000);
     utimesSync(file, old, old);
-    assert.equal(smoke.quietHolder(directory), null);
-    const hold = smoke.holdQuietSync({ directory, pid: process.ppid, log: () => {}, sleepSync: () => assert.fail("unexpected wait") });
+    assert.equal(smoke.quietHolder(at.directory), null);
+    const hold = smoke.holdQuietSync({ ...at, pid: process.ppid, sleepSync: () => assert.fail("unexpected wait") });
     assert.equal(readFileSync(file, "utf8"), String(process.ppid));
     hold.release();
     assert.equal(existsSync(file), false);
@@ -1011,27 +1093,67 @@ test("a dead or stale quiet hold blocks nobody and is replaced", () => {
     hold.release();
     assert.equal(existsSync(file), true);
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    rmSync(at.directory, { recursive: true, force: true });
   }
 });
 
-test("a second frame reading waits for the first", () => {
-  const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-quiet-"));
+test("a second frame reading waits for the first and never replaces a live hold", () => {
+  const at = quietDir();
+  const file = path.join(at.directory, smoke.QUIET_HOLD);
   try {
-    const first = smoke.holdQuietSync({ directory, pid: process.ppid, log: () => {}, sleepSync: () => assert.fail("unexpected wait") });
+    const first = smoke.holdQuietSync({ ...at, pid: process.ppid, sleepSync: () => assert.fail("unexpected wait") });
     let sleeps = 0;
     const second = smoke.holdQuietSync({
-      directory,
-      log: () => {},
+      ...at,
       sleepSync: () => {
         sleeps += 1;
-        first.release();
+        assert.equal(readFileSync(file, "utf8"), String(process.ppid), "the live hold is untouched");
+        if (sleeps === 2) first.release();
       },
     });
-    assert.equal(sleeps, 1);
-    assert.equal(smoke.quietHolder(directory), process.pid);
+    assert.equal(sleeps, 2);
+    assert.equal(smoke.quietHolder(at.directory), process.pid);
+    // Taking it again while holding it is not a wait.
+    smoke.holdQuietSync({ ...at, sleepSync: () => assert.fail("already ours") });
     second.release();
+    assert.throws(
+      () => {
+        smoke.holdQuietSync({ ...at, pid: process.ppid, sleepSync: () => {} });
+        smoke.holdQuietSync({ ...at, timeoutMs: -1, sleepSync: () => {} });
+      },
+      /another frame reading .* no frame reading taken/,
+    );
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    rmSync(at.directory, { recursive: true, force: true });
+  }
+});
+
+// Six readings start at once: exactly one may hold at any moment.
+test("readings that start together never hold the machine at the same time", async () => {
+  const at = quietDir();
+  const script = `
+    import { holdQuietSync } from ${JSON.stringify(new URL("./sketch-smoke.mjs", import.meta.url).href)};
+    import { appendFileSync } from "node:fs";
+    const hold = holdQuietSync({ directory: process.argv[1], quietDirectory: process.argv[1], pollMs: 5, log: () => {} });
+    appendFileSync(process.argv[2], "in " + process.pid + "\\n");
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 40);
+    appendFileSync(process.argv[2], "out " + process.pid + "\\n");
+    hold.release();
+  `;
+  const journal = path.join(at.directory, "journal");
+  try {
+    const exits = Array.from({ length: 6 }, () =>
+      once(spawn(process.execPath, ["--input-type=module", "-e", script, at.directory, journal], { stdio: "inherit" }), "exit"),
+    );
+    for (const exit of await Promise.all(exits)) assert.deepEqual(exit, [0, null]);
+    const lines = readFileSync(journal, "utf8").trim().split("\n");
+    assert.equal(lines.length, 12);
+    for (let index = 0; index < lines.length; index += 2) {
+      const [, pid] = lines[index].split(" ");
+      assert.equal(lines[index], "in " + pid);
+      assert.equal(lines[index + 1], "out " + pid, "another reading entered before this one left");
+    }
+  } finally {
+    rmSync(at.directory, { recursive: true, force: true });
   }
 });

@@ -35,6 +35,10 @@ import { holdQuietSync } from "./sketch-smoke.mjs";
 // A self-play game that exits non-zero (1 run ended early, 2 no tools/ in the pack, 3 stalled)
 // fails the check with exit 1, or 2 for code 2.
 // Exit 0 inside budget, 1 over it, 2 when nothing was measured. Never downloads anything.
+// A reading that launches the game holds the machine quiet for as long as the game runs: it waits (up to 45 min, then
+// exit 2) for sketch:smoke and sketch:fast runs on the shared slot pool to finish, and no runner on this machine
+// takes a slot until the game exits. It does not see a running gate, nightly run, red team, band read or export, so
+// do not start a reading during one. Grading a log (--log=) takes no hold; FRAMETIME_NO_QUIET=1 skips it.
 // --capture=engine|mangohud picks how frames are caught (captureMode). Without it: MangoHud when
 // mangohud is on PATH, else the engine on macOS (no MangoHud there), else MangoHud's install note.
 // The engine capture launches $GODOT_BIN --path sketches/core-loop (or --exe=<a packed build's
@@ -435,11 +439,12 @@ export function main(
   env = process.env,
   out = outRoot,
   platform = process.platform,
+  quiet = null,
 ) {
   const args = parseArgs(argv);
   const outDir = path.join(out, stamp());
   if (args.log) return analyse(path.resolve(args.log), args, outDir);
-  if (captureMode(args, platform, env.PATH) === "engine") return engineCapture(args, env, outDir, platform);
+  if (captureMode(args, platform, env.PATH) === "engine") return engineCapture(args, env, outDir, platform, quiet);
 
   const mangohud = findOnPath("mangohud", env.PATH);
   if (!mangohud) {
@@ -459,12 +464,14 @@ export function main(
   // A self-play game saves into its own XDG data and config under the run folder, never the player's
   // (the cache stays shared, so shader compiles are not part of the measure).
   const launch = { env: { ...env, MANGOHUD_CONFIG: config, ...(args.selfPlay ? selfPlayXdg(outDir) : {}) } };
-  const run = spawnSync(
-    mangohud,
-    [target, ...gameArgv(args)],
-    args.selfPlay
-      ? { ...launch, stdio: ["inherit", "pipe", "inherit"], maxBuffer: 256 * 1024 * 1024, encoding: "utf8" }
-      : { ...launch, stdio: "inherit" },
+  const run = launchQuiet(quiet, () =>
+    spawnSync(
+      mangohud,
+      [target, ...gameArgv(args)],
+      args.selfPlay
+        ? { ...launch, stdio: ["inherit", "pipe", "inherit"], maxBuffer: 256 * 1024 * 1024, encoding: "utf8" }
+        : { ...launch, stdio: "inherit" },
+    ),
   );
   return collect(
     run,
@@ -493,7 +500,24 @@ function collect(run, args, outDir, noLogMessage, context = null) {
   return analyse(logFile, args, outDir, selfPlay, context);
 }
 
-function engineCapture(args, env, outDir, platform) {
+// The game runs while this reading holds the machine quiet (holdQuietSync in scripts/sketch-smoke.mjs). The hold is
+// taken only here, after the arguments and the target are checked, and is given back when the game exits.
+function launchQuiet(quiet, launch) {
+  if (!quiet) return launch();
+  let held;
+  try {
+    held = quiet();
+  } catch (error) {
+    throw new FrametimeError(error.message);
+  }
+  try {
+    return launch();
+  } finally {
+    held.release();
+  }
+}
+
+function engineCapture(args, env, outDir, platform, quiet) {
   if (args.hud) throw new FrametimeError("--hud is MangoHud's overlay; the engine capture has none");
   const godotBin = env.GODOT_BIN;
   if (!args.exe && !(godotBin && existsSync(godotBin))) {
@@ -512,12 +536,14 @@ function engineCapture(args, env, outDir, platform) {
   );
   // The game's user:// lives under this HOME on macOS (scripts/godot-home.mjs), never the player's.
   const launch = { env: { ...env, ...userDataEnv(home, platform) } };
-  const run = spawnSync(
-    command,
-    argv,
-    args.selfPlay
-      ? { ...launch, stdio: ["inherit", "pipe", "inherit"], maxBuffer: 256 * 1024 * 1024, encoding: "utf8" }
-      : { ...launch, stdio: "inherit" },
+  const run = launchQuiet(quiet, () =>
+    spawnSync(
+      command,
+      argv,
+      args.selfPlay
+        ? { ...launch, stdio: ["inherit", "pipe", "inherit"], maxBuffer: 256 * 1024 * 1024, encoding: "utf8" }
+        : { ...launch, stdio: "inherit" },
+    ),
   );
   return collect(
     run,
@@ -532,13 +558,14 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  // A reading that launches the game holds the machine quiet: no test runner starts while it runs, and it starts only
-  // once the runners have finished (scripts/sketch-smoke.mjs, holdQuietSync). Grading an existing log needs no hold.
-  const launches = !process.argv.slice(2).some((arg) => arg.startsWith("--log")) && process.env.FRAMETIME_NO_QUIET !== "1";
-  const quiet = launches ? holdQuietSync() : null;
-  if (quiet) process.once("exit", quiet.release);
   try {
-    process.exitCode = main();
+    process.exitCode = main(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      process.env.FRAMETIME_NO_QUIET === "1" ? null : holdQuietSync,
+    );
   } catch (error) {
     if (!(error instanceof FrametimeError)) throw error;
     console.error(error.message);
