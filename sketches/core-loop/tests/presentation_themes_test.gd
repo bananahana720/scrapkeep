@@ -3,6 +3,7 @@ extends SceneTree
 
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const PlatformPin := preload("res://tests/support/platform_pin.gd")
 
 # The level themes and boss tiers, driven directly. Every theme and boss track renders
 # non-silent without clipping; the metric modulation lands on a beat boundary and
@@ -137,6 +138,11 @@ const MEASURES := 3
 # Calibrated alone on this machine (DESIGN-NOTES integration call 18): the densest
 # arrangement sits at about 85-90% of it.
 const RATIO_CAP := 0.21
+# 2026-11-17 (ruling eb, Mac gate; tests/support/platform_pin.gd): the Mac cap, 5 percent over its highest reading.
+# The Mac Studio (M5 Max, Godot 4.7.2) has no /proc, so _measure reads wall time there. Five runs on
+# w43/gate-mac-reds 30c61601, beside the posture sweeps (load average 21 to 33), read 0.204, 0.210, 0.214, 0.205 and
+# 0.205 (densest arrangement, least of three paired runs); the wave 43 gate read 0.211 to 0.215. Highest 0.215.
+const RATIO_CAP_MAC := 0.226
 const ABSOLUTE_NOTE_MS := 80.0
 # The reference: REF_VOICES fixed buffers mixed with a gain ramp into one block, the
 # shape of the engine's own inner mixing loop, REF_BLOCKS times.
@@ -179,9 +185,10 @@ func _cost() -> void:
 			name = "%s %s" % [spec[0], spec[2]]
 	var shown := ", ".join(worst_runs.map(func(r): return "%.0f ms / %.0f ms ref = %.3f" % [r["ms"], r["ref"], r["ratio"]]))
 	var least_ms: float = worst_runs.map(func(r): return r["ms"]).min() if not worst_runs.is_empty() else 0.0
-	_check("cpu", worst > 0.0 and worst < RATIO_CAP,
+	var cap: float = PlatformPin.pick(RATIO_CAP, RATIO_CAP_MAC)
+	_check("cpu", worst > 0.0 and worst < cap,
 		"densest arrangement %s costs %.3f of the reference workload (cap %.3f), the least of %d paired runs [%s]; absolute %.0f ms of CPU per second of music, %.1f%% of one core (information only, was capped at %.0f ms)"
-			% [name, worst, RATIO_CAP, MEASURES, shown, least_ms, least_ms / 10.0, ABSOLUTE_NOTE_MS])
+			% [name, worst, cap, MEASURES, shown, least_ms, least_ms / 10.0, ABSOLUTE_NOTE_MS])
 
 
 # This process's own CPU time for the work, where the OS reports it (Linux /proc), so
