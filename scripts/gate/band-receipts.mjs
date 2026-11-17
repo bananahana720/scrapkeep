@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Turns a difficulty band read (scripts/challenge/run.mjs: its folder's runs.ndjson) into the receipts that scripts/world1-bands.mjs reads for three rows: strong-build-shows, warden-fairness and
-// novice-deaths. Each receipt is { head, pass, measured, plant_caught }. Each row's plant is applied to a copy of the same
+// Turns a difficulty band read (scripts/challenge/run.mjs: its folder's runs.ndjson) into the receipts that scripts/world1-bands.mjs reads for five rows: strong-build-shows, warden-fairness,
+// novice-deaths, brindle-worst-minute and brindle-stop-tax. Each receipt is { head, pass, measured, plant_caught }. Each row's plant is applied to a copy of the same
 // read and graded by the same function; plant_caught is true only when the planted copy misses on every check the plant
 // targets. A receipt passes only when its own checks pass and its plant was caught.
 //
@@ -8,12 +8,13 @@
 //
 // Produce the band read with:
 //   npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48 --label=<name>
-// It writes <out>/strong-build-shows.json, <out>/warden-fairness.json and <out>/novice-deaths.json.
+// It writes <out>/<row id>.json for each of the five rows.
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { EXCLUDED, FAIRNESS, fairnessPool, gradeRun, median, parseNdjson } from "../challenge/lib.mjs";
+import { worstWindows } from "../challenge/worst-window.mjs";
 
 // World 1's fight cells in the band table: the dam Warden, the flume Warden and Admiral Brindle.
 export const W1_FIGHTS = ["w1", "w2", "brindle"];
@@ -24,6 +25,7 @@ export const SEEDS = {
   expert: 48, // line 54, "Expert on each fight cell"; the Expert fight time reads the same runs (line 58)
   fairness: 24, // lines 59 to 61, F1 to F3
   novice: { w1: 48, w2: 24, w1clear: 24 }, // lines 51, 52 and 56; the death share reads the same runs (line 57)
+  worstMinute: 48, // whole clear, Learner attempt 5 and Expert: lines 53 (dam Learner attempt 5) and 55 (whole clear Expert)
 };
 // The Novice cells the plan names (lines 51, 52, 56). It names no Novice row for Brindle, so Brindle is not graded here.
 export const NOVICE_CELLS = ["w1", "w2", "w1clear"];
@@ -195,6 +197,85 @@ export function plantNoviceDeaths(read) {
   }) };
 }
 
+// --- brindle-worst-minute: Brindle's worst minute costs at least the dam Warden's (BACKLOG MG-11) ----------------------
+
+// The whole-clear cell (w1clear) plays the dam, the flume and Brindle in one run, so both fights are read off the same
+// runs. Per column, the median share of max hull lost in the fight's worst 60 s (worst_60s_hull, tools/bot_driver.gd,
+// W1-31; read by worstWindows in scripts/challenge/worst-window.mjs) at Brindle must be above zero and at least the dam's.
+// A fight no run reached, or one whose notes never carry worst_60s_hull (a record from before the field, or a Brindle
+// that landed no hit in any run), is no data and a miss: worstWindows reads a missing field as 0, which would let an
+// unrecorded fight look calm.
+export const WORST_COLUMNS = ["learner5", "expert"];
+export function gradeWorstMinute(read, head) {
+  const none = Object.fromEntries(WORST_COLUMNS.map((c) => [c, null]));
+  const sel = select(read, head, ["w1clear"]);
+  if (sel.error) return { pass: false, measured: sel.error, checks: none };
+  const counts = WORST_COLUMNS.map((c) => enough(sel, "w1clear", c, SEEDS.worstMinute));
+  if (counts.some((c) => !c.ok)) return { pass: false, measured: `Brindle against the dam, whole clear: ${tooFew(counts)}`, checks: none };
+  const checks = {};
+  const texts = WORST_COLUMNS.map((column) => {
+    const runs = sel.runs.filter((r) => r.column === column);
+    const fights = worstWindows(runs)[column] ?? { dam: [], brindle: [] };
+    const damNotes = runs.map((r) => (r.row.stages ?? []).find((s) => s.stage === 1)).filter((n) => n?.warden_engaged_s != null);
+    const bossNotes = runs.map((r) => r.row.boss).filter((n) => n != null);
+    const recorded = (notes) => notes.some((n) => typeof n.worst_60s_hull === "number");
+    const side = (name, list, notes) => (!list.length ? `${name} no data (no run reached it)` : !recorded(notes) ? `${name} no data (worst_60s_hull not recorded)` : null);
+    const gap = side("dam", fights.dam, damNotes) ?? side("Brindle", fights.brindle, bossNotes);
+    if (gap) {
+      checks[column] = false;
+      return `${column} ${gap}`;
+    }
+    const dam = median(fights.dam.map((x) => x.hull));
+    const boss = median(fights.brindle.map((x) => x.hull));
+    checks[column] = boss > 0 && boss >= dam - 1e-9;
+    return `${column} Brindle ${pct(boss)} (n=${fights.brindle.length}) against dam ${pct(dam)} (n=${fights.dam.length})`;
+  });
+  return { pass: WORST_COLUMNS.every((c) => checks[c] === true), measured: `median worst-minute hull lost, share of max hull: ${texts.join("; ")} (${counts.map((c) => c.text).join(", ")})`, checks };
+}
+
+// The plant: Brindle deals no damage. Every whole-clear boss note keeps its fields but reads 0 hull and 0 hits in its
+// worst minute, so every column must miss.
+export function plantWorstMinute(read) {
+  return { ...clone(read), runs: clone(read.runs).map((r) => {
+    if (r.cell !== "w1clear" || !r.row?.boss) return r;
+    const { hit_sources, ...boss } = r.row.boss;
+    return { ...r, row: { ...r.row, boss: { ...boss, worst_60s_hull: 0, worst_60s_hp: 0 } } };
+  }) };
+}
+
+// --- brindle-stop-tax: in the Slag Bowl a stopped ball pays at least double (F2, BACKLOG MG-11) -------------------------
+
+// F2 from warden-fairness (fairnessPool's stop tax against FAIRNESS.stopTax), read on the Brindle cell alone: one pool per
+// column, each needing the fairness count of seeds. A pool with no stop tax is a miss, and so is a read with no Brindle run.
+export function gradeBowlStopTax(read, head) {
+  const sel = select(read, head, ["brindle"]);
+  if (sel.error) return { pass: false, measured: sel.error, checks: { tax: null } };
+  const columns = [...new Set(sel.all.map((r) => r.column))];
+  if (!columns.length) return { pass: false, measured: "Slag Bowl stop tax: no data (no Brindle runs)", checks: { tax: false } };
+  const counts = columns.map((c) => enough(sel, "brindle", c, SEEDS.fairness));
+  if (counts.some((c) => !c.ok)) return { pass: false, measured: `Slag Bowl stop tax: ${tooFew(counts)}`, checks: { tax: null } };
+  const pools = columns.map((column) => ({ column, ...fairnessPool(sel.runs.filter((r) => r.column === column)) }));
+  const bad = pools.filter((p) => p.stopTax == null || p.stopTax < FAIRNESS.stopTax - 1e-9);
+  const show = (p) => `${p.column} ${p.stopTax == null ? `no data (${p.stopTaxNote})` : p.stopTax.toFixed(2)}`;
+  const text = `Slag Bowl stop tax, line ${FAIRNESS.stopTax.toFixed(1)}: ${pools.map(show).join(", ")}${bad.length ? `; under the line: ${bad.map((p) => p.column).join(", ")}` : ""} (${counts.map((c) => c.text).join(", ")})`;
+  return { pass: bad.length === 0, measured: text, checks: { tax: bad.length === 0 } };
+}
+
+// The plant: a stopped ball loses hull at the same rate as a cruising one. In each Brindle column, every run's hull lost
+// below cruise is set to its time below cruise times the column's pooled cruise rate, so the pooled stop tax is 1.
+export function plantBowlStopTax(read) {
+  const out = clone(read);
+  const runs = out.runs.filter((r) => r.cell === "brindle" && r.row?.fairness);
+  for (const column of new Set(runs.map((r) => r.column))) {
+    const col = runs.filter((r) => r.column === column);
+    const fastS = col.reduce((a, r) => a + (r.row.fairness.fast_s ?? 0), 0);
+    const fastH = col.reduce((a, r) => a + (r.row.fairness.fast_hull ?? 0), 0);
+    const rate = fastS > 0 ? fastH / fastS : 0;
+    for (const r of col) r.row.fairness.slow_hull = rate * (r.row.fairness.slow_s ?? 0);
+  }
+  return out;
+}
+
 // --- receipts -----------------------------------------------------------------------------------------------------
 
 // Each row: its grader, its plant, and the checks the plant must make miss.
@@ -202,6 +283,8 @@ export const ROWS = {
   "strong-build-shows": { grade: gradeStrongBuild, plant: plantStrongBuild, targets: ["parts", "faster"] },
   "warden-fairness": { grade: gradeFairness, plant: plantFairness, targets: ["F1marked"] },
   "novice-deaths": { grade: gradeNoviceDeaths, plant: plantNoviceDeaths, targets: ["share"] },
+  "brindle-worst-minute": { grade: gradeWorstMinute, plant: plantWorstMinute, targets: WORST_COLUMNS },
+  "brindle-stop-tax": { grade: gradeBowlStopTax, plant: plantBowlStopTax, targets: ["tax"] },
 };
 
 // read: { runs: runs.ndjson rows }.

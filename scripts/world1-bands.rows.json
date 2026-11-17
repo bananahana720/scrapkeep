@@ -544,6 +544,28 @@
       "basis": "ruling cu; 46% on the 10 Nov read"
     },
     {
+      "id": "brindle-worst-minute",
+      "area": "Wardens and bosses",
+      "source": "receipt",
+      "label": "Brindle's worst minute costs at least the dam Warden's",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: in the whole-clear cell (w1clear), Learner attempt 5 and Expert, 48 seeds each, the median share of max hull lost in Brindle's worst 60 s (worst_60s_hull on the boss note) is above zero and at least the dam Warden's; a fight with no run or no worst_60s_hull recorded is no data and a miss",
+      "plant": "a Brindle that deals no damage must read as a miss in both columns",
+      "basis": "BACKLOG MG-11; board issue 1106, comment 6935842041: Brindle 0% for Learner and Expert against 27% and 7% at the dam. A wave 45 gate row that misses until the Brindle pressure units land (ruling cu: harder, never easier)"
+    },
+    {
+      "id": "brindle-stop-tax",
+      "area": "Wardens and bosses",
+      "source": "receipt",
+      "label": "in the Slag Bowl a stopped ball pays at least double",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: F2 (hull lost per second below cruise over at or above cruise, line from scripts/challenge/fairness.json) in every column of the Brindle cell, 24 seeds a pool; a pool with no stop tax is a miss",
+      "plant": "a stopped ball that loses hull at the cruising ball's rate must read as a miss",
+      "basis": "BACKLOG MG-11; ruling cu fairness line F2, read on the Brindle cell alone (that cell enters the fight on its first tick, --to-boss=1, so its whole fairness record is the bowl). A wave 45 gate row; no band read on a wave 44 head has graded it yet"
+    },
+    {
       "id": "map-standard",
       "area": "Stages and world",
       "source": "receipt",
