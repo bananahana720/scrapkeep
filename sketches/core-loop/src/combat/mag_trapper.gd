@@ -49,6 +49,9 @@ const CORE_EMISSION := 0.6
 # top disc (the top face is at y 0.6) and its head in the lifted disc, so the disc never hangs free.
 const LINK_FOOT := 0.5
 const LINK_RADIUS := 0.16
+# The 0.20 m casing sits on the floor, with the lower half of the core set into it.
+const CASING_HALF_HEIGHT := 0.10
+const DISC_RADIUS := 1.05
 
 static var _warned_asset := false
 static var _shared: Dictionary = {}
@@ -153,6 +156,25 @@ func _commit(_to_ball: Vector3) -> Node3D:
 	var aim: Vector3 = _ball() + target.planar_velocity() * LEAD
 	_facing(aim - global_position)
 	return _commit_ring(Threat.Type.INSTANT, aim, PIT_RADIUS, PIT_REACH)
+
+
+func _go_live() -> void:
+	var pit := telegraph()
+	if pit == null or not windup_pose_enabled:
+		return
+	# The missing top disc is now the tool in the pit. Its mesh is a child of the
+	# existing mark, so an interrupted, expired or destroyed pit takes it along.
+	var disc := MeshInstance3D.new()
+	disc.name = "DeployedDisc"
+	disc.mesh = _top_disc.mesh
+	pit.add_child(disc)
+	var at: Vector3 = pit.center
+	var x := Vector3.RIGHT * DISC_RADIUS
+	var z := Vector3.BACK * DISC_RADIUS
+	var rise_x := Telegraph.ground_under(terrain, at + x) - Telegraph.ground_under(terrain, at - x)
+	var rise_z := Telegraph.ground_under(terrain, at + z) - Telegraph.ground_under(terrain, at - z)
+	var normal := Vector3(-rise_x, 2.0 * DISC_RADIUS, -rise_z).normalized()
+	disc.global_transform = Transform3D(Basis(Quaternion(Vector3.UP, normal)), at + normal * CASING_HALF_HEIGHT)
 
 
 func _live(_delta: float) -> bool:

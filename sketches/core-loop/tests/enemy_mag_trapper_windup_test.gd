@@ -128,6 +128,10 @@ func _trace(enabled: bool) -> Array:
 	var pre_release_full := false
 	var warn_full := []
 	var live_shorter := true
+	var deployed_frames := 0
+	var seated := true
+	var quiet := true
+	var deployed: WeakRef
 	var rest_after := false
 	var saw_rest := false
 	_strike_frames = []
@@ -146,8 +150,20 @@ func _trace(enabled: bool) -> Array:
 			if parts[1].position.distance_to(enemy._top_rest + Vector3.UP * HOIST) < TOLERANCE:
 				full_frames.append(Engine.get_physics_frames())
 				warn_full.append(enemy.phase == 1)
+			var disc := tele.get_node_or_null("DeployedDisc") as MeshInstance3D if tele != null else null
 			if enemy.phase == 2:
 				live_shorter = live_shorter and not parts[1].visible and enemy._stack.visible and enemy.find_child("MagDiscs", true, false).visible
+				if disc != null:
+					if deployed == null:
+						deployed = weakref(disc)
+						if "--plant-deployed" in OS.get_cmdline_user_args():
+							disc.position.x += 1.0
+					deployed_frames += 1
+					var foot := disc.global_position - disc.global_basis.y * 0.10
+					seated = seated and foot.distance_to(tele.center) < TOLERANCE and disc.mesh == parts[1].mesh
+					seated = seated and disc.get_child_count() == 0 and disc.is_visible_in_tree()
+			else:
+				quiet = quiet and disc == null
 			if not _strike_frames.is_empty() and enemy.phase == 0 and not saw_rest:
 				rest_after = _rest(enemy)
 				saw_rest = true
@@ -164,6 +180,10 @@ func _trace(enabled: bool) -> Array:
 			"strike frames %s; full frames %s; difference %d physics frames" % [_strike_frames, full_frames, delta])
 		_test.check("WG-4 completed cycle", rest_after and _rest(enemy), "exact rest on first ROAM frame after LIVE")
 		_test.check("WG-4 one disc leaves", live_shorter and not _strike_frames.is_empty(), "only top disc hidden throughout LIVE")
+		_test.check("W1-126 one disc seats at the committed centre", seated and deployed_frames >= 250,
+			"%d live frames with the original mesh, no collider" % deployed_frames)
+		_test.check("W1-126 the disc only exists during the live pit", quiet and deployed != null and deployed.get_ref() == null,
+			"no preview disc and no remnant after the pit expires")
 		_test.check("WG-6 unhit pivot identity", pivot_identity, "identity immediately after _pose over %d real physics frames" % FRAMES)
 	var relative_strikes := []
 	for frame in _strike_frames:
@@ -261,9 +281,18 @@ func _interruptions() -> void:
 	_game.player.body().global_position = ball_rest
 	# Destruction removes the posed nodes, rather than leaving a detached posed mesh.
 	for action in ["queue_free", "death", "retry"]:
-		enemy = await _half_windup()
+		enemy = _spawn()
+		for frame in 180:
+			await physics_frame
+			if enemy.phase == 2:
+				break
 		var parts := _parts(enemy)
+		var pit: Node3D = enemy.telegraph()
+		var disc := pit.get_node_or_null("DeployedDisc") if pit != null else null
+		_test.check("W1-126 live disc before " + action, enemy.phase == 2 and disc != null)
 		var ids := [enemy.get_instance_id(), parts[0].get_instance_id(), parts[1].get_instance_id()]
+		if disc != null:
+			ids.append(disc.get_instance_id())
 		match action:
 			"queue_free":
 				enemy.queue_free()
