@@ -67,6 +67,16 @@ func _run() -> void:
 		match world:
 			1:
 				var trees := stage_root.get_node_or_null("Cottonwoods")
+				if stage == 2 and trees != null:
+					var blocker := Vector2(23.36, 241.48)
+					var bank := Vector2(19.63, 201.83)
+					var holds_bank := false
+					var blocks_lip := false
+					for shell: Node3D in trees.find_children("Cottonwood*", "Node3D", false, false):
+						var foot := Vector2(shell.global_position.x, shell.global_position.z)
+						holds_bank = holds_bank or foot.distance_to(bank) < 0.2
+						blocks_lip = blocks_lip or foot.distance_to(blocker) < 0.2
+					_t.check("the siphon keeps the bank tree and clears the kicker approach", holds_bank and not blocks_lip)
 				var planted: int = 0 if trees == null else trees.get_child(0).multimesh.instance_count
 				_t.check("stage %d plants cottonwoods by its water" % stage, planted >= 8 and planted <= Spillway.PARK_TREES_MAX, "%d trees" % planted)
 				_t.check("stage %d mists its drops" % stage, scenery.get_node_or_null("WaterMist") != null)

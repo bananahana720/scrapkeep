@@ -66,6 +66,19 @@ const GROUND_STRATA_ID := 1
 # Metres per tile of the floor texture: sandstone.gdshader's floor_metres default (:9), which the
 # `ground` slot leaves alone (palette.gd sets only strata_metres, from triplanar_scale).
 const GROUND_FLOOR_METRES := 5.0
+# The old haul track turns west below the Eye. At the siphon a scoured wash follows the
+# outside of the low return, under the high trough. Both are wear in the actual ground
+# colour map: no mesh to clip through, collider, live warning, or material change.
+const HAUL_TRACKS := {
+	"park_dam": [[Vector2(-7, 205), Vector2(-5, 246), Vector2(-82, 287)]],
+	"park_flume": [
+		[Vector2(12, 222), Vector2(14, 266), Vector2(69, 310)],
+		# The trestle's stand of timbers obscures the far bank on approach. A worn
+		# turn starts beside the working face and continues to the near lip.
+		[Vector2(-168, -129), Vector2(-166, -93), Vector2(-186, -57)],
+	],
+}
+
 const HALF := 800.0
 const STEP := 2.0
 const CELLS := 800
@@ -642,6 +655,28 @@ func _load_tints(path: String) -> void:
 			pixels[at + 2] = lookup[from + 2]
 	var image := Image.create_from_data(CELLS, CELLS, false, Image.FORMAT_RGBA8, pixels)
 	_tints = feather(image)
+	for track in HAUL_TRACKS.get(map_id, []):
+		_wear_track(track)
+
+
+func _wear_track(track: Array) -> void:
+	var start: Vector2 = track[0]
+	var bend: Vector2 = track[1]
+	var end: Vector2 = track[2]
+	for z in range(int(start.y), int(end.y) + 1):
+		# Both bends sit halfway along Z, so t gives the quadratic's exact world Z.
+		var t := inverse_lerp(start.y, end.y, float(z))
+		var x_mid := lerpf(lerpf(start.x, bend.x, t), lerpf(bend.x, end.x, t), t)
+		var depth := smoothstep(0.0, 0.10, t) * (1.0 - smoothstep(0.82, 1.0, t))
+		var half_width := 2.8 + 0.6 * sin(float(z) * 0.23)
+		for x in range(floori(x_mid - half_width), ceili(x_mid + half_width) + 1):
+			var edge := 1.0 - smoothstep(0.25, 1.0, absf(float(x) - x_mid) / half_width)
+			var pixel := Vector2i(x, z) + Vector2i.ONE * (int(HALF) + FEATHER_MARGIN)
+			var tint := _tints.get_pixelv(pixel)
+			var old_alpha := tint.a
+			tint = tint.darkened(depth * edge * 0.23)
+			tint.a = old_alpha
+			_tints.set_pixelv(pixel, tint)
 
 
 # The normal y of grid vertex (i, j) from its four neighbours' heights (edges clamped), as terrain.gd.
