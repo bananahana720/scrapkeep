@@ -2,14 +2,16 @@
 // The receipt for the world 1 done read's row "core-feel-tests" (scripts/world1-bands.rows.json):
 //   { head, pass, measured, plant_caught }
 // The row's basis is the six core feel flakes KNOWN-FAILING.tsv carries, rows that fail only under load. They are
-// the flake rows on hit-stop, the juice budget and the ball's launch speed (TESTS below). On this checkout (head from
+// the flake rows on hit-stop, the juice budget and how the ball takes a shove or a slam (TESTS below). None of them
+// checks launch speed; world_launch_test does, and this row does not claim it. On this checkout (head from
 // git; cleanHead refuses a dirty checkout) it runs each test alone through the project's runner (SMOKE_SLOTS=1), three
 // times, each run on a quiet machine: it refuses to start when the 1-minute load is above a quarter of the threads
 // (shard.mjs QUIET_FACTOR, the gate's retime rule), and between runs waits for quiet as retime does.
 // The receipt passes only with 18 passes in 18 runs, no flake or red row for any of the six in KNOWN-FAILING.tsv, and
 // the plant caught: hit_stop_ticks_test with FEEL_PLANT=zero_stop (a test-only switch asking for a hit-stop of zero
 // ticks) must fail its [slowed ticks] check, so a runner that reports everything green is caught. Fewer runs than 18
-// is a miss, never a pass.
+// is a miss, never a pass. The quiet runs do not take a row off the ledger: a row comes off only after the test
+// passes two full gates in a row, or with a fix for its load fault (project-guide/handoff/GATE.md, KNOWN-FAILING).
 //
 //   node scripts/gate/core-feel-receipt.mjs --out <file>
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
@@ -28,7 +30,7 @@ export const TESTS = [
   ["presentation_hitstop_test", "hit-stop: damage bands, the 60 ms cap, spacing and budget"],
   ["presentation_juice_test", "hit-stop: the real freeze on Engine.time_scale, camera hooks and squash"],
   ["juice_budget_test", "juice budget: shake capped per frame, hit-stop only on the attacker's strike"],
-  ["kite_dive_stack_test", "launch speed: diving drones never launch the ball"],
+  ["kite_dive_stack_test", "the ball in the hand: a diving drone never shoves the ball into a jump of speed"],
   ["harpoon_canon_test", "the ball in the hand: the harpoon's slam, winch and rewind on real physics"],
 ];
 export const NAMES = TESTS.map(([name]) => name);
@@ -48,7 +50,7 @@ export function buildReceipt({ runs, carried, plant, head, threads, maxLoad }) {
   if (!counted) measured += `; only ${runs.length} of ${want} runs were made: too little data, a miss`;
   const red = runs.filter((r) => !r.ok);
   if (red.length) measured += `; failed: ${red.map((r) => `${r.test} run ${r.run} (exit ${r.exit})`).join(", ")}`;
-  measured += carried.length ? `; KNOWN-FAILING.tsv still carries ${carried.map((r) => `${r.test} (${r.kind})`).join(", ")}` : "; KNOWN-FAILING.tsv carries none of the six";
+  measured += carried.length ? `; KNOWN-FAILING.tsv still carries ${carried.map((r) => `${r.test} (${r.kind})`).join(", ")}, so the receipt fails; quiet solo passes do not clear a row, which comes off only after two full gates in a row pass the test or a fix for its load fault lands (GATE.md)` : "; KNOWN-FAILING.tsv carries none of the six";
   measured += `; plant: ${PLANT.test} with FEEL_PLANT=zero_stop ${caught ? `failed ${PLANT.check}` : "was not seen to fail"}`;
   return { head, pass, measured, plant_caught: caught };
 }

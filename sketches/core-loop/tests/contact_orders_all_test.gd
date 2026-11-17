@@ -1,4 +1,4 @@
-# smoke: timeout=360s (124 orders, each on a fresh game: 283 s alone on a quiet Mac Studio, 17 Nov)
+# smoke: timeout=360s (62 orders, each on a fresh game: 156 s alone at load 6 to 7 on 18 threads, 17 Nov; 360 s, the runner ceiling, is 2.3 times that)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -7,20 +7,22 @@ const ClassDef := preload("res://src/core/class_def.gd")
 
 # Contacts met in one physics tick end in one game state whatever order they arrive in.
 # contact_order_test tries 3 of the 6 orders of a pair or trio on real physics; this one
-# builds up to four contacts from a fixed seed, runs EVERY order (2, 6 or 24) on a fresh game
-# and compares each snapshot with the first.
+# builds up to four contacts, runs EVERY order (2, 6 or 24; 62 in all) on a fresh game and
+# compares each snapshot with the first.
 #
 # Contacts are of two sorts:
 # - A touch (an enemy the ball meets): listed to the real RigidBall._note_enemies through a fake
 #   physics state in arrival order, then told through the real _on_body_entered, so the game's
-#   own sort (Contact.meets_first) is what is under test. Two delivery modes:
-#   block        the server step (_note_enemies) and every touch's body_entered at the first
-#                touch's place in the order;
-#   interleaved  the server step at the start of the tick, then each touch's body_entered at its
-#                own place, so a hit, pickup or hazard lands between two touches, and between the
-#                server step and the first body_entered (MG-14, W1-120).
+#   own sort (Contact.meets_first) is what is under test. The server step and the first
+#   body_entered are delivered at the first touch's place in the order.
 # - A direct fact (an enemy's hit on the hull, a pickup, a hazard): applied through the public
 #   door the game uses for it, at its place in the arrival order.
+# Why that covers every order the engine can produce (MG-14, closed by this argument): the first
+# _on_body_entered of a tick tells every enemy met that tick (src/movement/rigid_ball.gd:353-362),
+# so no direct fact can land between two touches taking effect; a later body_entered of the same
+# tick finds its enemy told and does nothing. _note_enemies (rigid_ball.gd:333-346) writes only
+# the ball's own contact lists, so a fact landing between it and the first body_entered meets the
+# same game state as a fact placed before the touches, which these orders already try.
 # Events are compared as a multiset: the game promises no order between independent facts, and
 # the touches' own order is already pinned by the state they leave. Whether the raw event lists
 # also agree is printed as a note.
@@ -28,15 +30,17 @@ const ClassDef := preload("res://src/core/class_def.gd")
 # show an order-dependent state, or the comparison proves nothing. CONTACT_PLANT=nosort (a test-only
 # switch; the game is untouched) runs the control sets through the "same state" checks with the sort
 # bypassed, so the test itself must fail: scripts/gate/contact-orders-receipt.mjs requires that.
-# Not claimed: a pickup and a hazard in one tick (KNOWN_PAIR) end in a state that depends on which
-# lands first. Whether a same-tick pickup always lands first is a design call waiting on Andrew.
-# Evidence limit: the physics server is faked, so this shows the game's rules agree; it does
-# not show what a real server lists.
+# Not claimed: a pickup with any damage in one tick (KNOWN_PAIR tries a hazard; run_state.gd
+# damage and _damage_armored, 721-770, armour every source, W1-120) ends in a state that depends on
+# which lands first. Whether a same-tick pickup always lands first is a design call waiting on Andrew.
+# What is faked: the physics server, for one tick, with every contact new (_touching reset); the
+# state is read before the next tick; ctx.calm is on, so a hit skips its knock (combat.gd, the
+# return before crowd_control). Each fresh game draws its own run_seed; it is in NOISE.
 
+# Places the contacts (_place); it is not the run's seed.
 const SEED := 4301
-# (2 + 6 + 6 + 24 + 24 over SETS) in each of MODES: a fixed count, so the check cannot agree with itself.
-const ORDERS_EXPECTED := 124
-const MODES := ["block", "interleaved"]
+# 2 + 6 + 6 + 24 + 24 over SETS: a fixed count, so the check cannot agree with itself.
+const ORDERS_EXPECTED := 62
 
 # Each set is a list of contact kinds. Touches: heavy (rebounds the ball), kill (a ram that
 # kills), soft (a ram that does not kill), stomp (a drop onto an enemy below). Direct: hit,
@@ -51,9 +55,12 @@ const SETS := [
 # Control sets: two rebounds off bodies at different angles leave the ball going the way the
 # LAST one pushed it, so the sort must matter here, and the unsorted run must show it.
 const CONTROL_SETS := [["heavy", "heavy"], ["heavy", "heavy", "stomp"]]
-# Written by _process (a render frame, so its timing is not the game's state): the drawn roll.
-const RENDER_ONLY := {"player._roll": true}
-# A pickup before damage (a hazard here) lets the scrap absorb part of it (run_state.gd _damage_armored); the
+# Fields left out of the comparison, pinned by name: they differ between two fresh games run
+# through the SAME order (17 Nov). A field that differs there and is not listed fails the test.
+# player._roll is written by _process (a render frame, so its timing is not the game's state); the
+# rest are the run's id, seed, clocks and start pick, drawn fresh per game.
+const NOISE := ["player._roll", "player._spin_set_tick", "run._snapshot", "run._stage_starts", "run.run_id", "run.run_seed", "run.start_pick"]
+# A pickup before any damage (a hazard here) lets the scrap absorb part of it (run_state.gd _damage_armored); the
 # game orders them by process order, not by a physics server list, so this pair is not part of
 # the "same state" claim. The test pins that the comparison can see it.
 const KNOWN_PAIR := ["pickup", "hazard"]
@@ -270,8 +277,8 @@ func _snapshot(game: Node, made: Array, log: Array) -> Dictionary:
 	return {"state": out, "events_in_order": lines}
 
 
-# One fresh game, one arrival order. mode is "block", "interleaved" (see the top) or "bypass", the
-# planted control: touches told in arrival order with no sort.
+# One fresh game, one arrival order. mode is "block" (see the top) or "bypass", the planted
+# control: touches told in arrival order with no sort.
 func _order(set: Array, order: Array, mode: String) -> Dictionary:
 	var bypass := mode == "bypass"
 	var game := await _boot()
@@ -300,17 +307,11 @@ func _order(set: Array, order: Array, mode: String) -> Dictionary:
 	if not bypass:
 		ball.enemy_touched.connect(func(_enemy, _normal): reported[0] += 1)
 	var told := false
-	if mode == "interleaved" and not touches.is_empty():
-		ball.call("_note_enemies", fake)
 	for slot in order:
 		match set[slot]:
 			"heavy", "kill", "soft", "stomp":
 				if bypass:
 					player.touch_body(made[slot])
-				elif mode == "interleaved":
-					# A body freed earlier in the tick sends no body_entered.
-					if is_instance_valid(made[slot]):
-						ball.call("_on_body_entered", made[slot])
 				elif not told:
 					told = true
 					ball.call("_note_enemies", fake)
@@ -378,11 +379,18 @@ func _run() -> void:
 	var probe_order := [0, 1, 2, 3]
 	var a := await _order(probe_set, probe_order, "block")
 	var b := await _order(probe_set, probe_order, "block")
-	var noise := RENDER_ONLY.duplicate()
+	var noise := {}
+	for key in NOISE:
+		noise[key] = true
+	var unpinned := []
+	var seen := []
 	for row in _diff(a["state"], b["state"]):
-		noise[row.split(":")[0]] = true
-	print("same order twice: %d keys differ between fresh games and are left out: %s" % [noise.size(), str(noise.keys())])
-	_check("determinism: same order twice, state keys compared", a["state"].size() > 100 and noise.size() <= 8, "%d keys, %d noisy" % [a["state"].size(), noise.size()])
+		var key: String = row.split(":")[0]
+		seen.append(key)
+		if not noise.has(key):
+			unpinned.append(key)
+	print("same order twice: %d keys differ between fresh games: %s; left out by name: %s" % [seen.size(), str(seen), str(NOISE)])
+	_check("determinism: same order twice, only the pinned noise fields differ", a["state"].size() > 100 and unpinned.is_empty(), "%d keys, %d differ, not pinned: %s" % [a["state"].size(), seen.size(), str(unpinned)])
 
 	if _plant:
 		# The planted fault: the sort bypassed on the checks that carry the claim. They must fail.
@@ -399,15 +407,14 @@ func _run() -> void:
 	var total_expected := 0
 	var total_ran := 0
 	var differ := 0
-	for mode in MODES:
-		for set in SETS:
-			var result := await _all_orders(set, mode, noise)
-			total_expected += result["expected"]
-			total_ran += result["ran"]
-			differ += result["findings"].size()
-			_same_state_check(mode, set, result)
-			print("note: %s %s event lists in raw order differ in %d of %d orders" % [mode, "+".join(set), result["list_differs"], result["ran"]])
-	_check("orders ran", total_ran == ORDERS_EXPECTED and total_expected == ORDERS_EXPECTED, "%d orders of %d expected (2+6+6+24+24 per mode, %d modes)" % [total_ran, ORDERS_EXPECTED, MODES.size()])
+	for set in SETS:
+		var result := await _all_orders(set, "block", noise)
+		total_expected += result["expected"]
+		total_ran += result["ran"]
+		differ += result["findings"].size()
+		_same_state_check("block", set, result)
+		print("note: %s event lists in raw order differ in %d of %d orders" % ["+".join(set), result["list_differs"], result["ran"]])
+	_check("orders ran", total_ran == ORDERS_EXPECTED and total_expected == ORDERS_EXPECTED, "%d orders of %d expected (2+6+6+24+24)" % [total_ran, ORDERS_EXPECTED])
 
 	# Planted control: no sort. At least one set must show an order-dependent state.
 	var control_hits := 0
@@ -424,7 +431,7 @@ func _run() -> void:
 	var named: String = known["findings"][0][1][0] if not known["findings"].is_empty() else "none"
 	_check("known dependence seen: pickup then hazard", known["ran"] == 2 and not known["findings"].is_empty() and str(known["findings"][0][1]).contains("run.hp"), "differs in %s" % named.left(80))
 
-	print("SUMMARY %s" % JSON.stringify({"orders": total_ran, "pinned": ORDERS_EXPECTED, "modes": MODES, "sets": SETS.size(), "differ": differ, "control_differ": control_hits, "excluded": "a pickup and a hazard in the same tick"}))
+	print("SUMMARY %s" % JSON.stringify({"orders": total_ran, "pinned": ORDERS_EXPECTED, "sets": SETS.size(), "differ": differ, "control_differ": control_hits, "excluded": "a pickup with any damage in the same tick"}))
 	print("contact_orders_all_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(1 if _failures > 0 else 0)
 

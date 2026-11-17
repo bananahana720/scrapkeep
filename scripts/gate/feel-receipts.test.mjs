@@ -29,8 +29,8 @@ function repoWith(files) {
 const SETS = [["heavy+heavy", 2], ["heavy+kill+pickup", 6], ["heavy+heavy+stomp", 6], ["heavy+heavy+kill+hit", 24], ["stomp+kill+soft+hazard", 24]];
 const same = (mode, set, ran, differ = 0, detail = "") => `[same state ${mode}: ${set}] ${ran} orders ran, ${differ} differ from the first${detail} -> ${differ ? "FAIL" : "ok"}`;
 const contactLog = ({ parted = null, orders = PINNED_ORDERS, drop = 0, known = "ok" } = {}) => {
-  const rows = ["block", "interleaved"].flatMap((mode) => SETS.map(([set, n]) => (parted && parted.mode === mode && parted.set === set
-    ? same(mode, set, n, 1, `; first differing order [2, 0, 1], fields: ["run.hp: 60 vs 65"]`) : same(mode, set, n)))).slice(drop);
+  const rows = SETS.map(([set, n]) => (parted && parted.set === set
+    ? same("block", set, n, 1, `; first differing order [2, 0, 1], fields: ["run.hp: 60 vs 65"]`) : same("block", set, n))).slice(drop);
   const failed = rows.some((r) => r.endsWith("FAIL")) || known !== "ok";
   return [
     "[determinism: same order twice, state keys compared] 400 keys, 3 noisy -> ok",
@@ -38,7 +38,7 @@ const contactLog = ({ parted = null, orders = PINNED_ORDERS, drop = 0, known = "
     `[orders ran] ${orders} orders of ${PINNED_ORDERS} expected -> ${orders === PINNED_ORDERS ? "ok" : "FAIL"}`,
     "[planted control fails the comparison] 3 of 8 unsorted orders differ -> ok",
     `[known dependence seen: pickup then hazard] differs in run.hp -> ${known}`,
-    `SUMMARY ${JSON.stringify({ orders, pinned: PINNED_ORDERS, modes: ["block", "interleaved"], sets: 5, differ: parted ? 1 : 0 })}`,
+    `SUMMARY ${JSON.stringify({ orders, pinned: PINNED_ORDERS, sets: 5, differ: parted ? 1 : 0 })}`,
     `contact_orders_all_test: ${failed || orders !== PINNED_ORDERS ? "FAIL (1)" : "PASS"}`,
   ].join("\n");
 };
@@ -51,24 +51,24 @@ const plantRun = ({ fails = true } = {}) => ({
   ].join("\n"),
 });
 
-test("contact orders: every order in both modes ends in one state and the plant failed, so the receipt passes and says what is not claimed", () => {
+test("contact orders: every order ends in one state and the plant failed, so the receipt passes and says what is not claimed", () => {
   const r = contactReceipt({ ok: true, log: contactLog() }, plantRun(), HEAD);
   assert.equal(r.pass, true);
   assert.equal(r.plant_caught, true);
-  assert.match(r.measured, /^all 124 arrival orders of 5 contact sets .* interleaved with hits, pickups and hazards; not claimed: a pickup and a hazard in the same tick/);
+  assert.match(r.measured, /^all 62 arrival orders of 5 contact sets \(up to four same-tick contacts, each order a fresh game\) end in one state; what is faked: the physics server, for one tick, .*a hit lands its damage but not its knock; not claimed: a pickup with any damage in the same tick/);
   assert.match(r.measured, /a design call waiting on Andrew; plant: with the contact sort bypassed \(CONTACT_PLANT=nosort\) 3 orders parted and the test failed$/);
   assert.deepEqual(receiptRow({ id: "same-seed-same-run", plant: "x", producer: "x" }, r, HEAD), { measured: r.measured, pass: true });
 });
 
-test("contact orders: an order dependence fails the receipt and names the set, the mode and the field", () => {
-  const r = contactReceipt({ ok: false, log: contactLog({ parted: { mode: "interleaved", set: "heavy+heavy+kill+hit" } }) }, plantRun(), HEAD);
+test("contact orders: an order dependence fails the receipt and names the set and the field", () => {
+  const r = contactReceipt({ ok: false, log: contactLog({ parted: { set: "heavy+heavy+kill+hit" } }) }, plantRun(), HEAD);
   assert.equal(r.pass, false);
-  assert.match(r.measured, /^order dependence: heavy\+heavy\+kill\+hit \(interleaved\) parts in 1 of 24 orders; first differing order \[2, 0, 1\], fields: \["run.hp: 60 vs 65"\]/);
+  assert.match(r.measured, /^order dependence: heavy\+heavy\+kill\+hit parts in 1 of 24 orders; first differing order \[2, 0, 1\], fields: \["run.hp: 60 vs 65"\]/);
 });
 
-test("contact orders: too few orders, or a set-and-mode check missing, is a miss", () => {
-  assert.equal(contactReceipt({ ok: true, log: contactLog({ orders: 62 }) }, plantRun(), HEAD).pass, false);
-  const r = contactReceipt({ ok: true, log: contactLog({ drop: 5 }) }, plantRun(), HEAD);
+test("contact orders: too few orders, or a set check missing, is a miss", () => {
+  assert.equal(contactReceipt({ ok: true, log: contactLog({ orders: 60 }) }, plantRun(), HEAD).pass, false);
+  const r = contactReceipt({ ok: true, log: contactLog({ drop: 1 }) }, plantRun(), HEAD);
   assert.equal(r.pass, false);
   assert.match(r.measured, /too few orders were tried to judge/);
   assert.match(contactReceipt({ ok: false, log: "crashed" }, plantRun(), HEAD).measured, /^no SUMMARY or same-state lines/);
@@ -117,7 +117,7 @@ test("core feel: one red run, a carried flake row, or too few runs fails the rec
   assert.match(red.measured, /^17 of 18 .*; failed: juice_budget_test run 2 \(exit 0\)/);
   const carried = feel({ carried: carriedRows(LEDGER + ledgerRow("juice_budget_test", "flake") + ledgerRow("other_test", "flake")) });
   assert.equal(carried.pass, false);
-  assert.match(carried.measured, /KNOWN-FAILING.tsv still carries juice_budget_test \(flake\);/);
+  assert.match(carried.measured, /KNOWN-FAILING.tsv still carries juice_budget_test \(flake\), so the receipt fails; quiet solo passes do not clear a row, which comes off only after two full gates in a row/);
   const short = feel({ runs: allRuns().slice(0, 17) });
   assert.equal(short.pass, false);
   assert.match(short.measured, /only 17 of 18 runs were made: too little data, a miss/);
