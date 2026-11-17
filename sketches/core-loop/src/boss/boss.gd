@@ -1089,6 +1089,7 @@ func _charge_hit(h, ball: Vector3) -> void:
 	var up := maxf(0.0, Rules.CHARGE_SHOVE_UP - v.y)
 	ctx.player.crowd_control("brindle_charge", (away * Rules.CHARGE_SHOVE_SIDE + Vector3.UP * up - h.heading * minf(0.0, along)) / _delta)
 	ship.hull.add_collision_exception_with(ctx.player.body())
+	ship.follow_shoved_rider(ctx.player.body())
 	_ghost_until = clock + Rules.CHARGE_GRACE
 
 
@@ -1102,6 +1103,7 @@ func _step_ghost() -> void:
 	if absf(local.x) < half.x and absf(local.y) < half.y and absf(local.z) < half.z:
 		return
 	ship.hull.remove_collision_exception_with(ctx.player.body())
+	ship.follow_shoved_rider(null)
 	_ghost_until = -1.0
 
 

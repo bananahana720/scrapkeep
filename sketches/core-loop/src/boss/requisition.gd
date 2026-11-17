@@ -71,6 +71,7 @@ var _pending_hides := {}
 var _drawn_parts: Array = []
 # One camera-only body per drawn box, [body, node, local AABB], so the chase camera meets what is drawn.
 var _camera_bodies: Array = []
+var _shoved_rider: Node3D
 
 
 func build(boss) -> void:
@@ -137,7 +138,14 @@ func _build_camera_bodies() -> void:
 		shape.shape = BoxShape3D.new()
 		body.add_child(shape)
 		add_child(body)
-		_camera_bodies.append([body, part[0], part[1], Vector3.ZERO])
+		_camera_bodies.append([body, part[0], part[1], Vector3.ZERO, part[2] if part.size() > 2 else [part[0]]])
+	_follow_drawn_parts()
+
+
+# During a charge shove the rider can pass through the hull. Keep the outside
+# opaque and cut away only those parts standing over the ball.
+func follow_shoved_rider(rider: Node3D) -> void:
+	_shoved_rider = rider
 	_follow_drawn_parts()
 
 
@@ -162,6 +170,18 @@ func _follow_drawn_parts() -> void:
 		if not size.is_equal_approx(row[3]):
 			(shape.shape as BoxShape3D).size = size
 			row[3] = size
+		# The close chase lens is above the ball. A one-radius column covers
+		# the moving cage even when the arm pivot trails the sideways shove.
+		var covering := false
+		if is_instance_valid(_shoved_rider):
+			var ball := body.to_local(_shoved_rider.global_position)
+			var above := body.to_local(_shoved_rider.global_position + Vector3.UP * 12.0)
+			covering = AABB(-size * 0.5, size).grow(1.0).intersects_segment(ball, above) != null
+		var layer := 0 if covering else ChaseCamera.CAMERA_BODY_BIT
+		if body.collision_layer != layer:
+			body.collision_layer = layer
+			for mesh in row[4]:
+				mesh.transparency = 0.88 if covering else 0.0
 
 
 static func _cable_mesh() -> ArrayMesh:
@@ -216,16 +236,18 @@ func _find_drawn_parts() -> void:
 				nodes.append(found)
 		var hull_mesh := model.find_child("Hull", true, false) as Node3D
 		var fittings := AABB()
+		var fitting_meshes := []
 		var any := false
 		for part in FITTING_PARTS:
 			var f := model.find_child(part, true, false) as VisualInstance3D
 			if f != null and hull_mesh != null:
+				fitting_meshes.append(f)
 				var local: AABB = hull_mesh.global_transform.affine_inverse() * f.global_transform * f.get_aabb()
 				fittings = local if not any else fittings.merge(local)
 				any = true
 		if any:
 			# The drums turn with the idle clip, so their box is grown past a drum's corners.
-			_drawn_parts.append([hull_mesh, fittings.grow(0.6)])
+			_drawn_parts.append([hull_mesh, fittings.grow(0.6), fitting_meshes])
 	else:
 		for prim in _prims:
 			var owner_piece = prim.get_parent()

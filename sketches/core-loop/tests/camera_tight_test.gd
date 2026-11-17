@@ -47,6 +47,7 @@ func _run() -> void:
 	await _low_wall()
 	await _roof()
 	await _floor()
+	await _fight_floor()
 	await _pillar()
 	await _unstepped()
 	await _ship()
@@ -58,6 +59,7 @@ func _run() -> void:
 	await _touching_drum()
 	await _like_a_wall()
 	await _touching_ship()
+	await _shove_cutaway()
 	_layers()
 	quit(_t.verdict())
 
@@ -153,6 +155,45 @@ func _floor() -> void:
 	_t.check("F1 looking up over open ground the arm is not lifted", absf(cam.arm.rotation.x - 0.5) < 0.001, "arm %.3f, pitch 0.500, hit length %.2f" % [cam.arm.rotation.x, cam.arm.get_hit_length()])
 	ground.free()
 	cam.free()
+
+
+# On the west water-sheet approach the rider pitches up 0.5 rad to see the reactor,
+# putting the unadjusted arm on a nearly flat tile. Compare that view to open-ground
+# look-up with the same pitch, then mount and shoot at the same point on both rigs.
+func _fight_floor() -> void:
+	var floor_body := _box(Vector3(80, 1, 80), Vector3(0, -1.5, 0))
+	var subject := Node3D.new()
+	root.add_child(subject)
+	subject.position = Vector3(0, 22, -24)
+	var open := _rig()
+	var fight := ChaseCamera.new()
+	root.add_child(fight)
+	fight.setup(Target.new(), Tuning.new(), func(): return subject)
+	for rig in [open, fight]:
+		rig.snap(Vector3.FORWARD, 0.5)
+	await _settle(fight, 120)
+	var crowded := open.arm.get_hit_length()
+	var clear := fight.arm.get_hit_length()
+	_t.check("F2 the water-sheet view clears the floor and shows the ball", crowded < 4.0 and clear > 7.0 and fight.shows(Vector3.ZERO), "open %.2f m, fight %.2f m" % [crowded, clear])
+	_t.check("F3 the high target and nearby floor fit in the same view", fight.shows(subject.position) and fight.shows(Vector3(0, -1, -4)), "target %s, floor %s" % [fight.shows(subject.position), fight.shows(Vector3(0, -1, -4))])
+	for rig in [open, fight]:
+		rig.shoulder_target = 1.0
+		rig.reduced_motion = true
+	await _settle(fight, 120)
+	var target_at := open.aim_origin() + open.aim_forward() * 18.0
+	var struck := _box(Vector3.ONE, target_at)
+	await physics_frame
+	var space := root.world_3d.direct_space_state
+	for rig in [open, fight]:
+		var ray := PhysicsRayQueryParameters3D.create(rig.aim_origin(), rig.aim_origin() + rig.aim_forward() * 30.0, 1)
+		var hit := space.intersect_ray(ray)
+		_t.check("F4 the mounted sight hits the aimed box", hit.get("collider") == struck, "origin %s, first hit %s" % [rig.aim_origin(), hit.get("position")])
+	_t.check("F5 both mounted rests agree", open.aim_origin().distance_to(fight.aim_origin()) < 0.03 and open.aim_forward().angle_to(fight.aim_forward()) < 0.002, "open %s, fight %s" % [open.aim_origin(), fight.aim_origin()])
+	floor_body.free()
+	struck.free()
+	subject.free()
+	open.free()
+	fight.free()
 
 
 # A pillar pass: a wall behind the ball for 9 frames (0.15 s), then gone. The lens must not lurch.
@@ -521,6 +562,37 @@ func _touching_ship() -> void:
 		_t.check("T4 touching the hull's %s no drawn box holds the lens or lies between it and the ball" % pose[2], held == "", "hit length %.2f, lens %s, box %s" % [cam.arm.get_hit_length(), lens, held])
 		ship.free()
 		cam.free()
+
+
+# A normal bow contact leaves all camera boxes solid. During a charge shove
+# the ball can go through the hull: only meshes in its column may yield.
+func _shove_cutaway() -> void:
+	var ship := Requisition.new()
+	root.add_child(ship)
+	ship.build(null)
+	var ball := Node3D.new()
+	root.add_child(ball)
+	ball.position = Vector3(0, 2, -4)
+	await physics_frame
+	var outer := ship.model.find_child("Hull", true, false) as MeshInstance3D
+	_t.check("B4 ordinary bow contact is opaque", outer.transparency == 0.0)
+	ship.follow_shoved_rider(ball)
+	var solid := 0
+	var cut := 0
+	for body in ship.get_children():
+		if body is AnimatableBody3D:
+			if body.collision_layer == 0:
+				cut += 1
+			elif body.collision_layer == ChaseCamera.CAMERA_BODY_BIT:
+				solid += 1
+	_t.check("B5 a shove cuts the covering hull and keeps other parts solid", outer.transparency > 0.8 and cut > 0 and solid > 0, "%d cut, %d solid" % [cut, solid])
+	ship.follow_shoved_rider(null)
+	_t.check("B6 the outer hull returns when the charge releases the rider", outer.transparency == 0.0)
+	for body in ship.get_children():
+		if body is AnimatableBody3D:
+			_t.check("B6 each ship proxy sees the camera again", body.collision_layer == ChaseCamera.CAMERA_BODY_BIT)
+	ball.free()
+	ship.free()
 
 
 # The camera layer must not have changed any contact: the ball, every enemy and the Warden.

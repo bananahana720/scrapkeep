@@ -102,6 +102,8 @@ var _locked := false
 var _boss_reach := false
 var _pitch_bias := 0.0
 var _tight := 0.0
+var _contact_subject: Callable
+var _contact_lift := 0.0
 var _query := PhysicsShapeQueryParameters3D.new()
 var _fov_add := 0.0
 var _glance_subject: Node3D
@@ -120,7 +122,8 @@ static func camera_body() -> AnimatableBody3D:
 	return body
 
 
-func setup(target_ref, tuning_ref) -> void:
+func setup(target_ref, tuning_ref, contact_subject := Callable()) -> void:
+	_contact_subject = contact_subject
 	target = target_ref
 	tuning = tuning_ref
 	arm = SpringArm3D.new()
@@ -209,6 +212,7 @@ func snap(heading: Vector3, pitch_value := -0.30) -> void:
 	_previous_velocity = target.state.velocity
 	_kick = Vector3.ZERO
 	_tight = 0.0
+	_contact_lift = 0.0
 	_glance_subject = null
 
 
@@ -323,23 +327,47 @@ func _tight_target(arm_pitch: float) -> float:
 # wall: the arm's own shape and mask, one query reused. Ground (a contact normal the ball
 # itself calls floor, BallState.MAX_SLOPE_DOT) is no wall, so it reads as a free arm: looking up on
 # open ground shortens the arm as it always did.
-func _free_arm(arm_pitch: float) -> float:
+func _free_arm(arm_pitch: float, reach := TIGHT_ARM, ignore_floor := true) -> float:
 	if not is_inside_tree():
-		return TIGHT_ARM
+		return reach
 	var space := get_world_3d().direct_space_state
 	var dir: Vector3 = yaw_basis() * Basis(Vector3.RIGHT, arm_pitch) * Vector3.BACK
 	_query.transform = Transform3D(Basis.IDENTITY, global_position)
-	_query.motion = dir * TIGHT_ARM
+	_query.motion = dir * reach
 	var fractions := space.cast_motion(_query)
 	if fractions.size() < 2 or fractions[0] >= 1.0:
-		return TIGHT_ARM
+		return reach
+	if not ignore_floor:
+		return fractions[0] * reach
 	# At the first contact the shape touches what stopped it; its normal says wall or floor.
-	_query.transform = Transform3D(Basis.IDENTITY, global_position + dir * TIGHT_ARM * fractions[1])
+	_query.transform = Transform3D(Basis.IDENTITY, global_position + dir * reach * fractions[1])
 	_query.motion = Vector3.ZERO
 	var rest := space.get_rest_info(_query)
 	if not rest.is_empty() and (rest["normal"] as Vector3).y > BallState.MAX_SLOPE_DOT:
-		return TIGHT_ARM
-	return fractions[0] * TIGHT_ARM
+		return reach
+	return fractions[0] * reach
+
+
+# Keep the ball low in the frame when a tall target pulls the lens down to the floor or
+# a bow closes over the rider. Test both boom directions from the same pivot: the
+# SpringArm can still reject a perch under a roof. Mounted aim owns its shoulder view.
+func _boss_contact_lift(arm_pitch: float, subject: Node3D) -> float:
+	if subject == null or shoulder_target > 0.0 or shoulder_blend > 0.0:
+		return 0.0
+	var distance := global_position.distance_to(subject.global_position)
+	if distance >= 40.0 or (distance >= 17.0 and not in_view(subject.global_position)):
+		return 0.0
+	var near_bow := 1.0 - smoothstep(10.0, 17.0, distance)
+	var reach := arm.spring_length
+	var normal_reach := _free_arm(arm_pitch, reach, false)
+	# A distant Warden only needs the change when looking up has pinned the lens to the ground.
+	var floor_press := (1.0 - smoothstep(0.55, 0.8, normal_reach / reach)) if arm_pitch > 0.0 else 0.0
+	floor_press *= 1.0 - smoothstep(35.0, 40.0, distance)
+	var perch := lerpf(-0.03, -1.42, near_bow)
+	var lift := maxf(0.0, arm_pitch - perch) * maxf(floor_press, near_bow)
+	if lift <= 0.0 or _free_arm(arm_pitch - lift, reach, false) < normal_reach - LIFT_GAIN:
+		return 0.0
+	return lift
 
 
 func active_profiles() -> Array:
@@ -431,7 +459,12 @@ func _process(delta: float) -> void:
 	_base_fov = lerpf(_base_fov, lerpf(FOV_REST, FOV_FAST, fraction), ease)
 
 	rotation = Vector3(0.0, yaw, 0.0)
-	arm.rotation = Vector3(pitch + _pitch_bias + lift, 0.0, 0.0)
+	var arm_pitch := pitch + _pitch_bias + lift
+	var subject: Node3D = _contact_subject.call() if _contact_subject.is_valid() else null
+	var contact_lift := _boss_contact_lift(arm_pitch, subject)
+	_contact_lift = lerpf(_contact_lift, contact_lift, 1.0 - exp(-16.0 * delta))
+	_contact_lift = minf(_contact_lift, arm_pitch - MAX_ARM_PITCH)
+	arm.rotation = Vector3(arm_pitch - _contact_lift, 0.0, 0.0)
 
 	var accel := (velocity - _previous_velocity) / maxf(delta, 0.0001)
 	_previous_velocity = velocity
@@ -443,8 +476,18 @@ func _process(delta: float) -> void:
 	_kick = _kick.lerp(Vector3.ZERO, 1.0 - exp(-KICK_RETURN * delta))
 	var jitter := Vector3(_shake_rng.randf_range(-1.0, 1.0), _shake_rng.randf_range(-1.0, 1.0), 0.0) * _shake * 0.22
 	cam.position = jitter + cam.get_parent().global_basis.inverse() * _kick
-	# The lens turns back by the bias so the view direction, and with it the aim, stays the player's.
-	cam.rotation = Vector3(-_pitch_bias - lift, 0.0, _roll + jitter.x * 0.1)
+	# The normal wall lift preserves the player's view. At boss contact the raised
+	# lens still needs the ball and floor in its lower third, including after a shove.
+	var view_pitch := pitch
+	if _contact_lift > 0.001 and subject != null:
+		var to_ball: Vector3 = target.shown_position() - aim_origin()
+		var ahead := -yaw_basis().z
+		var ball_pitch := atan2(to_ball.y, ahead.dot(to_ball))
+		var to_subject := subject.global_position - aim_origin()
+		var subject_pitch := atan2(to_subject.y, Vector2(to_subject.x, to_subject.z).length())
+		var floor_in_view := minf((ball_pitch + subject_pitch) * 0.5, ball_pitch + deg_to_rad(cam.fov) * 0.36)
+		view_pitch = lerpf(pitch, minf(pitch, floor_in_view), smoothstep(0.0, 0.16, _contact_lift))
+	cam.rotation = Vector3(view_pitch - arm.rotation.x, 0.0, _roll + jitter.x * 0.1)
 	cam.fov = minf(_base_fov + _fov_add + _punch, FOV_CAP)
 
 
