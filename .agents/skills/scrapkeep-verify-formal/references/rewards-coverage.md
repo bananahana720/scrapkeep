@@ -104,4 +104,4 @@ Known gaps in the save points:
 - `Checkpoint` writes the run's current settled list. `_on_death_saved` (`sketches/core-loop/src/core/flow.gd:652-653`) rewrites the stored `_entrance` document, which was built at the last entrance or cleared save and can predate an earn, so in the code that save may carry an older settled list than the model's. It can only drop a key from the run file, which makes a loss need a later save point; it adds no path.
 - `_save_cleared` (`sketches/core-loop/src/core/flow.gd:1291-1295`) is folded into `Checkpoint` with the other `_save` callers.
 
-Sync commit: SYNC (stage/alpha-w44 branch w44/rewards-once, 17 November 2026, W1-117; before it, 2d1bbd4ff)
+Sync commit: df87700dd (stage/alpha-w44 branch w44/rewards-once, 17 November 2026, W1-117; before it, 2d1bbd4ff)
