@@ -17,7 +17,7 @@
 // The packed Oggs are gitignored. When a clip's stems are not on this machine the receipt does not
 // pass, and when none are it says "no data" first (scripts/music/mx stems-sync copies them in).
 //
-//   node scripts/gate/sound-levels-receipt.mjs [--out <file>] [--project <dir>]
+//   node scripts/gate/sound-levels-receipt.mjs [--out <file>]
 import { cleanHead } from "./sound-recipes-receipt.mjs";
 import { realpathSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
@@ -107,8 +107,10 @@ export function measure(project) {
 }
 
 function main(argv) {
-  const args = { project: path.join(root, "sketches/core-loop") };
+  const args = {};
   for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
+  // Always this checkout's own game folder: the head below is this checkout's, so no other folder may be measured.
+  args.project = path.join(root, "sketches/core-loop");
   // The head comes from the checkout, and only a clean one: an edited manifest or hash list judges no commit.
   let head;
   try { head = cleanHead(root); } catch (e) { console.error(String(e.message ?? e)); return 2; }
