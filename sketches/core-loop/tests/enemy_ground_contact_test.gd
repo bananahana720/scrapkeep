@@ -9,7 +9,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const T := preload("res://tests/support/t.gd")
 
-const KINDS := ["hooker", "swatter", "mag_trapper", "netcaster", "bola_thrower", "catch_trap", "jolt_layer", "plated_brute", "deflector", "gyro_jammer"]
+const KINDS := ["chaser", "hooker", "swatter", "mag_trapper", "netcaster", "bola_thrower", "catch_trap", "jolt_layer", "plated_brute", "deflector", "gyro_jammer"]
 const SINK_MAX := 0.12
 const FLOAT_MAX := 0.25
 const FOOTPRINT := 1.5
@@ -97,7 +97,13 @@ func _stand(kind: String, at: Vector3) -> Vector2:
 	enemy.hp = 100000.0
 	enemy._rest = 999.0
 	# It holds the spot so the read is the spot's slope; it still turns to watch the ball.
-	enemy.walk_speed = 0.0
+	if kind == "chaser":
+		# A rolling ball rams this light body off its feet on the flat. Measure its planted stance.
+		_game.player.body().freeze = true
+		enemy._age = enemy.ENTRY_GRACE_S
+		enemy.run_speed = 0.0
+	else:
+		enemy.walk_speed = 0.0
 	var sink := 0.0
 	var float_up := 0.0
 	for i in 150:
@@ -121,5 +127,7 @@ func _stand(kind: String, at: Vector3) -> Vector2:
 		if lowest < INF:
 			float_up = maxf(float_up, lowest)
 	enemy.free()
+	if kind == "chaser":
+		_game.player.body().freeze = false
 	await physics_frame
 	return Vector2(sink, float_up)

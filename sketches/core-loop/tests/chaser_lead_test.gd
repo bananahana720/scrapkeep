@@ -78,11 +78,13 @@ func _boot() -> void:
 # chaser was spawned with)}.
 # head_on: the roller starts HEAD_ON_FROM metres off and rolls straight at the chaser, HEAD_ON_SIDE off its centre.
 # own_speed: the chaser is held at its own SPEED; false leaves it the stage's chaser speed (unit D2 raises it).
-func _pass(speed: float, overrides: Dictionary, head_on := false, own_speed := true) -> Dictionary:
+func _pass(speed: float, overrides: Dictionary, head_on := false, own_speed := true, flanker := false) -> Dictionary:
 	ChallengeDials.set_overrides(overrides)
 	var enemy = _game.combat.spawn_enemy("chaser", _game.ctx.terrain.drop_point(-100.0, -90.0, 1.6))
 	ChallengeDials.set_overrides({})
 	enemy.hp = 100000.0
+	if flanker:
+		enemy.pressure["flanker"] = true
 	var roller := Roller.new()
 	enemy.target = roller
 	# Settle on the floor first: the roller sits on the chaser and the lunge is held.
@@ -186,5 +188,7 @@ func _run() -> void:
 	# fire in this geometry; the print says how long the led aim was in range before the wind-up and why it waited.
 	var loose: Dictionary = await _pass(FAST, FADE_OFF, true, false)
 	print("[info] fade off at the stage's chaser speed %.1f m/s: hit %s, lane laid with the ball %.1f m off; the led aim was in range for %d ticks before the wind-up, %d of them with the chaser off the floor" % [loose.run, loose.hit, loose.wound_m, loose.held, loose.held_air])
+	var parked: Dictionary = await _pass(0.0, {}, false, true, true)
+	_t.check("a flanker lunges a parked target after its full tell", parked.hit and parked.tell >= Chaser.WINDUP - tick - 0.0001, str(parked))
 	ChallengeDials.reset()
 	quit(_t.verdict())

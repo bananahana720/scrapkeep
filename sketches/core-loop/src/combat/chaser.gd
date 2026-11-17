@@ -54,6 +54,8 @@ const LUNGE_SPEED := LUNGE_LENGTH / LUNGE_TIME
 # once the ball's next FLANK_CALL_S of roll comes within LUNGE_RANGE.
 const FLANK_AHEAD_S := 1.6
 const FLANK_SIDE := 5.0
+# Below this speed there is no crossing to lead. The flanker runs the ordinary lunge.
+const FLANK_MIN_SPEED := 1.0
 const FLANK_CALL_S := 1.1
 
 var state := State.CHASE
@@ -88,6 +90,10 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	weight = 1.0
 	radius = 1.0
 	half_height = 1.5
+	# The scraper braces on its claws. Bank the visual about their contact plane
+	# while the committed lane keeps its horizontal heading. The baked move clip owns each step.
+	_gait = EnemyGait.new()
+	_gait.steps = false
 	pressure = spec_ref.get("pressure", {})
 	run_speed = clampf(float(spec_ref.get("run_speed", SPEED)), SPEED, SPEED_CEILING)
 	# _add_capsule still lays the collider and the flashing material; its capsule mesh is
@@ -167,7 +173,7 @@ func _physics_process(delta: float) -> void:
 	match state:
 		State.CHASE:
 			var lead := PackPressure.lead_now(pressure, target)
-			if pressure.get("flanker", false):
+			if pressure.get("flanker", false) and target.planar_velocity().length() >= FLANK_MIN_SPEED:
 				_flank(delta, to_ball)
 			elif lead > 0.0:
 				_lead_chase(delta, to_ball, lead)
@@ -252,7 +258,7 @@ func _flank(delta: float, to_ball: Vector3) -> void:
 func _flank_point() -> Vector3:
 	var ahead := PackPressure.predict(target, FLANK_AHEAD_S)
 	var v: Vector3 = target.planar_velocity()
-	if v.length() < 1.0:
+	if v.length() < FLANK_MIN_SPEED:
 		return ahead
 	var side := Vector3(-v.z, 0.0, v.x).normalized()
 	if side.dot(global_position - ahead) < 0.0:
