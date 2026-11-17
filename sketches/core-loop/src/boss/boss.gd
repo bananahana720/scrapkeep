@@ -15,6 +15,7 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const Field := preload("res://src/build/scrap_field.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const PackPressure := preload("res://src/combat/pack_pressure.gd")
 
 # Writer E's module: Admiral Brindle and the Requisition in the Slag Bowl (DEMO-SPEC
 # Brindle, BOSS-BRINDLE). Flow calls enter_arena(entry_velocity) after stage 3's
@@ -1005,22 +1006,30 @@ func _brace_turn(delta: float) -> void:
 
 # A cued charge is the Scuttle's hook turn: its ratchet cue sounded CUE_LEAD ago, so it
 # draws the short tell, and it never leads a combo or a second hook turn.
-func _commit_charge(ball: Vector3, cued := false) -> void:
+#
+# The lane leads a ball that holds a line (PackPressure.lead_aim): it is laid where the ball's roll
+# carries it by the time the hull's nose gets there, so a straight line is met and a turn inside the
+# tell escapes. A turning, slow or stopped ball is aimed at where it is. The aim reads the ball's
+# position and roll from the player itself; `_ball` stays for the tests that commit a charge by hand.
+func _commit_charge(_ball: Vector3, cued := false) -> void:
 	if not cued:
 		_combo_left = ChallengeDials.combo_step("brindle", _combo_left)
 	var from: Vector3 = ship.global_position
-	var to_ball := Vector3(ball.x - from.x, 0.0, ball.z - from.z)
-	var heading := _aim_at(ball)
+	var half := Requisition.HULL.z * 0.5
+	var warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.CHARGE_WARN, Hazard.MIN_WARN)
+	# The nose starts half a hull and its reach ahead of the centre, so it meets the ball that much sooner.
+	var nose_start := (half + CHARGE_REACH) / Rules.CHARGE_SPEED
+	var aim := PackPressure.lead_aim(ctx.player, from, maxf(0.0, warn - nose_start), Rules.CHARGE_SPEED)
+	var to_aim := Vector3(aim.x - from.x, 0.0, aim.z - from.z)
+	var heading := _aim_at(aim)
 	var to_wall := _travel_to_rim(from, heading)
-	var wanted := to_ball.length() + Rules.CHARGE_OVERSHOOT
+	var wanted := to_aim.length() + Rules.CHARGE_OVERSHOOT
 	var into_wall := wanted >= to_wall
 	var length := minf(wanted, to_wall)
-	var half := Requisition.HULL.z * 0.5
 	var h = _new_hazard()
 	if cued:
 		h.warn_floor = FightPhases.CUED_WARN
 		h.cued = true
-	var warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.CHARGE_WARN, Hazard.MIN_WARN)
 	h.commit_lane("charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
 		Requisition.HULL.y + 0.5, warn, length / Rules.CHARGE_SPEED + 0.2)
 	# Only the hull's nose hurts once the lane is live, and it starts at the ship.
