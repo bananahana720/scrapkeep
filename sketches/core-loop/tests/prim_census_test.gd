@@ -35,7 +35,11 @@ const T := preload("res://tests/support/t.gd")
 const SEED := 40317
 const PILOT := "pylon_engineer"
 const TIMEOUT_S := 840.0
-const MIN_SURFACES := 129  # measured on stage/alpha-w44 d313e95f3, 17 Nov 2026
+# 129 is the count this run measured on stage/alpha-w44 d313e95f3 (17 Nov 2026): every primitive surface key drawn
+# from stage 1 into stage 3, the control box left out. It falls when a stand-in gets its model or a stage stops building
+# a mark; a fall that is meant lowers this pin (and PINNED_SURFACES in scripts/gate/stand-ins-receipt.mjs) in the same
+# change, with the census line that went. A fall nobody meant is a stage that was not built, and fails here.
+const MIN_SURFACES := 129
 
 var _t := T.new("prim_census_test")
 

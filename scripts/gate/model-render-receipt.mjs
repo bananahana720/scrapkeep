@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 // The receipt for the world 1 done read's row "models-render" (scripts/world1-bands.rows.json):
 //   { head, pass, measured, plant_caught }
-// It judges sketches/core-loop/tools/model_render_check.gd: each generated (Tripo) enemy model, shot in the real game
-// beside the authored one, must send at least 0.80 of the authored brightness with at most 0.15 more near-black pixels,
-// in both views. The check's compare step ends with one line:
-//   SUMMARY {"judged": n, "pinned": 6, "failed": [kind...], "plant": ""}
-// The receipt passes only when the real compare judged every one of the PINNED_KINDS kinds, failed none, ran with no
-// plant, and the planted compare (RENDER_PLANT=dark_hooker: the hooker painted near-black in the generated shoot, the
-// fault of the rejected dark hooker body) failed the hooker, which the real compare passed. A plant switch left in the
-// caller's environment reaches the real shoot, which then names the plant, so the receipt fails.
+// What it measures: no generated (Tripo) enemy model renders darker than its authored one, for the 6 enemy kinds that
+// have one, in two views. sketches/core-loop/tools/model_render_check.gd shoots each kind in the real game, measures
+// only the parts drawn from the model file (code-built nets, masts and lamps are masked out), and its compare needs at
+// least 0.80 of the authored brightness with at most 0.15 more near-black pixels. The compare ends with one line:
+//   SUMMARY {"judged": n, "pinned": 6, "failed": [kind...], "missing": [kind...], "plant": ""}
+// The receipt passes only when the real compare printed one verdict line per pinned kind, judged all 6, found no kind
+// missing its generated model and none too dark, ran with no plant, and the planted compare (RENDER_PLANT=dark_models:
+// every kind's model parts painted near-black as it is shot, the fault of the rejected dark hooker body) shows the
+// plant in its stats and failed every one of the 6 kinds. A plant switch left in the caller's environment reaches the
+// real shoot (the authored shoot refuses it), so the receipt fails.
 // The head comes from cleanHead (clean-head.mjs).
 //
 // A shoot needs a graphics display, so every run goes through display-run.mjs (a machine slot, a window, a scratch
@@ -27,9 +29,9 @@ import { runWindowed } from "./display-run.mjs";
 export const TOOL = "tools/model_render_check.gd";
 export const ENGINE_ARGS = ["--resolution", "800x600", "--audio-driver", "Dummy"];
 export const PINNED_KINDS = 6;
-export const PLANT_ENV = { RENDER_PLANT: "dark_hooker" };
-export const PLANT_KIND = "hooker";
-export const NOT_SEEN = "what the numbers cannot say: rendered brightness against the authored model is all that is measured, so shape, fit, floating parts and how a model looks to a person still need the PC look; props are not judged";
+export const KINDS = ["chaser", "lobber", "swatter", "hooker", "netcaster", "boom_tender"];
+export const PLANT_ENV = { RENDER_PLANT: "dark_models" };
+export const NOT_SEEN = "not judged: pilots, item parts, the camp pet and props have no render check; only a model darker than its authored one is caught, so a brighter, white or recoloured model passes; most of an enemy's material is replaced in code, so a missing or wrong material in the model file cannot be seen; shape, fit, floating parts and how a model looks to a person still need the PC look";
 export const NO_DISPLAY = "not run: the shoot needs a graphics display and display-run.mjs found none";
 
 const summaryOf = (text) => {
@@ -43,23 +45,27 @@ export function buildReceipt(real, plant, head) {
   const s = summaryOf(real.log);
   const p = summaryOf(plant.log);
   const lines = kindLines(real.log);
+  const missing = s && Array.isArray(s.missing) ? s.missing : ["(no missing list)"];
   const counted = Boolean(s) && s.judged === PINNED_KINDS && s.pinned === PINNED_KINDS && lines.length === PINNED_KINDS;
   const clean = Boolean(s) && s.plant === "";
   const failed = s && Array.isArray(s.failed) ? s.failed : [];
-  const caught = Boolean(s && p) && p.plant === PLANT_ENV.RENDER_PLANT && Array.isArray(p.failed)
-    && p.failed.includes(PLANT_KIND) && !failed.includes(PLANT_KIND);
-  const pass = counted && clean && failed.length === 0 && caught;
+  const plantFailed = p && Array.isArray(p.failed) ? p.failed : [];
+  const plantMissed = KINDS.filter((k) => !plantFailed.includes(k));
+  const caught = Boolean(s && p) && p.plant === PLANT_ENV.RENDER_PLANT && plantMissed.length === 0;
+  const pass = counted && clean && missing.length === 0 && failed.length === 0 && caught;
   let measured;
   if (!s) {
     const first = String(real.log ?? "").split("\n").find((l) => l.trim()) ?? "";
     measured = `no SUMMARY line, so no model was judged: ${first.slice(0, 200)}`;
   } else if (!clean) measured = `the real shoot ran planted (${s.plant}): a plant switch reached the run that counts`;
-  else if (!counted) measured = `${s.judged} kinds judged with ${lines.length} verdict lines, pinned ${PINNED_KINDS}: a kind was not shot in both`;
-  else if (failed.length) measured = `${failed.length} of ${s.judged} generated enemy models render too dark beside the authored ones: ${failed.join(", ")}`;
-  else measured = `all ${s.judged} generated enemy models render at least 0.80 of the authored brightness with at most 0.15 more near-black pixels, in two views each`;
+  else if (missing.length) measured = `${missing.length} kind(s) had no generated model loaded, so nothing was judged for them: ${missing.join(", ")}`;
+  else if (!counted) measured = `${s.judged} kinds judged with ${lines.length} verdict lines, pinned ${PINNED_KINDS} (the check pins ${s.pinned}): a kind was not shot in both`;
+  else if (failed.length) measured = `${failed.length} of ${s.judged} generated enemy models render darker than their authored ones: ${failed.join(", ")}`;
+  else measured = `no generated enemy model renders darker than its authored one: all ${s.judged} kinds send at least 0.80 of the authored brightness with at most 0.15 more near-black pixels, in two views each, over the parts drawn from the model file`;
   if (s) {
     if (!p) measured += "; plant: the planted compare printed no SUMMARY";
-    else measured += `; plant: with the hooker painted near-black (RENDER_PLANT=dark_hooker) the compare ${caught ? "failed the hooker" : `failed ${p.failed?.join(", ") || "nothing"}, not the hooker alone`}`;
+    else if (p.plant !== PLANT_ENV.RENDER_PLANT) measured += `; plant: the planted shoot's stats do not show the plant (${p.plant || "none"}), so it proves nothing`;
+    else measured += `; plant: with every kind's model parts painted near-black (RENDER_PLANT=dark_models) the compare ${caught ? `failed all ${KINDS.length} kinds` : `missed ${plantMissed.join(", ")}`}`;
   }
   measured += `; ${NOT_SEEN}`;
   return { head, pass, measured, plant_caught: caught };

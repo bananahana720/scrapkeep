@@ -47,6 +47,26 @@ known-dark hooker scored 0.81 in view 0 and failed only in view 1. A result near
 A shoot stops with exit 2 on an enemy name it does not know (the game would spawn a chaser for it) and on any
 model flag but `--models=tripo-all`.
 
+Since 17 November 2026 (PR 1117) the check measures only the parts drawn from the model file: any mesh that is not
+a Godot primitive. The code-built parts an enemy hangs on its model, such as the netcaster's net, masts, rings and
+lamps, are hidden for the two measured stills. Before that change the net diluted the netcaster's body to 1.00.
+`stats.json` records, per enemy, the file `ModelVariants` loaded, whether it loaded, and the measured part names. The
+compare refuses an enemy whose generated shoot loaded no generated file of its own, and names it under `missing`.
+It ends with one `SUMMARY {"judged","pinned","failed","missing","plant"}` line.
+
+**The receipt (`models-render` row of the world 1 done read).** `node scripts/gate/model-render-receipt.mjs --out
+<file>` runs on a clean checkout. It runs five steps through `scripts/gate/display-run.mjs`: the authored shoot, the
+`--models=tripo-all` shoot, the compare, the planted shoot, and the planted compare. `display-run.mjs` is the one
+approved way for a gate producer to open a window. It takes a machine slot, launches Godot without `--headless`
+under a scratch `HOME` in `artifacts/local/display-run/`, and kills the whole run at its timeout. The plant is
+`RENDER_PLANT=dark_models`: every enemy's model parts are painted near-black as each enemy is shot, which is the
+fault of the rejected dark hooker body. The compare must fail all six enemies. An authored shoot refuses the plant.
+On Linux with no display the receipt fails with "not supported here". The PC's gamescope lane is not wired into it.
+
+The receipt does not judge pilots, item parts, the camp pet or props. Only a model darker than its authored one
+fails, so a brighter, white or recoloured model passes. Most of an enemy's material is replaced in code, so a
+missing material in the model file cannot be seen.
+
 | Enemy | View 0: brightness, near-black (authored) | View 1: brightness, near-black (authored) | Result |
 | --- | --- | --- | --- |
 | Lobber | 1.06, 0.02 (0.00) | 1.11, 0.04 (0.02) | pass |
