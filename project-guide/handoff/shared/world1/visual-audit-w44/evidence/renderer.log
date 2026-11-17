@@ -1,0 +1,39 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+Metal 4.0 - Forward+ - Using Device #0: Apple - Apple M5 Max (Apple9)
+
+SCRAPKEEP_BUILD commit=bf80564798868331c1d86bc51939d97d305abcaf dirty=false built=unknown source=checkout
+...
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_scenario (servers/rendering/renderer_scene_cull.cpp:844)
+   GDScript backtrace (most recent call first):
+       [0] _end (res://src/world/events/natural.gd:761)
+       [1] handle (res://src/world/events/natural.gd:407)
+       [2] _park_hook (res://src/world/event_director.gd:616)
+       [3] _park_end (res://src/world/event_director.gd:604)
+       [4] _park_step_live (res://src/world/event_director.gd:569)
+       [5] _advance_park (res://src/world/event_director.gd:459)
+       [6] advance (res://src/world/event_director.gd:172)
+       [7] _physics_process (res://src/world/world.gd:456)
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_base (servers/rendering/renderer_scene_cull.cpp:616)
+   GDScript backtrace (most recent call first):
+       [0] _end (res://src/world/events/natural.gd:761)
+       [1] handle (res://src/world/events/natural.gd:407)
+       [2] _park_hook (res://src/world/event_director.gd:616)
+       [3] _park_end (res://src/world/event_director.gd:604)
+       [4] _park_step_live (res://src/world/event_director.gd:569)
+       [5] _advance_park (res://src/world/event_director.gd:459)
+       [6] advance (res://src/world/event_director.gd:172)
+       [7] _physics_process (res://src/world/world.gd:456)
+...
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_scenario (servers/rendering/renderer_scene_cull.cpp:844)
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_base (servers/rendering/renderer_scene_cull.cpp:616)
+ERROR: 12 shaders of type ParticlesShaderRD were never freed
+   at: ~ShaderRD (servers/rendering/renderer_rd/shader_rd.cpp:1236)
+WARNING: 177 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 3 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+ERROR: 12 RID allocations of type 'N10RendererRD15MaterialStorage6ShaderE' were leaked at exit.

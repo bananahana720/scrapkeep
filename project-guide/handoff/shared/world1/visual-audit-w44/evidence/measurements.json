@@ -1,0 +1,2149 @@
+{
+  "commit": "bf80564798868331c1d86bc51939d97d305abcaf",
+  "warm_frame_times": [
+    {
+      "utc": "2026-11-17T19-45-02Z",
+      "frames": 8745,
+      "seconds": 48,
+      "p50_ms": 5.33,
+      "p95_ms": 9.9,
+      "p99_ms": 12.87,
+      "max_ms": 41.98,
+      "over_hitch": 3,
+      "over_severe": 0,
+      "hitches": [
+        {
+          "at_s": 19.29,
+          "ms": 41.81
+        },
+        {
+          "at_s": 33.18,
+          "ms": 41.98
+        },
+        {
+          "at_s": 46.07,
+          "ms": 41.11
+        }
+      ],
+      "budget": {
+        "p99_ms": 16.7,
+        "hitch_ms": 33
+      },
+      "p99_ok": true,
+      "hitch_ok": false,
+      "pass": false,
+      "self_play": {
+        "exit": 0,
+        "stages": [
+          {
+            "stage": 1,
+            "retry": false,
+            "launch_s": 5.16,
+            "log_s": -44.84,
+            "worst_frame_ms": 0
+          }
+        ],
+        "stalled": null,
+        "lines": [
+          "self-play: stage 1 entered at 5.16 s",
+          "self-play: carry stage=1 hp=100.00 mass=0.00 cogs=0 parts= picks=s_beachhead",
+          "self-play: skipper seed 1 until 1 started at 5.28 s",
+          "self-play: hand overtime bell: heading there (stage 1, 73 s)",
+          "self-play: hand called shot is window () (stage 1, 80 s)",
+          "self-play: hand called shot is called (DUNK) (stage 1, 80 s)",
+          "self-play: done at 108.16 s",
+          "self-play: watch stuck=0 hung=0 wedged=0 fell=0 objectives=5 blank_max=0.0 bar_off_max=0.0 stages=1",
+          "self-play: skills slot2=10 slot3=3 set_pieces=0"
+        ]
+      },
+      "target": "debug-editor",
+      "cache": "reused (--home)"
+    },
+    {
+      "utc": "2026-11-17T19-47-17Z",
+      "frames": 9218,
+      "seconds": 48,
+      "p50_ms": 5,
+      "p95_ms": 9.97,
+      "p99_ms": 13.55,
+      "max_ms": 43.24,
+      "over_hitch": 3,
+      "over_severe": 0,
+      "hitches": [
+        {
+          "at_s": 20.3,
+          "ms": 40.78
+        },
+        {
+          "at_s": 32.86,
+          "ms": 41.36
+        },
+        {
+          "at_s": 45.91,
+          "ms": 43.24
+        }
+      ],
+      "budget": {
+        "p99_ms": 16.7,
+        "hitch_ms": 33
+      },
+      "p99_ok": true,
+      "hitch_ok": false,
+      "pass": false,
+      "self_play": {
+        "exit": 0,
+        "stages": [
+          {
+            "stage": 1,
+            "retry": false,
+            "launch_s": 5.11,
+            "log_s": -44.89,
+            "worst_frame_ms": 0
+          }
+        ],
+        "stalled": null,
+        "lines": [
+          "self-play: stage 1 entered at 5.11 s",
+          "self-play: carry stage=1 hp=100.00 mass=0.00 cogs=0 parts= picks=s_beachhead",
+          "self-play: skipper seed 1 until 1 started at 5.24 s",
+          "self-play: hand overtime bell: heading there (stage 1, 71 s)",
+          "self-play: hand called shot is window () (stage 1, 80 s)",
+          "self-play: hand called shot is called (DUNK) (stage 1, 80 s)",
+          "self-play: done at 108.12 s",
+          "self-play: watch stuck=0 hung=0 wedged=0 fell=0 objectives=4 blank_max=0.0 bar_off_max=0.0 stages=1",
+          "self-play: skills slot2=9 slot3=2 set_pieces=0"
+        ]
+      },
+      "target": "debug-editor",
+      "cache": "reused (--home)"
+    }
+  ],
+  "collision_sweeps": [
+    {
+      "area": "park_dam",
+      "band": [
+        0.15,
+        12.0
+      ],
+      "identity_multimeshes": 0,
+      "near_m": 1.5,
+      "seed": 1,
+      "step": 0.75,
+      "tol": 0.4,
+      "totals": {
+        "bare": 6878,
+        "invisible": 0,
+        "samples": 49447,
+        "shapes": 338
+      },
+      "visual_meshes": 375
+    },
+    {
+      "area": "park_flume",
+      "band": [
+        0.15,
+        12.0
+      ],
+      "identity_multimeshes": 0,
+      "near_m": 1.5,
+      "seed": 1,
+      "step": 0.75,
+      "tol": 0.4,
+      "totals": {
+        "bare": 74,
+        "invisible": 0,
+        "samples": 4157,
+        "shapes": 15
+      },
+      "visual_meshes": 15
+    },
+    {
+      "area": "arena",
+      "band": [
+        0.15,
+        12.0
+      ],
+      "identity_multimeshes": 0,
+      "near_m": 1.5,
+      "seed": 1,
+      "step": 0.75,
+      "tol": 0.4,
+      "totals": {
+        "bare": 0,
+        "invisible": 0,
+        "samples": 15337,
+        "shapes": 19
+      },
+      "visual_meshes": 133
+    }
+  ],
+  "hoodoo_contacts": {
+    "classes_places": {
+      "ground": 1,
+      "moving": 0,
+      "other": 0,
+      "piece": 6
+    },
+    "classes_raw": {
+      "ground": 1,
+      "moving": 0,
+      "other": 0,
+      "piece": 6
+    },
+    "complete": true,
+    "controls": [],
+    "controls_run": 0,
+    "display": "macOS",
+    "lanes_run": 8,
+    "lanes_skipped": 0,
+    "loss": 0.5,
+    "map": "park_dam",
+    "max_angle_deg": 45.0,
+    "multimesh_trusted": true,
+    "pieces_in_shard": 1,
+    "pieces_off_map": 3,
+    "pieces_total": 62,
+    "places": [
+      {
+        "at": [
+          497.95,
+          100.75,
+          707.99
+        ],
+        "class": "piece",
+        "count": 1,
+        "drawn": true,
+        "hit": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider#1011",
+        "pieces": 1,
+        "speed_after": 1.6,
+        "speed_before": 13.0,
+        "worst_loss": 0.88
+      },
+      {
+        "at": [
+          190.51,
+          100.81,
+          729.65
+        ],
+        "class": "piece",
+        "count": 1,
+        "drawn": true,
+        "hit": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider#1016",
+        "pieces": 1,
+        "speed_after": 2.8,
+        "speed_before": 13.5,
+        "worst_loss": 0.79
+      },
+      {
+        "at": [
+          200.13,
+          0.98,
+          456.75
+        ],
+        "class": "ground",
+        "count": 1,
+        "drawn": false,
+        "hit": "/root/@Node3D@2/Stage1/Ground/Tiles/Tile6_7",
+        "pieces": 1,
+        "speed_after": 3.5,
+        "speed_before": 13.6,
+        "worst_loss": 0.74
+      },
+      {
+        "at": [
+          484.66,
+          100.78,
+          463.38
+        ],
+        "class": "piece",
+        "count": 1,
+        "drawn": true,
+        "hit": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider#61",
+        "pieces": 1,
+        "speed_after": 3.5,
+        "speed_before": 13.5,
+        "worst_loss": 0.74
+      },
+      {
+        "at": [
+          508.61,
+          100.71,
+          483.26
+        ],
+        "class": "piece",
+        "count": 1,
+        "drawn": true,
+        "hit": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider#151",
+        "pieces": 1,
+        "speed_after": 3.9,
+        "speed_before": 13.5,
+        "worst_loss": 0.71
+      },
+      {
+        "at": [
+          214.97,
+          100.7,
+          746.59
+        ],
+        "class": "piece",
+        "count": 1,
+        "drawn": true,
+        "hit": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider#1106",
+        "pieces": 1,
+        "speed_after": 5.4,
+        "speed_before": 13.5,
+        "worst_loss": 0.6
+      },
+      {
+        "at": [
+          199.33,
+          0.67,
+          503.31
+        ],
+        "class": "piece",
+        "count": 1,
+        "drawn": true,
+        "hit": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider#156",
+        "pieces": 1,
+        "speed_after": 6.1,
+        "speed_before": 12.9,
+        "worst_loss": 0.53
+      }
+    ],
+    "seams": [],
+    "seed": 1,
+    "shard": "0/1",
+    "skipped_reasons": {},
+    "snags": [
+      {
+        "at": [
+          190.51,
+          100.81,
+          729.65
+        ],
+        "class": "piece",
+        "dir": [
+          0.26,
+          -0.97
+        ],
+        "hit": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider#1016",
+        "lane": "graze",
+        "moving": false,
+        "n": [
+          -0.08,
+          0.19,
+          0.98
+        ],
+        "piece": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider",
+        "piece_at": [
+          350.0,
+          54.5,
+          604.5
+        ],
+        "size": [
+          327.7,
+          295.5,
+          111.0
+        ],
+        "speed_after": 2.8,
+        "speed_before": 13.5,
+        "t": 2.42,
+        "terrain": false,
+        "visible": true
+      },
+      {
+        "at": [
+          199.33,
+          0.67,
+          503.31
+        ],
+        "class": "piece",
+        "dir": [
+          0.26,
+          0.97
+        ],
+        "hit": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider#156",
+        "lane": "graze",
+        "moving": false,
+        "n": [
+          -0.32,
+          0.33,
+          -0.89
+        ],
+        "piece": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider",
+        "piece_at": [
+          350.0,
+          54.5,
+          604.5
+        ],
+        "size": [
+          327.7,
+          295.5,
+          111.0
+        ],
+        "speed_after": 6.1,
+        "speed_before": 12.9,
+        "t": 4.49,
+        "terrain": false,
+        "visible": true
+      },
+      {
+        "at": [
+          200.13,
+          0.98,
+          456.75
+        ],
+        "class": "ground",
+        "dir": [
+          0.97,
+          0.26
+        ],
+        "hit": "/root/@Node3D@2/Stage1/Ground/Tiles/Tile6_7",
+        "lane": "graze",
+        "moving": false,
+        "n": [
+          -1.0,
+          0.02,
+          0.0
+        ],
+        "piece": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider",
+        "piece_at": [
+          350.0,
+          54.5,
+          604.5
+        ],
+        "size": [
+          327.7,
+          295.5,
+          111.0
+        ],
+        "speed_after": 3.5,
+        "speed_before": 13.6,
+        "t": 1.72,
+        "terrain": false,
+        "visible": false
+      },
+      {
+        "at": [
+          214.97,
+          100.7,
+          746.59
+        ],
+        "class": "piece",
+        "dir": [
+          0.97,
+          -0.26
+        ],
+        "hit": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider#1106",
+        "lane": "graze",
+        "moving": false,
+        "n": [
+          -0.92,
+          0.3,
+          -0.24
+        ],
+        "piece": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider",
+        "piece_at": [
+          350.0,
+          54.5,
+          604.5
+        ],
+        "size": [
+          327.7,
+          295.5,
+          111.0
+        ],
+        "speed_after": 5.4,
+        "speed_before": 13.5,
+        "t": 2.9,
+        "terrain": false,
+        "visible": true
+      },
+      {
+        "at": [
+          484.66,
+          100.78,
+          463.38
+        ],
+        "class": "piece",
+        "dir": [
+          -0.97,
+          0.26
+        ],
+        "hit": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider#61",
+        "lane": "graze",
+        "moving": false,
+        "n": [
+          0.83,
+          0.22,
+          -0.52
+        ],
+        "piece": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider",
+        "piece_at": [
+          350.0,
+          54.5,
+          604.5
+        ],
+        "size": [
+          327.7,
+          295.5,
+          111.0
+        ],
+        "speed_after": 3.5,
+        "speed_before": 13.5,
+        "t": 2.93,
+        "terrain": false,
+        "visible": true
+      },
+      {
+        "at": [
+          497.95,
+          100.75,
+          707.99
+        ],
+        "class": "piece",
+        "dir": [
+          -0.26,
+          -0.97
+        ],
+        "hit": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider#1011",
+        "lane": "graze",
+        "moving": false,
+        "n": [
+          -0.01,
+          0.25,
+          0.97
+        ],
+        "piece": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider",
+        "piece_at": [
+          350.0,
+          54.5,
+          604.5
+        ],
+        "size": [
+          327.7,
+          295.5,
+          111.0
+        ],
+        "speed_after": 1.6,
+        "speed_before": 13.0,
+        "t": 4.86,
+        "terrain": false,
+        "visible": true
+      },
+      {
+        "at": [
+          508.61,
+          100.71,
+          483.26
+        ],
+        "class": "piece",
+        "dir": [
+          -0.26,
+          0.97
+        ],
+        "hit": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider#151",
+        "lane": "graze",
+        "moving": false,
+        "n": [
+          -0.09,
+          0.29,
+          -0.95
+        ],
+        "piece": "/root/@Node3D@2/Stage1/ParkRows/Park_hoodoo_15/Collider",
+        "piece_at": [
+          350.0,
+          54.5,
+          604.5
+        ],
+        "size": [
+          327.7,
+          295.5,
+          111.0
+        ],
+        "speed_after": 3.9,
+        "speed_before": 13.5,
+        "t": 2.72,
+        "terrain": false,
+        "visible": true
+      }
+    ],
+    "window_s": 0.2
+  },
+  "controlled_captures": {
+    "standard": {
+      "adapter": "Apple M5 Max (Apple9)",
+      "at": 0.6,
+      "danger_mark": true,
+      "frames": [
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": true,
+          "edge_alpha": 0.0,
+          "explosion": {},
+          "flight_age_s": 0.0,
+          "flight_s": 1.9,
+          "fov": 65.1629104614258,
+          "hp": 999999.0,
+          "impact_tick": -1,
+          "label": "first",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": true,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": true,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": true
+          },
+          "physics_hz": 90,
+          "preset": "high",
+          "release_tick": 1757,
+          "tick": 1757
+        },
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": true,
+          "edge_alpha": 0.0,
+          "explosion": {},
+          "flight_age_s": 0.955555555555554,
+          "flight_s": 1.9,
+          "fov": 65.1629104614258,
+          "hp": 999999.0,
+          "impact_tick": -1,
+          "label": "middle-high",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": true,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": true,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": true
+          },
+          "physics_hz": 90,
+          "preset": "high",
+          "release_tick": 1757,
+          "tick": 1847
+        },
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": true,
+          "edge_alpha": 0.0,
+          "explosion": {},
+          "flight_age_s": 0.955555555555554,
+          "flight_s": 1.9,
+          "fov": 65.1629104614258,
+          "hp": 999999.0,
+          "impact_tick": -1,
+          "label": "middle-low",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": false,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": false,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": false
+          },
+          "physics_hz": 90,
+          "preset": "low",
+          "release_tick": 1757,
+          "tick": 1850
+        },
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": true,
+          "edge_alpha": 0.0,
+          "explosion": {},
+          "flight_age_s": 1.88888888888888,
+          "flight_s": 1.9,
+          "fov": 65.1629104614258,
+          "hp": 999999.0,
+          "impact_tick": -1,
+          "label": "last-before-contact",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": true,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": true,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": true
+          },
+          "physics_hz": 90,
+          "preset": "high",
+          "release_tick": 1757,
+          "tick": 1939
+        },
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": null,
+          "edge_alpha": 0.648343940808811,
+          "explosion": {
+            "hit": true,
+            "hp_after": 999975.2,
+            "hp_before": 999999.0,
+            "radius": 3.6
+          },
+          "flight_age_s": null,
+          "flight_s": null,
+          "fov": 65.1629104614258,
+          "hp": 999975.2,
+          "impact_tick": 1944,
+          "label": "impact",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": true,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": true,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": true
+          },
+          "physics_hz": 90,
+          "preset": "high",
+          "release_tick": 1757,
+          "tick": 1945
+        },
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": null,
+          "edge_alpha": 0.515324297947944,
+          "explosion": {
+            "hit": true,
+            "hp_after": 999975.2,
+            "hp_before": 999999.0,
+            "radius": 3.6
+          },
+          "flight_age_s": null,
+          "flight_s": null,
+          "fov": 65.1629104614258,
+          "hp": 999975.2,
+          "impact_tick": 1944,
+          "label": "after-150ms",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": true,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": true,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": true
+          },
+          "physics_hz": 90,
+          "preset": "high",
+          "release_tick": 1757,
+          "tick": 1962
+        },
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": null,
+          "edge_alpha": 0.0,
+          "explosion": {
+            "hit": true,
+            "hp_after": 999975.2,
+            "hp_before": 999999.0,
+            "radius": 3.6
+          },
+          "flight_age_s": null,
+          "flight_s": null,
+          "fov": 65.1629104614258,
+          "hp": 999975.2,
+          "impact_tick": 1944,
+          "label": "after-420ms",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": true,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": true,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": true
+          },
+          "physics_hz": 90,
+          "preset": "high",
+          "release_tick": 1757,
+          "tick": 1989
+        }
+      ],
+      "limits": "The lobber, the slag ring and the charge lane are the game's own attacks. The boil ring and the yard wall are staged through the game's builders and sizes with no fight running, the wall where the run starts and not where the lock fires. No crew is on screen, Brindle's drones are held off, and the crew's hello is put down as a press of fire does. Each still lists the warnings on screen under threats. Size, place and read only on a software renderer.",
+      "size": [
+        1600.0,
+        900.0
+      ],
+      "table": "park",
+      "tool": "danger_read_capture.gd"
+    },
+    "comfort": {
+      "adapter": "Apple M5 Max (Apple9)",
+      "at": 0.6,
+      "danger_mark": true,
+      "frames": [
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": true,
+          "edge_alpha": 0.0,
+          "explosion": {},
+          "flight_age_s": 0.0,
+          "flight_s": 1.9,
+          "fov": 65.1629104614258,
+          "hp": 999999.0,
+          "impact_tick": -1,
+          "label": "first",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": true,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": true,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": true
+          },
+          "physics_hz": 90,
+          "preset": "high",
+          "release_tick": 1757,
+          "tick": 1757
+        },
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": true,
+          "edge_alpha": 0.0,
+          "explosion": {},
+          "flight_age_s": 0.955555555555554,
+          "flight_s": 1.9,
+          "fov": 65.1629104614258,
+          "hp": 999999.0,
+          "impact_tick": -1,
+          "label": "middle-high",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": true,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": true,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": true
+          },
+          "physics_hz": 90,
+          "preset": "high",
+          "release_tick": 1757,
+          "tick": 1847
+        },
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": true,
+          "edge_alpha": 0.0,
+          "explosion": {},
+          "flight_age_s": 0.955555555555554,
+          "flight_s": 1.9,
+          "fov": 65.1629104614258,
+          "hp": 999999.0,
+          "impact_tick": -1,
+          "label": "middle-low",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": false,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": false,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": false
+          },
+          "physics_hz": 90,
+          "preset": "low",
+          "release_tick": 1757,
+          "tick": 1850
+        },
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": true,
+          "edge_alpha": 0.0,
+          "explosion": {},
+          "flight_age_s": 1.88888888888888,
+          "flight_s": 1.9,
+          "fov": 65.1629104614258,
+          "hp": 999999.0,
+          "impact_tick": -1,
+          "label": "last-before-contact",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": true,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": true,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": true
+          },
+          "physics_hz": 90,
+          "preset": "high",
+          "release_tick": 1757,
+          "tick": 1939
+        },
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": null,
+          "edge_alpha": 0.162085985202203,
+          "explosion": {
+            "hit": true,
+            "hp_after": 999975.2,
+            "hp_before": 999999.0,
+            "radius": 3.6
+          },
+          "flight_age_s": null,
+          "flight_s": null,
+          "fov": 65.1629104614258,
+          "hp": 999975.2,
+          "impact_tick": 1944,
+          "label": "impact",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": true,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": true,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": true
+          },
+          "physics_hz": 90,
+          "preset": "high",
+          "release_tick": 1757,
+          "tick": 1945
+        },
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": null,
+          "edge_alpha": 0.128831074486986,
+          "explosion": {
+            "hit": true,
+            "hp_after": 999975.2,
+            "hp_before": 999999.0,
+            "radius": 3.6
+          },
+          "flight_age_s": null,
+          "flight_s": null,
+          "fov": 65.1629104614258,
+          "hp": 999975.2,
+          "impact_tick": 1944,
+          "label": "after-150ms",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": true,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": true,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": true
+          },
+          "physics_hz": 90,
+          "preset": "high",
+          "release_tick": 1757,
+          "tick": 1962
+        },
+        {
+          "ball": "(-139.812, 142.9452, -658.8793)",
+          "ball_in_ring": null,
+          "edge_alpha": 0.0,
+          "explosion": {
+            "hit": true,
+            "hp_after": 999975.2,
+            "hp_before": 999999.0,
+            "radius": 3.6
+          },
+          "flight_age_s": null,
+          "flight_s": null,
+          "fov": 65.1629104614258,
+          "hp": 999975.2,
+          "impact_tick": 1944,
+          "label": "after-420ms",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "lighting": {
+            "fog": true,
+            "fog_density": 0.000600000028498471,
+            "glow": true,
+            "glow_blend": 1,
+            "sdfgi": false,
+            "ssao": true,
+            "ssil": false,
+            "sun_count": 6,
+            "volumetric_fog": true
+          },
+          "physics_hz": 90,
+          "preset": "high",
+          "release_tick": 1757,
+          "tick": 1989
+        }
+      ],
+      "limits": "The lobber, the slag ring and the charge lane are the game's own attacks. The boil ring and the yard wall are staged through the game's builders and sizes with no fight running, the wall where the run starts and not where the lock fires. No crew is on screen, Brindle's drones are held off, and the crew's hello is put down as a press of fire does. Each still lists the warnings on screen under threats. Size, place and read only on a software renderer.",
+      "size": [
+        1600.0,
+        900.0
+      ],
+      "table": "park",
+      "tool": "danger_read_capture.gd"
+    },
+    "motion": {
+      "adapter": "Apple M5 Max (Apple9)",
+      "at": 0.6,
+      "danger_mark": true,
+      "frames": [
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 7.53,
+            "wanted": 7.53
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "flash_fraction": 1.0,
+          "fov": 65.1609497070312,
+          "grounded": false,
+          "hit_stops": [],
+          "id": "overlap-000",
+          "lens": "(-140.6222, 145.9711, -666.0294)",
+          "mark": false,
+          "physics_tick": 1433,
+          "preset": "high",
+          "profiles": [],
+          "sample_s": 0.0,
+          "shoulder_mix": 0.0,
+          "speed": 0.288888901472092,
+          "stage": 1,
+          "world_position": "(-139.812, 142.9452, -658.8793)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 7.53,
+            "wanted": 7.53
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "flash_fraction": 0.804166666666667,
+          "fov": 65.1614761352539,
+          "grounded": false,
+          "hit_stops": [
+            [
+              0.012,
+              0.012,
+              "enemy_struck",
+              13739
+            ]
+          ],
+          "id": "overlap-100",
+          "lens": "(-140.6222, 145.9711, -666.0294)",
+          "mark": true,
+          "physics_tick": 1444,
+          "preset": "high",
+          "profiles": [],
+          "sample_s": 0.1,
+          "shoulder_mix": 0.0,
+          "speed": 0.288888901472092,
+          "stage": 1,
+          "world_position": "(-139.812, 142.9452, -658.8793)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 7.53,
+            "wanted": 7.53
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "flash_fraction": 0.693055555555555,
+          "fov": 65.1617050170898,
+          "grounded": false,
+          "hit_stops": [
+            [
+              0.012,
+              0.012,
+              "enemy_struck",
+              13739
+            ]
+          ],
+          "id": "overlap-150",
+          "lens": "(-140.6222, 145.9712, -666.0295)",
+          "mark": true,
+          "physics_tick": 1451,
+          "preset": "high",
+          "profiles": [],
+          "sample_s": 0.155555555555556,
+          "shoulder_mix": 0.0,
+          "speed": 0.288888901472092,
+          "stage": 1,
+          "world_position": "(-139.812, 142.9452, -658.8793)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 7.53,
+            "wanted": 7.53
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "flash_fraction": 0.359722222222222,
+          "fov": 65.1622009277344,
+          "grounded": false,
+          "hit_stops": [
+            [
+              0.012,
+              0.012,
+              "enemy_struck",
+              13739
+            ]
+          ],
+          "id": "overlap-300",
+          "lens": "(-140.6222, 145.9712, -666.0296)",
+          "mark": true,
+          "physics_tick": 1466,
+          "preset": "high",
+          "profiles": [],
+          "sample_s": 0.3,
+          "shoulder_mix": 0.0,
+          "speed": 0.288888901472092,
+          "stage": 1,
+          "world_position": "(-139.812, 142.9452, -658.8793)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 7.53,
+            "wanted": 7.53
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "flash_fraction": 0.0,
+          "fov": 65.1625137329102,
+          "grounded": false,
+          "hit_stops": [
+            [
+              0.012,
+              0.012,
+              "enemy_struck",
+              13739
+            ]
+          ],
+          "id": "overlap-450",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "mark": true,
+          "physics_tick": 1482,
+          "preset": "high",
+          "profiles": [],
+          "sample_s": 0.455555555555556,
+          "shoulder_mix": 0.0,
+          "speed": 0.288888901472092,
+          "stage": 1,
+          "world_position": "(-139.812, 142.9452, -658.8793)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 7.53,
+            "wanted": 7.53
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "flash_fraction": 0.0,
+          "fov": 65.1627502441406,
+          "grounded": false,
+          "hit_stops": [
+            [
+              0.012,
+              0.012,
+              "enemy_struck",
+              13739
+            ]
+          ],
+          "id": "overlap-700",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "mark": true,
+          "physics_tick": 1506,
+          "preset": "high",
+          "profiles": [],
+          "sample_s": 0.7,
+          "shoulder_mix": 0.0,
+          "speed": 0.288888901472092,
+          "stage": 1,
+          "world_position": "(-139.812, 142.9452, -658.8793)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 9.95,
+            "wanted": 10.04
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 77.1888580322266,
+          "grounded": false,
+          "id": "flume-air-high",
+          "lens": "(-54.29713, 45.10439, 36.07238)",
+          "physics_tick": 1684,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.3145866394043,
+          "stage": 2,
+          "world_position": "(-16.4392, 34.22883, 96.16338)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 9.95,
+            "wanted": 10.04
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 77.1888580322266,
+          "grounded": false,
+          "id": "flume-air-low",
+          "lens": "(-54.29713, 45.10439, 36.07238)",
+          "physics_tick": 1687,
+          "preset": "low",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.3145866394043,
+          "stage": 2,
+          "world_position": "(-16.4392, 34.22883, 96.16338)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 10.36,
+            "wanted": 10.43
+          },
+          "ball_in_frustum": false,
+          "comfort": false,
+          "fov": 79.0481872558594,
+          "grounded": false,
+          "id": "flume-reverse",
+          "lens": "(-23.95567, 41.88647, 80.50546)",
+          "physics_tick": 1695,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.7861099243164,
+          "stage": 2,
+          "turn_degrees": 180.000005467945,
+          "world_position": "(-15.25834, 33.44571, 97.54408)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 11.84,
+            "wanted": 11.85
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 85.4172286987305,
+          "grounded": true,
+          "id": "flume-landed",
+          "lens": "(2.276338, 28.97006, 118.0452)",
+          "physics_tick": 1751,
+          "preset": "high",
+          "profiles": [],
+          "shoulder_mix": 0.0,
+          "speed": 42.9454689025879,
+          "stage": 2,
+          "turn_degrees": 180.000005467945,
+          "world_position": "(-2.963667, 20.41761, 111.9194)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 4.2,
+            "wanted": 4.2
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 80.6617965698242,
+          "grounded": true,
+          "id": "shoulder",
+          "lens": "(0.762516, 23.26479, 113.9683)",
+          "physics_tick": 1791,
+          "preset": "high",
+          "profiles": [],
+          "shoulder_mix": 1.0,
+          "speed": 42.9454689025879,
+          "stage": 2,
+          "turn_degrees": 180.000005467945,
+          "world_position": "(-2.963667, 20.41761, 111.9194)"
+        }
+      ],
+      "limits": "The lobber, the slag ring and the charge lane are the game's own attacks. The boil ring and the yard wall are staged through the game's builders and sizes with no fight running, the wall where the run starts and not where the lock fires. No crew is on screen, Brindle's drones are held off, and the crew's hello is put down as a press of fire does. Each still lists the warnings on screen under threats. Size, place and read only on a software renderer.",
+      "size": [
+        1600.0,
+        900.0
+      ],
+      "table": "park",
+      "tool": "danger_read_capture.gd"
+    },
+    "motion-comfort": {
+      "adapter": "Apple M5 Max (Apple9)",
+      "at": 0.6,
+      "danger_mark": true,
+      "frames": [
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 7.53,
+            "wanted": 7.53
+          },
+          "ball_in_frustum": true,
+          "comfort": true,
+          "flash_fraction": 1.0,
+          "fov": 65.1609497070312,
+          "grounded": false,
+          "hit_stops": [],
+          "id": "overlap-000",
+          "lens": "(-140.6222, 145.9711, -666.0294)",
+          "mark": false,
+          "physics_tick": 1433,
+          "preset": "high",
+          "profiles": [],
+          "sample_s": 0.0,
+          "shoulder_mix": 0.0,
+          "speed": 0.288888901472092,
+          "stage": 1,
+          "world_position": "(-139.812, 142.9452, -658.8793)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 7.53,
+            "wanted": 7.53
+          },
+          "ball_in_frustum": true,
+          "comfort": true,
+          "flash_fraction": 0.804166666666667,
+          "fov": 65.1614761352539,
+          "grounded": false,
+          "hit_stops": [
+            [
+              0.012,
+              0.012,
+              "enemy_struck",
+              14932
+            ]
+          ],
+          "id": "overlap-100",
+          "lens": "(-140.6222, 145.9711, -666.0294)",
+          "mark": true,
+          "physics_tick": 1444,
+          "preset": "high",
+          "profiles": [],
+          "sample_s": 0.1,
+          "shoulder_mix": 0.0,
+          "speed": 0.288888901472092,
+          "stage": 1,
+          "world_position": "(-139.812, 142.9452, -658.8793)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 7.53,
+            "wanted": 7.53
+          },
+          "ball_in_frustum": true,
+          "comfort": true,
+          "flash_fraction": 0.693055555555555,
+          "fov": 65.1617050170898,
+          "grounded": false,
+          "hit_stops": [
+            [
+              0.012,
+              0.012,
+              "enemy_struck",
+              14932
+            ]
+          ],
+          "id": "overlap-150",
+          "lens": "(-140.6222, 145.9712, -666.0295)",
+          "mark": true,
+          "physics_tick": 1451,
+          "preset": "high",
+          "profiles": [],
+          "sample_s": 0.155555555555556,
+          "shoulder_mix": 0.0,
+          "speed": 0.288888901472092,
+          "stage": 1,
+          "world_position": "(-139.812, 142.9452, -658.8793)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 7.53,
+            "wanted": 7.53
+          },
+          "ball_in_frustum": true,
+          "comfort": true,
+          "flash_fraction": 0.359722222222222,
+          "fov": 65.1622009277344,
+          "grounded": false,
+          "hit_stops": [
+            [
+              0.012,
+              0.012,
+              "enemy_struck",
+              14932
+            ]
+          ],
+          "id": "overlap-300",
+          "lens": "(-140.6222, 145.9712, -666.0296)",
+          "mark": true,
+          "physics_tick": 1466,
+          "preset": "high",
+          "profiles": [],
+          "sample_s": 0.3,
+          "shoulder_mix": 0.0,
+          "speed": 0.288888901472092,
+          "stage": 1,
+          "world_position": "(-139.812, 142.9452, -658.8793)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 7.53,
+            "wanted": 7.53
+          },
+          "ball_in_frustum": true,
+          "comfort": true,
+          "flash_fraction": 0.0,
+          "fov": 65.1625137329102,
+          "grounded": false,
+          "hit_stops": [
+            [
+              0.012,
+              0.012,
+              "enemy_struck",
+              14932
+            ]
+          ],
+          "id": "overlap-450",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "mark": true,
+          "physics_tick": 1482,
+          "preset": "high",
+          "profiles": [],
+          "sample_s": 0.455555555555556,
+          "shoulder_mix": 0.0,
+          "speed": 0.288888901472092,
+          "stage": 1,
+          "world_position": "(-139.812, 142.9452, -658.8793)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 7.53,
+            "wanted": 7.53
+          },
+          "ball_in_frustum": true,
+          "comfort": true,
+          "flash_fraction": 0.0,
+          "fov": 65.1627502441406,
+          "grounded": false,
+          "hit_stops": [
+            [
+              0.012,
+              0.012,
+              "enemy_struck",
+              14932
+            ]
+          ],
+          "id": "overlap-700",
+          "lens": "(-140.6222, 145.9712, -666.0297)",
+          "mark": true,
+          "physics_tick": 1506,
+          "preset": "high",
+          "profiles": [],
+          "sample_s": 0.7,
+          "shoulder_mix": 0.0,
+          "speed": 0.288888901472092,
+          "stage": 1,
+          "world_position": "(-139.812, 142.9452, -658.8793)"
+        }
+      ],
+      "limits": "The lobber, the slag ring and the charge lane are the game's own attacks. The boil ring and the yard wall are staged through the game's builders and sizes with no fight running, the wall where the run starts and not where the lock fires. No crew is on screen, Brindle's drones are held off, and the crew's hello is put down as a press of fire does. Each still lists the warnings on screen under threats. Size, place and read only on a software renderer.",
+      "size": [
+        1600.0,
+        900.0
+      ],
+      "table": "park",
+      "tool": "danger_read_capture.gd"
+    },
+    "turn-replay": {
+      "adapter": "Apple M5 Max (Apple9)",
+      "at": 0.6,
+      "danger_mark": true,
+      "frames": [
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 9.71,
+            "wanted": 9.81
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 76.2471389770508,
+          "grounded": false,
+          "id": "flume-air-high",
+          "lens": "(-23.8218, 49.93378, 87.53142)",
+          "physics_tick": 1790,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.225757598877,
+          "stage": 2,
+          "world_position": "(-16.67575, 44.36964, 95.8868)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 9.71,
+            "wanted": 9.81
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 76.2471389770508,
+          "grounded": false,
+          "id": "flume-air-low",
+          "lens": "(-23.8218, 49.93378, 87.53142)",
+          "physics_tick": 1793,
+          "preset": "low",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.225757598877,
+          "stage": 2,
+          "world_position": "(-16.67575, 44.36964, 95.8868)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 10.16,
+            "wanted": 10.24
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 78.2972564697266,
+          "grounded": false,
+          "id": "flume-reverse",
+          "lens": "(-11.00695, 49.67888, 102.5149)",
+          "physics_tick": 1801,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.6882286071777,
+          "stage": 2,
+          "turn_degrees": 180.000005467945,
+          "world_position": "(-15.49426, 43.60217, 97.26823)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 10.16,
+            "wanted": 10.24
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 78.2972564697266,
+          "grounded": false,
+          "id": "recovery-01",
+          "lens": "(-11.00695, 49.67888, 102.5149)",
+          "physics_tick": 1804,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.6882286071777,
+          "stage": 2,
+          "turn_degrees": 180.000005467945,
+          "world_position": "(-15.49426, 43.60217, 97.26823)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 10.24,
+            "wanted": 10.32
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 78.6518478393555,
+          "grounded": false,
+          "id": "recovery-02",
+          "lens": "(-10.74361, 49.60688, 102.8229)",
+          "physics_tick": 1808,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.7861099243164,
+          "stage": 2,
+          "turn_degrees": 180.000005467945,
+          "world_position": "(-15.25834, 43.4393, 97.54408)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 10.39,
+            "wanted": 10.46
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 79.312370300293,
+          "grounded": false,
+          "id": "recovery-03",
+          "lens": "(-10.21793, 49.44355, 103.4375)",
+          "physics_tick": 1813,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.9870872497559,
+          "stage": 2,
+          "turn_degrees": 180.000005467945,
+          "world_position": "(-14.78689, 43.10418, 98.09531)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 10.71,
+            "wanted": 10.77
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 80.7134017944336,
+          "grounded": false,
+          "id": "recovery-06",
+          "lens": "(-8.91453, 48.93019, 104.9615)",
+          "physics_tick": 1821,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 36.5188293457031,
+          "stage": 2,
+          "turn_degrees": 180.000005467945,
+          "world_position": "(-13.61054, 42.2119, 99.47073)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 11.1,
+            "wanted": 11.14
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 82.3666458129883,
+          "grounded": false,
+          "id": "recovery-09",
+          "lens": "(-6.871534, 47.82981, 107.3502)",
+          "physics_tick": 1832,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 37.4507751464844,
+          "stage": 2,
+          "turn_degrees": 180.000005467945,
+          "world_position": "(-11.73542, 40.62297, 101.6632)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 11.52,
+            "wanted": 11.54
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 84.1091918945312,
+          "grounded": false,
+          "id": "recovery-15",
+          "lens": "(-3.41412, 45.19935, 111.3927)",
+          "physics_tick": 1849,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 39.2903327941895,
+          "stage": 2,
+          "turn_degrees": 180.000005467945,
+          "world_position": "(-8.476275, 37.36867, 105.4739)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 11.95,
+            "wanted": 11.95
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 85.827880859375,
+          "grounded": true,
+          "id": "flume-landed",
+          "lens": "(8.657234, 29.32231, 125.5069)",
+          "physics_tick": 1904,
+          "preset": "high",
+          "profiles": [],
+          "shoulder_mix": 0.0,
+          "speed": 47.6188163757324,
+          "stage": 2,
+          "turn_degrees": 180.000005467945,
+          "world_position": "(3.327137, 20.16187, 119.2748)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 4.2,
+            "wanted": 4.2
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 80.7361679077148,
+          "grounded": true,
+          "id": "shoulder",
+          "lens": "(7.053029, 23.01041, 121.3234)",
+          "physics_tick": 1944,
+          "preset": "high",
+          "profiles": [],
+          "shoulder_mix": 1.0,
+          "speed": 47.6188163757324,
+          "stage": 2,
+          "turn_degrees": 180.000005467945,
+          "world_position": "(3.327137, 20.16187, 119.2748)"
+        }
+      ],
+      "limits": "The lobber, the slag ring and the charge lane are the game's own attacks. The boil ring and the yard wall are staged through the game's builders and sizes with no fight running, the wall where the run starts and not where the lock fires. No crew is on screen, Brindle's drones are held off, and the crew's hello is put down as a press of fire does. Each still lists the warnings on screen under threats. Size, place and read only on a software renderer.",
+      "size": [
+        1600.0,
+        900.0
+      ],
+      "table": "park",
+      "tool": "danger_read_capture.gd"
+    },
+    "turn-control": {
+      "adapter": "Apple M5 Max (Apple9)",
+      "at": 0.6,
+      "danger_mark": true,
+      "frames": [
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 9.71,
+            "wanted": 9.81
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 76.2471389770508,
+          "grounded": false,
+          "id": "flume-air-high",
+          "lens": "(-23.8218, 49.93378, 87.53142)",
+          "physics_tick": 1790,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.225757598877,
+          "stage": 2,
+          "world_position": "(-16.67575, 44.36964, 95.8868)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 9.71,
+            "wanted": 9.81
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 76.2471389770508,
+          "grounded": false,
+          "id": "flume-air-low",
+          "lens": "(-23.8218, 49.93378, 87.53142)",
+          "physics_tick": 1793,
+          "preset": "low",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.225757598877,
+          "stage": 2,
+          "world_position": "(-16.67575, 44.36964, 95.8868)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 10.16,
+            "wanted": 10.24
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 78.2972564697266,
+          "grounded": false,
+          "id": "flume-reverse",
+          "lens": "(-22.93431, 49.67888, 88.56911)",
+          "physics_tick": 1801,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.6882286071777,
+          "stage": 2,
+          "turn_degrees": 0.0,
+          "world_position": "(-15.49426, 43.60217, 97.26823)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 10.16,
+            "wanted": 10.24
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 78.2972564697266,
+          "grounded": false,
+          "id": "recovery-01",
+          "lens": "(-22.93431, 49.67888, 88.56911)",
+          "physics_tick": 1804,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.6882286071777,
+          "stage": 2,
+          "turn_degrees": 0.0,
+          "world_position": "(-15.49426, 43.60217, 97.26823)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 10.24,
+            "wanted": 10.32
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 78.6518478393555,
+          "grounded": false,
+          "id": "recovery-02",
+          "lens": "(-22.74436, 49.60687, 88.79121)",
+          "physics_tick": 1808,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.7861099243164,
+          "stage": 2,
+          "turn_degrees": 0.0,
+          "world_position": "(-15.25834, 43.4393, 97.54408)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 10.39,
+            "wanted": 10.46
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 79.312370300293,
+          "grounded": false,
+          "id": "recovery-03",
+          "lens": "(-22.35538, 49.44355, 89.24601)",
+          "physics_tick": 1813,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 35.9870872497559,
+          "stage": 2,
+          "turn_degrees": 0.0,
+          "world_position": "(-14.78689, 43.10418, 98.09531)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 10.71,
+            "wanted": 10.77
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 80.7134017944336,
+          "grounded": false,
+          "id": "recovery-06",
+          "lens": "(-21.3428, 48.93019, 90.42994)",
+          "physics_tick": 1821,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 36.5188293457031,
+          "stage": 2,
+          "turn_degrees": 0.0,
+          "world_position": "(-13.61054, 42.2119, 99.47073)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 11.1,
+            "wanted": 11.14
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 82.3666458129883,
+          "grounded": false,
+          "id": "recovery-09",
+          "lens": "(-19.64718, 47.8298, 92.41251)",
+          "physics_tick": 1832,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 37.4507751464844,
+          "stage": 2,
+          "turn_degrees": 0.0,
+          "world_position": "(-11.73542, 40.62297, 101.6632)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": true,
+            "hit": 11.52,
+            "wanted": 11.54
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 84.1091918945312,
+          "grounded": false,
+          "id": "recovery-15",
+          "lens": "(-16.56828, 45.19936, 96.01244)",
+          "physics_tick": 1849,
+          "preset": "high",
+          "profiles": [
+            "falling"
+          ],
+          "shoulder_mix": 0.0,
+          "speed": 39.2903327941895,
+          "stage": 2,
+          "turn_degrees": 0.0,
+          "world_position": "(-8.476275, 37.36867, 105.4739)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 11.95,
+            "wanted": 11.95
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 85.827880859375,
+          "grounded": true,
+          "id": "flume-landed",
+          "lens": "(-4.907646, 29.32231, 109.6464)",
+          "physics_tick": 1904,
+          "preset": "high",
+          "profiles": [],
+          "shoulder_mix": 0.0,
+          "speed": 47.6188163757324,
+          "stage": 2,
+          "turn_degrees": 0.0,
+          "world_position": "(3.327137, 20.16187, 119.2748)"
+        },
+        {
+          "arm": {
+            "body": null,
+            "easing": false,
+            "hit": 4.2,
+            "wanted": 4.2
+          },
+          "ball_in_frustum": true,
+          "comfort": false,
+          "fov": 80.7361679077148,
+          "grounded": true,
+          "id": "shoulder",
+          "lens": "(-0.398757, 23.01042, 117.2262)",
+          "physics_tick": 1944,
+          "preset": "high",
+          "profiles": [],
+          "shoulder_mix": 1.0,
+          "speed": 47.6188163757324,
+          "stage": 2,
+          "turn_degrees": 0.0,
+          "world_position": "(3.327137, 20.16187, 119.2748)"
+        }
+      ],
+      "limits": "The lobber, the slag ring and the charge lane are the game's own attacks. The boil ring and the yard wall are staged through the game's builders and sizes with no fight running, the wall where the run starts and not where the lock fires. No crew is on screen, Brindle's drones are held off, and the crew's hello is put down as a press of fire does. Each still lists the warnings on screen under threats. Size, place and read only on a software renderer.",
+      "size": [
+        1600.0,
+        900.0
+      ],
+      "table": "park",
+      "tool": "danger_read_capture.gd"
+    },
+    "return-131": {
+      "adapter": "",
+      "at": 0.6,
+      "danger_mark": true,
+      "frames": [
+        {
+          "blast_centre": "(-136.4293, 139.4916, -629.0528)",
+          "distance_m": 11.5163249969482,
+          "hit": false,
+          "movement": "full right from held rest; no boost",
+          "radius_m": 3.6,
+          "returned": true,
+          "start_pos": "(-139.812, 142.9452, -658.8793)",
+          "start_shell_age": 1.45555555555555,
+          "start_tick": 131,
+          "target": "(-139.812, 141.4976, -658.8793)"
+        }
+      ],
+      "limits": "The lobber, the slag ring and the charge lane are the game's own attacks. The boil ring and the yard wall are staged through the game's builders and sizes with no fight running, the wall where the run starts and not where the lock fires. No crew is on screen, Brindle's drones are held off, and the crew's hello is put down as a press of fire does. Each still lists the warnings on screen under threats. Size, place and read only on a software renderer.",
+      "size": [
+        1600.0,
+        900.0
+      ],
+      "table": "park",
+      "tool": "danger_read_capture.gd"
+    },
+    "return-132": {
+      "adapter": "",
+      "at": 0.6,
+      "danger_mark": true,
+      "frames": [
+        {
+          "blast_centre": "(-139.812, 141.4976, -658.8793)",
+          "distance_m": 1.25705289840698,
+          "hit": true,
+          "movement": "full right from held rest; no boost",
+          "radius_m": 3.6,
+          "returned": false,
+          "start_pos": "(-139.812, 142.9452, -658.8793)",
+          "start_shell_age": 1.46666666666666,
+          "start_tick": 132,
+          "target": "(-139.812, 141.4976, -658.8793)"
+        }
+      ],
+      "limits": "The lobber, the slag ring and the charge lane are the game's own attacks. The boil ring and the yard wall are staged through the game's builders and sizes with no fight running, the wall where the run starts and not where the lock fires. No crew is on screen, Brindle's drones are held off, and the crew's hello is put down as a press of fire does. Each still lists the warnings on screen under threats. Size, place and read only on a software renderer.",
+      "size": [
+        1600.0,
+        900.0
+      ],
+      "table": "park",
+      "tool": "danger_read_capture.gd"
+    }
+  },
+  "source_check_verdicts": [
+    "PASS sketches/core-loop import exit=0 2.5s",
+    "PASS sketches/core-loop res://tests/camera_aim_rest_test.gd exit=0 5.4s",
+    "PASS sketches/core-loop res://tests/camera_profiles_test.gd exit=0 0.3s",
+    "PASS sketches/core-loop res://tests/camera_glance_test.gd exit=0 5.9s",
+    "PASS sketches/core-loop res://tests/enemy_ground_contact_test.gd exit=0 39.8s",
+    "PASS sketches/core-loop res://tests/flash_comfort_test.gd exit=0 5.5s",
+    "PASS sketches/core-loop res://tests/flash_rate_measure_test.gd exit=0 2.5s",
+    "PASS sketches/core-loop res://tests/keyline_floor_test.gd exit=0 0.2s",
+    "PASS sketches/core-loop res://tests/park_landmark_sight_test.gd exit=0 1.7s",
+    "PASS sketches/core-loop res://tests/reduced_motion_test.gd exit=0 4.2s",
+    "PASS sketches/core-loop res://tests/camera_tight_test.gd exit=0 67.4s",
+    "PASS sketches/core-loop res://tests/reward_gate_nameplate_test.gd exit=0 20.9s",
+    "PASS sketches/core-loop res://tests/telegraph_ground_batch_test.gd exit=0 3.3s",
+    "PASS sketches/core-loop res://tests/snag_sweep_test.gd exit=0 132.9s"
+  ]
+}

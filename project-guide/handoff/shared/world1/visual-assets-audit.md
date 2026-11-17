@@ -1,5 +1,7 @@
 # World 1 visual assets critique (12 Nov 2026)
 
+For the 17 November replay of the dam, flume and Brindle, see the [wave 44 visual audit and design assignments](visual-audit-w44/README.md).
+
 Andrew asked on 12 November 2026 for a deep and wide design critique of world 1, split by silo. This page is the visual assets silo: models, materials, colour and light, item and pickup art, HUD and icon art, style and stand-ins. Effects (VFX, hit feedback, telegraph look, screen effects) belong to the effects critique and play design to the gameplay critique; what this page found for them is passed on at the end. Every finding is a row in [BACKLOG.md](../../../../BACKLOG.md#world-1-and-scaling-backlog-12-november-2026): W1-21 to W1-29, W1-46 to W1-48 and SG-13 to SG-16.
 
 **Status, 14 November 2026:** every row this page made is built and stacked on stage/alpha-w41 (BACKLOG.md names each pull request). A finding below describes the build of cand/w40 6b9cb42e, not the current stage. Read the PC film of a later stage before treating any finding as still open.
