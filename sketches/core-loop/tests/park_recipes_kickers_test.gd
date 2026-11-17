@@ -37,6 +37,9 @@ const UNSEATED := {
 	# Its lip lands on the terrace edge (x 272, y 0); seated, the exit would sit on the terrace and the ramp would rise
 	# 13 m over it (2-park_flume.md, drum lip kicker moved again 2026-10-25).
 	"drum_lip_kicker": "park_flume.json",
+	# Its lip stands on the gap table's sheer face line so it meets the table top with no notch (W1-102 review, 17 Nov
+	# 2026); seated, the fit would read the face's 2 m skirt of raised ground under its last metres.
+	"gap_table_kicker": "park_flume.json",
 }
 # Each piece: [L, H, W] as authored.
 const PIECES := {

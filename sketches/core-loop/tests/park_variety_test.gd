@@ -117,10 +117,16 @@ func _planted(g, map, map_id: String, stage: int, prepared: Dictionary, pool, si
 	var one := sites_doc.duplicate(true)
 	one["miniboss_sites"] = [sites_doc["miniboss_sites"][0]]
 	var keys := {}
+	var modifiers := {}
 	for s in RUNS:
 		# Every run draws its pockets from one seed: the draw ignores the run, as a one-entry library would.
 		var d := draw_set(g, map, map_id, stage, 1, prepared, pool, one, true)
 		keys[d["key"]] = true
+		if d["modifier"] != NONE:
+			modifiers[d["modifier"]] = true
+	# Every planted run draws no modifier: "none" is no drawn value, so modifiers_drawn reads 0 and fails its line.
+	print("PLANTED every_run_no_modifier modifiers_drawn %d pass>=%d %s" % [modifiers.size(), PART_MIN, "PASS" if modifiers.size() >= PART_MIN else "FAIL"])
+	t.check("planted: every run drawing no modifier fails modifiers_drawn", modifiers.size() < PART_MIN, "%d drawn" % modifiers.size())
 	var n := keys.size()
 	print("PLANTED one_site_no_modifier_fixed_pockets layout_sets %d pass>=%d %s" % [n, SETS_MIN, "PASS" if n >= SETS_MIN else "FAIL"])
 	t.check("planted: no modifier, one rogue site and a fixed pocket draw give one set and fail", n == 1 and n < SETS_MIN, "%d sets" % n)
