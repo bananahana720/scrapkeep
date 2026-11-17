@@ -4,7 +4,36 @@ A finding is a break of `models/Rewards.tla` that replayed on the real code. [re
 
 ## Open
 
+### R-2. Two games on one profile each pay the same reward
+
+- Rule: `AtMostOnce`. Configs: `rewards-today-two-once` and `rewards-today-two-nofail-once`. The candidate fix does not change it (`rewards-guarded-two-once`).
+- Steps: two game processes load the same profile before either earns the row. Game A earns the row, grants it and saves. Game B earns it too. B's own profile in memory has no settled key, so B grants again. B's save finds a newer generation on disk and merges (a union). The model needs no crash and no failed write for this.
+- Harm: both games announce the earn and run the grant. The file holds the unlock once, because every unlock is a set member, so nothing is doubled on disk. A reward that is not a set member would be paid twice.
+- Replay: `replay/reward_twice_two_games.gd` at `04a7311c4`, 16 November 2026. It runs headless with two `Profile` and `Progress` pairs on one file, as two processes hold them. Output:
+
+  ```
+  step A earns: A cosmetic true, earn announced 1, file generation 2
+  step B earns: B cosmetic true, earn announced 1, file generation 4
+  step file: cosmetic held 1 time(s), settled true
+  REPRODUCED
+  ```
+
+  The control is the same script with `-- --control`, where game B loads the profile after A's save:
+
+  ```
+  step A earns: A cosmetic true, earn announced 1, file generation 2
+  step B earns: B cosmetic true, earn announced 0, file generation 2
+  step file: cosmetic held 1 time(s), settled true
+  NOT REPRODUCED
+  ```
+
+- Evidence limit: two objects in one process, not two game processes. Two games on one `user://` folder is not a normal way to play. The profile's merge exists so that it loses nothing, not so that it pays once.
+
+## Closed
+
 ### R-1. If both profile saves of a reward's earn fail and no later profile save succeeds before the game closes, a Continue settles the reward without paying it, for good
+
+- Closed (17 November 2026): pull request 1093 (`69870ceff`) made `reconcile_settled` skip `reward:*` keys, the narrow fix below (ruling ea: never lost outranks at most once). With `ReconcileCopies="ledger"`, `rewards-today-one` holds both rules (48,537 states) and both two-game `NeverLost` configs hold. The fault stays checkable: `rewards-broken-midsave` and the history below.
 
 - Rule: `NeverLost`. Config: `rewards-today-one` (one game, at most two crashes and two failed writes). With no failed write (`rewards-today-one-nofail`) both rules hold.
 - Steps, in the code's words:
@@ -53,28 +82,3 @@ A finding is a break of `models/Rewards.tla` that replayed on the real code. [re
   - How the reward arrives with one game: the continued run still refuses the grant, because its own list holds the key (`progress.gd:117-118`). `_earn` saves the row as earned and not settled (`:419`), and the next launch's `backfill_rewards` pays it once. The reward arrives one launch late.
   - Behaviour change: a profile wiped (or lost) while a run file survives is paid again at the next launch. Today the run file's list stops that payment.
   - `sketches/core-loop/tests/unlock_settle_once_test.gd` does not tell the two designs apart. Its "profile without the id" check calls `grant_once` straight after `reconcile_settled`, inside the run, and the run's own list refuses that grant under either design.
-
-### R-2. Two games on one profile each pay the same reward
-
-- Rule: `AtMostOnce`. Configs: `rewards-today-two-once` and `rewards-today-two-nofail-once`. The candidate fix does not change it (`rewards-guarded-two-once`).
-- Steps: two game processes load the same profile before either earns the row. Game A earns the row, grants it and saves. Game B earns it too. B's own profile in memory has no settled key, so B grants again. B's save finds a newer generation on disk and merges (a union). The model needs no crash and no failed write for this.
-- Harm: both games announce the earn and run the grant. The file holds the unlock once, because every unlock is a set member, so nothing is doubled on disk. A reward that is not a set member would be paid twice.
-- Replay: `replay/reward_twice_two_games.gd` at `04a7311c4`, 16 November 2026. It runs headless with two `Profile` and `Progress` pairs on one file, as two processes hold them. Output:
-
-  ```
-  step A earns: A cosmetic true, earn announced 1, file generation 2
-  step B earns: B cosmetic true, earn announced 1, file generation 4
-  step file: cosmetic held 1 time(s), settled true
-  REPRODUCED
-  ```
-
-  The control is the same script with `-- --control`, where game B loads the profile after A's save:
-
-  ```
-  step A earns: A cosmetic true, earn announced 1, file generation 2
-  step B earns: B cosmetic true, earn announced 0, file generation 2
-  step file: cosmetic held 1 time(s), settled true
-  NOT REPRODUCED
-  ```
-
-- Evidence limit: two objects in one process, not two game processes. Two games on one `user://` folder is not a normal way to play. The profile's merge exists so that it loses nothing, not so that it pays once.
