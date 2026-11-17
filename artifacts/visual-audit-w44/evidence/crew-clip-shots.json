@@ -1,0 +1,344 @@
+{
+	"shots": [
+		{
+			"clip": "rest",
+			"file": "chaser_00_rest.png",
+			"kind": "chaser",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "chaser_01_idle.png",
+			"kind": "chaser",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "chaser_02_move.png",
+			"kind": "chaser",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "chaser_03_windup_half.png",
+			"kind": "chaser",
+			"label": "windup_half",
+			"t": 0.3
+		},
+		{
+			"clip": "windup",
+			"file": "chaser_04_windup_release.png",
+			"kind": "chaser",
+			"label": "windup_release",
+			"t": 0.6
+		},
+		{
+			"clip": "attack",
+			"file": "chaser_05_attack.png",
+			"kind": "chaser",
+			"label": "attack",
+			"t": 0.027
+		},
+		{
+			"clip": "hit",
+			"file": "chaser_06_hit.png",
+			"kind": "chaser",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "chaser_07_death.png",
+			"kind": "chaser",
+			"label": "death",
+			"t": 0.5
+		},
+		{
+			"clip": "rest",
+			"file": "lobber_00_rest.png",
+			"kind": "lobber",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "lobber_01_idle.png",
+			"kind": "lobber",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "lobber_02_move.png",
+			"kind": "lobber",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "lobber_03_windup_half.png",
+			"kind": "lobber",
+			"label": "windup_half",
+			"t": 0.65
+		},
+		{
+			"clip": "windup",
+			"file": "lobber_04_windup_release.png",
+			"kind": "lobber",
+			"label": "windup_release",
+			"t": 1.3
+		},
+		{
+			"clip": "attack",
+			"file": "lobber_05_attack.png",
+			"kind": "lobber",
+			"label": "attack",
+			"t": 0.037
+		},
+		{
+			"clip": "hit",
+			"file": "lobber_06_hit.png",
+			"kind": "lobber",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "lobber_07_death.png",
+			"kind": "lobber",
+			"label": "death",
+			"t": 0.5
+		},
+		{
+			"clip": "rest",
+			"file": "mag_trapper_00_rest.png",
+			"kind": "mag_trapper",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "mag_trapper_01_idle.png",
+			"kind": "mag_trapper",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "mag_trapper_02_move.png",
+			"kind": "mag_trapper",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "mag_trapper_03_windup_half.png",
+			"kind": "mag_trapper",
+			"label": "windup_half",
+			"t": 0.55
+		},
+		{
+			"clip": "windup",
+			"file": "mag_trapper_04_windup_release.png",
+			"kind": "mag_trapper",
+			"label": "windup_release",
+			"t": 1.1
+		},
+		{
+			"clip": "attack",
+			"file": "mag_trapper_05_attack.png",
+			"kind": "mag_trapper",
+			"label": "attack",
+			"t": 0.048
+		},
+		{
+			"clip": "hit",
+			"file": "mag_trapper_06_hit.png",
+			"kind": "mag_trapper",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "mag_trapper_07_death.png",
+			"kind": "mag_trapper",
+			"label": "death",
+			"t": 0.5
+		},
+		{
+			"clip": "rest",
+			"file": "plated_brute_00_rest.png",
+			"kind": "plated_brute",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "plated_brute_01_idle.png",
+			"kind": "plated_brute",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "plated_brute_02_move.png",
+			"kind": "plated_brute",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "plated_brute_03_windup_half.png",
+			"kind": "plated_brute",
+			"label": "windup_half",
+			"t": 0.55
+		},
+		{
+			"clip": "windup",
+			"file": "plated_brute_04_windup_release.png",
+			"kind": "plated_brute",
+			"label": "windup_release",
+			"t": 1.1
+		},
+		{
+			"clip": "attack",
+			"file": "plated_brute_05_attack.png",
+			"kind": "plated_brute",
+			"label": "attack",
+			"t": 0.027
+		},
+		{
+			"clip": "hit",
+			"file": "plated_brute_06_hit.png",
+			"kind": "plated_brute",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "plated_brute_07_death.png",
+			"kind": "plated_brute",
+			"label": "death",
+			"t": 0.5
+		},
+		{
+			"clip": "rest",
+			"file": "winch_drone_00_rest.png",
+			"kind": "winch_drone",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "winch_drone_01_idle.png",
+			"kind": "winch_drone",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "winch_drone_02_move.png",
+			"kind": "winch_drone",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "winch_drone_03_windup_half.png",
+			"kind": "winch_drone",
+			"label": "windup_half",
+			"t": 0.5
+		},
+		{
+			"clip": "windup",
+			"file": "winch_drone_04_windup_release.png",
+			"kind": "winch_drone",
+			"label": "windup_release",
+			"t": 1.0
+		},
+		{
+			"clip": "attack",
+			"file": "winch_drone_05_attack.png",
+			"kind": "winch_drone",
+			"label": "attack",
+			"t": 0.048
+		},
+		{
+			"clip": "hit",
+			"file": "winch_drone_06_hit.png",
+			"kind": "winch_drone",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "winch_drone_07_death.png",
+			"kind": "winch_drone",
+			"label": "death",
+			"t": 0.5
+		},
+		{
+			"clip": "rest",
+			"file": "jolt_layer_00_rest.png",
+			"kind": "jolt_layer",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "jolt_layer_01_idle.png",
+			"kind": "jolt_layer",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "jolt_layer_02_move.png",
+			"kind": "jolt_layer",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "jolt_layer_03_windup_half.png",
+			"kind": "jolt_layer",
+			"label": "windup_half",
+			"t": 0.5
+		},
+		{
+			"clip": "windup",
+			"file": "jolt_layer_04_windup_release.png",
+			"kind": "jolt_layer",
+			"label": "windup_release",
+			"t": 1.0
+		},
+		{
+			"clip": "attack",
+			"file": "jolt_layer_05_attack.png",
+			"kind": "jolt_layer",
+			"label": "attack",
+			"t": 0.048
+		},
+		{
+			"clip": "hit",
+			"file": "jolt_layer_06_hit.png",
+			"kind": "jolt_layer",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "jolt_layer_07_death.png",
+			"kind": "jolt_layer",
+			"label": "death",
+			"t": 0.5
+		}
+	],
+	"size": [
+		640,
+		480
+	]
+}

@@ -16,6 +16,17 @@ These are proposed assignments for the coordinator to select against the current
 | Dam level design | [Make the fork at the Eye readable at speed](tasks/dam-route.md) | Compare against the water treatment in [PR 1120](https://github.com/bananahana720/scrapkeep/pull/1120). Coordinate the approach replay with the camera writer. |
 | Flume level design | [Distinguish the upper carry from the lower return](tasks/flume-route.md) | Reconcile with the climb in [PR 1119](https://github.com/bananahana720/scrapkeep/pull/1119) before editing the flume or its graph. |
 | Arena level design | [Orient the rider on the bowl entry tangent](tasks/bowl-route.md) | Use the boss writer’s charge evidence. Coordinate any hazard interaction with [PR 1123](https://github.com/bananahana720/scrapkeep/pull/1123). |
+| Encounter design | [Curate the first decision in each wave](tasks/encounter-curation.md) | Preserve counts for the baseline. Share one route and encounter recording with the director writer. |
+| Spawn placement | [Give arrivals a visible approach](tasks/spawn-approaches.md) | Separate ordinary director packs, authored homes, rotating yard waves and overtime. |
+| Enemy art and animation | [Read body, tool and commitment in motion](tasks/enemy-motion.md) | Start with one of the [six captured machines](CREW-POSES.md). Compare script and clip poses at the same attack phase. |
+| Traversal | [Grapple into a bank and roll out at speed](tasks/grapple-roll.md) | Select one park field. Coordinate with its level designer before moving a solid or baking a graph. |
+| Enemy behavior | [Compare three ways to challenge a bowling pilot](tasks/fast-pack.md) | Run the existing flanker against stock first. Compare a bank-covering lobber and a bowl-through boom in separate encounters. |
+
+## Pick the first experiment
+
+The filmed camera, wave-mark and reward failures can go straight to reproduction. The roster and traversal proposals need a baseline for each named site. Pair the **fast pack** and **grapple line** baselines on the same route so both writers can see the moving player’s choice. Stage implementation one variable at a time. The frame-pacing writer can work independently on an idle machine. [Enemy roles by site](ENCOUNTERS.md)
+
+The design sheets use OpenAI ImageGen for composition, pose and movement ideas. Terrain coordinates, attachment range, damage shapes, UI copy and timing come from game data. Each assignment names a chase-camera view for player judgment and a second view for diagnosis. The performance card uses measured frame intervals. The [map plans](MAP-DESIGN.md), [Godot pose gallery](CREW-POSES.md) and [film run](README.md) supply the comparisons.
 
 ## Replay the route
 

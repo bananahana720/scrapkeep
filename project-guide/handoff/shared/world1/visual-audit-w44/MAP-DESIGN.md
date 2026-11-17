@@ -4,6 +4,10 @@ Give the rider a visible answer to two questions before each commitment. **What 
 
 The plans below show authored geometry and a sampled ride on the audit commit. Each task proposes a small change that a writer can test at speed. The design follows the project’s ten map points and its rule that difficulty presses a rider who slows or stops. Landmark sight and a change of pace are established level-design techniques. [World 1 map standard and measured results](../map-audit.md) · [Difficulty plan](../difficulty-plan.md) · [Michael Barclay on signposting and pacing](https://mikebarclay.co.uk/my-level-design-guidelines/)
 
+![Concept views from the rolling pilot at the dam fork, flume landing and bowl entry](../../../../../artifacts/visual-audit-w44/images/route-reading-study.jpg)
+
+*Rider-height concept views. Use the scaled plans below for geometry. Test the [hook, swing and rolling return](tasks/grapple-roll.md) against the actual terrain and anchor faces.*
+
 ## Dam · read the choice before the ball reaches it
 
 ![Dam plan with the floor line, Kest’s line, observed ball positions and four decision points](../../../../../artifacts/visual-audit-w44/images/dam-plan.png)

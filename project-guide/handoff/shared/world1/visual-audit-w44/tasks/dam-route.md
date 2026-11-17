@@ -2,6 +2,8 @@
 
 **Dam level designer · world 1 map points 1, 3, 7 and 9.** At the Eye the rider should see where the rim turn carries speed and where the construction incline leads. Both should point back toward the dam. [Top-down plate](../../../../../../artifacts/visual-audit-w44/images/dam-plan.png) · [Replay and handoff](../HANDOFF.md)
 
+![Rider-height concept. Read the dam fork in the upper panel alongside the measured overhead.](../../../../../../artifacts/visual-audit-w44/images/route-reading-study.jpg)
+
 1. Read the `the_eye`, `west_rim_bench`, `construction_incline`, `apron_yard_bowl` and `apron_kicker` rows. Capture both exits from rolling height on the floor and a pilot line. Mark the point where each route first reveals its landing and the dam face. Check the current water-sheet art before adding a cue near the Warden. [Dam map](../../../../../../sketches/core-loop/src/world/park/park_dam.json) · [Dam water change](https://github.com/bananahana720/scrapkeep/pull/1120)
 2. Prototype one silhouette change at the fork. Follow the existing bend with a worn curved lip. Align an existing square service frame with the incline landing. Leave an open view through each mouth. Start with dressing outside the rolling corridor. Test a collision change only if the existing surface actually prevents the advertised turn.
 3. Ride both lines with a light and a heavy build. Compare speed on entry and rejoin, unplanned stops, collisions and the time the nearest landing and far landmark remain visible. Check a reverse graze against every changed solid. Preserve the open-cell landmark sight requirement of at least 85%. At the yard, use two different approaches so its moving lock ring gets tested off-axis.

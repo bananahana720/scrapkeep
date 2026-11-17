@@ -4,6 +4,8 @@
 
 ![The dam camera moves from a serviceable chase shot to the cage covering the reticle](../../../../../../artifacts/visual-audit-w44/images/camera.jpg)
 
+![Concept sections and rider views for the dam and Brindle. Use the upper pair for the dam.](../../../../../../artifacts/visual-audit-w44/images/camera-contact-study.jpg)
+
 1. Reproduce the two approaches around frames 73 and 101. Match ball position, arm request, hit length and contacted tile to the [recorded rows](../../../../../../artifacts/visual-audit-w44/evidence/film.ndjson). Save a frame on either side of each hit.
 2. Inspect `_free_arm` and `_tight_target`. The lift probe treats a floor-like normal as free and tests whether tipping up buys clearance. The spring arm itself can still retract against terrain. Log the actual normal and candidate clearances at tile 5_8 to test whether that explains this shot. [Chase camera](../../../../../../sketches/core-loop/src/movement/chase_camera.gd)
 3. Prototype the smallest local framing change supported by that trace. A candidate shot lifts the line of sight over the cage through sustained contact, then settles back as the rider clears the face. Compare short obstructions, open-ground look-up, low roofs and back-to-back rim contacts for snapping or oscillation.

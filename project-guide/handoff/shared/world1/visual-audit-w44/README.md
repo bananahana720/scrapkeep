@@ -1,6 +1,8 @@
 # World 1 visual design audit · 17 November 2026
 
-**At the dam Warden and under Brindle’s bow, the camera hides the floor just when the player needs to pick an escape line.** In the open flume the same camera follows a fast reversal and landing. The strongest design opportunity is to recover the view during contact while keeping the open-space shot. Two smaller changes would help riders make immediate decisions. Give a live shell priority over reinforcement marks, and keep a reward’s full trade-off attached to its arch at the screen edge. [Session handoff and eight proposed assignments](HANDOFF.md) · [Top-down map plans](MAP-DESIGN.md)
+**At the dam Warden and under Brindle’s bow, the camera hides the floor just when the player needs to pick an escape line.** In the open flume the same camera follows a fast reversal and landing. The strongest design opportunity is to recover the view during contact while keeping the open-space shot. Two smaller changes would help riders make immediate decisions. Give a live shell priority over reinforcement marks, and keep a reward’s full trade-off attached to its arch at the screen edge. [Session handoff and thirteen proposed assignments](HANDOFF.md) · [Top-down map plans](MAP-DESIGN.md)
+
+For combat at bowling speed, the [encounter brief](ENCOUNTERS.md) compares a crossing chaser, a lobber covering a bank entry and a breakable boom line. The [enemy pose sheets](CREW-POSES.md) show six actual machines. The [grapple and roll spec](tasks/grapple-roll.md) pairs those encounters with real hook targets and recoverable landings.
 
 ## What the run showed
 
