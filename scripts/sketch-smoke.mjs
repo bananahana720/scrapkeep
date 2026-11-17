@@ -130,6 +130,12 @@ export function jobCount() {
   return Math.min(8, Math.max(2, Math.floor(idle / 3)));
 }
 
+// Solo tests run one at a time unless SMOKE_SOLO_JOBS widens the phase. A machine with cores to
+// spare can run several side by side; a test whose verdict reads wall time still wants 1.
+export function soloWidth(env = process.env) {
+  return Math.max(1, Math.floor(Number(env.SMOKE_SOLO_JOBS)) || 1);
+}
+
 // A test that prints SKIP, or "N skipped" with N above zero, passed without checking
 // something. The run still passes, but the summary lists it so a missing asset stays visible.
 const skipWord = /\bSKIP\b/;
@@ -802,7 +808,7 @@ async function main() {
   }
   results.push(...(await pool(jobs, width)));
   const soloStarted = Date.now();
-  for (const job of solo) results.push(await runAsync(job));
+  results.push(...(await pool(solo, soloWidth())));
   const soloSeconds = (Date.now() - soloStarted) / 1000;
   const ok = runPasses(results) && expired.length === 0;
   const slowest = [...results].sort((a, b) => b.ms - a.ms).slice(0, SLOWEST);
