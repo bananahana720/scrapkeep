@@ -9,6 +9,7 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Game := preload("res://src/game.gd")
 const T := preload("res://tests/support/t.gd")
+const PlatformPin := preload("res://tests/support/platform_pin.gd")
 
 # The reactor band (design-v3/wardens/reactor.md section 7; K-UNITS wave K-F, KF2), modelled on
 # tests/posture_bands_test.gd: a solo bot sweep on the reactor's first stage, the alpha table's
@@ -75,8 +76,15 @@ const DRIVER_PATH := "res://src/combat/warden_reactor.gd"
 # stage and not a later change. The ratio now reads 2.33 and the twice-grown check passes. Small 73.1 s is 3 s
 # over the 45-70 s ordinary-pilot ruling (DECISIONS section 5); ruling cu (harder, never easier) is the newer
 # one, and the overshoot is on the list for Andrew's sitting.
+# 2026-11-17 (ruling eb, Mac gate; tests/support/platform_pin.gd): Mac pins beside the Linux ones (73.09 / 31.34 stay).
+# The Mac plays each seed a different fight (its sinf and cosf round differently). One run alone on w43/gate-mac-reds
+# 30c61601 (stage alpha-w43 35e0fc83, Mac Studio M5 Max, Godot 4.7.2), the same medians as the wave 43 gate's run: small
+# [53.15, 64.13, 60.87] median 60.87, grown [31.34, 25.42, 21.74] median 25.42, ratio 2.39, campers 120, rides per run
+# [1, 3, 1, 0, 1, 0, 1, 1, 2]. Grown 25.4 s sits 0.4 s over the 25 s band floor on the Mac.
 const EXPECT_SMALL_S := 73.09
+const EXPECT_SMALL_S_MAC := 60.87
 const EXPECT_GROWN_S := 31.34
+const EXPECT_GROWN_S_MAC := 25.42
 const TOLERANCE := 0.10
 const WALL_S := 330.0
 
@@ -140,10 +148,10 @@ func _initialize() -> void:
 	# Not a band bullet (reactor.md section 7): a small run that hits the cap is reported, not gated.
 	print("[report] small broke it in %d of %d runs" % [small_broke, SEEDS.size()])
 	t.eq("the camper never breaks it", camper_broke, 0)
-	t.check("small median within 10 percent of the pin", absf(small - EXPECT_SMALL_S) <= TOLERANCE * EXPECT_SMALL_S,
-		"small %.1f s, pin %.1f s" % [small, EXPECT_SMALL_S])
-	t.check("grown median within 10 percent of the pin", absf(grown - EXPECT_GROWN_S) <= TOLERANCE * EXPECT_GROWN_S,
-		"grown %.1f s, pin %.1f s" % [grown, EXPECT_GROWN_S])
+	t.check("small median within 10 percent of the pin", absf(small - PlatformPin.pick(EXPECT_SMALL_S, EXPECT_SMALL_S_MAC)) <= TOLERANCE * PlatformPin.pick(EXPECT_SMALL_S, EXPECT_SMALL_S_MAC),
+		"small %.1f s, pin %.1f s" % [small, PlatformPin.pick(EXPECT_SMALL_S, EXPECT_SMALL_S_MAC)])
+	t.check("grown median within 10 percent of the pin", absf(grown - PlatformPin.pick(EXPECT_GROWN_S, EXPECT_GROWN_S_MAC)) <= TOLERANCE * PlatformPin.pick(EXPECT_GROWN_S, EXPECT_GROWN_S_MAC),
+		"grown %.1f s, pin %.1f s" % [grown, PlatformPin.pick(EXPECT_GROWN_S, EXPECT_GROWN_S_MAC)])
 	if t.failures == 0:
 		PostureSweep._remove_tree(folder)
 	quit(t.verdict())
