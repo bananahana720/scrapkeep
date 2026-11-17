@@ -298,6 +298,24 @@ func _kettle_drawn(game) -> void:
 
 # A cross with a hold (overtime's whistle) frees itself once the hold is over.
 func _held_cross(game) -> void:
+	var camera: Camera3D = root.get_camera_3d()
+	var view := root.get_visible_rect().size
+	var near_spot := camera.project_position(view * 0.5, 2.0)
+	var far_spot := camera.project_position(view * 0.5, 180.0)
+	var warning := WaveCross.mark(game, [near_spot, far_spot], 1.0)
+	var near_mark: MeshInstance3D = warning.get_child(0)
+	var far_mark: MeshInstance3D = warning.get_child(1)
+	var near_span := _height_share(camera, near_mark, view.y)
+	var far_span := _height_share(camera, far_mark, view.y)
+	_t.check("near mark fits 8% of screen height and the distant cross keeps its world size",
+		near_span <= 0.081 and near_span > 0.07 and far_span > 0.0 and far_span < 0.04,
+		"near %.4f, far %.4f" % [near_span, far_span])
+	var vertices: PackedVector3Array = near_mark.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	_t.check("all four near tips end clear of the middle", vertices.size() == 16
+		and Array(vertices).all(func(v): return v.length() > 0.6))
+	warning._physics_process(0.5)
+	_t.check("the capped mark still closes as the crew arrives", _height_share(camera, near_mark, view.y) < near_span * 0.8)
+	warning.free()
 	var held: Node3D = WaveCross.mark(game, [Vector3(0.0, 5.0, 0.0)], 0.0, 0.2)
 	_t.check("held cross: it shows", is_instance_valid(held) and held.get_child_count() == 1)
 	var frames := 0
@@ -305,3 +323,9 @@ func _held_cross(game) -> void:
 		await physics_frame
 		frames += 1
 	_t.check("held cross: it frees itself after its hold", not is_instance_valid(held) and frames > 5, str(frames))
+
+
+func _height_share(camera: Camera3D, mark: MeshInstance3D, screen_height: float) -> float:
+	var span := mark.mesh.get_aabb().size.y * mark.scale.y
+	var centre := camera.unproject_position(mark.global_position)
+	return camera.unproject_position(mark.global_position + span * camera.global_basis.y).distance_to(centre) / screen_height

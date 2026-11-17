@@ -29,8 +29,8 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 # cards use; a gate whose part completes a synergy pulses.
 #
 # The name is a screen prompt (WorldPrompt, owner_placed) that its own gate places every frame at the
-# gate's projected crossbar point, centred on the gate's column, so a name is never apart from its gate (PF-22).
-# It is never slotted, moved aside or clamped to a band. One type size, the name on one row or two when
+# gate's projected crossbar point, with the gate's column inside its sign (PF-22).
+# An edge sign opens inward from the crossbar. One type size, the name on one row or two when
 # its room is narrow; the effect lines under a one-row name when they fit the room. When names would still
 # overlap, the gate farther from the ball hides its name only (fit_names), with hysteresis so the set of
 # named gates does not flip with a pixel of camera sway. The groups "word_keep_clear" (sound words) and
@@ -568,7 +568,7 @@ func _place_names() -> void:
 		entries.append(fit.merged({"index": i, "col": col, "dist": from.distance_to(gate.global_position),
 			"was_shown": _shown.get(i, false), "was_detail": _detail.get(i, false), "was_rows": _rows.get(i, 1)}))
 		live.append(prompt)
-	var out := fit_names(entries, ScreenRegions.rect("top", view.size).end.y)
+	var out := fit_names(entries, ScreenRegions.rect("top", view.size).end.y, view.size)
 	for k in live.size():
 		var prompt: Label = live[k]
 		var i: int = entries[k]["index"]
@@ -583,6 +583,7 @@ func _place_names() -> void:
 		prompt.name_rows = entries[k]["two"] if got["rows"] == 2 else PackedStringArray([prompt.parts()["title"]])
 		prompt.detail_shown = got["detail"]
 		prompt.position = (got["rect"] as Rect2).position
+		prompt.crossbar_x = float(entries[k]["col"].x) - prompt.position.x
 		prompt.size = got["rect"].size
 		_name_rects.append(got["rect"])
 
@@ -590,7 +591,7 @@ func _place_names() -> void:
 # Which names show and how, a pure rule over screen numbers. Each entry: index (the gate's), col (its crossbar
 # point on screen), dist (from the ball), w1 and h1 (the name on one row), w2 and h2 (on two), dw and dh (its
 # effect lines, widths including padding), was_shown and was_detail (last frame). A name hangs under its
-# column, centred on it, and never moves. A name wider than its room (the distance to the nearest other gate's
+# column, centred until a screen edge requires the sign to open inward. A name wider than its room (the distance to the nearest other gate's
 # column less NAME_GAP) takes two rows before anything hides; the effect lines show only under a one-row name
 # and only when they fit the room. Nearest gates first (distance in NAME_TIE_M steps, then a name already shown,
 # then the lower index, so a tie never depends on sort order): a name whose rect would overlap one placed by
@@ -598,7 +599,7 @@ func _place_names() -> void:
 # goes back to one only with ROWS_BACK px to spare (was_rows). A name whose crossbar point is above band_end (the top
 # HUD band's lower edge) drops straight down its own column to just under it, and returns to the point below the band.
 # Returns, per entry in order, {shown, rows, detail, rect}.
-static func fit_names(entries: Array, band_end := 0.0) -> Array:
+static func fit_names(entries: Array, band_end := 0.0, view_size := Vector2.INF) -> Array:
 	var order: Array = range(entries.size())
 	order.sort_custom(func(a, b):
 		var ea: Dictionary = entries[a]
@@ -615,7 +616,7 @@ static func fit_names(entries: Array, band_end := 0.0) -> Array:
 	var placed: Array[Rect2] = []
 	for k in order:
 		var e: Dictionary = entries[k]
-		var room := INF
+		var room := view_size.x
 		for other in entries:
 			if other != e:
 				room = minf(room, absf(float(other["col"].x) - float(e["col"].x)) - NAME_GAP)
@@ -636,13 +637,20 @@ static func fit_names(entries: Array, band_end := 0.0) -> Array:
 			if form["detail"]:
 				width = maxf(width, float(e["dw"]))
 				height += float(e["dh"])
-			var rect := Rect2(Vector2(float(e["col"].x) - width * 0.5, maxf(float(e["col"].y) + NAME_DROP, band_end)), Vector2(width, height))
+			if width > view_size.x or height > view_size.y - band_end:
+				continue
+			var column: Vector2 = e["col"]
+			var x := clampf(column.x - width * 0.5, 0.0, view_size.x - width)
+			var y := maxf(column.y + NAME_DROP, band_end)
+			if y + height > view_size.y:
+				y = maxf(column.y - NAME_DROP - height, band_end)
+			var rect := Rect2(Vector2(x, y), Vector2(width, height))
 			if placed.all(func(r): return _overlap(rect, r) <= reach):
 				result = {"shown": true, "rows": form["rows"], "detail": form["detail"], "rect": rect}
 				break
 		if result["shown"]:
 			placed.append(result["rect"])
-		out[entries.find(e)] = result
+		out[k] = result
 	return out
 
 

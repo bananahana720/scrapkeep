@@ -133,7 +133,7 @@ func _physics_process(delta: float) -> void:
 		meet("active")
 	if abilities.casting != AbilityState.UNSTARTED:
 		meet("cast")
-	if fight_live(game.flow):
+	if fight_live(game.flow) or game.flow.calm():
 		_withdraw()
 		return
 	if not seen("ultimate") and AbilitySlots.ultimate_of(game)["state"] == AbilityState.READY:
@@ -229,7 +229,7 @@ func _step_showing(delta: float) -> void:
 	_release()
 
 
-# A fight starts: the showing tip comes down, and waits again unless it was already told.
+# A fight or a reward choice takes the showing tip down until the next quiet stretch of play.
 func _withdraw() -> void:
 	if showing == "":
 		return

@@ -83,6 +83,12 @@ func _fit_part() -> void:
 	var lone := RewardGates.fit_names([_entry(0, 400.0, 50.0, 140.0, false, 80.0, 200.0)])
 	_t.check("B. a lone gate shows its name on one row with its effect lines", lone[0]["shown"] and lone[0]["rows"] == 1 and lone[0]["detail"], str(lone))
 	_t.check("B. the name is centred on its gate's column and hangs under it", is_equal_approx((lone[0]["rect"] as Rect2).get_center().x, 400.0) and is_equal_approx((lone[0]["rect"] as Rect2).position.y, 300.0 + RewardGates.NAME_DROP), str(lone[0]["rect"]))
+	for x in [8.0, 1272.0]:
+		var edge := RewardGates.fit_names([_entry(0, x, 25.0, 140.0, false, 80.0, 248.0)], 90.0, Vector2(1280, 720))[0] as Dictionary
+		var rect: Rect2 = edge["rect"]
+		_t.check("the complete edge offer opens inward from its own arch at x=%s" % x,
+			edge["shown"] and edge["detail"] and rect.position.x <= x and x <= rect.end.x
+			and Rect2(0, 0, 1280, 720).encloses(rect), str(edge))
 	# Two gates 100 px apart: room is 88, the one-row name (140) does not fit, two rows (80) do, so both show.
 	var rows := RewardGates.fit_names([_entry(0, 400.0, 50.0), _entry(1, 520.0, 80.0)])
 	_t.check("B. a name wider than its room takes two rows before anything hides", rows.all(func(r): return r["shown"] and r["rows"] == 2), str(rows))
