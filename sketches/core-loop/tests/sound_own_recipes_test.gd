@@ -27,8 +27,9 @@ const ClassDef := preload("res://src/core/class_def.gd")
 
 const PLANT_ID := "plant_recipe_removed"
 # The world 1 named cues counted today. A change that adds or drops world 1 cues updates this on purpose.
-const CUES_PINNED := 182
-const CLASS_SYMBOLS := ["class_motif", "class_break", "motif_release", "mind_quote"]
+# Wave 44: 182 -> 197, the three motif cues (gauge, line skill, ultimate peak) are judged once per class motif, 3 -> 18.
+const CUES_PINNED := 197
+const CLASS_SYMBOLS := ["class_motif", "class_break", "motif_release", "mind_quote", "motif_accumulate", "motif_line", "motif_stinger"]
 # Real recipes the plant checks bake something longer than the fallback blip.
 const REAL_IDS := ["slam_boom", "found_chime", "threat_whistle"]
 

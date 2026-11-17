@@ -76,6 +76,9 @@ static func resolve(id: String, context := {}) -> String:
 			return Roster.voiced(String(Roster.faction(String(context["faction"]))["arrival"]), motif)
 		"mind_quote":
 			return Roster.voiced(id, motif) if motif != "" else ""
+		"motif_accumulate", "motif_line", "motif_stinger":
+			# The class's own version (sfx_bank motif_cue_id); the generic cue with no class in context.
+			return SfxBank.motif_cue_id(id, motif) if motif != "" else id
 	return id
 
 
