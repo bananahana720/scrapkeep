@@ -13,7 +13,7 @@ extends SceneTree
 # shift along the expected flow on screen (the projected downhill, or the tailrace's drift), found as the best
 # match of the later still against the earlier one moved along that axis. Positive is with the flow, negative is
 # uphill. The speed is the median over the a-b pair and each sequence pair, in metres a second on the surface.
-# Exit 0 when each close view moves inside the water, holds still outside it and shifts with the flow; 1 otherwise.
+# Exit 0 when each close view moves inside the water, holds still outside it and every pair shifts with the flow; 1 otherwise.
 # SCRAPKEEP_WATER_FLOW_PLANT=freeze sets water_flow_scale to 0, so the water stands still and the run must exit 1.
 # What it cannot show: whether the water looks good, and frame cost (no frame-time reading is taken).
 
@@ -21,9 +21,12 @@ const Terrain := preload("res://src/world/terrain.gd")
 const Scenery := preload("res://src/presentation/spillway_scenery.gd")
 
 const SIZE := Vector2i(1280, 720)
-const STEP_S := 0.4
+# Gaps short enough that a sheet's fall (2.4 m/s, about 86 px/s in the close view) moves its 3.9 m
+# light bands (about 141 px) by well under half a band between two stills, inside SEARCH_PX, so no pair
+# can match the wrong band. Each still adds about 4 frames to the gap.
+const STEP_S := 0.25
 const SEQ := 6
-const SEQ_GAP_S := 0.25
+const SEQ_GAP_S := 0.15
 # The close views are this many metres tall; a spill sheet is about this half wide.
 const VIEW_M := 25.0
 const SHEET_HALF_M := 5.0
@@ -120,7 +123,7 @@ func _shoot() -> void:
 	var ok := true
 	for key in rows:
 		var row: Dictionary = rows[key]
-		var good: bool = row.moved_in > MOVES_IN and row.moved_out < STILL_OUT and row.shift_px > 0.5
+		var good: bool = row.moved_in > MOVES_IN and row.moved_out < STILL_OUT and row.speeds.all(func(v): return v > 0.0)
 		ok = ok and good
 		print("%s %s: water %d px, changed in water %.3f, outside %.4f; a to b shift with the flow %.2f px in %.3f s; median %.3f m/s on the surface over %d pairs (%.1f px/m): %s" % [
 			"PASS" if good else "FAIL", key, row.water_px, row.moved_in, row.moved_out, row.shift_px, row.elapsed_s,

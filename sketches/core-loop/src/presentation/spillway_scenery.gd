@@ -524,7 +524,10 @@ static func _cottonwood_shells(group: Node3D, trees: Array, from: int, to: int) 
 # and where a face is flat it drifts by the surface's drift uniform. flow_at is the shader's
 # vertex flow in GDScript, so tests/water_flow_test.gd can check it on the built meshes.
 const WATER_FALL_SPEED := 2.4
-const WATER_FLOW_PERIOD := 2.0
+# Below WATER_LEVEL (sine of the slope) a face is level water and only drifts; the fall fades in
+# up to WATER_SLOPED. Same values as LEVEL and SLOPED in the shader.
+const WATER_LEVEL := 0.05
+const WATER_SLOPED := 0.15
 # The tailrace's drift away from the falls, m/s: still water barely moves.
 const TAILRACE_DRIFT := 0.35
 # The water_flow_scale shader global under reduced motion: the water runs slower, never stops.
@@ -536,13 +539,12 @@ static func flow_at(normal: Vector3, drift: Vector2) -> Vector3:
 	var n := normal.normalized()
 	var steep := sqrt(maxf(0.0, 1.0 - n.y * n.y))
 	var downhill := Vector3(n.x * n.y, n.y * n.y - 1.0, n.z * n.y)
-	return downhill * WATER_FALL_SPEED + Vector3(drift.x, 0.0, drift.y) * (1.0 - steep)
+	return downhill * WATER_FALL_SPEED * smoothstep(WATER_LEVEL, WATER_SLOPED, steep) + Vector3(drift.x, 0.0, drift.y) * (1.0 - steep)
 
 
-# How far the first of the shader's two pattern phases has carried the water at time_s.
+# How far the shader's pattern has been carried at time_s.
 static func flow_offset(normal: Vector3, drift: Vector2, time_s: float) -> Vector3:
-	var phase := fposmod(time_s * flow_scale / WATER_FLOW_PERIOD, 1.0)
-	return flow_at(normal, drift) * phase * WATER_FLOW_PERIOD
+	return flow_at(normal, drift) * time_s * flow_scale
 
 
 # Away from the falls, level: from the spill sheets' middle to the tailrace's.

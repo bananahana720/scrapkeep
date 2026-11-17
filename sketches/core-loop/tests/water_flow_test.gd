@@ -4,7 +4,8 @@ extends SceneTree
 # meshes of both world 1 water surface kinds: the spill sheets and the tailrace.
 # What it shows: at t and t + 0.5 s every vertex's pattern offset differs; on every sloped face the
 # flow points down the slope (negative dot with the uphill direction, worked out here on its own);
-# a steeper face runs faster; the flat tailrace drifts away from the falls; reduced motion slows the
+# a steeper face runs faster; each surface carries one flow on every vertex (no shear over time);
+# the flat tailrace drifts away from the falls; reduced motion slows the
 # flow and does not stop it; the shader source carries the same flow as flow_at and reads TIME; and
 # both surfaces are built with the boot's scenery from one shader that writes no ALPHA, so their
 # pipelines compile at boot like before and nothing compiles at the first sight of water.
@@ -82,10 +83,13 @@ func _run() -> void:
 		var flat := 0
 		var away := 0
 		var total_speed := 0.0
+		var first := Scenery.flow_at(normals[0], drift)
+		var spread := 0.0
 		for i in vertices.size():
 			var n := normals[i].normalized()
 			var flow := Scenery.flow_at(n, drift)
 			total_speed += flow.length()
+			spread = maxf(spread, flow.distance_to(first))
 			if (_offset(n, drift, T0 + STEP) - _offset(n, drift, T0)).length() > 0.01:
 				moved += 1
 			var steep := sqrt(maxf(0.0, 1.0 - n.y * n.y))
@@ -104,6 +108,9 @@ func _run() -> void:
 			"%s has its pinned %d vertices, %d sloped and %d flat" % [kind, VERTICES[kind], SLOPED_VERTICES[kind], FLAT_VERTICES[kind]])
 		_check(vertices.size() > 0 and moved == vertices.size(), "%s: every vertex's pattern moves between t and t + %.1f s (%d of %d)" % [kind, STEP, moved, vertices.size()])
 		_check(downhill == sloped, "%s: flow runs downhill on every sloped face (%d of %d)" % [kind, downhill, sloped])
+		# One flow over the whole surface, so the pattern carried by TIME never shears between vertices
+		# (the tailrace's level faces tilt up to 0.4 degrees; without the level gate that made 0.018 m/s).
+		_check(spread < 0.001, "%s: every vertex carries the same flow (spread %.4f m/s)" % [kind, spread])
 		if kind == "Tailrace":
 			_check(drift.length() > 0.0 and flat > 0 and away == flat, "Tailrace: flat water drifts away from the falls (%d of %d)" % [away, flat])
 	if speeds.has("SpillSheets") and speeds.has("Tailrace"):
@@ -133,10 +140,16 @@ func _run() -> void:
 	_check(source.contains("global uniform float water_flow_scale;") and ProjectSettings.has_setting("shader_globals/water_flow_scale"),
 		"water_flow_scale is a project shader global")
 	_check(source.contains("vec3 downhill = vec3(n.x*n.y, n.y*n.y - 1.0, n.z*n.y);")
-		and source.contains("flow = downhill * FALL_SPEED + vec3(drift.x, 0.0, drift.y) * (1.0 - steep);")
+		and source.contains("flow = downhill * FALL_SPEED * smoothstep(LEVEL, SLOPED, steep) + vec3(drift.x, 0.0, drift.y) * (1.0 - steep);")
 		and source.contains("const float FALL_SPEED = %.1f;" % Scenery.WATER_FALL_SPEED)
-		and source.contains("const float FLOW_PERIOD = %.1f;" % Scenery.WATER_FLOW_PERIOD),
+		and source.contains("const float LEVEL = %.2f;" % Scenery.WATER_LEVEL)
+		and source.contains("const float SLOPED = %.2f;" % Scenery.WATER_SLOPED),
 		"the shader's flow matches SpillwayScenery.flow_at")
+	# One sample of the pattern, carried by the flow. A cross-fade of two copies a half period apart
+	# drew still water on the GPU (17 Nov): with this smooth pattern the copies overlap and the blend's
+	# centre does not move. The shader must call shade() once (plus its definition).
+	_check(source.count("shade(") == 2 and source.contains("ALBEDO = shade(at - flow * TIME * water_flow_scale);"),
+		"the shader samples the pattern once, carried by flow * TIME")
 
 	# Same render state as before: opaque (no ALPHA write), one render mode, no defines, so the
 	# boot's scenery build compiles the only pipelines it needs.
