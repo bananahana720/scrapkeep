@@ -183,7 +183,10 @@ func _place_ball(entry_velocity: Vector3) -> void:
 	var velocity := heading * flat + Vector3.UP * clampf(entry_velocity.y, -8.0, 0.0)
 	var at: Vector3 = arena.entry_point()
 	ctx.player.reset_to(at, velocity)
-	ctx.camera.snap(heading)
+	# The arrival still carries its tangent. Look slightly inside the turn so
+	# the first mast and inward ramp share the frame with the bank ahead.
+	var inward: Vector3 = (arena.global_position - at).slide(Vector3.UP).normalized()
+	ctx.camera.snap(heading.slerp(inward, 0.14))
 	# Ruling cv: the fall into the bowl is marked with landing rings and a pad, as a stage's arrival is.
 	var world = ctx.root.get("world") if ctx.root != null else null
 	if world != null and world.has_method("mark_arrival"):

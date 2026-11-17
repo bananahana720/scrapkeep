@@ -25,9 +25,11 @@ var hook_body: StaticBody3D
 var sites := {}
 var waypoints := {}
 var extras := {}
+var landmark: Node3D
 var watch_side: Camera3D
 var damage_events := []
 var chased_by := []
+var view_rays := {}
 
 
 func _initialize() -> void:
@@ -100,7 +102,7 @@ func _run() -> void:
 					Vector2(188, 438), Vector2(210, 452)])
 				await _road("miss", [Vector2(14, 220), Vector2(47, 251), Vector2(58, 286), Vector2(85, 335), Vector2(148, 418),
 					Vector2(188, 438), Vector2(210, 452)])
-				await _road("upper-spill", [Vector2(14, 212), Vector2(53, 236), Vector2(69, 274),
+				await _road("upper-spill", [Vector2(14, 212), Vector2(53, 221), Vector2(78, 265),
 					Vector2(85, 335), Vector2(148, 418), Vector2(188, 438), Vector2(210, 452)], true)
 		"hook":
 			await _hooks()
@@ -120,6 +122,7 @@ func _run() -> void:
 
 func _bowl() -> void:
 	game.ctx.calm = false
+	source.hold = {"move": Vector2(0, 1)}
 	var carried := Vector3(20, -2, 0)
 	game.flow.enter_boss(carried)
 	var boss = game.ctx.boss
@@ -128,6 +131,7 @@ func _bowl() -> void:
 		sites["mast-%03d" % int(a)] = _vec(arena.point_at(deg_to_rad(a), Arena.MAST_R, 4.0))
 	for a in Arena.RAMP_ANGLES:
 		sites["ramp-%03d" % int(a)] = _vec(arena.point_at(deg_to_rad(a), Arena.RAMP_FROM, 0.7))
+		sites["ramp-top-%03d" % int(a)] = _vec(arena.point_at(deg_to_rad(a), Arena.RAMP_TO, Arena.RAMP_TOP + 0.5))
 	for a in Arena.VENT_ANGLES:
 		sites["vent-%03d" % int(a)] = _vec(arena.point_at(deg_to_rad(a), Arena.VENT_R, 1.2))
 	extras["incoming_velocity"] = _vec(carried)
@@ -176,11 +180,11 @@ func _bowl() -> void:
 				_steer(track)
 			if first < 0 and ((mode == "charge" and boss.charge_coming()) or (mode.begins_with("slag") and boss.active_hazards().any(func(h): return h.attack_id.begins_with("slag")))):
 				first = tick
-			if tick in [1, 30, 115, 260] or (first >= 0 and tick in [first, first + 65, first + 180]):
+			if tick in [1, 30, 115, 260] or (first >= 0 and tick in [first, first + 65, first + 240, first + 405]):
 				await _shot("bowl-%s-%04d" % [mode, tick])
 			if tick % 9 == 0:
 				_sample("bowl-"+mode, tick)
-			if first >= 0 and tick > first + 185:
+			if first >= 0 and tick > first + 410:
 				break
 
 
@@ -215,6 +219,8 @@ func _start(p: Vector2, dir: Vector3, high := false) -> void:
 		if game.player.ball_position().distance_to(pos) < 2.0:
 			break
 	game.player.set_velocity_now(dir * 19.0)
+	await physics_frame
+	await physics_frame
 	game.camera.snap(dir)
 
 
@@ -238,11 +244,25 @@ func _look(direction: Vector3, pitch: float) -> void:
 
 
 func _road(label: String, marks: Array, high := false) -> void:
+	if not waypoints.is_empty():
+		# A previous finish may still own the ball (for example the headhouse
+		# launch). Enter the stage anew before placing the next independent run.
+		var stage: int = game.run.stage
+		game.flow.enter_stage(stage, Vector3.ZERO, false)
+		await _ready_stage(stage)
+		game.get_node("Workshop").close_all()
+		if grown:
+			game.run.grant_start_mass(300.0)
 	waypoints[label] = marks.map(func(pt): return [pt.x, pt.y])
 	var map = game.ctx.terrain.map()
+	landmark = game.ctx.terrain.geometry_root(game.run.stage).find_child("Landmark_" + String(map.park.landmark.id), true, false)
 	var top: Array = map.park.landmark.get("sight_top", [])
 	if top.size() == 3:
 		sites["landmark"] = top
+		var centre: Array = map.park.landmark.at
+		var height: float = map.park.landmark["size"][1]
+		sites["landmark-face"] = [centre[0], height * 0.5, centre[1]]
+		sites["landmark-foot"] = [centre[0], height * 0.15, centre[1]]
 	for idx in range(1, marks.size()):
 		var mark: Vector2 = marks[idx]
 		var pos: Vector3 = game.ctx.terrain.drop_point(mark.x, mark.y, 0.6)
@@ -263,6 +283,10 @@ func _road(label: String, marks: Array, high := false) -> void:
 		var at := Vector2(ball.x, ball.z)
 		next = marks[goal]
 		_steer(Vector3(next.x, ball.y, next.y))
+		# Clear the siphon wall with the normal jump. The other take carries
+		# its speed along the deck, and the ground starts never touch this lip.
+		if label == "upper-spill" and tick in [18, 72, 155] and game.player.state.grounded:
+			source.press["jump_pressed"] = true
 		var leg: Vector2 = next - Vector2(marks[goal - 1])
 		var across := absf(leg.normalized().cross(at - next))
 		var reached := at.distance_to(next) < 7 or ((at - next).dot(leg) >= 0.0 and across < 27.0)
@@ -273,6 +297,17 @@ func _road(label: String, marks: Array, high := false) -> void:
 		if reached:
 			goal += 1
 			if goal == marks.size():
+				if not game.player.state.grounded:
+					# The low approach can reach the drum airborne. Keep the real landing
+					# in its trace, alongside the instant it first crossed the forecourt.
+					for settle in range(1, 400):
+						await physics_frame
+						if settle % 3 == 0:
+							_sample(label, tick + settle)
+						if game.player.state.grounded:
+							_sample(label, tick + settle)
+							await _shot("%s-land-%04d" % [label, tick + settle])
+							break
 				break
 	extras[label + "_waypoints_passed"] = goal - 1
 	print("ROUTE ", label, " passed ", goal - 1, "/", marks.size() - 1, " waypoints")
@@ -317,6 +352,11 @@ func _hooks() -> void:
 		return
 	sites["trestle"] = _vec(subject)
 	sites["receiving-bank"] = _vec(game.ctx.terrain.drop_point(-186, -57, 0.8))
+	# Actual first recontact is on the approach to the lip. The lip itself lies
+	# farther along the same return; record the two bearings independently.
+	sites["receiving-slope"] = _vec(game.ctx.terrain.drop_point(-167, -116, 0.9))
+	for pos in [Vector2(-171, -125), Vector2(-162, -111), Vector2(-173, -90), Vector2(-181, -70)]:
+		sites["return-%d" % int(-pos.y)] = _vec(game.ctx.terrain.drop_point(pos.x, pos.y, 0.9))
 	var skyline: Array = game.ctx.terrain.map().park.landmark["sight_top"]
 	sites["tower"] = skyline
 	print("HOLLOW POST ", subject)
@@ -324,13 +364,27 @@ func _hooks() -> void:
 		var h := Vector3(down.x, 0, down.y)
 		if mode == "reverse":
 			h = -h
-		var start := subject - h * 16.0 - h.cross(Vector3.UP) * 6.0
+		var start := subject - h * 31.0 - h.cross(Vector3.UP) * 6.0
 		contact_path = ""
 		await _start(Vector2(start.x, start.z), h)
+		# Look down the receiving slope before lifting the aim to the metal strap.
+		# Moving the placed start upstream preserves the approach to the actual bite.
+		for lead in range(-69, 0):
+			await physics_frame
+			_look(h + h.cross(Vector3.UP) * 0.18, -0.19)
+			var basis: Basis = game.camera.yaw_basis()
+			source.hold.move = Vector2(h.dot(basis.x), -h.dot(basis.z))
+			if lead == -48:
+				await _shot("lead-%s-048" % mode)
+			if lead % 3 == 0:
+				_sample(mode, lead)
 		if mode == "chase":
 			game.ctx.calm = false
-			for lateral in [-4.0, 0.0, 4.0]:
-				var enemy = game.ctx.spawner.spawn_enemy("chaser", game.player.ball_position() - h * 9.0 + h.cross(Vector3.UP) * lateral)
+			# One pursuer comes up from behind, two enter beside the receiving slope.
+			for offset in [Vector2(-4, -9), Vector2(5, 24), Vector2(9, 30)]:
+				var at: Vector3 = game.player.ball_position() + h * offset.y + h.cross(Vector3.UP) * offset.x
+				var foot: Vector3 = game.ctx.terrain.drop_point(at.x, at.z, 0.8)
+				var enemy = game.ctx.spawner.spawn_enemy("chaser", foot)
 				if enemy != null:
 					chased_by.append(weakref(enemy))
 		var release := 80 if mode=="early" else 145 if mode=="late" else 110
@@ -365,7 +419,7 @@ func _hooks() -> void:
 				source.hold.erase("brake_held")
 				source.hold.erase("harpoon_held")
 				source.press["harpoon_released"] = true
-			if tick in [15, 42, release + 1, 215, 575]:
+			if tick in [15, 30, 42, release + 1, 215, 575]:
 				await _shot("trestle-%s-%03d" % [mode, tick])
 				if mode == "hook":
 					await _side("side-%s-%03d" % [mode, tick], h)
@@ -397,18 +451,20 @@ func _sample(label: String, tick: int) -> void:
 	if section == "bowl":
 		for hazard in game.ctx.boss.active_hazards():
 			threats.append([hazard.attack_id, hazard.state, hazard.contains(p)])
+	var view := _visible_sites()
 	var gate = game.flow.gate
 	var lock_state: String = gate.lock_state if gate != null else ""
 	var yard_crew: int = gate.crew_alive().size() if gate != null and gate.lock_active() else 0
 	rows.append({"damage": damage_events.duplicate(), "chase": chase, "clearances": clearances, "yard": lock_state, "crew": yard_crew, "threats": threats, "hp": game.run.hp, "trial": label, "tick": tick, "position": _vec(p), "velocity": _vec(v), "ground": game.player.state.grounded,
-		"contact": contact_path, "input": [source.hold.move.x, source.hold.move.y, source.hold.get("harpoon_held", false), source.hold.get("brake_held", false)],
-		"view": _visible_sites(), "yaw": game.camera.yaw, "pitch": game.camera.pitch, "cam": _vec(game.camera.cam.global_position),
+		"contact": contact_path, "input": [source.hold.get("move", Vector2.ZERO).x, source.hold.get("move", Vector2.ZERO).y, source.hold.get("harpoon_held", false), source.hold.get("brake_held", false)],
+		"view": view, "view_rays": view_rays.duplicate(), "yaw": game.camera.yaw, "pitch": game.camera.pitch, "cam": _vec(game.camera.cam.global_position),
 		"enemies": get_nodes_in_group("enemy").size(), "stage": game.run.stage, "frozen": game.player.frozen(), "hooked": kit.hooked, "anchor": _vec(kit.anchor), "rope": kit.rope, "heft": game.player.heft()})
 	damage_events.clear()
 
 
 func _visible_sites() -> Array:
 	var visible := []
+	view_rays.clear()
 	var cam: Camera3D = game.camera.cam
 	for key in sites:
 		var coords: Array = sites[key]
@@ -416,7 +472,20 @@ func _visible_sites() -> Array:
 		if cam.is_position_in_frustum(p):
 			var query := PhysicsRayQueryParameters3D.create(cam.global_position, p, 1)
 			var hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(query)
-			if hit.is_empty() or (key == "trestle" and hit.collider == hook_body and hit.position.distance_to(p) < 5.0) or p.distance_to(hit.position) <= (1.25 if String(key).begins_with("mast-") else 0.9):
+			if not hit.is_empty() and (key in ["trestle", "receiving-slope", "receiving-bank", "ramp-000", "landmark", "landmark-face"]):
+				view_rays[key] = [str(hit.collider.name), _vec(hit.position)]
+			var sees_ramp := false
+			if not hit.is_empty() and String(key).begins_with("ramp-") and hit.collider.name == "Bowl":
+				# A sight ray to the mouth may strike its own sloping side first.
+				var angle := deg_to_rad(float(String(key).get_slice("-", String(key).get_slice_count("-") - 1)))
+				var local: Vector3 = hit.position - game.ctx.boss.arena.global_position
+				var depth := Arena.RAMP_FROM - local.dot(Arena.dir(angle))
+				var length := Arena.RAMP_FROM - Arena.RAMP_TO
+				sees_ramp = depth >= -0.05 and depth <= length + 0.05 \
+					and absf(local.dot(Arena.tangent(angle))) <= Arena.RAMP_HALF_WIDTH + 0.05 \
+					and local.y >= -0.05 and local.y <= Arena.RAMP_TOP * depth / length + 0.05
+			var sees_landmark: bool = not hit.is_empty() and String(key).begins_with("landmark") and is_instance_valid(landmark) and landmark.is_ancestor_of(hit.collider)
+			if hit.is_empty() or sees_landmark or sees_ramp or (key == "trestle" and hit.collider == hook_body and hit.position.distance_to(p) < 5.0) or p.distance_to(hit.position) <= (1.25 if String(key).begins_with("mast-") else 0.9):
 				visible.append(key)
 	return visible
 
