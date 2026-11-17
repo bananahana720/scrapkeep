@@ -82,17 +82,32 @@ func setup(events, run, profile, now := Callable(), codex = null) -> void:
 
 # Pays the reward of every row the profile already earned, once per reward target (the
 # settle-once ledger keys it), so a reward changed after the earn still lands. Returns the number of grants made.
+# It runs at every launch: rewards memory already shows paid cost nothing, and the rest share one
+# profile.transact (one lock and one read of the file).
 func backfill_rewards() -> int:
 	if _profile == null:
 		return 0
-	var granted := 0
+	var owed: Array = []
 	for id in rows:
 		if not _profile.earned(id):
 			continue
 		var reward: Dictionary = rows[id].get("reward", {})
 		for kind in reward:
-			if _grant_reward(id, String(kind), String(reward[kind])):
-				granted += 1
+			# Paid already: _grant_reward_now only settles the targeted key beside an older build's legacy key.
+			if _paid_in_memory(id, String(kind), String(reward[kind])):
+				_grant_reward_now(id, String(kind), String(reward[kind]))
+			else:
+				owed.append([id, String(kind), String(reward[kind])])
+	if owed.is_empty():
+		return 0
+	return int(_profile.transact(_backfill_now.bind(owed)))
+
+
+func _backfill_now(owed: Array) -> int:
+	var granted := 0
+	for row in owed:
+		if _grant_reward(row[0], row[1], row[2]):
+			granted += 1
 	return granted
 
 
@@ -102,18 +117,29 @@ func backfill_rewards() -> int:
 # the legacy key covers the current target (it is what that profile was paid), once. The legacy
 # key is still settled beside the targeted one, so older builds reading the profile pay nothing twice.
 # The decision is one profile.transact, so a reward another game on this profile paid is seen, and
-# paid here no more.
+# paid here no more. A reward memory already shows paid needs no read: settled ids only grow (the
+# merge is a union), so the file cannot change that answer.
 func _grant_reward(id: String, kind: String, target: String) -> bool:
+	if _paid_in_memory(id, kind, target):
+		return _grant_reward_now(id, kind, target)
 	return bool(_profile.transact(_grant_reward_now.bind(id, kind, target)))
+
+
+# True when _grant_reward_now would refuse without reading the file: the targeted key is settled, or
+# the profile holds the legacy key with no targeted key (an older build's payment).
+func _paid_in_memory(id: String, kind: String, target: String) -> bool:
+	var legacy := "reward:%s:%s" % [id, kind]
+	return _is_settled("%s:%s" % [legacy, target]) or (_profile.is_settled(legacy) and not _has_targeted(legacy))
 
 
 func _grant_reward_now(id: String, kind: String, target: String) -> bool:
 	var legacy := "reward:%s:%s" % [id, kind]
 	var key := "%s:%s" % [legacy, target]
-	# Only the profile shows that an older build paid: it saved the legacy key in the same write as
-	# the unlock. A run file from such a build may hold the key after both profile saves of the earn
-	# failed; read from there it would settle the targeted key with nothing paid (W1-117), so the
-	# reward is paid instead.
+	# The legacy key counts as paid only from the profile. A run file from a build before 8 November
+	# may hold it after both profile saves of the earn failed; read from there it would settle the
+	# targeted key with nothing paid (W1-117), so the reward is paid instead. A profile's key is not
+	# proof either: builds from 4 October to 16 November could save a reward key without its unlock
+	# (finding R-1). Such a reward stays unpaid here; repairing it is card W1-121.
 	if _profile.is_settled(legacy) and not _has_targeted(legacy):
 		settle(key, false)
 		return false

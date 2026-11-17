@@ -5,10 +5,13 @@ extends RefCounted
 # last pilot, the between-run nodes opened (SG12, an id list added inside schema 4: a
 # file without it reads as none opened) and the jukebox tunes heard (tune_rows.gd, an id
 # list added the same way; the pilot radio's takes join that list) and the radio's dial and
-# mixtapes (radio.gd's to_dict, a dict added the same way). Preferences live in settings_store.gd. The store knows no starters and
-# reads no clock; the caller passes the time an achievement was earned. Mutators change
-# memory and save() writes. A store cannot save until it has loaded, and a save that finds
-# a newer generation on disk merges it in instead of replacing it. A file this build
+# mixtapes (radio.gd's to_dict, a dict added the same way). Preferences live in settings_store.gd. The store knows no starters,
+# and the caller passes the time an achievement was earned; the only clock it reads is the save
+# lock's age. Mutators change memory and save() writes. A store cannot save until it has loaded,
+# and a save that finds a newer generation on disk merges it in instead of replacing it. Every
+# save, and every transact (one decision against the newest file), holds the save lock, a
+# directory beside the file, so two games on one profile never write between each other's read
+# and write. A file this build
 # cannot read is never overwritten: unreadable files are kept as .bad, and a file from a
 # newer build is left alone.
 
@@ -72,6 +75,10 @@ var _loaded_tally_prefixes := {}
 var _pending_tally_settlements := {}
 var _last_closed_tally_run := ""
 var _lock_depth := 0
+# Inside a transact that could not get the lock: the error it got, and how deep. Every lock taken
+# under it fails at once with that error instead of waiting again.
+var _lock_refused := 0
+var _lock_error := OK
 
 
 func _init(file_path := "user://profile.json") -> void:
@@ -113,8 +120,9 @@ func save() -> bool:
 	if not can_save:
 		last_error = _refusal
 		return false
-	if not _lock():
-		last_error = "not saving: another game is saving %s" % path
+	var locked := _lock()
+	if locked != OK:
+		last_error = _lock_message(locked)
 		return false
 	var saved := _save_locked()
 	_unlock()
@@ -126,9 +134,18 @@ func save() -> bool:
 # since this one last read or wrote the file (the same merge as save). A save inside change writes
 # under the same lock. A profile that cannot save, or a lock it cannot get, runs change on memory as
 # before: never lost outranks at most once (ruling ea).
+# Inside a held transact it runs change at once: the file was taken in under the same lock.
 func transact(change: Callable) -> Variant:
-	if not can_save or not _lock():
+	if not can_save or _lock_depth > 0 or _lock_refused > 0:
 		return change.call()
+	var locked := _lock()
+	if locked != OK:
+		last_error = _lock_message(locked)
+		_lock_refused += 1
+		_lock_error = locked
+		var unlocked = change.call()
+		_lock_refused -= 1
+		return unlocked
 	var read := _read()
 	if _newer_on_disk(read):
 		_discard_compacted_tallies(_doc["stats"], read["doc"]["stats"])
@@ -146,29 +163,38 @@ func transact(change: Callable) -> Variant:
 
 # The save lock is a directory beside the file: making it is atomic, so one game holds it at a time.
 # Held for one save or one transact (milliseconds); taken again inside them it nests. A game waits
-# LOCK_WAIT_MS for another's save to finish, and breaks a lock older than lock_stale_s, which only a
-# game that died inside a save leaves.
-func _lock() -> bool:
+# LOCK_WAIT_MS for another's save to finish (then ERR_BUSY), and breaks a lock whose time is more than
+# lock_stale_s from now either way: only a game that died inside a save, or a clock that was moved,
+# leaves one. Any other error is the directory's own.
+func _lock() -> Error:
+	if _lock_refused > 0:
+		return _lock_error
 	if _lock_depth > 0:
 		_lock_depth += 1
-		return true
+		return OK
 	var dir := path + ".lock"
 	var waited := 0
 	while waited <= LOCK_WAIT_MS:
 		var err := DirAccess.make_dir_absolute(dir)
 		if err == OK:
 			_lock_depth = 1
-			return true
+			return OK
 		if err != ERR_ALREADY_EXISTS:
-			return false
+			return err
 		# 0 when the holder let go between the two calls: try again.
 		var made := FileAccess.get_modified_time(dir) if DirAccess.dir_exists_absolute(dir) else 0
-		if made > 0 and Time.get_unix_time_from_system() - made > lock_stale_s:
+		if made > 0 and absf(Time.get_unix_time_from_system() - made) > lock_stale_s:
 			DirAccess.remove_absolute(dir)
 		else:
 			OS.delay_msec(LOCK_POLL_MS)
 		waited += LOCK_POLL_MS
-	return false
+	return ERR_BUSY
+
+
+func _lock_message(err: Error) -> String:
+	if err == ERR_BUSY:
+		return "not saving: another game is saving %s" % path
+	return "not saving: could not take the save lock %s.lock: %s" % [path, error_string(err)]
 
 
 func _unlock() -> void:

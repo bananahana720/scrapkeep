@@ -16,7 +16,9 @@ const GameEvents := preload("res://src/core/game_events.gd")
 #     earn failed (finding R-3): Continue and the earn pay the reward, never settle it unpaid;
 #   - a failed profile save and a Continue on this build, paid by the next launch's
 #     backfill_rewards (MG-13, the route PR 1093 fixed);
-#   - the profile's save lock: held by another game, released, and broken when stale.
+#   - the profile's save lock: held by another game, released, broken when stale or dated ahead,
+#     failing fast for the rest of a transact that could not take it, and naming its own error;
+#   - a launch whose rewards are all paid reads no file (the backfill's fast path).
 # Each game is its own Profile and Progress on one file, as two processes hold them. The test uses
 # its own user:// folder and a fixed clock.
 
@@ -41,6 +43,10 @@ func _initialize() -> void:
 	_old_profile_key_still_paid()
 	_failed_save_continue_backfill()
 	_save_lock()
+	_future_lock_broken()
+	_lock_fails_fast()
+	_lock_error_text()
+	_paid_launch_reads_nothing()
 	for node in _keep:
 		node.free()
 	_clear_dir()
@@ -233,3 +239,69 @@ func _save_lock() -> void:
 	_t.check("lock a lock left by a game that died inside a save is broken", profile.save() and not DirAccess.dir_exists_absolute(lock))
 	_t.check("lock and the save that broke it wrote the file", _file(path).has_cosmetic("paint_lock") and _file(path).has_cosmetic("paint_kept"))
 	DirAccess.remove_absolute(lock)
+
+
+# A lock whose time is ahead of the clock (a clock moved back after a game died inside a save) is stale too.
+func _future_lock_broken() -> void:
+	var path := _path("future")
+	var lock := path + ".lock"
+	var profile := _profile(path)
+	DirAccess.make_dir_absolute(lock)
+	var out: Array = []
+	var touched := OS.execute("touch", ["-t", "203001010000", ProjectSettings.globalize_path(lock)], out, true)
+	if touched != 0 or FileAccess.get_modified_time(lock) < Time.get_unix_time_from_system() + 3600.0:
+		_t.skip("lock a lock dated in the future is broken", "touch could not date the lock: %s" % str(out))
+		DirAccess.remove_absolute(lock)
+		return
+	_t.check("lock a lock dated in the future is broken", profile.save() and not DirAccess.dir_exists_absolute(lock), profile.last_error)
+
+
+# After one failed take, the rest of that transact fails at once instead of waiting again: here the
+# lock is freed inside the change, and the save there still does not take it.
+func _lock_fails_fast() -> void:
+	var path := _path("fast")
+	var lock := path + ".lock"
+	var profile := _profile(path)
+	profile.save()
+	DirAccess.make_dir_absolute(lock)
+	var tried := func():
+		DirAccess.remove_absolute(lock)
+		return profile.save()
+	var saved_inside: bool = profile.transact(tried)
+	_t.check("lock inside a transact that could not take the lock, a save does not try again", not saved_inside and profile.last_error.contains("another game"), profile.last_error)
+	_t.check("lock after that transact a save takes the lock again", profile.save() and not DirAccess.dir_exists_absolute(lock), profile.last_error)
+
+
+# The message names the directory's own error when the lock cannot be made, not another game.
+func _lock_error_text() -> void:
+	var profile := _profile(DIR + "missing_folder/profile.json")
+	var saved := profile.save()
+	_t.check("lock a lock that cannot be made says why", not saved and profile.last_error.contains("could not take the save lock") and not profile.last_error.contains("another game"), profile.last_error)
+
+
+# A launch whose rewards are all paid in memory reads nothing: a newer file written by another game
+# after the load (with a cosmetic only it holds) is not taken in by the backfill.
+func _paid_launch_reads_nothing() -> void:
+	var path := _path("paid")
+	var payer := _profile(path)
+	payer.earn(ROW, 1000.0)
+	payer.save()
+	_game(payer)
+	var launch := _profile(path)
+	var other := _profile(path)
+	other.unlock_cosmetic("paint_other")
+	other.save()
+	var game := _game(launch, null, {})
+	game["progress"].rows = ROWS
+	_t.check("launch every reward paid: the backfill pays nothing", game["progress"].backfill_rewards() == 0 and launch.has_cosmetic(PAINT))
+	_t.check("launch and reads no file: the other game's newer save is not taken in", not launch.has_cosmetic("paint_other"))
+	var owed_path := _path("owed")
+	var seed := _profile(owed_path)
+	seed.earn(ROW, 1000.0)
+	seed.save()
+	var owed := _profile(owed_path)
+	var writer := _profile(owed_path)
+	writer.unlock_cosmetic("paint_other")
+	writer.save()
+	_game(owed)
+	_t.check("launch a reward memory shows unpaid is paid after one take-in of the file", owed.has_cosmetic("paint_other") and owed.has_cosmetic(PAINT) and _file(owed_path)._doc["cosmetics"].count(PAINT) == 1)
