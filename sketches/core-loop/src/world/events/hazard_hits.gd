@@ -12,10 +12,10 @@ const SiltBoil := preload("res://src/combat/silt_boil.gd")
 # it on: world 1's two stages; worlds 2 and 3 are parked (ruling at). The same dial turns on the storm's seek and
 # the flood's tax (natural.gd), the pressure that pays for the easier fights.
 #
-# One plant for the pinned test (tests/hazards_hit_everyone_test.gd): SCRAPKEEP_PLANT_HAZARD=skip_enemies
-# makes every hazard pass over enemies, so that test must go red.
-
-const PLANT_ENV := "SCRAPKEEP_PLANT_HAZARD"
+# Plants for the pinned test only (tests/hazards_hit_everyone_test.gd), which fills plants from its own
+# environment; the game never sets it and reads no environment here. skip_enemies makes every hazard pass over
+# enemies; storm_seek.gd reads no_tell and seek_rolling. The test must go red under each.
+static var plants: Array[String] = []
 
 
 # Whether the run's stage (run.stage, 1-based; 0 or unknown is off) has hazards that hit everyone.
@@ -30,7 +30,7 @@ static func applies_to(run) -> bool:
 
 
 static func planted(name: String) -> bool:
-	return OS.get_environment(PLANT_ENV).split(",").has(name)
+	return plants.has(name)
 
 
 # Strikes each live enemy whose feet inside() accepts and whose instance id is not in struck (then added), with

@@ -16,7 +16,9 @@ const T := preload("res://tests/support/t.gd")
 #   rolling  a ball orbiting tight at twice cruise: never sought (ruling cu: rolling and turning stays free).
 #   flood    the enemy in the risen water is swept; a ball sitting slow in it pays no tax for 3 s, then pays.
 # Too little data is a miss: each scenario must see the strikes or taxes it reads, or the check fails.
-# Plants (HazardHits.PLANT_ENV): skip_enemies, no_tell and seek_rolling must each turn this test red.
+# Plants: SCRAPKEEP_PLANT_HAZARD=skip_enemies, no_tell or seek_rolling (comma-separated) must each turn this test
+# red. Only this test reads that variable; it hands the names to HazardHits.plants, so the game reads none.
+const PLANT_ENV := "SCRAPKEEP_PLANT_HAZARD"
 
 const DT := 0.1
 const CRUISE := 14.0
@@ -152,6 +154,8 @@ func _tick(w, handler, clock: float) -> void:
 
 
 func _run() -> void:
+	for name in OS.get_environment(PLANT_ENV).split(",", false):
+		HazardHits.plants.append(name)
 	t.check("world 1's stages have hazards that hit enemies", HazardHits.applies(1) and HazardHits.applies(2))
 	t.check("a parked world's stage does not", not HazardHits.applies(3))
 	t.check("a run with no stage does not", not HazardHits.applies_to(null))
