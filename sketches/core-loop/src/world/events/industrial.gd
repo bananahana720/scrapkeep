@@ -8,6 +8,7 @@ const Natural := preload("res://src/world/events/natural.gd")
 const EventGround := preload("res://src/world/events/event_ground.gd")
 const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
+const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 
 # Cones use [length, width]. The ring uses an [x, z] footprint with a safe eye.
 const FALLOUT_EYE_FRACTION := 0.4
@@ -18,6 +19,8 @@ const SHAPES := {
 }
 # Reach above the ground, the same for every shape this family commits.
 const REACH_M := 3.0
+# What a steam cone or a fallout ring takes from each enemy it catches (the silt boil's enemy damage).
+const ENEMY_DAMAGE := 25.0
 
 var world
 # row id -> {hazard, site, at, hit, swap}
@@ -26,11 +29,13 @@ var _sites := {}
 var _overlay_map: EventGround.OverlayMap
 # The stage's swap overlays, projected on a worker from setup (EventGround.plan_overlays).
 var _plan := {}
+var _hits_enemies := false
 
 
 func setup(world_ref) -> void:
 	world = world_ref
 	name = "IndustrialEvents"
+	_hits_enemies = HazardHits.applies(world.terrain.map().park)
 	for site in world.terrain.map().park.park_rows:
 		_sites[site.id] = site
 	var items := []
@@ -79,7 +84,7 @@ func _telegraph(row: Dictionary) -> void:
 		var outer := minf(float(size[0]), float(size[1])) * 0.5
 		hazard.commit_annulus(row.id, Threat.Type.INSTANT, at, Vector2(outer * float(spec.inner_fraction), outer), REACH_M, lead, live)
 	add_child(hazard)
-	active[row.id] = {"hazard": hazard, "site": site, "at": at, "hit": false, "swap": "", "overlay_record": {}}
+	active[row.id] = {"hazard": hazard, "site": site, "at": at, "hit": false, "struck": {}, "swap": "", "overlay_record": {}}
 
 
 func _land(row: Dictionary, ctx: Dictionary) -> void:
@@ -131,10 +136,16 @@ func _geometry(site: Dictionary, at := Vector3.INF) -> Dictionary:
 
 
 # The shared damage path (natural.gd's strike): lose_scrap for the row's damage, once per
-# activation, and a vertical lift when no scrap is left to take.
+# activation, and a vertical lift when no scrap is left to take. In the Spillway every enemy the live
+# hazard contains is struck too, once per activation, thrown out from its centre (HazardHits).
 func _strike(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 	var hazard: Hazard = state.hazard
-	if not hazard.is_live() or state.hit:
+	if not hazard.is_live():
+		return
+	if _hits_enemies:
+		HazardHits.strike(get_tree(), hazard.contains, row.kind, ENEMY_DAMAGE, Natural.ENEMY_TOSS, state.struck,
+			func(point: Vector3) -> Vector3: return point - hazard.centre)
+	if state.hit:
 		return
 	var ball: Vector3 = ctx.ball
 	if not hazard.contains(ball):

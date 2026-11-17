@@ -152,13 +152,20 @@ func _stirring() -> bool:
 	return _looping()
 
 
-# Every sample of the window lies within STALL_SPREAD of the samples' centre.
 func _stalled() -> bool:
+	return stalled(_samples)
+
+
+# The game's one stall test, for the silt and the storm (world/events/storm_seek.gd): a full window of ball
+# positions, one each SAMPLE_S over LOOP_WINDOW, every one within STALL_SPREAD of their centre.
+static func stalled(samples: Array) -> bool:
+	if samples.size() < int(LOOP_WINDOW / SAMPLE_S) + 1:
+		return false
 	var centre := Vector3.ZERO
-	for at in _samples:
+	for at in samples:
 		centre += _flat(at)
-	centre /= float(_samples.size())
-	for at in _samples:
+	centre /= float(samples.size())
+	for at in samples:
 		if (_flat(at) - centre).length() > STALL_SPREAD:
 			return false
 	return true
@@ -192,7 +199,7 @@ func _fighting(ball: Vector3, enemies: Array) -> bool:
 	for enemy in enemies:
 		if DamageDoor.dead(enemy):
 			continue
-		if _set_piece(enemy) or _flat(enemy.global_position - ball).length() > FIGHT_RADIUS:
+		if set_piece(enemy) or _flat(enemy.global_position - ball).length() > FIGHT_RADIUS:
 			continue
 		if crews == null:
 			crews = _activity_crews()
@@ -229,7 +236,7 @@ func _erupt(k: float, enemies: Array) -> void:
 	for enemy in enemies:
 		if DamageDoor.dead(enemy):
 			continue
-		if _set_piece(enemy) or not is_instance_valid(_ring):
+		if set_piece(enemy) or not is_instance_valid(_ring):
 			continue
 		if not _ring.contains(enemy.global_position - Vector3.UP * float(enemy.get("half_height"))):
 			continue
@@ -263,7 +270,7 @@ func _drop_ring() -> void:
 
 
 # Wardens, vaults and boss pieces are set pieces: they neither start a boil nor take one.
-static func _set_piece(enemy) -> bool:
+static func set_piece(enemy) -> bool:
 	var kind := String(enemy.get("kind"))
 	return kind in ["warden", "vault"] or Roster.is_boss_piece(kind)
 
