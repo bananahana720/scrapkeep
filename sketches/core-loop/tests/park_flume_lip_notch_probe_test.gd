@@ -51,7 +51,6 @@ const DRUM_SIGHTLINES := [
 	[Vector3(252.9, -8.1, 456.4), Vector3(253.8, -11.2, 465.5)],
 ]
 const SERVICE_START := Vector3(251.0, -12.0, 458.0)
-const SERVICE_CREST_X := 290.0
 
 var t := T.new("park_flume_lip_notch_probe_test")
 var game
@@ -107,12 +106,16 @@ func _run() -> void:
 	var run_in: Vector3 = Vector3(slot["at"].x, gate_ground, slot["at"].y) - (slot["facing"] as Vector3) * 9.0
 	print("  gate 0 at %s, ground %.2f, run-in %s" % [slot["at"], gate_ground, run_in])
 	var crossbar := Vector3(slot["at"].x, gate_ground + RewardGates.HEIGHT, slot["at"].y)
+	var landmark: Node = game.ctx.terrain.geometry_root(2).find_child("Landmark_penstock_tower", true, false)
+	var views: Array[Node] = landmark.find_children("landmark_penstock_tower*", "MeshInstance3D", true, false) if landmark != null else []
+	t.check("the landmark views are in the scene", not views.is_empty())
 	for pose: Array in DRUM_SIGHTLINES:
 		for from: Vector3 in pose:
 			var query := PhysicsRayQueryParameters3D.create(from, crossbar, 1)
 			query.hit_from_inside = true
 			var hit: Dictionary = space.intersect_ray(query)
-			t.check("the north crossbar is visible from %s" % from, hit.is_empty(), str(hit.get("position", "clear")))
+			t.check("the ground leaves the north crossbar visible from %s" % from, hit.is_empty(), str(hit.get("position", "clear")))
+			t.eq("the liner leaves the north crossbar visible from %s" % from, _blocking_view(views, from, crossbar), "")
 	var landed: Dictionary = await _land()
 	print("  rest: grounded at %.2f s, at %s" % [landed["s"], landed["at"]])
 	t.check("rest: a ball dropped where the groove was lands grounded there", landed["s"] >= 0.0
@@ -131,6 +134,18 @@ func _run() -> void:
 	await _service_exit()
 	game.free()
 	quit(t.verdict())
+
+
+func _blocking_view(views: Array[Node], from: Vector3, target: Vector3) -> String:
+	for view: MeshInstance3D in views:
+		var start := view.to_local(from)
+		var ray := view.to_local(target) - start
+		var faces := view.mesh.get_faces()
+		for i in range(0, faces.size(), 3):
+			var hit: Variant = Geometry3D.ray_intersects_triangle(start, ray, faces[i], faces[i + 1], faces[i + 2])
+			if hit != null and start.distance_squared_to(hit) < ray.length_squared():
+				return view.name
+	return ""
 
 
 func _stick(want: Vector3) -> Vector2:
@@ -214,13 +229,12 @@ func _service_exit() -> void:
 		return
 	var offer: Dictionary = offers[0]
 	var at: Vector3 = offer["at"]
-	for tick in int(CLIMB_S * Engine.physics_ticks_per_second):
-		var ball: Vector3 = player.ball_position()
-		var target := Vector3(ball.x + CENTRE_LEAD_M, ball.y, SERVICE_START.z) if ball.x < SERVICE_CREST_X else Vector3(at.x + 3.0, ball.y, at.z)
-		source.hold = {"move": _stick(target - ball)}
+	game.camera.snap(at - SERVICE_START)
+	source.hold = {"move": Vector2(0.0, 1.0)}
+	for _tick in int(CLIMB_S * Engine.physics_ticks_per_second):
 		await physics_frame
 		if not taken.is_empty():
 			break
 	source.hold = {}
 	t.check("the service grade leads through the north gate on a roll", taken == offer["part_id"], "took %s at %s" % [taken, player.ball_position()])
-	t.check("the gate keeps an eastbound launch", launch.x > absf(launch.z) and launch.y > 0.0, str(launch))
+	t.check("the gate keeps an eastbound launch", Vector2(launch.x, launch.z).normalized().x >= 0.9 and launch.y > 0.0, str(launch))
