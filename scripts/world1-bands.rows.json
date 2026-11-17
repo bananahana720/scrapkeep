@@ -572,7 +572,7 @@
       "label": "no world 1 sound plays a stand-in",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: count world 1 cues with no recipe of their own (wave 43)",
+      "producer": "node scripts/gate/sound-recipes-receipt.mjs --out <dir>/sound-own-recipes.json, on a clean checkout of the head: it runs sketches/core-loop/tests/sound_own_recipes_test.gd through scripts/sketch-smoke.mjs, takes the head from git rev-parse HEAD, and judges every cue the world 1 sound facts name (sound_twins_test.gd's derivation; the count is pinned), naming for each cue with no sound of its own the row's shared sound it plays instead",
       "plant": "a cue with its recipe removed must be counted",
       "basis": "audit of 13 Nov, finding 7: about 95 of 110 named sounds have no recipe"
     },
@@ -583,7 +583,7 @@
       "label": "loudness, true peak and loop seams inside their limits",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "scripts/audio-gate.mjs loudness, peak and seam checks, not yet in a gate lane (wave 43)",
+      "producer": "node scripts/gate/sound-levels-receipt.mjs --out <dir>/sound-levels.json (on a clean checkout of the head; it takes the head from git) runs scripts/audio-gate.mjs's checks over every music_ace clip: true peak and seams on every clip, loudness (EBU R 128 programme loudness) on clips of 10 s or more, and the stale checks, with five planted faults; with the gitignored stems absent it writes no data (scripts/music/mx stems-sync first)",
       "plant": "a stem 6 LU too loud must fail",
       "basis": "audio-gate.mjs: -16 LUFS within 0.5 LU, true peak at or below -1 dBTP"
     },

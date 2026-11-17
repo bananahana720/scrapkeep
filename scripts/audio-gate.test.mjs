@@ -210,7 +210,10 @@ test("STEMS.sha256 rejects a stale, an unlisted and a re-encoded stem and names 
   }
 });
 
-test("the gate flags a stale pack and an unhashed one, and passes the good pack", { skip: !hasFfmpeg() && "no ffmpeg" }, () => {
+// The fixture packs are Ogg Vorbis, which an ffmpeg built without libvorbis (Homebrew's) cannot write.
+const hasLibvorbis = () => hasFfmpeg() && /libvorbis/.test(String(spawnSync("ffmpeg", ["-hide_banner", "-encoders"]).stdout));
+
+test("the gate flags a stale pack and an unhashed one, and passes the good pack", { skip: !hasLibvorbis() && "no ffmpeg with libvorbis" }, () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "audio-gate-stale-"));
   const music = path.join(dir, "assets/music_ace/zone");
   mkdirSync(music, { recursive: true });

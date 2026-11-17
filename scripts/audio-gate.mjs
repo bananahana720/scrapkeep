@@ -21,8 +21,9 @@ import { fileURLToPath } from "node:url";
 //              gitignored, so the manifest and the hash list are what a checkout can compare them to.
 //   unchecked  a track whose audio is not on disk, or no ffmpeg; never counted as a pass
 // Game clips are measured as the engine plays them: stems summed, plus the manifest's level_db.
-// Loudness skips clips and files under 10 s (stingers, fanfares, short beds), where an integrated
-// reading means little; seams do not.
+// Loudness skips clips and files under 10 s (stingers, fanfares, short beds): the target is EBU R 128
+// integrated programme loudness (ITU-R BS.1770 gating), a whole-programme measure that means little
+// over a few seconds. True peak (BS.1770 4x oversampled) and seams are checked on every clip.
 // Run: node scripts/audio-gate.mjs [--project <dir>] [--music <dir>]... [--loops <regex>] [--json] [--cues-only]
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -206,18 +207,19 @@ export function gain(samples, db) {
   return samples.map((s) => s * g);
 }
 
-// A track's verdicts: loudness and true peak when it is long enough, the seam when it loops.
+// A track's verdicts: true peak always, loudness when it is long enough, the seam when it loops.
 export function judge(name, samples, rate, { loop = false, exit = null, loopAt = 0 } = {}) {
   const found = [];
   const seconds = samples.length / 2 / rate;
   const row = { name, seconds: Math.round(seconds * 10) / 10 };
+  const { lufs, truePeak } = meter(samples, rate);
+  row.truePeak = truePeak;
+  if (truePeak === null || truePeak > MAX_TRUE_PEAK)
+    found.push({ kind: "peak", where: name, what: `true peak ${truePeak} dBTP, limit ${MAX_TRUE_PEAK}` });
   if (seconds >= MIN_LOUDNESS_SECONDS) {
-    const { lufs, truePeak } = meter(samples, rate);
-    Object.assign(row, { lufs, truePeak });
+    row.lufs = lufs;
     if (lufs === null || Math.abs(lufs - TARGET_LUFS) > LUFS_TOL)
       found.push({ kind: "loudness", where: name, what: `${lufs} LUFS, target ${TARGET_LUFS} +/- ${LUFS_TOL}` });
-    if (truePeak === null || truePeak > MAX_TRUE_PEAK)
-      found.push({ kind: "peak", where: name, what: `true peak ${truePeak} dBTP, limit ${MAX_TRUE_PEAK}` });
   }
   if (loop) {
     const s = seamStep(samples, exit ?? samples.length / 2, loopAt);
