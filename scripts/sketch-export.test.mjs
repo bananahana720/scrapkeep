@@ -152,7 +152,7 @@ const presetsText = readFileSync(
 
 test("the real proof preset matches the shipped preset except name, runnable and tools/*", () => {
   const presets = parsePresets(presetsText);
-  assert.deepEqual(Object.keys(presets), ["Linux x64", "Linux x64 proof"]);
+  assert.deepEqual(Object.keys(presets), ["Linux x64", "Linux x64 proof", "macOS"]);
   assert.equal(
     presets["Linux x64 proof"].options["texture_format/s3tc_bptc"],
     "true",

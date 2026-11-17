@@ -397,11 +397,12 @@ export function packageName(sha7, dirty = false, selfPlay = false) {
 
 // --self-play: the shipped preset with tools/ kept in, so the launch flag --self-play finds
 // res://tools/self_play.gd (and the bot driver it preloads). Only the exclude_filter line of the
-// shipped preset changes; the default pack keeps tools/* out.
-export function selfPlayPresetText(presetText) {
+// shipped preset changes; the default pack keeps tools/* out. name picks another preset (the Mac
+// export passes "macOS").
+export function selfPlayPresetText(presetText, name = preset) {
   const lines = presetText.split("\n");
-  const start = lines.findIndex((line) => line === `name="${preset}"`);
-  if (start < 0) throw new Error(`preset "${preset}" missing`);
+  const start = lines.findIndex((line) => line === `name="${name}"`);
+  if (start < 0) throw new Error(`preset "${name}" missing`);
   for (let i = start + 1; i < lines.length && !lines[i].startsWith("["); i++) {
     if (!lines[i].startsWith("exclude_filter=")) continue;
     const kept = lines[i]
@@ -413,7 +414,7 @@ export function selfPlayPresetText(presetText) {
     lines[i] = `exclude_filter="${kept.join(", ")}"`;
     return lines.join("\n");
   }
-  throw new Error(`preset "${preset}" has no exclude_filter`);
+  throw new Error(`preset "${name}" has no exclude_filter`);
 }
 
 // The bot_run.gd arguments after "--" for one proof; the local and cloud exports both build from this,

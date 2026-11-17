@@ -49,7 +49,7 @@ test("a pattern covers a file by Godot glob and an exclude beats nothing here", 
   );
 });
 
-for (const name of ["Linux x64", "Linux x64 proof"]) {
+for (const name of ["Linux x64", "Linux x64 proof", "macOS"]) {
   test(`every raw file the game opens is in the "${name}" include filter`, () => {
     const { problems, files } = checkPreset({ sketch, presetText, presetName: name });
     assert.ok(files.length >= 30, "the scan found " + files.length + " raw files");

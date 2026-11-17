@@ -5,6 +5,9 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
@@ -393,9 +396,16 @@ test("main on macOS launches the engine capture under a scratch HOME and grades 
   process.stdout.write = () => true;
   let code;
   let missing;
+  let reused;
+  // --home lives elsewhere, so the run folder must still be made for the frame log and self-play.log.
+  const localRoot = path.resolve(import.meta.dirname, "../artifacts/local");
+  mkdirSync(localRoot, { recursive: true });
+  const keptHome = mkdtempSync(path.join(localRoot, "frametime-test-home-"));
+  const outReused = path.join(base, "out3");
   try {
     code = main(["--self-play", "--seconds=1"], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, out, "darwin");
     missing = main([], { PATH: "/usr/bin:/bin" }, path.join(base, "out2"), "darwin");
+    reused = main(["--self-play", "--seconds=1", "--home=" + keptHome], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, outReused, "darwin");
   } finally {
     console.log = log;
     console.error = error;
@@ -414,10 +424,39 @@ test("main on macOS launches the engine capture under a scratch HOME and grades 
   const summary = JSON.parse(readFileSync(path.join(dir, "summary.json"), "utf8"));
   assert.equal(summary.frames, 200);
   assert.equal(summary.self_play.stages[0].log_s, 2);
+  assert.equal(reused, 0);
+  const reusedDir = path.join(outReused, readdirSync(outReused)[0]);
+  assert.equal(readFileSync(path.join(reusedDir, "home.txt"), "utf8").trim(), keptHome);
+  assert.equal(JSON.parse(readFileSync(path.join(reusedDir, "summary.json"), "utf8")).cache, "reused (--home)");
+  rmSync(keptHome, { recursive: true });
 });
 
 test("an engine reading says whether it measured a packed build and on what caches", async () => {
   const { engineContext } = await import("./frametime-check.mjs");
   assert.deepEqual(engineContext({ exe: null }, "darwin"), { target: "debug-editor", cache: "cold" });
   assert.deepEqual(engineContext({ exe: "/b/game" }, "linux"), { target: "packed", cache: "shared" });
+  assert.deepEqual(engineContext({ exe: "/b/game", home: "/h" }, "darwin"), { target: "packed", cache: "reused (--home)" });
+});
+
+test("--home reuses an existing scratch HOME under artifacts/local and refuses any other folder", async () => {
+  const { engineHome, parseArgs } = await import("./frametime-check.mjs");
+  assert.equal(parseArgs(["--home=/l/run/home"]).home, "/l/run/home");
+  assert.equal(parseArgs([]).home, null);
+  const base = realpathSync(mkdtempSync(path.join(os.tmpdir(), "home-")));
+  const local = path.join(base, "local");
+  const kept = path.join(local, "frametime/a/home");
+  const outside = path.join(base, "outside");
+  mkdirSync(kept, { recursive: true });
+  mkdirSync(outside);
+  assert.equal(engineHome({ home: null }, "/out", local), "/out/home");
+  assert.equal(engineHome({ home: kept }, "/out", local), kept);
+  for (const bad of [outside, local, path.join(local, "../outside")])
+    assert.throws(() => engineHome({ home: bad }, "/out", local), /under artifacts\/local/);
+  assert.throws(() => engineHome({ home: path.join(local, "missing") }, "/out", local), /no folder/);
+  // A link inside artifacts/local that points out of it is refused; one that stays inside is not.
+  symlinkSync(outside, path.join(local, "escape"));
+  assert.throws(() => engineHome({ home: path.join(local, "escape") }, "/out", local), /under artifacts\/local/);
+  symlinkSync(kept, path.join(local, "inside"));
+  assert.equal(engineHome({ home: path.join(local, "inside") }, "/out", local), kept);
+  rmSync(base, { recursive: true });
 });

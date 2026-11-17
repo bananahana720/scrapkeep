@@ -6,6 +6,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -42,6 +43,8 @@ import { userDataEnv } from "./godot-home.mjs";
 // start empty; on macOS HOME moves there too, so the shader and pipeline caches also start empty
 // and shader compiles fall in the log unless the warmup covers them. Without --exe the engine runs
 // the project as a debug run, so that reading is not comparable with a packed build's. --hud has no engine overlay and is refused there.
+// --home=<dir> (engine capture) reuses an earlier run's scratch HOME, a folder under artifacts/local/,
+// so on macOS its shader and pipeline caches and its user:// carry over (engineHome).
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const exportRoot = path.join(root, "artifacts/local/core-loop-export");
@@ -67,6 +70,7 @@ export function parseArgs(argv) {
     sound: false,
     selfPlay: false,
     capture: null,
+    home: null,
     selfPlayArgs: [],
     gameArgs: [],
   };
@@ -88,6 +92,7 @@ export function parseArgs(argv) {
     else if (arg.startsWith("--warmup=")) args.warmup = number(arg, "warmup");
     else if (arg.startsWith("--p99=")) args.p99 = number(arg, "p99");
     else if (arg.startsWith("--hitch=")) args.hitch = number(arg, "hitch");
+    else if (arg.startsWith("--home=")) args.home = arg.slice("--home=".length);
     else if (arg === "--keep-vsync") args.keepVsync = true;
     else if (arg === "--hud") args.hud = true;
     else if (arg === "--sound") args.sound = true;
@@ -362,8 +367,23 @@ function stamp(date = new Date()) {
 }
 
 // What a reading measured: a packed build or a debug run of the project, on warm or cold caches.
+// With --home on macOS the caches are an earlier run's: "reused", not proven warm.
 export function engineContext(args, platform = process.platform) {
-  return { target: args.exe ? "packed" : "debug-editor", cache: platform === "darwin" ? "cold" : "shared" };
+  const cache = platform !== "darwin" ? "shared" : args.home ? "reused (--home)" : "cold";
+  return { target: args.exe ? "packed" : "debug-editor", cache };
+}
+
+// The engine capture's scratch HOME: a fresh one in the run folder, or --home=<dir>, which must
+// already exist under artifacts/local/, so a reading never runs on the player's own HOME. Both paths
+// are resolved through links first, so a link inside artifacts/local/ cannot lead out of it.
+export function engineHome(args, outDir, localRoot = path.join(root, "artifacts/local")) {
+  if (!args.home) return path.join(outDir, "home");
+  if (!existsSync(args.home)) throw new FrametimeError("no folder at --home=" + args.home);
+  const home = realpathSync(args.home);
+  const rel = path.relative(existsSync(localRoot) ? realpathSync(localRoot) : path.resolve(localRoot), home);
+  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel))
+    throw new FrametimeError("--home must be a folder under artifacts/local/: " + args.home);
+  return home;
 }
 
 function analyse(logFile, args, outDir, selfPlay = null, context = null) {
@@ -480,7 +500,8 @@ function engineCapture(args, env, outDir, platform) {
     return 2;
   }
   if (args.exe && !existsSync(args.exe)) throw new FrametimeError("no build at --exe=" + args.exe);
-  const home = path.join(outDir, "home");
+  const home = engineHome(args, outDir);
+  mkdirSync(outDir, { recursive: true });
   mkdirSync(home, { recursive: true });
   const { command, argv, csv } = engineLaunch(args, { outDir, godotBin });
   const minutes = Math.round(((args.warmup + args.seconds) / 60) * 10) / 10;
