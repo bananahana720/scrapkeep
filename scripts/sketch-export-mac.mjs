@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { cp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
-import { existsSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,8 +16,9 @@ import {
 } from "./sketch-export.mjs";
 
 // npm run sketch:export-mac: a macOS release of sketches/core-loop on the Mac Studio, as
-// artifacts/local/core-loop-export-mac/<run>/Scrapkeep.app, ad-hoc signed by Godot (no Apple
-// identity, no notarization), then booted headless for 300 frames. Every Godot launch runs with HOME
+// artifacts/local/core-loop-export-mac/<run>/Scrapkeep.app with BUILD.txt in Contents/MacOS, ad-hoc
+// signed (no Apple identity, no notarization), then booted headless for 300 frames, which must report
+// this commit. Every Godot launch runs with HOME
 // in a scratch folder under the run (Godot on macOS ignores XDG_DATA_HOME; scripts/godot-home.mjs),
 // and the export finds the installed templates through a link in that scratch HOME, so the player's
 // ~/Library/Application Support/Godot is read for templates only and never written.
@@ -90,28 +91,64 @@ export function templatesDir(home) {
   return path.join(home, "Library/Application Support/Godot/export_templates");
 }
 
-// The one file in Contents/MacOS that is not a stem folder is the game's executable.
+// The one file in Contents/MacOS that is not the stem folder or the build stamp is the executable.
 export function appExecutable(app, list = readdirSync) {
   const dir = path.join(app, "Contents/MacOS");
-  const files = list(dir).filter((name) => name !== "music_ace");
+  const files = list(dir).filter((name) => name !== "music_ace" && name !== "BUILD.txt");
   if (files.length !== 1) throw new Error(`expected one executable in ${dir}, found ${files.length}`);
   return path.join(dir, files[0]);
 }
 
-export function macBuildStamp({ sha, dirty, stamp, godot, stems, selfPlay, boot }) {
+// BUILD.txt. src/core/build_stamp.gd reads it beside the executable, so one copy goes in
+// Contents/MacOS (boot null: written before the boot) and the full one beside the app.
+export function macBuildStamp({ sha, dirty, stamp, godot, stems, selfPlay, boot = null }) {
   return (
     [
       "commit: " + sha,
       "dirty: " + dirty,
       "built: " + stamp,
       "godot: " + godot,
-      "target: macOS universal .app (runs native arm64 on Apple silicon), ad-hoc signed by Godot, not notarized",
+      "target: macOS universal .app (runs native arm64 on Apple silicon), ad-hoc signed, not notarized",
       "stems: " + stems,
       ...(selfPlay ? ["self-play pack (tools/ included); not the shipped pack"] : []),
-      "checked: export include filter, preset drift against Linux x64, headless boot 300 frames (" + boot + ")",
-      "not checked: release placeholder gate, Vulkan boss smoke, park-table boot, win proof, a windowed launch by a person, Gatekeeper on another Mac",
+      ...(boot
+        ? [
+            "checked: export include filter, preset drift against Linux x64, ad-hoc seal (codesign --verify --strict), headless boot 300 frames reporting this commit (" + boot + ")",
+            "not checked: release placeholder gate, Vulkan boss smoke, park-table boot, win proof, a windowed launch by a person, Gatekeeper on another Mac",
+          ]
+        : []),
     ].join("\n") + "\n"
   );
+}
+
+// The boot must print the stamp it was given: build_stamp.gd's "SCRAPKEEP_BUILD commit=<sha> ...".
+export function stampFailures(output, sha) {
+  const line = /^SCRAPKEEP_BUILD commit=(\S+) .*source=(\S+)/m.exec(output);
+  if (!line) return ["no SCRAPKEEP_BUILD line in the boot output"];
+  if (line[1] !== sha || line[2] !== "export")
+    return [`the app reports commit=${line[1]} source=${line[2]}, want commit=${sha} source=export`];
+  return [];
+}
+
+// Writes each {path, text} for the length of body and puts every file back afterwards: in finally,
+// on process.exit (fail() included) and on SIGINT or SIGTERM (exit 130 or 143). SIGKILL cannot be
+// caught; git status then shows the change.
+export async function withSwappedFiles(changes, body) {
+  const saved = changes.map(({ path: file }) => ({ file, text: readFileSync(file, "utf8") }));
+  const restore = () => {
+    for (const { file, text } of saved) writeFileSync(file, text);
+  };
+  const onSignal = { SIGINT: () => process.exit(130), SIGTERM: () => process.exit(143) };
+  process.once("exit", restore);
+  for (const [signal, handler] of Object.entries(onSignal)) process.once(signal, handler);
+  try {
+    for (const { path: file, text } of changes) writeFileSync(file, text);
+    return await body();
+  } finally {
+    restore();
+    process.removeListener("exit", restore);
+    for (const [signal, handler] of Object.entries(onSignal)) process.removeListener(signal, handler);
+  }
 }
 
 function run(command, args, options = {}) {
@@ -148,7 +185,7 @@ async function stems(stemsFrom, app) {
     await cp(path.join(stemRoot, track, "manifest.json"), path.join(dest, track, "manifest.json"));
     count += Object.keys(manifests[track].clips).length * manifests[track].stems.length;
   }
-  return { copied: true, line: `${count} from ${stemsFrom} into Contents/MacOS/music_ace (added after signing, so the bundle seal no longer covers them)` };
+  return { copied: true, line: `${count} from ${stemsFrom} into Contents/MacOS/music_ace` };
 }
 
 async function main() {
@@ -178,28 +215,18 @@ async function main() {
   await symlink(realTemplates, path.join(templatesDir(home), TEMPLATE_VERSION));
   const env = { ...process.env, HOME: home, XDG_DATA_HOME: home };
 
-  // project.godot (and, with --self-play, the preset) change for the import and export alone. The
-  // restore runs in finally, on any exit (fail() included) and on SIGINT/SIGTERM.
+  // project.godot (and, with --self-play, the preset) change for the import and export alone;
+  // withSwappedFiles puts them back on success, failure and interruption.
   const projectPath = path.join(project, "project.godot");
   const projectText = await readFile(projectPath, "utf8");
-  const restore = () => {
-    writeFileSync(projectPath, projectText);
-    writeFileSync(presetPath, presetText);
-  };
   const app = path.join(outDir, APP_NAME);
-  let exported;
-  try {
-    process.once("exit", restore);
-    for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, () => process.exit(128));
-    await writeFile(projectPath, astcProjectText(projectText));
-    if (args.selfPlay) await writeFile(presetPath, selfPlayPresetText(presetText, MAC_PRESET));
+  const swaps = [{ path: projectPath, text: astcProjectText(projectText) }];
+  if (args.selfPlay) swaps.push({ path: presetPath, text: selfPlayPresetText(presetText, MAC_PRESET) });
+  const exported = await withSwappedFiles(swaps, () => {
     const imported = run(binary, ["--headless", "--path", project, "--editor", "--import"], { env });
     if (imported.status !== 0) fail("editor import failed\n" + (imported.stdout + imported.stderr).slice(-2000));
-    exported = run(binary, ["--headless", "--path", project, "--export-release", MAC_PRESET, app], { env });
-  } finally {
-    restore();
-    process.removeListener("exit", restore);
-  }
+    return run(binary, ["--headless", "--path", project, "--export-release", MAC_PRESET, app], { env });
+  });
   const exportText = exported.stdout + exported.stderr;
   await writeFile(path.join(outDir, "export.log"), exportText);
   if (exported.status !== 0 || errorLine.test(exportText) || !existsSync(app)) fail("export failed\n" + exportText.slice(-2000));
@@ -210,6 +237,19 @@ async function main() {
   const stemsFrom = path.resolve(args.stemsFrom ?? defaultStemsFrom(common.stdout.trim()));
   const stemResult = await stems(stemsFrom, app);
 
+  // The stamp goes in Contents/MacOS, where the game reads it. Adding files after Godot signed the
+  // bundle breaks its seal, so the app is signed again, ad-hoc (no identity), keeping Godot's
+  // entitlements and hardened-runtime flags, and the seal is verified.
+  const sha = run("git", ["-C", root, "rev-parse", "HEAD"]).stdout.trim();
+  const dirty = run("git", ["-C", root, "status", "--porcelain", "--untracked-files=no"]).stdout.trim() !== "";
+  const godot = run(binary, ["--version"], { env }).stdout.trim();
+  const stampFields = { sha, dirty, stamp, godot, stems: stemResult.line, selfPlay: args.selfPlay };
+  await writeFile(path.join(app, "Contents/MacOS/BUILD.txt"), macBuildStamp(stampFields));
+  const signed = run("codesign", ["--force", "--sign", "-", "--preserve-metadata=entitlements,flags,runtime", app]);
+  if (signed.status !== 0) fail("ad-hoc re-sign failed\n" + signed.stderr);
+  const verified = run("codesign", ["--verify", "--strict", app]);
+  if (verified.status !== 0) fail("codesign --verify failed\n" + verified.stderr);
+
   const bootHome = path.join(outDir, "boot-home");
   await mkdir(bootHome, { recursive: true });
   const bootArgs = ["--headless", "--quit-after", "300", ...(stemResult.copied ? ["--music=ace", "--ace-check"] : [])];
@@ -217,24 +257,11 @@ async function main() {
   const bootText = boot.stdout + boot.stderr;
   await writeFile(path.join(outDir, "boot.log"), bootText);
   const failures = stemResult.copied ? bootFailures(bootText) : errorLine.test(bootText) ? ["SCRIPT ERROR or ERROR line in the boot output"] : [];
+  failures.push(...stampFailures(bootText, sha));
   if (boot.status !== 0) failures.push("boot exit " + boot.status);
   if (failures.length > 0) fail(failures.join("; ") + "\n" + bootText.slice(-2000));
 
-  const sha = run("git", ["-C", root, "rev-parse", "HEAD"]).stdout.trim();
-  const dirty = run("git", ["-C", root, "status", "--porcelain", "--untracked-files=no"]).stdout.trim() !== "";
-  const godot = run(binary, ["--version"], { env }).stdout.trim();
-  await writeFile(
-    path.join(outDir, "BUILD.txt"),
-    macBuildStamp({
-      sha,
-      dirty,
-      stamp,
-      godot,
-      stems: stemResult.line,
-      selfPlay: args.selfPlay,
-      boot: `exit 0, ${bootArgs.join(" ")}`,
-    }),
-  );
+  await writeFile(path.join(outDir, "BUILD.txt"), macBuildStamp({ ...stampFields, boot: `exit 0, ${bootArgs.join(" ")}` }));
   console.log("app: " + app);
   console.log("executable: " + exe);
   console.log("stems: " + stemResult.line);

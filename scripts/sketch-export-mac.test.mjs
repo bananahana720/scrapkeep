@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  stampFailures,
+  withSwappedFiles,
   APP_NAME,
   ASTC_SETTING,
   MAC_PRESET,
@@ -80,4 +84,66 @@ test("BUILD.txt names the stems, the self-play pack and what was not checked", (
   assert.match(text, /self-play pack/);
   assert.match(text, /not checked: .*win proof/);
   assert.doesNotMatch(macBuildStamp({ sha: "a", dirty: false, stamp: "s", godot: "g", stems: "x", selfPlay: false, boot: "b" }), /self-play/);
+});
+
+test("the stamp goes beside the executable and appExecutable skips it", () => {
+  assert.equal(appExecutable("/o/" + APP_NAME, () => ["BUILD.txt", "Scrapkeep"]), "/o/Scrapkeep.app/Contents/MacOS/Scrapkeep");
+  const inside = macBuildStamp({ sha: "abc", dirty: false, stamp: "s", godot: "g", stems: "x", selfPlay: false });
+  assert.match(inside, /^commit: abc\ndirty: false\nbuilt: s\n/);
+  assert.doesNotMatch(inside, /checked:/);
+});
+
+test("stampFailures wants the app to report this commit from its own BUILD.txt", () => {
+  const sha = "90497047b5c085810154ba32e2d5866af8e1dd3b";
+  assert.deepEqual(stampFailures(`x\nSCRAPKEEP_BUILD commit=${sha} dirty=false built=s source=export\n`, sha), []);
+  assert.match(stampFailures("SCRAPKEEP_BUILD commit=unknown dirty=false built=unknown source=none\n", sha)[0], /commit=unknown source=none/);
+  assert.match(stampFailures(`SCRAPKEEP_BUILD commit=${sha} dirty=false built= source=checkout\n`, sha)[0], /source=checkout/);
+  assert.deepEqual(stampFailures("no stamp here", sha), ["no SCRAPKEEP_BUILD line in the boot output"]);
+});
+
+const swapFile = () => {
+  const file = path.join(mkdtempSync(path.join(os.tmpdir(), "swap-")), "project.godot");
+  writeFileSync(file, "original\n");
+  return file;
+};
+
+test("withSwappedFiles restores the file after the body returns and after it throws", async () => {
+  const file = swapFile();
+  const seen = await withSwappedFiles([{ path: file, text: "swapped\n" }], () => readFileSync(file, "utf8"));
+  assert.equal(seen, "swapped\n");
+  assert.equal(readFileSync(file, "utf8"), "original\n");
+  await assert.rejects(
+    withSwappedFiles([{ path: file, text: "swapped\n" }], () => {
+      throw new Error("export failed");
+    }),
+    /export failed/,
+  );
+  assert.equal(readFileSync(file, "utf8"), "original\n");
+});
+
+const moduleUrl = pathToFileURL(path.join(root, "scripts/sketch-export-mac.mjs")).href;
+const childScript = (file, body) =>
+  `const { withSwappedFiles } = await import(${JSON.stringify(moduleUrl)});\n` +
+  `await withSwappedFiles([{ path: ${JSON.stringify(file)}, text: "swapped\\n" }], ${body});`;
+
+// fail() calls process.exit inside the body, which skips finally; the exit listener must restore.
+test("withSwappedFiles restores the file when the body exits the process", () => {
+  const file = swapFile();
+  const child = spawnSync(process.execPath, ["--input-type=module", "-e", childScript(file, "() => process.exit(1)")]);
+  assert.equal(child.status, 1);
+  assert.equal(readFileSync(file, "utf8"), "original\n");
+});
+
+test("withSwappedFiles restores the file when the process gets SIGTERM", async () => {
+  const file = swapFile();
+  const body = 'async () => { console.log("swapped"); await new Promise((r) => setTimeout(r, 30000)); }';
+  const child = spawn(process.execPath, ["--input-type=module", "-e", childScript(file, body)], {
+    stdio: ["ignore", "pipe", "inherit"],
+  });
+  await new Promise((resolve) => child.stdout.once("data", resolve));
+  assert.equal(readFileSync(file, "utf8"), "swapped\n");
+  child.kill("SIGTERM");
+  const code = await new Promise((resolve) => child.once("exit", resolve));
+  assert.equal(code, 143);
+  assert.equal(readFileSync(file, "utf8"), "original\n");
 });
