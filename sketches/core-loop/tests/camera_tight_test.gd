@@ -576,21 +576,26 @@ func _shove_cutaway() -> void:
 	await physics_frame
 	var outer := ship.model.find_child("Hull", true, false) as MeshInstance3D
 	_t.check("B4 ordinary bow contact is opaque", outer.transparency == 0.0)
+	var original_layers := {}
+	for body in ship.get_children():
+		if body is AnimatableBody3D:
+			original_layers[body] = body.collision_layer
 	ship.follow_shoved_rider(ball)
 	var solid := 0
 	var cut := 0
-	for body in ship.get_children():
-		if body is AnimatableBody3D:
+	for body in original_layers:
+		if original_layers[body] == ChaseCamera.CAMERA_BODY_BIT:
 			if body.collision_layer == 0:
 				cut += 1
 			elif body.collision_layer == ChaseCamera.CAMERA_BODY_BIT:
 				solid += 1
+		else:
+			_t.eq("B5 the shove preserves %s's gameplay layer" % body.name, body.collision_layer, original_layers[body])
 	_t.check("B5 a shove cuts the covering hull and keeps other parts solid", outer.transparency > 0.8 and cut > 0 and solid > 0, "%d cut, %d solid" % [cut, solid])
 	ship.follow_shoved_rider(null)
 	_t.check("B6 the outer hull returns when the charge releases the rider", outer.transparency == 0.0)
-	for body in ship.get_children():
-		if body is AnimatableBody3D:
-			_t.check("B6 each ship proxy sees the camera again", body.collision_layer == ChaseCamera.CAMERA_BODY_BIT)
+	for body in original_layers:
+		_t.eq("B6 release restores %s's original layer" % body.name, body.collision_layer, original_layers[body])
 	ball.free()
 	ship.free()
 
