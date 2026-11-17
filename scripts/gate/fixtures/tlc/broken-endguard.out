@@ -1,0 +1,26 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 126 and seed 1783773913509867697 with 4 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/RunFlow.tla
+Parsing file <tmp>/Naturals.tla
+Parsing file <tmp>/FiniteSets.tla
+Parsing file <tmp>/Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module RunFlow
+Starting... (2026-11-17 05:40:47)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-17 05:40:48.
+Error: Invariant EndsOnce is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+State 2: <PressStart line 95, col 3 to line 98, col 109 of module RunFlow>
+State 3: <PickPilot line 102, col 3 to line 111, col 63 of module RunFlow>
+State 4: <TakeWind line 240, col 3 to line 242, col 101 of module RunFlow>
+State 5: <TakeCover line 246, col 3 to line 261, col 43 of module RunFlow>
+State 6: <Death line 278, col 3 to line 285, col 117 of module RunFlow>
+State 7: <Death line 278, col 3 to line 285, col 117 of module RunFlow>
+123 states generated, 72 distinct states found, 38 states left on queue.
+The depth of the complete state graph search is 9.
+The average outdegree of the complete state graph is 2 (minimum is 1, the maximum 7 and the 95th percentile is 5).
+Finished in 00s at (2026-11-17 05:40:48)

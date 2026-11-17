@@ -31,7 +31,8 @@
 3. Sign in and clone: `gh auth login`, then `git clone https://github.com/bananahana720/scrapkeep.git ~/projects/scrapkeep`, then `cd ~/projects/scrapkeep`. Set `git config --global user.name` and `user.email` to the same values as on the PC.
 4. Switch to the stage, install the locked packages and import the project: `git switch --detach origin/stage/alpha-w43`, `npm ci`, `mkdir -p artifacts/local/mac-home`, then `HOME="$PWD/artifacts/local/mac-home" node scripts/import-stamp.mjs import`. The import writes `.godot/`, so the first run takes several minutes.
 5. Check the setup: `npm run sketch:fast -- --base origin/stage/alpha-w43`. A clean stage passes.
-6. Bring Claude's project memory across. It lives only on the PC under `~/.claude/projects/-home-andrew-Projects-scrapkeep/memory/`, packed as `~/scratch/archive/scrapkeep-claude-memory-2026-11-16.tar.gz`; send it the same way as the music. On the Mac it goes under `~/.claude/projects/-Users-<you>-projects-scrapkeep/memory/`. The folder name is the checkout path with each `/` written as `-`.
+6. For the model checks (`scripts/gate/model-receipts.mjs`, the `scrapkeep-verify-formal` skill), install Java with `brew install openjdk` and put `/opt/homebrew/opt/openjdk/bin` on `PATH`. Then run the astack statechart skill's `statechart install-tlc` once. It downloads TLC 1.7.4, checks it against its pinned SHA-256 and stores it as `~/.local/share/astack/tlc/tla2tools-1.7.4.jar`.
+7. Bring Claude's project memory across. It lives only on the PC under `~/.claude/projects/-home-andrew-Projects-scrapkeep/memory/`, packed as `~/scratch/archive/scrapkeep-claude-memory-2026-11-16.tar.gz`; send it the same way as the music. On the Mac it goes under `~/.claude/projects/-Users-<you>-projects-scrapkeep/memory/`. The folder name is the checkout path with each `/` written as `-`.
 
 ### Pick up the open wave
 

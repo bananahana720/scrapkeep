@@ -451,8 +451,8 @@
       "label": "a run always ends, and ends once",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: the run flow model in the scrapkeep-verify-formal skill (wave 42)",
-      "plant": "the model without the vanished-Warden fallback must show a run that never ends",
+      "producer": "node scripts/gate/model-receipts.mjs --row run-always-ends --out <dir> runs TLC on the run flow model (.agents/skills/scrapkeep-verify-formal) with today-store.cfg and writes <dir>/run-always-ends.json; it fails while a covered file has changed since the model's sync commit",
+      "plant": "the model without the vanished-Warden fallback (broken-vanish.cfg) must show a run that never ends, and the model without the death guard (broken-endguard.cfg) a run that ends twice",
       "basis": "plan track V3, check F-A: src/core/flow.gd has no stall guard, and two world 2 findings are runs that never end"
     },
     {
@@ -473,8 +473,8 @@
       "label": "an earned reward is banked once and never lost",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: the profile and run store model in the scrapkeep-verify-formal skill (wave 43)",
-      "plant": "the settle ledger removed from the model must show a reward banked twice",
+      "producer": "node scripts/gate/model-receipts.mjs --row rewards-banked-once --out <dir> runs TLC on the rewards model (.agents/skills/scrapkeep-verify-formal) with rewards-today-one.cfg (one game) and rewards-today-two-once.cfg (two games on one profile) and writes <dir>/rewards-banked-once.json; it fails while two games each pay a reward (finding R-2) and while a covered file has changed since the model's sync commit, and it names the gap it cannot check: the old-key loss route of W1-117 is not modelled",
+      "plant": "the settle ledger removed from the model (rewards-broken-ledger.cfg) must show a reward banked twice, and a save between settle and unlock (rewards-broken-midsave.cfg) a reward lost",
       "basis": "plan track V3, check F-B: src/core/profile.gd, progress.gd and run_store.gd across a crash at every step"
     },
     {
