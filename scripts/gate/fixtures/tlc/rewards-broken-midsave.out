@@ -1,0 +1,31 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 19 and seed 8887814855029355581 with 4 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/Rewards.tla
+Parsing file <tmp>/Naturals.tla
+Parsing file <tmp>/Sequences.tla
+Parsing file <tmp>/FiniteSets.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Rewards
+Starting... (2026-11-17 06:07:04)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-17 06:07:04.
+Error: Invariant NeverLost is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+State 2: <Launch line 78, col 3 to line 87, col 68 of module Rewards>
+State 3: <StepB line 163, col 3 to line 165, col 125 of module Rewards>
+State 4: <NewRun line 92, col 3 to line 96, col 108 of module Rewards>
+State 5: <StepP line 195, col 3 to line 203, col 121 of module Rewards>
+State 6: <StepW line 207, col 3 to line 215, col 90 of module Rewards>
+State 7: <StepR line 228, col 3 to line 238, col 140 of module Rewards>
+State 8: <Earn line 101, col 3 to line 104, col 116 of module Rewards>
+State 9: <StepG line 171, col 3 to line 183, col 87 of module Rewards>
+State 10: <StepP line 195, col 3 to line 203, col 121 of module Rewards>
+State 11: <StepW line 207, col 3 to line 215, col 90 of module Rewards>
+State 12: <Crash line 149, col 3 to line 157, col 49 of module Rewards>
+783 states generated, 548 distinct states found, 197 states left on queue.
+The depth of the complete state graph search is 15.
+The average outdegree of the complete state graph is 2 (minimum is 0, the maximum 5 and the 95th percentile is 5).
+Finished in 00s at (2026-11-17 06:07:05)
