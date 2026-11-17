@@ -32,14 +32,14 @@ rcfg() {
 }
 BOTH="AtMostOnce NeverLost"
 TWO=("Procs={p1, p2}" MaxCrashes=1 MaxGen=5)
-# The code at the sync commit: one game, then each with no failed write. Two games on one profile
+# The code: one game, then each with no failed write. Pull request 1093 landed the narrow fix (ReconcileCopies="ledger"). Two games on one profile
 # check one rule per config, because a break stops the checker before it covers the other rule.
-rcfg today-one "$BOTH"
-rcfg today-one-nofail "$BOTH" MaxFails=0
-rcfg today-two-once "AtMostOnce" "${TWO[@]}" MaxFails=1
-rcfg today-two-lost "NeverLost" "${TWO[@]}" MaxFails=2
-rcfg today-two-nofail-once "AtMostOnce" "${TWO[@]}" MaxFails=0
-rcfg today-two-nofail-lost "NeverLost" "${TWO[@]}" MaxFails=0
+rcfg today-one "$BOTH" ReconcileCopies=\"ledger\"
+rcfg today-one-nofail "$BOTH" MaxFails=0 ReconcileCopies=\"ledger\"
+rcfg today-two-once "AtMostOnce" "${TWO[@]}" MaxFails=1 ReconcileCopies=\"ledger\"
+rcfg today-two-lost "NeverLost" "${TWO[@]}" MaxFails=2 ReconcileCopies=\"ledger\"
+rcfg today-two-nofail-once "AtMostOnce" "${TWO[@]}" MaxFails=0 ReconcileCopies=\"ledger\"
+rcfg today-two-nofail-lost "NeverLost" "${TWO[@]}" MaxFails=0 ReconcileCopies=\"ledger\"
 # The candidate fix: Continue copies the run document's ledger ids into the profile, never its reward keys.
 rcfg guarded-one "$BOTH" ReconcileCopies=\"ledger\"
 rcfg guarded-two-once "AtMostOnce" "${TWO[@]}" MaxFails=1 ReconcileCopies=\"ledger\"

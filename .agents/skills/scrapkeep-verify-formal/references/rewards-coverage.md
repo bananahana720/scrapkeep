@@ -58,7 +58,7 @@ One reward id stands for every id: ids do not interact. The legacy key `reward:<
 | --- | --- | --- |
 | `Procs` | `{p1}` or `{p1, p2}` | one game, or two on one `user://` folder |
 | `MaxCrashes`, `MaxFails`, `MaxGen` | 2, 2, 6 (two games: 1 crash, generation 5, and 0, 1 or 2 failed writes as the config says) | bounds; `MaxGen` is a state constraint |
-| `ReconcileCopies` | `"all"` | `"ledger"` in `guarded-*` and the `broken-*` configs built on it: the narrow candidate fix. `reconcile_settled` still copies ledger ids (`ledger.found.*`, settled at `sketches/core-loop/src/core/progress.gd:325-326`), never `reward:*` keys. The model holds one reward key and no ledger id, so it shows the fix's one effect on the reward: the key is not copied, and Continue may still save the profile because a ledger id was copied |
+| `ReconcileCopies` | `"ledger"` since pull request 1093 (`69870ceff`); the configs set it on each `today-*` line, the sync commit is not yet moved | `"all"` in `rewards-reach` (not yet rerun on the fix); `"ledger"` in `today-*`, `guarded-*` and the `broken-*` configs built on it: the narrow candidate fix. `reconcile_settled` still copies ledger ids (`ledger.found.*`, settled at `sketches/core-loop/src/core/progress.gd:325-326`), never `reward:*` keys. The model holds one reward key and no ledger id, so it shows the fix's one effect on the reward: the key is not copied, and Continue may still save the profile because a ledger id was copied |
 | `LedgerChecked` | TRUE | FALSE in `broken-ledger`: grants ignore the settled ledger |
 | `GrantSavesOnce` | TRUE | FALSE in `broken-midsave`: `grant_once` saves between the settle and the unlock (the comment at `sketches/core-loop/src/core/progress.gd:214` names this fault) |
 

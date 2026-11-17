@@ -6,6 +6,8 @@ A finding is a break of `models/Rewards.tla` that replayed on the real code. [re
 
 ### R-1. If both profile saves of a reward's earn fail and no later profile save succeeds before the game closes, a Continue settles the reward without paying it, for good
 
+- Status (17 November 2026): fixed in code by pull request 1093 (`69870ceff`, ruling ea: never lost outranks at most once). The `today-*` configs now set `ReconcileCopies="ledger"`. This finding closes and the sync commit moves once `rewards-today-one` is checked and holds; no checker has run on the fix yet.
+
 - Rule: `NeverLost`. Config: `rewards-today-one` (one game, at most two crashes and two failed writes). With no failed write (`rewards-today-one-nofail`) both rules hold.
 - Steps, in the code's words:
   1. The player starts a run. `flow._begin_run` saves the profile and `enter_stage(1)` saves the run file.

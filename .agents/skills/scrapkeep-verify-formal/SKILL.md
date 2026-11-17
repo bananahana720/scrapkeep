@@ -53,6 +53,8 @@ Each rule is one promise to the player. [references/coverage.md](references/cove
 
 A `broken-*` config that reports no break means the model can no longer see that fault. Fix the model before trusting any pass (VFM-03).
 
+The world 1 done read takes this check as two receipts, `run-always-ends` and `rewards-banked-once`. `node scripts/gate/model-receipts.mjs --out <dir>` writes them. It runs plain TLC on `today-store` with the `broken-vanish` and `broken-endguard` plants, and on `rewards-today-one` with the `rewards-broken-ledger` and `rewards-broken-midsave` plants. A receipt fails while step 1 of "Is this change covered?" shows a changed file.
+
 ## Read a result
 
 1. A break in a `guarded-*` or `today-*` config is a candidate, not a bug. Tell it as steps in the code's words, using the coverage table. (VFM-02)
