@@ -1,9 +1,12 @@
 extends RefCounted
 
-# Pack pressure experiments, world 1 (the kiting sweep, scrapkeep#241 comment 6378906601: circling a pack
-# costs nothing on every stage). Five variants, each only a preset of ChallengeDials rows, chosen on the
-# command line with --pack-pressure=A, or a combination such as --pack-pressure=A+D. Without the flag every
-# dial but A's and E's reads its identity. An explicit --tune of the same key wins over a preset.
+# How the ball's roll is read and led, world 1. Two users share one reading of the ball (observe, once a
+# physics tick): the pack pressure experiments below, and the bosses' lead on a held line (lead_aim).
+#
+# Pack pressure (the kiting sweep, scrapkeep#241 comment 6378906601: circling a pack costs nothing on every
+# stage). Five variants, each only a preset of ChallengeDials rows, chosen on the command line with
+# --pack-pressure=A, or a combination such as --pack-pressure=A+D. Without the flag every dial but A's and
+# E's reads its identity. An explicit --tune of the same key wins over a preset.
 #
 #   A  aim: crews lead the ball's roll, along its curve, when they steer and when they lay a lunge lane.
 #      A ships at half on world 1 (wave 37 unit D1, ChallengeDials.LEAD_W1); the preset names the full lead.
@@ -19,6 +22,9 @@ extends RefCounted
 #
 # World 1 only: each preset fills the stage 1 and 2 entries of a per-stage dial and leaves the rest at
 # identity.
+#
+# Boss lead (MG-11): Brindle's charge, the gate crane's sweep and drop and the miniboss's slam and charge
+# aim through lead_aim at their commit. See the constants above lead_aim.
 
 const W1 := [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]
 const HALF_W1 := [0.5, 0.5, 1.0, 1.0, 1.0, 1.0]
@@ -55,12 +61,19 @@ const STEADY_SPREAD_DEG := 10.0
 const UNSTEADY_SPREAD_DEG := 20.0
 const LEAD_FLOOR := 0.85
 const BOSS_MAX_LEAD_S := 4.0
+# The lead scales with the tell (coordinator's call, an assumption Andrew can overturn): whole at
+# LEAD_TELL_FULL seconds from commit to hit or longer, none at LEAD_TELL_NONE or shorter, linear between. A
+# short tell leaves no time to turn off a led mark, so a cued follow-up (its tell is the floor) is never led.
+const LEAD_TELL_FULL := 1.0
+const LEAD_TELL_NONE := 0.6
 # An attack that travels to its mark (a charge, a swung hook) lands later the further it aims; lead_aim
-# settles that landing time in this many passes.
+# settles that landing time in this many passes. A ball as fast as the attack cannot be met that way, so it
+# is not led.
 const LEAD_SOLVE_STEPS := 3
-# The plant switch for boss_lead_line_test, read only at a commit: "full" leads every ball, turning or
-# not, and "none" leads no ball. Unset in play.
-const PLANT_ENV := "SCRAPKEEP_PLANT_BOSS_LEAD"
+
+# A planted fault for boss_lead_line_test only, which sets it directly: "full" leads every ball, turning or
+# not, and "none" leads no ball. Always "" in play; nothing in the game writes it.
+static var lead_plant := ""
 
 
 # The ball's heading over the last second: one planar heading (radians, atan2(z, x)) every SAMPLE_S in a
@@ -170,31 +183,34 @@ static func _carry(at: Vector3, v: Vector3, t: float) -> Vector3:
 	return at + Vector3(v.x * a - v.z * b, 0.0, v.x * b + v.z * a) / w
 
 
-# Where a boss attack committed now from `from` should be aimed. It lands `delay` seconds after the
-# commit, plus the time to reach its mark at `travel_speed` m/s (0 for a mark that lands all at once, a
-# ring). A ball that has held a line is aimed at where its roll carries it by then; a turning, slow or
-# stopped ball at where it is. Bosses call this once, at the commit, and draw what it returns.
-static func lead_aim(target, from: Vector3, delay: float, travel_speed := 0.0) -> Vector3:
+# Where a boss attack committed now from `from` should be aimed. It hurts `tell` seconds after the commit;
+# an attack that then travels to its mark (a charge, a swung hook) moves at `travel_speed` m/s and hurts
+# from `reach` metres ahead of `from` at once (a hull's nose); a ring that lands all at once passes 0. A ball
+# that has held a line is aimed at where its roll carries it by the hit, scaled by the tell (LEAD_TELL_*);
+# a turning, slow or stopped ball, or one as fast as the attack, is aimed at where it is. Bosses call this
+# once, at the commit, and draw what it returns.
+static func lead_aim(target, from: Vector3, tell: float, travel_speed := 0.0, reach := 0.0) -> Vector3:
 	var at: Vector3 = target.ball_position()
 	var v: Vector3 = target.planar_velocity()
-	var share := _lead_share(v)
+	if travel_speed > 0.0 and v.length() >= travel_speed:
+		return at
+	var share := _lead_share(v) * clampf((tell - LEAD_TELL_NONE) / (LEAD_TELL_FULL - LEAD_TELL_NONE), 0.0, 1.0)
 	if share <= 0.0:
 		return at
 	var aim := at
 	for i in LEAD_SOLVE_STEPS:
-		var t := delay
+		var t := tell
 		if travel_speed > 0.0:
-			t += Vector2(aim.x - from.x, aim.z - from.z).length() / travel_speed
+			t += maxf(0.0, Vector2(aim.x - from.x, aim.z - from.z).length() - reach) / travel_speed
 		aim = _carry(at, v, clampf(t, 0.0, BOSS_MAX_LEAD_S))
 	return at.lerp(aim, share)
 
 
 # How much of the lead a boss takes: 1 on a held line, fading to 0 as the heading strays.
 static func _lead_share(v: Vector3) -> float:
-	var plant := OS.get_environment(PLANT_ENV)
-	if plant == "full":
+	if lead_plant == "full":
 		return 1.0
-	if plant == "none":
+	if lead_plant == "none":
 		return 0.0
 	if Vector2(v.x, v.z).length() < _lead_floor():
 		return 0.0
@@ -219,7 +235,9 @@ static func observe(v: Vector3, cruise := 0.0) -> void:
 		return
 	var fresh := frame != _frame + 1
 	_frame = frame
-	observe_tick(v, 1.0 / float(Engine.physics_ticks_per_second), cruise, fresh)
+	# A tick lasts 1 / ticks_per_second of game time, scaled like the physics delta: under a hit stop
+	# (Engine.time_scale 0.05) ticks keep coming at the real rate but each is a twentieth as long.
+	observe_tick(v, Engine.time_scale / float(Engine.physics_ticks_per_second), cruise, fresh)
 
 
 # One tick of the ball's roll, `dt` seconds long. observe() calls it once a physics tick; a headless test

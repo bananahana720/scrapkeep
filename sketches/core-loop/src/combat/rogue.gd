@@ -335,7 +335,8 @@ func _begin_attack(to_ball: Vector3) -> void:
 		"sweep":
 			# The hook reaches the lane's end at half the strike, so it travels at 2 x length / strike.
 			var swing := 2.0 * _size("length") / _seconds("strike")
-			var aim := PackPressure.lead_aim(target, global_position, _seconds("wind"), swing) - global_position
+			# The hook bats a ball within its reach (_strike), so it meets one that much sooner.
+			var aim := PackPressure.lead_aim(target, global_position, _seconds("wind"), swing, _size("reach") + 1.0) - global_position
 			aim.y = 0.0
 			_commit_lane(Threat.Type.LANE, global_position, aim if aim.length() > 0.5 else heading, _size("length"), _size("width"), reach)
 		"haul", "harpoon":

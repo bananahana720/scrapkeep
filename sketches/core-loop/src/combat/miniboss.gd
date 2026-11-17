@@ -48,6 +48,12 @@ const SLAM_RADIUS := 7.0
 const SLAM_HEIGHT := 9.0
 const SLAM_DAMAGE := 24.0
 const SLAM_SHOVE := 9.0
+# _slam_spot: the world layer it checks, how far short of a wall the body lands (its radius and a margin),
+# the height its ray runs above the ground, and how far above and below the spot it looks for ground.
+const WORLD_LAYER := 1
+const LEAP_CLEAR := RADIUS + 0.5
+const LEAP_RAY_LIFT := 0.5
+const LEAP_GROUND_PROBE := 4.0
 const CHARGE_BRACE := 1.0
 const CHARGE_LENGTH := 30.0
 const CHARGE_WIDTH := 4.6
@@ -250,19 +256,44 @@ func _enter(next: int) -> void:
 func _begin_attack(to_ball: Vector3) -> void:
 	attacks += 1
 	if _next_attack == 0:
-		# It lands as the ring fills, at the end of the crouch and the leap.
-		var at := PackPressure.lead_aim(target, global_position, slam_crouch + SLAM_LEAP)
+		# It lands as the ring fills, at the end of the crouch and the leap, on ground it can reach.
+		var at := _slam_spot(PackPressure.lead_aim(target, global_position, slam_crouch + SLAM_LEAP))
 		_leap_to = Vector3(at.x, terrain.height(at.x, at.z) + HALF_HEIGHT, at.z)
 		_commit_ring(Threat.Type.PROJECTILE, at, SLAM_RADIUS, 4.0)
 		telegraph().set_flight(global_position + Vector3.DOWN * HALF_HEIGHT, 4.0 * SLAM_HEIGHT)
 		_enter(State.SLAM_CROUCH)
 	else:
-		var aim := PackPressure.lead_aim(target, global_position, charge_brace, CHARGE_LENGTH / CHARGE_TIME) - global_position
+		var aim := PackPressure.lead_aim(target, global_position, charge_brace, CHARGE_LENGTH / CHARGE_TIME, HIT_REACH) - global_position
 		aim.y = 0.0
 		var heading := aim if aim.length() > 0.5 else (to_ball if to_ball.length() > 0.5 else -global_basis.z)
 		_commit_lane(Threat.Type.LANE, global_position, heading, CHARGE_LENGTH, CHARGE_WIDTH, 4.0).run_body(0.0, HIT_REACH)
 		_enter(State.CHARGE_BRACE)
 	_next_attack = 1 - _next_attack
+
+
+# Where a slam led to `led` may land. The leap sets the body's position with no collision check, so it
+# is never sent through a wall or off the stage: a ray from the ball toward the led point stops LEAP_CLEAR
+# short of the first thing on the world layer, and a ray down there must find ground. Otherwise the slam
+# lands on the ball, as an unled one does.
+func _slam_spot(led: Vector3) -> Vector3:
+	var ball := _ball()
+	var flat := Vector3(led.x - ball.x, 0.0, led.z - ball.z)
+	if flat.length() < 0.5 or not is_inside_tree():
+		return ball
+	var space := get_world_3d().direct_space_state
+	var from := ball + Vector3.UP * LEAP_RAY_LIFT
+	var to := Vector3(led.x, terrain.height(led.x, led.z) + 1.0 + LEAP_RAY_LIFT, led.z)
+	var at := led
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to, WORLD_LAYER))
+	if not hit.is_empty():
+		var room := Vector3(hit.position.x - ball.x, 0.0, hit.position.z - ball.z).length() - LEAP_CLEAR
+		if room <= 0.0:
+			return ball
+		at = ball + flat.normalized() * room
+	var top := Vector3(at.x, terrain.height(at.x, at.z) + LEAP_GROUND_PROBE, at.z)
+	if space.intersect_ray(PhysicsRayQueryParameters3D.create(top, top + Vector3.DOWN * LEAP_GROUND_PROBE * 2.0, WORLD_LAYER)).is_empty():
+		return ball
+	return Vector3(at.x, ball.y, at.z)
 
 
 # After the slam lands: in phase two the charge follows at once behind the ratchet cue;

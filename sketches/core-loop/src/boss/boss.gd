@@ -957,9 +957,9 @@ func _step_charges(delta: float, ball: Vector3) -> void:
 				if _charge["state"] == CHARGE_REST:
 					if _in_transition() or reeling():
 						return
-					_commit_charge(ball)
+					_commit_charge()
 				elif _charge["state"] == CHARGE_HOOK:
-					_commit_charge(ball, true)
+					_commit_charge(true)
 				else:
 					_charge = {"state": CHARGE_REST, "timer": _rest_time()}
 		CHARGE_BRACE:
@@ -1009,17 +1009,16 @@ func _brace_turn(delta: float) -> void:
 #
 # The lane leads a ball that holds a line (PackPressure.lead_aim): it is laid where the ball's roll
 # carries it by the time the hull's nose gets there, so a straight line is met and a turn inside the
-# tell escapes. A turning, slow or stopped ball is aimed at where it is. The aim reads the ball's
-# position and roll from the player itself; `_ball` stays for the tests that commit a charge by hand.
-func _commit_charge(_ball: Vector3, cued := false) -> void:
+# tell escapes. A turning, slow or stopped ball is aimed at where it is, and so is every ball on the
+# hook turn's short cued tell. The aim reads the ball's position and roll from the player itself.
+func _commit_charge(cued := false) -> void:
 	if not cued:
 		_combo_left = ChallengeDials.combo_step("brindle", _combo_left)
 	var from: Vector3 = ship.global_position
 	var half := Requisition.HULL.z * 0.5
 	var warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.CHARGE_WARN, Hazard.MIN_WARN)
-	# The nose starts half a hull and its reach ahead of the centre, so it meets the ball that much sooner.
-	var nose_start := (half + CHARGE_REACH) / Rules.CHARGE_SPEED
-	var aim := PackPressure.lead_aim(ctx.player, from, maxf(0.0, warn - nose_start), Rules.CHARGE_SPEED)
+	# The nose hurts from half a hull and its reach ahead of the centre, so it meets the ball that much sooner.
+	var aim := PackPressure.lead_aim(ctx.player, from, warn, Rules.CHARGE_SPEED, half + CHARGE_REACH)
 	var to_aim := Vector3(aim.x - from.x, 0.0, aim.z - from.z)
 	var heading := _aim_at(aim)
 	var to_wall := _travel_to_rim(from, heading)

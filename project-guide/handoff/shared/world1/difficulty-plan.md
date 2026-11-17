@@ -30,7 +30,7 @@ A Novice win is the game failing to stop a weak player, so a higher Novice numbe
 - plated brute, foreman, dispatcher: fine.
 - silt boil: built to punish circle-kiting (DECISIONS.md:176). Conflicts with the new direction: re-scope to punish the stall, not the kite.
 - Brindle: the model kiting fight (charge at 24 m/s, bait into a wall for a 3 s stun).
-- Bosses (Brindle's charge, the gate crane's sweep and drop, the miniboss's slam and charge) aimed at where the ball was at the commit, so a ball that kept rolling was never hit (Andrew: "a pushover"). They now lead a ball that has held a line for a second at cruise, and a turning ball not at all (`PackPressure.lead_aim`; `tests/boss_lead_line_test.gd` for the per-attack numbers; BACKLOG MG-11 for the band read still owed).
+- Bosses (Brindle's charge, the gate crane's sweep and drop, the miniboss's slam and charge) aimed at where the ball was at the commit, so a ball that kept rolling was never hit (Andrew: "a pushover"). They now lead a ball that has held a line for a second at 85% of cruise or more, scaled by the tell (none at 0.6 s or less), and a turning ball not at all (`PackPressure.lead_aim`; `tests/boss_lead_line_test.gd` for the per-attack numbers; BACKLOG MG-11 for the band read still owed).
 - Reject at base: lowering the one-shot guard (does not reward movement); churned silt (pack D), which drags the ball below fast tier.
 - Comps rows worth borrowing (`design-v3/research/comps/difficulty/SUMMARY.md`): row 14 raise aggression and elite share, not count; row 15 attack interval x0.85 to 0.7; enemy speed x1.15 (RoR2 uses x1.4); row 5 no step ever shortens a tell; Roboquest players run about 2.35 times the median enemy (chaser is at 2.9 times today).
 
