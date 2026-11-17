@@ -42,10 +42,18 @@ func _ready() -> void:
 			warmup_s = maxf(float(arg.trim_prefix(WARMUP_FLAG)), 0.0)
 		elif arg.begins_with(SECONDS_FLAG):
 			seconds = maxf(float(arg.trim_prefix(SECONDS_FLAG)), 0.001)
+	if path.is_empty():
+		push_error("frame_log: %s needs a path" % FLAG)
+		written = true
+		return
 	RenderingServer.frame_post_draw.connect(_on_frame_drawn)
 
 
 func _exit_tree() -> void:
+	_disconnect()
+
+
+func _disconnect() -> void:
 	if RenderingServer.frame_post_draw.is_connected(_on_frame_drawn):
 		RenderingServer.frame_post_draw.disconnect(_on_frame_drawn)
 
@@ -69,7 +77,7 @@ func frame(now_usec: int) -> void:
 
 func write() -> void:
 	written = true
-	_exit_tree()
+	_disconnect()
 	var info := PackedStringArray([INFO])
 	for value in [Engine.get_version_info().get("string", ""), RenderingServer.get_current_rendering_driver_name(),
 			RenderingServer.get_video_adapter_name(), DisplayServer.window_get_vsync_mode()]:

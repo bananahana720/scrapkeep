@@ -38,9 +38,10 @@ import { userDataEnv } from "./godot-home.mjs";
 // The engine capture launches $GODOT_BIN --path sketches/core-loop (or --exe=<a packed build's
 // binary>) windowed, with Godot's --disable-vsync unless --keep-vsync, and the game's own frame log
 // (src/core/frame_log.gd, --frame-log=<csv>) on the same warmup and seconds; the CSV it writes is
-// read as MangoHud's is. Each such run has a scratch HOME (and XDG data) under the run folder, so
-// its saves and its shader and pipeline caches start empty: shader compiles fall in the log unless
-// the warmup covers them. --hud has no engine overlay and is refused there.
+// read as MangoHud's is. Each such run has scratch XDG data under the run folder, so its saves
+// start empty; on macOS HOME moves there too, so the shader and pipeline caches also start empty
+// and shader compiles fall in the log unless the warmup covers them. Without --exe the engine runs
+// the project as a debug run, so that reading is not comparable with a packed build's. --hud has no engine overlay and is refused there.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const exportRoot = path.join(root, "artifacts/local/core-loop-export");
