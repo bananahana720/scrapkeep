@@ -121,7 +121,9 @@ static func room_db(room_for: String, sound: String, warning: bool, sounding := 
 # CROWD_DB_PER_DOUBLING for each doubling above CROWD_FREE, never below CROWD_FLOOR_DB.
 # Kit signatures, ultimates and big moments are not on the list: overpowered pays (direction 5).
 const CROWD_SOUNDS := ["weapon_zap", "hit_thwack", "clank", "scrap_tick", "cog_tick", "kill_pop", "crit_ping", "shatter",
-	"dash_whoosh", "near_whoosh", "kest_kick_thump", "rarity_tick", "panel_note", "shell_spring", "land_thud", "hop"]
+	"dash_whoosh", "near_whoosh", "kest_kick_thump", "rarity_tick", "panel_note", "shell_spring", "land_thud", "hop",
+	# World 1's own sounds that took over a crowd cue (the thwack, the spring and the shatter) stay on the list.
+	"pin_double_thwack", "rebound_spring_snap", "kest_snare_crack", "cracked_wall_crumble"]
 const CROWD_FREE := 6
 const CROWD_DB_PER_DOUBLING := 3.0
 const CROWD_FLOOR_DB := -9.0
@@ -135,7 +137,12 @@ const VOICE_LIMIT := {"weapon_zap": 3, "scrap_tick": 3, "cog_tick": 3, "hit_thwa
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1, "rarity_tick": 2, "panel_note": 3, "clank": 2, "grapple_clink": 2,
 	"swarm_buzz": 2, "kill_chain_tier": 1, "achievement_chime": 1, "rescue_fanfare": 1,
 	"menu_move": 2, "menu_confirm": 1, "menu_back": 1, "verb_fail": 1, "gauge_dry_click": 1, "marble_tick_ladder": 3,
-	"drop_thud": 1, "drop_whiff": 1, "guard_creak": 1, "beacon_open_chime": 1, "callout_warden_chime": 1}
+	"drop_thud": 1, "drop_whiff": 1, "guard_creak": 1, "beacon_open_chime": 1, "callout_warden_chime": 1,
+	# World 1's own sounds keep the limits of the stand-ins they replace: the gauge's climb is one voice like the
+	# beacon hum it was, and a pin's double hit takes two where the single thwack took three.
+	"motif_accumulate": 1, "pin_double_thwack": 2,
+	"motif_accumulate_sable": 1, "motif_accumulate_rivet": 1, "motif_accumulate_kest": 1, "motif_accumulate_tarn": 1,
+	"motif_accumulate_tally": 1, "motif_accumulate_cannon": 1}
 const MIN_GAP_MS := {"weapon_zap": 55, "scrap_tick": 40, "cog_tick": 40, "enemy_arrive": 200, "hit_thwack": 35, "land_thud": 80, "kill_pop": 45,
 	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600,
 	"grapple_clink": 60, "ride_cable_clink": 60, "ride_rolling_metal": 250, "ride_hop_lift": 60, "ride_ledge_scuff": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
@@ -143,7 +150,11 @@ const MIN_GAP_MS := {"weapon_zap": 55, "scrap_tick": 40, "cog_tick": 40, "enemy_
 	"achievement_chime": 400, "rescue_fanfare": 400, "clank": 90, "rarity_tick": 45,
 	# A menu move repeats as fast as a held d-pad; a failed verb repeats as fast as the button is mashed.
 	"menu_move": 45, "menu_confirm": 90, "menu_back": 90, "verb_fail": 150, "gauge_dry_click": 120, "marble_tick_ladder": 60,
-	"drop_thud": 120, "drop_whiff": 200, "guard_creak": 700, "beacon_open_chime": 400, "callout_warden_chime": 300}
+	"drop_thud": 120, "drop_whiff": 200, "guard_creak": 700, "beacon_open_chime": 400, "callout_warden_chime": 300,
+	# Each hazard landing keeps the shared slam's 60 ms, the line skill's motif the bite's 60. The pin takes the clank's 90, not the thwack's 35 it stood in for: a deliberate change, so a second pin inside 90 ms is dropped.
+	"flood_drop": 60, "fleet_anvil_brass_drop": 60, "lightning_strike": 60, "rockfall_boom": 60, "crater_crump_sub_boom": 60,
+	"steam_whistle_percussion_drop": 60, "ancient_family_drop": 60, "motif_line": 60, "pin_double_thwack": 90,
+	"motif_line_sable": 60, "motif_line_rivet": 60, "motif_line_kest": 60, "motif_line_tarn": 60, "motif_line_tally": 60, "motif_line_cannon": 60}
 
 const MENU_FLOWS := ["title", "class_select"]
 const OVER_FLOWS := ["summary", "dead", "victory"]
