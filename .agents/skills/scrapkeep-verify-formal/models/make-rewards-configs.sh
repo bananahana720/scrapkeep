@@ -7,24 +7,27 @@ rcfg() {
   local name=$1
   local rules=$2
   shift 2
-  declare -A c=(
-    [Procs]="{p1}" [MaxCrashes]=2 [MaxFails]=2 [MaxGen]=6
-    [ReconcileCopies]="\"all\"" [LedgerChecked]=TRUE [GrantSavesOnce]=TRUE
-  )
-  local kv key
+  # Plain variables, not an associative array, so the system bash 3.2 on macOS runs it.
+  local keys="Procs MaxCrashes MaxFails MaxGen ReconcileCopies LedgerChecked GrantSavesOnce"
+  local c_Procs="{p1}" c_MaxCrashes=2 c_MaxFails=2 c_MaxGen=6
+  local c_ReconcileCopies="\"ledger\"" c_LedgerChecked=TRUE c_GrantSavesOnce=TRUE
+  local kv key v
   for kv in "$@"; do
     key=${kv%%=*}
-    if [ -z "${c[$key]}" ]; then
-      echo "make-rewards-configs: unknown constant $key" >&2
-      exit 2
-    fi
-    c[$key]=${kv#*=}
+    case " $keys " in
+      *" $key "*) printf -v "c_$key" '%s' "${kv#*=}" ;;
+      *)
+        echo "make-rewards-configs: unknown constant $key" >&2
+        exit 2
+        ;;
+    esac
   done
   {
     echo "SPECIFICATION Spec"
     echo "CONSTANTS"
-    for key in $(printf '%s\n' "${!c[@]}" | sort); do
-      echo "  $key = ${c[$key]}"
+    for key in $(printf '%s\n' $keys | sort); do
+      v="c_$key"
+      echo "  $key = ${!v}"
     done
     echo "CONSTRAINT Bounded"
     echo "INVARIANTS TypeOK $rules"
@@ -32,14 +35,14 @@ rcfg() {
 }
 BOTH="AtMostOnce NeverLost"
 TWO=("Procs={p1, p2}" MaxCrashes=1 MaxGen=5)
-# The code: one game, then each with no failed write. Pull request 1093 landed the narrow fix (ReconcileCopies="ledger"). Two games on one profile
+# The code: one game, then each with no failed write. Since pull request 1093 the code is the narrow fix, ReconcileCopies="ledger" (the default above). Two games on one profile
 # check one rule per config, because a break stops the checker before it covers the other rule.
-rcfg today-one "$BOTH" ReconcileCopies=\"ledger\"
-rcfg today-one-nofail "$BOTH" MaxFails=0 ReconcileCopies=\"ledger\"
-rcfg today-two-once "AtMostOnce" "${TWO[@]}" MaxFails=1 ReconcileCopies=\"ledger\"
-rcfg today-two-lost "NeverLost" "${TWO[@]}" MaxFails=2 ReconcileCopies=\"ledger\"
-rcfg today-two-nofail-once "AtMostOnce" "${TWO[@]}" MaxFails=0 ReconcileCopies=\"ledger\"
-rcfg today-two-nofail-lost "NeverLost" "${TWO[@]}" MaxFails=0 ReconcileCopies=\"ledger\"
+rcfg today-one "$BOTH"
+rcfg today-one-nofail "$BOTH" MaxFails=0
+rcfg today-two-once "AtMostOnce" "${TWO[@]}" MaxFails=1
+rcfg today-two-lost "NeverLost" "${TWO[@]}" MaxFails=2
+rcfg today-two-nofail-once "AtMostOnce" "${TWO[@]}" MaxFails=0
+rcfg today-two-nofail-lost "NeverLost" "${TWO[@]}" MaxFails=0
 # The candidate fix: Continue copies the run document's ledger ids into the profile, never its reward keys.
 rcfg guarded-one "$BOTH" ReconcileCopies=\"ledger\"
 rcfg guarded-two-once "AtMostOnce" "${TWO[@]}" MaxFails=1 ReconcileCopies=\"ledger\"

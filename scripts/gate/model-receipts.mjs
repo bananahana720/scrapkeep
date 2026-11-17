@@ -136,7 +136,7 @@ function runTlc({ java, jar, workers, models, spec, cfg }) {
   try {
     copyFileSync(join(models, spec), join(dir, spec));
     copyFileSync(join(models, cfg), join(dir, cfg));
-    const r = spawnSync(java, ["-XX:+UseParallelGC", "-cp", jar, "tlc2.TLC", "-workers", String(workers), "-noGenerateSpecTE",
+    const r = spawnSync(java, ["-XX:+UseParallelGC", "-cp", jar, "tlc2.TLC", "-workers", String(workers),
       "-metadir", join(dir, "states"), "-config", cfg, spec], { cwd: dir, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
     return `${r.stdout ?? ""}\n${r.stderr ?? ""}`;
   } finally {

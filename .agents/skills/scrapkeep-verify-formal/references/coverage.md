@@ -9,7 +9,7 @@ Each action in the model (`RunFlow.tla`, in the `models` folder beside this one)
 | `TakeCover` with `choose` | the closure in `sketches/core-loop/src/game.gd` `pick_pilot`; `sketches/core-loop/src/core/flow.gd` `choose_class`, `_begin_run`, `enter_stage` | the run starts under full cover |
 | `NewRun` | `sketches/core-loop/src/core/flow.gd` `new_run`, `_begin_run`; callers `sketches/core-loop/src/game.gd` `_screen_key` (N on the death screen and summary), `sketches/core-loop/src/game.gd` restart latch (R held for `RESTART_HOLD`, with a store), `sketches/core-loop/src/ui/pause_menu.gd` Restart | a new run from any state in play |
 | `ShowTitle` | `sketches/core-loop/src/core/flow.gd` `show_title`; callers `sketches/core-loop/src/ui/screens.gd` `open_camp_from_summary` and `_input` (Escape) | back to the title |
-| `Resume` | `sketches/core-loop/src/core/flow.gd` `resume_run` | Continue: the saved run document comes back |
+| `Resume` | `sketches/core-loop/src/core/flow.gd` `resume_run`; from a document marked `boss_won`, `_resume_after_boss` -> `_advance_from` -> `_end_run_won` | Continue: the saved run document comes back; a run saved at its boss's fall ends won |
 | `QuitRelaunch` | `sketches/core-loop/src/ui/pause_menu.gd` Quit (`get_tree().quit()`), or the window closing, then a fresh start | memory is gone, the saved run document stays; the only way to a Continue with a store |
 | `ToBeacon` | `sketches/core-loop/src/core/flow.gd` tick | the ring starts to charge |
 | `WardenBroken` | `sketches/core-loop/src/core/flow.gd` `_on_enemy_killed`, `_unseal` | the Warden breaks, the gates open |
@@ -21,7 +21,7 @@ Each action in the model (`RunFlow.tla`, in the `models` folder beside this one)
 | `TakeCover` with `cut` | `sketches/core-loop/src/core/flow.gd` `_cut_under_cover`, `_finish_stage` | the cut under full cover |
 | `Death` | `sketches/core-loop/src/core/flow.gd` `_on_player_died`, `_end_run` | with a store the run ends; without one the death screen shows |
 | `Retry` | `sketches/core-loop/src/core/flow.gd` `retry_stage`, `_untake`, `_retry_arena` | store-less flows only: back to the stage's checkpoint. `replay_stage` (T on the death screen) also calls `retry_stage` after moving the stage index; it is not modelled |
-| `BossDefeated`, `VictoryEnds` | `sketches/core-loop/src/core/flow.gd` `_on_boss_defeated`, `_end_run_won`, `_end_run` | the boss falls, then the run ends as won |
+| `BossDefeated`, `VictoryEnds` | `sketches/core-loop/src/core/flow.gd` `_on_boss_defeated` with its deferred `_save_boss_won` (store only, pull request 1081), `_end_run_won`, `_end_run` | the boss falls and the run is saved past the arena (`svWon`), then the run ends as won |
 
 ## Guard constants
 
@@ -42,9 +42,8 @@ Each action in the model (`RunFlow.tla`, in the `models` folder beside this one)
 - `RunLast` is the stage whose launch plays no swipe (`worlds.is_run_last`). It is 6 by default, outside the model, so both world 1 launches play the swipe; `guarded-lastgate` sets it to 2.
 - The swipe's word is a part id or 0. The model cannot tell the swipe's own word from no word at all.
 - The camp gate's way into a run (`sketches/core-loop/src/game.gd`, the second `launch_take.play` call) is not modelled; it starts the same swipe as a pilot pick.
-- Unprobed actions: only the four reach probes (`RunFlow.tla`, `ProbeContinue`, `ProbeBossUnderSwipe`, `ProbeRetryUnderSwipe`, `ProbeSummary`) show an action can fire; every other action is unprobed.
-- Drift found 17 November 2026, not yet in the model: pull request 1081 (`1f5455bf2`, `14d24b619`, `53efb383b`) makes `_on_boss_defeated` save the run (`_save_boss_won`, deferred, store only) as a cleared document marked `boss_won`, and a Continue from it goes to `_resume_after_boss`, which ends a world 1 run as won (`_advance_from` -> `_end_run_won`) instead of the boss arena. `BossDefeated` must then write the saved document and `Resume` must end the run from it; until that change is checked with TLC the sync commit stays.
-- No rule watches a quit in the victory state. The model reaches it, and on the game a Continue from there fights the beaten boss again with the arena's earnings gone (PF-55, seed 2883; `sketches/core-loop/tools/sysaudit/break_run.gd` now flags it as `won_boss_refought`). The rule belongs with the fix, in wave 43.
+- Unprobed actions: only the five reach probes (`RunFlow.tla`, `ProbeContinue`, `ProbeBossUnderSwipe`, `ProbeRetryUnderSwipe`, `ProbeSummary`, `ProbeWonSave`) show an action can fire; every other action is unprobed.
+- A quit in the victory state: since pull request 1081 the boss's fall saves the run marked `boss_won`, and a Continue from that save ends the run as won instead of fighting the boss again (PF-55). The model has it as `svWon`, and `ProbeWonSave` shows the title can be reached with that save. No rule says the arena's earnings survive; the model holds no earnings.
 - The victory lap is folded into the victory state. Stage replay from the death screen and the pilot-select page opened from the death screen are not modelled.
 - The arena's retry is one step that restores the checkpoint and stays in the boss state.
 - The save is one run document: what the run holds, the stage, and whether the stage is cleared. Profile unlocks and a failed write are not modelled.
@@ -55,4 +54,4 @@ Each action in the model (`RunFlow.tla`, in the `models` folder beside this one)
 
 The model was last confirmed to describe the code at:
 
-`bbd157f44` (branch w43/new-run-untake, 16 November 2026; before it, `3adc2fd0e`)
+`2d1bbd4ff` (stage/alpha-w44, 17 November 2026, with pull request 1081 modelled; before it, `bbd157f44`)
