@@ -3480,6 +3480,15 @@ static func motif_cue_id(cue: String, motif: String) -> String:
 	return "%s_%s" % [cue, motif]
 
 
+# Every class's version of every motif cue, for the startup bake.
+static func motif_cue_ids() -> Array:
+	var ids: Array = []
+	for cue in MOTIF_CUES:
+		for motif in Harmony.CLASS_MOTIFS:
+			ids.append(motif_cue_id(cue, motif))
+	return ids
+
+
 # [cue, motif] for a class's motif cue id, else [].
 static func _motif_cue_parts(id: String) -> Array:
 	for cue in MOTIF_CUES:

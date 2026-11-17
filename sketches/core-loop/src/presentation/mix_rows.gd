@@ -151,7 +151,7 @@ const MIN_GAP_MS := {"weapon_zap": 55, "scrap_tick": 40, "cog_tick": 40, "enemy_
 	# A menu move repeats as fast as a held d-pad; a failed verb repeats as fast as the button is mashed.
 	"menu_move": 45, "menu_confirm": 90, "menu_back": 90, "verb_fail": 150, "gauge_dry_click": 120, "marble_tick_ladder": 60,
 	"drop_thud": 120, "drop_whiff": 200, "guard_creak": 700, "beacon_open_chime": 400, "callout_warden_chime": 300,
-	# Each hazard landing keeps the shared slam's 60 ms, the line skill's motif the bite's 60, and the pin the thwack's clank-like 90.
+	# Each hazard landing keeps the shared slam's 60 ms, the line skill's motif the bite's 60. The pin takes the clank's 90, not the thwack's 35 it stood in for: a deliberate change, so a second pin inside 90 ms is dropped.
 	"flood_drop": 60, "fleet_anvil_brass_drop": 60, "lightning_strike": 60, "rockfall_boom": 60, "crater_crump_sub_boom": 60,
 	"steam_whistle_percussion_drop": 60, "ancient_family_drop": 60, "motif_line": 60, "pin_double_thwack": 90,
 	"motif_line_sable": 60, "motif_line_rivet": 60, "motif_line_kest": 60, "motif_line_tarn": 60, "motif_line_tally": 60, "motif_line_cannon": 60}

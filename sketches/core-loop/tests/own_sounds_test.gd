@@ -7,6 +7,7 @@ const Rows := preload("res://src/presentation/rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const MixRows := preload("res://src/presentation/mix_rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
+const Audio := preload("res://src/presentation/audio.gd")
 
 # The 28 world 1 cues that played a shared stand-in until wave 44 (the world 1 done read's row
 # sound-own-recipes) each bake a sound of their own. For each: a recipe and a level no louder than
@@ -108,6 +109,7 @@ func _motifs() -> void:
 			looped += 1
 			var id := SfxBank.motif_cue_id(cue, motif)
 			_t.eq("%s resolves to %s" % [cue, id], Rows.resolve(cue, {"motif": motif}), id)
+			_t.check("%s is baked at startup, not on its first play" % id, id in Audio._sound_ids())
 			var cells: Array = (Harmony.MOTIFS[motif]["cells"] as Array).map(func(c): return int(c[1]))
 			_t.eq("%s plays %s's own motif notes" % [id, motif], SfxBank.motif_cue_notes(motif), cells)
 			_t.check("%s has a recipe at %s's level" % [id, cue], SfxBank.has_recipe(id) and is_equal_approx(SfxBank.trim_db(id), SfxBank.trim_db(cue)))
