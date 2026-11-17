@@ -27,12 +27,13 @@ const SRC = "sketches/core-loop/src";
 export const TLC_PIN = "1.7.4";
 export const TIMEOUT_MIN = 30;
 
-// real: the configs that stand for the code; each must report no break. label: the plain words for one of them.
-// gaps: what the model cannot see, printed on every receipt.
+// real: the configs that stand for the code; each must report no break in at least minStates distinct states (the
+// count measured when the model last changed; fewer means part of the model went dead). label: the plain words for one
+// of them. gaps: what the model cannot see, printed on every receipt.
 export const ROWS = {
   "run-always-ends": {
     spec: "RunFlow.tla",
-    real: [{ cfg: "today-store.cfg" }],
+    real: [{ cfg: "today-store.cfg", minStates: 1444 }],
     plants: [
       { cfg: "broken-vanish.cfg", rule: "WardenGoneOpens" },
       { cfg: "broken-endguard.cfg", rule: "EndsOnce" },
@@ -43,9 +44,9 @@ export const ROWS = {
   "rewards-banked-once": {
     spec: "Rewards.tla",
     real: [
-      { cfg: "rewards-today-one.cfg", label: "one game, from a fresh start or an older build's run file (W1-117)" },
-      { cfg: "rewards-today-two-once.cfg", label: "two games on one profile paying once (finding R-2)" },
-      { cfg: "rewards-today-two-lost.cfg", label: "two games on one profile losing nothing" },
+      { cfg: "rewards-today-one.cfg", minStates: 98319, label: "one game, from a fresh start or an older build's run file (W1-117)" },
+      { cfg: "rewards-today-two-once.cfg", minStates: 8009266, label: "two games on one profile paying once (finding R-2)" },
+      { cfg: "rewards-today-two-lost.cfg", minStates: 19042013, label: "two games on one profile losing nothing" },
     ],
     plants: [
       { cfg: "rewards-broken-ledger.cfg", rule: "AtMostOnce" },
@@ -58,6 +59,7 @@ export const ROWS = {
     gaps: [
       "the profile's save lock is taken as perfect: a game that waits longer than 250 ms for it, a stale lock broken while its holder still lives, and an older build saving beside this one (it takes no lock) are not modelled",
       "two games pay twice when both profile saves of the first game's earn fail (ruling ea: never lost outranks at most once; rewards-ruled-two-twofail-once)",
+      "a profile that builds from 4 October to 16 November left holding a reward key without its unlock (finding R-1) stays unpaid: the model starts from a profile that never held one, and the repair is card W1-121",
     ],
   },
 };
@@ -136,9 +138,11 @@ const name = (cfg) => cfg.replace(/\.cfg$/, "");
 // sync); gaps: what the model cannot see.
 export function buildReceipt({ head, real, plants, drift, gaps = [] }) {
   const caught = plants.length > 0 && plants.every((p) => brokeRule(p.parsed, p.rules, p.rule));
-  const clean = real.length > 0 && real.every((r) => r.parsed.outcome === "clean");
+  const enough = (r) => r.minStates == null || (r.parsed.distinct ?? 0) >= r.minStates;
+  const clean = real.length > 0 && real.every((r) => r.parsed.outcome === "clean" && enough(r));
   const synced = drift.sync !== null && drift.files.length === 0;
-  const realText = real.map((r) => `${r.label ? `${r.label}, ` : ""}${name(r.cfg)}: ${said(r.parsed)} in ${states(r.parsed)} distinct states`).join("; ");
+  const few = (r) => (r.parsed.outcome === "clean" && !enough(r) ? ` (fewer than the ${r.minStates.toLocaleString("en-US")} pinned)` : "");
+  const realText = real.map((r) => `${r.label ? `${r.label}, ` : ""}${name(r.cfg)}: ${said(r.parsed)} in ${states(r.parsed)} distinct states${few(r)}`).join("; ");
   const plantText = plants.map((p) => `${name(p.cfg)} ${brokeRule(p.parsed, p.rules, p.rule) ? `broke ${p.rule}` : `did not break ${p.rule} (${said(p.parsed)})`} in ${states(p.parsed)} states`).join("; ");
   let measured = `${realText}; plants: ${plantText}`;
   if (gaps.length) measured += `; not checked: ${gaps.join("; ")}`;
