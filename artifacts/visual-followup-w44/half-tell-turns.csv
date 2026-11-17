@@ -1,0 +1,16 @@
+attack,turn_degrees,paired_trials,outward_hits,inward_hits,both_directions_hit
+the gate crane's sweep,30,20,8,6,3
+the gate crane's drop,30,20,0,0,0
+the miniboss's slam,30,20,20,20,20
+the miniboss's charge,30,20,10,8,4
+Brindle,30,20,9,11,9
+the gate crane's sweep,60,20,4,2,0
+the gate crane's drop,60,20,0,0,0
+the miniboss's slam,60,20,20,20,20
+the miniboss's charge,60,20,5,3,0
+Brindle,60,20,0,6,0
+the gate crane's sweep,90,20,1,1,0
+the gate crane's drop,90,20,0,0,0
+the miniboss's slam,90,20,0,0,0
+the miniboss's charge,90,20,3,2,0
+Brindle,90,20,0,2,0

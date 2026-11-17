@@ -16,3 +16,9 @@ offer: active:cutting_torch at=(300.0, 0.0, 501.0) facing=(1.0, 0.0, 0.0)
 take: id=spare_cell at=(300.2583, 1.000005, 460.6171) launch=(13.96132, 24.0, 1.03997) active=scrap_rocket
 uncovered: slide_seen=true boss=boss swipe_busy=false frozen=false at=(317.6396, 31.36792, 477.3706) after_input=(323.8381, 31.0, 474.5189)
 headless input: PASS
+
+Opposite-key controls, source 4b36b80f35f3961b566143a8b67139c541b47932. After the swipe cleared, the fresh game received A or D for 45 physics ticks at 90 Hz.
+3 offers A uncovered: slide_seen=true boss=boss swipe_busy=false frozen=false at=(317.6396, 31.36792, 477.3706) after_input=(323.2688, 31.06088, 472.6688)
+3 offers D uncovered: slide_seen=true boss=boss swipe_busy=false frozen=false at=(317.6396, 31.36792, 477.3706) after_input=(324.2453, 31.0, 477.0603)
+4 offers A uncovered: slide_seen=true boss=boss swipe_busy=false frozen=false at=(317.6396, 31.36792, 477.3706) after_input=(323.2688, 31.06088, 472.6688)
+4 offers D uncovered: slide_seen=true boss=boss swipe_busy=false frozen=false at=(317.6396, 31.36792, 477.3706) after_input=(324.2453, 31.0, 477.0603)
