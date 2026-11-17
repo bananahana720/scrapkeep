@@ -1,12 +1,12 @@
 # The Spillway from above
 
-Give the rider a visible answer to two questions before each commitment: **what can I do here, and where will I land?** At the dam, that decision is a fork off the Eye. In the flume it is a choice between the high carry and a recoverable lower line. In Brindle’s bowl it is whether to keep turning along the bank or cut toward a ramp or mast. All three fit inside the existing playable footprint.
+Give the rider a visible answer to two questions before each commitment. **What can I do here, and where will I land?** At the dam, that decision is a fork off the Eye. In the flume it is a choice between the high carry and a recoverable lower line. In Brindle’s bowl it is whether to keep turning along the bank or cut toward a ramp or mast. All three fit inside the existing playable footprint.
 
 The plans below show authored geometry and a sampled ride on the audit commit. Each task proposes a small change that a writer can test at speed. The design follows the project’s ten map points and its rule that difficulty presses a rider who slows or stops. Landmark sight and a change of pace are established level-design techniques. [World 1 map standard and measured results](../map-audit.md) · [Difficulty plan](../difficulty-plan.md) · [Michael Barclay on signposting and pacing](https://mikebarclay.co.uk/my-level-design-guidelines/)
 
-## Dam · read the choice before the front wheel reaches it
+## Dam · read the choice before the ball reaches it
 
-![Dam plan with the floor line, Kest’s line, observed ball positions and four decision points](images/dam-plan.png)
+![Dam plan with the floor line, Kest’s line, observed ball positions and four decision points](../../../../../artifacts/visual-audit-w44/images/dam-plan.png)
 
 From the shelf, the dam face gives the entire park a heading. The Eye at (0, 165) is the place to show two immediate opportunities: a broad, banked turn along the existing rim and a straighter commitment down the construction incline. Try a long rounded lip on the rideable bend and the square ends of service frames along the industrial descent. Give both exits a visible patch of receiving ground. Where a real hazard can deny a line, its active warning owns the sharp edge and strongest value. Dry service paint must read as part of the works when the threat clears.
 
@@ -14,7 +14,7 @@ The yard lock follows the approach. Its radius is 26 m and its centre lies 10 m 
 
 ## Flume · show where a missed high line goes
 
-![Flume plan with the floor line, Kest’s line, sampled run and siphon decision point](images/flume-plan.png)
+![Flume plan with the floor line, Kest’s line, sampled run and siphon decision point](../../../../../artifacts/visual-audit-w44/images/flume-plan.png)
 
 The butte gap and siphon already join multiple approaches. At the siphon, compose one view that shows what the rider gains by climbing and where the lower route rejoins. The upper lip and repeating supports can point toward the drum. A wider curved wash can show the continuous lower turn. A rectangular maintenance pier can communicate utility if its collision really stops the attack in question. In this build the dam and flume allow terrain to intercept an outbound lobber shell. A thin dress mesh or an open arch cannot promise that protection. [Shell behavior](../../../../../sketches/core-loop/src/combat/projectile.gd) · [Stage dials](../../../../../sketches/core-loop/src/core/challenge_dials.gd)
 
@@ -22,7 +22,7 @@ Let the lower carry give a brief view back to the worksite while the ball is sti
 
 ## Brindle · make the first turn readable before the next charge
 
-![Bowl plan with entry, ramps, grapple masts, kickers, vents and slag footprints](images/bowl-plan.png)
+![Bowl plan with entry, ramps, grapple masts, kickers, vents and slag footprints](../../../../../artifacts/visual-audit-w44/images/bowl-plan.png)
 
 At the entry tangent, reveal one ramp mouth, a grapple mast and the outer bank in depth. Use the curve of the bank to suggest continued movement, a square mast base to identify grapple utility, and the live attack edge to identify the threatened sector. Both concentric slag bands change state. A permanent luminous stripe along the bank could promise safety during an incoming charge. Keep rival hull plates and vent caps visible as working ship parts, especially during the reveal after the flume launch. [Arena assignment](tasks/bowl-route.md) · [Spillway combat art reference](../../../../../docs/art/reference/spillway/spillway-combat-brindle-bowl.jpg)
 

@@ -2,9 +2,9 @@
 
 **Reward UI writer · PF-22.** Keep the three- or four-way physical choice. A rider approaching an edge arch needs its name, benefit and trade-off before crossing it. [Replay instructions](../HANDOFF.md)
 
-![Three dam offers and four flume offers as they appear during the ride](../images/gates.jpg)
+![Three dam offers and four flume offers as they appear during the ride](../../../../../../artifacts/visual-audit-w44/images/gates.jpg)
 
-![Full 720p baseline showing the cut-off right-hand offer and previous slam tip](../images/gate-detail.jpg)
+![Full 720p baseline showing the cut-off right-hand offer and previous slam tip](../../../../../../artifacts/visual-audit-w44/images/gate-detail.jpg)
 
 1. Reproduce frame 115 and mirror the approach to the left edge. `_place_names` checks whether the crossbar point is in view. `fit_names` receives its neighbours and the top band, but no viewport width. It can accept a centred rectangle whose right edge falls outside the screen. Gate signs set `owner_placed`, so the general HUD prompt clamp skips them. [Gate placement and measured name forms](../../../../../../sketches/core-loop/src/build/reward_gates.gd) · [Screen regions](../../../../../../sketches/core-loop/src/ui/screen_regions.gd)
 2. Fit the actual text footprint to the space around its arch. Try inward wrapping or an inward-facing detail block that still shares an edge or column with the crossbar. Retain the nearest-gate ordering, legible type size and hysteresis as neighbours move. Publish the actual drawn bounds to `keep_clear_rects` so effects respect the sign. Keep selection, payouts and arch collision in their existing owners.

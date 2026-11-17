@@ -35,7 +35,7 @@ HOME="$capture/home" "$GODOT_BIN" --path sketches/core-loop \
   --self-play-film-live=1 --self-play-film-every=4 --self-play-film="$capture/film"
 ```
 
-3. Match by stage, event, pose and contacted body. Clock times and filenames can drift between builds. The [baseline manifest](evidence/film.ndjson) retains all 255 original frame names and readings. The repo includes the selected frames used in the report. Controlled 90 Hz attack and turn fixtures and warm wall-clock passes have their own [measurements](evidence/measurements.json).
+3. Match by stage, event, pose and contacted body. Clock times and filenames can drift between builds. The [baseline manifest](../../../../../artifacts/visual-audit-w44/evidence/film.ndjson) retains all 255 original frame names and readings. The repo includes the selected frames used in the report. Controlled 90 Hz attack and turn fixtures and warm wall-clock passes have their own [measurements](../../../../../artifacts/visual-audit-w44/evidence/measurements.json).
 4. Run each focused test named in the spec with `npm run sketch:smoke -- --sketch core-loop --test <name>`. Run `npm run sketch:fast -- --base <open-stage>` and obtain independent review for a game change. Return the source SHA, machine, settings, before/after pictures, measurements and any failed control. Store disposable captures under `artifacts/local/` and publish the selected evidence with the writer’s draft PR.
 
 The Gate owns admission, difficulty-band decisions and the release film. These targeted replays can guide a design decision. The sitting supplies the human judgment about feel. [Gate and film rules](../../../GATE.md)

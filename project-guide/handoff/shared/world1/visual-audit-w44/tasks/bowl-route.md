@@ -1,6 +1,6 @@
 # Frame the bank, ramp and mast on entry to the Slag Bowl
 
-**Arena level designer · world 1 map points 5, 7 and 8.** The rider should enter at speed and see a continuing turn plus one way to cut back toward the ship. Use the existing arena footprint. [Top-down plate](../images/bowl-plan.png) · [Replay and handoff](../HANDOFF.md)
+**Arena level designer · world 1 map points 5, 7 and 8.** The rider should enter at speed and see a continuing turn plus one way to cut back toward the ship. Use the existing arena footprint. [Top-down plate](../../../../../../artifacts/visual-audit-w44/images/bowl-plan.png) · [Replay and handoff](../HANDOFF.md)
 
 1. Stage the handover from the flume exit. The bowl computes its centre from that exit so the rider arrives on a tangent. In bowl-local space the entry is at 245°, radius 41 m. Identify the nearest visible grapple mast, ramp and vent in the first steerable frame. Record forward heading and ball speed on both sides of the handover. [Arena placement and geometry](../../../../../../sketches/core-loop/src/boss/arena.gd) · [Existing art direction](../../../../../../docs/art/reference/spillway/spillway-combat-brindle-bowl.jpg)
 2. Try opening the skyline around one mast and giving its existing base a readable rectangular silhouette. Carry a subtle wear arc around a short piece of bank to show turning direction. Use the wear only where the bank is continuously rideable. Active vents, slag bands and the charge lane alone describe current denial. Keep the sightline to the ship’s bow through this change.

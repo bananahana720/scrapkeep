@@ -1,6 +1,6 @@
 # Show both the upper carry and its lower return
 
-**Flume level designer · world 1 map points 1, 2, 3 and 7.** Give a rider entering the siphon one readable decision: commit speed to the upper flume, or keep rolling down the lower return toward the same drum. [Top-down plate](../images/flume-plan.png) · [Replay and handoff](../HANDOFF.md)
+**Flume level designer · world 1 map points 1, 2, 3 and 7.** Give a rider entering the siphon one readable decision: commit speed to the upper flume, or keep rolling down the lower return toward the same drum. [Top-down plate](../../../../../../artifacts/visual-audit-w44/images/flume-plan.png) · [Replay and handoff](../HANDOFF.md)
 
 1. Read the `flume_lower`, `canal_lower` and `bench_run` routes, the `flume_entry_kicker` at (40, 255), the wasteway and drum forecourt. First inspect the current state of the butte-gap climb. It proposes a fourth climbing ride elsewhere in this park and changes the graph that this task may consume. [Flume map](../../../../../../sketches/core-loop/src/world/park/park_flume.json) · [Climb proposal](https://github.com/bananahana720/scrapkeep/pull/1119)
 2. On the kicker approach, take a rider-height still before the last turn and one on a missed landing. Try orienting an existing support or opening one gap in the dressing so the high lip frames the penstock tower, with the lower receiving turn visible below it. Use the worn outside curve of the lower line to show momentum through recovery. Keep hostile X marks and attack-ring edges reserved for their live events.
