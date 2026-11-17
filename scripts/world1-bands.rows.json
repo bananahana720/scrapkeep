@@ -495,8 +495,8 @@
       "label": "a strong build beats Brindle faster and with more parts than a plain one",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: parts and fight time for a top build against the base build, from the band read (wave 43)",
-      "plant": "a top build with its parts stripped must read as a miss",
+      "producer": "the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: Brindle, Expert top build against ordinary, 48 seeds each, median parts at entry higher and median win time lower",
+      "plant": "the top and ordinary build labels swapped must read as a miss on both parts and fight time",
       "basis": "Direction: overpowered pays; audit of 13 Nov, finding 5"
     },
     {
@@ -528,7 +528,7 @@
       "label": "every killing hit is telegraphed, a stopped ball pays double, and the first hit waits 3 s",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: grade fairness lines F1 to F3 from the band read (wave 43)",
+      "producer": "the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: F1 (every killing hit telegraphed) and F2 in every cell and column of w1, w2 and brindle, F3 on Learner attempt 1, 24 seeds a pool, lines from scripts/challenge/fairness.json",
       "plant": "a Warden attack with its telegraph removed must read as a miss",
       "basis": "ruling cu fairness lines; scripts/challenge/fairness.json prints them and grades nothing today"
     },
@@ -539,7 +539,7 @@
       "label": "at least 60% of Novice non-wins are deaths, not time caps",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: death share from the band read's runs.ndjson (wave 43)",
+      "producer": "the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: deaths over deaths and time caps, per cell, in the Novice column of w1 (48 seeds), w2 and w1clear (24 each)",
       "plant": "a band where every loss is a time cap must read as a miss",
       "basis": "ruling cu; 46% on the 10 Nov read"
     },
