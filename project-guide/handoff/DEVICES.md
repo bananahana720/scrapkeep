@@ -1,4 +1,4 @@
-# Andrew's PC and the cloud box
+# Andrew's PC, the Mac Studio and the cloud box
 
 ## The PC
 
@@ -10,6 +10,31 @@
 - **Reboot rule.** An NVIDIA driver auto-update locks the GPU ("Driver/library version mismatch") until a reboot. Ask Andrew to reboot after any update, and don't pin the driver.
 - **One script, not compound shells.** Pipes, `&&` and `cd` chains trigger allow-once prompts. Use one checked-in script with subcommands (`scripts/music/mx` for music), called as one plain command.
 - **Allow-list.** The PC allows test and check scripts, read-only git, and pushes to `cand/*` and `scratch/*`. A push to main follows the standing merge authority in [DECISIONS.md](DECISIONS.md); a force-push or an install needs Andrew's go-ahead first.
+
+## The Mac Studio
+
+- **Machine:** M5 Max (18 cores), 36 GB unified memory, 512 GB disk, macOS. Andrew's main development machine from 16 Nov 2026, quiet and for the agents' use alone, so checks run wide. Checkout: `~/projects/scrapkeep`.
+- **The Mac is the Gate machine** (ruling eb, 16 Nov, [DECISIONS.md](DECISIONS.md)). The local session here stacks, runs the wave gate, the release gate, the band reads and the frame-time and press-latency captures, and its readings count. Each Mac reading needs a Mac base: do not compare a Mac number with a PC receipt.
+- **Shell.** A non-interactive shell has no Homebrew on its path: start commands with `export PATH=/opt/homebrew/bin:$PATH GODOT_BIN="$HOME/Applications/Godot_4.7.2.app/Contents/MacOS/Godot"`.
+- **Saves.** Godot on macOS ignores `XDG_DATA_HOME` and keeps `user://` under `$HOME/Library/Application Support/godot/app_userdata/core-loop`. The runners (`sketch-fast.mjs`, `sketch-smoke.mjs`, `gate/pc.mjs`, through `scripts/godot-home.mjs`) and the tests that launch a child game (`tests/trees/child_runs.gd` `home_env`) move `HOME` with the data folder (PRs 1099 and 1103). A hand launch still needs `HOME` set to a scratch folder under `artifacts/local/`. Ten bot tests still launch children that share the test's folder (BACKLOG MG-02).
+- **Shutdown lines.** The headless engine on macOS prints "RID allocations ... leaked at exit" and "resources still in use at exit" on tests that end clean on Linux. The runner and the gate skip those two lines on macOS only, so a real exit leak is not caught here (BACKLOG MG-01).
+- **Pins.** The Mac repeats its own runs exactly, but each seed plays a different fight than on Linux, so hashes and posture medians differ. A pin that differs holds both values through `tests/support/platform_pin.gd` (`pick(linux, mac)`); never replace a Linux value with a Mac one. The cause is not established: the test comments name the platform's `sinf` and `cosf` rounding, which does differ, but a run with that patched still gave the Mac's hashes (BACKLOG MG-03).
+- **Timings (17 Nov).** `npm run sketch:fast` takes 6 to 8 minutes. The full suite takes about 30 minutes at `SMOKE_JOBS=12 SMOKE_SOLO_JOBS=8`; at that width a few tests fail under load and pass alone (BACKLOG MG-04 names them). The wave gate's time is in [STATE.md](STATE.md).
+- **Frame time.** `node scripts/frametime-check.mjs --capture=engine` logs each drawn frame from inside the game (the PC's MangoHud path stays as `--capture=mangohud`). A reading from the editor binary on a cold shader cache is not graded: grade a packed build, or the second pass of a debug run, and say which (BACKLOG MG-05).
+- **Packed music.** The Oggs are gitignored. The copy on the PC (`~/scratch/repage/music_ace`, packed as `~/scratch/archive/music_ace-repaged-2026-11-16.tar`) already has the short 20 ms Ogg pages that `sketches/core-loop/tools/ace/repage.py` writes, but it does not hash as `STEMS.sha256` lists, so `stems-sync` refuses it and an export with it reports stale stems. Tests do not need the Oggs. An export does: run `repage.py apply`, rewrite the list with `scripts/music/mx stem-hashes`, and land the list in its own pull request first. To move the tar to the Mac, join the Mac to the same Tailscale network and send it from the PC with `tailscale file cp <tar> <mac name>:`.
+
+### Set up the Mac
+
+1. Install the tools: `xcode-select --install`, then with Homebrew `brew install git gh node ffmpeg python`. Node must match `package.json#engines` (20.19 or 22.12 and later).
+2. Install Godot 4.7.2: download `Godot_v4.7.2-stable_macos.universal.zip` from the Godot releases on GitHub, unzip it, rename the `Godot.app` it holds to `Godot_4.7.2.app`, move that into `~/Applications`, and run it once from Finder so macOS clears its quarantine. Add `export GODOT_BIN="$HOME/Applications/Godot_4.7.2.app/Contents/MacOS/Godot"` to `~/.zshrc`.
+3. Sign in and clone: `gh auth login`, then `git clone https://github.com/bananahana720/scrapkeep.git ~/projects/scrapkeep`, then `cd ~/projects/scrapkeep`. Set `git config --global user.name` and `user.email` to the same values as on the PC.
+4. Switch to the stage, install the locked packages and import the project: `git switch --detach origin/stage/alpha-w43`, `npm ci`, `mkdir -p artifacts/local/mac-home`, then `HOME="$PWD/artifacts/local/mac-home" node scripts/import-stamp.mjs import`. The import writes `.godot/`, so the first run takes several minutes.
+5. Check the setup: `npm run sketch:fast -- --base origin/stage/alpha-w43`. A clean stage passes.
+6. Bring Claude's project memory across. It lives only on the PC under `~/.claude/projects/-home-andrew-Projects-scrapkeep/memory/`, packed as `~/scratch/archive/scrapkeep-claude-memory-2026-11-16.tar.gz`; send it the same way as the music. On the Mac it goes under `~/.claude/projects/-Users-<you>-projects-scrapkeep/memory/`. The folder name is the checkout path with each `/` written as `-`.
+
+### Pick up the open wave
+
+Start a Claude Code session in `~/projects/scrapkeep`. Tell it to read AGENTS.md and then the newest handoff comment on the live board ([STATE.md](STATE.md) names it). It names the open branches and what each still owes.
 
 ## The cloud box
 

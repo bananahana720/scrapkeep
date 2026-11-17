@@ -6,15 +6,27 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 | Fact | Value |
 | --- | --- |
-| Last promotion | wave 41, main 3996f591, #1043 |
-| Open stage | stage/alpha-w42 |
-| Live board | #1044 |
-| Red team | first-timer |
-| Compare against | gate/w41-e2770d85/ |
+| Last promotion | wave 42, main a76ccfd3, #1075 |
+| Open stage | stage/alpha-w43 |
+| Live board | #1076 |
+| Red team | cautious |
+| Compare against | /home/andrew/scratch/gate/w42-52304036/ |
 
 The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
-## Now (16 Nov 2026, wave 42 closing)
+## Now (17 Nov 2026, wave 43 closing)
+
+**Wave 43's gate is clean on b5fb45a7 (17 Nov), the first wave gate run on the Mac Studio** (ruling eb). It took 2 h 32 min, counting the `npm run sketch:fast` run that names its bot tests (09:08Z to 11:40Z); the first gate took about 2 h 45 min. Every row passes: 1386 node tests, 1207 non-bot tests, 30 scoped bot tests and a fresh weekly sweep. Carried on the ledger, each failing the check its row names: posture_bands_test, bot_fairness_test, stage_modifier_test, posture_bands_mind_test and waking_fight_test. One load flake with no row: world1_run_test stalled at Brindle in one of three runs and passed twice alone (card MG-12). Receipts: branch `scratch/gate-receipts-w43-b5fb45a7`. The pre-promotion review of the wave's game code (top tier, code reading only) passed with notes and no blocker; its three follow-ups are cards MG-13 to MG-15, and the older-build reward route stays on W1-117.
+
+The first gate, on 35e0fc83, was red on fourteen tests, with one more reading off its pin. PR 1103 settled them: two were faults in the game or its tools (a queued tread bonus struck an enemy already freed; the shape census scanned in the tick that built a reward gate), two were gaps in the Mac port (child runs wrote outside their scratch home; the gate read macOS shutdown lines as errors), and the rest were values that differ between the Mac and Linux, now pinned side by side (`tests/support/platform_pin.gd`). The Linux values were not changed. [DEVICES.md](DEVICES.md) has how the Mac runs; BACKLOG rows MG-01 to MG-15 hold what is still owed, first among them a Linux re-read of the swarm's first stagger (MG-03).
+
+### Earlier (16 Nov 2026, wave 43 open)
+
+**Wave 42 is on main** (a76ccfd3, PR 1075, 16 Nov). The wave gate ran on 52304036 and was red on two test-side faults, both fixed in the close commit 8c772605: pack_telegraph_record_test failed about 1 run in 11 because the held ball armed world 1's silt boils beside a recovering swarm (the test now holds the boils off; 48 of 48 after, 4 of 44 failing before), and lab-cable-bench.test.js committed with the machine's git identity, which the gate hides. A fresh weekly sweep ran on 52304036 (16 Nov) and carries until 23 Nov; its two reds, both already on the ledger, had one check each added to their rows in 1ccc1984.
+
+**Wave 43 is sound, difficulty by movement and frame time**, on `stage/alpha-w43` (cut at a76ccfd3). Stacked by 16 Nov evening (`git log --first-parent a76ccfd3..origin/stage/alpha-w43`): sound W1-32 to W1-43 and W1-108 with UA-07 (PRs 1077 to 1079, 1086, 1095); clarity PF-52 to PF-55, W1-109, W1-110 and UA-02 (PRs 1080 to 1082, 1084, 1085, 1089, 1090, 1096); W1-66 lay-ahead (PR 1088); the sitting played run (PR 1087, five of six loops); the F-B rewards model and its fix under ruling ea (PRs 1091, 1093); the F-C same-tick contact test (PR 1092); the UA-03, UA-04 and UA-06 measures (PR 1094). Running: W1-31 difficulty tuning and the UA-08 latency capture. Left for the wave: the vsync-off frame capture on an idle 4080, the wave gate and the promotion. Fable's monthly limit is spent until 19 Nov: the data-loss reviews of PRs 1091 and 1093 ran on the mid tier and owe a top-tier re-review (card W1-117).
+
+### Earlier (16 Nov 2026, wave 42 closing)
 
 **Wave 42 closes on what it has (16 Nov).** The coordinator session on the PC hit a usage limit at 10:22Z and was picked up by a new local session at 10:35Z; the PC rebooted between them. Wave 42's remaining rows move to wave 43 (Andrew accepted the reorder at 09:30Z), and ruling dz moves the whole-run film to the release, so the wave closes on its records, the wave gate and the promotion. Landed after PR 1070: hit words (PR 1063, its Brindle test made load-proof), Brindle's eject ground mark (PR 1071, W1-107) and the radio names (PR 1072, PF-51). In review: a visible sign for each sound the player must act on, with the UA-07 list (W1-108). Moved to wave 43: the sitting launch's played run (one of six loops fired; it would add a red test) and PF-55, a Continue after a quit in Brindle's victory beat that fights him again (replayed on seed 2883; `break_run.gd` flags it as `won_boss_refought`, PR 1073). Six fixed findings read "open until the release film" (PF-06, PF-16, PF-22, PF-26, PF-38, PF-50).
 
@@ -27,7 +39,7 @@ The board is the GitHub issue in the table. It also holds the file fences of the
 The wave gate is faster from wave 42: the scoped bot shard runs two bot lanes with the six wall-clock or machine-filling bot tests alone afterwards, and a red that fails a check alone with no flake row gets one solo rerun ([GATE.md](GATE.md)). Wave 41 took 3 h 40 min; record the wave 42 time on the board. A gate that ends red is closed the way waves 40 and 41 were: one close commit, then the named tests alone on the close head.
 
 Carried into wave 42:
-1. **PR 948** (critique rows W1-63/77, W1-65 and W1-67, 12aba88a): held, and being landed row by row. Learner rung 1, 72 seeds, on the wave 42 stage (8d503975: 47 clears, 10 deaths, 15 time caps): W1-63/77 alone is identical run for run and is stacked as PR 1046; W1-65 alone reads 49 clears, 5 deaths, 18 caps, not shown equal or harder, so it waits for more seeds. Neither explains the whole pull request's 40 to 50 clears of 14 Nov, which leaves W1-67: its commit also lets the dam sheet open one of two lanes, so it is read alone next. W1-66 opens as its own pull request after that. The plain stage itself moved from 40 clears and 17 deaths (7ab5aee0, 14 Nov) to 47 and 10 (8d503975); wave 43's difficulty pass reads whether wave 41's yard work made the dam easier.
+1. **PR 948** (critique rows W1-63/77, W1-65 and W1-67, 12aba88a): held, and being landed row by row. Learner rung 1, 72 seeds, on the wave 42 stage (8d503975: 47 clears, 10 deaths, 15 time caps): W1-63/77 alone is identical run for run and is stacked as PR 1046; W1-65 alone reads 49 clears, 5 deaths, 18 caps, not shown equal or harder, so it waits for more seeds. (W1-65 and W1-67 later landed together as PR 1053 on stage/alpha-w42, so both are on main.) Neither explains the whole pull request's 40 to 50 clears of 14 Nov, which leaves W1-67: its commit also lets the dam sheet open one of two lanes, so it is read alone next. W1-66 opens as its own pull request after that. The plain stage itself moved from 40 clears and 17 deaths (7ab5aee0, 14 Nov) to 47 and 10 (8d503975); wave 43's difficulty pass reads whether wave 41's yard work made the dam easier.
 2. **park_reactor_fight_test**: the 24-seed clamp-open-to-break read against the 35.7 s median (DECISIONS, ruling ai). A risen median goes to Andrew beside the 73.1 s small reactor band; otherwise swap the seed.
 3. **The yard camera lift (PR 1032)** may move where shots start from in every shut yard, because the aim origin follows the camera arm. One control run with the lift off confirms or clears it; if confirmed it is a design question for the camera owner.
 4. **PF-48 and PF-49**: replay the run that stalled at the flume exit and the Brindle fight that ran 420 s. Also replay posture_bands_reactor_test small seed 2, which did not break the reactor in 120 s.

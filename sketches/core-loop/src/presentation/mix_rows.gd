@@ -131,14 +131,19 @@ const CROWD_FLOOR_DB := -9.0
 # Moss says one line at a time: a new line cuts the last one off. The Mind's quote is heard
 # once per adaptation.
 const VOICE_DEFAULT := 3
-const VOICE_LIMIT := {"weapon_zap": 3, "scrap_tick": 3, "cog_tick": 3, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
+const VOICE_LIMIT := {"weapon_zap": 3, "scrap_tick": 3, "cog_tick": 3, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1, "sluice_siren_two_tone": 1, "steam_whistle_rise": 1, "ride_cable_clink": 2, "ride_rolling_metal": 1,
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1, "rarity_tick": 2, "panel_note": 3, "clank": 2, "grapple_clink": 2,
-	"swarm_buzz": 2, "kill_chain_tier": 1, "achievement_chime": 1, "rescue_fanfare": 1}
+	"swarm_buzz": 2, "kill_chain_tier": 1, "achievement_chime": 1, "rescue_fanfare": 1,
+	"menu_move": 2, "menu_confirm": 1, "menu_back": 1, "verb_fail": 1, "gauge_dry_click": 1, "marble_tick_ladder": 3,
+	"drop_thud": 1, "drop_whiff": 1, "guard_creak": 1, "beacon_open_chime": 1, "callout_warden_chime": 1}
 const MIN_GAP_MS := {"weapon_zap": 55, "scrap_tick": 40, "cog_tick": 40, "enemy_arrive": 200, "hit_thwack": 35, "land_thud": 80, "kill_pop": 45,
 	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600,
-	"grapple_clink": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
+	"grapple_clink": 60, "ride_cable_clink": 60, "ride_rolling_metal": 250, "ride_hop_lift": 60, "ride_ledge_scuff": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
 	"grown_sub": 60, "grown_crack": 60, "grown_tail": 120, "grown_rattle": 120,
-	"achievement_chime": 400, "rescue_fanfare": 400, "clank": 90, "rarity_tick": 45}
+	"achievement_chime": 400, "rescue_fanfare": 400, "clank": 90, "rarity_tick": 45,
+	# A menu move repeats as fast as a held d-pad; a failed verb repeats as fast as the button is mashed.
+	"menu_move": 45, "menu_confirm": 90, "menu_back": 90, "verb_fail": 150, "gauge_dry_click": 120, "marble_tick_ladder": 60,
+	"drop_thud": 120, "drop_whiff": 200, "guard_creak": 700, "beacon_open_chime": 400, "callout_warden_chime": 300}
 
 const MENU_FLOWS := ["title", "class_select"]
 const OVER_FLOWS := ["summary", "dead", "victory"]

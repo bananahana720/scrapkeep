@@ -30,7 +30,7 @@ const ELEMENT_SOUNDS := {"freeze": "ice_form", "ice": "ice_form", "frost": "ice_
 static func row(kind: String) -> Dictionary:
 	if EventKinds.has(kind):
 		return EventKinds.row(kind)
-	for table in [EventKinds.UI_ROWS, EventKinds.LOOT_ROWS, FALLBACK]:
+	for table in [EventKinds.UI_ROWS, EventKinds.LOOT_ROWS, EventKinds.WORLD_ROWS, FALLBACK]:
 		if table.has(kind):
 			return table[kind]
 	return {}
@@ -103,12 +103,17 @@ static func releases(motif: String) -> Array:
 	return found
 
 
+# Every sound any event_kinds table plans, in `sound` or `sound_next`: a row's own planned sound
+# is never a class's release, whichever table the row sits in.
 static func _named_by_rows() -> Array:
 	var named: Array = []
-	for table in [EventKinds.ROWS, EventKinds.UI_ROWS, EventKinds.LOOT_ROWS]:
-		for kind in table:
-			named.append(String(table[kind].get("sound_next", "")))
-			named.append(String(table[kind].get("sound", "")))
+	for table in (EventKinds as GDScript).get_script_constant_map().values():
+		if not table is Dictionary:
+			continue
+		for row in table.values():
+			if row is Dictionary:
+				named.append(String(row.get("sound_next", "")))
+				named.append(String(row.get("sound", "")))
 	return named
 
 

@@ -6,7 +6,9 @@ extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const T := preload("res://tests/support/t.gd")
+const PlatformPin := preload("res://tests/support/platform_pin.gd")
 const Director := preload("res://src/world/director.gd")
+const ChallengeDials := preload("res://src/core/challenge_dials.gd")
 const Park := preload("res://src/core/park_defs.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
@@ -144,6 +146,56 @@ const BASE_RUN := [
 	"5688ace964ef79baf678d3eade08733f66ad575524acf40f607363b62a90db70",
 	"035cf283ca9c9b22f6d4d6cc68523a0dbe01925c5f144980685116c9d765af7e",
 ]
+# 2026-11-17 Mac pins (ruling eb: the Mac Studio, Apple M5 Max arm64, Godot 4.7.2, is the gate machine). The Mac repeats
+# its own runs exactly, but Apple's sinf and cosf round differently from glibc's (tests/support/platform_pin.gd), so all
+# 20 schedules and all 20 whole runs hash differently there. These are the Mac values beside the Linux ones above, read
+# from this test's own MEASURE lines (schedule0, tier0.hash), seeds 0..19, on w43/gate-mac-reds at 30c61601 (stage
+# alpha-w43 35e0fc83 plus the gate reds commit; no schedule or run change against the stage). The Linux tables stay as
+# they were; a re-pin records both, one on each platform.
+const BASE_SCHEDULE_MAC := [
+	"e02163dd9905c1b414389434363d2e136ce05132f4a7da8f374658ecc019df70",
+	"866938a469162d385cbd958ab618b70334775bf1619d105eb0e0a0845c197e9e",
+	"091d96108cdb568f31b3b9006679006369bd0397d5d6315617dfcfe8f8eeb28b",
+	"0fbc3b02623821e752bdf8a351c08ca5af8cb1eafc95bf43029ba1e9dd6abc57",
+	"fef5e05174039ef0ef45c29238e35fabd5a0c7938e171c86d30616e11c004599",
+	"fef2d510da9e4b468d042f1dd5ba162e8a32f512c1914358f322346f72e03ef6",
+	"90166cf682193a942c629924e3f04246d7a13a119fb962cd3c9d3f6c803c87b4",
+	"6e3fa1c5595e61eb74869b39c950354c06ea663670174443d955855add8563de",
+	"ac4bbe234c4d859c1986bc4eb378123d6cd940b0ce26931cd92d9b0331c72995",
+	"cfb082ab3ff4d69c981b9102303f277796f91afedf503511c88c1afb7bf6099a",
+	"810ebdb63fb05d5582b574c86dea731ad9fa2b3e6ae6b2ed44706dc854469506",
+	"64ee3d176d151f14a5963274cf74de3d8a0ba661cf557447a6ffd298201394f4",
+	"946f5a5669656ac578c857bfc08e6bb56554ddcd3f0d14c6477a84a3ee30efb4",
+	"6536c71acbf6763c61224de1b3506f0a04728468531455d81db21286c0e6da98",
+	"d6b209cf0a68643d482bfbd6ab23269df0dbad5581c09776a0c4057e848d4748",
+	"4b5607f9e3bda342b4849edd105cc31d7a9db30e44631eb8931bdfe5b0857521",
+	"18ab0342000aad2243926b04f92778e52816325858b923fd037efb1ea3ff3017",
+	"0c55aaa2bf03ccd6ed461a9d3a9a93852340b06850d800360caa23e334294654",
+	"3743427b0bcd17d07053dcaa824077e777435c2585614ca8e27e7db097d04f67",
+	"44373655ef7b0ede7a6e2ddadf6ea8e41eeae81bfbf11c11c8d2598850d32c84",
+]
+const BASE_RUN_MAC := [
+	"6700a27b5182cb08fa8d78040a581e6e79578e90233f869f144a9b00fd0507bb",
+	"33e1bb4bf7db969f04f8e9a655a29c910574bc73908157740512582694902b10",
+	"b4b5a32e6864afe218a0119483a7ecc01f122b468a810ece0f8ca55b47823b49",
+	"7a7b2e0fec8cd55f87160ac93b06134696832e7d8d62863084f17fe292e1b954",
+	"ad4f35fbdf382c0c071057b2aa38250299d5aaf70d1404be1c9be2ded0da48e7",
+	"b652ff3e51f451579dc66922da87211f36eb7f65e6aa89b2766b8621f3bf92fe",
+	"59dc75f0f0f89bf0b2c78aa9a6d9c0514ae4106044a06a9f28be7f78d35abc98",
+	"2962fef0f6f75d8742064ece003d9629a748c572824d1fc470a7a8deb1af3b2a",
+	"d6bf25a8d986c3fcf9c029bd11c00407fb18bb71258702fa387f615b30ae7b73",
+	"406947c8d5f48c17576bf1c60450ba6405c8ec2ee18ccf77bfd69473bec6bff6",
+	"ab7cfe8b7c08dbaffd7ad5e2d516ed392e9566011f05d548b59462d34661dd7a",
+	"2037ea6ed97ab134b014faeb4c2c0a891841221aae956498009de9e33a25a87a",
+	"820420593be9857c75c07e9fd9eabd575bc741015c1538ba6de48f837c5049ce",
+	"c8f0a049d4d8ea6122a3eae3fdb2000c68b6ba51e86eee3e21a193baa7139f0b",
+	"0551dfe904286e720102f050ff874b09fde525a21ea99498dd03cb208f168e6c",
+	"3029cb2bbc3b8f93883954e79a32f0d5f5fbc700dd95ee689f843a50e4354b79",
+	"f9523fb625ec1f96637dc01236140f5b94e062c3fcf44683be4d9e29b3fdb653",
+	"942b1d22d071dd11ff6f81d2f1daac665e1095b52d6fb4e49618d62b9e7c9175",
+	"0a9d292a05dc5dbf6d7acdde6cd25babcbb0e512b23baaf66a82dc3f1aaf7bd9",
+	"40bd3ecc30151ed3600d630c26bce4118ec0dcc4a38c0641a31371caf04e3ced",
+]
 const SEEDS := 20
 const DRAWS := 400
 class ChoiceGame extends "res://src/game.gd":
@@ -274,7 +326,9 @@ func _component(seed_value: int, tier_value: int) -> Dictionary:
 			# The stage's last clock tier (mobs.clock_tiers_by_stage: +3 on world 1 since wave 37, +2 elsewhere).
 			var last_tier := Director.clock_tiers(d.dial_stage)
 			var cap_expected := mini(Director.HARD_CAP, roundi((6 + 2 * last_tier) * row.threat * row.pressure.pack_scale * config.cap_weight))
-			var interval_expected := maxf(Director.MIN_INTERVAL, (Director.BASE_INTERVAL - 0.7 * last_tier) / row.threat * row.pressure.interval_scale * config.interval_weight)
+			# The stage's own pace dial (mobs.interval_scale: the flume's 0.7 since W1-31, 1 elsewhere).
+			var stage_pace := ChallengeDials.stage_mult("mobs.interval_scale", d.dial_stage)
+			var interval_expected := maxf(Director.MIN_INTERVAL, (Director.BASE_INTERVAL - 0.7 * last_tier) / row.threat * row.pressure.interval_scale * stage_pace * config.interval_weight)
 			t.eq("independent cap seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.cap, cap_expected)
 			t.near("independent interval seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.interval, interval_expected)
 			# Ruling al: no tier raises enemy health.
@@ -395,6 +449,8 @@ func _runtime() -> void:
 	var tier_script = load("res://src/core/run_tier.gd") if not record and ResourceLoader.exists("res://src/core/run_tier.gd") else null
 	if not record:
 		t.check("named pay cap is 1.5", tier_script != null and tier_script.get_script_constant_map().get("PAY_GAIN_CAP") == 1.5)
+	var schedule_pins: Array = PlatformPin.pick(BASE_SCHEDULE, BASE_SCHEDULE_MAC)
+	var run_pins: Array = PlatformPin.pick(BASE_RUN, BASE_RUN_MAC)
 	for seed_value in SEEDS:
 		if only_seed >= 0 and seed_value != only_seed:
 			continue
@@ -407,8 +463,8 @@ func _runtime() -> void:
 		var pair: Array = await _settle_pair(seed_value)
 		var base: Dictionary = pair[0]
 		var hard: Dictionary = pair[1]
-		t.check("bit-identical schedule seed %d" % seed_value, BASE_SCHEDULE.size() == SEEDS and a.hash == BASE_SCHEDULE[seed_value])
-		t.check("bit-identical whole-run default seed %d" % seed_value, BASE_RUN.size() == SEEDS and base.hash == BASE_RUN[seed_value])
+		t.check("bit-identical schedule seed %d" % seed_value, schedule_pins.size() == SEEDS and a.hash == schedule_pins[seed_value])
+		t.check("bit-identical whole-run default seed %d" % seed_value, run_pins.size() == SEEDS and base.hash == run_pins[seed_value])
 		t.check("higher threat seed %d" % seed_value, b.members > a.members and hard.threat > base.threat)
 		t.check("higher pay seed %d" % seed_value, hard.pay > base.pay and hard.cores > base.cores and hard.rare_share > base.rare_share)
 		t.check("pay cap seed %d" % seed_value, hard.pay / base.pay <= RunTier.PAY_GAIN_CAP)

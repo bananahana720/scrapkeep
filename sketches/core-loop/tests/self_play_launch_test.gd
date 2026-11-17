@@ -2,6 +2,7 @@
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
+const ChildRuns := preload("res://tests/trees/child_runs.gd")
 
 # --self-play (src/game.gd, tools/self_play.gd): the launched main scene is played by a bot with
 # real ticks (a played game, not test_mode or SimClock) and quits by code: 0 the goal was reached,
@@ -76,7 +77,7 @@ func _line(text: String, prefix: String) -> String:
 
 
 func _find_userdata(data: String) -> String:
-	var apps := data.path_join("godot/app_userdata")
+	var apps := ChildRuns.userdata_root(data)
 	for dir in DirAccess.get_directories_at(apps):
 		return apps.path_join(dir)
 	return ""
@@ -91,8 +92,7 @@ func _launch(extra: Array) -> Dictionary:
 	var base := ProjectSettings.globalize_path("user://").path_join("sp-%d-%d" % [OS.get_process_id(), _serial])
 	for dir in ["data", "config", "cache"]:
 		DirAccess.make_dir_recursive_absolute(base.path_join(dir))
-	var args := ["XDG_DATA_HOME=" + base.path_join("data"), "XDG_CONFIG_HOME=" + base.path_join("config"),
-		"XDG_CACHE_HOME=" + base.path_join("cache"), OS.get_executable_path(),
+	var args: Array = ChildRuns.home_env(base) + [OS.get_executable_path(),
 		"--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--", "--self-play"]
 	args.append_array(extra)
 	var output := []

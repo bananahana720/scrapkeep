@@ -15,6 +15,7 @@ const BossRules := preload("res://src/boss/boss_rules.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const BotKite := preload("res://tools/bot_kite.gd")
 const BotFairness := preload("res://tools/bot_fairness.gd")
+const BotLoops := preload("res://tools/bot_loops.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -449,6 +450,10 @@ var late_offer_policy := ""
 # the game's own set_stakes before it rolls in, works it to its pay, then goes on to the Warden.
 # 0 leaves every code path below untouched.
 var relay_stake := 0
+# The sitting hand (bot_loops.gd), made on the first tick of a --profile=sitting launch; null elsewhere.
+var loops
+# Hands of the sitting hand to leave off (--self-play-hand-off), read when it is made.
+var hands_off: Array = []
 # The pacing lab's switch (bot_run --explore-by=<s>, scripts/pacing-check.mjs): the stage second the
 # completionist stops its optional rolling for the Warden. Left at ENGAGE_BY unless the flag is given.
 var engage_by := ENGAGE_BY
@@ -886,6 +891,10 @@ func tick(delta: float) -> bool:
 			and game.run.stage_time - float(fight_start) > fight_limit:
 		_end("fight_capped")
 		return true
+	if loops == null and game.ctx.tuning != null and (game.ctx.tuning.sitting() or game.ctx.tuning.sitting_earned()):
+		loops = BotLoops.new(self, game)
+		for name in hands_off:
+			loops.hands[name] = false
 	_boost_clock -= delta
 	_play_clock += delta
 	_min_hp = minf(_min_hp, float(game.run.hp))
@@ -919,9 +928,11 @@ func tick(delta: float) -> bool:
 				game.player.kit.hooked, game.player.kit.on_body])
 	match state:
 		"stage", "beacon":
-			_roam(delta)
+			if loops == null or not loops.stage(delta):
+				_roam(delta)
 		"gates":
-			_to_gate(delta)
+			if loops == null or not loops.gates(delta):
+				_to_gate(delta)
 		"boss":
 			_boss_clock += delta
 			if _boss_clock > BOSS_LIMIT:
@@ -932,6 +943,8 @@ func tick(delta: float) -> bool:
 			_lap_roll()
 		_:
 			source.hold = {}
+	if loops != null:
+		loops.step(delta)
 	_set_piece_hands()
 	return outcome != ""
 
@@ -1032,6 +1045,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_plate_hand = {}
 	_clear_chain_hand()
 	_close_note()
+	_window_hits = []
 	_stage = stage
 	_offers = []
 	_gate_pick = -1
@@ -1202,9 +1216,35 @@ func _on_player_hit(amount: float, source_id: String) -> void:
 			if hull > float(into.get("largest_hull_hit", 0.0)):
 				into["largest_hull_hit"] = snappedf(hull, 0.1)
 				into["largest_hull_hit_share"] = snappedf(hull / maxf(float(game.run.max_hp), 1.0), 0.001)
+			var clock: float = _boss_clock if in_boss else game.run.stage_time
+			note_worst_window(_window_hits, into, clock, amount, hull, float(game.run.max_hp))
 			if fight_s <= FIRST_45_S:
 				into["hp_lost_45s"] = snappedf(float(into.get("hp_lost_45s", 0.0)) + amount, 0.1)
 				into["hull_lost_45s"] = snappedf(float(into.get("hull_lost_45s", 0.0)) + hull, 0.1)
+
+
+# The fight's worst WORST_WINDOW_S of damage, as hull and as whole hits, for the curve cards (W1-31): a window's sum
+# peaks at a hit, so it is checked at each hit over the hits still inside it. worst_60s_max_hp is the max hull when
+# the worst hull window peaked, so a share of it does not shrink as max hull grows later in the run. The window is
+# timed by a clock that only moves forward (stage time, or the boss clock) and is cleared on each stage and boss
+# entry. Record only.
+const WORST_WINDOW_S := 60.0
+var _window_hits: Array = []
+
+
+static func note_worst_window(hits: Array, into: Dictionary, t: float, amount: float, hull: float, max_hp: float) -> void:
+	hits.append([t, amount, hull])
+	while float(hits[0][0]) <= t - WORST_WINDOW_S:
+		hits.pop_front()
+	var hp_sum := 0.0
+	var hull_sum := 0.0
+	for h in hits:
+		hp_sum += float(h[1])
+		hull_sum += float(h[2])
+	into["worst_60s_hp"] = snappedf(maxf(float(into.get("worst_60s_hp", 0.0)), hp_sum), 0.1)
+	if hull_sum > float(into.get("worst_60s_hull", 0.0)) or not into.has("worst_60s_max_hp"):
+		into["worst_60s_max_hp"] = snappedf(max_hp, 0.1)
+	into["worst_60s_hull"] = snappedf(maxf(float(into.get("worst_60s_hull", 0.0)), hull_sum), 0.1)
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
@@ -1435,6 +1475,7 @@ func _close_note() -> void:
 func _on_boss_entered() -> void:
 	_close_note()
 	_boss_clock = 0.0
+	_window_hits = []
 	_seen = {}
 	_evaded = {}
 	_charge_read = {}

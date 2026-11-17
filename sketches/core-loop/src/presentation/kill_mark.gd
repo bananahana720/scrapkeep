@@ -30,6 +30,15 @@ const CARD_TILT := 0.21
 const RENDER_PRIORITY := 0
 # How hot the burst starts, before FlashGuard.whiten.
 const HEAT := 0.8
+# Near the lens the mark keeps its alpha (a kill must never read as a hit) but shrinks so its width
+# is at most this share of the view's height (PF-53: with the arm against a wall the lens sits about
+# 2 m from the ball and a 3 m mark filled the screen). 0.4 leaves today's mark whole at the play
+# distance; inside CAP_WITHIN_M only, so a merged kill's bigger mark at range is not touched. The cap
+# eases in from CAP_WITHIN_M down to CAP_FULL_M, so a big merged mark never snaps in size when the
+# lens crosses the edge during its pop.
+const SCREEN_CAP := 0.4
+const CAP_WITHIN_M := 7.5
+const CAP_FULL_M := 6.0
 
 const _SHADER := """
 shader_type spatial;
@@ -194,12 +203,29 @@ static func shape_at(t: float, mode: int, still := false) -> Dictionary:
 		"alpha": 1.0 if t < 0.45 else 1.0 - (t - 0.45) / 0.55}
 
 
+# The multiplier (1 or less) that keeps a mark of half-width `half_m` at `node` within SCREEN_CAP of
+# the view's height.
+func _cap_for(node: Node3D, half_m: float) -> float:
+	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+	if cam == null:
+		return 1.0
+	return cap(half_m, node.global_position.distance_to(cam.global_position), cam.fov)
+
+
+static func cap(half_m: float, eye_m: float, fov_deg: float) -> float:
+	if eye_m >= CAP_WITHIN_M or half_m <= 0.0:
+		return 1.0
+	var view_h := 2.0 * eye_m * tan(deg_to_rad(fov_deg) * 0.5)
+	var capped := minf(1.0, SCREEN_CAP * view_h * 0.5 / half_m)
+	return lerpf(capped, 1.0, clampf((eye_m - CAP_FULL_M) / (CAP_WITHIN_M - CAP_FULL_M), 0.0, 1.0))
+
+
 func _draw(slot: Dictionary) -> void:
 	var t: float = slot["t"]
 	var mode: int = slot["mode"]
 	var look := shape_at(t, mode, reduced_motion)
 	var node: MeshInstance3D = slot["node"]
-	node.basis = Basis.IDENTITY.scaled(Vector3.ONE * slot["size"] * float(look["scale"]))
+	node.basis = Basis.IDENTITY.scaled(Vector3.ONE * slot["size"] * float(look["scale"]) * _cap_for(node, slot["size"] * float(look["scale"])))
 	var mat: ShaderMaterial = slot["mat"]
 	mat.set_shader_parameter("heat", look["heat"])
 	mat.set_shader_parameter("alpha", float(look["alpha"]) * float(slot["alpha"]))

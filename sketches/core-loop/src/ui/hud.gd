@@ -117,6 +117,9 @@ class NoteKey extends Control:
 const TOAST_IN := 0.12
 const TOAST_OUT := 0.2
 const TOAST_HOLD := {3: 2.4, 2: 1.6}
+# An event's warning line stays up for its lead, no longer than this (W1-110): a line that
+# outlives a few seconds of its own warning is the one a crew's hit gets blamed on.
+const EVENT_LINE_CAP := 12.0
 const TOAST_FONT := {3: UiTokens.LABEL, 2: UiTokens.BODY}
 const TOAST_WORDS := 4
 # What the cores held do for the gates, by count (parts.gd gate_rarities reads min(count, RunState.CORE_TIER_CAP)):
@@ -266,6 +269,9 @@ var _engaged := false
 var _struggle := Objectives.Struggle.new()
 # The finished goal the plate shows ticked before the next one (objectives.gd Done).
 var _done := Objectives.Done.new()
+# The detour row's own hold: the side site it last named, and the tick of that site finished or lost.
+var _detour_site = null
+var _detour_done := Objectives.Done.new()
 # The side site the plate holds as its goal (activities.gd at_hand), stepped each physics tick: a
 # site once at hand keeps the row until it is finished or the ball has left it.
 var _site = null
@@ -411,6 +417,7 @@ func setup(game_ref) -> void:
 	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
 		toast_kind("boss_phase_changed", {"name": phase_name.capitalize()}))
 	game.events.event_ended.connect(_on_event_ended)
+	game.events.event_started.connect(_end_event_line)
 	game.events.event_announced.connect(_on_event_announced)
 	game.events.part_gained.connect(func(part_id: String, _source: String): part_name.show_part(part_id))
 	game.events.warden_engaged.connect(func(_stage: int): _begin_engagement(true))
@@ -418,10 +425,12 @@ func setup(game_ref) -> void:
 	game.events.beacon_unsealed.connect(func(_stage: int): _begin_engagement(false))
 	# A finished goal is ticked on the plate before the next one shows (plate_shown).
 	game.events.activity_done.connect(func(id: String, _at: Vector3): _done.note(Objectives.done_words(id, game.world.activities.called(id))))
+	game.events.activity_done.connect(func(id: String, _at: Vector3): _note_detour(id, true))
 	game.events.trade_taken.connect(func(kind: String, _at: Vector3): _done.note(Objectives.done_words(kind)))
 	game.events.event_ended.connect(func(id: String, outcome: String):
 		if outcome == "lost":
-			_done.note(Objectives.lost_words(id), false))
+			_done.note(Objectives.lost_words(id), false)
+			_note_detour(id, false))
 	game.events.beacon_unsealed.connect(func(_stage: int): _done.note(Objectives.done_words("warden")))
 	# The clamp is the fight's: opened from the road it is ticked nowhere (the plate never said it
 	# was shut), and a site finished in the same breath keeps its own tick.
@@ -745,11 +754,11 @@ static func _drop_args(callable: Callable, count: int) -> Callable:
 	return callable.unbind(count) if count > 0 else callable
 
 
-func _on_field_fact(value, kind: String) -> void:
+func _on_field_fact(value, kind: String, hold := -1.0, tint := Color(0, 0, 0, 0)) -> void:
 	var shown = value
 	if value is String:
 		shown = (value as String).replace("_", " ").capitalize()
-	toast_kind(kind, {FIELD_ARGS[kind]: shown})
+	toast_kind(kind, {FIELD_ARGS[kind]: shown}, hold, tint)
 
 
 func _on_fact(kind: String) -> void:
@@ -823,31 +832,55 @@ func _on_posture(enemy: Node3D, posture: float, staggered: bool) -> void:
 
 # "incoming" warns of something still on its way. An announcement with no lead is already here
 # (a stage's resting weather starts with the stage: "Dawn Still"), so it warns of nothing.
+# The line reads "not yet" (slate ink, slate lightened for a word), and the red edge marker says where: hazard red is for what
+# hurts now, so a crew's hit never reads as this line's cause (W1-110). It lives as long as the
+# lead (capped) and ends when its event starts or ends.
 func _on_event_announced(event_id: String, seconds_until: float, _at: Vector3) -> void:
 	if seconds_until > 0.0:
 		var called: String = game.world.activities.called(event_id)
-		_on_field_fact(called if called != "" else event_id, "event_announced")
+		var life := minf(seconds_until, EVENT_LINE_CAP)
+		_on_field_fact(called if called != "" else event_id, "event_announced", maxf(life - TOAST_IN - TOAST_OUT, 0.0), Palette.SLATE_INK)
+		var line := _held_toast if launch_card.showing() else _toast
+		if not line.is_empty():
+			line["event"] = event_id
+
+
+# The event's own line has done its job once the event starts or ends: it fades out at once.
+func _end_event_line(event_id: String) -> void:
+	if event_id == "":
+		return
+	for entry in [_toast, _held_toast]:
+		if entry.has("event") and entry["event"] == event_id:
+			entry["left"] = minf(entry["left"], TOAST_OUT)
+			entry["event"] = ""
 
 
 # Only a lost event gets a toast: a win already has its milestone toast.
 func _on_event_ended(event_id: String, outcome: String) -> void:
+	_end_event_line(event_id)
 	if outcome == "lost":
 		# A site whose marker has its own word is lost under that word (the Stocktake yard), not its id's.
 		var called: String = game.world.activities.called(event_id)
 		toast(toast_text("event_ended", {"event": called if called != "" else event_id.replace("_", " ").capitalize()}), Palette.RUST, "wave", 2)
 
 
-func toast_kind(kind: String, fields := {}) -> void:
-	toast(toast_text(kind, fields), EventKinds.color(kind), EventKinds.row(kind).get("shape", "none"), mini(EventKinds.priority(kind), 3))
+# A tint with alpha overrides the row's colour for this one line.
+func toast_kind(kind: String, fields := {}, hold := -1.0, tint := Color(0, 0, 0, 0)) -> void:
+	var shape: String = EventKinds.row(kind).get("shape", "none")
+	if tint.a > 0.0:
+		toast(toast_text(kind, fields), tint, shape, mini(EventKinds.priority(kind), 3), hold)
+		return
+	toast(toast_text(kind, fields), EventKinds.color(kind), shape, mini(EventKinds.priority(kind), 3), hold)
 
 
 # One toast at a time: a new one replaces the one showing, and the same words already
 # showing stay up for another full beat instead (the gates re-publish their offers
 # whenever they move). While the stage card is up, the newest toast waits for it.
-func toast(text: String, color := Palette.SAND, shape := "diamond", priority := 3) -> void:
+# A hold of 0 or more overrides the priority's hold, in seconds.
+func toast(text: String, color := Palette.SAND, shape := "diamond", priority := 3, hold_s := -1.0) -> void:
 	if text == "":
 		return
-	var hold: float = TOAST_HOLD.get(priority, TOAST_HOLD[2])
+	var hold: float = hold_s if hold_s >= 0.0 else TOAST_HOLD.get(priority, TOAST_HOLD[2])
 	if not _toast.is_empty() and _toast["text"] == text:
 		_toast["left"] = maxf(_toast["left"], hold + TOAST_OUT)
 		return
@@ -928,6 +961,8 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_threat = 0
 	_begin_engagement(false)
 	_done.clear()
+	_detour_done.clear()
+	_detour_site = null
 	_site = null
 	if retry:
 		return
@@ -1240,10 +1275,19 @@ func objective_reading() -> Dictionary:
 
 
 # The plate's detour row under the goal (objectives.gd detour_shown): the stage's caged pilot while
-# one waits, else the nearest side site not yet started, each with its metres (as the goal row's) and in its own
-# marker's colour and glyph, so the row and the chevron at the edge read as one thing. {} for none.
+# one waits, else the nearest side site not yet started that lies ahead of the ball on its way to the
+# Warden, each with its metres (as the goal row's) and in its own marker's colour and glyph, so the
+# row and the chevron at the edge read as one thing. The site the row named keeps the row while its
+# run is at hand (the goal row has its live words, the row draws nothing) and for Done.SECONDS after it is won or lost (its tick or cross),
+# then the next site takes it. {} for none.
 func detour_reading(goal: Dictionary) -> Dictionary:
-	if not Objectives.detour_shown(String(goal.get("id", ""))) or game.world == null:
+	if game.world == null:
+		return {}
+	var goal_id := String(goal.get("id", ""))
+	var held_run: bool = is_instance_valid(_detour_site) and _detour_site == _site
+	if (held_run or _detour_done.showing()) and goal_id in ["find_warden", "find_activity"]:
+		return _held_detour(held_run)
+	if not Objectives.detour_shown(goal_id):
 		return {}
 	var ball: Vector3 = game.player.shown_position()
 	var rescue = game.world.get("rescue")
@@ -1253,21 +1297,70 @@ func detour_reading(goal: Dictionary) -> Dictionary:
 			return {"what": "cage", "icon": Interactables.row("ally")["icon"], "color": Interactables.color("ally"),
 				"words": Objectives.cage_words(cage.terms() if cage != null else ""),
 				"distance": int(ball.distance_to(waiting["at"]))}
+	var warden = game.flow.warden if is_instance_valid(game.flow.warden) else null
 	var best = null
 	var best_m := INF
 	for site in edge_markers.unfinished_sites():
 		if site.started or site.failed:
 			continue
+		# A site behind the ball (off the far side of the line to the Warden) is not on offer: its metres
+		# would only count up as the ball drives on.
+		if warden != null and not _ahead_of(ball, site.global_position, warden.global_position):
+			continue
 		var m := ball.distance_to(site.global_position)
 		if m < best_m:
 			best = site
 			best_m = m
+	# A started site whose run is not at hand (the frame before `_site` says so, a surge still waiting
+	# for its sluice, a run the ball rolled away from) keeps the row with its own words and metres, so no
+	# other site takes it before its result. It lets go once the ball is past the run's own let-go range
+	# (the player left it) unless its surge is live. A trade spot never comes to hand, so it is not kept.
+	if is_instance_valid(_detour_site) and _detour_site.started and not _detour_site.done and not _detour_site.failed \
+			and _detour_site.rule.finishes != "trade":
+		var to_kept: Vector3 = _detour_site.global_position - ball
+		# On the ground plane, as the run's own let-go (activities.gd at_hand) measures it.
+		if _detour_site.surge_live or Vector2(to_kept.x, to_kept.z).length() <= game.world.activities.LET_GO_M:
+			return _site_row(_detour_site, int(to_kept.length()))
+	_detour_site = best
 	if best == null:
 		return {}
-	var kind := String(best.id)
+	return _site_row(best, int(best_m))
+
+
+# Whether a point lies ahead of the ball on its way to the goal: on the goal's side of the ball, on the ground plane
+# (a ball far above a site still has it ahead).
+static func _ahead_of(ball: Vector3, point: Vector3, goal: Vector3) -> bool:
+	var to_point := Vector2(point.x - ball.x, point.z - ball.z)
+	var to_goal := Vector2(goal.x - ball.x, goal.z - ball.z)
+	return to_point.dot(to_goal) > 0.0
+
+
+# The row for a side site, in its marker's colour; metres -1 for none.
+func _site_row(site, metres: int, words := "") -> Dictionary:
+	var kind := String(site.id)
 	return {"what": kind, "icon": Objectives.glyph("find_activity"),
-		"color": EdgeMarkers.marker_color({"activity": String(best.rule.get("cue", {}).get("view", kind))}),
-		"words": Objectives.activity_words(kind, game.world.activities.called(kind)), "distance": int(best_m)}
+		"color": EdgeMarkers.marker_color({"activity": String(site.rule.get("cue", {}).get("view", kind))}),
+		"words": words if words != "" else Objectives.activity_words(kind, game.world.activities.called(kind)), "distance": metres}
+
+
+# The named site's done or lost tick. While its run is at hand, or while the goal row ticks the same
+# result, the goal row already says it, so the row stays held on the site (no other site takes it)
+# and draws nothing; it carries the tick only when the goal row has moved on early.
+func _held_detour(running: bool) -> Dictionary:
+	if running or (_done.showing() and _done.words == _detour_done.words):
+		return {}
+	var row := _site_row(_detour_site, -1, _detour_done.words) if is_instance_valid(_detour_site) else {"what": "", "icon": "", "words": _detour_done.words, "color": Color.WHITE, "distance": -1}
+	row["color"] = EventKinds.color("activity_done") if _detour_done.won else Palette.RUST
+	row["done"] = "won" if _detour_done.won else "lost"
+	return row
+
+
+# A side site finished or lost: if the detour row named it, it ticks there before the next site shows.
+func _note_detour(id: String, good: bool) -> void:
+	if not is_instance_valid(_detour_site) or String(_detour_site.id) != id:
+		return
+	var text := Objectives.done_words(id, game.world.activities.called(id)) if good else Objectives.lost_words(id)
+	_detour_done.note(text, good)
 
 
 # What the plate shows: the objective, or for Objectives.Done.SECONDS after a goal is finished
@@ -1415,7 +1508,7 @@ func _process(delta: float) -> void:
 	var reading := plate_shown(goal)
 	_objective.set_objective(reading["icon"], reading["words"], reading["color"], reading["progress"], reading["distance"], reading.get("done", ""), reading["step"])
 	var detour := detour_reading(goal)
-	_objective.set_detour(detour.get("icon", ""), detour.get("words", ""), detour.get("color", Color.WHITE), detour.get("distance", -1))
+	_objective.set_detour(detour.get("icon", ""), detour.get("words", ""), detour.get("color", Color.WHITE), detour.get("distance", -1), detour.get("done", ""))
 	edge_markers.objective_id = goal["id"]
 	edge_markers.objective_icon = goal["icon"]
 	edge_markers.engaged = _engaged
@@ -1521,6 +1614,8 @@ func _physics_process(delta: float) -> void:
 	_site = activities.at_hand(game.player.shown_position(), _site if is_instance_valid(_site) else null) if activities != null and game.flow != null and game.flow.in_play() else null
 	if _done.showing() and game.flow != null and game.flow.in_play():
 		_done.step(delta, String(objective_reading()["words"]))
+	if _detour_done.showing():
+		_detour_done.step(delta, "")
 	part_name.step(delta)
 	_step_fight_hint()
 

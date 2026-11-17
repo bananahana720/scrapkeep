@@ -36,7 +36,8 @@ const PATTERNS := {
 	"legacy_map_cmp": "(==|!=)\\s*\"(reach|dig|dig_deep|highdraft|highdraft_crown)\"|\"(reach|dig|dig_deep|highdraft|highdraft_crown)\"\\s*(==|!=|in\\b)|\\[\\s*\"(reach|dig|dig_deep|highdraft|highdraft_crown)\"\\s*,",
 }
 # Counted on stage/alpha-w39 de79a4e6, 12 Nov 2026: 109 sites in 32 files. FX-22 (12 Nov) took
-# world_fx_specs.gd from 15 to 5 by dropping the unread "set" key from its spec rows: 99 sites.
+# world_fx_specs.gd from 15 to 5 by dropping the unread "set" key from its spec rows: 99 sites. W1-31 (16 Nov) took
+# breather_rows.gd from 2 to 1 by removing the flume's breather row: 98 sites.
 const PINS := {
 	"res://src/build/parts.gd": 1,
 	"res://src/combat/kest_kit.gd": 1,
@@ -59,7 +60,7 @@ const PINS := {
 	"res://src/ui/comic_page.gd": 1,
 	"res://src/ui/ending_sequence.gd": 9,
 	"res://src/ui/screens.gd": 1,
-	"res://src/world/breather_rows.gd": 2,
+	"res://src/world/breather_rows.gd": 1,
 	"res://src/world/director.gd": 1,
 	"res://src/world/events/natural.gd": 2,
 	"res://src/world/interactables.gd": 1,

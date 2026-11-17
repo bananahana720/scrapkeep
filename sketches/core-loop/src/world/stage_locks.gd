@@ -4,6 +4,7 @@ const LockRows := preload("res://src/world/lock_rows.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Overtime := preload("res://src/world/overtime.gd")
+const WaveCross := preload("res://src/world/wave_cross.gd")
 
 # The Spillway's pacing locks (lock_rows.gd): the park Warden's gate and the yard's arena lock.
 # Both are rows; a map with no row is untouched, and so is every table but the park table.
@@ -77,6 +78,7 @@ var _engaged_s := -1.0
 var _clock := 0.0
 var _refused_at := -INF
 var _wall: Node3D
+var _wave_marks: Node3D
 var _wall_rise := 0.0
 var _collar: Node3D
 var _pips: Array[MeshInstance3D] = []
@@ -386,6 +388,7 @@ func _step_lock(delta: float) -> void:
 					_unlock(true)
 				else:
 					_wave_wait = float(lock_row().get("wave_gap_s", 1.5))
+					_mark_wave()
 					ctx.events.world_fact.emit("arena_wave", lock_centre)
 			elif _wave_wait >= 0.0:
 				_wave_wait -= delta
@@ -452,19 +455,48 @@ func _waves() -> Array:
 # round, so the yard keeps the ball turning. The whole crew is one pack id for the attack budget.
 func _land_wave() -> void:
 	var kinds: Array = _waves()[_wave] if _wave < _waves().size() else []
-	var radius := float(lock_row().get("radius_m", 26.0))
-	var facing := _facing + WAVE_TURN * _wave
 	var seq := LOCK_SEQ + int(ctx.run.stage)
+	_drop_wave_marks()
 	if not ctx.can_spawn():
 		return
+	var spots := _wave_spots(_wave)
 	for i in kinds.size():
-		var a := facing + (float(i) - (kinds.size() - 1) * 0.5) * CREW_SPREAD / maxf(1.0, kinds.size() - 1) * 2.0
-		var spot := lock_centre + Vector3(cos(a), 0.0, sin(a)) * radius * CREW_RING
-		var enemy = ctx.spawner.spawn_enemy(String(kinds[i]), ctx.terrain.drop_point(spot.x, spot.z, 2.4))
+		var enemy = ctx.spawner.spawn_enemy(String(kinds[i]), spots[i])
 		if enemy is Node3D:
 			enemy.set_meta("pack_seq", seq)
 			enemy.set_meta("yard_crew", true)
 			_crew.append(weakref(enemy))
+
+
+# Where wave `wave` of the crew lands: the ground point of each member on the ring.
+func _wave_spots(wave: int) -> Array[Vector3]:
+	var kinds: Array = _waves()[wave] if wave < _waves().size() else []
+	var radius := float(lock_row().get("radius_m", 26.0))
+	var facing := _facing + WAVE_TURN * wave
+	var out: Array[Vector3] = []
+	for i in kinds.size():
+		var a := facing + (float(i) - (kinds.size() - 1) * 0.5) * CREW_SPREAD / maxf(1.0, kinds.size() - 1) * 2.0
+		var spot := lock_centre + Vector3(cos(a), 0.0, sin(a)) * radius * CREW_RING
+		out.append(ctx.terrain.drop_point(spot.x, spot.z, 2.4))
+	return out
+
+
+# The wave whistle's twin (arena_wave): a cross, held up where the crew drops from, at each spot the
+# next wave lands on, closing as the landing nears. It starts with the whistle and is gone the tick
+# the crew lands, so a muted player sees where and when. WaveCross owns how it looks.
+func _mark_wave() -> void:
+	_drop_wave_marks()
+	_wave_marks = WaveCross.mark(self, _wave_spots(_wave + 1), _wave_wait)
+
+
+func has_wave_marks() -> bool:
+	return _wave_marks != null and is_instance_valid(_wave_marks) and _wave_marks.get_child_count() > 0
+
+
+func _drop_wave_marks() -> void:
+	if _wave_marks != null and is_instance_valid(_wave_marks):
+		_wave_marks.free()
+	_wave_marks = null
 
 
 func _unlock(won: bool) -> void:
@@ -564,6 +596,7 @@ static func _fence_material() -> StandardMaterial3D:
 
 
 func _drop_wall() -> void:
+	_drop_wave_marks()
 	if _wall != null and is_instance_valid(_wall):
 		_wall.queue_free()
 	_wall = null

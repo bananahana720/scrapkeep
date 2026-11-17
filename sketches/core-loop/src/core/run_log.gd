@@ -30,6 +30,7 @@ const LOG_FILE := "runs.ndjson"
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
+const LoopTally := preload("res://src/core/loop_tally.gd")
 const UNKNOWN_CAUSE := "unspecified"
 
 
@@ -202,6 +203,7 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 
 func _on_run_started(class_id: String) -> void:
 	_bank_gains.clear()
+	LoopTally.reset(run)
 	_stages = {}
 	_in_arena = false
 	_phase = 0
@@ -587,6 +589,13 @@ func _write(outcome: String) -> void:
 	var redline = player.get("redline") if player != null else null
 	if redline != null and redline.mode != "off":
 		line["redline"] = redline.summary()
+	# The sitting's six loops (loop_tally.gd), present only once one has fired, so a base run's line
+	# is unchanged. Heat counts as fired when a shell blew (a detonation or a cook-off).
+	var loops := LoopTally.counts(run)
+	if redline != null and redline.mode == "on" and redline.detonations + redline.cook_offs > 0:
+		loops["heat"] = redline.detonations + redline.cook_offs
+	if not loops.is_empty():
+		line["loops"] = loops
 	# The durability prototype's per-run metrics (run_state.gd), present only in armour
 	# mode so a flag-off line is byte-identical to the base. reverse_seconds is an
 	# approximation: seconds with a spill live and the ball moving against the stage's

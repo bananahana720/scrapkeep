@@ -9,8 +9,9 @@ extends SceneTree
 # check, so the pass is never empty, and a park without a file is not counted. Planted controls that must fail: an
 # instance on a line, one inside a keepout, one beside a home, tier edges at the line and a kicker run-out.
 #
-# Each park's vignette file pins its own expansion fingerprint in a top-level "pin" field, so the six park PRs never
-# edit a shared table here. A park file without a pin fails and prints the value to pin.
+# Each park pins its own expansion in tests/fixtures/pins/<park>.pin (tests/support/pin_hash.gd: rounded placements, so the
+# pin holds on the Linux build and the Mac), so the six park PRs never edit a shared table here. Record one with
+# PIN_RECORD=1. The vignette file's "pin" field is the plan tool's exact fingerprint (tools/park_props_plan.gd).
 
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
@@ -19,6 +20,7 @@ const ParkProps := preload("res://src/presentation/park_props.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
+const PinHash := preload("res://tests/support/pin_hash.gd")
 
 const FIXTURE_FILE := "res://tests/fixtures/park_props/park_dam.json"
 const FIXTURE_MAP := "park_dam"
@@ -41,11 +43,12 @@ func _run() -> void:
 		real += 1
 		var world := ParkProps.world_for(id)
 		var list := _check_park(id, path, MIN_KINDS, 2, world)
-		var got := ParkProps.fingerprint(list)
-		var file: Dictionary = ParkProps.load_json(path)
-		print("park_props_test: %s fingerprint %d" % [id, got])
-		_t.check("%s pins its fingerprint" % id, file.has("pin"))
-		_t.eq("%s expansion matches its pin" % id, got, int(file.get("pin", -1)))
+		var parts := ParkProps.fingerprint_parts(list)
+		var pin := "res://tests/fixtures/pins/%s.pin" % id
+		var pin_error := PinHash.check(pin, parts)
+		print("park_props_test: %s %d instances, rounding margin %.2f" % [id, parts.size(), PinHash.margin(parts)])
+		_t.check("%s pins its fingerprint" % id, FileAccess.file_exists(pin), pin)
+		_t.check("%s expansion matches its pin" % id, pin_error.is_empty(), pin_error)
 	print("park_props_test: %d of %d parks have a vignette file; %d without one" % [real, ParkProps.PARKS.size(), ParkProps.PARKS.size() - real])
 
 	var world := ParkProps.world_for(FIXTURE_MAP)

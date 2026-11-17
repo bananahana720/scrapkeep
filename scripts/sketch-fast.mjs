@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,6 +22,7 @@ import {
 } from "./sketch-smoke.mjs";
 import { readLedger } from "./known-failing.mjs";
 import { writeImportStamp } from "./import-stamp.mjs";
+import { scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
 
 // npm run sketch:fast: the fast PR lane of the tiered gate (ORCHESTRATOR, "Tiered gate").
 // It judges one PR head in about 15 minutes, cheapest and most-often-failing checks first, and
@@ -474,7 +475,7 @@ function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
   return new Promise((resolve) => {
     const started = Date.now();
     const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"));
-    const child = spawn(binary, ["--headless", "--path", sketchDir, "--script", "res://" + test], { env: { ...process.env, XDG_DATA_HOME: dataHome } });
+    const child = spawn(binary, ["--headless", "--path", sketchDir, "--script", "res://" + test], { env: { ...process.env, ...userDataEnv(dataHome) } });
     running.add(child);
     onChild(child);
     let output = "";
@@ -499,7 +500,7 @@ function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
 function runBatch(sketchDir, tests, timeoutMs, onChild = () => {}) {
   return new Promise((resolve) => {
     const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"));
-    const child = spawn(binary, ["--headless", "--path", sketchDir, "--script", "res://tools/test_batch.gd"], { env: { ...process.env, XDG_DATA_HOME: dataHome, SCRAPKEEP_TEST_BATCH: tests.join(",") } });
+    const child = spawn(binary, ["--headless", "--path", sketchDir, "--script", "res://tools/test_batch.gd"], { env: { ...process.env, ...userDataEnv(dataHome), SCRAPKEEP_TEST_BATCH: tests.join(",") } });
     running.add(child);
     onChild(child);
     let output = "";
@@ -649,7 +650,7 @@ export function usableBaseRun(rerun, baseRun) {
 
 function importAsync(args) {
   return new Promise((resolve) => {
-    const child = spawn(binary, [...args, "--import"], { stdio: "ignore" });
+    const child = spawn(binary, [...args, "--import"], { stdio: "ignore", env: { ...process.env, ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) } });
     const timer = setTimeout(() => child.kill("SIGKILL"), 180_000);
     child.on("close", (code) => {
       clearTimeout(timer);
@@ -842,12 +843,12 @@ async function main() {
   const base = ["--headless", "--path", sketchDir];
   const imported = importWithRetry(SKETCH, base, (job) => {
     const t = Date.now();
-    const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: 180_000 });
+    const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: 180_000, env: { ...process.env, ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) } });
     return { label: job.label, exit: result.status, signal: result.signal ?? null, scriptErrors: scriptErrorCount((result.stdout || "") + (result.stderr || "")), ok: result.status === 0, ms: Date.now() - t };
   }, log);
   if (!stage("import", imported.ok, { note: imported.tries.map((row) => `${row.outcome} exit=${row.exit ?? row.signal}`).join(", ") })) finish();
   writeImportStamp(root, SKETCH);
-  const boot = spawnSync(binary, [...base, "--quit-after", "300"], { encoding: "utf8", timeout: 180_000, env: { ...process.env, XDG_DATA_HOME: mkdtempSync(path.join(os.tmpdir(), "sketch-fast-")) } });
+  const boot = spawnSync(binary, [...base, "--quit-after", "300"], { encoding: "utf8", timeout: 180_000, env: { ...process.env, ...userDataEnv(mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) } });
   const bootVerdict = judge({ status: boot.status, output: (boot.stdout || "") + (boot.stderr || "") });
   if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
 
@@ -1073,7 +1074,7 @@ async function main() {
   finish();
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (process.argv[2] === "--fold-timings") {
     const files = process.argv.slice(3);
     if (files.length === 0) throw new Error("--fold-timings takes one or more receipt files (smoke, fast lane or gate shard.json)");

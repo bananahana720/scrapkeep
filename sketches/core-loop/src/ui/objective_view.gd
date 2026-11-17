@@ -33,6 +33,8 @@ var detour_icon := ""
 var detour_words := ""
 var detour_color := Color.WHITE
 var detour_metres := -1
+# "" for an offer or a live site, "won" or "lost" for the detour's own done row.
+var detour_done := ""
 
 
 func _init() -> void:
@@ -54,9 +56,10 @@ func set_objective(icon: String, text: String, tint: Color, broken := -1.0, dist
 	queue_redraw()
 
 
-func set_detour(icon: String, text: String, tint: Color, distance := -1) -> void:
-	if icon == detour_icon and text == detour_words and tint == detour_color and distance == detour_metres:
+func set_detour(icon: String, text: String, tint: Color, distance := -1, finished := "") -> void:
+	if icon == detour_icon and text == detour_words and tint == detour_color and distance == detour_metres and finished == detour_done:
 		return
+	detour_done = finished
 	detour_icon = icon
 	detour_words = text
 	detour_color = tint
@@ -122,7 +125,7 @@ func _draw() -> void:
 	var mid := ICON * 0.5
 	var icon_rect := Rect2(Vector2(x, 0.0), Vector2(ICON, ICON))
 	if done != "":
-		_draw_done(icon_rect)
+		_draw_done(icon_rect, done, color)
 	else:
 		draw_texture_rect(Icons.texture(icon_id), icon_rect.grow(-4.0), false, Icons.tint(icon_id, color))
 	if progress >= 0.0:
@@ -148,7 +151,11 @@ func _draw_detour(top: float) -> void:
 	var quiet := detour_ink()
 	var x := (size.x - _detour_width()) * 0.5
 	var mid := top + DETOUR_ICON * 0.5
-	draw_texture_rect(Icons.texture(detour_icon), Rect2(Vector2(x, top), Vector2(DETOUR_ICON, DETOUR_ICON)).grow(-3.0), false, Icons.tint(detour_icon, quiet))
+	var icon_rect := Rect2(Vector2(x, top), Vector2(DETOUR_ICON, DETOUR_ICON))
+	if detour_done != "":
+		_draw_done(icon_rect, detour_done, quiet)
+	else:
+		draw_texture_rect(Icons.texture(detour_icon), icon_rect.grow(-3.0), false, Icons.tint(detour_icon, quiet))
 	x += DETOUR_ICON + GAP
 	x += UiDraw.text(self, x, mid, detour_words, FONT, quiet)
 	if detour_metres >= 0:
@@ -156,13 +163,13 @@ func _draw_detour(top: float) -> void:
 
 
 # The done row's mark: a tick for a goal finished, a cross for one lost, inked like the words.
-func _draw_done(rect: Rect2) -> void:
+func _draw_done(rect: Rect2, kind: String, ink: Color) -> void:
 	var c := rect.get_center()
-	var r := ICON * 0.3
+	var r := rect.size.x * 0.3
 	var strokes: Array = [PackedVector2Array([c + Vector2(-r, 0.0), c + Vector2(-r * 0.3, r * 0.7), c + Vector2(r, -r * 0.7)])]
-	if done == "lost":
+	if kind == "lost":
 		strokes = [PackedVector2Array([c + Vector2(-r, -r), c + Vector2(r, r)]), PackedVector2Array([c + Vector2(-r, r), c + Vector2(r, -r)])]
 	for stroke in strokes:
-		draw_polyline(stroke, UiDraw.OUTLINE, 8.0)
+		draw_polyline(stroke, UiDraw.OUTLINE, rect.size.x * 8.0 / ICON)
 	for stroke in strokes:
-		draw_polyline(stroke, color, 4.0)
+		draw_polyline(stroke, ink, rect.size.x * 4.0 / ICON)

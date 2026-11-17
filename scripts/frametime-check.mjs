@@ -12,6 +12,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { userDataEnv } from "./godot-home.mjs";
 
 // node scripts/frametime-check.mjs: plays the exported build under MangoHud, logs every frame and
 // reports whether frame times stay inside the alpha budget (sketches/core-loop/BUG-BAR.md).
@@ -32,11 +33,23 @@ import { fileURLToPath } from "node:url";
 // A self-play game that exits non-zero (1 run ended early, 2 no tools/ in the pack, 3 stalled)
 // fails the check with exit 1, or 2 for code 2.
 // Exit 0 inside budget, 1 over it, 2 when nothing was measured. Never downloads anything.
+// --capture=engine|mangohud picks how frames are caught (captureMode). Without it: MangoHud when
+// mangohud is on PATH, else the engine on macOS (no MangoHud there), else MangoHud's install note.
+// The engine capture launches $GODOT_BIN --path sketches/core-loop (or --exe=<a packed build's
+// binary>) windowed, with Godot's --disable-vsync unless --keep-vsync, and the game's own frame log
+// (src/core/frame_log.gd, --frame-log=<csv>) on the same warmup and seconds; the CSV it writes is
+// read as MangoHud's is. Each such run has scratch XDG data under the run folder, so its saves
+// start empty; on macOS HOME moves there too, so the shader and pipeline caches also start empty
+// and shader compiles fall in the log unless the warmup covers them. Without --exe the engine runs
+// the project as a debug run, so that reading is not comparable with a packed build's. --hud has no engine overlay and is refused there.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const exportRoot = path.join(root, "artifacts/local/core-loop-export");
 const outRoot = path.join(root, "artifacts/local/frametime");
+const projectDir = path.join(root, "sketches/core-loop");
 export const EXECUTABLE = "core-loop.x86_64";
+export const ENGINE_LOG = "frames.csv";
+export const CAPTURES = ["engine", "mangohud"];
 export const BUDGET = { p99Ms: 16.7, hitchMs: 33, severeMs: 50 };
 
 export class FrametimeError extends Error {}
@@ -53,6 +66,7 @@ export function parseArgs(argv) {
     hud: false,
     sound: false,
     selfPlay: false,
+    capture: null,
     selfPlayArgs: [],
     gameArgs: [],
   };
@@ -78,6 +92,11 @@ export function parseArgs(argv) {
     else if (arg === "--hud") args.hud = true;
     else if (arg === "--sound") args.sound = true;
     else if (arg === "--self-play") args.selfPlay = true;
+    else if (arg.startsWith("--capture=")) {
+      args.capture = arg.slice("--capture=".length);
+      if (!CAPTURES.includes(args.capture))
+        throw new FrametimeError(`--capture takes ${CAPTURES.join(" or ")}: ${arg}`);
+    }
     else if (arg.startsWith("--self-play-script="))
       throw new FrametimeError("--self-play-script= is a test override of the game and is not forwarded");
     else if (/^--self-play-[a-z]+=/.test(arg)) args.selfPlayArgs.push(arg);
@@ -151,6 +170,26 @@ export function findOnPath(name, envPath = process.env.PATH ?? "") {
     }
   }
   return null;
+}
+
+// The one place the capture is chosen: --capture=, else MangoHud wherever it is installed, else
+// the engine's own log on macOS, where MangoHud does not exist.
+export function captureMode(args, platform = process.platform, envPath = process.env.PATH ?? "") {
+  if (args.capture) return args.capture;
+  if (findOnPath("mangohud", envPath)) return "mangohud";
+  return platform === "darwin" ? "engine" : "mangohud";
+}
+
+// The engine capture's command: the editor binary on the project, or --exe=<packed build binary>;
+// windowed, vsync off unless --keep-vsync, and the frame log's flags first among the user args.
+export function engineLaunch(args, { outDir, godotBin, project = projectDir }) {
+  const csv = path.join(outDir, ENGINE_LOG);
+  const flags = [`--frame-log=${csv}`, `--frame-log-warmup=${args.warmup}`, `--frame-log-seconds=${args.seconds}`];
+  const game = gameArgv(args);
+  const split = game.indexOf("--");
+  const user = split < 0 ? [...game, "--", ...flags] : [...game.slice(0, split + 1), ...flags, ...game.slice(split + 1)];
+  const engine = [...(args.exe ? [] : ["--path", project]), "--windowed", ...(args.keepVsync ? [] : ["--disable-vsync"])];
+  return { command: args.exe ? path.resolve(args.exe) : godotBin, argv: [...engine, ...user], csv };
 }
 
 export function missingMangohudMessage() {
@@ -279,10 +318,15 @@ export function summarize(
   };
 }
 
-export function report(summary, source) {
+// The engine's log opens with its own info row; any other log is MangoHud's.
+export function logLabel(text) {
+  return text.startsWith("scrapkeep_frame_log,") ? "Engine frame log" : "MangoHud log";
+}
+
+export function report(summary, source, label = "MangoHud log") {
   const ok = (flag) => (flag ? "ok  " : "OVER");
   const lines = [
-    `MangoHud log: ${source}`,
+    `${label}: ${source}`,
     `${summary.frames} frames over ${summary.seconds} s. p50 ${summary.p50_ms} ms, p95 ${summary.p95_ms} ms, max ${summary.max_ms} ms.`,
     `${ok(summary.p99_ok)} p99 frame time ${summary.p99_ms} ms (budget ${summary.budget.p99_ms} ms)`,
     `${ok(summary.hitch_ok)} frames over ${summary.budget.hitch_ms} ms: ${summary.over_hitch} (over 50 ms: ${summary.over_severe})`,
@@ -317,8 +361,14 @@ function stamp(date = new Date()) {
     .replace(/-\d{3}Z$/, "Z");
 }
 
-function analyse(logFile, args, outDir, selfPlay = null) {
-  const frames = parseLog(readFileSync(logFile, "utf8"));
+// What a reading measured: a packed build or a debug run of the project, on warm or cold caches.
+export function engineContext(args, platform = process.platform) {
+  return { target: args.exe ? "packed" : "debug-editor", cache: platform === "darwin" ? "cold" : "shared" };
+}
+
+function analyse(logFile, args, outDir, selfPlay = null, context = null) {
+  const text = readFileSync(logFile, "utf8");
+  const frames = parseLog(text);
   const summary = summarize(frames, {
     p99Ms: args.p99,
     hitchMs: args.hitch,
@@ -346,9 +396,13 @@ function analyse(logFile, args, outDir, selfPlay = null) {
   mkdirSync(outDir, { recursive: true });
   writeFileSync(
     path.join(outDir, "summary.json"),
-    JSON.stringify({ log: logFile, ...summary, ...extra }, null, 2) + "\n",
+    JSON.stringify({ log: logFile, ...summary, ...extra, ...(context ?? {}) }, null, 2) + "\n",
   );
-  console.log(report(summary, logFile));
+  console.log(report(summary, logFile, logLabel(text)));
+  if (context)
+    console.log(
+      `Measured: ${context.target === "packed" ? "a packed build" : "a debug run of the project (not the packed build)"}, ${context.cache} shader caches.`,
+    );
   for (const note of notes) console.log(note);
   console.log("Summary: " + path.join(outDir, "summary.json"));
   if (selfPlay && selfPlay.exit !== 0) return selfPlay.exit === 2 ? 2 : 1;
@@ -359,10 +413,12 @@ export function main(
   argv = process.argv.slice(2),
   env = process.env,
   out = outRoot,
+  platform = process.platform,
 ) {
   const args = parseArgs(argv);
   const outDir = path.join(out, stamp());
   if (args.log) return analyse(path.resolve(args.log), args, outDir);
+  if (captureMode(args, platform, env.PATH) === "engine") return engineCapture(args, env, outDir, platform);
 
   const mangohud = findOnPath("mangohud", env.PATH);
   if (!mangohud) {
@@ -389,6 +445,16 @@ export function main(
       ? { ...launch, stdio: ["inherit", "pipe", "inherit"], maxBuffer: 256 * 1024 * 1024, encoding: "utf8" }
       : { ...launch, stdio: "inherit" },
   );
+  return collect(
+    run,
+    args,
+    outDir,
+    `MangoHud wrote no log in ${outDir}. Quit before the log ended, or MangoHud did not attach. Run again and play past ${minutes} min.`,
+  );
+}
+
+// After the game closes, either capture: keep the self-play lines, then grade the run folder's log.
+function collect(run, args, outDir, noLogMessage, context = null) {
   if (run.error)
     throw new FrametimeError("could not launch: " + run.error.message);
   let selfPlay = null;
@@ -400,12 +466,44 @@ export function main(
   const logFile = newestLog(outDir);
   if (!logFile) {
     if (selfPlay) console.error(`self-play: game exit ${selfPlay.exit}${selfPlay.stalled ? ", stalled at stage " + selfPlay.stalled.stage : ""}`);
-    console.error(
-      `MangoHud wrote no log in ${outDir}. Quit before the log ended, or MangoHud did not attach. Run again and play past ${minutes} min.`,
-    );
+    console.error(noLogMessage);
     return 2;
   }
-  return analyse(logFile, args, outDir, selfPlay);
+  return analyse(logFile, args, outDir, selfPlay, context);
+}
+
+function engineCapture(args, env, outDir, platform) {
+  if (args.hud) throw new FrametimeError("--hud is MangoHud's overlay; the engine capture has none");
+  const godotBin = env.GODOT_BIN;
+  if (!args.exe && !(godotBin && existsSync(godotBin))) {
+    console.error("The engine capture needs GODOT_BIN set to the Godot 4.7.2 editor binary, or --exe=<a packed build's binary>.");
+    return 2;
+  }
+  if (args.exe && !existsSync(args.exe)) throw new FrametimeError("no build at --exe=" + args.exe);
+  const home = path.join(outDir, "home");
+  mkdirSync(home, { recursive: true });
+  const { command, argv, csv } = engineLaunch(args, { outDir, godotBin });
+  const minutes = Math.round(((args.warmup + args.seconds) / 60) * 10) / 10;
+  console.log(`Launching ${command} with the engine's frame log.`);
+  console.log(
+    `Logging starts ${args.warmup} s after launch and runs ${args.seconds} s. Play normally for about ${minutes} min, then quit.`,
+  );
+  // The game's user:// lives under this HOME on macOS (scripts/godot-home.mjs), never the player's.
+  const launch = { env: { ...env, ...userDataEnv(home, platform) } };
+  const run = spawnSync(
+    command,
+    argv,
+    args.selfPlay
+      ? { ...launch, stdio: ["inherit", "pipe", "inherit"], maxBuffer: 256 * 1024 * 1024, encoding: "utf8" }
+      : { ...launch, stdio: "inherit" },
+  );
+  return collect(
+    run,
+    args,
+    outDir,
+    `The game wrote no frame log at ${csv}. It closed before the log ended, or the build has no src/core/frame_log.gd. Run again and play past ${minutes} min.`,
+    engineContext(args, platform),
+  );
 }
 
 if (

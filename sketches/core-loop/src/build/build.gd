@@ -861,7 +861,9 @@ func _step_tread(delta: float) -> void:
 	_tread_hits = []
 	_own_strikes += 1
 	for hit in hits:
-		_strike(hit["enemy"], SYNERGY_KIND, hit["damage"])
+		# The strike that queued the bonus may have killed and freed the enemy before this step.
+		if is_instance_valid(hit["enemy"]):
+			_strike(hit["enemy"], SYNERGY_KIND, hit["damage"])
 	_own_strikes -= 1
 
 
