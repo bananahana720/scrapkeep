@@ -26,9 +26,16 @@ const T := preload("res://tests/support/t.gd")
 # this bot skips, a drop it never sees) is not judged; the whole tree is scanned every 30 ticks, so
 # what a stage builds counts whether or not the ball goes near it.
 
+# Receipt (scripts/gate/stand-ins-receipt.mjs, the world 1 done read's row no-code-stand-ins): the test ends with
+#   SUMMARY {"surfaces", "pinned", "stand_ins", "new", "stale", "plant"}
+# PRIM_PLANT=dam_box is the receipt's plant: the control box is judged as a real surface, a new code-built box the
+# pin does not cover, so the test must fail and name it. MIN_SURFACES is the least the run must count; fewer means
+# part of the world was not built.
+
 const SEED := 40317
 const PILOT := "pylon_engineer"
 const TIMEOUT_S := 840.0
+const MIN_SURFACES := 129  # measured on stage/alpha-w44 d313e95f3, 17 Nov 2026
 
 var _t := T.new("prim_census_test")
 
@@ -49,12 +56,13 @@ func _initialize() -> void:
 	_t.check("the bot played through Brindle into stage 3", log.contains("-> until at stage 3"), _tail(log))
 	var census := _rows(log)
 	var planted := census.filter(func(r): return String(r.shape).ends_with("/" + "PlantedStandIn"))
+	var plant := OS.get_environment("PRIM_PLANT")
 	var real: Array[Dictionary] = []
-	real.assign(census.filter(func(r): return not String(r.shape).ends_with("/PlantedStandIn")))
+	real.assign(census.filter(func(r): return plant == "dam_box" or not String(r.shape).ends_with("/PlantedStandIn")))
 	_t.check("control: the BoxMesh planted on a park activity is new to the pin",
 		planted.size() == 1 and PrimCensus.pin_for(planted[0], pin).is_empty(), "%d planted rows" % planted.size())
 	var verdict := PrimCensus.judge(real, pin)
-	_t.check("the census saw surfaces", real.size() > 50, "%d" % real.size())
+	_t.check("the census saw at least the pinned surfaces", real.size() >= MIN_SURFACES and real.size() > 50, "%d, pinned %d" % [real.size(), MIN_SURFACES])
 	_t.check("no primitive surface outside the pin", verdict.unlisted.is_empty(),
 		"%d new: %s" % [verdict.unlisted.size(), "; ".join(verdict.unlisted.slice(0, 8).map(PrimCensus.describe))])
 	_t.check("no stale stand-in row (its model landed: drop the row)", verdict.stale.is_empty(),
@@ -67,6 +75,10 @@ func _initialize() -> void:
 	for row in by_row:
 		print("[skip] %d stand-in surface(s) owed by %s" % [by_row[row], row])
 	print("prim census: %d surfaces, %d code, %d stand-in" % [real.size(), real.size() - verdict.stand_ins.size() - verdict.unlisted.size(), verdict.stand_ins.size()])
+	var brief := func(r): return {"file": r.owner, "mesh": r.mesh, "shape": r.shape, "row": r.get("row", ""), "path": r.get("path", ""), "stage": r.get("stage", 0)}
+	print("SUMMARY " + JSON.stringify({"surfaces": real.size(), "pinned": MIN_SURFACES, "stand_ins": verdict.stand_ins.map(brief),
+		"new": verdict.unlisted.map(brief), "stale": verdict.stale.map(func(p): return {"line": p.line, "file": p.owner, "mesh": p.mesh, "shape": p.shape, "row": p.row}),
+		"plant": plant}))
 	_remove_tree(out)
 	quit(_t.verdict())
 

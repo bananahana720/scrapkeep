@@ -594,7 +594,7 @@
       "label": "every generated model passes the render check",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "tools/model_render_check.gd, which has no pass line wired yet (wave 44)",
+      "producer": "node scripts/gate/model-render-receipt.mjs --out <dir>/models-render.json, on a clean checkout of the head: it judges the SUMMARY line of tools/model_render_check.gd's compare (all 6 enemy kinds pinned, none too dark beside the authored model) and a planted compare with RENDER_PLANT=dark_hooker that must fail the hooker. Not run yet: a shoot needs a graphics display and scripts/sketch-smoke.mjs is headless only, so the receipt fails with that reason until a display lane exists",
       "plant": "the rejected dark hooker body must fail",
       "basis": "ruling dr: each Tripo model is accepted on its own"
     },
@@ -605,7 +605,7 @@
       "label": "no code-built stand-in left in world 1",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "prim_census_test against tools/prim_census_pin.tsv, with the world 1 pin at zero (wave 44)",
+      "producer": "node scripts/gate/stand-ins-receipt.mjs --out <dir>/no-code-stand-ins.json, on a clean checkout of the head: it runs sketches/core-loop/tests/prim_census_test.gd alone through scripts/sketch-smoke.mjs, then again with PRIM_PLANT=dam_box, and passes only when the census counts at least 129 primitive surfaces with no new primitive, no stale pin row and no stand-in left except the W1-23 trade spot bodies ruled to wait (ruling ci), each one left named by file and BACKLOG row",
       "plant": "a new code-built box in the dam must fail",
       "basis": "STATE.md: zero placeholders; the pin holds 89 lines today"
     },

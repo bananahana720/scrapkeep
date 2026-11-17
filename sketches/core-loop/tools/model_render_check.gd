@@ -26,6 +26,11 @@ const Intent := preload("res://src/movement/intent.gd")
 # A kind fails when, in either view, the generated model is under FLOOR of the authored brightness or has
 # DARK_MORE more near-black pixels. Exit 2: a bad argument, no display for a shoot, or a kind that drew
 # fewer than MIN_PIXELS pixels (the check saw nothing, which is not a pass).
+# The compare step ends with one machine-readable line for scripts/gate/model-render-receipt.mjs:
+#   SUMMARY {"judged": <kinds in both shoots>, "pinned": <KINDS.size()>, "failed": [<kind>...], "plant": "<switch or empty>"}
+# Plant (the receipt's control): RENDER_PLANT=dark_hooker in a --models=tripo-all shoot paints every surface of
+# the hooker near-black, the fault of the rejected dark hooker body; the compare must fail the hooker. stats.json
+# records the switch, so a compare over a planted shoot names it, and an authored shoot refuses it.
 
 const SIZE := Vector2i(800, 600)
 const KINDS := ["chaser", "lobber", "swatter", "hooker", "netcaster", "boom_tender"]
@@ -35,8 +40,10 @@ const NEAR_BLACK := 0.08
 const FLOOR := 0.8
 const DARK_MORE := 0.15
 const MIN_PIXELS := 2000
+const PLANTS := ["dark_hooker"]
 
 var game
+var plant := OS.get_environment("RENDER_PLANT")
 var out := ""
 var compare := ""
 var kinds: Array = KINDS
@@ -67,6 +74,10 @@ func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(out)
 	if not compare.is_empty():
 		quit(_compare())
+		return
+	if not plant.is_empty() and (not plant in PLANTS or not "--models=tripo-all" in OS.get_cmdline_user_args()):
+		printerr("model_render_check: RENDER_PLANT=%s plants only in a --models=tripo-all shoot (known: %s)" % [plant, ", ".join(PLANTS)])
+		quit(2)
 		return
 	if DisplayServer.get_name() == "headless":
 		printerr("model_render_check: a shoot needs a display (headless gamescope on the PC)")
@@ -111,6 +122,12 @@ func _shoot() -> void:
 		await process_frame
 		paused = true
 		enemy.global_position = at
+		if plant == "dark_hooker" and kinds[i] == "hooker":
+			var black := StandardMaterial3D.new()
+			black.albedo_color = Color(0.02, 0.02, 0.02)
+			black.roughness = 1.0
+			for drawn: GeometryInstance3D in enemy.find_children("*", "GeometryInstance3D", true, false):
+				drawn.material_override = black
 		var views: Array = enemy.find_children("*", "MeshInstance3D", true, false)
 		var box := AABB()
 		var first := true
@@ -147,7 +164,7 @@ func _shoot() -> void:
 		paused = false
 		await process_frame
 	var file := FileAccess.open(out.path_join("stats.json"), FileAccess.WRITE)
-	file.store_string(JSON.stringify({"size": [SIZE.x, SIZE.y], "models": "tripo-all" if "--models=tripo-all" in OS.get_cmdline_user_args() else "authored", "kinds": stats}, "\t"))
+	file.store_string(JSON.stringify({"size": [SIZE.x, SIZE.y], "models": "tripo-all" if "--models=tripo-all" in OS.get_cmdline_user_args() else "authored", "plant": plant, "kinds": stats}, "\t"))
 	file.close()
 	if blind:
 		printerr("model_render_check: a kind drew under %d pixels, so nothing was judged" % MIN_PIXELS)
@@ -202,6 +219,7 @@ func _compare() -> int:
 		return 2
 	var failed := 0
 	var judged := 0
+	var failed_kinds: Array[String] = []
 	for kind in authored["kinds"]:
 		if not tripo["kinds"].has(kind):
 			continue
@@ -219,6 +237,8 @@ func _compare() -> int:
 			notes.append("view %d brightness %.2f of authored (%.3f, authored %.3f), near-black %.2f (authored %.2f)" % [v, ratio, t["brightness"], a["brightness"], t["near_black"], a["near_black"]])
 		judged += 1
 		failed += 0 if ok else 1
+		if not ok:
+			failed_kinds.append(kind)
 		print("%s %s: %s" % ["PASS" if ok else "FAIL", kind, "; ".join(notes)])
 		var left := Image.load_from_file(dirs[0].path_join("%s_0.png" % kind))
 		var right := Image.load_from_file(dirs[1].path_join("%s_0.png" % kind))
@@ -231,5 +251,7 @@ func _compare() -> int:
 	if judged == 0:
 		printerr("model_render_check: no kind is in both shoots")
 		return 2
+	var planted: String = str(tripo.get("plant", "")) + str(authored.get("plant", ""))
+	print("SUMMARY " + JSON.stringify({"judged": judged, "pinned": KINDS.size(), "failed": failed_kinds, "plant": planted}))
 	print("model_render_check: %s (%d kinds, at least %.2f of the authored brightness, at most %.2f more near-black)" % ["PASS" if failed == 0 else "FAIL (%d)" % failed, judged, FLOOR, DARK_MORE])
 	return 1 if failed > 0 else 0
