@@ -1134,16 +1134,18 @@ test("readings that start together never hold the machine at the same time", asy
   const script = `
     import { holdQuietSync } from ${JSON.stringify(new URL("./sketch-smoke.mjs", import.meta.url).href)};
     import { appendFileSync } from "node:fs";
-    const hold = holdQuietSync({ directory: process.argv[1], quietDirectory: process.argv[1], pollMs: 5, log: () => {} });
-    appendFileSync(process.argv[2], "in " + process.pid + "\\n");
+    const hold = holdQuietSync({ directory: process.argv[2], quietDirectory: process.argv[2], pollMs: 5, log: () => {} });
+    appendFileSync(process.argv[3], "in " + process.pid + "\\n");
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 40);
-    appendFileSync(process.argv[2], "out " + process.pid + "\\n");
+    appendFileSync(process.argv[3], "out " + process.pid + "\\n");
     hold.release();
   `;
   const journal = path.join(at.directory, "journal");
+  const child = path.join(at.directory, "reading.mjs");
+  writeFileSync(child, script);
   try {
     const exits = Array.from({ length: 6 }, () =>
-      once(spawn(process.execPath, ["--input-type=module", "-e", script, at.directory, journal], { stdio: "inherit" }), "exit"),
+      once(spawn(process.execPath, [child, at.directory, journal], { stdio: "inherit" }), "exit"),
     );
     for (const exit of await Promise.all(exits)) assert.deepEqual(exit, [0, null]);
     const lines = readFileSync(journal, "utf8").trim().split("\n");
