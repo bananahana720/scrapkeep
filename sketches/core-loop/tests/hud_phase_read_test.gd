@@ -392,9 +392,18 @@ func _pause_checks() -> void:
 		var label := "all twelve panels" if held.size() > 0 else "no panels"
 		# W1-46: the pilot's own shell turns in the view, never the grey stand-in sphere.
 		_t.check("R2 %s: the view wears the pilot's shell" % label, not read._worn.is_empty() and read._worn.core.is_inside_tree() and not read._ball.visible, str(read._worn.keys()))
+		var pilot: Node3D = read._worn.pod.get_node_or_null("AnimatedPilot")
+		_t.check("R2 %s: the pilot's model is in the shell" % label, pilot != null and pilot.scene_file_path.contains("pilot_"))
+		_t.check("R2 %s: the preview opens with the pilot facing the eye" % label, (-read._worn.pod.global_basis.z).dot(Vector3.BACK) > 0.9)
 		var cores: Array = read._pivot.get_children().filter(func(n): return n.name == "HeroCore" and not n.is_queued_for_deletion())
 		_t.eq("R2 %s: one shell, never a pile of them" % label, cores.size(), 1)
 		_t.eq("R1 %s: one stat line each" % label, read.lines.size(), maxi(1, held.size()))
+		if held.size() > 0 and _game.presentation.hero_assets.ball_look() == "cutaway":
+			var parts: Array = read.shell.find_children("*", "MultiMeshInstance3D", false, false)
+			_t.eq("R2 the grown preview wears the held panels", read.shell.shown_count(), _game.run.panels.size())
+			_t.check("R2 every panel leaves the same window as the shell", not parts.is_empty() and parts.all(func(part):
+				var material = part.multimesh.mesh.surface_get_material(0)
+				return material is ShaderMaterial and material.get_shader_parameter("held") == true))
 		for size in SIZES:
 			menu.lay_build(size)
 			var tag := "%dx%d %s" % [int(size.x), int(size.y), label]
