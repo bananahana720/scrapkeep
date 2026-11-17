@@ -1,7 +1,7 @@
 extends SceneTree
 
-## Compare first commitments on the flume kicker approach and the dam yard's drop arc.
-## Run with --script res://tools/spillway_crew_trial.gd -- --trial=stock|flank|lobber|boom|yard|arrivals
+## Compare live crew behavior at the flume kicker and dam yard.
+## Select stock, flank, lobber, boom, crossing, yard, yard-drive, arrivals, home, cover or motion.
 ## --out=/absolute/dir. Add --pictures in a drawn run to keep the 720p chase frames.
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -88,7 +88,7 @@ func _initialize() -> void:
 		if arg.begins_with("--out="):
 			out = arg.trim_prefix("--out=")
 	pictures = "--pictures" in OS.get_cmdline_user_args()
-	if trial not in ["stock", "flank", "lobber", "boom", "yard", "arrivals", "motion", "home", "crossing"] or out.is_empty() \
+	if trial not in ["stock", "flank", "lobber", "boom", "yard", "arrivals", "motion", "home", "crossing", "yard-drive", "cover"] or out.is_empty() \
 			or DirAccess.make_dir_recursive_absolute(out) != OK:
 		quit(2)
 		return
@@ -106,6 +106,10 @@ func _run() -> void:
 		if pictures:
 			await _arrival_stills()
 		game.free()
+	elif trial == "cover":
+		await _boot()
+		await _pier()
+		game.free()
 	elif trial == "home":
 		await _boot()
 		await _home_reveal()
@@ -121,12 +125,15 @@ func _run() -> void:
 		await _motion()
 		game.free()
 	else:
-		for approach in (["stock", "alternate"] if trial == "yard" else CASES):
+		var approaches := ["stock", "alternate"] if trial == "yard" else CASES
+		if trial == "yard-drive":
+			approaches = ["small", "grown", "turn"]
+		for approach in approaches:
 			if only_case != "" and approach != only_case:
 				continue
 			await _boot()
 			case_id = approach
-			if trial == "yard":
+			if trial in ["yard", "yard-drive"]:
 				await _yard(approach == "alternate")
 			else:
 				await _pass(approach)
@@ -157,7 +164,7 @@ func _boot() -> void:
 	game.flow.choose_class(0)
 	game.run.set_max_hp(99999)
 	game.presentation.juice.hit_stop_sink = func(_s): pass
-	if trial != "yard":
+	if trial not in ["yard", "yard-drive"]:
 		game.flow.enter_stage(2, Vector3.ZERO, false)
 	for i in (420 if pictures else 10):
 		await physics_frame
@@ -290,6 +297,7 @@ func _pass(approach: String) -> void:
 
 
 func _arrivals() -> void:
+	var lenses := {}
 	for seed_value in [1, 1, 17, 31]:
 		for aim in [UPPER, LOWER, SIPHON]:
 			var heading := KICKER.direction_to(aim)
@@ -299,6 +307,11 @@ func _arrivals() -> void:
 			game.camera.snap(ahead)
 			for i in 6:
 				await physics_frame
+			# A fresh camera eases up from entry. Freeze each real lens once so repeated
+			# geometry queries compare the same sightline even after turning the camera away.
+			if not lenses.has(aim):
+				lenses[aim] = game.camera.cam.global_transform
+			game.camera.cam.global_transform = lenses[aim]
 			for shift in [false, true]:
 				var d := Placement.new(seed_value)
 				d.author(ParkDefs.DEFS[1], ParkDefs)
@@ -335,7 +348,7 @@ func _yard(alternate: bool) -> void:
 	game.player.body().freeze = true
 	game.camera.snap(Vector3.BACK)
 	locks.set_physics_process(false)
-	locks.row = LockRows.row("park_dam")
+	locks.row = LockRows.row("park_dam").duplicate(true)
 	locks.lock_centre = _point(centre, 0)
 	locks._facing = PI / 2
 	var sentinel_start: Vector3 = game.flow.beacon.global_position - Vector3.BACK * 260.0
@@ -347,7 +360,6 @@ func _yard(alternate: bool) -> void:
 		await _shot("sentry")
 		rows.append({"order": case_id, "wave": "sentry", "kind": sentry.kind, "at": str(sentry.global_position)})
 		sentry.free()
-	game.player.reset_to(_point(centre - Vector2(0, 10), 1.1))
 	for wave in [0, 3, 4]:
 		var source: Array = locks.lock_row().waves[wave]
 		var kinds := source.duplicate()
@@ -362,20 +374,45 @@ func _yard(alternate: bool) -> void:
 		tell = false
 		tick = 0
 		var placement := []
-		for i in kinds.size():
-			var enemy = game.combat.spawn_enemy(kinds[i], spots[i])
-			enemy.set_meta("pack_seq", 901)
+		game.player.body().freeze = true
+		game.player.reset_to(_point(centre - Vector2(0, 10), 1.1))
+		locks.lock_row().waves[wave] = kinds
+		if pictures and wave > 0:
+			locks._wave = wave - 1
+			locks._wave_wait = float(locks.lock_row().wave_gap_s)
+			locks._mark_wave()
+			game.camera.snap((spots[spots.size()/2] - game.player.ball_position()).normalized())
+			await _shot("wave-%d-warning" % (wave + 1))
+		locks._wave = wave
+		locks._land_wave()
+		for enemy in locks.crew_alive():
 			_watch(enemy)
-			placement.append({"kind": kinds[i], "at": str(spots[i])})
+			placement.append({"kind": enemy.kind, "at": str(enemy.global_position), "pack": enemy.get_meta("pack_seq")})
 		game.camera.snap((spots[spots.size()/2] - game.player.ball_position()).normalized())
 		await _shot("wave-%d-land" % (wave + 1))
+		if trial == "yard-drive":
+			game.combat.heft_override = 4.0 if case_id == "grown" else 1.0
+			game.player.heft_of = func(): return game.combat.heft_override
+			var along: Vector3 = (spots[0] - game.player.ball_position()).slide(Vector3.UP).normalized()
+			game.player.body().freeze = false
+			game.player.reset_to(game.player.ball_position(), along * 25)
+			game.camera.snap(along)
+			game.player.source.hold = {"move": Vector2(0, 1)}
+		var hp: float = game.run.hp
+		var first_clear_tick := -1
 		for i in 450:
 			tick = i
+			if case_id == "turn" and tell:
+				game.player.source.hold = {"move": Vector2(1, 0)}
 			await physics_frame
+			if first_clear_tick < 0 and locks.crew_alive().is_empty():
+				first_clear_tick = i
 			if i in [70, 326]:
 				await _shot("wave-%d-%d" % [wave + 1, i])
 		rows.append({"order": case_id, "wave": wave + 1, "members": placement,
-			"events": events, "survivors_5s": observed.filter(func(r): return is_instance_valid(r.get_ref())).size()})
+			"events": events, "first_clear_tick": first_clear_tick, "lost_hp": hp - game.run.hp,
+			"exit_speed": game.player.planar_velocity().length(), "exit": str(game.player.ball_position()),
+			"survivors_5s": locks.crew_alive().size()})
 		for ref in observed:
 			var unit = ref.get_ref()
 			if is_instance_valid(unit):
@@ -414,6 +451,10 @@ func _motion() -> void:
 		await _shot(phase)
 		if phase in ["windup", "lunge"] and pictures:
 			var original := camera.global_transform
+			var original_projection := camera.projection
+			var original_size := camera.size
+			camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+			camera.size = 5.0
 			var overlays := root.find_children("*", "CanvasLayer", true, false).filter(func(layer): return layer.visible)
 			for layer in overlays:
 				layer.visible = false
@@ -425,6 +466,8 @@ func _motion() -> void:
 				for j in 3:
 					await RenderingServer.frame_post_draw
 				root.get_texture().get_image().save_jpg(out.path_join("motion-%s-%s.jpg" % [phase, view[0]]), 0.9)
+			camera.projection = original_projection
+			camera.size = original_size
 			camera.global_transform = original
 			for layer in overlays:
 				layer.visible = true
@@ -554,3 +597,48 @@ func _arrival_stills() -> void:
 			if is_instance_valid(member):
 				member.queue_free()
 		await physics_frame
+
+
+# Search the actual player lens for a line where the runout pier covers part of the
+# machine. Report which of five shoulder-to-shoulder rays hit the pier on that frame.
+func _pier() -> void:
+	var pier := Vector2(12, 260)
+	for kind in ["chaser", "lobber"]:
+		var found := false
+		for angle in [0.0, PI / 2, PI, -PI / 2]:
+			var along := Vector2.UP.rotated(angle)
+			var side := along.orthogonal()
+			var player_xz := pier - along * 15
+			game.player.body().freeze = true
+			game.player.reset_to(_point(player_xz, 1.25))
+			game.camera.snap(Vector3(along.x, 0, along.y))
+			await physics_frame
+			var cam: Camera3D = game.camera.cam
+			for n in range(-40, 41):
+				var at := pier + along * 5 + side * n * 0.3
+				var eye := _point(at, 1.45)
+				var covered := []
+				var clear := 0
+				for span in [-1.2, -0.6, 0.0, 0.6, 1.2]:
+					var target: Vector3 = eye + Vector3(side.x, 0, side.y) * float(span)
+					var ray := PhysicsRayQueryParameters3D.create(cam.global_position, target, 1)
+					var hit := cam.get_world_3d().direct_space_state.intersect_ray(ray)
+					if hit.is_empty():
+						clear += 1
+					elif "siphon_runout_pier" in str(hit.collider.get_path()).to_lower():
+						covered.append(span)
+				if covered.is_empty() or clear == 0 or not cam.is_position_in_frustum(eye):
+					continue
+				var enemy = game.combat.spawn_enemy(kind, _point(at, 1.5))
+				await physics_frame
+				case_id = kind
+				await _shot("pier")
+				rows.append({"kind":kind, "map":"park_flume", "pier":"siphon_runout_pier",
+					"eye":str(eye), "lens":str(cam.global_position), "covered_rays":covered, "clear_rays":clear})
+				enemy.free()
+				found = true
+				break
+			if found:
+				break
+		if not found:
+			rows.append({"kind":kind, "matched":false})

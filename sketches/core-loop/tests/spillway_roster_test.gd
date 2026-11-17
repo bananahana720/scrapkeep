@@ -229,10 +229,17 @@ func _boom() -> void:
 	var bowl := _boom_live(SpeedTier.FAST)
 	bowl.popped = [false, false, false, false, false]
 	bowl._pops_live = 0
+	var pieces_before: int = _game.build.scrap.count()
 	for i in bowl.FLOAT_OUT.size():
 		bowl._bowl_through(bowl.float_position(i))
 	_t.eq("five floats in one pass is a strike", [bowl.popped, bowl.strikes], [[true, true, true, true, true], 1])
 	_t.check("the strike discovers its codex entry", _combat.discovered.has("boom_strike"), str(_combat.discovered.keys()))
+	var first_payout: int = _game.build.scrap.count() - pieces_before
+	_t.eq("the five float pops each pay one piece", first_payout, 5)
+	for i in bowl.FLOAT_OUT.size():
+		bowl._bowl_through(bowl.float_position(i))
+	_t.eq("the same spent line pays nothing on a return crossing",
+		[_game.build.scrap.count() - pieces_before, bowl.strikes], [5, 1])
 	bowl.queue_free()
 
 
