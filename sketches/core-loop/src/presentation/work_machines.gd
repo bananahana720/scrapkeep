@@ -1,5 +1,7 @@
 extends Node3D
 
+const AmbientKinds := preload("res://src/core/ambient_kinds.gd")
+const AmbientLife := preload("res://src/presentation/ambient_life.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
@@ -24,6 +26,7 @@ const SWAY_MAX := 0.25
 const TALLY_CLERK := "res://assets/models/world_one/works_tally_clerk.glb"
 const TALLY_RANGE_M := 130.0
 const TALLY_FADE_S := 0.35
+const TALLY_SENSE_S := 0.1
 
 # The conveyor's buckets ride a MultiMesh each way, built from the GLB's CupFull and CupEmpty.
 const CONVEYOR := {
@@ -309,7 +312,8 @@ func _build_tally(machine: Node3D, row: Dictionary, ground: Callable) -> Diction
 		view.visibility_range_end = TALLY_RANGE_M
 		view.transparency = 1.0
 	station.hide()
-	return {"root": station, "arm": arm, "die": die, "rest_y": die.position.y, "views": views, "alpha": 0.0}
+	return {"root": station, "arm": arm, "die": die, "rest_y": die.position.y, "views": views,
+		"alpha": 0.0, "sense_left": 0.0, "combat_near": false}
 
 
 # A conveyor's two runs of buckets: one MultiMesh per run from the GLB's CupFull and CupEmpty, which
@@ -398,18 +402,35 @@ static func tally_press(t: float) -> float:
 
 func _pose_tally(tally: Dictionary, time: float, delta: float) -> void:
 	var spec: Dictionary = GraphicsPreset.PRESETS[GraphicsPreset.current]
-	var show_clerk: bool = spec.get("set_dressing", false) and ctx.flow.in_play() and not ctx.flow.boss_active and not _tally_sheltered
+	var open: bool = spec.get("set_dressing", false) and ctx.flow.in_play() and not ctx.flow.boss_active and not _tally_sheltered
+	if open:
+		tally.sense_left -= delta
+		if float(tally.sense_left) <= 0.0:
+			tally.sense_left = TALLY_SENSE_S
+			tally.combat_near = _combat_near(tally.root.global_position)
+	else:
+		tally.sense_left = 0.0
+	var show_clerk: bool = open and not tally.combat_near
 	var alpha := move_toward(float(tally.alpha), 1.0 if show_clerk else 0.0, delta / TALLY_FADE_S)
 	if alpha != float(tally.alpha):
 		tally.alpha = alpha
 		tally.root.visible = alpha > 0.0
 		for view: MeshInstance3D in tally.views:
 			view.transparency = 1.0 - alpha
-	if not tally.root.visible:
+	if not tally.root.visible or not show_clerk:
 		return
 	var press := tally_press(time) if EnemyMotion.motion_scale > 0.0 else 1.0
 	tally.arm.rotation.x = -0.35 * press
 	tally.die.position.y = tally.rest_y - 0.165 * press
+
+
+func _combat_near(at: Vector3) -> bool:
+	var threats := AmbientLife.threat_positions(get_tree())
+	var flat := Vector2(at.x, at.z)
+	for point: Vector3 in threats.threats:
+		if flat.distance_squared_to(Vector2(point.x, point.z)) <= AmbientKinds.COMBAT_M * AmbientKinds.COMBAT_M:
+			return true
+	return false
 
 
 # Each bucket sits spacing_m behind the next: up the carrying run loaded, back down under it empty.

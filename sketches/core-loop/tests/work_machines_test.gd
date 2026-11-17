@@ -380,6 +380,28 @@ func _tally_view(view: Node3D, ctx: FakeCtx, stage: int) -> void:
 	for i in 4:
 		view._process(0.1)
 	_t.check("the clerk fades in on High", station.visible and is_equal_approx(tally.alpha, 1.0))
+	var foe := Node3D.new()
+	root.add_child(foe)
+	foe.add_to_group("enemy")
+	foe.global_position = at + Vector3.RIGHT * 31.0
+	view._process(0.1)
+	_t.check("a distant enemy leaves the clerk at work", station.visible and is_equal_approx(tally.alpha, 1.0))
+	foe.global_position = at + Vector3.RIGHT * 29.0
+	view._process(0.1)
+	_t.check("a nearby enemy starts a fade", station.visible and float(tally.alpha) < 1.0)
+	for i in 4:
+		view._process(0.1)
+	_t.check("the clerk stays hidden beside the enemy", not station.visible)
+	foe.remove_from_group("enemy")
+	foe.add_to_group("telegraph")
+	view._process(0.1)
+	_t.check("a nearby live telegraph keeps the clerk hidden", not station.visible)
+	foe.free()
+	view._process(0.1)
+	_t.check("the quiet return starts with a fade", station.visible and float(tally.alpha) < 1.0)
+	for i in 4:
+		view._process(0.1)
+	_t.check("the clerk returns when the site is quiet", station.visible and is_equal_approx(tally.alpha, 1.0))
 	var before: float = tally.rest_y
 	machine.t = 7.2
 	view._process(0.0)

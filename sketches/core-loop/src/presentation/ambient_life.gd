@@ -212,20 +212,25 @@ func _tick(dt: float) -> void:
 			_voice(m, "react")
 
 
-func _gather() -> Dictionary:
+static func threat_positions(tree: SceneTree) -> Dictionary:
 	var threats: Array = []
 	var telegraphs: Array = []
-	for e in get_tree().get_nodes_in_group("enemy"):
+	for e in tree.get_nodes_in_group("enemy"):
 		if is_instance_valid(e) and e is Node3D and not (e.has_method("is_dead") and e.is_dead()):
 			threats.append(e.global_position)
-	for g in get_tree().get_nodes_in_group("telegraph"):
+	for g in tree.get_nodes_in_group("telegraph"):
 		if is_instance_valid(g) and g is Node3D and g.is_visible_in_tree():
 			var at: Vector3 = g.center if "center" in g else g.global_position
 			telegraphs.append(at)
 			threats.append(at)
+	return {"threats": threats, "telegraphs": telegraphs}
+
+
+func _gather() -> Dictionary:
+	var nearby := threat_positions(get_tree())
 	var ground := _ground
 	return {
-		"player": ctx.player.shown_position(), "threats": threats, "telegraphs": telegraphs,
+		"player": ctx.player.shown_position(), "threats": nearby.threats, "telegraphs": nearby.telegraphs,
 		"boss": _latched or ctx.flow.boss_active or not _active, "reduced": EnemyMotion.motion_scale == 0.0,
 		"ground": func(x: float, z: float) -> float: return (ground.call(x, z, 0.0) as Vector3).y,
 	}

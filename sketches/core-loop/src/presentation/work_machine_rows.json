@@ -55,7 +55,7 @@
     ],
     "yaw_deg": 0.0,
     "phase_s": 17.0,
-    "tally": {"offset": [-23.0, -4.0], "yaw_deg": 115.0}
+    "tally": {"offset": [-23.0, -8.0], "yaw_deg": 115.0}
    },
    {
     "id": "bench_batch_conveyor",
