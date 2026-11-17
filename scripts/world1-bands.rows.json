@@ -462,8 +462,8 @@
       "label": "the same seed plays the same run whatever order contacts arrive in",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: every arrival order of up to four same-tick contacts on the real code (wave 43)",
-      "plant": "the contact sort removed must make two orders part",
+      "producer": "node scripts/gate/contact-orders-receipt.mjs --out <dir>/same-seed-same-run.json, on a clean checkout of the head (it takes the head from git): it runs sketches/core-loop/tests/contact_orders_all_test.gd alone through scripts/sketch-smoke.mjs, every arrival order of five sets of up to four same-tick contacts on the real code, each on a fresh game (62 orders, pinned); a set whose orders end in different states fails it, named. Touches take effect together at the first body_entered of a tick (src/movement/rigid_ball.gd:353-362), so no hit, pickup or hazard can land between two of them. Faked: the physics server for one tick, every contact new, the state read before the next tick, and calm on, so a hit skips its knock. Not claimed: a pickup with any damage in the same tick, whose end state depends on which lands first (a design call waiting on Andrew)",
+      "plant": "the contact sort bypassed (CONTACT_PLANT=nosort, a test-only switch) must make the test fail",
       "basis": "plan track V3, check F-C; LESSONS 71 and pull request 1027"
     },
     {
@@ -514,11 +514,11 @@
       "id": "core-feel-tests",
       "area": "Core feel",
       "source": "receipt",
-      "label": "hit-stop, juice budget and launch speed hold with no carried flake",
+      "label": "hit-stop, juice budget and the ball's shove and slam tests hold with no carried flake",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: the six core feel tests alone on a quiet PC, three runs each (wave 42)",
-      "plant": "a hit-stop of zero ticks must fail",
+      "producer": "node scripts/gate/core-feel-receipt.mjs --out <dir>/core-feel-tests.json, on a clean checkout of the head (it takes the head from git): it runs the six core feel tests KNOWN-FAILING.tsv carries as load flakes (hit_stop_ticks, presentation_hitstop, presentation_juice, juice_budget, kite_dive_stack, harpoon_canon) alone through scripts/sketch-smoke.mjs with one slot, three runs each, refusing a machine whose 1-minute load is above a quarter of its threads; it needs 18 passes in 18 and no flake or red row for any of the six. Quiet solo passes do not clear a row: it comes off after two full gates in a row pass the test, or with a fix for its load fault (GATE.md). Launch speed is not in this row; world_launch_test checks it",
+      "plant": "a hit-stop of zero ticks (hit_stop_ticks_test with FEEL_PLANT=zero_stop, a test-only switch) must fail",
       "basis": "KNOWN-FAILING.tsv carries six core feel flakes that only fail under load"
     },
     {
