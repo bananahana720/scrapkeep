@@ -154,7 +154,7 @@ func _lines(text: String, prefix: String) -> Array:
 
 # The stage of the run saved in the leg's folder, 0 when there is none (no file, or an ended run's empty one).
 func _saved_stage(data: String) -> int:
-	var apps := data.path_join("godot/app_userdata")
+	var apps := ChildRuns.userdata_root(data)
 	for app in DirAccess.get_directories_at(apps):
 		var doc = JSON.parse_string(FileAccess.get_file_as_string(apps.path_join(app).path_join("self-play-session/run.json")))
 		if doc is Dictionary and doc.get("run") is Dictionary:

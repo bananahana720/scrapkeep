@@ -246,7 +246,7 @@ func _errors(text: String) -> Array:
 
 
 func _saved(data: String) -> bool:
-	var apps := data.path_join("godot/app_userdata")
+	var apps := ChildRuns.userdata_root(data)
 	for app in DirAccess.get_directories_at(apps):
 		var userdata := apps.path_join(app)
 		for dir in DirAccess.get_directories_at(userdata):

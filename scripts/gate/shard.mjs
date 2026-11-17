@@ -31,7 +31,7 @@ import { LEDGER_FILE, TIME_OUT, judgeFailures, parseLedger, uncoveredChecks } fr
 import { WEEKLY_FILE, weeklyNames as readWeeklyNames } from "./weekly.mjs";
 
 export { WEEKLY_FILE, WEEKLY_HEADER, parseWeekly } from "./weekly.mjs";
-import { IMPORT_TRIES, failingLines, importTry, isBot, scriptErrorCount, testScripts, testTimeoutMs, timeScale } from "../sketch-smoke.mjs";
+import { IMPORT_TRIES, failingLines, importTry, isBot, scriptErrorCount, testScripts, testTimeoutMs, timeScale, withoutTeardownNoise } from "../sketch-smoke.mjs";
 import { writeImportStamp } from "../import-stamp.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -211,7 +211,8 @@ export function failedChecks(text) {
 // run passed or failed another way (ruling dx: a retry never decides a verdict). A passing run is not read. An
 // error line is one at the start of a line, as the runner counts it (sketch-smoke.mjs); a passing check line
 // that carries the words "-> FAIL" is not a failing check.
-export function whatFailed(runs) {
+// On macOS the engine's shutdown lines are not error lines, as in the runner (withoutTeardownNoise).
+export function whatFailed(runs, platform = process.platform) {
   const failed = runs.filter((run) => !run.ok);
   const labels = [];
   for (const run of failed) {
@@ -220,7 +221,7 @@ export function whatFailed(runs) {
   return {
     labels,
     timedOut: failed.some((run) => run.timedOut),
-    errorLine: failed.some((run) => run.text !== null && /^(?:SCRIPT ERROR|ERROR)\b/m.test(run.text)),
+    errorLine: failed.some((run) => run.text !== null && /^(?:SCRIPT ERROR|ERROR)\b/m.test(withoutTeardownNoise(run.text, platform))),
   };
 }
 

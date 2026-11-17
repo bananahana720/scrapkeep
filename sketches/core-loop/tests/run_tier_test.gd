@@ -7,6 +7,7 @@ extends SceneTree
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const T := preload("res://tests/support/t.gd")
 const Director := preload("res://src/world/director.gd")
+const ChallengeDials := preload("res://src/core/challenge_dials.gd")
 const Park := preload("res://src/core/park_defs.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
@@ -274,7 +275,9 @@ func _component(seed_value: int, tier_value: int) -> Dictionary:
 			# The stage's last clock tier (mobs.clock_tiers_by_stage: +3 on world 1 since wave 37, +2 elsewhere).
 			var last_tier := Director.clock_tiers(d.dial_stage)
 			var cap_expected := mini(Director.HARD_CAP, roundi((6 + 2 * last_tier) * row.threat * row.pressure.pack_scale * config.cap_weight))
-			var interval_expected := maxf(Director.MIN_INTERVAL, (Director.BASE_INTERVAL - 0.7 * last_tier) / row.threat * row.pressure.interval_scale * config.interval_weight)
+			# The stage's own pace dial (mobs.interval_scale_by_stage: the flume's 0.7 since W1-31, 1 elsewhere).
+			var stage_pace := ChallengeDials.by_stage("mobs.interval_scale_by_stage", d.dial_stage)
+			var interval_expected := maxf(Director.MIN_INTERVAL, (Director.BASE_INTERVAL - 0.7 * last_tier) / row.threat * row.pressure.interval_scale * stage_pace * config.interval_weight)
 			t.eq("independent cap seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.cap, cap_expected)
 			t.near("independent interval seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.interval, interval_expected)
 			# Ruling al: no tier raises enemy health.

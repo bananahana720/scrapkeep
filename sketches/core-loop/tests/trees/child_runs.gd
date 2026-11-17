@@ -45,6 +45,22 @@ static func run(jobs: Array, timeout_s: float, parallel := 0) -> Array:
 	return out
 
 
+# The env words that give a launched child its own data, config and cache under `home`. Godot on macOS
+# ignores XDG_DATA_HOME and keeps user:// under $HOME/Library/Application Support, so there HOME moves
+# to the data folder too; without it every child shares the test's own save folder.
+static func home_env(home: String) -> Array:
+	var env := ["XDG_DATA_HOME=" + home.path_join("data"), "XDG_CONFIG_HOME=" + home.path_join("config"),
+		"XDG_CACHE_HOME=" + home.path_join("cache")]
+	if OS.get_name() == "macOS":
+		env.append("HOME=" + home.path_join("data"))
+	return env
+
+
+# The folder inside a child's data folder that holds one folder per project (the child's user://).
+static func userdata_root(data: String) -> String:
+	return data.path_join("Library/Application Support/Godot/app_userdata" if OS.get_name() == "macOS" else "godot/app_userdata")
+
+
 # Launches the game itself (the main scene, no --script) once a job, at most `parallel` at a time, each
 # with its own XDG data, config and cache under `base` and its own log, as a player's install has. A job
 # is {name, args}; args follow "--" (the game's launch flags). Returns one {code, timed_out, seconds,
@@ -83,8 +99,7 @@ static func run_launched(jobs: Array, base: String, timeout_s: float, parallel: 
 				r["done"] = true
 				continue
 			var home: String = r["home"]
-			var args: Array = ["XDG_DATA_HOME=" + home.path_join("data"), "XDG_CONFIG_HOME=" + home.path_join("config"),
-				"XDG_CACHE_HOME=" + home.path_join("cache"), OS.get_executable_path(), "--headless", "--fixed-fps", "90",
+			var args: Array = home_env(home) + [OS.get_executable_path(), "--headless", "--fixed-fps", "90",
 				"--log-file", r["log"], "--path", project, "--"] + r["args"]
 			r["pid"] = OS.create_process("env", PackedStringArray(args))
 			r["start"] = Time.get_ticks_msec()

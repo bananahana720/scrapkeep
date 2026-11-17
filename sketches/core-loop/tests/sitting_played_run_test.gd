@@ -2,6 +2,7 @@
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
+const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const Profile := preload("res://src/core/profile.gd")
 
 # The launch Andrew plays, --profile=sitting-earned (six loops on: heat, overtime, called shot, marked
@@ -157,9 +158,8 @@ func _start(save: String, extra: Array) -> Dictionary:
 	for dir in ["data", "config", "cache"]:
 		DirAccess.make_dir_recursive_absolute(base.path_join(dir))
 	var out := base.path_join("out.txt")
-	var args := ["-c", "out=$1; shift; \"$@\" > \"$out\" 2>&1; echo $? > \"$out.code\"", "sh", out, "env",
-		"XDG_DATA_HOME=" + base.path_join("data"), "XDG_CONFIG_HOME=" + base.path_join("config"),
-		"XDG_CACHE_HOME=" + base.path_join("cache"), OS.get_executable_path(),
+	var args: Array = ["-c", "out=$1; shift; \"$@\" > \"$out\" 2>&1; echo $? > \"$out.code\"", "sh", out, "env"]
+	args += ChildRuns.home_env(base) + [OS.get_executable_path(),
 		"--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--",
 		"--self-play", "--self-play-until=win", "--self-play-hold=1", "--self-play-save=" + save, "--self-play-seed=%d" % SEED, "--profile=sitting-earned"]
 	args.append_array(extra)
@@ -170,7 +170,7 @@ func _start(save: String, extra: Array) -> Dictionary:
 func _finish(child: Dictionary) -> Dictionary:
 	var code := int(FileAccess.get_file_as_string(child["out"] + ".code").strip_edges())
 	var folder := ""
-	var apps: String = child["base"].path_join("data/godot/app_userdata")
+	var apps: String = ChildRuns.userdata_root(child["base"].path_join("data"))
 	for dir in DirAccess.get_directories_at(apps):
 		folder = apps.path_join(dir).path_join("self-play-" + child["save"])
 	var last := {}
