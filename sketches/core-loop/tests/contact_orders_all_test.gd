@@ -1,4 +1,4 @@
-# smoke: timeout=330s
+# smoke: timeout=360s (124 orders, each on a fresh game: 283 s alone on a quiet Mac Studio, 17 Nov)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -13,20 +13,30 @@ const ClassDef := preload("res://src/core/class_def.gd")
 # Contacts are of two sorts:
 # - A touch (an enemy the ball meets): listed to the real RigidBall._note_enemies through a fake
 #   physics state in arrival order, then told through the real _on_body_entered, so the game's
-#   own sort (Contact.meets_first) is what is under test.
+#   own sort (Contact.meets_first) is what is under test. Two delivery modes:
+#   block        the server step (_note_enemies) and every touch's body_entered at the first
+#                touch's place in the order;
+#   interleaved  the server step at the start of the tick, then each touch's body_entered at its
+#                own place, so a hit, pickup or hazard lands between two touches, and between the
+#                server step and the first body_entered (MG-14, W1-120).
 # - A direct fact (an enemy's hit on the hull, a pickup, a hazard): applied through the public
 #   door the game uses for it, at its place in the arrival order.
 # Events are compared as a multiset: the game promises no order between independent facts, and
 # the touches' own order is already pinned by the state they leave. Whether the raw event lists
 # also agree is printed as a note.
 # Planted control: the same sets with the sort bypassed (touches told in arrival order) must
-# show an order-dependent state, or the comparison proves nothing.
+# show an order-dependent state, or the comparison proves nothing. CONTACT_PLANT=nosort (a test-only
+# switch; the game is untouched) runs the control sets through the "same state" checks with the sort
+# bypassed, so the test itself must fail: scripts/gate/contact-orders-receipt.mjs requires that.
+# Not claimed: a pickup and a hazard in one tick (KNOWN_PAIR) end in a state that depends on which
+# lands first. Whether a same-tick pickup always lands first is a design call waiting on Andrew.
 # Evidence limit: the physics server is faked, so this shows the game's rules agree; it does
 # not show what a real server lists.
 
 const SEED := 4301
-# 2 + 6 + 6 + 24 + 24 over SETS: a fixed count, so the check cannot agree with itself.
-const ORDERS_EXPECTED := 62
+# (2 + 6 + 6 + 24 + 24 over SETS) in each of MODES: a fixed count, so the check cannot agree with itself.
+const ORDERS_EXPECTED := 124
+const MODES := ["block", "interleaved"]
 
 # Each set is a list of contact kinds. Touches: heavy (rebounds the ball), kill (a ram that
 # kills), soft (a ram that does not kill), stomp (a drop onto an enemy below). Direct: hit,
@@ -69,6 +79,7 @@ var _failures := 0
 var _runs := 0
 var _tags := {}
 var _noise := {}
+var _plant := OS.get_environment("CONTACT_PLANT") == "nosort"
 
 
 func _check(label: String, ok: bool, detail: String) -> void:
@@ -259,9 +270,10 @@ func _snapshot(game: Node, made: Array, log: Array) -> Dictionary:
 	return {"state": out, "events_in_order": lines}
 
 
-# One fresh game, one arrival order. `bypass` plants the control: touches told in arrival order
-# with no sort.
-func _order(set: Array, order: Array, bypass: bool) -> Dictionary:
+# One fresh game, one arrival order. mode is "block", "interleaved" (see the top) or "bypass", the
+# planted control: touches told in arrival order with no sort.
+func _order(set: Array, order: Array, mode: String) -> Dictionary:
+	var bypass := mode == "bypass"
 	var game := await _boot()
 	var made := _place(game, set, SEED)
 	var player = game.player
@@ -288,11 +300,17 @@ func _order(set: Array, order: Array, bypass: bool) -> Dictionary:
 	if not bypass:
 		ball.enemy_touched.connect(func(_enemy, _normal): reported[0] += 1)
 	var told := false
+	if mode == "interleaved" and not touches.is_empty():
+		ball.call("_note_enemies", fake)
 	for slot in order:
 		match set[slot]:
 			"heavy", "kill", "soft", "stomp":
 				if bypass:
 					player.touch_body(made[slot])
+				elif mode == "interleaved":
+					# A body freed earlier in the tick sends no body_entered.
+					if is_instance_valid(made[slot]):
+						ball.call("_on_body_entered", made[slot])
 				elif not told:
 					told = true
 					ball.call("_note_enemies", fake)
@@ -327,7 +345,8 @@ func _diff(a: Dictionary, b: Dictionary) -> Array:
 
 
 # Every order of `set` against the first; returns how many orders ran and the findings.
-func _all_orders(set: Array, bypass: bool, noise: Dictionary) -> Dictionary:
+func _all_orders(set: Array, mode: String, noise: Dictionary) -> Dictionary:
+	var bypass := mode == "bypass"
 	var indexes := []
 	for i in set.size():
 		indexes.append(i)
@@ -337,7 +356,7 @@ func _all_orders(set: Array, bypass: bool, noise: Dictionary) -> Dictionary:
 	var list_differs := 0
 	var ran := 0
 	for order in orders:
-		var snap := await _order(set, order, bypass)
+		var snap := await _order(set, order, mode)
 		ran += 1
 		_runs += 1
 		if not bypass and snap["reported"] != snap["touches"]:
@@ -357,42 +376,62 @@ func _run() -> void:
 	# Noise: keys that differ between two games run through the SAME order (ids, clocks).
 	var probe_set: Array = SETS[3]
 	var probe_order := [0, 1, 2, 3]
-	var a := await _order(probe_set, probe_order, false)
-	var b := await _order(probe_set, probe_order, false)
+	var a := await _order(probe_set, probe_order, "block")
+	var b := await _order(probe_set, probe_order, "block")
 	var noise := RENDER_ONLY.duplicate()
 	for row in _diff(a["state"], b["state"]):
 		noise[row.split(":")[0]] = true
 	print("same order twice: %d keys differ between fresh games and are left out: %s" % [noise.size(), str(noise.keys())])
 	_check("determinism: same order twice, state keys compared", a["state"].size() > 100 and noise.size() <= 8, "%d keys, %d noisy" % [a["state"].size(), noise.size()])
 
+	if _plant:
+		# The planted fault: the sort bypassed on the checks that carry the claim. They must fail.
+		var planted_differ := 0
+		for set in CONTROL_SETS:
+			var result := await _all_orders(set, "bypass", noise)
+			planted_differ += result["findings"].size()
+			_same_state_check("planted no sort", set, result)
+		print("PLANT %s" % JSON.stringify({"switch": "CONTACT_PLANT=nosort", "sets": CONTROL_SETS.size(), "orders_differ": planted_differ}))
+		print("contact_orders_all_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+		quit(1 if _failures > 0 else 0)
+		return
+
 	var total_expected := 0
 	var total_ran := 0
-	for set in SETS:
-		var result := await _all_orders(set, false, noise)
-		total_expected += result["expected"]
-		total_ran += result["ran"]
-		var detail := "%d orders ran, %d differ from the first" % [result["ran"], result["findings"].size()]
-		if not result["findings"].is_empty():
-			var worst: Array = result["findings"][0]
-			detail += "; first differing order %s, fields: %s" % [str(worst[0]), str(worst[1].slice(0, 6))]
-		_check("same state: " + "+".join(set), result["findings"].is_empty() and result["ran"] == result["expected"], detail)
-		print("note: %s event lists in raw order differ in %d of %d orders" % ["+".join(set), result["list_differs"], result["ran"]])
-	_check("orders ran", total_ran == ORDERS_EXPECTED and total_expected == ORDERS_EXPECTED, "%d orders of %d expected (2+6+24 per set)" % [total_ran, total_expected])
+	var differ := 0
+	for mode in MODES:
+		for set in SETS:
+			var result := await _all_orders(set, mode, noise)
+			total_expected += result["expected"]
+			total_ran += result["ran"]
+			differ += result["findings"].size()
+			_same_state_check(mode, set, result)
+			print("note: %s %s event lists in raw order differ in %d of %d orders" % [mode, "+".join(set), result["list_differs"], result["ran"]])
+	_check("orders ran", total_ran == ORDERS_EXPECTED and total_expected == ORDERS_EXPECTED, "%d orders of %d expected (2+6+6+24+24 per mode, %d modes)" % [total_ran, ORDERS_EXPECTED, MODES.size()])
 
 	# Planted control: no sort. At least one set must show an order-dependent state.
 	var control_hits := 0
 	var control_ran := 0
 	for set in CONTROL_SETS:
-		var result := await _all_orders(set, true, noise)
+		var result := await _all_orders(set, "bypass", noise)
 		control_ran += result["ran"]
 		control_hits += result["findings"].size()
 		print("control (no sort) %s: %d of %d orders differ; e.g. %s" % ["+".join(set), result["findings"].size(), result["ran"], str(result["findings"][0] if not result["findings"].is_empty() else [])])
 	_check("planted control fails the comparison", control_ran > 0 and control_hits > 0, "%d of %d unsorted orders differ" % [control_hits, control_ran])
 
 	# A real, documented dependence the comparison must be able to see.
-	var known := await _all_orders(KNOWN_PAIR, false, noise)
+	var known := await _all_orders(KNOWN_PAIR, "block", noise)
 	var named: String = known["findings"][0][1][0] if not known["findings"].is_empty() else "none"
 	_check("known dependence seen: pickup then hazard", known["ran"] == 2 and not known["findings"].is_empty() and str(known["findings"][0][1]).contains("run.hp"), "differs in %s" % named.left(80))
 
+	print("SUMMARY %s" % JSON.stringify({"orders": total_ran, "pinned": ORDERS_EXPECTED, "modes": MODES, "sets": SETS.size(), "differ": differ, "control_differ": control_hits, "excluded": "a pickup and a hazard in the same tick"}))
 	print("contact_orders_all_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(1 if _failures > 0 else 0)
+
+
+func _same_state_check(mode: String, set: Array, result: Dictionary) -> void:
+	var detail := "%d orders ran, %d differ from the first" % [result["ran"], result["findings"].size()]
+	if not result["findings"].is_empty():
+		var worst: Array = result["findings"][0]
+		detail += "; first differing order %s, fields: %s" % [str(worst[0]), str(worst[1].slice(0, 6))]
+	_check("same state %s: %s" % [mode, "+".join(set)], result["findings"].is_empty() and result["ran"] == result["expected"], detail)
