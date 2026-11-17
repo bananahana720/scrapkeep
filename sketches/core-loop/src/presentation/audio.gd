@@ -512,6 +512,11 @@ static func _sound_ids() -> Array:
 	for id in SfxBank.TRIM_DB:
 		if not id in ids:
 			ids.append(id)
+	# Each class's version of the motif cues: a row resolves to one by class, so TRIM_DB does not list them, and the
+	# first gauge charge of a class would otherwise make its cue on the main thread.
+	for id in SfxBank.motif_cue_ids():
+		if not id in ids:
+			ids.append(id)
 	# The event-set files, tier files included (a tier plays by rung, so it must be baked).
 	for id in SfxBank.EVENT_CUES:
 		if not id in ids:
