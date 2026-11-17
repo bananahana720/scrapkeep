@@ -1045,6 +1045,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_plate_hand = {}
 	_clear_chain_hand()
 	_close_note()
+	_window_hits = []
 	_stage = stage
 	_offers = []
 	_gate_pick = -1
@@ -1215,30 +1216,34 @@ func _on_player_hit(amount: float, source_id: String) -> void:
 			if hull > float(into.get("largest_hull_hit", 0.0)):
 				into["largest_hull_hit"] = snappedf(hull, 0.1)
 				into["largest_hull_hit_share"] = snappedf(hull / maxf(float(game.run.max_hp), 1.0), 0.001)
-			_note_worst_window(into, "boss" if in_boss else "s%d" % int(_note.get("stage", 0)), fight_s, amount, hull)
+			var clock: float = _boss_clock if in_boss else game.run.stage_time
+			note_worst_window(_window_hits, into, clock, amount, hull, float(game.run.max_hp))
 			if fight_s <= FIRST_45_S:
 				into["hp_lost_45s"] = snappedf(float(into.get("hp_lost_45s", 0.0)) + amount, 0.1)
 				into["hull_lost_45s"] = snappedf(float(into.get("hull_lost_45s", 0.0)) + hull, 0.1)
 
 
 # The fight's worst WORST_WINDOW_S of damage, as hull and as whole hits, for the curve cards (W1-31): a window's sum
-# peaks at a hit, so it is checked at each hit over the hits still inside it. Record only.
+# peaks at a hit, so it is checked at each hit over the hits still inside it. worst_60s_max_hp is the max hull when
+# the worst hull window peaked, so a share of it does not shrink as max hull grows later in the run. The window is
+# timed by a clock that only moves forward (stage time, or the boss clock) and is cleared on each stage and boss
+# entry. Record only.
 const WORST_WINDOW_S := 60.0
-var _window_hits := {}
+var _window_hits: Array = []
 
 
-func _note_worst_window(into: Dictionary, key: String, fight_s: float, amount: float, hull: float) -> void:
-	var hits: Array = _window_hits.get(key, [])
-	hits.append([fight_s, amount, hull])
-	while float(hits[0][0]) <= fight_s - WORST_WINDOW_S:
+static func note_worst_window(hits: Array, into: Dictionary, t: float, amount: float, hull: float, max_hp: float) -> void:
+	hits.append([t, amount, hull])
+	while float(hits[0][0]) <= t - WORST_WINDOW_S:
 		hits.pop_front()
-	_window_hits[key] = hits
 	var hp_sum := 0.0
 	var hull_sum := 0.0
 	for h in hits:
 		hp_sum += float(h[1])
 		hull_sum += float(h[2])
 	into["worst_60s_hp"] = snappedf(maxf(float(into.get("worst_60s_hp", 0.0)), hp_sum), 0.1)
+	if hull_sum > float(into.get("worst_60s_hull", 0.0)) or not into.has("worst_60s_max_hp"):
+		into["worst_60s_max_hp"] = snappedf(max_hp, 0.1)
 	into["worst_60s_hull"] = snappedf(maxf(float(into.get("worst_60s_hull", 0.0)), hull_sum), 0.1)
 
 
@@ -1470,6 +1475,7 @@ func _close_note() -> void:
 func _on_boss_entered() -> void:
 	_close_note()
 	_boss_clock = 0.0
+	_window_hits = []
 	_seen = {}
 	_evaded = {}
 	_charge_read = {}
