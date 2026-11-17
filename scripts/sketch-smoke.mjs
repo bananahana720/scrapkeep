@@ -313,7 +313,8 @@ function sweepStaleWaiters(directory, own) {
 // QUIET_MAX_MS old.
 export const QUIET_HOLD = "scrapkeep-quiet-hold";
 export const QUIET_MAX_MS = 2 * 60 * 60 * 1000;
-const QUIET_LOCK_STALE_MS = 5000;
+// The lock is held for a few file calls; a minute old means its holder died.
+const QUIET_LOCK_STALE_MS = 60 * 1000;
 
 function quietRoot() {
   return process.env.SCRAPKEEP_QUIET_DIR || "/tmp";
@@ -371,8 +372,9 @@ export function holdQuietSync({
         break;
       } catch (error) {
         if (error.code !== "EEXIST") throw error;
+        if (late()) throw new Error(`the quiet hold's lock (${lock}) is stuck; no frame reading taken`);
         try {
-          if (Date.now() - statSync(lock).mtimeMs > QUIET_LOCK_STALE_MS) rmdirSync(lock);
+          if (Math.abs(Date.now() - statSync(lock).mtimeMs) > QUIET_LOCK_STALE_MS) rmSync(lock, { recursive: true, force: true });
         } catch (gone) {
           if (gone.code !== "ENOENT") throw gone;
         }

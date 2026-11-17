@@ -279,11 +279,17 @@ function selfPlayRun(exitCode, stdoutLines) {
   console.log = (line) => lines.push(line);
   process.stdout.write = () => true;
   let code;
+  const held = [];
   try {
     code = main(
       [`--exe=${game}`, "--seconds=1", "--self-play", "--self-play-from=6", "--self-play-stall=100"],
       { PATH: [bin, "/usr/bin", "/bin"].join(path.delimiter), XDG_DATA_HOME: base },
       out,
+      undefined,
+      () => {
+        held.push("taken");
+        return { release: () => held.push("released") };
+      },
     );
   } finally {
     console.log = log;
@@ -291,6 +297,8 @@ function selfPlayRun(exitCode, stdoutLines) {
   }
   const [stampDir] = readdirSync(out);
   const dir = path.join(out, stampDir);
+  // The MangoHud launch takes the quiet hold once and gives it back.
+  assert.deepEqual(held, ["taken", "released"]);
   return { code, lines, dir, summary: JSON.parse(readFileSync(path.join(dir, "summary.json"), "utf8")) };
 }
 

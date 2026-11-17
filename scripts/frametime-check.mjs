@@ -37,7 +37,8 @@ import { holdQuietSync } from "./sketch-smoke.mjs";
 // Exit 0 inside budget, 1 over it, 2 when nothing was measured. Never downloads anything.
 // A reading that launches the game holds the machine quiet for as long as the game runs: it waits (up to 45 min, then
 // exit 2) for sketch:smoke and sketch:fast runs on the shared slot pool to finish, and no runner on this machine
-// takes a slot until the game exits. It does not see a running gate, nightly run, red team, band read or export, so
+// takes a slot until the game exits (a new sketch:fast still runs its lint and node checks before it waits). A
+// reading killed by a signal leaves a hold that dies with its process. It does not see a running gate, nightly run, red team, band read or export, so
 // do not start a reading during one. Grading a log (--log=) takes no hold; FRAMETIME_NO_QUIET=1 skips it.
 // --capture=engine|mangohud picks how frames are caught (captureMode). Without it: MangoHud when
 // mangohud is on PATH, else the engine on macOS (no MangoHud there), else MangoHud's install note.

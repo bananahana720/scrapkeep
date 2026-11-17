@@ -20,6 +20,7 @@ import * as smoke from "./sketch-smoke.mjs";
 
 // Slot tests never see a real frame reading's hold on this machine.
 process.env.SCRAPKEEP_QUIET_DIR = mkdtempSync(path.join(os.tmpdir(), "smoke-no-quiet-"));
+test.after(() => rmSync(process.env.SCRAPKEEP_QUIET_DIR, { recursive: true, force: true }));
 import {
   HEARTBEAT_MS,
   STALE_CLAIM_MS,
@@ -967,16 +968,16 @@ test("a runner waits while a frame reading holds the machine quiet", async () =>
   }
 });
 
-// The hold is machine-wide: a runner on a private slot pool (a gate step) waits for it too.
+// The hold is machine-wide: a runner on a private slot pool (a gate step) finds it through the default hold folder.
 test("a runner on another slot pool waits for the hold", async () => {
-  const at = quietDir();
+  const quietDirectory = process.env.SCRAPKEEP_QUIET_DIR;
+  const reading = mkdtempSync(path.join(os.tmpdir(), "smoke-pool-"));
   const pool = mkdtempSync(path.join(os.tmpdir(), "smoke-pool-"));
+  const hold = smoke.holdQuietSync({ directory: reading, quietDirectory, log: () => {}, sleepSync: () => assert.fail("nothing to wait for") });
   try {
-    const hold = smoke.holdQuietSync({ ...at, sleepSync: () => assert.fail("nothing to wait for") });
     let sleeps = 0;
     const lease = await acquireSlot({
       directory: pool,
-      quietDirectory: at.quietDirectory,
       slots: 1,
       log: () => {},
       sleep: async () => {
@@ -987,7 +988,8 @@ test("a runner on another slot pool waits for the hold", async () => {
     assert.equal(sleeps, 1);
     lease.release();
   } finally {
-    rmSync(at.directory, { recursive: true, force: true });
+    hold.release();
+    rmSync(reading, { recursive: true, force: true });
     rmSync(pool, { recursive: true, force: true });
   }
 });
