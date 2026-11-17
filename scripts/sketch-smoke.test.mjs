@@ -860,7 +860,7 @@ test("a script error inside an awaited part of a test cannot pass", { skip: !exi
     const run = spawnSync(binary, ["--headless", "--path", project, "--script", "hazard.gd"], {
       encoding: "utf8",
       timeout: 60_000,
-      env: { ...process.env, XDG_DATA_HOME: path.join(project, "data") },
+      env: { ...process.env, ...userDataEnv(path.join(project, "data")) },
     });
     const output = (run.stdout || "") + (run.stderr || "");
     assert.equal(run.status, 0);

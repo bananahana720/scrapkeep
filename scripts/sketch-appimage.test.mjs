@@ -136,13 +136,14 @@ test("installPaths puts the AppImage, icon and app-menu entry under the data hom
 // A tarball shaped like sketch:export's: one top folder holding the game and music_ace.
 function fakeExport() {
   const dir = mkdtempSync(path.join(os.tmpdir(), "appimage-build-"));
-  const stage = path.join(dir, "20261016T000000");
+  // Staged under its final name so the plain tar flags work with GNU and BSD tar alike.
+  const stage = path.join(dir, "stage", "scrapkeep-core-loop-abcdef1");
   mkdirSync(path.join(stage, "music_ace/spillway"), { recursive: true });
   writeFileSync(path.join(stage, EXECUTABLE), "#!/bin/sh\necho game \"$@\"\n");
   writeFileSync(path.join(stage, "music_ace/spillway/manifest.json"), "{}\n");
   writeFileSync(path.join(stage, "BUILD.txt"), "commit: abc\n");
   const tarball = path.join(dir, "scrapkeep-core-loop-abcdef1.tar.gz");
-  const tar = spawnSync("tar", ["-czf", tarball, "-C", dir, "--transform=s,^20261016T000000,scrapkeep-core-loop-abcdef1,", "20261016T000000"]);
+  const tar = spawnSync("tar", ["-czf", tarball, "-C", path.dirname(stage), path.basename(stage)]);
   assert.equal(tar.status, 0, String(tar.stderr));
   // Stands in for appimagetool: records its arguments and writes the output file it was given.
   const tool = path.join(dir, "fake-appimagetool");

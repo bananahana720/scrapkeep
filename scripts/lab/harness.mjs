@@ -354,7 +354,12 @@ async function runTrial({
     try {
       process.kill(-child.pid, "SIGKILL");
     } catch (error) {
-      if (error.code !== "ESRCH") throw error;
+      // macOS answers EPERM, not ESRCH, for a group whose members are all
+      // already exiting (seen after the stall kill, with ps listing none).
+      const groupGone =
+        error.code === "ESRCH" ||
+        (process.platform === "darwin" && error.code === "EPERM");
+      if (!groupGone) throw error;
     }
   };
   const kill = async (waitingFor) => {

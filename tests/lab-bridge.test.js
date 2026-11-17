@@ -23,6 +23,7 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  realpath,
   rm,
   writeFile,
 } from "node:fs/promises";
@@ -198,7 +199,8 @@ test("env and cwd from the launch reach the spawned process", async (t) => {
   assert.equal(trials[0].outcome, "crash");
   const seen = JSON.parse(await readFile(probe, "utf8"));
   assert.equal(seen.env, "carried");
-  assert.equal(seen.cwd, temporary);
+  // process.cwd() is the resolved path; macOS keeps its temp folder behind /var -> /private/var.
+  assert.equal(seen.cwd, await realpath(temporary));
   assert.equal(
     seen.path,
     process.env.PATH,
