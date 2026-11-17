@@ -168,6 +168,8 @@ func _ready() -> void:
 	process_physics_priority = -1
 	# A reward ceremony or the pause menu pauses the tree; the bot must keep answering them.
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	var probe_file := ""
+	var probe_signals := false
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--self-play-hold="):
 			_hold = float(arg.trim_prefix("--self-play-hold="))
@@ -228,10 +230,12 @@ func _ready() -> void:
 		elif arg.begins_with("--self-play-eyes="):
 			_eyes = arg.trim_prefix("--self-play-eyes=") == "1"
 		elif arg.begins_with("--self-play-probe="):
-			_probe = FrameProbe.new()
-			_probe.watch(game, arg.trim_prefix("--self-play-probe="), "--self-play-probe-signals=1" in OS.get_cmdline_user_args(), self)
-		elif arg == "--self-play-probe-signals=1":
-			pass  # read with --self-play-probe=
+			probe_file = arg.trim_prefix("--self-play-probe=")
+		elif arg.begins_with("--self-play-probe-signals="):
+			probe_signals = arg.trim_prefix("--self-play-probe-signals=") == "1"
+	if probe_file != "":
+		_probe = FrameProbe.new()
+		_probe.watch(game, probe_file, probe_signals, self)
 	if not (_policy in BotDriver.POLICIES or _policy in BotDriver.PROFILES):
 		push_error("self-play: unknown policy '%s'" % _policy)
 		get_tree().quit.call_deferred(2)

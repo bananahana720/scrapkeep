@@ -43,12 +43,10 @@ func _process(_delta: float) -> bool:
 	# and sounds the frame it is done, so the frame that asks for it does no synth work.
 	var line := "Pad's hot. Go on, before the clock notices."
 	var cues: int = audio.cue_log.size()
-	var started := Time.get_ticks_usec()
 	var spoke: bool = audio.speak("shop_left", line, 0)
-	var asked_ms := (Time.get_ticks_usec() - started) / 1000.0
 	_t.check("BA-4 a babble line is asked for without rendering it on the asking frame",
-		spoke and not audio._babble_job.is_empty() and audio.cue_log.size() == cues and asked_ms < 10.0,
-		"spoke %s, job %s, cues %d -> %d, the ask took %.1f ms" % [spoke, not audio._babble_job.is_empty(), cues, audio.cue_log.size(), asked_ms])
+		spoke and not audio._babble_job.is_empty() and audio.cue_log.size() == cues and audio._babble.is_empty(),
+		"spoke %s, job %s, cues %d -> %d, cached %d" % [spoke, not audio._babble_job.is_empty(), cues, audio.cue_log.size(), audio._babble.size()])
 	_settle(audio)
 	var said: Array = audio.cue_log.back() if audio.cue_log.size() > cues else []
 	_t.check("BA-4 it sounds once its worker is done, and is kept", said.size() >= 3 and said[0] == "shop_left" and said[1] == "babble" and said[2] == "now"
@@ -82,8 +80,7 @@ func _process(_delta: float) -> bool:
 
 # Waits out the babble worker, then gives the audio the frame step that sounds a finished line.
 func _settle(audio) -> void:
-	var waited := 0
-	while not audio._babble_job.is_empty() and not WorkerThreadPool.is_task_completed(audio._babble_job.task) and waited < 5000:
-		OS.delay_msec(5)
-		waited += 5
+	# The worker is short (tens of ms); its own completion is the wait, polled, no clock read.
+	while not audio._babble_job.is_empty() and not WorkerThreadPool.is_task_completed(audio._babble_job.task):
+		pass
 	audio._tend_babble()
