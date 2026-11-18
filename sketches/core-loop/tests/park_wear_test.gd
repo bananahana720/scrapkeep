@@ -10,6 +10,7 @@ const T := preload("res://tests/support/t.gd")
 
 const FIXTURE := "res://src/world/park/park_test.json"
 const WIDTH_M := 6.0
+const WIDE_M := 12.0
 const GREY := 0.6
 # A shade of difference the eye can see on the 0..1 scale; the lane darkens by up to ParkTerrain.WEAR_DARKEN.
 const VISIBLE_STEP := 0.02
@@ -24,6 +25,7 @@ func _initialize() -> void:
 		_lane("falling", [[200, 300], [200, 200], [200, 100]]),
 		_lane("east_west", [[-400, 100], [-300, 100]]),
 		_lane("diagonal", [[-300, -300], [-200, -200]]),
+		{"id": "wide_diagonal", "points": [[200, -300], [300, -200]], "width_m": WIDE_M},
 		_lane("off_edge", [[ParkTerrain.HALF - 20.0, 0], [ParkTerrain.HALF + 60.0, 0]]),
 	]
 	park["wear_rows"] = lanes
@@ -62,15 +64,18 @@ func _paint_checks(lanes: Array) -> void:
 		_luma(image, -350, 100) < _luma(image, -350, 100 + far) - VISIBLE_STEP, "%.3f" % _luma(image, -350, 100 + far))
 	var diagonal := _luma(image, -250, -250)
 	_t.check("a diagonal lane paints", diagonal < _luma(image, -250 + far, -250 - far) - VISIBLE_STEP, "%.3f" % diagonal)
-	# A diagonal lane keeps its width: a pixel half a width off its centre line, measured across it, is still worn.
-	var across := WIDTH_M * 0.25 / sqrt(2.0)
-	_t.check("a diagonal lane is as wide across as along",
-		_luma(image, -250 + across, -250 - across) < _luma(image, -250 + far, -250 - far) - VISIBLE_STEP, "%.3f" % _luma(image, -250 + across, -250 - across))
+	# A diagonal lane keeps its width. Count worn pixels straight across the wide diagonal lane: a painter
+	# that measured width along x alone would wear about half as many.
+	var worn := 0
+	for k in range(-10, 11):
+		worn += int(_luma(image, 250 + k, -250 - k) < GREY - VISIBLE_STEP)
+	var expected := int(WIDE_M / sqrt(2.0))
+	_t.check("a diagonal lane is as wide across as its width says", worn >= expected - 1, "%d worn pixels across, about %d expected" % [worn, expected])
 	_t.check("a lane running off the map edge paints its on-map part", _luma(image, ParkTerrain.HALF - 10.0, 0) < GREY - VISIBLE_STEP,
 		"%.3f" % _luma(image, ParkTerrain.HALF - 10.0, 0))
-	var small := Image.create(8, 8, false, Image.FORMAT_RGBA8)
-	ParkTerrain.paint_wear(small, lanes)
-	_t.check("a lane over an image too small for it paints without error", true)
+	var edge := int(ParkTerrain.HALF) + ParkTerrain.FEATHER_MARGIN
+	_t.check("a lane running off one edge does not come back on the opposite edge",
+		is_equal_approx(_luma(image, -edge, 0), GREY) and is_equal_approx(_luma(image, 0, -edge), GREY), "%.3f, %.3f" % [_luma(image, -edge, 0), _luma(image, 0, -edge)])
 
 
 func _schema_checks(park: Dictionary) -> void:
