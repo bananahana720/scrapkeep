@@ -1514,6 +1514,7 @@ func _process(delta: float) -> void:
 	edge_markers.engaged = _engaged
 	edge_markers.yard_locked = reading["id"] == "break_yard_crew"
 	edge_markers.keep_clear = _ball_readouts()
+	edge_markers.sign_rects = game.build.gates.keep_clear_rects() if not edge_markers.gate_points.is_empty() else []
 	var tbl = game.ctx.stages
 	var world: int = tbl.world_of(run.stage)
 	var world_stages: int = tbl.last_of(world) - tbl.first_of(world) + 1
