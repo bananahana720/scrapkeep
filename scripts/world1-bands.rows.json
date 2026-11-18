@@ -696,7 +696,7 @@
       "id": "hook-pays",
       "area": "Core feel",
       "source": "receipt",
-      "label": "holding the hook through a swing pays at every hook site",
+      "label": "a passive hold matches the best early horizontal landing speed or reaches an exclusive tier at every hook site",
       "status": "report",
       "enforced_from": [
         "W1-135"
@@ -707,7 +707,7 @@
       },
       "producer": "node scripts/proof/receipt.mjs --row hook-pays --test hook_sites_test --plant no_bite --out <dir>/hook-pays.json",
       "plant": "a site whose anchor the line cannot bite must read no hold",
-      "basis": "Codex receipt at the one measured flume site, hold 3.44 m/s against release 12.74 m/s (not rerun); the release's own speed is the expected value; docs/promises/W1-135.md"
+      "basis": "14 m/s at the bite, winch off. Compare horizontal speed at first walkable ground contact. Keep the passive early-release landing floor at each site. Passive round 0 and no-hold plant: PR 1147 at 0618e2531. See docs/promises/W1-135.md for the energy check and the Gate's stock-excess decision."
     },
     {
       "id": "machines-read",
