@@ -1,0 +1,14 @@
+sketch:smoke waiting for a machine slot (2 occupied)
+sketch:smoke waited 184s for the machine
+PASS sketches/core-loop import exit=0 4.7s
+PASS sketches/core-loop res://tests/rivet_warm_hitch_test.gd exit=0 8.8s
+slowest 2:
+  8.8s sketches/core-loop res://tests/rivet_warm_hitch_test.gd
+  4.7s sketches/core-loop import
+skipped 1 (passed without running every check; not a failure):
+  sketches/core-loop res://tests/rivet_warm_hitch_test.gd
+    SKIP control Fin.L
+    SKIP control Fin.R
+0 tests lack a verdict line
+sketch:smoke pass: 1 sketches, 2 runs, 2 at a time, 0 solo (0s), 14s. Headless boot and sketch tests only; feel needs Andrew's play.
+receipt /Users/hanabanana/projects/scrapkeep/artifacts/local/W1-144a/artifacts/local/receipts/named-018104f78fae-2026-11-18T14-21-59-905Z.json

@@ -1,0 +1,11 @@
+
+> scrapkeep@1.0.0 sketch:fast
+> node scripts/sketch-fast.mjs --base origin/stage/alpha-w44
+
+sketch:fast: 1 changed paths (0 sketch, 1 node, 0 docs) since 1d5d77fc
+PASS tree hygiene (no symlink, root file or new top-level folder)
+selected 0 tests (0 solo), about 0s at width 7; 0 past the budget go to the staging full gate; 0 for the bot shards
+PASS sketch-lint (sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1 W1=0 W2=0 W4=0 W6=27 W7=1 S8=0, 1069ms)
+PASS godot (no sketch change)
+receipt /Users/hanabanana/projects/scrapkeep/artifacts/local/W1-144a/artifacts/local/receipts/fast-c63c4e15de4a-2026-11-18T14-13-45-608Z.json
+sketch:fast pass in 2s on c63c4e15 (merge base 1d5d77fc). Fast lane only: the staging full gate and red team still judge the wave.

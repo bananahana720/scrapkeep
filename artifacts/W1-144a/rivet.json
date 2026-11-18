@@ -1,0 +1,72 @@
+{
+  "schema": "scrapkeep-smoke-receipt/1",
+  "label": "named",
+  "argv": [
+    "--sketch",
+    "core-loop",
+    "--test",
+    "rivet_warm_hitch_test"
+  ],
+  "root": "/Users/hanabanana/projects/scrapkeep/artifacts/local/W1-144a",
+  "head": "c63c4e15de4af64fa797d1fbb7d9e52a5a62d19b",
+  "tree": "018104f78fae4abb9e0fc0d6a48910759dc2000e",
+  "clean": false,
+  "dirty_paths": [
+    "?? sketches/core-loop/tests/beacon_open_level_test.gd.uid",
+    "?? sketches/core-loop/tests/press_latency_measure_test.gd.uid"
+  ],
+  "godot": {
+    "binary": "/Users/hanabanana/Applications/Godot_4.7.2.app/Contents/MacOS/Godot",
+    "version": "4.7.2.stable.official.ed1daf0bf"
+  },
+  "sketches": [
+    "sketches/core-loop"
+  ],
+  "flags": [],
+  "width": 2,
+  "lock_wait_ms": 184152,
+  "started_at": "2026-11-18T14:21:59.905Z",
+  "wall_ms": 13732,
+  "stems": {
+    "sketches/core-loop": 0
+  },
+  "quarantined": [],
+  "quarantine_expired": [],
+  "results": [
+    {
+      "label": "sketches/core-loop import",
+      "ok": true,
+      "exit": 0,
+      "ms": 4740,
+      "solo": false,
+      "passes": 0,
+      "fails": 0,
+      "verdict_line": null,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/rivet_warm_hitch_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 8833,
+      "solo": false,
+      "passes": 15,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": [
+        "SKIP control Fin.L",
+        "SKIP control Fin.R"
+      ]
+    }
+  ],
+  "bot_tier_not_run": [],
+  "totals": {
+    "runs": 2,
+    "failed": 0,
+    "skipped": 1,
+    "missing_verdict": 0,
+    "quarantined_red": [],
+    "quarantine_stale": []
+  },
+  "ok": true
+}

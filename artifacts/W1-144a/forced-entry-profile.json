@@ -1,0 +1,552 @@
+[
+  {
+    "frame": 332,
+    "functions": [
+      {
+        "function": "res://src/world/scatter.gd::561::Chunked._build_chunk",
+        "calls": 4,
+        "self_ms": 0.02,
+        "total_ms": 1192.71
+      },
+      {
+        "function": "res://src/world/scatter.gd::463::Chunked._ensure_lane_mask",
+        "calls": 4,
+        "self_ms": 557.77,
+        "total_ms": 743.65
+      },
+      {
+        "function": "res://src/world/scatter.gd::149::_kept_out",
+        "calls": 2856,
+        "self_ms": 587.03,
+        "total_ms": 587.03
+      },
+      {
+        "function": "res://src/world/scatter.gd::196::chunk_transforms",
+        "calls": 22,
+        "self_ms": 8.79,
+        "total_ms": 517.8
+      },
+      {
+        "function": "res://src/world/scatter.gd::327::chunk_batches",
+        "calls": 8,
+        "self_ms": 1.2,
+        "total_ms": 449.02
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::863::stream",
+        "calls": 27,
+        "self_ms": 0.03,
+        "total_ms": 358.72
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::784::samples",
+        "calls": 25,
+        "self_ms": 0.06,
+        "total_ms": 342.35
+      },
+      {
+        "function": "/Users/hanabanana/projects/scrapkeep/artifacts/local/W1-144a/artifacts/local/W1-144/prepared-entry.gd::11::run",
+        "calls": 1,
+        "self_ms": 0.01,
+        "total_ms": 327.27
+      },
+      {
+        "function": "res://src/core/flow.gd::713::enter_stage",
+        "calls": 1,
+        "self_ms": 0.01,
+        "total_ms": 327.17
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::895::_bake",
+        "calls": 25,
+        "self_ms": 0.23,
+        "total_ms": 324.55
+      },
+      {
+        "function": "res://src/world/events/event_ground.gd::184::project_surface",
+        "calls": 4,
+        "self_ms": 56.63,
+        "total_ms": 239.38
+      },
+      {
+        "function": "res://src/world/events/event_ground.gd::107::Ground.height",
+        "calls": 53482,
+        "self_ms": 23.72,
+        "total_ms": 235.75
+      },
+      {
+        "function": "res://src/world/world.gd::301::_on_stage_entered",
+        "calls": 1,
+        "self_ms": 1.1,
+        "total_ms": 234.24
+      },
+      {
+        "function": "res://src/world/perch_points.gd::264::_ring_top",
+        "calls": 2080,
+        "self_ms": 9.06,
+        "total_ms": 221.49
+      },
+      {
+        "function": "res://src/world/events/families.gd::13::build",
+        "calls": 1,
+        "self_ms": 0.13,
+        "total_ms": 211.9
+      },
+      {
+        "function": "res://src/world/events/natural.gd::109::setup",
+        "calls": 1,
+        "self_ms": 0.22,
+        "total_ms": 211.18
+      },
+      {
+        "function": "res://src/world/events/natural.gd::225::_planned",
+        "calls": 1,
+        "self_ms": 0.0,
+        "total_ms": 209.24
+      },
+      {
+        "function": "res://src/world/events/natural.gd::145::plan",
+        "calls": 1,
+        "self_ms": 0.16,
+        "total_ms": 208.93
+      },
+      {
+        "function": "res://src/world/terrain.gd::699::<anonymous lambda>(lambda)",
+        "calls": 40352,
+        "self_ms": 18.54,
+        "total_ms": 191.49
+      },
+      {
+        "function": "res://src/world/events/event_ground.gd::118::Ground._floor",
+        "calls": 53482,
+        "self_ms": 26.76,
+        "total_ms": 172.23
+      },
+      {
+        "function": "res://src/world/terrain.gd::854::_park_height",
+        "calls": 67957,
+        "self_ms": 27.7,
+        "total_ms": 167.01
+      },
+      {
+        "function": "res://src/world/park/park_map.gd::347::build_lane_mask",
+        "calls": 1,
+        "self_ms": 134.97,
+        "total_ms": 137.93
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::3460::_world1_own",
+        "calls": 5,
+        "self_ms": 0.02,
+        "total_ms": 137.21
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::3541::_world1_recipe",
+        "calls": 5,
+        "self_ms": 0.03,
+        "total_ms": 95.42
+      },
+      {
+        "function": "res://src/world/events/event_ground.gd::310::_clip_edge",
+        "calls": 67068,
+        "self_ms": 76.24,
+        "total_ms": 91.33
+      },
+      {
+        "function": "res://src/presentation/synth.gd::184::crash",
+        "calls": 1,
+        "self_ms": 62.03,
+        "total_ms": 69.79
+      },
+      {
+        "function": "res://src/world/events/event_ground.gd::578::<anonymous lambda>(lambda)",
+        "calls": 7440,
+        "self_ms": 1.57,
+        "total_ms": 69.63
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::1959::_shed",
+        "calls": 2,
+        "self_ms": 0.02,
+        "total_ms": 69.45
+      },
+      {
+        "function": "res://src/world/events/event_ground.gd::327::_water_ground",
+        "calls": 1948,
+        "self_ms": 19.61,
+        "total_ms": 68.88
+      },
+      {
+        "function": "res://src/world/events/event_ground.gd::572::<anonymous lambda>(lambda)",
+        "calls": 7440,
+        "self_ms": 4.03,
+        "total_ms": 63.81
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::1799::_fm",
+        "calls": 8,
+        "self_ms": 20.78,
+        "total_ms": 63.76
+      },
+      {
+        "function": "res://src/world/scatter.gd::104::_stand",
+        "calls": 1685,
+        "self_ms": 4.01,
+        "total_ms": 57.88
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::1779::_noise",
+        "calls": 20,
+        "self_ms": 49.94,
+        "total_ms": 50.41
+      },
+      {
+        "function": "res://src/world/events/event_ground.gd::596::<anonymous lambda>(lambda)",
+        "calls": 2,
+        "self_ms": 0.0,
+        "total_ms": 49.21
+      },
+      {
+        "function": "res://src/world/events/event_ground.gd::566::overlay_surface",
+        "calls": 2,
+        "self_ms": 0.0,
+        "total_ms": 49.21
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::1752::_tone",
+        "calls": 20,
+        "self_ms": 45.82,
+        "total_ms": 46.19
+      },
+      {
+        "function": "res://src/presentation/spillway_scenery.gd::345::_on_stage_entered",
+        "calls": 1,
+        "self_ms": 0.01,
+        "total_ms": 46.03
+      },
+      {
+        "function": "res://src/presentation/spillway_scenery.gd::338::ParkBuild.finish",
+        "calls": 1,
+        "self_ms": 0.0,
+        "total_ms": 46.0
+      },
+      {
+        "function": "res://src/presentation/spillway_scenery.gd::404::ParkPass.step",
+        "calls": 9,
+        "self_ms": 0.01,
+        "total_ms": 45.99
+      },
+      {
+        "function": "res://src/presentation/synth.gd::74::normalize",
+        "calls": 52,
+        "self_ms": 20.71,
+        "total_ms": 45.59
+      },
+      {
+        "function": "res://src/world/terrain.gd::517::height",
+        "calls": 3897,
+        "self_ms": 1.71,
+        "total_ms": 42.89
+      },
+      {
+        "function": "res://src/world/terrain.gd::903::_grid_height",
+        "calls": 69936,
+        "self_ms": 42.28,
+        "total_ms": 42.28
+      },
+      {
+        "function": "res://src/world/park/park_graph.gd::123::from_bytes",
+        "calls": 1,
+        "self_ms": 1.71,
+        "total_ms": 39.95
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::1731::_mix",
+        "calls": 22,
+        "self_ms": 0.4,
+        "total_ms": 39.69
+      },
+      {
+        "function": "res://src/world/terrain.gd::859::_park_ground_at",
+        "calls": 8623,
+        "self_ms": 2.96,
+        "total_ms": 38.67
+      }
+    ]
+  },
+  {
+    "frame": 422,
+    "functions": [
+      {
+        "function": "res://src/world/scatter.gd::561::Chunked._build_chunk",
+        "calls": 2,
+        "self_ms": 0.0,
+        "total_ms": 309.42
+      },
+      {
+        "function": "res://src/world/scatter.gd::327::chunk_batches",
+        "calls": 2,
+        "self_ms": 0.63,
+        "total_ms": 309.41
+      },
+      {
+        "function": "res://src/world/scatter.gd::149::_kept_out",
+        "calls": 1338,
+        "self_ms": 277.94,
+        "total_ms": 277.94
+      },
+      {
+        "function": "res://src/world/scatter.gd::196::chunk_transforms",
+        "calls": 7,
+        "self_ms": 2.81,
+        "total_ms": 232.92
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::784::samples",
+        "calls": 3,
+        "self_ms": 0.01,
+        "total_ms": 82.53
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::895::_bake",
+        "calls": 3,
+        "self_ms": 0.06,
+        "total_ms": 73.66
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::3460::_world1_own",
+        "calls": 3,
+        "self_ms": 0.0,
+        "total_ms": 73.59
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::3508::_motif_cue",
+        "calls": 3,
+        "self_ms": 0.03,
+        "total_ms": 73.55
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::863::stream",
+        "calls": 3,
+        "self_ms": 0.01,
+        "total_ms": 66.29
+      },
+      {
+        "function": "/Users/hanabanana/projects/scrapkeep/artifacts/local/W1-144a/artifacts/local/W1-144/prepared-entry.gd::11::run",
+        "calls": 1,
+        "self_ms": 0.02,
+        "total_ms": 63.82
+      },
+      {
+        "function": "res://src/core/flow.gd::810::enter_boss",
+        "calls": 1,
+        "self_ms": 0.01,
+        "total_ms": 63.74
+      },
+      {
+        "function": "res://src/boss/boss.gd::154::enter_arena",
+        "calls": 1,
+        "self_ms": 0.05,
+        "total_ms": 60.92
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::1752::_tone",
+        "calls": 3,
+        "self_ms": 49.59,
+        "total_ms": 49.69
+      },
+      {
+        "function": "res://src/world/events/event_ground.gd::310::_clip_edge",
+        "calls": 28280,
+        "self_ms": 34.47,
+        "total_ms": 40.47
+      },
+      {
+        "function": "res://src/boss/arena.gd::315::_ready",
+        "calls": 1,
+        "self_ms": 0.01,
+        "total_ms": 39.28
+      },
+      {
+        "function": "res://src/boss/arena.gd::329::build_step",
+        "calls": 7,
+        "self_ms": 0.03,
+        "total_ms": 39.24
+      },
+      {
+        "function": "res://src/presentation/sfx_bank.gd::1731::_mix",
+        "calls": 4,
+        "self_ms": 0.03,
+        "total_ms": 23.19
+      },
+      {
+        "function": "res://src/world/scatter.gd::104::_stand",
+        "calls": 886,
+        "self_ms": 2.04,
+        "total_ms": 21.11
+      },
+      {
+        "function": "res://src/presentation/arena_bowl_dress.gd::132::build",
+        "calls": 1,
+        "self_ms": 0.4,
+        "total_ms": 17.61
+      },
+      {
+        "function": "res://src/presentation/synth.gd::74::normalize",
+        "calls": 8,
+        "self_ms": 7.83,
+        "total_ms": 17.34
+      },
+      {
+        "function": "res://src/boss/requisition.gd::77::build",
+        "calls": 1,
+        "self_ms": 0.28,
+        "total_ms": 17.21
+      },
+      {
+        "function": "res://src/boss/requisition.gd::368::_dress",
+        "calls": 1,
+        "self_ms": 0.19,
+        "total_ms": 15.33
+      },
+      {
+        "function": "res://src/boss/requisition.gd::514::_take_ahead",
+        "calls": 1,
+        "self_ms": 0.0,
+        "total_ms": 14.94
+      },
+      {
+        "function": "res://src/boss/requisition.gd::523::_instance",
+        "calls": 1,
+        "self_ms": 0.02,
+        "total_ms": 14.94
+      },
+      {
+        "function": "res://src/presentation/synth.gd::52::add_into",
+        "calls": 21,
+        "self_ms": 14.5,
+        "total_ms": 14.5
+      },
+      {
+        "function": "res://src/world/terrain.gd::859::_park_ground_at",
+        "calls": 4457,
+        "self_ms": 1.25,
+        "total_ms": 14.15
+      },
+      {
+        "function": "res://src/boss/requisition.gd::532::_finish",
+        "calls": 1,
+        "self_ms": 0.02,
+        "total_ms": 14.02
+      },
+      {
+        "function": "res://src/world/terrain.gd::854::_park_height",
+        "calls": 5194,
+        "self_ms": 2.12,
+        "total_ms": 12.45
+      },
+      {
+        "function": "res://src/presentation/bake_look.gd::122::dress",
+        "calls": 1,
+        "self_ms": 1.28,
+        "total_ms": 11.07
+      },
+      {
+        "function": "res://src/presentation/arena_bowl_dress.gd::267::_parts",
+        "calls": 3,
+        "self_ms": 7.73,
+        "total_ms": 10.44
+      },
+      {
+        "function": "res://src/presentation/synth.gd::58::peak",
+        "calls": 8,
+        "self_ms": 9.5,
+        "total_ms": 9.5
+      },
+      {
+        "function": "res://src/boss/arena.gd::394::_bowl_bank",
+        "calls": 1,
+        "self_ms": 0.18,
+        "total_ms": 9.21
+      },
+      {
+        "function": "res://src/presentation/bake_look.gd::187::tangent_safe",
+        "calls": 29,
+        "self_ms": 3.84,
+        "total_ms": 8.71
+      },
+      {
+        "function": "res://src/boss/arena.gd::422::_solid_part",
+        "calls": 3,
+        "self_ms": 1.35,
+        "total_ms": 6.66
+      },
+      {
+        "function": "res://src/core/palette.gd::290::striped",
+        "calls": 7,
+        "self_ms": 0.05,
+        "total_ms": 5.9
+      },
+      {
+        "function": "res://src/core/palette.gd::58::checker_texture",
+        "calls": 7,
+        "self_ms": 5.8,
+        "total_ms": 5.8
+      },
+      {
+        "function": "res://src/presentation/arena_bowl_dress.gd::348::_surfaces",
+        "calls": 1,
+        "self_ms": 0.13,
+        "total_ms": 5.42
+      },
+      {
+        "function": "res://src/presentation/synth.gd::93::to_wav",
+        "calls": 4,
+        "self_ms": 5.32,
+        "total_ms": 5.33
+      },
+      {
+        "function": "res://src/presentation/arena_bowl_dress.gd::384::_kicker",
+        "calls": 2,
+        "self_ms": 0.03,
+        "total_ms": 5.24
+      },
+      {
+        "function": "res://src/presentation/recipe_props.gd::90::_place",
+        "calls": 8,
+        "self_ms": 4.9,
+        "total_ms": 5.13
+      },
+      {
+        "function": "res://src/boss/arena.gd::531::_local",
+        "calls": 3760,
+        "self_ms": 1.31,
+        "total_ms": 4.97
+      },
+      {
+        "function": "res://src/world/terrain.gd::903::_grid_height",
+        "calls": 5357,
+        "self_ms": 3.91,
+        "total_ms": 3.91
+      },
+      {
+        "function": "res://src/presentation/bake_look.gd::269::_lods",
+        "calls": 46,
+        "self_ms": 2.2,
+        "total_ms": 3.76
+      },
+      {
+        "function": "res://src/boss/arena.gd::407::_bowl_wall",
+        "calls": 1,
+        "self_ms": 0.04,
+        "total_ms": 3.54
+      },
+      {
+        "function": "res://src/boss/boss.gd::1811::_publish",
+        "calls": 2,
+        "self_ms": 0.01,
+        "total_ms": 3.46
+      }
+    ]
+  }
+]
