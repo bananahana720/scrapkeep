@@ -1,6 +1,6 @@
 # World 1 promise cards
 
-This folder holds the work left on world 1 after Andrew's requests of 17 November 2026, as fifteen promise cards, `W1-131.md` to `W1-145.md`. A thread that has read only `AGENTS.md` can take a card from here. Ruling ec lets a Codex thread on the Astra model own cards W1-131 to W1-144; W1-145 is the Gate's. The review that admits a pull request to the stage is the Gate's Claude reviewer (decision A12 below).
+This folder holds the work left on world 1 after Andrew's requests of 17 November 2026, as fifteen promise cards, `W1-131.md` to `W1-145.md`. A thread that has read only `AGENTS.md` can take a card from here. Ruling ec lets a Codex thread on the Astra model own cards W1-131 to W1-144; W1-145 is the Gate's. The review that admits a pull request to the stage is the Gate's Claude reviewer (decision A12 below). A subtask a player sees or plays also carries a GPT-6.2 Sol QA verdict in its READY post (ruling ee in `project-guide/handoff/DECISIONS.md`).
 
 ## What a promise card is
 
