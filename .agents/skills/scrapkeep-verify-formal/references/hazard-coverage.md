@@ -14,7 +14,7 @@ The covered files: `sketches/core-loop/src/world/events/storm_seek.gd` (the seek
 | `Begin` | `StormSeek.step`: one `Hazard` committed on the ball's spot (`commit_annulus`); `_seek` sends the `lightning_mark` cue |
 | `Fill` | `Hazard.step` while `state == WARN` (`TELL_S` 1.2 s, never under the hazard's 1.0 s floor) |
 | `Strike` | `StormSeek.step` on the tick the warning ends: `hit` runs once; `_seek` tests the ball with `hazard.contains` and strikes enemies through `HazardHits.strike` with the same `contains` |
-| `Cleared` | `StormSeek.clear()`, called from the storm's `_end` for a lightning row and from `release` |
+| `Cleared` | `StormSeek.clear()`, called from the storm's `_end` for a lightning row and from `release`; `StormSeek.stand_down()` drops a tell the same way when the ball enters a place a storm does not seek |
 | `Cool`, `Rested` | `StormSeek` `REST_S`, counted down in `observe` |
 
 ## Ticks and seconds
@@ -35,6 +35,6 @@ One model tick is 0.3 s: `TellTicks` 4 is the 1.2 s tell and `MinTell` 2 the 0.6
 
 ## Not modelled
 
-The dome's own fixed strike circle, floods, the boiler's steam cone and the reactor's fallout ring (each strikes enemies through the same `HazardHits.strike` call; the test and `park_events_industrial_test` cover them), more than one enemy, the enemy's death and drop, and anything drawn or heard.
+The dome's own fixed strike circle, floods, the boiler's steam cone and the reactor's fallout ring (each strikes enemies through the same `HazardHits.strike` call; the test and `park_events_industrial_test` cover them), the places a storm does not seek (the reward gates, the launch, an engaged Warden's ring and the calm bay: `SiltBoil.exempt` and `bay.inside`, read in `sketches/core-loop/src/world/events/natural.gd` `_seek_exempt` and pinned by the test), more than one enemy, the enemy's death and drop, and anything drawn or heard.
 
-Sync commit: f2aab5a7b (branch w44/hazards-hit-everyone, 17 November 2026, the stage dial and its test-double guard; before it, fcc359e25)
+Sync commit: 751d35bf6 (branch w44/hazards-hit-everyone, 18 November 2026, a comment in hazard_hits.gd only; before it, 5935c2ce8, the seek standing down where the silt does not boil and in the calm bay, outside the modelled steps; 158d11f47, f2aab5a7b and fcc359e25)

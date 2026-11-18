@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Writes the receipts that scripts/world1-bands.mjs reads for the two rows backed by the TLA+ models in
-// .agents/skills/scrapkeep-verify-formal: "run-always-ends" (RunFlow.tla) and "rewards-banked-once" (Rewards.tla), and
-// the receipt for "hazards-hit-everyone" (HazardCycle.tla, W44), which no band row reads yet.
+// Writes the receipts for the rows backed by the TLA+ models in .agents/skills/scrapkeep-verify-formal:
+// "run-always-ends" (RunFlow.tla) and "rewards-banked-once" (Rewards.tla), which scripts/world1-bands.mjs reads,
+// "flood-never-held" (ParkFlood.tla), and "hazards-hit-everyone" (HazardCycle.tla, W44), which no band row reads yet.
 //   { head, pass, measured, plant_caught }
 // For each row it runs TLC, the TLA+ model checker, on every config that stands for the code (the skill's today-*
 // configs) and on each planted fault (a broken-* config with one guard off). It passes only when every code config
@@ -77,6 +77,26 @@ export const ROWS = {
     coverage: "references/hazard-coverage.md",
     gaps: [
       "the model counts in ticks with a shortened rest and storm; seconds, the dome's own fixed strike, floods and the industrial cone and ring are left to tests/hazards_hit_everyone_test.gd and the park event tests",
+    ],
+  },
+  "flood-never-held": {
+    spec: "ParkFlood.tla",
+    real: [
+      { cfg: "flood-today-timed.cfg", minStates: 74228, label: "a flood with a live time, as every real flood row has" },
+      { cfg: "flood-today-noclock.cfg", minStates: 468, label: "a flood with no live time" },
+    ],
+    plants: [
+      { cfg: "flood-broken-nosnap.cfg", rule: "FullWaterNeverHeld" },
+      { cfg: "flood-broken-nosnap-slot.cfg", rule: "FullWaterFreesItsSlot" },
+      { cfg: "flood-broken-nowait.cfg", rule: "NeverRisesUnderBall" },
+      { cfg: "flood-broken-endunder.cfg", rule: "NeverEndsUnderBall" },
+      { cfg: "flood-broken-nocap.cfg", rule: "WithinCap" },
+    ],
+    coverage: "references/flood-coverage.md",
+    gaps: [
+      "a ball parked in a basin before the water has risen stops the rise for as long as it stays, and the flood then ends unrisen (finding PF-1, an open design question)",
+      "after its live time is up, a flood that cannot end because the ball is near is no longer stepped (finding PF-2)",
+      "collapses and cave-ins are not modelled; their clock shares the rise's helper and park_events_test.gd sweeps it",
     ],
   },
 };

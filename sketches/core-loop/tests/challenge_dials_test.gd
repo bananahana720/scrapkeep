@@ -83,6 +83,9 @@ func _rules() -> void:
 		# Crews lead the roll by half on world 1 (wave 37 unit D1).
 		if key in ["brindle.period_by_phase", "brindle.damage_by_phase", "brindle.follow_ups_by_phase", "hazard.boil_by_stage", "mobs.damage_by_stage", "pack.lead_by_stage", "pack.lead_cruise_by_stage"]:
 			continue
+		# World 1's hazards hit enemies too (W44, PR 1123), an on/off flag pinned below.
+		if key == "hazard.hits_enemies_by_stage":
+			continue
 		# Wave 37's other world 1 defaults, each pinned below: chasers run at 9 m/s (unit D2).
 		if key in W37_TUNED:
 			continue
@@ -108,6 +111,7 @@ func _rules() -> void:
 	_t.eq("W1-67: the flume Warden's cycle tightens x0.9 per chunk lost, the rest stay flat", ChallengeDials.value("warden.pulse_ratchet_by_stage"), [1.0, 0.9, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("the clock climbs three tiers on world 1, two after it", ChallengeDials.value("mobs.clock_tiers_by_stage"), [3.0, 3.0, 2.0, 2.0, 2.0, 2.0])
 	_t.eq("the boils read the stall on world 1, the loop after it", ChallengeDials.value("hazard.boil_stall_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("W44: world 1's hazards hit enemies, storms seek and floods tax; nowhere after it", ChallengeDials.value("hazard.hits_enemies_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("W1-31: the director's spawn interval is x0.7 on the flume and untouched elsewhere", ChallengeDials.value("mobs.interval_scale_by_stage"), [1.0, 0.7, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("the hull regenerates only while rolling on world 1, at any speed after it", ChallengeDials.value("pilot.regen_rolling_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("weak points ship off on both bosses for wave 18", [ChallengeDials.value("waking.weak_points"), ChallengeDials.value("mind.weak_points")], [0.0, 0.0])

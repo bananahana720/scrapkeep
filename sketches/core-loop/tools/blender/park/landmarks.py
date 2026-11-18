@@ -965,7 +965,7 @@ def build_dam():
 # 40 m of the centre (230, 480) and its walls slope to grade (y 0) at 42 m on all four sides, so the head house is a
 # square concrete pit. The liner lies on those four planes 0.07 m proud; the parapet stands outside the rim and keeps
 # off every crossing of the six pilot lines and the floor line in assets/park/park_flume/lines.json (the south-west
-# corner and the south wall near x 253), the annex corner and the whole east wall (the warden_exit kicker and gate lip).
+# corner and the south wall near x 253), the annex corner and the whole east wall (the two routes to the gate lip).
 # The roof is a ring girder on rim columns carrying six north-south trusses, never lower than y 14.6.
 FLUME_DRUM = (230.0, 480.0)
 FLUME_FLOOR = -14.0
@@ -1016,6 +1016,26 @@ def build_penstock_tower():
     d0, d1w = FLUME_WALL
     inset = 0.07
     sides = {"N": ((1, 0), (0, 1)), "S": ((1, 0), (0, -1)), "E": ((0, 1), (1, 0)), "W": ((0, 1), (-1, 0))}
+    park = json.loads((SKETCH / "src/world/park/park_flume.json").read_text())
+    grade = next(row for row in park["park_rows"] if row["id"] == "drum_service_grade")
+    assert grade["yaw_deg"] == 90, "the drum service grade must run east from the liner"
+    grade_z = grade["at"][1]
+    half_width = grade["size"][2] / 2
+    opening = (grade_z - half_width, grade_z + half_width)
+
+    def liner_face(surface, name, out, points, color, skin_inset):
+        inward = vscale(F.dir_local(*out), -1.0)
+        if name != "E":
+            surface.poly([L(*point) for point in points], color, up=inward)
+            return
+        # The grade cuts through the terrain beneath this draw-only liner. Keep the same opening
+        # in the formwork, its stains and the mid view, so the eye and the ball have the same way out.
+        outline = [(z, y) for _, y, z in points]
+        for normal, limit in (((1, 0), opening[0]), ((-1, 0), -opening[1])):
+            section = clip(outline, normal, limit)
+            surface.poly([L(cx + d0 + (d1w - d0) * (y - FLUME_FLOOR) / 14.0 - skin_inset, y, z)
+                          for z, y in section], color, up=inward)
+
     for name, (along, out) in sides.items():
         for i in range(10):
             for j in range(3):
@@ -1026,9 +1046,8 @@ def build_penstock_tower():
                     a = -d + 2 * d * fa
                     wx = cx + along[0] * a + out[0] * d
                     wz = cz + along[1] * a + out[1] * d
-                    pts.append(L(wx, y, wz))
-                n_out = F.dir_local(out[0], out[1])
-                e.poly(pts, shade("concrete", 1.0, (i, j, ord(name)), 0.06), up=vscale(n_out, -1.0))
+                    pts.append((wx, y, wz))
+                liner_face(e, name, out, pts, shade("concrete", 1.0, (i, j, ord(name)), 0.06), inset)
     # parapet: concrete runs on the rim with pilasters; each run collides
     for side, a0, a1 in FLUME_PARAPET:
         if side == "W":
@@ -1109,8 +1128,8 @@ def build_penstock_tower():
         for fa, y in ((0.0, FLUME_FLOOR), (1.0, FLUME_FLOOR), (1.0, 0.0), (0.0, 0.0)):
             d = d0 + (d1w - d0) * (y - FLUME_FLOOR) / 14.0 - inset
             a = -d + 2 * d * fa
-            pts.append(L(cx + along[0] * a + out[0] * d, y, cz + along[1] * a + out[1] * d))
-        me.poly(pts, col("concrete"), up=vscale(F.dir_local(out[0], out[1]), -1.0))
+            pts.append((cx + along[0] * a + out[0] * d, y, cz + along[1] * a + out[1] * d))
+        liner_face(me, name, out, pts, col("concrete"), inset)
     for side, a0, a1 in FLUME_PARAPET:
         if side == "W":
             lo, hi = (cx - 43.8, a0), (cx - 42.3, a1)
@@ -1136,7 +1155,9 @@ def build_penstock_tower():
     frustum(fe, tc, 11.0, 10.2, 87.0, 90.0, 12, col("concrete"), caps=(False, True))
     for k in range(4):
         a, b = ring_pts[k], ring_pts[(k + 1) % 4]
-        beam(fe, L(a[0], 2.0, a[1]), L(b[0], 2.0, b[1]), 1.5, 4.0, col("concrete_lt"))
+        spans = [(a, b)] if k != 1 else [(a, (a[0], opening[0])), ((b[0], opening[1]), b)]
+        for start, end in spans:
+            beam(fe, L(start[0], 2.0, start[1]), L(end[0], 2.0, end[1]), 1.5, 4.0, col("concrete_lt"))
         beam(far["steel"], L(a[0], 17.8, a[1]), L(b[0], 17.8, b[1]), 0.9, 1.6, col("iron"))
 
     # ---- shells: window slots, gallery brackets, truss gussets (1); tie holes and liner streaks (2)
@@ -1181,8 +1202,8 @@ def build_penstock_tower():
             pts = []
             for aa, y in ((a - w, bot), (a + w, bot), (a + w * 0.5, top), (a - w * 0.5, top)):
                 d = d0 + (d1w - d0) * (y - FLUME_FLOOR) / 14.0 - inset - 0.03
-                pts.append(L(cx + along[0] * aa + out[0] * d, y, cz + along[1] * aa + out[1] * d))
-            card(s2, pts, lerp(col("stain"), col("rust"), rnd(k, ord(name), 5)), vscale(F.dir_local(out[0], out[1]), -1.0))
+                pts.append((cx + along[0] * aa + out[0] * d, y, cz + along[1] * aa + out[1] * d))
+            liner_face(s2, name, out, pts, lerp(col("stain"), col("rust"), rnd(k, ord(name), 5)), inset + 0.03)
     empties = {"sight_top": (tc[0], 90.0, tc[1]), "beam_root": (tc[0], 90.0, tc[1]), "warden_anchor": L(*FLUME_ANCHOR)}
     empties.update({k: L(*v) for k, v in hp.items()})
     return {"base": base, "exempt": exempt, "col": colm, "nodes": [], "empties": empties, "mid": mid, "far": far,

@@ -14,8 +14,8 @@ const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 # (SiltBoil.stalled: ten seconds within 18 m) and below cruise (SpeedTier) for SLOW_S. A ball at cruise or above is
 # never sought, however tight it turns. After a strike the storm rests REST_S before it can seek again.
 #
-# Plants for the pinned test (HazardHits.PLANT_ENV): no_tell strikes the moment it commits, seek_rolling seeks
-# whatever the ball does. tests/hazards_hit_everyone_test.gd must go red under each.
+# Plants for the pinned test only (HazardHits.plants, set by tests/hazards_hit_everyone_test.gd): no_tell strikes
+# the moment it commits, seek_rolling seeks whatever the ball does. That test must go red under each.
 
 const TELL_S := 1.2
 # The fairness floor (scripts/challenge/fairness.json tellS): no sought strike tells for less.
@@ -94,6 +94,15 @@ func pending() -> Hazard:
 # A storm that ends, or a stage that leaves, takes a tell with it: it never strikes.
 func clear() -> void:
 	_drop()
+
+
+# The ball is out of the storm's reach (SiltBoil.exempt, or the calm bay): a tell in flight is dropped and the read
+# starts over, so a ball that stopped there is not sought the tick it leaves.
+func stand_down() -> void:
+	_drop()
+	_samples.clear()
+	_sample_clock = 0.0
+	_slow_s = 0.0
 
 
 func _drop() -> void:

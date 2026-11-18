@@ -36,8 +36,7 @@ import { nodeTestsForPaths,
   failedRunLog,
   failedRunLogName,
   receiptBaseName,
-  signalReason,
-} from "./sketch-fast.mjs";
+  signalReason, checkLabels, removedChecks, checksRemoved } from "./sketch-fast.mjs";
 import { IMPORT_TRIES, importTry, importWithRetry, quarantineRecord, scriptErrorCount } from "./sketch-smoke.mjs";
 
 const files = (entries) => indexFromFiles(new Map(Object.entries(entries)));
@@ -572,4 +571,28 @@ test("nodeTestsForPaths: a park prop recipe or file faces the far-mesh fault che
   assert.deepEqual(nodeTestsForPaths(["src/core/palette.gd"]), ["scripts/palette-gd.test.mjs"]);
   assert.deepEqual(nodeTestsForPaths(["tools/icons/generate_icons.py", "tools/blender/common.py"]), ["scripts/palette-gd.test.mjs"]);
   assert.deepEqual(nodeTestsForPaths(["src/world/park/park_dam.json", "assets/models/world_one/ambush_altar.glb"]), []);
+});
+
+test("removedChecks names the labels a changed test no longer checks", () => {
+  const base = ['\t_check("the route climbs the kicker", climbs, str(points))', '\tT.eq("ends at gate level", end_y, gate_y)', '\t# _check("old", false, "")'].join("\n");
+  const head = ['\t_check("the route gains the grade rise", rise >= 2.0, str(rise))', '\tT.eq("ends at gate level", end_y, gate_y)', '\t_check(LABELS[0], ok, "")'].join("\n");
+  assert.deepEqual([...checkLabels(base)].sort(), ["ends at gate level", "the route climbs the kicker"]);
+  assert.deepEqual(removedChecks(base, head), ["the route climbs the kicker"]);
+  assert.deepEqual(removedChecks(base, base), []);
+});
+
+test("checkLabels reads the _report form most tests use", () => {
+  assert.deepEqual([...checkLabels('\t_report("layers stack in order", ok, detail)\n\tt.eq("count", a, b)\n')].sort(), ["count", "layers stack in order"]);
+});
+
+test("checkLabels reads a check helper with a longer name", () => {
+  assert.deepEqual([...checkLabels('\t_check_near("lip height", a, b, 0.1)\n\tt.eq_vec("aim", a, b)\n')].sort(), ["aim", "lip height"]);
+});
+
+test("checksRemoved compares a renamed test with its old path and a deleted one with nothing", () => {
+  const files = { "base:sketches/core-loop/tests/a_test.gd": 't.eq("one", 1, 1)\nt.eq("two", 2, 2)\n', "head:sketches/core-loop/tests/b_test.gd": 't.eq("one", 1, 1)\n',
+    "base:sketches/core-loop/tests/gone_test.gd": 't.eq("three", 3, 3)\n', "head:sketches/core-loop/tests/new_test.gd": 't.eq("four", 4, 4)\n' };
+  const show = (ref, file) => files[`${ref}:${file}`] ?? null;
+  const lines = ["R090\tsketches/core-loop/tests/a_test.gd\tsketches/core-loop/tests/b_test.gd", "D\tsketches/core-loop/tests/gone_test.gd", "A\tsketches/core-loop/tests/new_test.gd", "M\tscripts/x.mjs", ""];
+  assert.deepEqual(checksRemoved(lines, show, "base", "head"), [{ test: "b_test.gd", labels: ["two"] }, { test: "gone_test.gd", labels: ["three"] }]);
 });
