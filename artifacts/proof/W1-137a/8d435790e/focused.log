@@ -1,0 +1,27 @@
+sketch:smoke waiting for a machine slot (2 occupied)
+sketch:smoke waited 50s for the machine
+PASS sketches/core-loop import exit=0 3.3s
+PASS sketches/core-loop res://tests/invisible_walls_test.gd exit=0 37.0s
+PASS sketches/core-loop res://tests/landing_mark_test.gd exit=0 0.4s
+PASS sketches/core-loop res://tests/park_dam_rim_roll_test.gd exit=0 39.3s
+PASS sketches/core-loop res://tests/camera_tight_test.gd exit=0 95.3s
+PASS sketches/core-loop res://tests/threat_landing_depth_test.gd exit=0 0.7s
+PASS sketches/core-loop res://tests/park_flume_rim_roll_test.gd exit=0 41.2s
+slowest 7:
+  95.3s sketches/core-loop res://tests/camera_tight_test.gd
+  41.2s sketches/core-loop res://tests/park_flume_rim_roll_test.gd
+  39.3s sketches/core-loop res://tests/park_dam_rim_roll_test.gd
+  37.0s sketches/core-loop res://tests/invisible_walls_test.gd
+  3.3s sketches/core-loop import
+  0.7s sketches/core-loop res://tests/threat_landing_depth_test.gd
+  0.4s sketches/core-loop res://tests/landing_mark_test.gd
+skipped 2 (passed without running every check; not a failure):
+  sketches/core-loop res://tests/park_dam_rim_roll_test.gd
+    SKIP control Fin.L
+    SKIP control Fin.R
+  sketches/core-loop res://tests/park_flume_rim_roll_test.gd
+    SKIP control Fin.L
+    SKIP control Fin.R
+0 tests lack a verdict line
+sketch:smoke pass: 1 sketches, 7 runs, 2 at a time, 0 solo (0s), 121s. Headless boot and sketch tests only; feel needs Andrew's play.
+receipt /private/tmp/sk-W1-137a-gate/artifacts/local/receipts/named-0b46f9604f52-2026-11-18T22-11-32-740Z.json

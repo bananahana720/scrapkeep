@@ -1,0 +1,55 @@
+sketch:smoke waiting for a machine slot (2 occupied)
+sketch:smoke waited 98s for the machine
+PASS sketches/core-loop import exit=0 3.0s
+FAIL sketches/core-loop res://tests/invisible_walls_test.gd exit=1 38.7s
+failing lines (69 checks passed, 1 failed):
+  >> the test exited with code 1
+  >> [the matching wall has no undrawn place] got 1, want 0 -> FAIL
+[filtered report records its owner filter] got ["--owner=Park_QAWall_Near"], want ["--owner=Park_QAWall_Near"] -> PASS
+[filtered report covers one collider] got 1, want 1 -> PASS
+[the full map report survives a filtered sweep]  -> PASS
+RECEIPT {"bare_samples":2937,"invisible_samples":1959.0,"places_by_owner":{"Park_QAWall_Matched":1,"Park_QAWall_Missing":1,"Park_QAWall_Near":1}}
+[each visibility control creates a fresh directory] OK -> PASS
+[visibility control wrote its own report --layer-zero-wall] 0 -> PASS
+[visibility control measured places --layer-zero-wall]  -> PASS
+[rider-hidden mesh counts as a third place --layer-zero-wall] got ["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"], want ["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"] -> PASS
+[same collider samples in both visibility readings] got 2937, want 2937 -> PASS
+[remove fixture report wall_fixture-s1.json] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1-owners.json] got 0, want 0 -> PASS
+[remove the empty wall fixture directory] got 0, want 0 -> PASS
+[each visibility control creates a fresh directory] OK -> PASS
+[visibility control wrote its own report --camera-masked-wall] 0 -> PASS
+[visibility control measured places --camera-masked-wall]  -> PASS
+[rider-hidden mesh counts as a third place --camera-masked-wall] got ["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"], want ["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"] -> PASS
+[same collider samples in both visibility readings] got 2937, want 2937 -> PASS
+[remove fixture report wall_fixture-s1.json] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1-owners.json] got 0, want 0 -> PASS
+[remove the empty wall fixture directory] got 0, want 0 -> PASS
+[each visibility control creates a fresh directory] OK -> PASS
+[visibility control wrote its own report --preview-wall] 0 -> PASS
+[visibility control measured places --preview-wall]  -> PASS
+[rider-hidden mesh counts as a third place --preview-wall] got ["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"], want ["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"] -> PASS
+[same collider samples in both visibility readings] got 2937, want 2937 -> PASS
+[remove fixture report wall_fixture-s1.json] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1-owners.json] got 0, want 0 -> PASS
+[remove the empty wall fixture directory] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1.json] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1-owners.json] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1-partial-1289bb9a2e.json] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1-partial-1289bb9a2e-owners.json] got 0, want 0 -> PASS
+[remove the empty wall fixture directory] got 0, want 0 -> PASS
+[stage 1 (-199.5,30.0,445.0): the sweep ran 8 roll-outs (exit 0, 8 rows)]  -> PASS
+[stage 1 (-199.5,30.0,445.0): no roll-out hangs, sticks or falls through, and one gets clear { "reached": 5, "short": 2, "slope": 1 }]  -> PASS
+invisible_walls_test: FAIL (1 of 70 checks)
+WARNING: 22 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 2 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.
+
+the test exited with code 1
+slowest 2:
+  38.7s sketches/core-loop res://tests/invisible_walls_test.gd
+  3.0s sketches/core-loop import
+skipped 0 (passed without running every check; not a failure):
+0 tests lack a verdict line
+sketch:smoke fail: 1 sketches, 2 runs, 2 at a time, 0 solo (0s), 42s. Headless boot and sketch tests only; feel needs Andrew's play.
+receipt /private/tmp/sk-W1-137a-gate/artifacts/local/receipts/named-0b46f9604f52-2026-11-18T22-13-34-589Z.json
