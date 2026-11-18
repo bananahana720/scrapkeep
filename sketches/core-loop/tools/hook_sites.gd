@@ -9,9 +9,9 @@ const HOLD_TICKS := 75
 const LANDING_LIMIT := 360
 const Rules := preload("res://src/movement/ball_rules.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const Stamps := preload("res://src/world/park/park_stamps.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const Intent := preload("res://src/movement/intent.gd")
-
 const Game := preload("res://src/game.gd")
 
 var game
@@ -101,13 +101,24 @@ func measure(id: String, site: Dictionary, no_bite: bool) -> Dictionary:
 		worst_energy = maxf(worst_energy, early.exit_energy_residual)
 		if best.is_empty() or early.landing_mps > best.landing_mps:
 			best = early
+	# A moving stage or leftover contact must not choose the winner. Repeat
+	# both entries after traversing the whole schedule, in reverse order.
+	var repeat_early := await _take(pose, int(best.release_tick))
+	var repeat_held := await _take(pose, HOLD_TICKS)
+	row["repeat_early"] = repeat_early
+	row["repeat_held"] = repeat_held
 	row["best_early"] = best
 	row["worst_exit_energy_residual"] = worst_energy
 	row["held_only_tier"] = not held.tier.is_empty() and not early_surfaces.has(held.tier)
 	row["early_tiers"] = early_surfaces.keys()
 	row["early_trials"] = HOLD_TICKS - 1
-	row.status = "measured"
+	row.status = "measured" if _same_landing(held, repeat_held) and _same_landing(best, repeat_early) else "inconsistent repeat"
 	return row
+
+
+func _same_landing(first: Dictionary, repeat: Dictionary) -> bool:
+	return repeat.status == "landed" and first.landing_surface == repeat.landing_surface and first.tier == repeat.tier \
+		and absf(first.landing_mps - repeat.landing_mps) <= 0.01
 
 
 func _station(site: Dictionary) -> Dictionary:
@@ -218,6 +229,13 @@ func _tier(pose: Dictionary, surface: Node3D, at: Vector3) -> String:
 			var ledge := game.find_child("Park_" + String(id), true, false) as Node3D
 			if ledge != null and (ledge == surface or ledge.is_ancestor_of(surface)):
 				return id
+			# A draped ledge has no separate body. The terrain under this
+			# authored plateau rises by the stamp's height within its footprint.
+			if surface.name.begins_with("Tile"):
+				for feature in game.ctx.terrain.map().park.park_rows:
+					if feature.id == id and feature.get("fit") == "drape" and feature.stamp == "plateau":
+						if Stamps.inside(Stamps.frame(feature), at.x, at.z) and feature.size[1] > 0:
+							return id
 	return ""
 
 
