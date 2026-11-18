@@ -19,14 +19,17 @@ extends SceneTree
 #   jump    a jump pressed on that landing leaves the ground.
 #   climb   from rest on the drum floor (BASIN), a person's line: to DRUM_WEST on the drum floor west of the kicker, up
 #           its centre line holding shift, a jump near the lip, then east: on the terrace at the gate's level inside CLIMB_S.
+#   sight   the north arch's crossbar is visible along the service grade from the stalled run's camera and ball.
+#   roll    the ball rolls out along the service grade, takes an offer and launches east without jumping or boosting.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const RewardGates := preload("res://src/build/reward_gates.gd")
 const T := preload("res://tests/support/t.gd")
 
 const REST := Vector3(271.07, 1.4, 487.0)
 const BASIN := Vector3(245.0, -12.0, 465.0)
-const DRUM_WEST := Vector3(230.0, 0.0, 480.0)
+const DRUM_WEST := Vector3(230.0, 0.0, 483.0)
 const KICKER := "drum_lip_kicker"
 const TERRACE_EDGE_X := 272.0
 const GROOVE_X := [270.0, 274.0]
@@ -41,10 +44,19 @@ const SHOT_S := 4.0
 const CLIMB_S := 20.0
 const JUMP_RISE_M := 1.0
 const CENTRE_LEAD_M := 6.0
+# Frames 0168, 0172 and 0180 of the wave 44 played run. The old terrain or kicker cuts all six rays.
+const DRUM_SIGHTLINES := [
+	[Vector3(252.8, -9.6, 459.4), Vector3(262.3, -13.0, 461.2)],
+	[Vector3(268.7, -11.0, 462.7), Vector3(269.1, -13.0, 460.7)],
+	[Vector3(252.9, -8.1, 456.4), Vector3(253.8, -11.2, 465.5)],
+]
+const SERVICE_START := Vector3(251.0, -12.0, 458.0)
 
 var t := T.new("park_flume_lip_notch_probe_test")
 var game
 var source := Intent.Scripted.new()
+var taken := ""
+var launch := Vector3.ZERO
 
 
 func _initialize() -> void:
@@ -93,6 +105,17 @@ func _run() -> void:
 	var gate_ground: float = game.ctx.terrain.height(slot["at"].x, slot["at"].y)
 	var run_in: Vector3 = Vector3(slot["at"].x, gate_ground, slot["at"].y) - (slot["facing"] as Vector3) * 9.0
 	print("  gate 0 at %s, ground %.2f, run-in %s" % [slot["at"], gate_ground, run_in])
+	var crossbar := Vector3(slot["at"].x, gate_ground + RewardGates.HEIGHT, slot["at"].y)
+	var landmark: Node = game.ctx.terrain.geometry_root(2).find_child("Landmark_penstock_tower", true, false)
+	var views: Array[Node] = landmark.find_children("landmark_penstock_tower*", "MeshInstance3D", true, false) if landmark != null else []
+	t.check("the landmark views are in the scene", not views.is_empty())
+	for pose: Array in DRUM_SIGHTLINES:
+		for from: Vector3 in pose:
+			var query := PhysicsRayQueryParameters3D.create(from, crossbar, 1)
+			query.hit_from_inside = true
+			var hit: Dictionary = space.intersect_ray(query)
+			t.check("the ground leaves the north crossbar visible from %s" % from, hit.is_empty(), str(hit.get("position", "clear")))
+			t.eq("the liner leaves the north crossbar visible from %s" % from, _blocking_view(views, from, crossbar), "")
 	var landed: Dictionary = await _land()
 	print("  rest: grounded at %.2f s, at %s" % [landed["s"], landed["at"]])
 	t.check("rest: a ball dropped where the groove was lands grounded there", landed["s"] >= 0.0
@@ -108,8 +131,21 @@ func _run() -> void:
 	print("  climb: out at %.1f s, end=%s, peak y %.2f" % [climb["out_s"], climb["end"], climb["peak"]])
 	t.check("climb: a player rolls up the kicker from the drum floor and out to the gate's level", climb["out_s"] >= 0.0,
 			"end %s, peak y %.2f, gate ground %.2f" % [climb["end"], climb["peak"], gate_ground])
+	await _service_exit()
 	game.free()
 	quit(t.verdict())
+
+
+func _blocking_view(views: Array[Node], from: Vector3, target: Vector3) -> String:
+	for view: MeshInstance3D in views:
+		var start := view.to_local(from)
+		var ray := view.to_local(target) - start
+		var faces := view.mesh.get_faces()
+		for i in range(0, faces.size(), 3):
+			var hit: Variant = Geometry3D.ray_intersects_triangle(start, ray, faces[i], faces[i + 1], faces[i + 2])
+			if hit != null and start.distance_squared_to(hit) < ray.length_squared():
+				return view.name
+	return ""
 
 
 func _stick(want: Vector3) -> Vector2:
@@ -179,3 +215,26 @@ func _climb(run_in: Vector3) -> Dictionary:
 		await physics_frame
 	source.hold = {}
 	return {"out_s": -1.0, "end": player.ball_position(), "peak": peak}
+
+
+func _service_exit() -> void:
+	var player = game.player
+	player.reset_to(SERVICE_START)
+	await physics_frame
+	game.ctx.events.reward_chosen.connect(func(id: String): taken = id)
+	game.ctx.events.launched.connect(func(velocity: Vector3): launch = velocity)
+	game.flow._unseal()
+	var offers: Array = game.build.gates.offers
+	if not t.check("the normal flume gate row opens", offers.size() >= 2, "offers %d" % offers.size()):
+		return
+	var offer: Dictionary = offers[0]
+	var at: Vector3 = offer["at"]
+	game.camera.snap(at - SERVICE_START)
+	source.hold = {"move": Vector2(0.0, 1.0)}
+	for _tick in int(CLIMB_S * Engine.physics_ticks_per_second):
+		await physics_frame
+		if not taken.is_empty():
+			break
+	source.hold = {}
+	t.check("the service grade leads through the north gate on a roll", taken == offer["part_id"], "took %s at %s" % [taken, player.ball_position()])
+	t.check("the gate keeps an eastbound launch", Vector2(launch.x, launch.z).normalized().x >= 0.9 and launch.y > 0.0, str(launch))

@@ -30,13 +30,30 @@ const ENDING_PROOF := "mind_quieted"
 
 # Reel order is rough progression order, so "furthest along" reads as "newest". The saved
 # round-robin pointer is a reel index: add rows at the end rather than reordering.
+# postcard (optional): a set built for the postcard shot, in the set's own frame and placed at `at` on the stage.
+# set is the model; dressing lists more models as {model, at, scale, yaw_deg}; water is a plane {at, size}; subject
+# is where the row's subject stands and how much it is scaled; camera is {at, look, drift, fov}, drifting by `drift`
+# over the shot; sky names a WorldLook.TIME_ROWS grade.
 # card: who, what, then three stats (one true, one deadpan, one at the subject's expense).
 # lines: postcard caption, the crash caption, the wink caption.
 const ROWS := [
 	{"id": "sable", "kind": "pilot", "pilot": "pylon_engineer", "world": 1, "theme": "A",
 		"card": ["SABLE", "Fox · pylon engineer", "Top speed", "yes", "Brakes", "rumoured", "Leaves", "faster than she arrived"],
 		"lines": ["Spillway Works. Dawn. Probably a Tuesday.", "This is the sad part.", "Moss packed a spare."],
-		"sfx": ["VRRRM", "FWOOSH", "KLANG!"], "cameo": "brindle", "inset": "Someone out there remembers her. (Later.)"},
+		"sfx": ["VRRRM", "FWOOSH", "KLANG!"], "cameo": "brindle", "inset": "Someone out there remembers her. (Later.)",
+		"postcard": {
+			"at": Vector3(0.0, 0.0, -950.0),
+			"set": "res://assets/models/park/landmark_dam.glb",
+			"dressing": [
+				{"model": "res://assets/models/park/anchor_hoodoo_c.glb", "at": Vector3(-248, 5, -20), "scale": Vector3(32.0, 14.5, 23.0), "yaw_deg": 27.0},
+				{"model": "res://assets/models/park/anchor_hoodoo_b.glb", "at": Vector3(254, 4, -58), "scale": Vector3(27.0, 12.5, 22.0), "yaw_deg": 145.0},
+			],
+			"water": {"at": Vector3(0.0, 5.0, 380.0), "size": Vector2(1600.0, 1000.0)},
+			# Deck at y 121, just inside the apron-side parapet at x 61 (park/landmarks.py).
+			"subject": {"at": Vector3(61.0, 121.0, -71.0), "scale": 3.2},
+			"camera": {"at": Vector3(-53.0, 9.0, 364.0), "look": Vector3(-11.0, 77.0, -43.0), "drift": Vector3(0.0, 0.0, -20.0), "fov": 40.0},
+			"sky": "dawn",
+		}},
 	{"id": "spillway", "kind": "world", "world": 1, "theme": "A",
 		"card": ["SPILLWAY WORKS", "World one · the river canyon", "Pumps", "rusty", "River", "keeps no promises", "Fish", "larger than the Foreman permits"],
 		"lines": ["World one. Wet, sunny, loud.", "The river took the spare seal.", "Moss packed another."],

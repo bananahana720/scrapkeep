@@ -10,15 +10,15 @@ const T := preload("res://tests/support/t.gd")
 
 # The Flume's warden exit (design-v3/park/stages/2-park_flume.md, route warden_exit; card BOT-LINE).
 # After a stage-2 break the gates stand on the ground east of the head-house drum, 13 m over its
-# floor, and the drum's east wall is a cliff. The authored way out is drum_lip_kicker: a 28 m greybox
-# wedge rising 14 m to its east lip. Since 2026-10-25 the lip is x 272, on the terrace edge at the terrace's
+# floor. The service grade cuts through the north end of the drum's east wall. The other way out is
+# drum_lip_kicker, a 28 m wedge rising 14 m to its east lip. Since 2026-10-25 the lip is x 272, on the terrace edge at the terrace's
 # height (it was x 267 with a 5 m gap, then x 270.07 with a 1.93 m notch that wedged a resting ball off the
 # ground, park_flume_lip_notch_probe_test). The heights tools/bot_driver.gd
 # _climb_route reads do not hold the wedge (it is a placed collider), so on 540a55a4 the route came
 # back empty and runner_gunner seed 1 sat against the wall from t=120 to the stage limit.
 # Pins, from the ball's stall point on that run, (269, -13, 462):
-#   route   _climb_route to the gate's run-in point is not empty, climbs the kicker (a point where the ramp
-#           stands at least RAMP_HIGH_M over the floor) and ends within LEVEL_BAND of the gate's height;
+#   route   _climb_route to the gate's run-in point passes through the service grade's footprint and ends within LEVEL_BAND of the gate's height;
+#           a second route, to the kicker's lip from a start in line with it, still climbs the wedge;
 #   exit    from each of STARTS, the bot's own climb steering (_fight_way_up, then _act) puts the
 #           ball on the ground east of the drum wall, within LEVEL_BAND of the gate's height,
 #           inside EXIT_S;
@@ -45,7 +45,10 @@ const EXIT_X := 272.5
 const EXIT_S := 40.0
 const SETTLE_TICKS := 30
 const KICKER := "drum_lip_kicker"
+const GRADE := "drum_service_grade"
 const RAMP_HIGH_M := 7.0
+# A start this far back from the lip, on the same line, so the only way up is the wedge.
+const KICKER_RUN_M := 36.0
 
 var _t := T.new("bot_flume_exit_test")
 var _game
@@ -112,16 +115,31 @@ func _physics_process(delta: float) -> bool:
 				lip = (node as Node3D).global_transform * Vector3(0.0, float(row["size"][1]), float(row["size"][0]) * 0.5)
 		_t.check("%s stands as a kicker" % KICKER, lip != Vector3.INF, str(lip))
 		var route: Array[Vector3] = _driver._climb_route(STALL, _target)
+		var end_y: float = _game.ctx.terrain.height(route.back().x, route.back().z) if not route.is_empty() else -INF
+		# A point merely inside the footprint proves little: the stall line is 2 m from its edge. The
+		# route has to stand high on the grade, which is what climbing it means.
+		var floor_y: float = _game.ctx.terrain.height(STALL.x, STALL.z)
+		var on_grade := 0
+		var grade_rise := 0.0
+		for row in map.park["park_rows"]:
+			if row["id"] == GRADE:
+				for p in route:
+					if map.footprint_contains(row, Vector2(p.x, p.z)):
+						var rise: float = _game.ctx.terrain.height(p.x, p.z) - floor_y
+						grade_rise = maxf(grade_rise, rise)
+						on_grade += int(rise >= RAMP_HIGH_M)
 		var kickers: Array = _driver._kickers_within(Vector2(STALL.x, STALL.z) - Vector2.ONE * 80.0, Vector2(STALL.x, STALL.z) + Vector2.ONE * 80.0)
+		var kicker_route: Array[Vector3] = _driver._climb_route(Vector3(lip.x - KICKER_RUN_M, STALL.y, lip.z), lip)
 		var on_ramp := 0
-		for p in route:
+		for p in kicker_route:
 			if BotDriver._kicker_height(kickers, Vector2(p.x, p.z)) - _game.ctx.terrain.height(p.x, p.z) >= RAMP_HIGH_M:
 				on_ramp += 1
-		var end_y: float = _game.ctx.terrain.height(route.back().x, route.back().z) if not route.is_empty() else -INF
-		print("exit route from %s to %s: %d points, %d high on the ramp, ends at ground %.1f (gate %.1f): %s" % [
-			STALL, _target, route.size(), on_ramp, end_y, _gate_y, route])
+		print("exit route from %s to %s: %d points, %d on the grade, ends at ground %.1f (gate %.1f): %s" % [
+			STALL, _target, route.size(), on_grade, end_y, _gate_y, route])
+		print("kicker route to the lip %s: %d points, %d high on the ramp: %s" % [lip, kicker_route.size(), on_ramp, kicker_route])
 		_t.check("a climb route to the gates exists", not route.is_empty(), "%d points" % route.size())
-		_t.check("the route climbs the kicker", on_ramp > 0, "%d points high on the ramp" % on_ramp)
+		_t.check("the route to the gates climbs the %s" % GRADE, on_grade > 0, "%d points at least %.0f m up it, highest %.1f m" % [on_grade, RAMP_HIGH_M, grade_rise])
+		_t.check("the router still finds a way up the kicker when aimed at its lip", on_ramp > 0, "%d points high on the ramp" % on_ramp)
 		_t.check("the route ends at the gates' level", _gate_y - end_y <= BotDriver.LEVEL_BAND, "ground %.1f, gate %.1f" % [end_y, _gate_y])
 		_start_leg()
 		return false

@@ -141,14 +141,14 @@ test("display-run: takes a slot, sets a scratch home, never passes --headless, r
   const events = [];
   let seen;
   const start = async (command, argv, { env }) => { events.push("start"); seen = { command, argv, env }; return { exit: 0, signal: null, output: "ok", timedOut: false }; };
-  const r = await display.runWindowed({ cwd: dir, script: "res://tools/x.gd", args: ["--out=/a"], binary: "/bin/godot", env: { HOME: "/Users/real" }, acquire: noSlot(events), start });
+  const r = await display.runWindowed({ platform: "linux", cwd: dir, script: "res://tools/x.gd", args: ["--out=/a"], binary: "/bin/godot", env: { DISPLAY: ":0", HOME: "/Users/real" }, acquire: noSlot(events), start });
   assert.deepEqual(events, ["acquire", "start", "release"]);
   assert.equal(r.exit, 0);
   assert.ok(r.home.startsWith(path.join(dir, "artifacts/local/display-run/home-")));
   assert.deepEqual(seen.argv, ["--path", path.join(dir, "sketches/core-loop"), "--script", "res://tools/x.gd", "--", "--out=/a"]);
   assert.equal(seen.env.HOME, r.home);
   assert.ok(!existsSync(r.home), "the scratch home is removed after the run");
-  const kept = await display.runWindowed({ cwd: dir, script: "res://x.gd", binary: "/bin/godot", env: { KEEP_DISPLAY_HOME: "1" }, acquire: noSlot(), start });
+  const kept = await display.runWindowed({ platform: "linux", cwd: dir, script: "res://x.gd", binary: "/bin/godot", env: { DISPLAY: ":0", KEEP_DISPLAY_HOME: "1" }, acquire: noSlot(), start });
   assert.ok(existsSync(kept.home), "KEEP_DISPLAY_HOME=1 keeps it");
 });
 
@@ -156,7 +156,7 @@ test("display-run: the scratch home wins over a caller's HOME and platform, on e
   const { dir } = repo();
   let env;
   const start = async (command, argv, opts) => { env = opts.env; return { exit: 0, output: "", timedOut: false }; };
-  const r = await display.runWindowed({ cwd: dir, script: "res://x.gd", binary: "/bin/godot", platform: "linux", env: { DISPLAY: ":0", HOME: "/Users/real" },
+  const r = await display.runWindowed({ platform: "linux", cwd: dir, script: "res://x.gd", binary: "/bin/godot", env: { DISPLAY: ":0", HOME: "/Users/real" },
     extraEnv: { HOME: "/Users/real", XDG_DATA_HOME: "/x" }, acquire: noSlot(), start });
   assert.equal(env.HOME, r.home);
   assert.equal(env.XDG_DATA_HOME, path.join(r.home, "data"));
@@ -170,16 +170,16 @@ test("display-run: refuses window-defeating engine flags and a script that is no
   const start = async () => assert.fail("must not start");
   for (const flag of ["--headless", "--display-driver", "--display-driver=headless", "--rendering-driver", "--path"]) {
     const events = [];
-    await assert.rejects(display.runWindowed({ cwd: dir, script: "res://x.gd", engineArgs: [flag, "x"], binary: "/bin/godot", acquire: noSlot(events), start }), /refusing engine flag/);
+    await assert.rejects(display.runWindowed({ platform: "linux", cwd: dir, script: "res://x.gd", engineArgs: [flag, "x"], binary: "/bin/godot", acquire: noSlot(events), start }), /refusing engine flag/);
     assert.deepEqual(events, [], `${flag}: no slot taken`);
   }
-  await assert.rejects(display.runWindowed({ cwd: dir, script: "/abs/x.gd", binary: "/bin/godot", acquire: noSlot(), start }), /res:\/\//);
+  await assert.rejects(display.runWindowed({ platform: "linux", cwd: dir, script: "/abs/x.gd", binary: "/bin/godot", acquire: noSlot(), start }), /res:\/\//);
 });
 
 test("display-run: releases the slot when the launch throws", async () => {
   const { dir } = repo();
   const events = [];
-  await assert.rejects(display.runWindowed({ cwd: dir, script: "res://x.gd", binary: "/bin/godot", acquire: noSlot(events), start: async () => { throw new Error("boom"); } }), /boom/);
+  await assert.rejects(display.runWindowed({ platform: "linux", cwd: dir, script: "res://x.gd", binary: "/bin/godot", env: { DISPLAY: ":0" }, acquire: noSlot(events), start: async () => { throw new Error("boom"); } }), /boom/);
   assert.deepEqual(events, ["acquire", "release"]);
 });
 
@@ -190,7 +190,7 @@ test("display-run: the timeout kills the whole run, a forked child or an exec, i
     writeFileSync(fake, `#!/bin/sh\necho started "$@"\n${body}`, { mode: 0o755 });
     const events = [];
     const t0 = Date.now();
-    const r = await display.runWindowed({ cwd: dir, script: "res://x.gd", binary: fake, timeoutMs: 300, acquire: noSlot(events) });
+    const r = await display.runWindowed({ platform: "linux", cwd: dir, script: "res://x.gd", binary: fake, env: { DISPLAY: ":0" }, timeoutMs: 300, acquire: noSlot(events) });
     assert.ok(Date.now() - t0 < 2000, `${body.trim()}: returned in ${Date.now() - t0} ms`);
     assert.equal(r.timedOut, true);
     assert.equal(r.exit, null);
@@ -206,7 +206,8 @@ test("display-run: SIGTERM to the node process kills the run's group", async () 
   writeFileSync(fake, `#!/bin/sh\nsleep 30 &\necho $$ $! > "${pids}"\nwait\n`, { mode: 0o755 });
   const runner = path.join(dir, "runner.mjs");
   writeFileSync(runner, `import { runWindowed } from ${JSON.stringify(path.join(here, "display-run.mjs"))};
-await runWindowed({ cwd: ${JSON.stringify(dir)}, script: "res://x.gd", binary: ${JSON.stringify(fake)}, timeoutMs: 20000, acquire: async () => ({ release() {} }) });
+await runWindowed({ platform: "linux", env: { DISPLAY: ":0" }, cwd: ${JSON.stringify(dir)}, script: "res://x.gd", binary: ${JSON.stringify(fake)}, timeoutMs: 20000, acquire: async () => ({ release() { console.error("released"); } }) });
+process.exit(1); // An interrupted receipt producer must never reach its next step.
 `);
   const node = spawn(process.execPath, [runner], { stdio: "ignore" });
   const until = async (ok, ms) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
