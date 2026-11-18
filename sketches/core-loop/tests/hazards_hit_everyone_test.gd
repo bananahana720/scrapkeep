@@ -26,6 +26,8 @@ const T := preload("res://tests/support/t.gd")
 const PLANT_ENV := "SCRAPKEEP_PLANT_HAZARD"
 
 const DT := 0.1
+# The director's flood hold cap as the card pins it (PARK_FLOOD_HOLD_CAP_S, W1-148).
+const HOLD_CAP_S := 2.0
 const CRUISE := 14.0
 const DOME := {"id": "dome_lightning", "kind": "lightning", "family": "natural", "site": "domes",
 	"trigger": {"on": "clock_tier", "value": 1}, "weight": 1.0,
@@ -436,7 +438,7 @@ func _flood_parked() -> void:
 	t.check("parked flood: it landed with the ball in the basin (else nothing was read)", landed_at >= 0.0)
 	if t.check("parked flood: the parked ball was taxed before the flood ended (none is a miss)", not taxes.is_empty() and (ended_at < 0.0 or float(taxes[0].t) < ended_at),
 		"landed %.1f s, ended %.1f s, taxes %d" % [landed_at, ended_at, taxes.size()]):
-		t.check("parked flood: no tax before the hold cap and the 3 s in deep water", float(taxes[0].t) - landed_at >= Director.PARK_FLOOD_HOLD_CAP_S + Natural.FLOOD_TAX_AFTER_S - DT,
+		t.check("parked flood: no tax before the hold cap and the 3 s in deep water", float(taxes[0].t) - landed_at >= HOLD_CAP_S + Natural.FLOOD_TAX_AFTER_S - DT,
 			"first tax %.1f s after landing" % (float(taxes[0].t) - landed_at))
 	w.free()
 
