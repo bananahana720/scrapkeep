@@ -56,7 +56,8 @@ const LIFT_GAIN := 0.3
 # The contact lift (set_contact_subject), by the metres from the pivot to the subject. Out to CONTACT_RANGE the lift
 # may act, easing out over the last CONTACT_RANGE - CONTACT_FADE_START; past CONTACT_BOW_FAR the subject must also be
 # in view. The near bow is the stretch from CONTACT_BOW_FAR in to CONTACT_BOW_NEAR, where the arm swings from the far
-# perch to the near one: nearly level behind the ball, then almost straight up (radians, short of MAX_ARM_PITCH).
+# perch to the near one: nearly level behind the ball, then almost straight up (radians, short of MAX_ARM_PITCH);
+# the lift that reaches the near perch is cut to CONTACT_LIFT_MAX.
 const CONTACT_RANGE := 40.0
 const CONTACT_FADE_START := 35.0
 const CONTACT_BOW_FAR := 17.0
@@ -380,9 +381,9 @@ func _free_arm(arm_pitch: float, reach := TIGHT_ARM, ignore_floor := true) -> fl
 	return fractions[0] * reach
 
 
-# Keep the ball low in the frame when a tall target pulls the lens down to the floor or
-# a bow closes over the rider. Test both boom directions from the same pivot: the
-# SpringArm can still reject a perch under a roof. Mounted aim owns its shoulder view.
+# Raise the lens, by at most CONTACT_LIFT_MAX over the player's pitch, when a tall target pulls it down to
+# the floor or a bow closes over the rider. The lens keeps looking along the player's pitch, so the ball stays in
+# frame. Test both boom directions from the same pivot: the SpringArm can still reject a perch under a roof. Mounted aim owns its shoulder view.
 func _boss_contact_lift(arm_pitch: float, subject: Node3D) -> float:
 	if subject == null or shoulder_target > 0.0 or shoulder_blend > 0.0:
 		return 0.0
