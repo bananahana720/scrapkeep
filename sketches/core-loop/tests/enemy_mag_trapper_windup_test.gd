@@ -1,5 +1,8 @@
 extends SceneTree
 
+# PLANT --plant-deployed -> [W1-126 one disc seats at the committed centre]
+# PLANT --plant-floating -> [W1-126 one disc seats at the committed centre]
+
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -13,6 +16,12 @@ const TOLERANCE := 0.0001
 # The stack's top face and the top disc's thickness, in stack space (enemy_mag_trapper.py).
 const STACK_TOP := 0.6
 const DISC_HALF := 0.1
+# The deployed disc's lowest point rests on the terrain under it to this distance; it is a mesh
+# bound against a terrain height, so neither number comes from the code that places the disc.
+const SEAT_TOLERANCE := 0.05
+# The casing is seated along the slope's normal, which moves its middle sideways a little.
+const CENTRE_TOLERANCE := 0.1
+const FLOAT_PLANT := 0.5
 
 var _game
 var _test := T.new("enemy_mag_trapper_windup_test")
@@ -58,6 +67,17 @@ func _spawn(enabled := true):
 	enemy.windup_pose_enabled = enabled
 	enemy._rest = 0.0
 	return enemy
+
+
+# The lowest vertex of a mesh node in world space. A tilted disc's AABB corner hangs below the disc
+# itself, so the box would call a seated disc sunk.
+func _lowest_point(node: MeshInstance3D) -> Vector3:
+	var low := Vector3(0.0, INF, 0.0)
+	for vertex in node.mesh.get_faces():
+		var world: Vector3 = node.global_transform * vertex
+		if world.y < low.y:
+			low = world
+	return low
 
 
 func _parts(enemy) -> Array:
@@ -129,6 +149,9 @@ func _trace(enabled: bool) -> Array:
 	var warn_full := []
 	var live_shorter := true
 	var deployed_frames := 0
+	var worst_gap := 0.0
+	var centred := true
+	var capped := true
 	var seated := true
 	var profile_kept := true
 	var quiet := true
@@ -159,9 +182,16 @@ func _trace(enabled: bool) -> Array:
 						deployed = weakref(disc)
 						if "--plant-deployed" in OS.get_cmdline_user_args():
 							disc.position.x += 1.0
+						if "--plant-floating" in OS.get_cmdline_user_args():
+							disc.position.y += FLOAT_PLANT
 					deployed_frames += 1
-					var foot := disc.global_position - disc.global_basis.y * 0.10
-					seated = seated and foot.distance_to(tele.center) < TOLERANCE and disc.mesh == parts[1].mesh
+					var box: AABB = disc.global_transform * disc.mesh.get_aabb()
+					var low := _lowest_point(disc)
+					var ground: float = _game.ctx.terrain.height(low.x, low.z)
+					worst_gap = maxf(worst_gap, absf(low.y - ground))
+					centred = centred and Vector2(disc.global_position.x - tele.center.x, disc.global_position.z - tele.center.z).length() < CENTRE_TOLERANCE
+					capped = capped and box.end.y > tele.global_position.y
+					seated = seated and disc.mesh == parts[1].mesh
 					seated = seated and disc.get_child_count() == 0 and disc.is_visible_in_tree()
 					profile_kept = profile_kept and is_equal_approx(disc.global_basis.y.length(), 1.5) \
 						and is_equal_approx(disc.global_basis.x.length(), 1.0) and is_equal_approx(disc.global_basis.z.length(), 1.0)
@@ -183,8 +213,9 @@ func _trace(enabled: bool) -> Array:
 			"strike frames %s; full frames %s; difference %d physics frames" % [_strike_frames, full_frames, delta])
 		_test.check("WG-4 completed cycle", rest_after and _rest(enemy), "exact rest on first ROAM frame after LIVE")
 		_test.check("WG-4 one disc leaves", live_shorter and not _strike_frames.is_empty(), "only top disc hidden throughout LIVE")
-		_test.check("W1-126 one disc seats at the committed centre", seated and deployed_frames >= 250,
-			"%d live frames with the original mesh, no collider" % deployed_frames)
+		_test.check("W1-126 one disc seats at the committed centre", seated and centred and worst_gap < SEAT_TOLERANCE and deployed_frames >= 250,
+			"%d live frames with the original mesh, no collider; lowest point at most %.4f m from the terrain" % [deployed_frames, worst_gap])
+		_test.check("W1-126 the disc top shows above the pit paint", capped and deployed_frames > 0)
 		_test.check("W1-126 the taller casing keeps its horizontal footprint", profile_kept and deployed_frames > 0)
 		_test.check("W1-126 the disc only exists during the live pit", quiet and deployed != null and deployed.get_ref() == null,
 			"no preview disc and no remnant after the pit expires")
