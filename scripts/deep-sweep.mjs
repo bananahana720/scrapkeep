@@ -8,6 +8,9 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = "sketches/core-loop/src/";
+// Tools are read for private reach-ins only: a capture or trial script that drives the game through its
+// underscore members breaks on the next refactor and proves less than it claims.
+const TOOLS = "sketches/core-loop/tools/";
 const WIDE_PARAMS = 6;
 const WIDE_BOOLS = 3;
 const GIANT_LINES = 1500;
@@ -84,7 +87,10 @@ export function wideSignatures(funcs) {
     .map((f) => ({ line: f.line, message: `${f.name}() takes ${f.params.length} params (${f.params.filter((p) => p.bool).length} bool)` }));
 }
 
-const reachIn = /(?<![\w.])(?!self\b)([a-z]\w*)\.(_[a-z]\w*)\b|\.(?:get|set|call)\(\s*"(_[a-z]\w*)"/;
+// The owner may be a chain (game.flow.warden._age), and self.other._member is still a reach into other.
+// super._member is a class calling its own parent, and self._member a file reading its own field, neither a reach.
+// A chain may start at the file's own private field, with or without self (_game.flow._set_state): the reach is into flow.
+const reachIn = /(?<![\w.])(?!super\._)(?:self\.)?(?!self\b)((?:_?[a-z]\w*\.)*_?[a-z]\w*)\.(_[a-z]\w*)\b|\.(?:get|set|call)\(\s*"(_[a-z]\w*)"/;
 
 // D2: code that touches another object's underscore members. Lines are [number, text] pairs.
 export function reachIns(lines) {
@@ -133,7 +139,9 @@ export function sweep({ base, head, read, diff, listSrc, linesAt }) {
   const leaks = new Map();
   const allSrc = listSrc();
   for (const [file, lines] of added) {
-    if (!file.startsWith(SRC) || !file.endsWith(".gd") || lines.length === 0) continue;
+    if (!file.endsWith(".gd") || lines.length === 0) continue;
+    if (file.startsWith(TOOLS)) { reachIns(lines).forEach((item) => add("D2", file, item)); continue; }
+    if (!file.startsWith(SRC)) continue;
     const text = read(file);
     const changed = new Set(lines.map(([n]) => n));
     const funcs = parseFuncs(text).filter((f) => changed.has(f.line));
@@ -180,7 +188,7 @@ function main(argv) {
   };
   const linesAt = (ref, file) => { try { return execFileSync("git", ["show", `${ref}:${file}`], { cwd: root, encoding: "utf8", maxBuffer: 256 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] }).split("\n").length; } catch { return 0; } };
   const listSrc = () => git("ls-tree", "-r", "--name-only", head, SRC).split("\n").filter((f) => f.endsWith(".gd"));
-  const diff = git("diff", "--unified=0", "--no-color", base, head, "--", SRC);
+  const diff = git("diff", "--unified=0", "--no-color", base, head, "--", SRC, TOOLS);
   const text = report({ base, head, findings: sweep({ base, head, read, diff, listSrc, linesAt }) });
   const out = opt("--out");
   if (out) writeFileSync(out, text); else process.stdout.write(text);
