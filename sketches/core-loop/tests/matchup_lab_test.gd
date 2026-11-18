@@ -319,21 +319,57 @@ func _damage_control() -> void:
 
 # Both stages ship grounded. A result for the dam must never stand in for the flume.
 # Invoke the producer as the done read does, without the old duel table's --out.
+class StrikeDummy extends Node3D:
+	signal attack_phase(facts: Dictionary)
+	enum Phase { LIVE }
+	var phase := Phase.LIVE
+	var kind := "plated_brute"
+	var mark
+
+	func telegraph():
+		return mark
+
+	func is_dead() -> bool:
+		return false
+
+
 func _fast_pass_receipt() -> void:
 	var mark := Lab.TelegraphScript.new()
 	mark.radius = 1.0
 	var counter := Lab.PassCounter.new()
-	for x in [0.0, 3.0]:
-		var owner := "on" if x == 0.0 else "off"
-		mark.center = Vector3(x, 0.0, 14.0)
+	var ball := [Vector3.ZERO]
+	counter.ball_position = func(): return ball[0]
+	for offset in [0.0, 3.0]:
+		var dummy := StrikeDummy.new()
+		dummy.mark = mark
+		counter.observe(dummy, "plated_brute")
+		mark.center = Vector3(offset, 0, 14)
 		for tick in range(91):
+			counter.tick = tick
+			ball[0] = Vector3(0.0, 1.0, 14.0 * tick / 90.0)
+			if tick == 0:
+				dummy.attack_phase.emit({"phase": "windup", "instance": 1})
 			if tick == 90:
-				var ball := Vector3(0.0, 1.0, 14.0 * tick / 90.0)
-				counter.shape(owner, owner, mark, ball)
-				counter.shape(owner, owner, mark, ball)
-	_check("a committed strike on the line counts once and a strike 3 m aside misses",
-		counter.threats == {"on": 1} and counter.strikes.size() == 2)
+				dummy.attack_phase.emit({"phase": "strike", "instance": 1})
+				dummy.attack_phase.emit({"phase": "strike", "instance": 1})
+		dummy.free()
+	_check("the attack observer counts the on-line dummy once and misses a dummy 3 m aside",
+		counter.threats == {"plated_brute": 1} and counter.strikes.size() == 2 and counter.contacts.size() == 1
+		and counter.contacts[0].geometry.r_out == 1.0 and counter.contacts[0].tick == 90)
+	var pit := StrikeDummy.new()
+	pit.mark = mark
+	pit.kind = "mag_trapper"
+	mark.center = ball[0]
+	counter.observe(pit, pit.kind)
+	pit.attack_phase.emit({"phase": "strike", "instance": 1})
+	counter.fields()
+	ball[0] += Vector3.RIGHT * 3.0
+	counter.tick += 1
+	counter.fields()
+	_check("a ball leaving the pit between arming and its first active tick is clear", counter.contacts.size() == 1)
+	pit.free()
 	mark.free()
+	_pass_grade_controls()
 	var receipt := OS.get_user_data_dir().path_join("fast-threat-%d-%d.json" % [OS.get_process_id(), Time.get_ticks_usec()])
 	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
 		"--script", "res://tools/matchup_lab.gd", "--", "--packs=grounded", "--table=park",
@@ -357,6 +393,37 @@ func _fast_pass_receipt() -> void:
 	observed.sort()
 	_check("grounded is ridden once at each speed on each Spillway stage",
 		rows.size() == 4 and observed == ["1/14", "1/28", "2/14", "2/28"])
+
+
+# Complete synthetic matrix with a deliberate hole in each of the three floors.
+func _pass_grade_controls() -> void:
+	var rows := []
+	var controls := []
+	var base := []
+	for pack in Lab.spillway_packs(PackedStringArray(["all"])):
+		for s in range(1, 9):
+			for speed in [14, 28]:
+				for mode in ["straight", "weave", "stall"]:
+					var row := {"stage": pack.stage, "pack": pack.pack, "site": [10, 20], "pilot": "tarn",
+						"seed": s, "speed": speed, "pass": mode, "outcome": "pass_complete", "plant": "",
+						"threats": 1, "observed_strikes": 1, "hull_lost": 0 if mode == "weave" else 1, "hull_per_min": 2 if mode == "stall" else 1}
+					rows.append(row)
+					if mode == "weave":
+						base.append(row.duplicate())
+					if mode == "straight" and "lobber" in pack.members:
+						var plant := row.duplicate()
+						plant.merge({"plant": "zero_lead", "threats": 0}, true)
+						controls.append(plant)
+	_check("the matched 13-stage/pack matrix and zero-lead controls meet their floors",
+		rows.size() == 624 and controls.size() == 96 and Lab.pass_grade(rows, controls, base, ["tarn"]).pass)
+	rows[0].threats = 0
+	rows[1].hull_lost = 1
+	rows[2].hull_per_min = 1
+	var grade := Lab.pass_grade(rows, controls, base, ["tarn"])
+	_check("one missed straight threat, one weaving regression and a failed stall ratio each register",
+		not grade.pass and grade.straight_misses == 1 and grade.weave_misses == 1 and grade.stall_misses == 1)
+	controls[0].threats = 1
+	_check("a threat in a zero-lead lobber pack invalidates the control", not Lab.pass_grade(rows, controls, base, ["tarn"]).plant_caught)
 
 
 func _packs_pure() -> void:

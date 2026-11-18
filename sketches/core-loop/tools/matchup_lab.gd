@@ -950,8 +950,10 @@ func _reap(run: Dictionary, timed_out: bool) -> void:
 			result["outcome"] = "no_result"
 			result["diagnostic"] = log_text.substr(maxi(0, log_text.find("SCRIPT ERROR:")), 300)
 		for key in ["n", "stage", "pilot", "pass", "speed", "seed", "plant"]:
-			result[key] = run[key]
-		result["pack"] = run.kind
+			if key == "n" or not result.has(key):
+				result[key] = run[key]
+		if not result.has("pack"):
+			result["pack"] = run.kind
 	if String(run["kind"]).begins_with(PACK_PREFIX):
 		result["pack"] = String(run["kind"]).substr(PACK_PREFIX.length())
 		result["table"] = _table_id
@@ -1772,27 +1774,99 @@ class NoLeadSight extends "res://src/combat/sight.gd":
 class PassCounter:
 	var threats := {}
 	var strikes := {}
-	var covered := {}
+	var contacts: Array = []
 
-	func strike(owner: String, key: String, contains_ball: bool) -> void:
+	var ball_position: Callable
+	var members: Array = []
+	var serials := {}
+	var slots := {}
+	var pulses := {}
+	var tick := 0
+	var warnings: Array = []
+	var strike_ticks := {}
+
+	func shape(owner: String, key: String, mark, ball: Vector3, at_tick: int, attacker: int) -> void:
+		if not is_instance_valid(mark) or not mark.is_hostile():
+			return
 		if not strikes.has(key):
-			strikes[key] = owner
-		if contains_ball and not covered.has(key):
-			covered[key] = true
-			threats[owner] = int(threats.get(owner, 0)) + 1
+			strikes[key] = false
+		if strikes[key] or not mark.contains(ball):
+			return
+		strikes[key] = true
+		threats[owner] = int(threats.get(owner, 0)) + 1
+		var geometry: Dictionary = mark.descriptor()
+		for field in geometry:
+			var value = geometry[field]
+			if value is Vector3:
+				geometry[field] = [value.x, value.y, value.z]
+		geometry.erase("tone")
+		contacts.append({"attacker": attacker, "kind": owner, "attack": key, "tick": at_tick,
+			"ball": [ball.x, ball.y, ball.z], "geometry": geometry})
 
-	func shape(owner: String, key: String, mark, ball: Vector3) -> void:
-		if is_instance_valid(mark) and mark.is_hostile():
-			strike(owner, key, mark.contains(ball))
+
+	func observe(enemy, kind: String) -> void:
+		members.append(weakref(enemy))
+		var owner_id: int = enemy.get_instance_id()
+		var slot := members.size() - 1
+		slots[owner_id] = slot
+		enemy.attack_phase.connect(func(facts: Dictionary):
+			var key := "%d/%d" % [slot, facts.instance]
+			if facts.phase == "windup":
+				warnings.append({"tick": tick, "kind": kind, "attacker": slot})
+			if facts.phase != "strike":
+				return
+			serials[owner_id] = key
+			strike_ticks[owner_id] = tick
+			if kind not in ["lobber", "chaser", "jolt_layer", "mag_trapper", "boom_tender"]:
+				shape(kind, key, enemy.telegraph(), ball_position.call(), tick, slot))
+		if kind == "chaser":
+			# A head reaching the ball inside its committed lane is the chaser's strike.
+			enemy.hit_player.connect(func(_damage, _shove):
+				shape(kind, "lunge/%d/%d" % [slot, enemy.lunges], enemy.telegraph(), ball_position.call(), tick, slot))
+		if kind == "lobber":
+			enemy.released.connect(func(_ring):
+				for shell in enemy.get_tree().get_nodes_in_group("enemy_shot"):
+					if shell.lobber == enemy and not shell.has_meta("pass_watched"):
+						shell.set_meta("pass_watched", true)
+						var key := "shell/%d/%d" % [slot, enemy.shots]
+						shell.exploded.connect(func(at, _radius, _hit):
+							if not shell.returned and at.is_equal_approx(shell.landing):
+								shape(kind, key, shell.ring, ball_position.call(), tick, slot)))
+
+
+	func fields() -> void:
+		for ref in members:
+			var enemy = ref.get_ref()
+			if not is_instance_valid(enemy) or enemy.is_dead():
+				continue
+			var id: int = enemy.get_instance_id()
+			if not serials.has(id):
+				continue
+			var key: String = serials[id]
+			if enemy.kind == "jolt_layer" and enemy.field != null:
+				# The mat's fill goes live before its first pulse. Only the pulse can jolt.
+				var count: int = enemy.field.outcomes.size()
+				if count > int(pulses.get(key, 0)):
+					shape(enemy.kind, "%s/pulse/%d" % [key, enemy.field.pulses], enemy.telegraph(), ball_position.call(), tick, slots[id])
+				pulses[key] = count
+			elif enemy.kind in ["mag_trapper", "boom_tender"] and enemy.phase == enemy.Phase.LIVE and tick > int(strike_ticks[id]):
+				var mark = enemy.telegraph()
+				if enemy.kind != "boom_tender" or (tick - int(strike_ticks[id])) <= enemy.SWEEP * Engine.physics_ticks_per_second:
+					shape(enemy.kind, key, mark, ball_position.call(), tick, slots[id])
+
+
+# Runs after the crew on the same physics tick. Reading during the next physics_frame
+# can sample the ball after Jolt has already moved it another step.
+class PassFieldSampler extends Node:
+	signal sampled
+	var counter: PassCounter
+
+	func _physics_process(_delta: float) -> void:
+		counter.fields()
+		sampled.emit()
 
 
 var _pass_counter := PassCounter.new()
-var _pass_members: Array = []
-var _pass_serials := {}
-var _pass_pulses := {}
-var _pass_tick := 0
-var _pass_warnings: Array = []
-var _pass_strike_ticks := {}
 
 
 static func spillway_packs(ids: PackedStringArray) -> Array:
@@ -1897,7 +1971,7 @@ static func pass_grade(rows: Array, controls: Array, baseline: Array, pilots: Ar
 					var straight: Dictionary = indexed.get(k, {})
 					if "lobber" in pack.members:
 						zero_lead_expected += 1
-						if planted.has(k) and planted[k].threats == 0:
+						if planted.has(k) and planted[k].threats == 0 and planted[k].get("observed_strikes", 0) > 0:
 							zero_lead_ok += 1
 					query.pass = "weave"
 					var weave: Dictionary = indexed.get(_pass_key(query), {})
@@ -1935,15 +2009,24 @@ func _write_pass_table() -> void:
 	var controls := _results.filter(func(r): return r.get("plant") == "zero_lead")
 	var rows := _results.filter(func(r): return r.get("plant", "") == "")
 	var baseline := []
+	var baseline_identity := {}
 	if _settings.has("baseline"):
-		var base = JSON.parse_string(FileAccess.get_file_as_string(String(_settings.baseline)))
+		var source := String(_settings.baseline)
+		var digest := FileAccess.get_sha256(source)
+		var base = JSON.parse_string(FileAccess.get_file_as_string(source))
 		if not base is Dictionary or base.get("row") != "fast-threat" or not base.get("complete") or not base.get("passes") is Array:
 			printerr("invalid --baseline fast-threat receipt")
 			quit(2)
 			return
+		if head.is_empty() or base.get("head", "") in ["", head] or not base.get("baseline_identity", {}).is_empty() \
+				or digest.is_empty() or digest != _settings.get("round-zero-sha256", ""):
+			printerr("--baseline must match the published round-zero SHA256, be from another head and itself have no baseline")
+			quit(2)
+			return
+		baseline_identity = {"head": base.head, "sha256": digest}
 		baseline = base.passes
 	var grade := pass_grade(rows, controls, baseline, _pilots)
-	var report := {"row": "fast-threat", "head": head, "passes": rows, "controls": controls, "grade": grade,
+	var report := {"row": "fast-threat", "head": head, "passes": rows, "controls": controls, "grade": grade, "baseline_identity": baseline_identity,
 		"complete": valid, "pass": valid and grade.pass, "plant_caught": valid and grade.plant_caught,
 		"measured": "%d/%d matched pack/speed/seed/pilot triples; misses: straight %d, weave %d, stall %d; zero-lead %d/%d" % [
 			grade.matched, grade.expected, grade.straight_misses, grade.weave_misses, grade.stall_misses,
@@ -1987,52 +2070,7 @@ func _pass_site(stage: int) -> Vector3:
 func _pass_enemy(enemy, kind: String) -> void:
 	if _settings.get("plant") == "zero_lead":
 		enemy.target = NoLeadSight.new(_game.player, _game.combat, enemy, kind)
-	_pass_members.append(weakref(enemy))
-	var owner_id: int = enemy.get_instance_id()
-	enemy.attack_phase.connect(func(facts: Dictionary):
-		var key := "%d/%d" % [owner_id, facts.instance]
-		if facts.phase == "windup":
-			_pass_warnings.append({"tick": _pass_tick, "kind": kind})
-		if facts.phase != "strike":
-			return
-		_pass_serials[owner_id] = key
-		_pass_strike_ticks[owner_id] = _pass_tick
-		if kind not in ["lobber", "chaser", "jolt_layer", "mag_trapper", "boom_tender"]:
-			_pass_counter.shape(kind, key, enemy.telegraph(), _game.player.ball_position()))
-	if kind == "chaser":
-		# A head reaching the ball inside its committed lane is the chaser's strike.
-		enemy.hit_player.connect(func(_damage, _shove):
-			_pass_counter.strike(kind, str(owner_id) + "/" + str(enemy.lunges), true))
-	if kind == "lobber":
-		enemy.released.connect(func(_ring):
-			for shell in get_nodes_in_group("enemy_shot"):
-				if shell.lobber == enemy and not shell.has_meta("pass_watched"):
-					shell.set_meta("pass_watched", true)
-					var key := "shell/%d" % shell.get_instance_id()
-					shell.exploded.connect(func(at, _radius, hit):
-						if not shell.returned and at.is_equal_approx(shell.landing):
-							_pass_counter.strike(kind, key, hit)))
-
-
-func _pass_fields() -> void:
-	for ref in _pass_members:
-		var enemy = ref.get_ref()
-		if not is_instance_valid(enemy) or enemy.is_dead():
-			continue
-		var id: int = enemy.get_instance_id()
-		if not _pass_serials.has(id):
-			continue
-		var key: String = _pass_serials[id]
-		if enemy.kind == "jolt_layer" and enemy.field != null:
-			# The mat's fill goes live before its first pulse. Only the pulse can jolt.
-			var count: int = enemy.field.outcomes.size()
-			if count > int(_pass_pulses.get(key, 0)):
-				_pass_counter.strike(enemy.kind, "%s/pulse/%d" % [key, enemy.field.pulses], true)
-			_pass_pulses[key] = count
-		elif enemy.kind in ["mag_trapper", "boom_tender"] and enemy.phase == enemy.Phase.LIVE:
-			var mark = enemy.telegraph()
-			if enemy.kind != "boom_tender" or (_pass_tick - int(_pass_strike_ticks[id])) <= enemy.SWEEP * Engine.physics_ticks_per_second:
-				_pass_counter.shape(enemy.kind, key, mark, _game.player.ball_position())
+	_pass_counter.observe(enemy, kind)
 
 
 func _run_pass() -> void:
@@ -2082,6 +2120,11 @@ func _run_pass() -> void:
 	var velocity := heading * (0 if mode == "stall" else speed)
 	_game.player.reset_to(terrain.drop_point(point.x, point.z, 1.0), velocity)
 	_game.camera.snap(heading)
+	_pass_counter.ball_position = Callable(_game.player, "ball_position")
+	var sampler := PassFieldSampler.new()
+	sampler.counter = _pass_counter
+	sampler.process_physics_priority = 1000
+	_game.add_child(sampler)
 	_game.events.enemy_spawned.connect(_pass_enemy)
 	var spawned := 0
 	for i in entry.members.size():
@@ -2102,15 +2145,16 @@ func _run_pass() -> void:
 		var total := float(_game.run.metrics.hull_damage)
 		by_source[source] = float(by_source.get(source, 0)) + total - float(damage_total[0])
 		damage_total[0] = total)
-	var ticks := 7 * Engine.physics_ticks_per_second
+	# Match both arms across the ten-second silt-boil history and its 1.2 s warning.
+	var ticks := 12 * Engine.physics_ticks_per_second
 	var elapsed := 0
 	for i in ticks:
-		_pass_tick = i
+		await physics_frame
+		_pass_counter.tick = i
 		if mode == "weave":
 			velocity = heading.rotated(Vector3.UP, 0.65 * sin(TAU * i * dt / 1.8)) * speed
 		_game.player.body().teleport(terrain.drop_point(point.x, point.z, 1.0), velocity)
-		await physics_frame
-		_pass_fields()
+		await sampler.sampled
 		elapsed += 1
 		point += velocity * dt
 		if _game.run.hp <= 0.0:
@@ -2118,14 +2162,16 @@ func _run_pass() -> void:
 	var lost := float(_game.run.metrics.hull_damage) - hull_start
 	var row := {"pilot": pilot, "pack": id, "stage": stage, "seed": s, "pass": mode, "speed": speed,
 		"members": entry.members, "spawned": spawned, "plant": _settings.get("plant", ""),
-		"warnings": _pass_warnings, "threats_by_kind": _pass_counter.threats, "threats": _pass_counter.covered.size(),
+		"warnings": _pass_counter.warnings, "observed_strikes": _pass_counter.strikes.size(), "threats_by_kind": _pass_counter.threats, "contacts": _pass_counter.contacts,
+		"threats": _pass_counter.contacts.size(),
 		"site": [site.x, site.z], "seconds": elapsed * dt, "died": _game.run.hp <= 0.0,
 		"hull_lost": lost, "hull_by_source": by_source, "hull_per_min": lost * 60 / (elapsed * dt),
-		"outcome": "pass_complete" if spawned == entry.members.size() and _game.run.stage == stage else "no_result"}
+		"outcome": "pass_complete" if spawned == entry.members.size() and _game.run.stage == stage and _game.run.class_id() == pilot else "no_result"}
 	var file := FileAccess.open(String(_settings.result), FileAccess.WRITE)
 	if file != null:
 		file.store_line(JSON.stringify(row))
 		file.close()
-	_game.free()
+	_game.queue_free()
+	await process_frame
 	_game = null
 	quit(0 if file != null else 2)
