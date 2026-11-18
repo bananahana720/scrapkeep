@@ -1,0 +1,25 @@
+
+> scrapkeep@1.0.0 sketch:fast
+> node scripts/sketch-fast.mjs --base origin/stage/alpha-w44
+
+sketch:fast: 6 changed paths (2 sketch, 4 node, 0 docs) since 1d5d77fc
+PASS tree hygiene (no symlink, root file or new top-level folder)
+selected 7 tests (1 solo), about 216s at width 2; 0 past the budget go to the staging full gate; 0 for the bot shards
+no test names: tools/offscreen_probe.gd, tools/offscreen_window.gd
+PASS sketch-lint (sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1 W1=0 W2=0 W4=0 W6=27 W7=1 S8=0, 985ms)
+PASS placeholders no higher than base (no group grew)
+PASS node tests (scripts/gate/display-run.test.mjs scripts/gate/look-receipts.test.mjs)
+PASS quarantine (0 rows, none expired)
+sketch:smoke waiting for a machine slot (2 occupied)
+PASS import (ok exit=0)
+PASS boot (300 frames)
+PASS tests/new_world_cost_test.gd exit=0 2.9s
+PASS tests/colour_meanings_test.gd exit=0 5.0s
+PASS tests/presentation_random_lint_test.gd exit=0 0.9s
+PASS tests/launch_table_test.gd exit=0 7.3s
+PASS tests/ace_tracks_test.gd exit=0 0.1s
+PASS tests/codex_coverage_test.gd exit=0 0.2s
+PASS tests/unit_suite_test.gd exit=0 31.0s
+PASS tests (7 run, 0 flaky, 0 base-red)
+receipt /Users/hanabanana/projects/sk-W1-131a/artifacts/local/receipts/fast-3d36e24e0a23-2026-11-18T14-43-24-220Z.json
+sketch:fast pass in 383s on 3d36e24e (merge base 1d5d77fc). Fast lane only: the staging full gate and red team still judge the wave.

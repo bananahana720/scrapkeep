@@ -1,0 +1,6 @@
+{
+  "script": "res://tools/model_render_check.gd",
+  "exit": 1,
+  "output": "Mac capture refused before launch: no watched qualification for this script version: res://tools/model_render_check.gd",
+  "godot_spawned": false
+}

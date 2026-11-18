@@ -1,0 +1,215 @@
+{
+  "implementation": "3d36e24e0a231551e853265ac798de4b9639e1c7",
+  "base": "1d5d77fc6b6260ade5848c98290862eec7f499c0",
+  "station": "dam yard, seed 280928, High, fixed camera",
+  "method": "Two --offscreen probe CLI processes started together, using the default drawn lock. The Core Graphics watcher sampled on a 50 ms schedule before spawn through exit. Counts of focus acquisition include only transitions to the captured child.",
+  "first_attempt": [
+    {
+      "run": "3d36e24-pair-1",
+      "watch": {
+        "samples": 340,
+        "firstMs": 1795013414133,
+        "lastMs": 1795013431129,
+        "periodMs": 50,
+        "maxGapMs": 97,
+        "missed": 1,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "status": "rejected for missed watcher period"
+    },
+    {
+      "run": "3d36e24-pair-2",
+      "watch": {
+        "samples": 437,
+        "firstMs": 1795013392134,
+        "lastMs": 1795013413964,
+        "periodMs": 50,
+        "maxGapMs": 94,
+        "missed": 1,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "status": "rejected for missed watcher period"
+    }
+  ],
+  "runs": [
+    {
+      "path": "3d36e24-retry-pair-1/yard.png",
+      "exit": 0,
+      "size": [
+        1920,
+        1080
+      ],
+      "sha256": "1cecaf13dd880a1bcd76c08fd1455c33aa5236aeb84eaa99ab96235743938e18",
+      "metrics": {
+        "black": 0.0,
+        "luma": 0.349193631112799,
+        "sky": 0.0188194444444444,
+        "sky_rgb": [
+          158,
+          168,
+          194
+        ]
+      },
+      "watch": {
+        "samples": 282,
+        "firstMs": 1795013490314,
+        "lastMs": 1795013504372,
+        "periodMs": 50,
+        "maxGapMs": 78,
+        "missed": 0,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "watch_started_utc": "2026-11-18T14:51:30.314+00:00",
+      "watch_ended_utc": "2026-11-18T14:51:44.372+00:00",
+      "draw_lock_wait": null,
+      "engine": "Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org",
+      "renderer": "Metal 4.0 - Forward+ - Using Device #0: Apple - Apple M5 Max (Apple9)",
+      "helper": "OFFSCREEN_WINDOW 56688 embedded",
+      "engine_errors": {
+        "ERROR: BUG, indexing did not unpair geometries from light.": 2,
+        "ERROR: 7 shaders of type ParticlesShaderRD were never freed": 1,
+        "ERROR: 7 RID allocations of type 'N10RendererRD15MaterialStorage6ShaderE' were leaked at exit.": 1
+      }
+    },
+    {
+      "path": "3d36e24-retry-pair-2/yard.png",
+      "exit": 0,
+      "size": [
+        1920,
+        1080
+      ],
+      "sha256": "eb34e734d8960504e0efa8a66768756f3e9be7a59d28a90dc9829537cbdbaef3",
+      "metrics": {
+        "black": 0.0,
+        "luma": 0.346983734786241,
+        "sky": 0.0188194444444444,
+        "sky_rgb": [
+          158,
+          168,
+          194
+        ]
+      },
+      "watch": {
+        "samples": 285,
+        "firstMs": 1795013522354,
+        "lastMs": 1795013536513,
+        "periodMs": 50,
+        "maxGapMs": 81,
+        "missed": 0,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "watch_started_utc": "2026-11-18T14:52:02.354+00:00",
+      "watch_ended_utc": "2026-11-18T14:52:16.513+00:00",
+      "draw_lock_wait": "display-run waiting: sketch:smoke waiting for a machine slot (1 occupied)",
+      "engine": "Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org",
+      "renderer": "Metal 4.0 - Forward+ - Using Device #0: Apple - Apple M5 Max (Apple9)",
+      "helper": "OFFSCREEN_WINDOW 56813 embedded",
+      "engine_errors": {
+        "ERROR: BUG, indexing did not unpair geometries from light.": 2,
+        "ERROR: 7 shaders of type ParticlesShaderRD were never freed": 1,
+        "ERROR: 7 RID allocations of type 'N10RendererRD15MaterialStorage6ShaderE' were leaked at exit.": 1
+      }
+    }
+  ],
+  "milliseconds_between_watched_runs": 17982,
+  "headless_measurements": {
+    "size": {
+      "exit": 0,
+      "reading": {
+        "file": "3d36e24-retry-pair-1/yard.png",
+        "metrics": {
+          "black": 0.0,
+          "luma": 0.349193631112799,
+          "sky": 0.0188194444444444,
+          "sky_rgb": [
+            158,
+            168,
+            194
+          ]
+        },
+        "quadrant_cie76": [],
+        "reference": "",
+        "sha256": "1cecaf13dd880a1bcd76c08fd1455c33aa5236aeb84eaa99ab96235743938e18"
+      }
+    },
+    "repeat": {
+      "exit": 0,
+      "reading": {
+        "file": "3d36e24-retry-pair-2/yard.png",
+        "metrics": {
+          "black": 0.0,
+          "luma": 0.346983734786241,
+          "sky": 0.0188194444444444,
+          "sky_rgb": [
+            158,
+            168,
+            194
+          ]
+        },
+        "quadrant_cie76": [
+          0.00955458730459213,
+          0.0214465744793415,
+          0.0276879575103521,
+          1.0024847984314
+        ],
+        "reference": "3d36e24-retry-pair-1/yard.png",
+        "reference_sha256": "1cecaf13dd880a1bcd76c08fd1455c33aa5236aeb84eaa99ab96235743938e18",
+        "sha256": "eb34e734d8960504e0efa8a66768756f3e9be7a59d28a90dc9829537cbdbaef3"
+      }
+    },
+    "bad-quadrant": {
+      "exit": 1,
+      "reading": {
+        "file": "plant-quadrant.png",
+        "metrics": {
+          "black": 0.0,
+          "luma": 0.300819688822638,
+          "sky": 0.25,
+          "sky_rgb": [
+            255,
+            0,
+            0
+          ]
+        },
+        "quadrant_cie76": [
+          105.91641998291,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "reference": "resumed/yard.png",
+        "reference_sha256": "819c5887e450a455a65aeffe94c4fe60880efb466f36149426ce6d8fb0aa6896",
+        "sha256": "5ee83d676e4e6bde7186855c52e0c05c8f8c22109ffdeb84f39148b61b727a0c"
+      }
+    },
+    "dead": {
+      "exit": 1,
+      "reading": {
+        "file": "plant-dead.png",
+        "metrics": {
+          "black": 1.0,
+          "luma": 0.0,
+          "sky": 1.0,
+          "sky_rgb": [
+            0,
+            0,
+            0
+          ]
+        },
+        "quadrant_cie76": [],
+        "reference": "",
+        "sha256": "781ecac70db064dbe38d52eb52ba8e55a525495391db38ed92e50452df948245"
+      }
+    }
+  },
+  "windowed_reference": "Pending the Gate’s single notified run on this commit.",
+  "limits": "The two frames are independent embedded runs. Their difference measures repeatability. A run without --reference checks dimensions and the dead-frame bars only."
+}

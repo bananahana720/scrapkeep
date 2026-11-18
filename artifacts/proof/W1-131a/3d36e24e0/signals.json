@@ -1,0 +1,20 @@
+{
+  "host": "macOS",
+  "route": "Linux library caller with DISPLAY and a process-group fixture",
+  "records": [
+    {
+      "signal": "SIGINT",
+      "exit": 130,
+      "lease_released": true,
+      "scratch_removed": true,
+      "child_and_grandchild_gone": true
+    },
+    {
+      "signal": "SIGTERM",
+      "exit": 143,
+      "lease_released": true,
+      "scratch_removed": true,
+      "child_and_grandchild_gone": true
+    }
+  ]
+}

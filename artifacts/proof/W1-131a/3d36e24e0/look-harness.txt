@@ -1,0 +1,11 @@
+sketch:smoke waiting for a machine slot (2 occupied)
+sketch:smoke waited 322s for the machine
+PASS sketches/core-loop import exit=0 4.5s
+PASS sketches/core-loop res://tests/look_harness_test.gd exit=0 6.7s
+slowest 2:
+  6.7s sketches/core-loop res://tests/look_harness_test.gd
+  4.5s sketches/core-loop import
+skipped 0 (passed without running every check; not a failure):
+0 tests lack a verdict line
+sketch:smoke pass: 1 sketches, 2 runs, 2 at a time, 0 solo (0s), 11s. Headless boot and sketch tests only; feel needs Andrew's play.
+receipt /Users/hanabanana/projects/sk-W1-131a/artifacts/local/receipts/named-b4be69e206cf-2026-11-18T14-48-47-333Z.json
