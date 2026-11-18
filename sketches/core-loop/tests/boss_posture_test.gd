@@ -85,7 +85,7 @@ func _run() -> void:
 	events.boss_weak_point_hit.connect(func(id: String): _weak.append(id))
 	events.enemy_killed.connect(func(kind: String, _at: Vector3, _scrap: int):
 		if kind == "brindle":
-			_kill_tags.append(_game.run.last_kill_from_spark))
+			_kill_tags.append(_game.run.last_kill_triggerless))
 	Harness.start_run(_game)
 	Harness.enter(_game, Vector3(18.0, 0.0, 0.0))
 	await physics_frame
@@ -201,7 +201,7 @@ func _run() -> void:
 			and _boss.hp == 0.0 and _kill_tags.size() == 1,
 		"a patch on the landed scooter left state %s; the catch: defeats %d, state %s, chunks %d, hp %.0f, kills recorded %d"
 			% ["eject" if patch_no_kill else "changed", _defeats, _boss.state_name(), _boss.chunks_left(), _boss.hp, _kill_tags.size()])
-	_report("kill tag", _kill_tags == [true], "the defeat's enemy_killed saw last_kill_from_spark %s" % [_kill_tags])
+	_report("kill tag", _kill_tags == [true], "the defeat's enemy_killed saw last_kill_triggerless %s" % [_kill_tags])
 
 	print("boss_posture_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
