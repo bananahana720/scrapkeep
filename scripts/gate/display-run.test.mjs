@@ -148,6 +148,30 @@ test("both Mac entry points refuse unknown and changed tools before taking a loc
   assert.equal((await runCapture({ ...opts, ...unused })).supported, false);
 });
 
+test("a queued Mac draw rechecks its files before the version query and again before the draw", async () => {
+  for (const wait of ["slot", "sample"]) {
+    const opts = capture(scratch());
+    const changeHelper = () => writeFileSync(path.join(opts.cwd, "sketches/core-loop/tools/offscreen_window.gd"), "changed");
+    let released = false;
+    const result = await runWindowed({ ...opts,
+      acquire: async () => {
+        if (wait === "slot") changeHelper();
+        return { release() { released = true; } };
+      },
+      version: wait === "slot" ? assert.fail : version,
+      observe: async draw => {
+        assert.equal(wait, "sample");
+        changeHelper();
+        return draw();
+      },
+      start: assert.fail,
+    });
+    assert.equal(result.supported, false);
+    assert.match(result.output, /refused before launch/);
+    assert.equal(released, true);
+  }
+});
+
 test("headless measurement and the editor version probe use only their scratch homes", async () => {
   const opts = capture(scratch());
   const file = path.join(opts.cwd, "yard.png");

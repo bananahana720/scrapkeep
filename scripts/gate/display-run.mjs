@@ -1,6 +1,6 @@
 // Run a pixel-producing script with scratch saves, a machine slot and an exclusive drawn-run lock.
 // On the Mac, --offscreen uses the native embedded Metal display and a 50 ms window watcher.
-// The models-render gate also uses that display. Only the Gate runs the visible CLI reference.
+// Mac callers need a watched qualification for each tool. Only the Gate runs the visible CLI reference.
 // Linux library callers supply their own display (the PC uses headless gamescope).
 import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
@@ -210,14 +210,19 @@ async function macCapture({ script, args = [], reference = false, cwd = root, en
   if (platform !== "darwin") throw new Error("Mac capture requires macOS; the Linux PC uses gamescope through the Gate");
   if (reference && script !== PROBE) throw new Error("only the W1-131 probe may draw the Gate reference");
   checkCaptureEngineArgs(engineArgs);
-  if (!hasWatchedVersion(script, cwd)) {
-    return { exit: null, supported: false, timedOut: false, home: null,
-      output: "Mac capture refused before launch: no watched qualification for this script version: " + script };
-  }
+  const refusal = new Error("Mac capture refused before launch: no watched qualification for this script version: " + script);
+  const refused = { exit: null, supported: false, timedOut: false, home: null, output: refusal.message };
+  if (!hasWatchedVersion(script, cwd)) return refused;
+  // Both the machine slot and the first watcher sample may take time. Recheck the
+  // files after each wait, immediately before the corresponding Godot invocation.
+  const verifyBeforeSpawn = () => {
+    if (!hasWatchedVersion(script, cwd)) throw refusal;
+  };
   return runScript({
     engineArgs, script, args: script === PROBE ? [...args, "--shots=yard"] : args, cwd, env, platform, binary, acquire, timeoutMs,
     extraEnv: { ...extraEnv, SCRAPKEEP_OFFSCREEN: reference ? "0" : "1" },
     start: async (command, argv, options) => {
+      verifyBeforeSpawn();
       if (!/^4\.7\.2\.stable\.official\.ed1daf0bf/.test(version(command, options))) {
         throw new Error("offscreen: expected the pinned Godot 4.7.2 editor; no drawn run started");
       }
@@ -225,7 +230,10 @@ async function macCapture({ script, args = [], reference = false, cwd = root, en
       // Embedded Godot publishes its layer through EngineDebugger. The local stdout debugger
       // provides that object with no editor, listener or network peer.
       if (!reference) flags.unshift("--embedded");
-      const result = await observe(signal => start(command, [...flags, ...argv], { ...options, signal }));
+      const result = await observe(signal => {
+        verifyBeforeSpawn();
+        return start(command, [...flags, ...argv], { ...options, signal });
+      });
       const w = result.watch;
       const recorded = reference ? w.targetOnScreen > 0 :
         w.onScreen === 0 && w.frontmostChanges === 0 && (!requireMarker || result.output.split(/\r?\n/).includes("OFFSCREEN_WINDOW " + result.pid + " embedded"));
@@ -238,6 +246,9 @@ async function macCapture({ script, args = [], reference = false, cwd = root, en
       }
       return result;
     },
+  }).catch(error => {
+    if (error === refusal) return refused;
+    throw error;
   });
 }
 
