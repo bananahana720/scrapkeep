@@ -1,6 +1,7 @@
 # smoke: bots timeout=1200s (real duels in child processes: a 12-duel table, an idle control, a pack duel and a 30 s capped pack duel that must outlast the beacon charge, two perched duels (park and mast); 264 s alone on the base, 701 s and 894 s beside a lab table, killed at the 360 s solo ceiling in sketch:fast on 2026-10-20, so it joins the bot tier like alpha_posture_bands_test)
 extends SceneTree
 
+const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const Lab := preload("res://tools/matchup_lab.gd")
 const PocketArena := preload("res://tools/pocket_arena.gd")
 
@@ -385,7 +386,7 @@ func _fast_pass_receipt() -> void:
 	var expected := Lab.PassSource.revision(repo)
 	var project := checkout.path_join("sketches/core-loop")
 	var cache := project.path_join(".godot")
-	var prepared := Lab.PassSource.detached(repo, expected, checkout) and DirAccess.create_link(ProjectSettings.globalize_path("res://.godot"), cache) == OK
+	var prepared := Lab.PassSource.detached(repo, expected, checkout) and DirAccess.open(project).create_link(ProjectSettings.globalize_path("res://.godot"), cache) == OK
 	_check("private fixture checks out the measured commit", prepared)
 	if not prepared:
 		return
@@ -399,18 +400,37 @@ func _fast_pass_receipt() -> void:
 	var bytes := FileAccess.get_file_as_bytes(receipt) if FileAccess.file_exists(receipt) else PackedByteArray()
 	if code != 0:
 		printerr("\n".join(output))
-	# A harmless comment is still an uncommitted game input. A previously published
-	# receipt must survive this failed retry without being relabelled or overwritten.
-	var input := FileAccess.open(project.path_join("src/core/park_defs.gd"), FileAccess.READ_WRITE)
-	input.seek_end()
-	input.store_line("\n# dirty source control")
-	input.close()
+	# Run the same producer serially and change the original input after the first
+	# worker returns. Later workers must still finish in their pinned checkout.
+	var log_path := checkout.path_join("drift.log")
+	var drift_args := ["--log-file", log_path] + args + ["--procs=1"]
+	var pid := OS.create_process(OS.get_executable_path(), drift_args)
+	var changed := false
+	var log_text := ""
+	for poll in 6000:
+		if pid <= 0 or not OS.is_process_running(pid):
+			break
+		if not changed and FileAccess.file_exists(log_path):
+			log_text = FileAccess.get_file_as_string(log_path)
+			if "matchup_lab: 1 of " in log_text:
+				var input := FileAccess.open(project.path_join("src/core/park_defs.gd"), FileAccess.READ_WRITE)
+				input.seek_end()
+				input.store_line("\n# dirty source control")
+				input.close()
+				changed = true
+		ChildRuns.elapse_wall(50)
+	if pid > 0 and OS.is_process_running(pid):
+		OS.kill(pid)
+	log_text = FileAccess.get_file_as_string(log_path)
+	_check("changing the caller after dispatch refuses publication and preserves the prior receipt",
+		changed and "source changed before publication" in log_text and FileAccess.get_file_as_bytes(receipt) == bytes)
 	output.clear()
 	code = OS.execute(OS.get_executable_path(), args, output, true)
 	_check("dirty game source refuses dispatch and preserves the existing receipt",
 		code == 2 and "refuses a dirty" in "".join(output) and not bytes.is_empty() and FileAccess.get_file_as_bytes(receipt) == bytes)
 	DirAccess.remove_absolute(cache)
 	Lab._remove_tree(checkout)
+	_check("fixture checkout and its hidden Git metadata are removed", not DirAccess.dir_exists_absolute(checkout))
 	if bytes.is_empty():
 		return
 	var result = JSON.parse_string(bytes.get_string_from_utf8())

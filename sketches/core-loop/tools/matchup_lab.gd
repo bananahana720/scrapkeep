@@ -916,7 +916,7 @@ func _spawn(job: Dictionary) -> void:
 	var project := ProjectSettings.globalize_path("res://") if _pass_source == null else _pass_source.project
 	var args := child_args(job, _cap, _settings, _table_id, home, project)
 	if _pass_source != null:
-		args.append("--source-head=" + _pass_source.head)
+		args.append_array(["--source-head=" + _pass_source.head, "--source-project=" + _pass_source.project])
 	var previous := {}
 	for kind in ["DATA", "CONFIG", "CACHE"]:
 		var key: String = "XDG_%s_HOME" % kind
@@ -970,13 +970,19 @@ func _reap(run: Dictionary, timed_out: bool) -> void:
 
 
 static func _remove_tree(path: String) -> void:
-	if not DirAccess.dir_exists_absolute(path):
+	var directory := DirAccess.open(path)
+	if directory == null:
 		return
-	for sub in DirAccess.get_directories_at(path):
-		_remove_tree(path.path_join(sub))
-	for file in DirAccess.get_files_at(path):
-		DirAccess.remove_absolute(path.path_join(file))
-	DirAccess.remove_absolute(path)
+	directory.include_hidden = true
+	for sub in directory.get_directories():
+		if directory.is_link(sub):
+			directory.remove(sub)
+		else:
+			_remove_tree(path.path_join(sub))
+	for file in directory.get_files():
+		directory.remove(file)
+	if DirAccess.remove_absolute(path) != OK:
+		push_error("could not remove lab scratch directory: " + path)
 
 
 # After the baseline table: for each hard cell, look up its answer item and queue the paired
@@ -2009,7 +2015,11 @@ func _begin_pass_table() -> void:
 	_sweep_dir = OS.get_user_data_dir().path_join("matchup_lab/" + Crypto.new().generate_random_bytes(16).hex_encode())
 	var repo := ProjectSettings.globalize_path("res://").path_join("../..").simplify_path()
 	_pass_source = PassSource.new()
-	if DirAccess.make_dir_recursive_absolute(_sweep_dir) != OK or not _pass_source.prepare(repo, _sweep_dir.path_join("source")):
+	if DirAccess.make_dir_recursive_absolute(_sweep_dir) != OK:
+		quit(2)
+		return
+	print("fast pass scratch for PID %d: %s" % [OS.get_process_id(), _sweep_dir])
+	if not _pass_source.prepare(repo, _sweep_dir.path_join("source")):
 		printerr("fast pass source could not be bound before dispatch")
 		quit(2)
 		return
@@ -2018,6 +2028,16 @@ func _begin_pass_table() -> void:
 
 func _finalize() -> void:
 	if _pass_source != null:
+		for job in _running:
+			if job.pid > 0 and OS.is_process_running(job.pid):
+				OS.kill(job.pid)
+		for attempt in 100:
+			if not _running.any(func(job): return job.pid > 0 and OS.is_process_running(job.pid)):
+				break
+			OS.delay_msec(20)
+		if _running.any(func(job): return job.pid > 0 and OS.is_process_running(job.pid)):
+			push_error("worker still using fast-pass scratch: " + _sweep_dir)
+			return
 		if not _pass_source.project.is_empty() and DirAccess.dir_exists_absolute(_pass_source.project):
 			OS.execute("chmod", ["-R", "u+w", _pass_source.project])
 		_remove_tree(_sweep_dir)
@@ -2169,8 +2189,9 @@ func _pass_enemy(enemy, kind: String) -> void:
 
 
 func _run_pass() -> void:
-	var source_head := PassSource.revision(ProjectSettings.globalize_path("res://"))
-	if source_head.is_empty() or source_head != _settings.get("source-head", ""):
+	var project := ProjectSettings.globalize_path("res://").simplify_path().trim_suffix("/")
+	var source_head := PassSource.revision(project)
+	if project != _settings.get("source-project", "") or source_head.is_empty() or source_head != _settings.get("source-head", ""):
 		printerr("fast pass worker source differs from its dispatch")
 		quit(2)
 		return
