@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-verify-formal
-description: "Check by model the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals), with a TLA+ model kept beside this skill, and check by a second model that an earned reward is banked once and never lost through crashes, failed saves and two games on one profile. Use when a change touches flow.gd, launch_take.gd or the launch swipe calls in game.gd, or profile.gd, safe_store.gd, run_store.gd or the settle and grant calls in progress.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check the run flow; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
+description: "Check by model the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals), with a TLA+ model kept beside this skill, and check by a second model that an earned reward is banked once and never lost through crashes, failed saves and two games on one profile, and by a third that a park flood never holds full water under the ball. Use when a change touches the park event step in event_director.gd, flow.gd, launch_take.gd or the launch swipe calls in game.gd, or profile.gd, safe_store.gd, run_store.gd or the settle and grant calls in progress.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check the run flow; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
 ---
 
 # Check the run flow against its model
@@ -53,7 +53,7 @@ Each rule is one promise to the player. [references/coverage.md](references/cove
 
 A `broken-*` config that reports no break means the model can no longer see that fault. Fix the model before trusting any pass (VFM-03).
 
-The world 1 done read takes this check as two receipts, `run-always-ends` and `rewards-banked-once`. `node scripts/gate/model-receipts.mjs --out <dir>` writes them. It runs plain TLC on `today-store` with the `broken-vanish` and `broken-endguard` plants, and on `rewards-today-one` and `rewards-today-two-once` with the `rewards-broken-ledger` and `rewards-broken-midsave` plants, each with a timeout. A receipt fails while step 1 of "Is this change covered?" shows a changed file, and the script refuses a checkout with uncommitted changes under this skill or `sketches/core-loop/src`. The rewards receipt fails until finding R-2 closes, and it always says that the old-key loss route of W1-117 is not modelled.
+The world 1 done read takes this check as two receipts, `run-always-ends` and `rewards-banked-once`. `node scripts/gate/model-receipts.mjs --out <dir>` writes them. It runs plain TLC on `today-store` with the `broken-vanish` and `broken-endguard` plants, and on `rewards-today-one`, `rewards-today-two-once` and `rewards-today-two-lost` with the `rewards-broken-ledger`, `rewards-broken-midsave`, `rewards-broken-legacyrun`, `rewards-broken-stale` and `rewards-broken-nolock` plants, each with a timeout. A receipt fails while step 1 of "Is this change covered?" shows a changed file, and the script refuses a checkout with uncommitted changes under this skill or `sketches/core-loop/src`. The rewards receipt always names what the model cannot see: the save lock is taken as perfect, and ruling ea lets two games pay twice when both saves of the first game's earn fail.
 
 ## Read a result
 
@@ -76,7 +76,7 @@ A pass covers the model within its bounds and its time assumption (VFM-07). Not 
 
 ## The rewards model
 
-A second model, `models/Rewards.tla`, checks how an earned reward is banked: `sketches/core-loop/src/core/progress.gd`'s earn, settle, `grant_once` and `reconcile_settled`, the profile and run stores, and `sketches/core-loop/src/core/safe_store.gd`'s writes, with a crash between any two file writes, failed writes and two game processes on one profile. Its rules:
+A second model, `models/Rewards.tla`, checks how an earned reward is banked: `sketches/core-loop/src/core/progress.gd`'s earn, settle, `grant_once` and `reconcile_settled`, the profile and run stores, and `sketches/core-loop/src/core/safe_store.gd`'s writes, with a crash between any two file writes, failed writes, two game processes on one profile and a run file an older build left with the legacy reward key. Its rules:
 
 | Rule | The promise | What breaks for the player |
 | --- | --- | --- |
@@ -84,6 +84,18 @@ A second model, `models/Rewards.tla`, checks how an earned reward is banked: `sk
 | `NeverLost` | An earned and settled reward id is granted after any crash and reload. | A cosmetic or world the player earned never arrives. |
 
 Run it with `bash $F/models/make-rewards-configs.sh`, then each `rewards-*.cfg` as in "Run it"; the two-game configs need plain TLC with several workers. [references/rewards-coverage.md](references/rewards-coverage.md) has the code behind each step, the config table with what each config must report, and what is not modelled. Its findings are in [references/rewards-findings.md](references/rewards-findings.md). The rest of this skill (covered changes, reading a result, replays, broken variants, reach probes) applies to it unchanged.
+
+## The flood model
+
+A third model, `models/ParkFlood.tla`, checks a park flood from its announcement to its end in `sketches/core-loop/src/world/event_director.gd` (`_park_step_live`, `_park_capacity`, `_park_can_end`), with the ball free to roll into or out of any basin between any two ticks. Its rules:
+
+- **FullWaterNeverHeld.** While its live time runs, water that has risen for its whole fill time is stepped on every tick, ball or no ball.
+- **FullWaterFreesItsSlot.** Full water with no live time stops counting against the ground cap.
+- **NeverRisesUnderBall** and **NeverEndsUnderBall.** Water neither rises nor ends while a grounded ball is in its basin.
+- **WithinCap.** No more unsettled ground events are live than the cap allows.
+- **FloodEnds** and **AnnouncedLands.** Once the ball stays out, every live flood ends and every announced one lands.
+
+Run `bash $F/models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg` with `ParkFlood.tla`. [references/flood-coverage.md](references/flood-coverage.md) maps each step and guard to the code and lists what each config must report, and [references/flood-findings.md](references/flood-findings.md) holds the findings, one of them an open design question. `node scripts/gate/model-receipts.mjs --out <dir> --row flood-never-held` writes its receipt.
 
 ## Lessons and updates
 

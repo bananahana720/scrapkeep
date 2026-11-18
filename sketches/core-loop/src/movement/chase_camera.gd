@@ -53,6 +53,26 @@ const CAMERA_BODY_BIT := 8
 const PROBE_RADIUS := 0.3
 # A lifted probe must free at least this much arm over the unlifted one, or the lift is not worth it.
 const LIFT_GAIN := 0.3
+# The contact lift (set_contact_subject), by the metres from the pivot to the subject. Out to CONTACT_RANGE the lift
+# may act, easing out over the last CONTACT_RANGE - CONTACT_FADE_START; past CONTACT_BOW_FAR the subject must also be
+# in view. The near bow is the stretch from CONTACT_BOW_FAR in to CONTACT_BOW_NEAR, where the arm swings from the far
+# perch to the near one: nearly level behind the ball, then almost straight up (radians, short of MAX_ARM_PITCH);
+# the lift that reaches the near perch is cut to CONTACT_LIFT_MAX.
+const CONTACT_RANGE := 40.0
+const CONTACT_FADE_START := 35.0
+const CONTACT_BOW_FAR := 17.0
+const CONTACT_BOW_NEAR := 10.0
+const CONTACT_PERCH_FAR := -0.03
+const CONTACT_PERCH_NEAR := -1.42
+# The most the lift may raise the arm above the player's own pitch. The lens keeps looking along that pitch, so a
+# bigger lift would leave the ball below the frame.
+const CONTACT_LIFT_MAX := 0.4
+# A far subject lifts only when looking up has pinned the lens to the ground: the share of the arm still free below
+# which the floor presses, whole at CONTACT_FLOOR_PINNED and gone at CONTACT_FLOOR_FREE.
+const CONTACT_FLOOR_PINNED := 0.55
+const CONTACT_FLOOR_FREE := 0.8
+# How fast the contact lift eases toward its target, per second.
+const CONTACT_LIFT_RATE := 16.0
 # Situation rows. arm 0.0 means no opinion; pitch_bias tilts the arm without touching the
 # player's pitch; shake_cap is the most total shake allowed while the row is active.
 const PROFILES := {
@@ -102,6 +122,8 @@ var _locked := false
 var _boss_reach := false
 var _pitch_bias := 0.0
 var _tight := 0.0
+var _contact_subject: Node3D
+var _contact_lift := 0.0
 var _query := PhysicsShapeQueryParameters3D.new()
 var _fov_add := 0.0
 var _glance_subject: Node3D
@@ -209,6 +231,7 @@ func snap(heading: Vector3, pitch_value := -0.30) -> void:
 	_previous_velocity = target.state.velocity
 	_kick = Vector3.ZERO
 	_tight = 0.0
+	_contact_lift = 0.0
 	_glance_subject = null
 
 
@@ -307,6 +330,20 @@ func set_boss_reach(on: bool) -> void:
 	_boss_reach = on
 
 
+# The fight that wants the ball and the floor kept in view near its tall body declares it here (Brindle's ship,
+# the dam-face Warden). This is the opposite intent to set_boss_reach's far framing, so it is its own call. There is
+# one slot for two owners: each owner ends its own with clear_contact_subject, and null here clears whoever holds it.
+# A subject that has been freed is dropped.
+func set_contact_subject(subject: Node3D) -> void:
+	_contact_subject = subject
+
+
+# Ends the lift for `subject` only; another owner's subject stays.
+func clear_contact_subject(subject: Node3D) -> void:
+	if _contact_subject == subject:
+		_contact_subject = null
+
+
 # 0..1: how far the free arm along `arm_pitch` is under TIGHT_ARM, or 0 when tipping the arm up
 # would not free LIFT_GAIN metres of it (a roof). Reads two probes of its own, so the turn the arm
 # is under does not feed back; an arm outside the tree or in a world with no walls reads free.
@@ -323,23 +360,47 @@ func _tight_target(arm_pitch: float) -> float:
 # wall: the arm's own shape and mask, one query reused. Ground (a contact normal the ball
 # itself calls floor, BallState.MAX_SLOPE_DOT) is no wall, so it reads as a free arm: looking up on
 # open ground shortens the arm as it always did.
-func _free_arm(arm_pitch: float) -> float:
+func _free_arm(arm_pitch: float, reach := TIGHT_ARM, ignore_floor := true) -> float:
 	if not is_inside_tree():
-		return TIGHT_ARM
+		return reach
 	var space := get_world_3d().direct_space_state
 	var dir: Vector3 = yaw_basis() * Basis(Vector3.RIGHT, arm_pitch) * Vector3.BACK
 	_query.transform = Transform3D(Basis.IDENTITY, global_position)
-	_query.motion = dir * TIGHT_ARM
+	_query.motion = dir * reach
 	var fractions := space.cast_motion(_query)
 	if fractions.size() < 2 or fractions[0] >= 1.0:
-		return TIGHT_ARM
+		return reach
+	if not ignore_floor:
+		return fractions[0] * reach
 	# At the first contact the shape touches what stopped it; its normal says wall or floor.
-	_query.transform = Transform3D(Basis.IDENTITY, global_position + dir * TIGHT_ARM * fractions[1])
+	_query.transform = Transform3D(Basis.IDENTITY, global_position + dir * reach * fractions[1])
 	_query.motion = Vector3.ZERO
 	var rest := space.get_rest_info(_query)
 	if not rest.is_empty() and (rest["normal"] as Vector3).y > BallState.MAX_SLOPE_DOT:
-		return TIGHT_ARM
-	return fractions[0] * TIGHT_ARM
+		return reach
+	return fractions[0] * reach
+
+
+# Raise the lens, by at most CONTACT_LIFT_MAX over the player's pitch, when a tall target pulls it down to
+# the floor or a bow closes over the rider. The lens keeps looking along the player's pitch, so the ball stays in
+# frame. Test both boom directions from the same pivot: the SpringArm can still reject a perch under a roof. Mounted aim owns its shoulder view.
+func _boss_contact_lift(arm_pitch: float, subject: Node3D) -> float:
+	if subject == null or shoulder_target > 0.0 or shoulder_blend > 0.0:
+		return 0.0
+	var distance := global_position.distance_to(subject.global_position)
+	if distance >= CONTACT_RANGE or (distance >= CONTACT_BOW_FAR and not in_view(subject.global_position)):
+		return 0.0
+	var near_bow := 1.0 - smoothstep(CONTACT_BOW_NEAR, CONTACT_BOW_FAR, distance)
+	var reach := arm.spring_length
+	var normal_reach := _free_arm(arm_pitch, reach, false)
+	# A distant Warden only needs the change when looking up has pinned the lens to the ground.
+	var floor_press := (1.0 - smoothstep(CONTACT_FLOOR_PINNED, CONTACT_FLOOR_FREE, normal_reach / reach)) if arm_pitch > 0.0 else 0.0
+	floor_press *= 1.0 - smoothstep(CONTACT_FADE_START, CONTACT_RANGE, distance)
+	var perch := lerpf(CONTACT_PERCH_FAR, CONTACT_PERCH_NEAR, near_bow)
+	var lift := minf(maxf(0.0, arm_pitch - perch), CONTACT_LIFT_MAX) * maxf(floor_press, near_bow)
+	if lift <= 0.0 or _free_arm(arm_pitch - lift, reach, false) < normal_reach - LIFT_GAIN:
+		return 0.0
+	return lift
 
 
 func active_profiles() -> Array:
@@ -431,7 +492,15 @@ func _process(delta: float) -> void:
 	_base_fov = lerpf(_base_fov, lerpf(FOV_REST, FOV_FAST, fraction), ease)
 
 	rotation = Vector3(0.0, yaw, 0.0)
-	arm.rotation = Vector3(pitch + _pitch_bias + lift, 0.0, 0.0)
+	var arm_pitch := pitch + _pitch_bias + lift
+	# A freed node compares equal to null, so the validity test must stand alone to drop it.
+	if not is_instance_valid(_contact_subject):
+		_contact_subject = null
+	var subject := _contact_subject
+	var contact_lift := _boss_contact_lift(arm_pitch, subject)
+	_contact_lift = lerpf(_contact_lift, contact_lift, 1.0 - exp(-CONTACT_LIFT_RATE * delta))
+	_contact_lift = minf(_contact_lift, arm_pitch - MAX_ARM_PITCH)
+	arm.rotation = Vector3(arm_pitch - _contact_lift, 0.0, 0.0)
 
 	var accel := (velocity - _previous_velocity) / maxf(delta, 0.0001)
 	_previous_velocity = velocity
@@ -443,8 +512,7 @@ func _process(delta: float) -> void:
 	_kick = _kick.lerp(Vector3.ZERO, 1.0 - exp(-KICK_RETURN * delta))
 	var jitter := Vector3(_shake_rng.randf_range(-1.0, 1.0), _shake_rng.randf_range(-1.0, 1.0), 0.0) * _shake * 0.22
 	cam.position = jitter + cam.get_parent().global_basis.inverse() * _kick
-	# The lens turns back by the bias so the view direction, and with it the aim, stays the player's.
-	cam.rotation = Vector3(-_pitch_bias - lift, 0.0, _roll + jitter.x * 0.1)
+	cam.rotation = Vector3(pitch - arm.rotation.x, 0.0, _roll + jitter.x * 0.1)
 	cam.fov = minf(_base_fov + _fov_add + _punch, FOV_CAP)
 
 

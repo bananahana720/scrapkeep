@@ -5,7 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
 
 # Clip stills for the field crew (enemy_clips.gd): the real game, paused, one enemy at a time on
-# the launch lip, posed at each clip's key moments from a fixed three-quarter camera, so the
+# the launch lip or the Spillway dam apron, posed at each clip's key moments from a fixed three-quarter camera, so the
 # clips can be judged by eye on a phone page. The poses are the clip alone over the rest pose;
 # the scripts' own wind-up poses (the chaser's rear-up and the rest) add to them in play.
 # Display server needed:
@@ -64,11 +64,14 @@ func _run() -> void:
 	camera.current = true
 	camera.fov = 40.0
 	var terrain = game.ctx.terrain
+	var dam_apron: bool = terrain.map().title == "park_dam"
 	var base: Vector3 = terrain.drop_point(-65.0, -130.0, 0.0)
 	game.player.reset_to(base + Vector3(0, 0, -60))
 	game.player.visible = false
+	# The launch lip hides the feet on the dam; its open apron leaves ground beneath the tools.
+	var at: Vector3 = terrain.drop_point(10.0, 540.0, 1.2) if dam_apron else terrain.drop_point(base.x + 30.0, base.z + 25.0, 1.2)
+	var centre: Vector3 = at + Vector3.UP * (1.6 if dam_apron else 0.6)
 	for kind in kinds:
-		var at: Vector3 = terrain.drop_point(base.x + 30.0, base.z + 25.0, 1.2)
 		var enemy = game.ctx.spawner.spawn_enemy(kind, at)
 		for f in 4:
 			await physics_frame
@@ -81,8 +84,7 @@ func _run() -> void:
 			quit(3)
 			return
 		enemy.reaction_pivot.transform = Transform3D.IDENTITY
-		var centre: Vector3 = at + Vector3.UP * 0.6
-		var d := float(DISTANCE.get(kind, 8.0))
+		var d := float(DISTANCE.get(kind, 8.0)) * (1.55 if dam_apron else 1.0)
 		camera.look_at_from_position(centre + Vector3(-0.62, 0.32, -0.72).normalized() * d, centre)
 		for i in SHOTS.size():
 			var shot: Array = SHOTS[i]

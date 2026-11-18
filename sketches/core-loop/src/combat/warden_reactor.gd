@@ -141,6 +141,7 @@ var paid_gain := 0.0
 var lane := 0
 
 var _entry_speed := 0.0
+var _camera_declared := false
 var _sheet_view: MeshInstance3D
 
 
@@ -158,6 +159,18 @@ static func _is_dam(warden) -> bool:
 	return warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face"
 
 
+# The dam fight asks the chase camera to keep the ball and the floor in view near this body, once on each change,
+# and takes back only its own request.
+func _declare_fight(warden, engaged: bool) -> void:
+	if engaged == _camera_declared or warden.fleet == null or warden.fleet.ctx.camera == null:
+		return
+	_camera_declared = engaged
+	if engaged:
+		warden.fleet.ctx.camera.set_contact_subject(warden)
+	else:
+		warden.fleet.ctx.camera.clear_contact_subject(warden)
+
+
 static func _is_flume(warden) -> bool:
 	return warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "flume"
 
@@ -169,6 +182,7 @@ func step(warden, delta: float) -> void:
 		var engaged: bool = warden.fleet != null and warden.fleet.ctx.flow.engaged() \
 				and warden._in_play() and warden.hp > 0.0
 		warden._posture.contact_drain_delay = delta if engaged else 0.0
+		_declare_fight(warden, engaged)
 		for child in warden.get_children():
 			if child is CollisionShape3D:
 				if not child.shape is SphereShape3D:
@@ -317,7 +331,8 @@ func _open_sheet(warden) -> void:
 
 # The killing ram always lands with the sheet open, and a freed Warden no longer steps the
 # sheet's timer, so the slab (drawn under the world root, not the Warden) closes here.
-func on_exit(_warden) -> void:
+func on_exit(warden) -> void:
+	_declare_fight(warden, false)
 	sheet_left = 0.0
 	_close_sheet()
 

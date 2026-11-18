@@ -10,13 +10,15 @@ const SKILL = new URL("../../.agents/skills/scrapkeep-verify-formal/", import.me
 const cfg = (name) => cfgRules(readFileSync(new URL(`models/${name}`, SKILL), "utf8"));
 
 // Real TLC 2.19 output (tla2tools 1.7.4), trimmed by dropping the variable values under each State line and the temp
-// folder paths. Captured on the Mac Studio on 17 November 2026 from the configs each file is named for.
+// folder paths. Captured on the Mac Studio on 17 November 2026 from the configs each file is named for; the rewards-*
+// files from the W1-117 model (old and new reward keys apart, the save lock), with TLC's Progress lines dropped too.
 const fixture = (name) => readFileSync(new URL(`fixtures/tlc/${name}.out`, import.meta.url), "utf8");
 const out = {
   clean: parseTlc(fixture("today-store")),
   vanish: parseTlc(fixture("broken-vanish")),
   endguard: parseTlc(fixture("broken-endguard")),
   rewardsClean: parseTlc(fixture("rewards-today-one")),
+  rewardsTwo: parseTlc(fixture("rewards-today-two-once")),
   ledger: parseTlc(fixture("rewards-broken-ledger")),
   midsave: parseTlc(fixture("rewards-broken-midsave")),
 };
@@ -143,19 +145,63 @@ test("the covered files are every source file the coverage page cites", () => {
   }
 });
 
-test("the rewards receipt fails while two games each pay a reward, and always names both open gaps", () => {
+test("the rewards receipt checks the old-key route and two games, fails on a break in either, and names what it cannot see", () => {
   const rw = ROWS["rewards-banked-once"];
-  const plants = [
-    { ...rw.plants[0], rules: cfg(rw.plants[0].cfg), parsed: out.ledger },
-    { ...rw.plants[1], rules: cfg(rw.plants[1].cfg), parsed: out.midsave },
+  assert.deepEqual(rw.real.map((r) => r.cfg), ["rewards-today-one.cfg", "rewards-today-two-once.cfg", "rewards-today-two-lost.cfg"]);
+  assert.equal(cfg("rewards-today-one.cfg").invariants.includes("NeverLost"), true);
+  assert.equal(cfg("rewards-today-two-lost.cfg").invariants.includes("NeverLost"), true);
+  assert.equal(cfg("rewards-today-two-once.cfg").invariants.includes("AtMostOnce"), true);
+  assert.deepEqual(rw.plants.map((p) => [p.cfg, p.rule]), [
+    ["rewards-broken-ledger.cfg", "AtMostOnce"],
+    ["rewards-broken-midsave.cfg", "NeverLost"],
+    ["rewards-broken-legacyrun.cfg", "NeverLost"],
+    ["rewards-broken-stale.cfg", "AtMostOnce"],
+    ["rewards-broken-nolock.cfg", "AtMostOnce"],
+  ]);
+  const caughtBy = { AtMostOnce: out.ledger, NeverLost: out.midsave };
+  const plants = rw.plants.map((p) => ({ ...p, rules: cfg(p.cfg), parsed: caughtBy[p.rule] }));
+  const real = (second) => [
+    { ...rw.real[0], parsed: out.rewardsClean },
+    { ...rw.real[1], parsed: second },
+    { ...rw.real[2], parsed: { ...out.rewardsTwo, distinct: rw.real[2].minStates } },
   ];
-  const r = buildReceipt({ head: HEAD, real: [{ ...rw.real[0], parsed: out.rewardsClean }, { ...rw.real[1], parsed: out.ledger }], plants, drift: synced, gaps: rw.gaps });
+  const r = buildReceipt({ head: HEAD, real: real(out.ledger), plants, drift: synced, gaps: rw.gaps });
   assert.equal(r.pass, false);
   assert.equal(r.plant_caught, true);
-  assert.match(r.measured, /two games on one profile, each paying the reward \(finding R-2\), rewards-today-two-once: broke AtMostOnce/);
-  assert.match(r.measured, /not checked: the old-key loss route of W1-117 is not modelled/);
-  const held = buildReceipt({ head: HEAD, real: [{ ...rw.real[0], parsed: out.rewardsClean }, { ...rw.real[1], parsed: out.rewardsClean }], plants, drift: synced, gaps: rw.gaps });
+  assert.match(r.measured, /two games on one profile paying once \(finding R-2\), rewards-today-two-once: broke AtMostOnce/);
+  const held = buildReceipt({ head: HEAD, real: real(out.rewardsTwo), plants, drift: synced, gaps: rw.gaps });
   assert.equal(held.pass, true);
-  assert.match(held.measured, /finding R-2\), rewards-today-two-once: no break/);
-  assert.match(held.measured, /W1-117 is not modelled/);
+  assert.match(held.measured, /older build's run file \(W1-117\), rewards-today-one: no break/);
+  assert.match(held.measured, /finding R-2\), rewards-today-two-once: no break in 8,009,266 distinct states/);
+  assert.match(held.measured, /not checked: the profile's save lock is taken as perfect/);
+  assert.doesNotMatch(held.measured, /not modelled \(the model holds the old and new reward keys as one flag\)/);
+  assert.match(held.measured, /finding R-1\) stays unpaid: .* card W1-121/);
+});
+
+test("a code config with fewer distinct states than its pin is a miss, and every code config carries a pin", () => {
+  for (const row of Object.values(ROWS)) for (const r of row.real) assert.ok(Number.isInteger(r.minStates) && r.minStates > 0, r.cfg);
+  const rw = ROWS["rewards-banked-once"];
+  const plants = rw.plants.map((p) => ({ ...p, rules: cfg(p.cfg), parsed: p.rule === "AtMostOnce" ? out.ledger : out.midsave }));
+  const real = (one) => [
+    { ...rw.real[0], parsed: one },
+    { ...rw.real[1], parsed: out.rewardsTwo },
+    { ...rw.real[2], parsed: { ...out.rewardsTwo, distinct: rw.real[2].minStates } },
+  ];
+  assert.equal(buildReceipt({ head: HEAD, real: real(out.rewardsClean), plants, drift: synced, gaps: rw.gaps }).pass, true);
+  const shrunk = buildReceipt({ head: HEAD, real: real({ ...out.rewardsClean, distinct: rw.real[0].minStates - 1 }), plants, drift: synced, gaps: rw.gaps });
+  assert.equal(shrunk.pass, false);
+  assert.match(shrunk.measured, /rewards-today-one: no break in 98,318 distinct states \(fewer than the 98,319 pinned\)/);
+  assert.equal(out.clean.distinct, ROWS["run-always-ends"].real[0].minStates);
+  assert.equal(out.rewardsClean.distinct, rw.real[0].minStates);
+  assert.equal(out.rewardsTwo.distinct, rw.real[1].minStates);
+});
+
+test("the flood row's pins and plants match captured TLC output", () => {
+  const fl = ROWS["flood-never-held"];
+  for (const r of fl.real) {
+    const parsed = parseTlc(fixture(r.cfg.replace(".cfg", "")));
+    assert.equal(parsed.outcome, "clean", r.cfg);
+    assert.equal(parsed.distinct, r.minStates, r.cfg);
+  }
+  for (const p of fl.plants) assert.equal(brokeRule(parseTlc(fixture(p.cfg.replace(".cfg", ""))), cfg(p.cfg), p.rule), true, `${p.cfg} breaks ${p.rule}`);
 });

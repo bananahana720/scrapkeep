@@ -32,6 +32,7 @@ func _initialize() -> void:
 		_site_corridors()
 		_toe_vents_wake()
 		_water_lifetime()
+		_full_water_at_entry()
 		_overlap()
 		_held_announcements()
 		_corridors()
@@ -386,6 +387,42 @@ func _toe_vents_wake() -> void:
 			if f.kind == "world" and f.get("phase") in ["telegraph", "land"]:
 				observed[f.phase] += 1
 	_check("toe_vents_wake telegraphs and lands off all seven corridors", clear and observed.values().all(func(value): return value == 1), str(observed))
+
+
+# The ball rolls in one tick before the ground event has finished filling, then again once it has.
+# Rates and fill times are swept because the fault was a rounding remainder that only some pairs leave.
+func _full_water_at_entry() -> void:
+	for kind in ["flash_flood", "collapse"]:
+		for hz in [60.0, 90.0, 120.0]:
+			for fill_s in [4.0, 6.0]:
+				# Every real collapse row has no live time; every real flood row has one.
+				for live_s in [20.0, 0.0]:
+					var row := _row("boundary", kind)
+					row.effect = {"fill_s": fill_s, "material": "water"} if kind == "flash_flood" else {"fill_s": fill_s}
+					row.live_s = live_s
+					var director = _director([row])
+					var occupied_steps := []
+					director.register_family("natural", func(action, _row, context):
+						if action == "step" and context.ball == Vector3.UP:
+							occupied_steps.append(context.rise_s))
+					var delta: float = 1.0 / hz
+					var started := false
+					for tick in 1800:
+						if _step(director, delta).any(func(fact): return fact.kind == "started"):
+							started = true
+							break
+					var at := "%s, %d ticks a second, %.0f s fill, %.0f s live" % [kind, int(hz), fill_s, live_s]
+					_check("boundary event starts on clear ground (%s)" % at, started, "")
+					for tick in int(round(fill_s * hz)) - 1:
+						_step(director, delta)
+					_step(director, delta, Vector3.UP)
+					_check("one tick short of full still waits under a grounded ball (%s)" % at, occupied_steps.is_empty(), str(occupied_steps))
+					_step(director, delta)
+					_step(director, delta, Vector3.UP)
+					_step(director, delta, Vector3.UP)
+					_check("a full event keeps stepping under the ball (%s)" % at, occupied_steps.size() == 2, str(occupied_steps))
+					if kind == "flash_flood":
+						_check("full water reports its whole fill time (%s)" % at, occupied_steps == [fill_s, fill_s], str(occupied_steps))
 
 
 func _water_lifetime() -> void:
