@@ -53,6 +53,10 @@ const PARK_CORRIDOR_M := 8.0
 const PARK_BAR_S := 240.0 / 172.0
 const PARK_GROUND_CAP := 2
 const PARK_FAMILY_CAP := 1
+# A sum of tick lengths lands a hair under its target at most tick rates, so a park
+# clock counts as arrived within this slack. Without it a full flood or a finished
+# collapse still reads as under way and waits under a rider who rolls in.
+const PARK_CLOCK_SLACK_S := 0.00000001
 const PARK_LAND_FACTS := {
 	"ground_slump": "ground_slump_landed",
 	"flood_rising": "flood_landed", "fleet_inbound": "fleet_landed",
@@ -559,12 +563,12 @@ func _park_capacity(candidate: Dictionary) -> bool:
 static func _park_downbeat(time_s: float, context: Dictionary) -> float:
 	var bar := maxf(0.000001, float(context.get("bar_s", PARK_BAR_S)))
 	var origin := float(context.get("bar_origin_s", 0.0))
-	return origin + ceil((time_s - origin - 0.00000001) / bar) * bar
+	return origin + ceil((time_s - origin - PARK_CLOCK_SLACK_S) / bar) * bar
 
 
 func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: Vector3, ctx: Dictionary, facts: Array) -> void:
 	var live_s := float(state.row.live_s)
-	if live_s > 0.0 and state.live_elapsed_s >= live_s - 0.00000001:
+	if live_s > 0.0 and state.live_elapsed_s >= live_s - PARK_CLOCK_SLACK_S:
 		if _park_can_end(state):
 			_park_end(state, facts)
 		return
@@ -578,16 +582,19 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 	_park_hook("step", state, step_ctx)
 	if state.phase != LIVE:
 		return
-	if not state.weather and state.row.kind in ["collapse", "cave_in"]:
-		state.collapse_s = minf(float(state.row.effect.get("fill_s", 0.0)), float(state.collapse_s) + dt)
-	if not state.weather and _park_rising(state):
+	if not state.weather:
 		var fill_s := float(state.row.effect.get("fill_s", 0.0))
-		var next_rise := float(state.rise_s) + dt
-		# Finish on the same clock tolerance as the live phase. A rounding remainder
-		# would otherwise hold already-full water as soon as the rider rolls in.
-		state.rise_s = fill_s if next_rise >= fill_s - 0.00000001 else next_rise
-	if live_s > 0.0 and state.live_elapsed_s >= live_s - 0.00000001 and _park_can_end(state):
+		if state.row.kind in ["collapse", "cave_in"]:
+			state.collapse_s = _park_clock(state.collapse_s, dt, fill_s)
+		if _park_rising(state):
+			state.rise_s = _park_clock(state.rise_s, dt, fill_s)
+	if live_s > 0.0 and state.live_elapsed_s >= live_s - PARK_CLOCK_SLACK_S and _park_can_end(state):
 		_park_end(state, facts)
+
+
+static func _park_clock(elapsed_s: float, dt: float, target_s: float) -> float:
+	var next_s := elapsed_s + dt
+	return target_s if next_s >= target_s - PARK_CLOCK_SLACK_S else next_s
 
 
 static func _park_collapsing(state: Dictionary) -> bool:
