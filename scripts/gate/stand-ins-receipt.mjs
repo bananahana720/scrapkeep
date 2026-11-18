@@ -113,6 +113,7 @@ function produceAll() {
   const campBox = (hit) => hit.area === "camp" && hit.mesh === "BoxMesh" && hit.path.endsWith("/PlantedCampBox");
   const caught = base.run.ok && base.scope?.plant === "" && !base.scope.findings.some(campBox)
     && !planted.run.ok && planted.scope?.plant === "camp_box" && planted.scope.findings.some(campBox)
+    && verdictLine(planted.run.log).startsWith(TEST + ": FAIL (1 of ")
     && planted.run.log.split("\n").some((l) => l.startsWith("[camp has no planted box]") && l.endsWith("-> FAIL"));
   const findings = base.scope?.findings ?? [];
   const waiting = waitingFromPin(readFileSync(path.join(root, PIN), "utf8"));
@@ -121,6 +122,7 @@ function produceAll() {
     const key = `${hit.file}|${hit.mesh}|${hit.shape}`;
     if (!waiting.some((w) => w.cite && w.key === key)) unlisted.add(key);
   }
+  if (cleanHead(root) !== ride.head) throw new Error("checkout changed during the census");
   return { head: ride.head, pass: Boolean(ride.pass && caught && unlisted.size === 0),
     measured: base.scope ? `${Object.keys(base.scope.areas).length} stations, ${unlisted.size} distinct unlisted primitive keys` : "area run did not finish",
     areas: base.scope?.areas ?? {}, findings, unlisted_stand_ins: base.scope ? unlisted.size : null,
