@@ -43,7 +43,7 @@ export function tallyRows(text, first = "shard") {
       inTable = false;
       return;
     }
-    if (cells.length === 2 && cells[0].toLowerCase() === first && /^verdict$/i.test(cells[1])) {
+    if (cells.length === 2 && cells[0].toLowerCase() === first.toLowerCase() && /^verdict$/i.test(cells[1])) {
       inTable = true;
       return;
     }
@@ -107,9 +107,9 @@ export function checkNodeRow(text) {
   const row = tallyRows(text, "check").reverse().find((candidate) => candidate.shard.toLowerCase() === NODE_CHECK);
   if (!row) return [`no "${NODE_CHECK}" row in a "| Check | Verdict |" table; run the node suite on the gated head and record "PASS. N tests, 0 fail. Receipt node/summary.txt"`];
   const problems = [];
-  const count = /\b(\d+) tests, (\d+) fail\b/.exec(row.verdict);
+  const counts = [...row.verdict.matchAll(/\b(\d+) tests, (\d+) fail\b/g)];
   if (!isPass(row.verdict)) problems.push(`line ${row.line}: "${row.shard}" does not open with PASS in its newest row`);
-  if (!count || Number(count[1]) === 0 || Number(count[2]) !== 0) problems.push(`line ${row.line}: "${row.shard}" does not read "N tests, 0 fail" with N above zero`);
+  if (counts.length === 0 || counts.some(([, tests, fail]) => Number(tests) === 0 || Number(fail) !== 0)) problems.push(`line ${row.line}: "${row.shard}" does not read "N tests, 0 fail" with N above zero`);
   if (!hasReceipt(row.verdict)) problems.push(`line ${row.line}: "${row.shard}" names no receipt`);
   return problems;
 }

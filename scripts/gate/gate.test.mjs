@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -598,4 +599,22 @@ test("a red node step keeps the tally from CLEAN, whatever the shard rows say", 
   const reread = gateSide("| node tests | RED: exit 1. 1506 tests, 1 fail. Receipt node/summary.txt |").replace("| --- | --- |\n", "| --- | --- |\n| node tests | PASS. 1506 tests, 0 fail. Receipt node/old.txt |\n");
   assert.match(checkNodeRow(reread).join("\n"), /does not open with PASS/, "the newest node row wins");
   assert.equal(tallyRows(gateSide("| node tests | RED: exit 1. 1 tests, 1 fail. Receipt node/summary.txt |")).length, 1, "the shard rows are unchanged");
+  assert.match(checkNodeRow(gateSide("| node tests | PASS. was 10 tests, 0 fail; now 10 tests, 2 fail. Receipt x |")).join("\n"), /does not read "N tests, 0 fail"/, "every count is read, not the first");
+});
+
+test("the tally command itself refuses CLEAN beside a red node row", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "tally-node-"));
+  try {
+    const file = path.join(dir, "plan.md");
+    const write = (verdict) => writeFileSync(file, ["## Gate-side", "| Check | Verdict |", "| --- | --- |", `| node tests | ${verdict} |`, ""].join("\n"));
+    const run = () => spawnSync(process.execPath, [fileURLToPath(new URL("./tally.mjs", import.meta.url)), "--plan", file], { encoding: "utf8" });
+    write("RED: exit 1. 1506 tests, 1 fail. Receipt node/summary.txt");
+    const red = run();
+    assert.notEqual(red.status, 0);
+    assert.match(red.stdout, /^PROBLEM line 4: "node tests" does not open with PASS/m);
+    write("PASS. 1506 tests, 0 fail. Receipt node/summary.txt");
+    assert.doesNotMatch(run().stdout, /PROBLEM .*node tests/, "a passing node row raises no node problem");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
