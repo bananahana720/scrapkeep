@@ -1,0 +1,32 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 32 and seed -3505874037733087564 with 4 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/HazardCycle.tla
+Parsing file <tmp>/Naturals.tla
+Semantic processing of module Naturals
+Semantic processing of module HazardCycle
+Starting... (2026-11-17 17:41:57)
+Computing initial states...
+Computed 2 initial states...
+Computed 4 initial states...
+Computed 8 initial states...
+Computed 16 initial states...
+Computed 32 initial states...
+Finished computing initial states: 54 distinct states generated at 2026-11-17 17:41:57.
+Error: Invariant BallOnlyWhereTold is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+
+State 2: <Next line 106, col 9 to line 106, col 90 of module HazardCycle>
+
+State 3: <Next line 106, col 9 to line 106, col 90 of module HazardCycle>
+
+State 4: <Next line 106, col 9 to line 106, col 90 of module HazardCycle>
+
+State 5: <Next line 106, col 9 to line 106, col 90 of module HazardCycle>
+
+State 6: <Next line 106, col 9 to line 106, col 90 of module HazardCycle>
+
+21445 states generated, 1246 distinct states found, 473 states left on queue.
+The depth of the complete state graph search is 6.
+The average outdegree of the complete state graph is 2 (minimum is 0, the maximum 27 and the 95th percentile is 17).
+Finished in 00s at (2026-11-17 17:41:58)

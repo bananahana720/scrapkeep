@@ -8,11 +8,11 @@ hcfg() {
   local rules=$2
   shift 2
   # Plain variables, not an associative array, so the system bash 3.2 on macOS runs it.
-  local keys="Places TellTicks MinTell RestTicks StormTicks TellGuard SeekNeedsStall StrikeWhereTold HitsEnemies SeekOn"
+  local keys="Places TellTicks MinTell RestTicks StormTicks TellGuard SeekNeedsStall StrikeWhereTold HitsEnemies BallTested SeekOn"
   # One tick is 0.3 s: a 1.2 s tell is 4, the 0.6 s floor is 2. The rest and the storm are shortened (the code's
   # 5 s and 20 s); they set the bound's size, not the order of steps.
   local c_Places="{\"p1\", \"p2\", \"p3\"}" c_TellTicks=4 c_MinTell=2 c_RestTicks=3 c_StormTicks=10
-  local c_TellGuard=TRUE c_SeekNeedsStall=TRUE c_StrikeWhereTold=TRUE c_HitsEnemies=TRUE c_SeekOn=TRUE
+  local c_TellGuard=TRUE c_SeekNeedsStall=TRUE c_StrikeWhereTold=TRUE c_HitsEnemies=TRUE c_BallTested=TRUE c_SeekOn=TRUE
   local kv key v
   for kv in "$@"; do
     key=${kv%%=*}
@@ -43,3 +43,4 @@ hcfg broken-seekrolling "RollingNeverSought" SeekNeedsStall=FALSE
 hcfg broken-strikeatball "TellBeforeStrike" StrikeWhereTold=FALSE
 hcfg broken-skipenemies "EnemyStruck" HitsEnemies=FALSE
 hcfg broken-noseek "StalledSought" SeekOn=FALSE
+hcfg broken-hitanywhere "BallOnlyWhereTold" BallTested=FALSE

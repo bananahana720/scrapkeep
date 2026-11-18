@@ -72,6 +72,7 @@ export const ROWS = {
       { cfg: "hazard-broken-strikeatball.cfg", rule: "TellBeforeStrike" },
       { cfg: "hazard-broken-skipenemies.cfg", rule: "EnemyStruck" },
       { cfg: "hazard-broken-noseek.cfg", rule: "StalledSought" },
+      { cfg: "hazard-broken-hitanywhere.cfg", rule: "BallOnlyWhereTold" },
     ],
     coverage: "references/hazard-coverage.md",
     gaps: [
