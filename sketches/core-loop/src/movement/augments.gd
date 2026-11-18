@@ -791,7 +791,7 @@ static func _grapple(kit, state, tuning, intent, body_state, step: float) -> voi
 				else:
 					# The cable has only just taken the load. Its
 					# curvature turns the rider through v * dt / r.
-					var taut := (end.length() - kit.rope) / (end.length() - dist)
+					var taut: float = (end.length() - kit.rope) / (end.length() - dist)
 					var angle := v.angle_to(arc)
 					var turn := minf(angle, 2.0 * half_turn * taut)
 					body_state.linear_velocity = v.slerp(arc, turn / angle) if angle > 0.0 else v
