@@ -87,7 +87,7 @@ func _run() -> void:
 		_t.near("next slag is scheduled on the hazard's own warn", _boss._next_attack - _boss.clock, want, 0.02)
 	_boss._cancel_hazards()
 	_boss._enter_phase(3)
-	_boss._commit_charge(ball)
+	_boss._commit_charge()
 	var charge = _boss._charge.get("hazard")
 	_t.check("charge warn stays >= MIN_WARN at tell_mult 0.1", charge != null and charge.warn_seconds >= Hazard.MIN_WARN - 1e-6,
 			str(charge.warn_seconds if charge != null else -1.0))

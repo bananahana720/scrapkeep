@@ -22,9 +22,12 @@ const T := preload("res://tests/support/t.gd")
 # Control: the child hangs a BoxMesh on the first park activity (--prim-plant=1); the census must
 # call it new, so the test can fail.
 #
-# Evidence limit: one seed, one pilot, one table. A surface the run never builds (a stage-2 secret
+# Default ride scope: one seed, one pilot, one table. A surface the run never builds (a stage-2 secret
 # this bot skips, a drop it never sees) is not judged; the whole tree is scanned every 30 ticks, so
 # what a stage builds counts whether or not the ball goes near it.
+
+# PRIM_SCOPE=all visits the named pilot, menu, shop, camp and event stations below.
+# PRIM_PLANT=camp_box makes only its camp-box assertion fail.
 
 # Receipt (scripts/gate/stand-ins-receipt.mjs, the world 1 done read's row no-code-stand-ins): the test ends with
 #   SUMMARY {"surfaces", "pinned", "stand_ins", "new", "stale", "plant"}
@@ -41,10 +44,15 @@ const TIMEOUT_S := 840.0
 # change, with the census line that went. A fall nobody meant is a stage that was not built, and fails here.
 const MIN_SURFACES := 129
 
+var _areas := {}
+var _area_hits := []
 var _t := T.new("prim_census_test")
 
 
 func _initialize() -> void:
+	if OS.get_environment("PRIM_SCOPE") == "all":
+		_scan_areas.call_deferred()
+		return
 	var enforce := OS.get_environment("SCRAPKEEP_RELEASE_GATE") == "1"
 	_judge_rules()
 	var pin := PrimCensus.load_pin()
@@ -140,3 +148,196 @@ func _remove_tree(dir: String) -> void:
 	for file in DirAccess.get_files_at(dir):
 		DirAccess.remove_absolute(dir.path_join(file))
 	DirAccess.remove_absolute(dir)
+
+
+# These stations use the live game for the area census. Each station has its own
+# surface set, so a mesh seen at the title still counts if the shop also draws it.
+func _station(area: String, where: Node, ready: bool) -> void:
+	if not _t.check("station reached: " + area, ready and is_instance_valid(where)):
+		return
+	var census := PrimCensus.new()
+	var rows := census.scan(where, Engine.get_physics_frames(), 0, true)
+	var pin := PrimCensus.load_pin()
+	var findings := 0
+	for row in rows:
+		var rule := PrimCensus.pin_for(row, pin)
+		if rule.get("kind", "") == "code":
+			continue
+		var hit := {"area": area, "file": row.owner, "mesh": row.mesh, "shape": row.shape,
+			"path": row.path, "row": rule.get("row", "W1-143b"), "why": rule.get("why", "")}
+		findings += 1
+		_area_hits.append(hit)
+	_areas[area] = {"surfaces": rows.size(), "findings": findings}
+
+
+func _scan_areas() -> void:
+	var game = preload("res://src/game.gd").new()
+	game.test_mode = true
+	game.table = "park"
+	preload("res://src/core/sim_clock.gd").ticks = true
+	root.add_child(game)
+	await process_frame
+	await process_frame
+	game.run.run_seed_override = SEED
+	var plant := OS.get_environment("PRIM_PLANT")
+	await _title_and_camp(game, plant)
+	await _pilots_and_pause(game)
+	await _shop(game)
+	for stage in [1, 2]:
+		game.flow.enter_stage(stage, Vector3.ZERO, false)
+		await physics_frame
+		var park: Dictionary = game.ctx.terrain.map().park
+		var events: Array = park.event_rows
+		_t.check("world 1 event rows on stage %d" % stage, not events.is_empty())
+		for row in events:
+			if row.kind == "sluice_surge":
+				await _surge_stations(game, row.id)
+			else:
+				await _event_stations(game, park, row)
+	game.run.damage(99999.0, "census")
+	await process_frame
+	_station("menu/death", game, game.flow.state_name() == "dead")
+	game.screens.start_ending_sequence()
+	await process_frame
+	_station("menu/ending", game.screens.ending_sequence, game.screens.ending_open())
+	var boxes := _area_hits.filter(func(r): return r.area == "camp" and r.path.ends_with("/PlantedCampBox"))
+	_t.check("camp has no planted box", boxes.is_empty(), str(boxes))
+	print("AREAS " + JSON.stringify({"areas": _areas, "findings": _area_hits, "plant": plant}))
+	game.free()
+	quit(_t.verdict())
+
+
+func _title_and_camp(game, plant: String) -> void:
+	var screens = game.screens
+	screens.prologue_enabled = false
+	_station("menu/title", game, game.flow.state_name() == "title")
+	for page in ["help", "settings", "achievements"]:
+		screens.call("toggle_" + page)
+		await process_frame
+		_station("menu/" + page, game, screens.call(page + "_open"))
+		screens.call("toggle_" + page)
+	screens.toggle_camp()
+	await process_frame
+	var hub = game.camp_hub
+	if plant == "camp_box" and hub.built:
+		var box := MeshInstance3D.new()
+		box.name = "PlantedCampBox"
+		box.mesh = BoxMesh.new()
+		hub.root.add_child(box)
+	_station("camp", hub.root, hub.built and hub.walking)
+	screens.walk_customize()
+	await process_frame
+	var locker = screens.camp_page().customize
+	_station("menu/customize", locker, locker.is_visible_in_tree())
+	locker.close()
+	for page in ["radio", "jukebox"]:
+		screens.call("toggle_" + page)
+		await process_frame
+		_station("menu/" + page, game, screens.call(page + "_open"))
+		screens.call("toggle_" + page)
+	screens.toggle_camp()
+
+
+func _pilots_and_pause(game) -> void:
+	game.flow.press_start()
+	await process_frame
+	var roster := preload("res://src/core/class_def.gd").all()
+	_station("menu/pilot-select", game, game.screens.class_cards().size() == roster.size())
+	game.flow.choose_class(0)
+	await physics_frame
+	var hero = game.presentation.hero_assets
+	_t.eq("six pilot definitions", roster.size(), 6)
+	for pilot in roster:
+		game.player.fit_class(pilot)
+		await process_frame
+		hero._process(0.0)
+		var rec: Dictionary = hero.shell_of(game.player)
+		_station("pilot/" + pilot.id, game.player, rec.get("class") == pilot.id
+			and is_instance_valid(rec.get("pod")) and is_instance_valid(rec.get("core"))
+			and not game.player.find_children("*", "MeshInstance3D", true, false).is_empty())
+	var pause_menu = game.get_node("PauseMenu")
+	pause_menu.open()
+	await process_frame
+	_station("menu/pause", pause_menu, pause_menu.is_open())
+	pause_menu.close()
+
+
+func _shop(game) -> void:
+	var workshop = game.get_node("Workshop")
+	var terrain = game.ctx.terrain
+	var map = terrain.map()
+	var dock: Vector2 = map.bay_dock.at
+	var ground := Vector3(dock.x, terrain.height(dock.x, dock.y), dock.y)
+	game.world.bay.dock([{"at": ground, "facing": map.bay_dock.facing}], Callable(terrain, "height"),
+		root.get_world_3d().direct_space_state, map)
+	workshop.armed = true
+	game.build.shop.enter()
+	workshop.open_counter()
+	await process_frame
+	_station("shop", game, workshop.counter.is_open() and game.world.bay.docked)
+	workshop.close_counter()
+	game.build.shop.leave()
+
+
+# Run the actual director on one authored row. The other rows cannot win its
+# random draw; its warning, landing, family visuals and published facts are real.
+func _event_stations(game, park: Dictionary, row: Dictionary) -> void:
+	var selection := preload("res://src/world/park/park_map.gd").new()
+	selection.park = park.duplicate()
+	selection.park.event_rows = [row]
+	selection.park.weather_rows = []
+	var director := preload("res://src/world/event_director.gd").new(SEED, {}, selection,
+		game.tuning.f("cruise"), Callable(game.ctx.terrain, "height"))
+	var family = game.world.event_families.get(row.family)
+	if not _t.check("handler for " + row.id, is_instance_valid(family)):
+		return
+	director.register_family(row.family, Callable(family, "handle"))
+	if row.trigger.on == "warden_phase":
+		director.notify_warden_phase(row.trigger.value)
+	var seen := []
+	for tick in 600:
+		var facts := director.advance(0.1, Vector3(3000, 0, 3000), Vector3.ZERO, {"clock_tier": 4})
+		game.world._publish(facts)
+		for fact in facts:
+			if fact.id != row.id or fact.kind not in ["announced", "started"] or fact.kind in seen:
+				continue
+			seen.append(fact.kind)
+			await process_frame
+			_station("event/%s/%s" % [row.id, fact.kind], game, true)
+		if "started" in seen:
+			family.handle("end", row, {})
+			break
+	_t.eq("warning and landing for " + row.id, seen, ["announced", "started"])
+
+
+# The sluice's water front belongs to the playable surge course. Reaching
+# the industrial handler alone leaves that mesh hidden inside the stage.
+func _surge_stations(game, id: String) -> void:
+	var site = game.world.activities.site("surge_run")
+	if not _t.check("flume has a surge course", is_instance_valid(site) and is_instance_valid(site.course)):
+		return
+	var announced := []
+	var on_warning := func(event_id, _lead, _at):
+		if event_id == id:
+			announced.append(event_id)
+	game.events.event_announced.connect(on_warning)
+	var warning_seen := false
+	var front_seen := false
+	var gate := Vector3.INF
+	for frame in 20 * Engine.physics_ticks_per_second:
+		if site.surge_live and not gate.is_finite():
+			gate = site.course.next_gate_point()
+		var at: Vector3 = gate if gate.is_finite() else site.global_position
+		game.player.reset_to(at + Vector3.UP * 1.05, Vector3.ZERO)
+		await physics_frame
+		if not warning_seen and not announced.is_empty():
+			warning_seen = true
+			_station("event/%s/announced" % id, game, site.started)
+		# This is the course's show_live condition. It still reaches the
+		# station if the water front is rebuilt with an imported model.
+		if site.surge_live and site.course.model.front > 0.0:
+			front_seen = true
+			_station("event/%s/started" % id, game, true)
+			break
+	game.events.event_announced.disconnect(on_warning)
+	_t.check("sluice warning and visible water front", warning_seen and front_seen)

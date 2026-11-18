@@ -16,6 +16,12 @@ const Intent := preload("res://src/movement/intent.gd")
 const PinHash := preload("res://tests/support/pin_hash.gd")
 
 # Stage -> [map, batch count], from the 7dbdebae builder; the hashes below are the old exact pins.
+# 2026-11-17 flume butte gap table re-pin (W1-102): tests/fixtures/pins/park_dressing_2.pin re-recorded with PIN_RECORD=1
+# on the Mac, because gap_table's plateau rebakes the flume ground and it and its kicker join the scatter keep-out; the
+# pin is rounded to hold on both machines (pin_hash.gd), stages 1 and 3 to 6 unchanged.
+# 2026-11-18 stage 2 re-recorded again at 4ddb8e828 on stage/alpha-w44 c9d55d7c: the pin from f47b5e827 was already red
+# on the branch at 371ea873 (a shape change, after the gap table rows moved); the merged footings do not feed the
+# dressing; stages 1 and 3 to 6 unchanged.
 # 2026-10-22 crown sentinel re-pin: stage 6 park_crown 74019119 -> 2943158398, because sentinel_50 moved from [-150, 420] to
 # [-185, 398] (its spire stamp rebakes the ground) and sentinel_50 and sentinel_36 ([-135, 438] -> [-156, 446]) both move their
 # scatter keep-outs; stages 1 to 5 unchanged.
