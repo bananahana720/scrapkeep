@@ -1,23 +1,18 @@
 extends RefCounted
 
 # Park coordinates and the Slag Bowl's centre-relative coordinates are both (x, z).
-const FILES := {
-	"park_dam": "res://assets/park/park_dam/regions.json",
-	"park_flume": "res://assets/park/park_flume/regions.json",
-	"slag_bowl": "res://src/boss/arena_regions.json",
-}
-
 static var _maps := {}
 
 
 static func at(map_id: String, point: Vector2) -> Dictionary:
-	if not FILES.has(map_id):
+	if not map_id.is_valid_identifier():
 		return {}
 	if not _maps.has(map_id):
+		var path := "res://src/boss/arena_regions.json" if map_id == "slag_bowl" else "res://assets/park/%s/regions.json" % map_id
 		var prepared := []
-		if not FileAccess.file_exists(FILES[map_id]):
+		if not FileAccess.file_exists(path):
 			return {}
-		var rows = JSON.parse_string(FileAccess.get_file_as_string(FILES[map_id]))
+		var rows = JSON.parse_string(FileAccess.get_file_as_string(path))
 		if not rows is Array:
 			push_error("Cannot read regions for %s" % map_id)
 			return {}

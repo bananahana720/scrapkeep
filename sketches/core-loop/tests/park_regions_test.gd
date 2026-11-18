@@ -21,9 +21,10 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	for map_id: String in Regions.FILES:
+	for map_id: String in ["park_dam", "park_flume", "slag_bowl"]:
 		var facts := _bowl_facts() if map_id == "slag_bowl" else _park_facts(map_id)
-		var rows = JSON.parse_string(FileAccess.get_file_as_string(Regions.FILES[map_id])) if FileAccess.file_exists(Regions.FILES[map_id]) else []
+		var path := "res://src/boss/arena_regions.json" if map_id == "slag_bowl" else "res://assets/park/%s/regions.json" % map_id
+		var rows = JSON.parse_string(FileAccess.get_file_as_string(path)) if FileAccess.file_exists(path) else []
 		if not t.check("%s regions loaded" % map_id, rows is Array and not rows.is_empty()):
 			continue
 		var ids := {}
@@ -35,6 +36,7 @@ func _run() -> void:
 	for key in ["without_purpose", "verbs_unbacked", "route_nodes_outside"]:
 		t.eq(key, measured[key], 0)
 	t.eq("unknown map", Regions.at("unknown", Vector2.ZERO), {})
+	t.eq("a path is not a map id", Regions.at("../park/park_dam", Vector2(-110, -520)), {})
 	t.eq("outside the park", Regions.at("park_dam", Vector2(2000, 2000)), {})
 	quit(t.verdict())
 
