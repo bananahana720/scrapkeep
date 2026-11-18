@@ -21,7 +21,14 @@ const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 # the hull's: worldCauses (lightning, impact, boiler_burst, reactor_blow, flood, cave_in) are matched to the telegraph of that
 # cause that world events publish (their telegraphs(ball), group world_telegraphs: a natural mark, an industrial Hazard, a
 # rubble fall's disc, a flood's water, the storm's sought ring), and a boss cause (crane) to the boss hazard of that attack. A
-# scrap point counts as one hull point in F1, whose share is over both. F2 and F3 stay hull readings.
+# scrap point counts as one hull point. Nothing pooled may make a line easier (ruling cu), so each line is two readings and
+# fails when either is under it: F1 telegraph_share stays hull only and pooled_share adds scrap; F2 stop_tax stays hull only and
+# pooled_stop_tax adds the scrap lost slow and fast (slow_scrap, fast_scrap); F3 counts a theft as a hit, so a stage's first hit
+# is the earlier of the first hull hit and the first theft. The hull buckets sum to hull_lost; scrap has its own buckets.
+# One cause serves two lightning tells, the fixed strike circle and the storm's sought ring. That is safe: the circle counts
+# only while the ball is inside it, where it has stood drawn since the row's announcement, and a sought ring covers the ball
+# from its own age, so a sought strike under a young ring reads untelegraphed unless the ball stood inside the fixed circle,
+# where it was told anyway.
 # F1 = telegraphed / (telegraphed + untelegraphed). A telegraph's age is how long it has stood, so a lane entered late is judged
 # on the lane's age as it is now. Every published telegraph is read, the steering's own filters (amber, wider than the field
 # radius) do not apply here.
@@ -40,6 +47,8 @@ var _hull := {"telegraphed": 0.0, "untelegraphed": 0.0, "contact": 0.0, "unknown
 var _sources := {}
 var _scrap := {"telegraphed": 0.0, "untelegraphed": 0.0, "contact": 0.0, "unknown": 0.0}
 var _scrap_sources := {}
+var _slow_scrap := 0.0
+var _fast_scrap := 0.0
 var _killing = null
 var _slow_s := 0.0
 var _fast_s := 0.0
@@ -175,6 +184,11 @@ func hit(source: String, hull: float) -> void:
 		_fast_hull += hull
 	else:
 		_slow_hull += hull
+	_note_first_hit()
+
+
+# The stage's (or boss fight's) first hit: a hull hit or a theft of scrap, whichever comes first.
+func _note_first_hit() -> void:
 	if _segment != "":
 		var seg: Dictionary = _segments[_segment]
 		if seg["first_hit_s"] == null:
@@ -192,6 +206,11 @@ func loss(cause: String, amount: float) -> void:
 	var bucket := classify(cause, _scan(false), _prev, _published)
 	_scrap[bucket] = float(_scrap[bucket]) + amount
 	_scrap_sources[cause] = float(_scrap_sources.get(cause, 0.0)) + amount
+	if _fast:
+		_fast_scrap += amount
+	else:
+		_slow_scrap += amount
+	_note_first_hit()
 
 
 # The bucket for one hit. `now` and `before` are _scan() rows (this tick's read and the last tick's, because a telegraph can
@@ -245,8 +264,10 @@ static func _owner_match(source: String, published: Dictionary, cfg: Dictionary)
 
 # died: whether the run ended in death. The killing hit is null on a death with no hit behind it.
 func record(died: bool) -> Dictionary:
-	var shown: float = float(_hull["telegraphed"]) + float(_scrap["telegraphed"])
-	var hidden: float = float(_hull["untelegraphed"]) + float(_scrap["untelegraphed"])
+	var shown: float = float(_hull["telegraphed"])
+	var hidden: float = float(_hull["untelegraphed"])
+	var pooled_shown: float = shown + float(_scrap["telegraphed"])
+	var pooled_hidden: float = hidden + float(_scrap["untelegraphed"])
 	var first := {}
 	for key in _segments:
 		var seg: Dictionary = _segments[key]
@@ -260,6 +281,7 @@ func record(died: bool) -> Dictionary:
 	return {
 		"hull": {"telegraphed": snappedf(shown, 0.1), "untelegraphed": snappedf(hidden, 0.1), "contact": snappedf(float(_hull["contact"]), 0.1), "unknown": snappedf(float(_hull["unknown"]), 0.1)},
 		"telegraph_share": snappedf(shown / (shown + hidden), 0.001) if shown + hidden > 0.0 else null,
+		"pooled_share": snappedf(pooled_shown / (pooled_shown + pooled_hidden), 0.001) if pooled_shown + pooled_hidden > 0.0 else null,
 		"killing_hit": _killing if died and _killing != null else null,
 		"hit_sources": _round_all(_sources),
 		"scrap": {"telegraphed": snappedf(float(_scrap["telegraphed"]), 0.1), "untelegraphed": snappedf(float(_scrap["untelegraphed"]), 0.1), "contact": snappedf(float(_scrap["contact"]), 0.1), "unknown": snappedf(float(_scrap["unknown"]), 0.1)},
@@ -267,6 +289,8 @@ func record(died: bool) -> Dictionary:
 		"slow_s": snappedf(_slow_s, 0.01), "fast_s": snappedf(_fast_s, 0.01),
 		"slow_hull": snappedf(_slow_hull, 0.1), "fast_hull": snappedf(_fast_hull, 0.1),
 		"stop_tax": snappedf((_slow_hull / _slow_s) / (_fast_hull / _fast_s), 0.001) if _slow_s > 0.0 and _fast_s > 0.0 and _fast_hull > 0.0 else null,
+		"slow_scrap": snappedf(_slow_scrap, 0.1), "fast_scrap": snappedf(_fast_scrap, 0.1),
+		"pooled_stop_tax": snappedf(((_slow_hull + _slow_scrap) / _slow_s) / ((_fast_hull + _fast_scrap) / _fast_s), 0.001) if _slow_s > 0.0 and _fast_s > 0.0 and _fast_hull + _fast_scrap > 0.0 else null,
 		"first_hit": first,
 		"hull_lost": snappedf(total, 0.1),
 	}

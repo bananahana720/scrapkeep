@@ -33,8 +33,8 @@ extends RefCounted
 #                          RINGLESS_SHARE of its max hull, source "ringless_plant", as the ambush an unringed spawn would land.
 #
 #   scrap=K                An untelegraphed theft, the scrap-loss lines' positive control (fairness.telegraph_share reads scrap
-#                          taken through run.lose_scrap beside the hull): once a game second on a stage after the game's own
-#                          first hit, the ball loses K x SCRAP_PER_S scrap through run.lose_scrap, cause "scrap_plant", as a
+#                          taken through run.lose_scrap beside the hull): once every SCRAP_EVERY_S game seconds on a stage after the
+#                          game's own first hit, the ball loses K x SCRAP_PER_S scrap through run.lose_scrap, cause "scrap_plant", as a
 #                          world hazard with no mark would take it.
 #
 # rut, drain, fast_tax and ringless drain the hull straight through run.damage, which is a hit that no telegraph announced, so
@@ -49,6 +49,7 @@ const DRAIN_SHARE := 0.01
 const FAST_TAX_SHARE := 0.02
 const RINGLESS_SHARE := 0.05
 const SCRAP_PER_S := 10.0
+const SCRAP_EVERY_S := 10.0
 const RUT_WINDOW_S := 10.0
 # Wider than the orbit ring at the outer edge of its band (2 x (14 + 3) m), so a full lap never clears it.
 const RUT_SPAN_M := 36.0
@@ -216,7 +217,7 @@ func _scrap_theft(scale: float) -> void:
 		_scrap_clock = float(run.stage_time)
 	if float(run.stage_time) < _scrap_clock:
 		return
-	_scrap_clock += 1.0
+	_scrap_clock += SCRAP_EVERY_S
 	run.lose_scrap(maxi(1, roundi(scale * SCRAP_PER_S)), _game.player.ball_position(), "scrap_plant")
 
 

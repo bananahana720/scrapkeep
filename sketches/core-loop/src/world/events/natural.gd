@@ -690,9 +690,9 @@ func telegraphs(ball: Vector3) -> Array:
 		var state: Dictionary = active[id]
 		var kind := String(state.get("kind", ""))
 		if kind in ["impact", "lightning"]:
-			out.append({"id": ("natural:%s" % id).hash(), "cause": kind, "covers": _in_strike(state, ball)})
+			out.append({"id": ("natural:%s:%s" % [id, state.announced_s]).hash(), "cause": kind, "covers": _in_strike(state, ball)})
 		elif kind in FLOOD_KINDS and state.water != null:
-			out.append({"id": ("natural:%s" % id).hash(), "cause": "flood", "covers": state.water.in_basin(ball)})
+			out.append({"id": ("natural:%s:%s" % [id, state.announced_s]).hash(), "cause": "flood", "covers": state.water.in_basin(ball)})
 	var ring = seek.pending()
 	if ring != null and is_instance_valid(ring):
 		out.append({"id": ring.get_instance_id(), "cause": "lightning", "covers": ring.contains(ball)})

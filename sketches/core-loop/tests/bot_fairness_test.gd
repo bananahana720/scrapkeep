@@ -162,6 +162,13 @@ func _plain(f: Dictionary) -> void:
 	var total := 0.0
 	for k in hull:
 		total += float(hull[k])
+	# Hull buckets sum to hull_lost; scrap has its own, and the unknown share reads over both.
+	var scrap: Dictionary = f.get("scrap", {})
+	for k in scrap:
+		total += float(scrap[k])
+	hull = hull.duplicate()
+	for k in scrap:
+		hull[k] = float(hull.get(k, 0.0)) + float(scrap[k])
 	var shares := {}
 	for k in hull:
 		shares[k] = snappedf(float(hull[k]) / maxf(total, 0.001), 0.001)
@@ -203,8 +210,11 @@ func _ringless(f: Dictionary, f1: float, f2: float, f3: float) -> void:
 
 
 # Scrap taken through run.lose_scrap with no telegraph (the plant's cause) is a loss the three lines must see: F1 drops below the line.
-# F2 and F3 are hull readings and stay where they were.
+# The plant is small, so the hull F1, F2 and F3 stay where they were (_others).
 func _scrap(f: Dictionary, f1: float, f2: float, f3: float) -> void:
-	_t.check("F1 drops below the line with the scrap theft planted", f.get("telegraph_share") != null and _share(f) < float(_line["telegraphShare"]), "share %s" % [f.get("telegraph_share")])
-	_t.check("F1 planted reads below unplanted", f.get("telegraph_share") != null and _share(f) < f1, "planted %s, unplanted %s" % [f.get("telegraph_share"), f1])
+	# telegraph_share stays hull only; the theft moves pooled_share (hull and scrap together), and F1 fails on either.
+	var pooled = f.get("pooled_share")
+	_t.check("F1's pooled share drops below the line with the scrap theft planted", pooled != null and float(pooled) < float(_line["telegraphShare"]), "pooled %s" % [pooled])
+	_t.check("F1's pooled share reads below unplanted", pooled != null and float(pooled) < f1, "planted %s, unplanted %s" % [pooled, f1])
 	_t.check("the planted theft is in the scrap record", float(f.get("scrap_sources", {}).get("scrap_plant", 0.0)) > 0.0, "scrap_sources %s" % [f.get("scrap_sources")])
+	_others("scrap", f, f1, f2, f3, "")

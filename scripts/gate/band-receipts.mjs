@@ -13,7 +13,7 @@ import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { COLUMNS, EXCLUDED, FAIRNESS, fairnessPool, gradeRun, median, parseNdjson } from "../challenge/lib.mjs";
+import { COLUMNS, EXCLUDED, FAIRNESS, fairnessPool, f1ShareUnder, f2TaxUnder, gradeRun, median, parseNdjson } from "../challenge/lib.mjs";
 import { fightMaxHp, fightNotes, med } from "../challenge/worst-window.mjs";
 
 // World 1's fight cells in the band table: the dam Warden, the flume Warden and Admiral Brindle.
@@ -134,11 +134,11 @@ export function gradeFairness(read, head) {
   const pools = keys.map(([cell, column]) => ({ key: `${cell} ${column}`, cell, column, ...fairnessPool(sel.runs.filter((r) => r.cell === cell && r.column === column)) }));
   const unmeasured = thinMeasured(pools);
   if (unmeasured) return { pass: false, measured: unmeasured, checks: none };
-  const f1Fails = (p) => p.telegraphShare == null || !p.shareMarked || p.telegraphShare < FAIRNESS.telegraphShare - 1e-9 || p.killsShown !== p.kills || p.killsOther > 0;
+  const f1Fails = (p) => p.telegraphShare == null || !p.shareMarked || f1ShareUnder(p) || p.killsShown !== p.kills || p.killsOther > 0;
   const f1Bad = pools.filter(f1Fails);
   // F1 judged only where it carries a mark: what the plant must be seen to move.
   const f1Marked = pools.filter((p) => p.shareMarked);
-  const f2Bad = pools.filter((p) => p.stopTax == null || p.stopTax < FAIRNESS.stopTax - 1e-9);
+  const f2Bad = pools.filter((p) => p.stopTax == null || f2TaxUnder(p));
   const f3 = pools.filter((p) => p.column === "learner1");
   const f3Bad = f3.filter((p) => p.firstHitS == null || p.firstHitS < FAIRNESS.firstHitS - 1e-9);
   const checks = {
@@ -303,7 +303,7 @@ export function gradeBowlStopTax(read, head) {
   const pools = columns.map((column) => ({ column, key: `brindle ${column}`, ...fairnessPool(sel.runs.filter((r) => r.column === column)) }));
   const unmeasured = thinMeasured(pools);
   if (unmeasured) return { pass: false, measured: `Slag Bowl stop tax: ${unmeasured}`, checks: { tax: false } };
-  const bad = pools.filter((p) => p.stopTax == null || p.stopTax < FAIRNESS.stopTax - 1e-9);
+  const bad = pools.filter((p) => p.stopTax == null || f2TaxUnder(p));
   const show = (p) => `${p.column} ${p.stopTax == null ? `no data (${p.stopTaxNote})` : p.stopTax.toFixed(2)}`;
   const text = `Slag Bowl stop tax, line ${FAIRNESS.stopTax.toFixed(1)}: ${pools.map(show).join(", ")}${bad.length ? `; under the line: ${bad.map((p) => p.column).join(", ")}` : ""} (${counts.map((c) => c.text).join(", ")})`;
   return { pass: bad.length === 0, measured: text, checks: { tax: bad.length === 0 } };
