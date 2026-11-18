@@ -663,11 +663,10 @@ func _shoot(subject: String, extra := {}) -> void:
 	if not base.is_empty() and FileAccess.file_exists(base_frames):
 		_pins = ball_pins(JSON.parse_string(FileAccess.get_file_as_string(base_frames)))
 	var recs: Array = []
-	var cameras: Array = row.cameras.duplicate()
-	if extra.has("mast"):
-		cameras.append(["numerical_aim", Vector3.ZERO, Vector3.ZERO, game.camera.cam.fov, ["mast_eye", "station"]])
-	for shot in cameras:
+	for shot in row.cameras:
 		var v := Subjects.resolve(subject, shot, _anchors)
+		if extra.has("mast") and shot[0] == "numerical_aim":
+			v.fov = game.camera.cam.fov
 		var ball := {"in_frame": false, "bbox": []}
 		var settled := _check_stage_yaw(subject, String(shot[0]))
 		var started := Time.get_ticks_msec()

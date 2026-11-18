@@ -373,6 +373,9 @@ static func merge_stations(directory: String, subjects: Dictionary) -> Array:
 				shot[1] = _vector(shot[1])
 				shot[2] = _vector(shot[2])
 				shot[3] = float(shot[3])
+			if row.has("mast_angle_deg"):
+				# Both capture and blind pairing read this list. At capture the aim uses the live chase lens.
+				row.cameras.append(["numerical_aim", Vector3.ZERO, Vector3.ZERO, 65.0, ["mast_eye", "station"]])
 			subjects[id] = row
 	return errors
 
@@ -419,6 +422,8 @@ static func _station_problem(id: String, row: Variant) -> String:
 	for shot in row.cameras:
 		if not shot is Array or shot.size() != 4 or not shot[0] is String or not shot[0].is_valid_identifier():
 			return "each camera needs [name, eye, target, fov]"
+		if row.has("mast_angle_deg") and shot[0] == "numerical_aim":
+			return "numerical_aim is reserved for the measured mast view"
 		if names_seen.has(shot[0]) or not _has_xyz(shot[1]) or not _has_xyz(shot[2]) or shot[1] == shot[2]:
 			return "camera names must be unique and eye and target must differ"
 		if not (shot[3] is int or shot[3] is float) or not (shot[3] >= 20 and shot[3] <= 100):

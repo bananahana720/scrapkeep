@@ -155,8 +155,8 @@ const PROBE = "res://tools/offscreen_probe.gd";
 // does not qualify a tool. The probe inherits the dam capture, so pin both scripts.
 const watchedTools = new Map([
   ["res://tools/look_harness.gd", {
-    "tools/look_harness.gd": "72dd248701953ab883a58b33d80c90067d918edc90e970546e457343d460dbc2",
-    "tools/look_subjects.gd": "52f42303bf427c003c287818cf45d7bf99e598904542a149c7208efb4bed52c8",
+    "tools/look_harness.gd": "b986d6b4eacd2729f4d2aea6f933fd0d7be8f654c39806d09b3d077e007fc8f7",
+    "tools/look_subjects.gd": "3c2cb005892290cbca2bf9dd4086689972370966c683db3ffeb4a9abd1e735d7",
     "tools/offscreen_window.gd": "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d",
     "tests/workshop/push.gd": "f233cec8d830d14f3aeaaff0931b8a649763bfb30a107036a6a1533fd17d2cce",
   }],

@@ -30,6 +30,23 @@ func _run() -> void:
 	file.close()
 	var errors := Subjects.merge_stations(fixture, Subjects.SUBJECTS.duplicate())
 	_t.check("duplicate built-in subject is refused", errors.size() == 1 and str(errors[0]).contains("duplicates subject arb_bowl"), str(errors))
+	var mast: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tools/stations/W1-135.json")).bowl_mast
+	mast.cameras[0][0] = "numerical_aim"
+	file = FileAccess.open(fixture.path_join("duplicate.json"), FileAccess.WRITE)
+	file.store_string(JSON.stringify({"mast_name_plant": mast}))
+	file.close()
+	errors = Subjects.merge_stations(fixture, {})
+	_t.check("a station cannot overwrite the numerical aim PNG", errors.size() == 1 and str(errors[0]).contains("reserved"))
+	_t.eq("capture and blind pairing list both mast views", Subjects.SUBJECTS.bowl_mast.cameras.map(func(shot): return shot[0]), ["rider", "numerical_aim"])
+	var image := Image.create(2, 2, false, Image.FORMAT_RGB8)
+	var base_dir := ProjectSettings.globalize_path("user://mast_pairs/base")
+	var head_dir := ProjectSettings.globalize_path("user://mast_pairs/head")
+	var pair_dir := ProjectSettings.globalize_path("user://mast_pairs/pairs")
+	for side in [base_dir, head_dir]:
+		DirAccess.make_dir_recursive_absolute(side.path_join("bowl_mast"))
+		for camera_id in ["rider", "numerical_aim"]:
+			image.save_png(side.path_join("bowl_mast").path_join(camera_id + ".png"))
+	_t.eq("blind pairing writes both mast views", write_pairs(["bowl_mast"], base_dir, head_dir, pair_dir), 2)
 	var scratch := DirAccess.open(fixture)
 	_t.eq("duplicate fixture removed", scratch.remove("duplicate.json"), OK)
 	_t.eq("fixture directory removed", DirAccess.remove_absolute(ProjectSettings.globalize_path(fixture)), OK)
