@@ -1813,16 +1813,22 @@ class PassCounter:
 			var key := "%d/%d" % [slot, facts.instance]
 			if facts.phase == "windup":
 				warnings.append({"tick": tick, "kind": kind, "attacker": slot})
+			if kind == "mag_trapper" and facts.phase == "recover" and serials.get(owner_id) == key and enemy.broken_by == "":
+				# _end publishes recover after the pit's last occupancy check, before clearing
+				# its mark. A player break skips that check and a death publishes cancelled.
+				shape(kind, key, enemy.telegraph(), ball_position.call(), tick, slot)
 			if facts.phase != "strike":
 				return
 			serials[owner_id] = key
 			strike_ticks[owner_id] = tick
+			if kind == "chaser" and is_instance_valid(enemy.telegraph()):
+				strikes[key] = false
 			if kind not in ["lobber", "chaser", "jolt_layer", "mag_trapper", "boom_tender"]:
 				shape(kind, key, enemy.telegraph(), ball_position.call(), tick, slot))
 		if kind == "chaser":
 			# A head reaching the ball inside its committed lane is the chaser's strike.
 			enemy.hit_player.connect(func(_damage, _shove):
-				shape(kind, "lunge/%d/%d" % [slot, enemy.lunges], enemy.telegraph(), ball_position.call(), tick, slot))
+				shape(kind, str(serials.get(owner_id, "lunge/%d/%d" % [slot, enemy.lunges])), enemy.telegraph(), ball_position.call(), tick, slot))
 		if kind == "lobber":
 			enemy.released.connect(func(_ring):
 				for shell in enemy.get_tree().get_nodes_in_group("enemy_shot"):
@@ -1896,6 +1902,14 @@ func _begin_pass_table() -> void:
 		printerr("fast pass needs --table=park, --receipt=<file> and optionally --plant=zero_lead")
 		quit(2)
 		return
+	for selection in [ids, modes, speeds, seeds, pilots]:
+		var seen := {}
+		for token in selection:
+			if token.is_empty() or seen.has(token):
+				printerr("empty or duplicate fast-pass selection: ", token)
+				quit(2)
+				return
+			seen[token] = true
 	for id in ids:
 		if id != "all" and not packs.any(func(p): return p.pack == id):
 			printerr("unknown Spillway pack: ", id)
@@ -1946,6 +1960,10 @@ static func pass_grade(rows: Array, controls: Array, baseline: Array, pilots: Ar
 	var base_weave := {}
 	for row in baseline:
 		if row.get("outcome") == "pass_complete" and row.get("pass") == "weave" and row.get("plant", "") == "":
+			if base_weave.has(_pass_key(row)):
+				return {"pass": false, "plant_caught": false, "matched": 0, "expected": 0,
+					"straight_misses": 0, "weave_misses": 0, "stall_misses": 0, "zero_lead_ok": 0,
+					"zero_lead_expected": 0, "invalid": "duplicate baseline weave"}
 			base_weave[_pass_key(row)] = row
 	var indexed := {}
 	var planted := {}
@@ -1955,6 +1973,7 @@ static func pass_grade(rows: Array, controls: Array, baseline: Array, pilots: Ar
 	for row in controls:
 		if row.get("outcome") == "pass_complete" and row.get("plant") == "zero_lead":
 			planted[_pass_key(row)] = row
+	var unique := indexed.size() == rows.size() and planted.size() == controls.size()
 	var expected := 0
 	var matched := 0
 	var zero_lead_expected := 0
@@ -1988,8 +2007,8 @@ static func pass_grade(rows: Array, controls: Array, baseline: Array, pilots: Ar
 						weave_misses += 1
 					if stall.hull_per_min <= 0 or stall.hull_per_min + 0.00001 < 2.0 * straight.hull_per_min:
 						stall_misses += 1
-	var caught := zero_lead_expected > 0 and zero_lead_ok == zero_lead_expected
-	return {"plant_caught": caught, "pass": matched == expected and caught and straight_misses + weave_misses + stall_misses == 0,
+	var caught := unique and zero_lead_expected > 0 and zero_lead_ok == zero_lead_expected
+	return {"plant_caught": caught, "pass": unique and matched == expected and caught and straight_misses + weave_misses + stall_misses == 0,
 		"matched": matched, "expected": expected, "straight_misses": straight_misses, "weave_misses": weave_misses,
 		"stall_misses": stall_misses, "zero_lead_ok": zero_lead_ok, "zero_lead_expected": zero_lead_expected}
 

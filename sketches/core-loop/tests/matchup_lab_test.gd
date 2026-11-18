@@ -325,6 +325,7 @@ class StrikeDummy extends Node3D:
 	var phase := Phase.LIVE
 	var kind := "plated_brute"
 	var mark
+	var broken_by := ""
 
 	func telegraph():
 		return mark
@@ -367,6 +368,13 @@ func _fast_pass_receipt() -> void:
 	counter.tick += 1
 	counter.fields()
 	_check("a ball leaving the pit between arming and its first active tick is clear", counter.contacts.size() == 1)
+	ball[0] = mark.center
+	pit.broken_by = "jumped"
+	pit.attack_phase.emit({"phase": "recover", "instance": 1})
+	_check("a break before the final occupancy check is clear", counter.contacts.size() == 1)
+	pit.broken_by = ""
+	pit.attack_phase.emit({"phase": "recover", "instance": 1})
+	_check("a ball entering on the pit's expiry tick counts", counter.contacts.size() == 2)
 	pit.free()
 	mark.free()
 	_pass_grade_controls()
@@ -416,6 +424,11 @@ func _pass_grade_controls() -> void:
 						controls.append(plant)
 	_check("the matched 13-stage/pack matrix and zero-lead controls meet their floors",
 		rows.size() == 624 and controls.size() == 96 and Lab.pass_grade(rows, controls, base, ["tarn"]).pass)
+	for with_duplicate in [rows + [rows[0]], [rows[0]] + rows]:
+		_check("a duplicate cannot stand in for an independent pass", not Lab.pass_grade(with_duplicate, controls, base, ["tarn"]).pass)
+	_check("duplicate baseline and planted rows cannot qualify a sweep",
+		not Lab.pass_grade(rows, controls, base + [base[0]], ["tarn"]).pass
+		and not Lab.pass_grade(rows, controls + [controls[0]], base, ["tarn"]).plant_caught)
 	rows[0].threats = 0
 	rows[1].hull_lost = 1
 	rows[2].hull_per_min = 1
