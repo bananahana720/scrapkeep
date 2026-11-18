@@ -178,8 +178,14 @@ async function macCapture({ script, args = [], reference = false, cwd = root, en
       const w = result.watch;
       const recorded = reference ? w.targetOnScreen > 0 :
         w.onScreen === 0 && w.frontmostChanges === 0 && (!requireMarker || result.output.split(/\r?\n/).includes("OFFSCREEN_WINDOW " + result.pid + " embedded"));
-      const pass = result.exit === 0 && !result.timedOut && w.missed === 0 && recorded;
-      return { ...result, exit: pass ? 0 : (result.exit || 1) };
+      if (result.timedOut || w.missed !== 0 || !recorded) {
+        // The models-render producer reads SUMMARY even when its planted compare exits 1.
+        // A run with invalid display evidence cannot supply that producer with a verdict.
+        const message = "display-run: invalid capture; see window counts and helper acknowledgement";
+        const output = requireMarker ? result.output + "\n" + message : message;
+        return { ...result, output, exit: result.exit || 1 };
+      }
+      return result;
     },
   });
 }

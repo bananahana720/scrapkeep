@@ -111,3 +111,14 @@ test("the existing models-render gate also draws offscreen, keeping its resoluti
   assert.equal(result.exit, 0);
   assert.equal(result.output, "SUMMARY");
 });
+
+test("model receipts see a valid planted comparison but cannot consume an unwatched verdict", async () => {
+  const summary = 'SUMMARY {"judged":6,"plant":"dark_models"}';
+  for (const [rows, expected] of [[clean, true], [[sample(0), sample(50, 4, [12])], false]]) {
+    const result = await runWindowed({ ...capture(scratch(), rows), script: "res://tools/model_render_check.gd",
+      start: async () => ({ exit: 1, pid: 12, output: summary, timedOut: false }),
+    });
+    assert.equal(result.exit, 1);
+    assert.equal(result.output.includes(summary), expected);
+  }
+});
