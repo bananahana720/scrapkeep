@@ -508,6 +508,32 @@ func _flood_hold_cap() -> void:
 		"first step under the ball %.2f s after landing; %d steps under it" % [first_under - landed_at, risen_under])
 	_check("hold cap: a flood with a ball parked through its whole live time ends once the ball leaves", ends == 1,
 		"ends=%d" % ends)
+	_flood_no_end_under_ball()
+
+
+# A flood whose rise outlasts its live time minus the cap must still never end under a ball standing in its water.
+func _flood_no_end_under_ball() -> void:
+	var row := _row("no_end", "flood_fill", "natural", 5.0)
+	row.hold_clear_m = 0.0
+	row.effect = {"depth_m": 1.2, "fill_s": 10.0, "material": "water"}
+	row.live_s = 8.0 + HOLD_CAP_S - 1.0
+	var d = _director([row])
+	var under := Vector3(0, 1, 0)
+	var landed_at := -1.0
+	var ended_under := 0
+	var ended_after := 0
+	for i in 600:
+		var parked: bool = landed_at >= 0.0 and float(d.stage_time) < landed_at + row.live_s + 10.0
+		for f in _step(d, H, under if parked else FAR):
+			if f.kind == "started" and landed_at < 0.0:
+				landed_at = float(f.time_s)
+			if f.kind == "ended":
+				if parked:
+					ended_under += 1
+				else:
+					ended_after += 1
+	_check("hold cap: a flood never ends under a ball standing in its rising water", landed_at >= 0.0 and ended_under == 0 and ended_after == 1,
+		"landed %.2f s; ended under the ball %d times, after it left %d times" % [landed_at, ended_under, ended_after])
 
 
 func _overlap() -> void:

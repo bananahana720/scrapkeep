@@ -26,8 +26,6 @@ const T := preload("res://tests/support/t.gd")
 const PLANT_ENV := "SCRAPKEEP_PLANT_HAZARD"
 
 const DT := 0.1
-# The director's flood hold cap as the card pins it (PARK_FLOOD_HOLD_CAP_S, W1-148).
-const HOLD_CAP_S := 2.0
 const CRUISE := 14.0
 const DOME := {"id": "dome_lightning", "kind": "lightning", "family": "natural", "site": "domes",
 	"trigger": {"on": "clock_tier", "value": 1}, "weight": 1.0,
@@ -183,10 +181,10 @@ func _enemy(w: Node3D, at: Vector3) -> Enemy:
 
 
 # One tick: the ball's read (natural.gd _physics_process), then the director.
-func _tick(w, handler, clock: float) -> void:
+func _tick(w, handler, clock: float, grounded := true) -> void:
 	w.ctx.run.clock = clock
 	handler._physics_process(DT)
-	w.events.advance(DT, w.ctx.player.at, w.ctx.player.velocity, {"clock_tier": 1, "grounded": true})
+	w.events.advance(DT, w.ctx.player.at, w.ctx.player.velocity, {"clock_tier": 1, "grounded": grounded})
 
 
 func _run() -> void:
@@ -203,7 +201,8 @@ func _run() -> void:
 	_stand_down()
 	_kill()
 	_flood()
-	_flood_parked()
+	_flood_parked(true)
+	_flood_parked(false)
 	quit(t.verdict())
 
 
@@ -417,16 +416,18 @@ func _kill() -> void:
 
 # W1-148: a ball parked in the basin from the flood's landing no longer holds the water off. The director waits
 # PARK_FLOOD_HOLD_CAP_S for it, then the water rises around it and the deep-water tax reads it before the flood ends.
-func _flood_parked() -> void:
+func _flood_parked(grounded: bool) -> void:
+	var label := "parked flood" if grounded else "hopping flood"
 	var fx := _fixture(POOL)
 	var w = fx[0]
 	var handler = fx[1]
+	var cap := float(w.events.get_script().get_script_constant_map().get("PARK_FLOOD_HOLD_CAP_S", -1.0))
 	w.ctx.player.at = Vector3(40, 1.2, 0)
 	var landed_at := -1.0
 	var ended_at := -1.0
 	for i in 900:
 		var clock := i * DT
-		_tick(w, handler, clock)
+		_tick(w, handler, clock, grounded or i % 2 == 0)
 		var state = handler.active.get("plunge_pool_flood")
 		if landed_at < 0.0 and state != null and state.phase != "telegraph":
 			landed_at = clock
@@ -435,10 +436,10 @@ func _flood_parked() -> void:
 			ended_at = clock
 			break
 	var taxes: Array = w.ctx.run.losses.filter(func(l): return l.cause == "flood")
-	t.check("parked flood: it landed with the ball in the basin (else nothing was read)", landed_at >= 0.0)
-	if t.check("parked flood: the parked ball was taxed before the flood ended (none is a miss)", not taxes.is_empty() and (ended_at < 0.0 or float(taxes[0].t) < ended_at),
+	t.check(label + ": it landed with the ball in the basin (else nothing was read)", landed_at >= 0.0)
+	if t.check(label + ": the parked ball was taxed before the flood ended (none is a miss)", not taxes.is_empty() and (ended_at < 0.0 or float(taxes[0].t) < ended_at),
 		"landed %.1f s, ended %.1f s, taxes %d" % [landed_at, ended_at, taxes.size()]):
-		t.check("parked flood: no tax before the hold cap and the 3 s in deep water", float(taxes[0].t) - landed_at >= HOLD_CAP_S + Natural.FLOOD_TAX_AFTER_S - DT,
+		t.check(label + ": no tax before the hold cap and the 3 s in deep water", float(taxes[0].t) - landed_at >= cap + Natural.FLOOD_TAX_AFTER_S - DT,
 			"first tax %.1f s after landing" % (float(taxes[0].t) - landed_at))
 	w.free()
 

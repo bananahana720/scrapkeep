@@ -451,7 +451,7 @@ func _build_park(park: Dictionary, height: Callable) -> void:
 func _park_state(row: Dictionary, weather: bool) -> Dictionary:
 	return {"row": row, "weather": weather, "phase": WAITING, "ready_s": 0.0,
 		"due_s": 0.0, "holding": false, "pending": 0, "live_elapsed_s": 0.0,
-		"rise_s": 0.0, "collapse_s": 0.0, "held_s": 0.0, "context": {}}
+		"rise_s": 0.0, "collapse_s": 0.0, "waited_s": 0.0, "context": {}}
 
 
 func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dictionary, facts: Array) -> void:
@@ -479,7 +479,7 @@ func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dict
 		state.phase = LIVE
 		state.live_elapsed_s = 0.0
 		state.rise_s = 0.0
-		state.held_s = 0.0
+		state.waited_s = 0.0
 		state.collapse_s = 0.0
 		_park_hook("land", state, ctx)
 		if not state.weather:
@@ -580,9 +580,13 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 	var dt := minf(delta, maxf(0.0, live_s - float(state.live_elapsed_s))) if live_s > 0.0 else delta
 	state.live_elapsed_s += dt
 	if not state.weather and (_park_rising(state) or _park_collapsing(state)) and not _park_clear(state, ball, velocity, ctx):
-		if _park_under_ball(state, ball, ctx):
-			state.held_s += dt
-		return
+		var inside := _park_in_footprint(state, ball)
+		if inside and _park_hold_spent(state):
+			pass
+		else:
+			if inside:
+				state.waited_s += dt
+			return
 	var step_ctx := ctx.duplicate(true)
 	step_ctx.delta_s = dt
 	step_ctx.rise_s = state.rise_s
@@ -620,17 +624,19 @@ func _park_half(state: Dictionary, site: Dictionary) -> Vector2:
 	return half
 
 
-# Rising water with a grounded ball standing in its footprint: the one hold the flood's cap bounds.
-func _park_under_ball(state: Dictionary, ball: Vector3, context: Dictionary) -> bool:
-	if state.weather or not _park_rising(state) or not context.grounded:
+# Rising water with a ball standing in its footprint, grounded or not: the time the cap counts. A ball that hops
+# in place is still in the water's way, so hopping cannot hold a flood off.
+func _park_in_footprint(state: Dictionary, ball: Vector3) -> bool:
+	if state.weather or not _park_rising(state):
 		return false
 	var site: Dictionary = NaturalFootprint.resolve(state.row, _park_sites[state.row.site])
 	return ParkMap.footprint_contains(site, Vector2(ball.x, ball.z), 0.0, Vector2.INF, _park_half(state, site))
 
 
-# A flood that has waited PARK_FLOOD_HOLD_CAP_S for a ball stops waiting while it still rises.
+# A flood that has waited PARK_FLOOD_HOLD_CAP_S for a ball in its footprint stops waiting while it still rises
+# (only the step gate reads this: a flood still never ends under a ball, _park_can_end).
 static func _park_hold_spent(state: Dictionary) -> bool:
-	return state.phase == LIVE and float(state.held_s) >= PARK_FLOOD_HOLD_CAP_S - PARK_CLOCK_SLACK_S and _park_rising(state)
+	return state.phase == LIVE and float(state.waited_s) >= PARK_FLOOD_HOLD_CAP_S - PARK_CLOCK_SLACK_S and _park_rising(state)
 
 
 func _park_can_end(state: Dictionary) -> bool:
@@ -686,8 +692,8 @@ func _park_clear(state: Dictionary, ball: Vector3, velocity: Vector3, context: D
 	var site: Dictionary = NaturalFootprint.resolve(state.row, _park_sites[state.row.site])
 	var half := _park_half(state, site)
 	var point := Vector2(ball.x, ball.z)
-	if _park_under_ball(state, ball, context):
-		return _park_hold_spent(state)
+	if _park_rising(state) and context.grounded and _park_in_footprint(state, ball):
+		return false
 	if not _park_ground(state.row):
 		return true
 	var end := point + Vector2(velocity.x, velocity.z) * PARK_TRAVEL_S
