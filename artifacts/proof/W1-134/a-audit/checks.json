@@ -1,0 +1,282 @@
+{
+  "base": "09be3186b392da09ab6913ce008621ff142394f8",
+  "candidate": "bfa18f399cbb6d8ec70182dfe39b54041de2d3e5",
+  "godot": "4.7.2.stable.official.ed1daf0bf",
+  "fast": {
+    "ok": true,
+    "wall_ms": 700717,
+    "failed_runs": [],
+    "flaky": [],
+    "base_red": [],
+    "merge_base": "09be3186b392da09ab6913ce008621ff142394f8"
+  },
+  "smoke": {
+    "tree": "9b26a1591944af69069d55a7b9ff414be2c54d56",
+    "clean": true,
+    "dirty_paths": [],
+    "started_at": "2026-11-18T22:23:09.520Z",
+    "totals": {
+      "runs": 2,
+      "failed": 0,
+      "skipped": 1,
+      "missing_verdict": 0,
+      "quarantined_red": [],
+      "quarantine_stale": []
+    },
+    "results": [
+      {
+        "label": "sketches/core-loop import",
+        "ok": true,
+        "exit": 0,
+        "ms": 2103,
+        "solo": false,
+        "passes": 0,
+        "fails": 0,
+        "verdict_line": null,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/arrival_census_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 421897,
+        "solo": true,
+        "passes": 63,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": [
+          "SKIP control Fin.L",
+          "SKIP control Fin.R",
+          "SKIP control Fin.L",
+          "SKIP control Fin.R"
+        ]
+      }
+    ]
+  },
+  "plants": {
+    "ordinary_unseen": {
+      "started_at": "2026-11-18T22:19:08.647Z",
+      "totals": {
+        "runs": 2,
+        "failed": 1,
+        "skipped": 0,
+        "missing_verdict": 0,
+        "quarantined_red": [],
+        "quarantine_stale": []
+      },
+      "results": [
+        {
+          "label": "sketches/core-loop import",
+          "ok": true,
+          "exit": 0,
+          "ms": 2296,
+          "solo": false,
+          "passes": 0,
+          "fails": 0,
+          "verdict_line": null,
+          "skips": []
+        },
+        {
+          "label": "sketches/core-loop res://tests/arrival_census_test.gd",
+          "ok": false,
+          "exit": 1,
+          "ms": 2957,
+          "solo": true,
+          "passes": 18,
+          "fails": 1,
+          "verdict_line": true,
+          "skips": []
+        }
+      ]
+    },
+    "live_ahead": {
+      "started_at": "2026-11-18T22:30:49.380Z",
+      "totals": {
+        "runs": 2,
+        "failed": 1,
+        "skipped": 0,
+        "missing_verdict": 0,
+        "quarantined_red": [],
+        "quarantine_stale": []
+      },
+      "results": [
+        {
+          "label": "sketches/core-loop import",
+          "ok": true,
+          "exit": 0,
+          "ms": 1894,
+          "solo": false,
+          "passes": 0,
+          "fails": 0,
+          "verdict_line": null,
+          "skips": []
+        },
+        {
+          "label": "sketches/core-loop res://tests/arrival_census_test.gd",
+          "ok": false,
+          "exit": 1,
+          "ms": 2756,
+          "solo": true,
+          "passes": 18,
+          "fails": 1,
+          "verdict_line": true,
+          "skips": []
+        }
+      ]
+    }
+  },
+  "guards": {
+    "stage": [
+      {
+        "id": "difficulty",
+        "area": "Difficulty and pacing",
+        "label": "Novice, Learner, Expert on w1, w2, Brindle, park1, park2",
+        "status": "gate",
+        "enforced_from": null,
+        "measured": "no challenge table given",
+        "threshold": "-",
+        "verdict": "no data",
+        "blocks": true
+      },
+      {
+        "id": "warden-fairness",
+        "area": "Wardens and bosses",
+        "label": "every killing hit is telegraphed, a stopped ball pays double, and the first hit waits 3 s",
+        "status": "gate",
+        "enforced_from": null,
+        "measured": "no receipt (the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: F1 (every killing hit telegraphed) and F2 in every cell and column of w1, w2 and brindle, F3 on Learner attempt 1, 24 seeds a pool, lines from scripts/challenge/fairness.json)",
+        "threshold": "-",
+        "verdict": "no data",
+        "blocks": true
+      }
+    ],
+    "candidate": [
+      {
+        "id": "difficulty",
+        "area": "Difficulty and pacing",
+        "label": "Novice, Learner, Expert on w1, w2, Brindle, park1, park2",
+        "status": "gate",
+        "enforced_from": null,
+        "measured": "no challenge table given",
+        "threshold": "-",
+        "verdict": "no data",
+        "blocks": true
+      },
+      {
+        "id": "warden-fairness",
+        "area": "Wardens and bosses",
+        "label": "every killing hit is telegraphed, a stopped ball pays double, and the first hit waits 3 s",
+        "status": "gate",
+        "enforced_from": null,
+        "measured": "no receipt (the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: F1 (every killing hit telegraphed) and F2 in every cell and column of w1, w2 and brindle, F3 on Learner attempt 1, 24 seeds a pool, lines from scripts/challenge/fairness.json)",
+        "threshold": "-",
+        "verdict": "no data",
+        "blocks": true
+      }
+    ]
+  },
+  "guard_tests": {
+    "tree": "9b26a1591944af69069d55a7b9ff414be2c54d56",
+    "clean": true,
+    "started_at": "2026-11-18T22:19:14.659Z",
+    "totals": {
+      "runs": 7,
+      "failed": 0,
+      "skipped": 2,
+      "missing_verdict": 0,
+      "quarantined_red": [],
+      "quarantine_stale": []
+    },
+    "results": [
+      {
+        "label": "sketches/core-loop import",
+        "ok": true,
+        "exit": 0,
+        "ms": 2269,
+        "solo": false,
+        "passes": 0,
+        "fails": 0,
+        "verdict_line": null,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/director_breather_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 1156,
+        "solo": false,
+        "passes": 35,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/director_route_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 1052,
+        "solo": false,
+        "passes": 11,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/combat_miniboss_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 28461,
+        "solo": false,
+        "passes": 7,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": [
+          "SKIP control Fin.L",
+          "SKIP control Fin.R"
+        ]
+      },
+      {
+        "label": "sketches/core-loop res://tests/bot_world_arrivals_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 169510,
+        "solo": true,
+        "passes": 45,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": [
+          "SKIP control Fin.L",
+          "SKIP control Fin.R",
+          "SKIP control Fin.L",
+          "SKIP control Fin.R",
+          "SKIP control Fin.L",
+          "SKIP control Fin.R",
+          "SKIP control Fin.L",
+          "SKIP control Fin.R"
+        ]
+      },
+      {
+        "label": "sketches/core-loop res://tests/pocket_entry_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 345413,
+        "solo": true,
+        "passes": 117,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/stage_locks_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 54322,
+        "solo": true,
+        "passes": 224,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      }
+    ]
+  }
+}
