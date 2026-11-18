@@ -25,6 +25,11 @@ const CAP_SIZE := Vector3(2.2, 0.8, 2.2)
 # whole width, so it never drops out mid-fight.
 const PLATE_REACH := 160.0
 const PLATE_LIFT := DECK + 4.0
+# The charge shove's cutaway: a camera body whose box, grown by CUTAWAY_MARGIN, meets the column CUTAWAY_COLUMN metres
+# up from the rider turns every mesh it stands for to this transparency.
+const CUTAWAY_TRANSPARENCY := 0.88
+const CUTAWAY_COLUMN := 12.0
+const CUTAWAY_MARGIN := 1.0
 # The fortress and its scooter (recipes in tools/blender/bosses). The primitives below stay
 # built and are only hidden when the model loads, so a missing GLB leaves the old boxes.
 const MODEL := "res://assets/models/bosses/boss_brindle.glb"
@@ -142,8 +147,8 @@ func _build_camera_bodies() -> void:
 	_follow_drawn_parts()
 
 
-# During a charge shove the rider can pass through the hull. Keep the outside
-# opaque and cut away only those parts standing over the ball.
+# During a charge shove the rider can pass through the hull. Each camera body standing over the ball goes
+# see-through whole, with every mesh it stands for (so the hull goes with its fittings), and the rest stay opaque.
 func follow_shoved_rider(rider: Node3D) -> void:
 	_shoved_rider = rider
 	_follow_drawn_parts()
@@ -175,13 +180,13 @@ func _follow_drawn_parts() -> void:
 		var covering := false
 		if is_instance_valid(_shoved_rider):
 			var ball := body.to_local(_shoved_rider.global_position)
-			var above := body.to_local(_shoved_rider.global_position + Vector3.UP * 12.0)
-			covering = AABB(-size * 0.5, size).grow(1.0).intersects_segment(ball, above) != null
+			var above := body.to_local(_shoved_rider.global_position + Vector3.UP * CUTAWAY_COLUMN)
+			covering = AABB(-size * 0.5, size).grow(CUTAWAY_MARGIN).intersects_segment(ball, above) != null
 		var layer := 0 if covering else ChaseCamera.CAMERA_BODY_BIT
 		if body.collision_layer != layer:
 			body.collision_layer = layer
 			for mesh in row[4]:
-				mesh.transparency = 0.88 if covering else 0.0
+				mesh.transparency = CUTAWAY_TRANSPARENCY if covering else 0.0
 
 
 static func _cable_mesh() -> ArrayMesh:

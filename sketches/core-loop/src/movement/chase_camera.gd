@@ -53,6 +53,22 @@ const CAMERA_BODY_BIT := 8
 const PROBE_RADIUS := 0.3
 # A lifted probe must free at least this much arm over the unlifted one, or the lift is not worth it.
 const LIFT_GAIN := 0.3
+# The contact lift (set_contact_subject), by the metres from the pivot to the subject. Out to CONTACT_RANGE the lift
+# may act, easing out over the last CONTACT_RANGE - CONTACT_FADE_START; past CONTACT_BOW_FAR the subject must also be
+# in view. The near bow is the stretch from CONTACT_BOW_FAR in to CONTACT_BOW_NEAR, where the arm swings from the far
+# perch to the near one: nearly level behind the ball, then almost straight up (radians, short of MAX_ARM_PITCH).
+const CONTACT_RANGE := 40.0
+const CONTACT_FADE_START := 35.0
+const CONTACT_BOW_FAR := 17.0
+const CONTACT_BOW_NEAR := 10.0
+const CONTACT_PERCH_FAR := -0.03
+const CONTACT_PERCH_NEAR := -1.42
+# A far subject lifts only when looking up has pinned the lens to the ground: the share of the arm still free below
+# which the floor presses, whole at CONTACT_FLOOR_PINNED and gone at CONTACT_FLOOR_FREE.
+const CONTACT_FLOOR_PINNED := 0.55
+const CONTACT_FLOOR_FREE := 0.8
+# How fast the contact lift eases toward its target, per second.
+const CONTACT_LIFT_RATE := 16.0
 # Situation rows. arm 0.0 means no opinion; pitch_bias tilts the arm without touching the
 # player's pitch; shake_cap is the most total shake allowed while the row is active.
 const PROFILES := {
@@ -361,15 +377,15 @@ func _boss_contact_lift(arm_pitch: float, subject: Node3D) -> float:
 	if subject == null or shoulder_target > 0.0 or shoulder_blend > 0.0:
 		return 0.0
 	var distance := global_position.distance_to(subject.global_position)
-	if distance >= 40.0 or (distance >= 17.0 and not in_view(subject.global_position)):
+	if distance >= CONTACT_RANGE or (distance >= CONTACT_BOW_FAR and not in_view(subject.global_position)):
 		return 0.0
-	var near_bow := 1.0 - smoothstep(10.0, 17.0, distance)
+	var near_bow := 1.0 - smoothstep(CONTACT_BOW_NEAR, CONTACT_BOW_FAR, distance)
 	var reach := arm.spring_length
 	var normal_reach := _free_arm(arm_pitch, reach, false)
 	# A distant Warden only needs the change when looking up has pinned the lens to the ground.
-	var floor_press := (1.0 - smoothstep(0.55, 0.8, normal_reach / reach)) if arm_pitch > 0.0 else 0.0
-	floor_press *= 1.0 - smoothstep(35.0, 40.0, distance)
-	var perch := lerpf(-0.03, -1.42, near_bow)
+	var floor_press := (1.0 - smoothstep(CONTACT_FLOOR_PINNED, CONTACT_FLOOR_FREE, normal_reach / reach)) if arm_pitch > 0.0 else 0.0
+	floor_press *= 1.0 - smoothstep(CONTACT_FADE_START, CONTACT_RANGE, distance)
+	var perch := lerpf(CONTACT_PERCH_FAR, CONTACT_PERCH_NEAR, near_bow)
 	var lift := maxf(0.0, arm_pitch - perch) * maxf(floor_press, near_bow)
 	if lift <= 0.0 or _free_arm(arm_pitch - lift, reach, false) < normal_reach - LIFT_GAIN:
 		return 0.0
@@ -470,7 +486,7 @@ func _process(delta: float) -> void:
 		_contact_subject = null
 	var subject := _contact_subject
 	var contact_lift := _boss_contact_lift(arm_pitch, subject)
-	_contact_lift = lerpf(_contact_lift, contact_lift, 1.0 - exp(-16.0 * delta))
+	_contact_lift = lerpf(_contact_lift, contact_lift, 1.0 - exp(-CONTACT_LIFT_RATE * delta))
 	_contact_lift = minf(_contact_lift, arm_pitch - MAX_ARM_PITCH)
 	arm.rotation = Vector3(arm_pitch - _contact_lift, 0.0, 0.0)
 
