@@ -484,18 +484,7 @@ func _process(delta: float) -> void:
 	_kick = _kick.lerp(Vector3.ZERO, 1.0 - exp(-KICK_RETURN * delta))
 	var jitter := Vector3(_shake_rng.randf_range(-1.0, 1.0), _shake_rng.randf_range(-1.0, 1.0), 0.0) * _shake * 0.22
 	cam.position = jitter + cam.get_parent().global_basis.inverse() * _kick
-	# The normal wall lift preserves the player's view. At boss contact the raised
-	# lens still needs the ball and floor in its lower third, including after a shove.
-	var view_pitch := pitch
-	if _contact_lift > 0.001 and subject != null:
-		var to_ball: Vector3 = target.shown_position() - aim_origin()
-		var ahead := -yaw_basis().z
-		var ball_pitch := atan2(to_ball.y, ahead.dot(to_ball))
-		var to_subject := subject.global_position - aim_origin()
-		var subject_pitch := atan2(to_subject.y, Vector2(to_subject.x, to_subject.z).length())
-		var floor_in_view := minf((ball_pitch + subject_pitch) * 0.5, ball_pitch + deg_to_rad(cam.fov) * 0.36)
-		view_pitch = lerpf(pitch, minf(pitch, floor_in_view), smoothstep(0.0, 0.16, _contact_lift))
-	cam.rotation = Vector3(view_pitch - arm.rotation.x, 0.0, _roll + jitter.x * 0.1)
+	cam.rotation = Vector3(pitch - arm.rotation.x, 0.0, _roll + jitter.x * 0.1)
 	cam.fov = minf(_base_fov + _fov_add + _punch, FOV_CAP)
 
 

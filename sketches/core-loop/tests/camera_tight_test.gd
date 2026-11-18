@@ -48,6 +48,7 @@ func _run() -> void:
 	await _roof()
 	await _floor()
 	await _fight_floor()
+	await _aim_kept()
 	await _pillar()
 	await _unstepped()
 	await _ship()
@@ -175,8 +176,14 @@ func _fight_floor() -> void:
 	await _settle(fight, 120)
 	var crowded := open.arm.get_hit_length()
 	var clear := fight.arm.get_hit_length()
-	_t.check("F2 the water-sheet view clears the floor and shows the ball", crowded < 4.0 and clear > 7.0 and fight.shows(Vector3.ZERO), "open %.2f m, fight %.2f m" % [crowded, clear])
-	_t.check("F3 the high target and nearby floor fit in the same view", fight.shows(subject.position) and fight.shows(Vector3(0, -1, -4)), "target %s, floor %s" % [fight.shows(subject.position), fight.shows(Vector3(0, -1, -4))])
+	_t.check("F2 the water-sheet view clears the floor", crowded < 4.0 and clear > 7.0, "open %.2f m, fight %.2f m" % [crowded, clear])
+	# The view keeps the player's pitch, so the ball and floor stay in frame only while the player's own
+	# look leaves them there: 0.3 rad up with the target 22 m above, not the steeper 0.5 above.
+	fight.snap(Vector3.FORWARD, 0.3)
+	await _settle(fight, 120)
+	_t.check("F3 the ball, the high target and nearby floor fit in the same view", fight.shows(Vector3.ZERO) and fight.shows(subject.position) and fight.shows(Vector3(0, -1, -4)), "ball %s, target %s, floor %s" % [fight.shows(Vector3.ZERO), fight.shows(subject.position), fight.shows(Vector3(0, -1, -4))])
+	fight.snap(Vector3.FORWARD, 0.5)
+	await _settle(fight, 120)
 	for rig in [open, fight]:
 		rig.shoulder_target = 1.0
 		rig.reduced_motion = true
@@ -195,6 +202,39 @@ func _fight_floor() -> void:
 	subject.free()
 	open.free()
 	fight.free()
+
+
+# The lift moves the arm only. A player who looks up at a high subject keeps that aim while the lift is on, and
+# nothing turns when the lift ends or the player mounts.
+func _aim_kept() -> void:
+	var floor_body := _box(Vector3(80, 1, 80), Vector3(0, -1.5, 0))
+	var subject := Node3D.new()
+	root.add_child(subject)
+	subject.position = Vector3(0, 22, -24)
+	var cam := _rig()
+	cam.reduced_motion = true
+	cam.set_contact_subject(subject)
+	var looked := 0.5
+	cam.snap(Vector3.FORWARD, looked)
+	await _settle(cam, 120)
+	_t.check("A0 the lift is on", cam.arm.rotation.x < looked - 0.3, "arm %.3f, pitch %.3f" % [cam.arm.rotation.x, looked])
+	_t.check("A1 with the lift on the aim pitch is the player's", absf(_aim_pitch(cam) - looked) < 0.002, "aim %.3f, player %.3f" % [_aim_pitch(cam), looked])
+	cam.set_contact_subject(null)
+	await _settle(cam, 120)
+	_t.check("A2 ending the lift does not turn the aim", absf(_aim_pitch(cam) - looked) < 0.002, "aim %.3f, player %.3f" % [_aim_pitch(cam), looked])
+	cam.set_contact_subject(subject)
+	await _settle(cam, 120)
+	var before_mount := _aim_pitch(cam)
+	cam.shoulder_target = 1.0
+	await _settle(cam, 120)
+	_t.check("A3 mounting does not turn the aim", absf(_aim_pitch(cam) - before_mount) < 0.002 and absf(_aim_pitch(cam) - looked) < 0.002, "aim %.3f before, %.3f after, player %.3f" % [before_mount, _aim_pitch(cam), looked])
+	floor_body.free()
+	subject.free()
+	cam.free()
+
+
+func _aim_pitch(cam) -> float:
+	return asin(cam.aim_forward().y)
 
 
 # A pillar pass: a wall behind the ball for 9 frames (0.15 s), then gone. The lens must not lurch.
