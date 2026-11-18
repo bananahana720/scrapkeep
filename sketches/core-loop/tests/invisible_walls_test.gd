@@ -17,6 +17,7 @@ const T := preload("res://tests/support/t.gd")
 
 # [stage, x, y, z] of each spot, y above the surface to drop onto.
 const HUNG_SPOTS := [[1, -199.5, 30.0, 445.0]]
+const WALL_FILTER := "--owner=Park_QAWall_Near"
 
 var _t := T.new("invisible_walls_test")
 
@@ -98,11 +99,29 @@ func _cluster_samples() -> void:
 	if places.size() == 3:
 		_t.eq("the connected patch spans its three samples", places[0],
 			{"owner": "A", "samples": 3, "position": [0.0, 2.0, 0.0], "size": [2.0, 0.0, 0.0]})
+		_t.eq("the distant patch is the single sample at x=6", places[1],
+			{"owner": "A", "samples": 1, "position": [6.0, 2.0, 0.0], "size": [0.0, 0.0, 0.0]})
 		_t.eq("the other owner keeps its coincident sample", places[2]["owner"], "B")
 
 
 func _wall_sweep() -> void:
 	var out := OS.get_user_data_dir().path_join("wall-sweep-" + Crypto.new().generate_random_bytes(12).hex_encode())
+	var created := DirAccess.make_dir_absolute(out)
+	if not _t.check("the wall fixture creates its own report directory", created == OK, error_string(created)):
+		return
+	var partial_stem := "wall_fixture-s1-partial-" + WALL_FILTER.sha256_text().left(10)
+	_check_wall_reports(out, partial_stem)
+
+	# Both sweeps can leave an unavailable report if the fixture fails to load.
+	for stem: String in ["wall_fixture-s1", partial_stem]:
+		for suffix: String in [".json", "-owners.json", "-unavailable.json", "-unavailable-owners.json"]:
+			var path := out.path_join(stem + suffix)
+			if FileAccess.file_exists(path):
+				_t.eq("remove fixture report " + path.get_file(), DirAccess.remove_absolute(path), OK)
+	_t.eq("remove the empty wall fixture directory", DirAccess.remove_absolute(out), OK)
+
+
+func _check_wall_reports(out: String, partial_stem: String) -> void:
 	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
 		"--script", "res://tools/qa/collision_sweep.gd", "--", "--area=wall_fixture", "--step=0.15", "--out=%s" % out])
 	if OS.get_environment("PLANT") == "invisible_wall":
@@ -132,14 +151,16 @@ func _wall_sweep() -> void:
 	_t.eq("the planted invisible wall is one place", counts.get("Park_QAWall_Missing", 0), 1)
 	_t.eq("the inventory accounts for every bare sample", counted, int(report["totals"]["bare"]))
 	_t.eq("only the missing meshes have no geometry within 1.5 m", invisible, int(report["totals"]["invisible"]))
-	var filter_arg := "--owner=Park_QAWall_Near"
-	args.append(filter_arg)
+	args.append(WALL_FILTER)
+	output.clear()
 	code = OS.execute(OS.get_executable_path(), args, output, true)
-	var partial_file := "wall_fixture-s1-partial-%s.json" % filter_arg.sha256_text().left(10)
+	var partial_file := partial_stem + ".json"
 	if _t.check("the filtered sweep has its own report", code == 0 and FileAccess.file_exists(out.path_join(partial_file))):
 		var partial = JSON.parse_string(FileAccess.get_file_as_string(out.path_join(partial_file)))
-		_t.eq("filtered report records its owner filter", partial["filters"], [filter_arg])
+		_t.eq("filtered report records its owner filter", partial["filters"], [WALL_FILTER])
 		_t.eq("filtered report covers one collider", int(partial["totals"]["shapes"]), 1)
+	else:
+		print("\n".join(output))
 	_t.check("the full map report survives a filtered sweep", FileAccess.get_file_as_string(path) == full_report)
 	print("RECEIPT %s" % JSON.stringify({"places_by_owner": counts, "bare_samples": counted,
 		"invisible_samples": report["totals"]["invisible"]}))
