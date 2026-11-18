@@ -333,9 +333,9 @@ func _surge_stations(game, id: String) -> void:
 		if not warning_seen and not announced.is_empty():
 			warning_seen = true
 			_station("event/%s/announced" % id, game, site.started)
-		var front: Array = site.course.find_children("*", "MeshInstance3D", false, false).filter(
-			func(mesh): return mesh.mesh is BoxMesh and mesh.is_visible_in_tree())
-		if site.surge_live and not front.is_empty():
+		# This is the course's show_live condition. It still reaches the
+		# station if the water front is rebuilt with an imported model.
+		if site.surge_live and site.course.model.front > 0.0:
 			front_seen = true
 			_station("event/%s/started" % id, game, true)
 			break
