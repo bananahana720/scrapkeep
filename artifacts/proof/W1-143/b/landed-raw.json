@@ -1,0 +1,1561 @@
+{
+  "status": "raw test output",
+  "ride": {
+    "new": [],
+    "pinned": 129,
+    "plant": "",
+    "stale": [],
+    "stand_ins": [
+      {
+        "file": "build_read.gd",
+        "mesh": "SphereMesh",
+        "path": "@Node3D@2/PauseMenu/@Control@1203/BuildRead/@VBoxContainer@1215/@SubViewportContainer@1216/@SubViewport@1217/@Node3D@1220/@MeshInstance3D@1221",
+        "row": "W1-46",
+        "shape": "SubViewport/Node3D/MeshInstance3D",
+        "stage": 1
+      },
+      {
+        "file": "stakes.gd",
+        "mesh": "CylinderMesh",
+        "path": "@Node3D@2/SableStakes/Stake1/@MeshInstance3D@4617",
+        "row": "W1-23",
+        "shape": "SableStakes/Stake/MeshInstance3D",
+        "stage": 1
+      },
+      {
+        "file": "stakes.gd",
+        "mesh": "TorusMesh",
+        "path": "@Node3D@2/SableStakes/Stake1/@MeshInstance3D@4618",
+        "row": "W1-23",
+        "shape": "SableStakes/Stake/MeshInstance3D",
+        "stage": 1
+      }
+    ],
+    "surfaces": 128
+  },
+  "dam_box_named": true,
+  "camp_box_named": true,
+  "verdicts": {
+    "ride": "prim_census_test: FAIL (1 of 11 checks)",
+    "dam_box": "prim_census_test: FAIL (1 of 11 checks)",
+    "scope": "prim_census_test: PASS (71 checks)",
+    "camp_box": "prim_census_test: FAIL (1 of 71 checks)"
+  },
+  "areas": {
+    "camp": {
+      "findings": 7,
+      "surfaces": 7
+    },
+    "event/annex_reactor_blow/announced": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/annex_reactor_blow/started": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/bench_dropship/announced": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/bench_dropship/started": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/bend_relic_wakes/announced": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/bend_relic_wakes/started": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/dome_lightning/announced": {
+      "findings": 4,
+      "surfaces": 43
+    },
+    "event/dome_lightning/started": {
+      "findings": 4,
+      "surfaces": 45
+    },
+    "event/east_bench_dropship/announced": {
+      "findings": 4,
+      "surfaces": 45
+    },
+    "event/east_bench_dropship/started": {
+      "findings": 4,
+      "surfaces": 45
+    },
+    "event/head_gate_sluice/announced": {
+      "findings": 3,
+      "surfaces": 46
+    },
+    "event/head_gate_sluice/started": {
+      "findings": 5,
+      "surfaces": 46
+    },
+    "event/hollow_trestle_collapse/announced": {
+      "findings": 3,
+      "surfaces": 43
+    },
+    "event/hollow_trestle_collapse/started": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/plunge_pool_flood/announced": {
+      "findings": 4,
+      "surfaces": 43
+    },
+    "event/plunge_pool_flood/started": {
+      "findings": 4,
+      "surfaces": 43
+    },
+    "event/powerhouse_boiler/announced": {
+      "findings": 4,
+      "surfaces": 45
+    },
+    "event/powerhouse_boiler/started": {
+      "findings": 4,
+      "surfaces": 45
+    },
+    "event/toe_vents_wake/announced": {
+      "findings": 4,
+      "surfaces": 45
+    },
+    "event/toe_vents_wake/started": {
+      "findings": 4,
+      "surfaces": 45
+    },
+    "event/wasteway_flash_flood/announced": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/wasteway_flash_flood/started": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/west_wash_flash_flood/announced": {
+      "findings": 4,
+      "surfaces": 43
+    },
+    "event/west_wash_flash_flood/started": {
+      "findings": 4,
+      "surfaces": 43
+    },
+    "menu/achievements": {
+      "findings": 3,
+      "surfaces": 17
+    },
+    "menu/customize": {
+      "findings": 0,
+      "surfaces": 1
+    },
+    "menu/death": {
+      "findings": 5,
+      "surfaces": 46
+    },
+    "menu/ending": {
+      "findings": 9,
+      "surfaces": 9
+    },
+    "menu/help": {
+      "findings": 3,
+      "surfaces": 17
+    },
+    "menu/jukebox": {
+      "findings": 10,
+      "surfaces": 24
+    },
+    "menu/pause": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "menu/pilot-select": {
+      "findings": 7,
+      "surfaces": 21
+    },
+    "menu/radio": {
+      "findings": 10,
+      "surfaces": 24
+    },
+    "menu/settings": {
+      "findings": 3,
+      "surfaces": 17
+    },
+    "menu/title": {
+      "findings": 3,
+      "surfaces": 17
+    },
+    "pilot/demolitions_caster": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "pilot/pylon_engineer": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "pilot/remembered_cannon": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "pilot/runner_gunner": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "pilot/tally": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "pilot/tarn": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "shop": {
+      "findings": 3,
+      "surfaces": 54
+    }
+  },
+  "findings": [
+    {
+      "area": "menu/title",
+      "file": "flood.gd",
+      "mesh": "PlaneMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@235",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/title",
+      "file": "flood.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@236",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/title",
+      "file": "flood.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@237",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/help",
+      "file": "flood.gd",
+      "mesh": "PlaneMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@235",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/help",
+      "file": "flood.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@236",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/help",
+      "file": "flood.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@237",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/settings",
+      "file": "flood.gd",
+      "mesh": "PlaneMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@235",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/settings",
+      "file": "flood.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@236",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/settings",
+      "file": "flood.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@237",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/achievements",
+      "file": "flood.gd",
+      "mesh": "PlaneMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@235",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/achievements",
+      "file": "flood.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@236",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/achievements",
+      "file": "flood.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@237",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "camp",
+      "file": "camp_hub.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/CampGround/SandstoneDisc",
+      "row": "W1-143b",
+      "shape": "CampRoot/CampGround/SandstoneDisc",
+      "why": ""
+    },
+    {
+      "area": "camp",
+      "file": "camp_hub.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/CampGround/@MeshInstance3D@1863",
+      "row": "W1-143b",
+      "shape": "CampRoot/CampGround/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "camp",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/Bulb_bronze",
+      "row": "W1-143b",
+      "shape": "CampHub/CampRoot/Bulb_bronze",
+      "why": ""
+    },
+    {
+      "area": "camp",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/Bulb_silver",
+      "row": "W1-143b",
+      "shape": "CampHub/CampRoot/Bulb_silver",
+      "why": ""
+    },
+    {
+      "area": "camp",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/Bulb_gold",
+      "row": "W1-143b",
+      "shape": "CampHub/CampRoot/Bulb_gold",
+      "why": ""
+    },
+    {
+      "area": "camp",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/GuideLine",
+      "row": "W1-143b",
+      "shape": "CampHub/CampRoot/GuideLine",
+      "why": ""
+    },
+    {
+      "area": "camp",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/RingPost/@MeshInstance3D@2104",
+      "row": "W1-143b",
+      "shape": "CampRoot/RingPost/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/radio",
+      "file": "flood.gd",
+      "mesh": "PlaneMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@235",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/radio",
+      "file": "flood.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@236",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/radio",
+      "file": "flood.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@237",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/radio",
+      "file": "camp_hub.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/CampGround/SandstoneDisc",
+      "row": "W1-143b",
+      "shape": "CampRoot/CampGround/SandstoneDisc",
+      "why": ""
+    },
+    {
+      "area": "menu/radio",
+      "file": "camp_hub.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/CampGround/@MeshInstance3D@1863",
+      "row": "W1-143b",
+      "shape": "CampRoot/CampGround/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/radio",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/Bulb_bronze",
+      "row": "W1-143b",
+      "shape": "CampHub/CampRoot/Bulb_bronze",
+      "why": ""
+    },
+    {
+      "area": "menu/radio",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/Bulb_silver",
+      "row": "W1-143b",
+      "shape": "CampHub/CampRoot/Bulb_silver",
+      "why": ""
+    },
+    {
+      "area": "menu/radio",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/Bulb_gold",
+      "row": "W1-143b",
+      "shape": "CampHub/CampRoot/Bulb_gold",
+      "why": ""
+    },
+    {
+      "area": "menu/radio",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/GuideLine",
+      "row": "W1-143b",
+      "shape": "CampHub/CampRoot/GuideLine",
+      "why": ""
+    },
+    {
+      "area": "menu/radio",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/RingPost/@MeshInstance3D@2104",
+      "row": "W1-143b",
+      "shape": "CampRoot/RingPost/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/jukebox",
+      "file": "flood.gd",
+      "mesh": "PlaneMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@235",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/jukebox",
+      "file": "flood.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@236",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/jukebox",
+      "file": "flood.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@237",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/jukebox",
+      "file": "camp_hub.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/CampGround/SandstoneDisc",
+      "row": "W1-143b",
+      "shape": "CampRoot/CampGround/SandstoneDisc",
+      "why": ""
+    },
+    {
+      "area": "menu/jukebox",
+      "file": "camp_hub.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/CampGround/@MeshInstance3D@1863",
+      "row": "W1-143b",
+      "shape": "CampRoot/CampGround/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/jukebox",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/Bulb_bronze",
+      "row": "W1-143b",
+      "shape": "CampHub/CampRoot/Bulb_bronze",
+      "why": ""
+    },
+    {
+      "area": "menu/jukebox",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/Bulb_silver",
+      "row": "W1-143b",
+      "shape": "CampHub/CampRoot/Bulb_silver",
+      "why": ""
+    },
+    {
+      "area": "menu/jukebox",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/Bulb_gold",
+      "row": "W1-143b",
+      "shape": "CampHub/CampRoot/Bulb_gold",
+      "why": ""
+    },
+    {
+      "area": "menu/jukebox",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/GuideLine",
+      "row": "W1-143b",
+      "shape": "CampHub/CampRoot/GuideLine",
+      "why": ""
+    },
+    {
+      "area": "menu/jukebox",
+      "file": "camp_hub.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/CampHub/CampRoot/RingPost/@MeshInstance3D@2104",
+      "row": "W1-143b",
+      "shape": "CampRoot/RingPost/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/pilot-select",
+      "file": "flood.gd",
+      "mesh": "PlaneMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@235",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/pilot-select",
+      "file": "flood.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@236",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/pilot-select",
+      "file": "flood.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/Flood/@MeshInstance3D@237",
+      "row": "W1-143b",
+      "shape": "Node3D/Flood/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/pilot-select",
+      "file": "class_preview.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Screens/@VBoxContainer@654/@HBoxContainer@660/@Button@2198/@VBoxContainer@2138/@SubViewportContainer@2154/@SubViewport@2139/@MeshInstance3D@2141",
+      "row": "W1-143b",
+      "shape": "SubViewportContainer/SubViewport/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/pilot-select",
+      "file": "class_preview.gd",
+      "mesh": "TorusMesh",
+      "path": "@Node3D@2/Screens/@VBoxContainer@654/@HBoxContainer@660/@Button@2198/@VBoxContainer@2138/@SubViewportContainer@2154/@SubViewport@2139/@MeshInstance3D@2142",
+      "row": "W1-143b",
+      "shape": "SubViewportContainer/SubViewport/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/pilot-select",
+      "file": "class_preview.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Screens/@VBoxContainer@654/@HBoxContainer@660/@Button@2198/@VBoxContainer@2138/@SubViewportContainer@2154/@SubViewport@2139/@MeshInstance3D@2143",
+      "row": "W1-143b",
+      "shape": "SubViewportContainer/SubViewport/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/pilot-select",
+      "file": "class_preview.gd",
+      "mesh": "SphereMesh",
+      "path": "@Node3D@2/Screens/@VBoxContainer@654/@HBoxContainer@660/@Button@2260/@VBoxContainer@2200/@SubViewportContainer@2219/@SubViewport@2201/@MeshInstance3D@2207",
+      "row": "W1-143b",
+      "shape": "SubViewportContainer/SubViewport/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "shop",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_trade_risk/trade_1_blood_counter_0/@StaticBody3D@2785/@MeshInstance3D@2784",
+      "row": "W1-143b",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "shop",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_trade_risk/trade_1_blood_counter_0/@MeshInstance3D@2786",
+      "row": "W1-143b",
+      "shape": "Activity_trade_risk/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "shop",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_trade_risk/trade_1_blood_counter_0/@MeshInstance3D@2787",
+      "row": "W1-143b",
+      "shape": "Activity_trade_risk/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/plunge_pool_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@StaticBody3D@3391/@MeshInstance3D@3390",
+      "row": "W1-143b",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/plunge_pool_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3392",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/plunge_pool_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3393",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/plunge_pool_flood/announced",
+      "file": "site_markers.gd",
+      "mesh": "QuadMesh",
+      "path": "@Node3D@2/Presentation/SiteMarkers/@MeshInstance3D@3673",
+      "row": "W1-143b",
+      "shape": "Presentation/SiteMarkers/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/plunge_pool_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@StaticBody3D@3391/@MeshInstance3D@3390",
+      "row": "W1-143b",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/plunge_pool_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3392",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/plunge_pool_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3393",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/plunge_pool_flood/started",
+      "file": "site_markers.gd",
+      "mesh": "QuadMesh",
+      "path": "@Node3D@2/Presentation/SiteMarkers/@MeshInstance3D@3673",
+      "row": "W1-143b",
+      "shape": "Presentation/SiteMarkers/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/west_wash_flash_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@StaticBody3D@3391/@MeshInstance3D@3390",
+      "row": "W1-143b",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/west_wash_flash_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3392",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/west_wash_flash_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3393",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/west_wash_flash_flood/announced",
+      "file": "site_markers.gd",
+      "mesh": "QuadMesh",
+      "path": "@Node3D@2/Presentation/SiteMarkers/@MeshInstance3D@3673",
+      "row": "W1-143b",
+      "shape": "Presentation/SiteMarkers/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/west_wash_flash_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@StaticBody3D@3391/@MeshInstance3D@3390",
+      "row": "W1-143b",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/west_wash_flash_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3392",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/west_wash_flash_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3393",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/west_wash_flash_flood/started",
+      "file": "site_markers.gd",
+      "mesh": "QuadMesh",
+      "path": "@Node3D@2/Presentation/SiteMarkers/@MeshInstance3D@3673",
+      "row": "W1-143b",
+      "shape": "Presentation/SiteMarkers/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/dome_lightning/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@StaticBody3D@3391/@MeshInstance3D@3390",
+      "row": "W1-143b",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/dome_lightning/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3392",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/dome_lightning/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3393",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/dome_lightning/announced",
+      "file": "site_markers.gd",
+      "mesh": "QuadMesh",
+      "path": "@Node3D@2/Presentation/SiteMarkers/@MeshInstance3D@3673",
+      "row": "W1-143b",
+      "shape": "Presentation/SiteMarkers/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/dome_lightning/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@StaticBody3D@3391/@MeshInstance3D@3390",
+      "row": "W1-143b",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/dome_lightning/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3392",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/dome_lightning/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3393",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/dome_lightning/started",
+      "file": "site_markers.gd",
+      "mesh": "QuadMesh",
+      "path": "@Node3D@2/Presentation/SiteMarkers/@MeshInstance3D@3673",
+      "row": "W1-143b",
+      "shape": "Presentation/SiteMarkers/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/east_bench_dropship/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@StaticBody3D@3391/@MeshInstance3D@3390",
+      "row": "W1-143b",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/east_bench_dropship/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3392",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/east_bench_dropship/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3393",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/east_bench_dropship/announced",
+      "file": "site_markers.gd",
+      "mesh": "QuadMesh",
+      "path": "@Node3D@2/Presentation/SiteMarkers/@MeshInstance3D@3673",
+      "row": "W1-143b",
+      "shape": "Presentation/SiteMarkers/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/east_bench_dropship/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@StaticBody3D@3391/@MeshInstance3D@3390",
+      "row": "W1-143b",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/east_bench_dropship/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3392",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/east_bench_dropship/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3393",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/east_bench_dropship/started",
+      "file": "site_markers.gd",
+      "mesh": "QuadMesh",
+      "path": "@Node3D@2/Presentation/SiteMarkers/@MeshInstance3D@3673",
+      "row": "W1-143b",
+      "shape": "Presentation/SiteMarkers/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/toe_vents_wake/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@StaticBody3D@3391/@MeshInstance3D@3390",
+      "row": "W1-143b",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/toe_vents_wake/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3392",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/toe_vents_wake/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3393",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/toe_vents_wake/announced",
+      "file": "site_markers.gd",
+      "mesh": "QuadMesh",
+      "path": "@Node3D@2/Presentation/SiteMarkers/@MeshInstance3D@3673",
+      "row": "W1-143b",
+      "shape": "Presentation/SiteMarkers/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/toe_vents_wake/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@StaticBody3D@3391/@MeshInstance3D@3390",
+      "row": "W1-143b",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/toe_vents_wake/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3392",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/toe_vents_wake/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3393",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/toe_vents_wake/started",
+      "file": "site_markers.gd",
+      "mesh": "QuadMesh",
+      "path": "@Node3D@2/Presentation/SiteMarkers/@MeshInstance3D@3673",
+      "row": "W1-143b",
+      "shape": "Presentation/SiteMarkers/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/powerhouse_boiler/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@StaticBody3D@3391/@MeshInstance3D@3390",
+      "row": "W1-143b",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/powerhouse_boiler/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3392",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/powerhouse_boiler/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3393",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/powerhouse_boiler/announced",
+      "file": "site_markers.gd",
+      "mesh": "QuadMesh",
+      "path": "@Node3D@2/Presentation/SiteMarkers/@MeshInstance3D@3673",
+      "row": "W1-143b",
+      "shape": "Presentation/SiteMarkers/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/powerhouse_boiler/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@StaticBody3D@3391/@MeshInstance3D@3390",
+      "row": "W1-143b",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/powerhouse_boiler/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3392",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/powerhouse_boiler/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3358/trade_1_blood_counter_0/@MeshInstance3D@3393",
+      "row": "W1-143b",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/powerhouse_boiler/started",
+      "file": "site_markers.gd",
+      "mesh": "QuadMesh",
+      "path": "@Node3D@2/Presentation/SiteMarkers/@MeshInstance3D@3673",
+      "row": "W1-143b",
+      "shape": "Presentation/SiteMarkers/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/hollow_trestle_collapse/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4519/@MeshInstance3D@4518",
+      "row": "W1-143b",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/hollow_trestle_collapse/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4520",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/hollow_trestle_collapse/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4521",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/hollow_trestle_collapse/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4519/@MeshInstance3D@4518",
+      "row": "W1-143b",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/hollow_trestle_collapse/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4520",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/hollow_trestle_collapse/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4521",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/wasteway_flash_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4519/@MeshInstance3D@4518",
+      "row": "W1-143b",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/wasteway_flash_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4520",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/wasteway_flash_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4521",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/wasteway_flash_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4519/@MeshInstance3D@4518",
+      "row": "W1-143b",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/wasteway_flash_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4520",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/wasteway_flash_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4521",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/bench_dropship/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4519/@MeshInstance3D@4518",
+      "row": "W1-143b",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/bench_dropship/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4520",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/bench_dropship/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4521",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/bench_dropship/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4519/@MeshInstance3D@4518",
+      "row": "W1-143b",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/bench_dropship/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4520",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/bench_dropship/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4521",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/bend_relic_wakes/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4519/@MeshInstance3D@4518",
+      "row": "W1-143b",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/bend_relic_wakes/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4520",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/bend_relic_wakes/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4521",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/bend_relic_wakes/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4519/@MeshInstance3D@4518",
+      "row": "W1-143b",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/bend_relic_wakes/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4520",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/bend_relic_wakes/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4521",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/annex_reactor_blow/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4519/@MeshInstance3D@4518",
+      "row": "W1-143b",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/annex_reactor_blow/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4520",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/annex_reactor_blow/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4521",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/annex_reactor_blow/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4519/@MeshInstance3D@4518",
+      "row": "W1-143b",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/annex_reactor_blow/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4520",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/annex_reactor_blow/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4521",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/head_gate_sluice/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4519/@MeshInstance3D@4518",
+      "row": "W1-143b",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/head_gate_sluice/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4520",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/head_gate_sluice/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4521",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/head_gate_sluice/started",
+      "file": "surge_course.gd",
+      "mesh": "TorusMesh",
+      "path": "@Node3D@2/Activities/Activity_surge_run/SurgeCourse/@MeshInstance3D@4394",
+      "row": "W1-143b",
+      "shape": "Activity_surge_run/SurgeCourse/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/head_gate_sluice/started",
+      "file": "surge_course.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_surge_run/SurgeCourse/@MeshInstance3D@4399",
+      "row": "W1-143b",
+      "shape": "Activity_surge_run/SurgeCourse/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/head_gate_sluice/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4519/@MeshInstance3D@4518",
+      "row": "W1-143b",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/head_gate_sluice/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4520",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "event/head_gate_sluice/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4521",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/death",
+      "file": "surge_course.gd",
+      "mesh": "TorusMesh",
+      "path": "@Node3D@2/Activities/Activity_surge_run/SurgeCourse/@MeshInstance3D@4394",
+      "row": "W1-143b",
+      "shape": "Activity_surge_run/SurgeCourse/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/death",
+      "file": "surge_course.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_surge_run/SurgeCourse/@MeshInstance3D@4399",
+      "row": "W1-143b",
+      "shape": "Activity_surge_run/SurgeCourse/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/death",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4519/@MeshInstance3D@4518",
+      "row": "W1-143b",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/death",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4520",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/death",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4521",
+      "row": "W1-143b",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": ""
+    },
+    {
+      "area": "menu/ending",
+      "file": "ending_sequence.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Screens/EndingSequence/EndingView/@Node3D@4862/World1/Stage2/ParkRows/Landmark_penstock_tower/AncientBeam/Column/Core",
+      "row": "W1-143b",
+      "shape": "AncientBeam/Column/Core",
+      "why": ""
+    },
+    {
+      "area": "menu/ending",
+      "file": "ending_sequence.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Screens/EndingSequence/EndingView/@Node3D@4862/World1/Stage2/ParkRows/Landmark_penstock_tower/AncientBeam/Column/Veil",
+      "row": "W1-143b",
+      "shape": "AncientBeam/Column/Veil",
+      "why": ""
+    },
+    {
+      "area": "menu/ending",
+      "file": "ending_sequence.gd",
+      "mesh": "QuadMesh",
+      "path": "@Node3D@2/Screens/EndingSequence/EndingView/@Node3D@4862/World1/Stage2/ParkRows/Landmark_penstock_tower/WorldFx_landmark_penstock_tower/Impostor_lm_penstock_vent",
+      "row": "W1-143b",
+      "shape": "Landmark_penstock_tower/WorldFx_landmark_penstock_tower/Impostor_lm_penstock_vent",
+      "why": ""
+    },
+    {
+      "area": "menu/ending",
+      "file": "ending_sequence.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Screens/EndingSequence/EndingView/@Node3D@4862/World1/Stage2/Contraptions/_MeshInstance3D_4096",
+      "row": "W1-143b",
+      "shape": "Stage/Contraptions/_MeshInstanceD_",
+      "why": ""
+    },
+    {
+      "area": "menu/ending",
+      "file": "ending_sequence.gd",
+      "mesh": "TorusMesh",
+      "path": "@Node3D@2/Screens/EndingSequence/EndingView/@Node3D@4862/World1/Stage2/Contraptions/_MeshInstance3D_4097",
+      "row": "W1-143b",
+      "shape": "Stage/Contraptions/_MeshInstanceD_",
+      "why": ""
+    },
+    {
+      "area": "menu/ending",
+      "file": "ending_sequence.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Screens/EndingSequence/EndingView/@Node3D@4862/World1/Stage2/Contraptions/_MeshInstance3D_4098",
+      "row": "W1-143b",
+      "shape": "Stage/Contraptions/_MeshInstanceD_",
+      "why": ""
+    },
+    {
+      "area": "menu/ending",
+      "file": "ending_sequence.gd",
+      "mesh": "TorusMesh",
+      "path": "@Node3D@2/Screens/EndingSequence/EndingView/@Node3D@4862/World1/Stage2/Contraptions/flume_trebuchet/_MeshInstance3D_4099",
+      "row": "W1-143b",
+      "shape": "Contraptions/flume_trebuchet/_MeshInstanceD_",
+      "why": ""
+    },
+    {
+      "area": "menu/ending",
+      "file": "ending_sequence.gd",
+      "mesh": "TorusMesh",
+      "path": "@Node3D@2/Screens/EndingSequence/EndingView/@Node3D@4862/World1/Stage2/Contraptions/forecourt_geyser/_MeshInstance3D_4104",
+      "row": "W1-143b",
+      "shape": "Contraptions/forecourt_geyser/_MeshInstanceD_",
+      "why": ""
+    },
+    {
+      "area": "menu/ending",
+      "file": "ending_sequence.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Screens/EndingSequence/EndingView/@Node3D@4862/World1/Stage2/Contraptions/forecourt_geyser/_MeshInstance3D_4105",
+      "row": "W1-143b",
+      "shape": "Contraptions/forecourt_geyser/_MeshInstanceD_",
+      "why": ""
+    }
+  ]
+}

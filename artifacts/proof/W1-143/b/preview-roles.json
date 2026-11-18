@@ -1,0 +1,143 @@
+{
+  "demolitions_caster": {
+    "loop": [
+      "CylinderMesh/turntable floor",
+      "TorusMesh/turntable rim",
+      "SphereMesh/charge2",
+      "BoxMesh/lane",
+      "SphereMesh/charge0",
+      "SphereMesh/charge1",
+      "SphereMesh/smoke0",
+      "SphereMesh/smoke1",
+      "SphereMesh/smoke2",
+      "SphereMesh/smoke3",
+      "SphereMesh/smoke4"
+    ],
+    "rest": [
+      "CylinderMesh/turntable floor",
+      "TorusMesh/turntable rim",
+      "SphereMesh/charge2",
+      "BoxMesh/lane"
+    ]
+  },
+  "pylon_engineer": {
+    "loop": [
+      "CylinderMesh/turntable floor",
+      "TorusMesh/turntable rim",
+      "BoxMesh/wall",
+      "CylinderMesh/post",
+      "TorusMesh/cap",
+      "CylinderMesh/tether",
+      "TorusMesh/discharge",
+      "SphereMesh/dust0",
+      "SphereMesh/dust1",
+      "SphereMesh/dust2",
+      "TorusMesh/trail0",
+      "TorusMesh/trail1",
+      "TorusMesh/trail2"
+    ],
+    "rest": [
+      "CylinderMesh/turntable floor",
+      "TorusMesh/turntable rim",
+      "BoxMesh/wall",
+      "CylinderMesh/post",
+      "TorusMesh/cap",
+      "CylinderMesh/tether"
+    ]
+  },
+  "remembered_cannon": {
+    "loop": [
+      "CylinderMesh/turntable floor",
+      "TorusMesh/turntable rim",
+      "BoxMesh/lane",
+      "CylinderMesh/bolt",
+      "BoxMesh/split0",
+      "BoxMesh/split1",
+      "CylinderMesh/plate",
+      "TorusMesh/ring"
+    ],
+    "rest": [
+      "CylinderMesh/turntable floor",
+      "TorusMesh/turntable rim",
+      "BoxMesh/lane",
+      "CylinderMesh/bolt"
+    ]
+  },
+  "runner_gunner": {
+    "loop": [
+      "CylinderMesh/turntable floor",
+      "TorusMesh/turntable rim",
+      "BoxMesh/dummy0",
+      "CylinderMesh/bolt0",
+      "SphereMesh/dust0",
+      "BoxMesh/dummy1",
+      "CylinderMesh/bolt1",
+      "SphereMesh/dust1",
+      "BoxMesh/dummy2",
+      "CylinderMesh/bolt2",
+      "SphereMesh/dust2",
+      "TorusMesh/blast"
+    ],
+    "rest": [
+      "CylinderMesh/turntable floor",
+      "TorusMesh/turntable rim",
+      "BoxMesh/dummy0",
+      "CylinderMesh/bolt0",
+      "SphereMesh/dust0",
+      "BoxMesh/dummy1",
+      "CylinderMesh/bolt1",
+      "SphereMesh/dust1",
+      "BoxMesh/dummy2",
+      "CylinderMesh/bolt2",
+      "SphereMesh/dust2"
+    ]
+  },
+  "tally": {
+    "loop": [
+      "CylinderMesh/turntable floor",
+      "TorusMesh/turntable rim",
+      "BoxMesh/plate0",
+      "BoxMesh/plate1",
+      "BoxMesh/plate2",
+      "TorusMesh/surge",
+      "BoxMesh/stamp",
+      "TorusMesh/slam"
+    ],
+    "rest": [
+      "CylinderMesh/turntable floor",
+      "TorusMesh/turntable rim",
+      "BoxMesh/plate0",
+      "BoxMesh/plate1",
+      "BoxMesh/plate2"
+    ]
+  },
+  "tarn": {
+    "loop": [
+      "CylinderMesh/turntable floor",
+      "TorusMesh/turntable rim",
+      "BoxMesh/dummy0",
+      "CylinderMesh/bolt0",
+      "SphereMesh/dust0",
+      "BoxMesh/dummy1",
+      "CylinderMesh/bolt1",
+      "SphereMesh/dust1",
+      "BoxMesh/dummy2",
+      "CylinderMesh/bolt2",
+      "SphereMesh/dust2",
+      "TorusMesh/blast"
+    ],
+    "rest": [
+      "CylinderMesh/turntable floor",
+      "TorusMesh/turntable rim",
+      "BoxMesh/dummy0",
+      "CylinderMesh/bolt0",
+      "SphereMesh/dust0",
+      "BoxMesh/dummy1",
+      "CylinderMesh/bolt1",
+      "SphereMesh/dust1",
+      "BoxMesh/dummy2",
+      "CylinderMesh/bolt2",
+      "SphereMesh/dust2"
+    ]
+  }
+}
