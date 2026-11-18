@@ -880,7 +880,7 @@ func _staged() -> void:
 		if game.flow.stage() != int(row.stage):
 			await _stage(int(row.stage))
 		var timing := await _wait_tick(subject)
-		if timing.late or game.ctx.stages != Game.TABLES.park or game.flow.stage() != int(row.stage):
+		if timing.tick != timing.wanted or game.ctx.stages != Game.TABLES.park or game.flow.stage() != int(row.stage):
 			printerr("look_harness: %s needs park stage %s at tick %s (actual stage %s, tick %s)" % [subject, row.stage, timing.wanted, game.flow.stage(), ticks])
 			failures += 1
 			continue

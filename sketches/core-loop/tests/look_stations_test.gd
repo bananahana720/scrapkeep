@@ -34,6 +34,16 @@ func _run() -> void:
 	await _staged()
 	_t.eq("the same station on alpha fails before capture", failures, 1)
 	_t.eq("the alpha frame cannot enter the proof", _captures, 2)
+	_plant_alpha = false
+	var early: Dictionary = Subjects.SUBJECTS["west_wash_run"].duplicate(true)
+	early.stage = 2
+	early.tick = 0
+	Subjects.SUBJECTS["too_early"] = early
+	requested = ["too_early"]
+	await _staged()
+	_t.eq("a tick before the stage was ready fails", failures, 2)
+	_t.eq("a late frame cannot stand in for tick zero", _captures, 2)
+	Subjects.SUBJECTS.erase("too_early")
 	game.free()
 	quit(_t.verdict())
 
