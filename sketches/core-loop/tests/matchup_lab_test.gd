@@ -378,7 +378,7 @@ func _fast_pass_receipt() -> void:
 	pit.free()
 	mark.free()
 	_pass_grade_controls()
-	var receipt := OS.get_user_data_dir().path_join("fast-threat-%d-%d.json" % [OS.get_process_id(), Time.get_ticks_usec()])
+	var receipt := OS.get_user_data_dir().path_join("fast-threat-%s.json" % Crypto.new().generate_random_bytes(16).hex_encode())
 	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
 		"--script", "res://tools/matchup_lab.gd", "--", "--packs=grounded", "--table=park",
 		"--pass=straight", "--speed=14,28", "--seeds=1", "--pilots=tarn", "--receipt=" + receipt]
