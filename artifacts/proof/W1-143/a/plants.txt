@@ -1,0 +1,23 @@
+Clean ride
+[control: the BoxMesh planted on a park activity is new to the pin] 1 planted rows -> PASS
+[no primitive surface outside the pin] 0 new:  -> PASS
+prim_census_test: PASS (11 checks)
+
+Dam box
+[control: the BoxMesh planted on a park activity is new to the pin] 1 planted rows -> PASS
+[no primitive surface outside the pin] 1 new: activities.gd|BoxMesh|Activities/Activity_enemy_camp/PlantedStandIn (tick 30, stage 1, @Node3D@2/Activities/Activity_enemy_camp/PlantedStandIn) -> FAIL
+prim_census_test: FAIL (1 of 11 checks)
+
+Clean station census
+[station reached: menu/customize]  -> PASS
+[station reached: shop]  -> PASS
+[sluice warning and visible water front]  -> PASS
+[camp has no planted box] [] -> PASS
+prim_census_test: PASS (71 checks)
+
+Camp box
+[station reached: menu/customize]  -> PASS
+[station reached: shop]  -> PASS
+[sluice warning and visible water front]  -> PASS
+[camp has no planted box] [{ "area": "camp", "file": "camp_hub.gd", "mesh": "BoxMesh", "shape": "CampHub/CampRoot/PlantedCampBox", "path": "@Node3D@2/CampHub/CampRoot/PlantedCampBox", "row": "W1-143b", "why": "" }] -> FAIL
+prim_census_test: FAIL (1 of 71 checks)
