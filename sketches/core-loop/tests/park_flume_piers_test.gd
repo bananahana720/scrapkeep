@@ -15,7 +15,7 @@ const LINES := "res://assets/park/park_flume/lines.json"
 const LINE_STEP_M := 2.0
 # How far past the outermost feet a step still counts as under the span: a foot's concrete flares out
 # to about a metre, and the ball is wider than that again.
-const SPAN_MARGIN_M := 3.0
+const SPAN_MARGIN_M := 6.0
 const TILE_BODY_PREFIX := "flume_reach_120_body_tile"
 # The trestle's feet are read from the placed steel itself: the vertices within FOOT_BAND_M of the mesh's
 # lowest point, grouped when they lie within FOOT_JOIN_M of each other.
@@ -25,15 +25,19 @@ const FOOT_JOIN_M := 1.0
 # height, looking only at faces within LEG_MEET_RADIUS_M of the foot.
 const LEG_MEET_TOL_M := 0.25
 const LEG_MEET_RADIUS_M := 1.0
-# Known failure, found in review and not yet fixed: these steps of the authored lines (world x, z and the
-# line) are shut by tall footings. Each is split out as a skip; any other blocked step fails the check.
-const KNOWN_TOLERANCE_M := 0.3
-const KNOWN_BLOCKED := [
-	[Vector2(-160.2, -479.2), "sable"], [Vector2(-151.0, -472.0), "sable"], [Vector2(-153.7, -466.7), "sable"],
-	[Vector2(-16.8, 163.6), "kest"], [Vector2(-22.0, 169.6), "kest"],
-	[Vector2(-16.8, 163.6), "cannon"], [Vector2(-22.0, 169.6), "cannon"],
-	[Vector2(196.0, 445.0), "tally"], [Vector2(196.1, 444.7), "cannon"], [Vector2(209.8, 452.2), "cannon"],
+# A footing yields to an authored line (Footings.fit's ridden callable): the soles a line passes near stay
+# bare. This is the most a bare sole's footing could have reached: the table's widest base half-extent
+# plus a ball's radius plus the clearance. Only a sole with no concrete near it and a line this close is exempt.
+const BARE_REACH_M := 3.0
+const BARE_TOLERANCE_M := 0.5
+# The soles left bare because a line passes, as [world x, z]: a later map card can move these lines or legs.
+const EXPECTED_BARE := [
+	Vector2(-160.5, -477.6), Vector2(-151.8, -465.8), Vector2(-148.9, -472.6),
+	Vector2(-23.4, 167.6), Vector2(-17.1, 163.8), Vector2(196.7, 445.1), Vector2(210.5, 450.4),
 ]
+# The rivet step that sat just outside the old swept margin.
+const RIVET_STEP := Vector2(-15.3, 162.6)
+const KNOWN_TOLERANCE_M := 0.3
 const TEST_LAYER := 1 << 30
 const BALL_CLEARANCE_M := 0.1
 
@@ -44,6 +48,10 @@ var park_data: Dictionary
 # One entry per placed tile of every reach: {"node", "feet" (local), "stations" ([left, right] local),
 # "to_local", "half_x", "z0", "z1"}.
 var spans: Array = []
+# The authored lines as resolved points, by line name.
+var line_points := {}
+# Soles with no footing because a line passes: [Vector2 x z, recipe, reach id].
+var bare: Array = []
 
 
 func _initialize() -> void:
@@ -51,6 +59,8 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	# Planted fault: footings ignore the lines, so the line check must go red with the shut steps.
+	Footings.plant_ignore_lines = "--plant-lines" in OS.get_cmdline_user_args()
 	park_data = JSON.parse_string(FileAccess.get_file_as_string(PARK_FILE))
 	var park := Node3D.new()
 	root.add_child(park)
@@ -90,6 +100,7 @@ func _run() -> void:
 	_check_lines(swept["under"], open_steps)
 	for reach in reaches:
 		_check_reach(reach)
+	_check_bare()
 	quit(t.verdict())
 
 
@@ -188,6 +199,15 @@ func _check_reach(reach: Node3D) -> void:
 				var floor_y := _floor(sole)
 				if sole.y - floor_y <= Footings.OFF_GROUND_M:
 					continue  # the existing leg has already entered the hillside
+				var top := -INF
+				for i in faces.size():
+					var corner := view_frame * faces[i]
+					if Vector2(corner.x - sole.x, corner.z - sole.z).length() <= LEG_MEET_RADIUS_M:
+						top = maxf(top, corner.y)
+				var at := Vector2(sole.x, sole.z)
+				if top == -INF and _line_near(at, BARE_REACH_M):
+					_note_bare(at, reach)
+					continue  # the footing yielded to a line
 				open_feet += 1
 				var across := (sole - centre) * Vector3(1.0, 0.0, 1.0)
 				across = across.normalized()
@@ -196,11 +216,6 @@ func _check_reach(reach: Node3D) -> void:
 					misses.append(toe)
 				if not _hits(reach, sole - across * 2.0, sole):
 					upper_misses.append(sole)
-				var top := -INF
-				for i in faces.size():
-					var corner := view_frame * faces[i]
-					if Vector2(corner.x - sole.x, corner.z - sole.z).length() <= LEG_MEET_RADIUS_M:
-						top = maxf(top, corner.y)
 				if absf(top - sole.y) > LEG_MEET_TOL_M:
 					loose.append(sole)
 	t.check(label + " seats every exposed foot", open_feet > 0 and misses.is_empty(), "%d soles, gaps at %s" % [open_feet, misses])
@@ -208,6 +223,39 @@ func _check_reach(reach: Node3D) -> void:
 	t.check(label + " tops each hanging leg within %.2f m of the foot" % LEG_MEET_TOL_M, loose.is_empty(), str(loose))
 	t.check(label + " passes a ball between the foundations", open_segments > 0 and clear_misses.is_empty(),
 			"%d spans, blocked at %s" % [open_segments, clear_misses])
+
+
+func _line_near(at: Vector2, reach: float) -> bool:
+	for line: String in line_points:
+		var points: Array[Vector2] = line_points[line]
+		for i in range(1, points.size()):
+			if Geometry2D.get_closest_point_to_segment(at, points[i - 1], points[i]).distance_to(at) <= reach:
+				return true
+	return false
+
+
+func _note_bare(at: Vector2, reach: Node3D) -> void:
+	for entry: Array in bare:
+		if (entry[0] as Vector2).distance_to(at) <= BARE_TOLERANCE_M:
+			return
+	var id := String(reach.name).trim_prefix("Park_")
+	var recipe := ""
+	for row: Dictionary in park_data["park_rows"]:
+		if row.get("id") == id:
+			recipe = String(row.get("recipe", ""))
+	bare.append([at, recipe, id])
+
+
+# The bare soles are pinned, so a new one (or one that gets its footing back) is a deliberate edit.
+func _check_bare() -> void:
+	var listed := bare.map(func(entry: Array) -> String: return "(%.1f, %.1f) %s on %s" % [entry[0].x, entry[0].y, entry[1], entry[2]])
+	print("%d soles left bare because a line passes: %s" % [bare.size(), listed])
+	if "--plant" in OS.get_cmdline_user_args():
+		return
+	var missing := EXPECTED_BARE.filter(func(spot: Vector2) -> bool:
+		return not bare.any(func(entry: Array) -> bool: return (entry[0] as Vector2).distance_to(spot) <= BARE_TOLERANCE_M))
+	t.check("the soles left bare because a line passes are the pinned ones", bare.size() == EXPECTED_BARE.size() and missing.is_empty(),
+			"%d bare, pinned %d, pinned but footed %s, now: %s" % [bare.size(), EXPECTED_BARE.size(), missing, listed])
 
 
 func _floor(at: Vector3) -> float:
@@ -243,6 +291,7 @@ func _line_steps() -> Dictionary:
 				at = ParkMap.place_of(park_data, waypoint)
 			if at != Vector2.INF:
 				points.append(at)
+		line_points[line] = points
 		for k in range(1, points.size()):
 			var count := ceili(points[k - 1].distance_to(points[k]) / LINE_STEP_M)
 			var previous := Vector3.INF
@@ -261,36 +310,16 @@ func _check_lines(under: Array, open_steps: Array) -> void:
 	var sphere := SphereShape3D.new()
 	sphere.radius = Tuning.RADIUS + BALL_CLEARANCE_M
 	var shut: Array = []
-	var known: Array = []
 	for step: Array in open_steps:
-		if not _blocked(sphere, step[0], step[1]):
-			continue
-		if _is_known(step):
-			known.append(step)
-		else:
+		if _blocked(sphere, step[0], step[1]):
 			shut.append(step)
-	print("swept %d steps under the trough spans, %d open with the footings off" % [under.size(), open_steps.size()])
+	print("swept %d steps under the trough spans, %d open with the footings off, %d shut with them on" % [under.size(), open_steps.size(), shut.size()])
 	t.check("the authored lines have steps to sweep", open_steps.size() > 0)
+	t.check("the sweep covers the rivet step near %s" % RIVET_STEP, open_steps.any(func(step: Array) -> bool:
+		return step[2] == "rivet" and Vector2(step[1].x, step[1].z).distance_to(RIVET_STEP) <= KNOWN_TOLERANCE_M))
 	t.check("the foundations leave every open step of the authored lines open", shut.is_empty(),
 			"%d of %d steps blocked (%d under the spans), first at %s" % [shut.size(), open_steps.size(), under.size(),
 			shut.map(_describe)])
-	if not known.is_empty():
-		t.skip("the foundations leave every open step of the authored lines open: known blocked steps",
-				"%d steps shut by tall footings, not yet moved: %s" % [known.size(), known.map(_describe)])
-	# A listed spot that no longer blocks must leave the list, or a later re-block there would pass as known.
-	# With --plant no footing is solid, so nothing can block and the list is not judged.
-	if not "--plant" in OS.get_cmdline_user_args():
-		var stale := KNOWN_BLOCKED.filter(func(spot: Array) -> bool:
-			return not known.any(func(step: Array) -> bool: return _at_spot(step, spot)))
-		t.check("every spot listed as known blocked is still blocked", stale.is_empty(), "open again, take out of KNOWN_BLOCKED: %s" % [stale])
-
-
-func _is_known(step: Array) -> bool:
-	return KNOWN_BLOCKED.any(func(spot: Array) -> bool: return _at_spot(step, spot))
-
-
-func _at_spot(step: Array, spot: Array) -> bool:
-	return step[2] == spot[1] and Vector2(step[1].x, step[1].z).distance_to(spot[0]) <= KNOWN_TOLERANCE_M
 
 
 func _describe(step: Array) -> String:
