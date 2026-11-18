@@ -1,0 +1,205 @@
+{
+  "original_sha256": "799fae304251ea56856e644a493a23f52242ff5143da679fc3ca74abc0ccaf15",
+  "receipt": {
+    "schema": "scrapkeep-fast-receipt/1",
+    "label": "W1-133a-refresh-fast",
+    "head": "aa6510a4fe93ae4fbeeb6d97c1716882f609d360",
+    "base": "origin/stage/alpha-w44",
+    "merge_base": "c9d55d7c7f41910b9ae9e4f3bd6023f610779fc2",
+    "started_at": "2026-11-18T19:04:37.725Z",
+    "stages": [
+      {
+        "name": "tree hygiene",
+        "ok": true,
+        "ms": 43,
+        "note": "no symlink, root file or new top-level folder",
+        "findings": []
+      },
+      {
+        "name": "sketch-lint",
+        "ok": true,
+        "ms": 1778,
+        "note": "sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1 W1=0 W2=0 W4=0 W6=27 W7=1 S8=0, 1174ms"
+      },
+      {
+        "name": "placeholders no higher than base",
+        "ok": true,
+        "ms": 4654,
+        "note": "no group grew",
+        "grew": []
+      },
+      {
+        "name": "quarantine",
+        "ok": true,
+        "ms": 4654,
+        "note": "0 rows, none expired"
+      },
+      {
+        "name": "import",
+        "ok": true,
+        "ms": 169744,
+        "note": "ok exit=0"
+      },
+      {
+        "name": "boot",
+        "ok": true,
+        "ms": 181263,
+        "note": "300 frames"
+      },
+      {
+        "name": "tests",
+        "ok": true,
+        "ms": 234602,
+        "note": "8 run, 0 flaky, 0 base-red"
+      }
+    ],
+    "ok": true,
+    "diff_base": "c9d55d7c7f41910b9ae9e4f3bd6023f610779fc2",
+    "pre": [],
+    "changed": 4,
+    "selection": {
+      "hubs": [],
+      "unmapped": [
+        "tools/stations/W1-133.json"
+      ],
+      "tests": {
+        "tests/colour_meanings_test.gd": {
+          "tier": 0,
+          "why": "always (content pins)"
+        },
+        "tests/new_world_cost_test.gd": {
+          "tier": 0,
+          "why": "always (content pins)"
+        },
+        "tests/unit_suite_test.gd": {
+          "tier": 0,
+          "why": "always (content pins)"
+        },
+        "tests/matchup_lab_test.gd": {
+          "tier": 0,
+          "why": "changed"
+        },
+        "tests/matchup_lab_pocket_test.gd": {
+          "tier": 1,
+          "why": "named after tools/matchup_lab.gd"
+        },
+        "tests/presentation_random_lint_test.gd": {
+          "tier": 3,
+          "why": "canary"
+        },
+        "tests/launch_table_test.gd": {
+          "tier": 3,
+          "why": "canary"
+        },
+        "tests/ace_tracks_test.gd": {
+          "tier": 3,
+          "why": "canary"
+        },
+        "tests/codex_coverage_test.gd": {
+          "tier": 3,
+          "why": "canary"
+        }
+      },
+      "deferred_to_full_gate": [],
+      "bot_shards": [
+        "tests/matchup_lab_test.gd"
+      ],
+      "shard_reasons": {},
+      "estimate_ms": 217850
+    },
+    "failed_runs": [],
+    "batch": {
+      "on": true,
+      "batches": 1,
+      "tests": 5,
+      "reruns": []
+    },
+    "results": [
+      {
+        "test": "tests/new_world_cost_test.gd",
+        "ok": true,
+        "exit": 0,
+        "signal": null,
+        "failing": 0,
+        "ms": 1273,
+        "reason": null,
+        "quarantined": false
+      },
+      {
+        "test": "tests/colour_meanings_test.gd",
+        "ok": true,
+        "exit": 0,
+        "signal": null,
+        "failing": 0,
+        "ms": 2552,
+        "reason": null,
+        "quarantined": false
+      },
+      {
+        "test": "tests/presentation_random_lint_test.gd",
+        "ok": true,
+        "exit": 0,
+        "signal": null,
+        "failing": 0,
+        "ms": 554,
+        "reason": null,
+        "quarantined": false
+      },
+      {
+        "test": "tests/matchup_lab_pocket_test.gd",
+        "ok": true,
+        "exit": 0,
+        "signal": null,
+        "failing": 0,
+        "ms": 3593,
+        "reason": null,
+        "quarantined": false
+      },
+      {
+        "test": "tests/launch_table_test.gd",
+        "ok": true,
+        "exit": 0,
+        "signal": null,
+        "failing": 0,
+        "ms": 4064,
+        "reason": null,
+        "quarantined": false
+      },
+      {
+        "test": "tests/ace_tracks_test.gd",
+        "ok": true,
+        "exit": 0,
+        "signal": null,
+        "failing": 0,
+        "ms": 95,
+        "reason": null,
+        "quarantined": false
+      },
+      {
+        "test": "tests/codex_coverage_test.gd",
+        "ok": true,
+        "exit": 0,
+        "signal": null,
+        "failing": 0,
+        "ms": 124,
+        "reason": null,
+        "quarantined": false
+      },
+      {
+        "test": "tests/unit_suite_test.gd",
+        "ok": true,
+        "exit": 0,
+        "signal": null,
+        "failing": 0,
+        "ms": 43175,
+        "reason": null,
+        "quarantined": false
+      }
+    ],
+    "quarantined": [],
+    "flaky": [],
+    "ledger_flaky": [],
+    "base_red": [],
+    "wall_ms": 234602
+  }
+}

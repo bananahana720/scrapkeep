@@ -1,0 +1,14 @@
+Head aa6510a4fe93ae4fbeeb6d97c1716882f609d360
+Godot 4.7.2.stable.official.ed1daf0bf, headless.
+[PASS] the attack observer counts the on-line dummy once and misses a dummy 3 m aside
+[PASS] a ball leaving the pit between arming and its first active tick is clear
+[PASS] a break before the final occupancy check is clear
+[PASS] a ball entering on the pit's expiry tick counts
+[PASS] the matched 13-stage/pack matrix and zero-lead controls meet their floors
+[PASS] a duplicate cannot stand in for an independent pass
+[PASS] a duplicate cannot stand in for an independent pass
+[PASS] duplicate baseline and planted rows cannot qualify a sweep
+[PASS] one missed straight threat, one weaving regression and a failed stall ratio each register
+[PASS] a threat in a zero-lead lobber pack invalidates the control
+[PASS] the fast-pass producer writes its receipt
+[PASS] grounded is ridden once at each speed on each Spillway stage

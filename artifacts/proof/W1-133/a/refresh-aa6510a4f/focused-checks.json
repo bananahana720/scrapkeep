@@ -1,0 +1,161 @@
+{
+  "original_sha256": "bddc13fa4adf9596d3d819ec67a8d3a959d5ebdee214ae1326ef3228e0793dc3",
+  "receipt": {
+    "schema": "scrapkeep-smoke-receipt/1",
+    "label": "W1-133a-refresh-focused",
+    "argv": [
+      "--sketch",
+      "core-loop",
+      "--test",
+      "matchup_lab_test",
+      "--test",
+      "chaser_speed_test",
+      "--test",
+      "attack_budget_test",
+      "--test",
+      "body_run_warning_test",
+      "--test",
+      "pocket_entry_test",
+      "--test",
+      "lobber_cover_test",
+      "--test",
+      "telegraph_timing_pack_test",
+      "--receipt",
+      "W1-133a-refresh-focused"
+    ],
+    "root": "<worktree>",
+    "head": "aa6510a4fe93ae4fbeeb6d97c1716882f609d360",
+    "tree": "6e580ac0d6240c6423a4dad53bbed63a4380343f",
+    "clean": false,
+    "dirty_paths": [
+      "?? sketches/core-loop/src/world/park/footings.gd.uid",
+      "?? sketches/core-loop/tests/beacon_open_level_test.gd.uid",
+      "?? sketches/core-loop/tests/brindle_arrival_view_test.gd.uid",
+      "?? sketches/core-loop/tests/brindle_defeat_cutaway_test.gd.uid",
+      "?? sketches/core-loop/tests/camera_contact_wiring_test.gd.uid",
+      "?? sketches/core-loop/tests/edge_arrow_sweep_test.gd.uid",
+      "?? sketches/core-loop/tests/park_footings_test.gd.uid",
+      "?? sketches/core-loop/tests/park_wear_test.gd.uid",
+      "?? sketches/core-loop/tests/press_latency_measure_test.gd.uid",
+      "?? sketches/core-loop/tools/offscreen_probe.gd.uid",
+      "?? sketches/core-loop/tools/offscreen_window.gd.uid"
+    ],
+    "godot": {
+      "binary": "<home>/Applications/Godot_4.7.2.app/Contents/MacOS/Godot",
+      "version": "4.7.2.stable.official.ed1daf0bf"
+    },
+    "sketches": [
+      "sketches/core-loop"
+    ],
+    "flags": [],
+    "width": 2,
+    "lock_wait_ms": 112111,
+    "started_at": "2026-11-18T19:09:21.898Z",
+    "wall_ms": 1368772,
+    "stems": {
+      "sketches/core-loop": 0
+    },
+    "quarantined": [],
+    "quarantine_expired": [],
+    "results": [
+      {
+        "label": "sketches/core-loop import",
+        "ok": true,
+        "exit": 0,
+        "ms": 6572,
+        "solo": false,
+        "passes": 0,
+        "fails": 0,
+        "verdict_line": null,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/body_run_warning_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 10489,
+        "solo": false,
+        "passes": 34,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/attack_budget_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 122957,
+        "solo": true,
+        "passes": 22,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/chaser_speed_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 47126,
+        "solo": true,
+        "passes": 14,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/lobber_cover_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 21089,
+        "solo": true,
+        "passes": 23,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/matchup_lab_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 319056,
+        "solo": true,
+        "passes": 0,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/pocket_entry_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 566756,
+        "solo": true,
+        "passes": 117,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/telegraph_timing_pack_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 274555,
+        "solo": true,
+        "passes": 292,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      }
+    ],
+    "bot_tier_not_run": [],
+    "totals": {
+      "runs": 8,
+      "failed": 0,
+      "skipped": 0,
+      "missing_verdict": 0,
+      "quarantined_red": [],
+      "quarantine_stale": []
+    },
+    "ok": true
+  }
+}
