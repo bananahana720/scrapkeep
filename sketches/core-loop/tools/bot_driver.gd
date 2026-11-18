@@ -616,6 +616,8 @@ var _warden_hp_at := -1.0
 var _warden_kinds := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
 var _harpoon_held := false
+# Seconds left in which the latch arm keeps its line off the Warden (hold_off_warden_line).
+var _line_hold_off := 0.0
 var _pass_bite_frame := -100000
 # Weak points (stub_boss.gd weak_open, #241): the point being read, how long it has been open, the
 # learner's one roll for it, whether a go is on, and the Warden it was read on: a go waives the harpoon hand's
@@ -896,6 +898,7 @@ func tick(delta: float) -> bool:
 		for name in hands_off:
 			loops.hands[name] = false
 	_boost_clock -= delta
+	_line_hold_off = maxf(0.0, _line_hold_off - delta)
 	_play_clock += delta
 	_min_hp = minf(_min_hp, float(game.run.hp))
 	_ult_wait -= delta
@@ -2672,6 +2675,12 @@ func _sheet_warden(target: Node3D) -> bool:
 			and target.mount_driver.has_method("sheet_live")
 
 
+# The loop hand's one ask of the latch arm: keep the harpoon off the Warden for `seconds` (renewed each tick the
+# hand wants it), so a held brake can call the shot. The arm lets go of a line it holds and bites again after.
+func hold_off_warden_line(seconds: float) -> void:
+	_line_hold_off = maxf(_line_hold_off, seconds)
+
+
 func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 	var kit = game.player.kit
 	var ball: Vector3 = game.player.ball_position()
@@ -2785,6 +2794,15 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 				source.hold["shift_held"] = true
 				_boost_clock = BOOST_GAP
 				_shift_left = SHIFT_HOLD
+		return
+	if _line_hold_off > 0.0:
+		# Asked to keep the line home (a call needs it free, called_shot.gd): let go, do not bite, close on the body.
+		if kit.hooked:
+			source.press["harpoon_released"] = true
+		_harpoon_held = false
+		_harpoon_commit = false
+		_goal = "line home for the call"
+		_act(at, target, delta, target)
 		return
 	if lined:
 		_anchor_ride(target, staggered, ball, delta)

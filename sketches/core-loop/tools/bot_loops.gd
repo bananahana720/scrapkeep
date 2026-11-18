@@ -15,6 +15,8 @@ extends RefCounted
 #   carry a core    finish one activity (its pay is SPIL-9's first piece), ring the keeper's bell three times and ram
 #                   the pot (its core), so the counter's stow plate opens (shop.gd stow_core).
 
+const Augments := preload("res://src/movement/augments.gd")
+
 const HOLD_S := 0.6
 const CRADLE_S := 40.0
 const DECK_S := 50.0
@@ -26,6 +28,7 @@ const ROUTE_REACHED := 15.0
 const BELL_S := 90.0
 const PIECE_S := 150.0
 const CARRY_RINGS := 3
+const LINE_HOME_TICKS := 4
 
 var hands := {"called_shot": true, "bay": true, "trade": true, "overtime": true, "carry": true}
 
@@ -50,6 +53,7 @@ var _piece_clock := 0.0
 var _rings_told := 0
 var _pot_said := -1
 var _cash_told := false
+var _line_home := 0
 
 
 func _init(driver, game) -> void:
@@ -59,8 +63,7 @@ func _init(driver, game) -> void:
 
 # Called each tick after the driver has set its own hold, so a hold set here wins the tick.
 func step(delta: float) -> void:
-	if hands["called_shot"]:
-		_called_shot(delta)
+	_called_shot(delta)
 
 
 func _called_shot(delta: float) -> void:
@@ -72,6 +75,10 @@ func _called_shot(delta: float) -> void:
 		_shot_state = shot.state
 		_say("called shot is %s (%s)" % [shot.state if shot.state != "" else "idle", shot.called])
 	if shot.state != "window":
+		return
+	# With the hand off nothing calls: the driver's own brake holds in a fight would, so they are let go.
+	if not hands["called_shot"]:
+		_driver.source.hold.erase("brake_held")
 		return
 	# A missed call burns one of the stage's cores (called_shot.gd settle): a hand that holds one for the counter
 	# lets this window pass, as a player who wants the core to ride would.
@@ -87,8 +94,14 @@ func _called_shot(delta: float) -> void:
 	var look: Vector3 = _game.ctx.aim_forward()
 	var aimed: bool = Vector2(to.x, to.z).length() > 0.01 and Vector2(look.x, look.z).length() > 0.01 \
 			and Vector2(to.x, to.z).normalized().dot(Vector2(look.x, look.z).normalized()) >= shot.AIM_DOT
+	# The call wants the line home (called_shot.gd _line_free): the latch arm is asked to let it go.
+	_driver.hold_off_warden_line(0.3)
+	# A brake held while the line was out is the player's haul and stays claimed until it is let go
+	# (player_ball.gd _ctrl_claimed): the brake waits until the line has been home for a few ticks.
+	var kit = _game.player.kit
+	_line_home = _line_home + 1 if not kit.hooked and kit.line_state == Augments.LINE_IDLE else 0
 	# Held long enough to show the first stamp, then let go: the release is what calls it.
-	if aimed and shot.held_s < HOLD_S:
+	if aimed and (_line_home >= LINE_HOME_TICKS or shot.held_s > 0.0) and shot.held_s < HOLD_S:
 		_driver.source.hold["brake_held"] = true
 
 
