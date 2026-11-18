@@ -1308,6 +1308,9 @@ func _defeat(kind: String, at: Vector3, source := "") -> void:
 	_sync_crest()
 	ctx.flow.boss_active = false
 	ctx.camera.set_contact_subject(null)
+	# No step runs after the catch, so a shove still in its grace would leave the hull cut away over the ball.
+	if is_instance_valid(ship):
+		ship.follow_shoved_rider(null)
 	# The scooter stays in sight through boss_defeated, so the fall plays where he was caught
 	# (machine_fx reads a visible scooter before the ship); it is hidden once the event is out.
 	_publish("boss_defeated")
