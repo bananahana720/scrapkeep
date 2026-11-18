@@ -31,13 +31,14 @@ func _run() -> void:
 		for view: MeshInstance3D in ramps:
 			t.check("bowl ramp is not hazard striped", not (view.material_override is BaseMaterial3D and view.material_override.get_meta("greybox_checker", false)), String(view.name))
 		var rig := arena.find_children("*", "MeshInstance3D", true, false).filter(func(n): return n.get_meta("bowl_surface", "") in ["Mast", "Crossbar"])
-		t.eq("all rig parts use the copper family", rig.size(), 8)
+		t.eq("the bowl has eight rig parts, masts and booms", rig.size(), 8)
 		t.check("the masts and booms are the crane kit, not a cylinder and a box", rig.all(func(v): return not v.mesh is PrimitiveMesh))
 		var nozzles := arena.find_children("VentNozzle_*", "MeshInstance3D", false, false)
 		t.check("each rim vent has its nozzle model", nozzles.size() == 4 and nozzles.all(func(v): return not v.mesh is PrimitiveMesh), "%d nozzles" % nozzles.size())
 		for view: MeshInstance3D in rig:
-			t.check("rig part is copper rather than hazard striped", view.material_override is BaseMaterial3D
+			# The masts and booms are weathered steel so they stand out from the copper ramps (pull request 1129).
+			t.check("rig part is mast steel, not copper and not hazard striped", view.material_override is BaseMaterial3D
 				and not view.material_override.get_meta("greybox_checker", false)
-				and view.material_override.albedo_color == Palette.COPPER, String(view.name))
+				and view.material_override.albedo_color == Palette.MAST_STEEL and Palette.MAST_STEEL != Palette.COPPER, String(view.name))
 	game.free()
 	quit(t.verdict())

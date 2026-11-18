@@ -48,6 +48,8 @@ var near := false
 # on one row or two (name_rows), the effect lines under it only while detail_shown, no icon. The HUD never
 # places or hides it.
 var owner_placed := false
+# The crossbar column relative to the left side of an owner-placed gate sign.
+var crossbar_x := INF
 var name_rows := PackedStringArray()
 var detail_shown := false
 var _structured := false
@@ -245,7 +247,10 @@ func _draw_owned(font: Font, color: Color, outline: Color, extent: Vector2) -> v
 	for i in lines.size():
 		var size: int = title_size() if i < names else detail_size()
 		var w := _line_width(lines[i], size)
-		var at := Vector2((extent.x - w) * 0.5, y + font.get_ascent(size))
+		var left := (extent.x - w) * 0.5
+		if is_finite(crossbar_x):
+			left = clampf(crossbar_x - w * 0.5, SIGN_PAD, maxf(SIGN_PAD, extent.x - SIGN_PAD - w))
+		var at := Vector2(left, y + font.get_ascent(size))
 		var ink := color if i < names else Color(color, 0.9)
 		draw_string_outline(font, at, lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, size, 6, outline)
 		draw_string(font, at, lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, size, ink)

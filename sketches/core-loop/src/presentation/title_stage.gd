@@ -439,7 +439,7 @@ func _build_lights() -> void:
 # The deck (W1-47, the gig poster look Andrew picked on 13 Nov 2026): the crew on Moss's
 # barge at dusk while Brindle's ship hangs over them, all from the game's finished models. Each
 # row: name, model, position, yaw, scale. A model that fails to load is left out, never stood in. Only
-# models without collision shapes load here (_visual_scene), so a camp prop with a -col node cannot be used.
+# models without collision shapes load here (visual_scene), so a camp prop with a -col node cannot be used.
 const DECK := [
 	["Barge", "res://assets/models/barge.glb", Vector3(0.0, -1.95, 0.3), 0.0, Vector3(1.0, 1.0, 0.62)],
 	["Brindle", "res://assets/models/bosses/boss_brindle.glb", Vector3(9.0, 6.5, -38.0), 2.5, Vector3(1.6, 1.6, 1.6)],
@@ -450,7 +450,7 @@ const DECK := [
 
 func _build_deck() -> void:
 	for row in DECK:
-		var model := _visual_scene(row[1])
+		var model := visual_scene(row[1])
 		if model == null:
 			_warn(row[1])
 			continue
@@ -473,7 +473,7 @@ func _build_heroes() -> void:
 		holder.rotation.y = -0.22
 		stage.add_child(holder)
 		var path: String = HeroAssets.SHELLS[row.id]
-		var shell := _visual_scene(path)
+		var shell := visual_scene(path)
 		var pod := shell.find_child("Pod", true, false) as Node3D if shell != null else null
 		var core := shell.find_child("Core", true, false) as Node3D if shell != null else null
 		if pod == null or core == null:
@@ -515,7 +515,7 @@ func _build_companion() -> void:
 	companion.rotation.y = -0.3
 	stage.add_child(companion)
 	var path := CompanionBody.model_path(["primer_coil", "ram_prow"])
-	var model := _visual_scene(path)
+	var model := visual_scene(path)
 	if model == null:
 		_warn(path)
 		_box("CompanionHullFallback", Vector3(1.1, 0.42, 0.72), Vector3.ZERO, Palette.VERDIGRIS, companion)
@@ -527,18 +527,29 @@ func _build_companion() -> void:
 	_freeze_visual(model)
 
 
-# Reject malformed imported scenes before they enter any physics space.
-func _visual_scene(path: String) -> Node3D:
+# Reject malformed imported scenes before they enter any physics space. With strip_collision, a scene that
+# carries collision (a park recipe imports its -col mesh and body) has it removed instead of being refused.
+func visual_scene(path: String, strip_collision := false) -> Node3D:
 	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
 	if packed == null:
 		return null
-	var state := packed.get_state()
-	for i in state.get_node_count():
-		var type := state.get_node_type(i)
-		if ClassDB.class_exists(type) and ClassDB.is_parent_class(type, "CollisionObject3D"):
-			return null
+	if not strip_collision:
+		var state := packed.get_state()
+		for i in state.get_node_count():
+			var type := state.get_node_type(i)
+			if ClassDB.class_exists(type) and ClassDB.is_parent_class(type, "CollisionObject3D"):
+				return null
 	var model := packed.instantiate()
-	if not model is Node3D or not _visual_only(model):
+	if not model is Node3D:
+		model.free()
+		return null
+	if strip_collision:
+		var doomed := model.find_children("*", "CollisionObject3D", true, false)
+		doomed.append_array(model.find_children("*-col", "", true, false))
+		for node in doomed:
+			if is_instance_valid(node) and node != model:
+				node.free()
+	if not _visual_only(model):
 		model.free()
 		return null
 	return model as Node3D

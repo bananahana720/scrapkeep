@@ -45,6 +45,7 @@ const LandmarkBeam := preload("res://src/presentation/landmark_beam.gd")
 const WardenMind := preload("res://src/combat/warden_mind.gd")
 const IsleRig := preload("res://src/world/park/isle_rig.gd")
 const DamRig := preload("res://src/world/park/dam_rig.gd")
+const Footings := preload("res://src/world/park/footings.gd")
 
 const BUDGETS_PATH := "res://assets/asset_budgets.json"
 const GLB_DIR := "res://assets/models/park/"
@@ -644,7 +645,7 @@ static func tile_fit(row: Dictionary, ends: Dictionary, tile: Dictionary, ground
 # Places a park row (or the landmark object) under parent and returns its node, or null when the recipe is "" or a
 # greybox id names no element. publish(kind, at) is called when the ball enters the ride sensor; the stage passes
 # its bus's world_fact.emit. A recipe whose base GLB is missing stands in as its element's greybox, with a warning.
-static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish := Callable()) -> Node3D:
+static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish := Callable(), ridden := Callable()) -> Node3D:
 	var recipe := String(row.get("recipe", ""))
 	if recipe == "":
 		return null
@@ -685,7 +686,7 @@ static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish
 	for key in ["mid", "far"]:
 		if p.has(key):
 			parts[key] = _load(p[key])
-	var node := place_parts(row, parts, parent, ground, publish)
+	var node := place_parts(row, parts, parent, ground, publish, ridden)
 	for key in parts:
 		for scene: Node in parts[key]:
 			scene.free()
@@ -794,7 +795,7 @@ static func _beam_root(path: String):
 # fit is refused places unfitted here: place() stands it in before it gets here. A tile-fit row places every part once
 # per copy on that copy's transform (tile_fit), views named <mesh>_tile<k>, and keeps the copies' transforms as meta
 # "tile_fit"; a refused tile fit likewise places unfitted here. The caller keeps ownership of the part scenes.
-static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, ground := Callable(), publish := Callable()) -> Node3D:
+static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, ground := Callable(), publish := Callable(), ridden := Callable()) -> Node3D:
 	var node := _node(row, parent, ground)
 	var body := _body(node)
 	var at_origin := Transform3D(Basis.IDENTITY, ride_frame(row)["origin"])
@@ -817,22 +818,29 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 	# copies. A tile copy draws on its collider: an odd copy lifted over its joints left the deck between them over the
 	# collider the ball rides (park_park_flume_test intact top).
 	var fits := [[at_origin, "", 0.0]]
+	var tiles: Array[Transform3D] = []
 	if fits_tile(row) and not (parts.get("base", []) as Array).is_empty():
 		var lip := origin(String(row.get("recipe", ""))) == ORIGIN_ENTRY_LIP
 		var tile := tile_fit(row, authored_ends(parts["base"][0], lip), tile_ends(parts["base"][0], lip), ground)
 		if tile["ok"]:
 			baked = true
 			fits = []
-			var xfs := []
 			for k in (tile["copies"] as Array).size():
 				var xf: Transform3D = tile["copies"][k]["transform"]
 				fits.append([xf, "_tile%d" % k, 0.0])
-				xfs.append(xf)
-			node.set_meta("tile_fit", xfs)
+				tiles.append(xf)
+			node.set_meta("tile_fit", tiles)
 			node.set_meta("tile_count", tile["count"])
 			node.set_meta("tile_stretch", tile["stretch"])
 	var r :=ranges(String(row.get("budget", "landform")))
 	var base_end := float(r.get("base_end", 0.0))
+	var footing := Footings.fit(row, node.transform, at_origin, tiles, ground, ridden)
+	if not footing.is_empty():
+		var footing_view := footing["view"] as MeshInstance3D
+		_range(footing_view, 0.0, base_end, float(r.get("base_margin", 0.0)))
+		footing_view.set_meta(RecipeProps.META_FADE, true)
+		node.add_child(footing_view)
+		body.add_child(footing["shape"])
 	var mid_end := float(r.get("mid_end", 0.0))
 	for scene: Node in parts.get("base", []):
 		for f: Array in fits:
@@ -1795,11 +1803,11 @@ static func _anchor_mesh(path: String) -> Array:
 # sensor but drops its box and collider: the stamp is already its shape, and a box of the row's size on one height
 # cannot follow the stamped ground (a 300 m bank box stood 8 m over the fixture's pool). Its node stands on the plain
 # the stamp raised (seat), so the sensor spans the raise.
-static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), publish := Callable(), zones: Array = [], posts = null, lift := 0.0) -> Node3D:
+static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), publish := Callable(), zones: Array = [], posts = null, lift := 0.0, ridden := Callable()) -> Node3D:
 	var recipe := String(row.get("recipe", ""))
 	if is_anchor_field(row):
 		return place_anchor_field(row, parent, ground, zones, ANCHOR_PITCH_M, posts)
-	var node := place(row, parent, seat(row, ground), publish)
+	var node := place(row, parent, seat(row, ground), publish, ridden)
 	if node != null and lift > 0.0:
 		_lift_drawn(node, lift)
 	if node != null and row.has("rider"):
@@ -1880,11 +1888,11 @@ static func row_paths(row: Dictionary) -> Array:
 # the main thread because a row makes server resources (meshes, multimeshes, shapes), and a mesh made on a worker
 # raced the main thread's in the headless renderer ("Attempting to initialize the wrong RID", 2 of 10 park_swap_test
 # runs, artifacts/local/alpha/push/w13/place/swap10/); scatter.gd keeps its worker to data for the same reason.
-static func build_placed(parent: Node3D, park: Dictionary, ground: Callable, publish: Callable, threaded: bool) -> Node3D:
+static func build_placed(parent: Node3D, park: Dictionary, ground: Callable, publish: Callable, threaded: bool, ridden := Callable()) -> Node3D:
 	var node := Placer.new()
 	node.name = "ParkRows"
 	parent.add_child(node)
-	node.start(park, ground, publish, threaded)
+	node.start(park, ground, publish, threaded, ridden)
 	return node
 
 
@@ -1918,6 +1926,7 @@ class Placer extends Node3D:
 	var _zones: Array = []
 	var _ground: Callable
 	var _publish: Callable
+	var _ridden: Callable
 	var _pending: Array = []
 	# Loaded resources held for the build, so its load() calls find them cached.
 	var _held: Array = []
@@ -1936,13 +1945,14 @@ class Placer extends Node3D:
 	func is_ready() -> bool:
 		return phase == Phase.READY
 
-	func start(park: Dictionary, ground: Callable, publish: Callable, threaded: bool) -> void:
+	func start(park: Dictionary, ground: Callable, publish: Callable, threaded: bool, ridden := Callable()) -> void:
 		var t0 := Time.get_ticks_usec()
 		_rows = Self.placed_rows(park)
 		_layers = Self.layer_rows(park)
 		_zones = Self.clear_zones(park)
 		_ground = ground
 		_publish = publish
+		_ridden = ridden
 		_threaded = threaded
 		_landmark = Self.landmark_row(park)
 		_park = park
@@ -2070,7 +2080,7 @@ class Placer extends Node3D:
 			var r0 := Time.get_ticks_usec()
 			# Built outside the tree, then added once.
 			var holder := Node3D.new()
-			Self.place_row(_rows[_next], holder, _ground, _publish, _zones, _posts.get(_next), float(_lifts.get(_next, 0.0)))
+			Self.place_row(_rows[_next], holder, _ground, _publish, _zones, _posts.get(_next), float(_lifts.get(_next, 0.0)), _ridden)
 			# The row's node and its rider, if it has one.
 			for node: Node in holder.get_children():
 				holder.remove_child(node)
