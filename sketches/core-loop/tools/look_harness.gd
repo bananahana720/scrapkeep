@@ -170,6 +170,10 @@ func _physics_process(_delta: float) -> bool:
 
 
 func _main() -> void:
+	if not Subjects.station_errors.is_empty():
+		printerr("look_harness: ", "; ".join(Subjects.station_errors))
+		quit(2)
+		return
 	if not boss.is_empty():
 		quit(await _boss_smoke(boss))
 		return
@@ -556,6 +560,10 @@ func _wait_tick(subject: String) -> Dictionary:
 # static collider that hides it. Rays skip enemies, the Warden and rigid bodies, so where they
 # stand at the tick cannot move the ball, and nothing reads where the staging left it.
 func _place_ball(subject: String, shot_name: String, eye: Vector3, target: Vector3) -> Dictionary:
+	if Subjects.SUBJECTS[subject]["group"] == "staged":
+		var at: Vector3 = game.player.ball_position()
+		_ball_root().global_position = at
+		return {"at": at, "placed": "station"}
 	var how := "rule"
 	var p := Vector3.INF
 	var pinned: Dictionary = Subjects.SUBJECTS[subject].get("ball", {})
@@ -829,6 +837,7 @@ func _strip_camera(subject: String, shot: Array, v: Dictionary, dir: String, bal
 func _run_group(group: String) -> void:
 	_anchors = {}
 	match group:
+		"staged": await _staged()
 		"smalls": await _smalls()
 		"pickup": await _pickup()
 		"dig_fx": await _dig_fx()
@@ -854,6 +863,50 @@ func _run_group(group: String) -> void:
 			failures += 1
 	if group_arg.is_empty():
 		failures += _summarize(requested, out, [{"group": group, "rc": failures, "wall_s": 0.0, "subjects": requested}])
+
+
+# One fresh park per station keeps the tick, seed and spawns independent of selection order.
+func _staged() -> void:
+	for subject in requested:
+		var row: Dictionary = Subjects.SUBJECTS[subject]
+		if row.group != "staged":
+			continue
+		if game != null:
+			game.free()
+			game = null
+			await process_frame
+		ticks = 0
+		await _boot(false, "park")
+		if game.flow.stage() != int(row.stage):
+			await _stage(int(row.stage))
+		var timing := await _wait_tick(subject)
+		if timing.late or game.ctx.stages != Game.TABLES.park or game.flow.stage() != int(row.stage):
+			printerr("look_harness: %s needs park stage %s at tick %s (actual stage %s, tick %s)" % [subject, row.stage, timing.wanted, game.flow.stage(), ticks])
+			failures += 1
+			continue
+		var point := _station_point(row, row.point)
+		_anchor("station", point)
+		var body: RigidBody3D = game.player.body()
+		body.freeze = false
+		game.player.reset_to(_station_point(row, row.ball_position), row.ball_velocity)
+		var spawned := []
+		for spawn in row.spawns:
+			var actor: Node3D = game.combat.spawn_enemy(spawn.kind, _station_point(row, spawn.point))
+			if actor == null or actor.get("kind") != spawn.kind:
+				printerr("look_harness: %s could not stage %s" % [subject, spawn.kind])
+				failures += 1
+				break
+			var at := actor.global_position
+			spawned.append({"kind": spawn.kind, "at": [at.x, at.y, at.z]})
+		if spawned.size() == row.spawns.size():
+			await _shoot(subject, {"table": game.table, "stage": game.flow.stage(), "spawns": spawned,
+				"ball_velocity": [body.linear_velocity.x, body.linear_velocity.y, body.linear_velocity.z]})
+
+
+func _station_point(row: Dictionary, point: Vector3) -> Vector3:
+	if row.get("terrain_relative", false):
+		point.y += _gh(point.x, point.z)
+	return point
 
 
 func _smalls() -> void:

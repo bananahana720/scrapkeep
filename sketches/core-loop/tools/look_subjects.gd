@@ -81,7 +81,7 @@ const WARDEN_BODY_STAGE_YAW := {
 	"warden_body_mind": {"over_shoulder": 76.8, "boss_high": 76.8, "boss_low": 76.8, "three_q": 76.8, "under": 76.8}}
 const WARDEN_BODY_BALL_REASON := "the ball stands on the floor beside the body (under: 9 m to the side of the target), off the eye-to-target line, so it stays small"
 
-const SUBJECTS := {
+const BUILTIN_SUBJECTS := {
 	# ---------------------------------------------------------------- miniboss, swarm, vault (stage 1)
 	"pmb_miniboss_stalk": {"group": "smalls", "stage": 1, "kind": "actor", "owner": "VX-FX", "anchor": "miniboss", "basis": true, "tick": 330,
 		"cameras": [["front", Vector3(0, 3, -17), Vector3.ZERO, 55.0], ["three_q", Vector3(10.284602, 4, -12.256711), Vector3.ZERO, 55.0], ["side", Vector3(15, 2, 0), Vector3.ZERO, 55.0], ["rear", Vector3(0, 4, 16), Vector3.ZERO, 55.0]]},
@@ -327,7 +327,94 @@ const SUBJECTS := {
 }
 
 # The order --all boots the groups in; every group a row names appears once.
-const GROUPS := ["smalls", "pickup", "dig_fx", "hd_fx", "hd_redo", "arenas", "arw2", "devices", "props", "bay", "cages", "scrap", "workshop", "dig_deep", "title", "title2", "ending", "customize", "cge", "warden_bodies"]
+const GROUPS := ["smalls", "pickup", "dig_fx", "hd_fx", "hd_redo", "arenas", "arw2", "devices", "props", "bay", "cages", "scrap", "workshop", "dig_deep", "title", "title2", "ending", "customize", "cge", "warden_bodies", "staged"]
+
+
+# Each tools/stations/*.json maps a unique subject id to its station. Camera eye and
+# target are offsets from point. Positions are [x,y,z] in world metres, or metres
+# above the local terrain when terrain_relative is true. Velocity is world m/s.
+static var SUBJECTS: Dictionary = BUILTIN_SUBJECTS.duplicate()
+static var station_errors: Array = []
+
+
+static func _static_init() -> void:
+	station_errors = merge_stations("res://tools/stations", SUBJECTS)
+
+
+static func merge_stations(directory: String, subjects: Dictionary) -> Array:
+	var errors := []
+	for file in DirAccess.get_files_at(directory):
+		if file.get_extension() != "json":
+			continue
+		var path := directory.path_join(file)
+		var rows = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if not rows is Dictionary or rows.is_empty():
+			errors.append("%s needs a map of station names to rows" % path)
+			continue
+		for id in rows:
+			if subjects.has(id):
+				errors.append("%s duplicates subject %s" % [path, id])
+				continue
+			var row = rows[id]
+			var problem := _station_problem(id, row)
+			if not problem.is_empty():
+				errors.append("%s: %s %s" % [path, id, problem])
+				continue
+			row["group"] = "staged"
+			row["anchor"] = "station"
+			for key in ["point", "ball_position", "ball_velocity"]:
+				row[key] = _vector(row[key])
+			for spawn in row.spawns:
+				spawn.point = _vector(spawn.point)
+			for shot in row.cameras:
+				shot[1] = _vector(shot[1])
+				shot[2] = _vector(shot[2])
+				shot[3] = float(shot[3])
+			subjects[id] = row
+	return errors
+
+
+static func _vector(values: Array) -> Vector3:
+	return Vector3(values[0], values[1], values[2])
+
+
+static func _has_xyz(value: Variant) -> bool:
+	return value is Array and value.size() == 3 and value.all(func(v): return (v is float or v is int) and is_finite(v))
+
+
+static func _station_problem(id: String, row: Variant) -> String:
+	if not id.is_valid_identifier() or not row is Dictionary:
+		return "needs a subject id and a station row"
+	if row.get("table", "park") != "park":
+		return "must use the park table"
+	if not (row.get("stage") is float or row.get("stage") is int) or row.stage != int(row.stage) or row.stage < 1 or row.stage > STAGES:
+		return "needs a park stage"
+	if not (row.get("tick") is float or row.get("tick") is int) or row.tick != int(row.tick) or row.tick < 0:
+		return "needs a nonnegative physics tick"
+	if not row.get("kind") in ["actor", "prop", "scene"] or not row.get("owner") is String or row.owner.is_empty():
+		return "needs a subject kind and owner"
+	if not row.get("terrain_relative", false) is bool:
+		return "terrain_relative must be true or false"
+	for key in ["point", "ball_position", "ball_velocity"]:
+		if not _has_xyz(row.get(key)):
+			return "%s needs three coordinates" % key
+	if not row.get("spawns") is Array:
+		return "needs a spawns array"
+	for spawn in row.spawns:
+		if not spawn is Dictionary or not spawn.get("kind") is String or spawn.kind.is_empty() or not _has_xyz(spawn.get("point")):
+			return "each spawn needs a kind and point"
+	if not row.get("cameras") is Array or row.cameras.is_empty():
+		return "needs at least one camera"
+	var names_seen := {}
+	for shot in row.cameras:
+		if not shot is Array or shot.size() != 4 or not shot[0] is String or not shot[0].is_valid_identifier():
+			return "each camera needs [name, eye, target, fov]"
+		if names_seen.has(shot[0]) or not _has_xyz(shot[1]) or not _has_xyz(shot[2]) or shot[1] == shot[2]:
+			return "camera names must be unique and eye and target must differ"
+		if not (shot[3] is int or shot[3] is float) or not (shot[3] >= 20 and shot[3] <= 100):
+			return "camera fov must be 20 to 100 degrees"
+		names_seen[shot[0]] = true
+	return ""
 
 
 static func names() -> Array:
@@ -378,7 +465,7 @@ static func resolve(subject: String, shot: Array, anchors: Dictionary) -> Dictio
 
 # Row problems, empty when the table is sound. stage_count is alpha_defs COUNT.
 static func problems(stage_count: int) -> Array:
-	var out: Array = []
+	var out: Array = station_errors.duplicate()
 	for n in SUBJECTS:
 		var row: Dictionary = SUBJECTS[n]
 		for key in ["group", "stage", "kind", "owner", "cameras", "tick"]:
