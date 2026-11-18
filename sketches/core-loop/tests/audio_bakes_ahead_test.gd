@@ -38,8 +38,7 @@ func _run() -> void:
 	var audio = _game.audio()
 	_t.check("BA-2 this headless game does not bake ahead", not audio.bakes_ahead and not audio.engine.warm_stingers,
 		"bakes_ahead %s, warm_stingers %s" % [audio.bakes_ahead, audio.engine.warm_stingers])
-	_t.check("BA-2 no band bake was started", Audio._opening_task == -1 and Audio._rest_task == -1,
-		"opening %d, rest %d" % [Audio._opening_task, Audio._rest_task])
+	_t.check("BA-2 no band bake was started", not Audio.band_bakes()["held"], "bakes %s" % [Audio.band_bakes()])
 	# setup() hands the stinger warming whatever it found for baking ahead: a drawn game warms them.
 	var drawn := DrawnAudio.new()
 	drawn.setup(_game.ctx)
@@ -54,8 +53,9 @@ func _run() -> void:
 	var waited := Time.get_ticks_msec()
 	while not audio.sound_ready and Time.get_ticks_msec() - waited < 60000:
 		await process_frame
-	_t.check("BA-3 a game that bakes ahead starts the band bakes when its bank is ready", audio.sound_ready and Audio._opening_task >= 0 and Audio._rest_task >= 0,
-		"ready %s, opening %d, rest %d" % [audio.sound_ready, Audio._opening_task, Audio._rest_task])
+	var bank_late: bool = not audio.sound_ready
+	_t.check("BA-3 a game that bakes ahead starts the band bakes when its bank is ready", audio.sound_ready and Audio.band_bakes()["held"],
+		"%sready %s, bakes %s" % ["TIMED OUT: " if bank_late else "", audio.sound_ready, Audio.band_bakes()])
 	# Moss's bay line rendered 30 to 45 ms on the frame the ball rolled in: it renders on a worker
 	# and sounds the frame it is done, so the frame that asks for it does no synth work.
 	var line := "Pad's hot. Go on, before the clock notices."
@@ -64,10 +64,10 @@ func _run() -> void:
 	_t.check("BA-4 a babble line is asked for without rendering it on the asking frame",
 		spoke and audio.babble_state(line, 0) == "rendering" and audio.cue_log.size() == cues,
 		"spoke %s, state %s, cues %d -> %d" % [spoke, audio.babble_state(line, 0), cues, audio.cue_log.size()])
-	await _settle(audio, line, 0)
+	var late: bool = await _settle(audio, line, 0)
 	var said: Array = audio.cue_log.back() if audio.cue_log.size() > cues else []
 	_t.check("BA-4 it sounds once its worker is done, and is kept", said.size() >= 3 and said[0] == "shop_left" and said[1] == "babble" and said[2] == "now"
-		and audio.babble_state(line, 0) == "ready", "cue %s, state %s" % [said, audio.babble_state(line, 0)])
+		and audio.babble_state(line, 0) == "ready", "%scue %s, state %s" % ["TIMED OUT: " if late else "", said, audio.babble_state(line, 0)])
 	cues = audio.cue_log.size()
 	audio.speak("shop_left", line, 0)
 	_t.check("BA-4 a kept line sounds on the frame it is asked for", audio.cue_log.size() == cues + 1, "cues %d -> %d" % [cues, audio.cue_log.size()])
@@ -76,27 +76,31 @@ func _run() -> void:
 	audio.speak("shop_entered", gone, 0)
 	cues = audio.cue_log.size()
 	_game.events.stage_entered.emit(2, false)
-	await _settle(audio, gone, 0)
+	late = await _settle(audio, gone, 0)
 	var babbled: Array = audio.cue_log.slice(cues).filter(func(row: Array): return row[1] == "babble" and row[2] == "now")
-	_t.check("BA-5 a line whose stage changed before it rendered stays silent", babbled.is_empty(), "babble cues after: %s" % [babbled])
+	_t.check("BA-5 a line whose stage changed before it rendered stays silent, and is still rendered and kept",
+		babbled.is_empty() and audio.babble_state(gone, 0) == "ready", "%sbabble cues after: %s, state %s" % ["TIMED OUT: " if late else "", babbled, audio.babble_state(gone, 0)])
 	# A call card closing is no business of a bay line: the line plays out (call_end ends a caller only).
 	var kept := "Shelf's there. Hook's not for sale."
 	audio.speak("shop_entered", kept, 0)
 	cues = audio.cue_log.size()
 	audio.call_end()
-	await _settle(audio, kept, 0)
+	late = await _settle(audio, kept, 0)
 	babbled = audio.cue_log.slice(cues).filter(func(row: Array): return row[1] == "babble" and row[2] == "now")
-	_t.check("BA-6 a call card closing does not silence a bay line still rendering", babbled.size() == 1, "babble cues after: %s" % [babbled])
+	_t.check("BA-6 a call card closing does not silence a bay line still rendering", babbled.size() == 1, "%sbabble cues after: %s" % ["TIMED OUT: " if late else "", babbled])
 	root.remove_child(_game)
-	_t.check("BA-3 leaving the tree lets go of them", Audio._opening_task == -1 and Audio._rest_task == -1,
-		"opening %d, rest %d" % [Audio._opening_task, Audio._rest_task])
+	_t.check("BA-3 leaving the tree lets go of them", not Audio.band_bakes()["held"], "bakes %s" % [Audio.band_bakes()])
 	_game.free()
 	_game = null
 	quit(_t.verdict())
 
 
 # Frames pass until the line is rendered and kept, which is the frame it sounds; a minute is the cap.
-func _settle(audio, text: String, beat: int) -> void:
+# True when the cap was hit.
+func _settle(audio, text: String, beat: int) -> bool:
 	var started := Time.get_ticks_msec()
-	while audio.babble_state(text, beat) == "rendering" and Time.get_ticks_msec() - started < 60000:
+	while audio.babble_state(text, beat) == "rendering":
+		if Time.get_ticks_msec() - started >= 60000:
+			return true
 		await process_frame
+	return false

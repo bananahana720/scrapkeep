@@ -277,6 +277,8 @@ var _babble := {}
 # synth code never runs on two threads in step (LESSONS 59). Lines asked for meanwhile wait in order.
 var _babble_job := {}
 var _babble_queue: Array = []
+# The key each asked line was queued under, by "beat|text", for babble_state.
+var _babble_asked := {}
 var sound_ready := false
 var _pitch_rng := RandomNumberGenerator.new()
 # Every cue decided: [kind, sound, "now" | "beat" | "music" | "skip", start_sample, pitch].
@@ -1976,6 +1978,7 @@ func speak(kind: String, text: String, beat: int) -> bool:
 	if not _babble.has(key) and bakes_ahead:
 		# A bay line took 30 to 45 ms to render on the Mac Studio, on the frame the ball rolled in or
 		# out: it renders on a worker and sounds when done, a few frames after its bubble.
+		_babble_asked["%d|%s" % [beat, text]] = key
 		_babble_queue.append([key, kind, text, beat, live])
 		_next_babble()
 		return true
@@ -1986,14 +1989,24 @@ func speak(kind: String, text: String, beat: int) -> bool:
 
 
 # Where a speak() line stands: "ready" once it is rendered and kept, "rendering" while it waits for or
-# sits on its worker (it sounds the frame it is done), "none" when it was never asked for.
+# sits on its worker (it sounds the frame it is done), "none" when it was never asked for. A line is
+# matched by the key it was asked under, so a music key change after the ask does not lose it.
 func babble_state(text: String, beat: int) -> String:
-	var key := "%d|%d|%s" % [beat, live_key(), text]
+	var key: String = _babble_asked.get("%d|%s" % [beat, text], "%d|%d|%s" % [beat, live_key(), text])
 	if _babble.has(key):
 		return "ready"
 	if String(_babble_job.get("key", "")) == key or _babble_queue.any(func(ask: Array): return ask[0] == key):
 		return "rendering"
 	return "none"
+
+
+# The band bakes, read from outside: "held" while a band bake has been started and not let go,
+# "running" while one of them is still working.
+static func band_bakes() -> Dictionary:
+	var held := _opening_task >= 0 or _rest_task >= 0
+	var running := (_opening_task >= 0 and not WorkerThreadPool.is_task_completed(_opening_task)) \
+		or (_rest_task >= 0 and not WorkerThreadPool.is_task_completed(_rest_task))
+	return {"held": held, "running": running}
 
 
 func _next_babble() -> void:
