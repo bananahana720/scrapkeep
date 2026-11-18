@@ -1,6 +1,6 @@
 # World 1 promise cards
 
-This folder holds the work left on world 1 after Andrew's requests of 17 November 2026, as fifteen promise cards, `W1-131.md` to `W1-145.md`. A thread that has read only `AGENTS.md` can take a card from here. Ruling ec lets a Codex thread on the Astra model own cards W1-131 to W1-144; W1-145 is the Gate's. The review that admits a pull request to the stage is the Gate's Claude reviewer (decision A12 below).
+This folder holds the work left on world 1 after Andrew's requests of 17 November 2026, as fifteen promise cards, `W1-131.md` to `W1-145.md`. A thread that has read only `AGENTS.md` can take a card from here. Ruling ec lets a Codex thread on the Astra model own cards W1-131 to W1-144; W1-145 is the Gate's. The review that admits a pull request to the stage is the Gate's Claude reviewer (decision A12 below). A subtask a player sees or plays also carries a GPT-6.2 Sol QA verdict in its READY post (ruling ee in `project-guide/handoff/DECISIONS.md`).
 
 ## What a promise card is
 
@@ -36,9 +36,10 @@ Every command runs from the repo root on the Mac after `export PATH=/opt/homebre
 6. **Build rounds.** Each round is one commit to a file your subtask owns, then the measure again. **[W1-132c]** `node scripts/proof/rounds.mjs round --card W1-1NN --sub x` judges it kept, flat, worse or void and reverts a flat or worse round. Until then: judge it by the rule in picture-proof (c), revert with `git revert --no-edit HEAD`, and add the row to your table.
 7. **Pictures.** **[W1-131a]** `node scripts/gate/display-run.mjs --offscreen <script> -- <args>` draws frames with no window on screen, and refuses a script that has not been qualified (picture-proof (d) says how a tool qualifies). Nothing else opens a game window on the Mac. Until your tool is qualified, work on headless numbers, keep your pull request a draft, and take the close pictures afterwards.
 8. **Focused tests and the fast lane**: `node scripts/sketch-smoke.mjs --sketch core-loop --test <name>` for each test your subtask names, then `npm run sketch:fast -- --base origin/<stage>` (rule 4). Rerun a red alone before you call it red.
-9. **Close.** **[W1-132c]** `node scripts/proof/rounds.mjs close --card W1-1NN --sub x` writes the close word, builds the sheet, pushes `proof/W1-1NN` and prints the receipt, which opens `VERDICT <PASS|PASS+NOTES|FAIL|BLOCKED> head <sha>`. Until then, write the same receipt by hand.
-10. **Hand over**: `gh pr create --draft --base <stage> --head w44/W1-1NNx --body-file <receipt file>`, then one board comment, `Ready to stack <pull request link> head <sha>`. The Gate reviews (below) and you get one fix round.
-11. **After the last subtask** the Gate runs the level 2 review and moves the card's row from `report` to `gate`.
+9. **Sol QA**, for a subtask that changes or measures what a player sees or plays (ruling ee): start a GPT-6.2 Sol agent from your thread with the card's done-when, the before and after pictures and the round table; it judges the after state against the card and rulings ct, cu, cv and cx. Its verdict, model and effort and the pictures it judged go in your receipt. A tool or records subtask skips this step. Sol's verdict is QA evidence, not admission.
+10. **Close.** **[W1-132c]** `node scripts/proof/rounds.mjs close --card W1-1NN --sub x` writes the close word, builds the sheet, pushes `proof/W1-1NN` and prints the receipt, which opens `VERDICT <PASS|PASS+NOTES|FAIL|BLOCKED> head <sha>`. Until then, write the same receipt by hand.
+11. **Hand over**: `gh pr create --draft --base <stage> --head w44/W1-1NNx --body-file <receipt file>`, then one board comment, `Ready to stack <pull request link> head <sha>`. The Gate reviews (below) and you get one fix round.
+12. **After the last subtask** the Gate runs the level 2 review and moves the card's row from `report` to `gate`.
 
 ## Order and waves
 

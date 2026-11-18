@@ -85,9 +85,23 @@ A second model, `models/Rewards.tla`, checks how an earned reward is banked: `sk
 
 Run it with `bash $F/models/make-rewards-configs.sh`, then each `rewards-*.cfg` as in "Run it"; the two-game configs need plain TLC with several workers. [references/rewards-coverage.md](references/rewards-coverage.md) has the code behind each step, the config table with what each config must report, and what is not modelled. Its findings are in [references/rewards-findings.md](references/rewards-findings.md). The rest of this skill (covered changes, reading a result, replays, broken variants, reach probes) applies to it unchanged.
 
+## The hazard model
+
+A further model, `models/HazardCycle.tla`, checks a storm's sought strike in the Spillway (W44): `sketches/core-loop/src/world/events/storm_seek.gd`, stepped by `sketches/core-loop/src/world/events/natural.gd`, and the enemies it strikes through `sketches/core-loop/src/world/events/hazard_hits.gd`. One tick at a time the ball and one enemy go anywhere, the ball rolls, slows or stalls, a storm breaks or runs down, and the hazard goes idle, tell, strike, cool. Its rules:
+
+| Rule | The promise | What breaks for the player |
+| --- | --- | --- |
+| `TellBeforeStrike` | A strike tells for at least 0.6 s, on the place it lands. | Lightning hits with no warning, or not where it warned. |
+| `RollingNeverSought` | Only a stalled ball is sought; a rolling one, turning or not, never. | Rolling and kiting stop being free (ruling cu). |
+| `StalledSought` | A stalled ball in a storm that can still strike is sought within the rest and one tick. | Parking under a storm costs nothing. |
+| `EnemyStruck` | An enemy inside the strike is struck. | A pack dragged through the strike walks out whole. |
+| `BallOnlyWhereTold` | The ball is hit only inside the told ring, so a ball that rolls off escapes. | A dodge that worked still costs scrap. |
+
+Run it with `bash $F/models/make-hazard-configs.sh`, then each `hazard-*.cfg` as in "Run it". `hazard-today` must report no break; each `hazard-broken-*` must break the rule its line in the script names. `node scripts/gate/model-receipts.mjs --row hazards-hit-everyone --out <dir>` writes its receipt. [references/hazard-coverage.md](references/hazard-coverage.md) has the code behind each step and what is not modelled.
+
 ## The flood model
 
-A third model, `models/ParkFlood.tla`, checks a park flood from its announcement to its end in `sketches/core-loop/src/world/event_director.gd` (`_park_step_live`, `_park_capacity`, `_park_can_end`), with the ball free to roll into or out of any basin between any two ticks. Its rules:
+Another model, `models/ParkFlood.tla`, checks a park flood from its announcement to its end in `sketches/core-loop/src/world/event_director.gd` (`_park_step_live`, `_park_capacity`, `_park_can_end`), with the ball free to roll into or out of any basin between any two ticks. Its rules:
 
 - **FullWaterNeverHeld.** While its live time runs, water that has risen for its whole fill time is stepped on every tick, ball or no ball.
 - **FullWaterFreesItsSlot.** Full water with no live time stops counting against the ground cap.
