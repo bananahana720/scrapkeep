@@ -464,6 +464,11 @@ func _init() -> void:
 	_pitch_rng.seed = 0xA0D10
 
 
+# Whether this game bakes ahead on workers: the one read of the machine, so a test can stand in a drawn game.
+func _drawn_with_workers() -> bool:
+	return bakes_ahead_on(AudioServer.get_driver_name(), DisplayServer.get_name())
+
+
 static func bakes_ahead_on(audio_driver: String, display_driver: String) -> bool:
 	return audio_driver != "Dummy" or display_driver != "headless"
 
@@ -475,7 +480,7 @@ func setup(ctx_ref) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_make_buses()
 	live_output = AudioServer.get_driver_name() != "Dummy"
-	bakes_ahead = bakes_ahead_on(AudioServer.get_driver_name(), DisplayServer.get_name())
+	bakes_ahead = _drawn_with_workers()
 	engine = MusicEngine.new()
 	engine.warm_stingers = bakes_ahead
 	if ctx.has_method("aim_forward"):
@@ -1980,6 +1985,17 @@ func speak(kind: String, text: String, beat: int) -> bool:
 	return true
 
 
+# Where a speak() line stands: "ready" once it is rendered and kept, "rendering" while it waits for or
+# sits on its worker (it sounds the frame it is done), "none" when it was never asked for.
+func babble_state(text: String, beat: int) -> String:
+	var key := "%d|%d|%s" % [beat, live_key(), text]
+	if _babble.has(key):
+		return "ready"
+	if String(_babble_job.get("key", "")) == key or _babble_queue.any(func(ask: Array): return ask[0] == key):
+		return "rendering"
+	return "none"
+
+
 func _next_babble() -> void:
 	if not _babble_job.is_empty() or _babble_queue.is_empty():
 		return
@@ -2047,8 +2063,6 @@ func call_in(kind: String, speaker: String, text: String) -> float:
 # may talk. Nothing happens when nobody is talking. A shorter dip another cue asked for in
 # that moment is freed with it.
 func call_end() -> void:
-	# A babble line still rendering belongs to the bubble that just went: it never sounds.
-	_drop_babble()
 	if _calling == "" or clock >= float(_gates.get("call_in", -1000.0)):
 		return
 	engine.cancel_stinger(_calling)

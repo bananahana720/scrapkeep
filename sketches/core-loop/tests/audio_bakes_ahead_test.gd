@@ -15,6 +15,12 @@ var _t := T.new("audio_bakes_ahead_test")
 var _game
 
 
+# A drawn game as setup() would find it, for the one place a headless test cannot be one.
+class DrawnAudio extends Audio:
+	func _drawn_with_workers() -> bool:
+		return true
+
+
 func _initialize() -> void:
 	_t.check("BA-1 a device bakes ahead", Audio.bakes_ahead_on("CoreAudio", "headless"), "a sound device always bakes ahead")
 	_t.check("BA-1 a drawn game with no device bakes ahead", Audio.bakes_ahead_on("Dummy", "macOS") and Audio.bakes_ahead_on("Dummy", "X11"),
@@ -23,64 +29,74 @@ func _initialize() -> void:
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
+	_run()
 
 
-func _process(_delta: float) -> bool:
-	if _game == null or _game.flow == null:
-		return false
+func _run() -> void:
+	while _game.flow == null:
+		await process_frame
 	var audio = _game.audio()
 	_t.check("BA-2 this headless game does not bake ahead", not audio.bakes_ahead and not audio.engine.warm_stingers,
 		"bakes_ahead %s, warm_stingers %s" % [audio.bakes_ahead, audio.engine.warm_stingers])
 	_t.check("BA-2 no band bake was started", Audio._opening_task == -1 and Audio._rest_task == -1,
 		"opening %d, rest %d" % [Audio._opening_task, Audio._rest_task])
+	# setup() hands the stinger warming whatever it found for baking ahead: a drawn game warms them.
+	var drawn := DrawnAudio.new()
+	drawn.setup(_game.ctx)
+	var drawn_ok: bool = drawn.bakes_ahead and drawn.engine.warm_stingers
+	root.add_child(drawn)
+	root.remove_child(drawn)
+	_t.check("BA-2 setup warms the stingers of a game that bakes ahead", drawn_ok, "bakes_ahead %s, warm_stingers %s" % [drawn.bakes_ahead, drawn.engine.warm_stingers])
+	drawn.free()
 	# The drawn dummy-driver game: its bank ready, the band bakes start on workers.
 	audio.bakes_ahead = true
 	audio.sound_ready = false
-	audio._on_ready()
-	_t.check("BA-3 a game that bakes ahead starts the band bakes when its bank is ready", Audio._opening_task >= 0 and Audio._rest_task >= 0,
-		"opening %d, rest %d" % [Audio._opening_task, Audio._rest_task])
+	var waited := Time.get_ticks_msec()
+	while not audio.sound_ready and Time.get_ticks_msec() - waited < 60000:
+		await process_frame
+	_t.check("BA-3 a game that bakes ahead starts the band bakes when its bank is ready", audio.sound_ready and Audio._opening_task >= 0 and Audio._rest_task >= 0,
+		"ready %s, opening %d, rest %d" % [audio.sound_ready, Audio._opening_task, Audio._rest_task])
 	# Moss's bay line rendered 30 to 45 ms on the frame the ball rolled in: it renders on a worker
 	# and sounds the frame it is done, so the frame that asks for it does no synth work.
 	var line := "Pad's hot. Go on, before the clock notices."
 	var cues: int = audio.cue_log.size()
 	var spoke: bool = audio.speak("shop_left", line, 0)
 	_t.check("BA-4 a babble line is asked for without rendering it on the asking frame",
-		spoke and not audio._babble_job.is_empty() and audio.cue_log.size() == cues and audio._babble.is_empty(),
-		"spoke %s, job %s, cues %d -> %d, cached %d" % [spoke, not audio._babble_job.is_empty(), cues, audio.cue_log.size(), audio._babble.size()])
-	_settle(audio)
+		spoke and audio.babble_state(line, 0) == "rendering" and audio.cue_log.size() == cues,
+		"spoke %s, state %s, cues %d -> %d" % [spoke, audio.babble_state(line, 0), cues, audio.cue_log.size()])
+	await _settle(audio, line, 0)
 	var said: Array = audio.cue_log.back() if audio.cue_log.size() > cues else []
 	_t.check("BA-4 it sounds once its worker is done, and is kept", said.size() >= 3 and said[0] == "shop_left" and said[1] == "babble" and said[2] == "now"
-		and audio._babble_job.is_empty() and audio._babble.size() == 1, "cue %s, cached %d" % [said, audio._babble.size()])
+		and audio.babble_state(line, 0) == "ready", "cue %s, state %s" % [said, audio.babble_state(line, 0)])
 	cues = audio.cue_log.size()
 	audio.speak("shop_left", line, 0)
-	_t.check("BA-4 a kept line sounds on the frame it is asked for", audio.cue_log.size() == cues + 1 and audio._babble_job.is_empty(),
-		"cues %d -> %d" % [cues, audio.cue_log.size()])
-	# A line still rendering when its bubble goes (the bubble ends its voice through call_end), or
-	# when the stage changes, never sounds.
-	for ending in ["bubble", "stage"]:
-		var text := "Shelf's there. Hook's not for sale." if ending == "bubble" else "Back again. The Warden keeps your last shell."
-		audio.speak("shop_entered", text, 0)
-		cues = audio.cue_log.size()
-		if ending == "bubble":
-			audio.call_end()
-		else:
-			audio._on_stage_entered(2, false)
-		_settle(audio)
-		var babbled: Array = audio.cue_log.slice(cues).filter(func(row: Array): return row[1] == "babble" and row[2] == "now")
-		_t.check("BA-5 a line whose %s went before it rendered stays silent" % ending, babbled.is_empty() and audio._babble_job.is_empty(),
-			"babble cues after: %s" % [babbled])
+	_t.check("BA-4 a kept line sounds on the frame it is asked for", audio.cue_log.size() == cues + 1, "cues %d -> %d" % [cues, audio.cue_log.size()])
+	# A stage change drops a line still rendering: it never sounds.
+	var gone := "Back again. The Warden keeps your last shell."
+	audio.speak("shop_entered", gone, 0)
+	cues = audio.cue_log.size()
+	_game.events.stage_entered.emit(2, false)
+	await _settle(audio, gone, 0)
+	var babbled: Array = audio.cue_log.slice(cues).filter(func(row: Array): return row[1] == "babble" and row[2] == "now")
+	_t.check("BA-5 a line whose stage changed before it rendered stays silent", babbled.is_empty(), "babble cues after: %s" % [babbled])
+	# A call card closing is no business of a bay line: the line plays out (call_end ends a caller only).
+	var kept := "Shelf's there. Hook's not for sale."
+	audio.speak("shop_entered", kept, 0)
+	cues = audio.cue_log.size()
+	audio.call_end()
+	await _settle(audio, kept, 0)
+	babbled = audio.cue_log.slice(cues).filter(func(row: Array): return row[1] == "babble" and row[2] == "now")
+	_t.check("BA-6 a call card closing does not silence a bay line still rendering", babbled.size() == 1, "babble cues after: %s" % [babbled])
 	root.remove_child(_game)
 	_t.check("BA-3 leaving the tree lets go of them", Audio._opening_task == -1 and Audio._rest_task == -1,
 		"opening %d, rest %d" % [Audio._opening_task, Audio._rest_task])
 	_game.free()
 	_game = null
 	quit(_t.verdict())
-	return true
 
 
-# Waits out the babble worker, then gives the audio the frame step that sounds a finished line.
-func _settle(audio) -> void:
-	# The worker is short (tens of ms); its own completion is the wait, polled, no clock read.
-	while not audio._babble_job.is_empty() and not WorkerThreadPool.is_task_completed(audio._babble_job.task):
-		pass
-	audio._tend_babble()
+# Frames pass until the line is rendered and kept, which is the frame it sounds; a minute is the cap.
+func _settle(audio, text: String, beat: int) -> void:
+	var started := Time.get_ticks_msec()
+	while audio.babble_state(text, beat) == "rendering" and Time.get_ticks_msec() - started < 60000:
+		await process_frame
