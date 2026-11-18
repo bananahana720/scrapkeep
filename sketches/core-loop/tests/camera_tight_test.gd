@@ -18,6 +18,9 @@ const RealTuning := preload("res://src/movement/tuning.gd")
 # ground is not a wall. P1-P2: a wall that is there for 9 frames does not throw the lens up.
 
 const DT := 1.0 / 60.0
+# The ball's centre must sit at least this share of the viewport's height above its bottom edge.
+const BALL_BOTTOM_MARGIN := 0.08
+const BALL_FRAMED_PITCHES := [-0.6, -0.3, 0.0, 0.3, 0.5]
 
 var _t = T.new("camera_tight_test")
 
@@ -49,6 +52,7 @@ func _run() -> void:
 	await _floor()
 	await _fight_floor()
 	await _aim_kept()
+	await _ball_stays_framed()
 	await _pillar()
 	await _unstepped()
 	await _ship()
@@ -234,6 +238,38 @@ func _aim_kept() -> void:
 	floor_body.free()
 	subject.free()
 	cam.free()
+
+
+# Pixels between the ball's centre and the bottom edge of the viewport; negative when it is below the frame or the
+# lens has it behind.
+func _ball_margin(cam) -> float:
+	if cam.cam.is_position_behind(Vector3.ZERO):
+		return -INF
+	var view: Vector2 = cam.get_viewport().get_visible_rect().size
+	return view.y - cam.cam.unproject_position(Vector3.ZERO).y
+
+
+# The player sees the pilot (ruling dm): with the contact subject inside the hull's reach the lift is fully on,
+# and at every pitch the player can hold the ball's centre must still sit this share of the frame's height above
+# the bottom edge.
+func _ball_stays_framed() -> void:
+	var floor_body := _box(Vector3(80, 1, 80), Vector3(0, -1.5, 0))
+	for distance in [6.0, 9.0]:
+		for looked in BALL_FRAMED_PITCHES:
+			var subject := Node3D.new()
+			root.add_child(subject)
+			subject.position = Vector3(0, -1, -distance)
+			var cam := _rig()
+			cam.reduced_motion = true
+			cam.set_contact_subject(subject)
+			cam.snap(Vector3.FORWARD, looked)
+			await _settle(cam, 120)
+			var margin: float = _ball_margin(cam)
+			var need: float = BALL_BOTTOM_MARGIN * cam.get_viewport().get_visible_rect().size.y
+			_t.check("H1 the ball stays in frame with the subject %.0f m off at pitch %.1f" % [distance, looked], margin >= need, "ball %.0f px above the bottom edge, need %.0f; arm %.3f, pitch %.3f" % [margin, need, cam.arm.rotation.x, looked])
+			subject.free()
+			cam.free()
+	floor_body.free()
 
 
 func _aim_pitch(cam) -> float:
