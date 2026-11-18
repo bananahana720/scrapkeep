@@ -255,6 +255,15 @@ func _half_windup():
 	return enemy
 
 
+func _live_pit():
+	var enemy = _spawn()
+	for frame in 180:
+		await physics_frame
+		if enemy.phase == 2:
+			break
+	return enemy
+
+
 func _interruptions() -> void:
 	await _boot()
 	var enemy = await _half_windup()
@@ -283,35 +292,34 @@ func _interruptions() -> void:
 	_test.check("WG-4 harpoon smash", enemy.phase == 0 and _rest(enemy), "within 0.3 s of the real smash landing callback")
 	enemy.free()
 	_game.player.body().global_position = ball_rest
-	# Destruction removes the posed nodes, rather than leaving a detached posed mesh.
-	for action in ["queue_free", "death", "retry"]:
-		enemy = _spawn()
-		for frame in 180:
-			await physics_frame
-			if enemy.phase == 2:
-				break
-		var parts := _parts(enemy)
-		var pit: Node3D = enemy.telegraph()
-		var disc := pit.get_node_or_null("DeployedDisc") if pit != null else null
-		_test.check("W1-126 live disc before " + action, enemy.phase == 2 and disc != null)
-		var ids := [enemy.get_instance_id(), parts[0].get_instance_id(), parts[1].get_instance_id()]
-		if disc != null:
-			ids.append(disc.get_instance_id())
-		match action:
-			"queue_free":
-				enemy.queue_free()
-			"death":
-				enemy.take_damage(enemy.hp + 1.0)
-			"retry":
-				_game.flow.retry_stage()
-		await _frames(27)
-		var removed := true
-		for id in ids:
-			removed = removed and not is_instance_id_valid(id)
-		var fresh = _spawn()
-		fresh.set_physics_process(false)
-		_test.check("WG-4 " + action, removed and _rest(fresh), "all old posed nodes removed within 0.3 s; fresh body at rest")
-		fresh.free()
+	# Destruction removes the posed nodes, rather than leaving a detached posed mesh. It must hold
+	# at half wind-up (the disc hoisted) and with the pit live (the disc thrown into it).
+	for phase in ["half wind-up", "live pit"]:
+		for action in ["queue_free", "death", "retry"]:
+			enemy = await _half_windup() if phase == "half wind-up" else await _live_pit()
+			var parts := _parts(enemy)
+			var pit: Node3D = enemy.telegraph()
+			var disc := pit.get_node_or_null("DeployedDisc") if pit != null else null
+			if phase == "live pit":
+				_test.check("W1-126 live disc before " + action, enemy.phase == 2 and disc != null)
+			else:
+				_test.check("hoisted disc and pit mark before " + action, enemy.phase == 1 and pit != null and parts[1].position.y > enemy._top_rest.y)
+			var gone := [weakref(enemy), weakref(parts[0]), weakref(parts[1]), weakref(pit), weakref(disc)]
+			match action:
+				"queue_free":
+					enemy.queue_free()
+				"death":
+					enemy.take_damage(enemy.hp + 1.0)
+				"retry":
+					_game.flow.retry_stage()
+			await _frames(27)
+			var removed := true
+			for ref in gone:
+				removed = removed and ref.get_ref() == null
+			var fresh = _spawn()
+			fresh.set_physics_process(false)
+			_test.check("WG-4 %s at %s" % [action, phase], removed and _rest(fresh), "enemy, cart, disc, pit mark and deployed disc all freed within 0.3 s; fresh body at rest")
+			fresh.free()
 	_game.free()
 	_game = null
 
