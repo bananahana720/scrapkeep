@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import test from "node:test";
 
-import { acquireDrawnSlot, launch, runCapture, runWindowed } from "./display-run.mjs";
+import { acquireDrawnSlot, launch, measureFrame, runCapture, runWindowed } from "./display-run.mjs";
 import { watchDrawnRun, windowCounts } from "./window-watch.mjs";
 
 const script = "res://tools/offscreen_probe.gd";
@@ -15,6 +15,11 @@ const lease = async () => ({ release() {} });
 const sample = (at, front = 4, visible = [], godot = [], missed = 0) => ({ at, front, visible, godot, missed });
 const clean = [sample(0), sample(50), sample(100)];
 function capture(cwd, samples = clean) {
+  const tools = path.join(cwd, "sketches/core-loop/tools");
+  mkdirSync(tools, { recursive: true });
+  for (const file of ["offscreen_probe.gd", "dam_look_capture.gd", "offscreen_window.gd"]) {
+    copyFileSync(new URL("../../sketches/core-loop/tools/" + file, import.meta.url), path.join(tools, file));
+  }
   return { script, cwd, platform: "darwin", env: {}, binary: "/test/godot", version, acquire: lease,
     start: async () => ({ exit: 0, pid: 12, output: "OFFSCREEN_WINDOW 12 embedded\n", timedOut: false }),
     observe: async run => ({ ...await run(), watch: windowCounts(samples, 12) }),
@@ -37,9 +42,12 @@ test("the probe uses embedded Metal before the project is loaded, with a scratch
 
 test("the watcher rejects focus changes, visible children, missing periods and missing helper", async () => {
   const cwd = scratch();
-  for (const plant of [sample(50, 7), sample(50, 4, [], [99]), sample(102, 4, [], [], 1), sample(50, 4, [12])]) {
+  for (const plant of [sample(50, 12), sample(50, 4, [], [99]), sample(102, 4, [], [], 1), sample(50, 4, [12])]) {
     assert.equal((await runCapture(capture(cwd, [sample(0), plant]))).exit, 1);
   }
+  const otherApps = [sample(0, 4), sample(50, 7), sample(100, 4)];
+  assert.equal((await runCapture(capture(cwd, otherApps))).exit, 0);
+  assert.equal(windowCounts([...otherApps, sample(150, 12), sample(200, 12), sample(250, 4)], 12).frontmostChanges, 1);
   const opts = capture(cwd);
   assert.equal((await runCapture({ ...opts, start: async () => ({ ...await opts.start(), output: "" }) })).exit, 1);
   assert.throws(() => windowCounts([sample(0)], 12), /lacks/);
@@ -55,6 +63,7 @@ test("the Gate reference needs a visible sample for its own process and the pinn
   } });
   assert.equal(r.exit, 0);
   assert.equal(r.watch.targetOnScreen, 1);
+  assert.equal(r.watch.frontmostChanges, 1);
   const unrelated = capture(cwd, [sample(0), sample(50, 9, [99], [99])]);
   assert.equal((await runCapture({ ...unrelated, reference: true })).exit, 1);
   await assert.rejects(runCapture({ ...plant, version: () => "4.5", start: assert.fail }), /pinned/);
@@ -97,9 +106,9 @@ test("losing the sampler aborts a still-running group before releasing the drawn
   assert.ok(Date.now() - from < 5000);
 });
 
-test("the existing models-render gate also draws offscreen, keeping its resolution and plant", async () => {
+test("Mac library captures keep the producer resolution and plant while forcing the embedded backend", async () => {
   const opts = capture(scratch());
-  const result = await runWindowed({ ...opts, script: "res://tools/model_render_check.gd",
+  const result = await runWindowed({ ...opts, reference: true,
     engineArgs: ["--resolution", "800x600"], extraEnv: { RENDER_PLANT: "dark_models" },
     start: async (bin, argv, { env }) => {
       assert.equal(argv[0], "--embedded");
@@ -115,10 +124,55 @@ test("the existing models-render gate also draws offscreen, keeping its resoluti
 test("model receipts see a valid planted comparison but cannot consume an unwatched verdict", async () => {
   const summary = 'SUMMARY {"judged":6,"plant":"dark_models"}';
   for (const [rows, expected] of [[clean, true], [[sample(0), sample(50, 4, [12])], false]]) {
-    const result = await runWindowed({ ...capture(scratch(), rows), script: "res://tools/model_render_check.gd",
+    const result = await runWindowed({ ...capture(scratch(), rows),
       start: async () => ({ exit: 1, pid: 12, output: summary, timedOut: false }),
     });
     assert.equal(result.exit, 1);
     assert.equal(result.output.includes(summary), expected);
   }
+});
+
+test("both Mac entry points refuse unknown and changed tools before taking a lock or starting Godot", async () => {
+  const opts = capture(scratch());
+  const unused = { acquire: assert.fail, version: assert.fail, observe: assert.fail, start: assert.fail };
+  for (const entry of [runWindowed, runCapture]) {
+    for (const tool of ["res://tools/model_render_check.gd", "res://tools/look_harness.gd", "res://new.gd"]) {
+      const r = await entry({ ...opts, ...unused, script: tool });
+      assert.equal(r.supported, false);
+      assert.match(r.output, /refused before launch/);
+    }
+    await assert.rejects(entry({ ...opts, ...unused, engineArgs: ["--script", "res://other.gd"] }), /refusing engine flag/);
+  }
+  writeFileSync(path.join(opts.cwd, "sketches/core-loop/tools/dam_look_capture.gd"), "modified inherited capture");
+  assert.equal((await runWindowed({ ...opts, ...unused })).supported, false);
+  assert.equal((await runCapture({ ...opts, ...unused })).supported, false);
+});
+
+test("headless measurement and the editor version probe use only their scratch homes", async () => {
+  const opts = capture(scratch());
+  const file = path.join(opts.cwd, "yard.png");
+  const ref = path.join(opts.cwd, "gate.png");
+  const result = await measureFrame(file, ref, { ...opts, env: { HOME: "/original" },
+    start: async (_binary, argv, { env }) => {
+      assert.deepEqual(argv, ["--headless", "--path", path.join(opts.cwd, "sketches/core-loop"), "--script", script,
+        "--", "--measure=" + file, "--reference=" + ref]);
+      assert.ok(env.HOME.startsWith(path.join(opts.cwd, "artifacts/local/display-run/home-")));
+      assert.equal(env.XDG_DATA_HOME, path.join(env.HOME, "data"));
+      return { exit: 0, output: "measured", timedOut: false };
+    },
+  });
+  assert.equal(result.exit, 0);
+  assert.equal(existsSync(result.home), false);
+  let versionHome;
+  const control = await runCapture({ ...opts, reference: true, version: (_command, { env }) => {
+    versionHome = env.HOME;
+    assert.ok(existsSync(versionHome));
+    return version();
+  }, start: async (_bin, _argv, { env }) => {
+    assert.equal(env.HOME, versionHome);
+    assert.equal(env.XDG_CACHE_HOME, path.join(versionHome, "cache"));
+    return opts.start();
+  } });
+  assert.equal(control.home, versionHome);
+  assert.equal(existsSync(versionHome), false);
 });

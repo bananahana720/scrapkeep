@@ -2,6 +2,7 @@
 // On the Mac, --offscreen uses the native embedded Metal display and a 50 ms window watcher.
 // The models-render gate also uses that display. Only the Gate runs the visible CLI reference.
 // Linux library callers supply their own display (the PC uses headless gamescope).
+import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { watchDrawnRun } from "./window-watch.mjs";
@@ -79,7 +80,7 @@ export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellatio
       process.off("SIGINT", onSignal);
       process.off("SIGTERM", onSignal);
       cancellation?.removeEventListener("abort", cancel);
-      resolve({ pid: child.pid, exit: interrupted ?? exit, signal, output, timedOut });
+      resolve({ pid: child.pid, exit: interrupted ?? exit, interrupted, signal, output, timedOut });
     };
     child.on("error", (error) => { output += String(error.message ?? error); finish(null, null); });
     // "close" once the pipes drain; "exit" plus half a second when a grandchild keeps them open past the kill.
@@ -104,10 +105,8 @@ export async function acquireDrawnSlot({ directory = "/tmp/scrapkeep-drawn.slots
 // Runs one Godot script with a window. Returns { exit, output, timedOut, home, supported }. exit is null when the run
 // did not start or was killed.
 export function runWindowed(options = {}) {
-  // The models-render gate is the library caller that draws on the Mac. Its original
-  // receipt predates helper markers and judges its own real and planted images.
-  if ((options.platform ?? process.platform) === "darwin" && options.script === "res://tools/model_render_check.gd") {
-    return macCapture(options, false);
+  if ((options.platform ?? process.platform) === "darwin") {
+    return macCapture({ ...options, reference: false }, false);
   }
   return runScript(options);
 }
@@ -124,27 +123,74 @@ async function runScript({
   platform = process.platform,
   acquire = acquireDrawnSlot,
   start = launch,
+  headless = false,
 } = {}) {
   if (typeof script !== "string" || !script.startsWith("res://")) throw new Error(`display-run: script must be a res:// path, got ${script}`);
   const refused = engineArgs.filter((a) => REFUSED_ENGINE_ARGS.some((r) => a === r || a.startsWith(`${r}=`)));
   if (refused.length) throw new Error(`display-run: refusing engine flag(s) ${refused.join(", ")}`);
-  const problem = displayProblem(platform, env);
+  const problem = !headless && displayProblem(platform, env);
   if (problem) return { exit: null, output: problem, timedOut: false, home: null, supported: false };
   if (!binary) return { exit: null, output: "GODOT_BIN is not set", timedOut: false, home: null, supported: true };
   const lease = await acquire({ log: console.error });
   let scratch;
+  let interrupted;
   try {
     scratch = scratchEnv(cwd);
-    const argv = [...engineArgs, "--path", path.join(cwd, SKETCH), "--script", script, "--", ...args];
+    const argv = [...(headless ? ["--headless"] : []), ...engineArgs, "--path", path.join(cwd, SKETCH), "--script", script, "--", ...args];
     const run = await start(binary, argv, { env: { ...env, ...extraEnv, ...scratch.env }, cwd, timeoutMs });
+    interrupted = run.interrupted;
     return { ...run, exit: run.timedOut ? null : run.exit, home: scratch.home, supported: true };
   } finally {
     lease.release();
     if (scratch && env.KEEP_DISPLAY_HOME !== "1") rmSync(scratch.home, { recursive: true, force: true });
+    if (interrupted) process.exit(interrupted);
   }
 }
 
 const PROBE = "res://tools/offscreen_probe.gd";
+
+// Each admitted tool version has a kept Mac watcher receipt. During the owning subtask,
+// the candidate registration and its watched trial stay on that subtask's isolated branch.
+// Keep the receipt before admitting the registration to the stage. A helper marker alone
+// does not qualify a tool. The probe inherits the dam capture, so pin both scripts.
+const watchedTools = new Map([
+  [PROBE, {
+    // proof/W1-131 at 2c2dfa665, artifacts/proof/W1-131a/capture.json
+    "tools/offscreen_probe.gd": "156464df4c44b25ba4f903f6786557bdff94a71b89f033744c0021f5d734819b",
+    "tools/dam_look_capture.gd": "157820aa32157a3dfb1374f852acdc8c0659d87b02307c1ed58377ad7a59c6b4",
+    "tools/offscreen_window.gd": "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d",
+  }],
+]);
+
+function hasWatchedVersion(script, cwd) {
+  const files = watchedTools.get(script);
+  if (!files) return false;
+  return Object.entries(files).every(([file, hash]) => {
+    const source = path.join(cwd, SKETCH, file);
+    return existsSync(source) && createHash("sha256").update(readFileSync(source)).digest("hex") === hash;
+  });
+}
+
+// Whitelist engine options used by capture callers. An injected --script or project
+// selector would run a different entry point after qualification.
+function checkCaptureEngineArgs(argv) {
+  for (let i = 0; i < argv.length; i += 2) {
+    const [key, value] = argv.slice(i, i + 2);
+    if (key === "--resolution" && /^\d+x\d+$/.test(value)) continue;
+    if (key === "--audio-driver" && value === "Dummy") continue;
+    throw new Error("display-run: refusing engine flag " + key);
+  }
+}
+
+export async function measureFrame(file, reference, { cwd = root, env = process.env,
+  binary = env.GODOT_BIN, acquire = acquireSlot, start = launch } = {}) {
+  if (!path.isAbsolute(file) || (reference !== undefined && !path.isAbsolute(reference))) {
+    throw new Error("--measure requires absolute PNG paths");
+  }
+  const args = ["--measure=" + file];
+  if (reference !== undefined) args.push("--reference=" + reference);
+  return runScript({ script: PROBE, args, cwd, env, binary, acquire, start, headless: true });
+}
 
 function editorVersion(command, options) {
   const r = spawnSync(command, ["--headless", "--version"], { ...options, timeout: 5000, encoding: "utf8" });
@@ -163,6 +209,11 @@ async function macCapture({ script, args = [], reference = false, cwd = root, en
   observe = watchDrawnRun, version = editorVersion, timeoutMs = TIMEOUT_MS }, requireMarker) {
   if (platform !== "darwin") throw new Error("Mac capture requires macOS; the Linux PC uses gamescope through the Gate");
   if (reference && script !== PROBE) throw new Error("only the W1-131 probe may draw the Gate reference");
+  checkCaptureEngineArgs(engineArgs);
+  if (!hasWatchedVersion(script, cwd)) {
+    return { exit: null, supported: false, timedOut: false, home: null,
+      output: "Mac capture refused before launch: no watched qualification for this script version: " + script };
+  }
   return runScript({
     engineArgs, script, args: script === PROBE ? [...args, "--shots=yard"] : args, cwd, env, platform, binary, acquire, timeoutMs,
     extraEnv: { ...extraEnv, SCRAPKEEP_OFFSCREEN: reference ? "0" : "1" },
@@ -193,29 +244,38 @@ async function macCapture({ script, args = [], reference = false, cwd = root, en
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   try {
     const [mode, name, separator, ...args] = process.argv.slice(2);
-    if (!["--offscreen", "--gate-reference"].includes(mode) || !name || separator !== "--") {
-      throw new Error("usage: display-run.mjs --offscreen <script> -- <args>");
-    }
-    const script = name.startsWith("res://") ? name : "res://" + name;
-    let probeFrame;
-    if (script === PROBE) {
-      const out = args[0]?.slice("--out=".length);
-      if (args.length !== 1 || !args[0].startsWith("--out=") || !path.isAbsolute(out)) {
-        throw new Error("the probe needs -- --out=<absolute directory>");
+    if (mode === "--measure") {
+      if (!name || (separator === undefined ? args.length !== 0 : separator !== "--reference" || args.length !== 1)) {
+        throw new Error("usage: display-run.mjs --measure <absolute PNG> [--reference <absolute PNG>]");
       }
-      probeFrame = path.join(out, "yard.png");
-      if (existsSync(probeFrame)) throw new Error("yard.png already exists; supply a fresh output directory");
-    }
-    const result = await runCapture({ script, args, reference: mode === "--gate-reference" });
-    if (result.output) console.log(result.output.trimEnd());
-    if (result.watch) console.log("WINDOW_WATCH " + JSON.stringify(result.watch));
-    if (probeFrame && result.exit === 0) {
-      const png = readFileSync(probeFrame);
-      if (png.toString("hex", 0, 8) !== "89504e470d0a1a0a" || png.readUInt32BE(16) !== 1920 || png.readUInt32BE(20) !== 1080) {
-        throw new Error("probe did not write a new 1920x1080 PNG");
+      const result = await measureFrame(name, args[0]);
+      console.log(result.output.trimEnd());
+      process.exitCode ||= result.exit ?? 1;
+    } else {
+      if (!["--offscreen", "--gate-reference"].includes(mode) || !name || separator !== "--") {
+        throw new Error("usage: display-run.mjs --offscreen <script> -- <args>");
       }
+      const script = name.startsWith("res://") ? name : "res://" + name;
+      let probeFrame;
+      if (script === PROBE) {
+        const out = args[0]?.slice("--out=".length);
+        if (args.length !== 1 || !args[0].startsWith("--out=") || !path.isAbsolute(out)) {
+          throw new Error("the probe needs -- --out=<absolute directory>");
+        }
+        probeFrame = path.join(out, "yard.png");
+        if (existsSync(probeFrame)) throw new Error("yard.png already exists; supply a fresh output directory");
+      }
+      const result = await runCapture({ script, args, reference: mode === "--gate-reference" });
+      if (result.output) console.log(result.output.trimEnd());
+      if (result.watch) console.log("WINDOW_WATCH " + JSON.stringify(result.watch));
+      if (probeFrame && result.exit === 0) {
+        const png = readFileSync(probeFrame);
+        if (png.toString("hex", 0, 8) !== "89504e470d0a1a0a" || png.readUInt32BE(16) !== 1920 || png.readUInt32BE(20) !== 1080) {
+          throw new Error("probe did not write a new 1920x1080 PNG");
+        }
+      }
+      process.exitCode ||= result.exit ?? 1;
     }
-    process.exitCode ||= result.exit ?? 1;
   } catch (error) {
     console.error(error.message);
     process.exitCode ||= 1;

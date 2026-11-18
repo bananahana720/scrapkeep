@@ -38,7 +38,8 @@ while (true) {
   const row = {at: Date.now(), front, visible: Array.from(visible), godot: Array.from(godot), missed};
   stdout.writeData($(JSON.stringify(row) + "\\n").dataUsingEncoding($.NSUTF8StringEncoding));
   next += (missed + 1) * period;
-  delay(Math.max(0, next - clock.systemUptime));
+  // Service workspace notifications between snapshots so frontmostApplication stays current.
+  $.NSRunLoop.currentRunLoop.runUntilDate($.NSDate.dateWithTimeIntervalSinceNow(Math.max(0, next - clock.systemUptime)));
 }
 `;
 
@@ -58,7 +59,7 @@ export function windowCounts(samples, pid) {
   let maxGapMs = 0;
   for (const [i, s] of samples.entries()) {
     if (i > 0) {
-      if (s.front !== samples[i - 1].front) frontmostChanges++;
+      if (s.front === pid && samples[i - 1].front !== pid) frontmostChanges++;
       maxGapMs = Math.max(maxGapMs, s.at - samples[i - 1].at);
       missed += s.missed;
     }
