@@ -234,7 +234,7 @@ func _climb(speed: float, held: bool) -> Dictionary:
 			break
 	source.hold = {}
 	# Floor height within NOTCH_ZONE_M of the face is down a notch between the kicker and the table, not the open floor.
-	var on_floor := ball.y < floor_y + Tuning.RADIUS + 2.0 and ball.z < kicker.lip - NOTCH_ZONE_M
+	var on_floor: bool = ball.y < floor_y + Tuning.RADIUS + 2.0 and ball.z < kicker.lip - NOTCH_ZONE_M
 	var end := "time"
 	if still >= REST_TICKS:
 		end = "top" if _on_top(ball) else ("floor" if on_floor else "stuck")
