@@ -1,0 +1,122 @@
+{
+  "head": "162dc4fcacd6bbe1f1a3d25b193bbd6e2373fa6d",
+  "base": "1d5d77fc6b6260ade5848c98290862eec7f499c0",
+  "runs": [
+    {
+      "run": "162dc4f-pair-1",
+      "watch": {
+        "samples": 385,
+        "firstMs": 1795011728999,
+        "lastMs": 1795011748194,
+        "periodMs": 50,
+        "maxGapMs": 69,
+        "missed": 0,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "frame": {
+        "file": "162dc4f-pair-1/yard.png",
+        "metrics": {
+          "black": 0.0,
+          "luma": 0.348794452838763,
+          "sky": 0.0188194444444444,
+          "sky_rgb": [
+            158,
+            168,
+            194
+          ]
+        },
+        "quadrant_cie76": [],
+        "reference": "",
+        "sha256": "78e6207d0a90d22bca778d703cfd8a19ff426e024b1ba5135e3b41981afc52c3"
+      },
+      "waited_for_drawn_lock": false,
+      "renderer": "Metal 4.0 - Forward+ - Using Device #0: Apple - Apple M5 Max (Apple9)",
+      "engine_errors": [
+        "ERROR: 1 resources still in use at exit (run with --verbose for details).",
+        "ERROR: 8 RID allocations of type 'N10RendererRD15MaterialStorage6ShaderE' were leaked at exit.",
+        "ERROR: 8 shaders of type ParticlesShaderRD were never freed",
+        "ERROR: BUG, indexing did not unpair geometries from light."
+      ]
+    },
+    {
+      "run": "162dc4f-pair-2",
+      "watch": {
+        "samples": 318,
+        "firstMs": 1795011748978,
+        "lastMs": 1795011764825,
+        "periodMs": 50,
+        "maxGapMs": 65,
+        "missed": 0,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "frame": {
+        "file": "162dc4f-pair-2/yard.png",
+        "metrics": {
+          "black": 0.0,
+          "luma": 0.347821422119821,
+          "sky": 0.0188194444444444,
+          "sky_rgb": [
+            158,
+            168,
+            194
+          ]
+        },
+        "quadrant_cie76": [
+          0.0202554166316986,
+          0.0231353156268597,
+          0.170390784740448,
+          0.31417790055275
+        ],
+        "reference": "162dc4f-pair-1/yard.png",
+        "reference_sha256": "78e6207d0a90d22bca778d703cfd8a19ff426e024b1ba5135e3b41981afc52c3",
+        "sha256": "4f2a7536084a8c784a9e1adc91867acc28cb1de4df7a5232544b05bb8059acb9"
+      },
+      "waited_for_drawn_lock": true,
+      "renderer": "Metal 4.0 - Forward+ - Using Device #0: Apple - Apple M5 Max (Apple9)",
+      "engine_errors": [
+        "ERROR: 7 RID allocations of type 'N10RendererRD15MaterialStorage6ShaderE' were leaked at exit.",
+        "ERROR: 7 shaders of type ParticlesShaderRD were never freed",
+        "ERROR: BUG, indexing did not unpair geometries from light."
+      ]
+    }
+  ],
+  "image_controls_on_round2_frame": {
+    "same": {
+      "input_sha256": "819c5887e450a455a65aeffe94c4fe60880efb466f36149426ce6d8fb0aa6896",
+      "reference_sha256": "819c5887e450a455a65aeffe94c4fe60880efb466f36149426ce6d8fb0aa6896",
+      "black": 0.0,
+      "quadrant_cie76": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "exit": 0
+    },
+    "shift": {
+      "input_sha256": "5ee83d676e4e6bde7186855c52e0c05c8f8c22109ffdeb84f39148b61b727a0c",
+      "reference_sha256": "819c5887e450a455a65aeffe94c4fe60880efb466f36149426ce6d8fb0aa6896",
+      "black": 0.0,
+      "quadrant_cie76": [
+        105.91641998291,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "exit": 1
+    },
+    "dead": {
+      "input_sha256": "781ecac70db064dbe38d52eb52ba8e55a525495391db38ed92e50452df948245",
+      "reference_sha256": null,
+      "black": 1.0,
+      "quadrant_cie76": [],
+      "exit": 1
+    }
+  },
+  "windowed_reference": "Pending single notified Gate run",
+  "acceptance": "Offscreen-to-offscreen differences are repeatability evidence only."
+}

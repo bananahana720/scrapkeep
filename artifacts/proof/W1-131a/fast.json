@@ -1,0 +1,193 @@
+{
+  "schema": "scrapkeep-fast-receipt/1",
+  "label": "fast",
+  "head": "162dc4fcacd6bbe1f1a3d25b193bbd6e2373fa6d",
+  "base": "origin/stage/alpha-w44",
+  "merge_base": "1d5d77fc6b6260ade5848c98290862eec7f499c0",
+  "started_at": "2026-11-18T14:17:24.390Z",
+  "stages": [
+    {
+      "name": "tree hygiene",
+      "ok": true,
+      "ms": 42,
+      "note": "no symlink, root file or new top-level folder",
+      "findings": []
+    },
+    {
+      "name": "sketch-lint",
+      "ok": true,
+      "ms": 1449,
+      "note": "sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1 W1=0 W2=0 W4=0 W6=27 W7=1 S8=0, 1125ms"
+    },
+    {
+      "name": "placeholders no higher than base",
+      "ok": true,
+      "ms": 4368,
+      "note": "no group grew",
+      "grew": []
+    },
+    {
+      "name": "node tests",
+      "ok": true,
+      "ms": 6573,
+      "note": "scripts/gate/display-run.test.mjs scripts/gate/look-receipts.test.mjs",
+      "tests": [
+        "scripts/gate/display-run.test.mjs",
+        "scripts/gate/look-receipts.test.mjs"
+      ]
+    },
+    {
+      "name": "quarantine",
+      "ok": true,
+      "ms": 6573,
+      "note": "0 rows, none expired"
+    },
+    {
+      "name": "import",
+      "ok": true,
+      "ms": 79129,
+      "note": "ok exit=0"
+    },
+    {
+      "name": "boot",
+      "ok": true,
+      "ms": 85447,
+      "note": "300 frames"
+    },
+    {
+      "name": "tests",
+      "ok": true,
+      "ms": 107394,
+      "note": "7 run, 0 flaky, 0 base-red"
+    }
+  ],
+  "ok": true,
+  "diff_base": "1d5d77fc6b6260ade5848c98290862eec7f499c0",
+  "pre": [],
+  "changed": 5,
+  "selection": {
+    "hubs": [],
+    "unmapped": [
+      "tools/offscreen_probe.gd",
+      "tools/offscreen_window.gd"
+    ],
+    "tests": {
+      "tests/colour_meanings_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/new_world_cost_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/unit_suite_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/presentation_random_lint_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/launch_table_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/ace_tracks_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/codex_coverage_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      }
+    },
+    "deferred_to_full_gate": [],
+    "bot_shards": [],
+    "shard_reasons": {},
+    "estimate_ms": 101640
+  },
+  "failed_runs": [],
+  "batch": {
+    "on": true,
+    "batches": 1,
+    "tests": 4,
+    "reruns": []
+  },
+  "results": [
+    {
+      "test": "tests/new_world_cost_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 825,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/colour_meanings_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1311,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_random_lint_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 282,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/launch_table_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2936,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ace_tracks_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 61,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/codex_coverage_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 122,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/unit_suite_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 18294,
+      "reason": null,
+      "quarantined": false
+    }
+  ],
+  "quarantined": [],
+  "flaky": [],
+  "ledger_flaky": [],
+  "base_red": [],
+  "wall_ms": 107394
+}

@@ -1,0 +1,38 @@
+✔ the probe uses embedded Metal before the project is loaded, with a scratch home (1.244ms)
+✔ the watcher rejects focus changes, visible children, missing periods and missing helper (1.848541ms)
+✔ the Gate reference needs a visible sample for its own process and the pinned executable (1.163917ms)
+✔ two drawn runs wait for one lock across worktrees and have disjoint start/end times (89.384167ms)
+✔ losing the sampler aborts a still-running group before releasing the drawn slot (266.879208ms)
+✔ the existing models-render gate also draws offscreen, keeping its resolution and plant (0.633042ms)
+✔ model receipts see a valid planted comparison but cannot consume an unwatched verdict (0.756334ms)
+✔ models-render: every kind judged, none failed, the plant caught on every kind -> pass (0.832875ms)
+✔ models-render: a dark model is a miss and is named (0.080292ms)
+✔ models-render: a kind with no generated model loaded is a miss and is named (0.057917ms)
+✔ models-render: each count guard fails alone (verdict lines, the check's pin, judged) (0.111083ms)
+✔ models-render: a plant that misses one kind, or whose stats do not show it, is not caught (0.097125ms)
+✔ models-render: a plant switch that reached the real shoot fails the receipt (0.055375ms)
+✔ models-render: the producer takes the head from git and refuses a dirty checkout (59.55225ms)
+✔ models-render: runShoots shoots authored, tripo-all, compares, then shoots and compares the plant (37.412791ms)
+✔ models-render: no display, or a failed shoot, is a miss that says why (36.007166ms)
+✔ display-run: takes a slot, sets a scratch home, never passes --headless, removes the home after (35.040167ms)
+✔ display-run: the scratch home wins over a caller's HOME and platform, on every platform (34.751334ms)
+✔ display-run: refuses window-defeating engine flags and a script that is not res:// (36.364375ms)
+✔ display-run: releases the slot when the launch throws (35.600542ms)
+✔ display-run: the timeout kills the whole run, a forked child or an exec, in under 2 s (640.809667ms)
+✔ display-run: SIGTERM to the node process kills the run's group (693.230667ms)
+✔ display-run: no display on Linux, or another platform, is not supported and starts nothing (0.179708ms)
+✔ no-code-stand-ins: no stand-in, no new primitive, enough surfaces, the plant caught -> pass (0.294375ms)
+✔ no-code-stand-ins: the pin's ruled rows wait, matched on the exact key and only with a cite (0.134458ms)
+✔ no-code-stand-ins: a stand-in the pin allows still fails and is named by file and row (0.057334ms)
+✔ no-code-stand-ins: each guard fails alone (0.188916ms)
+✔ no-code-stand-ins: a plant not caught voids the pass (0.041125ms)
+✔ no-code-stand-ins: a plant switch that reached the counting run fails the receipt (0.03075ms)
+✔ no-code-stand-ins: the producer runs the test then the plant, reads the pin, takes the head from git, refuses a dirty checkout (95.777875ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 30
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1803.432917
