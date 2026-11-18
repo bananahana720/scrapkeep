@@ -180,13 +180,14 @@ func _fixture() -> Dictionary:
 	crew.set_meta("arrival_state", "entering")
 	hidden.sample(cam, 0.1)
 	t.eq("one glimpse before forced removal leaves the warning unmeasured", hidden.reading().short_unwarned, 1)
-	hidden.sample(cam, Chaser.WINDUP)
+	for tick in 6:
+		hidden.sample(cam, 0.1)
 	t.eq("the visible crew has already accumulated its warning lead", hidden.reading().short_unwarned, 0)
 	crew.set_meta("arrival_state", "live")
 	crew.attack_phase.emit({"phase": "windup"})
 	hidden.sample(cam, 0.1)
 	t.eq("crew visible while entering never pops in", hidden.reading().pop_ins, 0)
-	t.near("only visible time before the first warning counts", hidden.reading().seen_before_warning_s, Chaser.WINDUP)
+	t.near("only visible time before the first warning counts", hidden.reading().seen_before_warning_s, Chaser.WINDUP, 0.000001)
 	var mixed := _ordinary_plant(scene, cam, hidden)
 	scene.free()
 	return {"live_ahead": plant, "ordinary_unseen": mixed}
