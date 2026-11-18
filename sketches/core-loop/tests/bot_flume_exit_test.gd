@@ -116,12 +116,18 @@ func _physics_process(delta: float) -> bool:
 		_t.check("%s stands as a kicker" % KICKER, lip != Vector3.INF, str(lip))
 		var route: Array[Vector3] = _driver._climb_route(STALL, _target)
 		var end_y: float = _game.ctx.terrain.height(route.back().x, route.back().z) if not route.is_empty() else -INF
+		# A point merely inside the footprint proves little: the stall line is 2 m from its edge. The
+		# route has to stand high on the grade, which is what climbing it means.
+		var floor_y: float = _game.ctx.terrain.height(STALL.x, STALL.z)
 		var on_grade := 0
+		var grade_rise := 0.0
 		for row in map.park["park_rows"]:
 			if row["id"] == GRADE:
 				for p in route:
 					if map.footprint_contains(row, Vector2(p.x, p.z)):
-						on_grade += 1
+						var rise: float = _game.ctx.terrain.height(p.x, p.z) - floor_y
+						grade_rise = maxf(grade_rise, rise)
+						on_grade += int(rise >= RAMP_HIGH_M)
 		var kickers: Array = _driver._kickers_within(Vector2(STALL.x, STALL.z) - Vector2.ONE * 80.0, Vector2(STALL.x, STALL.z) + Vector2.ONE * 80.0)
 		var kicker_route: Array[Vector3] = _driver._climb_route(Vector3(lip.x - KICKER_RUN_M, STALL.y, lip.z), lip)
 		var on_ramp := 0
@@ -132,8 +138,8 @@ func _physics_process(delta: float) -> bool:
 			STALL, _target, route.size(), on_grade, end_y, _gate_y, route])
 		print("kicker route to the lip %s: %d points, %d high on the ramp: %s" % [lip, kicker_route.size(), on_ramp, kicker_route])
 		_t.check("a climb route to the gates exists", not route.is_empty(), "%d points" % route.size())
-		_t.check("the route to the gates crosses the %s footprint" % GRADE, on_grade > 0, "%d points inside" % on_grade)
-		_t.check("a route that takes the kicker still climbs it", on_ramp > 0, "%d points high on the ramp" % on_ramp)
+		_t.check("the route to the gates climbs the %s" % GRADE, on_grade > 0, "%d points at least %.0f m up it, highest %.1f m" % [on_grade, RAMP_HIGH_M, grade_rise])
+		_t.check("the router still finds a way up the kicker when aimed at its lip", on_ramp > 0, "%d points high on the ramp" % on_ramp)
 		_t.check("the route ends at the gates' level", _gate_y - end_y <= BotDriver.LEVEL_BAND, "ground %.1f, gate %.1f" % [end_y, _gate_y])
 		_start_leg()
 		return false
