@@ -9,6 +9,7 @@ import {
   binary,
   IMPORT_TRIES,
   importWithRetry,
+  spawnCollect,
   scriptErrorCount,
   isBot,
   isSolo,
@@ -884,15 +885,15 @@ async function main() {
   }
   await acquireMachine();
   const base = ["--headless", "--path", sketchDir];
-  const imported = importWithRetry(SKETCH, base, (job) => {
+  const imported = await importWithRetry(SKETCH, base, async (job) => {
     const t = Date.now();
-    const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: 180_000, env: { ...process.env, ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) } });
-    return { label: job.label, exit: result.status, signal: result.signal ?? null, scriptErrors: scriptErrorCount((result.stdout || "") + (result.stderr || "")), ok: result.status === 0, ms: Date.now() - t };
+    const result = await spawnCollect(binary, job.args, { timeoutMs: 180_000, env: { ...process.env, ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) } });
+    return { label: job.label, exit: result.status, signal: result.signal ?? null, scriptErrors: scriptErrorCount(result.output), ok: result.status === 0, ms: Date.now() - t };
   }, log);
   if (!stage("import", imported.ok, { note: imported.tries.map((row) => `${row.outcome} exit=${row.exit ?? row.signal}`).join(", ") })) finish();
   writeImportStamp(root, SKETCH);
-  const boot = spawnSync(binary, [...base, "--quit-after", "300"], { encoding: "utf8", timeout: 180_000, env: { ...process.env, ...userDataEnv(mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) } });
-  const bootVerdict = judge({ status: boot.status, output: (boot.stdout || "") + (boot.stderr || "") });
+  const boot = await spawnCollect(binary, [...base, "--quit-after", "300"], { timeoutMs: 180_000, env: { ...process.env, ...userDataEnv(mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) } });
+  const bootVerdict = judge({ status: boot.status, output: boot.output });
   if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
 
   const results = [];

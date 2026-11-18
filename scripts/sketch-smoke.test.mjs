@@ -491,6 +491,40 @@ test("a lease heartbeat refreshes its claim mtime", async () => {
   }
 });
 
+test("a slot published after a long wait is never born stale", async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-born-stale-"));
+  let lease;
+  try {
+    // Simulate a wait longer than the stale window: the owner file's mtime is old at the moment of publication.
+    const backdate = () => {
+      const claim = readdirSync(directory).find((name) => name.startsWith("claim-"));
+      const file = path.join(directory, claim, claim);
+      const old = (Date.now() - STALE_CLAIM_MS - 60_000) / 1000;
+      utimesSync(file, old, old);
+    };
+    lease = await acquireSlot({ directory, slots: 1, heartbeatMs: 3_600_000, beforePublish: backdate });
+    // A second runner must see the held slot as live, not reap it.
+    assert.equal(namedRunMustWait({ directory, slots: 1 }), true);
+    let slept = false;
+    const second = acquireSlot({
+      directory,
+      slots: 1,
+      pollMs: 1,
+      log: () => {},
+      sleep: async () => {
+        slept = true;
+        throw new Error("second runner waited, as it should");
+      },
+    });
+    await assert.rejects(second, /second runner waited/);
+    assert.equal(slept, true);
+    assert.equal(existsSync(lease.slot), true);
+  } finally {
+    lease?.release();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("a stale waiter directory is swept and a fresh one is kept", async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-waiters-"));
   let lease;
@@ -1160,4 +1194,16 @@ test("readings that start together never hold the machine at the same time", asy
   } finally {
     rmSync(at.directory, { recursive: true, force: true });
   }
+});
+
+test("a long import leaves the event loop free, so a held slot keeps its heartbeat", async () => {
+  let ticks = 0;
+  const timer = setInterval(() => ticks++, 20);
+  const result = await smoke.spawnCollect(process.execPath, ["-e", "setTimeout(() => { console.log('done'); process.exit(3); }, 300)"]);
+  clearInterval(timer);
+  assert.equal(result.status, 3);
+  assert.match(result.output, /done/);
+  assert.ok(ticks >= 5, `the loop ran ${ticks} timer ticks while the child ran`);
+  const slow = await smoke.spawnCollect(process.execPath, ["-e", "setTimeout(() => {}, 5000)"], { timeoutMs: 100 });
+  assert.equal(slow.signal, "SIGTERM", "the time limit still stops a child");
 });

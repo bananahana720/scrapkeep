@@ -464,6 +464,9 @@ export async function acquireSlot({
         try {
           // Publish an already populated directory atomically: no pid-write gap.
           beforePublish(); // a test seam: what happens between this runner's hold check and its publish
+          // A long wait leaves the owner file older than the stale window. Refresh it while the claim is still private,
+          // so the slot is never visible looking stale (a rename keeps the files' mtimes).
+          touch(path.join(claim, owner));
           renameSync(claim, slot);
           // Publish, then check the hold again: the reading writes its hold and then scans the slots, so a runner that
           // slipped in between gives the slot back here before it starts anything.
@@ -789,12 +792,39 @@ function report(job, status, output, ms, signal = null) {
 
 export const scriptErrorCount = (output) => (output.match(/^SCRIPT ERROR\b/gm) ?? []).length;
 
+// One child run with its output collected and a time limit, without blocking the event loop: a held
+// machine slot keeps its heartbeat only while the loop is free, and an import can take minutes.
+export function spawnCollect(command, args, { env = process.env, timeoutMs = TIMEOUT_MS } = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, { env, stdio: ["ignore", "pipe", "pipe"] });
+    let output = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => (output += chunk));
+    child.stderr.on("data", (chunk) => (output += chunk));
+    let kill = null;
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      kill = setTimeout(() => child.kill("SIGKILL"), 5_000);
+    }, timeoutMs);
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      clearTimeout(kill);
+      resolve({ status: null, signal: null, output: output + String(error.message) });
+    });
+    child.on("close", (status, signal) => {
+      clearTimeout(timer);
+      clearTimeout(kill);
+      resolve({ status, signal, output });
+    });
+  });
+}
+
 // Import writes the sketch's .godot cache, so it runs alone before anything reads it.
-function runSync(job) {
+async function runImport(job) {
   const started = Date.now();
-  const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: TIMEOUT_MS, env: { ...process.env, ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-smoke-"))) } });
-  const output = (result.stdout || "") + (result.stderr || "");
-  return { ...report(job, result.status, output, Date.now() - started, result.signal), scriptErrors: scriptErrorCount(output) };
+  const result = await spawnCollect(binary, job.args, { env: { ...process.env, ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-smoke-"))) } });
+  return { ...report(job, result.status, result.output, Date.now() - started, result.signal), scriptErrors: scriptErrorCount(result.output) };
 }
 
 export const IMPORT_TRIES = 3;
@@ -815,10 +845,10 @@ export function importTry({ exit, signal = null, scriptErrors = 0 }) {
 // import fails only when the last try does, so the run stops there and no test prints a misleading
 // red. On a pass, `results` holds the passing try alone (earlier tries are in `tries` and the log):
 // a crash that a retry cleared is not a failed row of the run.
-export function importWithRetry(name, base, run = runSync, log = console.log) {
+export async function importWithRetry(name, base, run = runImport, log = console.log) {
   const tries = [];
   for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
-    const result = run({ label: `${name} import${attempt > 1 ? ` (try ${attempt})` : ""}`, args: [...base, "--import"] });
+    const result = await run({ label: `${name} import${attempt > 1 ? ` (try ${attempt})` : ""}`, args: [...base, "--import"] });
     const outcome = importTry(result);
     tries.push({ ...result, outcome });
     if (outcome === "ok") return { ok: true, results: [result], tries };
@@ -935,7 +965,7 @@ async function main() {
     const quarantineRows = readQuarantineEntries(directory);
     const quarantine = new Set(quarantineRows.map((row) => row.test));
     expired.push(...expiredQuarantine(quarantineRows));
-    const imported = importWithRetry(name, base);
+    const imported = await importWithRetry(name, base);
     results.push(...imported.results);
     if (!imported.ok) {
       console.error(`${name} import failed ${IMPORT_TRIES} times (${imported.tries.map((row) => row.outcome).join(", ")}); tests not run`);
