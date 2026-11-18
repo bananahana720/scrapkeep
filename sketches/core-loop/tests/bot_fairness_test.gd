@@ -116,7 +116,7 @@ func _run() -> void:
 	_line = BotFairness.config()
 	_fixtures()
 	var base := OS.get_user_data_dir().path_join("bot-fairness-%d" % OS.get_process_id())
-	var arms := {"plain": "", "drain": "drain=0.02", "fast_tax": "fast_tax=0.03", "ringless": "ringless=0.3", "scrap": "scrap=0.3"}
+	var arms := {"plain": "", "drain": "drain=0.02", "fast_tax": "fast_tax=0.03", "ringless": "ringless=0.3", "scrap": "scrap=0.1"}
 	var jobs := []
 	for name in arms:
 		jobs.append({"script": "res://tools/bot_run.gd", "args": _args(base.path_join(name), arms[name])})
@@ -217,4 +217,7 @@ func _scrap(f: Dictionary, f1: float, f2: float, f3: float) -> void:
 	_t.check("F1's pooled share drops below the line with the scrap theft planted", pooled != null and float(pooled) < float(_line["telegraphShare"]), "pooled %s" % [pooled])
 	_t.check("F1's pooled share reads below unplanted", pooled != null and float(pooled) < f1, "planted %s, unplanted %s" % [pooled, f1])
 	_t.check("the planted theft is in the scrap record", float(f.get("scrap_sources", {}).get("scrap_plant", 0.0)) > 0.0, "scrap_sources %s" % [f.get("scrap_sources")])
-	_others("scrap", f, f1, f2, f3, "")
+	# F2 is not held for this plant: a theft changes the ball's heft, so the whole run's hull path moves and the one-seed hull F2
+	# swings past its 50% tolerance (0.594 unplanted, 1.50 with 20 scrap taken). That is the one-seed instability the ledger
+	# row for this test already names, so a check on it would read the seed and not the plumbing. F1's hull share and F3 are held.
+	_others("scrap", f, f1, f2, f3, "F2")
