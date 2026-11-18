@@ -109,7 +109,7 @@ func _yard() -> void:
 		var ids := crew.map(func(e): return e.get_instance_id())
 		# Give each wave its share of the lock duration. Preserve missing
 		# observations when we clear survivors to exercise the next wave.
-		var window := float(lock.max_s) / lock.waves.size() - float(lock.wave_gap_s) - 1.0
+		var window: float = float(lock.max_s) / lock.waves.size() - float(lock.wave_gap_s) - 1.0
 		var observed := {}
 		for tick in maxi(1, floori(window * Engine.physics_ticks_per_second)):
 			await physics_frame
