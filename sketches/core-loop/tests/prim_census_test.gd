@@ -41,10 +41,15 @@ const TIMEOUT_S := 840.0
 # change, with the census line that went. A fall nobody meant is a stage that was not built, and fails here.
 const MIN_SURFACES := 129
 
+var _areas := {}
+var _area_hits := []
 var _t := T.new("prim_census_test")
 
 
 func _initialize() -> void:
+	if OS.get_environment("PRIM_SCOPE") == "all":
+		_scan_areas.call_deferred()
+		return
 	var enforce := OS.get_environment("SCRAPKEEP_RELEASE_GATE") == "1"
 	_judge_rules()
 	var pin := PrimCensus.load_pin()
@@ -140,3 +145,115 @@ func _remove_tree(dir: String) -> void:
 	for file in DirAccess.get_files_at(dir):
 		DirAccess.remove_absolute(dir.path_join(file))
 	DirAccess.remove_absolute(dir)
+
+# These stations use the live game for the area census. Each station has its own
+# surface set, so a mesh seen at the title still counts if the shop also draws it.
+
+func _station(area: String, where: Node, ready: bool) -> void:
+	if not _t.check("station reached: " + area, ready and is_instance_valid(where)):
+		return
+	var census := PrimCensus.new()
+	var rows := census.scan(where, Engine.get_physics_frames(), 0, true)
+	var pin := PrimCensus.load_pin()
+	var findings := 0
+	for row in rows:
+		var rule := PrimCensus.pin_for(row, pin)
+		if rule.get("kind", "") == "code":
+			continue
+		var hit := {"area": area, "file": row.owner, "mesh": row.mesh, "shape": row.shape,
+			"path": row.path, "row": rule.get("row", "W1-143b"), "why": rule.get("why", "")}
+		findings += 1
+		_area_hits.append(hit)
+	_areas[area] = {"surfaces": rows.size(), "findings": findings}
+
+
+func _scan_areas() -> void:
+	var game = preload("res://src/game.gd").new()
+	game.test_mode = true
+	game.table = "park"
+	preload("res://src/core/sim_clock.gd").ticks = true
+	root.add_child(game)
+	await process_frame
+	await process_frame
+	game.run.run_seed_override = SEED
+	var screens = game.screens
+	screens.prologue_enabled = false
+	_station("menu/title", game, game.flow.state_name() == "title")
+	for page in ["help", "settings", "achievements"]:
+		screens.call("toggle_" + page)
+		await process_frame
+		_station("menu/" + page, game, screens.call(page + "_open"))
+		screens.call("toggle_" + page)
+	screens.toggle_camp()
+	await process_frame
+	var hub = game.camp_hub
+	var plant := OS.get_environment("PRIM_PLANT")
+	if plant == "camp_box" and hub.built:
+		var box := MeshInstance3D.new()
+		box.name = "PlantedCampBox"
+		box.mesh = BoxMesh.new()
+		hub.root.add_child(box)
+	_station("camp", hub.root, hub.built and hub.walking)
+	for page in ["radio", "jukebox"]:
+		screens.call("toggle_" + page)
+		await process_frame
+		_station("menu/" + page, game, screens.call(page + "_open"))
+		screens.call("toggle_" + page)
+	screens.toggle_camp()
+	game.flow.press_start()
+	await process_frame
+	var roster := preload("res://src/core/class_def.gd").all()
+	_station("menu/pilot-select", game, screens.class_cards().size() == roster.size())
+	game.flow.choose_class(0)
+	await physics_frame
+	var hero = game.presentation.hero_assets
+	_t.eq("six pilot definitions", roster.size(), 6)
+	for pilot in roster:
+		game.player.fit_class(pilot)
+		await process_frame
+		hero._process(0.0)
+		var rec: Dictionary = hero.shell_of(game.player)
+		_station("pilot/" + pilot.id, game.player, rec.get("class") == pilot.id
+			and is_instance_valid(rec.get("pod")) and is_instance_valid(rec.get("core"))
+			and not game.player.find_children("*", "MeshInstance3D", true, false).is_empty())
+	var pause_menu = game.get_node("PauseMenu")
+	pause_menu.open()
+	await process_frame
+	_station("menu/pause", pause_menu, pause_menu.is_open())
+	pause_menu.close()
+	var workshop = game.get_node("Workshop")
+	workshop.armed = true
+	game.build.shop.enter()
+	workshop.open_counter()
+	await process_frame
+	_station("shop", game, workshop.counter.is_open())
+	workshop.close_counter()
+	game.build.shop.leave()
+	for stage in [1, 2]:
+		game.flow.enter_stage(stage, Vector3.ZERO, false)
+		await physics_frame
+		var park: Dictionary = game.ctx.terrain.map().park
+		var events: Array = park.event_rows
+		_t.check("world 1 event rows on stage %d" % stage, not events.is_empty())
+		for row in events:
+			var family = game.world.event_families.get(row.family)
+			if not _t.check("handler for " + row.id, is_instance_valid(family)):
+				continue
+			var site: Dictionary = park.park_rows.filter(func(r): return r.id == row.site)[0]
+			var at := Vector3(float(site.at[0]), 0, float(site.at[1]))
+			at.y = game.ctx.terrain.height(at.x, at.z)
+			var ctx := {"at": at, "clock_s": 1.0, "ball": game.player.ball_position(), "velocity": Vector3.ZERO}
+			for phase in ["telegraph", "land"]:
+				family.handle(phase, row, ctx)
+				await process_frame
+				_station("event/%s/%s" % [row.id, phase], game, game.run.stage == stage)
+			family.handle("end", row, ctx)
+			await process_frame
+	game.run.damage(99999.0, "census")
+	await process_frame
+	_station("menu/death", game, game.flow.state_name() == "dead")
+	var boxes := _area_hits.filter(func(r): return r.area == "camp" and r.path.ends_with("/PlantedCampBox"))
+	_t.check("camp has no planted box", boxes.is_empty(), str(boxes))
+	print("AREAS " + JSON.stringify({"areas": _areas, "findings": _area_hits, "plant": plant}))
+	game.free()
+	quit(_t.verdict())
