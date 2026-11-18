@@ -355,7 +355,7 @@ func _late_phase_rows() -> void:
 	_t.eq("P5 a stagger between charges keeps the row and turns its glyph", [boss.charge_coming(), _plate_row()], [false, ["bait_charge", "Bait into walls, then cockpit", Objectives.COCKPIT_GLYPH]])
 	# A stagger does not hold a Scuttle charge back. From the commit (the lane's tell) to the end of
 	# the run the plate keeps the charge's row, and no marker sends the player at the cockpit.
-	boss._commit_charge(_game.player.ball_position())
+	boss._commit_charge()
 	_t.eq("P5 a charge committed through the stagger keeps the charge's row", [boss.staggered(), boss.charge_coming(), _plate_row()],
 		[true, true, ["bait_charge", "Bait into walls, then cockpit", Objectives.glyph("bait_charge")]])
 	_t.eq("P6 and marks nothing", _marks(), [[], "", ""])

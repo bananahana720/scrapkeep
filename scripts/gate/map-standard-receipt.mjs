@@ -31,7 +31,7 @@ export const TESTS = {
   park_landmark_sight_test: 1,
   park_breath_test: 1,
   park_rhythm_test: 2,
-  park_variety_test: 1,
+  park_variety_test: 2,
   park_cover_tags_test: 2,
   park_feature_census_test: 3,
   park_fight_bowl_test: 2,
