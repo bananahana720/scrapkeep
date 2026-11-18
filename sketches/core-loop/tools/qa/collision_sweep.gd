@@ -22,6 +22,7 @@ extends SceneTree
 # Filtered reports have a -partial suffix with their filter hash; incomplete reads have an -unavailable suffix.
 # --area=wall_fixture checks matching, near and missing wall meshes. --plant-wall hides the matching mesh.
 
+const OffscreenWindow := preload("res://tools/offscreen_window.gd")
 const UndrawnPlaces := preload("res://tools/qa/undrawn_places.gd")
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
@@ -68,6 +69,7 @@ var ball_body: RigidBody3D
 
 
 func _initialize() -> void:
+	OffscreenWindow.apply(root)
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--area="):
 			area = a.trim_prefix("--area=")
@@ -117,7 +119,23 @@ func _run() -> void:
 		_add_fixture_wall("Park_QAWall_Matched", 2000.0, 0.0, not OS.get_cmdline_user_args().has("--plant-wall"))
 		_add_fixture_wall("Park_QAWall_Near", 2010.0, 1.05, true)
 		_add_fixture_wall("Park_QAWall_Missing", 2020.0, 0.0, false)
+		var camera := Camera3D.new()
+		camera.cull_mask = 1
+		game.add_child(camera)
+		camera.position = Vector3(2005, 5, 2009)
+		camera.look_at(Vector3(2005, 4, 2000))
+		if OS.get_cmdline_user_args().has("--frame"):
+			var light := DirectionalLight3D.new()
+			game.add_child(light)
+			light.rotation_degrees = Vector3(-40, 35, 0)
+			camera.environment = Environment.new()
+			camera.environment.background_mode = Environment.BG_SKY
+			camera.environment.sky = Sky.new()
+			camera.environment.sky.sky_material = ProceduralSkyMaterial.new()
 		ground_fn = func(_x: float, _z: float) -> float: return 0.0
+		if not await _save_frame_if_requested():
+			quit(1)
+			return
 		await _physics(2)
 		await _sweep_map("")
 		return
@@ -197,11 +215,27 @@ func _run() -> void:
 		_terrain_check(stage_index)
 		quit(0)
 		return
+	if not await _save_frame_if_requested():
+		quit(1)
+		return
 	ball_body = game.player.body()
 	ball_body.freeze = true
 	ball_body.global_position = Vector3(0.0, -5000.0, 0.0)
 	await _physics(2)
 	await _sweep_map(places_unavailable)
+
+
+# Keep the rider view before the sweep parks the ball below the map.
+func _save_frame_if_requested() -> bool:
+	if not OS.get_cmdline_user_args().has("--frame"):
+		return true
+	if DisplayServer.get_name() == "headless":
+		return false
+	await RenderingServer.frame_post_draw
+	var frame := root.get_texture().get_image()
+	if frame == null or frame.is_empty() or DirAccess.make_dir_recursive_absolute(out_dir) != OK:
+		return false
+	return frame.save_png(out_dir.path_join("view.png")) == OK
 
 
 func _sweep_map(places_unavailable: String) -> void:
@@ -293,6 +327,11 @@ func _add_fixture_wall(label: String, x: float, mesh_offset_z: float, drawn: boo
 	view.mesh = mesh
 	view.position.z = mesh_offset_z
 	view.visible = drawn
+	if label == "Park_QAWall_Matched":
+		if OS.get_cmdline_user_args().has("--layer-zero-wall"):
+			view.layers = 0
+		elif OS.get_cmdline_user_args().has("--camera-masked-wall"):
+			view.layers = 2
 	wall.add_child(view)
 	game.add_child(wall)
 
@@ -353,6 +392,11 @@ func _shape_faces(shape: Shape3D) -> PackedVector3Array:
 	return mesh.get_faces() if mesh != null else PackedVector3Array()
 
 
+func _rider_can_see(view: GeometryInstance3D) -> bool:
+	var camera := root.get_camera_3d()
+	return camera != null and view.is_visible_in_tree() and (view.layers & camera.cull_mask) != 0
+
+
 # Drawn meshes near any blocker, copied as baked trimeshes onto VISUAL_LAYER.
 func _visual_bodies(blockers: Array) -> Array:
 	var cell := 32.0
@@ -379,7 +423,7 @@ func _visual_bodies(blockers: Array) -> Array:
 	var made: Array = [holder]
 	for node in game.find_children("*", "GeometryInstance3D", true, false):
 		var gi := node as GeometryInstance3D
-		if not gi.is_visible_in_tree() or gi.visibility_range_begin > NEAR_BEGIN_M:
+		if not _rider_can_see(gi) or gi.visibility_range_begin > NEAR_BEGIN_M:
 			continue
 		if (player_node != null and player_node.is_ancestor_of(gi)) or holder.is_ancestor_of(gi):
 			continue
@@ -752,7 +796,7 @@ func _watch_contacts() -> void:
 func _drawn_near(body: Node, p: Vector3) -> bool:
 	var top: Node = body.get_parent() if body.get_parent() != null else body
 	for node in [body] + top.find_children("*", "GeometryInstance3D", true, false):
-		if node is GeometryInstance3D and (node as GeometryInstance3D).is_visible_in_tree():
+		if node is GeometryInstance3D and _rider_can_see(node):
 			var gi := node as GeometryInstance3D
 			if (gi.global_transform * gi.get_aabb()).grow(tol).has_point(p):
 				return true

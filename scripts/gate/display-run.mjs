@@ -154,6 +154,16 @@ const PROBE = "res://tools/offscreen_probe.gd";
 // Keep the receipt before admitting the registration to the stage. A helper marker alone
 // does not qualify a tool. The probe inherits the dam capture, so pin both scripts.
 const watchedTools = new Map([
+  ["res://tools/qa/collision_sweep.gd", {
+    "tools/qa/collision_sweep.gd": "cec9b202f318fa7fc56f4e3f5bd208e0376f5fd7d8f6c63c52202e65e81c3369",
+    "tools/qa/undrawn_places.gd": "a2bd84dd039e4174f22bfbd879f70294922a9bf6af7200c67a3e3996034a5799",
+    "tools/offscreen_window.gd": "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d",
+    "tools/bot_driver.gd": "c8c27ad0c9c22ec2f432ed3479ba7d4b3e5f4ff6258de7d18c500b3a4ab138f1",
+    "tools/bot_kite.gd": "807dce96556c24e2c7bd6e87f5a8be7115cca376bca479446f0a246464dccfd5",
+    "tools/bot_fairness.gd": "da843f6b7be47cb9464a1b0b78b424a953d0c1792ab7a0104cd96122ac907d53",
+    "tools/bot_loops.gd": "7d6f7e9b0c21a4aa8dfd634897c5e58500593cf1c61f414c906af4abd95fbf68",
+    "tools/skill_band.gd": "f62487eac3bc8f5f0902001f0c3e48568a1a4e4d06481ae2b2a067cd39bf743a",
+  }],
   [PROBE, {
     // proof/W1-131 at 2c2dfa665, artifacts/proof/W1-131a/capture.json
     "tools/offscreen_probe.gd": "156464df4c44b25ba4f903f6786557bdff94a71b89f033744c0021f5d734819b",

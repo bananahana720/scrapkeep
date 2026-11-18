@@ -165,6 +165,26 @@ func _check_wall_reports(out: String, partial_stem: String) -> void:
 	print("RECEIPT %s" % JSON.stringify({"places_by_owner": counts, "bare_samples": counted,
 		"invisible_samples": report["totals"]["invisible"]}))
 
+	# The game hides substituted meshes with layers=0 while keeping them in the scene tree.
+	# A nonzero layer outside the rider camera's mask is equally absent from its view.
+	args.remove_at(args.size() - 1)  # owner filter
+	if args.has("--plant-wall"):
+		args.remove_at(args.find("--plant-wall"))
+	for layer_flag: String in ["--layer-zero-wall", "--camera-masked-wall"]:
+		output.clear()
+		code = OS.execute(OS.get_executable_path(), args + PackedStringArray([layer_flag]), output, true)
+		if not _t.check("layer control ran " + layer_flag, code == 0, str(code)):
+			print("\n".join(output))
+			continue
+		var layer_report = JSON.parse_string(FileAccess.get_file_as_string(path))
+		var owners := []
+		for place in layer_report["places"]:
+			owners.append(place["owner"])
+		owners.sort()
+		_t.eq("rider-hidden mesh counts as a third place " + layer_flag, owners,
+			["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"])
+		_t.eq("same collider samples in both layer readings", layer_report["totals"]["samples"], report["totals"]["samples"])
+
 
 # Rolls out of spot from 8 sides (tools/spot_sweep.gd --leave=1): no probe may hang or stick, and the drop must land.
 func _roll_out(spot: Array) -> void:
