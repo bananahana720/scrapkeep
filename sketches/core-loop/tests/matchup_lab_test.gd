@@ -15,6 +15,11 @@ var _failures := 0
 
 
 func _initialize() -> void:
+	if "--fast-pass-only" in OS.get_cmdline_user_args():
+		_fast_pass_receipt()
+		quit(0 if _failures == 0 else 1)
+		return
+	_fast_pass_receipt()
 	_synthetic()
 	_pocket_pure()
 	_lookup()
@@ -310,6 +315,34 @@ func _damage_control() -> void:
 	for r in rows:
 		hurt = hurt or (float(r["hits"]) > 0.0 and float(r["damage_taken"]) > 0.0 and float(r["hull_lost"]) > 0.0)
 	_check("planted positive: an idle pilot is hit, takes damage and loses hull (2 rows)", rows.size() == 2 and hurt)
+
+
+# Both stages ship grounded. A result for the dam must never stand in for the flume.
+# Invoke the producer as the done read does, without the old duel table's --out.
+func _fast_pass_receipt() -> void:
+	var receipt := OS.get_user_data_dir().path_join("fast-threat-%d-%d.json" % [OS.get_process_id(), Time.get_ticks_usec()])
+	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
+		"--script", "res://tools/matchup_lab.gd", "--", "--packs=grounded", "--table=park",
+		"--pass=straight", "--speed=14,28", "--seeds=1", "--pilots=tarn", "--receipt=" + receipt]
+	var output := []
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	_check("the fast-pass producer writes its receipt", code == 0 and FileAccess.file_exists(receipt))
+	if code != 0 or not FileAccess.file_exists(receipt):
+		printerr("\n".join(output))
+		return
+	var result = JSON.parse_string(FileAccess.get_file_as_string(receipt))
+	var rows = result.get("passes") if result is Dictionary else null
+	if not rows is Array:
+		_check("the fast-pass receipt contains individual passes", false)
+		return
+	var observed := []
+	for row in rows:
+		if row is Dictionary and row.get("pack") == "grounded" and row.get("pass") == "straight" \
+				and row.get("pilot") == "tarn" and row.get("seed") == 1:
+			observed.append("%d/%d" % [row["stage"], row["speed"]])
+	observed.sort()
+	_check("grounded is ridden once at each speed on each Spillway stage",
+		rows.size() == 4 and observed == ["1/14", "1/28", "2/14", "2/28"])
 
 
 func _packs_pure() -> void:
