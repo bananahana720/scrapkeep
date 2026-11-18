@@ -164,7 +164,7 @@ static func apply(kit, state, tuning, intent, aim: Basis, body_state) -> void:
 	if kit.plant_time > 0.0:
 		return
 	_glide(kit, state, tuning, intent, aim, body_state, step)
-	_grapple(kit, state, tuning, intent, body_state, step)
+	_grapple(kit, tuning, intent, body_state, step)
 
 
 # While the ball is planted by a slam or mounted on a pylon, drive, boost and jump
@@ -741,7 +741,7 @@ static func _keep_body_line(kit, tuning, body_state) -> void:
 		_follow(kit, tuning, body_state.transform.origin)
 
 
-static func _grapple(kit, state, tuning, intent, body_state, step: float) -> void:
+static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 	if not kit.hooked:
 		return
 	var origin: Vector3 = body_state.transform.origin
@@ -780,15 +780,6 @@ static func _grapple(kit, state, tuning, intent, body_state, step: float) -> voi
 		# tangential speed alone, which is what turns a fall into a pendulum.
 		var outward := -v.dot(dir)
 		if outward > 0.0:
-			# A ball rolling downhill can be caught between the bank and a
-			# taut cable. Carry the roll where those two constraints meet.
-			if not kit.winching and state.grounded and v.y < 0.0:
-				var along: Vector3 = state.contact_normal.cross(dir).normalized()
-				var rolling := v.dot(along)
-				if absf(rolling) > 0.01:
-					var half_turn := 0.5 * v.length() * step / dist
-					body_state.linear_velocity = (along * signf(rolling) * cos(half_turn) + dir * sin(half_turn)) * v.length()
-					return
 			v += dir * outward
 		v += dir * (dist - kit.rope) * tuning.f("rope_spring")
 	body_state.linear_velocity = v
