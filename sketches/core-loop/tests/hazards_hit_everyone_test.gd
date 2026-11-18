@@ -198,6 +198,7 @@ func _run() -> void:
 	_rolling()
 	_cruise_line()
 	_exempt()
+	_stand_down()
 	_kill()
 	_flood()
 	quit(t.verdict())
@@ -356,6 +357,39 @@ func _exempt() -> void:
 		w.ctx.flow.is_engaged = true
 		w.ctx.flow.beacon = ring
 		w.ctx.flow.warden = warden)
+
+
+# A ball that stops on the stage is sought; the moment the world turns exempt the tell in flight is dropped and the
+# read starts over, so going back to the stage does not seek it again for a stall window.
+func _stand_down() -> void:
+	var fx := _fixture(DOME)
+	var w = fx[0]
+	var handler = fx[1]
+	w.ctx.flow = Flow.new()
+	w.ctx.player.at = Vector3(30, 1.2, 0)
+	var clock := 0.0
+	while handler.seek.pending() == null and clock < 40.0:
+		_tick(w, handler, clock)
+		clock += DT
+	if not t.check("stand down: a tell began on the stage (none is a miss)", handler.seek.pending() != null):
+		w.free()
+		return
+	var strikes: int = handler.seek.strikes
+	var tells: int = handler.seek.tells
+	w.ctx.flow.name = "gates"
+	_tick(w, handler, clock)
+	clock += DT
+	t.check("stand down: the tell in flight is dropped", handler.seek.pending() == null)
+	t.eq("stand down: no strike", handler.seek.strikes, strikes)
+	t.eq("stand down: no scrap lost", w.ctx.run.losses.size(), 0)
+	w.ctx.flow.name = "stage"
+	var quiet := StormSeek.SiltBoil.LOOP_WINDOW
+	var end := clock + quiet
+	while clock < end:
+		_tick(w, handler, clock)
+		clock += DT
+	t.eq("stand down: no new tell for a stall window after the stage returns", handler.seek.tells, tells)
+	w.free()
 
 
 func _kill() -> void:

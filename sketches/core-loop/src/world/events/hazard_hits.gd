@@ -7,7 +7,7 @@ const SiltBoil := preload("res://src/combat/silt_boil.gd")
 # every enemy whose feet are inside the same committed area it tests the ball against, once per activation,
 # with the knock the silt boils give (silt_boil.gd _erupt): the flash comes with take_damage, the toss shows it
 # moved. A kill drops what any kill drops: take_damage ends in enemy.died, which combat files with
-# record_kill as a hazard's own kind of kill: it drops and counts, but fires no on-kill item or tree effect (assumption: no ruling sets hazard kills apart). Set pieces (the Warden, the vault, boss pieces)
+# record_kill as a hazard's own kind of kill: it drops and counts, but fires no on-kill item or tree effect (Gate assumption, no ruling covers it). Set pieces (the Warden, the vault, boss pieces)
 # are never struck, as the silt spares them. The stage dial hazard.hits_enemies_by_stage (ChallengeDials) turns
 # it on: world 1's two stages; worlds 2 and 3 are parked (ruling at). The same dial turns on the storm's seek and
 # the flood's tax (natural.gd), the pressure that pays for the easier fights.

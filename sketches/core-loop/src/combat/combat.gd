@@ -3783,7 +3783,7 @@ func cloak_sight() -> float:
 func _on_proc_fact(kind: String) -> void:
 	if ctx == null or not ctx.flow.in_play() or ctx.run.class_def == null:
 		return
-	# A spark kill (wear_trail) procs no tree effect.
+	# A spark kill (wear_trail) or a hazard kill (hazard_hits.gd) procs no tree effect.
 	if kind == "enemy_killed" and ctx.run.last_kill_triggerless:
 		return
 	for proc in ctx.player.tree.procs():

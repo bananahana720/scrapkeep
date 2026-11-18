@@ -14,7 +14,7 @@ The covered files: `sketches/core-loop/src/world/events/storm_seek.gd` (the seek
 | `Begin` | `StormSeek.step`: one `Hazard` committed on the ball's spot (`commit_annulus`); `_seek` sends the `lightning_mark` cue |
 | `Fill` | `Hazard.step` while `state == WARN` (`TELL_S` 1.2 s, never under the hazard's 1.0 s floor) |
 | `Strike` | `StormSeek.step` on the tick the warning ends: `hit` runs once; `_seek` tests the ball with `hazard.contains` and strikes enemies through `HazardHits.strike` with the same `contains` |
-| `Cleared` | `StormSeek.clear()`, called from the storm's `_end` for a lightning row and from `release` |
+| `Cleared` | `StormSeek.clear()`, called from the storm's `_end` for a lightning row and from `release`; `StormSeek.stand_down()` drops a tell the same way when the ball enters a place a storm does not seek |
 | `Cool`, `Rested` | `StormSeek` `REST_S`, counted down in `observe` |
 
 ## Ticks and seconds
