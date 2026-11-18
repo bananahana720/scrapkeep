@@ -465,6 +465,8 @@ export async function acquireSlot({
           // Publish an already populated directory atomically: no pid-write gap.
           beforePublish(); // a test seam: what happens between this runner's hold check and its publish
           renameSync(claim, slot);
+          // A long wait leaves the owner file older than the stale window; refresh it at publication so a slot is never born stale.
+          touch(path.join(slot, owner));
           // Publish, then check the hold again: the reading writes its hold and then scans the slots, so a runner that
           // slipped in between gives the slot back here before it starts anything.
           if (quietHolder(quietDirectory) !== null) {
