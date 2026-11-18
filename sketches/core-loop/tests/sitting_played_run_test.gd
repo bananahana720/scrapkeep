@@ -18,12 +18,9 @@ const Profile := preload("res://src/core/profile.gd")
 # Evidence limit: one seed, skipper policy, headless; a loop the bot never plays reads as not fired.
 
 const LOOPS := ["heat", "overtime", "called_shot", "marked_hull", "moss_scale", "carry_core"]
-# Loops the bot has no hand for yet, so the run cannot fire them. Carry a core needs two things the skipper
-# never does before the bay: a finished activity (a companion piece, activities.gd _pay_piece) and a bonus
-# core (an overtime pot cashed after three rings, a vault, an ambush altar). Until a hand does both, the
-# run's receipt (scripts/gate/sitting-played-receipt.mjs) reads fail and names it. A loop here is not
-# asserted as fired, and the test fails the day it does fire, so the list cannot go stale.
-const OPEN := ["carry_core"]
+# Loops the bot cannot fire yet, so the run does not assert them. A loop here is not asserted as fired, and the
+# test fails the day it does fire, so the list cannot go stale.
+const OPEN := []
 # The seed the run is played on: one where a keeper's trade stands near the stage's start, which the
 # marked hull needs (trade_pockets.gd draws one by seed and stage).
 const SEED := 5
