@@ -7,7 +7,8 @@ const STATIONS := "res://tools/stations/W1-135.json"
 const ENTRY_SPEED := 14.0
 const HOLD_TICKS := 75
 const LANDING_LIMIT := 360
-const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const Rules := preload("res://src/movement/ball_rules.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
@@ -71,7 +72,7 @@ func measure(id: String, site: Dictionary, no_bite: bool) -> Dictionary:
 	var pose := _station(site)
 	var row := {"site": id, "status": "no hold"}
 	if pose.is_empty():
-		row["reason"] = "station geometry missing"
+		row.status = "invalid setup"
 		return row
 	if no_bite:
 		# Move the approach beyond rope range. The ordinary aim and fire decide the result.
@@ -80,13 +81,14 @@ func measure(id: String, site: Dictionary, no_bite: bool) -> Dictionary:
 		pose.eye += away
 	row["target_xyz"] = [pose.target.x, pose.target.y, pose.target.z]
 	row["entry_xyz"] = [pose.entry.x, pose.entry.y, pose.entry.z]
-	row["gravity_mps2"] = game.tuning.f("gravity")
+	row["gravity_mps2"] = float(ProjectSettings.get_setting("physics/3d/default_gravity")) * game.player.body().gravity_scale
 	var held := await _take(pose, HOLD_TICKS)
 	row["held"] = held
 	if held.status != "landed":
 		row.status = held.status
 		return row
 	var best := {}
+	var worst_energy := float(held.exit_energy_residual)
 	var early_surfaces := {}
 	for tick in range(1, HOLD_TICKS):
 		var early := await _take(pose, tick)
@@ -94,60 +96,40 @@ func measure(id: String, site: Dictionary, no_bite: bool) -> Dictionary:
 			row.status = "incomplete early trial"
 			row["early"] = early
 			return row
-		early_surfaces[early.landing_surface] = true
+		if not early.tier.is_empty():
+			early_surfaces[early.tier] = true
+		worst_energy = maxf(worst_energy, early.exit_energy_residual)
 		if best.is_empty() or early.landing_mps > best.landing_mps:
 			best = early
 	row["best_early"] = best
-	row["early_landing_surfaces"] = early_surfaces.keys()
+	row["worst_exit_energy_residual"] = worst_energy
+	row["held_only_tier"] = not held.tier.is_empty() and not early_surfaces.has(held.tier)
+	row["early_tiers"] = early_surfaces.keys()
 	row["early_trials"] = HOLD_TICKS - 1
 	row.status = "measured"
 	return row
 
 
 func _station(site: Dictionary) -> Dictionary:
-	var target: Vector3
-	var heading: Vector3
-	var collider: Node
+	var target := _xyz(site.point)
+	var entry := _xyz(site.ball_position)
+	var heading := _xyz(site.ball_velocity).normalized()
+	var expected: Node3D
 	if site.has("mast_angle_deg"):
 		var arena = game.ctx.boss.arena
-		var angle := deg_to_rad(float(site.mast_angle_deg))
-		target = arena.point_at(angle, Arena.MAST_R, float(site.target_lift_m))
-		heading = Arena.tangent(angle)
-		collider = arena.get_node_or_null("Bowl")
+		target = arena.global_position + _xyz(site.bowl_target_local)
+		entry = arena.global_position + _xyz(site.bowl_entry_local)
+		expected = arena.get_node_or_null("Bowl")
 	else:
-		var field: Node = game.find_child("Park_" + String(site.park_row), true, false)
-		if field == null:
-			return {}
-		collider = field.get_node_or_null("Collider")
-		if site.has("eye"):
-			return {"target": _xyz(site.point), "eye": _xyz(site.eye), "entry": _xyz(site.ball_position),
-				"heading": _xyz(site.ball_velocity).normalized(), "collider": collider}
-		heading = _xyz(site.ball_velocity).normalized()
-		# The span is a field of standing timbers. Aim at the nearest actual
-		# timber to the station mark, which may itself be in the gap between two.
-		if collider == null:
-			return {}
-		var mark: Vector3 = game.ctx.terrain.drop_point(site.point[0], site.point[2], site.point[1])
-		var nearest := INF
-		for part: Dictionary in ParkRecipes.collider_shapes(collider):
-			if part.disabled:
-				continue
-			var center: Vector3 = part.global_transform.origin
-			if part.shape is ConvexPolygonShape3D:
-				var points: PackedVector3Array = part.shape.points
-				var box := AABB(points[0], Vector3.ZERO)
-				for corner in points:
-					box = box.expand(corner)
-				center = part.global_transform * box.get_center()
-			var distance := center.distance_squared_to(mark)
-			if distance < nearest:
-				target = center
-				nearest = distance
-		if nearest == INF:
-			return {}
-	var entry := target - heading * 8.0 + heading.cross(Vector3.UP) * 3.0 - Vector3.UP * 1.0
-	return {"target": target, "entry": entry, "eye": entry - heading * 6.0 + Vector3.UP * 3.0,
-		"heading": heading, "collider": collider}
+		expected = game.find_child("Park_" + String(site.park_row), true, false)
+		if site.terrain_relative:
+			target.y += game.ctx.terrain.height(target.x, target.z)
+			entry.y += game.ctx.terrain.height(entry.x, entry.z)
+	if expected == null:
+		return {}
+	var eye := _xyz(site.eye) if site.has("eye") else entry - heading * 6.0 + Vector3.UP * 3.0
+	return {"target": target, "entry": entry, "eye": eye, "heading": heading, "expected": expected,
+		"stamped": site.get("stamped", false), "tiers": site.get("tiers", []), "bowl": site.has("mast_angle_deg")}
 
 
 func _take(pose: Dictionary, release_tick: int) -> Dictionary:
@@ -172,12 +154,16 @@ func _take(pose: Dictionary, release_tick: int) -> Dictionary:
 	var hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(query)
 	# The bowl shares a single body between floor, ramps and masts. The face must
 	# also be at the requested mast, and the flume must bite the recorded timber.
-	if hit.is_empty() or hit.collider != pose.collider or point.distance_to(pose.target) > 2.0:
+	var intended := false
+	if not hit.is_empty():
+		intended = hit.collider == pose.expected or pose.expected.is_ancestor_of(hit.collider)
+		if pose.stamped:
+			intended = hit.collider.name.begins_with("Tile")
+	if not intended or point.distance_to(pose.target) > 2.0:
 		result["reason"] = "line caught a different face"
 		result["hit_xyz"] = [point.x, point.y, point.z]
 		return result
 	result["bite_xyz"] = [point.x, point.y, point.z]
-	source.hold["brake_held"] = true
 	for tick in range(1, release_tick):
 		await game.get_tree().physics_frame
 		if not player.kit.hooked:
@@ -192,20 +178,47 @@ func _take(pose: Dictionary, release_tick: int) -> Dictionary:
 	var body: RigidBody3D = player.body()
 	result["exit_mps"] = body.linear_velocity.length()
 	result["drop_m"] = pose.entry.y - player.ball_position().y
+	var gravity := float(ProjectSettings.get_setting("physics/3d/default_gravity")) * body.gravity_scale
+	result["exit_energy_residual"] = body.linear_velocity.length_squared() - (ENTRY_SPEED * ENTRY_SPEED + 2.0 * gravity * result.drop_m)
 	for tick in LANDING_LIMIT:
-		if player.state.grounded:
-			var v := body.linear_velocity
+		var state := PhysicsServer3D.body_get_direct_state(body.get_rid())
+		for i in state.get_contact_count():
+			var floor_body = state.get_contact_collider_object(i)
+			if not Rules.world_face(floor_body) or state.get_contact_local_normal(i).y <= Tuning.MAX_SLOPE_DOT:
+				continue
+			var at := state.get_contact_collider_position(i)
+			var v := state.linear_velocity
 			result["landing_mps"] = Vector2(v.x, v.z).length()
-			var at: Vector3 = player.ball_position()
 			result["landing_xyz"] = [at.x, at.y, at.z]
-			var floor_ray := PhysicsRayQueryParameters3D.create(at, at - Vector3.UP * 2.5, 1)
-			var floor_hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(floor_ray)
-			result["landing_surface"] = str(game.get_path_to(floor_hit.collider)) if not floor_hit.is_empty() else ""
+			result["landing_surface"] = str(game.get_path_to(floor_body))
+			result["landing_shape"] = state.get_contact_collider_shape(i)
+			result["tier"] = _tier(pose, floor_body, at)
 			result.status = "landed"
 			return result
 		await game.get_tree().physics_frame
 	result.status = "no landing"
 	return result
+
+
+# Only a named ledge/deck with a walkable contact counts. In the bowl the
+# deck and floor share one body, so check the raised end of the actual ramp.
+func _tier(pose: Dictionary, surface: Node3D, at: Vector3) -> String:
+	if pose.bowl:
+		var arena = game.ctx.boss.arena
+		if surface != pose.expected:
+			return ""
+		for degrees in Arena.RAMP_ANGLES:
+			var angle := deg_to_rad(float(degrees))
+			var deck: Vector3 = arena.point_at(angle, Arena.RAMP_TO, Arena.RAMP_TOP)
+			var rel := at - deck
+			if absf(rel.dot(Arena.tangent(angle))) <= Arena.RAMP_HALF_WIDTH and absf(rel.dot(Arena.dir(angle))) <= 1.0 and absf(rel.y) <= 0.5:
+				return "bowl_ramp_%d" % degrees
+	else:
+		for id in pose.tiers:
+			var ledge := game.find_child("Park_" + String(id), true, false) as Node3D
+			if ledge != null and (ledge == surface or ledge.is_ancestor_of(surface)):
+				return id
+	return ""
 
 
 func _xyz(values: Array) -> Vector3:

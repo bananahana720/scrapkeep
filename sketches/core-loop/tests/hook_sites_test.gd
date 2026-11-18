@@ -35,7 +35,12 @@ func _initialize() -> void:
 		if row.status != "measured":
 			continue
 		t.eq("%s tried every earlier physics tick" % row.site, int(row.early_trials), HookSites.HOLD_TICKS - 1)
-		if row.held.landing_mps >= row.best_early.landing_mps:
+		var station: Dictionary = stations[row.site]
+		var baseline = station.get("round0_early_landing_mps")
+		var early_preserved: bool = baseline != null and float(row.best_early.landing_mps) >= float(baseline) - 0.001
+		# A game verdict needs the frozen numerical control as well as a payoff.
+		# Leave the row reporting until the sites and baselines have been frozen.
+		if early_preserved and (row.held_only_tier or row.held.landing_mps >= row.best_early.landing_mps) and row.worst_exit_energy_residual <= 0.001:
 			paid += 1
 	t.eq("station count", sampled.size(), stations.size())
 	print("RECEIPT ", JSON.stringify({"row": "hook-pays", "pass": paid == stations.size() and t.failures == 0,
