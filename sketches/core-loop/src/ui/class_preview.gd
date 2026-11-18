@@ -6,6 +6,7 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
+const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const WorldGrade := preload("res://src/presentation/world_grade.gd")
 
@@ -106,10 +107,9 @@ var _look_idle := LOOK_HOLD
 var look_dragging := false
 # --profile=sitting: the unlock plays on the first focus of every launch instead.
 var sitting := false
-const IDLE_CLIP := "idle_loop"
 const UNLOCK_CLIP := "unlock"
 const UNLOCK_SEEN := "unlock_clip_"
-const BASE_BLEND: float = preload("res://src/presentation/pilot_reactions.gd").BASE_BLEND
+const BASE_BLEND: float = PilotReactions.BASE_BLEND
 # At rest the pilot climbs out and does their bit (pilot_antics.gd) every ANTIC_PERIOD seconds,
 # each card on its own phase so a row of cards never moves in step; never in the first period,
 # so a card you just opened on shows its still first.
@@ -283,17 +283,7 @@ func _fit_pilot() -> void:
 # (the same still as before) when the GLB has it; else animator stopped, bones at rest pose.
 # Returns the clip now playing, or "".
 func seat_pilot() -> String:
-	if _animator == null or _pilot == null:
-		return ""
-	if _animator.has_animation(IDLE_CLIP):
-		if _animator.current_animation != IDLE_CLIP or not _animator.is_playing():
-			_animator.play(IDLE_CLIP, BASE_BLEND if _animator.is_playing() else 0.0)
-			_animator.advance(0.0)
-		return IDLE_CLIP
-	_animator.stop()
-	for skeleton in _pilot.find_children("*", "Skeleton3D", true, false):
-		skeleton.reset_bone_poses()
-	return ""
+	return PilotReactions.seat_idle(_animator, _pilot)
 
 
 # PILOT-CLIPS section 1.4: the first focus after the pilot unlocks plays unlock, once per

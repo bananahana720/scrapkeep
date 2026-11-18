@@ -25,6 +25,11 @@ const CAP_SIZE := Vector3(2.2, 0.8, 2.2)
 # whole width, so it never drops out mid-fight.
 const PLATE_REACH := 160.0
 const PLATE_LIFT := DECK + 4.0
+# The charge shove's cutaway: a camera body whose box, grown by CUTAWAY_MARGIN, meets the column CUTAWAY_COLUMN metres
+# up from the rider turns every mesh it stands for to this transparency.
+const CUTAWAY_TRANSPARENCY := 0.88
+const CUTAWAY_COLUMN := 12.0
+const CUTAWAY_MARGIN := 1.0
 # The fortress and its scooter (recipes in tools/blender/bosses). The primitives below stay
 # built and are only hidden when the model loads, so a missing GLB leaves the old boxes.
 const MODEL := "res://assets/models/bosses/boss_brindle.glb"
@@ -71,6 +76,7 @@ var _pending_hides := {}
 var _drawn_parts: Array = []
 # One camera-only body per drawn box, [body, node, local AABB], so the chase camera meets what is drawn.
 var _camera_bodies: Array = []
+var _shoved_rider: Node3D
 
 
 func build(boss) -> void:
@@ -137,7 +143,14 @@ func _build_camera_bodies() -> void:
 		shape.shape = BoxShape3D.new()
 		body.add_child(shape)
 		add_child(body)
-		_camera_bodies.append([body, part[0], part[1], Vector3.ZERO])
+		_camera_bodies.append([body, part[0], part[1], Vector3.ZERO, part[2] if part.size() > 2 else [part[0]]])
+	_follow_drawn_parts()
+
+
+# During a charge shove the rider can pass through the hull. Each camera body standing over the ball goes
+# see-through whole, with every mesh it stands for (so the hull goes with its fittings), and the rest stay opaque.
+func follow_shoved_rider(rider: Node3D) -> void:
+	_shoved_rider = rider
 	_follow_drawn_parts()
 
 
@@ -162,6 +175,18 @@ func _follow_drawn_parts() -> void:
 		if not size.is_equal_approx(row[3]):
 			(shape.shape as BoxShape3D).size = size
 			row[3] = size
+		# The close chase lens is above the ball. A one-radius column covers
+		# the moving cage even when the arm pivot trails the sideways shove.
+		var covering := false
+		if is_instance_valid(_shoved_rider):
+			var ball := body.to_local(_shoved_rider.global_position)
+			var above := body.to_local(_shoved_rider.global_position + Vector3.UP * CUTAWAY_COLUMN)
+			covering = AABB(-size * 0.5, size).grow(CUTAWAY_MARGIN).intersects_segment(ball, above) != null
+		var layer := 0 if covering else ChaseCamera.CAMERA_BODY_BIT
+		if body.collision_layer != layer:
+			body.collision_layer = layer
+			for mesh in row[4]:
+				mesh.transparency = CUTAWAY_TRANSPARENCY if covering else 0.0
 
 
 static func _cable_mesh() -> ArrayMesh:
@@ -216,16 +241,18 @@ func _find_drawn_parts() -> void:
 				nodes.append(found)
 		var hull_mesh := model.find_child("Hull", true, false) as Node3D
 		var fittings := AABB()
+		var fitting_meshes := []
 		var any := false
 		for part in FITTING_PARTS:
 			var f := model.find_child(part, true, false) as VisualInstance3D
 			if f != null and hull_mesh != null:
+				fitting_meshes.append(f)
 				var local: AABB = hull_mesh.global_transform.affine_inverse() * f.global_transform * f.get_aabb()
 				fittings = local if not any else fittings.merge(local)
 				any = true
 		if any:
 			# The drums turn with the idle clip, so their box is grown past a drum's corners.
-			_drawn_parts.append([hull_mesh, fittings.grow(0.6)])
+			_drawn_parts.append([hull_mesh, fittings.grow(0.6), fitting_meshes])
 	else:
 		for prim in _prims:
 			var owner_piece = prim.get_parent()

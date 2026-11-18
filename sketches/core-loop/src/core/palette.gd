@@ -32,6 +32,8 @@ const SLATE_INK := Color("a3b3c3")
 # Worn steel: the cog, the money, and the grey panels' hardware (W1-21). Neutral and light, so it is
 # neither Brindle's brass nor the relic's amber to any eye, nor slate's cool "not yet".
 const STEEL := Color("9aa0a0")
+# Weathered steel uprights, warmer and lighter than STEEL: the Slag Bowl's crane masts against its copper ramps.
+const MAST_STEEL := Color("b7b6a3")
 # Frost and ice reads in models and icons (VISUAL-LANGUAGE section 2 extension).
 const ICE := Color("c8f0ff")
 # Icon-only inks (tools/icons/generate_icons.py): ash for Redjaw, the ledger page's light, and the older verdigris.

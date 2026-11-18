@@ -67,6 +67,9 @@ func _plant(label: String, id: String, rule: String, mutate: Callable) -> void:
 
 
 func _planted_rows() -> void:
+	# A row's optional clear_view needs a depth and a half width above zero.
+	_plant("clear_view without a depth", "deck", "missing", func(p): _row(p, "park_rows", "deck")["clear_view"] = {"half_width_m": 8})
+	_plant("clear_view of no width", "deck", "clear_view", func(p): _row(p, "park_rows", "deck")["clear_view"] = {"depth_m": 20, "half_width_m": 0})
 	# A field is missing, or an enum value is not in its list.
 	_plant("missing verb", "run_wash", "missing", func(p): _row(p, "park_rows", "run_wash").erase("verb"))
 	_plant("unknown element", "deck", "enum", func(p): _row(p, "park_rows", "deck")["element"] = "skate_ramp")
