@@ -1914,6 +1914,10 @@ class PassSource:
 			return ""
 		return String(output[0]).strip_edges()
 
+	static func same_project(actual: String, expected: String) -> bool:
+		var directory := DirAccess.open(actual)
+		return directory != null and not expected.is_empty() and directory.is_equivalent(actual, expected)
+
 	static func clean(repo: String) -> bool:
 		var output := []
 		if OS.execute("git", ["-C", repo, "status", "--porcelain", "-uno"], output) != 0 or not "".join(output).is_empty():
@@ -1948,8 +1952,8 @@ class PassSource:
 		return OS.execute("chmod", ["-R", "a-w", project]) == 0 and matches()
 
 	func matches() -> bool:
-		return revision(origin) == head and clean(origin) and revision(checkout) == head \
-			and OS.execute("git", ["-C", checkout, "diff", "--quiet", head, "--", SKETCH]) == 0
+		return revision(checkout) == head and OS.execute("git", ["-C", checkout, "diff", "--quiet", head, "--", SKETCH]) == 0 \
+			and clean(origin) and revision(origin) == head
 
 func _begin_pass_table() -> void:
 	var ids := String(_settings.get("packs", "all")).split(",")
@@ -2191,7 +2195,7 @@ func _pass_enemy(enemy, kind: String) -> void:
 func _run_pass() -> void:
 	var project := ProjectSettings.globalize_path("res://").simplify_path().trim_suffix("/")
 	var source_head := PassSource.revision(project)
-	if project != _settings.get("source-project", "") or source_head.is_empty() or source_head != _settings.get("source-head", ""):
+	if not PassSource.same_project(project, _settings.get("source-project", "")) or source_head.is_empty() or source_head != _settings.get("source-head", ""):
 		printerr("fast pass worker source differs from its dispatch")
 		quit(2)
 		return

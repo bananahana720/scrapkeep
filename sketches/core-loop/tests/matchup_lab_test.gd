@@ -390,6 +390,10 @@ func _fast_pass_receipt() -> void:
 	_check("private fixture checks out the measured commit", prepared)
 	if not prepared:
 		return
+	var alias := checkout.path_join("project-alias")
+	var linked := DirAccess.open(checkout).create_link(project, alias) == OK
+	_check("worker identity accepts a filesystem alias but refuses another checkout at the same commit",
+		linked and Lab.PassSource.same_project(alias, project) and not Lab.PassSource.same_project(ProjectSettings.globalize_path("res://"), project))
 	var receipt := checkout.path_join("fast-threat.json")
 	var args := ["--headless", "--fixed-fps", "90", "--path", project,
 		"--script", "res://tools/matchup_lab.gd", "--", "--packs=grounded", "--table=park",
