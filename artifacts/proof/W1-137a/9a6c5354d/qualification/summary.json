@@ -1,0 +1,33 @@
+{
+  "area": "park_flume",
+  "seed": 1,
+  "step": 0.75,
+  "tol": 0.4,
+  "near_m": 1.5,
+  "max_samples_per_shape": 2,
+  "visual_meshes": 1173,
+  "identity_multimeshes": 0,
+  "filters": [],
+  "totals": {
+    "bare": 17,
+    "invisible": 0,
+    "samples": 562,
+    "shapes": 330
+  },
+  "head": "9a6c5354d6f24631a472aa04b3b05e067271fcbf",
+  "stage": "3cafd8fa3962934e11ba89c439b3af943dba5d8d",
+  "places": 17,
+  "watcher": {
+    "samples": 523,
+    "firstMs": 1795034759606,
+    "lastMs": 1795034785708,
+    "periodMs": 50,
+    "maxGapMs": 67,
+    "missed": 0,
+    "onScreen": 0,
+    "targetOnScreen": 0,
+    "frontmostChanges": 0
+  },
+  "sha256_frame": "982f61eed6c84a18cc969fd66e54040d955997e140879a26906f954cd08f5c3a",
+  "sha256_report": "005739fe4ff80241f557dce442b519a04b4475d8e5f7f275b02613aeee04c6fc"
+}

@@ -1,0 +1,44 @@
+{
+  "head": "ae85870e2",
+  "area": "wall_fixture",
+  "step": 0.15,
+  "tol": 0.4,
+  "near_m": 1.5,
+  "visual_meshes": 2,
+  "totals": {
+    "bare": 1957,
+    "invisible": 979,
+    "samples": 2937,
+    "shapes": 3
+  },
+  "places": [
+    {
+      "owner": "Park_QAWall_Missing",
+      "position": [
+        2020.0,
+        4.0,
+        2000.0
+      ],
+      "samples": 979,
+      "size": [
+        4.0,
+        2.0,
+        0.5
+      ]
+    },
+    {
+      "owner": "Park_QAWall_Near",
+      "position": [
+        2010.0,
+        4.0,
+        2000.0
+      ],
+      "samples": 978,
+      "size": [
+        4.0,
+        2.0,
+        0.5
+      ]
+    }
+  ]
+}
