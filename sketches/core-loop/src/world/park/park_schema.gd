@@ -170,6 +170,9 @@ const MUSIC_LAYER_PREFIX := "layer_"
 # Optional at the top: "rescue_rows", the stage's caged pilots (rescue_site.gd). pilot is the ClassDef id sitting in
 # the cage, so who is rescued is data; quest is what rescue_completed carries (the achievement rows key on it).
 const RESCUE_FIELDS := {"id": "s", "site": "s", "at": "v2", "face": "v2", "quest": "s", "pilot": "s", "prompt": "s"}
+# Optional at the top: "wear_rows", the worn haul lanes painted into the ground tint (park_terrain.gd paint_wear). points
+# is a polyline of two or more [x, z] metres in any direction; width_m is the lane's full width in metres.
+const WEAR_FIELDS := {"id": "s", "points": "a", "width_m": "n"}
 # Optional at the top: "survival_rows", the places a survival count can stand (survival_count.gd FORMS names the
 # form; activities.gd builds one row of a form a run, and only with --stocktake=on). They are not activity rows, so
 # nothing that reads the stage's activities sees them.
@@ -286,6 +289,10 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	var rescues := _rows(out, park, "rescue_rows", RESCUE_FIELDS) if park.has("rescue_rows") else {}
 	if park.has("survival_rows"):
 		_rows(out, park, "survival_rows", SURVIVAL_FIELDS)
+	if park.has("wear_rows"):
+		var lanes := _rows(out, park, "wear_rows", WEAR_FIELDS)
+		for id in lanes:
+			_wear_row(out, id, lanes[id])
 	if park.has("approach"):
 		_fields(out, "approach", park["approach"], APPROACH_FIELDS)
 
@@ -431,6 +438,14 @@ static func _waymarks(out: Array, waymarks: Array, places: Dictionary) -> void:
 		if seen.has(w):
 			_add(out, "waymarks", "duplicate", "waymark %s repeats" % str(w))
 		seen[w] = true
+
+
+static func _wear_row(out: Array, id: String, row: Dictionary) -> void:
+	var points: Array = row["points"]
+	if points.size() < 2 or not points.all(func(p): return _is_vec(p, 2)):
+		_add(out, id, "points", "points must be two or more [x, z] pairs")
+	if float(row["width_m"]) <= 0.0:
+		_add(out, id, "width", "width_m %s must be above 0" % str(row["width_m"]))
 
 
 static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary, routes: Dictionary, events := {}) -> void:

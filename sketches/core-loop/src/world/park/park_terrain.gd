@@ -152,6 +152,15 @@ const FEATHER_PAD := 4
 const FEATHER_LEVEL := 2
 # One-metre pixels of padding on each side of feather()'s image: vertex m is at pixel m + this.
 const FEATHER_MARGIN := 2 * FEATHER_PAD
+# Worn haul lanes (paint_wear): how much a lane's centre darkens the tint, the share of its half width held
+# at full depth, the ripple in its width (0.6 m on a 2.8 m half width, per metre of arc) and the fractions of
+# its length over which it fades in and out.
+const WEAR_DARKEN := 0.23
+const WEAR_CORE := 0.25
+const WEAR_RIPPLE := 0.21
+const WEAR_RIPPLE_PER_M := 0.23
+const WEAR_FADE_IN := 0.10
+const WEAR_FADE_OUT_FROM := 0.82
 # Terrain3D's default colour map is white with alpha 127/255, which leaves roughness unchanged.
 const COLOR_ALPHA_BYTE := 127
 # n.y < FACE exactly when dx^2 + dz^2 > (2 STEP)^2 * (1 / FACE^2 - 1), n = (dx, 2 STEP, dz) normalised.
@@ -644,31 +653,57 @@ func _load_tints(path: String) -> void:
 	_tints = feather(image)
 	# Worn haul lanes belong to the park that drew them. Painting the tint map
 	# lets the same ground keep its collider, dress, alpha and material slots.
-	var wear_path := path.get_base_dir().path_join("haul_wear.json")
-	if FileAccess.file_exists(wear_path):
-		var tracks: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(wear_path))
-		for track in tracks.values():
-			_wear_track(track)
+	if _map != null and "park" in _map:
+		paint_wear(_tints, _map.park.get("wear_rows", []))
 
 
-func _wear_track(track: Array) -> void:
-	var start := Vector2(track[0][0], track[0][1])
-	var bend := Vector2(track[1][0], track[1][1])
-	var end := Vector2(track[2][0], track[2][1])
-	for z in range(int(start.y), int(end.y) + 1):
-		# Both bends sit halfway along Z, so t gives the quadratic's exact world Z.
-		var t := inverse_lerp(start.y, end.y, float(z))
-		var x_mid := lerpf(lerpf(start.x, bend.x, t), lerpf(bend.x, end.x, t), t)
-		var depth := smoothstep(0.0, 0.10, t) * (1.0 - smoothstep(0.82, 1.0, t))
-		var half_width := 2.8 + 0.6 * sin(float(z) * 0.23)
-		for x in range(floori(x_mid - half_width), ceili(x_mid + half_width) + 1):
-			var edge := 1.0 - smoothstep(0.25, 1.0, absf(float(x) - x_mid) / half_width)
-			var pixel := Vector2i(x, z) + Vector2i.ONE * (int(HALF) + FEATHER_MARGIN)
-			var tint := _tints.get_pixelv(pixel)
+# Darkens the tint map along each wear row's polyline (park_schema.gd WEAR_FIELDS). A pixel's strength is
+# its distance to the polyline against the lane's width at that arc length, faded in and out over the lane's
+# ends; where segments overlap the strongest wins, so a bend is not darkened twice. The painter clamps to the image.
+static func paint_wear(tints: Image, rows: Array) -> void:
+	var origin := Vector2i.ONE * (int(HALF) + FEATHER_MARGIN)
+	var size := tints.get_size()
+	for row: Dictionary in rows:
+		var line := PackedVector2Array()
+		for p in row["points"]:
+			line.append(Vector2(p[0], p[1]))
+		var length := 0.0
+		for i in range(1, line.size()):
+			length += line[i - 1].distance_to(line[i])
+		if length <= 0.0:
+			continue
+		var half_mean: float = float(row["width_m"]) * 0.5
+		var reach := half_mean * (1.0 + WEAR_RIPPLE)
+		var strength := {}
+		var base := 0.0
+		for i in range(1, line.size()):
+			var a := line[i - 1]
+			var seg := line[i] - a
+			var seg_len := seg.length()
+			if seg_len <= 0.0:
+				continue
+			var lo := (Vector2(minf(a.x, line[i].x), minf(a.y, line[i].y)) - Vector2.ONE * reach).floor()
+			var hi := (Vector2(maxf(a.x, line[i].x), maxf(a.y, line[i].y)) + Vector2.ONE * reach).ceil()
+			for z in range(maxi(int(lo.y), -origin.y), mini(int(hi.y), size.y - 1 - origin.y) + 1):
+				for x in range(maxi(int(lo.x), -origin.x), mini(int(hi.x), size.x - 1 - origin.x) + 1):
+					var at := Vector2(x, z)
+					var along := clampf((at - a).dot(seg) / (seg_len * seg_len), 0.0, 1.0)
+					var arc := base + along * seg_len
+					var half := half_mean * (1.0 + WEAR_RIPPLE * sin(arc * WEAR_RIPPLE_PER_M))
+					var edge := 1.0 - smoothstep(WEAR_CORE, 1.0, at.distance_to(a + seg * along) / half)
+					if edge <= 0.0:
+						continue
+					var t := arc / length
+					var depth := smoothstep(0.0, WEAR_FADE_IN, t) * (1.0 - smoothstep(WEAR_FADE_OUT_FROM, 1.0, t))
+					var pixel := Vector2i(x, z) + origin
+					strength[pixel] = maxf(strength.get(pixel, 0.0), depth * edge)
+			base += seg_len
+		for pixel: Vector2i in strength:
+			var tint := tints.get_pixelv(pixel)
 			var old_alpha := tint.a
-			tint = tint.darkened(depth * edge * 0.23)
+			tint = tint.darkened(float(strength[pixel]) * WEAR_DARKEN)
 			tint.a = old_alpha
-			_tints.set_pixelv(pixel, tint)
+			tints.set_pixelv(pixel, tint)
 
 
 # The normal y of grid vertex (i, j) from its four neighbours' heights (edges clamped), as terrain.gd.

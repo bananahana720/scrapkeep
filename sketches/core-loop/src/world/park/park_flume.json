@@ -298,6 +298,10 @@
   {"id": "weir_surge", "activity": "surge_run", "site": "weir_mesa", "at": [-427, -563], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2", "route": "flume_upper"},
   {"id": "canal_altar", "activity": "ambush_altar", "site": "main_canal", "at": [-475, -206], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2"}
  ],
+ "wear_rows": [
+  {"id": "wasteway_return", "points": [[12.0, 222.0], [13.3, 233.0], [16.3, 244.0], [21.0, 255.0], [27.2, 266.0], [35.2, 277.0], [44.8, 288.0], [56.1, 299.0], [69.0, 310.0]], "width_m": 5.6},
+  {"id": "hollow_receiving_bank", "points": [[-168.0, -129.0], [-167.8, -120.0], [-168.4, -111.0], [-169.6, -102.0], [-171.5, -93.0], [-174.1, -84.0], [-177.4, -75.0], [-181.3, -66.0], [-186.0, -57.0]], "width_m": 5.6}
+ ],
  "survival_rows": [
   {"id": "fields_muster", "form": "muster", "at": [-242, 65]}
  ]
