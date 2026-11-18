@@ -10,10 +10,16 @@ extends RefCounted
 # the one before, so that pair shares one foundation across the seam. "flare" is how far the
 # concrete base grows past the sole: clamp(lift + rate * drop, min, max) on x and on z.
 const OFF_GROUND_M := 0.3
+# A sole casts no footing when an authored ride line passes within the footing's base half-extent, a ball's radius and
+# this much more of it: concrete that a rolling ball would meet is left out, and the leg hangs as it did.
+const LINE_CLEARANCE_M := 0.3
+# Test-only fault: when true, a ridden sole is cast anyway. Set by tests/park_flume_piers_test.gd.
+static var plant_ignore_lines := false
 const SAMPLES_ACROSS := [-1.0, -0.5, 0.0, 0.5, 1.0]
 const SAMPLES_ALONG := [-1.0, 0.0, 1.0]
 const CONCRETE := preload("res://assets/materials/gpw_workshop.gdshader")
 const WEAR_MARGIN := Vector3.ONE
+const Tuning := preload("res://src/movement/tuning.gd")
 
 # The iron bents of the tiled trough end 6 m below its origin. The soles are the leg feet in
 # flume_works.py's frame2 and spec_flume. The base stays narrow enough to roll under the central
@@ -37,8 +43,9 @@ const TABLE := {
 
 
 # The footings of one placed piece: {"view": MeshInstance3D, "shape": CollisionShape3D}, or {} when
-# nothing hangs. frame is the piece's node transform; at_origin and tiles are in the node's space.
-static func fit(row: Dictionary, frame: Transform3D, at_origin: Transform3D, tiles: Array[Transform3D], ground: Callable) -> Dictionary:
+# nothing hangs. frame is the piece's node transform; at_origin and tiles are in the node's space. ridden(at: Vector2,
+# reach_m: float) -> bool says whether an authored line passes within reach_m of a world x, z; such a sole is not footed.
+static func fit(row: Dictionary, frame: Transform3D, at_origin: Transform3D, tiles: Array[Transform3D], ground: Callable, ridden := Callable()) -> Dictionary:
 	var recipe := String(row.get("recipe", ""))
 	if not TABLE.has(recipe) or not ground.is_valid():
 		return {}
@@ -65,7 +72,7 @@ static func fit(row: Dictionary, frame: Transform3D, at_origin: Transform3D, til
 					var paired: Vector3 = places[k + 1] * Vector3(x, entry["y"], stations[0])
 					depth += (paired.z - top.z) * 0.5
 					top = (top + paired) * 0.5
-				if _cast(surface, entry, frame, ground, top, depth):
+				if _cast(surface, entry, frame, ground, top, depth, ridden):
 					placed = true
 	if not placed:
 		return {}
@@ -90,7 +97,7 @@ static func fit(row: Dictionary, frame: Transform3D, at_origin: Transform3D, til
 
 # One frustum from the sole down to the lowest ground under its base, embedded into the hillside.
 # The steel keeps its own height: only the concrete is added.
-static func _cast(surface: SurfaceTool, entry: Dictionary, frame: Transform3D, ground: Callable, sole: Vector3, depth: float) -> bool:
+static func _cast(surface: SurfaceTool, entry: Dictionary, frame: Transform3D, ground: Callable, sole: Vector3, depth: float, ridden: Callable) -> bool:
 	var at := frame * sole
 	var drop := at.y - float(ground.call(at.x, at.z))
 	var flare: Vector2 = (entry["flare_lift"] + entry["flare_rate"] * drop).clamp(entry["flare_min"], entry["flare_max"])
@@ -102,6 +109,9 @@ static func _cast(surface: SurfaceTool, entry: Dictionary, frame: Transform3D, g
 			var sample := frame * (sole + Vector3(across * base_half.x, 0.0, along * base_half.y))
 			low = minf(low, float(ground.call(sample.x, sample.z)))
 	if at.y - low <= OFF_GROUND_M:
+		return false
+	if ridden.is_valid() and not plant_ignore_lines \
+			and ridden.call(Vector2(at.x, at.z), maxf(base_half.x, base_half.y) + Tuning.RADIUS + LINE_CLEARANCE_M):
 		return false
 	var upper := _ring(sole + Vector3.UP * float(entry["join"]), top_half)
 	var lower := _ring(sole - Vector3.UP * (at.y - low + float(entry["embed"])), base_half)
