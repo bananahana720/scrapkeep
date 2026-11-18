@@ -19,6 +19,7 @@ extends SceneTree
 #
 # The report includes every bare sample in "places", even on shapes below the flagged-area cutoff.
 # A place gives the owner and the centre and size of the sample bounds in world metres.
+# Filtered reports have a -partial suffix with their filter hash; incomplete reads have an -unavailable suffix.
 # --area=wall_fixture checks matching, near and missing wall meshes. --plant-wall hides the matching mesh.
 
 const UndrawnPlaces := preload("res://tools/qa/undrawn_places.gd")
@@ -110,6 +111,16 @@ func _physics(n: int) -> void:
 
 func _run() -> void:
 	seed(run_seed)
+	if area == "wall_fixture":
+		game = Node3D.new()
+		root.add_child(game)
+		_add_fixture_wall("Park_QAWall_Matched", 2000.0, 0.0, not OS.get_cmdline_user_args().has("--plant-wall"))
+		_add_fixture_wall("Park_QAWall_Near", 2010.0, 1.05, true)
+		_add_fixture_wall("Park_QAWall_Missing", 2020.0, 0.0, false)
+		ground_fn = func(_x: float, _z: float) -> float: return 0.0
+		await _physics(2)
+		await _sweep_map("")
+		return
 	game = Game.new()
 	game.test_mode = true
 	game.table = "park"
@@ -125,13 +136,7 @@ func _run() -> void:
 	game.player.source = Intent.Scripted.new()
 	game.run.run_seed_override = run_seed
 	var stage_index := 0
-	if area == "wall_fixture":
-		_add_fixture_wall("Park_QAWall_Matched", 2000.0, 0.0, not OS.get_cmdline_user_args().has("--plant-wall"))
-		_add_fixture_wall("Park_QAWall_Near", 2010.0, 1.05, true)
-		_add_fixture_wall("Park_QAWall_Missing", 2020.0, 0.0, false)
-		ground_fn = func(_x: float, _z: float) -> float: return 0.0
-		owner_filter = "Park_QAWall"
-	elif area == "camp":
+	if area == "camp":
 		game.camp_hub.enter_walk()
 		await _frames(30)
 		var o: Vector3 = game.camp_hub.HUB_ORIGIN
@@ -192,9 +197,14 @@ func _run() -> void:
 		_terrain_check(stage_index)
 		quit(0)
 		return
-	game.player.body().freeze = true
-	game.player.body().global_position = Vector3(0.0, -5000.0, 0.0)
+	ball_body = game.player.body()
+	ball_body.freeze = true
+	ball_body.global_position = Vector3(0.0, -5000.0, 0.0)
 	await _physics(2)
+	await _sweep_map(places_unavailable)
+
+
+func _sweep_map(places_unavailable: String) -> void:
 	var blockers := _blockers()
 	var made := _visual_bodies(blockers)
 	await _physics(3)
@@ -222,7 +232,16 @@ func _run() -> void:
 		places_unavailable = "map places require a real renderer for MultiMesh transforms"
 	elif identity_multimeshes > 0 or visual_count == 0 or blockers.is_empty() or totals["samples"] == 0:
 		places_unavailable = "incomplete blocker or visual geometry"
-	var report := {"area": area, "identity_multimeshes": identity_multimeshes, "seed": run_seed, "step": step, "tol": tol, "near_m": NEAR_M, "visual_meshes": visual_count,
+	var filters := PackedStringArray()
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--centre=") or arg.begins_with("--radius=") or arg.begins_with("--owner="):
+			filters.append(arg)
+	var stem := "%s-s%d" % [area, run_seed]
+	if not filters.is_empty():
+		stem += "-partial-" + " ".join(filters).sha256_text().left(10)
+	if not places_unavailable.is_empty():
+		stem += "-unavailable"
+	var report := {"area": area, "filters": filters, "max_samples_per_shape": max_samples, "identity_multimeshes": identity_multimeshes, "seed": run_seed, "step": step, "tol": tol, "near_m": NEAR_M, "visual_meshes": visual_count,
 		"band": [BAND_LOW, BAND_HIGH], "totals": totals, "flagged": flagged}
 	if places_unavailable.is_empty():
 		report["places"] = UndrawnPlaces.cluster(bare_by_owner, step)
@@ -232,7 +251,7 @@ func _run() -> void:
 		report["places_unavailable"] = places_unavailable
 		printerr("collision_sweep: no place count: " + places_unavailable)
 	DirAccess.make_dir_recursive_absolute(out_dir)
-	var path := out_dir.path_join("%s-s%d.json" % [area, run_seed])
+	var path := out_dir.path_join(stem + ".json")
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(report, "  "))
 	f.close()
@@ -251,7 +270,7 @@ func _run() -> void:
 	report_owners = by_owner
 	for o in by_owner:
 		print("  owner %-44s shapes %3d  inv %8.1f m2  bare %8.1f m2  | rolling band inv %7.1f bare %7.1f" % [o.left(44), by_owner[o][0], by_owner[o][1], by_owner[o][2], by_owner[o][3], by_owner[o][4]])
-	var of := FileAccess.open(out_dir.path_join("%s-s%d-owners.json" % [area, run_seed]), FileAccess.WRITE)
+	var of := FileAccess.open(out_dir.path_join(stem + "-owners.json"), FileAccess.WRITE)
 	of.store_string(JSON.stringify(by_owner, "  "))
 	of.close()
 	for r: Dictionary in flagged.slice(0, 40):
@@ -286,7 +305,7 @@ func _in_area(p: Vector3) -> bool:
 func _blockers() -> Array:
 	var out: Array = []
 	var skipped := {}
-	var ball = game.player.body()
+	var ball := ball_body
 	for node in game.find_children("*", "CollisionObject3D", true, false):
 		if node is Area3D or node == ball:
 			continue
@@ -356,13 +375,13 @@ func _visual_bodies(blockers: Array) -> Array:
 	var holder := Node3D.new()
 	holder.name = "SweepVisuals"
 	game.add_child(holder)
-	var player_node: Node = game.player
+	var player_node: Node = game.player if ball_body != null else null
 	var made: Array = [holder]
 	for node in game.find_children("*", "GeometryInstance3D", true, false):
 		var gi := node as GeometryInstance3D
 		if not gi.is_visible_in_tree() or gi.visibility_range_begin > NEAR_BEGIN_M:
 			continue
-		if player_node.is_ancestor_of(gi) or holder.is_ancestor_of(gi):
+		if (player_node != null and player_node.is_ancestor_of(gi)) or holder.is_ancestor_of(gi):
 			continue
 		var items: Array = []
 		if gi is MeshInstance3D and (gi as MeshInstance3D).mesh != null:

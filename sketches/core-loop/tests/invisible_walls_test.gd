@@ -113,20 +113,34 @@ func _wall_sweep() -> void:
 	if not _t.check("wall fixture wrote its report", code == 0 and FileAccess.file_exists(path), str(code)):
 		print("\n".join(output))
 		return
-	var report = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var full_report := FileAccess.get_file_as_string(path)
+	var report = JSON.parse_string(full_report)
 	if not _t.check("the sweep sampled all three physical walls", report is Dictionary and report.get("totals", {}).get("shapes") == 3
 			and report["totals"]["samples"] > 0 and report.get("places") is Array):
 		return
 	var counts := {}
+	var invisible := 0
 	var counted := 0
 	for place in report["places"]:
 		var owner: String = place["owner"]
 		counts[owner] = int(counts.get(owner, 0)) + 1
 		counted += int(place["samples"])
+		if owner == "Park_QAWall_Missing" or (owner == "Park_QAWall_Matched" and args.has("--plant-wall")):
+			invisible += int(place["samples"])
 	_t.eq("the matching wall has no undrawn place", counts.get("Park_QAWall_Matched", 0), 0)
 	_t.eq("the 0.4 m miss with a mesh within 1.5 m is one place", counts.get("Park_QAWall_Near", 0), 1)
 	_t.eq("the planted invisible wall is one place", counts.get("Park_QAWall_Missing", 0), 1)
 	_t.eq("the inventory accounts for every bare sample", counted, int(report["totals"]["bare"]))
+	_t.eq("only the missing meshes have no geometry within 1.5 m", invisible, int(report["totals"]["invisible"]))
+	var filter_arg := "--owner=Park_QAWall_Near"
+	args.append(filter_arg)
+	code = OS.execute(OS.get_executable_path(), args, output, true)
+	var partial_file := "wall_fixture-s1-partial-%s.json" % filter_arg.sha256_text().left(10)
+	if _t.check("the filtered sweep has its own report", code == 0 and FileAccess.file_exists(out.path_join(partial_file))):
+		var partial = JSON.parse_string(FileAccess.get_file_as_string(out.path_join(partial_file)))
+		_t.eq("filtered report records its owner filter", partial["filters"], [filter_arg])
+		_t.eq("filtered report covers one collider", int(partial["totals"]["shapes"]), 1)
+	_t.check("the full map report survives a filtered sweep", FileAccess.get_file_as_string(path) == full_report)
 	print("RECEIPT %s" % JSON.stringify({"places_by_owner": counts, "bare_samples": counted,
 		"invisible_samples": report["totals"]["invisible"]}))
 
