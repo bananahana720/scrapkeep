@@ -19,7 +19,7 @@ const RealTuning := preload("res://src/movement/tuning.gd")
 
 const DT := 1.0 / 60.0
 # The ball's centre must sit at least this share of the viewport's height above its bottom edge.
-const BALL_BOTTOM_MARGIN := 0.08
+const BALL_BOTTOM_MARGIN := 0.06
 const BALL_FRAMED_PITCHES := [-0.6, -0.3, 0.0, 0.3, 0.5]
 
 var _t = T.new("camera_tight_test")

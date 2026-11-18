@@ -63,6 +63,9 @@ const CONTACT_BOW_FAR := 17.0
 const CONTACT_BOW_NEAR := 10.0
 const CONTACT_PERCH_FAR := -0.03
 const CONTACT_PERCH_NEAR := -1.42
+# The most the lift may raise the arm above the player's own pitch. The lens keeps looking along that pitch, so a
+# bigger lift would leave the ball below the frame.
+const CONTACT_LIFT_MAX := 0.4
 # A far subject lifts only when looking up has pinned the lens to the ground: the share of the arm still free below
 # which the floor presses, whole at CONTACT_FLOOR_PINNED and gone at CONTACT_FLOOR_FREE.
 const CONTACT_FLOOR_PINNED := 0.55
@@ -386,7 +389,7 @@ func _boss_contact_lift(arm_pitch: float, subject: Node3D) -> float:
 	var floor_press := (1.0 - smoothstep(CONTACT_FLOOR_PINNED, CONTACT_FLOOR_FREE, normal_reach / reach)) if arm_pitch > 0.0 else 0.0
 	floor_press *= 1.0 - smoothstep(CONTACT_FADE_START, CONTACT_RANGE, distance)
 	var perch := lerpf(CONTACT_PERCH_FAR, CONTACT_PERCH_NEAR, near_bow)
-	var lift := maxf(0.0, arm_pitch - perch) * maxf(floor_press, near_bow)
+	var lift := minf(maxf(0.0, arm_pitch - perch), CONTACT_LIFT_MAX) * maxf(floor_press, near_bow)
 	if lift <= 0.0 or _free_arm(arm_pitch - lift, reach, false) < normal_reach - LIFT_GAIN:
 		return 0.0
 	return lift
