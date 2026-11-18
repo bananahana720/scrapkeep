@@ -212,14 +212,24 @@ static func _groups_of(subjects: Array) -> Array:
 	return groups
 
 
+# The Mac executable chooses embedded startup before it reads --display-driver.
+# A child rendering another capture group must make the same choice as its parent.
+static func child_display_args(platform: String, display: String) -> Array:
+	var driver := display.to_lower()
+	if platform == "macOS" and driver == "embedded":
+		return ["--embedded", "--display-driver", driver]
+	return ["--display-driver", driver]
+
+
 func _render_children(subjects: Array, dir: String) -> int:
 	var logs := dir.path_join("_logs")
 	DirAccess.make_dir_recursive_absolute(logs)
 	# OS.get_cmdline_args() drops the engine's own flags (a child given only those rendered on
 	# card 0 while the parent ran on card 1), so each child gets the parent's renderer, display
 	# and the queue's card index explicitly.
-	var engine_args: Array = ["--path", ProjectSettings.globalize_path("res://"), "--rendering-driver", RenderingServer.get_current_rendering_driver_name(),
-		"--display-driver", DisplayServer.get_name().to_lower(), "--resolution", "%dx%d" % [SIZE.x, SIZE.y], "--script", "res://tools/look_harness.gd"]
+	var engine_args := child_display_args(OS.get_name(), DisplayServer.get_name())
+	engine_args.append_array(["--path", ProjectSettings.globalize_path("res://"), "--rendering-driver", RenderingServer.get_current_rendering_driver_name(),
+		"--resolution", "%dx%d" % [SIZE.x, SIZE.y], "--script", "res://tools/look_harness.gd"])
 	if OS.has_environment("SCRAPKEEP_GPU_INDEX"):
 		engine_args.append_array(["--gpu-index", OS.get_environment("SCRAPKEEP_GPU_INDEX")])
 	var rows: Array = []

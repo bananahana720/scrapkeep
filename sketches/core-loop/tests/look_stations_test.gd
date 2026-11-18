@@ -13,6 +13,10 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_t.eq("Mac embedded children select the backend before startup", child_display_args("macOS", "Embedded"),
+		["--embedded", "--display-driver", "embedded"])
+	_t.eq("a regular Mac child keeps its parent display", child_display_args("macOS", "macOS"), ["--display-driver", "macos"])
+	_t.eq("a Linux child keeps its parent display", child_display_args("Linux", "X11"), ["--display-driver", "x11"])
 	_t.check("station files load", Subjects.station_errors.is_empty(), str(Subjects.station_errors))
 	for route in ["west_wash_run", "canal_run", "incline_line"]:
 		_t.check("dam station %s is available" % route, Subjects.in_group("staged").has(route))
