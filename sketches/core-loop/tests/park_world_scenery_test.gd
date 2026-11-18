@@ -15,6 +15,9 @@ const Spillway := preload("res://src/presentation/spillway_scenery.gd")
 
 const NODES := {1: "SpillwayScenery", 2: "DigScenery", 3: "HighdraftScenery"}
 
+# A tree this close outside a clear view shows the strip is cut from a planted bank, not an empty one.
+const NEAR_STRIP_M := 25.0
+
 var _t := T.new("park_world_scenery_test")
 
 
@@ -68,15 +71,7 @@ func _run() -> void:
 			1:
 				var trees := stage_root.get_node_or_null("Cottonwoods")
 				if stage == 2 and trees != null:
-					var blocker := Vector2(23.36, 241.48)
-					var bank := Vector2(19.63, 201.83)
-					var holds_bank := false
-					var blocks_lip := false
-					for shell: Node3D in trees.find_children("Cottonwood*", "Node3D", false, false):
-						var foot := Vector2(shell.global_position.x, shell.global_position.z)
-						holds_bank = holds_bank or foot.distance_to(bank) < 0.2
-						blocks_lip = blocks_lip or foot.distance_to(blocker) < 0.2
-					_t.check("the siphon keeps the bank tree and clears the kicker approach", holds_bank and not blocks_lip)
+					_clear_view_checks(trees, terrain.map().park["park_rows"])
 				var planted: int = 0 if trees == null else trees.get_child(0).multimesh.instance_count
 				_t.check("stage %d plants cottonwoods by its water" % stage, planted >= 8 and planted <= Spillway.PARK_TREES_MAX, "%d trees" % planted)
 				_t.check("stage %d mists its drops" % stage, scenery.get_node_or_null("WaterMist") != null)
@@ -111,3 +106,33 @@ func _bodies(node: Node) -> int:
 	if node == null:
 		return 0
 	return node.find_children("*", "CollisionObject3D", true, false).size() + node.find_children("*", "CollisionShape3D", true, false).size()
+
+
+# Every row with a clear_view keeps trees out of its strip, and trees still stand just outside it, so the check cannot
+# pass on an empty bank. The strip is worked out here from the row's own frame: along its run from the rear edge back
+# depth_m, across its centre line half_width_m.
+func _clear_view_checks(trees: Node3D, rows: Array) -> void:
+	var feet: Array[Vector2] = []
+	for shell: Node3D in trees.find_children("Cottonwood*", "Node3D", false, false):
+		feet.append(Vector2(shell.global_position.x, shell.global_position.z))
+	var strips := 0
+	for row: Dictionary in rows:
+		if not row.has("clear_view"):
+			continue
+		strips += 1
+		var run := Vector2.from_angle(PI * 0.5 - deg_to_rad(float(row["yaw_deg"])))
+		var across := Vector2(-run.y, run.x)
+		var back: float = -float(row["size"][0]) * 0.5
+		var depth: float = row["clear_view"]["depth_m"]
+		var half: float = row["clear_view"]["half_width_m"]
+		var inside := 0
+		var near := 0
+		for foot in feet:
+			var offset := foot - Vector2(float(row["at"][0]), float(row["at"][1]))
+			var gap := Vector2(maxf(maxf(back - depth - offset.dot(run), offset.dot(run) - back), 0.0),
+				maxf(absf(offset.dot(across)) - half, 0.0)).length()
+			inside += 1 if gap == 0.0 else 0
+			near += 1 if gap > 0.0 and gap <= NEAR_STRIP_M else 0
+		_t.check("%s: no tree stands in its clear view" % row["id"], inside == 0, "%d of %d trees" % [inside, feet.size()])
+		_t.check("%s: trees stand within %.0f m of its clear view" % [row["id"], NEAR_STRIP_M], near > 0, "%d trees" % near)
+	_t.check("the siphon's park carries a clear view", strips > 0)
