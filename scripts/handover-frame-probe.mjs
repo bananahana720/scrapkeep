@@ -115,6 +115,7 @@ function nativeCapture(file) {
     if (row.pass_number !== number || typeof row.planted !== "boolean" || (number === 1 && row.planted))
       throw new Error("invalid pass identity");
     const maxima = {};
+    const entryFrames = {};
     for (const name of ["dam_to_flume", "flume_to_bowl"]) {
       const { entry_us: entry, intervals_us: intervals } = row.seams[name];
       const left = entry - 1_000_000;
@@ -128,13 +129,14 @@ function nativeCapture(file) {
         if (![a, b].every(Number.isSafeInteger) || a !== previous || b <= a || b <= left || a >= right)
           throw new Error("invalid or missing drawn interval at " + name);
         worst = Math.max(worst, b - a);
+        if (a <= entry && entry < b) entryFrames[name] = (b - a) / 1000;
         previous = b;
       }
       maxima[name] = worst / 1000;
     }
     if (row.seams.dam_to_flume.entry_us >= row.seams.flume_to_bowl.entry_us)
       throw new Error("reversed handovers");
-    return { pass_number: number, planted: row.planted, max_frame_ms: maxima };
+    return { pass_number: number, planted: row.planted, max_frame_ms: maxima, entry_frame_ms: entryFrames };
   });
   const afterWarmWin = lines.slice(lines.indexOf(rows[3]) + 1).join("\n");
   const errors = withoutTeardownNoise(afterWarmWin, "darwin").split("\n").filter(line => /^(?:SCRIPT )?ERROR:/.test(line));

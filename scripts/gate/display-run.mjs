@@ -9,7 +9,7 @@ import { watchDrawnRun } from "./window-watch.mjs";
 import { closeSync, existsSync, mkdirSync, openSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 
-import { acquireSlot } from "../sketch-smoke.mjs";
+import { acquireSlot, holdQuietSync } from "../sketch-smoke.mjs";
 import { root } from "./clean-head.mjs";
 
 export const SKETCH = "sketches/core-loop";
@@ -293,8 +293,13 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
         if (existsSync(probeFrame)) throw new Error("yard.png already exists; supply a fresh output directory");
       }
       // The handover probe plays two complete 90 Hz rides before it returns.
-      const timeoutMs = script === "res://tools/handover_capture.gd" ? 30 * 60_000 : TIMEOUT_MS;
-      const result = await runCapture({ script, args, reference: mode === "--gate-reference", timeoutMs });
+      const handover = script === "res://tools/handover_capture.gd";
+      const timeoutMs = handover ? 30 * 60_000 : TIMEOUT_MS;
+      // Use the frame-time runner's machine-wide quiet hold for the two timed rides.
+      // Both the qualification and the shorter dam shutdown controls use the normal slot.
+      const acquire = handover && !args.includes("--w144-qualify")
+        ? () => acquireDrawnSlot({ machine: holdQuietSync }) : acquireDrawnSlot;
+      const result = await runCapture({ script, args, reference: mode === "--gate-reference", timeoutMs, acquire });
       if (result.output) console.log(result.output.trimEnd());
       if (result.watch) console.log("WINDOW_WATCH " + JSON.stringify(result.watch));
       if (probeFrame && result.exit === 0) {
