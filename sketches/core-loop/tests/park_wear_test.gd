@@ -2,13 +2,16 @@ extends SceneTree
 
 # Worn haul lanes: park files carry optional wear_rows (park_schema.gd), and ParkTerrain.paint_wear
 # darkens the ground tint along each polyline whatever its direction, clamped to the map. The park is the
-# test fixture with lanes added in memory.
+# test fixture with lanes added in memory. The last check builds the dam's real ground, so a park file's
+# own lanes are shown to reach the painter.
 
+const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const T := preload("res://tests/support/t.gd")
 
 const FIXTURE := "res://src/world/park/park_test.json"
+const DAM := "res://src/world/park/park_dam.json"
 const WIDTH_M := 6.0
 const WIDE_M := 12.0
 const GREY := 0.6
@@ -19,6 +22,10 @@ var _t := T.new("park_wear_test")
 
 
 func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
 	var park: Dictionary = ParkSchema.load_park(FIXTURE)["data"]
 	var lanes := [
 		_lane("rising", [[0, 0], [0, 100]]),
@@ -32,6 +39,7 @@ func _initialize() -> void:
 	_t.check("the park with wear lanes validates", ParkSchema.validate(park).is_empty(), ParkSchema.describe(ParkSchema.validate(park)))
 	_paint_checks(lanes)
 	_schema_checks(park)
+	await _built_ground_check()
 	quit(_t.verdict())
 
 
@@ -90,3 +98,37 @@ func _schema_checks(park: Dictionary) -> void:
 		bad["wear_rows"].append(cases[label])
 		var errors := ParkSchema.validate(bad)
 		_t.check("a wear row with %s fails validation" % label, errors.any(func(e): return e["id"] == cases[label]["id"]), ParkSchema.describe(errors))
+
+
+# The dam's ground built through the real path (make_render, start), once with its map and once without.
+# The map is the only difference, so a darker pixel on a lane is the park file's own row reaching the painter.
+func _built_ground_check() -> void:
+	var map := ParkMap.new(DAM)
+	var rows: Array = map.park.get("wear_rows", [])
+	if not _t.check("the dam's park file carries a wear lane", not rows.is_empty(), "%d rows" % rows.size()):
+		return
+	var points: Array = rows[0]["points"]
+	var mid: Array = points[points.size() / 2]
+	var worn := await _ground_luma(map, mid[0], mid[1])
+	var bare := await _ground_luma(null, mid[0], mid[1])
+	_t.check("the dam's built ground is darker on its own lane than the same ground built without the park's rows",
+		worn < bare - VISIBLE_STEP, "%s at (%.1f, %.1f): %.3f with the park, %.3f without" % [rows[0]["id"], mid[0], mid[1], worn, bare])
+
+
+func _ground_luma(map: RefCounted, x: float, z: float) -> float:
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var camera := Camera3D.new()
+	holder.add_child(camera)
+	camera.make_current()
+	await process_frame
+	var render: Node3D = ParkTerrain.make_render(holder, "Render_wear")
+	var ground := ParkTerrain.new()
+	holder.add_child(ground)
+	ground.start("park_dam", map, false, render)
+	await process_frame
+	var loc := Vector2i(floori(x / ParkTerrain.REGION_SIZE), floori(z / ParkTerrain.REGION_SIZE))
+	var c: Color = render.data.get_region(loc).get_color_map().get_pixel(roundi(x) - loc.x * ParkTerrain.REGION_SIZE, roundi(z) - loc.y * ParkTerrain.REGION_SIZE)
+	holder.queue_free()
+	await process_frame
+	return (c.r + c.g + c.b) / 3.0
