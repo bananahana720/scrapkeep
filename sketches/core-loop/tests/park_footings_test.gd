@@ -2,7 +2,7 @@ extends SceneTree
 
 # The footing module decides from the ground, not from a row id: a piece of any listed recipe gets a
 # footing where the ground under a sole falls away by more than OFF_GROUND_M, and none where the sole
-# sits on the ground. This is the check a new row of a listed recipe relies on.
+# sits on the ground or hangs less than the entry's own gap. This is the check a new row of a listed recipe relies on.
 const T := preload("res://tests/support/t.gd")
 const Footings := preload("res://src/world/park/footings.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -10,7 +10,7 @@ const TILE_LENGTH_M := 120.0
 const PROBE_M := 0.05
 # The recipes the table holds today. The loop below covers whatever the table lists; this count makes an
 # entry that goes missing fail, and a new recipe a deliberate edit here.
-const RECIPE_COUNT := 1
+const RECIPE_COUNT := 3
 
 var t := T.new("park_footings_test")
 
@@ -57,17 +57,18 @@ func _check_recipe(recipe: String, entry: Dictionary) -> void:
 		tiles.append(Transform3D.IDENTITY)
 		tiles.append(Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, TILE_LENGTH_M)))
 	var sole_y: float = entry["y"]
+	var gap: float = entry.get("min_gap", Footings.OFF_GROUND_M)
 	var cases := {
 		"on the ground": sole_y,
-		"just inside the threshold": sole_y - Footings.OFF_GROUND_M + PROBE_M,
-		"just past the threshold": sole_y - Footings.OFF_GROUND_M - PROBE_M,
+		"just inside the threshold": sole_y - gap + PROBE_M,
+		"just past the threshold": sole_y - gap - PROBE_M,
 		"over a deep gap": sole_y - 20.0,
 	}
 	for label: String in cases:
 		var level: float = cases[label]
 		var ground := func(_x: float, _z: float) -> float: return level
 		var footing := Footings.fit(row, Transform3D.IDENTITY, Transform3D.IDENTITY, tiles, ground)
-		var wants := level < sole_y - Footings.OFF_GROUND_M
+		var wants := level < sole_y - gap
 		t.check("%s %s: %s" % [recipe, label, "footed" if wants else "bare"], footing.is_empty() != wants)
 		if wants and not footing.is_empty():
 			var view := footing["view"] as MeshInstance3D

@@ -3,14 +3,20 @@ extends RefCounted
 # Concrete footings under steel that hangs in the air. TABLE is keyed by recipe name and lists the
 # recipe's soles, the points in the piece's own space where a leg or a tower end meets the air.
 # The ground under each sole decides: a footing is cast only where the gap is more than
-# OFF_GROUND_M, so a new row of a listed recipe needs no entry here. A sole that an authored ride
-# line passes stays bare (fit's ridden callable). Each piece gets one mesh and one collision shape,
-# both in the placed node's space.
+# the entry's "min_gap" (OFF_GROUND_M unless it says otherwise), so a new row of a listed recipe
+# needs no entry here. A sole that an authored ride line passes stays bare (fit's ridden callable).
+# Each piece gets one mesh and one collision shape, both in the placed node's space.
 #
 # "tiled" recipes put their soles on every tile copy; the first station of a tile is the last of
-# the one before, so that pair shares one foundation across the seam. "flare" is how far the
-# concrete base grows past the sole: clamp(lift + rate * drop, min, max) on x and on z.
+# the one before, so that pair shares one foundation across the seam. A recipe with "end_inset"
+# has a sole near each end of the piece's length, that far in from the end, and no stations.
+# "flare" is how far the concrete base grows past the sole: clamp(lift + rate * drop, min, max)
+# on x and on z.
+const Tuning := preload("res://src/movement/tuning.gd")
 const OFF_GROUND_M := 0.3
+# A tower end with less than a ball's width under it is no underpass, and the towers that hang that
+# low keep their own look; only an end the ball could roll under is cast down.
+const TOWER_MIN_GAP_M := Tuning.RADIUS * 2.0
 # A sole casts no footing when an authored ride line passes within the base's corner distance, a ball's radius and
 # this much more of it: concrete that a rolling ball would meet is left out, and the leg hangs as it did.
 const LINE_CLEARANCE_M := 0.3
@@ -20,7 +26,24 @@ const SAMPLES_ACROSS := [-1.0, -0.5, 0.0, 0.5, 1.0]
 const SAMPLES_ALONG := [-1.0, 0.0, 1.0]
 const CONCRETE := preload("res://assets/materials/gpw_workshop.gdshader")
 const WEAR_MARGIN := Vector3.ONE
-const Tuning := preload("res://src/movement/tuning.gd")
+
+# The flume's grapple towers stand across cut banks. Their authored mesh, grapple face and ride
+# sensor keep their height, and the footing stays inside the tower's own footprint.
+const TOWER := {
+	"tiled": false,
+	"x": [0.0],
+	"y": 0.0,
+	"end_inset": 1.05,
+	"min_gap": TOWER_MIN_GAP_M,
+	"top": Vector2(1.40, 0.58),
+	"flare_lift": Vector2.ZERO,
+	"flare_rate": Vector2.ZERO,
+	"flare_min": Vector2(0.18, 0.19),
+	"flare_max": Vector2(0.18, 0.19),
+	"join": 0.08,
+	"embed": 0.35,
+	"color": Color("877b68"),
+}
 
 # The iron bents of the tiled trough end 6 m below its origin. The soles are the leg feet in
 # flume_works.py's frame2 and spec_flume. The base stays narrow enough to roll under the central
@@ -40,6 +63,8 @@ const TABLE := {
 		"embed": 0.75,
 		"color": Color("786c57"),
 	},
+	"flume_bent_50": TOWER,
+	"surge_pylon_28": TOWER,
 }
 
 
@@ -62,7 +87,7 @@ static func fit(row: Dictionary, frame: Transform3D, at_origin: Transform3D, til
 	var placed := false
 	for x: float in entry["x"]:
 		for k in places.size():
-			var stations: Array = entry["stations"]
+			var stations := _stations(entry, row)
 			for i in stations.size():
 				if entry["tiled"] and i == 0 and k > 0:
 					continue
@@ -96,6 +121,14 @@ static func fit(row: Dictionary, frame: Transform3D, at_origin: Transform3D, til
 	return {"view": view, "shape": shape}
 
 
+# Where along the piece its soles sit: the entry's own stations, or one near each end of the row's length.
+static func _stations(entry: Dictionary, row: Dictionary) -> Array:
+	if entry.has("stations"):
+		return entry["stations"]
+	var reach := float(row["size"][0]) * 0.5 - float(entry["end_inset"])
+	return [-reach, reach]
+
+
 # One frustum from the sole down to the lowest ground under its base, embedded into the hillside.
 # The steel keeps its own height: only the concrete is added.
 static func _cast(surface: SurfaceTool, entry: Dictionary, frame: Transform3D, ground: Callable, sole: Vector3, depth: float, ridden: Callable) -> bool:
@@ -109,7 +142,7 @@ static func _cast(surface: SurfaceTool, entry: Dictionary, frame: Transform3D, g
 		for along: float in SAMPLES_ALONG:
 			var sample := frame * (sole + Vector3(across * base_half.x, 0.0, along * base_half.y))
 			low = minf(low, float(ground.call(sample.x, sample.z)))
-	if at.y - low <= OFF_GROUND_M:
+	if at.y - low <= float(entry.get("min_gap", OFF_GROUND_M)):
 		return false
 	if ridden.is_valid() and not plant_ignore_lines \
 			and ridden.call(Vector2(at.x, at.z), base_half.length() + Tuning.RADIUS + LINE_CLEARANCE_M):
