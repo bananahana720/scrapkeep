@@ -183,7 +183,10 @@ func _fight_floor() -> void:
 	await _settle(fight, 120)
 	_t.check("F3 the ball, the high target and nearby floor fit in the same view", fight.shows(Vector3.ZERO) and fight.shows(subject.position) and fight.shows(Vector3(0, -1, -4)), "ball %s, target %s, floor %s" % [fight.shows(Vector3.ZERO), fight.shows(subject.position), fight.shows(Vector3(0, -1, -4))])
 	fight.snap(Vector3.FORWARD, 0.5)
+	# Close in, the subject would lift the arm: the shoulder view must still win once mounted.
+	subject.position = Vector3(0, 4, -8)
 	await _settle(fight, 120)
+	_t.check("F3b the close subject lifts the arm before mounting", fight.arm.rotation.x < 0.5 - 0.3, "arm %.3f, pitch 0.500" % fight.arm.rotation.x)
 	for rig in [open, fight]:
 		rig.shoulder_target = 1.0
 		rig.reduced_motion = true
