@@ -1,0 +1,102 @@
+{
+  "passes": [
+    {
+      "pass_number": 1,
+      "planted": false,
+      "max_frame_ms": {
+        "dam_to_flume": 131.32,
+        "flume_to_bowl": 57.875
+      },
+      "entry_frame_ms": {
+        "dam_to_flume": 131.32,
+        "flume_to_bowl": 20.952
+      },
+      "trace": {
+        "dam_to_flume": {
+          "entry_us": 201407710,
+          "draw_intervals": 659,
+          "over_33_3_ms": [
+            {
+              "start_ms_from_entry": -25.052,
+              "duration_ms": 131.32
+            },
+            {
+              "start_ms_from_entry": 106.268,
+              "duration_ms": 119.258
+            },
+            {
+              "start_ms_from_entry": 225.526,
+              "duration_ms": 45.827
+            }
+          ]
+        },
+        "flume_to_bowl": {
+          "entry_us": 337345951,
+          "draw_intervals": 712,
+          "over_33_3_ms": [
+            {
+              "start_ms_from_entry": 3162.504,
+              "duration_ms": 57.875
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pass_number": 2,
+      "planted": false,
+      "max_frame_ms": {
+        "dam_to_flume": 72.001,
+        "flume_to_bowl": 18.889
+      },
+      "entry_frame_ms": {
+        "dam_to_flume": 72.001,
+        "flume_to_bowl": 18.889
+      },
+      "trace": {
+        "dam_to_flume": {
+          "entry_us": 593721749,
+          "draw_intervals": 676,
+          "over_33_3_ms": [
+            {
+              "start_ms_from_entry": -25.741,
+              "duration_ms": 72.001
+            },
+            {
+              "start_ms_from_entry": 46.26,
+              "duration_ms": 45.737
+            }
+          ]
+        },
+        "flume_to_bowl": {
+          "entry_us": 731244148,
+          "draw_intervals": 718,
+          "over_33_3_ms": []
+        }
+      }
+    }
+  ],
+  "frame_pass": false,
+  "shutdown_pass": null,
+  "shutdown_error_lines": 4,
+  "errors": [
+    "ERROR: BUG, indexing did not unpair geometries from light.",
+    "ERROR: BUG, indexing did not unpair geometries from light.",
+    "ERROR: 23 shaders of type ParticlesShaderRD were never freed",
+    "ERROR: 23 RID allocations of type 'N10RendererRD15MaterialStorage6ShaderE' were leaked at exit."
+  ],
+  "pass": false,
+  "grader_exit": 1,
+  "watch": {
+    "samples": 16522,
+    "firstMs": 1795034789914,
+    "lastMs": 1795035615977,
+    "periodMs": 50,
+    "maxGapMs": 71,
+    "missed": 0,
+    "onScreen": 0,
+    "targetOnScreen": 0,
+    "frontmostChanges": 0
+  },
+  "launcher_exit": "DISPLAY_RUN_EXIT 0"
+}
