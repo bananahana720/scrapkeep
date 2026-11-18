@@ -1307,9 +1307,10 @@ func _defeat(kind: String, at: Vector3, source := "") -> void:
 	ctx.run.add_part(Rules.CREST_PART, "boss")
 	_sync_crest()
 	ctx.flow.boss_active = false
-	ctx.camera.clear_contact_subject(ship)
-	# No step runs after the catch, so a shove still in its grace would leave the hull cut away over the ball.
+	# A freed ship ends its own lift in the camera, and a freed object cannot be passed as a Node3D.
 	if is_instance_valid(ship):
+		ctx.camera.clear_contact_subject(ship)
+		# No step runs after the catch, so a shove still in its grace would leave the hull cut away over the ball.
 		ship.follow_shoved_rider(null)
 	# The scooter stays in sight through boss_defeated, so the fall plays where he was caught
 	# (machine_fx reads a visible scooter before the ship); it is hidden once the event is out.
