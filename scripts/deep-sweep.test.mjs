@@ -90,3 +90,8 @@ test("sweep reads a tool script for reach-ins only", () => {
   const findings = sweep({ base: "b".repeat(40), head: "h".repeat(40), read: () => "", diff, listSrc: () => [], linesAt: () => 0 });
   assert.deepEqual(findings.map((f) => [f.rule, f.path, f.line]), [["D2", tool, 2]]);
 });
+
+test("reachIns follows a chain that starts at the file's own private field", () => {
+  const hits = reachIns([[1, "\t_game.flow._set_state(2)"], [2, "\tself._game = game"], [3, "\tvar a = _local"]]);
+  assert.deepEqual(hits.map((h) => [h.line, h.message]), [[1, "reaches into _game.flow._set_state"]]);
+});

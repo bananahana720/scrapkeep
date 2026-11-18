@@ -20,7 +20,7 @@ Then it posts the report's header and counts on the new wave's board issue with 
 
 1. On the promoted main, run `node scripts/deep-sweep.mjs --out artifacts/local/deep-sweep-w<N>.md`. With no `--base` it compares the promotion merge against main before it. It lists leads, not defects:
    - D1 a new public function whose whole body forwards its own parameters to one other call;
-   - D2 new code that touches another object's underscore member (`boss._phase`, `w.get("_state")`);
+   - D2 new code that touches another object's underscore member (`boss._phase`, `w.get("_state")`, or through a chain, `game.flow.warden._age`), read in `tools/` as well as `src/`;
    - D3 a new function with six or more parameters, or three or more bools;
    - D4 a snake_case string key on a new line that three or more `src/` files spell (a leaked schema);
    - D5 a file over 1500 lines that grew by 100 or more.

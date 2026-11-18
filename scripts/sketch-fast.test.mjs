@@ -580,3 +580,7 @@ test("removedChecks names the labels a changed test no longer checks", () => {
   assert.deepEqual(removedChecks(base, head), ["the route climbs the kicker"]);
   assert.deepEqual(removedChecks(base, base), []);
 });
+
+test("checkLabels reads the _report form most tests use", () => {
+  assert.deepEqual([...checkLabels('\t_report("layers stack in order", ok, detail)\n\tt.eq("count", a, b)\n')].sort(), ["count", "layers stack in order"]);
+});

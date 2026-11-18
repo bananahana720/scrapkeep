@@ -314,13 +314,13 @@ export function failingChecks(output) {
   }))].sort();
 }
 
-// The labels a test file checks: the first argument of each check, eq or near call when it is a plain string.
+// The labels a test file checks: the first argument of each check, eq, near or report call when it is a plain string.
 // A label built at run time is not seen, so this reads less than the test runs.
 export function checkLabels(source) {
   const labels = new Set();
   for (const raw of source.split("\n")) {
     const line = raw.replace(/^\s*#.*$/, "");
-    for (const m of line.matchAll(/(?<![\w])(?:\w+\.)?_?(?:check|eq|near)\(\s*"((?:[^"\\]|\\.)*)"/g)) labels.add(m[1]);
+    for (const m of line.matchAll(/(?<![\w])(?:\w+\.)?_?(?:check|eq|near|report)\(\s*"((?:[^"\\]|\\.)*)"/g)) labels.add(m[1]);
   }
   return labels;
 }
@@ -752,7 +752,7 @@ async function main() {
   if (!stage("tree hygiene", hygiene.length === 0, { note: hygiene.length ? hygiene.slice(0, 5).join("; ") : "no symlink, root file or new top-level folder", findings: hygiene }) && !options.dryRun) finish();
   // Not a stage: a removed check can be right. The receipt lists each so the pull request has to name it.
   const show = (ref, file) => { const r = spawnSync("git", ["-C", root, "show", `${ref}:${file}`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); return r.status === 0 ? r.stdout : null; };
-  receipt.checks_removed = changedPaths.filter((file) => /^sketches\/core-loop\/tests\/[^/]+\.gd$/.test(file)).map((file) => {
+  receipt.checks_removed = changedPaths.filter((file) => /^sketches\/core-loop\/tests\/(?:[^/]+\/)?[^/]+\.gd$/.test(file)).map((file) => {
     const before = show(diffBase, file);
     return before === null ? null : { test: path.posix.basename(file), labels: removedChecks(before, show("HEAD", file) ?? "") };
   }).filter((row) => row && row.labels.length > 0);

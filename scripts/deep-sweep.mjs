@@ -88,8 +88,9 @@ export function wideSignatures(funcs) {
 }
 
 // The owner may be a chain (game.flow.warden._age), and self.other._member is still a reach into other.
-// super._member is a class calling its own parent, not a reach.
-const reachIn = /(?<![\w.])(?!self\._|super\._)(?:self\.)?((?:[a-z]\w*\.)*[a-z]\w*)\.(_[a-z]\w*)\b|\.(?:get|set|call)\(\s*"(_[a-z]\w*)"/;
+// super._member is a class calling its own parent, not a reach. A chain may start at the file's own private
+// field (_game.flow._set_state): the reach is into flow.
+const reachIn = /(?<![\w.])(?!self\._|super\._)(?:self\.)?((?:_?[a-z]\w*\.)*_?[a-z]\w*)\.(_[a-z]\w*)\b|\.(?:get|set|call)\(\s*"(_[a-z]\w*)"/;
 
 // D2: code that touches another object's underscore members. Lines are [number, text] pairs.
 export function reachIns(lines) {
