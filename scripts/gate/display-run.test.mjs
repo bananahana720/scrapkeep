@@ -200,3 +200,21 @@ test("headless measurement and the editor version probe use only their scratch h
   assert.equal(control.home, versionHome);
   assert.equal(existsSync(versionHome), false);
 });
+
+test("the handover capture pins its entry script, offscreen helper and self-play probes", async () => {
+  const cwd = scratch();
+  const opts = capture(cwd);
+  const local = path.join(cwd, "sketches/core-loop/tools");
+  for (const file of ["handover_capture.gd", "self_play.gd", "frame_probe.gd"]) {
+    copyFileSync(new URL("../../sketches/core-loop/tools/" + file, import.meta.url), path.join(local, file));
+  }
+  opts.script = "res://tools/handover_capture.gd";
+  assert.equal((await runCapture(opts)).exit, 0);
+  for (const file of ["handover_capture.gd", "offscreen_window.gd", "self_play.gd", "frame_probe.gd"]) {
+    const target = path.join(local, file);
+    writeFileSync(target, "changed version");
+    const refused = await runCapture({ ...opts, start: assert.fail, acquire: assert.fail });
+    assert.equal(refused.supported, false);
+    copyFileSync(new URL("../../sketches/core-loop/tools/" + file, import.meta.url), target);
+  }
+});

@@ -1,4 +1,5 @@
 // W1-144a. Read artifacts without starting a game. Each mode is one independent diagnostic.
+//   node scripts/handover-frame-probe.mjs native <watched two-pass handover log with DISPLAY_RUN_EXIT>
 //   node scripts/handover-frame-probe.mjs frames <frame capture directory> <ordered engine log>
 //   node scripts/handover-frame-probe.mjs shutdown <ordered Godot stdout+stderr from launch to exit>
 // On the Mac only a qualified tool through display-run.mjs --offscreen may produce the
@@ -93,6 +94,54 @@ function frameWindows(directory, log) {
   return { max_frame_ms_bounds: result, pass };
 }
 
+// Unlike the archived engine CSV, this capture timestamps the stage signals and the
+// ends of drawn frames with one monotonic microsecond clock. Grade only pass two.
+function nativeCapture(file) {
+  const lines = readFileSync(file, "utf8").trimEnd().split(/\r?\n/);
+  if (!lines.some(line => /^Metal .*Apple/.test(line)) ||
+      !lines.some(line => /^OFFSCREEN_WINDOW [1-9]\d* embedded$/.test(line)) ||
+      lines.at(-1) !== "DISPLAY_RUN_EXIT 0" || !lines.at(-2)?.startsWith("WINDOW_WATCH "))
+    throw new Error("need a complete watched Mac capture and successful launcher exit");
+  const watch = JSON.parse(lines.at(-2).slice("WINDOW_WATCH ".length));
+  if (watch.periodMs !== 50 || !(watch.samples >= 2) ||
+      [watch.missed, watch.onScreen, watch.targetOnScreen, watch.frontmostChanges].some(n => n !== 0))
+    throw new Error("invalid window watcher receipt");
+  const rows = lines.filter(line => line.startsWith("W144_START ") || line.startsWith("W144_PASS "));
+  if (rows.length !== 4 || rows[0] !== "W144_START 1" || rows[2] !== "W144_START 2" ||
+      !rows[1].startsWith("W144_PASS ") || !rows[3].startsWith("W144_PASS "))
+    throw new Error("need one cold ride followed by one warm ride");
+  const passes = [1, 2].map(number => {
+    const row = JSON.parse(rows[number * 2 - 1].slice("W144_PASS ".length));
+    if (row.pass_number !== number || typeof row.planted !== "boolean" || (number === 1 && row.planted))
+      throw new Error("invalid pass identity");
+    const maxima = {};
+    for (const name of ["dam_to_flume", "flume_to_bowl"]) {
+      const { entry_us: entry, intervals_us: intervals } = row.seams[name];
+      const left = entry - 1_000_000;
+      const right = entry + 5_000_000;
+      if (!Number.isSafeInteger(entry) || !intervals.length ||
+          intervals[0][0] > left || intervals.at(-1)[1] < right)
+        throw new Error("incomplete native window for " + name);
+      let worst = 0;
+      let previous = intervals[0][0];
+      for (const [a, b] of intervals) {
+        if (![a, b].every(Number.isSafeInteger) || a !== previous || b <= a || b <= left || a >= right)
+          throw new Error("invalid or missing drawn interval at " + name);
+        worst = Math.max(worst, b - a);
+        previous = b;
+      }
+      maxima[name] = worst / 1000;
+    }
+    if (row.seams.dam_to_flume.entry_us >= row.seams.flume_to_bowl.entry_us)
+      throw new Error("reversed handovers");
+    return { pass_number: number, planted: row.planted, max_frame_ms: maxima };
+  });
+  const afterWarmWin = lines.slice(lines.indexOf(rows[3]) + 1).join("\n");
+  const errors = withoutTeardownNoise(afterWarmWin, "darwin").split("\n").filter(line => /^(?:SCRIPT )?ERROR:/.test(line));
+  const framePass = Object.values(passes[1].max_frame_ms).every(ms => ms <= 33.3);
+  return { passes, frame_pass: framePass, shutdown_error_lines: errors.length, errors, pass: framePass && !errors.length };
+}
+
 function shutdown(file) {
   const log = readFileSync(file, "utf8").replaceAll("\r\n", "\n");
   if (!/^Metal .*Apple/m.test(log)) throw new Error("expected a drawn Mac Metal run");
@@ -108,9 +157,9 @@ function shutdown(file) {
 
 try {
   const [mode, input, engineLog, ...extra] = process.argv.slice(2);
-  if (!input || extra.length || !["frames", "shutdown"].includes(mode) || (mode === "frames") !== Boolean(engineLog))
-    throw new Error("usage: handover-frame-probe.mjs frames <directory> <engine log> | shutdown <engine log>");
-  const result = mode === "frames" ? frameWindows(input, readFileSync(engineLog, "utf8")) : shutdown(input);
+  if (!input || extra.length || !["frames", "shutdown", "native"].includes(mode) || (mode === "frames") !== Boolean(engineLog))
+    throw new Error("usage: handover-frame-probe.mjs frames <directory> <engine log> | shutdown <engine log> | native <watched log>");
+  const result = mode === "frames" ? frameWindows(input, readFileSync(engineLog, "utf8")) : mode === "native" ? nativeCapture(input) : shutdown(input);
   console.log(JSON.stringify(result));
   process.exitCode = result.pass === null ? 2 : result.pass ? 0 : 1;
 } catch (error) {

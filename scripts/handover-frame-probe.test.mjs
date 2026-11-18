@@ -76,3 +76,37 @@ test("shutdown requires a drained clean exit and distinguishes a renderer error 
     assert.deepEqual(JSON.parse(fault.stdout).errors, ["ERROR: shader was never freed"]);
   }
 });
+
+test("the watched capture grades the warm drawn intervals and rejects a gap or invalid watcher", t => {
+  const file = path.join(scratch(t), "watched.log");
+  const watch = { periodMs: 50, samples: 800, missed: 0, onScreen: 0, targetOnScreen: 0, frontmostChanges: 0 };
+  function seam(entry, plant) {
+    const intervals = [];
+    for (let a = entry - 1_000_000; a < entry + 5_000_000;) {
+      const b = a + (a === entry && plant ? 50_000 : 10_000);
+      intervals.push([a, b]);
+      a = b;
+    }
+    return { entry_us: entry, intervals_us: intervals };
+  }
+  const pass = (number, plant) => ({ pass_number: number, planted: number === 2 && plant, seams: {
+    dam_to_flume: seam(number * 30_000_000, plant),
+    flume_to_bowl: seam(number * 30_000_000 + 10_000_000, false),
+  } });
+  function run(warm, error = "", watcher = watch) {
+    writeFileSync(file, ["Metal 4 - Apple M5 Max", "OFFSCREEN_WINDOW 42 embedded",
+      "W144_START 1", "W144_PASS " + JSON.stringify(pass(1, true)),
+      "W144_START 2", "W144_PASS " + JSON.stringify(warm), error,
+      "WINDOW_WATCH " + JSON.stringify(watcher), "DISPLAY_RUN_EXIT 0"].join("\n"));
+    return probe("native", file);
+  }
+  assert.equal(run(pass(2, false)).status, 0);
+  const planted = run(pass(2, true));
+  assert.equal(planted.status, 1);
+  assert.deepEqual(JSON.parse(planted.stdout).passes[1].max_frame_ms, { dam_to_flume: 50, flume_to_bowl: 10 });
+  assert.equal(run(pass(2, false), "ERROR: shader still in use").status, 1);
+  assert.equal(run(pass(2, false), "", { ...watch, missed: 1 }).status, 2);
+  const missing = pass(2, false);
+  missing.seams.flume_to_bowl.intervals_us.splice(60, 1);
+  assert.equal(run(missing).status, 2);
+});

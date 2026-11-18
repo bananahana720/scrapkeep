@@ -154,6 +154,12 @@ const PROBE = "res://tools/offscreen_probe.gd";
 // Keep the receipt before admitting the registration to the stage. A helper marker alone
 // does not qualify a tool. The probe inherits the dam capture, so pin both scripts.
 const watchedTools = new Map([
+  ["res://tools/handover_capture.gd", {
+    "tools/handover_capture.gd": "7aa6b50b1f8034e2b6231fa017000f4434a09c23d984590de3166272946bf6ab",
+    "tools/offscreen_window.gd": "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d",
+    "tools/self_play.gd": "0b34c8016bee91fe5adacbd778b10e5d0a94776a715978db2ab0286e728a68d2",
+    "tools/frame_probe.gd": "bfd5b3ee4d3d06f60ae753279121b01af456fd8fd3c70aee64027b3af901999e",
+  }],
   [PROBE, {
     // proof/W1-131 at 2c2dfa665, artifacts/proof/W1-131a/capture.json
     "tools/offscreen_probe.gd": "156464df4c44b25ba4f903f6786557bdff94a71b89f033744c0021f5d734819b",
@@ -276,7 +282,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
         probeFrame = path.join(out, "yard.png");
         if (existsSync(probeFrame)) throw new Error("yard.png already exists; supply a fresh output directory");
       }
-      const result = await runCapture({ script, args, reference: mode === "--gate-reference" });
+      // The handover probe plays two complete 90 Hz rides before it returns.
+      const timeoutMs = script === "res://tools/handover_capture.gd" ? 30 * 60_000 : TIMEOUT_MS;
+      const result = await runCapture({ script, args, reference: mode === "--gate-reference", timeoutMs });
       if (result.output) console.log(result.output.trimEnd());
       if (result.watch) console.log("WINDOW_WATCH " + JSON.stringify(result.watch));
       if (probeFrame && result.exit === 0) {
