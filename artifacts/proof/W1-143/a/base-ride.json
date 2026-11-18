@@ -1,0 +1,6 @@
+{
+  "head": "1d5d77fc6b6260ade5848c98290862eec7f499c0",
+  "pass": false,
+  "measured": "129 primitive surfaces counted over one bot run through the dam, the flume and Brindle; 1 code-built stand-in(s) left: SubViewport/Node3D/MeshInstance3D in build_read.gd (SphereMesh, owed by W1-46); waiting: SableStakes/Stake/MeshInstance3D in stakes.gd (CylinderMesh, owed by W1-23) (project-guide/handoff/DECISIONS.md:117); SableStakes/Stake/MeshInstance3D in stakes.gd (TorusMesh, owed by W1-23) (project-guide/handoff/DECISIONS.md:117); plant: with the control box judged as real (PRIM_PLANT=dam_box) the test failed and named it new; what is not judged: one seed, one pilot and one table, so a surface the run never builds is not seen, a second primitive under a key already pinned is not seen, and a model that does exist says nothing about how it looks",
+  "plant_caught": true
+}
