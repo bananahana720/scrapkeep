@@ -212,6 +212,15 @@ func _run() -> void:
 	_advance(0.1)
 	_report("a broken Warden lets the tip up", tips.showing == "grip" and _game.hud.toast_on_screen() == FieldTips.TIPS["grip"]
 		and not tips.seen("grip"), "showing %s, toasts %s" % [tips.showing, _game.hud.toast_texts()])
+	var previous: int = _game.flow.state
+	for choice_phase in [_game.flow.GATES, _game.flow.LAUNCH]:
+		_game.flow.state = choice_phase
+		var at_gates := _advance(0.5)
+		_report("reward or launch holds the unseen tip", at_gates.count("grip") == 0
+			and tips.pending.count("grip") == 1 and not tips.seen("grip"), str(tips.pending))
+	_game.flow.state = previous
+	_advance(0.1)
+	_report("returning to the ride shows the same unseen tip", tips.showing == "grip", tips.showing)
 	# The Warden's fight comes back before the tip has been up MIN_SHOWN: it comes down unseen.
 	_fight(true)
 	_advance(0.1)
