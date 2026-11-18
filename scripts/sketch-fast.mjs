@@ -758,6 +758,12 @@ async function main() {
   }).filter((row) => row && row.labels.length > 0);
   for (const row of receipt.checks_removed) log(`  checks removed from ${row.test}: ${row.labels.map((label) => `"${label}"`).join(", ")}`);
   if (receipt.checks_removed.length > 0) log("  name each removed check in the pull request and say what now covers it");
+  // Also a report, not a stage: the deep sweep's leads on this branch's own lines (DEEP-SWEEP.md), so a reach
+  // into another module's private members is seen at the pull request and not only after promotion.
+  const swept = spawnSync(process.execPath, [path.join(root, "scripts", "deep-sweep.mjs"), "--base", mergeBase, "--head", "HEAD"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, timeout: 60_000 });
+  receipt.deep_sweep = swept.status === 0 ? Object.fromEntries([...swept.stdout.matchAll(/^## (D\d) .*\((\d+)\)$/gm)].map((m) => [m[1], Number(m[2])])) : null;
+  if (receipt.deep_sweep === null) log("  deep sweep did not run");
+  else if (Object.values(receipt.deep_sweep).some((n) => n > 0)) log(`  deep sweep leads on this branch: ${Object.entries(receipt.deep_sweep).filter(([, n]) => n > 0).map(([rule, n]) => `${rule} ${n}`).join(", ")} (node scripts/deep-sweep.mjs --base ${mergeBase.slice(0, 10)} lists them)`);
   const merges = git(["rev-list", "--first-parent", "--merges", "--parents", `${mergeBase}..HEAD`]).split("\n").filter(Boolean)
     .map((line) => line.split(" "))
     .filter(([, , second]) => second && spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", second, mergeBase]).status !== 0)
