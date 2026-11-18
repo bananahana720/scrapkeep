@@ -148,6 +148,26 @@ test("both Mac entry points refuse unknown and changed tools before taking a loc
   assert.equal((await runCapture({ ...opts, ...unused })).supported, false);
 });
 
+test("the registered look harness requires the same harness, catalog, helper and workshop input scripts", async () => {
+  const opts = capture(scratch());
+  const look = "res://tools/look_harness.gd";
+  const files = ["tools/look_harness.gd", "tools/look_subjects.gd", "tools/offscreen_window.gd", "tests/workshop/push.gd"];
+  function install(file) {
+    const dest = path.join(opts.cwd, "sketches/core-loop", file);
+    mkdirSync(path.dirname(dest), { recursive: true });
+    copyFileSync(new URL("../../sketches/core-loop/" + file, import.meta.url), dest);
+    return dest;
+  }
+  files.forEach(install);
+  assert.equal((await runCapture({ ...opts, script: look })).exit, 0);
+  for (const file of files) {
+    writeFileSync(path.join(opts.cwd, "sketches/core-loop", file), "changed");
+    const result = await runCapture({ ...opts, script: look, acquire: assert.fail });
+    assert.equal(result.supported, false, file);
+    install(file);
+  }
+});
+
 test("a queued Mac draw rechecks its files before the version query and again before the draw", async () => {
   for (const wait of ["slot", "sample"]) {
     const opts = capture(scratch());

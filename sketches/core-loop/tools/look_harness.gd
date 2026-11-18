@@ -62,6 +62,7 @@ extends SceneTree
 #   direction to the camera eye; a subject faces a named view when facing() is under 90.
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const OffscreenWindow := preload("res://tools/offscreen_window.gd")
 const Subjects := preload("res://tools/look_subjects.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
@@ -109,6 +110,7 @@ var _yaw_probe := {}
 
 
 func _initialize() -> void:
+	OffscreenWindow.apply(root)
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--out="): out = a.trim_prefix("--out=")
 		elif a.begins_with("--subject="): requested = Array(a.trim_prefix("--subject=").split(",", false))
@@ -217,7 +219,7 @@ static func _groups_of(subjects: Array) -> Array:
 static func child_display_args(platform: String, display: String) -> Array:
 	var driver := display.to_lower()
 	if platform == "macOS" and driver == "embedded":
-		return ["--embedded", "--display-driver", driver]
+		return ["--embedded", "--debug", "--skip-breakpoints", "--ignore-error-breaks", "--audio-driver", "Dummy", "--display-driver", driver]
 	return ["--display-driver", driver]
 
 

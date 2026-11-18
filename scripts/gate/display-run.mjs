@@ -154,6 +154,12 @@ const PROBE = "res://tools/offscreen_probe.gd";
 // Keep the receipt before admitting the registration to the stage. A helper marker alone
 // does not qualify a tool. The probe inherits the dam capture, so pin both scripts.
 const watchedTools = new Map([
+  ["res://tools/look_harness.gd", {
+    "tools/look_harness.gd": "a513ec6e82b999e685ad43755e952b1fc1095e1e8b23e77abf02fbf7bd1b6a38",
+    "tools/look_subjects.gd": "a8a2bb31ffa2da8f152e2abb8dab22024bac9586107dcc268b2c14dd77193e2d",
+    "tools/offscreen_window.gd": "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d",
+    "tests/workshop/push.gd": "f233cec8d830d14f3aeaaff0931b8a649763bfb30a107036a6a1533fd17d2cce",
+  }],
   [PROBE, {
     // proof/W1-131 at 2c2dfa665, artifacts/proof/W1-131a/capture.json
     "tools/offscreen_probe.gd": "156464df4c44b25ba4f903f6786557bdff94a71b89f033744c0021f5d734819b",

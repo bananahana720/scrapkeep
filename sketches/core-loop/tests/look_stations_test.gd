@@ -1,7 +1,8 @@
 # smoke: solo timeout=180s
 extends "res://tools/look_harness.gd"
 
-# Exercise the actual capture group through its last step before drawing a frame.
+# Inspect the actual capture group at its requested tick immediately after the spawn.
+# The 0.5 m bound checks authored placement at capture, before the chaser moves.
 const T := preload("res://tests/support/t.gd")
 var _t := T.new("look_stations_test")
 var _captures := 0
@@ -14,7 +15,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_t.eq("Mac embedded children select the backend before startup", child_display_args("macOS", "Embedded"),
-		["--embedded", "--display-driver", "embedded"])
+		["--embedded", "--debug", "--skip-breakpoints", "--ignore-error-breaks", "--audio-driver", "Dummy", "--display-driver", "embedded"])
 	_t.eq("a regular Mac child keeps its parent display", child_display_args("macOS", "macOS"), ["--display-driver", "macos"])
 	_t.eq("a Linux child keeps its parent display", child_display_args("Linux", "X11"), ["--display-driver", "x11"])
 	_t.check("station files load", Subjects.station_errors.is_empty(), str(Subjects.station_errors))
@@ -28,6 +29,9 @@ func _run() -> void:
 	file.close()
 	var errors := Subjects.merge_stations(fixture, Subjects.SUBJECTS.duplicate())
 	_t.check("duplicate built-in subject is refused", errors.size() == 1 and str(errors[0]).contains("duplicates subject arb_bowl"), str(errors))
+	var scratch := DirAccess.open(fixture)
+	_t.eq("duplicate fixture removed", scratch.remove("duplicate.json"), OK)
+	_t.eq("fixture directory removed", DirAccess.remove_absolute(ProjectSettings.globalize_path(fixture)), OK)
 
 	requested = ["west_wash_run", "incline_line"]
 	await _staged()
