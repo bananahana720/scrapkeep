@@ -1,12 +1,12 @@
 extends RefCounted
 
-# Headless witness of the crew's body origin through the rider's lens. The drawn
+# Headless witness of the crew's collider through the rider's lens. The drawn
 # footprint at a mouth is a separate look-harness measurement. World geometry
 # is layer 1; the ball and other moving crews use different layers.
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 
 var _active := {}
-var _rows: Array[Dictionary] = []
+var _rows := {}
 
 
 func spawned(body: Node3D, kind: String) -> void:
@@ -15,9 +15,9 @@ func spawned(body: Node3D, kind: String) -> void:
 		return
 	var row := {"kind": kind, "seen": false, "pop_in": false, "warned": false,
 		"seen_before_warning_s": 0.0}
-	_rows.append(row)
 	var id := body.get_instance_id()
-	_active[id] = {"ref": weakref(body), "row": row, "was_visible": false}
+	_rows[id] = row
+	_active[id] = {"ref": weakref(body), "row": row, "was_visible": false, "points": _points(body)}
 	if body.has_signal("attack_phase"):
 		body.connect("attack_phase", _phase.bind(row))
 	if body.has_signal("special_tell"):
@@ -29,6 +29,42 @@ func spawned(body: Node3D, kind: String) -> void:
 func _phase(fact: Dictionary, row: Dictionary) -> void:
 	if fact.get("phase") == "windup":
 		row.warned = true
+
+
+# Cache body-local samples from the actual shapes at spawn. The centre and
+# six face centres capture a shoulder or crown emerging before the origin.
+func _points(body: Node3D) -> PackedVector3Array:
+	var points := PackedVector3Array()
+	if body is CollisionObject3D:
+		for owner in body.get_shape_owners():
+			var transform: Transform3D = body.shape_owner_get_transform(owner)
+			for index in body.shape_owner_get_shape_count(owner):
+				var mesh: Mesh = body.shape_owner_get_shape(owner, index).get_debug_mesh()
+				if mesh == null:
+					continue
+				var box := mesh.get_aabb()
+				var centre := box.get_center()
+				points.append(transform * centre)
+				for axis in [Vector3.RIGHT, Vector3.UP, Vector3.BACK]:
+					var offset: Vector3 = axis * box.size * 0.5
+					points.append(transform * (centre - offset))
+					points.append(transform * (centre + offset))
+	if points.is_empty():
+		points.append(Vector3.ZERO)
+	return points
+
+
+func _visible(cam: Camera3D, body: Node3D, points: PackedVector3Array) -> bool:
+	if not body.is_visible_in_tree():
+		return false
+	for local in points:
+		var point := body.to_global(local)
+		if cam.is_position_in_frustum(point):
+			var ray := PhysicsRayQueryParameters3D.create(cam.global_position, point, 1)
+			ray.hit_from_inside = true
+			if cam.get_world_3d().direct_space_state.intersect_ray(ray).is_empty():
+				return true
+	return false
 
 
 # Call once per physics tick. An interval is credited only after the body
@@ -48,22 +84,21 @@ func sample(cam: Camera3D, delta: float) -> void:
 			row.seen_before_warning_s += delta
 		if row.kind == "swarm_remnant" and not WindupRows.state_facts(body).is_empty():
 			row.warned = true
-		var point := body.global_position
-		var visible := body.is_visible_in_tree() and cam.is_position_in_frustum(point)
-		if visible:
-			var ray := PhysicsRayQueryParameters3D.create(cam.global_position, point, 1)
-			ray.hit_from_inside = true
-			visible = cam.get_world_3d().direct_space_state.intersect_ray(ray).is_empty()
+		var visible := _visible(cam, body, track.points)
 		track.was_visible = visible
 		if visible and not row.seen:
 			row.seen = true
 			row.pop_in = body.get_meta("arrival_state", "live") == "live"
 
 
-func reading() -> Dictionary:
-	var out := {"crews": _rows.size(), "seen": 0, "pop_ins": 0, "warnings": 0,
+func reading(ids = null) -> Dictionary:
+	var out := {"crews": 0, "seen": 0, "pop_ins": 0, "warnings": 0,
 		"early_warnings": 0, "seen_before_warning_s": null}
-	for row in _rows:
+	for id in (_rows.keys() if ids == null else ids):
+		if not _rows.has(id):
+			continue
+		var row: Dictionary = _rows[id]
+		out.crews += 1
 		out.seen += int(row.seen)
 		out.pop_ins += int(row.pop_in)
 		if row.warned:

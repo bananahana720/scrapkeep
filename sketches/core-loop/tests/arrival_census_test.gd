@@ -43,7 +43,9 @@ func _start() -> void:
 	game.table = "park"
 	root.add_child(game)
 	game.run.run_seed_override = case_seed
-	game.events.enemy_spawned.connect(census.spawned)
+	game.events.enemy_spawned.connect(func(body: Node3D, kind: String):
+		if game.run.stage in [1, 2]:
+			census.spawned(body, kind))
 	game.presentation.audio.bake_opening_now()
 	if role.begins_with("park_"):
 		await _yard()
@@ -101,12 +103,22 @@ func _yard() -> void:
 			if not crew.is_empty():
 				break
 		var kinds := crew.map(func(e): return String(e.kind))
-		yard_waves.append(kinds)
-		if not t.eq("%s wave %d" % [role, yard_waves.size()], kinds, wave):
+		var ordinal := yard_waves.size() + 1
+		if not t.eq("%s wave %d" % [role, ordinal], kinds, wave):
 			break
-		# Let the arriving crew be sampled and potentially warn before clearing it.
-		for tick in Engine.physics_ticks_per_second * 2:
+		var ids := crew.map(func(e): return e.get_instance_id())
+		# Give each wave its share of the lock duration. Preserve missing
+		# observations when we clear survivors to exercise the next wave.
+		var window := float(lock.max_s) / lock.waves.size() - float(lock.wave_gap_s) - 1.0
+		var observed := {}
+		for tick in maxi(1, floori(window * Engine.physics_ticks_per_second)):
 			await physics_frame
+			observed = census.reading(ids)
+			if observed.seen == ids.size() and observed.warnings == ids.size():
+				break
+		t.eq("the census registered every member of wave %d" % ordinal, observed.crews, wave.size())
+		observed.merge({"wave": ordinal, "kinds": kinds})
+		yard_waves.append(observed)
 		for enemy in crew:
 			if is_instance_valid(enemy) and not enemy.is_dead():
 				enemy._die()
@@ -120,6 +132,11 @@ func _fixture() -> int:
 	scene.add_child(cam)
 	var crew := Chaser.new()
 	crew.process_mode = Node.PROCESS_MODE_DISABLED
+	var collider := CollisionShape3D.new()
+	var capsule := CapsuleShape3D.new()
+	capsule.height = 4.0
+	collider.shape = capsule
+	crew.add_child(collider)
 	scene.add_child(crew)
 	var behind := Census.new()
 	crew.position = Vector3.BACK * 30.0
@@ -149,6 +166,14 @@ func _fixture() -> int:
 	hidden.spawned(crew, "chaser")
 	hidden.sample(cam, 0.1)
 	t.eq("terrain hides a projected live crew", hidden.reading().seen, 0)
+	# Lower the obstruction until the crown clears it but the origin does not.
+	wall.position.y = -3.5
+	await physics_frame
+	await physics_frame
+	var crown := Census.new()
+	crown.spawned(crew, "chaser")
+	crown.sample(cam, 0.1)
+	t.eq("visible crown reveals a live crew while its centre is hidden", crown.reading().pop_ins, 1)
 	wall.position.x = 20.0
 	await physics_frame
 	await physics_frame
@@ -182,6 +207,8 @@ func _parent() -> void:
 	var rows := []
 	var pop_ins := 0
 	var minimum = null
+	var complete := true
+	var bot_stages := {}
 	for i in jobs.size():
 		var result: Dictionary = results[i]
 		var args: Array = jobs[i].args
@@ -195,10 +222,20 @@ func _parent() -> void:
 		if not t.check(label + " reported its arrivals", row.get("case") == args[1] and row.get("seed") == int(args[2]) and row.get("crews", 0) > 0):
 			continue
 		rows.append(row)
+		if args[1] in ["skipper", "camper"]:
+			# A normal death is a measured run. A driver cap is a partial trace.
+			bot_stages[args[1]] = maxi(bot_stages.get(args[1], 0), int(row.stage))
+			if row.ending not in ["world_1_clear", "lost", "died", "won"]:
+				complete = false
+		else:
+			for wave in row.yard_waves:
+				if wave.seen != wave.crews or wave.warnings == 0:
+					complete = false
 		pop_ins += int(row.pop_ins)
 		if row.seen_before_warning_s != null and (minimum == null or row.seen_before_warning_s < minimum):
 			minimum = row.seen_before_warning_s
 	t.check("bot runs measured first warnings", rows.filter(func(r): return r["case"] in ["skipper", "camper"] and r.warnings > 0).size() == 8)
-	print("RECEIPT " + JSON.stringify({"pop_ins": pop_ins, "seen_before_warning_s": minimum, "runs": rows,
-		"pass": t.failures == 0 and pop_ins == 0 and minimum != null and minimum + 0.000001 >= 0.6}))
+	complete = complete and bot_stages.get("skipper", 0) == 2 and bot_stages.get("camper", 0) == 2
+	print("RECEIPT " + JSON.stringify({"coverage_complete": complete, "pop_ins": pop_ins, "seen_before_warning_s": minimum, "runs": rows,
+		"pass": t.failures == 0 and complete and pop_ins == 0 and minimum != null and minimum + 0.000001 >= 0.6}))
 	quit(t.verdict())
