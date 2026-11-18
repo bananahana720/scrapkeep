@@ -1,0 +1,9 @@
+# W1-137a picture review
+
+**PASS+NOTES for the collision inventory.** GPT-6.2 Sol at high effort reviewed the two fixture frames blind, then the rider views, raw counts and place lists. The captures ran at `f6709da3f` against stage `4f9017c58`. The reviewer also compared the final PR head `8d435790e` against the surveyed head. The merge changed release tally files only.
+
+In the blind pair, Sol identified the extra gray box on the left in A. The gray box on the right and the horizon stayed in the same place in both frames. The key identified A as the matched fixture and B as the layer-zero control. Of 2,937 physical samples, changing the matched box to layer zero added exactly its 980 samples to the misses at both search distances. The only new place was Park_QAWall_Matched, centred at [2000, 4, 2000] with size [4, 2, 0.5] metres. [Fixture A](matched/view.png) · [Fixture B](layer-zero/view.png)
+
+The flume frame shows the ball on a lined apron with a tower ahead and a raised crossing on the left. The dam frame shows a foreground lip and open ground between flat-topped outcrops. In both, existing arrival overlays cover part of the ball and the ground. Sol saw no visual fault attributable to the candidate. The captures show the rider view at arrival. [Flume](flume/view.png) · [Dam](dam/view.png)
+
+Sol checked every place for owner, centre and size, and reconciled the sum of its samples to the map’s full 0.4 m miss count. All four frame hashes matched their summaries. That satisfies the collision inventory step of map standard ct point 8. Proving riding-line snags, rolling and turning under cu, or heading carry under cv requires motion evidence. This change adds no player-facing words or cues under cx. Both map runs wrote their reports and exited successfully. Godot reported two light-unpair errors and leaked particle shader resources on shutdown. [Flume report and watcher log](flume) · [Dam report and watcher log](dam)
