@@ -78,13 +78,18 @@ func _two_rows_entry(was_rows: int, w1: float) -> Array:
 	return RewardGates.fit_names([a, _entry(1, 540.0, 80.0, w1)])
 
 
+# The room between the top band's end (band_end) and the bottom HUD band, across the whole view.
+func _room(view: Vector2, band_end: float) -> Rect2:
+	return Rect2(0.0, band_end, view.x, ScreenRegions.rect("bottom", view).position.y - band_end)
+
+
 # B. The rule, with numbers.
 func _fit_part() -> void:
 	var lone := RewardGates.fit_names([_entry(0, 400.0, 50.0, 140.0, false, 80.0, 200.0)])
 	_t.check("B. a lone gate shows its name on one row with its effect lines", lone[0]["shown"] and lone[0]["rows"] == 1 and lone[0]["detail"], str(lone))
 	_t.check("B. the name is centred on its gate's column and hangs under it", is_equal_approx((lone[0]["rect"] as Rect2).get_center().x, 400.0) and is_equal_approx((lone[0]["rect"] as Rect2).position.y, 300.0 + RewardGates.NAME_DROP), str(lone[0]["rect"]))
 	for x in [8.0, 1272.0]:
-		var edge := RewardGates.fit_names([_entry(0, x, 25.0, 140.0, false, 80.0, 248.0)], 90.0, Vector2(1280, 720))[0] as Dictionary
+		var edge := RewardGates.fit_names([_entry(0, x, 25.0, 140.0, false, 80.0, 248.0)], _room(Vector2(1280, 720), 90.0))[0] as Dictionary
 		var rect: Rect2 = edge["rect"]
 		_t.check("the complete edge offer opens inward from its own arch at x=%s" % x,
 			edge["shown"] and edge["detail"] and rect.position.x <= x and x <= rect.end.x
@@ -94,7 +99,7 @@ func _fit_part() -> void:
 	var lower_edge := _entry(0, 24.0, 25.0, 140.0, false, 80.0, 248.0)
 	lower_edge.col.y = 700.0
 	var viewport_size := Vector2(1280, 720)
-	var docked: Dictionary = RewardGates.fit_names([lower_edge], 90.0, viewport_size)[0]
+	var docked: Dictionary = RewardGates.fit_names([lower_edge], _room(viewport_size, 90.0))[0]
 	var bottom_hud := ScreenRegions.rect("bottom", viewport_size)
 	_t.check("a low edge offer stays on its arch column and clears the bottom HUD", docked.detail
 		and docked.rect.end.y <= bottom_hud.position.y and docked.rect.position.x <= 24.0
@@ -139,12 +144,26 @@ func _fit_part() -> void:
 	# The top band: the name drops straight down its own column to the band's lower edge, and returns below it.
 	var high := Dictionary(_entry(0, 400.0, 50.0))
 	high["col"] = Vector2(400.0, 95.0)
-	var dropped := RewardGates.fit_names([high], 126.0)
+	var dropped := RewardGates.fit_names([high], Rect2(0.0, 126.0, INF, INF))
 	_t.check("B. a crossbar point in the top band drops the name to the band's lower edge, same column", is_equal_approx((dropped[0]["rect"] as Rect2).position.y, 126.0) and is_equal_approx((dropped[0]["rect"] as Rect2).get_center().x, 400.0), str(dropped[0]["rect"]))
 	var low := Dictionary(_entry(0, 400.0, 50.0))
 	low["col"] = Vector2(400.0, 300.0)
-	var kept := RewardGates.fit_names([low], 126.0)
+	var kept := RewardGates.fit_names([low], Rect2(0.0, 126.0, INF, INF))
 	_t.check("B. below the band the name hangs at the crossbar point", is_equal_approx((kept[0]["rect"] as Rect2).position.y, 300.0 + RewardGates.NAME_DROP), str(kept[0]["rect"]))
+	# The flip above the crossbar: a name that would run off the room's bottom hangs above, and one pixel either
+	# side of the boundary does not flip it back and forth.
+	var space := Rect2(0.0, 126.0, 1280.0, 400.0)
+	var edge_y := space.end.y - RewardGates.NAME_DROP - 30.0
+	var hang := Dictionary(_entry(0, 400.0, 50.0))
+	var hung := []
+	for dy in [-1.0, 0.0, 1.0, 0.0, -1.0, 0.0]:
+		hang["col"] = Vector2(400.0, edge_y + dy)
+		var got: Dictionary = RewardGates.fit_names([hang], space)[0]
+		hang["was_above"] = got["above"]
+		hung.append(got["above"])
+	_t.eq("B. a name at the flip boundary flips above once and a one pixel change does not flip it back", hung, [false, false, true, true, true, true])
+	hang["col"] = Vector2(400.0, edge_y - RewardGates.NAME_HOLD - 1.0)
+	_t.check("B. it comes back below with NAME_HOLD px to spare", not RewardGates.fit_names([hang], space)[0]["above"])
 
 
 func _focal() -> float:
