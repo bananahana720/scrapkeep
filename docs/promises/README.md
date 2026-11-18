@@ -47,7 +47,7 @@ Every command runs from the repo root on the Mac after `export PATH=/opt/homebre
 | 0 | now, the Gate alone | G0 below, in two parts | Part 1 (the cards, rows and rulings) must exist before a claim. Part 2 (every open draft stacked or parked) must be done before a card fences a file a draft touches. |
 | 1 | after G0 part 1 | W1-131a; W1-132a to f; W1-133a to e and g; W1-134a; W1-135a, b; W1-137a; W1-141a; W1-143a; W1-144a | The proof tools unblock every picture and close. Enemies at speed is what Andrew asked for most, and its rounds are headless. Every other promise records its round 0 now, headless. No file here is touched by an open draft. |
 | 2 | W1-131a and W1-132a to c stacked; G0 part 2 done | W1-131b; W1-132g to i; W1-133f, h; W1-134b to e; W1-136; W1-137b, c; W1-138; W1-139; W1-140; W1-141b to c3; W1-143b; W1-144b | Everything that needs real frames, a frozen board, or a file an open draft held. W1-141 owns the park geometry files this wave. |
-| 3 | W1-141c and W1-133 stacked | W1-135c, d; W1-141d, e; W1-142 | The works and the heights need the rebuilt places and the new enemy leads. |
+| 3 | W1-141c1, c2 and c3 and the full W1-133 card stacked | W1-135c, d; W1-141d, e; W1-142 | The works and the heights need the rebuilt places and the new enemy leads. |
 | 4 | W1-142 and W1-141 stacked | W1-137d; W1-145 | Collision fixes touch the geometry last; the read on every pilot and the packed build closes the tree. |
 
 **G0, the Gate's wave 0 step** (carries gap R1), in two parts.
