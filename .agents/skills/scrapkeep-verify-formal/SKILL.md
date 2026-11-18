@@ -89,7 +89,7 @@ Run it with `bash $F/models/make-rewards-configs.sh`, then each `rewards-*.cfg` 
 
 A third model, `models/ParkFlood.tla`, checks a park flood from its announcement to its end in `sketches/core-loop/src/world/event_director.gd` (`_park_step_live`, `_park_capacity`, `_park_can_end`), with the ball free to roll into or out of any basin between any two ticks. Its rules:
 
-- **FullWaterNeverHeld.** Water that has risen for its whole fill time is stepped on every tick, ball or no ball.
+- **FullWaterNeverHeld.** While its live time runs, water that has risen for its whole fill time is stepped on every tick, ball or no ball.
 - **FullWaterFreesItsSlot.** Full water with no live time stops counting against the ground cap.
 - **NeverRisesUnderBall** and **NeverEndsUnderBall.** Water neither rises nor ends while a grounded ball is in its basin.
 - **WithinCap.** No more unsettled ground events are live than the cap allows.

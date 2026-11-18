@@ -79,6 +79,7 @@ export const ROWS = {
     coverage: "references/flood-coverage.md",
     gaps: [
       "a ball parked in a basin before the water has risen stops the rise for as long as it stays, and the flood then ends unrisen (finding PF-1, an open design question)",
+      "after its live time is up, a flood that cannot end because the ball is near is no longer stepped (finding PF-2)",
       "collapses and cave-ins are not modelled; their clock shares the rise's helper and park_events_test.gd sweeps it",
     ],
   },
