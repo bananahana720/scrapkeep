@@ -61,9 +61,10 @@ class WaterView:
 	var surface: WaterSurface
 	var query_xz := Vector2.ZERO
 	var depth_m := 0.0
-	var _plane := MeshInstance3D.new()
+	var _plane: MeshInstance3D
 	func setup(projected: WaterSurface) -> void:
 		surface = projected
+		_plane = MeshInstance3D.new()
 		_plane.mesh = projected.mesh
 		_plane.material_override = Palette.water(Palette.water_tone())
 		add_child(_plane)
@@ -74,8 +75,6 @@ class WaterView:
 		return surface.height(query_xz) + depth_m
 	func render() -> void:
 		_plane.position = Vector3.UP * depth_m
-	func external_accel(_point: Vector3, _velocity: Vector3) -> Vector3:
-		return Vector3.ZERO
 
 
 
