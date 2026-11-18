@@ -96,6 +96,15 @@ func clear() -> void:
 	_drop()
 
 
+# The ball is out of the storm's reach (SiltBoil.exempt, or the calm bay): a tell in flight is dropped and the read
+# starts over, so a ball that stopped there is not sought the tick it leaves.
+func stand_down() -> void:
+	_drop()
+	_samples.clear()
+	_sample_clock = 0.0
+	_slow_s = 0.0
+
+
 func _drop() -> void:
 	if _pending != null and is_instance_valid(_pending):
 		_pending.finish()

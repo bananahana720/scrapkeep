@@ -47,6 +47,7 @@ const DamageDoor := preload("res://src/combat/damage_door.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const ChurnGround := preload("res://src/combat/churn_ground.gd")
 const SiltBoil := preload("res://src/combat/silt_boil.gd")
+const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -636,6 +637,8 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 		enemy.counter_hit.connect(_on_player_hit.bind("warden_counter"))
 	enemy.died.connect(func(where: Vector3, scrap: int):
 		var source: String = enemy.last_damage_source if "last_damage_source" in enemy else ""
+		if enemy.has_meta(HazardHits.STRUCK):
+			source = "hazard"
 		# A fuse death is an enemy spent by its own blast (splitter_pod.gd): nobody killed it.
 		if source != "fuse":
 			ctx.run.kill_tags = _kill_tags(enemy, affix_id)
@@ -3781,7 +3784,7 @@ func _on_proc_fact(kind: String) -> void:
 	if ctx == null or not ctx.flow.in_play() or ctx.run.class_def == null:
 		return
 	# A spark kill (wear_trail) procs no tree effect.
-	if kind == "enemy_killed" and ctx.run.last_kill_from_spark:
+	if kind == "enemy_killed" and ctx.run.last_kill_triggerless:
 		return
 	for proc in ctx.player.tree.procs():
 		if proc["on"] != kind:

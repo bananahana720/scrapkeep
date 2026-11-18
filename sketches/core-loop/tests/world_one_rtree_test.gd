@@ -378,7 +378,7 @@ func _trail_checks() -> void:
 	var pending_before: int = build.bus.pending.size()
 	var bloom_before: int = build._kills.size()
 	var flag_seen := [false]
-	var watch: Callable = func(_k, _a, _s): flag_seen[0] = _game.run.last_kill_from_spark
+	var watch: Callable = func(_k, _a, _s): flag_seen[0] = _game.run.last_kill_triggerless
 	_game.events.enemy_killed.connect(watch)
 	var spark_before: float = float(_combat.delivered_damage()["by_action"].get("spark", 0.0))
 	var over_before: float = float(_combat.delivered_damage()["overkill"])
@@ -388,7 +388,7 @@ func _trail_checks() -> void:
 	_check("spark kill drops scrap", build.scrap.count() > scrap_before, "%d -> %d scrap items" % [scrap_before, build.scrap.count()])
 	_check("spark kill posts no ON_KILL", build.bus.pending.size() == pending_before, "%d pending (was %d)" % [build.bus.pending.size(), pending_before])
 	_check("spark kill records no shrapnel_bloom kill", build._kills.size() == bloom_before, "%d kills recorded (was %d)" % [build._kills.size(), bloom_before])
-	_check("flag clear after the emit", not _game.run.last_kill_from_spark, "last_kill_from_spark %s" % _game.run.last_kill_from_spark)
+	_check("flag clear after the emit", not _game.run.last_kill_triggerless, "last_kill_triggerless %s" % _game.run.last_kill_triggerless)
 	# Rampage's refund rides the same gate: the patch kill above gave none, an ordinary kill does.
 	_check("spark kill gives no Rampage refund", refunds[0] == 0 and not _procs_of("refund_move").is_empty(), "%d refunds, %d rampage procs" % [refunds[0], _procs_of("refund_move").size()])
 	var refunds_spark: int = refunds[0]

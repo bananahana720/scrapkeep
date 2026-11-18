@@ -19,6 +19,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const StormSeek := preload("res://src/world/events/storm_seek.gd")
+const SiltBoil := preload("res://src/combat/silt_boil.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 # Flood foam (WorldFx set "spill_flood") rides the water in pieces this long along the footprint's long
 # axis, each at its own surface height, so foam follows a wash's slope; at most FOAM_PIECES a flood.
@@ -434,7 +435,21 @@ func _physics_process(delta: float) -> void:
 	var player = world.ctx.player
 	if player == null or not player.has_method("ball_position") or not player.has_method("planar_velocity"):
 		return
-	seek.observe(delta, player.ball_position(), player.planar_velocity(), _cruise())
+	var ball: Vector3 = player.ball_position()
+	if _seek_exempt(ball):
+		seek.stand_down()
+		return
+	seek.observe(delta, ball, player.planar_velocity(), _cruise())
+
+
+# Where the silt does not boil (the reward gates, the launch, an engaged Warden's ring: SiltBoil.exempt) and the
+# calm bay, where the director is not stepped, a storm does not seek.
+func _seek_exempt(ball: Vector3) -> bool:
+	var flow = world.ctx.get("flow")
+	if flow != null and SiltBoil.exempt(flow, ball):
+		return true
+	var bay = world.get("bay")
+	return bay != null and bay.inside
 
 
 # The ball's cruise speed, or 0 where there is no tuning (a test double): then no speed reads as slow.
@@ -625,7 +640,7 @@ func _hazard(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 	if hits_enemies:
 		HazardHits.strike(get_tree(), func(point: Vector3) -> bool: return _in_strike(state, point), row.kind,
 			ENEMY_STRIKE_DAMAGE, ENEMY_TOSS, state.struck)
-		if row.kind == "lightning" and state.phase == "live":
+		if row.kind == "lightning" and state.phase == "live" and not _seek_exempt(ctx.ball):
 			_seek(row, state, ctx)
 	if state.hit or not _in_strike(state, ctx.ball):
 		return

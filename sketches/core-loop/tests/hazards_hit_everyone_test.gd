@@ -5,6 +5,7 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 const Natural := preload("res://src/world/events/natural.gd")
 const StormSeek := preload("res://src/world/events/storm_seek.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
+const RunState := preload("res://src/core/run_state.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W44, hazards hit everyone (ruling cu). The Spillway's storm (the dam's dome lightning row as authored: a 3 s tell,
@@ -14,6 +15,10 @@ const T := preload("res://tests/support/t.gd")
 #            (the stall window, then a tick); the dome itself strikes the enemy standing in its circle.
 #   escape   a ball that rolls off as the tell starts: the strike lands on the old spot and misses it.
 #   rolling  a ball orbiting tight at twice cruise: never sought (ruling cu: rolling and turning stays free).
+#   cruise   a tight orbit just above 0.55 of cruise (the walk/cruise line, speed_tier.gd) is never sought; just below it is.
+#   exempt   a ball stopped under the storm at the reward gates, in the launch, inside an engaged Warden's ring or in
+#            the calm bay is never sought or struck (SiltBoil.exempt and the bay: the silt's own exemptions).
+#   kill     a kill a hazard lands is credited as a hazard's: it counts, and no on-kill effect runs.
 #   flood    the enemy in the risen water is swept; a ball sitting slow in it pays no tax for 3 s, then pays.
 # Too little data is a miss: each scenario must see the strikes or taxes it reads, or the check fails.
 # Plants: SCRAPKEEP_PLANT_HAZARD=skip_enemies, no_tell or seek_rolling (comma-separated) must each turn this test
@@ -66,8 +71,33 @@ class Run:
 		losses.append({"amount": lost, "cause": cause, "t": clock})
 		return lost
 
+class Flow:
+	extends RefCounted
+	var name := "stage"
+	var is_engaged := false
+	var beacon = null
+	var warden = null
+	func state_name() -> String:
+		return name
+	func engaged() -> bool:
+		return is_engaged
+
+class Bay:
+	extends RefCounted
+	var inside := false
+
+class Bus:
+	extends RefCounted
+	signal enemy_killed(kind: String, at: Vector3, scrap: int)
+	signal special_broken(kind: String)
+
+class Ring:
+	extends Node3D
+	var radius := 10.0
+
 class Context:
 	extends RefCounted
+	var flow = null
 	var player := Player.new()
 	var run := Run.new()
 	var root: Node3D
@@ -92,6 +122,7 @@ class World:
 	extends Node3D
 	var ctx := Context.new()
 	var terrain := Terrain.new()
+	var bay = null
 	var events
 	var flood = null
 	var terrain_view = null
@@ -104,9 +135,12 @@ class Enemy:
 	var hits: Array = []
 	var knocks := 0
 	var last_damage_source := ""
+	var struck_tags := 0
 	func take_damage(amount: float) -> float:
 		hp -= amount
 		hits.append(last_damage_source)
+		if has_meta(HazardHits.STRUCK):
+			struck_tags += 1
 		return amount
 	func knock(_direction: Vector3, _force: float) -> void:
 		knocks += 1
@@ -162,6 +196,9 @@ func _run() -> void:
 	_stalled()
 	_escape()
 	_rolling()
+	_cruise_line()
+	_exempt()
+	_kill()
 	_flood()
 	quit(t.verdict())
 
@@ -255,6 +292,89 @@ func _rolling() -> void:
 	t.check("rolling: the storm went live (else nothing was read)", read.live_at >= 0.0)
 	t.eq("rolling: a ball orbiting tight at twice cruise is never sought", read.tells, 0)
 	t.eq("rolling: and never hit", w.ctx.run.losses.size(), 0)
+	w.free()
+
+
+# A tight orbit (8 m radius, so the stall test holds) at a multiple of cruise. SpeedTier.MULTIPLES[CRUISE] is 0.55.
+func _orbit(multiple: float) -> Dictionary:
+	var fx := _fixture(DOME)
+	var w = fx[0]
+	var handler = fx[1]
+	var speed := CRUISE * multiple
+	var radius := 8.0
+	var mover := func(clock: float, _h) -> void:
+		var a := clock * speed / radius
+		w.ctx.player.at = Vector3(30.0 + cos(a) * radius, 1.2, sin(a) * radius)
+		w.ctx.player.velocity = Vector3(-sin(a), 0.0, cos(a)) * speed
+	var read := _storm(w, handler, mover)
+	read.losses = w.ctx.run.losses.size()
+	w.free()
+	return read
+
+
+func _cruise_line() -> void:
+	var above := _orbit(0.56)
+	t.check("cruise: the storm went live (above)", above.live_at >= 0.0)
+	t.eq("cruise: an orbit just above 0.55 of cruise is never sought", above.tells, 0)
+	t.eq("cruise: and never hit", above.losses, 0)
+	var below := _orbit(0.54)
+	t.check("cruise: the storm went live (below)", below.live_at >= 0.0)
+	t.check("cruise: an orbit just below 0.55 of cruise is sought (none is a miss)", below.tells >= 1, str(below))
+
+
+# A ball parked at 30 m under the storm with the world in the given shape; nothing may seek or strike it, unless sought is set (the control).
+func _parked(label: String, shape: Callable, sought := false) -> void:
+	var fx := _fixture(DOME)
+	var w = fx[0]
+	var handler = fx[1]
+	w.ctx.flow = Flow.new()
+	w.bay = Bay.new()
+	w.ctx.player.at = Vector3(30, 1.2, 0)
+	shape.call(w)
+	var read := _storm(w, handler)
+	t.check("%s: the storm went live" % label, read.live_at >= 0.0)
+	if sought:
+		t.check("%s: a stopped ball is sought and struck (none is a miss)" % label, read.tells >= 1 and w.ctx.run.losses.size() >= 1, str(read))
+		w.free()
+		return
+	t.eq("%s: a stopped ball is not sought" % label, read.tells, 0)
+	t.eq("%s: and not struck" % label, w.ctx.run.losses.size(), 0)
+	w.free()
+
+
+func _exempt() -> void:
+	_parked("exempt, stage (control: the same fixture is sought)", func(_w) -> void: pass, true)
+	_parked("exempt, reward gates", func(w) -> void: w.ctx.flow.name = "gates")
+	_parked("exempt, launch", func(w) -> void: w.ctx.flow.name = "launch")
+	_parked("exempt, calm bay", func(w) -> void: w.bay.inside = true)
+	_parked("exempt, engaged Warden's ring", func(w) -> void:
+		var ring := Ring.new()
+		w.add_child(ring)
+		ring.global_position = Vector3(30, 0, 0)
+		var warden := Node3D.new()
+		w.add_child(warden)
+		w.ctx.flow.is_engaged = true
+		w.ctx.flow.beacon = ring
+		w.ctx.flow.warden = warden)
+
+
+func _kill() -> void:
+	var fx := _fixture(DOME)
+	var w = fx[0]
+	var bus := Bus.new()
+	var run := RunState.new()
+	run.events = bus
+	var seen := {"flags": [], "kills": 0}
+	bus.enemy_killed.connect(func(_k, _a, _s) -> void: seen.flags.append(run.last_kill_triggerless))
+	run.record_kill("chaser", Vector3.ZERO, 3, "hazard")
+	run.record_kill("chaser", Vector3.ZERO, 3, "")
+	t.eq("kill: a hazard kill is triggerless, a player's is not", seen.flags, [true, false])
+	t.eq("kill: both counted", run.kills, 2)
+	t.check("kill: the flag is clear after the emit", not run.last_kill_triggerless)
+	var e := _enemy(w, Vector3(30, 0, 0))
+	HazardHits.strike(root.get_tree(), func(_p) -> bool: return true, "lightning", 5.0, 1.0, {})
+	t.eq("kill: an enemy a hazard hits carries the tag while it takes the damage", e.struck_tags, 1)
+	t.check("kill: and not after", not e.has_meta(HazardHits.STRUCK))
 	w.free()
 
 

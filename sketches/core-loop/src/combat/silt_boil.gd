@@ -180,11 +180,15 @@ func _looping() -> bool:
 
 # The exit run (gates, launch) and an engaged, standing Warden's ring: no boil arms there, and none pending erupts.
 func _exempt(ball: Vector3) -> bool:
-	return not _ctx.flow.state_name() in BOIL_STATES or _in_warden_ring(ball)
+	return exempt(_ctx.flow, ball)
 
 
-func _in_warden_ring(ball: Vector3) -> bool:
-	var flow = _ctx.flow
+# The game's one answer to "is the ball out of the hazards' reach": the silt and the storm's seek (world/events/natural.gd) both ask it.
+static func exempt(flow, ball: Vector3) -> bool:
+	return not flow.state_name() in BOIL_STATES or _in_warden_ring(flow, ball)
+
+
+static func _in_warden_ring(flow, ball: Vector3) -> bool:
 	if not flow.engaged():
 		return false
 	var beacon = flow.get("beacon")
