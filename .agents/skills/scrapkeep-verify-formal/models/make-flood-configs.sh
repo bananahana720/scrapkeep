@@ -39,7 +39,7 @@ fcfg today-timed "$SAFE" "$LIVE"
 fcfg today-noclock "$SAFE" "AnnouncedLands HoldEnds" Live=0
 # A fill that outlasts the live time less the wait (Fill > Live - HoldTicks): the live time ends before the rise
 # can, so a spent wait must not let the flood end under the ball (review of W1-148).
-fcfg today-longfill "$SAFE" "$LIVE" Fill=3 Live=2
+fcfg today-longfill "$SAFE" "FloodEnds AnnouncedLands" Fill=3 Live=2
 # One guard off each, from today: the named rule must break.
 # The code before pull request 1135: the rise can sit a hair under full.
 fcfg broken-nosnap "FullWaterNeverHeld" - SnapRise=FALSE

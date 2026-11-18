@@ -1,5 +1,5 @@
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 106 and seed -7496369827011985002 with 4 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Running breadth-first search Model-Checking with fp 0 and seed 6129011907205024802 with 4 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
 Parsing file <tmp>/ParkFlood.tla
 Parsing file <tmp>/Naturals.tla
 Parsing file <tmp>/FiniteSets.tla
@@ -12,16 +12,16 @@ Starting... (2026-11-17 17:39:25)
 Implied-temporal checking--satisfiability problem has 3 branches.
 Computing initial states...
 Finished computing initial states: 1 distinct state generated at 2026-11-17 17:39:25.
-Checking 3 branches of temporal properties for the current state space with 227397 total distinct states at (2026-11-17 17:39:25)
+Checking 3 branches of temporal properties for the current state space with 213048 total distinct states at (2026-11-17 17:39:25)
 Error: Temporal properties were violated.
 
 Error: The following behavior constitutes a counter-example:
 
 State 1: <Initial predicate>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
 /\ lives = [a |-> 0, b |-> 0, c |-> 0]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ rise = [a |-> 0, b |-> 0, c |-> 0]
 /\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
@@ -29,11 +29,11 @@ State 1: <Initial predicate>
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 2: <Announce line 66, col 3 to line 69, col 88 of module ParkFlood>
+State 2: <Announce line 67, col 3 to line 70, col 91 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
 /\ lives = [a |-> 0, b |-> 0, c |-> 0]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ rise = [a |-> 0, b |-> 0, c |-> 0]
 /\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
@@ -41,23 +41,23 @@ State 2: <Announce line 66, col 3 to line 69, col 88 of module ParkFlood>
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 3: <Announce line 66, col 3 to line 69, col 88 of module ParkFlood>
+State 3: <Land line 75, col 3 to line 84, col 55 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
-/\ lives = [a |-> 0, b |-> 0, c |-> 0]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ lives = [a |-> 1, b |-> 0, c |-> 0]
 /\ rise = [a |-> 0, b |-> 0, c |-> 0]
 /\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
-/\ phase = [a |-> "announced", b |-> "announced", c |-> "waiting"]
+/\ phase = [a |-> "live", b |-> "waiting", c |-> "waiting"]
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 4: <Land line 74, col 3 to line 83, col 52 of module ParkFlood>
+State 4: <Announce line 67, col 3 to line 70, col 91 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
 /\ lives = [a |-> 1, b |-> 0, c |-> 0]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ rise = [a |-> 0, b |-> 0, c |-> 0]
 /\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
@@ -65,11 +65,11 @@ State 4: <Land line 74, col 3 to line 83, col 52 of module ParkFlood>
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 5: <Land line 74, col 3 to line 83, col 52 of module ParkFlood>
+State 5: <Land line 75, col 3 to line 84, col 55 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
 /\ lives = [a |-> 1, b |-> 1, c |-> 0]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ rise = [a |-> 0, b |-> 0, c |-> 0]
 /\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
@@ -77,296 +77,272 @@ State 5: <Land line 74, col 3 to line 83, col 52 of module ParkFlood>
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 6: <Announce line 66, col 3 to line 69, col 88 of module ParkFlood>
+State 6: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
-/\ lives = [a |-> 1, b |-> 1, c |-> 0]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 0, b |-> 0, c |-> 0]
-/\ waited = [a |-> 0, b |-> 0, c |-> 0]
-/\ ball = "out"
-/\ phase = [a |-> "live", b |-> "live", c |-> "announced"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 7: <Step line 99, col 3 to line 120, col 60 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 0, b |-> 1, c |-> 0]
 /\ lives = [a |-> 1, b |-> 1, c |-> 0]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ rise = [a |-> 0, b |-> 1, c |-> 0]
 /\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
-/\ phase = [a |-> "live", b |-> "live", c |-> "announced"]
+/\ phase = [a |-> "live", b |-> "live", c |-> "waiting"]
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 8: <Step line 99, col 3 to line 120, col 60 of module ParkFlood>
+State 7: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 1, b |-> 1, c |-> 0]
 /\ lives = [a |-> 1, b |-> 1, c |-> 0]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ rise = [a |-> 1, b |-> 1, c |-> 0]
 /\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
-/\ phase = [a |-> "live", b |-> "live", c |-> "announced"]
+/\ phase = [a |-> "live", b |-> "live", c |-> "waiting"]
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 9: <Step line 99, col 3 to line 120, col 60 of module ParkFlood>
+State 8: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 1, b |-> 2, c |-> 0]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 2, b |-> 1, c |-> 0]
 /\ lives = [a |-> 1, b |-> 1, c |-> 0]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 1, b |-> 2, c |-> 0]
+/\ rise = [a |-> 2, b |-> 1, c |-> 0]
 /\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
-/\ phase = [a |-> "live", b |-> "live", c |-> "announced"]
+/\ phase = [a |-> "live", b |-> "live", c |-> "waiting"]
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 10: <Step line 99, col 3 to line 120, col 60 of module ParkFlood>
+State 9: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 1, b |-> 3, c |-> 0]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 1, c |-> 0]
 /\ lives = [a |-> 1, b |-> 1, c |-> 0]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 1, b |-> 2, c |-> 0]
+/\ rise = [a |-> 2, b |-> 1, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "cooldown", b |-> "live", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 10: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 2, c |-> 0]
+/\ lives = [a |-> 1, b |-> 1, c |-> 0]
+/\ rise = [a |-> 2, b |-> 2, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "cooldown", b |-> "live", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 11: <Announce line 67, col 3 to line 70, col 91 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 2, c |-> 0]
+/\ lives = [a |-> 1, b |-> 1, c |-> 0]
+/\ rise = [a |-> 2, b |-> 2, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "cooldown", b |-> "live", c |-> "announced"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 12: <Announce line 67, col 3 to line 70, col 91 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 2, c |-> 0]
+/\ lives = [a |-> 1, b |-> 1, c |-> 0]
+/\ rise = [a |-> 2, b |-> 2, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "announced", b |-> "live", c |-> "announced"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 13: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 3, c |-> 0]
+/\ lives = [a |-> 1, b |-> 1, c |-> 0]
+/\ rise = [a |-> 2, b |-> 2, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "announced", b |-> "cooldown", c |-> "announced"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 14: <Land line 75, col 3 to line 84, col 55 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 3, c |-> 0]
+/\ lives = [a |-> 2, b |-> 1, c |-> 0]
+/\ rise = [a |-> 0, b |-> 2, c |-> 0]
 /\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
 /\ phase = [a |-> "live", b |-> "cooldown", c |-> "announced"]
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 11: <Land line 74, col 3 to line 83, col 52 of module ParkFlood>
+State 15: <Announce line 67, col 3 to line 70, col 91 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 1, b |-> 3, c |-> 0]
-/\ lives = [a |-> 1, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 1, b |-> 2, c |-> 0]
-/\ waited = [a |-> 0, b |-> 0, c |-> 0]
-/\ ball = "out"
-/\ phase = [a |-> "live", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 12: <Step line 99, col 3 to line 120, col 60 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 2, b |-> 3, c |-> 0]
-/\ lives = [a |-> 1, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 2, b |-> 2, c |-> 0]
-/\ waited = [a |-> 0, b |-> 0, c |-> 0]
-/\ ball = "out"
-/\ phase = [a |-> "live", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 13: <Step line 99, col 3 to line 120, col 60 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 3, b |-> 3, c |-> 0]
-/\ lives = [a |-> 1, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 2, b |-> 2, c |-> 0]
-/\ waited = [a |-> 0, b |-> 0, c |-> 0]
-/\ ball = "out"
-/\ phase = [a |-> "cooldown", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 14: <Roll line 123, col 3 to line 124, col 89 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 3, b |-> 3, c |-> 0]
-/\ lives = [a |-> 1, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 2, b |-> 2, c |-> 0]
-/\ waited = [a |-> 0, b |-> 0, c |-> 0]
-/\ ball = "c"
-/\ phase = [a |-> "cooldown", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 15: <Step line 99, col 3 to line 120, col 60 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 3, b |-> 3, c |-> 1]
-/\ lives = [a |-> 1, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 2, b |-> 2, c |-> 0]
-/\ waited = [a |-> 0, b |-> 0, c |-> 1]
-/\ ball = "c"
-/\ phase = [a |-> "cooldown", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 16: <Announce line 66, col 3 to line 69, col 88 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 3, b |-> 3, c |-> 1]
-/\ lives = [a |-> 1, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 2, b |-> 2, c |-> 0]
-/\ waited = [a |-> 0, b |-> 0, c |-> 1]
-/\ ball = "c"
-/\ phase = [a |-> "announced", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 17: <Land line 74, col 3 to line 83, col 52 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 0, b |-> 3, c |-> 1]
-/\ lives = [a |-> 2, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 3, c |-> 0]
+/\ lives = [a |-> 2, b |-> 1, c |-> 0]
 /\ rise = [a |-> 0, b |-> 2, c |-> 0]
-/\ waited = [a |-> 0, b |-> 0, c |-> 1]
-/\ ball = "c"
-/\ phase = [a |-> "live", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 18: <Step line 99, col 3 to line 120, col 60 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 1, b |-> 3, c |-> 1]
-/\ lives = [a |-> 2, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 1, b |-> 2, c |-> 0]
-/\ waited = [a |-> 0, b |-> 0, c |-> 1]
-/\ ball = "c"
-/\ phase = [a |-> "live", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 19: <Step line 99, col 3 to line 120, col 60 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 1, b |-> 3, c |-> 2]
-/\ lives = [a |-> 2, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 1, b |-> 2, c |-> 0]
-/\ waited = [a |-> 0, b |-> 0, c |-> 1]
-/\ ball = "c"
-/\ phase = [a |-> "live", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 20: <Step line 99, col 3 to line 120, col 60 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 1, b |-> 3, c |-> 3]
-/\ lives = [a |-> 2, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 1, b |-> 2, c |-> 0]
-/\ waited = [a |-> 0, b |-> 0, c |-> 1]
-/\ ball = "c"
-/\ phase = [a |-> "live", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 21: <Roll line 123, col 3 to line 124, col 89 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 1, b |-> 3, c |-> 3]
-/\ lives = [a |-> 2, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 1, b |-> 2, c |-> 0]
-/\ waited = [a |-> 0, b |-> 0, c |-> 1]
-/\ ball = "a"
-/\ phase = [a |-> "live", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 22: <Step line 99, col 3 to line 120, col 60 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 2, b |-> 3, c |-> 3]
-/\ lives = [a |-> 2, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 1, b |-> 2, c |-> 0]
-/\ waited = [a |-> 1, b |-> 0, c |-> 1]
-/\ ball = "a"
-/\ phase = [a |-> "live", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 23: <Roll line 123, col 3 to line 124, col 89 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 2, b |-> 3, c |-> 3]
-/\ lives = [a |-> 2, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 1, b |-> 2, c |-> 0]
-/\ waited = [a |-> 1, b |-> 0, c |-> 1]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
-/\ phase = [a |-> "live", b |-> "cooldown", c |-> "live"]
+/\ phase = [a |-> "live", b |-> "announced", c |-> "announced"]
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 24: <Step line 99, col 3 to line 120, col 60 of module ParkFlood>
+State 16: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 3, b |-> 3, c |-> 3]
-/\ lives = [a |-> 2, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 2, b |-> 2, c |-> 0]
-/\ waited = [a |-> 1, b |-> 0, c |-> 1]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 1, b |-> 3, c |-> 0]
+/\ lives = [a |-> 2, b |-> 1, c |-> 0]
+/\ rise = [a |-> 1, b |-> 2, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
-/\ phase = [a |-> "cooldown", b |-> "cooldown", c |-> "live"]
+/\ phase = [a |-> "live", b |-> "announced", c |-> "announced"]
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 25: <Roll line 123, col 3 to line 124, col 89 of module ParkFlood>
+State 17: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 3, b |-> 3, c |-> 3]
-/\ lives = [a |-> 2, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 2, b |-> 3, c |-> 0]
+/\ lives = [a |-> 2, b |-> 1, c |-> 0]
 /\ rise = [a |-> 2, b |-> 2, c |-> 0]
-/\ waited = [a |-> 1, b |-> 0, c |-> 1]
-/\ ball = "a"
-/\ phase = [a |-> "cooldown", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 26: <Roll line 123, col 3 to line 124, col 89 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 3, b |-> 3, c |-> 3]
-/\ lives = [a |-> 2, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 2, b |-> 2, c |-> 0]
-/\ waited = [a |-> 1, b |-> 0, c |-> 1]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
-/\ phase = [a |-> "cooldown", b |-> "cooldown", c |-> "live"]
+/\ phase = [a |-> "live", b |-> "announced", c |-> "announced"]
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 27: <Roll line 123, col 3 to line 124, col 89 of module ParkFlood>
+State 18: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 3, c |-> 0]
+/\ lives = [a |-> 2, b |-> 1, c |-> 0]
+/\ rise = [a |-> 2, b |-> 2, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "cooldown", b |-> "announced", c |-> "announced"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 19: <Land line 75, col 3 to line 84, col 55 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 3, c |-> 0]
+/\ lives = [a |-> 2, b |-> 1, c |-> 1]
+/\ rise = [a |-> 2, b |-> 2, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "cooldown", b |-> "announced", c |-> "live"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 20: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 3, c |-> 1]
+/\ lives = [a |-> 2, b |-> 1, c |-> 1]
+/\ rise = [a |-> 2, b |-> 2, c |-> 1]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "cooldown", b |-> "announced", c |-> "live"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 21: <Roll line 124, col 3 to line 125, col 92 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 3, c |-> 1]
+/\ lives = [a |-> 2, b |-> 1, c |-> 1]
+/\ rise = [a |-> 2, b |-> 2, c |-> 1]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "c"
+/\ phase = [a |-> "cooldown", b |-> "announced", c |-> "live"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 22: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 3, c |-> 2]
+/\ lives = [a |-> 2, b |-> 1, c |-> 1]
+/\ rise = [a |-> 2, b |-> 2, c |-> 1]
+/\ waited = [a |-> 0, b |-> 0, c |-> 1]
+/\ ball = "c"
+/\ phase = [a |-> "cooldown", b |-> "announced", c |-> "live"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 23: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 3, b |-> 3, c |-> 3]
 /\ lives = [a |-> 2, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 2, b |-> 2, c |-> 0]
-/\ waited = [a |-> 1, b |-> 0, c |-> 1]
+/\ rise = [a |-> 2, b |-> 2, c |-> 1]
+/\ waited = [a |-> 0, b |-> 0, c |-> 1]
+/\ ball = "c"
+/\ phase = [a |-> "cooldown", b |-> "announced", c |-> "live"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 24: <Roll line 124, col 3 to line 125, col 92 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 3, c |-> 3]
+/\ lives = [a |-> 2, b |-> 1, c |-> 1]
+/\ rise = [a |-> 2, b |-> 2, c |-> 1]
+/\ waited = [a |-> 0, b |-> 0, c |-> 1]
+/\ ball = "out"
+/\ phase = [a |-> "cooldown", b |-> "announced", c |-> "live"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 25: <Roll line 124, col 3 to line 125, col 92 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 3, c |-> 3]
+/\ lives = [a |-> 2, b |-> 1, c |-> 1]
+/\ rise = [a |-> 2, b |-> 2, c |-> 1]
+/\ waited = [a |-> 0, b |-> 0, c |-> 1]
+/\ ball = "c"
+/\ phase = [a |-> "cooldown", b |-> "announced", c |-> "live"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 26: <Roll line 124, col 3 to line 125, col 92 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 3, c |-> 3]
+/\ lives = [a |-> 2, b |-> 1, c |-> 1]
+/\ rise = [a |-> 2, b |-> 2, c |-> 1]
+/\ waited = [a |-> 0, b |-> 0, c |-> 1]
 /\ ball = "b"
-/\ phase = [a |-> "cooldown", b |-> "cooldown", c |-> "live"]
+/\ phase = [a |-> "cooldown", b |-> "announced", c |-> "live"]
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 28: <Roll line 123, col 3 to line 124, col 89 of module ParkFlood>
+State 27: <Roll line 124, col 3 to line 125, col 92 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 3, b |-> 3, c |-> 3]
 /\ lives = [a |-> 2, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 2, b |-> 2, c |-> 0]
-/\ waited = [a |-> 1, b |-> 0, c |-> 1]
-/\ ball = "c"
-/\ phase = [a |-> "cooldown", b |-> "cooldown", c |-> "live"]
+/\ rise = [a |-> 2, b |-> 2, c |-> 1]
+/\ waited = [a |-> 0, b |-> 0, c |-> 1]
+/\ ball = "out"
+/\ phase = [a |-> "cooldown", b |-> "announced", c |-> "live"]
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 29: <Roll line 123, col 3 to line 124, col 89 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 3, b |-> 3, c |-> 3]
-/\ lives = [a |-> 2, b |-> 1, c |-> 1]
-/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ rise = [a |-> 2, b |-> 2, c |-> 0]
-/\ waited = [a |-> 1, b |-> 0, c |-> 1]
-/\ ball = "a"
-/\ phase = [a |-> "cooldown", b |-> "cooldown", c |-> "live"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-Back to state 24: <Roll line 123, col 3 to line 124, col 89 of module ParkFlood>
+Back to state 23: <Roll line 124, col 3 to line 125, col 92 of module ParkFlood>
 
 Finished checking temporal properties in 00s at 2026-11-17 17:39:25
-373409 states generated, 75799 distinct states found, 7353 states left on queue.
+344121 states generated, 71016 distinct states found, 8144 states left on queue.
 Finished in 03s at (2026-11-17 17:39:25)

@@ -84,7 +84,7 @@ export const ROWS = {
     real: [
       { cfg: "flood-today-timed.cfg", minStates: 31616, label: "a flood with a live time, as every real flood row has" },
       { cfg: "flood-today-noclock.cfg", minStates: 1792, label: "a flood with no live time" },
-      { cfg: "flood-today-longfill.cfg", minStates: 1, label: "a fill that outlasts the live time less the wait" },
+      { cfg: "flood-today-longfill.cfg", minStates: 14336, label: "a fill that outlasts the live time less the wait" },
     ],
     plants: [
       { cfg: "flood-broken-nosnap.cfg", rule: "FullWaterNeverHeld" },

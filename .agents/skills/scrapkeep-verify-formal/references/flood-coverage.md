@@ -44,7 +44,7 @@ Run `bash models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg` wi
 | --- | --- | --- |
 | `flood-today-timed` | the code, with a live time as every real flood row has | no break, in at least the pinned 31,616 distinct states |
 | `flood-today-noclock` | the code, for a flood with `live_s` 0 (the shape some test rows use) | no break, in at least the pinned 1,792 distinct states |
-| `flood-today-longfill` | the code, for a fill that outlasts the live time less the wait (`Fill` 3, `Live` 2) | no break, in at least the pinned LONGFILL distinct states |
+| `flood-today-longfill` | the code, for a fill that outlasts the live time less the wait (`Fill` 3, `Live` 2) | no break, in at least the pinned 14,336 distinct states; `HoldEnds` is not claimed here, because a ball parked to the live end leaves the water part risen until it rolls out |
 | `flood-broken-*` | one guard off, as the Guards table lists | the named rule breaks |
 | `flood-broken-nohold` | the cap on the wait removed, asked without the ball leaving | `HoldEnds` breaks: finding PF-1 in [flood-findings.md](flood-findings.md), closed by W1-148 |
 | `flood-reach-timed-*`, `flood-reach-noclock-*` | one probe each that says "never" about a thing that must happen | the probe breaks; one that holds means an action can no longer fire |
@@ -59,4 +59,4 @@ Run `bash models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg` wi
 
 Weather rows, collapses and cave-ins (a collapse's clock goes through the same `_park_clock` as the rise and `sketches/core-loop/tests/park_events_test.gd` sweeps it, but the model has no collapse), the drain, the quiet window after a Warden phase breaks, the bar the landing waits for, the route check (`_park_route_safe` is taken as true), the travel margin around a footprint (`hold_clear_m` and the ball's speed), a row with `once` true, the stage ending under a live flood (`end_all`), what the `step` hook does with the water, and anything drawn or heard.
 
-Sync commit: b42c34231 (branch w44/W1-148-held-flood, W1-148, 18 November 2026, the wait for a parked ball capped at 2 s)
+Sync commit: ba1f09956 (branch w44/W1-148-held-flood, W1-148, 18 November 2026, the wait for a parked ball capped at 2 s)
