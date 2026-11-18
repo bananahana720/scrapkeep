@@ -15,6 +15,8 @@ static func at(map_id: String, point: Vector2) -> Dictionary:
 		return {}
 	if not _maps.has(map_id):
 		var prepared := []
+		if not FileAccess.file_exists(FILES[map_id]):
+			return {}
 		var rows = JSON.parse_string(FileAccess.get_file_as_string(FILES[map_id]))
 		if not rows is Array:
 			push_error("Cannot read regions for %s" % map_id)

@@ -2,6 +2,7 @@ extends SceneTree
 
 const Regions := preload("res://src/world/park/regions.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const T := preload("res://tests/support/t.gd")
 const PURPOSES := ["fight", "rest", "route", "landmark", "reward", "hub"]
@@ -21,10 +22,10 @@ func _initialize() -> void:
 
 func _run() -> void:
 	for map_id: String in Regions.FILES:
-		var rows = JSON.parse_string(FileAccess.get_file_as_string(Regions.FILES[map_id]))
+		var facts := _bowl_facts() if map_id == "slag_bowl" else _park_facts(map_id)
+		var rows = JSON.parse_string(FileAccess.get_file_as_string(Regions.FILES[map_id])) if FileAccess.file_exists(Regions.FILES[map_id]) else []
 		if not t.check("%s regions loaded" % map_id, rows is Array and not rows.is_empty()):
 			continue
-		var facts := _bowl_facts() if map_id == "slag_bowl" else _park_facts(map_id)
 		var ids := {}
 		for row: Dictionary in rows:
 			t.check("unique region %s/%s" % [map_id, row.id], not ids.has(row.id))
@@ -41,10 +42,11 @@ func _run() -> void:
 func _park_facts(map_id: String) -> Dictionary:
 	var park: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/%s.json" % map_id))
 	var facts := {"hook": [], "jump": [], "roll": [], "shoot": [], "dash": []}
+	var posts := ParkRecipes.field_posts(ParkRecipes.placed_rows(park), ParkRecipes.clear_zones(park))
+	for field in posts.values():
+		facts.hook.append_array(field)
 	for row in park.park_rows:
 		var at := Vector2(row.at[0], row.at[1])
-		if row.element == "anchor_field":
-			facts.hook.append(at)
 		if row.element in ["kicker", "ramp"] or row.stamp == "ramp":
 			facts.jump.append(at)
 		if row.element == "bank":
@@ -100,17 +102,17 @@ func _measure(map_id: String, row: Dictionary, facts: Dictionary) -> void:
 	if row.verbs.is_empty():
 		measured.verbs_unbacked += 1
 	for verb in row.verbs:
-		if not _backed(verb, polygon, facts):
+		if not _backed(verb, polygon, facts, map_id, row.id):
 			print("Unbacked: ", map_id, "/", row.id, "/", verb)
 			measured.verbs_unbacked += 1
 
 
-func _backed(verb: String, polygon: PackedVector2Array, facts: Dictionary) -> bool:
+func _backed(verb: String, polygon: PackedVector2Array, facts: Dictionary, map_id: String, id: String) -> bool:
 	for witness in facts.get(verb, []):
 		if verb == "dash":
 			for segment in Geometry2D.intersect_polyline_with_polygon(PackedVector2Array(witness), polygon):
 				if segment[0].distance_to(segment[-1]) >= 40.0:
 					return true
-		elif Geometry2D.is_point_in_polygon(witness, polygon):
+		elif Regions.at(map_id, witness).get("id", "") == id:
 			return true
 	return false
