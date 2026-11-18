@@ -30,6 +30,7 @@ extends "res://src/combat/enemy.gd"
 # "miniboss-heavy" on the next downbeat.
 
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 const HP := 600.0
 # Used only when the spawner passes no plating (1.25 x a stage-1 Warden's 30).
@@ -40,6 +41,8 @@ const RADIUS := 2.3
 # How close the body must come to the ball to hit it; the lane's running-body mark reads the same.
 const HIT_REACH := RADIUS + 1.6
 const HALF_HEIGHT := 3.45
+# How near the ball's centre can come to the body's before the body stops it; PackPressure.lead_aim cuts its lead there.
+const BODY_CONTACT := RADIUS + Tuning.RADIUS
 const WALK := 5.5
 const STALK := 1.6
 const SLAM_CROUCH := 0.5
@@ -257,13 +260,13 @@ func _begin_attack(to_ball: Vector3) -> void:
 	attacks += 1
 	if _next_attack == 0:
 		# It lands as the ring fills, at the end of the crouch and the leap, on ground it can reach.
-		var at := _slam_spot(PackPressure.lead_aim(target, global_position, slam_crouch + SLAM_LEAP))
+		var at := _slam_spot(PackPressure.lead_aim(target, global_position, slam_crouch + SLAM_LEAP, 0.0, 0.0, BODY_CONTACT))
 		_leap_to = Vector3(at.x, terrain.height(at.x, at.z) + HALF_HEIGHT, at.z)
 		_commit_ring(Threat.Type.PROJECTILE, at, SLAM_RADIUS, 4.0)
 		telegraph().set_flight(global_position + Vector3.DOWN * HALF_HEIGHT, 4.0 * SLAM_HEIGHT)
 		_enter(State.SLAM_CROUCH)
 	else:
-		var aim := PackPressure.lead_aim(target, global_position, charge_brace, CHARGE_LENGTH / CHARGE_TIME, HIT_REACH) - global_position
+		var aim := PackPressure.lead_aim(target, global_position, charge_brace, CHARGE_LENGTH / CHARGE_TIME, HIT_REACH, BODY_CONTACT) - global_position
 		aim.y = 0.0
 		var heading := aim if aim.length() > 0.5 else (to_ball if to_ball.length() > 0.5 else -global_basis.z)
 		_commit_lane(Threat.Type.LANE, global_position, heading, CHARGE_LENGTH, CHARGE_WIDTH, 4.0).run_body(0.0, HIT_REACH)

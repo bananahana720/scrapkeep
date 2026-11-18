@@ -53,13 +53,15 @@ const LEAD_FADE_FROM := 0.85
 
 # Bosses lead a held line (lead_aim; Andrew after his world 1 sitting: "bosses (mini or main lineup) are
 # a pushover", because every boss attack aimed where the ball was at the commit). A ball whose heading has
-# stayed inside STEADY_SPREAD_DEG for the whole record (about a second) at LEAD_FLOOR of cruise or more is
-# aimed at where its roll carries it when the attack lands. The lead fades to nothing as the spread grows to
+# stayed inside STEADY_SPREAD_DEG for the whole record (about a second) while rolling at MIN_TURN_SPEED or
+# more is aimed at where its roll carries it by its real velocity when the attack lands, so a slower ball is
+# led a shorter way, and one that slows before the commit and then holds its line is met. A ball that stops or
+# turns after the commit is not: the lead is spent by then (boss_lead_line_test prints a ball that stops 0.25 s
+# in, which the aim at the ball's place hits and the lead misses). The lead fades to nothing as the spread grows to
 # UNSTEADY_SPREAD_DEG, so a ball that is turning is aimed at where it is, as before, and a turn made inside
 # the tell carries the ball off the mark. A boss looks at most BOSS_MAX_LEAD_S ahead.
 const STEADY_SPREAD_DEG := 10.0
 const UNSTEADY_SPREAD_DEG := 20.0
-const LEAD_FLOOR := 0.85
 const BOSS_MAX_LEAD_S := 4.0
 # The lead scales with the tell (coordinator's call, an assumption Andrew can overturn): whole at
 # LEAD_TELL_FULL seconds from commit to hit or longer, none at LEAD_TELL_NONE or shorter, linear between. A
@@ -77,7 +79,7 @@ static var lead_plant := ""
 
 
 # The ball's heading over the last second: one planar heading (radians, atan2(z, x)) every SAMPLE_S in a
-# fixed ring of SAMPLES slots, NAN where the ball was below LEAD_FLOOR of cruise. observe_tick writes it;
+# fixed ring of SAMPLES slots, NAN where the ball was below MIN_TURN_SPEED. observe_tick writes it;
 # lead_aim reads it. No allocation after construction.
 class HeadingRecord:
 	const SAMPLE_S := 0.1
@@ -185,11 +187,12 @@ static func _carry(at: Vector3, v: Vector3, t: float) -> Vector3:
 
 # Where a boss attack committed now from `from` should be aimed. It hurts `tell` seconds after the commit;
 # an attack that then travels to its mark (a charge, a swung hook) moves at `travel_speed` m/s and hurts
-# from `reach` metres ahead of `from` at once (a hull's nose); a ring that lands all at once passes 0. A ball
+# from `reach` metres ahead of `from` at once (a hull's nose); a ring that lands all at once passes 0. `body`
+# is the attacker's contact distance (see _stop_at_body). A ball
 # that has held a line is aimed at where its roll carries it by the hit, scaled by the tell (LEAD_TELL_*);
 # a turning, slow or stopped ball, or one as fast as the attack, is aimed at where it is. Bosses call this
 # once, at the commit, and draw what it returns.
-static func lead_aim(target, from: Vector3, tell: float, travel_speed := 0.0, reach := 0.0) -> Vector3:
+static func lead_aim(target, from: Vector3, tell: float, travel_speed := 0.0, reach := 0.0, body := 0.0) -> Vector3:
 	var at: Vector3 = target.ball_position()
 	var v: Vector3 = target.planar_velocity()
 	if travel_speed > 0.0 and v.length() >= travel_speed:
@@ -203,7 +206,32 @@ static func lead_aim(target, from: Vector3, tell: float, travel_speed := 0.0, re
 		if travel_speed > 0.0:
 			t += maxf(0.0, Vector2(aim.x - from.x, aim.z - from.z).length() - reach) / travel_speed
 		aim = _carry(at, v, clampf(t, 0.0, BOSS_MAX_LEAD_S))
-	return at.lerp(aim, share)
+	return _stop_at_body(at.lerp(aim, share), from, at, body)
+
+
+# A ball cannot roll through the attacker. `body` is how near the ball's centre can come to `from` (the
+# attacker's own radius plus the ball's; 0 cuts nothing). The lead stops where the carried path first comes
+# that near, so the attack meets the ball where it stops against the body, not on the far side; a ball
+# already that near is aimed at where it is, as before the lead.
+static func _stop_at_body(led: Vector3, from: Vector3, at: Vector3, body: float) -> Vector3:
+	if body <= 0.0:
+		return led
+	var a := Vector2(at.x - from.x, at.z - from.z)
+	var d := Vector2(led.x - at.x, led.z - at.z)
+	if a.length() <= body:
+		return at
+	var len2 := d.length_squared()
+	if len2 <= 0.0:
+		return led
+	# |a + d t| = body, the smaller root, with the segment's t in [0, 1].
+	var b := a.dot(d)
+	var disc := b * b - len2 * (a.length_squared() - body * body)
+	if disc < 0.0:
+		return led
+	var t := (-b - sqrt(disc)) / len2
+	if t < 0.0 or t > 1.0:
+		return led
+	return at.lerp(led, t)
 
 
 # How much of the lead a boss takes: 1 on a held line, fading to 0 as the heading strays.
@@ -212,14 +240,10 @@ static func _lead_share(v: Vector3) -> float:
 		return 1.0
 	if lead_plant == "none":
 		return 0.0
-	if Vector2(v.x, v.z).length() < _lead_floor():
+	if Vector2(v.x, v.z).length() < MIN_TURN_SPEED:
 		return 0.0
 	var spread := rad_to_deg(_record.spread(atan2(v.z, v.x)))
 	return clampf((UNSTEADY_SPREAD_DEG - spread) / (UNSTEADY_SPREAD_DEG - STEADY_SPREAD_DEG), 0.0, 1.0)
-
-
-static func _lead_floor() -> float:
-	return LEAD_FLOOR * _cruise if _cruise > 0.0 else MIN_TURN_SPEED
 
 
 static func turn_rate() -> float:
@@ -250,7 +274,7 @@ static func observe_tick(v: Vector3, dt: float, cruise := 0.0, fresh := false) -
 		_record.clear()
 	var speed := Vector2(v.x, v.z).length()
 	var heading := atan2(v.z, v.x)
-	_record.push(heading if speed >= _lead_floor() else NAN, dt)
+	_record.push(heading if speed >= MIN_TURN_SPEED else NAN, dt)
 	if speed < MIN_TURN_SPEED:
 		_have_heading = false
 		_turn = move_toward(_turn, 0.0, dt * MAX_TURN)

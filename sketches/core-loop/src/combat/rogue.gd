@@ -30,6 +30,7 @@ extends "res://src/combat/enemy.gd"
 
 const Miniboss := preload("res://src/combat/miniboss.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 const SCRAP := 30
 const WEIGHT := 5.0
@@ -336,14 +337,14 @@ func _begin_attack(to_ball: Vector3) -> void:
 			# The hook reaches the lane's end at half the strike, so it travels at 2 x length / strike.
 			var swing := 2.0 * _size("length") / _seconds("strike")
 			# The hook bats a ball within its reach (_strike), so it meets one that much sooner.
-			var aim := PackPressure.lead_aim(target, global_position, _seconds("wind"), swing, _size("reach") + 1.0) - global_position
+			var aim := PackPressure.lead_aim(target, global_position, _seconds("wind"), swing, _size("reach") + 1.0, radius + Tuning.RADIUS) - global_position
 			aim.y = 0.0
 			_commit_lane(Threat.Type.LANE, global_position, aim if aim.length() > 0.5 else heading, _size("length"), _size("width"), reach)
 		"haul", "harpoon":
 			_commit_lane(Threat.Type.LANE, global_position, heading, _size("length"), _size("width"), reach)
 		"drop":
 			# The leaf lands as the ring fills, at the strike's end.
-			var at := PackPressure.lead_aim(target, global_position, _seconds("wind") + _seconds("strike"))
+			var at := PackPressure.lead_aim(target, global_position, _seconds("wind") + _seconds("strike"), 0.0, 0.0, radius + Tuning.RADIUS)
 			_commit_ring(Threat.Type.PROJECTILE, at, _size("radius"), reach)
 		"dump":
 			var ahead := minf(_size("ahead"), to_ball.length())

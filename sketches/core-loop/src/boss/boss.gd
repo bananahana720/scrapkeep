@@ -8,6 +8,8 @@ const Hazard := preload("res://src/boss/hazard.gd")
 # How far ahead of the hull's nose the ram still hits; the lane publishes its front this far
 # out, so the dodge watch lands the ram where the damage does.
 const CHARGE_REACH := 1.5
+# A charge that is not a ram stops this far short of the point where its nose would bury in the bank.
+const CHARGE_RIM_CLEAR := 1.0
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -1017,14 +1019,23 @@ func _commit_charge(cued := false) -> void:
 	var from: Vector3 = ship.global_position
 	var half := Requisition.HULL.z * 0.5
 	var warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.CHARGE_WARN, Hazard.MIN_WARN)
-	# The nose hurts from half a hull and its reach ahead of the centre, so it meets the ball that much sooner.
-	var aim := PackPressure.lead_aim(ctx.player, from, warn, Rules.CHARGE_SPEED, half + CHARGE_REACH)
+	var ball: Vector3 = ctx.player.ball_position()
+	var to_ball := Vector3(ball.x - from.x, 0.0, ball.z - from.z)
+	# Whether it rams the bank is judged from where the ball is, as before the lead: a led point far out
+	# would make almost every outward line a ram and hand the ball a free stun. A ram is aimed at the ball
+	# and runs to the bank; any other charge keeps its led aim and ends short of the bank. So the flag, the
+	# lane, the stun and the wind-up sound all agree.
+	var ball_heading := _aim_at(ball)
+	var into_wall := to_ball.length() + Rules.CHARGE_OVERSHOOT >= _travel_to_rim(from, ball_heading)
+	var aim := ball
+	if not into_wall:
+		# The nose hurts from half a hull and its reach ahead of the centre, so it meets the ball that much sooner.
+		aim = PackPressure.lead_aim(ctx.player, from, warn, Rules.CHARGE_SPEED, half + CHARGE_REACH, half + Tuning.RADIUS)
 	var to_aim := Vector3(aim.x - from.x, 0.0, aim.z - from.z)
-	var heading := _aim_at(aim)
+	var heading := ball_heading if into_wall else _aim_at(aim)
 	var to_wall := _travel_to_rim(from, heading)
 	var wanted := to_aim.length() + Rules.CHARGE_OVERSHOOT
-	var into_wall := wanted >= to_wall
-	var length := minf(wanted, to_wall)
+	var length := to_wall if into_wall else minf(wanted, to_wall - CHARGE_RIM_CLEAR)
 	var h = _new_hazard()
 	if cued:
 		h.warn_floor = FightPhases.CUED_WARN
