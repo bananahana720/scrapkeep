@@ -304,7 +304,7 @@ func _scrap_trail() -> Dictionary:
 
 # Whether any authored line of this park (the floor line and every pilot's) passes within reach_m of at, measured to
 # the line's segments. The lines are read once. A park with no lines file answers false. Waypoints that resolve to no
-# place are left out, as the line walkers leave them.
+# place are left out, as the line walkers leave them. Main thread only: the first call fills the cache unguarded.
 func line_within(at: Vector2, reach_m: float) -> bool:
 	if _ride_lines == null:
 		_ride_lines = _read_ride_lines()
