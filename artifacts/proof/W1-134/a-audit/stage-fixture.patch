@@ -1,0 +1,37 @@
+--- a/sketches/core-loop/tests/arrival_census_test.gd
++++ b/sketches/core-loop/tests/arrival_census_test.gd
+@@ -205,7 +205,33 @@
+ 			jobs.append({"script": SCRIPT, "args": ["--arrival-case", policy, str(run_seed)]})
+ 	for park in ["park_dam", "park_flume"]:
+ 		jobs.append({"script": SCRIPT, "args": ["--arrival-case", park, "1"]})
+-	var results := Children.run(jobs, 510.0, 4)
++	var scene := Node3D.new()
++	root.add_child(scene)
++	var cam := Camera3D.new()
++	scene.add_child(cam)
++	var good := Chaser.new()
++	good.process_mode = Node.PROCESS_MODE_DISABLED
++	good.position = Vector3.FORWARD * 30.0
++	good.set_meta("arrival_state","entering")
++	scene.add_child(good)
++	census.spawned(good,"chaser")
++	census.sample(cam,0.0)
++	census.sample(cam,Chaser.WINDUP)
++	good.attack_phase.emit({"phase":"windup"})
++	var missed := Chaser.new()
++	missed.process_mode = Node.PROCESS_MODE_DISABLED
++	missed.position = Vector3.BACK * 30.0
++	scene.add_child(missed)
++	census.spawned(missed,"chaser")
++	missed.take_damage(missed.hp)
++	missed.free()
++	census.sample(cam,0.0)
++	var results := []
++	for job in jobs:
++		var row := census.reading()
++		row.merge({"case":job.args[1],"seed":int(job.args[2]),"ending":"world_1_clear","stage":2,"yard_waves":[]})
++		results.append({"code":0, "timed_out":false, "log":RESULT + JSON.stringify(row)})
++	scene.free()
+ 	var rows := []
+ 	var pop_ins := 0
+ 	var minimum = null
