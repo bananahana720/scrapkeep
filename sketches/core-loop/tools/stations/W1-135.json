@@ -1,0 +1,17 @@
+{
+  "stations": [
+    {
+      "id": "dam_viga_span", "stage": 1, "park_row": "viga_span",
+      "route": "sable", "bearing_from": [-109, 410], "bearing_to": [-100, 445],
+      "target_xz": [-190, 425], "target_lift_m": 2.8
+    },
+    {
+      "id": "flume_hollow_trestles", "stage": 2, "park_row": "hollow_trestles",
+      "target": [-168.18, 39.84, -128.09], "eye": [-163.26, 40.55, -148.13],
+      "entry": [-165.71, 35.54, -135.66], "bearing": [4.33, 18.52]
+    },
+    {
+      "id": "bowl_mast", "stage": "bowl", "mast_angle_deg": 225, "target_lift_m": 9.0
+    }
+  ]
+}
