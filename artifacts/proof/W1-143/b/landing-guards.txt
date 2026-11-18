@@ -1,0 +1,5 @@
+SKIP control Fin.L
+SKIP control Fin.R
+pilot_clips_rivet_test: PASS (78 checks)
+survey_posts_test: PASS (24 checks)
+bowl_approach_test: PASS (39 checks)

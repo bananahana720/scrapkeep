@@ -1,0 +1,82 @@
+--- a/sketches/core-loop/tools/blender/world_one/shell_rivet.py
++++ b/sketches/core-loop/tools/blender/world_one/shell_rivet.py
+@@ -20,8 +20,8 @@
+ # base meshes' existing slots. Draws: Core paint, copper, rubber; Pod paint, rubber, copper,
+ # class_accent (exhaust mouths); Gyro; GyroInner; WeaponRing paint, rubber, copper (laser pods,
+ # collar studs, drill hanger); Drill copper, class_accent (lens); the placeholder Pilot, which
+-# fit_pilot_into hides in play (hero_assets.gd:1113-1115). 15 in the file, 14 drawn; the
+-# registry row carries the draw exception under the 16-draw Hoberman pilot mecha cap
++# fit_pilot_into hides in play); and one skinned copper draw for both cooling fins. This gives
++# 16 in the file, 15 drawn, under the 16-draw Hoberman pilot mecha cap
+ # (docs/decisions.tsv w13-PD, 2026-10-10).
+ #
+ # 2026-10-10 (PD-RIVET fix round 2): rebuilt on PD-0b's shell_base (struts 0.06 m, caps 0.10 m,
+@@ -35,6 +35,7 @@
+ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+
+ import bmesh  # noqa: E402
++import bpy  # noqa: E402
+ from mathutils import Vector  # noqa: E402
+
+ import common  # noqa: E402
+@@ -121,6 +122,43 @@
+         j = (i + 1) % n
+         faces.append(part.bm.faces.new((bot[i], bot[j], top[j], top[i])))
+     part.paint(faces, "copper")
++    # The rear edge stays on the shell as the forward tip lifts.
++    return on((a + b) / 2, FIN_IN), v
++
++
++def cooling_fins(core):
++    """Keep both leaves on one copper draw outside the replaceable lattice mesh."""
++    part = Part("CoolingFins")
++    hinges = []
++    for az, el in FIN_AT:
++        pivot, across = fin(part, direction(az, el))
++        left = az < 0
++        # The pose table sets opposite angles. Point the two hinge axes so
++        # both positive displacements of the tips are away from the ball.
++        hinges.append(("Fin.L" if left else "Fin.R", pivot, -across if left else across))
++    sb._sharpen(part, angle=1.1)
++    rig = bpy.data.objects.new("CoolingFinRig", bpy.data.armatures.new("CoolingFinBones"))
++    bpy.context.collection.objects.link(rig)
++    rig.parent = core
++    mesh = part.to_object(parent=rig)
++    bpy.context.view_layer.objects.active = rig
++    rig.select_set(True)
++    bpy.ops.object.mode_set(mode="EDIT")
++    root = rig.data.edit_bones.new("FinMount")
++    root.head, root.tail = (0, 0, 0), (0, 0.08, 0)
++    for name, pivot, axis in hinges:
++        bone = rig.data.edit_bones.new(name)
++        bone.parent = root
++        bone.head = pivot
++        bone.tail = pivot + axis * 0.1
++    bpy.ops.object.mode_set(mode="OBJECT")
++    for name, pivot, _axis in hinges:
++        vertices = [v.index for v in mesh.data.vertices if v.co.x * pivot.x > 0]
++        if len(vertices) * 2 != len(mesh.data.vertices) or not vertices:
++            raise ValueError("expected one half of the fin pair on " + name)
++        mesh.vertex_groups.new(name=name).add(vertices, 1.0, "REPLACE")
++    mesh.modifiers.new("Cooling fin hinges", "ARMATURE").object = rig
++    return mesh
+
+
+ def scale_ticks(part, pairs):
+@@ -149,8 +187,6 @@
+     def lattice(part, enamel="petrol", pairs=2, hub_sides=8, cap_sides=8, rng=None,
+                 strut_width=sb.BAR_WIDTH, cap_width=sb.CAP_WIDTH):
+         out = base(part, enamel, pairs, hub_sides, cap_sides, rng, strut_width, cap_width)
+-        for az, el in FIN_AT:
+-            fin(part, direction(az, el))
+         if variant:
+             scale_ticks(part, pairs)
+         # 6-sided hub drums turn 60 degrees a side, past the base's 0.9 rad split, so they would
+@@ -318,6 +354,7 @@
+                             hub_sides=6, cap_sides=6)
+     finally:
+         sb.lattice, sb.cockpit, sb.weapon_ring = saved
++    shell["fins"] = cooling_fins(shell["core"])
+     ring, pod = shell["ring"], shell["pod"]
+     shell["drill"] = drill(variant).to_object((0, DRILL_Y0, DRILL_Z), ring)
+     common.empty("DrillTip", (0, DRILL_STEPS[-1][1] + 0.0015, DRILL_Z), ring)
