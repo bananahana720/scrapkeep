@@ -22,7 +22,7 @@ One pull request per subtask is the default. A card may mark subtasks that share
 
 `GAPS.tsv` lists every gap found in the 17 November audit with a stable id. Each id is carried by exactly one card's Carries field, by one decision below, or (R1 only) by the Gate's wave 0 step.
 
-`<stage>` below is the open stage `project-guide/handoff/STATE.md` names (`stage/alpha-w44` on 17 November 2026).
+`<stage>` below is the open stage `project-guide/handoff/STATE.md` names (`stage/alpha-w44` on 17 November 2026), and a branch takes that wave's prefix (`w44/` on that date).
 
 ## From opening a card to handing it over
 
