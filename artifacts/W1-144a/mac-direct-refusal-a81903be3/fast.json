@@ -1,0 +1,66 @@
+{
+  "schema": "scrapkeep-fast-receipt/1",
+  "label": "fast",
+  "head": "a81903be370107493957c3e29cb1e4a2c765a3e2",
+  "base": "origin/stage/alpha-w44",
+  "merge_base": "4f9017c58537e6e6785c00f6d4d45cdcd6e6f1be",
+  "started_at": "2026-11-18T21:20:35.941Z",
+  "stages": [
+    {
+      "name": "tree hygiene",
+      "ok": true,
+      "ms": 40,
+      "note": "no symlink, root file or new top-level folder",
+      "findings": []
+    },
+    {
+      "name": "sketch-lint",
+      "ok": true,
+      "ms": 1546,
+      "note": "sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1 W1=0 W2=0 W4=0 W6=27 W7=1 S8=0, 989ms"
+    },
+    {
+      "name": "check:docs",
+      "ok": true,
+      "ms": 2068,
+      "note": "INFO tracking TRACKING.md:107 interim row without a BACKLOG link: PS-01 (audit rec 3, 13, 17; S0-02, S0-03)"
+    },
+    {
+      "name": "node tests",
+      "ok": true,
+      "ms": 2399,
+      "note": "scripts/frametime-check.test.mjs",
+      "tests": [
+        "scripts/frametime-check.test.mjs"
+      ]
+    },
+    {
+      "name": "godot",
+      "ok": true,
+      "ms": 2399,
+      "note": "no sketch change"
+    }
+  ],
+  "ok": true,
+  "diff_base": "4f9017c58537e6e6785c00f6d4d45cdcd6e6f1be",
+  "pre": [],
+  "changed": 5,
+  "checks_removed": [],
+  "deep_sweep": {
+    "D1": 0,
+    "D2": 0,
+    "D3": 0,
+    "D4": 0,
+    "D5": 0
+  },
+  "selection": {
+    "hubs": [],
+    "unmapped": [],
+    "tests": {},
+    "deferred_to_full_gate": [],
+    "bot_shards": [],
+    "shard_reasons": {},
+    "estimate_ms": 0
+  },
+  "wall_ms": 2399
+}
