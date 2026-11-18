@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 
-import { checkTally, expectedShards, tallyRows, planHead } from "./tally.mjs";
+import { checkNodeRow, checkTally, expectedShards, tallyRows, planHead } from "./tally.mjs";
 import { SCOPED_ALWAYS, defaultBudget, challengeArgs, receiptBotShards, checkBands, compareBands, compareLines, compareRuns, gatePlan, loadBands, nodeSummary, planFileText, runPlan, sortedLines, spareWhileWaiting, stepEnv, worktreePool } from "./pc.mjs";
 
 const names = (count, prefix) => Array.from({ length: count }, (_, index) => `${prefix}${String(index).padStart(4, "0")}_test`);
@@ -245,6 +245,13 @@ test("the plan file parses through the tally and passes when everything passed a
   assert.equal(rows.length, 3 + 5 + 3 + 1 + 1);
   assert.deepEqual(checkTally(rows, { testCount: 1049, botCount: 23, planHead: planHead(`/g/w34-${head.slice(0, 8)}-gate-plan.md`), head, weeklyCount: 2, today }), []);
   assert.match(text, /\| weekly sweep \| PASS 2026-11-12\. Receipts weekly-tests\/receipt\.md, weekly-bots\/receipt\.md \|/);
+  assert.deepEqual(checkNodeRow(text), []);
+  const redNode = planFileText({ wave: 34, head, persona: "cautious", base: "/g/w33-aaaaaaaa", results: { ...allPass(steps), node: { exit: 1, verdict: "1049 tests, 1 fail." } }, compare: same, steps, today });
+  assert.deepEqual(checkTally(tallyRows(redNode), { testCount: 1049, botCount: 23, weeklyCount: 2, today }), [], "the shard rows alone would read clean");
+  assert.match(checkNodeRow(redNode).join("\n"), /"node tests" does not open with PASS/, "the failing-Node control");
+  const noNode = { ...allPass(steps) };
+  delete noNode.node;
+  assert.match(checkNodeRow(planFileText({ wave: 34, head, persona: "cautious", base: "/g/w33-aaaaaaaa", results: noNode, compare: same, steps, today })).join("\n"), /does not open with PASS/);
   assert.equal(expectedShards(23).every((name) => rows.some((row) => row.shard.toLowerCase().startsWith(name.toLowerCase()))), true);
 });
 

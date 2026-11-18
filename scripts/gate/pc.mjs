@@ -739,12 +739,13 @@ async function run(options) {
   };
   const exits = await runPlan(steps, { budget: options.budget, start, isDone, onExit: (step) => (step.kind === "shard" ? retimeFor(step, receipts) : []) });
   console.log(`gate plan: ${planFile}`);
-  const worst = [...exits.values()].some((exit) => exit !== 0);
+  // An inconclusive shard (exit 2) that its retime settled reads "PASS after retime" on the plan, so it is not red here.
+  const worst = [...exits].some(([id, exit]) => exit !== 0 && !(exit === 2 && exits.get(`retime-${id}`) === 0));
   const tallyArgs = [...(options.scoped ? ["--wave"] : []), "--plan", planFile];
   console.log(`node scripts/gate/tally.mjs ${tallyArgs.join(" ")}`);
   if (options.tally) {
     const tally = spawnSync(process.execPath, ["scripts/gate/tally.mjs", ...tallyArgs], { cwd: root, stdio: "inherit" });
-    return tally.status ?? 1;
+    return worst ? 1 : (tally.status ?? 1);
   }
   return worst ? 1 : 0;
 }
