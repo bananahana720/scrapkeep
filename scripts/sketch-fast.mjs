@@ -320,7 +320,7 @@ export function checkLabels(source) {
   const labels = new Set();
   for (const raw of source.split("\n")) {
     const line = raw.replace(/^\s*#.*$/, "");
-    for (const m of line.matchAll(/(?<![\w])(?:\w+\.)?_?(?:check|eq|near|report)\(\s*"((?:[^"\\]|\\.)*)"/g)) labels.add(m[1]);
+    for (const m of line.matchAll(/(?<![\w])(?:\w+\.)?_?(?:check|eq|near|report)\w*\(\s*"((?:[^"\\]|\\.)*)"/g)) labels.add(m[1]);
   }
   return labels;
 }
@@ -752,9 +752,14 @@ async function main() {
   if (!stage("tree hygiene", hygiene.length === 0, { note: hygiene.length ? hygiene.slice(0, 5).join("; ") : "no symlink, root file or new top-level folder", findings: hygiene }) && !options.dryRun) finish();
   // Not a stage: a removed check can be right. The receipt lists each so the pull request has to name it.
   const show = (ref, file) => { const r = spawnSync("git", ["-C", root, "show", `${ref}:${file}`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); return r.status === 0 ? r.stdout : null; };
-  receipt.checks_removed = changedPaths.filter((file) => /^sketches\/core-loop\/tests\/(?:[^/]+\/)?[^/]+\.gd$/.test(file)).map((file) => {
-    const before = show(diffBase, file);
-    return before === null ? null : { test: path.posix.basename(file), labels: removedChecks(before, show("HEAD", file) ?? "") };
+  // A renamed test is compared with its old path at the base, so a rename alone removes no check.
+  const isTest = (file) => /^sketches\/core-loop\/tests\/(?:[^/]+\/)?[^/]+\.gd$/.test(file);
+  receipt.checks_removed = git(["diff", "--name-status", "-M", diffBase, "HEAD"]).split("\n").filter(Boolean).map((line) => {
+    const [status, from, to = from] = line.split("\t");
+    if (status.startsWith("A") || !isTest(from)) return null;
+    const before = show(diffBase, from);
+    const after = status.startsWith("D") ? "" : show("HEAD", to) ?? "";
+    return before === null ? null : { test: path.posix.basename(to), labels: removedChecks(before, after) };
   }).filter((row) => row && row.labels.length > 0);
   for (const row of receipt.checks_removed) log(`  checks removed from ${row.test}: ${row.labels.map((label) => `"${label}"`).join(", ")}`);
   if (receipt.checks_removed.length > 0) log("  name each removed check in the pull request and say what now covers it");

@@ -584,3 +584,7 @@ test("removedChecks names the labels a changed test no longer checks", () => {
 test("checkLabels reads the _report form most tests use", () => {
   assert.deepEqual([...checkLabels('\t_report("layers stack in order", ok, detail)\n\tt.eq("count", a, b)\n')].sort(), ["count", "layers stack in order"]);
 });
+
+test("checkLabels reads a check helper with a longer name", () => {
+  assert.deepEqual([...checkLabels('\t_check_near("lip height", a, b, 0.1)\n\tt.eq_vec("aim", a, b)\n')].sort(), ["aim", "lip height"]);
+});

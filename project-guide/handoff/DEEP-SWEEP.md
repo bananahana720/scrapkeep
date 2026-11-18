@@ -16,6 +16,8 @@ cp artifacts/local/deep-sweep-w<N>.md /mnt/project-files/gate/deep-sweep-w<N>.md
 
 Then it posts the report's header and counts on the new wave's board issue with a link to the shared copy, and tells the coordinator, who opens one sweep thread per promotion that has leads. A report with zero leads closes the step. The step never holds a promotion or the next stage cut.
 
+The fast lane also runs the sweep on each pull request's own lines and puts the counts in its receipt as `deep_sweep` ([ORCHESTRATOR.md](../../ORCHESTRATOR.md), the tiered gate). That report never fails the lane; it lets a reach into another module's private members be seen at review, before promotion.
+
 ## Steps for the sweep thread
 
 1. On the promoted main, run `node scripts/deep-sweep.mjs --out artifacts/local/deep-sweep-w<N>.md`. With no `--base` it compares the promotion merge against main before it. It lists leads, not defects:

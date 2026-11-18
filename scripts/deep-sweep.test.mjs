@@ -92,6 +92,6 @@ test("sweep reads a tool script for reach-ins only", () => {
 });
 
 test("reachIns follows a chain that starts at the file's own private field", () => {
-  const hits = reachIns([[1, "\t_game.flow._set_state(2)"], [2, "\tself._game = game"], [3, "\tvar a = _local"]]);
-  assert.deepEqual(hits.map((h) => [h.line, h.message]), [[1, "reaches into _game.flow._set_state"]]);
+  const hits = reachIns([[1, "\t_game.flow._set_state(2)"], [2, "\tself._game = game"], [3, "\tvar a = _local"], [4, "\tself._game.flow._set_state(2)"]]);
+  assert.deepEqual(hits.map((h) => [h.line, h.message]), [[1, "reaches into _game.flow._set_state"], [4, "reaches into _game.flow._set_state"]]);
 });
