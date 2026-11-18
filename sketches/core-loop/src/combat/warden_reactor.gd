@@ -171,6 +171,11 @@ func _declare_fight(warden, engaged: bool) -> void:
 		warden.fleet.ctx.camera.clear_contact_subject(warden)
 
 
+# A tick the fight is not in play: the Warden runs no step, so the request ends here.
+func idle(warden) -> void:
+	_declare_fight(warden, false)
+
+
 static func _is_flume(warden) -> bool:
 	return warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "flume"
 
@@ -331,7 +336,8 @@ func _open_sheet(warden) -> void:
 
 # The killing ram always lands with the sheet open, and a freed Warden no longer steps the
 # sheet's timer, so the slab (drawn under the world root, not the Warden) closes here.
-func on_exit(_warden) -> void:
+func on_exit(warden) -> void:
+	_declare_fight(warden, false)
 	sheet_left = 0.0
 	_close_sheet()
 

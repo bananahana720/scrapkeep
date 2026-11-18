@@ -26,7 +26,8 @@ func _initialize() -> void:
 
 func _run() -> void:
 	await _brindle()
-	await _dam()
+	for ending in ["beaten", "abandoned", "freed"]:
+		await _dam(ending)
 	quit(_t.verdict())
 
 
@@ -75,7 +76,7 @@ func _brindle() -> void:
 	game.free()
 
 
-func _dam() -> void:
+func _dam(ending: String) -> void:
 	var game := Game.new()
 	game.test_mode = true
 	game.table = "park"
@@ -97,9 +98,16 @@ func _dam() -> void:
 	var to_warden: Vector3 = warden.global_position - game.player.ball_position()
 	game.ctx.camera.snap(Vector3(to_warden.x, 0.0, to_warden.z).normalized(), DAM_LOOK_UP)
 	await _settle(game)
-	_t.check("W5 the dam fight is on", game.flow.engaged() and warden.hp > 0.0, "engaged %s, hp %.1f" % [game.flow.engaged(), warden.hp])
-	_t.check("W6 in the dam-face fight the arm lifts when the ball is near the Warden", _raised(game) > LIFT_SEEN, "raised %.3f rad, %.1f m off" % [_raised(game), game.ctx.camera.global_position.distance_to(warden.global_position)])
-	warden.hp = 0.0
+	_t.check("W5 the dam fight is on (%s)" % ending, game.flow.engaged() and warden.hp > 0.0, "engaged %s, hp %.1f" % [game.flow.engaged(), warden.hp])
+	_t.check("W6 in the dam-face fight the arm lifts when the ball is near the Warden (%s)" % ending, _raised(game) > LIFT_SEEN, "raised %.3f rad, %.1f m off" % [_raised(game), game.ctx.camera.global_position.distance_to(warden.global_position)])
+	match ending:
+		"beaten":
+			warden.hp = 0.0
+		"abandoned":
+			warden.live = func(): return false
+		"freed":
+			warden.queue_free()
 	await _settle(game)
-	_t.check("W7 beating the Warden puts the arm back", _raised(game) < LIFT_SEEN, "raised %.3f rad" % _raised(game))
+	_t.check("W7 the arm goes back when the Warden is %s" % ending, _raised(game) < LIFT_SEEN, "raised %.3f rad" % _raised(game))
 	game.free()
+
