@@ -1,0 +1,15 @@
+[
+  {"id": "top_shelf", "polygon": [[-500, -780], [260, -780], [260, -650], [-500, -650]], "purpose": "route", "verbs": ["hook"], "why": "The deck lets you catch a post before the first drop."},
+  {"id": "slickrock_domes", "polygon": [[-460, -650], [220, -650], [220, -340], [-460, -340]], "purpose": "route", "verbs": ["roll", "jump"], "why": "The survey crew left a kicker between the humps."},
+  {"id": "shelf_lip", "polygon": [[-260, -340], [180, -340], [180, -245], [-260, -245]], "purpose": "route", "verbs": ["jump"], "why": "The last slab of shelf throws you into the wash."},
+  {"id": "west_wash", "polygon": [[-250, -245], [-75, -245], [-75, 110], [-250, 110]], "purpose": "fight", "verbs": ["shoot", "jump"], "why": "The culvert crew has the straight. The kicker goes over their heads."},
+  {"id": "upper_slot", "polygon": [[-75, -245], [-16, -245], [-16, 110], [-75, 110]], "purpose": "route", "verbs": ["jump"], "why": "Take the step across the cut before the walls come together."},
+  {"id": "corkscrew_slot", "polygon": [[-16, -245], [95, -245], [95, 110], [-16, 110]], "purpose": "rest", "verbs": ["jump"], "why": "The step gives you one clean landing between the walls."},
+  {"id": "east_slickrock", "polygon": [[95, -245], [640, -245], [640, 110], [95, 110]], "purpose": "route", "verbs": ["hook"], "why": "Catch a saguaro and swing wide of the slot."},
+  {"id": "the_eye", "polygon": [[-155, 110], [145, 110], [145, 230], [-155, 230]], "purpose": "hub", "verbs": ["jump"], "why": "The chute splits at the old stone eye."},
+  {"id": "west_rim", "polygon": [[-340, 230], [-75, 230], [-75, 550], [-340, 550]], "purpose": "reward", "verbs": ["roll", "hook", "shoot"], "why": "The timber carries you past the gun ledge to the cliff rooms."},
+  {"id": "east_rim", "polygon": [[75, 230], [370, 230], [370, 310], [75, 310]], "purpose": "route", "verbs": ["roll"], "why": "The outside bank lets you keep the turn above the gorge."},
+  {"id": "river_canyon", "polygon": [[-75, 230], [75, 230], [75, 500], [-75, 500]], "purpose": "fight", "verbs": ["jump"], "why": "The apron kicker puts you above the yard."},
+  {"id": "east_bench_canal", "polygon": [[75, 310], [290, 310], [290, 500], [75, 500]], "purpose": "route", "verbs": ["jump"], "why": "The haul grade climbs out beside the canal lips."},
+  {"id": "dam_toe", "polygon": [[-75, 500], [250, 500], [250, 710], [-210, 710], [-210, 550], [-75, 550]], "purpose": "landmark", "verbs": ["roll", "hook"], "why": "The piers hold a cable all the way up the face."}
+]
