@@ -561,10 +561,8 @@ func fit_worn_into(ball: Node3D, panels: Node3D, player: Node, rec: Dictionary) 
 		if outfit != "":
 			fit_outfit(fitted.pilot, outfit, tints)
 		var animator: AnimationPlayer = fitted.animator
-		var idle: String = PilotReactions.BASES.idle.clip
-		if animator != null and animator.has_animation(idle):
-			animator.play(idle)
-			animator.advance(0.0)
+		# Held on its first idle frame: the preview is a still of the worn pilot.
+		if PilotReactions.seat_idle(animator, fitted.pilot) != "":
 			animator.pause()
 	BallLooks.ride(ball_look(), panels)
 	return shell
