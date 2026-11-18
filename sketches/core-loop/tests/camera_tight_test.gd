@@ -181,12 +181,12 @@ func _fight_floor() -> void:
 	var crowded := open.arm.get_hit_length()
 	var clear := fight.arm.get_hit_length()
 	_t.check("F2 the water-sheet view clears the floor", crowded < 4.0 and clear > 7.0, "open %.2f m, fight %.2f m" % [crowded, clear])
-	# The view keeps the player's pitch, so the ball and floor stay in frame only while the player's own
-	# look leaves them there: 0.3 rad up with the target 22 m above, not the steeper 0.5 above.
-	fight.snap(Vector3.FORWARD, 0.3)
-	await _settle(fight, 120)
-	_t.check("F3 the ball, the high target and nearby floor fit in the same view", fight.shows(Vector3.ZERO) and fight.shows(subject.position) and fight.shows(Vector3(0, -1, -4)), "ball %s, target %s, floor %s" % [fight.shows(Vector3.ZERO), fight.shows(subject.position), fight.shows(Vector3(0, -1, -4))])
-	fight.snap(Vector3.FORWARD, 0.5)
+	# Measured with the lift off (set_contact_subject(null)) at pitches 0.3 to 0.8 over this ground: the unlifted
+	# camera keeps the ball in frame at every one, so the frame alone cannot show the lift. What the lift buys at
+	# 0.5 is the lens pulled clear of the floor (F2's arm length) with the ball, the target and the floor ahead still
+	# shown; the floor right behind the ball (z -2 to -8) is the one thing a lifted lens gives up.
+	var ahead := Vector3(0, -1, -12)
+	_t.check("F3 the lifted lens, clear of the floor, still shows the ball, the high target and the floor ahead", fight.arm.get_hit_length() > 7.0 and fight.shows(Vector3.ZERO) and fight.shows(subject.position) and fight.shows(ahead), "arm %.2f m, ball %s, target %s, floor %s" % [fight.arm.get_hit_length(), fight.shows(Vector3.ZERO), fight.shows(subject.position), fight.shows(ahead)])
 	# Close in, the subject would lift the arm: the shoulder view must still win once mounted.
 	subject.position = Vector3(0, 4, -8)
 	await _settle(fight, 120)
