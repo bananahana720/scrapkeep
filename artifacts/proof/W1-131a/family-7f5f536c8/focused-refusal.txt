@@ -1,0 +1,11 @@
+✔ Mac library and CLI refuse the consumed visible reference before starting Godot (81.221625ms)
+✔ a windowless capture child taking focus invalidates an otherwise clear trace (0.323625ms)
+✔ each newly foreground family PID counts, including a detached grandchild (0.371792ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 170.347125

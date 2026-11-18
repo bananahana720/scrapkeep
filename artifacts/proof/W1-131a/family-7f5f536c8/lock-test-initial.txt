@@ -1,0 +1,62 @@
+✔ the probe uses embedded Metal before the project is loaded, with a scratch home (2.894125ms)
+✔ the watcher rejects focus changes, visible children, missing periods and missing helper (6.30775ms)
+✔ the Gate reference needs a visible sample for its own process and the pinned executable (2.353584ms)
+✖ two drawn runs wait for one lock across worktrees and have disjoint start/end times (238719.125583ms)
+✔ losing the sampler aborts a still-running group before releasing the drawn slot (275.876208ms)
+✔ Mac library captures keep the producer resolution and plant while forcing the embedded backend (2.449792ms)
+✔ model receipts see a valid planted comparison but cannot consume an unwatched verdict (5.047916ms)
+✔ both Mac entry points refuse unknown and changed tools before taking a lock or starting Godot (2.028666ms)
+✔ a queued Mac draw rechecks its files before the version query and again before the draw (5.365875ms)
+✔ headless measurement and the editor version probe use only their scratch homes (3.663083ms)
+✔ models-render: every kind judged, none failed, the plant caught on every kind -> pass (0.892833ms)
+✔ models-render: a dark model is a miss and is named (0.082334ms)
+✔ models-render: a kind with no generated model loaded is a miss and is named (0.059209ms)
+✔ models-render: each count guard fails alone (verdict lines, the check's pin, judged) (0.108708ms)
+✔ models-render: a plant that misses one kind, or whose stats do not show it, is not caught (0.094708ms)
+✔ models-render: a plant switch that reached the real shoot fails the receipt (0.066459ms)
+✔ models-render: the producer takes the head from git and refuses a dirty checkout (57.814208ms)
+✔ models-render: runShoots shoots authored, tripo-all, compares, then shoots and compares the plant (33.821125ms)
+✔ models-render: no display, or a failed shoot, is a miss that says why (33.209459ms)
+✔ display-run: takes a slot, sets a scratch home, never passes --headless, removes the home after (33.675542ms)
+✔ display-run: the scratch home wins over a caller's HOME and platform, on every platform (32.897333ms)
+✔ display-run: refuses window-defeating engine flags and a script that is not res:// (33.227542ms)
+✔ display-run: releases the slot when the launch throws (33.0805ms)
+✔ display-run: the timeout kills the whole run, a forked child or an exec, in under 2 s (637.122209ms)
+✔ display-run: SIGTERM to the node process kills the run's group (190.485541ms)
+✔ display-run: no display on Linux, or another platform, is not supported and starts nothing (0.174042ms)
+✔ no-code-stand-ins: no stand-in, no new primitive, enough surfaces, the plant caught -> pass (0.281ms)
+✔ no-code-stand-ins: the pin's ruled rows wait, matched on the exact key and only with a cite (0.13075ms)
+✔ no-code-stand-ins: a stand-in the pin allows still fails and is named by file and row (0.0545ms)
+✔ no-code-stand-ins: each guard fails alone (0.183375ms)
+✔ no-code-stand-ins: a plant not caught voids the pass (0.038667ms)
+✔ no-code-stand-ins: a plant switch that reached the counting run fails the receipt (0.033917ms)
+✔ no-code-stand-ins: the producer runs the test then the plant, reads the pin, takes the head from git, refuses a dirty checkout (94.471625ms)
+✔ a windowless capture child taking focus invalidates an otherwise clear trace (0.520375ms)
+✔ each newly foreground family PID counts, including a detached grandchild (0.563333ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 34
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 239605.452833
+
+✖ failing tests:
+
+test at scripts/gate/display-run.test.mjs:73:1
+✖ two drawn runs wait for one lock across worktrees and have disjoint start/end times (238719.125583ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(intervals[0][1] <= intervals[1][0])
+  
+      at TestContext.<anonymous> (file:///Users/hanabanana/projects/scrapkeep/artifacts/local/w131-focus/scripts/gate/display-run.test.mjs:90:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

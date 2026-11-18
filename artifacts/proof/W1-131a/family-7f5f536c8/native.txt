@@ -1,0 +1,3 @@
+Unmodified live Mac watcher, windowless CLI parent {"samples":15,"firstMs":1795037457186,"lastMs":1795037457870,"periodMs":50,"maxGapMs":55,"missed":0,"onScreen":0,"targetOnScreen":0,"frontmostChanges":0}
+Foreground PID transitions from unrelated sleep to detached capture child; native ancestry and WindowServer unchanged {"samples":15,"firstMs":1795037457986,"lastMs":1795037458681,"periodMs":50,"maxGapMs":51,"missed":0,"onScreen":0,"targetOnScreen":0,"frontmostChanges":1}
+Unreadable Darwin ancestry rejected before a zero-count receipt could be returned
