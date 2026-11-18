@@ -1,0 +1,26 @@
+# W1-144 watched handovers on the Mac
+
+The game is stage `3cafd8fa3962934e11ba89c439b3af943dba5d8d`. Probe revision `13c9e4748` uses Godot 4.7.2 on the M5 Max, the embedded Metal display at 1920 × 1080, Forward+, High, Dummy audio and synthesized music. Both passes use seed 1, pylon engineer, skipper, the sitting profile, the park table, Tripo models and the cutaway ball. One Godot process plays a cold game to victory, releases that scene and plays a fresh game against the same renderer and scratch home. The second ride is graded. A drawn interval belongs to a handover if it overlaps the second before entry or the five seconds after it. The ceiling is 33.3 ms.
+
+## Repeat the capture
+
+Use the qualified version of the probe, the launcher and the pinned Mac editor. Set `GODOT_BIN` to the editor executable. The launcher supplies an isolated home, takes the exclusive drawn slot and holds the machine quiet for the timed rides. Run outside a wave gate, export or band capture.
+
+```sh
+node scripts/gate/display-run.mjs --offscreen res://tools/handover_capture.gd -- \
+  --self-play --self-play-watch=1 --self-play-until=win --self-play-seed=1 \
+  --self-play-pilot=pylon_engineer --self-play-policy=skipper --self-play-min=650 \
+  --table=park --models=tripo --profile=sitting --ball-look=cutaway --preset=high \
+  --fullscreen=0 > round.log 2>&1
+status=$?
+echo "DISPLAY_RUN_EXIT $status" >> round.log
+node scripts/handover-frame-probe.mjs native round.log
+```
+
+Add `--w144-plant` to the fixed game arguments to sleep 50 ms at each warm handover. The additional `--w144-victory-flood` releases the flood warning light after the warm timing windows and after the victory record. Its shutdown is a separate diagnostic. The grader reports both the maximum within each window and the interval containing the entry signal. It refuses a budget verdict for an instrumented ride or a broken watcher trace. Captures with the original ten-minute timeout are historical preflights.
+
+## Shutdown controls
+
+The unmodified dam checkpoint produces two light-unpair errors. Releasing all lights moves both errors before quit. Releasing only the flood warning light, with every other light still in the scene, produces both at that release. The game creates the lamp in `sketches/core-loop/src/world/flood.gd:54`. The renderer reports `instance_set_scenario` and `instance_set_base` in `renderer_scene_cull.cpp`. The earlier flood-water change on PR #1127 concerns a different node.
+
+Releasing every live GPU emitter or the whole game scene at the dam still leaves eight particle shaders and eight matching shader RIDs at quit. An empty scene and a scene containing one default GPU emitter both exit cleanly. Read the entries in `shutdown-controls.json` for the engine write order. The compressed logs keep the node inventories and detailed backtraces. `qualification.json` links the script digest, watcher counts and dead-frame measurement to `qualification.png`.
