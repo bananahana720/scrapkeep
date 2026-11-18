@@ -195,3 +195,13 @@ test("a code config with fewer distinct states than its pin is a miss, and every
   assert.equal(out.rewardsClean.distinct, rw.real[0].minStates);
   assert.equal(out.rewardsTwo.distinct, rw.real[1].minStates);
 });
+
+test("the flood row's pins and plants match captured TLC output", () => {
+  const fl = ROWS["flood-never-held"];
+  for (const r of fl.real) {
+    const parsed = parseTlc(fixture(r.cfg.replace(".cfg", "")));
+    assert.equal(parsed.outcome, "clean", r.cfg);
+    assert.equal(parsed.distinct, r.minStates, r.cfg);
+  }
+  for (const p of fl.plants) assert.equal(brokeRule(parseTlc(fixture(p.cfg.replace(".cfg", ""))), cfg(p.cfg), p.rule), true, `${p.cfg} breaks ${p.rule}`);
+});

@@ -44,6 +44,24 @@ const BASES := {
 	"flight": {"clip": "ult_ride_loop", "priority": 64},
 }
 const BASE_BLEND := 0.1
+
+
+# Seats a pilot in its idle loop from the first frame (PILOT-CLIPS section 3 rule 9), for a pilot
+# shown where no reaction drives it (the class card, the Build preview). A GLB with no idle_loop
+# gets the animator stopped and its bones at rest pose. Returns the clip now playing, or "".
+static func seat_idle(animator: AnimationPlayer, pilot: Node) -> String:
+	if animator == null or pilot == null:
+		return ""
+	var idle: String = BASES.idle.clip
+	if animator.has_animation(idle):
+		if animator.current_animation != idle or not animator.is_playing():
+			animator.play(idle, BASE_BLEND if animator.is_playing() else 0.0)
+			animator.advance(0.0)
+		return idle
+	animator.stop()
+	for skeleton in pilot.find_children("*", "Skeleton3D", true, false):
+		skeleton.reset_bone_poses()
+	return ""
 # Set piece phases (ultimate.gd phase()) that hold the ride base. The wind-up counts: its clip
 # ends on the ride pose 17 ms before the flight begins, and no signal marks that start.
 const RIDE_PHASES := ["windup", "flight"]

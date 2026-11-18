@@ -531,28 +531,40 @@ func _worn_tints(player: Node, tint) -> Dictionary:
 	return tints
 
 
-# The shell the player wears right now (pilot, variant, paint, heft class), fitted under ball
-# for a preview such as the pause menu's build read. Pass back the record it returned last time:
-# the same pilot, variant and paint only update the heft class; anything else refits. {} when
-# even the default base is unavailable (the caller keeps its own stand-in).
-func fit_worn_into(ball: Node3D, player: Node, rec := {}) -> Dictionary:
+# The shell and pilot the player wears right now, seated for the pause preview. Reuse the
+# previous fit and update its heft and panel window when the worn cosmetics have not changed.
+# Returns {} when even the default shell is unavailable.
+func fit_worn_into(ball: Node3D, panels: Node3D, player: Node, rec: Dictionary) -> Dictionary:
 	var id := class_id(player)
 	var paint_id := _equipped_paint(id)
 	var tint = paint_tint(id, paint_id) if paint_id != "" else null
 	var variant := _equipped_variant(id)
-	var look := [id, variant, tint]
+	var outfit := CosmeticWear.worn(profile, id, "outfit")
+	var look := [id, variant, tint, outfit]
 	if not rec.is_empty() and rec.get("worn") == look and is_instance_valid(rec.core):
 		set_heft_class(rec, _run_heft_class(), false)
 		_glow_rec(rec, _ready_glow)
+		BallLooks.ride(ball_look(), panels)
 		return rec
 	for key in ["core", "pod"]:
 		var old = rec.get(key)
 		if old != null and is_instance_valid(old):
 			old.get_parent().remove_child(old)
 			old.queue_free()
-	var shell := fit_shell_into(ball, id, variant, _run_heft_class(), _worn_tints(player, tint))
-	if not shell.is_empty():
-		shell["worn"] = look
+	var tints := _worn_tints(player, tint)
+	var shell := fit_shell_into(ball, id, variant, _run_heft_class(), tints)
+	if shell.is_empty():
+		return shell
+	shell["worn"] = look
+	var fitted := fit_pilot_into(shell.pod, id, player.class_color())
+	if not fitted.is_empty():
+		if outfit != "":
+			fit_outfit(fitted.pilot, outfit, tints)
+		var animator: AnimationPlayer = fitted.animator
+		# Held on its first idle frame: the preview is a still of the worn pilot.
+		if PilotReactions.seat_idle(animator, fitted.pilot) != "":
+			animator.pause()
+	BallLooks.ride(ball_look(), panels)
 	return shell
 
 
