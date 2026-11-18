@@ -1,0 +1,152 @@
+{
+  "original_sha256": "0a84d128682aded286bbadd968c1fe29949f367e86872b58ccdf746b9be69ab4",
+  "receipt": {
+    "schema": "scrapkeep-smoke-receipt/1",
+    "label": "W1-133a-focused",
+    "argv": [
+      "--sketch",
+      "core-loop",
+      "--test",
+      "matchup_lab_test",
+      "--test",
+      "chaser_speed_test",
+      "--test",
+      "attack_budget_test",
+      "--test",
+      "body_run_warning_test",
+      "--test",
+      "pocket_entry_test",
+      "--test",
+      "lobber_cover_test",
+      "--test",
+      "telegraph_timing_pack_test",
+      "--receipt",
+      "W1-133a-focused"
+    ],
+    "root": "<worktree>",
+    "head": "2df78cdb1e21b3aedf09b5e3d70baebfb8555535",
+    "tree": "7d07062a1459784fbea0221c6936fdac26103c4d",
+    "clean": false,
+    "dirty_paths": [
+      "?? sketches/core-loop/tests/beacon_open_level_test.gd.uid",
+      "?? sketches/core-loop/tests/press_latency_measure_test.gd.uid"
+    ],
+    "godot": {
+      "binary": "<home>/Applications/Godot_4.7.2.app/Contents/MacOS/Godot",
+      "version": "4.7.2.stable.official.ed1daf0bf"
+    },
+    "sketches": [
+      "sketches/core-loop"
+    ],
+    "flags": [],
+    "width": 2,
+    "lock_wait_ms": 34026,
+    "started_at": "2026-11-18T14:31:13.028Z",
+    "wall_ms": 1053574,
+    "stems": {
+      "sketches/core-loop": 0
+    },
+    "quarantined": [],
+    "quarantine_expired": [],
+    "results": [
+      {
+        "label": "sketches/core-loop import",
+        "ok": true,
+        "exit": 0,
+        "ms": 1815,
+        "solo": false,
+        "passes": 0,
+        "fails": 0,
+        "verdict_line": null,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/body_run_warning_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 8222,
+        "solo": false,
+        "passes": 34,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/attack_budget_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 119118,
+        "solo": true,
+        "passes": 22,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/chaser_speed_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 45782,
+        "solo": true,
+        "passes": 14,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/lobber_cover_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 19346,
+        "solo": true,
+        "passes": 23,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/matchup_lab_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 229368,
+        "solo": true,
+        "passes": 0,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/pocket_entry_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 366873,
+        "solo": true,
+        "passes": 117,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/telegraph_timing_pack_test.gd",
+        "ok": true,
+        "exit": 0,
+        "ms": 262918,
+        "solo": true,
+        "passes": 292,
+        "fails": 0,
+        "verdict_line": true,
+        "skips": []
+      }
+    ],
+    "bot_tier_not_run": [],
+    "totals": {
+      "runs": 8,
+      "failed": 0,
+      "skipped": 0,
+      "missing_verdict": 0,
+      "quarantined_red": [],
+      "quarantine_stale": []
+    },
+    "ok": true
+  }
+}
