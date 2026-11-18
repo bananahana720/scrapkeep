@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Writes the receipts for the rows backed by the TLA+ models in .agents/skills/scrapkeep-verify-formal:
-// "run-always-ends" (RunFlow.tla) and "rewards-banked-once" (Rewards.tla), which scripts/world1-bands.mjs reads, and
-// "flood-never-held" (ParkFlood.tla).
+// "run-always-ends" (RunFlow.tla) and "rewards-banked-once" (Rewards.tla), which scripts/world1-bands.mjs reads,
+// "flood-never-held" (ParkFlood.tla), and "hazards-hit-everyone" (HazardCycle.tla, W44), which no band row reads yet.
 //   { head, pass, measured, plant_caught }
 // For each row it runs TLC, the TLA+ model checker, on every config that stands for the code (the skill's today-*
 // configs) and on each planted fault (a broken-* config with one guard off). It passes only when every code config
@@ -61,6 +61,21 @@ export const ROWS = {
       "the profile's save lock is taken as perfect: a game that waits longer than 250 ms for it, a stale lock broken while its holder still lives, and an older build saving beside this one (it takes no lock) are not modelled",
       "two games pay twice when both profile saves of the first game's earn fail (ruling ea: never lost outranks at most once; rewards-ruled-two-twofail-once)",
       "a profile that builds from 4 October to 16 November left holding a reward key without its unlock (finding R-1) stays unpaid: the model starts from a profile that never held one, and the repair is card W1-121",
+    ],
+  },
+  "hazards-hit-everyone": {
+    spec: "HazardCycle.tla",
+    real: [{ cfg: "hazard-today.cfg", minStates: 45981, label: "a storm's sought strike, one ball and one enemy (W44)" }],
+    plants: [
+      { cfg: "hazard-broken-notell.cfg", rule: "TellBeforeStrike" },
+      { cfg: "hazard-broken-seekrolling.cfg", rule: "RollingNeverSought" },
+      { cfg: "hazard-broken-strikeatball.cfg", rule: "TellBeforeStrike" },
+      { cfg: "hazard-broken-skipenemies.cfg", rule: "EnemyStruck" },
+      { cfg: "hazard-broken-noseek.cfg", rule: "StalledSought" },
+    ],
+    coverage: "references/hazard-coverage.md",
+    gaps: [
+      "the model counts in ticks with a shortened rest and storm; seconds, the dome's own fixed strike, floods and the industrial cone and ring are left to tests/hazards_hit_everyone_test.gd and the park event tests",
     ],
   },
   "flood-never-held": {

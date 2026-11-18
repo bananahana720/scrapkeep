@@ -878,9 +878,11 @@ func grant_start_mass(amount: float) -> void:
 	set_max_hp(max_hp + base_max_hp() - previous_base)
 
 
-# True only while enemy_killed is emitting for a kill a wear spark landed: the item and tree
-# consumers skip it, the bookkeeping ones do not.
-var last_kill_from_spark := false
+# True only while enemy_killed is emitting for a kill a wear spark or a world hazard landed (source "spark" or
+# "hazard"; hazard_hits.gd): the item and tree consumers skip it, the bookkeeping ones (the kill count, the drop)
+# do not.
+const TRIGGERLESS_SOURCES := ["spark", "hazard"]
+var last_kill_triggerless := false
 # What combat knew about the kill being recorded (elite, jackpot), read by enemy_killed
 # listeners during the emit and cleared after it.
 var kill_tags := {}
@@ -888,10 +890,10 @@ var kill_tags := {}
 
 func record_kill(kind: String, at: Vector3, scrap_value: int, source := "") -> void:
 	kills += 1
-	last_kill_from_spark = source == "spark"
+	last_kill_triggerless = source in TRIGGERLESS_SOURCES
 	events.enemy_killed.emit(kind, at, scrap_value)
 	if kind in Roster.SPECIALS: events.special_broken.emit(kind)
-	last_kill_from_spark = false
+	last_kill_triggerless = false
 	kill_tags = {}
 
 
