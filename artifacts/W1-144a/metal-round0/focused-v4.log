@@ -1,0 +1,23 @@
+✔ the probe uses embedded Metal before the project is loaded, with a scratch home (2.366542ms)
+✔ the watcher rejects focus changes, visible children, missing periods and missing helper (4.832084ms)
+✔ the Gate reference needs a visible sample for its own process and the pinned executable (2.046708ms)
+✔ two drawn runs wait for one lock across worktrees and have disjoint start/end times (94.42275ms)
+✔ losing the sampler aborts a still-running group before releasing the drawn slot (258.416334ms)
+✔ Mac library captures keep the producer resolution and plant while forcing the embedded backend (1.288583ms)
+✔ model receipts see a valid planted comparison but cannot consume an unwatched verdict (1.948ms)
+✔ both Mac entry points refuse unknown and changed tools before taking a lock or starting Godot (0.821333ms)
+✔ a queued Mac draw rechecks its files before the version query and again before the draw (1.807209ms)
+✔ headless measurement and the editor version probe use only their scratch homes (1.15925ms)
+✔ the handover capture pins its entry script, offscreen helper and self-play probes (2.40825ms)
+✔ the handover log preserves the engine's write order across stdout and stderr (71.251292ms)
+✔ a planted 50 ms frame fails only the crossing in which it occurs (234.165417ms)
+✔ shutdown requires a drained clean exit and distinguishes a renderer error from truncation (446.166625ms)
+✔ the watched capture grades the warm drawn intervals and rejects a gap or invalid watcher (515.651625ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1278.774459

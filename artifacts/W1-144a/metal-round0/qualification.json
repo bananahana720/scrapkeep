@@ -1,0 +1,36 @@
+{
+  "stage": "3cafd8fa3962934e11ba89c439b3af943dba5d8d",
+  "tool_commit": "13c9e4748",
+  "script_sha256": "3dde701eac84667cf3cb6da25798de65893e80a8d852b10b8344d8746444e60c",
+  "engine": "Godot 4.7.2.stable.official.ed1daf0bf",
+  "renderer": "Metal 4.0 Forward+, Apple M5 Max (Apple9)",
+  "capture": "1920x1080 embedded, --audio-driver Dummy, --preset=high, seed 1, sitting profile",
+  "launch_exit": 0,
+  "watch": {
+    "samples": 388,
+    "firstMs": 1795033696746,
+    "lastMs": 1795033716055,
+    "periodMs": 50,
+    "maxGapMs": 56,
+    "missed": 0,
+    "onScreen": 0,
+    "targetOnScreen": 0,
+    "frontmostChanges": 0
+  },
+  "dead_frame_check": {
+    "file": "/Users/hanabanana/projects/scrapkeep/artifacts/local/W1-144a/artifacts/local/display-run/home-OZaxoV/Library/Application Support/godot/app_userdata/core-loop/handover-qualification.png",
+    "metrics": {
+      "black": 0.00850308641975309,
+      "luma": 0.400162817259676,
+      "sky": 0.0168055555555556,
+      "sky_rgb": [
+        243,
+        236,
+        220
+      ]
+    },
+    "quadrant_cie76": [],
+    "reference": "",
+    "sha256": "3758528871502da62d6175633de5c7cdcfd2546a12000e25db4a61dbed9f2378"
+  }
+}
