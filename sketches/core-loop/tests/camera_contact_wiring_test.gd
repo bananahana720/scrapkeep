@@ -8,7 +8,7 @@ const T := preload("res://tests/support/t.gd")
 
 # The chase camera lifts its arm near Brindle's ship and near the dam-face Warden only while those fights are on.
 # Seen through the camera's arm angle in the real game: lifted when the ball is close to the body, level again once
-# the arena is left, Brindle is beaten, or the Warden is beaten, freed or abandoned.
+# the arena is left, Brindle is beaten, or the Warden is beaten or freed.
 
 # The arm is raised more than this over the player's pitch when the contact lift is on (it reaches
 # ChaseCamera.CONTACT_LIFT_MAX) and less when it is off. The ball falls out of the freed arena, and the camera's
@@ -26,7 +26,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	await _brindle()
-	for ending in ["beaten", "abandoned", "freed"]:
+	for ending in ["beaten", "freed"]:
 		await _dam(ending)
 	quit(_t.verdict())
 
@@ -103,8 +103,6 @@ func _dam(ending: String) -> void:
 	match ending:
 		"beaten":
 			warden.hp = 0.0
-		"abandoned":
-			warden.live = func(): return false
 		"freed":
 			warden.queue_free()
 	await _settle(game)

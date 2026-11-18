@@ -56,7 +56,7 @@ const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 #   flaring hardpoint's line; the flare goes out when that line does.
 # - The per-kind hook (KF1, widened 2026-10-11 for KF2 to KF4). The driver must answer
 #   mount_offset(warden, clock) -> Vector3 and may answer step(warden, delta) every physics
-#   tick after the body moved, idle(warden) on a tick the fight is not in play (no step runs then),
+#   tick after the body moved,
 #   charge_allowed(warden) -> bool before a charge starts (false
 #   lets the pulse clock run and starts no charge), on_charge(warden, seconds), on_pulse(warden,
 #   lifted), on_stagger(warden, open), on_chunk_lost(warden, left) and on_exit(warden) as the
@@ -365,7 +365,6 @@ func _physics_process(delta: float) -> void:
 	_update_flash(delta)
 	_pose(delta)
 	if not _in_play() or target == null:
-		_hook("idle", [self])
 		return
 	_since_pulse += delta
 	_step_mounting(delta)

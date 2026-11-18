@@ -493,7 +493,8 @@ func _process(delta: float) -> void:
 
 	rotation = Vector3(0.0, yaw, 0.0)
 	var arm_pitch := pitch + _pitch_bias + lift
-	if _contact_subject != null and not is_instance_valid(_contact_subject):
+	# A freed node compares equal to null, so the validity test must stand alone to drop it.
+	if not is_instance_valid(_contact_subject):
 		_contact_subject = null
 	var subject := _contact_subject
 	var contact_lift := _boss_contact_lift(arm_pitch, subject)

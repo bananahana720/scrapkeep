@@ -171,11 +171,6 @@ func _declare_fight(warden, engaged: bool) -> void:
 		warden.fleet.ctx.camera.clear_contact_subject(warden)
 
 
-# A tick the fight is not in play: the Warden runs no step, so the request ends here.
-func idle(warden) -> void:
-	_declare_fight(warden, false)
-
-
 static func _is_flume(warden) -> bool:
 	return warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "flume"
 

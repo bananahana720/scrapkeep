@@ -20,6 +20,8 @@ const RealTuning := preload("res://src/movement/tuning.gd")
 const DT := 1.0 / 60.0
 # The ball's centre must sit at least this share of the viewport's height above its bottom edge.
 const BALL_BOTTOM_MARGIN := 0.06
+# The arm's rise over the player's pitch that counts as the contact lift being on.
+const LIFT_ON := 0.3
 const BALL_FRAMED_PITCHES := [-0.6, -0.3, 0.0, 0.3, 0.5]
 
 var _t = T.new("camera_tight_test")
@@ -267,8 +269,13 @@ func _ball_stays_framed() -> void:
 			await _settle(cam, 120)
 			var margin: float = _ball_margin(cam)
 			var need: float = BALL_BOTTOM_MARGIN * cam.get_viewport().get_visible_rect().size.y
-			_t.check("H1 the ball stays in frame with the subject %.0f m off at pitch %.1f" % [distance, looked], margin >= need, "ball %.0f px above the bottom edge, need %.0f; arm %.3f, pitch %.3f" % [margin, need, cam.arm.rotation.x, looked])
+			var raised: float = cam.pitch - cam.arm.rotation.x
+			_t.check("H1 the ball stays in frame with the lift on, the subject %.0f m off at pitch %.1f" % [distance, looked], margin >= need and raised > LIFT_ON, "ball %.0f px above the bottom edge, need %.0f; arm %.3f, pitch %.3f" % [margin, need, cam.arm.rotation.x, looked])
 			subject.free()
+			if distance == 6.0 and looked == BALL_FRAMED_PITCHES[1]:
+				# A subject freed without a clear: the camera must drop it and let the arm back down.
+				await _settle(cam, 120)
+				_t.check("H2 a freed subject ends the lift", cam.pitch - cam.arm.rotation.x < LIFT_ON, "raised %.3f rad" % (cam.pitch - cam.arm.rotation.x))
 			cam.free()
 	floor_body.free()
 
