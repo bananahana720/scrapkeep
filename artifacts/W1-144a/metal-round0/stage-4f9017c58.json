@@ -1,0 +1,238 @@
+{
+  "passes": [
+    {
+      "pass_number": 1,
+      "planted": false,
+      "max_frame_ms": {
+        "dam_to_flume": 212.015,
+        "flume_to_bowl": 110.701
+      },
+      "entry_frame_ms": {
+        "dam_to_flume": 212.015,
+        "flume_to_bowl": 73.202
+      },
+      "trace": {
+        "dam_to_flume": {
+          "entry_us": 172807143,
+          "draw_intervals": 447,
+          "over_33_3_ms": [
+            {
+              "start_ms_from_entry": -641.459,
+              "duration_ms": 58.082
+            },
+            {
+              "start_ms_from_entry": -583.377,
+              "duration_ms": 59.471
+            },
+            {
+              "start_ms_from_entry": -523.906,
+              "duration_ms": 42.509
+            },
+            {
+              "start_ms_from_entry": -62.178,
+              "duration_ms": 212.015
+            },
+            {
+              "start_ms_from_entry": 149.837,
+              "duration_ms": 143.708
+            },
+            {
+              "start_ms_from_entry": 293.545,
+              "duration_ms": 68.072
+            },
+            {
+              "start_ms_from_entry": 361.617,
+              "duration_ms": 50.291
+            },
+            {
+              "start_ms_from_entry": 411.908,
+              "duration_ms": 40.926
+            },
+            {
+              "start_ms_from_entry": 452.834,
+              "duration_ms": 35.198
+            },
+            {
+              "start_ms_from_entry": 730.573,
+              "duration_ms": 35.515
+            },
+            {
+              "start_ms_from_entry": 766.088,
+              "duration_ms": 39.24
+            },
+            {
+              "start_ms_from_entry": 914.3,
+              "duration_ms": 39.407
+            },
+            {
+              "start_ms_from_entry": 3000.459,
+              "duration_ms": 54.474
+            },
+            {
+              "start_ms_from_entry": 3054.933,
+              "duration_ms": 33.387
+            }
+          ]
+        },
+        "flume_to_bowl": {
+          "entry_us": 313742579,
+          "draw_intervals": 452,
+          "over_33_3_ms": [
+            {
+              "start_ms_from_entry": -1036.407,
+              "duration_ms": 43.772
+            },
+            {
+              "start_ms_from_entry": -911.616,
+              "duration_ms": 69.916
+            },
+            {
+              "start_ms_from_entry": -841.7,
+              "duration_ms": 110.701
+            },
+            {
+              "start_ms_from_entry": -730.999,
+              "duration_ms": 45.802
+            },
+            {
+              "start_ms_from_entry": -655.195,
+              "duration_ms": 42.39
+            },
+            {
+              "start_ms_from_entry": -612.805,
+              "duration_ms": 41.289
+            },
+            {
+              "start_ms_from_entry": -571.516,
+              "duration_ms": 56.943
+            },
+            {
+              "start_ms_from_entry": -514.573,
+              "duration_ms": 47.515
+            },
+            {
+              "start_ms_from_entry": -467.058,
+              "duration_ms": 35.504
+            },
+            {
+              "start_ms_from_entry": -431.554,
+              "duration_ms": 35.705
+            },
+            {
+              "start_ms_from_entry": -342.209,
+              "duration_ms": 34.624
+            },
+            {
+              "start_ms_from_entry": -133.773,
+              "duration_ms": 51.604
+            },
+            {
+              "start_ms_from_entry": -82.169,
+              "duration_ms": 46.339
+            },
+            {
+              "start_ms_from_entry": -35.83,
+              "duration_ms": 73.202
+            },
+            {
+              "start_ms_from_entry": 207.979,
+              "duration_ms": 40.947
+            },
+            {
+              "start_ms_from_entry": 441.878,
+              "duration_ms": 50.034
+            },
+            {
+              "start_ms_from_entry": 2196.325,
+              "duration_ms": 46.836
+            },
+            {
+              "start_ms_from_entry": 3179.457,
+              "duration_ms": 84.658
+            },
+            {
+              "start_ms_from_entry": 4516.866,
+              "duration_ms": 41.184
+            }
+          ]
+        }
+      }
+    },
+    {
+      "pass_number": 2,
+      "planted": false,
+      "max_frame_ms": {
+        "dam_to_flume": 133.841,
+        "flume_to_bowl": 29.982
+      },
+      "entry_frame_ms": {
+        "dam_to_flume": 133.841,
+        "flume_to_bowl": 26.626
+      },
+      "trace": {
+        "dam_to_flume": {
+          "entry_us": 573705474,
+          "draw_intervals": 484,
+          "over_33_3_ms": [
+            {
+              "start_ms_from_entry": -703.197,
+              "duration_ms": 34.466
+            },
+            {
+              "start_ms_from_entry": -668.731,
+              "duration_ms": 45.812
+            },
+            {
+              "start_ms_from_entry": -622.919,
+              "duration_ms": 48.019
+            },
+            {
+              "start_ms_from_entry": -52.481,
+              "duration_ms": 133.841
+            },
+            {
+              "start_ms_from_entry": 81.36,
+              "duration_ms": 85.326
+            },
+            {
+              "start_ms_from_entry": 166.686,
+              "duration_ms": 42.313
+            },
+            {
+              "start_ms_from_entry": 208.999,
+              "duration_ms": 33.915
+            }
+          ]
+        },
+        "flume_to_bowl": {
+          "entry_us": 723743662,
+          "draw_intervals": 671,
+          "over_33_3_ms": []
+        }
+      }
+    }
+  ],
+  "frame_pass": false,
+  "shutdown_pass": false,
+  "shutdown_error_lines": 4,
+  "errors": [
+    "ERROR: BUG, indexing did not unpair geometries from light.",
+    "ERROR: BUG, indexing did not unpair geometries from light.",
+    "ERROR: 21 shaders of type ParticlesShaderRD were never freed",
+    "ERROR: 21 RID allocations of type 'N10RendererRD15MaterialStorage6ShaderE' were leaked at exit."
+  ],
+  "pass": false,
+  "grader_exit": 1,
+  "watch": {
+    "samples": 16617,
+    "firstMs": 1795038674896,
+    "lastMs": 1795039505693,
+    "periodMs": 50,
+    "maxGapMs": 85,
+    "missed": 0,
+    "onScreen": 0,
+    "targetOnScreen": 0,
+    "frontmostChanges": 0
+  },
+  "launcher_exit": "DISPLAY_RUN_EXIT 0"
+}

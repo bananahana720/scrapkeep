@@ -1,0 +1,35 @@
+MangoHud is not installed (no mangohud on PATH).
+MangoHud is a Linux overlay that shows and logs frame times for Vulkan and OpenGL games.
+Install it from the Arch extra repository, then run this again:
+
+  sudo pacman -S mangohud
+
+✔ parseArgs keeps the alpha budget by default and passes arguments after -- to the game (0.784334ms)
+✔ the missing-MangoHud message names the Arch install and downloads nothing (0.075042ms)
+✔ findOnPath finds only executable files (0.626792ms)
+✔ resolveTarget prefers --exe, then the installed AppImage, then the newest export (0.678042ms)
+✔ mangohudConfig logs every frame after the warm-up, vsync off and no overlay by default (0.103709ms)
+✔ parseLog reads the frametime column below the system block, converting microseconds (0.245666ms)
+✔ summarize passes a steady run and times each hitch from the start of the log (0.315542ms)
+✔ main runs the build under a stand-in mangohud and grades its log (28.684833ms)
+✔ main --log grades an existing log without launching anything (1.106542ms)
+✔ --self-play passes the flag and its options to the game; the default launch is unchanged (0.187459ms)
+✔ parseSelfPlay reads stage entries on the launch and log clocks, and the stall (0.25025ms)
+✔ worstFrameNear reads the window around a stage entry (0.326709ms)
+✔ main --self-play launches the game with the flag and records the self-play lines (28.435833ms)
+✔ main --self-play fails the check when the game stalls (3) or lacks tools/ (2) (63.541625ms)
+✔ --capture picks engine or mangohud; without it MangoHud wins where installed, else the engine on macOS (0.431916ms)
+✔ engineLaunch runs the editor on the project windowed, vsync off, with the frame log on the same warmup and seconds (0.173125ms)
+✔ the engine frame log reads through the MangoHud parser, and its label says which it is (0.123416ms)
+✔ all direct Mac captures refuse before any executable runs or the machine is reserved (1.071083ms)
+✔ main on Linux launches the engine capture with scratch XDG data and grades the game's own log (96.811958ms)
+✔ an engine reading says whether it measured a packed build and on what caches (0.180041ms)
+✔ --home reuses an existing scratch HOME under artifacts/local and refuses any other folder (1.959666ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 328.518541

@@ -1,0 +1,62 @@
+sketch:smoke waiting: a frame reading (pid 33206) holds the machine quiet (/tmp/scrapkeep-quiet-hold)
+sketch:smoke waiting for a machine slot (2 occupied)
+sketch:smoke waited 733s for the machine
+FAIL sketches/core-loop import exit=null 50.0s
+failing lines (0 checks passed, 0 failed):
+  >> the test was killed at the time limit or by a signal
+[   0% ] [90m[1mimport[22m | Started Import Scene (104 steps)[39m[0m
+[   0% ] [90m[1mimport[22m | Importing Scene...[39m[0m
+[   1% ] [90m[1mimport[22m | Running Custom Script...[39m[0m
+[  99% ] [90m[1mimport[22m | Saving...[39m[0m
+[92m[ DONE ][39m [1mimport[22m
+[0m
+[  85% ] [90m[1mreimport[22m | hose_coil_a.glb[39m[0m
+[   0% ] [90m[1mimport[22m | Started Import Scene (104 steps)[39m[0m
+[   0% ] [90m[1mimport[22m | Importing Scene...[39m[0m
+[   1% ] [90m[1mimport[22m | Running Custom Script...[39m[0m
+[  99% ] [90m[1mimport[22m | Saving...[39m[0m
+[92m[ DONE ][39m [1mimport[22m
+[0m
+[  85% ] [90m[1mreimport[22m | rock_bucket_b_lod1.glb[39m[0m
+[   0% ] [90m[1mimport[22m | Started Import Scene (104 steps)[39m[0m
+[   0% ] [90m[1mimport[22m | Importing Scene...[39m[0m
+[   1% ] [90m[1mimport[22m | Running Custom Script...[39m[0m
+[  99% ] [90m[1mimport[22m | Saving...[39m[0m
+[92m[ DONE ][39m [1mimport[22m
+[0m
+[  85% ] [90m[1mreimport[22m | rock_bucket_b.glb[39m[0m
+[   0% ] [90m[1mimport[22m | Started Import Scene (104 steps)[39m[0m
+[   0% ] [90m[1mimport[22m | Importing Scene...[39m[0m
+[   1% ] [90m[1mimport[22m | Running Custom Script...[39m[0m
+[  99% ] [90m[1mimport[22m | Saving...[39m[0m
+[92m[ DONE ][39m [1mimport[22m
+[0m
+[  85% ] [90m[1mreimport[22m | rock_bucket_a_lod2.glb[39m[0m
+[   0% ] [90m[1mimport[22m | Started Import Scene (104 steps)[39m[0m
+[   0% ] [90m[1mimport[22m | Importing Scene...[39m[0m
+[   1% ] [90m[1mimport[22m | Running Custom Script...[39m[0m
+[  99% ] [90m[1mimport[22m | Saving...[39m[0m
+[92m[ DONE ][39m [1mimport[22m
+[0m
+[  85% ] [90m[1mreimport[22m | rock_bucket_a_lod1.glb[39m[0m
+[   0% ] [90m[1mimport[22m | Started Import Scene (104 steps)[39m[0m
+[   0% ] [90m[1mimport[22m | Importing Scene...[39m[0m
+[   1% ] [90m[1mimport[22m | Running Custom Script...[39m[0m
+[  99% ] [90m[1mimport[22m | Saving...[39m[0m
+
+the test was killed at the time limit or by a signal
+sketches/core-loop import try 1 of 3: failed (exit=SIGTERM); trying again
+PASS sketches/core-loop import (try 2) exit=0 44.2s
+PASS sketches/core-loop res://tests/rivet_warm_hitch_test.gd exit=0 12.0s
+PASS sketches/core-loop res://tests/audio_bakes_ahead_test.gd exit=0 25.3s
+slowest 3:
+  44.2s sketches/core-loop import (try 2)
+  25.3s sketches/core-loop res://tests/audio_bakes_ahead_test.gd
+  12.0s sketches/core-loop res://tests/rivet_warm_hitch_test.gd
+skipped 1 (passed without running every check; not a failure):
+  sketches/core-loop res://tests/rivet_warm_hitch_test.gd
+    SKIP control Fin.L
+    SKIP control Fin.R
+0 tests lack a verdict line
+sketch:smoke pass: 1 sketches, 3 runs, 2 at a time, 0 solo (0s), 120s. Headless boot and sketch tests only; feel needs Andrew's play.
+receipt /Users/hanabanana/projects/scrapkeep/artifacts/local/W1-144a-stage-check/artifacts/local/receipts/named-1cb707a3d861-2026-11-18T21-45-33-339Z.json
