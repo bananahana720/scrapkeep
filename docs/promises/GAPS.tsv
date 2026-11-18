@@ -1,0 +1,89 @@
+id	gap	section
+D1.1	Godot numbers: resting FOV 80 to 90 (game 65, 80 at speed, cap 88)	Left to decide
+D1.2	Plus 8 to 12 degrees on a dash (game plus 7, plus 5 on boost)	Left to decide
+D1.3	Camera arm 4.5 to 6.0 m (game 7.5 to 10.5, 12 in falls, yards, bosses)	Left to decide
+D1.4	Shoulder offset 0.6 to 0.8 m (game centred in free roll)	Left to decide
+D1.5	Floors and walls under 50% brightness (pale sand about 80%)	Left to decide
+D1.6	Warning fill 0.4 to 0.8 s (chaser 0.6; lobber, Warden, Brindle 1.0 to 2.5)	Left to decide
+D1.7	Sparks and trails 0.15 to 0.3 s (about ten bursts last 0.4 to 1.1 s)	Left to decide
+D1.8	Hit flash 0.03 to 0.05 s pure white (cream tint over about 0.4 s)	Left to decide
+D1.9	SSIL on (off on both presets, no reason recorded)	Left to decide
+D2	Sharp shapes for danger: live warnings only, no jagged static hazards, not stated as a decision	Left to decide
+D3	The crossing chaser read well and stayed off after one seed	Left to decide
+D4	Scrap or cogs as the price of a paid lever, and whether a paid device may add risk	Left to decide
+D5	Whether crews need pathfinding around terrain	Left to decide
+D6	Chaser speed; the open lever is how much it leads	Left to decide
+G1a	Map layout against the six principles: no drawn proposal of what moves, is added or removed	Left to design
+G1b	Pacing and rhythm has no design for the dam or the bowl	Left to design
+G1c	Encounter cadence and difficulty progression per map appear nowhere	Left to design
+G1d	Dam and flume regions with no stated purpose (domes, shelf, corkscrew slot, east rim, canal, weir, bench run, lower gorge)	Left to design
+G1e	Where the maps give a reason to dash, jump and shoot was not considered	Left to design
+G2a	Enemies keep up with a fast pilot: the lobber commits 21 m behind a 28 m/s rider	Left to design
+G2b	The boom tender missed all three fast passes and has no task row	Left to design
+G3a	Roster: hooker, dispatcher and foreman got nothing	Left to design
+G3b	Roster: the Drop Hammer miniboss, the Gate Crane and the reactor relic got nothing	Left to design
+G3c	Roster: jolt layer, ramp flipper and winch drone got one table row each	Left to design
+G3d	Roster: plated brute got one table row	Left to design
+G4	One agreed look per enemy: chaser drawn four ways; no top or rider-at-speed views; five kinds with no concept art	Left to design
+G5	Arrivals: culverts, ledges, water, winches; enemies popping in from thin air	Left to design
+G6a	Grappling that pays: holding lands at 3.44 m/s against 12.74 for an early release	Left to design
+G6b	The dam timber span was never trialled and the bowl mast was measured and left	Left to design
+G7	A landing-height cue: the airborne shadow merges with pier shadows; AO off on Low	Left to design
+G8a	A guide to the exit and rewards when a wave clears: nothing comes on at the end of a fight	Left to design
+G8b	Reward arches have no glow	Left to design
+G9	A rim light on the crew machines and the pilot	Left to design
+G10	A colour and value sheet for world 1	Left to design
+G11	A lighting pass for the dam, flume and Slag Bowl, or a recorded statement that the look stands	Left to design
+G12	Vertical play: the flume climbing ride and fights that use height	Left to design
+G13a	Mini bosses: aiming ahead (on a morning branch)	Left to design
+G13b	Warden escalation, deferred to phase 2	Left to design
+G14	A scrap-activated device that works against the player	Left to design
+G15	The primed boom crossing: a playable timed crossing with no row	Left to design
+B1a	Dam fork: the worn curved lip	Left to build
+B1b	Dam fork: the square service frame at the incline landing	Left to build
+B2a	Bowl: an opened skyline around one mast	Left to build
+B2b	Bowl: a square mast base	Left to build
+B2c	Bowl: a wear arc on the rideable bank	Left to build
+B2d	Bowl: a new first view (the camera turn was reverted)	Left to build
+B3a	Flume: a view back to the worksite from the lower carry	Left to build
+B3b	Flume: a pier that really stops a shell where it promises cover	Left to build
+B3c	Flume: legs on the far trestle model	Left to build
+B4a	Enemy motion: the chaser's load separated from its thrust	Left to build
+B4b	Enemy motion: the lobber's firing tool raised above its hopper	Left to build
+B4c	Enemy motion: the scraper hidden by foliage at the flume pier	Left to build
+B5a	Rammable Fleet loads (no row id)	Left to build
+B5b	One paid lever per stage (no row id)	Left to build
+B5c	A lead for the lobber and the brute (no row id)	Left to build
+B5d	One cued elite combo (no row id)	Left to build
+B6a	Rivet's cooling fins (W1-130)	Left to build
+B6b	The Brindle brace cue	Left to build
+B6c	The crane sweep warning during the reward choice	Left to build
+B6d	Survey posts	Left to build
+B6e	Bowl approach smoke	Left to build
+B7a	Renderer errors at shutdown (no row id)	Left to build
+B7b	The cause of the 57 to 59 ms frames at the stage hand-over	Left to build
+K1a	Passes until the before and after stops improving: one round, no pass list, no stopping rule	Checks that were asked for and not done
+K1b	Never reached: colour	Checks that were asked for and not done
+K1c	Never reached: lighting	Checks that were asked for and not done
+K1d	Never reached: fog	Checks that were asked for and not done
+K1e	Never reached: effects timing	Checks that were asked for and not done
+K1f	Never reached: pacing	Checks that were asked for and not done
+K1g	Never reached: map scale	Checks that were asked for and not done
+K1h	Never reached: map shape language	Checks that were asked for and not done
+K2a	Formal verification of passes and experiments: no experiment got a model	Checks that were asked for and not done
+K2b	The later flood model found a sibling fault in the same clock	Checks that were asked for and not done
+K3	Grouped review at two levels: no per-group review, no reviewer output file	Checks that were asked for and not done
+K4a	No kept change is checked against the bible or a ruling in writing	Checks that were asked for and not done
+K4b	Less ceremony: the session added 18 handoff pages and nine rows	Checks that were asked for and not done
+K5	A wider placeholder sweep: other pilots, camp, shop, menus, events	Checks that were asked for and not done
+K6	Drawn game frames with no window on screen	Checks that were asked for and not done
+K7	Collision with no drawn rock: 6,878 dam and 74 flume samples, no list of places	Checks that were asked for and not done
+K8a	Other seeds and pilots	Checks that were asked for and not done
+K8b	A human first read	Checks that were asked for and not done
+K8c	The packed Linux build	Checks that were asked for and not done
+K9a	Seven of the yard waves on the flume	Checks that were asked for and not done
+K9b	The dam's yard waves 2 and 3	Checks that were asked for and not done
+K9c	A rider doubling back	Checks that were asked for and not done
+K9d	The camera's framing snapping or oscillating over back-to-back rim contacts (from the dam camera brief)	Checks that were asked for and not done
+K9e	The enemy and grapple baselines on one shared route	Checks that were asked for and not done
+R1	The day's plan lives only in a board comment: no BACKLOG rows for culverts, rammable loads, the paid lever and the elite combo, and Brindle's "keep pressing" is not in DECISIONS.md

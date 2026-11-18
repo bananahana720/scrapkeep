@@ -18,6 +18,11 @@ const RealTuning := preload("res://src/movement/tuning.gd")
 # ground is not a wall. P1-P2: a wall that is there for 9 frames does not throw the lens up.
 
 const DT := 1.0 / 60.0
+# The ball's centre must sit at least this share of the viewport's height above its bottom edge.
+const BALL_BOTTOM_MARGIN := 0.06
+# The arm's rise over the player's pitch that counts as the contact lift being on.
+const LIFT_ON := 0.3
+const BALL_FRAMED_PITCHES := [-0.6, -0.3, 0.0, 0.3, 0.5]
 
 var _t = T.new("camera_tight_test")
 
@@ -47,6 +52,10 @@ func _run() -> void:
 	await _low_wall()
 	await _roof()
 	await _floor()
+	await _fight_floor()
+	await _aim_kept()
+	await _ball_stays_framed()
+	await _two_owners()
 	await _pillar()
 	await _unstepped()
 	await _ship()
@@ -58,6 +67,7 @@ func _run() -> void:
 	await _touching_drum()
 	await _like_a_wall()
 	await _touching_ship()
+	await _shove_cutaway()
 	_layers()
 	quit(_t.verdict())
 
@@ -153,6 +163,152 @@ func _floor() -> void:
 	_t.check("F1 looking up over open ground the arm is not lifted", absf(cam.arm.rotation.x - 0.5) < 0.001, "arm %.3f, pitch 0.500, hit length %.2f" % [cam.arm.rotation.x, cam.arm.get_hit_length()])
 	ground.free()
 	cam.free()
+
+
+# On the west water-sheet approach the rider pitches up 0.5 rad to see the reactor,
+# putting the unadjusted arm on a nearly flat tile. Compare that view to open-ground
+# look-up with the same pitch, then mount and shoot at the same point on both rigs.
+func _fight_floor() -> void:
+	var floor_body := _box(Vector3(80, 1, 80), Vector3(0, -1.5, 0))
+	var subject := Node3D.new()
+	root.add_child(subject)
+	subject.position = Vector3(0, 22, -24)
+	var open := _rig()
+	var fight := ChaseCamera.new()
+	root.add_child(fight)
+	fight.setup(Target.new(), Tuning.new())
+	fight.set_contact_subject(subject)
+	for rig in [open, fight]:
+		rig.snap(Vector3.FORWARD, 0.5)
+	await _settle(fight, 120)
+	var crowded := open.arm.get_hit_length()
+	var clear := fight.arm.get_hit_length()
+	_t.check("F2 the water-sheet view clears the floor", crowded < 4.0 and clear > 7.0, "open %.2f m, fight %.2f m" % [crowded, clear])
+	# Measured with the lift off (set_contact_subject(null)) at pitches 0.3 to 0.8 over this ground: the unlifted
+	# camera keeps the ball in frame at every one, so the frame alone cannot show the lift. What the lift buys at
+	# 0.5 is the lens pulled clear of the floor (F2's arm length) with the ball, the target and the floor ahead still
+	# shown; the floor right behind the ball (z -2 to -8) is the one thing a lifted lens gives up.
+	var ahead := Vector3(0, -1, -12)
+	_t.check("F3 the lifted lens, clear of the floor, still shows the ball, the high target and the floor ahead", fight.arm.get_hit_length() > 7.0 and fight.shows(Vector3.ZERO) and fight.shows(subject.position) and fight.shows(ahead), "arm %.2f m, ball %s, target %s, floor %s" % [fight.arm.get_hit_length(), fight.shows(Vector3.ZERO), fight.shows(subject.position), fight.shows(ahead)])
+	# Close in, the subject would lift the arm: the shoulder view must still win once mounted.
+	subject.position = Vector3(0, 4, -8)
+	await _settle(fight, 120)
+	_t.check("F3b the close subject lifts the arm before mounting", fight.arm.rotation.x < 0.5 - 0.3, "arm %.3f, pitch 0.500" % fight.arm.rotation.x)
+	for rig in [open, fight]:
+		rig.shoulder_target = 1.0
+		rig.reduced_motion = true
+	await _settle(fight, 120)
+	var target_at := open.aim_origin() + open.aim_forward() * 18.0
+	var struck := _box(Vector3.ONE, target_at)
+	await physics_frame
+	var space := root.world_3d.direct_space_state
+	for rig in [open, fight]:
+		var ray := PhysicsRayQueryParameters3D.create(rig.aim_origin(), rig.aim_origin() + rig.aim_forward() * 30.0, 1)
+		var hit := space.intersect_ray(ray)
+		_t.check("F4 the mounted sight hits the aimed box", hit.get("collider") == struck, "origin %s, first hit %s" % [rig.aim_origin(), hit.get("position")])
+	_t.check("F5 both mounted rests agree", open.aim_origin().distance_to(fight.aim_origin()) < 0.03 and open.aim_forward().angle_to(fight.aim_forward()) < 0.002, "open %s, fight %s" % [open.aim_origin(), fight.aim_origin()])
+	floor_body.free()
+	struck.free()
+	subject.free()
+	open.free()
+	fight.free()
+
+
+# The lift moves the arm only. A player who looks up at a high subject keeps that aim while the lift is on, and
+# nothing turns when the lift ends or the player mounts.
+func _aim_kept() -> void:
+	var floor_body := _box(Vector3(80, 1, 80), Vector3(0, -1.5, 0))
+	var subject := Node3D.new()
+	root.add_child(subject)
+	subject.position = Vector3(0, 22, -24)
+	var cam := _rig()
+	cam.reduced_motion = true
+	cam.set_contact_subject(subject)
+	var looked := 0.5
+	cam.snap(Vector3.FORWARD, looked)
+	await _settle(cam, 120)
+	_t.check("A0 the lift is on", cam.arm.rotation.x < looked - 0.3, "arm %.3f, pitch %.3f" % [cam.arm.rotation.x, looked])
+	_t.check("A1 with the lift on the aim pitch is the player's", absf(_aim_pitch(cam) - looked) < 0.002, "aim %.3f, player %.3f" % [_aim_pitch(cam), looked])
+	cam.set_contact_subject(null)
+	await _settle(cam, 120)
+	_t.check("A2 ending the lift does not turn the aim", absf(_aim_pitch(cam) - looked) < 0.002, "aim %.3f, player %.3f" % [_aim_pitch(cam), looked])
+	cam.set_contact_subject(subject)
+	await _settle(cam, 120)
+	var before_mount := _aim_pitch(cam)
+	cam.shoulder_target = 1.0
+	await _settle(cam, 120)
+	_t.check("A3 mounting does not turn the aim", absf(_aim_pitch(cam) - before_mount) < 0.002 and absf(_aim_pitch(cam) - looked) < 0.002, "aim %.3f before, %.3f after, player %.3f" % [before_mount, _aim_pitch(cam), looked])
+	floor_body.free()
+	subject.free()
+	cam.free()
+
+
+# Pixels between the ball's centre and the bottom edge of the viewport; negative when it is below the frame or the
+# lens has it behind.
+func _ball_margin(cam) -> float:
+	if cam.cam.is_position_behind(Vector3.ZERO):
+		return -INF
+	var view: Vector2 = cam.get_viewport().get_visible_rect().size
+	return view.y - cam.cam.unproject_position(Vector3.ZERO).y
+
+
+# The player sees the pilot (ruling dm): with the contact subject inside the hull's reach the lift is fully on,
+# and at every pitch the player can hold the ball's centre must still sit this share of the frame's height above
+# the bottom edge.
+func _ball_stays_framed() -> void:
+	var floor_body := _box(Vector3(80, 1, 80), Vector3(0, -1.5, 0))
+	for distance in [6.0, 9.0]:
+		for looked in BALL_FRAMED_PITCHES:
+			var subject := Node3D.new()
+			root.add_child(subject)
+			subject.position = Vector3(0, -1, -distance)
+			var cam := _rig()
+			cam.reduced_motion = true
+			cam.set_contact_subject(subject)
+			cam.snap(Vector3.FORWARD, looked)
+			await _settle(cam, 120)
+			var margin: float = _ball_margin(cam)
+			var need: float = BALL_BOTTOM_MARGIN * cam.get_viewport().get_visible_rect().size.y
+			var raised: float = cam.pitch - cam.arm.rotation.x
+			_t.check("H1 the ball stays in frame with the lift on, the subject %.0f m off at pitch %.1f" % [distance, looked], margin >= need and raised > LIFT_ON, "ball %.0f px above the bottom edge, need %.0f; arm %.3f, pitch %.3f" % [margin, need, cam.arm.rotation.x, looked])
+			subject.free()
+			if distance == 6.0 and looked == BALL_FRAMED_PITCHES[1]:
+				# A subject freed without a clear: the camera must drop it and let the arm back down.
+				await _settle(cam, 120)
+				_t.check("H2 a freed subject ends the lift", cam.pitch - cam.arm.rotation.x < LIFT_ON, "raised %.3f rad" % (cam.pitch - cam.arm.rotation.x))
+			cam.free()
+	floor_body.free()
+
+
+# The one slot has two owners (Brindle's ship, the dam Warden): clearing a subject that is not the current one
+# leaves the lift on, clearing the current one ends it.
+func _two_owners() -> void:
+	var floor_body := _box(Vector3(80, 1, 80), Vector3(0, -1.5, 0))
+	var mine := Node3D.new()
+	var theirs := Node3D.new()
+	root.add_child(mine)
+	root.add_child(theirs)
+	mine.position = Vector3(0, -1, -6)
+	theirs.position = Vector3(0, -1, -30)
+	var cam := _rig()
+	cam.reduced_motion = true
+	cam.set_contact_subject(mine)
+	await _settle(cam, 120)
+	var lifted: float = cam.pitch - cam.arm.rotation.x
+	cam.clear_contact_subject(theirs)
+	await _settle(cam, 120)
+	_t.check("O1 another owner's clear leaves the lift on", absf((cam.pitch - cam.arm.rotation.x) - lifted) < 0.01 and lifted > 0.3, "raised %.3f, was %.3f" % [cam.pitch - cam.arm.rotation.x, lifted])
+	cam.clear_contact_subject(mine)
+	await _settle(cam, 120)
+	_t.check("O2 the owner's own clear ends the lift", absf(cam.pitch - cam.arm.rotation.x) < 0.01, "raised %.3f" % [cam.pitch - cam.arm.rotation.x])
+	floor_body.free()
+	mine.free()
+	theirs.free()
+	cam.free()
+
+
+func _aim_pitch(cam) -> float:
+	return asin(cam.aim_forward().y)
 
 
 # A pillar pass: a wall behind the ball for 9 frames (0.15 s), then gone. The lens must not lurch.
@@ -521,6 +677,42 @@ func _touching_ship() -> void:
 		_t.check("T4 touching the hull's %s no drawn box holds the lens or lies between it and the ball" % pose[2], held == "", "hit length %.2f, lens %s, box %s" % [cam.arm.get_hit_length(), lens, held])
 		ship.free()
 		cam.free()
+
+
+# A normal bow contact leaves all camera boxes solid. During a charge shove
+# the ball can go through the hull: only meshes in its column may yield.
+func _shove_cutaway() -> void:
+	var ship := Requisition.new()
+	root.add_child(ship)
+	ship.build(null)
+	var ball := Node3D.new()
+	root.add_child(ball)
+	ball.position = Vector3(0, 2, -4)
+	await physics_frame
+	var outer := ship.model.find_child("Hull", true, false) as MeshInstance3D
+	_t.check("B4 ordinary bow contact is opaque", outer.transparency == 0.0)
+	var original_layers := {}
+	for body in ship.get_children():
+		if body is AnimatableBody3D:
+			original_layers[body] = body.collision_layer
+	ship.follow_shoved_rider(ball)
+	var solid := 0
+	var cut := 0
+	for body in original_layers:
+		if original_layers[body] == ChaseCamera.CAMERA_BODY_BIT:
+			if body.collision_layer == 0:
+				cut += 1
+			elif body.collision_layer == ChaseCamera.CAMERA_BODY_BIT:
+				solid += 1
+		else:
+			_t.eq("B5 the shove preserves %s's gameplay layer" % body.name, body.collision_layer, original_layers[body])
+	_t.check("B5 a shove cuts the covering hull and keeps other parts solid", outer.transparency > 0.8 and cut > 0 and solid > 0, "%d cut, %d solid" % [cut, solid])
+	ship.follow_shoved_rider(null)
+	_t.check("B6 the outer hull returns when the charge releases the rider", outer.transparency == 0.0)
+	for body in original_layers:
+		_t.eq("B6 release restores %s's original layer" % body.name, body.collision_layer, original_layers[body])
+	ball.free()
+	ship.free()
 
 
 # The camera layer must not have changed any contact: the ball, every enemy and the Warden.
