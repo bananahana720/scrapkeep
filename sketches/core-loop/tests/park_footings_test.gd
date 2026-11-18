@@ -9,7 +9,7 @@ const TILE_LENGTH_M := 120.0
 const PROBE_M := 0.05
 # The recipes the table holds today. The loop below covers whatever the table lists; this count makes an
 # entry that goes missing fail, and a new recipe a deliberate edit here.
-const RECIPE_COUNT := 1
+const RECIPE_COUNT := 3
 
 var t := T.new("park_footings_test")
 
