@@ -64,7 +64,8 @@ const AUDIT := {
 	"res://src/combat/ballast_heavy.gd": ["INSTANT"],
 	"res://src/combat/gap_net.gd": ["LANE"],
 	# 2026-10-23 rogue fleet mini-bosses (#385): sweep, haul and harpoon lanes; drop and dump rings; the whip ring.
-	"res://src/combat/rogue.gd": ["LANE", "PROJECTILE", "PROJECTILE", "INSTANT"],
+	# 2026-11-17 MG-11: the sweep's lane leads a held line, so it commits apart from haul and harpoon.
+	"res://src/combat/rogue.gd": ["LANE", "LANE", "PROJECTILE", "PROJECTILE", "INSTANT"],
 	# alpha w7 Mind: build() lays each descriptor's own type; DESCRIPTORS audits where it is named.
 	"res://src/boss/mind_attacks.gd": ["descriptor", "descriptor", "descriptor"],
 }

@@ -16,6 +16,9 @@ const BASE_CONSTS := {
 # phase two (miniboss_phase_test): state_name, _physics_process, _land_slam, _open_weak_window. Re-pinned 2026-11-15 for PF-16 (body_run_warning_test):
 # _physics_process and _begin_attack each tell the lane where the body is (Telegraph.run_body), and
 # _check_charge reads the new HIT_REACH constant that run_body shares; the numbers are unchanged.
+# Re-pinned 2026-11-17 for MG-11 (boss_lead_line_test): _begin_attack aims the slam ring and the
+# charge lane through PackPressure.lead_aim, so a ball holding a line is led, and lands the slam only on
+# ground it can reach (_slam_spot); tells and sizes unchanged.
 const GAMEPLAY_HASHES := {
 	"state_name": "f531faa43d6baa25b8c72491cb73b3c8df3af4a435809860053cf94d086a6856",
 	"is_weak": "20e84d3101502a8331b833e1c201ef67fd3c48c74db4859292fcaa23dd44171f",
@@ -23,7 +26,7 @@ const GAMEPLAY_HASHES := {
 	"knock": "44e0e65b9157eae56a65fdcc63a1be99f30fddcf771575778b123f39c4629cd9",
 	"_physics_process": "8223245a55c51c65cec4d29c941ab78fef21bb59fb9608bd3f40db777e1d572c",
 	"_enter": "93ff6aafd23f4348ae2745de0415b4565647f6e4eff2157b87d933b36be437a8",
-	"_begin_attack": "88e417bc9ffad7de8ca8ae4fe418a115f31913e5d8c6bfafe89ff8e0dad16460",
+	"_begin_attack": "da58ea44a33c22a6308df18bf63bb08fe93785cea8ff1218457924352702e786",
 	"_land_slam": "b5f92d8417e046301d52a51be1b95371f573969e8eb1b7dd1018a6131868e5b6",
 	"_check_charge": "e47c6804f609eac31da5adbaebfdae62399732a4ae06c4e2d056ac7705ffe180",
 	"_open_weak_window": "8e91926c9080fa3f1812fce4fc5e5653d7290bf40f697736508698278bd0069a",
