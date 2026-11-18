@@ -93,6 +93,8 @@ func measure(id: String, site: Dictionary, no_bite: bool) -> Dictionary:
 		return row
 	var best := {}
 	var worst_energy_trial := held
+	var excess_by_tick := {}
+	_record_excess(held, excess_by_tick)
 	var early_surfaces := {}
 	for tick in range(1, HOLD_TICKS):
 		var early := await _take(pose, tick)
@@ -102,6 +104,7 @@ func measure(id: String, site: Dictionary, no_bite: bool) -> Dictionary:
 			return row
 		for tier in early.tiers:
 			early_surfaces[tier] = true
+		_record_excess(early, excess_by_tick)
 		if early.exit_energy_residual > worst_energy_trial.exit_energy_residual:
 			worst_energy_trial = early
 		if best.is_empty() or early.landing_mps > best.landing_mps:
@@ -115,11 +118,26 @@ func measure(id: String, site: Dictionary, no_bite: bool) -> Dictionary:
 	row["best_early"] = best
 	row["worst_exit_energy_residual"] = worst_energy_trial.exit_energy_residual
 	row["worst_energy_tick"] = worst_energy_trial.release_tick
+	row["exit_excess_by_tick"] = excess_by_tick
 	row["held_only_tier"] = held.tiers.any(func(tier): return not early_surfaces.has(tier))
 	row["early_tiers"] = early_surfaces.keys()
 	row["early_trials"] = HOLD_TICKS - 1
 	row.status = "measured" if _same_landing(held, repeat_held) and _same_landing(best, repeat_early) else "inconsistent repeat"
 	return row
+
+
+# A negative residual is within the gravity bound. Only excess can spend the
+# stock allowance for this site and this release tick.
+func _record_excess(trial: Dictionary, by_tick: Dictionary) -> void:
+	if trial.exit_energy_residual > 0.0:
+		by_tick[str(trial.release_tick)] = trial.exit_energy_residual
+
+
+static func added_excess(observed: Dictionary, stock: Dictionary) -> float:
+	var largest := 0.0
+	for tick in observed:
+		largest = maxf(largest, float(observed[tick]) - float(stock.get(tick, 0.0)))
+	return largest
 
 
 func _same_landing(first: Dictionary, repeat: Dictionary) -> bool:

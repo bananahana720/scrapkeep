@@ -25,6 +25,10 @@ func _initialize() -> void:
 		quit(t.verdict())
 		return
 	var stations: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(HookSites.STATIONS))
+	# The exceptional passive release at one tick cannot buy energy on another.
+	t.near("an unchanged stock excess adds nothing", HookSites.added_excess({"3": 3.0}, {"3": 3.0}), 0.0)
+	t.near("the same tick catches an extra unit", HookSites.added_excess({"3": 4.0}, {"3": 3.0}), 1.0)
+	t.near("another tick cannot borrow that excess", HookSites.added_excess({"4": 3.0}, {"3": 3.0}), 3.0)
 	var sampled := {}
 	_check_station_list(t, stations)
 	var paid := 0
@@ -51,11 +55,13 @@ func _initialize() -> void:
 		t.eq("%s tried every earlier physics tick" % row.site, int(row.early_trials), HookSites.HOLD_TICKS - 1)
 		row["early_speed_preserved"] = baseline == null or float(row.best_early.landing_mps) >= float(baseline) - 0.001
 		row["hold_pays"] = row.held_only_tier or row.held.landing_mps >= row.best_early.landing_mps
-		row["within_energy_bound"] = row.worst_exit_energy_residual <= 0.001
+		row["within_energy_bound"] = row.exit_excess_by_tick.is_empty()
+		row["added_excess"] = HookSites.added_excess(row.exit_excess_by_tick, station.get("round0_exit_excess_by_tick", {}))
+		row["within_stock_allowance"] = row.added_excess <= float(station.get("round0_excess_noise", 0.0))
 		if row.hold_pays:
 			hold_pays += 1
 		all_releases_preserved = all_releases_preserved and row.early_speed_preserved
-		if row.early_speed_preserved and row.hold_pays and row.within_energy_bound:
+		if row.early_speed_preserved and row.hold_pays and row.within_stock_allowance:
 			paid += 1
 			if baseline != null:
 				usable_passing.append(row.site)
