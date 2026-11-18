@@ -110,7 +110,7 @@ func _run() -> void:
 	_line = BotFairness.config()
 	_fixtures()
 	var base := OS.get_user_data_dir().path_join("bot-fairness-%d" % OS.get_process_id())
-	var arms := {"plain": "", "drain": "drain=0.02", "fast_tax": "fast_tax=0.03", "ringless": "ringless=0.3"}
+	var arms := {"plain": "", "drain": "drain=0.02", "fast_tax": "fast_tax=0.03", "ringless": "ringless=0.3", "scrap": "scrap=0.3"}
 	var jobs := []
 	for name in arms:
 		jobs.append({"script": "res://tools/bot_run.gd", "args": _args(base.path_join(name), arms[name])})
@@ -135,6 +135,7 @@ func _run() -> void:
 	_drain(fair["drain"], f1, f2, f3)
 	_fast_tax(fair["fast_tax"], f1, f2, f3)
 	_ringless(fair["ringless"], f1, f2, f3)
+	_scrap(fair["scrap"], f1, f2, f3)
 	quit(_t.verdict())
 
 
@@ -193,3 +194,11 @@ func _ringless(f: Dictionary, f1: float, f2: float, f3: float) -> void:
 	_t.check("F3 drops below the line with the ringless spawn", v >= 0.0 and v < float(_line["firstHitS"]), "first_hit %s" % [f.get("first_hit")])
 	_t.check("F3 planted reads below unplanted", v >= 0.0 and v < f3, "planted %s, unplanted %s" % [v, f3])
 	_others("ringless", f, f1, f2, f3, "F3")
+
+
+# Scrap taken through run.lose_scrap with no telegraph (the plant's cause) is a loss the three lines must see: F1 drops below the line.
+# F2 and F3 are hull readings and stay where they were.
+func _scrap(f: Dictionary, f1: float, f2: float, f3: float) -> void:
+	_t.check("F1 drops below the line with the scrap theft planted", f.get("telegraph_share") != null and _share(f) < float(_line["telegraphShare"]), "share %s" % [f.get("telegraph_share")])
+	_t.check("F1 planted reads below unplanted", f.get("telegraph_share") != null and _share(f) < f1, "planted %s, unplanted %s" % [f.get("telegraph_share"), f1])
+	_t.check("the planted theft is in the scrap record", float(f.get("scrap_sources", {}).get("scrap_plant", 0.0)) > 0.0, "scrap_sources %s" % [f.get("scrap_sources")])
