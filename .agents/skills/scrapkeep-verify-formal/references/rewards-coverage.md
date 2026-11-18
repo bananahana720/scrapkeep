@@ -106,4 +106,4 @@ Known gaps in the save points:
 - `Checkpoint` writes the run's current settled list. `_on_death_saved` (`sketches/core-loop/src/core/flow.gd:652-653`) rewrites the stored `_entrance` document, which was built at the last entrance or cleared save and can predate an earn, so in the code that save may carry an older settled list than the model's. It can only drop a key from the run file, which makes a loss need a later save point; it adds no path.
 - `_save_cleared` (`sketches/core-loop/src/core/flow.gd:1291-1295`) is folded into `Checkpoint` with the other `_save` callers.
 
-Sync commit: 5935c2ce8 (branch w44/hazards-hit-everyone, 18 November 2026: only the kill-trigger flag in `run_state.gd` changed, outside the modelled steps; before it, e5c8fb1d4 and df87700dd)
+Sync commit: 5935c2ce8 (branch w44/hazards-hit-everyone, 18 November 2026: only the kill-trigger flag in `sketches/core-loop/src/core/run_state.gd` changed, outside the modelled steps; before it, e5c8fb1d4 and df87700dd)

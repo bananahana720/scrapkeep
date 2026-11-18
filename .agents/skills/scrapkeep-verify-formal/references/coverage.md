@@ -54,4 +54,4 @@ Each action in the model (`RunFlow.tla`, in the `models` folder beside this one)
 
 The model was last confirmed to describe the code at:
 
-`5935c2ce8` (branch w44/hazards-hit-everyone, 18 November 2026: only the kill-trigger flag in `run_state.gd` and `build.gd` changed, outside the modelled steps; before it, `2d1bbd4ff` and `bbd157f44`)
+`5935c2ce8` (branch w44/hazards-hit-everyone, 18 November 2026: only the kill-trigger flag in `sketches/core-loop/src/core/run_state.gd` and `sketches/core-loop/src/build/build.gd` changed, outside the modelled steps; before it, `2d1bbd4ff` and `bbd157f44`)

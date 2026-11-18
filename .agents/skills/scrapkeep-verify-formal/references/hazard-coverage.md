@@ -34,6 +34,6 @@ One model tick is 0.3 s: `TellTicks` 4 is the 1.2 s tell and `MinTell` 2 the 0.6
 
 ## Not modelled
 
-The dome's own fixed strike circle, floods, the boiler's steam cone and the reactor's fallout ring (each strikes enemies through the same `HazardHits.strike` call; the test and `park_events_industrial_test` cover them), the places a storm does not seek (the reward gates, the launch, an engaged Warden's ring and the calm bay: `SiltBoil.exempt` and `bay.inside`, read in `natural.gd` `_seek_exempt` and pinned by the test), more than one enemy, the enemy's death and drop, and anything drawn or heard.
+The dome's own fixed strike circle, floods, the boiler's steam cone and the reactor's fallout ring (each strikes enemies through the same `HazardHits.strike` call; the test and `park_events_industrial_test` cover them), the places a storm does not seek (the reward gates, the launch, an engaged Warden's ring and the calm bay: `SiltBoil.exempt` and `bay.inside`, read in `sketches/core-loop/src/world/events/natural.gd` `_seek_exempt` and pinned by the test), more than one enemy, the enemy's death and drop, and anything drawn or heard.
 
 Sync commit: 5935c2ce8 (branch w44/hazards-hit-everyone, 18 November 2026, the seek stands down where the silt does not boil and in the calm bay, outside the modelled steps; before it, 158d11f47, f2aab5a7b and fcc359e25)
