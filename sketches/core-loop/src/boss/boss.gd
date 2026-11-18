@@ -10,6 +10,9 @@ const Hazard := preload("res://src/boss/hazard.gd")
 const CHARGE_REACH := 1.5
 # A charge that is not a ram stops this far short of the point where its nose would bury in the bank.
 const CHARGE_RIM_CLEAR := 1.0
+# A led lane clipped shorter than this is no charge (a hull resting at the bank with the led point beyond it
+# would clip to nothing or less): that charge is aimed at the ball, as the stage aimed it.
+const CHARGE_MIN_LANE := 4.0
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -1038,7 +1041,10 @@ func _commit_charge(cued := false) -> void:
 	var heading := ball_heading if into_wall else _aim_at(aim)
 	var to_wall := _travel_to_rim(from, heading)
 	var wanted := to_aim.length() + Rules.CHARGE_OVERSHOOT
-	var length := to_wall if into_wall else minf(wanted, to_wall - CHARGE_RIM_CLEAR)
+	var length := to_wall if into_wall else maxf(0.0, minf(wanted, to_wall - CHARGE_RIM_CLEAR))
+	if not into_wall and length < CHARGE_MIN_LANE:
+		heading = ball_heading
+		length = to_ball.length() + Rules.CHARGE_OVERSHOOT
 	var h = _new_hazard()
 	if cued:
 		h.warn_floor = FightPhases.CUED_WARN

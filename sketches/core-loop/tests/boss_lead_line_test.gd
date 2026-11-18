@@ -509,7 +509,7 @@ func _enemy_trial(enemy, v: Dictionary, case: String, line: Dictionary, tell: fl
 	_hits_outside = 0
 	var rest := {"stopped": false}
 	for k in range(at + 1, path.size()):
-		var tick: Array = _meet_body(rest, path[k], enemy.global_position, float(line.get("contact", 0.0)))
+		var tick: Array = _meet_body(rest, path[k], enemy.global_position, float(line.get("contact", 0.0)), enemy.half_height)
 		_roller.at = tick[0]
 		_roller.v = tick[1]
 		PackPressure.observe_tick(_roller.v, DT, CRUISE)
@@ -527,14 +527,15 @@ func _enemy_trial(enemy, v: Dictionary, case: String, line: Dictionary, tell: fl
 
 # A rolling ball cannot pass through the attacker: the tick `nominal` ([position, velocity] as if it rolled on)
 # puts it within `contact` of the attacker where it is at that tick, the ball stops against it and stays
-# there. `rest` carries the stop between ticks. A `contact` of 0 leaves the ball rolling.
-func _meet_body(rest: Dictionary, nominal: Array, body: Vector3, contact: float) -> Array:
+# there. The body has height: a ball passes under one that has leapt more than its half height plus the
+# ball's radius clear of it. `rest` carries the stop between ticks. A `contact` of 0 leaves the ball rolling.
+func _meet_body(rest: Dictionary, nominal: Array, body: Vector3, contact: float, half_height: float) -> Array:
 	if contact <= 0.0:
 		return nominal
 	var p: Vector3 = nominal[0]
 	if not rest["stopped"]:
 		var off := Vector3(p.x - body.x, 0.0, p.z - body.z)
-		if off.length() >= contact:
+		if off.length() >= contact or absf(p.y - body.y) >= half_height + Tuning.RADIUS:
 			return nominal
 		rest["stopped"] = true
 		var away := off.normalized() if off.length() > 0.01 else Vector3.RIGHT
@@ -634,6 +635,7 @@ func _brindle() -> void:
 	_bank_check(boss, centre)
 	_brindle_scenarios(boss, centre, nose)
 	_bank_stun_check(boss, centre)
+	_rest_at_bank_check(boss, centre)
 	boss.set_physics_process(true)
 
 
@@ -681,7 +683,7 @@ func _brindle_run(boss, hold: String, path: Array, contact := 0.0) -> Dictionary
 	var drawn := {}
 	var rest := {"stopped": false}
 	for k in range(0, path.size() - pre):
-		var tick: Array = _meet_body(rest, path[pre + k], boss.ship.global_position, contact) if k > 0 else path[pre]
+		var tick: Array = _meet_body(rest, path[pre + k], boss.ship.global_position, contact, Requisition.HULL.y) if k > 0 else path[pre]
 		path[pre + k] = tick
 		_place(tick[0], tick[1])
 		PackPressure.observe_tick(tick[1], DT, CRUISE)
@@ -737,6 +739,7 @@ func _bank_check(boss, centre: Vector3) -> void:
 # --- A ball that rolls at the attacker, and a ball at other speeds ------------------------------
 
 const HEAD_ON_FROM := [12.0, 16.0]
+const SLAM_HEAD_ON_FROM := [6.0, 9.0]
 const HEAD_ON_OFF_DEG := [0.0, 10.0, -10.0]
 # The ball's speed as a share of cruise before the commit and from it, and when it stops (seconds after the
 # commit, INF for never).
@@ -759,27 +762,31 @@ func _head_on_line(from: Vector3, dist: float, off_deg: float, contact: float) -
 # before each trial and returns where the attacker is; `pace_line` makes a line with the shared RNG and
 # the pace members; `hit` runs a line and says whether the ball was hit.
 func _scenarios(name: String, contact: float, prepare: Callable, pace_line: Callable, hit: Callable) -> void:
-	var head_on := {}
-	for plant in ["", "none"]:
-		PackPressure.lead_plant = plant
-		var n := 0
+	# The slam's body leaves its spot 0.5 s in and is airborne after, so a ball only meets it standing
+	# on the ground if it starts within SLAM_HEAD_ON_FROM; the 12 m and 16 m balls are printed (they roll
+	# under the leaping body).
+	var asserted: Array = SLAM_HEAD_ON_FROM if name.begins_with("the miniboss's slam") else HEAD_ON_FROM
+	for dists in ([asserted] if asserted == HEAD_ON_FROM else [asserted, HEAD_ON_FROM]):
+		var head_on := {}
 		var total := 0
-		var missed := []
-		for dist in HEAD_ON_FROM:
-			for off in HEAD_ON_OFF_DEG:
-				total += 1
-				var from: Vector3 = prepare.call()
-				if hit.call(_head_on_line(from, dist, off, contact)):
-					n += 1
-				else:
-					missed.append("%d m %+d deg" % [dist, off])
-		head_on[plant] = n
-		if plant == "":
-			if name in HEAD_ON_ASSERTED:
-				_report(name + " hits a ball rolling at it", n == total, "%d of %d head-on balls hit; missed %s" % [n, total, missed])
-		else:
-			print("[%s head-on (12 m and 16 m out, 0 and 10 degrees off, stopping against the body)] %d of %d hit with the lead, %d of %d with lead_plant none (the stage)"
-				% [name, head_on[""], total, n, total])
+		for plant in ["", "none"]:
+			PackPressure.lead_plant = plant
+			var n := 0
+			total = 0
+			var missed := []
+			for dist in dists:
+				for off in HEAD_ON_OFF_DEG:
+					total += 1
+					var from: Vector3 = prepare.call()
+					if hit.call(_head_on_line(from, dist, off, contact)):
+						n += 1
+					else:
+						missed.append("%d m %+d deg" % [dist, off])
+			head_on[plant] = n
+			if plant == "" and dists == asserted and name in HEAD_ON_ASSERTED:
+				_report(name + " hits a ball rolling at it", n == total, "%d of %d head-on balls hit (from %s m); missed %s" % [n, total, dists, missed])
+		print("[%s head-on from %s m, 0 and 10 degrees off, stopping against the body] %d of %d hit with the lead, %d of %d with lead_plant none (the stage)"
+			% [name, dists, head_on[""], total, head_on["none"], total])
 	for pace in PACES:
 		_pre_pace = pace[1]
 		_pace = pace[2]
@@ -876,3 +883,43 @@ func _bank_stun_check(boss, centre: Vector3) -> void:
 					stray += 1
 		_report("Brindle takes the bank stun only with the hull at the rim, " + scene[0], stray == 0,
 			"%d of 40 charges ended in the stun, the farthest %.2f m from the rim; the others ended at least %.2f m short of it; %d stray" % [rams, ram_gap, rest_min if rest_min != INF else -1.0, stray])
+
+
+# A ram leaves the hull at the stop radius. The next charge, at a ball about 28 m away rolling toward the
+# nearby bank on a held line, leads to a point outside the bowl: its lane must still be a charge (positive
+# length) and the hull must never go backward along it.
+func _rest_at_bank_check(boss, centre: Vector3) -> void:
+	var arena = boss.arena
+	var shortest := INF
+	var backward := 0.0
+	for i in 20:
+		_game.run.heal(1000.0)
+		var a := _rng.randf_range(-0.5, 0.5)
+		var rim := centre + Vector3(cos(a), 0.0, sin(a)) * Rules.CHARGE_STOP_R
+		var from := _park_ship(boss, centre, rim)
+		var radial := Vector3(cos(a), 0.0, sin(a))
+		var side := Vector3(-radial.z, 0.0, radial.x) * (1.0 if i % 2 == 0 else -1.0)
+		# 28 m out along a line mostly sideways to the ship and drifting toward the bank.
+		var start := Vector3(from.x, 0.0, from.z) - radial * 16.0 + side * 23.0
+		var dir := (-side * 0.6 + radial * 0.8).normalized()
+		var heading := atan2(dir.z, dir.x)
+		var line := {"at0": start, "heading": heading, "turn_sign": 1.0, "deg": ARC_DEG, "land": start, "pre_speed": CRUISE, "speed": CRUISE}
+		var path := _path("straight", line, 0.0, func(p: Vector3) -> float: return arena.ground(p) + 1.0)
+		var pre := int(round(PRE_ROLL / DT))
+		_feed(path, 0, pre)
+		boss._charge = {"state": boss.CHARGE_REST, "timer": 0.5 * DT}
+		var length := -1.0
+		for k in range(0, 400):
+			_place(path[pre + k][0], path[pre + k][1])
+			PackPressure.observe_tick(path[pre + k][1], DT, CRUISE)
+			boss.advance(DT)
+			if length < 0.0 and boss._charge.get("state", "") == boss.CHARGE_BRACE:
+				length = float(boss._charge["length"])
+			if length >= 0.0:
+				var back: float = (boss.ship.global_position - from).dot(Vector3(boss._charge["heading"])) if boss._charge.has("heading") else 0.0
+				backward = maxf(backward, -back)
+				if boss._charge.get("state", "") not in [boss.CHARGE_BRACE, boss.CHARGE_RUN]:
+					break
+		shortest = minf(shortest, length)
+	_report("Brindle's charge from the bank is a charge, not a step back", shortest > 0.0 and backward < 0.05,
+		"20 charges from the stop radius: shortest committed lane %.2f m (must be positive); farthest the hull went backward along its heading %.2f m" % [shortest, backward])
