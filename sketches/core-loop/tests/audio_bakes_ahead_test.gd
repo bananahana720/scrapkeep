@@ -4,6 +4,9 @@ const Game := preload("res://src/game.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const T := preload("res://tests/support/t.gd")
+# A wait for a worker is capped in frames, not time (sketch-lint L1). Headless frames run unpaced, so the cap is
+# set far above any bake seen; the smoke runner's own timeout stops a hang first.
+const WAIT_FRAMES := 600000
 
 # A drawn game bakes its band and warms its stingers on workers whether or not it has a sound
 # device (Audio.bakes_ahead). On the dummy driver of a drawn game, the silent self-play frame
@@ -50,8 +53,9 @@ func _run() -> void:
 	# The drawn dummy-driver game: its bank ready, the band bakes start on workers.
 	audio.bakes_ahead = true
 	audio.sound_ready = false
-	var waited := Time.get_ticks_msec()
-	while not audio.sound_ready and Time.get_ticks_msec() - waited < 60000:
+	for i in WAIT_FRAMES:
+		if audio.sound_ready:
+			break
 		await process_frame
 	var bank_late: bool = not audio.sound_ready
 	_t.check("BA-3 a game that bakes ahead starts the band bakes when its bank is ready", audio.sound_ready and Audio.band_bakes()["held"],
@@ -95,12 +99,11 @@ func _run() -> void:
 	quit(_t.verdict())
 
 
-# Frames pass until the line is rendered and kept, which is the frame it sounds; a minute is the cap.
+# Frames pass until the line is rendered and kept, which is the frame it sounds; WAIT_FRAMES is the cap.
 # True when the cap was hit.
 func _settle(audio, text: String, beat: int) -> bool:
-	var started := Time.get_ticks_msec()
-	while audio.babble_state(text, beat) == "rendering":
-		if Time.get_ticks_msec() - started >= 60000:
-			return true
+	for i in WAIT_FRAMES:
+		if audio.babble_state(text, beat) != "rendering":
+			return false
 		await process_frame
-	return false
+	return audio.babble_state(text, beat) == "rendering"
