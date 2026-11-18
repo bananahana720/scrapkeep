@@ -1,0 +1,55 @@
+{
+  "before": {
+    "mode": "tracked edit before dispatch",
+    "head": "aa6510a4fe93ae4fbeeb6d97c1716882f609d360",
+    "exit": 0,
+    "receipt_head": "aa6510a4fe93ae4fbeeb6d97c1716882f609d360",
+    "passes": 4,
+    "controls": 4,
+    "source_diff": "diff --git a/sketches/core-loop/src/core/park_defs.gd b/sketches/core-loop/src/core/park_defs.gd\nindex dfdee2937..89bbe6ed7 100644\n--- a/sketches/core-loop/src/core/park_defs.gd\n+++ b/sketches/core-loop/src/core/park_defs.gd\n@@ -241,3 +241,5 @@ static func elite_arrival() -> int:\n \n static func has_vault() -> bool:\n \treturn false\n+\n+# audit control\n"
+  },
+  "clean": {
+    "mode": "clean",
+    "head": "27c6e5fb137d11ecc5461bab574a357493e84872",
+    "code": 0,
+    "planted": false,
+    "receipt_head": "27c6e5fb137d11ecc5461bab574a357493e84872",
+    "passes": 4,
+    "controls": 4,
+    "worker_heads": [
+      "27c6e5fb137d11ecc5461bab574a357493e84872"
+    ],
+    "previous_preserved": false
+  },
+  "after_dispatch": {
+    "mode": "drift",
+    "head": "27c6e5fb137d11ecc5461bab574a357493e84872",
+    "code": 2,
+    "planted": true,
+    "receipt_head": null,
+    "passes": 0,
+    "controls": 0,
+    "worker_heads": [],
+    "previous_preserved": true,
+    "completed_private_workers": 8,
+    "completed_worker_heads": [
+      "27c6e5fb137d11ecc5461bab574a357493e84872"
+    ],
+    "prior_receipt_sha256": "6fba292642f3b0752b8f1e57cedc5fd4b34c3d37ec5d53306928d95497ab5bae",
+    "final_receipt_sha256": "6fba292642f3b0752b8f1e57cedc5fd4b34c3d37ec5d53306928d95497ab5bae",
+    "log": [
+      "matchup_lab: 1 of 8",
+      "matchup_lab: 2 of 8",
+      "matchup_lab: 3 of 8",
+      "matchup_lab: 4 of 8",
+      "matchup_lab: 5 of 8",
+      "matchup_lab: 6 of 8",
+      "matchup_lab: 7 of 8",
+      "matchup_lab: 8 of 8",
+      "fast pass source changed before publication"
+    ]
+  },
+  "matched_rows": 624,
+  "changed_threat_counts": 0,
+  "changed_hull_loss": 0
+}

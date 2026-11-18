@@ -1,0 +1,13 @@
+{
+  "stage": "4f9017c58537e6e6785c00f6d4d45cdcd6e6f1be",
+  "code": 0,
+  "change": {
+    "old": "enemy.global_position + Vector3.FORWARD * (reach + offset)",
+    "nu": "enemy.global_position + lane.dir * (reach + offset)"
+  },
+  "evidence": [
+    "[chaser: the lane's body_reach (2.40) is the reach its hit test uses]  -> PASS",
+    "[miniboss: the lane's body_reach (3.90) is the reach its hit test uses]  -> PASS",
+    "body_run_warning_test: PASS (34 checks)"
+  ]
+}

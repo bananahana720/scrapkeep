@@ -1,0 +1,71 @@
+{
+  "original_sha256": "bc3eb260683abbf64134aa97fadfee6a7a7ac244a6a089a1c4f830fc7234b663",
+  "receipt": {
+    "schema": "scrapkeep-smoke-receipt/1",
+    "label": "W1-133a-base-body-solo",
+    "argv": [
+      "--sketch",
+      "core-loop",
+      "--test",
+      "body_run_warning_test",
+      "--receipt",
+      "W1-133a-base-body-solo"
+    ],
+    "root": "<worktree>/artifacts/local/W1-133a/body-control-stage",
+    "head": "4f9017c58537e6e6785c00f6d4d45cdcd6e6f1be",
+    "tree": "97b54e605591d7d7c9205f45b2fe73ac1ec4ba2b",
+    "clean": true,
+    "dirty_paths": [],
+    "godot": {
+      "binary": "<home>/Applications/Godot_4.7.2.app/Contents/MacOS/Godot",
+      "version": "4.7.2.stable.official.ed1daf0bf"
+    },
+    "sketches": [
+      "sketches/core-loop"
+    ],
+    "flags": [],
+    "width": 2,
+    "lock_wait_ms": 870650,
+    "started_at": "2026-11-18T21:46:45.515Z",
+    "wall_ms": 168697,
+    "stems": {
+      "sketches/core-loop": 0
+    },
+    "quarantined": [],
+    "quarantine_expired": [],
+    "results": [
+      {
+        "label": "sketches/core-loop import (try 2)",
+        "ok": true,
+        "exit": 0,
+        "ms": 70689,
+        "solo": false,
+        "passes": 0,
+        "fails": 0,
+        "verdict_line": null,
+        "skips": []
+      },
+      {
+        "label": "sketches/core-loop res://tests/body_run_warning_test.gd",
+        "ok": false,
+        "exit": 1,
+        "ms": 13076,
+        "solo": false,
+        "passes": 33,
+        "fails": 1,
+        "verdict_line": true,
+        "skips": []
+      }
+    ],
+    "bot_tier_not_run": [],
+    "totals": {
+      "runs": 2,
+      "failed": 1,
+      "skipped": 0,
+      "missing_verdict": 0,
+      "quarantined_red": [],
+      "quarantine_stale": []
+    },
+    "ok": false
+  }
+}
