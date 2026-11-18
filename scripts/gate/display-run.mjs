@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { watchDrawnRun } from "./window-watch.mjs";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 
 import { acquireSlot } from "../sketch-smoke.mjs";
@@ -47,17 +47,24 @@ const killGroup = (child) => {
 
 // Starts a process in its own group and resolves { exit, signal, output, timedOut }. At the timeout, or on SIGINT or
 // SIGTERM to this process while it runs, the whole group is killed. A seam for the tests.
-export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellation }) {
+export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellation, orderedLog }) {
   cancellation?.throwIfAborted();
   return new Promise((resolve) => {
     let output = "";
     let timedOut = false;
     let child;
+    // A teardown diagnostic needs the write order at the child, before stdout and
+    // stderr can be reordered by independent pipe readers in Node.
+    let descriptor;
     try {
-      child = spawn(command, argv, { env, cwd, stdio: ["ignore", "pipe", "pipe"], detached: true });
+      if (orderedLog) descriptor = openSync(orderedLog, "wx");
+      const sink = descriptor ?? "pipe";
+      child = spawn(command, argv, { env, cwd, stdio: ["ignore", sink, sink], detached: true });
     } catch (error) {
       resolve({ exit: null, signal: null, output: String(error.message ?? error), timedOut });
       return;
+    } finally {
+      if (descriptor !== undefined) closeSync(descriptor);
     }
     const cancel = () => killGroup(child);
     let interrupted;
@@ -69,8 +76,8 @@ export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellatio
     cancellation?.addEventListener("abort", cancel, { once: true });
     process.on("SIGINT", onSignal);
     process.on("SIGTERM", onSignal);
-    child.stdout.on("data", (d) => { output += d; });
-    child.stderr.on("data", (d) => { output += d; });
+    child.stdout?.on("data", (d) => { output += d; });
+    child.stderr?.on("data", (d) => { output += d; });
     const timer = setTimeout(() => { timedOut = true; killGroup(child); }, timeoutMs);
     let done = false;
     const finish = (exit, signal) => {
@@ -80,6 +87,7 @@ export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellatio
       process.off("SIGINT", onSignal);
       process.off("SIGTERM", onSignal);
       cancellation?.removeEventListener("abort", cancel);
+      if (orderedLog) output = readFileSync(orderedLog, "utf8") + output;
       resolve({ pid: child.pid, exit: interrupted ?? exit, interrupted, signal, output, timedOut });
     };
     child.on("error", (error) => { output += String(error.message ?? error); finish(null, null); });
@@ -238,7 +246,9 @@ async function macCapture({ script, args = [], reference = false, cwd = root, en
       if (!reference) flags.unshift("--embedded");
       const result = await observe(signal => {
         verifyBeforeSpawn();
-        return start(command, [...flags, ...argv], { ...options, signal });
+        const orderedLog = script === "res://tools/handover_capture.gd"
+          ? path.join(options.env.HOME, "handover-engine.log") : undefined;
+        return start(command, [...flags, ...argv], { ...options, signal, orderedLog });
       });
       const w = result.watch;
       const recorded = reference ? w.targetOnScreen > 0 :

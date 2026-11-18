@@ -218,3 +218,15 @@ test("the handover capture pins its entry script, offscreen helper and self-play
     copyFileSync(new URL("../../sketches/core-loop/tools/" + file, import.meta.url), target);
   }
 });
+
+test("the handover log preserves the engine's write order across stdout and stderr", async () => {
+  const orderedLog = path.join(scratch(), "engine.log");
+  const chunk = "X".repeat(100_000);
+  const source = String.raw`const fs = require("node:fs");
+    fs.writeSync(1, "X".repeat(100_000));
+    fs.writeSync(2, "fault\n");
+    fs.writeSync(1, "last\n");`;
+  const result = await launch(process.execPath, ["-e", source], { env: process.env, timeoutMs: 5000, orderedLog });
+  assert.equal(result.exit, 0);
+  assert.equal(result.output, chunk + "fault\nlast\n");
+});
