@@ -71,8 +71,18 @@ export function windowCounts(samples, pid) {
 
 // The first reading precedes spawn, and a new reading brackets exit. Failure to sample
 // never becomes a receipt with zero windows. The positive control must match the child's PID.
-export async function watchDrawnRun(run) {
-  const child = spawn("/usr/bin/osascript", ["-l", "JavaScript", "-e", SAMPLER], { stdio: ["ignore", "pipe", "pipe"] });
+function startSampler() {
+  return spawn("/usr/bin/osascript", ["-l", "JavaScript", "-e", SAMPLER], { stdio: ["ignore", "pipe", "pipe"] });
+}
+
+export async function watchDrawnRun(run, start = startSampler) {
+  const child = start();
+  const controller = new AbortController();
+  const stop = () => { controller.abort(); child.kill(); };
+  const onInterrupt = signal => { process.exitCode = signal === "SIGINT" ? 130 : 143; stop(); };
+  process.on("SIGINT", onInterrupt);
+  process.on("SIGTERM", onInterrupt);
+  process.on("exit", stop);
   let error = "";
   child.on("error", e => { error = e.message; });
   child.stderr.setEncoding("utf8").on("data", s => { error += s; });
@@ -88,15 +98,18 @@ export async function watchDrawnRun(run) {
   try {
     await bounded(read(), 5000);
     const observing = (async () => {
-      do { await read(); } while (exitMs === undefined || samples.at(-1).at <= exitMs);
-    })().then(() => null, e => e);
-    const result = await run();
+      do { await bounded(read(), 1500); } while (exitMs === undefined || samples.at(-1).at <= exitMs);
+    })().then(() => null, e => { controller.abort(); return e; });
+    const result = await run(controller.signal);
     exitMs = Date.now();
     const failure = await bounded(observing, 3000);
     if (failure) throw failure;
     return { ...result, watch: windowCounts(samples, result.pid) };
   } finally {
+    process.off("SIGINT", onInterrupt);
+    process.off("SIGTERM", onInterrupt);
+    process.off("exit", stop);
     lines.close();
-    child.kill();
+    stop();
   }
 }

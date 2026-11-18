@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import test from "node:test";
 
-import { acquireDrawnSlot, runCapture } from "./display-run.mjs";
-import { windowCounts } from "./window-watch.mjs";
+import { acquireDrawnSlot, launch, runCapture, runWindowed } from "./display-run.mjs";
+import { watchDrawnRun, windowCounts } from "./window-watch.mjs";
 
 const script = "res://tools/offscreen_probe.gd";
 const version = () => "4.7.2.stable.official.ed1daf0bf";
@@ -78,4 +79,35 @@ test("two drawn runs wait for one lock across worktrees and have disjoint start/
   await Promise.all([draw(), draw()]);
   assert.ok(notices.some(msg => msg.includes("waiting")));
   assert.ok(intervals[0][1] <= intervals[1][0]);
+});
+
+test("losing the sampler aborts a still-running group before releasing the drawn slot", async () => {
+  const row = JSON.stringify(sample(Date.now()));
+  const sampler = () => spawn(process.execPath, ["-e", "console.log(process.argv[1]);setTimeout(()=>process.exit(1),180)", row],
+    { stdio: ["ignore", "pipe", "pipe"] });
+  let result;
+  const from = Date.now();
+  await assert.rejects(watchDrawnRun(async signal => {
+    result = await launch(process.execPath, ["-e", "setInterval(()=>{},1000)"],
+      { cwd: scratch(), env: {}, timeoutMs: 8000, signal });
+    return result;
+  }, sampler), /watcher stopped/);
+  assert.equal(result.timedOut, false);
+  assert.equal(result.signal, "SIGKILL");
+  assert.ok(Date.now() - from < 5000);
+});
+
+test("the existing models-render gate also draws offscreen, keeping its resolution and plant", async () => {
+  const opts = capture(scratch());
+  const result = await runWindowed({ ...opts, script: "res://tools/model_render_check.gd",
+    engineArgs: ["--resolution", "800x600"], extraEnv: { RENDER_PLANT: "dark_models" },
+    start: async (bin, argv, { env }) => {
+      assert.equal(argv[0], "--embedded");
+      assert.equal(argv[argv.lastIndexOf("--resolution") + 1], "800x600");
+      assert.equal(env.RENDER_PLANT, "dark_models");
+      return { exit: 0, pid: 12, output: "SUMMARY", timedOut: false };
+    },
+  });
+  assert.equal(result.exit, 0);
+  assert.equal(result.output, "SUMMARY");
 });

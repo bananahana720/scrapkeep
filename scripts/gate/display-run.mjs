@@ -1,26 +1,11 @@
-// One Godot script run WITH a window, for a gate producer whose check reads rendered pixels (the world 1 done read's
-// row "models-render", tools/model_render_check.gd). It is the one approved way for a gate producer to open a window.
-// Godot is started elsewhere too, always headless: scripts/sketch-smoke.mjs for tests, and scripts/gate/pc.mjs, which
-// launches Godot directly under its own scratch environment (stepEnv).
-//
-// It takes a machine slot with acquireSlot (scripts/sketch-smoke.mjs), so it waits while a frame reading holds the
-// machine quiet and counts as a runner, then launches
-//   $GODOT_BIN [engineArgs] --path sketches/core-loop --script res://<path> -- <args>
-// with no --headless. The child's HOME, XDG_DATA_HOME, XDG_CONFIG_HOME and XDG_CACHE_HOME are always a new scratch
-// folder under the repo's artifacts/local/display-run/, merged last over every other variable, on every platform (Godot
-// on macOS ignores XDG_DATA_HOME, so HOME must move too; scripts/godot-home.mjs). A scratch folder that would resolve
-// outside artifacts/local is refused, so the player's own saves are never read or written. The folder is removed after
-// the run unless KEEP_DISPLAY_HOME=1.
-// The child runs in its own process group. At the timeout, or when this node process gets SIGINT or SIGTERM during a
-// run, the whole group is killed. The slot is always given back.
-//
-// macOS has a window server for a logged-in session, so a run there opens a window. On Linux a run needs DISPLAY or
-// WAYLAND_DISPLAY; the PC's lane is gamescope headless (tools/tripo/README.md, "The render check"), not built here, so
-// with no display this returns "not supported here" without starting Godot. Other platforms are not supported.
+// Run a pixel-producing script with scratch saves, a machine slot and an exclusive drawn-run lock.
+// On the Mac, --offscreen uses the native embedded Metal display and a 50 ms window watcher.
+// The models-render gate also uses that display. Only the Gate runs the visible CLI reference.
+// Linux library callers supply their own display (the PC uses headless gamescope).
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { watchDrawnRun } from "./window-watch.mjs";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 
 import { acquireSlot } from "../sketch-smoke.mjs";
@@ -61,7 +46,8 @@ const killGroup = (child) => {
 
 // Starts a process in its own group and resolves { exit, signal, output, timedOut }. At the timeout, or on SIGINT or
 // SIGTERM to this process while it runs, the whole group is killed. A seam for the tests.
-export function launch(command, argv, { env, cwd, timeoutMs }) {
+export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellation }) {
+  cancellation?.throwIfAborted();
   return new Promise((resolve) => {
     let output = "";
     let timedOut = false;
@@ -72,10 +58,14 @@ export function launch(command, argv, { env, cwd, timeoutMs }) {
       resolve({ exit: null, signal: null, output: String(error.message ?? error), timedOut });
       return;
     }
+    const cancel = () => killGroup(child);
+    let interrupted;
     const onSignal = (signal) => {
-      killGroup(child);
-      process.exit(signal === "SIGINT" ? 130 : 143);
+      interrupted = signal === "SIGINT" ? 130 : 143;
+      process.exitCode = interrupted;
+      cancel();
     };
+    cancellation?.addEventListener("abort", cancel, { once: true });
     process.on("SIGINT", onSignal);
     process.on("SIGTERM", onSignal);
     child.stdout.on("data", (d) => { output += d; });
@@ -88,7 +78,8 @@ export function launch(command, argv, { env, cwd, timeoutMs }) {
       clearTimeout(timer);
       process.off("SIGINT", onSignal);
       process.off("SIGTERM", onSignal);
-      resolve({ pid: child.pid, exit, signal, output, timedOut });
+      cancellation?.removeEventListener("abort", cancel);
+      resolve({ pid: child.pid, exit: interrupted ?? exit, signal, output, timedOut });
     };
     child.on("error", (error) => { output += String(error.message ?? error); finish(null, null); });
     // "close" once the pipes drain; "exit" plus half a second when a grandchild keeps them open past the kill.
@@ -98,7 +89,7 @@ export function launch(command, argv, { env, cwd, timeoutMs }) {
 }
 
 // Share the drawn lock across worktrees, while still participating in the ordinary machine-slot pool.
-export async function acquireDrawnSlot({ directory = "/tmp/scrapkeep-drawn.slots", log = console.log,
+export async function acquireDrawnSlot({ directory = "/tmp/scrapkeep-drawn.slots", log = console.error,
   machine = acquireSlot, pollMs = 2000 } = {}) {
   const drawn = await acquireSlot({ directory, slots: 1, pollMs, log: msg => log("display-run waiting: " + msg) });
   try {
@@ -112,7 +103,16 @@ export async function acquireDrawnSlot({ directory = "/tmp/scrapkeep-drawn.slots
 
 // Runs one Godot script with a window. Returns { exit, output, timedOut, home, supported }. exit is null when the run
 // did not start or was killed.
-export async function runWindowed({
+export function runWindowed(options = {}) {
+  // The models-render gate is the library caller that draws on the Mac. Its original
+  // receipt predates helper markers and judges its own real and planted images.
+  if ((options.platform ?? process.platform) === "darwin" && options.script === "res://tools/model_render_check.gd") {
+    return macCapture(options, false);
+  }
+  return runScript(options);
+}
+
+async function runScript({
   script,
   args = [],
   engineArgs = [],
@@ -131,7 +131,7 @@ export async function runWindowed({
   const problem = displayProblem(platform, env);
   if (problem) return { exit: null, output: problem, timedOut: false, home: null, supported: false };
   if (!binary) return { exit: null, output: "GODOT_BIN is not set", timedOut: false, home: null, supported: true };
-  const lease = await acquire({ log: console.log });
+  const lease = await acquire({ log: console.error });
   let scratch;
   try {
     scratch = scratchEnv(cwd);
@@ -153,26 +153,31 @@ function editorVersion(command, options) {
 
 // Finite probe with a fixed script for the Gate's single notified reference. All other
 // CLI runs start with --embedded: Godot draws to a CAMetalLayer with no editor attached.
-export async function runCapture({ script, args = [], reference = false, cwd = root, env = process.env,
+export function runCapture(options = {}) {
+  return macCapture(options, true);
+}
+
+async function macCapture({ script, args = [], reference = false, cwd = root, env = process.env,
+  engineArgs = [], extraEnv = {},
   platform = process.platform, binary = env.GODOT_BIN, acquire, start = launch,
-  observe = watchDrawnRun, version = editorVersion, timeoutMs = TIMEOUT_MS } = {}) {
+  observe = watchDrawnRun, version = editorVersion, timeoutMs = TIMEOUT_MS }, requireMarker) {
   if (platform !== "darwin") throw new Error("Mac capture requires macOS; the Linux PC uses gamescope through the Gate");
   if (reference && script !== PROBE) throw new Error("only the W1-131 probe may draw the Gate reference");
-  return runWindowed({
-    script, args: script === PROBE ? [...args, "--shots=yard"] : args, cwd, env, platform, binary, acquire, timeoutMs,
-    extraEnv: { SCRAPKEEP_OFFSCREEN: reference ? "0" : "1" },
+  return runScript({
+    engineArgs, script, args: script === PROBE ? [...args, "--shots=yard"] : args, cwd, env, platform, binary, acquire, timeoutMs,
+    extraEnv: { ...extraEnv, SCRAPKEEP_OFFSCREEN: reference ? "0" : "1" },
     start: async (command, argv, options) => {
       if (!/^4\.7\.2\.stable\.official\.ed1daf0bf/.test(version(command, options))) {
         throw new Error("offscreen: expected the pinned Godot 4.7.2 editor; no drawn run started");
       }
-      const flags = ["--resolution", "1920x1080", "--audio-driver", "Dummy"];
+      const flags = ["--rendering-driver", "metal", "--debug", "--skip-breakpoints", "--ignore-error-breaks", "--resolution", "1920x1080", "--audio-driver", "Dummy"];
       // Embedded Godot publishes its layer through EngineDebugger. The local stdout debugger
       // provides that object with no editor, listener or network peer.
-      if (!reference) flags.unshift("--embedded", "--rendering-driver", "metal", "--debug", "--skip-breakpoints", "--ignore-error-breaks");
-      const result = await observe(() => start(command, [...flags, ...argv], options));
+      if (!reference) flags.unshift("--embedded");
+      const result = await observe(signal => start(command, [...flags, ...argv], { ...options, signal }));
       const w = result.watch;
       const recorded = reference ? w.targetOnScreen > 0 :
-        w.onScreen === 0 && w.frontmostChanges === 0 && result.output.split(/\r?\n/).includes("OFFSCREEN_WINDOW " + result.pid + " embedded");
+        w.onScreen === 0 && w.frontmostChanges === 0 && (!requireMarker || result.output.split(/\r?\n/).includes("OFFSCREEN_WINDOW " + result.pid + " embedded"));
       const pass = result.exit === 0 && !result.timedOut && w.missed === 0 && recorded;
       return { ...result, exit: pass ? 0 : (result.exit || 1) };
     },
@@ -186,12 +191,27 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
       throw new Error("usage: display-run.mjs --offscreen <script> -- <args>");
     }
     const script = name.startsWith("res://") ? name : "res://" + name;
+    let probeFrame;
+    if (script === PROBE) {
+      const out = args[0]?.slice("--out=".length);
+      if (args.length !== 1 || !args[0].startsWith("--out=") || !path.isAbsolute(out)) {
+        throw new Error("the probe needs -- --out=<absolute directory>");
+      }
+      probeFrame = path.join(out, "yard.png");
+      if (existsSync(probeFrame)) throw new Error("yard.png already exists; supply a fresh output directory");
+    }
     const result = await runCapture({ script, args, reference: mode === "--gate-reference" });
     if (result.output) console.log(result.output.trimEnd());
     if (result.watch) console.log("WINDOW_WATCH " + JSON.stringify(result.watch));
-    process.exitCode = result.exit ?? 1;
+    if (probeFrame && result.exit === 0) {
+      const png = readFileSync(probeFrame);
+      if (png.toString("hex", 0, 8) !== "89504e470d0a1a0a" || png.readUInt32BE(16) !== 1920 || png.readUInt32BE(20) !== 1080) {
+        throw new Error("probe did not write a new 1920x1080 PNG");
+      }
+    }
+    process.exitCode ||= result.exit ?? 1;
   } catch (error) {
     console.error(error.message);
-    process.exitCode = 1;
+    process.exitCode ||= 1;
   }
 }
