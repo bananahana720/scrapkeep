@@ -52,6 +52,8 @@ var rescue_sites: Array = []
 var survival_sites: Array = []
 # The way to the boss's bowl for bowl_approach.gd, from the park file's optional approach: {to, smoke: Vector2}, or {}.
 var approach := {}
+# The authored lines as resolved points, read on the first line_within call; null until then.
+var _ride_lines = null
 
 
 # An empty path reads nothing (ok stays false): event_ground.gd's OverlayMap copies a loaded map's
@@ -298,6 +300,40 @@ func _scrap_trail() -> Dictionary:
 		along += leg.length()
 	return {"points": points, "spacing_m": float(row["spacing_m"]), "phrase": int(row["phrase"]), "rest": int(row["rest"]),
 		"gaps": gaps}
+
+
+# Whether any authored line of this park (the floor line and every pilot's) passes within reach_m of at, measured to
+# the line's segments. The lines are read once. A park with no lines file answers false. Waypoints that resolve to no
+# place are left out, as the line walkers leave them. Main thread only: the first call fills the cache unguarded.
+func line_within(at: Vector2, reach_m: float) -> bool:
+	if _ride_lines == null:
+		_ride_lines = _read_ride_lines()
+	for points: PackedVector2Array in _ride_lines:
+		for i in range(1, points.size()):
+			if Geometry2D.get_closest_point_to_segment(at, points[i - 1], points[i]).distance_to(at) <= reach_m:
+				return true
+	return false
+
+
+func _read_ride_lines() -> Array:
+	var out: Array = []
+	var lines_path := LINES_PATH % title
+	if not FileAccess.file_exists(lines_path):
+		return out
+	var data: Dictionary = ParkSchema.read_file(lines_path)["data"]
+	var routes: Array = []
+	if data.get("floor") is Dictionary:
+		routes.append(data["floor"].get("waypoints", []))
+	for pilot in data.get("pilots", {}):
+		routes.append(data["pilots"][pilot].get("waypoints", []))
+	for route: Array in routes:
+		var points := PackedVector2Array()
+		for point in route:
+			var at := place_of(park, point) if point is String else _v2(point)
+			if at != Vector2.INF:
+				points.append(at)
+		out.append(points)
+	return out
 
 
 # Where a line's named waypoint stands on a park file: drop_in is the spawn, landmark the landmark's beacon, any other

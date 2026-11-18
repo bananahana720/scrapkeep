@@ -158,6 +158,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	ship = Requisition.new()
 	arena.add_child(ship)
 	ship.build(self)
+	ctx.camera.set_contact_subject(ship)
 	state = FIGHT
 	_posture = BossPosture.new(Rules.POSTURE)
 	_phases = FightPhases.boss("brindle", ctx.events)
@@ -208,6 +209,8 @@ func exit_arena() -> void:
 		arena.get_parent().remove_child(arena)
 		arena.queue_free()
 	arena = null
+	if ctx.camera != null:
+		ctx.camera.clear_contact_subject(ship)
 	ship = null
 	scooter = null
 	_scooter_anim = null
@@ -1089,6 +1092,7 @@ func _charge_hit(h, ball: Vector3) -> void:
 	var up := maxf(0.0, Rules.CHARGE_SHOVE_UP - v.y)
 	ctx.player.crowd_control("brindle_charge", (away * Rules.CHARGE_SHOVE_SIDE + Vector3.UP * up - h.heading * minf(0.0, along)) / _delta)
 	ship.hull.add_collision_exception_with(ctx.player.body())
+	ship.follow_shoved_rider(ctx.player.body())
 	_ghost_until = clock + Rules.CHARGE_GRACE
 
 
@@ -1102,6 +1106,7 @@ func _step_ghost() -> void:
 	if absf(local.x) < half.x and absf(local.y) < half.y and absf(local.z) < half.z:
 		return
 	ship.hull.remove_collision_exception_with(ctx.player.body())
+	ship.follow_shoved_rider(null)
 	_ghost_until = -1.0
 
 
@@ -1302,6 +1307,11 @@ func _defeat(kind: String, at: Vector3, source := "") -> void:
 	ctx.run.add_part(Rules.CREST_PART, "boss")
 	_sync_crest()
 	ctx.flow.boss_active = false
+	# A freed ship ends its own lift in the camera, and a freed object cannot be passed as a Node3D.
+	if is_instance_valid(ship):
+		ctx.camera.clear_contact_subject(ship)
+		# No step runs after the catch, so a shove still in its grace would leave the hull cut away over the ball.
+		ship.follow_shoved_rider(null)
 	# The scooter stays in sight through boss_defeated, so the fall plays where he was caught
 	# (machine_fx reads a visible scooter before the ship); it is hidden once the event is out.
 	_publish("boss_defeated")
