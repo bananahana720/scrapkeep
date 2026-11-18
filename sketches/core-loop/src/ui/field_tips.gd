@@ -37,7 +37,8 @@ const Tuning := preload("res://src/movement/tuning.gd")
 # itself in the profile's seen list so it never repeats. A tip whose toast leaves sooner (another
 # toast replaced it, or a fight took it down) goes back to the front of `pending`.
 # A fight keeps its word budget (ui_word_budget_test): while fight_live() no tip goes up and a
-# tip still on screen is taken down. Words come from the game's own: the Warden's slots are
+# tip still on screen is taken down. Tips also wait through the reward choice and the launch
+# (flow.calm(), in every world), so the choice and the launch read alone. Words come from the game's own: the Warden's slots are
 # numbers, and no tip types a key: a toast is a plain Label that cannot draw a keycap, so a tip that needs
 # a key points at the mark that draws it (the mast's prompt, the bar slot, the notes) and keys can be rebound.
 # A new run (events.run_started) clears the queue and takes down the tip on screen: each was
