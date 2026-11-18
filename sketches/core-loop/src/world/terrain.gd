@@ -338,7 +338,7 @@ func _on_park_built(i: int) -> void:
 	maps[i].build_props(_roots[i], ground_callable(i + 1))
 	# The park rows (KB9): every row naming a recipe, with its collider and ride sensor, placed on the height() floor.
 	if maps[i] is ParkMap:
-		ParkRecipes.build_placed(_roots[i], maps[i].park, _park_floor_at.bind(_heights[i], _placement_holes[i], _under[i]), publish, _threaded[i])
+		ParkRecipes.build_placed(_roots[i], maps[i].park, _park_floor_at.bind(_heights[i], _placement_holes[i], _under[i]), publish, _threaded[i], maps[i].line_within)
 	Scatter.build_chunked(_roots[i], maps[i], ground_callable(i + 1), _worker_builds())
 	_perch_read_ahead(i)
 	stage_built.emit(i + 1)

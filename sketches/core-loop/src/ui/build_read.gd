@@ -15,6 +15,8 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 const VIEW := Vector2i(300, 240)
 const TURN := 0.6
+# The pod faces -Z; open on the pilot almost head-on before the turn shows the panels.
+const OPEN_ANGLE := deg_to_rad(175.0)
 const LABEL_LIFT := 1.75
 # A panel tag's letter height in the view's world units.
 const TAG_HEIGHT := 0.16
@@ -57,7 +59,7 @@ func _init() -> void:
 	var cam := Camera3D.new()
 	cam.position = Vector3(0.0, 0.6, 4.6)
 	cam.look_at_from_position(cam.position, Vector3.ZERO)
-	cam.fov = 40.0
+	cam.fov = 41.5
 	view.add_child(cam)
 	var sun := DirectionalLight3D.new()
 	sun.rotation = Vector3(-0.8, 0.6, 0.0)
@@ -124,13 +126,13 @@ func refresh(run, overflow := 0, class_id := "", effective := {}) -> void:
 		_list.add_child(_line(line))
 
 
-# Puts the pilot's shell, as the player wears it, where the stand-in sphere sits. painter is the
-# game's HeroAssets; a game without one (or a pilot with no model) keeps the sphere.
+# Fits the worn shell and its pilot. The sphere stays for a missing shell or painter.
 func wear(painter, player) -> void:
 	if painter == null or player == null:
 		return
-	_worn = painter.fit_worn_into(_pivot, player, _worn)
+	_worn = painter.fit_worn_into(_pivot, shell, player, _worn)
 	_ball.visible = _worn.is_empty()
+	_pivot.rotation.y = OPEN_ANGLE
 
 
 # Seats the read in the screen's left gutter, centred on its height, clear of the pause
