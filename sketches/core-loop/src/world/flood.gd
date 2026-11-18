@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const ModelKit := preload("res://src/world/model_kit.gd")
 const SIREN_MAST := preload("res://assets/models/world_one/poi_siren_mast.glb")
 const FloodCycle := preload("res://src/world/flood_cycle.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
@@ -38,10 +39,11 @@ func setup() -> void:
 	add_child(_plane)
 
 	# The muster siren's model is six metres high with its origin at the foot.
-	_mast = SIREN_MAST.instantiate()
+	_mast = Node3D.new()
 	_mast.name = "KlaxonMast"
 	_mast.scale = Vector3.ONE * (16.0 / 6.0)
 	add_child(_mast)
+	ModelKit.whole(SIREN_MAST.resource_path, _mast)
 
 	_lamp_material = Palette.solid(Palette.AMBER, 1.0)
 	_lamp_mesh = MeshInstance3D.new()
