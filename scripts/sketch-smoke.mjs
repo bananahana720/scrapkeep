@@ -796,17 +796,25 @@ export const scriptErrorCount = (output) => (output.match(/^SCRIPT ERROR\b/gm) ?
 // machine slot keeps its heartbeat only while the loop is free, and an import can take minutes.
 export function spawnCollect(command, args, { env = process.env, timeoutMs = TIMEOUT_MS } = {}) {
   return new Promise((resolve) => {
-    const child = spawn(command, args, { env });
+    const child = spawn(command, args, { env, stdio: ["ignore", "pipe", "pipe"] });
     let output = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
     child.stdout.on("data", (chunk) => (output += chunk));
     child.stderr.on("data", (chunk) => (output += chunk));
-    const timer = setTimeout(() => child.kill("SIGTERM"), timeoutMs);
+    let kill = null;
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      kill = setTimeout(() => child.kill("SIGKILL"), 5_000);
+    }, timeoutMs);
     child.on("error", (error) => {
       clearTimeout(timer);
+      clearTimeout(kill);
       resolve({ status: null, signal: null, output: output + String(error.message) });
     });
     child.on("close", (status, signal) => {
       clearTimeout(timer);
+      clearTimeout(kill);
       resolve({ status, signal, output });
     });
   });

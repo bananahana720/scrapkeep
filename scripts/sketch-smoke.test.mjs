@@ -1197,14 +1197,13 @@ test("readings that start together never hold the machine at the same time", asy
 });
 
 test("a long import leaves the event loop free, so a held slot keeps its heartbeat", async () => {
-  const { spawnCollect } = await import("./sketch-smoke.mjs");
   let ticks = 0;
   const timer = setInterval(() => ticks++, 20);
-  const result = await spawnCollect(process.execPath, ["-e", "setTimeout(() => { console.log('done'); process.exit(3); }, 300)"]);
+  const result = await smoke.spawnCollect(process.execPath, ["-e", "setTimeout(() => { console.log('done'); process.exit(3); }, 300)"]);
   clearInterval(timer);
   assert.equal(result.status, 3);
   assert.match(result.output, /done/);
   assert.ok(ticks >= 5, `the loop ran ${ticks} timer ticks while the child ran`);
-  const slow = await spawnCollect(process.execPath, ["-e", "setTimeout(() => {}, 5000)"], { timeoutMs: 100 });
+  const slow = await smoke.spawnCollect(process.execPath, ["-e", "setTimeout(() => {}, 5000)"], { timeoutMs: 100 });
   assert.equal(slow.signal, "SIGTERM", "the time limit still stops a child");
 });

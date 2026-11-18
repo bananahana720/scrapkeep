@@ -892,8 +892,8 @@ async function main() {
   }, log);
   if (!stage("import", imported.ok, { note: imported.tries.map((row) => `${row.outcome} exit=${row.exit ?? row.signal}`).join(", ") })) finish();
   writeImportStamp(root, SKETCH);
-  const boot = spawnSync(binary, [...base, "--quit-after", "300"], { encoding: "utf8", timeout: 180_000, env: { ...process.env, ...userDataEnv(mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) } });
-  const bootVerdict = judge({ status: boot.status, output: (boot.stdout || "") + (boot.stderr || "") });
+  const boot = await spawnCollect(binary, [...base, "--quit-after", "300"], { timeoutMs: 180_000, env: { ...process.env, ...userDataEnv(mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) } });
+  const bootVerdict = judge({ status: boot.status, output: boot.output });
   if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
 
   const results = [];
