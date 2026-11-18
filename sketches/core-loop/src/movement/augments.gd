@@ -164,7 +164,7 @@ static func apply(kit, state, tuning, intent, aim: Basis, body_state) -> void:
 	if kit.plant_time > 0.0:
 		return
 	_glide(kit, state, tuning, intent, aim, body_state, step)
-	_grapple(kit, state, tuning, intent, body_state, step)
+	_grapple(kit, tuning, intent, body_state, step)
 
 
 # While the ball is planted by a slam or mounted on a pylon, drive, boost and jump
@@ -741,7 +741,7 @@ static func _keep_body_line(kit, tuning, body_state) -> void:
 		_follow(kit, tuning, body_state.transform.origin)
 
 
-static func _grapple(kit, state, tuning, intent, body_state, step: float) -> void:
+static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 	if not kit.hooked:
 		return
 	var origin: Vector3 = body_state.transform.origin
@@ -775,21 +775,9 @@ static func _grapple(kit, state, tuning, intent, body_state, step: float) -> voi
 		var head := clampf(1.0 - closing / tuning.f("reel_speed"), 0.0, 1.0)
 		if dist > MIN_ROPE:
 			v += dir * tuning.f("reel_force") * head * step
-	# A downhill roll reaches the end of its cable part-way through a
-	# physics step. Follow the bank around the anchor for the taut part.
-	if not kit.winching and state.grounded and v.y < 0.0 and v.dot(dir) < 0.0:
-		var travel := v * step
-		var end := travel - to_anchor
-		if end.length() >= kit.rope:
-			var along: Vector3 = state.contact_normal.cross(dir).normalized()
-			var rolling := v.dot(along)
-			if absf(rolling) > 0.01:
-				var half_turn := 0.5 * travel.length() / dist
-				var arc := (along * signf(rolling) * cos(half_turn) + dir * sin(half_turn)) * v.length()
-				var taut := clampf((end.length() - kit.rope) / (end.length() - dist), 0.0, 1.0)
-				body_state.linear_velocity = v.slerp(arc, taut)
-				return
 	if dist > kit.rope:
+		# A rope does not stretch: cancelling only the outward component leaves the
+		# tangential speed alone, which is what turns a fall into a pendulum.
 		var outward := -v.dot(dir)
 		if outward > 0.0:
 			v += dir * outward
