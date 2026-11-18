@@ -36,8 +36,7 @@ import { nodeTestsForPaths,
   failedRunLog,
   failedRunLogName,
   receiptBaseName,
-  signalReason,
-} from "./sketch-fast.mjs";
+  signalReason, checkLabels, removedChecks } from "./sketch-fast.mjs";
 import { IMPORT_TRIES, importTry, importWithRetry, quarantineRecord, scriptErrorCount } from "./sketch-smoke.mjs";
 
 const files = (entries) => indexFromFiles(new Map(Object.entries(entries)));
@@ -572,4 +571,12 @@ test("nodeTestsForPaths: a park prop recipe or file faces the far-mesh fault che
   assert.deepEqual(nodeTestsForPaths(["src/core/palette.gd"]), ["scripts/palette-gd.test.mjs"]);
   assert.deepEqual(nodeTestsForPaths(["tools/icons/generate_icons.py", "tools/blender/common.py"]), ["scripts/palette-gd.test.mjs"]);
   assert.deepEqual(nodeTestsForPaths(["src/world/park/park_dam.json", "assets/models/world_one/ambush_altar.glb"]), []);
+});
+
+test("removedChecks names the labels a changed test no longer checks", () => {
+  const base = ['\t_check("the route climbs the kicker", climbs, str(points))', '\tT.eq("ends at gate level", end_y, gate_y)', '\t# _check("old", false, "")'].join("\n");
+  const head = ['\t_check("the route gains the grade rise", rise >= 2.0, str(rise))', '\tT.eq("ends at gate level", end_y, gate_y)', '\t_check(LABELS[0], ok, "")'].join("\n");
+  assert.deepEqual([...checkLabels(base)].sort(), ["ends at gate level", "the route climbs the kicker"]);
+  assert.deepEqual(removedChecks(base, head), ["the route climbs the kicker"]);
+  assert.deepEqual(removedChecks(base, base), []);
 });

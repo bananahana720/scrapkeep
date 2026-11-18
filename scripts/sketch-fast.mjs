@@ -314,6 +314,24 @@ export function failingChecks(output) {
   }))].sort();
 }
 
+// The labels a test file checks: the first argument of each check, eq or near call when it is a plain string.
+// A label built at run time is not seen, so this reads less than the test runs.
+export function checkLabels(source) {
+  const labels = new Set();
+  for (const raw of source.split("\n")) {
+    const line = raw.replace(/^\s*#.*$/, "");
+    for (const m of line.matchAll(/(?<![\w])(?:\w+\.)?_?(?:check|eq|near)\(\s*"((?:[^"\\]|\\.)*)"/g)) labels.add(m[1]);
+  }
+  return labels;
+}
+
+// Labels the base version of a test checked that the head no longer does. A test edited to fit new behaviour
+// can drop a check and still pass (GATE.md: a moved tick, pin or floor is a finding even when the test passes).
+export function removedChecks(baseSource, headSource) {
+  const head = checkLabels(headSource);
+  return [...checkLabels(baseSource)].filter((label) => !head.has(label)).sort();
+}
+
 // Added files must not be symlinks, root files or new top-level folders (#104 committed a
 // node_modules symlink, which broke every merge into a tree that has node_modules).
 // .mcp.json is the one root file a tool requires there: Claude Code reads project MCP servers
@@ -732,6 +750,14 @@ async function main() {
     ...bridgeFindings(spawnSync("git", ["-C", root, "show", "HEAD:sketches/core-loop/project.godot"], { encoding: "utf8" }).stdout ?? ""),
   ];
   if (!stage("tree hygiene", hygiene.length === 0, { note: hygiene.length ? hygiene.slice(0, 5).join("; ") : "no symlink, root file or new top-level folder", findings: hygiene }) && !options.dryRun) finish();
+  // Not a stage: a removed check can be right. The receipt lists each so the pull request has to name it.
+  const show = (ref, file) => { const r = spawnSync("git", ["-C", root, "show", `${ref}:${file}`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); return r.status === 0 ? r.stdout : null; };
+  receipt.checks_removed = changedPaths.filter((file) => /^sketches\/core-loop\/tests\/[^/]+\.gd$/.test(file)).map((file) => {
+    const before = show(diffBase, file);
+    return before === null ? null : { test: path.posix.basename(file), labels: removedChecks(before, show("HEAD", file) ?? "") };
+  }).filter((row) => row && row.labels.length > 0);
+  for (const row of receipt.checks_removed) log(`  checks removed from ${row.test}: ${row.labels.map((label) => `"${label}"`).join(", ")}`);
+  if (receipt.checks_removed.length > 0) log("  name each removed check in the pull request and say what now covers it");
   const merges = git(["rev-list", "--first-parent", "--merges", "--parents", `${mergeBase}..HEAD`]).split("\n").filter(Boolean)
     .map((line) => line.split(" "))
     .filter(([, , second]) => second && spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", second, mergeBase]).status !== 0)

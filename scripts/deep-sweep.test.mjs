@@ -74,3 +74,19 @@ test("sweep skips string keys that the event schema owns", () => {
   const findings = sweep({ base: "b", head: "h", read: (f) => src[f] ?? "", diff, listSrc: () => Object.keys(src), linesAt: () => 0 });
   assert.deepEqual(findings, []);
 });
+
+test("reachIns follows a chain of owners and a member of another object held on self", () => {
+  const hits = reachIns([[1, "\tgame.flow.warden._age = 0.0"], [2, "\tself.director._home_at(site)"], [3, "\tself._age = 1.0"], [4, "\tlocks._wave.clear()"], [5, "\tsuper._ready()"]]);
+  assert.deepEqual(hits.map((h) => [h.line, h.message]), [
+    [1, "reaches into game.flow.warden._age"],
+    [2, "reaches into director._home_at"],
+    [4, "reaches into locks._wave"],
+  ]);
+});
+
+test("sweep reads a tool script for reach-ins only", () => {
+  const tool = "sketches/core-loop/tools/trial.gd";
+  const diff = `+++ b/${tool}\n@@ -0,0 +1,2 @@\n+func run(a, b, c, d, e, f, g):\n+\tdirector._place_pack()\n`;
+  const findings = sweep({ base: "b".repeat(40), head: "h".repeat(40), read: () => "", diff, listSrc: () => [], linesAt: () => 0 });
+  assert.deepEqual(findings.map((f) => [f.rule, f.path, f.line]), [["D2", tool, 2]]);
+});
