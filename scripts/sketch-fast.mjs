@@ -314,7 +314,8 @@ export function failingChecks(output) {
   }))].sort();
 }
 
-// The labels a test file checks: the first argument of each check, eq, near or report call when it is a plain string.
+// The labels a test file checks: the first argument of each call whose name starts with check, eq, near or report
+// (t.eq, _report, _check_near) when it is a plain string.
 // A label built at run time is not seen, so this reads less than the test runs.
 export function checkLabels(source) {
   const labels = new Set();
@@ -330,6 +331,19 @@ export function checkLabels(source) {
 export function removedChecks(baseSource, headSource) {
   const head = checkLabels(headSource);
   return [...checkLabels(baseSource)].filter((label) => !head.has(label)).sort();
+}
+
+// The removed checks of a diff, from `git diff --name-status -M` lines and show(ref, file) -> text or null.
+// A renamed test is compared with its old path at the base, a deleted one with nothing, and an added one is skipped.
+export function checksRemoved(nameStatusLines, show, baseRef, headRef) {
+  const isTest = (file) => /^sketches\/core-loop\/tests\/(?:[^/]+\/)?[^/]+\.gd$/.test(file);
+  return nameStatusLines.filter(Boolean).map((line) => {
+    const [status, from, to = from] = line.split("\t");
+    if (status.startsWith("A") || !isTest(from)) return null;
+    const before = show(baseRef, from);
+    const after = status.startsWith("D") ? "" : show(headRef, to) ?? "";
+    return before === null ? null : { test: path.posix.basename(to), labels: removedChecks(before, after) };
+  }).filter((row) => row && row.labels.length > 0);
 }
 
 // Added files must not be symlinks, root files or new top-level folders (#104 committed a
@@ -752,15 +766,7 @@ async function main() {
   if (!stage("tree hygiene", hygiene.length === 0, { note: hygiene.length ? hygiene.slice(0, 5).join("; ") : "no symlink, root file or new top-level folder", findings: hygiene }) && !options.dryRun) finish();
   // Not a stage: a removed check can be right. The receipt lists each so the pull request has to name it.
   const show = (ref, file) => { const r = spawnSync("git", ["-C", root, "show", `${ref}:${file}`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); return r.status === 0 ? r.stdout : null; };
-  // A renamed test is compared with its old path at the base, so a rename alone removes no check.
-  const isTest = (file) => /^sketches\/core-loop\/tests\/(?:[^/]+\/)?[^/]+\.gd$/.test(file);
-  receipt.checks_removed = git(["diff", "--name-status", "-M", diffBase, "HEAD"]).split("\n").filter(Boolean).map((line) => {
-    const [status, from, to = from] = line.split("\t");
-    if (status.startsWith("A") || !isTest(from)) return null;
-    const before = show(diffBase, from);
-    const after = status.startsWith("D") ? "" : show("HEAD", to) ?? "";
-    return before === null ? null : { test: path.posix.basename(to), labels: removedChecks(before, after) };
-  }).filter((row) => row && row.labels.length > 0);
+  receipt.checks_removed = checksRemoved(git(["diff", "--name-status", "-M", diffBase, "HEAD"]).split("\n"), show, diffBase, "HEAD");
   for (const row of receipt.checks_removed) log(`  checks removed from ${row.test}: ${row.labels.map((label) => `"${label}"`).join(", ")}`);
   if (receipt.checks_removed.length > 0) log("  name each removed check in the pull request and say what now covers it");
   // Also a report, not a stage: the deep sweep's leads on this branch's own lines (DEEP-SWEEP.md), so a reach
