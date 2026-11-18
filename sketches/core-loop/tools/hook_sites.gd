@@ -1,4 +1,4 @@
-extends RefCounted
+extends SceneTree
 
 # A placed, level 14 m/s entry. Only the release tick changes between takes.
 # The original flume trial held for 75 ticks after its bite. Compare every earlier
@@ -11,18 +11,65 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
+const Game := preload("res://src/game.gd")
+
 var game
 var source := Intent.Scripted.new()
 
 
-func _init(running_game) -> void:
-	game = running_game
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
+	seed(731)
+	game = Game.new()
+	game.test_mode = true
+	game.table = "park"
+	root.add_child(game)
+	while game.flow == null:
+		await physics_frame
+	game.ctx.calm = true
+	game.flow.force_warden = false
+	game.flow.press_start()
+	game.flow.choose_class(0)
 	game.player.source = source
+	var stations: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(STATIONS))
+	var station_ids := stations.keys()
+	station_ids.sort_custom(func(a, b): return int(stations[a].hook_order) < int(stations[b].hook_order))
+	var rows := []
+	for id: String in station_ids:
+		var site: Dictionary = stations[id]
+		if int(site.stage) != game.run.stage:
+			game.flow.enter_stage(int(site.stage), Vector3.ZERO, false)
+		if not await _ready_stage(int(site.stage)):
+			printerr("Hook station %s could not enter stage %s" % [id, site.stage])
+			quit(1)
+			return
+		if site.has("mast_angle_deg"):
+			game.flow.enter_boss(Vector3.ZERO)
+			# Isolate the swing from Brindle's ordnance while leaving the real bowl in physics.
+			game.ctx.boss.set_physics_process(false)
+		game.run.set_max_hp(99999.0)
+		rows.append(await measure(id, site, OS.get_environment("PLANT") == "no_bite" and id == "flume_hollow_trestles"))
+	print("HOOK_SITES ", JSON.stringify(rows))
+	game.free()
+	await process_frame
+	quit(0)
 
 
-func measure(site: Dictionary, no_bite: bool) -> Dictionary:
+func _ready_stage(stage: int) -> bool:
+	for tick in 1200:
+		await physics_frame
+		if game.ctx.terrain.is_ready(stage) and game.flow.in_play() and not game.player.frozen():
+			game.flow.start_card.hide_card()
+			return true
+	return false
+
+
+func measure(id: String, site: Dictionary, no_bite: bool) -> Dictionary:
 	var pose := _station(site)
-	var row := {"site": site.id, "status": "no hold"}
+	var row := {"site": id, "status": "no hold"}
 	if pose.is_empty():
 		row["reason"] = "station geometry missing"
 		return row
@@ -40,15 +87,18 @@ func measure(site: Dictionary, no_bite: bool) -> Dictionary:
 		row.status = held.status
 		return row
 	var best := {}
+	var early_surfaces := {}
 	for tick in range(1, HOLD_TICKS):
 		var early := await _take(pose, tick)
 		if early.status != "landed":
 			row.status = "incomplete early trial"
 			row["early"] = early
 			return row
+		early_surfaces[early.landing_surface] = true
 		if best.is_empty() or early.landing_mps > best.landing_mps:
 			best = early
 	row["best_early"] = best
+	row["early_landing_surfaces"] = early_surfaces.keys()
 	row["early_trials"] = HOLD_TICKS - 1
 	row.status = "measured"
 	return row
@@ -58,7 +108,7 @@ func _station(site: Dictionary) -> Dictionary:
 	var target: Vector3
 	var heading: Vector3
 	var collider: Node
-	if site.stage is String and site.stage == "bowl":
+	if site.has("mast_angle_deg"):
 		var arena = game.ctx.boss.arena
 		var angle := deg_to_rad(float(site.mast_angle_deg))
 		target = arena.point_at(angle, Arena.MAST_R, float(site.target_lift_m))
@@ -69,17 +119,15 @@ func _station(site: Dictionary) -> Dictionary:
 		if field == null:
 			return {}
 		collider = field.get_node_or_null("Collider")
-		if site.has("entry"):
-			return {"target": _xyz(site.target), "eye": _xyz(site.eye), "entry": _xyz(site.entry),
-				"heading": Vector3(site.bearing[0], 0, site.bearing[1]).normalized(), "collider": collider}
-		var a: Array = site.bearing_from
-		var b: Array = site.bearing_to
-		heading = Vector3(b[0] - a[0], 0, b[1] - a[1]).normalized()
+		if site.has("eye"):
+			return {"target": _xyz(site.point), "eye": _xyz(site.eye), "entry": _xyz(site.ball_position),
+				"heading": _xyz(site.ball_velocity).normalized(), "collider": collider}
+		heading = _xyz(site.ball_velocity).normalized()
 		# The span is a field of standing timbers. Aim at the nearest actual
 		# timber to the station mark, which may itself be in the gap between two.
 		if collider == null:
 			return {}
-		var mark: Vector3 = game.ctx.terrain.drop_point(site.target_xz[0], site.target_xz[1], site.target_lift_m)
+		var mark: Vector3 = game.ctx.terrain.drop_point(site.point[0], site.point[2], site.point[1])
 		var nearest := INF
 		for part: Dictionary in ParkRecipes.collider_shapes(collider):
 			if part.disabled:
@@ -124,8 +172,9 @@ func _take(pose: Dictionary, release_tick: int) -> Dictionary:
 	var hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(query)
 	# The bowl shares a single body between floor, ramps and masts. The face must
 	# also be at the requested mast, and the flume must bite the recorded timber.
-	if hit.get("collider") != pose.collider or hit.is_empty() or point.distance_to(pose.target) > 2.0:
+	if hit.is_empty() or hit.collider != pose.collider or point.distance_to(pose.target) > 2.0:
 		result["reason"] = "line caught a different face"
+		result["hit_xyz"] = [point.x, point.y, point.z]
 		return result
 	result["bite_xyz"] = [point.x, point.y, point.z]
 	source.hold["brake_held"] = true
@@ -147,7 +196,11 @@ func _take(pose: Dictionary, release_tick: int) -> Dictionary:
 		if player.state.grounded:
 			var v := body.linear_velocity
 			result["landing_mps"] = Vector2(v.x, v.z).length()
-			result["landing_y"] = player.ball_position().y
+			var at: Vector3 = player.ball_position()
+			result["landing_xyz"] = [at.x, at.y, at.z]
+			var floor_ray := PhysicsRayQueryParameters3D.create(at, at - Vector3.UP * 2.5, 1)
+			var floor_hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(floor_ray)
+			result["landing_surface"] = str(game.get_path_to(floor_hit.collider)) if not floor_hit.is_empty() else ""
 			result.status = "landed"
 			return result
 		await game.get_tree().physics_frame
