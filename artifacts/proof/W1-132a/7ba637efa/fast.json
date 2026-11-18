@@ -1,0 +1,285 @@
+{
+  "schema": "scrapkeep-fast-receipt/1",
+  "label": "fast",
+  "head": "7ba637efa5121d84006c16b50d3e079d7bddcdce",
+  "base": "origin/stage/alpha-w44",
+  "merge_base": "f28fff6dfcafc9570628a3d890df97dbbabc647c",
+  "started_at": "2026-11-18T22:07:50.604Z",
+  "stages": [
+    {
+      "name": "tree hygiene",
+      "ok": true,
+      "ms": 58,
+      "note": "no symlink, root file or new top-level folder",
+      "findings": []
+    },
+    {
+      "name": "carried branches current",
+      "ok": true,
+      "ms": 1147,
+      "note": "1 merges, none stale"
+    },
+    {
+      "name": "sketch-lint",
+      "ok": true,
+      "ms": 2595,
+      "note": "sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1 W1=0 W2=0 W4=0 W6=27 W7=1 S8=0, 1101ms"
+    },
+    {
+      "name": "placeholders no higher than base",
+      "ok": true,
+      "ms": 5739,
+      "note": "no group grew",
+      "grew": []
+    },
+    {
+      "name": "node tests",
+      "ok": true,
+      "ms": 7522,
+      "note": "scripts/gate/display-run.test.mjs scripts/gate/look-receipts.test.mjs scripts/gate/window-watch.test.mjs",
+      "tests": [
+        "scripts/gate/display-run.test.mjs",
+        "scripts/gate/look-receipts.test.mjs",
+        "scripts/gate/window-watch.test.mjs"
+      ]
+    },
+    {
+      "name": "quarantine",
+      "ok": true,
+      "ms": 7522,
+      "note": "0 rows, none expired"
+    },
+    {
+      "name": "import",
+      "ok": true,
+      "ms": 28320,
+      "note": "ok exit=0"
+    },
+    {
+      "name": "boot",
+      "ok": true,
+      "ms": 34964,
+      "note": "300 frames"
+    },
+    {
+      "name": "tests",
+      "ok": true,
+      "ms": 157535,
+      "note": "12 run, 0 flaky, 0 base-red"
+    }
+  ],
+  "ok": true,
+  "diff_base": "f28fff6dfcafc9570628a3d890df97dbbabc647c",
+  "pre": [],
+  "changed": 9,
+  "checks_removed": [],
+  "deep_sweep": {
+    "D1": 0,
+    "D2": 0,
+    "D3": 0,
+    "D4": 0,
+    "D5": 0
+  },
+  "carried": [
+    {
+      "merge": "1929174875c6b4941173161257f07bb2e70f70b9",
+      "carried": "7f5f536c88c76e4db6b624e2c42ca7f4de06be44",
+      "prs": [
+        "1157"
+      ],
+      "stale": false
+    }
+  ],
+  "selection": {
+    "hubs": [],
+    "unmapped": [],
+    "tests": {
+      "tests/colour_meanings_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/new_world_cost_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/unit_suite_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/look_stations_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/look_frames_test.gd": {
+        "tier": 1,
+        "why": "names tools/look_harness.gd"
+      },
+      "tests/look_harness_test.gd": {
+        "tier": 1,
+        "why": "names tools/look_harness.gd"
+      },
+      "tests/pilot_mask_test.gd": {
+        "tier": 2,
+        "why": "names tools/pilot_mask.gd, which names tools/look_subjects.gd"
+      },
+      "tests/hook_sites_test.gd": {
+        "tier": 1,
+        "why": "names tools/stations/shared_route.json"
+      },
+      "tests/presentation_random_lint_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/launch_table_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/ace_tracks_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/codex_coverage_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      }
+    },
+    "deferred_to_full_gate": [],
+    "bot_shards": [],
+    "shard_reasons": {},
+    "estimate_ms": 588950
+  },
+  "failed_runs": [],
+  "batch": {
+    "on": true,
+    "batches": 1,
+    "tests": 6,
+    "reruns": []
+  },
+  "results": [
+    {
+      "test": "tests/new_world_cost_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 845,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/colour_meanings_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1340,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_random_lint_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 283,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pilot_mask_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1019,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/launch_table_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 3032,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ace_tracks_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 57,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/codex_coverage_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 126,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/look_harness_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 155,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/look_frames_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 6946,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/unit_suite_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 18349,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/look_stations_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 36144,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/hook_sites_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 59772,
+      "reason": null,
+      "quarantined": false
+    }
+  ],
+  "quarantined": [],
+  "flaky": [],
+  "ledger_flaky": [],
+  "base_red": [],
+  "wall_ms": 157535
+}

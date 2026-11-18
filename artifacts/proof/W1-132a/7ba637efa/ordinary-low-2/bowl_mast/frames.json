@@ -1,0 +1,76 @@
+{
+	"adapter": "Apple M5 Max (Apple9)",
+	"class": 0,
+	"extra": {
+		"ball_velocity": [
+			9.89949512481689,
+			0.0,
+			-9.89949512481689
+		],
+		"spawns": [],
+		"stage": 2,
+		"table": "park"
+	},
+	"frames": [
+		{
+			"ball": {
+				"at": [
+					306.704498291016,
+					31.5,
+					505.848205566406
+				],
+				"bbox": [
+					1170.0,
+					1478.3,
+					210.0,
+					210.0
+				],
+				"in_frame": false,
+				"placed": "station",
+				"seen": false,
+				"visible": 0.0
+			},
+			"dead": false,
+			"eye": [
+				303.168884277344,
+				43.0,
+				505.14111328125
+			],
+			"file": "rider.png",
+			"fov": 80.0,
+			"id": "rider",
+			"metrics": {
+				"black": 0.0,
+				"luma": 0.601943720679168,
+				"sky": 0.0098070987654321,
+				"sky_rgb": [
+					196,
+					155,
+					106
+				]
+			},
+			"sha256": "8d69a503e3a7c260eafd52d0952b8c0c8aa49b90ce1b0b3d06da8527ca8a6524",
+			"stage_yaw": {},
+			"target": [
+				310.239990234375,
+				39.0,
+				498.070007324219
+			],
+			"wall_ms": 1496
+		}
+	],
+	"group": "staged",
+	"kind": "scene",
+	"owner": "W1-135",
+	"preset": "low",
+	"rendering": "forward_plus",
+	"stage": 2.0,
+	"subject": "bowl_mast",
+	"tick": {
+		"late": false,
+		"tick": 120,
+		"wanted": 120
+	},
+	"tool": "look_harness.gd",
+	"variant": ""
+}

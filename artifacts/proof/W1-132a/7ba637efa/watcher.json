@@ -1,0 +1,145 @@
+{
+  "head": "7ba637efa5121d84006c16b50d3e079d7bddcdce",
+  "stage": "f28fff6dfcafc9570628a3d890df97dbbabc647c",
+  "watcher_dependency": "7f5f536c88c76e4db6b624e2c42ca7f4de06be44",
+  "source_of_measurement": "https://github.com/bananahana720/scrapkeep/pull/1144#issuecomment-6992236126",
+  "engine": "Godot 4.7.2.stable.official.ed1daf0bf",
+  "runs": [
+    {
+      "run": "ordinary-before",
+      "accepted": false,
+      "head": "40c5666bcbfe5beac8eb2592aa9071e3f02ddfc0",
+      "watcher": {
+        "samples": 862,
+        "firstMs": 1795035616703,
+        "lastMs": 1795035659813,
+        "periodMs": 50,
+        "maxGapMs": 89,
+        "missed": 1,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "embedded_pids": [
+        "319"
+      ],
+      "command": "node scripts/gate/display-run.mjs --offscreen res://tools/look_harness.gd -- --subject=bowl_mast --preset=high --out=<fresh absolute output directory>",
+      "role": "negative control, ordinary flume at old absolute coordinates",
+      "rejection": "The two original controls overlapped and each missed one watcher interval. Excluded from the before-and-after pair."
+    },
+    {
+      "run": "ordinary-low",
+      "accepted": false,
+      "head": "40c5666bcbfe5beac8eb2592aa9071e3f02ddfc0",
+      "watcher": {
+        "samples": 857,
+        "firstMs": 1795035617137,
+        "lastMs": 1795035659981,
+        "periodMs": 50,
+        "maxGapMs": 91,
+        "missed": 1,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "embedded_pids": [
+        "431"
+      ],
+      "command": "node scripts/gate/display-run.mjs --offscreen res://tools/look_harness.gd -- --subject=bowl_mast --class=0 --preset=low --out=<fresh absolute output directory>",
+      "role": "negative control, ordinary flume at old absolute coordinates",
+      "rejection": "The two original controls overlapped and each missed one watcher interval. Excluded from the before-and-after pair."
+    },
+    {
+      "run": "ordinary-high-2",
+      "accepted": true,
+      "head": "40c5666bcbfe5beac8eb2592aa9071e3f02ddfc0",
+      "watcher": {
+        "samples": 685,
+        "firstMs": 1795037455373,
+        "lastMs": 1795037489572,
+        "periodMs": 50,
+        "maxGapMs": 71,
+        "missed": 0,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "embedded_pids": [
+        "40595"
+      ],
+      "command": "node scripts/gate/display-run.mjs --offscreen res://tools/look_harness.gd -- --subject=bowl_mast --class=0 --preset=high --out=<fresh absolute output directory>",
+      "role": "negative control, ordinary flume at old absolute coordinates"
+    },
+    {
+      "run": "ordinary-low-2",
+      "accepted": true,
+      "head": "40c5666bcbfe5beac8eb2592aa9071e3f02ddfc0",
+      "watcher": {
+        "samples": 663,
+        "firstMs": 1795038333516,
+        "lastMs": 1795038366611,
+        "periodMs": 50,
+        "maxGapMs": 74,
+        "missed": 0,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "embedded_pids": [
+        "49155"
+      ],
+      "command": "node scripts/gate/display-run.mjs --offscreen res://tools/look_harness.gd -- --subject=bowl_mast --class=0 --preset=low --out=<fresh absolute output directory>",
+      "role": "negative control, ordinary flume at old absolute coordinates"
+    },
+    {
+      "run": "final-high-1",
+      "accepted": true,
+      "head": "7ba637efa5121d84006c16b50d3e079d7bddcdce",
+      "watcher": {
+        "samples": 738,
+        "firstMs": 1795039718442,
+        "lastMs": 1795039755299,
+        "periodMs": 50,
+        "maxGapMs": 69,
+        "missed": 0,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "embedded_pids": [
+        "68968",
+        "69029",
+        "68974"
+      ],
+      "command": "node scripts/gate/display-run.mjs --offscreen res://tools/look_harness.gd -- --subject=ttl_title,bowl_mast --class=0 --preset=high --out=<fresh absolute output directory>",
+      "role": "Brindle arena, measured mast"
+    },
+    {
+      "run": "final-low-1",
+      "accepted": true,
+      "head": "7ba637efa5121d84006c16b50d3e079d7bddcdce",
+      "watcher": {
+        "samples": 738,
+        "firstMs": 1795039808072,
+        "lastMs": 1795039844927,
+        "periodMs": 50,
+        "maxGapMs": 66,
+        "missed": 0,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "embedded_pids": [
+        "95655",
+        "97104",
+        "96446"
+      ],
+      "command": "node scripts/gate/display-run.mjs --offscreen res://tools/look_harness.gd -- --subject=ttl_title,bowl_mast --class=0 --preset=low --out=<fresh absolute output directory>",
+      "role": "Brindle arena, measured mast"
+    }
+  ],
+  "camera_roles": {
+    "rider": "80-degree station overview",
+    "numerical_aim": "65-degree eye and direction from W1-135 at bite"
+  }
+}

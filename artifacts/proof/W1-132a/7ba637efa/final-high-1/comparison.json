@@ -1,0 +1,52 @@
+{
+  "source": "https://github.com/bananahana720/scrapkeep/pull/1144#issuecomment-6990961391",
+  "witness": "https://github.com/bananahana720/scrapkeep/pull/1144#issuecomment-6992236126",
+  "reference_xyz": {
+    "target": [
+      310.23547,
+      39,
+      498.06674
+    ],
+    "entry": [
+      306.70096,
+      31.5,
+      505.84494
+    ],
+    "hit": [
+      309.69223,
+      38.68569,
+      498.90634
+    ],
+    "aim_eye": [
+      302.45828,
+      34.500004,
+      510.08755
+    ]
+  },
+  "aim_forward": [
+    0.5182069356145957,
+    0.29984351832895917,
+    -0.8009715577953074
+  ],
+  "forward_vector_error": 1e-06,
+  "preset": "high",
+  "pilot": 0,
+  "world_error_m": {
+    "target": 4e-06,
+    "entry": 2e-06,
+    "hit": 3.1e-05,
+    "aim_eye": 4.9e-05
+  },
+  "arena_local_error_m": {
+    "target": 8e-06,
+    "entry": 1.1e-05
+  },
+  "camera_fov_deg": {
+    "rider": 80.0,
+    "numerical_aim": 65.0
+  },
+  "camera_ball_visible_share": {
+    "rider": 0.0,
+    "numerical_aim": 0.0
+  }
+}

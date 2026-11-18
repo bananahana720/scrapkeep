@@ -1,0 +1,163 @@
+{
+	"adapter": "Apple M5 Max (Apple9)",
+	"class": 0,
+	"extra": {
+		"ball_velocity": [
+			9.89949512481689,
+			0.0,
+			-9.89949512481689
+		],
+		"mast": {
+			"aim_eye": [
+				302.458312988281,
+				34.5,
+				510.087585449219
+			],
+			"angle_deg": 225.0,
+			"arena": "/root/Game/SlagBowl",
+			"arena_origin": [
+				329.327362060547,
+				30.0,
+				517.158630371094
+			],
+			"center_local": [
+				-19.0918884277344,
+				10.0,
+				-19.0918884277344
+			],
+			"collider": "/root/Game/SlagBowl/Bowl",
+			"entry": [
+				306.700958251953,
+				31.5,
+				505.844940185547
+			],
+			"flow_state": "BOSS",
+			"height": 20.0,
+			"hit": [
+				309.692260742188,
+				38.6856918334961,
+				498.906341552734
+			],
+			"in_arena": true,
+			"radius": 1.0,
+			"shape_index": 7,
+			"shape_type": "CylinderShape3D",
+			"target": [
+				310.235473632812,
+				39.0,
+				498.066741943359
+			]
+		},
+		"spawns": [],
+		"stage": 2,
+		"table": "park"
+	},
+	"frames": [
+		{
+			"ball": {
+				"at": [
+					306.700958251953,
+					31.5,
+					505.844940185547
+				],
+				"bbox": [
+					1170.1,
+					1478.2,
+					210.0,
+					210.0
+				],
+				"in_frame": false,
+				"placed": "station",
+				"seen": false,
+				"visible": 0.0
+			},
+			"dead": false,
+			"eye": [
+				303.164367675781,
+				43.0,
+				505.137847900391
+			],
+			"file": "rider.png",
+			"fov": 80.0,
+			"id": "rider",
+			"metrics": {
+				"black": 0.0000308641975308642,
+				"luma": 0.495367013035305,
+				"sky": 0.00679012345679012,
+				"sky_rgb": [
+					65,
+					67,
+					67
+				]
+			},
+			"sha256": "b98d4c9571398de5b951100bbf48bf009468dada7b8aa7df73ab73a8a1d606ef",
+			"stage_yaw": {},
+			"target": [
+				310.235473632812,
+				39.0,
+				498.066741943359
+			],
+			"wall_ms": 1087
+		},
+		{
+			"ball": {
+				"at": [
+					306.700958251953,
+					31.5,
+					505.844940185547
+				],
+				"bbox": [
+					1006.5,
+					1193.4,
+					360.9,
+					360.9
+				],
+				"in_frame": false,
+				"placed": "station",
+				"seen": false,
+				"visible": 0.0
+			},
+			"dead": false,
+			"eye": [
+				302.458312988281,
+				34.5,
+				510.087585449219
+			],
+			"file": "numerical_aim.png",
+			"fov": 65.0,
+			"id": "numerical_aim",
+			"metrics": {
+				"black": 0.0,
+				"luma": 0.539089349152692,
+				"sky": 0.0142438271604938,
+				"sky_rgb": [
+					120,
+					141,
+					169
+				]
+			},
+			"sha256": "1af6ca98545e0d374ca96e40aeb1b595f9f121fb230526045e9716189bb8e1aa",
+			"stage_yaw": {},
+			"target": [
+				310.235473632812,
+				39.0,
+				498.066741943359
+			],
+			"wall_ms": 598
+		}
+	],
+	"group": "staged",
+	"kind": "scene",
+	"owner": "W1-135",
+	"preset": "low",
+	"rendering": "forward_plus",
+	"stage": 2.0,
+	"subject": "bowl_mast",
+	"tick": {
+		"late": false,
+		"tick": 120,
+		"wanted": 120
+	},
+	"tool": "look_harness.gd",
+	"variant": ""
+}

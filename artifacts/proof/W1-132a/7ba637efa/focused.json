@@ -1,0 +1,92 @@
+{
+  "schema": "scrapkeep-smoke-receipt/1",
+  "label": "named",
+  "argv": [
+    "--sketch",
+    "core-loop",
+    "--test",
+    "look_harness_test",
+    "--test",
+    "look_stations_test"
+  ],
+  "root": "/private/tmp/sk-W1-132a-fast",
+  "head": "7ba637efa5121d84006c16b50d3e079d7bddcdce",
+  "tree": "f596faeb7ccd01721589cd76f06cd43e236e58c0",
+  "clean": true,
+  "dirty_paths": [],
+  "godot": {
+    "binary": "/Users/hanabanana/Applications/Godot_4.7.2.app/Contents/MacOS/Godot",
+    "version": "4.7.2.stable.official.ed1daf0bf"
+  },
+  "sketches": [
+    "sketches/core-loop"
+  ],
+  "flags": [],
+  "width": 2,
+  "lock_wait_ms": 52042,
+  "started_at": "2026-11-18T22:07:04.871Z",
+  "wall_ms": 45446,
+  "stems": {
+    "sketches/core-loop": 0
+  },
+  "quarantined": [],
+  "quarantine_expired": [],
+  "results": [
+    {
+      "label": "sketches/core-loop import",
+      "ok": true,
+      "exit": 0,
+      "ms": 3309,
+      "solo": false,
+      "passes": 0,
+      "fails": 0,
+      "verdict_line": null,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/look_harness_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 3443,
+      "solo": false,
+      "passes": 436,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/look_stations_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 38536,
+      "solo": true,
+      "passes": 49,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": [
+        "SKIP control Fin.L",
+        "SKIP control Fin.R",
+        "SKIP control Fin.L",
+        "SKIP control Fin.R",
+        "SKIP control Fin.L",
+        "SKIP control Fin.R",
+        "SKIP control Fin.L",
+        "SKIP control Fin.R",
+        "SKIP control Fin.L",
+        "SKIP control Fin.R",
+        "SKIP control Fin.L",
+        "SKIP control Fin.R"
+      ]
+    }
+  ],
+  "bot_tier_not_run": [],
+  "totals": {
+    "runs": 3,
+    "failed": 0,
+    "skipped": 1,
+    "missing_verdict": 0,
+    "quarantined_red": [],
+    "quarantine_stale": []
+  },
+  "ok": true
+}

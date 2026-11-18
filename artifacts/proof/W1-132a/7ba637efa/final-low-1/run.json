@@ -1,0 +1,31 @@
+{
+	"adapter": "Apple M5 Max (Apple9)",
+	"adapter_drift": [],
+	"ball_out_of_frame": [],
+	"dead": [],
+	"failed_groups": [],
+	"groups": [
+		{
+			"group": "title",
+			"rc": 0,
+			"subjects": [
+				"ttl_title"
+			],
+			"wall_s": 7.594
+		},
+		{
+			"group": "staged",
+			"rc": 0,
+			"subjects": [
+				"bowl_mast"
+			],
+			"wall_s": 25.475
+		}
+	],
+	"missing": [],
+	"pair_problem": "",
+	"preset": "low",
+	"subjects": 2,
+	"tool": "look_harness.gd",
+	"variant": ""
+}
