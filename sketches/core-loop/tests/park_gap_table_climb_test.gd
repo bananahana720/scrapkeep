@@ -7,7 +7,8 @@ extends SceneTree
 #
 #  climbs   a ball starts 2 m short of the kicker's foot heading up it at each of SPEEDS m/s, once holding forward and once
 #           not. Each run records the planar speed as the ball passes the lip line and how it ends: on the table top, or
-#           at rest. No run may end at rest anywhere but the floor or the top (not in a notch, not wedged on a face).
+#           back on the open floor (at rest, or still rolling out there when the clock ends). No run may end at rest
+#           anywhere but the floor or the top (not in a notch, not wedged on a face).
 #           The pinned reach (measured 17 Nov 2026 on the Mac): every held start reaches the top, from rest up, so the
 #           kicker is no speed gate for a ball holding forward; a free ball needs FREE_REACH_MPS (it tops out from 27 m/s
 #           and rolls back from 22 m/s and under).
