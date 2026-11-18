@@ -1,0 +1,34 @@
+{
+  "release": "whole dam scene after 120 drawn frames, then two post-draws before quit",
+  "engine": "Godot 4.7.2 official ed1daf0bf, Metal, M5 Max",
+  "listed_leaked_classes": {
+    "GDScriptNativeClass": 1,
+    "GDScript": 5,
+    "RefCounted": 212,
+    "AudioStreamWAV": 93,
+    "RandomNumberGenerator": 2
+  },
+  "resources_still_in_use": [
+    "Resource still in use: res://tools/bot_fairness.gd (GDScript)",
+    "Resource still in use: res://tools/bot_loops.gd (GDScript)",
+    "Resource still in use: res://tools/bot_driver.gd (GDScript)"
+  ],
+  "engine_errors": [
+    "ERROR: BUG, indexing did not unpair geometries from light.",
+    "ERROR: BUG, indexing did not unpair geometries from light.",
+    "ERROR: 8 shaders of type ParticlesShaderRD were never freed",
+    "ERROR: 8 RID allocations of type 'N10RendererRD15MaterialStorage6ShaderE' were leaked at exit."
+  ],
+  "watch": {
+    "samples": 630,
+    "firstMs": 1795037456492,
+    "lastMs": 1795037487936,
+    "periodMs": 50,
+    "maxGapMs": 74,
+    "missed": 0,
+    "onScreen": 0,
+    "targetOnScreen": 0,
+    "frontmostChanges": 0
+  },
+  "exit": "DISPLAY_RUN_EXIT 0"
+}

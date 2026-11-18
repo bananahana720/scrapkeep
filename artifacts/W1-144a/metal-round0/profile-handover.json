@@ -1,0 +1,6037 @@
+{
+  "dam_to_flume": {
+    "signal_s": 571.41494,
+    "diagnostic_max_ms": 125.233,
+    "entry_frame": [
+      {
+        "added": 446,
+        "d_nodes": -974.0,
+        "d_objects": -1374.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          4.0
+        ],
+        "d_resources": -118.0,
+        "draw_ms": 6.94,
+        "freed": 1420,
+        "ms": 125.23,
+        "phys_top": [
+          [
+            "Build",
+            5.3
+          ],
+          [
+            "self_play.gd",
+            1.52
+          ],
+          [
+            "World",
+            1.09
+          ],
+          [
+            "Combat",
+            0.92
+          ],
+          [
+            "Player",
+            0.72
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.38
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            17.15
+          ],
+          [
+            "Presentation/Audio",
+            6.96
+          ],
+          [
+            "Stage1",
+            3.01
+          ],
+          [
+            "Presentation/SiteMarkers",
+            1.53
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            1.07
+          ],
+          [
+            "Hud",
+            0.81
+          ]
+        ],
+        "signals": [
+          {
+            "args": "[2, false]",
+            "f": 8433,
+            "handlers": [
+              [
+                "build.gd._on_stage_entered",
+                16.92
+              ],
+              [
+                "world.gd._on_stage_entered",
+                8.77
+              ],
+              [
+                "park_props.gd._stage_entered",
+                2.51
+              ],
+              [
+                "activities.gd._on_stage_entered",
+                2.08
+              ],
+              [
+                "set_dressing.gd._stage_entered",
+                1.99
+              ],
+              [
+                "ambient_life.gd._stage_entered",
+                1.26
+              ],
+              [
+                "work_machines.gd._stage_entered",
+                1.07
+              ],
+              [
+                "combat.gd._on_stage_entered",
+                0.54
+              ],
+              [
+                "bake_warm.gd._on_stage_entered",
+                0.44
+              ],
+              [
+                "world_fx.gd._on_stage_entered",
+                0.24
+              ],
+              [
+                "GDScript._on_stage_entered",
+                0.24
+              ],
+              [
+                "audio.gd._on_stage_entered",
+                0.19
+              ],
+              [
+                "fleet.gd.<anonymous lambda>",
+                0.12
+              ],
+              [
+                "vfx.gd.<anonymous lambda>",
+                0.1
+              ],
+              [
+                "GDScript._on_stage_entered",
+                0.1
+              ],
+              [
+                "self_play.gd._on_stage_entered",
+                0.09
+              ],
+              [
+                "machine_fx.gd.<anonymous lambda>",
+                0.09
+              ],
+              [
+                "stage_locks.gd._on_stage_entered",
+                0.09
+              ],
+              [
+                "radio_deck.gd.<anonymous lambda>",
+                0.07
+              ],
+              [
+                "codex.gd._on_stage_entered",
+                0.07
+              ],
+              [
+                "hud.gd._on_stage_entered",
+                0.04
+              ],
+              [
+                "rivet_kit.gd.<anonymous lambda>",
+                0.03
+              ],
+              [
+                "maker_bonuses.gd.<anonymous lambda>",
+                0.03
+              ],
+              [
+                "bot_driver.gd._on_stage_entered",
+                0.03
+              ],
+              [
+                "survey_posts.gd.<anonymous lambda>",
+                0.02
+              ],
+              [
+                "site_markers.gd._on_stage_entered",
+                0.02
+              ],
+              [
+                "vfx.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "player_fx.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "juice.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "boss.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "vfx.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "run_state.gd._on_stage_entered",
+                0.01
+              ],
+              [
+                "player_ball.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "player_ball.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "run_log.gd._on_stage_entered",
+                0.01
+              ],
+              [
+                "interact.gd._on_stage_entered",
+                0.01
+              ],
+              [
+                "bowl_approach.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "rescue_site.gd._on_stage_entered",
+                0.01
+              ],
+              [
+                "GDScript._on_stage_entered",
+                0.01
+              ],
+              [
+                "GDScript._on_stage_entered",
+                0.01
+              ],
+              [
+                "tarn_claw.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "moss_bubble.gd._on_stage_entered",
+                0.01
+              ],
+              [
+                "kest_kit.gd._on_stage_entered",
+                0.01
+              ],
+              [
+                "active_rack.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "workshop.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "why_callout.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "edge_markers.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "hero_assets.gd._warden_stage_entered",
+                0.0
+              ],
+              [
+                "handover_capture.gd._stage",
+                0.0
+              ],
+              [
+                "spillway_story.gd._on_stage_entered",
+                0.0
+              ],
+              [
+                "reward_ceremony.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "codex_banner.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "screen_busy.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "called_shot.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "combat.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "stakes.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "holds.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "run_moments.gd._on_stage_entered",
+                0.0
+              ],
+              [
+                "opening.gd._on_stage_entered",
+                0.0
+              ],
+              [
+                "player_ball.gd.<anonymous lambda>",
+                0.0
+              ]
+            ],
+            "signal": "stage_entered",
+            "total_ms": 37.35
+          }
+        ],
+        "sources": {
+          "AudioStreamPlayer3D": 3,
+          "CollisionShape3D": 23,
+          "MeshInstance3D": 326,
+          "MultiMeshInstance3D": 33,
+          "Node3D": 25,
+          "StaticBody3D": 12
+        },
+        "split": {
+          "phys_ms": 60.3,
+          "post_proc_ms": 1.47,
+          "pre_proc_ms": 0.12,
+          "proc_ms": 34.05,
+          "tick_max_ms": 51.96
+        },
+        "stage": 2,
+        "stage_time": 0.01,
+        "state": "stage",
+        "t": 571.495
+      }
+    ],
+    "slow_frames_near_entry": [
+      {
+        "added": 0,
+        "d_nodes": -9.0,
+        "d_objects": -12.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 4.42,
+        "freed": 9,
+        "ms": 26.42,
+        "phys_top": [
+          [
+            "self_play.gd",
+            1.58
+          ],
+          [
+            "Build",
+            1.01
+          ],
+          [
+            "World",
+            0.52
+          ],
+          [
+            "Combat",
+            0.33
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.19
+          ],
+          [
+            "Player",
+            0.14
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/TargetSetDressing",
+            0.94
+          ],
+          [
+            "Presentation/Audio",
+            0.78
+          ],
+          [
+            "Hud",
+            0.39
+          ],
+          [
+            "Presentation/Vfx",
+            0.17
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.14
+          ],
+          [
+            "CombatEffects",
+            0.12
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 8.3,
+          "post_proc_ms": 1.43,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 3.79,
+          "tick_max_ms": 5.16
+        },
+        "stage": 1,
+        "stage_time": 144.56,
+        "state": "gates",
+        "t": 570.508
+      },
+      {
+        "added": 88,
+        "d_nodes": 88.0,
+        "d_objects": 99.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 19.11,
+        "freed": 0,
+        "ms": 48.24,
+        "phys_top": [
+          [
+            "self_play.gd",
+            13.63
+          ],
+          [
+            "Activities",
+            1.08
+          ],
+          [
+            "Build",
+            0.46
+          ],
+          [
+            "World",
+            0.37
+          ],
+          [
+            "Combat",
+            0.18
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.13
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.21
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.47
+          ],
+          [
+            "Hud",
+            0.36
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.15
+          ],
+          [
+            "Presentation/Vfx",
+            0.14
+          ],
+          [
+            "Presentation/ParkProps",
+            0.1
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "CollisionShape3D": 4,
+          "Label3D": 3,
+          "MeshInstance3D": 67,
+          "Node3D": 8,
+          "StaticBody3D": 4,
+          "res://src/world/activity_view.gd": 2
+        },
+        "split": {
+          "phys_ms": 17.42,
+          "post_proc_ms": 1.33,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 3.62,
+          "tick_max_ms": 14.89
+        },
+        "stage": 1,
+        "stage_time": 144.93,
+        "state": "launch",
+        "t": 570.897
+      },
+      {
+        "added": 135,
+        "d_nodes": 135.0,
+        "d_objects": 165.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 4.48,
+        "freed": 0,
+        "ms": 56.44,
+        "phys_top": [
+          [
+            "Activities",
+            3.59
+          ],
+          [
+            "self_play.gd",
+            3.14
+          ],
+          [
+            "Build",
+            1.62
+          ],
+          [
+            "World",
+            0.89
+          ],
+          [
+            "Combat",
+            0.44
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.33
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            2.17
+          ],
+          [
+            "Hud",
+            0.95
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.51
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.18
+          ],
+          [
+            "Presentation/Vfx",
+            0.13
+          ],
+          [
+            "Presentation/AmbientLife",
+            0.11
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "CollisionShape3D": 12,
+          "Label3D": 5,
+          "MeshInstance3D": 87,
+          "Node3D": 12,
+          "StaticBody3D": 12,
+          "res://src/world/activity_view.gd": 3
+        },
+        "split": {
+          "phys_ms": 14.18,
+          "post_proc_ms": 1.59,
+          "pre_proc_ms": 0.37,
+          "proc_ms": 5.23,
+          "tick_max_ms": 5.64
+        },
+        "stage": 1,
+        "stage_time": 144.97,
+        "state": "launch",
+        "t": 570.953
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 1.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.88,
+        "freed": 0,
+        "ms": 29.26,
+        "phys_top": [
+          [
+            "self_play.gd",
+            4.17
+          ],
+          [
+            "Build",
+            1.3
+          ],
+          [
+            "World",
+            1.12
+          ],
+          [
+            "Combat",
+            0.57
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.42
+          ],
+          [
+            "Player",
+            0.31
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.33
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.48
+          ],
+          [
+            "Hud",
+            0.35
+          ],
+          [
+            "Presentation/Vfx",
+            0.19
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.15
+          ],
+          [
+            "self_play.gd",
+            0.09
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 12.64,
+          "post_proc_ms": 1.36,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 3.65,
+          "tick_max_ms": 2.86
+        },
+        "stage": 1,
+        "stage_time": 145.03,
+        "state": "launch",
+        "t": 570.982
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": -1.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.13,
+        "freed": 0,
+        "ms": 46.81,
+        "phys_top": [
+          [
+            "self_play.gd",
+            2.26
+          ],
+          [
+            "Build",
+            0.9
+          ],
+          [
+            "World",
+            0.67
+          ],
+          [
+            "Combat",
+            0.3
+          ],
+          [
+            "Player",
+            0.3
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.22
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.94
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.46
+          ],
+          [
+            "Hud",
+            0.34
+          ],
+          [
+            "Presentation/Vfx",
+            0.22
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.15
+          ],
+          [
+            "self_play.gd",
+            0.09
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 7.21,
+          "post_proc_ms": 1.55,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 4.27,
+          "tick_max_ms": 2.64
+        },
+        "stage": 1,
+        "stage_time": 145.06,
+        "state": "launch",
+        "t": 571.029
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": -3.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.71,
+        "freed": 0,
+        "ms": 34.69,
+        "phys_top": [
+          [
+            "self_play.gd",
+            3.36
+          ],
+          [
+            "Build",
+            0.99
+          ],
+          [
+            "World",
+            0.82
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.49
+          ],
+          [
+            "Combat",
+            0.38
+          ],
+          [
+            "Player",
+            0.23
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.05
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.33
+          ],
+          [
+            "Hud",
+            0.26
+          ],
+          [
+            "Presentation/Vfx",
+            0.17
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.11
+          ],
+          [
+            "Presentation/SiteMarkers",
+            0.09
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 9.65,
+          "post_proc_ms": 1.02,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 2.93,
+          "tick_max_ms": 2.93
+        },
+        "stage": 1,
+        "stage_time": 145.11,
+        "state": "launch",
+        "t": 571.064
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": -1.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.9,
+        "freed": 0,
+        "ms": 28.53,
+        "phys_top": [
+          [
+            "self_play.gd",
+            2.64
+          ],
+          [
+            "Build",
+            0.87
+          ],
+          [
+            "World",
+            0.78
+          ],
+          [
+            "Combat",
+            0.36
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.26
+          ],
+          [
+            "Player",
+            0.22
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.4
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.36
+          ],
+          [
+            "Hud",
+            0.26
+          ],
+          [
+            "Presentation/Vfx",
+            0.26
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.11
+          ],
+          [
+            "self_play.gd",
+            0.07
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 8.42,
+          "post_proc_ms": 1.04,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 3.49,
+          "tick_max_ms": 2.97
+        },
+        "stage": 1,
+        "stage_time": 145.15,
+        "state": "launch",
+        "t": 571.092
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 0.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 6.35,
+        "freed": 0,
+        "ms": 25.68,
+        "phys_top": [
+          [
+            "self_play.gd",
+            0.88
+          ],
+          [
+            "Build",
+            0.28
+          ],
+          [
+            "World",
+            0.24
+          ],
+          [
+            "Combat",
+            0.11
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.08
+          ],
+          [
+            "Player",
+            0.07
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/WorkMachines",
+            5.54
+          ],
+          [
+            "Presentation/Audio",
+            0.89
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.47
+          ],
+          [
+            "Hud",
+            0.37
+          ],
+          [
+            "Presentation/Vfx",
+            0.15
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.11
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 2.72,
+          "post_proc_ms": 1.44,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 8.52,
+          "tick_max_ms": 2.72
+        },
+        "stage": 1,
+        "stage_time": 145.29,
+        "state": "launch",
+        "t": 571.234
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": -1.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.12,
+        "freed": 0,
+        "ms": 26.06,
+        "phys_top": [
+          [
+            "self_play.gd",
+            2.45
+          ],
+          [
+            "Build",
+            0.76
+          ],
+          [
+            "World",
+            0.68
+          ],
+          [
+            "Combat",
+            0.32
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.22
+          ],
+          [
+            "Player",
+            0.19
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            2.36
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.49
+          ],
+          [
+            "Presentation/Vfx",
+            0.46
+          ],
+          [
+            "Hud",
+            0.37
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.15
+          ],
+          [
+            "Presentation/LineView",
+            0.11
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 7.32,
+          "post_proc_ms": 1.69,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 5.27,
+          "tick_max_ms": 2.56
+        },
+        "stage": 1,
+        "stage_time": 145.32,
+        "state": "launch",
+        "t": 571.261
+      },
+      {
+        "added": 446,
+        "d_nodes": -974.0,
+        "d_objects": -1374.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          4.0
+        ],
+        "d_resources": -118.0,
+        "draw_ms": 6.94,
+        "freed": 1420,
+        "ms": 125.23,
+        "phys_top": [
+          [
+            "Build",
+            5.3
+          ],
+          [
+            "self_play.gd",
+            1.52
+          ],
+          [
+            "World",
+            1.09
+          ],
+          [
+            "Combat",
+            0.92
+          ],
+          [
+            "Player",
+            0.72
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.38
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            17.15
+          ],
+          [
+            "Presentation/Audio",
+            6.96
+          ],
+          [
+            "Stage1",
+            3.01
+          ],
+          [
+            "Presentation/SiteMarkers",
+            1.53
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            1.07
+          ],
+          [
+            "Hud",
+            0.81
+          ]
+        ],
+        "signals": [
+          {
+            "args": "[2, false]",
+            "f": 8433,
+            "handlers": [
+              [
+                "build.gd._on_stage_entered",
+                16.92
+              ],
+              [
+                "world.gd._on_stage_entered",
+                8.77
+              ],
+              [
+                "park_props.gd._stage_entered",
+                2.51
+              ],
+              [
+                "activities.gd._on_stage_entered",
+                2.08
+              ],
+              [
+                "set_dressing.gd._stage_entered",
+                1.99
+              ],
+              [
+                "ambient_life.gd._stage_entered",
+                1.26
+              ],
+              [
+                "work_machines.gd._stage_entered",
+                1.07
+              ],
+              [
+                "combat.gd._on_stage_entered",
+                0.54
+              ],
+              [
+                "bake_warm.gd._on_stage_entered",
+                0.44
+              ],
+              [
+                "world_fx.gd._on_stage_entered",
+                0.24
+              ],
+              [
+                "GDScript._on_stage_entered",
+                0.24
+              ],
+              [
+                "audio.gd._on_stage_entered",
+                0.19
+              ],
+              [
+                "fleet.gd.<anonymous lambda>",
+                0.12
+              ],
+              [
+                "vfx.gd.<anonymous lambda>",
+                0.1
+              ],
+              [
+                "GDScript._on_stage_entered",
+                0.1
+              ],
+              [
+                "self_play.gd._on_stage_entered",
+                0.09
+              ],
+              [
+                "machine_fx.gd.<anonymous lambda>",
+                0.09
+              ],
+              [
+                "stage_locks.gd._on_stage_entered",
+                0.09
+              ],
+              [
+                "radio_deck.gd.<anonymous lambda>",
+                0.07
+              ],
+              [
+                "codex.gd._on_stage_entered",
+                0.07
+              ],
+              [
+                "hud.gd._on_stage_entered",
+                0.04
+              ],
+              [
+                "rivet_kit.gd.<anonymous lambda>",
+                0.03
+              ],
+              [
+                "maker_bonuses.gd.<anonymous lambda>",
+                0.03
+              ],
+              [
+                "bot_driver.gd._on_stage_entered",
+                0.03
+              ],
+              [
+                "survey_posts.gd.<anonymous lambda>",
+                0.02
+              ],
+              [
+                "site_markers.gd._on_stage_entered",
+                0.02
+              ],
+              [
+                "vfx.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "player_fx.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "juice.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "boss.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "vfx.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "run_state.gd._on_stage_entered",
+                0.01
+              ],
+              [
+                "player_ball.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "player_ball.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "run_log.gd._on_stage_entered",
+                0.01
+              ],
+              [
+                "interact.gd._on_stage_entered",
+                0.01
+              ],
+              [
+                "bowl_approach.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "rescue_site.gd._on_stage_entered",
+                0.01
+              ],
+              [
+                "GDScript._on_stage_entered",
+                0.01
+              ],
+              [
+                "GDScript._on_stage_entered",
+                0.01
+              ],
+              [
+                "tarn_claw.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "moss_bubble.gd._on_stage_entered",
+                0.01
+              ],
+              [
+                "kest_kit.gd._on_stage_entered",
+                0.01
+              ],
+              [
+                "active_rack.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "workshop.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "why_callout.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "edge_markers.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "hero_assets.gd._warden_stage_entered",
+                0.0
+              ],
+              [
+                "handover_capture.gd._stage",
+                0.0
+              ],
+              [
+                "spillway_story.gd._on_stage_entered",
+                0.0
+              ],
+              [
+                "reward_ceremony.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "codex_banner.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "screen_busy.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "called_shot.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "combat.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "stakes.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "holds.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "run_moments.gd._on_stage_entered",
+                0.0
+              ],
+              [
+                "opening.gd._on_stage_entered",
+                0.0
+              ],
+              [
+                "player_ball.gd.<anonymous lambda>",
+                0.0
+              ]
+            ],
+            "signal": "stage_entered",
+            "total_ms": 37.35
+          }
+        ],
+        "sources": {
+          "AudioStreamPlayer3D": 3,
+          "CollisionShape3D": 23,
+          "MeshInstance3D": 326,
+          "MultiMeshInstance3D": 33,
+          "Node3D": 25,
+          "StaticBody3D": 12
+        },
+        "split": {
+          "phys_ms": 60.3,
+          "post_proc_ms": 1.47,
+          "pre_proc_ms": 0.12,
+          "proc_ms": 34.05,
+          "tick_max_ms": 51.96
+        },
+        "stage": 2,
+        "stage_time": 0.01,
+        "state": "stage",
+        "t": 571.495
+      },
+      {
+        "added": 62,
+        "d_nodes": -485.0,
+        "d_objects": -888.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 5.85,
+        "freed": 547,
+        "ms": 96.51,
+        "phys_top": [
+          [
+            "self_play.gd",
+            2.83
+          ],
+          [
+            "World",
+            1.69
+          ],
+          [
+            "Build",
+            1.43
+          ],
+          [
+            "Combat",
+            1.2
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            1.0
+          ],
+          [
+            "Player",
+            0.79
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            10.34
+          ],
+          [
+            "Presentation/ParkProps",
+            4.54
+          ],
+          [
+            "Stage1",
+            3.01
+          ],
+          [
+            "Presentation/AmbientLife",
+            1.05
+          ],
+          [
+            "Hud",
+            0.7
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.66
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "AnimationPlayer": 5,
+          "MeshInstance3D": 10,
+          "MultiMeshInstance3D": 20,
+          "Node3D": 12,
+          "PhysicalBoneSimulator3D": 5,
+          "Skeleton3D": 5
+        },
+        "split": {
+          "phys_ms": 24.11,
+          "post_proc_ms": 1.41,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 22.43,
+          "tick_max_ms": 4.1
+        },
+        "stage": 2,
+        "stage_time": 0.1,
+        "state": "stage",
+        "t": 571.592
+      },
+      {
+        "added": 32,
+        "d_nodes": -195.0,
+        "d_objects": -330.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": -32.0,
+        "draw_ms": 4.63,
+        "freed": 227,
+        "ms": 66.54,
+        "phys_top": [
+          [
+            "self_play.gd",
+            2.35
+          ],
+          [
+            "Build",
+            1.48
+          ],
+          [
+            "World",
+            1.45
+          ],
+          [
+            "Combat",
+            1.25
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.81
+          ],
+          [
+            "Player",
+            0.67
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            5.33
+          ],
+          [
+            "Presentation/ParkProps",
+            4.62
+          ],
+          [
+            "self_play.gd",
+            4.05
+          ],
+          [
+            "Stage1",
+            3.01
+          ],
+          [
+            "Hud",
+            0.55
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.38
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 1,
+          "MultiMeshInstance3D": 30,
+          "Node3D": 1
+        },
+        "split": {
+          "phys_ms": 20.27,
+          "post_proc_ms": 1.36,
+          "pre_proc_ms": 0.09,
+          "proc_ms": 19.8,
+          "tick_max_ms": 3.75
+        },
+        "stage": 2,
+        "stage_time": 0.19,
+        "state": "stage",
+        "t": 571.658
+      },
+      {
+        "added": 19,
+        "d_nodes": -329.0,
+        "d_objects": -700.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": -232.0,
+        "draw_ms": 3.52,
+        "freed": 348,
+        "ms": 51.97,
+        "phys_top": [
+          [
+            "self_play.gd",
+            1.69
+          ],
+          [
+            "World",
+            1.04
+          ],
+          [
+            "Combat",
+            0.86
+          ],
+          [
+            "Build",
+            0.81
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.55
+          ],
+          [
+            "Player",
+            0.49
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            5.49
+          ],
+          [
+            "Presentation/ParkProps",
+            4.88
+          ],
+          [
+            "Stage1",
+            3.02
+          ],
+          [
+            "Hud",
+            0.7
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.67
+          ],
+          [
+            "self_play.gd",
+            0.3
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 4,
+          "MultiMeshInstance3D": 14,
+          "Node3D": 1
+        },
+        "split": {
+          "phys_ms": 13.51,
+          "post_proc_ms": 0.69,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 17.44,
+          "tick_max_ms": 2.85
+        },
+        "stage": 2,
+        "stage_time": 0.26,
+        "state": "stage",
+        "t": 571.71
+      },
+      {
+        "added": 31,
+        "d_nodes": -252.0,
+        "d_objects": -534.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": -175.0,
+        "draw_ms": 4.91,
+        "freed": 283,
+        "ms": 52.6,
+        "phys_top": [
+          [
+            "self_play.gd",
+            1.09
+          ],
+          [
+            "World",
+            1.02
+          ],
+          [
+            "Build",
+            0.79
+          ],
+          [
+            "Combat",
+            0.67
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.49
+          ],
+          [
+            "Player",
+            0.39
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            5.66
+          ],
+          [
+            "Presentation/ParkProps",
+            4.55
+          ],
+          [
+            "Stage1",
+            3.03
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.62
+          ],
+          [
+            "Hud",
+            0.58
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.29
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 2,
+          "MultiMeshInstance3D": 27,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 11.91,
+          "post_proc_ms": 0.81,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 17.29,
+          "tick_max_ms": 4.25
+        },
+        "stage": 2,
+        "stage_time": 0.3,
+        "state": "stage",
+        "t": 571.763
+      },
+      {
+        "added": 27,
+        "d_nodes": -437.0,
+        "d_objects": -729.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": -30.0,
+        "draw_ms": 4.77,
+        "freed": 464,
+        "ms": 49.42,
+        "phys_top": [
+          [
+            "self_play.gd",
+            1.75
+          ],
+          [
+            "World",
+            1.15
+          ],
+          [
+            "Combat",
+            1.05
+          ],
+          [
+            "Build",
+            0.97
+          ],
+          [
+            "Activities",
+            0.6
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.59
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            4.65
+          ],
+          [
+            "Presentation/Audio",
+            4.34
+          ],
+          [
+            "Stage1",
+            1.67
+          ],
+          [
+            "Hud",
+            0.52
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.45
+          ],
+          [
+            "self_play.gd",
+            0.26
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 2,
+          "MultiMeshInstance3D": 23,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 15.44,
+          "post_proc_ms": 0.9,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 13.85,
+          "tick_max_ms": 4.43
+        },
+        "stage": 2,
+        "stage_time": 0.36,
+        "state": "stage",
+        "t": 571.812
+      },
+      {
+        "added": 33,
+        "d_nodes": -131.0,
+        "d_objects": -246.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.87,
+        "freed": 164,
+        "ms": 47.41,
+        "phys_top": [
+          [
+            "self_play.gd",
+            1.96
+          ],
+          [
+            "Combat",
+            1.52
+          ],
+          [
+            "Build",
+            1.24
+          ],
+          [
+            "World",
+            1.24
+          ],
+          [
+            "Activities",
+            0.71
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.68
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            4.67
+          ],
+          [
+            "Presentation/Audio",
+            4.26
+          ],
+          [
+            "Hud",
+            0.54
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.49
+          ],
+          [
+            "self_play.gd",
+            0.27
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.22
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 5,
+          "MultiMeshInstance3D": 26,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 17.3,
+          "post_proc_ms": 0.75,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 12.07,
+          "tick_max_ms": 4.54
+        },
+        "stage": 2,
+        "stage_time": 0.4,
+        "state": "stage",
+        "t": 571.86
+      },
+      {
+        "added": 19,
+        "d_nodes": -147.0,
+        "d_objects": -277.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.3,
+        "freed": 166,
+        "ms": 51.18,
+        "phys_top": [
+          [
+            "self_play.gd",
+            1.97
+          ],
+          [
+            "World",
+            0.92
+          ],
+          [
+            "Build",
+            0.84
+          ],
+          [
+            "Combat",
+            0.81
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.56
+          ],
+          [
+            "Activities",
+            0.48
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            7.11
+          ],
+          [
+            "Presentation/ParkProps",
+            5.09
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.97
+          ],
+          [
+            "Hud",
+            0.81
+          ],
+          [
+            "self_play.gd",
+            0.3
+          ],
+          [
+            "Presentation/Vfx",
+            0.25
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 4,
+          "MultiMeshInstance3D": 14,
+          "Node3D": 1
+        },
+        "split": {
+          "phys_ms": 14.07,
+          "post_proc_ms": 0.7,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 16.8,
+          "tick_max_ms": 4.17
+        },
+        "stage": 2,
+        "stage_time": 0.46,
+        "state": "stage",
+        "t": 571.911
+      },
+      {
+        "added": 30,
+        "d_nodes": -125.0,
+        "d_objects": -246.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": -15.0,
+        "draw_ms": 3.42,
+        "freed": 155,
+        "ms": 37.55,
+        "phys_top": [
+          [
+            "self_play.gd",
+            1.16
+          ],
+          [
+            "World",
+            0.68
+          ],
+          [
+            "Build",
+            0.61
+          ],
+          [
+            "Combat",
+            0.54
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.38
+          ],
+          [
+            "Player",
+            0.33
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            4.62
+          ],
+          [
+            "Presentation/Audio",
+            4.04
+          ],
+          [
+            "Hud",
+            0.51
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.41
+          ],
+          [
+            "self_play.gd",
+            0.26
+          ],
+          [
+            "Presentation/Vfx",
+            0.22
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 2,
+          "MultiMeshInstance3D": 26,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 9.22,
+          "post_proc_ms": 0.78,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 11.82,
+          "tick_max_ms": 2.71
+        },
+        "stage": 2,
+        "stage_time": 0.5,
+        "state": "stage",
+        "t": 571.949
+      },
+      {
+        "added": 21,
+        "d_nodes": -94.0,
+        "d_objects": -194.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": -12.0,
+        "draw_ms": 3.37,
+        "freed": 115,
+        "ms": 35.2,
+        "phys_top": [
+          [
+            "self_play.gd",
+            0.89
+          ],
+          [
+            "World",
+            0.65
+          ],
+          [
+            "Combat",
+            0.57
+          ],
+          [
+            "Build",
+            0.52
+          ],
+          [
+            "Player",
+            0.34
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.3
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            4.84
+          ],
+          [
+            "Presentation/Audio",
+            4.1
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.68
+          ],
+          [
+            "Hud",
+            0.68
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.34
+          ],
+          [
+            "self_play.gd",
+            0.32
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 4,
+          "MultiMeshInstance3D": 16,
+          "Node3D": 1
+        },
+        "split": {
+          "phys_ms": 8.72,
+          "post_proc_ms": 0.69,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 12.94,
+          "tick_max_ms": 3.56
+        },
+        "stage": 2,
+        "stage_time": 0.53,
+        "state": "stage",
+        "t": 571.984
+      },
+      {
+        "added": 12,
+        "d_nodes": -123.0,
+        "d_objects": -260.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": -24.0,
+        "draw_ms": 3.33,
+        "freed": 135,
+        "ms": 44.09,
+        "phys_top": [
+          [
+            "self_play.gd",
+            1.64
+          ],
+          [
+            "Combat",
+            0.96
+          ],
+          [
+            "World",
+            0.87
+          ],
+          [
+            "Build",
+            0.8
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.55
+          ],
+          [
+            "Activities",
+            0.48
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            5.04
+          ],
+          [
+            "Presentation/Audio",
+            4.75
+          ],
+          [
+            "Hud",
+            0.57
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.55
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.3
+          ],
+          [
+            "self_play.gd",
+            0.28
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 1,
+          "MultiMeshInstance3D": 10,
+          "Node3D": 1
+        },
+        "split": {
+          "phys_ms": 13.98,
+          "post_proc_ms": 0.77,
+          "pre_proc_ms": 0.01,
+          "proc_ms": 13.49,
+          "tick_max_ms": 4.42
+        },
+        "stage": 2,
+        "stage_time": 0.58,
+        "state": "stage",
+        "t": 572.028
+      },
+      {
+        "added": 31,
+        "d_nodes": -69.0,
+        "d_objects": -246.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": -123.0,
+        "draw_ms": 3.31,
+        "freed": 100,
+        "ms": 40.9,
+        "phys_top": [
+          [
+            "self_play.gd",
+            1.45
+          ],
+          [
+            "World",
+            0.97
+          ],
+          [
+            "Build",
+            0.93
+          ],
+          [
+            "Combat",
+            0.71
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.44
+          ],
+          [
+            "Player",
+            0.4
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            5.13
+          ],
+          [
+            "Presentation/ParkProps",
+            4.65
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.53
+          ],
+          [
+            "Hud",
+            0.48
+          ],
+          [
+            "self_play.gd",
+            0.25
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.23
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 5,
+          "MultiMeshInstance3D": 24,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 11.75,
+          "post_proc_ms": 0.74,
+          "pre_proc_ms": 0.1,
+          "proc_ms": 12.96,
+          "tick_max_ms": 3.21
+        },
+        "stage": 2,
+        "stage_time": 0.62,
+        "state": "stage",
+        "t": 572.069
+      },
+      {
+        "added": 34,
+        "d_nodes": 17.0,
+        "d_objects": -4.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": -36.0,
+        "draw_ms": 4.0,
+        "freed": 17,
+        "ms": 33.87,
+        "phys_top": [
+          [
+            "self_play.gd",
+            0.68
+          ],
+          [
+            "Build",
+            0.45
+          ],
+          [
+            "World",
+            0.45
+          ],
+          [
+            "Combat",
+            0.35
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.23
+          ],
+          [
+            "Player",
+            0.21
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            3.72
+          ],
+          [
+            "Presentation/Audio",
+            3.55
+          ],
+          [
+            "Hud",
+            0.48
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.39
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.31
+          ],
+          [
+            "Presentation/Vfx",
+            0.27
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 2,
+          "MultiMeshInstance3D": 30,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 5.92,
+          "post_proc_ms": 0.7,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 10.18,
+          "tick_max_ms": 2.5
+        },
+        "stage": 2,
+        "stage_time": 0.66,
+        "state": "stage",
+        "t": 572.103
+      },
+      {
+        "added": 35,
+        "d_nodes": 35.0,
+        "d_objects": 68.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.15,
+        "freed": 0,
+        "ms": 32.38,
+        "phys_top": [
+          [
+            "self_play.gd",
+            0.81
+          ],
+          [
+            "World",
+            0.57
+          ],
+          [
+            "Build",
+            0.46
+          ],
+          [
+            "Combat",
+            0.44
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.28
+          ],
+          [
+            "Activities",
+            0.26
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            3.94
+          ],
+          [
+            "Presentation/ParkProps",
+            3.04
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.48
+          ],
+          [
+            "Hud",
+            0.47
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.28
+          ],
+          [
+            "self_play.gd",
+            0.21
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 5,
+          "MultiMeshInstance3D": 28,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 7.37,
+          "post_proc_ms": 0.55,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 9.85,
+          "tick_max_ms": 3.61
+        },
+        "stage": 2,
+        "stage_time": 0.69,
+        "state": "stage",
+        "t": 572.135
+      },
+      {
+        "added": 24,
+        "d_nodes": 24.0,
+        "d_objects": 44.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.09,
+        "freed": 0,
+        "ms": 36.52,
+        "phys_top": [
+          [
+            "self_play.gd",
+            0.96
+          ],
+          [
+            "World",
+            0.72
+          ],
+          [
+            "Build",
+            0.55
+          ],
+          [
+            "Combat",
+            0.52
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.4
+          ],
+          [
+            "Player",
+            0.34
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            4.76
+          ],
+          [
+            "Presentation/ParkProps",
+            3.07
+          ],
+          [
+            "Hud",
+            0.91
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.55
+          ],
+          [
+            "self_play.gd",
+            0.34
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.27
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 5,
+          "MultiMeshInstance3D": 17,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 9.3,
+          "post_proc_ms": 0.92,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 12.15,
+          "tick_max_ms": 3.38
+        },
+        "stage": 2,
+        "stage_time": 0.72,
+        "state": "stage",
+        "t": 572.172
+      },
+      {
+        "added": 28,
+        "d_nodes": 28.0,
+        "d_objects": 55.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.42,
+        "freed": 0,
+        "ms": 41.84,
+        "phys_top": [
+          [
+            "self_play.gd",
+            1.58
+          ],
+          [
+            "Combat",
+            1.1
+          ],
+          [
+            "World",
+            0.91
+          ],
+          [
+            "Build",
+            0.81
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.48
+          ],
+          [
+            "Player",
+            0.44
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            5.05
+          ],
+          [
+            "Presentation/ParkProps",
+            3.09
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.66
+          ],
+          [
+            "Hud",
+            0.59
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.27
+          ],
+          [
+            "Presentation/Vfx",
+            0.23
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 4,
+          "MultiMeshInstance3D": 23,
+          "Node3D": 1
+        },
+        "split": {
+          "phys_ms": 12.64,
+          "post_proc_ms": 0.58,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 11.69,
+          "tick_max_ms": 3.44
+        },
+        "stage": 2,
+        "stage_time": 0.77,
+        "state": "stage",
+        "t": 572.213
+      },
+      {
+        "added": 24,
+        "d_nodes": 24.0,
+        "d_objects": 47.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.4,
+        "freed": 0,
+        "ms": 36.26,
+        "phys_top": [
+          [
+            "self_play.gd",
+            1.17
+          ],
+          [
+            "World",
+            0.64
+          ],
+          [
+            "Combat",
+            0.54
+          ],
+          [
+            "Build",
+            0.54
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.35
+          ],
+          [
+            "Player",
+            0.28
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            4.63
+          ],
+          [
+            "Presentation/ParkProps",
+            3.27
+          ],
+          [
+            "Hud",
+            0.94
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.78
+          ],
+          [
+            "self_play.gd",
+            0.45
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.29
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 1,
+          "MultiMeshInstance3D": 22,
+          "Node3D": 1
+        },
+        "split": {
+          "phys_ms": 8.72,
+          "post_proc_ms": 0.98,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 12.58,
+          "tick_max_ms": 3.54
+        },
+        "stage": 2,
+        "stage_time": 0.8,
+        "state": "stage",
+        "t": 572.25
+      },
+      {
+        "added": 18,
+        "d_nodes": 18.0,
+        "d_objects": 33.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.43,
+        "freed": 0,
+        "ms": 37.06,
+        "phys_top": [
+          [
+            "self_play.gd",
+            1.27
+          ],
+          [
+            "World",
+            0.6
+          ],
+          [
+            "Build",
+            0.57
+          ],
+          [
+            "Combat",
+            0.53
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.39
+          ],
+          [
+            "Player",
+            0.28
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            4.3
+          ],
+          [
+            "Presentation/ParkProps",
+            3.03
+          ],
+          [
+            "Hud",
+            0.81
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.52
+          ],
+          [
+            "self_play.gd",
+            0.42
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.36
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 1,
+          "MultiMeshInstance3D": 16,
+          "Node3D": 1
+        },
+        "split": {
+          "phys_ms": 9.36,
+          "post_proc_ms": 0.95,
+          "pre_proc_ms": 0.06,
+          "proc_ms": 11.49,
+          "tick_max_ms": 3.33
+        },
+        "stage": 2,
+        "stage_time": 0.83,
+        "state": "stage",
+        "t": 572.287
+      },
+      {
+        "added": 34,
+        "d_nodes": 6.0,
+        "d_objects": 35.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.86,
+        "freed": 28,
+        "ms": 38.06,
+        "phys_top": [
+          [
+            "self_play.gd",
+            0.9
+          ],
+          [
+            "Build",
+            0.68
+          ],
+          [
+            "World",
+            0.64
+          ],
+          [
+            "Combat",
+            0.54
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.32
+          ],
+          [
+            "Player",
+            0.31
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            5.52
+          ],
+          [
+            "Presentation/ParkProps",
+            3.27
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.61
+          ],
+          [
+            "Hud",
+            0.52
+          ],
+          [
+            "self_play.gd",
+            0.27
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.25
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 2,
+          "MultiMeshInstance3D": 30,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 8.83,
+          "post_proc_ms": 0.87,
+          "pre_proc_ms": 0.01,
+          "proc_ms": 12.38,
+          "tick_max_ms": 3.15
+        },
+        "stage": 2,
+        "stage_time": 0.88,
+        "state": "stage",
+        "t": 572.325
+      },
+      {
+        "added": 39,
+        "d_nodes": 39.0,
+        "d_objects": 71.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.94,
+        "freed": 0,
+        "ms": 37.35,
+        "phys_top": [
+          [
+            "Combat",
+            0.76
+          ],
+          [
+            "World",
+            0.73
+          ],
+          [
+            "Build",
+            0.59
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.33
+          ],
+          [
+            "Player",
+            0.3
+          ],
+          [
+            "self_play.gd",
+            0.3
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            5.1
+          ],
+          [
+            "Presentation/ParkProps",
+            3.08
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.91
+          ],
+          [
+            "Hud",
+            0.72
+          ],
+          [
+            "self_play.gd",
+            0.47
+          ],
+          [
+            "Presentation/Vfx",
+            0.28
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 5,
+          "MultiMeshInstance3D": 32,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 8.34,
+          "post_proc_ms": 0.74,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 12.63,
+          "tick_max_ms": 3.45
+        },
+        "stage": 2,
+        "stage_time": 0.91,
+        "state": "stage",
+        "t": 572.362
+      },
+      {
+        "added": 40,
+        "d_nodes": 40.0,
+        "d_objects": 72.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.44,
+        "freed": 0,
+        "ms": 41.34,
+        "phys_top": [
+          [
+            "Build",
+            0.93
+          ],
+          [
+            "World",
+            0.9
+          ],
+          [
+            "Combat",
+            0.79
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.54
+          ],
+          [
+            "Player",
+            0.47
+          ],
+          [
+            "Activities",
+            0.41
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            3.84
+          ],
+          [
+            "Presentation/Audio",
+            3.39
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            1.05
+          ],
+          [
+            "Hud",
+            0.81
+          ],
+          [
+            "self_play.gd",
+            0.43
+          ],
+          [
+            "Presentation/AmbientLife",
+            0.3
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 8,
+          "MultiMeshInstance3D": 30,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 12.64,
+          "post_proc_ms": 0.9,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 11.75,
+          "tick_max_ms": 3.65
+        },
+        "stage": 2,
+        "stage_time": 0.96,
+        "state": "stage",
+        "t": 572.403
+      },
+      {
+        "added": 18,
+        "d_nodes": 18.0,
+        "d_objects": 35.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.21,
+        "freed": 0,
+        "ms": 37.19,
+        "phys_top": [
+          [
+            "World",
+            0.6
+          ],
+          [
+            "Build",
+            0.52
+          ],
+          [
+            "Combat",
+            0.5
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.37
+          ],
+          [
+            "Player",
+            0.3
+          ],
+          [
+            "Activities",
+            0.28
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            4.77
+          ],
+          [
+            "Presentation/ParkProps",
+            3.68
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.82
+          ],
+          [
+            "Hud",
+            0.66
+          ],
+          [
+            "self_play.gd",
+            0.32
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.27
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 1,
+          "MultiMeshInstance3D": 16,
+          "Node3D": 1
+        },
+        "split": {
+          "phys_ms": 7.98,
+          "post_proc_ms": 0.65,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 12.83,
+          "tick_max_ms": 3.53
+        },
+        "stage": 2,
+        "stage_time": 0.99,
+        "state": "stage",
+        "t": 572.441
+      },
+      {
+        "added": 21,
+        "d_nodes": 20.0,
+        "d_objects": 39.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.16,
+        "freed": 1,
+        "ms": 38.35,
+        "phys_top": [
+          [
+            "Build",
+            0.64
+          ],
+          [
+            "World",
+            0.54
+          ],
+          [
+            "Combat",
+            0.45
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.33
+          ],
+          [
+            "Player",
+            0.25
+          ],
+          [
+            "Activities",
+            0.23
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            3.49
+          ],
+          [
+            "Presentation/Audio",
+            3.07
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            1.18
+          ],
+          [
+            "Hud",
+            0.9
+          ],
+          [
+            "self_play.gd",
+            0.45
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.4
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 4,
+          "MultiMeshInstance3D": 16,
+          "Node3D": 1
+        },
+        "split": {
+          "phys_ms": 7.72,
+          "post_proc_ms": 0.98,
+          "pre_proc_ms": 0.08,
+          "proc_ms": 11.81,
+          "tick_max_ms": 2.17
+        },
+        "stage": 2,
+        "stage_time": 1.03,
+        "state": "stage",
+        "t": 572.479
+      },
+      {
+        "added": 38,
+        "d_nodes": 38.0,
+        "d_objects": 70.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.78,
+        "freed": 0,
+        "ms": 31.95,
+        "phys_top": [
+          [
+            "World",
+            0.64
+          ],
+          [
+            "Build",
+            0.56
+          ],
+          [
+            "Combat",
+            0.54
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.35
+          ],
+          [
+            "Player",
+            0.33
+          ],
+          [
+            "Activities",
+            0.31
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            3.25
+          ],
+          [
+            "Presentation/ParkProps",
+            3.03
+          ],
+          [
+            "Hud",
+            0.48
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.39
+          ],
+          [
+            "self_play.gd",
+            0.25
+          ],
+          [
+            "Presentation/Vfx",
+            0.2
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 6,
+          "MultiMeshInstance3D": 30,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 8.11,
+          "post_proc_ms": 0.7,
+          "pre_proc_ms": 0.01,
+          "proc_ms": 9.31,
+          "tick_max_ms": 3.42
+        },
+        "stage": 2,
+        "stage_time": 1.07,
+        "state": "stage",
+        "t": 572.511
+      },
+      {
+        "added": 44,
+        "d_nodes": 44.0,
+        "d_objects": 90.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.28,
+        "freed": 0,
+        "ms": 27.17,
+        "phys_top": [
+          [
+            "Combat",
+            0.54
+          ],
+          [
+            "World",
+            0.47
+          ],
+          [
+            "Build",
+            0.41
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.25
+          ],
+          [
+            "self_play.gd",
+            0.23
+          ],
+          [
+            "Player",
+            0.21
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            3.03
+          ],
+          [
+            "Presentation/Audio",
+            2.05
+          ],
+          [
+            "World",
+            1.21
+          ],
+          [
+            "Hud",
+            0.4
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.4
+          ],
+          [
+            "self_play.gd",
+            0.2
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 2,
+          "MultiMeshInstance3D": 39,
+          "Node3D": 3
+        },
+        "split": {
+          "phys_ms": 5.85,
+          "post_proc_ms": 0.63,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 8.68,
+          "tick_max_ms": 2.26
+        },
+        "stage": 2,
+        "stage_time": 1.1,
+        "state": "stage",
+        "t": 572.538
+      },
+      {
+        "added": 25,
+        "d_nodes": 25.0,
+        "d_objects": 57.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.74,
+        "freed": 0,
+        "ms": 29.69,
+        "phys_top": [
+          [
+            "World",
+            0.45
+          ],
+          [
+            "Build",
+            0.39
+          ],
+          [
+            "Combat",
+            0.35
+          ],
+          [
+            "Activities",
+            0.2
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.19
+          ],
+          [
+            "Player",
+            0.17
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            3.61
+          ],
+          [
+            "Presentation/ParkProps",
+            3.34
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.9
+          ],
+          [
+            "Hud",
+            0.58
+          ],
+          [
+            "self_play.gd",
+            0.3
+          ],
+          [
+            "Presentation/Vfx",
+            0.22
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 1,
+          "MultiMeshInstance3D": 23,
+          "Node3D": 1
+        },
+        "split": {
+          "phys_ms": 4.8,
+          "post_proc_ms": 0.83,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 10.64,
+          "tick_max_ms": 2.94
+        },
+        "stage": 2,
+        "stage_time": 1.12,
+        "state": "stage",
+        "t": 572.568
+      },
+      {
+        "added": 21,
+        "d_nodes": 21.0,
+        "d_objects": 35.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.73,
+        "freed": 0,
+        "ms": 26.95,
+        "phys_top": [
+          [
+            "World",
+            0.41
+          ],
+          [
+            "Build",
+            0.34
+          ],
+          [
+            "Combat",
+            0.32
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.22
+          ],
+          [
+            "Player",
+            0.18
+          ],
+          [
+            "self_play.gd",
+            0.17
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            3.02
+          ],
+          [
+            "Presentation/Audio",
+            3.0
+          ],
+          [
+            "Hud",
+            0.52
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.51
+          ],
+          [
+            "self_play.gd",
+            0.25
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.25
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 2,
+          "MultiMeshInstance3D": 17,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 4.81,
+          "post_proc_ms": 0.76,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 9.35,
+          "tick_max_ms": 1.89
+        },
+        "stage": 2,
+        "stage_time": 1.16,
+        "state": "stage",
+        "t": 572.595
+      },
+      {
+        "added": 53,
+        "d_nodes": 53.0,
+        "d_objects": 96.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.26,
+        "freed": 0,
+        "ms": 26.42,
+        "phys_top": [
+          [
+            "Build",
+            0.42
+          ],
+          [
+            "Combat",
+            0.39
+          ],
+          [
+            "World",
+            0.36
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.25
+          ],
+          [
+            "self_play.gd",
+            0.19
+          ],
+          [
+            "Player",
+            0.16
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            3.02
+          ],
+          [
+            "Presentation/Audio",
+            2.19
+          ],
+          [
+            "Hud",
+            0.46
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.39
+          ],
+          [
+            "self_play.gd",
+            0.38
+          ],
+          [
+            "Hud/edge_markers.gd",
+            0.22
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 8,
+          "MultiMeshInstance3D": 43,
+          "Node3D": 2
+        },
+        "split": {
+          "phys_ms": 5.13,
+          "post_proc_ms": 0.85,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 8.54,
+          "tick_max_ms": 2.63
+        },
+        "stage": 2,
+        "stage_time": 1.18,
+        "state": "stage",
+        "t": 572.621
+      },
+      {
+        "added": 22,
+        "d_nodes": 22.0,
+        "d_objects": 45.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.89,
+        "freed": 0,
+        "ms": 28.43,
+        "phys_top": [
+          [
+            "World",
+            0.5
+          ],
+          [
+            "Build",
+            0.5
+          ],
+          [
+            "Combat",
+            0.44
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.27
+          ],
+          [
+            "Player",
+            0.24
+          ],
+          [
+            "self_play.gd",
+            0.23
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            3.38
+          ],
+          [
+            "Presentation/Audio",
+            2.65
+          ],
+          [
+            "Hud",
+            0.45
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.39
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.26
+          ],
+          [
+            "self_play.gd",
+            0.23
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 1,
+          "MultiMeshInstance3D": 20,
+          "Node3D": 1
+        },
+        "split": {
+          "phys_ms": 6.3,
+          "post_proc_ms": 0.55,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 8.76,
+          "tick_max_ms": 2.59
+        },
+        "stage": 2,
+        "stage_time": 1.21,
+        "state": "stage",
+        "t": 572.65
+      },
+      {
+        "added": 68,
+        "d_nodes": 68.0,
+        "d_objects": 121.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.89,
+        "freed": 0,
+        "ms": 27.78,
+        "phys_top": [
+          [
+            "World",
+            0.44
+          ],
+          [
+            "Build",
+            0.41
+          ],
+          [
+            "Combat",
+            0.4
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.28
+          ],
+          [
+            "Activities",
+            0.22
+          ],
+          [
+            "self_play.gd",
+            0.21
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            3.02
+          ],
+          [
+            "Presentation/Audio",
+            2.7
+          ],
+          [
+            "Hud",
+            0.42
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.24
+          ],
+          [
+            "self_play.gd",
+            0.18
+          ],
+          [
+            "Presentation/Vfx",
+            0.18
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 13,
+          "MultiMeshInstance3D": 51,
+          "Node3D": 4
+        },
+        "split": {
+          "phys_ms": 5.71,
+          "post_proc_ms": 0.52,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 8.19,
+          "tick_max_ms": 3.17
+        },
+        "stage": 2,
+        "stage_time": 1.23,
+        "state": "stage",
+        "t": 572.677
+      },
+      {
+        "added": 24,
+        "d_nodes": 24.0,
+        "d_objects": 46.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 6.3,
+        "freed": 0,
+        "ms": 30.25,
+        "phys_top": [
+          [
+            "World",
+            0.29
+          ],
+          [
+            "Build",
+            0.25
+          ],
+          [
+            "Combat",
+            0.2
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.13
+          ],
+          [
+            "self_play.gd",
+            0.13
+          ],
+          [
+            "Player",
+            0.12
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/ParkProps",
+            8.15
+          ],
+          [
+            "Presentation/Audio",
+            1.83
+          ],
+          [
+            "Hud",
+            0.42
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.28
+          ],
+          [
+            "Presentation/Vfx",
+            0.22
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.2
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MultiMeshInstance3D": 24
+        },
+        "split": {
+          "phys_ms": 3.36,
+          "post_proc_ms": 1.78,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 12.4,
+          "tick_max_ms": 1.79
+        },
+        "stage": 2,
+        "stage_time": 1.79,
+        "state": "stage",
+        "t": 573.232
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 3.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.31,
+        "freed": 0,
+        "ms": 27.31,
+        "phys_top": [
+          [
+            "World",
+            1.0
+          ],
+          [
+            "Combat",
+            0.5
+          ],
+          [
+            "Build",
+            0.35
+          ],
+          [
+            "Player",
+            0.24
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.2
+          ],
+          [
+            "Activities",
+            0.18
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            4.02
+          ],
+          [
+            "ChaseCamera",
+            0.47
+          ],
+          [
+            "Hud",
+            0.44
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.28
+          ],
+          [
+            "self_play.gd",
+            0.22
+          ],
+          [
+            "Presentation/Vfx",
+            0.21
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 7.16,
+          "post_proc_ms": 0.7,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 6.89,
+          "tick_max_ms": 3.56
+        },
+        "stage": 2,
+        "stage_time": 1.82,
+        "state": "stage",
+        "t": 573.259
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 6.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 12.29,
+        "freed": 0,
+        "ms": 33.18,
+        "phys_top": [
+          [
+            "World",
+            0.19
+          ],
+          [
+            "Build",
+            0.13
+          ],
+          [
+            "Combat",
+            0.12
+          ],
+          [
+            "Player",
+            0.08
+          ],
+          [
+            "self_play.gd",
+            0.07
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.07
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Juice",
+            7.39
+          ],
+          [
+            "Presentation/Audio",
+            1.25
+          ],
+          [
+            "RadioDeck",
+            1.23
+          ],
+          [
+            "Hud",
+            0.34
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.22
+          ],
+          [
+            "self_play.gd",
+            0.19
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 1.89,
+          "post_proc_ms": 0.6,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 11.87,
+          "tick_max_ms": 1.89
+        },
+        "stage": 2,
+        "stage_time": 1.99,
+        "state": "stage",
+        "t": 573.44
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": -3.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 4.26,
+        "freed": 0,
+        "ms": 31.37,
+        "phys_top": [
+          [
+            "Combat",
+            0.86
+          ],
+          [
+            "World",
+            0.62
+          ],
+          [
+            "Build",
+            0.43
+          ],
+          [
+            "Player",
+            0.24
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.24
+          ],
+          [
+            "self_play.gd",
+            0.23
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            3.03
+          ],
+          [
+            "Hud",
+            0.5
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.22
+          ],
+          [
+            "self_play.gd",
+            0.18
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.14
+          ],
+          [
+            "Presentation/Vfx",
+            0.14
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 8.83,
+          "post_proc_ms": 0.72,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 5.33,
+          "tick_max_ms": 4.49
+        },
+        "stage": 2,
+        "stage_time": 2.03,
+        "state": "stage",
+        "t": 573.472
+      },
+      {
+        "added": 82,
+        "d_nodes": 70.0,
+        "d_objects": 139.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          2.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 4.02,
+        "freed": 12,
+        "ms": 25.2,
+        "phys_top": [
+          [
+            "World",
+            3.72
+          ],
+          [
+            "self_play.gd",
+            0.45
+          ],
+          [
+            "Combat",
+            0.24
+          ],
+          [
+            "Build",
+            0.21
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.16
+          ],
+          [
+            "Player",
+            0.12
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.02
+          ],
+          [
+            "CodexBannerLayer/CodexBanner",
+            0.78
+          ],
+          [
+            "Hud",
+            0.32
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.24
+          ],
+          [
+            "self_play.gd",
+            0.17
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.14
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "CollisionShape3D": 5,
+          "MeshInstance3D": 46,
+          "Node3D": 17,
+          "res://src/combat/dispatcher.gd": 1,
+          "res://src/presentation/crew_lamp.gd": 2,
+          "res://src/presentation/enemy_clips.gd": 2
+        },
+        "split": {
+          "phys_ms": 6.91,
+          "post_proc_ms": 0.75,
+          "pre_proc_ms": 0.07,
+          "proc_ms": 3.68,
+          "tick_max_ms": 5.13
+        },
+        "stage": 2,
+        "stage_time": 5.02,
+        "state": "stage",
+        "t": 576.459
+      }
+    ]
+  },
+  "flume_to_bowl": {
+    "signal_s": 709.993965,
+    "diagnostic_max_ms": 36.735,
+    "entry_frame": [
+      {
+        "added": 212,
+        "d_nodes": -809.0,
+        "d_objects": -1248.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          2.0,
+          0.0,
+          24.0
+        ],
+        "d_resources": -6.0,
+        "draw_ms": 3.13,
+        "freed": 1021,
+        "ms": 36.73,
+        "phys_top": [
+          [
+            "Combat",
+            0.4
+          ],
+          [
+            "Boss",
+            0.4
+          ],
+          [
+            "Player",
+            0.39
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.18
+          ],
+          [
+            "self_play.gd",
+            0.08
+          ],
+          [
+            "Build",
+            0.08
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.74
+          ],
+          [
+            "Hud",
+            0.41
+          ],
+          [
+            "self_play.gd",
+            0.19
+          ],
+          [
+            "Presentation/Vfx",
+            0.14
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.12
+          ],
+          [
+            "Presentation/AmbientLife",
+            0.11
+          ]
+        ],
+        "signals": [
+          {
+            "args": "[\"arena\"]",
+            "f": 14722,
+            "handlers": [
+              [
+                "world.gd._on_stage_content_cleared",
+                3.23
+              ],
+              [
+                "park_props.gd._clear_stage",
+                0.99
+              ],
+              [
+                "build.gd._on_stage_content_cleared",
+                0.37
+              ],
+              [
+                "combat.gd._on_stage_content_cleared",
+                0.14
+              ],
+              [
+                "vfx.gd.<anonymous lambda>",
+                0.07
+              ],
+              [
+                "audio.gd.<anonymous lambda>",
+                0.06
+              ],
+              [
+                "machine_fx.gd.<anonymous lambda>",
+                0.05
+              ],
+              [
+                "activities.gd.<anonymous lambda>",
+                0.02
+              ],
+              [
+                "rivet_kit.gd.<anonymous lambda>",
+                0.02
+              ],
+              [
+                "active_rack.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "vfx.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "site_markers.gd._on_cleared",
+                0.01
+              ],
+              [
+                "presentation.gd._dismiss_banner",
+                0.01
+              ],
+              [
+                "work_machines.gd._stage_cleared",
+                0.01
+              ],
+              [
+                "player_ball.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "set_dressing.gd._clear_stage",
+                0.01
+              ],
+              [
+                "reward_ceremony.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "vfx.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "juice.gd._reset",
+                0.0
+              ],
+              [
+                "ambient_life.gd._clear_stage",
+                0.0
+              ],
+              [
+                "audio.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "screen_busy.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "maker_bonuses.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "combat.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "kest_kit.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "kest_kit.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "stakes.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "tarn_claw.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "holds.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "rescue_site.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "bowl_approach.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "survey_posts.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "interact.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "run_log.gd._on_stage_content_cleared",
+                0.0
+              ],
+              [
+                "codex.gd._on_stage_content_cleared",
+                0.0
+              ],
+              [
+                "player_ball.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "player_ball.gd.<anonymous lambda>",
+                0.0
+              ]
+            ],
+            "signal": "stage_content_cleared",
+            "total_ms": 5.04
+          }
+        ],
+        "sources": {
+          "AnimatableBody3D": 12,
+          "CollisionShape3D": 31,
+          "Label3D": 5,
+          "MeshInstance3D": 124,
+          "Node3D": 22,
+          "res://src/boss/boss_target.gd": 6
+        },
+        "split": {
+          "phys_ms": 14.22,
+          "post_proc_ms": 0.87,
+          "pre_proc_ms": 0.1,
+          "proc_ms": 3.55,
+          "tick_max_ms": 12.4
+        },
+        "stage": 2,
+        "stage_time": 0.01,
+        "state": "boss",
+        "t": 710.012
+      }
+    ],
+    "slow_frames_near_entry": [
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 2.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.19,
+        "freed": 0,
+        "ms": 25.58,
+        "phys_top": [
+          [
+            "self_play.gd",
+            5.81
+          ],
+          [
+            "World",
+            0.68
+          ],
+          [
+            "Combat",
+            0.47
+          ],
+          [
+            "Build",
+            0.33
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.17
+          ],
+          [
+            "Player",
+            0.14
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            0.76
+          ],
+          [
+            "Hud",
+            0.33
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.21
+          ],
+          [
+            "Presentation/Vfx",
+            0.14
+          ],
+          [
+            "self_play.gd",
+            0.13
+          ],
+          [
+            "Presentation/AmbientLife",
+            0.12
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 10.12,
+          "post_proc_ms": 1.05,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 2.74,
+          "tick_max_ms": 5.87
+        },
+        "stage": 2,
+        "stage_time": 136.36,
+        "state": "gates",
+        "t": 709.119
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 0.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.21,
+        "freed": 0,
+        "ms": 25.09,
+        "phys_top": [
+          [
+            "self_play.gd",
+            3.98
+          ],
+          [
+            "Combat",
+            0.98
+          ],
+          [
+            "World",
+            0.68
+          ],
+          [
+            "Build",
+            0.46
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.31
+          ],
+          [
+            "StageLocks",
+            0.16
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            0.87
+          ],
+          [
+            "Hud",
+            0.37
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.26
+          ],
+          [
+            "Presentation/Vfx",
+            0.19
+          ],
+          [
+            "self_play.gd",
+            0.16
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.16
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 9.09,
+          "post_proc_ms": 0.97,
+          "pre_proc_ms": 0.11,
+          "proc_ms": 3.07,
+          "tick_max_ms": 4.75
+        },
+        "stage": 2,
+        "stage_time": 136.38,
+        "state": "gates",
+        "t": 709.144
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": -1.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.48,
+        "freed": 0,
+        "ms": 28.58,
+        "phys_top": [
+          [
+            "self_play.gd",
+            4.9
+          ],
+          [
+            "World",
+            0.97
+          ],
+          [
+            "Combat",
+            0.76
+          ],
+          [
+            "Build",
+            0.47
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.22
+          ],
+          [
+            "Player",
+            0.2
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.0
+          ],
+          [
+            "Hud",
+            0.36
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.25
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.21
+          ],
+          [
+            "Presentation/Vfx",
+            0.2
+          ],
+          [
+            "self_play.gd",
+            0.15
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 11.13,
+          "post_proc_ms": 0.92,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 3.78,
+          "tick_max_ms": 4.2
+        },
+        "stage": 2,
+        "stage_time": 136.42,
+        "state": "gates",
+        "t": 709.173
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 1.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.86,
+        "freed": 0,
+        "ms": 28.25,
+        "phys_top": [
+          [
+            "self_play.gd",
+            5.14
+          ],
+          [
+            "World",
+            0.87
+          ],
+          [
+            "Combat",
+            0.58
+          ],
+          [
+            "Build",
+            0.45
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.22
+          ],
+          [
+            "Player",
+            0.18
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.14
+          ],
+          [
+            "Hud",
+            0.38
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.26
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.16
+          ],
+          [
+            "Presentation/Vfx",
+            0.14
+          ],
+          [
+            "self_play.gd",
+            0.14
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 10.71,
+          "post_proc_ms": 0.99,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 3.6,
+          "tick_max_ms": 4.11
+        },
+        "stage": 2,
+        "stage_time": 136.54,
+        "state": "gates",
+        "t": 709.293
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 0.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.63,
+        "freed": 0,
+        "ms": 26.0,
+        "phys_top": [
+          [
+            "self_play.gd",
+            3.68
+          ],
+          [
+            "World",
+            0.63
+          ],
+          [
+            "Combat",
+            0.56
+          ],
+          [
+            "Build",
+            0.33
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.16
+          ],
+          [
+            "Player",
+            0.13
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.0
+          ],
+          [
+            "Hud",
+            0.36
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.24
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.16
+          ],
+          [
+            "Presentation/Vfx",
+            0.15
+          ],
+          [
+            "self_play.gd",
+            0.13
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 7.97,
+          "post_proc_ms": 0.88,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 3.24,
+          "tick_max_ms": 4.36
+        },
+        "stage": 2,
+        "stage_time": 136.56,
+        "state": "gates",
+        "t": 709.319
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": -1.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.45,
+        "freed": 0,
+        "ms": 28.65,
+        "phys_top": [
+          [
+            "self_play.gd",
+            5.38
+          ],
+          [
+            "World",
+            0.79
+          ],
+          [
+            "Combat",
+            0.49
+          ],
+          [
+            "Build",
+            0.4
+          ],
+          [
+            "Player",
+            0.2
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.19
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            0.99
+          ],
+          [
+            "Hud",
+            0.37
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.24
+          ],
+          [
+            "Presentation/Vfx",
+            0.18
+          ],
+          [
+            "Presentation/AmbientLife",
+            0.17
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.17
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 10.61,
+          "post_proc_ms": 0.95,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 3.43,
+          "tick_max_ms": 4.11
+        },
+        "stage": 2,
+        "stage_time": 136.59,
+        "state": "gates",
+        "t": 709.348
+      },
+      {
+        "added": 8,
+        "d_nodes": -41.0,
+        "d_objects": -68.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.01,
+        "freed": 49,
+        "ms": 27.12,
+        "phys_top": [
+          [
+            "Build",
+            4.33
+          ],
+          [
+            "self_play.gd",
+            3.87
+          ],
+          [
+            "World",
+            0.56
+          ],
+          [
+            "Combat",
+            0.23
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.2
+          ],
+          [
+            "Player",
+            0.12
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            0.91
+          ],
+          [
+            "Hud",
+            0.36
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.27
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.21
+          ],
+          [
+            "WorldFx",
+            0.13
+          ],
+          [
+            "Presentation/Vfx",
+            0.12
+          ]
+        ],
+        "signals": [],
+        "sources": {
+          "MeshInstance3D": 4,
+          "Node3D": 4
+        },
+        "split": {
+          "phys_ms": 11.38,
+          "post_proc_ms": 0.69,
+          "pre_proc_ms": 0.13,
+          "proc_ms": 3.18,
+          "tick_max_ms": 7.7
+        },
+        "stage": 2,
+        "stage_time": 136.64,
+        "state": "launch",
+        "t": 709.398
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 1.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.85,
+        "freed": 0,
+        "ms": 29.58,
+        "phys_top": [
+          [
+            "self_play.gd",
+            4.99
+          ],
+          [
+            "World",
+            0.86
+          ],
+          [
+            "Build",
+            0.44
+          ],
+          [
+            "Combat",
+            0.37
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.24
+          ],
+          [
+            "Activities",
+            0.22
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.2
+          ],
+          [
+            "Hud",
+            0.36
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.25
+          ],
+          [
+            "Presentation/Vfx",
+            0.17
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.17
+          ],
+          [
+            "self_play.gd",
+            0.15
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 10.36,
+          "post_proc_ms": 0.74,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 3.57,
+          "tick_max_ms": 4.12
+        },
+        "stage": 2,
+        "stage_time": 136.67,
+        "state": "launch",
+        "t": 709.427
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": -1.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.36,
+        "freed": 0,
+        "ms": 25.15,
+        "phys_top": [
+          [
+            "self_play.gd",
+            5.32
+          ],
+          [
+            "World",
+            0.9
+          ],
+          [
+            "Combat",
+            0.47
+          ],
+          [
+            "Build",
+            0.46
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.24
+          ],
+          [
+            "Player",
+            0.2
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            0.78
+          ],
+          [
+            "Hud",
+            0.27
+          ],
+          [
+            "Presentation/TargetSetDressing",
+            0.19
+          ],
+          [
+            "Presentation/Vfx",
+            0.14
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.12
+          ],
+          [
+            "self_play.gd",
+            0.1
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 10.65,
+          "post_proc_ms": 0.52,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 2.42,
+          "tick_max_ms": 3.67
+        },
+        "stage": 2,
+        "stage_time": 136.75,
+        "state": "launch",
+        "t": 709.501
+      },
+      {
+        "added": 212,
+        "d_nodes": -809.0,
+        "d_objects": -1248.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          2.0,
+          0.0,
+          24.0
+        ],
+        "d_resources": -6.0,
+        "draw_ms": 3.13,
+        "freed": 1021,
+        "ms": 36.73,
+        "phys_top": [
+          [
+            "Combat",
+            0.4
+          ],
+          [
+            "Boss",
+            0.4
+          ],
+          [
+            "Player",
+            0.39
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.18
+          ],
+          [
+            "self_play.gd",
+            0.08
+          ],
+          [
+            "Build",
+            0.08
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.74
+          ],
+          [
+            "Hud",
+            0.41
+          ],
+          [
+            "self_play.gd",
+            0.19
+          ],
+          [
+            "Presentation/Vfx",
+            0.14
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.12
+          ],
+          [
+            "Presentation/AmbientLife",
+            0.11
+          ]
+        ],
+        "signals": [
+          {
+            "args": "[\"arena\"]",
+            "f": 14722,
+            "handlers": [
+              [
+                "world.gd._on_stage_content_cleared",
+                3.23
+              ],
+              [
+                "park_props.gd._clear_stage",
+                0.99
+              ],
+              [
+                "build.gd._on_stage_content_cleared",
+                0.37
+              ],
+              [
+                "combat.gd._on_stage_content_cleared",
+                0.14
+              ],
+              [
+                "vfx.gd.<anonymous lambda>",
+                0.07
+              ],
+              [
+                "audio.gd.<anonymous lambda>",
+                0.06
+              ],
+              [
+                "machine_fx.gd.<anonymous lambda>",
+                0.05
+              ],
+              [
+                "activities.gd.<anonymous lambda>",
+                0.02
+              ],
+              [
+                "rivet_kit.gd.<anonymous lambda>",
+                0.02
+              ],
+              [
+                "active_rack.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "vfx.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "site_markers.gd._on_cleared",
+                0.01
+              ],
+              [
+                "presentation.gd._dismiss_banner",
+                0.01
+              ],
+              [
+                "work_machines.gd._stage_cleared",
+                0.01
+              ],
+              [
+                "player_ball.gd.<anonymous lambda>",
+                0.01
+              ],
+              [
+                "set_dressing.gd._clear_stage",
+                0.01
+              ],
+              [
+                "reward_ceremony.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "vfx.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "juice.gd._reset",
+                0.0
+              ],
+              [
+                "ambient_life.gd._clear_stage",
+                0.0
+              ],
+              [
+                "audio.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "screen_busy.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "maker_bonuses.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "combat.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "kest_kit.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "kest_kit.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "stakes.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "tarn_claw.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "holds.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "rescue_site.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "bowl_approach.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "survey_posts.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "interact.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "run_log.gd._on_stage_content_cleared",
+                0.0
+              ],
+              [
+                "codex.gd._on_stage_content_cleared",
+                0.0
+              ],
+              [
+                "player_ball.gd.<anonymous lambda>",
+                0.0
+              ],
+              [
+                "player_ball.gd.<anonymous lambda>",
+                0.0
+              ]
+            ],
+            "signal": "stage_content_cleared",
+            "total_ms": 5.04
+          }
+        ],
+        "sources": {
+          "AnimatableBody3D": 12,
+          "CollisionShape3D": 31,
+          "Label3D": 5,
+          "MeshInstance3D": 124,
+          "Node3D": 22,
+          "res://src/boss/boss_target.gd": 6
+        },
+        "split": {
+          "phys_ms": 14.22,
+          "post_proc_ms": 0.87,
+          "pre_proc_ms": 0.1,
+          "proc_ms": 3.55,
+          "tick_max_ms": 12.4
+        },
+        "stage": 2,
+        "stage_time": 0.01,
+        "state": "boss",
+        "t": 710.012
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 0.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.29,
+        "freed": 0,
+        "ms": 25.97,
+        "phys_top": [
+          [
+            "Combat",
+            0.1
+          ],
+          [
+            "Boss",
+            0.09
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.06
+          ],
+          [
+            "Player",
+            0.05
+          ],
+          [
+            "self_play.gd",
+            0.04
+          ],
+          [
+            "Build",
+            0.03
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/FlourishPlayer",
+            9.36
+          ],
+          [
+            "Presentation/Audio",
+            0.87
+          ],
+          [
+            "Hud/edge_markers.gd",
+            0.8
+          ],
+          [
+            "Hud",
+            0.3
+          ],
+          [
+            "self_play.gd",
+            0.26
+          ],
+          [
+            "Presentation/Vfx",
+            0.17
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 1.13,
+          "post_proc_ms": 1.51,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 12.77,
+          "tick_max_ms": 1.13
+        },
+        "stage": 2,
+        "stage_time": 0.76,
+        "state": "boss",
+        "t": 710.757
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 1.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.75,
+        "freed": 0,
+        "ms": 28.69,
+        "phys_top": [
+          [
+            "Combat",
+            0.52
+          ],
+          [
+            "Boss",
+            0.21
+          ],
+          [
+            "Player",
+            0.16
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.16
+          ],
+          [
+            "self_play.gd",
+            0.1
+          ],
+          [
+            "Build",
+            0.09
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Vfx",
+            9.69
+          ],
+          [
+            "Presentation/Audio",
+            1.13
+          ],
+          [
+            "Hud",
+            0.31
+          ],
+          [
+            "self_play.gd",
+            0.21
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.19
+          ],
+          [
+            "CombatEffects",
+            0.1
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 3.08,
+          "post_proc_ms": 0.87,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 12.78,
+          "tick_max_ms": 1.64
+        },
+        "stage": 2,
+        "stage_time": 1.0,
+        "state": "boss",
+        "t": 711.005
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 10.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.41,
+        "freed": 0,
+        "ms": 31.87,
+        "phys_top": [
+          [
+            "Combat",
+            0.18
+          ],
+          [
+            "Boss",
+            0.11
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.07
+          ],
+          [
+            "self_play.gd",
+            0.06
+          ],
+          [
+            "Player",
+            0.06
+          ],
+          [
+            "Build",
+            0.05
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            16.18
+          ],
+          [
+            "Hud",
+            0.39
+          ],
+          [
+            "self_play.gd",
+            0.27
+          ],
+          [
+            "Presentation/Vfx",
+            0.23
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.16
+          ],
+          [
+            "Presentation/AmbientLife",
+            0.15
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 1.42,
+          "post_proc_ms": 1.24,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 18.52,
+          "tick_max_ms": 1.42
+        },
+        "stage": 2,
+        "stage_time": 1.46,
+        "state": "boss",
+        "t": 711.483
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 1.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.86,
+        "freed": 0,
+        "ms": 30.42,
+        "phys_top": [
+          [
+            "Boss",
+            0.69
+          ],
+          [
+            "Combat",
+            0.23
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.13
+          ],
+          [
+            "Player",
+            0.11
+          ],
+          [
+            "self_play.gd",
+            0.09
+          ],
+          [
+            "Build",
+            0.08
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.87
+          ],
+          [
+            "self_play.gd",
+            1.28
+          ],
+          [
+            "Hud",
+            0.3
+          ],
+          [
+            "Visual/Juice",
+            0.19
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.11
+          ],
+          [
+            "Presentation/Vfx",
+            0.09
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 2.86,
+          "post_proc_ms": 1.15,
+          "pre_proc_ms": 0.0,
+          "proc_ms": 4.71,
+          "tick_max_ms": 1.69
+        },
+        "stage": 2,
+        "stage_time": 3.47,
+        "state": "boss",
+        "t": 713.564
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 1.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 2.76,
+        "freed": 0,
+        "ms": 33.95,
+        "phys_top": [
+          [
+            "Boss",
+            6.6
+          ],
+          [
+            "Combat",
+            1.56
+          ],
+          [
+            "Launch/@MeshInstance3D@11949",
+            0.26
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.21
+          ],
+          [
+            "Build",
+            0.2
+          ],
+          [
+            "Player",
+            0.18
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            1.97
+          ],
+          [
+            "Hud",
+            0.3
+          ],
+          [
+            "self_play.gd",
+            0.18
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.13
+          ],
+          [
+            "Hud/edge_markers.gd",
+            0.09
+          ],
+          [
+            "Presentation/Vfx",
+            0.09
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 11.4,
+          "post_proc_ms": 0.94,
+          "pre_proc_ms": 0.12,
+          "proc_ms": 3.57,
+          "tick_max_ms": 7.56
+        },
+        "stage": 2,
+        "stage_time": 3.5,
+        "state": "boss",
+        "t": 713.598
+      },
+      {
+        "added": 0,
+        "d_nodes": 0.0,
+        "d_objects": 2.0,
+        "d_pipelines": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "d_resources": 0.0,
+        "draw_ms": 3.86,
+        "freed": 0,
+        "ms": 25.98,
+        "phys_top": [
+          [
+            "Combat",
+            2.53
+          ],
+          [
+            "Boss",
+            0.8
+          ],
+          [
+            "Hud/key_glyphs.gd",
+            0.17
+          ],
+          [
+            "Player",
+            0.12
+          ],
+          [
+            "self_play.gd",
+            0.1
+          ],
+          [
+            "Build",
+            0.1
+          ]
+        ],
+        "proc_top": [
+          [
+            "Presentation/Audio",
+            2.17
+          ],
+          [
+            "self_play.gd",
+            1.64
+          ],
+          [
+            "Hud",
+            0.37
+          ],
+          [
+            "Presentation/HeroAssets",
+            0.14
+          ],
+          [
+            "Player/Indicator",
+            0.13
+          ],
+          [
+            "Hud/edge_markers.gd",
+            0.11
+          ]
+        ],
+        "signals": [],
+        "sources": {},
+        "split": {
+          "phys_ms": 5.39,
+          "post_proc_ms": 1.84,
+          "pre_proc_ms": 0.12,
+          "proc_ms": 5.6,
+          "tick_max_ms": 3.55
+        },
+        "stage": 2,
+        "stage_time": 3.68,
+        "state": "boss",
+        "t": 713.8
+      }
+    ]
+  },
+  "watch": {
+    "samples": 16021,
+    "firstMs": 1795037523941,
+    "lastMs": 1795038324950,
+    "periodMs": 50,
+    "maxGapMs": 87,
+    "missed": 0,
+    "onScreen": 0,
+    "targetOnScreen": 0,
+    "frontmostChanges": 0
+  },
+  "launcher_exit": "DISPLAY_RUN_EXIT 0"
+}
