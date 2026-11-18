@@ -10,11 +10,16 @@ const Intent := preload("res://src/movement/intent.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const T := preload("res://tests/support/t.gd")
-const TOWERS := {
-	"flume_ride_pier_3": [50.0, 87.0], "flume_ride_pier_34": [50.0, 138.977],
-	"bluff_ride_pier_9": [28.0, 8.0], "bluff_ride_pier_19": [28.0, 8.0], "bluff_ride_pier_21": [28.0, 8.0],
-}
-const UNCHANGED := ["bluff_ride_pier_11", "bluff_ride_pier_13", "flume_ride_pier_25", "flume_head_reach", "flume_weir_reach"]
+const Footings := preload("res://src/world/park/footings.gd")
+const FLUME_ROWS := "res://src/world/park/park_flume.json"
+# The towers whose end hangs over a bank; every other row of the same recipes stands on its own.
+const FOOTED := ["flume_ride_pier_3", "flume_ride_pier_34", "bluff_ride_pier_9", "bluff_ride_pier_19", "bluff_ride_pier_21"]
+# A tower is crossed this far either side of its middle, beside its end footings.
+const CROSSING_Z_M := 3.0
+const CROSSING_HALF_M := 3.3
+const CLEAR_M := 0.05
+const CROSSING_SAMPLES := 8
+const CROSSING_STEP_M := 1.0
 const EPS := 0.015
 
 var _t := T.new("park_grapple_footing_test")
@@ -54,33 +59,50 @@ func _run() -> void:
 	var space := game.get_world_3d().direct_space_state
 	var stage: Node3D = terrain.geometry_root(2)
 	var ground: Callable = terrain.ground_callable(2)
-	for id: String in TOWERS:
-		_check_tower(_row(stage, id), space, ground, TOWERS[id])
-	for id: String in UNCHANGED:
+	var rows: Dictionary = {}
+	for row: Dictionary in JSON.parse_string(FileAccess.get_file_as_string(FLUME_ROWS))["park_rows"]:
+		rows[String(row["id"])] = row
+	var towers := 0
+	for id: String in rows:
+		var recipe := String(rows[id]["recipe"])
+		if not Footings.TABLE.has(recipe) or Footings.TABLE[recipe]["tiled"]:
+			continue
+		towers += 1
 		var node := _row(stage, id)
-		_t.check("%s keeps its own support" % id, node != null
-			and not node.has_node("GrappleFooting") and not node.has_node("Collider/GrappleFooting"))
-	await _check_underpass(_row(stage, "flume_ride_pier_3"), space, -16.8, 3.13, false)
-	await _check_underpass(_row(stage, "bluff_ride_pier_21"), space, -4.75, -3.13, true)
+		var footed := node != null and node.has_node("Footings") and node.has_node("Collider/Footings")
+		_t.check("%s %s" % [id, "has its footing" if id in FOOTED else "keeps its own support"], footed == (id in FOOTED))
+	_t.check("the flume's tower rows were found", towers > FOOTED.size())
+	var swept := 0
+	var open_crossings := 0
+	for id: String in FOOTED:
+		_check_tower(_row(stage, id), space, ground, rows[id])
+		var crossings: Array[int] = await _check_underpass(_row(stage, id), space, ground)
+		swept += crossings[0]
+		open_crossings += crossings[1]
+	_t.check("crossings beside the footings were swept, and some are open without them", swept > 0 and open_crossings > 0, "%d swept, %d open" % [swept, open_crossings])
 	game.free()
 	quit(_t.verdict())
+
+
+func _floor(ground: Callable, at: Vector3) -> float:
+	return (ground.call(at.x, at.z, 0.0) as Vector3).y
 
 
 func _row(stage: Node3D, id: String) -> Node3D:
 	return stage.find_child("Park_" + id, true, false) as Node3D
 
 
-func _check_tower(node: Node3D, space: PhysicsDirectSpaceState3D, ground: Callable, heights: Array) -> void:
+func _check_tower(node: Node3D, space: PhysicsDirectSpaceState3D, ground: Callable, row: Dictionary) -> void:
 	if not _t.check("the named tower is present", node != null):
 		return
 	var id := String(node.name)
 	var body := node.get_node("Collider") as StaticBody3D
-	var extra := body.get_node_or_null("GrappleFooting") as CollisionShape3D
-	var view := node.get_node_or_null("GrappleFooting") as MeshInstance3D
+	var extra := body.get_node_or_null("Footings") as CollisionShape3D
+	var view := node.get_node_or_null("Footings") as MeshInstance3D
 	if not _t.check(id + " has a matching drawn and solid footing", extra != null and view != null):
 		return
 	var bounds := view.mesh.get_aabb()
-	_t.check(id + " keeps the tower at its previous height", absf(node.global_position.y - float(heights[1])) < EPS)
+	_t.check(id + " keeps the tower on the ground at its own spot", absf(node.global_position.y - _floor(ground, node.global_position)) < EPS)
 	_t.check(id + " footing stays in the tower's footprint and below the grapple face",
 		bounds.position.x > -2.0 and bounds.end.x < 2.0 and bounds.position.z > -6.0 and bounds.end.z < 6.0
 		and bounds.end.y > 0.0 and bounds.end.y < 0.12, str(bounds))
@@ -103,7 +125,7 @@ func _check_tower(node: Node3D, space: PhysicsDirectSpaceState3D, ground: Callab
 	var drawn := _drawn_hit(view, from, to)
 	_t.check(id + " the footing's exposed side reads the same to sight and physics", ray.get("collider") == body
 		and drawn.is_finite() and drawn.distance_to(ray["position"]) < EPS, "ray %s draw %s" % [str(ray.get("position")), str(drawn)])
-	var aim := node.to_global(Vector3(2.0, float(heights[0]) * 0.70, 0.0))
+	var aim := node.to_global(Vector3(2.0, float(row["size"][1]) * 0.70, 0.0))
 	var eye := aim + node.global_basis.x * 8.0
 	var hit := Augments.grapple_target(space, eye, -node.global_basis.x, eye, 45.0, 0.0, Augments.WORLD_MASK, false)
 	_t.check(id + " the grapple still hits the authored side at the original height", hit.state != Augments.AIM_NONE
@@ -127,27 +149,49 @@ func _drawn_hit(view: MeshInstance3D, from: Vector3, to: Vector3) -> Vector3:
 	return closest
 
 
-func _check_underpass(tower: Node3D, space: PhysicsDirectSpaceState3D, height: float, z: float, open: bool) -> void:
-	if tower == null or not tower.has_node("Collider/GrappleFooting"):
-		return
-	var footing := tower.get_node("Collider/GrappleFooting") as CollisionShape3D
+# Crosses the tower on both sides of its middle, beside the end footings, with a ball at every height
+# from the lowest ground across it up to the tower's underside, with the footing off and on. The
+# footing must change none of those crossings. Returns [crossings swept, crossings the terrain leaves open].
+func _check_underpass(tower: Node3D, space: PhysicsDirectSpaceState3D, ground: Callable) -> Array[int]:
+	var footing := tower.get_node("Collider/Footings") as CollisionShape3D
 	var ball := SphereShape3D.new()
 	ball.radius = Tuning.RADIUS
-	var query := PhysicsShapeQueryParameters3D.new()
-	query.shape = ball
-	query.collision_mask = Augments.WORLD_MASK
-	query.transform = Transform3D(Basis.IDENTITY, tower.to_global(Vector3(3.3, height, z)))
-	query.motion = tower.global_basis * Vector3(-6.6, 0.0, 0.0)
-	var candidate := space.cast_motion(query)[0]
+	var queries: Array[PhysicsShapeQueryParameters3D] = []
+	for z: float in [-CROSSING_Z_M, CROSSING_Z_M]:
+		var from := tower.to_global(Vector3(CROSSING_HALF_M, 0.0, z))
+		var to := tower.to_global(Vector3(-CROSSING_HALF_M, 0.0, z))
+		var lowest := INF
+		for step in CROSSING_SAMPLES + 1:
+			lowest = minf(lowest, _floor(ground, from.lerp(to, float(step) / CROSSING_SAMPLES)))
+		var y := lowest + ball.radius + CLEAR_M
+		while y + ball.radius <= tower.global_position.y:
+			var query := PhysicsShapeQueryParameters3D.new()
+			query.shape = ball
+			query.collision_mask = Augments.WORLD_MASK
+			query.transform = Transform3D(Basis.IDENTITY, Vector3(from.x, y, from.z))
+			query.motion = to - from
+			queries.append(query)
+			y += CROSSING_STEP_M
+	var candidate: Array[float] = []
+	for query in queries:
+		candidate.append(space.cast_motion(query)[0])
 	footing.disabled = true
 	await physics_frame
 	await physics_frame
-	var stock := space.cast_motion(query)[0]
+	var stock: Array[float] = []
+	for query in queries:
+		stock.append(space.cast_motion(query)[0])
 	footing.disabled = false
-	var expected := stock >= 0.999 if open else stock > 0.8 and stock < 0.999
-	_t.check("%s keeps the same ball-size crossing beside its footing" % tower.name,
-		expected and absf(candidate - stock) < EPS,
-		"candidate %.4f stock %.4f" % [candidate, stock])
+	await physics_frame
+	await physics_frame
+	var open: Array[int] = []
+	var changed: Array[float] = []
+	for i in queries.size():
+		if stock[i] >= 0.999:
+			open.append(i)
+		if absf(candidate[i] - stock[i]) >= EPS:
+			changed.append(queries[i].transform.origin.y)
+	_t.check("%s footing leaves each of its %d crossings as the terrain has them" % [tower.name, queries.size()], changed.is_empty(), "changed at y %s" % [changed])
 	var wall := StaticBody3D.new()
 	wall.collision_layer = Augments.WORLD_MASK
 	var shape := CollisionShape3D.new()
@@ -159,5 +203,10 @@ func _check_underpass(tower: Node3D, space: PhysicsDirectSpaceState3D, height: f
 	tower.add_child(wall)
 	await physics_frame
 	await physics_frame
-	_t.check("control: filling the full tower footprint obstructs the same crossing", space.cast_motion(query)[0] < stock - 0.2)
+	var passed := 0
+	for i in open:
+		if space.cast_motion(queries[i])[0] < stock[i] - 0.2:
+			passed += 1
+	_t.check("control: filling the full tower footprint obstructs every open crossing of %s" % tower.name, passed == open.size(), "%d of %d" % [passed, open.size()])
 	wall.free()
+	return [queries.size(), open.size()]

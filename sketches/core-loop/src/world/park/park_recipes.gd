@@ -40,7 +40,6 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const Stamps := preload("res://src/world/park/park_stamps.gd")
-const GrappleFooting := preload("res://src/world/park/grapple_footing.gd")
 const LandmarkProxy := preload("res://src/presentation/landmark_proxy.gd")
 const LandmarkBeam := preload("res://src/presentation/landmark_beam.gd")
 const WardenMind := preload("res://src/combat/warden_mind.gd")
@@ -849,21 +848,6 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 				view.position.y += float(f[2])
 				_range(view, 0.0, base_end, float(r.get("base_margin", 0.0)))
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	if not baked and not (parts.get("base", []) as Array).is_empty():
-		var footing := GrappleFooting.fit(row, node.transform * at_origin, ground)
-		if footing != null:
-			var view := MeshInstance3D.new()
-			view.name = "GrappleFooting"
-			view.mesh = footing
-			view.transform = at_origin
-			view.set_meta(RecipeProps.META_FADE, true)
-			_range(view, 0.0, base_end, float(r.get("base_margin", 0.0)))
-			node.add_child(view)
-			var shape := CollisionShape3D.new()
-			shape.name = "GrappleFooting"
-			shape.shape = footing.create_trimesh_shape()
-			shape.transform = at_origin
-			body.add_child(shape)
 	var shell_ranges: Array = r.get("shells", [])
 	var shells: Array = parts.get("shells", [])
 	for k in shells.size():
