@@ -138,7 +138,7 @@ export function gradeFairness(read, head) {
   const f1Bad = pools.filter(f1Fails);
   // F1 judged only where it carries a mark: what the plant must be seen to move.
   const f1Marked = pools.filter((p) => p.shareMarked);
-  const f2Bad = pools.filter((p) => p.stopTax == null || f2TaxUnder(p));
+  const f2Bad = pools.filter((p) => (p.stopTax == null && p.pooledStopTax == null) || f2TaxUnder(p));
   const f3 = pools.filter((p) => p.column === "learner1");
   const f3Bad = f3.filter((p) => p.firstHitS == null || p.firstHitS < FAIRNESS.firstHitS - 1e-9);
   const checks = {
@@ -147,11 +147,24 @@ export function gradeFairness(read, head) {
     F2: f2Bad.length === 0,
     F3: f3Bad.length === 0,
   };
-  const f1Why = (p) => (p.telegraphShare == null ? "not measured" : !p.shareMarked ? `unknown hull ${pct(p.unknownShare)}` : `${pct(p.telegraphShare)}, kills shown ${p.killsShown}/${p.kills + p.killsOther}`);
+  // Which reading missed is named: the hull share, the pooled share (hull and scrap together), or the unknown loss.
+  const f1Why = (p) => {
+    if (p.telegraphShare == null) return "not measured";
+    if (!p.shareMarked) return `unknown ${pct(p.unknownShare)} of hull${p.pooledUnknownShare != null && p.pooledUnknownShare > FAIRNESS.unknownMaxShare ? `, ${pct(p.pooledUnknownShare)} of hull and scrap` : ""}`;
+    const line = FAIRNESS.telegraphShare - 1e-9;
+    const missed = [p.telegraphShare < line ? `hull ${pct(p.telegraphShare)}` : "", p.pooledShare != null && p.pooledShare < line ? `hull and scrap ${pct(p.pooledShare)}` : ""].filter(Boolean);
+    return `${missed.length ? `${missed.join(", ")} under the line` : pct(p.telegraphShare)}, kills shown ${p.killsShown}/${p.kills + p.killsOther}`;
+  };
+  const f2Why = (p) => {
+    if (p.stopTax == null && p.pooledStopTax == null) return `not measured (${p.stopTaxNote})`;
+    const line = FAIRNESS.stopTax - 1e-9;
+    const missed = [p.stopTax != null && p.stopTax < line ? `hull ${p.stopTax.toFixed(2)}` : "", p.pooledStopTax != null && p.pooledStopTax < line ? `hull and scrap ${p.pooledStopTax.toFixed(2)}` : ""].filter(Boolean);
+    return missed.length ? `${missed.join(", ")} under the line` : (p.stopTax ?? p.pooledStopTax).toFixed(2);
+  };
   const say = (name, all, bad, show) => (bad.length ? `${name} misses in ${bad.length} of ${all.length} pools (${bad.slice(0, 3).map(show).join(", ")})` : `${name} holds in ${all.length} pools`);
   const parts = [
     say("F1", pools, f1Bad, (p) => `${p.key} ${f1Why(p)}`),
-    say("F2", pools, f2Bad, (p) => `${p.key} ${p.stopTax == null ? `not measured (${p.stopTaxNote})` : p.stopTax.toFixed(2)}`),
+    say("F2", pools, f2Bad, (p) => `${p.key} ${f2Why(p)}`),
     say("F3", f3, f3Bad, (p) => `${p.key} ${p.firstHitS == null ? "not measured" : fmt(p.firstHitS) + " s"}`),
     `n ${Math.min(...counts.map((c) => c.n))} to ${Math.max(...counts.map((c) => c.n))} a pool over ${pools.length} pools`,
   ];
@@ -303,8 +316,9 @@ export function gradeBowlStopTax(read, head) {
   const pools = columns.map((column) => ({ column, key: `brindle ${column}`, ...fairnessPool(sel.runs.filter((r) => r.column === column)) }));
   const unmeasured = thinMeasured(pools);
   if (unmeasured) return { pass: false, measured: `Slag Bowl stop tax: ${unmeasured}`, checks: { tax: false } };
-  const bad = pools.filter((p) => p.stopTax == null || f2TaxUnder(p));
-  const show = (p) => `${p.column} ${p.stopTax == null ? `no data (${p.stopTaxNote})` : p.stopTax.toFixed(2)}`;
+  const bad = pools.filter((p) => (p.stopTax == null && p.pooledStopTax == null) || f2TaxUnder(p));
+  // The reading shown is the one that missed: the hull ratio, or the pooled one (hull and scrap together) when it is the lower.
+  const show = (p) => `${p.column} ${p.stopTax == null && p.pooledStopTax == null ? `no data (${p.stopTaxNote})` : f2TaxUnder(p) && p.pooledStopTax != null && (p.stopTax == null || p.pooledStopTax < p.stopTax) ? `${p.pooledStopTax.toFixed(2)} with scrap` : (p.stopTax ?? p.pooledStopTax).toFixed(2)}`;
   const text = `Slag Bowl stop tax, line ${FAIRNESS.stopTax.toFixed(1)}: ${pools.map(show).join(", ")}${bad.length ? `; under the line: ${bad.map((p) => p.column).join(", ")}` : ""} (${counts.map((c) => c.text).join(", ")})`;
   return { pass: bad.length === 0, measured: text, checks: { tax: bad.length === 0 } };
 }

@@ -617,12 +617,15 @@ export function fairnessPool(runs) {
   const unt = bucketed.reduce((a, r) => a + r.untelegraphed, 0);
   const hull = { telegraphed: tel, untelegraphed: unt, contact: sum("contact"), unknown: sum("unknown") };
   const scrap = { telegraphed: sum("scrapTel"), untelegraphed: sum("scrapUntel"), contact: sum("scrapContact"), unknown: sum("scrapUnknown") };
-  const whole = hull.telegraphed + hull.untelegraphed + hull.contact + hull.unknown + scrap.telegraphed + scrap.untelegraphed + scrap.contact + scrap.unknown;
+  const hullWhole = hull.telegraphed + hull.untelegraphed + hull.contact + hull.unknown;
+  const whole = hullWhole + scrap.telegraphed + scrap.untelegraphed + scrap.contact + scrap.unknown;
   out.hull = hull;
   out.scrap = scrap;
-  // Unknown and contact are read over hull and scrap together: a scrap point counts as a hull point.
-  out.unknownShare = whole > 0 ? (hull.unknown + scrap.unknown) / whole : null;
-  out.contactShare = whole > 0 ? (hull.contact + scrap.contact) / whole : null;
+  // Unknown and contact read over hull as they always did, and unknown again over hull and scrap together (a scrap point counts
+  // as a hull point). Scrap must not dilute the unknown hull, so F1's mark drops when either unknown share is over the line.
+  out.unknownShare = hullWhole > 0 ? hull.unknown / hullWhole : null;
+  out.pooledUnknownShare = whole > 0 ? (hull.unknown + scrap.unknown) / whole : null;
+  out.contactShare = hullWhole > 0 ? hull.contact / hullWhole : null;
   // F1 is two readings and fails when either is under its line (ruling cu, harder never easier): the hull share as it always
   // read, and the pooled share with scrap taken through lose_scrap counted a point for a point.
   out.telegraphShare = tel + unt > 0 ? tel / (tel + unt) : null;
@@ -630,7 +633,7 @@ export function fairnessPool(runs) {
   const punt = unt + scrap.untelegraphed;
   out.pooledShare = ptel + punt > 0 ? ptel / (ptel + punt) : null;
   // F1 carries no mark while the loss it could not match is over the line.
-  out.shareMarked = (out.telegraphShare != null || out.pooledShare != null) && !(out.unknownShare != null && out.unknownShare > FAIRNESS.unknownMaxShare);
+  out.shareMarked = (out.telegraphShare != null || out.pooledShare != null) && !(out.unknownShare != null && out.unknownShare > FAIRNESS.unknownMaxShare) && !(out.pooledUnknownShare != null && out.pooledUnknownShare > FAIRNESS.unknownMaxShare);
   const kills = rows.map((r) => r.killing).filter((b) => b === "telegraphed" || b === "untelegraphed");
   out.kills = kills.length;
   out.killsShown = kills.filter((b) => b === "telegraphed").length;
@@ -646,7 +649,8 @@ export function fairnessPool(runs) {
   // The same ratio with scrap taken beside hull, a point for a point. F2 fails when either ratio is under its line.
   const slowP = slowH + tax.reduce((a, r) => a + r.slowScrap, 0);
   const fastP = fastH + tax.reduce((a, r) => a + r.fastScrap, 0);
-  out.pooledStopTax = !out.stopTaxNote && fastP > 0 ? slowP / slowS / (fastP / fastS) : null;
+  // Measured whenever there was time on both sides and loss at cruise, even when the hull alone had none (the recorder's rule).
+  out.pooledStopTax = tax.length && slowS > 0 && fastS > 0 && fastP > 0 ? slowP / slowS / (fastP / fastS) : null;
   out.fastShare = slowS + fastS > 0 ? fastS / (slowS + fastS) : null;
   // F3: one reading per stage and for the boss that a pack was met in. A segment with no hit is the best case and reads as
   // infinitely late, so it can move the median; one a hit itself opened has no pack-to-hit time and is counted apart.
@@ -697,8 +701,8 @@ export function renderFairness(fair) {
     const scrapShown = fmt(p.scrap.telegraphed + p.scrap.untelegraphed);
     const anyScrap = p.scrap.telegraphed + p.scrap.untelegraphed + p.scrap.contact + p.scrap.unknown > 0;
     const pooled = p.pooledShare == null || !anyScrap ? "" : ` (hull and scrap together ${pct(p.pooledShare)} of ${fmt(p.hull.telegraphed + p.hull.untelegraphed + p.scrap.telegraphed + p.scrap.untelegraphed)} lost, ${scrapShown} of it scrap)`;
-    const f1 = p.telegraphShare == null && p.pooledShare == null ? "F1 not measured" : `F1 ${p.telegraphShare == null ? "-" : pct(p.telegraphShare)} of ${fmt(p.hull.telegraphed + p.hull.untelegraphed)} hull shown${pooled}${p.shareMarked ? mark(!f1ShareUnder(p)) : ` (no mark: unknown ${anyScrap ? "hull and scrap" : "hull"} over the line)`}, killing hits shown ${p.kills ? `${p.killsShown} of ${p.kills}${p.shareMarked ? mark(p.killsShown === p.kills) : ""}` : "none counted"}${p.killsOther ? ` (${p.killsOther} killed by contact or unknown)` : ""}; contact ${fmt(p.hull.contact)} hull${anyScrap ? ` and ${fmt(p.scrap.contact)} scrap` : ""}, unknown ${fmt(p.hull.unknown)} hull${anyScrap ? ` and ${fmt(p.scrap.unknown)} scrap` : ""} (${p.unknownShare == null ? "-" : pct(p.unknownShare)} of ${anyScrap ? "hull and scrap lost" : "hull"})`;
-    const f2 = p.stopTax == null ? `F2 not measured (${p.stopTaxNote})` : `F2 stop tax ${p.stopTax.toFixed(2)}${p.pooledStopTax != null && p.pooledStopTax !== p.stopTax ? ` (hull and scrap together ${p.pooledStopTax.toFixed(2)})` : ""}${mark(!f2TaxUnder(p))}, ${pct(p.fastShare)} of time at cruise`;
+    const f1 = p.telegraphShare == null && p.pooledShare == null ? "F1 not measured" : `F1 ${p.telegraphShare == null ? "-" : pct(p.telegraphShare)} of ${fmt(p.hull.telegraphed + p.hull.untelegraphed)} hull shown${pooled}${p.shareMarked ? mark(!f1ShareUnder(p)) : ` (no mark: unknown ${anyScrap ? "hull and scrap" : "hull"} over the line)`}, killing hits shown ${p.kills ? `${p.killsShown} of ${p.kills}${p.shareMarked ? mark(p.killsShown === p.kills) : ""}` : "none counted"}${p.killsOther ? ` (${p.killsOther} killed by contact or unknown)` : ""}; contact ${fmt(p.hull.contact)} hull${anyScrap ? ` and ${fmt(p.scrap.contact)} scrap` : ""}, unknown ${fmt(p.hull.unknown)} hull${anyScrap ? ` and ${fmt(p.scrap.unknown)} scrap` : ""} (${p.unknownShare == null ? "-" : pct(p.unknownShare)} of hull${anyScrap ? `, ${p.pooledUnknownShare == null ? "-" : pct(p.pooledUnknownShare)} of hull and scrap lost` : ""})`;
+    const f2 = p.stopTax == null && p.pooledStopTax == null ? `F2 not measured (${p.stopTaxNote})` : `F2 stop tax ${p.stopTax == null ? "-" : p.stopTax.toFixed(2)}${p.pooledStopTax != null && p.pooledStopTax !== p.stopTax ? ` (hull and scrap together ${p.pooledStopTax.toFixed(2)})` : ""}${mark(!f2TaxUnder(p))}, ${pct(p.fastShare)} of time at cruise`;
     // An infinite median means at least half the readings took no hit: exactly half on an even split, over half otherwise.
     const noHitPart = p.noHit * 2 === p.firstHitN ? "no hit in half" : "no hit in over half";
     const f3 = p.firstHitS == null ? `F3 not measured (${p.openedByHit} opened by a hit)` : `F3 first hit ${Number.isFinite(p.firstHitS) ? fmt(p.firstHitS) + " s" : noHitPart} median over ${p.firstHitN} stage readings${mark(p.firstHitS >= FAIRNESS.firstHitS - 1e-9)}, ${p.noHit} of ${p.firstHitN} took no hit${p.openedByHit ? `, ${p.openedByHit} opened by a hit` : ""}`;

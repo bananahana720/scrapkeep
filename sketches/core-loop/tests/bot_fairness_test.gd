@@ -16,6 +16,8 @@ const T := preload("res://tests/support/t.gd")
 # Part 2, live: one seed on stage 1 (novice, which loses hull both moving and stopped), played unplanted and once per plant.
 # Unplanted, every number is measured and on the passing side. Each plant moves its own number under the line and leaves the
 # other two readings inside a stated tolerance of the unplanted run, so a plant proves its own reading and not the plumbing.
+# The scrap plant is the exception: a theft changes the ball's heft and so the whole run's hull path, which moves the one-seed
+# hull F2 past its tolerance, so F2 is not held for it; its split of slow and fast loss is checked by sums instead.
 # A null is "not measured" and never a passing control.
 #
 # Run it by hand after any change under tools/bot_* or to the classifier (it is on the weekly list).
@@ -217,7 +219,12 @@ func _scrap(f: Dictionary, f1: float, f2: float, f3: float) -> void:
 	_t.check("F1's pooled share drops below the line with the scrap theft planted", pooled != null and float(pooled) < float(_line["telegraphShare"]), "pooled %s" % [pooled])
 	_t.check("F1's pooled share reads below unplanted", pooled != null and float(pooled) < f1, "planted %s, unplanted %s" % [pooled, f1])
 	_t.check("the planted theft is in the scrap record", float(f.get("scrap_sources", {}).get("scrap_plant", 0.0)) > 0.0, "scrap_sources %s" % [f.get("scrap_sources")])
-	# F2 is not held for this plant: a theft changes the ball's heft, so the whole run's hull path moves and the one-seed hull F2
-	# swings past its 50% tolerance (0.594 unplanted, 1.50 with 20 scrap taken). That is the one-seed instability the ledger
-	# row for this test already names, so a check on it would read the seed and not the plumbing. F1's hull share and F3 are held.
+	# Seed-independent sums in place of an F2 hold: every point stolen is in the slow or the fast total once, and every hull
+	# point lost is too. (F2 itself is not held: the theft changes the ball's heft, so the one-seed hull F2 swings, 0.594
+	# unplanted against 1.50 with 20 scrap taken, the instability the ledger row for this test names.) F1's hull share and F3 are held.
+	var planted := float(f.get("scrap_sources", {}).get("scrap_plant", 0.0))
+	var split := float(f.get("slow_scrap", -1.0)) + float(f.get("fast_scrap", -1.0))
+	_t.check("slow and fast scrap sum to the scrap stolen", absf(split - planted) <= 0.15, "slow %s + fast %s, stolen %s" % [f.get("slow_scrap"), f.get("fast_scrap"), planted])
+	var hull_split := float(f.get("slow_hull", -1.0)) + float(f.get("fast_hull", -1.0))
+	_t.check("slow and fast hull sum to hull_lost", absf(hull_split - float(f.get("hull_lost", -2.0))) <= 0.15, "slow %s + fast %s, lost %s" % [f.get("slow_hull"), f.get("fast_hull"), f.get("hull_lost")])
 	_others("scrap", f, f1, f2, f3, "F2")

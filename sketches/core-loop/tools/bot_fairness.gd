@@ -210,7 +210,10 @@ func loss(cause: String, amount: float) -> void:
 		_fast_scrap += amount
 	else:
 		_slow_scrap += amount
-	_note_first_hit()
+	# A theft counts as a first hit only once a pack has been met: one before contact must not open the segment (that would drop
+	# the stage from F3's median and hide a later fast ambush).
+	if _segment != "" and _segments[_segment]["contact_s"] != null:
+		_note_first_hit()
 
 
 # The bucket for one hit. `now` and `before` are _scan() rows (this tick's read and the last tick's, because a telegraph can

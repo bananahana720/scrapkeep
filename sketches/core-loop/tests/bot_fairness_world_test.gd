@@ -62,11 +62,16 @@ func _fixture(row: Dictionary) -> Array:
 
 
 # Plays the fixture for up to `ticks`, the ball at `ball`, handing each new theft to a recorder. mover(clock, w) may move the ball.
-func _play(row: Dictionary, ball: Vector3, ticks: int, mover := Callable()) -> Dictionary:
+func _play(row: Dictionary, ball: Vector3, ticks: int, mover := Callable(), enemy_at := Vector3.INF) -> Dictionary:
 	var fx := _fixture(row)
 	var w = fx[0]
 	var handler = fx[1]
 	w.ctx.player.at = ball
+	if enemy_at != Vector3.INF:
+		var e := H.Enemy.new()
+		w.add_child(e)
+		e.add_to_group("enemy")
+		e.global_position = enemy_at
 	var game := FairGame.new()
 	game.player = w.ctx.player
 	root.add_child(game)
@@ -102,6 +107,7 @@ func _run() -> void:
 	_storm("a sought strike under its full ring", false)
 	_storm("a sought strike under a ring with no tell (storm_seek no_tell plant)", true)
 	_flood()
+	_first_hit()
 	quit(_t.verdict())
 
 
@@ -121,6 +127,7 @@ func _storm(label: String, no_tell: bool) -> void:
 	_t.check("%s: its scrap reads %s" % [label, want], float(scrap[want]) > 0.0 and float(scrap[other]) == 0.0, str(scrap))
 	_t.check("%s: pooled share %s the line" % [label, "under" if no_tell else "on"], (float(read.record.pooled_share) < float(BotFairness.config()["telegraphShare"])) == no_tell, str(read.record.get("pooled_share")))
 	_t.check("%s: no hull was lost, so the hull share stays unmeasured" % label, read.record.telegraph_share == null)
+	_t.check("%s: the parked ball's thefts land in the slow scrap" % label, float(read.record.slow_scrap) > 0.0 and float(read.record.fast_scrap) == 0.0, "slow %s, fast %s" % [read.record.slow_scrap, read.record.fast_scrap])
 
 
 func _flood() -> void:
@@ -140,3 +147,16 @@ func _flood() -> void:
 		return
 	var scrap: Dictionary = read.record.scrap
 	_t.check("flood: the tax under water that has stood reads telegraphed", float(scrap.telegraphed) > 0.0 and float(scrap.untelegraphed) == 0.0, str(scrap))
+
+
+# F3: a theft before any pack has been met changes nothing (it must not open the stage as a hit-opened contact and so drop it
+# from the median); a theft after contact is the stage's first hit, so it pulls first_hit_s earlier.
+func _first_hit() -> void:
+	HazardHits.plants.clear()
+	var alone := _play(H.DOME, Vector3(30, 1.2, 0), 400)
+	var seg = alone.record.first_hit.get("s1")
+	_t.check("first hit: thefts happened with no pack met", alone.losses.size() > 0)
+	_t.check("first hit: a theft before contact opens nothing", seg != null and not seg.contact and not seg.hit and not seg.opened_by_hit, str(seg))
+	var met := _play(H.DOME, Vector3(30, 1.2, 0), 400, Callable(), Vector3(45, 0, 0))
+	var seg2 = met.record.first_hit.get("s1")
+	_t.check("first hit: after contact the first theft is the first hit, later than contact", seg2 != null and seg2.contact and seg2.hit and not seg2.opened_by_hit and seg2.first_hit_s != null and float(seg2.first_hit_s) > 0.0, str(seg2))

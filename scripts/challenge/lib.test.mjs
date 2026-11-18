@@ -646,3 +646,26 @@ test("F2 reads scrap lost beside hull and fails when either ratio is under the l
   assert.ok(fairnessFails(rec(60)).includes("F2"));
   assert.equal(rec(60).stopTax, 8);
 });
+
+test("telegraphed scrap cannot dilute unknown hull into F1's mark (ruling cu)", () => {
+  // 57 telegraphed hull and 4 unknown hull is 6.6% unknown, unmarked. 30 telegraphed scrap would read 4.4% pooled; the hull
+  // reading still says unmarked, and the mark drops when either is over the line.
+  const hullOnly = fairnessPool([fake("w1", "expert", { hull: hullOf(57, 0, 0, 4), first_hit: {} })]);
+  const withScrap = fairnessPool([fake("w1", "expert", { hull: hullOf(57, 0, 0, 4), scrap: scrapOf(30, 0), first_hit: {} })]);
+  assert.equal(hullOnly.shareMarked, false);
+  assert.ok(withScrap.pooledUnknownShare < FAIRNESS.unknownMaxShare && withScrap.unknownShare > FAIRNESS.unknownMaxShare);
+  assert.equal(withScrap.shareMarked, false);
+  // and unknown scrap alone drops the mark too
+  const scrapUnknown = fairnessPool([fake("w1", "expert", { hull: hullOf(57, 0), scrap: scrapOf(0, 0, 0, 10), first_hit: {} })]);
+  assert.equal(scrapUnknown.shareMarked, false);
+});
+
+test("F2 is measured when only scrap was lost at cruise, and fails on either ratio", () => {
+  const rec = { hull: hullOf(10, 0), slow_s: 30, fast_s: 60, slow_hull: 20, fast_hull: 0, slow_scrap: 0, fast_scrap: 30, first_hit: { s1: seg(true, 8) }, killing_hit: null };
+  const p = fairnessPool([fake("w1", "expert", rec)]);
+  assert.equal(p.stopTax, null);
+  assert.equal(p.pooledStopTax, (20 / 30) / (30 / 60));
+  assert.ok(!fairnessFails(p).includes("F2") || p.pooledStopTax < FAIRNESS.stopTax);
+  const bad = fairnessPool([fake("w1", "expert", { ...rec, fast_scrap: 300 })]);
+  assert.ok(fairnessFails(bad).includes("F2"));
+});
