@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-verify-formal
-description: "Check by model the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals), with a TLA+ model kept beside this skill, and check by a second model that an earned reward is banked once and never lost through crashes, failed saves and two games on one profile. Use when a change touches flow.gd, launch_take.gd or the launch swipe calls in game.gd, or profile.gd, safe_store.gd, run_store.gd or the settle and grant calls in progress.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check the run flow; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
+description: "Check by model the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals), with a TLA+ model kept beside this skill, and check by a second model that an earned reward is banked once and never lost through crashes, failed saves and two games on one profile, and by a third that a park flood never holds full water under the ball. Use when a change touches the park event step in event_director.gd, flow.gd, launch_take.gd or the launch swipe calls in game.gd, or profile.gd, safe_store.gd, run_store.gd or the settle and grant calls in progress.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check the run flow; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
 ---
 
 # Check the run flow against its model
@@ -87,7 +87,7 @@ Run it with `bash $F/models/make-rewards-configs.sh`, then each `rewards-*.cfg` 
 
 ## The hazard model
 
-A third model, `models/HazardCycle.tla`, checks a storm's sought strike in the Spillway (W44): `sketches/core-loop/src/world/events/storm_seek.gd`, stepped by `sketches/core-loop/src/world/events/natural.gd`, and the enemies it strikes through `sketches/core-loop/src/world/events/hazard_hits.gd`. One tick at a time the ball and one enemy go anywhere, the ball rolls, slows or stalls, a storm breaks or runs down, and the hazard goes idle, tell, strike, cool. Its rules:
+A further model, `models/HazardCycle.tla`, checks a storm's sought strike in the Spillway (W44): `sketches/core-loop/src/world/events/storm_seek.gd`, stepped by `sketches/core-loop/src/world/events/natural.gd`, and the enemies it strikes through `sketches/core-loop/src/world/events/hazard_hits.gd`. One tick at a time the ball and one enemy go anywhere, the ball rolls, slows or stalls, a storm breaks or runs down, and the hazard goes idle, tell, strike, cool. Its rules:
 
 | Rule | The promise | What breaks for the player |
 | --- | --- | --- |
@@ -98,6 +98,18 @@ A third model, `models/HazardCycle.tla`, checks a storm's sought strike in the S
 | `BallOnlyWhereTold` | The ball is hit only inside the told ring, so a ball that rolls off escapes. | A dodge that worked still costs scrap. |
 
 Run it with `bash $F/models/make-hazard-configs.sh`, then each `hazard-*.cfg` as in "Run it". `hazard-today` must report no break; each `hazard-broken-*` must break the rule its line in the script names. `node scripts/gate/model-receipts.mjs --row hazards-hit-everyone --out <dir>` writes its receipt. [references/hazard-coverage.md](references/hazard-coverage.md) has the code behind each step and what is not modelled.
+
+## The flood model
+
+A third model, `models/ParkFlood.tla`, checks a park flood from its announcement to its end in `sketches/core-loop/src/world/event_director.gd` (`_park_step_live`, `_park_capacity`, `_park_can_end`), with the ball free to roll into or out of any basin between any two ticks. Its rules:
+
+- **FullWaterNeverHeld.** While its live time runs, water that has risen for its whole fill time is stepped on every tick, ball or no ball.
+- **FullWaterFreesItsSlot.** Full water with no live time stops counting against the ground cap.
+- **NeverRisesUnderBall** and **NeverEndsUnderBall.** Water neither rises nor ends while a grounded ball is in its basin.
+- **WithinCap.** No more unsettled ground events are live than the cap allows.
+- **FloodEnds** and **AnnouncedLands.** Once the ball stays out, every live flood ends and every announced one lands.
+
+Run `bash $F/models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg` with `ParkFlood.tla`. [references/flood-coverage.md](references/flood-coverage.md) maps each step and guard to the code and lists what each config must report, and [references/flood-findings.md](references/flood-findings.md) holds the findings, one of them an open design question. `node scripts/gate/model-receipts.mjs --out <dir> --row flood-never-held` writes its receipt.
 
 ## Lessons and updates
 

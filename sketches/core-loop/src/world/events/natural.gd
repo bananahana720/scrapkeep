@@ -11,8 +11,6 @@ const EventDirector := preload("res://src/world/event_director.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
-const Flood := preload("res://src/world/flood.gd")
-const FloodCycle := preload("res://src/world/flood_cycle.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
@@ -76,30 +74,29 @@ static var _plans := {}
 static var _marks_job := {}
 
 
-class WaterClock:
-	extends FloodCycle
-	var metres := 0.0
-	func depth(_full: float) -> float:
-		return metres
-	func klaxon() -> bool:
-		return false
-
-
+# A local rise has its own projected surface and foam. The basin's klaxon mast and light
+# belong to the stage flood and never signal a local event.
 class WaterView:
-	extends Flood
+	extends Node3D
 	var site := {}
 	var geometry := {}
 	var surface: WaterSurface
 	var query_xz := Vector2.ZERO
+	var depth_m := 0.0
+	var _plane: MeshInstance3D
+	func setup(projected: WaterSurface) -> void:
+		surface = projected
+		_plane = MeshInstance3D.new()
+		_plane.mesh = projected.mesh
+		_plane.material_override = Palette.water(Palette.water_tone())
+		add_child(_plane)
 	func in_basin(point: Vector3) -> bool:
 		query_xz = Vector2(point.x, point.z)
 		return visible and ParkMap.footprint_contains(geometry.site, query_xz, 0.0, Vector2.INF, geometry.half)
 	func surface_y() -> float:
-		return surface.height(query_xz) + cycle.metres
+		return surface.height(query_xz) + depth_m
 	func render() -> void:
-		_plane.position = Vector3.UP * cycle.metres
-	func external_accel(_point: Vector3, _velocity: Vector3) -> Vector3:
-		return Vector3.ZERO
+		_plane.position = Vector3.UP * depth_m
 
 
 
@@ -419,7 +416,7 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 				var fraction := clampf(elapsed / fill_s, 0.0, 1.0) if fill_s > 0.0 else 1.0
 				var depth := minf(ParkSchema.MAX_EVENT_WATER_M, maxf(0.0, float(row.effect.get("depth_m", 0.0))))
 				state.depth_m = lerpf(float(state.start_depth_m), 0.0 if row.kind == "drain" else depth, fraction)
-				state.water.cycle.metres = state.depth_m
+				state.water.depth_m = state.depth_m
 				state.water.render()
 				_ride_foam(state, 1.0 - fraction if row.kind != "drain" else 0.0)
 			if row.kind in ["collapse", "cave_in"]:
@@ -503,26 +500,17 @@ static func _at(terrain, site: Dictionary) -> Vector3:
 func _land_water(row: Dictionary, state: Dictionary) -> void:
 	var water := WaterView.new()
 	add_child(water)
-	water.setup()
+	water.setup(state.water_surface)
 	water.site = state.site
 	water.geometry = state.geometry
-	water.cycle = WaterClock.new()
 	var depth := minf(ParkSchema.MAX_EVENT_WATER_M, maxf(0.0, float(row.effect.get("depth_m", 0.0))))
 	state.start_depth_m = depth if row.kind == "drain" else 0.0
 	for existing in _water_field.surfaces:
 		if existing.site.id == state.site.id and existing.visible:
-			state.start_depth_m = existing.cycle.metres
+			state.start_depth_m = existing.depth_m
 	state.depth_m = state.start_depth_m
-	water.cycle.metres = state.depth_m
-	var half: Vector2 = state.geometry.half
-	var centre := Vector2(state.at.x, state.at.z)
-	water.configure({"centre": centre, "radius": half.length(), "plane_centre": centre,
-		"plane_size": half * 2.0, "depth": depth}, state.at.y, state.at)
-	water.surface = state.water_surface
-	water.query_xz = centre
-	water._plane.mesh = water.surface.mesh
-	water._mast.visible = false
-	water._lamp_mesh.visible = false
+	water.depth_m = state.depth_m
+	water.query_xz = Vector2(state.at.x, state.at.z)
 	water.render()
 	state.water = water
 	if FOAM_PARKS.has(String(_original_map.park.get("map", ""))):
@@ -563,9 +551,9 @@ static func _ride_foam(state: Dictionary, churn: float) -> void:
 	for a: Node3D in state.get("foam", []):
 		var xz := Vector2(a.position.x, a.position.z)
 		var floor_y: float = water.surface.height(xz)
-		a.visible = floor_y > -INF and float(water.cycle.metres) > FOAM_DRY_M
+		a.visible = floor_y > -INF and float(water.depth_m) > FOAM_DRY_M
 		if a.visible:
-			a.position.y = floor_y + water.cycle.metres + 0.05
+			a.position.y = floor_y + water.depth_m + 0.05
 		a.set_level(lerpf(0.35, 1.0, clampf(churn, 0.0, 1.0)))
 
 
