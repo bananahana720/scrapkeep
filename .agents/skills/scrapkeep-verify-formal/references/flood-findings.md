@@ -20,7 +20,7 @@ Each finding is a break the model found that replayed on the real game. A closed
 
 **What happens.** Rising water waits under a grounded ball, with no limit. The flood's live time keeps running meanwhile. When the ball at last rolls out after the live time is up, the flood ends on the next tick without ever having risen.
 
-**Harm.** Stopping in the basin is the safe move: it cancels the flood. AGENTS.md rule 9 says hardness presses a ball that slows or stops. Here a stopped ball is the one thing the water will not touch. The wait is deliberate (it keeps water from rising onto a rider with no warning, and `park_events_test.gd` checks it), so this is a question for Andrew, not a slip: should rising water wait under a ball only for a bounded time, or only for a ball that is moving?
+**Harm.** Stopping in the basin is the safe move: it cancels the flood. AGENTS.md rule 9 says hardness presses a ball that slows or stops. Here a stopped ball is the one thing the water will not touch. The wait is deliberate (it keeps water from rising onto a rider with no warning, and `sketches/core-loop/tests/park_events_test.gd` checks it), so this is a question for Andrew, not a slip: should rising water wait under a ball only for a bounded time, or only for a ball that is moving?
 
 **Model.** `flood-parked` breaks `RiseFinishes`.
 
