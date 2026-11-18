@@ -1,0 +1,98 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRAPKEEP_MENU_READY ms=6937 profile=default pilots=1/6 stages=6
+[a cottonwood collides as a hull (Prop_cottonwood)] ():<ConvexPolygonShape3D#-9223371448914008641> -> PASS
+[Prop_cottonwood: hull reaches SOLID_TOP_M and no higher (4.00 m)]  -> PASS
+[Prop_cottonwood: above the root flare the hull is the trunk (widest 0.89 m from its axis, want < 1.2)]  -> PASS
+[a cottonwood collides as a hull (@Node3D@1444)] ():<ConvexPolygonShape3D#-9223371447320173113> -> PASS
+[@Node3D@1444: hull reaches SOLID_TOP_M and no higher (4.00 m)]  -> PASS
+[@Node3D@1444: above the root flare the hull is the trunk (widest 0.89 m from its axis, want < 1.2)]  -> PASS
+[a cottonwood collides as a hull (@Node3D@1446)] ():<ConvexPolygonShape3D#-9223371445743114800> -> PASS
+[@Node3D@1446: hull reaches SOLID_TOP_M and no higher (4.00 m)]  -> PASS
+[@Node3D@1446: above the root flare the hull is the trunk (widest 0.89 m from its axis, want < 1.2)]  -> PASS
+[a cottonwood collides as a hull (@Node3D@1448)] ():<ConvexPolygonShape3D#-9223371444166056488> -> PASS
+[@Node3D@1448: hull reaches SOLID_TOP_M and no higher (4.00 m)]  -> PASS
+[@Node3D@1448: above the root flare the hull is the trunk (widest 0.89 m from its axis, want < 1.2)]  -> PASS
+[a cottonwood collides as a hull (@Node3D@1450)] ():<ConvexPolygonShape3D#-9223371442588998176> -> PASS
+[@Node3D@1450: hull reaches SOLID_TOP_M and no higher (4.00 m)]  -> PASS
+[@Node3D@1450: above the root flare the hull is the trunk (widest 0.89 m from its axis, want < 1.2)]  -> PASS
+[a cottonwood collides as a hull (@Node3D@1452)] ():<ConvexPolygonShape3D#-9223371440995162647> -> PASS
+[@Node3D@1452: hull reaches SOLID_TOP_M and no higher (4.00 m)]  -> PASS
+[@Node3D@1452: above the root flare the hull is the trunk (widest 0.89 m from its axis, want < 1.2)]  -> PASS
+[six cottonwoods checked] got 6, want 6 -> PASS
+[the jukebox cabinet stays solid to its top (2.60 m, cabinet 2.6 m)]  -> PASS
+[hoodoo a at size 10 splits its upper column (3 bands)]  -> PASS
+[its neck band is under half the widest band's footprint (12.3 of 41.0 m2)]  -> PASS
+[one hull per band] got 5, want 5 -> PASS
+[one connected patch, one distant patch and one different owner] got 3, want 3 -> PASS
+[the connected patch spans its three samples] got {
+"owner": "A",
+"position": [0.0, 2.0, 0.0],
+"samples": 3,
+"size": [2.0, 0.0, 0.0]
+}, want {
+"owner": "A",
+"position": [0.0, 2.0, 0.0],
+"samples": 3,
+"size": [2.0, 0.0, 0.0]
+} -> PASS
+[the distant patch is the single sample at x=6] got {
+"owner": "A",
+"position": [6.0, 2.0, 0.0],
+"samples": 1,
+"size": [0.0, 0.0, 0.0]
+}, want {
+"owner": "A",
+"position": [6.0, 2.0, 0.0],
+"samples": 1,
+"size": [0.0, 0.0, 0.0]
+} -> PASS
+[the other owner keeps its coincident sample] got "B", want "B" -> PASS
+[the wall fixture creates its own report directory] OK -> PASS
+[wall fixture wrote its report] 0 -> PASS
+[the sweep sampled all three physical walls]  -> PASS
+[the matching wall has no undrawn place] got 1, want 0 -> FAIL
+[the 0.4 m miss with a mesh within 1.5 m is one place] got 1, want 1 -> PASS
+[the planted invisible wall is one place] got 1, want 1 -> PASS
+[the inventory accounts for every bare sample] got 2937, want 2937 -> PASS
+[only the missing meshes have no geometry within 1.5 m] got 1959, want 1959 -> PASS
+[the filtered sweep has its own report]  -> PASS
+[filtered report records its owner filter] got ["--owner=Park_QAWall_Near"], want ["--owner=Park_QAWall_Near"] -> PASS
+[filtered report covers one collider] got 1, want 1 -> PASS
+[the full map report survives a filtered sweep]  -> PASS
+RECEIPT {"bare_samples":2937,"invisible_samples":1959.0,"places_by_owner":{"Park_QAWall_Matched":1,"Park_QAWall_Missing":1,"Park_QAWall_Near":1}}
+[each visibility control creates a fresh directory] OK -> PASS
+[visibility control wrote its own report --layer-zero-wall] 0 -> PASS
+[visibility control measured places --layer-zero-wall]  -> PASS
+[rider-hidden mesh counts as a third place --layer-zero-wall] got ["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"], want ["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"] -> PASS
+[same collider samples in both visibility readings] got 2937, want 2937 -> PASS
+[remove fixture report wall_fixture-s1.json] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1-owners.json] got 0, want 0 -> PASS
+[remove the empty wall fixture directory] got 0, want 0 -> PASS
+[each visibility control creates a fresh directory] OK -> PASS
+[visibility control wrote its own report --camera-masked-wall] 0 -> PASS
+[visibility control measured places --camera-masked-wall]  -> PASS
+[rider-hidden mesh counts as a third place --camera-masked-wall] got ["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"], want ["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"] -> PASS
+[same collider samples in both visibility readings] got 2937, want 2937 -> PASS
+[remove fixture report wall_fixture-s1.json] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1-owners.json] got 0, want 0 -> PASS
+[remove the empty wall fixture directory] got 0, want 0 -> PASS
+[each visibility control creates a fresh directory] OK -> PASS
+[visibility control wrote its own report --preview-wall] 0 -> PASS
+[visibility control measured places --preview-wall]  -> PASS
+[rider-hidden mesh counts as a third place --preview-wall] got ["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"], want ["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"] -> PASS
+[same collider samples in both visibility readings] got 2937, want 2937 -> PASS
+[remove fixture report wall_fixture-s1.json] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1-owners.json] got 0, want 0 -> PASS
+[remove the empty wall fixture directory] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1.json] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1-owners.json] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1-partial-1289bb9a2e.json] got 0, want 0 -> PASS
+[remove fixture report wall_fixture-s1-partial-1289bb9a2e-owners.json] got 0, want 0 -> PASS
+[remove the empty wall fixture directory] got 0, want 0 -> PASS
+[stage 1 (-199.5,30.0,445.0): the sweep ran 8 roll-outs (exit 0, 8 rows)]  -> PASS
+[stage 1 (-199.5,30.0,445.0): no roll-out hangs, sticks or falls through, and one gets clear { "reached": 5, "short": 2, "slope": 1 }]  -> PASS
+invisible_walls_test: FAIL (1 of 70 checks)
+WARNING: 26 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 2 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.
