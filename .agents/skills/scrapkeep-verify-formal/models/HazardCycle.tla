@@ -18,6 +18,7 @@ CONSTANTS
     SeekNeedsStall,  \* FALSE: any ball is sought (plant seek_rolling)
     StrikeWhereTold, \* FALSE: the strike re-aims at the ball when it lands
     HitsEnemies,     \* FALSE: the strike passes over enemies (plant skip_enemies)
+    BallTested,      \* FALSE: the strike hits the ball wherever it stands
     SeekOn           \* FALSE: no storm ever seeks
 
 Modes == {"rolling", "slow", "stalled"}
@@ -76,7 +77,7 @@ Fill ==
 Strike ==
     /\ phase = "tell" /\ Storm /\ age + 1 >= TellLength
     /\ LET at == IF StrikeWhereTold THEN told ELSE ball IN
-       last' = [at |-> at, told |-> told, tell |-> age + 1, ballIn |-> ball = at, ballHit |-> ball = at,
+       last' = [at |-> at, told |-> told, tell |-> age + 1, ballIn |-> ball = at, ballHit |-> (BallTested => ball = at),
                 enemyIn |-> enemy = at, enemyHit |-> HitsEnemies /\ enemy = at]
     /\ phase' = "strike" /\ age' = age + 1
     /\ UNCHANGED <<told, rest, sought>>

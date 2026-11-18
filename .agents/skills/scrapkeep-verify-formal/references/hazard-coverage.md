@@ -31,6 +31,7 @@ One model tick is 0.3 s: `TellTicks` 4 is the 1.2 s tell and `MinTell` 2 the 0.6
 | `hazard-broken-strikeatball` | the strike re-aims at the ball | `TellBeforeStrike` breaks |
 | `hazard-broken-skipenemies` | the strike passes over enemies | `EnemyStruck` breaks |
 | `hazard-broken-noseek` | no storm seeks | `StalledSought` breaks |
+| `hazard-broken-hitanywhere` | the strike hits the ball without the `hazard.contains` test | `BallOnlyWhereTold` breaks |
 
 ## Not modelled
 
