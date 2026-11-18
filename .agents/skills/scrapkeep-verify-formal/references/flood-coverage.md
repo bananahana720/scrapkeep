@@ -57,4 +57,4 @@ Run `bash models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg` wi
 
 Weather rows, collapses and cave-ins (a collapse's clock goes through the same `_park_clock` as the rise and `sketches/core-loop/tests/park_events_test.gd` sweeps it, but the model has no collapse), the drain, the quiet window after a Warden phase breaks, the bar the landing waits for, the route check (`_park_route_safe` is taken as true), the travel margin around a footprint (`hold_clear_m` and the ball's speed), a row with `once` true, the stage ending under a live flood (`end_all`), what the `step` hook does with the water, and anything drawn or heard.
 
-Sync commit: 4c873ffac (branch w44/W1-148-held-flood, W1-148, 18 November 2026, the wait for a parked ball capped at 2 s)
+Sync commit: ce01217b0 (branch w44/W1-148-held-flood, W1-148, 18 November 2026, the wait for a parked ball capped at 2 s)
