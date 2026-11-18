@@ -209,9 +209,9 @@ func exit_arena() -> void:
 		arena.get_parent().remove_child(arena)
 		arena.queue_free()
 	arena = null
-	ship = null
 	if ctx.camera != null:
-		ctx.camera.set_contact_subject(null)
+		ctx.camera.clear_contact_subject(ship)
+	ship = null
 	scooter = null
 	_scooter_anim = null
 	hazards.clear()
@@ -1307,7 +1307,7 @@ func _defeat(kind: String, at: Vector3, source := "") -> void:
 	ctx.run.add_part(Rules.CREST_PART, "boss")
 	_sync_crest()
 	ctx.flow.boss_active = false
-	ctx.camera.set_contact_subject(null)
+	ctx.camera.clear_contact_subject(ship)
 	# No step runs after the catch, so a shove still in its grace would leave the hull cut away over the ball.
 	if is_instance_valid(ship):
 		ship.follow_shoved_rider(null)

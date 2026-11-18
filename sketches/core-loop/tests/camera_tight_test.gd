@@ -53,6 +53,7 @@ func _run() -> void:
 	await _fight_floor()
 	await _aim_kept()
 	await _ball_stays_framed()
+	await _two_owners()
 	await _pillar()
 	await _unstepped()
 	await _ship()
@@ -270,6 +271,33 @@ func _ball_stays_framed() -> void:
 			subject.free()
 			cam.free()
 	floor_body.free()
+
+
+# The one slot has two owners (Brindle's ship, the dam Warden): clearing a subject that is not the current one
+# leaves the lift on, clearing the current one ends it.
+func _two_owners() -> void:
+	var floor_body := _box(Vector3(80, 1, 80), Vector3(0, -1.5, 0))
+	var mine := Node3D.new()
+	var theirs := Node3D.new()
+	root.add_child(mine)
+	root.add_child(theirs)
+	mine.position = Vector3(0, -1, -6)
+	theirs.position = Vector3(0, -1, -30)
+	var cam := _rig()
+	cam.reduced_motion = true
+	cam.set_contact_subject(mine)
+	await _settle(cam, 120)
+	var lifted: float = cam.pitch - cam.arm.rotation.x
+	cam.clear_contact_subject(theirs)
+	await _settle(cam, 120)
+	_t.check("O1 another owner's clear leaves the lift on", absf((cam.pitch - cam.arm.rotation.x) - lifted) < 0.01 and lifted > 0.3, "raised %.3f, was %.3f" % [cam.pitch - cam.arm.rotation.x, lifted])
+	cam.clear_contact_subject(mine)
+	await _settle(cam, 120)
+	_t.check("O2 the owner's own clear ends the lift", absf(cam.pitch - cam.arm.rotation.x) < 0.01, "raised %.3f" % [cam.pitch - cam.arm.rotation.x])
+	floor_body.free()
+	mine.free()
+	theirs.free()
+	cam.free()
 
 
 func _aim_pitch(cam) -> float:

@@ -330,10 +330,17 @@ func set_boss_reach(on: bool) -> void:
 
 
 # The fight that wants the ball and the floor kept in view near its tall body declares it here (Brindle's ship,
-# the dam-face Warden) and clears it with null. This is the opposite intent to set_boss_reach's far framing, so
-# it is its own call. A subject that has been freed is dropped.
+# the dam-face Warden). This is the opposite intent to set_boss_reach's far framing, so it is its own call. There is
+# one slot for two owners: each owner ends its own with clear_contact_subject, and null here clears whoever holds it.
+# A subject that has been freed is dropped.
 func set_contact_subject(subject: Node3D) -> void:
 	_contact_subject = subject
+
+
+# Ends the lift for `subject` only; another owner's subject stays.
+func clear_contact_subject(subject: Node3D) -> void:
+	if _contact_subject == subject:
+		_contact_subject = null
 
 
 # 0..1: how far the free arm along `arm_pitch` is under TIGHT_ARM, or 0 when tipping the arm up
