@@ -6,7 +6,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 
 # Stills of the flume's butte gap table (park_flume gap_table and gap_table_kicker, W1-102), from three fixed eyes in
 # the running game, so the place before and after a change compares frame for frame: far from the weir bench (how it
-# reads from a distance, map standard point 1), the approach down the mesa rim road (the kicker at its foot), and the
+# reads from a distance, map standard point 1), the approach down the mesa rim road (the kicker head-on, from south of its foot, on the line a ball climbs), and the
 # gap floor under the flume's last reach looking back at the far lip. The ball is frozen out of shot and the HUD
 # hidden. Each eye stands 2 m over the ground under it. Needs a rendered display:
 #
@@ -16,9 +16,9 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 
 const SIZE := Vector2i(1920, 1080)
 const SHOTS := {
-	"far": {"eye": Vector2(-440, -440), "rise": 22.0, "at": Vector3(-302, 58, -308), "fov": 50.0},
-	"approach": {"eye": Vector2(-372, -352), "rise": 2.0, "at": Vector3(-310, 60, -312), "fov": 65.0},
-	"lip": {"eye": Vector2(-262, -250), "rise": 2.0, "at": Vector3(-300, 62, -306), "fov": 65.0},
+	"far": {"eye": Vector2(-440, -440), "rise": 22.0, "at": Vector3(-301, 58, -328), "fov": 50.0},
+	"approach": {"eye": Vector2(-301, -392), "rise": 2.0, "at": Vector3(-301, 60, -340), "fov": 65.0},
+	"lip": {"eye": Vector2(-262, -250), "rise": 2.0, "at": Vector3(-301, 62, -328), "fov": 65.0},
 }
 
 var _out := ""

@@ -42,9 +42,6 @@ const SKIRT_M := 2.0
 const NOTCH_M := 3.5
 const NOTCH_ZONE_M := 4.0
 const LIP_M := 1.2
-# The mesa rim road's centre line (park_flume.json mesa_rim_road: at, yaw 39.8).
-const ROAD_AT := Vector2(-370.0, -340.0)
-const ROAD_YAW_DEG := 39.8
 
 var t := T.new("park_gap_table_climb_test")
 var game
@@ -53,6 +50,9 @@ var table := {}
 var kicker := {}
 var top_y := 0.0
 var floor_y := 0.0
+# The mesa rim road's centre line and heading, read from its park row.
+var road_at := Vector2.ZERO
+var road_yaw_deg := 0.0
 
 
 func _initialize() -> void:
@@ -61,6 +61,10 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_read_rows()
+	if not t.check("the park file holds the gap table, its kicker and the mesa rim road", not table.is_empty() and not kicker.is_empty() and road_at != Vector2.ZERO,
+			"table %s, kicker %s, road %s" % [not table.is_empty(), not kicker.is_empty(), road_at]):
+		quit(t.verdict())
+		return
 	game = Game.new()
 	game.test_mode = true
 	game.table = "park"
@@ -108,7 +112,7 @@ func _run() -> void:
 			if held or v >= FREE_REACH_MPS:
 				t.check("%s reaches the table top" % label, r.end == "top", r.end)
 			else:
-				t.check("%s rolls back short of the top" % label, r.end != "top", r.end)
+				t.check("%s rolls back short of the top and comes to rest on the floor" % label, r.end == "floor", r.end)
 	# Off the top, back over the lip.
 	var off := await _off_top()
 	print("  off the top: %s at %s" % [off.end, off.at])
@@ -122,7 +126,7 @@ func _run() -> void:
 		"kicker foot (-z)": [Vector3(table.x0 - 8.0, 0, kicker.foot - clear), Vector3.RIGHT, table.x1 - table.x0 + 16.0],
 	}
 	var corner := _road_corner()
-	var road_dir := Vector3(sin(deg_to_rad(ROAD_YAW_DEG)), 0, cos(deg_to_rad(ROAD_YAW_DEG)))
+	var road_dir := Vector3(sin(deg_to_rad(road_yaw_deg)), 0, cos(deg_to_rad(road_yaw_deg)))
 	var out_n := Vector3(-road_dir.z, 0, road_dir.x)
 	if out_n.dot(Vector3(table.cx - corner.x, 0, (table.z0 + table.z1) * 0.5 - corner.z)) > 0.0:
 		out_n = -out_n
@@ -146,6 +150,9 @@ func _read_rows() -> void:
 				"z0": at.y - float(size[0]) * 0.5, "z1": at.y + float(size[0]) * 0.5}
 		elif row["id"] == "gap_table_kicker":
 			kicker = {"cx": at.x, "foot": at.y - float(size[0]) * 0.5, "lip": at.y + float(size[0]) * 0.5}
+		elif row["id"] == "mesa_rim_road":
+			road_at = at
+			road_yaw_deg = float(row.get("yaw_deg", 0.0))
 
 
 func _plant(plant: String, node: Node3D) -> void:
@@ -170,11 +177,11 @@ func _plant(plant: String, node: Node3D) -> void:
 
 # The table corner closest to the mesa rim road's centre line.
 func _road_corner() -> Vector3:
-	var d := Vector2(sin(deg_to_rad(ROAD_YAW_DEG)), cos(deg_to_rad(ROAD_YAW_DEG)))
+	var d := Vector2(sin(deg_to_rad(road_yaw_deg)), cos(deg_to_rad(road_yaw_deg)))
 	var best := Vector2.ZERO
 	var best_d := INF
 	for c in [Vector2(table.x0, table.z0), Vector2(table.x0, table.z1), Vector2(table.x1, table.z0), Vector2(table.x1, table.z1)]:
-		var rel: Vector2 = c - ROAD_AT
+		var rel: Vector2 = c - road_at
 		var dist := absf(rel.x * d.y - rel.y * d.x)
 		if dist < best_d:
 			best_d = dist
