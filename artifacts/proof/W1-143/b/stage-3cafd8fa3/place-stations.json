@@ -1,0 +1,148 @@
+{
+  "head": "3266114510b51a744f9e363c9d3fe9c78aa0b4e4",
+  "method": "Real stage entries under --profile=sitting-earned, then option-on stage entries, then calm with both options on. Six physics frames after entry. Counts describe nodes. Pixel visibility requires the drawn pair.",
+  "stages": [
+    {
+      "approach_option": "off",
+      "furnace": false,
+      "map": "park_dam",
+      "mode": "sitting-earned",
+      "post_rows": 0,
+      "posts_option": "off",
+      "rng_seed": 280928,
+      "run_seed": 280928,
+      "stage": 1
+    },
+    {
+      "approach_option": "off",
+      "furnace": false,
+      "map": "park_flume",
+      "mode": "sitting-earned",
+      "post_rows": 0,
+      "posts_option": "off",
+      "rng_seed": 280928,
+      "run_seed": 280928,
+      "stage": 2
+    },
+    {
+      "approach_option": "on",
+      "first_row_positions": [
+        [
+          -66.9392471313477,
+          112.928169250488,
+          -151.957565307617
+        ],
+        [
+          -70.168815612793,
+          113.806640625,
+          -141.534042358398
+        ],
+        [
+          -63.913459777832,
+          112.013847351074,
+          -132.592514038086
+        ],
+        [
+          -67.1430282592773,
+          112.907745361328,
+          -122.168998718262
+        ],
+        [
+          -60.8876724243164,
+          111.153327941895,
+          -113.227493286133
+        ]
+      ],
+      "furnace": false,
+      "map": "park_dam",
+      "mode": "both-options-on",
+      "post_rows": 2,
+      "posts_option": "on",
+      "rng_seed": 280928,
+      "route_heading_xz": [
+        0.15437687933445,
+        0.988012075424194
+      ],
+      "run_seed": 280928,
+      "stage": 1
+    },
+    {
+      "approach_option": "on",
+      "bridge_heading_xz": [
+        0.987440645694733,
+        0.157990500330925
+      ],
+      "first_row_positions": [
+        [
+          -464.353851318359,
+          109.0,
+          -460.481109619141
+        ],
+        [
+          -469.920074462891,
+          109.0,
+          -451.095092773438
+        ],
+        [
+          -465.916839599609,
+          109.0,
+          -440.943542480469
+        ],
+        [
+          -471.483062744141,
+          106.873573303223,
+          -431.557495117188
+        ],
+        [
+          -467.479858398438,
+          103.973136901855,
+          -421.405975341797
+        ]
+      ],
+      "furnace": true,
+      "furnace_home": [
+        900.0,
+        32.0,
+        480.0
+      ],
+      "map": "park_flume",
+      "mode": "both-options-on",
+      "post_rows": 1,
+      "posts_option": "on",
+      "rng_seed": 280928,
+      "route_heading_xz": [
+        -0.0797452256083488,
+        0.996815264225006
+      ],
+      "run_seed": 280928,
+      "stage": 2,
+      "weighbridge_on_approach": [
+        -24.5994415283203,
+        1.99540865421295,
+        436.264099121094
+      ]
+    },
+    {
+      "approach_option": "on",
+      "furnace": false,
+      "map": "park_dam",
+      "mode": "calm-with-both-on",
+      "post_rows": 0,
+      "posts_option": "on",
+      "rng_seed": 280928,
+      "run_seed": 280928,
+      "stage": 1
+    },
+    {
+      "approach_option": "on",
+      "furnace": false,
+      "map": "park_flume",
+      "mode": "calm-with-both-on",
+      "post_rows": 0,
+      "posts_option": "on",
+      "rng_seed": 280928,
+      "run_seed": 280928,
+      "stage": 2
+    }
+  ]
+}

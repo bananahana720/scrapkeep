@@ -1,0 +1,231 @@
+{
+  "head": "3266114510b51a744f9e363c9d3fe9c78aa0b4e4",
+  "samples": [
+    {
+      "gates": [],
+      "sample": "physics",
+      "stage": 1,
+      "tick": 11890
+    },
+    {
+      "gates": [],
+      "sample": "idle_start",
+      "stage": 1,
+      "tick": 11890
+    },
+    {
+      "gates": [],
+      "sample": "physics",
+      "stage": 1,
+      "tick": 11910
+    },
+    {
+      "gates": [],
+      "sample": "idle_start",
+      "stage": 1,
+      "tick": 11910
+    },
+    {
+      "gates": [
+        {
+          "arch": false,
+          "id": 14064994504869,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": false,
+          "visible_primitives": [
+            "BoxMesh",
+            "BoxMesh",
+            "BoxMesh",
+            "PrismMesh"
+          ]
+        },
+        {
+          "arch": false,
+          "id": 14065598472498,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": false,
+          "visible_primitives": [
+            "BoxMesh",
+            "BoxMesh",
+            "BoxMesh",
+            "BoxMesh"
+          ]
+        },
+        {
+          "arch": false,
+          "id": 14065934028998,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": false,
+          "visible_primitives": [
+            "BoxMesh",
+            "BoxMesh",
+            "BoxMesh",
+            "PrismMesh",
+            "BoxMesh"
+          ]
+        }
+      ],
+      "sample": "physics",
+      "stage": 1,
+      "tick": 11911
+    },
+    {
+      "gates": [
+        {
+          "arch": true,
+          "id": 14064994504869,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        },
+        {
+          "arch": true,
+          "id": 14065598472498,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        },
+        {
+          "arch": true,
+          "id": 14065934028998,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        }
+      ],
+      "sample": "idle_start",
+      "stage": 1,
+      "tick": 11911
+    },
+    {
+      "gates": [
+        {
+          "arch": true,
+          "id": 14064994504869,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        },
+        {
+          "arch": true,
+          "id": 14065598472498,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        },
+        {
+          "arch": true,
+          "id": 14065934028998,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        }
+      ],
+      "sample": "physics",
+      "stage": 1,
+      "tick": 11912
+    },
+    {
+      "gates": [
+        {
+          "arch": true,
+          "id": 14064994504869,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        },
+        {
+          "arch": true,
+          "id": 14065598472498,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        },
+        {
+          "arch": true,
+          "id": 14065934028998,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        }
+      ],
+      "sample": "idle_start",
+      "stage": 1,
+      "tick": 11912
+    },
+    {
+      "gates": [
+        {
+          "arch": true,
+          "id": 14064994504869,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        },
+        {
+          "arch": true,
+          "id": 14065598472498,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        },
+        {
+          "arch": true,
+          "id": 14065934028998,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        }
+      ],
+      "sample": "physics",
+      "stage": 1,
+      "tick": 11940
+    },
+    {
+      "gates": [
+        {
+          "arch": true,
+          "id": 14064994504869,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        },
+        {
+          "arch": true,
+          "id": 14065598472498,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        },
+        {
+          "arch": true,
+          "id": 14065934028998,
+          "offer_error_m": 0.0,
+          "queued_free": false,
+          "topper": true,
+          "visible_primitives": []
+        }
+      ],
+      "sample": "idle_start",
+      "stage": 1,
+      "tick": 11940
+    }
+  ]
+}

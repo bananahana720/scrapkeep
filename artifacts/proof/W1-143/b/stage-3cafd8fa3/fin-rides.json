@@ -1,0 +1,214 @@
+{
+  "head": "3266114510b51a744f9e363c9d3fe9c78aa0b4e4",
+  "method": "Real Foundry Cutter presses, fixed 90 Hz, park table with the sitting-earned launch and worn cutaway. First idle sample following the actual peak after the presentation updates. Null means a fitted bone is missing.",
+  "trials": [
+    {
+      "after": {
+        "Fin.L": null,
+        "Fin.R": null
+      },
+      "ended": "land",
+      "failures": [
+        "missing fitted bone Fin.L",
+        "missing fitted bone Fin.R"
+      ],
+      "look": "cutaway",
+      "mode": "land",
+      "peak": {
+        "phase": "flight",
+        "physics_tick": 130,
+        "piece": "foundry_cutter",
+        "pose": {
+          "Fin.L": null,
+          "Fin.R": null
+        },
+        "reaction": "ult_strike",
+        "sample_physics_tick": 130
+      },
+      "pilot": "runner_gunner",
+      "press_physics_tick": 15,
+      "profile": "sitting-earned",
+      "rest": {
+        "Fin.L": null,
+        "Fin.R": null
+      },
+      "table": "park",
+      "targets": {
+        "Fin.L": {
+          "axis": "z",
+          "deg": 10.0,
+          "phases": [
+            "peak"
+          ],
+          "rate": 12.0
+        },
+        "Fin.R": {
+          "axis": "z",
+          "deg": -10.0,
+          "phases": [
+            "peak"
+          ],
+          "rate": 12.0
+        }
+      },
+      "tolerance_deg": 0.25,
+      "worn_variant": ""
+    },
+    {
+      "after": {
+        "Fin.L": null,
+        "Fin.R": null
+      },
+      "ended": "bail",
+      "failures": [
+        "missing fitted bone Fin.L",
+        "missing fitted bone Fin.R"
+      ],
+      "look": "cutaway",
+      "mode": "bail",
+      "peak": {
+        "phase": "flight",
+        "physics_tick": 130,
+        "piece": "foundry_cutter",
+        "pose": {
+          "Fin.L": null,
+          "Fin.R": null
+        },
+        "reaction": "ult_strike",
+        "sample_physics_tick": 130
+      },
+      "pilot": "runner_gunner",
+      "press_physics_tick": 15,
+      "profile": "sitting-earned",
+      "rest": {
+        "Fin.L": null,
+        "Fin.R": null
+      },
+      "table": "park",
+      "targets": {
+        "Fin.L": {
+          "axis": "z",
+          "deg": 10.0,
+          "phases": [
+            "peak"
+          ],
+          "rate": 12.0
+        },
+        "Fin.R": {
+          "axis": "z",
+          "deg": -10.0,
+          "phases": [
+            "peak"
+          ],
+          "rate": 12.0
+        }
+      },
+      "tolerance_deg": 0.25,
+      "worn_variant": ""
+    },
+    {
+      "after": {
+        "Fin.L": null,
+        "Fin.R": null
+      },
+      "ended": "land",
+      "failures": [
+        "missing fitted bone Fin.L",
+        "missing fitted bone Fin.R"
+      ],
+      "look": "cutaway",
+      "mode": "land",
+      "peak": {
+        "phase": "flight",
+        "physics_tick": 130,
+        "piece": "foundry_cutter",
+        "pose": {
+          "Fin.L": null,
+          "Fin.R": null
+        },
+        "reaction": "ult_strike",
+        "sample_physics_tick": 130
+      },
+      "pilot": "runner_gunner",
+      "press_physics_tick": 15,
+      "profile": "sitting-earned",
+      "rest": {
+        "Fin.L": null,
+        "Fin.R": null
+      },
+      "table": "park",
+      "targets": {
+        "Fin.L": {
+          "axis": "z",
+          "deg": 10.0,
+          "phases": [
+            "peak"
+          ],
+          "rate": 12.0
+        },
+        "Fin.R": {
+          "axis": "z",
+          "deg": -10.0,
+          "phases": [
+            "peak"
+          ],
+          "rate": 12.0
+        }
+      },
+      "tolerance_deg": 0.25,
+      "worn_variant": "shell_rivet_calibrated"
+    },
+    {
+      "after": {
+        "Fin.L": null,
+        "Fin.R": null
+      },
+      "ended": "bail",
+      "failures": [
+        "missing fitted bone Fin.L",
+        "missing fitted bone Fin.R"
+      ],
+      "look": "cutaway",
+      "mode": "bail",
+      "peak": {
+        "phase": "flight",
+        "physics_tick": 130,
+        "piece": "foundry_cutter",
+        "pose": {
+          "Fin.L": null,
+          "Fin.R": null
+        },
+        "reaction": "ult_strike",
+        "sample_physics_tick": 130
+      },
+      "pilot": "runner_gunner",
+      "press_physics_tick": 15,
+      "profile": "sitting-earned",
+      "rest": {
+        "Fin.L": null,
+        "Fin.R": null
+      },
+      "table": "park",
+      "targets": {
+        "Fin.L": {
+          "axis": "z",
+          "deg": 10.0,
+          "phases": [
+            "peak"
+          ],
+          "rate": 12.0
+        },
+        "Fin.R": {
+          "axis": "z",
+          "deg": -10.0,
+          "phases": [
+            "peak"
+          ],
+          "rate": 12.0
+        }
+      },
+      "tolerance_deg": 0.25,
+      "worn_variant": "shell_rivet_calibrated"
+    }
+  ]
+}

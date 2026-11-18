@@ -1,0 +1,233 @@
+{
+  "base": "3cafd8fa3962934e11ba89c439b3af943dba5d8d",
+  "head": "3266114510b51a744f9e363c9d3fe9c78aa0b4e4",
+  "methods": "Real solo runner for each test. Base and draft unplanted rides reached stage 3. The headless station run is separate from the legacy ride guard.",
+  "station_count": 43,
+  "distinct_unlisted_station_keys": 0,
+  "ruled_trade_observations": 78,
+  "ride_keys_identical": true,
+  "unplanted_rides": {
+    "base": {
+      "new": [
+        {
+          "file": "reward_gates.gd",
+          "mesh": "BoxMesh",
+          "path": "@Node3D@2/RewardGates/@Node3D@5422/@MeshInstance3D@5423",
+          "row": "",
+          "shape": "RewardGates/Node3D/MeshInstance3D",
+          "stage": 1
+        },
+        {
+          "file": "reward_gates.gd",
+          "mesh": "PrismMesh",
+          "path": "@Node3D@2/RewardGates/@Node3D@5422/Topper",
+          "row": "",
+          "shape": "RewardGates/Node3D/Topper",
+          "stage": 1
+        },
+        {
+          "file": "reward_gates.gd",
+          "mesh": "BoxMesh",
+          "path": "@Node3D@2/RewardGates/@Node3D@5426/Topper",
+          "row": "",
+          "shape": "RewardGates/Node3D/Topper",
+          "stage": 1
+        },
+        {
+          "file": "reward_gates.gd",
+          "mesh": "BoxMesh",
+          "path": "@Node3D@2/RewardGates/@Node3D@5430/Topper/Stripe",
+          "row": "",
+          "shape": "Node3D/Topper/Stripe",
+          "stage": 1
+        }
+      ],
+      "pinned": 129,
+      "plant": "",
+      "stale": [],
+      "stand_ins": [
+        {
+          "file": "build_read.gd",
+          "mesh": "SphereMesh",
+          "path": "@Node3D@2/PauseMenu/@Control@1203/BuildRead/@VBoxContainer@1215/@SubViewportContainer@1216/@SubViewport@1217/@Node3D@1220/@MeshInstance3D@1221",
+          "row": "W1-46",
+          "shape": "SubViewport/Node3D/MeshInstance3D",
+          "stage": 1
+        },
+        {
+          "file": "stakes.gd",
+          "mesh": "CylinderMesh",
+          "path": "@Node3D@2/SableStakes/Stake1/@MeshInstance3D@4611",
+          "row": "W1-23",
+          "shape": "SableStakes/Stake/MeshInstance3D",
+          "stage": 1
+        },
+        {
+          "file": "stakes.gd",
+          "mesh": "TorusMesh",
+          "path": "@Node3D@2/SableStakes/Stake1/@MeshInstance3D@4612",
+          "row": "W1-23",
+          "shape": "SableStakes/Stake/MeshInstance3D",
+          "stage": 1
+        }
+      ],
+      "surfaces": 132
+    },
+    "draft": {
+      "new": [
+        {
+          "file": "reward_gates.gd",
+          "mesh": "BoxMesh",
+          "path": "@Node3D@2/RewardGates/@Node3D@5412/@MeshInstance3D@5413",
+          "row": "",
+          "shape": "RewardGates/Node3D/MeshInstance3D",
+          "stage": 1
+        },
+        {
+          "file": "reward_gates.gd",
+          "mesh": "PrismMesh",
+          "path": "@Node3D@2/RewardGates/@Node3D@5412/Topper",
+          "row": "",
+          "shape": "RewardGates/Node3D/Topper",
+          "stage": 1
+        },
+        {
+          "file": "reward_gates.gd",
+          "mesh": "BoxMesh",
+          "path": "@Node3D@2/RewardGates/@Node3D@5416/Topper",
+          "row": "",
+          "shape": "RewardGates/Node3D/Topper",
+          "stage": 1
+        },
+        {
+          "file": "reward_gates.gd",
+          "mesh": "BoxMesh",
+          "path": "@Node3D@2/RewardGates/@Node3D@5420/Topper/Stripe",
+          "row": "",
+          "shape": "Node3D/Topper/Stripe",
+          "stage": 1
+        }
+      ],
+      "pinned": 129,
+      "plant": "",
+      "stale": [],
+      "stand_ins": [
+        {
+          "file": "build_read.gd",
+          "mesh": "SphereMesh",
+          "path": "@Node3D@2/PauseMenu/@Control@1201/BuildRead/@VBoxContainer@1213/@SubViewportContainer@1214/@SubViewport@1215/@Node3D@1218/@MeshInstance3D@1219",
+          "row": "W1-46",
+          "shape": "SubViewport/Node3D/MeshInstance3D",
+          "stage": 1
+        },
+        {
+          "file": "stakes.gd",
+          "mesh": "CylinderMesh",
+          "path": "@Node3D@2/SableStakes/Stake1/@MeshInstance3D@4601",
+          "row": "W1-23",
+          "shape": "SableStakes/Stake/MeshInstance3D",
+          "stage": 1
+        },
+        {
+          "file": "stakes.gd",
+          "mesh": "TorusMesh",
+          "path": "@Node3D@2/SableStakes/Stake1/@MeshInstance3D@4602",
+          "row": "W1-23",
+          "shape": "SableStakes/Stake/MeshInstance3D",
+          "stage": 1
+        }
+      ],
+      "surfaces": 132
+    }
+  },
+  "test_verdicts": {
+    "ride": "prim_census_test: FAIL (1 of 11 checks)",
+    "stations": "prim_census_test: PASS (71 checks)",
+    "dam": "prim_census_test: FAIL (1 of 11 checks)",
+    "camp": "prim_census_test: FAIL (1 of 71 checks)",
+    "base-ride": "prim_census_test: FAIL (1 of 11 checks)"
+  },
+  "planted_dam": {
+    "new": [
+      {
+        "file": "activities.gd",
+        "mesh": "BoxMesh",
+        "path": "@Node3D@2/Activities/Activity_enemy_camp/PlantedStandIn",
+        "row": "",
+        "shape": "Activities/Activity_enemy_camp/PlantedStandIn",
+        "stage": 1
+      },
+      {
+        "file": "reward_gates.gd",
+        "mesh": "BoxMesh",
+        "path": "@Node3D@2/RewardGates/@Node3D@5412/@MeshInstance3D@5413",
+        "row": "",
+        "shape": "RewardGates/Node3D/MeshInstance3D",
+        "stage": 1
+      },
+      {
+        "file": "reward_gates.gd",
+        "mesh": "PrismMesh",
+        "path": "@Node3D@2/RewardGates/@Node3D@5412/Topper",
+        "row": "",
+        "shape": "RewardGates/Node3D/Topper",
+        "stage": 1
+      },
+      {
+        "file": "reward_gates.gd",
+        "mesh": "BoxMesh",
+        "path": "@Node3D@2/RewardGates/@Node3D@5416/Topper",
+        "row": "",
+        "shape": "RewardGates/Node3D/Topper",
+        "stage": 1
+      },
+      {
+        "file": "reward_gates.gd",
+        "mesh": "BoxMesh",
+        "path": "@Node3D@2/RewardGates/@Node3D@5420/Topper/Stripe",
+        "row": "",
+        "shape": "Node3D/Topper/Stripe",
+        "stage": 1
+      }
+    ],
+    "pinned": 129,
+    "plant": "dam_box",
+    "stale": [],
+    "stand_ins": [
+      {
+        "file": "build_read.gd",
+        "mesh": "SphereMesh",
+        "path": "@Node3D@2/PauseMenu/@Control@1201/BuildRead/@VBoxContainer@1213/@SubViewportContainer@1214/@SubViewport@1215/@Node3D@1218/@MeshInstance3D@1219",
+        "row": "W1-46",
+        "shape": "SubViewport/Node3D/MeshInstance3D",
+        "stage": 1
+      },
+      {
+        "file": "stakes.gd",
+        "mesh": "CylinderMesh",
+        "path": "@Node3D@2/SableStakes/Stake1/@MeshInstance3D@4601",
+        "row": "W1-23",
+        "shape": "SableStakes/Stake/MeshInstance3D",
+        "stage": 1
+      },
+      {
+        "file": "stakes.gd",
+        "mesh": "TorusMesh",
+        "path": "@Node3D@2/SableStakes/Stake1/@MeshInstance3D@4602",
+        "row": "W1-23",
+        "shape": "SableStakes/Stake/MeshInstance3D",
+        "stage": 1
+      }
+    ],
+    "surfaces": 133
+  },
+  "camp_plant": {
+    "area": "camp",
+    "file": "camp_hub.gd",
+    "mesh": "BoxMesh",
+    "path": "@Node3D@2/CampHub/CampRoot/PlantedCampBox",
+    "row": "W1-143b",
+    "shape": "CampHub/CampRoot/PlantedCampBox",
+    "why": ""
+  }
+}

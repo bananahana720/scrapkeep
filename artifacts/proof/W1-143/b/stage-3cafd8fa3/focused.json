@@ -1,0 +1,178 @@
+{
+  "schema": "scrapkeep-smoke-receipt/1",
+  "label": "named",
+  "argv": [
+    "--sketch",
+    "core-loop",
+    "--test",
+    "pilot_clips_rivet_test",
+    "--test",
+    "survey_posts_test",
+    "--test",
+    "bowl_approach_test",
+    "--test",
+    "site_markers_test",
+    "--test",
+    "class_preview_pilot_test",
+    "--test",
+    "camp_hub_test",
+    "--test",
+    "surge_course_park_test",
+    "--test",
+    "water_edges_test"
+  ],
+  "root": "/Users/hanabanana/projects/sk-W1-143b",
+  "head": "3266114510b51a744f9e363c9d3fe9c78aa0b4e4",
+  "tree": "ba544345cddd4a25faf3520eab0ed8ddd2b2fcde",
+  "clean": false,
+  "dirty_paths": [
+    "?? sketches/core-loop/src/world/park/footings.gd.uid",
+    "?? sketches/core-loop/src/world/park/regions.gd.uid",
+    "?? sketches/core-loop/tests/arrival_census_test.gd.uid",
+    "?? sketches/core-loop/tests/beacon_open_level_test.gd.uid",
+    "?? sketches/core-loop/tests/brindle_arrival_view_test.gd.uid",
+    "?? sketches/core-loop/tests/brindle_defeat_cutaway_test.gd.uid",
+    "?? sketches/core-loop/tests/camera_contact_wiring_test.gd.uid",
+    "?? sketches/core-loop/tests/edge_arrow_sweep_test.gd.uid",
+    "?? sketches/core-loop/tests/hook_sites_test.gd.uid",
+    "?? sketches/core-loop/tests/park_footings_test.gd.uid",
+    "?? sketches/core-loop/tests/park_regions_test.gd.uid",
+    "?? sketches/core-loop/tests/park_wear_test.gd.uid",
+    "?? sketches/core-loop/tests/press_latency_measure_test.gd.uid",
+    "?? sketches/core-loop/tools/arrival_census.gd.uid",
+    "?? sketches/core-loop/tools/hook_sites.gd.uid",
+    "?? sketches/core-loop/tools/offscreen_probe.gd.uid",
+    "?? sketches/core-loop/tools/offscreen_window.gd.uid"
+  ],
+  "godot": {
+    "binary": "/Users/hanabanana/Applications/Godot_4.7.2.app/Contents/MacOS/Godot",
+    "version": "4.7.2.stable.official.ed1daf0bf"
+  },
+  "sketches": [
+    "sketches/core-loop"
+  ],
+  "flags": [],
+  "width": 2,
+  "lock_wait_ms": 190156,
+  "started_at": "2026-11-18T20:19:02.401Z",
+  "wall_ms": 68895,
+  "stems": {
+    "sketches/core-loop": 0
+  },
+  "quarantined": [],
+  "quarantine_expired": [],
+  "results": [
+    {
+      "label": "sketches/core-loop import",
+      "ok": true,
+      "exit": 0,
+      "ms": 2281,
+      "solo": false,
+      "passes": 0,
+      "fails": 0,
+      "verdict_line": null,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/camp_hub_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 11068,
+      "solo": false,
+      "passes": 226,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/class_preview_pilot_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 1577,
+      "solo": false,
+      "passes": 29,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/bowl_approach_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 18178,
+      "solo": false,
+      "passes": 39,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/pilot_clips_rivet_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 8042,
+      "solo": false,
+      "passes": 78,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": [
+        "SKIP control Fin.L",
+        "SKIP control Fin.R"
+      ]
+    },
+    {
+      "label": "sketches/core-loop res://tests/site_markers_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 13108,
+      "solo": false,
+      "passes": 101,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/water_edges_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 151,
+      "solo": false,
+      "passes": 0,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/survey_posts_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 12177,
+      "solo": false,
+      "passes": 24,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/surge_course_park_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 33606,
+      "solo": true,
+      "passes": 13,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    }
+  ],
+  "bot_tier_not_run": [],
+  "totals": {
+    "runs": 9,
+    "failed": 0,
+    "skipped": 1,
+    "missing_verdict": 0,
+    "quarantined_red": [],
+    "quarantine_stale": []
+  },
+  "ok": true
+}

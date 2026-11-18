@@ -1,0 +1,33 @@
+{
+  "head": "3266114510b51a744f9e363c9d3fe9c78aa0b4e4",
+  "samples": [
+    {
+      "has_fitted_core": false,
+      "legacy_sphere_count": 1,
+      "moment": "on ride, before pause",
+      "pause_open": false,
+      "preview": {
+        "hidden_canvas_ancestors": [
+          "@SubViewportContainer@1214",
+          "@VBoxContainer@1213",
+          "BuildRead",
+          "@Control@1201",
+          "PauseMenu"
+        ],
+        "sphere_visible_in_3d": true
+      },
+      "station_sphere_count": 0
+    },
+    {
+      "has_fitted_core": true,
+      "legacy_sphere_count": 0,
+      "moment": "first open pause",
+      "pause_open": true,
+      "preview": {
+        "hidden_canvas_ancestors": [],
+        "sphere_visible_in_3d": false
+      },
+      "station_sphere_count": 0
+    }
+  ]
+}
