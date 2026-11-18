@@ -186,6 +186,7 @@ var _answer_results: Array = []
 var _procs := 4
 var _total := 0
 var _sweep_dir := ""
+var _pass_source: PassSource
 var _phase := 1
 var _pilots: Array = []
 var _kinds: Array = []
@@ -912,7 +913,10 @@ static func pack_outcome(spawned: int, outcome: String) -> String:
 func _spawn(job: Dictionary) -> void:
 	var home := _sweep_dir.path_join("job%d_%d" % [_phase, job["n"]])
 	DirAccess.make_dir_recursive_absolute(home)
-	var args := child_args(job, _cap, _settings, _table_id, home, ProjectSettings.globalize_path("res://"))
+	var project := ProjectSettings.globalize_path("res://") if _pass_source == null else _pass_source.project
+	var args := child_args(job, _cap, _settings, _table_id, home, project)
+	if _pass_source != null:
+		args.append("--source-head=" + _pass_source.head)
 	var previous := {}
 	for kind in ["DATA", "CONFIG", "CACHE"]:
 		var key: String = "XDG_%s_HOME" % kind
@@ -1889,6 +1893,58 @@ static func spillway_packs(ids: PackedStringArray) -> Array:
 	return packs
 
 
+# Only fast-pass receipts attest a Git source. Import a private detached checkout once,
+# then keep its project (including the imported resources) read-only for all workers.
+class PassSource:
+	const SKETCH := "sketches/core-loop"
+	var origin: String
+	var head: String
+	var checkout: String
+	var project: String
+
+	static func revision(repo: String) -> String:
+		var output := []
+		if OS.execute("git", ["-C", repo, "rev-parse", "--verify", "HEAD^{commit}"], output) != 0:
+			return ""
+		return String(output[0]).strip_edges()
+
+	static func clean(repo: String) -> bool:
+		var output := []
+		if OS.execute("git", ["-C", repo, "status", "--porcelain", "-uno"], output) != 0 or not "".join(output).is_empty():
+			return false
+		# A loose project input could change what the caller thinks it is measuring.
+		output.clear()
+		return OS.execute("git", ["-C", repo, "ls-files", "--others", "--exclude-standard", "--", SKETCH + "/src", SKETCH + "/assets", SKETCH + "/tools/stations"], output) == 0 and "".join(output).is_empty()
+
+	static func detached(repo: String, commit: String, dest: String) -> bool:
+		return OS.execute("git", ["clone", "--quiet", "--local", "--shared", "--no-checkout", "--sparse", repo, dest]) == 0 \
+			and OS.execute("git", ["-C", dest, "sparse-checkout", "set", SKETCH]) == 0 \
+			and OS.execute("git", ["-C", dest, "checkout", "--quiet", "--detach", commit]) == 0 \
+			and revision(dest) == commit
+
+	func prepare(repo: String, dest: String) -> bool:
+		origin = repo
+		head = revision(origin)
+		if head.is_empty() or not clean(origin):
+			printerr("fast pass refuses a dirty or unreadable source checkout")
+			return false
+		checkout = dest
+		project = checkout.path_join(SKETCH)
+		if not detached(origin, head, checkout):
+			return false
+		var output := []
+		var args := ["--headless", "--path", project, "--editor", "--import"]
+		# First import builds the global class cache. Judge the second, like import-stamp.mjs.
+		OS.execute(OS.get_executable_path(), args)
+		if OS.execute(OS.get_executable_path(), args, output, true) != 0 or "SCRIPT ERROR:" in "".join(output):
+			printerr("fast pass could not import the detached source: ", "".join(output).right(1500))
+			return false
+		return OS.execute("chmod", ["-R", "a-w", project]) == 0 and matches()
+
+	func matches() -> bool:
+		return revision(origin) == head and clean(origin) and revision(checkout) == head \
+			and OS.execute("git", ["-C", checkout, "diff", "--quiet", head, "--", SKETCH]) == 0
+
 func _begin_pass_table() -> void:
 	var ids := String(_settings.get("packs", "all")).split(",")
 	var packs := spillway_packs(ids)
@@ -1950,8 +2006,21 @@ func _begin_pass_table() -> void:
 							_queue.append(control)
 	_total = _queue.size()
 	_procs = clampi(int(_settings.get("procs", "2")), 1, 6)
-	_sweep_dir = OS.get_user_data_dir().path_join("matchup_lab/p%d" % OS.get_process_id())
+	_sweep_dir = OS.get_user_data_dir().path_join("matchup_lab/" + Crypto.new().generate_random_bytes(16).hex_encode())
+	var repo := ProjectSettings.globalize_path("res://").path_join("../..").simplify_path()
+	_pass_source = PassSource.new()
+	if DirAccess.make_dir_recursive_absolute(_sweep_dir) != OK or not _pass_source.prepare(repo, _sweep_dir.path_join("source")):
+		printerr("fast pass source could not be bound before dispatch")
+		quit(2)
+		return
 	_parent = true
+
+
+func _finalize() -> void:
+	if _pass_source != null:
+		if not _pass_source.project.is_empty() and DirAccess.dir_exists_absolute(_pass_source.project):
+			OS.execute("chmod", ["-R", "u+w", _pass_source.project])
+		_remove_tree(_sweep_dir)
 
 
 # A release receipt must cover the complete matched matrix. Partial sweeps report
@@ -2021,10 +2090,11 @@ func _write_pass_table() -> void:
 	var path := String(_settings.receipt)
 	_results.sort_custom(func(a, b): return a.n < b.n)
 	var valid := _results.size() == _total and _results.all(func(r): return r.get("outcome") == "pass_complete")
-	var output := []
-	var repo := ProjectSettings.globalize_path("res://").path_join("../..")
-	var code := OS.execute("git", ["-C", repo, "rev-parse", "HEAD"], output)
-	var head := String(output[0]).strip_edges() if code == 0 and not output.is_empty() else ""
+	var head := _pass_source.head
+	if not _results.all(func(r): return r.get("source_head", "") == head):
+		printerr("fast pass refuses results without the pinned worker identity")
+		quit(2)
+		return
 	var controls := _results.filter(func(r): return r.get("plant") == "zero_lead")
 	var rows := _results.filter(func(r): return r.get("plant", "") == "")
 	var baseline := []
@@ -2059,7 +2129,13 @@ func _write_pass_table() -> void:
 		return
 	file.store_line(JSON.stringify(report))
 	file.close()
-	if DirAccess.rename_absolute(tmp, path) != OK:
+	if not _pass_source.matches():
+		printerr("fast pass source changed before publication")
+		DirAccess.remove_absolute(tmp)
+		quit(2)
+		return
+	var published := DirAccess.rename_absolute(tmp, path) == OK
+	if not published:
 		printerr("cannot publish fast-pass receipt ", path)
 		quit(2)
 		return
@@ -2093,6 +2169,11 @@ func _pass_enemy(enemy, kind: String) -> void:
 
 
 func _run_pass() -> void:
+	var source_head := PassSource.revision(ProjectSettings.globalize_path("res://"))
+	if source_head.is_empty() or source_head != _settings.get("source-head", ""):
+		printerr("fast pass worker source differs from its dispatch")
+		quit(2)
+		return
 	var stage := int(_settings.stage)
 	var id := String(_settings.kind)
 	var entries := spillway_packs(PackedStringArray([id]))
@@ -2179,7 +2260,7 @@ func _run_pass() -> void:
 		if _game.run.hp <= 0.0:
 			break
 	var lost := float(_game.run.metrics.hull_damage) - hull_start
-	var row := {"pilot": pilot, "pack": id, "stage": stage, "seed": s, "pass": mode, "speed": speed,
+	var row := {"source_head": source_head, "pilot": pilot, "pack": id, "stage": stage, "seed": s, "pass": mode, "speed": speed,
 		"members": entry.members, "spawned": spawned, "plant": _settings.get("plant", ""),
 		"warnings": _pass_counter.warnings, "observed_strikes": _pass_counter.strikes.size(), "threats_by_kind": _pass_counter.threats, "contacts": _pass_counter.contacts,
 		"threats": _pass_counter.contacts.size(),

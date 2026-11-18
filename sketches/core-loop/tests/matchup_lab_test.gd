@@ -378,21 +378,47 @@ func _fast_pass_receipt() -> void:
 	pit.free()
 	mark.free()
 	_pass_grade_controls()
-	var receipt := OS.get_user_data_dir().path_join("fast-threat-%s.json" % Crypto.new().generate_random_bytes(16).hex_encode())
-	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
+	# Exercise both paths in a real private checkout. Never plant a dirty input in a
+	# developer's worktree. Only the bootstrap sees the test runner's class cache.
+	var checkout := OS.get_user_data_dir().path_join("pass-test-" + Crypto.new().generate_random_bytes(16).hex_encode())
+	var repo := ProjectSettings.globalize_path("res://").path_join("../..").simplify_path()
+	var expected := Lab.PassSource.revision(repo)
+	var project := checkout.path_join("sketches/core-loop")
+	var cache := project.path_join(".godot")
+	var prepared := Lab.PassSource.detached(repo, expected, checkout) and DirAccess.create_link(ProjectSettings.globalize_path("res://.godot"), cache) == OK
+	_check("private fixture checks out the measured commit", prepared)
+	if not prepared:
+		return
+	var receipt := checkout.path_join("fast-threat.json")
+	var args := ["--headless", "--fixed-fps", "90", "--path", project,
 		"--script", "res://tools/matchup_lab.gd", "--", "--packs=grounded", "--table=park",
 		"--pass=straight", "--speed=14,28", "--seeds=1", "--pilots=tarn", "--receipt=" + receipt]
 	var output := []
 	var code := OS.execute(OS.get_executable_path(), args, output, true)
 	_check("the fast-pass producer writes its receipt", code == 0 and FileAccess.file_exists(receipt))
-	if code != 0 or not FileAccess.file_exists(receipt):
+	var bytes := FileAccess.get_file_as_bytes(receipt) if FileAccess.file_exists(receipt) else PackedByteArray()
+	if code != 0:
 		printerr("\n".join(output))
+	# A harmless comment is still an uncommitted game input. A previously published
+	# receipt must survive this failed retry without being relabelled or overwritten.
+	var input := FileAccess.open(project.path_join("src/core/park_defs.gd"), FileAccess.READ_WRITE)
+	input.seek_end()
+	input.store_line("\n# dirty source control")
+	input.close()
+	output.clear()
+	code = OS.execute(OS.get_executable_path(), args, output, true)
+	_check("dirty game source refuses dispatch and preserves the existing receipt",
+		code == 2 and "refuses a dirty" in "".join(output) and not bytes.is_empty() and FileAccess.get_file_as_bytes(receipt) == bytes)
+	DirAccess.remove_absolute(cache)
+	Lab._remove_tree(checkout)
+	if bytes.is_empty():
 		return
-	var result = JSON.parse_string(FileAccess.get_file_as_string(receipt))
+	var result = JSON.parse_string(bytes.get_string_from_utf8())
 	var rows = result.get("passes") if result is Dictionary else null
 	if not rows is Array:
 		_check("the fast-pass receipt contains individual passes", false)
 		return
+	_check("every worker reports the pinned source commit", result.head == expected and rows.all(func(r): return r.get("source_head", "") == expected))
 	var observed := []
 	for row in rows:
 		if row is Dictionary and row.get("pack") == "grounded" and row.get("pass") == "straight" \
