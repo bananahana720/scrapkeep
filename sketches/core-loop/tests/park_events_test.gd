@@ -477,7 +477,7 @@ func _water_lifetime() -> void:
 # it, so a ball parked in the basin from the landing is stepped and taxed. The wait itself keeps its reason: a
 # ball that arrives as the water lands is not swapped under inside the cap.
 func _flood_hold_cap() -> void:
-	_check("hold cap: the director names the cap", float(Director.get_script_constant_map().get("PARK_FLOOD_HOLD_CAP_S", -1.0)) == HOLD_CAP_S, "PARK_FLOOD_HOLD_CAP_S")
+	_check("hold cap: the director names the cap", float((_director([]).get_script() as Script).get_script_constant_map().get("PARK_FLOOD_HOLD_CAP_S", -1.0)) == HOLD_CAP_S, "PARK_FLOOD_HOLD_CAP_S")
 	var row := _row("hold_cap", "flood_fill", "natural", 5.0)
 	row.hold_clear_m = 0.0
 	row.effect = {"depth_m": 1.2, "fill_s": 10.0, "material": "water"}
