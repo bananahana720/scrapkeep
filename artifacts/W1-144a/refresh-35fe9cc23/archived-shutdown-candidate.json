@@ -1,0 +1,1 @@
+{"shutdown_error_lines":4,"errors":["ERROR: BUG, indexing did not unpair geometries from light.","ERROR: BUG, indexing did not unpair geometries from light.","ERROR: 12 shaders of type ParticlesShaderRD were never freed","ERROR: 12 RID allocations of type 'N10RendererRD15MaterialStorage6ShaderE' were leaked at exit."],"pass":false}

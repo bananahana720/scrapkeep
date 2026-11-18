@@ -1,0 +1,81 @@
+{
+  "schema": "scrapkeep-smoke-receipt/1",
+  "label": "named",
+  "argv": [
+    "--sketch",
+    "core-loop",
+    "--test",
+    "rivet_warm_hitch_test"
+  ],
+  "root": "/Users/hanabanana/projects/scrapkeep/artifacts/local/W1-144a",
+  "head": "35fe9cc23b8dbb457b1d8a5ec59db2db6ea45aa4",
+  "tree": "3bc909080abbf523a1ae212113b616ff2e50cdb6",
+  "clean": false,
+  "dirty_paths": [
+    "?? sketches/core-loop/src/world/park/footings.gd.uid",
+    "?? sketches/core-loop/tests/beacon_open_level_test.gd.uid",
+    "?? sketches/core-loop/tests/brindle_arrival_view_test.gd.uid",
+    "?? sketches/core-loop/tests/brindle_defeat_cutaway_test.gd.uid",
+    "?? sketches/core-loop/tests/camera_contact_wiring_test.gd.uid",
+    "?? sketches/core-loop/tests/edge_arrow_sweep_test.gd.uid",
+    "?? sketches/core-loop/tests/park_footings_test.gd.uid",
+    "?? sketches/core-loop/tests/park_wear_test.gd.uid",
+    "?? sketches/core-loop/tests/press_latency_measure_test.gd.uid",
+    "?? sketches/core-loop/tools/offscreen_probe.gd.uid",
+    "?? sketches/core-loop/tools/offscreen_window.gd.uid"
+  ],
+  "godot": {
+    "binary": "/Users/hanabanana/Applications/Godot_4.7.2.app/Contents/MacOS/Godot",
+    "version": "4.7.2.stable.official.ed1daf0bf"
+  },
+  "sketches": [
+    "sketches/core-loop"
+  ],
+  "flags": [],
+  "width": 2,
+  "lock_wait_ms": 94082,
+  "started_at": "2026-11-18T19:07:23.010Z",
+  "wall_ms": 19701,
+  "stems": {
+    "sketches/core-loop": 0
+  },
+  "quarantined": [],
+  "quarantine_expired": [],
+  "results": [
+    {
+      "label": "sketches/core-loop import",
+      "ok": true,
+      "exit": 0,
+      "ms": 6416,
+      "solo": false,
+      "passes": 0,
+      "fails": 0,
+      "verdict_line": null,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/rivet_warm_hitch_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 13069,
+      "solo": false,
+      "passes": 15,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": [
+        "SKIP control Fin.L",
+        "SKIP control Fin.R"
+      ]
+    }
+  ],
+  "bot_tier_not_run": [],
+  "totals": {
+    "runs": 2,
+    "failed": 0,
+    "skipped": 1,
+    "missing_verdict": 0,
+    "quarantined_red": [],
+    "quarantine_stale": []
+  },
+  "ok": true
+}

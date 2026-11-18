@@ -1,0 +1,18 @@
+clear 0 {"max_frame_ms_bounds":{"dam_to_flume":{"lower":10,"upper":10},"flume_to_bowl":{"lower":10,"upper":10}},"pass":true}
+flume 50 ms 1 {"max_frame_ms_bounds":{"dam_to_flume":{"lower":50,"upper":50},"flume_to_bowl":{"lower":10,"upper":10}},"pass":false}
+bowl 50 ms 1 {"max_frame_ms_bounds":{"dam_to_flume":{"lower":10,"upper":10},"flume_to_bowl":{"lower":50,"upper":50}},"pass":false}
+outside 0 {"max_frame_ms_bounds":{"dam_to_flume":{"lower":10,"upper":10},"flume_to_bowl":{"lower":10,"upper":10}},"pass":true}
+precision 1 {"max_frame_ms_bounds":{"dam_to_flume":{"lower":10,"upper":10},"flume_to_bowl":{"lower":33.301,"upper":33.301}},"pass":false}
+uncertain boundary 2 {"max_frame_ms_bounds":{"dam_to_flume":{"lower":10,"upper":50},"flume_to_bowl":{"lower":10,"upper":10}},"pass":null}
+truncated bowl window 2 incomplete window for flume_to_bowl
+skipped exit 2 out of order or repeated ride markers
+film clock 2 film markers use simulation time
+cold pass 2 expected a debug-editor capture reusing the cold pass home
+missing CSV marker 2 expected the complete engine log from the same frame capture
+missing beat 2 need a wall-clock beat after the CSV write
+no victory 2 ride must take both exits and win with watch enabled
+clean exit 0 {"shutdown_error_lines":0,"errors":[],"pass":true}
+dummy RID 0 {"shutdown_error_lines":0,"errors":[],"pass":true}
+Metal error 1 {"shutdown_error_lines":1,"errors":["ERROR: renderer fault"],"pass":false}
+victory log cut short 2 missing clean process exit recorded after both streams closed
+abnormal exit 2 missing clean process exit recorded after both streams closed

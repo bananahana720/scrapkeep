@@ -1,0 +1,29 @@
+The engine capture needs GODOT_BIN set to the Godot 4.7.2 editor binary, or --exe=<a packed build's binary>.
+✔ parseArgs keeps the alpha budget by default and passes arguments after -- to the game (0.751208ms)
+✔ the missing-MangoHud message names the Arch install and downloads nothing (0.070125ms)
+✔ findOnPath finds only executable files (0.73725ms)
+✔ resolveTarget prefers --exe, then the installed AppImage, then the newest export (0.717916ms)
+✔ mangohudConfig logs every frame after the warm-up, vsync off and no overlay by default (0.091542ms)
+✔ parseLog reads the frametime column below the system block, converting microseconds (0.228541ms)
+✔ summarize passes a steady run and times each hitch from the start of the log (0.332792ms)
+✔ main runs the build under a stand-in mangohud and grades its log (30.473208ms)
+✔ main --log grades an existing log without launching anything (0.881333ms)
+✔ --self-play passes the flag and its options to the game; the default launch is unchanged (0.191041ms)
+✔ parseSelfPlay reads stage entries on the launch and log clocks, and the stall (0.245625ms)
+✔ worstFrameNear reads the window around a stage entry (0.194875ms)
+✔ main --self-play launches the game with the flag and records the self-play lines (29.670541ms)
+✔ main --self-play fails the check when the game stalls (3) or lacks tools/ (2) (58.775125ms)
+✔ --capture picks engine or mangohud; without it MangoHud wins where installed, else the engine on macOS (0.310041ms)
+✔ engineLaunch runs the editor on the project windowed, vsync off, with the frame log on the same warmup and seconds (0.134208ms)
+✔ the engine frame log reads through the MangoHud parser, and its label says which it is (0.10075ms)
+✔ main on macOS launches the engine capture under a scratch HOME and grades the game's own log (39.748833ms)
+✔ an engine reading says whether it measured a packed build and on what caches (0.133416ms)
+✔ --home reuses an existing scratch HOME under artifacts/local and refuses any other folder (1.685667ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 257.824

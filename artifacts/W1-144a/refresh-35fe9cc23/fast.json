@@ -1,0 +1,43 @@
+{
+  "schema": "scrapkeep-fast-receipt/1",
+  "label": "fast",
+  "head": "35fe9cc23b8dbb457b1d8a5ec59db2db6ea45aa4",
+  "base": "origin/stage/alpha-w44",
+  "merge_base": "c9d55d7c7f41910b9ae9e4f3bd6023f610779fc2",
+  "started_at": "2026-11-18T19:06:38.571Z",
+  "stages": [
+    {
+      "name": "tree hygiene",
+      "ok": true,
+      "ms": 44,
+      "note": "no symlink, root file or new top-level folder",
+      "findings": []
+    },
+    {
+      "name": "sketch-lint",
+      "ok": true,
+      "ms": 1276,
+      "note": "sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1 W1=0 W2=0 W4=0 W6=27 W7=1 S8=0, 996ms"
+    },
+    {
+      "name": "godot",
+      "ok": true,
+      "ms": 1285,
+      "note": "no sketch change"
+    }
+  ],
+  "ok": true,
+  "diff_base": "c9d55d7c7f41910b9ae9e4f3bd6023f610779fc2",
+  "pre": [],
+  "changed": 1,
+  "selection": {
+    "hubs": [],
+    "unmapped": [],
+    "tests": {},
+    "deferred_to_full_gate": [],
+    "bot_shards": [],
+    "shard_reasons": {},
+    "estimate_ms": 0
+  },
+  "wall_ms": 1285
+}
