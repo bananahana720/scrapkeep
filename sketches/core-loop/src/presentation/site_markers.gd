@@ -208,7 +208,8 @@ func _plume(kind: String, at: Vector3, key: String) -> MeshInstance3D:
 	view.set_meta("at", at)
 	view.set_meta("far", bool(row.get("far", false)))
 	view.set_meta("near", row.get("near", Vector2(GONE_M, FULL_M)))
-	add_child(view)
+	# A fading plume can share this site key with its replacement. Keep the site name on both.
+	add_child(view, true)
 	view.global_position = at
 	view.visible = false
 	return view
