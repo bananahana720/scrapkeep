@@ -102,7 +102,7 @@ var _locked := false
 var _boss_reach := false
 var _pitch_bias := 0.0
 var _tight := 0.0
-var _contact_subject: Callable
+var _contact_subject: Node3D
 var _contact_lift := 0.0
 var _query := PhysicsShapeQueryParameters3D.new()
 var _fov_add := 0.0
@@ -122,8 +122,7 @@ static func camera_body() -> AnimatableBody3D:
 	return body
 
 
-func setup(target_ref, tuning_ref, contact_subject := Callable()) -> void:
-	_contact_subject = contact_subject
+func setup(target_ref, tuning_ref) -> void:
 	target = target_ref
 	tuning = tuning_ref
 	arm = SpringArm3D.new()
@@ -311,6 +310,13 @@ func set_boss_reach(on: bool) -> void:
 	_boss_reach = on
 
 
+# The fight that wants the ball and the floor kept in view near its tall body declares it here (Brindle's ship,
+# the dam-face Warden) and clears it with null. This is the opposite intent to set_boss_reach's far framing, so
+# it is its own call. A subject that has been freed is dropped.
+func set_contact_subject(subject: Node3D) -> void:
+	_contact_subject = subject
+
+
 # 0..1: how far the free arm along `arm_pitch` is under TIGHT_ARM, or 0 when tipping the arm up
 # would not free LIFT_GAIN metres of it (a roof). Reads two probes of its own, so the turn the arm
 # is under does not feed back; an arm outside the tree or in a world with no walls reads free.
@@ -460,7 +466,9 @@ func _process(delta: float) -> void:
 
 	rotation = Vector3(0.0, yaw, 0.0)
 	var arm_pitch := pitch + _pitch_bias + lift
-	var subject: Node3D = _contact_subject.call() if _contact_subject.is_valid() else null
+	if _contact_subject != null and not is_instance_valid(_contact_subject):
+		_contact_subject = null
+	var subject := _contact_subject
 	var contact_lift := _boss_contact_lift(arm_pitch, subject)
 	_contact_lift = lerpf(_contact_lift, contact_lift, 1.0 - exp(-16.0 * delta))
 	_contact_lift = minf(_contact_lift, arm_pitch - MAX_ARM_PITCH)

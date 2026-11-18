@@ -222,7 +222,7 @@ func _ready() -> void:
 	camera = ChaseCamera.new()
 	camera.name = "ChaseCamera"
 	add_child(camera)
-	camera.setup(player, tuning, _contact_subject)
+	camera.setup(player, tuning)
 
 	beacon = Beacon.new()
 	beacon.name = "Beacon"
@@ -612,17 +612,6 @@ func _exit_tree() -> void:
 			DirAccess.remove_absolute(book.path_join(file))
 		DirAccess.remove_absolute(book)
 	DirAccess.remove_absolute(storage_dir)
-
-
-# The two Spillway fights whose drawn bodies can cover both the ball and its escape floor.
-func _contact_subject() -> Node3D:
-	if flow == null:
-		return null
-	if flow.state == Flow.BOSS and boss != null and is_instance_valid(boss.ship):
-		return boss.ship
-	if flow.engaged() and is_instance_valid(flow.warden) and flow.warden.get("mounting") == "dam_face":
-		return flow.warden
-	return null
 
 
 func _physics_process(delta: float) -> void:

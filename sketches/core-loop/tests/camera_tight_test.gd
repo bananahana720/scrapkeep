@@ -168,7 +168,8 @@ func _fight_floor() -> void:
 	var open := _rig()
 	var fight := ChaseCamera.new()
 	root.add_child(fight)
-	fight.setup(Target.new(), Tuning.new(), func(): return subject)
+	fight.setup(Target.new(), Tuning.new())
+	fight.set_contact_subject(subject)
 	for rig in [open, fight]:
 		rig.snap(Vector3.FORWARD, 0.5)
 	await _settle(fight, 120)

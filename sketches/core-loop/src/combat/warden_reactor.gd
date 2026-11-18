@@ -141,6 +141,7 @@ var paid_gain := 0.0
 var lane := 0
 
 var _entry_speed := 0.0
+var _camera_declared := false
 var _sheet_view: MeshInstance3D
 
 
@@ -158,6 +159,14 @@ static func _is_dam(warden) -> bool:
 	return warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face"
 
 
+# The dam fight asks the chase camera to keep the ball and the floor in view near this body, once on each change.
+func _declare_fight(warden, engaged: bool) -> void:
+	if engaged == _camera_declared or warden.fleet == null or warden.fleet.ctx.camera == null:
+		return
+	_camera_declared = engaged
+	warden.fleet.ctx.camera.set_contact_subject(warden if engaged else null)
+
+
 static func _is_flume(warden) -> bool:
 	return warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "flume"
 
@@ -169,6 +178,7 @@ func step(warden, delta: float) -> void:
 		var engaged: bool = warden.fleet != null and warden.fleet.ctx.flow.engaged() \
 				and warden._in_play() and warden.hp > 0.0
 		warden._posture.contact_drain_delay = delta if engaged else 0.0
+		_declare_fight(warden, engaged)
 		for child in warden.get_children():
 			if child is CollisionShape3D:
 				if not child.shape is SphereShape3D:

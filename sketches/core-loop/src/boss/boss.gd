@@ -158,6 +158,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	ship = Requisition.new()
 	arena.add_child(ship)
 	ship.build(self)
+	ctx.camera.set_contact_subject(ship)
 	state = FIGHT
 	_posture = BossPosture.new(Rules.POSTURE)
 	_phases = FightPhases.boss("brindle", ctx.events)
@@ -209,6 +210,8 @@ func exit_arena() -> void:
 		arena.queue_free()
 	arena = null
 	ship = null
+	if ctx.camera != null:
+		ctx.camera.set_contact_subject(null)
 	scooter = null
 	_scooter_anim = null
 	hazards.clear()
@@ -1304,6 +1307,7 @@ func _defeat(kind: String, at: Vector3, source := "") -> void:
 	ctx.run.add_part(Rules.CREST_PART, "boss")
 	_sync_crest()
 	ctx.flow.boss_active = false
+	ctx.camera.set_contact_subject(null)
 	# The scooter stays in sight through boss_defeated, so the fall plays where he was caught
 	# (machine_fx reads a visible scooter before the ship); it is hidden once the event is out.
 	_publish("boss_defeated")
