@@ -28,6 +28,8 @@ func _initialize() -> void:
 	var sampled := {}
 	_check_station_list(t, stations)
 	var paid := 0
+	var hold_pays := 0
+	var all_releases_preserved := true
 	var usable_at_round0 := []
 	var usable_passing := []
 	for row: Dictionary in rows:
@@ -43,11 +45,16 @@ func _initialize() -> void:
 			t.eq("%s round-0 anchor still takes the line" % row.site, row.status, "measured")
 		t.check("%s comparison finished" % row.site, row.status in ["no hold", "measured"], row.status)
 		if row.status != "measured":
+			if baseline != null:
+				all_releases_preserved = false
 			continue
 		t.eq("%s tried every earlier physics tick" % row.site, int(row.early_trials), HookSites.HOLD_TICKS - 1)
 		row["early_speed_preserved"] = baseline == null or float(row.best_early.landing_mps) >= float(baseline) - 0.001
 		row["hold_pays"] = row.held_only_tier or row.held.landing_mps >= row.best_early.landing_mps
 		row["within_energy_bound"] = row.worst_exit_energy_residual <= 0.001
+		if row.hold_pays:
+			hold_pays += 1
+		all_releases_preserved = all_releases_preserved and row.early_speed_preserved
 		if row.early_speed_preserved and row.hold_pays and row.within_energy_bound:
 			paid += 1
 			if baseline != null:
@@ -56,6 +63,7 @@ func _initialize() -> void:
 	t.check("measured flume control in round 0", usable_at_round0.has("flume_hollow_trestles"))
 	print("RECEIPT ", JSON.stringify({"row": "hook-pays", "pass": paid == stations.size() and t.failures == 0,
 		"measured": {"entry_mps": HookSites.ENTRY_SPEED, "sites_passing": paid, "stations": rows,
+			"sites_where_hold_beats_release": hold_pays, "release_speed_not_below_round0": all_releases_preserved,
 			"usable_at_round0": usable_at_round0, "usable_sites_passing": usable_passing}}))
 	quit(t.verdict())
 
