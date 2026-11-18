@@ -658,6 +658,217 @@
       "basis": "LEGIBILITY.md section 13; ruling cx"
     },
     {
+      "id": "fast-threat",
+      "area": "Difficulty and pacing",
+      "source": "receipt",
+      "label": "every Spillway pack makes a straight-rolling ball turn, and a turning ball rides through",
+      "status": "report",
+      "enforced_from": [
+        "W1-133"
+      ],
+      "floor": {
+        "threats_per_straight_pass": 1,
+        "stall_over_straight_hull_per_min": 2.0,
+        "weave_hull_over_round0": 1.0
+      },
+      "producer": "\"$GODOT_BIN\" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/matchup_lab.gd -- --packs=all --table=park --pass=straight,weave,stall --speed=14,28 --seeds=1,2,3,4,5,6,7,8 --receipt=<dir>/fast-threat.json (the fast-pass arm W1-133a adds; until it lands there is no producer and the row reads no data)",
+      "plant": "every crew's lead set to 0 must read 0 threats per straight pass on the packs with a lobber",
+      "basis": "ruling cu; Codex trials of 17 Nov, not rerun (the lobber commits 21 m behind a 28 m/s rider; the boom tender missed 3 of 3 fast passes); LEAD_CRUISE_W1 is 0.0 on stages 1 and 2 (challenge_dials.gd:56); docs/promises/W1-133.md"
+    },
+    {
+      "id": "arrivals-seen",
+      "area": "Clarity",
+      "source": "receipt",
+      "label": "no crew pops in: every crew is seen arriving at least 0.6 s before its first warning",
+      "status": "report",
+      "enforced_from": [
+        "W1-134"
+      ],
+      "floor": {
+        "pop_ins": 0,
+        "seen_before_warning_s": 0.6
+      },
+      "producer": "node scripts/proof/receipt.mjs --row arrivals-seen --test arrival_census_test --plant live_ahead --out <dir>/arrivals-seen.json (seeds 1 to 4, skipper and camper, every yard wave)",
+      "plant": "one kind placed live 30 m ahead in view, skipping the arrival, must count 1 pop-in",
+      "basis": "Andrew's A70 of 17 Nov (\"enemies poping in from thin air\"); ruling cu's fairness line; chaser.gd:24 WINDUP 0.6, the shortest crew tell; map-audit.md (packs spawn 60 to 90 m ahead on a timer); docs/promises/W1-134.md"
+    },
+    {
+      "id": "hook-pays",
+      "area": "Core feel",
+      "source": "receipt",
+      "label": "holding the hook through a swing pays at every hook site",
+      "status": "report",
+      "enforced_from": [
+        "W1-135"
+      ],
+      "floor": {
+        "sites_where_hold_beats_release": "all"
+      },
+      "producer": "node scripts/proof/receipt.mjs --row hook-pays --test hook_sites_test --plant no_bite --out <dir>/hook-pays.json",
+      "plant": "a site whose anchor the line cannot bite must read no hold",
+      "basis": "Codex receipt at the one measured flume site, hold 3.44 m/s against release 12.74 m/s (not rerun); the release's own speed is the expected value; docs/promises/W1-135.md"
+    },
+    {
+      "id": "machines-read",
+      "area": "Look",
+      "source": "receipt",
+      "label": "every world 1 crew has one agreed look and reads at 3 to 1 against its surround in sun and shade",
+      "status": "report",
+      "enforced_from": [
+        "W1-136"
+      ],
+      "floor": {
+        "boards_frozen": "every kind the world 1 packs name",
+        "named_in_distinctness_read": "all",
+        "body_ring_contrast": 3.0
+      },
+      "producer": "node scripts/proof/receipt.mjs --row machines-read --test machines_read_test --plant floor_paint --out <dir>/machines-read.json (draws through node scripts/gate/display-run.mjs --offscreen; Mac base, ruling eb)",
+      "plant": "a kind painted the floor's own colour must fail",
+      "basis": "WCAG 2.1 success criterion 1.4.11 (non-text contrast 3 to 1), the line tools/hud_contrast_capture.gd holds for HUD marks; COVERAGE G4 (no agreed boards); docs/promises/W1-136.md"
+    },
+    {
+      "id": "landing-read",
+      "area": "Clarity",
+      "source": "receipt",
+      "label": "the landing cue reads on sand, in shade and beside pier shadows, on High and Low",
+      "status": "report",
+      "enforced_from": [
+        "W1-137"
+      ],
+      "floor": {
+        "cue_contrast_sunlit": 3.0,
+        "cue_cie76_from_shade": 20,
+        "stations": 12
+      },
+      "producer": "node scripts/proof/receipt.mjs --row landing-read --test landing_cue_test --plant cue_hidden --out <dir>/landing-read.json (draws through the off-screen lane; Mac base)",
+      "plant": "the cue hidden must fail every station",
+      "basis": "WCAG 2.1 SC 1.4.11 for 3 to 1; 20 CIE76 is half the palette's smallest gap between two meanings (ARC to SAND 38.8), a design choice Andrew can overturn; COVERAGE G7; docs/promises/W1-137.md"
+    },
+    {
+      "id": "meanings-outshine-sand",
+      "area": "Look",
+      "source": "receipt",
+      "label": "warnings, loot, the item ladder, boss facts and your verb outshine the sand in sun and shade, on High and Low",
+      "status": "report",
+      "enforced_from": [
+        "W1-138"
+      ],
+      "floor": {
+        "share_of_designed_distance": 0.6,
+        "warning_edge_contrast": 3.0
+      },
+      "producer": "node scripts/proof/receipt.mjs --row meanings-outshine-sand --test meanings_value_test --plant sandstone_warning --out <dir>/meanings-outshine-sand.json (draws through the off-screen lane; Mac base, ruling eb)",
+      "plant": "a lobber warning drawn in SANDSTONE with no dark edge must fail at every station",
+      "basis": "palette.gd's designed CIE76 distances from SAND (HAZARD 72.5, COBALT 86.4, AMBER 43.4, BRASS 40.0, ARC 38.8, worked from the hex values); WCAG 2.1 SC 1.4.11 for the edge; a fill is held by colour distance because HAZARD on SAND is 1.81 to 1 by luminance; the 0.6 share is a design choice; COVERAGE G10, G11; docs/promises/W1-138.md"
+    },
+    {
+      "id": "boss-fast-threat",
+      "area": "Wardens and bosses",
+      "source": "receipt",
+      "label": "every world 1 boss presses a ball that holds a line, and a turn escapes",
+      "status": "report",
+      "enforced_from": [
+        "W1-139"
+      ],
+      "floor": {
+        "threats_per_straight_pass": 1,
+        "stall_over_straight_hull_per_min": 2.0,
+        "weave_hull_over_round0": 1.0
+      },
+      "producer": "\"$GODOT_BIN\" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/matchup_lab.gd -- --bosses=world1 --pass=straight,weave,stall --speed=14 --seeds=1,2,3,4,5,6,7,8 --receipt=<dir>/boss-fast-threat.json (the boss mode W1-139a adds)",
+      "plant": "every boss aimed at the ball's current point (lead 0) must read 0 threats",
+      "basis": "ruling cu; the board plan of 17 Nov (boss charges and drops lead a ball holding a straight line, a turn escapes); Andrew's A70 (\"bosses ... are a pushover\"); COVERAGE G13; docs/promises/W1-139.md"
+    },
+    {
+      "id": "clear-guide",
+      "area": "Clarity",
+      "source": "receipt",
+      "label": "when a fight ends, the way out and the rewards light up",
+      "status": "report",
+      "enforced_from": [
+        "W1-140"
+      ],
+      "floor": {
+        "guide_contrast": 3.0,
+        "guide_change_cie76": 20
+      },
+      "producer": "node scripts/proof/receipt.mjs --row clear-guide --test clear_guide_test --plant guide_off --out <dir>/clear-guide.json (draws through the off-screen lane)",
+      "plant": "the guide switched off must fail every station",
+      "basis": "COVERAGE G8 (nothing comes on at the end of a fight; the arches have no glow); WCAG 2.1 SC 1.4.11; 20 CIE76 is half the palette's smallest gap between two meanings; docs/promises/W1-140.md"
+    },
+    {
+      "id": "map-regions",
+      "area": "Stages and world",
+      "source": "receipt",
+      "label": "every place on the dam, the flume and the Slag Bowl says what it is for, serves a verb, and its drawn change is built",
+      "status": "report",
+      "enforced_from": [
+        "W1-141"
+      ],
+      "floor": {
+        "without_purpose": 0,
+        "verbs_unbacked": 0,
+        "route_nodes_outside": 0,
+        "board_changes_unbuilt": 0
+      },
+      "producer": "node scripts/proof/receipt.mjs --row map-regions --test park_regions_test --plant no_purpose,fake_hook --out <dir>/map-regions.json",
+      "plant": "a region with no purpose, and a region claiming hook with no anchor inside it, must each read as a miss",
+      "basis": "Andrew's B6 six principles (17 Nov); ruling ct; COVERAGE G1 (eight regions with no stated purpose); verbs are checked against park data, not the regions file; a board change is built only when the check its changes entry names passes; docs/promises/W1-141.md"
+    },
+    {
+      "id": "works-turn",
+      "area": "Stages and world",
+      "source": "receipt",
+      "label": "on each map a paid lever helps, a device turns on a stopped ball, a load can be rammed, and the boom crossing is timed",
+      "status": "report",
+      "enforced_from": [
+        "W1-142"
+      ],
+      "floor": {
+        "paid_levers_per_map": 1,
+        "stopped_ball_hull_from_device": "> 0",
+        "weaving_ball_hull_from_device": 0,
+        "ram_loads_per_map": 1,
+        "timed_crossing": 1
+      },
+      "producer": "node scripts/proof/receipt.mjs --row works-turn --test works_census_test --plant dead_lever --out <dir>/works-turn.json (with a bot pair over seeds 1 to 8)",
+      "plant": "a lever that does nothing must read no change",
+      "basis": "Andrew's A70 (scrap-activated interactions that challenge or help); COVERAGE G14, G15; ruling cu (risk on a ball that slows or stops); docs/promises/W1-142.md"
+    },
+    {
+      "id": "stand-ins-everywhere",
+      "area": "Look",
+      "source": "receipt",
+      "label": "no code-built stand-in on any pilot, in the camp, the shop, the menus or the events",
+      "status": "report",
+      "enforced_from": [
+        "W1-143"
+      ],
+      "floor": {
+        "unlisted_stand_ins": 0
+      },
+      "producer": "node scripts/gate/stand-ins-receipt.mjs --scope=all --out <dir>/stand-ins-everywhere.json (the widening W1-143a adds; today the receipt covers the world 1 ride as the gate row no-code-stand-ins)",
+      "plant": "a planted box in the camp must fail, as PRIM_PLANT=dam_box fails the ride today",
+      "basis": "COVERAGE K5 (the sweep covered one ride, one pilot, one seed); tools/prim_census_pin.tsv; docs/promises/W1-143.md"
+    },
+    {
+      "id": "handover-frames",
+      "area": "Stability",
+      "source": "receipt",
+      "label": "no frame over two 60 Hz frames at the stage hand-overs, and no renderer error at shutdown",
+      "status": "report",
+      "enforced_from": [
+        "W1-144"
+      ],
+      "floor": {
+        "max_frame_ms": 33.3,
+        "shutdown_error_lines": 0
+      },
+      "producer": "node scripts/frametime-check.mjs --capture=engine over the dam to flume and flume to Slag Bowl hand-overs, drawn through the off-screen lane on the Mac; node scripts/proof/receipt.mjs --row handover-frames writes the receipt",
+      "plant": "a 50 ms sleep added at the hand-over must fail",
+      "basis": "the 60 Hz frame of 16.7 ms; Codex's audit of 17 Nov (57 to 59 ms frames at the hand-over, not rerun); DEVICES.md lists the two macOS shutdown lines that do not count; ruling eb; docs/promises/W1-144.md"
+    },
+    {
       "id": "sitting-01",
       "area": "Core feel",
       "label": "how the ball feels in the hand: weight, speed, the hit",

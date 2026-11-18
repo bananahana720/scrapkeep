@@ -198,10 +198,27 @@ test("the rows file names a status and a known source on every row", () => {
     }
     assert.ok(["bots", "pacing", "beats", "placeholders", "frames", "challenge", "findings", "ledger", "receipt"].includes(r.source), r.id);
     // A receipt row says which command writes its receipt and which planted fault that check must catch.
-    if (r.source === "receipt") assert.ok(r.status === "gate" && r.producer && r.plant, r.id);
+    // A promise row (docs/promises) is a receipt row that reports until its card closes, then gates.
+    if (r.source === "receipt") assert.ok(["gate", "report"].includes(r.status) && r.producer && r.plant, r.id);
     if (r.status === "report") assert.ok(Array.isArray(r.enforced_from) && r.enforced_from.length, r.id);
   }
   assert.equal(new Set(SPEC.rows.map((r) => r.id)).size, SPEC.rows.length);
+});
+
+test("a promise row reports until its card closes: no receipt or a failing one never blocks, and the table names the card", () => {
+  const promises = SPEC.rows.filter((r) => r.source === "receipt" && r.status === "report");
+  assert.ok(promises.length > 0);
+  for (const r of promises) assert.match(r.enforced_from.join(" "), /^W1-\d+$/, r.id);
+  const inputs = finished();
+  const [unrun, failing] = promises;
+  delete inputs.receipts[unrun.id];
+  inputs.receipts[failing.id] = { head: HEAD, pass: false, measured: "0 of 11 packs", plant_caught: true };
+  const rows = evaluate(SPEC, inputs);
+  assert.equal(row(rows, unrun.id).verdict, "no data");
+  assert.equal(row(rows, failing.id).verdict, "miss");
+  assert.ok(!row(rows, unrun.id).blocks && !row(rows, failing.id).blocks);
+  assert.equal(passed(rows), true);
+  assert.match(renderTable(rows), new RegExp(`report until ${unrun.enforced_from[0]}`));
 });
 
 test("review: a pacing band without numeric min/max, or another schema, never passes", () => {
