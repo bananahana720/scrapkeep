@@ -1,6 +1,6 @@
 [
   {"id": "weir_mesa", "polygon": [[-650, -760], [-317, -760], [-317, -380], [-650, -380]], "purpose": "route", "verbs": ["jump", "hook"], "why": "The crew left the timber up beside the intake chute."},
-  {"id": "flume_north", "polygon": [[-317, -730], [-145, -730], [-145, -312], [-317, -312]], "purpose": "route", "verbs": ["jump"], "why": "The chute feeds the high trough. Its bents will take a cable."},
+  {"id": "flume_north", "polygon": [[-317, -730], [-145, -730], [-145, -312], [-317, -312]], "purpose": "route", "verbs": ["jump"], "why": "The chute throws you onto the high trough."},
   {"id": "canal_fields", "polygon": [[-570, -380], [-308, -380], [-308, 134], [-570, 134]], "purpose": "fight", "verbs": ["shoot", "jump"], "why": "The gun on the rim looks straight down the lined canal."},
   {"id": "butte_gap", "polygon": [[-308, -312], [-178, -312], [-178, -145], [-308, -145]], "purpose": "hub", "verbs": ["dash"], "why": "The canal and the high line trade sides between the buttes."},
   {"id": "upper_canal", "polygon": [[-178, -312], [60, -312], [60, -145], [-178, -145]], "purpose": "route", "verbs": ["jump"], "why": "The rim road kicker clears the dry cut."},
