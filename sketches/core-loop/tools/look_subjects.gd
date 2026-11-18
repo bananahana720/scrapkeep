@@ -364,6 +364,9 @@ static func merge_stations(directory: String, subjects: Dictionary) -> Array:
 			row["anchor"] = "station"
 			for key in ["point", "ball_position", "ball_velocity"]:
 				row[key] = _vector(row[key])
+			if row.has("mast_angle_deg"):
+				row.bowl_target_local = _vector(row.bowl_target_local)
+				row.bowl_entry_local = _vector(row.bowl_entry_local)
 			for spawn in row.spawns:
 				spawn.point = _vector(spawn.point)
 			for shot in row.cameras:
@@ -398,6 +401,13 @@ static func _station_problem(id: String, row: Variant) -> String:
 	for key in ["point", "ball_position", "ball_velocity"]:
 		if not _has_xyz(row.get(key)):
 			return "%s needs three coordinates" % key
+	if id == "bowl_mast" or row.has("mast_angle_deg") or row.has("bowl_entry_local") or row.has("bowl_target_local"):
+		if not _has_xyz(row.get("bowl_entry_local")) or not _has_xyz(row.get("bowl_target_local")):
+			return "needs a bowl-local entry and target"
+		if not (row.get("mast_angle_deg") is float or row.get("mast_angle_deg") is int) or not is_finite(row.mast_angle_deg):
+			return "needs a mast angle"
+		if _vector(row.ball_velocity).is_zero_approx():
+			return "needs an incoming heading for the mast"
 	if not row.get("spawns") is Array:
 		return "needs a spawns array"
 	for spawn in row.spawns:

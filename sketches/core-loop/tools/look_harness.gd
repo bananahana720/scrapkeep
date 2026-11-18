@@ -663,7 +663,10 @@ func _shoot(subject: String, extra := {}) -> void:
 	if not base.is_empty() and FileAccess.file_exists(base_frames):
 		_pins = ball_pins(JSON.parse_string(FileAccess.get_file_as_string(base_frames)))
 	var recs: Array = []
-	for shot in row["cameras"]:
+	var cameras: Array = row.cameras.duplicate()
+	if extra.has("mast"):
+		cameras.append(["numerical_aim", Vector3.ZERO, Vector3.ZERO, game.camera.cam.fov, ["mast_eye", "station"]])
+	for shot in cameras:
 		var v := Subjects.resolve(subject, shot, _anchors)
 		var ball := {"in_frame": false, "bbox": []}
 		var settled := _check_stage_yaw(subject, String(shot[0]))
@@ -891,16 +894,31 @@ func _staged() -> void:
 		await _boot(false, "park")
 		if game.flow.stage() != int(row.stage):
 			await _stage(int(row.stage))
+		if row.has("mast_angle_deg"):
+			_enter_station_bowl()
+			await physics_frame
 		var timing := await _wait_tick(subject)
 		if timing.tick != timing.wanted or game.ctx.stages != Game.TABLES.park or game.flow.stage() != int(row.stage):
 			printerr("look_harness: %s needs park stage %s at tick %s (actual stage %s, tick %s)" % [subject, row.stage, timing.wanted, game.flow.stage(), ticks])
 			failures += 1
 			continue
 		var point := _station_point(row, row.point)
+		var entry := _station_point(row, row.ball_position)
+		var extra := {"table": game.table, "stage": game.flow.stage()}
+		if row.has("mast_angle_deg"):
+			var pose := _mast_pose(row)
+			if pose.is_empty():
+				printerr("look_harness: %s requires a physical hit on the %.0f-degree Brindle mast" % [subject, row.mast_angle_deg])
+				failures += 1
+				continue
+			point = pose.target
+			entry = pose.entry
+			_anchor("mast_eye", pose.eye)
+			extra.mast = pose.receipt
 		_anchor("station", point)
 		var body: RigidBody3D = game.player.body()
 		body.freeze = false
-		game.player.reset_to(_station_point(row, row.ball_position), row.ball_velocity)
+		game.player.reset_to(entry, row.ball_velocity)
 		var spawned := []
 		for spawn in row.spawns:
 			var actor: Node3D = game.combat.spawn_enemy(spawn.kind, _station_point(row, spawn.point))
@@ -911,8 +929,52 @@ func _staged() -> void:
 			var at := actor.global_position
 			spawned.append({"kind": spawn.kind, "at": [at.x, at.y, at.z]})
 		if spawned.size() == row.spawns.size():
-			await _shoot(subject, {"table": game.table, "stage": game.flow.stage(), "spawns": spawned,
-				"ball_velocity": [body.linear_velocity.x, body.linear_velocity.y, body.linear_velocity.z]})
+			extra.spawns = spawned
+			extra.ball_velocity = _coordinates(body.linear_velocity)
+			await _shoot(subject, extra)
+
+
+func _enter_station_bowl() -> void:
+	game.flow.enter_boss(Vector3.ZERO)
+	game.ctx.boss.set_physics_process(false)
+
+
+static func _coordinates(point: Vector3) -> Array:
+	return [point.x, point.y, point.z]
+
+
+# Match the numerical grapple station. Floor, ramps and four masts share Bowl's body.
+func _mast_pose(row: Dictionary) -> Dictionary:
+	if not game.flow.in_arena or game.flow.state != game.flow.BOSS:
+		return {}
+	var arena: Node3D = game.ctx.boss.get("arena")
+	if not is_instance_valid(arena) or arena.name != &"SlagBowl":
+		return {}
+	var bowl := arena.get_node_or_null("Bowl") as StaticBody3D
+	if bowl == null:
+		return {}
+	var target: Vector3 = arena.global_position + row.bowl_target_local
+	var entry: Vector3 = arena.global_position + row.bowl_entry_local
+	var eye: Vector3 = entry - row.ball_velocity.normalized() * 6.0 + Vector3.UP * 3.0
+	var hit := _ray(eye, target)
+	if hit.get("collider") != bowl or target.distance_to(hit.position) > 2.0:
+		return {}
+	var shape := bowl.shape_owner_get_owner(bowl.shape_find_owner(hit.shape)) as CollisionShape3D
+	if shape == null or not shape.shape is CylinderShape3D:
+		return {}
+	var cylinder := shape.shape as CylinderShape3D
+	var axis := arena.to_local(shape.global_position)
+	var angle := deg_to_rad(float(row.mast_angle_deg))
+	var expected_axis := Vector2(cos(angle), sin(angle)) * 27.0
+	if Vector2(axis.x, axis.z).distance_to(expected_axis) > 0.01 or not is_equal_approx(cylinder.radius, 1.0) or not is_equal_approx(cylinder.height, 20.0):
+		return {}
+	return {"entry": entry, "target": target, "eye": eye, "receipt": {
+		"flow_state": "BOSS", "in_arena": game.flow.in_arena, "arena": str(arena.get_path()),
+		"arena_origin": _coordinates(arena.global_position), "collider": str(bowl.get_path()),
+		"shape_index": hit.shape, "shape_type": cylinder.get_class(), "radius": cylinder.radius,
+		"height": cylinder.height, "angle_deg": fposmod(rad_to_deg(atan2(axis.z, axis.x)), 360.0),
+		"hit": _coordinates(hit.position), "target": _coordinates(target), "entry": _coordinates(entry),
+		"aim_eye": _coordinates(eye)}}
 
 
 func _station_point(row: Dictionary, point: Vector3) -> Vector3:
