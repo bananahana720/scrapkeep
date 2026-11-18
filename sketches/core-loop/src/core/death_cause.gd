@@ -27,6 +27,7 @@ const WORDS := {
 	"warden": "the Warden",
 	"warden_counter": "the Warden's counter-pulse",
 	"silt_boil": "a silt boil",
+	"flood": "the flood",
 	"cinder_floor": "the cinder floor",
 	"pocket_veil": "a pocket veil",
 	"heat_cook_off": "your own shell, cooked off",
