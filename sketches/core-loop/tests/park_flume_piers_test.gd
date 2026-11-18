@@ -277,13 +277,20 @@ func _check_lines(under: Array, open_steps: Array) -> void:
 	if not known.is_empty():
 		t.skip("the foundations leave every open step of the authored lines open: known blocked steps",
 				"%d steps shut by tall footings, not yet moved: %s" % [known.size(), known.map(_describe)])
+	# A listed spot that no longer blocks must leave the list, or a later re-block there would pass as known.
+	# With --plant no footing is solid, so nothing can block and the list is not judged.
+	if not "--plant" in OS.get_cmdline_user_args():
+		var stale := KNOWN_BLOCKED.filter(func(spot: Array) -> bool:
+			return not known.any(func(step: Array) -> bool: return _at_spot(step, spot)))
+		t.check("every spot listed as known blocked is still blocked", stale.is_empty(), "open again, take out of KNOWN_BLOCKED: %s" % [stale])
 
 
 func _is_known(step: Array) -> bool:
-	for spot: Array in KNOWN_BLOCKED:
-		if step[2] == spot[1] and Vector2(step[1].x, step[1].z).distance_to(spot[0]) <= KNOWN_TOLERANCE_M:
-			return true
-	return false
+	return KNOWN_BLOCKED.any(func(spot: Array) -> bool: return _at_spot(step, spot))
+
+
+func _at_spot(step: Array, spot: Array) -> bool:
+	return step[2] == spot[1] and Vector2(step[1].x, step[1].z).distance_to(spot[0]) <= KNOWN_TOLERANCE_M
 
 
 func _describe(step: Array) -> String:
