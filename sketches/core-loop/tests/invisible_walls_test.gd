@@ -1,5 +1,6 @@
 extends SceneTree
 
+const UndrawnPlaces := preload("res://tools/qa/undrawn_places.gd")
 const Game := preload("res://src/game.gd")
 const CampHub := preload("res://src/world/camp_hub.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
@@ -82,9 +83,52 @@ func _run() -> void:
 	var hulls := ParkRecipes.anchor_hulls(row, fit)
 	_t.eq("one hull per band", hulls.size(), fit.size())
 	game.free()
+	_cluster_samples()
+	_wall_sweep()
 	for spot: Array in HUNG_SPOTS:
 		_roll_out(spot)
 	quit(_t.verdict())
+
+
+func _cluster_samples() -> void:
+	# The middle sample bridges the two ends, crossing zero and a cell boundary.
+	var points := PackedVector3Array([Vector3(-1, 2, 0), Vector3(1, 2, 0), Vector3(0, 2, 0), Vector3(6, 2, 0)])
+	var places := UndrawnPlaces.cluster({"A": points, "B": PackedVector3Array([points[0]])}, 0.75)
+	_t.eq("one connected patch, one distant patch and one different owner", places.size(), 3)
+	if places.size() == 3:
+		_t.eq("the connected patch spans its three samples", places[0],
+			{"owner": "A", "samples": 3, "position": [0.0, 2.0, 0.0], "size": [2.0, 0.0, 0.0]})
+		_t.eq("the other owner keeps its coincident sample", places[2]["owner"], "B")
+
+
+func _wall_sweep() -> void:
+	var out := OS.get_user_data_dir().path_join("wall-sweep-%d-%d" % [OS.get_process_id(), Time.get_ticks_usec()])
+	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
+		"--script", "res://tools/qa/collision_sweep.gd", "--", "--area=wall_fixture", "--step=0.15", "--out=%s" % out])
+	if OS.get_environment("PLANT") == "invisible_wall":
+		args.append("--plant-wall")
+	var output := []
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	var path := out.path_join("wall_fixture-s1.json")
+	if not _t.check("wall fixture wrote its report", code == 0 and FileAccess.file_exists(path), str(code)):
+		print("\n".join(output))
+		return
+	var report = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not _t.check("the sweep sampled all three physical walls", report is Dictionary and report.get("totals", {}).get("shapes") == 3
+			and report["totals"]["samples"] > 0 and report.get("places") is Array):
+		return
+	var counts := {}
+	var counted := 0
+	for place in report["places"]:
+		var owner: String = place["owner"]
+		counts[owner] = int(counts.get(owner, 0)) + 1
+		counted += int(place["samples"])
+	_t.eq("the matching wall has no undrawn place", counts.get("Park_QAWall_Matched", 0), 0)
+	_t.eq("the 0.4 m miss with a mesh within 1.5 m is one place", counts.get("Park_QAWall_Near", 0), 1)
+	_t.eq("the planted invisible wall is one place", counts.get("Park_QAWall_Missing", 0), 1)
+	_t.eq("the inventory accounts for every bare sample", counted, int(report["totals"]["bare"]))
+	print("RECEIPT %s" % JSON.stringify({"places_by_owner": counts, "bare_samples": counted,
+		"invisible_samples": report["totals"]["invisible"]}))
 
 
 # Rolls out of spot from 8 sides (tools/spot_sweep.gd --leave=1): no probe may hang or stick, and the drop must land.

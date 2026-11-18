@@ -17,8 +17,11 @@ extends SceneTree
 #
 # --area=arena finishes stage 2 into Brindle's Slag Bowl and sweeps the bowl, its ground being the bowl's own surface.
 #
-# Writes <out>/<area>-s<seed>.json (every flagged shape with its bare points) and prints a summary table.
+# The report includes every bare sample in "places", even on shapes below the flagged-area cutoff.
+# A place gives the owner and the centre and size of the sample bounds in world metres.
+# --area=wall_fixture checks matching, near and missing wall meshes. --plant-wall hides the matching mesh.
 
+const UndrawnPlaces := preload("res://tools/qa/undrawn_places.gd")
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -117,11 +120,18 @@ func _run() -> void:
 	if bot_policy != "":
 		await _run_bot()
 		return
+	var places_unavailable := ""
 	game.ctx.calm = true
 	game.player.source = Intent.Scripted.new()
 	game.run.run_seed_override = run_seed
 	var stage_index := 0
-	if area == "camp":
+	if area == "wall_fixture":
+		_add_fixture_wall("Park_QAWall_Matched", 2000.0, 0.0, not OS.get_cmdline_user_args().has("--plant-wall"))
+		_add_fixture_wall("Park_QAWall_Near", 2010.0, 1.05, true)
+		_add_fixture_wall("Park_QAWall_Missing", 2020.0, 0.0, false)
+		ground_fn = func(_x: float, _z: float) -> float: return 0.0
+		owner_filter = "Park_QAWall"
+	elif area == "camp":
 		game.camp_hub.enter_walk()
 		await _frames(30)
 		var o: Vector3 = game.camp_hub.HUB_ORIGIN
@@ -171,6 +181,8 @@ func _run() -> void:
 		while waited < 3000 and not (terrain.rows_ready(stage_index) and terrain.is_ready(stage_index) and game.flow.state_name() == "stage"):
 			await process_frame
 			waited += 1
+		if not (terrain.rows_ready(stage_index) and terrain.is_ready(stage_index) and game.flow.state_name() == "stage"):
+			places_unavailable = "the park stage did not finish loading"
 		var pp = game.presentation.park_props
 		if pp != null:
 			pp.finish()
@@ -188,9 +200,13 @@ func _run() -> void:
 	await _physics(3)
 	space = game.get_world_3d().direct_space_state
 	var flagged: Array = []
+	var bare_by_owner := {}
 	var totals := {"shapes": 0, "samples": 0, "bare": 0, "invisible": 0}
 	for b: Dictionary in blockers:
-		var r := _sweep_shape(b)
+		var owner := _owner_label(b["body"])
+		if not bare_by_owner.has(owner):
+			bare_by_owner[owner] = PackedVector3Array()
+		var r := _sweep_shape(b, bare_by_owner[owner])
 		totals["shapes"] += 1
 		totals["samples"] += int(r["samples"])
 		totals["bare"] += int(r["bare"])
@@ -202,8 +218,19 @@ func _run() -> void:
 		body.queue_free()
 	if identity_multimeshes > 0:
 		printerr("collision_sweep: %d MultiMeshes read every instance at one transform (headless renderer?): run under xvfb-run --rendering-driver opengl3" % identity_multimeshes)
+	if area != "wall_fixture" and DisplayServer.get_name() == "headless":
+		places_unavailable = "map places require a real renderer for MultiMesh transforms"
+	elif identity_multimeshes > 0 or visual_count == 0 or blockers.is_empty() or totals["samples"] == 0:
+		places_unavailable = "incomplete blocker or visual geometry"
 	var report := {"area": area, "identity_multimeshes": identity_multimeshes, "seed": run_seed, "step": step, "tol": tol, "near_m": NEAR_M, "visual_meshes": visual_count,
 		"band": [BAND_LOW, BAND_HIGH], "totals": totals, "flagged": flagged}
+	if places_unavailable.is_empty():
+		report["places"] = UndrawnPlaces.cluster(bare_by_owner, step)
+		print("collision_sweep: %d undrawn places" % report["places"].size())
+	else:
+		report["places"] = null
+		report["places_unavailable"] = places_unavailable
+		printerr("collision_sweep: no place count: " + places_unavailable)
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	var path := out_dir.path_join("%s-s%d.json" % [area, run_seed])
 	var f := FileAccess.open(path, FileAccess.WRITE)
@@ -230,6 +257,25 @@ func _run() -> void:
 	for r: Dictionary in flagged.slice(0, 40):
 		print("  %-58s inv %7.1f m2  bare %7.1f m2  at %s  (%s)" % [String(r["owner"]).left(58), r["invisible_band_m2"], r["bare_band_m2"], str(r["worst"]), r["shape"]])
 	quit(0)
+
+
+func _add_fixture_wall(label: String, x: float, mesh_offset_z: float, drawn: bool) -> void:
+	var wall := StaticBody3D.new()
+	wall.name = label
+	wall.position = Vector3(x, 4, 2000)
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(4, 2, 0.5)
+	var collider := CollisionShape3D.new()
+	collider.shape = shape
+	wall.add_child(collider)
+	var view := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = shape.size
+	view.mesh = mesh
+	view.position.z = mesh_offset_z
+	view.visible = drawn
+	wall.add_child(view)
+	game.add_child(wall)
 
 
 func _in_area(p: Vector3) -> bool:
@@ -376,7 +422,7 @@ func _instances(view: MultiMeshInstance3D) -> Array:
 	return out
 
 
-func _sweep_shape(b: Dictionary) -> Dictionary:
+func _sweep_shape(b: Dictionary, bare_positions: PackedVector3Array) -> Dictionary:
 	var shape: Shape3D = b["shape"]
 	var body: CollisionObject3D = b["body"]
 	var xf: Transform3D = b["xf"]
@@ -448,6 +494,7 @@ func _sweep_shape(b: Dictionary) -> Dictionary:
 			if _enclosed(p, n):
 				continue
 			bare += 1
+			bare_positions.append(p)
 			probe.radius = NEAR_M
 			var none_near := space.intersect_shape(q, 1).is_empty()
 			# The gap to the drawn surface: the first of GAPS that reaches it, NEAR_M when only NEAR_M does, "none" past it.
