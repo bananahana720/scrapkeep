@@ -12,6 +12,8 @@ var game
 var qualify_only := false
 var stage_one_draws := -1
 var quit_arm := ""
+var profile
+var trace_warm := false
 var pass_number := 0
 var draws := PackedInt64Array()
 var entries := {}
@@ -31,17 +33,47 @@ func _initialize() -> void:
 	sleep_at_entry = args.has("--w144-plant")
 	if sleep_at_entry:
 		args.erase("--w144-plant")
-	for arm in ["wait", "lights", "particles", "game"]:
-		if args.has("--w144-quit=" + arm):
-			quit_arm = arm
-			args.erase("--w144-quit=" + arm)
-	if args != OPTIONS or (sleep_at_entry and qualify_only) or (quit_arm != "" and not qualify_only):
+	trace_warm = args.has("--w144-trace")
+	if trace_warm:
+		args.erase("--w144-trace")
+	for arg: String in args.duplicate():
+		if arg.begins_with("--w144-quit="):
+			var arm := arg.trim_prefix("--w144-quit=")
+			if quit_arm == "" and arm in ["wait", "lights", "particles", "game", "one-light", "empty", "one-emitter"]:
+				quit_arm = arm
+				args.erase(arg)
+	if args != OPTIONS or (qualify_only and (sleep_at_entry or trace_warm)) or (quit_arm != "" and not qualify_only):
 		printerr("handover_capture needs its fixed seed-1 sitting options")
 		quit(2)
 		return
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	RenderingServer.frame_post_draw.connect(_drawn)
-	_start.call_deferred()
+	if quit_arm in ["empty", "one-emitter"]:
+		_minimal.call_deferred()
+	else:
+		_start.call_deferred()
+
+
+# Is a live game scene required for the particle shader teardown errors?
+func _minimal() -> void:
+	var world := Node3D.new()
+	root.add_child(world)
+	var camera := Camera3D.new()
+	world.add_child(camera)
+	camera.position.z = 3.0
+	if quit_arm == "one-emitter":
+		var emitter := GPUParticles3D.new()
+		emitter.draw_pass_1 = BoxMesh.new()
+		emitter.process_material = ParticleProcessMaterial.new()
+		world.add_child(emitter)
+	for frame in 120:
+		await RenderingServer.frame_post_draw
+	print("W144_RELEASE ", quit_arm)
+	world.queue_free()
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	print("W144_QUIT ", quit_arm)
+	quit()
 
 
 func _start() -> void:
@@ -55,6 +87,9 @@ func _start() -> void:
 	game.events.boss_arena_entered.connect(_mark.bind("flume_to_bowl"))
 	game.events.run_ended.connect(_finished, CONNECT_ONE_SHOT)
 	print("W144_START ", pass_number)
+	if trace_warm and pass_number == 2:
+		profile = load("res://tools/frame_probe.gd").new()
+		profile.watch(game, "user://handover-profile.ndjson", true)
 
 
 func _drawn() -> void:
@@ -82,6 +117,13 @@ func _quit_experiment() -> void:
 			if (quit_arm == "lights" and kind == "Light3D") or (quit_arm == "particles" and kind == "GPUParticles3D"):
 				node.queue_free()
 	print("W144_RELEASE ", quit_arm)
+	if quit_arm == "one-light":
+		for light in game.find_children("*", "Light3D", true, false):
+			print("W144_FREE_LIGHT ", light.get_path())
+			light.free()
+			await RenderingServer.frame_post_draw
+			await RenderingServer.frame_post_draw
+			print("W144_FREED_LIGHT")
 	if quit_arm == "game":
 		game.queue_free()
 	await RenderingServer.frame_post_draw
@@ -134,6 +176,8 @@ func _close(won: bool) -> void:
 		rows[seam] = {"entry_us": entries[seam], "max_ms": worst_us / 1000.0, "intervals_us": samples}
 	print("W144_PASS ", JSON.stringify({"pass_number": pass_number, "planted": pass_number == 2 and sleep_at_entry, "seams": rows}))
 	if pass_number == 2:
+		if profile != null:
+			profile.write()
 		quit()
 		return
 	paused = false
