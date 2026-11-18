@@ -155,7 +155,7 @@ const PROBE = "res://tools/offscreen_probe.gd";
 // does not qualify a tool. The probe inherits the dam capture, so pin both scripts.
 const watchedTools = new Map([
   ["res://tools/qa/collision_sweep.gd", {
-    "tools/qa/collision_sweep.gd": "cec9b202f318fa7fc56f4e3f5bd208e0376f5fd7d8f6c63c52202e65e81c3369",
+    "tools/qa/collision_sweep.gd": "ae4652385fead29cc80ef5ebb937abffe2c15ff8a7d3f1171b5d4feca4485ada",
     "tools/qa/undrawn_places.gd": "a2bd84dd039e4174f22bfbd879f70294922a9bf6af7200c67a3e3996034a5799",
     "tools/offscreen_window.gd": "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d",
     "tools/bot_driver.gd": "c8c27ad0c9c22ec2f432ed3479ba7d4b3e5f4ff6258de7d18c500b3a4ab138f1",

@@ -112,8 +112,12 @@ func _wall_sweep() -> void:
 	var partial_stem := "wall_fixture-s1-partial-" + WALL_FILTER.sha256_text().left(10)
 	_check_wall_reports(out, partial_stem)
 
+	_remove_wall_reports(out, ["wall_fixture-s1", partial_stem])
+
+
+func _remove_wall_reports(out: String, stems: Array) -> void:
 	# Both sweeps can leave an unavailable report if the fixture fails to load.
-	for stem: String in ["wall_fixture-s1", partial_stem]:
+	for stem: String in stems:
 		for suffix: String in [".json", "-owners.json", "-unavailable.json", "-unavailable-owners.json"]:
 			var path := out.path_join(stem + suffix)
 			if FileAccess.file_exists(path):
@@ -167,23 +171,34 @@ func _check_wall_reports(out: String, partial_stem: String) -> void:
 
 	# The game hides substituted meshes with layers=0 while keeping them in the scene tree.
 	# A nonzero layer outside the rider camera's mask is equally absent from its view.
-	args.remove_at(args.size() - 1)  # owner filter
-	if args.has("--plant-wall"):
-		args.remove_at(args.find("--plant-wall"))
-	for layer_flag: String in ["--layer-zero-wall", "--camera-masked-wall"]:
-		output.clear()
-		code = OS.execute(OS.get_executable_path(), args + PackedStringArray([layer_flag]), output, true)
-		if not _t.check("layer control ran " + layer_flag, code == 0, str(code)):
-			print("\n".join(output))
+	for flag: String in ["--layer-zero-wall", "--camera-masked-wall", "--preview-wall"]:
+		var control_dir := out.path_join(flag.trim_prefix("--"))
+		var created := DirAccess.make_dir_absolute(control_dir)
+		if not _t.check("each visibility control creates a fresh directory", created == OK, error_string(created)):
 			continue
-		var layer_report = JSON.parse_string(FileAccess.get_file_as_string(path))
-		var owners := []
-		for place in layer_report["places"]:
-			owners.append(place["owner"])
-		owners.sort()
-		_t.eq("rider-hidden mesh counts as a third place " + layer_flag, owners,
-			["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"])
-		_t.eq("same collider samples in both layer readings", layer_report["totals"]["samples"], report["totals"]["samples"])
+		_check_hidden_wall(control_dir, flag, int(report["totals"]["samples"]))
+		_remove_wall_reports(control_dir, ["wall_fixture-s1"])
+
+
+func _check_hidden_wall(out: String, flag: String, expected_samples: int) -> void:
+	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
+		"--script", "res://tools/qa/collision_sweep.gd", "--", "--area=wall_fixture", "--step=0.15", "--out=%s" % out, flag])
+	var output := []
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	var path := out.path_join("wall_fixture-s1.json")
+	if not _t.check("visibility control wrote its own report " + flag, code == 0 and FileAccess.file_exists(path), str(code)):
+		print("\n".join(output))
+		return
+	var report = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not _t.check("visibility control measured places " + flag, report is Dictionary and report.get("places") is Array):
+		return
+	var owners := []
+	for place in report["places"]:
+		owners.append(place["owner"])
+	owners.sort()
+	_t.eq("rider-hidden mesh counts as a third place " + flag, owners,
+		["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"])
+	_t.eq("same collider samples in both visibility readings", int(report["totals"]["samples"]), expected_samples)
 
 
 # Rolls out of spot from 8 sides (tools/spot_sweep.gd --leave=1): no probe may hang or stick, and the drop must land.

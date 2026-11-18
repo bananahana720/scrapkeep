@@ -119,6 +119,14 @@ func _run() -> void:
 		_add_fixture_wall("Park_QAWall_Matched", 2000.0, 0.0, not OS.get_cmdline_user_args().has("--plant-wall"))
 		_add_fixture_wall("Park_QAWall_Near", 2010.0, 1.05, true)
 		_add_fixture_wall("Park_QAWall_Missing", 2020.0, 0.0, false)
+		if OS.get_cmdline_user_args().has("--preview-wall"):
+			var preview := SubViewport.new()
+			preview.own_world_3d = true
+			game.add_child(preview)
+			var mesh: MeshInstance3D = game.get_node("Park_QAWall_Matched").find_children("*", "MeshInstance3D", true, false)[0]
+			var at := mesh.global_transform
+			mesh.reparent(preview)
+			mesh.global_transform = at
 		var camera := Camera3D.new()
 		camera.cull_mask = 1
 		game.add_child(camera)
@@ -394,7 +402,7 @@ func _shape_faces(shape: Shape3D) -> PackedVector3Array:
 
 func _rider_can_see(view: GeometryInstance3D) -> bool:
 	var camera := root.get_camera_3d()
-	return camera != null and view.is_visible_in_tree() and (view.layers & camera.cull_mask) != 0
+	return camera != null and view.get_world_3d() == camera.get_world_3d() and view.is_visible_in_tree() and (view.layers & camera.cull_mask) != 0
 
 
 # Drawn meshes near any blocker, copied as baked trimeshes onto VISUAL_LAYER.
