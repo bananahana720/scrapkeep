@@ -8,6 +8,11 @@ const Game := preload("res://src/game.gd")
 const TitleIntros := preload("res://src/presentation/title_intros.gd")
 const T := preload("res://tests/support/t.gd")
 
+# The subject shows as a speck under the pointer's arrow; it must still be a measurable share of the frame.
+const MIN_SUBJECT_SCREEN_FRACTION := 0.01
+# How far under the subject's feet the set's surface may lie.
+const SUPPORT_GAP_M := 1.0
+
 var _t := T.new("title_intros_test")
 
 
@@ -212,11 +217,11 @@ func _play_row(game: Node, display, id: String, capture: String) -> void:
 			# The arrow is drawn from its own left edge, so it must be no wider than a line.
 			_t.check(id + " pointer's arrow hangs under the middle of its words", arrow != null and pointer.size.x > 0.0
 				and arrow.size.x < 2.0 and absf(arrow.position.x - pointer.size.x * 0.5) < 2.0)
-			if id == "sable":
-				_check_sable_postcard(display)
+			if TitleIntros.row(id).has("postcard"):
+				_check_postcard(display)
 		if id == "sable" and i == 1:
 			var set_root: Node3D = display.stage.get_node("IntroSet")
-			var postcard := set_root.get_node_or_null("SablePostcard") as Node3D
+			var postcard := set_root.get_node_or_null("Postcard") as Node3D
 			var subject := set_root.get_node("Subject") as Node3D
 			_t.check("Sable's hero shot leaves the dam set and dawn behind", postcard != null and not postcard.visible
 				and display.camera.environment == display._environment)
@@ -252,19 +257,54 @@ func _play_row(game: Node, display, id: String, capture: String) -> void:
 	_t.check(id + " cuts back to the deck", display.camera.position.distance_to(held.origin) < 1.5)
 
 
-func _check_sable_postcard(display: Node) -> void:
+func _check_postcard(display: Node) -> void:
 	var set_root: Node3D = display.stage.get_node("IntroSet")
-	var postcard := set_root.get_node_or_null("SablePostcard") as Node3D
-	if not _t.check("Sable's postcard shows the dam set", postcard != null and postcard.visible):
+	var postcard := set_root.get_node_or_null("Postcard") as Node3D
+	if not _t.check("the postcard shows its set", postcard != null and postcard.visible):
 		return
-	var subject: Node3D = set_root.get_node("Subject")
-	var subject_at := postcard.to_local(subject.global_position)
-	# The landmark's arch deck is at 121 m; between the gate towers and the abutments it is open to the sky.
-	_t.check("Sable is on the open crest", absf(subject_at.x) > 24.0 and absf(subject_at.x) < 160.0
-		and subject_at.y >= 121.0 and subject_at.y <= 126.0)
+	var camera: Camera3D = display.camera
+	var box := _world_box(set_root.get_node("Subject"))
+	var centre := box.get_center()
+	var head := Vector3(centre.x, box.end.y, centre.z)
+	var feet := Vector3(centre.x, box.position.y, centre.z)
+	_t.check("the subject is inside the camera frustum", camera.is_position_in_frustum(head) and camera.is_position_in_frustum(feet),
+		"head %s, feet %s" % [head, feet])
+	var screen: float = camera.get_viewport().get_visible_rect().size.y
+	var shown := (camera.unproject_position(feet).y - camera.unproject_position(head).y) / screen
+	_t.check("the subject is at least %.1f%% of the screen tall" % (MIN_SUBJECT_SCREEN_FRACTION * 100.0),
+		shown >= MIN_SUBJECT_SCREEN_FRACTION, "%.2f%%" % (shown * 100.0))
+	var floor_y := _floor_below(postcard, centre)
+	_t.check("set geometry lies under the subject's feet", floor_y != -INF and absf(floor_y - feet.y) <= SUPPORT_GAP_M,
+		"floor %.1f, feet %.1f" % [floor_y, feet.y])
 	var water: Node3D = postcard.get_node("Tailwater")
-	var camera_height: float = display.camera.global_position.y - water.global_position.y
-	_t.check("Sable's postcard looks up at the dam from just over the water", camera_height > 0.0 and camera_height < 10.0)
+	var camera_height: float = camera.global_position.y - water.global_position.y
+	_t.check("the postcard looks up at its set from just over the water", camera_height > 0.0 and camera_height < 10.0)
+
+
+# The world-space box of every mesh under a node.
+func _world_box(node: Node3D) -> AABB:
+	var box := AABB()
+	var first := true
+	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		var part: AABB = view.global_transform * view.get_aabb()
+		box = part if first else box.merge(part)
+		first = false
+	return box
+
+
+# The height of the highest set surface straight below a point, -INF where there is none. The tailwater is the water
+# plane, not the set a subject stands on.
+func _floor_below(postcard: Node3D, from: Vector3) -> float:
+	var best := -INF
+	for view: MeshInstance3D in postcard.find_children("*", "MeshInstance3D", true, false):
+		if view.name == "Tailwater" or view.mesh == null:
+			continue
+		var local_from: Vector3 = view.global_transform.affine_inverse() * from
+		var local_dir: Vector3 = view.global_transform.basis.inverse() * Vector3.DOWN
+		var hit: Dictionary = view.mesh.generate_triangle_mesh().intersect_ray(local_from, local_dir)
+		if not hit.is_empty():
+			best = maxf(best, (view.global_transform * Vector3(hit.position)).y)
+	return best
 
 
 # The workshop's companion key (M) runs before the title stage in tree order; the opening must

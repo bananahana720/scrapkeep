@@ -61,11 +61,8 @@ const ROLLCALL_AT := Vector3(-300.0, 0.0, 0.0)
 # The stage is tonemapped bright for the deck; sky colours read true at this energy.
 const SKY_ENERGY := 0.5
 const ROLLCALL := [["runner_gunner", "RIVET", "Never misses."], ["demolitions_caster", "KEST", "Still deciding."], ["tarn", "TARN", "Very gentle. Machine isn't."]]
-const SABLE_POSTCARD_AT := Vector3(0.0, 0.0, -950.0)
-const SABLE_POSTCARD_SCALE := 3.2
-const PARK_DAM := "res://assets/models/park/landmark_dam.glb"
-# Deck at y=121, just inside the apron-side parapet at x=61 (park/landmarks.py).
-const SABLE_CREST := Vector3(61.0, 121.0, -71.0)
+const POSTCARD_SKY_CURVE := 0.45
+const POSTCARD_WATER_COLORS := [Color("1a4d58"), Color("639294")]
 
 var host: Node
 var camera: Camera3D
@@ -83,8 +80,8 @@ var _row := {}
 var _set: Node3D
 var _subject: Node3D
 var _subject_size := 1.0
-var _sable_postcard: Node3D
-var _sable_dawn: Environment
+var _postcard: Node3D
+var _postcard_env: Environment
 var _props := {}
 var _layer: CanvasLayer
 var _overlay: Control
@@ -206,8 +203,8 @@ func _finish(skipped: bool) -> void:
 		_set.queue_free()
 	_set = null
 	_subject = null
-	_sable_postcard = null
-	_sable_dawn = null
+	_postcard = null
+	_postcard_env = null
 	_props.clear()
 	_antics = null
 	if is_instance_valid(_layer):
@@ -285,30 +282,31 @@ func _build_set() -> void:
 			var mate := _shell(String(ROLLCALL[i][0]), "Mate%d" % i)
 			if mate != null:
 				mate.position = ROLLCALL_AT + Vector3(-2.6 + i * 2.6, 1.04, -0.2 * absf(i - 1))
-	if id == "sable":
-		_build_sable_postcard()
+	if _row.has("postcard"):
+		_build_postcard(_row.postcard)
 
 
-func _build_sable_postcard() -> void:
-	var dam := _postcard_model(PARK_DAM)
-	if dam == null:
+# A row's own postcard set (title_intros.gd): its model at its authored scale, any dressing, a water plane and
+# a sky. A set whose model will not load leaves the postcard on the ordinary world framing.
+func _build_postcard(spec: Dictionary) -> void:
+	var set_model := _postcard_model(String(spec.set))
+	if set_model == null:
 		return
-	_sable_postcard = Node3D.new()
-	_sable_postcard.name = "SablePostcard"
-	_sable_postcard.position = SABLE_POSTCARD_AT
-	_sable_postcard.visible = false
-	_set.add_child(_sable_postcard)
-	# Use the park dam at its authored scale so the gates and upper arch establish the scale.
-	_sable_postcard.add_child(dam)
-	_postcard_rock("res://assets/models/park/anchor_hoodoo_c.glb", Vector3(-248, 5, -20), Vector3(32.0, 14.5, 23.0), 27.0)
-	_postcard_rock("res://assets/models/park/anchor_hoodoo_b.glb", Vector3(254, 4, -58), Vector3(27.0, 12.5, 22.0), 145.0)
-
+	_postcard = Node3D.new()
+	_postcard.name = "Postcard"
+	_postcard.position = spec.at
+	_postcard.visible = false
+	_set.add_child(_postcard)
+	_postcard.add_child(set_model)
+	for piece: Dictionary in spec.dressing:
+		_postcard_piece(piece)
+	var water_spec: Dictionary = spec.water
 	var tailwater := MeshInstance3D.new()
 	tailwater.name = "Tailwater"
 	var plane := PlaneMesh.new()
-	plane.size = Vector2(1600.0, 1000.0)
+	plane.size = water_spec.size
 	tailwater.mesh = plane
-	tailwater.position = Vector3(0.0, 5.0, 380.0)
+	tailwater.position = water_spec.at
 	var wave_noise := FastNoiseLite.new()
 	wave_noise.frequency = 0.018
 	var ripples := NoiseTexture2D.new()
@@ -316,7 +314,7 @@ func _build_sable_postcard() -> void:
 	ripples.seamless = true
 	ripples.as_normal_map = true
 	var water_colors := Gradient.new()
-	water_colors.colors = PackedColorArray([Color("1a4d58"), Color("639294")])
+	water_colors.colors = PackedColorArray(POSTCARD_WATER_COLORS)
 	var wave_tint := NoiseTexture2D.new()
 	wave_tint.noise = wave_noise
 	wave_tint.seamless = true
@@ -328,34 +326,25 @@ func _build_sable_postcard() -> void:
 	water.uv1_scale = Vector3(4.0, 9.0, 1.0)
 	water.roughness = 0.38
 	tailwater.material_override = water
-	_sable_postcard.add_child(tailwater)
+	_postcard.add_child(tailwater)
 
-	var dawn: Dictionary = WorldLook.TIME_ROWS.dawn.grade
+	var dawn: Dictionary = WorldLook.TIME_ROWS[String(spec.sky)].grade
 	var sky_material := ProceduralSkyMaterial.new()
 	sky_material.sky_top_color = dawn.top
 	sky_material.sky_horizon_color = dawn.horizon
-	sky_material.sky_curve = 0.45
+	sky_material.sky_curve = POSTCARD_SKY_CURVE
 	sky_material.ground_horizon_color = dawn.horizon
 	var sky := Sky.new()
 	sky.sky_material = sky_material
-	_sable_dawn = environment.duplicate()
-	_sable_dawn.background_mode = Environment.BG_SKY
-	_sable_dawn.background_energy_multiplier = dawn.energy
-	_sable_dawn.sky = sky
+	_postcard_env = environment.duplicate()
+	_postcard_env.background_mode = Environment.BG_SKY
+	_postcard_env.background_energy_multiplier = dawn.energy
+	_postcard_env.sky = sky
 
 
 func _postcard_model(path: String) -> Node3D:
-	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
-	if packed == null:
-		host._warn(path)
-		return null
-	var model := packed.instantiate()
-	# Godot imports the park recipe's collision mesh and body together. Remove both off-tree.
-	var collision_mesh := model.find_child(path.get_file().get_basename() + "-col", true, false)
-	if collision_mesh != null:
-		collision_mesh.free()
-	if not (model is Node3D and host._visual_only(model)):
-		model.free()
+	var model: Node3D = host.visual_scene(path, true)
+	if model == null:
 		host._warn(path)
 		return null
 	host._freeze_visual(model)
@@ -363,19 +352,19 @@ func _postcard_model(path: String) -> Node3D:
 	return model
 
 
-func _postcard_rock(path: String, at: Vector3, scale: Vector3, yaw: float) -> void:
-	var model := _postcard_model(path)
+func _postcard_piece(piece: Dictionary) -> void:
+	var model := _postcard_model(String(piece.model))
 	if model == null:
 		return
-	model.position = at
-	model.scale = scale
-	model.rotation_degrees.y = yaw
-	_sable_postcard.add_child(model)
+	model.position = piece.at
+	model.scale = piece.scale
+	model.rotation_degrees.y = float(piece.yaw_deg)
+	_postcard.add_child(model)
 
 
 func _shell(class_id: String, label: String) -> Node3D:
 	var path: String = HeroAssets.SHELLS.get(class_id, "")
-	var shell: Node3D = host._visual_scene(path) if path != "" else null
+	var shell: Node3D = host.visual_scene(path) if path != "" else null
 	var def = ClassDef.by_id(class_id)
 	var color: Color = def.color if def != null else Palette.COPPER
 	if shell == null:
@@ -405,7 +394,7 @@ func _shell(class_id: String, label: String) -> Node3D:
 
 # Loads a visual-only model, scaled so its tallest side is fit metres, its base on the ground.
 func _model(path: String, label: String, fit: float) -> Node3D:
-	var model: Node3D = host._visual_scene(path)
+	var model: Node3D = host.visual_scene(path)
 	if model == null:
 		host._warn(path)
 		return null
@@ -527,14 +516,15 @@ func _enter_shot(shot: Dictionary) -> void:
 	_show_prop("UpIsland", kind == "up" and world != 3)
 	if _subject != null:
 		_subject.position = Vector3(0.0, 0.0 if _row.kind == "boss" else 1.04, 0.0)
-	if _sable_postcard != null:
-		_sable_postcard.visible = kind == "postcard"
-		camera.environment = _sable_dawn if _sable_postcard.visible else environment
+	if _postcard != null:
+		_postcard.visible = kind == "postcard"
+		camera.environment = _postcard_env if _postcard.visible else environment
 		_subject.scale = Vector3.ONE
-		if _sable_postcard.visible:
-			_subject.scale *= SABLE_POSTCARD_SCALE
-			_subject.position = SABLE_POSTCARD_AT + SABLE_CREST + Vector3.UP * 1.04 * SABLE_POSTCARD_SCALE
-			camera.fov = 40.0
+		if _postcard.visible:
+			var stand: Dictionary = _row.postcard.subject
+			_subject.scale *= float(stand.scale)
+			_subject.position = _postcard.position + Vector3(stand.at) + Vector3.UP * 1.04 * float(stand.scale)
+			camera.fov = float(_row.postcard.camera.fov)
 	var card: Array = _row.card
 	var lines: Array = _row.lines
 	var sfx: Array = _row.sfx
@@ -604,9 +594,10 @@ func _frame_shot(kind: String, t: float) -> void:
 	var roll := 0.0
 	match kind:
 		"postcard":
-			if _sable_postcard != null:
-				at = SABLE_POSTCARD_AT + Vector3(-53.0, 9.0, 364.0 - 20.0 * push)
-				look = SABLE_POSTCARD_AT + Vector3(-11.0, 77.0, -43.0)
+			if _postcard != null:
+				var shot_camera: Dictionary = _row.postcard.camera
+				at = _postcard.position + Vector3(shot_camera.at) + Vector3(shot_camera.drift) * push
+				look = _postcard.position + Vector3(shot_camera.look)
 			else:
 				var world: int = int(_row.world)
 				var behind: float = WORLDS[world].behind
