@@ -37,6 +37,9 @@ const UNSEATED := {
 	# Its lip lands on the terrace edge (x 272, y 0); seated, the exit would sit on the terrace and the ramp would rise
 	# 13 m over it (2-park_flume.md, drum lip kicker moved again 2026-10-25).
 	"drum_lip_kicker": "park_flume.json",
+	# Its lip stands on the gap table's sheer face line so it meets the table top with no notch (W1-102 review, 17 Nov
+	# 2026); seated, the fit would read the face's 2 m skirt of raised ground under its last metres.
+	"gap_table_kicker": "park_flume.json",
 }
 # Each piece: [L, H, W] as authored.
 const PIECES := {
@@ -190,8 +193,9 @@ func _check_coverage() -> void:
 		_t.check("(c) %s: every target row has a piece that seats it" % path.get_file(), missing.is_empty(), str(missing))
 	# 78 on stage w17 with #78: the islands' 18 step lips stay greybox and run_step_lip_3 is not split (#78 held them back)
 	# 79 with flume pass two (#432): spill_leap_kicker on the flume's mesa rim seats plate_kicker_10x3x8.
-	_t.check("(c) the pieces seat all 79 target rows (19 flume and pit kickers, 24 sinkhole half-pipes, 16 crown kickers, 20 islands kickers)",
-		covered == total and total == 79, "%d of %d" % [covered, total])
+	# 80 with the flume's butte gap table (W1-102, 17 Nov 2026): gap_table_kicker seats plate_kicker_28x14x34.
+	_t.check("(c) the pieces seat all 80 target rows (20 flume and pit kickers, 24 sinkhole half-pipes, 16 crown kickers, 20 islands kickers)",
+		covered == total and total == 80, "%d of %d" % [covered, total])
 
 
 # The collider's AABB in the node's space.

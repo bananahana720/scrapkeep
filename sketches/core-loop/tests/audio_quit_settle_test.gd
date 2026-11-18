@@ -36,13 +36,13 @@ func _process(_delta: float) -> bool:
 		return false
 	if _step < 4:
 		return false
-	var in_flight := Audio._rest_task >= 0 and not WorkerThreadPool.is_task_completed(Audio._rest_task)
+	var in_flight: bool = Audio.band_bakes()["running"]
 	if not _t.check("QS-0 the band bake is in flight", in_flight, "the bake must still be running when the game leaves, or the cancel is not tested"):
 		quit(1)
 		return false
 	root.remove_child(_game)
-	_t.check("QS-1 leaving the tree lets go of every bake", Audio._bake_task == -1 and Audio._opening_task == -1 and Audio._rest_task == -1,
-		"bank %d, opening %d, rest %d" % [Audio._bake_task, Audio._opening_task, Audio._rest_task])
+	_t.check("QS-1 leaving the tree lets go of every bake", Audio._bake_task == -1 and not Audio.band_bakes()["held"],
+		"bank %d, bakes %s" % [Audio._bake_task, Audio.band_bakes()])
 	_t.check("QS-1 the cancel flag is down again", not SfxBank.bake_cancel, "a flag left up would stop the next bake")
 	_t.check("QS-2 the band bake was abandoned, not waited out", _wobbles() == 0, "%d wobbles: the bake ran to its end" % _wobbles())
 	_game.free()
