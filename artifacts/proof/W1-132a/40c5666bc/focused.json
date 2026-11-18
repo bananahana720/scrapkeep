@@ -1,0 +1,107 @@
+{
+  "schema": "scrapkeep-smoke-receipt/1",
+  "label": "named",
+  "argv": [
+    "--sketch",
+    "core-loop",
+    "--test",
+    "look_harness_test",
+    "--test",
+    "look_stations_test"
+  ],
+  "root": "/Users/hanabanana/projects/sk-W1-132a",
+  "head": "40c5666bcbfe5beac8eb2592aa9071e3f02ddfc0",
+  "tree": "2e9ab86d1ec09f4c1deaaca0ecc692fa50f5a1f5",
+  "clean": false,
+  "dirty_paths": [
+    "?? sketches/core-loop/src/world/park/footings.gd.uid",
+    "?? sketches/core-loop/src/world/park/regions.gd.uid",
+    "?? sketches/core-loop/tests/arrival_census_test.gd.uid",
+    "?? sketches/core-loop/tests/beacon_open_level_test.gd.uid",
+    "?? sketches/core-loop/tests/brindle_arrival_view_test.gd.uid",
+    "?? sketches/core-loop/tests/brindle_defeat_cutaway_test.gd.uid",
+    "?? sketches/core-loop/tests/camera_contact_wiring_test.gd.uid",
+    "?? sketches/core-loop/tests/edge_arrow_sweep_test.gd.uid",
+    "?? sketches/core-loop/tests/hook_sites_test.gd.uid",
+    "?? sketches/core-loop/tests/look_stations_test.gd.uid",
+    "?? sketches/core-loop/tests/park_footings_test.gd.uid",
+    "?? sketches/core-loop/tests/park_regions_test.gd.uid",
+    "?? sketches/core-loop/tests/park_wear_test.gd.uid",
+    "?? sketches/core-loop/tests/press_latency_measure_test.gd.uid",
+    "?? sketches/core-loop/tools/arrival_census.gd.uid",
+    "?? sketches/core-loop/tools/hook_sites.gd.uid",
+    "?? sketches/core-loop/tools/offscreen_probe.gd.uid",
+    "?? sketches/core-loop/tools/offscreen_window.gd.uid"
+  ],
+  "godot": {
+    "binary": "/Users/hanabanana/Applications/Godot_4.7.2.app/Contents/MacOS/Godot",
+    "version": "4.7.2.stable.official.ed1daf0bf"
+  },
+  "sketches": [
+    "sketches/core-loop"
+  ],
+  "flags": [],
+  "width": 2,
+  "lock_wait_ms": 98081,
+  "started_at": "2026-11-18T20:07:43.724Z",
+  "wall_ms": 29876,
+  "stems": {
+    "sketches/core-loop": 0
+  },
+  "quarantined": [],
+  "quarantine_expired": [],
+  "results": [
+    {
+      "label": "sketches/core-loop import",
+      "ok": true,
+      "exit": 0,
+      "ms": 2701,
+      "solo": false,
+      "passes": 0,
+      "fails": 0,
+      "verdict_line": null,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/look_harness_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 3255,
+      "solo": false,
+      "passes": 435,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": []
+    },
+    {
+      "label": "sketches/core-loop res://tests/look_stations_test.gd",
+      "ok": true,
+      "exit": 0,
+      "ms": 23750,
+      "solo": true,
+      "passes": 28,
+      "fails": 0,
+      "verdict_line": true,
+      "skips": [
+        "SKIP control Fin.L",
+        "SKIP control Fin.R",
+        "SKIP control Fin.L",
+        "SKIP control Fin.R",
+        "SKIP control Fin.L",
+        "SKIP control Fin.R",
+        "SKIP control Fin.L",
+        "SKIP control Fin.R"
+      ]
+    }
+  ],
+  "bot_tier_not_run": [],
+  "totals": {
+    "runs": 3,
+    "failed": 0,
+    "skipped": 1,
+    "missing_verdict": 0,
+    "quarantined_red": [],
+    "quarantine_stale": []
+  },
+  "ok": true
+}

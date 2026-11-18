@@ -1,0 +1,85 @@
+{
+	"adapter": "Apple M5 Max (Apple9)",
+	"class": 1,
+	"extra": {
+		"ball_velocity": [
+			0.0,
+			0.0,
+			14.0
+		],
+		"spawns": [
+			{
+				"at": [
+					-110.0,
+					102.441070556641,
+					-60.0
+				],
+				"kind": "chaser"
+			}
+		],
+		"stage": 1,
+		"table": "park"
+	},
+	"frames": [
+		{
+			"ball": {
+				"at": [
+					-110.0,
+					103.742828369141,
+					-85.0
+				],
+				"bbox": [
+					897.2,
+					574.3,
+					125.7,
+					125.7
+				],
+				"in_frame": true,
+				"placed": "station",
+				"seen": true,
+				"visible": 0.871
+			},
+			"dead": false,
+			"eye": [
+				-110.0,
+				106.441070556641,
+				-95.0
+			],
+			"file": "rider.png",
+			"fov": 80.0,
+			"id": "rider",
+			"metrics": {
+				"black": 0.00560956790123457,
+				"luma": 0.278958902511642,
+				"sky": 0.0170987654320988,
+				"sky_rgb": [
+					64,
+					78,
+					89
+				]
+			},
+			"sha256": "b187ed9cc0fcaf5ebad1f4acb9f303c8cc8dc38758c469323d347ddd560b6a4a",
+			"stage_yaw": {},
+			"target": [
+				-110.0,
+				102.441070556641,
+				-60.0
+			],
+			"wall_ms": 1075
+		}
+	],
+	"group": "staged",
+	"kind": "scene",
+	"owner": "W1-132",
+	"preset": "high",
+	"rendering": "forward_plus",
+	"stage": 1.0,
+	"subject": "west_wash_run",
+	"tick": {
+		"late": false,
+		"tick": 120,
+		"wanted": 120
+	},
+	"tool": "look_harness.gd",
+	"variant": ""
+}

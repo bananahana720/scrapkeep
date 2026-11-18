@@ -1,0 +1,132 @@
+{
+  "head": "40c5666bcbfe5beac8eb2592aa9071e3f02ddfc0",
+  "stage": "3cafd8fa3962934e11ba89c439b3af943dba5d8d",
+  "engine": "Godot 4.7.2.stable.official.ed1daf0bf",
+  "device": "Apple M5 Max",
+  "runs": [
+    {
+      "run": "multi-high-1",
+      "command": "node scripts/gate/display-run.mjs --offscreen res://tools/look_harness.gd -- --subject=ttl_title,west_wash_run --preset=high --out=<fresh absolute output directory>",
+      "accepted": false,
+      "exit": 1,
+      "markers": [
+        "OFFSCREEN_WINDOW 56560 embedded",
+        "OFFSCREEN_WINDOW 57034 embedded",
+        "OFFSCREEN_WINDOW 56778 embedded"
+      ],
+      "watcher": {
+        "samples": 746,
+        "firstMs": 1795032504841,
+        "lastMs": 1795032542187,
+        "periodMs": 50,
+        "maxGapMs": 147,
+        "missed": 2,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "frame_sha256": {
+        "west_wash_run/rider.png": "067ae3de342e8903250bd5ce50d3d766d79adfbf8ae24a3cf08de060dee74c3d",
+        "ttl_title/t0.png": "37a0373d4bdf14e0a7772aef26da59cbd50768fae7647339f07dd066a873eaeb"
+      }
+    },
+    {
+      "run": "multi-high-2",
+      "command": "node scripts/gate/display-run.mjs --offscreen res://tools/look_harness.gd -- --subject=ttl_title,west_wash_run --preset=high --out=<fresh absolute output directory>",
+      "accepted": true,
+      "exit": 0,
+      "markers": [
+        "OFFSCREEN_WINDOW 58029 embedded",
+        "OFFSCREEN_WINDOW 58129 embedded",
+        "OFFSCREEN_WINDOW 58057 embedded"
+      ],
+      "watcher": {
+        "samples": 722,
+        "firstMs": 1795032586157,
+        "lastMs": 1795032622207,
+        "periodMs": 50,
+        "maxGapMs": 70,
+        "missed": 0,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "frame_sha256": {
+        "west_wash_run/rider.png": "b187ed9cc0fcaf5ebad1f4acb9f303c8cc8dc38758c469323d347ddd560b6a4a",
+        "ttl_title/t0.png": "0776b03626d6ca9e397a0192a383b7e26cab32237c7dbf55980e107368086912"
+      }
+    },
+    {
+      "run": "multi-low-1",
+      "command": "node scripts/gate/display-run.mjs --offscreen res://tools/look_harness.gd -- --subject=ttl_title,west_wash_run --preset=low --out=<fresh absolute output directory>",
+      "accepted": true,
+      "exit": 0,
+      "markers": [
+        "OFFSCREEN_WINDOW 59009 embedded",
+        "OFFSCREEN_WINDOW 59252 embedded",
+        "OFFSCREEN_WINDOW 59089 embedded"
+      ],
+      "watcher": {
+        "samples": 643,
+        "firstMs": 1795032670321,
+        "lastMs": 1795032702426,
+        "periodMs": 50,
+        "maxGapMs": 64,
+        "missed": 0,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "frame_sha256": {
+        "west_wash_run/rider.png": "71fe82684f7f3f8b1e2686ef9d61bdee573ced663e4b85b60038f3a80177e536",
+        "ttl_title/t0.png": "5243cf9bdbd3bd1f1e8502d1622118164dd3248da626136e518f895d6252f4e4"
+      }
+    },
+    {
+      "run": "single-high-1",
+      "command": "node scripts/gate/display-run.mjs --offscreen res://tools/look_harness.gd -- --subject=west_wash_run --preset=high --out=<fresh absolute output directory>",
+      "accepted": true,
+      "exit": 0,
+      "markers": [
+        "OFFSCREEN_WINDOW 58461 embedded"
+      ],
+      "watcher": {
+        "samples": 464,
+        "firstMs": 1795032622885,
+        "lastMs": 1795032646029,
+        "periodMs": 50,
+        "maxGapMs": 74,
+        "missed": 0,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "frame_sha256": {
+        "west_wash_run/rider.png": "f96b752559f5c75820961b57ca4ef1c9aa3ed22a08a98cad8e4445348f75f5fe"
+      }
+    },
+    {
+      "run": "single-low-1",
+      "command": "node scripts/gate/display-run.mjs --offscreen res://tools/look_harness.gd -- --subject=west_wash_run --preset=low --out=<fresh absolute output directory>",
+      "accepted": true,
+      "exit": 0,
+      "markers": [
+        "OFFSCREEN_WINDOW 58597 embedded"
+      ],
+      "watcher": {
+        "samples": 460,
+        "firstMs": 1795032646704,
+        "lastMs": 1795032669652,
+        "periodMs": 50,
+        "maxGapMs": 80,
+        "missed": 0,
+        "onScreen": 0,
+        "targetOnScreen": 0,
+        "frontmostChanges": 0
+      },
+      "frame_sha256": {
+        "west_wash_run/rider.png": "5c900e4820c5fb5946195457ef66b50b7d4eb29cbf2375350023a25dd103d1f1"
+      }
+    }
+  ]
+}

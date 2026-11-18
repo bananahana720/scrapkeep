@@ -1,0 +1,56 @@
+{
+	"adapter": "Apple M5 Max (Apple9)",
+	"class": 1,
+	"extra": {
+		"state": "title"
+	},
+	"frames": [
+		{
+			"ball": {
+				"bbox": [],
+				"in_frame": false
+			},
+			"dead": false,
+			"eye": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"file": "t0.png",
+			"fov": 55.0,
+			"id": "t0",
+			"metrics": {
+				"black": 0.0122993827160494,
+				"luma": 0.275713745049813,
+				"sky": 0.40516975308642,
+				"sky_rgb": [
+					54,
+					38,
+					42
+				]
+			},
+			"sha256": "0776b03626d6ca9e397a0192a383b7e26cab32237c7dbf55980e107368086912",
+			"stage_yaw": {},
+			"target": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"wall_ms": 226
+		}
+	],
+	"group": "title",
+	"kind": "ui",
+	"owner": "VX-LIGHT",
+	"preset": "high",
+	"rendering": "forward_plus",
+	"stage": 1,
+	"subject": "ttl_title",
+	"tick": {
+		"late": false,
+		"tick": 60,
+		"wanted": 60
+	},
+	"tool": "look_harness.gd",
+	"variant": ""
+}
