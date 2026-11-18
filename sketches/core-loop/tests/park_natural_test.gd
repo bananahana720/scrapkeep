@@ -238,7 +238,8 @@ func _water_lifecycle() -> void:
 	var state: Dictionary = handler.active.flood_fill
 	t.check("a local flood builds no light", state.water.find_children("*", "Light3D", true, false).is_empty())
 	var held: float = state.depth_m
-	for i in 21:
+	# Under the director's 2 s cap on the wait for a grounded ball (PARK_FLOOD_HOLD_CAP_S, W1-148).
+	for i in 15:
 		w.events.advance(0.1, Vector3(0, 1, 0), Vector3.ZERO, {"clock_tier": 1, "grounded": true})
 	t.near("grounded ball holds real water rise", state.depth_m, held)
 	t.near("grounded hold also holds the renderer", state.water.surface_y(), held)
