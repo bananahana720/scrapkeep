@@ -54,4 +54,4 @@ Each action in the model (`RunFlow.tla`, in the `models` folder beside this one)
 
 The model was last confirmed to describe the code at:
 
-`2d1bbd4ff` (stage/alpha-w44, 17 November 2026, with pull request 1081 modelled; before it, `bbd157f44`)
+`5935c2ce8` (branch w44/hazards-hit-everyone, 18 November 2026: only the kill-trigger flag in `run_state.gd` and `build.gd` changed, outside the modelled steps; before it, `2d1bbd4ff` and `bbd157f44`)
