@@ -14,6 +14,7 @@ var stage_one_draws := -1
 var quit_arm := ""
 var profile
 var trace_warm := false
+var victory_flood := false
 var pass_number := 0
 var draws := PackedInt64Array()
 var entries := {}
@@ -36,13 +37,16 @@ func _initialize() -> void:
 	trace_warm = args.has("--w144-trace")
 	if trace_warm:
 		args.erase("--w144-trace")
+	victory_flood = args.has("--w144-victory-flood")
+	if victory_flood:
+		args.erase("--w144-victory-flood")
 	for arg: String in args.duplicate():
 		if arg.begins_with("--w144-quit="):
 			var arm := arg.trim_prefix("--w144-quit=")
-			if quit_arm == "" and arm in ["wait", "lights", "particles", "game", "one-light", "empty", "one-emitter"]:
+			if quit_arm == "" and arm in ["wait", "lights", "particles", "game", "one-light", "flood", "empty", "one-emitter"]:
 				quit_arm = arm
 				args.erase(arg)
-	if args != OPTIONS or (qualify_only and (sleep_at_entry or trace_warm)) or (quit_arm != "" and not qualify_only):
+	if args != OPTIONS or (qualify_only and (sleep_at_entry or trace_warm or victory_flood)) or (quit_arm != "" and not qualify_only):
 		printerr("handover_capture needs its fixed seed-1 sitting options")
 		quit(2)
 		return
@@ -117,8 +121,15 @@ func _quit_experiment() -> void:
 			if (quit_arm == "lights" and kind == "Light3D") or (quit_arm == "particles" and kind == "GPUParticles3D"):
 				node.queue_free()
 	print("W144_RELEASE ", quit_arm)
-	if quit_arm == "one-light":
-		for light in game.find_children("*", "Light3D", true, false):
+	if quit_arm in ["one-light", "flood"]:
+		var lights: Array[Node] = game.find_children("*", "Light3D", true, false)
+		if quit_arm == "flood":
+			lights = game.get_node("Flood").find_children("*", "OmniLight3D", false, false)
+			if lights.size() != 1:
+				printerr("handover_capture: expected one flood warning light")
+				quit(2)
+				return
+		for light in lights:
 			print("W144_FREE_LIGHT ", light.get_path())
 			light.free()
 			await RenderingServer.frame_post_draw
@@ -174,10 +185,18 @@ func _close(won: bool) -> void:
 				samples.append([draws[i - 1], draws[i]])
 				worst_us = maxi(worst_us, draws[i] - draws[i - 1])
 		rows[seam] = {"entry_us": entries[seam], "max_ms": worst_us / 1000.0, "intervals_us": samples}
-	print("W144_PASS ", JSON.stringify({"pass_number": pass_number, "planted": pass_number == 2 and sleep_at_entry, "seams": rows}))
+	print("W144_PASS ", JSON.stringify({"pass_number": pass_number, "planted": pass_number == 2 and sleep_at_entry, "profiled": profile != null, "seams": rows}))
 	if pass_number == 2:
 		if profile != null:
+			# This sampler wraps the game without wrapping the bot's own tick.
+			for row in profile.rows:
+				row.erase("bot_ms")
+				row.erase("net_ms")
 			profile.write()
+		if victory_flood:
+			quit_arm = "flood"
+			_quit_experiment()
+			return
 		quit()
 		return
 	paused = false

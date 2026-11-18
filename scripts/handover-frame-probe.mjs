@@ -112,6 +112,7 @@ function nativeCapture(file) {
     throw new Error("need one cold ride followed by one warm ride");
   const passes = [1, 2].map(number => {
     const row = JSON.parse(rows[number * 2 - 1].slice("W144_PASS ".length));
+    if (row.profiled !== false) throw new Error("need an uninstrumented capture for a budget verdict");
     if (row.pass_number !== number || typeof row.planted !== "boolean" || (number === 1 && row.planted))
       throw new Error("invalid pass identity");
     const maxima = {};
@@ -139,9 +140,12 @@ function nativeCapture(file) {
     return { pass_number: number, planted: row.planted, max_frame_ms: maxima, entry_frame_ms: entryFrames };
   });
   const afterWarmWin = lines.slice(lines.indexOf(rows[3]) + 1).join("\n");
+  const controlledQuit = /^W144_RELEASE /m.test(afterWarmWin);
   const errors = withoutTeardownNoise(afterWarmWin, "darwin").split("\n").filter(line => /^(?:SCRIPT )?ERROR:/.test(line));
   const framePass = Object.values(passes[1].max_frame_ms).every(ms => ms <= 33.3);
-  return { passes, frame_pass: framePass, shutdown_error_lines: errors.length, errors, pass: framePass && !errors.length };
+  const shutdownPass = controlledQuit ? null : !errors.length;
+  return { passes, frame_pass: framePass, shutdown_pass: shutdownPass, shutdown_error_lines: errors.length, errors,
+    pass: framePass ? shutdownPass : false };
 }
 
 function shutdown(file) {

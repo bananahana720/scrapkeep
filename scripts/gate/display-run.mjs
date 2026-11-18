@@ -163,7 +163,7 @@ const PROBE = "res://tools/offscreen_probe.gd";
 // does not qualify a tool. The probe inherits the dam capture, so pin both scripts.
 const watchedTools = new Map([
   ["res://tools/handover_capture.gd", {
-    "tools/handover_capture.gd": "82d268263e2f9da79f318e5dac53ffb1d26f1587a675b863c50093ccac1a6486",
+    "tools/handover_capture.gd": "3dde701eac84667cf3cb6da25798de65893e80a8d852b10b8344d8746444e60c",
     "tools/offscreen_window.gd": "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d",
     "tools/self_play.gd": "0b34c8016bee91fe5adacbd778b10e5d0a94776a715978db2ab0286e728a68d2",
     "tools/frame_probe.gd": "bfd5b3ee4d3d06f60ae753279121b01af456fd8fd3c70aee64027b3af901999e",

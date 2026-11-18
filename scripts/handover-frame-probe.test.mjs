@@ -89,7 +89,7 @@ test("the watched capture grades the warm drawn intervals and rejects a gap or i
     }
     return { entry_us: entry, intervals_us: intervals };
   }
-  const pass = (number, plant) => ({ pass_number: number, planted: number === 2 && plant, seams: {
+  const pass = (number, plant) => ({ pass_number: number, profiled: false, planted: number === 2 && plant, seams: {
     dam_to_flume: seam(number * 30_000_000, plant),
     flume_to_bowl: seam(number * 30_000_000 + 10_000_000, false),
   } });
@@ -106,6 +106,8 @@ test("the watched capture grades the warm drawn intervals and rejects a gap or i
   assert.deepEqual(JSON.parse(planted.stdout).passes[1].max_frame_ms, { dam_to_flume: 50, flume_to_bowl: 10 });
   assert.equal(run(pass(2, false), "ERROR: shader still in use").status, 1);
   assert.equal(run(pass(2, false), "", { ...watch, missed: 1 }).status, 2);
+  assert.equal(run({ ...pass(2, false), profiled: true }).status, 2);
+  assert.equal(run(pass(2, false), "W144_RELEASE flood").status, 2);
   const missing = pass(2, false);
   missing.seams.flume_to_bowl.intervals_us.splice(60, 1);
   assert.equal(run(missing).status, 2);
