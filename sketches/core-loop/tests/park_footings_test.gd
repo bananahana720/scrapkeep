@@ -7,11 +7,15 @@ const T := preload("res://tests/support/t.gd")
 const Footings := preload("res://src/world/park/footings.gd")
 const TILE_LENGTH_M := 120.0
 const PROBE_M := 0.05
+# The recipes the table holds today. The loop below covers whatever the table lists; this count makes an
+# entry that goes missing fail, and a new recipe a deliberate edit here.
+const RECIPE_COUNT := 1
 
 var t := T.new("park_footings_test")
 
 
 func _initialize() -> void:
+	t.eq("the footing table holds the recipes this test covers", Footings.TABLE.size(), RECIPE_COUNT)
 	for recipe: String in Footings.TABLE:
 		_check_recipe(recipe, Footings.TABLE[recipe])
 	var flat := func(_x: float, _z: float) -> float: return 0.0
