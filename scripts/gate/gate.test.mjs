@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -9,7 +10,7 @@ import { place, sortChanges, testsToRerun } from "./carry.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, namedPool, testName, retime, shardVerdict, soloEnvironment, soloTests, failedChecks, whatFailed } from "./shard.mjs";
-import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isDeferred, isPass, planHead, tallyRows } from "./tally.mjs";
+import { WEEKLY_MAX_DAYS, checkNodeRow, checkTally, checkWeeklySweep, expectedShards, isDeferred, isPass, planHead, tallyRows } from "./tally.mjs";
 import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -584,4 +585,36 @@ test("a named window draws on the promotion list and the weekly names; a weekly 
   assert.deepEqual(namedPool(lists, { bots: false, weekly: false }), ["a_test", "b_test"]);
   assert.deepEqual(namedPool(lists, { bots: true, weekly: true }), ["a_bot_test"]);
   assert.equal(testName(" tests/x_test.gd "), "x_test");
+});
+
+test("a red node step keeps the tally from CLEAN, whatever the shard rows say", () => {
+  const gateSide = (row) => ["## Gate-side", "| Check | Verdict |", "| --- | --- |", ...(row ? [row] : []), "", "## Tally", "| Shard | Verdict |", "| --- | --- |", "| bands A | PASS. Receipt bands-A/ |", ""].join("\n");
+  assert.deepEqual(checkNodeRow(gateSide("| node tests | PASS. 1506 tests, 0 fail. Receipt node/summary.txt |")), []);
+  assert.match(checkNodeRow(gateSide("| node tests | RED: exit 1. 1506 tests, 1 fail. Receipt node/summary.txt |")).join("\n"), /"node tests" does not open with PASS/);
+  assert.match(checkNodeRow(gateSide(null)).join("\n"), /no "node tests" row/);
+  assert.match(checkNodeRow(gateSide("| node tests | PASS. 1506 tests, 2 fail. Receipt node/summary.txt |")).join("\n"), /does not read "N tests, 0 fail"/, "a pass word over a failing count");
+  assert.match(checkNodeRow(gateSide("| node tests | PASS. undefined tests, undefined fail. Receipt node/summary.txt |")).join("\n"), /does not read "N tests, 0 fail"/, "a summary with no counts");
+  assert.match(checkNodeRow(gateSide("| node tests | PASS. 0 tests, 0 fail. Receipt node/summary.txt |")).join("\n"), /with N above zero/);
+  assert.match(checkNodeRow(gateSide("| node tests | PASS. 1506 tests, 0 fail. |")).join("\n"), /names no receipt/);
+  const reread = gateSide("| node tests | RED: exit 1. 1506 tests, 1 fail. Receipt node/summary.txt |").replace("| --- | --- |\n", "| --- | --- |\n| node tests | PASS. 1506 tests, 0 fail. Receipt node/old.txt |\n");
+  assert.match(checkNodeRow(reread).join("\n"), /does not open with PASS/, "the newest node row wins");
+  assert.equal(tallyRows(gateSide("| node tests | RED: exit 1. 1 tests, 1 fail. Receipt node/summary.txt |")).length, 1, "the shard rows are unchanged");
+  assert.match(checkNodeRow(gateSide("| node tests | PASS. was 10 tests, 0 fail; now 10 tests, 2 fail. Receipt x |")).join("\n"), /does not read "N tests, 0 fail"/, "every count is read, not the first");
+});
+
+test("the tally command itself refuses CLEAN beside a red node row", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "tally-node-"));
+  try {
+    const file = path.join(dir, "plan.md");
+    const write = (verdict) => writeFileSync(file, ["## Gate-side", "| Check | Verdict |", "| --- | --- |", `| node tests | ${verdict} |`, ""].join("\n"));
+    const run = () => spawnSync(process.execPath, [fileURLToPath(new URL("./tally.mjs", import.meta.url)), "--plan", file], { encoding: "utf8" });
+    write("RED: exit 1. 1506 tests, 1 fail. Receipt node/summary.txt");
+    const red = run();
+    assert.notEqual(red.status, 0);
+    assert.match(red.stdout, /^PROBLEM line 4: "node tests" does not open with PASS/m);
+    write("PASS. 1506 tests, 0 fail. Receipt node/summary.txt");
+    assert.doesNotMatch(run().stdout, /PROBLEM .*node tests/, "a passing node row raises no node problem");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
