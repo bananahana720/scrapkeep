@@ -104,7 +104,7 @@ func _brindle() -> void:
 	var armour_shed: bool = ship._model_armour.all(func(p): return not p.visible)
 	_t.check("phase 3 sheds the model's armour and opens its shield", armour_shed and not ship._model_shield.visible,
 			"armour shed %s, shield visible %s" % [armour_shed, ship._model_shield.visible])
-	boss._commit_charge(game.player.ball_position())
+	boss._commit_charge()
 	_t.eq("a committed charge plays charge_warn", ship._anim.assigned_animation, "charge_warn")
 	boss._stun(2.0)
 	_t.eq("a wall stun plays wall_stun", ship._anim.assigned_animation, "wall_stun")
