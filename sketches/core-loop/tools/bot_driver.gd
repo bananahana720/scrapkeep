@@ -2675,6 +2675,11 @@ func _sheet_warden(target: Node3D) -> bool:
 			and target.mount_driver.has_method("sheet_live")
 
 
+# The loop hand's ask to leave an activity (by its id) to the player: the activity run passes it over.
+func skip_activity(key: String) -> void:
+	_activity_skip[key] = true
+
+
 # The loop hand's one ask of the latch arm: keep the harpoon off the Warden for `seconds` (renewed each tick the
 # hand wants it), so a held brake can call the shot. The arm lets go of a line it holds and bites again after.
 func hold_off_warden_line(seconds: float) -> void:

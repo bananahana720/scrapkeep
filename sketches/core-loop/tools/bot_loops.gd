@@ -50,6 +50,7 @@ var _press_gap := 0.0
 var _route_for := ""
 var _device_told := {}
 var _piece_clock := 0.0
+var _piece_stage := -1
 var _rings_told := 0
 var _pot_said := -1
 var _cash_told := false
@@ -75,6 +76,7 @@ func _called_shot(delta: float) -> void:
 		_shot_state = shot.state
 		_say("called shot is %s (%s)" % [shot.state if shot.state != "" else "idle", shot.called])
 	if shot.state != "window":
+		_line_home = 0
 		return
 	# With the hand off nothing calls: the driver's own brake holds in a fight would, so they are let go.
 	if not hands["called_shot"]:
@@ -82,7 +84,7 @@ func _called_shot(delta: float) -> void:
 		return
 	# A missed call burns one of the stage's cores (called_shot.gd settle): a hand that holds one for the counter
 	# lets this window pass, as a player who wants the core to ride would.
-	if hands["carry"] and _game.run.bonus_cores > _game.run.arrived_core and not _game.run.companion.is_empty():
+	if hands["carry"] and _game.run.can_stow_core():
 		_driver.source.hold.erase("brake_held")
 		return
 	var warden = _game.flow.warden
@@ -103,6 +105,9 @@ func _called_shot(delta: float) -> void:
 	# Held long enough to show the first stamp, then let go: the release is what calls it.
 	if aimed and (_line_home >= LINE_HOME_TICKS or shot.held_s > 0.0) and shot.held_s < HOLD_S:
 		_driver.source.hold["brake_held"] = true
+	elif shot.held_s <= 0.0:
+		# Not yet: a brake held across a hooked tick stays claimed and is dropped (player_ball.gd _ctrl_claimed).
+		_driver.source.hold.erase("brake_held")
 
 
 # The marked hull on the stage's state: before the Warden wakes, a trade whose price is health (it welds the
@@ -122,11 +127,14 @@ func stage(delta: float) -> bool:
 # and the hauler stand a kilometre off in the first stage, so they are passed over, as a player would. Time-boxed,
 # and idle once the companion holds a piece.
 func _piece(delta: float) -> bool:
+	if _piece_stage != _game.run.stage:
+		_piece_stage = _game.run.stage
+		_piece_clock = 0.0
 	if not hands["carry"] or not _game.run.companion.is_empty() or _piece_clock > PIECE_S:
 		return false
 	if _piece_clock == 0.0:
 		for key in ["cracked_cache", "hauler_bounty"]:
-			_driver._activity_skip[key] = true
+			_driver.skip_activity(key)
 		_say("piece: heading for the camp")
 	_piece_clock += delta
 	return _driver._activity_goal(delta)
