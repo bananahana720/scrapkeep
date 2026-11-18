@@ -1,10 +1,12 @@
 // W1-144a. Read artifacts without starting a game. Each mode is one independent diagnostic.
-//   node scripts/handover-frame-probe.mjs frames <frametime-check run directory> <ordered engine log>
+//   node scripts/handover-frame-probe.mjs frames <frame capture directory> <ordered engine log>
 //   node scripts/handover-frame-probe.mjs shutdown <ordered Godot stdout+stderr from launch to exit>
-// For frames use --capture=engine, a warmed scratch HOME, --self-play-watch=1 and --self-play-until=win.
+// On the Mac only a qualified tool through display-run.mjs --offscreen may produce the
+// frame capture. Read its frames.csv, frametime-compatible summary.json and ordered log.
+// Use a matched warm scratch HOME, --self-play-watch=1 and --self-play-until=win.
 // Use --self-play-beat=0.5 and finish the CSV during play so the next beat bounds its end.
 // For a clean shutdown append "GODOT_EXIT <status>" after the child exits and both streams close.
-// Capture shutdown at the engine process. frametime-check buffers stdout and inherits stderr,
+// Capture shutdown at the engine process. A parent may buffer stdout and inherit stderr,
 // and the user:// Godot log can close before the particle shader destructor reports its error.
 // Exit 0 if the selected check passes, 1 for a measured miss, 2 for missing or unusable evidence.
 import { readFileSync } from "node:fs";
