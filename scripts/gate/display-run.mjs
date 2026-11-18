@@ -166,7 +166,9 @@ export async function runCapture({ script, args = [], reference = false, cwd = r
         throw new Error("offscreen: expected the pinned Godot 4.7.2 editor; no drawn run started");
       }
       const flags = ["--resolution", "1920x1080", "--audio-driver", "Dummy"];
-      if (!reference) flags.unshift("--embedded", "--rendering-driver", "metal");
+      // Embedded Godot publishes its layer through EngineDebugger. The local stdout debugger
+      // provides that object with no editor, listener or network peer.
+      if (!reference) flags.unshift("--embedded", "--rendering-driver", "metal", "--debug", "--skip-breakpoints", "--ignore-error-breaks");
       const result = await observe(() => start(command, [...flags, ...argv], options));
       const w = result.watch;
       const recorded = reference ? w.targetOnScreen > 0 :

@@ -29,7 +29,7 @@ test("the probe uses embedded Metal before the project is loaded, with a scratch
     return opts.start();
   } });
   assert.equal(r.exit, 0);
-  assert.deepEqual(saved.argv.slice(0, 7), ["--embedded", "--rendering-driver", "metal", "--resolution", "1920x1080", "--audio-driver", "Dummy"]);
+  assert.deepEqual(saved.argv.slice(0, 10), ["--embedded", "--rendering-driver", "metal", "--debug", "--skip-breakpoints", "--ignore-error-breaks", "--resolution", "1920x1080", "--audio-driver", "Dummy"]);
   assert.equal(saved.env.SCRAPKEEP_OFFSCREEN, "1");
   assert.ok(saved.env.HOME.startsWith(path.join(opts.cwd, "artifacts/local/display-run/home-")));
 });
