@@ -16,6 +16,10 @@ const ARM_WIDTH_M := 0.34
 const MAX_HEIGHT_SHARE := 0.08
 const SPAN_M := (2.0 * ARM_M + ARM_WIDTH_M) * 0.70710678
 const START_SCALE := 2.2
+# The share of screen height a cross spans before it opens into tips, and the lower share it keeps them
+# down to: the gap is the hold that stops a cross at the line from flickering between meshes with sway.
+const TIPS_OPEN_SHARE := 0.04
+const TIPS_KEEP_SHARE := 0.036
 
 var _tips: ArrayMesh
 var _distant_cross: ArrayMesh
@@ -73,10 +77,12 @@ func _close() -> void:
 			var full_span := centre.distance_to(top) * SPAN_M * START_SCALE
 			# At distance the strokes meet. Up close they open over the live shell.
 			var screen_h := get_viewport().get_visible_rect().size.y
-			tips = full_span >= screen_h * (0.036 if arms.mesh == _tips else 0.04)
+			tips = full_span >= screen_h * (TIPS_KEEP_SHARE if arms.mesh == _tips else TIPS_OPEN_SHARE)
 			if full_span > 0.0:
 				unit = minf(1.0, MAX_HEIGHT_SHARE * screen_h / full_span)
-		arms.mesh = _tips if tips else _distant_cross
+		var mesh := _tips if tips else _distant_cross
+		if arms.mesh != mesh:
+			arms.mesh = mesh
 		arms.scale = Vector3.ONE * unit * lerpf(1.0, START_SCALE, left)
 
 
