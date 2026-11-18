@@ -93,7 +93,7 @@ func sample(cam: Camera3D, delta: float) -> void:
 
 func reading(ids = null) -> Dictionary:
 	var out := {"crews": 0, "seen": 0, "pop_ins": 0, "warnings": 0,
-		"early_warnings": 0, "seen_before_warning_s": null}
+		"early_warnings": 0, "short_unwarned": 0, "seen_before_warning_s": null}
 	for id in (_rows.keys() if ids == null else ids):
 		if not _rows.has(id):
 			continue
@@ -101,9 +101,11 @@ func reading(ids = null) -> Dictionary:
 		out.crews += 1
 		out.seen += int(row.seen)
 		out.pop_ins += int(row.pop_in)
+		var lead := float(row.seen_before_warning_s)
+		if not row.warned and lead + 0.000001 < 0.6:
+			out.short_unwarned += 1
 		if row.warned:
 			out.warnings += 1
-			var lead := float(row.seen_before_warning_s)
 			if lead + 0.000001 < 0.6:
 				out.early_warnings += 1
 			if out.seen_before_warning_s == null or lead < out.seen_before_warning_s:

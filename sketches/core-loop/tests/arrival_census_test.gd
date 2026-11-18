@@ -179,8 +179,10 @@ func _fixture() -> int:
 	await physics_frame
 	crew.set_meta("arrival_state", "entering")
 	hidden.sample(cam, 0.1)
+	t.eq("one glimpse before forced removal leaves the warning unmeasured", hidden.reading().short_unwarned, 1)
 	for tick in 6:
 		hidden.sample(cam, 0.1)
+	t.eq("the visible crew has already accumulated its warning lead", hidden.reading().short_unwarned, 0)
 	crew.set_meta("arrival_state", "live")
 	crew.attack_phase.emit({"phase": "windup"})
 	hidden.sample(cam, 0.1)
@@ -229,12 +231,13 @@ func _parent() -> void:
 				complete = false
 		else:
 			for wave in row.yard_waves:
-				if wave.seen != wave.crews or wave.warnings == 0:
+				if wave.seen != wave.crews or wave.short_unwarned > 0:
 					complete = false
 		pop_ins += int(row.pop_ins)
 		if row.seen_before_warning_s != null and (minimum == null or row.seen_before_warning_s < minimum):
 			minimum = row.seen_before_warning_s
 	t.check("bot runs measured first warnings", rows.filter(func(r): return r["case"] in ["skipper", "camper"] and r.warnings > 0).size() == 8)
+	complete = complete and t.failures == 0 and rows.size() == jobs.size()
 	complete = complete and bot_stages.get("skipper", 0) == 2 and bot_stages.get("camper", 0) == 2
 	print("RECEIPT " + JSON.stringify({"coverage_complete": complete, "pop_ins": pop_ins, "seen_before_warning_s": minimum, "runs": rows,
 		"pass": t.failures == 0 and complete and pop_ins == 0 and minimum != null and minimum + 0.000001 >= 0.6}))
