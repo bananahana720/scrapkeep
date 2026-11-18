@@ -84,6 +84,7 @@ export const ROWS = {
     real: [
       { cfg: "flood-today-timed.cfg", minStates: 31616, label: "a flood with a live time, as every real flood row has" },
       { cfg: "flood-today-noclock.cfg", minStates: 1792, label: "a flood with no live time" },
+      { cfg: "flood-today-longfill.cfg", minStates: 1, label: "a fill that outlasts the live time less the wait" },
     ],
     plants: [
       { cfg: "flood-broken-nosnap.cfg", rule: "FullWaterNeverHeld" },
@@ -92,10 +93,11 @@ export const ROWS = {
       { cfg: "flood-broken-endunder.cfg", rule: "NeverEndsUnderBall" },
       { cfg: "flood-broken-nocap.cfg", rule: "WithinCap" },
       { cfg: "flood-broken-nohold.cfg", rule: "HoldEnds" },
+      { cfg: "flood-broken-endspent.cfg", rule: "NeverEndsUnderBall" },
     ],
     coverage: "references/flood-coverage.md",
     gaps: [
-      "the wait is counted in ticks (HoldTicks 1 against the real 2 s), and only as the wait for a ball in the basin; the wait for a ball in the margin the row keeps around the basin (hold_clear_m) is not capped, as a ball there is outside the water (finding PF-1, closed by W1-148)",
+      "the wait is counted in ticks (HoldTicks 1 against the real 2 s); the wait for a ball near the basin but outside it (hold_clear_m, 12 to 20 m on real flood rows) is not capped and not modelled, so such a ball still holds the water off (finding PF-3)",
       "after its live time is up, a flood that cannot end because the ball is near is no longer stepped (finding PF-2)",
       "collapses and cave-ins are not modelled; their clock shares the rise's helper and park_events_test.gd sweeps it",
     ],

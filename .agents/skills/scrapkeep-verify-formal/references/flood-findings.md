@@ -24,7 +24,7 @@ Each finding is a break the model found that replayed on the real game. A closed
 
 **Why the wait exists.** `git log -S` finds the check in `9b956f657`, the commit that scheduled park rows; its message gives no reason. The design page does: `sketches/core-loop/design-v3/PARK.md` rule 2, "Never stop the ball", says new geometry never appears under the ball and "rising water never rises under the ball" (the hold rule), so the water never changes under a grounded ball with no warning, such as on its landing frame.
 
-**Closed by.** W1-148 keeps the wait and caps it: `PARK_FLOOD_HOLD_CAP_S` (2 s of a flood's live time, `_park_hold_spent`). The wait for a ball only near the basin (`hold_clear_m`, 12 to 15 m) is not capped; that ball is outside the water. After the cap the water rises around a ball in the basin and the deep-water tax reads it (the cap is an assumption Andrew can overturn).
+**Closed by.** W1-148 keeps the wait and caps it: `PARK_FLOOD_HOLD_CAP_S` (2 s of a flood's live time). Time with a ball in the footprint counts toward the cap whether the ball is grounded or not, so hopping in place cannot hold a flood off. The cap is only in the step gate of `_park_step_live`; `_park_clear`, and so `_park_can_end`, still refuse to end a flood under a ball. The cap is an assumption Andrew can overturn.
 
 **Model.** `flood-broken-nohold` (no cap) breaks `HoldEnds`; `flood-today-timed` holds it.
 
@@ -40,3 +40,10 @@ Each finding is a break the model found that replayed on the real game. A closed
 
 **Model.** Not seen: the model's live-time branch leaves `held` unchanged, and `FullWaterNeverHeld` is stated for the live time only. Found by reading the code in review, not by the checker and not replayed.
 
+## PF-3. A ball near a flood but outside its footprint still holds the water off, without limit (open)
+
+**Steps.** A flood lands. The ball sits outside its footprint but inside the row's clearance margin (`hold_clear_m`; the real flood rows use 12, 15 and 20 m) and stays.
+
+**What happens.** `_park_clear` holds the rise while the ball is within the margin, and the cap does not count this wait. The live time keeps running. The ball is not in the water, so the deep-water tax cannot reach it.
+
+**Harm.** Parking near a flood, not in it, still cancels it, for the whole live time. Left open on purpose in W1-148 (an assumption Andrew can overturn): capping it would raise the water toward a ball 12 to 20 m away, which the hold rule is there to prevent. The model does not see it: its ball is either in the basin or out.

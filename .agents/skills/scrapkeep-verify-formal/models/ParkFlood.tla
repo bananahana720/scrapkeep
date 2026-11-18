@@ -20,6 +20,7 @@ CONSTANTS
   HoldTicks,      \* PARK_FLOOD_HOLD_CAP_S in ticks: how many ticks the wait lasts, W1-148
   HoldCap,        \* the wait is spent after HoldTicks ticks (FALSE: it lasts as long as the ball stays)
   EndNeedsClear,  \* _park_can_end: a flood ends only with its basin clear
+  EndWhenSpent,   \* plant: a flood may end under a ball once its wait is spent (the fault W1-148 review found)
   CapGuard        \* _park_capacity: a new ground event waits for a free slot
 
 VARIABLES
@@ -29,12 +30,12 @@ VARIABLES
   elapsed,  \* per row: live ticks, 0..Live
   lives,    \* per row: times landed
   ball,     \* the row whose basin holds the grounded ball, or "out"
-  waited,   \* per row: ticks the rise has waited for a ball since the row landed (held_s)
-  held,     \* per row: a tick skipped the step hook on water that had risen Fill ticks
+  waited,   \* per row: ticks the rise has waited for a ball since the row landed (waited_s)
+  skipped,     \* per row: a tick skipped the step hook on water that had risen Fill ticks
   roseUnder,\* per row: a tick raised the water with the ball in the basin
   endedUnder\* per row: the flood ended with the ball in the basin
 
-vars == <<phase, rise, hair, elapsed, lives, ball, waited, held, roseUnder, endedUnder>>
+vars == <<phase, rise, hair, elapsed, lives, ball, waited, skipped, roseUnder, endedUnder>>
 
 Rising(e) == rise[e] < Fill \/ hair[e]
 
@@ -58,7 +59,7 @@ Init ==
   /\ lives = [e \in Events |-> 0]
   /\ ball = "out"
   /\ waited = [e \in Events |-> 0]
-  /\ held = [e \in Events |-> FALSE]
+  /\ skipped = [e \in Events |-> FALSE]
   /\ roseUnder = [e \in Events |-> FALSE]
   /\ endedUnder = [e \in Events |-> FALSE]
 
@@ -66,7 +67,7 @@ Announce(e) ==
   /\ phase[e] \in {"waiting", "cooldown"}
   /\ lives[e] < MaxLives
   /\ phase' = [phase EXCEPT ![e] = "announced"]
-  /\ UNCHANGED <<rise, hair, elapsed, lives, ball, waited, held, roseUnder, endedUnder>>
+  /\ UNCHANGED <<rise, hair, elapsed, lives, ball, waited, skipped, roseUnder, endedUnder>>
 
 \* The landing in _advance_park: capacity, a clear basin, then the clocks reset.
 \* Clear is read before the reset, as the code reads it.
@@ -80,9 +81,9 @@ Land(e) ==
   /\ elapsed' = [elapsed EXCEPT ![e] = 0]
   /\ lives' = [lives EXCEPT ![e] = lives[e] + 1]
   /\ waited' = [waited EXCEPT ![e] = 0]
-  /\ UNCHANGED <<ball, held, roseUnder, endedUnder>>
+  /\ UNCHANGED <<ball, skipped, roseUnder, endedUnder>>
 
-CanEnd(e) == ~EndNeedsClear \/ Clear(e)
+CanEnd(e) == ~EndNeedsClear \/ Clear(e) \/ (EndWhenSpent /\ Spent(e))
 
 End(e) ==
   /\ phase' = [phase EXCEPT ![e] = "cooldown"]
@@ -100,7 +101,7 @@ Step(e) ==
   /\ UNCHANGED <<lives, ball>>
   /\ IF Live > 0 /\ elapsed[e] = Live
      THEN \* the live time is up: end if the basin is clear, else wait
-          /\ UNCHANGED <<rise, hair, elapsed, waited, held, roseUnder>>
+          /\ UNCHANGED <<rise, hair, elapsed, waited, skipped, roseUnder>>
           /\ IF CanEnd(e) THEN End(e) ELSE UNCHANGED <<phase, endedUnder>>
      ELSE LET now == IF Live > 0 THEN elapsed[e] + 1 ELSE 0
               waits == WaitUnderBall /\ Rising(e) /\ ~Clear(e) /\ ~Spent(e)
@@ -108,9 +109,9 @@ Step(e) ==
              /\ IF waits
                 THEN \* no step hook this tick
                      /\ waited' = [waited EXCEPT ![e] = IF waited[e] < HoldTicks THEN waited[e] + 1 ELSE waited[e]]
-                     /\ held' = [held EXCEPT ![e] = held[e] \/ rise[e] = Fill]
+                     /\ skipped' = [skipped EXCEPT ![e] = skipped[e] \/ rise[e] = Fill]
                      /\ UNCHANGED <<phase, rise, hair, roseUnder, endedUnder>>
-                ELSE /\ UNCHANGED <<waited, held>>
+                ELSE /\ UNCHANGED <<waited, skipped>>
                      /\ \/ /\ rise[e] + 1 = Fill
                            /\ \E h \in (IF SnapRise THEN {FALSE} ELSE BOOLEAN) : Rose(e, h)
                         \/ /\ rise[e] + 1 # Fill
@@ -121,7 +122,7 @@ Step(e) ==
 
 Roll ==
   /\ \E b \in Events \cup {"out"} : ball' = b /\ b # ball
-  /\ UNCHANGED <<phase, rise, hair, elapsed, lives, waited, held, roseUnder, endedUnder>>
+  /\ UNCHANGED <<phase, rise, hair, elapsed, lives, waited, skipped, roseUnder, endedUnder>>
 
 Next == Roll \/ \E e \in Events : Announce(e) \/ Land(e) \/ Step(e)
 
@@ -140,7 +141,7 @@ TypeOK ==
 (* The rules. Each is one promise to the player. *)
 
 \* Water that has finished rising keeps acting on a ball that rolls in.
-FullWaterNeverHeld == \A e \in Events : ~held[e]
+FullWaterNeverHeld == \A e \in Events : ~skipped[e]
 
 \* A flood with no clock gives its ground slot back once its water is full.
 FullWaterFreesItsSlot ==
@@ -160,8 +161,9 @@ BallOut == <>[](ball = "out")
 FloodEnds == BallOut => \A e \in Events : (Live > 0 /\ phase[e] = "live") ~> (phase[e] # "live")
 AnnouncedLands == BallOut => \A e \in Events : (phase[e] = "announced") ~> (phase[e] = "live")
 
-\* The wait for a ball is bounded: asked without the ball leaving, rising water always finishes rising.
-\* It did not before W1-148 (finding PF-1); flood-broken-nohold removes the cap and must break it.
+\* The wait for a ball is bounded: asked without the ball leaving, a live flood's water either finishes rising
+\* or the flood ends (a flood that ends was not left rising). It did not hold before W1-148 (finding PF-1);
+\* flood-broken-nohold removes the cap and must break it.
 HoldEnds == \A e \in Events : (phase[e] = "live" /\ Rising(e)) ~> ~(phase[e] = "live" /\ Rising(e))
 
 (* Probes that say "never" about things that must happen. Each must break. *)
