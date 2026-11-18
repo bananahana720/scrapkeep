@@ -114,7 +114,10 @@ func _shoot(subject: String, extra := {}) -> void:
 		_t.check("ball is at the measured entry", game.player.ball_position().distance_to(entry) < 0.01)
 		_t.check("ball has the measured velocity", game.player.body().linear_velocity.distance_to(Vector3(9.899495, 0, -9.899495)) < 0.001)
 		_t.check("camera anchor matches the measured target", target.distance_to(_anchors.station.point) < 0.01)
-		_t.check("numerical camera matches the probe", eye.distance_to(_anchors.mast_eye.point) < 0.01)
+		var view := Subjects.resolve(subject, row.cameras[1], _anchors)
+		_t.check("numerical camera matches the probe", eye.distance_to(view.eye) < 0.01 and target.distance_to(view.target) < 0.01)
+		_t.eq("numerical camera uses the measured lens", view.fov, 65.0)
+		_t.eq("station overview keeps its own lens", Subjects.resolve(subject, row.cameras[0], _anchors).fov, 80.0)
 		var hit: Array = extra.mast.hit
 		_t.check("ray hit matches the measured bite", Vector3(hit[0], hit[1], hit[2]).distance_to(arena.global_position + Vector3(-19.6351, 8.6857, -18.2523)) < 0.05)
 		return

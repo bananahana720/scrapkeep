@@ -374,7 +374,7 @@ static func merge_stations(directory: String, subjects: Dictionary) -> Array:
 				shot[2] = _vector(shot[2])
 				shot[3] = float(shot[3])
 			if row.has("mast_angle_deg"):
-				# Both capture and blind pairing read this list. At capture the aim uses the live chase lens.
+				# W1-135 measured the bite with a 65-degree lens. Capture and blind pairing use this same row.
 				row.cameras.append(["numerical_aim", Vector3.ZERO, Vector3.ZERO, 65.0, ["mast_eye", "station"]])
 			subjects[id] = row
 	return errors

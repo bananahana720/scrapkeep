@@ -665,8 +665,6 @@ func _shoot(subject: String, extra := {}) -> void:
 	var recs: Array = []
 	for shot in row.cameras:
 		var v := Subjects.resolve(subject, shot, _anchors)
-		if extra.has("mast") and shot[0] == "numerical_aim":
-			v.fov = game.camera.cam.fov
 		var ball := {"in_frame": false, "bbox": []}
 		var settled := _check_stage_yaw(subject, String(shot[0]))
 		var started := Time.get_ticks_msec()
@@ -970,7 +968,7 @@ func _mast_pose(row: Dictionary) -> Dictionary:
 	return {"entry": entry, "target": target, "eye": eye, "receipt": {
 		"flow_state": "BOSS", "in_arena": game.flow.in_arena, "arena": str(arena.get_path()),
 		"arena_origin": _coordinates(arena.global_position), "collider": str(bowl.get_path()),
-		"shape_index": hit.shape, "shape_type": cylinder.get_class(), "radius": cylinder.radius,
+		"shape_index": hit.shape, "center_local": _coordinates(axis), "shape_type": cylinder.get_class(), "radius": cylinder.radius,
 		"height": cylinder.height, "angle_deg": fposmod(rad_to_deg(atan2(axis.z, axis.x)), 360.0),
 		"hit": _coordinates(hit.position), "target": _coordinates(target), "entry": _coordinates(entry),
 		"aim_eye": _coordinates(eye)}}
