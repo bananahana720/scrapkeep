@@ -95,7 +95,7 @@ export const ROWS = {
     ],
     coverage: "references/flood-coverage.md",
     gaps: [
-      "the wait is counted in ticks (HoldTicks 1 against the real 2 s), and only as the wait for a ball in the basin; the margin the row keeps around the basin (hold_clear_m) is taken as the basin itself (finding PF-1, closed by W1-148)",
+      "the wait is counted in ticks (HoldTicks 1 against the real 2 s), and only as the wait for a ball in the basin; the wait for a ball in the margin the row keeps around the basin (hold_clear_m) is not capped, as a ball there is outside the water (finding PF-1, closed by W1-148)",
       "after its live time is up, a flood that cannot end because the ball is near is no longer stepped (finding PF-2)",
       "collapses and cave-ins are not modelled; their clock shares the rise's helper and park_events_test.gd sweeps it",
     ],

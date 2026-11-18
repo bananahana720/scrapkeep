@@ -580,7 +580,7 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 	var dt := minf(delta, maxf(0.0, live_s - float(state.live_elapsed_s))) if live_s > 0.0 else delta
 	state.live_elapsed_s += dt
 	if not state.weather and (_park_rising(state) or _park_collapsing(state)) and not _park_clear(state, ball, velocity, ctx):
-		if _park_rising(state):
+		if _park_under_ball(state, ball, ctx):
 			state.held_s += dt
 		return
 	var step_ctx := ctx.duplicate(true)
@@ -610,6 +610,22 @@ static func _park_collapsing(state: Dictionary) -> bool:
 
 static func _park_rising(state: Dictionary) -> bool:
 	return state.row.kind != "drain" and (state.row.kind in ["flood_fill", "flash_flood"] or state.row.effect.get("material") == "water") and state.rise_s < float(state.row.effect.get("fill_s", 0.0))
+
+
+func _park_half(state: Dictionary, site: Dictionary) -> Vector2:
+	var half := ParkMap.footprint_half_extents(site)
+	if state.row.effect.has("footprint_m"):
+		var footprint = state.row.effect.footprint_m
+		half = (footprint if footprint is Vector2 else Vector2(float(footprint[0]), float(footprint[1]))).abs() * 0.5
+	return half
+
+
+# Rising water with a grounded ball standing in its footprint: the one hold the flood's cap bounds.
+func _park_under_ball(state: Dictionary, ball: Vector3, context: Dictionary) -> bool:
+	if state.weather or not _park_rising(state) or not context.grounded:
+		return false
+	var site: Dictionary = NaturalFootprint.resolve(state.row, _park_sites[state.row.site])
+	return ParkMap.footprint_contains(site, Vector2(ball.x, ball.z), 0.0, Vector2.INF, _park_half(state, site))
 
 
 # A flood that has waited PARK_FLOOD_HOLD_CAP_S for a ball stops waiting while it still rises.
@@ -665,16 +681,13 @@ func _park_world(state: Dictionary, form: String, phase: String) -> Dictionary:
 
 
 func _park_clear(state: Dictionary, ball: Vector3, velocity: Vector3, context: Dictionary) -> bool:
-	if state.weather or _park_hold_spent(state):
+	if state.weather:
 		return true
 	var site: Dictionary = NaturalFootprint.resolve(state.row, _park_sites[state.row.site])
-	var half := ParkMap.footprint_half_extents(site)
-	if state.row.effect.has("footprint_m"):
-		var footprint = state.row.effect.footprint_m
-		half = (footprint if footprint is Vector2 else Vector2(float(footprint[0]), float(footprint[1]))).abs() * 0.5
+	var half := _park_half(state, site)
 	var point := Vector2(ball.x, ball.z)
-	if _park_rising(state) and context.grounded and ParkMap.footprint_contains(site, point, 0.0, Vector2.INF, half):
-		return false
+	if _park_under_ball(state, ball, context):
+		return _park_hold_spent(state)
 	if not _park_ground(state.row):
 		return true
 	var end := point + Vector2(velocity.x, velocity.z) * PARK_TRAVEL_S

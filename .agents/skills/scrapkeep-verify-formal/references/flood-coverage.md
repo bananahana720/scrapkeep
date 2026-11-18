@@ -13,7 +13,7 @@ The covered file: `sketches/core-loop/src/world/event_director.gd`.
 | `Step` | `_park_step_live`, one call |
 | `Step`, the live time is up | the first branch of `_park_step_live`: end when `_park_can_end`, else return |
 | `Step`, `waits` | the early return while the water is rising, `_park_clear` is false and the wait is not spent (`_park_hold_spent`): the family's `step` hook is not called and the rise does not advance; each such tick adds to `held_s` |
-| `Spent`, `waited` | `_park_hold_spent`: `held_s` has reached `PARK_FLOOD_HOLD_CAP_S` (2 s) while the water still rises; `_park_clear` then returns true and the water rises around the ball. `held_s` resets when the flood lands (W1-148) |
+| `Spent`, `waited` | `_park_under_ball` and `_park_hold_spent`: with a grounded ball in the footprint, `held_s` has reached `PARK_FLOOD_HOLD_CAP_S` (2 s) while the water still rises; `_park_clear` then returns true and the water rises around the ball. `held_s` resets when the flood lands (W1-148) |
 | `Rose` | `rise_s` advances through `_park_clock` and stops at `fill_s` |
 | `hair` | `rise_s` after a whole fill time of ticks, when the float sum sits under `fill_s` |
 | `End` | `_park_end`: the row goes to `COOLDOWN` (every real flood row has `once` false) |

@@ -16,7 +16,7 @@ Each finding is a break the model found that replayed on the real game. A closed
 
 ## PF-1. A ball parked in a basin stops the flood from ever rising (closed by W1-148)
 
-**Steps.** A flood lands with the ball away. The ball rolls into the basin, or within the row's clearance around it (`hold_clear_m`, 12 to 15 m), before the water has risen and stays there.
+**Steps.** A flood lands with the ball away. The ball rolls into the basin before the water has risen and stays there.
 
 **What happened.** Rising water waited under a grounded ball, with no limit. The flood's live time kept running meanwhile. When the ball at last rolled out after the live time was up, the flood ended on the next tick without ever having risen.
 
@@ -24,7 +24,7 @@ Each finding is a break the model found that replayed on the real game. A closed
 
 **Why the wait exists.** `git log -S` finds the check in `9b956f657`, the commit that scheduled park rows; its message gives no reason. The design page does: `sketches/core-loop/design-v3/PARK.md` rule 2, "Never stop the ball", says new geometry never appears under the ball and "rising water never rises under the ball" (the hold rule), so the water never changes under a grounded ball with no warning, such as on its landing frame.
 
-**Closed by.** W1-148 keeps the wait and caps it: `PARK_FLOOD_HOLD_CAP_S` (2 s of a flood's live time, `_park_hold_spent`). After that the water rises around the ball and the deep-water tax reads it (the cap is an assumption Andrew can overturn).
+**Closed by.** W1-148 keeps the wait and caps it: `PARK_FLOOD_HOLD_CAP_S` (2 s of a flood's live time, `_park_hold_spent`). The wait for a ball only near the basin (`hold_clear_m`, 12 to 15 m) is not capped; that ball is outside the water. After the cap the water rises around a ball in the basin and the deep-water tax reads it (the cap is an assumption Andrew can overturn).
 
 **Model.** `flood-broken-nohold` (no cap) breaks `HoldEnds`; `flood-today-timed` holds it.
 
