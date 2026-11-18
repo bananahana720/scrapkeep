@@ -17,6 +17,9 @@
 // the bot blocks, the three band sweeps and the red team it needs one "scoped" row: the bot and band tests the
 // wave's changes reach, by name. A release shard may still have a row; it may open with DEFERRED and name the
 // receipt of its last full read. Without --wave nothing is deferred: that is the release gate.
+//
+// Both scopes also read the plan's "| Check | Verdict |" table and refuse unless its newest "node tests" row
+// passed with 0 fails and names its receipt (checkNodeRow).
 
 import { spawnSync } from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
@@ -29,8 +32,9 @@ import { WEEKLY_FILE, gateLists } from "./shard.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const BOT_BLOCK = 5;
 
-// Rows of every table whose header is "| Shard | Verdict |", in file order.
-export function tallyRows(text) {
+// Rows of every table whose header is "| Shard | Verdict |" (or "| Check | Verdict |" with that
+// first word), in file order.
+export function tallyRows(text, first = "shard") {
   const rows = [];
   let inTable = false;
   text.split("\n").forEach((line, index) => {
@@ -39,7 +43,7 @@ export function tallyRows(text) {
       inTable = false;
       return;
     }
-    if (cells.length === 2 && /^shard$/i.test(cells[0]) && /^verdict$/i.test(cells[1])) {
+    if (cells.length === 2 && cells[0].toLowerCase() === first && /^verdict$/i.test(cells[1])) {
       inTable = true;
       return;
     }
@@ -93,6 +97,23 @@ export function checkWeeklySweep(rows, { weeklyCount = 0, today = new Date() } =
   return [];
 }
 
+export const NODE_CHECK = "node tests";
+
+// The plan's Gate-side table carries the node suite's result for the gated head (scripts/gate/pc.mjs
+// writes it from node/summary.txt). A release tally once read CLEAN beside a red node step because
+// only the shard tables were read, so the newest "node tests" row must open with PASS, give
+// "N tests, 0 fail" with N above zero, and name its receipt.
+export function checkNodeRow(text) {
+  const row = tallyRows(text, "check").reverse().find((candidate) => candidate.shard.toLowerCase() === NODE_CHECK);
+  if (!row) return [`no "${NODE_CHECK}" row in a "| Check | Verdict |" table; run the node suite on the gated head and record "PASS. N tests, 0 fail. Receipt node/summary.txt"`];
+  const problems = [];
+  const count = /\b(\d+) tests, (\d+) fail\b/.exec(row.verdict);
+  if (!isPass(row.verdict)) problems.push(`line ${row.line}: "${row.shard}" does not open with PASS in its newest row`);
+  if (!count || Number(count[1]) === 0 || Number(count[2]) !== 0) problems.push(`line ${row.line}: "${row.shard}" does not read "N tests, 0 fail" with N above zero`);
+  if (!hasReceipt(row.verdict)) problems.push(`line ${row.line}: "${row.shard}" names no receipt`);
+  return problems;
+}
+
 export function checkTally(rows, { testCount, botCount, planHead: gated = null, head = null, weeklyCount = 0, today = new Date(), scope = "release" }) {
   const wave = scope === "wave";
   const problems = [];
@@ -131,13 +152,15 @@ async function main() {
   const planAt = argv.indexOf("--plan");
   if (planAt < 0 || !argv[planAt + 1]) throw new Error("usage: node scripts/gate/tally.mjs [--wave] --plan <gate plan.md>");
   const lists = gateLists(path.join(root, "sketches", "core-loop"));
-  const rows = tallyRows(readFileSync(argv[planAt + 1], "utf8"));
+  const text = readFileSync(argv[planAt + 1], "utf8");
+  const rows = tallyRows(text);
   const gated = planHead(argv[planAt + 1]);
   const head = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim() || null;
   if (!gated) console.log("NOTE the plan's file name is not w<N>-<head>-gate-plan.md, so the head it gates was not checked against this checkout");
   const weekly = lists.weekly.tests.length + lists.weekly.bots.length;
   const scope = argv.includes("--wave") ? "wave" : "release";
   const problems = checkTally(rows, { testCount: lists.tests.length, botCount: lists.bots.length, planHead: gated, head, weeklyCount: weekly, scope });
+  problems.push(...checkNodeRow(text));
   console.log(scope === "wave" ? `wave gate (ruling cy): every non-bot test and the "${SCOPED_SHARD}" row; bot blocks, bands and the red team wait for the release gate` : "release gate: every shard, nothing deferred");
   const notRun = new Set([...lists.weekly.tests, ...lists.weekly.bots]);
   const ledger = (await checkLedger(root, { promotion: true, notRun, requireChecks: true })).filter((finding) => finding.level === "failure");

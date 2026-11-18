@@ -744,7 +744,7 @@ async function run(options) {
   console.log(`node scripts/gate/tally.mjs ${tallyArgs.join(" ")}`);
   if (options.tally) {
     const tally = spawnSync(process.execPath, ["scripts/gate/tally.mjs", ...tallyArgs], { cwd: root, stdio: "inherit" });
-    return tally.status ?? 1;
+    return worst ? 1 : (tally.status ?? 1);
   }
   return worst ? 1 : 0;
 }
