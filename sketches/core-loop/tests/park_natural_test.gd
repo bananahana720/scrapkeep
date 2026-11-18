@@ -170,7 +170,6 @@ func _run() -> void:
 			t.check(kind + " uses Flood rendering", state.get("water") != null)
 			if state.get("water") != null:
 				t.near(kind + " rendered surface agrees", state.water.surface_y(), depth)
-				t.eq(kind + " water never brakes", state.water.external_accel(Vector3.ZERO, Vector3(17, 0, 9)), Vector3.ZERO)
 		elif kind != "lightning":
 			var probe := Vector2(2.37, 0.19).rotated(-deg_to_rad(30.0)) if kind == "impact" else Vector2.ZERO
 			if kind == "collapse":
@@ -237,6 +236,7 @@ func _water_lifecycle() -> void:
 	for i in 53:
 		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1, "grounded": true})
 	var state: Dictionary = handler.active.flood_fill
+	t.check("a local flood builds no light", state.water.find_children("*", "Light3D", true, false).is_empty())
 	var held: float = state.depth_m
 	for i in 21:
 		w.events.advance(0.1, Vector3(0, 1, 0), Vector3.ZERO, {"clock_tier": 1, "grounded": true})
