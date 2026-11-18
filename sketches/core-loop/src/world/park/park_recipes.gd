@@ -45,7 +45,7 @@ const LandmarkBeam := preload("res://src/presentation/landmark_beam.gd")
 const WardenMind := preload("res://src/combat/warden_mind.gd")
 const IsleRig := preload("res://src/world/park/isle_rig.gd")
 const DamRig := preload("res://src/world/park/dam_rig.gd")
-const FlumePiers := preload("res://src/world/park/flume_piers.gd")
+const Footings := preload("res://src/world/park/footings.gd")
 
 const BUDGETS_PATH := "res://assets/asset_budgets.json"
 const GLB_DIR := "res://assets/models/park/"
@@ -834,18 +834,13 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 			node.set_meta("tile_stretch", tile["stretch"])
 	var r :=ranges(String(row.get("budget", "landform")))
 	var base_end := float(r.get("base_end", 0.0))
-	if row.get("recipe") == FlumePiers.RECIPE and not tiles.is_empty() and ground.is_valid():
-		var pier_mesh := FlumePiers.fit(node.transform, tiles, ground)
-		if pier_mesh != null:
-			var piers := MeshInstance3D.new()
-			piers.name = "Piers"
-			piers.mesh = pier_mesh
-			_range(piers, 0.0, base_end, float(r.get("base_margin", 0.0)))
-			node.add_child(piers)
-			var pier_shape := CollisionShape3D.new()
-			pier_shape.name = "Piers"
-			pier_shape.shape = pier_mesh.create_trimesh_shape()
-			body.add_child(pier_shape)
+	var footing := Footings.fit(row, node.transform, at_origin, tiles, ground)
+	if not footing.is_empty():
+		var footing_view := footing["view"] as MeshInstance3D
+		_range(footing_view, 0.0, base_end, float(r.get("base_margin", 0.0)))
+		footing_view.set_meta(RecipeProps.META_FADE, true)
+		node.add_child(footing_view)
+		body.add_child(footing["shape"])
 	var mid_end := float(r.get("mid_end", 0.0))
 	for scene: Node in parts.get("base", []):
 		for f: Array in fits:
