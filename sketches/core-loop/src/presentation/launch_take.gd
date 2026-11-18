@@ -197,9 +197,6 @@ func advance(delta: float) -> void:
 			_set_progress(1.0)
 			var drawn: bool = not _ready_check.is_valid() or bool(_ready_check.call())
 			if (_t >= HOLD_MIN_S and drawn) or _t >= HOLD_MAX_S:
-				if live:
-					# The release check reads how long the panel held, cover to reveal.
-					print("SCRAPKEEP_TAKE_HOLD ms=%d revealed_at=%d" % [Time.get_ticks_msec() - shown_ms, Time.get_ticks_msec()])
 				_next(REVEAL)
 		REVEAL:
 			_set_progress(1.0 + minf(1.0, _t / REVEAL_S))
