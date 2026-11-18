@@ -75,7 +75,8 @@ func _run() -> void:
 	for i in live.size():
 		var state: Dictionary = live[i]
 		t.check("unsafe fill wall time exceeds authored duration " + state.row.id, state.live_elapsed_s > fill_s)
-		t.near("unsafe fill keeps delivered rise " + state.row.id, float(state.rise_s), before[i])
+		# The ball hangs over the site, so the water waits PARK_FLOOD_HOLD_CAP_S for it (W1-148) and then rises around it.
+		t.near("unsafe fill delivers only the rise past the wait " + state.row.id, float(state.rise_s), before[i] + fill_s + 1.0 - Director.PARK_FLOOD_HOLD_CAP_S, 0.2)
 		t.eq("unsafe permanent fill remains LIVE " + state.row.id, state.phase, Director.LIVE)
 		t.eq("permanent fill preserves authored lifetime " + state.row.id, state.row.live_s, 0.0)
 	t.check("unsafe permanent fills retain all ground slots beyond fill_s", not game.world.events._park_capacity(candidate))
