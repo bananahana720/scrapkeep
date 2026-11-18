@@ -53,7 +53,8 @@ func _initialize() -> void:
 				all_releases_preserved = false
 			continue
 		t.eq("%s tried every earlier physics tick" % row.site, int(row.early_trials), HookSites.HOLD_TICKS - 1)
-		row["early_speed_preserved"] = baseline == null or float(row.best_early.landing_mps) >= float(baseline) - 0.001
+		var early_control := minf(row.best_early.landing_mps, row.repeat_early.landing_mps)
+		row["early_speed_preserved"] = baseline == null or early_control >= float(baseline)
 		row["hold_pays"] = row.held_only_tier or row.held.landing_mps >= row.best_early.landing_mps
 		row["within_energy_bound"] = row.exit_excess_by_tick.is_empty()
 		row["added_excess"] = HookSites.added_excess(row.exit_excess_by_tick, station.get("round0_exit_excess_by_tick", {}))

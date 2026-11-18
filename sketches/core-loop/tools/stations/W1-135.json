@@ -31,7 +31,7 @@
     "park_row": "pipeline_bridge",
     "route": "canal_run",
     "stamped": true,
-    "round0_early_landing_mps": 13.996667,
+    "round0_early_landing_mps": 13.9966669082642,
     "round0_exit_excess_by_tick": {
       "2": 2.79938130333085,
       "3": 3.00638280931526,
@@ -86,7 +86,7 @@
     "park_row": "canal_lips",
     "route": "canal_run",
     "stamped": true,
-    "round0_early_landing_mps": 14.117118,
+    "round0_early_landing_mps": 14.1171197891235,
     "round0_exit_excess_by_tick": {},
     "round0_excess_noise": 0.0
   },
@@ -105,7 +105,7 @@
     "park_row": "hollow_trestles",
     "eye": [-163.26, 40.55, -148.13],
     "tiers": ["bend_rim_ledge"],
-    "round0_early_landing_mps": 13.589718,
+    "round0_early_landing_mps": 13.5897178649902,
     "round0_exit_excess_by_tick": {},
     "round0_excess_noise": 0.0
   },
@@ -125,7 +125,7 @@
     "target_lift_m": 9,
     "bowl_target_local": [-19.091883, 9, -19.091883],
     "bowl_entry_local": [-22.6264, 1.5, -11.3137],
-    "round0_early_landing_mps": 13.81373,
+    "round0_early_landing_mps": 13.8137302398682,
     "round0_exit_excess_by_tick": {},
     "round0_excess_noise": 0.0
   }

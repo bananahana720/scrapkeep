@@ -113,6 +113,11 @@ func measure(id: String, site: Dictionary, no_bite: bool) -> Dictionary:
 	# both entries after traversing the whole schedule, in reverse order.
 	var repeat_early := await _take(pose, int(best.release_tick))
 	var repeat_held := await _take(pose, HOLD_TICKS)
+	for repeat in [repeat_held, repeat_early]:
+		if repeat.status == "landed":
+			_record_excess(repeat, excess_by_tick)
+			if repeat.exit_energy_residual > worst_energy_trial.exit_energy_residual:
+				worst_energy_trial = repeat
 	row["repeat_early"] = repeat_early
 	row["repeat_held"] = repeat_held
 	row["best_early"] = best
@@ -130,7 +135,8 @@ func measure(id: String, site: Dictionary, no_bite: bool) -> Dictionary:
 # stock allowance for this site and this release tick.
 func _record_excess(trial: Dictionary, by_tick: Dictionary) -> void:
 	if trial.exit_energy_residual > 0.0:
-		by_tick[str(trial.release_tick)] = trial.exit_energy_residual
+		var tick := str(trial.release_tick)
+		by_tick[tick] = maxf(float(by_tick.get(tick, 0.0)), trial.exit_energy_residual)
 
 
 static func added_excess(observed: Dictionary, stock: Dictionary) -> float:
