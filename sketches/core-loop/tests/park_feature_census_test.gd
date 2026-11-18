@@ -50,9 +50,7 @@ const BANDS := {
 }
 
 # Stage measures under their line today. {"<stage> <measure>": {"value": measured, "why": "..."}}
-const OWED := {
-	"park_flume ride_climb_rows": {"value": 3, "why": "only the entry kicker (21 m), the drum lip kicker (30 m) and one bend_zip pier (16 m) climb 10 m; the pier chains run level and the zips and the lift climb under it"},
-}
+const OWED := {}
 
 var t := T.new("park_feature_census_test")
 

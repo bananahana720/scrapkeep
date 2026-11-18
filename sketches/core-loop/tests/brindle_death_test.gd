@@ -91,7 +91,7 @@ func _die_to(how: String) -> void:
 				boss._charge_hit(fake, ball)
 			fake.free()
 		"lane":
-			boss._commit_charge(ball)
+			boss._commit_charge()
 			var lane: Dictionary = boss._charge
 			var at: Vector3 = lane["from"] + lane["heading"] * Requisition.HULL.z * 0.5
 			Harness.put_ball(game, Vector3(at.x, boss.arena.ground(at) + 1.0, at.z))
