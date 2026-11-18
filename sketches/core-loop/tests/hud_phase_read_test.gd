@@ -425,51 +425,32 @@ func _pause_checks() -> void:
 
 
 func _opening_tags(menu: Node) -> void:
-	# Every panel type, twice over, at several seeds: a seed moves where each part sits on the shell,
-	# so one seed proves one arrangement. 203 is the seed that puts the spool near the top edge.
-	var stack: Array = Panels.ROWS.keys()
 	var prior_seed: int = _game.run.run_seed
 	var prior_panels := Array(_game.run.panels).duplicate()
-	_game.run.panels.clear()
-	for i in stack.size() * 2:
-		_game.run.panels.append(String(stack[i % stack.size()]))
 	var read = menu.build_read
 	read.set_process(false)
+	# The hard check: seed 203 puts the spool near the top edge when the pilot faces the player.
+	var eight := ["punch_rivet", "fin_plate", "splash_skirt", "ram_bumper",
+		"vent_louvre", "winch_drum", "hull_tile", "rope_spool"]
+	var first: Dictionary = await _tag_layout(menu, eight, 24, 203)
+	_t.check("R2 all eight opening tag bounds fit the 720p preview", first.count == eight.size() and first.room >= 0.0,
+		"%d boxes, %.2f px" % [first.count, first.room])
+	_t.check("R2 the opening tag bounds have at most one overlapping pair", first.overlaps.size() <= 1, str(first.overlaps))
+	# The wide read: every panel type at several seeds, because a seed moves where each part sits on
+	# the shell. Only tags on the near side of the shell count; the shell hides the rest in the game.
+	var every: Array = Panels.ROWS.keys()
 	var overlaps := []
-	var fits := true
-	var detail := []
+	var tight := []
 	for seed_value in TAG_SEEDS:
-		_game.run.run_seed = seed_value
-		menu._show_build()
-		menu.lay_build(SIZES[0])
-		await process_frame
-		await process_frame
-		var view := read._frame.get_child(0) as SubViewport
-		var camera := view.get_camera_3d()
-		var boxes: Array[Rect2] = []
-		var names: Array[String] = []
-		var room := INF
-		for tag: Label3D in read._labels.get_children():
-			# The dummy renderer has no glyph bounds. Estimate the outlined billboard in screen space.
-			var font := tag.font if tag.font != null else ThemeDB.fallback_font
-			var size := font.get_string_size(tag.text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag.font_size)
-			var half := (size + Vector2.ONE * tag.outline_size * 2.0) * tag.pixel_size * 0.5
-			var corner := camera.global_basis.y * half.y - camera.global_basis.x * half.x
-			var a := camera.unproject_position(tag.global_position + corner)
-			var b := camera.unproject_position(tag.global_position - corner)
-			var box := Rect2(a, b - a)
-			room = minf(room, minf(minf(a.x, a.y), minf(view.size.x - b.x, view.size.y - b.y)))
-			for earlier_index in boxes.size():
-				if boxes[earlier_index].intersects(box):
-					overlaps.append("seed %d: %s over %s" % [seed_value, names[earlier_index], tag.text])
-			boxes.append(box)
-			names.append(tag.text)
-		fits = fits and view.size == BuildRead.VIEW and boxes.size() == stack.size() and room >= 0.0
-		detail.append("seed %d: %d boxes, %.2f px" % [seed_value, boxes.size(), room])
-	if fits:
-		_t.check("R2 all %d opening tag bounds fit the 720p preview at every seed" % stack.size(), true, "; ".join(detail))
+		var laid: Dictionary = await _tag_layout(menu, every, every.size() * 2, seed_value)
+		for pair in laid.overlaps:
+			overlaps.append("seed %d: %s" % [seed_value, pair])
+		if laid.count != every.size() or laid.room < 0.0:
+			tight.append("seed %d: %d boxes, %.2f px" % [seed_value, laid.count, laid.room])
+	if tight.is_empty():
+		_t.check("R2 all %d opening tag bounds fit the 720p preview at every seed" % every.size(), true, "%d seeds" % TAG_SEEDS.size())
 	else:
-		_t.skip("R2 all %d opening tag bounds fit the 720p preview at every seed" % stack.size(), "open problem, a tag leaves the view (px of room per seed): " + "; ".join(detail))
+		_t.skip("R2 all %d opening tag bounds fit the 720p preview at every seed" % every.size(), "open problem, a tag leaves the view (px of room): " + "; ".join(tight))
 	if overlaps.is_empty():
 		_t.check("R2 no two opening tags overlap, at every seed and panel type", true, "%d seeds" % TAG_SEEDS.size())
 	else:
@@ -478,3 +459,45 @@ func _opening_tags(menu: Node) -> void:
 	_game.run.panels.clear()
 	_game.run.panels.append_array(prior_panels)
 	read.set_process(true)
+
+
+
+# Lays the Build preview for one ball and measures its tags on screen: how many there are, the least
+# room any near-side tag has inside the view, and which near-side pairs overlap.
+func _tag_layout(menu: Node, stack: Array, plates: int, seed_value: int) -> Dictionary:
+	var read = menu.build_read
+	_game.run.run_seed = seed_value
+	_game.run.panels.clear()
+	for i in plates:
+		_game.run.panels.append(String(stack[i % stack.size()]))
+	menu._show_build()
+	menu.lay_build(SIZES[0])
+	await process_frame
+	await process_frame
+	var view := read._frame.get_child(0) as SubViewport
+	var camera := view.get_camera_3d()
+	var centre: Vector3 = read._labels.global_position
+	var boxes: Array[Rect2] = []
+	var names: Array[String] = []
+	var overlaps := []
+	var room := INF
+	var count := 0
+	for tag: Label3D in read._labels.get_children():
+		count += 1
+		if (tag.global_position - centre).dot(camera.global_position - centre) <= 0.0:
+			continue
+		# The dummy renderer has no glyph bounds. Estimate the outlined billboard in screen space.
+		var font := tag.font if tag.font != null else ThemeDB.fallback_font
+		var size := font.get_string_size(tag.text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag.font_size)
+		var half := (size + Vector2.ONE * tag.outline_size * 2.0) * tag.pixel_size * 0.5
+		var corner := camera.global_basis.y * half.y - camera.global_basis.x * half.x
+		var a := camera.unproject_position(tag.global_position + corner)
+		var b := camera.unproject_position(tag.global_position - corner)
+		var box := Rect2(a, b - a)
+		room = minf(room, minf(minf(a.x, a.y), minf(view.size.x - b.x, view.size.y - b.y)))
+		for earlier in boxes.size():
+			if boxes[earlier].intersects(box):
+				overlaps.append("%s over %s" % [names[earlier], tag.text])
+		boxes.append(box)
+		names.append(tag.text)
+	return {"count": count if view.size == BuildRead.VIEW else -1, "room": room, "overlaps": overlaps}
