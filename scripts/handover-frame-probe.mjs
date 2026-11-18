@@ -62,16 +62,20 @@ function frameWindows(directory, log) {
   const stage = run.self_play.stages.find((entry) => entry.stage === 2);
   const warmupMs = (flume - stage.log_s) * 1000;
   const total = frames.reduce((sum, ms) => sum + ms, 0);
-  const earliest = Math.max(0, warmupMs - frames[0] - 6);
-  const latest = Number(nextBeat.split(" ")[2]) * 1000 + 51 - total;
+  // Self-play reads whole milliseconds, prints entry times to 0.01 s and beats
+  // to 0.1 s. Allow 1 ms of clock granularity plus half the printed unit.
+  const entrySlackMs = 6;
+  const beatSlackMs = 51;
+  const earliest = Math.max(0, warmupMs - frames[0] - entrySlackMs);
+  const latest = Number(nextBeat.split(" ")[2]) * 1000 + beatSlackMs - total;
   if (!(earliest <= latest)) throw new Error("inconsistent CSV and ride clocks");
 
   const result = {};
   for (const [name, seconds] of [["dam_to_flume", flume], ["flume_to_bowl", bowl]]) {
     // Entry stamps are rounded to 0.01 s. Bound the maximum for every possible
     // clock alignment, using the union and intersection of the six-second windows.
-    const first = seconds * 1000 - latest - 6;
-    const last = seconds * 1000 - earliest + 6;
+    const first = seconds * 1000 - latest - entrySlackMs;
+    const last = seconds * 1000 - earliest + entrySlackMs;
     if (first < 1000 || last + 5000 > total) throw new Error("incomplete window for " + name);
     let elapsed = 0;
     let lower = 0;
@@ -90,7 +94,7 @@ function frameWindows(directory, log) {
 }
 
 function shutdown(file) {
-  const log = readFileSync(file, "utf8");
+  const log = readFileSync(file, "utf8").replaceAll("\r\n", "\n");
   if (!/^Metal .*Apple/m.test(log)) throw new Error("expected a drawn Mac Metal run");
   rideTimes(log.split(/\r?\n/));
   const end = /^self-play: run won at [\d.]+ s$/m.exec(log);
