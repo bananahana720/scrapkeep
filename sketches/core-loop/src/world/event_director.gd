@@ -57,9 +57,9 @@ const PARK_FAMILY_CAP := 1
 # clock counts as arrived within this slack. Without it a full flood or a finished
 # collapse still reads as under way and waits under a rider who rolls in.
 const PARK_CLOCK_SLACK_S := 0.00000001
-# A rising flood waits for a grounded ball in its basin only so the water mesh never swaps under a ball on its
-# landing frame (_park_clear). The wait is spent after this much of the flood's live time; then the water
-# rises around the ball and natural.gd's deep-water tax reads it (W1-148, ruling cu: parking pays).
+# A rising flood waits for a grounded ball in its basin so the water never changes under a ball with no
+# warning (design-v3/PARK.md rule 2, the hold rule). The wait is spent after this much of the flood's live
+# time; then the water rises around the ball and natural.gd's deep-water tax reads it (W1-148, ruling cu).
 const PARK_FLOOD_HOLD_CAP_S := 2.0
 const PARK_LAND_FACTS := {
 	"ground_slump": "ground_slump_landed",

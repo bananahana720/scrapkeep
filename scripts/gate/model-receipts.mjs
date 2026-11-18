@@ -82,8 +82,8 @@ export const ROWS = {
   "flood-never-held": {
     spec: "ParkFlood.tla",
     real: [
-      { cfg: "flood-today-timed.cfg", minStates: 74228, label: "a flood with a live time, as every real flood row has" },
-      { cfg: "flood-today-noclock.cfg", minStates: 468, label: "a flood with no live time" },
+      { cfg: "flood-today-timed.cfg", minStates: 31616, label: "a flood with a live time, as every real flood row has" },
+      { cfg: "flood-today-noclock.cfg", minStates: 1792, label: "a flood with no live time" },
     ],
     plants: [
       { cfg: "flood-broken-nosnap.cfg", rule: "FullWaterNeverHeld" },
@@ -91,10 +91,11 @@ export const ROWS = {
       { cfg: "flood-broken-nowait.cfg", rule: "NeverRisesUnderBall" },
       { cfg: "flood-broken-endunder.cfg", rule: "NeverEndsUnderBall" },
       { cfg: "flood-broken-nocap.cfg", rule: "WithinCap" },
+      { cfg: "flood-broken-nohold.cfg", rule: "HoldEnds" },
     ],
     coverage: "references/flood-coverage.md",
     gaps: [
-      "a ball parked in a basin before the water has risen stops the rise for as long as it stays, and the flood then ends unrisen (finding PF-1, an open design question)",
+      "the wait is counted in ticks (HoldTicks 1 against the real 2 s), and only as the wait for a ball in the basin; the margin the row keeps around the basin (hold_clear_m) is taken as the basin itself (finding PF-1, closed by W1-148)",
       "after its live time is up, a flood that cannot end because the ball is near is no longer stepped (finding PF-2)",
       "collapses and cave-ins are not modelled; their clock shares the rise's helper and park_events_test.gd sweeps it",
     ],

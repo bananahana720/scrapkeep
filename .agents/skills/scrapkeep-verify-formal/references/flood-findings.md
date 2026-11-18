@@ -14,19 +14,21 @@ Each finding is a break the model found that replayed on the real game. A closed
 
 **Replay.** `replay/flood_under_ball.gd`, on stage commit bf8056479: `held 60 Hz: REPRODUCED`, `held 90 Hz: REPRODUCED`, `held 120 Hz: REPRODUCED`, `held 144 Hz: NOT REPRODUCED`. On pull request 1135 (c485ca53c): NOT REPRODUCED at all four rates.
 
-## PF-1. A ball parked in a basin stops the flood from ever rising (open, a design question)
+## PF-1. A ball parked in a basin stops the flood from ever rising (closed by W1-148)
 
 **Steps.** A flood lands with the ball away. The ball rolls into the basin, or within the row's clearance around it (`hold_clear_m`, 12 to 15 m), before the water has risen and stays there.
 
-**What happens.** Rising water waits under a grounded ball, with no limit. The flood's live time keeps running meanwhile. When the ball at last rolls out after the live time is up, the flood ends on the next tick without ever having risen.
+**What happened.** Rising water waited under a grounded ball, with no limit. The flood's live time kept running meanwhile. When the ball at last rolled out after the live time was up, the flood ended on the next tick without ever having risen.
 
-**Harm.** Stopping in the basin is the safe move: it cancels the flood. AGENTS.md rule 9 says hardness presses a ball that slows or stops. Here a stopped ball is the one thing the water will not touch. The wait is deliberate (it keeps water from rising onto a rider with no warning, and `sketches/core-loop/tests/park_events_test.gd` checks it), so this is a question for Andrew, not a slip: should rising water wait under a ball only for a bounded time, or only for a ball that is moving?
+**Harm.** Stopping in the basin was the safe move: it cancelled the flood, and since pull request 1123 it also dodged the deep-water tax. AGENTS.md rule 9 says hardness presses a ball that slows or stops.
 
-**Model.** `flood-parked` breaks `RiseFinishes`.
+**Why the wait exists.** `git log -S` finds the check in `9b956f657`, the commit that scheduled park rows; its message gives no reason. The design page does: `sketches/core-loop/design-v3/PARK.md` rule 2, "Never stop the ball", says new geometry never appears under the ball and "rising water never rises under the ball" (the hold rule), so the water never changes under a grounded ball with no warning, such as on its landing frame.
 
-**Replay.** `replay/flood_under_ball.gd`, on bf8056479 and on c485ca53c alike: `parked: REPRODUCED (50 s with the ball in the basin, live time 20 s: step hook calls 0, water rose false, flood ended false)`, then `after the ball leaves for 5 s: step hook calls 0, flood ended true`.
+**Closed by.** W1-148 keeps the wait and caps it: `PARK_FLOOD_HOLD_CAP_S` (2 s of a flood's live time, `_park_hold_spent`). After that the water rises around the ball and the deep-water tax reads it (the cap is an assumption Andrew can overturn).
 
-**Not changed here.** Pull request 1135 fixes PF-0 only. This finding predates it.
+**Model.** `flood-broken-nohold` (no cap) breaks `HoldEnds`; `flood-today-timed` holds it.
+
+**Replay.** `replay/flood_under_ball.gd` printed `parked: REPRODUCED` on bf8056479 and c485ca53c; on the W1-148 director it prints NOT REPRODUCED.
 
 ## PF-2. Full water stops stepping once its live time is up and the ball is still near (open, found by review)
 

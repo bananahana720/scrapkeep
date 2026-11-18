@@ -5,9 +5,10 @@ extends SceneTree
 # held (config flood-broken-nosnap, rule FullWaterNeverHeld):
 #   Land, Step x Fill with the ball out, Roll into the basin, Step.
 #   REPRODUCED when the step hook is not called on that last tick although the water has risen for its whole fill time.
-# parked (config flood-parked, property RiseFinishes, finding PF-1):
+# parked (config flood-broken-nohold, property HoldEnds, finding PF-1, closed by W1-148):
 #   Land, Roll into the basin, Step for longer than the flood's live time.
-#   REPRODUCED when the water never rises and the flood never ends while the ball stays.
+#   REPRODUCED when the water never rises and the flood never ends while the ball stays. Since W1-148 the water
+#   rises after PARK_FLOOD_HOLD_CAP_S, so this prints NOT REPRODUCED on the current director.
 #
 # usage: "$GODOT_BIN" --headless --path sketches/core-loop --script <this file> [-- --only=held|parked]
 # It reads the director only through advance() and the family hook, so it runs on any commit that has them.

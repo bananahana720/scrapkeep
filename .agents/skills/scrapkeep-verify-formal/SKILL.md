@@ -105,7 +105,8 @@ Another model, `models/ParkFlood.tla`, checks a park flood from its announcement
 
 - **FullWaterNeverHeld.** While its live time runs, water that has risen for its whole fill time is stepped on every tick, ball or no ball.
 - **FullWaterFreesItsSlot.** Full water with no live time stops counting against the ground cap.
-- **NeverRisesUnderBall** and **NeverEndsUnderBall.** Water neither rises nor ends while a grounded ball is in its basin.
+- **NeverRisesUnderBall** and **NeverEndsUnderBall.** Water does not rise for the first 2 s of a grounded ball in its basin (the bounded wait), and does not end while the ball is in its basin.
+- **HoldEnds.** The wait is bounded: rising water always finishes rising, ball or no ball (finding PF-1, closed by W1-148).
 - **WithinCap.** No more unsettled ground events are live than the cap allows.
 - **FloodEnds** and **AnnouncedLands.** Once the ball stays out, every live flood ends and every announced one lands.
 
