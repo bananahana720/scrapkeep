@@ -12,8 +12,15 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const T := preload("res://tests/support/t.gd")
 const Footings := preload("res://src/world/park/footings.gd")
 const FLUME_ROWS := "res://src/world/park/park_flume.json"
-# The towers whose end hangs over a bank; every other row of the same recipes stands on its own.
-const FOOTED := ["flume_ride_pier_3", "flume_ride_pier_34", "bluff_ride_pier_9", "bluff_ride_pier_19", "bluff_ride_pier_21"]
+# A tower's legs stand this far in from the ends of its length (flume_works.py), along its own z axis.
+const END_INSET_M := 1.05
+# An end's gap is measured to the lowest ground under the leg: across the tower's width and this far
+# either side of the leg along its length.
+const END_SPAN_M := 1.0
+# A bare end hanging more than this is listed in the gap check's detail for the owner.
+const HANG_NOTE_M := 0.3
+# The count of footed towers in today's rows. A pin on the data, not a rule: a new hanging tower moves it.
+const FOOTED_TODAY := 5
 # A tower is crossed this far either side of its middle, beside its end footings.
 const CROSSING_Z_M := 3.0
 const CROSSING_HALF_M := 3.3
@@ -63,18 +70,37 @@ func _run() -> void:
 	for row: Dictionary in JSON.parse_string(FileAccess.get_file_as_string(FLUME_ROWS))["park_rows"]:
 		rows[String(row["id"])] = row
 	var towers := 0
+	var footed_ids: Array[String] = []
+	var wrong: Array[String] = []
+	var hanging_bare: Array[String] = []
 	for id: String in rows:
 		var recipe := String(rows[id]["recipe"])
 		if not Footings.TABLE.has(recipe) or Footings.TABLE[recipe]["tiled"]:
 			continue
 		towers += 1
 		var node := _row(stage, id)
-		var footed := node != null and node.has_node("Footings") and node.has_node("Collider/Footings")
-		_t.check("%s %s" % [id, "has its footing" if id in FOOTED else "keeps its own support"], footed == (id in FOOTED))
-	_t.check("the flume's tower rows were found", towers > FOOTED.size())
+		if not _t.check("%s is placed in the stage" % id, node != null):
+			continue
+		var view := node.get_node_or_null("Footings") as MeshInstance3D
+		var footed := view != null and node.has_node("Collider/Footings")
+		if footed:
+			footed_ids.append(id)
+		var gaps := _end_gaps(node, rows[id], ground)
+		for side in 2:
+			var gap: float = gaps[side]
+			var has := view != null and _has_end(view, side)
+			var wants := gap > Footings.TOWER_MIN_GAP_M
+			if has != wants:
+				wrong.append("%s end %d: gap %.2f m, %s" % [id, side, gap, "footed" if has else "bare"])
+			if not has and gap > HANG_NOTE_M:
+				hanging_bare.append("%s end %d: %.2f m" % [id, side, gap])
+	_t.check("the flume's tower rows were found", towers > 0)
+	_t.check("each tower end is footed exactly when its gap exceeds %.2f m" % Footings.TOWER_MIN_GAP_M, wrong.is_empty() and towers > 0,
+		"%d towers; wrong: %s; bare ends hanging more than %.1f m: %s" % [towers, wrong, HANG_NOTE_M, hanging_bare])
+	_t.check("today's rows have %d footed towers" % FOOTED_TODAY, footed_ids.size() == FOOTED_TODAY, "footed: %s" % [footed_ids])
 	var swept := 0
 	var open_crossings := 0
-	for id: String in FOOTED:
+	for id in footed_ids:
 		_check_tower(_row(stage, id), space, ground, rows[id])
 		var crossings: Array[int] = await _check_underpass(_row(stage, id), space, ground)
 		swept += crossings[0]
@@ -86,6 +112,33 @@ func _run() -> void:
 
 func _floor(ground: Callable, at: Vector3) -> float:
 	return (ground.call(at.x, at.z, 0.0) as Vector3).y
+
+
+# Each end's gap, from the row and the ground alone: the lowest ground under the leg against the tower's
+# underside, which is the row's own height or, with none, the ground at its spot.
+func _end_gaps(node: Node3D, row: Dictionary, ground: Callable) -> Array[float]:
+	var at := Vector3(float(row["at"][0]), 0.0, float(row["at"][1]))
+	var underside := _floor(ground, at) if row["y"] == null else float(row["y"])
+	var reach := float(row["size"][0]) * 0.5 - END_INSET_M
+	var gaps: Array[float] = []
+	for side: float in [-1.0, 1.0]:
+		var lowest := INF
+		for across: float in [-1.0, 0.0, 1.0]:
+			for along: float in [-1.0, 0.0, 1.0]:
+				var spot := at + node.global_basis.z * (side * reach + along * END_SPAN_M) \
+						+ node.global_basis.x * across * float(row["size"][2]) * 0.5
+				lowest = minf(lowest, _floor(ground, spot))
+		gaps.append(underside - lowest)
+	return gaps
+
+
+# Whether the footing mesh has any face at one end of the tower's length: side 0 the -z end, 1 the +z end.
+func _has_end(view: MeshInstance3D, side: int) -> bool:
+	var faces := view.mesh.get_faces()
+	for corner in faces:
+		if (corner.z < 0.0) == (side == 0):
+			return true
+	return false
 
 
 func _row(stage: Node3D, id: String) -> Node3D:
@@ -191,7 +244,10 @@ func _check_underpass(tower: Node3D, space: PhysicsDirectSpaceState3D, ground: C
 			open.append(i)
 		if absf(candidate[i] - stock[i]) >= EPS:
 			changed.append(queries[i].transform.origin.y)
-	_t.check("%s footing leaves each of its %d crossings as the terrain has them" % [tower.name, queries.size()], changed.is_empty(), "changed at y %s" % [changed])
+	if queries.is_empty():
+		_t.skip("%s footing leaves its crossings as the terrain has them" % tower.name, "no ball height fits between the ground and the underside, so no crossing was swept")
+	else:
+		_t.check("%s footing leaves each of its %d crossings as the terrain has them" % [tower.name, queries.size()], changed.is_empty(), "changed at y %s" % [changed])
 	var wall := StaticBody3D.new()
 	wall.collision_layer = Augments.WORLD_MASK
 	var shape := CollisionShape3D.new()
@@ -207,6 +263,9 @@ func _check_underpass(tower: Node3D, space: PhysicsDirectSpaceState3D, ground: C
 	for i in open:
 		if space.cast_motion(queries[i])[0] < stock[i] - 0.2:
 			passed += 1
-	_t.check("control: filling the full tower footprint obstructs every open crossing of %s" % tower.name, passed == open.size(), "%d of %d" % [passed, open.size()])
+	if open.is_empty():
+		_t.skip("control: filling the full tower footprint obstructs the open crossings of %s" % tower.name, "no crossing is open, so the control had nothing to stop")
+	else:
+		_t.check("control: filling the full tower footprint obstructs every open crossing of %s" % tower.name, passed == open.size(), "%d of %d" % [passed, open.size()])
 	wall.free()
 	return [queries.size(), open.size()]
