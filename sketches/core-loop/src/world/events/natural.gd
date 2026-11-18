@@ -128,6 +128,7 @@ class WaterField:
 func setup(world_ref) -> void:
 	world = world_ref
 	name = "NaturalEvents"
+	add_to_group("world_telegraphs")
 	_original_map = world.terrain.map()
 	_original_flood = world.terrain.flood
 	for site in _original_map.park.park_rows:
@@ -394,7 +395,7 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 		"telegraph":
 			var state: Dictionary = _prepared[row.id].duplicate()
 			state.merge({"phase": "telegraph", "hit": false, "elapsed_s": 0.0, "depth_m": 0.0,
-				"struck": {}, "sweep_s": 0.0, "wet_slow_s": 0.0, "taxes": 0, "water": null, "mark": _mark(row, state.geometry), "announced_s": ctx.clock_s}, true)
+				"struck": {}, "sweep_s": 0.0, "wet_slow_s": 0.0, "taxes": 0, "water": null, "kind": row.kind, "mark": _mark(row, state.geometry), "announced_s": ctx.clock_s}, true)
 			active[row.id] = state
 		"land":
 			var state: Dictionary = active[row.id]
@@ -678,6 +679,24 @@ func _seek(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 			HazardHits.strike(get_tree(), hazard.contains, row.kind, ENEMY_STRIKE_DAMAGE, ENEMY_TOSS, {}))
 	if seek.tells > told:
 		_publish("lightning_mark", seek.pending().centre)
+
+
+# What tells the ball about each hazard of this stage that takes its scrap, as [{id, cause, covers}]: the mark of a live
+# strike (lightning, impact) over the circle it strikes, a flood's water over its basin, and the storm's sought ring.
+# The cause is the one lose_scrap is called with. The bot's fairness record reads this (tools/bot_fairness.gd).
+func telegraphs(ball: Vector3) -> Array:
+	var out: Array = []
+	for id in active:
+		var state: Dictionary = active[id]
+		var kind := String(state.get("kind", ""))
+		if kind in ["impact", "lightning"]:
+			out.append({"id": ("natural:%s" % id).hash(), "cause": kind, "covers": _in_strike(state, ball)})
+		elif kind in FLOOD_KINDS and state.water != null:
+			out.append({"id": ("natural:%s" % id).hash(), "cause": "flood", "covers": state.water.in_basin(ball)})
+	var ring = seek.pending()
+	if ring != null and is_instance_valid(ring):
+		out.append({"id": ring.get_instance_id(), "cause": "lightning", "covers": ring.contains(ball)})
+	return out
 
 
 func _publish(kind: String, at: Vector3) -> void:

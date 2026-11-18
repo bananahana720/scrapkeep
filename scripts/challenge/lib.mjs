@@ -590,8 +590,12 @@ export function fairnessOf(run) {
   if (!f || typeof f !== "object") return null;
   const hull = f.hull && typeof f.hull === "object" ? f.hull : {};
   const k = f.killing_hit && typeof f.killing_hit === "object" ? f.killing_hit : null;
+  // Scrap taken through lose_scrap is read into the same four buckets, a point of scrap counting as a point of hull (a record
+  // from before the field has no scrap and reads as hull alone).
+  const scrap = f.scrap && typeof f.scrap === "object" ? f.scrap : {};
+  const both = (key) => (num(hull[key]) == null ? null : num(hull[key]) + (num(scrap[key]) ?? 0));
   return {
-    telegraphed: num(hull.telegraphed), untelegraphed: num(hull.untelegraphed), contact: num(hull.contact), unknown: num(hull.unknown),
+    telegraphed: both("telegraphed"), untelegraphed: both("untelegraphed"), contact: both("contact"), unknown: both("unknown"),
     killing: k ? k.bucket ?? null : null,
     slowS: num(f.slow_s), fastS: num(f.fast_s), slowHull: num(f.slow_hull), fastHull: num(f.fast_hull),
     segments: f.first_hit && typeof f.first_hit === "object" ? Object.values(f.first_hit) : null,

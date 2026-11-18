@@ -39,12 +39,23 @@ var _since_last := INF
 func setup(world_ref) -> void:
 	world = world_ref
 	name = "CaveIns"
+	add_to_group("world_telegraphs")
 	var map = world.terrain.map()
 	if not "park" in map or map.park.is_empty():
 		return
 	for home in map.park.get("home_rows", []):
 		if String(home.get("enemy", "")) == "burrower":
 			active = true
+
+
+# The warning disc of each live fall as [{id, cause, covers}], cause the one lose_scrap is called with. The bot's fairness
+# record reads this (tools/bot_fairness.gd).
+func telegraphs(ball: Vector3) -> Array:
+	var out: Array = []
+	for fall in _live:
+		if is_instance_valid(fall) and fall.hazard != null and is_instance_valid(fall.hazard):
+			out.append({"id": fall.hazard.get_instance_id(), "cause": "cave_in", "covers": fall.hazard.contains(ball)})
+	return out
 
 
 # A park family (families.gd) with no rows of its own: the director never calls it.

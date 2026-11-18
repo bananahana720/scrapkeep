@@ -95,6 +95,12 @@ func _fixtures() -> void:
 	_t.eq("an unowned ring is the Warden's own", BotFairness.classify("warden", [_row("", 2.0, true)], [], {}), "telegraphed")
 	_t.eq("an unowned ring is not a pack unit's", BotFairness.classify("chaser", [_row("", 2.0, true)], [], {"chaser": true}), "untelegraphed")
 	_t.eq("a planted drain is untelegraphed", BotFairness.classify("drain_plant", [_row("chaser", 5.0, true)], [], {}), "untelegraphed")
+	# Scrap causes (lose_scrap's own cause, read through the same rule): a world cause matches only a world telegraph of its own cause.
+	_t.eq("a lightning theft under its own old ring is telegraphed", BotFairness.classify("lightning", [_row("world", 2.0, true, "lightning")], [], {}), "telegraphed")
+	_t.eq("a lightning theft under another cause's old mark is untelegraphed", BotFairness.classify("lightning", [_row("world", 2.0, true, "impact")], [], {}), "untelegraphed")
+	_t.eq("a boiler theft under a young hazard is untelegraphed", BotFairness.classify("boiler_burst", [_row("world", tell - 0.2, true, "boiler_burst")], [], {}), "untelegraphed")
+	_t.eq("a crane theft under the crane's own old sweep is telegraphed", BotFairness.classify("crane", [_row("boss", 2.0, true, "crane_0")], [], {"boss": true}), "telegraphed")
+	_t.eq("the scrap plant is untelegraphed", BotFairness.classify("scrap_plant", [_row("world", 5.0, true, "lightning")], [], {}), "untelegraphed")
 	_t.eq("an environment source has no owner to match", BotFairness.classify("cinder_floor", [], [], {}), "unknown")
 	_t.eq("a chaser hit under another chaser's old lane reads telegraphed (sources carry only the kind)", BotFairness.classify("chaser", [_row("chaser", 2.0, true)], [], {"chaser": true}), "telegraphed")
 
