@@ -102,7 +102,7 @@ func _cluster_samples() -> void:
 
 
 func _wall_sweep() -> void:
-	var out := OS.get_user_data_dir().path_join("wall-sweep-%d-%d" % [OS.get_process_id(), Time.get_ticks_usec()])
+	var out := OS.get_user_data_dir().path_join("wall-sweep-" + Crypto.new().generate_random_bytes(12).hex_encode())
 	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
 		"--script", "res://tools/qa/collision_sweep.gd", "--", "--area=wall_fixture", "--step=0.15", "--out=%s" % out])
 	if OS.get_environment("PLANT") == "invisible_wall":
