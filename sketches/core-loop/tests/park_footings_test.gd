@@ -5,6 +5,7 @@ extends SceneTree
 # sits on the ground or hangs less than the entry's own gap. This is the check a new row of a listed recipe relies on.
 const T := preload("res://tests/support/t.gd")
 const Footings := preload("res://src/world/park/footings.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const TILE_LENGTH_M := 120.0
 const PROBE_M := 0.05
 # The recipes the table holds today. The loop below covers whatever the table lists; this count makes an
@@ -20,7 +21,33 @@ func _initialize() -> void:
 		_check_recipe(recipe, Footings.TABLE[recipe])
 	var flat := func(_x: float, _z: float) -> float: return 0.0
 	t.check("a recipe with no table entry gets no footing", Footings.fit({"recipe": "crib_pier_2", "size": [10.0, 5.0, 2.0]}, Transform3D.IDENTITY, Transform3D.IDENTITY, [] as Array[Transform3D], flat).is_empty())
+	_check_yield()
 	quit(t.verdict())
+
+
+# A sole an authored line passes stays bare, and the module asks with a reach that covers its base and a ball.
+func _check_yield() -> void:
+	for recipe: String in Footings.TABLE:
+		var entry: Dictionary = Footings.TABLE[recipe]
+		var row := {"recipe": recipe, "size": [TILE_LENGTH_M, 10.0, 8.0]}
+		var tiles: Array[Transform3D] = []
+		if entry["tiled"]:
+			tiles.append(Transform3D.IDENTITY)
+		var deep: float = float(entry["y"]) - 20.0
+		var ground := func(_x: float, _z: float) -> float: return deep
+		var reaches: Array[float] = []
+		var none_ridden := func(_at: Vector2, reach: float) -> bool:
+			reaches.append(reach)
+			return false
+		var all_ridden := func(_at: Vector2, _reach: float) -> bool: return true
+		var footed := Footings.fit(row, Transform3D.IDENTITY, Transform3D.IDENTITY, tiles, ground, none_ridden)
+		t.check("%s over a deep gap with no line near: footed" % recipe, not footed.is_empty())
+		t.check("%s asks about every sole with a reach past a ball's radius and the clearance" % recipe,
+				not reaches.is_empty() and reaches.min() > Tuning.RADIUS + Footings.LINE_CLEARANCE_M, "%d asks, least reach %.2f m" % [reaches.size(), reaches.min() if not reaches.is_empty() else 0.0])
+		var bare := Footings.fit(row, Transform3D.IDENTITY, Transform3D.IDENTITY, tiles, ground, all_ridden)
+		t.check("%s over a deep gap with a line at every sole: bare" % recipe, bare.is_empty())
+		for node: Node in footed.values() + bare.values():
+			node.free()
 
 
 func _check_recipe(recipe: String, entry: Dictionary) -> void:

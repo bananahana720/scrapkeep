@@ -4,8 +4,8 @@ extends RefCounted
 # recipe's soles, the points in the piece's own space where a leg or a tower end meets the air.
 # The ground under each sole decides: a footing is cast only where the gap is more than
 # the entry's "min_gap" (OFF_GROUND_M unless it says otherwise), so a new row of a listed recipe
-# needs no entry here. Each piece gets one mesh and one collision shape, both in the placed node's
-# space.
+# needs no entry here. A sole that an authored ride line passes stays bare (fit's ridden callable).
+# Each piece gets one mesh and one collision shape, both in the placed node's space.
 #
 # "tiled" recipes put their soles on every tile copy; the first station of a tile is the last of
 # the one before, so that pair shares one foundation across the seam. A recipe with "end_inset"
@@ -17,10 +17,10 @@ const OFF_GROUND_M := 0.3
 # A tower end with less than a ball's width under it is no underpass, and the towers that hang that
 # low keep their own look; only an end the ball could roll under is cast down.
 const TOWER_MIN_GAP_M := Tuning.RADIUS * 2.0
-# A sole casts no footing when an authored ride line passes within the footing's base half-extent, a ball's radius and
+# A sole casts no footing when an authored ride line passes within the base's corner distance, a ball's radius and
 # this much more of it: concrete that a rolling ball would meet is left out, and the leg hangs as it did.
 const LINE_CLEARANCE_M := 0.3
-# Test-only fault: when true, a ridden sole is cast anyway. Set by tests/park_flume_piers_test.gd.
+# Test-only fault: when true, a ridden sole is cast anyway. Nothing in src/ sets it; tests/park_flume_piers_test.gd does.
 static var plant_ignore_lines := false
 const SAMPLES_ACROSS := [-1.0, -0.5, 0.0, 0.5, 1.0]
 const SAMPLES_ALONG := [-1.0, 0.0, 1.0]
@@ -145,7 +145,7 @@ static func _cast(surface: SurfaceTool, entry: Dictionary, frame: Transform3D, g
 	if at.y - low <= float(entry.get("min_gap", OFF_GROUND_M)):
 		return false
 	if ridden.is_valid() and not plant_ignore_lines \
-			and ridden.call(Vector2(at.x, at.z), maxf(base_half.x, base_half.y) + Tuning.RADIUS + LINE_CLEARANCE_M):
+			and ridden.call(Vector2(at.x, at.z), base_half.length() + Tuning.RADIUS + LINE_CLEARANCE_M):
 		return false
 	var upper := _ring(sole + Vector3.UP * float(entry["join"]), top_half)
 	var lower := _ring(sole - Vector3.UP * (at.y - low + float(entry["embed"])), base_half)

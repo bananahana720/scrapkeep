@@ -1,7 +1,8 @@
 extends SceneTree
 
 # W1-123. Check the real, placed level, including both sides of the piers and the shared
-# foundations at the tile seams. --plant removes the foundations from the physics world.
+# foundations at the tile seams. --plant removes the foundations from the physics world, and
+# --plant-lines makes the footings ignore the authored lines, so the line check goes red.
 const T := preload("res://tests/support/t.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const Recipes := preload("res://src/world/park/park_recipes.gd")
@@ -26,18 +27,19 @@ const FOOT_JOIN_M := 1.0
 const LEG_MEET_TOL_M := 0.25
 const LEG_MEET_RADIUS_M := 1.0
 # A footing yields to an authored line (Footings.fit's ridden callable): the soles a line passes near stay
-# bare. This is the most a bare sole's footing could have reached: the table's widest base half-extent
+# bare. This is the most a bare sole's footing could have reached: the corner distance of the table's widest base
 # plus a ball's radius plus the clearance. Only a sole with no concrete near it and a line this close is exempt.
 const BARE_REACH_M := 3.0
 const BARE_TOLERANCE_M := 0.5
 # The soles left bare because a line passes, as [world x, z]: a later map card can move these lines or legs.
 const EXPECTED_BARE := [
 	Vector2(-160.5, -477.6), Vector2(-151.8, -465.8), Vector2(-148.9, -472.6),
-	Vector2(-23.4, 167.6), Vector2(-17.1, 163.8), Vector2(196.7, 445.1), Vector2(210.5, 450.4),
+	Vector2(-23.4, 167.6), Vector2(-17.1, 163.8), Vector2(121.0, 351.9), Vector2(121.5, 352.5),
+	Vector2(196.7, 445.1), Vector2(210.5, 450.4),
 ]
 # The rivet step that sat just outside the old swept margin.
 const RIVET_STEP := Vector2(-15.3, 162.6)
-const KNOWN_TOLERANCE_M := 0.3
+const STEP_TOLERANCE_M := 0.3
 const TEST_LAYER := 1 << 30
 const BALL_CLEARANCE_M := 0.1
 
@@ -316,7 +318,7 @@ func _check_lines(under: Array, open_steps: Array) -> void:
 	print("swept %d steps under the trough spans, %d open with the footings off, %d shut with them on" % [under.size(), open_steps.size(), shut.size()])
 	t.check("the authored lines have steps to sweep", open_steps.size() > 0)
 	t.check("the sweep covers the rivet step near %s" % RIVET_STEP, open_steps.any(func(step: Array) -> bool:
-		return step[2] == "rivet" and Vector2(step[1].x, step[1].z).distance_to(RIVET_STEP) <= KNOWN_TOLERANCE_M))
+		return step[2] == "rivet" and Vector2(step[1].x, step[1].z).distance_to(RIVET_STEP) <= STEP_TOLERANCE_M))
 	t.check("the foundations leave every open step of the authored lines open", shut.is_empty(),
 			"%d of %d steps blocked (%d under the spans), first at %s" % [shut.size(), open_steps.size(), under.size(),
 			shut.map(_describe)])
