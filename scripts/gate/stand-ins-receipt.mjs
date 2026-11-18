@@ -99,11 +99,45 @@ export function produce({ cwd = root, run = runAlone } = {}) {
   return buildReceipt(main, plant, head, { waiting: waitingFromPin(pin) });
 }
 
+// The wider row keeps the ride as a guard. Its second pair exercises the
+// screens, the worn roster and both park stages' authored event rows.
+function produceAll() {
+  const ride = produce();
+  const measure = (plant) => {
+    const run = runAlone(root, TEST, { PRIM_SCOPE: "all", ...(plant ? { PRIM_PLANT: plant } : {}) });
+    const line = run.log.split("\n").find((l) => l.startsWith("AREAS "));
+    return { run, scope: line ? JSON.parse(line.slice(6)) : null };
+  };
+  const base = measure("");
+  const planted = measure("camp_box");
+  const campBox = (hit) => hit.area === "camp" && hit.mesh === "BoxMesh" && hit.path.endsWith("/PlantedCampBox");
+  const caught = base.run.ok && base.scope?.plant === "" && !base.scope.findings.some(campBox)
+    && !planted.run.ok && planted.scope?.plant === "camp_box" && planted.scope.findings.some(campBox)
+    && verdictLine(planted.run.log).startsWith(TEST + ": FAIL (1 of ")
+    && planted.run.log.split("\n").some((l) => l.startsWith("[camp has no planted box]") && l.endsWith("-> FAIL"));
+  const findings = base.scope?.findings ?? [];
+  const waiting = waitingFromPin(readFileSync(path.join(root, PIN), "utf8"));
+  const unlisted = new Set();
+  for (const hit of findings) {
+    const key = `${hit.file}|${hit.mesh}|${hit.shape}`;
+    if (!waiting.some((w) => w.cite && w.key === key)) unlisted.add(key);
+  }
+  if (cleanHead(root) !== ride.head) throw new Error("checkout changed during the census");
+  return { head: ride.head, pass: Boolean(ride.pass && caught && unlisted.size === 0),
+    measured: base.scope ? `${Object.keys(base.scope.areas).length} stations, ${unlisted.size} distinct unlisted primitive keys` : "area run did not finish",
+    areas: base.scope?.areas ?? {}, findings, unlisted_stand_ins: base.scope ? unlisted.size : null,
+    ride, camp_plant_caught: Boolean(caught), plant_caught: Boolean(ride.plant_caught && caught) };
+}
+
 function main(argv) {
   const args = {};
-  for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--scope=all") args.all = true;
+    else if (argv[i] === "--out" && argv[i + 1]) args.out = argv[++i];
+    else { console.error("usage: stand-ins-receipt.mjs [--scope=all] [--out file]"); return 2; }
+  }
   let receipt;
-  try { receipt = produce(); } catch (e) { console.error(String(e.message ?? e)); return 2; }
+  try { receipt = args.all ? produceAll() : produce(); } catch (e) { console.error(String(e.message ?? e)); return 2; }
   const text = JSON.stringify(receipt, null, 2) + "\n";
   if (args.out) writeFileSync(args.out, text);
   else process.stdout.write(text);
