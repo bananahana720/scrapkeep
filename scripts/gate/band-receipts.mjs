@@ -138,7 +138,8 @@ export function gradeFairness(read, head) {
   const f1Bad = pools.filter(f1Fails);
   // F1 judged only where it carries a mark: what the plant must be seen to move.
   const f1Marked = pools.filter((p) => p.shareMarked);
-  const f2Bad = pools.filter((p) => (p.stopTax == null && p.pooledStopTax == null) || f2TaxUnder(p));
+  // The pooled reading only adds misses: a pool with no hull stop tax is a miss whatever scrap shows.
+  const f2Bad = pools.filter((p) => p.stopTax == null || f2TaxUnder(p));
   const f3 = pools.filter((p) => p.column === "learner1");
   const f3Bad = f3.filter((p) => p.firstHitS == null || p.firstHitS < FAIRNESS.firstHitS - 1e-9);
   const checks = {
@@ -316,9 +317,9 @@ export function gradeBowlStopTax(read, head) {
   const pools = columns.map((column) => ({ column, key: `brindle ${column}`, ...fairnessPool(sel.runs.filter((r) => r.column === column)) }));
   const unmeasured = thinMeasured(pools);
   if (unmeasured) return { pass: false, measured: `Slag Bowl stop tax: ${unmeasured}`, checks: { tax: false } };
-  const bad = pools.filter((p) => (p.stopTax == null && p.pooledStopTax == null) || f2TaxUnder(p));
+  const bad = pools.filter((p) => p.stopTax == null || f2TaxUnder(p));
   // The reading shown is the one that missed: the hull ratio, or the pooled one (hull and scrap together) when it is the lower.
-  const show = (p) => `${p.column} ${p.stopTax == null && p.pooledStopTax == null ? `no data (${p.stopTaxNote})` : f2TaxUnder(p) && p.pooledStopTax != null && (p.stopTax == null || p.pooledStopTax < p.stopTax) ? `${p.pooledStopTax.toFixed(2)} with scrap` : (p.stopTax ?? p.pooledStopTax).toFixed(2)}`;
+  const show = (p) => `${p.column} ${p.stopTax == null ? `no data (${p.stopTaxNote})${p.pooledStopTax == null ? "" : `, ${p.pooledStopTax.toFixed(2)} with scrap`}` : f2TaxUnder(p) && p.pooledStopTax != null && (p.stopTax == null || p.pooledStopTax < p.stopTax) ? `${p.pooledStopTax.toFixed(2)} with scrap` : (p.stopTax ?? p.pooledStopTax).toFixed(2)}`;
   const text = `Slag Bowl stop tax, line ${FAIRNESS.stopTax.toFixed(1)}: ${pools.map(show).join(", ")}${bad.length ? `; under the line: ${bad.map((p) => p.column).join(", ")}` : ""} (${counts.map((c) => c.text).join(", ")})`;
   return { pass: bad.length === 0, measured: text, checks: { tax: bad.length === 0 } };
 }

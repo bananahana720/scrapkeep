@@ -665,7 +665,8 @@ test("F2 is measured when only scrap was lost at cruise, and fails on either rat
   const p = fairnessPool([fake("w1", "expert", rec)]);
   assert.equal(p.stopTax, null);
   assert.equal(p.pooledStopTax, (20 / 30) / (30 / 60));
-  assert.ok(!fairnessFails(p).includes("F2") || p.pooledStopTax < FAIRNESS.stopTax);
+  assert.ok(p.pooledStopTax < FAIRNESS.stopTax);
+  assert.ok(fairnessFails(p).includes("F2"), "a pooled ratio under the line flags F2 even with no hull ratio");
   const bad = fairnessPool([fake("w1", "expert", { ...rec, fast_scrap: 300 })]);
   assert.ok(fairnessFails(bad).includes("F2"));
 });

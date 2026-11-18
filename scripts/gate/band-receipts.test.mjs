@@ -389,3 +389,13 @@ test("the command line cannot stamp a Brindle pass: unknown flags change nothing
 test("each row's producer names this command", () => {
   for (const id of ["strong-build-shows", "warden-fairness", "novice-deaths", "brindle-worst-minute", "brindle-stop-tax"]) assert.match(rowOf(id).producer, /node scripts\/gate\/band-receipts\.mjs --band <band read folder> --head <commit> --out <dir>/);
 });
+
+test("F2: a pool with no hull lost at cruise stays a miss, whatever the scrap at cruise reads", () => {
+  // 20 hull in 30 s slow, none at cruise, 1 scrap at cruise in 60 s: the pooled ratio is 40, far over the line.
+  const scrapOnly = () => fair({ slow_s: 30, fast_s: 60, slow_hull: 20, fast_hull: 0, slow_scrap: 0, fast_scrap: 1 });
+  const g = gradeFairness(band({ fairness: scrapOnly }), HEAD);
+  assert.equal(g.checks.F2, false);
+  const bowl = gradeBowlStopTax(band({ fairness: scrapOnly }), HEAD);
+  assert.deepEqual([bowl.pass, bowl.checks.tax], [false, false]);
+  assert.match(bowl.measured, /expert no data \(.*\), 40\.00 with scrap/);
+});
