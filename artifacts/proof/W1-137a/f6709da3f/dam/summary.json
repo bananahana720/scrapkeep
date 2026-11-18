@@ -1,0 +1,33 @@
+{
+  "area": "park_dam",
+  "seed": 1,
+  "step": 0.75,
+  "tol": 0.4,
+  "near_m": 1.5,
+  "max_samples_per_shape": 4000,
+  "visual_meshes": 5573,
+  "identity_multimeshes": 0,
+  "filters": [],
+  "totals": {
+    "bare": 292350,
+    "invisible": 122,
+    "samples": 1905765,
+    "shapes": 17022
+  },
+  "head": "f6709da3fa00ff6f472ecd35d417108b1944315b",
+  "stage": "4f9017c58537e6e6785c00f6d4d45cdcd6e6f1be",
+  "places": 17823,
+  "watcher": {
+    "samples": 879,
+    "firstMs": 1795039756815,
+    "lastMs": 1795039800724,
+    "periodMs": 50,
+    "maxGapMs": 73,
+    "missed": 0,
+    "onScreen": 0,
+    "targetOnScreen": 0,
+    "frontmostChanges": 0
+  },
+  "sha256_frame": "52b59723197f038740e13908e9ba8075b4b8d3910086f896b63614c03326269d",
+  "sha256_report": "3bd20c14628a2c109b0d62803772c98bf0a91e254ad48c43093e26c918d0205b"
+}

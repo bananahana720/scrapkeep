@@ -1,0 +1,33 @@
+{
+  "area": "wall_fixture",
+  "seed": 1,
+  "step": 0.15,
+  "tol": 0.4,
+  "near_m": 1.5,
+  "max_samples_per_shape": 4000,
+  "visual_meshes": 1,
+  "identity_multimeshes": 0,
+  "filters": [],
+  "totals": {
+    "bare": 2937,
+    "invisible": 1959,
+    "samples": 2937,
+    "shapes": 3
+  },
+  "head": "f6709da3fa00ff6f472ecd35d417108b1944315b",
+  "stage": "4f9017c58537e6e6785c00f6d4d45cdcd6e6f1be",
+  "places": 3,
+  "watcher": {
+    "samples": 85,
+    "firstMs": 1795039713843,
+    "lastMs": 1795039718044,
+    "periodMs": 50,
+    "maxGapMs": 68,
+    "missed": 0,
+    "onScreen": 0,
+    "targetOnScreen": 0,
+    "frontmostChanges": 0
+  },
+  "sha256_frame": "4c976e40f9081de7c6d25abdc5704cdc2dc803fa0c814a221f0ded98c13a55de",
+  "sha256_report": "b723ed0400b12c8e947f0db6b3a0d577a6779461f8ba768f0ecac73526362930"
+}
