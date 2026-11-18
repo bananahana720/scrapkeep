@@ -1,0 +1,252 @@
+[
+  {
+    "basin": {},
+    "has_cycle": false,
+    "kind": "flood",
+    "station": "menu/title",
+    "visible": true
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "cage",
+    "station": "event/plunge_pool_flood/announced"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "rogue",
+    "station": "event/plunge_pool_flood/announced"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "cage",
+    "station": "event/plunge_pool_flood/started"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "rogue",
+    "station": "event/plunge_pool_flood/started"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "cage",
+    "station": "event/west_wash_flash_flood/announced"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "rogue",
+    "station": "event/west_wash_flash_flood/announced"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "cage",
+    "station": "event/west_wash_flash_flood/started"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "rogue",
+    "station": "event/west_wash_flash_flood/started"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "cage",
+    "station": "event/dome_lightning/announced"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "rogue",
+    "station": "event/dome_lightning/announced"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "cage",
+    "station": "event/dome_lightning/started"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "rogue",
+    "station": "event/dome_lightning/started"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "cage",
+    "station": "event/east_bench_dropship/announced"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "rogue",
+    "station": "event/east_bench_dropship/announced"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "cage",
+    "station": "event/east_bench_dropship/started"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "rogue",
+    "station": "event/east_bench_dropship/started"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "cage",
+    "station": "event/toe_vents_wake/announced"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "rogue",
+    "station": "event/toe_vents_wake/announced"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "cage",
+    "station": "event/toe_vents_wake/started"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "rogue",
+    "station": "event/toe_vents_wake/started"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "cage",
+    "station": "event/powerhouse_boiler/announced"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "rogue",
+    "station": "event/powerhouse_boiler/announced"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "cage",
+    "station": "event/powerhouse_boiler/started"
+  },
+  {
+    "kind": "anonymous plume",
+    "shader": "res://src/presentation/site_markers.gdshader",
+    "site": "rogue",
+    "station": "event/powerhouse_boiler/started"
+  },
+  {
+    "copy_shape": "AncientBeam/Column/Core",
+    "kind": "snapshot",
+    "mesh": "CylinderMesh",
+    "owner": "landmark_beam.gd",
+    "pin": "ancient light column, an effect",
+    "shape": "AncientBeam/Column/Core",
+    "size": "(6.0, 300.0, 6.0)",
+    "source_path": "@Node3D@2/Stage2/ParkRows/Landmark_penstock_tower/AncientBeam/Column/Core",
+    "station": "menu/ending"
+  },
+  {
+    "copy_shape": "AncientBeam/Column/Veil",
+    "kind": "snapshot",
+    "mesh": "CylinderMesh",
+    "owner": "landmark_beam.gd",
+    "pin": "ancient light column, an effect",
+    "shape": "AncientBeam/Column/Veil",
+    "size": "(18.0, 300.0, 18.0)",
+    "source_path": "@Node3D@2/Stage2/ParkRows/Landmark_penstock_tower/AncientBeam/Column/Veil",
+    "station": "menu/ending"
+  },
+  {
+    "copy_shape": "Landmark_penstock_tower/WorldFx_landmark_penstock_tower/Impostor_lm_penstock_vent",
+    "kind": "snapshot",
+    "mesh": "QuadMesh",
+    "owner": "world_fx_anchor.gd",
+    "pin": "mist and steam cards",
+    "shape": "Landmark_penstock_tower/WorldFx_landmark_penstock_tower/Impostor_lm_penstock_vent",
+    "size": "(16.0, 16.0, 0.0)",
+    "source_path": "@Node3D@2/Stage2/ParkRows/Landmark_penstock_tower/WorldFx_landmark_penstock_tower/Impostor_lm_penstock_vent",
+    "station": "menu/ending"
+  },
+  {
+    "copy_shape": "Stage/Contraptions/_MeshInstanceD_",
+    "kind": "snapshot",
+    "mesh": "CylinderMesh",
+    "owner": "contraptions.gd",
+    "pin": "launcher ring, grapple cable and hook, steam plume: marks and lines",
+    "shape": "Stage/Contraptions/MeshInstance3D",
+    "size": "(0.36, 228.5563, 0.36)",
+    "source_path": "@Node3D@2/Stage2/Contraptions/@MeshInstance3D@4096",
+    "station": "menu/ending"
+  },
+  {
+    "copy_shape": "Stage/Contraptions/_MeshInstanceD_",
+    "kind": "snapshot",
+    "mesh": "TorusMesh",
+    "owner": "contraptions.gd",
+    "pin": "launcher ring, grapple cable and hook, steam plume: marks and lines",
+    "shape": "Stage/Contraptions/MeshInstance3D",
+    "size": "(8.0, 0.5, 8.0)",
+    "source_path": "@Node3D@2/Stage2/Contraptions/@MeshInstance3D@4097",
+    "station": "menu/ending"
+  },
+  {
+    "copy_shape": "Stage/Contraptions/_MeshInstanceD_",
+    "kind": "snapshot",
+    "mesh": "BoxMesh",
+    "owner": "contraptions.gd",
+    "pin": "launcher ring, grapple cable and hook, steam plume: marks and lines",
+    "shape": "Stage/Contraptions/MeshInstance3D",
+    "size": "(0.12, 0.95, 0.05)",
+    "source_path": "@Node3D@2/Stage2/Contraptions/@MeshInstance3D@4098",
+    "station": "menu/ending"
+  },
+  {
+    "copy_shape": "Contraptions/flume_trebuchet/_MeshInstanceD_",
+    "kind": "snapshot",
+    "mesh": "TorusMesh",
+    "owner": "contraptions.gd",
+    "pin": "launcher ring, grapple cable and hook, steam plume: marks and lines",
+    "shape": "Contraptions/flume_trebuchet/MeshInstance3D",
+    "size": "(7.0, 0.6, 7.0)",
+    "source_path": "@Node3D@2/Stage2/Contraptions/flume_trebuchet/@MeshInstance3D@4099",
+    "station": "menu/ending"
+  },
+  {
+    "copy_shape": "Contraptions/forecourt_geyser/_MeshInstanceD_",
+    "kind": "snapshot",
+    "mesh": "TorusMesh",
+    "owner": "contraptions.gd",
+    "pin": "launcher ring, grapple cable and hook, steam plume: marks and lines",
+    "shape": "Contraptions/forecourt_geyser/MeshInstance3D",
+    "size": "(7.0, 0.6, 7.0)",
+    "source_path": "@Node3D@2/Stage2/Contraptions/forecourt_geyser/@MeshInstance3D@4104",
+    "station": "menu/ending"
+  },
+  {
+    "copy_shape": "Contraptions/forecourt_geyser/_MeshInstanceD_",
+    "kind": "snapshot",
+    "mesh": "CylinderMesh",
+    "owner": "contraptions.gd",
+    "pin": "geyser steam column (contraptions.gd _build_launcher): a translucent column that swells with the charge over the geyser_vent model",
+    "shape": "Contraptions/forecourt_geyser/MeshInstance3D",
+    "size": "(4.8, 10.0, 4.8)",
+    "source_path": "@Node3D@2/Stage2/Contraptions/forecourt_geyser/@MeshInstance3D@4105",
+    "station": "menu/ending"
+  }
+]

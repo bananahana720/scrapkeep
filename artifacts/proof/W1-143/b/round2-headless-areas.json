@@ -1,0 +1,881 @@
+{
+  "areas": {
+    "camp": {
+      "findings": 0,
+      "surfaces": 7
+    },
+    "event/annex_reactor_blow/announced": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/annex_reactor_blow/started": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/bench_dropship/announced": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/bench_dropship/started": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/bend_relic_wakes/announced": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/bend_relic_wakes/started": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/dome_lightning/announced": {
+      "findings": 3,
+      "surfaces": 44
+    },
+    "event/dome_lightning/started": {
+      "findings": 3,
+      "surfaces": 44
+    },
+    "event/east_bench_dropship/announced": {
+      "findings": 3,
+      "surfaces": 46
+    },
+    "event/east_bench_dropship/started": {
+      "findings": 3,
+      "surfaces": 46
+    },
+    "event/head_gate_sluice/announced": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/head_gate_sluice/started": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/hollow_trestle_collapse/announced": {
+      "findings": 3,
+      "surfaces": 43
+    },
+    "event/hollow_trestle_collapse/started": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/plunge_pool_flood/announced": {
+      "findings": 3,
+      "surfaces": 44
+    },
+    "event/plunge_pool_flood/started": {
+      "findings": 3,
+      "surfaces": 44
+    },
+    "event/powerhouse_boiler/announced": {
+      "findings": 3,
+      "surfaces": 46
+    },
+    "event/powerhouse_boiler/started": {
+      "findings": 3,
+      "surfaces": 46
+    },
+    "event/toe_vents_wake/announced": {
+      "findings": 3,
+      "surfaces": 46
+    },
+    "event/toe_vents_wake/started": {
+      "findings": 3,
+      "surfaces": 46
+    },
+    "event/wasteway_flash_flood/announced": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/wasteway_flash_flood/started": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "event/west_wash_flash_flood/announced": {
+      "findings": 3,
+      "surfaces": 44
+    },
+    "event/west_wash_flash_flood/started": {
+      "findings": 3,
+      "surfaces": 44
+    },
+    "menu/achievements": {
+      "findings": 0,
+      "surfaces": 14
+    },
+    "menu/customize": {
+      "findings": 0,
+      "surfaces": 1
+    },
+    "menu/death": {
+      "findings": 3,
+      "surfaces": 45
+    },
+    "menu/ending": {
+      "findings": 0,
+      "surfaces": 9
+    },
+    "menu/help": {
+      "findings": 0,
+      "surfaces": 14
+    },
+    "menu/jukebox": {
+      "findings": 0,
+      "surfaces": 21
+    },
+    "menu/pause": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "menu/pilot-select": {
+      "findings": 0,
+      "surfaces": 23
+    },
+    "menu/radio": {
+      "findings": 0,
+      "surfaces": 21
+    },
+    "menu/settings": {
+      "findings": 0,
+      "surfaces": 14
+    },
+    "menu/title": {
+      "findings": 0,
+      "surfaces": 14
+    },
+    "pilot/demolitions_caster": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "pilot/pylon_engineer": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "pilot/remembered_cannon": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "pilot/runner_gunner": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "pilot/tally": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "pilot/tarn": {
+      "findings": 0,
+      "surfaces": 0
+    },
+    "shop": {
+      "findings": 3,
+      "surfaces": 52
+    }
+  },
+  "findings": [
+    {
+      "area": "shop",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_trade_risk/trade_1_blood_counter_0/@StaticBody3D@2702/@MeshInstance3D@2701",
+      "row": "W1-23",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "shop",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_trade_risk/trade_1_blood_counter_0/@MeshInstance3D@2703",
+      "row": "W1-23",
+      "shape": "Activity_trade_risk/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "shop",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_trade_risk/trade_1_blood_counter_0/@MeshInstance3D@2704",
+      "row": "W1-23",
+      "shape": "Activity_trade_risk/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/plunge_pool_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@StaticBody3D@3308/@MeshInstance3D@3307",
+      "row": "W1-23",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/plunge_pool_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3309",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/plunge_pool_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3310",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/plunge_pool_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@StaticBody3D@3308/@MeshInstance3D@3307",
+      "row": "W1-23",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/plunge_pool_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3309",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/plunge_pool_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3310",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/west_wash_flash_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@StaticBody3D@3308/@MeshInstance3D@3307",
+      "row": "W1-23",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/west_wash_flash_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3309",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/west_wash_flash_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3310",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/west_wash_flash_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@StaticBody3D@3308/@MeshInstance3D@3307",
+      "row": "W1-23",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/west_wash_flash_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3309",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/west_wash_flash_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3310",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/dome_lightning/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@StaticBody3D@3308/@MeshInstance3D@3307",
+      "row": "W1-23",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/dome_lightning/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3309",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/dome_lightning/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3310",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/dome_lightning/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@StaticBody3D@3308/@MeshInstance3D@3307",
+      "row": "W1-23",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/dome_lightning/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3309",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/dome_lightning/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3310",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/east_bench_dropship/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@StaticBody3D@3308/@MeshInstance3D@3307",
+      "row": "W1-23",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/east_bench_dropship/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3309",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/east_bench_dropship/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3310",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/east_bench_dropship/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@StaticBody3D@3308/@MeshInstance3D@3307",
+      "row": "W1-23",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/east_bench_dropship/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3309",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/east_bench_dropship/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3310",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/toe_vents_wake/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@StaticBody3D@3308/@MeshInstance3D@3307",
+      "row": "W1-23",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/toe_vents_wake/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3309",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/toe_vents_wake/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3310",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/toe_vents_wake/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@StaticBody3D@3308/@MeshInstance3D@3307",
+      "row": "W1-23",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/toe_vents_wake/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3309",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/toe_vents_wake/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3310",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/powerhouse_boiler/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@StaticBody3D@3308/@MeshInstance3D@3307",
+      "row": "W1-23",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/powerhouse_boiler/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3309",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/powerhouse_boiler/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3310",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/powerhouse_boiler/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@StaticBody3D@3308/@MeshInstance3D@3307",
+      "row": "W1-23",
+      "shape": "trade__blood_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/powerhouse_boiler/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3309",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/powerhouse_boiler/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/@Node3D@3275/trade_1_blood_counter_0/@MeshInstance3D@3310",
+      "row": "W1-23",
+      "shape": "Node3D/trade__blood_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/hollow_trestle_collapse/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4429/@MeshInstance3D@4428",
+      "row": "W1-23",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/hollow_trestle_collapse/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4430",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/hollow_trestle_collapse/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4431",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/hollow_trestle_collapse/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4429/@MeshInstance3D@4428",
+      "row": "W1-23",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/hollow_trestle_collapse/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4430",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/hollow_trestle_collapse/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4431",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/wasteway_flash_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4429/@MeshInstance3D@4428",
+      "row": "W1-23",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/wasteway_flash_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4430",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/wasteway_flash_flood/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4431",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/wasteway_flash_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4429/@MeshInstance3D@4428",
+      "row": "W1-23",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/wasteway_flash_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4430",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/wasteway_flash_flood/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4431",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/bench_dropship/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4429/@MeshInstance3D@4428",
+      "row": "W1-23",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/bench_dropship/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4430",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/bench_dropship/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4431",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/bench_dropship/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4429/@MeshInstance3D@4428",
+      "row": "W1-23",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/bench_dropship/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4430",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/bench_dropship/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4431",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/bend_relic_wakes/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4429/@MeshInstance3D@4428",
+      "row": "W1-23",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/bend_relic_wakes/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4430",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/bend_relic_wakes/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4431",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/bend_relic_wakes/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4429/@MeshInstance3D@4428",
+      "row": "W1-23",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/bend_relic_wakes/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4430",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/bend_relic_wakes/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4431",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/annex_reactor_blow/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4429/@MeshInstance3D@4428",
+      "row": "W1-23",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/annex_reactor_blow/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4430",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/annex_reactor_blow/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4431",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/annex_reactor_blow/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4429/@MeshInstance3D@4428",
+      "row": "W1-23",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/annex_reactor_blow/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4430",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/annex_reactor_blow/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4431",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/head_gate_sluice/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4429/@MeshInstance3D@4428",
+      "row": "W1-23",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/head_gate_sluice/announced",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4430",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/head_gate_sluice/announced",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4431",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/head_gate_sluice/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4429/@MeshInstance3D@4428",
+      "row": "W1-23",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/head_gate_sluice/started",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4430",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "event/head_gate_sluice/started",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4431",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    },
+    {
+      "area": "menu/death",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@StaticBody3D@4429/@MeshInstance3D@4428",
+      "row": "W1-23",
+      "shape": "trade__sacrifice_counter_/StaticBody3D/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's body and its collider stays until its body is built after the sitting"
+    },
+    {
+      "area": "menu/death",
+      "file": "stake_devices.gd",
+      "mesh": "CylinderMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4430",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's cap on the counter stays until its body is built after the sitting"
+    },
+    {
+      "area": "menu/death",
+      "file": "stake_devices.gd",
+      "mesh": "BoxMesh",
+      "path": "@Node3D@2/Activities/Activity_sacrifice/trade_2_sacrifice_counter_0/@MeshInstance3D@4431",
+      "row": "W1-23",
+      "shape": "Activity_sacrifice/trade__sacrifice_counter_/MeshInstance3D",
+      "why": "ruling ci (project-guide/handoff/DECISIONS.md:117): the risky trade counter's price stud stays until its body is built after the sitting"
+    }
+  ],
+  "plant": ""
+}

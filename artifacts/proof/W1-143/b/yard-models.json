@@ -1,0 +1,29 @@
+[
+  {
+    "fallbacks": 0,
+    "models": {
+      "BayPin": 0,
+      "BayPost": 1,
+      "BayYardWall": 1
+    },
+    "pilot": "pylon_engineer"
+  },
+  {
+    "fallbacks": 0,
+    "models": {
+      "BayPin": 3,
+      "BayPost": 0,
+      "BayYardWall": 0
+    },
+    "pilot": "runner_gunner"
+  },
+  {
+    "fallbacks": 0,
+    "models": {
+      "BayPin": 3,
+      "BayPost": 0,
+      "BayYardWall": 0
+    },
+    "pilot": "tarn"
+  }
+]
