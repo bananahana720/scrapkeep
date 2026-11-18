@@ -921,5 +921,5 @@ func _rest_at_bank_check(boss, centre: Vector3) -> void:
 				if boss._charge.get("state", "") not in [boss.CHARGE_BRACE, boss.CHARGE_RUN]:
 					break
 		shortest = minf(shortest, length)
-	_report("Brindle's charge from the bank is a charge, not a step back", shortest > 0.0 and backward < 0.05,
-		"20 charges from the stop radius: shortest committed lane %.2f m (must be positive); farthest the hull went backward along its heading %.2f m" % [shortest, backward])
+	_report("Brindle's charge from the bank is a charge, not a step back", shortest >= boss.CHARGE_MIN_LANE and backward < 0.05,
+		"20 charges from the stop radius: shortest committed lane %.2f m (must be at least the %.0f m floor); farthest the hull went backward along its heading %.2f m" % [shortest, boss.CHARGE_MIN_LANE, backward])
