@@ -525,7 +525,7 @@ func _connect_triggers() -> void:
 	var events = ctx.events
 	events.enemy_struck.connect(_on_struck_trigger)
 	events.enemy_killed.connect(func(_kind: String, at: Vector3, _scrap: int):
-		if ctx.run.last_kill_from_spark:
+		if ctx.run.last_kill_triggerless:
 			return
 		_post(Triggers.Kind.ON_KILL, _last_strike_kind, Triggers.strike_proc(_last_strike_kind), at))
 	for smash in ["slammed", "arc_slammed", "skid_smashed", "demo_slammed"]:
@@ -1095,7 +1095,7 @@ func _on_stage_content_cleared(reason: String) -> void:
 
 
 func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
-	if has_transformer("shrapnel_bloom") and not ctx.run.last_kill_from_spark:
+	if has_transformer("shrapnel_bloom") and not ctx.run.last_kill_triggerless:
 		_kills.append(at)
 	if not ctx.flow.in_stage():
 		return

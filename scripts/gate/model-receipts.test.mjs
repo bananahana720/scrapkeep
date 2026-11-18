@@ -11,7 +11,8 @@ const cfg = (name) => cfgRules(readFileSync(new URL(`models/${name}`, SKILL), "u
 
 // Real TLC 2.19 output (tla2tools 1.7.4), trimmed by dropping the variable values under each State line and the temp
 // folder paths. Captured on the Mac Studio on 17 November 2026 from the configs each file is named for; the rewards-*
-// files from the W1-117 model (old and new reward keys apart, the save lock), with TLC's Progress lines dropped too.
+// files from the W1-117 model (old and new reward keys apart, the save lock), with TLC's Progress lines dropped too;
+// the hazard-* files from HazardCycle.tla the same way.
 const fixture = (name) => readFileSync(new URL(`fixtures/tlc/${name}.out`, import.meta.url), "utf8");
 const out = {
   clean: parseTlc(fixture("today-store")),
@@ -21,6 +22,8 @@ const out = {
   rewardsTwo: parseTlc(fixture("rewards-today-two-once")),
   ledger: parseTlc(fixture("rewards-broken-ledger")),
   midsave: parseTlc(fixture("rewards-broken-midsave")),
+  hazardClean: parseTlc(fixture("hazard-today")),
+  hitAnywhere: parseTlc(fixture("hazard-broken-hitanywhere")),
 };
 
 test("a finished clean run is clean, with the final state counts", () => {
@@ -58,6 +61,7 @@ test("a plant counts as caught only on the rule it names", () => {
   assert.equal(brokeRule(out.endguard, cfg("broken-endguard.cfg"), "EndsOnce"), true);
   assert.equal(brokeRule(out.ledger, cfg("rewards-broken-ledger.cfg"), "AtMostOnce"), true);
   assert.equal(brokeRule(out.midsave, cfg("rewards-broken-midsave.cfg"), "NeverLost"), true);
+  assert.equal(brokeRule(out.hitAnywhere, cfg("hazard-broken-hitanywhere.cfg"), "BallOnlyWhereTold"), true);
   assert.equal(brokeRule(out.ledger, cfg("rewards-broken-midsave.cfg"), "NeverLost"), false);
   assert.equal(brokeRule(out.vanish, cfg("broken-endguard.cfg"), "EndsOnce"), false);
   assert.equal(brokeRule(out.clean, cfg("broken-vanish.cfg"), "WardenGoneOpens"), false);
@@ -194,6 +198,8 @@ test("a code config with fewer distinct states than its pin is a miss, and every
   assert.equal(out.clean.distinct, ROWS["run-always-ends"].real[0].minStates);
   assert.equal(out.rewardsClean.distinct, rw.real[0].minStates);
   assert.equal(out.rewardsTwo.distinct, rw.real[1].minStates);
+  assert.equal(out.hazardClean.outcome, "clean");
+  assert.equal(out.hazardClean.distinct, ROWS["hazards-hit-everyone"].real[0].minStates);
 });
 
 test("the flood row's pins and plants match captured TLC output", () => {
