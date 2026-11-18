@@ -1,0 +1,42 @@
+✔ the probe uses embedded Metal before the project is loaded, with a scratch home (4.120416ms)
+✔ the watcher rejects focus changes, visible children, missing periods and missing helper (5.481083ms)
+✔ the Gate reference needs a visible sample for its own process and the pinned executable (3.712417ms)
+✔ two drawn runs wait for one lock across worktrees and have disjoint start/end times (92.0765ms)
+✔ losing the sampler aborts a still-running group before releasing the drawn slot (281.156334ms)
+✔ Mac library captures keep the producer resolution and plant while forcing the embedded backend (1.613208ms)
+✔ model receipts see a valid planted comparison but cannot consume an unwatched verdict (2.339542ms)
+✔ both Mac entry points refuse unknown and changed tools before taking a lock or starting Godot (1.03125ms)
+✔ a queued Mac draw rechecks its files before the version query and again before the draw (2.770541ms)
+✔ headless measurement and the editor version probe use only their scratch homes (1.540292ms)
+✔ the collision sweep pins its clustering tool before a watched launch (3.570916ms)
+✔ models-render: every kind judged, none failed, the plant caught on every kind -> pass (0.995ms)
+✔ models-render: a dark model is a miss and is named (0.086167ms)
+✔ models-render: a kind with no generated model loaded is a miss and is named (0.058083ms)
+✔ models-render: each count guard fails alone (verdict lines, the check's pin, judged) (0.11325ms)
+✔ models-render: a plant that misses one kind, or whose stats do not show it, is not caught (0.094916ms)
+✔ models-render: a plant switch that reached the real shoot fails the receipt (0.045541ms)
+✔ models-render: the producer takes the head from git and refuses a dirty checkout (92.683041ms)
+✔ models-render: runShoots shoots authored, tripo-all, compares, then shoots and compares the plant (48.289583ms)
+✔ models-render: no display, or a failed shoot, is a miss that says why (52.121959ms)
+✔ display-run: takes a slot, sets a scratch home, never passes --headless, removes the home after (50.125584ms)
+✔ display-run: the scratch home wins over a caller's HOME and platform, on every platform (52.266541ms)
+✔ display-run: refuses window-defeating engine flags and a script that is not res:// (50.927416ms)
+✔ display-run: releases the slot when the launch throws (46.825584ms)
+✔ display-run: the timeout kills the whole run, a forked child or an exec, in under 2 s (656.757917ms)
+✔ display-run: SIGTERM to the node process kills the run's group (257.51375ms)
+✔ display-run: no display on Linux, or another platform, is not supported and starts nothing (0.190292ms)
+✔ no-code-stand-ins: no stand-in, no new primitive, enough surfaces, the plant caught -> pass (0.31225ms)
+✔ no-code-stand-ins: the pin's ruled rows wait, matched on the exact key and only with a cite (0.14475ms)
+✔ no-code-stand-ins: a stand-in the pin allows still fails and is named by file and row (0.083792ms)
+✔ no-code-stand-ins: each guard fails alone (0.200166ms)
+✔ no-code-stand-ins: a plant not caught voids the pass (0.0455ms)
+✔ no-code-stand-ins: a plant switch that reached the counting run fails the receipt (0.031ms)
+✔ no-code-stand-ins: the producer runs the test then the plant, reads the pin, takes the head from git, refuses a dirty checkout (139.422666ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1670.676667

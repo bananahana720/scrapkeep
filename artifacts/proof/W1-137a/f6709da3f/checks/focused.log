@@ -1,0 +1,27 @@
+sketch:smoke waiting: a frame reading (pid 1898) holds the machine quiet (/tmp/scrapkeep-quiet-hold)
+sketch:smoke waited 372s for the machine
+PASS sketches/core-loop import exit=0 3.1s
+PASS sketches/core-loop res://tests/invisible_walls_test.gd exit=0 47.2s
+PASS sketches/core-loop res://tests/landing_mark_test.gd exit=0 0.4s
+PASS sketches/core-loop res://tests/park_dam_rim_roll_test.gd exit=0 40.5s
+PASS sketches/core-loop res://tests/camera_tight_test.gd exit=0 95.5s
+PASS sketches/core-loop res://tests/threat_landing_depth_test.gd exit=0 0.5s
+PASS sketches/core-loop res://tests/park_flume_rim_roll_test.gd exit=0 46.4s
+slowest 7:
+  95.5s sketches/core-loop res://tests/camera_tight_test.gd
+  47.2s sketches/core-loop res://tests/invisible_walls_test.gd
+  46.4s sketches/core-loop res://tests/park_flume_rim_roll_test.gd
+  40.5s sketches/core-loop res://tests/park_dam_rim_roll_test.gd
+  3.1s sketches/core-loop import
+  0.5s sketches/core-loop res://tests/threat_landing_depth_test.gd
+  0.4s sketches/core-loop res://tests/landing_mark_test.gd
+skipped 2 (passed without running every check; not a failure):
+  sketches/core-loop res://tests/park_dam_rim_roll_test.gd
+    SKIP control Fin.L
+    SKIP control Fin.R
+  sketches/core-loop res://tests/park_flume_rim_roll_test.gd
+    SKIP control Fin.L
+    SKIP control Fin.R
+0 tests lack a verdict line
+sketch:smoke pass: 1 sketches, 7 runs, 2 at a time, 0 solo (0s), 138s. Headless boot and sketch tests only; feel needs Andrew's play.
+receipt /private/tmp/sk-W1-137a-stage4f/artifacts/local/receipts/named-768b6108dcdb-2026-11-18T21-30-56-010Z.json
