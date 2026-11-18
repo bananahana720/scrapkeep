@@ -112,7 +112,7 @@ func _run() -> void:
 			if held or v >= FREE_REACH_MPS:
 				t.check("%s reaches the table top" % label, r.end == "top", r.end)
 			else:
-				t.check("%s rolls back short of the top and comes to rest on the floor" % label, r.end == "floor", r.end)
+				t.check("%s rolls back short of the top to the open floor" % label, r.end == "floor", r.end)
 	# Off the top, back over the lip.
 	var off := await _off_top()
 	print("  off the top: %s at %s" % [off.end, off.at])
@@ -208,8 +208,8 @@ func _drive(dir: Vector3, held: bool) -> void:
 
 
 # One climb from RUNUP_M short of the kicker's foot. end: "top" (on the table and ON_TOP_M past its edge, or at rest on
-# it), "floor" (at rest within 2 m of the floor height, short of the face by NOTCH_ZONE_M), "stuck" (at rest anywhere
-# else) or "time".
+# it), "floor" (within 2 m of the floor height and short of the face by NOTCH_ZONE_M, at rest or still rolling out
+# when the clock runs out), "stuck" (at rest anywhere else) or "time".
 func _climb(speed: float, held: bool) -> Dictionary:
 	var player = game.player
 	var start := Vector3(kicker.cx, 0, kicker.foot - RUNUP_M)
@@ -233,15 +233,14 @@ func _climb(speed: float, held: bool) -> Dictionary:
 		if still >= REST_TICKS:
 			break
 	source.hold = {}
+	# Floor height within NOTCH_ZONE_M of the face is down a notch between the kicker and the table, not the open floor.
+	var on_floor := ball.y < floor_y + Tuning.RADIUS + 2.0 and ball.z < kicker.lip - NOTCH_ZONE_M
 	var end := "time"
 	if still >= REST_TICKS:
-		if _on_top(ball):
-			end = "top"
-		# Floor height within NOTCH_ZONE_M of the face is down a notch between the kicker and the table, not the open floor.
-		elif ball.y < floor_y + Tuning.RADIUS + 2.0 and ball.z < kicker.lip - NOTCH_ZONE_M:
-			end = "floor"
-		else:
-			end = "stuck"
+		end = "top" if _on_top(ball) else ("floor" if on_floor else "stuck")
+	elif on_floor:
+		# Rolled back down and still running out across the open floor when the clock ran out.
+		end = "floor"
 	return {"lip": lip_speed, "end": end, "at": _fmt(ball)}
 
 
