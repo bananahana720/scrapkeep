@@ -7,9 +7,9 @@ fcfg() {
   local name=$1 rules=$2 props=$3
   shift 3
   # Plain variables, not an associative array, so the system bash 3.2 on macOS runs it.
-  local keys="Events Fill Live Cap MaxLives SnapRise WaitUnderBall EndNeedsClear CapGuard"
+  local keys="Events Fill Live Cap MaxLives SnapRise WaitUnderBall HoldTicks HoldCap EndNeedsClear CapGuard"
   local c_Events="{\"a\", \"b\", \"c\"}" c_Fill=2 c_Live=3 c_Cap=2 c_MaxLives=2
-  local c_SnapRise=TRUE c_WaitUnderBall=TRUE c_EndNeedsClear=TRUE c_CapGuard=TRUE
+  local c_SnapRise=TRUE c_WaitUnderBall=TRUE c_HoldTicks=1 c_HoldCap=TRUE c_EndNeedsClear=TRUE c_CapGuard=TRUE
   local kv key v
   for kv in "$@"; do
     key=${kv%%=*}
@@ -33,10 +33,10 @@ fcfg() {
   } > "flood-$name.cfg"
 }
 SAFE="FullWaterNeverHeld FullWaterFreesItsSlot NeverRisesUnderBall NeverEndsUnderBall WithinCap"
-LIVE="FloodEnds AnnouncedLands"
+LIVE="FloodEnds AnnouncedLands HoldEnds"
 # The code with pull request 1135: every real flood row has a live time; a flood with no clock is the test rows' shape.
 fcfg today-timed "$SAFE" "$LIVE"
-fcfg today-noclock "$SAFE" "AnnouncedLands" Live=0
+fcfg today-noclock "$SAFE" "AnnouncedLands HoldEnds" Live=0
 # One guard off each, from today: the named rule must break.
 # The code before pull request 1135: the rise can sit a hair under full.
 fcfg broken-nosnap "FullWaterNeverHeld" - SnapRise=FALSE
@@ -44,8 +44,8 @@ fcfg broken-nosnap-slot "FullWaterFreesItsSlot" - SnapRise=FALSE Live=0
 fcfg broken-nowait "NeverRisesUnderBall" - WaitUnderBall=FALSE
 fcfg broken-endunder "NeverEndsUnderBall" - EndNeedsClear=FALSE
 fcfg broken-nocap "WithinCap" - CapGuard=FALSE
-# Finding PF-1: asked without the ball leaving, a ball parked in a rising basin holds the water for good.
-fcfg parked "" "RiseFinishes"
+# Finding PF-1, closed by W1-148: without the cap, a ball parked in a rising basin holds the water for good.
+fcfg broken-nohold "" "HoldEnds" HoldCap=FALSE
 # Probes: every one must break, or an action can no longer fire. One probe per config, because a break stops the checker.
 for probe in Full Ends Waits CapHolds SecondLife EndWaits; do
   fcfg "reach-timed-$probe" "Probe$probe" -

@@ -57,6 +57,10 @@ const PARK_FAMILY_CAP := 1
 # clock counts as arrived within this slack. Without it a full flood or a finished
 # collapse still reads as under way and waits under a rider who rolls in.
 const PARK_CLOCK_SLACK_S := 0.00000001
+# A rising flood waits for a grounded ball in its basin only so the water mesh never swaps under a ball on its
+# landing frame (_park_clear). The wait is spent after this much of the flood's live time; then the water
+# rises around the ball and natural.gd's deep-water tax reads it (W1-148, ruling cu: parking pays).
+const PARK_FLOOD_HOLD_CAP_S := 2.0
 const PARK_LAND_FACTS := {
 	"ground_slump": "ground_slump_landed",
 	"flood_rising": "flood_landed", "fleet_inbound": "fleet_landed",
@@ -447,7 +451,7 @@ func _build_park(park: Dictionary, height: Callable) -> void:
 func _park_state(row: Dictionary, weather: bool) -> Dictionary:
 	return {"row": row, "weather": weather, "phase": WAITING, "ready_s": 0.0,
 		"due_s": 0.0, "holding": false, "pending": 0, "live_elapsed_s": 0.0,
-		"rise_s": 0.0, "collapse_s": 0.0, "context": {}}
+		"rise_s": 0.0, "collapse_s": 0.0, "held_s": 0.0, "context": {}}
 
 
 func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dictionary, facts: Array) -> void:
@@ -475,6 +479,7 @@ func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dict
 		state.phase = LIVE
 		state.live_elapsed_s = 0.0
 		state.rise_s = 0.0
+		state.held_s = 0.0
 		state.collapse_s = 0.0
 		_park_hook("land", state, ctx)
 		if not state.weather:
@@ -575,6 +580,8 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 	var dt := minf(delta, maxf(0.0, live_s - float(state.live_elapsed_s))) if live_s > 0.0 else delta
 	state.live_elapsed_s += dt
 	if not state.weather and (_park_rising(state) or _park_collapsing(state)) and not _park_clear(state, ball, velocity, ctx):
+		if _park_rising(state):
+			state.held_s += dt
 		return
 	var step_ctx := ctx.duplicate(true)
 	step_ctx.delta_s = dt
@@ -603,6 +610,11 @@ static func _park_collapsing(state: Dictionary) -> bool:
 
 static func _park_rising(state: Dictionary) -> bool:
 	return state.row.kind != "drain" and (state.row.kind in ["flood_fill", "flash_flood"] or state.row.effect.get("material") == "water") and state.rise_s < float(state.row.effect.get("fill_s", 0.0))
+
+
+# A flood that has waited PARK_FLOOD_HOLD_CAP_S for a ball stops waiting while it still rises.
+static func _park_hold_spent(state: Dictionary) -> bool:
+	return state.phase == LIVE and float(state.held_s) >= PARK_FLOOD_HOLD_CAP_S - PARK_CLOCK_SLACK_S and _park_rising(state)
 
 
 func _park_can_end(state: Dictionary) -> bool:
@@ -653,7 +665,7 @@ func _park_world(state: Dictionary, form: String, phase: String) -> Dictionary:
 
 
 func _park_clear(state: Dictionary, ball: Vector3, velocity: Vector3, context: Dictionary) -> bool:
-	if state.weather:
+	if state.weather or _park_hold_spent(state):
 		return true
 	var site: Dictionary = NaturalFootprint.resolve(state.row, _park_sites[state.row.site])
 	var half := ParkMap.footprint_half_extents(site)

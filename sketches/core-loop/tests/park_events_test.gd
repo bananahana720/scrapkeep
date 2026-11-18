@@ -8,6 +8,8 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const H := 0.05
 const BAR := 240.0 / 172.0
 const FAR := Vector3(1000.0, 1.0, 1000.0)
+# Steps in the director's flood hold cap (PARK_FLOOD_HOLD_CAP_S, W1-148).
+const CAP_STEPS := int(Director.PARK_FLOOD_HOLD_CAP_S / H + 0.5)
 const LABELS := ["both trigger kinds", "lead floors and one bar", "clearance and grounded water", "overlap 10000 steps and break quiet"]
 
 class Map:
@@ -32,6 +34,7 @@ func _initialize() -> void:
 		_site_corridors()
 		_toe_vents_wake()
 		_water_lifetime()
+		_flood_hold_cap()
 		_full_water_at_entry()
 		_overlap()
 		_held_announcements()
@@ -189,7 +192,7 @@ func _clearance() -> void:
 				water_checks.safe += 1
 		water_checks.depth = water_checks.depth and float(r.effect.depth_m) <= 1.2)
 	for i in 500:
-		var ball := Vector3(0, 1, 0) if i >= 120 and i < 300 else FAR
+		var ball := Vector3(0, 1, 0) if i >= 120 and i < 120 + CAP_STEPS - 5 else FAR
 		_step(d, H, ball)
 	_check("water pauses mid-fill", water_checks.under == 0 and water_checks.safe > 0 and water_checks.depth, "rise hooks under grounded ball=%d; safe=%d; depth cap=%s" % [water_checks.under, water_checks.safe, water_checks.depth])
 	_check(LABELS[2], not bad and started and water_checks.under == 0 and water_checks.safe > 0 and water_checks.depth, "clearance, projected travel, mid-fill grounding and 1.2 m water cap")
@@ -293,7 +296,7 @@ func _site_clearance() -> void:
 				hooks.safe += 1
 				if ctx.clock_s <= 11.0 + 0.000001:
 					hooks.before = ctx.rise_s
-				elif ctx.clock_s >= 16.0 - 0.000001 and hooks.resumed < 0.0:
+				elif ctx.clock_s >= 11.0 + (CAP_STEPS - 5) * H - 0.000001 and hooks.resumed < 0.0:
 					hooks.resumed = ctx.rise_s)
 	for i in 180:
 		facts.append_array(_step(d, H, under))
@@ -307,9 +310,9 @@ func _site_clearance() -> void:
 	_check("site-derived grounded flood lands after clearance", released.filter(func(f): return f.kind == "started").size() == 1
 		and released.filter(func(f): return f.kind == "world" and f.get("phase") == "land").size() == 1 and hooks.land == 1,
 		"grounded ball clears at 9 s; one landing required")
-	for i in 100:
+	for i in CAP_STEPS - 5:
 		_step(d, H, under)
-	for i in 20:
+	for i in 85:
 		_step(d)
 	_check("site-derived live flood pauses under grounded ball", hooks.unsafe == 0 and hooks.safe > 0 and hooks.before > 0.0
 		and absf(hooks.resumed - hooks.before - H) < 0.000001,
@@ -439,9 +442,10 @@ func _water_lifetime() -> void:
 			if action == "end":
 				hooks.end += 1
 			if action == "step":
-				hooks.unsafe += int(ctx.grounded and ctx.ball == Vector3(0, 1, 0) and ctx.rise_s < 10.0)
 				if not starts.is_empty():
 					var elapsed: float = ctx.clock_s - starts[0].time_s
+					# The hold is spent CAP s after the ball sits down at 1 s; a rise step before that is unsafe.
+					hooks.unsafe += int(ctx.grounded and ctx.ball == Vector3(0, 1, 0) and ctx.rise_s < 10.0 and elapsed < 1.0 + Director.PARK_FLOOD_HOLD_CAP_S - 2.0 * H)
 					if elapsed < 1.0 - 0.000001:
 						hooks.last_rise = ctx.rise_s
 					elif elapsed >= release_s - 0.000001 and hooks.resume_rise < 0.0:
@@ -461,9 +465,47 @@ func _water_lifetime() -> void:
 		if ends.size() == 1:
 			ok = ok and ends[0].time_s >= expected - 0.000001 and ends[0].time_s <= expected + H + 0.000001
 		if release_s < float(row.live_s):
-			ok = ok and hooks.last_rise >= 0.0 and absf(hooks.resume_rise - hooks.last_rise - H) < 0.000001
+			# The ball sat down at 1 s; the rise waited the cap, then went on around it.
+			var expected_rise: float = hooks.last_rise + release_s - 1.0 - Director.PARK_FLOOD_HOLD_CAP_S + H
+			ok = ok and hooks.last_rise >= 0.0 and absf(hooks.resume_rise - expected_rise) < 2.0 * H
 		_check("water lifetime release %.0f s" % release_s, ok,
 			"starts=%s ends=%s expected=%.3f unsafe_hooks=%d end_hooks=%d fill_before=%.3f fill_after=%.3f" % [starts.map(func(f): return f.time_s), ends.map(func(f): return f.time_s), expected, hooks.unsafe, hooks.end, hooks.last_rise, hooks.resume_rise])
+
+
+# W1-148: the wait for a grounded ball is capped (PARK_FLOOD_HOLD_CAP_S of live time), then the water rises around
+# it, so a ball parked in the basin from the landing is stepped and taxed. The wait itself keeps its reason: a
+# ball that arrives as the water lands is not swapped under inside the cap.
+func _flood_hold_cap() -> void:
+	var row := _row("hold_cap", "flood_fill", "natural", 5.0)
+	row.hold_clear_m = 0.0
+	row.effect = {"depth_m": 1.2, "fill_s": 10.0, "material": "water"}
+	row.live_s = 30.0
+	var d = _director([row])
+	var under := Vector3(0, 1, 0)
+	var landed_at := -1.0
+	var stats := {"steps": [], "under": []}
+	d.register_family("natural", func(action, _r, ctx):
+		if action == "step":
+			stats.steps.append(ctx.clock_s)
+			if ctx.ball == under and ctx.grounded:
+				stats.under.append(ctx.clock_s))
+	var ends := 0
+	for i in 800:
+		var parked: bool = landed_at >= 0.0 and float(d.stage_time) < landed_at + row.live_s
+		for f in _step(d, H, under if parked else FAR):
+			if f.kind == "started" and landed_at < 0.0:
+				landed_at = float(f.time_s)
+			ends += int(f.kind == "ended")
+	var first_under: float = stats.under[0] if not stats.under.is_empty() else INF
+	var risen_under: int = stats.under.size()
+	_check("hold reason: a ball arriving as the water lands is not swapped under within the cap",
+		landed_at >= 0.0 and first_under >= landed_at + Director.PARK_FLOOD_HOLD_CAP_S - 2.0 * H,
+		"landed %.2f s; first step under the ball %.2f s; cap %.1f s" % [landed_at, first_under, Director.PARK_FLOOD_HOLD_CAP_S])
+	_check("hold cap: past the cap the water rises around a parked ball", landed_at >= 0.0
+		and first_under <= landed_at + Director.PARK_FLOOD_HOLD_CAP_S + 2.0 * H and risen_under >= int(10.0 / H) - 2,
+		"first step under the ball %.2f s after landing; %d steps under it" % [first_under - landed_at, risen_under])
+	_check("hold cap: a flood with a ball parked through its whole live time ends once the ball leaves", ends == 1,
+		"ends=%d" % ends)
 
 
 func _overlap() -> void:

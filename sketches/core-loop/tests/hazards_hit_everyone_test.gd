@@ -201,6 +201,7 @@ func _run() -> void:
 	_stand_down()
 	_kill()
 	_flood()
+	_flood_parked()
 	quit(t.verdict())
 
 
@@ -409,6 +410,34 @@ func _kill() -> void:
 	HazardHits.strike(root.get_tree(), func(_p) -> bool: return true, "lightning", 5.0, 1.0, {})
 	t.eq("kill: an enemy a hazard hits carries the tag while it takes the damage", e.struck_tags, 1)
 	t.check("kill: and not after", not e.has_meta(HazardHits.STRUCK))
+	w.free()
+
+
+# W1-148: a ball parked in the basin from the flood's landing no longer holds the water off. The director waits
+# PARK_FLOOD_HOLD_CAP_S for it, then the water rises around it and the deep-water tax reads it before the flood ends.
+func _flood_parked() -> void:
+	var fx := _fixture(POOL)
+	var w = fx[0]
+	var handler = fx[1]
+	w.ctx.player.at = Vector3(40, 1.2, 0)
+	var landed_at := -1.0
+	var ended_at := -1.0
+	for i in 900:
+		var clock := i * DT
+		_tick(w, handler, clock)
+		var state = handler.active.get("plunge_pool_flood")
+		if landed_at < 0.0 and state != null and state.phase != "telegraph":
+			landed_at = clock
+			w.ctx.player.at = Vector3(0, 1.2, 0)
+		if landed_at >= 0.0 and state == null:
+			ended_at = clock
+			break
+	var taxes: Array = w.ctx.run.losses.filter(func(l): return l.cause == "flood")
+	t.check("parked flood: it landed with the ball in the basin (else nothing was read)", landed_at >= 0.0)
+	if t.check("parked flood: the parked ball was taxed before the flood ended (none is a miss)", not taxes.is_empty() and (ended_at < 0.0 or float(taxes[0].t) < ended_at),
+		"landed %.1f s, ended %.1f s, taxes %d" % [landed_at, ended_at, taxes.size()]):
+		t.check("parked flood: no tax before the hold cap and the 3 s in deep water", float(taxes[0].t) - landed_at >= Director.PARK_FLOOD_HOLD_CAP_S + Natural.FLOOD_TAX_AFTER_S - DT,
+			"first tax %.1f s after landing" % (float(taxes[0].t) - landed_at))
 	w.free()
 
 
