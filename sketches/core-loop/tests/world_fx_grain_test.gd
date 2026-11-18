@@ -170,10 +170,6 @@ class FakeSurface:
 		return -INF if p.x < -60.0 else -0.1 * p.x
 
 
-class FakeClock:
-	var metres := 1.2
-
-
 # Flood foam (natural.gd): pieces along the footprint's long axis, each on its own surface height,
 # fitted to its piece, thick while the water climbs, hidden over no surface and on drained water.
 func _foam() -> void:
@@ -181,7 +177,6 @@ func _foam() -> void:
 	root.add_child(natural)
 	var holder := _FakeWater.new()
 	holder.surface = FakeSurface.new()
-	holder.cycle = FakeClock.new()
 	natural.add_child(holder)
 	var pieces: Array = natural._foam(holder, {"half": Vector2(50.0, 8.0), "yaw": 0.0, "at": Vector3(0, 0, 0)})
 	t.eq("a 100 m flood foams in four pieces", pieces.size(), Natural.FOAM_PIECES)
@@ -195,7 +190,7 @@ func _foam() -> void:
 	t.check("foam calms once the water is up", pieces[1].emitters[0].amount_ratio < thick)
 	var west: Array = natural._foam(holder, {"half": Vector2(90.0, 8.0), "yaw": 0.0, "at": Vector3(0, 0, 0)})
 	t.check("a piece over no surface hides", not west[0].visible and west[3].visible)
-	holder.cycle.metres = 0.0
+	holder.depth_m = 0.0
 	Natural._ride_foam({"water": holder, "foam": pieces}, 0.0)
 	t.check("drained water carries no foam", pieces.all(func(a): return not a.visible))
 	var turned: Array = natural._foam(holder, {"half": Vector2(50.0, 8.0), "yaw": PI / 2.0, "at": Vector3(0, 0, 0)})
@@ -206,4 +201,4 @@ func _foam() -> void:
 
 class _FakeWater extends Node3D:
 	var surface
-	var cycle
+	var depth_m := 1.2

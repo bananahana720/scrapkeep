@@ -1,0 +1,96 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 12 and seed 5252711421818188196 with 4 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/ParkFlood.tla
+Parsing file <tmp>/Naturals.tla
+Parsing file <tmp>/FiniteSets.tla
+Parsing file <tmp>/Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module ParkFlood
+Starting... (2026-11-17 17:39:25)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-17 17:39:25.
+Error: Invariant WithinCap is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
+/\ lives = [a |-> 0, b |-> 0, c |-> 0]
+/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ rise = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "waiting", b |-> "waiting", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 2: <Announce line 59, col 3 to line 62, col 80 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
+/\ lives = [a |-> 0, b |-> 0, c |-> 0]
+/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ rise = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "announced", b |-> "waiting", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 3: <Land line 67, col 3 to line 75, col 52 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
+/\ lives = [a |-> 1, b |-> 0, c |-> 0]
+/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ rise = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "live", b |-> "waiting", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 4: <Announce line 59, col 3 to line 62, col 80 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
+/\ lives = [a |-> 1, b |-> 0, c |-> 0]
+/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ rise = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "live", b |-> "announced", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 5: <Land line 67, col 3 to line 75, col 52 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
+/\ lives = [a |-> 1, b |-> 1, c |-> 0]
+/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ rise = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "live", b |-> "live", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 6: <Announce line 59, col 3 to line 62, col 80 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
+/\ lives = [a |-> 1, b |-> 1, c |-> 0]
+/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ rise = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "live", b |-> "live", c |-> "announced"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 7: <Land line 67, col 3 to line 75, col 52 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
+/\ lives = [a |-> 1, b |-> 1, c |-> 1]
+/\ held = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ rise = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "live", b |-> "live", c |-> "live"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+1432 states generated, 399 distinct states found, 172 states left on queue.
+The depth of the complete state graph search is 9.
+The average outdegree of the complete state graph is 2 (minimum is 0, the maximum 6 and the 95th percentile is 4).
+Finished in 00s at (2026-11-17 17:39:25)

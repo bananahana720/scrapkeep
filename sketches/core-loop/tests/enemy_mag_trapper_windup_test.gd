@@ -1,5 +1,8 @@
 extends SceneTree
 
+# PLANT --plant-deployed -> [W1-126 one disc seats at the committed centre]
+# PLANT --plant-floating -> [W1-126 one disc seats at the committed centre]
+
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -13,6 +16,12 @@ const TOLERANCE := 0.0001
 # The stack's top face and the top disc's thickness, in stack space (enemy_mag_trapper.py).
 const STACK_TOP := 0.6
 const DISC_HALF := 0.1
+# The deployed disc's lowest point rests on the terrain under it to this distance; it is a mesh
+# bound against a terrain height, so neither number comes from the code that places the disc.
+const SEAT_TOLERANCE := 0.05
+# The casing is seated along the slope's normal, which moves its middle sideways a little.
+const CENTRE_TOLERANCE := 0.1
+const FLOAT_PLANT := 0.5
 
 var _game
 var _test := T.new("enemy_mag_trapper_windup_test")
@@ -58,6 +67,17 @@ func _spawn(enabled := true):
 	enemy.windup_pose_enabled = enabled
 	enemy._rest = 0.0
 	return enemy
+
+
+# The lowest vertex of a mesh node in world space. A tilted disc's AABB corner hangs below the disc
+# itself, so the box would call a seated disc sunk.
+func _lowest_point(node: MeshInstance3D) -> Vector3:
+	var low := Vector3(0.0, INF, 0.0)
+	for vertex in node.mesh.get_faces():
+		var world: Vector3 = node.global_transform * vertex
+		if world.y < low.y:
+			low = world
+	return low
 
 
 func _parts(enemy) -> Array:
@@ -128,6 +148,14 @@ func _trace(enabled: bool) -> Array:
 	var pre_release_full := false
 	var warn_full := []
 	var live_shorter := true
+	var deployed_frames := 0
+	var worst_gap := 0.0
+	var centred := true
+	var capped := true
+	var seated := true
+	var profile_kept := true
+	var quiet := true
+	var deployed: WeakRef
 	var rest_after := false
 	var saw_rest := false
 	_strike_frames = []
@@ -146,8 +174,29 @@ func _trace(enabled: bool) -> Array:
 			if parts[1].position.distance_to(enemy._top_rest + Vector3.UP * HOIST) < TOLERANCE:
 				full_frames.append(Engine.get_physics_frames())
 				warn_full.append(enemy.phase == 1)
+			var disc := tele.get_node_or_null("DeployedDisc") as MeshInstance3D if tele != null else null
 			if enemy.phase == 2:
 				live_shorter = live_shorter and not parts[1].visible and enemy._stack.visible and enemy.find_child("MagDiscs", true, false).visible
+				if disc != null:
+					if deployed == null:
+						deployed = weakref(disc)
+						if "--plant-deployed" in OS.get_cmdline_user_args():
+							disc.position.x += 1.0
+						if "--plant-floating" in OS.get_cmdline_user_args():
+							disc.position.y += FLOAT_PLANT
+					deployed_frames += 1
+					var box: AABB = disc.global_transform * disc.mesh.get_aabb()
+					var low := _lowest_point(disc)
+					var ground: float = _game.ctx.terrain.height(low.x, low.z)
+					worst_gap = maxf(worst_gap, absf(low.y - ground))
+					centred = centred and Vector2(disc.global_position.x - tele.center.x, disc.global_position.z - tele.center.z).length() < CENTRE_TOLERANCE
+					capped = capped and box.end.y > tele.global_position.y
+					seated = seated and disc.mesh == parts[1].mesh
+					seated = seated and disc.get_child_count() == 0 and disc.is_visible_in_tree()
+					profile_kept = profile_kept and is_equal_approx(disc.global_basis.y.length(), 1.5) \
+						and is_equal_approx(disc.global_basis.x.length(), 1.0) and is_equal_approx(disc.global_basis.z.length(), 1.0)
+			else:
+				quiet = quiet and disc == null
 			if not _strike_frames.is_empty() and enemy.phase == 0 and not saw_rest:
 				rest_after = _rest(enemy)
 				saw_rest = true
@@ -164,6 +213,12 @@ func _trace(enabled: bool) -> Array:
 			"strike frames %s; full frames %s; difference %d physics frames" % [_strike_frames, full_frames, delta])
 		_test.check("WG-4 completed cycle", rest_after and _rest(enemy), "exact rest on first ROAM frame after LIVE")
 		_test.check("WG-4 one disc leaves", live_shorter and not _strike_frames.is_empty(), "only top disc hidden throughout LIVE")
+		_test.check("W1-126 one disc seats at the committed centre", seated and centred and worst_gap < SEAT_TOLERANCE and deployed_frames >= 250,
+			"%d live frames with the original mesh, no collider; lowest point at most %.4f m from the terrain" % [deployed_frames, worst_gap])
+		_test.check("W1-126 the disc top shows above the pit paint", capped and deployed_frames > 0)
+		_test.check("W1-126 the taller casing keeps its horizontal footprint", profile_kept and deployed_frames > 0)
+		_test.check("W1-126 the disc only exists during the live pit", quiet and deployed != null and deployed.get_ref() == null,
+			"no preview disc and no remnant after the pit expires")
 		_test.check("WG-6 unhit pivot identity", pivot_identity, "identity immediately after _pose over %d real physics frames" % FRAMES)
 	var relative_strikes := []
 	for frame in _strike_frames:
@@ -231,6 +286,15 @@ func _half_windup():
 	return enemy
 
 
+func _live_pit():
+	var enemy = _spawn()
+	for frame in 180:
+		await physics_frame
+		if enemy.phase == 2:
+			break
+	return enemy
+
+
 func _interruptions() -> void:
 	await _boot()
 	var enemy = await _half_windup()
@@ -259,26 +323,34 @@ func _interruptions() -> void:
 	_test.check("WG-4 harpoon smash", enemy.phase == 0 and _rest(enemy), "within 0.3 s of the real smash landing callback")
 	enemy.free()
 	_game.player.body().global_position = ball_rest
-	# Destruction removes the posed nodes, rather than leaving a detached posed mesh.
-	for action in ["queue_free", "death", "retry"]:
-		enemy = await _half_windup()
-		var parts := _parts(enemy)
-		var ids := [enemy.get_instance_id(), parts[0].get_instance_id(), parts[1].get_instance_id()]
-		match action:
-			"queue_free":
-				enemy.queue_free()
-			"death":
-				enemy.take_damage(enemy.hp + 1.0)
-			"retry":
-				_game.flow.retry_stage()
-		await _frames(27)
-		var removed := true
-		for id in ids:
-			removed = removed and not is_instance_id_valid(id)
-		var fresh = _spawn()
-		fresh.set_physics_process(false)
-		_test.check("WG-4 " + action, removed and _rest(fresh), "all old posed nodes removed within 0.3 s; fresh body at rest")
-		fresh.free()
+	# Destruction removes the posed nodes, rather than leaving a detached posed mesh. It must hold
+	# at half wind-up (the disc hoisted) and with the pit live (the disc thrown into it).
+	for phase in ["half wind-up", "live pit"]:
+		for action in ["queue_free", "death", "retry"]:
+			enemy = await _half_windup() if phase == "half wind-up" else await _live_pit()
+			var parts := _parts(enemy)
+			var pit: Node3D = enemy.telegraph()
+			var disc := pit.get_node_or_null("DeployedDisc") if pit != null else null
+			if phase == "live pit":
+				_test.check("W1-126 live disc before " + action, enemy.phase == 2 and disc != null)
+			else:
+				_test.check("hoisted disc and pit mark before " + action, enemy.phase == 1 and pit != null and parts[1].position.y > enemy._top_rest.y)
+			var gone := [weakref(enemy), weakref(parts[0]), weakref(parts[1]), weakref(pit), weakref(disc)]
+			match action:
+				"queue_free":
+					enemy.queue_free()
+				"death":
+					enemy.take_damage(enemy.hp + 1.0)
+				"retry":
+					_game.flow.retry_stage()
+			await _frames(27)
+			var removed := true
+			for ref in gone:
+				removed = removed and ref.get_ref() == null
+			var fresh = _spawn()
+			fresh.set_physics_process(false)
+			_test.check("WG-4 %s at %s" % [action, phase], removed and _rest(fresh), "enemy, cart, disc, pit mark and deployed disc all freed within 0.3 s; fresh body at rest")
+			fresh.free()
 	_game.free()
 	_game = null
 

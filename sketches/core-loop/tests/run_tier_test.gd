@@ -264,8 +264,9 @@ func _hash(value) -> String:
 
 # 2026-10-16 (ruling RT1): the park rows without their presentation fields. A row's recipe and fit pick
 # the art it draws with and never reach the director, so a dressing swap must not move the schedule pin
-# (KD1-DRESS moved all 20 by renaming three recipes).
-const PRESENTATION_FIELDS := ["recipe", "fit"]
+# (KD1-DRESS moved all 20 by renaming three recipes). clear_view is the strip the scenery keeps free of
+# trees behind a row; only src/presentation/spillway_scenery.gd reads it.
+const PRESENTATION_FIELDS := ["recipe", "fit", "clear_view"]
 
 static func _director_rows(rows: Array) -> Array:
 	var kept := []
