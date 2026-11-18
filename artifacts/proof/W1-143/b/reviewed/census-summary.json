@@ -1,0 +1,50 @@
+{
+  "commit_under_test": "10d412e6574ab0a3f2bf53734eaa38eda84fe628",
+  "method": "Four raw logs from the project solo runner. The landed-stage full producer refused its stamp after import generated an untracked footings.gd.uid. This file is a raw test summary.",
+  "stations": 43,
+  "unlisted_keys": 0,
+  "ruled_trade_observations": 78,
+  "dam_box_named": true,
+  "camp_box_named": true,
+  "verdicts": {
+    "ride": "prim_census_test: FAIL (1 of 11 checks)",
+    "dam": "prim_census_test: FAIL (1 of 11 checks)",
+    "stations": "prim_census_test: PASS (71 checks)",
+    "camp": "prim_census_test: FAIL (1 of 71 checks)"
+  },
+  "ride": {
+    "new": [],
+    "pinned": 129,
+    "plant": "",
+    "stale": [],
+    "stand_ins": [
+      {
+        "file": "build_read.gd",
+        "mesh": "SphereMesh",
+        "path": "@Node3D@2/PauseMenu/@Control@1201/BuildRead/@VBoxContainer@1213/@SubViewportContainer@1214/@SubViewport@1215/@Node3D@1218/@MeshInstance3D@1219",
+        "row": "W1-46",
+        "shape": "SubViewport/Node3D/MeshInstance3D",
+        "stage": 1
+      },
+      {
+        "file": "stakes.gd",
+        "mesh": "CylinderMesh",
+        "path": "@Node3D@2/SableStakes/Stake1/@MeshInstance3D@4607",
+        "row": "W1-23",
+        "shape": "SableStakes/Stake/MeshInstance3D",
+        "stage": 1
+      },
+      {
+        "file": "stakes.gd",
+        "mesh": "TorusMesh",
+        "path": "@Node3D@2/SableStakes/Stake1/@MeshInstance3D@4608",
+        "row": "W1-23",
+        "shape": "SableStakes/Stake/MeshInstance3D",
+        "stage": 1
+      }
+    ],
+    "surfaces": 128
+  },
+  "ride_keys_equal_base": true,
+  "unlisted_observations": []
+}

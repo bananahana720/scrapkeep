@@ -1,0 +1,8 @@
+ride: prim_census_test: FAIL (1 of 11 checks)
+[the census saw at least the pinned surfaces] 128, pinned 129 -> FAIL
+dam: prim_census_test: FAIL (1 of 11 checks)
+[no primitive surface outside the pin] 1 new: activities.gd|BoxMesh|Activities/Activity_enemy_camp/PlantedStandIn (tick 30, stage 1, @Node3D@2/Activities/Activity_enemy_camp/PlantedStandIn) -> FAIL
+stations: prim_census_test: PASS (71 checks)
+
+camp: prim_census_test: FAIL (1 of 71 checks)
+[camp has no planted box] [{ "area": "camp", "file": "camp_hub.gd", "mesh": "BoxMesh", "shape": "CampHub/CampRoot/PlantedCampBox", "path": "@Node3D@2/CampHub/CampRoot/PlantedCampBox", "row": "W1-143b", "why": "" }] -> FAIL

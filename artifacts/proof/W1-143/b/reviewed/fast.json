@@ -1,0 +1,982 @@
+{
+  "schema": "scrapkeep-fast-receipt/1",
+  "label": "fast",
+  "head": "10d412e6574ab0a3f2bf53734eaa38eda84fe628",
+  "base": "origin/stage/alpha-w44",
+  "merge_base": "49d7d53e2d52d315d62d114304bacee2b2c74f48",
+  "started_at": "2026-11-18T19:46:31.515Z",
+  "stages": [
+    {
+      "name": "tree hygiene",
+      "ok": true,
+      "ms": 48,
+      "note": "no symlink, root file or new top-level folder",
+      "findings": []
+    },
+    {
+      "name": "sketch-lint",
+      "ok": true,
+      "ms": 1809,
+      "note": "sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1 W1=0 W2=0 W4=0 W6=27 W7=1 S8=0, 1095ms"
+    },
+    {
+      "name": "placeholders no higher than base",
+      "ok": true,
+      "ms": 4381,
+      "note": "no group grew",
+      "grew": []
+    },
+    {
+      "name": "quarantine",
+      "ok": true,
+      "ms": 4381,
+      "note": "0 rows, none expired"
+    },
+    {
+      "name": "import",
+      "ok": true,
+      "ms": 483783,
+      "note": "ok exit=0"
+    },
+    {
+      "name": "boot",
+      "ok": true,
+      "ms": 490115,
+      "note": "300 frames"
+    },
+    {
+      "name": "tests",
+      "ok": true,
+      "ms": 900948,
+      "note": "60 run, 0 flaky, 0 base-red"
+    }
+  ],
+  "ok": true,
+  "diff_base": "49d7d53e2d52d315d62d114304bacee2b2c74f48",
+  "pre": [],
+  "changed": 6,
+  "checks_removed": [],
+  "deep_sweep": {
+    "D1": 0,
+    "D2": 0,
+    "D3": 0,
+    "D4": 0,
+    "D5": 0
+  },
+  "selection": {
+    "hubs": [],
+    "unmapped": [],
+    "tests": {
+      "tests/colour_meanings_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/new_world_cost_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/unit_suite_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/site_markers_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/site_markers.gd"
+      },
+      "tests/burden_sweep_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/presentation.gd, which names src/presentation/site_markers.gd"
+      },
+      "tests/discovery_part_card_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/presentation.gd, which names src/presentation/site_markers.gd"
+      },
+      "tests/pack_pressure_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/presentation.gd, which names src/presentation/site_markers.gd"
+      },
+      "tests/presentation_ceremony_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/presentation.gd, which names src/presentation/site_markers.gd"
+      },
+      "tests/cannon_look_test.gd": {
+        "tier": 1,
+        "why": "names src/ui/class_preview.gd"
+      },
+      "tests/class_preview_pilot_test.gd": {
+        "tier": 1,
+        "why": "names src/ui/class_preview.gd"
+      },
+      "tests/cosmetic_apply_test.gd": {
+        "tier": 1,
+        "why": "names src/ui/class_preview.gd"
+      },
+      "tests/hero_assets_missing_glb_test.gd": {
+        "tier": 1,
+        "why": "names src/ui/class_preview.gd"
+      },
+      "tests/pilot_antics_test.gd": {
+        "tier": 1,
+        "why": "names src/ui/class_preview.gd"
+      },
+      "tests/pilot_clips_kest_test.gd": {
+        "tier": 1,
+        "why": "names src/ui/class_preview.gd"
+      },
+      "tests/pilot_clips_rivet_test.gd": {
+        "tier": 1,
+        "why": "names src/ui/class_preview.gd"
+      },
+      "tests/pilot_clips_tally_test.gd": {
+        "tier": 1,
+        "why": "names src/ui/class_preview.gd"
+      },
+      "tests/shell_layers_test.gd": {
+        "tier": 1,
+        "why": "names src/ui/class_preview.gd"
+      },
+      "tests/tally_look_test.gd": {
+        "tier": 1,
+        "why": "names src/ui/class_preview.gd"
+      },
+      "tests/ui_class_card_test.gd": {
+        "tier": 1,
+        "why": "names src/ui/class_preview.gd"
+      },
+      "tests/world_grade_test.gd": {
+        "tier": 1,
+        "why": "names src/ui/class_preview.gd"
+      },
+      "tests/class_portraits_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/class_card.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/dig_rescue_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/class_card.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/isles_rescue_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/class_card.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/pilot_locks_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/class_card.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/pilot_pick_words_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/class_card.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/roster_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/class_card.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/ui_camp_menu_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/class_card.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/ui_locked_card_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/class_card.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/customization_presentation_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/customize_page.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/customization_system_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/customize_page.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/customize_slots_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/customize_page.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/first_win_secrets_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/customize_page.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/page_structure_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/customize_page.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/ui_customize_page_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/customize_page.gd, which names src/ui/class_preview.gd"
+      },
+      "tests/camp_hub_test.gd": {
+        "tier": 1,
+        "why": "names src/world/camp_hub.gd"
+      },
+      "tests/invisible_walls_test.gd": {
+        "tier": 1,
+        "why": "names src/world/camp_hub.gd"
+      },
+      "tests/bay_map_limit_test.gd": {
+        "tier": 2,
+        "why": "names src/world/world.gd, which names src/world/flood.gd"
+      },
+      "tests/cableway_hanger_test.gd": {
+        "tier": 2,
+        "why": "names src/world/world.gd, which names src/world/flood.gd"
+      },
+      "tests/fua_rescue_identifier_test.gd": {
+        "tier": 2,
+        "why": "names src/world/world.gd, which names src/world/flood.gd"
+      },
+      "tests/park_place_test.gd": {
+        "tier": 2,
+        "why": "names src/world/world.gd, which names src/world/flood.gd"
+      },
+      "tests/park_prepare_test.gd": {
+        "tier": 2,
+        "why": "names src/world/world.gd, which names src/world/flood.gd"
+      },
+      "tests/sluice_surge_test.gd": {
+        "tier": 1,
+        "why": "names src/world/surge_course.gd"
+      },
+      "tests/surge_course_park_test.gd": {
+        "tier": 1,
+        "why": "named after src/world/surge_course.gd"
+      },
+      "tests/activities_pay_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/activities_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/activity_signpost_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/blazing_cache_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/codex_coverage_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/entry_spread_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/flume_side_spots_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/park_cache_faces_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/park_map_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/park_schema_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/pocket_draw_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/pocket_kinds_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/pocket_library_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/reach_secret_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/relay_park_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/rib_cache_spots_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/run_resume_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/side_content_roster_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/site_variants_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/spillway_finds_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/stocktake_yard_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/timed_door_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/visible_odds_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/world/surge_course.gd"
+      },
+      "tests/prim_census_test.gd": {
+        "tier": 2,
+        "why": "names tools/prim_census.gd, which names tools/prim_census_pin.tsv"
+      },
+      "tests/presentation_random_lint_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/launch_table_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/ace_tracks_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      }
+    },
+    "deferred_to_full_gate": [
+      "tests/blazing_cache_test.gd",
+      "tests/flume_side_spots_test.gd",
+      "tests/page_structure_test.gd",
+      "tests/pilot_pick_words_test.gd",
+      "tests/site_variants_test.gd",
+      "tests/stocktake_yard_test.gd",
+      "tests/visible_odds_test.gd",
+      "tests/launch_table_test.gd",
+      "tests/ace_tracks_test.gd"
+    ],
+    "bot_shards": [
+      "tests/prim_census_test.gd"
+    ],
+    "shard_reasons": {},
+    "estimate_ms": 897150
+  },
+  "failed_runs": [],
+  "batch": {
+    "on": true,
+    "batches": 5,
+    "tests": 26,
+    "reruns": []
+  },
+  "results": [
+    {
+      "test": "tests/new_world_cost_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 763,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/colour_meanings_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1259,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_random_lint_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 235,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/customize_slots_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 543,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/shell_layers_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 239,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_schema_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 586,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/sluice_surge_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 158,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_map_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 88,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/class_preview_pilot_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 192,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/class_portraits_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 193,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/entry_spread_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1157,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/customization_system_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 528,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/tally_look_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1697,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bay_map_limit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1301,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/cableway_hanger_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 294,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/rib_cache_spots_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1549,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/cannon_look_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 645,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/discovery_part_card_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 458,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/burden_sweep_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 236,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/fua_rescue_identifier_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1203,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_place_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2589,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/codex_coverage_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 3116,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pilot_clips_rivet_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2364,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pilot_locks_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1969,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/hero_assets_missing_glb_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1496,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pilot_antics_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2643,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/side_content_roster_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 5138,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/cosmetic_apply_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1905,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pilot_clips_kest_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1731,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/customization_presentation_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 6146,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pilot_clips_tally_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 6205,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/activities_pay_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 6434,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ui_locked_card_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 10333,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/timed_door_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 9074,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/reach_secret_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7073,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ui_customize_page_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 6308,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ui_camp_menu_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7757,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/site_markers_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 13073,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_prepare_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 10008,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/activity_signpost_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 6284,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/camp_hub_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 10668,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/world_grade_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 5299,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_ceremony_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 32261,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ui_class_card_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 11569,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/spillway_finds_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 10547,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/dig_rescue_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 11930,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pocket_library_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 12446,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/roster_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 21155,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/invisible_walls_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 15750,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/isles_rescue_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 16908,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/run_resume_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 14943,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pocket_kinds_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 25718,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_cache_faces_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 19462,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/first_win_secrets_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 38276,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/unit_suite_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 16793,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pack_pressure_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 3354,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/surge_course_park_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 34181,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/relay_park_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 38844,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pocket_draw_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 35568,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/activities_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 79293,
+      "reason": null,
+      "quarantined": false
+    }
+  ],
+  "quarantined": [],
+  "flaky": [],
+  "ledger_flaky": [],
+  "base_red": [],
+  "wall_ms": 900948
+}
