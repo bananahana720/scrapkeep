@@ -270,6 +270,12 @@ func _initialize() -> void:
 	_settings = _parse(OS.get_cmdline_user_args())
 	_bot_options = BotOptions.new(_settings, self)
 	_cap = float(_settings.get("cap", "40"))
+	if _settings.has("pass-job"):
+		_run_pass.call_deferred()
+		return
+	if _settings.has("pass") and not _settings.has("bosses"):
+		_begin_pass_table()
+		return
 	if _settings.has("kind"):
 		_begin_child()
 		return
@@ -843,7 +849,7 @@ func _process(_delta: float) -> bool:
 	if not _parent or _done:
 		return false
 	for run in _running.duplicate():
-		if not OS.is_process_running(run["pid"]):
+		if int(run["pid"]) <= 0 or not OS.is_process_running(run["pid"]):
 			_reap(run, false)
 		elif float(Time.get_ticks_msec() - int(run["started"])) / 1000.0 > WALL_LIMIT_S:
 			OS.kill(run["pid"])
@@ -851,7 +857,7 @@ func _process(_delta: float) -> bool:
 	while _running.size() < _procs and not _queue.is_empty():
 		_spawn(_queue.pop_front())
 	if _running.is_empty() and _queue.is_empty():
-		if _phase == 1 and _begin_answer_phase():
+		if not _settings.has("pass") and _phase == 1 and _begin_answer_phase():
 			return false
 		_done = true
 		_finish()
@@ -867,6 +873,11 @@ static func child_args(job: Dictionary, cap: float, settings: Dictionary, table_
 	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", project_path,
 			"--script", "res://tools/matchup_lab.gd", "--", "--pilot=" + String(job["pilot"]), "--kind=" + String(job["kind"]),
 			"--run-seed=%d" % job["seed"], "--cap=%s" % cap, "--result=" + home.path_join("result.json"), "--home=" + home])
+	if job.has("pass"):
+		args = PackedStringArray(["--log-file", home.path_join("engine.log")]) + args
+		args.append_array(["--pass-job=" + String(job.pass), "--stage=%d" % job.stage,
+			"--speed=%d" % job.speed, "--plant=" + String(job.plant)])
+		return args
 	if String(job["give"]) != "":
 		args.append("--give=" + String(job["give"]))
 	if settings.has("dodge"):
@@ -907,6 +918,9 @@ func _spawn(job: Dictionary) -> void:
 		var key: String = "XDG_%s_HOME" % kind
 		previous[key] = OS.get_environment(key)
 		OS.set_environment(key, home.path_join("state-" + kind.to_lower()))
+	if OS.get_name() == "macOS" and job.has("pass"):
+		previous["HOME"] = OS.get_environment("HOME")
+		OS.set_environment("HOME", home)
 	var pid := OS.create_process(OS.get_executable_path(), args)
 	for key in previous:
 		if previous[key].is_empty():
@@ -929,6 +943,15 @@ func _reap(run: Dictionary, timed_out: bool) -> void:
 	if not result is Dictionary:
 		result = {"pilot": run["pilot"], "kind": run["kind"], "seed": run["seed"], "give": run["give"],
 				"outcome": "wall_timeout" if timed_out else "no_result", "ttk_s": -1.0, "hull_lost": 0.0}
+	if run.has("pass"):
+		var log_file := home.path_join("engine.log")
+		var log_text := FileAccess.get_file_as_string(log_file) if FileAccess.file_exists(log_file) else ""
+		if log_text.is_empty() or "SCRIPT ERROR:" in log_text or run.pid <= 0 or timed_out:
+			result["outcome"] = "no_result"
+			result["diagnostic"] = log_text.substr(maxi(0, log_text.find("SCRIPT ERROR:")), 300)
+		for key in ["n", "stage", "pilot", "pass", "speed", "seed", "plant"]:
+			result[key] = run[key]
+		result["pack"] = run.kind
 	if String(run["kind"]).begins_with(PACK_PREFIX):
 		result["pack"] = String(run["kind"]).substr(PACK_PREFIX.length())
 		result["table"] = _table_id
@@ -979,6 +1002,9 @@ func _row_members(kind: String) -> Array:
 
 
 func _finish() -> void:
+	if _settings.has("pass"):
+		_write_pass_table()
+		return
 	if _pocket_mode:
 		_write_pocket(_results, _pocket_columns)
 		_remove_tree(_sweep_dir)
@@ -1271,7 +1297,7 @@ func _on_node_added(node: Node) -> void:
 
 
 func _physics_process(delta: float) -> bool:
-	if _parent or _done or _game == null or _game.flow == null:
+	if _settings.has("pass-job") or _parent or _done or _game == null or _game.flow == null:
 		return false
 	if _driver == null:
 		_game.ctx.calm = true
@@ -1735,3 +1761,371 @@ func _record() -> void:
 	var file := FileAccess.open(String(_settings["result"]), FileAccess.WRITE)
 	file.store_string(JSON.stringify(row) + "\n")
 	file.close()
+
+
+# The planted crew still sees the ball and can hurt it. Only its prediction input is zero.
+class NoLeadSight extends "res://src/combat/sight.gd":
+	func planar_velocity() -> Vector3:
+		return Vector3.ZERO
+
+
+class PassCounter:
+	var threats := {}
+	var strikes := {}
+	var covered := {}
+
+	func strike(owner: String, key: String, contains_ball: bool) -> void:
+		if not strikes.has(key):
+			strikes[key] = owner
+		if contains_ball and not covered.has(key):
+			covered[key] = true
+			threats[owner] = int(threats.get(owner, 0)) + 1
+
+	func shape(owner: String, key: String, mark, ball: Vector3) -> void:
+		if is_instance_valid(mark) and mark.is_hostile():
+			strike(owner, key, mark.contains(ball))
+
+
+var _pass_counter := PassCounter.new()
+var _pass_members: Array = []
+var _pass_serials := {}
+var _pass_pulses := {}
+var _pass_tick := 0
+var _pass_warnings: Array = []
+var _pass_strike_ticks := {}
+
+
+static func spillway_packs(ids: PackedStringArray) -> Array:
+	var packs := []
+	for stage in ParkDefs.DEFS:
+		if stage.world != 1:
+			continue
+		for pack in stage.packs + [stage.elite]:
+			if "all" in ids or pack.id in ids:
+				packs.append({"stage": stage.stage, "pack": pack.id, "members": pack.kinds,
+					"elite": pack.id == stage.elite.id})
+		if "staged_winch" in ids and stage.stage == 1:
+			packs.append({"stage": 1, "pack": "staged_winch", "members": ParkDefs.ELITE.kinds, "elite": false})
+	return packs
+
+
+func _begin_pass_table() -> void:
+	var ids := String(_settings.get("packs", "all")).split(",")
+	var packs := spillway_packs(ids)
+	var modes := String(_settings.pass).split(",")
+	var speeds := String(_settings.get("speed", "14,28")).split(",")
+	var seeds := String(_settings.get("seeds", "1,2,3,4,5,6,7,8")).split(",")
+	var pilots := String(_settings.get("pilots", "tarn")).split(",")
+	var plant := String(_settings.get("plant", OS.get_environment("PLANT")))
+	_pilots = Array(pilots)
+	if _settings.get("table", "park") != "park" or String(_settings.get("receipt", "")).is_empty() or plant not in ["", "zero_lead"]:
+		printerr("fast pass needs --table=park, --receipt=<file> and optionally --plant=zero_lead")
+		quit(2)
+		return
+	for id in ids:
+		if id != "all" and not packs.any(func(p): return p.pack == id):
+			printerr("unknown Spillway pack: ", id)
+			quit(2)
+			return
+	for mode in modes:
+		if mode not in ["straight", "weave", "stall"]:
+			printerr("unknown pass: ", mode)
+			quit(2)
+			return
+	for speed in speeds:
+		if speed not in ["14", "28"]:
+			printerr("unknown pass speed: ", speed)
+			quit(2)
+			return
+	for s in seeds:
+		if not s.is_valid_int():
+			printerr("invalid seed: ", s)
+			quit(2)
+			return
+	for pilot in pilots:
+		if BotDriver.class_index_for(0, pilot) < 0:
+			printerr("unknown pilot: ", pilot)
+			quit(2)
+			return
+	for pack in packs:
+		for pilot in pilots:
+			for s in seeds:
+				for mode in modes:
+					for speed in speeds:
+						_queue.append({"n": _queue.size(), "kind": pack.pack, "stage": pack.stage,
+							"pilot": pilot, "seed": int(s), "give": "", "pass": mode,
+							"speed": int(speed), "plant": plant})
+						if plant == "" and mode == "straight" and "lobber" in pack.members:
+							var control: Dictionary = _queue.back().duplicate()
+							control.n = _queue.size()
+							control.plant = "zero_lead"
+							_queue.append(control)
+	_total = _queue.size()
+	_procs = clampi(int(_settings.get("procs", "2")), 1, 6)
+	_sweep_dir = OS.get_user_data_dir().path_join("matchup_lab/p%d" % OS.get_process_id())
+	_parent = true
+
+
+# A release receipt must cover the complete matched matrix. Partial sweeps report
+# their individual passes without turning missing seeds, modes or controls into passes.
+static func pass_grade(rows: Array, controls: Array, baseline: Array, pilots: Array) -> Dictionary:
+	var base_weave := {}
+	for row in baseline:
+		if row.get("outcome") == "pass_complete" and row.get("pass") == "weave" and row.get("plant", "") == "":
+			base_weave[_pass_key(row)] = row
+	var indexed := {}
+	var planted := {}
+	for row in rows:
+		if row.get("outcome") == "pass_complete" and row.get("plant", "") == "":
+			indexed[_pass_key(row)] = row
+	for row in controls:
+		if row.get("outcome") == "pass_complete" and row.get("plant") == "zero_lead":
+			planted[_pass_key(row)] = row
+	var expected := 0
+	var matched := 0
+	var zero_lead_expected := 0
+	var zero_lead_ok := 0
+	var straight_misses := 0
+	var weave_misses := 0
+	var stall_misses := 0
+	for pack in spillway_packs(PackedStringArray(["all"])):
+		for pilot in pilots:
+			for s in range(1, 9):
+				for speed in [14, 28]:
+					var query := {"stage": pack.stage, "pack": pack.pack, "pilot": pilot, "seed": s, "speed": speed, "pass": "straight"}
+					var k := _pass_key(query)
+					var straight: Dictionary = indexed.get(k, {})
+					if "lobber" in pack.members:
+						zero_lead_expected += 1
+						if planted.has(k) and planted[k].threats == 0:
+							zero_lead_ok += 1
+					query.pass = "weave"
+					var weave: Dictionary = indexed.get(_pass_key(query), {})
+					var base: Dictionary = base_weave.get(_pass_key(query), {})
+					query.pass = "stall"
+					var stall: Dictionary = indexed.get(_pass_key(query), {})
+					expected += 1
+					if straight.is_empty() or weave.is_empty() or stall.is_empty():
+						continue
+					matched += 1
+					if straight.threats < 1:
+						straight_misses += 1
+					if base.is_empty() or base.site != weave.site or weave.hull_lost > base.hull_lost + 0.00001:
+						weave_misses += 1
+					if stall.hull_per_min <= 0 or stall.hull_per_min + 0.00001 < 2.0 * straight.hull_per_min:
+						stall_misses += 1
+	var caught := zero_lead_expected > 0 and zero_lead_ok == zero_lead_expected
+	return {"plant_caught": caught, "pass": matched == expected and caught and straight_misses + weave_misses + stall_misses == 0,
+		"matched": matched, "expected": expected, "straight_misses": straight_misses, "weave_misses": weave_misses,
+		"stall_misses": stall_misses, "zero_lead_ok": zero_lead_ok, "zero_lead_expected": zero_lead_expected}
+
+
+static func _pass_key(row: Dictionary) -> String:
+	return "%d/%s/%s/%d/%d/%s" % [row.stage, row.pack, row.pilot, row.seed, row.speed, row.pass]
+
+
+func _write_pass_table() -> void:
+	var path := String(_settings.receipt)
+	_results.sort_custom(func(a, b): return a.n < b.n)
+	var valid := _results.size() == _total and _results.all(func(r): return r.get("outcome") == "pass_complete")
+	var output := []
+	var repo := ProjectSettings.globalize_path("res://").path_join("../..")
+	var code := OS.execute("git", ["-C", repo, "rev-parse", "HEAD"], output)
+	var head := String(output[0]).strip_edges() if code == 0 and not output.is_empty() else ""
+	var controls := _results.filter(func(r): return r.get("plant") == "zero_lead")
+	var rows := _results.filter(func(r): return r.get("plant", "") == "")
+	var baseline := []
+	if _settings.has("baseline"):
+		var base = JSON.parse_string(FileAccess.get_file_as_string(String(_settings.baseline)))
+		if not base is Dictionary or base.get("row") != "fast-threat" or not base.get("complete") or not base.get("passes") is Array:
+			printerr("invalid --baseline fast-threat receipt")
+			quit(2)
+			return
+		baseline = base.passes
+	var grade := pass_grade(rows, controls, baseline, _pilots)
+	var report := {"row": "fast-threat", "head": head, "passes": rows, "controls": controls, "grade": grade,
+		"complete": valid, "pass": valid and grade.pass, "plant_caught": valid and grade.plant_caught,
+		"measured": "%d/%d matched pack/speed/seed/pilot triples; misses: straight %d, weave %d, stall %d; zero-lead %d/%d" % [
+			grade.matched, grade.expected, grade.straight_misses, grade.weave_misses, grade.stall_misses,
+			grade.zero_lead_ok, grade.zero_lead_expected]}
+	var error := DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path).get_base_dir())
+	var tmp := path + ".%d.tmp" % OS.get_process_id()
+	var file := FileAccess.open(tmp, FileAccess.WRITE) if error == OK else null
+	if file == null:
+		printerr("cannot write fast-pass receipt ", path)
+		quit(2)
+		return
+	file.store_line(JSON.stringify(report))
+	file.close()
+	if DirAccess.rename_absolute(tmp, path) != OK:
+		printerr("cannot publish fast-pass receipt ", path)
+		quit(2)
+		return
+	print("RECEIPT ", JSON.stringify({"row": report.row, "measured": report.measured, "head": head}))
+	quit(0 if valid else 1)
+
+
+# Before W1-132a stacks, take the matched approach from the stage's authored floor line.
+func _pass_site(stage: int) -> Vector3:
+	var shared := "res://tools/stations/shared_route.json"
+	if stage == 1 and FileAccess.file_exists(shared):
+		var row: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(shared))["west_wash_run"]
+		return Vector3(row.point[0], 0, row.point[2])
+	var map: String = ParkDefs.DEFS[stage - 1].map
+	var lines: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/park/%s/lines.json" % map))
+	# One specific floor waypoint on each stage, by its route neighbours. On the dam the
+	# shared station is Sable's approach in the same file.
+	if stage == 1:
+		var line: Array = lines.pilots.sable.waypoints
+		var p: Array = line[line.find("the_eye") - 3]
+		return Vector3(p[0], 0, p[1])
+	var floor_line: Array = lines.floor.waypoints
+	var p: Array = floor_line[floor_line.find("siphon_camp") + 1]
+	return Vector3(p[0], 0, p[1])
+
+
+func _pass_enemy(enemy, kind: String) -> void:
+	if _settings.get("plant") == "zero_lead":
+		enemy.target = NoLeadSight.new(_game.player, _game.combat, enemy, kind)
+	_pass_members.append(weakref(enemy))
+	var owner_id: int = enemy.get_instance_id()
+	enemy.attack_phase.connect(func(facts: Dictionary):
+		var key := "%d/%d" % [owner_id, facts.instance]
+		if facts.phase == "windup":
+			_pass_warnings.append({"tick": _pass_tick, "kind": kind})
+		if facts.phase != "strike":
+			return
+		_pass_serials[owner_id] = key
+		_pass_strike_ticks[owner_id] = _pass_tick
+		if kind not in ["lobber", "chaser", "jolt_layer", "mag_trapper", "boom_tender"]:
+			_pass_counter.shape(kind, key, enemy.telegraph(), _game.player.ball_position()))
+	if kind == "chaser":
+		# A head reaching the ball inside its committed lane is the chaser's strike.
+		enemy.hit_player.connect(func(_damage, _shove):
+			_pass_counter.strike(kind, str(owner_id) + "/" + str(enemy.lunges), true))
+	if kind == "lobber":
+		enemy.released.connect(func(_ring):
+			for shell in get_nodes_in_group("enemy_shot"):
+				if shell.lobber == enemy and not shell.has_meta("pass_watched"):
+					shell.set_meta("pass_watched", true)
+					var key := "shell/%d" % shell.get_instance_id()
+					shell.exploded.connect(func(at, _radius, hit):
+						if not shell.returned and at.is_equal_approx(shell.landing):
+							_pass_counter.strike(kind, key, hit)))
+
+
+func _pass_fields() -> void:
+	for ref in _pass_members:
+		var enemy = ref.get_ref()
+		if not is_instance_valid(enemy) or enemy.is_dead():
+			continue
+		var id: int = enemy.get_instance_id()
+		if not _pass_serials.has(id):
+			continue
+		var key: String = _pass_serials[id]
+		if enemy.kind == "jolt_layer" and enemy.field != null:
+			# The mat's fill goes live before its first pulse. Only the pulse can jolt.
+			var count: int = enemy.field.outcomes.size()
+			if count > int(_pass_pulses.get(key, 0)):
+				_pass_counter.strike(enemy.kind, "%s/pulse/%d" % [key, enemy.field.pulses], true)
+			_pass_pulses[key] = count
+		elif enemy.kind in ["mag_trapper", "boom_tender"] and enemy.phase == enemy.Phase.LIVE:
+			var mark = enemy.telegraph()
+			if enemy.kind != "boom_tender" or (_pass_tick - int(_pass_strike_ticks[id])) <= enemy.SWEEP * Engine.physics_ticks_per_second:
+				_pass_counter.shape(enemy.kind, key, mark, _game.player.ball_position())
+
+
+func _run_pass() -> void:
+	var stage := int(_settings.stage)
+	var id := String(_settings.kind)
+	var entries := spillway_packs(PackedStringArray([id]))
+	var entry: Dictionary = {}
+	for item in entries:
+		if item.stage == stage:
+			entry = item
+	if entry.is_empty():
+		quit(2)
+		return
+	var pilot := String(_settings.pilot)
+	var s := int(_settings["run-seed"])
+	var mode := String(_settings["pass-job"])
+	var speed := int(_settings.speed)
+	seed(s)
+	_game = Game.new()
+	_game.test_mode = true
+	_game.table = "park"
+	root.add_child(_game)
+	while _game.flow == null:
+		await physics_frame
+	_game.ctx.calm = true
+	_game.codex.storage_dir = _settings.home
+	_game.run_log.storage_dir = _settings.home
+	_game.run.run_seed_override = s
+	_game.flow.beacon_seconds_override = BEACON_PIN_S
+	_game.ctx.rng.seed = s
+	_game.player.source = preload("res://src/movement/intent.gd").Scripted.new()
+	_game.flow.press_start()
+	_game.flow.choose_class(BotDriver.class_index_for(0, pilot))
+	if stage != 1:
+		_game.flow.enter_stage(stage, Vector3.ZERO, false)
+	_game.presentation.juice.hit_stop_sink = func(_seconds): pass
+	for i in 10:
+		await physics_frame
+	for enemy in get_nodes_in_group("enemy"):
+		if not enemy.is_in_group("harpoon_anchor"):
+			enemy.queue_free()
+	await physics_frame
+	var site := _pass_site(stage)
+	var point := site - Vector3.BACK * 25.0
+	var heading := Vector3.BACK
+	var terrain = _game.ctx.terrain
+	var velocity := heading * (0 if mode == "stall" else speed)
+	_game.player.reset_to(terrain.drop_point(point.x, point.z, 1.0), velocity)
+	_game.camera.snap(heading)
+	_game.events.enemy_spawned.connect(_pass_enemy)
+	var spawned := 0
+	for i in entry.members.size():
+		var offset := Director.PACK_SPREAD * (float(i) - float(entry.members.size() - 1) / 2.0)
+		var enemy = _game.combat.spawn_enemy(entry.members[i], terrain.drop_point(site.x + offset, site.z, 1.8))
+		if enemy != null:
+			spawned += 1
+			enemy.set_meta("pack_seq", 1)
+			if entry.elite:
+				enemy.set_meta("elite_pack", true)
+	var hull_start := float(_game.run.metrics.hull_damage)
+	var dt := 1.0 / Engine.physics_ticks_per_second
+	# Drive an identical, terrain-following path even when a hold or a ram would push the
+	# pilot aside. The game's actual player, target sight, hit geometry and damage stay live.
+	var by_source := {}
+	var damage_total := [hull_start]
+	_game.events.player_hit.connect(func(_amount: float, source: String):
+		var total := float(_game.run.metrics.hull_damage)
+		by_source[source] = float(by_source.get(source, 0)) + total - float(damage_total[0])
+		damage_total[0] = total)
+	var ticks := 7 * Engine.physics_ticks_per_second
+	var elapsed := 0
+	for i in ticks:
+		_pass_tick = i
+		if mode == "weave":
+			velocity = heading.rotated(Vector3.UP, 0.65 * sin(TAU * i * dt / 1.8)) * speed
+		_game.player.body().teleport(terrain.drop_point(point.x, point.z, 1.0), velocity)
+		await physics_frame
+		_pass_fields()
+		elapsed += 1
+		point += velocity * dt
+		if _game.run.hp <= 0.0:
+			break
+	var lost := float(_game.run.metrics.hull_damage) - hull_start
+	var row := {"pilot": pilot, "pack": id, "stage": stage, "seed": s, "pass": mode, "speed": speed,
+		"members": entry.members, "spawned": spawned, "plant": _settings.get("plant", ""),
+		"warnings": _pass_warnings, "threats_by_kind": _pass_counter.threats, "threats": _pass_counter.covered.size(),
+		"site": [site.x, site.z], "seconds": elapsed * dt, "died": _game.run.hp <= 0.0,
+		"hull_lost": lost, "hull_by_source": by_source, "hull_per_min": lost * 60 / (elapsed * dt),
+		"outcome": "pass_complete" if spawned == entry.members.size() and _game.run.stage == stage else "no_result"}
+	var file := FileAccess.open(String(_settings.result), FileAccess.WRITE)
+	if file != null:
+		file.store_line(JSON.stringify(row))
+		file.close()
+	_game.free()
+	_game = null
+	quit(0 if file != null else 2)

@@ -320,6 +320,20 @@ func _damage_control() -> void:
 # Both stages ship grounded. A result for the dam must never stand in for the flume.
 # Invoke the producer as the done read does, without the old duel table's --out.
 func _fast_pass_receipt() -> void:
+	var mark := Lab.TelegraphScript.new()
+	mark.radius = 1.0
+	var counter := Lab.PassCounter.new()
+	for x in [0.0, 3.0]:
+		var owner := "on" if x == 0.0 else "off"
+		mark.center = Vector3(x, 0.0, 14.0)
+		for tick in range(91):
+			if tick == 90:
+				var ball := Vector3(0.0, 1.0, 14.0 * tick / 90.0)
+				counter.shape(owner, owner, mark, ball)
+				counter.shape(owner, owner, mark, ball)
+	_check("a committed strike on the line counts once and a strike 3 m aside misses",
+		counter.threats == {"on": 1} and counter.strikes.size() == 2)
+	mark.free()
 	var receipt := OS.get_user_data_dir().path_join("fast-threat-%d-%d.json" % [OS.get_process_id(), Time.get_ticks_usec()])
 	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
 		"--script", "res://tools/matchup_lab.gd", "--", "--packs=grounded", "--table=park",

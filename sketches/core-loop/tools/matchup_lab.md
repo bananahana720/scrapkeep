@@ -42,6 +42,24 @@ The lab spawns one enemy 18 m ahead of the ball and the bot fights it until the 
 
 Kinds are `Director.KIND_NAMES` that the roster has built, minus `linker` (it guards a partner, so there is nothing to duel alone) and `foreman` (it never attacks; its row is its crew). Both are measured by `priority_proof.gd`. Bosses and wardens are not in `KIND_NAMES`. Every other named kind spawned and died alone in a probe run (27 kinds).
 
+## Spillway passes at speed (W1-133a)
+
+Run the lab headlessly in an imported worktree with a scratch home. This arm writes one JSON receipt. It does not need the duel table's `--out`.
+
+```sh
+"$GODOT_BIN" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/matchup_lab.gd -- \
+  --packs=all --table=park --pass=straight,weave,stall --speed=14,28 \
+  --seeds=1,2,3,4,5,6,7,8 --pilots=tarn --receipt=<absolute-path>/fast-threat.json
+```
+
+The dam has five ordinary packs and the flume six. Each has the Spillway elite. The stage remains part of the key when both ship the same pack. Eight seeds and two speeds yield 16 straight passes for each of those 13 stage/pack combinations, with matching weave and stall runs. `--pilots` takes the existing lab pilot IDs and defaults to Tarn for round zero. Request `--packs=staged_winch` separately to measure the fallback brute and winch drone on the dam. The fixture and narrower pack/seed selections use the same producer.
+
+The crew spawns across a route point with the director's spacing and pack identity. The rider starts 25 m short. Each pass lasts seven simulation seconds or until death. The lab drives the real player body along the ground at the selected speed on a fixed north–south approach (toward increasing world Z). Weave steers through ±0.65 radians over 1.8 seconds. Stall holds the starting point for the matched duration. The trace measures committed geometry and hull damage on controlled paths. It cannot qualify a natural ram, speed after knockback or human feel. On the dam the site comes from `west_wash_run` in the shared route file once available, and from Sable's corresponding waypoint beforehand. On the flume it is the floor route's first point after the siphon camp.
+
+Each pass reports its site, stage, pack, member count, pilot, seed, mode, speed, elapsed time, attacker warnings, threats by kind, hull loss by source and hull loss per minute. A shell counts at impact, a chaser at lunge contact, a jolt mat at its pulse. A committed attack counts at most once even when the ball is in its live area for several ticks. The control for a lobber pack repeats every straight run with the crew's sight reporting zero velocity. The physical rider still moves. To run only the planted cases, use `--pass=straight --plant=zero_lead`.
+
+A completed run writes its individual passes even when the enemies miss. A partial matrix or a missing baseline cannot pass the promise. For a later gameplay round, pass `--baseline=<round-zero receipt>` to compare weaving hull on the same stage, site, pack, seed, speed and pilot. A stall with zero hull loss cannot establish the pressure floor. Keep the first baseline with its command and head for every later round. The W1-131a lane and W1-132 shared tools supply the separate drawn comparisons.
+
 ## Pack duels
 
 A pack duel puts one named authored pack in front of the pilot instead of one kind, so a counter pack (a plated rig over a catch cup, three chasers and a lobber) can show up as a hard cell that no single-kind row reveals. The pack table is each stage's `packs` plus its `elite` from `ParkDefs.DEFS` (or `AlphaDefs.DEFS` with `--table=alpha`). `--table` only picks which pack list; pack duels play the same calm legacy map as kind duels. The parent hands each child `--pack-table=<id>`, never `--table=`, because `Game._chosen_table()` reads `--table=` from the command line and would move the duel onto a park or alpha stage map. `--packs=all` is every distinct id in first-seen stage order (a stage's packs, then its elite). Duplicate ids collapse; if one id carried different kinds in different stages the first stage's kinds are used. `pack_kinds(table, id)` and `pack_ids(table)` are the pure lookups.
