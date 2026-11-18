@@ -775,6 +775,9 @@ static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 		var head := clampf(1.0 - closing / tuning.f("reel_speed"), 0.0, 1.0)
 		if dist > MIN_ROPE:
 			v += dir * tuning.f("reel_force") * head * step
+	if not kit.winching:
+		body_state.linear_velocity = _swing_velocity(to_anchor, v, kit.rope, step)
+		return
 	if dist > kit.rope:
 		# A rope does not stretch: cancelling only the outward component leaves the
 		# tangential speed alone, which is what turns a fall into a pendulum.
@@ -783,6 +786,22 @@ static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 			v += dir * outward
 		v += dir * (dist - kit.rope) * tuning.f("rope_spring")
 	body_state.linear_velocity = v
+
+# A slack line is free flight. When the next step would carry the rider past
+# the end, turn the moving ball along the circle without a radial spring kick.
+static func _swing_velocity(to_anchor: Vector3, v: Vector3, rope: float, step: float) -> Vector3:
+	var offset := -to_anchor
+	var travel := v * step
+	var next := offset + travel
+	if next.length() <= rope or next.length() <= offset.length():
+		return v
+	var radial := offset.normalized()
+	var tangent := v.slide(radial)
+	if tangent.length_squared() < 0.0001:
+		return v - radial * maxf(0.0, v.dot(radial))
+	var turn := travel.length() / maxf(rope, offset.length())
+	var direction := tangent.normalized() * cos(turn * 0.5) - radial * sin(turn * 0.5)
+	return direction * v.length()
 
 
 # A Warden is a harpoon anchor (PARK.md section 7): its line is a world line whose anchor
