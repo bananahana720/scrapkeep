@@ -1,0 +1,10 @@
+{
+  "landed": true,
+  "peak": {
+    "fin_bones": [],
+    "phase": "flight",
+    "piece": "foundry_cutter",
+    "reaction": "ult_strike"
+  },
+  "press": ""
+}

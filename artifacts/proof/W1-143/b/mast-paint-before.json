@@ -1,0 +1,9 @@
+{
+  "empty_basin_clears_geometry": true,
+  "hidden_before_configure": true,
+  "lamp_at_warning_height": true,
+  "mast_at_foot": true,
+  "mast_uses_authored_vertex_paint": false,
+  "model_in_configured_basin": true,
+  "water_matches_simulation": true
+}
