@@ -240,7 +240,7 @@
   {"id": "mesa_entry_kicker", "element": "kicker", "landform": "mesa_rim", "society": "dam_era", "at": [-470, -495], "y": 109.0, "size": [24, 3, 20], "yaw_deg": 0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "plate_kicker_24x3x20", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": "", "fit": "seat"},
   {"id": "tally_field_kicker", "element": "kicker", "landform": "dry_wash", "society": "dam_era", "at": [-195, 80], "y": 36.0, "size": [24, 4, 18], "yaw_deg": 35, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "plate_kicker_24x4x18", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": "", "fit": "seat"},
   {"id": "rim_flow_drop", "element": "drop", "landform": "mesa_rim", "society": "dam_era", "at": [-85, -130], "y": 20, "size": [438, 24, 36], "yaw_deg": 63, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "rim_road", "stamp": "", "hole": false, "budget": "landform", "routes": ["rim_mid"], "fragment": ""},
-  {"id": "flume_entry_kicker", "element": "kicker", "landform": "flume", "society": "dam_era", "at": [40, 255], "y": null, "size": [18, 4, 10], "yaw_deg": 39.1, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "plate_kicker_18x4x10", "stamp": "", "hole": false, "budget": "detail", "routes": ["flume_lower"], "fragment": "", "fit": "seat"},
+  {"id": "flume_entry_kicker", "element": "kicker", "landform": "flume", "society": "dam_era", "at": [40, 255], "y": null, "size": [18, 4, 10], "yaw_deg": 39.1, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "plate_kicker_18x4x10", "stamp": "", "hole": false, "budget": "detail", "routes": ["flume_lower"], "fragment": "", "fit": "seat", "clear_view": {"depth_m": 23, "half_width_m": 8}},
   {"id": "bend_turn_pier", "element": "grind_line", "landform": "mesa_rim", "society": "dam_era", "at": [78, 0], "y": null, "size": [28, 28, 6], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "crib_pier_28x28x6", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "bench_return_pier", "element": "grind_line", "landform": "slickrock", "society": "dam_era", "at": [-53, 480], "y": null, "size": [24, 18, 6], "yaw_deg": 90, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "crib_pier_24x18x6", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "forecourt_surge_mast", "element": "grind_line", "landform": "penstock", "society": "dam_era", "at": [203, 419], "y": null, "size": [12, 48, 4], "yaw_deg": 90, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "surge_pylon_48", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
@@ -299,6 +299,10 @@
   {"id": "bench_bounty", "activity": "hauler_bounty", "site": "south_bench", "at": [-119, 332], "pack": [], "pay": {"rarities": ["common", "rare"]}, "alts": [{"activity": "ambush_altar", "pack": ["chaser", "lobber", "lobber"]}]},
   {"id": "weir_surge", "activity": "surge_run", "site": "weir_mesa", "at": [-427, -563], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2", "route": "flume_upper"},
   {"id": "canal_altar", "activity": "ambush_altar", "site": "main_canal", "at": [-475, -206], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2"}
+ ],
+ "wear_rows": [
+  {"id": "wasteway_return", "points": [[12.0, 222.0], [13.3, 233.0], [16.3, 244.0], [21.0, 255.0], [27.2, 266.0], [35.2, 277.0], [44.8, 288.0], [56.1, 299.0], [69.0, 310.0]], "width_m": 5.6},
+  {"id": "hollow_receiving_bank", "points": [[-168.0, -129.0], [-167.8, -120.0], [-168.4, -111.0], [-169.6, -102.0], [-171.5, -93.0], [-174.1, -84.0], [-177.4, -75.0], [-181.3, -66.0], [-186.0, -57.0]], "width_m": 5.6}
  ],
  "survival_rows": [
   {"id": "fields_muster", "form": "muster", "at": [-242, 65]}
