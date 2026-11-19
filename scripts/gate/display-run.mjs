@@ -6,10 +6,10 @@ import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { watchDrawnRun } from "./window-watch.mjs";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 
-import { acquireSlot } from "../sketch-smoke.mjs";
+import { acquireSlot, holdQuietSync } from "../sketch-smoke.mjs";
 import { root } from "./clean-head.mjs";
 
 export const SKETCH = "sketches/core-loop";
@@ -47,17 +47,24 @@ const killGroup = (child) => {
 
 // Starts a process in its own group and resolves { exit, signal, output, timedOut }. At the timeout, or on SIGINT or
 // SIGTERM to this process while it runs, the whole group is killed. A seam for the tests.
-export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellation }) {
+export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellation, orderedLog }) {
   cancellation?.throwIfAborted();
   return new Promise((resolve) => {
     let output = "";
     let timedOut = false;
     let child;
+    // A teardown diagnostic needs the write order at the child, before stdout and
+    // stderr can be reordered by independent pipe readers in Node.
+    let descriptor;
     try {
-      child = spawn(command, argv, { env, cwd, stdio: ["ignore", "pipe", "pipe"], detached: true });
+      if (orderedLog) descriptor = openSync(orderedLog, "wx");
+      const sink = descriptor ?? "pipe";
+      child = spawn(command, argv, { env, cwd, stdio: ["ignore", sink, sink], detached: true });
     } catch (error) {
       resolve({ exit: null, signal: null, output: String(error.message ?? error), timedOut });
       return;
+    } finally {
+      if (descriptor !== undefined) closeSync(descriptor);
     }
     const cancel = () => killGroup(child);
     let interrupted;
@@ -69,8 +76,8 @@ export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellatio
     cancellation?.addEventListener("abort", cancel, { once: true });
     process.on("SIGINT", onSignal);
     process.on("SIGTERM", onSignal);
-    child.stdout.on("data", (d) => { output += d; });
-    child.stderr.on("data", (d) => { output += d; });
+    child.stdout?.on("data", (d) => { output += d; });
+    child.stderr?.on("data", (d) => { output += d; });
     const timer = setTimeout(() => { timedOut = true; killGroup(child); }, timeoutMs);
     let done = false;
     const finish = (exit, signal) => {
@@ -80,6 +87,7 @@ export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellatio
       process.off("SIGINT", onSignal);
       process.off("SIGTERM", onSignal);
       cancellation?.removeEventListener("abort", cancel);
+      if (orderedLog) output = readFileSync(orderedLog, "utf8") + output;
       resolve({ pid: child.pid, exit: interrupted ?? exit, interrupted, signal, output, timedOut });
     };
     child.on("error", (error) => { output += String(error.message ?? error); finish(null, null); });
@@ -154,6 +162,13 @@ const PROBE = "res://tools/offscreen_probe.gd";
 // Keep the receipt before admitting the registration to the stage. A helper marker alone
 // does not qualify a tool. The probe inherits the dam capture, so pin both scripts.
 const watchedTools = new Map([
+  ["res://tools/handover_capture.gd", {
+    // proof/W1-144 at b66a9a6a4, artifacts/W1-144a/metal-round0/qualification.json
+    "tools/handover_capture.gd": "3dde701eac84667cf3cb6da25798de65893e80a8d852b10b8344d8746444e60c",
+    "tools/offscreen_window.gd": "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d",
+    "tools/self_play.gd": "0b34c8016bee91fe5adacbd778b10e5d0a94776a715978db2ab0286e728a68d2",
+    "tools/frame_probe.gd": "bfd5b3ee4d3d06f60ae753279121b01af456fd8fd3c70aee64027b3af901999e",
+  }],
   [PROBE, {
     // proof/W1-131 at 2c2dfa665, artifacts/proof/W1-131a/capture.json
     "tools/offscreen_probe.gd": "156464df4c44b25ba4f903f6786557bdff94a71b89f033744c0021f5d734819b",
@@ -230,9 +245,13 @@ async function macCapture({ script, args = [], reference = false, cwd = root, en
       // Embedded Godot publishes its layer through EngineDebugger. The local stdout debugger
       // provides that object with no editor, listener or network peer.
       if (!reference) flags.unshift("--embedded");
+      // On the full-scene release control Godot can name its surviving objects and resources.
+      if (script === "res://tools/handover_capture.gd" && args.includes("--w144-quit=game")) flags.push("--verbose");
       const result = await observe(signal => {
         verifyBeforeSpawn();
-        return start(command, [...flags, ...argv], { ...options, signal });
+        const orderedLog = script === "res://tools/handover_capture.gd"
+          ? path.join(options.env.HOME, "handover-engine.log") : undefined;
+        return start(command, [...flags, ...argv], { ...options, signal, orderedLog });
       });
       const w = result.watch;
       const recorded = reference ? w.targetOnScreen > 0 :
@@ -276,7 +295,14 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
         probeFrame = path.join(out, "yard.png");
         if (existsSync(probeFrame)) throw new Error("yard.png already exists; supply a fresh output directory");
       }
-      const result = await runCapture({ script, args, reference: mode === "--gate-reference" });
+      // The handover probe plays two complete 90 Hz rides before it returns.
+      const handover = script === "res://tools/handover_capture.gd";
+      const timeoutMs = handover ? 30 * 60_000 : TIMEOUT_MS;
+      // Use the frame-time runner's machine-wide quiet hold for the two timed rides.
+      // Both the qualification and the shorter dam shutdown controls use the normal slot.
+      const acquire = handover && !args.includes("--w144-qualify")
+        ? () => acquireDrawnSlot({ machine: holdQuietSync }) : acquireDrawnSlot;
+      const result = await runCapture({ script, args, reference: mode === "--gate-reference", timeoutMs, acquire });
       if (result.output) console.log(result.output.trimEnd());
       if (result.watch) console.log("WINDOW_WATCH " + JSON.stringify(result.watch));
       if (probeFrame && result.exit === 0) {
