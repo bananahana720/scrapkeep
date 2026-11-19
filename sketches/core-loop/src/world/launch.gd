@@ -146,18 +146,23 @@ static func rail_velocity(from: Vector3, velocity: Vector3, g: float, turn: floa
 	return turned_flat(flat, turn, t) + Vector3.UP * (velocity.y - g * t)
 
 
-# Where the ball is t seconds into the rail, summed tick by tick as the flight applies it: each physics tick holds
-# the curve's velocity at that tick's end, and the last, part-tick slice holds the velocity at t.
+# Where the real ball is t seconds into the rail, summed tick by tick. The body integrates each tick's move with
+# the velocity it held when the tick began, minus the one tick of gravity the body adds before it moves, and takes
+# the rail's new velocity only after it (measured in launch_ring_real_ball_test). So a slice holds the curve's
+# velocity at its start, and the first slice holds the ball's own horizontal speed with no lift.
 static func path_point(origin: Vector3, from: Vector3, velocity: Vector3, g: float, turn: float, t: float) -> Vector3:
 	var tick := 1.0 / Engine.physics_ticks_per_second
 	var at := origin
 	var done := 0.0
 	while done < t - 0.000001:
 		var slice := minf(tick, t - done)
-		done += slice
 		var v := rail_velocity(from, velocity, g, turn, done)
-		at += Vector3(v.x, 0.0, v.z) * slice
-	return Vector3(at.x, origin.y + velocity.y * t - 0.5 * g * t * t, at.z)
+		if done == 0.0:
+			v.y = 0.0
+		v.y -= g * tick
+		at += v * slice
+		done += slice
+	return at
 
 
 # The velocity the rail holds the ball to this tick, or null once it lets go. The camera turns by the same share.

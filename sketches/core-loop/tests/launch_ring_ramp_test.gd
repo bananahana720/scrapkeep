@@ -5,7 +5,10 @@ const Launch := preload("res://src/world/launch.gd")
 # The guide rings sit where the ball really is at each ring's time. The rail's own flight is stepped at the
 # physics step and the ball's place is read at each ring's time (linearly between the two frames around it);
 # an entry at 5 m/s raised to the floor speed is checked straight and turned, and a launch with no ramp is
-# checked against the plain arc it was drawn on before the ramp was read. The flight holds each tick's velocity for the whole tick, and the rings sum the same way horizontally. The ring's height stays on the exact arc, so the stepped ball sits up to 8 cm off it vertically.
+# checked against the plain arc it was drawn on before the ramp was read. The stepped ball moves each tick with the
+# velocity it held when the tick began, less one tick of gravity, and takes the rail's velocity after the move;
+# launch_ring_real_ball_test measured that on the real body. Its first tick holds the ball's own horizontal speed
+# and no lift.
 
 const FLOOR := 14.0
 const ENTRY := 5.0
@@ -45,6 +48,7 @@ func _ramped(dt: float, heading: Vector3, label: String) -> void:
 	launch.fire(origin, velocity, from)
 	var rings: Array = launch.get_children().filter(func(c): return c is MeshInstance3D and c.mesh is TorusMesh).slice(0, Launch.RINGS)
 	var at := origin
+	var held := Vector3(from.x, 0.0, from.z)
 	var time := 0.0
 	var next := 0
 	var worst := 0.0
@@ -53,7 +57,8 @@ func _ramped(dt: float, heading: Vector3, label: String) -> void:
 		var before := at
 		var v = launch.rail(dt)
 		time += dt
-		at += v * dt
+		at += (held - Vector3.UP * launch.gravity * dt) * dt
+		held = v
 		while next < Launch.RINGS and _ring_time(next) <= time:
 			var ring: MeshInstance3D = rings[next]
 			var here := before.lerp(at, (_ring_time(next) - (time - dt)) / dt)
@@ -73,14 +78,19 @@ func _unramped(dt: float) -> void:
 	var velocity := Launch.launch_velocity(Vector3(0.0, 0.0, -20.0), FLOOR, Vector3.FORWARD)
 	var origin := Vector3(1.0, 4.0, 2.0)
 	var worst := 0.0
+	var low := 0.0
 	var launch := _launch(Vector3.ZERO)
 	launch.fire(origin, velocity, velocity)
 	var rings: Array = launch.get_children().filter(func(c): return c is MeshInstance3D and c.mesh is TorusMesh).slice(0, Launch.RINGS)
 	for i in Launch.RINGS:
-		worst = maxf(worst, rings[i].position.distance_to(Launch.arc_point(origin, velocity, launch.gravity, _ring_time(i))))
-	if worst > SAME:
-		_fail("no ramp, no turn: a ring is %.4f m off the plain arc" % worst)
-	print("no ramp, no turn: largest ring offset from the plain arc %.5f m" % worst)
+		var arc := Launch.arc_point(origin, velocity, launch.gravity, _ring_time(i))
+		var off: Vector3 = rings[i].position - arc
+		worst = maxf(worst, Vector2(off.x, off.z).length())
+		low = maxf(low, -off.y)
+	var lag: float = dt * (velocity.y + launch.gravity * _ring_time(Launch.RINGS - 1)) + 0.02
+	if worst > SAME or low > lag:
+		_fail("no ramp, no turn: a ring is %.4f m off the plain arc along the ground, %.3f m below it (one tick allows %.3f)" % [worst, low, lag])
+	print("no ramp, no turn: largest ring offset from the plain arc %.5f m along the ground, %.3f m below" % [worst, low])
 	launch.queue_free()
 
 
