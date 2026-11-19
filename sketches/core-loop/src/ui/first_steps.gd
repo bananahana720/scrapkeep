@@ -18,7 +18,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 #         DRIVE_LEARNED seconds of steering; a run that gets there is one use. It never shows once
 #         the stage's Warden is engaged, so a fight keeps its word budget (ui_word_budget_test).
 #   slam  while the Warden is staggered: Space Ctrl SLAM over the core on the ground (jump, then
-#         slam), Ctrl SLAM alone in the air. A slam within SLAM_REACH of the open core is one use.
+#         slam), Ctrl SLAM alone in the air; nothing while a line stands, which owns Ctrl. A slam within SLAM_REACH of the open core is one use.
 #   plate no words (ruling cx; gameplay critique finding 7, W1-68). A strike that glances off a
 #         slate rim makes that rim beat (the target's flare_glance()) and stretches three speed
 #         lines in the live colour from the ball, away from the target, longer the further the
@@ -117,7 +117,7 @@ func step(delta: float) -> void:
 			profile.add_use("roll")
 		else:
 			_add("roll", player.shown_position(), BALL_OFFSET, "end", _drive_parts())
-	if core_open() and not retired("slam"):
+	if core_open() and not retired("slam") and not player.line_stands():
 		var parts: Array = [{"key": Glyphs.of("haul")}, {"word": SLAM_WORD}]
 		if player.state.grounded:
 			parts.push_front({"key": Glyphs.of("jump")})
