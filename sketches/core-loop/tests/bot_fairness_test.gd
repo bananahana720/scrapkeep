@@ -137,9 +137,11 @@ func _run() -> void:
 		fair[name] = f if f is Dictionary else {}
 		print("%s: %s" % [name, JSON.stringify(fair[name])])
 	_plain(fair["plain"])
-	var f1: float = _share(fair["plain"])
-	var f2: float = float(fair["plain"].get("stop_tax", 0.0))
-	var f3: float = _first_hit(fair["plain"])
+	var base := BotFairness.baseline(fair["plain"])
+	var f1: float = base["share"]
+	var f2: float = base["stop_tax"]
+	var f3: float = base["first_hit"]
+	_t.check("plain baseline measured a stop tax", base["miss"] == "", "%s" % [base["miss"]])
 	_drain(fair["drain"], f1, f2, f3)
 	_fast_tax(fair["fast_tax"], f1, f2, f3)
 	_ringless(fair["ringless"], f1, f2, f3)
@@ -148,15 +150,11 @@ func _run() -> void:
 
 
 func _share(f: Dictionary) -> float:
-	var v = f.get("telegraph_share")
-	return float(v) if v != null else -1.0
+	return BotFairness.share_of(f)
 
 
 func _first_hit(f: Dictionary) -> float:
-	var seg = f.get("first_hit", {}).get("s1")
-	if seg == null or seg.get("first_hit_s") == null:
-		return -1.0
-	return float(seg["first_hit_s"])
+	return BotFairness.first_hit_of(f)
 
 
 func _plain(f: Dictionary) -> void:
@@ -187,7 +185,10 @@ func _others(name: String, f: Dictionary, f1: float, f2: float, f3: float, skip:
 	if skip != "F1":
 		_t.check("%s leaves F1 within %.2f" % [name, TOL_SHARE], f.get("telegraph_share") != null and absf(_share(f) - f1) <= TOL_SHARE, "planted %s, unplanted %s" % [f.get("telegraph_share"), f1])
 	if skip != "F2":
-		_t.check("%s leaves F2 within %.0f%%" % [name, TOL_TAX * 100.0], f.get("stop_tax") != null and absf(float(f["stop_tax"]) - f2) <= TOL_TAX * f2, "planted %s, unplanted %s" % [f.get("stop_tax"), f2])
+		if f2 < 0.0:
+			_t.check("%s leaves F2 within %.0f%%: not judged, the plain baseline measured no stop tax" % [name, TOL_TAX * 100.0], false, "unplanted %s" % [f2])
+		else:
+			_t.check("%s leaves F2 within %.0f%%" % [name, TOL_TAX * 100.0], f.get("stop_tax") != null and absf(float(f["stop_tax"]) - f2) <= TOL_TAX * f2, "planted %s, unplanted %s" % [f.get("stop_tax"), f2])
 	if skip != "F3":
 		_t.check("%s leaves F3 within %.1f s" % [name, TOL_FIRST_HIT_S], _first_hit(f) >= 0.0 and absf(_first_hit(f) - f3) <= TOL_FIRST_HIT_S, "planted %s, unplanted %s" % [_first_hit(f), f3])
 
@@ -200,7 +201,10 @@ func _drain(f: Dictionary, f1: float, f2: float, f3: float) -> void:
 
 func _fast_tax(f: Dictionary, f1: float, f2: float, f3: float) -> void:
 	_t.check("F2 falls below the line with the fast-ball tax", f.get("stop_tax") != null and float(f["stop_tax"]) < float(_line["stopTax"]), "stop_tax %s" % [f.get("stop_tax")])
-	_t.check("F2 planted reads below unplanted", f.get("stop_tax") != null and float(f["stop_tax"]) < f2, "planted %s, unplanted %s" % [f.get("stop_tax"), f2])
+	if f2 < 0.0:
+		_t.check("F2 planted reads below unplanted: not judged, the plain baseline measured no stop tax", false, "unplanted %s" % [f2])
+	else:
+		_t.check("F2 planted reads below unplanted", f.get("stop_tax") != null and float(f["stop_tax"]) < f2, "planted %s, unplanted %s" % [f.get("stop_tax"), f2])
 	_others("fast_tax", f, f1, f2, f3, "F2")
 
 
