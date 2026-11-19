@@ -21,10 +21,12 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+// cleanHead lives in sound-recipes-receipt.mjs until a shared gate module takes it.
 import { cleanHead } from "./sound-recipes-receipt.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 export const MAPS = ["park_dam", "park_flume"];
+// Each test that prints MAPCHECK lines for the two maps, with the PLANTED lines it prints that carry a verdict.
 export const TESTS = {
   park_landmark_sight_test: 1,
   park_breath_test: 1,
@@ -36,6 +38,8 @@ export const TESTS = {
   site_markers_test: 0,
   park_scrap_lines_test: 0,
 };
+// The ten points of the map standard (ruling ct; project-guide/handoff/shared/world1/map-audit.md section G) and the
+// MAPCHECK measures that check each one.
 export const POINTS = {
   1: ["open_sight_share", "line_sight_share"],
   2: ["line_quiet_share"],
@@ -48,7 +52,9 @@ export const POINTS = {
   9: ["hub_zones_3_bands"],
   10: ["marker_sight", "furnace_sight", "scrap_on_lines"],
 };
+// Gating MAPCHECK lines for park_dam and park_flume on a full run; a lost or added check moves it.
 export const PINNED_LINES = 40;
+// Items ruled to wait. Each names the line that parks it.
 export const WAITING = [
   {
     map: "park_flume",
@@ -59,6 +65,8 @@ export const WAITING = [
     cite: "project-guide/handoff/ROADMAP.md:27 (\"the rebuilt concave flume yard (the bowl test records it as OWED)\"); DECISIONS.md:320, ruling ct",
   },
 ];
+// Halves of a point that no MAPCHECK line checks. Each is a miss unless `parked` cites the ruling or line that parks
+// it; none is parked today. `closes` names the check that would close it.
 export const OPEN_HALVES = [
   { point: 1, half: "1 picture (beam read from fixed chase-camera poses)", closes: "tools/map_sheet_capture.gd sheets read blind against a beam-hidden control" },
   { point: 5, half: "5 picture (safe ground and hostile marks read blind)", closes: "a blind 'where is safe' read of tools/danger_read_capture.gd stills, scored against its HAZARD-striped control" },
@@ -70,6 +78,7 @@ export const OPEN_HALVES = [
 const pointOf = (measure) => Number(Object.keys(POINTS).find((p) => POINTS[p].includes(measure)) ?? 0);
 const waiting = (line) => WAITING.find((w) => w.map === line.map && w.measure === line.measure && w.status === line.status && w.value === line.value);
 
+// The gating MAPCHECK lines of one log: {map, measure, value, line, status, text}.
 export function mapLines(text) {
   return text.split("\n").filter((l) => l.startsWith("MAPCHECK ") && !/\breport INFO\b/.test(l)).map((l) => {
     const words = l.trim().split(/\s+/);
@@ -81,6 +90,8 @@ export function mapLines(text) {
 
 const plantLines = (text) => text.split("\n").filter((l) => l.startsWith("PLANTED ") && /\b(PASS|FAIL)\s*$/.test(l.trim()));
 
+// logs: {"<test>": "<log text>"}.
+// halves is a seam for the node tests; the receipt itself always judges OPEN_HALVES.
 export function buildReceipt(logs, head, { halves = OPEN_HALVES } = {}) {
   const problems = [];
   let plantCaught = true;
@@ -128,6 +139,7 @@ export function buildReceipt(logs, head, { halves = OPEN_HALVES } = {}) {
   return { head, pass, measured, plant_caught: plantCaught };
 }
 
+// Runs every test through the project's runner and returns {"<test>": "<log text>"}.
 export function runTests(cwd) {
   const logs = mkdtempSync(path.join(os.tmpdir(), "map-standard-"));
   const args = [path.join(cwd, "scripts/sketch-smoke.mjs"), "--sketch", "core-loop"];
@@ -141,6 +153,7 @@ export function runTests(cwd) {
   return out;
 }
 
+// The receipt for the checkout at cwd. run is injectable so the refusal can be tested without Godot.
 export function produce({ cwd = root, run = runTests } = {}) {
   const head = cleanHead(cwd);
   return buildReceipt(run(cwd), head);
@@ -150,6 +163,7 @@ function main(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
   if (args.logs) {
+    // A test hook: logs from anywhere judge no commit, so it never writes a passing receipt.
     const logs = {};
     for (const test of Object.keys(TESTS)) {
       const file = path.join(args.logs, `${test}.log`);

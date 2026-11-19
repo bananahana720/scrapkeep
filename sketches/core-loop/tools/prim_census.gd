@@ -143,6 +143,8 @@ static func _mesh_of(geo: GeometryInstance3D) -> Mesh:
 		return (geo as MultiMeshInstance3D).multimesh.mesh
 	return null
 
+# A preview mesh can remain visible inside its viewport after the menu
+# containing that viewport closes. Station scans follow the enclosing UI too.
 static func _visible_in_screen(node: Node) -> bool:
 	var at := node.get_parent()
 	while at != null:

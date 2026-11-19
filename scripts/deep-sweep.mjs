@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = "sketches/core-loop/src/";
+// Tools are read for private reach-ins only: a capture or trial script that drives the game through its
+// underscore members breaks on the next refactor and proves less than it claims.
 const TOOLS = "sketches/core-loop/tools/";
 const WIDE_PARAMS = 6;
 const WIDE_BOOLS = 3;
@@ -85,6 +87,9 @@ export function wideSignatures(funcs) {
     .map((f) => ({ line: f.line, message: `${f.name}() takes ${f.params.length} params (${f.params.filter((p) => p.bool).length} bool)` }));
 }
 
+// The owner may be a chain (game.flow.warden._age), and self.other._member is still a reach into other.
+// super._member is a class calling its own parent, and self._member a file reading its own field, neither a reach.
+// A chain may start at the file's own private field, with or without self (_game.flow._set_state): the reach is into flow.
 const reachIn = /(?<![\w.])(?!super\._)(?:self\.)?(?!self\b)((?:_?[a-z]\w*\.)*_?[a-z]\w*)\.(_[a-z]\w*)\b|\.(?:get|set|call)\(\s*"(_[a-z]\w*)"/;
 
 // D2: code that touches another object's underscore members. Lines are [number, text] pairs.

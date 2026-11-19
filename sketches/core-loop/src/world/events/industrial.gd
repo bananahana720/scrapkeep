@@ -19,6 +19,7 @@ const SHAPES := {
 }
 # Reach above the ground, the same for every shape this family commits.
 const REACH_M := 3.0
+# What a steam cone or a fallout ring takes from each enemy it catches (the silt boil's enemy damage).
 const ENEMY_DAMAGE := 25.0
 
 var world
@@ -87,6 +88,8 @@ func _telegraph(row: Dictionary) -> void:
 	active[row.id] = {"hazard": hazard, "kind": row.kind, "site": site, "at": at, "hit": false, "struck": {}, "swap": "", "overlay_record": {}}
 
 
+# The committed Hazard of each live row as [{id, cause, covers}], cause the one lose_scrap is called with (the row's kind).
+# The bot's fairness record reads this (tools/bot_fairness.gd).
 func telegraphs(ball: Vector3) -> Array:
 	var out: Array = []
 	for id in active:

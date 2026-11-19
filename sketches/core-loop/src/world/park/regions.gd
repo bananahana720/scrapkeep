@@ -1,5 +1,6 @@
 extends RefCounted
 
+# Park coordinates and the Slag Bowl's centre-relative coordinates are both (x, z).
 static var _maps := {}
 
 

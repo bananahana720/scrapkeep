@@ -55,7 +55,11 @@ const BAND_CLEARANCE := 16.0
 const ICON_BACK := 1.9
 const MIN_SIZE := 13.0
 const MAX_SIZE := 30.0
+# The farthest an arrow slides along the edge to clear a sign; past it the arrow stays and is drawn
+# over the sign, since the only pointer to an off-screen gate must not go.
 const ARROW_SLIDE_MAX := 160.0
+# The clear room a slid arrow needs before it moves to a spot or home, so a pixel of camera sway
+# never toggles it (reward_gates.gd NAME_HOLD does the same for a name).
 const ARROW_HOLD := 12.0
 const NEAR := 25.0
 const FAR := 180.0
@@ -108,11 +112,15 @@ var gate_points: Array[Vector3] = []
 # readouts that ride on it. A part behind the ball is still marked (its brackets tell the truth),
 # but its name over the ball read as if the ball were the target (w37 film 081-082, PF-35).
 var keep_clear: Array[Rect2] = []
+# The choice written on each reward arch, in screen space, set by the HUD each frame while the
+# gates stand. The off-screen arrow slides along the edge off them, and never hides for them: a mark
+# outranks a word.
 var sign_rects: Array[Rect2] = []
 # Pocket doors the player has had in view inside POCKET_RANGE (pocket_doors' key to true). A door
 # is discovered once and stays so for the run; an undiscovered door never gets a marker.
 var discovered := {}
 var _shown: Array[Dictionary] = []
+# How far each off-screen arrow stands from its own spot along the edge, by the point it names.
 var _slide := {}
 # Events announced with a place and not started: {event_id: {at, left}}, left in seconds.
 var _incoming := {}
@@ -447,6 +455,7 @@ func markers(size: Vector2) -> Array[Dictionary]:
 		var near := clampf((ball.distance_to(at) - NEAR) / (FAR - NEAR), 0.0, 1.0)
 		var tip := _on_edge(view, centre, dir)
 		var span := lerpf(MAX_SIZE, MIN_SIZE, near)
+		# Both the arrowhead and the glyph behind it slide off the choice written on the arch.
 		var offset := arrow_slide(view, tip, dir, span, sign_rects, float(_slide.get(target["at"], 0.0)))
 		slid_now[target["at"]] = offset
 		tip += _edge_tangent(view, tip) * offset
@@ -456,11 +465,16 @@ func markers(size: Vector2) -> Array[Dictionary]:
 	return out
 
 
+# The unit direction along the edge `tip` stands on: down a side, across the top or bottom.
 static func _edge_tangent(view: Rect2, tip: Vector2) -> Vector2:
 	var on_side := absf(tip.x - view.position.x) < 0.5 or absf(tip.x - view.end.x) < 0.5
 	return Vector2.DOWN if on_side else Vector2.RIGHT
 
 
+# How far along its edge an arrow at `tip` stands from `tip` to stay off every sign, given `held`,
+# where it stood last frame. It stays put while its spot is clear (home returns only with
+# ARROW_HOLD px clear), else takes the nearest spot within ARROW_SLIDE_MAX with ARROW_HOLD px
+# clear, else the nearest merely clear, else stays where it was and is drawn over the sign.
 static func arrow_slide(view: Rect2, tip: Vector2, dir: Vector2, span: float, signs: Array[Rect2], held: float) -> float:
 	if signs.is_empty():
 		return 0.0
@@ -485,6 +499,7 @@ static func arrow_slide(view: Rect2, tip: Vector2, dir: Vector2, span: float, si
 	return held
 
 
+# Viewport bounds of the arrow tip, its two fins and the square objective glyph.
 static func edge_footprint(tip: Vector2, dir: Vector2, span: float) -> Rect2:
 	var icon := tip - dir * span * ICON_BACK
 	var fin := Vector2(-dir.y, dir.x) * span * 0.8

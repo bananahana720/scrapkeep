@@ -1,5 +1,8 @@
 extends SceneTree
 
+# A placed, level 14 m/s entry. Only the release tick changes between takes.
+# The original flume trial held for 75 ticks after its bite. Compare every earlier
+# tick and report horizontal speed at the first grounded tick after letting go.
 const STATIONS := "res://tools/stations/W1-135.json"
 const ENTRY_SPEED := 14.0
 const HOLD_TICKS := 75
@@ -50,6 +53,7 @@ func _run() -> void:
 			return
 		if site.has("mast_angle_deg"):
 			game.flow.enter_boss(Vector3.ZERO)
+			# Isolate the swing from Brindle's ordnance while leaving the real bowl in physics.
 			game.ctx.boss.set_physics_process(false)
 		game.run.set_max_hp(99999.0)
 		rows.append(await measure(id, site, OS.get_environment("PLANT") == "no_bite" and id == "flume_hollow_trestles"))
@@ -75,6 +79,7 @@ func measure(id: String, site: Dictionary, no_bite: bool) -> Dictionary:
 		row.status = "invalid setup"
 		return row
 	if no_bite:
+		# Move the approach beyond rope range. The ordinary aim and fire decide the result.
 		var away: Vector3 = (pose.entry - pose.target).normalized() * (game.player.grapple_range() + 5.0)
 		pose.entry += away
 		pose.eye += away
@@ -104,6 +109,8 @@ func measure(id: String, site: Dictionary, no_bite: bool) -> Dictionary:
 			worst_energy_trial = early
 		if best.is_empty() or early.landing_mps > best.landing_mps:
 			best = early
+	# A moving stage or leftover contact must not choose the winner. Repeat
+	# both entries after traversing the whole schedule, in reverse order.
 	var repeat_early := await _take(pose, int(best.release_tick))
 	var repeat_held := await _take(pose, HOLD_TICKS)
 	for repeat in [repeat_held, repeat_early]:
@@ -124,6 +131,8 @@ func measure(id: String, site: Dictionary, no_bite: bool) -> Dictionary:
 	return row
 
 
+# A negative residual is within the gravity bound. Only excess can spend the
+# stock allowance for this site and this release tick.
 func _record_excess(trial: Dictionary, by_tick: Dictionary) -> void:
 	if trial.exit_energy_residual > 0.0:
 		var tick := str(trial.release_tick)
@@ -172,6 +181,8 @@ func _station(site: Dictionary) -> Dictionary:
 		"ridge": ridge, "tiers": site.get("tiers", []), "bowl": site.has("mast_angle_deg")}
 
 
+# Both event callbacks run inside the player physics tick. Its movement state
+# includes any velocity set on release before the rigid body integrates again.
 func _motion() -> Dictionary:
 	return {"speed": game.player.state.velocity.length(), "y": game.player.ball_position().y}
 
@@ -198,6 +209,8 @@ func _take(pose: Dictionary, release_tick: int) -> Dictionary:
 	var normal: Vector3 = player.kit.anchor_normal
 	var query := PhysicsRayQueryParameters3D.create(point + normal * 0.1, point - normal * 0.15, 1)
 	var hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(query)
+	# The bowl shares a single body between floor, ramps and masts. The face must
+	# also be at the requested mast, and the flume must bite the recorded timber.
 	var intended := false
 	if not hit.is_empty():
 		intended = hit.collider == pose.expected or pose.expected.is_ancestor_of(hit.collider)
@@ -242,6 +255,8 @@ func _take(pose: Dictionary, release_tick: int) -> Dictionary:
 	return result
 
 
+# Physics contact order can change at a seam. Take every tier the ball touched
+# on its first walkable tick and select a stable surface for the printed detail.
 func _landing(pose: Dictionary, state: PhysicsDirectBodyState3D) -> Dictionary:
 	var tiers := []
 	var landing := {}
@@ -267,6 +282,8 @@ func _landing(pose: Dictionary, state: PhysicsDirectBodyState3D) -> Dictionary:
 	return landing
 
 
+# Only a named ledge/deck with a walkable contact counts. In the bowl the
+# deck and floor share one body, so check the raised end of the actual ramp.
 func _tier(pose: Dictionary, surface: Node3D, at: Vector3) -> String:
 	if pose.bowl:
 		var arena = game.ctx.boss.arena
@@ -283,6 +300,8 @@ func _tier(pose: Dictionary, surface: Node3D, at: Vector3) -> String:
 			var ledge := game.find_child("Park_" + String(id), true, false) as Node3D
 			if ledge != null and (ledge == surface or ledge.is_ancestor_of(surface)):
 				return id
+			# A draped ledge has no separate body. The terrain under this
+			# authored plateau rises by the stamp's height within its footprint.
 			if surface.name.begins_with("Tile"):
 				for feature in game.ctx.terrain.map().park.park_rows:
 					if feature.id == id and feature.get("fit") == "drape" and feature.stamp == "plateau":

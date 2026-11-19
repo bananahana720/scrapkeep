@@ -315,6 +315,9 @@ export function failingChecks(output) {
   }))].sort();
 }
 
+// The labels a test file checks: the first argument of each call whose name starts with check, eq, near or report
+// (t.eq, _report, _check_near) when it is a plain string.
+// A label built at run time is not seen, so this reads less than the test runs.
 export function checkLabels(source) {
   const labels = new Set();
   for (const raw of source.split("\n")) {
@@ -324,11 +327,15 @@ export function checkLabels(source) {
   return labels;
 }
 
+// Labels the base version of a test checked that the head no longer does. A test edited to fit new behaviour
+// can drop a check and still pass (GATE.md: a moved tick, pin or floor is a finding even when the test passes).
 export function removedChecks(baseSource, headSource) {
   const head = checkLabels(headSource);
   return [...checkLabels(baseSource)].filter((label) => !head.has(label)).sort();
 }
 
+// The removed checks of a diff, from `git diff --name-status -M` lines and show(ref, file) -> text or null.
+// A renamed test is compared with its old path at the base, a deleted one with nothing, and an added one is skipped.
 export function checksRemoved(nameStatusLines, show, baseRef, headRef) {
   const isTest = (file) => /^sketches\/core-loop\/tests\/(?:[^/]+\/)?[^/]+\.gd$/.test(file);
   return nameStatusLines.filter(Boolean).map((line) => {
@@ -758,10 +765,13 @@ async function main() {
     ...bridgeFindings(spawnSync("git", ["-C", root, "show", "HEAD:sketches/core-loop/project.godot"], { encoding: "utf8" }).stdout ?? ""),
   ];
   if (!stage("tree hygiene", hygiene.length === 0, { note: hygiene.length ? hygiene.slice(0, 5).join("; ") : "no symlink, root file or new top-level folder", findings: hygiene }) && !options.dryRun) finish();
+  // Not a stage: a removed check can be right. The receipt lists each so the pull request has to name it.
   const show = (ref, file) => { const r = spawnSync("git", ["-C", root, "show", `${ref}:${file}`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); return r.status === 0 ? r.stdout : null; };
   receipt.checks_removed = checksRemoved(git(["diff", "--name-status", "-M", diffBase, "HEAD"]).split("\n"), show, diffBase, "HEAD");
   for (const row of receipt.checks_removed) log(`  checks removed from ${row.test}: ${row.labels.map((label) => `"${label}"`).join(", ")}`);
   if (receipt.checks_removed.length > 0) log("  name each removed check in the pull request and say what now covers it");
+  // Also a report, not a stage: the deep sweep's leads on this branch's own lines (DEEP-SWEEP.md), so a reach
+  // into another module's private members is seen at the pull request and not only after promotion.
   const swept = spawnSync(process.execPath, [path.join(root, "scripts", "deep-sweep.mjs"), "--base", mergeBase, "--head", "HEAD"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, timeout: 60_000 });
   receipt.deep_sweep = swept.status === 0 ? Object.fromEntries([...swept.stdout.matchAll(/^## (D\d) .*\((\d+)\)$/gm)].map((m) => [m[1], Number(m[2])])) : null;
   if (receipt.deep_sweep === null) log("  deep sweep did not run");

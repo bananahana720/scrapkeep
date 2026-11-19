@@ -78,9 +78,12 @@ func _called_shot(delta: float) -> void:
 	if shot.state != "window":
 		_line_home = 0
 		return
+	# With the hand off nothing calls: the driver's own brake holds in a fight would, so they are let go.
 	if not hands["called_shot"]:
 		_driver.source.hold.erase("brake_held")
 		return
+	# A missed call burns one of the stage's cores (called_shot.gd settle): a hand that holds one for the counter
+	# lets this window pass, as a player who wants the core to ride would.
 	if hands["carry"] and _game.run.can_stow_core():
 		_driver.source.hold.erase("brake_held")
 		return
@@ -93,13 +96,17 @@ func _called_shot(delta: float) -> void:
 	var look: Vector3 = _game.ctx.aim_forward()
 	var aimed: bool = Vector2(to.x, to.z).length() > 0.01 and Vector2(look.x, look.z).length() > 0.01 \
 			and Vector2(to.x, to.z).normalized().dot(Vector2(look.x, look.z).normalized()) >= shot.AIM_DOT
+	# The call wants the line home (called_shot.gd _line_free): the latch arm is asked to let it go.
 	_driver.hold_off_warden_line(0.3)
+	# A brake held while the line was out is the player's haul and stays claimed until it is let go
+	# (player_ball.gd _ctrl_claimed): the brake waits until the line has been home for a few ticks.
 	var kit = _game.player.kit
 	_line_home = _line_home + 1 if not kit.hooked and kit.line_state == Augments.LINE_IDLE else 0
 	# Held long enough to show the first stamp, then let go: the release is what calls it.
 	if aimed and (_line_home >= LINE_HOME_TICKS or shot.held_s > 0.0) and shot.held_s < HOLD_S:
 		_driver.source.hold["brake_held"] = true
 	elif shot.held_s <= 0.0:
+		# Not yet: a brake held across a hooked tick stays claimed and is dropped (player_ball.gd _ctrl_claimed).
 		_driver.source.hold.erase("brake_held")
 
 
@@ -115,6 +122,10 @@ func stage(delta: float) -> bool:
 	return _piece(delta)
 
 
+# SPIL-9's first piece, from the stage's enemy camp: the driver's own activity run (its pack fight and pay roll),
+# held only until the companion holds a piece. The finished site pays it (activities.gd _pay_piece). The caches
+# and the hauler stand a kilometre off in the first stage, so they are passed over, as a player would. Time-boxed,
+# and idle once the companion holds a piece.
 func _piece(delta: float) -> bool:
 	if _piece_stage != _game.run.stage:
 		_piece_stage = _game.run.stage
@@ -154,6 +165,7 @@ func _bell(delta: float) -> bool:
 	return true
 
 
+# Three rings fill the pot with a core; a ram at it cashes (overtime.gd cash).
 func _pot(overtime, delta: float) -> bool:
 	_bell_clock += delta
 	if _bell_clock > BELL_S:

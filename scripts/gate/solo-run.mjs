@@ -1,3 +1,5 @@
+// One test run alone through the project's runner (scripts/sketch-smoke.mjs, so Godot's HOME is a scratch folder),
+// for the world 1 done read's receipt producers. The runner gets one slot of its own (shard.mjs soloEnvironment).
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync } from "node:fs";
 import os from "node:os";
@@ -5,6 +7,8 @@ import path from "node:path";
 
 import { parseSmokeLog, soloEnvironment } from "./shard.mjs";
 
+// Returns { ok, exit, seconds, log }: ok and exit from the runner's own PASS|FAIL line, log from the test's output.
+// extraEnv carries a test-only plant switch; it never reaches a run that counts.
 export function runAlone(cwd, test, extraEnv = {}) {
   const out = mkdtempSync(path.join(os.tmpdir(), `solo-${test}-`));
   const env = { ...soloEnvironment(process.env, out, "logs"), ...extraEnv };

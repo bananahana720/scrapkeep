@@ -157,7 +157,7 @@ func _shoot() -> void:
 			enemy.visible = false
 			var ground := await _still()
 			enemy.visible = true
-			for drawn: GeometryInstance3D in code_built:
+			for drawn: GeometryInstance3D in code_built:  # the mask: only what the model file drew is measured
 				drawn.visible = false
 			var shadows := {}
 			for drawn: GeometryInstance3D in enemy.find_children("*", "GeometryInstance3D", true, false):  # batched parts too (the boom tender's floats)
@@ -223,6 +223,8 @@ func _read(dir: String) -> Dictionary:
 	return parsed if parsed is Dictionary else {}
 
 
+# The parts of an enemy drawn from its model file: every drawn geometry whose mesh is not a Godot primitive (the
+# code-built net, masts, rings and lamps are BoxMesh, CylinderMesh, TorusMesh and the like).
 static func model_parts(enemy: Node) -> Array:
 	var out := []
 	for drawn: GeometryInstance3D in enemy.find_children("*", "GeometryInstance3D", true, false):
@@ -236,6 +238,9 @@ static func model_parts(enemy: Node) -> Array:
 	return out
 
 
+# Judges a --models=tripo-all shoot's stats against an authored shoot's. Returns {error, judged, failed, missing,
+# lines}. A kind is missing when the generated shoot did not load a generated file of its own (the path is the
+# authored one, or it did not load): it is a miss, never judged. error is set when nothing can be judged.
 static func judge(authored: Dictionary, tripo: Dictionary) -> Dictionary:
 	var out := {"error": "", "judged": 0, "failed": [], "missing": [], "lines": []}
 	if authored.get("models", "") != "authored" or tripo.get("models", "") != "tripo-all":

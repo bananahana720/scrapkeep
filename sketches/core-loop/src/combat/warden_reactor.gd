@@ -159,6 +159,8 @@ static func _is_dam(warden) -> bool:
 	return warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face"
 
 
+# The dam fight asks the chase camera to keep the ball and the floor in view near this body, once on each change,
+# and takes back only its own request.
 func _declare_fight(warden, engaged: bool) -> void:
 	if engaged == _camera_declared or warden.fleet == null or warden.fleet.ctx.camera == null:
 		return

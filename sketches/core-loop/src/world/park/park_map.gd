@@ -52,6 +52,7 @@ var rescue_sites: Array = []
 var survival_sites: Array = []
 # The way to the boss's bowl for bowl_approach.gd, from the park file's optional approach: {to, smoke: Vector2}, or {}.
 var approach := {}
+# The authored lines as resolved points, read on the first line_within call; null until then.
 var _ride_lines = null
 
 

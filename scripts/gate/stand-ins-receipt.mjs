@@ -1,4 +1,22 @@
 #!/usr/bin/env node
+// The receipt for the world 1 done read's row "no-code-stand-ins" (scripts/world1-bands.rows.json):
+//   { head, pass, measured, plant_caught }
+// It runs sketches/core-loop/tests/prim_census_test.gd twice, alone, through the project's runner (solo-run.mjs), on
+// this checkout, and takes the head from cleanHead (clean-head.mjs). The test plays one skipper bot through the dam,
+// the flume and Brindle, lists every surface drawn from a Godot primitive mesh, judges the list against
+// tools/prim_census_pin.tsv, and ends with one line:
+//   SUMMARY {"surfaces": n, "pinned": <least surfaces>, "stand_ins": [...], "new": [...], "stale": [...], "plant": ""}
+//   1. as it ships: the receipt passes only when the test passed, the census counted at least the pinned number of
+//      surfaces, the bot reached stage 3, it ran with no plant, and it found no new primitive, no stale stand-in row and
+//      no stand-in except one that waits: a pin row whose why names a ruling and cites its DECISIONS.md line
+//      (waitingFromPin), matched on its exact surface key. The pin marking a surface "stand-in" does not
+//      excuse it: the row is "no code-built stand-in left in world 1", so each one left fails the receipt and is named
+//      with its file and the BACKLOG row that owes its model.
+//   2. with PRIM_PLANT=dam_box, a test-only switch: the box the test's control hangs on the first activity it finds
+//      is judged as a real surface, a new code-built box the pin does not cover. The test must fail and name it.
+//      A plant switch left in the caller's environment reaches run 1, which then names the plant and fails.
+//
+//   node scripts/gate/stand-ins-receipt.mjs --out <file>
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,6 +40,9 @@ const summaryOf = (text) => {
 const verdictLine = (text) => String(text ?? "").split("\n").find((l) => l.startsWith(`${TEST}: `)) ?? "";
 const named = (r) => `${r.shape} in ${r.file} (${r.mesh}${r.row ? `, owed by ${r.row}` : ""})`;
 
+// The one home for which stand-ins wait is the pin: a stand-in row whose why names a ruling. Each entry is that row's
+// exact surface key (owner|mesh|shape) and the DECISIONS.md line its why cites ("" when it cites none, which excuses
+// nothing).
 export function waitingFromPin(text) {
   return String(text).split("\n").filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("\t"))
     .filter((c) => c.length >= 6 && c[3].startsWith("stand-in") && WAIT_ROW.test(c[5]))
@@ -30,6 +51,7 @@ export function waitingFromPin(text) {
 
 const STAGE_CHECK = "[the bot played through Brindle into stage 3]";
 
+// run and plant: { ok, log } of the shipped run and the planted run, ok from the runner. waiting: waitingFromPin.
 export function buildReceipt(run, plant, head, { waiting = [] } = {}) {
   const s = summaryOf(run.log);
   const p = summaryOf(plant.log);
@@ -67,6 +89,7 @@ export function buildReceipt(run, plant, head, { waiting = [] } = {}) {
   return { head, pass, measured, plant_caught: caught };
 }
 
+// The receipt for the checkout at cwd. run is injectable so the refusal can be tested without Godot.
 export function produce({ cwd = root, run = runAlone } = {}) {
   const head = cleanHead(cwd);
   const main = run(cwd, TEST);
@@ -76,6 +99,8 @@ export function produce({ cwd = root, run = runAlone } = {}) {
   return buildReceipt(main, plant, head, { waiting: waitingFromPin(pin) });
 }
 
+// The wider row keeps the ride as a guard. Its second pair exercises the
+// screens, the worn roster and both park stages' authored event rows.
 function produceAll() {
   const ride = produce();
   const measure = (plant) => {

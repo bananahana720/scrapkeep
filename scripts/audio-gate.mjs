@@ -207,6 +207,7 @@ export function gain(samples, db) {
   return samples.map((s) => s * g);
 }
 
+// A track's verdicts: true peak always, loudness when it is long enough, the seam when it loops.
 export function judge(name, samples, rate, { loop = false, exit = null, loopAt = 0 } = {}) {
   const found = [];
   const seconds = samples.length / 2 / rate;

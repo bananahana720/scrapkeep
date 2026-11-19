@@ -286,6 +286,8 @@ func _build_set() -> void:
 		_build_postcard(_row.postcard)
 
 
+# A row's own postcard set (title_intros.gd): its model at its authored scale, any dressing, a water plane and
+# a sky. A set whose model will not load leaves the postcard on the ordinary world framing.
 func _build_postcard(spec: Dictionary) -> void:
 	var set_model := _postcard_model(String(spec.set))
 	if set_model == null:

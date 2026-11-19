@@ -616,6 +616,7 @@ var _warden_hp_at := -1.0
 var _warden_kinds := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
 var _harpoon_held := false
+# Seconds left in which the latch arm keeps its line off the Warden (hold_off_warden_line).
 var _line_hold_off := 0.0
 var _pass_bite_frame := -100000
 # Weak points (stub_boss.gd weak_open, #241): the point being read, how long it has been open, the
@@ -2675,10 +2676,13 @@ func _sheet_warden(target: Node3D) -> bool:
 			and target.mount_driver.has_method("sheet_live")
 
 
+# The loop hand's ask to leave an activity (by its id) to the player: the activity run passes it over.
 func skip_activity(key: String) -> void:
 	_activity_skip[key] = true
 
 
+# The loop hand's one ask of the latch arm: keep the harpoon off the Warden for `seconds` (renewed each tick the
+# hand wants it), so a held brake can call the shot. The arm lets go of a line it holds and bites again after.
 func hold_off_warden_line(seconds: float) -> void:
 	_line_hold_off = maxf(_line_hold_off, seconds)
 
@@ -2798,6 +2802,7 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 				_shift_left = SHIFT_HOLD
 		return
 	if _line_hold_off > 0.0:
+		# Asked to keep the line home (a call needs it free, called_shot.gd): let go, do not bite, close on the body.
 		if kit.hooked:
 			source.press["harpoon_released"] = true
 		_harpoon_held = false

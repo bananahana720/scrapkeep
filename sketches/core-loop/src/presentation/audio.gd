@@ -273,8 +273,12 @@ var _optional_listeners := {}
 var _motif := ""
 # Moss's babble, baked once per line, beat and key: {"beat|key|text": AudioStreamWAV}.
 var _babble := {}
+# A line of Moss's babble rendering on a worker (bakes_ahead): its cache key, the cue's kind, the
+# task and the samples it fills; it sounds the frame it is done. One at a time, so the babble's
+# synth code never runs on two threads in step (LESSONS 59). Lines asked for meanwhile wait in order.
 var _babble_job := {}
 var _babble_queue: Array = []
+# The key each asked line was queued under, by "beat|text", for babble_state.
 var _babble_asked := {}
 var sound_ready := false
 var _pitch_rng := RandomNumberGenerator.new()
@@ -463,6 +467,7 @@ func _init() -> void:
 	_pitch_rng.seed = 0xA0D10
 
 
+# Whether this game bakes ahead on workers: the one read of the machine, so a test can stand in a drawn game.
 func _drawn_with_workers() -> bool:
 	return bakes_ahead_on(AudioServer.get_driver_name(), AppShell.headless())
 
@@ -515,6 +520,8 @@ static func _sound_ids() -> Array:
 	for id in SfxBank.TRIM_DB:
 		if not id in ids:
 			ids.append(id)
+	# Each class's version of the motif cues: a row resolves to one by class, so TRIM_DB does not list them, and the
+	# first gauge charge of a class would otherwise make its cue on the main thread.
 	for id in SfxBank.motif_cue_ids():
 		if not id in ids:
 			ids.append(id)
@@ -1970,6 +1977,8 @@ func speak(kind: String, text: String, beat: int) -> bool:
 	var live := live_key()
 	var key := "%d|%d|%s" % [beat, live, text]
 	if not _babble.has(key) and bakes_ahead:
+		# A bay line took 30 to 45 ms to render on the Mac Studio, on the frame the ball rolled in or
+		# out: it renders on a worker and sounds when done, a few frames after its bubble.
 		_babble_asked["%d|%s" % [beat, text]] = key
 		_babble_queue.append([key, kind, text, beat, live])
 		_next_babble()
@@ -1980,6 +1989,9 @@ func speak(kind: String, text: String, beat: int) -> bool:
 	return true
 
 
+# Where a speak() line stands: "ready" once it is rendered and kept, "rendering" while it waits for or
+# sits on its worker (it sounds the frame it is done), "none" when it was never asked for. A line is
+# matched by the key it was asked under, so a music key change after the ask does not lose it.
 func babble_state(text: String, beat: int) -> String:
 	var key: String = _babble_asked.get("%d|%s" % [beat, text], "%d|%d|%s" % [beat, live_key(), text])
 	if _babble.has(key):
@@ -1989,6 +2001,8 @@ func babble_state(text: String, beat: int) -> String:
 	return "none"
 
 
+# The band bakes, read from outside: "held" while a band bake has been started and not let go,
+# "running" while one of them is still working.
 static func band_bakes() -> Dictionary:
 	var held := _opening_task >= 0 or _rest_task >= 0
 	var running := (_opening_task >= 0 and not WorkerThreadPool.is_task_completed(_opening_task)) \
@@ -2005,6 +2019,7 @@ func _next_babble() -> void:
 	_babble_job = {"key": ask[0], "kind": ask[1], "task": task, "out": out}
 
 
+# The rendered line sounds the frame its worker is done; a line cached by then sounds from the cache.
 func _tend_babble() -> void:
 	if _babble_job.is_empty() or not WorkerThreadPool.is_task_completed(_babble_job.task):
 		return
@@ -2025,6 +2040,8 @@ func _settle_babble() -> void:
 	_babble_queue.clear()
 
 
+# The lines still waiting or rendering never sound (their bubble went, or the stage changed); the
+# one rendering keeps its worker and lands in the cache, silent.
 func _drop_babble() -> void:
 	_babble_queue.clear()
 	if not _babble_job.is_empty():

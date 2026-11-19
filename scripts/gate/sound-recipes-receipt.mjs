@@ -1,4 +1,18 @@
 #!/usr/bin/env node
+// The receipt for the world 1 done read's row "sound-own-recipes" (scripts/world1-bands.rows.json):
+//   { head, pass, measured, plant_caught }
+// It runs sketches/core-loop/tests/sound_own_recipes_test.gd itself, through the project's runner
+// (scripts/sketch-smoke.mjs, so Godot's HOME is a scratch folder), on this checkout, and takes the head
+// from `git rev-parse HEAD`. It refuses a checkout with uncommitted changes to tracked files, since the
+// test would then judge code that no commit holds.
+// The test prints one CUE line per cue the world 1 sound facts name, with whether it plays a sound of
+// its own and what plays in its place; a PLANT line (one world 1 cue's recipe removed must be counted,
+// the removed id must bake the fallback blip, three real recipes must not); and a SUMMARY line with the
+// pinned cue count. The receipt passes only when no check failed, the CUE lines number the SUMMARY's
+// count and that count is the pinned one, no cue lacks a sound of its own, and the plant was caught.
+//
+//   node scripts/gate/sound-recipes-receipt.mjs --out <file>
+//   node scripts/gate/sound-recipes-receipt.mjs --log <test output>   (a test hook: prints, never passes)
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import os from "node:os";
@@ -11,6 +25,7 @@ export { cleanHead };
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 export const TEST = "sound_own_recipes_test";
+// The test prints five check lines; fewer means it stopped early.
 export const MIN_CHECKS = 5;
 
 const jsonLines = (text, tag) => text.split("\n").filter((l) => l.startsWith(`${tag} {`)).map((line) => {
@@ -26,6 +41,7 @@ export function buildReceipt(text, head) {
   const summary = jsonLines(text, "SUMMARY")[0] ?? null;
   const short = cues.filter((c) => c.own !== true);
   const counted = Boolean(summary) && cues.length === summary.cues && summary.cues === summary.pinned;
+  // The plant is caught when the removed recipe was counted as one more cue than the real run found.
   const caught = Boolean(plant && plant.caught === true && plant.fact && plant.before === short.length && plant.after === short.length + 1);
   const pass = failed.length === 0 && checks >= MIN_CHECKS && counted && short.length === 0 && caught;
   let measured;
@@ -39,6 +55,7 @@ export function buildReceipt(text, head) {
   return { head, pass, measured, plant_caught: caught };
 }
 
+// Runs the test through the project's runner and returns its log text.
 export function runTest(cwd) {
   const logs = mkdtempSync(path.join(os.tmpdir(), "sound-recipes-"));
   const run = spawnSync(process.execPath, [path.join(cwd, "scripts/sketch-smoke.mjs"), "--sketch", "core-loop", "--test", TEST], {
@@ -47,6 +64,8 @@ export function runTest(cwd) {
   try { return readFileSync(path.join(logs, `${TEST}.log`), "utf8"); } catch { return `runner exit ${run.status}, no ${TEST}.log: ${String(run.stdout).slice(-200)}`; }
 }
 
+// The receipt for the checkout at cwd: takes the head from cleanHead and runs the test there. run is injectable so
+// the refusal can be tested without Godot.
 export function produce({ cwd = root, run = runTest } = {}) {
   const head = cleanHead(cwd);
   return buildReceipt(run(cwd), head);
@@ -56,6 +75,7 @@ function main(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
   if (args.log) {
+    // A test hook: a log from anywhere judges no commit, so it never writes a passing receipt.
     const r = buildReceipt(readFileSync(args.log, "utf8"), "0000000");
     process.stdout.write(JSON.stringify({ ...r, pass: false, measured: `log only, not a receipt: ${r.measured}` }, null, 2) + "\n");
     return 1;

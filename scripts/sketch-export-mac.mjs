@@ -86,6 +86,9 @@ export function astcProjectText(text) {
   return lines.join("\n");
 }
 
+// The files the export swaps must match git before it starts: a run killed with SIGKILL can leave
+// the ETC2/ASTC line in, and the restore would then write that back. porcelain is
+// `git status --porcelain -- <files>`; returns the problem, or null when both are clean.
 export const SWAPPED_FILES = ["sketches/core-loop/project.godot", "sketches/core-loop/export_presets.cfg"];
 export function swapFilesProblem(porcelain) {
   const changed = porcelain.split("\n").filter((line) => line.trim()).map((line) => line.slice(3));
@@ -98,6 +101,7 @@ export function templatesDir(home) {
   return path.join(home, "Library/Application Support/Godot/export_templates");
 }
 
+// The one file in Contents/MacOS that is not the stem folder is the game's executable.
 export function appExecutable(app, list = readdirSync) {
   const dir = path.join(app, "Contents/MacOS");
   const files = list(dir).filter((name) => name !== "music_ace");
@@ -128,6 +132,7 @@ export function macBuildStamp({ sha, dirty, stamp, godot, stems, selfPlay, boot 
   );
 }
 
+// The boot must print the stamp it was given: build_stamp.gd's "SCRAPKEEP_BUILD commit=<sha> ...".
 export function stampFailures(output, sha) {
   const line = /^SCRAPKEEP_BUILD commit=(\S+) .*source=(\S+)/m.exec(output);
   if (!line) return ["no SCRAPKEEP_BUILD line in the boot output"];
@@ -166,6 +171,7 @@ function fail(message) {
   process.exit(1);
 }
 
+// Copies the stems into the app when every one is present and hashes as cut; otherwise returns why not.
 async function stems(stemsFrom, app) {
   const tracks = trackedManifests(stemRoot);
   const manifests = {};
@@ -225,6 +231,8 @@ async function main() {
   await symlink(realTemplates, path.join(templatesDir(home), TEMPLATE_VERSION));
   const env = { ...process.env, HOME: home, XDG_DATA_HOME: home };
 
+  // project.godot (and, with --self-play, the preset) change for the import and export alone;
+  // withSwappedFiles puts them back on success, failure and interruption.
   const projectPath = path.join(project, "project.godot");
   const projectText = await readFile(projectPath, "utf8");
   const app = path.join(outDir, APP_NAME);

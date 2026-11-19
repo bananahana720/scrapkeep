@@ -211,12 +211,15 @@ func _ready_stage(stage: int) -> void:
 		if i == 2399:
 			failed = true
 			printerr("Stage ", stage, " did not become playable")
+	# Remove the startup overlay through its normal ownership. All gameplay cues stay on.
 	game.flow.start_card.hide_card()
 
 
 func _start(p: Vector2, dir: Vector3, high := false) -> void:
 	var pos: Vector3 = game.ctx.terrain.drop_point(p.x, p.y, 1.4)
 	if high:
+		# Enter on the actual upper deck. Casting down distinguishes it from the
+		# stamped floor and the lower end of a pier in the same XZ column.
 		var query := PhysicsRayQueryParameters3D.create(Vector3(p.x, 120, p.y), pos, 1)
 		var hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(query)
 		if not hit.is_empty():
@@ -257,6 +260,8 @@ func _look(direction: Vector3, pitch: float) -> void:
 
 func _road(label: String, marks: Array, high := false) -> void:
 	if not waypoints.is_empty():
+		# A previous finish may still own the ball (for example the headhouse
+		# launch). Enter the stage anew before placing the next independent run.
 		var stage: int = game.run.stage
 		game.flow.enter_stage(stage, Vector3.ZERO, false)
 		await _ready_stage(stage)
@@ -293,6 +298,8 @@ func _road(label: String, marks: Array, high := false) -> void:
 		var at := Vector2(ball.x, ball.z)
 		next = marks[goal]
 		_steer(Vector3(next.x, ball.y, next.y))
+		# Clear the siphon wall with the normal jump. The other take carries
+		# its speed along the deck, and the ground starts never touch this lip.
 		if label == "upper-spill" and tick in [18, 72, 155] and game.player.state.grounded:
 			source.press["jump_pressed"] = true
 		var leg: Vector2 = next - Vector2(marks[goal - 1])
@@ -306,6 +313,8 @@ func _road(label: String, marks: Array, high := false) -> void:
 			goal += 1
 			if goal == marks.size():
 				if not game.player.state.grounded:
+					# The low approach can reach the drum airborne. Keep the real landing
+					# in its trace, alongside the instant it first crossed the forecourt.
 					for settle in range(1, 400):
 						await physics_frame
 						if settle % 3 == 0:
@@ -346,6 +355,8 @@ func _hooks() -> void:
 		var across := local.dot(bank)
 		if absf(along) > 134.0:
 			continue
+		# Seek a timber just outside a rideable lip with room for a miss in its
+		# trough, rather than the timber nearest the long field's centre.
 		var score := absf(absf(across) - 20.0) + absf(lift - 8.0) * 0.25
 		if score < nearest:
 			nearest = score
@@ -356,6 +367,8 @@ func _hooks() -> void:
 		return
 	sites["trestle"] = _vec(subject)
 	sites["receiving-bank"] = _vec(game.ctx.terrain.drop_point(-186, -57, 0.8))
+	# Actual first recontact is on the approach to the lip. The lip itself lies
+	# farther along the same return; record the two bearings independently.
 	sites["receiving-slope"] = _vec(game.ctx.terrain.drop_point(-167, -116, 0.9))
 	for pos in [Vector2(-171, -125), Vector2(-162, -111), Vector2(-173, -90), Vector2(-181, -70)]:
 		sites["return-%d" % int(-pos.y)] = _vec(game.ctx.terrain.drop_point(pos.x, pos.y, 0.9))
@@ -369,6 +382,8 @@ func _hooks() -> void:
 		var start := subject - h * 31.0 - h.cross(Vector3.UP) * 6.0
 		contact_path = ""
 		await _start(Vector2(start.x, start.z), h)
+		# Look down the receiving slope before lifting the aim to the metal strap.
+		# Moving the placed start upstream preserves the approach to the actual bite.
 		for lead in range(-69, 0):
 			await physics_frame
 			_look(h + h.cross(Vector3.UP) * 0.18, -0.19)
@@ -380,6 +395,7 @@ func _hooks() -> void:
 				_sample(mode, lead)
 		if mode == "chase":
 			game.ctx.calm = false
+			# One pursuer comes up from behind, two enter beside the receiving slope.
 			for offset in [Vector2(-4, -9), Vector2(5, 24), Vector2(9, 30)]:
 				var at: Vector3 = game.player.ball_position() + h * offset.y + h.cross(Vector3.UP) * offset.x
 				var foot: Vector3 = game.ctx.terrain.drop_point(at.x, at.z, 0.8)
@@ -402,6 +418,7 @@ func _hooks() -> void:
 			var basis: Basis = rig.yaw_basis()
 			if tick <= release:
 				source.hold.move = Vector2(h.dot(basis.x), -h.dot(basis.z))
+			# The mouse press, hold and release take the same route as the keyboard source.
 			if tick == 35 and mode != "roll":
 				source.press["harpoon_pressed"] = true
 				source.hold["harpoon_held"] = true
@@ -474,6 +491,7 @@ func _visible_sites() -> Array:
 				view_rays[key] = [str(hit.collider.name), _vec(hit.position)]
 			var sees_ramp := false
 			if not hit.is_empty() and String(key).begins_with("ramp-") and hit.collider.name == "Bowl":
+				# A sight ray to the mouth may strike its own sloping side first.
 				var angle := deg_to_rad(float(String(key).get_slice("-", String(key).get_slice_count("-") - 1)))
 				var local: Vector3 = hit.position - game.ctx.boss.arena.global_position
 				var depth := Arena.RAMP_FROM - local.dot(Arena.dir(angle))

@@ -1,4 +1,22 @@
 #!/usr/bin/env node
+// Writes the receipts for the rows backed by the TLA+ models in .agents/skills/scrapkeep-verify-formal:
+// "run-always-ends" (RunFlow.tla) and "rewards-banked-once" (Rewards.tla), which scripts/world1-bands.mjs reads,
+// "flood-never-held" (ParkFlood.tla), and "hazards-hit-everyone" (HazardCycle.tla, W44), which no band row reads yet.
+//   { head, pass, measured, plant_caught }
+// For each row it runs TLC, the TLA+ model checker, on every config that stands for the code (the skill's today-*
+// configs) and on each planted fault (a broken-* config with one guard off). It passes only when every code config
+// reports no break, every plant reports a break of the rule it names (plant_caught), and no source file the model's
+// coverage page cites changed since the model's sync commit (the skill's "Is this change covered?" step 1: a changed
+// file means the model may no longer describe the code until someone reads the diff and moves the sync commit).
+// A gap the model cannot see is named in measured on every run.
+//
+//   node scripts/gate/model-receipts.mjs --out <dir> [--row <id>] [--jar <tla2tools.jar>] [--workers <n>] [--timeout-min <n>]
+//
+// It refuses a checkout with uncommitted changes under the skill folder or sketches/core-loop/src, and names the
+// checked-out commit as the head. TLC is plain TLC (the skill's rewards-coverage.md command): java -XX:+UseParallelGC
+// -cp <jar> tlc2.TLC. The jar is --jar, else $TLA2TOOLS, else the pinned jar that the astack statechart skill's
+// `statechart install-tlc` puts in ${XDG_DATA_HOME:-~/.local/share}/astack/tlc. Java is $JAVA, else java on PATH. Each
+// run works in a new temp folder, so nothing is written beside the models.
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -10,6 +28,9 @@ const SRC = "sketches/core-loop/src";
 export const TLC_PIN = "1.7.4";
 export const TIMEOUT_MIN = 30;
 
+// real: the configs that stand for the code; each must report no break in at least minStates distinct states (the
+// count measured when the model last changed; fewer means part of the model went dead). label: the plain words for one
+// of them. gaps: what the model cannot see, printed on every receipt.
 export const ROWS = {
   "run-always-ends": {
     spec: "RunFlow.tla",
@@ -85,6 +106,8 @@ export const ROWS = {
 
 const num = (s) => Number(s.replaceAll(",", ""));
 
+// TLC's printed output -> what it found. outcome: "clean" (it finished and found no error), "violated" (it names
+// one or more breaks) or "error" (it stopped for any other reason, or the text is not a finished TLC run).
 export function parseTlc(text) {
   const lines = text.split("\n").map((l) => l.trim());
   const rules = [];
@@ -112,10 +135,12 @@ export function parseTlc(text) {
   return { outcome, rules, temporal, deadlock, generated, distinct, error: other[0] ?? (outcome === "error" ? "no finished TLC run in the output" : null) };
 }
 
+// A run stopped by the timeout: a miss, whatever it printed so far.
 export function timedOut(minutes) {
   return { outcome: "error", rules: [], temporal: false, deadlock: false, generated: null, distinct: null, error: `did not finish in ${minutes} min` };
 }
 
+// A config's checked rules: { invariants, properties }.
 export function cfgRules(text) {
   const words = (key) => {
     const m = text.match(new RegExp(`^${key}\\b(.*)$`, "m"));
@@ -133,11 +158,13 @@ export function brokeRule(parsed, rules, rule) {
   return false;
 }
 
+// The model's sync commit: the first commit id on the last non-empty line of its coverage page.
 export function syncCommit(text) {
   const line = text.split("\n").map((l) => l.trim()).filter(Boolean).pop() ?? "";
   return line.match(/\b[0-9a-f]{7,40}\b/)?.[0] ?? null;
 }
 
+// The source files a coverage page cites: the one list of what the model stands for (SKILL.md step 1 reads it too).
 export function coveredFiles(text) {
   return [...new Set(text.match(new RegExp(`${SRC}/[A-Za-z0-9_/]+\\.gd`, "g")) ?? [])].sort();
 }
@@ -147,6 +174,8 @@ const said = (p) => (p.outcome === "clean" ? "no break" : p.outcome === "error" 
   : `broke ${[...p.rules, ...(p.temporal ? ["a temporal property"] : []), ...(p.deadlock ? ["deadlock"] : [])].join(", ")}`);
 const name = (cfg) => cfg.replace(/\.cfg$/, "");
 
+// real: [{ cfg, label?, parsed }]; plants: [{ cfg, rule, rules, parsed }]; drift: { sync, files } (files changed since
+// sync); gaps: what the model cannot see.
 export function buildReceipt({ head, real, plants, drift, gaps = [] }) {
   const caught = plants.length > 0 && plants.every((p) => brokeRule(p.parsed, p.rules, p.rule));
   const enough = (r) => r.minStates == null || (r.parsed.distinct ?? 0) >= r.minStates;

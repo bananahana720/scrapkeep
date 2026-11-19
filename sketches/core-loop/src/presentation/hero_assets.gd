@@ -531,6 +531,9 @@ func _worn_tints(player: Node, tint) -> Dictionary:
 	return tints
 
 
+# The shell and pilot the player wears right now, seated for the pause preview. Reuse the
+# previous fit and update its heft and panel window when the worn cosmetics have not changed.
+# Returns {} when even the default shell is unavailable.
 func fit_worn_into(ball: Node3D, panels: Node3D, player: Node, rec: Dictionary) -> Dictionary:
 	var id := class_id(player)
 	var paint_id := _equipped_paint(id)
@@ -558,6 +561,7 @@ func fit_worn_into(ball: Node3D, panels: Node3D, player: Node, rec: Dictionary) 
 		if outfit != "":
 			fit_outfit(fitted.pilot, outfit, tints)
 		var animator: AnimationPlayer = fitted.animator
+		# Held on its first idle frame: the preview is a still of the worn pilot.
 		if PilotReactions.seat_idle(animator, fitted.pilot) != "":
 			animator.pause()
 	BallLooks.ride(ball_look(), panels)

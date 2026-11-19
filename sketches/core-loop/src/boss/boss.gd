@@ -8,7 +8,10 @@ const Hazard := preload("res://src/boss/hazard.gd")
 # How far ahead of the hull's nose the ram still hits; the lane publishes its front this far
 # out, so the dodge watch lands the ram where the damage does.
 const CHARGE_REACH := 1.5
+# A charge that is not a ram stops this far short of the point where its nose would bury in the bank.
 const CHARGE_RIM_CLEAR := 1.0
+# A led lane clipped shorter than this is no charge (a hull resting at the bank with the led point beyond it
+# would clip to nothing or less): that charge is aimed at the ball, as the stage aimed it.
 const CHARGE_MIN_LANE := 4.0
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -1024,10 +1027,15 @@ func _commit_charge(cued := false) -> void:
 	var warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.CHARGE_WARN, Hazard.MIN_WARN)
 	var ball: Vector3 = ctx.player.ball_position()
 	var to_ball := Vector3(ball.x - from.x, 0.0, ball.z - from.z)
+	# Whether it rams the bank is judged from where the ball is, as before the lead: a led point far out
+	# would make almost every outward line a ram and hand the ball a free stun. A ram is aimed at the ball
+	# and runs to the bank; any other charge keeps its led aim and ends short of the bank. So the flag, the
+	# lane, the stun and the wind-up sound all agree.
 	var ball_heading := _aim_at(ball)
 	var into_wall := to_ball.length() + Rules.CHARGE_OVERSHOOT >= _travel_to_rim(from, ball_heading)
 	var aim := ball
 	if not into_wall:
+		# The nose hurts from half a hull and its reach ahead of the centre, so it meets the ball that much sooner.
 		aim = PackPressure.lead_aim(ctx.player, from, warn, Rules.CHARGE_SPEED, half + CHARGE_REACH, half + Tuning.RADIUS)
 	var to_aim := Vector3(aim.x - from.x, 0.0, aim.z - from.z)
 	var heading := ball_heading if into_wall else _aim_at(aim)
@@ -1327,6 +1335,7 @@ func _defeat(kind: String, at: Vector3, source := "") -> void:
 	# A freed ship ends its own lift in the camera, and a freed object cannot be passed as a Node3D.
 	if is_instance_valid(ship):
 		ctx.camera.clear_contact_subject(ship)
+		# No step runs after the catch, so a shove still in its grace would leave the hull cut away over the ball.
 		ship.follow_shoved_rider(null)
 	# The scooter stays in sight through boss_defeated, so the fall plays where he was caught
 	# (machine_fx reads a visible scooter before the ship); it is hidden once the event is out.

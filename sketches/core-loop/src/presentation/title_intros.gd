@@ -49,6 +49,7 @@ const ROWS := [
 				{"model": "res://assets/models/park/anchor_hoodoo_b.glb", "at": Vector3(254, 4, -58), "scale": Vector3(27.0, 12.5, 22.0), "yaw_deg": 145.0},
 			],
 			"water": {"at": Vector3(0.0, 5.0, 380.0), "size": Vector2(1600.0, 1000.0)},
+			# Deck at y 121, just inside the apron-side parapet at x 61 (park/landmarks.py).
 			"subject": {"at": Vector3(61.0, 121.0, -71.0), "scale": 3.2},
 			"camera": {"at": Vector3(-53.0, 9.0, 364.0), "look": Vector3(-11.0, 77.0, -43.0), "drift": Vector3(0.0, 0.0, -20.0), "fov": 40.0},
 			"sky": "dawn",

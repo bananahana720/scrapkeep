@@ -48,6 +48,7 @@ var near := false
 # on one row or two (name_rows), the effect lines under it only while detail_shown, no icon. The HUD never
 # places or hides it.
 var owner_placed := false
+# The crossbar column relative to the left side of an owner-placed gate sign.
 var crossbar_x := INF
 var name_rows := PackedStringArray()
 var detail_shown := false
