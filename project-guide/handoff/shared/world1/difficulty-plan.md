@@ -61,6 +61,9 @@ A Novice win is the game failing to stop a weak player, so a higher Novice numbe
 | F2 stop against move | hull lost per minute below cruise / at or above cruise >= 2.0 | 24 | a plant that taxes fast balls |
 | F3 first hit | median first contact to first hit >= 3 s (Learner 1) | 24 | a plant that spawns with no arrival ring |
 | F4 momentum | dead stops per minute <= base +10% (`core/run_log.gd:37`) | 24 | not built |
+
+Since 18 Nov (W1-149, PR 1161) F1 and F2 are each two readings: hull alone, and hull plus the scrap world hazards take through `lose_scrap`, counted point for point and matched by cause to the hazard's own telegraph. Each line fails when either reading is under it, and a pool with no hull reading stays a miss, so scrap can only add misses (ruling cu). F3 counts a theft as the first hit only after pack contact.
+
 Bots cannot tell: fun, whether a death felt fair, human kiting (no bot kites with skill; the Expert dodges by reading tells).
 
 ## Arrivals on the grid (INTEGRATION.md:165-196)
