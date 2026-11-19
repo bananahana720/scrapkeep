@@ -6416,6 +6416,24 @@ Andrew installed Risk of Rain 2, Gunfire Reborn, Roboquest and The Binding of Is
 
 **Verification and evidence:** as CS-01. **Boundary:** as CS-01; the pak reader is chosen at card start and built from source or a package registry.
 
+<a id="cs-04"></a>
+
+### CS-04: 3D speed platformer comps notes
+
+**Card revision:** 1 · **Owner:** Design research · **Size:** M · **Lane:** Comps study
+
+**Source and inputs:** Andrew, 19 November 2026 (ruling ef): the 3D games of the Sonic series as a model for designing maps, tuning and loops round a fast character in 3D, "only as a reference point", made "unique to the universe, to beings, the props, the wildlife, maps". [CS-01](#cs-01) note shape and posture. Public writing only (interviews, reviews, manuals, written guides); no game file is opened. The draft at `sketches/core-loop/design-v3/research/comps/speed3d/README.md`.
+
+**Dependencies:** [CS-01](#cs-01). **Blocking questions:** None.
+
+**Files touched:** `sketches/core-loop/design-v3/research/comps/speed3d/**`; `comps/maps-compared.md` (a fifth column) and `comps/README.md` (method rows, borrow rows).
+
+**Definition of done:** five notes in the six-section shape, each with a diagram: stage anatomy at speed (the high, middle and low route), what is placed on a route and how it is signposted, small challenges in an open area, rewards and replay, and where speed design goes wrong. A section mapping each borrowed relationship to a park file field and to the ten map points, saying where a ruling wins over the reference. Ten or fewer proposed readings a headless check or a film could take. Every claim about the reference games carries a source or is marked unchecked.
+
+**Verification and evidence:** as CS-01; `npm run check:docs`; one independent review of structure and fit to rulings ct, cu and cv. **Status (19 November 2026):** a full draft is in the folder, written by a GPT-6.2 Astra agent; owed are the diagrams, the `maps-compared.md` column, the comps README rows and the review.
+
+**Boundary:** as CS-01. Research and documentation only: no game change and no map change. No name, character, level layout, art, music, text or code of the reference games is used, and none of their names becomes a Scrapkeep name.
+
 ## Systems audit add-on (11 November 2026)
 
 Andrew asked on 11 November 2026 for an add-on workstream: find and fix the weakest parts of the game's systems, mechanics and features, with evidence from running the game. It runs beside the world 1 polish program and never pauses or re-scopes a wave. Step 0 is [docs/systems-audit/PLAN.md](docs/systems-audit/PLAN.md); it fills the two numbers Andrew's request left in brackets (first 15 minutes; 10 hours of game time per player type), names which file stands in for the absent `TECH_BIBLE.md`, and records that a headless harness exists, so no harness card is filed. Scope is world 1 (the title, the camp, the dam, the flume and Brindle) and early progression; worlds 2 and 3 are parked (ruling at). Outputs go in `docs/systems-audit/`.
@@ -6747,6 +6765,23 @@ Read from the code on `stage/alpha-w38` (48f62bf9), 12 November 2026. Adding a w
 | FD-12 | Every world's Wardens escalate per chunk lost, as mini-bosses with phases | `warden.gd` dials per stage | S per world | with each world's design card | [gameplay critique](project-guide/handoff/shared/world1/gameplay-critique.md) "For future worlds" (W1-67) |
 | FD-13 | Every boss's phase floors pay their overflow: a chunk broken before the floor buys a reel, never a wait | the boss's rules, after W1-61 proves the pattern on Brindle | M per boss | phase 2 | [gameplay critique](project-guide/handoff/shared/world1/gameplay-critique.md) "For future worlds" (W1-61) |
 | FD-14 | The first won fight of every world's first stage pays a part, so each world opens with a build choice inside two minutes | reward gate rows per world | S per world | phase 2 | [gameplay critique](project-guide/handoff/shared/world1/gameplay-critique.md) "For future worlds" (W1-63) |
+
+<a id="area-blueprint"></a>
+
+### Scaling: the area blueprint for worlds 2 and 3 (19 November 2026)
+
+Andrew, 19 November 2026 (ruling ef): split each map into areas that are each a curated place to play in, where enemies arrive, the rider traverses, finds, loots and sets things off by hand or by chance, as a blueprint to iterate on and to build worlds 2 and 3 from; "I want to kind of maybe do this at the very end". The page is [AREA-BLUEPRINT.md](sketches/core-loop/design-v3/park/AREA-BLUEPRINT.md). The research behind it (an inventory of every idea said and not built, and an inventory of the concept art against all six stages) is on branch `scratch/area-blueprint-research`. Every row is proposed and not started. AB-01 and AB-02 leave world 1 unchanged and may run before the sitting if a thread is free; the rest wait for ruling at to lift.
+
+| ID | What it gives | Files | Size | When | Source |
+| --- | --- | --- | --- | --- | --- |
+| AB-01 | The approved journey pictures are in the repository. The decision log records 30 park pictures and 41 journey panels at `artifacts/local/alpha/push/w13/concepts/codex/`; on 19 November the files were not in the repository, on the Mac Studio or on the Linux PC. Find them (the published journey pages may be the only copy) and check them in beside the journeys | `sketches/core-loop/design-v3/park/journeys/`, an image folder beside it | S | now; needs Andrew to say where the files are if a search of the published pages fails | concept art inventory, "Approved journey pictures recorded outside this checkout" |
+| AB-02 | An area card can be printed for any region: a tool asks `Regions.at` where each home, activity, pocket, contraption, event and route node stands and prints the card the blueprint defines, for the dam, the flume and the Slag Bowl. It adds no data and no field | a new tool under `tools/`, `src/world/park/regions.gd` read only | S-M | after W1-141's region rows settle | AREA-BLUEPRINT.md "The area card" |
+| AB-03 | A written rule for edges: which area owns an event, a home or a payout on a boundary, and a ride that crosses one; the region test fails on an overlap the rule does not allow | `design-v3/park/AREA-BLUEPRINT.md`, `tests/park_regions_test.gd` | S | with AB-02 | idea inventory, gaps |
+| AB-04 | Regions for stages 3 to 6: purpose, verbs and why for every place in the pit, the sinkhole, the islands and the crown, from their stage sheets and journeys | `assets/park/park_pit/regions.json` and its three siblings (new) | M per stage | phase 2, when ruling at lifts | idea inventory, gaps; ROADMAP phase 2 item 3 |
+| AB-05 | Area cards for the Dig and the Highdraft with each area's art marked approved, draft or none, and a board made for each area with none before it is modelled | the cards from AB-02's tool; boards under `design-v3/boards/` | M per world | phase 2 | concept art inventory, "Places with art" |
+| AB-06 | The speed readings as checks, first on the dam's shelf to the Eye: seconds from a fork to the rejoin on each height with a planted miss, seconds of notice before a commitment, and the share of the ride above speed tier 2 on each height | a new tool beside the traversal tools; `design-v3/TRAVERSAL.md` | M | after CS-04's review | [CS-04](#cs-04) "Ten proposed measures" |
+| AB-07 | One loop for making an area, kept true: the eight steps in the blueprint, joined to SG-11's checklist for adding a stage or a world | `design-v3/park/AREA-BLUEPRINT.md`, the "registered tables" paragraph of `design-v3/ALPHA-PLAN.md` | S | with SG-11 | AREA-BLUEPRINT.md "The loop for one area" |
+| AB-08 | A card session with Andrew on the ideas said and not yet used (allies bought at a place, a slam plate, a lap-time vault, water on lava, an airborne thing to interact with, a reward for an event that overlaps a boss mechanic, a settlement built for rolling, 145 draft lore finds), so each is taken, parked or dropped | DECISIONS.md | S | NEEDS ANDREW, after the sitting | idea inventory, section 2 |
 
 ### World 1 effects critique rows (12 November 2026)
 

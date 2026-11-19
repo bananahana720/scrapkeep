@@ -17,6 +17,7 @@
 - [ROADMAP.md](ROADMAP.md): Historical milestone definitions. The live roadmap is [project-guide/coord/ROADMAP.md](../../../project-guide/coord/ROADMAP.md).
 - [OWNER-INTERVIEW-2026-10-02.md](OWNER-INTERVIEW-2026-10-02.md): Accepted owner answers and provenance.
 - [LORE-TONE-SAMPLE.md](LORE-TONE-SAMPLE.md): Lore tone sample retained by the unit instruction.
+- [park/AREA-BLUEPRINT.md](park/AREA-BLUEPRINT.md): Proposed, parked until after the world 1 sitting: how a map is split into areas, what each area states, and the loop that builds and checks one, for worlds 2 and 3 (19 Nov).
 - [STORY-MAP.md](STORY-MAP.md): What the world is and what every place, system, enemy and item means in it, with what each should look, sound and play like. Owns story facts and meaning; read before any design, art or sound work.
 
 ## Archived documents
