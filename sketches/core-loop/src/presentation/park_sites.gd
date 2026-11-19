@@ -90,8 +90,6 @@ static func frame(row: Dictionary) -> Dictionary:
 		"half_length": float(row["size"][0]) * 0.5, "half_width": float(row["size"][2]) * 0.5}
 
 
-# Whether a ground point stands in a row's clear_view strip (park_schema.gd): from the row's rear edge back
-# `depth_m` along its run, `half_width_m` either side of its centre line.
 static func in_clear_view(frame: Dictionary, view: Dictionary, point: Vector2) -> bool:
 	var offset := point - Vector2(frame["at"])
 	var along := offset.dot(frame["run"])

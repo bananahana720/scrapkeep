@@ -71,7 +71,6 @@ func _main() -> void:
 	cam.far = 2000.0
 	_game.add_child(cam)
 	cam.make_current()
-	# A free still camera takes the terrain's detail rings over from the chase camera (dam_look_capture.gd).
 	for terrain in root.find_children("*", "Terrain3D", true, false):
 		terrain.set_camera(cam)
 	var record := {}

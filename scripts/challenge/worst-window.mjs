@@ -23,8 +23,6 @@ export function fightMaxHp(note, row) {
   return { maxHp: row.max_hp ?? 120, from: "run_end" };
 }
 
-// The note of each fight one bot record fought, or null for a fight it never reached: the dam is stage 1's note once its
-// Warden was engaged, the flume stage 2's, Brindle the boss note.
 export function fightNotes(row) {
   const stage = (n) => (row?.stages ?? []).find((s) => s.stage === n);
   const fought = (n) => (n?.warden_engaged_s != null ? n : null);

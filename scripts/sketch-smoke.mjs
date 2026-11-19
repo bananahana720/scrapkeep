@@ -313,7 +313,6 @@ function sweepStaleWaiters(directory, own) {
 // QUIET_MAX_MS old.
 export const QUIET_HOLD = "scrapkeep-quiet-hold";
 export const QUIET_MAX_MS = 2 * 60 * 60 * 1000;
-// The lock is held for a few file calls; a minute old means its holder died.
 const QUIET_LOCK_STALE_MS = 60 * 1000;
 
 function quietRoot() {
@@ -339,9 +338,6 @@ export function quietHolder(directory = quietRoot()) {
   }
 }
 
-// Take the hold, then wait until no runner holds a slot in the shared pool. Synchronous, for
-// scripts/frametime-check.mjs. Replacing a dead hold happens under a short lock, so two readings that start together
-// cannot both take it.
 export function holdQuietSync({
   directory = slotRoot(),
   quietDirectory = quietRoot(),
@@ -364,7 +360,6 @@ export function holdQuietSync({
       if (error.code !== "ENOENT") throw error;
     }
   };
-  // Returns the pid that holds after this try: ours when the hold was free or dead.
   const claim = () => {
     for (;;) {
       try {
@@ -404,7 +399,6 @@ export function holdQuietSync({
     let lost = false;
     for (;;) {
       const busy = readdirSync(directory).filter((name) => name.startsWith("slot-") && slotOwner(path.join(directory, name))?.alive);
-      // Read the hold after the scan: a runner publishes its slot and then checks the hold, so one side sees the other.
       if (quietHolder(quietDirectory) !== pid) {
         lost = true;
         break;
@@ -420,7 +414,6 @@ export function holdQuietSync({
     }
     if (!lost) break;
   }
-  // The age cap counts from the start of the reading, not from the start of the wait.
   touch(file);
   return { waitMs: Date.now() - started, release };
 }
@@ -463,13 +456,11 @@ export async function acquireSlot({
         if (holder && !holder.alive) releaseSlot(slot, holder.owner);
         try {
           // Publish an already populated directory atomically: no pid-write gap.
-          beforePublish(); // a test seam: what happens between this runner's hold check and its publish
+          beforePublish();
           // A long wait leaves the owner file older than the stale window. Refresh it while the claim is still private,
           // so the slot is never visible looking stale (a rename keeps the files' mtimes).
           touch(path.join(claim, owner));
           renameSync(claim, slot);
-          // Publish, then check the hold again: the reading writes its hold and then scans the slots, so a runner that
-          // slipped in between gives the slot back here before it starts anything.
           if (quietHolder(quietDirectory) !== null) {
             releaseSlot(slot, owner);
             mkdirSync(claim, { recursive: true });
@@ -792,8 +783,6 @@ function report(job, status, output, ms, signal = null) {
 
 export const scriptErrorCount = (output) => (output.match(/^SCRIPT ERROR\b/gm) ?? []).length;
 
-// One child run with its output collected and a time limit, without blocking the event loop: a held
-// machine slot keeps its heartbeat only while the loop is free, and an import can take minutes.
 export function spawnCollect(command, args, { env = process.env, timeoutMs = TIMEOUT_MS } = {}) {
   return new Promise((resolve) => {
     const child = spawn(command, args, { env, stdio: ["ignore", "pipe", "pipe"] });

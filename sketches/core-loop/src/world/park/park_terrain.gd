@@ -152,9 +152,6 @@ const FEATHER_PAD := 4
 const FEATHER_LEVEL := 2
 # One-metre pixels of padding on each side of feather()'s image: vertex m is at pixel m + this.
 const FEATHER_MARGIN := 2 * FEATHER_PAD
-# Worn haul lanes (paint_wear): how much a lane's centre darkens the tint, the share of its half width held
-# at full depth, the ripple in its width (0.6 m on a 2.8 m half width, per metre of arc) and the fractions of
-# its length over which it fades in and out.
 const WEAR_DARKEN := 0.23
 const WEAR_CORE := 0.25
 const WEAR_RIPPLE := 0.21
@@ -651,15 +648,10 @@ func _load_tints(path: String) -> void:
 			pixels[at + 2] = lookup[from + 2]
 	var image := Image.create_from_data(CELLS, CELLS, false, Image.FORMAT_RGBA8, pixels)
 	_tints = feather(image)
-	# Worn haul lanes belong to the park that drew them. Painting the tint map
-	# lets the same ground keep its collider, dress, alpha and material slots.
 	if _map != null and "park" in _map:
 		paint_wear(_tints, _map.park.get("wear_rows", []))
 
 
-# Darkens the tint map along each wear row's polyline (park_schema.gd WEAR_FIELDS). A pixel's strength is
-# its distance to the polyline against the lane's width at that arc length, faded in and out over the lane's
-# ends; where segments overlap the strongest wins, so a bend is not darkened twice. The painter clamps to the image.
 static func paint_wear(tints: Image, rows: Array) -> void:
 	var origin := Vector2i.ONE * (int(HALF) + FEATHER_MARGIN)
 	var size := tints.get_size()

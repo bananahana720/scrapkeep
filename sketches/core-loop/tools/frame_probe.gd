@@ -79,7 +79,6 @@ class Marker:
 		probe._mark(true, label)
 
 
-# A marker before each child of root and of its children, so each span names one subtree.
 func _place_markers(root: Node, depth: int) -> void:
 	for child in root.get_children():
 		if child is Marker:

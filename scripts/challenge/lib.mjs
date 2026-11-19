@@ -590,8 +590,6 @@ export function fairnessOf(run) {
   if (!f || typeof f !== "object") return null;
   const hull = f.hull && typeof f.hull === "object" ? f.hull : {};
   const k = f.killing_hit && typeof f.killing_hit === "object" ? f.killing_hit : null;
-  // Scrap taken through lose_scrap (a record from before the field has none and reads as no scrap). It stays in its own
-  // buckets: the hull ones sum to hull_lost, and the pooled readings below are the ones that add the two.
   const scrap = f.scrap && typeof f.scrap === "object" ? f.scrap : {};
   return {
     telegraphed: num(hull.telegraphed), untelegraphed: num(hull.untelegraphed), contact: num(hull.contact), unknown: num(hull.unknown),
@@ -621,18 +619,13 @@ export function fairnessPool(runs) {
   const whole = hullWhole + scrap.telegraphed + scrap.untelegraphed + scrap.contact + scrap.unknown;
   out.hull = hull;
   out.scrap = scrap;
-  // Unknown and contact read over hull as they always did, and unknown again over hull and scrap together (a scrap point counts
-  // as a hull point). Scrap must not dilute the unknown hull, so F1's mark drops when either unknown share is over the line.
   out.unknownShare = hullWhole > 0 ? hull.unknown / hullWhole : null;
   out.pooledUnknownShare = whole > 0 ? (hull.unknown + scrap.unknown) / whole : null;
   out.contactShare = hullWhole > 0 ? hull.contact / hullWhole : null;
-  // F1 is two readings and fails when either is under its line (ruling cu, harder never easier): the hull share as it always
-  // read, and the pooled share with scrap taken through lose_scrap counted a point for a point.
   out.telegraphShare = tel + unt > 0 ? tel / (tel + unt) : null;
   const ptel = tel + scrap.telegraphed;
   const punt = unt + scrap.untelegraphed;
   out.pooledShare = ptel + punt > 0 ? ptel / (ptel + punt) : null;
-  // F1 carries no mark while the loss it could not match is over the line.
   out.shareMarked = (out.telegraphShare != null || out.pooledShare != null) && !(out.unknownShare != null && out.unknownShare > FAIRNESS.unknownMaxShare) && !(out.pooledUnknownShare != null && out.pooledUnknownShare > FAIRNESS.unknownMaxShare);
   const kills = rows.map((r) => r.killing).filter((b) => b === "telegraphed" || b === "untelegraphed");
   out.kills = kills.length;
@@ -646,10 +639,8 @@ export function fairnessPool(runs) {
   out.stopTax = null;
   out.stopTaxNote = !tax.length ? "not measured" : slowS <= 0 || fastS <= 0 ? "no time on one side of cruise" : fastH <= 0 ? "no hull lost at cruise" : null;
   if (!out.stopTaxNote) out.stopTax = slowH / slowS / (fastH / fastS);
-  // The same ratio with scrap taken beside hull, a point for a point. F2 fails when either ratio is under its line.
   const slowP = slowH + tax.reduce((a, r) => a + r.slowScrap, 0);
   const fastP = fastH + tax.reduce((a, r) => a + r.fastScrap, 0);
-  // Measured whenever there was time on both sides and loss at cruise, even when the hull alone had none (the recorder's rule).
   out.pooledStopTax = tax.length && slowS > 0 && fastS > 0 && fastP > 0 ? slowP / slowS / (fastP / fastS) : null;
   out.fastShare = slowS + fastS > 0 ? fastS / (slowS + fastS) : null;
   // F3: one reading per stage and for the boss that a pack was met in. A segment with no hit is the best case and reads as
@@ -682,7 +673,6 @@ export function fairnessByCell(runs) {
 // The numbers of one pool that miss their line (marked ones only), as "F1", "F2", "F3".
 // A reading under its line, null reads as not under it (the callers judge a missing reading apart).
 const under = (x, line) => x != null && x < line - 1e-9;
-// The shared either-fails rules: hull alone or hull and scrap pooled under the line fails the number.
 export const f1ShareUnder = (p) => under(p.telegraphShare, FAIRNESS.telegraphShare) || under(p.pooledShare, FAIRNESS.telegraphShare);
 export const f2TaxUnder = (p) => under(p.stopTax, FAIRNESS.stopTax) || under(p.pooledStopTax, FAIRNESS.stopTax);
 

@@ -187,7 +187,6 @@ func hit(source: String, hull: float) -> void:
 	_note_first_hit()
 
 
-# The stage's (or boss fight's) first hit: a hull hit or a theft of scrap, whichever comes first.
 func _note_first_hit() -> void:
 	if _segment != "":
 		var seg: Dictionary = _segments[_segment]
@@ -198,8 +197,6 @@ func _note_first_hit() -> void:
 			seg["first_hit_s"] = _clock
 
 
-# Scrap taken from the ball, from the run's scrap_lost fact (amount actually taken, cause). The same rule as a hit, with the cause
-# as the source. Nothing taken is nothing lost.
 func loss(cause: String, amount: float) -> void:
 	if amount <= 0.0:
 		return
@@ -210,8 +207,6 @@ func loss(cause: String, amount: float) -> void:
 		_fast_scrap += amount
 	else:
 		_slow_scrap += amount
-	# A theft counts as a first hit only once a pack has been met: one before contact must not open the segment (that would drop
-	# the stage from F3's median and hide a later fast ambush).
 	if _segment != "" and _segments[_segment]["contact_s"] != null:
 		_note_first_hit()
 

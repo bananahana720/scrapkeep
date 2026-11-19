@@ -155,8 +155,6 @@ const DEFAULTS := {
 	# it eased the Novice on the dam (12 seeds: 8 wins against 4), so it ships with the dam's mob hits at x2
 	# (MOBS_DAMAGE_W1), read together: 3 wins of 12, and the Expert's kite no longer boils at cruise.
 	"hazard.boil_stall_by_stage": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
-	# World events that hit enemies as well as the ball, with the storm's seek and the flood's tax beside them
-	# (world/events/hazard_hits.gd, W44): 1 on, 0 off. World 1 only; worlds 2 and 3 are parked (ruling at).
 	"hazard.hits_enemies_by_stage": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
 	# Pilot regen: not allowed as defaults or tunes (--tune-unruled only). The HARD ladder's top rungs cut it
 	# (run_tier.gd LADDER, Andrew 27 Oct option 3).

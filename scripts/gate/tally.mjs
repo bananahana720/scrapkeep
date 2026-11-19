@@ -32,8 +32,6 @@ import { WEEKLY_FILE, gateLists } from "./shard.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const BOT_BLOCK = 5;
 
-// Rows of every table whose header is "| Shard | Verdict |" (or "| Check | Verdict |" with that
-// first word), in file order.
 export function tallyRows(text, first = "shard") {
   const rows = [];
   let inTable = false;
@@ -99,10 +97,6 @@ export function checkWeeklySweep(rows, { weeklyCount = 0, today = new Date() } =
 
 export const NODE_CHECK = "node tests";
 
-// The plan's Gate-side table carries the node suite's result for the gated head (scripts/gate/pc.mjs
-// writes it from node/summary.txt). A release tally once read CLEAN beside a red node step because
-// only the shard tables were read, so the newest "node tests" row must open with PASS, give
-// "N tests, 0 fail" with N above zero, and name its receipt.
 export function checkNodeRow(text) {
   const row = tallyRows(text, "check").reverse().find((candidate) => candidate.shard.toLowerCase() === NODE_CHECK);
   if (!row) return [`no "${NODE_CHECK}" row in a "| Check | Verdict |" table; run the node suite on the gated head and record "PASS. N tests, 0 fail. Receipt node/summary.txt"`];

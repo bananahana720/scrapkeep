@@ -25,8 +25,6 @@ const CAP_SIZE := Vector3(2.2, 0.8, 2.2)
 # whole width, so it never drops out mid-fight.
 const PLATE_REACH := 160.0
 const PLATE_LIFT := DECK + 4.0
-# The charge shove's cutaway: a camera body whose box, grown by CUTAWAY_MARGIN, meets the column CUTAWAY_COLUMN metres
-# up from the rider turns every mesh it stands for to this transparency.
 const CUTAWAY_TRANSPARENCY := 0.88
 const CUTAWAY_COLUMN := 12.0
 const CUTAWAY_MARGIN := 1.0
@@ -147,8 +145,6 @@ func _build_camera_bodies() -> void:
 	_follow_drawn_parts()
 
 
-# During a charge shove the rider can pass through the hull. Each camera body standing over the ball goes
-# see-through whole, with every mesh it stands for (so the hull goes with its fittings), and the rest stay opaque.
 func follow_shoved_rider(rider: Node3D) -> void:
 	_shoved_rider = rider
 	_follow_drawn_parts()
@@ -175,8 +171,6 @@ func _follow_drawn_parts() -> void:
 		if not size.is_equal_approx(row[3]):
 			(shape.shape as BoxShape3D).size = size
 			row[3] = size
-		# The close chase lens is above the ball. A one-radius column covers
-		# the moving cage even when the arm pivot trails the sideways shove.
 		var covering := false
 		if is_instance_valid(_shoved_rider):
 			var ball := body.to_local(_shoved_rider.global_position)
