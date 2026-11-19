@@ -159,10 +159,8 @@ func step(ball: Vector3, heading: Vector3) -> bool:
 		var offer: Dictionary = offers[i]
 		var rel: Vector3 = ball - offer["at"]
 		var along: float = rel.dot(offer["facing"])
-		var flat_facing := Vector3((offer["facing"] as Vector3).x, 0.0, (offer["facing"] as Vector3).z)
-		var flat_rel := Vector3(rel.x, 0.0, rel.z)
 		# Across the way through, on the ground plane: a jumping ball's height is not a sideways miss.
-		var side: float = (flat_rel - flat_facing * flat_rel.dot(flat_facing)).length()
+		var side: float = absf(rel.dot((offer["facing"] as Vector3).cross(Vector3.UP).normalized()))
 		var was: float = _last_side.get(i, along)
 		_last_side[i] = along
 		var through := was < 0.0 and along >= 0.0
