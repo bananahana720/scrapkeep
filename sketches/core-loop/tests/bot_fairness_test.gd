@@ -137,11 +137,11 @@ func _run() -> void:
 		fair[name] = f if f is Dictionary else {}
 		print("%s: %s" % [name, JSON.stringify(fair[name])])
 	_plain(fair["plain"])
-	var base := BotFairness.baseline(fair["plain"])
-	var f1: float = base["share"]
-	var f2: float = base["stop_tax"]
-	var f3: float = base["first_hit"]
-	_t.check("plain baseline measured a stop tax", base["miss"] == "", "%s" % [base["miss"]])
+	var plain := BotFairness.baseline(fair["plain"])
+	var f1: float = plain["share"]
+	var f2: float = plain["stop_tax"]
+	var f3: float = plain["first_hit"]
+	_t.check("plain baseline measured a stop tax", plain["miss"] == "", "%s" % [plain["miss"]])
 	_drain(fair["drain"], f1, f2, f3)
 	_fast_tax(fair["fast_tax"], f1, f2, f3)
 	_ringless(fair["ringless"], f1, f2, f3)
