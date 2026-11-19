@@ -232,8 +232,7 @@ func _reach_pin(kind: String, enemy) -> void:
 	else:
 		# Since MG-11 the charge aims where a still ball is, not along the heading it is handed, so the ball
 		# waits ahead on the line the probes below use.
-		_game.player.body().global_position = enemy.global_position + Vector3.FORWARD * (2.3 + 1.6) + Vector3.UP
-		_game.player.body().linear_velocity = Vector3.ZERO
+		_game.player.reset_to(enemy.global_position + Vector3.FORWARD * (2.3 + 1.6) + Vector3.UP)
 		enemy._next_attack = 1
 		enemy._begin_attack(Vector3.FORWARD)
 	var lane = enemy.telegraph()
