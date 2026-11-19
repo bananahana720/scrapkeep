@@ -32,7 +32,8 @@ const Interactables := preload("res://src/world/interactables.gd")
 # warning says where as well as what (PF-16: "Dome Lightning incoming" named the event and not
 # its place). Once the place is in view it wears brackets in the same colour instead, with no tag:
 # the warning line names it, the brackets say where (W1-04). The world publishes the place with the
-# announcement; the mark goes when the event starts, ends or its lead runs out. The weather and the
+# announcement; the mark goes when the event starts or ends or the stage or run resets, not when its
+# lead runs out, since the director holds an announced event for clear ground. The weather and the
 # flood have no one place and get none.
 #
 # In a fight whose row names a thing (Brindle's arena, the Spillway's two mounted Wardens) the
@@ -122,7 +123,8 @@ var discovered := {}
 var _shown: Array[Dictionary] = []
 # How far each off-screen arrow stands from its own spot along the edge, by the point it names.
 var _slide := {}
-# Events announced with a place and not started: {event_id: {at, left}}, left in seconds.
+# Events announced with a place and not started: {event_id: {at, left}}, left in seconds and held at
+# zero while the event waits to land.
 var _incoming := {}
 
 
@@ -159,10 +161,8 @@ func note_incoming(event_id: String, seconds: float, at: Vector3) -> void:
 
 
 func step_incoming(delta: float) -> void:
-	for id in _incoming.keys():
-		_incoming[id]["left"] -= delta
-		if _incoming[id]["left"] <= 0.0:
-			_incoming.erase(id)
+	for id in _incoming:
+		_incoming[id]["left"] = maxf(0.0, _incoming[id]["left"] - delta)
 
 
 func incoming_targets() -> Array[Dictionary]:
