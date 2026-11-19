@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, wallStats, checkMerge, planHash, jobKey, dedupeBy, bucketInfo, fightStart, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson, maxJobs, settledMark, columnTarget, MAX_RUN_TIER, botArgs, qaRows, playerReport, renderPlayerReport, QA_KINDS, FAIRNESS, fairnessOf, fairnessPool, fairnessByCell, renderFairness } from "./lib.mjs";
+import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, wallStats, checkMerge, planHash, jobKey, dedupeBy, bucketInfo, fightStart, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson, maxJobs, settledMark, columnTarget, MAX_RUN_TIER, botArgs, qaRows, playerReport, renderPlayerReport, QA_KINDS, FAIRNESS, fairnessOf, fairnessPool, fairnessByCell, fairnessFails, renderFairness } from "./lib.mjs";
 
 const docs = (n, stage = 2) => Array.from({ length: n }, (_, i) => ({ file: `s${stage}/d${i}.json`, stage, mass: 100 + i * 10, parts: i % 5, pilot: "tarn" }));
 const builds = () => Object.fromEntries([2, 3, 4, 5, 6].map((s) => [s, pickBuilds(docs(24, s))]));
@@ -610,4 +610,63 @@ test("early stop settles a column only when the seeds left cannot change its mar
   assert.equal(settledMark({ grades: g(3, 0), left: 0, target: expert }), null); // nothing left to skip
   assert.equal(columnTarget("w1", "warden", "expert")?.min, 0.85);
   assert.equal(columnTarget("w1clear", "clear", "expert"), null);
+});
+
+// Scrap taken through lose_scrap (assumption, ruling cu: pooling never makes a line easier; a scrap point counts as a hull point).
+const scrapOf = (telegraphed, untelegraphed, contact = 0, unknown = 0) => ({ telegraphed, untelegraphed, contact, unknown });
+const calm = { slow_s: 30, fast_s: 60, slow_hull: 10, fast_hull: 10, first_hit: { s1: seg(true, 8) } };
+
+test("scrap is its own bucket: hull is counted once and the pooled share adds scrap once", () => {
+  const p = fairnessPool([fake("w1", "expert", { hull: hullOf(30, 2), scrap: scrapOf(14, 0), killing_hit: null, ...calm })]);
+  assert.deepEqual(p.hull, { telegraphed: 30, untelegraphed: 2, contact: 0, unknown: 0 });
+  assert.deepEqual(p.scrap, { telegraphed: 14, untelegraphed: 0, contact: 0, unknown: 0 });
+  assert.equal(p.telegraphShare, 30 / 32);
+  assert.equal(p.pooledShare, 44 / 46);
+  assert.equal(p.unknownShare, 0);
+});
+
+test("F1 fails when either the hull share or the pooled share is under the line, in both directions", () => {
+  // Fails on hull alone (10 of 50 = 0.2); plenty of telegraphed scrap lifts the pooled share to 0.97 and cannot rescue it.
+  const rescued = fairnessPool([fake("w1", "expert", { hull: hullOf(10, 40), scrap: scrapOf(1000, 0), killing_hit: null, ...calm })]);
+  assert.ok(rescued.pooledShare > 0.95 && rescued.telegraphShare < 0.95);
+  assert.ok(fairnessFails(rescued).includes("F1"));
+  // Passes on hull (0.98), fails once untelegraphed scrap is added.
+  const hullOnly = fairnessPool([fake("w1", "expert", { hull: hullOf(98, 2), killing_hit: null, ...calm })]);
+  assert.ok(!fairnessFails(hullOnly).includes("F1"));
+  const tipped = fairnessPool([fake("w1", "expert", { hull: hullOf(98, 2), scrap: scrapOf(0, 30), killing_hit: null, ...calm })]);
+  assert.ok(tipped.telegraphShare > 0.95 && tipped.pooledShare < 0.95);
+  assert.ok(fairnessFails(tipped).includes("F1"));
+});
+
+test("F2 reads scrap lost beside hull and fails when either ratio is under the line", () => {
+  // Hull alone: 40/30 over 10/60 = 8. Scrap lost at cruise (fast_scrap 30) brings the pooled ratio to (40/30)/(40/60) = 2 - fine; 60 pulls it under.
+  const rec = (fastScrap) => fairnessPool([fake("w1", "expert", { hull: hullOf(50, 0), slow_s: 30, fast_s: 60, slow_hull: 40, fast_hull: 10, slow_scrap: 0, fast_scrap: fastScrap, first_hit: { s1: seg(true, 8) }, killing_hit: null })]);
+  assert.equal(rec(0).stopTax, 8);
+  assert.ok(!fairnessFails(rec(0)).includes("F2"));
+  assert.ok(fairnessFails(rec(60)).includes("F2"));
+  assert.equal(rec(60).stopTax, 8);
+});
+
+test("telegraphed scrap cannot dilute unknown hull into F1's mark (ruling cu)", () => {
+  // 57 telegraphed hull and 4 unknown hull is 6.6% unknown, unmarked. 30 telegraphed scrap would read 4.4% pooled; the hull
+  // reading still says unmarked, and the mark drops when either is over the line.
+  const hullOnly = fairnessPool([fake("w1", "expert", { hull: hullOf(57, 0, 0, 4), first_hit: {} })]);
+  const withScrap = fairnessPool([fake("w1", "expert", { hull: hullOf(57, 0, 0, 4), scrap: scrapOf(30, 0), first_hit: {} })]);
+  assert.equal(hullOnly.shareMarked, false);
+  assert.ok(withScrap.pooledUnknownShare < FAIRNESS.unknownMaxShare && withScrap.unknownShare > FAIRNESS.unknownMaxShare);
+  assert.equal(withScrap.shareMarked, false);
+  // and unknown scrap alone drops the mark too
+  const scrapUnknown = fairnessPool([fake("w1", "expert", { hull: hullOf(57, 0), scrap: scrapOf(0, 0, 0, 10), first_hit: {} })]);
+  assert.equal(scrapUnknown.shareMarked, false);
+});
+
+test("F2 is measured when only scrap was lost at cruise, and fails on either ratio", () => {
+  const rec = { hull: hullOf(10, 0), slow_s: 30, fast_s: 60, slow_hull: 20, fast_hull: 0, slow_scrap: 0, fast_scrap: 30, first_hit: { s1: seg(true, 8) }, killing_hit: null };
+  const p = fairnessPool([fake("w1", "expert", rec)]);
+  assert.equal(p.stopTax, null);
+  assert.equal(p.pooledStopTax, (20 / 30) / (30 / 60));
+  assert.ok(p.pooledStopTax < FAIRNESS.stopTax);
+  assert.ok(fairnessFails(p).includes("F2"), "a pooled ratio under the line flags F2 even with no hull ratio");
+  const bad = fairnessPool([fake("w1", "expert", { ...rec, fast_scrap: 300 })]);
+  assert.ok(fairnessFails(bad).includes("F2"));
 });

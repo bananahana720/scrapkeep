@@ -35,6 +35,7 @@ var _hits_enemies := false
 func setup(world_ref) -> void:
 	world = world_ref
 	name = "IndustrialEvents"
+	add_to_group("world_telegraphs")
 	_hits_enemies = HazardHits.applies_to(world.ctx.get("run"))
 	for site in world.terrain.map().park.park_rows:
 		_sites[site.id] = site
@@ -84,7 +85,19 @@ func _telegraph(row: Dictionary) -> void:
 		var outer := minf(float(size[0]), float(size[1])) * 0.5
 		hazard.commit_annulus(row.id, Threat.Type.INSTANT, at, Vector2(outer * float(spec.inner_fraction), outer), REACH_M, lead, live)
 	add_child(hazard)
-	active[row.id] = {"hazard": hazard, "site": site, "at": at, "hit": false, "struck": {}, "swap": "", "overlay_record": {}}
+	active[row.id] = {"hazard": hazard, "kind": row.kind, "site": site, "at": at, "hit": false, "struck": {}, "swap": "", "overlay_record": {}}
+
+
+# The committed Hazard of each live row as [{id, cause, covers}], cause the one lose_scrap is called with (the row's kind).
+# The bot's fairness record reads this (tools/bot_fairness.gd).
+func telegraphs(ball: Vector3) -> Array:
+	var out: Array = []
+	for id in active:
+		var state: Dictionary = active[id]
+		var hazard: Hazard = state.hazard
+		if is_instance_valid(hazard):
+			out.append({"id": hazard.get_instance_id(), "cause": String(state.kind), "covers": hazard.contains(ball)})
+	return out
 
 
 func _land(row: Dictionary, ctx: Dictionary) -> void:

@@ -802,6 +802,7 @@ func wire() -> void:
 		_boss_set("defeated_s", snappedf(_boss_clock, 0.01))
 		_boss_hold_note())
 	events.scrap_lost.connect(func(amount: int, _at: Vector3, _total: int, cause: String):
+		_fair.loss(cause, float(amount))
 		if cause == "crane":
 			_boss_set("stolen", int(boss_note.get("stolen", 0)) + amount))
 	if late_offer_policy != "":
