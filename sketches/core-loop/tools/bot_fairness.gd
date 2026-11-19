@@ -299,6 +299,32 @@ func record(died: bool) -> Dictionary:
 	}
 
 
+# The three numbers a plain baseline run must give the planted-fault comparisons. stop_tax is null when the run never spent time
+# slow or never lost hull at cruise, so a null is a run that measured nothing, not a bug in record(); "miss" then names it.
+# Unmeasured share and first hit read -1.0, which no passing line accepts.
+static func baseline(f: Dictionary) -> Dictionary:
+	var tax = f.get("stop_tax")
+	var out := {"share": share_of(f), "stop_tax": -1.0, "first_hit": first_hit_of(f), "miss": ""}
+	if tax == null:
+		out["miss"] = "plain baseline measured no stop tax"
+	else:
+		out["stop_tax"] = float(tax)
+	return out
+
+
+static func share_of(f: Dictionary) -> float:
+	var v = f.get("telegraph_share")
+	return float(v) if v != null else -1.0
+
+
+static func first_hit_of(f: Dictionary) -> float:
+	var hits = f.get("first_hit")
+	var seg = hits.get("s1") if hits is Dictionary else null
+	if not seg is Dictionary or seg.get("first_hit_s") == null:
+		return -1.0
+	return float(seg["first_hit_s"])
+
+
 static func _round_all(by: Dictionary) -> Dictionary:
 	var out := {}
 	for k in by:
