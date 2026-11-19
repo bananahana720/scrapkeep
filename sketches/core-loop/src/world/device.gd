@@ -6,12 +6,12 @@ const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 # One interactable (LOOP-REDESIGN section 9). The interact system (interact.gd) picks
-# the device E reaches, runs its consent (roll, hold or press) and calls fire(); the
+# the device Interact reaches, runs its consent (roll, hold or press) and calls fire(); the
 # device owns its greybox, its own rules and its prompt. A subclass overrides ready_now,
 # gauge, terms, fire and tick. Travel devices also carry a RollThrough in `roll`.
 #
 # The prompt grammar, shared by every device: from GLYPH_REACH the family glyph alone;
-# when E would reach it, the E keycap, the glyph and at most PROMPT_WORDS words; a
+# when Interact would reach it, its bound keycap, the glyph and at most PROMPT_WORDS words; a
 # device that is not ready shows its gauge round the glyph and never the keycap.
 
 var ctx

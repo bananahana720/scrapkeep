@@ -2,7 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 
-# The interact key's vocabulary (LOOP-REDESIGN section 9). E is interact everywhere, and
+# The interact key's vocabulary (LOOP-REDESIGN section 9). One key is interact everywhere, and
 # every interactable belongs to one of five families. A family is one shape, one colour,
 # one sound register and one prompt verb, so the player learns five things, not fifty.
 # The device builders, the world prompt, the reticle's hold ring, audio and VFX all read
