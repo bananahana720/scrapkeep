@@ -35,7 +35,7 @@ func _run() -> void:
 	game.run.hp = 1000.0
 	var at: Vector3 = ship.global_position + Vector3.UP * 2.0
 	Harness.put_ball(game, at)
-	boss._commit_charge(at)
+	boss._commit_charge()
 	boss._charge_hit(boss._charge["hazard"], at)
 	await physics_frame
 	_t.check("D0 the shove cuts the hull away over the ball", hull.transparency > 0.8, "transparency %.2f" % hull.transparency)

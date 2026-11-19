@@ -230,6 +230,10 @@ func _reach_pin(kind: String, enemy) -> void:
 	if kind == "chaser":
 		enemy._begin_windup(Vector3.FORWARD)
 	else:
+		# Since MG-11 the charge aims where a still ball is, not along the heading it is handed, so the ball
+		# waits ahead on the line the probes below use.
+		_game.player.body().global_position = enemy.global_position + Vector3.FORWARD * (2.3 + 1.6) + Vector3.UP
+		_game.player.body().linear_velocity = Vector3.ZERO
 		enemy._next_attack = 1
 		enemy._begin_attack(Vector3.FORWARD)
 	var lane = enemy.telegraph()
@@ -246,7 +250,8 @@ func _reach_pin(kind: String, enemy) -> void:
 		else:
 			enemy._check_charge(lane)
 		results.append(enemy._landed)
-	_t.check("%s: the lane's body_reach (%.2f) is the reach its hit test uses" % [kind, reach], is_equal_approx(advertised, reach) and results == [true, false])
+	_t.check("%s: the lane's body_reach (%.2f) is the reach its hit test uses" % [kind, reach], is_equal_approx(advertised, reach) and results == [true, false],
+		"advertised %.2f, hit inside then outside %s" % [advertised, results])
 
 
 # A real enemy, the ball held `ahead` metres down its lane: on the first ticks of its run the
