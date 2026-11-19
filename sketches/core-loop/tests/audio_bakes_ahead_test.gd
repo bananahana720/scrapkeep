@@ -25,10 +25,10 @@ class DrawnAudio extends Audio:
 
 
 func _initialize() -> void:
-	_t.check("BA-1 a device bakes ahead", Audio.bakes_ahead_on("CoreAudio", "headless"), "a sound device always bakes ahead")
-	_t.check("BA-1 a drawn game with no device bakes ahead", Audio.bakes_ahead_on("Dummy", "macOS") and Audio.bakes_ahead_on("Dummy", "X11"),
+	_t.check("BA-1 a device bakes ahead", Audio.bakes_ahead_on("CoreAudio", true), "a sound device always bakes ahead")
+	_t.check("BA-1 a drawn game with no device bakes ahead", Audio.bakes_ahead_on("Dummy", false),
 		"the dummy driver of a drawn game must bake on workers, not on the frame its bar asks")
-	_t.check("BA-1 a headless game renders on demand", not Audio.bakes_ahead_on("Dummy", "headless"), "a headless test must not start workers")
+	_t.check("BA-1 a headless game renders on demand", not Audio.bakes_ahead_on("Dummy", true), "a headless test must not start workers")
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)

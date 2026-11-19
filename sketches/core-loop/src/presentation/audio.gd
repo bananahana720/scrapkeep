@@ -1,5 +1,6 @@
 extends Node
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const Activities := preload("res://src/world/activities.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Rows := preload("res://src/presentation/rows.gd")
@@ -468,11 +469,11 @@ func _init() -> void:
 
 # Whether this game bakes ahead on workers: the one read of the machine, so a test can stand in a drawn game.
 func _drawn_with_workers() -> bool:
-	return bakes_ahead_on(AudioServer.get_driver_name(), DisplayServer.get_name())
+	return bakes_ahead_on(AudioServer.get_driver_name(), AppShell.headless())
 
 
-static func bakes_ahead_on(audio_driver: String, display_driver: String) -> bool:
-	return audio_driver != "Dummy" or display_driver != "headless"
+static func bakes_ahead_on(audio_driver: String, headless: bool) -> bool:
+	return audio_driver != "Dummy" or not headless
 
 
 func setup(ctx_ref) -> void:
