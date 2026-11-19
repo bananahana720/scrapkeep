@@ -148,6 +148,8 @@ func setup(game_ref) -> void:
 	game.events.event_announced.connect(note_incoming)
 	# A retry or a new stage ends what was announced without an end for each event.
 	game.events.stage_entered.connect(func(_stage: int, _retry: bool): _incoming.clear())
+	# The arena and the lap clear the stage's content with no stage change and no end per event.
+	game.events.stage_content_cleared.connect(func(_reason: String): _incoming.clear())
 	game.events.event_started.connect(func(id: String): _incoming.erase(id))
 	game.events.event_ended.connect(func(id: String, _outcome: String): _incoming.erase(id))
 

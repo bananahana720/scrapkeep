@@ -7,13 +7,13 @@ const GameEvents := preload("res://src/core/game_events.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 
-# Rule (PF-16): an event announced with a lead and a place points the edge marker at that place
-# through its lead, in the warning colour with the event glyph, and no longer: the marker goes
-# while the event is still coming: the lead running out does not drop it, since the director can
-# hold an announced event for clear ground, and it goes when the event starts or ends or the stage
-# or run resets (through the bus). In view the place wears
-# brackets instead of the edge chevron (W1-04), so the target is a mark. The weather, the flood
-# and a squall have no one place (Vector3.INF) and get none; nor does an event with no lead.
+# Rule (PF-16): an event announced with a lead and a place points the edge marker at that place,
+# in the warning colour with the event glyph, for as long as the event is still coming. The lead
+# running out does not drop it, since the director can hold an announced event for clear ground.
+# It goes when the event starts or ends, or the stage, its content or the run resets (through the
+# bus). In view the place wears brackets instead of the edge chevron (W1-04), so the target is a
+# mark. The weather, the flood and a squall have no one place (Vector3.INF) and get none; nor does
+# an event with no lead.
 
 var _t := preload("res://tests/support/t.gd").new("ui_edge_marker_incoming_test")
 
@@ -73,13 +73,16 @@ func _bus_clears() -> void:
 	bus.event_announced.emit("dome_lightning", 2.0, at)
 	bus.run_started.emit("any_class")
 	_t.eq("run_started clears it", m.incoming_targets().size(), 0)
+	bus.event_announced.emit("dome_lightning", 2.0, at)
+	bus.stage_content_cleared.emit("arena")
+	_t.eq("stage_content_cleared clears it", m.incoming_targets().size(), 0)
 	m.free()
 	bus.free()
 
 
 # The real director on the dam map with the ball standing in the flood pool's footprint: the event
 # is announced, cannot land while the ball is inside, and lands once the ball walks clear. The
-# marker is fed the director's own facts the way world.gd publishes them.
+# marker is fed the director's own facts directly, without the bus or world.gd's place filter.
 func _through_a_hold() -> void:
 	var id := "plunge_pool_flood"
 	var park := ParkMap.new("res://src/world/park/park_dam.json")
