@@ -1,6 +1,7 @@
 extends Node3D
 
 const Interactables := preload("res://src/world/interactables.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Palette := preload("res://src/core/palette.gd")
 
@@ -110,7 +111,7 @@ func show_prompt(targeted: bool) -> void:
 	if spent and not targeted:
 		prompt.set_interact("", "", "", -1.0)
 	elif targeted:
-		prompt.set_interact(icon, words(), Interactables.KEY, -1.0)
+		prompt.set_interact(icon, words(), Glyphs.of("interact"), -1.0)
 	else:
 		prompt.set_interact(icon, "", "", gauge() if not ready_now() else -1.0)
 

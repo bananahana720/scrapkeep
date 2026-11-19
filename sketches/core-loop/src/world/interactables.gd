@@ -34,7 +34,6 @@ const GLYPH_REACH := 30.0
 const HOLD_SECONDS := 0.35
 const LANE_LENGTH := 12.0
 const PROMPT_WORDS := 5
-const KEY := "key_e"
 
 const FAMILIES := {
 	"travel": {"icon": "obj_launch", "shape": "arrow", "color": Palette.AMBER, "accent": Palette.SAND,
