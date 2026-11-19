@@ -1,4 +1,4 @@
-# smoke: solo timeout=360s (nine bot runs in child processes at once; a loaded machine slows them)
+# smoke: solo timeout=360s (twenty-seven bot runs in child processes at once; a loaded machine slows them)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -17,14 +17,14 @@ const PlatformPin := preload("res://tests/support/platform_pin.gd")
 # mechanism live: once the stage's Warden stands, the child mounts src/combat/warden_reactor.gd
 # on it through set_mount_driver, so every pulse opens the gates and lays the sheet. The arms
 # are tools/posture_sweep.gd's (small: skipper from mass 0; grown: skipper from 540; camper:
-# shoots from range), seeds 0, 1 and 2, one child process each, a run that never breaks counting
+# shoots from range), seeds 0 to 8 (three seeds until 19 Nov 2026), one child process each, a run that never breaks counting
 # as the 120 s cap (posture_bands_test.gd's smoke limit). Bands: grown median 25 to 45 s, small median at least twice grown's, the
 # camper never breaks it; the live medians stay within 10 percent of the pins below.
 # The child is this script run with --arm (posture_sweep.gd's child shape on the alpha table).
 # The Warden is not made a harpoon anchor here: KF1b measured the bot stalling on the
 # stagger-gated haul (posture_bands_test.gd header), and KF8 wires the park's anchors.
 
-const SEEDS := [0, 1, 2]
+const SEEDS := [0, 1, 2, 3, 4, 5, 6, 7, 8]
 const ARMS := ["small", "grown", "camper"]
 # A run that never breaks counts as this cap; the camper's run lasts it, so it bounds the wall time.
 const CAP := 120.0
@@ -81,10 +81,18 @@ const DRIVER_PATH := "res://src/combat/warden_reactor.gd"
 # 30c61601 (stage alpha-w43 35e0fc83, Mac Studio M5 Max, Godot 4.7.2), the same medians as the wave 43 gate's run: small
 # [53.15, 64.13, 60.87] median 60.87, grown [31.34, 25.42, 21.74] median 25.42, ratio 2.39, campers 120, rides per run
 # [1, 3, 1, 0, 1, 0, 1, 1, 2]. Grown 25.4 s sits 0.4 s over the 25 s band floor on the Mac.
+# 2026-11-19 (Gate, stage/alpha-w44 ca8b06bbb plus w44/brindle-bot-camera 7adeb1b4c, Mac Studio, Godot 4.7.2): nine seeds,
+# Mac re-pin small 60.87 -> 54.96 s, grown 25.42 -> 19.39 s. b0c797f04 (MG-11) made pack_pressure.gd observe() count a
+# hit-stopped tick at its true length; that plays seed 1 a different fight (64.1 -> 42.3 s small), which alone decided the
+# three-seed medians and broke the twice-grown rule. Old against new observe() over seeds 3 to 8 agree within 7 s, so the
+# clock shifts no band. Nine seeds: small [48.63, 42.32, 54.96, 120, 55.31, 18.10, 53.93, 55.80, 120] median 54.96, grown
+# [31.34, 28.76, 15.78, 15.16, 19.36, 14.47, 23.11, 35.16, 19.39] median 19.39, ratio 2.83, campers 120. Grown sits 5.6 s
+# under the 25 s floor, as the 24-seed read of 24 Oct said: the three-seed pass was luck. The band check stays red and is
+# carried on KNOWN-FAILING.tsv beside posture_bands_test's grown floor (the stage 1 Warden plating sweep). Linux pins stay.
 const EXPECT_SMALL_S := 73.09
-const EXPECT_SMALL_S_MAC := 60.87
+const EXPECT_SMALL_S_MAC := 54.96
 const EXPECT_GROWN_S := 31.34
-const EXPECT_GROWN_S_MAC := 25.42
+const EXPECT_GROWN_S_MAC := 19.39
 const TOLERANCE := 0.10
 const WALL_S := 330.0
 
@@ -132,7 +140,7 @@ func _initialize() -> void:
 		rows[arm].append(cols)
 	var all_rows: Array = rows.values().reduce(func(acc, r): return acc + r, [])
 	# A fast break can come before the first pulse; the camper's full-length runs must see the gates.
-	t.check("every run mounted the reactor driver; the gates opened in every camper run", all_rows.size() == 9
+	t.check("every run mounted the reactor driver; the gates opened in every camper run", all_rows.size() == ARMS.size() * SEEDS.size()
 			and all_rows.all(func(c): return c.size() >= 6 and c[3] == "true")
 			and rows.get("camper", []).all(func(c): return c.size() >= 6 and int(c[4]) > 0),
 		"attached and gates per run %s" % [all_rows.map(func(c): return "%s/%s" % [c[3], c[4]] if c.size() >= 6 else "?")])
