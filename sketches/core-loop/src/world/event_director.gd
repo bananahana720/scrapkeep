@@ -581,9 +581,7 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 	state.live_elapsed_s += dt
 	if not state.weather and (_park_rising(state) or _park_collapsing(state)) and not _park_clear(state, ball, velocity, ctx):
 		var inside := _park_in_footprint(state, ball)
-		if inside and _park_hold_spent(state):
-			pass
-		else:
+		if not (inside and _park_hold_spent(state)):
 			if inside:
 				state.waited_s += dt
 			return

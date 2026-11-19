@@ -16,7 +16,7 @@ CONSTANTS
   Cap,            \* PARK_GROUND_CAP
   MaxLives,       \* how many times one row may land (bounds the model)
   SnapRise,       \* the rise snaps to full within the clock tolerance (pull request 1135)
-  WaitUnderBall,  \* rising water waits while a grounded ball is in its basin
+  WaitUnderBall,  \* rising water waits while the ball is in its basin, grounded or not
   HoldTicks,      \* PARK_FLOOD_HOLD_CAP_S in ticks: how many ticks the wait lasts, W1-148
   HoldCap,        \* the wait is spent after HoldTicks ticks (FALSE: it lasts as long as the ball stays)
   EndNeedsClear,  \* _park_can_end: a flood ends only with its basin clear
@@ -29,7 +29,7 @@ VARIABLES
   hair,     \* per row: Fill ticks risen but the sum is a hair short
   elapsed,  \* per row: live ticks, 0..Live
   lives,    \* per row: times landed
-  ball,     \* the row whose basin holds the grounded ball, or "out"
+  ball,     \* the row whose basin holds the ball, or "out"
   waited,   \* per row: ticks the rise has waited for a ball since the row landed (waited_s)
   skipped,     \* per row: a tick skipped the step hook on water that had risen Fill ticks
   roseUnder,\* per row: a tick raised the water with the ball in the basin
@@ -147,7 +147,7 @@ FullWaterNeverHeld == \A e \in Events : ~skipped[e]
 FullWaterFreesItsSlot ==
   \A e \in Events : (Live = 0 /\ phase[e] = "live" /\ rise[e] = Fill) => Settled(e)
 
-\* Water does not rise onto a grounded ball in its basin while the wait for it lasts (the first HoldTicks ticks).
+\* Water does not rise onto the ball in its basin while the wait for it lasts (the first HoldTicks ticks).
 NeverRisesUnderBall == \A e \in Events : ~roseUnder[e]
 
 \* A flood never withdraws from under a ball in its basin.

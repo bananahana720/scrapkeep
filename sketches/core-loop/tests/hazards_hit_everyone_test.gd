@@ -427,7 +427,8 @@ func _flood_parked(grounded: bool) -> void:
 	var ended_at := -1.0
 	for i in 900:
 		var clock := i * DT
-		_tick(w, handler, clock, grounded or i % 2 == 0)
+		# The hopping ball never touches down after the landing, so the cap has to count airborne time in the basin.
+		_tick(w, handler, clock, grounded or (landed_at < 0.0 and i % 2 == 0))
 		var state = handler.active.get("plunge_pool_flood")
 		if landed_at < 0.0 and state != null and state.phase != "telegraph":
 			landed_at = clock

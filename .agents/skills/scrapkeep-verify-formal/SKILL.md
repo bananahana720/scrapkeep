@@ -105,12 +105,12 @@ Another model, `models/ParkFlood.tla`, checks a park flood from its announcement
 
 - **FullWaterNeverHeld.** While its live time runs, water that has risen for its whole fill time is stepped on every tick, ball or no ball.
 - **FullWaterFreesItsSlot.** Full water with no live time stops counting against the ground cap.
-- **NeverRisesUnderBall** and **NeverEndsUnderBall.** Water does not rise for the first 2 s of a grounded ball in its basin (the bounded wait), and does not end while the ball is in its basin.
+- **NeverRisesUnderBall** and **NeverEndsUnderBall.** Water does not rise for the first 2 s of the ball in its basin, grounded or not (the bounded wait), and does not end while the ball is in its basin.
 - **HoldEnds.** The wait is bounded: rising water always finishes rising, ball or no ball (finding PF-1, closed by W1-148).
 - **WithinCap.** No more unsettled ground events are live than the cap allows.
 - **FloodEnds** and **AnnouncedLands.** Once the ball stays out, every live flood ends and every announced one lands.
 
-Run `bash $F/models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg` with `ParkFlood.tla`. [references/flood-coverage.md](references/flood-coverage.md) maps each step and guard to the code and lists what each config must report, and [references/flood-findings.md](references/flood-findings.md) holds the findings, one of them an open design question. `node scripts/gate/model-receipts.mjs --out <dir> --row flood-never-held` writes its receipt.
+Run `bash $F/models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg` with `ParkFlood.tla`. [references/flood-coverage.md](references/flood-coverage.md) maps each step and guard to the code and lists what each config must report, and [references/flood-findings.md](references/flood-findings.md) holds the findings, two of them open (PF-2 and PF-3). `node scripts/gate/model-receipts.mjs --out <dir> --row flood-never-held` writes its receipt.
 
 ## Lessons and updates
 

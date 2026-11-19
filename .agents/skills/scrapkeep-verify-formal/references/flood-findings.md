@@ -38,7 +38,7 @@ Each finding is a break the model found that replayed on the real game. A closed
 
 **Harm.** None a player can see on this tree. Once a step taxes a slow ball in deep water (pull request 1123), a ball that outstays the flood stops being taxed.
 
-**Model.** Not seen: the model's live-time branch leaves `held` unchanged, and `FullWaterNeverHeld` is stated for the live time only. Found by reading the code in review, not by the checker and not replayed.
+**Model.** Not seen: the model's live-time branch leaves `skipped` unchanged, and `FullWaterNeverHeld` is stated for the live time only. Found by reading the code in review, not by the checker and not replayed.
 
 ## PF-3. A ball near a flood but outside its footprint still holds the water off, without limit (open)
 

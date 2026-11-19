@@ -26,7 +26,7 @@ The covered file: `sketches/core-loop/src/world/event_director.gd`.
 | Constant | The guard in the code | Config that turns it off | Rule that must break |
 | --- | --- | --- | --- |
 | `SnapRise` | `_park_clock` sets a clock to its target once the sum is within `PARK_CLOCK_SLACK_S` (pull request 1135) | `flood-broken-nosnap`, `flood-broken-nosnap-slot` | `FullWaterNeverHeld`, `FullWaterFreesItsSlot` |
-| `WaitUnderBall` | the early return in `_park_step_live` while rising water's basin holds a grounded ball | `flood-broken-nowait` | `NeverRisesUnderBall` |
+| `WaitUnderBall` | the early return in `_park_step_live` while rising water's basin holds the ball, grounded or not | `flood-broken-nowait` | `NeverRisesUnderBall` |
 | `HoldCap` | `_park_hold_spent` against `PARK_FLOOD_HOLD_CAP_S`: the wait lasts at most 2 s of live time (W1-148) | `flood-broken-nohold` | `HoldEnds` |
 | `EndWhenSpent` | no guard in the code: the plant for the fault the W1-148 review found, a spent wait letting the flood end under the ball | `flood-broken-endspent` (`Fill` 3, `Live` 2, so `Fill > Live - HoldTicks`) | `NeverEndsUnderBall` |
 | `EndNeedsClear` | `_park_can_end` | `flood-broken-endunder` | `NeverEndsUnderBall` |
