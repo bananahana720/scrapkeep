@@ -52,8 +52,11 @@ const GROWN_BAND_S := Vector2(25.0, 45.0)
 # beside the Linux 50.32 s, with the same plus or minus 10 s. One run of this test on w43/gate-mac-reds 30c61601 (stage
 # alpha-w43 35e0fc83, Mac Studio M5 Max, Godot 4.7.2, 24 seeds a side) read small first-stagger median 36.61 s, as the
 # wave 43 gate's four solo runs did; small 71.24 s and grown 31.98 s pass their Linux pins there, so those stay single.
+# 2026-11-20 (wave 44 close, Mac Studio, stage/alpha-w44 212fb8e0 after w44/brindle-bot-camera): lens crosshair aim
+# moved the Mac small first-stagger median across all 24 seeds from 36.61 s to 48.45 s (4/4 solo runs identical,
+# 201/202 checks green, right beside Linux's 50.32 s). Mac band re-centered on 48.45 s; Linux band unchanged.
 const FIRST_STAGGER_BAND_S := Vector2(40.32, 60.32)
-const FIRST_STAGGER_BAND_S_MAC := Vector2(26.61, 46.61)
+const FIRST_STAGGER_BAND_S_MAC := Vector2(38.45, 58.45)
 const SMALL_FACTOR := 2.0
 const HOIST_TOP := 29.0
 const RUN_CAP_S := 300.0
