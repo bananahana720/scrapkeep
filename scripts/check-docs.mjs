@@ -8,10 +8,7 @@ import { checkLedger } from "./known-failing.mjs";
 import { checkWeekly } from "./gate/weekly.mjs";
 import { checkWaveState } from "./wave-state.mjs";
 
-const scriptRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-);
+const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const limits =
   "Structural documentation checks only. No build, runtime, browser or remote check is implied; link targets are checked for existence and anchors, not for content correctness.";
 const cardFields = [
@@ -104,10 +101,7 @@ function parseArguments(argv) {
     else throw new Error("Unknown argument: " + flag);
     index++;
   }
-  options.report ??= path.join(
-    options.root,
-    "artifacts/local/check-docs/report.json",
-  );
+  options.report ??= path.join(options.root, "artifacts/local/check-docs/report.json");
   return options;
 }
 
@@ -120,14 +114,18 @@ async function exists(file) {
   }
 }
 
-async function walk(root, directory, keep) {
+async function walk(root, directory, keep, skipDir = () => false) {
   const files = [];
   const absolute = path.join(root, directory);
   if (!(await exists(absolute))) return files;
   for (const item of await readdir(absolute, { withFileTypes: true })) {
     const file = path.posix.join(directory, item.name);
-    if (item.isDirectory()) files.push(...(await walk(root, file, keep)));
-    else if (item.isFile() && keep(file)) files.push(file);
+    if (item.isDirectory()) {
+      if (skipDir(file)) continue;
+      files.push(...(await walk(root, file, keep, skipDir)));
+    } else if (item.isFile() && keep(file)) {
+      files.push(file);
+    }
   }
   return files;
 }
@@ -142,9 +140,8 @@ async function markdownFiles(root) {
     ...(await walk(
       root,
       "artifacts",
-      (file) =>
-        path.posix.basename(file) === "README.md" &&
-        !file.startsWith("artifacts/local/"),
+      (file) => path.posix.basename(file) === "README.md",
+      (dir) => dir === "artifacts/local",
     )),
   );
   return files.sort();
@@ -186,8 +183,7 @@ function collectAnchors(lines) {
       seen.set(base, count + 1);
       anchors.add(count === 0 ? base : base + "-" + count);
     }
-    for (const match of line.matchAll(/<a\s+(?:name|id)="([^"]+)"/g))
-      anchors.add(match[1]);
+    for (const match of line.matchAll(/<a\s+(?:name|id)="([^"]+)"/g)) anchors.add(match[1]);
   }
   return anchors;
 }
@@ -196,7 +192,15 @@ class Documents {
   constructor(root) {
     this.root = root;
     this.cache = new Map();
+    this.existsCache = new Map();
     this.findings = [];
+  }
+
+  async hasFile(relativePath) {
+    if (!this.existsCache.has(relativePath)) {
+      this.existsCache.set(relativePath, await exists(path.join(this.root, relativePath)));
+    }
+    return this.existsCache.get(relativePath);
   }
 
   async load(file) {
@@ -235,12 +239,7 @@ async function checkLinks(docs, file) {
       if (/^[a-z][a-z0-9+.-]*:/i.test(target)) continue;
       checked++;
       if (target.startsWith("/")) {
-        docs.fail(
-          "links",
-          file,
-          number,
-          "non-portable absolute link: " + target,
-        );
+        docs.fail("links", file, number, "non-portable absolute link: " + target);
         continue;
       }
       const [rawPath, rawAnchor] = target.split("#");
@@ -250,29 +249,17 @@ async function checkLinks(docs, file) {
         anchor = rawAnchor ? decodeURIComponent(rawAnchor) : "";
         decodedPath = rawPath ? decodeURIComponent(rawPath) : "";
       } catch {
-        docs.fail(
-          "links",
-          file,
-          number,
-          "malformed percent-encoding in link: " + target,
-        );
+        docs.fail("links", file, number, "malformed percent-encoding in link: " + target);
         continue;
       }
       let targetFile = file;
       if (decodedPath) {
-        targetFile = path.posix.normalize(
-          path.posix.join(path.posix.dirname(file), decodedPath),
-        );
+        targetFile = path.posix.normalize(path.posix.join(path.posix.dirname(file), decodedPath));
         if (targetFile === ".." || targetFile.startsWith("../")) {
-          docs.fail(
-            "links",
-            file,
-            number,
-            "link escapes repository: " + target,
-          );
+          docs.fail("links", file, number, "link escapes repository: " + target);
           continue;
         }
-        if (!(await exists(path.join(docs.root, targetFile)))) {
+        if (!(await docs.hasFile(targetFile))) {
           docs.fail("links", file, number, "missing link target: " + target);
           continue;
         }
@@ -284,11 +271,7 @@ async function checkLinks(docs, file) {
           "links",
           file,
           number,
-          "broken anchor: " +
-            target +
-            " (no heading or <a id> for #" +
-            anchor +
-            ")",
+          "broken anchor: " + target + " (no heading or <a id> for #" + anchor + ")",
         );
     }
   }
@@ -322,11 +305,7 @@ async function checkBacklog(docs) {
         "backlog",
         file,
         number,
-        id +
-          ": preceding <a id> is " +
-          JSON.stringify(anchor) +
-          ", expected " +
-          id.toLowerCase(),
+        id + ": preceding <a id> is " + JSON.stringify(anchor) + ", expected " + id.toLowerCase(),
       );
     if (id.startsWith("Q-")) continue;
     cards++;
@@ -335,12 +314,7 @@ async function checkBacklog(docs) {
     const body = lines.slice(index + 1, end);
     for (const field of cardFields)
       if (!body.some((entry) => entry.includes("**" + field + ":**")))
-        docs.fail(
-          "backlog",
-          file,
-          number,
-          id + ": missing field **" + field + ":**",
-        );
+        docs.fail("backlog", file, number, id + ": missing field **" + field + ":**");
     for (const [offset, entry] of body.entries()) {
       const size = /\*\*Size:\*\*\s*([A-Z]+)/.exec(entry);
       if (size && !["S", "M"].includes(size[1]))
@@ -351,9 +325,7 @@ async function checkBacklog(docs) {
           id + ": non-assignable card, Size " + size[1] + " (S or M required)",
         );
       if (
-        !/\*\*(Dependencies|Blocking questions|Registered non-blocking questions):\*\*/.test(
-          entry,
-        )
+        !/\*\*(Dependencies|Blocking questions|Registered non-blocking questions):\*\*/.test(entry)
       )
         continue;
       for (const link of entry.matchAll(/\[([^\]]+)\]\(#([^)]+)\)/g)) {
@@ -402,9 +374,7 @@ function tableSections(lines, sectionHeading) {
 
 function tableRows(lines, sectionHeading) {
   const section = tableSections(lines, sectionHeading)[0];
-  return section
-    ? { start: section.start, end: section.end, rows: section.rows }
-    : null;
+  return section ? { start: section.start, end: section.end, rows: section.rows } : null;
 }
 
 // Every declared event archive in documentation scope, as an event source:
@@ -438,12 +408,7 @@ async function eventArchives(docs) {
       .flatMap((section) => section.rows)
       .filter((row) => isEventId(row.cells[0]));
     if (!rows.length) {
-      docs.fail(
-        "tracking",
-        file,
-        exact[0],
-        "declared event archive holds no EV-NNNN event rows",
-      );
+      docs.fail("tracking", file, exact[0], "declared event archive holds no EV-NNNN event rows");
       continue;
     }
     archives.push({ file, lines, sections, rows });
@@ -459,8 +424,7 @@ async function checkTracking(docs) {
   }
   const { lines } = await docs.load(file);
   const events = tableRows(lines, "## Append-only events");
-  if (!events)
-    docs.fail("tracking", file, 0, "missing section ## Append-only events");
+  if (!events) docs.fail("tracking", file, 0, "missing section ## Append-only events");
   // Event sources: the live board, then every archive that declares itself an
   // event archive. The board keeps the shape the AR-01 rules were written
   // against; archives contribute ids, sequence positions and named records.
@@ -474,8 +438,7 @@ async function checkTracking(docs) {
     },
     ...archives,
   ];
-  const lowest = (source) =>
-    Math.min(...source.rows.map((row) => Number(row.cells[0].slice(3))));
+  const lowest = (source) => Math.min(...source.rows.map((row) => Number(row.cells[0].slice(3))));
   // The id space is checked over the ordered union of sources: each source keeps
   // its own file order, and the sources themselves are ordered by their lowest
   // event id, so an archived EV-0001..EV-0057 prefix precedes the board's
@@ -505,27 +468,17 @@ async function checkTracking(docs) {
           "tracking",
           source.file,
           row.line,
-          "duplicate event " +
-            id +
-            " (first seen in " +
-            first.file +
-            ":" +
-            first.line +
-            ")",
+          "duplicate event " + id + " (first seen in " + first.file + ":" + first.line + ")",
         );
       } else if (value !== previous + 1)
         docs.fail(
           "tracking",
           source.file,
           row.line,
-          "event sequence break: " +
-            id +
-            " follows EV-" +
-            String(previous).padStart(4, "0"),
+          "event sequence break: " + id + " follows EV-" + String(previous).padStart(4, "0"),
         );
       sequence.add(id);
-      if (!firstSeen.has(id))
-        firstSeen.set(id, { file: source.file, line: row.line });
+      if (!firstSeen.has(id)) firstSeen.set(id, { file: source.file, line: row.line });
       previous = Math.max(previous, value);
     }
   // The events table stays one unbroken table in every source, archive included.
@@ -537,19 +490,9 @@ async function checkTracking(docs) {
       const last = rows[rows.length - 1].line - 1;
       for (let index = first; index <= last; index++)
         if (source.lines[index].trim() === "")
-          docs.fail(
-            "tracking",
-            source.file,
-            index + 1,
-            "blank line inside the events table",
-          );
+          docs.fail("tracking", source.file, index + 1, "blank line inside the events table");
         else if (!source.lines[index].startsWith("|"))
-          docs.fail(
-            "tracking",
-            source.file,
-            index + 1,
-            "non-table line inside the events table",
-          );
+          docs.fail("tracking", source.file, index + 1, "non-table line inside the events table");
     }
   // Which records each change-carrying event names, so an index row can be
   // compared against events that arrived after its own Last event. Archived
@@ -562,8 +505,7 @@ async function checkTracking(docs) {
     const affectedIndex = header.indexOf("Affected records");
     const kindIndex = header.indexOf("Actor / kind");
     for (const row of source.rows) {
-      if (programEvent.test(row.cells[kindIndex >= 0 ? kindIndex : 2] ?? ""))
-        continue;
+      if (programEvent.test(row.cells[kindIndex >= 0 ? kindIndex : 2] ?? "")) continue;
       const event = { id: row.cells[0], sequence: Number(row.cells[0].slice(3)) };
       for (const id of recordIds(row.cells[affectedIndex >= 0 ? affectedIndex : 3] ?? ""))
         namedEvents.set(id, [...(namedEvents.get(id) ?? []), event]);
@@ -595,12 +537,7 @@ async function checkTracking(docs) {
       const record = (link ? link[1] : head.split(/[\s(]/)[0]).trim();
       if (!link) interim.push({ line: row.line, row: head });
       else if (!backlogAnchors.has(link[2]))
-        docs.fail(
-          "tracking",
-          file,
-          row.line,
-          head + ": BACKLOG.md#" + link[2] + " has no anchor",
-        );
+        docs.fail("tracking", file, row.line, head + ": BACKLOG.md#" + link[2] + " has no anchor");
       if (taskIndex && stateIndex >= 0) {
         states++;
         const state = row.cells[stateIndex] ?? "";
@@ -626,9 +563,7 @@ async function checkTracking(docs) {
           "tracking",
           file,
           row.line,
-          head +
-            ": Last event is not an EV-NNNN id: " +
-            JSON.stringify(lastEvent),
+          head + ": Last event is not an EV-NNNN id: " + JSON.stringify(lastEvent),
         );
       else if (!sequence.has(lastEvent))
         docs.fail(
@@ -659,26 +594,17 @@ async function checkTracking(docs) {
     }
   }
   for (const row of interim)
-    docs.info(
-      "tracking",
-      file,
-      row.line,
-      "interim row without a BACKLOG link: " + row.row,
-    );
+    docs.info("tracking", file, row.line, "interim row without a BACKLOG link: " + row.row);
   return { events: sequence.size, interim, states, archives: archives.length };
 }
 
 async function checkSections(docs) {
-  const files = await walk(docs.root, "docs/tech/sections", (file) =>
-    file.endsWith(".md"),
-  );
+  const files = await walk(docs.root, "docs/tech/sections", (file) => file.endsWith(".md"));
   for (const file of files) {
     const { lines } = await docs.load(file);
     const present = new Set(
       lines
-        .map((line) =>
-          /^#{1,6}\s+(.*?)\s*#*\s*$/.exec(line)?.[1].trim().toLowerCase(),
-        )
+        .map((line) => /^#{1,6}\s+(.*?)\s*#*\s*$/.exec(line)?.[1].trim().toLowerCase())
         .filter(Boolean),
     );
     for (const heading of sectionHeadings)
@@ -692,8 +618,20 @@ async function checkClosureContract(docs) {
   const contracts = {
     "ORCHESTRATOR.md": ["Sprint closure", "Specification contradictions"],
     "docs/project/prompts/sprint-close.md": ["Close the selected sprint"],
-    "docs/project/sprint-0/amendment-request.md": ["Request identity and context", "Conflicting clauses and observation", "Classification and proposed change", "Decision record", "Admission and propagation receipt", "Closure disposition"],
-    "docs/project/sprint-0/closure-receipt.md": ["Receipt schema", "Mandatory gates", "Run the checker", "Evidence limits"],
+    "docs/project/sprint-0/amendment-request.md": [
+      "Request identity and context",
+      "Conflicting clauses and observation",
+      "Classification and proposed change",
+      "Decision record",
+      "Admission and propagation receipt",
+      "Closure disposition",
+    ],
+    "docs/project/sprint-0/closure-receipt.md": [
+      "Receipt schema",
+      "Mandatory gates",
+      "Run the checker",
+      "Evidence limits",
+    ],
   };
   for (const [file, headings] of Object.entries(contracts)) {
     if (!(await exists(path.join(docs.root, file)))) {
@@ -712,7 +650,9 @@ async function checkClosureContract(docs) {
   ]) {
     if (!(await exists(path.join(docs.root, file)))) continue;
     const { lines } = await docs.load(file);
-    const linked = lines.some((line) => [...line.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].some((match) => match[1] === target));
+    const linked = lines.some((line) =>
+      [...line.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].some((match) => match[1] === target),
+    );
     if (!linked) docs.fail("closure", file, 0, "missing required closure link: " + target);
   }
 }
@@ -728,11 +668,10 @@ async function checkSkillsStage(docs) {
   if (!(await exists(script))) return 0;
   if (!(await exists(path.join(docs.root, ".agents/skills")))) return 0;
   const timeoutMs = 30_000;
-  const result = spawnSync(
-    process.execPath,
-    [script, "--root", docs.root, "--json"],
-    { encoding: "utf8", timeout: timeoutMs },
-  );
+  const result = spawnSync(process.execPath, [script, "--root", docs.root, "--json"], {
+    encoding: "utf8",
+    timeout: timeoutMs,
+  });
   if (result.error?.code === "ETIMEDOUT") {
     docs.fail(
       "skills",
@@ -768,8 +707,7 @@ async function checkSkillsStage(docs) {
   }
   for (const finding of findings) {
     const message = "[" + finding.check + "] " + finding.message;
-    if (finding.level === "failure")
-      docs.fail("skills", finding.file, finding.line, message);
+    if (finding.level === "failure") docs.fail("skills", finding.file, finding.line, message);
     else docs.info("skills", finding.file, finding.line, message);
   }
   return findings.length;
@@ -853,11 +791,8 @@ async function main() {
   const ledgerFindings = await checkLedgerStage(docs);
   await checkRulingLetters(docs);
   const manifest = {};
-  for (const file of [...docs.cache.keys()].sort())
-    manifest[file] = docs.cache.get(file).sha256;
-  const failures = docs.findings.filter(
-    (finding) => finding.level === "failure",
-  );
+  for (const file of [...docs.cache.keys()].sort()) manifest[file] = docs.cache.get(file).sha256;
+  const failures = docs.findings.filter((finding) => finding.level === "failure");
   const report = {
     result: failures.length ? "fail" : "pass",
     root: options.root,
