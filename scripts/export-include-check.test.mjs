@@ -17,7 +17,8 @@ const sketch = path.join(root, "sketches/core-loop");
 const presetText = readFileSync(path.join(sketch, "export_presets.cfg"), "utf8");
 
 test("rawLiterals finds raw data names and skips resource names", () => {
-  const source = 'a("res://assets/park/%s/graph.bin")\nb(dir + "/ground.bin")\nc("x.glb")\nd("runs.ndjson")';
+  const source =
+    'a("res://assets/park/%s/graph.bin")\nb(dir + "/ground.bin")\nc("x.glb")\nd("runs.ndjson")';
   assert.deepEqual(
     rawLiterals(source).map((item) => item.text),
     ["res://assets/park/%s/graph.bin", "/ground.bin", "runs.ndjson"],

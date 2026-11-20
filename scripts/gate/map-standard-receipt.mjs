@@ -62,33 +62,73 @@ export const WAITING = [
     status: "OWED",
     value: "-0.41",
     why: "the rebuilt concave flume yard is parked until after the sitting",
-    cite: "project-guide/handoff/ROADMAP.md:27 (\"the rebuilt concave flume yard (the bowl test records it as OWED)\"); DECISIONS.md:320, ruling ct",
+    cite: 'project-guide/handoff/ROADMAP.md:27 ("the rebuilt concave flume yard (the bowl test records it as OWED)"); DECISIONS.md:320, ruling ct',
   },
 ];
 // Halves of a point that no MAPCHECK line checks. Each is a miss unless `parked` cites the ruling or line that parks
 // it; none is parked today. `closes` names the check that would close it.
 export const OPEN_HALVES = [
-  { point: 1, half: "1 picture (beam read from fixed chase-camera poses)", closes: "tools/map_sheet_capture.gd sheets read blind against a beam-hidden control" },
-  { point: 5, half: "5 picture (safe ground and hostile marks read blind)", closes: "a blind 'where is safe' read of tools/danger_read_capture.gd stills, scored against its HAZARD-striped control" },
-  { point: 5, half: "5 tagged cover (park_cover_tags_test reads layers only, so it passes by construction)", closes: "hard and soft tags on park rows and a shell-path cast per tagged row (audit unit 6)" },
-  { point: 8, half: "8b silhouettes", closes: "tools/map_sheet_capture.gd silhouette mode, one machine hidden counted short" },
-  { point: 8, half: "8c snags", closes: "a MAPCHECK line per map from tools/qa/snag_sweep.gd (0 snags per area)" },
+  {
+    point: 1,
+    half: "1 picture (beam read from fixed chase-camera poses)",
+    closes: "tools/map_sheet_capture.gd sheets read blind against a beam-hidden control",
+  },
+  {
+    point: 5,
+    half: "5 picture (safe ground and hostile marks read blind)",
+    closes:
+      "a blind 'where is safe' read of tools/danger_read_capture.gd stills, scored against its HAZARD-striped control",
+  },
+  {
+    point: 5,
+    half: "5 tagged cover (park_cover_tags_test reads layers only, so it passes by construction)",
+    closes: "hard and soft tags on park rows and a shell-path cast per tagged row (audit unit 6)",
+  },
+  {
+    point: 8,
+    half: "8b silhouettes",
+    closes: "tools/map_sheet_capture.gd silhouette mode, one machine hidden counted short",
+  },
+  {
+    point: 8,
+    half: "8c snags",
+    closes: "a MAPCHECK line per map from tools/qa/snag_sweep.gd (0 snags per area)",
+  },
 ];
 
-const pointOf = (measure) => Number(Object.keys(POINTS).find((p) => POINTS[p].includes(measure)) ?? 0);
-const waiting = (line) => WAITING.find((w) => w.map === line.map && w.measure === line.measure && w.status === line.status && w.value === line.value);
+const pointOf = (measure) =>
+  Number(Object.keys(POINTS).find((p) => POINTS[p].includes(measure)) ?? 0);
+const waiting = (line) =>
+  WAITING.find(
+    (w) =>
+      w.map === line.map &&
+      w.measure === line.measure &&
+      w.status === line.status &&
+      w.value === line.value,
+  );
 
 // The gating MAPCHECK lines of one log: {map, measure, value, line, status, text}.
 export function mapLines(text) {
-  return text.split("\n").filter((l) => l.startsWith("MAPCHECK ") && !/\breport INFO\b/.test(l)).map((l) => {
-    const words = l.trim().split(/\s+/);
-    const status = words.find((w) => w === "PASS" || w === "FAIL" || w === "OWED") ?? "NONE";
-    const at = words.findIndex((w) => w.startsWith("pass"));
-    return { map: words[1], measure: words[2], value: words[at - 1], line: words[at] ?? "", status, text: l.trim() };
-  });
+  return text
+    .split("\n")
+    .filter((l) => l.startsWith("MAPCHECK ") && !/\breport INFO\b/.test(l))
+    .map((l) => {
+      const words = l.trim().split(/\s+/);
+      const status = words.find((w) => w === "PASS" || w === "FAIL" || w === "OWED") ?? "NONE";
+      const at = words.findIndex((w) => w.startsWith("pass"));
+      return {
+        map: words[1],
+        measure: words[2],
+        value: words[at - 1],
+        line: words[at] ?? "",
+        status,
+        text: l.trim(),
+      };
+    });
 }
 
-const plantLines = (text) => text.split("\n").filter((l) => l.startsWith("PLANTED ") && /\b(PASS|FAIL)\s*$/.test(l.trim()));
+const plantLines = (text) =>
+  text.split("\n").filter((l) => l.startsWith("PLANTED ") && /\b(PASS|FAIL)\s*$/.test(l.trim()));
 
 // logs: {"<test>": "<log text>"}.
 // halves is a seam for the node tests; the receipt itself always judges OPEN_HALVES.
@@ -101,7 +141,11 @@ export function buildReceipt(logs, head, { halves = OPEN_HALVES } = {}) {
     const text = logs[test] ?? "";
     if (!new RegExp(`^${test}: PASS \\(`, "m").test(text)) {
       const failed = text.split("\n").filter((l) => l.endsWith("-> FAIL"));
-      problems.push(failed.length ? `${test}: ${failed.length} check(s) failed: ${failed[0].slice(0, 100)}` : `${test} did not finish`);
+      problems.push(
+        failed.length
+          ? `${test}: ${failed.length} check(s) failed: ${failed[0].slice(0, 100)}`
+          : `${test} did not finish`,
+      );
     }
     const planted = plantLines(text);
     const caught = planted.filter((l) => /\bFAIL\s*$/.test(l.trim())).length;
@@ -116,24 +160,42 @@ export function buildReceipt(logs, head, { halves = OPEN_HALVES } = {}) {
   const counts = {};
   const uncovered = [];
   for (const p of Object.keys(POINTS)) {
-    counts[p] = MAPS.map((m) => lines.filter((l) => l.map === m && pointOf(l.measure) === Number(p)).length);
-    MAPS.forEach((m, i) => { if (counts[p][i] === 0) uncovered.push(`point ${p} on ${m}`); });
+    counts[p] = MAPS.map(
+      (m) => lines.filter((l) => l.map === m && pointOf(l.measure) === Number(p)).length,
+    );
+    MAPS.forEach((m, i) => {
+      if (counts[p][i] === 0) uncovered.push(`point ${p} on ${m}`);
+    });
   }
   const held = lines.filter((l) => l.status !== "PASS" && waiting(l));
   const misses = lines.filter((l) => l.status !== "PASS" && !waiting(l));
   const countedOk = lines.length === PINNED_LINES;
   const open = halves.filter((h) => !h.parked);
-  const pass = problems.length === 0 && countedOk && uncovered.length === 0 && misses.length === 0 && open.length === 0 && plantCaught && lines.length > 0;
+  const pass =
+    problems.length === 0 &&
+    countedOk &&
+    uncovered.length === 0 &&
+    misses.length === 0 &&
+    open.length === 0 &&
+    plantCaught &&
+    lines.length > 0;
 
-  const perPoint = Object.keys(POINTS).map((p) => `${p}:${counts[p].join("/")}`).join(" ");
-  let measured = lines.length === 0
-    ? "no MAPCHECK lines: the tests did not run"
-    : `${lines.length} MAPCHECK lines (pinned ${PINNED_LINES}); lines per point dam/flume ${perPoint}`;
-  if (!countedOk && lines.length) measured += "; the line count is off the pin: a check was lost or added";
+  const perPoint = Object.keys(POINTS)
+    .map((p) => `${p}:${counts[p].join("/")}`)
+    .join(" ");
+  let measured =
+    lines.length === 0
+      ? "no MAPCHECK lines: the tests did not run"
+      : `${lines.length} MAPCHECK lines (pinned ${PINNED_LINES}); lines per point dam/flume ${perPoint}`;
+  if (!countedOk && lines.length)
+    measured += "; the line count is off the pin: a check was lost or added";
   if (uncovered.length) measured += `; no check for ${uncovered.join(", ")}`;
-  if (misses.length) measured += `; misses: ${misses.map((l) => `${l.map} ${l.measure} ${l.value} ${l.line} ${l.status}`).join(", ")}`;
-  if (open.length) measured += `; open halves, no ruling parks them: ${open.map((h) => `${h.half} (closes with ${h.closes})`).join("; ")}`;
-  if (held.length) measured += `; waiting: ${held.map((l) => `${l.map} ${l.measure} ${l.value} ${l.line} (${waiting(l).cite.split(" ")[0]})`).join(", ")}`;
+  if (misses.length)
+    measured += `; misses: ${misses.map((l) => `${l.map} ${l.measure} ${l.value} ${l.line} ${l.status}`).join(", ")}`;
+  if (open.length)
+    measured += `; open halves, no ruling parks them: ${open.map((h) => `${h.half} (closes with ${h.closes})`).join("; ")}`;
+  if (held.length)
+    measured += `; waiting: ${held.map((l) => `${l.map} ${l.measure} ${l.value} ${l.line} (${waiting(l).cite.split(" ")[0]})`).join(", ")}`;
   if (problems.length) measured += `; ${problems.join("; ")}`;
   if (!plantCaught) measured += `; plants not shown caught: ${plantNotes.join(", ")}`;
   return { head, pass, measured, plant_caught: plantCaught };
@@ -144,11 +206,18 @@ export function runTests(cwd) {
   const logs = mkdtempSync(path.join(os.tmpdir(), "map-standard-"));
   const args = [path.join(cwd, "scripts/sketch-smoke.mjs"), "--sketch", "core-loop"];
   for (const test of Object.keys(TESTS)) args.push("--test", test);
-  const run = spawnSync(process.execPath, args, { cwd, env: { ...process.env, SMOKE_LOG_DIR: logs }, encoding: "utf8", maxBuffer: 1 << 26 });
+  const run = spawnSync(process.execPath, args, {
+    cwd,
+    env: { ...process.env, SMOKE_LOG_DIR: logs },
+    encoding: "utf8",
+    maxBuffer: 1 << 26,
+  });
   const out = {};
   for (const test of Object.keys(TESTS)) {
     const file = path.join(logs, `${test}.log`);
-    out[test] = existsSync(file) ? readFileSync(file, "utf8") : `runner exit ${run.status}, no ${test}.log`;
+    out[test] = existsSync(file)
+      ? readFileSync(file, "utf8")
+      : `runner exit ${run.status}, no ${test}.log`;
   }
   return out;
 }
@@ -170,15 +239,27 @@ function main(argv) {
       logs[test] = existsSync(file) ? readFileSync(file, "utf8") : "";
     }
     const r = buildReceipt(logs, "0000000");
-    process.stdout.write(JSON.stringify({ ...r, pass: false, measured: `logs only, not a receipt: ${r.measured}` }, null, 2) + "\n");
+    process.stdout.write(
+      JSON.stringify(
+        { ...r, pass: false, measured: `logs only, not a receipt: ${r.measured}` },
+        null,
+        2,
+      ) + "\n",
+    );
     return 1;
   }
   let receipt;
-  try { receipt = produce(); } catch (e) { console.error(String(e.message ?? e)); return 2; }
+  try {
+    receipt = produce();
+  } catch (e) {
+    console.error(String(e.message ?? e));
+    return 2;
+  }
   const text = JSON.stringify(receipt, null, 2) + "\n";
   if (args.out) writeFileSync(args.out, text);
   else process.stdout.write(text);
   return receipt.pass ? 0 : 1;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) process.exit(main(process.argv.slice(2)));
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
+  process.exit(main(process.argv.slice(2)));

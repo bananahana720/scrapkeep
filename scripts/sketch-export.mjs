@@ -1,12 +1,5 @@
 import { spawnSync } from "node:child_process";
-import {
-  copyFile,
-  cp,
-  mkdir,
-  readFile,
-  stat,
-  writeFile,
-} from "node:fs/promises";
+import { copyFile, cp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -41,8 +34,7 @@ import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
 // PASS line and then aborts, so the step must fail on the exit alone. Unset, nothing crashes.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const recordedBinary =
-  "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
+const recordedBinary = "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
 const binary = process.env.GODOT_BIN || recordedBinary;
 const project = path.join(root, "sketches/core-loop");
 const stemRoot = path.join(project, "assets/music_ace");
@@ -77,7 +69,15 @@ export const WIN_PROOFS = [
   // 2026-10-23 (C17 dry run): the w18 park run is about 92,000 ticks, twice a world run, and won
   // in 1060 s wall on a cloud box, past the 900 s every proof had; headless at --fixed-fps 90 runs
   // near real time, so a faster GPU does not shorten it.
-  { label: "win proof (park)", seed: PARK_SEED, pilot: PARK_PILOT, table: "park", dir: "park", tries: 3, timeoutS: 1800 },
+  {
+    label: "win proof (park)",
+    seed: PARK_SEED,
+    pilot: PARK_PILOT,
+    table: "park",
+    dir: "park",
+    tries: 3,
+    timeoutS: 1800,
+  },
 ];
 export const WIN_PROOF_TIMEOUT_S = 900;
 export const winProofTimeoutMs = (proof) => (proof.timeoutS ?? WIN_PROOF_TIMEOUT_S) * 1000;
@@ -118,20 +118,15 @@ export function parseArgs(argv) {
     if (arg === "--win-proof") winProof = true;
     else if (arg === "--boss-smoke-only") bossSmokeOnly = true;
     else if (arg === "--self-play") selfPlay = true;
-    else if (arg.startsWith("--stems-from="))
-      stemsFrom = arg.slice("--stems-from=".length);
-    else if (arg === "--stems-from" && i + 1 < argv.length)
-      stemsFrom = argv[++i];
+    else if (arg.startsWith("--stems-from=")) stemsFrom = arg.slice("--stems-from=".length);
+    else if (arg === "--stems-from" && i + 1 < argv.length) stemsFrom = argv[++i];
     else throw new Error("unknown argument: " + arg);
   }
   return { stemsFrom, winProof, bossSmokeOnly, selfPlay };
 }
 
 export function defaultStemsFrom(gitCommonDir) {
-  return path.join(
-    path.dirname(gitCommonDir),
-    "sketches/core-loop/assets/music_ace",
-  );
+  return path.join(path.dirname(gitCommonDir), "sketches/core-loop/assets/music_ace");
 }
 
 export function missingStemsMessage(missing, directory, fallback) {
@@ -168,9 +163,7 @@ export function parsePresets(text) {
     const header = /^\[(.+)\]$/.exec(line);
     if (header) current = sections[header[1]] = {};
     else if (current && line.indexOf("=") > 0)
-      current[line.slice(0, line.indexOf("="))] = line.slice(
-        line.indexOf("=") + 1,
-      );
+      current[line.slice(0, line.indexOf("="))] = line.slice(line.indexOf("=") + 1);
   }
   const presets = {};
   for (const [id, fields] of Object.entries(sections)) {
@@ -186,21 +179,15 @@ export function parsePresets(text) {
 export function proofPresetDrift(presets) {
   const shipped = presets[preset];
   const proof = presets[proofPreset];
-  if (!shipped || !proof)
-    return [`preset "${shipped ? proofPreset : preset}" missing`];
+  if (!shipped || !proof) return [`preset "${shipped ? proofPreset : preset}" missing`];
   const drift = [];
   const own = new Set(["name", "runnable", "exclude_filter"]);
   for (const part of ["fields", "options"]) {
-    const keys = new Set([
-      ...Object.keys(shipped[part]),
-      ...Object.keys(proof[part]),
-    ]);
+    const keys = new Set([...Object.keys(shipped[part]), ...Object.keys(proof[part])]);
     for (const key of keys) {
       if (part === "fields" && own.has(key)) continue;
       if (shipped[part][key] !== proof[part][key])
-        drift.push(
-          `${part} ${key}: ${shipped[part][key]} shipped, ${proof[part][key]} proof`,
-        );
+        drift.push(`${part} ${key}: ${shipped[part][key]} shipped, ${proof[part][key]} proof`);
     }
   }
   const list = (value) =>
@@ -212,8 +199,7 @@ export function proofPresetDrift(presets) {
     .filter((item) => item !== "tools/*")
     .join(", ");
   const got = list(proof.fields.exclude_filter).join(", ");
-  if (want !== got)
-    drift.push(`exclude_filter: proof "${got}", want "${want}"`);
+  if (want !== got) drift.push(`exclude_filter: proof "${got}", want "${want}"`);
   return drift;
 }
 
@@ -228,8 +214,7 @@ export function proofLibraries(files) {
 export function winProofFailures(output, status, rowsText) {
   const failures = [];
   if (status !== 0) failures.push("bot run exited " + status);
-  if (errorLine.test(output))
-    failures.push("SCRIPT ERROR or ERROR line in the bot run output");
+  if (errorLine.test(output)) failures.push("SCRIPT ERROR or ERROR line in the bot run output");
   const rows = (rowsText ?? "").split("\n").filter((line) => line.trim());
   if (rows.length !== 1) {
     failures.push(`expected one bots.ndjson row, found ${rows.length}`);
@@ -243,9 +228,7 @@ export function winProofFailures(output, status, rowsText) {
     return failures;
   }
   if (row.outcome !== "won")
-    failures.push(
-      `outcome ${row.outcome} at stage ${row.stage_reached}, not won`,
-    );
+    failures.push(`outcome ${row.outcome} at stage ${row.stage_reached}, not won`);
   else if (row.stage_reached !== WIN_STAGE)
     failures.push(`won at stage ${row.stage_reached}, not stage ${WIN_STAGE}`);
   return failures;
@@ -284,13 +267,39 @@ export function bossSmokeCommand({ queue, binary, project, boss, crash = false }
   return {
     command: queue,
     args: [
-      "--gpu", "1", "--need", "3000", "--name", "boss-smoke-" + boss, "--display", "--shared",
-      "--timeout", String(BOSS_SMOKE_QUEUE_WAIT_S), "--",
-      "timeout", "-k", "10", String(BOSS_SMOKE_TIMEOUT_S),
-      "sh", "-c", 'exec "$0" --gpu-index "$SCRAPKEEP_GPU_INDEX" "$@"', binary,
-      "--rendering-driver", "vulkan", "--display-driver", "x11", "--audio-driver", "Dummy", "--path", project,
-      "--resolution", "1280x720", "--script", crash ? BOSS_SMOKE_CRASH_SCRIPT : BOSS_SMOKE_SCRIPT,
-      "--", "--boss=" + boss,
+      "--gpu",
+      "1",
+      "--need",
+      "3000",
+      "--name",
+      "boss-smoke-" + boss,
+      "--display",
+      "--shared",
+      "--timeout",
+      String(BOSS_SMOKE_QUEUE_WAIT_S),
+      "--",
+      "timeout",
+      "-k",
+      "10",
+      String(BOSS_SMOKE_TIMEOUT_S),
+      "sh",
+      "-c",
+      'exec "$0" --gpu-index "$SCRAPKEEP_GPU_INDEX" "$@"',
+      binary,
+      "--rendering-driver",
+      "vulkan",
+      "--display-driver",
+      "x11",
+      "--audio-driver",
+      "Dummy",
+      "--path",
+      project,
+      "--resolution",
+      "1280x720",
+      "--script",
+      crash ? BOSS_SMOKE_CRASH_SCRIPT : BOSS_SMOKE_SCRIPT,
+      "--",
+      "--boss=" + boss,
     ],
   };
 }
@@ -323,7 +332,9 @@ export function bossSmokeFailures(boss, output, status, signal = null) {
   if (signal) failures.push(`${boss}: killed by ${signal}`);
   else if (status !== 0) failures.push(`${boss}: ${exitText(status, null)}`);
   const lines = output.split("\n");
-  const pass = lines.findIndex((line) => line.startsWith(`BOSS_SMOKE boss=${boss} `) && line.trim().endsWith(" PASS"));
+  const pass = lines.findIndex(
+    (line) => line.startsWith(`BOSS_SMOKE boss=${boss} `) && line.trim().endsWith(" PASS"),
+  );
   if (pass < 0) failures.push(`${boss}: no BOSS_SMOKE PASS line`);
   for (const line of pass < 0 ? lines : lines.slice(0, pass))
     if (/^(SCRIPT ERROR|ERROR)\b/.test(line) || /VK_ERROR|vulkan[^\n]*(error|fail)/i.test(line))
@@ -335,7 +346,8 @@ export function bossSmokeFailures(boss, output, status, signal = null) {
 }
 
 // Error lines after the PASS line come from teardown; they are kept in the line, not failed.
-const runText = ({ status, signal, wall }) => `${exitText(status, signal)}, ${(wall / 1000).toFixed(1)} s wall`;
+const runText = ({ status, signal, wall }) =>
+  `${exitText(status, signal)}, ${(wall / 1000).toFixed(1)} s wall`;
 
 export function bossSmokeLine(boss, output, run) {
   const lines = output.split("\n");
@@ -343,8 +355,13 @@ export function bossSmokeLine(boss, output, run) {
   const ticks = pass.match(/ticks=(\d+)/)?.[1] ?? "?";
   const stage = pass.match(/stage=(\d+)/)?.[1] ?? "?";
   const device = output.match(deviceLine)?.[2] ?? "unknown device";
-  const after = lines.slice(lines.indexOf(pass) + 1).filter((line) => /^(SCRIPT ERROR|ERROR)\b/.test(line)).length;
-  return `boss smoke ${boss}: PASS, ${runText(run)}, stage ${stage} arena, ${ticks} ticks, Vulkan on ${device}` + (after > 0 ? `, ${after} teardown error lines` : "");
+  const after = lines
+    .slice(lines.indexOf(pass) + 1)
+    .filter((line) => /^(SCRIPT ERROR|ERROR)\b/.test(line)).length;
+  return (
+    `boss smoke ${boss}: PASS, ${runText(run)}, stage ${stage} arena, ${ticks} ticks, Vulkan on ${device}` +
+    (after > 0 ? `, ${after} teardown error lines` : "")
+  );
 }
 
 export function bossSmokeFailLine(boss, failures, run) {
@@ -353,11 +370,25 @@ export function bossSmokeFailLine(boss, failures, run) {
 }
 
 // Every boss runs and prints its line, so one crash does not hide the others' state.
-export function runBossSmoke({ runner, queue, binary, project, bosses = BOSS_SMOKE, crash = null, now = Date.now }) {
+export function runBossSmoke({
+  runner,
+  queue,
+  binary,
+  project,
+  bosses = BOSS_SMOKE,
+  crash = null,
+  now = Date.now,
+}) {
   const lines = [];
   const failures = [];
   for (const boss of bosses) {
-    const { command, args } = bossSmokeCommand({ queue, binary, project, boss, crash: boss === crash });
+    const { command, args } = bossSmokeCommand({
+      queue,
+      binary,
+      project,
+      boss,
+      crash: boss === crash,
+    });
     const started = now();
     const result = runner(command, args);
     const run = { status: result.status, signal: result.signal ?? null, wall: now() - started };
@@ -503,10 +534,13 @@ async function main() {
   if (!existsSync(template)) fail("export template missing: " + template);
 
   const tracks = trackedManifests(stemRoot);
-  if (!tracks.includes("spillway")) fail("ACE manifest missing: " + path.join(stemRoot, manifestRel));
+  if (!tracks.includes("spillway"))
+    fail("ACE manifest missing: " + path.join(stemRoot, manifestRel));
   const manifests = {};
   for (const track of tracks)
-    manifests[track] = JSON.parse(await readFile(path.join(stemRoot, track, "manifest.json"), "utf8"));
+    manifests[track] = JSON.parse(
+      await readFile(path.join(stemRoot, track, "manifest.json"), "utf8"),
+    );
   const common = run("git", [
     "-C",
     root,
@@ -520,9 +554,7 @@ async function main() {
   for (const track of tracks) {
     const missing = missingStems(manifests[track], path.join(stemsFrom, track));
     if (missing.length > 0)
-      fail(
-        missingStemsMessage(missing, path.join(stemsFrom, track), fallback),
-      );
+      fail(missingStemsMessage(missing, path.join(stemsFrom, track), fallback));
     const manifestPath = path.join(stemRoot, track, "manifest.json");
     const folderManifest = path.join(stemsFrom, track, "manifest.json");
     if (existsSync(folderManifest)) {
@@ -546,7 +578,9 @@ async function main() {
   );
   const rejected = stemHashMismatches(path.join(stemRoot, STEM_HASHES), stemsFrom, named);
   if (rejected === null)
-    fail(`no ${STEM_HASHES} in ${stemRoot}; the packed stems cannot be compared to what was cut (scripts/music/mx stem-hashes writes it)`);
+    fail(
+      `no ${STEM_HASHES} in ${stemRoot}; the packed stems cannot be compared to what was cut (scripts/music/mx stem-hashes writes it)`,
+    );
   if (rejected.length > 0)
     fail(
       `${rejected.length} stem file(s) in ${stemsFrom} do not match ${STEM_HASHES}:\n` +
@@ -574,8 +608,16 @@ async function main() {
   if (gateFailures.length > 0) fail("release gate\n" + gateFailures.join("\n"));
 
   // Report only until wave 20 (Andrew, 2026-10-16): print the placeholder count, never block on it.
-  const placeholders = run(process.execPath, [path.join(root, "scripts/placeholder-gate.mjs"), "--project", project, "--limit", "0"]);
-  const placeholderLine = ((placeholders.stdout ?? "") + (placeholders.stderr ?? "")).trim().split("\n").pop() || "no output";
+  const placeholders = run(process.execPath, [
+    path.join(root, "scripts/placeholder-gate.mjs"),
+    "--project",
+    project,
+    "--limit",
+    "0",
+  ]);
+  const placeholderLine =
+    ((placeholders.stdout ?? "") + (placeholders.stderr ?? "")).trim().split("\n").pop() ||
+    "no output";
   console.log("placeholder report (not blocking): " + placeholderLine);
 
   const smoke = bossSmoke(crash);
@@ -614,11 +656,16 @@ async function main() {
   let stemCount = 0;
   for (const track of tracks) {
     await mkdir(path.join(outDir, "music_ace", track), { recursive: true });
-    await copyFile(path.join(stemRoot, track, "manifest.json"), path.join(outDir, "music_ace", track, "manifest.json"));
+    await copyFile(
+      path.join(stemRoot, track, "manifest.json"),
+      path.join(outDir, "music_ace", track, "manifest.json"),
+    );
     stemCount += Object.keys(manifests[track].clips).length * manifests[track].stems.length;
   }
 
-  const boot = run(exe, ["--headless", "--quit-after", "300", "--music=ace", "--ace-check"], { cwd: outDir });
+  const boot = run(exe, ["--headless", "--quit-after", "300", "--music=ace", "--ace-check"], {
+    cwd: outDir,
+  });
   const bootText = boot.stdout + boot.stderr;
   const failures = bootFailures(bootText);
   if (boot.status !== 0) failures.push("boot exit " + boot.status);
@@ -630,19 +677,20 @@ async function main() {
   const parkText = parkBoot.stdout + parkBoot.stderr;
   const parkErrors = parkText.split("\n").filter((line) => /^(SCRIPT ERROR|ERROR)\b/.test(line));
   if (parkBoot.status !== 0 || parkErrors.length > 0)
-    fail("park table boot exit " + parkBoot.status + "\n" + parkErrors.join("\n") + "\n" + parkText.slice(-1000));
+    fail(
+      "park table boot exit " +
+        parkBoot.status +
+        "\n" +
+        parkErrors.join("\n") +
+        "\n" +
+        parkText.slice(-1000),
+    );
 
   const head = run("git", ["-C", root, "rev-parse", "HEAD"]);
   if (head.status !== 0) fail("git HEAD not found\n" + head.stderr);
   const sha = head.stdout.trim();
   const sha7 = sha.slice(0, 7);
-  const status = run("git", [
-    "-C",
-    root,
-    "status",
-    "--porcelain",
-    "--untracked-files=no",
-  ]);
+  const status = run("git", ["-C", root, "status", "--porcelain", "--untracked-files=no"]);
   if (status.status !== 0) fail("git status failed\n" + status.stderr);
   const dirty = status.stdout.trim() !== "";
   const version = sha7 + (dirty ? "-dirty" : "");
@@ -661,10 +709,7 @@ async function main() {
       selfPlay: args.selfPlay,
     }),
   );
-  await writeFile(
-    path.join(outDir, "HOW-TO-RUN.txt"),
-    howToRun({ sha7: version }),
-  );
+  await writeFile(path.join(outDir, "HOW-TO-RUN.txt"), howToRun({ sha7: version }));
   const tar = run("tar", tarArgs(outDir, sha7, dirty, args.selfPlay));
   if (tar.status !== 0) fail("tar failed\n" + tar.stderr);
   const tarball = path.join(
@@ -675,33 +720,30 @@ async function main() {
   const size = (await stat(exe)).size;
   console.log("version: " + version + " " + stamp);
   console.log(
-    "package: " +
-      tarball +
-      " (" +
-      ((await stat(tarball)).size / 1048576).toFixed(1) +
-      " MiB)",
+    "package: " + tarball + " (" + ((await stat(tarball)).size / 1048576).toFixed(1) + " MiB)",
   );
   console.log("executable: " + exe);
-  console.log("pack size: " + size + " bytes (" + (size / 1048576).toFixed(1) + " MiB, pack embedded)");
+  console.log(
+    "pack size: " + size + " bytes (" + (size / 1048576).toFixed(1) + " MiB, pack embedded)",
+  );
   console.log("stems from: " + stemsFrom);
   console.log("sidecar stems: " + stemCount + " in " + path.join(outDir, "music_ace"));
   console.log("boot tail:\n" + bootText.trim().split("\n").slice(-6).join("\n"));
   if (proofLine) console.log(proofLine);
-  if (args.selfPlay) console.log("self-play: pack carries tools/ (launch with -- --self-play); not the shipped pack");
+  if (args.selfPlay)
+    console.log(
+      "self-play: pack carries tools/ (launch with -- --self-play); not the shipped pack",
+    );
   console.log(nextStepLine());
 }
 
 async function winProof(outDir) {
   const drift = proofPresetDrift(
-    parsePresets(
-      await readFile(path.join(project, "export_presets.cfg"), "utf8"),
-    ),
+    parsePresets(await readFile(path.join(project, "export_presets.cfg"), "utf8")),
   );
-  if (drift.length > 0)
-    fail("proof preset drifted from the shipped preset\n" + drift.join("\n"));
+  if (drift.length > 0) fail("proof preset drifted from the shipped preset\n" + drift.join("\n"));
   const proofDir = outDir + "-win-proof";
-  if (existsSync(proofDir))
-    fail("win proof folder already exists: " + proofDir);
+  if (existsSync(proofDir)) fail("win proof folder already exists: " + proofDir);
   await mkdir(proofDir, { recursive: true });
   const pack = path.join(proofDir, "proof.pck");
   const exported = run(binary, [
@@ -734,7 +776,9 @@ async function playWinProof(base, pack, proof) {
     await mkdir(path.join(state, dir), { recursive: true });
   const addons = path.join(project, "addons");
   const addonFiles = existsSync(addons)
-    ? readdirSync(addons, { recursive: true }).map((rel) => path.join("addons", String(rel)).split(path.sep).join("/"))
+    ? readdirSync(addons, { recursive: true }).map((rel) =>
+        path.join("addons", String(rel)).split(path.sep).join("/"),
+      )
     : [];
   for (const rel of proofLibraries(addonFiles)) {
     await mkdir(path.join(path.dirname(pack), path.dirname(rel)), { recursive: true });
@@ -770,7 +814,11 @@ async function playWinProof(base, pack, proof) {
   const rowsText = existsSync(rowsPath) ? await readFile(rowsPath, "utf8") : "";
   const failures = winProofFailures(botText, bot.status, rowsText);
   if (failures.length > 0)
-    return { ok: false, failure: failures.join("\n") + "\n" + botText.slice(-2000), summary: failures[0] };
+    return {
+      ok: false,
+      failure: failures.join("\n") + "\n" + botText.slice(-2000),
+      summary: failures[0],
+    };
   return { ok: true, line: winProofLine(JSON.parse(rowsText.trim()), pack, proof) };
 }
 
@@ -788,8 +836,12 @@ export async function playProofTries(proof, playOnce) {
   const last = outcomes[outcomes.length - 1];
   if (!last.ok) return { ok: false, failure: last.failure, outcomes };
   const earlier = outcomes.slice(0, -1).map((o, i) => `try ${i + 1}: ${o.summary}`);
-  const note = tries > 1 ? ` (try ${outcomes.length} of ${tries}${earlier.length ? "; " + earlier.join("; ") : ""})` : "";
+  const note =
+    tries > 1
+      ? ` (try ${outcomes.length} of ${tries}${earlier.length ? "; " + earlier.join("; ") : ""})`
+      : "";
   return { ok: true, line: last.line + note, outcomes };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+  await main();

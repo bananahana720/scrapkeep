@@ -72,7 +72,14 @@ test("cueKey makes files, theme folders and clip ids comparable", () => {
 test("the cue list covers all 17 special WAVs and the boss cues", () => {
   assert.equal(specialCues().length, 17);
   const ids = cueList().map((c) => c.id);
-  for (const id of ["splitter_break_split", "linker_spawn", "stinger_boss_defeated", "hype_drop", "euro-mind-final", "brindle"])
+  for (const id of [
+    "splitter_break_split",
+    "linker_spawn",
+    "stinger_boss_defeated",
+    "hype_drop",
+    "euro-mind-final",
+    "brindle",
+  ])
     assert.ok(ids.includes(id), id);
 });
 
@@ -94,14 +101,19 @@ test("a cue is present when the bank, a theme or a file can play it", () => {
   const missing = missingCues(cues, wired, ["/renders/mind-final-s2701.mp3"]);
   assert.deepEqual(
     missing.map((f) => f.what),
-    ["sound hype_drop has no audio in the game or the render folders", "track mind-final rendered (mind-final-s2701.mp3) but not in the game"],
+    [
+      "sound hype_drop has no audio in the game or the render folders",
+      "track mind-final rendered (mind-final-s2701.mp3) but not in the game",
+    ],
   );
   assert.ok(bankIds('"a_b": 1, "c"').has("a_b"));
 });
 
 test("cue findings need the game's sound bank and feed the placeholder gate", () => {
   const none = project({ "src/core/park_defs.gd": "" });
-  const game = project({ "src/presentation/sfx_bank.gd": '"boss_arena_in" "boss_phase" "stinger_boss_defeated"' });
+  const game = project({
+    "src/presentation/sfx_bank.gd": '"boss_arena_in" "boss_phase" "stinger_boss_defeated"',
+  });
   try {
     assert.deepEqual(cueFindings(none), []);
     assert.equal(cueFindings(game).length, cueList().length - 3);
@@ -116,8 +128,17 @@ test("cue findings need the game's sound bank and feed the placeholder gate", ()
 test("a wrong project or music path never reads as a pass", () => {
   const empty = project({ "README.md": "" });
   try {
-    const args = parseArgs(["--project", empty, "--music", path.join(empty, "nope"), "--cues-only"]);
-    assert.deepEqual(missingInputs(args, []).map((f) => f.what), ["no src/presentation/sfx_bank.gd; cues not checked", "music folder not found"]);
+    const args = parseArgs([
+      "--project",
+      empty,
+      "--music",
+      path.join(empty, "nope"),
+      "--cues-only",
+    ]);
+    assert.deepEqual(
+      missingInputs(args, []).map((f) => f.what),
+      ["no src/presentation/sfx_bank.gd; cues not checked", "music folder not found"],
+    );
     assert.equal(missingInputs({ ...args, cuesOnly: false }, [{ clips: {} }]).length, 3);
     assert.notEqual(run(args).findings.length, 0);
   } finally {
@@ -126,7 +147,8 @@ test("a wrong project or music path never reads as a pass", () => {
 });
 
 test("parseEbur128 reads the summary, not the running lines", () => {
-  const stderr = "[Parsed_ebur128_0] t: 1 M: -20 S: -20 I: -19.0 LUFS\nSummary:\n\n  Integrated loudness:\n    I:         -16.2 LUFS\n\n  True peak:\n    Peak:       -2.9 dBFS\n";
+  const stderr =
+    "[Parsed_ebur128_0] t: 1 M: -20 S: -20 I: -19.0 LUFS\nSummary:\n\n  Integrated loudness:\n    I:         -16.2 LUFS\n\n  True peak:\n    Peak:       -2.9 dBFS\n";
   assert.deepEqual(parseEbur128(stderr), { lufs: -16.2, truePeak: -2.9 });
   assert.deepEqual(parseEbur128("nothing"), { lufs: null, truePeak: null });
 });
@@ -134,7 +156,8 @@ test("parseEbur128 reads the summary, not the running lines", () => {
 test("seamStep passes a whole-cycle loop and catches a wrap that clicks", () => {
   const loop = (frames, cut = frames) => {
     const s = new Float32Array(frames * 2);
-    for (let f = 0; f < frames; f++) s[f * 2] = s[f * 2 + 1] = Math.sin((2 * Math.PI * f) / 48) * 0.5;
+    for (let f = 0; f < frames; f++)
+      s[f * 2] = s[f * 2 + 1] = Math.sin((2 * Math.PI * f) / 48) * 0.5;
     return { s, cut };
   };
   const clean = loop(4800);
@@ -160,23 +183,30 @@ test("report lists each kind and never passes with findings", () => {
   assert.match(text, /FAIL/);
 });
 
-test("judge measures loudness, true peak and seams through ffmpeg", { skip: !hasFfmpeg() && "no ffmpeg" }, () => {
-  const dir = project({
-    // A full-scale stereo sine reads 0 LUFS, so amplitude 0.158 reads about -16.
-    "on-target-loop.wav": sineWav(48000 * 12, 0.158),
-    "loud-click-loop.wav": sineWav(48000 * 12 + 12, 0.5),
-  });
-  try {
-    const good = judge("on-target", decode(path.join(dir, "on-target-loop.wav")), 48000, { loop: true });
-    assert.deepEqual(good.found, []);
-    assert.ok(Math.abs(good.row.lufs + 16) < 0.3, String(good.row.lufs));
-    const bad = judge("loud", decode(path.join(dir, "loud-click-loop.wav")), 48000, { loop: true });
-    assert.deepEqual(bad.found.map((f) => f.kind).sort(), ["loudness", "seam"]);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
+test(
+  "judge measures loudness, true peak and seams through ffmpeg",
+  { skip: !hasFfmpeg() && "no ffmpeg" },
+  () => {
+    const dir = project({
+      // A full-scale stereo sine reads 0 LUFS, so amplitude 0.158 reads about -16.
+      "on-target-loop.wav": sineWav(48000 * 12, 0.158),
+      "loud-click-loop.wav": sineWav(48000 * 12 + 12, 0.5),
+    });
+    try {
+      const good = judge("on-target", decode(path.join(dir, "on-target-loop.wav")), 48000, {
+        loop: true,
+      });
+      assert.deepEqual(good.found, []);
+      assert.ok(Math.abs(good.row.lufs + 16) < 0.3, String(good.row.lufs));
+      const bad = judge("loud", decode(path.join(dir, "loud-click-loop.wav")), 48000, {
+        loop: true,
+      });
+      assert.deepEqual(bad.found.map((f) => f.kind).sort(), ["loudness", "seam"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  },
+);
 
 // A stale Ogg under the right file name is the failure these tests plant (the zone packs' Oggs were
 // 17 days older than their manifests and every export played them). Each check runs on a good pack
@@ -184,13 +214,26 @@ test("judge measures loudness, true peak and seams through ffmpeg", { skip: !has
 test("a clip whose length or loudness differs from its manifest is stale", () => {
   const t = { name: "spillway/calm", frames: 988672, measuredLufs: -16 };
   assert.deepEqual(staleAgainstManifest(t, 988672, -15.9), []);
-  assert.deepEqual(staleAgainstManifest(t, 988673, -16).map((f) => f.kind), ["stale"]);
-  assert.deepEqual(staleAgainstManifest(t, 988672, -14.2).map((f) => f.kind), ["stale"]);
-  assert.deepEqual(staleAgainstManifest({ name: "old/calm", frames: null, measuredLufs: null }, 5, -3), []);
+  assert.deepEqual(
+    staleAgainstManifest(t, 988673, -16).map((f) => f.kind),
+    ["stale"],
+  );
+  assert.deepEqual(
+    staleAgainstManifest(t, 988672, -14.2).map((f) => f.kind),
+    ["stale"],
+  );
+  assert.deepEqual(
+    staleAgainstManifest({ name: "old/calm", frames: null, measuredLufs: null }, 5, -3),
+    [],
+  );
 });
 
 test("STEMS.sha256 rejects a stale, an unlisted and a re-encoded stem and names each", () => {
-  const dir = project({ "spillway/calm.drums.ogg": "fresh drums", "spillway/calm.bass.ogg": "fresh bass", "spillway/calm.other.ogg": "fresh other" });
+  const dir = project({
+    "spillway/calm.drums.ogg": "fresh drums",
+    "spillway/calm.bass.ogg": "fresh bass",
+    "spillway/calm.other.ogg": "fresh other",
+  });
   const named = ["spillway/calm.drums.ogg", "spillway/calm.bass.ogg", "spillway/calm.other.ogg"];
   const list = path.join(dir, "STEMS.sha256");
   try {
@@ -199,47 +242,102 @@ test("STEMS.sha256 rejects a stale, an unlisted and a re-encoded stem and names 
     assert.deepEqual(stemHashMismatches(list, dir, named), [], "the good pack passes");
     writeFileSync(path.join(dir, "spillway/calm.bass.ogg"), "an older mix under the same name");
     const bad = stemHashMismatches(list, dir, named);
-    assert.deepEqual(bad.map((r) => r.file), ["spillway/calm.bass.ogg"], "the planted stale Ogg is named and nothing else");
+    assert.deepEqual(
+      bad.map((r) => r.file),
+      ["spillway/calm.bass.ogg"],
+      "the planted stale Ogg is named and nothing else",
+    );
     assert.match(bad[0].why, /sha256 differs/);
     const unlisted = stemHashMismatches(list, dir, [...named, "spillway/build.drums.ogg"]);
-    assert.deepEqual(unlisted.map((r) => r.file), ["spillway/calm.bass.ogg"], "a named file that is not on disk is not this check's finding");
+    assert.deepEqual(
+      unlisted.map((r) => r.file),
+      ["spillway/calm.bass.ogg"],
+      "a named file that is not on disk is not this check's finding",
+    );
     writeFileSync(path.join(dir, "spillway/build.drums.ogg"), "new, never hashed");
-    assert.ok(stemHashMismatches(list, dir, [...named, "spillway/build.drums.ogg"]).some((r) => r.file === "spillway/build.drums.ogg" && /not listed/.test(r.why)));
+    assert.ok(
+      stemHashMismatches(list, dir, [...named, "spillway/build.drums.ogg"]).some(
+        (r) => r.file === "spillway/build.drums.ogg" && /not listed/.test(r.why),
+      ),
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
 // The fixture packs are Ogg Vorbis, which an ffmpeg built without libvorbis (Homebrew's) cannot write.
-const hasLibvorbis = () => hasFfmpeg() && /libvorbis/.test(String(spawnSync("ffmpeg", ["-hide_banner", "-encoders"]).stdout));
+const hasLibvorbis = () =>
+  hasFfmpeg() &&
+  /libvorbis/.test(String(spawnSync("ffmpeg", ["-hide_banner", "-encoders"]).stdout));
 
-test("the gate flags a stale pack and an unhashed one, and passes the good pack", { skip: !hasLibvorbis() && "no ffmpeg with libvorbis" }, () => {
-  const dir = mkdtempSync(path.join(os.tmpdir(), "audio-gate-stale-"));
-  const music = path.join(dir, "assets/music_ace/zone");
-  mkdirSync(music, { recursive: true });
-  const tone = (file, seconds, level) =>
-    spawnSync("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", `sine=frequency=440:duration=${seconds}:sample_rate=44100`, "-af", `volume=${level}`, "-ac", "2", "-c:a", "libvorbis", file]);
-  try {
-    for (const stem of ["drums", "bass", "other"]) tone(path.join(music, `calm.${stem}.ogg`), 12, 0.02);
-    const manifest = { theme: "zone", rate: 44100, level_db: 0, stems: ["drums", "bass", "other"], clips: { calm: { files: { drums: "calm.drums.ogg", bass: "calm.bass.ogg", other: "calm.other.ogg" } } } };
-    const write = (clip) => writeFileSync(path.join(music, "manifest.json"), JSON.stringify({ ...manifest, clips: { calm: { ...manifest.clips.calm, ...clip } } }));
-    write({});
-    const base = parseArgs(["--project", dir]);
-    const kinds = () => run(base).findings.filter((f) => f.kind === "stale" || f.where.endsWith("STEMS.sha256")).map((f) => f.kind);
-    assert.deepEqual(kinds(), ["unchecked"], "no hash list: unchecked, never a pass");
-    writeStemHashes(path.join(dir, "assets/music_ace", "STEMS.sha256"), path.join(dir, "assets/music_ace"), ["zone/calm.drums.ogg", "zone/calm.bass.ogg", "zone/calm.other.ogg"]);
-    const measured = run(base).rows[0].lufs;
-    write({ measured: { lufs: measured } });
-    assert.deepEqual(kinds(), [], "the good pack: hashes match, loudness matches its manifest");
-    write({ measured: { lufs: measured + 2 } });
-    assert.deepEqual(kinds(), ["stale"], "a manifest cut from a louder mix flags the clip");
-    write({ measured: { lufs: measured } });
-    tone(path.join(music, "calm.bass.ogg"), 12, 0.02);
-    assert.ok(kinds().includes("stale"), "a re-encoded stem differs from the hash list");
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
+test(
+  "the gate flags a stale pack and an unhashed one, and passes the good pack",
+  { skip: !hasLibvorbis() && "no ffmpeg with libvorbis" },
+  () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "audio-gate-stale-"));
+    const music = path.join(dir, "assets/music_ace/zone");
+    mkdirSync(music, { recursive: true });
+    const tone = (file, seconds, level) =>
+      spawnSync("ffmpeg", [
+        "-v",
+        "error",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        `sine=frequency=440:duration=${seconds}:sample_rate=44100`,
+        "-af",
+        `volume=${level}`,
+        "-ac",
+        "2",
+        "-c:a",
+        "libvorbis",
+        file,
+      ]);
+    try {
+      for (const stem of ["drums", "bass", "other"])
+        tone(path.join(music, `calm.${stem}.ogg`), 12, 0.02);
+      const manifest = {
+        theme: "zone",
+        rate: 44100,
+        level_db: 0,
+        stems: ["drums", "bass", "other"],
+        clips: {
+          calm: {
+            files: { drums: "calm.drums.ogg", bass: "calm.bass.ogg", other: "calm.other.ogg" },
+          },
+        },
+      };
+      const write = (clip) =>
+        writeFileSync(
+          path.join(music, "manifest.json"),
+          JSON.stringify({ ...manifest, clips: { calm: { ...manifest.clips.calm, ...clip } } }),
+        );
+      write({});
+      const base = parseArgs(["--project", dir]);
+      const kinds = () =>
+        run(base)
+          .findings.filter((f) => f.kind === "stale" || f.where.endsWith("STEMS.sha256"))
+          .map((f) => f.kind);
+      assert.deepEqual(kinds(), ["unchecked"], "no hash list: unchecked, never a pass");
+      writeStemHashes(
+        path.join(dir, "assets/music_ace", "STEMS.sha256"),
+        path.join(dir, "assets/music_ace"),
+        ["zone/calm.drums.ogg", "zone/calm.bass.ogg", "zone/calm.other.ogg"],
+      );
+      const measured = run(base).rows[0].lufs;
+      write({ measured: { lufs: measured } });
+      assert.deepEqual(kinds(), [], "the good pack: hashes match, loudness matches its manifest");
+      write({ measured: { lufs: measured + 2 } });
+      assert.deepEqual(kinds(), ["stale"], "a manifest cut from a louder mix flags the clip");
+      write({ measured: { lufs: measured } });
+      tone(path.join(music, "calm.bass.ogg"), 12, 0.02);
+      assert.ok(kinds().includes("stale"), "a re-encoded stem differs from the hash list");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  },
+);
 
 // A minimal Ogg Vorbis byte stream: an identification page, then one page per granule position.
 function oggOf(granules, rate = 44100) {
@@ -255,7 +353,10 @@ function oggOf(granules, rate = 44100) {
   id.write("\x01vorbis", 0, "latin1");
   id[11] = 2;
   id.writeUInt32LE(rate, 12);
-  return Buffer.concat([page(0, id), ...granules.map((g) => page(g, Buffer.from("OggS is not a page here")))]);
+  return Buffer.concat([
+    page(0, id),
+    ...granules.map((g) => page(g, Buffer.from("OggS is not a page here"))),
+  ]);
 }
 
 test("a packed Ogg stored in one-second pages is named, a short-paged one passes", () => {
@@ -264,12 +365,29 @@ test("a packed Ogg stored in one-second pages is named, a short-paged one passes
   assert.equal(oggLongestPage(long), 1);
   assert.equal(oggLongestPage(short), 0.02);
   assert.equal(oggLongestPage(Buffer.from("fresh drums")), null, "not an Ogg is not judged");
-  assert.equal(oggLongestPage(long.subarray(0, 40)), null, "a file cut off inside its first page is not judged, and does not throw");
+  assert.equal(
+    oggLongestPage(long.subarray(0, 40)),
+    null,
+    "a file cut off inside its first page is not judged, and does not throw",
+  );
   const manifest = (pack, files) => ({ dir: pack, clips: { calm: { files } } });
-  const dir = project({ "assets/music_ace/spillway/calm.drums.ogg": short, "assets/music_ace/spillway/calm.bass.ogg": long });
+  const dir = project({
+    "assets/music_ace/spillway/calm.drums.ogg": short,
+    "assets/music_ace/spillway/calm.bass.ogg": long,
+  });
   try {
-    const found = pageFindings(dir, [manifest("spillway", { drums: "calm.drums.ogg", bass: "calm.bass.ogg", other: "calm.other.ogg" })]);
-    assert.deepEqual(found.map((f) => [f.kind, f.where]), [["pages", "spillway/calm.bass.ogg"]], "the long-paged stem is named; the short one and the absent one are not");
+    const found = pageFindings(dir, [
+      manifest("spillway", {
+        drums: "calm.drums.ogg",
+        bass: "calm.bass.ogg",
+        other: "calm.other.ogg",
+      }),
+    ]);
+    assert.deepEqual(
+      found.map((f) => [f.kind, f.where]),
+      [["pages", "spillway/calm.bass.ogg"]],
+      "the long-paged stem is named; the short one and the absent one are not",
+    );
     assert.match(found[0].what, /repage\.py apply/);
   } finally {
     rmSync(dir, { recursive: true, force: true });

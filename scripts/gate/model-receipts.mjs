@@ -18,7 +18,16 @@
 // `statechart install-tlc` puts in ${XDG_DATA_HOME:-~/.local/share}/astack/tlc. Java is $JAVA, else java on PATH. Each
 // run works in a new temp folder, so nothing is written beside the models.
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -45,9 +54,21 @@ export const ROWS = {
   "rewards-banked-once": {
     spec: "Rewards.tla",
     real: [
-      { cfg: "rewards-today-one.cfg", minStates: 98319, label: "one game, from a fresh start or an older build's run file (W1-117)" },
-      { cfg: "rewards-today-two-once.cfg", minStates: 8009266, label: "two games on one profile paying once (finding R-2)" },
-      { cfg: "rewards-today-two-lost.cfg", minStates: 19042013, label: "two games on one profile losing nothing" },
+      {
+        cfg: "rewards-today-one.cfg",
+        minStates: 98319,
+        label: "one game, from a fresh start or an older build's run file (W1-117)",
+      },
+      {
+        cfg: "rewards-today-two-once.cfg",
+        minStates: 8009266,
+        label: "two games on one profile paying once (finding R-2)",
+      },
+      {
+        cfg: "rewards-today-two-lost.cfg",
+        minStates: 19042013,
+        label: "two games on one profile losing nothing",
+      },
     ],
     plants: [
       { cfg: "rewards-broken-ledger.cfg", rule: "AtMostOnce" },
@@ -65,7 +86,13 @@ export const ROWS = {
   },
   "hazards-hit-everyone": {
     spec: "HazardCycle.tla",
-    real: [{ cfg: "hazard-today.cfg", minStates: 45981, label: "a storm's sought strike, one ball and one enemy (W44)" }],
+    real: [
+      {
+        cfg: "hazard-today.cfg",
+        minStates: 45981,
+        label: "a storm's sought strike, one ball and one enemy (W44)",
+      },
+    ],
     plants: [
       { cfg: "hazard-broken-notell.cfg", rule: "TellBeforeStrike" },
       { cfg: "hazard-broken-seekrolling.cfg", rule: "RollingNeverSought" },
@@ -82,9 +109,17 @@ export const ROWS = {
   "flood-never-held": {
     spec: "ParkFlood.tla",
     real: [
-      { cfg: "flood-today-timed.cfg", minStates: 31616, label: "a flood with a live time, as every real flood row has" },
+      {
+        cfg: "flood-today-timed.cfg",
+        minStates: 31616,
+        label: "a flood with a live time, as every real flood row has",
+      },
       { cfg: "flood-today-noclock.cfg", minStates: 1792, label: "a flood with no live time" },
-      { cfg: "flood-today-longfill.cfg", minStates: 14336, label: "a fill that outlasts the live time less the wait" },
+      {
+        cfg: "flood-today-longfill.cfg",
+        minStates: 14336,
+        label: "a fill that outlasts the live time less the wait",
+      },
     ],
     plants: [
       { cfg: "flood-broken-nosnap.cfg", rule: "FullWaterNeverHeld" },
@@ -119,11 +154,20 @@ export function parseTlc(text) {
     if (inv) rules.push(inv[1]);
     else if (/^Error: Temporal properties were violated/.test(line)) temporal = true;
     else if (/^Error: Deadlock reached/.test(line)) deadlock = true;
-    else if (/^Error: (The behavior up to this point is|The following behavior constitutes a counter-example)/.test(line)) continue;
+    else if (
+      /^Error: (The behavior up to this point is|The following behavior constitutes a counter-example)/.test(
+        line,
+      )
+    )
+      continue;
     else if (/^Error:|Parse Error|^Semantic errors|^\*\*\* Errors/.test(line)) other.push(line);
   }
-  const stats = text.match(/([\d,]+) states generated, ([\d,]+) distinct states found, ([\d,]+) states left on queue/g);
-  const last = stats ? stats[stats.length - 1].match(/([\d,]+) states generated, ([\d,]+) distinct states found/) : null;
+  const stats = text.match(
+    /([\d,]+) states generated, ([\d,]+) distinct states found, ([\d,]+) states left on queue/g,
+  );
+  const last = stats
+    ? stats[stats.length - 1].match(/([\d,]+) states generated, ([\d,]+) distinct states found/)
+    : null;
   const generated = last ? num(last[1]) : null;
   const distinct = last ? num(last[2]) : null;
   const finished = /Model checking completed\. No error has been found\./.test(text);
@@ -132,12 +176,28 @@ export function parseTlc(text) {
   else if (rules.length || temporal || deadlock) outcome = "violated";
   else if (finished && distinct !== null) outcome = "clean";
   else outcome = "error";
-  return { outcome, rules, temporal, deadlock, generated, distinct, error: other[0] ?? (outcome === "error" ? "no finished TLC run in the output" : null) };
+  return {
+    outcome,
+    rules,
+    temporal,
+    deadlock,
+    generated,
+    distinct,
+    error: other[0] ?? (outcome === "error" ? "no finished TLC run in the output" : null),
+  };
 }
 
 // A run stopped by the timeout: a miss, whatever it printed so far.
 export function timedOut(minutes) {
-  return { outcome: "error", rules: [], temporal: false, deadlock: false, generated: null, distinct: null, error: `did not finish in ${minutes} min` };
+  return {
+    outcome: "error",
+    rules: [],
+    temporal: false,
+    deadlock: false,
+    generated: null,
+    distinct: null,
+    error: `did not finish in ${minutes} min`,
+  };
 }
 
 // A config's checked rules: { invariants, properties }.
@@ -160,7 +220,12 @@ export function brokeRule(parsed, rules, rule) {
 
 // The model's sync commit: the first commit id on the last non-empty line of its coverage page.
 export function syncCommit(text) {
-  const line = text.split("\n").map((l) => l.trim()).filter(Boolean).pop() ?? "";
+  const line =
+    text
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .pop() ?? "";
   return line.match(/\b[0-9a-f]{7,40}\b/)?.[0] ?? null;
 }
 
@@ -170,8 +235,12 @@ export function coveredFiles(text) {
 }
 
 const states = (p) => (p.distinct === null ? "?" : p.distinct.toLocaleString("en-US"));
-const said = (p) => (p.outcome === "clean" ? "no break" : p.outcome === "error" ? `stopped: ${p.error}`
-  : `broke ${[...p.rules, ...(p.temporal ? ["a temporal property"] : []), ...(p.deadlock ? ["deadlock"] : [])].join(", ")}`);
+const said = (p) =>
+  p.outcome === "clean"
+    ? "no break"
+    : p.outcome === "error"
+      ? `stopped: ${p.error}`
+      : `broke ${[...p.rules, ...(p.temporal ? ["a temporal property"] : []), ...(p.deadlock ? ["deadlock"] : [])].join(", ")}`;
 const name = (cfg) => cfg.replace(/\.cfg$/, "");
 
 // real: [{ cfg, label?, parsed }]; plants: [{ cfg, rule, rules, parsed }]; drift: { sync, files } (files changed since
@@ -181,13 +250,27 @@ export function buildReceipt({ head, real, plants, drift, gaps = [] }) {
   const enough = (r) => r.minStates == null || (r.parsed.distinct ?? 0) >= r.minStates;
   const clean = real.length > 0 && real.every((r) => r.parsed.outcome === "clean" && enough(r));
   const synced = drift.sync !== null && drift.files.length === 0;
-  const few = (r) => (r.parsed.outcome === "clean" && !enough(r) ? ` (fewer than the ${r.minStates.toLocaleString("en-US")} pinned)` : "");
-  const realText = real.map((r) => `${r.label ? `${r.label}, ` : ""}${name(r.cfg)}: ${said(r.parsed)} in ${states(r.parsed)} distinct states${few(r)}`).join("; ");
-  const plantText = plants.map((p) => `${name(p.cfg)} ${brokeRule(p.parsed, p.rules, p.rule) ? `broke ${p.rule}` : `did not break ${p.rule} (${said(p.parsed)})`} in ${states(p.parsed)} states`).join("; ");
+  const few = (r) =>
+    r.parsed.outcome === "clean" && !enough(r)
+      ? ` (fewer than the ${r.minStates.toLocaleString("en-US")} pinned)`
+      : "";
+  const realText = real
+    .map(
+      (r) =>
+        `${r.label ? `${r.label}, ` : ""}${name(r.cfg)}: ${said(r.parsed)} in ${states(r.parsed)} distinct states${few(r)}`,
+    )
+    .join("; ");
+  const plantText = plants
+    .map(
+      (p) =>
+        `${name(p.cfg)} ${brokeRule(p.parsed, p.rules, p.rule) ? `broke ${p.rule}` : `did not break ${p.rule} (${said(p.parsed)})`} in ${states(p.parsed)} states`,
+    )
+    .join("; ");
   let measured = `${realText}; plants: ${plantText}`;
   if (gaps.length) measured += `; not checked: ${gaps.join("; ")}`;
   if (drift.sync === null) measured = `no sync commit on the model's coverage page; ${measured}`;
-  else if (drift.files.length) measured = `model not synced: ${drift.files.join(", ")} changed since ${drift.sync}; ${measured}`;
+  else if (drift.files.length)
+    measured = `model not synced: ${drift.files.join(", ")} changed since ${drift.sync}; ${measured}`;
   return { head, pass: clean && caught && synced, measured, plant_caught: caught };
 }
 
@@ -199,7 +282,11 @@ function git(root, args) {
 
 function findJar(arg) {
   const data = process.env.XDG_DATA_HOME || join(homedir(), ".local/share");
-  return [arg, process.env.TLA2TOOLS, join(data, "astack/tlc", `tla2tools-${TLC_PIN}.jar`)].find((p) => p && existsSync(p)) ?? null;
+  return (
+    [arg, process.env.TLA2TOOLS, join(data, "astack/tlc", `tla2tools-${TLC_PIN}.jar`)].find(
+      (p) => p && existsSync(p),
+    ) ?? null
+  );
 }
 
 function runTlc({ java, jar, workers, minutes, models, spec, cfg }) {
@@ -207,9 +294,29 @@ function runTlc({ java, jar, workers, minutes, models, spec, cfg }) {
   try {
     copyFileSync(join(models, spec), join(dir, spec));
     copyFileSync(join(models, cfg), join(dir, cfg));
-    const r = spawnSync(java, ["-XX:+UseParallelGC", "-cp", jar, "tlc2.TLC", "-workers", String(workers),
-      "-metadir", join(dir, "states"), "-config", cfg, spec],
-    { cwd: dir, encoding: "utf8", maxBuffer: 256 * 1024 * 1024, timeout: minutes * 60_000, killSignal: "SIGKILL" });
+    const r = spawnSync(
+      java,
+      [
+        "-XX:+UseParallelGC",
+        "-cp",
+        jar,
+        "tlc2.TLC",
+        "-workers",
+        String(workers),
+        "-metadir",
+        join(dir, "states"),
+        "-config",
+        cfg,
+        spec,
+      ],
+      {
+        cwd: dir,
+        encoding: "utf8",
+        maxBuffer: 256 * 1024 * 1024,
+        timeout: minutes * 60_000,
+        killSignal: "SIGKILL",
+      },
+    );
     if (r.error?.code === "ETIMEDOUT" || r.signal === "SIGKILL") return timedOut(minutes);
     return parseTlc(`${r.stdout ?? ""}\n${r.stderr ?? ""}`);
   } finally {
@@ -222,13 +329,22 @@ export function produce(id, { root, head, java, jar, workers, minutes, log = () 
   const models = join(root, SKILL, "models");
   const page = readFileSync(join(root, SKILL, row.coverage), "utf8");
   const sync = syncCommit(page);
-  const files = sync === null ? [] : git(root, ["diff", "--name-only", sync, "--", ...coveredFiles(page)]).split("\n").filter(Boolean);
+  const files =
+    sync === null
+      ? []
+      : git(root, ["diff", "--name-only", sync, "--", ...coveredFiles(page)])
+          .split("\n")
+          .filter(Boolean);
   const check = (cfg) => {
     log(`${id}: TLC ${row.spec} ${cfg}`);
     return runTlc({ java, jar, workers, minutes, models, spec: row.spec, cfg });
   };
   const real = row.real.map((r) => ({ ...r, parsed: check(r.cfg) }));
-  const plants = row.plants.map((p) => ({ ...p, rules: cfgRules(readFileSync(join(models, p.cfg), "utf8")), parsed: check(p.cfg) }));
+  const plants = row.plants.map((p) => ({
+    ...p,
+    rules: cfgRules(readFileSync(join(models, p.cfg), "utf8")),
+    parsed: check(p.cfg),
+  }));
   return buildReceipt({ head, real, plants, drift: { sync, files }, gaps: row.gaps });
 }
 
@@ -236,13 +352,17 @@ function main(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
   if (!args.out || (args.row && !ROWS[args.row])) {
-    console.error(`usage: model-receipts.mjs --out <dir> [--row ${Object.keys(ROWS).join("|")}] [--jar <tla2tools.jar>] [--workers <n>] [--timeout-min <n>]`);
+    console.error(
+      `usage: model-receipts.mjs --out <dir> [--row ${Object.keys(ROWS).join("|")}] [--jar <tla2tools.jar>] [--workers <n>] [--timeout-min <n>]`,
+    );
     return 2;
   }
   const root = git(process.cwd(), ["rev-parse", "--show-toplevel"]);
   const dirty = git(root, ["status", "--porcelain", "--untracked-files=all", "--", SKILL, SRC]);
   if (dirty) {
-    console.error(`model-receipts: uncommitted changes under ${SKILL} or ${SRC}; commit them first, the receipt names a commit:\n${dirty}`);
+    console.error(
+      `model-receipts: uncommitted changes under ${SKILL} or ${SRC}; commit them first, the receipt names a commit:\n${dirty}`,
+    );
     return 2;
   }
   const head = git(root, ["rev-parse", "HEAD"]);
@@ -250,14 +370,28 @@ function main(argv) {
   const jar = findJar(args.jar);
   const javaOk = spawnSync(java, ["-version"], { encoding: "utf8" }).status === 0;
   if (!javaOk || !jar) {
-    if (!javaOk) console.error(`model-receipts: no working Java (${java} -version failed); set JAVA or install a JDK`);
-    if (!jar) console.error(`model-receipts: no TLC jar; pass --jar, set TLA2TOOLS, or run the astack statechart skill's install-tlc (TLC ${TLC_PIN})`);
+    if (!javaOk)
+      console.error(
+        `model-receipts: no working Java (${java} -version failed); set JAVA or install a JDK`,
+      );
+    if (!jar)
+      console.error(
+        `model-receipts: no TLC jar; pass --jar, set TLA2TOOLS, or run the astack statechart skill's install-tlc (TLC ${TLC_PIN})`,
+      );
     return 2;
   }
   mkdirSync(args.out, { recursive: true });
   let ok = true;
   for (const id of args.row ? [args.row] : Object.keys(ROWS)) {
-    const receipt = produce(id, { root, head, java, jar, workers: Number(args.workers ?? 4), minutes: Number(args["timeout-min"] ?? TIMEOUT_MIN), log: (m) => console.error(m) });
+    const receipt = produce(id, {
+      root,
+      head,
+      java,
+      jar,
+      workers: Number(args.workers ?? 4),
+      minutes: Number(args["timeout-min"] ?? TIMEOUT_MIN),
+      log: (m) => console.error(m),
+    });
     const file = resolve(args.out, `${id}.json`);
     writeFileSync(file, JSON.stringify(receipt, null, 2) + "\n");
     console.log(`${id}: ${receipt.pass ? "PASS" : "FAIL"} ${receipt.measured} -> ${file}`);
@@ -266,4 +400,5 @@ function main(argv) {
   return ok ? 0 : 1;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) process.exit(main(process.argv.slice(2)));
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
+  process.exit(main(process.argv.slice(2)));

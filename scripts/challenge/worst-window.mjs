@@ -40,7 +40,11 @@ export function worstWindows(rows) {
       for (const [key, n] of Object.entries(fightNotes(r.row))) {
         if (!n) continue;
         const { maxHp, from } = fightMaxHp(n, r.row);
-        fights[key].push({ hull: (n.worst_60s_hull ?? 0) / maxHp, hp: (n.worst_60s_hp ?? 0) / maxHp, from });
+        fights[key].push({
+          hull: (n.worst_60s_hull ?? 0) / maxHp,
+          hp: (n.worst_60s_hp ?? 0) / maxHp,
+          from,
+        });
       }
     }
     out[column] = fights;
@@ -50,7 +54,11 @@ export function worstWindows(rows) {
 
 function main() {
   for (const dir of process.argv.slice(2)) {
-    const rows = fs.readFileSync(`${dir}/runs.ndjson`, "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    const rows = fs
+      .readFileSync(`${dir}/runs.ndjson`, "utf8")
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
     console.log(`# ${dir}`);
     for (const [column, fights] of Object.entries(worstWindows(rows))) {
       for (const [key, list] of Object.entries(fights)) {
@@ -58,8 +66,12 @@ function main() {
         const w = list.map((x) => x.hp);
         const counts = {};
         for (const x of list) counts[x.from] = (counts[x.from] ?? 0) + 1;
-        const from = Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(", ");
-        console.log(`${column} ${key}: n=${list.length} worst-60s hull median ${pct(med(h))} mean ${pct(mean(h))} | hit damage median ${pct(med(w))} mean ${pct(mean(w))} | max hull from ${from || "-"}`);
+        const from = Object.entries(counts)
+          .map(([k, v]) => `${k} ${v}`)
+          .join(", ");
+        console.log(
+          `${column} ${key}: n=${list.length} worst-60s hull median ${pct(med(h))} mean ${pct(mean(h))} | hit damage median ${pct(med(w))} mean ${pct(mean(w))} | max hull from ${from || "-"}`,
+        );
       }
     }
   }

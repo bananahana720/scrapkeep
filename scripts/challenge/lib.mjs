@@ -6,7 +6,14 @@
 import os from "node:os";
 import fairnessLines from "./fairness.json" with { type: "json" };
 
-export const PILOTS = ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"];
+export const PILOTS = [
+  "pylon_engineer",
+  "runner_gunner",
+  "demolitions_caster",
+  "tarn",
+  "tally",
+  "remembered_cannon",
+];
 
 // Coordinator ruling, DECISIONS.md section 5, 19 Oct 01:58 (verbatim):
 // "Base-tier targets with an ordinary build: bosses and Wardens beat Novice in at least 85% of
@@ -51,8 +58,17 @@ export const BOSSES = [
   { id: "waking", name: "the Waking", world: 2, stage: 4 },
   { id: "mind", name: "the Mind", world: 3, stage: 6 },
 ];
-export const WARDENS = [1, 2, 3, 4, 5, 6].map((n) => ({ id: "w" + n, stage: n, world: Math.ceil(n / 2) }));
-export const WORLDS = [1, 2, 3].map((w) => ({ id: "world" + w, world: w, first: 2 * w - 1, last: 2 * w }));
+export const WARDENS = [1, 2, 3, 4, 5, 6].map((n) => ({
+  id: "w" + n,
+  stage: n,
+  world: Math.ceil(n / 2),
+}));
+export const WORLDS = [1, 2, 3].map((w) => ({
+  id: "world" + w,
+  world: w,
+  first: 2 * w - 1,
+  last: 2 * w,
+}));
 // World chains are a comparison column only (coordinator ruling, 19 Oct 04:32Z: "chain, information only"):
 // no target, no ✓/✗, never in the fail or incomplete lists.
 const CHAIN_IDS = new Set(WORLDS.map((w) => w.id));
@@ -60,7 +76,13 @@ export const isChain = (cell) => CHAIN_IDS.has(cell);
 // A park cell: resume park N and stop the tick its own Warden is engaged. This is the default park measure: the
 // world chain above has to break the first park's Warden on the way, so it mixes the park target with the Warden one
 // (a Learner who wins that Warden 15-35% of the time cannot reach the second park's Warden 80% of the time).
-export const PARKS = [1, 2, 3, 4, 5, 6].map((n) => ({ id: "park" + n, park: n, world: Math.ceil(n / 2), first: n, last: n }));
+export const PARKS = [1, 2, 3, 4, 5, 6].map((n) => ({
+  id: "park" + n,
+  park: n,
+  world: Math.ceil(n / 2),
+  first: n,
+  last: n,
+}));
 
 // The whole-World-1 clear (wave 36, difficulty-plan.md row D8): one bot run of the dam, the flume and Admiral Brindle in one
 // attempt. It is its own cell, never part of `--only=w1` (that id is the stage 1 Warden) and never in the default cells, so
@@ -92,12 +114,15 @@ export const MIN_BUCKET = 3;
 // every doc is in. A small library therefore makes the buckets overlap (a doc in both); `overlap` counts those,
 // and the table marks the Expert-top column "(overlaps ordinary)" when it is not zero.
 export function pickBuilds(docs) {
-  const ranked = [...docs].sort((a, b) => a.mass - b.mass || a.parts - b.parts || String(a.file).localeCompare(String(b.file)));
+  const ranked = [...docs].sort(
+    (a, b) => a.mass - b.mass || a.parts - b.parts || String(a.file).localeCompare(String(b.file)),
+  );
   const n = ranked.length;
   if (n === 0) return { ordinary: [], top: [], ranked, overlap: 0 };
   const pct = (i) => (n === 1 ? 0.5 : i / (n - 1));
   let lo = ranked.findIndex((_, i) => pct(i) >= 0.4 - 1e-9);
-  let hi = ranked.length - 1 - [...ranked].reverse().findIndex((_, i) => pct(n - 1 - i) <= 0.6 + 1e-9);
+  let hi =
+    ranked.length - 1 - [...ranked].reverse().findIndex((_, i) => pct(n - 1 - i) <= 0.6 + 1e-9);
   if (lo < 0 || hi < lo) {
     lo = Math.floor((n - 1) / 2);
     hi = lo;
@@ -120,8 +145,14 @@ export function describeDoc(file, text) {
   const doc = JSON.parse(text);
   const run = doc.run ?? doc;
   return {
-    file, stage: run.stage, pilot: run.class_id, mass: run.mass ?? 0, heft_class: run.heft_class ?? 0,
-    parts: (run.parts ?? []).length, hp: run.hp, max_hp: run.max_hp,
+    file,
+    stage: run.stage,
+    pilot: run.class_id,
+    mass: run.mass ?? 0,
+    heft_class: run.heft_class ?? 0,
+    parts: (run.parts ?? []).length,
+    hp: run.hp,
+    max_hp: run.max_hp,
   };
 }
 
@@ -132,28 +163,53 @@ export function describeDoc(file, text) {
 // A cell is a fight or a park; a column is a band (and a build bucket); a job is one seed of one column of one cell.
 export function planCells(opts) {
   const {
-    builds = {}, cells = ["boss", "warden", "park"], only = null, seeds = null, columns = COLUMNS.map((c) => c.id), persona = "brawler", wardenPersona = "skipper", parkPersona = "skipper",
+    builds = {},
+    cells = ["boss", "warden", "park"],
+    only = null,
+    seeds = null,
+    columns = COLUMNS.map((c) => c.id),
+    persona = "brawler",
+    wardenPersona = "skipper",
+    parkPersona = "skipper",
   } = opts;
   const jobs = [];
-  const tuneArgs = [...(opts.tune ? ["--tune=" + opts.tune] : []), ...(opts.tuneUnruled ? ["--tune-unruled"] : []), ...(opts.tier ? ["--run-tier=" + opts.tier] : [])];
+  const tuneArgs = [
+    ...(opts.tune ? ["--tune=" + opts.tune] : []),
+    ...(opts.tuneUnruled ? ["--tune-unruled"] : []),
+    ...(opts.tier ? ["--run-tier=" + opts.tier] : []),
+  ];
   const want = (id) => !only || only.includes(id);
   const defs = [];
-  for (const b of BOSSES) if (cells.includes("boss") && want(b.id)) defs.push({ kind: "boss", ...b });
-  for (const w of WARDENS) if (cells.includes("warden") && want(w.id)) defs.push({ kind: "warden", ...w });
-  for (const w of WORLDS) if (cells.includes("world") && want(w.id)) defs.push({ kind: "world", ...w, stage: w.first });
-  for (const p of PARKS) if (cells.includes("park") && want(p.id)) defs.push({ kind: "world", ...p, stage: p.first });
+  for (const b of BOSSES)
+    if (cells.includes("boss") && want(b.id)) defs.push({ kind: "boss", ...b });
+  for (const w of WARDENS)
+    if (cells.includes("warden") && want(w.id)) defs.push({ kind: "warden", ...w });
+  for (const w of WORLDS)
+    if (cells.includes("world") && want(w.id)) defs.push({ kind: "world", ...w, stage: w.first });
+  for (const p of PARKS)
+    if (cells.includes("park") && want(p.id)) defs.push({ kind: "world", ...p, stage: p.first });
   if (only?.includes(W1CLEAR.id)) defs.push({ kind: "clear", ...W1CLEAR, stage: W1CLEAR.first });
   for (const def of defs) {
-    const cols = COLUMNS.filter((c) => columns.includes(c.id) && (def.kind !== "world" || WORLD_COLUMNS.includes(c.id)) && (def.kind !== "clear" || W1CLEAR_COLUMNS.includes(c.id)));
+    const cols = COLUMNS.filter(
+      (c) =>
+        columns.includes(c.id) &&
+        (def.kind !== "world" || WORLD_COLUMNS.includes(c.id)) &&
+        (def.kind !== "clear" || W1CLEAR_COLUMNS.includes(c.id)),
+    );
     for (const col of cols) {
       const stage = def.kind === "world" ? def.first : def.stage;
       // Stage 1 is the start of a run: no build to carry, so it plays fresh (the seed picks the pilot).
       const docs = stage === 1 ? [null] : (builds[stage]?.[col.build] ?? []);
-      const count = seeds ?? (def.kind === "world" || def.kind === "clear" ? DEFAULT_SEEDS.world : DEFAULT_SEEDS.fight);
+      const count =
+        seeds ??
+        (def.kind === "world" || def.kind === "clear" ? DEFAULT_SEEDS.world : DEFAULT_SEEDS.fight);
       for (let i = 0; i < count; i++) {
         const doc = docs.length ? docs[i % docs.length] : undefined;
         if (doc === undefined) {
-          jobs.push({ ...base(def, col, i, persona, wardenPersona, parkPersona, null, tuneArgs), missing: true });
+          jobs.push({
+            ...base(def, col, i, persona, wardenPersona, parkPersona, null, tuneArgs),
+            missing: true,
+          });
           continue;
         }
         jobs.push(base(def, col, i, persona, wardenPersona, parkPersona, doc, tuneArgs));
@@ -167,24 +223,62 @@ export function planCells(opts) {
 function cellSeed(def, i) {
   // The same seeds as `w1` (the stage 1 Warden), so the two cells pair seed for seed on stage 1.
   if (def.kind === "clear") return 40000 + (3 + W1CLEAR.first - 1) * 100 + i;
-  const slot = def.kind === "boss" ? def.world - 1 : def.kind === "warden" ? 3 + def.stage - 1 : def.park ? 12 + def.park - 1 : 9 + def.world - 1;
+  const slot =
+    def.kind === "boss"
+      ? def.world - 1
+      : def.kind === "warden"
+        ? 3 + def.stage - 1
+        : def.park
+          ? 12 + def.park - 1
+          : 9 + def.world - 1;
   return 40000 + slot * 100 + i;
 }
 
 function base(def, col, i, persona, wardenPersona, parkPersona, doc = null, tuneArgs = []) {
   const seed = cellSeed(def, i);
-  const policy = def.kind === "clear" ? wardenPersona : def.kind === "world" ? parkPersona : def.kind === "warden" ? wardenPersona : persona;
+  const policy =
+    def.kind === "clear"
+      ? wardenPersona
+      : def.kind === "world"
+        ? parkPersona
+        : def.kind === "warden"
+          ? wardenPersona
+          : persona;
   const from = def.kind === "world" || def.kind === "clear" ? def.first : def.stage;
   const args = [...tuneArgs, "--band=" + col.band, "--attempt=" + col.attempt, "--cell=" + def.id];
   if (doc) args.push("--entrance=" + doc.file, "--from-stage=" + from);
   else if (from !== 1) args.push("--from-stage=" + from);
-  if (def.kind === "clear") args.push("--until=" + def.last, "--fight-limit=" + WARDEN_FIGHT_LIMIT_S, "--stage-limit=" + WARDEN_STAGE_LIMIT_S, "--ticks=" + W1CLEAR_TICKS);
-  else if (def.kind === "boss") args.push("--to-boss=1", "--until=" + def.stage, "--ticks=" + BOSS_TICKS);
-  else if (def.kind === "warden") args.push("--until=" + def.stage, "--fight-limit=" + WARDEN_FIGHT_LIMIT_S, "--stage-limit=" + WARDEN_STAGE_LIMIT_S, "--ticks=" + WARDEN_TICKS);
+  if (def.kind === "clear")
+    args.push(
+      "--until=" + def.last,
+      "--fight-limit=" + WARDEN_FIGHT_LIMIT_S,
+      "--stage-limit=" + WARDEN_STAGE_LIMIT_S,
+      "--ticks=" + W1CLEAR_TICKS,
+    );
+  else if (def.kind === "boss")
+    args.push("--to-boss=1", "--until=" + def.stage, "--ticks=" + BOSS_TICKS);
+  else if (def.kind === "warden")
+    args.push(
+      "--until=" + def.stage,
+      "--fight-limit=" + WARDEN_FIGHT_LIMIT_S,
+      "--stage-limit=" + WARDEN_STAGE_LIMIT_S,
+      "--ticks=" + WARDEN_TICKS,
+    );
   else args.push("--stop-at=engaged:" + def.last, "--ticks=" + WORLD_TICKS);
   return {
-    id: `${def.id}-${col.id}-${seed}`, kind: def.kind, cell: def.id, stage: def.stage, column: col.id, band: col.band, attempt: col.attempt,
-    build: def.kind === "world" || def.kind === "clear" ? "ordinary" : col.build, policy, seed, entrance: doc ? doc.file : null, pilot: doc?.pilot ?? null, args,
+    id: `${def.id}-${col.id}-${seed}`,
+    kind: def.kind,
+    cell: def.id,
+    stage: def.stage,
+    column: col.id,
+    band: col.band,
+    attempt: col.attempt,
+    build: def.kind === "world" || def.kind === "clear" ? "ordinary" : col.build,
+    policy,
+    seed,
+    entrance: doc ? doc.file : null,
+    pilot: doc?.pilot ?? null,
+    args,
   };
 }
 
@@ -192,14 +286,28 @@ function base(def, col, i, persona, wardenPersona, parkPersona, doc = null, tune
 export function shardJobs(jobs, spec) {
   if (!spec) return jobs;
   const m = /^(\d+)\/(\d+)$/.exec(spec);
-  if (!m || Number(m[1]) < 1 || Number(m[1]) > Number(m[2])) throw new Error("--shard must be i/n with 1 <= i <= n");
+  if (!m || Number(m[1]) < 1 || Number(m[1]) > Number(m[2]))
+    throw new Error("--shard must be i/n with 1 <= i <= n");
   return jobs.filter((_, k) => k % Number(m[2]) === Number(m[1]) - 1);
 }
 
 export function botArgs(job, out) {
   return [
-    "--headless", "--fixed-fps", "90", "--path", "sketches/core-loop", "--script", "res://tools/band_run.gd", "--",
-    "--out=" + out, "--policy=" + job.policy, "--seeds=" + job.seed, "--table=park", "--gate=1", "--qa-log=1", ...job.args,
+    "--headless",
+    "--fixed-fps",
+    "90",
+    "--path",
+    "sketches/core-loop",
+    "--script",
+    "res://tools/band_run.gd",
+    "--",
+    "--out=" + out,
+    "--policy=" + job.policy,
+    "--seeds=" + job.seed,
+    "--table=park",
+    "--gate=1",
+    "--qa-log=1",
+    ...job.args,
   ];
 }
 
@@ -231,7 +339,15 @@ export function playerReport(runs) {
       kinds[row.kind].rows += 1;
       const near = (row.at ?? []).map((x) => Math.round(x / QA_PLACE_M) * QA_PLACE_M);
       const key = [row.kind, row.stage, ...near].join(" ");
-      const place = places.get(key) ?? { kind: row.kind, stage: row.stage, near, rows: 0, runs: new Set(), cells: new Set(), goals: new Set() };
+      const place = places.get(key) ?? {
+        kind: row.kind,
+        stage: row.stage,
+        near,
+        rows: 0,
+        runs: new Set(),
+        cells: new Set(),
+        goals: new Set(),
+      };
       place.rows += 1;
       place.runs.add(run.id);
       place.cells.add(run.cell);
@@ -240,22 +356,49 @@ export function playerReport(runs) {
     }
   }
   const list = [...places.values()]
-    .map((place) => ({ ...place, runs: place.runs.size, cells: [...place.cells].sort(), goals: [...place.goals].sort() }))
-    .sort((a, b) => QA_KINDS.indexOf(a.kind) - QA_KINDS.indexOf(b.kind) || b.runs - a.runs || a.stage - b.stage || String(a.near).localeCompare(String(b.near)));
+    .map((place) => ({
+      ...place,
+      runs: place.runs.size,
+      cells: [...place.cells].sort(),
+      goals: [...place.goals].sort(),
+    }))
+    .sort(
+      (a, b) =>
+        QA_KINDS.indexOf(a.kind) - QA_KINDS.indexOf(b.kind) ||
+        b.runs - a.runs ||
+        a.stage - b.stage ||
+        String(a.near).localeCompare(String(b.near)),
+    );
   return { runs: runs.length, watched: watched.length, kinds, places: list };
 }
 
 export function renderPlayerReport(report, limit = 25) {
   const lines = ["## What a player would report", ""];
-  if (report.watched === 0) return [...lines, "No run carried the play watch's rows (runs recorded before it was switched on).", ""].join("\n");
-  lines.push(`The play watch (src/core/play_watch.gd) read ${report.watched} of ${report.runs} runs. It only reads the game, so the win rates above are what they would be without it. Information, not graded: a wedge, a fall, an empty objective plate or a hull bar off the hull is a bug to chase wherever it shows; a stuck or hung row is read with the bot's goal, since a camper waits by design.`, "");
+  if (report.watched === 0)
+    return [
+      ...lines,
+      "No run carried the play watch's rows (runs recorded before it was switched on).",
+      "",
+    ].join("\n");
+  lines.push(
+    `The play watch (src/core/play_watch.gd) read ${report.watched} of ${report.runs} runs. It only reads the game, so the win rates above are what they would be without it. Information, not graded: a wedge, a fall, an empty objective plate or a hull bar off the hull is a bug to chase wherever it shows; a stuck or hung row is read with the bot's goal, since a camper waits by design.`,
+    "",
+  );
   lines.push("| Kind | Rows | Runs with one |", "| --- | --- | --- |");
-  for (const kind of QA_KINDS) lines.push(`| ${kind} | ${report.kinds[kind].rows} | ${report.kinds[kind].runs} |`);
+  for (const kind of QA_KINDS)
+    lines.push(`| ${kind} | ${report.kinds[kind].rows} | ${report.kinds[kind].runs} |`);
   lines.push("");
   if (report.places.length === 0) return [...lines, "No place was reported.", ""].join("\n");
-  lines.push("| Kind | Stage | Near (x, y, z) | Runs | Rows | Cells | Bot's goal |", "| --- | --- | --- | --- | --- | --- | --- |");
-  for (const place of report.places.slice(0, limit)) lines.push(`| ${place.kind} | ${place.stage} | ${place.near.join(", ")} | ${place.runs} | ${place.rows} | ${place.cells.join(", ")} | ${place.goals.slice(0, 3).join("; ")} |`);
-  if (report.places.length > limit) lines.push("", `${report.places.length - limit} more places are in table.json.`);
+  lines.push(
+    "| Kind | Stage | Near (x, y, z) | Runs | Rows | Cells | Bot's goal |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+  );
+  for (const place of report.places.slice(0, limit))
+    lines.push(
+      `| ${place.kind} | ${place.stage} | ${place.near.join(", ")} | ${place.runs} | ${place.rows} | ${place.cells.join(", ")} | ${place.goals.slice(0, 3).join("; ")} |`,
+    );
+  if (report.places.length > limit)
+    lines.push("", `${report.places.length - limit} more places are in table.json.`);
   lines.push("");
   return lines.join("\n");
 }
@@ -268,57 +411,128 @@ export function renderPlayerReport(report, limit = 25) {
 // the largest single hit as a share of pilot health and the share of health lost in the fight's first 45 s.
 // A Warden never engaged has no fight to report, so its shares are null, not zero. The study file arrives with #167.
 export function fightReport(note, maxHp, engaged = true) {
-  if (!note || !engaged) return { largestShare: null, largestSource: null, hp45Share: null, largestHullShare: null, hull45Share: null };
+  if (!note || !engaged)
+    return {
+      largestShare: null,
+      largestSource: null,
+      hp45Share: null,
+      largestHullShare: null,
+      hull45Share: null,
+    };
   // hp_lost* and largest_hit are the whole hit before scrap armour; hull_* is what reached the hull. Rows
   // recorded before the driver kept hull keys read null for the hull, not zero.
-  const hullKnown = note.hull_lost_45s != null || note.largest_hull_hit != null || note.hull_lost != null;
+  const hullKnown =
+    note.hull_lost_45s != null || note.largest_hull_hit != null || note.hull_lost != null;
   return {
-    largestShare: note.largest_hit_share ?? (note.largest_hit != null && maxHp ? note.largest_hit / maxHp : null),
+    largestShare:
+      note.largest_hit_share ??
+      (note.largest_hit != null && maxHp ? note.largest_hit / maxHp : null),
     largestSource: note.largest_hit_source ?? null,
     hp45Share: maxHp ? Math.round(((note.hp_lost_45s ?? 0) / maxHp) * 1000) / 1000 : null,
-    largestHullShare: hullKnown ? note.largest_hull_hit_share ?? 0 : null,
-    hull45Share: hullKnown && maxHp ? Math.round(((note.hull_lost_45s ?? 0) / maxHp) * 1000) / 1000 : null,
+    largestHullShare: hullKnown ? (note.largest_hull_hit_share ?? 0) : null,
+    hull45Share:
+      hullKnown && maxHp ? Math.round(((note.hull_lost_45s ?? 0) / maxHp) * 1000) / 1000 : null,
   };
 }
 
 export function gradeRun(kind, row, job = {}) {
   if (!row) return { result: "error", why: "no record" };
-  if (row.resumed === false) return { result: "error", why: "the run did not resume its entrance doc" };
+  if (row.resumed === false)
+    return { result: "error", why: "the run did not resume its entrance doc" };
   const stages = row.stages ?? [];
   if (kind === "boss") {
     const boss = row.boss;
     const rep = fightReport(boss, row.max_hp);
-    if (boss?.defeated_s != null) return { result: "win", fightS: boss.defeated_s, hpLost: boss.hp_lost ?? null, ...rep };
-    if (row.outcome === "died" || row.outcome === "lost") return { result: "loss", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, diedS: boss?.died_s ?? boss?.seconds ?? null, ...rep };
+    if (boss?.defeated_s != null)
+      return { result: "win", fightS: boss.defeated_s, hpLost: boss.hp_lost ?? null, ...rep };
+    if (row.outcome === "died" || row.outcome === "lost")
+      return {
+        result: "loss",
+        fightS: boss?.seconds ?? null,
+        hpLost: boss?.hp_lost ?? null,
+        diedS: boss?.died_s ?? boss?.seconds ?? null,
+        ...rep,
+      };
     // "boss" is the driver finding no boss module in the boss state: the harness's fault, not a fight.
     if (row.outcome === "boss") return { result: "error", why: "no boss module in the boss state" };
-    if (row.outcome === "boss_stalled" || boss) return { result: "timeout", reason: row.outcome, fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, ...rep };
+    if (row.outcome === "boss_stalled" || boss)
+      return {
+        result: "timeout",
+        reason: row.outcome,
+        fightS: boss?.seconds ?? null,
+        hpLost: boss?.hp_lost ?? null,
+        ...rep,
+      };
     return { result: "error", why: "the boss was never entered (" + row.outcome + ")" };
   }
   if (kind === "warden") {
     const note = stages.find((s) => s.stage === (job.stage ?? row.stage_reached));
-    const rep = fightReport(note, note?.max_hp ?? row.max_hp, note != null && fightStart(note) != null);
+    const rep = fightReport(
+      note,
+      note?.max_hp ?? row.max_hp,
+      note != null && fightStart(note) != null,
+    );
     if (note?.warden_broken_s != null) {
       const start = fightStart(note);
       const fightS = start != null ? round2(note.warden_broken_s - start) : null;
       return { result: "win", fightS, hpLost: note.hp_lost ?? null, ...rep };
     }
-    if (row.outcome === "died" || row.outcome === "lost") return { result: "loss", fightS: null, hpLost: note?.hp_lost ?? null, ...rep };
-    return { result: "timeout", reason: row.outcome, fightS: null, hpLost: note?.hp_lost ?? null, ...rep };
+    if (row.outcome === "died" || row.outcome === "lost")
+      return { result: "loss", fightS: null, hpLost: note?.hp_lost ?? null, ...rep };
+    return {
+      result: "timeout",
+      reason: row.outcome,
+      fightS: null,
+      hpLost: note?.hp_lost ?? null,
+      ...rep,
+    };
   }
   if (kind === "world") {
-    if (row.outcome === "reached") return { result: "win", fightS: row.game_seconds ?? null, hpLost: null };
-    if (row.outcome === "died" || row.outcome === "lost") return { result: "loss", fightS: row.game_seconds ?? null, hpLost: null };
-    return { result: "timeout", reason: row.outcome, fightS: row.game_seconds ?? null, hpLost: null };
+    if (row.outcome === "reached")
+      return { result: "win", fightS: row.game_seconds ?? null, hpLost: null };
+    if (row.outcome === "died" || row.outcome === "lost")
+      return { result: "loss", fightS: row.game_seconds ?? null, hpLost: null };
+    return {
+      result: "timeout",
+      reason: row.outcome,
+      fightS: row.game_seconds ?? null,
+      hpLost: null,
+    };
   }
   if (kind === "clear") {
     // Won = Admiral Brindle defeated in the same attempt. Where it ended: the stage reached, and how (death, a cap, or the clear).
     const boss = row.boss;
     // where: the stage the run was in, or the boss fight when a boss note exists, so a stage 2 death reads apart from a boss death.
-    const at = { stage: row.stage_reached ?? null, gameS: row.game_seconds ?? null, where: row.boss ? "boss" : "s" + (row.stage_reached ?? "?") };
-    if (boss?.defeated_s != null) return { result: "win", fightS: row.game_seconds ?? null, hpLost: null, end: "clear", ...at };
-    if (row.outcome === "died" || row.outcome === "lost") return { result: "loss", fightS: row.game_seconds ?? null, hpLost: null, diedS: row.game_seconds ?? null, end: "death", ...at };
-    if (row.outcome === "stalled" || row.outcome === "fight_capped" || row.outcome === "boss_stalled" || row.outcome === "ticks_done") return { result: "timeout", reason: row.outcome, fightS: row.game_seconds ?? null, hpLost: null, end: "cap", ...at };
+    const at = {
+      stage: row.stage_reached ?? null,
+      gameS: row.game_seconds ?? null,
+      where: row.boss ? "boss" : "s" + (row.stage_reached ?? "?"),
+    };
+    if (boss?.defeated_s != null)
+      return { result: "win", fightS: row.game_seconds ?? null, hpLost: null, end: "clear", ...at };
+    if (row.outcome === "died" || row.outcome === "lost")
+      return {
+        result: "loss",
+        fightS: row.game_seconds ?? null,
+        hpLost: null,
+        diedS: row.game_seconds ?? null,
+        end: "death",
+        ...at,
+      };
+    if (
+      row.outcome === "stalled" ||
+      row.outcome === "fight_capped" ||
+      row.outcome === "boss_stalled" ||
+      row.outcome === "ticks_done"
+    )
+      return {
+        result: "timeout",
+        reason: row.outcome,
+        fightS: row.game_seconds ?? null,
+        hpLost: null,
+        end: "cap",
+        ...at,
+      };
     return { result: "error", why: "the clear ended as " + row.outcome };
   }
   throw new Error("unknown kind " + kind);
@@ -367,24 +581,39 @@ export function aggregate(grades) {
   const wins = count("win");
   const { lo, hi } = wilson(wins, n);
   const deaths = used.filter((g) => g.result === "loss" && g.diedS != null).map((g) => g.diedS);
-  const hit = used.filter((g) => g.largestShare != null).sort((a, b) => b.largestShare - a.largestShare)[0] ?? null;
+  const hit =
+    used.filter((g) => g.largestShare != null).sort((a, b) => b.largestShare - a.largestShare)[0] ??
+    null;
   const hp45 = used.map((g) => g.hp45Share).filter((x) => x != null);
   return {
-    n, total, wins, losses: count("loss"), timeouts: count("timeout"),
+    n,
+    total,
+    wins,
+    losses: count("loss"),
+    timeouts: count("timeout"),
     capped: used.filter((g) => g.result === "timeout" && CAPPED.includes(g.reason)).length,
     stalled: used.filter((g) => g.result === "timeout" && !CAPPED.includes(g.reason)).length,
-    excluded: { error, killed }, incomplete: total > 0 && (error + killed) / total > INCOMPLETE_SHARE,
-    rate: n ? wins / n : null, lo, hi,
+    excluded: { error, killed },
+    incomplete: total > 0 && (error + killed) / total > INCOMPLETE_SHARE,
+    rate: n ? wins / n : null,
+    lo,
+    hi,
     medianFightS: median(used.filter((g) => g.result === "win").map((g) => g.fightS)),
     medianHpLost: median(used.map((g) => g.hpLost)),
-    largestHullShare: used.some((g) => g.largestHullShare != null) ? Math.max(...used.map((g) => g.largestHullShare ?? 0)) : null,
+    largestHullShare: used.some((g) => g.largestHullShare != null)
+      ? Math.max(...used.map((g) => g.largestHullShare ?? 0))
+      : null,
     medianHull45Share: median(used.map((g) => g.hull45Share).filter((x) => x != null)),
-    maxHull45Share: used.some((g) => g.hull45Share != null) ? Math.max(...used.map((g) => g.hull45Share ?? 0)) : null,
+    maxHull45Share: used.some((g) => g.hull45Share != null)
+      ? Math.max(...used.map((g) => g.hull45Share ?? 0))
+      : null,
     earliestDeathS: deaths.length ? Math.min(...deaths) : null,
     deathsS: deaths,
     earlyDeaths: deaths.filter((s) => s < TARGETS.earliestLearnerBossDeathS).length,
-    largestShare: hit?.largestShare ?? null, largestSource: hit?.largestSource ?? null,
-    medianHp45Share: median(hp45), maxHp45Share: hp45.length ? Math.max(...hp45) : null,
+    largestShare: hit?.largestShare ?? null,
+    largestSource: hit?.largestSource ?? null,
+    medianHp45Share: median(hp45),
+    maxHp45Share: hp45.length ? Math.max(...hp45) : null,
   };
 }
 
@@ -407,7 +636,8 @@ export function settledMark({ grades, left, target, tellOpen = false }) {
   const a = aggregate(grades);
   if (a.incomplete || a.n === 0) return null;
   const now = meets(target, a.rate);
-  for (let w = 0; w <= left; w++) if (meets(target, (a.wins + w) / (a.n + left)) !== now) return null;
+  for (let w = 0; w <= left; w++)
+    if (meets(target, (a.wins + w) / (a.n + left)) !== now) return null;
   return now;
 }
 
@@ -440,31 +670,42 @@ export function buildTable(runs, buckets = {}) {
     (c.grades[r.column] ??= []).push(r.grade ?? gradeRun(r.kind, r.row, r));
   }
   const order = [...BOSSES, ...WARDENS, ...PARKS, ...WORLDS, W1CLEAR].map((d) => d.id);
-  return [...cells.values()].sort((a, b) => order.indexOf(a.cell) - order.indexOf(b.cell)).map((c) => {
-    const columns = {};
-    for (const col of COLUMNS) {
-      if (!c.grades[col.id]) continue;
-      const a = aggregate(c.grades[col.id]);
-      const target = columnTarget(c.cell, c.kind, col.id);
-      columns[col.id] = { ...a, target, ok: a.incomplete ? null : meets(target, a.rate) };
-    }
-    const ord = columns.expert?.medianFightS;
-    const top = columns.expertTop?.medianFightS;
-    // The 45 s check covers every Learner column that ran (attempt 1 and attempt 5).
-    const learners = [columns.learner1, columns.learner5].filter(Boolean);
-    const deaths = learners.flatMap((l) => l.deathsS);
-    const early = deaths.filter((d) => d < TARGETS.earliestLearnerBossDeathS).length;
-    const overlap = buckets[c.stage]?.overlap ?? 0;
-    return {
-      cell: c.cell, kind: c.kind, stage: c.stage, columns, overlap, info: isChain(c.cell) || c.kind === "clear",
-      ...(c.kind === "clear" ? { ends: endsByColumn(c.grades) } : {}),
-      growthRatio: ord && top ? round2(top / ord) : null, // reported, not graded
-      tell: c.kind === "boss" && learners.length ? {
-        earlyDeaths: early, earliestDeathS: deaths.length ? Math.min(...deaths) : null,
-        ok: learners.some((l) => l.incomplete) ? null : early === 0,
-      } : null,
-    };
-  });
+  return [...cells.values()]
+    .sort((a, b) => order.indexOf(a.cell) - order.indexOf(b.cell))
+    .map((c) => {
+      const columns = {};
+      for (const col of COLUMNS) {
+        if (!c.grades[col.id]) continue;
+        const a = aggregate(c.grades[col.id]);
+        const target = columnTarget(c.cell, c.kind, col.id);
+        columns[col.id] = { ...a, target, ok: a.incomplete ? null : meets(target, a.rate) };
+      }
+      const ord = columns.expert?.medianFightS;
+      const top = columns.expertTop?.medianFightS;
+      // The 45 s check covers every Learner column that ran (attempt 1 and attempt 5).
+      const learners = [columns.learner1, columns.learner5].filter(Boolean);
+      const deaths = learners.flatMap((l) => l.deathsS);
+      const early = deaths.filter((d) => d < TARGETS.earliestLearnerBossDeathS).length;
+      const overlap = buckets[c.stage]?.overlap ?? 0;
+      return {
+        cell: c.cell,
+        kind: c.kind,
+        stage: c.stage,
+        columns,
+        overlap,
+        info: isChain(c.cell) || c.kind === "clear",
+        ...(c.kind === "clear" ? { ends: endsByColumn(c.grades) } : {}),
+        growthRatio: ord && top ? round2(top / ord) : null, // reported, not graded
+        tell:
+          c.kind === "boss" && learners.length
+            ? {
+                earlyDeaths: early,
+                earliestDeathS: deaths.length ? Math.min(...deaths) : null,
+                ok: learners.some((l) => l.incomplete) ? null : early === 0,
+              }
+            : null,
+      };
+    });
 }
 
 export function cellVerdict(cell) {
@@ -478,11 +719,23 @@ export function cellVerdict(cell) {
 
 function cellText(c, note = "") {
   if (!c) return "-";
-  const out = [c.excluded.error ? `${c.excluded.error} error` : "", c.excluded.killed ? `${c.excluded.killed} killed` : ""].filter(Boolean).join(", ");
+  const out = [
+    c.excluded.error ? `${c.excluded.error} error` : "",
+    c.excluded.killed ? `${c.excluded.killed} killed` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
   if (c.incomplete) return `incomplete: ${c.n} of ${c.total} counted (excluded: ${out})${note}`;
   const mark = c.ok === null ? "" : c.ok ? " ✓" : " ✗";
   // A stall or a fight cap is the fight beating the player, not a win: shown beside the deaths.
-  const extra = [c.losses ? `${c.losses} died` : "", c.capped ? `${c.capped} capped` : "", c.stalled ? `${c.stalled} stalled` : "", ""].filter(Boolean).join(", ");
+  const extra = [
+    c.losses ? `${c.losses} died` : "",
+    c.capped ? `${c.capped} capped` : "",
+    c.stalled ? `${c.stalled} stalled` : "",
+    "",
+  ]
+    .filter(Boolean)
+    .join(", ");
   return `${pct(c.rate)} (${c.n}) [${pct(c.lo)}-${pct(c.hi)}]${mark}${c.target ? " vs " + describeTarget(c.target) : ""}${extra ? " (" + extra + ")" : ""}${out ? " (excluded: " + out + ")" : ""}${note}`;
 }
 
@@ -490,75 +743,173 @@ const fmt = (x, d = 1) => (x == null ? "-" : Number(x).toFixed(d));
 
 export function renderTable(table, meta = {}) {
   const lines = ["# Challenge band table", ""];
-  if (meta.tune_unruled) lines.push("Unruled: --tune-unruled was set, so pilot.* dials applied. No ruling allows them; this table is information only.", "");
-  if (meta.run_tier) lines.push(`Run tier ${meta.run_tier} (HARD ladder rung ${meta.run_tier}, bot_run --run-tier): every run picks it on the start card, or takes it as a resumed stage opens. The ✓/✗ marks still judge the base-tier targets.`, "");
-  if (meta.tune) lines.push(`Tuned: --tune=${meta.tune} requested (difficulty dials, src/core/challenge_dials.gd). The applied dials are on each run row as "dials", from describe(); a rejected entry is not applied.`, "");
-  if (meta.label) lines.push(`Label ${meta.label}${meta.commit ? ", commit " + meta.commit.slice(0, 8) : ""}${meta.when ? ", " + meta.when : ""}.`, "");
-  if (table.some((c) => c.kind !== "world")) lines.push(`Learner a1 at bosses and Wardens is information only (DECISIONS section 5, 19 Oct 19:00): no ✓/✗; the old reference range was ${pct(LEARNER1_FIGHT_REFERENCE.min)}-${pct(LEARNER1_FIGHT_REFERENCE.max)}. Parks still grade Learner a1 reach.`, "");
-  lines.push("Win rate (runs) [Wilson 95%] ✓/✗ against the target; ✓/✗ judges the point estimate. Brackets after a cell count deaths, fight caps (fight_capped, boss_stalled) and stalls; none is a win. Runs with no record, an unresumed doc or a harness kill are excluded from n and the rate and noted as `excluded`; over 10% excluded makes the column incomplete. Fight s and HP lost are medians over the cell's runs; top/ord is the Expert top fight time over the Expert ordinary fight time.", "");
+  if (meta.tune_unruled)
+    lines.push(
+      "Unruled: --tune-unruled was set, so pilot.* dials applied. No ruling allows them; this table is information only.",
+      "",
+    );
+  if (meta.run_tier)
+    lines.push(
+      `Run tier ${meta.run_tier} (HARD ladder rung ${meta.run_tier}, bot_run --run-tier): every run picks it on the start card, or takes it as a resumed stage opens. The ✓/✗ marks still judge the base-tier targets.`,
+      "",
+    );
+  if (meta.tune)
+    lines.push(
+      `Tuned: --tune=${meta.tune} requested (difficulty dials, src/core/challenge_dials.gd). The applied dials are on each run row as "dials", from describe(); a rejected entry is not applied.`,
+      "",
+    );
+  if (meta.label)
+    lines.push(
+      `Label ${meta.label}${meta.commit ? ", commit " + meta.commit.slice(0, 8) : ""}${meta.when ? ", " + meta.when : ""}.`,
+      "",
+    );
+  if (table.some((c) => c.kind !== "world"))
+    lines.push(
+      `Learner a1 at bosses and Wardens is information only (DECISIONS section 5, 19 Oct 19:00): no ✓/✗; the old reference range was ${pct(LEARNER1_FIGHT_REFERENCE.min)}-${pct(LEARNER1_FIGHT_REFERENCE.max)}. Parks still grade Learner a1 reach.`,
+      "",
+    );
+  lines.push(
+    "Win rate (runs) [Wilson 95%] ✓/✗ against the target; ✓/✗ judges the point estimate. Brackets after a cell count deaths, fight caps (fight_capped, boss_stalled) and stalls; none is a win. Runs with no record, an unresumed doc or a harness kill are excluded from n and the rate and noted as `excluded`; over 10% excluded makes the column incomplete. Fight s and HP lost are medians over the cell's runs; top/ord is the Expert top fight time over the Expert ordinary fight time.",
+    "",
+  );
   const fights = table.filter((c) => c.kind !== "world" && c.kind !== "clear");
   if (fights.length) {
     lines.push("## Bosses and Wardens", "");
-    lines.push("| Cell | Novice | Learner a1 | Learner a5 | Expert ordinary | Expert top | Learner deaths < 45 s | Fight s (ord / top) | HP lost (ord) | top/ord (reported, not graded) |");
+    lines.push(
+      "| Cell | Novice | Learner a1 | Learner a5 | Expert ordinary | Expert top | Learner deaths < 45 s | Fight s (ord / top) | HP lost (ord) | top/ord (reported, not graded) |",
+    );
     lines.push("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
     for (const c of fights) {
       const t = c.tell;
-      const tell = t ? (t.ok === null ? "incomplete" : t.ok ? "0 ✓" : `${t.earlyDeaths} ✗ (earliest ${fmt(t.earliestDeathS)} s)`) : "-";
-      lines.push(`| ${c.cell} | ${["novice", "learner1", "learner5", "expert", "expertTop"].map((id) => cellText(c.columns[id], id === "expertTop" && c.overlap ? " (overlaps ordinary)" : "")).join(" | ")} | ${tell} | ${fmt(c.columns.expert?.medianFightS)} / ${fmt(c.columns.expertTop?.medianFightS)} | ${fmt(c.columns.expert?.medianHpLost)} | ${c.growthRatio ?? "-"}${c.growthRatio != null && c.overlap ? " (overlaps ordinary)" : ""} |`);
+      const tell = t
+        ? t.ok === null
+          ? "incomplete"
+          : t.ok
+            ? "0 ✓"
+            : `${t.earlyDeaths} ✗ (earliest ${fmt(t.earliestDeathS)} s)`
+        : "-";
+      lines.push(
+        `| ${c.cell} | ${["novice", "learner1", "learner5", "expert", "expertTop"].map((id) => cellText(c.columns[id], id === "expertTop" && c.overlap ? " (overlaps ordinary)" : "")).join(" | ")} | ${tell} | ${fmt(c.columns.expert?.medianFightS)} / ${fmt(c.columns.expertTop?.medianFightS)} | ${fmt(c.columns.expert?.medianHpLost)} | ${c.growthRatio ?? "-"}${c.growthRatio != null && c.overlap ? " (overlaps ordinary)" : ""} |`,
+      );
     }
     lines.push("");
   }
   if (fights.length) {
-    lines.push("## Fight report (comps study format)", "", "From research/comps/difficulty/SUMMARY.md, Lab measure. Reference rows, which are tuning ranges, not rulings: boss TTK 50-90 s and Warden 90-150 s at an ordinary build (rows 1, 2); an ordinary hit 15-25% of pilot health, a heavy one 30-50%, and no single hit kills from full (rows 9, 10); a Learner loses well under full health in the first 45 s (row 11). Largest hit is the biggest single hit in any band's run, with its source id. Hit and HP-lost shares are the whole hit before scrap armour; the hull columns are what reached the hull after armour (blank for rows recorded before the driver kept them). Tells and recovery come from the attack sheet (`tools/attack_sheet.gd`), not from these runs. Warden rows count from the Warden fight's start.", "");
-    lines.push("| Cell | Expert ordinary TTK s | Largest hit, share of HP (source) | Learner a1 HP lost in first 45 s, share (median / max) | Largest hull hit | Learner a1 hull lost in first 45 s (median / max) |", "| --- | --- | --- | --- | --- | --- |");
+    lines.push(
+      "## Fight report (comps study format)",
+      "",
+      "From research/comps/difficulty/SUMMARY.md, Lab measure. Reference rows, which are tuning ranges, not rulings: boss TTK 50-90 s and Warden 90-150 s at an ordinary build (rows 1, 2); an ordinary hit 15-25% of pilot health, a heavy one 30-50%, and no single hit kills from full (rows 9, 10); a Learner loses well under full health in the first 45 s (row 11). Largest hit is the biggest single hit in any band's run, with its source id. Hit and HP-lost shares are the whole hit before scrap armour; the hull columns are what reached the hull after armour (blank for rows recorded before the driver kept them). Tells and recovery come from the attack sheet (`tools/attack_sheet.gd`), not from these runs. Warden rows count from the Warden fight's start.",
+      "",
+    );
+    lines.push(
+      "| Cell | Expert ordinary TTK s | Largest hit, share of HP (source) | Learner a1 HP lost in first 45 s, share (median / max) | Largest hull hit | Learner a1 hull lost in first 45 s (median / max) |",
+      "| --- | --- | --- | --- | --- | --- |",
+    );
     for (const c of fights) {
-      const all = Object.values(c.columns).filter((x) => x.largestShare != null).sort((a, b) => b.largestShare - a.largestShare)[0];
+      const all = Object.values(c.columns)
+        .filter((x) => x.largestShare != null)
+        .sort((a, b) => b.largestShare - a.largestShare)[0];
       const l1 = c.columns.learner1;
-      const hullMax = Math.max(-1, ...Object.values(c.columns).map((x) => x.largestHullShare ?? -1));
-      lines.push(`| ${c.cell} | ${fmt(c.columns.expert?.medianFightS)} | ${all ? `${pct(all.largestShare)} (${all.largestSource ?? "?"})` : "-"} | ${l1?.medianHp45Share != null ? `${pct(l1.medianHp45Share)} / ${pct(l1.maxHp45Share)}` : "-"} | ${hullMax >= 0 ? pct(hullMax) : "-"} | ${l1?.medianHull45Share != null ? `${pct(l1.medianHull45Share)} / ${pct(l1.maxHull45Share)}` : "-"} |`);
+      const hullMax = Math.max(
+        -1,
+        ...Object.values(c.columns).map((x) => x.largestHullShare ?? -1),
+      );
+      lines.push(
+        `| ${c.cell} | ${fmt(c.columns.expert?.medianFightS)} | ${all ? `${pct(all.largestShare)} (${all.largestSource ?? "?"})` : "-"} | ${l1?.medianHp45Share != null ? `${pct(l1.medianHp45Share)} / ${pct(l1.maxHp45Share)}` : "-"} | ${hullMax >= 0 ? pct(hullMax) : "-"} | ${l1?.medianHull45Share != null ? `${pct(l1.medianHull45Share)} / ${pct(l1.maxHull45Share)}` : "-"} |`,
+      );
     }
     lines.push("");
   }
-  const parkRow = (c) => `| ${c.cell} | ${cellText(c.columns.novice)} | ${cellText(c.columns.learner1)} | ${fmt(c.columns.learner1?.medianFightS)} |`;
+  const parkRow = (c) =>
+    `| ${c.cell} | ${cellText(c.columns.novice)} | ${cellText(c.columns.learner1)} | ${fmt(c.columns.learner1?.medianFightS)} |`;
   const parks = table.filter((c) => c.kind === "world" && !c.info);
   if (parks.length) {
-    lines.push("## Parks (reach the Warden)", "", "`parkN` resumes park N and stops when that park's Warden is engaged; reaching it is the win.", "");
-    lines.push("| Cell | Novice | Learner a1 | Game s to reach (Learner) |", "| --- | --- | --- | --- |");
+    lines.push(
+      "## Parks (reach the Warden)",
+      "",
+      "`parkN` resumes park N and stops when that park's Warden is engaged; reaching it is the win.",
+      "",
+    );
+    lines.push(
+      "| Cell | Novice | Learner a1 | Game s to reach (Learner) |",
+      "| --- | --- | --- | --- |",
+    );
     for (const c of parks) lines.push(parkRow(c));
     lines.push("");
   }
   const chains = table.filter((c) => c.info && c.kind === "world");
   if (chains.length) {
-    lines.push("## World chains (information only, not graded)", "", "`worldN` (only with `--cells=world`) starts at the world's first park and stops at its second park's Warden, so it must break the first Warden on the way. Coordinator ruling 19 Oct 04:32Z: the park target is read per park; the chain is a comparison column with no target.", "");
-    lines.push("| Cell | Novice | Learner a1 | Game s to reach (Learner) |", "| --- | --- | --- | --- |");
+    lines.push(
+      "## World chains (information only, not graded)",
+      "",
+      "`worldN` (only with `--cells=world`) starts at the world's first park and stops at its second park's Warden, so it must break the first Warden on the way. Coordinator ruling 19 Oct 04:32Z: the park target is read per park; the chain is a comparison column with no target.",
+      "",
+    );
+    lines.push(
+      "| Cell | Novice | Learner a1 | Game s to reach (Learner) |",
+      "| --- | --- | --- | --- |",
+    );
     for (const c of chains) lines.push(parkRow(c));
     lines.push("");
   }
   const clears = table.filter((c) => c.kind === "clear");
   if (clears.length) {
-    lines.push("## Whole World 1 clear (information only, not graded)", "", "`w1clear` plays the dam, the flume and Admiral Brindle in one attempt from a fresh run; a win is Brindle defeated. Where each run ended: the stage it reached, or the boss fight, and whether it died, hit a time cap (a stall or a fight cap) or cleared.", "");
-    lines.push("| Band | Clears (runs) [Wilson 95%] | Ended (stage: died / capped / cleared) | Game s (median of clears) |", "| --- | --- | --- | --- |");
-    for (const c of clears) for (const id of COLUMNS.map((x) => x.id)) if (c.columns[id]) lines.push(`| ${c.cell} ${id} | ${cellText(c.columns[id])} | ${c.ends[id]} | ${fmt(c.columns[id].medianFightS)} |`);
+    lines.push(
+      "## Whole World 1 clear (information only, not graded)",
+      "",
+      "`w1clear` plays the dam, the flume and Admiral Brindle in one attempt from a fresh run; a win is Brindle defeated. Where each run ended: the stage it reached, or the boss fight, and whether it died, hit a time cap (a stall or a fight cap) or cleared.",
+      "",
+    );
+    lines.push(
+      "| Band | Clears (runs) [Wilson 95%] | Ended (stage: died / capped / cleared) | Game s (median of clears) |",
+      "| --- | --- | --- | --- |",
+    );
+    for (const c of clears)
+      for (const id of COLUMNS.map((x) => x.id))
+        if (c.columns[id])
+          lines.push(
+            `| ${c.cell} ${id} | ${cellText(c.columns[id])} | ${c.ends[id]} | ${fmt(c.columns[id].medianFightS)} |`,
+          );
     lines.push("");
   }
   if (meta.fairness) lines.push(...renderFairness(meta.fairness));
   if (meta.buckets && Object.keys(meta.buckets).length) {
-    lines.push("## Build buckets", "", "Docs per stage in the library, in the ordinary bucket (middle fifth by mass, then parts) and the top bucket (top tenth); a short bucket widens to three docs, so a small library makes them overlap (a doc in both).", "");
+    lines.push(
+      "## Build buckets",
+      "",
+      "Docs per stage in the library, in the ordinary bucket (middle fifth by mass, then parts) and the top bucket (top tenth); a short bucket widens to three docs, so a small library makes them overlap (a doc in both).",
+      "",
+    );
     lines.push("| Stage | Docs | Ordinary | Top | In both |", "| --- | --- | --- | --- | --- |");
-    for (const [stage, b] of Object.entries(meta.buckets)) lines.push(`| ${stage} | ${b.docs} | ${b.ordinary} | ${b.top} | ${b.overlap}${b.overlap ? " (Expert top overlaps ordinary)" : ""} |`);
+    for (const [stage, b] of Object.entries(meta.buckets))
+      lines.push(
+        `| ${stage} | ${b.docs} | ${b.ordinary} | ${b.top} | ${b.overlap}${b.overlap ? " (Expert top overlaps ordinary)" : ""} |`,
+      );
     lines.push("");
   }
   if (meta.shards) lines.push(`Shards: ${meta.shards.join(", ")}.`, "");
   if (meta.warnings?.length) lines.push(...meta.warnings.map((w) => "Warning: " + w), "");
   const incomplete = table.filter((c) => cellVerdict(c) === "incomplete").map((c) => c.cell);
-  if (incomplete.length) lines.push(`Incomplete cells (over 10% of a column's jobs excluded as error or killed, no ✓/✗): ${incomplete.join(", ")}.`, "");
+  if (incomplete.length)
+    lines.push(
+      `Incomplete cells (over 10% of a column's jobs excluded as error or killed, no ✓/✗): ${incomplete.join(", ")}.`,
+      "",
+    );
   const failing = table.filter((c) => cellVerdict(c) === "fail").map((c) => c.cell);
   const scope = meta.fairness ? " against a win-rate target" : "";
-  lines.push(failing.length ? `Cells with a ✗${scope}: ${failing.join(", ")}.` : `No cell has a ✗${scope}.`, "");
+  lines.push(
+    failing.length ? `Cells with a ✗${scope}: ${failing.join(", ")}.` : `No cell has a ✗${scope}.`,
+    "",
+  );
   // The fairness marks are their own judgement and are summed apart, so the two sentences cannot disagree.
   if (meta.fairness) {
-    const bad = meta.fairness.flatMap((p) => fairnessFails(p).map((f) => `${p.cell} ${p.column} ${f}`));
-    lines.push(bad.length ? `Fairness lines with a ✗: ${bad.join("; ")}.` : "No fairness line has a ✗.", "");
+    const bad = meta.fairness.flatMap((p) =>
+      fairnessFails(p).map((f) => `${p.cell} ${p.column} ${f}`),
+    );
+    lines.push(
+      bad.length ? `Fairness lines with a ✗: ${bad.join("; ")}.` : "No fairness line has a ✗.",
+      "",
+    );
   }
   return lines.join("\n");
 }
@@ -568,10 +919,13 @@ function endsByColumn(grades) {
   const out = {};
   for (const [id, list] of Object.entries(grades)) {
     const wheres = [...new Set(list.filter((g) => g.end).map((g) => g.where))].sort();
-    out[id] = wheres.map((where) => {
-      const n = (end) => list.filter((g) => g.where === where && g.end === end).length;
-      return `${where}: ${n("death")} died / ${n("cap")} capped / ${n("clear")} cleared`;
-    }).join(", ") || "-";
+    out[id] =
+      wheres
+        .map((where) => {
+          const n = (end) => list.filter((g) => g.where === where && g.end === end).length;
+          return `${where}: ${n("death")} died / ${n("cap")} capped / ${n("clear")} cleared`;
+        })
+        .join(", ") || "-";
   }
   return out;
 }
@@ -594,17 +948,28 @@ export function fairnessOf(run) {
   // buckets: the hull ones sum to hull_lost, and the pooled readings below are the ones that add the two.
   const scrap = f.scrap && typeof f.scrap === "object" ? f.scrap : {};
   return {
-    telegraphed: num(hull.telegraphed), untelegraphed: num(hull.untelegraphed), contact: num(hull.contact), unknown: num(hull.unknown),
-    scrapTel: num(scrap.telegraphed) ?? 0, scrapUntel: num(scrap.untelegraphed) ?? 0, scrapContact: num(scrap.contact) ?? 0, scrapUnknown: num(scrap.unknown) ?? 0,
-    slowScrap: num(f.slow_scrap) ?? 0, fastScrap: num(f.fast_scrap) ?? 0,
-    killing: k ? k.bucket ?? null : null,
-    slowS: num(f.slow_s), fastS: num(f.fast_s), slowHull: num(f.slow_hull), fastHull: num(f.fast_hull),
+    telegraphed: num(hull.telegraphed),
+    untelegraphed: num(hull.untelegraphed),
+    contact: num(hull.contact),
+    unknown: num(hull.unknown),
+    scrapTel: num(scrap.telegraphed) ?? 0,
+    scrapUntel: num(scrap.untelegraphed) ?? 0,
+    scrapContact: num(scrap.contact) ?? 0,
+    scrapUnknown: num(scrap.unknown) ?? 0,
+    slowScrap: num(f.slow_scrap) ?? 0,
+    fastScrap: num(f.fast_scrap) ?? 0,
+    killing: k ? (k.bucket ?? null) : null,
+    slowS: num(f.slow_s),
+    fastS: num(f.fast_s),
+    slowHull: num(f.slow_hull),
+    fastHull: num(f.fast_hull),
     segments: f.first_hit && typeof f.first_hit === "object" ? Object.values(f.first_hit) : null,
   };
 }
 
 // Runs excluded the way the win table excludes them: no record, an unresumed doc, a harness kill.
-const counted = (run) => !EXCLUDED.includes(run.grade?.result ?? "") && run.row?.resumed !== false && run.row != null;
+const counted = (run) =>
+  !EXCLUDED.includes(run.grade?.result ?? "") && run.row?.resumed !== false && run.row != null;
 
 // The runs of one cell and one arm, pooled. Hull and seconds are summed over the runs that measured them, so a long run counts
 // for more than a short one. Each number is null when no run measured it, and the reason is kept for the table.
@@ -615,8 +980,18 @@ export function fairnessPool(runs) {
   const bucketed = rows.filter((r) => r.telegraphed != null && r.untelegraphed != null);
   const tel = bucketed.reduce((a, r) => a + r.telegraphed, 0);
   const unt = bucketed.reduce((a, r) => a + r.untelegraphed, 0);
-  const hull = { telegraphed: tel, untelegraphed: unt, contact: sum("contact"), unknown: sum("unknown") };
-  const scrap = { telegraphed: sum("scrapTel"), untelegraphed: sum("scrapUntel"), contact: sum("scrapContact"), unknown: sum("scrapUnknown") };
+  const hull = {
+    telegraphed: tel,
+    untelegraphed: unt,
+    contact: sum("contact"),
+    unknown: sum("unknown"),
+  };
+  const scrap = {
+    telegraphed: sum("scrapTel"),
+    untelegraphed: sum("scrapUntel"),
+    contact: sum("scrapContact"),
+    unknown: sum("scrapUnknown"),
+  };
   const hullWhole = hull.telegraphed + hull.untelegraphed + hull.contact + hull.unknown;
   const whole = hullWhole + scrap.telegraphed + scrap.untelegraphed + scrap.contact + scrap.unknown;
   out.hull = hull;
@@ -633,24 +1008,40 @@ export function fairnessPool(runs) {
   const punt = unt + scrap.untelegraphed;
   out.pooledShare = ptel + punt > 0 ? ptel / (ptel + punt) : null;
   // F1 carries no mark while the loss it could not match is over the line.
-  out.shareMarked = (out.telegraphShare != null || out.pooledShare != null) && !(out.unknownShare != null && out.unknownShare > FAIRNESS.unknownMaxShare) && !(out.pooledUnknownShare != null && out.pooledUnknownShare > FAIRNESS.unknownMaxShare);
-  const kills = rows.map((r) => r.killing).filter((b) => b === "telegraphed" || b === "untelegraphed");
+  out.shareMarked =
+    (out.telegraphShare != null || out.pooledShare != null) &&
+    !(out.unknownShare != null && out.unknownShare > FAIRNESS.unknownMaxShare) &&
+    !(out.pooledUnknownShare != null && out.pooledUnknownShare > FAIRNESS.unknownMaxShare);
+  const kills = rows
+    .map((r) => r.killing)
+    .filter((b) => b === "telegraphed" || b === "untelegraphed");
   out.kills = kills.length;
   out.killsShown = kills.filter((b) => b === "telegraphed").length;
-  out.killsOther = rows.map((r) => r.killing).filter((b) => b === "contact" || b === "unknown").length;
-  const tax = rows.filter((r) => [r.slowS, r.fastS, r.slowHull, r.fastHull].every((x) => x != null));
+  out.killsOther = rows
+    .map((r) => r.killing)
+    .filter((b) => b === "contact" || b === "unknown").length;
+  const tax = rows.filter((r) =>
+    [r.slowS, r.fastS, r.slowHull, r.fastHull].every((x) => x != null),
+  );
   const slowS = tax.reduce((a, r) => a + r.slowS, 0);
   const fastS = tax.reduce((a, r) => a + r.fastS, 0);
   const slowH = tax.reduce((a, r) => a + r.slowHull, 0);
   const fastH = tax.reduce((a, r) => a + r.fastHull, 0);
   out.stopTax = null;
-  out.stopTaxNote = !tax.length ? "not measured" : slowS <= 0 || fastS <= 0 ? "no time on one side of cruise" : fastH <= 0 ? "no hull lost at cruise" : null;
+  out.stopTaxNote = !tax.length
+    ? "not measured"
+    : slowS <= 0 || fastS <= 0
+      ? "no time on one side of cruise"
+      : fastH <= 0
+        ? "no hull lost at cruise"
+        : null;
   if (!out.stopTaxNote) out.stopTax = slowH / slowS / (fastH / fastS);
   // The same ratio with scrap taken beside hull, a point for a point. F2 fails when either ratio is under its line.
   const slowP = slowH + tax.reduce((a, r) => a + r.slowScrap, 0);
   const fastP = fastH + tax.reduce((a, r) => a + r.fastScrap, 0);
   // Measured whenever there was time on both sides and loss at cruise, even when the hull alone had none (the recorder's rule).
-  out.pooledStopTax = tax.length && slowS > 0 && fastS > 0 && fastP > 0 ? slowP / slowS / (fastP / fastS) : null;
+  out.pooledStopTax =
+    tax.length && slowS > 0 && fastS > 0 && fastP > 0 ? slowP / slowS / (fastP / fastS) : null;
   out.fastShare = slowS + fastS > 0 ? fastS / (slowS + fastS) : null;
   // F3: one reading per stage and for the boss that a pack was met in. A segment with no hit is the best case and reads as
   // infinitely late, so it can move the median; one a hit itself opened has no pack-to-hit time and is counted apart.
@@ -660,9 +1051,18 @@ export function fairnessPool(runs) {
   const timed = segs.filter((g) => !g.opened_by_hit);
   out.noHit = timed.filter((g) => !g.hit).length;
   out.firstHitN = timed.length;
-  const times = timed.map((g) => (g.hit ? num(g.first_hit_s) : Infinity)).filter((x) => x != null).sort((a, b) => a - b);
+  const times = timed
+    .map((g) => (g.hit ? num(g.first_hit_s) : Infinity))
+    .filter((x) => x != null)
+    .sort((a, b) => a - b);
   const mid = times.length >> 1;
-  out.firstHitS = !times.length ? null : times.length % 2 ? times[mid] : times[mid - 1] === times[mid] ? times[mid] : (times[mid - 1] + times[mid]) / 2;
+  out.firstHitS = !times.length
+    ? null
+    : times.length % 2
+      ? times[mid]
+      : times[mid - 1] === times[mid]
+        ? times[mid]
+        : (times[mid - 1] + times[mid]) / 2;
   return out;
 }
 
@@ -675,7 +1075,11 @@ export function fairnessByCell(runs) {
     if (!groups.has(key)) groups.set(key, { cell: r.cell, column: r.column ?? r.band, runs: [] });
     groups.get(key).runs.push(r);
   }
-  const out = [...groups.values()].map((g) => ({ cell: g.cell, column: g.column, ...fairnessPool(g.runs) }));
+  const out = [...groups.values()].map((g) => ({
+    cell: g.cell,
+    column: g.column,
+    ...fairnessPool(g.runs),
+  }));
   return out.some((p) => p.measured > 0) ? out : null;
 }
 
@@ -683,8 +1087,10 @@ export function fairnessByCell(runs) {
 // A reading under its line, null reads as not under it (the callers judge a missing reading apart).
 const under = (x, line) => x != null && x < line - 1e-9;
 // The shared either-fails rules: hull alone or hull and scrap pooled under the line fails the number.
-export const f1ShareUnder = (p) => under(p.telegraphShare, FAIRNESS.telegraphShare) || under(p.pooledShare, FAIRNESS.telegraphShare);
-export const f2TaxUnder = (p) => under(p.stopTax, FAIRNESS.stopTax) || under(p.pooledStopTax, FAIRNESS.stopTax);
+export const f1ShareUnder = (p) =>
+  under(p.telegraphShare, FAIRNESS.telegraphShare) || under(p.pooledShare, FAIRNESS.telegraphShare);
+export const f2TaxUnder = (p) =>
+  under(p.stopTax, FAIRNESS.stopTax) || under(p.pooledStopTax, FAIRNESS.stopTax);
 
 export function fairnessFails(p) {
   const out = [];
@@ -695,18 +1101,38 @@ export function fairnessFails(p) {
 }
 
 export function renderFairness(fair) {
-  const lines = ["## Fairness (F1 to F3, information beside the difficulty change)", "", `The lines are in scripts/challenge/fairness.json. F1 telegraph share: hull lost to a hit whose own source had a telegraph over the ball for at least ${FAIRNESS.tellS} s, over that plus hull from sources that publish telegraphs and had none in time, and the same share again with scrap taken by world hazards through lose_scrap counted a point for a point (matched by cause to the hazard's own telegraph); F1 fails when either share is under ${pct(FAIRNESS.telegraphShare)}, and every killing hit must be shown. Contact hull (body contact and ram, no telegraph by design) is printed beside it and is outside the share; unknown is hull whose source has no telegraph owner to match, and F1 carries no mark while unknown is over ${pct(FAIRNESS.unknownMaxShare)} of hull and scrap lost. F2 stop tax: hull per second below cruise speed over hull per second at or above it, and the same ratio with scrap lost beside hull; F2 fails when either is under ${FAIRNESS.stopTax.toFixed(1)}; the share of time at cruise is printed beside it. F3 first hit: median seconds from first contact with a pack to the first hit, one reading per stage and per boss fight; pass >= ${FAIRNESS.firstHitS} s; a stage with no hit reads as later than any (a theft of scrap counts as a hit here), and a hit that itself opened contact is counted apart. One line per cell and arm, with the runs behind it; runs graded error or unresumed are left out. "not measured" means no run carried the number; it is never read as zero.`, ""];
+  const lines = [
+    "## Fairness (F1 to F3, information beside the difficulty change)",
+    "",
+    `The lines are in scripts/challenge/fairness.json. F1 telegraph share: hull lost to a hit whose own source had a telegraph over the ball for at least ${FAIRNESS.tellS} s, over that plus hull from sources that publish telegraphs and had none in time, and the same share again with scrap taken by world hazards through lose_scrap counted a point for a point (matched by cause to the hazard's own telegraph); F1 fails when either share is under ${pct(FAIRNESS.telegraphShare)}, and every killing hit must be shown. Contact hull (body contact and ram, no telegraph by design) is printed beside it and is outside the share; unknown is hull whose source has no telegraph owner to match, and F1 carries no mark while unknown is over ${pct(FAIRNESS.unknownMaxShare)} of hull and scrap lost. F2 stop tax: hull per second below cruise speed over hull per second at or above it, and the same ratio with scrap lost beside hull; F2 fails when either is under ${FAIRNESS.stopTax.toFixed(1)}; the share of time at cruise is printed beside it. F3 first hit: median seconds from first contact with a pack to the first hit, one reading per stage and per boss fight; pass >= ${FAIRNESS.firstHitS} s; a stage with no hit reads as later than any (a theft of scrap counts as a hit here), and a hit that itself opened contact is counted apart. One line per cell and arm, with the runs behind it; runs graded error or unresumed are left out. "not measured" means no run carried the number; it is never read as zero.`,
+    "",
+  ];
   const mark = (ok) => (ok === null ? "" : ok ? " ✓" : " ✗");
   for (const p of fair) {
     const scrapShown = fmt(p.scrap.telegraphed + p.scrap.untelegraphed);
-    const anyScrap = p.scrap.telegraphed + p.scrap.untelegraphed + p.scrap.contact + p.scrap.unknown > 0;
-    const pooled = p.pooledShare == null || !anyScrap ? "" : ` (hull and scrap together ${pct(p.pooledShare)} of ${fmt(p.hull.telegraphed + p.hull.untelegraphed + p.scrap.telegraphed + p.scrap.untelegraphed)} lost, ${scrapShown} of it scrap)`;
-    const f1 = p.telegraphShare == null && p.pooledShare == null ? "F1 not measured" : `F1 ${p.telegraphShare == null ? "-" : pct(p.telegraphShare)} of ${fmt(p.hull.telegraphed + p.hull.untelegraphed)} hull shown${pooled}${p.shareMarked ? mark(!f1ShareUnder(p)) : ` (no mark: unknown ${anyScrap ? "hull and scrap" : "hull"} over the line)`}, killing hits shown ${p.kills ? `${p.killsShown} of ${p.kills}${p.shareMarked ? mark(p.killsShown === p.kills) : ""}` : "none counted"}${p.killsOther ? ` (${p.killsOther} killed by contact or unknown)` : ""}; contact ${fmt(p.hull.contact)} hull${anyScrap ? ` and ${fmt(p.scrap.contact)} scrap` : ""}, unknown ${fmt(p.hull.unknown)} hull${anyScrap ? ` and ${fmt(p.scrap.unknown)} scrap` : ""} (${p.unknownShare == null ? "-" : pct(p.unknownShare)} of hull${anyScrap ? `, ${p.pooledUnknownShare == null ? "-" : pct(p.pooledUnknownShare)} of hull and scrap lost` : ""})`;
-    const f2 = p.stopTax == null && p.pooledStopTax == null ? `F2 not measured (${p.stopTaxNote})` : `F2 stop tax ${p.stopTax == null ? "-" : p.stopTax.toFixed(2)}${p.pooledStopTax != null && p.pooledStopTax !== p.stopTax ? ` (hull and scrap together ${p.pooledStopTax.toFixed(2)})` : ""}${mark(p.stopTax == null ? (f2TaxUnder(p) ? false : null) : !f2TaxUnder(p))}, ${pct(p.fastShare)} of time at cruise`;
+    const anyScrap =
+      p.scrap.telegraphed + p.scrap.untelegraphed + p.scrap.contact + p.scrap.unknown > 0;
+    const pooled =
+      p.pooledShare == null || !anyScrap
+        ? ""
+        : ` (hull and scrap together ${pct(p.pooledShare)} of ${fmt(p.hull.telegraphed + p.hull.untelegraphed + p.scrap.telegraphed + p.scrap.untelegraphed)} lost, ${scrapShown} of it scrap)`;
+    const f1 =
+      p.telegraphShare == null && p.pooledShare == null
+        ? "F1 not measured"
+        : `F1 ${p.telegraphShare == null ? "-" : pct(p.telegraphShare)} of ${fmt(p.hull.telegraphed + p.hull.untelegraphed)} hull shown${pooled}${p.shareMarked ? mark(!f1ShareUnder(p)) : ` (no mark: unknown ${anyScrap ? "hull and scrap" : "hull"} over the line)`}, killing hits shown ${p.kills ? `${p.killsShown} of ${p.kills}${p.shareMarked ? mark(p.killsShown === p.kills) : ""}` : "none counted"}${p.killsOther ? ` (${p.killsOther} killed by contact or unknown)` : ""}; contact ${fmt(p.hull.contact)} hull${anyScrap ? ` and ${fmt(p.scrap.contact)} scrap` : ""}, unknown ${fmt(p.hull.unknown)} hull${anyScrap ? ` and ${fmt(p.scrap.unknown)} scrap` : ""} (${p.unknownShare == null ? "-" : pct(p.unknownShare)} of hull${anyScrap ? `, ${p.pooledUnknownShare == null ? "-" : pct(p.pooledUnknownShare)} of hull and scrap lost` : ""})`;
+    const f2 =
+      p.stopTax == null && p.pooledStopTax == null
+        ? `F2 not measured (${p.stopTaxNote})`
+        : `F2 stop tax ${p.stopTax == null ? "-" : p.stopTax.toFixed(2)}${p.pooledStopTax != null && p.pooledStopTax !== p.stopTax ? ` (hull and scrap together ${p.pooledStopTax.toFixed(2)})` : ""}${mark(p.stopTax == null ? (f2TaxUnder(p) ? false : null) : !f2TaxUnder(p))}, ${pct(p.fastShare)} of time at cruise`;
     // An infinite median means at least half the readings took no hit: exactly half on an even split, over half otherwise.
     const noHitPart = p.noHit * 2 === p.firstHitN ? "no hit in half" : "no hit in over half";
-    const f3 = p.firstHitS == null ? `F3 not measured (${p.openedByHit} opened by a hit)` : `F3 first hit ${Number.isFinite(p.firstHitS) ? fmt(p.firstHitS) + " s" : noHitPart} median over ${p.firstHitN} stage readings${mark(p.firstHitS >= FAIRNESS.firstHitS - 1e-9)}, ${p.noHit} of ${p.firstHitN} took no hit${p.openedByHit ? `, ${p.openedByHit} opened by a hit` : ""}`;
-    lines.push(`- ${p.cell} ${p.column} (${p.measured} of ${p.runs} runs measured): ${f1}; ${f2}; ${f3}.`);
+    const f3 =
+      p.firstHitS == null
+        ? `F3 not measured (${p.openedByHit} opened by a hit)`
+        : `F3 first hit ${Number.isFinite(p.firstHitS) ? fmt(p.firstHitS) + " s" : noHitPart} median over ${p.firstHitN} stage readings${mark(p.firstHitS >= FAIRNESS.firstHitS - 1e-9)}, ${p.noHit} of ${p.firstHitN} took no hit${p.openedByHit ? `, ${p.openedByHit} opened by a hit` : ""}`;
+    lines.push(
+      `- ${p.cell} ${p.column} (${p.measured} of ${p.runs} runs measured): ${f1}; ${f2}; ${f3}.`,
+    );
   }
   lines.push("");
   return lines;
@@ -736,7 +1162,11 @@ export function maxJobs(cpus = os.cpus().length, memBytes = os.totalmem()) {
 
 export function estimate(jobs, parallel = 4, perKind = SECONDS_PER_JOB) {
   const total = jobs.reduce((s, j) => s + (perKind[j.kind] ?? 120), 0);
-  return { jobs: jobs.length, cpuSeconds: total, wallSeconds: Math.ceil(total / Math.max(1, parallel)) };
+  return {
+    jobs: jobs.length,
+    cpuSeconds: total,
+    wallSeconds: Math.ceil(total / Math.max(1, parallel)),
+  };
 }
 
 // Library sharding: shards are separate folders with their own index.json (file paths relative to the folder).
@@ -760,7 +1190,12 @@ export function wallStats(runs) {
   for (const kind of ["boss", "warden", "world", "clear"]) {
     const r = runs.filter((x) => x.kind === kind);
     if (!r.length) continue;
-    out[kind] = { jobs: r.length, medianWallS: median(r.map((x) => x.wallS)), maxWallS: Math.max(...r.map((x) => x.wallS ?? 0)), medianGameS: median(r.map((x) => x.row?.game_seconds)) };
+    out[kind] = {
+      jobs: r.length,
+      medianWallS: median(r.map((x) => x.wallS)),
+      maxWallS: Math.max(...r.map((x) => x.wallS ?? 0)),
+      medianGameS: median(r.map((x) => x.row?.game_seconds)),
+    };
   }
   return out;
 }
@@ -784,13 +1219,25 @@ export const MAX_RUN_TIER = 5;
 // What makes two table runs the same experiment: the library, the cells, seeds, columns, personas, tune string and
 // run tier. The shard is not in it: shards of one plan share a hash. Tier 0 adds nothing, so base-tier hashes stay put.
 export function planHash(o) {
-  const keys = ["libraryLabel", "libraryDigest", "cells", "only", "seeds", "columns", "persona", "wardenPersona", "parkPersona", "tune"];
+  const keys = [
+    "libraryLabel",
+    "libraryDigest",
+    "cells",
+    "only",
+    "seeds",
+    "columns",
+    "persona",
+    "wardenPersona",
+    "parkPersona",
+    "tune",
+  ];
   const parts = keys.map((k) => o[k] ?? null);
   if (o.tier) parts.push({ tier: o.tier });
   return hashString(JSON.stringify(parts));
 }
 
-export const jobKey = (job, { libraryLabel, plan, commit }) => `${libraryLabel ?? "-"}:${plan}:${(commit ?? "").slice(0, 8)}:${job.id}`;
+export const jobKey = (job, { libraryLabel, plan, commit }) =>
+  `${libraryLabel ?? "-"}:${plan}:${(commit ?? "").slice(0, 8)}:${job.id}`;
 
 // meta: { shard: "i/n" | null, plan_hash, commit, library }. Returns { errors, warnings }: errors refuse the merge.
 export function checkMerge(metas, { allowMixed = false } = {}) {
@@ -799,13 +1246,24 @@ export function checkMerge(metas, { allowMixed = false } = {}) {
   const mixed = (what, values) => {
     const set = new Set(values);
     if (set.size <= 1) return;
-    (allowMixed ? warnings : errors).push(`folders differ in ${what}: ${[...set].join(", ")}${allowMixed ? "" : " (use --allow-mixed to merge anyway)"}`);
+    (allowMixed ? warnings : errors).push(
+      `folders differ in ${what}: ${[...set].join(", ")}${allowMixed ? "" : " (use --allow-mixed to merge anyway)"}`,
+    );
   };
   if (metas.some((m) => !m)) errors.push("a folder has no meta.json (not a challenge run folder)");
   const ms = metas.filter(Boolean);
-  mixed("plan hash", ms.map((m) => m.plan_hash));
-  mixed("commit", ms.map((m) => m.commit));
-  mixed("library", ms.map((m) => m.library));
+  mixed(
+    "plan hash",
+    ms.map((m) => m.plan_hash),
+  );
+  mixed(
+    "commit",
+    ms.map((m) => m.commit),
+  );
+  mixed(
+    "library",
+    ms.map((m) => m.library),
+  );
   const shards = ms.map((m) => m.shard);
   if (shards.some((s) => s)) {
     const parsed = shards.map((s) => (s ? /^(\d+)\/(\d+)$/.exec(s) : null));
@@ -816,7 +1274,8 @@ export function checkMerge(metas, { allowMixed = false } = {}) {
       else {
         const count = Number(parsed[0][2]);
         const have = parsed.map((p) => Number(p[1]));
-        for (let i = 1; i <= count; i++) if (!have.includes(i)) errors.push(`shard ${i}/${count} is missing`);
+        for (let i = 1; i <= count; i++)
+          if (!have.includes(i)) errors.push(`shard ${i}/${count} is missing`);
         if (new Set(have).size !== have.length) errors.push("a shard appears twice");
       }
     }
@@ -826,7 +1285,12 @@ export function checkMerge(metas, { allowMixed = false } = {}) {
 
 // Bucket sizes per stage from the pickBuilds results.
 export function bucketInfo(builds) {
-  return Object.fromEntries(Object.entries(builds).map(([stage, b]) => [stage, { docs: b.ranked.length, ordinary: b.ordinary.length, top: b.top.length, overlap: b.overlap }]));
+  return Object.fromEntries(
+    Object.entries(builds).map(([stage, b]) => [
+      stage,
+      { docs: b.ranked.length, ordinary: b.ordinary.length, top: b.top.length, overlap: b.overlap },
+    ]),
+  );
 }
 
 // Rows by a field, the last one winning.
