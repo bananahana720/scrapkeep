@@ -1,0 +1,5 @@
+{
+  "west_wash_run": {"owner": "W1-132", "stage": 1, "kind": "scene", "tick": 120, "terrain_relative": true, "point": [-110, 1.6, -60], "spawns": [{"kind": "chaser", "point": [-110, 1.6, -60]}], "ball_position": [-110, 0.9, -85], "ball_velocity": [0, 0, 14], "cameras": [["rider", [0, 4, -35], [0, 0, 0], 80]]},
+  "canal_run": {"owner": "W1-132", "stage": 1, "kind": "scene", "tick": 120, "terrain_relative": true, "point": [156, 1.6, 470], "spawns": [{"kind": "chaser", "point": [156, 1.6, 470]}], "ball_position": [156, 0.9, 445], "ball_velocity": [0, 0, 14], "cameras": [["rider", [0, 4, -35], [0, 0, 0], 80]]},
+  "incline_line": {"owner": "W1-132", "stage": 1, "kind": "scene", "tick": 120, "terrain_relative": true, "point": [-45, 1.6, 330], "spawns": [{"kind": "chaser", "point": [-45, 1.6, 330]}], "ball_position": [-45, 0.9, 305], "ball_velocity": [0, 0, 14], "cameras": [["rider", [0, 4, -35], [0, 0, 0], 80]]}
+}

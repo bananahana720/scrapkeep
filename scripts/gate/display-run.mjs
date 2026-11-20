@@ -1,6 +1,6 @@
 // Run a pixel-producing script with scratch saves, a machine slot and an exclusive drawn-run lock.
 // On the Mac, --offscreen uses the native embedded Metal display and a 50 ms window watcher.
-// Mac callers need a watched qualification for each tool. Only the Gate runs the visible CLI reference.
+// Mac callers need a watched qualification for each tool. All drawn Mac runs must use the embedded display.
 // Linux library callers supply their own display (the PC uses headless gamescope).
 import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
@@ -106,7 +106,7 @@ export async function acquireDrawnSlot({ directory = "/tmp/scrapkeep-drawn.slots
 // did not start or was killed.
 export function runWindowed(options = {}) {
   if ((options.platform ?? process.platform) === "darwin") {
-    return macCapture({ ...options, reference: false }, false);
+    return macCapture(options, false);
   }
   return runScript(options);
 }
@@ -154,6 +154,12 @@ const PROBE = "res://tools/offscreen_probe.gd";
 // Keep the receipt before admitting the registration to the stage. A helper marker alone
 // does not qualify a tool. The probe inherits the dam capture, so pin both scripts.
 const watchedTools = new Map([
+  ["res://tools/look_harness.gd", {
+    "tools/look_harness.gd": "b9125ab224f8798c57ce7c238b4d1012652c6d18b9cd57ab353a81f67a242595",
+    "tools/look_subjects.gd": "4df4ff493cd8259f498e43901ef573e4423637da8a8952cdd656b21016e49bad",
+    "tools/offscreen_window.gd": "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d",
+    "tests/workshop/push.gd": "f233cec8d830d14f3aeaaff0931b8a649763bfb30a107036a6a1533fd17d2cce",
+  }],
   [PROBE, {
     // proof/W1-131 at 2c2dfa665, artifacts/proof/W1-131a/capture.json
     "tools/offscreen_probe.gd": "156464df4c44b25ba4f903f6786557bdff94a71b89f033744c0021f5d734819b",
@@ -197,8 +203,7 @@ function editorVersion(command, options) {
   return r.status === 0 ? r.stdout.trim() : "";
 }
 
-// Finite probe with a fixed script for the Gate's single notified reference. All other
-// CLI runs start with --embedded: Godot draws to a CAMetalLayer with no editor attached.
+// Draw to a Metal layer without an editor or ordinary Mac window.
 export function runCapture(options = {}) {
   return macCapture(options, true);
 }
@@ -208,7 +213,7 @@ async function macCapture({ script, args = [], reference = false, cwd = root, en
   platform = process.platform, binary = env.GODOT_BIN, acquire, start = launch,
   observe = watchDrawnRun, version = editorVersion, timeoutMs = TIMEOUT_MS }, requireMarker) {
   if (platform !== "darwin") throw new Error("Mac capture requires macOS; the Linux PC uses gamescope through the Gate");
-  if (reference && script !== PROBE) throw new Error("only the W1-131 probe may draw the Gate reference");
+  if (reference) throw new Error("Mac capture requires --offscreen; the visible reference has already been taken");
   checkCaptureEngineArgs(engineArgs);
   const refusal = new Error("Mac capture refused before launch: no watched qualification for this script version: " + script);
   const refused = { exit: null, supported: false, timedOut: false, home: null, output: refusal.message };
@@ -220,23 +225,21 @@ async function macCapture({ script, args = [], reference = false, cwd = root, en
   };
   return runScript({
     engineArgs, script, args: script === PROBE ? [...args, "--shots=yard"] : args, cwd, env, platform, binary, acquire, timeoutMs,
-    extraEnv: { ...extraEnv, SCRAPKEEP_OFFSCREEN: reference ? "0" : "1" },
+    extraEnv: { ...extraEnv, SCRAPKEEP_OFFSCREEN: "1" },
     start: async (command, argv, options) => {
       verifyBeforeSpawn();
       if (!/^4\.7\.2\.stable\.official\.ed1daf0bf/.test(version(command, options))) {
         throw new Error("offscreen: expected the pinned Godot 4.7.2 editor; no drawn run started");
       }
-      const flags = ["--rendering-driver", "metal", "--debug", "--skip-breakpoints", "--ignore-error-breaks", "--resolution", "1920x1080", "--audio-driver", "Dummy"];
+      const flags = ["--embedded", "--rendering-driver", "metal", "--debug", "--skip-breakpoints", "--ignore-error-breaks", "--resolution", "1920x1080", "--audio-driver", "Dummy"];
       // Embedded Godot publishes its layer through EngineDebugger. The local stdout debugger
       // provides that object with no editor, listener or network peer.
-      if (!reference) flags.unshift("--embedded");
       const result = await observe(signal => {
         verifyBeforeSpawn();
         return start(command, [...flags, ...argv], { ...options, signal });
       });
       const w = result.watch;
-      const recorded = reference ? w.targetOnScreen > 0 :
-        w.onScreen === 0 && w.frontmostChanges === 0 && (!requireMarker || result.output.split(/\r?\n/).includes("OFFSCREEN_WINDOW " + result.pid + " embedded"));
+      const recorded = w.onScreen === 0 && w.frontmostChanges === 0 && (!requireMarker || result.output.split(/\r?\n/).includes("OFFSCREEN_WINDOW " + result.pid + " embedded"));
       if (result.timedOut || w.missed !== 0 || !recorded) {
         // The models-render producer reads SUMMARY even when its planted compare exits 1.
         // A run with invalid display evidence cannot supply that producer with a verdict.
@@ -263,7 +266,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
       console.log(result.output.trimEnd());
       process.exitCode ||= result.exit ?? 1;
     } else {
-      if (!["--offscreen", "--gate-reference"].includes(mode) || !name || separator !== "--") {
+      if (mode !== "--offscreen" || !name || separator !== "--") {
         throw new Error("usage: display-run.mjs --offscreen <script> -- <args>");
       }
       const script = name.startsWith("res://") ? name : "res://" + name;
@@ -276,7 +279,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
         probeFrame = path.join(out, "yard.png");
         if (existsSync(probeFrame)) throw new Error("yard.png already exists; supply a fresh output directory");
       }
-      const result = await runCapture({ script, args, reference: mode === "--gate-reference" });
+      const result = await runCapture({ script, args });
       if (result.output) console.log(result.output.trimEnd());
       if (result.watch) console.log("WINDOW_WATCH " + JSON.stringify(result.watch));
       if (probeFrame && result.exit === 0) {
