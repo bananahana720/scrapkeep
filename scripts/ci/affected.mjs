@@ -4,7 +4,7 @@
 // Usage: node scripts/ci/affected.mjs [--base <ref>] [--full] [--github-output <path>]
 
 import { spawnSync } from "node:child_process";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -52,11 +52,12 @@ export function diffFiles(baseRef, { cwd = process.cwd(), spawn = spawnSync } = 
 }
 
 function parseArgs(argv) {
-  const opts = { base: null, full: false, githubOutput: process.env.GITHUB_OUTPUT || null };
+  const opts = { base: null, full: false, stdin: false, githubOutput: process.env.GITHUB_OUTPUT || null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--base" && argv[i + 1]) opts.base = argv[++i];
     else if (arg === "--full") opts.full = true;
+    else if (arg === "--stdin") opts.stdin = true;
     else if (arg === "--github-output" && argv[i + 1]) opts.githubOutput = argv[++i];
     else throw new Error(`unknown argument: ${arg}`);
   }
@@ -66,8 +67,18 @@ function parseArgs(argv) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   try {
     const opts = parseArgs(process.argv.slice(2));
-    const files = opts.full || !opts.base ? [] : diffFiles(opts.base);
-    const result = classifyAffected(files, { full: opts.full || !opts.base });
+    let files = [];
+    let full = opts.full;
+    if (!full) {
+      if (opts.stdin) {
+        files = readFileSync(0, "utf8").split("\n").map((line) => line.trim()).filter(Boolean);
+      } else if (opts.base) {
+        files = diffFiles(opts.base);
+      } else {
+        full = true;
+      }
+    }
+    const result = classifyAffected(files, { full });
     console.log(JSON.stringify(result));
     if (opts.githubOutput) {
       const lines = Object.entries(result).map(([k, v]) => `${k}=${v}`).join("\n") + "\n";

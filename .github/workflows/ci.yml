@@ -36,6 +36,9 @@ jobs:
     name: Select affected surfaces
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 3
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       full: ${{ steps.select.outputs.full }}
       lint: ${{ steps.select.outputs.lint }}
@@ -44,28 +47,26 @@ jobs:
       web: ${{ steps.select.outputs.web }}
       godot: ${{ steps.select.outputs.godot }}
     steps:
-      - name: Checkout (blobless)
+      - name: Checkout selector script only
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          filter: blob:none
-          fetch-depth: 0
+          sparse-checkout: scripts/ci
+          sparse-checkout-cone-mode: false
           persist-credentials: false
-
-      - name: Setup Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Classify diff
         id: select
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           if [[ "${{ github.event_name }}" == "merge_group" || "${{ github.event_name }}" == "push" || "${{ inputs.full_suite }}" == "true" ]]; then
             node scripts/ci/affected.mjs --full --github-output "$GITHUB_OUTPUT"
           else
-            git fetch --no-tags --filter=blob:none origin "${{ github.base_ref }}"
-            node scripts/ci/affected.mjs --base "origin/${{ github.base_ref }}" --github-output "$GITHUB_OUTPUT"
+            gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+              --paginate --jq '.[] | .filename, (.previous_filename // empty)' \
+              | node scripts/ci/affected.mjs --stdin --github-output "$GITHUB_OUTPUT"
           fi
 
   lint:
@@ -259,7 +260,6 @@ jobs:
           elif [[ "${{ github.event_name }}" == "push" ]]; then
             echo "Cache seeded for Godot ${GODOT_VERSION} on ${{ github.ref_name }}"
           else
-            git fetch --no-tags --filter=blob:none origin "${{ github.base_ref }}"
             node scripts/ci/check-budget.mjs --label godot-affected --budget 180 -- \
-              node scripts/sketch-fast.mjs --base "origin/${{ github.base_ref }}" --no-base-check --budget 120
+              node scripts/sketch-fast.mjs --base "${{ github.event.pull_request.base.sha }}" --no-base-check --budget 120
           fi

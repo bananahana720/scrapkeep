@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { classifyAffected } from "./affected.mjs";
+
+const affectedScript = path.join(path.dirname(fileURLToPath(import.meta.url)), "affected.mjs");
 
 test("full mode enables every CI surface", () => {
   assert.deepEqual(classifyAffected([], { full: true }), {
@@ -45,4 +50,16 @@ test("CI workflow edit validates lint, docs, node and web build", () => {
   assert.equal(res.node, true);
   assert.equal(res.web, true);
   assert.equal(res.godot, false);
+});
+
+test("CLI --stdin reads changed paths without requiring git fetch", () => {
+  const ran = spawnSync(process.execPath, [affectedScript, "--stdin"], {
+    input: "sketches/core-loop/src/game.gd\nREADME.md\n",
+    encoding: "utf8",
+  });
+  assert.equal(ran.status, 0, ran.stderr);
+  const parsed = JSON.parse(ran.stdout.trim());
+  assert.equal(parsed.godot, true);
+  assert.equal(parsed.docs, true);
+  assert.equal(parsed.web, false);
 });
