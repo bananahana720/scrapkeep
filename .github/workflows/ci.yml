@@ -2,9 +2,6 @@ name: CI
 
 on:
   pull_request:
-    branches:
-      - main
-      - 'stage/*'
   push:
     branches:
       - main
@@ -133,10 +130,10 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Run check:docs (budget 25s)
+      - name: Run check:docs (budget 5s)
         run: |
           printf '| Check | Elapsed | Budget | Status |\n| --- | ---: | ---: | --- |\n' >> "$GITHUB_STEP_SUMMARY"
-          node scripts/ci/check-budget.mjs --label check:docs --budget 25 -- npm run check:docs
+          node scripts/ci/check-budget.mjs --label check:docs --budget 5 -- npm run check:docs
 
   node-tests:
     name: Node unit tests (${{ matrix.shard }}/2)
@@ -172,20 +169,35 @@ jobs:
         if: steps.nm-cache.outputs.cache-hit != 'true'
         run: npm ci --no-audit --no-fund --prefer-offline
 
+      - name: Restore apt ffmpeg cache
+        id: ffmpeg-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/apt-ffmpeg-debs
+          key: ${{ runner.os }}-${{ runner.arch }}-apt-ffmpeg-v1
+
       - name: Ensure ffprobe/ffmpeg for audio and brief tests
+        env:
+          DEB_DIR: ${{ runner.temp }}/apt-ffmpeg-debs
         run: |
+          set -euo pipefail
           if ! command -v ffprobe >/dev/null 2>&1; then
-            sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends ffmpeg >/dev/null
+            if [[ "${{ steps.ffmpeg-cache.outputs.cache-hit }}" == "true" && -d "$DEB_DIR" ]] && ls "$DEB_DIR"/*.deb >/dev/null 2>&1; then
+              sudo dpkg -i "$DEB_DIR"/*.deb >/dev/null 2>&1 || sudo apt-get -f install -y --no-install-recommends >/dev/null
+            else
+              sudo apt-get update -qq
+              mkdir -p "$DEB_DIR"
+              sudo apt-get install -y --no-install-recommends -o dir::cache::archives="$DEB_DIR" ffmpeg >/dev/null
+            fi
           fi
 
-      - name: Run Node test shard ${{ matrix.shard }}/2 (budget 60s, zero retries)
+      - name: Run Node test shard ${{ matrix.shard }}/2 in shuffled order (budget 60s, zero retries)
         env:
           SCRAPKEEP_WHOLE_TESTS: '1'
         run: |
           printf '| Check | Elapsed | Budget | Status |\n| --- | ---: | ---: | --- |\n' >> "$GITHUB_STEP_SUMMARY"
           node scripts/ci/check-budget.mjs --label "node-tests-${{ matrix.shard }}/2" --budget 60 -- \
-            node scripts/ci/node-tests.mjs --shard "${{ matrix.shard }}/2"
+            node scripts/ci/node-tests.mjs --shard "${{ matrix.shard }}/2" --shuffle --seed "${{ github.run_id }}"
 
   web-build:
     name: Browser proof build

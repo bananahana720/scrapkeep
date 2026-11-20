@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Runs Scrapkeep's Node test suite (reading the canonical list from package.json "test")
-// with proper --test-shard=i/n placement before file arguments.
-// Usage: node scripts/ci/node-tests.mjs [--shard <i/n>] [--dry-run]
+// with proper --test-shard=i/n placement before file arguments and optional deterministic
+// --shuffle [--seed <n>] ordering to flush out cross-file state leaks.
+// Usage: node scripts/ci/node-tests.mjs [--shard <i/n>] [--shuffle] [--seed <n>] [--dry-run]
 
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,7 +33,26 @@ export function resolveTestFiles(testScript, baseDir = root) {
   return [...new Set(tokens.flatMap((token) => expandToken(token, baseDir)))];
 }
 
-export function buildNodeTestArgs(files, { shard = null } = {}) {
+// Deterministic Fisher-Yates shuffle (mulberry32) so all shards with the same seed partition
+// the exact same permuted list without overlap or dropped files.
+export function shuffleFiles(files, seed) {
+  let state = seed >>> 0;
+  const next = () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const copy = [...files];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+export function buildNodeTestArgs(files, { shard = null, shuffle = false, seed = null } = {}) {
+  const ordered = shuffle ? shuffleFiles(files, seed ?? 1) : [...files];
   const args = ["--test"];
   if (shard) {
     if (!/^\d+\/\d+$/.test(shard)) {
@@ -44,30 +64,59 @@ export function buildNodeTestArgs(files, { shard = null } = {}) {
     }
     args.push(`--test-shard=${shard}`);
   }
-  args.push(...files);
+  args.push(...ordered);
   return args;
 }
 
 function parseArgs(argv) {
-  const opts = { shard: null, dryRun: false };
+  const opts = { shard: null, shuffle: false, seed: null, dryRun: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--shard" && argv[i + 1]) opts.shard = argv[++i];
-    else if (arg === "--dry-run") opts.dryRun = true;
-    else throw new Error(`unknown argument: ${arg}`);
+    if (arg === "--shard") {
+      if (i + 1 >= argv.length) throw new Error("--shard requires a value");
+      opts.shard = argv[++i];
+    } else if (arg === "--shuffle") {
+      opts.shuffle = true;
+    } else if (arg === "--seed") {
+      if (i + 1 >= argv.length) throw new Error("--seed requires a value");
+      const n = Number(argv[++i]);
+      if (!Number.isFinite(n)) throw new Error("--seed must be a number");
+      opts.seed = Math.trunc(n) >>> 0;
+    } else if (arg === "--dry-run") {
+      opts.dryRun = true;
+    } else {
+      throw new Error(`unknown argument: ${arg}`);
+    }
   }
   return opts;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+function isMain() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
+  } catch {
+    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+  }
+}
+
+if (isMain()) {
   try {
     const opts = parseArgs(process.argv.slice(2));
+    const seed = opts.shuffle ? (opts.seed ?? (Date.now() & 0xffffffff) >>> 0) : null;
     const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
     const files = resolveTestFiles(pkg.scripts?.test ?? "", root);
-    const args = buildNodeTestArgs(files, { shard: opts.shard });
+    const args = buildNodeTestArgs(files, { shard: opts.shard, shuffle: opts.shuffle, seed });
+    if (opts.shuffle) console.log(`node-tests: shuffled ${files.length} files with seed=${seed}`);
     if (opts.dryRun) {
       console.log(
-        JSON.stringify({ fileCount: files.length, shard: opts.shard, args: args.slice(0, 5) }),
+        JSON.stringify({
+          fileCount: files.length,
+          shard: opts.shard,
+          shuffle: opts.shuffle,
+          seed,
+          firstFiles: args.slice(opts.shard ? 2 : 1, opts.shard ? 5 : 4),
+        }),
       );
       process.exitCode = 0;
     } else {
