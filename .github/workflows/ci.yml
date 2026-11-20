@@ -13,13 +13,13 @@ on:
   workflow_dispatch:
     inputs:
       full_suite:
-        description: Run the full suite regardless of diff
+        description: Run the full suite (including full Godot non-bot suite)
         required: false
-        default: false
+        default: true
         type: boolean
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -59,14 +59,17 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
         run: |
           set -euo pipefail
-          if [[ "${{ github.event_name }}" == "merge_group" || "${{ github.event_name }}" == "push" || "${{ inputs.full_suite }}" == "true" ]]; then
-            node scripts/ci/affected.mjs --full --github-output "$GITHUB_OUTPUT"
-          else
-            gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+          if [[ "$EVENT_NAME" == "pull_request" && "${CHANGED_FILES:-0}" -gt 0 && "${CHANGED_FILES:-0}" -le 3000 ]]; then
+            gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/files?per_page=100" \
               --paginate --jq '.[] | .filename, (.previous_filename // empty)' \
               | node scripts/ci/affected.mjs --stdin --github-output "$GITHUB_OUTPUT"
+          else
+            node scripts/ci/affected.mjs --full --github-output "$GITHUB_OUTPUT"
           fi
 
   lint:
@@ -93,9 +96,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules
-          key: ${{ runner.os }}-node${{ env.NODE_VERSION }}-nm-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node${{ env.NODE_VERSION }}-nm-
+          key: ${{ runner.os }}-${{ runner.arch }}-node${{ env.NODE_VERSION }}-nm-${{ hashFiles('package-lock.json') }}
 
       - name: Install locked dependencies on cache miss
         if: steps.nm-cache.outputs.cache-hit != 'true'
@@ -165,9 +166,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules
-          key: ${{ runner.os }}-node${{ env.NODE_VERSION }}-nm-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node${{ env.NODE_VERSION }}-nm-
+          key: ${{ runner.os }}-${{ runner.arch }}-node${{ env.NODE_VERSION }}-nm-${{ hashFiles('package-lock.json') }}
 
       - name: Install locked dependencies on cache miss
         if: steps.nm-cache.outputs.cache-hit != 'true'
@@ -181,6 +180,8 @@ jobs:
           fi
 
       - name: Run Node test shard ${{ matrix.shard }}/2 (budget 60s, zero retries)
+        env:
+          SCRAPKEEP_WHOLE_TESTS: '1'
         run: |
           printf '| Check | Elapsed | Budget | Status |\n| --- | ---: | ---: | --- |\n' >> "$GITHUB_STEP_SUMMARY"
           node scripts/ci/check-budget.mjs --label "node-tests-${{ matrix.shard }}/2" --budget 60 -- \
@@ -210,9 +211,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules
-          key: ${{ runner.os }}-node${{ env.NODE_VERSION }}-nm-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node${{ env.NODE_VERSION }}-nm-
+          key: ${{ runner.os }}-${{ runner.arch }}-node${{ env.NODE_VERSION }}-nm-${{ hashFiles('package-lock.json') }}
 
       - name: Install locked dependencies on cache miss
         if: steps.nm-cache.outputs.cache-hit != 'true'
@@ -227,9 +226,70 @@ jobs:
   godot-affected:
     name: Godot affected tests
     needs: changes
-    if: needs.changes.outputs.godot == 'true'
+    if: needs.changes.outputs.godot == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push')
     runs-on: ${{ vars.CI_RUNNER_LARGE || vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
+    steps:
+      - name: Checkout (blobless, read-only token for base worktree/promisor)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: blob:none
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Restore Godot binary cache
+        id: godot-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}
+          key: ${{ runner.os }}-${{ runner.arch }}-godot-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}
+
+      - name: Install pinned Godot on cache miss
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        shell: bash
+        env:
+          GODOT_DIR: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$GODOT_DIR"
+          godot_bin="$GODOT_DIR/Godot_v${GODOT_VERSION}_linux.x86_64"
+          curl --fail --silent --show-error --location --retry 3 \
+            --output "$GODOT_DIR/editor.zip" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          printf '%s  %s\n' "$GODOT_ZIP_SHA512" "$GODOT_DIR/editor.zip" | sha512sum --check --quiet
+          python3 -I -c 'import sys, zipfile; from pathlib import Path; p = Path(sys.argv[2]); p.write_bytes(zipfile.ZipFile(sys.argv[1]).read(p.name)); p.chmod(0o755)' \
+            "$GODOT_DIR/editor.zip" "$godot_bin"
+          rm -f "$GODOT_DIR/editor.zip"
+          printf '%s  %s\n' "$GODOT_BIN_SHA256" "$godot_bin" | sha256sum --check --quiet
+
+      - name: Run affected Godot tests (or seed cache on push)
+        shell: bash
+        env:
+          GODOT_BIN: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            printf '| Check | Elapsed | Budget | Status |\n| --- | ---: | ---: | --- |\n' >> "$GITHUB_STEP_SUMMARY"
+            node scripts/ci/check-budget.mjs --label godot-affected --budget 240 -- \
+              node scripts/sketch-fast.mjs --base "$PR_BASE_SHA" --no-base-check --budget 120
+          else
+            echo "Cache seeded for Godot ${GODOT_VERSION} on ${REF_NAME}"
+          fi
+
+  godot-full:
+    name: Godot full suite (merge queue / manual)
+    needs: changes
+    if: github.event_name == 'merge_group' || (github.event_name == 'workflow_dispatch' && inputs.full_suite == true)
+    runs-on: ${{ vars.CI_RUNNER_LARGE || vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 180
     steps:
       - name: Checkout (blobless)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -243,39 +303,70 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Restore Godot 4.7.2 binary cache
+      - name: Restore Godot binary cache
         id: godot-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: /tmp/scrapkeep-godot-4.7.2
-          key: ${{ runner.os }}-godot-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}
+          path: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}
+          key: ${{ runner.os }}-${{ runner.arch }}-godot-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}
 
-      - name: Install pinned Godot 4.7.2 on cache miss
+      - name: Install pinned Godot on cache miss
         if: steps.godot-cache.outputs.cache-hit != 'true'
         shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p /tmp/scrapkeep-godot-4.7.2
-          curl --fail --silent --show-error --location --retry 3 \
-            --output /tmp/scrapkeep-godot-4.7.2/editor.zip \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
-          printf '%s  %s\n' "$GODOT_ZIP_SHA512" /tmp/scrapkeep-godot-4.7.2/editor.zip | sha512sum --check --quiet
-          python3 -I -c 'import zipfile; from pathlib import Path; p = Path("/tmp/scrapkeep-godot-4.7.2/Godot_v4.7.2-stable_linux.x86_64"); p.write_bytes(zipfile.ZipFile("/tmp/scrapkeep-godot-4.7.2/editor.zip").read(p.name)); p.chmod(0o755)'
-          rm -f /tmp/scrapkeep-godot-4.7.2/editor.zip
-          printf '%s  %s\n' "$GODOT_BIN_SHA256" /tmp/scrapkeep-godot-4.7.2/Godot_v4.7.2-stable_linux.x86_64 | sha256sum --check --quiet
-
-      - name: Run affected Godot tests (or full non-bot suite on merge_group)
-        shell: bash
         env:
-          GODOT_BIN: /tmp/scrapkeep-godot-4.7.2/Godot_v4.7.2-stable_linux.x86_64
+          GODOT_DIR: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}
         run: |
           set -euo pipefail
-          printf '| Check | Elapsed | Budget | Status |\n| --- | ---: | ---: | --- |\n' >> "$GITHUB_STEP_SUMMARY"
-          if [[ "${{ github.event_name }}" == "merge_group" || "${{ inputs.full_suite }}" == "true" ]]; then
-            node scripts/sketch-smoke.mjs --sketch core-loop --receipt ci-full
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "Cache seeded for Godot ${GODOT_VERSION} on ${{ github.ref_name }}"
-          else
-            node scripts/ci/check-budget.mjs --label godot-affected --budget 180 -- \
-              node scripts/sketch-fast.mjs --base "${{ github.event.pull_request.base.sha }}" --no-base-check --budget 120
+          mkdir -p "$GODOT_DIR"
+          godot_bin="$GODOT_DIR/Godot_v${GODOT_VERSION}_linux.x86_64"
+          curl --fail --silent --show-error --location --retry 3 \
+            --output "$GODOT_DIR/editor.zip" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          printf '%s  %s\n' "$GODOT_ZIP_SHA512" "$GODOT_DIR/editor.zip" | sha512sum --check --quiet
+          python3 -I -c 'import sys, zipfile; from pathlib import Path; p = Path(sys.argv[2]); p.write_bytes(zipfile.ZipFile(sys.argv[1]).read(p.name)); p.chmod(0o755)' \
+            "$GODOT_DIR/editor.zip" "$godot_bin"
+          rm -f "$GODOT_DIR/editor.zip"
+          printf '%s  %s\n' "$GODOT_BIN_SHA256" "$godot_bin" | sha256sum --check --quiet
+
+      - name: Run full non-bot Godot suite
+        env:
+          GODOT_BIN: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
+        run: node scripts/sketch-smoke.mjs --sketch core-loop --receipt ci-full
+
+  ci-gate:
+    name: CI gate
+    needs: [changes, lint, docs, node-tests, web-build, godot-affected, godot-full]
+    if: always()
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 2
+    steps:
+      - name: Require all active jobs green
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          LINT_RESULT: ${{ needs.lint.result }}
+          DOCS_RESULT: ${{ needs.docs.result }}
+          NODE_RESULT: ${{ needs.node-tests.result }}
+          WEB_RESULT: ${{ needs.web-build.result }}
+          GODOT_AFFECTED_RESULT: ${{ needs.godot-affected.result }}
+          GODOT_FULL_RESULT: ${{ needs.godot-full.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$CHANGES_RESULT" != "success" ]]; then
+            echo "changes job failed ($CHANGES_RESULT)" >&2
+            exit 1
           fi
+          for pair in \
+            "lint:$LINT_RESULT" \
+            "docs:$DOCS_RESULT" \
+            "node-tests:$NODE_RESULT" \
+            "web-build:$WEB_RESULT" \
+            "godot-affected:$GODOT_AFFECTED_RESULT" \
+            "godot-full:$GODOT_FULL_RESULT"; do
+            name="${pair%%:*}"
+            res="${pair#*:}"
+            if [[ "$res" != "success" && "$res" != "skipped" ]]; then
+              echo "job $name ended with $res" >&2
+              exit 1
+            fi
+          done
+          echo "All active CI jobs passed."
