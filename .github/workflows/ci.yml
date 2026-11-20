@@ -297,11 +297,15 @@ jobs:
           fi
 
   godot-full:
-    name: Godot full suite (merge queue / manual)
+    name: Godot full suite (${{ matrix.shard }}/4, duration-balanced)
     needs: changes
     if: github.event_name == 'merge_group' || (github.event_name == 'workflow_dispatch' && inputs.full_suite == true)
     runs-on: ${{ vars.CI_RUNNER_LARGE || vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 180
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - name: Checkout (blobless)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -340,10 +344,14 @@ jobs:
           rm -f "$GODOT_DIR/editor.zip"
           printf '%s  %s\n' "$GODOT_BIN_SHA256" "$godot_bin" | sha256sum --check --quiet
 
-      - name: Run full non-bot Godot suite
+      - name: Run duration-balanced Godot shard ${{ matrix.shard }}/4
+        shell: bash
         env:
           GODOT_BIN: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
-        run: node scripts/sketch-smoke.mjs --sketch core-loop --receipt ci-full
+        run: |
+          set -euo pipefail
+          tests="$(node scripts/ci/shard-plan.mjs --shard "${{ matrix.shard }}/4" --shuffle --seed "${{ github.run_id }}")"
+          node scripts/gate/shard.mjs run --tests "$tests" --out "${{ runner.temp }}/godot-shard-${{ matrix.shard }}"
 
   ci-gate:
     name: CI gate
