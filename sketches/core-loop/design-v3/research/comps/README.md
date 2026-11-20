@@ -127,4 +127,5 @@ Decisions the pack makes that he can strike. Each is a default, not a question.
 - [gunfire/](gunfire/README.md): stage anatomy, run pacing and economy, weapons and inscriptions, scrolls and synergies, elements and fusion, heroes and ascensions, enemies and bosses, production budgets, data tables, provenance.
 - [roboquest/](roboquest/README.md): stage anatomy, movement and feel, classes and perks, weapons and affixes, enemies and telegraphs, enemy design grammar (separable extra with the CC0 base-mesh shortlist), production budgets, data tables, provenance.
 - [difficulty/](difficulty/SUMMARY.md): cross-game difficulty reference for the Challenge lane (18 October 2026): boss time to kill, tells, punish windows, hit size, phases, mob and elite scaling and each difficulty ladder for all four games, with suggested Scrapkeep ranges in the summary.
+- [speed3d/](speed3d/README.md): a draft for [CS-04](../../../../../BACKLOG.md#cs-04) (19 November 2026): maps built round a fast character in 3D, from public writing on the 3D Sonic games; reference only, not yet reviewed.
 - [maps-compared.md](maps-compared.md): the four-game map comparison, completed under CS-03.
