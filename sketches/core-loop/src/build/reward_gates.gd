@@ -43,6 +43,8 @@ const SPREAD := 9.0
 const WIDTH := 8.0
 const HEIGHT := 7.0
 const MISSED_BEYOND := 20.0
+# The ball's centre may be this far below a gate's base and still count, for a gate on a slope.
+const SLOPE_BELOW := 4.0
 const LOST_BEYOND := 110.0
 # Gates go downhill of the ball, never up a bank (momentum is sacred): candidate
 # headings are tried nearest the ball's own line first, at these distances and
@@ -157,13 +159,14 @@ func step(ball: Vector3, heading: Vector3) -> bool:
 		var offer: Dictionary = offers[i]
 		var rel: Vector3 = ball - offer["at"]
 		var along: float = rel.dot(offer["facing"])
-		var side: float = (rel - (offer["facing"] as Vector3) * along).length()
+		# Across the way through, on the ground plane: a jumping ball's height is not a sideways miss.
+		var side: float = absf(rel.dot((offer["facing"] as Vector3).cross(Vector3.UP).normalized()))
 		var was: float = _last_side.get(i, along)
 		_last_side[i] = along
 		var through := was < 0.0 and along >= 0.0
 		if _fixed and was > 0.0 and along <= 0.0:
 			through = true
-		if through and side <= WIDTH * 0.5 + 1.0 and absf(rel.y) < HEIGHT + 4.0:
+		if through and side <= WIDTH * 0.5 + 1.0 and rel.y < HEIGHT and rel.y > -SLOPE_BELOW:
 			var id: String = offer["part_id"]
 			close()
 			chosen.emit(id)
