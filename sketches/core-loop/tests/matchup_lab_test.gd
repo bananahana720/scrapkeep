@@ -1,6 +1,7 @@
 # smoke: bots timeout=1200s (real duels in child processes: a 12-duel table, an idle control, a pack duel and a 30 s capped pack duel that must outlast the beacon charge, two perched duels (park and mast); 264 s alone on the base, 701 s and 894 s beside a lab table, killed at the 360 s solo ceiling in sketch:fast on 2026-10-20, so it joins the bot tier like alpha_posture_bands_test)
 extends SceneTree
 
+const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const Lab := preload("res://tools/matchup_lab.gd")
 const PocketArena := preload("res://tools/pocket_arena.gd")
 
@@ -15,6 +16,11 @@ var _failures := 0
 
 
 func _initialize() -> void:
+	if "--fast-pass-only" in OS.get_cmdline_user_args():
+		_fast_pass_receipt()
+		quit(0 if _failures == 0 else 1)
+		return
+	_fast_pass_receipt()
 	_synthetic()
 	_pocket_pure()
 	_lookup()
@@ -310,6 +316,177 @@ func _damage_control() -> void:
 	for r in rows:
 		hurt = hurt or (float(r["hits"]) > 0.0 and float(r["damage_taken"]) > 0.0 and float(r["hull_lost"]) > 0.0)
 	_check("planted positive: an idle pilot is hit, takes damage and loses hull (2 rows)", rows.size() == 2 and hurt)
+
+
+# Both stages ship grounded. A result for the dam must never stand in for the flume.
+# Invoke the producer as the done read does, without the old duel table's --out.
+class StrikeDummy extends Node3D:
+	signal attack_phase(facts: Dictionary)
+	enum Phase { LIVE }
+	var phase := Phase.LIVE
+	var kind := "plated_brute"
+	var mark
+	var broken_by := ""
+
+	func telegraph():
+		return mark
+
+	func is_dead() -> bool:
+		return false
+
+
+func _fast_pass_receipt() -> void:
+	var mark := Lab.TelegraphScript.new()
+	mark.radius = 1.0
+	var counter := Lab.PassCounter.new()
+	var ball := [Vector3.ZERO]
+	counter.ball_position = func(): return ball[0]
+	for offset in [0.0, 3.0]:
+		var dummy := StrikeDummy.new()
+		dummy.mark = mark
+		counter.observe(dummy, "plated_brute")
+		mark.center = Vector3(offset, 0, 14)
+		for tick in range(91):
+			counter.tick = tick
+			ball[0] = Vector3(0.0, 1.0, 14.0 * tick / 90.0)
+			if tick == 0:
+				dummy.attack_phase.emit({"phase": "windup", "instance": 1})
+			if tick == 90:
+				dummy.attack_phase.emit({"phase": "strike", "instance": 1})
+				dummy.attack_phase.emit({"phase": "strike", "instance": 1})
+		dummy.free()
+	_check("the attack observer counts the on-line dummy once and misses a dummy 3 m aside",
+		counter.threats == {"plated_brute": 1} and counter.strikes.size() == 2 and counter.contacts.size() == 1
+		and counter.contacts[0].geometry.r_out == 1.0 and counter.contacts[0].tick == 90)
+	var pit := StrikeDummy.new()
+	pit.mark = mark
+	pit.kind = "mag_trapper"
+	mark.center = ball[0]
+	counter.observe(pit, pit.kind)
+	pit.attack_phase.emit({"phase": "strike", "instance": 1})
+	counter.fields()
+	ball[0] += Vector3.RIGHT * 3.0
+	counter.tick += 1
+	counter.fields()
+	_check("a ball leaving the pit between arming and its first active tick is clear", counter.contacts.size() == 1)
+	ball[0] = mark.center
+	pit.broken_by = "jumped"
+	pit.attack_phase.emit({"phase": "recover", "instance": 1})
+	_check("a break before the final occupancy check is clear", counter.contacts.size() == 1)
+	pit.broken_by = ""
+	pit.attack_phase.emit({"phase": "recover", "instance": 1})
+	_check("a ball entering on the pit's expiry tick counts", counter.contacts.size() == 2)
+	pit.free()
+	mark.free()
+	_pass_grade_controls()
+	# Exercise both paths in a real private checkout. Never plant a dirty input in a
+	# developer's worktree. Only the bootstrap sees the test runner's class cache.
+	var checkout := OS.get_user_data_dir().path_join("pass-test-" + Crypto.new().generate_random_bytes(16).hex_encode())
+	var repo := ProjectSettings.globalize_path("res://").path_join("../..").simplify_path()
+	var expected := Lab.PassSource.revision(repo)
+	var project := checkout.path_join("sketches/core-loop")
+	var cache := project.path_join(".godot")
+	var prepared := Lab.PassSource.detached(repo, expected, checkout) and DirAccess.open(project).create_link(ProjectSettings.globalize_path("res://.godot"), cache) == OK
+	_check("private fixture checks out the measured commit", prepared)
+	if not prepared:
+		return
+	var alias := checkout.path_join("project-alias")
+	var linked := DirAccess.open(checkout).create_link(project, alias) == OK
+	_check("worker identity accepts a filesystem alias but refuses another checkout at the same commit",
+		linked and Lab.PassSource.same_project(alias, project) and not Lab.PassSource.same_project(ProjectSettings.globalize_path("res://"), project))
+	var receipt := checkout.path_join("fast-threat.json")
+	var args := ["--headless", "--fixed-fps", "90", "--path", project,
+		"--script", "res://tools/matchup_lab.gd", "--", "--packs=grounded", "--table=park",
+		"--pass=straight", "--speed=14,28", "--seeds=1", "--pilots=tarn", "--receipt=" + receipt]
+	var output := []
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	_check("the fast-pass producer writes its receipt", code == 0 and FileAccess.file_exists(receipt))
+	var bytes := FileAccess.get_file_as_bytes(receipt) if FileAccess.file_exists(receipt) else PackedByteArray()
+	if code != 0:
+		printerr("\n".join(output))
+	# Run the same producer serially and change the original input after the first
+	# worker returns. Later workers must still finish in their pinned checkout.
+	var log_path := checkout.path_join("drift.log")
+	var drift_args := ["--log-file", log_path] + args + ["--procs=1"]
+	var pid := OS.create_process(OS.get_executable_path(), drift_args)
+	var changed := false
+	var log_text := ""
+	for poll in 6000:
+		if pid <= 0 or not OS.is_process_running(pid):
+			break
+		if not changed and FileAccess.file_exists(log_path):
+			log_text = FileAccess.get_file_as_string(log_path)
+			if "matchup_lab: 1 of " in log_text:
+				var input := FileAccess.open(project.path_join("src/core/park_defs.gd"), FileAccess.READ_WRITE)
+				input.seek_end()
+				input.store_line("\n# dirty source control")
+				input.close()
+				changed = true
+		ChildRuns.elapse_wall(50)
+	if pid > 0 and OS.is_process_running(pid):
+		OS.kill(pid)
+	log_text = FileAccess.get_file_as_string(log_path)
+	_check("changing the caller after dispatch refuses publication and preserves the prior receipt",
+		changed and "source changed before publication" in log_text and FileAccess.get_file_as_bytes(receipt) == bytes)
+	output.clear()
+	code = OS.execute(OS.get_executable_path(), args, output, true)
+	_check("dirty game source refuses dispatch and preserves the existing receipt",
+		code == 2 and "refuses a dirty" in "".join(output) and not bytes.is_empty() and FileAccess.get_file_as_bytes(receipt) == bytes)
+	DirAccess.remove_absolute(cache)
+	Lab._remove_tree(checkout)
+	_check("fixture checkout and its hidden Git metadata are removed", not DirAccess.dir_exists_absolute(checkout))
+	if bytes.is_empty():
+		return
+	var result = JSON.parse_string(bytes.get_string_from_utf8())
+	var rows = result.get("passes") if result is Dictionary else null
+	if not rows is Array:
+		_check("the fast-pass receipt contains individual passes", false)
+		return
+	_check("every worker reports the pinned source commit", result.head == expected and rows.all(func(r): return r.get("source_head", "") == expected))
+	var observed := []
+	for row in rows:
+		if row is Dictionary and row.get("pack") == "grounded" and row.get("pass") == "straight" \
+				and row.get("pilot") == "tarn" and row.get("seed") == 1:
+			observed.append("%d/%d" % [row["stage"], row["speed"]])
+	observed.sort()
+	_check("grounded is ridden once at each speed on each Spillway stage",
+		rows.size() == 4 and observed == ["1/14", "1/28", "2/14", "2/28"])
+
+
+# Complete synthetic matrix with a deliberate hole in each of the three floors.
+func _pass_grade_controls() -> void:
+	var rows := []
+	var controls := []
+	var base := []
+	for pack in Lab.spillway_packs(PackedStringArray(["all"])):
+		for s in range(1, 9):
+			for speed in [14, 28]:
+				for mode in ["straight", "weave", "stall"]:
+					var row := {"stage": pack.stage, "pack": pack.pack, "site": [10, 20], "pilot": "tarn",
+						"seed": s, "speed": speed, "pass": mode, "outcome": "pass_complete", "plant": "",
+						"threats": 1, "observed_strikes": 1, "hull_lost": 0 if mode == "weave" else 1, "hull_per_min": 2 if mode == "stall" else 1}
+					rows.append(row)
+					if mode == "weave":
+						base.append(row.duplicate())
+					if mode == "straight" and "lobber" in pack.members:
+						var plant := row.duplicate()
+						plant.merge({"plant": "zero_lead", "threats": 0}, true)
+						controls.append(plant)
+	_check("the matched 13-stage/pack matrix and zero-lead controls meet their floors",
+		rows.size() == 624 and controls.size() == 96 and Lab.pass_grade(rows, controls, base, ["tarn"]).pass)
+	for with_duplicate in [rows + [rows[0]], [rows[0]] + rows]:
+		_check("a duplicate cannot stand in for an independent pass", not Lab.pass_grade(with_duplicate, controls, base, ["tarn"]).pass)
+	_check("duplicate baseline and planted rows cannot qualify a sweep",
+		not Lab.pass_grade(rows, controls, base + [base[0]], ["tarn"]).pass
+		and not Lab.pass_grade(rows, controls + [controls[0]], base, ["tarn"]).plant_caught)
+	rows[0].threats = 0
+	rows[1].hull_lost = 1
+	rows[2].hull_per_min = 1
+	var grade := Lab.pass_grade(rows, controls, base, ["tarn"])
+	_check("one missed straight threat, one weaving regression and a failed stall ratio each register",
+		not grade.pass and grade.straight_misses == 1 and grade.weave_misses == 1 and grade.stall_misses == 1)
+	controls[0].threats = 1
+	_check("a threat in a zero-lead lobber pack invalidates the control", not Lab.pass_grade(rows, controls, base, ["tarn"]).plant_caught)
 
 
 func _packs_pure() -> void:
