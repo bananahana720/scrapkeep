@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Runs Scrapkeep's Node test suite (reading the canonical list from package.json "test")
-// with proper --test-shard=i/n placement before file arguments and optional deterministic
-// --shuffle [--seed <n>] ordering to flush out cross-file state leaks.
+// with deterministic shuffling and shard slicing done before launching `node --test`,
+// so Node's internal positional sort cannot undo shard shuffling.
 // Usage: node scripts/ci/node-tests.mjs [--shard <i/n>] [--shuffle] [--seed <n>] [--dry-run]
 
 import { spawnSync } from "node:child_process";
@@ -51,21 +51,32 @@ export function shuffleFiles(files, seed) {
   return copy;
 }
 
-export function buildNodeTestArgs(files, { shard = null, shuffle = false, seed = null } = {}) {
-  const ordered = shuffle ? shuffleFiles(files, seed ?? 1) : [...files];
-  const args = ["--test"];
-  if (shard) {
-    if (!/^\d+\/\d+$/.test(shard)) {
-      throw new Error(`--shard must be INDEX/TOTAL (for example 1/2); got "${shard}"`);
-    }
-    const [index, total] = shard.split("/").map(Number);
-    if (index < 1 || total < 1 || index > total) {
-      throw new Error(`--shard ${shard} out of range`);
-    }
-    args.push(`--test-shard=${shard}`);
+export function parseShardSpec(shard) {
+  if (!/^\d+\/\d+$/.test(shard)) {
+    throw new Error(`--shard must be INDEX/TOTAL (for example 1/2); got "${shard}"`);
   }
-  args.push(...ordered);
-  return args;
+  const [index, total] = shard.split("/").map(Number);
+  if (index < 1 || total < 1 || index > total) {
+    throw new Error(`--shard ${shard} out of range`);
+  }
+  return { index, total };
+}
+
+export function selectShardFiles(files, { shard = null, shuffle = false, seed = null } = {}) {
+  if (shard && shuffle && seed === null) {
+    throw new Error(
+      "--shard with --shuffle requires an explicit --seed so all shards partition identically",
+    );
+  }
+  const ordered = shuffle ? shuffleFiles(files, seed ?? 1) : [...files];
+  if (!shard) return ordered;
+  const { index, total } = parseShardSpec(shard);
+  return ordered.filter((_, idx) => idx % total === index - 1);
+}
+
+export function buildNodeTestArgs(files, { shard = null, shuffle = false, seed = null } = {}) {
+  const selected = selectShardFiles(files, { shard, shuffle, seed });
+  return ["--test", ...selected];
 }
 
 function parseArgs(argv) {
@@ -79,9 +90,11 @@ function parseArgs(argv) {
       opts.shuffle = true;
     } else if (arg === "--seed") {
       if (i + 1 >= argv.length) throw new Error("--seed requires a value");
-      const n = Number(argv[++i]);
-      if (!Number.isFinite(n)) throw new Error("--seed must be a number");
-      opts.seed = Math.trunc(n) >>> 0;
+      const raw = argv[++i];
+      if (raw.trim() === "" || !Number.isFinite(Number(raw))) {
+        throw new Error(`--seed must be a finite number; got "${raw}"`);
+      }
+      opts.seed = Math.trunc(Number(raw)) >>> 0;
     } else if (arg === "--dry-run") {
       opts.dryRun = true;
     } else {
@@ -103,19 +116,28 @@ function isMain() {
 if (isMain()) {
   try {
     const opts = parseArgs(process.argv.slice(2));
+    if (opts.shard && opts.shuffle && opts.seed === null) {
+      throw new Error("--shard with --shuffle requires an explicit --seed");
+    }
     const seed = opts.shuffle ? (opts.seed ?? (Date.now() & 0xffffffff) >>> 0) : null;
     const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
     const files = resolveTestFiles(pkg.scripts?.test ?? "", root);
     const args = buildNodeTestArgs(files, { shard: opts.shard, shuffle: opts.shuffle, seed });
-    if (opts.shuffle) console.log(`node-tests: shuffled ${files.length} files with seed=${seed}`);
+    const selectedCount = args.length - 1;
+    if (opts.shuffle) {
+      console.log(
+        `node-tests: selected ${selectedCount}/${files.length} files shuffled with seed=${seed}`,
+      );
+    }
     if (opts.dryRun) {
       console.log(
         JSON.stringify({
-          fileCount: files.length,
+          totalFiles: files.length,
+          selectedFiles: selectedCount,
           shard: opts.shard,
           shuffle: opts.shuffle,
           seed,
-          firstFiles: args.slice(opts.shard ? 2 : 1, opts.shard ? 5 : 4),
+          firstFiles: args.slice(1, 5),
         }),
       );
       process.exitCode = 0;

@@ -3,8 +3,8 @@
 // Uses Longest-Processing-Time-first (LPT) bin packing from scripts/sketch-fast.timings.json
 // instead of alphabetical slicing, so every shard finishes at roughly the same wall clock.
 // Usage:
-//   node scripts/ci/shard-plan.mjs --shards 4 [--json]
-//   node scripts/ci/shard-plan.mjs --shard 1/4 [--shuffle] [--seed 42]
+//   node scripts/ci/shard-plan.mjs --shards 4
+//   node scripts/ci/shard-plan.mjs --shard 1/4 [--shuffle --seed 42]
 
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
@@ -17,6 +17,10 @@ const DEFAULT_SKETCH = "sketches/core-loop";
 const TIMINGS_FILE = path.join(root, "scripts", "sketch-fast.timings.json");
 const FALLBACK_MS = 10_000;
 
+function compareCodePoint(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 export function packDurationShards(items, shardCount) {
   if (!Number.isInteger(shardCount) || shardCount < 1) {
     throw new Error(`shardCount must be a positive integer; got ${shardCount}`);
@@ -26,8 +30,8 @@ export function packDurationShards(items, shardCount) {
     totalMs: 0,
     tests: [],
   }));
-  // Sort longest measured duration first, deterministic tie-break by test name.
-  const sorted = [...items].sort((a, b) => b.ms - a.ms || a.name.localeCompare(b.name));
+  // Sort longest measured duration first, locale-independent code-point tie-break by test name.
+  const sorted = [...items].sort((a, b) => b.ms - a.ms || compareCodePoint(a.name, b.name));
   for (const item of sorted) {
     let lightest = shards[0];
     for (let i = 1; i < shards.length; i++) {
@@ -69,19 +73,15 @@ export function loadNonBotTests(
     if (isBot(source)) continue;
     const name = path.posix.basename(rel, ".gd");
     const entry = timings[rel];
-    const ms =
-      typeof entry === "number"
-        ? entry
-        : entry && typeof entry.ms === "number"
-          ? entry.ms
-          : FALLBACK_MS;
+    const rawMs = typeof entry === "number" ? entry : entry?.ms;
+    const ms = Number.isFinite(rawMs) && rawMs >= 0 ? rawMs : FALLBACK_MS;
     items.push({ name, rel, ms });
   }
   return items;
 }
 
 function parseArgs(argv) {
-  const opts = { shards: null, shard: null, shuffle: false, seed: null, json: false };
+  const opts = { shards: null, shard: null, shuffle: false, seed: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--shards") {
@@ -94,11 +94,11 @@ function parseArgs(argv) {
       opts.shuffle = true;
     } else if (arg === "--seed") {
       if (i + 1 >= argv.length) throw new Error("--seed requires a value");
-      const n = Number(argv[++i]);
-      if (!Number.isFinite(n)) throw new Error("--seed must be a number");
-      opts.seed = Math.trunc(n) >>> 0;
-    } else if (arg === "--json") {
-      opts.json = true;
+      const raw = argv[++i];
+      if (raw.trim() === "" || !Number.isFinite(Number(raw))) {
+        throw new Error(`--seed must be a finite number; got "${raw}"`);
+      }
+      opts.seed = Math.trunc(Number(raw)) >>> 0;
     } else {
       throw new Error(`unknown argument: ${arg}`);
     }
@@ -130,7 +130,8 @@ if (isMain()) {
       const shards = packDurationShards(items, total);
       let tests = shards[index - 1].tests;
       if (opts.shuffle) {
-        tests = shuffleFiles(tests, opts.seed ?? 1);
+        const seed = opts.seed ?? (Date.now() & 0xffffffff) >>> 0;
+        tests = shuffleFiles(tests, seed);
       }
       console.log(tests.join(","));
     } else {

@@ -163,8 +163,14 @@ export function parseArgs(argv) {
     else if (arg === "--no-base-check") options.baseCheck = false;
     else if (arg === "--no-batch") options.batch = false;
     else if (arg === "--shuffle") options.shuffle = true;
-    else if (arg === "--seed" && argv[i + 1]) options.seed = Number(argv[++i]) >>> 0;
-    else if (arg === "--pre" && argv[i + 1]) options.pre.push(argv[++i].replace(/^#/, ""));
+    else if (arg === "--seed") {
+      if (i + 1 >= argv.length) throw new Error("--seed requires a value");
+      const raw = argv[++i];
+      if (raw.trim() === "" || !Number.isFinite(Number(raw))) {
+        throw new Error(`--seed must be a finite number; got "${raw}"`);
+      }
+      options.seed = Math.trunc(Number(raw)) >>> 0;
+    } else if (arg === "--pre" && argv[i + 1]) options.pre.push(argv[++i].replace(/^#/, ""));
   }
   if (!Number.isFinite(options.budgetS) || options.budgetS <= 0)
     throw new Error("--budget needs seconds above zero");
