@@ -257,8 +257,10 @@ const SOURCE_PINS := {
 	"ambush_altar": ["reach_point()", "7a1a73f6c7f2d8fc8645eb7565f763f0fb95d0d7701598998f46905bc9aa6db3"],
 }
 const INHERITED_PINS := {
-	"device": "4d3fd93f28a96ecdf01e95f0a1750673057bdd79c00ba1956a65e972d6fce056",
-	"interactables": "1a00f5262fff3af0a20ca0e35e6a70e50075d2cfeb6eab0b80b6533a98fd206a",
+	# 2026-11-19: device and interactables re-pinned for the prompt drawing Interact's bound key or
+	# button in place of a fixed E (Wave 44 audit).
+	"device": "df8c6c95e0c30134840d77dd9070190071c9325f377d1ec29c5ab5458b96ba36",
+	"interactables": "693003acc330eaffb583edf65056f45c13b09918795409fb3b2e7e7fa86b8713",
 	"interact": "52023d69247026b37e2ddbf86c4a91f28bb619f78232c4aa968143322f023087",
 }
 
