@@ -8,6 +8,8 @@ const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
+const ModelKit := preload("res://src/world/model_kit.gd")
+const YARD_KIT := "res://assets/models/world_one/bay_kit.glb"
 const WorldGrade := preload("res://src/presentation/world_grade.gd")
 
 # The class card's portrait and live ability preview: the pilot's real hero shell
@@ -178,8 +180,8 @@ func _build_stage() -> void:
 	ground.top_radius = FLOOR
 	ground.bottom_radius = FLOOR
 	ground.height = 0.1
-	_mesh(ground, _mat(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.2), 0.0, 1.0, false), Vector3(0.0, -0.05, 0.0))
-	_mesh(_torus(FLOOR - 0.06, FLOOR + 0.02), _mat(tint, 1.0), Vector3.ZERO)
+	_mesh(ground, _mat(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.2), 0.0, 1.0, false), Vector3(0.0, -0.05, 0.0)).name = "TurntableFloor"
+	_mesh(_torus(FLOOR - 0.06, FLOOR + 0.02), _mat(tint, 1.0), Vector3.ZERO).name = "TurntableRim"
 
 
 # The lights of a UI preview's own world: the sun and, with rim, a class-tinted rim from behind.
@@ -374,14 +376,10 @@ func _paint_shell() -> void:
 func _build_props() -> void:
 	match def.id:
 		"pylon_engineer":
-			var wall := BoxMesh.new()
-			wall.size = Vector3(1.2, 6.0, 4.0)
-			_mesh(wall, _mat(Palette.SANDSTONE, 0.0, 1.0, false), Vector3(WALL_X - 0.6, 3.0, 0.0))
-			var post := CylinderMesh.new()
-			post.top_radius = 0.14
-			post.bottom_radius = 0.24
-			post.height = 0.9
-			_prop("post", post, Palette.VERDIGRIS.lightened(0.25), 0.0, false)
+			var wall := _yard_piece("BayYardWall", Vector3(4.0, 6.0, 1.2), BoxMesh.new(), Palette.SANDSTONE)
+			wall.position = Vector3(WALL_X - 0.6, 3.0, 0.0)
+			wall.rotation.y = PI * 0.5
+			_props["post"] = _yard_piece("BayPost", Vector3(0.48, 0.9, 0.48), CylinderMesh.new(), Palette.VERDIGRIS)
 			_prop("cap", _torus(0.26, 0.4), def.color, 1.8)
 			_prop("tether", _stick(0.05), Palette.SAND.darkened(0.3), 0.0, false)
 			_prop("discharge", _torus(0.9, 1.0), def.color, 1.8)
@@ -390,9 +388,7 @@ func _build_props() -> void:
 				_prop("dust%d" % i, _sphere(0.5), Palette.SAND, 0.0)
 		"runner_gunner", "tarn":
 			for i in 3:
-				var box := BoxMesh.new()
-				box.size = Vector3(0.9, 1.2, 0.9)
-				_prop("dummy%d" % i, box, Palette.RUST, 0.0, false)
+				_props["dummy%d" % i] = _yard_piece("BayPin", Vector3(0.55, 1.2, 0.55), CylinderMesh.new(), Palette.RUST)
 				_prop("bolt%d" % i, _stick(0.07), def.color, 2.6)
 				_prop("dust%d" % i, _sphere(0.5), Palette.SANDSTONE, 0.0)
 			for i in 4:
@@ -735,12 +731,13 @@ func _roll() -> void:
 
 
 func _show(id: String, at: Vector3, scale_by := Vector3.ONE, alpha := 1.0, spin := Vector3.ZERO) -> void:
-	var prop: MeshInstance3D = _props[id]
+	var prop: Node3D = _props[id]
 	prop.visible = true
 	prop.position = at
 	prop.rotation = spin
 	prop.scale = scale_by
-	(prop.material_override as StandardMaterial3D).albedo_color.a = alpha
+	if prop is MeshInstance3D:
+		(prop.material_override as StandardMaterial3D).albedo_color.a = alpha
 
 
 # Stretches a unit stick from a to b.
@@ -757,8 +754,27 @@ func _line(id: String, a: Vector3, b: Vector3) -> void:
 	(prop.material_override as StandardMaterial3D).albedo_color.a = 1.0
 
 
+# These are the practice pieces Moss sets out in his bay. Pose the holder so the
+# mesh keeps its fitted size as the post grows or a pin tumbles.
+func _yard_piece(part: String, size: Vector3, fallback: PrimitiveMesh, color: Color) -> Node3D:
+	var holder := Node3D.new()
+	holder.name = part
+	_viewport.add_child(holder, true)
+	var view := ModelKit.part(YARD_KIT, [part], part, holder)
+	if view == null:
+		view = MeshInstance3D.new()
+		view.name = "MissingYardPiece"
+		view.mesh = fallback
+		view.material_override = _mat(color, 0.0, 1.0, false)
+		holder.add_child(view)
+	view.scale = size / view.mesh.get_aabb().size
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return holder
+
+
 func _prop(id: String, mesh: Mesh, color: Color, emit: float, fade := true) -> void:
 	var prop := _mesh(mesh, _mat(color, emit, 1.0, fade), Vector3.ZERO)
+	prop.name = id
 	prop.visible = false
 	_props[id] = prop
 

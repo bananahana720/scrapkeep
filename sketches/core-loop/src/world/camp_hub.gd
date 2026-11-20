@@ -405,6 +405,7 @@ func _build_ground() -> void:
 		collider.transform = segment
 		ground.add_child(collider)
 		var view := MeshInstance3D.new()
+		view.name = "Berm%d" % i
 		var box_mesh := BoxMesh.new()
 		box_mesh.size = box.size
 		box_mesh.material = berm_material
