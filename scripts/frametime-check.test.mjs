@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -180,11 +181,12 @@ test("main runs the build under a stand-in mangohud and grades its log", () => {
           XDG_DATA_HOME: base,
         },
         out,
+        "linux",
       ),
       0,
     );
     assert.equal(
-      main([], { PATH: path.join(base, "empty"), XDG_DATA_HOME: base }, out),
+      main([], { PATH: path.join(base, "empty"), XDG_DATA_HOME: base }, out, "linux"),
       2,
     );
   } finally {
@@ -201,7 +203,7 @@ test("main --log grades an existing log without launching anything", () => {
   const lines = [];
   console.log = (line) => lines.push(line);
   try {
-    assert.equal(main([`--log=${file}`], { PATH: "" }, out), 1);
+    assert.equal(main([`--log=${file}`], { PATH: "" }, out, "darwin"), 1);
   } finally {
     console.log = log;
   }
@@ -285,7 +287,7 @@ function selfPlayRun(exitCode, stdoutLines) {
       [`--exe=${game}`, "--seconds=1", "--self-play", "--self-play-from=6", "--self-play-stall=100"],
       { PATH: [bin, "/usr/bin", "/bin"].join(path.delimiter), XDG_DATA_HOME: base },
       out,
-      undefined,
+      "linux",
       () => {
         held.push("taken");
         return { release: () => held.push("released") };
@@ -381,15 +383,35 @@ test("the engine frame log reads through the MangoHud parser, and its label says
   assert.match(report(summarize([8]), "x.csv", logLabel(text)), /^Engine frame log: x.csv/);
 });
 
-test("main on macOS launches the engine capture under a scratch HOME and grades the game's own log", () => {
+test("all direct Mac captures refuse before any executable runs or the machine is reserved", t => {
+  const base = mkdtempSync(path.join(os.tmpdir(), "frame-mac-refusal-"));
+  t.after(() => rmSync(base, { recursive: true, force: true }));
+  const sentinel = path.join(base, "spawned");
+  const bin = path.join(base, "Godot");
+  for (const executable of [bin, path.join(base, "mangohud")]) {
+    writeFileSync(executable, '#!/bin/sh\necho spawned > "$SENTINEL"\n');
+    chmodSync(executable, 0o755);
+  }
+  const out = path.join(base, "out");
+  const warnings = t.mock.method(console, "error", () => {});
+  const env = { PATH: base, GODOT_BIN: bin, SENTINEL: sentinel };
+  for (const args of [[], ["--capture=engine"], ["--capture=mangohud"], ["--exe=" + bin, "--self-play"]]) {
+    assert.equal(main(args, env, out, "darwin", () => assert.fail("a refused draw took the quiet hold")), 2);
+  }
+  assert.ok(warnings.mock.calls.every(call => call.arguments[0].includes("display-run.mjs --offscreen")));
+  assert.equal(existsSync(sentinel), false);
+  assert.equal(existsSync(out), false);
+});
+
+test("main on Linux launches the engine capture with scratch XDG data and grades the game's own log", () => {
   const base = mkdtempSync(path.join(os.tmpdir(), "ft-engine-"));
-  // A stand-in editor: writes the CSV where --frame-log= points, and the HOME it was given.
+  // A stand-in editor: writes the CSV where --frame-log= points, and the scratch XDG data directory it was given.
   const fake = path.join(base, "Godot");
   const rows = Array.from({ length: 200 }, () => "8.000").join("\\n");
   writeFileSync(
     fake,
     `#!/bin/sh\nfor a in "$@"; do case "$a" in --frame-log=*) log="\${a#--frame-log=}";; esac; done\n` +
-      `printf '%s\\n' "$@" > "$(dirname "$log")/args.txt"\nprintf '%s\\n' "$HOME" > "$(dirname "$log")/home.txt"\n` +
+      `printf '%s\\n' "$@" > "$(dirname "$log")/args.txt"\nprintf '%s\\n' "$XDG_DATA_HOME" > "$(dirname "$log")/home.txt"\n` +
       `printf 'scrapkeep_frame_log,engine\\nscrapkeep_frame_log,4.7.2\\nframetime\\n${rows}\\n' > "$log"\n` +
       `echo 'self-play: stage 1 entered at 12.00 s'\n`,
   );
@@ -417,16 +439,16 @@ test("main on macOS launches the engine capture under a scratch HOME and grades 
       held.push("taken");
       return { release: () => held.push("released") };
     };
-    code = main(["--self-play", "--seconds=1"], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, out, "darwin", quiet);
-    missing = main([], { PATH: "/usr/bin:/bin" }, path.join(base, "out2"), "darwin", () => assert.fail("no launch, no hold"));
+    code = main(["--capture=engine", "--self-play", "--seconds=1"], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, out, "linux", quiet);
+    missing = main(["--capture=engine"], { PATH: "/usr/bin:/bin" }, path.join(base, "out2"), "linux", () => assert.fail("no launch, no hold"));
     assert.throws(
       () =>
-        main(["--self-play", "--seconds=1"], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, path.join(base, "out4"), "darwin", () => {
+        main(["--capture=engine", "--self-play", "--seconds=1"], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, path.join(base, "out4"), "linux", () => {
           throw new Error("no frame reading taken");
         }),
       (thrown) => thrown instanceof FrametimeError && /no frame reading taken/.test(thrown.message),
     );
-    reused = main(["--self-play", "--seconds=1", "--home=" + keptHome], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, outReused, "darwin");
+    reused = main(["--capture=engine", "--self-play", "--seconds=1", "--home=" + keptHome], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, outReused, "linux");
   } finally {
     console.log = log;
     console.error = error;
@@ -449,7 +471,7 @@ test("main on macOS launches the engine capture under a scratch HOME and grades 
   assert.equal(reused, 0);
   const reusedDir = path.join(outReused, readdirSync(outReused)[0]);
   assert.equal(readFileSync(path.join(reusedDir, "home.txt"), "utf8").trim(), keptHome);
-  assert.equal(JSON.parse(readFileSync(path.join(reusedDir, "summary.json"), "utf8")).cache, "reused (--home)");
+  assert.equal(JSON.parse(readFileSync(path.join(reusedDir, "summary.json"), "utf8")).cache, "shared");
   rmSync(keptHome, { recursive: true });
 });
 
