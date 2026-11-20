@@ -123,6 +123,9 @@ static func can_take(o: Dictionary, run) -> bool:
 		return false
 	if String(o["win_kind"]) == "part" and String(o["win"]) == "":
 		return false
+	# A heal that would restore no health and lift no mark takes no payment.
+	if String(o["win_kind"]) == "heal" and run.hp >= run.max_hp and HullMark.held(run) <= 0.0:
+		return false
 	var cost: int = o["cost"]
 	match String(o["cost_kind"]):
 		"hp":
