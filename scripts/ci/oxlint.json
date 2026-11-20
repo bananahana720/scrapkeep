@@ -5,7 +5,6 @@
     "suspicious": "error",
     "perf": "error"
   },
-  "ignorePatterns": ["artifacts/**", "node_modules/**", "dist/**", "sketches/**"],
   "rules": {
     "eslint/no-await-in-loop": "off",
     "eslint/no-control-regex": "off",

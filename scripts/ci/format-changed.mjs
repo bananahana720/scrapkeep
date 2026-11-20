@@ -4,7 +4,7 @@
 // Usage: node scripts/ci/format-changed.mjs [--base <ref>] [--write] [--] [files...]
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -18,13 +18,19 @@ export function filterFormatTargets(files, exists = (file) => existsSync(path.jo
 }
 
 export function changedFilesSince(baseRef, { cwd = root, spawn = spawnSync } = {}) {
-  const ran = spawn("git", ["diff", "--name-only", "--diff-filter=ACMR", `${baseRef}...HEAD`], {
-    cwd,
-    encoding: "utf8",
-  });
-  if (ran.status !== 0) {
+  // --no-renames avoids reading historical blobs from promisor remotes in blobless clones;
+  // a rename emits D <old> + A <new>, so --diff-filter=ACM still captures the destination file.
+  const ran = spawn(
+    "git",
+    ["diff", "--no-renames", "--name-only", "--diff-filter=ACM", `${baseRef}...HEAD`],
+    {
+      cwd,
+      encoding: "utf8",
+    },
+  );
+  if (ran.error || ran.status !== 0) {
     throw new Error(
-      `git diff against ${baseRef} failed: ${(ran.stderr || ran.stdout || "").trim()}`,
+      `git diff against ${baseRef} failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
     );
   }
   return ran.stdout
@@ -33,7 +39,7 @@ export function changedFilesSince(baseRef, { cwd = root, spawn = spawnSync } = {
     .filter(Boolean);
 }
 
-function parseArgs(argv) {
+export function parseFormatArgs(argv) {
   const opts = { base: null, write: false, files: [] };
   let rest = false;
   for (let i = 0; i < argv.length; i++) {
@@ -42,7 +48,10 @@ function parseArgs(argv) {
       opts.files.push(arg);
     } else if (arg === "--") {
       rest = true;
-    } else if (arg === "--base" && argv[i + 1]) {
+    } else if (arg === "--base") {
+      if (i + 1 >= argv.length || !argv[i + 1] || argv[i + 1].startsWith("-")) {
+        throw new Error("--base requires a ref");
+      }
       opts.base = argv[++i];
     } else if (arg === "--write") {
       opts.write = true;
@@ -52,14 +61,25 @@ function parseArgs(argv) {
       opts.files.push(arg);
     }
   }
+  if (!opts.base && opts.files.length === 0) {
+    throw new Error("pass --base <ref> or explicit file paths");
+  }
   return opts;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+function isMain() {
+  if (!process.argv[1]) return false;
   try {
-    const opts = parseArgs(process.argv.slice(2));
-    const candidates =
-      opts.files.length > 0 ? opts.files : opts.base ? changedFilesSince(opts.base) : [];
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
+  } catch {
+    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+  }
+}
+
+if (isMain()) {
+  try {
+    const opts = parseFormatArgs(process.argv.slice(2));
+    const candidates = opts.files.length > 0 ? opts.files : changedFilesSince(opts.base);
     const targets = filterFormatTargets(candidates);
     if (targets.length === 0) {
       console.log("format-changed: 0 JS/MJS files to check");
