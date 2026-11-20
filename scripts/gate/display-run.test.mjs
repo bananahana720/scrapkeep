@@ -200,3 +200,20 @@ test("headless measurement and the editor version probe use only their scratch h
   assert.equal(control.home, versionHome);
   assert.equal(existsSync(versionHome), false);
 });
+
+
+test("the collision sweep pins its clustering tool before a watched launch", async () => {
+  const cwd = scratch();
+  const opts = capture(cwd);
+  const files = ["qa/collision_sweep.gd", "qa/undrawn_places.gd", "bot_driver.gd", "bot_kite.gd",
+    "bot_fairness.gd", "bot_loops.gd", "skill_band.gd"];
+  const dir = path.join(cwd, "sketches/core-loop/tools");
+  mkdirSync(path.join(dir, "qa"));
+  for (const file of files) {
+    copyFileSync(new URL("../../sketches/core-loop/tools/" + file, import.meta.url), path.join(dir, file));
+  }
+  const sweep = { ...opts, script: "res://tools/qa/collision_sweep.gd" };
+  assert.equal((await runCapture(sweep)).exit, 0);
+  writeFileSync(path.join(dir, "qa/undrawn_places.gd"), "changed clusterer");
+  assert.equal((await runCapture({ ...sweep, start: assert.fail })).supported, false);
+});
