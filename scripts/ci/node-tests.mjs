@@ -66,7 +66,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     const files = resolveTestFiles(pkg.scripts?.test ?? "", root);
     const args = buildNodeTestArgs(files, { shard: opts.shard });
     if (opts.dryRun) {
-      console.log(JSON.stringify({ fileCount: files.length, shard: opts.shard, args: args.slice(0, 5) }));
+      console.log(
+        JSON.stringify({ fileCount: files.length, shard: opts.shard, args: args.slice(0, 5) }),
+      );
       process.exitCode = 0;
     } else {
       const ran = spawnSync(process.execPath, args, { cwd: root, stdio: "inherit" });

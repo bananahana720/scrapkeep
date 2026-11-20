@@ -8,10 +8,14 @@ import { appendFileSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const WEB_PATTERN = /^(index\.html|orchard\.html|vite\.config\.js|package\.json|package-lock\.json|public\/|src\/|server\/|scripts\/check-build\.mjs|scripts\/verify\.mjs)/;
-const GODOT_PATTERN = /^(sketches\/core-loop\/|scripts\/sketch-(?:fast|smoke|lint)|scripts\/import-stamp\.mjs|scripts\/godot-home\.mjs|scripts\/known-failing\.mjs|scripts\/placeholder-gate\.mjs|project-guide\/handoff\/KNOWN-FAILING\.tsv)/;
-const NODE_PATTERN = /^(package\.json|package-lock\.json|scripts\/|tests\/|tools\/|src\/|server\/|project-guide\/handoff\/sitting-kit\/|\.github\/workflows\/)/;
-const DOCS_PATTERN = /(\.md$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv)|^\.agents\/skills\/|^\.claude\/skills\/|^scripts\/(?:check-docs|check-project|check-skills|brief-check|wave-state|known-failing))/;
+const WEB_PATTERN =
+  /^(index\.html|orchard\.html|vite\.config\.js|package\.json|package-lock\.json|public\/|src\/|server\/|scripts\/check-build\.mjs|scripts\/verify\.mjs)/;
+const GODOT_PATTERN =
+  /^(sketches\/core-loop\/|scripts\/sketch-(?:fast|smoke|lint)|scripts\/import-stamp\.mjs|scripts\/godot-home\.mjs|scripts\/known-failing\.mjs|scripts\/placeholder-gate\.mjs|project-guide\/handoff\/KNOWN-FAILING\.tsv)/;
+const NODE_PATTERN =
+  /^(package\.json|package-lock\.json|scripts\/|tests\/|tools\/|src\/|server\/|project-guide\/handoff\/sitting-kit\/|\.github\/workflows\/)/;
+const DOCS_PATTERN =
+  /(\.md$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv)|^\.agents\/skills\/|^\.claude\/skills\/|^scripts\/(?:check-docs|check-project|check-skills|brief-check|wave-state|known-failing))/;
 const WORKFLOW_PATTERN = /^(\.github\/workflows\/|scripts\/ci\/)/;
 
 export function classifyAffected(changedFiles, { full = false } = {}) {
@@ -46,13 +50,23 @@ export function classifyAffected(changedFiles, { full = false } = {}) {
 export function diffFiles(baseRef, { cwd = process.cwd(), spawn = spawnSync } = {}) {
   const ran = spawn("git", ["diff", "--name-only", `${baseRef}...HEAD`], { cwd, encoding: "utf8" });
   if (ran.status !== 0) {
-    throw new Error(`git diff against ${baseRef} failed: ${(ran.stderr || ran.stdout || "").trim()}`);
+    throw new Error(
+      `git diff against ${baseRef} failed: ${(ran.stderr || ran.stdout || "").trim()}`,
+    );
   }
-  return ran.stdout.split("\n").map((line) => line.trim()).filter(Boolean);
+  return ran.stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 function parseArgs(argv) {
-  const opts = { base: null, full: false, stdin: false, githubOutput: process.env.GITHUB_OUTPUT || null };
+  const opts = {
+    base: null,
+    full: false,
+    stdin: false,
+    githubOutput: process.env.GITHUB_OUTPUT || null,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--base" && argv[i + 1]) opts.base = argv[++i];
@@ -71,7 +85,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     let full = opts.full;
     if (!full) {
       if (opts.stdin) {
-        files = readFileSync(0, "utf8").split("\n").map((line) => line.trim()).filter(Boolean);
+        files = readFileSync(0, "utf8")
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean);
       } else if (opts.base) {
         files = diffFiles(opts.base);
       } else {
@@ -81,7 +98,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     const result = classifyAffected(files, { full });
     console.log(JSON.stringify(result));
     if (opts.githubOutput) {
-      const lines = Object.entries(result).map(([k, v]) => `${k}=${v}`).join("\n") + "\n";
+      const lines =
+        Object.entries(result)
+          .map(([k, v]) => `${k}=${v}`)
+          .join("\n") + "\n";
       appendFileSync(opts.githubOutput, lines);
     }
   } catch (error) {

@@ -1,9 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { evaluateBudget, formatSummaryRow, parseBudgetArgs, runWithBudget } from "./check-budget.mjs";
+import {
+  evaluateBudget,
+  formatSummaryRow,
+  parseBudgetArgs,
+  runWithBudget,
+} from "./check-budget.mjs";
 
 test("parseBudgetArgs parses label, budget and command", () => {
-  const parsed = parseBudgetArgs(["--label", "lint", "--budget", "5", "--", "npm", "run", "sketch:lint"]);
+  const parsed = parseBudgetArgs([
+    "--label",
+    "lint",
+    "--budget",
+    "5",
+    "--",
+    "npm",
+    "run",
+    "sketch:lint",
+  ]);
   assert.deepEqual(parsed, { label: "lint", budgetS: 5, command: ["npm", "run", "sketch:lint"] });
 });
 
@@ -15,17 +29,35 @@ test("parseBudgetArgs rejects missing separator, label, budget or command", () =
 });
 
 test("evaluateBudget passes within budget and fails over budget", () => {
-  const pass = evaluateBudget({ label: "lint", budgetS: 5, elapsedMs: 1234, exitCode: 0, signal: null });
+  const pass = evaluateBudget({
+    label: "lint",
+    budgetS: 5,
+    elapsedMs: 1234,
+    exitCode: 0,
+    signal: null,
+  });
   assert.equal(pass.ok, true);
   assert.equal(pass.status, "PASS");
   assert.equal(pass.elapsedS, 1.23);
 
-  const slow = evaluateBudget({ label: "lint", budgetS: 5, elapsedMs: 5500, exitCode: 0, signal: null });
+  const slow = evaluateBudget({
+    label: "lint",
+    budgetS: 5,
+    elapsedMs: 5500,
+    exitCode: 0,
+    signal: null,
+  });
   assert.equal(slow.ok, false);
   assert.equal(slow.overBudget, true);
   assert.equal(slow.status, "OVER_BUDGET");
 
-  const failed = evaluateBudget({ label: "lint", budgetS: 5, elapsedMs: 200, exitCode: 1, signal: null });
+  const failed = evaluateBudget({
+    label: "lint",
+    budgetS: 5,
+    elapsedMs: 200,
+    exitCode: 1,
+    signal: null,
+  });
   assert.equal(failed.ok, false);
   assert.equal(failed.status, "FAIL");
 });

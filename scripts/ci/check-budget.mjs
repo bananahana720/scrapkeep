@@ -13,7 +13,8 @@ export function parseBudgetArgs(argv) {
   let label = null;
   let budgetS = null;
   let sep = argv.indexOf("--");
-  if (sep < 0) throw new Error("usage: check-budget.mjs --label <name> --budget <seconds> -- <cmd> [args...]");
+  if (sep < 0)
+    throw new Error("usage: check-budget.mjs --label <name> --budget <seconds> -- <cmd> [args...]");
   const head = argv.slice(0, sep);
   const command = argv.slice(sep + 1);
   if (command.length === 0) throw new Error("missing command after --");
@@ -24,7 +25,8 @@ export function parseBudgetArgs(argv) {
     else throw new Error(`unknown argument: ${arg}`);
   }
   if (!label) throw new Error("--label is required");
-  if (!Number.isFinite(budgetS) || budgetS <= 0) throw new Error("--budget must be a positive number of seconds");
+  if (!Number.isFinite(budgetS) || budgetS <= 0)
+    throw new Error("--budget must be a positive number of seconds");
   return { label, budgetS, command };
 }
 
@@ -51,7 +53,16 @@ export function formatSummaryRow(result) {
   return `| ${result.label} | ${result.elapsedS.toFixed(2)}s | ${result.budgetS}s | ${icon} |\n`;
 }
 
-export function runWithBudget(argv, { spawn = spawnSync, now = () => performance.now(), summaryPath = process.env.GITHUB_STEP_SUMMARY, log = console.log, errLog = console.error } = {}) {
+export function runWithBudget(
+  argv,
+  {
+    spawn = spawnSync,
+    now = () => performance.now(),
+    summaryPath = process.env.GITHUB_STEP_SUMMARY,
+    log = console.log,
+    errLog = console.error,
+  } = {},
+) {
   const { label, budgetS, command } = parseBudgetArgs(argv);
   const started = now();
   const child = spawn(command[0], command.slice(1), { stdio: "inherit" });
@@ -67,7 +78,9 @@ export function runWithBudget(argv, { spawn = spawnSync, now = () => performance
     exitCode: child.status,
     signal: child.signal,
   });
-  log(`budget[${result.label}]: ${result.elapsedS.toFixed(2)}s / ${result.budgetS}s (${result.status})`);
+  log(
+    `budget[${result.label}]: ${result.elapsedS.toFixed(2)}s / ${result.budgetS}s (${result.status})`,
+  );
   if (summaryPath) {
     try {
       appendFileSync(summaryPath, formatSummaryRow(result));
@@ -77,7 +90,9 @@ export function runWithBudget(argv, { spawn = spawnSync, now = () => performance
   }
   if (!result.ok) {
     if (result.overBudget && result.exitCode === 0) {
-      errLog(`budget[${result.label}]: exceeded budget (${result.elapsedS.toFixed(2)}s > ${result.budgetS}s)`);
+      errLog(
+        `budget[${result.label}]: exceeded budget (${result.elapsedS.toFixed(2)}s > ${result.budgetS}s)`,
+      );
       return { exit: 1, result };
     }
     return { exit: result.exitCode || 1, result };
