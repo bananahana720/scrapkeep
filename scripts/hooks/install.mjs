@@ -7,7 +7,7 @@ import { chmodSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-if (process.env.CI === "true") {
+if (/^(true|1)$/i.test(process.env.CI || "")) {
   process.exit(0);
 }
 

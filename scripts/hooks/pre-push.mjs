@@ -35,16 +35,21 @@ export function changedFilesForRange(
   { localSha, remoteSha },
   { cwd = root, spawn = spawnSync } = {},
 ) {
+  // Include deletions (no --diff-filter=ACM drop) so deleting a .md or sketch file still triggers
+  // check:docs / sketch:lint; filterFormatTargets filters out deleted JS files via exists().
+  // For new branches (remoteSha === null), walk all commits not yet on any remote (and handle merges).
   const args = remoteSha
-    ? ["diff", "--no-renames", "--name-only", "--diff-filter=ACM", `${remoteSha}..${localSha}`]
+    ? ["diff", "--no-renames", "--name-only", `${remoteSha}..${localSha}`]
     : [
-        "diff-tree",
-        "--no-commit-id",
+        "log",
         "--no-renames",
         "--name-only",
-        "--diff-filter=ACM",
-        "-r",
+        "--pretty=format:",
+        "-m",
+        "--first-parent",
         localSha,
+        "--not",
+        "--remotes",
       ];
   const ran = spawn("git", args, { cwd, encoding: "utf8" });
   if (ran.error || ran.status !== 0) {
@@ -52,10 +57,14 @@ export function changedFilesForRange(
       `git ${args[0]} failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
     );
   }
-  return ran.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+  return [
+    ...new Set(
+      ran.stdout
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+    ),
+  ];
 }
 
 export function planHookChecks(changedFiles, exists = (f) => existsSync(path.join(root, f))) {
@@ -85,11 +94,13 @@ function binPath(name) {
   );
 }
 
-function parseArgs(argv) {
+export function parseHookArgs(argv) {
   const opts = { base: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--base") {
-      if (i + 1 >= argv.length) throw new Error("--base requires a value");
+      if (i + 1 >= argv.length || !argv[i + 1] || argv[i + 1].startsWith("-")) {
+        throw new Error("--base requires a ref");
+      }
       opts.base = argv[++i];
     } else {
       throw new Error(`unknown argument: ${argv[i]}`);
@@ -110,17 +121,13 @@ function isMain() {
 if (isMain()) {
   const started = performance.now();
   try {
-    const opts = parseArgs(process.argv.slice(2));
+    const opts = parseHookArgs(process.argv.slice(2));
     let files = [];
     if (opts.base) {
-      const ran = spawnSync(
-        "git",
-        ["diff", "--no-renames", "--name-only", "--diff-filter=ACM", `${opts.base}...HEAD`],
-        {
-          cwd: root,
-          encoding: "utf8",
-        },
-      );
+      const ran = spawnSync("git", ["diff", "--no-renames", "--name-only", `${opts.base}...HEAD`], {
+        cwd: root,
+        encoding: "utf8",
+      });
       if (ran.error || ran.status !== 0) {
         throw new Error(`git diff failed: ${ran.error?.message || (ran.stderr || "").trim()}`);
       }
@@ -141,24 +148,29 @@ if (isMain()) {
     if (plan.jsFiles.length > 0) {
       const oxfmt = binPath("oxfmt");
       const oxlint = binPath("oxlint");
-      if (existsSync(oxfmt)) {
+      if (!existsSync(oxfmt) || !existsSync(oxlint)) {
+        ranLabels.push("js-lint/format skipped (missing node_modules; run npm ci)");
+        console.warn(
+          "pre-push: node_modules/.bin/{oxfmt,oxlint} missing; run npm ci to enable JS checks",
+        );
+      } else {
         ranLabels.push(`oxfmt(${plan.jsFiles.length})`);
-        const r = runStep("oxfmt", oxfmt, [
+        const r1 = runStep("oxfmt", oxfmt, [
           "-c",
           path.join(root, "scripts/ci/oxfmt.json"),
           "--check",
           ...plan.jsFiles,
         ]);
-        if (!r.ok) ok = false;
-      }
-      if (ok && existsSync(oxlint)) {
-        ranLabels.push(`oxlint(${plan.jsFiles.length})`);
-        const r = runStep("oxlint", oxlint, [
-          "-c",
-          path.join(root, "scripts/ci/oxlint.json"),
-          ...plan.jsFiles,
-        ]);
-        if (!r.ok) ok = false;
+        if (!r1.ok) ok = false;
+        if (ok) {
+          ranLabels.push(`oxlint(${plan.jsFiles.length})`);
+          const r2 = runStep("oxlint", oxlint, [
+            "-c",
+            path.join(root, "scripts/ci/oxlint.json"),
+            ...plan.jsFiles,
+          ]);
+          if (!r2.ok) ok = false;
+        }
       }
     }
     if (ok && plan.hasSketch) {
@@ -171,12 +183,13 @@ if (isMain()) {
       if (!r.ok) ok = false;
     }
     if (ok && plan.hasDocsOrPkg) {
-      ranLabels.push("check:project", "check:docs");
+      ranLabels.push("check:project");
       const r1 = runStep("check:project", process.execPath, [
         path.join(root, "scripts/check-project.mjs"),
       ]);
       if (!r1.ok) ok = false;
       if (ok) {
+        ranLabels.push("check:docs");
         const r2 = runStep("check:docs", process.execPath, [
           path.join(root, "scripts/check-docs.mjs"),
         ]);
@@ -185,17 +198,19 @@ if (isMain()) {
     }
 
     const elapsedS = (performance.now() - started) / 1000;
+    const elapsedDisplay =
+      elapsedS > HOOK_BUDGET_S && elapsedS.toFixed(2) === HOOK_BUDGET_S.toFixed(2)
+        ? elapsedS.toFixed(3)
+        : elapsedS.toFixed(2);
     const summary = ranLabels.length > 0 ? ranLabels.join(", ") : "no matching files";
     if (!ok) {
-      console.error(`pre-push: FAIL in ${elapsedS.toFixed(2)}s (${summary})`);
+      console.error(`pre-push: FAIL in ${elapsedDisplay}s (${summary})`);
       process.exitCode = 1;
     } else if (elapsedS > HOOK_BUDGET_S) {
-      console.error(
-        `pre-push: OVER_BUDGET (${elapsedS.toFixed(2)}s > ${HOOK_BUDGET_S}s; ${summary})`,
-      );
+      console.error(`pre-push: OVER_BUDGET (${elapsedDisplay}s > ${HOOK_BUDGET_S}s; ${summary})`);
       process.exitCode = 1;
     } else {
-      console.log(`pre-push: PASS in ${elapsedS.toFixed(2)}s / ${HOOK_BUDGET_S}s (${summary})`);
+      console.log(`pre-push: PASS in ${elapsedDisplay}s / ${HOOK_BUDGET_S}s (${summary})`);
       process.exitCode = 0;
     }
   } catch (error) {
