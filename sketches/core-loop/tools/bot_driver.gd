@@ -4764,8 +4764,12 @@ func _look(ball: Vector3, point: Vector3, pitch_to: bool, delta: float) -> void:
 		dyaw = clampf(wrapf(want - yaw, -PI, PI), -TURN_RATE * delta, TURN_RATE * delta)
 	var want_pitch := -0.30
 	if pitch_to and flat.length() > 0.5:
-		var pivot := ball + Vector3.UP * 0.8
-		want_pitch = clampf(atan2(point.y - pivot.y, flat.length()), -1.2, 0.5)
+		# The shot flies along the crosshair ray from the lens (aim_origin), not from the ball, and the contact
+		# lift moves the lens off the ball's line: a player puts the crosshair on the target, so the bot measures
+		# the pitch from the lens too.
+		var lens: Vector3 = cam.aim_origin()
+		var from_lens := Vector3(point.x - lens.x, 0.0, point.z - lens.z).length()
+		want_pitch = clampf(atan2(point.y - lens.y, maxf(from_lens, 0.5)), -1.2, 0.5)
 	var dpitch := clampf(want_pitch - pitch, -TURN_RATE * delta, TURN_RATE * delta)
 	if _defer_look:
 		_look_delta = Vector2(dyaw, dpitch)
