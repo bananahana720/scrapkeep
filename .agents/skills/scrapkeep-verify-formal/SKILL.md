@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-verify-formal
-description: "Check by model the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals), with a TLA+ model kept beside this skill, and check by a second model that an earned reward is banked once and never lost through crashes, failed saves and two games on one profile. Use when a change touches flow.gd, launch_take.gd or the launch swipe calls in game.gd, or profile.gd, safe_store.gd, run_store.gd or the settle and grant calls in progress.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check the run flow; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
+description: "Check by model the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals), with a TLA+ model kept beside this skill, and check by a second model that an earned reward is banked once and never lost through crashes, failed saves and two games on one profile, and by a third that a park flood never holds full water under the ball. Use when a change touches the park event step in event_director.gd, flow.gd, launch_take.gd or the launch swipe calls in game.gd, or profile.gd, safe_store.gd, run_store.gd or the settle and grant calls in progress.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check the run flow; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
 ---
 
 # Check the run flow against its model
@@ -27,7 +27,7 @@ Each rule is one promise to the player. [references/coverage.md](references/cove
 
 ## Is this change covered?
 
-1. Run `git diff --stat <sync commit> -- sketches/core-loop/src/core/flow.gd sketches/core-loop/src/presentation/launch_take.gd sketches/core-loop/src/game.gd sketches/core-loop/src/ui/pause_menu.gd sketches/core-loop/src/ui/screens.gd`. The sync commit is the last line of [references/coverage.md](references/coverage.md). That form compares the sync commit with the working tree, so it sees uncommitted changes too (VFM-09). No output: the model still describes the code, go to "Run it".
+1. Run `git diff --stat <sync commit> -- <files>`, where `<files>` is every `sketches/core-loop/src` file that [references/coverage.md](references/coverage.md) cites (for the rewards model, [references/rewards-coverage.md](references/rewards-coverage.md)); `scripts/gate/model-receipts.mjs` reads the same list. A step that comes to read a new file must cite it there. The sync commit is the last line of the coverage page. That form compares the sync commit with the working tree, so it sees uncommitted changes too (VFM-09). No output: the model still describes the code, go to "Run it".
 2. With output, read the diff of every function named in the coverage table, and look for a new caller of a covered function or a new writer of `_seam_take`, `_taken_part`, `_launched`, `run.over` or the swipe's `phase`. A new way to interrupt a run is a new action even when no covered function changed (VFM-05).
 3. A change that removes or adds a guard the coverage table names: set that constant on the two `today-*` lines of `models/make-configs.sh` to what the code now does, so `today-*` stands for the code under check (VFM-09). Any other change: change the model from the code before you run it, never from what makes it pass. One call in the code is one action in the model; two handlers of one signal are one action with an order choice (VFM-06). Then move the sync commit.
 
@@ -53,6 +53,8 @@ Each rule is one promise to the player. [references/coverage.md](references/cove
 
 A `broken-*` config that reports no break means the model can no longer see that fault. Fix the model before trusting any pass (VFM-03).
 
+The world 1 done read takes this check as two receipts, `run-always-ends` and `rewards-banked-once`. `node scripts/gate/model-receipts.mjs --out <dir>` writes them. It runs plain TLC on `today-store` with the `broken-vanish` and `broken-endguard` plants, and on `rewards-today-one`, `rewards-today-two-once` and `rewards-today-two-lost` with the `rewards-broken-ledger`, `rewards-broken-midsave`, `rewards-broken-legacyrun`, `rewards-broken-stale` and `rewards-broken-nolock` plants, each with a timeout. A receipt fails while step 1 of "Is this change covered?" shows a changed file, and the script refuses a checkout with uncommitted changes under this skill or `sketches/core-loop/src`. The rewards receipt always names what the model cannot see: the save lock is taken as perfect, and ruling ea lets two games pay twice when both saves of the first game's earn fail.
+
 ## Read a result
 
 1. A break in a `guarded-*` or `today-*` config is a candidate, not a bug. Tell it as steps in the code's words, using the coverage table. (VFM-02)
@@ -74,7 +76,7 @@ A pass covers the model within its bounds and its time assumption (VFM-07). Not 
 
 ## The rewards model
 
-A second model, `models/Rewards.tla`, checks how an earned reward is banked: `sketches/core-loop/src/core/progress.gd`'s earn, settle, `grant_once` and `reconcile_settled`, the profile and run stores, and `sketches/core-loop/src/core/safe_store.gd`'s writes, with a crash between any two file writes, failed writes and two game processes on one profile. Its rules:
+A second model, `models/Rewards.tla`, checks how an earned reward is banked: `sketches/core-loop/src/core/progress.gd`'s earn, settle, `grant_once` and `reconcile_settled`, the profile and run stores, and `sketches/core-loop/src/core/safe_store.gd`'s writes, with a crash between any two file writes, failed writes, two game processes on one profile and a run file an older build left with the legacy reward key. Its rules:
 
 | Rule | The promise | What breaks for the player |
 | --- | --- | --- |
@@ -82,6 +84,33 @@ A second model, `models/Rewards.tla`, checks how an earned reward is banked: `sk
 | `NeverLost` | An earned and settled reward id is granted after any crash and reload. | A cosmetic or world the player earned never arrives. |
 
 Run it with `bash $F/models/make-rewards-configs.sh`, then each `rewards-*.cfg` as in "Run it"; the two-game configs need plain TLC with several workers. [references/rewards-coverage.md](references/rewards-coverage.md) has the code behind each step, the config table with what each config must report, and what is not modelled. Its findings are in [references/rewards-findings.md](references/rewards-findings.md). The rest of this skill (covered changes, reading a result, replays, broken variants, reach probes) applies to it unchanged.
+
+## The hazard model
+
+A further model, `models/HazardCycle.tla`, checks a storm's sought strike in the Spillway (W44): `sketches/core-loop/src/world/events/storm_seek.gd`, stepped by `sketches/core-loop/src/world/events/natural.gd`, and the enemies it strikes through `sketches/core-loop/src/world/events/hazard_hits.gd`. One tick at a time the ball and one enemy go anywhere, the ball rolls, slows or stalls, a storm breaks or runs down, and the hazard goes idle, tell, strike, cool. Its rules:
+
+| Rule | The promise | What breaks for the player |
+| --- | --- | --- |
+| `TellBeforeStrike` | A strike tells for at least 0.6 s, on the place it lands. | Lightning hits with no warning, or not where it warned. |
+| `RollingNeverSought` | Only a stalled ball is sought; a rolling one, turning or not, never. | Rolling and kiting stop being free (ruling cu). |
+| `StalledSought` | A stalled ball in a storm that can still strike is sought within the rest and one tick. | Parking under a storm costs nothing. |
+| `EnemyStruck` | An enemy inside the strike is struck. | A pack dragged through the strike walks out whole. |
+| `BallOnlyWhereTold` | The ball is hit only inside the told ring, so a ball that rolls off escapes. | A dodge that worked still costs scrap. |
+
+Run it with `bash $F/models/make-hazard-configs.sh`, then each `hazard-*.cfg` as in "Run it". `hazard-today` must report no break; each `hazard-broken-*` must break the rule its line in the script names. `node scripts/gate/model-receipts.mjs --row hazards-hit-everyone --out <dir>` writes its receipt. [references/hazard-coverage.md](references/hazard-coverage.md) has the code behind each step and what is not modelled.
+
+## The flood model
+
+Another model, `models/ParkFlood.tla`, checks a park flood from its announcement to its end in `sketches/core-loop/src/world/event_director.gd` (`_park_step_live`, `_park_capacity`, `_park_can_end`), with the ball free to roll into or out of any basin between any two ticks. Its rules:
+
+- **FullWaterNeverHeld.** While its live time runs, water that has risen for its whole fill time is stepped on every tick, ball or no ball.
+- **FullWaterFreesItsSlot.** Full water with no live time stops counting against the ground cap.
+- **NeverRisesUnderBall** and **NeverEndsUnderBall.** Water does not rise for the first 2 s of the ball in its basin, grounded or not (the bounded wait), and does not end while the ball is in its basin.
+- **HoldEnds.** The wait is bounded: rising water always finishes rising, ball or no ball (finding PF-1, closed by W1-148).
+- **WithinCap.** No more unsettled ground events are live than the cap allows.
+- **FloodEnds** and **AnnouncedLands.** Once the ball stays out, every live flood ends and every announced one lands.
+
+Run `bash $F/models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg` with `ParkFlood.tla`. [references/flood-coverage.md](references/flood-coverage.md) maps each step and guard to the code and lists what each config must report, and [references/flood-findings.md](references/flood-findings.md) holds the findings, two of them open (PF-2 and PF-3). `node scripts/gate/model-receipts.mjs --out <dir> --row flood-never-held` writes its receipt.
 
 ## Lessons and updates
 

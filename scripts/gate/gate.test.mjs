@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -8,8 +9,40 @@ import { parseLedger } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
-import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, namedPool, testName, retime, shardVerdict, soloEnvironment, soloTests, failedChecks, whatFailed } from "./shard.mjs";
-import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isDeferred, isPass, planHead, tallyRows } from "./tally.mjs";
+import {
+  WEEKLY_HEADER,
+  chunks,
+  classifyFailure,
+  errorCounts,
+  gateLists,
+  importOutcome,
+  nearLimit,
+  numbered,
+  parseSmokeLog,
+  parseWeekly,
+  parseWindow,
+  renderReceipt,
+  windowNames,
+  namedPool,
+  testName,
+  retime,
+  shardVerdict,
+  soloEnvironment,
+  soloTests,
+  failedChecks,
+  whatFailed,
+} from "./shard.mjs";
+import {
+  WEEKLY_MAX_DAYS,
+  checkNodeRow,
+  checkTally,
+  checkWeeklySweep,
+  expectedShards,
+  isDeferred,
+  isPass,
+  planHead,
+  tallyRows,
+} from "./tally.mjs";
 import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -27,7 +60,9 @@ test("the gate lists split the sorted tests by the bot marker and number from 1"
   // The bot tier as a whole: the weekly list (ruling ca) moves bot tests out of the promotion list, not out of the tree.
   assert.ok(lists.bots.length + lists.weekly.bots.length >= 30);
   assert.deepEqual([...lists.tests].sort(), lists.tests);
-  assert.ok(lists.bots.includes("alpha_bot_sweep_test") && !lists.tests.includes("alpha_bot_sweep_test"));
+  assert.ok(
+    lists.bots.includes("alpha_bot_sweep_test") && !lists.tests.includes("alpha_bot_sweep_test"),
+  );
   assert.equal(numbered(["a_test", "b_test"]), "     1\ta_test.gd\n     2\tb_test.gd");
 });
 
@@ -55,8 +90,15 @@ test("a runner log yields one result per test and ignores import and summary lin
 });
 
 test("error lines are counted by kind", () => {
-  const text = "ERROR: a leak\nWARNING: 3 ObjectDB instances leaked at exit\n   SCRIPT ERROR: bad call\nResource still in use\nnot an ERROR line\n";
-  assert.deepEqual(errorCounts(text), { error: 1, script_error: 1, in_use: 1, freed: 0, leaked_warning: 1 });
+  const text =
+    "ERROR: a leak\nWARNING: 3 ObjectDB instances leaked at exit\n   SCRIPT ERROR: bad call\nResource still in use\nnot an ERROR line\n";
+  assert.deepEqual(errorCounts(text), {
+    error: 1,
+    script_error: 1,
+    in_use: 1,
+    freed: 0,
+    leaked_warning: 1,
+  });
 });
 
 test("a failure is carried only with a ledger row, and blocks when it fails alone without one", () => {
@@ -66,7 +108,10 @@ test("a failure is carried only with a ledger row, and blocks when it fails alon
   const mismatch = classifyFailure("wobble_test", [false, false, false, false], ledger);
   assert.equal(mismatch.call, "mismatch");
   assert.match(mismatch.note, /failed every solo run/);
-  assert.deepEqual(shardVerdict([mismatch]), { ok: false, line: "RED: 1 listed as a flake but red alone (wobble_test)" });
+  assert.deepEqual(shardVerdict([mismatch]), {
+    ok: false,
+    line: "RED: 1 listed as a flake but red alone (wobble_test)",
+  });
   const flake = classifyFailure("fresh_test", [true, true], ledger);
   assert.equal(flake.call, "new-flake");
   assert.equal(flake.alone, "2/2 pass alone");
@@ -78,75 +123,205 @@ test("a failed test with a red row is carried from its first run and is not reru
   // The first run already shows which check failed, and that run is read against the row, so a rerun adds only time.
   // (Trial gate on 375fe11a, 15 Nov: two such reruns took 832 s of the bot shard's 6922 s.)
   const failedACheck = () => ({ timedOut: false, failLines: 1 });
-  assert.deepEqual(soloTests(["red_test", "wobble_test", "fresh_test"], ledger, failedACheck), ["wobble_test", "fresh_test"]);
+  assert.deepEqual(soloTests(["red_test", "wobble_test", "fresh_test"], ledger, failedACheck), [
+    "wobble_test",
+    "fresh_test",
+  ]);
   // A time-out, a kill or a run with no failing check does not show which check failed, so it is still rerun.
-  assert.deepEqual(soloTests(["red_test"], ledger, () => ({ timedOut: true, failLines: 0 })), ["red_test"]);
-  assert.deepEqual(soloTests(["red_test"], ledger, () => ({ timedOut: false, failLines: 0 })), ["red_test"]);
-  assert.deepEqual(soloTests(["red_test"], ledger, () => null), ["red_test"]);
+  assert.deepEqual(
+    soloTests(["red_test"], ledger, () => ({ timedOut: true, failLines: 0 })),
+    ["red_test"],
+  );
+  assert.deepEqual(
+    soloTests(["red_test"], ledger, () => ({ timedOut: false, failLines: 0 })),
+    ["red_test"],
+  );
+  assert.deepEqual(
+    soloTests(["red_test"], ledger, () => null),
+    ["red_test"],
+  );
   const carried = classifyFailure("red_test", [], ledger);
   assert.equal(carried.call, "carried");
   assert.equal(carried.alone, "not rerun: red row, a check failed in the first run");
   // By test name alone the call is the same with solo runs; what each failed run did is read separately (whatFailed).
-  for (const runs of [[false], [true], [false, false], [true, true]]) assert.equal(classifyFailure("red_test", runs, ledger).call, "carried");
+  for (const runs of [[false], [true], [false, false], [true, true]])
+    assert.equal(classifyFailure("red_test", runs, ledger).call, "carried");
   // Without a row, no solo run is never a pass.
   assert.equal(classifyFailure("fresh_test", [], ledger).call, "new-red");
 });
 
 test("a red row carries only the check it names; another failing check in the same test is a new red (ruling dx)", () => {
-  const named = parseLedger(["test\tkind\tcause\towner\tadded\treview\tcheck", "red_test\tred\tpin off by 2 s\tcoordinator\t2026-11-09\t2026-11-23\tpin within 2 s"].join("\n")).rows;
-  assert.equal(classifyFailure("red_test", [], named, null, { labels: ["pin within 2 s"] }).call, "carried");
-  const second = classifyFailure("red_test", [], named, null, { labels: ["pin within 2 s", "stage 1 draw"] });
+  const named = parseLedger(
+    [
+      "test\tkind\tcause\towner\tadded\treview\tcheck",
+      "red_test\tred\tpin off by 2 s\tcoordinator\t2026-11-09\t2026-11-23\tpin within 2 s",
+    ].join("\n"),
+  ).rows;
+  assert.equal(
+    classifyFailure("red_test", [], named, null, { labels: ["pin within 2 s"] }).call,
+    "carried",
+  );
+  const second = classifyFailure("red_test", [], named, null, {
+    labels: ["pin within 2 s", "stage 1 draw"],
+  });
   assert.equal(second.call, "new-red");
   assert.match(second.note, /fails a check its row does not name: stage 1 draw/);
   assert.deepEqual(shardVerdict([second]), { ok: false, line: "RED: 1 new red (red_test)" });
   // The same holds when the test was rerun alone.
-  assert.equal(classifyFailure("red_test", [false], named, null, { labels: ["stage 1 draw"] }).call, "new-red");
+  assert.equal(
+    classifyFailure("red_test", [false], named, null, { labels: ["stage 1 draw"] }).call,
+    "new-red",
+  );
   // A killed run is not the named check either.
-  assert.equal(classifyFailure("red_test", [false], named, null, { labels: [], timedOut: true }).call, "new-red");
-  assert.deepEqual(failedChecks("[a] 1 -> PASS\n  >> [pin within 2 s] got 3 -> FAIL\n[pin within 2 s] got 3 -> FAIL\n[stage 1 draw] got \"x\", want \"y\" -> FAIL\n"), ["pin within 2 s", "stage 1 draw"]);
+  assert.equal(
+    classifyFailure("red_test", [false], named, null, { labels: [], timedOut: true }).call,
+    "new-red",
+  );
+  assert.deepEqual(
+    failedChecks(
+      '[a] 1 -> PASS\n  >> [pin within 2 s] got 3 -> FAIL\n[pin within 2 s] got 3 -> FAIL\n[stage 1 draw] got "x", want "y" -> FAIL\n',
+    ),
+    ["pin within 2 s", "stage 1 draw"],
+  );
 });
 
 test("every failed run of a listed test is read against its row, not only the last one (PR 1051 review)", () => {
-  const named = parseLedger(["test\tkind\tcause\towner\tadded\treview\tcheck", "red_test\tred\tpin off by 2 s\tcoordinator\t2026-11-09\t2026-11-23\tpin within 2 s"].join("\n")).rows;
+  const named = parseLedger(
+    [
+      "test\tkind\tcause\towner\tadded\treview\tcheck",
+      "red_test\tred\tpin off by 2 s\tcoordinator\t2026-11-09\t2026-11-23\tpin within 2 s",
+    ].join("\n"),
+  ).rows;
   const pin = "[pin within 2 s] got 3 -> FAIL\n";
   const other = "[stage 1 draw] got 1 -> FAIL\n";
   // First run killed after an unnamed check failed; alone it fails only the named check.
-  const mixed = whatFailed([{ ok: false, text: other, timedOut: true }, { ok: false, text: pin, timedOut: false }]);
-  assert.deepEqual(mixed, { labels: ["stage 1 draw", "pin within 2 s"], timedOut: true, errorLine: false });
+  const mixed = whatFailed([
+    { ok: false, text: other, timedOut: true },
+    { ok: false, text: pin, timedOut: false },
+  ]);
+  assert.deepEqual(mixed, {
+    labels: ["stage 1 draw", "pin within 2 s"],
+    timedOut: true,
+    errorLine: false,
+  });
   assert.equal(classifyFailure("red_test", [false], named, null, mixed).call, "new-red");
   // Every solo run passed: the first run is still read, so a retry does not decide the call.
-  const retried = whatFailed([{ ok: false, text: other, timedOut: false }, { ok: true, text: "[a] 1 -> PASS\n", timedOut: false }]);
+  const retried = whatFailed([
+    { ok: false, text: other, timedOut: false },
+    { ok: true, text: "[a] 1 -> PASS\n", timedOut: false },
+  ]);
   assert.deepEqual(retried.labels, ["stage 1 draw"]);
   assert.equal(classifyFailure("red_test", [true], named, null, retried).call, "new-red");
-  assert.equal(classifyFailure("red_test", [true], named, null, whatFailed([{ ok: false, text: pin, timedOut: false }, { ok: true, text: "", timedOut: false }])).call, "carried");
+  assert.equal(
+    classifyFailure(
+      "red_test",
+      [true],
+      named,
+      null,
+      whatFailed([
+        { ok: false, text: pin, timedOut: false },
+        { ok: true, text: "", timedOut: false },
+      ]),
+    ).call,
+    "carried",
+  );
   // A passing run's lines are not read; an ERROR line of a failed run is.
-  assert.deepEqual(whatFailed([{ ok: false, text: pin + "ERROR: resumed after await\n", timedOut: false }, { ok: true, text: other, timedOut: false }]), { labels: ["pin within 2 s"], timedOut: false, errorLine: true });
-  assert.equal(whatFailed([{ ok: false, text: pin + "SCRIPT ERROR: Invalid call\n", timedOut: false }]).errorLine, true);
+  assert.deepEqual(
+    whatFailed([
+      { ok: false, text: pin + "ERROR: resumed after await\n", timedOut: false },
+      { ok: true, text: other, timedOut: false },
+    ]),
+    { labels: ["pin within 2 s"], timedOut: false, errorLine: true },
+  );
+  assert.equal(
+    whatFailed([{ ok: false, text: pin + "SCRIPT ERROR: Invalid call\n", timedOut: false }])
+      .errorLine,
+    true,
+  );
   // macOS prints the dummy renderer's shutdown lines on a clean run; only there they are not an error line.
-  const shutdown = pin + "ERROR: 2 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.\n";
-  assert.equal(whatFailed([{ ok: false, text: shutdown, timedOut: false }], "darwin").errorLine, false);
-  assert.equal(whatFailed([{ ok: false, text: shutdown, timedOut: false }], "linux").errorLine, true);
-  assert.equal(whatFailed([{ ok: false, text: shutdown + "ERROR: resumed after await\n", timedOut: false }], "darwin").errorLine, true);
+  const shutdown =
+    pin +
+    "ERROR: 2 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.\n";
+  assert.equal(
+    whatFailed([{ ok: false, text: shutdown, timedOut: false }], "darwin").errorLine,
+    false,
+  );
+  assert.equal(
+    whatFailed([{ ok: false, text: shutdown, timedOut: false }], "linux").errorLine,
+    true,
+  );
+  assert.equal(
+    whatFailed(
+      [{ ok: false, text: shutdown + "ERROR: resumed after await\n", timedOut: false }],
+      "darwin",
+    ).errorLine,
+    true,
+  );
   // A failed run with no log, and a failing line the pattern cannot label, are never read as nothing.
-  assert.deepEqual(whatFailed([{ ok: false, text: null, timedOut: false }]).labels, ["a failed run left no log"]);
-  assert.deepEqual(failedChecks("CUA check -> FAIL: door\n[pin within 2 s] got 3 -> FAIL\n"), ["unlabelled failing line: CUA check -> FAIL: door", "pin within 2 s"]);
+  assert.deepEqual(whatFailed([{ ok: false, text: null, timedOut: false }]).labels, [
+    "a failed run left no log",
+  ]);
+  assert.deepEqual(failedChecks("CUA check -> FAIL: door\n[pin within 2 s] got 3 -> FAIL\n"), [
+    "unlabelled failing line: CUA check -> FAIL: door",
+    "pin within 2 s",
+  ]);
 });
 
 test("a load time-out never hides a check the row does not name (PR 1051, second review)", () => {
-  const named = parseLedger(["test\tkind\tcause\towner\tadded\treview\tcheck", "red_test\tred\tpin off by 2 s\tcoordinator\t2026-11-09\t2026-11-23\tpin within 2 s"].join("\n")).rows;
-  const loaded = { threads: 32, runs: [{ timedOut: true, failLines: 0, load: 20 }, { timedOut: true, failLines: 0, load: 20 }] };
+  const named = parseLedger(
+    [
+      "test\tkind\tcause\towner\tadded\treview\tcheck",
+      "red_test\tred\tpin off by 2 s\tcoordinator\t2026-11-09\t2026-11-23\tpin within 2 s",
+    ].join("\n"),
+  ).rows;
+  const loaded = {
+    threads: 32,
+    runs: [
+      { timedOut: true, failLines: 0, load: 20 },
+      { timedOut: true, failLines: 0, load: 20 },
+    ],
+  };
   // First run failed an unnamed check and was killed; both solo runs were killed under load with no check.
-  const hidden = classifyFailure("red_test", [false, false], named, loaded, { labels: ["stage 1 draw"], timedOut: true, errorLine: false });
+  const hidden = classifyFailure("red_test", [false, false], named, loaded, {
+    labels: ["stage 1 draw"],
+    timedOut: true,
+    errorLine: false,
+  });
   assert.equal(hidden.call, "new-red");
   assert.match(hidden.note, /stage 1 draw/);
   // Only the kill is unnamed: that is what a retime on a quiet machine can settle.
-  assert.equal(classifyFailure("red_test", [false, false], named, loaded, { labels: ["pin within 2 s"], timedOut: true, errorLine: false }).call, "suspect-load");
-  assert.equal(classifyFailure("red_test", [false, false], named, loaded, { labels: [], timedOut: true, errorLine: false }).call, "suspect-load");
+  assert.equal(
+    classifyFailure("red_test", [false, false], named, loaded, {
+      labels: ["pin within 2 s"],
+      timedOut: true,
+      errorLine: false,
+    }).call,
+    "suspect-load",
+  );
+  assert.equal(
+    classifyFailure("red_test", [false, false], named, loaded, {
+      labels: [],
+      timedOut: true,
+      errorLine: false,
+    }).call,
+    "suspect-load",
+  );
   // A passing check line is not a failing check, and an error line counts as the runner counts it: at column 0.
   assert.deepEqual(failedChecks("[x] expected -> FAIL, got it -> PASS\n"), []);
   // The last arrow on the line is the verdict: a failing check whose detail quotes "-> PASS" still fails.
-  assert.deepEqual(failedChecks('[stage 1 draw] wanted an "a -> PASS" line, got none -> FAIL\n'), ["stage 1 draw"]);
-  assert.equal(whatFailed([{ ok: false, text: "[pin within 2 s] got 3 -> FAIL\n  child: ERROR: echoed\n   ERROR: indented\n", timedOut: false }]).errorLine, false);
+  assert.deepEqual(failedChecks('[stage 1 draw] wanted an "a -> PASS" line, got none -> FAIL\n'), [
+    "stage 1 draw",
+  ]);
+  assert.equal(
+    whatFailed([
+      {
+        ok: false,
+        text: "[pin within 2 s] got 3 -> FAIL\n  child: ERROR: echoed\n   ERROR: indented\n",
+        timedOut: false,
+      },
+    ]).errorLine,
+    false,
+  );
 });
 
 test("a shard is red only for a new red, and its verdict names what it carried", () => {
@@ -154,8 +329,14 @@ test("a shard is red only for a new red, and its verdict names what it carried",
   const flake = classifyFailure("fresh_test", [true, true], ledger);
   const red = classifyFailure("broken_test", [false, false], ledger);
   assert.deepEqual(shardVerdict([]), { ok: true, line: "PASS, no new red" });
-  assert.deepEqual(shardVerdict([carried, flake]), { ok: true, line: "PASS, no new red (1 carried on the ledger, 1 new load flake for its owner to fix)" });
-  assert.deepEqual(shardVerdict([carried, red]), { ok: false, line: "RED: 1 new red (broken_test)" });
+  assert.deepEqual(shardVerdict([carried, flake]), {
+    ok: true,
+    line: "PASS, no new red (1 carried on the ledger, 1 new load flake for its owner to fix)",
+  });
+  assert.deepEqual(shardVerdict([carried, red]), {
+    ok: false,
+    line: "RED: 1 new red (broken_test)",
+  });
 });
 
 test("tests at or past 85% of their limit are listed, nearest first", () => {
@@ -165,7 +346,10 @@ test("tests at or past 85% of their limit are listed, nearest first", () => {
     { test: "closer_test", seconds: 175 },
   ];
   const limits = { fast_test: 180_000, close_test: 360_000, closer_test: 180_000 };
-  assert.deepEqual(nearLimit(results, (name) => limits[name]).map((result) => result.test), ["closer_test", "close_test"]);
+  assert.deepEqual(
+    nearLimit(results, (name) => limits[name]).map((result) => result.test),
+    ["closer_test", "close_test"],
+  );
 });
 
 test("the receipt leads with the verdict and lists steps, failures and error counts", () => {
@@ -178,7 +362,10 @@ test("the receipt leads with the verdict and lists steps, failures and error cou
     scale: 1.5,
     window: "non-bot list 1 to 2 of 1087",
     steps: { "import-1": { exit: 0, seconds: 90 }, chunk00: { exit: 1, seconds: 400 } },
-    results: [{ test: "a_test", ok: true, seconds: 12 }, { test: "red_test", ok: false, seconds: 30 }],
+    results: [
+      { test: "a_test", ok: true, seconds: 12 },
+      { test: "red_test", ok: false, seconds: 30 },
+    ],
     failures,
     counts: errorCounts(""),
     slow: [],
@@ -186,10 +373,16 @@ test("the receipt leads with the verdict and lists steps, failures and error cou
     startedAt: "2026-11-09T20:00:00Z",
     finishedAt: "2026-11-09T20:40:00Z",
   });
-  assert.match(text, /^# Gate shard: tests 1-2 on abcd1234\n\n\*\*Verdict: PASS, no new red \(1 carried on the ledger\)\.\*\* 1 of 2 passed on the first run\./);
+  assert.match(
+    text,
+    /^# Gate shard: tests 1-2 on abcd1234\n\n\*\*Verdict: PASS, no new red \(1 carried on the ledger\)\.\*\* 1 of 2 passed on the first run\./,
+  );
   assert.match(text, /Time limits scaled by 1\.5/);
   assert.match(text, /\| chunk00 \| 1 \| 400 s \|/);
-  assert.match(text, /\| red_test \| 0\/2 pass alone \| carried \| red, owner coordinator, review 2026-11-23: pin off by 2 s \|/);
+  assert.match(
+    text,
+    /\| red_test \| 0\/2 pass alone \| carried \| red, owner coordinator, review 2026-11-23: pin off by 2 s \|/,
+  );
 });
 
 test("changed paths sort into game files, test files and the rest", () => {
@@ -223,11 +416,19 @@ test("a changed test file reruns every test that reaches it, however many steps 
     ),
   );
   const direct = testsToRerun(index, ["tests/kest_kit_test.gd"]);
-  assert.deepEqual([...direct.keys()].sort(), ["tests/kest_finale_test.gd", "tests/kest_kit_test.gd", "tests/kest_set_piece_test.gd"]);
+  assert.deepEqual([...direct.keys()].sort(), [
+    "tests/kest_finale_test.gd",
+    "tests/kest_kit_test.gd",
+    "tests/kest_set_piece_test.gd",
+  ]);
   assert.equal(direct.get("tests/kest_kit_test.gd"), "changed");
   assert.equal(direct.get("tests/kest_set_piece_test.gd"), "reaches tests/kest_kit_test.gd");
   const support = testsToRerun(index, ["tests/support/probe.gd"]);
-  assert.deepEqual([...support.keys()].sort(), ["tests/kest_finale_test.gd", "tests/kest_kit_test.gd", "tests/kest_set_piece_test.gd"]);
+  assert.deepEqual([...support.keys()].sort(), [
+    "tests/kest_finale_test.gd",
+    "tests/kest_kit_test.gd",
+    "tests/kest_set_piece_test.gd",
+  ]);
   assert.equal(testsToRerun(index, ["tests/deleted_test.gd"]).size, 0);
 });
 
@@ -238,7 +439,20 @@ test("a test is placed in the list its shard reads", () => {
   assert.equal(place("gone_test", lists), "not in a gate list");
 });
 
-const plan = (rows) => ["## Gate-side", "| Check | Verdict |", "| --- | --- |", "| placeholders | PASS |", "", "## Tally", "| Shard | Verdict |", "| --- | --- |", ...rows, "", "## Verdict"].join("\n");
+const plan = (rows) =>
+  [
+    "## Gate-side",
+    "| Check | Verdict |",
+    "| --- | --- |",
+    "| placeholders | PASS |",
+    "",
+    "## Tally",
+    "| Shard | Verdict |",
+    "| --- | --- |",
+    ...rows,
+    "",
+    "## Verdict",
+  ].join("\n");
 const full = [
   "| tests 1-5 | PASS. Receipt tests-1-5.md |",
   "| tests 6-10 | PASS. Receipt tests-6-10.md |",
@@ -255,7 +469,14 @@ test("only the shard tables of a plan are read", () => {
   const rows = tallyRows(plan(full));
   assert.equal(rows.length, 8);
   assert.deepEqual(rows[0], { shard: "tests 1-5", verdict: "PASS. Receipt tests-1-5.md", line: 9 });
-  assert.deepEqual(expectedShards(10), ["bots 1", "bots 2", "bands A", "bands B", "bands C", "red team"]);
+  assert.deepEqual(expectedShards(10), [
+    "bots 1",
+    "bots 2",
+    "bands A",
+    "bands B",
+    "bands C",
+    "red team",
+  ]);
 });
 
 test("a full tally passes", () => {
@@ -264,24 +485,82 @@ test("a full tally passes", () => {
 
 test("the wave gate needs every test window and the scoped row, and lets a release shard wait", () => {
   const wave = { ...counts, scope: "wave" };
-  const tests = ["| tests 1-5 | PASS. Receipt tests-1-5.md |", "| tests 6-10 | PASS. Receipt tests-6-10.md |"];
-  const scoped = "| scoped | PASS 4/4: world1_run_test, posture_bands_flume_test, bot_run_end_test, session_test. Receipt scoped.md |";
-  assert.deepEqual(checkTally(tallyRows(plan([...tests, scoped])), wave), [], "no row at all for bots, bands or the red team");
-  const deferred = ["| bands B | DEFERRED to the release gate; last read PASS on f165fbb4, receipt w36-f165fbb4/bands-B |", "| red team | DEFERRED to the release gate; last read CLEAR on f165fbb4, receipt w36-f165fbb4/redteam |"];
+  const tests = [
+    "| tests 1-5 | PASS. Receipt tests-1-5.md |",
+    "| tests 6-10 | PASS. Receipt tests-6-10.md |",
+  ];
+  const scoped =
+    "| scoped | PASS 4/4: world1_run_test, posture_bands_flume_test, bot_run_end_test, session_test. Receipt scoped.md |";
+  assert.deepEqual(
+    checkTally(tallyRows(plan([...tests, scoped])), wave),
+    [],
+    "no row at all for bots, bands or the red team",
+  );
+  const deferred = [
+    "| bands B | DEFERRED to the release gate; last read PASS on f165fbb4, receipt w36-f165fbb4/bands-B |",
+    "| red team | DEFERRED to the release gate; last read CLEAR on f165fbb4, receipt w36-f165fbb4/redteam |",
+  ];
   assert.deepEqual(checkTally(tallyRows(plan([...tests, scoped, ...deferred])), wave), []);
   assert.match(checkTally(tallyRows(plan(tests)), wave).join("\n"), /no row for "scoped"/);
-  assert.match(checkTally(tallyRows(plan([tests[0], scoped])), wave).join("\n"), /non-bot tests 6 to 10 have no row/);
-  assert.match(checkTally(tallyRows(plan([...tests, "| scoped | RED world1_run_test fell. Receipt scoped.md |"])), wave).join("\n"), /"scoped" does not open with PASS/);
-  assert.match(checkTally(tallyRows(plan([...tests, scoped, "| bands A | RED posture_bands_flume_test. Receipt bands-A.md |"])), wave).join("\n"), /"bands A" does not open with PASS/, "a release shard that was read and is red still blocks");
-  assert.match(checkTally(tallyRows(plan([...tests, scoped, "| bands B | DEFERRED to the release gate |"])), wave).join("\n"), /"bands B" names no receipt/);
-  assert.match(checkTally(tallyRows(plan(["| tests 1-5 | DEFERRED. Receipt old.md |", tests[1], scoped])), wave).join("\n"), /"tests 1-5" does not open with PASS/, "a test window is never deferred");
-  assert.match(checkTally(tallyRows(plan([...tests, "| scoped | DEFERRED. Receipt old.md |"])), wave).join("\n"), /"scoped" does not open with PASS/, "the scoped row is never deferred");
+  assert.match(
+    checkTally(tallyRows(plan([tests[0], scoped])), wave).join("\n"),
+    /non-bot tests 6 to 10 have no row/,
+  );
+  assert.match(
+    checkTally(
+      tallyRows(plan([...tests, "| scoped | RED world1_run_test fell. Receipt scoped.md |"])),
+      wave,
+    ).join("\n"),
+    /"scoped" does not open with PASS/,
+  );
+  assert.match(
+    checkTally(
+      tallyRows(
+        plan([...tests, scoped, "| bands A | RED posture_bands_flume_test. Receipt bands-A.md |"]),
+      ),
+      wave,
+    ).join("\n"),
+    /"bands A" does not open with PASS/,
+    "a release shard that was read and is red still blocks",
+  );
+  assert.match(
+    checkTally(
+      tallyRows(plan([...tests, scoped, "| bands B | DEFERRED to the release gate |"])),
+      wave,
+    ).join("\n"),
+    /"bands B" names no receipt/,
+  );
+  assert.match(
+    checkTally(
+      tallyRows(plan(["| tests 1-5 | DEFERRED. Receipt old.md |", tests[1], scoped])),
+      wave,
+    ).join("\n"),
+    /"tests 1-5" does not open with PASS/,
+    "a test window is never deferred",
+  );
+  assert.match(
+    checkTally(tallyRows(plan([...tests, "| scoped | DEFERRED. Receipt old.md |"])), wave).join(
+      "\n",
+    ),
+    /"scoped" does not open with PASS/,
+    "the scoped row is never deferred",
+  );
 });
 
 test("the release gate defers nothing", () => {
-  const rows = full.map((row) => (row.startsWith("| bands B") ? "| bands B | DEFERRED to the release gate; last read PASS, receipt bands-B.md |" : row));
-  assert.match(checkTally(tallyRows(plan(rows)), counts).join("\n"), /"bands B" does not open with PASS/);
-  assert.match(checkTally(tallyRows(plan(full.slice(0, 5))), counts).join("\n"), /no row for "bands B"/);
+  const rows = full.map((row) =>
+    row.startsWith("| bands B")
+      ? "| bands B | DEFERRED to the release gate; last read PASS, receipt bands-B.md |"
+      : row,
+  );
+  assert.match(
+    checkTally(tallyRows(plan(rows)), counts).join("\n"),
+    /"bands B" does not open with PASS/,
+  );
+  assert.match(
+    checkTally(tallyRows(plan(full.slice(0, 5))), counts).join("\n"),
+    /no row for "bands B"/,
+  );
   assert.equal(isDeferred("**DEFERRED** to the release gate"), true);
   assert.equal(isDeferred("PASS, deferred nothing"), false);
 });
@@ -302,20 +581,45 @@ test("an empty verdict, a missing shard, a gap in the tests and a missing receip
 test("a red row blocks until a newer row for the same shard is not red", () => {
   const red = [...full];
   red[4] = "| bands A | RED, one new deterministic red. Receipt bands-A.md |";
-  assert.match(checkTally(tallyRows(plan(red)), counts).join("\n"), /"bands A" does not open with PASS/);
-  const reread = plan(red) + "\n\n## Head moved\n| Shard | Verdict |\n| --- | --- |\n| bands A | PASS after the re-pin. Receipt bands-A-2.md |\n";
+  assert.match(
+    checkTally(tallyRows(plan(red)), counts).join("\n"),
+    /"bands A" does not open with PASS/,
+  );
+  const reread =
+    plan(red) +
+    "\n\n## Head moved\n| Shard | Verdict |\n| --- | --- |\n| bands A | PASS after the re-pin. Receipt bands-A-2.md |\n";
   assert.deepEqual(checkTally(tallyRows(reread), counts), []);
 });
 
 test("a verdict passes only when it opens with PASS or CLEAR, however a red is worded", () => {
-  for (const verdict of ["PASS, no new red. Receipt a.md", "**PASS** 5/5", "Verdict: PASS, no new red", "**Verdict: PASS, no new red (1 carried on the ledger).**", "CLEAR. 0 blockers"]) assert.equal(isPass(verdict), true, verdict);
-  for (const verdict of ["RED 4/5", "NEW RED posture_bands_test", "Verdict: RED: 1 new red (foo_test). receipt gate/x", "red: foo_test failed alone, receipt gate/y", "1 new red", "FAIL", "passed mostly", "see the receipt"]) assert.equal(isPass(verdict), false, verdict);
+  for (const verdict of [
+    "PASS, no new red. Receipt a.md",
+    "**PASS** 5/5",
+    "Verdict: PASS, no new red",
+    "**Verdict: PASS, no new red (1 carried on the ledger).**",
+    "CLEAR. 0 blockers",
+  ])
+    assert.equal(isPass(verdict), true, verdict);
+  for (const verdict of [
+    "RED 4/5",
+    "NEW RED posture_bands_test",
+    "Verdict: RED: 1 new red (foo_test). receipt gate/x",
+    "red: foo_test failed alone, receipt gate/y",
+    "1 new red",
+    "FAIL",
+    "passed mostly",
+    "see the receipt",
+  ])
+    assert.equal(isPass(verdict), false, verdict);
   const worded = [...full];
   worded[0] = "| tests 1-5 | red: foo_test failed alone, receipt gate/y |";
-  assert.match(checkTally(tallyRows(plan(worded)), counts).join("\n"), /"tests 1-5" does not open with PASS/);
+  assert.match(
+    checkTally(tallyRows(plan(worded)), counts).join("\n"),
+    /"tests 1-5" does not open with PASS/,
+  );
 });
 
-test("\"receipts\" counts as naming a receipt", () => {
+test('"receipts" counts as naming a receipt', () => {
   const rows = [...full];
   rows[4] = "| bands A | PASS. receipts in gate/z |";
   assert.deepEqual(checkTally(tallyRows(plan(rows)), counts), []);
@@ -325,8 +629,22 @@ test("the tally refuses a plan that gates another head", () => {
   assert.equal(planHead("/mnt/project-files/gate/w32-58a6de62-gate-plan.md"), "58a6de62");
   assert.equal(planHead("notes.md"), null);
   const rows = tallyRows(plan(full));
-  assert.deepEqual(checkTally(rows, { ...counts, planHead: "58a6de62", head: "58a6de6200f5d9e63434d3bfe5435606968ecf94" }), []);
-  assert.match(checkTally(rows, { ...counts, planHead: "58a6de62", head: "8180ec6cc0000000000000000000000000000000" }).join("\n"), /the plan gates 58a6de62 and this checkout is at 8180ec6c/);
+  assert.deepEqual(
+    checkTally(rows, {
+      ...counts,
+      planHead: "58a6de62",
+      head: "58a6de6200f5d9e63434d3bfe5435606968ecf94",
+    }),
+    [],
+  );
+  assert.match(
+    checkTally(rows, {
+      ...counts,
+      planHead: "58a6de62",
+      head: "8180ec6cc0000000000000000000000000000000",
+    }).join("\n"),
+    /the plan gates 58a6de62 and this checkout is at 8180ec6c/,
+  );
 });
 
 test("tests on the weekly list hold a promotion until a sweep within a week is on the tally", () => {
@@ -334,16 +652,51 @@ test("tests on the weekly list hold a promotion until a sweep within a week is o
   const weekly = { ...counts, weeklyCount: 64, today };
   const withRow = (verdict) => tallyRows(plan([...full, `| weekly sweep | ${verdict} |`]));
   assert.deepEqual(checkTally(tallyRows(plan(full)), { ...counts, today }), [], "no list, no hold");
-  assert.match(checkTally(tallyRows(plan(full)), weekly).join("\n"), /no row for "weekly sweep": 64 tests are on the weekly list/);
-  assert.deepEqual(checkTally(withRow("PASS 2026-11-13 on 3997358b, tests 55/55, bots 9/9. Receipts weekly-tests/receipt.md"), weekly), [], "seven days old still counts");
-  assert.match(checkTally(withRow("PASS 2026-11-12 on 3997358b. Receipt weekly.md"), weekly).join("\n"), /the weekly sweep last ran on 2026-11-12, 8 days ago; a promotion needs one within 7 days/);
-  assert.match(checkTally(withRow("PASS on 3997358b. Receipt weekly.md"), weekly).join("\n"), /"weekly sweep" gives no day the sweep ran/);
-  assert.match(checkTally(withRow("PASS 2026-13-45. Receipt weekly.md"), weekly).join("\n"), /gives no day the sweep ran/);
-  assert.match(checkTally(withRow("PASS 2026-11-21. Receipt weekly.md"), weekly).join("\n"), /is dated 2026-11-21, which is after today/);
-  assert.match(checkTally(withRow("RED 2026-11-19, mind_boss_test failed alone. Receipt weekly.md"), weekly).join("\n"), /"weekly sweep" does not open with PASS/);
-  assert.match(checkTally(withRow("PASS 2026-11-19, 64 of 64"), weekly).join("\n"), /"weekly sweep" names no receipt/);
+  assert.match(
+    checkTally(tallyRows(plan(full)), weekly).join("\n"),
+    /no row for "weekly sweep": 64 tests are on the weekly list/,
+  );
+  assert.deepEqual(
+    checkTally(
+      withRow(
+        "PASS 2026-11-13 on 3997358b, tests 55/55, bots 9/9. Receipts weekly-tests/receipt.md",
+      ),
+      weekly,
+    ),
+    [],
+    "seven days old still counts",
+  );
+  assert.match(
+    checkTally(withRow("PASS 2026-11-12 on 3997358b. Receipt weekly.md"), weekly).join("\n"),
+    /the weekly sweep last ran on 2026-11-12, 8 days ago; a promotion needs one within 7 days/,
+  );
+  assert.match(
+    checkTally(withRow("PASS on 3997358b. Receipt weekly.md"), weekly).join("\n"),
+    /"weekly sweep" gives no day the sweep ran/,
+  );
+  assert.match(
+    checkTally(withRow("PASS 2026-13-45. Receipt weekly.md"), weekly).join("\n"),
+    /gives no day the sweep ran/,
+  );
+  assert.match(
+    checkTally(withRow("PASS 2026-11-21. Receipt weekly.md"), weekly).join("\n"),
+    /is dated 2026-11-21, which is after today/,
+  );
+  assert.match(
+    checkTally(
+      withRow("RED 2026-11-19, mind_boss_test failed alone. Receipt weekly.md"),
+      weekly,
+    ).join("\n"),
+    /"weekly sweep" does not open with PASS/,
+  );
+  assert.match(
+    checkTally(withRow("PASS 2026-11-19, 64 of 64"), weekly).join("\n"),
+    /"weekly sweep" names no receipt/,
+  );
   // The newest row wins, as for every shard: an old sweep is cured by a new row, not by editing the old one.
-  const rerun = plan([...full, "| weekly sweep | PASS 2026-11-01. Receipt old.md |"]) + "\n\n## Sweep rerun\n| Shard | Verdict |\n| --- | --- |\n| weekly sweep | PASS 2026-11-20. Receipt new.md |\n";
+  const rerun =
+    plan([...full, "| weekly sweep | PASS 2026-11-01. Receipt old.md |"]) +
+    "\n\n## Sweep rerun\n| Shard | Verdict |\n| --- | --- |\n| weekly sweep | PASS 2026-11-20. Receipt new.md |\n";
   assert.deepEqual(checkTally(tallyRows(rerun), weekly), []);
   assert.equal(WEEKLY_MAX_DAYS, 7);
   assert.deepEqual(checkWeeklySweep([], { weeklyCount: 0 }), []);
@@ -353,7 +706,8 @@ test("tests on the weekly list hold a promotion until a sweep within a week is o
 function listsOf(files) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "gate-weekly-"));
   mkdirSync(path.join(dir, "tests"));
-  for (const [name, text] of Object.entries(files)) writeFileSync(path.join(dir, name === "WEEKLY.tsv" ? "." : "tests", name), text);
+  for (const [name, text] of Object.entries(files))
+    writeFileSync(path.join(dir, name === "WEEKLY.tsv" ? "." : "tests", name), text);
   return gateLists(dir, path.join(dir, "WEEKLY.tsv"));
 }
 const weeklyHead = WEEKLY_HEADER.join("\t") + "\n";
@@ -366,20 +720,46 @@ test("the weekly list takes its tests out of the promotion lists and keeps them 
     "b_test.gd": plainTest,
     "bot_c_test.gd": botTest,
     "bot_d_test.gd": botTest,
-    "WEEKLY.tsv": weeklyHead + "b_test\tworld2\tparked by ruling at\tworlds 2 and 3 reopen\nbot_d_test\told-map-bots\tthe launched game does not use the map\tnever\n",
+    "WEEKLY.tsv":
+      weeklyHead +
+      "b_test\tworld2\tparked by ruling at\tworlds 2 and 3 reopen\nbot_d_test\told-map-bots\tthe launched game does not use the map\tnever\n",
   });
-  assert.deepEqual(lists, { tests: ["a_test"], bots: ["bot_c_test"], weekly: { tests: ["b_test"], bots: ["bot_d_test"] } });
+  assert.deepEqual(lists, {
+    tests: ["a_test"],
+    bots: ["bot_c_test"],
+    weekly: { tests: ["b_test"], bots: ["bot_d_test"] },
+  });
 });
 
 test("with no weekly list the promotion lists hold every test", () => {
-  assert.deepEqual(listsOf({ "a_test.gd": plainTest, "bot_c_test.gd": botTest }), { tests: ["a_test"], bots: ["bot_c_test"], weekly: { tests: [], bots: [] } });
+  assert.deepEqual(listsOf({ "a_test.gd": plainTest, "bot_c_test.gd": botTest }), {
+    tests: ["a_test"],
+    bots: ["bot_c_test"],
+    weekly: { tests: [], bots: [] },
+  });
 });
 
 test("a weekly list that does not parse, or names a missing test, is an error and never a silent skip", () => {
-  assert.throws(() => listsOf({ "a_test.gd": plainTest, "WEEKLY.tsv": "test\tgroup\n" }), /does not parse: line 1/);
-  assert.throws(() => listsOf({ "a_test.gd": plainTest, "WEEKLY.tsv": "" }), /does not parse: line 1/);
-  assert.throws(() => listsOf({ "a_test.gd": plainTest, "WEEKLY.tsv": weeklyHead + "gone_test\tworld2\twhy\twhen\n" }), /names tests that do not exist: gone_test/);
-  const { problems } = parseWeekly(weeklyHead + "a_test\tworld2\t\twhen\ntests/b_test.gd\tworld2\twhy\twhen\na_ok\tg\tr\tw\na_ok\tg\tr\tw\n");
+  assert.throws(
+    () => listsOf({ "a_test.gd": plainTest, "WEEKLY.tsv": "test\tgroup\n" }),
+    /does not parse: line 1/,
+  );
+  assert.throws(
+    () => listsOf({ "a_test.gd": plainTest, "WEEKLY.tsv": "" }),
+    /does not parse: line 1/,
+  );
+  assert.throws(
+    () =>
+      listsOf({
+        "a_test.gd": plainTest,
+        "WEEKLY.tsv": weeklyHead + "gone_test\tworld2\twhy\twhen\n",
+      }),
+    /names tests that do not exist: gone_test/,
+  );
+  const { problems } = parseWeekly(
+    weeklyHead +
+      "a_test\tworld2\t\twhen\ntests/b_test.gd\tworld2\twhy\twhen\na_ok\tg\tr\tw\na_ok\tg\tr\tw\n",
+  );
   assert.equal(problems.length, 3);
   assert.match(problems.join("\n"), /line 2: a row needs/);
   assert.match(problems.join("\n"), /line 3: "tests\/b_test.gd" must be the test's base name/);
@@ -395,9 +775,19 @@ test("the docs check fails a weekly list that does not parse or names a test wit
     writeFileSync(path.join(root, "sketches/core-loop/tests/a_test.gd"), plainTest);
     writeFileSync(path.join(root, WEEKLY_FILE), weeklyHead + "a_test\tworld2\twhy\twhen\n");
     assert.deepEqual(checkWeekly(root), []);
-    writeFileSync(path.join(root, WEEKLY_FILE), weeklyHead + "a_test\tworld2\twhy\twhen\ngone_test\tworld2\twhy\twhen\nb_test\tworld2\t\twhen\n");
+    writeFileSync(
+      path.join(root, WEEKLY_FILE),
+      weeklyHead +
+        "a_test\tworld2\twhy\twhen\ngone_test\tworld2\twhy\twhen\nb_test\tworld2\t\twhen\n",
+    );
     const findings = checkWeekly(root);
-    assert.deepEqual(findings.map((finding) => [finding.level, finding.line]), [["failure", 4], ["failure", 3]]);
+    assert.deepEqual(
+      findings.map((finding) => [finding.level, finding.line]),
+      [
+        ["failure", 4],
+        ["failure", 3],
+      ],
+    );
     assert.match(findings[1].message, /gone_test has no file/);
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -407,10 +797,20 @@ test("the docs check fails a weekly list that does not parse or names a test wit
 test("a shard reads its import the way the runner does: a signal is the engine's crash, a script error is not clean", () => {
   assert.equal(importOutcome(0, "[ DONE ] reimport\n"), "ok");
   assert.equal(importOutcome("SIGSEGV", "[   0% ] reimport | NotoSans-Bold.ttf\n"), "engine crash");
-  assert.equal(importOutcome("SIGABRT", "malloc(): smallbin double linked list corrupted\n"), "engine crash");
+  assert.equal(
+    importOutcome("SIGABRT", "malloc(): smallbin double linked list corrupted\n"),
+    "engine crash",
+  );
   assert.equal(importOutcome(139, ""), "engine crash");
-  assert.equal(importOutcome("SIGKILL", ""), "failed", "the shard's own time limit is not an engine crash");
-  assert.equal(importOutcome(0, "SCRIPT ERROR: Parse Error: Could not preload resource file\n"), "script errors");
+  assert.equal(
+    importOutcome("SIGKILL", ""),
+    "failed",
+    "the shard's own time limit is not an engine crash",
+  );
+  assert.equal(
+    importOutcome(0, "SCRIPT ERROR: Parse Error: Could not preload resource file\n"),
+    "script errors",
+  );
 });
 
 const timedOut = { timedOut: true, failLines: 0 };
@@ -437,33 +837,97 @@ test("two time-outs at load 58 on 32 threads with no failing check are suspect-l
   const runs = evidence(loaded(58), loaded(61));
   const call = classifyFailure("music_params_test", [false, false], ledger, runs);
   assert.equal(call.call, "suspect-load");
-  assert.equal(classifyFailure("music_params_test", [false, false], ledger).call, "new-red", "without the evidence it is the old call");
-  assert.equal(classifyFailure("fresh_test", [false, false], ledger, evidence(loaded(58, { failLines: 1 }), loaded(58))).call, "new-red");
-  assert.equal(classifyFailure("fresh_test", [false, false], ledger, evidence(loaded(58), { timedOut: false, failLines: 0, load: 58 })).call, "new-red", "a failure that is not a time-out is not the machine's");
-  assert.equal(classifyFailure("fresh_test", [false, false], ledger, evidence(loaded(16), loaded(3))).call, "new-red", "load at the line (32 x 0.5) is not over it");
-  assert.equal(classifyFailure("fresh_test", [false, false], ledger, evidence(loaded(5), loaded(17))).call, "suspect-load", "one run over the line is enough");
-  assert.equal(classifyFailure("fresh_test", [true, true], ledger, evidence(loaded(99), loaded(99))).call, "new-flake");
+  assert.equal(
+    classifyFailure("music_params_test", [false, false], ledger).call,
+    "new-red",
+    "without the evidence it is the old call",
+  );
+  assert.equal(
+    classifyFailure(
+      "fresh_test",
+      [false, false],
+      ledger,
+      evidence(loaded(58, { failLines: 1 }), loaded(58)),
+    ).call,
+    "new-red",
+  );
+  assert.equal(
+    classifyFailure(
+      "fresh_test",
+      [false, false],
+      ledger,
+      evidence(loaded(58), { timedOut: false, failLines: 0, load: 58 }),
+    ).call,
+    "new-red",
+    "a failure that is not a time-out is not the machine's",
+  );
+  assert.equal(
+    classifyFailure("fresh_test", [false, false], ledger, evidence(loaded(16), loaded(3))).call,
+    "new-red",
+    "load at the line (32 x 0.5) is not over it",
+  );
+  assert.equal(
+    classifyFailure("fresh_test", [false, false], ledger, evidence(loaded(5), loaded(17))).call,
+    "suspect-load",
+    "one run over the line is enough",
+  );
+  assert.equal(
+    classifyFailure("fresh_test", [true, true], ledger, evidence(loaded(99), loaded(99))).call,
+    "new-flake",
+  );
   assert.equal(classifyFailure("red_test", [false, false], ledger, runs).call, "carried");
-  assert.equal(classifyFailure("wobble_test", [true, false], ledger, evidence(loaded(5), loaded(90))).call, "carried");
+  assert.equal(
+    classifyFailure("wobble_test", [true, false], ledger, evidence(loaded(5), loaded(90))).call,
+    "carried",
+  );
 });
 
 test("a listed flake whose every solo run timed out under load is suspect-load, not a mismatch", () => {
   const four = evidence(loaded(70), loaded(70), loaded(70), loaded(70));
-  assert.equal(classifyFailure("wobble_test", [false, false, false, false], ledger).call, "mismatch");
-  assert.equal(classifyFailure("wobble_test", [false, false, false, false], ledger, four).call, "suspect-load");
-  assert.equal(classifyFailure("wobble_test", [false, false], ledger, evidence(loaded(70, { failLines: 2 }), loaded(70))).call, "mismatch");
+  assert.equal(
+    classifyFailure("wobble_test", [false, false, false, false], ledger).call,
+    "mismatch",
+  );
+  assert.equal(
+    classifyFailure("wobble_test", [false, false, false, false], ledger, four).call,
+    "suspect-load",
+  );
+  assert.equal(
+    classifyFailure(
+      "wobble_test",
+      [false, false],
+      ledger,
+      evidence(loaded(70, { failLines: 2 }), loaded(70)),
+    ).call,
+    "mismatch",
+  );
 });
 
 test("suspect-load blocks as INCONCLUSIVE, and a real red beside it keeps the shard RED and names both", () => {
-  const suspect = classifyFailure("music_params_test", [false, false], ledger, evidence(loaded(58), loaded(58)));
+  const suspect = classifyFailure(
+    "music_params_test",
+    [false, false],
+    ledger,
+    evidence(loaded(58), loaded(58)),
+  );
   const red = classifyFailure("broken_test", [false, false], ledger);
   const flake = classifyFailure("fresh_test", [true, true], ledger);
-  assert.deepEqual(shardVerdict([suspect, flake]), { ok: false, inconclusive: true, line: 'INCONCLUSIVE: 1 time-out(s) under load (music_params_test); rerun alone on a quiet machine with "node scripts/gate/shard.mjs retime"' });
-  assert.deepEqual(shardVerdict([suspect, red]), { ok: false, line: "RED: 1 new red (broken_test); 1 time-out(s) under load (music_params_test)" });
+  assert.deepEqual(shardVerdict([suspect, flake]), {
+    ok: false,
+    inconclusive: true,
+    line: 'INCONCLUSIVE: 1 time-out(s) under load (music_params_test); rerun alone on a quiet machine with "node scripts/gate/shard.mjs retime"',
+  });
+  assert.deepEqual(shardVerdict([suspect, red]), {
+    ok: false,
+    line: "RED: 1 new red (broken_test); 1 time-out(s) under load (music_params_test)",
+  });
 });
 
 test("a plan row that opens with INCONCLUSIVE is not a pass", () => {
-  assert.equal(isPass('INCONCLUSIVE: 1 time-out(s) under load (a_test); rerun alone. Receipt x.md'), false);
+  assert.equal(
+    isPass("INCONCLUSIVE: 1 time-out(s) under load (a_test); rerun alone. Receipt x.md"),
+    false,
+  );
   assert.equal(isPass("**Verdict: INCONCLUSIVE: 2 time-out(s) under load (a_test)**"), false);
 });
 
@@ -477,7 +941,10 @@ test("the receipt shows the load of every step, and a dash for a step saved befo
     godot: "Godot_v4.7.2",
     scale: 1,
     window: "non-bot list 1 to 2 of 1087",
-    steps: { "import-1": { exit: 0, seconds: 90 }, chunk00: { exit: 0, seconds: 400, load_start: 12.5, load_end: 58 } },
+    steps: {
+      "import-1": { exit: 0, seconds: 90 },
+      chunk00: { exit: 0, seconds: 400, load_start: 12.5, load_end: 58 },
+    },
     results: [{ test: "a_test", ok: true, seconds: 12 }],
     failures,
     counts: errorCounts(""),
@@ -493,7 +960,13 @@ test("the receipt shows the load of every step, and a dash for a step saved befo
 });
 
 // retime with a fake runner, load reader and sleep: no engine starts.
-async function retimeWith({ tests = ["a_test", "b_test"], runs = 2, outcome, loads = [3], known = ["a_test", "b_test"] }) {
+async function retimeWith({
+  tests = ["a_test", "b_test"],
+  runs = 2,
+  outcome,
+  loads = [3],
+  known = ["a_test", "b_test"],
+}) {
   const out = mkdtempSync(path.join(os.tmpdir(), "gate-retime-"));
   const ran = [];
   let sleeps = 0;
@@ -504,14 +977,36 @@ async function retimeWith({ tests = ["a_test", "b_test"], runs = 2, outcome, loa
   };
   const runSolo = async (test, run) => {
     ran.push(`${test}#${run}`);
-    return { exit: 0, seconds: 100, ok: true, timedOut: false, failLines: 0, ...outcome?.(test, run) };
+    return {
+      exit: 0,
+      seconds: 100,
+      ok: true,
+      timedOut: false,
+      failLines: 0,
+      ...outcome?.(test, run),
+    };
   };
   const logged = [];
   const log = console.log;
   console.log = (line) => logged.push(line);
   try {
-    const code = await retime({ tests, known, runs, out, maxLoad: 8, threads: 32, bots: false, head: "abcd1234ef", load, sleep, runSolo, refuse: () => {} });
-    const receipt = existsSync(path.join(out, "receipt.md")) ? readFileSync(path.join(out, "receipt.md"), "utf8") : null;
+    const code = await retime({
+      tests,
+      known,
+      runs,
+      out,
+      maxLoad: 8,
+      threads: 32,
+      bots: false,
+      head: "abcd1234ef",
+      load,
+      sleep,
+      runSolo,
+      refuse: () => {},
+    });
+    const receipt = existsSync(path.join(out, "receipt.md"))
+      ? readFileSync(path.join(out, "receipt.md"), "utf8")
+      : null;
     return { code, ran, sleeps, receipt, logged };
   } finally {
     console.log = log;
@@ -523,23 +1018,37 @@ test("retime: every run passing alone is PASS and exit 0, with one table row per
   const result = await retimeWith({});
   assert.equal(result.code, 0);
   assert.deepEqual(result.ran, ["a_test#1", "a_test#2", "b_test#1", "b_test#2"]);
-  assert.match(result.receipt, /^# Gate retime: a_test, b_test on abcd1234\n\n\*\*Verdict: PASS: every run passed alone on a quiet machine\.\*\*/);
+  assert.match(
+    result.receipt,
+    /^# Gate retime: a_test, b_test on abcd1234\n\n\*\*Verdict: PASS: every run passed alone on a quiet machine\.\*\*/,
+  );
   assert.match(result.receipt, /\| a_test \| 1 \| 0 \| 100 s \| 3 \| no \| 0 \|/);
   assert.equal(result.receipt.split("\n").filter((line) => /^\| [ab]_test /.test(line)).length, 4);
 });
 
 test("retime: a failing check alone is RED and exit 1", async () => {
-  const result = await retimeWith({ outcome: (test, run) => (test === "b_test" && run === 2 ? { ok: false, exit: 1, failLines: 1 } : {}) });
+  const result = await retimeWith({
+    outcome: (test, run) =>
+      test === "b_test" && run === 2 ? { ok: false, exit: 1, failLines: 1 } : {},
+  });
   assert.equal(result.code, 1);
   assert.match(result.receipt, /Verdict: RED: b_test failed a check alone\./);
-  const crash = await retimeWith({ outcome: (test) => (test === "a_test" ? { ok: false, exit: 134 } : {}) });
+  const crash = await retimeWith({
+    outcome: (test) => (test === "a_test" ? { ok: false, exit: 134 } : {}),
+  });
   assert.equal(crash.code, 1, "a failure that is not a time-out is red");
 });
 
 test("retime: time-outs only are INCONCLUSIVE and exit 2", async () => {
-  const result = await retimeWith({ outcome: (test, run) => (test === "a_test" && run === 1 ? { ok: false, exit: "null", timedOut: true } : {}) });
+  const result = await retimeWith({
+    outcome: (test, run) =>
+      test === "a_test" && run === 1 ? { ok: false, exit: "null", timedOut: true } : {},
+  });
   assert.equal(result.code, 2);
-  assert.match(result.receipt, /Verdict: INCONCLUSIVE: 1 time-out\(s\) even on a quiet machine \(a_test\)/);
+  assert.match(
+    result.receipt,
+    /Verdict: INCONCLUSIVE: 1 time-out\(s\) even on a quiet machine \(a_test\)/,
+  );
   assert.match(result.receipt, /\| a_test \| 1 \| null \| 100 s \| 3 \| yes \| 0 \|/);
 });
 
@@ -548,7 +1057,20 @@ test("retime: an unknown test name stops before any run", async () => {
   let ran = 0;
   try {
     await assert.rejects(
-      retime({ tests: ["a_test", "no_such_test"], known: ["a_test"], runs: 1, out, maxLoad: 8, threads: 32, bots: false, head: "abcd1234ef", load: () => 0, sleep: async () => {}, runSolo: async () => ran++, refuse: () => {} }),
+      retime({
+        tests: ["a_test", "no_such_test"],
+        known: ["a_test"],
+        runs: 1,
+        out,
+        maxLoad: 8,
+        threads: 32,
+        bots: false,
+        head: "abcd1234ef",
+        load: () => 0,
+        sleep: async () => {},
+        runSolo: async () => ran++,
+        refuse: () => {},
+      }),
       /not in the non-bot gate lists: no_such_test/,
     );
     assert.equal(ran, 0);
@@ -571,17 +1093,138 @@ test("retime waits while the load is above the line, and gives up with exit 2 wh
 
 test("a run window is FIRST-LAST or test names joined by commas, in the list's order", () => {
   const list = ["a_test", "b_test", "c_test", "d_test"];
-  assert.deepEqual(windowNames("2-3", list), { names: ["b_test", "c_test"], label: "2 to 3 of 4 (b_test to c_test)" });
-  assert.deepEqual(windowNames("d_test,b_test.gd", list), { names: ["b_test", "d_test"], label: "named, 2 of 4: b_test, d_test" });
+  assert.deepEqual(windowNames("2-3", list), {
+    names: ["b_test", "c_test"],
+    label: "2 to 3 of 4 (b_test to c_test)",
+  });
+  assert.deepEqual(windowNames("d_test,b_test.gd", list), {
+    names: ["b_test", "d_test"],
+    label: "named, 2 of 4: b_test, d_test",
+  });
   assert.throws(() => windowNames("b_test,x_test", list), /not on this list: x_test/);
   assert.throws(() => windowNames("", list), /FIRST-LAST/);
   assert.throws(() => windowNames("0-5", list), /does not fit/);
 });
 
 test("a named window draws on the promotion list and the weekly names; a weekly run on the weekly list alone", () => {
-  const lists = { tests: ["b_test"], bots: ["c_bot_test"], weekly: { tests: ["a_test"], bots: ["a_bot_test"] } };
+  const lists = {
+    tests: ["b_test"],
+    bots: ["c_bot_test"],
+    weekly: { tests: ["a_test"], bots: ["a_bot_test"] },
+  };
   assert.deepEqual(namedPool(lists, { bots: true, weekly: false }), ["a_bot_test", "c_bot_test"]);
   assert.deepEqual(namedPool(lists, { bots: false, weekly: false }), ["a_test", "b_test"]);
   assert.deepEqual(namedPool(lists, { bots: true, weekly: true }), ["a_bot_test"]);
   assert.equal(testName(" tests/x_test.gd "), "x_test");
+});
+
+test("a red node step keeps the tally from CLEAN, whatever the shard rows say", () => {
+  const gateSide = (row) =>
+    [
+      "## Gate-side",
+      "| Check | Verdict |",
+      "| --- | --- |",
+      ...(row ? [row] : []),
+      "",
+      "## Tally",
+      "| Shard | Verdict |",
+      "| --- | --- |",
+      "| bands A | PASS. Receipt bands-A/ |",
+      "",
+    ].join("\n");
+  assert.deepEqual(
+    checkNodeRow(gateSide("| node tests | PASS. 1506 tests, 0 fail. Receipt node/summary.txt |")),
+    [],
+  );
+  assert.match(
+    checkNodeRow(
+      gateSide("| node tests | RED: exit 1. 1506 tests, 1 fail. Receipt node/summary.txt |"),
+    ).join("\n"),
+    /"node tests" does not open with PASS/,
+  );
+  assert.match(checkNodeRow(gateSide(null)).join("\n"), /no "node tests" row/);
+  assert.match(
+    checkNodeRow(
+      gateSide("| node tests | PASS. 1506 tests, 2 fail. Receipt node/summary.txt |"),
+    ).join("\n"),
+    /does not read "N tests, 0 fail"/,
+    "a pass word over a failing count",
+  );
+  assert.match(
+    checkNodeRow(
+      gateSide("| node tests | PASS. undefined tests, undefined fail. Receipt node/summary.txt |"),
+    ).join("\n"),
+    /does not read "N tests, 0 fail"/,
+    "a summary with no counts",
+  );
+  assert.match(
+    checkNodeRow(gateSide("| node tests | PASS. 0 tests, 0 fail. Receipt node/summary.txt |")).join(
+      "\n",
+    ),
+    /with N above zero/,
+  );
+  assert.match(
+    checkNodeRow(gateSide("| node tests | PASS. 1506 tests, 0 fail. |")).join("\n"),
+    /names no receipt/,
+  );
+  const reread = gateSide(
+    "| node tests | RED: exit 1. 1506 tests, 1 fail. Receipt node/summary.txt |",
+  ).replace(
+    "| --- | --- |\n",
+    "| --- | --- |\n| node tests | PASS. 1506 tests, 0 fail. Receipt node/old.txt |\n",
+  );
+  assert.match(
+    checkNodeRow(reread).join("\n"),
+    /does not open with PASS/,
+    "the newest node row wins",
+  );
+  assert.equal(
+    tallyRows(gateSide("| node tests | RED: exit 1. 1 tests, 1 fail. Receipt node/summary.txt |"))
+      .length,
+    1,
+    "the shard rows are unchanged",
+  );
+  assert.match(
+    checkNodeRow(
+      gateSide("| node tests | PASS. was 10 tests, 0 fail; now 10 tests, 2 fail. Receipt x |"),
+    ).join("\n"),
+    /does not read "N tests, 0 fail"/,
+    "every count is read, not the first",
+  );
+});
+
+test("the tally command itself refuses CLEAN beside a red node row", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "tally-node-"));
+  try {
+    const file = path.join(dir, "plan.md");
+    const write = (verdict) =>
+      writeFileSync(
+        file,
+        [
+          "## Gate-side",
+          "| Check | Verdict |",
+          "| --- | --- |",
+          `| node tests | ${verdict} |`,
+          "",
+        ].join("\n"),
+      );
+    const run = () =>
+      spawnSync(
+        process.execPath,
+        [fileURLToPath(new URL("./tally.mjs", import.meta.url)), "--plan", file],
+        { encoding: "utf8" },
+      );
+    write("RED: exit 1. 1506 tests, 1 fail. Receipt node/summary.txt");
+    const red = run();
+    assert.notEqual(red.status, 0);
+    assert.match(red.stdout, /^PROBLEM line 4: "node tests" does not open with PASS/m);
+    write("PASS. 1506 tests, 0 fail. Receipt node/summary.txt");
+    assert.doesNotMatch(
+      run().stdout,
+      /PROBLEM .*node tests/,
+      "a passing node row raises no node problem",
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

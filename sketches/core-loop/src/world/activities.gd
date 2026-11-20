@@ -1030,7 +1030,7 @@ func _build_trade(s: Site) -> void:
 	var label := Label3D.new()
 	label.name = "TradePrices"
 	label.position = Vector3(door[0], 3.4, door[1] + 1.0)
-	label.text = "%s\n%s\nHold E at a device" % [TradePockets.door_words(s.trade, s.interior.tell.word), "\n".join(words)]
+	label.text = "%s\n%s\nHold at a device" % [TradePockets.door_words(s.trade, s.interior.tell.word), "\n".join(words)]
 	label.font_size = 36
 	label.outline_size = 8
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED

@@ -14,7 +14,7 @@ extends Node
 #   --self-play-from=<stage>  enter that stage directly (tools/bot_run.gd --from-stage)
 #   --self-play-until=<what>  <n>: stop once stage n is entered (default 2); exit<n>: once
 #                             stage n's exit is taken; win: once the run is won
-#   --self-play-hand-off=<h>  switch one of the sitting hand's hands off (bot_loops.gd hands: called_shot, bay, trade, overtime), so a test
+#   --self-play-hand-off=<h>  switch one of the sitting hand's hands off (bot_loops.gd hands: called_shot, bay, trade, overtime, carry), so a test
 #                             can show its loop reads as not fired; only on a --profile=sitting launch
 #   --self-play-hold=<s>      keep playing this long after the goal (default 30)
 #   --self-play-min=<s>       and until this many seconds since launch (default 0)
@@ -56,6 +56,9 @@ extends Node
 #                             Kit picks are then the first card, not the bot's seeded draw. A pause menu
 #                             the game opened by itself is closed with Esc and said. Each prologue line
 #                             stands EYES_READ_S before it is turned and a death screen twice that.
+#   --self-play-probe=<file>  write what built each frame over 25 ms (tools/frame_probe.gd, reads only) to <file> as
+#                             the game quits: the bot's own tick, draw, node work, nodes added, pipeline compiles.
+#                             --self-play-probe-signals=1 also times every GameEvents handler (it adds cost).
 #   --self-play-film=<dir>    film the run as the player's eyes meet it (tools/eye_film.gd, reads only): the
 #                             picture at each screen, plate change, prompt, offer, big hit (with the two
 #                             seconds before it) and death, and every --self-play-film-every=<s> seconds
@@ -89,6 +92,7 @@ const QaWatch := preload("res://tools/qa_watch.gd")
 const EyeFilm := preload("res://tools/eye_film.gd")
 const ObjectiveView := preload("res://src/ui/objective_view.gd")
 const RunState := preload("res://src/core/run_state.gd")
+const FrameProbe := preload("res://tools/frame_probe.gd")
 
 # Keys mode: how long a key stays down, the gap before the next, and how long the menus may take.
 const KEY_DOWN_S := 0.1
@@ -156,6 +160,7 @@ var _clock := 0.0
 var _eyes := false
 var _plant_hide := ""
 var _held_at := -1.0
+var _probe
 
 
 func _ready() -> void:
@@ -163,6 +168,8 @@ func _ready() -> void:
 	process_physics_priority = -1
 	# A reward ceremony or the pause menu pauses the tree; the bot must keep answering them.
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	var probe_file := ""
+	var probe_signals := false
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--self-play-hold="):
 			_hold = float(arg.trim_prefix("--self-play-hold="))
@@ -222,6 +229,13 @@ func _ready() -> void:
 				get_tree().quit.call_deferred(2)
 		elif arg.begins_with("--self-play-eyes="):
 			_eyes = arg.trim_prefix("--self-play-eyes=") == "1"
+		elif arg.begins_with("--self-play-probe="):
+			probe_file = arg.trim_prefix("--self-play-probe=")
+		elif arg.begins_with("--self-play-probe-signals="):
+			probe_signals = arg.trim_prefix("--self-play-probe-signals=") == "1"
+	if probe_file != "":
+		_probe = FrameProbe.new()
+		_probe.watch(game, probe_file, probe_signals, self)
 	if not (_policy in BotDriver.POLICIES or _policy in BotDriver.PROFILES):
 		push_error("self-play: unknown policy '%s'" % _policy)
 		get_tree().quit.call_deferred(2)
@@ -236,7 +250,21 @@ func _ready() -> void:
 		get_tree().quit.call_deferred(2)
 
 
+func _exit_tree() -> void:
+	if _probe != null:
+		_probe.write()
+
+
 func _physics_process(delta: float) -> void:
+	if _probe == null:
+		_step(delta)
+		return
+	var started := Time.get_ticks_usec()
+	_step(delta)
+	_probe.bot_us += Time.get_ticks_usec() - started
+
+
+func _step(delta: float) -> void:
 	_clock += delta
 	if game.flow == null:
 		return

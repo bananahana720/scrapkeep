@@ -12,18 +12,16 @@ const Profile := preload("res://src/core/profile.gd")
 # hold what it earned and load again. The bot saves to user://self-play-<name> (src/game.gd takes that
 # branch before the sitting-earned one), so the real user://sitting-earned and profile are never touched.
 # The bot's choices for the five loops the skipper never makes are tools/bot_loops.gd's hands. The
-# controls are the same run twice more, each with one loop off: heat by its launch flag, the called
-# shot by switching its hand off. Each must read that loop as not fired and every other loop as the
+# controls are the same run three more times, each with one loop off: heat by its launch flag, the called
+# shot and carry a core by switching their hands off. The called_shot control shows "no brake in the window,
+# no call", not "this hand made the call". Each must read that loop as not fired and every other loop as the
 # full run read it, so a hand that does nothing, or a count that is always on, cannot pass.
 # Evidence limit: one seed, skipper policy, headless; a loop the bot never plays reads as not fired.
 
 const LOOPS := ["heat", "overtime", "called_shot", "marked_hull", "moss_scale", "carry_core"]
-# Loops the bot has no hand for yet, so the run cannot fire them. Carry a core needs two things the skipper
-# never does before the bay: a finished activity (a companion piece, activities.gd _pay_piece) and a bonus
-# core (an overtime pot cashed after three rings, a vault, an ambush altar). Until a hand does both, the
-# run's receipt (scripts/gate/sitting-played-receipt.mjs) reads fail and names it. A loop here is not
-# asserted as fired, and the test fails the day it does fire, so the list cannot go stale.
-const OPEN := ["carry_core"]
+# Loops the bot cannot fire yet, so the run does not assert them. A loop here is not asserted as fired, and the
+# test fails the day it does fire, so the list cannot go stale.
+const OPEN := []
 # The seed the run is played on: one where a keeper's trade stands near the stage's start, which the
 # marked hull needs (trade_pockets.gd draws one by seed and stage).
 const SEED := 5
@@ -31,6 +29,7 @@ const SEED := 5
 const CONTROLS := [
 	{"off": "heat", "flag": "--heat=off"},
 	{"off": "called_shot", "flag": "--self-play-hand-off=called_shot"},
+	{"off": "carry_core", "flag": "--self-play-hand-off=carry"},
 ]
 
 

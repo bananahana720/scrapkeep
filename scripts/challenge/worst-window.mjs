@@ -23,21 +23,29 @@ export function fightMaxHp(note, row) {
   return { maxHp: row.max_hp ?? 120, from: "run_end" };
 }
 
+// The note of each fight one bot record fought, or null for a fight it never reached: the dam is stage 1's note once its
+// Warden was engaged, the flume stage 2's, Brindle the boss note.
+export function fightNotes(row) {
+  const stage = (n) => (row?.stages ?? []).find((s) => s.stage === n);
+  const fought = (n) => (n?.warden_engaged_s != null ? n : null);
+  return { dam: fought(stage(1)), flume: fought(stage(2)), brindle: row?.boss ?? null };
+}
+
 // rows: runs.ndjson lines. Returns {column: {dam|flume|brindle: [{hull, hp, from}]}}.
 export function worstWindows(rows) {
   const out = {};
   for (const column of [...new Set(rows.map((r) => r.column))]) {
     const fights = { dam: [], flume: [], brindle: [] };
     for (const r of rows.filter((x) => x.column === column && x.row)) {
-      const note = (n) => (r.row.stages ?? []).find((s) => s.stage === n);
-      const add = (key, n, engaged) => {
-        if (!n || !engaged) return;
+      for (const [key, n] of Object.entries(fightNotes(r.row))) {
+        if (!n) continue;
         const { maxHp, from } = fightMaxHp(n, r.row);
-        fights[key].push({ hull: (n.worst_60s_hull ?? 0) / maxHp, hp: (n.worst_60s_hp ?? 0) / maxHp, from });
-      };
-      add("dam", note(1), note(1)?.warden_engaged_s != null);
-      add("flume", note(2), note(2)?.warden_engaged_s != null);
-      add("brindle", r.row.boss, r.row.boss != null);
+        fights[key].push({
+          hull: (n.worst_60s_hull ?? 0) / maxHp,
+          hp: (n.worst_60s_hp ?? 0) / maxHp,
+          from,
+        });
+      }
     }
     out[column] = fights;
   }
@@ -46,7 +54,11 @@ export function worstWindows(rows) {
 
 function main() {
   for (const dir of process.argv.slice(2)) {
-    const rows = fs.readFileSync(`${dir}/runs.ndjson`, "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    const rows = fs
+      .readFileSync(`${dir}/runs.ndjson`, "utf8")
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l));
     console.log(`# ${dir}`);
     for (const [column, fights] of Object.entries(worstWindows(rows))) {
       for (const [key, list] of Object.entries(fights)) {
@@ -54,8 +66,12 @@ function main() {
         const w = list.map((x) => x.hp);
         const counts = {};
         for (const x of list) counts[x.from] = (counts[x.from] ?? 0) + 1;
-        const from = Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(", ");
-        console.log(`${column} ${key}: n=${list.length} worst-60s hull median ${pct(med(h))} mean ${pct(mean(h))} | hit damage median ${pct(med(w))} mean ${pct(mean(w))} | max hull from ${from || "-"}`);
+        const from = Object.entries(counts)
+          .map(([k, v]) => `${k} ${v}`)
+          .join(", ");
+        console.log(
+          `${column} ${key}: n=${list.length} worst-60s hull median ${pct(med(h))} mean ${pct(mean(h))} | hit damage median ${pct(med(w))} mean ${pct(mean(w))} | max hull from ${from || "-"}`,
+        );
       }
     }
   }

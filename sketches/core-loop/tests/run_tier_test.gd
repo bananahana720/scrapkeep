@@ -152,27 +152,34 @@ const BASE_RUN := [
 # from this test's own MEASURE lines (schedule0, tier0.hash), seeds 0..19, on w43/gate-mac-reds at 30c61601 (stage
 # alpha-w43 35e0fc83 plus the gate reds commit; no schedule or run change against the stage). The Linux tables stay as
 # they were; a re-pin records both, one on each platform.
+# 2026-11-17 flume butte gap table (W1-102, branch w44/flume-climb-sites): gap_table and gap_table_kicker are park-row data in
+# the schedule hash, so all 20 Mac schedules moved; whole runs unchanged. Mac values re-read from this test's own MEASURE
+# lines (schedule0), seeds 0..19, on the Mac at the branch head, again after the review fix moved both rows. The Linux BASE_SCHEDULE above was not touched and needs
+# the same re-read on a Linux machine.
+# 2026-11-20 stage/alpha-w44 close at 212fb8e0 (Mac Studio): PR 1147 (W1-135a hook sites) and PR 1148 (W1-141a Spillway regions)
+# updated park-row data in the schedule hash, so all 20 Mac schedules moved; all 20 whole-run hashes (BASE_RUN_MAC) are unchanged.
+# Recorded with --record-base --section=runtime --seed=0..19 on the Mac; Linux BASE_SCHEDULE stays untouched (BACKLOG W1-147).
 const BASE_SCHEDULE_MAC := [
-	"e02163dd9905c1b414389434363d2e136ce05132f4a7da8f374658ecc019df70",
-	"866938a469162d385cbd958ab618b70334775bf1619d105eb0e0a0845c197e9e",
-	"091d96108cdb568f31b3b9006679006369bd0397d5d6315617dfcfe8f8eeb28b",
-	"0fbc3b02623821e752bdf8a351c08ca5af8cb1eafc95bf43029ba1e9dd6abc57",
-	"fef5e05174039ef0ef45c29238e35fabd5a0c7938e171c86d30616e11c004599",
-	"fef2d510da9e4b468d042f1dd5ba162e8a32f512c1914358f322346f72e03ef6",
-	"90166cf682193a942c629924e3f04246d7a13a119fb962cd3c9d3f6c803c87b4",
-	"6e3fa1c5595e61eb74869b39c950354c06ea663670174443d955855add8563de",
-	"ac4bbe234c4d859c1986bc4eb378123d6cd940b0ce26931cd92d9b0331c72995",
-	"cfb082ab3ff4d69c981b9102303f277796f91afedf503511c88c1afb7bf6099a",
-	"810ebdb63fb05d5582b574c86dea731ad9fa2b3e6ae6b2ed44706dc854469506",
-	"64ee3d176d151f14a5963274cf74de3d8a0ba661cf557447a6ffd298201394f4",
-	"946f5a5669656ac578c857bfc08e6bb56554ddcd3f0d14c6477a84a3ee30efb4",
-	"6536c71acbf6763c61224de1b3506f0a04728468531455d81db21286c0e6da98",
-	"d6b209cf0a68643d482bfbd6ab23269df0dbad5581c09776a0c4057e848d4748",
-	"4b5607f9e3bda342b4849edd105cc31d7a9db30e44631eb8931bdfe5b0857521",
-	"18ab0342000aad2243926b04f92778e52816325858b923fd037efb1ea3ff3017",
-	"0c55aaa2bf03ccd6ed461a9d3a9a93852340b06850d800360caa23e334294654",
-	"3743427b0bcd17d07053dcaa824077e777435c2585614ca8e27e7db097d04f67",
-	"44373655ef7b0ede7a6e2ddadf6ea8e41eeae81bfbf11c11c8d2598850d32c84",
+	"1e7bddc2fc93f724e98ad926795b7cfa3de1354ce55d5f699a0309be436dfb7c",
+	"47ff3d36b3f6f8821861e30f998551cf2cd1d7d96e0b5b11d04feeb46bc9dcbd",
+	"95757a517b67d0a12d5d4b71649bf6e70460c804e17afbaa0f7a2d38e607328a",
+	"aa8657c3ade68239347f0a031fe51ab1b073cd063ed77a8a9864892ec310bafa",
+	"ee05657567a3433399a4e27e1e7e10fe85a7822ac07e64dfa06589fca142213f",
+	"5e5d3451f2846a1b2b10b5170208437f19cad3d2df3c15901753561492a67af7",
+	"ef4b33287d24b54417ac129199bc4a4a50d3d0bb5ad249c6a71a2a8b72fc14fd",
+	"15d5e8328608ea0fbed2b26da7551748685521763f725042d74c00912c89c9ea",
+	"6ee011ba8a779c18f1d391c75bbc63f98fe1ec958fb58b6eb9fb228026f61116",
+	"6598a94fadc4eb03a13304577f51dd5e863d11e66eef04d767d339364f133134",
+	"7bd5bb562384c1cdc4806782ba1cb0a597b25235afbbc0a58ba6905740dd6c56",
+	"24a57a4142a798e3f71640581e73c9ec1983a4c4196d16ce422dc9c33cb3b68b",
+	"809994d1577860f5823acf1045a25df8b32ce5b9a38c3653c8c47d1f1e307a97",
+	"8a1bd37a08ea7e5c213c22d199bcd95613bf2ddbbb2679f954fe7aad465d6f43",
+	"d2ed368b52416a48acb1bf81e9062cb9b2b7d08370c68ba2d1bac3ad24cd1d71",
+	"03377c84cc00174db45c334869158885ee80b2c8c74f7ef3ac3fb9aeda663d88",
+	"1ba583e8ade0c753d9619acec0315edee48e75f24053c42d832661740e8ce2a3",
+	"43a1891acd6a75597b1d916aac6667a9e4bfbb1c68e71ccf477e41bf8fa96838",
+	"74a4a1db7f72c4594907ef32686fcc564350d6f7afb260fd79700103d3150641",
+	"35531375d41d0d34b862adbe4ba5b79af41a321f3566321d24f44272e34c42e1",
 ]
 const BASE_RUN_MAC := [
 	"6700a27b5182cb08fa8d78040a581e6e79578e90233f869f144a9b00fd0507bb",
@@ -264,8 +271,9 @@ func _hash(value) -> String:
 
 # 2026-10-16 (ruling RT1): the park rows without their presentation fields. A row's recipe and fit pick
 # the art it draws with and never reach the director, so a dressing swap must not move the schedule pin
-# (KD1-DRESS moved all 20 by renaming three recipes).
-const PRESENTATION_FIELDS := ["recipe", "fit"]
+# (KD1-DRESS moved all 20 by renaming three recipes). clear_view is the strip the scenery keeps free of
+# trees behind a row; only src/presentation/spillway_scenery.gd reads it.
+const PRESENTATION_FIELDS := ["recipe", "fit", "clear_view"]
 
 static func _director_rows(rows: Array) -> Array:
 	var kept := []

@@ -30,6 +30,7 @@ A Novice win is the game failing to stop a weak player, so a higher Novice numbe
 - plated brute, foreman, dispatcher: fine.
 - silt boil: built to punish circle-kiting (DECISIONS.md:176). Conflicts with the new direction: re-scope to punish the stall, not the kite.
 - Brindle: the model kiting fight (charge at 24 m/s, bait into a wall for a 3 s stun).
+- Bosses (Brindle's charge, the gate crane's sweep and drop, the miniboss's slam and charge) aimed at where the ball was at the commit, so a ball that kept rolling was never hit (Andrew: "a pushover"). They now lead a ball that has held a line for a second at 3 m/s or more, scaled by the tell (none at 0.6 s or less), and a turning ball not at all (`PackPressure.lead_aim`; `tests/boss_lead_line_test.gd` for the per-attack numbers; BACKLOG MG-11 for the band read still owed).
 - Reject at base: lowering the one-shot guard (does not reward movement); churned silt (pack D), which drags the ball below fast tier.
 - Comps rows worth borrowing (`design-v3/research/comps/difficulty/SUMMARY.md`): row 14 raise aggression and elite share, not count; row 15 attack interval x0.85 to 0.7; enemy speed x1.15 (RoR2 uses x1.4); row 5 no step ever shortens a tell; Roboquest players run about 2.35 times the median enemy (chaser is at 2.9 times today).
 
@@ -60,6 +61,9 @@ A Novice win is the game failing to stop a weak player, so a higher Novice numbe
 | F2 stop against move | hull lost per minute below cruise / at or above cruise >= 2.0 | 24 | a plant that taxes fast balls |
 | F3 first hit | median first contact to first hit >= 3 s (Learner 1) | 24 | a plant that spawns with no arrival ring |
 | F4 momentum | dead stops per minute <= base +10% (`core/run_log.gd:37`) | 24 | not built |
+
+Since 18 Nov (W1-149, PR 1161) F1 and F2 are each two readings: hull alone, and hull plus the scrap world hazards take through `lose_scrap`, counted point for point and matched by cause to the hazard's own telegraph. Each line fails when either reading is under it, and a pool with no hull reading stays a miss, so scrap can only add misses (ruling cu). F3 counts a theft as the first hit only after pack contact.
+
 Bots cannot tell: fun, whether a death felt fair, human kiting (no bot kites with skill; the Expert dodges by reading tells).
 
 ## Arrivals on the grid (INTEGRATION.md:165-196)

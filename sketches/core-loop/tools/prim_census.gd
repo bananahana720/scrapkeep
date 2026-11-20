@@ -32,7 +32,7 @@ var _seen := {}
 
 # Scans the tree under `root` and returns the rows first seen on this scan:
 # {key, owner, mesh, shape, path, tick, stage, size}.
-func scan(root: Node, tick: int, stage: int) -> Array[Dictionary]:
+func scan(root: Node, tick: int, stage: int, station := false) -> Array[Dictionary]:
 	var found: Array[Dictionary] = []
 	for node in root.find_children("*", "GeometryInstance3D", true, false):
 		var geo := node as GeometryInstance3D
@@ -41,7 +41,10 @@ func scan(root: Node, tick: int, stage: int) -> Array[Dictionary]:
 		var mesh := _mesh_of(geo)
 		if not mesh is PrimitiveMesh:
 			continue
-		var path := String(root.get_path_to(geo))
+		if station and not _visible_in_screen(geo):
+			continue
+		var origin: Node = root.get_tree().root if station else root
+		var path := String(origin.get_path_to(geo))
 		var row := {"owner": owner_of(geo), "mesh": mesh.get_class(), "shape": shape_of(path)}
 		row["key"] = "%s|%s|%s" % [row.owner, row.mesh, row.shape]
 		if _seen.has(row.key):
@@ -139,3 +142,15 @@ static func _mesh_of(geo: GeometryInstance3D) -> Mesh:
 	if geo is MultiMeshInstance3D and (geo as MultiMeshInstance3D).multimesh != null:
 		return (geo as MultiMeshInstance3D).multimesh.mesh
 	return null
+
+# A preview mesh can remain visible inside its viewport after the menu
+# containing that viewport closes. Station scans follow the enclosing UI too.
+static func _visible_in_screen(node: Node) -> bool:
+	var at := node.get_parent()
+	while at != null:
+		if at is CanvasItem and not at.is_visible_in_tree():
+			return false
+		if at is CanvasLayer and not at.visible:
+			return false
+		at = at.get_parent()
+	return true

@@ -5,6 +5,7 @@ const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
+const PlatformPin := preload("res://tests/support/platform_pin.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The slice Warden's numbers are held by a bot sweep (tools/posture_sweep.md): a class III ball
@@ -105,8 +106,13 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # 2026-11-14 (wave 40 gate, PC, bd5b30f5c): small 54.4 s, grown 25.6 s over 24 seeds (a cloud read: 54.8 / 25.6).
 # Wave 40's stack shortened the small fight about 18%; the board re-pinned at promotion (an assumption
 # Andrew can overturn), and wave 41's harder world 1 stack (PR 845) is tuned against these pins. Was 66.7 / 25.8.
+# 2026-11-20 (wave 44 close, Mac Studio, stage/alpha-w44 212fb8e0 after w44/brindle-bot-camera): lens crosshair aim
+# lengthened the small-arm slice fight from 54.4 s to 62.0 s over 24 seeds while grown stayed at 25.0 s (within 10%
+# of 25.6 s, ratio 2.48x over the 1.85x floor, small 24/24, camper 0/24). Pinned on Mac beside Linux 54.4 s via
+# PlatformPin.pick (ruling eb); re-read Linux 54.4 s on a Linux machine before relying on it there.
 const GROWTH := 1.85
 const EXPECT_SMALL_S := 54.4
+const EXPECT_SMALL_S_MAC := 62.0
 const EXPECT_GROWN_S := 25.6
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
@@ -149,8 +155,9 @@ func _initialize() -> void:
 		"small %.1f s, grown %.1f s" % [small, grown])
 	t.eq("small breaks it in every run", cell.get("small_broke", ""), str(GROWTH_SEEDS.count(",") + 1))
 	t.eq("the camper never breaks it", _cell(camper_cells).get("camper_broke", ""), "0")
-	t.check("small median within 10 percent of the sweep's", absf(small - EXPECT_SMALL_S) <= TOLERANCE * EXPECT_SMALL_S,
-		"small %.1f s, sweep %.1f s" % [small, EXPECT_SMALL_S])
+	var expect_small: float = PlatformPin.pick(EXPECT_SMALL_S, EXPECT_SMALL_S_MAC)
+	t.check("small median within 10 percent of the sweep's", absf(small - expect_small) <= TOLERANCE * expect_small,
+		"small %.1f s, sweep %.1f s" % [small, expect_small])
 	t.check("grown median within 10 percent of the sweep's", absf(grown - EXPECT_GROWN_S) <= TOLERANCE * EXPECT_GROWN_S,
 		"grown %.1f s, sweep %.1f s" % [grown, EXPECT_GROWN_S])
 	if t.failures == 0:

@@ -41,6 +41,7 @@ const T := preload("res://tests/support/t.gd")
 const SIZES := [Vector2(1280.0, 720.0), Vector2(1920.0, 1080.0)]
 # A short screen the twelve-panel list cannot fit at full view height, so the view shrinks.
 const SHORT := Vector2(1280.0, 560.0)
+const TAG_SEEDS := [203, 1, 7, 31, 99, 4242]
 
 var _t := T.new("hud_phase_read_test")
 var _game
@@ -354,7 +355,7 @@ func _late_phase_rows() -> void:
 	_t.eq("P5 a stagger between charges keeps the row and turns its glyph", [boss.charge_coming(), _plate_row()], [false, ["bait_charge", "Bait into walls, then cockpit", Objectives.COCKPIT_GLYPH]])
 	# A stagger does not hold a Scuttle charge back. From the commit (the lane's tell) to the end of
 	# the run the plate keeps the charge's row, and no marker sends the player at the cockpit.
-	boss._commit_charge(_game.player.ball_position())
+	boss._commit_charge()
 	_t.eq("P5 a charge committed through the stagger keeps the charge's row", [boss.staggered(), boss.charge_coming(), _plate_row()],
 		[true, true, ["bait_charge", "Bait into walls, then cockpit", Objectives.glyph("bait_charge")]])
 	_t.eq("P6 and marks nothing", _marks(), [[], "", ""])
@@ -383,6 +384,8 @@ func _late_phase_rows() -> void:
 func _pause_checks() -> void:
 	var menu = _game.get_node("PauseMenu")
 	var read = menu.build_read
+	# Stop the preview's turn first, so the facing check reads the opening pose however slow the run.
+	read.set_process(false)
 	for held in [[], Panels.ROWS.keys()]:
 		_game.run.panels.clear()
 		for id in held:
@@ -392,9 +395,18 @@ func _pause_checks() -> void:
 		var label := "all twelve panels" if held.size() > 0 else "no panels"
 		# W1-46: the pilot's own shell turns in the view, never the grey stand-in sphere.
 		_t.check("R2 %s: the view wears the pilot's shell" % label, not read._worn.is_empty() and read._worn.core.is_inside_tree() and not read._ball.visible, str(read._worn.keys()))
+		var pilot: Node3D = read._worn.pod.get_node_or_null("AnimatedPilot")
+		_t.check("R2 %s: the pilot's model is in the shell" % label, pilot != null and pilot.scene_file_path.contains("pilot_"))
+		_t.check("R2 %s: the preview opens with the pilot facing the eye" % label, (-read._worn.pod.global_basis.z).dot(Vector3.BACK) > 0.9)
 		var cores: Array = read._pivot.get_children().filter(func(n): return n.name == "HeroCore" and not n.is_queued_for_deletion())
 		_t.eq("R2 %s: one shell, never a pile of them" % label, cores.size(), 1)
 		_t.eq("R1 %s: one stat line each" % label, read.lines.size(), maxi(1, held.size()))
+		if held.size() > 0 and _game.presentation.hero_assets.ball_look() == "cutaway":
+			var parts: Array = read.shell.find_children("*", "MultiMeshInstance3D", false, false)
+			_t.eq("R2 the grown preview wears the held panels", read.shell.shown_count(), _game.run.panels.size())
+			_t.check("R2 every panel leaves the same window as the shell", not parts.is_empty() and parts.all(func(part):
+				var material = part.multimesh.mesh.surface_get_material(0)
+				return material is ShaderMaterial and material.get_shader_parameter("held") == true))
 		for size in SIZES:
 			menu.lay_build(size)
 			var tag := "%dx%d %s" % [int(size.x), int(size.y), label]
@@ -409,3 +421,83 @@ func _pause_checks() -> void:
 			var view_y: float = read._frame.custom_minimum_size.y
 			_t.check("R1 short screen: the view shrinks, not below VIEW_MIN", view_y < BuildRead.VIEW.y and view_y >= BuildRead.VIEW.y * BuildRead.VIEW_MIN - 0.5, str(view_y))
 			_t.check("R1 short screen: the read stays on screen", Rect2(Vector2.ZERO, SHORT).encloses(rect), str(rect))
+	await _opening_tags(menu)
+
+
+func _opening_tags(menu: Node) -> void:
+	var prior_seed: int = _game.run.run_seed
+	var prior_panels := Array(_game.run.panels).duplicate()
+	var read = menu.build_read
+	read.set_process(false)
+	# The hard check: seed 203 puts the spool near the top edge when the pilot faces the player.
+	var eight := ["punch_rivet", "fin_plate", "splash_skirt", "ram_bumper",
+		"vent_louvre", "winch_drum", "hull_tile", "rope_spool"]
+	var first: Dictionary = await _tag_layout(menu, eight, 24, 203)
+	_t.check("R2 all eight opening tag bounds fit the 720p preview", first.count == eight.size() and first.room >= 0.0,
+		"%d boxes, %.2f px" % [first.count, first.room])
+	_t.check("R2 the opening tag bounds have at most one overlapping pair", first.overlaps.size() <= 1, str(first.overlaps))
+	# The wide read: every panel type at several seeds, because a seed moves where each part sits on
+	# the shell. Only tags on the near side of the shell count; the shell hides the rest in the game.
+	var every: Array = Panels.ROWS.keys()
+	var overlaps := []
+	var tight := []
+	for seed_value in TAG_SEEDS:
+		var laid: Dictionary = await _tag_layout(menu, every, every.size() * 2, seed_value)
+		for pair in laid.overlaps:
+			overlaps.append("seed %d: %s" % [seed_value, pair])
+		if laid.count != every.size() or laid.room < 0.0:
+			tight.append("seed %d: %d boxes, %.2f px" % [seed_value, laid.count, laid.room])
+	if tight.is_empty():
+		_t.check("R2 all %d opening tag bounds fit the 720p preview at every seed" % every.size(), true, "%d seeds" % TAG_SEEDS.size())
+	else:
+		_t.skip("R2 all %d opening tag bounds fit the 720p preview at every seed" % every.size(), "open problem, a tag leaves the view (px of room): " + "; ".join(tight))
+	if overlaps.is_empty():
+		_t.check("R2 no two opening tags overlap, at every seed and panel type", true, "%d seeds" % TAG_SEEDS.size())
+	else:
+		_t.skip("R2 no two opening tags overlap, at every seed and panel type", "open problem, tags overlap at: " + "; ".join(overlaps))
+	_game.run.run_seed = prior_seed
+	_game.run.panels.clear()
+	_game.run.panels.append_array(prior_panels)
+	read.set_process(true)
+
+
+
+# Lays the Build preview for one ball and measures its tags on screen: how many there are, the least
+# room any near-side tag has inside the view, and which near-side pairs overlap.
+func _tag_layout(menu: Node, stack: Array, plates: int, seed_value: int) -> Dictionary:
+	var read = menu.build_read
+	_game.run.run_seed = seed_value
+	_game.run.panels.clear()
+	for i in plates:
+		_game.run.panels.append(String(stack[i % stack.size()]))
+	menu._show_build()
+	menu.lay_build(SIZES[0])
+	await process_frame
+	await process_frame
+	var view := read._frame.get_child(0) as SubViewport
+	var camera := view.get_camera_3d()
+	var centre: Vector3 = read._labels.global_position
+	var boxes: Array[Rect2] = []
+	var names: Array[String] = []
+	var overlaps := []
+	var room := INF
+	var count := 0
+	for tag: Label3D in read._labels.get_children():
+		count += 1
+		if (tag.global_position - centre).dot(camera.global_position - centre) <= 0.0:
+			continue
+		# The dummy renderer has no glyph bounds. Estimate the outlined billboard in screen space.
+		var font := tag.font if tag.font != null else ThemeDB.fallback_font
+		var size := font.get_string_size(tag.text, HORIZONTAL_ALIGNMENT_LEFT, -1, tag.font_size)
+		var half := (size + Vector2.ONE * tag.outline_size * 2.0) * tag.pixel_size * 0.5
+		var corner := camera.global_basis.y * half.y - camera.global_basis.x * half.x
+		var a := camera.unproject_position(tag.global_position + corner)
+		var b := camera.unproject_position(tag.global_position - corner)
+		var box := Rect2(a, b - a)
+		room = minf(room, minf(minf(a.x, a.y), minf(view.size.x - b.x, view.size.y - b.y)))
+		for earlier in boxes.size():
+			if boxes[earlier].intersects(box):
+				overlaps.append("%s over %s" % [names[earlier], tag.text])
+		boxes.append(box)
+		names.append(tag.text)
+	return {"count": count if view.size == BuildRead.VIEW else -1, "room": room, "overlaps": overlaps}

@@ -25,9 +25,14 @@ static func read() -> Dictionary:
 
 
 # exe_dir is where BUILD.txt would sit; project_dir is the sketch's folder in a checkout, or ""
-# when there is none to read.
+# when there is none to read (read() passes it only from the editor binary).
+# An exported macOS .app keeps it in Contents/Resources instead (codesign refuses a data file in
+# Contents/MacOS), so that is read when there is none beside the executable, the executable sits
+# in <name>.app/Contents/MacOS, and it is not the editor.
 static func read_from(exe_dir: String, project_dir: String) -> Dictionary:
 	var rows := parse(_text(exe_dir.path_join(FILE)))
+	if rows.is_empty() and project_dir == "" and exe_dir.simplify_path().ends_with(".app/Contents/MacOS"):
+		rows = parse(_text(exe_dir.path_join("../Resources").simplify_path().path_join(FILE)))
 	if rows.get("commit", "") != "":
 		return {"commit": rows["commit"], "dirty": rows.get("dirty", "false") == "true",
 			"built": rows.get("built", ""), "source": "export"}

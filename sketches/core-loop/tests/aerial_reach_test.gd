@@ -72,7 +72,7 @@ func _spawn(kind: String, offset: Vector3, height: float):
 # Frames until the enemy has dived or struck and is back to ROAM, the pilot left to physics when
 # latched and parked when not. Returns the first hit and the telegraph seen while it warned.
 func _until_spent(enemy, parked: bool, release := false, budget := 900) -> Dictionary:
-	var out := {"warned": false, "aerial": false, "reach": 0.0, "warn": 0.0}
+	var out := {"warned": false, "aerial": false, "reach": 0.0, "warn": 0.0, "hits": []}
 	for frame in budget:
 		if not is_instance_valid(enemy):
 			out["died"] = true
@@ -81,6 +81,10 @@ func _until_spent(enemy, parked: bool, release := false, budget := 900) -> Dicti
 		out["batted"] = enemy.get("batted")
 		out["hurls"] = enemy.get("hurls")
 		out["slams"] = enemy.get("slams")
+		# Every source that hit the ball in the window, so a later hazard hit (a silt boil under the parked ball) cannot hide the enemy's.
+		var source: String = game.combat.last_player_hit.get("source", "")
+		if source != "" and not out.hits.has(source):
+			out.hits.append(source)
 		if parked:
 			game.player.reset_to(ball)
 		if enemy.phase == enemy.Phase.WARN and not out.warned:
@@ -278,7 +282,7 @@ func _run() -> void:
 	game.combat.last_player_hit = {}
 	brute = _spawn("plated_brute", Vector3(3.0, 0.0, 0.0), 1.0)
 	seen = await _until_spent(brute, true)
-	t.check("AR-6 brute slam unchanged", seen.slams == 1 and seen.hurls == 0 and not seen.aerial and _hit_by("plated_brute"),
-		"slams %d, hurls %d, aerial %s, hit '%s'" % [seen.slams, seen.hurls, seen.aerial, game.combat.last_player_hit.get("source", "")])
+	t.check("AR-6 brute slam unchanged", seen.slams == 1 and seen.hurls == 0 and not seen.aerial and seen.hits.has("plated_brute"),
+		"slams %d, hurls %d, aerial %s, hits %s" % [seen.slams, seen.hurls, seen.aerial, seen.hits])
 	_drop(brute)
 	quit(t.verdict())

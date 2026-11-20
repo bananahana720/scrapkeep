@@ -8,6 +8,11 @@ const Hazard := preload("res://src/boss/hazard.gd")
 # How far ahead of the hull's nose the ram still hits; the lane publishes its front this far
 # out, so the dodge watch lands the ram where the damage does.
 const CHARGE_REACH := 1.5
+# A charge that is not a ram stops this far short of the point where its nose would bury in the bank.
+const CHARGE_RIM_CLEAR := 1.0
+# A led lane clipped shorter than this is no charge (a hull resting at the bank with the led point beyond it
+# would clip to nothing or less): that charge is aimed at the ball, as the stage aimed it.
+const CHARGE_MIN_LANE := 4.0
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -15,6 +20,7 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const Field := preload("res://src/build/scrap_field.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const PackPressure := preload("res://src/combat/pack_pressure.gd")
 
 # Writer E's module: Admiral Brindle and the Requisition in the Slag Bowl (DEMO-SPEC
 # Brindle, BOSS-BRINDLE). Flow calls enter_arena(entry_velocity) after stage 3's
@@ -158,6 +164,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	ship = Requisition.new()
 	arena.add_child(ship)
 	ship.build(self)
+	ctx.camera.set_contact_subject(ship)
 	state = FIGHT
 	_posture = BossPosture.new(Rules.POSTURE)
 	_phases = FightPhases.boss("brindle", ctx.events)
@@ -208,6 +215,8 @@ func exit_arena() -> void:
 		arena.get_parent().remove_child(arena)
 		arena.queue_free()
 	arena = null
+	if ctx.camera != null:
+		ctx.camera.clear_contact_subject(ship)
 	ship = null
 	scooter = null
 	_scooter_anim = null
@@ -956,9 +965,9 @@ func _step_charges(delta: float, ball: Vector3) -> void:
 				if _charge["state"] == CHARGE_REST:
 					if _in_transition() or reeling():
 						return
-					_commit_charge(ball)
+					_commit_charge()
 				elif _charge["state"] == CHARGE_HOOK:
-					_commit_charge(ball, true)
+					_commit_charge(true)
 				else:
 					_charge = {"state": CHARGE_REST, "timer": _rest_time()}
 		CHARGE_BRACE:
@@ -1005,22 +1014,41 @@ func _brace_turn(delta: float) -> void:
 
 # A cued charge is the Scuttle's hook turn: its ratchet cue sounded CUE_LEAD ago, so it
 # draws the short tell, and it never leads a combo or a second hook turn.
-func _commit_charge(ball: Vector3, cued := false) -> void:
+#
+# The lane leads a ball that holds a line (PackPressure.lead_aim): it is laid where the ball's roll
+# carries it by the time the hull's nose gets there, so a straight line is met and a turn inside the
+# tell escapes. A turning, slow or stopped ball is aimed at where it is, and so is every ball on the
+# hook turn's short cued tell. The aim reads the ball's position and roll from the player itself.
+func _commit_charge(cued := false) -> void:
 	if not cued:
 		_combo_left = ChallengeDials.combo_step("brindle", _combo_left)
 	var from: Vector3 = ship.global_position
-	var to_ball := Vector3(ball.x - from.x, 0.0, ball.z - from.z)
-	var heading := _aim_at(ball)
-	var to_wall := _travel_to_rim(from, heading)
-	var wanted := to_ball.length() + Rules.CHARGE_OVERSHOOT
-	var into_wall := wanted >= to_wall
-	var length := minf(wanted, to_wall)
 	var half := Requisition.HULL.z * 0.5
+	var warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.CHARGE_WARN, Hazard.MIN_WARN)
+	var ball: Vector3 = ctx.player.ball_position()
+	var to_ball := Vector3(ball.x - from.x, 0.0, ball.z - from.z)
+	# Whether it rams the bank is judged from where the ball is, as before the lead: a led point far out
+	# would make almost every outward line a ram and hand the ball a free stun. A ram is aimed at the ball
+	# and runs to the bank; any other charge keeps its led aim and ends short of the bank. So the flag, the
+	# lane, the stun and the wind-up sound all agree.
+	var ball_heading := _aim_at(ball)
+	var into_wall := to_ball.length() + Rules.CHARGE_OVERSHOOT >= _travel_to_rim(from, ball_heading)
+	var aim := ball
+	if not into_wall:
+		# The nose hurts from half a hull and its reach ahead of the centre, so it meets the ball that much sooner.
+		aim = PackPressure.lead_aim(ctx.player, from, warn, Rules.CHARGE_SPEED, half + CHARGE_REACH, half + Tuning.RADIUS)
+	var to_aim := Vector3(aim.x - from.x, 0.0, aim.z - from.z)
+	var heading := ball_heading if into_wall else _aim_at(aim)
+	var to_wall := _travel_to_rim(from, heading)
+	var wanted := to_aim.length() + Rules.CHARGE_OVERSHOOT
+	var length := to_wall if into_wall else maxf(0.0, minf(wanted, to_wall - CHARGE_RIM_CLEAR))
+	if not into_wall and length < CHARGE_MIN_LANE:
+		heading = ball_heading
+		length = to_ball.length() + Rules.CHARGE_OVERSHOOT
 	var h = _new_hazard()
 	if cued:
 		h.warn_floor = FightPhases.CUED_WARN
 		h.cued = true
-	var warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.CHARGE_WARN, Hazard.MIN_WARN)
 	h.commit_lane("charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
 		Requisition.HULL.y + 0.5, warn, length / Rules.CHARGE_SPEED + 0.2)
 	# Only the hull's nose hurts once the lane is live, and it starts at the ship.
@@ -1089,6 +1117,7 @@ func _charge_hit(h, ball: Vector3) -> void:
 	var up := maxf(0.0, Rules.CHARGE_SHOVE_UP - v.y)
 	ctx.player.crowd_control("brindle_charge", (away * Rules.CHARGE_SHOVE_SIDE + Vector3.UP * up - h.heading * minf(0.0, along)) / _delta)
 	ship.hull.add_collision_exception_with(ctx.player.body())
+	ship.follow_shoved_rider(ctx.player.body())
 	_ghost_until = clock + Rules.CHARGE_GRACE
 
 
@@ -1102,6 +1131,7 @@ func _step_ghost() -> void:
 	if absf(local.x) < half.x and absf(local.y) < half.y and absf(local.z) < half.z:
 		return
 	ship.hull.remove_collision_exception_with(ctx.player.body())
+	ship.follow_shoved_rider(null)
 	_ghost_until = -1.0
 
 
@@ -1302,6 +1332,11 @@ func _defeat(kind: String, at: Vector3, source := "") -> void:
 	ctx.run.add_part(Rules.CREST_PART, "boss")
 	_sync_crest()
 	ctx.flow.boss_active = false
+	# A freed ship ends its own lift in the camera, and a freed object cannot be passed as a Node3D.
+	if is_instance_valid(ship):
+		ctx.camera.clear_contact_subject(ship)
+		# No step runs after the catch, so a shove still in its grace would leave the hull cut away over the ball.
+		ship.follow_shoved_rider(null)
 	# The scooter stays in sight through boss_defeated, so the fall plays where he was caught
 	# (machine_fx reads a visible scooter before the ship); it is hidden once the event is out.
 	_publish("boss_defeated")

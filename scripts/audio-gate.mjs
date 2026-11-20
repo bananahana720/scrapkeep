@@ -21,8 +21,9 @@ import { fileURLToPath } from "node:url";
 //              gitignored, so the manifest and the hash list are what a checkout can compare them to.
 //   unchecked  a track whose audio is not on disk, or no ffmpeg; never counted as a pass
 // Game clips are measured as the engine plays them: stems summed, plus the manifest's level_db.
-// Loudness skips clips and files under 10 s (stingers, fanfares, short beds), where an integrated
-// reading means little; seams do not.
+// Loudness skips clips and files under 10 s (stingers, fanfares, short beds): the target is EBU R 128
+// integrated programme loudness (ITU-R BS.1770 gating), a whole-programme measure that means little
+// over a few seconds. True peak (BS.1770 4x oversampled) and seams are checked on every clip.
 // Run: node scripts/audio-gate.mjs [--project <dir>] [--music <dir>]... [--loops <regex>] [--json] [--cues-only]
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -43,9 +44,10 @@ export const MANIFEST_LUFS_TOL = 0.3;
 export const SPECIALS = ["foreman", "dispatcher", "splitter", "linker"];
 export function specialCues() {
   return SPECIALS.flatMap((name) =>
-    (name === "splitter" ? ["presence", "tell", "break_split", "break_clean", "spawn"] : ["presence", "tell", "break", "spawn"]).map(
-      (part) => ({ id: `${name}_${part}`, type: "sound", group: "special" }),
-    ),
+    (name === "splitter"
+      ? ["presence", "tell", "break_split", "break_clean", "spawn"]
+      : ["presence", "tell", "break", "spawn"]
+    ).map((part) => ({ id: `${name}_${part}`, type: "sound", group: "special" })),
   );
 }
 
@@ -136,7 +138,10 @@ export function readManifests(project) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir, { withFileTypes: true })
     .filter((d) => d.isDirectory() && existsSync(path.join(dir, d.name, "manifest.json")))
-    .map((d) => ({ dir: path.join(dir, d.name), ...JSON.parse(readFileSync(path.join(dir, d.name, "manifest.json"), "utf8")) }));
+    .map((d) => ({
+      dir: path.join(dir, d.name),
+      ...JSON.parse(readFileSync(path.join(dir, d.name, "manifest.json"), "utf8")),
+    }));
 }
 
 export function cueFindings(project, delivered = []) {
@@ -164,7 +169,18 @@ export function hasFfmpeg() {
 
 // Interleaved stereo float samples at the file's own rate (or rate when given).
 export function decode(file, rate = null) {
-  const args = ["-v", "error", "-i", file, "-f", "f32le", "-ac", "2", ...(rate ? ["-ar", String(rate)] : []), "pipe:1"];
+  const args = [
+    "-v",
+    "error",
+    "-i",
+    file,
+    "-f",
+    "f32le",
+    "-ac",
+    "2",
+    ...(rate ? ["-ar", String(rate)] : []),
+    "pipe:1",
+  ];
   const out = spawnSync("ffmpeg", args, { maxBuffer: 1 << 30 });
   if (out.status !== 0) throw new Error(`ffmpeg could not decode ${file}: ${out.stderr}`);
   const buf = out.stdout;
@@ -172,7 +188,17 @@ export function decode(file, rate = null) {
 }
 
 export function probeRate(file) {
-  const out = spawnSync("ffprobe", ["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=sample_rate", "-of", "csv=p=0", file]);
+  const out = spawnSync("ffprobe", [
+    "-v",
+    "error",
+    "-select_streams",
+    "a:0",
+    "-show_entries",
+    "stream=sample_rate",
+    "-of",
+    "csv=p=0",
+    file,
+  ]);
   return Number(String(out.stdout).trim()) || 48000;
 }
 
@@ -180,7 +206,23 @@ export function meter(samples, rate) {
   const buf = Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength);
   const out = spawnSync(
     "ffmpeg",
-    ["-hide_banner", "-nostats", "-f", "f32le", "-ar", String(rate), "-ac", "2", "-i", "pipe:0", "-af", "ebur128=peak=true", "-f", "null", "-"],
+    [
+      "-hide_banner",
+      "-nostats",
+      "-f",
+      "f32le",
+      "-ar",
+      String(rate),
+      "-ac",
+      "2",
+      "-i",
+      "pipe:0",
+      "-af",
+      "ebur128=peak=true",
+      "-f",
+      "null",
+      "-",
+    ],
     { input: buf, maxBuffer: 1 << 26 },
   );
   return parseEbur128(String(out.stderr));
@@ -194,9 +236,12 @@ export function seamStep(samples, exit, loopAt) {
   for (let f = loopAt + 1; f < end; f++)
     for (let c = 0; c < 2; c++) steps.push(Math.abs(samples[f * 2 + c] - samples[(f - 1) * 2 + c]));
   steps.sort((a, b) => a - b);
-  const p = steps.length ? steps[Math.min(steps.length - 1, Math.floor(steps.length * SEAM_PERCENTILE))] : 0;
+  const p = steps.length
+    ? steps[Math.min(steps.length - 1, Math.floor(steps.length * SEAM_PERCENTILE))]
+    : 0;
   let wrap = 0;
-  for (let c = 0; c < 2; c++) wrap = Math.max(wrap, Math.abs(samples[loopAt * 2 + c] - samples[(end - 1) * 2 + c]));
+  for (let c = 0; c < 2; c++)
+    wrap = Math.max(wrap, Math.abs(samples[loopAt * 2 + c] - samples[(end - 1) * 2 + c]));
   return { wrap, p999: p, ok: wrap <= p };
 }
 
@@ -206,23 +251,37 @@ export function gain(samples, db) {
   return samples.map((s) => s * g);
 }
 
-// A track's verdicts: loudness and true peak when it is long enough, the seam when it loops.
+// A track's verdicts: true peak always, loudness when it is long enough, the seam when it loops.
 export function judge(name, samples, rate, { loop = false, exit = null, loopAt = 0 } = {}) {
   const found = [];
   const seconds = samples.length / 2 / rate;
   const row = { name, seconds: Math.round(seconds * 10) / 10 };
+  const { lufs, truePeak } = meter(samples, rate);
+  row.truePeak = truePeak;
+  if (truePeak === null || truePeak > MAX_TRUE_PEAK)
+    found.push({
+      kind: "peak",
+      where: name,
+      what: `true peak ${truePeak} dBTP, limit ${MAX_TRUE_PEAK}`,
+    });
   if (seconds >= MIN_LOUDNESS_SECONDS) {
-    const { lufs, truePeak } = meter(samples, rate);
-    Object.assign(row, { lufs, truePeak });
+    row.lufs = lufs;
     if (lufs === null || Math.abs(lufs - TARGET_LUFS) > LUFS_TOL)
-      found.push({ kind: "loudness", where: name, what: `${lufs} LUFS, target ${TARGET_LUFS} +/- ${LUFS_TOL}` });
-    if (truePeak === null || truePeak > MAX_TRUE_PEAK)
-      found.push({ kind: "peak", where: name, what: `true peak ${truePeak} dBTP, limit ${MAX_TRUE_PEAK}` });
+      found.push({
+        kind: "loudness",
+        where: name,
+        what: `${lufs} LUFS, target ${TARGET_LUFS} +/- ${LUFS_TOL}`,
+      });
   }
   if (loop) {
     const s = seamStep(samples, exit ?? samples.length / 2, loopAt);
     Object.assign(row, { seamWrap: round4(s.wrap), seamP999: round4(s.p999) });
-    if (!s.ok) found.push({ kind: "seam", where: name, what: `loop wrap steps ${round4(s.wrap)}, the loop's own 99.9th-percentile step is ${round4(s.p999)}` });
+    if (!s.ok)
+      found.push({
+        kind: "seam",
+        where: name,
+        what: `loop wrap steps ${round4(s.wrap)}, the loop's own 99.9th-percentile step is ${round4(s.p999)}`,
+      });
   }
   return { row, found };
 }
@@ -235,7 +294,17 @@ export function gameTracks(manifests) {
   for (const m of manifests)
     for (const [id, clip] of Object.entries(m.clips ?? {})) {
       const files = Object.values(clip.files ?? {}).map((f) => path.join(m.dir, f));
-      tracks.push({ name: `${m.theme}/${id}`, files, rate: clip.rate ?? m.rate, level: m.level_db ?? 0, loop: !!clip.loop, exit: clip.sample_count ?? clip.exit, loopAt: clip.loop_offset ?? 0, frames: clip.sample_count ?? null, measuredLufs: clip.measured?.lufs ?? null });
+      tracks.push({
+        name: `${m.theme}/${id}`,
+        files,
+        rate: clip.rate ?? m.rate,
+        level: m.level_db ?? 0,
+        loop: !!clip.loop,
+        exit: clip.sample_count ?? clip.exit,
+        loopAt: clip.loop_offset ?? 0,
+        frames: clip.sample_count ?? null,
+        measuredLufs: clip.measured?.lufs ?? null,
+      });
     }
   return tracks;
 }
@@ -244,9 +313,22 @@ export function gameTracks(manifests) {
 export function staleAgainstManifest(t, frames, lufs) {
   const found = [];
   if (t.frames !== null && frames !== t.frames)
-    found.push({ kind: "stale", where: t.name, what: `decoded ${frames} frames, the manifest's sample_count is ${t.frames}; the Oggs are not the ones this manifest was cut from` });
-  if (t.measuredLufs !== null && lufs !== null && lufs !== undefined && Math.abs(lufs - t.measuredLufs) > MANIFEST_LUFS_TOL)
-    found.push({ kind: "stale", where: t.name, what: `${lufs} LUFS, the manifest recorded ${t.measuredLufs} (tolerance ${MANIFEST_LUFS_TOL}); the Oggs are not the ones this manifest was cut from` });
+    found.push({
+      kind: "stale",
+      where: t.name,
+      what: `decoded ${frames} frames, the manifest's sample_count is ${t.frames}; the Oggs are not the ones this manifest was cut from`,
+    });
+  if (
+    t.measuredLufs !== null &&
+    lufs !== null &&
+    lufs !== undefined &&
+    Math.abs(lufs - t.measuredLufs) > MANIFEST_LUFS_TOL
+  )
+    found.push({
+      kind: "stale",
+      where: t.name,
+      what: `${lufs} LUFS, the manifest recorded ${t.measuredLufs} (tolerance ${MANIFEST_LUFS_TOL}); the Oggs are not the ones this manifest was cut from`,
+    });
   return found;
 }
 
@@ -257,7 +339,9 @@ export function sha256(file) {
 // The stem files the manifests name, as "pack/file.ogg".
 export function namedStems(manifests) {
   return manifests.flatMap((m) =>
-    Object.values(m.clips ?? {}).flatMap((clip) => Object.values(clip.files ?? {}).map((f) => `${path.basename(m.dir)}/${f}`)),
+    Object.values(m.clips ?? {}).flatMap((clip) =>
+      Object.values(clip.files ?? {}).map((f) => `${path.basename(m.dir)}/${f}`),
+    ),
   );
 }
 
@@ -281,8 +365,16 @@ export function stemHashMismatches(hashFile, stemsDir, named) {
   for (const rel of [...new Set(named)].sort()) {
     const file = path.join(stemsDir, rel);
     if (!existsSync(file)) continue;
-    if (!hashes.has(rel)) rejected.push({ file: rel, why: `not listed in ${STEM_HASHES}; run scripts/music/mx stem-hashes after packing` });
-    else if (sha256(file) !== hashes.get(rel)) rejected.push({ file: rel, why: `sha256 differs from ${STEM_HASHES} (a stale or re-encoded Ogg)` });
+    if (!hashes.has(rel))
+      rejected.push({
+        file: rel,
+        why: `not listed in ${STEM_HASHES}; run scripts/music/mx stem-hashes after packing`,
+      });
+    else if (sha256(file) !== hashes.get(rel))
+      rejected.push({
+        file: rel,
+        why: `sha256 differs from ${STEM_HASHES} (a stale or re-encoded Ogg)`,
+      });
   }
   return rejected;
 }
@@ -315,7 +407,11 @@ export function measureGame(manifests) {
     found.push(...r.found, ...staleAgainstManifest(t, mix.length / 2, r.row.lufs));
   }
   if (missing.length)
-    found.push({ kind: "unchecked", where: MUSIC_DIR, what: `${missing.length} clip(s) have no local stems (the Oggs are not committed): ${missing.slice(0, 4).join(", ")}${missing.length > 4 ? ", ..." : ""}` });
+    found.push({
+      kind: "unchecked",
+      where: MUSIC_DIR,
+      what: `${missing.length} clip(s) have no local stems (the Oggs are not committed): ${missing.slice(0, 4).join(", ")}${missing.length > 4 ? ", ..." : ""}`,
+    });
   return { rows, found };
 }
 
@@ -326,7 +422,9 @@ export function measureFiles(files, loops) {
   const found = [];
   for (const f of files) {
     const rate = probeRate(f);
-    const r = judge(path.basename(f), decode(f, rate), rate, { loop: loops.test(path.basename(f)) });
+    const r = judge(path.basename(f), decode(f, rate), rate, {
+      loop: loops.test(path.basename(f)),
+    });
     rows.push(r.row);
     found.push(...r.found);
   }
@@ -348,7 +446,9 @@ export function report(findings, rows = []) {
   if (rows.length) {
     lines.push("track  seconds  LUFS  true peak  seam wrap / p99.9");
     for (const r of rows)
-      lines.push(`  ${r.name}  ${r.seconds}  ${r.lufs ?? "-"}  ${r.truePeak ?? "-"}  ${r.seamWrap !== undefined ? `${r.seamWrap} / ${r.seamP999}` : "-"}`);
+      lines.push(
+        `  ${r.name}  ${r.seconds}  ${r.lufs ?? "-"}  ${r.truePeak ?? "-"}  ${r.seamWrap !== undefined ? `${r.seamWrap} / ${r.seamP999}` : "-"}`,
+      );
   }
   for (const [kind, title] of Object.entries(KIND_TITLES)) {
     const group = findings.filter((f) => f.kind === kind);
@@ -356,15 +456,29 @@ export function report(findings, rows = []) {
     lines.push(`${title}: ${group.length}`);
     for (const f of group) lines.push(`  ${f.where}  ${f.what}`);
   }
-  lines.push(findings.length === 0 ? "audio gate: PASS" : `audio gate: FAIL (${findings.length} finding(s))`);
+  lines.push(
+    findings.length === 0 ? "audio gate: PASS" : `audio gate: FAIL (${findings.length} finding(s))`,
+  );
   return lines.join("\n");
 }
 
 export function parseArgs(argv) {
-  const args = { project: path.join(root, "sketches/core-loop"), music: [], loops: /loop/i, json: false, cuesOnly: false, writeStemHashes: false };
+  const args = {
+    project: path.join(root, "sketches/core-loop"),
+    music: [],
+    loops: /loop/i,
+    json: false,
+    cuesOnly: false,
+    writeStemHashes: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    const value = (flag) => (arg === flag && i + 1 < argv.length ? argv[++i] : arg.startsWith(flag + "=") ? arg.slice(flag.length + 1) : null);
+    const value = (flag) =>
+      arg === flag && i + 1 < argv.length
+        ? argv[++i]
+        : arg.startsWith(flag + "=")
+          ? arg.slice(flag.length + 1)
+          : null;
     let v;
     if (arg === "--json") args.json = true;
     else if (arg === "--cues-only") args.cuesOnly = true;
@@ -381,10 +495,19 @@ export function parseArgs(argv) {
 export function missingInputs(args, manifests) {
   const found = [];
   if (!existsSync(path.join(args.project, SFX_BANK)))
-    found.push({ kind: "unchecked", where: args.project, what: `no ${SFX_BANK}; cues not checked` });
+    found.push({
+      kind: "unchecked",
+      where: args.project,
+      what: `no ${SFX_BANK}; cues not checked`,
+    });
   if (!args.cuesOnly && !manifests.some((m) => Object.keys(m.clips ?? {}).length))
-    found.push({ kind: "unchecked", where: args.project, what: `no ${MUSIC_DIR} manifest with clips; game music not measured` });
-  for (const d of args.music) if (!existsSync(d)) found.push({ kind: "unchecked", where: d, what: "music folder not found" });
+    found.push({
+      kind: "unchecked",
+      where: args.project,
+      what: `no ${MUSIC_DIR} manifest with clips; game music not measured`,
+    });
+  for (const d of args.music)
+    if (!existsSync(d)) found.push({ kind: "unchecked", where: d, what: "music folder not found" });
   return found;
 }
 
@@ -394,7 +517,14 @@ export function hashFindings(project, manifests) {
   const named = namedStems(manifests);
   if (!named.some((rel) => existsSync(path.join(dir, rel)))) return [];
   const rejected = stemHashMismatches(path.join(dir, STEM_HASHES), dir, named);
-  if (rejected === null) return [{ kind: "unchecked", where: path.join(dir, STEM_HASHES), what: "no stem hash list; packed Oggs not compared to what was cut" }];
+  if (rejected === null)
+    return [
+      {
+        kind: "unchecked",
+        where: path.join(dir, STEM_HASHES),
+        what: "no stem hash list; packed Oggs not compared to what was cut",
+      },
+    ];
   return rejected.map((r) => ({ kind: "stale", where: r.file, what: r.why }));
 }
 
@@ -408,13 +538,18 @@ export function oggLongestPage(data) {
   let last = 0;
   let longest = 0;
   let pages = 0;
-  for (let at = data.indexOf("OggS"); at >= 0 && at + 27 <= data.length; ) {
+  for (let at = data.indexOf("OggS"); at >= 0 && at + 27 <= data.length;) {
     const granule = data.readBigInt64LE(at + 6);
     const segments = data[at + 26];
     const body = at + 27 + segments;
     let size = 0;
     for (let i = at + 27; i < body && i < data.length; i++) size += data[i];
-    if (rate === 0 && body + 16 <= data.length && data.subarray(body, body + 7).toString("latin1") === "\x01vorbis") rate = data.readUInt32LE(body + 12);
+    if (
+      rate === 0 &&
+      body + 16 <= data.length &&
+      data.subarray(body, body + 7).toString("latin1") === "\x01vorbis"
+    )
+      rate = data.readUInt32LE(body + 12);
     if (granule >= 0n) {
       longest = Math.max(longest, Number(granule) - last);
       last = Number(granule);
@@ -434,21 +569,36 @@ export function pageFindings(project, manifests) {
     if (!rel.endsWith(".ogg") || !existsSync(file)) continue;
     const seconds = oggLongestPage(readFileSync(file));
     if (seconds !== null && seconds > MAX_OGG_PAGE_S)
-      found.push({ kind: "pages", where: rel, what: `longest Ogg page holds ${round4(seconds)} s of audio (over ${MAX_OGG_PAGE_S}); run tools/ace/repage.py apply, then scripts/music/mx stem-hashes` });
+      found.push({
+        kind: "pages",
+        where: rel,
+        what: `longest Ogg page holds ${round4(seconds)} s of audio (over ${MAX_OGG_PAGE_S}); run tools/ace/repage.py apply, then scripts/music/mx stem-hashes`,
+      });
   }
   return found;
 }
 
 export function run(args) {
   const delivered = args.music.flatMap((d) => walk(d, AUDIO_EXT));
-  const findings = [...missingInputs(args, readManifests(args.project)), ...cueFindings(args.project, delivered)];
+  const findings = [
+    ...missingInputs(args, readManifests(args.project)),
+    ...cueFindings(args.project, delivered),
+  ];
   const rows = [];
   if (!args.cuesOnly) findings.push(...hashFindings(args.project, readManifests(args.project)));
   if (!args.cuesOnly) findings.push(...pageFindings(args.project, readManifests(args.project)));
   if (!args.cuesOnly) {
-    if (!hasFfmpeg()) findings.push({ kind: "unchecked", where: "ffmpeg", what: "ffmpeg not found; loudness, peaks and seams not measured" });
+    if (!hasFfmpeg())
+      findings.push({
+        kind: "unchecked",
+        where: "ffmpeg",
+        what: "ffmpeg not found; loudness, peaks and seams not measured",
+      });
     else {
-      for (const part of [measureGame(readManifests(args.project)), measureFiles(delivered, args.loops)]) {
+      for (const part of [
+        measureGame(readManifests(args.project)),
+        measureFiles(delivered, args.loops),
+      ]) {
         rows.push(...part.rows);
         findings.push(...part.found);
       }
@@ -461,7 +611,11 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.writeStemHashes) {
     const dir = path.join(args.project, MUSIC_DIR);
-    const n = writeStemHashes(path.join(dir, STEM_HASHES), dir, namedStems(readManifests(args.project)));
+    const n = writeStemHashes(
+      path.join(dir, STEM_HASHES),
+      dir,
+      namedStems(readManifests(args.project)),
+    );
     console.log(`wrote ${n} hashes to ${path.join(dir, STEM_HASHES)}`);
     return;
   }

@@ -1,0 +1,15 @@
+[
+  {"id": "weir_mesa", "polygon": [[-650, -760], [-317, -760], [-317, -380], [-650, -380]], "purpose": "route", "verbs": ["jump", "hook"], "why": "The crew left the timber up beside the intake chute."},
+  {"id": "flume_north", "polygon": [[-317, -730], [-145, -730], [-145, -312], [-317, -312]], "purpose": "route", "verbs": ["jump"], "why": "The chute throws you onto the high trough."},
+  {"id": "canal_fields", "polygon": [[-570, -380], [-308, -380], [-308, 134], [-570, 134]], "purpose": "fight", "verbs": ["shoot", "jump"], "why": "The gun on the rim looks straight down the lined canal."},
+  {"id": "butte_gap", "polygon": [[-308, -312], [-178, -312], [-178, -145], [-308, -145]], "purpose": "hub", "verbs": ["dash"], "why": "The canal and the high line trade sides between the buttes."},
+  {"id": "upper_canal", "polygon": [[-178, -312], [60, -312], [60, -145], [-178, -145]], "purpose": "route", "verbs": ["jump"], "why": "The rim road kicker clears the dry cut."},
+  {"id": "rim_road", "polygon": [[-115, -145], [240, -145], [240, -35], [-115, -35]], "purpose": "reward", "verbs": ["roll"], "why": "The high bend gives you a look down both ways."},
+  {"id": "trestle_hollow", "polygon": [[-308, -145], [-115, -145], [-115, -35], [-75, -35], [-75, 116], [-95, 134], [-308, 134]], "purpose": "fight", "verbs": ["shoot"], "why": "The winches work the hollow from the bents above."},
+  {"id": "horseshoe", "polygon": [[240, -145], [410, -145], [410, 310], [145, 310], [145, -35], [240, -35]], "purpose": "landmark", "verbs": ["roll"], "why": "The outer bank keeps the bend in view."},
+  {"id": "siphon", "polygon": [[-206, 134], [-95, 134], [-75, 116], [-75, -35], [145, -35], [145, 310], [-30, 310], [-100, 235]], "purpose": "hub", "verbs": ["roll", "jump"], "why": "The siphon takes the high pipe across the low wash."},
+  {"id": "bench_run", "polygon": [[-430, 134], [-206, 134], [-100, 235], [-30, 310], [30, 510], [-430, 510]], "purpose": "reward", "verbs": ["jump", "roll"], "why": "Take the coping above the hauler landing."},
+  {"id": "wasteway", "polygon": [[-30, 310], [145, 310], [110, 405], [40, 445], [15, 457]], "purpose": "fight", "verbs": ["shoot", "roll"], "why": "The culvert crew owns the floor. The wall gives a way past."},
+  {"id": "bluff", "polygon": [[145, 310], [245, 310], [245, 570], [30, 570], [15, 457], [40, 445], [110, 405]], "purpose": "fight", "verbs": ["shoot", "roll"], "why": "The crew holds the drum door at the foot of the bluff."},
+  {"id": "lower_gorge", "polygon": [[245, 310], [600, 310], [600, 590], [245, 590]], "purpose": "route", "verbs": ["jump"], "why": "The last kicker sends you out over the penstocks."}
+]

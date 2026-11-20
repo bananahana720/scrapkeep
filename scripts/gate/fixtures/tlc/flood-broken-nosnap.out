@@ -1,0 +1,115 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 13 and seed -3480334569146874653 with 4 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/ParkFlood.tla
+Parsing file <tmp>/Naturals.tla
+Parsing file <tmp>/FiniteSets.tla
+Parsing file <tmp>/Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module ParkFlood
+Starting... (2026-11-17 17:39:25)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-17 17:39:25.
+Error: Invariant FullWaterNeverHeld is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
+/\ lives = [a |-> 0, b |-> 0, c |-> 0]
+/\ rise = [a |-> 0, b |-> 0, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "waiting", b |-> "waiting", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 2: <Roll line 124, col 3 to line 125, col 92 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
+/\ lives = [a |-> 0, b |-> 0, c |-> 0]
+/\ rise = [a |-> 0, b |-> 0, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "b"
+/\ phase = [a |-> "waiting", b |-> "waiting", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 3: <Announce line 67, col 3 to line 70, col 91 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
+/\ lives = [a |-> 0, b |-> 0, c |-> 0]
+/\ rise = [a |-> 0, b |-> 0, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "b"
+/\ phase = [a |-> "announced", b |-> "waiting", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 4: <Land line 75, col 3 to line 84, col 55 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
+/\ lives = [a |-> 1, b |-> 0, c |-> 0]
+/\ rise = [a |-> 0, b |-> 0, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "b"
+/\ phase = [a |-> "live", b |-> "waiting", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 5: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 1, b |-> 0, c |-> 0]
+/\ lives = [a |-> 1, b |-> 0, c |-> 0]
+/\ rise = [a |-> 1, b |-> 0, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "b"
+/\ phase = [a |-> "live", b |-> "waiting", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 6: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 2, b |-> 0, c |-> 0]
+/\ lives = [a |-> 1, b |-> 0, c |-> 0]
+/\ rise = [a |-> 2, b |-> 0, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "b"
+/\ phase = [a |-> "live", b |-> "waiting", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> TRUE, b |-> FALSE, c |-> FALSE]
+
+State 7: <Roll line 124, col 3 to line 125, col 92 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 2, b |-> 0, c |-> 0]
+/\ lives = [a |-> 1, b |-> 0, c |-> 0]
+/\ rise = [a |-> 2, b |-> 0, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "a"
+/\ phase = [a |-> "live", b |-> "waiting", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> TRUE, b |-> FALSE, c |-> FALSE]
+
+State 8: <Step line 100, col 3 to line 121, col 60 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> TRUE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 3, b |-> 0, c |-> 0]
+/\ lives = [a |-> 1, b |-> 0, c |-> 0]
+/\ rise = [a |-> 2, b |-> 0, c |-> 0]
+/\ waited = [a |-> 1, b |-> 0, c |-> 0]
+/\ ball = "a"
+/\ phase = [a |-> "live", b |-> "waiting", c |-> "waiting"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> TRUE, b |-> FALSE, c |-> FALSE]
+
+1279 states generated, 387 distinct states found, 172 states left on queue.
+The depth of the complete state graph search is 9.
+The average outdegree of the complete state graph is 2 (minimum is 0, the maximum 5 and the 95th percentile is 4).
+Finished in 00s at (2026-11-17 17:39:25)

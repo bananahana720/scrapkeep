@@ -1,5 +1,6 @@
 extends Node
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const Activities := preload("res://src/world/activities.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Rows := preload("res://src/presentation/rows.gd")
@@ -272,6 +273,13 @@ var _optional_listeners := {}
 var _motif := ""
 # Moss's babble, baked once per line, beat and key: {"beat|key|text": AudioStreamWAV}.
 var _babble := {}
+# A line of Moss's babble rendering on a worker (bakes_ahead): its cache key, the cue's kind, the
+# task and the samples it fills; it sounds the frame it is done. One at a time, so the babble's
+# synth code never runs on two threads in step (LESSONS 59). Lines asked for meanwhile wait in order.
+var _babble_job := {}
+var _babble_queue: Array = []
+# The key each asked line was queued under, by "beat|text", for babble_state.
+var _babble_asked := {}
 var sound_ready := false
 var _pitch_rng := RandomNumberGenerator.new()
 # Every cue decided: [kind, sound, "now" | "beat" | "music" | "skip", start_sample, pitch].
@@ -288,6 +296,13 @@ var muted := false
 # players start, and the band runs on a real-time clock so every cue decision and beat
 # still happens. Quitting right after freeing a playing player leaks its playback.
 var live_output := true
+# True wherever frames are drawn, a sound device or not: the band's chords and the bosses' tracks
+# bake on workers behind the title and stage 1, and stingers and riser cells render on a worker
+# before their beat. On the dummy driver of a drawn game (a machine with no sound device, or the
+# silent self-play frame reading) each of them otherwise rendered on the main thread the frame its
+# bar first asked: 25 to 45 ms frames in stage play and 40 to 120 ms frames in the boss fight on the
+# Mac Studio (w44 frame-hitches). Headless runs render on demand, so a test never waits on a worker at quit.
+var bakes_ahead := true
 
 var _music_player: AudioStreamPlayer
 var _stinger_player: AudioStreamPlayer
@@ -452,6 +467,15 @@ func _init() -> void:
 	_pitch_rng.seed = 0xA0D10
 
 
+# Whether this game bakes ahead on workers: the one read of the machine, so a test can stand in a drawn game.
+func _drawn_with_workers() -> bool:
+	return bakes_ahead_on(AudioServer.get_driver_name(), AppShell.headless())
+
+
+static func bakes_ahead_on(audio_driver: String, headless: bool) -> bool:
+	return audio_driver != "Dummy" or not headless
+
+
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "Audio"
@@ -459,8 +483,9 @@ func setup(ctx_ref) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_make_buses()
 	live_output = AudioServer.get_driver_name() != "Dummy"
+	bakes_ahead = _drawn_with_workers()
 	engine = MusicEngine.new()
-	engine.warm_stingers = live_output
+	engine.warm_stingers = bakes_ahead
 	if ctx.has_method("aim_forward"):
 		engine.set_parameter_source(sample_run_parameters)
 		engine.parameter_commit.connect(_commit_band_parameters)
@@ -493,6 +518,11 @@ static func _sound_ids() -> Array:
 			ids.append(extra)
 	# Every baked recipe a row can resolve to (a class motif, a hold, an arrival, the bell).
 	for id in SfxBank.TRIM_DB:
+		if not id in ids:
+			ids.append(id)
+	# Each class's version of the motif cues: a row resolves to one by class, so TRIM_DB does not list them, and the
+	# first gauge charge of a class would otherwise make its cue on the main thread.
+	for id in SfxBank.motif_cue_ids():
 		if not id in ids:
 			ids.append(id)
 	# The event-set files, tier files included (a tier plays by rung, so it must be baked).
@@ -659,7 +689,7 @@ func bake_opening_now() -> void:
 
 # A live run that starts before stage 1's band is baked waits for it, as on a loading frame.
 func _ready_for_run() -> void:
-	if not live_output:
+	if not bakes_ahead:
 		return
 	if not sound_ready:
 		bake_now()
@@ -673,7 +703,7 @@ static func _finish_opening() -> void:
 
 
 # The rest of stage 1's band bakes behind the title, and the other themes and the bosses
-# behind stage 1. Only a game with a sound device starts them (_on_ready): headless runs render
+# behind stage 1. Only a drawn game starts them (_on_ready, bakes_ahead): headless runs render
 # on demand instead, so a test never waits on the worker at quit; bots call bake_opening_now.
 static func _start_band_bakes() -> void:
 	if _opening_task < 0:
@@ -741,6 +771,7 @@ func _settle_workers() -> void:
 		WorkerThreadPool.wait_for_task_completion(_ace_task)
 		_ace_task = -1
 	MusicEngine.settle_stingers()
+	_settle_babble()
 	if OS.is_stdout_verbose():
 		print("AUDIO_SETTLE ms=%d" % (Time.get_ticks_msec() - started))
 
@@ -749,7 +780,7 @@ func _on_ready() -> void:
 	if sound_ready:
 		return
 	sound_ready = true
-	if live_output:
+	if bakes_ahead:
 		_start_band_bakes()
 	_virtual_usec = _transport_usec()
 	if not live_output:
@@ -994,6 +1025,7 @@ func _process(delta: float) -> void:
 	_follow_escalation()
 	_tend_set()
 	_tend_ear(delta)
+	_tend_babble()
 	if _launch_armed and _landing_theme >= 0 and SimClock.msec() - _entered_ms > LANDING_FALLBACK_MS:
 		_land_drop()
 	_pump()
@@ -1944,10 +1976,76 @@ func speak(kind: String, text: String, beat: int) -> bool:
 		return false
 	var live := live_key()
 	var key := "%d|%d|%s" % [beat, live, text]
+	if not _babble.has(key) and bakes_ahead:
+		# A bay line took 30 to 45 ms to render on the Mac Studio, on the frame the ball rolled in or
+		# out: it renders on a worker and sounds when done, a few frames after its bubble.
+		_babble_asked["%d|%s" % [beat, text]] = key
+		_babble_queue.append([key, kind, text, beat, live])
+		_next_babble()
+		return true
 	if not _babble.has(key):
 		_babble[key] = Synth.to_wav(SfxBank.babble(text, beat, live))
 	_start(kind, "babble", _babble[key], SfxBank.trim_db("babble"), 1.0, "SFX")
 	return true
+
+
+# Where a speak() line stands: "ready" once it is rendered and kept, "rendering" while it waits for or
+# sits on its worker (it sounds the frame it is done), "none" when it was never asked for. A line is
+# matched by the key it was asked under, so a music key change after the ask does not lose it.
+func babble_state(text: String, beat: int) -> String:
+	var key: String = _babble_asked.get("%d|%s" % [beat, text], "%d|%d|%s" % [beat, live_key(), text])
+	if _babble.has(key):
+		return "ready"
+	if String(_babble_job.get("key", "")) == key or _babble_queue.any(func(ask: Array): return ask[0] == key):
+		return "rendering"
+	return "none"
+
+
+# The band bakes, read from outside: "held" while a band bake has been started and not let go,
+# "running" while one of them is still working.
+static func band_bakes() -> Dictionary:
+	var held := _opening_task >= 0 or _rest_task >= 0
+	var running := (_opening_task >= 0 and not WorkerThreadPool.is_task_completed(_opening_task)) \
+		or (_rest_task >= 0 and not WorkerThreadPool.is_task_completed(_rest_task))
+	return {"held": held, "running": running}
+
+
+func _next_babble() -> void:
+	if not _babble_job.is_empty() or _babble_queue.is_empty():
+		return
+	var ask: Array = _babble_queue.pop_front()
+	var out: Array = []
+	var task := WorkerThreadPool.add_task(func(): out.append(SfxBank.babble(ask[2], ask[3], ask[4])), true, "babble")
+	_babble_job = {"key": ask[0], "kind": ask[1], "task": task, "out": out}
+
+
+# The rendered line sounds the frame its worker is done; a line cached by then sounds from the cache.
+func _tend_babble() -> void:
+	if _babble_job.is_empty() or not WorkerThreadPool.is_task_completed(_babble_job.task):
+		return
+	WorkerThreadPool.wait_for_task_completion(_babble_job.task)
+	var key: String = _babble_job.key
+	if not _babble.has(key) and not _babble_job.out.is_empty():
+		_babble[key] = Synth.to_wav(_babble_job.out[0])
+	if _babble.has(key) and not _babble_job.get("silent", false):
+		_start(_babble_job.kind, "babble", _babble[key], SfxBank.trim_db("babble"), 1.0, "SFX")
+	_babble_job = {}
+	_next_babble()
+
+
+func _settle_babble() -> void:
+	if not _babble_job.is_empty():
+		WorkerThreadPool.wait_for_task_completion(_babble_job.task)
+	_babble_job = {}
+	_babble_queue.clear()
+
+
+# The lines still waiting or rendering never sound (their bubble went, or the stage changed); the
+# one rendering keeps its worker and lands in the cache, silent.
+func _drop_babble() -> void:
+	_babble_queue.clear()
+	if not _babble_job.is_empty():
+		_babble_job["silent"] = true
 
 
 # A caller's line on the call card (SOUND-STORY section 8, "Who talks on what"): the caller's
@@ -2939,6 +3037,7 @@ func mix_state() -> String:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	_drop_babble()
 	_stage_now = stage
 	_set_overtime = false
 	_set_incoming_at = -1.0

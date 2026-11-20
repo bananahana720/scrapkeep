@@ -7,6 +7,9 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 # physics ticks and hands back the time scale that was in force before it. The count is exact
 # while a frame carries one physics tick (Godot reads the scale once per frame), so the test caps
 # a frame at one tick. A played game keeps the wall-time timer; this covers the tick path only.
+# FEEL_PLANT=zero_stop (a test-only switch; the game is untouched) asks every counted stop for zero
+# seconds, a hit-stop of zero ticks, so [slowed ticks] must fail: scripts/gate/core-feel-receipt.mjs
+# requires that.
 
 var _game
 var _failures := 0
@@ -18,6 +21,7 @@ var _timer_kept := false
 var _timer_scale := 0.0
 var _slow := 0
 var _runs: Array = []
+var _plant := OS.get_environment("FEEL_PLANT") == "zero_stop"
 
 
 func _initialize() -> void:
@@ -96,6 +100,8 @@ func _process(_delta: float) -> bool:
 			_check("stops end", _unended == 0, "%d stops still running 600 ticks after they began" % _unended)
 			_check("scale restored", scales_ok,
 				"scales before %s, after %s" % [scales, [_runs[0][1], _runs[1][1], _runs[2][1]]])
+			if _plant:
+				print("PLANT %s" % JSON.stringify({"switch": "FEEL_PLANT=zero_stop", "slowed": [_runs[0][0], _runs[1][0], _runs[2][0]]}))
 			print("hit_stop_ticks_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 			_game.free()
 			quit(0 if _failures == 0 else 1)
@@ -117,7 +123,7 @@ func _begin(scale: float, seconds: float) -> void:
 	_slow = 0
 	_ticks = 0
 	_stage += 1
-	_game.hit_stop(seconds)
+	_game.hit_stop(0.0 if _plant else seconds)
 
 
 func _finish_run(_seconds: float) -> void:

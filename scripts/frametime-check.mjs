@@ -6,6 +6,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -13,6 +14,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { userDataEnv } from "./godot-home.mjs";
+import { holdQuietSync } from "./sketch-smoke.mjs";
 
 // node scripts/frametime-check.mjs: plays the exported build under MangoHud, logs every frame and
 // reports whether frame times stay inside the alpha budget (sketches/core-loop/BUG-BAR.md).
@@ -33,6 +35,11 @@ import { userDataEnv } from "./godot-home.mjs";
 // A self-play game that exits non-zero (1 run ended early, 2 no tools/ in the pack, 3 stalled)
 // fails the check with exit 1, or 2 for code 2.
 // Exit 0 inside budget, 1 over it, 2 when nothing was measured. Never downloads anything.
+// A reading that launches the game holds the machine quiet for as long as the game runs: it waits (up to 45 min, then
+// exit 2) for sketch:smoke and sketch:fast runs on the shared slot pool to finish, and no runner on this machine
+// takes a slot until the game exits (a new sketch:fast still runs its lint and node checks before it waits). A
+// reading killed by a signal leaves a hold that dies with its process. It does not see a running gate, nightly run, red team, band read or export, so
+// do not start a reading during one. Grading a log (--log=) takes no hold; FRAMETIME_NO_QUIET=1 skips it.
 // --capture=engine|mangohud picks how frames are caught (captureMode). Without it: MangoHud when
 // mangohud is on PATH, else the engine on macOS (no MangoHud there), else MangoHud's install note.
 // The engine capture launches $GODOT_BIN --path sketches/core-loop (or --exe=<a packed build's
@@ -42,6 +49,8 @@ import { userDataEnv } from "./godot-home.mjs";
 // start empty; on macOS HOME moves there too, so the shader and pipeline caches also start empty
 // and shader compiles fall in the log unless the warmup covers them. Without --exe the engine runs
 // the project as a debug run, so that reading is not comparable with a packed build's. --hud has no engine overlay and is refused there.
+// --home=<dir> (engine capture) reuses an earlier run's scratch HOME, a folder under artifacts/local/,
+// so on macOS its shader and pipeline caches and its user:// carry over (engineHome).
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const exportRoot = path.join(root, "artifacts/local/core-loop-export");
@@ -67,6 +76,7 @@ export function parseArgs(argv) {
     sound: false,
     selfPlay: false,
     capture: null,
+    home: null,
     selfPlayArgs: [],
     gameArgs: [],
   };
@@ -83,11 +93,11 @@ export function parseArgs(argv) {
       break;
     } else if (arg.startsWith("--exe=")) args.exe = arg.slice("--exe=".length);
     else if (arg.startsWith("--log=")) args.log = arg.slice("--log=".length);
-    else if (arg.startsWith("--seconds="))
-      args.seconds = number(arg, "seconds");
+    else if (arg.startsWith("--seconds=")) args.seconds = number(arg, "seconds");
     else if (arg.startsWith("--warmup=")) args.warmup = number(arg, "warmup");
     else if (arg.startsWith("--p99=")) args.p99 = number(arg, "p99");
     else if (arg.startsWith("--hitch=")) args.hitch = number(arg, "hitch");
+    else if (arg.startsWith("--home=")) args.home = arg.slice("--home=".length);
     else if (arg === "--keep-vsync") args.keepVsync = true;
     else if (arg === "--hud") args.hud = true;
     else if (arg === "--sound") args.sound = true;
@@ -96,9 +106,10 @@ export function parseArgs(argv) {
       args.capture = arg.slice("--capture=".length);
       if (!CAPTURES.includes(args.capture))
         throw new FrametimeError(`--capture takes ${CAPTURES.join(" or ")}: ${arg}`);
-    }
-    else if (arg.startsWith("--self-play-script="))
-      throw new FrametimeError("--self-play-script= is a test override of the game and is not forwarded");
+    } else if (arg.startsWith("--self-play-script="))
+      throw new FrametimeError(
+        "--self-play-script= is a test override of the game and is not forwarded",
+      );
     else if (/^--self-play-[a-z]+=/.test(arg)) args.selfPlayArgs.push(arg);
     else throw new FrametimeError("unknown argument: " + arg);
   }
@@ -142,7 +153,12 @@ export function parseSelfPlay(text, warmup = 0) {
       });
     const stall = line.match(/^self-play: stalled at stage (\d+) (\w+) at ([\d.]+) s pos (\S+)/);
     if (stall)
-      stalled = { stage: Number(stall[1]), what: stall[2], launch_s: Number(stall[3]), pos: stall[4] };
+      stalled = {
+        stage: Number(stall[1]),
+        what: stall[2],
+        launch_s: Number(stall[3]),
+        pos: stall[4],
+      };
   }
   return { lines, stages, stalled };
 }
@@ -184,11 +200,22 @@ export function captureMode(args, platform = process.platform, envPath = process
 // windowed, vsync off unless --keep-vsync, and the frame log's flags first among the user args.
 export function engineLaunch(args, { outDir, godotBin, project = projectDir }) {
   const csv = path.join(outDir, ENGINE_LOG);
-  const flags = [`--frame-log=${csv}`, `--frame-log-warmup=${args.warmup}`, `--frame-log-seconds=${args.seconds}`];
+  const flags = [
+    `--frame-log=${csv}`,
+    `--frame-log-warmup=${args.warmup}`,
+    `--frame-log-seconds=${args.seconds}`,
+  ];
   const game = gameArgv(args);
   const split = game.indexOf("--");
-  const user = split < 0 ? [...game, "--", ...flags] : [...game.slice(0, split + 1), ...flags, ...game.slice(split + 1)];
-  const engine = [...(args.exe ? [] : ["--path", project]), "--windowed", ...(args.keepVsync ? [] : ["--disable-vsync"])];
+  const user =
+    split < 0
+      ? [...game, "--", ...flags]
+      : [...game.slice(0, split + 1), ...flags, ...game.slice(split + 1)];
+  const engine = [
+    ...(args.exe ? [] : ["--path", project]),
+    "--windowed",
+    ...(args.keepVsync ? [] : ["--disable-vsync"]),
+  ];
   return { command: args.exe ? path.resolve(args.exe) : godotBin, argv: [...engine, ...user], csv };
 }
 
@@ -237,9 +264,7 @@ export function resolveTarget({ exe, dataHome, exports = exportRoot }) {
 // perf_bench's vsync-off bench so the budget measures headroom, not the display's refresh.
 export function mangohudConfig({ outDir, seconds, warmup, keepVsync, hud }) {
   if (outDir.includes(","))
-    throw new FrametimeError(
-      "the output folder cannot contain a comma: " + outDir,
-    );
+    throw new FrametimeError("the output folder cannot contain a comma: " + outDir);
   const pairs = [
     "output_folder=" + outDir,
     "autostart_log=" + warmup,
@@ -259,8 +284,7 @@ export function parseLog(text) {
   const headerAt = lines.findIndex((line) =>
     line.split(",").some((cell) => cell.trim().toLowerCase() === "frametime"),
   );
-  if (headerAt < 0)
-    throw new FrametimeError("no frametime column in the MangoHud log");
+  if (headerAt < 0) throw new FrametimeError("no frametime column in the MangoHud log");
   const column = lines[headerAt]
     .split(",")
     .findIndex((cell) => cell.trim().toLowerCase() === "frametime");
@@ -269,12 +293,9 @@ export function parseLog(text) {
     const value = Number(line.split(",")[column]);
     if (line.trim() && Number.isFinite(value) && value > 0) frames.push(value);
   }
-  if (frames.length === 0)
-    throw new FrametimeError("the MangoHud log has no frames");
+  if (frames.length === 0) throw new FrametimeError("the MangoHud log has no frames");
   const sorted = [...frames].sort((a, b) => a - b);
-  return sorted[Math.floor(sorted.length / 2)] > 1000
-    ? frames.map((v) => v / 1000)
-    : frames;
+  return sorted[Math.floor(sorted.length / 2)] > 1000 ? frames.map((v) => v / 1000) : frames;
 }
 
 function percentile(sorted, p) {
@@ -286,18 +307,13 @@ const round = (value) => Math.round(value * 100) / 100;
 // Each hitch carries its time from the start of the log, so it can be matched to what was on screen.
 export function summarize(
   frames,
-  {
-    p99Ms = BUDGET.p99Ms,
-    hitchMs = BUDGET.hitchMs,
-    severeMs = BUDGET.severeMs,
-  } = {},
+  { p99Ms = BUDGET.p99Ms, hitchMs = BUDGET.hitchMs, severeMs = BUDGET.severeMs } = {},
 ) {
   const sorted = [...frames].sort((a, b) => a - b);
   const hitches = [];
   let elapsed = 0;
   for (const ms of frames) {
-    if (ms > hitchMs)
-      hitches.push({ at_s: round(elapsed / 1000), ms: round(ms) });
+    if (ms > hitchMs) hitches.push({ at_s: round(elapsed / 1000), ms: round(ms) });
     elapsed += ms;
   }
   const p99 = percentile(sorted, 0.99);
@@ -334,9 +350,7 @@ export function report(summary, source, label = "MangoHud log") {
   for (const hitch of summary.hitches.slice(0, 20))
     lines.push(`       at ${hitch.at_s} s: ${hitch.ms} ms`);
   if (summary.hitches.length > 20)
-    lines.push(
-      `       and ${summary.hitches.length - 20} more in summary.json`,
-    );
+    lines.push(`       and ${summary.hitches.length - 20} more in summary.json`);
   lines.push(
     summary.pass
       ? "PASS: frame times stay inside the alpha budget."
@@ -362,8 +376,26 @@ function stamp(date = new Date()) {
 }
 
 // What a reading measured: a packed build or a debug run of the project, on warm or cold caches.
+// With --home on macOS the caches are an earlier run's: "reused", not proven warm.
 export function engineContext(args, platform = process.platform) {
-  return { target: args.exe ? "packed" : "debug-editor", cache: platform === "darwin" ? "cold" : "shared" };
+  const cache = platform !== "darwin" ? "shared" : args.home ? "reused (--home)" : "cold";
+  return { target: args.exe ? "packed" : "debug-editor", cache };
+}
+
+// The engine capture's scratch HOME: a fresh one in the run folder, or --home=<dir>, which must
+// already exist under artifacts/local/, so a reading never runs on the player's own HOME. Both paths
+// are resolved through links first, so a link inside artifacts/local/ cannot lead out of it.
+export function engineHome(args, outDir, localRoot = path.join(root, "artifacts/local")) {
+  if (!args.home) return path.join(outDir, "home");
+  if (!existsSync(args.home)) throw new FrametimeError("no folder at --home=" + args.home);
+  const home = realpathSync(args.home);
+  const rel = path.relative(
+    existsSync(localRoot) ? realpathSync(localRoot) : path.resolve(localRoot),
+    home,
+  );
+  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel))
+    throw new FrametimeError("--home must be a folder under artifacts/local/: " + args.home);
+  return home;
 }
 
 function analyse(logFile, args, outDir, selfPlay = null, context = null) {
@@ -414,11 +446,13 @@ export function main(
   env = process.env,
   out = outRoot,
   platform = process.platform,
+  quiet = null,
 ) {
   const args = parseArgs(argv);
   const outDir = path.join(out, stamp());
   if (args.log) return analyse(path.resolve(args.log), args, outDir);
-  if (captureMode(args, platform, env.PATH) === "engine") return engineCapture(args, env, outDir, platform);
+  if (captureMode(args, platform, env.PATH) === "engine")
+    return engineCapture(args, env, outDir, platform, quiet);
 
   const mangohud = findOnPath("mangohud", env.PATH);
   if (!mangohud) {
@@ -437,13 +471,22 @@ export function main(
   // A self-play game's stdout is read for its "self-play:" lines and echoed; otherwise it is inherited.
   // A self-play game saves into its own XDG data and config under the run folder, never the player's
   // (the cache stays shared, so shader compiles are not part of the measure).
-  const launch = { env: { ...env, MANGOHUD_CONFIG: config, ...(args.selfPlay ? selfPlayXdg(outDir) : {}) } };
-  const run = spawnSync(
-    mangohud,
-    [target, ...gameArgv(args)],
-    args.selfPlay
-      ? { ...launch, stdio: ["inherit", "pipe", "inherit"], maxBuffer: 256 * 1024 * 1024, encoding: "utf8" }
-      : { ...launch, stdio: "inherit" },
+  const launch = {
+    env: { ...env, MANGOHUD_CONFIG: config, ...(args.selfPlay ? selfPlayXdg(outDir) : {}) },
+  };
+  const run = launchQuiet(quiet, () =>
+    spawnSync(
+      mangohud,
+      [target, ...gameArgv(args)],
+      args.selfPlay
+        ? {
+            ...launch,
+            stdio: ["inherit", "pipe", "inherit"],
+            maxBuffer: 256 * 1024 * 1024,
+            encoding: "utf8",
+          }
+        : { ...launch, stdio: "inherit" },
+    ),
   );
   return collect(
     run,
@@ -455,8 +498,7 @@ export function main(
 
 // After the game closes, either capture: keep the self-play lines, then grade the run folder's log.
 function collect(run, args, outDir, noLogMessage, context = null) {
-  if (run.error)
-    throw new FrametimeError("could not launch: " + run.error.message);
+  if (run.error) throw new FrametimeError("could not launch: " + run.error.message);
   let selfPlay = null;
   if (args.selfPlay) {
     process.stdout.write(run.stdout ?? "");
@@ -465,22 +507,46 @@ function collect(run, args, outDir, noLogMessage, context = null) {
   }
   const logFile = newestLog(outDir);
   if (!logFile) {
-    if (selfPlay) console.error(`self-play: game exit ${selfPlay.exit}${selfPlay.stalled ? ", stalled at stage " + selfPlay.stalled.stage : ""}`);
+    if (selfPlay)
+      console.error(
+        `self-play: game exit ${selfPlay.exit}${selfPlay.stalled ? ", stalled at stage " + selfPlay.stalled.stage : ""}`,
+      );
     console.error(noLogMessage);
     return 2;
   }
   return analyse(logFile, args, outDir, selfPlay, context);
 }
 
-function engineCapture(args, env, outDir, platform) {
-  if (args.hud) throw new FrametimeError("--hud is MangoHud's overlay; the engine capture has none");
+// The game runs while this reading holds the machine quiet (holdQuietSync in scripts/sketch-smoke.mjs). The hold is
+// taken only here, after the arguments and the target are checked, and is given back when the game exits.
+function launchQuiet(quiet, launch) {
+  if (!quiet) return launch();
+  let held;
+  try {
+    held = quiet();
+  } catch (error) {
+    throw new FrametimeError(error.message);
+  }
+  try {
+    return launch();
+  } finally {
+    held.release();
+  }
+}
+
+function engineCapture(args, env, outDir, platform, quiet) {
+  if (args.hud)
+    throw new FrametimeError("--hud is MangoHud's overlay; the engine capture has none");
   const godotBin = env.GODOT_BIN;
   if (!args.exe && !(godotBin && existsSync(godotBin))) {
-    console.error("The engine capture needs GODOT_BIN set to the Godot 4.7.2 editor binary, or --exe=<a packed build's binary>.");
+    console.error(
+      "The engine capture needs GODOT_BIN set to the Godot 4.7.2 editor binary, or --exe=<a packed build's binary>.",
+    );
     return 2;
   }
   if (args.exe && !existsSync(args.exe)) throw new FrametimeError("no build at --exe=" + args.exe);
-  const home = path.join(outDir, "home");
+  const home = engineHome(args, outDir);
+  mkdirSync(outDir, { recursive: true });
   mkdirSync(home, { recursive: true });
   const { command, argv, csv } = engineLaunch(args, { outDir, godotBin });
   const minutes = Math.round(((args.warmup + args.seconds) / 60) * 10) / 10;
@@ -490,12 +556,19 @@ function engineCapture(args, env, outDir, platform) {
   );
   // The game's user:// lives under this HOME on macOS (scripts/godot-home.mjs), never the player's.
   const launch = { env: { ...env, ...userDataEnv(home, platform) } };
-  const run = spawnSync(
-    command,
-    argv,
-    args.selfPlay
-      ? { ...launch, stdio: ["inherit", "pipe", "inherit"], maxBuffer: 256 * 1024 * 1024, encoding: "utf8" }
-      : { ...launch, stdio: "inherit" },
+  const run = launchQuiet(quiet, () =>
+    spawnSync(
+      command,
+      argv,
+      args.selfPlay
+        ? {
+            ...launch,
+            stdio: ["inherit", "pipe", "inherit"],
+            maxBuffer: 256 * 1024 * 1024,
+            encoding: "utf8",
+          }
+        : { ...launch, stdio: "inherit" },
+    ),
   );
   return collect(
     run,
@@ -506,12 +579,15 @@ function engineCapture(args, env, outDir, platform) {
   );
 }
 
-if (
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-) {
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    process.exitCode = main();
+    process.exitCode = main(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      process.env.FRAMETIME_NO_QUIET === "1" ? null : holdQuietSync,
+    );
   } catch (error) {
     if (!(error instanceof FrametimeError)) throw error;
     console.error(error.message);

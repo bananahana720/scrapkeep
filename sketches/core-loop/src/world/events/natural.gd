@@ -11,14 +11,16 @@ const EventDirector := preload("res://src/world/event_director.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
-const Flood := preload("res://src/world/flood.gd")
-const FloodCycle := preload("res://src/world/flood_cycle.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
+const HazardHits := preload("res://src/world/events/hazard_hits.gd")
+const StormSeek := preload("res://src/world/events/storm_seek.gd")
+const SiltBoil := preload("res://src/combat/silt_boil.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 # Flood foam (WorldFx set "spill_flood") rides the water in pieces this long along the footprint's long
 # axis, each at its own surface height, so foam follows a wash's slope; at most FOAM_PIECES a flood.
 const FOAM_SET := "spill_flood"
@@ -32,6 +34,22 @@ const KINDS := {
 	"flood_fill": {}, "drain": {}, "cave_in": {}, "collapse": {}, "flash_flood": {},
 	"impact": {"lift_mps": 8.0}, "lightning": {"lift_mps": 8.0},
 }
+# The Spillway's hazards hit enemies too (W44, HazardHits). A strike (an impact, lightning, a storm's sought
+# strike) takes ENEMY_STRIKE_DAMAGE from each enemy in its circle, once an activation. A flood never stops a
+# rolling ball (ruling cu): water FLOOD_DEEP_M deep at an enemy's feet sweeps it outward and takes
+# FLOOD_ENEMY_DAMAGE each FLOOD_SWEEP_S, and a ball that sits below cruise in water that deep for
+# FLOOD_TAX_AFTER_S loses FLOOD_TAX scrap, then again each FLOOD_TAX_EVERY_S it stays slow there.
+const ENEMY_STRIKE_DAMAGE := 40.0
+const ENEMY_TOSS := 14.0
+const FLOOD_DEEP_M := 0.4
+const FLOOD_SWEEP_S := 1.0
+const FLOOD_ENEMY_DAMAGE := 8.0
+const FLOOD_TOSS := 10.0
+const FLOOD_TAX := 2
+const FLOOD_TAX_AFTER_S := 3.0
+const FLOOD_TAX_EVERY_S := 2.0
+const BALL_RADIUS_M := 1.2
+const FLOOD_KINDS := ["flood_fill", "flash_flood"]
 
 var world
 var active := {}
@@ -44,6 +62,9 @@ var _original_flood
 var _audio
 var _world_sound := Callable()
 var _next_checked := false
+# Whether this park's hazards hit enemies and its storms seek a stalled ball (HazardHits.applies).
+var hits_enemies := false
+var seek := StormSeek.new()
 # Natural plans (plan()) by park stage root, the instance id of terrain's geometry root for the
 # stage, so a rebuilt stage plans again: {"task", "out"} while a worker plans the next stage, then
 # {"plan"}. Shared across handlers because each stage's handler is freed on the next entry. A
@@ -54,30 +75,29 @@ static var _plans := {}
 static var _marks_job := {}
 
 
-class WaterClock:
-	extends FloodCycle
-	var metres := 0.0
-	func depth(_full: float) -> float:
-		return metres
-	func klaxon() -> bool:
-		return false
-
-
+# A local rise has its own projected surface and foam. The basin's klaxon mast and light
+# belong to the stage flood and never signal a local event.
 class WaterView:
-	extends Flood
+	extends Node3D
 	var site := {}
 	var geometry := {}
 	var surface: WaterSurface
 	var query_xz := Vector2.ZERO
+	var depth_m := 0.0
+	var _plane: MeshInstance3D
+	func setup(projected: WaterSurface) -> void:
+		surface = projected
+		_plane = MeshInstance3D.new()
+		_plane.mesh = projected.mesh
+		_plane.material_override = Palette.water(Palette.water_tone())
+		add_child(_plane)
 	func in_basin(point: Vector3) -> bool:
 		query_xz = Vector2(point.x, point.z)
 		return visible and ParkMap.footprint_contains(geometry.site, query_xz, 0.0, Vector2.INF, geometry.half)
 	func surface_y() -> float:
-		return surface.height(query_xz) + cycle.metres
+		return surface.height(query_xz) + depth_m
 	func render() -> void:
-		_plane.position = Vector3.UP * cycle.metres
-	func external_accel(_point: Vector3, _velocity: Vector3) -> Vector3:
-		return Vector3.ZERO
+		_plane.position = Vector3.UP * depth_m
 
 
 
@@ -108,6 +128,7 @@ class WaterField:
 func setup(world_ref) -> void:
 	world = world_ref
 	name = "NaturalEvents"
+	add_to_group("world_telegraphs")
 	_original_map = world.terrain.map()
 	_original_flood = world.terrain.flood
 	for site in _original_map.park.park_rows:
@@ -124,6 +145,7 @@ func setup(world_ref) -> void:
 			_prepare_overlay(row, record, entry)
 		_prepared[row.id] = record
 	_plan_marks(planned)
+	hits_enemies = HazardHits.applies_to(world.ctx.get("run"))
 	world.terrain.flood = _water_field
 	# Replace the generic world's sound listener for this stage, preserving its other cues.
 	var presentation = world.ctx.root.get("presentation")
@@ -373,7 +395,7 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 		"telegraph":
 			var state: Dictionary = _prepared[row.id].duplicate()
 			state.merge({"phase": "telegraph", "hit": false, "elapsed_s": 0.0, "depth_m": 0.0,
-				"water": null, "mark": _mark(row, state.geometry), "announced_s": ctx.clock_s}, true)
+				"struck": {}, "sweep_s": 0.0, "wet_slow_s": 0.0, "taxes": 0, "water": null, "kind": row.kind, "mark": _mark(row, state.geometry), "announced_s": ctx.clock_s}, true)
 			active[row.id] = state
 		"land":
 			var state: Dictionary = active[row.id]
@@ -396,7 +418,7 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 				var fraction := clampf(elapsed / fill_s, 0.0, 1.0) if fill_s > 0.0 else 1.0
 				var depth := minf(ParkSchema.MAX_EVENT_WATER_M, maxf(0.0, float(row.effect.get("depth_m", 0.0))))
 				state.depth_m = lerpf(float(state.start_depth_m), 0.0 if row.kind == "drain" else depth, fraction)
-				state.water.cycle.metres = state.depth_m
+				state.water.depth_m = state.depth_m
 				state.water.render()
 				_ride_foam(state, 1.0 - fraction if row.kind != "drain" else 0.0)
 			if row.kind in ["collapse", "cave_in"]:
@@ -405,6 +427,36 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 			_hazard(row, state, ctx)
 		"end":
 			_end(row)
+
+
+# The storm's seek reads the ball every tick of the stage, so a ball that stalled before a storm broke is sought.
+func _physics_process(delta: float) -> void:
+	if world == null or not hits_enemies:
+		return
+	var player = world.ctx.player
+	if player == null or not player.has_method("ball_position") or not player.has_method("planar_velocity"):
+		return
+	var ball: Vector3 = player.ball_position()
+	if _seek_exempt(ball):
+		seek.stand_down()
+		return
+	seek.observe(delta, ball, player.planar_velocity(), _cruise())
+
+
+# Where the silt does not boil (the reward gates, the launch, an engaged Warden's ring: SiltBoil.exempt) and the
+# calm bay, where the director is not stepped, a storm does not seek.
+func _seek_exempt(ball: Vector3) -> bool:
+	var flow = world.ctx.get("flow")
+	if flow != null and SiltBoil.exempt(flow, ball):
+		return true
+	var bay = world.get("bay")
+	return bay != null and bay.inside
+
+
+# The ball's cruise speed, or 0 where there is no tuning (a test double): then no speed reads as slow.
+func _cruise() -> float:
+	var tuning = world.ctx.player.get("tuning")
+	return float(tuning.f("cruise")) if tuning != null else 0.0
 
 
 func _process(_delta: float) -> void:
@@ -464,26 +516,17 @@ static func _at(terrain, site: Dictionary) -> Vector3:
 func _land_water(row: Dictionary, state: Dictionary) -> void:
 	var water := WaterView.new()
 	add_child(water)
-	water.setup()
+	water.setup(state.water_surface)
 	water.site = state.site
 	water.geometry = state.geometry
-	water.cycle = WaterClock.new()
 	var depth := minf(ParkSchema.MAX_EVENT_WATER_M, maxf(0.0, float(row.effect.get("depth_m", 0.0))))
 	state.start_depth_m = depth if row.kind == "drain" else 0.0
 	for existing in _water_field.surfaces:
 		if existing.site.id == state.site.id and existing.visible:
-			state.start_depth_m = existing.cycle.metres
+			state.start_depth_m = existing.depth_m
 	state.depth_m = state.start_depth_m
-	water.cycle.metres = state.depth_m
-	var half: Vector2 = state.geometry.half
-	var centre := Vector2(state.at.x, state.at.z)
-	water.configure({"centre": centre, "radius": half.length(), "plane_centre": centre,
-		"plane_size": half * 2.0, "depth": depth}, state.at.y, state.at)
-	water.surface = state.water_surface
-	water.query_xz = centre
-	water._plane.mesh = water.surface.mesh
-	water._mast.visible = false
-	water._lamp_mesh.visible = false
+	water.depth_m = state.depth_m
+	water.query_xz = Vector2(state.at.x, state.at.z)
 	water.render()
 	state.water = water
 	if FOAM_PARKS.has(String(_original_map.park.get("map", ""))):
@@ -524,9 +567,9 @@ static func _ride_foam(state: Dictionary, churn: float) -> void:
 	for a: Node3D in state.get("foam", []):
 		var xz := Vector2(a.position.x, a.position.z)
 		var floor_y: float = water.surface.height(xz)
-		a.visible = floor_y > -INF and float(water.cycle.metres) > FOAM_DRY_M
+		a.visible = floor_y > -INF and float(water.depth_m) > FOAM_DRY_M
 		if a.visible:
-			a.position.y = floor_y + water.cycle.metres + 0.05
+			a.position.y = floor_y + water.depth_m + 0.05
 		a.set_level(lerpf(0.35, 1.0, clampf(churn, 0.0, 1.0)))
 
 
@@ -590,19 +633,101 @@ func _set_overlay(row: Dictionary, changed: bool) -> void:
 
 
 func _hazard(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
-	if row.kind not in ["impact", "lightning"] or state.hit:
+	if row.kind in FLOOD_KINDS:
+		_flood(row, state, ctx)
 		return
-	var radius: float = state.geometry.strike_m
-	var at: Vector3 = state.geometry.at
-	if Vector2(ctx.ball.x - at.x, ctx.ball.z - at.z).length() > radius or absf(ctx.ball.y - at.y) > radius:
+	if row.kind not in ["impact", "lightning"]:
+		return
+	if hits_enemies:
+		HazardHits.strike(get_tree(), func(point: Vector3) -> bool: return _in_strike(state, point), row.kind,
+			ENEMY_STRIKE_DAMAGE, ENEMY_TOSS, state.struck)
+		if row.kind == "lightning" and state.phase == "live" and not _seek_exempt(ctx.ball):
+			_seek(row, state, ctx)
+	if state.hit or not _in_strike(state, ctx.ball):
 		return
 	state.hit = true
+	_strike_ball(row, ctx.ball)
+
+
+# The strike circle the lightning and impact marks draw (plan(): strike_m round the site point).
+static func _in_strike(state: Dictionary, point: Vector3) -> bool:
+	var radius: float = state.geometry.strike_m
+	var at: Vector3 = state.geometry.at
+	return Vector2(point.x - at.x, point.z - at.z).length() <= radius and absf(point.y - at.y) <= radius
+
+
+func _strike_ball(row: Dictionary, ball: Vector3) -> void:
 	var amount := maxi(0, ceili(float(row.effect.get("damage", 0.0))))
-	var taken: int = world.ctx.run.lose_scrap(amount, ctx.ball, row.kind)
+	var taken: int = world.ctx.run.lose_scrap(amount, ball, row.kind)
 	if taken < amount or amount == 0:
 		var velocity: Vector3 = world.ctx.player.state.velocity
 		velocity.y = maxf(velocity.y, float(KINDS[row.kind].lift_mps))
 		world.ctx.player.set_velocity_now(velocity, "natural_event")
+
+
+# A live storm's sought strike (StormSeek): the lightning mark's cue as its ring starts to fill, the landing cue
+# where it strikes, and the ball and every enemy inside that ring struck as it strikes.
+func _seek(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
+	var told := seek.tells
+	var ball: Vector3 = ctx.ball
+	var terrain = world.terrain
+	seek.step(float(ctx.delta_s), self, func(point: Vector3) -> float: return terrain.height(point.x, point.z), ball,
+		float(state.geometry.strike_m), float(row.live_s) - float(state.elapsed_s), func(hazard) -> void:
+			_publish("lightning_mark_landed", hazard.centre)
+			if hazard.contains(ball):
+				_strike_ball(row, ball)
+			HazardHits.strike(get_tree(), hazard.contains, row.kind, ENEMY_STRIKE_DAMAGE, ENEMY_TOSS, {}))
+	if seek.tells > told:
+		_publish("lightning_mark", seek.pending().centre)
+
+
+# What tells the ball about each hazard of this stage that takes its scrap, as [{id, cause, covers}]: the mark of a live
+# strike (lightning, impact) over the circle it strikes, a flood's water over its basin, and the storm's sought ring.
+# The cause is the one lose_scrap is called with. The bot's fairness record reads this (tools/bot_fairness.gd).
+func telegraphs(ball: Vector3) -> Array:
+	var out: Array = []
+	for id in active:
+		var state: Dictionary = active[id]
+		var kind := String(state.get("kind", ""))
+		if kind in ["impact", "lightning"]:
+			out.append({"id": ("natural:%s:%s" % [id, state.announced_s]).hash(), "cause": kind, "covers": _in_strike(state, ball)})
+		elif kind in FLOOD_KINDS and state.water != null:
+			out.append({"id": ("natural:%s:%s" % [id, state.announced_s]).hash(), "cause": "flood", "covers": state.water.in_basin(ball)})
+	var ring = seek.pending()
+	if ring != null and is_instance_valid(ring):
+		out.append({"id": ring.get_instance_id(), "cause": "lightning", "covers": ring.contains(ball)})
+	return out
+
+
+func _publish(kind: String, at: Vector3) -> void:
+	if world.ctx.events != null:
+		world.ctx.events.world_fact.emit(kind, at)
+
+
+# A live flood (FLOOD_* above): sweeps the enemies standing in its deep water and taxes a ball that sits slow in it.
+func _flood(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
+	var water = state.water
+	if not hits_enemies or water == null:
+		return
+	var delta := float(ctx.get("delta_s", 0.0))
+	var deep := func(point: Vector3) -> bool: return water.in_basin(point) and water.surface_y() - point.y >= FLOOD_DEEP_M
+	state.sweep_s = float(state.sweep_s) - delta
+	if state.sweep_s <= 0.0:
+		state.sweep_s = FLOOD_SWEEP_S
+		var at: Vector3 = state.at
+		HazardHits.strike(get_tree(), deep, row.kind, FLOOD_ENEMY_DAMAGE, FLOOD_TOSS, {},
+			func(point: Vector3) -> Vector3: return Vector3(point.x - at.x, 0.5, point.z - at.z))
+	var ball: Vector3 = ctx.ball
+	var velocity: Vector3 = ctx.get("velocity", Vector3.ZERO)
+	var slow := SpeedTier.of(Vector2(velocity.x, velocity.z).length(), _cruise()) < SpeedTier.CRUISE
+	if not slow or not deep.call(ball - Vector3.UP * float(ctx.get("ball_radius_m", BALL_RADIUS_M))):
+		state.wet_slow_s = 0.0
+		state.taxes = 0
+		return
+	state.wet_slow_s = float(state.wet_slow_s) + delta
+	if state.wet_slow_s >= FLOOD_TAX_AFTER_S + FLOOD_TAX_EVERY_S * int(state.taxes):
+		state.taxes = int(state.taxes) + 1
+		world.ctx.run.lose_scrap(FLOOD_TAX, ball, "flood")
 
 
 func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
@@ -756,6 +881,8 @@ func _end(row: Dictionary) -> void:
 	if not active.has(row.id):
 		return
 	var state: Dictionary = active[row.id]
+	if row.get("kind", "") == "lightning":
+		seek.clear()
 	if state.water != null:
 		_water_field.surfaces.erase(state.water)
 		state.water.free()
@@ -767,6 +894,7 @@ func _end(row: Dictionary) -> void:
 
 
 func release() -> void:
+	seek.clear()
 	for id in active.keys():
 		_end({"id": id})
 	if world != null:

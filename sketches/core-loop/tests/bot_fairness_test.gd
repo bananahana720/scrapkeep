@@ -16,6 +16,8 @@ const T := preload("res://tests/support/t.gd")
 # Part 2, live: one seed on stage 1 (novice, which loses hull both moving and stopped), played unplanted and once per plant.
 # Unplanted, every number is measured and on the passing side. Each plant moves its own number under the line and leaves the
 # other two readings inside a stated tolerance of the unplanted run, so a plant proves its own reading and not the plumbing.
+# The scrap plant is the exception: a theft changes the ball's heft and so the whole run's hull path, which moves the one-seed
+# hull F2 past its tolerance, so F2 is not held for it; its split of slow and fast loss is checked by sums instead.
 # A null is "not measured" and never a passing control.
 #
 # Run it by hand after any change under tools/bot_* or to the classifier (it is on the weekly list).
@@ -95,6 +97,12 @@ func _fixtures() -> void:
 	_t.eq("an unowned ring is the Warden's own", BotFairness.classify("warden", [_row("", 2.0, true)], [], {}), "telegraphed")
 	_t.eq("an unowned ring is not a pack unit's", BotFairness.classify("chaser", [_row("", 2.0, true)], [], {"chaser": true}), "untelegraphed")
 	_t.eq("a planted drain is untelegraphed", BotFairness.classify("drain_plant", [_row("chaser", 5.0, true)], [], {}), "untelegraphed")
+	# Scrap causes (lose_scrap's own cause, read through the same rule): a world cause matches only a world telegraph of its own cause.
+	_t.eq("a lightning theft under its own old ring is telegraphed", BotFairness.classify("lightning", [_row("world", 2.0, true, "lightning")], [], {}), "telegraphed")
+	_t.eq("a lightning theft under another cause's old mark is untelegraphed", BotFairness.classify("lightning", [_row("world", 2.0, true, "impact")], [], {}), "untelegraphed")
+	_t.eq("a boiler theft under a young hazard is untelegraphed", BotFairness.classify("boiler_burst", [_row("world", tell - 0.2, true, "boiler_burst")], [], {}), "untelegraphed")
+	_t.eq("a crane theft under the crane's own old sweep is telegraphed", BotFairness.classify("crane", [_row("boss", 2.0, true, "crane_0")], [], {"boss": true}), "telegraphed")
+	_t.eq("the scrap plant is untelegraphed", BotFairness.classify("scrap_plant", [_row("world", 5.0, true, "lightning")], [], {}), "untelegraphed")
 	_t.eq("an environment source has no owner to match", BotFairness.classify("cinder_floor", [], [], {}), "unknown")
 	_t.eq("a chaser hit under another chaser's old lane reads telegraphed (sources carry only the kind)", BotFairness.classify("chaser", [_row("chaser", 2.0, true)], [], {"chaser": true}), "telegraphed")
 
@@ -110,7 +118,7 @@ func _run() -> void:
 	_line = BotFairness.config()
 	_fixtures()
 	var base := OS.get_user_data_dir().path_join("bot-fairness-%d" % OS.get_process_id())
-	var arms := {"plain": "", "drain": "drain=0.02", "fast_tax": "fast_tax=0.03", "ringless": "ringless=0.3"}
+	var arms := {"plain": "", "drain": "drain=0.02", "fast_tax": "fast_tax=0.03", "ringless": "ringless=0.3", "scrap": "scrap=0.1"}
 	var jobs := []
 	for name in arms:
 		jobs.append({"script": "res://tools/bot_run.gd", "args": _args(base.path_join(name), arms[name])})
@@ -129,25 +137,24 @@ func _run() -> void:
 		fair[name] = f if f is Dictionary else {}
 		print("%s: %s" % [name, JSON.stringify(fair[name])])
 	_plain(fair["plain"])
-	var f1: float = _share(fair["plain"])
-	var f2: float = float(fair["plain"].get("stop_tax", 0.0))
-	var f3: float = _first_hit(fair["plain"])
+	var plain := BotFairness.baseline(fair["plain"])
+	var f1: float = plain["share"]
+	var f2: float = plain["stop_tax"]
+	var f3: float = plain["first_hit"]
+	_t.check("plain baseline measured a stop tax", plain["miss"] == "", "%s" % [plain["miss"]])
 	_drain(fair["drain"], f1, f2, f3)
 	_fast_tax(fair["fast_tax"], f1, f2, f3)
 	_ringless(fair["ringless"], f1, f2, f3)
+	_scrap(fair["scrap"], f1, f2, f3)
 	quit(_t.verdict())
 
 
 func _share(f: Dictionary) -> float:
-	var v = f.get("telegraph_share")
-	return float(v) if v != null else -1.0
+	return BotFairness.share_of(f)
 
 
 func _first_hit(f: Dictionary) -> float:
-	var seg = f.get("first_hit", {}).get("s1")
-	if seg == null or seg.get("first_hit_s") == null:
-		return -1.0
-	return float(seg["first_hit_s"])
+	return BotFairness.first_hit_of(f)
 
 
 func _plain(f: Dictionary) -> void:
@@ -155,6 +162,13 @@ func _plain(f: Dictionary) -> void:
 	var total := 0.0
 	for k in hull:
 		total += float(hull[k])
+	# Hull buckets sum to hull_lost; scrap has its own, and the unknown share reads over both.
+	var scrap: Dictionary = f.get("scrap", {})
+	for k in scrap:
+		total += float(scrap[k])
+	hull = hull.duplicate()
+	for k in scrap:
+		hull[k] = float(hull.get(k, 0.0)) + float(scrap[k])
 	var shares := {}
 	for k in hull:
 		shares[k] = snappedf(float(hull[k]) / maxf(total, 0.001), 0.001)
@@ -171,7 +185,10 @@ func _others(name: String, f: Dictionary, f1: float, f2: float, f3: float, skip:
 	if skip != "F1":
 		_t.check("%s leaves F1 within %.2f" % [name, TOL_SHARE], f.get("telegraph_share") != null and absf(_share(f) - f1) <= TOL_SHARE, "planted %s, unplanted %s" % [f.get("telegraph_share"), f1])
 	if skip != "F2":
-		_t.check("%s leaves F2 within %.0f%%" % [name, TOL_TAX * 100.0], f.get("stop_tax") != null and absf(float(f["stop_tax"]) - f2) <= TOL_TAX * f2, "planted %s, unplanted %s" % [f.get("stop_tax"), f2])
+		if f2 < 0.0:
+			_t.check("%s leaves F2 within %.0f%%: not judged, the plain baseline measured no stop tax" % [name, TOL_TAX * 100.0], false, "unplanted %s" % [f2])
+		else:
+			_t.check("%s leaves F2 within %.0f%%" % [name, TOL_TAX * 100.0], f.get("stop_tax") != null and absf(float(f["stop_tax"]) - f2) <= TOL_TAX * f2, "planted %s, unplanted %s" % [f.get("stop_tax"), f2])
 	if skip != "F3":
 		_t.check("%s leaves F3 within %.1f s" % [name, TOL_FIRST_HIT_S], _first_hit(f) >= 0.0 and absf(_first_hit(f) - f3) <= TOL_FIRST_HIT_S, "planted %s, unplanted %s" % [_first_hit(f), f3])
 
@@ -184,7 +201,10 @@ func _drain(f: Dictionary, f1: float, f2: float, f3: float) -> void:
 
 func _fast_tax(f: Dictionary, f1: float, f2: float, f3: float) -> void:
 	_t.check("F2 falls below the line with the fast-ball tax", f.get("stop_tax") != null and float(f["stop_tax"]) < float(_line["stopTax"]), "stop_tax %s" % [f.get("stop_tax")])
-	_t.check("F2 planted reads below unplanted", f.get("stop_tax") != null and float(f["stop_tax"]) < f2, "planted %s, unplanted %s" % [f.get("stop_tax"), f2])
+	if f2 < 0.0:
+		_t.check("F2 planted reads below unplanted: not judged, the plain baseline measured no stop tax", false, "unplanted %s" % [f2])
+	else:
+		_t.check("F2 planted reads below unplanted", f.get("stop_tax") != null and float(f["stop_tax"]) < f2, "planted %s, unplanted %s" % [f.get("stop_tax"), f2])
 	_others("fast_tax", f, f1, f2, f3, "F2")
 
 
@@ -193,3 +213,22 @@ func _ringless(f: Dictionary, f1: float, f2: float, f3: float) -> void:
 	_t.check("F3 drops below the line with the ringless spawn", v >= 0.0 and v < float(_line["firstHitS"]), "first_hit %s" % [f.get("first_hit")])
 	_t.check("F3 planted reads below unplanted", v >= 0.0 and v < f3, "planted %s, unplanted %s" % [v, f3])
 	_others("ringless", f, f1, f2, f3, "F3")
+
+
+# Scrap taken through run.lose_scrap with no telegraph (the plant's cause) is a loss the three lines must see: F1 drops below the line.
+# The plant is small, so the hull F1, F2 and F3 stay where they were (_others).
+func _scrap(f: Dictionary, f1: float, f2: float, f3: float) -> void:
+	# telegraph_share stays hull only; the theft moves pooled_share (hull and scrap together), and F1 fails on either.
+	var pooled = f.get("pooled_share")
+	_t.check("F1's pooled share drops below the line with the scrap theft planted", pooled != null and float(pooled) < float(_line["telegraphShare"]), "pooled %s" % [pooled])
+	_t.check("F1's pooled share reads below unplanted", pooled != null and float(pooled) < f1, "planted %s, unplanted %s" % [pooled, f1])
+	_t.check("the planted theft is in the scrap record", float(f.get("scrap_sources", {}).get("scrap_plant", 0.0)) > 0.0, "scrap_sources %s" % [f.get("scrap_sources")])
+	# Seed-independent sums in place of an F2 hold: every point stolen is in the slow or the fast total once, and every hull
+	# point lost is too. (F2 itself is not held: the theft changes the ball's heft, so the one-seed hull F2 swings, 0.594
+	# unplanted against 1.50 with 20 scrap taken, the instability the ledger row for this test names.) F1's hull share and F3 are held.
+	var planted := float(f.get("scrap_sources", {}).get("scrap_plant", 0.0))
+	var split := float(f.get("slow_scrap", -1.0)) + float(f.get("fast_scrap", -1.0))
+	_t.check("slow and fast scrap sum to the scrap stolen", absf(split - planted) <= 0.15, "slow %s + fast %s, stolen %s" % [f.get("slow_scrap"), f.get("fast_scrap"), planted])
+	var hull_split := float(f.get("slow_hull", -1.0)) + float(f.get("fast_hull", -1.0))
+	_t.check("slow and fast hull sum to hull_lost", absf(hull_split - float(f.get("hull_lost", -2.0))) <= 0.15, "slow %s + fast %s, lost %s" % [f.get("slow_hull"), f.get("fast_hull"), f.get("hull_lost")])
+	_others("scrap", f, f1, f2, f3, "F2")

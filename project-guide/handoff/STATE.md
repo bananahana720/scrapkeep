@@ -6,15 +6,53 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 | Fact | Value |
 | --- | --- |
-| Last promotion | wave 42, main a76ccfd3, #1075 |
-| Open stage | stage/alpha-w43 |
-| Live board | #1076 |
-| Red team | cautious |
-| Compare against | /home/andrew/scratch/gate/w42-52304036/ |
+| Last promotion | wave 43, main b0037214, #1105 |
+| Open stage | stage/alpha-w44 |
+| Live board | #1106 |
+| Red team | greedy |
+| Compare against | artifacts/local/gate/w43-b5fb45a7/ on the Mac Studio (published on branch scratch/gate-receipts-w43-b5fb45a7) |
 
 The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
-## Now (17 Nov 2026, wave 43 closing)
+## Now (20 Nov 2026, wave 44 closing)
+
+**Wave 44 closes on the Mac Studio (20 Nov)** after stacking the CI speed stack (PRs 1174 to 1178: parallel PR CI with concurrency cancel, blobless checkout and seeded caches; oxlint + oxfmt replacing prettier; 23x faster `check:docs`; LPT-balanced Godot sharding and affected selection; tracked `<9s` pre-push hook), the audit fixes reviewed `PASS+NOTES` on the wave board (PRs 1165 to 1170 and 1172: reward-gate jump pickup, full-hull mend guard, unmeasured-stop-tax labels in `bot_fairness_test`, incoming-event edge markers, slam-lesson line guard, dynamic Interact prompt binding, audit records), and the two paused bot/reactor branches (`w44/brindle-bot-camera` lens crosshair aim and `w44/reactor-bands-lead` 9-seed reactor bands). Excluded from wave 44: PR 1171 (parked/fail), PR 1173 (awaits Andrew's nod on `AGENTS.md` rule 11 / ruling `eg`), PR 1120 (parked), and open promise-card PRs 1144 to 1158.
+
+**Pre-promotion review (20 Nov, `f42a22574..212fb8e0b` game code):** `PASS+NOTES` with zero blockers (ruling `cu`, `cx`, deep modules, save/reward integrity and `res://tools/` boundaries all clear). Two non-blocking follow-ups for wave 45: (1) `edge_markers.gd:165-167` skips `ARMED` visibility on non-park participatory offers, (2) `edge_markers.gd:492-493, 501` `arrow_slide` clamping at viewport corners.
+
+**Wave 44 gate on `212fb8e0` (20 Nov, Mac Studio M5 Max):**
+- `node tests`: **PASS** (1,544 tests, 0 fail).
+- `tests 1-412`: **PASS, no new red** (412/412 first run, 0 `SCRIPT ERROR`).
+- `tests 413-824`: **PASS, no new red** (410/412 first run; `posture_bands_reactor_test` carried on the ledger; `pick_card_clarity_test` load flake, 2/2 pass alone; 0 `SCRIPT ERROR`).
+- `tests 825-1234`: **PASS, no new red** (408/410 first run; `stage_modifier_test` carried on the ledger; `scenery_teardown_test` load flake, 2/2 pass alone; 0 `SCRIPT ERROR`; note `speed_bank_test` ran 336.4 s against its 360 s limit).
+- `weekly sweep`: carried from wave 43 (`PASS 2026-11-17`, within the 7-day limit; `w43-b5fb45a7/weekly-tests/receipt.md`, `w43-b5fb45a7/weekly-bots/receipt.md`).
+- `scoped` (28 bot tests): 21/28 passed on the first run (including `world1_run_test`, `sitting_played_run_test`, `bot_skill_bar_test`, `skill_band_test`, `alpha_posture_bands_test`, `alpha_posture_bands_w23_test`); the 7 reds are settled in this close commit and rerun alone on the close head:
+  - `run_tier_test`: all 20 `BASE_RUN_MAC` whole-run hashes matched; re-recorded `BASE_SCHEDULE_MAC` for PR 1147/1148 park-row additions (Linux `BASE_SCHEDULE` untouched; stays on `KNOWN-FAILING.tsv` under W1-147).
+  - `prim_census_test`: lowered `MIN_SURFACES` and `PINNED_SURFACES` (`129 -> 127`) because the faster stage-2 route (30,835 vs 34,853 ticks) skipped two transient keys (`Plume_cache__`, `DispatchPod`); 0 new, 0 stale, same 3 stand-ins.
+  - `posture_bands_test`: all bands pass (`grown 25.0 s`, `small 62.0 s`, ratio `2.48x`); pinned Mac small median `62.0 s` beside Linux `54.4 s` via `PlatformPin.pick` after `w44/brindle-bot-camera`.
+  - `posture_bands_swarm_test`: 201/202 pass; re-centered `FIRST_STAGGER_BAND_S_MAC` on `48.45 s` (`38.45..58.45`, right beside Linux's `50.32 s`) after `w44/brindle-bot-camera`.
+  - `bot_fairness_test`: updated the existing `KNOWN-FAILING.tsv` row to list the 5 explicit unmeasured-stop-tax check labels added by PR 1167 on seed 40301 (ruling `dx`).
+  - `posture_bands_flume_test`: carried on `KNOWN-FAILING.tsv` (`grown post-clamp median 14.7 s` against the `15 s` floor, within 10% of the `15.54 s` Mac pin; never lowering the band floor per ruling `cu`/`bj`).
+  - `park_reactor_fight_test`: carried on `KNOWN-FAILING.tsv` (seed 21 drifted from `28.74 s` to `89.71 s` vs `53.70 s` allowance after lens crosshair aim; 24-seed read to decide, matching wave 41).
+
+Gate assumptions added for Andrew: flume Warden post-clamp grown median (`14.7 s` vs `15 s` floor) and dam mounted-reactor seed 21 (`89.71 s` vs `53.70 s`) are carried for tuning/24-seed verification in wave 45 rather than weakening any band or allowance; Mac `posture_bands_test` small pin (`62.0 s`) and `posture_bands_swarm_test` first-stagger band (`48.45 s`) reflect `w44/brindle-bot-camera`'s lens crosshair aim and need Linux re-reads when a Linux box runs.
+
+### Earlier (18-19 Nov 2026, wave 44 open)
+
+**Wave 44 is map sites and bodies, plus the world 1 promise cards**, on `stage/alpha-w44` (cut at b0037214). Read the stack queue with `git log --first-parent origin/stage/alpha-w44`. On 18 Nov the Gate audited the sixteen Codex pull requests of 17 Nov (1124 to 1139) and stacked what passed: 1125 to 1127, 1129, 1130, 1132 to 1137 and 1139, with the fixes found in review. It also stacked the Claude rows 1116, 1119, 1122, 1123 (hazards hit enemies too; stages 1 and 2 read the same run for run with the dial off, so no easing under ruling cu) and 1140, and the audit's structures (1141). PRs 1124, 1128, 1131 and 1138 were closed on Andrew's go-ahead; the audit's deletion list is done, with each removed worktree's evidence archived on the Mac.
+
+**Promise cards** ([docs/promises/README.md](../../docs/promises/README.md), rulings ec and ee). Stacked: W1-131a (1150), W1-143a (1149), W1-134a (1143), W1-135a (1147) and W1-141a (1148); each card stays open for its later subtasks. Back with their Codex threads, verdicts on each pull request: W1-137a (1146, a test cleanup), W1-132a (1144, the off-screen window and its watcher receipt) and W1-144a (1152, a Mac reproduction and a test for the probe). W1-133a (1145) has posted progress only. PR 1120 (water flows) is parked.
+
+**Paused 19 Nov for a move to another setup; resume here.** The stage is at 9dabc7647. Stacked since the line below: the three stage reds that were new mistakes (app shell, Brindle defeat cutaway, miniboss reach; https://github.com/bananahana720/scrapkeep/pull/1164). Two branches are pushed and not stacked:
+- `w44/brindle-bot-camera` (7adeb1b4c, reviewed PASS+NOTES by the top-tier reviewer). Since e27901cd4 capped the camera's boss contact lift, the bot's shots went over Brindle's hull and every phase 2 seed of bot_brindle_short_test died; the bot now takes its aim pitch from the lens, as a player's crosshair does. It moves every bot aim, so bot-measured pins can move. Its bot run (merged with the stage, 05f22d706) read three changes still to compare against the bare stage before it stacks: posture_bands_test small 62.0 s against the sweep's 54.4 s; posture_bands_swarm_test small first stagger 48.45 s against 36.61 s; bot_fairness_test timed out at 1700 s after a `SCRIPT ERROR: Nonexistent 'float' constructor` with F2's stop_tax null. sitting_played_run_test passed. Next: run those three on the bare stage tip (LESSONS lesson 51), then stack or re-pin.
+- `w44/reactor-bands-lead` (5f3ce25da, built on the branch above). posture_bands_reactor_test now reads nine seeds; the Mac pins move to 54.96 / 19.39 s; the grown floor (19.4 s against 25 s, as a 24-seed read found on 24 Oct) is carried on KNOWN-FAILING.tsv beside posture_bands_test's, whose fix is the stage 1 Warden plating sweep. The cause of the three-seed red was b0c797f04's truthful hit-stop clock in pack_pressure.gd observe(), which moved seed 1 alone. Gate assumption: that clock stays; the crew lead stays at half (ruling D1). It stacks after the branch above.
+Still carried and owned: waking_fight_test, posture_bands_mind_test, stage_modifier_test. Then the wave 44 gate on the Mac.
+
+**After the Codex release sweep (18 Nov evening)** the Gate fixed and stacked: the release tally now refuses CLEAN beside a red node step (1159); a shared machine slot no longer reads dead while its holder is alive, and imports keep its heartbeat (1160); the fairness record sees scrap world hazards take, with F1 and F2 failing on either reading (W1-149, 1161); the sitting run reads six of six loops (W1-111, 1163). W1-148 (a parked ball cannot hold a flood off past 2 s) is stacked too (1162, stage a56a4b1e8); its aerial reach check now reads every hit in the slam window, because a silt boil can land on the parked ball after the brute's. Eight Godot tests fail alone on the stage at 37845f86b as well as on W1-148 (app shell, body run warning, waking fight, Brindle defeat cutaway, bot Brindle short, the two posture band tests, stage modifier); they are the Gate's to sort before the wave gate. The wave order is on the board: https://github.com/bananahana720/scrapkeep/issues/1106#issuecomment-6992991508. Gate assumptions added: the 2 s flood hold cap counts in-footprint time grounded or not; F1 and F2 fail when either reading misses.
+
+Owed: stills of the flume footings and the gap table once W1-131b or a Linux run can draw them; the 1119 snag sweep; the Linux run_tier re-read (ledger review 25 Nov); the stop-tax band read for 1122 at the wave gate. Gate assumptions Andrew can overturn: footings yield where a ride line passes; a hazard kill gives no on-kill trigger; 1122's boss charge may miss a ball that stops for 0.25 s; the W1-131a reference run counts despite seven missed watcher samples under load.
+
+### Earlier (17 Nov 2026, wave 43 closing)
 
 **Wave 43's gate is clean on b5fb45a7 (17 Nov), the first wave gate run on the Mac Studio** (ruling eb). It took 2 h 32 min, counting the `npm run sketch:fast` run that names its bot tests (09:08Z to 11:40Z); the first gate took about 2 h 45 min. Every row passes: 1386 node tests, 1207 non-bot tests, 30 scoped bot tests and a fresh weekly sweep. Carried on the ledger, each failing the check its row names: posture_bands_test, bot_fairness_test, stage_modifier_test, posture_bands_mind_test and waking_fight_test. One load flake with no row: world1_run_test stalled at Brindle in one of three runs and passed twice alone (card MG-12). Receipts: branch `scratch/gate-receipts-w43-b5fb45a7`. The pre-promotion review of the wave's game code (top tier, code reading only) passed with notes and no blocker; its three follow-ups are cards MG-13 to MG-15, and the older-build reward route stays on W1-117.
 

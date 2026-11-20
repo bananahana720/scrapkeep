@@ -53,6 +53,14 @@ const PARK_CORRIDOR_M := 8.0
 const PARK_BAR_S := 240.0 / 172.0
 const PARK_GROUND_CAP := 2
 const PARK_FAMILY_CAP := 1
+# A sum of tick lengths lands a hair under its target at most tick rates, so a park
+# clock counts as arrived within this slack. Without it a full flood or a finished
+# collapse still reads as under way and waits under a rider who rolls in.
+const PARK_CLOCK_SLACK_S := 0.00000001
+# A rising flood waits for a grounded ball in its basin so the water never changes under a ball with no
+# warning (design-v3/PARK.md rule 2, the hold rule). The wait is spent after this much of the flood's live
+# time; then the water rises around the ball and natural.gd's deep-water tax reads it (W1-148, ruling cu).
+const PARK_FLOOD_HOLD_CAP_S := 2.0
 const PARK_LAND_FACTS := {
 	"ground_slump": "ground_slump_landed",
 	"flood_rising": "flood_landed", "fleet_inbound": "fleet_landed",
@@ -443,7 +451,7 @@ func _build_park(park: Dictionary, height: Callable) -> void:
 func _park_state(row: Dictionary, weather: bool) -> Dictionary:
 	return {"row": row, "weather": weather, "phase": WAITING, "ready_s": 0.0,
 		"due_s": 0.0, "holding": false, "pending": 0, "live_elapsed_s": 0.0,
-		"rise_s": 0.0, "collapse_s": 0.0, "context": {}}
+		"rise_s": 0.0, "collapse_s": 0.0, "waited_s": 0.0, "context": {}}
 
 
 func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dictionary, facts: Array) -> void:
@@ -471,6 +479,7 @@ func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dict
 		state.phase = LIVE
 		state.live_elapsed_s = 0.0
 		state.rise_s = 0.0
+		state.waited_s = 0.0
 		state.collapse_s = 0.0
 		_park_hook("land", state, ctx)
 		if not state.weather:
@@ -559,31 +568,42 @@ func _park_capacity(candidate: Dictionary) -> bool:
 static func _park_downbeat(time_s: float, context: Dictionary) -> float:
 	var bar := maxf(0.000001, float(context.get("bar_s", PARK_BAR_S)))
 	var origin := float(context.get("bar_origin_s", 0.0))
-	return origin + ceil((time_s - origin - 0.00000001) / bar) * bar
+	return origin + ceil((time_s - origin - PARK_CLOCK_SLACK_S) / bar) * bar
 
 
 func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: Vector3, ctx: Dictionary, facts: Array) -> void:
 	var live_s := float(state.row.live_s)
-	if live_s > 0.0 and state.live_elapsed_s >= live_s - 0.00000001:
+	if live_s > 0.0 and state.live_elapsed_s >= live_s - PARK_CLOCK_SLACK_S:
 		if _park_can_end(state):
 			_park_end(state, facts)
 		return
 	var dt := minf(delta, maxf(0.0, live_s - float(state.live_elapsed_s))) if live_s > 0.0 else delta
 	state.live_elapsed_s += dt
 	if not state.weather and (_park_rising(state) or _park_collapsing(state)) and not _park_clear(state, ball, velocity, ctx):
-		return
+		var inside := _park_in_footprint(state, ball)
+		if not (inside and _park_hold_spent(state)):
+			if inside:
+				state.waited_s += dt
+			return
 	var step_ctx := ctx.duplicate(true)
 	step_ctx.delta_s = dt
 	step_ctx.rise_s = state.rise_s
 	_park_hook("step", state, step_ctx)
 	if state.phase != LIVE:
 		return
-	if not state.weather and state.row.kind in ["collapse", "cave_in"]:
-		state.collapse_s = minf(float(state.row.effect.get("fill_s", 0.0)), float(state.collapse_s) + dt)
-	if not state.weather and _park_rising(state):
-		state.rise_s = minf(float(state.row.effect.get("fill_s", 0.0)), float(state.rise_s) + dt)
-	if live_s > 0.0 and state.live_elapsed_s >= live_s - 0.00000001 and _park_can_end(state):
+	if not state.weather:
+		var fill_s := float(state.row.effect.get("fill_s", 0.0))
+		if state.row.kind in ["collapse", "cave_in"]:
+			state.collapse_s = _park_clock(state.collapse_s, dt, fill_s)
+		if _park_rising(state):
+			state.rise_s = _park_clock(state.rise_s, dt, fill_s)
+	if live_s > 0.0 and state.live_elapsed_s >= live_s - PARK_CLOCK_SLACK_S and _park_can_end(state):
 		_park_end(state, facts)
+
+
+static func _park_clock(elapsed_s: float, dt: float, target_s: float) -> float:
+	var next_s := elapsed_s + dt
+	return target_s if next_s >= target_s - PARK_CLOCK_SLACK_S else next_s
 
 
 static func _park_collapsing(state: Dictionary) -> bool:
@@ -592,6 +612,29 @@ static func _park_collapsing(state: Dictionary) -> bool:
 
 static func _park_rising(state: Dictionary) -> bool:
 	return state.row.kind != "drain" and (state.row.kind in ["flood_fill", "flash_flood"] or state.row.effect.get("material") == "water") and state.rise_s < float(state.row.effect.get("fill_s", 0.0))
+
+
+func _park_half(state: Dictionary, site: Dictionary) -> Vector2:
+	var half := ParkMap.footprint_half_extents(site)
+	if state.row.effect.has("footprint_m"):
+		var footprint = state.row.effect.footprint_m
+		half = (footprint if footprint is Vector2 else Vector2(float(footprint[0]), float(footprint[1]))).abs() * 0.5
+	return half
+
+
+# Rising water with a ball standing in its footprint, grounded or not: the time the cap counts. A ball that hops
+# in place is still in the water's way, so hopping cannot hold a flood off.
+func _park_in_footprint(state: Dictionary, ball: Vector3) -> bool:
+	if state.weather or not _park_rising(state):
+		return false
+	var site: Dictionary = NaturalFootprint.resolve(state.row, _park_sites[state.row.site])
+	return ParkMap.footprint_contains(site, Vector2(ball.x, ball.z), 0.0, Vector2.INF, _park_half(state, site))
+
+
+# A flood that has waited PARK_FLOOD_HOLD_CAP_S for a ball in its footprint stops waiting while it still rises
+# (only the step gate reads this: a flood still never ends under a ball, _park_can_end).
+static func _park_hold_spent(state: Dictionary) -> bool:
+	return state.phase == LIVE and float(state.waited_s) >= PARK_FLOOD_HOLD_CAP_S - PARK_CLOCK_SLACK_S and _park_rising(state)
 
 
 func _park_can_end(state: Dictionary) -> bool:
@@ -645,12 +688,9 @@ func _park_clear(state: Dictionary, ball: Vector3, velocity: Vector3, context: D
 	if state.weather:
 		return true
 	var site: Dictionary = NaturalFootprint.resolve(state.row, _park_sites[state.row.site])
-	var half := ParkMap.footprint_half_extents(site)
-	if state.row.effect.has("footprint_m"):
-		var footprint = state.row.effect.footprint_m
-		half = (footprint if footprint is Vector2 else Vector2(float(footprint[0]), float(footprint[1]))).abs() * 0.5
+	var half := _park_half(state, site)
 	var point := Vector2(ball.x, ball.z)
-	if _park_rising(state) and context.grounded and ParkMap.footprint_contains(site, point, 0.0, Vector2.INF, half):
+	if _park_rising(state) and context.grounded and _park_in_footprint(state, ball):
 		return false
 	if not _park_ground(state.row):
 		return true

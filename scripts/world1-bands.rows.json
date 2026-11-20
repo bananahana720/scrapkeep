@@ -451,8 +451,8 @@
       "label": "a run always ends, and ends once",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: the run flow model in the scrapkeep-verify-formal skill (wave 42)",
-      "plant": "the model without the vanished-Warden fallback must show a run that never ends",
+      "producer": "node scripts/gate/model-receipts.mjs --row run-always-ends --out <dir> runs TLC on the run flow model (.agents/skills/scrapkeep-verify-formal) with today-store.cfg and writes <dir>/run-always-ends.json; it fails while a covered file has changed since the model's sync commit",
+      "plant": "the model without the vanished-Warden fallback (broken-vanish.cfg) must show a run that never ends, and the model without the death guard (broken-endguard.cfg) a run that ends twice",
       "basis": "plan track V3, check F-A: src/core/flow.gd has no stall guard, and two world 2 findings are runs that never end"
     },
     {
@@ -462,8 +462,8 @@
       "label": "the same seed plays the same run whatever order contacts arrive in",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: every arrival order of up to four same-tick contacts on the real code (wave 43)",
-      "plant": "the contact sort removed must make two orders part",
+      "producer": "node scripts/gate/contact-orders-receipt.mjs --out <dir>/same-seed-same-run.json, on a clean checkout of the head (it takes the head from git): it runs sketches/core-loop/tests/contact_orders_all_test.gd alone through scripts/sketch-smoke.mjs, every arrival order of five sets of up to four same-tick contacts on the real code, each on a fresh game (62 orders, pinned); a set whose orders end in different states fails it, named. Touches take effect together at the first body_entered of a tick (src/movement/rigid_ball.gd:353-362), so no hit, pickup or hazard can land between two of them. Faked: the physics server for one tick, every contact new, the state read before the next tick, and calm on, so a hit skips its knock. Not claimed: a pickup with any damage in the same tick, whose end state depends on which lands first (a design call waiting on Andrew)",
+      "plant": "the contact sort bypassed (CONTACT_PLANT=nosort, a test-only switch) must make the test fail",
       "basis": "plan track V3, check F-C; LESSONS 71 and pull request 1027"
     },
     {
@@ -473,8 +473,8 @@
       "label": "an earned reward is banked once and never lost",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: the profile and run store model in the scrapkeep-verify-formal skill (wave 43)",
-      "plant": "the settle ledger removed from the model must show a reward banked twice",
+      "producer": "node scripts/gate/model-receipts.mjs --row rewards-banked-once --out <dir> runs TLC on the rewards model (.agents/skills/scrapkeep-verify-formal) with rewards-today-one.cfg (one game, from a fresh start or a run file an older build left with the old reward key, W1-117), rewards-today-two-once.cfg and rewards-today-two-lost.cfg (two games on one profile) and writes <dir>/rewards-banked-once.json; it fails while any of them breaks a rule (a reward paid twice, finding R-2, or lost, R-1 and R-3) and while a covered file has changed since the model's sync commit, and it names what it cannot check: the profile save lock is taken as perfect, and ruling ea lets two games pay twice when both saves of the first game's earn fail",
+      "plant": "the settle ledger removed from the model (rewards-broken-ledger.cfg) must show a reward banked twice, a save between settle and unlock (rewards-broken-midsave.cfg) a reward lost, the old key read from the run file (rewards-broken-legacyrun.cfg) a reward lost, and two games deciding on the profile as loaded (rewards-broken-stale.cfg) or without the save lock (rewards-broken-nolock.cfg) a reward banked twice",
       "basis": "plan track V3, check F-B: src/core/profile.gd, progress.gd and run_store.gd across a crash at every step"
     },
     {
@@ -495,8 +495,8 @@
       "label": "a strong build beats Brindle faster and with more parts than a plain one",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: parts and fight time for a top build against the base build, from the band read (wave 43)",
-      "plant": "a top build with its parts stripped must read as a miss",
+      "producer": "the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: Brindle, Expert top build against ordinary, 48 seeds each, median parts at entry higher and median win time lower",
+      "plant": "the top and ordinary build labels swapped must read as a miss on both parts and fight time",
       "basis": "Direction: overpowered pays; audit of 13 Nov, finding 5"
     },
     {
@@ -514,11 +514,11 @@
       "id": "core-feel-tests",
       "area": "Core feel",
       "source": "receipt",
-      "label": "hit-stop, juice budget and launch speed hold with no carried flake",
+      "label": "hit-stop, juice budget and the ball's shove and slam tests hold with no carried flake",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: the six core feel tests alone on a quiet PC, three runs each (wave 42)",
-      "plant": "a hit-stop of zero ticks must fail",
+      "producer": "node scripts/gate/core-feel-receipt.mjs --out <dir>/core-feel-tests.json, on a clean checkout of the head (it takes the head from git): it runs the six core feel tests KNOWN-FAILING.tsv carries as load flakes (hit_stop_ticks, presentation_hitstop, presentation_juice, juice_budget, kite_dive_stack, harpoon_canon) alone through scripts/sketch-smoke.mjs with one slot, three runs each, refusing a machine whose 1-minute load is above a quarter of its threads; it needs 18 passes in 18 and no flake or red row for any of the six. Quiet solo passes do not clear a row: it comes off after two full gates in a row pass the test, or with a fix for its load fault (GATE.md). Launch speed is not in this row; world_launch_test checks it",
+      "plant": "a hit-stop of zero ticks (hit_stop_ticks_test with FEEL_PLANT=zero_stop, a test-only switch) must fail",
       "basis": "KNOWN-FAILING.tsv carries six core feel flakes that only fail under load"
     },
     {
@@ -528,7 +528,7 @@
       "label": "every killing hit is telegraphed, a stopped ball pays double, and the first hit waits 3 s",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: grade fairness lines F1 to F3 from the band read (wave 43)",
+      "producer": "the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: F1 (every killing hit telegraphed) and F2 in every cell and column of w1, w2 and brindle, F3 on Learner attempt 1, 24 seeds a pool, lines from scripts/challenge/fairness.json",
       "plant": "a Warden attack with its telegraph removed must read as a miss",
       "basis": "ruling cu fairness lines; scripts/challenge/fairness.json prints them and grades nothing today"
     },
@@ -539,9 +539,35 @@
       "label": "at least 60% of Novice non-wins are deaths, not time caps",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: death share from the band read's runs.ndjson (wave 43)",
+      "producer": "the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: deaths over deaths and time caps, per cell, in the Novice column of w1 (48 seeds), w2 and w1clear (24 each)",
       "plant": "a band where every loss is a time cap must read as a miss",
       "basis": "ruling cu; 46% on the 10 Nov read"
+    },
+    {
+      "id": "brindle-worst-minute",
+      "area": "Wardens and bosses",
+      "source": "receipt",
+      "label": "Brindle's worst minute costs at least the dam Warden's",
+      "status": "gate",
+      "cadence": "sitting",
+      "floor": {
+        "learner5": 0.27,
+        "expert": 0.07
+      },
+      "producer": "the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: in the whole-clear cell (w1clear), Learner attempt 5 and Expert, the median share of max hull lost in Brindle's worst 60 s is at least the larger of the dam Warden's median in the same read and this row's floor; seed and fight counts are pinned in SEEDS in that file; a dam fight with no worst minute recorded reads 0 (no hit landed) when another dam fight in the read has one, and a Brindle fight reads 0 when its hit count is 0; any other fight with its worst minute unrecorded is no data and a miss",
+      "plant": "a Brindle that deals no damage must read as a miss in both columns",
+      "basis": "BACKLOG MG-11. floor: the dam's worst-minute medians on the W1-31 read (board issue 1106, comment 6935842041; branch head 3a8d440df on the Mac, 24 seeds an arm): Learner attempt 5 27%, Expert 7%, with Brindle 0% in both, so the dam cannot sink with Brindle to make a pass. The median is the lower middle (med in scripts/challenge/worst-window.mjs, the tool behind those figures). The worst minute is read on the whole-clear cell, which plays the skipper persona, while the fairness guards (warden-fairness, brindle-stop-tax) and the Brindle win floors read the Brindle cell, which plays the brawler: a Brindle lever is checked for fairness on a different bot from the one this row reads. A wave 45 gate row that misses until the Brindle pressure units land (ruling cu: harder, never easier)"
+    },
+    {
+      "id": "brindle-stop-tax",
+      "area": "Wardens and bosses",
+      "source": "receipt",
+      "label": "in the Slag Bowl a stopped ball pays at least double",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "the band read on the head (npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48); node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <dir> writes the receipt: F2 (hull lost per second below cruise over at or above cruise, line from scripts/challenge/fairness.json) in each column a default band read plays in the Brindle cell, one pool a column, each with the fairness seed count run and carrying a fairness record; a pool with no stop tax is a miss",
+      "plant": "a stopped ball that loses hull at the cruising ball's rate must read as a miss",
+      "basis": "BACKLOG MG-11; ruling cu fairness line F2. A narrower view of a check warden-fairness already makes on the Brindle pools, kept as the loop target for the Brindle pressure units. Read on the Brindle cell (the brawler persona; it enters the fight on its first tick, --to-boss=1, so its whole fairness record is the bowl), not the whole-clear cell that brindle-worst-minute reads. A wave 45 gate row; no band read on a wave 44 head has graded it yet"
     },
     {
       "id": "map-standard",
@@ -550,8 +576,8 @@
       "label": "every map standard point has a check, and nothing is owed that was not ruled to wait",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: collect the MAPCHECK lines of the park tests for the dam and the flume; points 4 and 5 have no check yet (wave 44)",
-      "plant": "a dam with one landmark removed must fail point 1",
+      "producer": "node scripts/gate/map-standard-receipt.mjs --out <dir>/map-standard.json, on a clean checkout of the head: it runs the nine park tests that print MAPCHECK lines (sight, breath, rhythm, variety, cover tags, feature census, fight bowl, site markers, scrap lines) through scripts/sketch-smoke.mjs, takes the head from git rev-parse HEAD, and passes only when each of the ten points has a line on the dam and on the flume, the line count is the pinned one and every line passes or is on its list of items ruled to wait (each pinned to its status and value, with the line that parks it), and no half of a point that no line checks is left open without a ruling (today open: the point 1 and 8b pictures, the point 5 picture and tagged cover, the 8c snag sweep)",
+      "plant": "every map test's planted fault must fail its line (the dam's riding-line nodes with their landmark sight cleared for point 1, a fixed draw for point 4, a hard row off the cover layer for point 5, and the rest); one plant not shown failing voids the receipt",
       "basis": "ruling ct, the ten-point map standard; shared/world1/map-audit.md section G"
     },
     {
@@ -572,7 +598,7 @@
       "label": "no world 1 sound plays a stand-in",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "not built yet: count world 1 cues with no recipe of their own (wave 43)",
+      "producer": "node scripts/gate/sound-recipes-receipt.mjs --out <dir>/sound-own-recipes.json, on a clean checkout of the head: it runs sketches/core-loop/tests/sound_own_recipes_test.gd through scripts/sketch-smoke.mjs, takes the head from git rev-parse HEAD, and judges every cue the world 1 sound facts name (sound_twins_test.gd's derivation; the count is pinned), naming for each cue with no sound of its own the row's shared sound it plays instead",
       "plant": "a cue with its recipe removed must be counted",
       "basis": "audit of 13 Nov, finding 7: about 95 of 110 named sounds have no recipe"
     },
@@ -583,7 +609,7 @@
       "label": "loudness, true peak and loop seams inside their limits",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "scripts/audio-gate.mjs loudness, peak and seam checks, not yet in a gate lane (wave 43)",
+      "producer": "node scripts/gate/sound-levels-receipt.mjs --out <dir>/sound-levels.json (on a clean checkout of the head; it takes the head from git) runs scripts/audio-gate.mjs's checks over every music_ace clip: true peak and seams on every clip, loudness (EBU R 128 programme loudness) on clips of 10 s or more, and the stale checks, with five planted faults; with the gitignored stems absent it writes no data (scripts/music/mx stems-sync first)",
       "plant": "a stem 6 LU too loud must fail",
       "basis": "audio-gate.mjs: -16 LUFS within 0.5 LU, true peak at or below -1 dBTP"
     },
@@ -591,11 +617,11 @@
       "id": "models-render",
       "area": "Look",
       "source": "receipt",
-      "label": "every generated model passes the render check",
+      "label": "no generated enemy model renders darker than its authored one (6 enemy kinds, two views)",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "tools/model_render_check.gd, which has no pass line wired yet (wave 44)",
-      "plant": "the rejected dark hooker body must fail",
+      "producer": "node scripts/gate/model-render-receipt.mjs --out <dir>/models-render.json, on a clean checkout of the head: it judges the SUMMARY line of tools/model_render_check.gd's compare over the parts drawn from each model file (all 6 enemy kinds pinned, each loaded from its generated file, none darker than the authored model) and a planted compare with RENDER_PLANT=dark_models that must fail every kind. Every shoot and compare runs with a window through scripts/gate/display-run.mjs (a machine slot and a scratch HOME); with no display (the PC's gamescope lane is not built) the receipt fails with that reason. Pilots, item parts, the camp pet and props are not judged, nor a model brighter than its authored one",
+      "plant": "every generated enemy model painted near-black must fail, the fault of the rejected dark hooker body",
       "basis": "ruling dr: each Tripo model is accepted on its own"
     },
     {
@@ -605,7 +631,7 @@
       "label": "no code-built stand-in left in world 1",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "prim_census_test against tools/prim_census_pin.tsv, with the world 1 pin at zero (wave 44)",
+      "producer": "node scripts/gate/stand-ins-receipt.mjs --out <dir>/no-code-stand-ins.json, on a clean checkout of the head: it runs sketches/core-loop/tests/prim_census_test.gd alone through scripts/sketch-smoke.mjs, then again with PRIM_PLANT=dam_box, and passes only when the census counts at least 129 primitive surfaces with no new primitive, no stale pin row, the bot in stage 3, and no stand-in left except a pin row whose why names a ruling and cites its DECISIONS.md line (today the two W1-23 trade spot bodies, ruling ci), matched on its exact surface key; each one left is named by file and BACKLOG row",
       "plant": "a new code-built box in the dam must fail",
       "basis": "STATE.md: zero placeholders; the pin holds 89 lines today"
     },
@@ -630,6 +656,219 @@
       "producer": "npm run sketch:lint and the two ui_word_budget tests; the receipt is the fast lane's",
       "plant": "a label that restates its value must fail the lint",
       "basis": "LEGIBILITY.md section 13; ruling cx"
+    },
+    {
+      "id": "fast-threat",
+      "area": "Difficulty and pacing",
+      "source": "receipt",
+      "label": "every Spillway pack makes a straight-rolling ball turn, and a turning ball rides through",
+      "status": "report",
+      "enforced_from": [
+        "W1-133"
+      ],
+      "floor": {
+        "threats_per_straight_pass": 1,
+        "stall_over_straight_hull_per_min": 2.0,
+        "weave_hull_over_round0": 1.0
+      },
+      "producer": "\"$GODOT_BIN\" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/matchup_lab.gd -- --packs=all --table=park --pass=straight,weave,stall --speed=14,28 --seeds=1,2,3,4,5,6,7,8 --receipt=<dir>/fast-threat.json (the fast-pass arm W1-133a adds; until it lands there is no producer and the row reads no data)",
+      "plant": "every crew's lead set to 0 must read 0 threats per straight pass on the packs with a lobber",
+      "basis": "ruling cu; Codex trials of 17 Nov, not rerun (the lobber commits 21 m behind a 28 m/s rider; the boom tender missed 3 of 3 fast passes); LEAD_CRUISE_W1 is 0.0 on stages 1 and 2 (challenge_dials.gd:56); docs/promises/W1-133.md"
+    },
+    {
+      "id": "arrivals-seen",
+      "area": "Clarity",
+      "source": "receipt",
+      "label": "no crew pops in: every crew is seen arriving at least 0.6 s before its first warning",
+      "status": "report",
+      "enforced_from": [
+        "W1-134"
+      ],
+      "floor": {
+        "pop_ins": 0,
+        "seen_before_warning_s": 0.6
+      },
+      "producer": "node scripts/proof/receipt.mjs --row arrivals-seen --test arrival_census_test --plant live_ahead --out <dir>/arrivals-seen.json (seeds 1 to 4, skipper and camper, every yard wave)",
+      "plant": "one kind placed live 30 m ahead in view, skipping the arrival, must count 1 pop-in",
+      "basis": "Andrew's A70 of 17 Nov (\"enemies poping in from thin air\"); ruling cu's fairness line; chaser.gd:24 WINDUP 0.6, the shortest crew tell; map-audit.md (packs spawn 60 to 90 m ahead on a timer); docs/promises/W1-134.md"
+    },
+    {
+      "id": "hook-pays",
+      "area": "Core feel",
+      "source": "receipt",
+      "label": "a passive hold matches the best early horizontal landing speed or reaches an exclusive tier at every hook site",
+      "status": "report",
+      "enforced_from": [
+        "W1-135"
+      ],
+      "floor": {
+        "sites_where_hold_beats_release": "all",
+        "release_speed_not_below_round0": true
+      },
+      "producer": "node scripts/proof/receipt.mjs --row hook-pays --test hook_sites_test --plant no_bite --out <dir>/hook-pays.json",
+      "plant": "a site whose anchor the line cannot bite must read no hold",
+      "basis": "14 m/s at the bite, winch off. Compare horizontal speed at first walkable ground contact. Keep the passive early-release landing floor at each site. Passive round 0 and no-hold plant: PR 1147 at 0618e2531. See docs/promises/W1-135.md for the energy check and the Gate's stock-excess decision."
+    },
+    {
+      "id": "machines-read",
+      "area": "Look",
+      "source": "receipt",
+      "label": "every world 1 crew has one agreed look and reads at 3 to 1 against its surround in sun and shade",
+      "status": "report",
+      "enforced_from": [
+        "W1-136"
+      ],
+      "floor": {
+        "boards_frozen": "every kind the world 1 packs name",
+        "named_in_distinctness_read": "all, on game frames",
+        "body_ring_contrast": 3.0
+      },
+      "producer": "node scripts/proof/receipt.mjs --row machines-read --test machines_read_test --plant floor_paint --out <dir>/machines-read.json (draws through node scripts/gate/display-run.mjs --offscreen; Mac base, ruling eb)",
+      "plant": "a kind painted the floor's own colour must fail",
+      "basis": "WCAG 2.1 success criterion 1.4.11 (non-text contrast 3 to 1), the line tools/hud_contrast_capture.gd holds for HUD marks; COVERAGE G4 (no agreed boards); docs/promises/W1-136.md"
+    },
+    {
+      "id": "landing-read",
+      "area": "Clarity",
+      "source": "receipt",
+      "label": "the landing cue reads on sand, in shade and beside pier shadows, on High and Low",
+      "status": "report",
+      "enforced_from": [
+        "W1-137"
+      ],
+      "floor": {
+        "cue_contrast_sunlit": 3.0,
+        "cue_cie76_from_shade": 20,
+        "stations": 12
+      },
+      "producer": "node scripts/proof/receipt.mjs --row landing-read --test landing_cue_test --plant cue_hidden --out <dir>/landing-read.json (draws through the off-screen lane; Mac base)",
+      "plant": "the cue hidden must fail every station",
+      "basis": "WCAG 2.1 SC 1.4.11 for 3 to 1; 20 CIE76 is half the palette's smallest gap between two meanings (ARC to SAND 38.8), a design choice Andrew can overturn; COVERAGE G7; docs/promises/W1-137.md"
+    },
+    {
+      "id": "meanings-outshine-sand",
+      "area": "Look",
+      "source": "receipt",
+      "label": "warnings, loot, the item ladder, boss facts and your verb outshine the sand in sun and shade, on High and Low",
+      "status": "report",
+      "enforced_from": [
+        "W1-138"
+      ],
+      "floor": {
+        "share_of_designed_distance": 0.6,
+        "warning_edge_contrast": 3.0
+      },
+      "producer": "node scripts/proof/receipt.mjs --row meanings-outshine-sand --test meanings_value_test --plant sandstone_warning --out <dir>/meanings-outshine-sand.json (draws through the off-screen lane; Mac base, ruling eb)",
+      "plant": "a lobber warning drawn in SANDSTONE with no dark edge must fail at every station",
+      "basis": "palette.gd's designed CIE76 distances from SAND (HAZARD 72.5, COBALT 86.4, AMBER 43.4, BRASS 40.0, ARC 38.8, worked from the hex values); WCAG 2.1 SC 1.4.11 for the edge; a fill is held by colour distance because HAZARD on SAND is 1.81 to 1 by luminance; the 0.6 share is a design choice; COVERAGE G10, G11; docs/promises/W1-138.md"
+    },
+    {
+      "id": "boss-fast-threat",
+      "area": "Wardens and bosses",
+      "source": "receipt",
+      "label": "every world 1 boss presses a ball that holds a line, and a turn escapes",
+      "status": "report",
+      "enforced_from": [
+        "W1-139"
+      ],
+      "floor": {
+        "threats_per_straight_pass": 1,
+        "stall_over_straight_hull_per_min": 2.0,
+        "weave_hull_over_round0": 1.0
+      },
+      "producer": "\"$GODOT_BIN\" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/matchup_lab.gd -- --bosses=world1 --pass=straight,weave,stall --speed=14 --seeds=1,2,3,4,5,6,7,8 --receipt=<dir>/boss-fast-threat.json (the boss mode W1-139a adds)",
+      "plant": "every boss aimed at the ball's current point (lead 0) must read 0 threats",
+      "basis": "ruling cu; the board plan of 17 Nov (boss charges and drops lead a ball holding a straight line, a turn escapes); Andrew's A70 (\"bosses ... are a pushover\"); COVERAGE G13; docs/promises/W1-139.md"
+    },
+    {
+      "id": "clear-guide",
+      "area": "Clarity",
+      "source": "receipt",
+      "label": "when a fight ends, the way out and the rewards light up",
+      "status": "report",
+      "enforced_from": [
+        "W1-140"
+      ],
+      "floor": {
+        "guide_seen": 0.2,
+        "guide_ring_cie76": 20,
+        "guide_change_cie76": 20
+      },
+      "producer": "node scripts/proof/receipt.mjs --row clear-guide --test clear_guide_test --plant guide_off --out <dir>/clear-guide.json (draws through the off-screen lane)",
+      "plant": "the guide switched off must fail every station",
+      "basis": "COVERAGE G8 (nothing comes on at the end of a fight; the arches have no glow); SEEN_SHARE 0.2 in tools/look_harness.gd; a lamp is held by colour distance, not luminance ratio, because white on sunlit sand is only 1.71 to 1; 20 CIE76 is half the palette's smallest gap between two meanings, a design choice; docs/promises/W1-140.md"
+    },
+    {
+      "id": "map-regions",
+      "area": "Stages and world",
+      "source": "receipt",
+      "label": "every place on the dam, the flume and the Slag Bowl says what it is for, serves a verb, and its drawn change is built",
+      "status": "report",
+      "enforced_from": [
+        "W1-141"
+      ],
+      "floor": {
+        "without_purpose": 0,
+        "verbs_unbacked": 0,
+        "route_nodes_outside": 0,
+        "board_changes_unbuilt": 0
+      },
+      "producer": "node scripts/proof/receipt.mjs --row map-regions --test park_regions_test --plant no_purpose,fake_hook --out <dir>/map-regions.json",
+      "plant": "a region with no purpose, and a region claiming hook with no anchor inside it, must each read as a miss",
+      "basis": "Andrew's B6 six principles (17 Nov); ruling ct; COVERAGE G1 (eight regions with no stated purpose); verbs are checked against park data, not the regions file; a board change is built only when the check its changes entry names passes; docs/promises/W1-141.md"
+    },
+    {
+      "id": "works-turn",
+      "area": "Stages and world",
+      "source": "receipt",
+      "label": "on each map a paid lever helps, a device turns on a stopped ball, a load can be rammed, and the boom crossing is timed",
+      "status": "report",
+      "enforced_from": [
+        "W1-142"
+      ],
+      "floor": {
+        "paid_levers_per_map": 1,
+        "stopped_ball_hull_from_device": "> 0",
+        "weaving_ball_hull_from_device": 0,
+        "ram_loads_per_map": 1,
+        "timed_crossing": 1
+      },
+      "producer": "node scripts/proof/receipt.mjs --row works-turn --test works_census_test --plant dead_lever --out <dir>/works-turn.json (with a bot pair over seeds 1 to 8)",
+      "plant": "a lever that does nothing must read no change",
+      "basis": "Andrew's A70 (scrap-activated interactions that challenge or help); COVERAGE G14, G15; ruling cu (risk on a ball that slows or stops); docs/promises/W1-142.md"
+    },
+    {
+      "id": "stand-ins-everywhere",
+      "area": "Look",
+      "source": "receipt",
+      "label": "no code-built stand-in on any pilot, in the camp, the shop, the menus or the events",
+      "status": "report",
+      "enforced_from": [
+        "W1-143"
+      ],
+      "floor": {
+        "unlisted_stand_ins": 0
+      },
+      "producer": "node scripts/gate/stand-ins-receipt.mjs --scope=all --out <dir>/stand-ins-everywhere.json (the widening W1-143a adds; today the receipt covers the world 1 ride as the gate row no-code-stand-ins)",
+      "plant": "a planted box in the camp must fail, as PRIM_PLANT=dam_box fails the ride today",
+      "basis": "COVERAGE K5 (the sweep covered one ride, one pilot, one seed); tools/prim_census_pin.tsv; docs/promises/W1-143.md"
+    },
+    {
+      "id": "handover-frames",
+      "area": "Stability",
+      "source": "receipt",
+      "label": "no frame over two 60 Hz frames at the stage hand-overs, and no renderer error at shutdown",
+      "status": "report",
+      "enforced_from": [
+        "W1-144"
+      ],
+      "floor": {
+        "max_frame_ms": 33.3,
+        "shutdown_error_lines": 0
+      },
+      "producer": "node scripts/frametime-check.mjs --capture=engine over the dam to flume and flume to Slag Bowl hand-overs, drawn through the off-screen lane on the Mac; node scripts/proof/receipt.mjs --row handover-frames writes the receipt (graded on the warm second pass of a debug run, DEVICES.md Frame time)",
+      "plant": "a 50 ms sleep added at the hand-over must fail",
+      "basis": "the 60 Hz frame of 16.7 ms; Codex's audit of 17 Nov (57 to 59 ms frames at the hand-over, not rerun); DEVICES.md lists the two macOS shutdown lines that do not count; ruling eb; docs/promises/W1-144.md"
     },
     {
       "id": "sitting-01",

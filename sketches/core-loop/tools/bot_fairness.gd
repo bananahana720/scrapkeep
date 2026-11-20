@@ -17,6 +17,18 @@ const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 # unownedSources name (matched to telegraphs nothing claims), a kind seen publishing this run, or a TelegraphRecord row.
 # Hit sources carry only the enemy kind, so two machines of one kind share one owner: a chaser hit under another chaser's
 # old lane reads telegraphed.
+# Scrap taken through run.lose_scrap is read the same way (loss()), by the cause lose_scrap carries, into its own buckets beside
+# the hull's: worldCauses (lightning, impact, boiler_burst, reactor_blow, flood, cave_in) are matched to the telegraph of that
+# cause that world events publish (their telegraphs(ball), group world_telegraphs: a natural mark, an industrial Hazard, a
+# rubble fall's disc, a flood's water, the storm's sought ring), and a boss cause (crane) to the boss hazard of that attack. A
+# scrap point counts as one hull point. Nothing pooled may make a line easier (ruling cu), so each line is two readings and
+# fails when either is under it: F1 telegraph_share stays hull only and pooled_share adds scrap; F2 stop_tax stays hull only and
+# pooled_stop_tax adds the scrap lost slow and fast (slow_scrap, fast_scrap); F3 counts a theft as a hit, so a stage's first hit
+# is the earlier of the first hull hit and the first theft. The hull buckets sum to hull_lost; scrap has its own buckets.
+# One cause serves two lightning tells, the fixed strike circle and the storm's sought ring. That is safe: the circle counts
+# only while the ball is inside it, where it has stood drawn since the row's announcement, and a sought ring covers the ball
+# from its own age, so a sought strike under a young ring reads untelegraphed unless the ball stood inside the fixed circle,
+# where it was told anyway.
 # F1 = telegraphed / (telegraphed + untelegraphed). A telegraph's age is how long it has stood, so a lane entered late is judged
 # on the lane's age as it is now. Every published telegraph is read, the steering's own filters (amber, wider than the field
 # radius) do not apply here.
@@ -33,6 +45,10 @@ var _prev: Array = []
 var _published := {}
 var _hull := {"telegraphed": 0.0, "untelegraphed": 0.0, "contact": 0.0, "unknown": 0.0}
 var _sources := {}
+var _scrap := {"telegraphed": 0.0, "untelegraphed": 0.0, "contact": 0.0, "unknown": 0.0}
+var _scrap_sources := {}
+var _slow_scrap := 0.0
+var _fast_scrap := 0.0
 var _killing = null
 var _slow_s := 0.0
 var _fast_s := 0.0
@@ -123,6 +139,10 @@ func _scan(mark: bool) -> Array:
 			var ring = child.get("ring")
 			if ring != null and is_instance_valid(ring):
 				_add(out, ids, ring, "lobber", ball, mark)
+	for node in game.get_tree().get_nodes_in_group("world_telegraphs"):
+		if is_instance_valid(node) and node.has_method("telegraphs"):
+			for t in node.telegraphs(ball):
+				_add_row(out, ids, int(t["id"]), "world", String(t["cause"]), bool(t["covers"]), mark)
 	if boss_hazards.is_valid():
 		for h in boss_hazards.call():
 			if is_instance_valid(h) and h.has_method("contains"):
@@ -135,7 +155,10 @@ func _scan(mark: bool) -> Array:
 
 
 func _add(out: Array, ids: Dictionary, t: Object, owner: String, ball: Vector3, mark: bool, attack := "") -> void:
-	var id: int = t.get_instance_id()
+	_add_row(out, ids, t.get_instance_id(), owner, attack, t.has_method("contains") and t.contains(ball), mark)
+
+
+func _add_row(out: Array, ids: Dictionary, id: int, owner: String, attack: String, covers: bool, mark: bool) -> void:
 	if ids.has(id):
 		# An enemy's own telegraph is also a child of the game: the owner read first wins.
 		return
@@ -146,7 +169,7 @@ func _add(out: Array, ids: Dictionary, t: Object, owner: String, ball: Vector3, 
 		_seen[id] = _clock
 	if owner != "":
 		_published[owner] = true
-	out.append({"id": id, "owner": owner, "attack": attack, "age_s": _clock - float(_seen[id]), "covers": t.has_method("contains") and t.contains(ball)})
+	out.append({"id": id, "owner": owner, "attack": attack, "age_s": _clock - float(_seen[id]), "covers": covers})
 
 
 # --- a hit ---------------------------------------------------------------------------------
@@ -161,6 +184,11 @@ func hit(source: String, hull: float) -> void:
 		_fast_hull += hull
 	else:
 		_slow_hull += hull
+	_note_first_hit()
+
+
+# The stage's (or boss fight's) first hit: a hull hit or a theft of scrap, whichever comes first.
+func _note_first_hit() -> void:
 	if _segment != "":
 		var seg: Dictionary = _segments[_segment]
 		if seg["first_hit_s"] == null:
@@ -168,6 +196,24 @@ func hit(source: String, hull: float) -> void:
 				seg["opened_by_hit"] = true
 				seg["contact_s"] = _clock
 			seg["first_hit_s"] = _clock
+
+
+# Scrap taken from the ball, from the run's scrap_lost fact (amount actually taken, cause). The same rule as a hit, with the cause
+# as the source. Nothing taken is nothing lost.
+func loss(cause: String, amount: float) -> void:
+	if amount <= 0.0:
+		return
+	var bucket := classify(cause, _scan(false), _prev, _published)
+	_scrap[bucket] = float(_scrap[bucket]) + amount
+	_scrap_sources[cause] = float(_scrap_sources.get(cause, 0.0)) + amount
+	if _fast:
+		_fast_scrap += amount
+	else:
+		_slow_scrap += amount
+	# A theft counts as a first hit only once a pack has been met: one before contact must not open the segment (that would drop
+	# the stage from F3's median and hide a later fast ambush).
+	if _segment != "" and _segments[_segment]["contact_s"] != null:
+		_note_first_hit()
 
 
 # The bucket for one hit. `now` and `before` are _scan() rows (this tick's read and the last tick's, because a telegraph can
@@ -208,6 +254,8 @@ static func _owner_match(source: String, published: Dictionary, cfg: Dictionary)
 				if String(row.get("attack", "")).begins_with(String(prefix)):
 					return true
 			return false
+	if source in cfg.get("worldCauses", []):
+		return func(row: Dictionary) -> bool: return row["owner"] == "world" and row["attack"] == source
 	if source in cfg.get("unownedSources", []):
 		return func(row: Dictionary) -> bool: return row["owner"] == ""
 	if source != "" and (published.has(source) or not TelegraphRecord.row_of(source).is_empty()):
@@ -221,6 +269,8 @@ static func _owner_match(source: String, published: Dictionary, cfg: Dictionary)
 func record(died: bool) -> Dictionary:
 	var shown: float = float(_hull["telegraphed"])
 	var hidden: float = float(_hull["untelegraphed"])
+	var pooled_shown: float = shown + float(_scrap["telegraphed"])
+	var pooled_hidden: float = hidden + float(_scrap["untelegraphed"])
 	var first := {}
 	for key in _segments:
 		var seg: Dictionary = _segments[key]
@@ -234,14 +284,45 @@ func record(died: bool) -> Dictionary:
 	return {
 		"hull": {"telegraphed": snappedf(shown, 0.1), "untelegraphed": snappedf(hidden, 0.1), "contact": snappedf(float(_hull["contact"]), 0.1), "unknown": snappedf(float(_hull["unknown"]), 0.1)},
 		"telegraph_share": snappedf(shown / (shown + hidden), 0.001) if shown + hidden > 0.0 else null,
+		"pooled_share": snappedf(pooled_shown / (pooled_shown + pooled_hidden), 0.001) if pooled_shown + pooled_hidden > 0.0 else null,
 		"killing_hit": _killing if died and _killing != null else null,
 		"hit_sources": _round_all(_sources),
+		"scrap": {"telegraphed": snappedf(float(_scrap["telegraphed"]), 0.1), "untelegraphed": snappedf(float(_scrap["untelegraphed"]), 0.1), "contact": snappedf(float(_scrap["contact"]), 0.1), "unknown": snappedf(float(_scrap["unknown"]), 0.1)},
+		"scrap_sources": _round_all(_scrap_sources),
 		"slow_s": snappedf(_slow_s, 0.01), "fast_s": snappedf(_fast_s, 0.01),
 		"slow_hull": snappedf(_slow_hull, 0.1), "fast_hull": snappedf(_fast_hull, 0.1),
 		"stop_tax": snappedf((_slow_hull / _slow_s) / (_fast_hull / _fast_s), 0.001) if _slow_s > 0.0 and _fast_s > 0.0 and _fast_hull > 0.0 else null,
+		"slow_scrap": snappedf(_slow_scrap, 0.1), "fast_scrap": snappedf(_fast_scrap, 0.1),
+		"pooled_stop_tax": snappedf(((_slow_hull + _slow_scrap) / _slow_s) / ((_fast_hull + _fast_scrap) / _fast_s), 0.001) if _slow_s > 0.0 and _fast_s > 0.0 and _fast_hull + _fast_scrap > 0.0 else null,
 		"first_hit": first,
 		"hull_lost": snappedf(total, 0.1),
 	}
+
+
+# The three numbers a plain baseline run must give the planted-fault comparisons. stop_tax is null when the run never spent time
+# slow or never lost hull at cruise, so a null is a run that measured nothing, not a bug in record(); "miss" then names it.
+# Unmeasured share and first hit read -1.0, which no passing line accepts.
+static func baseline(f: Dictionary) -> Dictionary:
+	var tax = f.get("stop_tax")
+	var out := {"share": share_of(f), "stop_tax": -1.0, "first_hit": first_hit_of(f), "miss": ""}
+	if tax == null:
+		out["miss"] = "plain baseline measured no stop tax"
+	else:
+		out["stop_tax"] = float(tax)
+	return out
+
+
+static func share_of(f: Dictionary) -> float:
+	var v = f.get("telegraph_share")
+	return float(v) if v != null else -1.0
+
+
+static func first_hit_of(f: Dictionary) -> float:
+	var hits = f.get("first_hit")
+	var seg = hits.get("s1") if hits is Dictionary else null
+	if not seg is Dictionary or seg.get("first_hit_s") == null:
+		return -1.0
+	return float(seg["first_hit_s"])
 
 
 static func _round_all(by: Dictionary) -> Dictionary:

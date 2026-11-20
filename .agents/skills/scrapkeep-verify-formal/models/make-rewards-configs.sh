@@ -7,45 +7,59 @@ rcfg() {
   local name=$1
   local rules=$2
   shift 2
-  declare -A c=(
-    [Procs]="{p1}" [MaxCrashes]=2 [MaxFails]=2 [MaxGen]=6
-    [ReconcileCopies]="\"all\"" [LedgerChecked]=TRUE [GrantSavesOnce]=TRUE
-  )
-  local kv key
+  # Plain variables, not an associative array, so the system bash 3.2 on macOS runs it.
+  local keys="Procs MaxCrashes MaxFails MaxGen OldRun ReconcileCopies LedgerChecked GrantSavesOnce LegacyFromProfile PayAgainstFile SaveLock"
+  local c_Procs="{p1}" c_MaxCrashes=2 c_MaxFails=2 c_MaxGen=6 c_OldRun=TRUE
+  local c_ReconcileCopies="\"ledger\"" c_LedgerChecked=TRUE c_GrantSavesOnce=TRUE
+  local c_LegacyFromProfile=TRUE c_PayAgainstFile=TRUE c_SaveLock=TRUE
+  local kv key v
   for kv in "$@"; do
     key=${kv%%=*}
-    if [ -z "${c[$key]}" ]; then
-      echo "make-rewards-configs: unknown constant $key" >&2
-      exit 2
-    fi
-    c[$key]=${kv#*=}
+    case " $keys " in
+      *" $key "*) printf -v "c_$key" '%s' "${kv#*=}" ;;
+      *)
+        echo "make-rewards-configs: unknown constant $key" >&2
+        exit 2
+        ;;
+    esac
   done
   {
     echo "SPECIFICATION Spec"
     echo "CONSTANTS"
-    for key in $(printf '%s\n' "${!c[@]}" | sort); do
-      echo "  $key = ${c[$key]}"
+    for key in $(printf '%s\n' $keys | sort); do
+      v="c_$key"
+      echo "  $key = ${!v}"
     done
     echo "CONSTRAINT Bounded"
     echo "INVARIANTS TypeOK $rules"
   } > "rewards-$name.cfg"
 }
-BOTH="AtMostOnce NeverLost"
+BOTH="AtMostOnce NeverLost LockInCall"
 TWO=("Procs={p1, p2}" MaxCrashes=1 MaxGen=5)
-# The code at the sync commit: one game, then each with no failed write. Two games on one profile
-# check one rule per config, because a break stops the checker before it covers the other rule.
+# The code (W1-117): the legacy key honoured from the profile only, and an earn or grant that takes in the
+# profile file under the save lock. Every start includes what an older build may have left (OldRun).
+# Two games on one profile check one rule per config, because a break stops the checker before it covers the other.
 rcfg today-one "$BOTH"
 rcfg today-one-nofail "$BOTH" MaxFails=0
-rcfg today-two-once "AtMostOnce" "${TWO[@]}" MaxFails=1
+rcfg today-two-once "AtMostOnce LockInCall" "${TWO[@]}" MaxFails=1
 rcfg today-two-lost "NeverLost" "${TWO[@]}" MaxFails=2
 rcfg today-two-nofail-once "AtMostOnce" "${TWO[@]}" MaxFails=0
 rcfg today-two-nofail-lost "NeverLost" "${TWO[@]}" MaxFails=0
-# The candidate fix: Continue copies the run document's ledger ids into the profile, never its reward keys.
-rcfg guarded-one "$BOTH" ReconcileCopies=\"ledger\"
-rcfg guarded-two-once "AtMostOnce" "${TWO[@]}" MaxFails=1 ReconcileCopies=\"ledger\"
-rcfg guarded-two-lost "NeverLost" "${TWO[@]}" MaxFails=2 ReconcileCopies=\"ledger\"
-# One guard off each, from guarded-one: the named rule must break.
-rcfg broken-ledger "AtMostOnce" ReconcileCopies=\"ledger\" LedgerChecked=FALSE
-rcfg broken-midsave "NeverLost" ReconcileCopies=\"ledger\" GrantSavesOnce=FALSE
-# Reach probes: each MUST break, or an action has gone dead.
-rcfg reach "ProbeLands ProbeContinue ProbeFail ProbeCrash ProbeTomb ProbeRunSettled"
+# Ruling ea's trade, which must break AtMostOnce: game A pays in memory and both its saves fail, game B
+# pays the reward that is not on disk, then A's next save lands its own grant too. Never lost outranks at most once.
+rcfg ruled-two-twofail-once "AtMostOnce" "${TWO[@]}" MaxFails=2
+# The code before W1-117 (pull request 1093 alone): the old-key route loses a reward, and two games each pay it.
+BEFORE=(LegacyFromProfile=FALSE PayAgainstFile=FALSE SaveLock=FALSE)
+rcfg guarded-one "NeverLost" "${BEFORE[@]}"
+rcfg guarded-two-once "AtMostOnce" "${TWO[@]}" MaxFails=0 "${BEFORE[@]}"
+rcfg guarded-two-lost "NeverLost" "${TWO[@]}" MaxFails=0 "${BEFORE[@]}"
+# One guard off each, from today: the named rule must break.
+rcfg broken-ledger "AtMostOnce" LedgerChecked=FALSE
+rcfg broken-midsave "NeverLost" GrantSavesOnce=FALSE
+rcfg broken-legacyrun "NeverLost" LegacyFromProfile=FALSE
+rcfg broken-stale "AtMostOnce" "${TWO[@]}" MaxFails=0 PayAgainstFile=FALSE
+rcfg broken-nolock "AtMostOnce" "${TWO[@]}" MaxFails=0 SaveLock=FALSE
+# Reach probes: each MUST break, or an action has gone dead. Run each probe on its own: TLC stops at the first break,
+# and -continue crashed TLC 1.7.4 on rewards-reach.
+rcfg reach "ProbeLands ProbeContinue ProbeFail ProbeCrash ProbeTomb ProbeRunSettled ProbeOldEarn"
+rcfg reach-two "ProbeLockWait" "${TWO[@]}" MaxFails=0

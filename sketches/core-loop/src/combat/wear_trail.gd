@@ -8,7 +8,7 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # is rolling over. The patches are combat's own damage, not a weapon: they hit an enemy
 # through take_damage directly, never through strike(), so no item, chain or element listener
 # sees them. They may kill; a spark kill drops scrap and counts, but procs no item or tree
-# effect (run_state.last_kill_from_spark). And only wear makes a patch, so a patch never spawns a patch.
+# effect (run_state.last_kill_triggerless). And only wear makes a patch, so a patch never spawns a patch.
 #
 #   DAMAGE per hit, RADIUS from the patch to an enemy's hull, LIFE seconds, MAX_LIVE at once
 #   (a new patch retires the oldest), and one hit per enemy per HIT_GAP across all patches.

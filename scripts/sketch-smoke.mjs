@@ -21,16 +21,25 @@ import { writeImportStamp } from "./import-stamp.mjs";
 import { scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const recordedBinary =
-  "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
-export const binary = process.env.GODOT_BIN || recordedBinary;
+const recordedBinary = "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
+function defaultGodotBinary() {
+  if (process.env.GODOT_BIN) return process.env.GODOT_BIN;
+  const candidates =
+    process.platform === "darwin"
+      ? [path.join(os.homedir(), "Applications/Godot_4.7.2.app/Contents/MacOS/Godot")]
+      : ["/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64", recordedBinary];
+  return candidates.find((candidate) => existsSync(candidate)) ?? recordedBinary;
+}
+export const binary = defaultGodotBinary();
 const errorLine = /^(SCRIPT ERROR|ERROR|FAIL)\b/m;
 // On macOS the headless engine reports the dummy renderer's unreleased handles and the resources
 // still loaded as it shuts down, after the verdict line, on tests that end clean on Linux (13 tests
 // on the wave 43 stage, 16 Nov 2026). Only macOS skips them: on Linux an exit-leak line has named
 // real faults (docs/decisions.tsv, the HDRI sky cycle) and still fails the run.
-const TEARDOWN_NOISE = /^ERROR: \d+ (?:RID allocations of type '\w*RendererDummy\w*' were leaked|resources still in use) at exit\b.*\r?\n?/gm;
-export const withoutTeardownNoise = (output, platform = process.platform) => (platform === "darwin" ? output.replace(TEARDOWN_NOISE, "") : output);
+const TEARDOWN_NOISE =
+  /^ERROR: \d+ (?:RID allocations of type '\w*RendererDummy\w*' were leaked|resources still in use) at exit\b.*\r?\n?/gm;
+export const withoutTeardownNoise = (output, platform = process.platform) =>
+  platform === "darwin" ? output.replace(TEARDOWN_NOISE, "") : output;
 // 180 s since 2026-10-04: the solo bot bands (alpha_posture_bands_test, bot_chain_hand_test)
 // legitimately run 110 to 120 s on a loaded machine; a hang still fails, three minutes later.
 const TIMEOUT_MS = 180_000;
@@ -74,9 +83,7 @@ const MAX_BOT_TIMEOUT_MS = 1_800_000;
 const BOT_TIMEOUT_MS = 1_200_000;
 
 export function isBot(source) {
-  return source
-    .split("\n", MARKER_LINES)
-    .some((line) => BOT_MARKER.test(line.replace(/\r$/, "")));
+  return source.split("\n", MARKER_LINES).some((line) => BOT_MARKER.test(line.replace(/\r$/, "")));
 }
 
 // SMOKE_TIME_SCALE stretches every test's time limit on a slow machine. It applies after
@@ -101,7 +108,10 @@ export function testTimeoutMs(source, scale = 1) {
   for (const line of source.split("\n", MARKER_LINES)) {
     const match = TIMEOUT_MARKER.exec(line.replace(/\r$/, ""));
     if (match) {
-      limit = Math.min(bots ? MAX_BOT_TIMEOUT_MS : MAX_TIMEOUT_MS, Math.max(TIMEOUT_MS, Number(match[1]) * 1000));
+      limit = Math.min(
+        bots ? MAX_BOT_TIMEOUT_MS : MAX_TIMEOUT_MS,
+        Math.max(TIMEOUT_MS, Number(match[1]) * 1000),
+      );
       break;
     }
   }
@@ -111,7 +121,10 @@ export function testTimeoutMs(source, scale = 1) {
 export function isSolo(source) {
   return source
     .split("\n", MARKER_LINES)
-    .some((line) => SOLO_MARKER.test(line.replace(/\r$/, "")) || BOT_MARKER.test(line.replace(/\r$/, "")));
+    .some(
+      (line) =>
+        SOLO_MARKER.test(line.replace(/\r$/, "")) || BOT_MARKER.test(line.replace(/\r$/, "")),
+    );
 }
 
 export function isSoloScript(directory, script) {
@@ -195,7 +208,14 @@ export function splitFlags(text) {
 }
 
 export function parseArgs(argv, env = {}) {
-  const options = { sketches: [], tests: [], flags: null, receipt: null, strict: false, bots: false };
+  const options = {
+    sketches: [],
+    tests: [],
+    flags: null,
+    receipt: null,
+    strict: false,
+    bots: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--sketch" && argv[i + 1]) options.sketches.push(argv[++i]);
@@ -213,7 +233,8 @@ export function parseArgs(argv, env = {}) {
 
 // Returns an error message, or null when the arguments are usable.
 export function validateRun(options, available) {
-  if (options.named && options.sketches.length !== 1) return "sketch:smoke --test requires exactly one --sketch";
+  if (options.named && options.sketches.length !== 1)
+    return "sketch:smoke --test requires exactly one --sketch";
   const missing = options.sketches.filter((name) => !available.includes(name));
   if (missing.length > 0) return `sketch:smoke has no sketch named ${missing.join(", ")}`;
   return null;
@@ -226,10 +247,7 @@ export function noMatchMessage(sketch, globs) {
 // Gates and named runs use the same pool. Keep its root independent of TMPDIR so
 // worktrees share the limit; all participants must use the same SMOKE_SLOTS value.
 function slotRoot() {
-  return path.join(
-    process.env.SCRAPKEEP_LOCK_DIR || "/tmp",
-    "scrapkeep-sketch-smoke.slots",
-  );
+  return path.join(process.env.SCRAPKEEP_LOCK_DIR || "/tmp", "scrapkeep-sketch-smoke.slots");
 }
 
 export function machineSlotCount(env = process.env) {
@@ -249,8 +267,7 @@ function slotOwner(slot) {
     const owner = readdirSync(slot).find((name) => name.startsWith("claim-"));
     if (!owner) return null;
     const pid = Number(readFileSync(path.join(slot, owner), "utf8"));
-    if (!Number.isSafeInteger(pid) || pid < 1)
-      throw new Error(`invalid slot pid in ${slot}`);
+    if (!Number.isSafeInteger(pid) || pid < 1) throw new Error(`invalid slot pid in ${slot}`);
     try {
       process.kill(pid, 0);
     } catch (error) {
@@ -304,6 +321,138 @@ function sweepStaleWaiters(directory, own) {
   }
 }
 
+// The quiet hold: a frame-time reading must have the machine to itself. While a reading holds this file, no runner on
+// this machine takes a slot in any pool (acquireSlot waits, whatever SCRAPKEEP_LOCK_DIR says, so gate steps wait too),
+// and the reading starts only once the shared pool's slots are empty. It does not see work that never takes a slot from
+// the shared pool: a running gate, the nightly run, the red team, a band read or an export. Do not start a reading
+// while one of those runs. A written "check pgrep first" rule was broken four times in one day (17 Nov 2026).
+// The holder blocks in spawnSync and cannot heartbeat, so a hold is alive while its pid is and it is under
+// QUIET_MAX_MS old.
+export const QUIET_HOLD = "scrapkeep-quiet-hold";
+export const QUIET_MAX_MS = 2 * 60 * 60 * 1000;
+// The lock is held for a few file calls; a minute old means its holder died.
+const QUIET_LOCK_STALE_MS = 60 * 1000;
+
+function quietRoot() {
+  return process.env.SCRAPKEEP_QUIET_DIR || "/tmp";
+}
+
+export function quietHolder(directory = quietRoot()) {
+  const file = path.join(directory, QUIET_HOLD);
+  try {
+    const pid = Number(readFileSync(file, "utf8"));
+    if (!Number.isSafeInteger(pid) || pid < 1) return null;
+    if (Date.now() - statSync(file).mtimeMs > QUIET_MAX_MS) return null;
+    try {
+      process.kill(pid, 0);
+    } catch (error) {
+      if (error.code === "ESRCH") return null;
+      if (error.code !== "EPERM") throw error;
+    }
+    return pid;
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+// Take the hold, then wait until no runner holds a slot in the shared pool. Synchronous, for
+// scripts/frametime-check.mjs. Replacing a dead hold happens under a short lock, so two readings that start together
+// cannot both take it.
+export function holdQuietSync({
+  directory = slotRoot(),
+  quietDirectory = quietRoot(),
+  pollMs = 2000,
+  timeoutMs = 45 * 60 * 1000,
+  pid = process.pid,
+  log = console.log,
+  sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms),
+} = {}) {
+  mkdirSync(directory, { recursive: true });
+  mkdirSync(quietDirectory, { recursive: true });
+  const file = path.join(quietDirectory, QUIET_HOLD);
+  const lock = file + ".lock";
+  const started = Date.now();
+  const late = () => Date.now() - started > timeoutMs;
+  const release = () => {
+    try {
+      if (Number(readFileSync(file, "utf8")) === pid) unlinkSync(file);
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+  };
+  // Returns the pid that holds after this try: ours when the hold was free or dead.
+  const claim = () => {
+    for (;;) {
+      try {
+        mkdirSync(lock);
+        break;
+      } catch (error) {
+        if (error.code !== "EEXIST") throw error;
+        if (late())
+          throw new Error(`the quiet hold's lock (${lock}) is stuck; no frame reading taken`);
+        try {
+          if (Math.abs(Date.now() - statSync(lock).mtimeMs) > QUIET_LOCK_STALE_MS)
+            rmSync(lock, { recursive: true, force: true });
+        } catch (gone) {
+          if (gone.code !== "ENOENT") throw gone;
+        }
+        sleepSync(20);
+      }
+    }
+    try {
+      const other = quietHolder(quietDirectory);
+      if (other !== null) return other;
+      writeFileSync(file, String(pid));
+      return pid;
+    } finally {
+      rmSync(lock, { recursive: true, force: true });
+    }
+  };
+  for (;;) {
+    let told = false;
+    for (;;) {
+      const other = claim();
+      if (other === pid) break;
+      if (late())
+        throw new Error(
+          `another frame reading (pid ${other}) still holds the machine after ${Math.round(timeoutMs / 60000)} min; no frame reading taken`,
+        );
+      if (!told)
+        log(`waiting: another frame reading (pid ${other}) holds the machine quiet (${file})`);
+      told = true;
+      sleepSync(pollMs);
+    }
+    told = false;
+    let lost = false;
+    for (;;) {
+      const busy = readdirSync(directory).filter(
+        (name) => name.startsWith("slot-") && slotOwner(path.join(directory, name))?.alive,
+      );
+      // Read the hold after the scan: a runner publishes its slot and then checks the hold, so one side sees the other.
+      if (quietHolder(quietDirectory) !== pid) {
+        lost = true;
+        break;
+      }
+      if (busy.length === 0) break;
+      if (late()) {
+        release();
+        throw new Error(
+          `${busy.length} test runner(s) still hold the machine after ${Math.round(timeoutMs / 60000)} min; no frame reading taken`,
+        );
+      }
+      if (!told)
+        log(`waiting for ${busy.length} test runner(s) to finish before the frame reading starts`);
+      told = true;
+      sleepSync(pollMs);
+    }
+    if (!lost) break;
+  }
+  // The age cap counts from the start of the reading, not from the start of the wait.
+  touch(file);
+  return { waitMs: Date.now() - started, release };
+}
+
 export async function acquireSlot({
   directory = slotRoot(),
   slots = machineSlotCount(),
@@ -311,6 +460,8 @@ export async function acquireSlot({
   heartbeatMs = HEARTBEAT_MS,
   sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
   log = console.log,
+  quietDirectory = quietRoot(),
+  beforePublish = () => {},
 } = {}) {
   if (!Number.isSafeInteger(slots) || slots < 1)
     throw new Error("slots must be a positive integer");
@@ -319,18 +470,43 @@ export async function acquireSlot({
   const claim = mkdtempSync(path.join(directory, `claim-${process.pid}-`));
   const owner = path.basename(claim);
   let told = false;
+  let toldQuiet = false;
+  const quietWait = async () => {
+    const holder = quietHolder(quietDirectory);
+    if (holder === null) return false;
+    if (!toldQuiet)
+      log(
+        `sketch:smoke waiting: a frame reading (pid ${holder}) holds the machine quiet (${path.join(quietDirectory, QUIET_HOLD)})`,
+      );
+    toldQuiet = true;
+    await sleep(pollMs);
+    return true;
+  };
   try {
     writeFileSync(path.join(claim, owner), String(process.pid));
     for (;;) {
       sweepStaleWaiters(directory, owner);
       touch(claim);
+      if (await quietWait()) continue;
       for (let index = 0; index < slots; index++) {
         const slot = path.join(directory, `slot-${index}`);
         const holder = slotOwner(slot);
         if (holder && !holder.alive) releaseSlot(slot, holder.owner);
         try {
           // Publish an already populated directory atomically: no pid-write gap.
+          beforePublish(); // a test seam: what happens between this runner's hold check and its publish
+          // A long wait leaves the owner file older than the stale window. Refresh it while the claim is still private,
+          // so the slot is never visible looking stale (a rename keeps the files' mtimes).
+          touch(path.join(claim, owner));
           renameSync(claim, slot);
+          // Publish, then check the hold again: the reading writes its hold and then scans the slots, so a runner that
+          // slipped in between gives the slot back here before it starts anything.
+          if (quietHolder(quietDirectory) !== null) {
+            releaseSlot(slot, owner);
+            mkdirSync(claim, { recursive: true });
+            writeFileSync(path.join(claim, owner), String(process.pid));
+            break;
+          }
           let released = false;
           const claimFile = path.join(slot, owner);
           const beat = setInterval(() => touch(claimFile), heartbeatMs);
@@ -349,8 +525,8 @@ export async function acquireSlot({
           if (!["EEXIST", "ENOTEMPTY"].includes(error.code)) throw error;
         }
       }
-      if (!told)
-        log(`sketch:smoke waiting for a machine slot (${slots} occupied)`);
+      if (quietHolder(quietDirectory) !== null) continue;
+      if (!told) log(`sketch:smoke waiting for a machine slot (${slots} occupied)`);
       told = true;
       await sleep(pollMs);
     }
@@ -365,10 +541,7 @@ export async function acquireMachine(pollMs = 2000) {
   return lease.waitMs;
 }
 
-export function namedRunMustWait({
-  directory = slotRoot(),
-  slots = machineSlotCount(),
-} = {}) {
+export function namedRunMustWait({ directory = slotRoot(), slots = machineSlotCount() } = {}) {
   return Array.from({ length: slots }, (_, index) =>
     slotOwner(path.join(directory, `slot-${index}`)),
   ).every((holder) => holder?.alive);
@@ -405,7 +578,8 @@ function godotState() {
 function countStems(directory) {
   const music = path.join(directory, "assets", "music_ace");
   if (!existsSync(music)) return 0;
-  return readdirSync(music, { recursive: true }).filter((name) => String(name).endsWith(".ogg")).length;
+  return readdirSync(music, { recursive: true }).filter((name) => String(name).endsWith(".ogg"))
+    .length;
 }
 
 export function receiptFileName(label, tree, startedAt) {
@@ -450,7 +624,9 @@ export function quarantineNote(entry) {
 // removed or its deadline is extended by the coordinator. A free-text deadline ("wave 3") is
 // not enforced because it has no date to compare.
 export function expiredQuarantine(entries, today = new Date().toISOString().slice(0, 10)) {
-  return entries.filter((entry) => /^\d{4}-\d{2}-\d{2}$/.test(entry.deadline ?? "") && entry.deadline < today);
+  return entries.filter(
+    (entry) => /^\d{4}-\d{2}-\d{2}$/.test(entry.deadline ?? "") && entry.deadline < today,
+  );
 }
 
 export function expiredLine(entry) {
@@ -459,11 +635,29 @@ export function expiredLine(entry) {
 
 // One receipt entry per quarantined test that ran: the row plus that run's result.
 export function quarantineRecord(entry, { ok, exit, signal = null, failing }) {
-  return { test: entry.test, owner: entry.owner, reason: entry.reason, deadline: entry.deadline, result: ok ? "green" : "red", exit: exit ?? null, signal, failing_checks: failing };
+  return {
+    test: entry.test,
+    owner: entry.owner,
+    reason: entry.reason,
+    deadline: entry.deadline,
+    result: ok ? "green" : "red",
+    exit: exit ?? null,
+    signal,
+    failing_checks: failing,
+  };
 }
 
 export function quarantineRecords(results) {
-  return results.filter((result) => result.quarantined && result.quarantine).map((result) => quarantineRecord(result.quarantine, { ok: result.ok, exit: result.exit, signal: result.signal, failing: result.fails }));
+  return results
+    .filter((result) => result.quarantined && result.quarantine)
+    .map((result) =>
+      quarantineRecord(result.quarantine, {
+        ok: result.ok,
+        exit: result.exit,
+        signal: result.signal,
+        failing: result.fails,
+      }),
+    );
 }
 
 // Human lines for the full gate: red rows with the failing-check count and exit or signal, then stale green rows.
@@ -474,11 +668,15 @@ export function quarantineLines(records) {
   const lines = [];
   if (red.length > 0) {
     lines.push(`quarantined (red) ${red.length} (known red; not a failure):`);
-    for (const record of red) lines.push(`  ${record.test}: ${record.failing_checks} failing checks, ${how(record)} (${record.owner}: ${record.reason}; deadline ${record.deadline})`);
+    for (const record of red)
+      lines.push(
+        `  ${record.test}: ${record.failing_checks} failing checks, ${how(record)} (${record.owner}: ${record.reason}; deadline ${record.deadline})`,
+      );
   }
   if (green.length > 0) {
     lines.push(`quarantined but green: remove from quarantine (${green.length}):`);
-    for (const record of green) lines.push(`  ${record.test} (${record.owner}; deadline ${record.deadline})`);
+    for (const record of green)
+      lines.push(`  ${record.test} (${record.owner}; deadline ${record.deadline})`);
   }
   return lines;
 }
@@ -519,7 +717,24 @@ export function emitReceipt(receipt, write = writeReceipt, log = console.log) {
   }
 }
 
-export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot, sketches, flags, width, lockWaitMs, startedAt, wallMs, stems, results, botTierNotRun = [], expired = [], timeScale: scale = 1 }) {
+export function buildReceipt({
+  label,
+  argv,
+  root: repoRoot,
+  git: gitInfo,
+  godot,
+  sketches,
+  flags,
+  width,
+  lockWaitMs,
+  startedAt,
+  wallMs,
+  stems,
+  results,
+  botTierNotRun = [],
+  expired = [],
+  timeScale: scale = 1,
+}) {
   const rows = results.map((result) => ({
     label: result.label,
     ok: result.ok,
@@ -537,7 +752,9 @@ export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot,
     runs: rows.length,
     failed: verdict.failed.length,
     skipped: rows.filter((row) => row.skips.length > 0).length,
-    missing_verdict: rows.filter((row) => row.verdict_line === false && (row.skips.length === 0 || row.passes + row.fails > 0)).length,
+    missing_verdict: rows.filter(
+      (row) => row.verdict_line === false && (row.skips.length === 0 || row.passes + row.fails > 0),
+    ).length,
     quarantined_red: verdict.quarantined_red,
     quarantine_stale: verdict.quarantine_stale,
   };
@@ -560,7 +777,11 @@ export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot,
     wall_ms: wallMs,
     stems,
     quarantined: quarantineRecords(results),
-    quarantine_expired: expired.map((entry) => ({ test: entry.test, owner: entry.owner, deadline: entry.deadline })),
+    quarantine_expired: expired.map((entry) => ({
+      test: entry.test,
+      owner: entry.owner,
+      deadline: entry.deadline,
+    })),
     results: rows,
     bot_tier_not_run: botTierNotRun,
     totals,
@@ -578,9 +799,7 @@ export function judge({ test, status, output: raw, platform = process.platform }
   const output = withoutTeardownNoise(raw, platform);
   // A script path binds the verdict to its file stem. Boolean callers retain the
   // legacy API until their owners supply the path (play.mjs and sketch-nightly.mjs).
-  const verdict = test
-    ? hasVerdictLine(output, typeof test === "string" ? test : undefined)
-    : null;
+  const verdict = test ? hasVerdictLine(output, typeof test === "string" ? test : undefined) : null;
 
   const skips = skipLines(output);
   const { passes, fails } = countChecks(output);
@@ -606,17 +825,29 @@ const MAX_FAILING_LINES = 60;
 
 export function failingLines(output, limit = MAX_FAILING_LINES, platform = process.platform) {
   const counts = new Map();
-  for (const line of withoutTeardownNoise(output, platform).split("\n").map((text) => text.replace(/\r$/, "")).filter((text) => FAILING_LINE.test(text) && !PASSING_LINE.test(text))) counts.set(line, (counts.get(line) ?? 0) + 1);
+  for (const line of withoutTeardownNoise(output, platform)
+    .split("\n")
+    .map((text) => text.replace(/\r$/, ""))
+    .filter((text) => FAILING_LINE.test(text) && !PASSING_LINE.test(text)))
+    counts.set(line, (counts.get(line) ?? 0) + 1);
   const lines = [...counts].map(([line, count]) => (count > 1 ? `${line} (x${count})` : line));
   if (lines.length <= limit) return lines;
-  return [...lines.slice(0, limit), `... ${lines.length - limit} more failing lines (set SMOKE_LOG_DIR for the full output)`];
+  return [
+    ...lines.slice(0, limit),
+    `... ${lines.length - limit} more failing lines (set SMOKE_LOG_DIR for the full output)`,
+  ];
 }
 
 // SMOKE_LOG_DIR keeps every test's whole output, pass or fail, one file per test, so a
 // gate shard can compare check lines with the last promoted head. SMOKE_FULL=1 prints the
 // same output to the terminal instead.
 export function logFileName(label) {
-  return label.replace(/^.* res:\/\/tests\//, "").replace(/\.gd$/, "").replace(/[^\w.-]+/g, "_") + ".log";
+  return (
+    label
+      .replace(/^.* res:\/\/tests\//, "")
+      .replace(/\.gd$/, "")
+      .replace(/[^\w.-]+/g, "_") + ".log"
+  );
 }
 
 function keepOutput(job, output, env = process.env) {
@@ -635,23 +866,75 @@ function report(job, status, output, ms, signal = null) {
   if (!ok) {
     // The runner's own reason leads: a test killed at its limit prints nothing that says so.
     const failing = [...(reason ? [reason] : []), ...failingLines(output)];
-    if (failing.length > 0) console.log(`failing lines (${passes} checks passed, ${fails} failed):\n${failing.map((line) => "  >> " + line).join("\n")}`);
+    if (failing.length > 0)
+      console.log(
+        `failing lines (${passes} checks passed, ${fails} failed):\n${failing.map((line) => "  >> " + line).join("\n")}`,
+      );
     if (!process.env.SMOKE_FULL) console.log(output.split("\n").slice(-40).join("\n"));
   }
   keepOutput(job, output);
   if (reason) console.log(reason);
   if (process.env.SMOKE_DEBUG_ARGS) console.log(`  args: ${job.args.join(" ")}`);
-  return { label: job.label, ok, exit: status, ms, solo: Boolean(job.solo), passes, fails, verdict_line: verdict, skips, test: Boolean(job.test), quarantined, signal: signal ?? null, ...(quarantined && job.quarantine ? { quarantine: job.quarantine } : {}) };
+  return {
+    label: job.label,
+    ok,
+    exit: status,
+    ms,
+    solo: Boolean(job.solo),
+    passes,
+    fails,
+    verdict_line: verdict,
+    skips,
+    test: Boolean(job.test),
+    quarantined,
+    signal: signal ?? null,
+    ...(quarantined && job.quarantine ? { quarantine: job.quarantine } : {}),
+  };
 }
 
 export const scriptErrorCount = (output) => (output.match(/^SCRIPT ERROR\b/gm) ?? []).length;
 
+// One child run with its output collected and a time limit, without blocking the event loop: a held
+// machine slot keeps its heartbeat only while the loop is free, and an import can take minutes.
+export function spawnCollect(command, args, { env = process.env, timeoutMs = TIMEOUT_MS } = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, { env, stdio: ["ignore", "pipe", "pipe"] });
+    let output = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => (output += chunk));
+    child.stderr.on("data", (chunk) => (output += chunk));
+    let kill = null;
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      kill = setTimeout(() => child.kill("SIGKILL"), 5_000);
+    }, timeoutMs);
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      clearTimeout(kill);
+      resolve({ status: null, signal: null, output: output + String(error.message) });
+    });
+    child.on("close", (status, signal) => {
+      clearTimeout(timer);
+      clearTimeout(kill);
+      resolve({ status, signal, output });
+    });
+  });
+}
+
 // Import writes the sketch's .godot cache, so it runs alone before anything reads it.
-function runSync(job) {
+async function runImport(job) {
   const started = Date.now();
-  const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: TIMEOUT_MS, env: { ...process.env, ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-smoke-"))) } });
-  const output = (result.stdout || "") + (result.stderr || "");
-  return { ...report(job, result.status, output, Date.now() - started, result.signal), scriptErrors: scriptErrorCount(output) };
+  const result = await spawnCollect(binary, job.args, {
+    env: {
+      ...process.env,
+      ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-smoke-"))),
+    },
+  });
+  return {
+    ...report(job, result.status, result.output, Date.now() - started, result.signal),
+    scriptErrors: scriptErrorCount(result.output),
+  };
 }
 
 export const IMPORT_TRIES = 3;
@@ -672,14 +955,19 @@ export function importTry({ exit, signal = null, scriptErrors = 0 }) {
 // import fails only when the last try does, so the run stops there and no test prints a misleading
 // red. On a pass, `results` holds the passing try alone (earlier tries are in `tries` and the log):
 // a crash that a retry cleared is not a failed row of the run.
-export function importWithRetry(name, base, run = runSync, log = console.log) {
+export async function importWithRetry(name, base, run = runImport, log = console.log) {
   const tries = [];
   for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
-    const result = run({ label: `${name} import${attempt > 1 ? ` (try ${attempt})` : ""}`, args: [...base, "--import"] });
+    const result = await run({
+      label: `${name} import${attempt > 1 ? ` (try ${attempt})` : ""}`,
+      args: [...base, "--import"],
+    });
     const outcome = importTry(result);
     tries.push({ ...result, outcome });
     if (outcome === "ok") return { ok: true, results: [result], tries };
-    log(`${name} import try ${attempt} of ${IMPORT_TRIES}: ${outcome} (exit=${result.exit ?? result.signal ?? "none"})${attempt < IMPORT_TRIES ? "; trying again" : ""}`);
+    log(
+      `${name} import try ${attempt} of ${IMPORT_TRIES}: ${outcome} (exit=${result.exit ?? result.signal ?? "none"})${attempt < IMPORT_TRIES ? "; trying again" : ""}`,
+    );
   }
   return { ok: false, results: tries, tries };
 }
@@ -719,7 +1007,10 @@ async function pool(jobs, width) {
 export function writeReceipt(receipt) {
   const directory = path.join(root, "artifacts", "local", "receipts");
   mkdirSync(directory, { recursive: true });
-  const file = path.join(directory, receiptFileName(receipt.label, receipt.tree, receipt.started_at));
+  const file = path.join(
+    directory,
+    receiptFileName(receipt.label, receipt.tree, receipt.started_at),
+  );
   writeFileSync(file, JSON.stringify(receipt, null, 2) + "\n");
   return file;
 }
@@ -733,12 +1024,18 @@ async function main() {
     process.exit(2);
   }
   const all = sketchDirectories(path.join(root, "sketches"));
-  const error = validateRun(options, all.map((directory) => path.basename(directory)));
+  const error = validateRun(
+    options,
+    all.map((directory) => path.basename(directory)),
+  );
   if (error) {
     console.error(error);
     process.exit(2);
   }
-  const sketches = options.sketches.length === 0 ? all : all.filter((directory) => options.sketches.includes(path.basename(directory)));
+  const sketches =
+    options.sketches.length === 0
+      ? all
+      : all.filter((directory) => options.sketches.includes(path.basename(directory)));
   if (!existsSync(binary)) {
     console.error(`Godot binary not found at ${binary}; set GODOT_BIN`);
     process.exit(2);
@@ -750,9 +1047,13 @@ async function main() {
   const named = options.named;
   const botTierNotRun = [];
   const plans = sketches.map((directory) => {
-    const selected = named ? selectTests(testScripts(directory), options.tests) : testScripts(directory);
+    const selected = named
+      ? selectTests(testScripts(directory), options.tests)
+      : testScripts(directory);
     const scripts = selected.filter((script) => {
-      const bots = isBot(readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"));
+      const bots = isBot(
+        readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"),
+      );
       if (options.bots) return bots;
       if (named || !bots) return true;
       botTierNotRun.push(path.posix.basename(script));
@@ -792,18 +1093,32 @@ async function main() {
     const quarantineRows = readQuarantineEntries(directory);
     const quarantine = new Set(quarantineRows.map((row) => row.test));
     expired.push(...expiredQuarantine(quarantineRows));
-    const imported = importWithRetry(name, base);
+    const imported = await importWithRetry(name, base);
     results.push(...imported.results);
     if (!imported.ok) {
-      console.error(`${name} import failed ${IMPORT_TRIES} times (${imported.tries.map((row) => row.outcome).join(", ")}); tests not run`);
+      console.error(
+        `${name} import failed ${IMPORT_TRIES} times (${imported.tries.map((row) => row.outcome).join(", ")}); tests not run`,
+      );
       process.exit(1);
     }
     writeImportStamp(root, name);
-    if (!named && !options.bots) jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
+    if (!named && !options.bots)
+      jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
     for (const script of scripts) {
       const isSoloJob = isSoloScript(directory, script);
-      const timeoutMs = testTimeoutMs(readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"), scale);
-      const job = { label: `${name} ${script}`, args: [...base, "--script", script, ...userArgs], test: script, solo: isSoloJob, timeoutMs, quarantined: quarantine.has(path.posix.basename(script, ".gd")), quarantine: quarantineRows.find((row) => row.test === path.posix.basename(script, ".gd")) };
+      const timeoutMs = testTimeoutMs(
+        readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"),
+        scale,
+      );
+      const job = {
+        label: `${name} ${script}`,
+        args: [...base, "--script", script, ...userArgs],
+        test: script,
+        solo: isSoloJob,
+        timeoutMs,
+        quarantined: quarantine.has(path.posix.basename(script, ".gd")),
+        quarantine: quarantineRows.find((row) => row.test === path.posix.basename(script, ".gd")),
+      };
       (isSoloJob ? solo : jobs).push(job);
     }
   }
@@ -827,8 +1142,12 @@ async function main() {
   }
   for (const line of quarantineLines(quarantineRecords(results))) console.log(line);
   for (const entry of expired) console.log(expiredLine(entry));
-  const unverdicted = results.filter((result) => result.verdict_line === false && result.skips.length === 0);
-  const names = unverdicted.slice(0, 10).map((result) => result.label.replace(/^.* res:\/\/tests\//, ""));
+  const unverdicted = results.filter(
+    (result) => result.verdict_line === false && result.skips.length === 0,
+  );
+  const names = unverdicted
+    .slice(0, 10)
+    .map((result) => result.label.replace(/^.* res:\/\/tests\//, ""));
   console.log(
     `${unverdicted.length} tests lack a verdict line${names.length > 0 ? ` (${names.join(", ")}${unverdicted.length > names.length ? ", ..." : ""})` : ""}`,
   );
@@ -847,7 +1166,9 @@ async function main() {
     lockWaitMs: waited,
     startedAt,
     wallMs: Date.now() - started,
-    stems: Object.fromEntries(sketches.map((directory) => [path.relative(root, directory), countStems(directory)])),
+    stems: Object.fromEntries(
+      sketches.map((directory) => [path.relative(root, directory), countStems(directory)]),
+    ),
     results,
     botTierNotRun,
     expired,

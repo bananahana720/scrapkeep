@@ -1044,6 +1044,11 @@ func _haul_refusal() -> String:
 	return "unstaggered"
 
 
+# A standing line owns Ctrl, so Ctrl is not the slam or the brake while this is true.
+func line_stands() -> bool:
+	return kit.hooked
+
+
 # Ctrl hauls the line in. On a latched body it commits the smash; on the world it winches
 # while held. While any line stands it is neither the brake nor the slam, until it is let
 # go: a haul can never plant or brake inside the crowd it flew into.
@@ -1063,7 +1068,7 @@ func _read_ctrl() -> void:
 			_fail("haul", _haul_refusal())
 		elif on_body:
 			_fail("haul", "committed")
-	if kit.hooked:
+	if line_stands():
 		_ctrl_claimed = true
 	if not intent.brake_held:
 		_ctrl_claimed = false

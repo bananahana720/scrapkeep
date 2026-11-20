@@ -32,7 +32,8 @@ const Interactables := preload("res://src/world/interactables.gd")
 # warning says where as well as what (PF-16: "Dome Lightning incoming" named the event and not
 # its place). Once the place is in view it wears brackets in the same colour instead, with no tag:
 # the warning line names it, the brackets say where (W1-04). The world publishes the place with the
-# announcement; the mark goes when the event starts, ends or its lead runs out. The weather and the
+# announcement; the mark goes when the event starts or ends or the stage or run resets, not when its
+# lead runs out, since the director holds an announced event for clear ground. The weather and the
 # flood have no one place and get none.
 #
 # In a fight whose row names a thing (Brindle's arena, the Spillway's two mounted Wardens) the
@@ -52,8 +53,15 @@ const Interactables := preload("res://src/world/interactables.gd")
 
 const SIDE_INSET := 0.035
 const BAND_CLEARANCE := 16.0
+const ICON_BACK := 1.9
 const MIN_SIZE := 13.0
 const MAX_SIZE := 30.0
+# The farthest an arrow slides along the edge to clear a sign; past it the arrow stays and is drawn
+# over the sign, since the only pointer to an off-screen gate must not go.
+const ARROW_SLIDE_MAX := 160.0
+# The clear room a slid arrow needs before it moves to a spot or home, so a pixel of camera sway
+# never toggles it (reward_gates.gd NAME_HOLD does the same for a name).
+const ARROW_HOLD := 12.0
 const NEAR := 25.0
 const FAR := 180.0
 # Hidden-pocket doors (W13-INTEGRATION-2.md row 29a; PARK.md:248, :265): the sight_ok range, the eye
@@ -105,11 +113,18 @@ var gate_points: Array[Vector3] = []
 # readouts that ride on it. A part behind the ball is still marked (its brackets tell the truth),
 # but its name over the ball read as if the ball were the target (w37 film 081-082, PF-35).
 var keep_clear: Array[Rect2] = []
+# The choice written on each reward arch, in screen space, set by the HUD each frame while the
+# gates stand. The off-screen arrow slides along the edge off them, and never hides for them: a mark
+# outranks a word.
+var sign_rects: Array[Rect2] = []
 # Pocket doors the player has had in view inside POCKET_RANGE (pocket_doors' key to true). A door
 # is discovered once and stays so for the run; an undiscovered door never gets a marker.
 var discovered := {}
 var _shown: Array[Dictionary] = []
-# Events announced with a place and not started: {event_id: {at, left}}, left in seconds.
+# How far each off-screen arrow stands from its own spot along the edge, by the point it names.
+var _slide := {}
+# Events announced with a place and not started: {event_id: {at, left}}, left in seconds and held at
+# zero while the event waits to land.
 var _incoming := {}
 
 
@@ -133,6 +148,8 @@ func setup(game_ref) -> void:
 	game.events.event_announced.connect(note_incoming)
 	# A retry or a new stage ends what was announced without an end for each event.
 	game.events.stage_entered.connect(func(_stage: int, _retry: bool): _incoming.clear())
+	# The arena and the lap clear the stage's content with no stage change and no end per event.
+	game.events.stage_content_cleared.connect(func(_reason: String): _incoming.clear())
 	game.events.event_started.connect(func(id: String): _incoming.erase(id))
 	game.events.event_ended.connect(func(id: String, _outcome: String): _incoming.erase(id))
 
@@ -146,10 +163,8 @@ func note_incoming(event_id: String, seconds: float, at: Vector3) -> void:
 
 
 func step_incoming(delta: float) -> void:
-	for id in _incoming.keys():
-		_incoming[id]["left"] -= delta
-		if _incoming[id]["left"] <= 0.0:
-			_incoming.erase(id)
+	for id in _incoming:
+		_incoming[id]["left"] = maxf(0.0, _incoming[id]["left"] - delta)
 
 
 func incoming_targets() -> Array[Dictionary]:
@@ -426,6 +441,7 @@ func markers(size: Vector2) -> Array[Dictionary]:
 		taken.append(mark_rect(box, tag, under, shift))
 		out.append({"box": box, "color": group["color"], "tag": tag, "under": under, "shift": shift})
 	var view := view_rect(size)
+	var slid_now := {}
 	var ball: Vector3 = game.player.shown_position()
 	for target in away:
 		var at: Vector3 = target["at"]
@@ -439,9 +455,59 @@ func markers(size: Vector2) -> Array[Dictionary]:
 			dir = cam.unproject_position(at) - centre
 		dir = dir.normalized()
 		var near := clampf((ball.distance_to(at) - NEAR) / (FAR - NEAR), 0.0, 1.0)
-		out.append({"at": _on_edge(view, centre, dir), "dir": dir, "size": lerpf(MAX_SIZE, MIN_SIZE, near),
+		var tip := _on_edge(view, centre, dir)
+		var span := lerpf(MAX_SIZE, MIN_SIZE, near)
+		# Both the arrowhead and the glyph behind it slide off the choice written on the arch.
+		var offset := arrow_slide(view, tip, dir, span, sign_rects, float(_slide.get(target["at"], 0.0)))
+		slid_now[target["at"]] = offset
+		tip += _edge_tangent(view, tip) * offset
+		out.append({"at": tip, "dir": dir, "size": span,
 			"color": marker_color(target), "icon": target["icon"]})
+	_slide = slid_now
 	return out
+
+
+# The unit direction along the edge `tip` stands on: down a side, across the top or bottom.
+static func _edge_tangent(view: Rect2, tip: Vector2) -> Vector2:
+	var on_side := absf(tip.x - view.position.x) < 0.5 or absf(tip.x - view.end.x) < 0.5
+	return Vector2.DOWN if on_side else Vector2.RIGHT
+
+
+# How far along its edge an arrow at `tip` stands from `tip` to stay off every sign, given `held`,
+# where it stood last frame. It stays put while its spot is clear (home returns only with
+# ARROW_HOLD px clear), else takes the nearest spot within ARROW_SLIDE_MAX with ARROW_HOLD px
+# clear, else the nearest merely clear, else stays where it was and is drawn over the sign.
+static func arrow_slide(view: Rect2, tip: Vector2, dir: Vector2, span: float, signs: Array[Rect2], held: float) -> float:
+	if signs.is_empty():
+		return 0.0
+	var tangent := _edge_tangent(view, tip)
+	var low := (view.position - tip).dot(tangent)
+	var high := (view.end - tip).dot(tangent)
+	var clear := func(offset: float, room: float) -> bool:
+		var footprint := edge_footprint(tip + tangent * offset, dir, span).grow(room)
+		return not signs.any(func(sign: Rect2): return sign.intersects(footprint))
+	if held == 0.0:
+		if clear.call(0.0, 0.0):
+			return 0.0
+	elif clear.call(held, 0.0):
+		return 0.0 if clear.call(0.0, ARROW_HOLD) else held
+	var first := -1.0 if held < 0.0 else 1.0
+	for room in [ARROW_HOLD, 0.0]:
+		for step in range(1, int(ARROW_SLIDE_MAX) + 1):
+			for way in [first, -first]:
+				var offset: float = way * step
+				if offset >= low and offset <= high and clear.call(offset, room):
+					return offset
+	return held
+
+
+# Viewport bounds of the arrow tip, its two fins and the square objective glyph.
+static func edge_footprint(tip: Vector2, dir: Vector2, span: float) -> Rect2:
+	var icon := tip - dir * span * ICON_BACK
+	var fin := Vector2(-dir.y, dir.x) * span * 0.8
+	var root := tip - dir * span
+	var bounds := Rect2(icon - Vector2.ONE * span * 0.5, Vector2.ONE * span)
+	return bounds.expand(tip).expand(root + fin).expand(root - fin).grow(1.0)
 
 
 # Whether the camera sees the thing at `at`: the world ray to it (Hitscan.WORLD; the ball is on
@@ -626,7 +692,7 @@ func _draw() -> void:
 			tip - dir * s - side * s * 0.8])
 		draw_colored_polygon(chevron, color)
 		draw_polyline(PackedVector2Array([chevron[0], chevron[1], chevron[2], chevron[3], chevron[0]]), Color(0.0, 0.0, 0.0, 0.7), 1.5)
-		var icon_at := tip - dir * s * 1.9
+		var icon_at := tip - dir * s * ICON_BACK
 		draw_texture_rect(Icons.texture(marker["icon"]), Rect2(icon_at - Vector2(s, s) * 0.5, Vector2(s, s)), false, Icons.tint(marker["icon"], color))
 
 
