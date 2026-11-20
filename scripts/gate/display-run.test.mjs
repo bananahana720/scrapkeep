@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -53,21 +53,21 @@ test("the watcher rejects focus changes, visible children, missing periods and m
   assert.throws(() => windowCounts([sample(0)], 12), /lacks/);
 });
 
-test("the Gate reference needs a visible sample for its own process and the pinned executable", async () => {
-  const cwd = scratch();
-  const plant = capture(cwd, [sample(0), sample(50, 12, [12], [12])]);
-  const r = await runCapture({ ...plant, reference: true, start: async (bin, argv, options) => {
-    assert.ok(!argv.includes("--embedded"));
-    assert.equal(options.env.SCRAPKEEP_OFFSCREEN, "0");
-    return plant.start();
-  } });
-  assert.equal(r.exit, 0);
-  assert.equal(r.watch.targetOnScreen, 1);
-  assert.equal(r.watch.frontmostChanges, 1);
-  const unrelated = capture(cwd, [sample(0), sample(50, 9, [99], [99])]);
-  assert.equal((await runCapture({ ...unrelated, reference: true })).exit, 1);
-  await assert.rejects(runCapture({ ...plant, version: () => "4.5", start: assert.fail }), /pinned/);
-  await assert.rejects(runCapture({ ...plant, reference: true, script: "res://other.gd", start: assert.fail }), /only the W1-131 probe/);
+test("Mac library and CLI refuse the consumed visible reference before starting Godot", async () => {
+  const opts = capture(scratch());
+  const unused = { acquire: assert.fail, start: assert.fail, observe: assert.fail, version: assert.fail };
+  for (const entry of [runWindowed, runCapture]) {
+    await assert.rejects(entry({ ...opts, ...unused, reference: true }), /requires --offscreen/);
+  }
+  const marker = path.join(opts.cwd, "godot-started");
+  const binary = path.join(opts.cwd, "godot-sentinel");
+  writeFileSync(binary, '#!/bin/sh\ntouch "$WATCH_TEST_MARKER"\n', { mode: 0o755 });
+  const cli = spawnSync(process.execPath, ["scripts/gate/display-run.mjs", "--gate-reference", script, "--", "--out=" + opts.cwd],
+    { cwd: new URL("../../", import.meta.url), env: { ...process.env, GODOT_BIN: binary, WATCH_TEST_MARKER: marker }, encoding: "utf8" });
+  assert.equal(cli.status, 1);
+  assert.match(cli.stderr, /usage: display-run.mjs --offscreen/);
+  assert.equal(existsSync(marker), false);
+  await assert.rejects(runCapture({ ...opts, version: () => "4.5", start: assert.fail }), /pinned/);
 });
 
 test("two drawn runs wait for one lock across worktrees and have disjoint start/end times", async () => {
@@ -108,7 +108,7 @@ test("losing the sampler aborts a still-running group before releasing the drawn
 
 test("Mac library captures keep the producer resolution and plant while forcing the embedded backend", async () => {
   const opts = capture(scratch());
-  const result = await runWindowed({ ...opts, reference: true,
+  const result = await runWindowed({ ...opts,
     engineArgs: ["--resolution", "800x600"], extraEnv: { RENDER_PLANT: "dark_models" },
     start: async (bin, argv, { env }) => {
       assert.equal(argv[0], "--embedded");
@@ -188,7 +188,7 @@ test("headless measurement and the editor version probe use only their scratch h
   assert.equal(result.exit, 0);
   assert.equal(existsSync(result.home), false);
   let versionHome;
-  const control = await runCapture({ ...opts, reference: true, version: (_command, { env }) => {
+  const control = await runCapture({ ...opts, version: (_command, { env }) => {
     versionHome = env.HOME;
     assert.ok(existsSync(versionHome));
     return version();

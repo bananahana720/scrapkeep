@@ -137,6 +137,10 @@ func _initialize() -> void:
 		baseline_root = ProjectSettings.globalize_path("res://").path_join("../../artifacts/local/alpha/baselines").simplify_path()
 	if not baseline.is_empty():
 		out = baseline_root.path_join(baseline)
+	if OS.get_name() == "macOS" and (DisplayServer.get_name().to_lower() != "embedded" or OS.get_environment("SCRAPKEEP_OFFSCREEN") != "1"):
+		printerr("look_harness: Mac captures require scripts/gate/display-run.mjs --offscreen")
+		quit(2)
+		return
 	if DisplayServer.get_name() == "headless":
 		printerr("look_harness: needs a native display (run through gpu_queue.sh --display)")
 		quit(2)
