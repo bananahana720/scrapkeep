@@ -134,18 +134,22 @@ jobs:
           node scripts/ci/check-budget.mjs --label check:docs --budget 25 -- npm run check:docs
 
   node-tests:
-    name: Node unit tests
+    name: Node unit tests (${{ matrix.shard }}/2)
     needs: changes
     if: needs.changes.outputs.node == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 4
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
-      - name: Checkout (blobless)
+      - name: Checkout (blobless, read-only token for lazy blob fetch)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           filter: blob:none
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -165,10 +169,18 @@ jobs:
         if: steps.nm-cache.outputs.cache-hit != 'true'
         run: npm ci --no-audit --no-fund --prefer-offline
 
-      - name: Run Node test suite (budget 60s, zero retries)
+      - name: Ensure ffprobe/ffmpeg for audio and brief tests
+        run: |
+          if ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends ffmpeg >/dev/null
+          fi
+
+      - name: Run Node test shard ${{ matrix.shard }}/2 (budget 60s, zero retries)
         run: |
           printf '| Check | Elapsed | Budget | Status |\n| --- | ---: | ---: | --- |\n' >> "$GITHUB_STEP_SUMMARY"
-          node scripts/ci/check-budget.mjs --label node-tests --budget 60 -- npm test
+          node scripts/ci/check-budget.mjs --label "node-tests-${{ matrix.shard }}/2" --budget 60 -- \
+            node scripts/ci/node-tests.mjs --shard "${{ matrix.shard }}/2"
 
   web-build:
     name: Browser proof build
