@@ -249,6 +249,7 @@ Instance methods the spine and other modules may call:
 - `height(x, z) -> float`
 - `floor_height(x, z) -> float` (height with no overlay down: the ground a ball under an overlay's sheet stands on; the fall rescue reads it)
 - `drop_point(x, z, clearance) -> Vector3`
+- `top_surface(x, z, radius := 0.0) -> Dictionary` returns `{"point", "normal"}` for the surface a ball rolling at (x, z) stands on. Only permanent faces count: the stage's ground tiles and its placed park rows' decks and props, and landed overlay sheets and cave roofs through `height()`. A moving body, a destructible, a contraption's door or lift, an activity's device or cache, a Dispatcher's mast and an ice slab never count. With no such face over `height()`, it answers `height()` and its slope. With a `radius`, the normal is the plane fitted to the surface over a disc of that radius, and the point lies on that plane under (x, z), lowered to the disc's lowest sample so a flat disc set there floats nowhere. It returns `{}` while the stage's rows are still placing, or within 2 physics frames of `use()` bringing the stage up, so the caller asks again on a later tick. With no scene tree it answers `height()` and its slope.
 - `spawn_point(stage) -> Vector3`
 - `entry_heading(stage) -> Vector3` (flat, unit length)
 - `beacon_point(stage) -> Vector3` (on the ground; the Warden spawns here on every map)
@@ -316,6 +317,7 @@ The codex is saved to `user://codex.json` with the keys `discovered` (ids), `fou
 - `declare({id, category, name, hint, clue, text})` registers an entry at setup, and a repeat declare is harmless. The categories are `build` (owned by B), `world` (owned by D), `enemy` (owned by A), and the reserved `npc` and `coop`.
 - `mark_discovered(id, at := Vector3.ZERO, participants := ["player"]) -> bool` is called by the entry's owner every time it fires. The first call in a run publishes `synergy_discovered(id, category, first_time)`, grants the treasure burst at `at` and appends a line to `user://codex-log.ndjson`. It returns whether the saved codex had never seen the entry.
 - `mark_found(text, category := "world", participants := ["player"]) -> bool` does the same for an unnamed interaction, publishing `interaction_found(text)`.
+- `file_note(id) -> bool` files a lore plate's field note: it makes the note known as `mark_known` does, adding it to the run's list and the codex log, then publishes `lore_found(id)` the first time the profile has it. It returns whether the note was new, and it grants no burst.
 - The read API is `known(id)`, `discovered()`, `found()`, `found_category(text)`, `discovered_this_run()`, `name_of(id)`, `entries(category := "")`, which returns `{id, category, name, known, hint, clue, text}` records, and `completion(category)`, from 0 to 1.
 
 Each codex log line holds `kind`, `run_id`, `stage`, `stage_ticks`, `category`, `id` or `text`, `participants`, `parts` and `heft`.

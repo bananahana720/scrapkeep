@@ -471,6 +471,9 @@ class MendWard extends Node3D:
 class LorePlate extends Node3D:
 	const REACH_M := 2.6
 	const HEIGHT_M := 3.0
+	# A ball centre this far under the face still counts (a ball on the face rides 1 m over it); deeper is a ball
+	# rolling under the deck the plate sits on.
+	const BELOW_M := 0.25
 
 	var note := ""
 	var read := false
@@ -2877,7 +2880,7 @@ func _watch_plate(p: LorePlate, ball: Vector3) -> void:
 	var offset := ball - p.global_position
 	var up := p.global_basis.y.normalized()
 	var rise := offset.dot(up)
-	if (offset - up * rise).length() > LorePlate.REACH_M or absf(rise) > LorePlate.HEIGHT_M:
+	if (offset - up * rise).length() > LorePlate.REACH_M or rise < -LorePlate.BELOW_M or rise > LorePlate.HEIGHT_M:
 		return
 	read_plate(p)
 

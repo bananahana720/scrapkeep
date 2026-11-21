@@ -3,19 +3,21 @@ extends SceneTree
 
 # Lore plate seats (W45 P8): every plate in the Dam and the Flume sits on the surface a ball rolling there stands on.
 #   Seat     around the plate's bottom rim (RIM points) and an inner ring, no point floats more than FLOAT_M above
-#            the highest world collider face under it, and none is buried deeper than the plate is thick. The
-#            surface is read here with its own rays, not through terrain.gd top_surface, which the plate seats by.
+#            the permanent face under it (a ground tile or a placed park row's deck or prop: surface_y), and none is
+#            buried deeper than the plate is thick. The surface is read here with its own rays and its own rule, not
+#            through terrain.gd top_surface, which the plate seats by.
 #   Clear    no world collider stands on the plate's footprint within a ball's height over its face, and no drawn
 #            mesh crosses the column over its face samples, so it can be seen and rolled across.
 #   Overlay  no park event's overlay sheet stands over a plate once it lands (a plate is seated once).
 #   Spot     a plate moved off its row's spot (secrets.gd PLATE_NUDGES) stays inside the row's footprint and within
 #            NUDGE_MAX_M of it.
 #   Trigger  a ball resting on the plate files it, at its centre and on either side of it along the slope; a ball on
-#            the ground under a deck plate does not.
+#            the ground under a deck plate, one touching that deck's underside, and one 1.5 m under any face do not.
 #   Look     the unread rim and face stand apart from the grounds a plate lies on and from each other; read, the face
 #            sinks flush, stops glowing and changes colour. No word, no collider.
 #   Planted  the old seat (a level disc at the bare ground under the row's spot) fails the seat on the 23 degree
-#            incline, the deck read under the trestle and the cover read under the gate flag's plinth.
+#            incline, the deck read under the trestle and the cover read under the gate flag's plinth; and a moving
+#            body, a breakable one and a contraption's, each planted over every plate, never become its surface.
 # Output: one `SEAT <park> <fragment> float=<m> bury=<m> ...` line per plate, plus PASS or FAIL rows from t.gd.
 
 const T := preload("res://tests/support/t.gd")
@@ -36,6 +38,7 @@ const RIM := 16
 const BALL_H := Tuning.RADIUS * 2.0
 const NUDGE_MAX_M := 12.0
 const REACH_M := 40.0
+const BELOW_M := 0.05
 const COVER_FROM_M := 0.03
 const FLOOR_SHARE := 0.75
 # The colour distance an ink keeps from the grounds and from its pair (LEGIBILITY's row test uses 35 for the live
@@ -91,6 +94,7 @@ func _live() -> void:
 			acts._watch_plate(p, Vector3(1.0e5, 0.0, 1.0e5))
 		_plates(map_id, game, stage)
 		_planted(map_id, game, stage)
+		await _planted_colliders(map_id, game, stage)
 	game.queue_free()
 	await process_frame
 
@@ -194,6 +198,20 @@ func _trigger(map_id: String, fragment: String, game, p) -> void:
 		p.read = false
 		acts._watch_plate(p, Vector3(p.global_position.x, ground + Tuning.RADIUS, p.global_position.z))
 		t.check("%s %s does not fire for a ball on the ground under it" % [map_id, fragment], not p.read)
+		# A ball rolling under the deck, touching its underside, and one a metre and a half under the face (a deck
+		# that thin): neither is on the plate.
+		var space: PhysicsDirectSpaceState3D = game.get_world_3d().direct_space_state
+		var up_ray := PhysicsRayQueryParameters3D.create(Vector3(p.global_position.x, ground + 0.1, p.global_position.z), p.global_position, 1)
+		var underside := space.intersect_ray(up_ray)
+		if not underside.is_empty():
+			var under: Vector3 = underside.position + Vector3.DOWN * Tuning.RADIUS
+			p.read = false
+			acts._watch_plate(p, under)
+			print("UNDER %s %s underside=%.2f rise=%.2f" % [map_id, fragment, underside.position.y, (under - p.global_position).dot(up)])
+			t.check("%s %s does not fire for a ball under its deck" % [map_id, fragment], not p.read)
+		p.read = false
+		acts._watch_plate(p, p.global_position - up * 1.5)
+		t.check("%s %s does not fire for a ball 1.5 m under its face" % [map_id, fragment], not p.read)
 	p.read = true
 	acts._show_plate(p)
 
@@ -229,6 +247,74 @@ func _planted(map_id: String, game, stage: int) -> void:
 				probe.free()
 
 
+# Bodies that are not ground, planted on the world layer a metre and a half over each plate in turn, where the
+# game hangs their kind: a moving body under the park rows (the isle's tip is one), a static body under the game
+# root (a destructible, a Dispatcher's mast, an ice slab, a cache or a device), and a static body in a node of its
+# own under the stage root (a contraption's door or lift). top_surface steps through each and answers the face
+# under it, as it does with none.
+func _planted_colliders(map_id: String, game, stage: int) -> void:
+	var terrain = game.ctx.terrain
+	var space: PhysicsDirectSpaceState3D = game.get_world_3d().direct_space_state
+	var specs := Secrets.plate_sites(terrain.map().park)
+	var stage_root: Node3D = terrain.geometry_root(stage)
+	var door_holder := Node3D.new()
+	stage_root.add_child(door_holder)
+	var kinds := {"moving": [terrain.park_rows(stage), "AnimatableBody3D"], "breakable": [game, "StaticBody3D"], "door": [door_holder, "StaticBody3D"]}
+	var missed := {}
+	var vacuous := {}
+	for kind in kinds:
+		missed[kind] = []
+		vacuous[kind] = []
+	for i in mini(specs.size(), game.world.activities.plates.size()):
+		var at: Vector2 = specs[i]["at"]
+		var fragment := String(specs[i]["fragment"])
+		var bare: Dictionary = terrain.top_surface(at.x, at.y)
+		if bare.is_empty():
+			missed["moving"].append(fragment + " (no answer)")
+			continue
+		for kind in kinds:
+			var body: CollisionObject3D = AnimatableBody3D.new() if kinds[kind][1] == "AnimatableBody3D" else StaticBody3D.new()
+			body.collision_layer = 1
+			body.collision_mask = 0
+			if body is AnimatableBody3D:
+				(body as AnimatableBody3D).sync_to_physics = false
+			if kind == "breakable":
+				body.set_meta("destructible_id", "planted")
+			var shape := CollisionShape3D.new()
+			var box := BoxShape3D.new()
+			box.size = Vector3(4.0, 0.5, 4.0)
+			shape.shape = box
+			body.add_child(shape)
+			(kinds[kind][0] as Node).add_child(body)
+			body.global_position = bare.point + Vector3.UP * 1.5
+			for f in 2:
+				await physics_frame
+			var ray := PhysicsRayQueryParameters3D.create(bare.point + Vector3.UP * 30.0, bare.point + Vector3.DOWN * 0.5, 1)
+			var first := {}
+			var hit_body := false
+			var exclude := []
+			for k in 8:
+				ray.exclude = exclude
+				first = space.intersect_ray(ray)
+				if first.is_empty():
+					break
+				if first.collider == body:
+					hit_body = true
+					break
+				exclude.append(first.rid)
+			if not hit_body:
+				vacuous[kind].append(fragment)
+			var with: Dictionary = terrain.top_surface(at.x, at.y)
+			if with.is_empty() or absf(with.point.y - bare.point.y) > 0.001:
+				missed[kind].append("%s %.2f -> %s" % [fragment, bare.point.y, "{}" if with.is_empty() else "%.2f" % with.point.y])
+			body.free()
+	door_holder.free()
+	for kind in kinds:
+		print("PLANTED_BODY %s %s missed=%d not_in_ray=%d" % [map_id, kind, missed[kind].size(), vacuous[kind].size()])
+		t.check("planted: %s top_surface steps through a %s body over every plate" % [map_id, kind], missed[kind].is_empty(), "; ".join(missed[kind]))
+		t.check("planted: %s the %s body stands in the ray's path over every plate" % [map_id, kind], vacuous[kind].is_empty(), ", ".join(vacuous[kind]))
+
+
 # ---- Measures ------------------------------------------------------------------------------------------------
 
 # The plate's worst float and bury: its bottom face's rim and an inner ring and centre, each against the highest
@@ -250,17 +336,34 @@ static func seat_fit(space: PhysicsDirectSpaceState3D, terrain, frame: Transform
 	return {"float": worst_float, "bury": worst_bury}
 
 
+# The permanent face under (x, z), in this test's own terms: the top hit whose body is a bare StaticBody3D (by class
+# name, so no moving or scripted subclass) filed under the stage's geometry root at Ground/ (the tiles) or ParkRows/
+# (the placed decks and props), with every shape live and no destructible id; else height(), which carries landed
+# overlays and cave roofs. A face more than BELOW_M under height() is not the ground's.
 static func surface_y(space: PhysicsDirectSpaceState3D, terrain, x: float, z: float) -> float:
 	var ground: float = terrain.height(x, z)
-	var query := PhysicsRayQueryParameters3D.create(Vector3(x, ground + REACH_M, z), Vector3(x, ground - 1.0, z), 1)
-	for i in 6:
+	var root: Node = terrain.geometry_root(terrain.stage)
+	var query := PhysicsRayQueryParameters3D.create(Vector3(x, ground + REACH_M, z), Vector3(x, ground - BELOW_M, z), 1)
+	for i in 16:
 		var hit := space.intersect_ray(query)
 		if hit.is_empty():
 			break
-		if hit.collider is StaticBody3D:
+		if permanent(hit.collider, root):
 			return hit.position.y
 		query.exclude = query.exclude + [hit.rid]
 	return ground
+
+
+static func permanent(body: Object, root: Node) -> bool:
+	if body == null or body.get_class() != "StaticBody3D" or (body as Node).has_meta("destructible_id") or not root.is_ancestor_of(body):
+		return false
+	var path := str(root.get_path_to(body))
+	if not (path.begins_with("Ground/") or path.begins_with("ParkRows/")):
+		return false
+	for shape in (body as Node).find_children("*", "CollisionShape3D", true, false):
+		if (shape as CollisionShape3D).disabled:
+			return false
+	return true
 
 
 # Static world colliders in the column a ball's height tall over the plate's face, tilted with it.

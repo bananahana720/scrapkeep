@@ -570,14 +570,20 @@ func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 	return Vector3(x, height(x, z) + clearance, z)
 
 
-# The surface a ball rolling at (x, z) stands on, as {"point", "normal"}: the highest world collider face within
-# SURFACE_REACH_M over height() (a deck, a prop's top, a landed sheet or the ground's own tiles), else height() and
-# its slope. With a radius, the normal is the plane that fits that surface over the disc of that radius, and the
+# The surface a ball rolling at (x, z) stands on, as {"point", "normal"}: the highest permanent face within
+# SURFACE_REACH_M over height(), else height() and its slope. Permanent means a body this module built for the stage
+# and nothing moves or breaks: the ground's own tiles and the placed park rows' decks and props (_is_surface). A
+# moving body, a destructible, a door, a device, a mast or an ice slab never answers; a landed overlay sheet or a
+# cave roof answers through height(), which already carries them, so no face below height() counts. With a radius, the normal is the plane that fits that surface over the disc of that radius, and the
 # point lies on the plane under (x, z), lowered to the disc's lowest sample, so a flat disc set on it stands proud
 # nowhere. {} while the stage's colliders are not yet where a query finds them: its rows still placing, or the
 # stage brought up from parking under SETTLE_FRAMES physics frames ago (a moved body answers from its old place
 # until the next step); ask again on a later tick.
 const SURFACE_REACH_M := 40.0
+# How far under height() a face may sit and still be the ground's (a tile's trimesh against height()'s triangles).
+const SURFACE_BELOW_M := 0.05
+# Faces a ray steps through before it gives up and answers height(): stacked doors, crates and pieces can sit over a deck.
+const SURFACE_SKIPS := 8
 const SETTLE_FRAMES := 2
 const SURFACE_RING := 16
 
@@ -621,18 +627,38 @@ func top_surface(x: float, z: float, radius := 0.0) -> Dictionary:
 func _surface_hit(space: PhysicsDirectSpaceState3D, x: float, z: float) -> Dictionary:
 	var ground := height(x, z)
 	if space != null:
-		var query := PhysicsRayQueryParameters3D.create(Vector3(x, ground + SURFACE_REACH_M, z), Vector3(x, ground - 1.0, z), 1)
-		# A ball or a mast on the world layer is not ground: only static bodies count.
-		for i in 4:
+		var top := Vector3(x, ground + SURFACE_REACH_M, z)
+		var query := PhysicsRayQueryParameters3D.create(top, Vector3(x, ground - SURFACE_BELOW_M, z), 1)
+		for i in SURFACE_SKIPS:
 			var hit := space.intersect_ray(query)
 			if hit.is_empty():
 				break
-			if hit.collider is StaticBody3D:
+			if _is_surface(hit.collider):
 				return {"point": hit.position, "normal": hit.normal}
 			query.exclude = query.exclude + [hit.rid]
 	var e := STEP * 0.25
 	var normal := Vector3(height(x - e, z) - height(x + e, z), 2.0 * e, height(x, z - e) - height(x, z + e)).normalized()
 	return {"point": Vector3(x, ground, z), "normal": normal}
+
+
+# A collider top_surface stands a thing on: a plain static body under a node this module built for the current
+# stage, the park ground's tiles (_grounds), the placed park rows (park_rows), or an old map's Ground body. Every
+# other world-layer body hangs elsewhere (enemies, masts, the boss arena, the element field's ice, activities'
+# devices and caches, the destructibles, the barge: the game root; contraptions' doors, barges and lifts: their own
+# node under the stage root) or moves (an AnimatableBody3D, such as the isle's tip under its landmark row).
+func _is_surface(collider: Object) -> bool:
+	if not (collider is StaticBody3D) or collider is AnimatableBody3D:
+		return false
+	var i := _index(stage)
+	var owners: Array[Node] = []
+	if _is_park[i]:
+		owners = [_grounds[i], park_rows(stage)]
+	elif _roots[i] != null:
+		owners = [_roots[i].get_node_or_null("Ground")]
+	for owner in owners:
+		if owner != null and (owner == collider or owner.is_ancestor_of(collider as Node)):
+			return true
+	return false
 
 
 # A perch top for the Dispatcher within PerchPoints.RANGE_M of `point`: a park post top or a landform
