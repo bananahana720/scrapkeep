@@ -1,5 +1,6 @@
 {
   "L1": [
+    "sketches/core-loop/tests/destructibles_look_test.gd",
     "sketches/core-loop/tests/hero_warden_assets_test.gd",
     "sketches/core-loop/tests/presentation_ace_director_test.gd",
     "sketches/core-loop/tests/presentation_escalation_test.gd",

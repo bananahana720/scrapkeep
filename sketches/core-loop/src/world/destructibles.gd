@@ -1,8 +1,8 @@
 extends Node3D
 
 const Interact := preload("res://src/world/interact.gd")
-const Palette := preload("res://src/core/palette.gd")
 const PropKicks := preload("res://src/presentation/prop_kicks.gd")
+const Kit := preload("res://src/presentation/destructible_kit.gd")
 
 # Heft destructibles (Wave 45, W45-C unit A; design-v3/HEFT-DESTRUCTIBLES.md). A standalone, authored,
 # non-load-bearing prop of tier 1 to 5 that a ball of that heft class or heavier breaks without losing a
@@ -83,7 +83,7 @@ const SOFT_TAGS := ["plant", "soft", "foliage"]
 # park_schema.gd GUARDED_SOCIETIES.
 const GUARDED_SOCIETIES := ["hohokam", "ancestral_puebloan"]
 
-const FAMILY_BY_TIER := {1: "wood", 2: "scrap", 3: "masonry", 4: "steel", 5: "steel"}
+const FAMILY_BY_TIER := Kit.FAMILY_BY_TIER
 const SHARD_SIZE := 0.35
 
 # The loot meter's ceilings for this stage; ctx keys scrap_cap and cog_cap plant others for a test.
@@ -109,6 +109,7 @@ var _stage := 0
 var _scrap: Object = null
 var _combat: Object = null
 var _cue: Callable = Callable()
+var _sfx: Callable = Callable()
 var _enemies: Callable = Callable()
 var _no_visuals := false
 var _exiting := false
@@ -116,6 +117,7 @@ var _exiting := false
 var _queue: Array[Callable] = []
 var _material: StandardMaterial3D = null
 var _shard_meshes := {}
+var _piece_meshes := {}
 var _puff_mesh: Mesh = null
 var _shards: Array = []
 var _puffs: Array = []
@@ -270,6 +272,7 @@ func teardown() -> void:
 	_puffs.clear()
 	_queue.clear()
 	_shard_meshes.clear()
+	_piece_meshes.clear()
 	_puff_mesh = null
 	_material = null
 	_scrap_paid = 0
@@ -445,6 +448,8 @@ func _shatter(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool, s
 		for i in n:
 			_throw(_shards, p, at, dir, speed, FAMILY_BY_TIER.get(p.tier, "scrap"))
 		_throw(_puffs, p, at, Vector3.UP, 0.0, "puff")
+		if _sfx.is_valid():
+			_sfx.call(Kit.sfx_id(p.tier), at)
 	_shrapnel(p, at, dir, speed, radial)
 	_pay(p)
 	piece_shattered.emit(p.bounds)
@@ -640,18 +645,19 @@ func _slice(budget_usec: int) -> void:
 
 
 func _make_material() -> void:
-	_material = StandardMaterial3D.new()
-	_material.vertex_color_use_as_albedo = true
-	_material.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
-	_material.albedo_color = Color(1.0, 1.0, 1.0, 1.0)
-	_material.roughness = 0.9
+	_material = Kit.material()
 
 
+# One mesh per (tier, size): two crates of one size share a mesh, so the stage builds each shape once.
 func _make_mesh(p: Piece) -> void:
 	if p.intact and is_instance_valid(p.body):
 		var node := MeshInstance3D.new()
 		node.name = "Intact_" + p.id
-		node.mesh = _box_mesh(p.half * 2.0, _color_of(p.tier))
+		var size := p.half * 2.0
+		var key := "%d:%.3f:%.3f:%.3f" % [p.tier, size.x, size.y, size.z]
+		if not _piece_meshes.has(key):
+			_piece_meshes[key] = Kit.piece_mesh(p.tier, size)
+		node.mesh = _piece_meshes[key]
 		node.material_override = _material
 		node.transform = Transform3D(p.basis, p.centre)
 		add_child(node)
@@ -659,11 +665,11 @@ func _make_mesh(p: Piece) -> void:
 
 
 func _make_shard_mesh(family: String) -> void:
-	_shard_meshes[family] = _box_mesh(Vector3.ONE * SHARD_SIZE, _color_of(_tier_of_family(family)))
+	_shard_meshes[family] = Kit.shard_mesh(family)
 
 
 func _make_puff_mesh() -> void:
-	_puff_mesh = _box_mesh(Vector3(0.9, 0.5, 0.9), Palette.SAND)
+	_puff_mesh = Kit.puff_mesh()
 
 
 func _make_pooled(list: Array, puff: bool) -> void:
@@ -678,54 +684,6 @@ func _make_pooled(list: Array, puff: bool) -> void:
 	s.node.top_level = true
 	add_child(s.node)
 	list.append(s)
-
-
-static func _tier_of_family(family: String) -> int:
-	for tier in FAMILY_BY_TIER:
-		if FAMILY_BY_TIER[tier] == family:
-			return int(tier)
-	return 2
-
-
-# Rust, charcoal, sandstone and concrete: the park's scenery colours, never a hazard or signal hue.
-static func _color_of(tier: int) -> Color:
-	match tier:
-		1:
-			return Palette.SAND
-		2:
-			return Palette.RUST
-		3:
-			return Palette.REDJAW_ASH
-		4:
-			return Palette.CHARCOAL
-	return Palette.STEEL
-
-
-# An opaque box carrying its colour in the vertices.
-static func _box_mesh(size: Vector3, color: Color) -> ArrayMesh:
-	var tool := SurfaceTool.new()
-	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-	tool.set_color(color)
-	var h := size * 0.5
-	var faces := [
-		[Vector3.RIGHT, Vector3.UP, Vector3.BACK], [Vector3.LEFT, Vector3.UP, Vector3.FORWARD],
-		[Vector3.UP, Vector3.BACK, Vector3.RIGHT], [Vector3.DOWN, Vector3.FORWARD, Vector3.RIGHT],
-		[Vector3.BACK, Vector3.UP, Vector3.LEFT], [Vector3.FORWARD, Vector3.UP, Vector3.RIGHT],
-	]
-	for face in faces:
-		var n: Vector3 = face[0]
-		var u: Vector3 = face[1]
-		var v: Vector3 = face[2]
-		var c := n * h
-		var a := c - u * h - v * h
-		var b := c + u * h - v * h
-		var d := c + u * h + v * h
-		var e := c - u * h + v * h
-		for corner in [a, b, d, a, d, e]:
-			tool.set_normal(n)
-			tool.add_vertex(corner)
-	tool.index()
-	return tool.commit()
 
 
 # ---- the shards: scripted, never a body, never a fade --------------------------------------------
@@ -840,7 +798,25 @@ func _bind(ctx: Variant) -> void:
 		_cue = Callable()
 		if events != null and (events as Object).has_signal("verb_failed"):
 			_cue = func(at: Vector3) -> void: (events as Object).emit_signal("verb_failed", "roll", "under_bar", at)
+	_sfx = _sfx_of(ctx)
 	_fx.seed = hash("destructibles_fx")
+
+
+# The shatter sound: ctx "sfx" (Callable(id, at)), or the game's audio (ctx.presentation.audio or
+# ctx.root.presentation.audio, matching game.gd:128 / world.gd:507) when present. Silent with neither,
+# and never built under --bot-no-visuals=1.
+func _sfx_of(ctx: Variant) -> Callable:
+	if _no_visuals:
+		return Callable()
+	var given: Variant = _ctx_get(ctx, "sfx", null)
+	if given is Callable:
+		return given
+	var audio: Variant = _chain(ctx, ["presentation", "audio"], null)
+	if audio == null:
+		audio = _chain(ctx, ["root", "presentation", "audio"], null)
+	if audio is Object and (audio as Object).has_method("play"):
+		return func(id: String, _at: Vector3) -> void: (audio as Object).call("play", "destructible_shatter", 0.0, 1.0, "SFX", id)
+	return Callable()
 
 
 func _tuned_cruise(ctx: Variant) -> float:

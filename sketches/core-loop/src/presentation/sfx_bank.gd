@@ -306,6 +306,8 @@ const TRIM_DB := {
 	# The arrival forms and the prop crew (tools/ace/arrival_sfx.py); a tell ends on its landing frame.
 	"lift_cage_arrive": -3.0, "zipline_whine": -5.0, "zipline_snap": -3.0, "cave_in_rumble": -4.0,
 	"cave_in_debris": -3.0, "prop_crew_presence": -14.0, "prop_crew_strain": -4.0, "prop_crew_collapse": -2.0,
+	# Heft destructibles (destructible_kit.gd): one shatter per family, made from the bank's own voices.
+	"destructible_wood": -7.0, "destructible_scrap": -6.0, "destructible_masonry": -4.0, "destructible_steel": -5.0,
 	# The Highdraft roster (tools/ace/roster_sfx.py); a tell ends on its landing frame.
 	"ballast_brace_tell": -4.0, "ballast_brace_slam": -2.0, "gap_net_charge_tell": -6.0, "gap_net_charge_live": -4.0,
 	"ring_out_fall": -8.0,
@@ -1172,6 +1174,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _zap_hum()
 		"shatter":
 			return _shatter()
+		"destructible_wood", "destructible_scrap", "destructible_masonry", "destructible_steel":
+			return _destructible(id.trim_prefix("destructible_"))
 		"chunk_low":
 			return _mix([[_tone(0.55, 120.0, 36.0, "sine", 7.0), 0, 1.0], [_tone(0.3, 75.0, 40.0, "square_dark", 12.0), 0, 0.3],
 				[_noise(0.08, 700.0, 200.0, 40.0), 0, 0.5]])
@@ -2058,6 +2062,21 @@ static func _zap_hum() -> PackedFloat32Array:
 		var crackle := rng.randf_range(-1.0, 1.0) if rng.randf() < 0.02 else 0.0
 		buf[i] = (low * (0.6 + 0.4 * sin(TAU * 60.0 * t)) + crackle * 0.8) * minf(1.0, t * 80.0) * exp(-t * 4.0)
 	return Synth.declick(buf, 16, 600)
+
+
+# A heft destructible breaking, one voice a family. Wood knocks and splinters, scrap clanks and rattles, masonry
+# thuds and crumbles, steel rings under a low hit. Each is a short mix of the bank's own tone, FM and noise.
+static func _destructible(family: String) -> PackedFloat32Array:
+	match family:
+		"wood":
+			return _mix([[_fm(0.16, _hz(74), 1.0, 2.5, 18.0, -7.0), 0, 0.8], [_noise(0.16, 2200.0, 700.0, 20.0), 0, 0.55],
+				[_noise(0.08, 3600.0, 1400.0, 34.0, 0.001), Synth.seconds(0.05), 0.4]])
+		"scrap":
+			return _mix([[_clank(), 0, 0.8], [_noise(0.22, 4600.0, 1800.0, 15.0), 0, 0.5], [_tone(0.16, 200.0, 95.0, "square_dark", 16.0), 0, 0.35]])
+		"masonry":
+			return _mix([[_tone(0.32, 115.0, 42.0, "sine", 11.0), 0, 0.95], [_noise(0.3, 950.0, 220.0, 9.0, 0.001), 0, 0.7],
+				[_noise(0.18, 2800.0, 1000.0, 20.0), Synth.seconds(0.06), 0.35]])
+	return _mix([[_fm(0.4, _hz(55), 2.76, 2.0, 9.0), 0, 0.7], [_noise(0.14, 5400.0, 2400.0, 26.0), 0, 0.5], [_tone(0.26, 95.0, 48.0, "sine", 13.0), 0, 0.7]])
 
 
 static func _shatter() -> PackedFloat32Array:
