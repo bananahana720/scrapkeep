@@ -234,6 +234,7 @@
   {"id": "dam_altar_drums", "tier": 1, "at": [231.0, 96.69, 250.0], "size": [1.2, 1.1, 1.2], "yaw_deg": -90},
   {"id": "dam_altar_barricade", "tier": 2, "at": [232.0, 97.18, 268.0], "size": [3.2, 2.2, 0.9], "yaw_deg": -125},
   {"id": "dam_apron_jersey", "tier": 3, "at": [31.0, -0.3, 526.0], "size": [3.6, 2.6, 1.1], "yaw_deg": -100},
-  {"id": "dam_apron_housing", "tier": 4, "at": [53.0, 0.81, 543.0], "size": [3.0, 3.0, 3.0], "yaw_deg": -115}
+  {"id": "dam_apron_housing", "tier": 4, "at": [53.0, 0.81, 543.0], "size": [3.0, 3.0, 3.0], "yaw_deg": -115},
+  {"id": "dam_yard_wall", "tier": 2, "at": [154.0, 107.24, 40.0], "size": [50.0, 2.2, 0.9], "yaw_deg": 0, "shortcut": true}
  ]
 }
