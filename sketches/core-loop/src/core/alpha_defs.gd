@@ -21,9 +21,11 @@ const BOSS := "brindle"
 const COUNT := 6
 
 # The maker tricks (synergies.gd) this table keeps: the five named synergies and the five
-# former three-part sets. Any other trick is out.
+# former three-part sets, and since 2026-11-21 (wave 45 B1) the four that had stayed out
+# (glacier_hull, storm_lattice, thermal_shock, linked_spiral), so all fourteen are live.
 const SYNERGIES := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod",
-	"ballast_rig", "shatter_crew", "live_wire", "hair_trigger", "storm_front"]
+	"ballast_rig", "shatter_crew", "live_wire", "hair_trigger", "storm_front",
+	"glacier_hull", "storm_lattice", "thermal_shock", "linked_spiral"]
 
 # The nineteen parts every source on this table offers, and the only ones. The five shown
 # parts of the kept synergies, one carrier of each hidden tag they need (kinetic, speed, mass;
@@ -64,6 +66,16 @@ const PARTS := [
 	# guaranteed cobalt has rows to stay new. They roll only at rare and move no common share;
 	# the two water rounds read on the Spillway's channels.
 	"horizon_optic", "ram_plow", "rime_rounds", "galvanic_rounds",
+	# 2026-11-21 (wave 45 B1): the two weapon-pattern transformers (Fan Spread, Helix Drill) and a
+	# curated set of 13 high-identity authored rows from items.gd, each with a touch verb and
+	# capped at cobalt (rare, ruling bn) so Spare Frame remains the park table's only relic. The
+	# nine shift-board unlock rows, the burden parts, Spare Frame, Warden Ward (kept at rare_plus),
+	# the three seam-gated non-pattern rows (Vault Battery, Anchor Spring, Feedback Loop), and
+	# shared movement-changing rows (Slipstream, Long Lane, Reserve Tank, Gutter Guard, Tumbler
+	# Bearing) stay out so movement belongs strictly to the pilot (BIBLE.md:537, DECISIONS.md:423).
+	"fan_spread", "helix_drill", "domino_wire", "echo_charge", "overcharge_coil", "ten_pin",
+	"synergy_lens", "crush_guard", "last_word", "par_chip",
+	"cloak_flask", "jet_vent", "quick_spool", "tracer_round", "magnet_coil",
 ]
 
 # SG4 burden parts: a second list beside PARTS, so the normal loot list (build_synergy_test pins

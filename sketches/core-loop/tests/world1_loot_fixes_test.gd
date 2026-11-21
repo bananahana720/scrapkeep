@@ -43,7 +43,7 @@ func _initialize() -> void:
 
 func _check_parts() -> void:
 	var missing: Array = AlphaDefs.PARTS.filter(func(id): return not ParkDefs.part_in_play(id))
-	_t.check("the park table offers every alpha part", missing.is_empty() and ParkDefs.PARTS.size() == 49,
+	_t.check("the park table offers every alpha part", missing.is_empty() and ParkDefs.PARTS.size() == 64,
 		"%d parts, missing %s" % [ParkDefs.PARTS.size(), missing])
 	var before = Synergies.table
 	Synergies.table = ParkDefs

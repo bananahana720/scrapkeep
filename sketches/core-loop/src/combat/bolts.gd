@@ -102,6 +102,8 @@ func fire(bolt: Dictionary) -> void:
 	bolt["travelled"] = 0.0
 	bolt["age"] = 0.0
 	bolt["shown"] = bolt["origin"]
+	bolt["pierce"] = int(bolt.get("pierce", 0))
+	bolt["exclude"] = []
 	_bolts.append(bolt)
 	fired += 1
 	peak_live = maxi(peak_live, _bolts.size())
@@ -112,7 +114,7 @@ func fire(bolt: Dictionary) -> void:
 # child can neither gain nor lose a bit (SI4).
 static func child(parent: Dictionary, overrides: Dictionary) -> Dictionary:
 	var out := parent.duplicate()
-	for key in ["travelled", "age", "shown", "right", "up"]:
+	for key in ["travelled", "age", "shown", "right", "up", "exclude"]:
 		out.erase(key)
 	for key in overrides:
 		out[key] = overrides[key]
@@ -140,16 +142,29 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 			if not wall.is_empty():
 				end = wall["position"]
 				blocked = true
-		var target := _first_enemy(from, end, bolt["radius"], snapshot)
+		var target := _first_enemy(from, end, bolt["radius"], snapshot, bolt["exclude"])
 		var shell := _first_shell(from, end, bolt["radius"], shells)
 		if not shell.is_empty() and (target.is_empty() or shell["along"] < target["along"]):
 			fresh = false
 			if on_shell.is_valid() and on_shell.call(bolt, shell["shell"]):
 				continue
-		if not target.is_empty():
+		var spent := false
+		while not target.is_empty():
 			fresh = false
+			var hit_id: int = target["enemy"].get_instance_id()
 			if on_hit.is_valid():
 				on_hit.call(bolt, target["enemy"], target["point"], target["part"])
+			if bolt["pierce"] <= 0:
+				spent = true
+				break
+			# A piercing bolt passes through: it keeps its line and corkscrew phase and
+			# looks for the next machine further along the same segment.
+			bolt["pierce"] -= 1
+			(bolt["exclude"] as Array).append(hit_id)
+			snapshot = _snapshot(enemies)
+			fresh = true
+			target = _first_enemy(from, end, bolt["radius"], snapshot, bolt["exclude"])
+		if spent:
 			continue
 		if blocked:
 			fresh = false
@@ -178,12 +193,14 @@ func _position(bolt: Dictionary) -> Vector3:
 # The first enemy the segment passes within reach of, measured against each enemy's
 # weak-point spheres first and then its upright capsule (its axis, widened by its
 # radius and the bolt's). A weak point wins a tie with the body it sits on.
-func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, snapshot: Array) -> Dictionary:
+func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, snapshot: Array, exclude := []) -> Dictionary:
 	var best := {}
 	var best_along := INF
 	var span := from.distance_to(to)
 	for entry in snapshot:
 		var enemy = entry["enemy"]
+		if not exclude.is_empty() and enemy.get_instance_id() in exclude:
+			continue
 		for weak in entry["weak"]:
 			var at: Vector3 = weak["at"]
 			var near := Geometry3D.get_closest_point_to_segment(at, from, to)

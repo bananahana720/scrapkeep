@@ -1749,6 +1749,7 @@ func _fire(weapon: String, source := "weapon") -> void:
 			"knock": p.knock, "chain_jumps": p.chain_jumps, "chain_range": p.chain_range,
 			"chain_falloff": p.chain_falloff, "lattice_chain_falloff": p.lattice_chain_falloff, "color": color,
 			"wave_amp": 0.0 if entry["centre"] else p.wave_amp, "wave_hz": p.wave_hz, "phase": entry["phase"],
+			"pierce": p.pierce,
 			"source": source,
 		})
 	volleys += 1
