@@ -375,6 +375,7 @@ func frozen() -> bool:
 
 func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	_bank_pending = {}
+	_drags.clear()
 	_clear_speed_bank()
 	_speed_bank_move_held = false
 	_speed_bank_brake_held = false
@@ -1471,9 +1472,8 @@ func _drag_in(at: Vector3) -> void:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.has_method("is_dead") and enemy.is_dead():
 			continue
-		var flat: Vector3 = at - enemy.global_position
-		flat.y = 0.0
-		if flat.length() > slam_radius() or Grip.heft_of(enemy) > heft():
+		var offset: Vector3 = at - enemy.global_position
+		if offset.length() > slam_radius() or Grip.heft_of(enemy) > heft():
 			continue
 		_drags[enemy.get_instance_id()] = {"enemy": weakref(enemy), "to": at, "t": 0.0}
 		enemy.flash()

@@ -1752,7 +1752,7 @@ func _fire(weapon: String, source := "weapon") -> void:
 		bolts.fire(_bolt_record(weapon, p, entry, muzzle, reach, damage, source))
 	if rake_follows(source, ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")):
 		_rakes.append({"at": _clock + RAKE_DELAY, "weapon": weapon, "forward": forward,
-			"damage": p.damage * _damage_mod(weapon)})
+			"damage": p.damage * _damage_mod(weapon), "volley": volleys})
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": aim["to"], "point": point,
 		"blocked": aim["blocked"], "bolts": layout.size(), "volley": volleys, "sprung": sprung}
@@ -1803,7 +1803,7 @@ func _rake_return(rake: Dictionary) -> void:
 	var up_hint := Vector3.UP if absf(forward.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
 	var right := forward.cross(up_hint).normalized()
 	var up := right.cross(forward).normalized()
-	for entry in p.layout(forward, volleys):
+	for entry in p.layout(forward, int(rake.get("volley", volleys))):
 		var dir: Vector3 = entry["dir"]
 		var mirrored := (forward * dir.dot(forward) - right * dir.dot(right) + up * dir.dot(up)).normalized()
 		var bolt := _bolt_record(weapon, p, {"dir": mirrored, "centre": entry["centre"], "phase": PI - float(entry["phase"])},

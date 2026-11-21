@@ -117,7 +117,8 @@ const UNSTARTED := ""
 #   any slot  cast (seconds from the press to the effect, 0 or absent for none), plant (the
 #             pilot plants, braking to a stop, through that cast), family (lane, split_lane, plate or rush: the Mind family this slot commits),
 #             pool (the slot whose charges this row spends: Tally's slots 2 and 3 spend
-#             slot 1's pressure). A special or line row with no charge_max is a tap: it
+#             slot 1's pressure), mutation (authored kit-swap behaviour id read by the slot's
+#             owning module). A special or line row with no charge_max is a tap: it
 #             casts on the press.
 # Each pilot owns one marked block below for its wave P-C rows (SKILL-BAR section 12, item
 # 4), so the six pilot units never edit the same lines.
