@@ -21,7 +21,8 @@ CONSTANTS
   HoldCap,        \* the wait is spent after HoldTicks ticks (FALSE: it lasts as long as the ball stays)
   EndNeedsClear,  \* _park_can_end: a flood ends only with its basin clear
   EndWhenSpent,   \* plant: a flood may end under a ball once its wait is spent (the fault W1-148 review found)
-  CapGuard        \* _park_capacity: a new ground event waits for a free slot
+  CapGuard,       \* _park_capacity: a new ground event waits for a free slot
+  StepPastExpiry  \* past its live time, a flood that cannot end is still stepped (60e2fccf5, finding PF-2)
 
 VARIABLES
   phase,    \* per row: "waiting", "announced", "live", "cooldown"
@@ -96,29 +97,35 @@ Rose(e, h) ==
   /\ roseUnder' = [roseUnder EXCEPT ![e] = roseUnder[e] \/ (Rising(e) /\ ball = e /\ ~Spent(e))]
 
 \* _park_step_live, one call.
+\* Past its live time a flood that cannot end runs on as before: the wait, the step hook and the rise, with the live
+\* clock held at its end (60e2fccf5). Without StepPastExpiry it returns with no step hook (finding PF-2).
 Step(e) ==
   /\ phase[e] = "live"
   /\ UNCHANGED <<lives, ball>>
-  /\ IF Live > 0 /\ elapsed[e] = Live
-     THEN \* the live time is up: end if the basin is clear, else wait
-          /\ UNCHANGED <<rise, hair, elapsed, waited, skipped, roseUnder>>
-          /\ IF CanEnd(e) THEN End(e) ELSE UNCHANGED <<phase, endedUnder>>
-     ELSE LET now == IF Live > 0 THEN elapsed[e] + 1 ELSE 0
-              waits == WaitUnderBall /\ Rising(e) /\ ~Clear(e) /\ ~Spent(e)
-          IN /\ elapsed' = [elapsed EXCEPT ![e] = now]
-             /\ IF waits
-                THEN \* no step hook this tick
-                     /\ waited' = [waited EXCEPT ![e] = IF waited[e] < HoldTicks THEN waited[e] + 1 ELSE waited[e]]
-                     /\ skipped' = [skipped EXCEPT ![e] = skipped[e] \/ rise[e] = Fill]
-                     /\ UNCHANGED <<phase, rise, hair, roseUnder, endedUnder>>
-                ELSE /\ UNCHANGED <<waited, skipped>>
-                     /\ \/ /\ rise[e] + 1 = Fill
-                           /\ \E h \in (IF SnapRise THEN {FALSE} ELSE BOOLEAN) : Rose(e, h)
-                        \/ /\ rise[e] + 1 # Fill
-                           /\ Rose(e, FALSE)
-                     /\ IF Live > 0 /\ now = Live /\ CanEnd(e)
-                        THEN End(e)
-                        ELSE UNCHANGED <<phase, endedUnder>>
+  /\ LET expired == Live > 0 /\ elapsed[e] = Live
+     IN IF expired /\ CanEnd(e)
+        THEN /\ UNCHANGED <<rise, hair, elapsed, waited, skipped, roseUnder>>
+             /\ End(e)
+        ELSE IF expired /\ ~StepPastExpiry
+        THEN \* the code before 60e2fccf5: no step hook while the ball stays
+             /\ skipped' = [skipped EXCEPT ![e] = skipped[e] \/ rise[e] = Fill]
+             /\ UNCHANGED <<phase, rise, hair, elapsed, waited, roseUnder, endedUnder>>
+        ELSE LET now == IF Live > 0 /\ ~expired THEN elapsed[e] + 1 ELSE elapsed[e]
+                 waits == WaitUnderBall /\ Rising(e) /\ ~Clear(e) /\ ~Spent(e)
+             IN /\ elapsed' = [elapsed EXCEPT ![e] = now]
+                /\ IF waits
+                   THEN \* no step hook this tick
+                        /\ waited' = [waited EXCEPT ![e] = IF waited[e] < HoldTicks THEN waited[e] + 1 ELSE waited[e]]
+                        /\ skipped' = [skipped EXCEPT ![e] = skipped[e] \/ rise[e] = Fill]
+                        /\ UNCHANGED <<phase, rise, hair, roseUnder, endedUnder>>
+                   ELSE /\ UNCHANGED <<waited, skipped>>
+                        /\ \/ /\ rise[e] + 1 = Fill
+                              /\ \E h \in (IF SnapRise THEN {FALSE} ELSE BOOLEAN) : Rose(e, h)
+                           \/ /\ rise[e] + 1 # Fill
+                              /\ Rose(e, FALSE)
+                        /\ IF Live > 0 /\ now = Live /\ CanEnd(e)
+                           THEN End(e)
+                           ELSE UNCHANGED <<phase, endedUnder>>
 
 Roll ==
   /\ \E b \in Events \cup {"out"} : ball' = b /\ b # ball
@@ -140,7 +147,8 @@ TypeOK ==
 
 (* The rules. Each is one promise to the player. *)
 
-\* Water that has finished rising keeps acting on a ball that rolls in.
+\* Water that has finished rising keeps acting on a ball that rolls in, during its live time and after it while the
+\* ball keeps the flood from ending.
 FullWaterNeverHeld == \A e \in Events : ~skipped[e]
 
 \* A flood with no clock gives its ground slot back once its water is full.

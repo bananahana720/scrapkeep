@@ -21,7 +21,9 @@ const cfg = (name) => cfgRules(readFileSync(new URL(`models/${name}`, SKILL), "u
 // Real TLC 2.19 output (tla2tools 1.7.4), trimmed by dropping the variable values under each State line and the temp
 // folder paths. Captured on the Mac Studio on 17 November 2026 from the configs each file is named for; the rewards-*
 // files from the W1-117 model (old and new reward keys apart, the save lock), with TLC's Progress lines dropped too;
-// the hazard-* files from HazardCycle.tla the same way.
+// the hazard-* files from HazardCycle.tla the same way. The flood-* files were captured again on 21 November 2026 from
+// ParkFlood.tla with the step past the live time (finding PF-2), and the destructibles-* files the same day from
+// Destructibles.tla (W45), untrimmed but for the temp folder, process and host.
 const fixture = (name) =>
   readFileSync(new URL(`fixtures/tlc/${name}.out`, import.meta.url), "utf8");
 const out = {
@@ -330,4 +332,52 @@ test("the flood row's pins and plants match captured TLC output", () => {
       true,
       `${p.cfg} breaks ${p.rule}`,
     );
+});
+
+test("the destructibles row's pin and plants match captured TLC output, and its page covers the code it models", () => {
+  const ds = ROWS["destructibles-safe"];
+  for (const r of ds.real) {
+    const parsed = parseTlc(fixture(r.cfg.replace(".cfg", "")));
+    assert.equal(parsed.outcome, "clean", r.cfg);
+    assert.equal(parsed.distinct, r.minStates, r.cfg);
+  }
+  assert.deepEqual(
+    ds.plants.map((p) => p.rule).sort(),
+    [
+      "NoColliderAfterShatter",
+      "NoLineOnRubble",
+      "NoLineOnRubble",
+      "NoLineOnRubble",
+      "PaysOnce",
+      "PaysOnce",
+      "RetryNoFarm",
+      "RetryNoFarm",
+      "TierCapNeverStacks",
+    ],
+  );
+  for (const p of ds.plants)
+    assert.equal(
+      brokeRule(parseTlc(fixture(p.cfg.replace(".cfg", ""))), cfg(p.cfg), p.rule),
+      true,
+      `${p.cfg} breaks ${p.rule}`,
+    );
+  const covered = coveredFiles(readFileSync(new URL(ds.coverage, SKILL), "utf8"));
+  for (const f of [
+    "world/destructibles.gd",
+    "world/world.gd",
+    "movement/player_ball.gd",
+    "core/flow.gd",
+    "core/run_state.gd",
+    "build/build.gd",
+    "build/scrap_field.gd",
+  ])
+    assert.ok(covered.includes(`sketches/core-loop/src/${f}`), f);
+});
+
+test("the flood row checks the step past the live time and no longer names PF-2 as a gap", () => {
+  const fl = ROWS["flood-never-held"];
+  assert.ok(fl.plants.some((p) => p.cfg === "flood-broken-endstop.cfg" && p.rule === "FullWaterNeverHeld"));
+  assert.ok(fl.plants.some((p) => p.cfg === "flood-broken-endstop-hold.cfg" && p.rule === "HoldEnds"));
+  assert.ok(cfg("flood-today-longfill.cfg").properties.includes("HoldEnds"));
+  assert.ok(fl.gaps.every((g) => !/PF-2/.test(g)));
 });

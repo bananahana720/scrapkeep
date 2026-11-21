@@ -1,5 +1,5 @@
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 118 and seed 6571496376592161663 with 4 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Running breadth-first search Model-Checking with fp 80 and seed -1709419983375324557 with 4 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
 Parsing file <tmp>/ParkFlood.tla
 Parsing file <tmp>/Naturals.tla
 Parsing file <tmp>/FiniteSets.tla
@@ -8,19 +8,22 @@ Semantic processing of module Naturals
 Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module ParkFlood
-Starting... (2026-11-17 17:39:25)
+Starting... (2026-11-21 12:36:13)
 Implied-temporal checking--satisfiability problem has 9 branches.
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-11-17 17:39:25.
-Progress(35) at 2026-11-17 17:39:25 168,433 states generated, 31,616 distinct states found, 0 states left on queue.
-Checking 9 branches of temporal properties for the complete state space with 284544 total distinct states at (2026-11-17 17:39:25)
-Finished checking temporal properties in 01s at 2026-11-17 17:39:25
+Finished computing initial states: 1 distinct state generated at 2026-11-21 12:36:13.
+Checking 9 branches of temporal properties for the current state space with 265743 total distinct states at (2026-11-21 12:36:16)
+Finished checking temporal properties in 01s at 2026-11-21 12:36:17
+Progress(31) at 2026-11-21 12:36:17: 153,318 states generated (153,318 s/min), 29,528 distinct states found (29,528 ds/min), 1,055 states left on queue.
+Progress(37) at 2026-11-21 12:36:18: 168,433 states generated, 31,616 distinct states found, 0 states left on queue.
+Checking 9 branches of temporal properties for the complete state space with 284544 total distinct states at (2026-11-21 12:36:18)
+Finished checking temporal properties in 01s at 2026-11-21 12:36:19
 Model checking completed. No error has been found.
   Estimates of the probability that TLC did not check all reachable states
   because two distinct states had the same fingerprint:
   calculated (optimistic):  val = 2.3E-10
-  based on the actual fingerprints:  val = 1.1E-11
+  based on the actual fingerprints:  val = 2.9E-11
 168433 states generated, 31616 distinct states found, 0 states left on queue.
-The depth of the complete state graph search is 35.
+The depth of the complete state graph search is 37.
 The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 6 and the 95th percentile is 3).
-Finished in 04s at (2026-11-17 17:39:25)
+Finished in 06s at (2026-11-21 12:36:19)

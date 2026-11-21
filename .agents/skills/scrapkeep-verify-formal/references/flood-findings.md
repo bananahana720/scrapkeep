@@ -30,15 +30,17 @@ Each finding is a break the model found that replayed on the real game. A closed
 
 **Replay.** `replay/flood_under_ball.gd` printed `parked: REPRODUCED` on bf8056479 and c485ca53c; on the W1-148 director it prints NOT REPRODUCED.
 
-## PF-2. Full water stops stepping once its live time is up and the ball is still near (open, found by review)
+## PF-2. Full water stopped stepping once its live time was up and the ball was still near (closed by 60e2fccf5, W45-A)
 
 **Steps.** A flood with a live time rises fully. The ball sits in or near the basin until the live time runs out.
 
-**What happens.** The first branch of `_park_step_live` returns without the step hook when the live time is up and the flood cannot end because the ball is not clear. The flood stays live and is no longer stepped for as long as the ball stays.
+**What happened.** The first branch of `_park_step_live` returned without the step hook when the live time was up and the flood could not end because the ball was not clear. The flood stayed live and was no longer stepped for as long as the ball stayed. Water still rising under a parked ball stopped rising there too.
 
-**Harm.** None a player can see on this tree. Once a step taxes a slow ball in deep water (pull request 1123), a ball that outstays the flood stops being taxed.
+**Harm.** Once a step taxes a slow ball in deep water (pull request 1123), a ball that outstayed the flood stopped being taxed, and a ball parked through the live time kept the water part risen.
 
-**Model.** Not seen: the model's live-time branch leaves `skipped` unchanged, and `FullWaterNeverHeld` is stated for the live time only. Found by reading the code in review, not by the checker and not replayed.
+**Closed by.** 60e2fccf5 (W45-A hygiene): past its live time a flood that cannot end keeps running in full. `dt` is the whole tick, the live clock stays at its end, and the hold cap, the step hook and the rise go on. `_park_can_end` still refuses to end a flood under a ball.
+
+**Model.** First found by reading the code in review, not by the checker. The model now has the step past the live time as `StepPastExpiry`. `flood-broken-endstop` (the code before 60e2fccf5) breaks `FullWaterNeverHeld`, and `flood-broken-endstop-hold` breaks `HoldEnds` with a fill longer than the live time. `flood-today-timed` and `flood-today-longfill` hold both, and `flood-today-longfill` now claims `HoldEnds` too. Not replayed on the game: the fix came from review, and `sketches/core-loop/tests/park_events_test.gd` carries its test ("expired flood under a parked ball: the step hook keeps running past live time").
 
 ## PF-3. A ball near a flood but outside its footprint still holds the water off, without limit (open)
 

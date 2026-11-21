@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-verify-formal
-description: "Check by model the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals), with a TLA+ model kept beside this skill, and check by a second model that an earned reward is banked once and never lost through crashes, failed saves and two games on one profile, and by a third that a park flood never holds full water under the ball. Use when a change touches the park event step in event_director.gd, flow.gd, launch_take.gd or the launch swipe calls in game.gd, or profile.gd, safe_store.gd, run_store.gd or the settle and grant calls in progress.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check the run flow; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
+description: "Check by model the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals), with a TLA+ model kept beside this skill, and check by a second model that an earned reward is banked once and never lost through crashes, failed saves and two games on one profile, by a third that a park flood never holds full water under the ball, and by a fourth that a heft destructible pays once, lets go of what rests on it and cannot be farmed by retrying. Use when a change touches the park event step in event_director.gd, destructibles.gd, flow.gd, launch_take.gd or the launch swipe calls in game.gd, or profile.gd, safe_store.gd, run_store.gd or the settle and grant calls in progress.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check the run flow; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
 ---
 
 # Check the run flow against its model
@@ -103,14 +103,28 @@ Run it with `bash $F/models/make-hazard-configs.sh`, then each `hazard-*.cfg` as
 
 Another model, `models/ParkFlood.tla`, checks a park flood from its announcement to its end in `sketches/core-loop/src/world/event_director.gd` (`_park_step_live`, `_park_capacity`, `_park_can_end`), with the ball free to roll into or out of any basin between any two ticks. Its rules:
 
-- **FullWaterNeverHeld.** While its live time runs, water that has risen for its whole fill time is stepped on every tick, ball or no ball.
+- **FullWaterNeverHeld.** Water that has risen for its whole fill time is stepped on every tick, ball or no ball, while its live time runs and after it while the ball keeps the flood from ending (finding PF-2, closed by 60e2fccf5).
 - **FullWaterFreesItsSlot.** Full water with no live time stops counting against the ground cap.
 - **NeverRisesUnderBall** and **NeverEndsUnderBall.** Water does not rise for the first 2 s of the ball in its basin, grounded or not (the bounded wait), and does not end while the ball is in its basin.
 - **HoldEnds.** The wait is bounded: rising water always finishes rising, ball or no ball (finding PF-1, closed by W1-148).
 - **WithinCap.** No more unsettled ground events are live than the cap allows.
 - **FloodEnds** and **AnnouncedLands.** Once the ball stays out, every live flood ends and every announced one lands.
 
-Run `bash $F/models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg` with `ParkFlood.tla`. [references/flood-coverage.md](references/flood-coverage.md) maps each step and guard to the code and lists what each config must report, and [references/flood-findings.md](references/flood-findings.md) holds the findings, two of them open (PF-2 and PF-3). `node scripts/gate/model-receipts.mjs --out <dir> --row flood-never-held` writes its receipt.
+Run `bash $F/models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg` with `ParkFlood.tla`. [references/flood-coverage.md](references/flood-coverage.md) maps each step and guard to the code and lists what each config must report, and [references/flood-findings.md](references/flood-findings.md) holds the findings, one of them open (PF-3). `node scripts/gate/model-receipts.mjs --out <dir> --row flood-never-held` writes its receipt.
+
+## The destructibles model
+
+One more model, `models/Destructibles.tla`, checks a stage's heft destructibles (W45-C) in `sketches/core-loop/src/world/destructibles.gd`: a piece broken by the ball's roll or by a blast, the scrap and cogs it drops against the stage's cap, the line, mount and aim that can rest on it (`_on_piece_shattered` in `sketches/core-loop/src/movement/player_ball.gd`), and the stage retry that rebuilds the pieces and restores the run. The world tick and the ball tick run in either order each frame. Its rules:
+
+| Rule | The promise | What breaks for the player |
+| --- | --- | --- |
+| `PaysOnce` | A piece pays at most once an attempt, and a stage's pieces never pay past 35 scrap and 20 cogs. | Rubble pays again, or one stage pays past its cap. |
+| `RetryNoFarm` | A retried stage banks at most one attempt's worth over the stage-entry checkpoint. | Break, retry, repeat is an endless income. |
+| `NoLineOnRubble` | At a frame's end no line, mount or aim rests on a shattered piece. | The ball hangs from, sits on, or fires at a thing that is gone. |
+| `NoColliderAfterShatter` | A shattered piece is never a live solid. | The ball hits an invisible wall where the piece stood. |
+| `TierCapNeverStacks` | A blast breaks at most one tier above the class. | Stacked bonuses skip the heft the tiers stand for. |
+
+Run `bash $F/models/make-destructibles-configs.sh`, then plain TLC on each `destructibles-*.cfg` with `Destructibles.tla`. [references/destructibles-coverage.md](references/destructibles-coverage.md) maps each step and guard to the code and lists what each config must report; [references/destructibles-findings.md](references/destructibles-findings.md) holds the findings (none open). `node scripts/gate/model-receipts.mjs --out <dir> --row destructibles-safe` writes its receipt.
 
 ## Lessons and updates
 

@@ -1,5 +1,5 @@
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 61 and seed 183175859207709076 with 4 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Running breadth-first search Model-Checking with fp 88 and seed 5439691811377520266 with 4 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
 Parsing file <tmp>/ParkFlood.tla
 Parsing file <tmp>/Naturals.tla
 Parsing file <tmp>/FiniteSets.tla
@@ -8,9 +8,9 @@ Semantic processing of module Naturals
 Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module ParkFlood
-Starting... (2026-11-17 17:39:25)
+Starting... (2026-11-21 12:35:46)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-11-17 17:39:25.
+Finished computing initial states: 1 distinct state generated at 2026-11-21 12:35:47.
 Error: Invariant WithinCap is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -25,7 +25,7 @@ State 1: <Initial predicate>
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 2: <Announce line 67, col 3 to line 70, col 91 of module ParkFlood>
+State 2: <Announce line 68, col 3 to line 71, col 91 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
@@ -33,23 +33,11 @@ State 2: <Announce line 67, col 3 to line 70, col 91 of module ParkFlood>
 /\ rise = [a |-> 0, b |-> 0, c |-> 0]
 /\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
-/\ phase = [a |-> "waiting", b |-> "announced", c |-> "waiting"]
+/\ phase = [a |-> "announced", b |-> "waiting", c |-> "waiting"]
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 3: <Announce line 67, col 3 to line 70, col 91 of module ParkFlood>
-/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
-/\ lives = [a |-> 0, b |-> 0, c |-> 0]
-/\ rise = [a |-> 0, b |-> 0, c |-> 0]
-/\ waited = [a |-> 0, b |-> 0, c |-> 0]
-/\ ball = "out"
-/\ phase = [a |-> "announced", b |-> "announced", c |-> "waiting"]
-/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
-
-State 4: <Land line 75, col 3 to line 84, col 55 of module ParkFlood>
+State 3: <Land line 76, col 3 to line 85, col 55 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
@@ -57,23 +45,35 @@ State 4: <Land line 75, col 3 to line 84, col 55 of module ParkFlood>
 /\ rise = [a |-> 0, b |-> 0, c |-> 0]
 /\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
-/\ phase = [a |-> "live", b |-> "announced", c |-> "waiting"]
+/\ phase = [a |-> "live", b |-> "waiting", c |-> "waiting"]
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 5: <Land line 75, col 3 to line 84, col 55 of module ParkFlood>
+State 4: <Announce line 68, col 3 to line 71, col 91 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
-/\ lives = [a |-> 1, b |-> 1, c |-> 0]
+/\ lives = [a |-> 1, b |-> 0, c |-> 0]
 /\ rise = [a |-> 0, b |-> 0, c |-> 0]
 /\ waited = [a |-> 0, b |-> 0, c |-> 0]
 /\ ball = "out"
-/\ phase = [a |-> "live", b |-> "live", c |-> "waiting"]
+/\ phase = [a |-> "live", b |-> "waiting", c |-> "announced"]
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 6: <Announce line 67, col 3 to line 70, col 91 of module ParkFlood>
+State 5: <Announce line 68, col 3 to line 71, col 91 of module ParkFlood>
+/\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
+/\ lives = [a |-> 1, b |-> 0, c |-> 0]
+/\ rise = [a |-> 0, b |-> 0, c |-> 0]
+/\ waited = [a |-> 0, b |-> 0, c |-> 0]
+/\ ball = "out"
+/\ phase = [a |-> "live", b |-> "announced", c |-> "announced"]
+/\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+/\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
+
+State 6: <Land line 76, col 3 to line 85, col 55 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
@@ -85,7 +85,7 @@ State 6: <Announce line 67, col 3 to line 70, col 91 of module ParkFlood>
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-State 7: <Land line 75, col 3 to line 84, col 55 of module ParkFlood>
+State 7: <Land line 76, col 3 to line 85, col 55 of module ParkFlood>
 /\ endedUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ skipped = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ elapsed = [a |-> 0, b |-> 0, c |-> 0]
@@ -97,7 +97,7 @@ State 7: <Land line 75, col 3 to line 84, col 55 of module ParkFlood>
 /\ roseUnder = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 /\ hair = [a |-> FALSE, b |-> FALSE, c |-> FALSE]
 
-1364 states generated, 367 distinct states found, 152 states left on queue.
-The depth of the complete state graph search is 8.
-The average outdegree of the complete state graph is 2 (minimum is 0, the maximum 6 and the 95th percentile is 4).
-Finished in 00s at (2026-11-17 17:39:25)
+1408 states generated, 378 distinct states found, 154 states left on queue.
+The depth of the complete state graph search is 9.
+The average outdegree of the complete state graph is 2 (minimum is 0, the maximum 5 and the 95th percentile is 4).
+Finished in 00s at (2026-11-21 12:35:47)

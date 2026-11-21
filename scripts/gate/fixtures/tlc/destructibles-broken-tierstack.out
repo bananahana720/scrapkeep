@@ -1,0 +1,83 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 57 and seed -3404595846143937597 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/Destructibles.tla
+Parsing file <tmp>/Naturals.tla
+Parsing file <tmp>/FiniteSets.tla
+Parsing file <tmp>/Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Destructibles
+Starting... (2026-11-21 12:44:02)
+Computing initial states...
+Computed 2 initial states...
+Finished computing initial states: 3 distinct states generated at 2026-11-21 12:44:02.
+Error: Invariant TierCapNeverStacks is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ runCogs = 0
+/\ dropCogs = 0
+/\ overTier = FALSE
+/\ runScrap = 0
+/\ aim = 0
+/\ ran = {}
+/\ line = 0
+/\ stage = "play"
+/\ cogsPaid = 0
+/\ heft = 1
+/\ mount = 0
+/\ intact = <<TRUE, TRUE>>
+/\ last = "Init"
+/\ scrapPaid = 0
+/\ paid = <<0, 0>>
+/\ dropScrap = 0
+/\ freed = {}
+/\ tries = 0
+/\ collider = <<TRUE, TRUE>>
+
+State 2: <WorldTick line 120, col 3 to line 125, col 47 of module Destructibles>
+/\ runCogs = 0
+/\ dropCogs = 0
+/\ overTier = FALSE
+/\ runScrap = 0
+/\ aim = 0
+/\ ran = {"world"}
+/\ line = 0
+/\ stage = "play"
+/\ cogsPaid = 0
+/\ heft = 1
+/\ mount = 0
+/\ intact = <<FALSE, TRUE>>
+/\ last = "OnBall"
+/\ scrapPaid = 0
+/\ paid = <<1, 0>>
+/\ dropScrap = 0
+/\ freed = {}
+/\ tries = 0
+/\ collider = <<FALSE, TRUE>>
+
+State 3: <OnBlast line 131, col 3 to line 138, col 42 of module Destructibles>
+/\ runCogs = 0
+/\ dropCogs = 1
+/\ overTier = TRUE
+/\ runScrap = 0
+/\ aim = 0
+/\ ran = {"world"}
+/\ line = 0
+/\ stage = "play"
+/\ cogsPaid = 1
+/\ heft = 1
+/\ mount = 0
+/\ intact = <<FALSE, FALSE>>
+/\ last = "OnBlast"
+/\ scrapPaid = 3
+/\ paid = <<1, 1>>
+/\ dropScrap = 3
+/\ freed = {}
+/\ tries = 0
+/\ collider = <<FALSE, FALSE>>
+
+181 states generated, 140 distinct states found, 117 states left on queue.
+The depth of the complete state graph search is 4.
+The average outdegree of the complete state graph is 8 (minimum is 5, the maximum 15 and the 95th percentile is 15).
+Finished in 00s at (2026-11-21 12:44:02)

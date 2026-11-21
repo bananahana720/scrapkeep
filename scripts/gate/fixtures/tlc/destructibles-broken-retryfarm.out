@@ -1,0 +1,146 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 33 and seed 3946230621366473001 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/Destructibles.tla
+Parsing file <tmp>/Naturals.tla
+Parsing file <tmp>/FiniteSets.tla
+Parsing file <tmp>/Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Destructibles
+Starting... (2026-11-21 12:44:01)
+Computing initial states...
+Computed 2 initial states...
+Finished computing initial states: 3 distinct states generated at 2026-11-21 12:44:01.
+Error: Invariant RetryNoFarm is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ runCogs = 0
+/\ dropCogs = 0
+/\ overTier = FALSE
+/\ runScrap = 0
+/\ aim = 0
+/\ ran = {}
+/\ line = 0
+/\ stage = "play"
+/\ cogsPaid = 0
+/\ heft = 3
+/\ mount = 0
+/\ intact = <<TRUE, TRUE>>
+/\ last = "Init"
+/\ scrapPaid = 0
+/\ paid = <<0, 0>>
+/\ dropScrap = 0
+/\ freed = {}
+/\ tries = 0
+/\ collider = <<TRUE, TRUE>>
+
+State 2: <WorldTick line 120, col 3 to line 125, col 47 of module Destructibles>
+/\ runCogs = 0
+/\ dropCogs = 1
+/\ overTier = FALSE
+/\ runScrap = 0
+/\ aim = 0
+/\ ran = {"world"}
+/\ line = 0
+/\ stage = "play"
+/\ cogsPaid = 1
+/\ heft = 3
+/\ mount = 0
+/\ intact = <<TRUE, FALSE>>
+/\ last = "OnBall"
+/\ scrapPaid = 3
+/\ paid = <<0, 1>>
+/\ dropScrap = 3
+/\ freed = {}
+/\ tries = 0
+/\ collider = <<TRUE, FALSE>>
+
+State 3: <Collect line 177, col 3 to line 181, col 103 of module Destructibles>
+/\ runCogs = 1
+/\ dropCogs = 0
+/\ overTier = FALSE
+/\ runScrap = 0
+/\ aim = 0
+/\ ran = {"world"}
+/\ line = 0
+/\ stage = "play"
+/\ cogsPaid = 1
+/\ heft = 3
+/\ mount = 0
+/\ intact = <<TRUE, FALSE>>
+/\ last = "Collect"
+/\ scrapPaid = 3
+/\ paid = <<0, 1>>
+/\ dropScrap = 3
+/\ freed = {}
+/\ tries = 0
+/\ collider = <<TRUE, FALSE>>
+
+State 4: <RetryStage line 188, col 3 to line 201, col 44 of module Destructibles>
+/\ runCogs = 1
+/\ dropCogs = 0
+/\ overTier = FALSE
+/\ runScrap = 0
+/\ aim = 0
+/\ ran = {"world"}
+/\ line = 0
+/\ stage = "play"
+/\ cogsPaid = 0
+/\ heft = 3
+/\ mount = 0
+/\ intact = <<TRUE, TRUE>>
+/\ last = "RetryStage"
+/\ scrapPaid = 0
+/\ paid = <<0, 0>>
+/\ dropScrap = 0
+/\ freed = {}
+/\ tries = 1
+/\ collider = <<TRUE, TRUE>>
+
+State 5: <OnBlast line 131, col 3 to line 138, col 42 of module Destructibles>
+/\ runCogs = 1
+/\ dropCogs = 1
+/\ overTier = FALSE
+/\ runScrap = 0
+/\ aim = 0
+/\ ran = {"world"}
+/\ line = 0
+/\ stage = "play"
+/\ cogsPaid = 1
+/\ heft = 3
+/\ mount = 0
+/\ intact = <<TRUE, FALSE>>
+/\ last = "OnBlast"
+/\ scrapPaid = 3
+/\ paid = <<0, 1>>
+/\ dropScrap = 3
+/\ freed = {}
+/\ tries = 1
+/\ collider = <<TRUE, FALSE>>
+
+State 6: <Collect line 177, col 3 to line 181, col 103 of module Destructibles>
+/\ runCogs = 2
+/\ dropCogs = 0
+/\ overTier = FALSE
+/\ runScrap = 0
+/\ aim = 0
+/\ ran = {"world"}
+/\ line = 0
+/\ stage = "play"
+/\ cogsPaid = 1
+/\ heft = 3
+/\ mount = 0
+/\ intact = <<TRUE, FALSE>>
+/\ last = "Collect"
+/\ scrapPaid = 3
+/\ paid = <<0, 1>>
+/\ dropScrap = 3
+/\ freed = {}
+/\ tries = 1
+/\ collider = <<TRUE, FALSE>>
+
+26133 states generated, 7536 distinct states found, 4058 states left on queue.
+The depth of the complete state graph search is 8.
+The average outdegree of the complete state graph is 2 (minimum is 0, the maximum 15 and the 95th percentile is 10).
+Finished in 00s at (2026-11-21 12:44:01)

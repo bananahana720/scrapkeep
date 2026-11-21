@@ -42,6 +42,10 @@
   After the model passes, run the reach probes (`reach-store`, `reach-nostore`); each must break. They prove four paths can happen (a Continue, the boss entered under the swipe, a retry under the swipe, the summary), not every action. An action no probe names is not shown to fire, so a new action gets its own probe or a line in `references/coverage.md` saying it is unprobed. Also check that each stage rule reads the same function the code reads.
   Evidence: the review of pull request 1070 found `Resume` unreachable (no quit action led to a Continue with a store) and the swipe skipped at the world's last stage where the code skips it at the run's last (`is_run_last`), so the launch into the boss was never explored with a swipe. Both are corrected (`QuitRelaunch`, `RunLast`).
   Overturned by: —
+- **VFM-11** · status: provisional · since: 2026-11-21 · origin: the first runs of the destructibles model
+  A plant that turns off one guard reports no break when a second guard backs the first. Keep a belt config with the one guard off that must report no break, so the backup is on record, and take both off for the plant that names the rule. Do not drop the plant or weaken the rule to get a break.
+  Evidence: the brief for `Destructibles.tla` named `on_blast` without its `not p.intact` skip as the plant for `PaysOnce`. Alone it reports no break in 27,096 states (`destructibles-belt-repay`), because `_shatter` also calls `_unfile` and `_near` never finds rubble again. `destructibles-broken-repay` takes both off and breaks `PaysOnce` in three states.
+  Overturned by: —
 
 ## Changelog
 
@@ -50,3 +54,4 @@
 | 2026-11-16 | VFM-01 to VFM-08 added with the skill. Model confirmed at `3adc2fd0e`. |
 | 2026-11-16 | VFM-09 added after the cold follow; SKILL.md steps for the diff, guard flips and the replay command corrected. |
 | 2026-11-16 | VFM-10 added after the review of pull request 1070: `QuitRelaunch` and `RunLast` added to the model, `guarded-lastgate` config added, the `broken-busy` and stage replay rows corrected. |
+| 2026-11-21 | FV-1: `ParkFlood.tla` steps a flood past its live time (`StepPastExpiry`, 60e2fccf5), closing PF-2, with plants `flood-broken-endstop` and `flood-broken-endstop-hold` and the probe `flood-reach-longfill-Full`; `flood-today-longfill` now claims `HoldEnds`. `RunFlow.tla` and `HazardCycle.tla` confirmed at `1c94e96b5`. `Destructibles.tla` added with the `destructibles-safe` receipt; VFM-11 added. |

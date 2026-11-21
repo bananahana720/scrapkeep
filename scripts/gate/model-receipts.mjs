@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Writes the receipts for the rows backed by the TLA+ models in .agents/skills/scrapkeep-verify-formal:
 // "run-always-ends" (RunFlow.tla) and "rewards-banked-once" (Rewards.tla), which scripts/world1-bands.mjs reads,
-// "flood-never-held" (ParkFlood.tla), and "hazards-hit-everyone" (HazardCycle.tla, W44), which no band row reads yet.
+// "flood-never-held" (ParkFlood.tla), "hazards-hit-everyone" (HazardCycle.tla, W44) and "destructibles-safe"
+// (Destructibles.tla, W45), which no band row reads yet.
 //   { head, pass, measured, plant_caught }
 // For each row it runs TLC, the TLA+ model checker, on every config that stands for the code (the skill's today-*
 // configs) and on each planted fault (a broken-* config with one guard off). It passes only when every code config
@@ -117,8 +118,8 @@ export const ROWS = {
       { cfg: "flood-today-noclock.cfg", minStates: 1792, label: "a flood with no live time" },
       {
         cfg: "flood-today-longfill.cfg",
-        minStates: 14336,
-        label: "a fill that outlasts the live time less the wait",
+        minStates: 63392,
+        label: "a fill that outlasts the live time less the wait, still rising past the live time under a parked ball",
       },
     ],
     plants: [
@@ -129,12 +130,40 @@ export const ROWS = {
       { cfg: "flood-broken-nocap.cfg", rule: "WithinCap" },
       { cfg: "flood-broken-nohold.cfg", rule: "HoldEnds" },
       { cfg: "flood-broken-endspent.cfg", rule: "NeverEndsUnderBall" },
+      { cfg: "flood-broken-endstop.cfg", rule: "FullWaterNeverHeld" },
+      { cfg: "flood-broken-endstop-hold.cfg", rule: "HoldEnds" },
     ],
     coverage: "references/flood-coverage.md",
     gaps: [
       "the wait is counted in ticks (HoldTicks 1 against the real 2 s); the wait for a ball near the basin but outside it (hold_clear_m, 12 to 20 m on real flood rows) is not capped and not modelled, so such a ball still holds the water off (finding PF-3)",
-      "after its live time is up, a flood that cannot end because the ball is near is no longer stepped (finding PF-2)",
       "collapses and cave-ins are not modelled; their clock shares the rise's helper and park_events_test.gd sweeps it",
+    ],
+  },
+  "destructibles-safe": {
+    spec: "Destructibles.tla",
+    real: [
+      {
+        cfg: "destructibles-today.cfg",
+        minStates: 27096,
+        label: "two pieces (tiers 1 and 3), every heft class, two retries, either tick order (W45)",
+      },
+    ],
+    plants: [
+      { cfg: "destructibles-broken-repay.cfg", rule: "PaysOnce" },
+      { cfg: "destructibles-broken-nocap.cfg", rule: "PaysOnce" },
+      { cfg: "destructibles-broken-cutline.cfg", rule: "NoLineOnRubble" },
+      { cfg: "destructibles-broken-dismount.cfg", rule: "NoLineOnRubble" },
+      { cfg: "destructibles-broken-staleaim.cfg", rule: "NoLineOnRubble" },
+      { cfg: "destructibles-broken-collider.cfg", rule: "NoColliderAfterShatter" },
+      { cfg: "destructibles-broken-retryfarm.cfg", rule: "RetryNoFarm" },
+      { cfg: "destructibles-broken-keepdrops.cfg", rule: "RetryNoFarm" },
+      { cfg: "destructibles-broken-tierstack.cfg", rule: "TierCapNeverStacks" },
+    ],
+    coverage: "references/destructibles-coverage.md",
+    gaps: [
+      "the caps are shrunk to bind on two pieces (3 scrap and 1 cog against the real 35 and 20 over 14 pieces); the sweep's geometry, speeds and the refused cue are left to tests/destructibles_test.gd",
+      "a line on a body (an enemy, a stake, a moving world anchor) is never cut by a break; a destructible is none of those, so its lines are world lines",
+      "a Continue after a quit (it loads the stage-entry save and enters the stage again) is not modelled apart from the retry; lifetime tallies a pickup feeds outside the run are not modelled",
     ],
   },
 };
