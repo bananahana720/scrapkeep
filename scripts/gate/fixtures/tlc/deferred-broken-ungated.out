@@ -1,0 +1,115 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 79 and seed -4787325333710539784 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/DeferredEffects.tla
+Parsing file <tmp>/Naturals.tla
+Parsing file <tmp>/FiniteSets.tla
+Parsing file <tmp>/Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module DeferredEffects
+Starting... (2026-11-21 15:01:58)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-21 15:01:58.
+Error: Invariant NoEchoAcrossAttempt is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ heat = "none"
+/\ att = 0
+/\ pike = "none"
+/\ expoOld = FALSE
+/\ flow = "title"
+/\ foe = "gone"
+/\ deep = FALSE
+/\ b = [ live |-> FALSE,
+  proc |-> FALSE,
+  old |-> FALSE,
+  bits |-> {},
+  spent |-> {},
+  gen |-> 0,
+  fam |-> 0,
+  bounces |-> 0,
+  hoar |-> FALSE,
+  spared |-> "none",
+  pulledAsChild |-> FALSE ]
+/\ mark = FALSE
+/\ q = [ rake |-> "none",
+  echo |-> "none",
+  bell |-> "none",
+  shock |-> "none",
+  strip |-> "none",
+  cast |-> "none",
+  bite |-> "none" ]
+/\ expo = "none"
+/\ last = "Init"
+/\ stale = FALSE
+/\ guards = "none"
+
+State 2: <ProcVolley line 177, col 3 to line 183, col 97 of module DeferredEffects>
+/\ heat = "none"
+/\ att = 0
+/\ pike = "none"
+/\ expoOld = FALSE
+/\ flow = "title"
+/\ foe = "gone"
+/\ deep = FALSE
+/\ b = [ live |-> TRUE,
+  proc |-> TRUE,
+  old |-> FALSE,
+  bits |-> {},
+  spent |-> {},
+  gen |-> 0,
+  fam |-> 1,
+  bounces |-> 0,
+  hoar |-> FALSE,
+  spared |-> "none",
+  pulledAsChild |-> FALSE ]
+/\ mark = FALSE
+/\ q = [ rake |-> "none",
+  echo |-> "none",
+  bell |-> "none",
+  shock |-> "none",
+  strip |-> "none",
+  cast |-> "none",
+  bite |-> "none" ]
+/\ expo = "none"
+/\ last = "ProcVolley"
+/\ stale = FALSE
+/\ guards = "none"
+
+State 3: <BoltWall line 324, col 3 to line 330, col 83 of module DeferredEffects>
+/\ heat = "none"
+/\ att = 0
+/\ pike = "none"
+/\ expoOld = FALSE
+/\ flow = "title"
+/\ foe = "gone"
+/\ deep = FALSE
+/\ b = [ live |-> FALSE,
+  proc |-> FALSE,
+  old |-> FALSE,
+  bits |-> {},
+  spent |-> {},
+  gen |-> 0,
+  fam |-> 0,
+  bounces |-> 0,
+  hoar |-> FALSE,
+  spared |-> "none",
+  pulledAsChild |-> FALSE ]
+/\ mark = FALSE
+/\ q = [ rake |-> "none",
+  echo |-> "none",
+  bell |-> "none",
+  shock |-> "none",
+  strip |-> "none",
+  cast |-> "none",
+  bite |-> "none" ]
+/\ expo = "none"
+/\ last = "BoltWall"
+/\ stale = TRUE
+/\ guards = "none"
+
+371 states generated, 143 distinct states found, 119 states left on queue.
+The depth of the complete state graph search is 7.
+The average outdegree of the complete state graph is 8 (minimum is 0, the maximum 24 and the 95th percentile is 24).
+Finished in 00s at (2026-11-21 15:01:58)

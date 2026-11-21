@@ -1,6 +1,6 @@
 ------------------------------ MODULE YardLock ------------------------------
 (* The Spillway's yard lock and its overtime bell: sketches/core-loop/src/world/stage_locks.gd (_step_lock, _lock,
-   _unlock, _on_flow_changed, _on_stage_entered, _clear and the warden_engaged handler) and
+   _unlock, _on_flow_changed, _on_stage_entered, _clear and _on_warden_engaged) and
    sketches/core-loop/src/world/overtime.gd (offer, ring, cash, clear), driven by the run flow in
    sketches/core-loop/src/core/flow.gd. references/yardlock-coverage.md has the code behind every step.
 
@@ -24,9 +24,10 @@ CONSTANTS
   MaxRings,            \* overtime.gd MAX_RINGS
   LongFlight,          \* the ball can reach the near or ring zone from outside without touching ground in the circle
   ArmedChecksEngaged,  \* _step_lock "armed": `_engaged_s >= 0.0` spends the lock unfired
-  LockedYields,        \* _step_lock "locked": an awake Warden opens the yard (not in the code: the YL-1 fix)
+  EngagedUnlocks,      \* _on_warden_engaged: a shut yard opens (_unlock(false)) in the same call that wakes the Warden
+  LockedYields,        \* _step_lock "locked": `_engaged_s >= 0.0 or not ctx.flow.sealed` opens the yard
   FlowSpends,          \* _on_flow_changed: gates, launch, summary, title spend a shut yard and drop its wall
-  DeadSpends,          \* _on_flow_changed: "dead" does the same (not in the code: the YL-2 fix)
+  DeadSpends,          \* _on_flow_changed: "dead" does the same (the YL-2 fix, P7)
   UnlockSpends,        \* _unlock: lock_state = "spent" first
   UnlockDropsWall,     \* _unlock: _drop_wall()
   ElifUnlock,          \* _step_lock "locked": the max_s branch and the crew branch are if/elif
@@ -102,14 +103,6 @@ FlowTo(f) == flow' = f /\ Spend(FlowSpends)
 
 (* ---- One physics frame ---- *)
 
-\* game.gd _physics_process -> flow.physics_step: beacon.advance marks the ring entered for a ball inside it (flat),
-\* and a sealed stage then calls _engage, which emits warden_engaged; StageLocks' handler sets _engaged_s.
-FlowTick ==
-  /\ phase = "flow" /\ phase' = "locks"
-  /\ engaged' = (engaged \/ (flow = "stage" /\ zone = "ring"))
-  /\ last' = "FlowTick"
-  /\ UNCHANGED <<flow, stage, entries, saved, yard, zone, grounded, bell>>
-
 \* _unlock(w): lock_state "spent", lock_won, the bells, _drop_wall, yard_cleared and overtime.offer on a win, then
 \* show_start_card. extra is a second _unlock(TRUE) in the same tick (the max_s and crew branches without elif). The
 \* counts stop at one past their rule's limit, so a plant that unlocks every tick still has a finite state space.
@@ -125,6 +118,22 @@ Unlock(w, extra) ==
   /\ UNCHANGED <<wave, gap, crewDown, yardAt, otPaid>>
 
 LastWave == crewDown /\ ~gap /\ wave + 1 >= Waves
+
+\* warden_engaged heard by _on_warden_engaged: `if lock_active(): _unlock(false)`, no panel and no bell.
+Wakes(plain, opened) ==
+  IF EngagedUnlocks /\ lock = "locked"
+    THEN Unlock(FALSE, FALSE) /\ UNCHANGED left /\ last' = opened
+    ELSE UNCHANGED yard /\ UNCHANGED bell /\ last' = plain
+
+\* game.gd _physics_process -> flow.physics_step: beacon.advance marks the ring entered for a ball inside it (flat),
+\* and a sealed stage then calls _engage, which emits warden_engaged once; StageLocks' _on_warden_engaged sets
+\* _engaged_s and, under EngagedUnlocks, opens a shut yard there and then (Wakes).
+FlowTick ==
+  /\ phase = "flow" /\ phase' = "locks"
+  /\ LET wakes == ~engaged /\ flow = "stage" /\ zone = "ring"
+     IN /\ engaged' = (engaged \/ wakes)
+        /\ IF wakes THEN Wakes("FlowTick", "EngagedUnlock") ELSE UNCHANGED yard /\ UNCHANGED bell /\ last' = "FlowTick"
+  /\ UNCHANGED <<flow, stage, entries, saved, zone, grounded>>
 
 \* StageLocks._physics_process -> _step_lock, only while flow.in_stage() and the stage has a lock row.
 LocksTick ==
@@ -146,7 +155,7 @@ LocksTick ==
      ELSE \* "locked"
        LET runDown == MaxSOpens /\ left <= 1
        IN /\ left' = IF MaxSOpens /\ left > 0 THEN left - 1 ELSE left
-          /\ IF LockedYields /\ engaged
+          /\ IF LockedYields /\ (engaged \/ flow # "stage")
                THEN Unlock(FALSE, FALSE) /\ last' = "Yield"
              ELSE IF runDown
                THEN Unlock(FALSE, ~ElifUnlock /\ LastWave) /\ last' = "UnlockTimeout"
@@ -199,10 +208,11 @@ KillCrew ==
 \* _engage, wherever the ball is. A shot reaches range_m x weapon_range (combat.gd _fire): 70 to 95 m bare, 142.5 m
 \* with a horizon optic, so on the dam a ball held in a yard shut anywhere in the any-ground share can land one.
 StrikeWarden ==
-  /\ Ev("StrikeWarden")
+  /\ phase = "events" /\ UNCHANGED phase
   /\ flow = "stage" /\ ~engaged /\ zone \in StrikeFrom
   /\ engaged' = TRUE
-  /\ UNCHANGED <<flow, stage, entries, saved, zone, grounded>> /\ UNCHANGED yard /\ UNCHANGED bell
+  /\ Wakes("StrikeWarden", "StrikeUnlock")
+  /\ UNCHANGED <<flow, stage, entries, saved, zone, grounded>>
 
 \* The Warden broken (flow._on_enemy_killed -> _unseal -> _set_state(GATES)).
 KillWarden ==
@@ -359,4 +369,10 @@ ProbeStrike == last # "StrikeWarden"
 ProbeContinue == last # "Continue"
 ProbeRetry == last # "Retry"
 ProbeSecondStage == ~(stage = 2 /\ lock = "locked")
+ProbeEngagedUnlock == last # "EngagedUnlock"
+ProbeStrikeUnlock == last # "StrikeUnlock"
+ProbeYield == last # "Yield"
+ProbeDeadSpend == ~(flow = "dead" /\ lock = "spent" /\ yardAt # "none" /\ ~won)
+ProbeKillWarden == last # "KillWarden"
+ProbeVanished == last # "WardenVanished"
 =============================================================================

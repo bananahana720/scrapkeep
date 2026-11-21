@@ -1,0 +1,119 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 115 and seed -1721066581053650001 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/EarnedSave.tla
+Parsing file <tmp>/Naturals.tla
+Semantic processing of module Naturals
+Semantic processing of module EarnedSave
+Starting... (2026-11-21 15:01:26)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-21 15:01:26.
+Error: Invariant SaveOnce is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ fails = 0
+/\ proc = "up"
+/\ part = FALSE
+/\ flow = "title"
+/\ spent = FALSE
+/\ last = "Init"
+/\ held = FALSE
+/\ owed = FALSE
+/\ writes = 0
+/\ disk = [part |-> FALSE, spent |-> FALSE, run |-> FALSE]
+/\ fired = 0
+
+State 2: <NewRun line 65, col 3 to line 68, col 39 of module EarnedSave>
+/\ fails = 0
+/\ proc = "up"
+/\ part = FALSE
+/\ flow = "stage"
+/\ spent = FALSE
+/\ last = "NewRun"
+/\ held = TRUE
+/\ owed = FALSE
+/\ writes = 1
+/\ disk = [part |-> FALSE, spent |-> FALSE, run |-> TRUE]
+/\ fired = 0
+
+State 3: <TakePart line 72, col 3 to line 74, col 98 of module EarnedSave>
+/\ fails = 0
+/\ proc = "up"
+/\ part = TRUE
+/\ flow = "stage"
+/\ spent = FALSE
+/\ last = "TakePart"
+/\ held = TRUE
+/\ owed = FALSE
+/\ writes = 1
+/\ disk = [part |-> FALSE, spent |-> FALSE, run |-> TRUE]
+/\ fired = 0
+
+State 4: <Entrance line 79, col 3 to line 81, col 71 of module EarnedSave>
+/\ fails = 0
+/\ proc = "up"
+/\ part = TRUE
+/\ flow = "stage"
+/\ spent = FALSE
+/\ last = "Entrance"
+/\ held = TRUE
+/\ owed = FALSE
+/\ writes = 2
+/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE]
+/\ fired = 0
+
+State 5: <Hit line 88, col 3 to line 109, col 37 of module EarnedSave>
+/\ fails = 1
+/\ proc = "up"
+/\ part = TRUE
+/\ flow = "stage"
+/\ spent = TRUE
+/\ last = "Saved"
+/\ held = TRUE
+/\ owed = FALSE
+/\ writes = 2
+/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE]
+/\ fired = 1
+
+State 6: <ToTitle line 113, col 3 to line 116, col 57 of module EarnedSave>
+/\ fails = 1
+/\ proc = "up"
+/\ part = TRUE
+/\ flow = "title"
+/\ spent = TRUE
+/\ last = "ToTitle"
+/\ held = TRUE
+/\ owed = FALSE
+/\ writes = 2
+/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE]
+/\ fired = 1
+
+State 7: <Continue line 152, col 3 to line 157, col 30 of module EarnedSave>
+/\ fails = 1
+/\ proc = "up"
+/\ part = TRUE
+/\ flow = "stage"
+/\ spent = FALSE
+/\ last = "Continue"
+/\ held = TRUE
+/\ owed = FALSE
+/\ writes = 3
+/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE]
+/\ fired = 1
+
+State 8: <Hit line 88, col 3 to line 109, col 37 of module EarnedSave>
+/\ fails = 1
+/\ proc = "up"
+/\ part = TRUE
+/\ flow = "stage"
+/\ spent = TRUE
+/\ last = "Saved"
+/\ held = TRUE
+/\ owed = FALSE
+/\ writes = 3
+/\ disk = [part |-> TRUE, spent |-> TRUE, run |-> TRUE]
+/\ fired = 2
+
+2280 states generated, 613 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 12.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 8 and the 95th percentile is 4).
+Finished in 00s at (2026-11-21 15:01:26)
