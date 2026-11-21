@@ -1,12 +1,12 @@
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 127 and seed -2933308615856395320 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Running breadth-first search Model-Checking with fp 76 and seed 2010243076903280234 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
 Parsing file <tmp>/EarnedSave.tla
 Parsing file <tmp>/Naturals.tla
 Semantic processing of module Naturals
 Semantic processing of module EarnedSave
-Starting... (2026-11-21 15:31:48)
+Starting... (2026-11-21 16:18:51)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-11-21 15:31:48.
+Finished computing initial states: 1 distinct state generated at 2026-11-21 16:18:51.
 Error: Invariant SaveOnce is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -17,6 +17,7 @@ State 1: <Initial predicate>
 /\ writes = 0
 /\ disk = [part |-> FALSE, spent |-> FALSE, run |-> FALSE, id |-> 0]
 /\ fired = (0 :> 0 @@ 1 :> 0 @@ 2 :> 0 @@ 3 :> 0 @@ 4 :> 0)
+/\ owedDoc = [part |-> FALSE, spent |-> FALSE, run |-> FALSE, id |-> 0]
 /\ last = "Init"
 /\ part = FALSE
 /\ spent = FALSE
@@ -24,7 +25,7 @@ State 1: <Initial predicate>
 /\ held = FALSE
 /\ owed = FALSE
 
-State 2: <NewRun line 75, col 3 to line 85, col 30 of module EarnedSave>
+State 2: <NewRun line 88, col 3 to line 101, col 30 of module EarnedSave>
 /\ proc = "up"
 /\ runs = 1
 /\ flow = "stage"
@@ -32,6 +33,7 @@ State 2: <NewRun line 75, col 3 to line 85, col 30 of module EarnedSave>
 /\ writes = 1
 /\ disk = [part |-> FALSE, spent |-> FALSE, run |-> TRUE, id |-> 1]
 /\ fired = (0 :> 0 @@ 1 :> 0 @@ 2 :> 0 @@ 3 :> 0 @@ 4 :> 0)
+/\ owedDoc = [part |-> FALSE, spent |-> FALSE, run |-> FALSE, id |-> 0]
 /\ last = "NewRun"
 /\ part = FALSE
 /\ spent = FALSE
@@ -39,127 +41,119 @@ State 2: <NewRun line 75, col 3 to line 85, col 30 of module EarnedSave>
 /\ held = TRUE
 /\ owed = FALSE
 
-State 3: <NewRun line 75, col 3 to line 85, col 30 of module EarnedSave>
+State 3: <TakePart line 105, col 3 to line 107, col 118 of module EarnedSave>
 /\ proc = "up"
-/\ runs = 2
+/\ runs = 1
 /\ flow = "stage"
 /\ fails = 0
-/\ writes = 2
-/\ disk = [part |-> FALSE, spent |-> FALSE, run |-> TRUE, id |-> 2]
+/\ writes = 1
+/\ disk = [part |-> FALSE, spent |-> FALSE, run |-> TRUE, id |-> 1]
 /\ fired = (0 :> 0 @@ 1 :> 0 @@ 2 :> 0 @@ 3 :> 0 @@ 4 :> 0)
-/\ last = "NewRun"
-/\ part = FALSE
-/\ spent = FALSE
-/\ rid = 2
-/\ held = TRUE
-/\ owed = FALSE
-
-State 4: <TakePart line 89, col 3 to line 91, col 109 of module EarnedSave>
-/\ proc = "up"
-/\ runs = 2
-/\ flow = "stage"
-/\ fails = 0
-/\ writes = 2
-/\ disk = [part |-> FALSE, spent |-> FALSE, run |-> TRUE, id |-> 2]
-/\ fired = (0 :> 0 @@ 1 :> 0 @@ 2 :> 0 @@ 3 :> 0 @@ 4 :> 0)
+/\ owedDoc = [part |-> FALSE, spent |-> FALSE, run |-> FALSE, id |-> 0]
 /\ last = "TakePart"
 /\ part = TRUE
 /\ spent = FALSE
-/\ rid = 2
+/\ rid = 1
 /\ held = TRUE
 /\ owed = FALSE
 
-State 5: <Entrance line 96, col 3 to line 98, col 82 of module EarnedSave>
+State 4: <Entrance line 112, col 3 to line 114, col 82 of module EarnedSave>
 /\ proc = "up"
-/\ runs = 2
+/\ runs = 1
 /\ flow = "stage"
 /\ fails = 0
-/\ writes = 3
-/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE, id |-> 2]
+/\ writes = 2
+/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE, id |-> 1]
 /\ fired = (0 :> 0 @@ 1 :> 0 @@ 2 :> 0 @@ 3 :> 0 @@ 4 :> 0)
+/\ owedDoc = [part |-> FALSE, spent |-> FALSE, run |-> FALSE, id |-> 0]
 /\ last = "Entrance"
 /\ part = TRUE
 /\ spent = FALSE
-/\ rid = 2
+/\ rid = 1
 /\ held = TRUE
 /\ owed = FALSE
 
-State 6: <Hit line 105, col 3 to line 126, col 48 of module EarnedSave>
+State 5: <Hit line 123, col 3 to line 147, col 48 of module EarnedSave>
 /\ proc = "up"
-/\ runs = 2
+/\ runs = 1
 /\ flow = "stage"
 /\ fails = 1
-/\ writes = 3
-/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE, id |-> 2]
-/\ fired = (0 :> 0 @@ 1 :> 0 @@ 2 :> 1 @@ 3 :> 0 @@ 4 :> 0)
+/\ writes = 2
+/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE, id |-> 1]
+/\ fired = (0 :> 0 @@ 1 :> 1 @@ 2 :> 0 @@ 3 :> 0 @@ 4 :> 0)
+/\ owedDoc = [part |-> TRUE, spent |-> TRUE, run |-> TRUE, id |-> 1]
 /\ last = "Saved"
 /\ part = TRUE
 /\ spent = TRUE
-/\ rid = 2
+/\ rid = 1
 /\ held = TRUE
 /\ owed = TRUE
 
-State 7: <QuitMenu line 146, col 3 to line 152, col 62 of module EarnedSave>
+State 6: <QuitMenu line 167, col 3 to line 173, col 62 of module EarnedSave>
 /\ proc = "down"
-/\ runs = 2
+/\ runs = 1
 /\ flow = "stage"
 /\ fails = 1
-/\ writes = 3
-/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE, id |-> 2]
-/\ fired = (0 :> 0 @@ 1 :> 0 @@ 2 :> 1 @@ 3 :> 0 @@ 4 :> 0)
+/\ writes = 2
+/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE, id |-> 1]
+/\ fired = (0 :> 0 @@ 1 :> 1 @@ 2 :> 0 @@ 3 :> 0 @@ 4 :> 0)
+/\ owedDoc = [part |-> FALSE, spent |-> FALSE, run |-> FALSE, id |-> 0]
 /\ last = "Quit"
 /\ part = TRUE
 /\ spent = TRUE
-/\ rid = 2
+/\ rid = 1
 /\ held = FALSE
 /\ owed = FALSE
 
-State 8: <Launch line 162, col 3 to line 164, col 88 of module EarnedSave>
+State 7: <Launch line 183, col 3 to line 185, col 97 of module EarnedSave>
 /\ proc = "up"
-/\ runs = 2
+/\ runs = 1
 /\ flow = "title"
 /\ fails = 1
-/\ writes = 3
-/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE, id |-> 2]
-/\ fired = (0 :> 0 @@ 1 :> 0 @@ 2 :> 1 @@ 3 :> 0 @@ 4 :> 0)
+/\ writes = 2
+/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE, id |-> 1]
+/\ fired = (0 :> 0 @@ 1 :> 1 @@ 2 :> 0 @@ 3 :> 0 @@ 4 :> 0)
+/\ owedDoc = [part |-> FALSE, spent |-> FALSE, run |-> FALSE, id |-> 0]
 /\ last = "Launch"
 /\ part = FALSE
 /\ spent = FALSE
-/\ rid = 2
+/\ rid = 1
 /\ held = FALSE
 /\ owed = FALSE
 
-State 9: <Continue line 169, col 3 to line 174, col 36 of module EarnedSave>
+State 8: <Continue line 190, col 3 to line 195, col 36 of module EarnedSave>
 /\ proc = "up"
-/\ runs = 2
+/\ runs = 1
 /\ flow = "stage"
 /\ fails = 1
-/\ writes = 4
-/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE, id |-> 2]
-/\ fired = (0 :> 0 @@ 1 :> 0 @@ 2 :> 1 @@ 3 :> 0 @@ 4 :> 0)
+/\ writes = 3
+/\ disk = [part |-> TRUE, spent |-> FALSE, run |-> TRUE, id |-> 1]
+/\ fired = (0 :> 0 @@ 1 :> 1 @@ 2 :> 0 @@ 3 :> 0 @@ 4 :> 0)
+/\ owedDoc = [part |-> FALSE, spent |-> FALSE, run |-> FALSE, id |-> 0]
 /\ last = "Continue"
 /\ part = TRUE
 /\ spent = FALSE
-/\ rid = 2
+/\ rid = 1
 /\ held = TRUE
 /\ owed = FALSE
 
-State 10: <Hit line 105, col 3 to line 126, col 48 of module EarnedSave>
+State 9: <Hit line 123, col 3 to line 147, col 48 of module EarnedSave>
 /\ proc = "up"
-/\ runs = 2
+/\ runs = 1
 /\ flow = "stage"
 /\ fails = 1
-/\ writes = 4
-/\ disk = [part |-> TRUE, spent |-> TRUE, run |-> TRUE, id |-> 2]
-/\ fired = (0 :> 0 @@ 1 :> 0 @@ 2 :> 2 @@ 3 :> 0 @@ 4 :> 0)
+/\ writes = 3
+/\ disk = [part |-> TRUE, spent |-> TRUE, run |-> TRUE, id |-> 1]
+/\ fired = (0 :> 0 @@ 1 :> 2 @@ 2 :> 0 @@ 3 :> 0 @@ 4 :> 0)
+/\ owedDoc = [part |-> FALSE, spent |-> FALSE, run |-> FALSE, id |-> 0]
 /\ last = "Saved"
 /\ part = TRUE
 /\ spent = TRUE
-/\ rid = 2
+/\ rid = 1
 /\ held = TRUE
 /\ owed = FALSE
 
-7170 states generated, 2216 distinct states found, 422 states left on queue.
+6780 states generated, 2117 distinct states found, 451 states left on queue.
 The depth of the complete state graph search is 11.
-The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 9 and the 95th percentile is 5).
-Finished in 00s at (2026-11-21 15:31:48)
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 10 and the 95th percentile is 5).
+Finished in 00s at (2026-11-21 16:18:51)

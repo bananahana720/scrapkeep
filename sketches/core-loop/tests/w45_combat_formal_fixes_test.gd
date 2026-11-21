@@ -1,6 +1,6 @@
 extends SceneTree
 
-# World 1 Hardening Unit P7: Formal-verification bug fixes (YL-1, YL-2, ES-1),
+# World 1 Hardening Unit P7 & P9: Formal-verification bug fixes (YL-1, YL-2, ES-1, ES-2, ES-3),
 # combat.gd P0/P1/P2 hardening, and Effects.live_mark_count() + stress_capture.gd.
 
 const Game := preload("res://src/game.gd")
@@ -31,6 +31,8 @@ func _run() -> void:
 	await _test_yl1_warden_wake_unlocks_yard()
 	await _test_yl2_death_drops_yard_lock()
 	await _test_es1_owed_death_save_spend()
+	await _test_es2_refused_clear_keeps_save_spend()
+	await _test_es3_refused_restart_keeps_save_spend()
 	await _test_combat_cleanup_p0_3()
 	await _test_combat_door_caps_mark_free_p0_4()
 	await _test_combat_second_bell_p0_5()
@@ -242,6 +244,147 @@ func _test_es1_owed_death_save_spend() -> void:
 	_t.check("ES-1 reload: fresh process Continue keeps flushed death_save_spent",
 		resumed2 and game2.run.death_save_spent)
 	game2.free()
+	await process_frame
+	_clean_save_dir()
+	DirAccess.remove_absolute(SAVE_DIR)
+
+
+# --- ES-2: Refused spend write then refused tombstone still flushes spend on exit ---
+
+func _test_es2_refused_clear_keeps_save_spend() -> void:
+	_clean_save_dir()
+	var tmp := SafeStore.tmp_path(SAVE_PATH)
+	var game := Game.new()
+	game.test_mode = true
+	game.run_store_path = SAVE_PATH
+	root.add_child(game)
+	await process_frame
+	game.ctx.calm = true
+	game.player.source = Intent.Scripted.new()
+	game.flow.press_start()
+	game.flow.choose_class(1)
+	for i in 5:
+		await process_frame
+	game.run.add_part("spare_frame", "test")
+	game.build.recompute()
+	game.flow.enter_stage(1, Vector3(0.0, 0.0, 14.0), false)
+	await process_frame
+
+	# Block disk writes across both the earned save and the death that follows.
+	DirAccess.make_dir_recursive_absolute(tmp)
+	game.run.damage(99999.0, "test")
+	_t.check("ES-2 precondition: spend refused sets owed while disk stays unspent",
+		game.run.alive() and game.run.death_save_spent and game.flow._save_spend_owed
+		and not bool(RunStore.new(SAVE_PATH).load().get("death_save_spent", false)))
+
+	game.run.damage(99999.0, "test")
+	_t.check("ES-2: death with refused tombstone keeps spend owed and disk holding the run",
+		not game.run.alive() and game.flow.state_name() == "summary"
+		and game.flow.store_error == "clear_failed" and game.flow._save_spend_owed
+		and not RunStore.new(SAVE_PATH).load().is_empty())
+
+	# Disk recovers before clean exit: _exit_tree flushes the held spend to disk.
+	DirAccess.remove_absolute(tmp)
+	game.free()
+	await process_frame
+	_t.check("ES-2: exit after refused clear flushes death_save_spent to disk",
+		bool(RunStore.new(SAVE_PATH).load().get("death_save_spent", false)))
+
+	# Fresh launch Continue loads the dead run with its earned save already spent.
+	var game2 := Game.new()
+	game2.test_mode = true
+	game2.run_store_path = SAVE_PATH
+	root.add_child(game2)
+	await process_frame
+	game2.ctx.calm = true
+	game2.player.source = Intent.Scripted.new()
+	var resumed: bool = game2.flow.resume_run()
+	game2.build.recompute()
+	_t.check("ES-2: Continue in new process sees death_save_spent == true",
+		resumed and game2.run.death_save_spent and game2.run.parts.has("spare_frame"))
+	game2.run.damage(99999.0, "test")
+	_t.check("ES-2: killing hit after Continue ends run (no second free life)",
+		not game2.run.alive() and game2.flow.state_name() == "summary" and game2.run.over)
+	game2.free()
+	await process_frame
+	_clean_save_dir()
+	DirAccess.remove_absolute(SAVE_DIR)
+
+
+# --- ES-3: Refused spend write then refused restart keeps spend owed without poisoning the new run ---
+
+func _test_es3_refused_restart_keeps_save_spend() -> void:
+	_clean_save_dir()
+	var tmp := SafeStore.tmp_path(SAVE_PATH)
+	var game := Game.new()
+	game.test_mode = true
+	game.run_store_path = SAVE_PATH
+	root.add_child(game)
+	await process_frame
+	game.ctx.calm = true
+	game.player.source = Intent.Scripted.new()
+	game.flow.press_start()
+	game.flow.choose_class(1)
+	for i in 5:
+		await process_frame
+	game.run.add_part("spare_frame", "test")
+	game.build.recompute()
+	game.flow.enter_stage(1, Vector3(0.0, 0.0, 14.0), false)
+	await process_frame
+
+	# (a) Both the spend write and the restart's writes are refused; disk recovers before title + Continue.
+	DirAccess.make_dir_recursive_absolute(tmp)
+	game.run.damage(99999.0, "test")
+	_t.check("ES-3a precondition: spend refused sets owed while disk stays unspent",
+		game.run.alive() and game.run.death_save_spent and game.flow._save_spend_owed
+		and not bool(RunStore.new(SAVE_PATH).load().get("death_save_spent", false)))
+
+	game.flow.new_run()
+	await process_frame
+	_t.check("ES-3a: refused restart keeps old run's spend owed and leaves new run unspent",
+		game.flow.state_name() == "stage" and game.flow.store_error == "write_failed"
+		and game.flow._save_spend_owed and not game.run.death_save_spent
+		and not game.run.parts.has("spare_frame")
+		and bool(RunStore.new(SAVE_PATH).load().get("parts", []).has("spare_frame")))
+
+	DirAccess.remove_absolute(tmp)
+	game.flow.show_title()
+	await process_frame
+	_t.check("ES-3a: show_title once disk returns flushes old run's death_save_spent to disk",
+		not game.flow._save_spend_owed
+		and bool(RunStore.new(SAVE_PATH).load().get("death_save_spent", false)))
+
+	var resumed: bool = game.flow.resume_run()
+	game.build.recompute()
+	_t.check("ES-3a: Continue loads old run with death_save_spent == true",
+		resumed and game.run.death_save_spent and game.run.parts.has("spare_frame"))
+	game.run.damage(99999.0, "test")
+	_t.check("ES-3a: killing hit after Continue ends run (no second free life)",
+		not game.run.alive() and game.flow.state_name() == "summary" and game.run.over)
+
+	# (b) Refused spend then refused restart, then disk returns and the new run writes its own entrance:
+	# the new run replaces the old run on disk, clears the debt, and keeps its own earned save.
+	game.flow.new_run()
+	await process_frame
+	game.run.add_part("spare_frame", "test")
+	game.build.recompute()
+	game.flow.enter_stage(1, Vector3(0.0, 0.0, 14.0), false)
+	DirAccess.make_dir_recursive_absolute(tmp)
+	game.run.damage(99999.0, "test")
+	game.flow.new_run()
+	await process_frame
+	DirAccess.remove_absolute(tmp)
+	game.run.add_part("spare_frame", "test")
+	game.build.recompute()
+	game.flow.enter_stage(2, Vector3(0.0, 0.0, 14.0), false)
+	_t.check("ES-3b: new run's landed entrance clears old debt without poisoning new run",
+		not game.flow._save_spend_owed and not game.run.death_save_spent
+		and not bool(RunStore.new(SAVE_PATH).load().get("death_save_spent", false)))
+	game.run.damage(99999.0, "test")
+	_t.check("ES-3b: new run's own earned save still fires once",
+		game.run.alive() and game.run.death_save_spent)
+
+	game.free()
 	await process_frame
 	_clean_save_dir()
 	DirAccess.remove_absolute(SAVE_DIR)
