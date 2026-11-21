@@ -2282,6 +2282,7 @@ func _hoar_patch(bolt: Dictionary, at: Vector3) -> void:
 	if field == null:
 		return
 	var slab: Dictionary = field.frost_patch(at, HOAR_FROST_RADIUS, "item_proc")
+	effects.frost_flash(at, HOAR_FROST_RADIUS)
 	if not slab.is_empty() and bolt.get("hoar_spared") is Array:
 		(bolt["hoar_spared"] as Array).append(int(slab["id"]))
 
@@ -2324,7 +2325,7 @@ func _tick_aftershocks() -> void:
 func _aftershock(shock: Dictionary) -> void:
 	var at: Vector3 = shock["at"]
 	var radius: float = shock["radius"]
-	effects.ring(at, radius, ctx.player.class_color())
+	effects.shockwave(at, radius, ctx.player.class_color())
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
@@ -2419,16 +2420,15 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 	if not pull_plan.is_empty() and is_instance_valid(enemy) and not enemy.is_dead():
 		enemy.knock(pull_plan["dir"], float(pull_plan["force"]))
 		acts = ShotBits.union(acts, ShotBits.bit("pull"))
-	_bit_tell(acts)
+	_bit_tell(acts, bolt, point)
 	if bolt["chain_jumps"] > 0:
 		_chain(enemy, from, bolt)
 
 
-# A bounce-bit glance off a wall: a spark in the bounce colour and its one sound. Not a hit,
-# so it pulls and heats nothing (pair rows bounce+pull, bounce+heat).
-func _on_bolt_bounce(_bolt: Dictionary, at: Vector3) -> void:
-	effects.spark(at, ShotBits.TABLE["bounce"]["color"])
-	_bit_tell(ShotBits.bit("bounce"))
+# A bounce-bit glance off a wall: the bounce V and its one sound. Not a hit, so it pulls and
+# heats nothing (pair rows bounce+pull, bounce+heat).
+func _on_bolt_bounce(bolt: Dictionary, at: Vector3) -> void:
+	_bit_tell(ShotBits.bit("bounce"), bolt, at)
 
 
 # The one bit sound for a hit or glance: the first acting bit in ShotBits.NAMES order, read
@@ -2438,14 +2438,31 @@ static func hit_tell(acts: int) -> String:
 	return String(tells[0]["sound"]) if not tells.is_empty() else ""
 
 
-func _bit_tell(acts: int) -> void:
+# The hit's one bit tell, sight and sound from the same first acting bit: its shape where it
+# acted (effects.bit_hit) and its sound.
+func _bit_tell(acts: int, bolt: Dictionary, point: Vector3) -> void:
 	var sound := hit_tell(acts)
 	if sound == "":
 		return
+	var bit_name := String(ShotBits.names(acts)[0])
+	effects.bit_hit(bit_name, point, bolt["dir"], _bit_aim(bit_name, bolt, point),
+		float(bolt.get("split_angle_deg", Bolts.SPLIT_ANGLE_DEG)))
 	var presentation = ctx.root.get("presentation") if ctx != null and ctx.root != null else null
 	var audio = presentation.get("audio") if presentation != null else null
 	if audio != null:
 		audio.play("shot_" + String(ShotBits.names(acts)[0]), 0.0, 1.0, "SFX", sound)
+
+
+# A bit tell's second direction: pull points from the hit to the ball, bounce back the way the
+# shot came in (its record already flies the way out, lifted off the wall along the normal).
+func _bit_aim(bit_name: String, bolt: Dictionary, point: Vector3) -> Vector3:
+	if bit_name == "pull" and ctx != null and ctx.player != null:
+		return ctx.player.ball_position() - point
+	if bit_name == "bounce":
+		var normal: Vector3 = bolt.get("origin", point) - point
+		if normal.length_squared() > 0.000001:
+			return -(bolt["dir"] as Vector3).bounce(normal.normalized())
+	return Vector3.ZERO
 
 
 # Plan one pull on a struck machine from a pull-ready bolt: the knock toward the ball,

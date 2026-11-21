@@ -1,5 +1,10 @@
 extends Node3D
 
+const Bolts := preload("res://src/combat/bolts.gd")
+const Density := preload("res://src/presentation/density.gd")
+const Palette := preload("res://src/core/palette.gd")
+const ShotBits := preload("res://src/build/shot_bits.gd")
+
 # Combat's own short-lived marks: chain arcs, blast rings, impact sparks and straight beams. They show
 # where a committed hit landed, for a fraction of a second, drawn as thin lines at
 # PRIORITY, below every enemy telegraph (principle 4: our effects never hide a threat).
@@ -13,11 +18,27 @@ const RING_LIFE := 0.24
 const SPARK_LIFE := 0.12
 const ARC_SEGMENTS := 7
 const RING_SEGMENTS := 40
+# Flair: the one shape a shot bit draws where it acts, and the verb evolutions' payoffs. Each is
+# a few straight lines in its own colour (a bit's ShotBits.TABLE row, never the hazard colour), held in one
+# list of at most FLAIR_CAP marks, oldest dropped first. A bit's shape is a P5 player effect, so
+# the density governor's band thins its alpha, size and life in a crowd; a payoff is P4 and keeps
+# its look. Each mark's lines come from flair_lines(), the one place its shape is worked out.
+const BIT_LIFE := 0.16
+const PAYOFF_LIFE := 0.3
+const FLAIR_CAP := 24
+const BIT_CLASS := "P5"
+const PAYOFF_CLASS := "P4"
+const BIT_REACH := 1.4
+const FROST_POINTS := 6
+const QUAKE_SEGMENTS := 32
+# A brighter brass for the pop a pressed (Grapeshot) split throws.
+const PRESS_POP := 0.4
 
 var _arcs: Array = []
 var _rings: Array = []
 var _sparks: Array = []
 var _beams: Array = []
+var _flair: Array = []
 var _mesh: ImmediateMesh
 var _arc_rng := RandomNumberGenerator.new()
 
@@ -59,8 +80,43 @@ func beam(from: Vector3, to: Vector3, color: Color, life: float) -> void:
 	_beams.append({"from": from, "to": to, "color": color, "life": life, "span": life})
 
 
+# The one shape for a shot bit acting at `point` on a shot flying along `dir`. `aim` is the
+# bit's second direction: for pull the way to the ball (the tether points there), for bounce the
+# way the shot came in (the V's other arm). `fork_deg` is the split's angle each side of the line;
+# a fork tighter than the plain split's is a pressed one (Grapeshot) and pops a brighter flash.
+# A pull with no way to the ball draws nothing.
+func bit_hit(bit_name: String, point: Vector3, dir: Vector3, aim := Vector3.ZERO, fork_deg := Bolts.SPLIT_ANGLE_DEG) -> void:
+	if not ShotBits.TABLE.has(bit_name) or (bit_name == "pull" and _flat(aim).length_squared() < 0.0001):
+		return
+	_add_flair({"kind": bit_name, "at": point, "dir": dir, "aim": aim, "fork_deg": fork_deg,
+		"color": ShotBits.TABLE[bit_name]["color"]}, BIT_CLASS, BIT_LIFE)
+
+
+# Hoar Barrel's frost landing: an ice crystal, six points round `radius`, where the patch lies.
+func frost_flash(at: Vector3, radius: float) -> void:
+	_add_flair({"kind": "frost", "at": at, "radius": radius, "color": Palette.ICE}, PAYOFF_CLASS, PAYOFF_LIFE)
+
+
+# Fault Hammer's aftershock: two rings running out from the centre, the pilot's colour inside a
+# slate rim, the rim landing on exactly `radius`, the ring the aftershock struck.
+func shockwave(at: Vector3, radius: float, color: Color) -> void:
+	_add_flair({"kind": "quake", "at": at, "radius": radius, "color": color}, PAYOFF_CLASS, PAYOFF_LIFE)
+
+
+func _add_flair(entry: Dictionary, priority_class: String, life: float) -> void:
+	var governed: Vector3 = Density.live().apply(priority_class, 1.0, 1.0, life)
+	entry["shade"] = governed.x
+	entry["size"] = governed.y
+	entry["life"] = governed.z
+	entry["span"] = governed.z
+	while _flair.size() >= FLAIR_CAP:
+		_flair.pop_front()
+	_flair.append(entry)
+
+
 func clear() -> void:
 	_beams.clear()
+	_flair.clear()
 	_arcs.clear()
 	_rings.clear()
 	_sparks.clear()
@@ -73,7 +129,8 @@ func _process(delta: float) -> void:
 	_rings = _age(_rings, delta)
 	_sparks = _age(_sparks, delta)
 	_beams = _age(_beams, delta)
-	if _arcs.is_empty() and _rings.is_empty() and _sparks.is_empty() and _beams.is_empty():
+	_flair = _age(_flair, delta)
+	if _arcs.is_empty() and _rings.is_empty() and _sparks.is_empty() and _beams.is_empty() and _flair.is_empty():
 		return
 	_mesh.surface_begin(Mesh.PRIMITIVE_LINES)
 	for entry in _arcs:
@@ -84,6 +141,10 @@ func _process(delta: float) -> void:
 		_draw_spark(entry)
 	for entry in _beams:
 		_line(entry["from"], entry["to"], Color(entry["color"], beam_alpha(entry)))
+	for entry in _flair:
+		var alpha := flair_alpha(entry)
+		for seg in flair_lines(entry):
+			_line(seg[0], seg[1], Color(seg[2], alpha))
 	_mesh.surface_end()
 
 
@@ -105,6 +166,10 @@ static func beam_alpha(entry: Dictionary) -> float:
 	return entry["color"].a * clampf(entry["life"] / entry["span"], 0.0, 1.0)
 
 
+static func flair_alpha(entry: Dictionary) -> float:
+	return entry["color"].a * float(entry["shade"]) * clampf(entry["life"] / entry["span"], 0.0, 1.0)
+
+
 # The brightest alpha any live mark draws at now.
 func brightest() -> float:
 	var best := 0.0
@@ -116,6 +181,8 @@ func brightest() -> float:
 		best = maxf(best, spark_alpha(entry))
 	for entry in _beams:
 		best = maxf(best, beam_alpha(entry))
+	for entry in _flair:
+		best = maxf(best, flair_alpha(entry))
 	return best
 
 
@@ -173,3 +240,103 @@ func _draw_spark(entry: Dictionary) -> void:
 	_line(at - Vector3.RIGHT * size, at + Vector3.RIGHT * size, color)
 	_line(at - Vector3.UP * size, at + Vector3.UP * size, color)
 	_line(at - Vector3.BACK * size, at + Vector3.BACK * size, color)
+
+
+# A flair mark's lines now, each [from, to, colour]: its shape at its age, scaled by its size.
+static func flair_lines(entry: Dictionary) -> Array:
+	var grown := 1.0 - clampf(entry["life"] / entry["span"], 0.0, 1.0)
+	var at: Vector3 = entry["at"]
+	var color: Color = entry["color"]
+	var reach := BIT_REACH * float(entry["size"])
+	var out: Array = []
+	match String(entry["kind"]):
+		"pierce":
+			# A streak punched through the body and a chevron at its tip, both along the line.
+			var dir := _unit(entry["dir"], Vector3.FORWARD)
+			var side := _side(dir)
+			var tip := at + dir * reach * lerpf(0.7, 1.15, grown)
+			out.append([at - dir * reach * 0.3, tip, color])
+			out.append([tip, tip - dir * reach * 0.35 + side * reach * 0.25, color])
+			out.append([tip, tip - dir * reach * 0.35 - side * reach * 0.25, color])
+			_cross(out, at, reach * 0.2, color)
+		"bounce":
+			# A V on the wall: one arm back the way the shot came, one out the way it left.
+			var leave := _unit(entry["dir"], Vector3.FORWARD)
+			var came := _unit(entry["aim"], -leave.rotated(Vector3.UP, deg_to_rad(70.0)))
+			out.append([at, at + came * reach * 0.8, color])
+			out.append([at, at + leave * reach * lerpf(0.8, 1.1, grown), color])
+			_cross(out, at, reach * 0.12, color)
+		"split":
+			# Two forks fanned about the shot's up axis at the split's own angle.
+			var dir := _unit(entry["dir"], Vector3.FORWARD)
+			var up := _side(dir).cross(dir).normalized()
+			var fork := deg_to_rad(float(entry["fork_deg"]))
+			out.append([at - dir * reach * 0.25, at, color])
+			for side_sign in [-1.0, 1.0]:
+				out.append([at, at + dir.rotated(up, fork * side_sign) * reach * lerpf(0.8, 1.15, grown), color])
+			if float(entry["fork_deg"]) < Bolts.SPLIT_ANGLE_DEG - 0.01:
+				var pop := color.lightened(PRESS_POP)
+				for i in 8:
+					var ray := dir.rotated(up, TAU * i / 8.0)
+					out.append([at + ray * reach * 0.12, at + ray * reach * lerpf(0.3, 0.45, grown), pop])
+		"pull":
+			# A tether drawn in toward the ball, its arrowhead pointing there.
+			var toward := _unit(_flat(entry["aim"]), Vector3.BACK)
+			var side := _side(toward)
+			var head := at + toward * reach * lerpf(0.8, 1.2, grown)
+			out.append([at, head, color])
+			out.append([head, head - toward * reach * 0.3 + side * reach * 0.22, color])
+			out.append([head, head - toward * reach * 0.3 - side * reach * 0.22, color])
+		"heat":
+			# Embers rising off the struck body; the glow ring is combat's own heat ring.
+			for i in 6:
+				var a := TAU * i / 6.0
+				var ray := Vector3(cos(a), 1.4, sin(a)).normalized()
+				out.append([at + ray * reach * 0.15, at + ray * reach * lerpf(0.45, 0.7, grown), color])
+		"frost":
+			# A six-pointed crystal round the patch: a hexagon with a spike out from each corner.
+			var radius := float(entry["radius"]) * float(entry["size"])
+			var centre := at + Vector3.UP * 0.4
+			var spike := lerpf(0.15, 0.4, grown)
+			for i in FROST_POINTS:
+				var a := TAU * i / FROST_POINTS
+				var b := TAU * (i + 1) / FROST_POINTS
+				var corner := centre + Vector3(cos(a), 0.0, sin(a)) * radius
+				out.append([corner, centre + Vector3(cos(b), 0.0, sin(b)) * radius, color])
+				out.append([corner, corner + Vector3(cos(a), 0.0, sin(a)) * radius * spike, color])
+		"quake":
+			# Two rings running outward; the slate rim lands on the committed radius.
+			var radius := float(entry["radius"])
+			var eased := 1.0 - pow(1.0 - grown, 2.0)
+			_circle(out, at, radius * lerpf(0.3, 0.86, eased), color)
+			_circle(out, at, radius * lerpf(0.45, 1.0, eased), Palette.SLATE)
+	return out
+
+
+static func _flat(v: Vector3) -> Vector3:
+	return Vector3(v.x, 0.0, v.z)
+
+
+static func _unit(v: Vector3, fallback: Vector3) -> Vector3:
+	return v.normalized() if v.length_squared() > 0.0001 else fallback
+
+
+# A direction square to `dir` along the ground (or across it, for a shot straight up or down).
+static func _side(dir: Vector3) -> Vector3:
+	var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
+	return dir.cross(up_hint).normalized()
+
+
+static func _cross(out: Array, at: Vector3, size: float, color: Color) -> void:
+	for axis in [Vector3.RIGHT, Vector3.UP, Vector3.BACK]:
+		out.append([at - axis * size, at + axis * size, color])
+
+
+static func _circle(out: Array, at: Vector3, radius: float, color: Color) -> void:
+	var centre := at + Vector3.UP * 0.4
+	var previous := centre + Vector3(radius, 0.0, 0.0)
+	for i in range(1, QUAKE_SEGMENTS + 1):
+		var angle := TAU * i / QUAKE_SEGMENTS
+		var point := centre + Vector3(cos(angle) * radius, 0.0, sin(angle) * radius)
+		out.append([previous, point, color])
+		previous = point
