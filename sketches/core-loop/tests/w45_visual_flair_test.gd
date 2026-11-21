@@ -495,6 +495,7 @@ func _check_fault() -> void:
 		var rims: Array = []
 		var inners: Array = []
 		var colours: Array = []
+		var rim_color := pilot.darkened(0.25)
 		for share in [1.0, 0.5, 0.05]:
 			var now: Dictionary = quakes[0].duplicate()
 			now["life"] = float(now["span"]) * share
@@ -502,7 +503,7 @@ func _check_fault() -> void:
 			var inner := 0.0
 			for seg in Effects.flair_lines(now):
 				var r := _flat((seg[0] as Vector3) - at).length()
-				if seg[2] == Palette.SLATE:
+				if seg[2] == rim_color:
 					rim = maxf(rim, r)
 				elif seg[2] == pilot:
 					inner = maxf(inner, r)
@@ -512,10 +513,10 @@ func _check_fault() -> void:
 			inners.append(inner)
 		ok = is_equal_approx(float(quakes[0]["radius"]), radius) and rims.all(func(r): return absf(r - radius) < 0.01) \
 			and inners[0] < inners[1] and inners[1] < inners[2] and inners[2] < radius \
-			and colours.size() == 2 and pilot in colours and Palette.SLATE in colours
-		detail = "committed radius %.2f; slate rim at %s from detonation to fade, pilot ring (%s) running out %s; colours %s" % [
+			and colours.size() == 2 and pilot in colours and rim_color in colours
+		detail = "committed radius %.2f; darkened pilot rim at %s from detonation to fade, pilot ring (%s) running out %s; colours %s" % [
 			radius, rims, pilot, inners, colours]
-	_report("fault hammer holds a slate rim on the committed radius", ok, detail)
+	_report("fault hammer holds a pilot-tinted rim on the committed radius", ok, detail)
 	var control := _quakes_after_slam([], at + Vector3(0.0, 0.0, 60.0))
 	_report("planted control: no fault hammer, no aftershock ring", control.is_empty() and not "fault_hammer" in _game.run.parts,
 		"quakes %d" % control.size())
@@ -558,9 +559,10 @@ func _check_density() -> void:
 	Density.live().reset()
 	var bit: Dictionary = flair[0]
 	var payoff: Dictionary = flair[1]
+	var rim_color: Color = _game.player.class_color().darkened(0.25)
 	var rim := 0.0
 	for seg in Effects.flair_lines(payoff):
-		if seg[2] == Palette.SLATE:
+		if seg[2] == rim_color:
 			rim = maxf(rim, _flat((seg[0] as Vector3) - BALL).length())
 	_report("the governor thins flair in a crowd, never a committed radius",
 		is_equal_approx(float(bit["shade"]), float(band["alpha"])) and is_equal_approx(float(bit["span"]), Effects.BIT_LIFE * float(band["lifetime"]))

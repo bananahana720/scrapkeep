@@ -106,8 +106,8 @@ func frost_flash(at: Vector3) -> void:
 	_add_flair({"kind": "frost", "at": at, "color": Palette.ICE}, PAYOFF_ALPHA, PAYOFF_LIFE, PAYOFF_CAP)
 
 
-# Fault Hammer's aftershock: a slate rim on exactly `radius`, the ring the aftershock struck, and a
-# ring in the pilot's colour running out from the centre to meet it.
+# Fault Hammer's aftershock: a darkened pilot-colour rim on exactly `radius`, the ring the
+# aftershock struck, and a full-bright ring in the pilot's colour running out to meet it.
 func shockwave(at: Vector3, radius: float, color: Color) -> void:
 	_add_flair({"kind": "quake", "at": at, "radius": radius, "color": color}, PAYOFF_ALPHA, PAYOFF_LIFE, PAYOFF_CAP)
 
@@ -325,11 +325,11 @@ static func flair_lines(entry: Dictionary) -> Array:
 				for barb in [-1.0, 1.0]:
 					out.append([knot, knot + out_dir.rotated(Vector3.UP, deg_to_rad(45.0) * barb) * arm * 0.3, color])
 		"quake":
-			# The slate rim stays on the committed radius; the pilot's ring runs out to meet it.
+			# The darkened pilot rim stays on the committed radius; the pilot's ring runs out to meet it.
 			var radius := float(entry["radius"])
 			var eased := 1.0 - pow(1.0 - grown, 2.0)
 			_circle(out, at, radius * lerpf(0.3, 0.92, eased), color)
-			_circle(out, at, radius, Palette.SLATE)
+			_circle(out, at, radius, color.darkened(0.25))
 	return out
 
 
