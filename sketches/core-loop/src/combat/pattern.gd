@@ -69,11 +69,11 @@ const TRANSFORMERS := {
 	},
 	"fan_spread": {
 		"label": "Fan spread", "text": "shots fan into a 5-round cone",
-		"add": {"count": 4}, "min": {"spread_deg": 7.0},
+		"add": {"count": 4}, "mul": {"damage": 0.65}, "min": {"spread_deg": 7.0},
 	},
 	"helix_drill": {
 		"label": "Helix drill", "text": "shots corkscrew through two machines",
-		"add": {"pierce": 1, "wave_amp": 0.35}, "min": {"count": 2, "spread_deg": 6.0, "wave_hz": 3.0},
+		"add": {"count": 2, "pierce": 1, "wave_amp": 0.35}, "mul": {"damage": 0.75}, "min": {"spread_deg": 6.0, "wave_hz": 3.0},
 	},
 	"chain_arc": {
 		"label": "Chain arc", "text": "hits arc to one more enemy nearby",

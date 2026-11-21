@@ -151,6 +151,7 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 		var spent := false
 		while not target.is_empty():
 			fresh = false
+			var hit_id: int = target["enemy"].get_instance_id()
 			if on_hit.is_valid():
 				on_hit.call(bolt, target["enemy"], target["point"], target["part"])
 			if bolt["pierce"] <= 0:
@@ -159,7 +160,7 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 			# A piercing bolt passes through: it keeps its line and corkscrew phase and
 			# looks for the next machine further along the same segment.
 			bolt["pierce"] -= 1
-			(bolt["exclude"] as Array).append(target["enemy"].get_instance_id())
+			(bolt["exclude"] as Array).append(hit_id)
 			snapshot = _snapshot(enemies)
 			fresh = true
 			target = _first_enemy(from, end, bolt["radius"], snapshot, bolt["exclude"])
