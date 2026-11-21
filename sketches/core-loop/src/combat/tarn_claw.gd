@@ -392,6 +392,7 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	var hits := 0
 	var damage := 0.0
 	combat.effects.ring(at, radius, ctx.player.class_color())
+	ctx.break_props(at, radius, "ultimate")
 	for enemy in _enemies():
 		if enemy.global_position.distance_to(at) > radius:
 			continue

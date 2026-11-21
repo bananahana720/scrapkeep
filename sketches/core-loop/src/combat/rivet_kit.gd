@@ -1444,6 +1444,7 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	var reach := breach_reach()
 	var pins: float = float(_knob("ult_pins", 1.0))
 	var damage: float = Ultimate.LANDING_DAMAGE * heft * chain
+	ctx.break_props(at, combat.ultimate.landing_radius(), "ultimate")
 	var late := _carve_late(id, at, heading, reach, pins, damage)
 	last_landing = late
 	var result: Array = [0, 0.0, "late"]
