@@ -219,5 +219,21 @@
  "survival_rows": [
   {"id": "shelf_yard", "form": "yard", "at": [-260, -620]},
   {"id": "slot_yard", "form": "yard", "at": [120, 80]}
+ ],
+ "destructible_rows": [
+  {"id": "dam_camp_crates", "tier": 1, "at": [-23.0, 127.2, -396.0], "size": [1.4, 1.0, 1.4], "yaw_deg": -90},
+  {"id": "dam_camp_jersey", "tier": 3, "at": [-27.0, 126.95, -376.0], "size": [3.6, 2.6, 1.1], "yaw_deg": -130},
+  {"id": "dam_relay_drums", "tier": 1, "at": [-155.0, 125.84, -367.0], "size": [1.2, 1.1, 1.2], "yaw_deg": 180},
+  {"id": "dam_relay_shanty", "tier": 2, "at": [-174.0, 127.46, -385.0], "size": [2.8, 2.4, 2.4], "yaw_deg": 90},
+  {"id": "dam_relay_wall", "tier": 3, "at": [-137.0, 127.72, -389.0], "size": [3.6, 2.6, 1.1], "yaw_deg": -75},
+  {"id": "dam_shelf_yard_crates", "tier": 1, "at": [-243.0, 138.91, -603.0], "size": [1.4, 1.0, 1.4], "yaw_deg": -135},
+  {"id": "dam_shelf_yard_barricade", "tier": 2, "at": [-277.0, 141.58, -637.0], "size": [3.2, 2.2, 0.9], "yaw_deg": 45},
+  {"id": "dam_slot_yard_shanty", "tier": 2, "at": [144.0, 105.67, 80.0], "size": [2.8, 2.4, 2.4], "yaw_deg": -90},
+  {"id": "dam_slot_yard_tank", "tier": 3, "at": [96.0, 105.81, 80.0], "size": [2.6, 2.8, 2.6], "yaw_deg": 90},
+  {"id": "dam_slot_yard_barricade", "tier": 2, "at": [120.0, 106.45, 58.0], "size": [3.2, 2.2, 0.9], "yaw_deg": 0},
+  {"id": "dam_altar_drums", "tier": 1, "at": [231.0, 96.69, 250.0], "size": [1.2, 1.1, 1.2], "yaw_deg": -90},
+  {"id": "dam_altar_barricade", "tier": 2, "at": [232.0, 97.18, 268.0], "size": [3.2, 2.2, 0.9], "yaw_deg": -125},
+  {"id": "dam_apron_jersey", "tier": 3, "at": [31.0, -0.3, 526.0], "size": [3.6, 2.6, 1.1], "yaw_deg": -100},
+  {"id": "dam_apron_housing", "tier": 4, "at": [53.0, 0.81, 543.0], "size": [3.0, 3.0, 3.0], "yaw_deg": -115}
  ]
 }
