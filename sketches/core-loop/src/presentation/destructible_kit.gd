@@ -178,7 +178,7 @@ static func _barricade(b: _Build, half: Vector3, relief: float, slab_h: float, g
 			var x := lerpf(-half.x + relief * 3.0, half.x - relief * 3.0, (float(k) + 0.5) / float(count))
 			for sz in [-1.0, 1.0]:
 				b.box(Vector3(x, y, sz * (half.z - relief * 0.6)), Vector3(relief * 0.8, slab_h * 0.5 - 0.02, relief * 0.6), batten)
-	_seam(b, 0.0, gap, body, recess)
+	_seam(b, 0.0, gap, Vector2(body.x + recess, body.y), recess)
 	for sx in [-1.0, 1.0]:
 		b.box(Vector3(sx * (half.x - relief * 1.1), 0.0, 0.0), Vector3(relief * 1.1, half.y, half.z - relief * 0.6), batten)
 
