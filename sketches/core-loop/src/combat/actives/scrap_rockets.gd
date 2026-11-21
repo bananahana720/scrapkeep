@@ -143,6 +143,7 @@ func _burst(rocket: Dictionary, struck) -> void:
 	var dmg: float = rocket["damage"]
 	var push: Vector3 = rocket["vel"]
 	combat.effects.ring(at, BLAST_RADIUS, ActiveFx.peak(COLOR))
+	ctx.break_props(at, BLAST_RADIUS, "scrap_rocket")
 	if struck != null:
 		combat._hit(struck, KIND, dmg, push, KNOCK, "", SOURCE)
 	for enemy in combat._nearest_list(at, BLAST_RADIUS, 16):

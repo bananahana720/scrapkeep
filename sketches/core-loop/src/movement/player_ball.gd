@@ -63,6 +63,8 @@ const DRY_FIRE_HOLD := 0.25
 const LET_GO_HOLD := 0.15
 const BROKE_HOLD := 0.3
 const LANDS_HOLD := 0.1
+# A line or mount on a piece's face counts as on the piece within this many metres when it breaks.
+const SHATTER_MARGIN := 0.25
 
 signal shockwave(position: Vector3, strength: float)
 # A physical contact the ball made, for combat to turn into damage. Local, not the bus:
@@ -190,6 +192,9 @@ var _bow_check_queued := false
 var _crushing := {}
 # Every collision exception the ball takes goes through here, so none ends with the ball inside.
 var exceptions
+# The stage's heft destructibles and the Callable that answers the run's heft class (bind_destructibles).
+var _destructibles: Node = null
+var _destructibles_class := Callable()
 
 
 func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
@@ -565,6 +570,48 @@ func yours(shape: Dictionary) -> Dictionary:
 
 func heft() -> float:
 	return float(heft_of.call()) if heft_of.is_valid() else 1.0
+
+
+# The stage's heft destructibles (world calls this on each stage entry, and with null at its end): the ball's
+# blasts (slam, Redline) reach them with the class `class_of` answers, and a piece that breaks lets go of any
+# line, mount or aim that stood on it the same tick.
+func bind_destructibles(pieces: Node, class_of := Callable()) -> void:
+	if is_instance_valid(_destructibles) and _destructibles.piece_shattered.is_connected(_on_piece_shattered):
+		_destructibles.piece_shattered.disconnect(_on_piece_shattered)
+	_destructibles = pieces
+	_destructibles_class = class_of
+	redline.blast_props = _break_props if pieces != null else Callable()
+	if pieces != null:
+		pieces.piece_shattered.connect(_on_piece_shattered)
+
+
+func _break_props(at: Vector3, radius: float, source: String) -> void:
+	if is_instance_valid(_destructibles):
+		_destructibles.on_blast(at, radius, source, 1, int(_destructibles_class.call()) if _destructibles_class.is_valid() else -1)
+
+
+# True when `point` lies in the piece that just broke (its own oriented box when the module can say, else the
+# world box), grown by a quarter metre so a face the line or mount sat on still counts.
+func _point_in_shattered(bounds: AABB, point: Vector3) -> bool:
+	var id: String = _destructibles.last_shattered_id() if is_instance_valid(_destructibles) else ""
+	if id != "":
+		return _destructibles.contains_point(id, point, SHATTER_MARGIN)
+	return bounds.grow(SHATTER_MARGIN).has_point(point)
+
+
+# A world line, a pylon mount or a harpoon aim that rested on the piece cannot outlive it: the line is cut, the
+# mount is dropped and the aim is cleared on the tick of the break, so a press the same tick finds no surface.
+func _on_piece_shattered(bounds: AABB) -> void:
+	if kit.hooked and not kit.on_body and _point_in_shattered(bounds, kit.anchor):
+		cut_line("shattered")
+	if kit.mounted and _point_in_shattered(bounds, kit.mount_face):
+		kit.mounted = false
+		kit.slingshot.cancel()
+		kit.mount_block = Augments.MOUNT_COOLDOWN
+		kit.dismount_velocity = Vector3.ZERO
+		kit.dismount_fired = true
+	if kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE and _point_in_shattered(bounds, kit.aim["point"]):
+		kit.aim = Augments.no_aim()
 
 
 # The one door for crowd control: a knock, the Warden's pulse and magnet, Brindle's
@@ -1418,6 +1465,7 @@ func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	events.slammed.emit(at, strength, flatness)
 	if strength >= 0.05:
 		shockwave.emit(at, strength)
+		_break_props(at, slam_radius(), "slam")
 		var hits := _push_enemies(at, slam_radius(), Augments.SLAM_KNOCK * strength, SLAM, Contact.heft_knock(heft()))
 		if hits > 0:
 			events.drop_landed.emit(hits)

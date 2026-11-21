@@ -875,10 +875,17 @@ func _sable_damage(at: Vector3, radius: float, damage: float, limit := 64, landi
 	return [hits, dealt]
 
 
+# A Q landing's ring: the props it reaches break (+1 class) and the machines in it take the damage, both from the
+# one radius the caller resolved.
+func _landing_damage(at: Vector3, radius: float, damage: float) -> Array:
+	ctx.break_props(at, radius, "ultimate")
+	return _sable_damage(at, radius, damage)
+
+
 func _sable_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 	stakes.plant(at)
 	stakes.arm()
-	return _sable_damage(at, landing_radius(), LANDING_DAMAGE * heft_mult * chain_mult * (0.5 if _leg > 1 else 1.0))
+	return _landing_damage(at, landing_radius(), LANDING_DAMAGE * heft_mult * chain_mult * (0.5 if _leg > 1 else 1.0))
 
 
 func _lightning_tech(beat: int, ball: Vector3, _aim: Vector3, heft_mult: float) -> int:
@@ -903,12 +910,12 @@ func _lightning_peak(at: Vector3) -> void:
 func _lightning_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 	ctx.player._tag_faces(at)
 	ctx.player.state.air_actions = 1
-	return _sable_damage(at, landing_radius() + 3.0, LANDING_DAMAGE * heft_mult * chain_mult * (0.5 if _leg > 1 else 1.0))
+	return _landing_damage(at, landing_radius() + 3.0, LANDING_DAMAGE * heft_mult * chain_mult * (0.5 if _leg > 1 else 1.0))
 
 
 func _outpost_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 	if _outpost_second:
-		return _sable_damage(at, landing_radius(), LANDING_DAMAGE * heft_mult * chain_mult * 0.5)
+		return _landing_damage(at, landing_radius(), LANDING_DAMAGE * heft_mult * chain_mult * 0.5)
 	stakes.plant(at)
 	stakes.arm()
 	stakes.start_sentries(_beat_len, heft_mult)
@@ -1120,6 +1127,7 @@ func _cannon_landing(at: Vector3, heft: float, chain: float) -> Array:
 	var damage := 0.0
 	var scale := 0.5 if _cannon_encore else 1.0
 	combat.effects.ring(at, landing_radius(), Palette.ANCIENT)
+	ctx.break_props(at, landing_radius(), "ultimate")
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()) or enemy.global_position.distance_to(at) > landing_radius():
 			continue
