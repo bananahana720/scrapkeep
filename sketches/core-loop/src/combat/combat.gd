@@ -1793,6 +1793,8 @@ func _add_shred(enemy: Node3D, punch: float) -> void:
 
 
 func _decay_shred(delta: float) -> void:
+	if _shred.is_empty():
+		return
 	for id in _shred.keys():
 		var enemy := instance_from_id(id) as Node3D
 		if DamageDoor.dead(enemy):
@@ -2017,16 +2019,19 @@ func _strike_strip(strip: Dictionary, enemies = null) -> void:
 
 # The strips strike what enters them and go when their life ends; a bell rings when it is due.
 func _step_verb_items(enemies = null) -> void:
-	for strip in _strips.duplicate():
-		if _clock >= float(strip["until"]):
-			ctx.player.indicator.clear(String(strip["layer"]))
-			_strips.erase(strip)
-		else:
-			_strike_strip(strip, enemies)
-	for bell in _bells.duplicate():
-		if _clock >= float(bell["at"]):
-			_bells.erase(bell)
-			_toll(bell, enemies)
+	# Checked before the copy: both lists are empty on most ticks.
+	if not _strips.is_empty():
+		for strip in _strips.duplicate():
+			if _clock >= float(strip["until"]):
+				ctx.player.indicator.clear(String(strip["layer"]))
+				_strips.erase(strip)
+			else:
+				_strike_strip(strip, enemies)
+	if not _bells.is_empty():
+		for bell in _bells.duplicate():
+			if _clock >= float(bell["at"]):
+				_bells.erase(bell)
+				_toll(bell, enemies)
 
 
 func _clear_verb_items() -> void:

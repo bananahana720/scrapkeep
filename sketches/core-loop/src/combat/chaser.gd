@@ -69,6 +69,8 @@ var _mesh: Node3D
 # Test seam: only the attack pose is disabled; facing and physics keep running.
 var windup_pose_enabled := true
 var _pose_parts: Dictionary = {}
+# A part left off its rest transform: the next unposed tick puts every part back once.
+var _posed_dirty := false
 # The body cues (LEGIBILITY section 6): while the lunge can still be broken the back wears the
 # will_break state row, and a broken wind-up plays the interrupted row. Colour, motion and
 # glyph shape come from STATE_ROWS; only the body paint's emission and a reaction move. Test
@@ -156,10 +158,11 @@ func state_name() -> String:
 
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
-	_cue_step(delta)
 	if not _in_play() or target == null:
+		_cue_step(delta)
 		_move(delta, Vector3.ZERO)
 		return
+	_cue_advance(delta)
 	_clock += delta
 	_age += delta
 	_rest = maxf(0.0, _rest - delta)
@@ -173,10 +176,12 @@ func _physics_process(delta: float) -> void:
 				_lead_chase(delta, to_ball, lead)
 			else:
 				var desired := Vector3.ZERO
-				if to_ball.length() > radius + 1.4:
+				var reach := radius + 1.4
+				var ball_sq := to_ball.length_squared()
+				if ball_sq > reach * reach:
 					desired = to_ball.normalized() * _pace()
 				_move(delta, desired)
-				if _rest <= 0.0 and to_ball.length() < LUNGE_RANGE and is_on_floor() and _knocked_speed() < 1.0:
+				if _rest <= 0.0 and ball_sq < LUNGE_RANGE * LUNGE_RANGE and is_on_floor() and _knocked_speed() < 1.0:
 					if AttackBudget.ask(self):
 						_begin_windup(to_ball)
 				else:
@@ -207,6 +212,7 @@ func _physics_process(delta: float) -> void:
 			var lane := telegraph()
 			if lane == null:
 				_end_attack(State.RECOVER)
+				_paint_cue()
 				return
 			_move(delta, lane.dir * LUNGE_LENGTH / LUNGE_TIME)
 			var along: float = (global_position - lane.center).dot(lane.dir)
@@ -338,7 +344,7 @@ func _pose() -> void:
 	var dt := get_physics_process_delta_time()
 	var lane := telegraph() if state == State.WINDUP or state == State.LUNGE else null
 	var face: Vector3 = lane.dir if lane != null else _flat_to_ball()
-	if face.length() > 0.01:
+	if face.length_squared() > 0.0001:
 		_mesh.rotation.y = lerp_angle(_mesh.rotation.y, atan2(-face.x, -face.z), 1.0 - exp(-14.0 * dt))
 	var shift := Vector3.ZERO
 	var pitch := 0.0
@@ -354,6 +360,13 @@ func _pose() -> void:
 			shift = REAR_SHIFT.lerp(Vector3(0.0, -0.08, -0.25), snap)
 			pitch = lerpf(deg_to_rad(REAR_PITCH), deg_to_rad(-12.0), snap)
 			flare = deg_to_rad(32.0) * (1.0 - snap)
+	if pitch == 0.0 and shift == Vector3.ZERO and flare == 0.0:
+		if _posed_dirty:
+			_posed_dirty = false
+			for part in _pose_parts.values():
+				part.node.transform = part.rest
+		return
+	_posed_dirty = true
 	var body_pose := Transform3D(Basis(Vector3.RIGHT, pitch), shift)
 	for part_name in _pose_parts:
 		var part: Dictionary = _pose_parts[part_name]
@@ -389,9 +402,13 @@ func _show_interrupted() -> void:
 
 
 func _cue_step(delta: float) -> void:
+	_cue_advance(delta)
+	_paint_cue()
+
+
+func _cue_advance(delta: float) -> void:
 	_interrupted_left = maxf(0.0, _interrupted_left - delta)
 	_cue_clock += delta
-	_paint_cue()
 
 
 # The cue is the body paint's emission. A flash and the rest look share that emission, so
