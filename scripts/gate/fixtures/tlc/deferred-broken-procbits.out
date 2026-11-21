@@ -1,0 +1,211 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 32 and seed -6259542425686574508 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/DeferredEffects.tla
+Parsing file <tmp>/Naturals.tla
+Parsing file <tmp>/FiniteSets.tla
+Parsing file <tmp>/Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module DeferredEffects
+Starting... (2026-11-21 15:01:54)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-21 15:01:54.
+Error: Invariant ProcDepthOne is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ heat = "none"
+/\ att = 0
+/\ pike = "none"
+/\ expoOld = FALSE
+/\ flow = "title"
+/\ foe = "gone"
+/\ deep = FALSE
+/\ b = [ live |-> FALSE,
+  proc |-> FALSE,
+  old |-> FALSE,
+  bits |-> {},
+  spent |-> {},
+  gen |-> 0,
+  fam |-> 0,
+  bounces |-> 0,
+  hoar |-> FALSE,
+  spared |-> "none",
+  pulledAsChild |-> FALSE ]
+/\ mark = FALSE
+/\ q = [ rake |-> "none",
+  echo |-> "none",
+  bell |-> "none",
+  shock |-> "none",
+  strip |-> "none",
+  cast |-> "none",
+  bite |-> "none" ]
+/\ expo = "none"
+/\ last = "Init"
+/\ stale = FALSE
+/\ guards = "none"
+
+State 2: <NewRun line 145, col 3 to line 147, col 48 of module DeferredEffects>
+/\ heat = "none"
+/\ att = 1
+/\ pike = "none"
+/\ expoOld = FALSE
+/\ flow = "play"
+/\ foe = "gone"
+/\ deep = FALSE
+/\ b = [ live |-> FALSE,
+  proc |-> FALSE,
+  old |-> FALSE,
+  bits |-> {},
+  spent |-> {},
+  gen |-> 0,
+  fam |-> 0,
+  bounces |-> 0,
+  hoar |-> FALSE,
+  spared |-> "none",
+  pulledAsChild |-> FALSE ]
+/\ mark = FALSE
+/\ q = [ rake |-> "none",
+  echo |-> "none",
+  bell |-> "none",
+  shock |-> "none",
+  strip |-> "none",
+  cast |-> "none",
+  bite |-> "none" ]
+/\ expo = "none"
+/\ last = "NewRun"
+/\ stale = FALSE
+/\ guards = "none"
+
+State 3: <EnterStage line 132, col 3 to line 134, col 52 of module DeferredEffects>
+/\ heat = "none"
+/\ att = 2
+/\ pike = "none"
+/\ expoOld = FALSE
+/\ flow = "play"
+/\ foe = "gone"
+/\ deep = FALSE
+/\ b = [ live |-> FALSE,
+  proc |-> FALSE,
+  old |-> FALSE,
+  bits |-> {},
+  spent |-> {},
+  gen |-> 0,
+  fam |-> 0,
+  bounces |-> 0,
+  hoar |-> FALSE,
+  spared |-> "none",
+  pulledAsChild |-> FALSE ]
+/\ mark = FALSE
+/\ q = [ rake |-> "none",
+  echo |-> "none",
+  bell |-> "none",
+  shock |-> "none",
+  strip |-> "none",
+  cast |-> "none",
+  bite |-> "none" ]
+/\ expo = "none"
+/\ last = "EnterStage"
+/\ stale = FALSE
+/\ guards = "none"
+
+State 4: <ProcVolley line 177, col 3 to line 183, col 97 of module DeferredEffects>
+/\ heat = "none"
+/\ att = 2
+/\ pike = "none"
+/\ expoOld = FALSE
+/\ flow = "play"
+/\ foe = "gone"
+/\ deep = FALSE
+/\ b = [ live |-> TRUE,
+  proc |-> TRUE,
+  old |-> FALSE,
+  bits |-> {"pierce", "split", "pull"},
+  spent |-> {},
+  gen |-> 0,
+  fam |-> 1,
+  bounces |-> 0,
+  hoar |-> FALSE,
+  spared |-> "none",
+  pulledAsChild |-> FALSE ]
+/\ mark = FALSE
+/\ q = [ rake |-> "none",
+  echo |-> "none",
+  bell |-> "none",
+  shock |-> "none",
+  strip |-> "none",
+  cast |-> "none",
+  bite |-> "none" ]
+/\ expo = "none"
+/\ last = "ProcVolley"
+/\ stale = FALSE
+/\ guards = "none"
+
+State 5: <Spawn line 341, col 3 to line 343, col 105 of module DeferredEffects>
+/\ heat = "none"
+/\ att = 2
+/\ pike = "none"
+/\ expoOld = FALSE
+/\ flow = "play"
+/\ foe = "alive"
+/\ deep = FALSE
+/\ b = [ live |-> TRUE,
+  proc |-> TRUE,
+  old |-> FALSE,
+  bits |-> {"pierce", "split", "pull"},
+  spent |-> {},
+  gen |-> 0,
+  fam |-> 1,
+  bounces |-> 0,
+  hoar |-> FALSE,
+  spared |-> "none",
+  pulledAsChild |-> FALSE ]
+/\ mark = FALSE
+/\ q = [ rake |-> "none",
+  echo |-> "none",
+  bell |-> "none",
+  shock |-> "none",
+  strip |-> "none",
+  cast |-> "none",
+  bite |-> "none" ]
+/\ expo = "none"
+/\ last = "Spawn"
+/\ stale = FALSE
+/\ guards = "none"
+
+State 6: <BoltHits line 303, col 3 to line 320, col 71 of module DeferredEffects>
+/\ heat = "none"
+/\ att = 2
+/\ pike = "none"
+/\ expoOld = FALSE
+/\ flow = "play"
+/\ foe = "alive"
+/\ deep = TRUE
+/\ b = [ live |-> TRUE,
+  proc |-> TRUE,
+  old |-> FALSE,
+  bits |-> {"pierce", "split", "pull"},
+  spent |-> {"split", "pull"},
+  gen |-> 1,
+  fam |-> 3,
+  bounces |-> 0,
+  hoar |-> FALSE,
+  spared |-> "none",
+  pulledAsChild |-> FALSE ]
+/\ mark = FALSE
+/\ q = [ rake |-> "none",
+  echo |-> "none",
+  bell |-> "none",
+  shock |-> "none",
+  strip |-> "none",
+  cast |-> "none",
+  bite |-> "none" ]
+/\ expo = "none"
+/\ last = "BoltSplits"
+/\ stale = FALSE
+/\ guards = "none"
+
+13115 states generated, 3998 distinct states found, 3580 states left on queue.
+The depth of the complete state graph search is 7.
+The average outdegree of the complete state graph is 10 (minimum is 0, the maximum 25 and the 95th percentile is 22).
+Finished in 00s at (2026-11-21 15:01:54)
