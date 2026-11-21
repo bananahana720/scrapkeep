@@ -137,10 +137,10 @@ func _pass(speed: float, overrides: Dictionary, head_on := false, own_speed := t
 
 func _run() -> void:
 	ChallengeDials.reset()
-	_t.eq("01 the lead ships at half on the dam and the flume, off after them", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("01 the lead ships at half across all stages", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
 	_t.near("02 a dam crew reads half", PackPressure.crew_row(1).lead, 0.5)
 	_t.near("03 a flume crew reads half", PackPressure.crew_row(2).lead, 0.5)
-	_t.near("04 a Dig crew reads none", PackPressure.crew_row(3).lead, 0.0)
+	_t.near("04 a Dig crew inherits half", PackPressure.crew_row(3).lead, 0.5)
 	_t.check("05 the wind-up is at least the tell floor", Chaser.WINDUP >= ChallengeDials.TELL_FLOOR, "WINDUP %.2f s, floor %.2f s" % [Chaser.WINDUP, ChallengeDials.TELL_FLOOR])
 	await _boot()
 	var tick := 1.0 / float(Engine.physics_ticks_per_second)
@@ -159,7 +159,7 @@ func _run() -> void:
 	_t.check("12 a lane laid for it, if any, stood the whole wind-up too", fast.tell < 0.0 or fast.tell >= Chaser.WINDUP - tick - 0.0001, "lane to lunge %.3f s" % fast.tell)
 	# The fade. The game's own cruise speed is what combat hands PackPressure each tick.
 	var cruise: float = _game.player.tuning.f("cruise")
-	_t.eq("13 the lead keeps none of itself at cruise on world 1, all of it after", ChallengeDials.value("pack.lead_cruise_by_stage"), [0.0, 0.0, 1.0, 1.0, 1.0, 1.0])
+	_t.eq("13 the lead keeps none of itself at cruise across all stages", ChallengeDials.value("pack.lead_cruise_by_stage"), [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 	var row: Dictionary = PackPressure.crew_row(1)
 	var roller := Roller.new()
 	var read := []

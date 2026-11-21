@@ -45,15 +45,16 @@ const PULSE_CYCLE_W1 := [1.0, 0.85, 1.0, 1.0, 1.0, 1.0]
 const PULSE_RATCHET_W1 := [1.0, 0.9, 1.0, 1.0, 1.0, 1.0]
 # Silt boils ship on world 1 at strength 2 (pack pressure E, 24 Oct ruling; DECISIONS section 5).
 const SILT_W1 := [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]
-# Crews on world 1 lead the ball's roll by half (wave 37 unit D1, ruling cu call 4: chasers lead your line).
+# Crews lead the ball's roll by half (wave 37 unit D1, ruling cu call 4: chasers lead your line).
 # A crew steers to cut the roll off and a chaser lays its lunge lane halfway to where the roll will be, so a
 # ball that slows or holds a line it can be met on gets lunged, and a ball at cruise across it still slips.
-# The lane is committed at the wind-up as before and the wind-up is no shorter.
-const LEAD_W1 := [0.5, 0.5, 0.0, 0.0, 0.0, 0.0]
-# The share of that lead a crew keeps on a ball at cruise: none on world 1 (wave 37, the stop-tax line F2). The
+# The lane is committed at the wind-up as before and the wind-up is no shorter. Stages 3 to 6 inherit the
+# stage 2 ruling-cu baseline so later worlds never drop back to an easier default.
+const LEAD_W1 := [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+# The share of that lead a crew keeps on a ball at cruise: none (wave 37, the stop-tax line F2). The
 # lead is whole below 85% of cruise and gone at cruise (PackPressure.lead_now), so pressure lands on the ball
 # that slows and a ball that keeps its speed is aimed at where it is, as before wave 37. 1 keeps it whole.
-const LEAD_CRUISE_W1 := [0.0, 0.0, 1.0, 1.0, 1.0, 1.0]
+const LEAD_CRUISE_W1 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # The dam (stage 1) takes mob hits at x1.5 (w19 world 1 bands, Andrew 26 Oct option 1, DECISIONS section 5).
 # 24 seeds on w1: Novice wins 33% (a measured miss of the <= 15% target: the dam Warden is world 1's
 # teaching Warden), Learner a5 67%, Expert 100% with the same fight time. Hit size, not crew aggression or
@@ -63,10 +64,10 @@ const LEAD_CRUISE_W1 := [0.0, 0.0, 1.0, 1.0, 1.0, 1.0]
 # second before armour against the base's 1.47 and the same hull lost a run (178). Hit size again, for the
 # reason above. A stalled ball's boil now hits 40 (10 x strength 2 x 2).
 const MOBS_DAMAGE_W1 := [2.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-# Chasers on world 1 run at 9 m/s, up from 4.8 (wave 37 unit D2, ruling cu call 4: faster than walking pace,
+# Chasers run at 9 m/s, up from 4.8 (wave 37 unit D2, ruling cu call 4: faster than walking pace,
 # slower than cruise). A ball that stops or dawdles is run down; a ball at cruise (14 m/s) is never caught by
-# running. The lunge, its lane and its wind-up are as they were.
-const CHASER_SPEED_W1 := [9.0, 9.0, 0.0, 0.0, 0.0, 0.0]
+# running. The lunge, its lane and its wind-up are as they were. Stages 3 to 6 inherit the stage 2 baseline.
+const CHASER_SPEED_W1 := [9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
 # The flume's crowd comes sooner (W1-31, gameplay critique section 6): the director's spawn interval x0.7 on stage 2, so the
 # opening carries packs instead of a walk. Interval, not hit size: it asks the ball to keep moving and no warning, shape
 # or damage changes. The dam keeps its own pace.
@@ -112,11 +113,10 @@ const DEFAULTS := {
 	# Wave 37 unit D4, ruling cu call 2: terrain stops enemy shells, and lobbers lead more of them. shell_cover is 1
 	# where a lobber shell bursts on the first terrain or landform it meets (0 = it flies through, the game before
 	# this unit); lobber_lead is the share of the ball's FLIGHT travel a lobber aims ahead (0.5 is Lobber.LEAD);
-	# lobber_share_step is the lobber share added per effective clock tier. It ships at the old step, 0.07, on every
-	# stage: at 0.12 the dam's Novice runs replayed tick for tick (12 seeds, wave 37 screen s4), because the dam's
-	# packs are authored and never read the share, and the flume was not read.
-	"hazard.shell_cover_by_stage": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
-	"mobs.lobber_lead_by_stage": [0.75, 0.75, 0.5, 0.5, 0.5, 0.5],
+	# lobber_share_step is the lobber share added per effective clock tier. Stages 3 to 6 inherit the stage 2
+	# ruling-cu baseline so later worlds never regress to an easier default.
+	"hazard.shell_cover_by_stage": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+	"mobs.lobber_lead_by_stage": [0.75, 0.75, 0.75, 0.75, 0.75, 0.75],
 	"mobs.lobber_share_step_by_stage": [0.07, 0.07, 0.07, 0.07, 0.07, 0.07],
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
@@ -154,7 +154,7 @@ const DEFAULTS := {
 	# never a ball that stood still. World 1 ships the stall test (wave 37 unit D5, ruling cu call 3). On its own
 	# it eased the Novice on the dam (12 seeds: 8 wins against 4), so it ships with the dam's mob hits at x2
 	# (MOBS_DAMAGE_W1), read together: 3 wins of 12, and the Expert's kite no longer boils at cruise.
-	"hazard.boil_stall_by_stage": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+	"hazard.boil_stall_by_stage": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
 	# World events that hit enemies as well as the ball, with the storm's seek and the flood's tax beside them
 	# (world/events/hazard_hits.gd, W44): 1 on, 0 off. World 1 only; worlds 2 and 3 are parked (ruling at).
 	"hazard.hits_enemies_by_stage": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
@@ -163,9 +163,9 @@ const DEFAULTS := {
 	"pilot.regen_delay_mult": 1.0, "pilot.regen_rate_mult": 1.0,
 	# Hull regenerates only while the ball rolls in the cruise speed tier or above (run_state.gd advance; wave 37
 	# unit D7, ruling cu call 1: motion heals, camping does not). 1 on, 0 = the hull regenerates at any speed,
-	# the game before this unit. World 1 ships it on; later worlds stay off until their bands are read. Ruled, so
-	# unlike the two multipliers above it is a plain tune (RULED_PILOT).
-	"pilot.regen_rolling_by_stage": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+	# the game before this unit. Stages 3 to 6 inherit the stage 2 ruling-cu baseline so later worlds never flip
+	# back to stationary healing. Ruled, so unlike the two multipliers above it is a plain tune (RULED_PILOT).
+	"pilot.regen_rolling_by_stage": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
 }
 
 # Pilot dials a ruling covers: tunable without --tune-unruled.

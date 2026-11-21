@@ -23,17 +23,18 @@ const WIDTH := 8.0
 # part_tier[tier] x part_growth^parts_held; the shop's reroll, charge cells and sell-back read
 # the rest. Values from the economy pass (systems audit pass B,
 # docs/systems-audit/economy/README.md), measured on Moss's shelf and his scale.
+const PART_GROWTH := 1.06
 const COG_PRICES := {
-	"part_base": 40.0, "part_tier": {1: 1.0, 2: 1.6, 3: 2.6}, "part_growth": 1.06,
+	"part_base": 40.0, "part_tier": {1: 1.0, 2: 1.6, 3: 2.6}, "part_growth": PART_GROWTH,
 	"reroll_base": 30, "reroll_growth": 1.5, "cell_base": 40, "cell_growth": 1.6, "sell_share": 0.5,
 	# Moss's scale (shop.gd weigh, `--moss-scale=on`). One press weighs up to weigh_lump mass;
 	# every mass_per_cog of it pays one cog, so a sale pays less than the scrap paid on the way in.
 	"weigh_lump": 50, "mass_per_cog": 2.0,
 }
 # Parts priced off Moss's shelf (a trade chest's cogs price, a rack active offer, a legacy
-# hoop) keep the curve from before the economy pass: the pass measured the new part_base on
-# the shelf only, and no bot meets these three (docs/systems-audit/economy/README.md).
-const OFF_SHELF := {"part_base": 10.0, "part_growth": 1.15}
+# hoop) share PART_GROWTH (1.06) with Moss's shelf so late World 2/3 builds (25-30 held parts)
+# never outrun Moss's shelf curve, while keeping the lower 10-cog base for off-shelf tiers.
+const OFF_SHELF := {"part_base": 10.0, "part_growth": PART_GROWTH}
 const RESTOCK := 2.5
 const AVOID_BEACON := 55.0
 const AVOID_SPAWN := 25.0

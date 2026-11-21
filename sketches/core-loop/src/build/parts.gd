@@ -304,8 +304,11 @@ const KITS := {
 	"remembered_cannon": {"weapon": ["mass"], "skill": ["mass", "kinetic", "speed"]},
 }
 # Target: 70% of a listed pilot's offered parts come from its kit (band 60 to 80%). The rest is the
-# neutral shelf, plus a generated recipe GENERATED_SHARE of those neutral slots off the slice.
+# non-kit pool: NEUTRAL_SHELF plus a bounded REST_OF_NEUTRAL slice for off-kit, non-shelf parts so
+# admitted items outside every pilot's kit tags still draw with non-zero weight (and a generated
+# recipe GENERATED_SHARE of those neutral slots off the slice).
 const KIT_SHARE := 0.7
+const REST_OF_NEUTRAL := 0.15
 # The most of one slot's odds a single kit part may hold (start value): on a short part list a
 # one-part kit would otherwise put that part in nearly every draw.
 const KIT_PART_CAP := 0.25
@@ -1049,8 +1052,9 @@ static func _uncapped(class_id: String, pool: Array, offered: Dictionary) -> Arr
 # the rarity draw and one pick, as before. Off the slice a generated recipe first takes its share
 # of the shelf's part (one more draw). The rolled rarity's uncapped parts split into four groups:
 # the kit's movement parts (MOVEMENT_SHARE; for a pilot whose pair has no movement,
-# CLASS_MOVEMENT_SHARE per class movement row, at most MOVEMENT_SHARE), its other parts (the rest of KIT_SHARE), the shelf (1 - KIT_SHARE) and the rest of the
-# pool (0). An empty group's share moves on: kit to shelf, shelf to kit, both to the rest; movement's
+# CLASS_MOVEMENT_SHARE per class movement row, at most MOVEMENT_SHARE), its other parts (the rest of KIT_SHARE),
+# the shelf ((1 - KIT_SHARE) * (1 - REST_OF_NEUTRAL)) and the rest of the pool ((1 - KIT_SHARE) * REST_OF_NEUTRAL).
+# An empty group's share moves on: kit to shelf (else rest), shelf to kit (else rest), rest to shelf; movement's
 # own share goes to the kit's other parts, and movement never takes another group's share unless
 # nothing else is left. Inside a group a part weighs 1 / (1 + times offered this stage), times
 # NEUTRAL_LEAN for a shelf part in the pilot's lean bucket. No part of the rolled rarity: any rarity.
@@ -1087,20 +1091,27 @@ static func slot_weights(rarity: String, class_id: String, pool: Array, offered:
 			groups["rest"].append(key)
 	var moving := MOVEMENT_SHARE if kit.has("movement") \
 		else minf(MOVEMENT_SHARE, CLASS_MOVEMENT_SHARE * groups["moving"].size())
-	var share := {"moving": moving, "still": KIT_SHARE - moving, "shelf": 1.0 - KIT_SHARE, "rest": 0.0}
+	var neutral := 1.0 - KIT_SHARE
+	var rest_share := neutral * REST_OF_NEUTRAL if not groups["rest"].is_empty() else 0.0
+	var share := {"moving": moving, "still": KIT_SHARE - moving, "shelf": neutral - rest_share, "rest": rest_share}
 	if groups["moving"].is_empty():
 		share["still"] += share["moving"]
 		share["moving"] = 0.0
 	if groups["still"].is_empty():
-		share["shelf"] += share["still"]
+		if not groups["shelf"].is_empty():
+			share["shelf"] += share["still"]
+		else:
+			share["rest"] += share["still"]
 		share["still"] = 0.0
 	if groups["shelf"].is_empty():
-		share["still"] += share["shelf"]
+		if not groups["still"].is_empty():
+			share["still"] += share["shelf"]
+		else:
+			share["rest"] += share["shelf"]
 		share["shelf"] = 0.0
-	if groups["still"].is_empty() and groups["shelf"].is_empty():
-		share["rest"] += share["still"] + share["shelf"]
 	if groups["rest"].is_empty() and share["rest"] > 0.0:
 		share["moving"] += share["rest"]
+		share["rest"] = 0.0
 	var weights := {}
 	for name in groups:
 		var raw := {}
@@ -1110,7 +1121,7 @@ static func slot_weights(rarity: String, class_id: String, pool: Array, offered:
 			var lean := 1.0
 			if name == "shelf" and kit.has(b) and (b != "weapon" or kit.has("movement")):
 				lean = NEUTRAL_LEAN
-			elif name == "shelf" and b == "weapon" and not kit.has("weapon"):
+			elif name in ["shelf", "rest"] and b == "weapon" and not kit.has("weapon"):
 				lean = NEUTRAL_WEAPON_EASE
 			raw[key] = lean / (1.0 + offered.get(key, 0))
 			sum += raw[key]
