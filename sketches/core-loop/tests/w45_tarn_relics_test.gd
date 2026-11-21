@@ -99,8 +99,9 @@ func _check_table() -> void:
 	_t.eq("rake heart is the weapon swap", [Relics.slot_of("rake_heart"), Relics.swap_of("rake_heart"), Relics.row("rake_heart")["maker"]],
 		[AbilityState.WEAPON, "claw_rake", "redjaw"])
 	_t.check("the texts say machines", "machines" in String(Relics.row("gutter_heart")["text"]), Relics.row("gutter_heart")["text"])
-	var swaps := Relics.ids().filter(func(id): return int(Relics.row(id)["world"]) == 1 and Relics.swap_of(id) != "")
-	_t.eq("World 1 has five swaps", swaps.size(), 5)
+	# Tally's and the cannon's swaps (U4, U5) join World 1 beside these; count the rest.
+	var swaps := Relics.ids().filter(func(id): return int(Relics.row(id)["world"]) == 1 and Relics.swap_of(id) != "" and not Relics.fits(id, "tally") and not Relics.fits(id, "remembered_cannon"))
+	_t.eq("World 1 has five swaps outside Tally and the cannon", swaps.size(), 5)
 	var tarn := Relics.eligible("tarn", {}, null, 1)
 	_t.check("tarn is offered both beside its cooldown relics",
 		"gutter_heart" in tarn and "rake_heart" in tarn and "taut_cable" in tarn and "vice_heart" in tarn, str(tarn))

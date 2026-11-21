@@ -42,9 +42,11 @@ const WORDS := {
 	"link_clips": "ledger clip",
 	"balance_due": "balance due",
 	"cannon_lane": "cannon lane",
+	"cannon_lane_walk": "walking lane",
 	"cannon_recoil": "recoil split",
 	"cannon_plate": "cannon plate",
 	"cannon_rush": "rush ring",
+	"cannon_rush_wake": "rush wake",
 	"line_reel": "line reel",
 	"ult_default": "ultimate",
 	# The shared chips that are no ability row: the harpoon every pilot fires, and Sable's boost

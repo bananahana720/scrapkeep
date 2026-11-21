@@ -57,6 +57,10 @@ const ROWS := {
 		"pilots": ["remembered_cannon"], "slot": AbilityState.MOVEMENT, "cooldown": 0.7, "world": 1},
 	"brace_pin": {"maker": "fleet_surplus", "name": "Brace Pin", "text": "Plate refills 25% sooner",
 		"pilots": ["remembered_cannon"], "slot": AbilityState.SPECIAL, "cooldown": 0.75, "world": 1},
+	"walking_lane": {"maker": "mind_glass", "name": "Walking Lane", "text": "Second call walks the lane further out",
+		"pilots": ["remembered_cannon"], "slot": AbilityState.WEAPON, "swap": "cannon_lane_walk", "world": 1},
+	"rush_wake": {"maker": "waking", "name": "Rush Wake", "text": "Rush landings leave a lane behind",
+		"pilots": ["remembered_cannon"], "slot": AbilityState.SMASH, "swap": "cannon_rush_wake", "world": 1},
 	# World 2, the Dig.
 	"spare_cell": {"maker": "moss", "name": "Spare Cell", "text": "Bank a second discharge",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "charges": 1, "world": 2},

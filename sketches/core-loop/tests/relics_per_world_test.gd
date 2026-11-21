@@ -24,10 +24,10 @@ const PILOT := "demolitions_caster"
 # 2026-10-05 (alpha wave 15 cannon-tree): the remembered cannon's own two rows per world
 const KITS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
 const WORLD_ONE := ["crater_heart", "quick_fuse", "muzzle_heart", "redline_spring", "rain_heart", "long_fuse", "taut_cable", "vice_heart",
-	"gutter_heart", "rake_heart", "oiled_flywheel", "return_spring", "kick_spring", "brace_pin"]
+	"gutter_heart", "rake_heart", "oiled_flywheel", "return_spring", "kick_spring", "brace_pin", "walking_lane", "rush_wake"]
 # W45-B2 U3: Tarn's kit swaps (Gutter Heart, Rake Heart) join World 1; Tally and the cannon follow
-# in U4 and U5, which add their own two each here.
-const WORLD_ONE_EXTRA := {"tarn": 2}
+# in U4 and U5, which add their own two each here (the cannon's are in).
+const WORLD_ONE_EXTRA := {"tarn": 2, "remembered_cannon": 2}
 # Different luck keys for the one cache, so its relic draw is checked over many picks.
 const DRAWS := 12
 const SETTLE_TICKS := 4

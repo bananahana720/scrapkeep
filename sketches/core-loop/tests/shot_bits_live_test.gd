@@ -223,7 +223,7 @@ func _check_no_bolt_weapons() -> void:
 	var base: String = abilities.id_of(AbilityState.WEAPON)
 	_hold(["hot_rivets", "arc_coil"], ShotBits.ALL)
 	var got := {}
-	for id in ["cannon_lane", "sticky_charge", "sticky_rain", "ledger_reader"]:
+	for id in ["cannon_lane", "cannon_lane_walk", "sticky_charge", "sticky_rain", "ledger_reader"]:
 		abilities.swap(AbilityState.WEAPON, id)
 		got[id] = [_build().shot_bits(), _build().dropped_shot_bits().size()]
 	abilities.swap(AbilityState.WEAPON, "claw_sweep")
