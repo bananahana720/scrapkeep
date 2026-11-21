@@ -54,6 +54,9 @@ const SKID_REFUND := 0.5
 # Tarn's rend turns the slam's outward shove into an inward pull this strong, so the
 # crowd lands in claw reach.
 const REND_PULL := 0.8
+# Gutter Heart (rend_drag): a machine no heavier than the ball slides to the crater centre over
+# this long; a heavier one holds. Machines move, the ball's own motion is never touched.
+const DRAG_SECONDS := 0.4
 const AIM_CONE_LENGTH := 5.0
 const AIM_CONE_HALF := 0.3
 # An aim mark starts this far from the ball's centre, clear of the cage, so it never draws over the ball.
@@ -108,6 +111,8 @@ var _cc_ignored_at := {}
 var immune_left := 0.0
 # The landing each smash flavour adds to the shared slam.
 var _smashes := {}
+# Gutter Heart slides in flight, by enemy instance id: {enemy, to, t}.
+var _drags := {}
 # The enemy a harpoon smash is landing on while that landing's strikes resolve; combat reads it.
 var smash_landing: Node3D
 # The harpoon chain; this player is its only writer (HOOK-CHAIN.md).
@@ -647,6 +652,7 @@ func grapple_range() -> float:
 
 func _physics_process(delta: float) -> void:
 	exceptions.step(delta)
+	_step_drags(delta)
 	source.poll(intent)
 	_route_slots(delta)
 	abilities.movement_key = _burst_key()
@@ -1442,6 +1448,9 @@ func _smash_demo(at: Vector3, _speed: float) -> void:
 
 # The shared slam already struck these enemies; the rend only pulls, so no second strike.
 func _smash_rend(at: Vector3, speed: float) -> void:
+	if abilities.cap(AbilityState.SMASH, "mutation", "") == "rend_drag":
+		_drag_in(at)
+		return
 	var strength := clampf(speed / 30.0, 0.4, 1.6)
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.has_method("is_dead") and enemy.is_dead():
@@ -1453,6 +1462,45 @@ func _smash_rend(at: Vector3, speed: float) -> void:
 		inward = inward.normalized() if inward.length() > 0.01 else Vector3.FORWARD
 		enemy.knock(inward + Vector3.UP * 0.2, Contact.heft_shove(Augments.SLAM_KNOCK * strength * REND_PULL, heft()))
 		enemy.flash()
+
+
+# Rend drag: every machine in the disc no heavier than the ball (Grip.heft_of, the weight rule of
+# POLES-FLAILS) starts a slide to the centre; a heavier one took the slam and holds. One inward
+# pull per landing, and nothing here reads or writes the ball's velocity.
+func _drag_in(at: Vector3) -> void:
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.has_method("is_dead") and enemy.is_dead():
+			continue
+		var flat: Vector3 = at - enemy.global_position
+		flat.y = 0.0
+		if flat.length() > slam_radius() or Grip.heft_of(enemy) > heft():
+			continue
+		_drags[enemy.get_instance_id()] = {"enemy": weakref(enemy), "to": at, "t": 0.0}
+		enemy.flash()
+
+
+# Closes each dragged machine's gap to the centre by the slide's share of this frame, so the
+# shove of the shared slam cannot carry it off the line and it arrives at DRAG_SECONDS. A body
+# the world blocks stops where it stands.
+func _step_drags(delta: float) -> void:
+	for id in _drags.keys():
+		var drag: Dictionary = _drags[id]
+		var enemy = drag["enemy"].get_ref()
+		if enemy == null or (enemy.has_method("is_dead") and enemy.is_dead()):
+			_drags.erase(id)
+			continue
+		var before: float = smoothstep(0.0, 1.0, drag["t"] / DRAG_SECONDS)
+		drag["t"] = minf(float(drag["t"]) + delta, DRAG_SECONDS)
+		var after: float = smoothstep(0.0, 1.0, drag["t"] / DRAG_SECONDS)
+		var gap: Vector3 = drag["to"] - enemy.global_position
+		gap.y = 0.0
+		var step: Vector3 = gap * (after - before) / maxf(1.0 - before, 0.0001)
+		if enemy is CharacterBody3D:
+			enemy.move_and_collide(step)
+		else:
+			enemy.global_position += step
+		if drag["t"] >= DRAG_SECONDS:
+			_drags.erase(id)
 
 
 # The shared slam already struck these enemies as "slam"; the stamp turns each one it

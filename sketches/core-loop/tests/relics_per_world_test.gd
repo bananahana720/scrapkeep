@@ -24,7 +24,10 @@ const PILOT := "demolitions_caster"
 # 2026-10-05 (alpha wave 15 cannon-tree): the remembered cannon's own two rows per world
 const KITS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
 const WORLD_ONE := ["crater_heart", "quick_fuse", "muzzle_heart", "redline_spring", "rain_heart", "long_fuse", "taut_cable", "vice_heart",
-	"oiled_flywheel", "return_spring", "kick_spring", "brace_pin"]
+	"gutter_heart", "rake_heart", "oiled_flywheel", "return_spring", "kick_spring", "brace_pin"]
+# W45-B2 U3: Tarn's kit swaps (Gutter Heart, Rake Heart) join World 1; Tally and the cannon follow
+# in U4 and U5, which add their own two each here.
+const WORLD_ONE_EXTRA := {"tarn": 2}
 # Different luck keys for the one cache, so its relic draw is checked over many picks.
 const DRAWS := 12
 const SETTLE_TICKS := 4
@@ -46,6 +49,11 @@ func _initialize() -> void:
 	root.add_child(_game)
 	_check_table()
 	_check_maps()
+
+
+# How many relics one pilot is offered in a world: two, plus that world's kit swaps.
+func _want(pilot: String, world: int) -> int:
+	return 2 + (int(WORLD_ONE_EXTRA.get(pilot, 0)) if world == 1 else 0)
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
@@ -70,15 +78,18 @@ func _check_table() -> void:
 			for kit in KITS:
 				if Relics.fits(id, kit):
 					per_kit[kit] = int(per_kit.get(kit, 0)) + 1
-		_report("world %d rows" % world, rows.size() == 2 * KITS.size() and per_kit.values().all(func(v): return v == 2) and per_kit.size() == KITS.size(),
+		var total := 0
+		for kit in KITS:
+			total += _want(kit, world)
+		_report("world %d rows" % world, rows.size() == total and KITS.all(func(k): return per_kit.get(k, 0) == _want(k, world)) and per_kit.size() == KITS.size(),
 			"%d rows, per kit %s" % [rows.size(), per_kit])
 		for pilot in Relics.PILOTS:
 			var pool := Relics.eligible(pilot, {}, null, world)
-			var own: bool = pool.size() == 2 and pool.all(func(i): return int(Relics.row(i)["world"]) == world)
+			var own: bool = pool.size() == _want(pilot, world) and pool.all(func(i): return int(Relics.row(i)["world"]) == world)
 			_report("world %d pool for %s" % [world, pilot], own, "%s" % [pool])
 	for pilot in Relics.PILOTS:
 		_report("world 0 is every world for " + pilot, Relics.eligible(pilot, {}, null, 0) == Relics.eligible(pilot, {})
-			and Relics.eligible(pilot, {}).size() == 6, "%s" % [Relics.eligible(pilot, {})])
+			and Relics.eligible(pilot, {}).size() == 6 + int(WORLD_ONE_EXTRA.get(pilot, 0)), "%s" % [Relics.eligible(pilot, {})])
 	var first := []
 	for pilot in Relics.PILOTS:
 		for id in Relics.eligible(pilot, {}, null, 1):
