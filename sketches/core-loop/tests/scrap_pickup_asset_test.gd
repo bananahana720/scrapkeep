@@ -15,7 +15,9 @@ const PanelShell := preload("res://src/build/panel_shell.gd")
 # Re-pinned 2026-11-11 (site markers, map audit unit 4): caches() also gives each rib cache's drop ground, kept from drop_panel; lay_out, magnet, collection, value and timing unchanged.
 # Re-pinned 2026-11-12 (W1-21, models for the cog and the dropped panel): drop_panel draws the panel's kit plate and
 # ground_plate builds it; lay_out, magnet, collection, value and timing unchanged.
-const LOGIC_SHA := "32c871a5590bf16268ff136524858e3d8a409023567442cd80cbaa933af72d8c"
+# Re-pinned 2026-11-21 (W45 perf unit 1): step() writes no spin to an uncaught pickup past SPIN_RANGE (120 m);
+# lay_out, magnet, collection, value, timing and every near spin unchanged.
+const LOGIC_SHA := "fac20ceea02b7d1accc9912231f7dd5cbc5df22db3c363341b617062961c04a7"
 
 var failures: Array[String] = []
 var game

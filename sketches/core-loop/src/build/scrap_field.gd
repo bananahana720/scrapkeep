@@ -102,6 +102,8 @@ var _trail := {}
 var _cache_column: CylinderMesh
 const CACHE_COLUMN := 14.0
 const CACHE_HEAR := 45.0
+# Past this distance an uncaught pickup holds its last turn, so the far field writes no transforms.
+const SPIN_RANGE := 120.0
 
 var _value := {}
 var _age := {}
@@ -588,7 +590,8 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 				item.global_position += (offset / distance + side * ARC_SIDE * far + Vector3.UP * ARC_LIFT * far) * home * delta
 				item.scale = Vector3.ONE * clampf(distance / reach, 0.45, 1.0)
 			# A panel turns upright so its light column stays a column.
-			item.rotation = Vector3(0.0 if _panels.has(item) else _spin * 0.7, _spin, 0.0)
+			if distance <= SPIN_RANGE or _caught.has(item):
+				item.rotation = Vector3(0.0 if _panels.has(item) else _spin * 0.7, _spin, 0.0)
 		i -= 1
 	return taken
 
@@ -674,6 +677,8 @@ func _add(at: Vector3, mesh: Mesh = null, material: Material = null) -> MeshInst
 	var item := MeshInstance3D.new()
 	item.mesh = mesh if mesh != null else _mesh
 	item.material_override = material if material != null else _material
+	# A pickup glows over the ground; its shadow is a draw nobody reads.
+	item.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	if not _pickup_mesh_cache.is_empty() and (mesh == null or mesh == _cluster_mesh):
 		# Position is already seeded by the field; visual selection never draws RNG.
 		var seed_key := "%d:%d:%d" % [roundi(at.x * 1000.0), roundi(at.y * 1000.0), roundi(at.z * 1000.0)]

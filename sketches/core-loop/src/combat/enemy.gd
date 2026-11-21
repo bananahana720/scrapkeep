@@ -949,6 +949,7 @@ func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
 		box.size = Vector3(0.09, size * 0.45, 0.06)
 		stroke.mesh = box
 		stroke.material_override = mat
+		stroke.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		stroke.position = Vector3((i - 1) * size * 0.18, (1 - i) * size * 0.28, 0.0)
 		stroke.rotation.z = 0.6 if i % 2 == 0 else -0.6
 		glyph.add_child(stroke)

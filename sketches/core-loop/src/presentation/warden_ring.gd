@@ -92,6 +92,9 @@ func bind(warden: Node3D) -> void:
 	_crack_mark.material_override = _mark_material
 	_mark_material.render_priority = PRIORITY + 2
 	add_child(_crack_mark)
+	# Flat unshaded ground marks cast nothing.
+	for mark: MeshInstance3D in find_children("*", "MeshInstance3D", false, false):
+		mark.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# The first ground fit waits FIRST_FIT_FRAMES frames: a Warden spawns on its stage's entry tick, and
 	# the ring's first _process runs in that same frame, where reading the ground at its ~740 points cost
 	# 14 ms of the flume's entry on the cloud (scrapkeep#494). Until then the ring is hidden.
