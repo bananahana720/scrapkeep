@@ -21,7 +21,7 @@ var _t := T.new("w45_verb_items_test")
 
 const IDS := ["backwash", "barbed_reel", "faultline_cap", "second_bell", "long_leash"]
 const EXPECTED := {
-	"backwash": {"maker": "spillway_works", "rarity": "uncommon", "touches": "movement", "base": "mobility",
+	"backwash": {"maker": "spillway_works", "rarity": "uncommon", "touches": "boost", "base": "mobility",
 		"effect_do": "dash_wake"},
 	"barbed_reel": {"maker": "redjaw", "rarity": "rare", "touches": "harpoon", "base": "weapon",
 		"effect_do": "reel_chain"},

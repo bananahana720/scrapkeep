@@ -168,9 +168,10 @@ func _check_label() -> void:
 # 2026-10-15 (wave 14 SQ19b, coordinator ruling): Tally's winch_pawl carries anchor (the winch
 # and harpoon family); was anchor 18
 # 2026-10-22 (alpha wave 19, earned save): spare_frame carries mass and anchor; was anchor 19, mass 36
+# 2026-11-21 (wave 45 U7): 5 verb items; was arc 16, kinetic 20, chain 9, anchor 20, speed 32, mass 37
 # 2026-11-21 (wave 45 U6): Slag Pike carries kinetic and Halo Rig split; was kinetic 19, split 5
-const TAG_COUNTS := {"frost": 5, "arc": 16, "kinetic": 20, "split": 6, "spiral": 8, "chain": 9, "anchor": 20,
-	"speed": 32, "mass": 37}
+const TAG_COUNTS := {"frost": 5, "arc": 17, "kinetic": 22, "split": 6, "spiral": 8, "chain": 10, "anchor": 21,
+	"speed": 33, "mass": 38}
 const KINETIC_SHARE_MAX := 0.25
 
 
@@ -248,8 +249,9 @@ func _check_table_present() -> void:
 	var bowling: int = Items.TABLE.values().filter(func(r): return r.get("bwl", false)).size()
 	var happy: int = Items.TABLE.values().filter(func(r): return r.get("happy", false)).size()
 	var charge: int = Items.TABLE.values().filter(func(r): return r.get("base", "") == "charge" and not r.get("happy", false)).size()
-	_report("64-item table in the pool", missing.is_empty() and table == 64 and bowling == 8 and happy == 5 and charge == 8,
-		"%d table items (61 new + 3 pattern rows), %d authored rows in all; bowling %d, happy accidents %d, charge %d; missing %s"
+	# 2026-11-21 (wave 45 U7): 69 items (64 + 5 verb items); was 64.
+	_report("69-item table in the pool", missing.is_empty() and table == 69 and bowling == 8 and happy == 5 and charge == 8,
+		"%d table items (66 new + 3 pattern rows), %d authored rows in all; bowling %d, happy accidents %d, charge %d; missing %s"
 			% [table, Parts.ids().size(), bowling, happy, charge, missing])
 
 

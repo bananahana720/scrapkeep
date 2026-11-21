@@ -91,7 +91,7 @@ const TABLE := {
 
 	# Wave 45 U7 (ABILITY-MUTATIONS.md C3–C7): five verb items, each a closed-table row in
 	# item_effects.gd with a small call site in its owning module. None changes movement.
-	"backwash": {"maker": "spillway_works", "touches": "movement", "base": "mobility", "rarity": "uncommon", "stack": "capped", "cap": 1, "tags": ["speed"],
+	"backwash": {"maker": "spillway_works", "touches": "boost", "base": "mobility", "rarity": "uncommon", "stack": "capped", "cap": 1, "tags": ["speed"],
 		"verb": "Dashing leaves a ripple strip behind", "text": "Dash lays a 4 m 0.4x strip",
 		"effect": {"do": "dash_wake", "length": 4.0, "share": 0.4}},
 	"barbed_reel": {"maker": "redjaw", "touches": "harpoon", "base": "weapon", "rarity": "rare", "stack": "capped", "cap": 1, "tags": ["kinetic", "chain"],
