@@ -11,7 +11,7 @@ The covered file: `sketches/core-loop/src/world/event_director.gd`.
 | `Announce` | `_advance_park`: a `WAITING` or `COOLDOWN` row is picked and becomes `ANNOUNCED` |
 | `Land` | `_advance_park`: an `ANNOUNCED` row whose time has come lands when `_park_capacity`, `_park_clear` and `_park_route_safe` all hold; `live_elapsed_s`, `rise_s` and `collapse_s` reset |
 | `Step` | `_park_step_live`, one call |
-| `Step`, the live time is up | the first branch of `_park_step_live`: end when `_park_can_end`, else return |
+| `Step`, the live time is up | `_park_step_live`'s `expired`: end when `_park_can_end`; else the flood keeps running in full with the live clock held at its end, through the same wait, step hook and rise as before its end (60e2fccf5, finding PF-2) |
 | `Step`, `waits` | the early return while the water is rising, `_park_clear` is false and the wait is not spent (`_park_hold_spent`): the family's `step` hook is not called and the rise does not advance; each such tick adds to `waited_s` |
 | `Spent`, `waited` | `_park_in_footprint` and `_park_hold_spent`: with a ball in the footprint, grounded or not, `waited_s` counts each tick the step gate waits; once it reaches `PARK_FLOOD_HOLD_CAP_S` (2 s) while the water still rises, the step gate lets the water rise around the ball. `_park_clear` and so `_park_can_end` are untouched: a flood never ends under a ball. `waited_s` resets when the flood lands (W1-148) |
 | `Rose` | `rise_s` advances through `_park_clock` and stops at `fill_s` |
@@ -31,6 +31,7 @@ The covered file: `sketches/core-loop/src/world/event_director.gd`.
 | `EndWhenSpent` | no guard in the code: the plant for the fault the W1-148 review found, a spent wait letting the flood end under the ball | `flood-broken-endspent` (`Fill` 3, `Live` 2, so `Fill > Live - HoldTicks`) | `NeverEndsUnderBall` |
 | `EndNeedsClear` | `_park_can_end` | `flood-broken-endunder` | `NeverEndsUnderBall` |
 | `CapGuard` | `_park_capacity` against `PARK_GROUND_CAP` | `flood-broken-nocap` | `WithinCap` |
+| `StepPastExpiry` | `_park_step_live` past its live time does not return when the flood cannot end: `dt` is the whole tick and the step goes on (60e2fccf5) | `flood-broken-endstop`, and `flood-broken-endstop-hold` (`Fill` 3, `Live` 2) | `FullWaterNeverHeld`, `HoldEnds` |
 
 ## Ticks and seconds
 
@@ -44,10 +45,11 @@ Run `bash models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg` wi
 | --- | --- | --- |
 | `flood-today-timed` | the code, with a live time as every real flood row has | no break, in at least the pinned 31,616 distinct states |
 | `flood-today-noclock` | the code, for a flood with `live_s` 0 (the shape some test rows use) | no break, in at least the pinned 1,792 distinct states |
-| `flood-today-longfill` | the code, for a fill that outlasts the live time less the wait (`Fill` 3, `Live` 2) | no break, in at least the pinned 14,336 distinct states; `HoldEnds` is not claimed here, because a ball parked to the live end leaves the water part risen until it rolls out |
+| `flood-today-longfill` | the code, for a fill that outlasts the live time less the wait (`Fill` 3, `Live` 2) | no break, in at least the pinned 63,392 distinct states, `HoldEnds` included: since 60e2fccf5 water under a parked ball goes on rising past the live time (before it, 14,336 states and `HoldEnds` not claimed) |
 | `flood-broken-*` | one guard off, as the Guards table lists | the named rule breaks |
 | `flood-broken-nohold` | the cap on the wait removed, asked without the ball leaving | `HoldEnds` breaks: finding PF-1 in [flood-findings.md](flood-findings.md), closed by W1-148 |
-| `flood-reach-timed-*`, `flood-reach-noclock-*` | one probe each that says "never" about a thing that must happen | the probe breaks; one that holds means an action can no longer fire |
+| `flood-broken-endstop`, `flood-broken-endstop-hold` | the code before 60e2fccf5: past its live time a flood the ball keeps from ending is not stepped | `FullWaterNeverHeld` breaks (full water stops acting on the ball), and with the long fill `HoldEnds` breaks (water under a parked ball stops rising): finding PF-2, closed by 60e2fccf5 |
+| `flood-reach-timed-*`, `flood-reach-noclock-*`, `flood-reach-longfill-Full` | one probe each that says "never" about a thing that must happen; `flood-reach-longfill-Full` reaches full water only by a step past the live time | the probe breaks; one that holds means an action can no longer fire |
 
 `FloodEnds` and `AnnouncedLands` are checked under the condition that the ball in the end stays out of every basin. They say nothing about a ball that never leaves; `HoldEnds` asks that: with the wait capped, a live flood's water finishes rising or the flood ends, ball or no ball.
 
@@ -59,4 +61,4 @@ Run `bash models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg` wi
 
 Weather rows, collapses and cave-ins (a collapse's clock goes through the same `_park_clock` as the rise and `sketches/core-loop/tests/park_events_test.gd` sweeps it, but the model has no collapse), the drain, the quiet window after a Warden phase breaks, the bar the landing waits for, the route check (`_park_route_safe` is taken as true), the travel margin around a footprint (`hold_clear_m` and the ball's speed), a row with `once` true, the stage ending under a live flood (`end_all`), what the `step` hook does with the water, and anything drawn or heard.
 
-Sync commit: 5ac54c6ee (branch w44/W1-148-held-flood, W1-148, 18 November 2026, the wait for a parked ball capped at 2 s; the step gate tidied with no change in behaviour, every flood config rerun)
+Sync commit: 1c94e96b5 (branch stage/alpha-w45, 21 November 2026: 60e2fccf5 (W45-A) keeps stepping a flood past its live time while the ball keeps it from ending, modelled as `StepPastExpiry`, which closes PF-2; every flood config rerun. Before it, 5ac54c6ee, W1-148)

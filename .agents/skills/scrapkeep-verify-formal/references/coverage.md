@@ -54,4 +54,4 @@ Each action in the model (`RunFlow.tla`, in the `models` folder beside this one)
 
 The model was last confirmed to describe the code at:
 
-`5935c2ce8` (branch w44/hazards-hit-everyone, 18 November 2026: only the kill-trigger flag in `sketches/core-loop/src/core/run_state.gd` and `sketches/core-loop/src/build/build.gd` changed, outside the modelled steps; before it, `2d1bbd4ff` and `bbd157f44`)
+`1c94e96b5` (branch stage/alpha-w45, 21 November 2026: of the covered files only `sketches/core-loop/src/build/build.gd` changed since `5935c2ce8`, adding the pure ShotBits fold (`shot_bits`, `dropped_shot_bits`, `_shot_fold`, `_weapon_fires_bolts`, `_fold_shot_masks`, called from `recompute`), which reads held parts and writes only its own cache, outside the modelled steps (no flow, swipe, take, retry or run-end state); before it, `5935c2ce8`, `2d1bbd4ff` and `bbd157f44`)
