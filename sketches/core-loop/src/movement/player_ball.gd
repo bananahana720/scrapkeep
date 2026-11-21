@@ -616,7 +616,7 @@ func _on_piece_shattered(bounds: AABB) -> void:
 		kit.mount_block = Augments.MOUNT_COOLDOWN
 		kit.dismount_velocity = Vector3.ZERO
 		kit.dismount_fired = true
-	if kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE and _point_in_shattered(bounds, kit.aim["point"]):
+	if kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE and kit.aim.get("body") == null and _point_in_shattered(bounds, kit.aim["point"]):
 		kit.aim = Augments.no_aim()
 
 
