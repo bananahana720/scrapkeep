@@ -16,7 +16,7 @@ The covered files:
 
 | Model step | Code |
 | --- | --- |
-| `Write(doc)`, `Save(p, s)` | flow.gd `_save(doc)`: while `_save_spend_owed`, the doc gets `death_save_spent = true`; `store.save` lands it or returns `write_failed` with the file as it was; a write that lands with the flag clears the debt |
+| `Write(doc)`, `Save(i, p, s)` | flow.gd `_save(doc)`: while `_save_spend_owed`, the doc gets `death_save_spent = true`; `store.save` lands it or returns `write_failed` with the file as it was; a write that lands with the flag clears the debt |
 | `Flush` | `_flush_save_spend`: `_save_spend_owed and store != null and not _entrance.is_empty()` -> `_entrance["death_save_spent"] = true` and `_save(_entrance)` |
 | `NewRun` | `new_run` -> `_begin_run`, from the title (`choose_class`), the summary, the pause menu's Restart or a held R in play (`step_restart_hold`): `_save_spend_owed = false` with no flush, `run.begin`, `enter_stage` writes the first entrance; a refused one leaves the old run on the file (finding ES-3). The model gives each run an id, so `SaveOnce` counts the saves of the run a Continue loads |
 | `TakePart` | a gate's reward adds the Spare Frame to the run in memory |

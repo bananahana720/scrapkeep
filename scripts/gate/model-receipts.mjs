@@ -13,8 +13,7 @@
 // A gap the model cannot see is named in measured on every run. An open finding the code still has is a gap too: its
 // row runs the code's configs with the finding's trigger left out, as the flood row does for PF-3 and the earned
 // save row does for ES-2 and ES-3 (earnedsave-es2-only and earnedsave-today-inprocess break), and swaps in the full
-// config once the fix lands, as
-// the yard lock row did when P7 closed YL-1 and YL-2.
+// config once the fix lands, as the yard lock row did when P7 closed YL-1 and YL-2.
 //
 //   node scripts/gate/model-receipts.mjs --out <dir> [--row <id>] [--jar <tla2tools.jar>] [--workers <n>] [--timeout-min <n>]
 //
