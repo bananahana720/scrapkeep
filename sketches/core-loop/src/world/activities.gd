@@ -330,6 +330,8 @@ const SURGE_WORDS := {
 # One standing activity: its rule, its look, its state and, once it has finished, its pay.
 class Site extends Node3D:
 	var id := ""
+	# The park row it stands at ("" for a site no row authors).
+	var row_id := ""
 	var rule := {}
 	var view
 	var done := false
@@ -462,15 +464,19 @@ class MendWard extends Node3D:
 				enemy.queue_free()
 
 
-# A lore plate (W45 P3, secrets.gd PLATES): a flush bronze disc at a row's fragment. The ball rolling over it files
-# its field note once; the disc then goes dark. touch() is the rule: true only the first time.
+# A lore plate (W45 P3, secrets.gd PLATES): a flush disc at a row's fragment, set on the surface the ball rolls on
+# there and tilted to it (terrain.gd top_surface). Unread, an amber face stands proud of a charcoal rim and glows
+# faintly: the dark rim reads on pale ground, the amber on dark. The ball rolling over it files its field note once;
+# the face then sinks flush and goes to bare copper. touch() is the rule: true only the first time.
 class LorePlate extends Node3D:
 	const REACH_M := 2.6
 	const HEIGHT_M := 3.0
 
 	var note := ""
 	var read := false
-	var disc: MeshInstance3D
+	var seated := false
+	var at := Vector2.ZERO
+	var face: MeshInstance3D
 
 	func touch() -> bool:
 		if read:
@@ -1010,6 +1016,7 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	var s := Site.new()
 	s.id = id
+	s.row_id = String(spec.get("row", ""))
 	s.rule = RULES[id]
 	s.interior = spec.get("interior", {})
 	s.drawn = spec.get("drawn", false)
@@ -2714,11 +2721,18 @@ static func far_pool(class_id: String, held: Array) -> Array:
 
 
 func _far_roll(s: Site) -> String:
-	var pool := far_pool(ctx.run.class_id(), ctx.run.parts)
+	return _far_pick(s, far_pool(ctx.run.class_id(), ctx.run.parts))
+
+
+# Seeded by the park row, so two far caches in one stage (the Dam's rim and incline caches share the cache's luck id)
+# roll apart; a site no row authors keeps its luck id. A pool with nothing left in it (no pilot's is today: every
+# cobalt weapon is unlevelled, so none is ever held at the top) rolls the rung itself.
+func _far_pick(s: Site, pool: Array) -> String:
+	var stream := s.row_id if s.row_id != "" else _luck_id(s)
 	if pool.is_empty():
-		return _roll(_luck_id(s), FAR_RUNG)
+		return _roll(stream, FAR_RUNG)
 	var rng := RandomNumberGenerator.new()
-	rng.seed = Interact.luck_seed(ctx.rng.seed, ctx.run.run_id, ctx.run.stage, _luck_id(s))
+	rng.seed = Interact.luck_seed(ctx.rng.seed, ctx.run.run_id, ctx.run.stage, stream)
 	return String(pool[rng.randi_range(0, pool.size() - 1)])
 
 
@@ -2728,6 +2742,10 @@ const WARD_POST := Vector3(0.9, 2.4, 0.9)
 const WARD_RING_H := 0.08
 const PLATE_RADIUS := 1.1
 const PLATE_H := 0.1
+# The lit face: its radius, and how far it stands proud of the rim until it is read.
+const PLATE_FACE_RADIUS := 0.78
+const PLATE_FACE_RAISE := 0.06
+const PLATE_GLOW := 0.6
 
 
 func _build_wards_and_plates(map) -> void:
@@ -2763,23 +2781,52 @@ func _build_plate(spec: Dictionary) -> LorePlate:
 	var p := LorePlate.new()
 	p.name = "Plate_" + String(spec["fragment"])
 	p.note = String(spec["note"])
+	p.at = spec["at"]
 	add_child(p)
-	var at: Vector2 = spec["at"]
-	p.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
-	p.disc = MeshInstance3D.new()
+	p.global_position = Vector3(p.at.x, ctx.terrain.height(p.at.x, p.at.y), p.at.y)
+	var rim := MeshInstance3D.new()
 	var disc := CylinderMesh.new()
 	disc.top_radius = PLATE_RADIUS
 	disc.bottom_radius = PLATE_RADIUS * 1.08
 	disc.height = PLATE_H
-	p.disc.mesh = disc
-	p.disc.material_override = _solid(Palette.COPPER)
-	p.disc.position = Vector3.UP * PLATE_H * 0.5
-	p.add_child(p.disc)
-	# A known note's plate is dark from the start: the disc is the fact, not a prompt.
-	if ctx.get("codex") != null and ctx.codex.known(p.note):
-		p.read = true
-		p.disc.material_override = _solid(Palette.REDJAW_ASH)
+	rim.mesh = disc
+	rim.material_override = _solid(Palette.CHARCOAL)
+	rim.position = Vector3.UP * PLATE_H * 0.5
+	p.add_child(rim)
+	p.face = MeshInstance3D.new()
+	var face := CylinderMesh.new()
+	face.top_radius = PLATE_FACE_RADIUS
+	face.bottom_radius = PLATE_FACE_RADIUS
+	face.height = PLATE_H
+	p.face.mesh = face
+	p.add_child(p.face)
+	# A known note's plate is spent from the start: the disc is the fact, not a prompt.
+	p.read = ctx.get("codex") != null and ctx.codex.known(p.note)
+	_show_plate(p)
+	_seat_plate(p)
 	return p
+
+
+# The plate stands on the surface a ball rolling there stands on, tilted to it. Until the stage's colliders can be
+# asked (the rows still placing, or the stage just brought up), it waits hidden, and the next tick asks again.
+func _seat_plate(p: LorePlate) -> void:
+	var seat: Dictionary = ctx.terrain.top_surface(p.at.x, p.at.y, PLATE_RADIUS * 1.08)
+	p.seated = not seat.is_empty()
+	p.visible = p.seated
+	if p.seated:
+		p.global_transform = Transform3D(Basis(Quaternion(Vector3.UP, seat.normal)), seat.point)
+
+
+# Unread, the amber face stands proud and glows; read, it sinks flush with the rim and goes to bare copper.
+func _show_plate(p: LorePlate) -> void:
+	if p.read:
+		p.face.material_override = _solid(Palette.COPPER)
+		p.face.position = Vector3.UP * (PLATE_H * 0.5 + 0.005)
+		return
+	if not _parts.has("plate_glow"):
+		_parts["plate_glow"] = Palette.solid(Palette.AMBER, PLATE_GLOW)
+	p.face.material_override = _parts["plate_glow"]
+	p.face.position = Vector3.UP * (PLATE_H * 0.5 + PLATE_FACE_RAISE)
 
 
 func _watch_ward(w: MendWard, delta: float, ball: Vector3) -> void:
@@ -2818,24 +2865,32 @@ func _ward_cue(kind: String) -> void:
 		presentation.audio.play(kind)
 
 
+# The ball's centre within REACH_M of the plate's axis and within HEIGHT_M of its face, both read in the plate's
+# own tilt: a ball on a sloped plate is over it, and one on the ground under a deck plate is not.
 func _watch_plate(p: LorePlate, ball: Vector3) -> void:
-	if not is_instance_valid(p) or p.read:
+	if not is_instance_valid(p):
 		return
-	if _planar(ball, p.global_position) > LorePlate.REACH_M or absf(ball.y - p.global_position.y) > LorePlate.HEIGHT_M:
+	if not p.seated:
+		_seat_plate(p)
+	if p.read or not p.seated:
+		return
+	var offset := ball - p.global_position
+	var up := p.global_basis.y.normalized()
+	var rise := offset.dot(up)
+	if (offset - up * rise).length() > LorePlate.REACH_M or absf(rise) > LorePlate.HEIGHT_M:
 		return
 	read_plate(p)
 
 
-# The ball rolled over a plate: its note is filed once (the codex's quiet record, then the HUD's note pulse), the
-# lore chime plays, and the disc goes dark. True when this touch filed it.
+# The ball rolled over a plate: the codex files its note (its quiet record, then the HUD's note pulse), the lore
+# chime plays, and the face sinks to bare copper. True when this touch filed it.
 func read_plate(p: LorePlate) -> bool:
 	if not p.touch():
 		return false
-	p.disc.material_override = _solid(Palette.REDJAW_ASH)
+	_show_plate(p)
 	var codex = ctx.get("codex")
-	if codex == null or not codex.mark_known(p.note):
+	if codex == null or not codex.file_note(p.note):
 		return false
-	codex.lore_found.emit(p.note)
 	var presentation: Node = ctx.root.get_node_or_null("Presentation")
 	if presentation != null:
 		presentation.audio.play("interaction_found", 0.0, 1.0, "SFX", "lore_found")

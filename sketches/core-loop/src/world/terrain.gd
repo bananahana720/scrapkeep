@@ -73,6 +73,8 @@ var _roots: Array = []
 var _heights: Array[PackedFloat32Array] = []
 var _worlds: Array[int] = []
 var _parent: Node3D
+# The physics frame use() last brought a stage up in (top_surface waits SETTLE_FRAMES past it).
+var _used_frame := -1000
 var _arena := false
 # Per global stage: whether it stands on a park file, its park ground node (null until built
 # or preparing), and its hole cells and their floors (empty off the park).
@@ -384,6 +386,7 @@ func _ensure(index: int) -> int:
 # trimesh back to the world rebuilds its tree (measured at about 34 ms a swap).
 func use(index: int) -> void:
 	var started := Time.get_ticks_usec()
+	_used_frame = Engine.get_physics_frames()
 	# Park stages that are neither the target nor its next leave first, so a target that is
 	# not resident (a new run back on stage 1) finds a free Terrain3D render node to draw into.
 	var target := _index(index)
@@ -565,6 +568,71 @@ func floor_height(x: float, z: float) -> float:
 
 func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 	return Vector3(x, height(x, z) + clearance, z)
+
+
+# The surface a ball rolling at (x, z) stands on, as {"point", "normal"}: the highest world collider face within
+# SURFACE_REACH_M over height() (a deck, a prop's top, a landed sheet or the ground's own tiles), else height() and
+# its slope. With a radius, the normal is the plane that fits that surface over the disc of that radius, and the
+# point lies on the plane under (x, z), lowered to the disc's lowest sample, so a flat disc set on it stands proud
+# nowhere. {} while the stage's colliders are not yet where a query finds them: its rows still placing, or the
+# stage brought up from parking under SETTLE_FRAMES physics frames ago (a moved body answers from its old place
+# until the next step); ask again on a later tick.
+const SURFACE_REACH_M := 40.0
+const SETTLE_FRAMES := 2
+const SURFACE_RING := 16
+
+
+func top_surface(x: float, z: float, radius := 0.0) -> Dictionary:
+	if not rows_ready(stage) or Engine.get_physics_frames() < _used_frame + SETTLE_FRAMES:
+		return {}
+	var space: PhysicsDirectSpaceState3D = null
+	if _parent != null and _parent.is_inside_tree():
+		space = _parent.get_world_3d().direct_space_state
+	var centre := _surface_hit(space, x, z)
+	if radius <= 0.0:
+		return centre
+	# A least-squares plane y = a + b dx + c dz through the centre and a ring of samples.
+	var samples: Array[Vector3] = [centre.point]
+	for k in SURFACE_RING:
+		var angle := TAU * float(k) / float(SURFACE_RING)
+		samples.append(_surface_hit(space, x + cos(angle) * radius, z + sin(angle) * radius).point)
+	var sxx := 0.0
+	var szz := 0.0
+	var sxy := 0.0
+	var szy := 0.0
+	var mean_y := 0.0
+	for p in samples:
+		mean_y += p.y
+	mean_y /= float(samples.size())
+	for p in samples:
+		sxx += (p.x - x) * (p.x - x)
+		szz += (p.z - z) * (p.z - z)
+		sxy += (p.x - x) * (p.y - mean_y)
+		szy += (p.z - z) * (p.y - mean_y)
+	# The ring is symmetric about (x, z), so the cross terms vanish and each slope is its own ratio.
+	var b := sxy / sxx
+	var c := szy / szz
+	var lowest := INF
+	for p in samples:
+		lowest = minf(lowest, p.y - (mean_y + b * (p.x - x) + c * (p.z - z)))
+	return {"point": Vector3(x, mean_y + lowest, z), "normal": Vector3(-b, 1.0, -c).normalized()}
+
+
+func _surface_hit(space: PhysicsDirectSpaceState3D, x: float, z: float) -> Dictionary:
+	var ground := height(x, z)
+	if space != null:
+		var query := PhysicsRayQueryParameters3D.create(Vector3(x, ground + SURFACE_REACH_M, z), Vector3(x, ground - 1.0, z), 1)
+		# A ball or a mast on the world layer is not ground: only static bodies count.
+		for i in 4:
+			var hit := space.intersect_ray(query)
+			if hit.is_empty():
+				break
+			if hit.collider is StaticBody3D:
+				return {"point": hit.position, "normal": hit.normal}
+			query.exclude = query.exclude + [hit.rid]
+	var e := STEP * 0.25
+	var normal := Vector3(height(x - e, z) - height(x + e, z), 2.0 * e, height(x, z - e) - height(x, z + e)).normalized()
+	return {"point": Vector3(x, ground, z), "normal": normal}
 
 
 # A perch top for the Dispatcher within PerchPoints.RANGE_M of `point`: a park post top or a landform
