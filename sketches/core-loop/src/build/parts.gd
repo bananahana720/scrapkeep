@@ -380,9 +380,14 @@ const HOTWIRED := {
 # One common part's recycle value in cogs (design-v3/research/economy/ECONOMY.md, Cogs: recycling).
 const RECYCLE_COMMON := 10
 
-# The four Evolved parts (their ingredient pairs are Synergies.EVOLUTIONS). Not in CATALOGUE, so
+# The seven Evolved parts (their ingredient pairs are Synergies.EVOLUTIONS). Not in CATALOGUE, so
 # they never enter rows(), ids(), offer_pool(), roll() or roll_gate(): build.gd grants one when
 # both ingredients are held (source "evolution"). Rarity evolved carries roll weight 0 too.
+# The first four fold numbers. VERB_EVOLVED rewrite a verb in combat instead and fold nothing
+# (design-v3/ABILITY-MUTATIONS.md section 7 D): Grapeshot Press tightens split children to a
+# forward knockback cone, Hoar Barrel frosts what a piercing shot hits and bursts the ice it
+# crosses, Fault Hammer rings a delayed aftershock after a slam. Their "bits": [] keeps their tags
+# from adding a shot bit (the ingredients already carry theirs, ABILITY-MUTATIONS section 8).
 const EVOLVED := {
 	"breaker_drive": {"name": "Breaker Drive", "verb": "Hit 35% harder, +8 punch", "text": "+8 punch, +35% weapon damage. From Wrecking Ball.",
 		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["kinetic", "speed"], "punch": 8.0,
@@ -396,7 +401,14 @@ const EVOLVED := {
 	"grounding_spike": {"name": "Grounding Spike", "verb": "Hit 25% harder, +8 punch", "text": "+8 punch, +25% weapon damage. From Lightning Rod.",
 		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["arc", "mass"], "punch": 8.0,
 		"mods": {"weapon_damage": 1.25}},
+	"grapeshot_press": {"name": "Grapeshot Press", "verb": "Splits fly tight and knock back", "text": "Tight splits knock machines back. From Shrapnel Bloom.",
+		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["split", "kinetic"], "bits": []},
+	"hoar_barrel": {"name": "Hoar Barrel", "verb": "Piercing shots frost and burst ice", "text": "Pierce frosts machines, bursts ice. From Shatter Crew.",
+		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["frost", "kinetic"], "bits": []},
+	"fault_hammer": {"name": "Fault Hammer", "verb": "Slams ring a delayed aftershock", "text": "Half-damage aftershock shatters ice. From Thermal Shock.",
+		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["mass", "frost"], "bits": []},
 }
+const VERB_EVOLVED := ["grapeshot_press", "hoar_barrel", "fault_hammer"]
 
 static var _defs := {}
 static var _run_ref: WeakRef
@@ -482,7 +494,12 @@ static func _base_row(part_id: String) -> Dictionary:
 	if not authored.is_empty():
 		return authored
 	if EVOLVED.has(part_id):
-		return _settled(EVOLVED[part_id])
+		# A verb evolution folds no number, so the plain-row demotion would read it as a scalar;
+		# its rule lives in combat, and it keeps the evolved rung.
+		var evolved := _settled(EVOLVED[part_id])
+		if part_id in VERB_EVOLVED:
+			evolved["rarity"] = String(EVOLVED[part_id]["rarity"])
+		return evolved
 	if is_burden(part_id):
 		return _settled(_burden_spec(part_id))
 	if Relics.is_relic(part_id):

@@ -3,6 +3,7 @@ extends Node3D
 const Elements := preload("res://src/build/elements.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # Melting ice blinks at this rate; reduce flashes slows it to FlashGuard's cap.
 const ICE_BLINK_HZ := 28.0 / TAU
@@ -20,6 +21,9 @@ signal resolved(result: Dictionary)
 # SG2: a pair of statuses fused on an enemy, at the frame it commits its area (the result
 # carries behaviour, kind, at, radius, seconds, damage and the drawn preview node).
 signal fused(result: Dictionary)
+# Hoar Barrel: a crossed slab burst into a forward shard cone, the one record that was drawn (its
+# node) and struck (its machines): {at, dir, length, half_angle, damage, struck, node}.
+signal shard_cone(cone: Dictionary)
 
 const ICE := Color("c8f0ff")
 const FROST := Color("e9f8ff")
@@ -37,6 +41,21 @@ const SHARD_SECONDS := 0.45
 const PUFF_SECONDS := 0.4
 const MAX_ZAPS := 12
 const ZAP_SECONDS := 0.12
+# Hoar Barrel's shard cone (design-v3/ABILITY-MUTATIONS.md section 7 D, start values): a slab a
+# piercing shot crosses bursts forward along the shot, from the slab's centre. The drawn wedge is
+# the committed record; the hit test forgives AbilityState.FORGIVENESS past its edge, never more.
+const SHARD_CONE_LENGTH := 7.0
+const SHARD_CONE_DEG := 28.0
+# How far above a slab's top a shot still crosses it, and how far above or below the apex a
+# machine still stands in the cone: a shot high over the ice never touches it.
+const CROSS_HEIGHT := 2.5
+const CONE_HEIGHT := 3.0
+# A slab whose top is within this of the ball's underside is the one it stands on.
+const STAND_GAP := 1.0
+# The strike kind an evolution's shatter lands as: the build's own (combat SYNERGY), which
+# Triggers.STRIKE_PROC holds at 0 and Elements.STATUS_KINDS does not list, so it starts no proc,
+# no status and no fusion (proc depth 1, ABILITY-MUTATIONS.md section 8).
+const EVOLUTION_STRIKE := "synergy"
 
 var ctx
 # Multiplies shatter damage; build sets it from the sheet (Thermal Shock doubles it).
@@ -61,6 +80,8 @@ var _statuses := {}
 var _fusions: Array[Dictionary] = []
 var _held := {}
 var _preview_mesh: ArrayMesh
+# Each created slab's id, so a caller can name a slab it made without holding its record.
+var _next_slab := 0
 
 
 func setup(ctx_ref) -> void:
@@ -150,7 +171,12 @@ func material_at(point: Vector3, reach := REACH) -> Dictionary:
 # result in the world and return it ({} when nothing happens).
 func apply(element_id: String, at: Vector3, source := "") -> Dictionary:
 	if element_id in Elements.TOUCH_ELEMENTS:
-		_touch_near(element_id, at)
+		_touch_near(element_id, at, Elements.TOUCH_RADIUS)
+	return _resolve(element_id, at, source)
+
+
+# The table, once, at a point: what the element does to the material there.
+func _resolve(element_id: String, at: Vector3, source: String) -> Dictionary:
 	var hit := material_at(at)
 	if hit.is_empty():
 		return {}
@@ -219,10 +245,13 @@ func _create_surface(surface: Dictionary, result: Dictionary) -> void:
 	body.global_position = Vector3(at.x, top - thickness * 0.5, at.z)
 	result["top"] = top
 	result["body"] = body
-	_slabs.append({
-		"body": body, "material": mat, "at": Vector3(at.x, top, at.z), "top": top,
+	_next_slab += 1
+	var slab := {
+		"id": _next_slab, "body": body, "material": mat, "at": Vector3(at.x, top, at.z), "top": top,
 		"radius": radius, "thickness": thickness, "left": surface["seconds"], "fade": surface["fade"],
-	})
+	}
+	_slabs.append(slab)
+	result["slab"] = slab
 
 
 func _electrify(row: Dictionary, result: Dictionary) -> void:
@@ -288,6 +317,171 @@ func _remove_slab(index: int, burst: bool) -> void:
 # A shard burst anywhere, for shrapnel and shatter.
 func shard_burst(at: Vector3) -> void:
 	_burst(at)
+
+
+# --- Evolution seams (design-v3/ABILITY-MUTATIONS.md section 7 D) -----------------------
+
+# Hoar Barrel's frost patch: a frost ring of `radius` drawn at `at` on any ground, frost on every
+# machine inside it, and frost applied to the material there (water freezes to a slab). Returns
+# the slab it froze, or {} on dry ground or ice, so the caller can spare the slab it just made.
+func frost_patch(at: Vector3, radius := 2.0, source := "item_proc") -> Dictionary:
+	flash_ring(at + Vector3.UP * 0.08, radius, FROST)
+	puff(at)
+	_touch_near("frost", at, radius)
+	var result := _resolve("frost", at, source)
+	return result.get("slab", {})
+
+
+# Fault Hammer's ring: every slab whose centre lies inside `radius` of `at` bursts, and once any
+# did, every machine inside the same ring takes one shatter strike (kinetic on ice, times the
+# shatter dial) as an evolution strike that procs nothing. {"shattered", "struck"}.
+func shatter_slabs_in_ring(at: Vector3, radius: float, source := "item_proc") -> Dictionary:
+	var shattered := 0
+	var i := _slabs.size() - 1
+	while i >= 0:
+		var slab: Dictionary = _slabs[i]
+		var slab_at: Vector3 = slab["at"]
+		if Vector2(slab_at.x - at.x, slab_at.z - at.z).length() <= radius and absf(slab_at.y - at.y) <= REACH:
+			_remove_slab(i, true)
+			shattered += 1
+		i -= 1
+	var struck := 0
+	if shattered > 0:
+		for enemy in get_tree().get_nodes_in_group("enemy"):
+			if (enemy as Node3D).global_position.distance_to(at) <= radius and _evolution_strike(enemy, shatter_damage(), source):
+				struck += 1
+	return {"shattered": shattered, "struck": struck}
+
+
+# Hoar Barrel's crossing: every slab the segment from..to passes over (inside its radius, no
+# higher than CROSS_HEIGHT above its top) bursts into a forward shard cone along `dir`, except the
+# slab the ball stands on (at `exclude_at`, of radius `exclude_radius`) and the slabs named in
+# `spare` (ids from frost_patch). {"detonated", "cones"}: each cone is the committed record that
+# was both drawn and hit-tested, with the machines it struck.
+func detonate_crossed_slabs(from: Vector3, to: Vector3, dir: Vector3, exclude_at: Vector3, exclude_radius: float,
+		source := "item_proc", spare: Array = []) -> Dictionary:
+	var spots: Array[Vector3] = []
+	var i := _slabs.size() - 1
+	while i >= 0:
+		var slab: Dictionary = _slabs[i]
+		if not int(slab["id"]) in spare and crosses(slab, from, to) and not stands_on(slab, exclude_at, exclude_radius):
+			spots.append(slab["at"])
+			_remove_slab(i, false)
+		i -= 1
+	var cones: Array = []
+	for spot in spots:
+		cones.append(_shard_cone(spot, dir, source))
+	return {"detonated": cones.size(), "cones": cones}
+
+
+# Damage one shatter strike deals: kinetic on ice, times the build's shatter dial.
+func shatter_damage() -> float:
+	return float(Elements.ROWS["kinetic:ice"]["damage"]) * shatter_scale
+
+
+# Whether the segment passes over the slab: inside its radius in plan, and at the closest point
+# no lower than its underside and no higher than CROSS_HEIGHT above its top.
+static func crosses(slab: Dictionary, from: Vector3, to: Vector3) -> bool:
+	var centre: Vector3 = slab["at"]
+	var a := Vector2(from.x, from.z)
+	var b := Vector2(to.x, to.z)
+	var c := Vector2(centre.x, centre.z)
+	var near := Geometry2D.get_closest_point_to_segment(c, a, b)
+	if near.distance_to(c) > float(slab["radius"]):
+		return false
+	var span := a.distance_to(b)
+	var y: float = lerpf(from.y, to.y, a.distance_to(near) / span) if span > 0.0001 else from.y
+	return y >= float(slab["top"]) - float(slab["thickness"]) and y <= float(slab["top"]) + CROSS_HEIGHT
+
+
+# Whether a ball at `ball` of radius `ball_radius` stands on the slab: over it in plan, its
+# underside within STAND_GAP of the top.
+static func stands_on(slab: Dictionary, ball: Vector3, ball_radius: float) -> bool:
+	var centre: Vector3 = slab["at"]
+	return Vector2(ball.x - centre.x, ball.z - centre.z).length() <= float(slab["radius"]) + ball_radius \
+		and absf(ball.y - ball_radius - float(slab["top"])) <= STAND_GAP
+
+
+# Whether a point stands in a committed shard cone: within its length and half angle in plan,
+# plus FORGIVENESS past the drawn edge, and within CONE_HEIGHT of the apex.
+static func in_shard_cone(cone: Dictionary, point: Vector3) -> bool:
+	var apex: Vector3 = cone["at"]
+	var dir: Vector3 = cone["dir"]
+	var offset := Vector3(point.x - apex.x, 0.0, point.z - apex.z)
+	if absf(point.y - apex.y) > CONE_HEIGHT:
+		return false
+	var along := offset.dot(dir)
+	if along < -AbilityState.FORGIVENESS or offset.length() > float(cone["length"]) + AbilityState.FORGIVENESS:
+		return false
+	var lateral := (offset - dir * along).length()
+	return lateral <= maxf(along, 0.0) * tan(float(cone["half_angle"])) + AbilityState.FORGIVENESS
+
+
+# One shard cone: committed, drawn and struck from the same record, each machine inside it once.
+func _shard_cone(apex: Vector3, dir: Vector3, source: String) -> Dictionary:
+	var flat := Vector3(dir.x, 0.0, dir.z)
+	flat = flat.normalized() if flat.length() > 0.01 else Vector3.FORWARD
+	var cone := {"at": apex, "dir": flat, "length": SHARD_CONE_LENGTH, "half_angle": deg_to_rad(SHARD_CONE_DEG),
+		"damage": shatter_damage(), "struck": []}
+	cone["node"] = _draw_cone(cone)
+	_cone_shards(cone)
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if in_shard_cone(cone, (enemy as Node3D).global_position) and _evolution_strike(enemy, float(cone["damage"]), source):
+			(cone["struck"] as Array).append(enemy)
+	shard_cone.emit(cone)
+	return cone
+
+
+# The cone's wedge on the ground, in ice, faded out with the puffs.
+func _draw_cone(cone: Dictionary) -> MeshInstance3D:
+	var apex: Vector3 = cone["at"]
+	var dir: Vector3 = cone["dir"]
+	var length: float = cone["length"]
+	var half: float = cone["half_angle"]
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var steps := 12
+	for n in steps:
+		var a := dir.rotated(Vector3.UP, lerpf(-half, half, float(n) / steps)) * length
+		var b := dir.rotated(Vector3.UP, lerpf(-half, half, float(n + 1) / steps)) * length
+		for v in [Vector3.ZERO, a, b]:
+			surface.add_vertex(v)
+	var node := MeshInstance3D.new()
+	node.name = "ShardCone"
+	node.mesh = surface.commit()
+	var mat := Palette.unshaded(Color(ICE.r, ICE.g, ICE.b, 0.55))
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	node.material_override = mat
+	add_child(node)
+	node.global_position = apex + Vector3.UP * 0.1
+	_puffs.append({"node": node, "left": PUFF_SECONDS})
+	return node
+
+
+# Shards thrown inside the cone, along its line.
+func _cone_shards(cone: Dictionary) -> void:
+	var apex: Vector3 = cone["at"]
+	var dir: Vector3 = cone["dir"]
+	var half: float = cone["half_angle"]
+	for n in SHARDS_PER_SLAB:
+		var heading := dir.rotated(Vector3.UP, lerpf(-half, half, float(n) / float(SHARDS_PER_SLAB - 1)))
+		var shard := MeshInstance3D.new()
+		shard.mesh = _shard_mesh
+		shard.material_override = _shard_material
+		add_child(shard)
+		shard.global_position = apex + Vector3.UP * 0.5
+		shard.look_at(apex + heading * 4.0 + Vector3.UP * 0.5, Vector3.UP)
+		_shards.append({"node": shard, "velocity": (heading + Vector3.UP * 0.2).normalized() * 22.0, "left": SHARD_SECONDS})
+
+
+# An evolution's strike: the build's own kind, which procs no item and leaves no element status,
+# tagged with its source. Whether it reached a live machine.
+func _evolution_strike(enemy: Node3D, damage: float, source: String) -> bool:
+	if ctx == null or ctx.spawner == null or damage <= 0.0 or not is_instance_valid(enemy) \
+			or (enemy.has_method("is_dead") and enemy.is_dead()):
+		return false
+	ctx.spawner.strike(enemy, EVOLUTION_STRIKE, damage, "", source)
+	return true
 
 
 func _burst(at: Vector3) -> void:
@@ -372,10 +566,10 @@ func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 		touch(enemy, Elements.STATUS_KINDS[kind])
 
 
-func _touch_near(element_id: String, at: Vector3) -> void:
+func _touch_near(element_id: String, at: Vector3, radius: float) -> void:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		var p: Vector3 = (enemy as Node3D).global_position
-		if Vector2(p.x - at.x, p.z - at.z).length() <= Elements.TOUCH_RADIUS and absf(p.y - at.y) <= Elements.TOUCH_RADIUS + 1.5:
+		if Vector2(p.x - at.x, p.z - at.z).length() <= radius and absf(p.y - at.y) <= radius + 1.5:
 			touch(enemy, element_id)
 
 

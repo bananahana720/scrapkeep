@@ -31,7 +31,9 @@ const MULTI_BIT_WIDTH := 1.15
 # The split bit (start values): two children at +/- SPLIT_ANGLE_DEG off the parent's line,
 # each SPLIT_DAMAGE of its damage, flying the parent's remaining range up to SPLIT_REACH: a
 # burst into the pack around the struck machine, not two more full-range shots that fill
-# MAX_LIVE and retire the player's own (principle 4).
+# MAX_LIVE and retire the player's own (principle 4). A record may carry its own
+# split_angle_deg and split_knock (Grapeshot Press, combat _bolt_record): the children then fly
+# at that angle and knock at least that hard.
 const SPLIT_ANGLE_DEG := 18.0
 const SPLIT_DAMAGE := 0.5
 const SPLIT_REACH := 12.0
@@ -48,6 +50,10 @@ var on_stop: Callable
 # Called as on_bounce.call(bolt: Dictionary, point: Vector3) when a bolt glances off a wall
 # with its bounce bit; the glance is not a hit, so it pulls and heats nothing.
 var on_bounce: Callable
+# Called as on_flight.call(bolt: Dictionary, from: Vector3, to: Vector3) -> bool once per bolt per
+# step, after its hits, over the stretch it actually flew (to the wall, the machine that stopped
+# it, or the step's end). True when it struck something, so the reach snapshot is read again.
+var on_flight: Callable
 var peak_live := 0
 var retired := 0
 var fired := 0
@@ -182,12 +188,16 @@ static func split_children(parent: Dictionary, point: Vector3, struck_id: int, u
 	var axis: Vector3 = parent.get("up", Vector3.UP)
 	var exclude: Array = (parent.get("exclude", []) as Array).duplicate()
 	exclude.append(struck_id)
+	var angle := deg_to_rad(float(parent.get("split_angle_deg", SPLIT_ANGLE_DEG)))
+	var split_knock := float(parent.get("split_knock", 0.0))
 	var out: Array = []
 	for side in [-1.0, 1.0]:
-		var kid := child(parent, {"origin": point, "dir": dir.rotated(axis, deg_to_rad(SPLIT_ANGLE_DEG) * side).normalized(),
+		var kid := child(parent, {"origin": point, "dir": dir.rotated(axis, angle * side).normalized(),
 			"max_dist": left, "damage": float(parent["damage"]) * SPLIT_DAMAGE, "pierce": 0})
 		kid["spent"] = split_spent(int(parent.get("spent", 0)))
 		kid["exclude"] = exclude.duplicate()
+		if split_knock > 0.0:
+			kid["knock"] = maxf(float(kid.get("knock", 0.0)), split_knock)
 		out.append(kid)
 	return out
 
@@ -240,6 +250,7 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 			if on_shell.is_valid() and on_shell.call(bolt, shell["shell"]):
 				continue
 		var stopped := false
+		var flown := end
 		while not target.is_empty():
 			fresh = false
 			var hit_id: int = target["enemy"].get_instance_id()
@@ -267,11 +278,14 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 				bolt["spent"] = ShotBits.union(int(bolt["spent"]), ShotBits.bit("pierce"))
 			else:
 				stopped = true
+				flown = target["point"]
 				break
 			(bolt["exclude"] as Array).append(hit_id)
 			snapshot = _snapshot(enemies)
 			fresh = true
 			target = _first_enemy(from, end, bolt["radius"], snapshot, bolt["exclude"])
+		if on_flight.is_valid() and on_flight.call(bolt, from, flown):
+			fresh = false
 		if stopped:
 			continue
 		if blocked:

@@ -50,6 +50,8 @@ const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const ChurnGround := preload("res://src/combat/churn_ground.gd")
 const SiltBoil := preload("res://src/combat/silt_boil.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
+const Synergies := preload("res://src/build/synergies.gd")
+const BallTuning := preload("res://src/movement/tuning.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -152,6 +154,19 @@ const WAKE_GRACE := 0.5
 const PIKE_RADIUS_MULT := 2.0
 # The copper ring that lights the muzzle on the volley before the fuse, in metres.
 const PIKE_RING_RADIUS := 1.5
+# Evolutions that rewrite a verb (design-v3/ABILITY-MUTATIONS.md section 7 D, start values).
+# Only the player's own press carries one, so every strike they add is item_proc (proc depth 1).
+# Grapeshot Press: split children fly GRAPESHOT_ANGLE_DEG off the line instead of
+# Bolts.SPLIT_ANGLE_DEG, and knock at least GRAPESHOT_KNOCK_SHARE of a slam's knock.
+const GRAPESHOT_ANGLE_DEG := 8.0
+const GRAPESHOT_KNOCK_SHARE := 0.5
+# Hoar Barrel: a piercing weapon shot frosts this far round each machine it hits.
+const HOAR_FROST_RADIUS := 2.0
+# Fault Hammer: an aftershock over the slam's own ring, FAULT_DELAY after it, at FAULT_DAMAGE of the
+# slam's damage with the slam's falloff. Its ring is drawn in the pilot's colour from the landing on.
+const FAULT_DELAY := 0.45
+const FAULT_DAMAGE := 0.5
+const FAULT_LAYER := "fault_hammer"
 
 # Ball contacts: base damage plus a share of the contact's force.
 const STRIKE_DAMAGE := {
@@ -318,6 +333,8 @@ var _escape := {}
 var _clamped := {}
 # Rake Heart: return passes waiting on their clock, {at, weapon, forward, damage, volley}.
 var _rakes: Array = []
+# Fault Hammer: aftershocks waiting on their clock, {at, radius, damage, born, due}.
+var _aftershocks: Array = []
 # The heat bit (ShotBits "heat", design-v3/ABILITY-MUTATIONS.md B3, starting values): a heated
 # bolt leaves the machine it hits glowing for HEAT_GLOW seconds, and a heated hit on a glowing
 # machine deals HEAT_BONUS, at most once per machine per HEAT_GLOW seconds. instance id ->
@@ -447,6 +464,7 @@ func setup(ctx_ref) -> void:
 	bolts.on_shell = func(_bolt: Dictionary, shell: Node3D) -> bool: return _bat(shell)
 	bolts.on_stop = func(at: Vector3, color: Color): effects.spark(at, color)
 	bolts.on_bounce = _on_bolt_bounce
+	bolts.on_flight = _on_bolt_flight
 	sticky = Sticky.new()
 	sticky.name = "StickyCharges"
 	ctx.root.add_child(sticky)
@@ -546,6 +564,7 @@ func setup(ctx_ref) -> void:
 		ctx.events.connect(kind, _on_proc_fact.bind(kind).unbind(argc))
 	ctx.events.slammed.connect(_on_slammed_upgrade)
 	ctx.events.slammed.connect(_on_cannon_slammed)
+	ctx.events.slammed.connect(_on_fault_slammed)
 	ctx.events.dashed.connect(_on_cannon_dashed)
 	ctx.events.dismounted.connect(_on_dismounted_sentry)
 	ctx.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _rebuild_patterns())
@@ -579,6 +598,7 @@ func setup(ctx_ref) -> void:
 		_prow_until = {}
 		_clamped = {}
 		_rakes = []
+		_aftershocks = []
 		_heated = {}
 		_escape = {}
 		escape_lane = {}
@@ -1820,8 +1840,10 @@ func _fire(weapon: String, source := "weapon") -> void:
 			if entry["centre"]:
 				centre = entry
 				break
-		bolts.fire(pike_bolt(_bolt_record(weapon, p, {"dir": forward, "centre": true, "phase": centre["phase"]}, muzzle, reach, damage, source, shot),
-			layout.size(), _pike_row()))
+		var fused := pike_bolt(_bolt_record(weapon, p, {"dir": forward, "centre": true, "phase": centre["phase"]}, muzzle, reach, damage, source, shot),
+			layout.size(), _pike_row())
+		_evolve_record(fused, p)
+		bolts.fire(fused)
 		fired = 1
 		_pike_cue()
 	else:
@@ -1908,7 +1930,7 @@ func _pike_cue() -> void:
 
 # One bolt of a volley: the pattern's numbers for this layout entry, fired from `muzzle`.
 func _bolt_record(weapon: String, p: Resource, entry: Dictionary, muzzle: Vector3, reach: float, damage: float, source: String, bits := 0) -> Dictionary:
-	return {
+	var record := {
 		"origin": muzzle, "dir": entry["dir"], "speed": p.speed, "max_dist": reach,
 		"damage": damage, "kind": Weapons.strike_kind(weapon), "weapon_id": weapon, "radius": p.bolt_radius,
 		"knock": p.knock, "chain_jumps": p.chain_jumps, "chain_range": p.chain_range,
@@ -1918,6 +1940,122 @@ func _bolt_record(weapon: String, p: Resource, entry: Dictionary, muzzle: Vector
 		"source": source,
 		"bits": bits,
 	}
+	_evolve_record(record, p)
+	return record
+
+
+# The verb evolutions a player's own press carries; a proc bolt carries none. Grapeshot Press
+# stamps the split it throws (Bolts.split_children reads it); Hoar Barrel marks a shot that
+# pierces, by its pattern or its pierce bit, and keeps the ids of the slabs its frost made.
+func _evolve_record(record: Dictionary, p: Resource) -> void:
+	if String(record.get("source", "")) != "weapon":
+		return
+	if _evolution_live("grapeshot_press"):
+		record["split_angle_deg"] = GRAPESHOT_ANGLE_DEG
+		record["split_knock"] = maxf(float(p.knock), Augments.SLAM_KNOCK * GRAPESHOT_KNOCK_SHARE)
+	if _evolution_live("hoar_barrel") and (int(p.pierce) > 0 or ShotBits.has(int(record.get("bits", 0)), ShotBits.bit("pierce"))):
+		record["hoar"] = true
+		record["hoar_spared"] = []
+
+
+# True while the run holds this Evolved part with both its ingredients.
+func _evolution_live(part_id: String) -> bool:
+	return ctx != null and ctx.run != null and Synergies.evolved_live(part_id, ctx.run.parts)
+
+
+# The build's element field, or null with no build (a bare test harness).
+func _field():
+	var build = ctx.build if ctx != null else null
+	return build.get("field") if build != null else null
+
+
+# Hoar Barrel: a marked shot bursts every slab it flew over into a forward shard cone, except the
+# one the ball stands on and the ones its own frost made. True when one burst.
+func _on_bolt_flight(bolt: Dictionary, from: Vector3, to: Vector3) -> bool:
+	if not bool(bolt.get("hoar", false)) or String(bolt.get("source", "")) != "weapon":
+		return false
+	var field = _field()
+	if field == null or field.slab_count() < 1:
+		return false
+	var burst: Dictionary = field.detonate_crossed_slabs(from, to, bolt["dir"], ctx.player.ball_position(), BallTuning.RADIUS,
+		"item_proc", bolt.get("hoar_spared", []))
+	return int(burst["detonated"]) > 0
+
+
+# Hoar Barrel: frost round a machine the marked shot hit; a slab that frost froze is spared from
+# the same shot's crossing, so it never bursts the ice it just laid.
+func _hoar_patch(bolt: Dictionary, at: Vector3) -> void:
+	var field = _field()
+	if field == null:
+		return
+	var slab: Dictionary = field.frost_patch(at, HOAR_FROST_RADIUS, "item_proc")
+	if not slab.is_empty() and bolt.get("hoar_spared") is Array:
+		(bolt["hoar_spared"] as Array).append(int(slab["id"]))
+
+
+# --- Fault Hammer (ABILITY-MUTATIONS.md section 7 D) ----------------------------------
+
+# A slam lands: its aftershock is committed now, drawn now, and lands FAULT_DELAY later.
+func _on_fault_slammed(at: Vector3, strength: float, _flatness: float) -> void:
+	if strength < 0.05 or not ctx.flow.in_play() or not _evolution_live("fault_hammer"):
+		return
+	_aftershocks.append({"at": at, "radius": float(ctx.player.slam_radius()), "damage": fault_damage(strength, heft()),
+		"born": _clock, "due": _clock + FAULT_DELAY})
+	_draw_aftershock()
+
+
+# The aftershock's damage at its centre: FAULT_DAMAGE of the slam's own (Dunk.slam_damage, the
+# row and heft the slam strikes with). It falls off to the ring's edge as the slam does.
+static func fault_damage(strength: float, pilot_heft: float) -> float:
+	return Dunk.slam_damage(Augments.SLAM_KNOCK * strength, STRIKE_DAMAGE["slam"], pilot_heft) * FAULT_DAMAGE
+
+
+func _tick_aftershocks() -> void:
+	if _aftershocks.is_empty():
+		return
+	var due: Array = []
+	var waiting: Array = []
+	for shock in _aftershocks:
+		if float(shock["due"]) <= _clock:
+			due.append(shock)
+		else:
+			waiting.append(shock)
+	_aftershocks = waiting
+	for shock in due:
+		_aftershock(shock)
+	_draw_aftershock()
+
+
+# One aftershock, once: the build's own strike kind (no contact, no dunk, no proc, no slam fact)
+# as item_proc on every machine in the ring, then the ice and the props in that same ring.
+func _aftershock(shock: Dictionary) -> void:
+	var at: Vector3 = shock["at"]
+	var radius: float = shock["radius"]
+	effects.ring(at, radius, ctx.player.class_color())
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
+		var reach: float = enemy.global_position.distance_to(at)
+		if reach > radius:
+			continue
+		if enemy.has_method("flash"):
+			enemy.flash()
+		strike(enemy, SYNERGY, float(shock["damage"]) * (1.0 - reach / radius), "", "item_proc")
+	var field = _field()
+	if field != null:
+		field.shatter_slabs_in_ring(at, radius, "item_proc")
+	ctx.break_props(at, radius, "fault_hammer")
+
+
+# The first waiting aftershock's ring, in the pilot's colour, its sweep filling to the landing.
+func _draw_aftershock() -> void:
+	var indicator = ctx.player.indicator
+	if _aftershocks.is_empty():
+		indicator.clear(FAULT_LAYER)
+		return
+	var shock: Dictionary = _aftershocks[0]
+	indicator.set_shape(FAULT_LAYER, ctx.player.yours({"kind": "ring", "centre": shock["at"], "radius": shock["radius"],
+		"fill": clampf((_clock - float(shock["born"])) / FAULT_DELAY, 0.0, 1.0)}))
 
 
 # Rake Heart (claw_rake): only the player's own press queues a return, so the return pass,
@@ -1983,6 +2121,8 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 	var pull_plan := _pull_plan(enemy, bolt) if Bolts.bit_ready(bolt, "pull") else {}
 	var hit_knock := 0.0 if not pull_plan.is_empty() else float(bolt["knock"])
 	_hit(enemy, bolt["kind"], damage, bolt["dir"], hit_knock, part, bolt.get("source", "weapon"))
+	if bool(bolt.get("hoar", false)) and String(bolt.get("source", "")) == "weapon":
+		_hoar_patch(bolt, from)
 	if not pull_plan.is_empty() and is_instance_valid(enemy) and not enemy.is_dead():
 		enemy.knock(pull_plan["dir"], float(pull_plan["force"]))
 		acts = ShotBits.union(acts, ShotBits.bit("pull"))
@@ -4364,6 +4504,7 @@ func _tick_upgrades(delta: float) -> void:
 	var kit = ctx.player.kit
 	_tick_echo(delta)
 	_tick_rakes()
+	_tick_aftershocks()
 	_pulse_left = maxf(0.0, _pulse_left - delta)
 	if _pulse_left <= 0.0:
 		if kit.hooked and _knob("anchor_pulse") > 0.0:
@@ -4815,6 +4956,7 @@ func _start_attempt() -> void:
 	assist_charge = 0.0
 	_clamped.clear()
 	_rakes.clear()
+	_aftershocks.clear()
 	_heated.clear()
 	_exposed.clear()
 	_pike_count = 0

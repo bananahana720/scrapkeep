@@ -128,6 +128,9 @@ const EVOLUTIONS := {
 	"bladestorm_rotor": ["spiral_wave", "loose_trigger"],
 	"storm_mast": ["focus_lens", "live_line"],
 	"grounding_spike": ["arc_coil", "drop_weight"],
+	"grapeshot_press": ["cross_split", "pin_setter"],
+	"hoar_barrel": ["frost_barb", "rime_rounds"],
+	"fault_hammer": ["echo_locator", "brace_frame"],
 }
 # The trick each evolution grew out of, the name its text ends on ("From Wrecking Ball.").
 const EVOLVED_FROM := {
@@ -135,6 +138,9 @@ const EVOLVED_FROM := {
 	"bladestorm_rotor": "pinwheel",
 	"storm_mast": "tesla_pylon",
 	"grounding_spike": "lightning_rod",
+	"grapeshot_press": "shrapnel_bloom",
+	"hoar_barrel": "shatter_crew",
+	"fault_hammer": "thermal_shock",
 }
 
 
@@ -220,6 +226,12 @@ static func evolution_live(part_id: String, held: Array) -> bool:
 	return not EVOLUTIONS.has(part_id) or _holds_all(held, EVOLUTIONS[part_id])
 
 
+# True while the run holds this Evolved part and both its ingredients: the one call combat makes
+# before an evolution rewrites a verb (design-v3/ABILITY-MUTATIONS.md section 7 D).
+static func evolved_live(part_id: String, held: Array) -> bool:
+	return EVOLUTIONS.has(part_id) and part_id in held and _holds_all(held, EVOLUTIONS[part_id])
+
+
 # The trick an Evolved part grew out of, or "".
 static func evolution_of(part_id: String) -> String:
 	return EVOLVED_FROM.get(part_id, "")
@@ -228,6 +240,29 @@ static func evolution_of(part_id: String) -> String:
 # True for an Evolved part or one of its ingredients.
 static func in_evolution(part_id: String) -> bool:
 	return EVOLUTIONS.has(part_id) or EVOLUTIONS.values().any(func(pair): return part_id in pair)
+
+
+# Admission for an evolution table (Elements.problems' shape): every pair is two distinct parts
+# `known` answers true for, no part sits in two pairs or is itself an Evolved part, and each
+# Evolved part names the trick it grew out of. Returns one line per problem; [] is clean.
+static func evolution_problems(table: Dictionary, grew_from: Dictionary, known: Callable) -> Array:
+	var found: Array = []
+	var owner := {}
+	for into in table:
+		var pair: Array = table[into]
+		if pair.size() != 2 or pair[0] == pair[1]:
+			found.append("%s is not a pair of two different parts" % into)
+		for part_id in pair:
+			if not known.call(part_id):
+				found.append("%s names an unknown ingredient %s" % [into, part_id])
+			if table.has(part_id):
+				found.append("%s takes the Evolved part %s as an ingredient" % [into, part_id])
+			if owner.has(part_id) and owner[part_id] != into:
+				found.append("%s shares the ingredient %s with %s" % [into, part_id, owner[part_id]])
+			owner[part_id] = into
+		if not ROWS.has(String(grew_from.get(into, ""))):
+			found.append("%s names no trick it grew out of" % into)
+	return found
 
 
 static func _holds_all(held: Array, parts: Array) -> bool:
