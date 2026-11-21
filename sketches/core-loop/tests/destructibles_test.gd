@@ -411,11 +411,18 @@ func _snag_run(heft: int, force_solid: bool) -> Dictionary:
 		)
 	var run: Dictionary = await _step(mod, ball, heft, 120)
 	var speeds: Array = run["speeds"]
+	var xs: Array = run["xs"]
 	var k: int = run["broke"]
+	var cross := -1
+	for i in xs.size():
+		if float(xs[i]) >= -2.0:
+			cross = i
+			break
 	var out := {"broke": k, "final_x": ball.global_position.x}
-	if k >= 1 and k + 5 < speeds.size():
+	if k >= 1:
 		out["before"] = speeds[k - 1]
-		out["after"] = speeds[k + 5]
+		var sample_at: int = (cross + 5) if (cross >= 0 and cross + 5 < speeds.size()) else mini(k + 5, speeds.size() - 1)
+		out["after"] = speeds[sample_at]
 		var min_vx := INF
 		for i in range(k, speeds.size()):
 			min_vx = minf(min_vx, speeds[i])
@@ -438,9 +445,9 @@ func _zero_snag() -> void:
 		"min %.2f, vy %.2f" % [clean.get("min_speed", 0.0), clean.get("peak_vy", 99.0)])
 	t.check("T2: the ball ended on the far side of the piece", float(clean["final_x"]) > 2.0, "x %.2f" % clean["final_x"])
 	var forced: Dictionary = await _snag_run(2, true)
-	var ok := float(forced.get("after", 0.0)) >= 0.99 * float(forced.get("before", 99.0)) and float(forced.get("final_x", 0.0)) > 2.0
+	var ok := float(forced.get("after", 0.0)) >= 0.99 * float(forced.get("before", 99.0)) and float(forced.get("min_speed", 0.0)) >= 0.99 * float(forced.get("before", 99.0)) and float(forced.get("final_x", 0.0)) > 2.0
 	t.check("T2 control: with the collider forced on through the contact tick the same checks fail", not ok,
-		"%.2f before, %.2f after, x %.2f" % [forced.get("before", 0.0), forced.get("after", 0.0), forced["final_x"]])
+		"%.2f before, %.2f after, min %.2f, x %.2f" % [forced.get("before", 0.0), forced.get("after", 0.0), forced.get("min_speed", 0.0), forced["final_x"]])
 	var light: Dictionary = await _snag_run(1, false)
 	t.check("T2 control: a Class I ball meets the same piece as a wall", int(light["broke"]) < 0 and float(light["final_x"]) < -1.0,
 		"broke %s, x %.2f" % [light["broke"], light["final_x"]])

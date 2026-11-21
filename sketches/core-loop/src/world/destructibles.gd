@@ -451,12 +451,13 @@ func _shatter(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool, s
 
 
 func _refuse(p: Piece, at: Vector3, dir: Vector3) -> void:
-	if _no_visuals or _clock - p.refused_at < REFUSED_GAP_S:
+	if _clock - p.refused_at < REFUSED_GAP_S:
 		return
 	p.refused_at = _clock
-	var n := CHIPS_MIN + int(_fx.randi() % (CHIPS_MAX - CHIPS_MIN + 1))
-	for i in n:
-		_throw(_shards, p, at, dir, 0.0, FAMILY_BY_TIER.get(p.tier, "scrap"), true)
+	if not _no_visuals:
+		var n := CHIPS_MIN + int(_fx.randi() % (CHIPS_MAX - CHIPS_MIN + 1))
+		for i in n:
+			_throw(_shards, p, at, dir, 0.0, FAMILY_BY_TIER.get(p.tier, "scrap"), true)
 	if _cue.is_valid():
 		_cue.call(at)
 
@@ -809,6 +810,10 @@ func _run_fx(delta: float) -> void:
 
 # ---- ctx ----------------------------------------------------------------------------------------
 
+func last_shattered_id() -> String:
+	return _breaks[-1] if not _breaks.is_empty() else ""
+
+
 func _bind(ctx: Variant) -> void:
 	_no_visuals = bool(_ctx_get(ctx, "no_visuals", false))
 	scrap_cap = int(_ctx_get(ctx, "scrap_cap", SCRAP_CAP))
@@ -818,6 +823,12 @@ func _bind(ctx: Variant) -> void:
 	_run_id = String(_ctx_get(ctx, "run_id", _chain(ctx, ["run", "run_id"], "")))
 	_stage = int(_ctx_get(ctx, "stage", _chain(ctx, ["run", "stage"], 0)))
 	_scrap = _ctx_get(ctx, "scrap", _chain(ctx, ["build", "scrap"], null)) as Object
+	if _scrap == null:
+		var raw_ctx: Variant = (ctx as Dictionary).get("ctx", ctx) if ctx is Dictionary else ctx
+		if raw_ctx is Object and (raw_ctx as Object).has_method("build_module"):
+			var bm: Variant = (raw_ctx as Object).call("build_module")
+			if bm is Object:
+				_scrap = (bm as Object).get("scrap") as Object
 	_combat = _ctx_get(ctx, "combat", _ctx_get(ctx, "spawner", null)) as Object
 	var finder: Variant = _ctx_get(ctx, "enemies", null)
 	_enemies = finder if finder is Callable else Callable()
@@ -841,8 +852,12 @@ func _tuned_cruise(ctx: Variant) -> float:
 
 static func _ctx_get(ctx: Variant, key: String, fallback: Variant) -> Variant:
 	if ctx is Dictionary:
-		var held: Variant = (ctx as Dictionary).get(key)
-		return fallback if held == null else held
+		var d := ctx as Dictionary
+		if d.has(key) and d[key] != null:
+			return d[key]
+		if key != "ctx" and d.has("ctx") and d["ctx"] != null:
+			return _ctx_get(d["ctx"], key, fallback)
+		return fallback
 	if ctx is Object:
 		var value: Variant = (ctx as Object).get(key)
 		return fallback if value == null else value
