@@ -7,6 +7,7 @@ const Parts := preload("res://src/build/parts.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
+const ParkDefs := preload("res://src/core/park_defs.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 
 # Wave 45 B1: the authored diversity pool. The four maker tricks that had stayed out of the alpha
@@ -17,7 +18,7 @@ const Bindings := preload("res://src/core/bindings.gd")
 
 const FORWARD := Vector3(0.0, 0.0, -1.0)
 const OUT := ["strike_pocket", "clean_break", "warhead_slug", "ring_wave", "salvage_drone", "scrap_geyser",
-	"spring_hull", "shock_liner", "rebound_skin", "spare_frame", "vault_battery", "anchor_spring", "feedback_loop",
+	"spring_hull", "shock_liner", "rebound_skin", "spare_frame", "warden_ward", "vault_battery", "anchor_spring", "feedback_loop",
 	"slipstream", "long_lane", "reserve_tank", "gutter_guard", "tumbler_bearing"]
 
 var _t := preload("res://tests/support/t.gd").new("diversity_pool_test")
@@ -54,6 +55,10 @@ func _tricks() -> void:
 		_t.check("%s wakes on two alpha pieces of %s" % [key, maker], pieces.size() >= 2 and key in Synergies.active(Parts.maker_counts(pieces.slice(0, 2)))
 			and not key in Synergies.active(Parts.maker_counts(pieces.slice(0, 1))), "pieces %s" % [pieces])
 	_t.eq("all fourteen tricks are live on the alpha table", Synergies.ROWS.keys().all(func(k): return AlphaDefs.synergy_in_play(k)), true)
+	Synergies.table = ParkDefs
+	for key in ["glacier_hull", "storm_lattice", "thermal_shock", "linked_spiral"]:
+		_t.check("%s is live on the park launch table" % key, ParkDefs.synergy_in_play(key) and Synergies.in_play(key), "")
+	_t.eq("all fourteen tricks are live on the park launch table", Synergies.ROWS.keys().all(func(k): return ParkDefs.synergy_in_play(k)), true)
 	Synergies.table = null
 
 
@@ -129,6 +134,8 @@ func _admission() -> void:
 		if not Bindings.VERBS.has(verb) or verb in ["look", "interact"]:
 			bad.append(id)
 	_t.eq("every alpha part names a touch verb", bad, [])
+	var relics: Array = AlphaDefs.PARTS.filter(func(id): return Parts.rarity_of(id) == "relic")
+	_t.eq("no alpha part sits on the relic rung (ruling bn, Spare Frame owns park hook)", relics, [])
 
 
 func _pierce() -> void:

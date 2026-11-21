@@ -67,13 +67,14 @@ const PARTS := [
 	# the two water rounds read on the Spillway's channels.
 	"horizon_optic", "ram_plow", "rime_rounds", "galvanic_rounds",
 	# 2026-11-21 (wave 45 B1): the two weapon-pattern transformers (Fan Spread, Helix Drill) and a
-	# curated set of 14 high-identity authored rows from items.gd, each with a touch verb. The nine
-	# shift-board unlock rows, the burden parts, Spare Frame, the three seam-gated non-pattern
-	# rows (Vault Battery, Anchor Spring, Feedback Loop), and shared movement-changing rows
-	# (Slipstream, Long Lane, Reserve Tank, Gutter Guard, Tumbler Bearing) stay out so movement
-	# belongs strictly to the pilot (BIBLE.md:537, DECISIONS.md:423).
+	# curated set of 13 high-identity authored rows from items.gd, each with a touch verb and
+	# capped at cobalt (rare, ruling bn) so Spare Frame remains the park table's only relic. The
+	# nine shift-board unlock rows, the burden parts, Spare Frame, Warden Ward (kept at rare_plus),
+	# the three seam-gated non-pattern rows (Vault Battery, Anchor Spring, Feedback Loop), and
+	# shared movement-changing rows (Slipstream, Long Lane, Reserve Tank, Gutter Guard, Tumbler
+	# Bearing) stay out so movement belongs strictly to the pilot (BIBLE.md:537, DECISIONS.md:423).
 	"fan_spread", "helix_drill", "domino_wire", "echo_charge", "overcharge_coil", "ten_pin",
-	"synergy_lens", "crush_guard", "last_word", "warden_ward", "par_chip",
+	"synergy_lens", "crush_guard", "last_word", "par_chip",
 	"cloak_flask", "jet_vent", "quick_spool", "tracer_round", "magnet_coil",
 ]
 

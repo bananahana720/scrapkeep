@@ -21,10 +21,9 @@ const BOSS := "brindle"
 
 const COUNT := 6
 
-# The maker tricks (synergies.gd) this table keeps: the five named synergies and the five
-# former three-part sets. Any other trick is out.
-const SYNERGIES := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod",
-	"ballast_rig", "shatter_crew", "live_wire", "hair_trigger", "storm_front"]
+# The maker tricks (synergies.gd) this table keeps: shared with AlphaDefs so a default launch
+# plays the same 14 tricks as the alpha table (wave 45 B1).
+const SYNERGIES := AlphaDefs.SYNERGIES
 
 # The parts every source on this table offers, and the only ones: the alpha table's 45 (its
 # SQ19b kit lean, the five maker sets complete from them, alpha_defs.gd says why each is
