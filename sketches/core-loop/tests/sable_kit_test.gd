@@ -367,8 +367,8 @@ func _audio_levels() -> void:
 			_t.near("non-PLAY set-piece note live-key pitch", cue[4], Harmony.ratio(audio.live_key()))
 		audio.sound_ready = false
 		var pending := audio.engine.pending_actions()
-		var played := audio.cue_log.size()
+		var played: int = audio.cue_log_total
 		audio.sable_note("cable", 2)
-		_t.check("mode %d unready bank refuses the note" % mode, audio.engine.pending_actions() == pending and audio.cue_log.size() == played)
+		_t.check("mode %d unready bank refuses the note" % mode, audio.engine.pending_actions() == pending and audio.cue_log_total == played)
 		audio.sound_ready = true
 	audio.free()

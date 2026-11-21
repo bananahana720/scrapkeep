@@ -807,14 +807,14 @@ func _check_hit_tell() -> void:
 	var logged := -1
 	var sounds: Array = []
 	if audio != null:
-		var before: int = audio.cue_log.size()
+		var before: int = audio.cue_log_total
 		var combat = _combat()
 		var t := _dummy(Measurement.BALL + OPEN_SITE + Vector3.BACK * 60.0)
 		var bolt := _record(Measurement.BALL, Vector3.FORWARD, _pierce | _split | _heat)
 		bolt["acts"] = _pierce | _split
 		combat._on_bolt_hit(bolt, t, t.global_position, "")
 		_free([t])
-		var shots: Array = audio.cue_log.slice(before).filter(func(row): return String(row[0]).begins_with("shot_"))
+		var shots: Array = audio.cues_since(before).filter(func(row): return String(row[0]).begins_with("shot_"))
 		logged = shots.size()
 		sounds = shots.map(func(row): return row[1])
 	_report("a pierce+split+heat hit plays one sound, the pierce crack", logged == 1 and sounds == ["breach_crack"],

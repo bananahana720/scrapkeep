@@ -103,11 +103,11 @@ func _physics_process(_delta: float) -> bool:
 			_plan.append([850 + window + 750 + i * 60, func():
 				_audio._last_start.clear()
 				var before: float = _juice._shell_velocity
-				var logged: int = _audio.cue_log.size()
+				var logged: int = _audio.cue_log_total
 				events.scrap_collected.emit(1, _game.player.ball_position(), i + 1)
 				# A pickup can also pay off a held part (reward_payoff's bell, or the next card's
 				# reveal), logged after the tick, so read this pickup's own tick, not the last cue.
-				var ticks: Array = _audio.cue_log.slice(logged).filter(func(e: Array): return e[0] == "scrap_collected")
+				var ticks: Array = _audio.cues_since(logged).filter(func(e: Array): return e[0] == "scrap_collected")
 				_marks["pitches"].append(ticks[0][4] if not ticks.is_empty() else 0.0)
 				_marks["shell_v"].append(_juice._shell_velocity - before)])
 		_plan.append([850 + window + 1200, func(): pass])

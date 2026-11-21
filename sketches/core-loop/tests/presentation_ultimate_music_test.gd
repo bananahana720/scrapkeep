@@ -208,7 +208,7 @@ func _kest_cue_contract() -> void:
 		_audio._last_start.erase(sound)
 		var kind := "line_skill_fired" if sound.begins_with("cable_") else "ultimate_peak"
 		_audio.engine._voices.clear()
-		var before: int = _audio.cue_log.size()
+		var before: int = _audio.cue_log_total
 		if sound.begins_with("tick_kest_"):
 			_audio.kest_roll(int(sound.get_slice("_", 2)))
 		elif sound == "raid_kest_boom":
@@ -219,7 +219,7 @@ func _kest_cue_contract() -> void:
 		else:
 			_game.player.kit.cloaked = true
 			_game.combat.ultimate._sound(sound, not sound.begins_with("cable_"))
-		var emitted: Array = _audio.cue_log.slice(before).filter(func(c): return c[1] == sound)
+		var emitted: Array = _audio.cues_since(before).filter(func(c): return c[1] == sound)
 		var gain: float = bank.trim_db(sound) + _audio.PRIORITY_DB[rows.priority(kind)]
 		if emitted.size() == 1 and emitted[0][2] == "now":
 			keyed = keyed and absf(float(emitted[0][4]) - Harmony.ratio(_audio.live_key())) < 0.0001

@@ -158,16 +158,16 @@ func _tell_on_entry(entry: Dictionary, s) -> void:
 	var expected: Dictionary = Rows.ACTIVITY_ROWS[entry.tell.record]
 	var audio = game.presentation.audio
 	audio._last_start.clear()
-	var since: int = audio.cue_log.size()
+	var since: int = audio.cue_log_total
 	var at: Vector3 = s.to_global(Vector3(entry.entry_spot[0], 0, entry.entry_spot[1]))
 	s.view.near(at)
-	var cues: Array = audio.cue_log.slice(since).filter(func(c): return c[0] == "interaction_found")
+	var cues: Array = audio.cues_since(since).filter(func(c): return c[0] == "interaction_found")
 	t.check(entry.id + " authored word visible at transformed entry", s.view.word.visible and s.view.word.text.split(" — Tier ")[0] == entry.tell.word, "at=%s text=%s" % [at, s.view.word.text])
 	t.check(entry.id + " rendered entry glyph matches selected record", _glyph_matches(s.view.glyph, String(expected.shape)), "expected=%s" % expected.shape)
 	t.check(entry.id + " entry audio request matches selected record", cues.size() == 1 and cues[0][1] == expected.sound and cues[0][2] == "now", "cues=%s expected=%s" % [cues, expected.sound])
-	var after: int = audio.cue_log.size()
+	var after: int = audio.cue_log_total
 	s.view.near(at)
-	t.eq(entry.id + " entry cue sounds once", audio.cue_log.size(), after)
+	t.eq(entry.id + " entry cue sounds once", audio.cue_log_total, after)
 
 func _glyph_matches(glyph: Node3D, shape: String) -> bool:
 	if not glyph.visible:
