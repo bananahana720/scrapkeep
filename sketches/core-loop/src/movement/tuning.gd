@@ -119,6 +119,9 @@ const SPECS := [
 	# Carry a core (feature-fit.md, new mechanic 3; Andrew 11 Nov 19:24Z, one core, only into
 	# SPIL-9): Moss's counter stows one of this stage's cores in a SPIL-9 socket for the next stage.
 	{"key": "carry_core", "label": "Carry a core", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# The shot bits the live game honours, as a ShotBits mask (design-v3/ABILITY-MUTATIONS.md
+	# B4): 17 is pierce (1) and heat (16). Bounce, pull and split join in later units.
+	{"key": "shot_bits_live", "label": "Live shot bits", "min": 0.0, "max": 31.0, "step": 1.0, "value": 17.0},
 	# The world whose boss ends the run won (W1-60, Andrew 12 Nov 22:06Z): "last" runs the whole
 	# stage table; "1" ends the world 1 sitting at Brindle, with its summary and HARD rung 1, instead
 	# of rolling on into the parked Dig.

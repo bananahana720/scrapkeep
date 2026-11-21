@@ -14,6 +14,7 @@ const Hitscan := preload("res://src/combat/hitscan.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Bolts := preload("res://src/combat/bolts.gd")
+const ShotBits := preload("res://src/build/shot_bits.gd")
 const Effects := preload("res://src/combat/effects.gd")
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -291,8 +292,15 @@ var escape_lane := {}
 var _escape := {}
 # Tarn's clamp: caught enemies (instance id -> clock the clamp ends) take CLAMP_BONUS from claw sweeps. Cleared on run start and every attempt; a kill drops its entry.
 var _clamped := {}
-# Rake Heart: return passes waiting on their clock, {at, weapon, forward, damage}.
+# Rake Heart: return passes waiting on their clock, {at, weapon, forward, damage, volley}.
 var _rakes: Array = []
+# The heat bit (ShotBits "heat", design-v3/ABILITY-MUTATIONS.md B3, starting values): a heated
+# bolt leaves the machine it hits glowing for HEAT_GLOW seconds, and a heated hit on a glowing
+# machine deals HEAT_BONUS, at most once per machine per HEAT_GLOW seconds. instance id ->
+# {"glow": clock the glow ends, "ready": clock the next bonus may land}; cleared like _clamped.
+const HEAT_GLOW := 2.0
+const HEAT_BONUS := 1.15
+var _heated := {}
 # The remembered cannon: committed volleys ({family, hazards, damage, source, struck,
 # expose, verb, window, and the commit's seed, target, centre, radius and phase}), how many it has committed (its seed counter),
 # and plate-exposed enemies (instance id -> {until, verb}) that take MindAttacks.BRACE_MULT
@@ -524,6 +532,7 @@ func setup(ctx_ref) -> void:
 		_prow_until = {}
 		_clamped = {}
 		_rakes = []
+		_heated = {}
 		_escape = {}
 		escape_lane = {}
 		escape_acts = 0
@@ -654,6 +663,7 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 		_prow_until.erase(id)
 		_record_retirement(_class_for_id(id, kind))
 		_clamped.erase(id)
+		_heated.erase(id)
 		_exposed.erase(id)
 		_exposed.erase(_arc_key(id))
 		_boss_add_ids.erase(id))
@@ -1748,8 +1758,11 @@ func _fire(weapon: String, source := "weapon") -> void:
 	if sprung:
 		effects.ring(muzzle, 1.5, Palette.VERDIGRIS)
 	var layout: Array = p.layout(forward, volleys)
+	# Only the player's own press carries the build's shot bits; a proc volley carries none,
+	# so proc depth stays 1 (ABILITY-MUTATIONS.md B1).
+	var shot: int = _shot_bits() if source == "weapon" else 0
 	for entry in layout:
-		bolts.fire(_bolt_record(weapon, p, entry, muzzle, reach, damage, source))
+		bolts.fire(_bolt_record(weapon, p, entry, muzzle, reach, damage, source, shot))
 	if rake_follows(source, ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")):
 		_rakes.append({"at": _clock + RAKE_DELAY, "weapon": weapon, "forward": forward,
 			"damage": p.damage * _damage_mod(weapon), "volley": volleys})
@@ -1760,7 +1773,7 @@ func _fire(weapon: String, source := "weapon") -> void:
 
 
 # One bolt of a volley: the pattern's numbers for this layout entry, fired from `muzzle`.
-func _bolt_record(weapon: String, p: Resource, entry: Dictionary, muzzle: Vector3, reach: float, damage: float, source: String) -> Dictionary:
+func _bolt_record(weapon: String, p: Resource, entry: Dictionary, muzzle: Vector3, reach: float, damage: float, source: String, bits := 0) -> Dictionary:
 	return {
 		"origin": muzzle, "dir": entry["dir"], "speed": p.speed, "max_dist": reach,
 		"damage": damage, "kind": Weapons.strike_kind(weapon), "weapon_id": weapon, "radius": p.bolt_radius,
@@ -1769,6 +1782,7 @@ func _bolt_record(weapon: String, p: Resource, entry: Dictionary, muzzle: Vector
 		"wave_amp": 0.0 if entry["centre"] else p.wave_amp, "wave_hz": p.wave_hz, "phase": entry["phase"],
 		"pierce": p.pierce,
 		"source": source,
+		"bits": bits,
 	}
 
 
@@ -1823,9 +1837,51 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 			damage *= Weapons.CLAMP_BONUS
 		else:
 			_clamped.erase(id)
+	if ShotBits.has(int(bolt.get("bits", 0)), ShotBits.bit("heat")):
+		damage *= _heat(enemy, point)
 	_hit(enemy, bolt["kind"], damage, bolt["dir"], bolt["knock"], part, bolt.get("source", "weapon"))
 	if bolt["chain_jumps"] > 0:
 		_chain(enemy, from, bolt)
+
+
+# The build's shot bits for a weapon press; 0 with no build (a bare test harness).
+func _shot_bits() -> int:
+	var build = ctx.build if ctx != null else null
+	return int(build.shot_bits()) if build != null and build.has_method("shot_bits") else 0
+
+
+# One heated hit on enemy: the damage multiplier, with the heat row's colour and sound as the
+# machine starts to glow and again when the bonus lands (one cue a hit at most).
+func _heat(enemy: Node3D, point: Vector3) -> float:
+	var hit := heat_hit(_heated, enemy.get_instance_id(), _clock)
+	if hit["lit"] or hit["bonus"]:
+		var row: Dictionary = ShotBits.TABLE["heat"]
+		var radius = enemy.get("radius")
+		effects.ring(point, (float(radius) if radius != null else 1.0) + (0.6 if hit["bonus"] else 0.3), row["color"])
+		var presentation = ctx.root.get("presentation") if ctx != null and ctx.root != null else null
+		var audio = presentation.get("audio") if presentation != null else null
+		if audio != null:
+			audio.play("shot_heat", 0.0, 1.0, "SFX", String(row["sound"]))
+	return float(hit["mult"])
+
+
+# Whether a machine is glowing from a heated hit right now.
+func heated(enemy: Node3D) -> bool:
+	return float(_heated.get(enemy.get_instance_id(), {}).get("glow", -INF)) > _clock
+
+
+# The heat rule on its own state, for one heated hit on the machine with this id at now:
+# {"mult" (HEAT_BONUS or 1), "lit" (it was not glowing), "bonus" (the bonus landed)}. Every
+# heated hit renews the glow; the bonus needs a glow already lit and HEAT_GLOW since the last.
+static func heat_hit(state: Dictionary, id: int, now: float) -> Dictionary:
+	var entry: Dictionary = state.get(id, {"glow": -INF, "ready": -INF})
+	var glowing := float(entry["glow"]) > now
+	var bonus := glowing and now >= float(entry["ready"])
+	if bonus:
+		entry["ready"] = now + HEAT_GLOW
+	entry["glow"] = now + HEAT_GLOW
+	state[id] = entry
+	return {"mult": HEAT_BONUS if bonus else 1.0, "lit": not glowing, "bonus": bonus}
 
 
 # One resolved weapon hit: the shove, the flash, then strike() for damage and the fact.
@@ -4383,6 +4439,7 @@ func _start_attempt() -> void:
 	assist_charge = 0.0
 	_clamped.clear()
 	_rakes.clear()
+	_heated.clear()
 	_exposed.clear()
 	_spring_until = -1.0
 	_warden_slam_hits = 0

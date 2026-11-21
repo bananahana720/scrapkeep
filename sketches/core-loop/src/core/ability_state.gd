@@ -105,7 +105,8 @@ const UNSTARTED := ""
 #   weapon    pattern (the Pattern it fires, default its id), mounted (the weapon it
 #             becomes on a pylon), lob (how many sticky charges one throw scatters),
 #             cards (the bay programs in bay order; the weapon runs the selected one on a
-#             press), pressure (the slot's charges are shared pressure that time never refills)
+#             press), pressure (the slot's charges are shared pressure that time never refills),
+#             bolts (false for a weapon that fires no bolts, so it carries no shot bits; default true)
 #   movement  augments (the movement kit it fits), rocket, cloak (Kest's passives)
 #   special   plant_discharge (planting a pylon fires it free)
 #   smash     flavour (arc, skid or demo landing), spends_special
@@ -133,8 +134,8 @@ const ABILITIES := {
 	"overdrive_blast": {"icon": "ab_rivet_special", "cooldown": 6.0, "charge_max": 1.0},
 	"point_blank": {"icon": "ab_rivet_special", "cooldown": 6.0, "charge_max": 1.0},
 	"shockwave_skid": {"icon": "ab_rivet_smash", "cooldown": 0.0, "flavour": "skid"},
-	"sticky_charge": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6, "lob": 1},
-	"sticky_rain": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6, "lob": 3, "pattern": "sticky_charge"},
+	"sticky_charge": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6, "lob": 1, "bolts": false},
+	"sticky_rain": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6, "lob": 3, "pattern": "sticky_charge", "bolts": false},
 	"smoke_blink": {"icon": "ab_kest_move", "cooldown": 4.0, "augments": ["blink", "glide"], "rocket": true, "cloak": true},
 	"detonation_line": {"icon": "ab_kest_special", "cooldown": 6.0, "charge_max": 0.8},
 	"demo_slam": {"icon": "ab_kest_smash", "cooldown": 0.0, "flavour": "demo"},
@@ -147,7 +148,7 @@ const ABILITIES := {
 	# Tally's slot 1, chip rows and smash; her bar and Q rows sit in her P-C block below.
 	"flywheel_surge": {"icon": "ab_tally_move", "cooldown": 4.0, "augments": ["surge"]},
 	"stamp_slam": {"icon": "ab_tally_smash", "cooldown": 0.0, "flavour": "stamp"},
-	"cannon_lane": {"icon": "ab_cannon_weapon", "cooldown": 0.0, "family": "lane"},
+	"cannon_lane": {"icon": "ab_cannon_weapon", "cooldown": 0.0, "family": "lane", "bolts": false},
 	"cannon_recoil": {"icon": "ab_cannon_move", "cooldown": 3.5, "augments": ["recoil"], "family": "split_lane"},
 	"cannon_plate": {"icon": "ab_cannon_special", "cooldown": 6.0, "charge_max": 0.8, "family": "plate"},
 	"cannon_rush": {"icon": "ab_cannon_smash", "cooldown": 0.0, "flavour": "rush", "family": "rush"},
@@ -183,7 +184,7 @@ const ABILITIES := {
 	# --- P-C Tally rows ------------------------------------------------------------------
 	# pilots/tally.md section 3: Balance Due alone spends pressure; Gather Plate and the Ledger
 	# Clip keep their own cooldowns and pay into it; Q's meter is Plate Return's charge.
-	"ledger_reader": {"icon": "ab_tally_weapon", "cooldown": 0.0, "cards": ["balance_due"], "pressure": 3},
+	"ledger_reader": {"icon": "ab_tally_weapon", "cooldown": 0.0, "cards": ["balance_due"], "pressure": 3, "bolts": false},
 	"gather_plate": {"icon": "ab_tally_gather", "cooldown": 6.0, "cast": 0.3},
 	"link_clips": {"icon": "ab_tally_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
 	"plate_return": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
