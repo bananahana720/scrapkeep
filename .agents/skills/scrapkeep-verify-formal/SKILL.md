@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-verify-formal
-description: "Check by model the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals), with a TLA+ model kept beside this skill, and check by a second model that an earned reward is banked once and never lost through crashes, failed saves and two games on one profile, by a third that a park flood never holds full water under the ball, and by a fourth that a heft destructible pays once, lets go of what rests on it and cannot be farmed by retrying. Use when a change touches the park event step in event_director.gd, destructibles.gd, flow.gd, launch_take.gd or the launch swipe calls in game.gd, or profile.gd, safe_store.gd, run_store.gd or the settle and grant calls in progress.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check the run flow; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
+description: "Check by TLA+ model, kept beside this skill, the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals); that an earned reward or earned save is spent or banked once through crashes, failed saves and two games on one profile; that a park flood never holds full water under the ball; that a heft destructible pays once and cannot be farmed; and that a yard lock opens, pays once and never shuts on an awake Warden. Use when a change touches flow.gd, launch_take.gd or the launch swipe calls in game.gd, profile.gd, safe_store.gd, run_store.gd, progress.gd's settle and grant calls, the park event step in event_director.gd, destructibles.gd, stage_locks.gd or overtime.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
 ---
 
 # Check the run flow against its model
@@ -15,15 +15,15 @@ This skill owns one formal check. A test plays the orders of events someone wrot
 
 Each rule is one promise to the player. [references/coverage.md](references/coverage.md) has the code behind every step of the model.
 
-| Rule | The promise | What breaks for the player |
-| --- | --- | --- |
+| Rule                | The promise                                                                         | What breaks for the player                                   |
+| ------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | `TakeNamesHeldPart` | When the swipe closes over a launch, it names a part only if the live run holds it. | The screen says a part was taken that the run does not have. |
-| `SeamOwned` | The flow waits for the swipe's cut only while a swipe really owes one. | The launch never lands and the run hangs in the air. |
-| `LaunchLands` | Every launch ends: the next stage, the boss or the summary. | The same hang, as a rule about time. |
-| `WardenGoneOpens` | A sealed stage whose Warden is gone opens its gates. | A stage with nothing to fight and no way on. |
-| `EndsOnce` | A run ends at most once. | Rewards and the run log are written twice. |
-| `PickHeard` | A pilot pick is never dropped without a sign. | A press on pilot select does nothing. |
-| `StampOnlySeam` | A pilot pick's swipe never carries a part's name. | The run-start swipe shows a part instead of its own word. |
+| `SeamOwned`         | The flow waits for the swipe's cut only while a swipe really owes one.              | The launch never lands and the run hangs in the air.         |
+| `LaunchLands`       | Every launch ends: the next stage, the boss or the summary.                         | The same hang, as a rule about time.                         |
+| `WardenGoneOpens`   | A sealed stage whose Warden is gone opens its gates.                                | A stage with nothing to fight and no way on.                 |
+| `EndsOnce`          | A run ends at most once.                                                            | Rewards and the run log are written twice.                   |
+| `PickHeard`         | A pilot pick is never dropped without a sign.                                       | A press on pilot select does nothing.                        |
+| `StampOnlySeam`     | A pilot pick's swipe never carries a part's name.                                   | The run-start swipe shows a part instead of its own word.    |
 
 ## Is this change covered?
 
@@ -37,19 +37,19 @@ Each rule is one promise to the player. [references/coverage.md](references/cove
 2. Check each config with the `astack:statechart` skill, giving it `RunFlow.tla` and the config. That skill owns the checker command and reads a result as a shortest path in plain words; give each run a new output folder outside the repository. Each run takes a few seconds.
 3. Compare with this table. Anything else is a result to explain, in "Read a result".
 
-| Config | Stands for | Must report |
-| --- | --- | --- |
-| `guarded-store`, `guarded-nostore`, `guarded-lastgate` | every guard in place: the real game, the store-less test flow, and a run with no swipe at its last gate | no break |
-| `today-store`, `today-nostore` | the code at the sync commit | only the open findings in [references/findings.md](references/findings.md) |
-| `broken-newrun` | `_begin_run` without `_untake` | `TakeNamesHeldPart` breaks |
-| `broken-retry` | `retry_stage` without `_untake` | `TakeNamesHeldPart` breaks |
-| `broken-end` | `_end_run` without `_untake` | `TakeNamesHeldPart` breaks |
-| `broken-vanish` | no `_warden_vanished` tick | `WardenGoneOpens` breaks |
-| `broken-endguard` | `_on_player_died` without its `in_play` guard | `EndsOnce` breaks |
-| `broken-keys` | screen keys not swallowed under the swipe | `PickHeard` breaks |
-| `broken-busy` | a busy swipe not refused, with the time assumption off too (a busy swipe cannot meet a launch otherwise) | `SeamOwned`, `StampOnlySeam`, `LaunchLands` break |
-| `reach-store`, `reach-nostore` | probes that say "never" about things that must happen | every probe breaks; one that holds means an action can no longer fire (VFM-10) |
-| `untimed` | the time assumption off | `TakeNamesHeldPart` breaks, by a path no player can make |
+| Config                                                 | Stands for                                                                                               | Must report                                                                    |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `guarded-store`, `guarded-nostore`, `guarded-lastgate` | every guard in place: the real game, the store-less test flow, and a run with no swipe at its last gate  | no break                                                                       |
+| `today-store`, `today-nostore`                         | the code at the sync commit                                                                              | only the open findings in [references/findings.md](references/findings.md)     |
+| `broken-newrun`                                        | `_begin_run` without `_untake`                                                                           | `TakeNamesHeldPart` breaks                                                     |
+| `broken-retry`                                         | `retry_stage` without `_untake`                                                                          | `TakeNamesHeldPart` breaks                                                     |
+| `broken-end`                                           | `_end_run` without `_untake`                                                                             | `TakeNamesHeldPart` breaks                                                     |
+| `broken-vanish`                                        | no `_warden_vanished` tick                                                                               | `WardenGoneOpens` breaks                                                       |
+| `broken-endguard`                                      | `_on_player_died` without its `in_play` guard                                                            | `EndsOnce` breaks                                                              |
+| `broken-keys`                                          | screen keys not swallowed under the swipe                                                                | `PickHeard` breaks                                                             |
+| `broken-busy`                                          | a busy swipe not refused, with the time assumption off too (a busy swipe cannot meet a launch otherwise) | `SeamOwned`, `StampOnlySeam`, `LaunchLands` break                              |
+| `reach-store`, `reach-nostore`                         | probes that say "never" about things that must happen                                                    | every probe breaks; one that holds means an action can no longer fire (VFM-10) |
+| `untimed`                                              | the time assumption off                                                                                  | `TakeNamesHeldPart` breaks, by a path no player can make                       |
 
 A `broken-*` config that reports no break means the model can no longer see that fault. Fix the model before trusting any pass (VFM-03).
 
@@ -78,10 +78,10 @@ A pass covers the model within its bounds and its time assumption (VFM-07). Not 
 
 A second model, `models/Rewards.tla`, checks how an earned reward is banked: `sketches/core-loop/src/core/progress.gd`'s earn, settle, `grant_once` and `reconcile_settled`, the profile and run stores, and `sketches/core-loop/src/core/safe_store.gd`'s writes, with a crash between any two file writes, failed writes, two game processes on one profile and a run file an older build left with the legacy reward key. Its rules:
 
-| Rule | The promise | What breaks for the player |
-| --- | --- | --- |
-| `AtMostOnce` | No reward id is granted twice. | The earn is announced and paid twice. |
-| `NeverLost` | An earned and settled reward id is granted after any crash and reload. | A cosmetic or world the player earned never arrives. |
+| Rule         | The promise                                                            | What breaks for the player                           |
+| ------------ | ---------------------------------------------------------------------- | ---------------------------------------------------- |
+| `AtMostOnce` | No reward id is granted twice.                                         | The earn is announced and paid twice.                |
+| `NeverLost`  | An earned and settled reward id is granted after any crash and reload. | A cosmetic or world the player earned never arrives. |
 
 Run it with `bash $F/models/make-rewards-configs.sh`, then each `rewards-*.cfg` as in "Run it"; the two-game configs need plain TLC with several workers. [references/rewards-coverage.md](references/rewards-coverage.md) has the code behind each step, the config table with what each config must report, and what is not modelled. Its findings are in [references/rewards-findings.md](references/rewards-findings.md). The rest of this skill (covered changes, reading a result, replays, broken variants, reach probes) applies to it unchanged.
 
@@ -89,13 +89,13 @@ Run it with `bash $F/models/make-rewards-configs.sh`, then each `rewards-*.cfg` 
 
 A further model, `models/HazardCycle.tla`, checks a storm's sought strike in the Spillway (W44): `sketches/core-loop/src/world/events/storm_seek.gd`, stepped by `sketches/core-loop/src/world/events/natural.gd`, and the enemies it strikes through `sketches/core-loop/src/world/events/hazard_hits.gd`. One tick at a time the ball and one enemy go anywhere, the ball rolls, slows or stalls, a storm breaks or runs down, and the hazard goes idle, tell, strike, cool. Its rules:
 
-| Rule | The promise | What breaks for the player |
-| --- | --- | --- |
-| `TellBeforeStrike` | A strike tells for at least 0.6 s, on the place it lands. | Lightning hits with no warning, or not where it warned. |
-| `RollingNeverSought` | Only a stalled ball is sought; a rolling one, turning or not, never. | Rolling and kiting stop being free (ruling cu). |
-| `StalledSought` | A stalled ball in a storm that can still strike is sought within the rest and one tick. | Parking under a storm costs nothing. |
-| `EnemyStruck` | An enemy inside the strike is struck. | A pack dragged through the strike walks out whole. |
-| `BallOnlyWhereTold` | The ball is hit only inside the told ring, so a ball that rolls off escapes. | A dodge that worked still costs scrap. |
+| Rule                 | The promise                                                                             | What breaks for the player                              |
+| -------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `TellBeforeStrike`   | A strike tells for at least 0.6 s, on the place it lands.                               | Lightning hits with no warning, or not where it warned. |
+| `RollingNeverSought` | Only a stalled ball is sought; a rolling one, turning or not, never.                    | Rolling and kiting stop being free (ruling cu).         |
+| `StalledSought`      | A stalled ball in a storm that can still strike is sought within the rest and one tick. | Parking under a storm costs nothing.                    |
+| `EnemyStruck`        | An enemy inside the strike is struck.                                                   | A pack dragged through the strike walks out whole.      |
+| `BallOnlyWhereTold`  | The ball is hit only inside the told ring, so a ball that rolls off escapes.            | A dodge that worked still costs scrap.                  |
 
 Run it with `bash $F/models/make-hazard-configs.sh`, then each `hazard-*.cfg` as in "Run it". `hazard-today` must report no break; each `hazard-broken-*` must break the rule its line in the script names. `node scripts/gate/model-receipts.mjs --row hazards-hit-everyone --out <dir>` writes its receipt. [references/hazard-coverage.md](references/hazard-coverage.md) has the code behind each step and what is not modelled.
 
@@ -116,15 +116,32 @@ Run `bash $F/models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg`
 
 One more model, `models/Destructibles.tla`, checks a stage's heft destructibles (W45-C) in `sketches/core-loop/src/world/destructibles.gd`: a piece broken by the ball's roll or by a blast, the scrap and cogs it drops against the stage's cap, the line, mount and aim that can rest on it (`_on_piece_shattered` in `sketches/core-loop/src/movement/player_ball.gd`), and the stage retry that rebuilds the pieces and restores the run. The world tick and the ball tick run in either order each frame. Its rules:
 
-| Rule | The promise | What breaks for the player |
-| --- | --- | --- |
-| `PaysOnce` | A piece pays at most once an attempt, and a stage's pieces never pay past 35 scrap and 20 cogs. | Rubble pays again, or one stage pays past its cap. |
-| `RetryNoFarm` | A retried stage banks at most one attempt's worth over the stage-entry checkpoint. | Break, retry, repeat is an endless income. |
-| `NoLineOnRubble` | At a frame's end no line, mount or aim rests on a shattered piece. | The ball hangs from, sits on, or fires at a thing that is gone. |
-| `NoColliderAfterShatter` | A shattered piece is never a live solid. | The ball hits an invisible wall where the piece stood. |
-| `TierCapNeverStacks` | A blast breaks at most one tier above the class. | Stacked bonuses skip the heft the tiers stand for. |
+| Rule                     | The promise                                                                                     | What breaks for the player                                      |
+| ------------------------ | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `PaysOnce`               | A piece pays at most once an attempt, and a stage's pieces never pay past 35 scrap and 20 cogs. | Rubble pays again, or one stage pays past its cap.              |
+| `RetryNoFarm`            | A retried stage banks at most one attempt's worth over the stage-entry checkpoint.              | Break, retry, repeat is an endless income.                      |
+| `NoLineOnRubble`         | At a frame's end no line, mount or aim rests on a shattered piece.                              | The ball hangs from, sits on, or fires at a thing that is gone. |
+| `NoColliderAfterShatter` | A shattered piece is never a live solid.                                                        | The ball hits an invisible wall where the piece stood.          |
+| `TierCapNeverStacks`     | A blast breaks at most one tier above the class.                                                | Stacked bonuses skip the heft the tiers stand for.              |
 
 Run `bash $F/models/make-destructibles-configs.sh`, then plain TLC on each `destructibles-*.cfg` with `Destructibles.tla`. [references/destructibles-coverage.md](references/destructibles-coverage.md) maps each step and guard to the code and lists what each config must report; [references/destructibles-findings.md](references/destructibles-findings.md) holds the findings (none open). `node scripts/gate/model-receipts.mjs --out <dir> --row destructibles-safe` writes its receipt.
+
+## The yard lock model
+
+`models/YardLock.tla` checks the Spillway's yard lock and its overtime bell (FV-2): `sketches/core-loop/src/world/stage_locks.gd` and `sketches/core-loop/src/world/overtime.gd`, driven by the run flow in `sketches/core-loop/src/core/flow.gd`. In one physics frame flow's tick and the locks' tick read the same ball, flow first, and the ball moves after both in the physics server; every interruption comes between frames. Its rules:
+
+| Rule                   | The promise                                                                                               | What breaks for the player                                        |
+| ---------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `WallOnlyWhileLocked`  | The wall stands only while the yard is shut on a stage in play.                                           | A wall left over a stage the run has left.                        |
+| `LockAlwaysOpens`      | A shut yard always opens while the stage plays on.                                                        | The ball is trapped.                                              |
+| `NoLockInWardenFight`  | As the locks tick ends, the yard is never shut while the Warden is awake (woken by the ring or a strike). | The Warden's fight happens inside the yard's wall, with its crew. |
+| `YardPaysOnce`         | A yard pays its panel at most once an activation.                                                         | The yard pays twice.                                              |
+| `OvertimeOnlyAfterWin` | The bell is offered, rung and cashed only after a won yard, three rings at most, one payout.              | The pot pays without the yard won, or twice.                      |
+| `StartCardOnce`        | The lock calls `show_start_card` at most once an activation.                                              | The start card pops twice.                                        |
+
+Run `bash $F/models/make-yardlock-configs.sh`, then plain TLC on each `yardlock-*.cfg` with `YardLock.tla`. [references/yardlock-coverage.md](references/yardlock-coverage.md) maps each step and guard to the code and lists what each config must report; [references/yardlock-findings.md](references/yardlock-findings.md) holds the findings, two open: YL-1 (the yard stays shut through the Warden's fight, when a ball first lands near the beacon or shoots the Warden from inside the yard) and YL-2 (a storeless flow's dead screen keeps the wall). `node scripts/gate/model-receipts.mjs --out <dir> --row yard-lock-safe` writes its receipt from `yardlock-today-unfired` while YL-1 is open, and names both findings as gaps.
+
+`models/EarnedSave.tla` is a smaller model beside the rewards model: the Spare Frame's earned save and the run file that must carry its spend (`sketches/core-loop/src/core/run_state.gd` `_try_death_save`, `sketches/core-loop/src/core/flow.gd` `_on_death_saved`, `_save`, `resume_run`). Run `bash $F/models/make-earnedsave-configs.sh`, then plain TLC on each `earnedsave-*.cfg`. Its rule `SaveOnce` breaks on the code (finding ES-1 in [references/rewards-findings.md](references/rewards-findings.md)): a refused spend write, a quit and a Continue hand the save back.
 
 ## Lessons and updates
 

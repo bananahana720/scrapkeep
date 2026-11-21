@@ -23,7 +23,8 @@ const cfg = (name) => cfgRules(readFileSync(new URL(`models/${name}`, SKILL), "u
 // files from the W1-117 model (old and new reward keys apart, the save lock), with TLC's Progress lines dropped too;
 // the hazard-* files from HazardCycle.tla the same way. The flood-* files were captured again on 21 November 2026 from
 // ParkFlood.tla with the step past the live time (finding PF-2), and the destructibles-* files the same day from
-// Destructibles.tla (W45), untrimmed but for the temp folder, process and host.
+// Destructibles.tla (W45), untrimmed but for the temp folder, process and host, and the yardlock-* files the same day
+// from YardLock.tla (W45 FV-2) the same way.
 const fixture = (name) =>
   readFileSync(new URL(`fixtures/tlc/${name}.out`, import.meta.url), "utf8");
 const out = {
@@ -381,4 +382,70 @@ test("the flood row checks the step past the live time and no longer names PF-2 
   );
   assert.ok(cfg("flood-today-longfill.cfg").properties.includes("HoldEnds"));
   assert.ok(fl.gaps.every((g) => !/PF-2/.test(g)));
+});
+
+test("the yard lock row's pin and plants match captured TLC output, and its open findings are gaps", () => {
+  const yl = ROWS["yard-lock-safe"];
+  for (const r of yl.real) {
+    const parsed = parseTlc(fixture(r.cfg.replace(".cfg", "")));
+    assert.equal(parsed.outcome, "clean", r.cfg);
+    assert.equal(parsed.distinct, r.minStates, r.cfg);
+    assert.ok(cfg(r.cfg).properties.includes("LockAlwaysOpens"), `${r.cfg} checks LockAlwaysOpens`);
+  }
+  assert.deepEqual([...new Set(yl.plants.map((p) => p.rule))].sort(), [
+    "LockAlwaysOpens",
+    "NoLockInWardenFight",
+    "OvertimeOnlyAfterWin",
+    "StartCardOnce",
+    "WallOnlyWhileLocked",
+    "YardPaysOnce",
+  ]);
+  for (const p of yl.plants)
+    assert.equal(
+      brokeRule(parseTlc(fixture(p.cfg.replace(".cfg", ""))), cfg(p.cfg), p.rule),
+      true,
+      `${p.cfg} breaks ${p.rule}`,
+    );
+  // The full code config still breaks on finding YL-1, so it stays out of the receipt and the finding is a gap.
+  const today = parseTlc(fixture("yardlock-today"));
+  assert.deepEqual(today.rules, ["NoLockInWardenFight"]);
+  // A ball that rolls in is not safe either: a shot from inside the yard wakes the Warden.
+  assert.deepEqual(parseTlc(fixture("yardlock-today-ranged")).rules, ["NoLockInWardenFight"]);
+  assert.ok(yl.real.every((r) => r.cfg !== "yardlock-today.cfg"));
+  assert.ok(yl.gaps.some((g) => /YL-1/.test(g)) && yl.gaps.some((g) => /YL-2/.test(g)));
+  const plants = yl.plants.map((p) => ({
+    ...p,
+    rules: cfg(p.cfg),
+    parsed: parseTlc(fixture(p.cfg.replace(".cfg", ""))),
+  }));
+  const real = (parsed) => [{ ...yl.real[0], parsed }];
+  const held = buildReceipt({
+    head: HEAD,
+    real: real(parseTlc(fixture("yardlock-today-unfired"))),
+    plants,
+    drift: synced,
+    gaps: yl.gaps,
+  });
+  assert.equal(held.pass, true);
+  assert.match(held.measured, /yardlock-today-unfired: no break in 47,690 distinct states/);
+  assert.match(held.measured, /yardlock-broken-maxs broke LockAlwaysOpens/);
+  assert.match(held.measured, /not checked: finding YL-1 is open/);
+  assert.equal(
+    buildReceipt({ head: HEAD, real: real(today), plants, drift: synced, gaps: yl.gaps }).pass,
+    false,
+  );
+  const covered = coveredFiles(readFileSync(new URL(yl.coverage, SKILL), "utf8"));
+  for (const f of [
+    "world/stage_locks.gd",
+    "world/overtime.gd",
+    "world/lock_rows.gd",
+    "core/flow.gd",
+    "core/beacon.gd",
+    "game.gd",
+    "world/world.gd",
+    "movement/player_ball.gd",
+    "movement/rigid_ball.gd",
+    "combat/weapons.gd",
+  ])
+    assert.ok(covered.includes(`sketches/core-loop/src/${f}`), f);
 });
