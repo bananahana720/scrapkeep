@@ -105,7 +105,8 @@ func _open() -> void:
 			var game = ancestor.get("game")
 			if game != null:
 				var build = game.get("build")
-				show_build(game.run.parts, {}, build.dropped_shot_bits() if build != null else [])
+				show_build(game.run.parts, {}, build.dropped_shot_bits() if build != null else [],
+					ShotBits.names(build.shot_bits()) if build != null else [])
 				_popup.popup_centered()
 			return
 		ancestor = ancestor.get_parent()
@@ -131,10 +132,12 @@ func visible_text() -> String:
 	return "\n".join(_rows.find_children("*", "Label", true, false).map(func(label): return label.text))
 
 
-# dropped: the shot bits held past the cap (Build.dropped_shot_bits), each drawn as its chip
-# struck through, no words (design-v3/ABILITY-MUTATIONS.md B2).
-func show_build(held: Array, loadout := {}, dropped: Array = []) -> void:
+# kept: the shot's bits (Build.shot_bits), each drawn as its chip; dropped: the bits held past
+# the cap (Build.dropped_shot_bits), each its chip struck through after them, so a struck chip
+# sits beside the whole ones it lost to. No words (design-v3/ABILITY-MUTATIONS.md B2).
+func show_build(held: Array, loadout := {}, dropped: Array = [], kept: Array = []) -> void:
 	_data = describe(held)
+	_data["shot_bits"] = kept.duplicate()
 	_data["struck_bits"] = dropped.duplicate()
 	for child in _rows.get_children():
 		_rows.remove_child(child)
@@ -148,10 +151,12 @@ func show_build(held: Array, loadout := {}, dropped: Array = []) -> void:
 			_line(words)
 	for row in _data["parts"]:
 		_part_row(row)
-	if not dropped.is_empty():
+	if not (kept.is_empty() and dropped.is_empty()):
 		var chips := HBoxContainer.new()
-		chips.name = "StruckBits"
+		chips.name = "ShotBits"
 		chips.add_theme_constant_override("separation", 8)
+		for bit in kept:
+			chips.add_child(BitChip.new(String(bit), false))
 		for bit in dropped:
 			chips.add_child(BitChip.new(String(bit), true))
 		_rows.add_child(chips)

@@ -11,6 +11,8 @@ extends Node3D
 #   spiral-and-cross build thickens into a haze, never a wall.
 # - Bolts draw at PRIORITY, below every enemy telegraph (Telegraph.PRIORITY), and never
 #   in HAZARD, the colour telegraphs own.
+# - A bolt carrying shot bits draws in its first bit's TABLE colour (ShotBits.NAMES order)
+#   and MULTI_BIT_WIDTH wider when it carries two or three (ABILITY-MUTATIONS.md B3).
 
 const Density := preload("res://src/presentation/density.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
@@ -25,6 +27,16 @@ const ALPHA_FULL := 0.9
 const ALPHA_CROWDED := 0.4
 const CROWD_START := 16
 const WAVE_RAMP := 6.0
+const MULTI_BIT_WIDTH := 1.15
+# The split bit (start values): two children at +/- SPLIT_ANGLE_DEG off the parent's line,
+# each SPLIT_DAMAGE of its damage, flying the parent's remaining range up to SPLIT_REACH: a
+# burst into the pack around the struck machine, not two more full-range shots that fill
+# MAX_LIVE and retire the player's own (principle 4).
+const SPLIT_ANGLE_DEG := 18.0
+const SPLIT_DAMAGE := 0.5
+const SPLIT_REACH := 12.0
+# A bounced bolt leaves the wall this far out along the normal, so it never meets it again.
+const BOUNCE_LIFT := 0.05
 
 # Called as on_hit.call(bolt: Dictionary, enemy: Node3D, point: Vector3, part: String);
 # part is a weak point id from enemy.weak_points(), or "" for the body.
@@ -33,6 +45,9 @@ var on_hit: Callable
 var on_shell: Callable
 # Called as on_stop.call(point: Vector3, color: Color) when a bolt hits the world.
 var on_stop: Callable
+# Called as on_bounce.call(bolt: Dictionary, point: Vector3) when a bolt glances off a wall
+# with its bounce bit; the glance is not a hit, so it pulls and heats nothing.
+var on_bounce: Callable
 var peak_live := 0
 var retired := 0
 var fired := 0
@@ -89,7 +104,8 @@ func clear() -> void:
 # bolt needs: origin, dir, speed, max_dist, damage, kind, weapon_id, radius, knock,
 # chain_jumps, chain_range, chain_falloff, color, wave_amp, wave_hz, phase; bits, the
 # shot's ShotBits set, is optional and defaults to the empty set, and so is spent, the bits
-# already used up (the pierce bit after its one pass).
+# already used up (pierce after its one pass, bounce after its glance, split after its first
+# hit; split_spent() for a split child). exclude, the machines it may not hit, is optional.
 func fire(bolt: Dictionary) -> void:
 	if not bolt.has("bits"):
 		bolt["bits"] = 0
@@ -106,7 +122,8 @@ func fire(bolt: Dictionary) -> void:
 	bolt["age"] = 0.0
 	bolt["shown"] = bolt["origin"]
 	bolt["pierce"] = int(bolt.get("pierce", 0))
-	bolt["exclude"] = []
+	bolt["exclude"] = (bolt.get("exclude", []) as Array).duplicate()
+	bolt["acts"] = 0
 	_bolts.append(bolt)
 	fired += 1
 	peak_live = maxi(peak_live, _bolts.size())
@@ -133,12 +150,59 @@ static func passes_left(bolt: Dictionary) -> int:
 
 
 static func _pierce_bit_ready(bolt: Dictionary) -> bool:
-	var pierce := ShotBits.bit("pierce")
-	return ShotBits.has(int(bolt.get("bits", 0)), pierce) and not ShotBits.has(int(bolt.get("spent", 0)), pierce)
+	return bit_ready(bolt, "pierce")
+
+
+# Whether the bolt holds the named bit and has not spent it.
+static func bit_ready(bolt: Dictionary, bit_name: String) -> bool:
+	var b := ShotBits.bit(bit_name)
+	return ShotBits.has(int(bolt.get("bits", 0)), b) and not ShotBits.has(int(bolt.get("spent", 0)), b)
+
+
+# What a split child has spent: its parent's spent plus split (a child never splits again, so
+# one bolt's family is at most three) and pull (only the first hit pulls), minus pierce (a
+# piercing parent's children still pierce once each). ABILITY-MUTATIONS.md B3 pair rows.
+static func split_spent(parent_spent: int) -> int:
+	var spent := ShotBits.union(parent_spent, ShotBits.bit("split") | ShotBits.bit("pull"))
+	return ShotBits.without(spent, ShotBits.bit("pierce"))
+
+
+# The two children a split-ready bolt throws from `point` when it strikes the machine with
+# `struck_id`: +/- SPLIT_ANGLE_DEG about its up axis, SPLIT_DAMAGE of its damage, the rest of
+# its range up to SPLIT_REACH, and that machine excluded. [] when the bolt cannot split.
+static func split_children(parent: Dictionary, point: Vector3, struck_id: int) -> Array:
+	if not bit_ready(parent, "split"):
+		return []
+	var dir: Vector3 = parent["dir"]
+	var axis: Vector3 = parent.get("up", Vector3.UP)
+	var left := clampf(float(parent["max_dist"]) - float(parent.get("travelled", 0.0)), 0.0, SPLIT_REACH)
+	var exclude: Array = (parent.get("exclude", []) as Array).duplicate()
+	exclude.append(struck_id)
+	var out: Array = []
+	for side in [-1.0, 1.0]:
+		var kid := child(parent, {"origin": point, "dir": dir.rotated(axis, deg_to_rad(SPLIT_ANGLE_DEG) * side).normalized(),
+			"max_dist": left, "damage": float(parent["damage"]) * SPLIT_DAMAGE, "pierce": 0})
+		kid["spent"] = split_spent(int(parent.get("spent", 0)))
+		kid["exclude"] = exclude.duplicate()
+		out.append(kid)
+	return out
+
+
+# The colour a bolt draws in: its first shot bit's TABLE colour in ShotBits.NAMES order, or
+# its weapon's colour when it carries none. TABLE never holds HAZARD (shot_bits.gd).
+static func tint(bolt: Dictionary) -> Color:
+	var held := ShotBits.names(int(bolt.get("bits", 0)))
+	return ShotBits.TABLE[held[0]]["color"] if not held.is_empty() else bolt["color"]
+
+
+# The bolt's drawn width: MULTI_BIT_WIDTH wider when it carries two or three bits.
+static func width(bolt: Dictionary) -> float:
+	return WIDTH * (MULTI_BIT_WIDTH if ShotBits.count(int(bolt.get("bits", 0))) >= 2 else 1.0)
 
 
 func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells: Array = []) -> void:
 	var survivors: Array = []
+	var spawned: Array = []
 	# The enemies' reach, built once and rebuilt after any hit callback (which can kill or move one).
 	var snapshot: Array = []
 	var fresh := false
@@ -147,15 +211,18 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 			snapshot = _snapshot(enemies)
 			fresh = true
 		var from: Vector3 = bolt["shown"]
+		var before: float = bolt["travelled"]
 		bolt["age"] += delta
 		bolt["travelled"] = minf(bolt["travelled"] + bolt["speed"] * delta, bolt["max_dist"])
 		var to := _position(bolt)
 		var end := to
 		var blocked := false
+		var normal := Vector3.ZERO
 		if from.distance_squared_to(to) > 0.000001:
 			var wall := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to, WORLD_MASK))
 			if not wall.is_empty():
 				end = wall["position"]
+				normal = wall.get("normal", Vector3.ZERO)
 				blocked = true
 		var target := _first_enemy(from, end, bolt["radius"], snapshot, bolt["exclude"])
 		var shell := _first_shell(from, end, bolt["radius"], shells)
@@ -167,8 +234,20 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 		while not target.is_empty():
 			fresh = false
 			var hit_id: int = target["enemy"].get_instance_id()
+			# The bits this hit sets off in flight, so the hit plays one tell for them all.
+			var acts := 0
+			if int(bolt["pierce"]) < 1 and _pierce_bit_ready(bolt):
+				acts = ShotBits.union(acts, ShotBits.bit("pierce"))
+			if bit_ready(bolt, "split"):
+				acts = ShotBits.union(acts, ShotBits.bit("split"))
+			bolt["acts"] = acts
 			if on_hit.is_valid():
 				on_hit.call(bolt, target["enemy"], target["point"], target["part"])
+			bolt["acts"] = 0
+			# The split bit spends on the first machine and throws two children from it.
+			if ShotBits.has(acts, ShotBits.bit("split")):
+				spawned.append_array(split_children(bolt, target["point"], hit_id))
+				bolt["spent"] = ShotBits.union(int(bolt["spent"]), ShotBits.bit("split"))
 			# A piercing bolt passes through: it keeps its line and corkscrew phase and
 			# looks for the next machine further along the same segment. The pattern's
 			# pierce goes first, then the pierce bit's one pass, which it then spends.
@@ -187,6 +266,9 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 			continue
 		if blocked:
 			fresh = false
+			if _glance(bolt, end, normal, before + from.distance_to(end)):
+				survivors.append(bolt)
+				continue
 			if on_stop.is_valid():
 				on_stop.call(end, bolt["color"])
 			continue
@@ -195,6 +277,29 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 		bolt["shown"] = to
 		survivors.append(bolt)
 	_bolts = survivors
+	for kid in spawned:
+		fire(kid)
+
+
+# The bounce bit: the first wall reflects the bolt about its normal with the range it has
+# left, and spends bounce, so a second wall stops it. Whether the bolt glanced.
+func _glance(bolt: Dictionary, at: Vector3, normal: Vector3, used: float) -> bool:
+	var left := float(bolt["max_dist"]) - used
+	if not bit_ready(bolt, "bounce") or normal.length_squared() < 0.0001 or left <= 0.0:
+		return false
+	var dir: Vector3 = (bolt["dir"] as Vector3).bounce(normal.normalized()).normalized()
+	bolt["spent"] = ShotBits.union(int(bolt["spent"]), ShotBits.bit("bounce"))
+	bolt["origin"] = at + normal.normalized() * BOUNCE_LIFT
+	bolt["dir"] = dir
+	bolt["max_dist"] = left
+	bolt["travelled"] = 0.0
+	bolt["shown"] = bolt["origin"]
+	var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
+	bolt["right"] = dir.cross(up_hint).normalized()
+	bolt["up"] = (bolt["right"] as Vector3).cross(dir).normalized()
+	if on_bounce.is_valid():
+		on_bounce.call(bolt, at)
+	return true
 
 
 # Where the bolt is now: along its line, plus the corkscrew for a waving bolt. The
@@ -279,12 +384,18 @@ func _process(_delta: float) -> void:
 	var alpha := crowd_alpha(count)
 	var tail := Density.SHED_STREAK_SCALE if Density.live().sheds("bolt_tails") else 1.0
 	for i in count:
-		var bolt: Dictionary = _bolts[i]
-		var dir: Vector3 = bolt["dir"]
-		var streak := minf(maxf(MIN_STREAK, bolt["speed"] * STREAK_SECONDS), maxf(0.2, bolt["travelled"])) * tail
-		var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
-		var basis := Basis.looking_at(dir, up_hint) * Basis.from_scale(Vector3(WIDTH, WIDTH, streak))
-		var head: Vector3 = bolt["shown"]
-		_multimesh.set_instance_transform(i, Transform3D(basis, head - dir * streak * 0.5))
-		var tint: Color = bolt["color"]
-		_multimesh.set_instance_color(i, Color(tint, alpha))
+		var drawn := instance(_bolts[i], alpha, tail)
+		_multimesh.set_instance_transform(i, drawn[0])
+		_multimesh.set_instance_color(i, drawn[1])
+
+
+# One bolt as its MultiMesh instance, [Transform3D, Color]: a streak along its line, width()
+# across and tint() at the crowd's alpha.
+static func instance(bolt: Dictionary, alpha: float, tail := 1.0) -> Array:
+	var dir: Vector3 = bolt["dir"]
+	var streak := minf(maxf(MIN_STREAK, bolt["speed"] * STREAK_SECONDS), maxf(0.2, bolt["travelled"])) * tail
+	var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
+	var side := width(bolt)
+	var basis := Basis.looking_at(dir, up_hint) * Basis.from_scale(Vector3(side, side, streak))
+	var head: Vector3 = bolt["shown"]
+	return [Transform3D(basis, head - dir * streak * 0.5), Color(tint(bolt), alpha)]
