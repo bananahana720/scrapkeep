@@ -60,6 +60,9 @@ const EXPECTED_LAYERS := {
 	"grounding_spike": "local",
 	# 2026-11-21 W45-B2 U6: Halo Rig is a pattern row (local); Slag Pike's fuse reads no weapon stat (global).
 	"halo_rig": "local", "slag_pike": "global",
+	# 2026-11-21 W45-B2 U7: Five verb items (C3–C7), all passive effects, player-global.
+	"backwash": "global", "barbed_reel": "global", "faultline_cap": "global",
+	"second_bell": "global", "long_leash": "global",
 }
 const FIXED_CHECKS := 29
 const FITTED_PARTS := ["hot_rivets", "hot_rivets", "slag_rounds", "rivet_plating", "quick_spool",

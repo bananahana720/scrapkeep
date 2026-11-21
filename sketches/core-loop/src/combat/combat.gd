@@ -336,6 +336,8 @@ var _cannon_count := 0
 # Both clear with the committed volleys, on a run start and every attempt.
 var _walk := {}
 var _wake := {}
+# Second Bell: queued repeats, {at, fire, fraction, share, row, is_gather, gather_radius}. Each fires once.
+var _bells: Array = []
 var _exposed := {}
 # Tally's program cards. bay is the selected card (0, 1 or 2); plate is Gather's plate ({}
 # or {"at", "until"}); link_group the live clips ({} or {"ids", "until", "spent"}); last_card
@@ -538,6 +540,10 @@ func setup(ctx_ref) -> void:
 	ctx.events.slammed.connect(_on_slammed_upgrade)
 	ctx.events.slammed.connect(_on_cannon_slammed)
 	ctx.events.dashed.connect(_on_cannon_dashed)
+	ctx.events.dashed.connect(_on_dash_wake)
+	ctx.events.boosted.connect(_on_dash_wake)
+	ctx.events.harpoon_smashed.connect(_on_reel_chain)
+	ctx.events.slammed.connect(_on_slam_crack)
 	ctx.events.dismounted.connect(_on_dismounted_sentry)
 	ctx.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _rebuild_patterns())
 	ctx.player.heft_of = heft
@@ -2147,6 +2153,7 @@ func _step_special(intent, delta: float) -> void:
 	# Twin Discharge and Vortex: the same release again, smaller, a moment later.
 	if _knob("special_echo") > 0.0:
 		_echo = {"row": row, "fraction": f * 0.6, "left": _knob("special_echo")}
+	_queue_bell(row, f)
 	ctx.events.gauge_released.emit(id, f)
 	ctx.events.special_used.emit(id, ctx.player.ball_position())
 	ctx.events.slot_cast.emit(AbilityState.SPECIAL, id, ctx.player.ball_position())
@@ -2215,6 +2222,7 @@ func _land_tap(slot: String, id: String, cast: Callable) -> void:
 	abilities.spend(slot)
 	var at: Vector3 = ctx.player.ball_position()
 	if slot == AbilityState.SPECIAL:
+		_queue_bell_tap(id, cast)
 		ctx.events.special_used.emit(id, at)
 	ctx.events.slot_cast.emit(slot, id, at)
 
@@ -2951,6 +2959,7 @@ func _cast_line(id: String, fraction: float) -> void:
 		_fire_line_skill(id, fraction)
 		return
 	var seconds := float(AbilityState.ABILITIES.get(id, {}).get("load_seconds", LINE_LOAD_SECONDS))
+	seconds *= _line_leash_mult()
 	_line_load = {"id": id, "fraction": fraction, "left": seconds}
 	ctx.events.line_skill_loaded.emit(id, seconds)
 
@@ -4300,6 +4309,7 @@ func _tick_upgrades(delta: float) -> void:
 	var kit = ctx.player.kit
 	_tick_echo(delta)
 	_tick_rakes()
+	_tick_bells()
 	_pulse_left = maxf(0.0, _pulse_left - delta)
 	if _pulse_left <= 0.0:
 		if kit.hooked and _knob("anchor_pulse") > 0.0:
@@ -4382,6 +4392,204 @@ func _step_devices(delta: float) -> void:
 			ultimate.payloads.recall(int(gone["id"]))
 		else:
 			sticky.recall(int(gone["id"]))
+
+
+# --- Verb items (ABILITY-MUTATIONS.md C3–C7) ----------------------------------------
+
+# Backwash (C3): a dash or boost lays a committed ripple strip behind the ball's path.
+# Damage is dash_wake.share of a weapon hit, source item_proc, bits 0, one hit per machine.
+func _on_dash_wake(direction: Vector3) -> void:
+	var row := _verb_row("dash_wake")
+	if row.is_empty() or not ctx.flow.in_play():
+		return
+	var ball: Vector3 = ctx.player.ball_position()
+	var back := -direction.normalized() if direction.length() > 0.01 else -ctx.aim_forward()
+	back.y = 0.0
+	back = back.normalized()
+	var length: float = float(row["length"])
+	var base_damage: float = float(row["share"]) * _base_weapon_damage()
+	var from: Vector3 = ball
+	var to: Vector3 = ball + back * length
+	var width := 1.5
+	effects.line(from, to, width, ctx.player.class_color())
+	var hit_ids := {}
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if DamageDoor.dead(enemy):
+			continue
+		var eid := enemy.get_instance_id()
+		if hit_ids.has(eid):
+			continue
+		if in_line(from, to, width, enemy.global_position, _hull(enemy)):
+			_hit(enemy, "item", base_damage, direction, 0.0, "", "item_proc")
+			hit_ids[eid] = true
+
+
+# Barbed Reel (C4): a reel-in impact chains once to the nearest other enemy within reach.
+func _on_reel_chain(enemy: Node3D, at: Vector3, _speed: float) -> void:
+	var row := _verb_row("reel_chain")
+	if row.is_empty() or not ctx.flow.in_play() or not is_instance_valid(enemy):
+		return
+	var damage: float = float(row["share"]) * _base_weapon_damage()
+	var reach: float = float(row["reach"])
+	var from: Vector3 = enemy.global_position
+	var near: Array = _nearest_n(from, reach, [enemy], 1)
+	if near.is_empty():
+		return
+	var target: Node3D = near[0]
+	effects.arc(from, target.global_position, ctx.player.class_color())
+	_hit(target, "item", damage, target.global_position - from, 0.0, "", "item_proc")
+
+
+# Faultline Cap (C5): a smash landing cracks an 8 m corridor ahead and breaks props along it.
+func _on_slam_crack(at: Vector3, _strength: float, _flatness: float) -> void:
+	var row := _verb_row("slam_crack")
+	if row.is_empty() or not ctx.flow.in_play():
+		return
+	var heading := ctx.aim_forward()
+	heading.y = 0.0
+	heading = heading.normalized() if heading.length() > 0.01 else Vector3.FORWARD
+	var length: float = float(row["length"])
+	var base_damage: float = float(row["share"]) * _smash_damage()
+	var from: Vector3 = at
+	var to: Vector3 = at + heading * length
+	var width := 2.0
+	effects.line(from, to, width, ctx.player.class_color())
+	var hit_ids := {}
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if DamageDoor.dead(enemy):
+			continue
+		var eid := enemy.get_instance_id()
+		if hit_ids.has(eid):
+			continue
+		if in_line(from, to, width, enemy.global_position, _hull(enemy)):
+			_hit(enemy, "item", base_damage, heading, 0.0, "", "item_proc")
+			hit_ids[eid] = true
+	var break_r: float = float(row["break_radius"])
+	for i in 3:
+		var t: float = (float(i) + 0.5) / 3.0
+		var point: Vector3 = from.lerp(to, t)
+		ctx.break_props(point, break_r, "faultline_cap")
+
+
+# Second Bell (C6): on kit special release, queue a repeat at half strength 1 s later.
+# Never fires on F-key Actives, ultimates, Crater Slam or plant discharge.
+func _queue_bell(row: Dictionary, fraction: float) -> void:
+	var bell := _verb_row("second_bell")
+	if bell.is_empty():
+		return
+	_bells.append({"at": _clock + float(bell["delay"]), "row": row, "fraction": fraction * float(bell["share"]),
+		"is_gather": false})
+
+
+func _queue_bell_tap(id: String, cast: Callable) -> void:
+	var bell := _verb_row("second_bell")
+	if bell.is_empty():
+		return
+	var is_gather: bool = id == "gather_plate"
+	_bells.append({"at": _clock + float(bell["delay"]), "id": id, "cast": cast,
+		"share": float(bell["share"]), "is_gather": is_gather})
+
+
+func _tick_bells() -> void:
+	var waiting: Array = []
+	for entry in _bells:
+		if float(entry["at"]) > _clock:
+			waiting.append(entry)
+		else:
+			_ring_bell(entry)
+	_bells = waiting
+
+
+func _ring_bell(entry: Dictionary) -> void:
+	if entry.has("row"):
+		var row: Dictionary = entry["row"]
+		if row.has("can") and not row["can"].call():
+			return
+		var prev_source := _forced_source
+		_forced_source = "item_proc"
+		row["fire"].call(float(entry["fraction"]), row["geometry"].call(float(entry["fraction"])))
+		_forced_source = prev_source
+	elif entry.get("is_gather", false):
+		_bell_gather(float(entry["share"]))
+	elif entry.has("cast"):
+		var prev_source := _forced_source
+		_forced_source = "item_proc"
+		entry["cast"].call()
+		_forced_source = prev_source
+
+
+func _bell_gather(share: float) -> void:
+	if plate.is_empty():
+		return
+	var radius: float = float(plate.get("radius", 6.0)) * share
+	var at: Vector3 = plate.get("at", ctx.player.ball_position())
+	effects.ring(at, radius, ctx.player.class_color())
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if DamageDoor.dead(enemy):
+			continue
+		if enemy.global_position.distance_to(at) <= radius * (1.0 + AbilityState.FORGIVENESS):
+			var pull := at - enemy.global_position
+			pull.y = 0.0
+			if pull.length() > 0.1 and enemy.has_method("knock"):
+				enemy.knock(pull.normalized(), 4.0)
+
+
+# Long Leash (C7): the multiplier on a line skill's load_seconds.
+func _line_leash_mult() -> float:
+	var build = ctx.build if ctx != null else null
+	var held = build.get("effects") if build != null else null
+	if held != null and not held.line_leash.is_empty():
+		return float(held.line_leash["mult"])
+	return 1.0
+
+
+# The base weapon damage for item_proc scaling (the weapon pattern's damage * weapon_damage mod).
+func _base_weapon_damage() -> float:
+	var weapon := active_weapon()
+	if weapon == "" or not _patterns.has(weapon):
+		return 14.0
+	return float(_patterns[weapon].damage) * _damage_mod(weapon)
+
+
+# The smash damage for Faultline Cap scaling.
+func _smash_damage() -> float:
+	return float(STRIKE_DAMAGE["slam"][0]) + float(STRIKE_DAMAGE["slam"][1]) * 10.0
+
+
+# Read a verb item's held table from the build's effects, or {} when not held.
+func _verb_row(effect_id: String) -> Dictionary:
+	var build = ctx.build if ctx != null else null
+	var held = build.get("effects") if build != null else null
+	if held == null:
+		return {}
+	match effect_id:
+		"dash_wake":
+			return held.dash_wake
+		"reel_chain":
+			return held.reel_chain
+		"slam_crack":
+			return held.slam_crack
+		"second_bell":
+			return held.second_bell
+		"line_leash":
+			return held.line_leash
+	return {}
+
+
+# Up to n nearest enemies from `at` within `reach`, excluding `exclude`.
+func _nearest_n(at: Vector3, reach: float, exclude: Array, n: int) -> Array:
+	var picks := []
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if DamageDoor.dead(enemy) or exclude.has(enemy):
+			continue
+		var d := enemy.global_position.distance_to(at)
+		if d <= reach:
+			picks.append([d, enemy])
+	picks.sort_custom(func(a, b): return a[0] < b[0])
+	var out := []
+	for i in mini(n, picks.size()):
+		out.append(picks[i][1])
+	return out
 
 
 # Crater Slam: a smash row that spends the special fires a full discharge on landing.

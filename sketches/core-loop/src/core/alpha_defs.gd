@@ -79,6 +79,9 @@ const PARTS := [
 	# 2026-11-21 (wave 45 U6): Slag Pike (rare, cobalt) and Halo Rig, the two weapon-pattern items of
 	# ABILITY-MUTATIONS.md C1 and C2; neither is a relic (ruling bn).
 	"slag_pike", "halo_rig",
+	# 2026-11-21 (wave 45 U7): Five verb items (ABILITY-MUTATIONS.md C3–C7), each a closed-table row
+	# in item_effects.gd; uncommon or rare cobalt only, no relic (ruling bn).
+	"backwash", "barbed_reel", "faultline_cap", "second_bell", "long_leash",
 ]
 
 # SG4 burden parts: a second list beside PARTS, so the normal loot list (build_synergy_test pins

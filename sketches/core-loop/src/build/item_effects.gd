@@ -30,9 +30,10 @@ const EFFECTS := {
 	"damage_reduction": "per", "heal_back": "chance", "brace": "share", "hp_per_mass": "per", "floor_hp": "",
 	"bonus_scrap": "chance", "ping": "", "price_scale": "per", "perk": "", "drone": "chance",
 	"slot_cooldown": "per", "overcharge": "damage", "burden_payout": "per", "pike_fuse": "",
+	"dash_wake": "", "reel_chain": "", "slam_crack": "", "second_bell": "", "line_leash": "",
 }
 const PASSIVE_EFFECTS := ["slot_cooldown", "damage_reduction", "price_scale", "hp_per_mass", "perk", "ballast",
-	"vault_cooldown", "vault_charges", "pike_fuse"]
+	"vault_cooldown", "vault_charges", "pike_fuse", "dash_wake", "reel_chain", "slam_crack", "second_bell", "line_leash"]
 const DOMINO_MAX_PER_WINDOW := 3
 const PING_RADIUS := 9.0
 
@@ -56,6 +57,16 @@ var vault_charges := 0
 # Slag Pike's row (every, cap_mult, range_mult, idle_s) while it is held, else empty. Combat reads
 # it once per weapon press through pike_fuse() and owns the volley counter (combat.gd _fire).
 var pike := {}
+# Backwash (dash_wake): {length, share} while held, else empty. Combat reads it on a dash event.
+var dash_wake := {}
+# Barbed Reel (reel_chain): {share, reach} while held, else empty. Combat reads it on harpoon_smashed.
+var reel_chain := {}
+# Faultline Cap (slam_crack): {length, share, break_radius} while held, else empty. Combat reads it on a slam.
+var slam_crack := {}
+# Second Bell (second_bell): {delay, share} while held, else empty. Combat reads it at gauge release and _land_tap SPECIAL.
+var second_bell := {}
+# Long Leash (line_leash): {mult} while held, else empty. Combat reads it in _cast_line.
+var line_leash := {}
 # Numbers the fuzzer and the tests read.
 var procs := {}
 
@@ -121,6 +132,11 @@ func refresh(held: Array) -> void:
 	vault_cooldown_scale = 1.0
 	vault_charges = 0
 	pike = {}
+	dash_wake = {}
+	reel_chain = {}
+	slam_crack = {}
+	second_bell = {}
+	line_leash = {}
 	var index := 0
 	for part_id in order:
 		var d: Resource = Parts.def(part_id)
@@ -152,6 +168,17 @@ func refresh(held: Array) -> void:
 			"pike_fuse":
 				pike = {"every": maxi(2, int(d.effect.get("every", 6))), "cap_mult": maxf(1.0, float(d.effect.get("cap_mult", 6.0))),
 					"range_mult": maxf(1.0, float(d.effect.get("range_mult", 1.25))), "idle_s": maxf(0.1, float(d.effect.get("idle_s", 3.0)))}
+			"dash_wake":
+				dash_wake = {"length": maxf(1.0, float(d.effect.get("length", 4.0))), "share": clampf(float(d.effect.get("share", 0.4)), 0.0, 1.0)}
+			"reel_chain":
+				reel_chain = {"share": clampf(float(d.effect.get("share", 0.7)), 0.0, 1.0), "reach": maxf(1.0, float(d.effect.get("reach", 6.0)))}
+			"slam_crack":
+				slam_crack = {"length": maxf(1.0, float(d.effect.get("length", 8.0))), "share": clampf(float(d.effect.get("share", 0.5)), 0.0, 1.0),
+					"break_radius": maxf(0.5, float(d.effect.get("break_radius", 2.5)))}
+			"second_bell":
+				second_bell = {"delay": maxf(0.1, float(d.effect.get("delay", 1.0))), "share": clampf(float(d.effect.get("share", 0.5)), 0.0, 1.0)}
+			"line_leash":
+				line_leash = {"mult": maxf(1.0, float(d.effect.get("mult", 2.0)))}
 		if d.trigger == "":
 			continue
 		var entry := {"id": part_id, "def": d, "copies": n, "index": index}

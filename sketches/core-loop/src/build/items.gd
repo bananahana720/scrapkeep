@@ -89,6 +89,24 @@ const TABLE := {
 		"verb": "Fires shots in a wide ring", "text": "Adds 6 ring bolts at 55% damage",
 		"patterns": {"halo": 1}},
 
+	# Wave 45 U7 (ABILITY-MUTATIONS.md C3–C7): five verb items, each a closed-table row in
+	# item_effects.gd with a small call site in its owning module. None changes movement.
+	"backwash": {"maker": "spillway_works", "touches": "movement", "base": "mobility", "rarity": "uncommon", "stack": "capped", "cap": 1, "tags": ["speed"],
+		"verb": "Dashing leaves a ripple strip behind", "text": "Dash lays a 4 m 0.4x strip",
+		"effect": {"do": "dash_wake", "length": 4.0, "share": 0.4}},
+	"barbed_reel": {"maker": "redjaw", "touches": "harpoon", "base": "weapon", "rarity": "rare", "stack": "capped", "cap": 1, "tags": ["kinetic", "chain"],
+		"verb": "Reel-in chains to one more machine", "text": "Reel-in hits the nearest machine at 0.7x",
+		"effect": {"do": "reel_chain", "share": 0.7, "reach": 6.0}},
+	"faultline_cap": {"maker": "waking", "touches": "jump", "base": "defense", "rarity": "rare", "stack": "capped", "cap": 1, "tags": ["kinetic", "mass"],
+		"verb": "Smash landings crack ahead 8 m", "text": "Smash cracks 8 m at 0.5x, breaks props",
+		"effect": {"do": "slam_crack", "length": 8.0, "share": 0.5, "break_radius": 2.5}},
+	"second_bell": {"maker": "mind_glass", "touches": "special", "base": "charge", "rarity": "uncommon", "stack": "capped", "cap": 1, "tags": ["arc"],
+		"verb": "Kit specials ring once more", "text": "1 s later, special repeats at half strength",
+		"effect": {"do": "second_bell", "delay": 1.0, "share": 0.5}},
+	"long_leash": {"maker": "moss", "touches": "harpoon", "base": "utility", "rarity": "uncommon", "stack": "capped", "cap": 1, "tags": ["anchor"],
+		"verb": "Loaded lines last twice as long", "text": "Loaded line lasts twice as long",
+		"effect": {"do": "line_leash", "mult": 2.0}},
+
 	# Designed happy accidents (5): rare, capped, fun because they are bounded.
 	"scrap_geyser": {"maker": "spillway_works", "base": "utility", "rarity": "rare", "trigger": "on_pickup", "stack": "capped", "cap": 1,
 		"tags": ["mass", "kinetic"], "happy": true, "verb": "4% of pickups knock machines away", "text": "4% of pickups blast nearby machines away",
