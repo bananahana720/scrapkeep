@@ -30,6 +30,7 @@ const WayOutPaint := preload("res://src/presentation/way_out_paint.gd")
 const Redline := preload("res://src/combat/redline.gd")
 const Flail := preload("res://src/combat/flail.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const Grip := preload("res://src/movement/grip.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const KestKit := preload("res://src/combat/kest_kit.gd")
 const Sight := preload("res://src/combat/sight.gd")
@@ -324,6 +325,13 @@ var _rakes: Array = []
 const HEAT_GLOW := 2.0
 const HEAT_BONUS := 1.15
 var _heated := {}
+# The pull bit (ShotBits "pull", ABILITY-MUTATIONS.md B3, starting values): a struck machine
+# no heavier than the pilot (Grip.heft_of against heft()) takes one PULL_KNOCK toward the
+# ball, up to PULL_RATIO_CAP harder the lighter it is; a heavier one holds. A piercing bolt
+# pulls each machine it passes once, each PULL_FALLOFF of the one before. The ball never moves.
+const PULL_KNOCK := 7.0
+const PULL_RATIO_CAP := 1.5
+const PULL_FALLOFF := 0.6
 # The remembered cannon: committed volleys ({family, hazards, damage, source, struck,
 # expose, verb, window, and the commit's seed, target, centre, radius and phase}), how many it has committed (its seed counter),
 # and plate-exposed enemies (instance id -> {until, verb}) that take MindAttacks.BRACE_MULT
@@ -438,6 +446,7 @@ func setup(ctx_ref) -> void:
 	bolts.on_hit = _on_bolt_hit
 	bolts.on_shell = func(_bolt: Dictionary, shell: Node3D) -> bool: return _bat(shell)
 	bolts.on_stop = func(at: Vector3, color: Color): effects.spark(at, color)
+	bolts.on_bounce = _on_bolt_bounce
 	sticky = Sticky.new()
 	sticky.name = "StickyCharges"
 	ctx.root.add_child(sticky)
@@ -1962,11 +1971,71 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 			damage *= Weapons.CLAMP_BONUS
 		else:
 			_clamped.erase(id)
+	# The bits this hit sets off: pierce and split from the flight (bolts.gd), heat and pull here.
+	var acts := int(bolt.get("acts", 0))
 	if ShotBits.has(int(bolt.get("bits", 0)), ShotBits.bit("heat")):
-		damage *= _heat(enemy, point)
-	_hit(enemy, bolt["kind"], damage, bolt["dir"], bolt["knock"], part, bolt.get("source", "weapon"))
+		var heat := _heat(enemy, point)
+		damage *= float(heat["mult"])
+		if heat["lit"] or heat["bonus"]:
+			acts = ShotBits.union(acts, ShotBits.bit("heat"))
+	# Decide pull before _hit so the weapon's away-knock never out-muscles a pull (Enemy.knock
+	# keeps only the stronger shove, so when a pull will land it replaces the weapon shove).
+	var pull_plan := _pull_plan(enemy, bolt) if Bolts.bit_ready(bolt, "pull") else {}
+	var hit_knock := 0.0 if not pull_plan.is_empty() else float(bolt["knock"])
+	_hit(enemy, bolt["kind"], damage, bolt["dir"], hit_knock, part, bolt.get("source", "weapon"))
+	if not pull_plan.is_empty() and is_instance_valid(enemy) and not enemy.is_dead():
+		enemy.knock(pull_plan["dir"], float(pull_plan["force"]))
+		acts = ShotBits.union(acts, ShotBits.bit("pull"))
+	_bit_tell(acts)
 	if bolt["chain_jumps"] > 0:
 		_chain(enemy, from, bolt)
+
+
+# A bounce-bit glance off a wall: a spark in the bounce colour and its one sound. Not a hit,
+# so it pulls and heats nothing (pair rows bounce+pull, bounce+heat).
+func _on_bolt_bounce(_bolt: Dictionary, at: Vector3) -> void:
+	effects.spark(at, ShotBits.TABLE["bounce"]["color"])
+	_bit_tell(ShotBits.bit("bounce"))
+
+
+# The one bit sound for a hit or glance: the first acting bit in ShotBits.NAMES order, read
+# off its TABLE row, so a three-bit hit never stacks three sounds. "" when no bit acted.
+static func hit_tell(acts: int) -> String:
+	var tells := ShotBits.tells(acts)
+	return String(tells[0]["sound"]) if not tells.is_empty() else ""
+
+
+func _bit_tell(acts: int) -> void:
+	var sound := hit_tell(acts)
+	if sound == "":
+		return
+	var presentation = ctx.root.get("presentation") if ctx != null and ctx.root != null else null
+	var audio = presentation.get("audio") if presentation != null else null
+	if audio != null:
+		audio.play("shot_" + String(ShotBits.names(acts)[0]), 0.0, 1.0, "SFX", sound)
+
+
+# Plan one pull on a struck machine from a pull-ready bolt: the knock toward the ball,
+# softer for each machine the bolt has already reached. Empty when the machine holds.
+func _pull_plan(enemy: Node3D, bolt: Dictionary) -> Dictionary:
+	var nth := int(bolt.get("pulled", 0))
+	bolt["pulled"] = nth + 1
+	if not is_instance_valid(enemy) or enemy.is_dead():
+		return {}
+	var force := pull_force(heft(), Grip.heft_of(enemy), nth)
+	var toward: Vector3 = ctx.player.ball_position() - enemy.global_position
+	toward.y = 0.0
+	if force <= 0.0 or toward.length() < 0.01:
+		return {}
+	return {"dir": toward.normalized(), "force": force}
+
+
+# The pull rule: lighter comes, heavier holds. 0 when the machine outweighs the pilot or has
+# no heft (a Warden, the vault); else PULL_KNOCK scaled by the heft ratio and the falloff.
+static func pull_force(pilot_heft: float, body_heft: float, nth: int) -> float:
+	if body_heft == INF or body_heft > pilot_heft:
+		return 0.0
+	return PULL_KNOCK * minf(pilot_heft / maxf(body_heft, 0.01), PULL_RATIO_CAP) * pow(PULL_FALLOFF, nth)
 
 
 # The build's shot bits for a weapon press; 0 with no build (a bare test harness).
@@ -1975,19 +2044,14 @@ func _shot_bits() -> int:
 	return int(build.shot_bits()) if build != null and build.has_method("shot_bits") else 0
 
 
-# One heated hit on enemy: the damage multiplier, with the heat row's colour and sound as the
-# machine starts to glow and again when the bonus lands (one cue a hit at most).
-func _heat(enemy: Node3D, point: Vector3) -> float:
+# One heated hit on enemy: heat_hit()'s answer, with a ring in the heat row's colour as the
+# machine starts to glow and again when the bonus lands; the hit's one sound is _bit_tell's.
+func _heat(enemy: Node3D, point: Vector3) -> Dictionary:
 	var hit := heat_hit(_heated, enemy.get_instance_id(), _clock)
 	if hit["lit"] or hit["bonus"]:
-		var row: Dictionary = ShotBits.TABLE["heat"]
 		var radius = enemy.get("radius")
-		effects.ring(point, (float(radius) if radius != null else 1.0) + (0.6 if hit["bonus"] else 0.3), row["color"])
-		var presentation = ctx.root.get("presentation") if ctx != null and ctx.root != null else null
-		var audio = presentation.get("audio") if presentation != null else null
-		if audio != null:
-			audio.play("shot_heat", 0.0, 1.0, "SFX", String(row["sound"]))
-	return float(hit["mult"])
+		effects.ring(point, (float(radius) if radius != null else 1.0) + (0.6 if hit["bonus"] else 0.3), ShotBits.TABLE["heat"]["color"])
+	return hit
 
 
 # Whether a machine is glowing from a heated hit right now.
