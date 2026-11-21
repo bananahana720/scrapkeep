@@ -5075,7 +5075,7 @@ func _wire_tally(events) -> void:
 		if id == "gather_plate":
 			_tally_cue("tally_plate", 0))
 	events.line_skill_fired.connect(func(id: String, _target: Node3D, _at: Vector3, _on: String):
-		if id != "link_clips":
+		if not id in ["link_clips", "link_double"]:
 			return
 		var combat = ctx.get("spawner") if ctx != null else null
 		var clips: int = int(combat.last_card.get("hits", 1)) if combat != null else 1
