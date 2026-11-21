@@ -169,13 +169,17 @@ static func split_spent(parent_spent: int) -> int:
 
 # The two children a split-ready bolt throws from `point` when it strikes the machine with
 # `struck_id`: +/- SPLIT_ANGLE_DEG about its up axis, SPLIT_DAMAGE of its damage, the rest of
-# its range up to SPLIT_REACH, and that machine excluded. [] when the bolt cannot split.
-static func split_children(parent: Dictionary, point: Vector3, struck_id: int) -> Array:
+# its range up to SPLIT_REACH (measured at `used_dist` when given, so fast bolts do not lose
+# a step of range), and that machine excluded. [] when the bolt cannot split or has no range left.
+static func split_children(parent: Dictionary, point: Vector3, struck_id: int, used_dist := -1.0) -> Array:
 	if not bit_ready(parent, "split"):
+		return []
+	var used := used_dist if used_dist >= 0.0 else float(parent.get("travelled", 0.0))
+	var left := clampf(float(parent["max_dist"]) - used, 0.0, SPLIT_REACH)
+	if left <= 0.05:
 		return []
 	var dir: Vector3 = parent["dir"]
 	var axis: Vector3 = parent.get("up", Vector3.UP)
-	var left := clampf(float(parent["max_dist"]) - float(parent.get("travelled", 0.0)), 0.0, SPLIT_REACH)
 	var exclude: Array = (parent.get("exclude", []) as Array).duplicate()
 	exclude.append(struck_id)
 	var out: Array = []
@@ -195,9 +199,14 @@ static func tint(bolt: Dictionary) -> Color:
 	return ShotBits.TABLE[held[0]]["color"] if not held.is_empty() else bolt["color"]
 
 
-# The bolt's drawn width: MULTI_BIT_WIDTH wider when it carries two or three bits.
+# The bolt's drawn width: width_scale (e.g. Slag Pike's fused bolt) times MULTI_BIT_WIDTH
+# when it carries two or three bits.
 static func width(bolt: Dictionary) -> float:
-	return WIDTH * (MULTI_BIT_WIDTH if ShotBits.count(int(bolt.get("bits", 0))) >= 2 else 1.0)
+	return WIDTH * float(bolt.get("width_scale", 1.0)) * (MULTI_BIT_WIDTH if ShotBits.count(int(bolt.get("bits", 0))) >= 2 else 1.0)
+
+
+static func drawn_width(bolt: Dictionary) -> float:
+	return width(bolt)
 
 
 func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells: Array = []) -> void:
@@ -236,9 +245,10 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 			var hit_id: int = target["enemy"].get_instance_id()
 			# The bits this hit sets off in flight, so the hit plays one tell for them all.
 			var acts := 0
+			var hit_used := before + from.distance_to(target["point"])
 			if int(bolt["pierce"]) < 1 and _pierce_bit_ready(bolt):
 				acts = ShotBits.union(acts, ShotBits.bit("pierce"))
-			if bit_ready(bolt, "split"):
+			if bit_ready(bolt, "split") and float(bolt["max_dist"]) - hit_used > 0.05:
 				acts = ShotBits.union(acts, ShotBits.bit("split"))
 			bolt["acts"] = acts
 			if on_hit.is_valid():
@@ -246,7 +256,7 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 			bolt["acts"] = 0
 			# The split bit spends on the first machine and throws two children from it.
 			if ShotBits.has(acts, ShotBits.bit("split")):
-				spawned.append_array(split_children(bolt, target["point"], hit_id))
+				spawned.append_array(split_children(bolt, target["point"], hit_id, hit_used))
 				bolt["spent"] = ShotBits.union(int(bolt["spent"]), ShotBits.bit("split"))
 			# A piercing bolt passes through: it keeps its line and corkscrew phase and
 			# looks for the next machine further along the same segment. The pattern's

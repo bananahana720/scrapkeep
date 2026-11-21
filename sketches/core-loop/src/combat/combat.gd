@@ -103,6 +103,11 @@ const MASS_K_SATURATION := 990.0
 # A build synergy's strike: its force is the punch (build scales it by heft), and it
 # always meets body plating, since it is never a landing on a weak point.
 const SYNERGY := "synergy"
+# A shattered destructible's shrapnel (world/destructibles.gd _shrapnel): a strike like any other through the
+# damage door, so crit, armour, elite affixes and every on-hit listener see it. Its source is one class, whatever
+# piece threw it, so the delivered-damage ledger keeps one bucket instead of one per piece. It is not a ball
+# contact, so Redline (SPEND_KINDS) never spends on it.
+const DEBRIS := "debris"
 const FIGHT_GROUPS := ["enemy", "enemy_shot", "telegraph"]
 const CHIP := 0.2
 # The spec's values, used only for a warden field a stage def is missing.
@@ -133,6 +138,20 @@ const SPRING_MULT := 1.5
 # Rake Heart: the return sweep comes this long after the first, at this share of its damage (start).
 const RAKE_DELAY := 0.25
 const RAKE_DAMAGE := 0.6
+# Walking Lane (cannon_lane_walk): a lane called within WALK_WINDOW of the last starts where it ended
+# and runs WALK_REACH further; the chain is two links, so the next call starts fresh.
+const WALK_WINDOW := 2.0
+const WALK_REACH := 6.0
+# Rush Wake (cannon_rush_wake): the landing lays one lane back along the rush's travel line at this share
+# of the lane's damage. A drift under WAKE_MIN_TRAVEL (a straight drop) lays it back along the aim. The
+# slam's start stays valid for WAKE_GRACE after the slam ends, so a landing a tick later still finds it.
+const WAKE_DAMAGE := 0.5
+const WAKE_MIN_TRAVEL := 1.0
+const WAKE_GRACE := 0.5
+# Slag Pike's fused bolt is this many times as wide (both hit test and drawn streak) as one plain bolt.
+const PIKE_RADIUS_MULT := 2.0
+# The copper ring that lights the muzzle on the volley before the fuse, in metres.
+const PIKE_RING_RADIUS := 1.5
 
 # Ball contacts: base damage plus a share of the contact's force.
 const STRIKE_DAMAGE := {
@@ -178,6 +197,10 @@ var effects
 # boss floor in the arena.
 var ground
 var volleys := 0
+# Slag Pike's cadence (item_effects.gd pike): weapon volleys fired since the last fuse, and the
+# clock of the last one. Both clear on every attempt and when the pike leaves the build.
+var _pike_count := 0
+var _pike_last := -INF
 # The last committed volley and discharge, for tests and anything that wants to read them.
 var last_shot := {}
 var last_burst := {}
@@ -317,6 +340,10 @@ const PULL_FALLOFF := 0.6
 # mark}), so a plate row and an arc row on one enemy never collide.
 var _cannon := []
 var _cannon_count := 0
+# Walking Lane's open link ({} or {"end", "at"}) and Rush Wake's slam start ({} or {"from", "until"}).
+# Both clear with the committed volleys, on a run start and every attempt.
+var _walk := {}
+var _wake := {}
 var _exposed := {}
 # Tally's program cards. bay is the selected card (0, 1 or 2); plate is Gather's plate ({}
 # or {"at", "until"}); link_group the live clips ({} or {"ids", "until", "spent"}); last_card
@@ -352,6 +379,13 @@ var _run_settles := 0
 var _stage_clip_casts := 0
 var _tally_cards := {}
 var _tally_card_frame := -1
+# The ledger clip ids (link_double is Double Entry's swap of link_clips). Ink Heart's books: a
+# machine the stamp reached (instance id -> {"until", "mark"}), settled by balance due.
+const CLIP_IDS := ["link_clips", "link_double"]
+const INK_SECONDS := 3.0
+const INK_HEIGHT := 2.2
+var _ink := {}
+static var _ink_mesh: ArrayMesh
 # The dodge read (near_miss.gd), and the last hit the ball took: where it came from, for
 # presentation's edge flash. last_impact names the IMPACT row and the enemy of the strike
 # whose enemy_struck is out right now, because a blast publishes under a gun kind; it is
@@ -466,6 +500,7 @@ func setup(ctx_ref) -> void:
 		# --- end Tarn ---
 		# --- P-C Tally line skill ---
 		"link_clips": {"on_body": _link_clips_body, "on_world": _link_clips_world, "geometry": _clip_geometry},
+		"link_double": {"on_body": _link_clips_body, "on_world": _link_clips_world, "geometry": _clip_geometry},
 		# --- end Tally ---
 		# --- P-C Cannon line skill ---
 		"cannon_lane_charge": {"on_body": _cannon_line_body, "on_world": _cannon_line_world, "geometry": _cannon_line_geometry},
@@ -490,9 +525,12 @@ func setup(ctx_ref) -> void:
 	_cards = {"balance_due": _run_balance}
 	ctx.events.enemy_struck.connect(_on_card_struck)
 	ctx.events.harpoon_smashed.connect(func(_enemy: Node3D, _at: Vector3, _speed: float): _grant_pressure(1))
-	ctx.events.slammed.connect(func(_at: Vector3, _strength: float, _flatness: float):
-		if ctx.player.abilities.cap(AbilityState.SMASH, "flavour", "") != "stamp":
-			_grant_pressure(1))
+	ctx.events.slammed.connect(func(at: Vector3, _strength: float, _flatness: float):
+		var smash = ctx.player.abilities
+		if smash.cap(AbilityState.SMASH, "flavour", "") != "stamp":
+			_grant_pressure(1)
+		elif smash.cap(AbilityState.SMASH, "mutation", "") == "stamp_ink":
+			_book_ink(at))
 	_wire_tally()
 	_actions = _proc_actions()
 	# Every bus fact any tree's procs listen for, connected once; the tree decides who fires.
@@ -1250,6 +1288,8 @@ static func _bump(map: Dictionary, key: String, amount: float) -> void:
 
 
 func _classify_source(kind: String, explicit: String) -> String:
+	if kind == DEBRIS:
+		return DEBRIS
 	if explicit != "":
 		return explicit
 	if kind == SYNERGY:
@@ -1770,15 +1810,100 @@ func _fire(weapon: String, source := "weapon") -> void:
 	# Only the player's own press carries the build's shot bits; a proc volley carries none,
 	# so proc depth stays 1 (ABILITY-MUTATIONS.md B1).
 	var shot: int = _shot_bits() if source == "weapon" else 0
-	for entry in layout:
-		bolts.fire(_bolt_record(weapon, p, entry, muzzle, reach, damage, source, shot))
+	var pike := _pike_press(source)
+	var fired := layout.size()
+	if pike.get("ring", false):
+		effects.ring(muzzle, PIKE_RING_RADIUS, Palette.COPPER)
+	if pike.get("fuse", false):
+		var centre: Dictionary = layout[0]
+		for entry in layout:
+			if entry["centre"]:
+				centre = entry
+				break
+		bolts.fire(pike_bolt(_bolt_record(weapon, p, {"dir": forward, "centre": true, "phase": centre["phase"]}, muzzle, reach, damage, source, shot),
+			layout.size(), _pike_row()))
+		fired = 1
+		_pike_cue()
+	else:
+		for entry in layout:
+			bolts.fire(_bolt_record(weapon, p, entry, muzzle, reach, damage, source, shot))
 	if rake_follows(source, ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")):
 		_rakes.append({"at": _clock + RAKE_DELAY, "weapon": weapon, "forward": forward,
 			"damage": p.damage * _damage_mod(weapon), "volley": volleys})
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": aim["to"], "point": point,
-		"blocked": aim["blocked"], "bolts": layout.size(), "volley": volleys, "sprung": sprung}
+		"blocked": aim["blocked"], "bolts": fired, "volley": volleys, "sprung": sprung, "fused": pike.get("fuse", false)}
 	ctx.events.shot_fired.emit(weapon, muzzle, aim["to"])
+
+
+# --- Slag Pike (ABILITY-MUTATIONS.md C1) ----------------------------------------------
+
+# The pike's table while the build holds it, else empty.
+func _pike_row() -> Dictionary:
+	var build = ctx.build if ctx != null else null
+	var held = build.get("effects") if build != null else null
+	return held.pike_fuse() if held != null and held.has_method("pike_fuse") else {}
+
+
+# Where this press falls in the pike's cycle: {} for a proc volley or with no pike, else
+# {"ring": volley five, "fuse": volley six}. Only the player's own press advances the count.
+func _pike_press(source: String) -> Dictionary:
+	if source != "weapon":
+		return {}
+	var row := _pike_row()
+	if row.is_empty():
+		_pike_count = 0
+		return {}
+	var step := pike_advance(_pike_count, _pike_last, _clock, row)
+	_pike_count = int(step["count"])
+	_pike_last = _clock
+	return step
+
+
+# The next count after one weapon press at `now`: the count restarts after `idle_s` without a
+# press; the press that reaches `every` fuses and the count resets. Pure, so tests can walk it.
+static func pike_advance(count: int, last: float, now: float, row: Dictionary) -> Dictionary:
+	var every := int(row.get("every", 6))
+	var n := 0 if now - last >= float(row.get("idle_s", 3.0)) else count
+	n += 1
+	var fuse := n >= every
+	return {"count": 0 if fuse else n, "ring": n == every - 1, "fuse": fuse}
+
+
+# The fused bolt: the volley's damage summed and capped at cap_mult times one bolt, range and
+# width up, the pierce colour, and the held bits with pierce on.
+static func pike_bolt(record: Dictionary, volley_size: int, row: Dictionary) -> Dictionary:
+	var out := record.duplicate()
+	var one: float = float(record["damage"])
+	out["damage"] = minf(one * volley_size, one * float(row.get("cap_mult", 6.0)))
+	out["max_dist"] = float(record["max_dist"]) * float(row.get("range_mult", 1.25))
+	out["radius"] = float(record["radius"]) * PIKE_RADIUS_MULT
+	out["width_scale"] = PIKE_RADIUS_MULT
+	out["color"] = ShotBits.TABLE["pierce"]["color"]
+	out["bits"] = fused_bits(int(record.get("bits", 0)))
+	return out
+
+
+# Held bits with pierce on, never past MAX_SHOT_BITS: a full set without pierce gives its
+# last bit in table order up to it, on this one bolt.
+static func fused_bits(bits: int) -> int:
+	var pierce := ShotBits.bit("pierce")
+	if ShotBits.has(bits, pierce):
+		return bits
+	if ShotBits.count(bits) >= ShotBits.MAX_SHOT_BITS:
+		for i in range(ShotBits.NAMES.size() - 1, -1, -1):
+			var b := ShotBits.bit(ShotBits.NAMES[i])
+			if ShotBits.has(bits, b):
+				bits = ShotBits.without(bits, b)
+				break
+	return ShotBits.union(bits, pierce)
+
+
+func _pike_cue() -> void:
+	var presentation = ctx.root.get("presentation") if ctx != null and ctx.root != null else null
+	var audio = presentation.get("audio") if presentation != null else null
+	if audio != null:
+		audio.play("shot_pierce", 0.0, 1.0, "SFX", String(ShotBits.TABLE["pierce"]["sound"]))
 
 
 # One bolt of a volley: the pattern's numbers for this layout entry, fired from `muzzle`.
@@ -1853,8 +1978,13 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 		damage *= float(heat["mult"])
 		if heat["lit"] or heat["bonus"]:
 			acts = ShotBits.union(acts, ShotBits.bit("heat"))
-	_hit(enemy, bolt["kind"], damage, bolt["dir"], bolt["knock"], part, bolt.get("source", "weapon"))
-	if Bolts.bit_ready(bolt, "pull") and _pull(enemy, bolt):
+	# Decide pull before _hit so the weapon's away-knock never out-muscles a pull (Enemy.knock
+	# keeps only the stronger shove, so when a pull will land it replaces the weapon shove).
+	var pull_plan := _pull_plan(enemy, bolt) if Bolts.bit_ready(bolt, "pull") else {}
+	var hit_knock := 0.0 if not pull_plan.is_empty() else float(bolt["knock"])
+	_hit(enemy, bolt["kind"], damage, bolt["dir"], hit_knock, part, bolt.get("source", "weapon"))
+	if not pull_plan.is_empty() and is_instance_valid(enemy) and not enemy.is_dead():
+		enemy.knock(pull_plan["dir"], float(pull_plan["force"]))
 		acts = ShotBits.union(acts, ShotBits.bit("pull"))
 	_bit_tell(acts)
 	if bolt["chain_jumps"] > 0:
@@ -1885,20 +2015,19 @@ func _bit_tell(acts: int) -> void:
 		audio.play("shot_" + String(ShotBits.names(acts)[0]), 0.0, 1.0, "SFX", sound)
 
 
-# One pull on a struck machine from a pull-ready bolt: the knock toward the ball, softer for
-# each machine the bolt has already reached. Whether it moved the machine.
-func _pull(enemy: Node3D, bolt: Dictionary) -> bool:
+# Plan one pull on a struck machine from a pull-ready bolt: the knock toward the ball,
+# softer for each machine the bolt has already reached. Empty when the machine holds.
+func _pull_plan(enemy: Node3D, bolt: Dictionary) -> Dictionary:
 	var nth := int(bolt.get("pulled", 0))
 	bolt["pulled"] = nth + 1
 	if not is_instance_valid(enemy) or enemy.is_dead():
-		return false
+		return {}
 	var force := pull_force(heft(), Grip.heft_of(enemy), nth)
 	var toward: Vector3 = ctx.player.ball_position() - enemy.global_position
 	toward.y = 0.0
 	if force <= 0.0 or toward.length() < 0.01:
-		return false
-	enemy.knock(toward.normalized(), force)
-	return true
+		return {}
+	return {"dir": toward.normalized(), "force": force}
 
 
 # The pull rule: lighter comes, heavier holds. 0 when the machine outweighs the pilot or has
@@ -2351,6 +2480,7 @@ func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: fl
 
 func _step_cannon(delta: float) -> void:
 	_step_cannon_exposure()
+	_track_wake()
 	if ctx.player.abilities.selected == AbilityState.LINE and ctx.player.abilities.id_of(AbilityState.LINE) == "cannon_lane_charge" and ctx.player.kit.hooked:
 		ctx.player.indicator.set_shape(AbilityState.LINE, _cannon_line_geometry(1.0))
 	elif ctx.player.abilities.id_of(AbilityState.LINE) == "cannon_lane_charge":
@@ -2408,7 +2538,8 @@ func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
 			_hit(enemy, "cannon", float(entry["damage"]) * _damage_mod(Weapons.CANNON_LANE), push, Weapons.CANNON_KNOCK, "", entry["source"])
 		if not entry.get("recital_checked", false):
 			entry["recital_checked"] = true
-			_cannon_recital(entry["family"], enemy.global_position)
+			if entry["source"] != "item_proc":
+				_cannon_recital(entry["family"], enemy.global_position)
 			if options.has("discovery"):
 				_discover("cannon_lane_charge", enemy.global_position)
 		if entry["expose"] and is_instance_valid(enemy) and not enemy.is_dead():
@@ -2429,6 +2560,8 @@ func _free_cannon() -> void:
 					h.get_parent().remove_child(h)
 				h.queue_free()
 	_cannon = []
+	_walk = {}
+	_wake = {}
 
 
 # The weapon: one Mind lane from the ground under the ball down the aim, per cooldown.
@@ -2442,7 +2575,17 @@ func _fire_cannon_lane(weapon: String) -> void:
 	var target := point
 	if Vector2(point.x - centre.x, point.z - centre.z).length() < 1.5:
 		target = centre + _flat_aim() * 10.0
-	var entry := _commit_cannon("lane", target, centre, reach, Weapons.LANE_DAMAGE, "weapon")
+	var mutation: String = ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")
+	var walked := walk_extends(mutation, _walk, _clock)
+	var radius := reach
+	if walked:
+		var flat := Vector3(target.x - centre.x, 0.0, target.z - centre.z)
+		var dir := flat.normalized() if flat.length_squared() > 0.0001 else _flat_aim()
+		var end_at: Vector3 = _walk["end"]
+		centre = _floor_at(end_at + Vector3.UP)
+		target = centre + dir * 10.0
+		radius = WALK_REACH + MindAttacks.LANE_HALF
+	var entry := _commit_cannon("lane", target, centre, radius, Weapons.LANE_DAMAGE, "weapon")
 	var h = entry["hazards"][0]
 	# The body the ball's line holds is struck when the lane's footprint covers it, however high it
 	# hangs: the lane reaches 3 m over the ground, and the stage-2 flume relic hangs 12 m over the
@@ -2455,11 +2598,19 @@ func _fire_cannon_lane(weapon: String) -> void:
 		if h.contains(Vector3(held.x, h.ground_at(held) + 1.0, held.z)) and not h.contains(held):
 			entry["options"] = {"forced": kit.anchor_body}
 	var end: Vector3 = h.centre + h.heading * h.length
+	if mutation == "cannon_lane_walk":
+		_walk = {} if walked else {"end": end, "at": _clock}
 	var muzzle: Vector3 = ball + h.heading * MUZZLE
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": end, "point": point, "blocked": aim["blocked"], "bolts": 0,
 		"volley": volleys, "sprung": false}
 	ctx.events.shot_fired.emit(weapon, muzzle, end)
+
+
+# Walking Lane: the call extends the open link when it comes within WALK_WINDOW of the last lane.
+# One link is open at most, and the extension closes it, so a third call never extends again.
+static func walk_extends(mutation: String, walk: Dictionary, clock: float) -> bool:
+	return mutation == "cannon_lane_walk" and not walk.is_empty() and clock - float(walk["at"]) <= WALK_WINDOW
 
 
 # The movement: the recoil kicks the ball along the aim; the split lands behind it.
@@ -2502,6 +2653,42 @@ func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 			target = enemy.global_position
 	_commit_cannon("rush", target, landing, Weapons.RUSH_REACH, Weapons.RUSH_DAMAGE * clampf(strength, 0.5, 1.5),
 		"drop_or_slam")
+	if wake_follows("drop_or_slam", ctx.player.abilities.cap(AbilityState.SMASH, "mutation", "")):
+		_lay_wake(landing)
+
+
+# Rush Wake: only the player's own rush landing lays a wake. The wake lane commits as item_proc and
+# is a lane, never a rush landing, so it can neither lay another nor walk (proc depth 1).
+static func wake_follows(source: String, mutation: String) -> bool:
+	return source == "drop_or_slam" and mutation == "cannon_rush_wake"
+
+
+# Remembers where a Rush Wake slam began: the ball's position on the tick the slam starts, kept until
+# WAKE_GRACE after it ends. A slam that never lands is overwritten by the next one.
+func _track_wake() -> void:
+	if ctx.player.abilities.cap(AbilityState.SMASH, "mutation", "") != "cannon_rush_wake":
+		if not _wake.is_empty():
+			_wake.clear()
+		return
+	if ctx.player.kit.slamming:
+		if _wake.is_empty() or float(_wake["until"]) < INF:
+			_wake = {"from": ctx.player.ball_position(), "until": INF}
+	elif not _wake.is_empty() and float(_wake["until"]) == INF:
+		_wake["until"] = _clock + WAKE_GRACE
+
+
+# One lane from the landing back along the rush's flattened travel line, at half lane damage and the
+# lane's own telegraph. No recorded start, or a start gone stale, lays nothing.
+func _lay_wake(landing: Vector3) -> void:
+	var wake := _wake
+	_wake = {}
+	if wake.is_empty() or _clock > float(wake["until"]):
+		return
+	var from: Vector3 = wake["from"]
+	var back := Vector3(from.x - landing.x, 0.0, from.z - landing.z)
+	back = back.normalized() if back.length() >= WAKE_MIN_TRAVEL else -_flat_aim()
+	var reach: float = Weapons.CANNON_LANE_REACH * ctx.tuning.mod("weapon_range")
+	_commit_cannon("lane", landing + back * 10.0, landing, reach, Weapons.LANE_DAMAGE * WAKE_DAMAGE, "item_proc")
 
 
 # --- PC-CANNON: the cable lane and the set-piece zones --------------------------------
@@ -2896,6 +3083,7 @@ func _ult_peak(at: Vector3) -> void:
 func _ult_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 	var radius: float = ultimate.landing_radius()
 	effects.ring(at, radius, ctx.player.class_color())
+	ctx.break_props(at, radius, "ultimate")
 	var hits := 0
 	var dealt := 0.0
 	for enemy in get_tree().get_nodes_in_group("enemy"):
@@ -2968,6 +3156,7 @@ func _reset_cards() -> void:
 	_restored_frame = {}
 	_clear_clip_post()
 	_clear_tally_piece()
+	_clear_ink()
 	tally_last_settle = {}
 	_tally_cards = {}
 
@@ -2979,7 +3168,7 @@ func _wire_tally() -> void:
 		if ctx.player.abilities.id_of(AbilityState.MOVEMENT) == "flywheel_surge":
 			_grant_pressure(Weapons.SURGE_PRESSURE))
 	ev.line_skill_fired.connect(func(id: String, _target: Node3D, at: Vector3, _on: String):
-		if id != "link_clips":
+		if not id in CLIP_IDS:
 			return
 		_stage_clip_casts += 1
 		if _stage_clip_casts >= PUNCH_TAPE_CASTS:
@@ -2987,6 +3176,8 @@ func _wire_tally() -> void:
 	ev.stage_entered.connect(func(_stage: int, _retry: bool):
 		_stage_clip_casts = 0
 		_clear_clip_post())
+	ev.stage_content_cleared.connect(func(_reason: String): _clear_ink())
+	ev.player_died.connect(_clear_ink)
 	ev.run_started.connect(func(_class_id: String):
 		_run_settles = 0
 		_stage_clip_casts = 0)
@@ -3015,6 +3206,7 @@ func _step_cards(intent, delta: float) -> void:
 	_step_clip_preview()
 	_step_tally_piece(delta)
 	_step_tally_cards()
+	_step_ink()
 	if not intent.fire_pressed or _cooldown > 0.0:
 		return
 	var card: String = cards[bay]
@@ -3134,6 +3326,7 @@ func _run_balance(point: Vector3, valid: bool) -> bool:
 			continue
 		_ledger_hit(enemy, damage, point, Weapons.LEDGER_KNOCK, "weapon")
 		hits += 1
+		_settle_ink(enemy)
 	effects.ring(point, Weapons.BALANCE_RADIUS, ClassDef.TALLY_COLOR)
 	last_card["hits"] = hits
 	last_card["damage"] = damage
@@ -3159,7 +3352,7 @@ func _clip_ring(centre: Vector3, radius: float) -> Dictionary:
 # While slot 3 is picked and a line stands, the ring the clip will commit to is drawn.
 func _step_clip_preview() -> void:
 	var abilities = ctx.player.abilities
-	if abilities.selected == AbilityState.LINE and abilities.id_of(AbilityState.LINE) == "link_clips" and ctx.player.kit.hooked:
+	if abilities.selected == AbilityState.LINE and abilities.id_of(AbilityState.LINE) in CLIP_IDS and ctx.player.kit.hooked:
 		ctx.player.indicator.set_shape("tally_clip", _clip_geometry(1.0))
 	else:
 		ctx.player.indicator.clear("tally_clip")
@@ -3177,7 +3370,7 @@ func _link_clips_body(target: Node3D, _fraction: float, mult: float) -> void:
 # enemies inside its ring within CLIP_POST_SECONDS.
 func _link_clips_world(anchor: Vector3, fraction: float, mult: float) -> void:
 	_reel_burst(anchor, fraction, mult)
-	link_group = {"ids": [], "until": _clock + Weapons.CLIP_POST_SECONDS, "spent": false, "mult": mult}
+	link_group = _new_link_group(Weapons.CLIP_POST_SECONDS, mult)
 	clip_post = {"at": anchor, "until": _clock + Weapons.CLIP_POST_SECONDS, "shape": _clip_ring(anchor, Weapons.CLIP_POST_RADIUS)}
 	ctx.player.indicator.set_shape("tally_post", clip_post["shape"])
 	effects.ring(anchor, Weapons.CLIP_POST_RADIUS, ClassDef.TALLY_COLOR)
@@ -3195,13 +3388,19 @@ func _link_from(first: Node3D, mult := 1.0, shape := {}) -> int:
 			break
 		if enemy != first and in_ring(centre, radius, enemy):
 			clips.append(enemy)
-	link_group = {"ids": [], "until": _clock + Weapons.LINK_SECONDS, "spent": false, "mult": mult}
+	link_group = _new_link_group(Weapons.LINK_SECONDS, mult)
 	for clip in clips:
 		_add_clip(clip)
 	last_card = {"card": "link_clips", "at": first.global_position, "hits": clips.size(), "spent": false}
 	if clips.size() > Weapons.LINK_NEIGHBOURS:
 		_tally_discover("tally_skim", "loaded_line", first.global_position)
 	return clips.size()
+
+
+# Double Entry (link_double) marks its group "double": one settled clip may jump once.
+func _new_link_group(seconds: float, mult: float) -> Dictionary:
+	return {"ids": [], "until": _clock + seconds, "spent": false, "mult": mult, "jumped": false,
+		"double": ctx.player.abilities.cap(AbilityState.LINE, "mutation", "") == "link_double"}
 
 
 func _add_clip(enemy: Node3D) -> void:
@@ -3265,7 +3464,122 @@ func _on_card_struck(enemy: Node3D, kind: String, force: float) -> void:
 		var to: Vector3 = other.global_position
 		effects.arc(from, to, ClassDef.TALLY_COLOR)
 		_ledger_hit(other, damage, from, Weapons.LEDGER_KNOCK, "weapon")
+	if bool(link_group.get("double", false)) and not bool(link_group.get("jumped", false)):
+		link_group["jumped"] = true
+		_clip_jump(from, damage)
 	_arcing = false
+
+
+# Double Entry: the settled machine's clip jumps once to the nearest live machine inside
+# LINK_NEIGHBOUR_REACH that holds no clip, as a fresh ledger link and one ledger strike. The group's
+# "jumped" flag is set before this runs and the strike is tagged item_proc inside the _arcing
+# guard, so a jumped clip settles nothing and never jumps again.
+func _clip_jump(from: Vector3, damage: float) -> void:
+	var ids: Array = link_group["ids"]
+	var best: Node3D = null
+	var best_gap := INF
+	for other in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(other) or DamageDoor.dead(other) or ids.has(other.get_instance_id()):
+			continue
+		var gap: float = other.global_position.distance_to(from)
+		if gap <= Weapons.LINK_NEIGHBOUR_REACH and gap < best_gap:
+			best = other
+			best_gap = gap
+	if best == null:
+		return
+	link_group["jump_to"] = best.get_instance_id()
+	effects.arc(from, best.global_position, ClassDef.TALLY_COLOR)
+	_ledger_hit(best, damage, from, Weapons.LEDGER_KNOCK, "item_proc")
+
+
+# --- Ink Heart (stamp_ink) --------------------------------------------------------------
+# The stamp books every live machine in its disc for INK_SECONDS, a ledger tick floating over each.
+# A balance due strike on a booked machine takes the book and refills one pressure (the bank's
+# own cap holds), so each machine pays once per stamp. The stamp itself still pays its base
+# pressure (flavour stamp), and nothing here touches the ball.
+
+func _book_ink(at: Vector3) -> void:
+	var reach: float = ctx.player.slam_radius()
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(enemy) or DamageDoor.dead(enemy) or (enemy.global_position - at).length() > reach:
+			continue
+		var id: int = enemy.get_instance_id()
+		var row: Dictionary = _ink.get(id, {})
+		if row.is_empty() or not is_instance_valid(row["mark"]):
+			row = {"mark": _ink_mark(enemy)}
+		row["until"] = _clock + INK_SECONDS
+		_ink[id] = row
+
+
+func _settle_ink(enemy: Node3D) -> void:
+	var id := enemy.get_instance_id()
+	if not _ink.has(id):
+		return
+	var live: bool = float(_ink[id]["until"]) > _clock
+	_drop_ink(id)
+	if live:
+		_grant_pressure(1)
+		last_card["ink"] = int(last_card.get("ink", 0)) + 1
+
+
+func _step_ink() -> void:
+	for id in _ink.keys():
+		var row: Dictionary = _ink[id]
+		var enemy = instance_from_id(id)
+		var left := float(row["until"]) - _clock
+		if enemy == null or not is_instance_valid(enemy) or DamageDoor.dead(enemy) or left <= 0.0:
+			_drop_ink(id)
+		elif is_instance_valid(row["mark"]):
+			# The tick blinks through its last three-quarters of a second.
+			row["mark"].visible = left > 0.75 or int(left * 8.0) % 2 == 0
+
+
+func _drop_ink(id: int) -> void:
+	var mark = _ink.get(id, {}).get("mark")
+	if is_instance_valid(mark):
+		if mark.get_parent() != null:
+			mark.get_parent().remove_child(mark)
+		mark.queue_free()
+	_ink.erase(id)
+
+
+func _clear_ink() -> void:
+	for id in _ink.keys():
+		_drop_ink(id)
+
+
+func _ink_mark(enemy: Node3D) -> MeshInstance3D:
+	var mark := MeshInstance3D.new()
+	mark.name = "InkTick"
+	mark.mesh = _ink_tick()
+	enemy.add_child(mark)
+	var parent_scale: Vector3 = enemy.global_basis.get_scale()
+	mark.scale = Vector3(1.0 / maxf(parent_scale.x, 0.0001), 1.0 / maxf(parent_scale.y, 0.0001), 1.0 / maxf(parent_scale.z, 0.0001))
+	mark.position = Vector3(0.0, INK_HEIGHT / maxf(parent_scale.y, 0.0001), 0.0)
+	return mark
+
+
+# A ledger tick (a check mark of two bars), always facing the camera, in the Tally ledger colour.
+static func _ink_tick() -> ArrayMesh:
+	if _ink_mesh != null:
+		return _ink_mesh
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for bar in [[Vector2(-0.30, 0.02), Vector2(-0.10, -0.24)], [Vector2(-0.10, -0.24), Vector2(0.34, 0.34)]]:
+		var a: Vector2 = bar[0]
+		var b: Vector2 = bar[1]
+		var side := (b - a).orthogonal().normalized() * 0.06
+		for p in [a - side, a + side, b - side, a + side, b + side, b - side]:
+			surface.add_vertex(Vector3(p.x, p.y, 0.0))
+	_ink_mesh = surface.commit()
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.no_depth_test = true
+	material.albedo_color = ClassDef.TALLY_COLOR
+	_ink_mesh.surface_set_material(0, material)
+	return _ink_mesh
 
 
 # One ledger strike from a Tally source: a boss takes BOSS_MULT and no knock.
@@ -3457,6 +3771,7 @@ func tally_landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	var radius: float = ultimate.landing_radius() + (Weapons.FLY_LANDING_BONUS if id == "plate_flywheel" else 0.0)
 	var amount: float = Ultimate.LANDING_DAMAGE * heft * chain
 	effects.ring(at, radius, ClassDef.TALLY_COLOR)
+	ctx.break_props(at, radius, "ultimate")
 	if not link_group.is_empty():
 		link_group["spent"] = true
 	var struck := {}
@@ -4502,6 +4817,8 @@ func _start_attempt() -> void:
 	_rakes.clear()
 	_heated.clear()
 	_exposed.clear()
+	_pike_count = 0
+	_pike_last = -INF
 	_spring_until = -1.0
 	_warden_slam_hits = 0
 	_cooldown = 0.0

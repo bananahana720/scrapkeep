@@ -331,6 +331,9 @@ const IMPACT := {
 	# The Glass Lance's pierce and its Chain Arc jumps (src/combat/actives/glass_lance.gd): a quick
 	# cut's stop and stagger, so a jumped machine reads like the pierced one.
 	"lance": {"knock": 8.0, "lift": 0.3, "stop": "hit", "shake": 0.1, "react": "stagger"},
+	# A shattered destructible's shrapnel (src/world/destructibles.gd): the piece threw the enemy itself and
+	# its own break owns the stop and shake, so a shard's strike freezes and shakes nothing and shoves nothing.
+	"debris": {"knock": 0.0, "lift": 0.0, "stop": "none", "shake": 0.0, "react": "flinch"},
 }
 # Degrees and seconds; enemy weight divides angles by sqrt(max(weight, 1)).
 const REACTIONS := {

@@ -29,10 +29,10 @@ const EFFECTS := {
 	"vault_cooldown": "per", "vault_charges": "count", "dash": "speed", "return_arc": "share",
 	"damage_reduction": "per", "heal_back": "chance", "brace": "share", "hp_per_mass": "per", "floor_hp": "",
 	"bonus_scrap": "chance", "ping": "", "price_scale": "per", "perk": "", "drone": "chance",
-	"slot_cooldown": "per", "overcharge": "damage", "burden_payout": "per",
+	"slot_cooldown": "per", "overcharge": "damage", "burden_payout": "per", "pike_fuse": "",
 }
 const PASSIVE_EFFECTS := ["slot_cooldown", "damage_reduction", "price_scale", "hp_per_mass", "perk", "ballast",
-	"vault_cooldown", "vault_charges"]
+	"vault_cooldown", "vault_charges", "pike_fuse"]
 const DOMINO_MAX_PER_WINDOW := 3
 const PING_RADIUS := 9.0
 
@@ -53,6 +53,9 @@ var hp_mass_cap := 0.0
 var perks := {}
 var vault_cooldown_scale := 1.0
 var vault_charges := 0
+# Slag Pike's row (every, cap_mult, range_mult, idle_s) while it is held, else empty. Combat reads
+# it once per weapon press through pike_fuse() and owns the volley counter (combat.gd _fire).
+var pike := {}
 # Numbers the fuzzer and the tests read.
 var procs := {}
 
@@ -117,6 +120,7 @@ func refresh(held: Array) -> void:
 	perks = {}
 	vault_cooldown_scale = 1.0
 	vault_charges = 0
+	pike = {}
 	var index := 0
 	for part_id in order:
 		var d: Resource = Parts.def(part_id)
@@ -145,6 +149,9 @@ func refresh(held: Array) -> void:
 				vault_cooldown_scale *= maxf(0.2, 1.0 - stacked(d, "per", n))
 			"vault_charges":
 				vault_charges += int(stacked(d, "count", n))
+			"pike_fuse":
+				pike = {"every": maxi(2, int(d.effect.get("every", 6))), "cap_mult": maxf(1.0, float(d.effect.get("cap_mult", 6.0))),
+					"range_mult": maxf(1.0, float(d.effect.get("range_mult", 1.25))), "idle_s": maxf(0.1, float(d.effect.get("idle_s", 3.0)))}
 		if d.trigger == "":
 			continue
 		var entry := {"id": part_id, "def": d, "copies": n, "index": index}
@@ -156,6 +163,11 @@ func refresh(held: Array) -> void:
 		var list: Array = by_kind.get(kind, [])
 		list.append(entry)
 		by_kind[kind] = list
+
+
+# Slag Pike's table while held, empty otherwise: the one call combat makes (a copy, never the live row).
+func pike_fuse() -> Dictionary:
+	return pike.duplicate()
 
 
 # All payout copies share one asymptote; the count includes repeated burden parts.

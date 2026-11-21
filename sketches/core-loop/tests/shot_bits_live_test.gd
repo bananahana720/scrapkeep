@@ -12,10 +12,10 @@ const Enemy := preload("res://src/combat/enemy.gd")
 const Grip := preload("res://src/movement/grip.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# Shot bits in live combat (design-v3/ABILITY-MUTATIONS.md B1 to B4, unit U1): the build's
-# held parts make the shot's bits, a player's own weapon press carries them, a proc volley
-# and a weapon that fires no bolts carry none, and the two live bits (pierce and heat) do
-# what their TABLE rule says. Each check has a planted failing control.
+# Shot bits in live combat (design-v3/ABILITY-MUTATIONS.md B1 to B4, units U1 and U2): the
+# build's held parts make the shot's bits, a player's own weapon press carries them, a proc
+# volley and a weapon that fires no bolts carry none, and all five bits (pierce, bounce,
+# split, pull and heat) do what their TABLE rule says. Each check has a planted failing control.
 #
 # (a) Build.shot_bits() is ShotBits.shot() over the held masks, under the live mask, for
 #     random builds; a retry that restores the part list restores the bits.
@@ -50,7 +50,7 @@ const BUILD_SIZE := 6
 const SEED := 45
 # The runtime aborts a check function on a script error without failing the run, so every
 # check must report: fewer than this many verdicts is itself a failure.
-const EXPECTED_REPORTS := 42
+const EXPECTED_REPORTS := 45
 # The pilot heft the pull checks hold (combat.heft_override): a chaser (crawler, 1.4) is
 # lighter, a plated brute (heavy, 4.0) heavier.
 const PILOT_HEFT := 2.0
@@ -280,7 +280,7 @@ func _check_no_bolt_weapons() -> void:
 	var base: String = abilities.id_of(AbilityState.WEAPON)
 	_hold(["hot_rivets", "arc_coil"], ShotBits.ALL)
 	var got := {}
-	for id in ["cannon_lane", "sticky_charge", "sticky_rain", "ledger_reader"]:
+	for id in ["cannon_lane", "cannon_lane_walk", "sticky_charge", "sticky_rain", "ledger_reader"]:
 		abilities.swap(AbilityState.WEAPON, id)
 		got[id] = [_build().shot_bits(), _build().dropped_shot_bits().size()]
 	abilities.swap(AbilityState.WEAPON, "claw_sweep")
@@ -584,6 +584,15 @@ func _check_split() -> void:
 	_report("split throws two half-damage children at +/- %.0f deg" % Bolts.SPLIT_ANGLE_DEG,
 		r["fired"] == 3 and half and r["first"] > 0.0 and not r["beyond"] and reach == [Bolts.SPLIT_REACH, Bolts.SPLIT_REACH, 5.0, 5.0],
 		"%s; children fly %s m (the rest of the range, at most %.0f)" % [r, reach, Bolts.SPLIT_REACH])
+	# Hit-point remaining range: a short claw bolt (5 m) hitting at 2 m gives children 3 m even
+	# if the step already advanced travelled to 5 m; a hit at the very end emits no zero-range kids.
+	var short := _record(Vector3.ZERO, Vector3.FORWARD, _split)
+	short["max_dist"] = 5.0
+	short["travelled"] = 5.0
+	var at_hit: Array = Bolts.split_children(short, Vector3.FORWARD * 2.0, 1, 2.0).map(func(k): return k["max_dist"])
+	var at_tip: Array = Bolts.split_children(short, Vector3.FORWARD * 5.0, 1, 5.0)
+	_report("split measures remaining range at the hit point and skips zero-range tips",
+		at_hit == [3.0, 3.0] and at_tip.is_empty(), "at 2 m of 5 m: %s; at tip: %d kid(s)" % [at_hit, at_tip.size()])
 
 
 # One split bolt down x = OPEN_SITE at a machine, three machines down each child's line and
@@ -708,6 +717,33 @@ func _check_pull_pairs() -> void:
 	_report("pierce+pull pulls each pierced machine once, the first hardest", _pulled_toward_ball(row[0]) and _pulled_toward_ball(row[1])
 		and knocks[0] > knocks[1] and knocks[2] < 0.001, "knock per machine %s" % [knocks])
 	_free(row)
+	# Real weapon knock (Arc Caster 5.0, Tarn's claw 8.0): pull replaces the weapon's away-shove
+	# so both the first and second pierced machines still come toward the ball.
+	var real_knock_ok := true
+	var real_knock_detail: Array = []
+	for weapon_knock in [5.0, 8.0]:
+		combat.heft_override = PILOT_HEFT
+		var pair := [_dummy(at + Vector3.FORWARD * 4.0), _dummy(at + Vector3.FORWARD * 7.0)]
+		var b := _record(at, Vector3.FORWARD, _pierce | _pull)
+		b["knock"] = weapon_knock
+		_fly(b, pair)
+		combat.heft_override = heft
+		var p0 := _pulled_toward_ball(pair[0])
+		var p1 := _pulled_toward_ball(pair[1])
+		real_knock_ok = real_knock_ok and p0 and p1
+		real_knock_detail.append([weapon_knock, p0, p1])
+		_free(pair)
+	_report("pull beats weapon away-knock on both pierced machines (arc 5, claw 8)", real_knock_ok, str(real_knock_detail))
+	# Planted control: shoving away with claw knock 8 before calling enemy.knock toward the ball
+	# loses the pull on the second pierced machine because Enemy.knock keeps the stronger shove.
+	var naive := _dummy(at + Vector3.FORWARD * 7.0)
+	naive.knock(Vector3.FORWARD, 8.0)
+	var toward_naive: Vector3 = _game.player.ball_position() - naive.global_position
+	toward_naive.y = 0.0
+	naive.knock(toward_naive.normalized(), Combat.pull_force(PILOT_HEFT, Grip.heft_of(naive), 1))
+	_report("planted control: applying weapon knock 8 before pull beats the second pull", not _pulled_toward_ball(naive),
+		"knock %s" % [_planar_knock(naive)])
+	_free([naive])
 	var real := _split_run(_split | _pull)
 	_report("split+pull: the first hit pulls, the children do not", real["first_pulled"] and real["children_pulled"] == [false, false]
 		and real["left"] > 0.0 and real["right"] > 0.0, str(real))

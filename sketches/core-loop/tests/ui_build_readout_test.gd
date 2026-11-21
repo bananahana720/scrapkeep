@@ -58,6 +58,8 @@ const EXPECTED_LAYERS := {
 	"cell_special": "global", "cell_smash": "global",
 	"breaker_drive": "local", "bladestorm_rotor": "local", "storm_mast": "local",
 	"grounding_spike": "local",
+	# 2026-11-21 W45-B2 U6: Halo Rig is a pattern row (local); Slag Pike's fuse reads no weapon stat (global).
+	"halo_rig": "local", "slag_pike": "global",
 }
 const FIXED_CHECKS := 29
 const FITTED_PARTS := ["hot_rivets", "hot_rivets", "slag_rounds", "rivet_plating", "quick_spool",

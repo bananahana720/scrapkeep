@@ -25,7 +25,7 @@ const Icons := preload("res://src/ui/icons.gd")
 # or passive, its stack rule is known and its cap fits the rule, every number is
 # finite, every description is at most eight words, every icon category, trigger and
 # element glyph is a real Icons id, every effect id is in item_effects' closed table,
-# the whole 62-item table is in the pool, the class items are offered only to their
+# the whole 64-item table is in the pool, the class items are offered only to their
 # class, a part waiting on a missing seam is never offered, generated recipes rebuild
 # identically from their id, and the rarity weights hold.
 
@@ -168,7 +168,8 @@ func _check_label() -> void:
 # 2026-10-15 (wave 14 SQ19b, coordinator ruling): Tally's winch_pawl carries anchor (the winch
 # and harpoon family); was anchor 18
 # 2026-10-22 (alpha wave 19, earned save): spare_frame carries mass and anchor; was anchor 19, mass 36
-const TAG_COUNTS := {"frost": 5, "arc": 16, "kinetic": 19, "split": 5, "spiral": 8, "chain": 9, "anchor": 20,
+# 2026-11-21 (wave 45 U6): Slag Pike carries kinetic and Halo Rig split; was kinetic 19, split 5
+const TAG_COUNTS := {"frost": 5, "arc": 16, "kinetic": 20, "split": 6, "spiral": 8, "chain": 9, "anchor": 20,
 	"speed": 32, "mass": 37}
 const KINETIC_SHARE_MAX := 0.25
 
@@ -247,8 +248,8 @@ func _check_table_present() -> void:
 	var bowling: int = Items.TABLE.values().filter(func(r): return r.get("bwl", false)).size()
 	var happy: int = Items.TABLE.values().filter(func(r): return r.get("happy", false)).size()
 	var charge: int = Items.TABLE.values().filter(func(r): return r.get("base", "") == "charge" and not r.get("happy", false)).size()
-	_report("62-item table in the pool", missing.is_empty() and table == 62 and bowling == 8 and happy == 5 and charge == 8,
-		"%d table items (59 new + 3 pattern rows), %d authored rows in all; bowling %d, happy accidents %d, charge %d; missing %s"
+	_report("64-item table in the pool", missing.is_empty() and table == 64 and bowling == 8 and happy == 5 and charge == 8,
+		"%d table items (61 new + 3 pattern rows), %d authored rows in all; bowling %d, happy accidents %d, charge %d; missing %s"
 			% [table, Parts.ids().size(), bowling, happy, charge, missing])
 
 

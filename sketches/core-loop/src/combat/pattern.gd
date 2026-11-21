@@ -75,6 +75,10 @@ const TRANSFORMERS := {
 		"label": "Helix drill", "text": "shots corkscrew through two machines",
 		"add": {"count": 2, "pierce": 1, "wave_amp": 0.35}, "mul": {"damage": 0.75}, "min": {"spread_deg": 6.0, "wave_hz": 3.0},
 	},
+	"halo": {
+		"label": "Halo rig", "text": "adds a ring of shots around your aim",
+		"add": {"arms": 5}, "min": {"arm_offset_deg": 10.0}, "mul": {"damage": 0.55, "rate": 0.85},
+	},
 	"chain_arc": {
 		"label": "Chain arc", "text": "hits arc to one more enemy nearby",
 		"add": {"chain_jumps": 1, "chain_range": 4.0}, "min": {"chain_range": 9.0},

@@ -467,6 +467,7 @@ func landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 	var dealt := 0.0
 	_cast["landed"] = true
 	combat.effects.ring(at, radius, ClassDef.KEST_COLOR)
+	ctx.break_props(at, radius, "ultimate")
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if not is_instance_valid(enemy) or enemy.is_dead() or enemy.global_position.distance_to(at) > radius:
 			continue
