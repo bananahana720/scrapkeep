@@ -20,6 +20,7 @@
 - [STORY-MAP.md](STORY-MAP.md): What the world is and what every place, system, enemy and item means in it, with what each should look, sound and play like. Owns story facts and meaning; read before any design, art or sound work.
 - [ABILITY-MUTATIONS.md](ABILITY-MUTATIONS.md): Wave 45 W45-B2 research-first proposal for World 1 kit-swap relics (Tarn, Tally, Cannon), live `ShotBits` plumbing, verb-rewriting items and three evolutions (ruling eg).
 - [HEFT-DESTRUCTIBLES.md](HEFT-DESTRUCTIBLES.md): Wave 45 W45-C research-first proposal for heft-scaled destructible props, shortcuts and capped light loot under `BACKLOG.md#q-p22` (ruling eh).
+- [WORLD1-DEMO-CATALYST.md](WORLD1-DEMO-CATALYST.md): Approved World 1 Demo creative & technical catalyst spec (`W46-C1` to `W46-C5`), Souls-like difficulty scaling & clutch-mastery contract, working-backwards verification plan, and World 1 Demo release post (ruling ei).
 
 ## Archived documents
 
