@@ -625,7 +625,7 @@ func _counts() -> Dictionary:
 			prompts += 1
 	var bolts: int = _game.ctx.spawner.live_projectiles() if _game.ctx.spawner.has_method("live_projectiles") else -1
 	var fx_node = _game.find_child("CombatEffects", false, false)
-	var combat_marks: int = fx_node._arcs.size() + fx_node._rings.size() + fx_node._sparks.size() if fx_node != null else 0
+	var combat_marks: int = fx_node.live_mark_count() if fx_node != null else 0
 	var words := WordBudget.count(_game, cam)
 	var effects_total := glyphs_visible + sparkles + bolts + combat_marks + lines + (1 if trail > 2 else 0)
 	var cap_sum := Vfx.POOL + Vfx.SPARKLE_POOL + Bolts.MAX_LIVE
