@@ -106,6 +106,10 @@ var _prev := Vector3.ZERO
 var _have_prev := false
 var _last_heft := 1
 var _cruise := 14.0
+var _cruise_override := false
+var _ctx: Object = null
+var _tuning: Object = null
+var _build: Object = null
 var _seed := 0
 var _run_id := ""
 var _stage := 0
@@ -286,6 +290,10 @@ func teardown() -> void:
 	_clock = 0.0
 	_have_prev = false
 	_live_serial = 0
+	_ctx = null
+	_tuning = null
+	_build = null
+	_cruise_override = false
 
 
 func _exit_tree() -> void:
@@ -411,7 +419,7 @@ func on_ball(ball_pos: Vector3, velocity: Vector3, heft_class: int, dt: float = 
 			continue
 		if heft_class >= p.tier and flat >= _bar(p.tier):
 			_shatter(p, seen["at"], heading, flat, false)
-		elif dist <= CONTACT_M and flat >= REFUSED_FLOOR * _cruise:
+		elif dist <= CONTACT_M and flat >= REFUSED_FLOOR * _live_cruise():
 			_refuse(p, seen["at"], heading)
 
 
@@ -421,6 +429,7 @@ func on_ball(ball_pos: Vector3, velocity: Vector3, heft_class: int, dt: float = 
 func on_blast(at: Vector3, radius: float, source: String, tier_bonus: int = 1, heft_class: int = -1) -> void:
 	var heft := heft_class if heft_class >= 0 else _last_heft
 	var effective := heft + clampi(tier_bonus, 0, 1)
+	var cruise := _live_cruise()
 	for p in _near(at, at, radius):
 		if not p.intact or effective < p.tier:
 			continue
@@ -428,13 +437,19 @@ func on_blast(at: Vector3, radius: float, source: String, tier_bonus: int = 1, h
 		if at.distance_to(near) > radius:
 			continue
 		var away := Vector3(p.centre.x - at.x, 0.0, p.centre.z - at.z)
-		_shatter(p, near, away.normalized() if away.length() > 0.01 else Vector3.FORWARD, _cruise, true, source)
+		_shatter(p, near, away.normalized() if away.length() > 0.01 else Vector3.FORWARD, cruise, true, source)
 
 
 # ---- the break ----------------------------------------------------------------------------------
 
+func _live_cruise() -> float:
+	if not _cruise_override and is_instance_valid(_tuning):
+		return float(_tuning.f("cruise"))
+	return _cruise
+
+
 func _bar(tier: int) -> float:
-	return WALL_SPEED if tier <= 1 else _cruise * RAM_MIN_PER_CRUISE
+	return WALL_SPEED if tier <= 1 else _live_cruise() * RAM_MIN_PER_CRUISE
 
 
 func _shatter(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool, source: String = "") -> void:
@@ -491,9 +506,11 @@ func _shrapnel(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool) 
 			continue
 		found.append([out.length(), enemy.get_instance_id(), enemy, away])
 	found.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0] or (a[0] == b[0] and a[1] < b[1]))
-	var force := BASE_FORCE * float(TIER_SCALE[p.tier - 1]) * clampf(speed / maxf(_cruise, 0.01), 0.6, 1.4)
+	var force := BASE_FORCE * float(TIER_SCALE[p.tier - 1]) * clampf(speed / maxf(_live_cruise(), 0.01), 0.6, 1.4)
 	for i in mini(found.size(), SHRAPNEL_MAX):
 		var enemy: Object = found[i][2]
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
 		var away: Vector3 = found[i][3]
 		var push := (away.normalized() if away.length() > 0.01 else dir) + Vector3.UP * 0.3
 		if enemy.has_method("knock"):
@@ -503,9 +520,21 @@ func _shrapnel(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool) 
 		_shrapnel_hits += 1
 
 
+func _is_scrapless() -> bool:
+	if is_instance_valid(_build) and _build.has_method("scrapless") and bool(_build.call("scrapless")):
+		return true
+	if is_instance_valid(_ctx):
+		var b: Variant = _ctx.get("build")
+		if b is Object and is_instance_valid(b) and (b as Object).has_method("scrapless") and bool((b as Object).call("scrapless")):
+			return true
+	return false
+
+
 # The piece pays once at the break from its own spot, from its own stream, clamped to what the stage's
 # meter still has room for. Past the cap it still shatters and hits and drops nothing.
 func _pay(p: Piece) -> void:
+	if _is_scrapless():
+		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = Interact.luck_seed(_seed, _run_id, _stage, "destructible:" + p.id)
 	var row: Array = LOOT[p.tier]
@@ -785,17 +814,22 @@ func _bind(ctx: Variant) -> void:
 	_no_visuals = bool(_ctx_get(ctx, "no_visuals", false))
 	scrap_cap = int(_ctx_get(ctx, "scrap_cap", SCRAP_CAP))
 	cog_cap = int(_ctx_get(ctx, "cog_cap", COG_CAP))
+	var raw_ctx: Variant = (ctx as Dictionary).get("ctx", ctx) if ctx is Dictionary else ctx
+	_ctx = raw_ctx as Object if raw_ctx is Object else null
+	_cruise_override = ctx is Dictionary and (ctx as Dictionary).has("cruise") and (ctx as Dictionary)["cruise"] != null
+	var tuning_val: Variant = _ctx_get(ctx, "tuning", null)
+	_tuning = tuning_val as Object if tuning_val is Object and (tuning_val as Object).has_method("f") else null
 	_cruise = float(_ctx_get(ctx, "cruise", _tuned_cruise(ctx)))
 	_seed = int(_ctx_get(ctx, "run_seed", _chain(ctx, ["rng", "seed"], 0)))
 	_run_id = String(_ctx_get(ctx, "run_id", _chain(ctx, ["run", "run_id"], "")))
 	_stage = int(_ctx_get(ctx, "stage", _chain(ctx, ["run", "stage"], 0)))
+	var build_val: Variant = _ctx_get(ctx, "build", null)
+	if build_val == null and _ctx != null and _ctx.has_method("build_module"):
+		build_val = _ctx.call("build_module")
+	_build = build_val as Object if build_val is Object else null
 	_scrap = _ctx_get(ctx, "scrap", _chain(ctx, ["build", "scrap"], null)) as Object
-	if _scrap == null:
-		var raw_ctx: Variant = (ctx as Dictionary).get("ctx", ctx) if ctx is Dictionary else ctx
-		if raw_ctx is Object and (raw_ctx as Object).has_method("build_module"):
-			var bm: Variant = (raw_ctx as Object).call("build_module")
-			if bm is Object:
-				_scrap = (bm as Object).get("scrap") as Object
+	if _scrap == null and _build != null:
+		_scrap = _build.get("scrap") as Object
 	_combat = _ctx_get(ctx, "combat", _ctx_get(ctx, "spawner", null)) as Object
 	var finder: Variant = _ctx_get(ctx, "enemies", null)
 	_enemies = finder if finder is Callable else Callable()

@@ -1172,7 +1172,7 @@ func _checks() -> Dictionary:
 		"band_skipped_mixes": engine.skipped_mixes if engine is SilentBand else -1,
 		"band_out_peak": music_peak, "band_voices": engine.voice_count(),
 		"audio_processing": audio.can_process(), "audio_listeners": _listeners_of(audio),
-		"audio_cues_logged": audio.cue_log.size(),
+		"audio_cues_logged": audio.cue_log_total,
 		"vfx_clock": vfx._clock, "vfx_processing": vfx.can_process(), "vfx_glyphs_spawned": spawned,
 		"vfx_particles_emitting": emitting, "vfx_listeners": _listeners_of(vfx),
 		"juice_has_vfx": _game.presentation.juice.vfx != null,

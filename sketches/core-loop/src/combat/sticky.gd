@@ -75,6 +75,10 @@ func live(mini := false) -> Array:
 	return charges.filter(func(c): return c["mini"] == mini)
 
 
+func is_idle() -> bool:
+	return charges.is_empty() and _evicted.is_empty()
+
+
 # Steps every charge; returns the ones that go off this tick, already removed.
 func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array) -> Array:
 	var gone := []

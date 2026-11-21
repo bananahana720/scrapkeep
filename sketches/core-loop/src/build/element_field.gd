@@ -35,6 +35,7 @@ const REACH := 4.5
 const MAX_SLABS := 64
 const MAX_ZONES := 6
 const MAX_PUFFS := 40
+const MAX_SHARDS := 64
 const BALL_CLEARANCE := 0.06
 const SHARDS_PER_SLAB := 8
 const SHARD_SECONDS := 0.45
@@ -71,6 +72,9 @@ var _shard_mesh: BoxMesh
 var _puff_mesh: SphereMesh
 var _shard_material: StandardMaterial3D
 var _puff_material: StandardMaterial3D
+var _cone_meshes: Dictionary = {}
+var _ring_mesh: TorusMesh
+var _unshaded_cache: Dictionary = {}
 var _flicker := 0.0
 # SG2 statuses and fusions. _statuses: enemy instance id -> {element, until}, at most one each
 # (a second fuses and spends both). _fusions: committed areas waiting to land or still running.
@@ -360,12 +364,19 @@ func shatter_slabs_in_ring(at: Vector3, radius: float, source := "item_proc") ->
 # was both drawn and hit-tested, with the machines it struck.
 func detonate_crossed_slabs(from: Vector3, to: Vector3, dir: Vector3, exclude_at: Vector3, exclude_radius: float,
 		source := "item_proc", spare: Array = []) -> Dictionary:
+	var min_x := minf(from.x, to.x)
+	var max_x := maxf(from.x, to.x)
+	var min_z := minf(from.z, to.z)
+	var max_z := maxf(from.z, to.z)
 	var spots: Array[Vector3] = []
 	var i := _slabs.size() - 1
 	while i >= 0:
 		var slab: Dictionary = _slabs[i]
-		if not int(slab["id"]) in spare and crosses(slab, from, to) and not stands_on(slab, exclude_at, exclude_radius):
-			spots.append(slab["at"])
+		var at: Vector3 = slab["at"]
+		var r: float = float(slab["radius"])
+		if at.x + r >= min_x and at.x - r <= max_x and at.z + r >= min_z and at.z - r <= max_z \
+				and not int(slab["id"]) in spare and crosses(slab, from, to) and not stands_on(slab, exclude_at, exclude_radius):
+			spots.append(at)
 			_remove_slab(i, false)
 		i -= 1
 	var cones: Array = []
@@ -383,11 +394,15 @@ func shatter_damage() -> float:
 # no lower than its underside and no higher than CROSS_HEIGHT above its top.
 static func crosses(slab: Dictionary, from: Vector3, to: Vector3) -> bool:
 	var centre: Vector3 = slab["at"]
+	var r: float = float(slab["radius"])
+	if centre.x + r < minf(from.x, to.x) or centre.x - r > maxf(from.x, to.x) \
+			or centre.z + r < minf(from.z, to.z) or centre.z - r > maxf(from.z, to.z):
+		return false
 	var a := Vector2(from.x, from.z)
 	var b := Vector2(to.x, to.z)
 	var c := Vector2(centre.x, centre.z)
 	var near := Geometry2D.get_closest_point_to_segment(c, a, b)
-	if near.distance_to(c) > float(slab["radius"]):
+	if near.distance_to(c) > r:
 		return false
 	var span := a.distance_to(b)
 	var y: float = lerpf(from.y, to.y, a.distance_to(near) / span) if span > 0.0001 else from.y
@@ -432,28 +447,68 @@ func _shard_cone(apex: Vector3, dir: Vector3, source: String) -> Dictionary:
 	return cone
 
 
+func _unshaded_material(color: Color, double_sided := false) -> StandardMaterial3D:
+	var key := (color.to_rgba32() << 1) | int(double_sided)
+	var cached: StandardMaterial3D = _unshaded_cache.get(key)
+	if cached != null:
+		return cached
+	var mat := Palette.unshaded(color)
+	if double_sided:
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_unshaded_cache[key] = mat
+	return mat
+
+
+func _cone_mesh(length: float, half: float) -> ArrayMesh:
+	var key := "%.3f:%.4f" % [length, half]
+	var cached: ArrayMesh = _cone_meshes.get(key)
+	if cached != null:
+		return cached
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var steps := 12
+	for n in steps:
+		var a := Vector3.FORWARD.rotated(Vector3.UP, lerpf(-half, half, float(n) / steps)) * length
+		var b := Vector3.FORWARD.rotated(Vector3.UP, lerpf(-half, half, float(n + 1) / steps)) * length
+		for v in [Vector3.ZERO, a, b]:
+			surface.add_vertex(v)
+	var mesh := surface.commit()
+	_cone_meshes[key] = mesh
+	return mesh
+
+
+func _flash_ring_mesh() -> TorusMesh:
+	if _ring_mesh == null:
+		_ring_mesh = TorusMesh.new()
+		_ring_mesh.inner_radius = 0.9
+		_ring_mesh.outer_radius = 1.0
+		_ring_mesh.rings = 24
+		_ring_mesh.ring_segments = 8
+	return _ring_mesh
+
+
+func _evict_puffs() -> void:
+	while _puffs.size() >= MAX_PUFFS:
+		var old: Dictionary = _puffs.pop_front()
+		var old_node = old.get("node")
+		if is_instance_valid(old_node):
+			old_node.queue_free()
+
+
 # The cone's wedge on the ground, in ice, faded out with the puffs.
 func _draw_cone(cone: Dictionary) -> MeshInstance3D:
 	var apex: Vector3 = cone["at"]
 	var dir: Vector3 = cone["dir"]
 	var length: float = cone["length"]
 	var half: float = cone["half_angle"]
-	var surface := SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var steps := 12
-	for n in steps:
-		var a := dir.rotated(Vector3.UP, lerpf(-half, half, float(n) / steps)) * length
-		var b := dir.rotated(Vector3.UP, lerpf(-half, half, float(n + 1) / steps)) * length
-		for v in [Vector3.ZERO, a, b]:
-			surface.add_vertex(v)
+	_evict_puffs()
 	var node := MeshInstance3D.new()
 	node.name = "ShardCone"
-	node.mesh = surface.commit()
-	var mat := Palette.unshaded(Color(ICE.r, ICE.g, ICE.b, 0.55))
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	node.material_override = mat
+	node.mesh = _cone_mesh(length, half)
+	node.material_override = _unshaded_material(Color(ICE.r, ICE.g, ICE.b, 0.55), true)
 	add_child(node)
 	node.global_position = apex + Vector3.UP * 0.1
+	node.rotation.y = atan2(-dir.x, -dir.z)
 	_puffs.append({"node": node, "left": PUFF_SECONDS})
 	return node
 
@@ -464,6 +519,8 @@ func _cone_shards(cone: Dictionary) -> void:
 	var dir: Vector3 = cone["dir"]
 	var half: float = cone["half_angle"]
 	for n in SHARDS_PER_SLAB:
+		if _shards.size() >= MAX_SHARDS:
+			break
 		var heading := dir.rotated(Vector3.UP, lerpf(-half, half, float(n) / float(SHARDS_PER_SLAB - 1)))
 		var shard := MeshInstance3D.new()
 		shard.mesh = _shard_mesh
@@ -486,6 +543,8 @@ func _evolution_strike(enemy: Node3D, damage: float, source: String) -> bool:
 
 func _burst(at: Vector3) -> void:
 	for n in SHARDS_PER_SLAB:
+		if _shards.size() >= MAX_SHARDS:
+			break
 		var angle := TAU * float(n) / SHARDS_PER_SLAB
 		var dir := Vector3(cos(angle), 0.55, sin(angle)).normalized()
 		var shard := MeshInstance3D.new()
@@ -526,20 +585,17 @@ func zap_line(from: Vector3, to: Vector3) -> void:
 		line.surface_add_vertex(from.lerp(to, t) + jitter)
 	line.surface_end()
 	node.mesh = line
-	node.material_override = Palette.unshaded(Palette.ARC)
+	node.material_override = _unshaded_material(Palette.ARC)
 	add_child(node)
 	_zaps.append({"node": node, "left": ZAP_SECONDS})
 
 
 # A flat ring that bursts out to radius: the arc coil's discharge, sized to its reach.
 func flash_ring(at: Vector3, radius: float, color: Color) -> void:
+	_evict_puffs()
 	var node := MeshInstance3D.new()
-	var torus := TorusMesh.new()
-	torus.inner_radius = 0.9
-	torus.outer_radius = 1.0
-	torus.rings = 48
-	node.mesh = torus
-	node.material_override = Palette.unshaded(Color(color, FlashGuard.info(color.a)))
+	node.mesh = _flash_ring_mesh()
+	node.material_override = _unshaded_material(Color(color, FlashGuard.info(color.a)))
 	add_child(node)
 	node.global_position = at
 	_puffs.append({"node": node, "left": PUFF_SECONDS, "grow": radius})
@@ -597,7 +653,7 @@ func _commit_fusion(row: Dictionary, key: String, enemy: Node3D) -> Dictionary:
 	preview.name = "FusionPreview"
 	preview.mesh = _preview_ring()
 	var colour := fusion_colour(key)
-	preview.material_override = Palette.unshaded(Color(colour.r, colour.g, colour.b, 0.7))
+	preview.material_override = _unshaded_material(Color(colour.r, colour.g, colour.b, 0.7))
 	add_child(preview)
 	preview.global_position = at + Vector3.UP * 0.1
 	preview.scale = Vector3(row["radius"], 1.0, row["radius"])
