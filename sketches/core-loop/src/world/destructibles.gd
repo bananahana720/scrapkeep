@@ -24,6 +24,9 @@ const Kit := preload("res://src/presentation/destructible_kit.gd")
 # drop_cogs), combat (strike), refused (Callable(at) for the roll's refused cue), enemies (Callable ->
 # Array), owned_ids (ids a contraption owns), no_visuals (--bot-no-visuals=1). Without a key the Context's
 # own refs answer: tuning.f("cruise"), rng.seed, run.run_id, run.stage, build.scrap, spawner, events.
+# A break sends one world_fact("piece_shattered") at its point on events, plays its family's sound at that point
+# (ctx "sfx", Callable(id, at)) and lands its tier's weight (ctx "weight", Callable(tier, at), else the game's
+# presentation.juice.on_piece_shattered); the sound and the weight are never built under --bot-no-visuals=1.
 
 signal piece_shattered(bounds: AABB)
 
@@ -110,6 +113,8 @@ var _scrap: Object = null
 var _combat: Object = null
 var _cue: Callable = Callable()
 var _sfx: Callable = Callable()
+var _weight: Callable = Callable()
+var _events: Object = null
 var _enemies: Callable = Callable()
 var _no_visuals := false
 var _exiting := false
@@ -450,9 +455,13 @@ func _shatter(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool, s
 		_throw(_puffs, p, at, Vector3.UP, 0.0, "puff")
 		if _sfx.is_valid():
 			_sfx.call(Kit.sfx_id(p.tier), at)
+		if _weight.is_valid():
+			_weight.call(p.tier, at)
 	_shrapnel(p, at, dir, speed, radial)
 	_pay(p)
 	piece_shattered.emit(p.bounds)
+	if is_instance_valid(_events) and _events.has_signal("world_fact"):
+		_events.emit_signal("world_fact", "piece_shattered", at)
 
 
 func _refuse(p: Piece, at: Vector3, dir: Vector3) -> void:
@@ -799,6 +808,9 @@ func _bind(ctx: Variant) -> void:
 		if events != null and (events as Object).has_signal("verb_failed"):
 			_cue = func(at: Vector3) -> void: (events as Object).emit_signal("verb_failed", "roll", "under_bar", at)
 	_sfx = _sfx_of(ctx)
+	_weight = _weight_of(ctx)
+	var bus: Variant = _ctx_get(ctx, "events", null)
+	_events = bus as Object if bus is Object else null
 	_fx.seed = hash("destructibles_fx")
 
 
@@ -814,8 +826,26 @@ func _sfx_of(ctx: Variant) -> Callable:
 	var audio: Variant = _chain(ctx, ["presentation", "audio"], null)
 	if audio == null:
 		audio = _chain(ctx, ["root", "presentation", "audio"], null)
+	if audio is Object and (audio as Object).has_method("play_at"):
+		return func(id: String, at: Vector3) -> void: (audio as Object).call("play_at", "destructible_shatter", at, 0.0, 1.0, "SFX", id)
 	if audio is Object and (audio as Object).has_method("play"):
 		return func(id: String, _at: Vector3) -> void: (audio as Object).call("play", "destructible_shatter", 0.0, 1.0, "SFX", id)
+	return Callable()
+
+
+# The break's weight (hit-stop, shake, kick by tier): ctx "weight" (Callable(tier, at)), or the game's juice
+# (presentation.juice, found as the sound's audio is). None with neither, and never under --bot-no-visuals=1.
+func _weight_of(ctx: Variant) -> Callable:
+	if _no_visuals:
+		return Callable()
+	var given: Variant = _ctx_get(ctx, "weight", null)
+	if given is Callable:
+		return given
+	var juice: Variant = _chain(ctx, ["presentation", "juice"], null)
+	if juice == null:
+		juice = _chain(ctx, ["root", "presentation", "juice"], null)
+	if juice is Object and (juice as Object).has_method("on_piece_shattered"):
+		return Callable(juice as Object, "on_piece_shattered")
 	return Callable()
 
 

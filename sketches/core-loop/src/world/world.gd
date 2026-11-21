@@ -28,6 +28,10 @@ const RunTier := preload("res://src/core/run_tier.gd")
 const RogueDirector := preload("res://src/world/rogue_director.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
+# The stage Warden's fight for the bus's fight phases (fight_phase_changed): phase 1 from the engage, one more for
+# each chunk its guard loses short of the break, so the four chunks are four phases.
+const WARDEN_FIGHT := "warden"
 
 # Writer D's module: the stage geometry, the event director, stage events and the
 # launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
@@ -52,6 +56,8 @@ var events
 var event_families := {}
 var _park_warden_staggered := false
 var _park_warden_chunks := 4
+# The Warden fight's phase published this attempt (0 before the engage); it only climbs.
+var _warden_phase := 0
 var view
 var launch
 # Where the last miniboss was asked for, for tests and the field notes.
@@ -311,6 +317,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	EventFamilies.release(events, event_families)
 	_park_warden_staggered = false
 	_park_warden_chunks = 4
+	_warden_phase = 0
 	launch.stop()
 	ride = null
 	_show_ride()
@@ -528,23 +535,35 @@ func _physics_process(delta: float) -> void:
 
 
 func _on_park_warden_engaged(_stage: int) -> void:
+	_warden_phase_to(1)
 	if events != null:
 		events.notify_warden_phase("engaged")
 
 
 func _on_park_warden_posture(enemy: Node3D, _posture: float, staggered: bool) -> void:
-	if events == null or enemy != ctx.flow.warden:
+	if enemy != ctx.flow.warden:
 		return
-	if staggered and not _park_warden_staggered:
+	if events != null and staggered and not _park_warden_staggered:
 		events.notify_warden_phase("stagger")
 	_park_warden_staggered = staggered
 	# Never back up: a drained bar does not pulse the same chunk twice.
 	var phase_left: int = enemy.phase_chunks_left() if enemy.has_method("phase_chunks_left") else enemy.chunks_left()
 	var left: int = mini(_park_warden_chunks, phase_left)
 	for lost in range(4 - _park_warden_chunks + 1, 4 - left + 1):
-		if lost <= 3:
+		if lost <= 3 and events != null:
 			events.notify_warden_phase("chunk_%d" % lost)
 	_park_warden_chunks = left
+	# A full guard is the engage's phase 1, published by the engage: a reading alone (a spawn's) opens no fight.
+	if left < BossPosture.CHUNKS:
+		_warden_phase_to(BossPosture.CHUNKS - maxi(left, 1) + 1)
+
+
+# Publishes each Warden fight phase up to `phase` not yet published this attempt, once each, so the band
+# and the screen hear every chunk the guard lost; a reading that loses nothing publishes nothing.
+func _warden_phase_to(phase: int) -> void:
+	while _warden_phase < mini(phase, BossPosture.CHUNKS):
+		_warden_phase += 1
+		ctx.events.fight_phase_changed.emit(WARDEN_FIGHT, _warden_phase, BossPosture.CHUNKS)
 
 
 func _on_park_warden_broken(_stage: int) -> void:
