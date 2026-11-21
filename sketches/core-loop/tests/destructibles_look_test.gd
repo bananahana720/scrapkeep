@@ -6,6 +6,7 @@ const Kit := preload("res://src/presentation/destructible_kit.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Context := preload("res://src/core/context.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 # Test F (design-v3/HEFT-DESTRUCTIBLES.md sections 4.1, 9 and 10.2), unit C: the look of a heft destructible.
@@ -39,6 +40,14 @@ class FakeAudio extends RefCounted:
 	func play(_kind: String, _db := 0.0, _pitch := 1.0, _bus := "SFX", sound_override := "") -> bool:
 		heard.append(sound_override)
 		return true
+
+
+class FakePres extends RefCounted:
+	var audio: FakeAudio
+
+
+class FakeRoot extends Node3D:
+	var presentation: FakePres
 
 
 func _initialize() -> void:
@@ -325,10 +334,27 @@ func _module_sounds() -> void:
 	mod.queue_free()
 
 	var audio := FakeAudio.new()
-	var wired := _make(_rows(2, func(i: int) -> int: return i + 1), {"presentation": {"audio": audio}})
+	var stub_root := FakeRoot.new()
+	stub_root.presentation = FakePres.new()
+	stub_root.presentation.audio = audio
+	root.add_child(stub_root)
+	var real_ctx := Context.new()
+	real_ctx.root = stub_root
+	var wired := _make(_rows(2, func(i: int) -> int: return i + 1), {"ctx": real_ctx, "root": stub_root})
 	wired.on_blast(Vector3(3.0, 2.0, 0.0), 60.0, "test", 1, 5)
-	t.check("F: the game's audio plays the family sound when no sfx key is given", audio.heard.size() == 2 and "destructible_wood" in audio.heard and "destructible_scrap" in audio.heard, str(audio.heard))
+	t.check("F: the game's audio plays via ctx.root.presentation.audio when no sfx key is given", audio.heard.size() == 2 and "destructible_wood" in audio.heard and "destructible_scrap" in audio.heard, str(audio.heard))
 	wired.queue_free()
+	stub_root.queue_free()
+
+	var bare_root := Node3D.new()
+	root.add_child(bare_root)
+	var bare_ctx := Context.new()
+	bare_ctx.root = bare_root
+	var bare_wired := _make(_rows(2, func(i: int) -> int: return i + 1), {"ctx": bare_ctx, "root": bare_root})
+	bare_wired.on_blast(Vector3(3.0, 2.0, 0.0), 60.0, "test", 1, 5)
+	t.check("F control: a Context whose root has no presentation stays silent and still breaks", bare_wired.intact_count() == 0, str(bare_wired.intact_count()))
+	bare_wired.queue_free()
+	bare_root.queue_free()
 
 	var quiet_heard: Array[String] = []
 	var quiet := _make(_rows(3, func(i: int) -> int: return i + 1), {"no_visuals": true, "sfx": func(id: String, _at: Vector3) -> void: quiet_heard.append(id)})

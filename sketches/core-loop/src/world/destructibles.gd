@@ -802,8 +802,9 @@ func _bind(ctx: Variant) -> void:
 	_fx.seed = hash("destructibles_fx")
 
 
-# The shatter sound: ctx "sfx" (Callable(id, at)), or the game's audio (ctx.presentation.audio.play) when it
-# is there. Silent with neither, and never built under --bot-no-visuals=1.
+# The shatter sound: ctx "sfx" (Callable(id, at)), or the game's audio (ctx.presentation.audio or
+# ctx.root.presentation.audio, matching game.gd:128 / world.gd:507) when present. Silent with neither,
+# and never built under --bot-no-visuals=1.
 func _sfx_of(ctx: Variant) -> Callable:
 	if _no_visuals:
 		return Callable()
@@ -811,6 +812,8 @@ func _sfx_of(ctx: Variant) -> Callable:
 	if given is Callable:
 		return given
 	var audio: Variant = _chain(ctx, ["presentation", "audio"], null)
+	if audio == null:
+		audio = _chain(ctx, ["root", "presentation", "audio"], null)
 	if audio is Object and (audio as Object).has_method("play"):
 		return func(id: String, _at: Vector3) -> void: (audio as Object).call("play", "destructible_shatter", 0.0, 1.0, "SFX", id)
 	return Callable()

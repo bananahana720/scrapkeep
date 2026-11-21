@@ -169,7 +169,7 @@ static func _crate(b: _Build, half: Vector3, relief: float, base: Color) -> void
 # Tier 2: two planked slabs with raised battens on both faces and a post at each end, one seam between.
 static func _barricade(b: _Build, half: Vector3, relief: float, slab_h: float, gap: float, recess: float, base: Color) -> void:
 	var batten := _shade(base, 0.78)
-	var body := Vector2(half.x - relief * 0.6, half.z - relief * 0.6)
+	var body := Vector2(maxf(half.x - relief * 2.2, 0.1), half.z - relief * 0.6)
 	var count := clampi(int(half.x * 2.0 / 0.9), 2, 5)
 	for i in 2:
 		var y := _slab_y(i, slab_h * 2.0 + gap, slab_h, gap)
