@@ -119,7 +119,8 @@ export const ROWS = {
       {
         cfg: "flood-today-longfill.cfg",
         minStates: 63392,
-        label: "a fill that outlasts the live time less the wait, still rising past the live time under a parked ball",
+        label:
+          "a fill that outlasts the live time less the wait, still rising past the live time under a parked ball",
       },
     ],
     plants: [

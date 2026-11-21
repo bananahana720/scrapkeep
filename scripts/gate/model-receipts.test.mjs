@@ -341,20 +341,17 @@ test("the destructibles row's pin and plants match captured TLC output, and its 
     assert.equal(parsed.outcome, "clean", r.cfg);
     assert.equal(parsed.distinct, r.minStates, r.cfg);
   }
-  assert.deepEqual(
-    ds.plants.map((p) => p.rule).sort(),
-    [
-      "NoColliderAfterShatter",
-      "NoLineOnRubble",
-      "NoLineOnRubble",
-      "NoLineOnRubble",
-      "PaysOnce",
-      "PaysOnce",
-      "RetryNoFarm",
-      "RetryNoFarm",
-      "TierCapNeverStacks",
-    ],
-  );
+  assert.deepEqual(ds.plants.map((p) => p.rule).sort(), [
+    "NoColliderAfterShatter",
+    "NoLineOnRubble",
+    "NoLineOnRubble",
+    "NoLineOnRubble",
+    "PaysOnce",
+    "PaysOnce",
+    "RetryNoFarm",
+    "RetryNoFarm",
+    "TierCapNeverStacks",
+  ]);
   for (const p of ds.plants)
     assert.equal(
       brokeRule(parseTlc(fixture(p.cfg.replace(".cfg", ""))), cfg(p.cfg), p.rule),
@@ -376,8 +373,12 @@ test("the destructibles row's pin and plants match captured TLC output, and its 
 
 test("the flood row checks the step past the live time and no longer names PF-2 as a gap", () => {
   const fl = ROWS["flood-never-held"];
-  assert.ok(fl.plants.some((p) => p.cfg === "flood-broken-endstop.cfg" && p.rule === "FullWaterNeverHeld"));
-  assert.ok(fl.plants.some((p) => p.cfg === "flood-broken-endstop-hold.cfg" && p.rule === "HoldEnds"));
+  assert.ok(
+    fl.plants.some((p) => p.cfg === "flood-broken-endstop.cfg" && p.rule === "FullWaterNeverHeld"),
+  );
+  assert.ok(
+    fl.plants.some((p) => p.cfg === "flood-broken-endstop-hold.cfg" && p.rule === "HoldEnds"),
+  );
   assert.ok(cfg("flood-today-longfill.cfg").properties.includes("HoldEnds"));
   assert.ok(fl.gaps.every((g) => !/PF-2/.test(g)));
 });
