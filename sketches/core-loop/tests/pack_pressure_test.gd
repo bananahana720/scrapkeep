@@ -157,9 +157,9 @@ func _identity() -> void:
 	for key in ["pack.lead_by_stage", "pack.crew_extra_by_stage", "pack.rest_by_stage", "pack.flank_by_stage", "ground.churn_by_stage", "hazard.boil_by_stage"]:
 		_t.eq("01 %s is at its default with no flag" % key, ChallengeDials.value(key), ChallengeDials.DEFAULTS[key])
 	_t.eq("01b silt boils ship on world 1 at strength 2, nowhere else", ChallengeDials.value("hazard.boil_by_stage"), [2.0, 2.0, 0.0, 0.0, 0.0, 0.0])
-	_t.eq("01c the lead ships at half on world 1, nowhere else (wave 37 unit D1)", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("01c the lead ships at half across all stages (wave 37 unit D1)", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
 	_t.eq("02 a dam crew reads the half lead, none of it kept at cruise, and nothing else", PackPressure.crew_row(1), {"lead": 0.5, "lead_cruise": 0.0, "rest": 1.0, "flank": 0.0})
-	_t.eq("02b a Dig crew reads the identity row", PackPressure.crew_row(3), {"lead": 0.0, "lead_cruise": 1.0, "rest": 1.0, "flank": 0.0})
+	_t.eq("02b a Dig crew inherits the half lead and cruise fade", PackPressure.crew_row(3), {"lead": 0.5, "lead_cruise": 0.0, "rest": 1.0, "flank": 0.0})
 	_t.eq("03 no extra chasers", PackPressure.crew_extra(1), 0)
 
 
@@ -350,7 +350,7 @@ const LOOP_TEST := {"hazard.boil_stall_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 
 func _stall(boils, ctx, enemy) -> void:
-	_t.eq("31 the stall test ships on world 1", ChallengeDials.DEFAULTS["hazard.boil_stall_by_stage"], [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("31 the stall test ships across all stages", ChallengeDials.DEFAULTS["hazard.boil_stall_by_stage"], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 	var stall_on: Dictionary = ChallengeDials.parse(PackPressure.tune_spec("E"))
 	stall_on["hazard.boil_stall_by_stage"] = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]
 	ChallengeDials.set_overrides(stall_on)

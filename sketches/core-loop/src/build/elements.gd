@@ -57,7 +57,7 @@ const TOUCH_ELEMENTS := ["frost"]
 const FUSION_LEAD_FRAMES := 15
 const FUSION_STRIKE := "fusion"
 const FUSION_KINDS := {"lock": "control", "overload": "burst", "grind": "sustained"}
-const BOSS_KINDS := ["miniboss", "warden", "vault", "rogue_crane", "rogue_skip", "rogue_tender"]
+const BOSS_KINDS := ["miniboss", "warden", "vault", "rogue_crane", "rogue_skip", "rogue_tender", "waking", "mind"]
 
 const FUSIONS := {
 	"arc+frost": {"behaviour": "lock", "kind": "control", "radius": 4.0, "seconds": 2.0, "damage": 10.0,

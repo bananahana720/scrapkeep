@@ -21,13 +21,12 @@ const Shop := preload("res://src/build/shop.gd")
 #     all excluded, draw the same picks and use the same rng on and off, and answer_nudge hands the
 #     nudge back untouched;
 #   - the shop shelf (Shop._stock, Parts.roll under it) is the nudged draw.
-# Rivet (runner_gunner) and Sable (pylon_engineer) are near-nil here: their spread and plating answers sit
-# in the rest group, so the drawable count printed below is 0 to 1 for them. The rest-group gap is
-# escalated to Andrew, not fixed in this card.
+# Rivet (runner_gunner) and Sable (pylon_engineer) have their spread and plating answers mostly in
+# the rest group; since w45 P5 (Parts.REST_OF_NEUTRAL), the rest group receives a bounded non-zero
+# share of the non-kit pool so off-kit answering parts are drawable and receive the answer lean.
 # Printed, not asserted: each pilot's answering share and how many answering parts the kit lean can
 # draw at all (weight above zero). A part off the pilot's kit and off the neutral shelf sits in the
-# "rest" group, which weighs 0 while kit or shelf parts remain, so the lean cannot lift it; it only
-# reaches an offer by the stage-2 pattern guarantee or the harder-part swap.
+# "rest" group, which shares the non-kit slice with the neutral shelf via Parts.REST_OF_NEUTRAL.
 # Evidence limit: the offer draw only. Whether a nudged run is easier is the matchup lab's claim.
 
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
