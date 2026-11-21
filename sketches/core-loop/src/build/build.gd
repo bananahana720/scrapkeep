@@ -169,10 +169,9 @@ var sheet
 # respec, run start and stage entry refold only the categories the changed parts touch.
 var stat_cache = StatCache.new()
 # The held parts' ShotBits masks in held order, refreshed with the stat cache (recompute), and
-# the shot they make under the live mask it was folded at (shot_bits()).
+# the shot they make, by the live mask it was folded under (shot_bits()).
 var _shot_masks: Array = []
-var _shot := {}
-var _shot_live := -1
+var _shot_by_live := {}
 # v2 W4 loot: the trigger bus, what held items do, and the loot's own seeded stream
 # (reseeded each stage entry, so a retry replays the same procs and never draws from
 # the run's shared ctx.rng).
@@ -367,10 +366,9 @@ func dropped_shot_bits() -> Array:
 
 func _shot_fold() -> Dictionary:
 	var live_mask := int(ctx.tuning.f("shot_bits_live"))
-	if _shot.is_empty() or live_mask != _shot_live:
-		_shot_live = live_mask
-		_shot = ShotBits.shot(_shot_masks.map(func(mask: int) -> int: return ShotBits.live(mask, live_mask)))
-	return _shot
+	if not _shot_by_live.has(live_mask):
+		_shot_by_live[live_mask] = ShotBits.shot(_shot_masks.map(func(mask: int) -> int: return ShotBits.live(mask, live_mask)))
+	return _shot_by_live[live_mask]
 
 
 func _weapon_fires_bolts() -> bool:
@@ -384,7 +382,7 @@ func _fold_shot_masks() -> void:
 		var d: Resource = Parts.def(part_id)
 		if d != null:
 			_shot_masks.append(int(d.bits))
-	_shot = {}
+	_shot_by_live = {}
 
 
 func active_synergies() -> Array:
