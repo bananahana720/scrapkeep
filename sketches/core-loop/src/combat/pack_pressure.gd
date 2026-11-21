@@ -9,7 +9,8 @@ extends RefCounted
 # E's reads its identity. An explicit --tune of the same key wins over a preset.
 #
 #   A  aim: crews lead the ball's roll, along its curve, when they steer and when they lay a lunge lane.
-#      A ships at half on world 1 (wave 37 unit D1, ChallengeDials.LEAD_W1); the preset names the full lead.
+#      A ships at half across all stages (wave 37 unit D1, inherited by W2/W3 in w45 P5,
+#      ChallengeDials.LEAD_W1); the preset names the full lead on world 1.
 #      --tune=pack.lead_by_stage=0/0/0/0/0/0 turns it off.
 #   B  numbers: one more chaser per crew and half the re-engage gap.
 #   C  flankers: every second chaser runs ahead of the ball's line, calls (a whistle, PRESSURE_CUE_S before
@@ -47,7 +48,7 @@ const MAX_TURN := 2.5
 const TURN_SMOOTH_S := 0.3
 const MIN_TURN_SPEED := 3.0
 # A lead is for a ball that can be met. It is whole up to LEAD_FADE_FROM of the pilot's cruise speed and falls
-# to the stage's pack.lead_cruise_by_stage share of itself at cruise and above: 0 on world 1, so a ball at
+# to the stage's pack.lead_cruise_by_stage share of itself at cruise and above: 0 across all stages, so a ball at
 # cruise is aimed at where it is, as before wave 37, and 1 keeps the lead whole at any speed.
 const LEAD_FADE_FROM := 0.85
 

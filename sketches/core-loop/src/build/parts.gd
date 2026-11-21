@@ -1121,7 +1121,7 @@ static func slot_weights(rarity: String, class_id: String, pool: Array, offered:
 			var lean := 1.0
 			if name == "shelf" and kit.has(b) and (b != "weapon" or kit.has("movement")):
 				lean = NEUTRAL_LEAN
-			elif name in ["shelf", "rest"] and b == "weapon" and not kit.has("weapon"):
+			elif (name == "shelf" or (name == "rest" and not groups["shelf"].is_empty())) and b == "weapon" and not kit.has("weapon"):
 				lean = NEUTRAL_WEAPON_EASE
 			raw[key] = lean / (1.0 + offered.get(key, 0))
 			sum += raw[key]
@@ -1247,12 +1247,14 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 	return _swap_stacked_out(rng, class_id, held, picks, pool, offered)
 
 
-# A leaning pilot's draw that holds no kit part still shows a shelf part: the first slot from first
-# on (past the synergy bait) that is not the draw's only harder part becomes one, when an uncapped
-# shelf part is left.
+# A leaning pilot's multi-slot draw (count >= 2) that holds no kit part still shows a shelf part:
+# the first slot from first on (past the synergy bait) that is not the draw's only harder part
+# becomes one, when an uncapped shelf part is left. Single-slot draws (fabricators, pockets,
+# one-slot offers) stay untouched so rest picks survive and a single listed draw consumes only its
+# rarity draw and one pick (run_tier_test).
 static func _keep_a_neutral(rng: RandomNumberGenerator, class_id: String, picks: Array, pool: Array,
 		offered: Dictionary, first: int) -> void:
-	if picks.is_empty() or picks.any(func(key): return in_kit(class_id, key) or key in NEUTRAL_SHELF):
+	if picks.size() < 2 or picks.any(func(key): return in_kit(class_id, key) or key in NEUTRAL_SHELF):
 		return
 	var shelf := _neutral_slot(class_id, pool.filter(func(key): return not key in picks), offered)
 	if shelf.is_empty():
