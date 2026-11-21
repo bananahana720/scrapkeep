@@ -22,6 +22,10 @@ extends SceneTree
 #         the tier ceiling (tier 5 ships only where class V is the median); breaking every stage piece adds at most
 #         0.078 heft (under 16% of the smallest class interval) and at most 3% of a stage's median cogs. Planted: an
 #         uncapped 100-scrap arm fails the bound.
+# Shortcuts (spec section 6): no world 1 row carries "shortcut" today. A shortcut must keep every rule above, so it
+# stands 20 m or more off every route leg; a graph search over both parks for a legal wall that forces a detour beyond
+# walking round the wall itself (the dam's best was 23 m, the same at every open-ground spot) found no narrow passage
+# for one to close. The check stays so a later card that finds one is held to it.
 # T11, the snag roll, boots the game and is a separate mode of this file (the default run stays static):
 #   $GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop -s tests/destructibles_world1_test.gd -- --snag=park_dam
 # It rolls tools/qa/snag_probe.gd's lanes (ride lanes over a low piece, graze lanes along a tall one's faces) at
