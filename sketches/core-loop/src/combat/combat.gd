@@ -349,6 +349,11 @@ var _clamped := {}
 var _rakes: Array = []
 # Fault Hammer: aftershocks waiting on their clock, {at, radius, damage, born, due}.
 var _aftershocks: Array = []
+var _fault_layer_count := 0
+# Cached verb-evolution flags, refreshed in _rebuild_patterns() on every build change.
+var _has_grapeshot := false
+var _has_hoar := false
+var _has_fault := false
 # The heat bit (ShotBits "heat", design-v3/ABILITY-MUTATIONS.md B3, starting values): a heated
 # bolt leaves the machine it hits glowing for HEAT_GLOW seconds, and a heated hit on a glowing
 # machine deals HEAT_BONUS, at most once per machine per HEAT_GLOW seconds. instance id ->
@@ -552,8 +557,7 @@ func setup(ctx_ref) -> void:
 	# A loaded line skill rides the next bite, body or world (grapple_fired goes out for both,
 	# after the latch is set). A reset point drops the load.
 	ctx.events.grapple_fired.connect(func(_anchor: Vector3): _bite_load())
-	ctx.events.player_died.connect(func(): _line_load = {})
-	ctx.events.stage_content_cleared.connect(func(_reason: String): _line_load = {})
+	ctx.events.player_died.connect(_on_player_died)
 	_cards = {"balance_due": _run_balance}
 	ctx.events.enemy_struck.connect(_on_card_struck)
 	ctx.events.harpoon_smashed.connect(func(_enemy: Node3D, _at: Vector3, _speed: float): _grant_pressure(1))
@@ -614,18 +618,23 @@ func setup(ctx_ref) -> void:
 		assists = 0
 		last_assist = {}
 		_prow_until = {}
+		_guards.clear()
 		_clamped = {}
 		_rakes = []
-		_aftershocks = []
+		_clear_aftershocks()
 		_heated = {}
 		_escape = {}
 		escape_lane = {}
 		escape_acts = 0
 		_free_cannon()
 		_cannon_count = 0
-		_exposed = {}
 		_reset_cards()
 		_line_load = {}
+		_cast_pending = {}
+		_bite_pending = false
+		_pike_count = 0
+		_pike_last = -INF
+		_clear_verb_items()
 		_cloud = {}
 		_sentry = {}
 		_pulse_left = 0.0
@@ -749,8 +758,8 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 		_record_retirement(_class_for_id(id, kind))
 		_clamped.erase(id)
 		_heated.erase(id)
-		_exposed.erase(id)
-		_exposed.erase(_arc_key(id))
+		_drop_exposed(id)
+		_drop_exposed(_arc_key(id))
 		_boss_add_ids.erase(id))
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_lobber_fired.bind(enemy))
@@ -847,7 +856,7 @@ func _door_caps(hit: Dictionary) -> void:
 			result["dunk"] = hit["dunk"]
 	if hit["kind"] in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()) \
 			and float(_exposed[enemy.get_instance_id()]["until"]) <= _clock:
-		_exposed.erase(enemy.get_instance_id())
+		_drop_exposed(enemy.get_instance_id())
 	# SG1: the mark was read above, so the hit that sets or refreshes it is never raised by
 	# its own mark.
 	if hit["kind"] == ARC_MARK_KIND:
@@ -1735,8 +1744,8 @@ func _physics_process(delta: float) -> void:
 	_step_special(intent, delta)
 	_step_line(intent, delta)
 	_step_cannon(delta)
-	_step_verb_items()
 	var enemies := get_tree().get_nodes_in_group("enemy")
+	_step_verb_items(enemies)
 	var shells := get_tree().get_nodes_in_group("enemy_shot")
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	bolts.step(delta, space, enemies, shells)
@@ -1751,17 +1760,18 @@ func _physics_process(delta: float) -> void:
 	_hulk_step(enemies, delta)
 	_bat_by_ball(shells)
 	_decay_shred(delta)
-	_tint()
+	_tint(enemies)
 
 
 # Plated targets glow amber when your punch beats their plating right now, slate when
 # it does not. Same function as the strike, re-read every physics tick. A target whose
 # tint_verb() is "ram" is compared with the ram alone, since only a ram counts there.
-func _tint() -> void:
+func _tint(enemies = null) -> void:
 	var punch := punch_now()
 	var ram := ram_punch_now()
-	for enemy in get_tree().get_nodes_in_group("enemy"):
-		if not enemy.has_method("set_tint") or enemy.is_dead() or enemy.plating <= 0.0:
+	var pool: Array = enemies if enemies is Array else get_tree().get_nodes_in_group("enemy")
+	for enemy in pool:
+		if not is_instance_valid(enemy) or not enemy.has_method("set_tint") or enemy.is_dead() or enemy.plating <= 0.0:
 			continue
 		var against: float = ram if enemy.has_method("tint_verb") and enemy.tint_verb() == "ram" else punch
 		enemy.set_tint("amber" if against >= plating_of(enemy) else "slate")
@@ -1989,9 +1999,12 @@ func _lay_strip(item: String, from: Vector3, to: Vector3, width: float, damage: 
 	return strip
 
 
-func _strike_strip(strip: Dictionary) -> void:
+func _strike_strip(strip: Dictionary, enemies = null) -> void:
 	var shape: Dictionary = strip["shape"]
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	var pool: Array = enemies if enemies is Array else get_tree().get_nodes_in_group("enemy")
+	for enemy in pool:
+		if not is_instance_valid(enemy):
+			continue
 		var id: int = enemy.get_instance_id()
 		if strip["struck"].has(id) or enemy.is_dead() \
 				or not in_line(shape["from"], shape["to"], shape["width"], enemy.global_position, _hull(enemy)):
@@ -2003,22 +2016,23 @@ func _strike_strip(strip: Dictionary) -> void:
 
 
 # The strips strike what enters them and go when their life ends; a bell rings when it is due.
-func _step_verb_items() -> void:
+func _step_verb_items(enemies = null) -> void:
 	for strip in _strips.duplicate():
 		if _clock >= float(strip["until"]):
 			ctx.player.indicator.clear(String(strip["layer"]))
 			_strips.erase(strip)
 		else:
-			_strike_strip(strip)
+			_strike_strip(strip, enemies)
 	for bell in _bells.duplicate():
 		if _clock >= float(bell["at"]):
 			_bells.erase(bell)
-			_toll(bell)
+			_toll(bell, enemies)
 
 
 func _clear_verb_items() -> void:
-	for record in _strips + _bells:
-		ctx.player.indicator.clear(String(record["layer"]))
+	if ctx != null and ctx.player != null and ctx.player.indicator != null:
+		for record in _strips + _bells:
+			ctx.player.indicator.clear(String(record["layer"]))
 	_strips.clear()
 	_bells.clear()
 	_reel_hits = {}
@@ -2064,12 +2078,11 @@ func _on_reel_chain(enemy: Node3D, at: Vector3, _speed: float) -> void:
 	if damage <= 0.0:
 		return
 	var from: Vector3 = first.global_position if first != null else at
-	var next := _nearest(from, float(row.get("reach", 6.0)), [first])
-	last_reel_arc = {"from": from, "damage": damage * float(row.get("mult", 0.7)), "source": "item_proc", "bits": 0,
-		"target": next}
-	_chain(first, from, {"damage": damage, "chain_jumps": 1, "chain_falloff": float(row.get("mult", 0.7)),
+	var mult := float(row.get("mult", 0.7))
+	var next := _chain(first, from, {"damage": damage, "chain_jumps": 1, "chain_falloff": mult,
 		"chain_range": float(row.get("reach", 6.0)), "color": ctx.player.class_color(), "kind": SYNERGY,
-		"knock": float(row.get("knock", 6.0)), "source": "item_proc", "bits": 0})
+		"knock": float(row.get("knock", 6.0)), "source": "item_proc", "bits": 0}, 1.0)
+	last_reel_arc = {"from": from, "damage": damage * mult, "source": "item_proc", "bits": 0, "target": next}
 
 
 # Faultline Cap (C5): a smash landing cracks a lane ahead along the ball's heading at mult of the
@@ -2091,11 +2104,9 @@ func _on_slam_crack(at: Vector3, strength: float, _flatness: float) -> void:
 		ctx.break_props(from + heading * minf(float(along), length), float(row.get("prop_radius", 2.5)), "faultline_cap")
 
 
-# Second Bell (C6): what a kit special's release changed, read before it fires: the burst record
-# it replaces and the props broken so far.
+# Second Bell (C6): the burst record a kit special's release replaces, read before it fires.
 func _bell_mark() -> Dictionary:
-	var pieces = ctx.destructibles if ctx != null else null
-	return {"burst": last_burst, "breaks": pieces.break_order().size() if pieces != null and is_instance_valid(pieces) else 0}
+	return {"burst": last_burst}
 
 
 # Hung on the two kit special exits only (the gauge release and a SPECIAL tap landing), after the
@@ -2120,7 +2131,7 @@ func _ring_bell(id: String, shape: Dictionary, mark: Dictionary) -> void:
 		bell["mode"] = "pulse"
 		bell["damage"] = float(last_burst["damage"]) * float(row.get("mult", 0.5))
 		bell["limit"] = int(last_burst.get("targets", -1))
-		bell["breaks"] = _bell_mark()["breaks"] > int(mark["breaks"])
+		bell["breaks"] = bool(last_burst.get("breaks_props", false))
 		var drawn := {}
 		for key in ["kind", "centre", "radius", "from", "to", "width", "apex", "dir", "length", "half_angle"]:
 			if shape.has(key):
@@ -2132,24 +2143,27 @@ func _ring_bell(id: String, shape: Dictionary, mark: Dictionary) -> void:
 	_bells.append(bell)
 
 
-func _toll(bell: Dictionary) -> void:
+func _toll(bell: Dictionary, enemies = null) -> void:
 	ctx.player.indicator.clear(String(bell["layer"]))
 	var shape: Dictionary = bell["shape"]
 	var color: Color = shape["color"]
 	var hits := 0
+	var pool: Array = enemies if enemies is Array else get_tree().get_nodes_in_group("enemy")
 	if bell["mode"] == "gather":
-		_gather_pull(shape["centre"], float(shape["radius"]))
+		_gather_pull(shape["centre"], float(shape["radius"]), pool)
 		effects.ring(shape["centre"], float(shape["radius"]), color)
 	else:
 		var origin := _shape_origin(shape)
 		var found: Array = []
-		for enemy in get_tree().get_nodes_in_group("enemy"):
-			if not enemy.is_dead() and in_shape(shape, enemy):
+		for enemy in pool:
+			if is_instance_valid(enemy) and not enemy.is_dead() and in_shape(shape, enemy):
 				found.append([enemy.global_position.distance_to(origin), enemy])
 		found.sort_custom(func(a, b): return a[0] < b[0])
 		var limit: int = int(bell["limit"]) if int(bell["limit"]) >= 0 else found.size()
 		for pair in found.slice(0, limit):
 			var enemy: Node3D = pair[1]
+			if not is_instance_valid(enemy) or enemy.is_dead():
+				continue
 			_hit(enemy, SYNERGY, float(bell["damage"]), enemy.global_position - origin, float(bell["knock"]), "", "item_proc", "proc")
 			hits += 1
 		_draw_shape(shape, color)
@@ -2243,10 +2257,10 @@ func _bolt_record(weapon: String, p: Resource, entry: Dictionary, muzzle: Vector
 func _evolve_record(record: Dictionary, p: Resource) -> void:
 	if String(record.get("source", "")) != "weapon":
 		return
-	if _evolution_live("grapeshot_press"):
+	if _has_grapeshot:
 		record["split_angle_deg"] = GRAPESHOT_ANGLE_DEG
 		record["split_knock"] = maxf(float(p.knock), Augments.SLAM_KNOCK * GRAPESHOT_KNOCK_SHARE)
-	if _evolution_live("hoar_barrel") and (int(p.pierce) > 0 or ShotBits.has(int(record.get("bits", 0)), ShotBits.bit("pierce"))):
+	if _has_hoar and (int(p.pierce) > 0 or ShotBits.has(int(record.get("bits", 0)), ShotBits.bit("pierce"))):
 		record["hoar"] = true
 		record["hoar_spared"] = []
 
@@ -2292,7 +2306,7 @@ func _hoar_patch(bolt: Dictionary, at: Vector3, point: Vector3) -> void:
 
 # A slam lands: its aftershock is committed now, drawn now, and lands FAULT_DELAY later.
 func _on_fault_slammed(at: Vector3, strength: float, _flatness: float) -> void:
-	if strength < 0.05 or not ctx.flow.in_play() or not _evolution_live("fault_hammer"):
+	if strength < 0.05 or not ctx.flow.in_play() or not _has_fault:
 		return
 	_aftershocks.append({"at": at, "radius": float(ctx.player.slam_radius()), "damage": fault_damage(strength, heft()),
 		"born": _clock, "due": _clock + FAULT_DELAY})
@@ -2342,15 +2356,28 @@ func _aftershock(shock: Dictionary) -> void:
 	ctx.break_props(at, radius, "fault_hammer")
 
 
-# The first waiting aftershock's ring, in the pilot's colour, its sweep filling to the landing.
+static func _fault_layer(index: int) -> String:
+	return FAULT_LAYER if index == 0 else "%s_%d" % [FAULT_LAYER, index]
+
+
+# Every waiting aftershock's ring, in the pilot's colour, its sweep filling to the landing.
 func _draw_aftershock() -> void:
 	var indicator = ctx.player.indicator
-	if _aftershocks.is_empty():
-		indicator.clear(FAULT_LAYER)
-		return
-	var shock: Dictionary = _aftershocks[0]
-	indicator.set_shape(FAULT_LAYER, ctx.player.yours({"kind": "ring", "centre": shock["at"], "radius": shock["radius"],
-		"fill": clampf((_clock - float(shock["born"])) / FAULT_DELAY, 0.0, 1.0)}))
+	for i in _aftershocks.size():
+		var shock: Dictionary = _aftershocks[i]
+		indicator.set_shape(_fault_layer(i), ctx.player.yours({"kind": "ring", "centre": shock["at"], "radius": shock["radius"],
+			"fill": clampf((_clock - float(shock["born"])) / FAULT_DELAY, 0.0, 1.0)}))
+	for i in range(_aftershocks.size(), _fault_layer_count):
+		indicator.clear(_fault_layer(i))
+	_fault_layer_count = _aftershocks.size()
+
+
+func _clear_aftershocks() -> void:
+	_aftershocks.clear()
+	if ctx != null and ctx.player != null and ctx.player.indicator != null:
+		for i in _fault_layer_count:
+			ctx.player.indicator.clear(_fault_layer(i))
+	_fault_layer_count = 0
 
 
 # Rake Heart (claw_rake): only the player's own press queues a return, so the return pass,
@@ -2545,11 +2572,12 @@ func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock:
 
 
 # The arc jumps from the struck enemy to the nearest one it has not touched, losing
-# chain_falloff of its damage per jump.
-func _chain(first: Node3D, from: Vector3, bolt: Dictionary) -> void:
+# chain_falloff of its damage per jump. Returns the first jumped target, or null.
+func _chain(first: Node3D, from: Vector3, bolt: Dictionary, knock_scale := 0.5) -> Node3D:
 	var visited := [first]
 	var damage: float = bolt["damage"]
 	var at := from
+	var first_jump: Node3D = null
 	for jump in int(bolt["chain_jumps"]):
 		var falloff: float = bolt["chain_falloff"]
 		if jump == int(bolt["chain_jumps"]) - 1 and float(bolt.get("lattice_chain_falloff", 0.0)) > 0.0:
@@ -2557,12 +2585,15 @@ func _chain(first: Node3D, from: Vector3, bolt: Dictionary) -> void:
 		damage *= falloff
 		var next := _nearest(at, bolt["chain_range"], visited)
 		if next == null:
-			return
+			return first_jump
+		if first_jump == null:
+			first_jump = next
 		visited.append(next)
 		var to: Vector3 = next.global_position
 		effects.arc(at, to, bolt["color"])
-		_hit(next, bolt["kind"], damage, to - at, bolt["knock"] * 0.5, "", bolt.get("source", "weapon"))
+		_hit(next, bolt["kind"], damage, to - at, bolt["knock"] * knock_scale, "", bolt.get("source", "weapon"))
 		at = to
+	return first_jump
 
 
 func _nearest(at: Vector3, reach: float, exclude: Array) -> Node3D:
@@ -2886,7 +2917,7 @@ func _fire_clamp(f: float, shape: Dictionary) -> void:
 		_hit(enemy, "claw", damage, ball - enemy.global_position, Weapons.CLAMP_KNOCK, "", "special", "clamp")
 		hit += 1
 	effects.ring(centre, radius, ClassDef.TARN_COLOR)
-	last_burst = {"at": centre, "radius": radius, "damage": damage, "hit": hit, "kind": "clamp"}
+	last_burst = {"at": centre, "radius": radius, "damage": damage, "hit": hit, "kind": "clamp", "breaks_props": false}
 	_forced_source = prev_source
 
 
@@ -3005,9 +3036,7 @@ func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
 func _free_cannon() -> void:
 	_recital_index = 0
 	_recital_at = -INF
-	for row in _exposed.values():
-		if is_instance_valid(row.get("mark")):
-			row["mark"].queue_free()
+	_clear_exposed()
 	for entry in _cannon:
 		for h in entry["hazards"]:
 			if is_instance_valid(h):
@@ -3089,12 +3118,12 @@ func _fire_plate(f: float, shape: Dictionary) -> void:
 	var dir: Vector3 = shape["dir"]
 	var damage := AbilityState.Gauge.scaled(f, Weapons.PLATE_DAMAGE_MIN, Weapons.PLATE_DAMAGE_MAX)
 	_commit_cannon("plate", apex + dir * MindAttacks.PLATE_HALF_BAND, apex, shape["length"], damage, "special", true)
-	last_burst = {"at": apex, "damage": damage, "kind": "cannon_plate"}
+	last_burst = {"at": apex, "damage": damage * _damage_mod(Weapons.CANNON_LANE), "kind": "cannon_plate", "breaks_props": false}
 
 
 # The smash: after the shared slam, a rush ring about the landing over the nearest enemy.
 func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
-	if ctx.player.abilities.cap(AbilityState.SMASH, "family", "") != "rush":
+	if strength < 0.05 or ctx.player.abilities.cap(AbilityState.SMASH, "family", "") != "rush":
 		return
 	var landing := _floor_at(at + Vector3.UP)
 	var target := landing + _flat_aim() * 6.0
@@ -3356,18 +3385,30 @@ static func _arc_ring() -> ArrayMesh:
 	return _arc_mark_mesh
 
 
+func _drop_exposed(key) -> void:
+	var row = _exposed.get(key)
+	if row is Dictionary:
+		var mark = row.get("mark")
+		if is_instance_valid(mark):
+			# Out of the tree now, so a mark set again this frame takes the name at once.
+			if mark.get_parent() != null:
+				mark.get_parent().remove_child(mark)
+			mark.queue_free()
+	_exposed.erase(key)
+
+
+func _clear_exposed() -> void:
+	for key in _exposed.keys():
+		_drop_exposed(key)
+
+
 func _step_cannon_exposure() -> void:
 	for key in _exposed.keys():
 		var row: Dictionary = _exposed[key]
 		var left := float(row["until"]) - _clock
 		var mark = row.get("mark")
 		if left <= 0.0 or not is_instance_valid(instance_from_id(int(row.get("id", key)))):
-			if is_instance_valid(mark):
-				# Out of the tree now, so a mark set again this frame takes the name at once.
-				if mark.get_parent() != null:
-					mark.get_parent().remove_child(mark)
-				mark.queue_free()
-			_exposed.erase(key)
+			_drop_exposed(key)
 		elif is_instance_valid(mark):
 			mark.set_instance_shader_parameter("left", left / float(row["window"]))
 
@@ -3714,9 +3755,10 @@ func _step_plate(delta: float) -> void:
 
 
 # One pull tick: ordinary enemies within `radius` roll toward `at`, harder from farther out.
-func _gather_pull(at: Vector3, radius: float) -> void:
-	for enemy in get_tree().get_nodes_in_group("enemy"):
-		if enemy.is_dead() or not _ordinary(enemy):
+func _gather_pull(at: Vector3, radius: float, enemies = null) -> void:
+	var pool: Array = enemies if enemies is Array else get_tree().get_nodes_in_group("enemy")
+	for enemy in pool:
+		if not is_instance_valid(enemy) or enemy.is_dead() or not _ordinary(enemy):
 			continue
 		var inward: Vector3 = at - enemy.global_position
 		inward.y = 0.0
@@ -4372,7 +4414,8 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 		fuse_charge["_source"] = "item_proc"
 	effects.arc(from + Vector3.UP * 0.5, to + Vector3.UP * 0.5, ClassDef.KEST_COLOR)
 	_start_cloak()
-	last_burst = {"at": from, "to": to, "damage": damage, "hit": hit, "kind": "line", "caught": caught.size()}
+	last_burst = {"at": from, "to": to, "damage": damage, "hit": hit, "kind": "line", "caught": caught.size(),
+		"breaks_props": not caught.is_empty()}
 
 
 # The pylon's opening burst: planting fires the special free when its row says so
@@ -4421,6 +4464,7 @@ func _discharge(at: Vector3, speed: float, kind: String, drawn_centre = null, li
 	last_burst["at"] = at
 	last_burst["hit"] = targets.size()
 	last_burst["kind"] = kind
+	last_burst["breaks_props"] = false
 
 
 func _nearest_in_ring(centre: Vector3, radius: float, limit: int) -> Array:
@@ -4452,7 +4496,7 @@ func _overdrive_blast(at: Vector3, scale := 1.0, shape := {}, radius_scale := 1.
 		_boost(Weapons.OVERDRIVE_SECONDS * p.special_scale)
 	effects.ring(at, radius, ClassDef.RIVET_COLOR)
 	last_burst = {"at": at, "radius": radius, "damage": damage, "hit": hit, "kind": "runner",
-		"overdrive": _overdrive}
+		"overdrive": _overdrive, "breaks_props": false}
 
 
 # The fire-rate boost; Unstoppable makes crowd control slide off while it runs.
@@ -5243,6 +5287,15 @@ func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	_rebuild_patterns()
 
 
+func _on_player_died() -> void:
+	_line_load = {}
+	_cast_pending = {}
+	_bite_pending = false
+	_clear_verb_items()
+	_clear_aftershocks()
+	_rakes.clear()
+
+
 # The arena is not a stage (DESIGN-NOTES spine call 34). Flow publishes this before the
 # boss module's enter_arena, on entry and on every arena retry, so nothing of Brindle's
 # exists yet and every enemy, shell and telegraph standing now came from the stage or
@@ -5250,12 +5303,17 @@ func _on_stage_entered(_stage: int, _retry: bool) -> void:
 # fresh as they do on a stage retry.
 func _on_stage_content_cleared(_reason: String) -> void:
 	_start_attempt()
+	_line_load = {}
+	_escape = {}
+	escape_lane = {}
+	_reset_cards()
 
 
 func _start_attempt() -> void:
 	_clear_fight()
 	_crushes.clear()
 	_shred.clear()
+	_guards.clear()
 	_pinned.clear()
 	_hulks.clear()
 	pins = 0
@@ -5271,9 +5329,11 @@ func _start_attempt() -> void:
 	assist_charge = 0.0
 	_clamped.clear()
 	_rakes.clear()
-	_aftershocks.clear()
+	_clear_aftershocks()
 	_heated.clear()
-	_exposed.clear()
+	_clear_exposed()
+	_cast_pending = {}
+	_bite_pending = false
 	_pike_count = 0
 	_pike_last = -INF
 	_clear_verb_items()
@@ -5313,7 +5373,21 @@ func _clear_devices() -> void:
 	devices.clear()
 
 
+func _refresh_evolutions() -> void:
+	_has_grapeshot = _evolution_live("grapeshot_press")
+	_has_hoar = _evolution_live("hoar_barrel")
+	_has_fault = _evolution_live("fault_hammer")
+
+
+func _on_build_recomputed(_categories: Array) -> void:
+	_refresh_evolutions()
+
+
 func _rebuild_patterns() -> void:
+	if ctx != null and ctx.build != null and ctx.build.get("stat_cache") != null \
+			and not ctx.build.stat_cache.recomputed.is_connected(_on_build_recomputed):
+		ctx.build.stat_cache.recomputed.connect(_on_build_recomputed)
+	_refresh_evolutions()
 	var ids := active_transformers()
 	var lattice_falloff := 0.0
 	# Combat hears part_gained before Build. Derive from the current held list so a

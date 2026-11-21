@@ -143,6 +143,11 @@ func clear() -> void:
 	_mesh.clear_surfaces()
 
 
+# Live marks drawn this frame across every combat effect pool.
+func live_mark_count() -> int:
+	return _arcs.size() + _rings.size() + _sparks.size() + _beams.size() + _flair.size()
+
+
 func _process(delta: float) -> void:
 	_mesh.clear_surfaces()
 	_arcs = _age(_arcs, delta)
