@@ -131,11 +131,11 @@ const SPRING_WINDOW := 3.0
 const SPRING_MULT := 1.5
 # Rake Heart: the return sweep comes this long after the first, at this share of its damage (start).
 const RAKE_DELAY := 0.25
-# Slag Pike's fused bolt is this many times as wide to a hit test as the volley's own bolt.
+const RAKE_DAMAGE := 0.6
+# Slag Pike's fused bolt is this many times as wide (both hit test and drawn streak) as one plain bolt.
 const PIKE_RADIUS_MULT := 2.0
 # The copper ring that lights the muzzle on the volley before the fuse, in metres.
 const PIKE_RING_RADIUS := 1.5
-const RAKE_DAMAGE := 0.6
 
 # Ball contacts: base damage plus a share of the contact's force.
 const STRIKE_DAMAGE := {
@@ -1837,6 +1837,7 @@ static func pike_bolt(record: Dictionary, volley_size: int, row: Dictionary) -> 
 	out["damage"] = minf(one * volley_size, one * float(row.get("cap_mult", 6.0)))
 	out["max_dist"] = float(record["max_dist"]) * float(row.get("range_mult", 1.25))
 	out["radius"] = float(record["radius"]) * PIKE_RADIUS_MULT
+	out["width_scale"] = PIKE_RADIUS_MULT
 	out["color"] = ShotBits.TABLE["pierce"]["color"]
 	out["bits"] = fused_bits(int(record.get("bits", 0)))
 	return out

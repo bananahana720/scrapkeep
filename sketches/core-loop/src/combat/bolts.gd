@@ -271,6 +271,10 @@ func _first_shell(from: Vector3, to: Vector3, bolt_radius: float, shells: Array)
 	return best
 
 
+static func drawn_width(bolt: Dictionary) -> float:
+	return WIDTH * float(bolt.get("width_scale", 1.0))
+
+
 func _process(_delta: float) -> void:
 	var count := _bolts.size()
 	_multimesh.visible_instance_count = count
@@ -283,7 +287,8 @@ func _process(_delta: float) -> void:
 		var dir: Vector3 = bolt["dir"]
 		var streak := minf(maxf(MIN_STREAK, bolt["speed"] * STREAK_SECONDS), maxf(0.2, bolt["travelled"])) * tail
 		var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
-		var basis := Basis.looking_at(dir, up_hint) * Basis.from_scale(Vector3(WIDTH, WIDTH, streak))
+		var w := drawn_width(bolt)
+		var basis := Basis.looking_at(dir, up_hint) * Basis.from_scale(Vector3(w, w, streak))
 		var head: Vector3 = bolt["shown"]
 		_multimesh.set_instance_transform(i, Transform3D(basis, head - dir * streak * 0.5))
 		var tint: Color = bolt["color"]

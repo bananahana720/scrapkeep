@@ -90,7 +90,11 @@ func _check_rows() -> void:
 		var d: Resource = Parts.def(id)
 		_t.check("%s card line is at most six words" % id, WordBudget.words_in(String(d.verb)) <= 6, String(d.verb))
 		_t.check("%s admitted to the alpha table and never a relic" % id, id in AlphaDefs.PARTS and not d.rarity in ["relic", "rare_plus"], d.rarity)
-		_t.check("%s text carries its numbers and says no unleash" % id, String(d.text).count(" ") >= 4 and not "unleash" in String(d.text).to_lower(), String(d.text))
+		_t.check("%s text carries its numbers and is never clipped" % id,
+			String(d.text).count(" ") >= 4 and not "..." in String(d.text) and not "unleash" in String(d.text).to_lower()
+			and WordBudget.words_in(String(d.text)) <= 8, String(d.text))
+	_t.check("pike settled text keeps 6x intact", "6x" in String(pike.text) and not "..." in String(pike.text), String(pike.text))
+	_t.check("halo settled text keeps 55% intact", "55%" in String(halo.text) and not "..." in String(halo.text), String(halo.text))
 	_t.eq("pike's verb", String(pike.verb), "Every sixth volley fuses into one")
 	_t.eq("halo's verb", String(halo.verb), "Fires shots in a wide ring")
 	_t.check("pike_fuse is a closed-table effect", ItemEffects.EFFECTS.has("pike_fuse"), "")
@@ -161,6 +165,7 @@ func _check_pike_table() -> void:
 	_t.near("one bolt stays 1x", float(one["damage"]), 10.0)
 	_t.near("range x1.25", float(nine["max_dist"]), 87.5)
 	_t.check("radius grows", float(nine["radius"]) > 0.3, str(nine["radius"]))
+	_t.near("width_scale matches PIKE_RADIUS_MULT", float(nine.get("width_scale", 1.0)), Combat.PIKE_RADIUS_MULT)
 	_t.eq("pierce colour", nine["color"], ShotBits.TABLE["pierce"]["color"])
 	_t.check("the record is not edited in place", float(record["damage"]) == 10.0 and float(record["max_dist"]) == 70.0, "")
 
@@ -280,6 +285,7 @@ func _check_cycle() -> void:
 	_t.eq("the test volley is nine bolts", size, 9)
 	var reach: float = p.range_m * _game.ctx.tuning.mod("weapon_range")
 	var one_damage := 0.0
+	var plain_width := 0.0
 	for volley in range(1, 8):
 		var shot := _press(weapon)
 		var live: Array = shot["live"]
@@ -288,6 +294,8 @@ func _check_cycle() -> void:
 			_t.eq("%s fires the whole pattern" % label, shot["bolts"], size)
 			_t.check("%s is plain weapon fire, not the pike" % label, live.all(func(b): return b["source"] == "weapon" and absf(float(b["max_dist"]) - reach) < 0.001), "")
 			one_damage = float(live[0]["damage"])
+			if volley == 1:
+				plain_width = Bolts.drawn_width(live[0])
 		if volley == 5:
 			_t.eq("volley five lights the muzzle ring", shot["rings"], 1)
 			_t.eq("the ring is copper", shot["ring_color"], Palette.COPPER)
@@ -301,6 +309,7 @@ func _check_cycle() -> void:
 			_t.check("the pierce bit is on", ShotBits.has(int(bolt["bits"]), ShotBits.bit("pierce")), str(ShotBits.names(int(bolt["bits"]))))
 			_t.eq("it draws in the pierce colour", bolt["color"], ShotBits.TABLE["pierce"]["color"])
 			_t.check("it is wider than a plain bolt", float(bolt["radius"]) > p.bolt_radius, "%.2f" % float(bolt["radius"]))
+			_t.near("it draws twice as thick as a plain bolt", Bolts.drawn_width(bolt), plain_width * Combat.PIKE_RADIUS_MULT, 0.001)
 			_t.near("nine bolts' damage is capped at 6x one bolt", float(bolt["damage"]), one_damage * 6.0, 0.001)
 			_t.check("planted control: the uncapped sum would be 9x", one_damage * size > float(bolt["damage"]) + 0.001, "")
 			_t.eq("the cycle restarts at zero", _combat._pike_count, 0)
