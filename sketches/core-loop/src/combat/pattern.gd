@@ -25,6 +25,7 @@ const MIN_RATE := 0.05
 const MAX_WAVE := 1.2
 const MAX_ARM_OFFSET := 14.0
 const MAX_ARMS := 8
+const MAX_PIERCE := 3
 
 @export var count := 1
 @export var spread_deg := 0.0
@@ -34,6 +35,8 @@ const MAX_ARMS := 8
 @export var spin_deg := 0.0
 @export var wave_amp := 0.0
 @export var wave_hz := 0.0
+# Machines a bolt passes through before it stops (helix drill).
+@export var pierce := 0
 @export var damage := 10.0
 @export var rate := 5.0
 @export var range_m := 70.0
@@ -50,7 +53,7 @@ const MAX_ARMS := 8
 @export var special_scale := 1.0
 
 const FIELDS := ["count", "spread_deg", "arms", "arm_offset_deg", "rotation_deg", "spin_deg",
-	"wave_amp", "wave_hz", "damage", "rate", "range_m", "speed", "bolt_radius", "knock",
+	"wave_amp", "wave_hz", "pierce", "damage", "rate", "range_m", "speed", "bolt_radius", "knock",
 	"chain_jumps", "chain_range", "chain_falloff", "lattice_chain_falloff", "burst_scale", "special_scale"]
 
 # The transformer catalogue. Each row is pure data: `add` then `mul` then `min` (a
@@ -63,6 +66,14 @@ const TRANSFORMERS := {
 	"spiral_wave": {
 		"label": "Spiral wave", "text": "the spread turns each shot and bolts corkscrew",
 		"add": {"spin_deg": 23.0, "wave_amp": 0.35}, "min": {"arms": 2, "arm_offset_deg": 4.0, "wave_hz": 3.0},
+	},
+	"fan_spread": {
+		"label": "Fan spread", "text": "shots fan into a 5-round cone",
+		"add": {"count": 4}, "min": {"spread_deg": 7.0},
+	},
+	"helix_drill": {
+		"label": "Helix drill", "text": "shots corkscrew through two machines",
+		"add": {"pierce": 1, "wave_amp": 0.35}, "min": {"count": 2, "spread_deg": 6.0, "wave_hz": 3.0},
 	},
 	"chain_arc": {
 		"label": "Chain arc", "text": "hits arc to one more enemy nearby",
@@ -139,6 +150,7 @@ func _clamp() -> void:
 	count = clampi(count, 1, MAX_VOLLEY)
 	rate = clampf(rate, MIN_RATE, MAX_RATE)
 	wave_amp = minf(wave_amp, MAX_WAVE)
+	pierce = clampi(pierce, 0, MAX_PIERCE)
 	arm_offset_deg = minf(arm_offset_deg, MAX_ARM_OFFSET)
 
 
