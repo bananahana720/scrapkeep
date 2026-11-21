@@ -121,6 +121,9 @@ func fire(bolt: Dictionary) -> void:
 		_bolts.pop_front()
 		retired += 1
 	var dir: Vector3 = bolt["dir"]
+	if dir.length_squared() < 1e-6:
+		dir = Vector3.FORWARD
+		bolt["dir"] = dir
 	var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
 	bolt["right"] = dir.cross(up_hint).normalized()
 	bolt["up"] = (bolt["right"] as Vector3).cross(dir).normalized()
@@ -194,6 +197,8 @@ static func split_children(parent: Dictionary, point: Vector3, struck_id: int, u
 	for side in [-1.0, 1.0]:
 		var kid := child(parent, {"origin": point, "dir": dir.rotated(axis, angle * side).normalized(),
 			"max_dist": left, "damage": float(parent["damage"]) * SPLIT_DAMAGE, "pierce": 0})
+		kid.erase("hoar")
+		kid.erase("hoar_spared")
 		kid["spent"] = split_spent(int(parent.get("spent", 0)))
 		kid["exclude"] = exclude.duplicate()
 		if split_knock > 0.0:
@@ -220,15 +225,13 @@ static func drawn_width(bolt: Dictionary) -> float:
 
 
 func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells: Array = []) -> void:
+	if _bolts.is_empty():
+		return
 	var survivors: Array = []
 	var spawned: Array = []
-	# The enemies' reach, built once and rebuilt after any hit callback (which can kill or move one).
-	var snapshot: Array = []
-	var fresh := false
+	# Built once per tick; struck entries refresh in place and dead enemies are skipped lazily.
+	var snapshot: Array = _snapshot(enemies)
 	for bolt in _bolts:
-		if not fresh:
-			snapshot = _snapshot(enemies)
-			fresh = true
 		var from: Vector3 = bolt["shown"]
 		var before: float = bolt["travelled"]
 		bolt["age"] += delta
@@ -246,13 +249,11 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 		var target := _first_enemy(from, end, bolt["radius"], snapshot, bolt["exclude"])
 		var shell := _first_shell(from, end, bolt["radius"], shells)
 		if not shell.is_empty() and (target.is_empty() or shell["along"] < target["along"]):
-			fresh = false
 			if on_shell.is_valid() and on_shell.call(bolt, shell["shell"]):
 				continue
 		var stopped := false
 		var flown := end
 		while not target.is_empty():
-			fresh = false
 			var hit_id: int = target["enemy"].get_instance_id()
 			# The bits this hit sets off in flight, so the hit plays one tell for them all.
 			var acts := 0
@@ -265,6 +266,7 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 			if on_hit.is_valid():
 				on_hit.call(bolt, target["enemy"], target["point"], target["part"])
 			bolt["acts"] = 0
+			_refresh_entry(target["entry"])
 			# The split bit spends on the first machine and throws two children from it.
 			if ShotBits.has(acts, ShotBits.bit("split")):
 				spawned.append_array(split_children(bolt, target["point"], hit_id, hit_used))
@@ -281,15 +283,12 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 				flown = target["point"]
 				break
 			(bolt["exclude"] as Array).append(hit_id)
-			snapshot = _snapshot(enemies)
-			fresh = true
 			target = _first_enemy(from, end, bolt["radius"], snapshot, bolt["exclude"])
-		if on_flight.is_valid() and on_flight.call(bolt, from, flown):
-			fresh = false
+		if on_flight.is_valid():
+			on_flight.call(bolt, from, flown)
 		if stopped:
 			continue
 		if blocked:
-			fresh = false
 			if _glance(bolt, end, normal, before + from.distance_to(end)):
 				survivors.append(bolt)
 				continue
@@ -346,8 +345,22 @@ func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, snapshot: Arra
 	var best_along := INF
 	var span := from.distance_to(to)
 	for entry in snapshot:
+		if entry["dead"]:
+			continue
 		var enemy = entry["enemy"]
-		if not exclude.is_empty() and enemy.get_instance_id() in exclude:
+		if not is_instance_valid(enemy) or enemy.is_dead():
+			entry["dead"] = true
+			continue
+		if not exclude.is_empty() and int(entry["id"]) in exclude:
+			continue
+		var centre: Vector3 = entry["centre"]
+		if enemy.global_position.distance_squared_to(centre) > 0.0001:
+			_refresh_entry(entry)
+			if entry["dead"]:
+				continue
+			centre = entry["centre"]
+		var bound_reach: float = float(entry["bound"]) + bolt_radius + span
+		if centre.distance_squared_to(from) > bound_reach * bound_reach:
 			continue
 		for weak in entry["weak"]:
 			var at: Vector3 = weak["at"]
@@ -356,11 +369,11 @@ func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, snapshot: Arra
 				var weak_along := from.distance_to(near) - 0.01
 				if weak_along < best_along:
 					best_along = weak_along
-					best = {"enemy": enemy, "point": near, "part": weak["id"], "along": weak_along}
-		var centre: Vector3 = entry["centre"]
+					best = {"enemy": enemy, "entry": entry, "point": near, "part": weak["id"], "along": weak_along}
 		var inner: float = entry["inner"]
 		var reach: float = entry["radius"] + bolt_radius
-		if centre.distance_to(from) > span + reach + inner + 0.5:
+		var cap_reach := span + reach + inner + 0.5
+		if centre.distance_squared_to(from) > cap_reach * cap_reach:
 			continue
 		var points := Geometry3D.get_closest_points_between_segments(from, to,
 			centre - Vector3.UP * inner, centre + Vector3.UP * inner)
@@ -369,7 +382,7 @@ func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, snapshot: Arra
 		var along := from.distance_to(points[0])
 		if along < best_along:
 			best_along = along
-			best = {"enemy": enemy, "point": points[0], "part": "", "along": along}
+			best = {"enemy": enemy, "entry": entry, "point": points[0], "part": "", "along": along}
 	return best
 
 
@@ -379,9 +392,30 @@ func _snapshot(enemies: Array) -> Array:
 	for enemy in enemies:
 		if not is_instance_valid(enemy) or enemy.is_dead():
 			continue
-		out.append({"enemy": enemy, "weak": enemy.weak_points(), "centre": enemy.global_position,
-			"inner": maxf(0.0, enemy.half_height - enemy.radius), "radius": enemy.radius})
+		var entry := {"enemy": enemy, "id": enemy.get_instance_id(), "dead": false}
+		_refresh_entry(entry)
+		if not entry["dead"]:
+			out.append(entry)
 	return out
+
+
+func _refresh_entry(entry: Dictionary) -> void:
+	var enemy = entry["enemy"]
+	if not is_instance_valid(enemy) or enemy.is_dead():
+		entry["dead"] = true
+		return
+	var centre: Vector3 = enemy.global_position
+	var inner: float = maxf(0.0, enemy.half_height - enemy.radius)
+	var weak_list: Array = enemy.weak_points()
+	var bound: float = enemy.radius + inner + 0.5
+	for weak in weak_list:
+		var w_at: Vector3 = weak["at"]
+		bound = maxf(bound, centre.distance_to(w_at) + float(weak["radius"]) + 0.5)
+	entry["weak"] = weak_list
+	entry["centre"] = centre
+	entry["inner"] = inner
+	entry["radius"] = enemy.radius
+	entry["bound"] = bound
 
 
 func _first_shell(from: Vector3, to: Vector3, bolt_radius: float, shells: Array) -> Dictionary:
@@ -417,6 +451,10 @@ func _process(_delta: float) -> void:
 # across and tint() at the crowd's alpha.
 static func instance(bolt: Dictionary, alpha: float, tail := 1.0) -> Array:
 	var dir: Vector3 = bolt["dir"]
+	if dir.length_squared() < 1e-6:
+		dir = Vector3.FORWARD
+	else:
+		dir = dir.normalized()
 	var streak := minf(maxf(MIN_STREAK, bolt["speed"] * STREAK_SECONDS), maxf(0.2, bolt["travelled"])) * tail
 	var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
 	var side := width(bolt)

@@ -19,6 +19,7 @@ const MINE_CAP := Devices.KEST_MINE_CAP
 const MINE_FUSE := Devices.ROWS[Devices.KEST_MINE]["lifetime"]
 const MINE_REACH := 2.0
 const NOTES := [62, 57, 53]
+const LOG_CAP := 2048
 
 var payloads
 var cable := {}
@@ -137,6 +138,8 @@ func clear_payloads() -> void:
 	_heavy = {}
 	_mines = []
 	_rolls = []
+	roll_log.clear()
+	volley_log.clear()
 	_cast = {}
 	ctx.player.indicator.clear("kest_caught")
 	ctx.player.indicator.clear("kest_cable")
@@ -382,6 +385,8 @@ func tech(_beat_number: int, ball: Vector3, aim: Vector3, heft_mult: float) -> i
 		_shell(ball, b, heft_mult)
 	for pick in targets:
 		_shell(ball, pick[1].global_position, heft_mult)
+	if volley_log.size() >= LOG_CAP:
+		volley_log.pop_front()
 	volley_log.append({"beat": _total_beat, "targets": targets.size(), "centre": b})
 	_sound("tick_kest_%d" % NOTES[posmod(_total_beat - 1, NOTES.size())])
 	return 0
@@ -557,6 +562,9 @@ func step(delta: float) -> void:
 
 
 func _step_payloads(delta: float) -> void:
+	if cable.is_empty() and _rolls.is_empty() and payloads.charges.is_empty() and payloads._evicted.is_empty() \
+			and not (_id == "windhover" and _cast.get("landed", false)):
+		return
 	if not cable.is_empty() and payloads.charges.has(cable):
 		if not ctx.player.kit.hooked:
 			_end_cable()
@@ -572,14 +580,17 @@ func _step_payloads(delta: float) -> void:
 			if payloads.charges.has(c):
 				c["_inert"] = false
 				_detonate_payload(_take_payload(c))
+		if roll_log.size() >= LOG_CAP:
+			roll_log.pop_front()
 		roll_log.append({"at": roll["at"], "index": roll["index"]})
 		var audio = ctx.root.presentation.audio if ctx.root.get("presentation") != null else null
 		if audio != null:
 			audio.kest_roll(NOTES[posmod(roll_log.size() - 1, NOTES.size())])
 		_rolls.erase(roll)
-	for c in payloads.step(delta, _space(), get_tree().get_nodes_in_group("enemy")):
-		combat.devices.remove(int(c.get("device_id", 0)))
-		_detonate_payload(c)
+	if not payloads.charges.is_empty() or not payloads._evicted.is_empty():
+		for c in payloads.step(delta, _space(), get_tree().get_nodes_in_group("enemy")):
+			combat.devices.remove(int(c.get("device_id", 0)))
+			_detonate_payload(c)
 	if _id == "windhover" and _cast.get("landed", false):
 		_check_grant(_cast, ctx.player.ball_position())
 

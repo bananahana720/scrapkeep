@@ -36,6 +36,7 @@ const SetDirector := preload("res://src/presentation/set_director.gd")
 # ror2/companions.md "Lab measure": at most once per trigger within a cooldown).
 const CHIRP_COOLDOWN := 0.75
 const CHIRP_LOG_CAP := 256
+const LOG_CAP := 2048
 const SpecialAudio := preload("res://src/presentation/special_audio.gd")
 const MenuSounds := preload("res://src/presentation/menu_sounds.gd")
 var _menu_sounds := MenuSounds.new()
@@ -465,6 +466,18 @@ static var _opening_task := -1
 
 func _init() -> void:
 	_pitch_rng.seed = 0xA0D10
+
+
+func _log_cue(entry: Array) -> void:
+	if cue_log.size() >= LOG_CAP:
+		cue_log.pop_front()
+	cue_log.push_back(entry)
+
+
+func _log_drop(entry: Array) -> void:
+	if drop_log.size() >= LOG_CAP:
+		drop_log.pop_front()
+	drop_log.push_back(entry)
 
 
 # Whether this game bakes ahead on workers: the one read of the machine, so a test can stand in a drawn game.
@@ -1566,7 +1579,7 @@ func radio_play(id: String, record: String, pinned := false) -> bool:
 	radio_pinned = pinned
 	_radio_args = [id, record, pinned]
 	_radio_respin_due = false
-	cue_log.append(["radio", id, "needle", engine.clock, 1.0])
+	_log_cue(["radio", id, "needle", engine.clock, 1.0])
 	return true
 
 
@@ -1591,7 +1604,7 @@ func radio_release() -> void:
 		engine.force_track("warden" if _warden_engaged and ctx.flow.get("sealed") else "level", _stage_theme(_stage_now))
 	_moment_playing = ""
 	_ace_return(_stage_now, engine.next_bar())
-	cue_log.append(["radio", "score", "bar", engine.next_bar(), 1.0])
+	_log_cue(["radio", "score", "bar", engine.next_bar(), 1.0])
 
 
 # The hold ends with no music of its own: the cue that ended it (a boss, a death, the run's
@@ -1826,7 +1839,7 @@ func _make_room(kind: String, sound: String) -> void:
 	_room_for = sound
 	_room_until_ms = Time.get_ticks_msec() + int(hold * 1000.0)
 	# [kind, sound, "room", clock, hold, dB, the row's "only" list, empty when it names none]: tools/mix/mixsim.py reads it.
-	cue_log.append([kind, sound, "room", engine.clock, hold, float(MixRows.MAKE_ROOM[sound]["db"]), MixRows.MAKE_ROOM[sound].get("only", [])])
+	_log_cue([kind, sound, "room", engine.clock, hold, float(MixRows.MAKE_ROOM[sound]["db"]), MixRows.MAKE_ROOM[sound].get("only", [])])
 	if _sfx == null:
 		return
 	for id in _voice_db:
@@ -1851,7 +1864,7 @@ func _room_offset(sound: String, sounding := true) -> float:
 # voice is the one whose "now" row has that sound and start clock; a duck row sets its offset from the
 # clock now, a restore row sets it back to 0. The start clock is the voice's key (the log has no voice ids).
 func _log_gain(kind: String, sound: String, how: String, start: int, db: float) -> void:
-	cue_log.append([kind, sound, how, engine.clock, start, db])
+	_log_cue([kind, sound, how, engine.clock, start, db])
 
 
 # The voices a room pushed down go back to their own level.
@@ -2092,7 +2105,7 @@ func call_in(kind: String, speaker: String, text: String) -> float:
 	_gates["call_in"] = clock + seconds
 	_calling = id
 	_duck(CALL_DUCK, seconds)
-	cue_log.append([kind, "babble", "call", at, 1.0])
+	_log_cue([kind, "babble", "call", at, 1.0])
 	return seconds
 
 
@@ -2109,7 +2122,7 @@ func call_end() -> void:
 		ace.free_duck()
 	_gates["call_in"] = clock
 	_calling = ""
-	cue_log.append(["call_end", "babble", "now", engine.clock, 1.0])
+	_log_cue(["call_end", "babble", "now", engine.clock, 1.0])
 
 
 # What the run's rows resolve by: the player's class motif.
@@ -2120,11 +2133,11 @@ func cue_context() -> Dictionary:
 # False (and logged) while the bank bakes, for a row with no sound, or inside the cue's gap.
 func _admit(kind: String, sound: String, pitch: float) -> bool:
 	if not sound_ready or sound == "":
-		cue_log.append([kind, sound, "skip", -1, pitch])
+		_log_cue([kind, sound, "skip", -1, pitch])
 		return false
 	var now := Time.get_ticks_msec()
 	if now - int(_last_start.get(sound, -100000)) < int(MIN_GAP_MS.get(sound, 0)):
-		cue_log.append([kind, sound, "skip", -1, pitch])
+		_log_cue([kind, sound, "skip", -1, pitch])
 		return false
 	_last_start[sound] = now
 	return true
@@ -2148,7 +2161,7 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 					_log_gain(kind, sound, "duck", engine.clock, room)
 		_voices[sound] = live
 	last_play_frame = Engine.get_process_frames()
-	cue_log.append([kind, sound, "now", engine.clock, pitch if _logged_pitch < 0.0 else _logged_pitch, volume])
+	_log_cue([kind, sound, "now", engine.clock, pitch if _logged_pitch < 0.0 else _logged_pitch, volume])
 
 
 # A start of a sound played outside this director on bus (the world's water and steam,
@@ -2158,7 +2171,7 @@ func note_cue(kind: String, sound: String, volume: float, bus := "SFX") -> void:
 	if engine == null:
 		return
 	var against := float(BUSES.get(bus, 0.0)) + float(mix_db.get(bus, 0.0)) - float(BUSES["SFX"]) - float(mix_db.get("SFX", 0.0))
-	cue_log.append([kind, sound, "now", engine.clock, 1.0, volume + against])
+	_log_cue([kind, sound, "now", engine.clock, 1.0, volume + against])
 
 
 # Cuts every voice of a sound on the SFX bus at once: a ceremony skipped mid-build drops
@@ -2221,7 +2234,7 @@ func _end_hum(node_id: int) -> void:
 	lane_hums.erase(node_id)
 	if id >= 0 and _sfx != null and _sfx.is_stream_playing(id):
 		_sfx.stop_stream(id)
-	cue_log.append(["threat_lane", EventKinds.THREAT_ROWS["threat_lane"]["sound"], "stop", engine.clock, 1.0])
+	_log_cue(["threat_lane", EventKinds.THREAT_ROWS["threat_lane"]["sound"], "stop", engine.clock, 1.0])
 
 
 # Cues here are not positional, so a far threat is only quieter: full within 20 m,
@@ -2237,7 +2250,7 @@ func _threat_distance_db(node: Node) -> float:
 func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_override := "") -> int:
 	var sound: String = sound_override if sound_override != "" else Rows.sound(kind, cue_context())
 	if not sound_ready or sound == "":
-		cue_log.append([kind, sound, "skip", -1, 1.0])
+		_log_cue([kind, sound, "skip", -1, 1.0])
 		return -1
 	var start := engine.schedule_stinger(sound, db + story_duck_db(kind), lane, repeats)
 	var beats: int = SfxBank.STINGER_BEATS.get(sound, 1)
@@ -2246,7 +2259,7 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 		engine.duck_bass(0.3, float(start - engine.clock + beats * Harmony.BEAT) / Harmony.RATE)
 	if _is_telegraph(kind, sound):
 		_focus_until = maxf(_focus_until, clock + float(start - engine.clock) / Harmony.RATE + float(MixRows.FOCUS["hold_s"]))
-	cue_log.append([kind, sound, "beat", start, 1.0])
+	_log_cue([kind, sound, "beat", start, 1.0])
 	return start
 
 
@@ -2260,6 +2273,9 @@ func _connect_all(events) -> void:
 		_heft_class = 1
 		_hull_seen = 0.0
 		_fired_this_run.clear()
+		_posture_seen.clear()
+		_guard_steps.clear()
+		_guard_warned.clear()
 		_line_was = ""
 		_motif = motif_of(class_id)
 		engine.set_class_motif(_motif)
@@ -2723,7 +2739,7 @@ func _start_hum() -> void:
 		hum_on = true
 		if _sfx != null:
 			_hum_voice = _sfx.play_stream(SfxBank.stream("line_hum"), 0.0, SfxBank.trim_db("line_hum") + HUM_DB, 1.0, AudioServer.PLAYBACK_TYPE_DEFAULT, "SFX")
-		cue_log.append(["line_state_changed", "line_hum", "now", engine.clock, 1.0])
+		_log_cue(["line_state_changed", "line_hum", "now", engine.clock, 1.0])
 	_tend_hum()
 
 
@@ -2735,7 +2751,7 @@ func _stop_hum() -> void:
 		_sfx.stop_stream(_hum_voice)
 	_hum_voice = -1
 	hum_pitch = 1.0
-	cue_log.append(["line_state_changed", "line_hum", "stop", engine.clock, 1.0])
+	_log_cue(["line_state_changed", "line_hum", "stop", engine.clock, 1.0])
 
 
 # Follows the line each frame: its pitch from the gap on a body, and an end the line never
@@ -2849,6 +2865,8 @@ func _restore_park_drop(event_id: String, cue: Dictionary) -> void:
 		cue.due = engine.next_bar() if engine.grid == null else engine.grid.next_bar(engine.clock)
 		cue.after_land = false
 	if int(cue.due) < engine.clock:
+		if park_cue_late.size() >= LOG_CAP:
+			park_cue_late.pop_front()
 		park_cue_late.append({"id": event_id, "due": cue.due, "clock": engine.clock})
 		return
 	_book_park_drop(event_id, cue)
@@ -3019,10 +3037,10 @@ func _on_event_ended(event_id: String, outcome: String) -> void:
 		var at := engine.resolve_event(true)
 		if at >= 0:
 			engine.schedule_stinger_at(Rows.sound("milestone_won"), at)
-			cue_log.append(["event_ended", Rows.sound("milestone_won"), "beat", at, 1.0])
+			_log_cue(["event_ended", Rows.sound("milestone_won"), "beat", at, 1.0])
 	else:
 		engine.resolve_event(false)
-		cue_log.append(["event_ended", "settle", "bar", engine.next_bar(), 1.0])
+		_log_cue(["event_ended", "settle", "bar", engine.next_bar(), 1.0])
 
 
 # The spine's event_progress(event_id, fraction), once it lands, replaces the timer.
@@ -3070,6 +3088,9 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_champions.clear()
 	_champion_euro.clear()
 	_champion_hyped = false
+	_posture_seen.clear()
+	_guard_steps.clear()
+	_guard_warned.clear()
 	# A stage starts with no moments; the stage band the flow starts is the music to return to.
 	_moments.clear()
 	_moment_playing = ""
@@ -3346,7 +3367,7 @@ func _begin_boss(kind: String, music: String) -> void:
 		_phase_music_done = 1
 		if music in MusicEngine.BOSS_TRACKS:
 			_ace_named(_boss_entry(music), again, true)
-		cue_log.append([kind, "restart", "beat", again, 1.0])
+		_log_cue([kind, "restart", "beat", again, 1.0])
 		return
 	var at := engine.begin_boss(music)
 	if at < 0:
@@ -3357,7 +3378,7 @@ func _begin_boss(kind: String, music: String) -> void:
 	var sound := Rows.sound(kind)
 	if sound != "":
 		engine.schedule_stinger_at(sound, at)
-	cue_log.append([kind, sound, "bar", at, 1.0])
+	_log_cue([kind, sound, "bar", at, 1.0])
 
 
 # boss_phase_changed(phase, name) in wave 4; with no phase argument, count up.
@@ -3406,16 +3427,16 @@ func phase_music(phase: int) -> Dictionary:
 		var when := PhaseMusic.drop_plan(engine.clock, engine.next_bar(), engine.bar_len(), Harmony.RATE)
 		if plan["hype"]:
 			engine.schedule_stinger_at("hype_drop", int(when["start"]))
-			cue_log.append(["boss_phase_music", "hype_drop", "beat", int(when["start"]), 1.0])
+			_log_cue(["boss_phase_music", "hype_drop", "beat", int(when["start"]), 1.0])
 		_ace_named(plan["track"], int(when["drop"]), true)
-		cue_log.append(["boss_phase_music", plan["track"], "bar", int(when["drop"]), 1.0])
+		_log_cue(["boss_phase_music", plan["track"], "bar", int(when["drop"]), 1.0])
 		return {"track": plan["track"], "hype": plan["hype"], "at": when["drop"]}
 	var track := PhaseMusic.track_for_phase(boss, phase, pack_available)
 	if track == "" or not pack_available.call(track):
 		return {}
 	var at := engine.next_bar()
 	_ace_named(track, at, true)
-	cue_log.append(["boss_phase_music", track, "bar", at, 1.0])
+	_log_cue(["boss_phase_music", track, "bar", at, 1.0])
 	return {"track": track, "hype": false, "at": at}
 
 
@@ -3438,7 +3459,7 @@ func _champion_joined(enemy: Node3D) -> void:
 		return
 	_champion_hyped = true
 	_ace_named(champion, engine.next_bar(), true)
-	cue_log.append(["champion_joined", champion, "bar", engine.next_bar(), 1.0])
+	_log_cue(["champion_joined", champion, "bar", engine.next_bar(), 1.0])
 
 
 func _champion_gone(id: int) -> void:
@@ -3450,7 +3471,7 @@ func _champion_gone(id: int) -> void:
 		_champion_hyped = false
 		if _stage_now > 0 and engine.track == "level":
 			_ace_stage(_stage_now, engine.next_bar())
-			cue_log.append(["champion_gone", "stage", "bar", engine.next_bar(), 1.0])
+			_log_cue(["champion_gone", "stage", "bar", engine.next_bar(), 1.0])
 
 
 # --- The place-and-moment tunes (tune_moments.gd, design-v3/sound/tunes.json) -----------
@@ -3464,7 +3485,7 @@ func new_run_tunes() -> void:
 	_remix_rng.randomize()
 	_remixes = TuneMoments.roll_remixes(_remix_rng)
 	if not _remixes.is_empty():
-		cue_log.append(["tune_remixes", ",".join(_remixes.values()), "run", engine.clock, 1.0])
+		_log_cue(["tune_remixes", ",".join(_remixes.values()), "run", engine.clock, 1.0])
 
 
 # What the level band plays on this stage: the live moment's tune, else the run's modifier or
@@ -3519,7 +3540,7 @@ func _refresh_moment(fight := false) -> void:
 	_moment_playing = want
 	var at := engine.next_bar()
 	_ace_stage(_stage_now, at, fight)
-	cue_log.append(["tune_moment", want if want != "" else "stage", "bar", at, 1.0])
+	_log_cue(["tune_moment", want if want != "" else "stage", "bar", at, 1.0])
 
 
 func _tend_moments() -> void:
@@ -3604,7 +3625,7 @@ func _tend_champions() -> void:
 			var when := PhaseMusic.drop_plan(engine.clock, engine.next_bar(), engine.bar_len(), Harmony.RATE)
 			engine.schedule_stinger_at("hype_drop", int(when["start"]))
 			_ace_named(final_track, int(when["drop"]), true)
-			cue_log.append(["champion_final", final_track, "bar", int(when["drop"]), 1.0])
+			_log_cue(["champion_final", final_track, "bar", int(when["drop"]), 1.0])
 			return
 
 
@@ -3746,7 +3767,7 @@ func _next_bar() -> int:
 func _note_at(kind: String, voice: String, midi: int, at: int, db := 0.0, home := false) -> void:
 	var id := SfxBank.grid_note_id(voice, midi)
 	engine.schedule_stinger_at(id, at, db + PRIORITY_DB[Rows.priority(kind)], home)
-	cue_log.append([kind, id, "grid", at, 1.0])
+	_log_cue([kind, id, "grid", at, 1.0])
 
 
 # The chord tones a landing at transport sample at falls to. The recorded band names no chords,
@@ -3812,7 +3833,7 @@ func land_streak(rung: int) -> int:
 			_note_at("enemy_killed", STREAK_VOICE, last, hold, SfxBank.GRID_UNDER_DB)
 		# The crash has no pitch, so it stays the boot bake's whatever the key.
 		engine.schedule_stinger_at(CHAIN_CRASH, at, PRIORITY_DB[Rows.priority("enemy_killed")], true)
-		cue_log.append(["enemy_killed", CHAIN_CRASH, "bar", at, 1.0])
+		_log_cue(["enemy_killed", CHAIN_CRASH, "bar", at, 1.0])
 	var land := Harmony.tone_below(last, _landing_tones(at))
 	_note_at("enemy_killed", STREAK_VOICE, land, at)
 	_note_at("enemy_killed", STREAK_BODY, land - 12, at, SfxBank.GRID_UNDER_DB)
@@ -3828,7 +3849,7 @@ func _quote_pilot(at: int) -> void:
 		return
 	var id := _pilot_quote_id()
 	engine.schedule_stinger_at(id, at, PRIORITY_DB[Rows.priority("enemy_killed")], false, grid_unit(4))
-	cue_log.append(["enemy_killed", id, "quote", at, 1.0])
+	_log_cue(["enemy_killed", id, "quote", at, 1.0])
 
 
 # The seconds between two quotes: PILOT_QUOTE_BARS bars of four beats at the sounding band's tempo.
@@ -3933,7 +3954,7 @@ func _land_drop() -> void:
 	var at := engine.drop_now(4, 0.85, {}, _landing_theme if radio_hold == "" else -1)
 	if _ace_arrival_stage > 0:
 		_ace_arrival_at = at
-	drop_log.append([touchdown, at])
+	_log_drop([touchdown, at])
 	if _ace_flight:
 		# The piece sounds to the landing's beat, fades under the synth drop over a beat and
 		# leaves the synth band to un-mute so its ramp ends on that beat.
@@ -3941,7 +3962,7 @@ func _land_drop() -> void:
 		if ace_playing():
 			ace.stop_at(at, ace.grid_beat)
 			_handover_at = at
-	cue_log.append(["landed", "drop", "beat", at, 1.0])
+	_log_cue(["landed", "drop", "beat", at, 1.0])
 	_launch_armed = false
 	_landing_theme = -1
 
@@ -4041,7 +4062,7 @@ func kest_cue(kind: String, sound: String, grid := "beat", pitch := 1.0) -> int:
 		at = engine.clock + posmod(eighth - posmod(engine.clock - engine.grid_origin, eighth), eighth)
 	engine.schedule_stinger_at(sound, at, priority_db)
 	_duck(0.6, float(at - engine.clock + SfxBank.STINGER_BEATS.get(sound, 1) * engine.beat_len()) / Harmony.RATE)
-	cue_log.append([kind, sound, grid, at, keyed_pitch, gain])
+	_log_cue([kind, sound, grid, at, keyed_pitch, gain])
 	return at
 
 
@@ -4066,7 +4087,7 @@ func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) 
 			engine._add_action(at, {"type": "drop", "bars": 4, "weight": 0.85, "then": {}, "theme": -1, "set": {"ult": false}})
 		else:
 			at = engine.drop_now(4, 0.85, {}, -1, {"ult": false})
-		drop_log.append([touchdown, at])
+		_log_drop([touchdown, at])
 		if _ace_flight:
 			_ace_flight = false
 			if ace_playing():
@@ -4079,7 +4100,7 @@ func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) 
 			_ace_arrival_stage = _stage_now
 			_ace_arrival_at = at
 		_ult_took_band = false
-		cue_log.append(["ultimate_landed", "drop", "beat", at, 1.0])
+		_log_cue(["ultimate_landed", "drop", "beat", at, 1.0])
 		_ult_armed = false
 	_set_ult_lift(false)
 
@@ -4224,7 +4245,7 @@ func _pay_beat(enemy: Node3D, kind: String) -> void:
 	if stab != null:
 		_start("hit_on_beat", ONBEAT_SOUND, stab, PRIORITY_DB[Rows.priority("enemy_struck")] + ONBEAT_DB, 1.0, "SFX")
 	else:
-		cue_log.append(["hit_on_beat", ONBEAT_SOUND, "absent", engine.clock, 1.0])
+		_log_cue(["hit_on_beat", ONBEAT_SOUND, "absent", engine.clock, 1.0])
 	hit_on_beat.emit(enemy, kind)
 
 
@@ -4332,7 +4353,7 @@ func _follow_warden_form(posture: float, staggered: bool, landed: bool) -> void:
 		return
 	var at: int = ace.follow_guard(posture, staggered, landed)
 	if at >= 0:
-		cue_log.append(["warden_form", "drop", "beat", at, 1.0, 0.0])
+		_log_cue(["warden_form", "drop", "beat", at, 1.0, 0.0])
 		_make_drop_room(at)
 
 
@@ -4360,7 +4381,7 @@ func _cut_charge() -> void:
 	var sound := Rows.sound("vent_charging", cue_context())
 	stop(sound)
 	engine.set_reactor_pedal(false)
-	cue_log.append(["posture_changed", sound, "stop", engine.clock, 1.0, 0.0])
+	_log_cue(["posture_changed", sound, "stop", engine.clock, 1.0, 0.0])
 
 
 # Hits on the Warden climb the pentatonic as its integrity falls; the unseal resolves
@@ -4534,7 +4555,7 @@ func _on_fight_phase(fight_id: String, phase: int, _phases: int) -> void:
 	if fight_id == WARDEN_FIGHT:
 		if phase >= 2:
 			engine.parameter_danger("warden_engaged")
-			cue_log.append(["fight_phase_changed", fight_id, "phase", engine.clock, float(phase)])
+			_log_cue(["fight_phase_changed", fight_id, "phase", engine.clock, float(phase)])
 		return
 	if phase < 2 or PhaseMusic.BOSS_SYNTH_THEME.has(fight_id):
 		return
@@ -4630,7 +4651,7 @@ static func run_threat(at: Vector3, forward: Vector3, enemies: Array, weights :=
 
 func _on_pressure(pressure: float) -> void:
 	_pressure = pressure
-	cue_log.append(["pressure_changed", "music_pressure", "music", engine.clock, 1.0])
+	_log_cue(["pressure_changed", "music_pressure", "music", engine.clock, 1.0])
 	if not engine.parameter_source.is_valid():
 		engine.set_pressure(pressure)
 	if ace_playing() and not engine.parameter_source.is_valid():
@@ -4691,7 +4712,7 @@ func _flush_flow() -> void:
 					var back := engine.retry_restart(MusicEngine.PLAY, _stage_theme(stage))
 					_ace_stage(stage, back)
 					engine.schedule_stinger_at(Rows.sound("stage_entered"), back)
-					cue_log.append(["stage_entered", Rows.sound("stage_entered"), "beat", back, 1.0])
+					_log_cue(["stage_entered", Rows.sound("stage_entered"), "beat", back, 1.0])
 					continue
 				var start := on_beat("stage_entered", 0.0, true, clampi(stage, 1, 4))
 				if start >= 0:
@@ -4767,11 +4788,11 @@ func _flush_flow() -> void:
 					var at := engine.unseal_drop()
 					var stinger_db := story_duck_db("beacon_unsealed")
 					engine.schedule_stinger_at(Rows.sound("beacon_unsealed"), at, stinger_db)
-					cue_log.append(["beacon_unsealed", Rows.sound("beacon_unsealed"), "beat", at, 1.0])
+					_log_cue(["beacon_unsealed", Rows.sound("beacon_unsealed"), "beat", at, 1.0])
 					# The ring turning open rides the stinger's downbeat, under it, and under a story sting's duck with it.
 					var opened := Rows.heard(EventKinds.state_row("beacon_open"))
 					engine.schedule_stinger_at(opened, at, stinger_db + BEACON_OPEN_DB)
-					cue_log.append(["beacon_open", opened, "beat", at, 1.0])
+					_log_cue(["beacon_open", opened, "beat", at, 1.0])
 				else:
 					# A Warden broken inside its pivot bar: the track switch is void.
 					engine.drop_pending_track("warden")
@@ -5227,9 +5248,9 @@ func _tend_set() -> void:
 		_set_answer = SfxBank.SET_ANSWER + plan.answer
 		_set_answer_at = at
 		engine.schedule_stinger_at(_set_answer, at, PRIORITY_DB[1], false, ramp)
-		cue_log.append(["set_answer", _set_answer, "grid", at, 1.0, PRIORITY_DB[1] + SfxBank.trim_db(_set_answer)])
+		_log_cue(["set_answer", _set_answer, "grid", at, 1.0, PRIORITY_DB[1] + SfxBank.trim_db(_set_answer)])
 	if plan.move != "hold":
-		cue_log.append(["set_move", plan.move, plan.mood, at, 1.0])
+		_log_cue(["set_move", plan.move, plan.mood, at, 1.0])
 
 
 # June's booked answer gives way when the bar it was booked for turns into a fight section,
@@ -5247,7 +5268,7 @@ func _set_answer_spoiled() -> bool:
 func _drop_set_answer() -> void:
 	if _set_answer != "":
 		engine.cancel_stinger(_set_answer)
-		cue_log.append(["set_answer_dropped", _set_answer, "grid", ace.clock, 1.0])
+		_log_cue(["set_answer_dropped", _set_answer, "grid", ace.clock, 1.0])
 		_set_answer = ""
 
 

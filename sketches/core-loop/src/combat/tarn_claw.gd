@@ -238,7 +238,7 @@ func _step_drag(delta: float) -> void:
 					combat.strike(enemy, "claw", SLAB_DAMAGE * mult, "", "special")
 				else:
 					combat._hit(enemy, "claw", SLAB_DAMAGE * mult, ctx.player.ball_position() - enemy.global_position, 14.0, "", "special")
-			drag["at"] = next
+		drag["at"] = next
 		ctx.player.indicator.set_shape("tarn_drag", _corridor(next, shape["to"], SLAB_HALF_WIDTH))
 		if next.distance_to(shape["to"]) < 0.05:
 			_stop_drag()

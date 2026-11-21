@@ -165,6 +165,7 @@ var multi_log: Array = []
 # the census read it.
 var rumble_log: Array = []
 const RUMBLE_LOG_CAP := 512
+const LOG_CAP := 2048
 
 var _squash := 0.0
 var _squash_velocity := 0.0
@@ -813,7 +814,7 @@ func _flush_kills() -> void:
 	# One ram or blast that takes several: an extra beat at 2, 4 and 8.
 	for mark in [2, 4, 8]:
 		if before < mark and _multi_size >= mark:
-			multi_log.append([mark, now])
+			_log_push(multi_log, [mark, now])
 			request_hit_stop(float(row["multi_stop_ms"]) / 1000.0, "multi_kill")
 			rumble("multi_kill", minf(0.5 + mark / 8.0, 1.0))
 			_camera("punch_fov", "multi_kill", Vector3.ZERO, -2.0 - mark * 0.5, 0.3)
@@ -890,7 +891,7 @@ func _on_near_miss(_kind: String, at: Vector3) -> void:
 # A hit taken: the screen edge toward the source flashes and the shell winces. Never a camera shake: it would hide whether the hit was dodged.
 func _on_player_hit(amount: float, source: String) -> void:
 	var row := EventKinds.juice("player_hit")
-	hook_log.append(["edge_flash", "player_hit"])
+	_log_push(hook_log, ["edge_flash", "player_hit"])
 	squash(float(row["squash"]), Vector3.ZERO)
 	rumble("player_hit", clampf(0.5 + amount / 30.0, 0.5, 1.0))
 	# The number and the flash keep the player_hit juice row's HAZARD for either source.
@@ -976,7 +977,7 @@ func _on_heft_class(heft_class: int, _heft: float) -> void:
 	if heft_class > _heft_class:
 		squash(0.32, Vector3.UP)
 		rumble("heft_class_changed")
-		hook_log.append(["class_up", "heft_class_changed"])
+		_log_push(hook_log, ["class_up", "heft_class_changed"])
 	_heft_class = heft_class
 
 
@@ -984,8 +985,14 @@ func shell_target() -> float:
 	return 1.0 + SHELL_PER_CLASS * (_heft_class - 1)
 
 
+static func _log_push(log_arr: Array, entry: Variant, cap := LOG_CAP) -> void:
+	if log_arr.size() >= cap:
+		log_arr.pop_front()
+	log_arr.append(entry)
+
+
 func _camera(hook: String, fact: String, direction: Vector3, amount: float, time := 0.3) -> void:
-	hook_log.append([hook, fact])
+	_log_push(hook_log, [hook, fact])
 	if camera == null:
 		return
 	match hook:
@@ -1073,7 +1080,7 @@ func request_shake(amount: float, time: float, _fact: String) -> void:
 func request_hit_stop(seconds: float, fact: String) -> void:
 	var now := SimClock.msec()
 	if not STRIKE_STOP_FACTS.has(fact):
-		hit_stop_log.append([seconds, 0.0, fact, now])
+		_log_push(hit_stop_log, [seconds, 0.0, fact, now])
 		return
 	var wanted := minf(seconds * 1000.0, SPINE_CAP_MS) * stop_scale
 	_stops = _stops.filter(func(stop: Array): return now - int(stop[0]) < 1000)
@@ -1087,11 +1094,11 @@ func request_hit_stop(seconds: float, fact: String) -> void:
 	var spaced := _stops.is_empty() or now - int(_stops.back()[0]) - float(_stops.back()[1]) >= EventKinds.STOP_GAP_MS
 	var in_play: bool = ctx.flow == null or ctx.flow.in_play()
 	if not in_play or not spaced or wanted < STOP_FLOOR_MS or sent < minf(wanted, STOP_TRIM_FLOOR_MS):
-		hit_stop_log.append([seconds, 0.0, fact, now])
+		_log_push(hit_stop_log, [seconds, 0.0, fact, now])
 		return
 	_stops.append([now, sent])
-	hit_stop_log.append([seconds, sent / 1000.0, fact, now])
-	hook_log.append(["hit_stop", fact])
+	_log_push(hit_stop_log, [seconds, sent / 1000.0, fact, now])
+	_log_push(hook_log, ["hit_stop", fact])
 	if hit_stop_sink.is_valid():
 		hit_stop_sink.call(sent / 1000.0)
 
