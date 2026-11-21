@@ -461,17 +461,33 @@ test("the yard lock row runs the full played game and the storeless flow now tha
   assert.match(held.measured, /yardlock-broken-maxs broke LockAlwaysOpens/);
 });
 
-test("the earned save row holds with P7's owed spend, catches each of its flushes taken out, and names ES-2 as a gap", () => {
+test("the earned save row holds with P7's owed spend, catches each of its flushes taken out, and names ES-2 and ES-3 as gaps", () => {
   const { row, held } = checkRow("earned-save-safe", {
     rules: ["SaveOnce"],
     files: ["core/flow.gd", "core/run_state.gd", "core/run_store.gd", "core/safe_store.gd"],
   });
   assert.ok(row.plants.some((p) => p.cfg === "earnedsave-broken-spendowed.cfg"));
   assert.ok(row.gaps.some((g) => /ES-2/.test(g)) && row.gaps.some((g) => /crash/.test(g)));
-  assert.ok(row.real.every((r) => r.cfg !== "earnedsave-today-clearfail.cfg"));
-  assert.deepEqual(parseTlc(fixture("earnedsave-today-clearfail")).rules, ["SaveOnce"]);
-  assert.match(held.measured, /earnedsave-today: no break in 534 distinct states/);
+  assert.ok(row.gaps.some((g) => /ES-3/.test(g) && /Restart/.test(g)));
+  // The open findings' configs break the rule and stay off the code's list until their fixes land.
+  for (const open of [
+    "earnedsave-today-clearfail",
+    "earnedsave-es2-only",
+    "earnedsave-today-inprocess",
+  ]) {
+    assert.ok(
+      row.real.every((r) => r.cfg !== `${open}.cfg`),
+      open,
+    );
+    assert.deepEqual(parseTlc(fixture(open)).rules, ["SaveOnce"], open);
+  }
+  // es2-only is ES-2's path (a refused tombstone, then a quit), today-inprocess ES-3's (a refused restart, no quit).
+  assert.match(fixture("earnedsave-es2-only"), /last = "ClearRefused"[\s\S]*last = "Quit"/);
+  assert.match(fixture("earnedsave-today-inprocess"), /last = "NewRunOwed"/);
+  assert.doesNotMatch(fixture("earnedsave-today-inprocess"), /last = "Quit"/);
+  assert.match(held.measured, /earnedsave-today: no break in 3,014 distinct states/);
   assert.match(held.measured, /not checked: finding ES-2 is open/);
+  assert.match(held.measured, /; finding ES-3 is open/);
 });
 
 test("the deferred effects row holds on the code and every plant breaks its rule", () => {

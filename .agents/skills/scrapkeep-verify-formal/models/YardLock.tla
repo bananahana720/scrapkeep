@@ -64,7 +64,7 @@ VARIABLES
   otPaid,     \* overtime_paid calls this activation
   otBad,      \* history: a ring or a cash came with no won yard behind it
   paid,       \* yard_cleared calls this activation
-  cards,      \* show_start_card calls from the lock this activation (stage_locks.gd:369 and :521)
+  cards,      \* show_start_card calls from the lock this activation (stage_locks.gd:375 and :530)
   phase,      \* the tick that runs next: "events" (between frames), "flow", "locks", "ball"
   last        \* the last step, for the reach probes
 

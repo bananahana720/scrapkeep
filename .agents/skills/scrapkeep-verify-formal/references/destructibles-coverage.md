@@ -53,7 +53,7 @@ The wallet counts from the stage-entry checkpoint, so the checkpoint itself is 0
 
 ## Bounds
 
-Two pieces, of tiers 1 and 3, every heft class from 1 to 3, two retries. The caps are 3 scrap and 1 cog, so that two pieces reach them; the real caps are 35 and 20 over the 14 pieces the dam and the flume each place (`sketches/core-loop/tests/destructibles_world1_test.gd` holds a world 1 stage to 12 to 15). A tier 3 piece pays 3 scrap and 2 cogs, so the cog cap binds on one break and the scrap cap on two. With tiers 1 and 3, a class 1 ball's blast stops at tier 2 and a stacked bonus would reach tier 3; a class 2 blast breaks tier 3 through its +1.
+Two pieces, of tiers 1 and 3, every heft class from 1 to 3, two retries. The caps are 3 scrap and 1 cog, so that two pieces reach them; the real caps are 35 and 20 over the pieces the dam and the flume place: 14 each at the sync commit, 15 and 14 on stage/alpha-w45 since P3 (38332087c), still inside the 12 to 15 that `sketches/core-loop/tests/destructibles_world1_test.gd` holds a world 1 stage to. Neither count changes the model's bounds. A tier 3 piece pays 3 scrap and 2 cogs, so the cog cap binds on one break and the scrap cap on two. With tiers 1 and 3, a class 1 ball's blast stops at tier 2 and a stacked bonus would reach tier 3; a class 2 blast breaks tier 3 through its +1.
 
 ## Configs
 

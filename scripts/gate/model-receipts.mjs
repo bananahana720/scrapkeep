@@ -12,7 +12,8 @@
 // file means the model may no longer describe the code until someone reads the diff and moves the sync commit).
 // A gap the model cannot see is named in measured on every run. An open finding the code still has is a gap too: its
 // row runs the code's configs with the finding's trigger left out, as the flood row does for PF-3 and the earned
-// save row does for ES-2 (earnedsave-today-clearfail breaks), and swaps in the full config once the fix lands, as
+// save row does for ES-2 and ES-3 (earnedsave-es2-only and earnedsave-today-inprocess break), and swaps in the full
+// config once the fix lands, as
 // the yard lock row did when P7 closed YL-1 and YL-2.
 //
 //   node scripts/gate/model-receipts.mjs --out <dir> [--row <id>] [--jar <tla2tools.jar>] [--workers <n>] [--timeout-min <n>]
@@ -210,14 +211,9 @@ export const ROWS = {
     real: [
       {
         cfg: "earnedsave-today.cfg",
-        minStates: 534,
+        minStates: 3014,
         label:
-          "the Spare Frame's earned save with one refused run write and a quit or Continue anywhere (ES-1 closed by P7)",
-      },
-      {
-        cfg: "earnedsave-today-inprocess.cfg",
-        minStates: 599,
-        label: "two refused writes in one process, Continued from the title",
+          "the Spare Frame's earned save with one refused run write and a quit, restart or Continue anywhere (ES-1 closed by P7)",
       },
     ],
     plants: [
@@ -229,7 +225,8 @@ export const ROWS = {
     ],
     coverage: "references/earnedsave-coverage.md",
     gaps: [
-      "finding ES-2 is open: when the spend write and then the dead run's tombstone are both refused, _record_end has emptied _entrance, so the exit has nothing to flush and a later launch Continues the dead run with the save back (earnedsave-today-clearfail breaks SaveOnce; replayed on e362998b2)",
+      "finding ES-2 is open: when the spend write and then the dead run's tombstone are both refused, _record_end has emptied _entrance, so the exit has nothing to flush and a later launch Continues the dead run with the save back (earnedsave-es2-only breaks SaveOnce; replayed on e362998b2)",
+      "finding ES-3 is open: when the spend write and then a restart's first entrance (the pause menu's Restart or a held R) are both refused, _begin_run has cleared the owed spend without a flush, so the file keeps the old run with the save unspent and a Continue fires it again (earnedsave-today-inprocess breaks SaveOnce; replayed on e362998b2)",
       "no write order closes a hard crash between the refused spend write and the next write that lands (earnedsave-guarded-crash), or a disk that refuses every write until the game closes (earnedsave-guarded-allfail)",
       "the model holds one run file and one Spare Frame; seconds, the boss arena's own saves and the run's other fields are not modelled",
     ],
