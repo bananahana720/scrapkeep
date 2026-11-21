@@ -1,14 +1,13 @@
 extends SceneTree
 
 # Replays the counterexamples of models/YardLock.tla on the real park_dam, one model step per call:
-#   ring  (yardlock-today, NoLockInWardenFight, finding YL-1): Start; one frame in which flow's tick sees the ball
-#         just outside the beacon ring and the ball's own tick carries it, grounded, inside it, so StageLocks shuts the
-#         yard first; the next frame, flow engages the Warden and the yard stays shut.
-#   near  (the same rule by the second path): the ball first touches ground near the beacon, outside its ring; the
-#         yard shuts; the ball rolls inside the yard into the ring; flow engages; the yard stays shut.
-#   strike (the same rule by StrikeWarden): the yard shuts 75 m from the beacon, the ball stays outside the ring inside
-#         the yard, 40 m from the Warden, and a hit lands on the Warden (the enemy_struck that combat.gd emits for every
-#         hit, as a scrap_rockets lock at 42 m would); flow engages; the yard stays shut.
+#   near  (yardlock-today and yardlock-today-flight, NoLockInWardenFight, finding YL-1): the ball first touches ground
+#         near the beacon, outside its ring; the yard shuts; the ball rolls inside the yard into the ring; flow
+#         engages; the yard stays shut.
+#   strike (yardlock-today-ranged, the same rule by StrikeWarden): a ball that rolled in shuts the yard 145 m from the
+#         beacon, at the share's edge; it rolls to the yard's beacon side, 110 m from the beacon, and a hit lands on
+#         the Warden (the enemy_struck that combat.gd emits for every hit, as a pylon turret's shot with a horizon
+#         optic, read from the game's own tables, would); flow engages; the yard stays shut.
 #   dead  (yardlock-today-nostore, WallOnlyWhileLocked, finding YL-2): a storeless flow; the yard shuts; the ball dies;
 #         the dead screen comes up with the lock still "locked" and its wall standing.
 #   control (dead with a store, as a played game): the death goes to the summary and the wall goes.
@@ -20,6 +19,8 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const Weapons := preload("res://src/combat/weapons.gd")
+const Parts := preload("res://src/build/parts.gd")
 const RADIUS := 1.0
 const STORE := "user://replay_yardlock/run.json"
 
@@ -29,8 +30,6 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	var ring := await _ring()
-	print("ring: %s" % ("REPRODUCED" if ring else "NOT REPRODUCED"))
 	var near := await _near()
 	print("near: %s" % ("REPRODUCED" if near else "NOT REPRODUCED"))
 	var strike := await _strike()
@@ -80,36 +79,6 @@ func _say(game, step: String) -> void:
 		game.flow.engaged()])
 
 
-func _ring() -> bool:
-	print("ring:")
-	var game = await _game(true)
-	var locks = game.flow.gate
-	_say(game, "Start")
-	# Between frames: the ball 0.25 m outside the ring on the ground, rolling in at 30 m/s (0.5 m a tick).
-	var at: Array = _toward(game, game.flow.beacon.radius + 0.25)
-	game.player.reset_to(at[0], at[1] * 30.0)
-	_say(game, "placed")
-	# The ball's first tick after the placement grounds it where it was put; it rolls in on the next.
-	var frames := 0
-	while locks.lock_state == "armed" and frames < 5:
-		await physics_frame
-		frames += 1
-		_say(game, "frame %d (FlowTick, BallTick, LocksTick)" % frames)
-	var inside: bool = game.flow.beacon.in_ring(game.player.ball_position())
-	var shut_first: bool = locks.lock_state == "locked" and inside and not game.flow.engaged()
-	await physics_frame
-	_say(game, "frame %d (FlowTick engages)" % (frames + 1))
-	var both: bool = locks.lock_state == "locked" and game.flow.engaged()
-	for i in 30:
-		await physics_frame
-	_say(game, "half a second later")
-	print("  objective: %s" % game.flow.objective_text())
-	var held: bool = locks.lock_state == "locked" and game.flow.engaged()
-	game.free()
-	await process_frame
-	return shut_first and both and held
-
-
 func _near() -> bool:
 	print("near:")
 	var game = await _game(true)
@@ -147,7 +116,7 @@ func _strike() -> bool:
 	print("strike:")
 	var game = await _game(true)
 	var locks = game.flow.gate
-	var at: Array = _toward(game, 75.0)
+	var at: Array = _toward(game, 145.0)
 	game.player.reset_to(at[0], Vector3.ZERO)
 	var waited := 0
 	while locks.lock_state == "armed" and waited < 60:
@@ -156,15 +125,20 @@ func _strike() -> bool:
 	_say(game, "Lock (after %d frames)" % waited)
 	var shut: bool = locks.lock_state == "locked" and not game.flow.engaged()
 	var centre: Vector3 = locks.lock_centre
-	var inner: Array = _toward(game, 40.0)
+	var inner: Array = _toward(game, 110.0)
 	print("  yard centre %.1f m from the beacon; the ball goes to a point %.1f m from the yard centre" % [
 		_flat(centre, game.flow.beacon.global_position), _flat(inner[0], centre)])
 	game.player.reset_to(inner[0], Vector3.ZERO)
 	await physics_frame
 	await physics_frame
-	_say(game, "rolled to 40 m, outside the ring")
+	_say(game, "rolled to the yard's beacon side")
+	var turret: float = float(Weapons.BASE[Weapons.PYLON_TURRET]["range_m"])
+	var optic: float = float(Parts.CATALOGUE["horizon_optic"]["mods"]["weapon_range"])
+	var to_warden: float = game.player.ball_position().distance_to(game.flow.warden.global_position)
+	print("  the Warden is %.1f m away; a pylon turret reaches %.0f m, %.1f m with a horizon optic" % [
+		to_warden, turret, turret * optic])
 	var before: bool = not game.flow.engaged()
-	game.events.enemy_struck.emit(game.flow.warden, "rockets", 10.0)
+	game.events.enemy_struck.emit(game.flow.warden, "pylon_turret", 10.0)
 	_say(game, "StrikeWarden")
 	for i in 30:
 		await physics_frame
@@ -173,7 +147,7 @@ func _strike() -> bool:
 			and not game.flow.beacon.in_ring(game.player.ball_position())
 	game.free()
 	await process_frame
-	return shut and before and held
+	return shut and before and held and to_warden < turret * optic
 
 
 func _dead(store: bool) -> bool:

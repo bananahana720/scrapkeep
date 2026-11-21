@@ -409,6 +409,8 @@ test("the yard lock row's pin and plants match captured TLC output, and its open
   // The full code config still breaks on finding YL-1, so it stays out of the receipt and the finding is a gap.
   const today = parseTlc(fixture("yardlock-today"));
   assert.deepEqual(today.rules, ["NoLockInWardenFight"]);
+  // A ball that rolls in is not safe either: a shot from inside the yard wakes the Warden.
+  assert.deepEqual(parseTlc(fixture("yardlock-today-ranged")).rules, ["NoLockInWardenFight"]);
   assert.ok(yl.real.every((r) => r.cfg !== "yardlock-today.cfg"));
   assert.ok(yl.gaps.some((g) => /YL-1/.test(g)) && yl.gaps.some((g) => /YL-2/.test(g)));
   const plants = yl.plants.map((p) => ({
@@ -419,13 +421,13 @@ test("the yard lock row's pin and plants match captured TLC output, and its open
   const real = (parsed) => [{ ...yl.real[0], parsed }];
   const held = buildReceipt({
     head: HEAD,
-    real: real(parseTlc(fixture("yardlock-today-rolling"))),
+    real: real(parseTlc(fixture("yardlock-today-unfired"))),
     plants,
     drift: synced,
     gaps: yl.gaps,
   });
   assert.equal(held.pass, true);
-  assert.match(held.measured, /yardlock-today-rolling: no break in 47,997 distinct states/);
+  assert.match(held.measured, /yardlock-today-unfired: no break in 47,690 distinct states/);
   assert.match(held.measured, /yardlock-broken-maxs broke LockAlwaysOpens/);
   assert.match(held.measured, /not checked: finding YL-1 is open/);
   assert.equal(
@@ -442,6 +444,8 @@ test("the yard lock row's pin and plants match captured TLC output, and its open
     "game.gd",
     "world/world.gd",
     "movement/player_ball.gd",
+    "movement/rigid_ball.gd",
+    "combat/weapons.gd",
   ])
     assert.ok(covered.includes(`sketches/core-loop/src/${f}`), f);
 });

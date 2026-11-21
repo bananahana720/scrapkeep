@@ -1,12 +1,12 @@
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 54 and seed 77862805373663419 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Running breadth-first search Model-Checking with fp 24 and seed -4382589181699428940 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
 Parsing file <tmp>/YardLock.tla
 Parsing file <tmp>/Naturals.tla
 Semantic processing of module Naturals
 Semantic processing of module YardLock
-Starting... (2026-11-21 13:32:41)
+Starting... (2026-11-21 13:53:31)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-11-21 13:32:41.
+Finished computing initial states: 1 distinct state generated at 2026-11-21 13:53:31.
 Error: Invariant WallOnlyWhileLocked is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -34,107 +34,7 @@ State 1: <Initial predicate>
 /\ yardAt = "none"
 /\ crewDown = FALSE
 
-State 2: <EndEvents line 177, col 3 to line 179, col 83 of module YardLock>
-/\ phase = "flow"
-/\ rings = 0
-/\ flow = "title"
-/\ zone = "out"
-/\ stage = 1
-/\ ot = "none"
-/\ cards = 0
-/\ lock = "none"
-/\ wave = 0
-/\ grounded = FALSE
-/\ left = 0
-/\ gap = FALSE
-/\ last = "EndEvents"
-/\ wall = FALSE
-/\ engaged = FALSE
-/\ won = FALSE
-/\ paid = 0
-/\ otBad = FALSE
-/\ entries = 0
-/\ otPaid = 0
-/\ saved = FALSE
-/\ yardAt = "none"
-/\ crewDown = FALSE
-
-State 3: <FlowTick line 103, col 3 to line 106, col 74 of module YardLock>
-/\ phase = "ball"
-/\ rings = 0
-/\ flow = "title"
-/\ zone = "out"
-/\ stage = 1
-/\ ot = "none"
-/\ cards = 0
-/\ lock = "none"
-/\ wave = 0
-/\ grounded = FALSE
-/\ left = 0
-/\ gap = FALSE
-/\ last = "FlowTick"
-/\ wall = FALSE
-/\ engaged = FALSE
-/\ won = FALSE
-/\ paid = 0
-/\ otBad = FALSE
-/\ entries = 0
-/\ otPaid = 0
-/\ saved = FALSE
-/\ yardAt = "none"
-/\ crewDown = FALSE
-
-State 4: <BallTick line 112, col 3 to line 119, col 67 of module YardLock>
-/\ phase = "locks"
-/\ rings = 0
-/\ flow = "title"
-/\ zone = "out"
-/\ stage = 1
-/\ ot = "none"
-/\ cards = 0
-/\ lock = "none"
-/\ wave = 0
-/\ grounded = FALSE
-/\ left = 0
-/\ gap = FALSE
-/\ last = "BallTick"
-/\ wall = FALSE
-/\ engaged = FALSE
-/\ won = FALSE
-/\ paid = 0
-/\ otBad = FALSE
-/\ entries = 0
-/\ otPaid = 0
-/\ saved = FALSE
-/\ yardAt = "none"
-/\ crewDown = FALSE
-
-State 5: <LocksTick line 139, col 3 to line 172, col 71 of module YardLock>
-/\ phase = "events"
-/\ rings = 0
-/\ flow = "title"
-/\ zone = "out"
-/\ stage = 1
-/\ ot = "none"
-/\ cards = 0
-/\ lock = "none"
-/\ wave = 0
-/\ grounded = FALSE
-/\ left = 0
-/\ gap = FALSE
-/\ last = "LocksTick"
-/\ wall = FALSE
-/\ engaged = FALSE
-/\ won = FALSE
-/\ paid = 0
-/\ otBad = FALSE
-/\ entries = 0
-/\ otPaid = 0
-/\ saved = FALSE
-/\ yardAt = "none"
-/\ crewDown = FALSE
-
-State 6: <Start line 291, col 3 to line 293, col 13 of module YardLock>
+State 2: <Start line 298, col 3 to line 300, col 13 of module YardLock>
 /\ phase = "events"
 /\ rings = 0
 /\ flow = "stage"
@@ -159,7 +59,7 @@ State 6: <Start line 291, col 3 to line 293, col 13 of module YardLock>
 /\ yardAt = "none"
 /\ crewDown = FALSE
 
-State 7: <EndEvents line 177, col 3 to line 179, col 83 of module YardLock>
+State 3: <EndEvents line 183, col 3 to line 185, col 83 of module YardLock>
 /\ phase = "flow"
 /\ rings = 0
 /\ flow = "stage"
@@ -184,8 +84,8 @@ State 7: <EndEvents line 177, col 3 to line 179, col 83 of module YardLock>
 /\ yardAt = "none"
 /\ crewDown = FALSE
 
-State 8: <FlowTick line 103, col 3 to line 106, col 74 of module YardLock>
-/\ phase = "ball"
+State 4: <FlowTick line 108, col 3 to line 111, col 74 of module YardLock>
+/\ phase = "locks"
 /\ rings = 0
 /\ flow = "stage"
 /\ zone = "out"
@@ -209,11 +109,36 @@ State 8: <FlowTick line 103, col 3 to line 106, col 74 of module YardLock>
 /\ yardAt = "none"
 /\ crewDown = FALSE
 
-State 9: <BallTick line 112, col 3 to line 119, col 67 of module YardLock>
-/\ phase = "locks"
+State 5: <LocksTick line 131, col 3 to line 164, col 71 of module YardLock>
+/\ phase = "ball"
 /\ rings = 0
 /\ flow = "stage"
-/\ zone = "ring"
+/\ zone = "out"
+/\ stage = 1
+/\ ot = "none"
+/\ cards = 0
+/\ lock = "armed"
+/\ wave = 0
+/\ grounded = FALSE
+/\ left = 0
+/\ gap = FALSE
+/\ last = "LocksTick"
+/\ wall = FALSE
+/\ engaged = FALSE
+/\ won = FALSE
+/\ paid = 0
+/\ otBad = FALSE
+/\ entries = 1
+/\ otPaid = 0
+/\ saved = TRUE
+/\ yardAt = "none"
+/\ crewDown = FALSE
+
+State 6: <BallTick line 171, col 3 to line 178, col 67 of module YardLock>
+/\ phase = "events"
+/\ rings = 0
+/\ flow = "stage"
+/\ zone = "near"
 /\ stage = 1
 /\ ot = "none"
 /\ cards = 0
@@ -234,11 +159,61 @@ State 9: <BallTick line 112, col 3 to line 119, col 67 of module YardLock>
 /\ yardAt = "none"
 /\ crewDown = FALSE
 
-State 10: <LocksTick line 139, col 3 to line 172, col 71 of module YardLock>
-/\ phase = "events"
+State 7: <EndEvents line 183, col 3 to line 185, col 83 of module YardLock>
+/\ phase = "flow"
 /\ rings = 0
 /\ flow = "stage"
-/\ zone = "ring"
+/\ zone = "near"
+/\ stage = 1
+/\ ot = "none"
+/\ cards = 0
+/\ lock = "armed"
+/\ wave = 0
+/\ grounded = TRUE
+/\ left = 0
+/\ gap = FALSE
+/\ last = "EndEvents"
+/\ wall = FALSE
+/\ engaged = FALSE
+/\ won = FALSE
+/\ paid = 0
+/\ otBad = FALSE
+/\ entries = 1
+/\ otPaid = 0
+/\ saved = TRUE
+/\ yardAt = "none"
+/\ crewDown = FALSE
+
+State 8: <FlowTick line 108, col 3 to line 111, col 74 of module YardLock>
+/\ phase = "locks"
+/\ rings = 0
+/\ flow = "stage"
+/\ zone = "near"
+/\ stage = 1
+/\ ot = "none"
+/\ cards = 0
+/\ lock = "armed"
+/\ wave = 0
+/\ grounded = TRUE
+/\ left = 0
+/\ gap = FALSE
+/\ last = "FlowTick"
+/\ wall = FALSE
+/\ engaged = FALSE
+/\ won = FALSE
+/\ paid = 0
+/\ otBad = FALSE
+/\ entries = 1
+/\ otPaid = 0
+/\ saved = TRUE
+/\ yardAt = "none"
+/\ crewDown = FALSE
+
+State 9: <LocksTick line 131, col 3 to line 164, col 71 of module YardLock>
+/\ phase = "ball"
+/\ rings = 0
+/\ flow = "stage"
+/\ zone = "near"
 /\ stage = 1
 /\ ot = "none"
 /\ cards = 0
@@ -256,61 +231,11 @@ State 10: <LocksTick line 139, col 3 to line 172, col 71 of module YardLock>
 /\ entries = 1
 /\ otPaid = 0
 /\ saved = TRUE
-/\ yardAt = "ring"
-/\ crewDown = FALSE
+/\ yardAt = "near"
+/\ crewDown = TRUE
 
-State 11: <EndEvents line 177, col 3 to line 179, col 83 of module YardLock>
-/\ phase = "flow"
-/\ rings = 0
-/\ flow = "stage"
-/\ zone = "ring"
-/\ stage = 1
-/\ ot = "none"
-/\ cards = 0
-/\ lock = "locked"
-/\ wave = 0
-/\ grounded = TRUE
-/\ left = 5
-/\ gap = FALSE
-/\ last = "EndEvents"
-/\ wall = TRUE
-/\ engaged = FALSE
-/\ won = FALSE
-/\ paid = 0
-/\ otBad = FALSE
-/\ entries = 1
-/\ otPaid = 0
-/\ saved = TRUE
-/\ yardAt = "ring"
-/\ crewDown = FALSE
-
-State 12: <FlowTick line 103, col 3 to line 106, col 74 of module YardLock>
-/\ phase = "ball"
-/\ rings = 0
-/\ flow = "stage"
-/\ zone = "ring"
-/\ stage = 1
-/\ ot = "none"
-/\ cards = 0
-/\ lock = "locked"
-/\ wave = 0
-/\ grounded = TRUE
-/\ left = 5
-/\ gap = FALSE
-/\ last = "FlowTick"
-/\ wall = TRUE
-/\ engaged = TRUE
-/\ won = FALSE
-/\ paid = 0
-/\ otBad = FALSE
-/\ entries = 1
-/\ otPaid = 0
-/\ saved = TRUE
-/\ yardAt = "ring"
-/\ crewDown = FALSE
-
-State 13: <BallTick line 112, col 3 to line 119, col 67 of module YardLock>
-/\ phase = "locks"
+State 10: <BallTick line 171, col 3 to line 178, col 67 of module YardLock>
+/\ phase = "events"
 /\ rings = 0
 /\ flow = "stage"
 /\ zone = "ring"
@@ -324,6 +249,56 @@ State 13: <BallTick line 112, col 3 to line 119, col 67 of module YardLock>
 /\ gap = FALSE
 /\ last = "BallTick"
 /\ wall = TRUE
+/\ engaged = FALSE
+/\ won = FALSE
+/\ paid = 0
+/\ otBad = FALSE
+/\ entries = 1
+/\ otPaid = 0
+/\ saved = TRUE
+/\ yardAt = "near"
+/\ crewDown = TRUE
+
+State 11: <EndEvents line 183, col 3 to line 185, col 83 of module YardLock>
+/\ phase = "flow"
+/\ rings = 0
+/\ flow = "stage"
+/\ zone = "ring"
+/\ stage = 1
+/\ ot = "none"
+/\ cards = 0
+/\ lock = "locked"
+/\ wave = 0
+/\ grounded = FALSE
+/\ left = 5
+/\ gap = FALSE
+/\ last = "EndEvents"
+/\ wall = TRUE
+/\ engaged = FALSE
+/\ won = FALSE
+/\ paid = 0
+/\ otBad = FALSE
+/\ entries = 1
+/\ otPaid = 0
+/\ saved = TRUE
+/\ yardAt = "near"
+/\ crewDown = TRUE
+
+State 12: <FlowTick line 108, col 3 to line 111, col 74 of module YardLock>
+/\ phase = "locks"
+/\ rings = 0
+/\ flow = "stage"
+/\ zone = "ring"
+/\ stage = 1
+/\ ot = "none"
+/\ cards = 0
+/\ lock = "locked"
+/\ wave = 0
+/\ grounded = FALSE
+/\ left = 5
+/\ gap = FALSE
+/\ last = "FlowTick"
+/\ wall = TRUE
 /\ engaged = TRUE
 /\ won = FALSE
 /\ paid = 0
@@ -331,11 +306,11 @@ State 13: <BallTick line 112, col 3 to line 119, col 67 of module YardLock>
 /\ entries = 1
 /\ otPaid = 0
 /\ saved = TRUE
-/\ yardAt = "ring"
-/\ crewDown = FALSE
+/\ yardAt = "near"
+/\ crewDown = TRUE
 
-State 14: <LocksTick line 139, col 3 to line 172, col 71 of module YardLock>
-/\ phase = "events"
+State 13: <LocksTick line 131, col 3 to line 164, col 71 of module YardLock>
+/\ phase = "ball"
 /\ rings = 0
 /\ flow = "stage"
 /\ zone = "ring"
@@ -356,10 +331,10 @@ State 14: <LocksTick line 139, col 3 to line 172, col 71 of module YardLock>
 /\ entries = 1
 /\ otPaid = 0
 /\ saved = TRUE
-/\ yardAt = "ring"
-/\ crewDown = FALSE
+/\ yardAt = "near"
+/\ crewDown = TRUE
 
-2275 states generated, 1060 distinct states found, 392 states left on queue.
-The depth of the complete state graph search is 15.
-The average outdegree of the complete state graph is 2 (minimum is 0, the maximum 8 and the 95th percentile is 5).
-Finished in 00s at (2026-11-21 13:32:41)
+5784 states generated, 2390 distinct states found, 662 states left on queue.
+The depth of the complete state graph search is 13.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 8 and the 95th percentile is 4).
+Finished in 00s at (2026-11-21 13:53:31)

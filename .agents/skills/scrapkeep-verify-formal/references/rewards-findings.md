@@ -32,6 +32,7 @@ This finding comes from a second, smaller model beside `Rewards.tla`: `models/Ea
   step hit again: alive false, flow summary, player_died 1, run over true
   NOT REPRODUCED
   ```
+
 - Proposed fix (not made; game code is outside this unit): when `_on_death_saved`'s `_save` is refused, keep the spend owed (a flow flag set from `store_error`), write `_entrance` again on every later `_save` and on each clean exit before it happens (the pause menu's Quit before `get_tree().quit()`, and the window's close request, which then needs `auto_accept_quit` off and its own handler), and clear the flag once a write lands; `resume_run` in the same process applies `death_save_spent = true` while the flag is held. That is `SpendOwed`, and `earnedsave-guarded` holds. A crash still hands the save back (`earnedsave-guarded-crash`), and so does a disk that refuses every write until the game closes (`earnedsave-guarded-allfail`); under a disk that refuses everything the Continue also rolls back the rest of the stage, so the save is then the only thing gained.
 
 ## Closed
@@ -52,6 +53,7 @@ This finding comes from a second, smaller model beside `Rewards.tla`: `models/Ea
   ```
 
   With the fix all 28 checks of the test pass. The test builds the older build's files with this build's stores: a profile saved without the earn, and a run file whose settled list holds `reward:routes_row:cosmetic` alone. No build from before 8 November was run.
+
 - Evidence limit: the run file's shape is this build's entrance document with the old key in its settled list; `settled` is optional in that document (`sketches/core-loop/src/core/run_state.gd:1112`), and the run store's schema has not changed since (still 1).
 
 ### R-2. Two games on one profile each pay the same reward
@@ -65,6 +67,7 @@ This finding comes from a second, smaller model beside `Rewards.tla`: `models/Ea
   ```
 
   The interleaving that needs the lock (B reads the file inside its save, A writes, B writes) cannot be made in one headless process; only the model checks it. The skill's replays `replay/reward_twice_two_games.gd` and `replay/reward_lost_on_continue.gd` both print NOT REPRODUCED at `4aa18e666` (17 November 2026, copied into `sketches/core-loop/tests/` and run through `scripts/sketch-smoke.mjs`).
+
 - Rule: `AtMostOnce`. Configs: `rewards-broken-stale`, `rewards-guarded-two-once` (the code before the fix).
 - Steps: two game processes load the same profile before either earns the row. Game A earns the row, grants it and saves. Game B earns it too. B's own profile in memory has no settled key, so B grants again. B's save finds a newer generation on disk and merges (a union). The model needs no crash and no failed write for this.
 - Harm: both games announce the earn and run the grant. The file holds the unlock once, because every unlock is a set member, so nothing is doubled on disk. A reward that is not a set member would be paid twice.

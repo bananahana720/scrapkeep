@@ -10,7 +10,7 @@
 // coverage page cites changed since the model's sync commit (the skill's "Is this change covered?" step 1: a changed
 // file means the model may no longer describe the code until someone reads the diff and moves the sync commit).
 // A gap the model cannot see is named in measured on every run. An open finding the code still has is a gap too: its
-// row runs the code's config with the finding's trigger left out (yardlock-today-rolling for YL-1), as the flood row
+// row runs the code's config with the finding's trigger left out (yardlock-today-unfired for YL-1), as the flood row
 // does for PF-3, and swaps in the full config (yardlock-today) once the fix lands.
 //
 //   node scripts/gate/model-receipts.mjs --out <dir> [--row <id>] [--jar <tla2tools.jar>] [--workers <n>] [--timeout-min <n>]
@@ -173,10 +173,10 @@ export const ROWS = {
     spec: "YardLock.tla",
     real: [
       {
-        cfg: "yardlock-today-rolling.cfg",
-        minStates: 47997,
+        cfg: "yardlock-today-unfired.cfg",
+        minStates: 47690,
         label:
-          "a played game's yard lock and overtime bell over two stages, a ball that touches ground in the lock's circle before it reaches the Warden's side (W45 FV-2)",
+          "a played game's yard lock and overtime bell over two stages, a ball that rolls in and lands no hit on the Warden before it enters the beacon ring (W45 FV-2)",
       },
     ],
     plants: [
@@ -192,7 +192,7 @@ export const ROWS = {
     ],
     coverage: "references/yardlock-coverage.md",
     gaps: [
-      "finding YL-1 is open: a ball that first touches ground within about 82 m of the beacon (after a jump, launch or swing over the lock's 150 m any-ground share) shuts the yard where the ball can reach the beacon ring or strike the Warden from inside it, and the yard stays shut while the Warden is awake (yardlock-today breaks NoLockInWardenFight; the ring, roll-in and strike paths replayed on the dam)",
+      "finding YL-1 is open: the yard stays shut while the Warden is awake, when a ball first touches ground within about 70 m of the beacon (after a jump, launch or swing over the lock's 150 m any-ground share) and rolls into the ring, or when a ball that rolled in shoots the Warden from inside the yard (a shot reaches 70 to 95 m bare and 142.5 m with a horizon optic, and a yard shut at the share's edge holds the ball 110 m out); yardlock-today, yardlock-today-flight and yardlock-today-ranged break NoLockInWardenFight, and both paths replayed on the dam",
       "finding YL-2 is open: in a storeless flow (tests and bots) the dead screen keeps the yard shut and its wall standing until a retry (yardlock-today-nostore breaks WallOnlyWhileLocked); a played game's death goes through the summary and drops it",
       "the Warden's clamp, the sentry, the wall's spring, the sluice and seconds are not modelled; max_s is 5 ticks and the lock row 2 waves",
     ],

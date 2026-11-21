@@ -4,13 +4,15 @@
    sketches/core-loop/src/world/overtime.gd (offer, ring, cash, clear), driven by the run flow in
    sketches/core-loop/src/core/flow.gd. references/yardlock-coverage.md has the code behind every step.
 
-   One physics frame runs three ticks in tree order: game.gd's _physics_process (flow.physics_step, which engages
-   the Warden when the ball is in the beacon ring), the ball's own tick (player_ball.gd, which moves it), then
-   StageLocks (added to the game root by world.gd after the ball). Kills, deaths, retries, quits, Continues and the
-   bell's rams come between frames. The ball's place is one of four zones measured flat from the beacon: "out"
-   (outside the lock row's any-ground share), "circle" (inside it, too far for a yard shut there to hold the ball
-   within the beacon ring or a strike's reach of the Warden), "near" (outside the ring, close enough that a yard shut
-   there does) and "ring" (inside the beacon ring, beacon.gd in_ring). *)
+   One physics frame: game.gd's _physics_process (flow.physics_step, which engages the Warden when the ball is in
+   the beacon ring) and then StageLocks' _physics_process (added to the game root by world.gd) run in node order and
+   read the same ball; the ball is a RigidBody3D with the built-in integrator (rigid_ball.gd custom_integrator off),
+   so it moves in the physics server after every node's _physics_process, and state.grounded is set in its
+   _integrate_forces. So the frame is FlowTick, LocksTick, then BallTick. Kills, strikes, deaths, retries, quits,
+   Continues and the bell's rams come between frames. The ball's place is one of four zones measured flat from the
+   beacon: "out" (outside the lock row's any-ground share), "circle" (inside it, too far for a yard shut there to hold
+   the ball within the beacon ring), "near" (outside the ring, close enough that a yard shut there does) and "ring"
+   (inside the beacon ring, beacon.gd in_ring). StrikeFrom names the zones a player's shot can reach the Warden from. *)
 EXTENDS Naturals
 
 CONSTANTS
@@ -32,10 +34,13 @@ CONSTANTS
   OfferNeedsWin,       \* _unlock: overtime.offer only when won
   CashSpends,          \* overtime.gd cash: state = "spent"
   RingCap,             \* overtime.gd ring: rings >= MAX_RINGS refuses
-  OvertimeOn           \* --overtime=on and the dam row's overtime block (overtime.gd enabled, offer)
+  OvertimeOn,          \* --overtime=on and the dam row's overtime block (overtime.gd enabled, offer)
+  StrikeFrom           \* the zones a ball can land a hit on the Warden from (weapons.gd range_m x weapon_range)
 
 Zones == {"out", "circle", "near", "ring"}
 InStage == {"stage", "gates", "launch"}  \* flow.gd in_stage(): the locks tick, the ball rolls
+
+ASSUME StrikeFrom \subseteq Zones
 
 VARIABLES
   flow,       \* flow.gd state: "stage" (STAGE or BEACON, sealed), "gates", "launch", "dead", "summary", "title"
@@ -59,7 +64,7 @@ VARIABLES
   otBad,      \* history: a ring or a cash came with no won yard behind it
   paid,       \* yard_cleared calls this activation
   cards,      \* show_start_card calls from the lock this activation (stage_locks.gd:369 and :521)
-  phase,      \* the tick that runs next: "events" (between frames), "flow", "ball", "locks"
+  phase,      \* the tick that runs next: "events" (between frames), "flow", "locks", "ball"
   last        \* the last step, for the reach probes
 
 vars == <<flow, stage, entries, saved, lock, wall, won, wave, gap, crewDown, left, engaged, zone, grounded, yardAt,
@@ -100,23 +105,10 @@ FlowTo(f) == flow' = f /\ Spend(FlowSpends)
 \* game.gd _physics_process -> flow.physics_step: beacon.advance marks the ring entered for a ball inside it (flat),
 \* and a sealed stage then calls _engage, which emits warden_engaged; StageLocks' handler sets _engaged_s.
 FlowTick ==
-  /\ phase = "flow" /\ phase' = "ball"
+  /\ phase = "flow" /\ phase' = "locks"
   /\ engaged' = (engaged \/ (flow = "stage" /\ zone = "ring"))
   /\ last' = "FlowTick"
   /\ UNCHANGED <<flow, stage, entries, saved, yard, zone, grounded, bell>>
-
-\* The ball's tick. In play it may go anywhere the wall lets it; without LongFlight, a ball with the yard still
-\* armed cannot reach the near or ring zone from outside them, since it touches ground in the circle first and the
-\* lock shuts there (lock_arms: any ground inside LOCK_ANY_SLOPE_SHARE). Frozen off the stage.
-BallTick ==
-  /\ phase = "ball" /\ phase' = "locks"
-  /\ IF flow \in InStage
-       THEN \E z \in (IF lock = "locked" THEN Reach(yardAt) ELSE Zones), g \in BOOLEAN :
-              /\ (~LongFlight /\ lock = "armed" /\ zone \in {"out", "circle"}) => z \in {"out", "circle"}
-              /\ zone' = z /\ grounded' = g
-       ELSE UNCHANGED <<zone, grounded>>
-  /\ last' = "BallTick"
-  /\ UNCHANGED <<flow, stage, entries, saved, yard, engaged, bell>>
 
 \* _unlock(w): lock_state "spent", lock_won, the bells, _drop_wall, yard_cleared and overtime.offer on a win, then
 \* show_start_card. extra is a second _unlock(TRUE) in the same tick (the max_s and crew branches without elif). The
@@ -136,7 +128,7 @@ LastWave == crewDown /\ ~gap /\ wave + 1 >= Waves
 
 \* StageLocks._physics_process -> _step_lock, only while flow.in_stage() and the stage has a lock row.
 LocksTick ==
-  /\ phase = "locks" /\ phase' = "events"
+  /\ phase = "locks" /\ phase' = "ball"
   /\ IF flow \notin InStage \/ lock \in {"none", "spent"}
        THEN UNCHANGED yard /\ UNCHANGED bell /\ last' = "LocksTick"
      ELSE IF lock = "armed"
@@ -171,6 +163,20 @@ LocksTick ==
                   /\ last' = "LocksTick"
   /\ UNCHANGED <<flow, stage, entries, saved, engaged, zone, grounded>>
 
+\* The physics server's step, after every node's tick: the ball moves and _integrate_forces sets grounded. In play it
+\* may go anywhere the wall lets it; without LongFlight, a ball with the yard still armed cannot reach the near or
+\* ring zone from outside them, since it touches ground in the circle first and the next locks tick shuts the yard
+\* there (lock_arms: any ground inside LOCK_ANY_SLOPE_SHARE). Frozen off the stage.
+BallTick ==
+  /\ phase = "ball" /\ phase' = "events"
+  /\ IF flow \in InStage
+       THEN \E z \in (IF lock = "locked" THEN Reach(yardAt) ELSE Zones), g \in BOOLEAN :
+              /\ (~LongFlight /\ lock = "armed" /\ zone \in {"out", "circle"}) => z \in {"out", "circle"}
+              /\ zone' = z /\ grounded' = g
+       ELSE UNCHANGED <<zone, grounded>>
+  /\ last' = "BallTick"
+  /\ UNCHANGED <<flow, stage, entries, saved, yard, engaged, bell>>
+
 (* ---- Between frames ---- *)
 
 EndEvents ==
@@ -190,10 +196,11 @@ KillCrew ==
   /\ UNCHANGED bell
 
 \* A hit on the sealed Warden from any source (combat.gd emits enemy_struck for every hit): flow._on_enemy_struck ->
-\* _engage, wherever the ball is. The longest strike is a scrap_rockets lock (LOCK_REACH 42 m), so the ball is near.
+\* _engage, wherever the ball is. A shot reaches range_m x weapon_range (combat.gd _fire): 70 to 95 m bare, 142.5 m
+\* with a horizon optic, so on the dam a ball held in a yard shut anywhere in the any-ground share can land one.
 StrikeWarden ==
   /\ Ev("StrikeWarden")
-  /\ flow = "stage" /\ ~engaged /\ zone \in {"near", "ring"}
+  /\ flow = "stage" /\ ~engaged /\ zone \in StrikeFrom
   /\ engaged' = TRUE
   /\ UNCHANGED <<flow, stage, entries, saved, zone, grounded>> /\ UNCHANGED yard /\ UNCHANGED bell
 
@@ -309,7 +316,7 @@ TypeOK ==
   /\ zone \in Zones /\ yardAt \in Zones \cup {"none"}
   /\ ot \in {"none", "offered", "spent"} /\ rings \in 0..(MaxRings + 1) /\ otPaid \in 0..2
   /\ paid \in 0..2 /\ cards \in 0..2
-  /\ phase \in {"events", "flow", "ball", "locks"}
+  /\ phase \in {"events", "flow", "locks", "ball"}
 
 (* The rules. Each is one promise to the player. *)
 
