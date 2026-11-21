@@ -67,6 +67,18 @@ var _shake_left := 0.0
 var _shake_clock := 0.0
 var _breath_clock := 0.0
 var _cover := 0.0
+# The centre ray's out-of-range reading, cast at most once per OUT_OF_RANGE_FRAMES physics frames
+# while the camera, the ball and the line's reach hold still, and the process frame it was read on.
+const OUT_OF_RANGE_FRAMES := 6
+var _out_of_range_cached := false
+var _out_of_range_frame := -1
+var _cast_frame := -1
+var _cast_camera := Transform3D()
+var _cast_ball := Vector3.INF
+var _cast_reach := -1.0
+# What _draw showed last, so a still reticle is not redrawn; a shake or a breath redraws every frame.
+var _drawn_state: Array = []
+var _was_animating := false
 
 
 func setup(player_ref, camera_ref: Camera3D) -> void:
@@ -85,7 +97,47 @@ func reading() -> Dictionary:
 
 func _process(delta: float) -> void:
 	step(delta)
-	queue_redraw()
+	if player == null:
+		return
+	var aim := reading()
+	_refresh_out_of_range(aim)
+	var view := get_viewport_rect().size
+	_cover = cover(view * 0.5 + shake_offset())
+	var style := AimStyle.of(aim, _out_of_range_cached)
+	var state := [style, player.kit.hooked, player.kit.on(Augments.GRAPPLE), harpoon_fill, gauge, gauge_color,
+		meter, meter_full, meter_active, meter_color, hide_q, _cover, view]
+	if style["shape"] == "brackets" or style["shape"] == "diamond":
+		state.append(aim.get("point"))
+		state.append(camera.global_transform if camera != null else Transform3D())
+	if q_shown():
+		state.append(q_glyph())
+	var animating := _shake_left > 0.0 or meter_full
+	if state != _drawn_state or animating or _was_animating:
+		_drawn_state = state
+		queue_redraw()
+	_was_animating = animating
+
+
+# Reads _out_of_range for this frame, recasting only when the camera, the ball or the reach moved, or
+# OUT_OF_RANGE_FRAMES physics frames have passed since the last cast.
+func _refresh_out_of_range(aim: Dictionary) -> void:
+	_out_of_range_frame = Engine.get_process_frames()
+	if camera == null or not camera.is_inside_tree() or not player.kit.on(Augments.GRAPPLE) \
+			or aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE:
+		_out_of_range_cached = false
+		_cast_frame = -1
+		return
+	var at := camera.global_transform
+	var ball: Vector3 = player.shown_position()
+	var reach: float = player.grapple_range()
+	var now := Engine.get_physics_frames()
+	if _cast_frame >= 0 and now - _cast_frame < OUT_OF_RANGE_FRAMES and at == _cast_camera and ball == _cast_ball and reach == _cast_reach:
+		return
+	_cast_frame = now
+	_cast_camera = at
+	_cast_ball = ball
+	_cast_reach = reach
+	_out_of_range_cached = _out_of_range(aim)
 
 
 func step(delta: float) -> void:
@@ -211,7 +263,8 @@ func _draw() -> void:
 	if player == null:
 		return
 	var aim := reading()
-	var style := AimStyle.of(aim, _out_of_range(aim))
+	var far := _out_of_range_cached if _out_of_range_frame == Engine.get_process_frames() else _out_of_range(aim)
+	var style := AimStyle.of(aim, far)
 	var color: Color = style["color"]
 	# The reticle marks the camera's centre ray, which is the viewport centre whatever
 	# size layout gave this control.
