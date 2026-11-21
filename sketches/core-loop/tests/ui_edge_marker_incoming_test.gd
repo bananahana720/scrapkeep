@@ -46,6 +46,8 @@ func _initialize() -> void:
 	_t.check("the announcement colour is the hazard role", EventKinds.color("event_announced") == Palette.HAZARD)
 	m.free()
 	_bus_clears()
+	_incoming_has_no_clock()
+	_arrow_slide_stays_on_the_edge()
 	_through_a_hold()
 	quit(_t.verdict())
 
@@ -122,3 +124,31 @@ func _through_a_hold() -> void:
 	_t.check("the director held it past its due time with the marker up", held_with_marker > 100, str(held_with_marker))
 	_t.check("and it landed once the ball was clear", started)
 	m.free()
+
+
+# An incoming entry is only its place: no countdown field sits beside it, and it stands through any wait.
+func _incoming_has_no_clock() -> void:
+	var m = EdgeMarkers.new()
+	m.note_incoming("held_flood", 3.0, Vector3(5.0, 0.0, 5.0))
+	_t.check("an incoming entry keeps only its place", m._incoming["held_flood"].keys() == ["at"], str(m._incoming["held_flood"]))
+	m.step_incoming(60.0)
+	_t.eq("and stands through a long wait", m.incoming_targets().size(), 1)
+	m.free()
+
+
+# The held spot from last frame can sit past the viewport's end when the view changes: the arrow
+# never slides off the edge, whether a clear spot exists or not.
+func _arrow_slide_stays_on_the_edge() -> void:
+	var view := Rect2(0.0, 0.0, 1000.0, 600.0)
+	var tip := Vector2(20.0, 0.0)
+	var dir := Vector2.UP
+	var span := 24.0
+	var low := -tip.x
+	var near_sign: Array[Rect2] = [Rect2(0.0, 0.0, 60.0, 60.0)]
+	var slid := EdgeMarkers.arrow_slide(view, tip, dir, span, near_sign, -100.0)
+	_t.check("a held spot past the edge's start is not kept when home is blocked", slid >= low, str(slid))
+	var wall: Array[Rect2] = [Rect2(-50.0, -50.0, 1200.0, 200.0)]
+	var stuck := EdgeMarkers.arrow_slide(view, tip, dir, span, wall, -100.0)
+	_t.check("with no clear spot it stays on the edge at its nearest end", stuck >= low and stuck <= 980.0, str(stuck))
+	var far := EdgeMarkers.arrow_slide(view, tip, dir, span, wall, 5000.0)
+	_t.check("and a held spot past the far end is clamped to it", far <= 980.0, str(far))

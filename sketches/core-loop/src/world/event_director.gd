@@ -573,12 +573,15 @@ static func _park_downbeat(time_s: float, context: Dictionary) -> float:
 
 func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: Vector3, ctx: Dictionary, facts: Array) -> void:
 	var live_s := float(state.row.live_s)
-	if live_s > 0.0 and state.live_elapsed_s >= live_s - PARK_CLOCK_SLACK_S:
-		if _park_can_end(state):
-			_park_end(state, facts)
+	var expired: bool = live_s > 0.0 and state.live_elapsed_s >= live_s - PARK_CLOCK_SLACK_S
+	if expired and _park_can_end(state):
+		_park_end(state, facts)
 		return
-	var dt := minf(delta, maxf(0.0, live_s - float(state.live_elapsed_s))) if live_s > 0.0 else delta
-	state.live_elapsed_s += dt
+	# Past its live time a flood that cannot end (a ball parked in its water) keeps running in full: the
+	# hold cap, the sweep and the rise go on, so a parked ball is never held on dry ground (PF-2).
+	var dt := delta if expired or live_s <= 0.0 else minf(delta, maxf(0.0, live_s - float(state.live_elapsed_s)))
+	if not expired:
+		state.live_elapsed_s += dt
 	if not state.weather and (_park_rising(state) or _park_collapsing(state)) and not _park_clear(state, ball, velocity, ctx):
 		var inside := _park_in_footprint(state, ball)
 		if not (inside and _park_hold_spent(state)):

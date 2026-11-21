@@ -509,6 +509,7 @@ func _flood_hold_cap() -> void:
 	_check("hold cap: a flood with a ball parked through its whole live time ends once the ball leaves", ends == 1,
 		"ends=%d" % ends)
 	_flood_no_end_under_ball()
+	_flood_expired_keeps_stepping()
 
 
 # A flood whose rise outlasts its live time minus the cap must still never end under a ball standing in its water.
@@ -534,6 +535,41 @@ func _flood_no_end_under_ball() -> void:
 					ended_after += 1
 	_check("hold cap: a flood never ends under a ball standing in its rising water", landed_at >= 0.0 and ended_under == 0 and ended_after == 1,
 		"landed %.2f s; ended under the ball %d times, after it left %d times" % [landed_at, ended_under, ended_after])
+
+
+# PF-2: a flood whose live time runs out with a ball parked in its water still sweeps, taxes and rises (the
+# step hook keeps firing and the rise finishes) while it waits for the ball, and ends once after the ball leaves.
+func _flood_expired_keeps_stepping() -> void:
+	var row := _row("expired_stall", "flood_fill", "natural", 5.0)
+	row.hold_clear_m = 0.0
+	row.effect = {"depth_m": 1.2, "fill_s": 10.0, "material": "water"}
+	row.live_s = 4.0
+	var d = _director([row])
+	var under := Vector3(0, 1, 0)
+	var landed_at := -1.0
+	var stats := {"late_steps": 0, "full_rise": false, "landed": -1.0}
+	d.register_family("natural", func(action, _r, ctx):
+		if action == "step" and stats.landed >= 0.0 and float(ctx.clock_s) > stats.landed + 4.5:
+			stats.late_steps += 1
+			stats.full_rise = stats.full_rise or float(ctx.rise_s) >= 10.0 - 0.1)
+	var ended_under := 0
+	var ended_after := 0
+	for i in 700:
+		var parked: bool = landed_at >= 0.0 and float(d.stage_time) < landed_at + 14.0
+		for f in _step(d, H, under if parked else FAR):
+			if f.kind == "started" and landed_at < 0.0:
+				landed_at = float(f.time_s)
+				stats.landed = landed_at
+			if f.kind == "ended":
+				if parked:
+					ended_under += 1
+				else:
+					ended_after += 1
+	_check("expired flood under a parked ball: the step hook keeps running past live time", landed_at >= 0.0 and stats.late_steps > int(5.0 / H),
+		"landed %.2f s; steps after live time %d" % [landed_at, stats.late_steps])
+	_check("expired flood under a parked ball: the rise finishes while it waits", stats.full_rise, "full rise %s" % stats.full_rise)
+	_check("expired flood under a parked ball: ends once, after the ball leaves", ended_under == 0 and ended_after == 1,
+		"under %d, after %d" % [ended_under, ended_after])
 
 
 func _overlap() -> void:
