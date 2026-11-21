@@ -176,9 +176,11 @@ func _check_alpha_parts() -> void:
 	# seventh part with a pitch); was 19 parts, 19 distinct ids and 6 with a pitch.
 	# 2026-10-27 (wave 20 cobalt rung): 49 parts, adding four catalogue rares; was 45 and 45.
 	# 2026-11-21 (wave 45 U6): 66 parts, adding Slag Pike and Halo Rig; was 64 and 64.
+	# 2026-11-21 (wave 45 U7): 71 parts, adding the five verb items (Backwash, Barbed Reel, Faultline Cap,
+	# Second Bell, Long Leash); was 66 and 66.
 	# 2026-11-21 (wave 45 B1): 64 parts, adding Fan Spread, Helix Drill and 13 authored items.gd rows (shared movement rows kept out per BIBLE.md:537; cobalt ceiling per ruling bn); was 49 and 49.
 	# 2026-11-12 (W1-64): Spare Cell gains a kill refill, two numbers, so it leaves the pitch parts; was 7.
-	_report("alpha parts", bad.is_empty() and AlphaDefs.PARTS.size() == 66 and distinct.size() == 66 and added.size() == 6,
+	_report("alpha parts", bad.is_empty() and AlphaDefs.PARTS.size() == 71 and distinct.size() == 71 and added.size() == 6,
 		"%d parts by verb %s, %d with a pitch %s; problems %s" % [AlphaDefs.PARTS.size(), families, added.size(), added, bad])
 
 
