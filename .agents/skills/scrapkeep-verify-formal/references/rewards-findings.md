@@ -4,7 +4,35 @@ A finding is a break of `models/Rewards.tla` that replayed on the real code. [re
 
 ## Open
 
-None.
+### ES-1. A refused write of the earned save's spend, then a quit and Continue, hands the save back for a second free life
+
+This finding comes from a second, smaller model beside `Rewards.tla`: `models/EarnedSave.tla`, written for FV-2 from `e7715dcfa`, with its configs from `models/make-earnedsave-configs.sh`. It covers the Spare Frame's earned save and the run document that carries its spend, and leaves `Rewards.tla` and its configs as they were.
+
+- Rule: `SaveOnce` (the earned save fires at most once in a run, across every quit and Continue). Config: `earnedsave-today` (one refused write, a quit or a crash anywhere): breaks in 387 distinct states. `earnedsave-today-nofail` (no refused write) holds in 109. `earnedsave-guarded` (the fix below, no crash) holds in 227. `earnedsave-guarded-crash` (the fix, with a crash) breaks in 382: a crash before any write lands is a gap no write order closes. `earnedsave-broken-spendwrite` (no spend write at all, no refused write) breaks in 190. The probes `earnedsave-reach-Saved`, `-Died`, `-ContinueHolding` and `-Refused` all break. TLC 2.19 (tla2tools 1.7.4), 8 workers, Mac Studio, 21 November 2026.
+- Code behind the steps: `sketches/core-loop/src/core/run_state.gd` `_try_death_save` (`sketches/core-loop/src/core/run_state.gd:795-803`) sets `death_save_spent` and emits `death_saved`; `sketches/core-loop/src/core/flow.gd` `_on_death_saved` (`sketches/core-loop/src/core/flow.gd:649-654`) sets the flag on the held `_entrance` and calls `_save`, which records a refusal in `store_error` and warns once (`:703-707`) and does nothing else; `sketches/core-loop/src/core/run_store.gd` `save` returns `write_failed` and leaves the file and its held `_doc` as they were (`sketches/core-loop/src/core/run_store.gd:108-155`). The pause menu's Quit calls `get_tree().quit()` and writes nothing (`sketches/core-loop/src/ui/pause_menu.gd:293-296`). `resume_run` loads the file and `from_entrance_doc` reads `death_save_spent` from it (`sketches/core-loop/src/core/flow.gd:579-614`, `sketches/core-loop/src/core/run_state.gd:1380`). The next stage entrance or launch writes the flag from memory (`to_entrance_doc`, `sketches/core-loop/src/core/run_state.gd:1164`), so the window runs from the refused write to the next write that lands.
+- Steps, in the code's words: a run takes the Spare Frame and a stage entrance writes it into the run file; a killing hit is held by the earned save; `_on_death_saved`'s write is refused; the player quits to the desktop before the next stage entrance or launch; the game is launched again and the run Continued: the run holds the Spare Frame with `death_save_spent` false, and its next killing hit is held again.
+- Harm: a second free life from a once-a-run save, and `clean_win` (which reads the flag) can be earned by a run that spent the save. It needs the run file's write to be refused at the moment of the save: a full disk, a read-only or removed save folder, or another program holding the temp file. A refusal is otherwise survivable (the run plays on), which is why nothing retries it.
+- Replay: `replay/earned_save_back_on_continue.gd`, copied into `sketches/core-loop/tests/` as zz_replay_earnedsave.gd and run with `"$GODOT_BIN" --headless --path sketches/core-loop --script res://tests/<copy>.gd` (Godot 4.7.2.stable.official.ed1daf0bf, `HOME` and `XDG_DATA_HOME` set to `artifacts/local/test-home`) on `e7715dcfa`, 21 November 2026, then deleted. The refused write is real: a directory sits where `sketches/core-loop/src/core/safe_store.gd` puts the run file's temp file, so `store.save` fails through its own write path; no game code was changed. **REPRODUCED**:
+
+  ```
+  step take part: disk parts hold it true, disk death_save_spent false, store_error ''
+  WARNING: flow: run not saved (write_failed): could not write user://replay_earned_save/run.json: Can't open file
+  step hit: alive true, flow stage, run death_save_spent true, store_error 'write_failed', disk death_save_spent false
+  step quit: disk death_save_spent false
+  step continue: offered true, resumed true, run death_save_spent false, parts hold it true
+  step hit again: alive true, flow stage, player_died 0, run over false
+  REPRODUCED
+  ```
+
+  The control (`-- --control`, the same steps with no refused write) ends the run on the second hit:
+
+  ```
+  step hit: alive true, flow stage, run death_save_spent true, store_error '', disk death_save_spent true
+  step continue: offered true, resumed true, run death_save_spent true, parts hold it true
+  step hit again: alive false, flow summary, player_died 1, run over true
+  NOT REPRODUCED
+  ```
+- Proposed fix (not made; game code is outside this unit): when `_on_death_saved`'s `_save` is refused, keep the spend owed (a flow flag set from `store_error`), write `_entrance` again on every later `_save` and on the pause menu's Quit before `get_tree().quit()`, and clear the flag once a write lands; `resume_run` in the same process applies `death_save_spent = true` while the flag is held. That is `SpendOwed`, and `earnedsave-guarded` holds. A crash, or a disk that refuses every write until the game closes, still hands the save back (`earnedsave-guarded-crash`); under a disk that refuses everything the Continue also rolls back the rest of the stage, so the save is then the only thing gained.
 
 ## Closed
 

@@ -46,6 +46,10 @@
   A plant that turns off one guard reports no break when a second guard backs the first. Keep a belt config with the one guard off that must report no break, so the backup is on record, and take both off for the plant that names the rule. Do not drop the plant or weaken the rule to get a break.
   Evidence: the brief for `Destructibles.tla` named `on_blast` without its `not p.intact` skip as the plant for `PaysOnce`. Alone it reports no break in 27,096 states (`destructibles-belt-repay`), because `_shatter` also calls `_unfile` and `_near` never finds rubble again. `destructibles-broken-repay` takes both off and breaks `PaysOnce` in three states.
   Overturned by: —
+- **VFM-12** · status: provisional · since: 2026-11-21 · origin: the first runs of the yard lock model
+  A physics frame runs its nodes in tree order, and two modules that read the ball in one frame can read two different balls: a node earlier in the tree sees the ball before its own tick moves it, a later one after. Model the tree's order as it is, with the ball's tick where it sits, instead of a free choice of order or one shared read. A guard that one module keeps because another module set a flag "first" holds only for the module that runs first.
+  Evidence: `YardLock.tla`'s first today run broke `NoLockInWardenFight` by a ten-step path: flow (the game root) read the ball outside the beacon ring, the ball's tick carried it in, grounded, and StageLocks (added to the root after the ball) shut the yard before flow could wake the Warden. It replayed on the dam (`replay/yard_locked_in_warden_fight.gd`, finding YL-1).
+  Overturned by: —
 
 ## Changelog
 
@@ -55,3 +59,4 @@
 | 2026-11-16 | VFM-09 added after the cold follow; SKILL.md steps for the diff, guard flips and the replay command corrected. |
 | 2026-11-16 | VFM-10 added after the review of pull request 1070: `QuitRelaunch` and `RunLast` added to the model, `guarded-lastgate` config added, the `broken-busy` and stage replay rows corrected. |
 | 2026-11-21 | FV-1: `ParkFlood.tla` steps a flood past its live time (`StepPastExpiry`, 60e2fccf5), closing PF-2, with plants `flood-broken-endstop` and `flood-broken-endstop-hold` and the probe `flood-reach-longfill-Full`; `flood-today-longfill` now claims `HoldEnds`. `RunFlow.tla` and `HazardCycle.tla` confirmed at `1c94e96b5`. `Destructibles.tla` added with the `destructibles-safe` receipt; VFM-11 added. |
+| 2026-11-21 | FV-2: `YardLock.tla` added for `sketches/core-loop/src/world/stage_locks.gd` and `sketches/core-loop/src/world/overtime.gd` with the `yard-lock-safe` receipt, findings YL-1 and YL-2 (both replayed, open); `EarnedSave.tla` added, finding ES-1 (replayed, open). VFM-12 added. Synced at `e7715dcfa`. |

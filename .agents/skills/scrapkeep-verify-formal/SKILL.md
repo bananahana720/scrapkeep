@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-verify-formal
-description: "Check by model the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals), with a TLA+ model kept beside this skill, and check by a second model that an earned reward is banked once and never lost through crashes, failed saves and two games on one profile, by a third that a park flood never holds full water under the ball, and by a fourth that a heft destructible pays once, lets go of what rests on it and cannot be farmed by retrying. Use when a change touches the park event step in event_director.gd, destructibles.gd, flow.gd, launch_take.gd or the launch swipe calls in game.gd, or profile.gd, safe_store.gd, run_store.gd or the settle and grant calls in progress.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check the run flow; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
+description: "Check by TLA+ model, kept beside this skill, the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals); that an earned reward or earned save is spent or banked once through crashes, failed saves and two games on one profile; that a park flood never holds full water under the ball; that a heft destructible pays once and cannot be farmed; and that a yard lock opens, pays once and never shuts on an awake Warden. Use when a change touches flow.gd, launch_take.gd or the launch swipe calls in game.gd, profile.gd, safe_store.gd, run_store.gd, progress.gd's settle and grant calls, the park event step in event_director.gd, destructibles.gd, stage_locks.gd or overtime.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
 ---
 
 # Check the run flow against its model
@@ -125,6 +125,23 @@ One more model, `models/Destructibles.tla`, checks a stage's heft destructibles 
 | `TierCapNeverStacks` | A blast breaks at most one tier above the class. | Stacked bonuses skip the heft the tiers stand for. |
 
 Run `bash $F/models/make-destructibles-configs.sh`, then plain TLC on each `destructibles-*.cfg` with `Destructibles.tla`. [references/destructibles-coverage.md](references/destructibles-coverage.md) maps each step and guard to the code and lists what each config must report; [references/destructibles-findings.md](references/destructibles-findings.md) holds the findings (none open). `node scripts/gate/model-receipts.mjs --out <dir> --row destructibles-safe` writes its receipt.
+
+## The yard lock model
+
+`models/YardLock.tla` checks the Spillway's yard lock and its overtime bell (FV-2): `sketches/core-loop/src/world/stage_locks.gd` and `sketches/core-loop/src/world/overtime.gd`, driven by the run flow in `sketches/core-loop/src/core/flow.gd`. One physics frame runs flow's tick, the ball's tick and the locks' tick in that order (the tree's order), and every interruption comes between frames. Its rules:
+
+| Rule | The promise | What breaks for the player |
+| --- | --- | --- |
+| `WallOnlyWhileLocked` | The wall stands only while the yard is shut on a stage in play. | A wall left over a stage the run has left. |
+| `LockAlwaysOpens` | A shut yard always opens while the stage plays on. | The ball is trapped. |
+| `NoLockInWardenFight` | At a frame's end the yard is never shut while the Warden is awake. | The Warden's fight happens inside the yard's wall, with its crew. |
+| `YardPaysOnce` | A yard pays its panel at most once an activation. | The yard pays twice. |
+| `OvertimeOnlyAfterWin` | The bell is offered, rung and cashed only after a won yard, three rings at most, one payout. | The pot pays without the yard won, or twice. |
+| `StartCardOnce` | The lock calls `show_start_card` at most once an activation. | The start card pops twice. |
+
+Run `bash $F/models/make-yardlock-configs.sh`, then plain TLC on each `yardlock-*.cfg` with `YardLock.tla`. [references/yardlock-coverage.md](references/yardlock-coverage.md) maps each step and guard to the code and lists what each config must report; [references/yardlock-findings.md](references/yardlock-findings.md) holds the findings, two open: YL-1 (a ball that first lands near the beacon shuts the yard round the Warden's fight) and YL-2 (a storeless flow's dead screen keeps the wall). `node scripts/gate/model-receipts.mjs --out <dir> --row yard-lock-safe` writes its receipt from `yardlock-today-rolling` while YL-1 is open, and names both findings as gaps.
+
+`models/EarnedSave.tla` is a smaller model beside the rewards model: the Spare Frame's earned save and the run file that must carry its spend (`sketches/core-loop/src/core/run_state.gd` `_try_death_save`, `sketches/core-loop/src/core/flow.gd` `_on_death_saved`, `_save`, `resume_run`). Run `bash $F/models/make-earnedsave-configs.sh`, then plain TLC on each `earnedsave-*.cfg`. Its rule `SaveOnce` breaks on the code (finding ES-1 in [references/rewards-findings.md](references/rewards-findings.md)): a refused spend write, a quit and a Continue hand the save back.
 
 ## Lessons and updates
 

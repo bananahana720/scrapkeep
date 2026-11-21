@@ -1,0 +1,190 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 22 and seed -1482143568541881299 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/YardLock.tla
+Parsing file <tmp>/Naturals.tla
+Semantic processing of module Naturals
+Semantic processing of module YardLock
+Starting... (2026-11-21 13:19:46)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-21 13:19:46.
+Error: Invariant WallOnlyWhileLocked is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ phase = "events"
+/\ rings = 0
+/\ flow = "title"
+/\ zone = "out"
+/\ stage = 1
+/\ ot = "none"
+/\ cards = 0
+/\ lock = "none"
+/\ wave = 0
+/\ grounded = FALSE
+/\ left = 0
+/\ gap = FALSE
+/\ last = "Init"
+/\ wall = FALSE
+/\ engaged = FALSE
+/\ won = FALSE
+/\ paid = 0
+/\ otBad = FALSE
+/\ entries = 0
+/\ otPaid = 0
+/\ saved = FALSE
+/\ yardAt = "none"
+/\ crewDown = FALSE
+
+State 2: <Start line 281, col 3 to line 283, col 13 of module YardLock>
+/\ phase = "events"
+/\ rings = 0
+/\ flow = "stage"
+/\ zone = "out"
+/\ stage = 1
+/\ ot = "none"
+/\ cards = 0
+/\ lock = "armed"
+/\ wave = 0
+/\ grounded = TRUE
+/\ left = 0
+/\ gap = FALSE
+/\ last = "Start"
+/\ wall = FALSE
+/\ engaged = FALSE
+/\ won = FALSE
+/\ paid = 0
+/\ otBad = FALSE
+/\ entries = 1
+/\ otPaid = 0
+/\ saved = TRUE
+/\ yardAt = "none"
+/\ crewDown = FALSE
+
+State 3: <EndEvents line 177, col 3 to line 179, col 83 of module YardLock>
+/\ phase = "flow"
+/\ rings = 0
+/\ flow = "stage"
+/\ zone = "out"
+/\ stage = 1
+/\ ot = "none"
+/\ cards = 0
+/\ lock = "armed"
+/\ wave = 0
+/\ grounded = TRUE
+/\ left = 0
+/\ gap = FALSE
+/\ last = "EndEvents"
+/\ wall = FALSE
+/\ engaged = FALSE
+/\ won = FALSE
+/\ paid = 0
+/\ otBad = FALSE
+/\ entries = 1
+/\ otPaid = 0
+/\ saved = TRUE
+/\ yardAt = "none"
+/\ crewDown = FALSE
+
+State 4: <FlowTick line 103, col 3 to line 106, col 74 of module YardLock>
+/\ phase = "ball"
+/\ rings = 0
+/\ flow = "stage"
+/\ zone = "out"
+/\ stage = 1
+/\ ot = "none"
+/\ cards = 0
+/\ lock = "armed"
+/\ wave = 0
+/\ grounded = TRUE
+/\ left = 0
+/\ gap = FALSE
+/\ last = "FlowTick"
+/\ wall = FALSE
+/\ engaged = FALSE
+/\ won = FALSE
+/\ paid = 0
+/\ otBad = FALSE
+/\ entries = 1
+/\ otPaid = 0
+/\ saved = TRUE
+/\ yardAt = "none"
+/\ crewDown = FALSE
+
+State 5: <BallTick line 112, col 3 to line 119, col 67 of module YardLock>
+/\ phase = "locks"
+/\ rings = 0
+/\ flow = "stage"
+/\ zone = "circle"
+/\ stage = 1
+/\ ot = "none"
+/\ cards = 0
+/\ lock = "armed"
+/\ wave = 0
+/\ grounded = TRUE
+/\ left = 0
+/\ gap = FALSE
+/\ last = "BallTick"
+/\ wall = FALSE
+/\ engaged = FALSE
+/\ won = FALSE
+/\ paid = 0
+/\ otBad = FALSE
+/\ entries = 1
+/\ otPaid = 0
+/\ saved = TRUE
+/\ yardAt = "none"
+/\ crewDown = FALSE
+
+State 6: <LocksTick line 139, col 3 to line 172, col 71 of module YardLock>
+/\ phase = "events"
+/\ rings = 0
+/\ flow = "stage"
+/\ zone = "circle"
+/\ stage = 1
+/\ ot = "none"
+/\ cards = 0
+/\ lock = "locked"
+/\ wave = 0
+/\ grounded = TRUE
+/\ left = 5
+/\ gap = FALSE
+/\ last = "Lock"
+/\ wall = TRUE
+/\ engaged = FALSE
+/\ won = FALSE
+/\ paid = 0
+/\ otBad = FALSE
+/\ entries = 1
+/\ otPaid = 0
+/\ saved = TRUE
+/\ yardAt = "circle"
+/\ crewDown = TRUE
+
+State 7: <Death line 224, col 3 to line 229, col 58 of module YardLock>
+/\ phase = "events"
+/\ rings = 0
+/\ flow = "summary"
+/\ zone = "circle"
+/\ stage = 1
+/\ ot = "none"
+/\ cards = 0
+/\ lock = "locked"
+/\ wave = 0
+/\ grounded = TRUE
+/\ left = 5
+/\ gap = FALSE
+/\ last = "Death"
+/\ wall = TRUE
+/\ engaged = FALSE
+/\ won = FALSE
+/\ paid = 0
+/\ otBad = FALSE
+/\ entries = 1
+/\ otPaid = 0
+/\ saved = FALSE
+/\ yardAt = "circle"
+/\ crewDown = TRUE
+
+410 states generated, 263 distinct states found, 125 states left on queue.
+The depth of the complete state graph search is 13.
+The average outdegree of the complete state graph is 2 (minimum is 0, the maximum 8 and the 95th percentile is 4).
+Finished in 00s at (2026-11-21 13:19:46)
