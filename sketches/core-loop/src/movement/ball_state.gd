@@ -11,6 +11,8 @@ var air_actions := 1
 var coyote := 0.0
 var jump_buffer := 0.0
 var boost_cooldown := 0.0
+# Seconds a boost pressed during its cooldown waits to fire (Tuning.BOOST_BUFFER).
+var boost_buffer := 0.0
 var impact := 0.0
 var tier := 0
 # Rivet's sprint raises the drive's cruise target by this factor while it runs.
@@ -44,6 +46,7 @@ func tick_timers(delta: float) -> void:
 	coyote = maxf(0.0, coyote - delta)
 	jump_buffer = maxf(0.0, jump_buffer - delta)
 	boost_cooldown = maxf(0.0, boost_cooldown - delta)
+	boost_buffer = maxf(0.0, boost_buffer - delta)
 	impact = maxf(0.0, impact - delta * 18.0)
 
 
@@ -55,6 +58,7 @@ func reset() -> void:
 	coyote = 0.0
 	jump_buffer = 0.0
 	boost_cooldown = 0.0
+	boost_buffer = 0.0
 	impact = 0.0
 	tier = 0
 	cruise_boost = 1.0

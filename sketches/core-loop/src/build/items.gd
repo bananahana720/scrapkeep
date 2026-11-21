@@ -216,6 +216,27 @@ const TABLE := {
 	"par_chip": {"maker": "mind_glass", "touches": "roll", "base": "utility", "rarity": "rare", "stack": "capped", "cap": 1, "tags": ["speed", "anchor"],
 		"verb": "Clock shows your split against best", "text": "Clock shows a split against best",
 		"effect": {"do": "perk", "perk": "par"}},
+
+	# Verb items (5), wave 45 U7 (ABILITY-MUTATIONS.md C3 to C7): each rewrites one verb by name. Every
+	# follow-up strike is item_proc and carries no shot bits (section 8), so "bits" is empty on each row
+	# even where a tag would map to one. The numbers live in the effect; combat reads them through
+	# item_effects.gd verb_row() (the strip, the arc, the crack, the bell and the load).
+	"backwash": {"maker": "spillway_works", "touches": "boost", "base": "mobility", "rarity": "uncommon", "stack": "capped", "cap": 1,
+		"tags": ["kinetic"], "bits": [], "verb": "Dashes leave a strip behind", "text": "Dashes lay a 4 m strip at 40%",
+		"effect": {"do": "dash_wake", "length": 4.0, "width": 2.0, "mult": 0.4, "life": 1.5, "knock": 4.0}},
+	"barbed_reel": {"maker": "redjaw", "touches": "harpoon", "base": "weapon", "rarity": "rare", "stack": "capped", "cap": 1,
+		"tags": ["anchor", "chain"], "bits": [], "verb": "Harpoon smashes arc to one more", "text": "Harpoon smash arcs 70% within 6 m",
+		"effect": {"do": "reel_chain", "reach": 6.0, "mult": 0.7, "knock": 6.0}},
+	"faultline_cap": {"maker": "waking", "touches": "haul", "base": "weapon", "rarity": "rare", "stack": "capped", "cap": 1,
+		"tags": ["mass", "kinetic"], "bits": [], "verb": "Smashes crack the ground ahead", "text": "Smash cracks 8 m ahead at 50% damage",
+		"effect": {"do": "slam_crack", "length": 8.0, "width": 2.5, "mult": 0.5, "life": 0.5, "knock": 8.0,
+			"props": [2.0, 4.5, 7.0], "prop_radius": 2.5}},
+	"second_bell": {"maker": "mind_glass", "touches": "special", "base": "utility", "rarity": "uncommon", "stack": "capped", "cap": 1,
+		"tags": ["spiral"], "bits": [], "verb": "Your special rings twice", "text": "Special rings again 1s later at 50%",
+		"effect": {"do": "second_bell", "delay": 1.0, "mult": 0.5, "gather_scale": 0.5, "knock": 6.0}},
+	"long_leash": {"maker": "moss", "touches": "harpoon", "base": "utility", "rarity": "uncommon", "stack": "capped", "cap": 1,
+		"tags": ["chain"], "bits": [], "verb": "Loaded lines wait twice as long", "text": "A loaded line waits 8s, not 4s",
+		"effect": {"do": "line_leash", "load_mult": 2.0}},
 }
 
 # Moss's charge cells (DESIGN-V2 section 12): the stockpile path you pay for. A cell is

@@ -1015,8 +1015,8 @@ func _read_shift() -> void:
 			_fail("boost", "busy" if Augments.holding(kit) else "uncharged")
 	else:
 		intent.boost_pressed = intent.boost_pressed \
-				or (intent.shift_pressed and (state.boost_cooldown <= 0.0 or kit.plant_time > 0.0))
-		if intent.shift_pressed and state.boost_cooldown > 0.0:
+				or (intent.shift_pressed and (state.boost_cooldown <= Tuning.BOOST_BUFFER or kit.plant_time > 0.0))
+		if intent.shift_pressed and state.boost_cooldown > Tuning.BOOST_BUFFER:
 			_fail("boost", "cooldown")
 		elif intent.shift_pressed and kit.mounted:
 			_fail("boost", "busy")
