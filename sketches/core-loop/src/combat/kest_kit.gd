@@ -562,7 +562,7 @@ func step(delta: float) -> void:
 
 
 func _step_payloads(delta: float) -> void:
-	if cable.is_empty() and _rolls.is_empty() and payloads.charges.is_empty() and payloads._evicted.is_empty() \
+	if cable.is_empty() and _rolls.is_empty() and payloads.is_idle() \
 			and not (_id == "windhover" and _cast.get("landed", false)):
 		return
 	if not cable.is_empty() and payloads.charges.has(cable):
@@ -587,7 +587,7 @@ func _step_payloads(delta: float) -> void:
 		if audio != null:
 			audio.kest_roll(NOTES[posmod(roll_log.size() - 1, NOTES.size())])
 		_rolls.erase(roll)
-	if not payloads.charges.is_empty() or not payloads._evicted.is_empty():
+	if not payloads.is_idle():
 		for c in payloads.step(delta, _space(), get_tree().get_nodes_in_group("enemy")):
 			combat.devices.remove(int(c.get("device_id", 0)))
 			_detonate_payload(c)

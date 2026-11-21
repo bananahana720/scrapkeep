@@ -285,6 +285,10 @@ var sound_ready := false
 var _pitch_rng := RandomNumberGenerator.new()
 # Every cue decided: [kind, sound, "now" | "beat" | "music" | "skip", start_sample, pitch].
 var cue_log: Array = []
+# Monotonic count of cues logged (keeps growing past cue_log_cap so mark-and-slice callers stay exact).
+var cue_log_total: int = 0
+# Ring-buffer ceiling for cue_log; 0 disables eviction for offline bounce captures.
+var cue_log_cap: int = LOG_CAP
 # The process frame of the last play_stream call, so a test can count frames from event to play().
 var last_play_frame := -1
 # The pitch the log shows for a tiered cue (the caller's ladder rung); -1 logs the played pitch.
@@ -469,9 +473,21 @@ func _init() -> void:
 
 
 func _log_cue(entry: Array) -> void:
-	if cue_log.size() >= LOG_CAP:
-		cue_log.pop_front()
+	cue_log_total += 1
+	if cue_log_cap > 0:
+		while cue_log.size() >= cue_log_cap:
+			cue_log.pop_front()
 	cue_log.push_back(entry)
+
+
+func cues_since(mark: int) -> Array:
+	var dropped := cue_log_total - cue_log.size()
+	return cue_log.slice(maxi(mark - dropped, 0))
+
+
+func reset_cue_log() -> void:
+	cue_log.clear()
+	cue_log_total = 0
 
 
 func _log_drop(entry: Array) -> void:

@@ -346,13 +346,13 @@ func _audio():
 
 func _cues() -> int:
 	var a = _audio()
-	return a.cue_log.size() if a != null else 0
+	return a.cue_log_total if a != null else 0
 
 
-# The sounds started since cue_log held `from` rows.
+# The sounds started since audio.cue_log_total held `from`.
 func _started_since(from: int) -> Array:
 	var a = _audio()
-	return sounds_started(a.cue_log.slice(from)) if a != null else []
+	return sounds_started(a.cues_since(from)) if a != null else []
 
 
 # --- the verbs ---
@@ -743,7 +743,7 @@ func _window(spec: Dictionary, press: bool, hold_us: int) -> Dictionary:
 	var logged: Array = []
 	if _audio() != null:
 		rows = _started_since(cue0)
-		for r in _audio().cue_log.slice(cue0).slice(0, 8):
+		for r in _audio().cues_since(cue0).slice(0, 8):
 			logged.append([str(r[1]), str(r[2])] if r is Array and r.size() > 2 else [str(r), ""])
 	var result := {"answered": false, "us": -1, "by": "none", "frame": -1}
 	if press:

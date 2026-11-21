@@ -495,14 +495,6 @@ func _evict_puffs() -> void:
 			old_node.queue_free()
 
 
-func _evict_shards() -> void:
-	while _shards.size() >= MAX_SHARDS:
-		var old: Dictionary = _shards.pop_front()
-		var old_node = old.get("node")
-		if is_instance_valid(old_node):
-			old_node.queue_free()
-
-
 # The cone's wedge on the ground, in ice, faded out with the puffs.
 func _draw_cone(cone: Dictionary) -> MeshInstance3D:
 	var apex: Vector3 = cone["at"]
@@ -527,7 +519,8 @@ func _cone_shards(cone: Dictionary) -> void:
 	var dir: Vector3 = cone["dir"]
 	var half: float = cone["half_angle"]
 	for n in SHARDS_PER_SLAB:
-		_evict_shards()
+		if _shards.size() >= MAX_SHARDS:
+			break
 		var heading := dir.rotated(Vector3.UP, lerpf(-half, half, float(n) / float(SHARDS_PER_SLAB - 1)))
 		var shard := MeshInstance3D.new()
 		shard.mesh = _shard_mesh
@@ -550,7 +543,8 @@ func _evolution_strike(enemy: Node3D, damage: float, source: String) -> bool:
 
 func _burst(at: Vector3) -> void:
 	for n in SHARDS_PER_SLAB:
-		_evict_shards()
+		if _shards.size() >= MAX_SHARDS:
+			break
 		var angle := TAU * float(n) / SHARDS_PER_SLAB
 		var dir := Vector3(cos(angle), 0.55, sin(angle)).normalized()
 		var shard := MeshInstance3D.new()
