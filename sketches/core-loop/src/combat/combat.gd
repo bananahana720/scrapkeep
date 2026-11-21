@@ -216,6 +216,20 @@ var volleys := 0
 # clock of the last one. Both clear on every attempt and when the pike leaves the build.
 var _pike_count := 0
 var _pike_last := -INF
+# The verb items (ABILITY-MUTATIONS.md C3 to C7, item_effects.gd verb_row). Live committed strips
+# (Backwash's wake, Faultline Cap's crack): each is one record that the indicator draws and the hit
+# test reads, and it strikes each machine once. Pending Second Bell repeats, rung once each. This
+# frame's reel-in impacts by machine id, for Barbed Reel. All clear on every attempt.
+var _strips: Array = []
+var _bells: Array = []
+var _verb_serial := 0
+var _reel_hits := {}
+var _reel_frame := -1
+var _wake_frame := -1
+# The last strip laid, the last arc jumped and the last bell rung, for tests and bots.
+var last_strip := {}
+var last_reel_arc := {}
+var last_bell := {}
 # The last committed volley and discharge, for tests and anything that wants to read them.
 var last_shot := {}
 var last_burst := {}
@@ -566,6 +580,10 @@ func setup(ctx_ref) -> void:
 	ctx.events.slammed.connect(_on_cannon_slammed)
 	ctx.events.slammed.connect(_on_fault_slammed)
 	ctx.events.dashed.connect(_on_cannon_dashed)
+	ctx.events.dashed.connect(_on_wake_dash)
+	ctx.events.boosted.connect(_on_wake_dash)
+	ctx.events.harpoon_smashed.connect(_on_reel_chain)
+	ctx.events.slammed.connect(_on_slam_crack)
 	ctx.events.dismounted.connect(_on_dismounted_sentry)
 	ctx.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _rebuild_patterns())
 	ctx.player.heft_of = heft
@@ -785,12 +803,15 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 			panel_punch(kind, _classify_source(kind, source if source != "" else _forced_source))))
 		return
 	var dunk := _dunk_bonus(enemy, kind)
+	var reel: bool = ctx != null and ctx.player != null and ctx.player.get("kit") != null \
+		and is_reel_impact(kind, ctx.player.smash_landing == enemy)
 	# A reel impact or a dunk marks the body, so a kill it lands is a jackpot (grey panels).
-	if ctx != null and ctx.player != null and ctx.player.get("kit") != null and \
-			(dunk > 0.0 or is_reel_impact(kind, ctx.player.smash_landing == enemy)):
+	if ctx != null and ctx.player != null and ctx.player.get("kit") != null and (dunk > 0.0 or reel):
 		enemy.set_meta(REEL_MARK, _clock)
-	door.pass_hit({"enemy": enemy, "kind": kind, "force": force, "part": part, "source": source,
+	var hit := door.pass_hit({"enemy": enemy, "kind": kind, "force": force, "part": part, "source": source,
 		"impact": impact, "dunk": dunk}, _strike_stages)
+	if reel:
+		_note_reel(enemy, float(hit.get("result", {}).get("dealt", 0.0)))
 
 
 # --- SR1: strike()'s stages, in damage_door.gd's ORDER --------------------------------
@@ -1714,6 +1735,7 @@ func _physics_process(delta: float) -> void:
 	_step_special(intent, delta)
 	_step_line(intent, delta)
 	_step_cannon(delta)
+	_step_verb_items()
 	var enemies := get_tree().get_nodes_in_group("enemy")
 	var shells := get_tree().get_nodes_in_group("enemy_shot")
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
@@ -1926,6 +1948,277 @@ func _pike_cue() -> void:
 	var audio = presentation.get("audio") if presentation != null else null
 	if audio != null:
 		audio.play("shot_pierce", 0.0, 1.0, "SFX", String(ShotBits.TABLE["pierce"]["sound"]))
+
+
+# --- Verb items (ABILITY-MUTATIONS.md C3 to C7) ---------------------------------------
+# Each follow-up strike here is a SYNERGY strike with source item_proc and no shot bits: it never
+# procs an item (Triggers.STRIKE_PROC), is never a ball contact (no heft scaling, no dunk, no Warden
+# slam count) and never reaches the verb that laid it, so proc depth stays 1 (section 8).
+
+# A held verb item's numbers, {} while the build does not hold it.
+func _verb(effect_id: String) -> Dictionary:
+	var build = ctx.build if ctx != null else null
+	var held = build.get("effects") if build != null else null
+	return held.verb_row(effect_id) if held != null and held.has_method("verb_row") else {}
+
+
+# Long Leash: how many times the row's load_seconds a loaded line waits (1 without it).
+func leash_scale() -> float:
+	var row := _verb("line_leash")
+	return maxf(1.0, float(row.get("load_mult", 1.0))) if not row.is_empty() else 1.0
+
+
+# One plain weapon hit now: the active weapon's pattern damage under the build's weapon mods.
+func _weapon_hit() -> float:
+	var weapon := active_weapon()
+	var p: Resource = _patterns.get(weapon)
+	return p.damage * _damage_mod(weapon) if p != null else 0.0
+
+
+# Lays one committed strip: the indicator draws the record's own shape and the same record is the
+# hit test (in_line with FORGIVENESS), striking each machine once while it lives. It strikes now.
+func _lay_strip(item: String, from: Vector3, to: Vector3, width: float, damage: float, life: float, knock: float) -> Dictionary:
+	_verb_serial += 1
+	var strip := {"item": item, "layer": "verb_strip_%d" % _verb_serial, "damage": damage, "knock": knock,
+		"until": _clock + life, "struck": {}, "hits": 0, "source": "item_proc", "bits": 0,
+		"shape": ctx.player.yours({"kind": "line", "from": from, "to": to, "width": width})}
+	ctx.player.indicator.set_shape(strip["layer"], strip["shape"])
+	_strips.append(strip)
+	_strike_strip(strip)
+	last_strip = strip
+	return strip
+
+
+func _strike_strip(strip: Dictionary) -> void:
+	var shape: Dictionary = strip["shape"]
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		var id: int = enemy.get_instance_id()
+		if strip["struck"].has(id) or enemy.is_dead() \
+				or not in_line(shape["from"], shape["to"], shape["width"], enemy.global_position, _hull(enemy)):
+			continue
+		strip["struck"][id] = true
+		strip["hits"] = int(strip["hits"]) + 1
+		_hit(enemy, SYNERGY, float(strip["damage"]), enemy.global_position - Vector3(shape["from"]), float(strip["knock"]),
+			"", "item_proc", "proc")
+
+
+# The strips strike what enters them and go when their life ends; a bell rings when it is due.
+func _step_verb_items() -> void:
+	for strip in _strips.duplicate():
+		if _clock >= float(strip["until"]):
+			ctx.player.indicator.clear(String(strip["layer"]))
+			_strips.erase(strip)
+		else:
+			_strike_strip(strip)
+	for bell in _bells.duplicate():
+		if _clock >= float(bell["at"]):
+			_bells.erase(bell)
+			_toll(bell)
+
+
+func _clear_verb_items() -> void:
+	for record in _strips + _bells:
+		ctx.player.indicator.clear(String(record["layer"]))
+	_strips.clear()
+	_bells.clear()
+	_reel_hits = {}
+	_reel_frame = -1
+	_wake_frame = -1
+
+
+# Backwash (C3): a dash or a boost lays a strip behind the ball, once per frame however many of
+# the two facts it published. The dash itself is untouched: this only reads where it began.
+func _on_wake_dash(dir: Vector3) -> void:
+	var row := _verb("dash_wake")
+	var frame := Engine.get_physics_frames()
+	if row.is_empty() or ctx.run.class_def == null or _wake_frame == frame:
+		return
+	_wake_frame = frame
+	var flat := Vector3(dir.x, 0.0, dir.z)
+	flat = flat.normalized() if flat.length() > 0.01 else _flat_aim()
+	var from := _ground_under(ctx.player.ball_position())
+	_lay_strip("dash_wake", from, from - flat * float(row.get("length", 4.0)), float(row.get("width", 2.0)),
+		float(row.get("mult", 0.4)) * _weapon_hit(), float(row.get("life", 1.5)), float(row.get("knock", 4.0)))
+
+
+# Barbed Reel (C4): this frame's reel-in damage on each machine (the landing contact and its
+# shockwave). A jump's SYNERGY strike is never a reel impact, so it never lands here.
+func _note_reel(enemy: Node3D, dealt: float) -> void:
+	var frame := Engine.get_physics_frames()
+	if frame != _reel_frame:
+		_reel_frame = frame
+		_reel_hits = {}
+	var id := enemy.get_instance_id()
+	_reel_hits[id] = float(_reel_hits.get(id, 0.0)) + dealt
+
+
+# The reel-in impact jumps once to the nearest other live machine within reach, at mult of that
+# impact's damage, through _chain with one jump. It never emits harpoon_smashed, so it cannot re-arm.
+func _on_reel_chain(enemy: Node3D, at: Vector3, _speed: float) -> void:
+	var row := _verb("reel_chain")
+	if row.is_empty() or _reel_frame != Engine.get_physics_frames() or _reel_hits.is_empty():
+		return
+	var first: Node3D = enemy if enemy != null and is_instance_valid(enemy) else null
+	var damage := float(_reel_hits.get(first.get_instance_id(), 0.0)) if first != null else float(_reel_hits.values().max())
+	_reel_hits = {}
+	if damage <= 0.0:
+		return
+	var from: Vector3 = first.global_position if first != null else at
+	var next := _nearest(from, float(row.get("reach", 6.0)), [first])
+	last_reel_arc = {"from": from, "damage": damage * float(row.get("mult", 0.7)), "source": "item_proc", "bits": 0,
+		"target": next}
+	_chain(first, from, {"damage": damage, "chain_jumps": 1, "chain_falloff": float(row.get("mult", 0.7)),
+		"chain_range": float(row.get("reach", 6.0)), "color": ctx.player.class_color(), "kind": SYNERGY,
+		"knock": float(row.get("knock", 6.0)), "source": "item_proc", "bits": 0})
+
+
+# Faultline Cap (C5): a smash landing cracks a lane ahead along the ball's heading at mult of the
+# smash's own punch (worked out once here; the strike is SYNERGY, so it is not scaled again), and
+# breaks props at three points down it through break_props, whose tier bonus is +1 and never more.
+func _on_slam_crack(at: Vector3, strength: float, _flatness: float) -> void:
+	var row := _verb("slam_crack")
+	if row.is_empty() or strength < 0.05 or ctx.run.class_def == null:
+		return
+	var heading: Vector3 = ctx.player.planar_velocity()
+	heading.y = 0.0
+	heading = heading.normalized() if heading.length() > 1.0 else _flat_aim()
+	var from := _ground_under(at)
+	var length := float(row.get("length", 8.0))
+	_lay_strip("slam_crack", from, from + heading * length, float(row.get("width", 2.5)),
+		float(row.get("mult", 0.5)) * punch_of("slam", Augments.SLAM_KNOCK * strength), float(row.get("life", 0.5)),
+		float(row.get("knock", 8.0)))
+	for along in row.get("props", [2.0, 4.5, 7.0]):
+		ctx.break_props(from + heading * minf(float(along), length), float(row.get("prop_radius", 2.5)), "faultline_cap")
+
+
+# Second Bell (C6): what a kit special's release changed, read before it fires: the burst record
+# it replaces and the props broken so far.
+func _bell_mark() -> Dictionary:
+	var pieces = ctx.destructibles if ctx != null else null
+	return {"burst": last_burst, "breaks": pieces.break_order().size() if pieces != null and is_instance_valid(pieces) else 0}
+
+
+# Hung on the two kit special exits only (the gauge release and a SPECIAL tap landing), after the
+# spend. A damaging release keeps its footprint lit and rings it again `delay` later at mult of its
+# damage; Gather Plate rings a gather of gather_scale its radius at the plate. The repeat spends
+# and refills nothing, and _toll never reaches this, so it cannot ring again.
+func _ring_bell(id: String, shape: Dictionary, mark: Dictionary) -> void:
+	var row := _verb("second_bell")
+	if row.is_empty():
+		return
+	var bell := {"id": id, "at": _clock + float(row.get("delay", 1.0)), "source": "item_proc", "bits": 0,
+		"knock": float(row.get("knock", 6.0)), "breaks": false}
+	if shape.is_empty():
+		if plate.is_empty() or String(last_card.get("card", "")) != id:
+			return
+		bell["mode"] = "gather"
+		bell["shape"] = ctx.player.yours({"kind": "ring", "centre": plate["at"],
+			"radius": Weapons.GATHER_RADIUS * float(row.get("gather_scale", 0.5))})
+	else:
+		if is_same(last_burst, mark["burst"]) or float(last_burst.get("damage", 0.0)) <= 0.0:
+			return
+		bell["mode"] = "pulse"
+		bell["damage"] = float(last_burst["damage"]) * float(row.get("mult", 0.5))
+		bell["limit"] = int(last_burst.get("targets", -1))
+		bell["breaks"] = _bell_mark()["breaks"] > int(mark["breaks"])
+		var drawn := {}
+		for key in ["kind", "centre", "radius", "from", "to", "width", "apex", "dir", "length", "half_angle"]:
+			if shape.has(key):
+				drawn[key] = shape[key]
+		bell["shape"] = ctx.player.yours(drawn)
+	_verb_serial += 1
+	bell["layer"] = "second_bell_%d" % _verb_serial
+	ctx.player.indicator.set_shape(bell["layer"], bell["shape"])
+	_bells.append(bell)
+
+
+func _toll(bell: Dictionary) -> void:
+	ctx.player.indicator.clear(String(bell["layer"]))
+	var shape: Dictionary = bell["shape"]
+	var color: Color = shape["color"]
+	var hits := 0
+	if bell["mode"] == "gather":
+		_gather_pull(shape["centre"], float(shape["radius"]))
+		effects.ring(shape["centre"], float(shape["radius"]), color)
+	else:
+		var origin := _shape_origin(shape)
+		var found: Array = []
+		for enemy in get_tree().get_nodes_in_group("enemy"):
+			if not enemy.is_dead() and in_shape(shape, enemy):
+				found.append([enemy.global_position.distance_to(origin), enemy])
+		found.sort_custom(func(a, b): return a[0] < b[0])
+		var limit: int = int(bell["limit"]) if int(bell["limit"]) >= 0 else found.size()
+		for pair in found.slice(0, limit):
+			var enemy: Node3D = pair[1]
+			_hit(enemy, SYNERGY, float(bell["damage"]), enemy.global_position - origin, float(bell["knock"]), "", "item_proc", "proc")
+			hits += 1
+		_draw_shape(shape, color)
+		if bell["breaks"]:
+			for blast in _shape_blasts(shape):
+				ctx.break_props(blast[0], blast[1], "second_bell")
+	last_bell = bell.duplicate()
+	last_bell["hits"] = hits
+	last_bell["rung_at"] = _clock
+
+
+# A committed area the release drew: ring, line or cone, each with the forgiveness.
+static func in_shape(shape: Dictionary, enemy: Node3D) -> bool:
+	match String(shape.get("kind", "")):
+		"ring":
+			return in_ring(shape["centre"], float(shape["radius"]), enemy)
+		"line":
+			return in_line(shape["from"], shape["to"], float(shape["width"]), enemy.global_position, _hull(enemy))
+		"cone":
+			var flat: Vector3 = enemy.global_position - Vector3(shape["apex"])
+			flat.y = 0.0
+			var hull := _hull(enemy)
+			var reach := flat.length()
+			if reach - hull > float(shape["length"]) * (1.0 + AbilityState.FORGIVENESS):
+				return false
+			if reach <= hull:
+				return true
+			var dir: Vector3 = shape["dir"]
+			var off := acos(clampf((flat / reach).dot(Vector3(dir.x, 0.0, dir.z).normalized()), -1.0, 1.0))
+			return off <= float(shape["half_angle"]) * (1.0 + AbilityState.FORGIVENESS) + atan2(hull, reach)
+	return false
+
+
+static func _shape_origin(shape: Dictionary) -> Vector3:
+	match String(shape.get("kind", "")):
+		"line":
+			return shape["from"]
+		"cone":
+			return shape["apex"]
+	return shape.get("centre", Vector3.ZERO)
+
+
+# Where a footprint's props break: a ring as itself, a line as three circles down it, a cone as
+# the circle round its middle.
+static func _shape_blasts(shape: Dictionary) -> Array:
+	match String(shape.get("kind", "")):
+		"line":
+			var from: Vector3 = shape["from"]
+			var to: Vector3 = shape["to"]
+			var r := maxf(float(shape["width"]) * 0.5, from.distance_to(to) / 6.0)
+			return [[from.lerp(to, 1.0 / 6.0), r], [from.lerp(to, 0.5), r], [from.lerp(to, 5.0 / 6.0), r]]
+		"cone":
+			var half := float(shape["length"]) * 0.5
+			return [[Vector3(shape["apex"]) + Vector3(shape["dir"]) * half, half]]
+	return [[shape["centre"], float(shape["radius"])]]
+
+
+func _draw_shape(shape: Dictionary, color: Color) -> void:
+	match String(shape.get("kind", "")):
+		"ring":
+			effects.ring(shape["centre"], float(shape["radius"]), color)
+		"line":
+			effects.beam(shape["from"], shape["to"], color, Effects.RING_LIFE)
+		"cone":
+			var apex: Vector3 = shape["apex"]
+			var dir: Vector3 = shape["dir"]
+			for side in [-1.0, 0.0, 1.0]:
+				var edge := dir.rotated(Vector3.UP, float(shape["half_angle"]) * side)
+				effects.beam(apex, apex + edge * float(shape["length"]), color, Effects.RING_LIFE)
 
 
 # One bolt of a volley: the pattern's numbers for this layout entry, fired from `muzzle`.
@@ -2347,10 +2640,12 @@ func _step_special(intent, delta: float) -> void:
 		return
 	abilities.spend(AbilityState.SPECIAL)
 	last_committed = {"id": id, "fraction": f, "geometry": shape}
+	var mark := _bell_mark()
 	row["fire"].call(f, shape)
 	# Twin Discharge and Vortex: the same release again, smaller, a moment later.
 	if _knob("special_echo") > 0.0:
 		_echo = {"row": row, "fraction": f * 0.6, "left": _knob("special_echo")}
+	_ring_bell(id, shape, mark)
 	ctx.events.gauge_released.emit(id, f)
 	ctx.events.special_used.emit(id, ctx.player.ball_position())
 	ctx.events.slot_cast.emit(AbilityState.SPECIAL, id, ctx.player.ball_position())
@@ -2413,12 +2708,14 @@ func _land_tap(slot: String, id: String, cast: Callable) -> void:
 	if not abilities.ready(slot):
 		_refuse_cast(slot, "cooling")
 		return
+	var mark := _bell_mark()
 	if not bool(cast.call()):
 		_refuse_cast(slot, "no_target")
 		return
 	abilities.spend(slot)
 	var at: Vector3 = ctx.player.ball_position()
 	if slot == AbilityState.SPECIAL:
+		_ring_bell(id, {}, mark)
 		ctx.events.special_used.emit(id, at)
 	ctx.events.slot_cast.emit(slot, id, at)
 
@@ -3154,7 +3451,7 @@ func _cast_line(id: String, fraction: float) -> void:
 	if ctx.player.kit.hooked:
 		_fire_line_skill(id, fraction)
 		return
-	var seconds := float(AbilityState.ABILITIES.get(id, {}).get("load_seconds", LINE_LOAD_SECONDS))
+	var seconds := float(AbilityState.ABILITIES.get(id, {}).get("load_seconds", LINE_LOAD_SECONDS)) * leash_scale()
 	_line_load = {"id": id, "fraction": fraction, "left": seconds}
 	ctx.events.line_skill_loaded.emit(id, seconds)
 
@@ -4961,6 +5258,7 @@ func _start_attempt() -> void:
 	_exposed.clear()
 	_pike_count = 0
 	_pike_last = -INF
+	_clear_verb_items()
 	_spring_until = -1.0
 	_warden_slam_hits = 0
 	_cooldown = 0.0

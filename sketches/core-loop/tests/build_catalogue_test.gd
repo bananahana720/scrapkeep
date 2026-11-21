@@ -25,7 +25,7 @@ const Icons := preload("res://src/ui/icons.gd")
 # or passive, its stack rule is known and its cap fits the rule, every number is
 # finite, every description is at most eight words, every icon category, trigger and
 # element glyph is a real Icons id, every effect id is in item_effects' closed table,
-# the whole 64-item table is in the pool, the class items are offered only to their
+# the whole 69-item table is in the pool, the class items are offered only to their
 # class, a part waiting on a missing seam is never offered, generated recipes rebuild
 # identically from their id, and the rarity weights hold.
 
@@ -169,8 +169,11 @@ func _check_label() -> void:
 # and harpoon family); was anchor 18
 # 2026-10-22 (alpha wave 19, earned save): spare_frame carries mass and anchor; was anchor 19, mass 36
 # 2026-11-21 (wave 45 U6): Slag Pike carries kinetic and Halo Rig split; was kinetic 19, split 5
-const TAG_COUNTS := {"frost": 5, "arc": 16, "kinetic": 20, "split": 6, "spiral": 8, "chain": 9, "anchor": 20,
-	"speed": 32, "mass": 37}
+# 2026-11-21 (wave 45 U7): the five verb items: Backwash kinetic, Barbed Reel anchor and chain, Faultline
+# Cap mass and kinetic, Second Bell spiral (the echo tag, as Echo Charge), Long Leash chain; tags picked
+# so no pilot's kit share moves (offer_weights_test); was kinetic 20, spiral 8, chain 9, anchor 20, mass 37
+const TAG_COUNTS := {"frost": 5, "arc": 16, "kinetic": 22, "split": 6, "spiral": 9, "chain": 11, "anchor": 21,
+	"speed": 32, "mass": 38}
 const KINETIC_SHARE_MAX := 0.25
 
 
@@ -248,8 +251,8 @@ func _check_table_present() -> void:
 	var bowling: int = Items.TABLE.values().filter(func(r): return r.get("bwl", false)).size()
 	var happy: int = Items.TABLE.values().filter(func(r): return r.get("happy", false)).size()
 	var charge: int = Items.TABLE.values().filter(func(r): return r.get("base", "") == "charge" and not r.get("happy", false)).size()
-	_report("64-item table in the pool", missing.is_empty() and table == 64 and bowling == 8 and happy == 5 and charge == 8,
-		"%d table items (61 new + 3 pattern rows), %d authored rows in all; bowling %d, happy accidents %d, charge %d; missing %s"
+	_report("69-item table in the pool", missing.is_empty() and table == 69 and bowling == 8 and happy == 5 and charge == 8,
+		"%d table items (66 new + 3 pattern rows), %d authored rows in all; bowling %d, happy accidents %d, charge %d; missing %s"
 			% [table, Parts.ids().size(), bowling, happy, charge, missing])
 
 
