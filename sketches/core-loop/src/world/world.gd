@@ -26,6 +26,8 @@ const Breach := preload("res://src/world/breach.gd")
 const EventFamilies := preload("res://src/world/events/families.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const RogueDirector := preload("res://src/world/rogue_director.gd")
+const Destructibles := preload("res://src/world/destructibles.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
 # Writer D's module: the stage geometry, the event director, stage events and the
 # launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
@@ -317,6 +319,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	terrain.use(stage)
 	_add_contraptions()
 	var m = terrain.map()
+	_host_destructibles(m)
 	if "swaps" in m:
 		for id in m.swaps:
 			m.apply_swap(id, false)
@@ -370,6 +373,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 # the next stage_entered rebuilds the stage. Flow publishes this on arena entry and on
 # every arena retry.
 func _on_stage_content_cleared(_reason: String) -> void:
+	_release_destructibles()
 	if events != null:
 		_publish(events.end_all())
 	EventFamilies.release(events, event_families)
@@ -392,6 +396,49 @@ func _on_stage_content_cleared(_reason: String) -> void:
 	if _pressure > 0.0:
 		ctx.events.pressure_changed.emit(0.0)
 	_pressure = -1.0
+
+
+# The stage's heft destructibles (destructibles.gd): one instance a stage entry, rebuilt on a retry and freed with the
+# stage. A map with no destructible_rows hosts none, so nothing is built, ticked or hashed for it.
+func _host_destructibles(map) -> void:
+	_release_destructibles()
+	var rows := _destructible_rows(map)
+	if rows.is_empty():
+		return
+	var pieces := Destructibles.new()
+	pieces.name = "Destructibles"
+	pieces.build({"destructible_rows": rows}, {"ctx": ctx, "root": ctx.root, "owned_ids": _contraption_ids(map),
+		"no_visuals": not ParkTerrain.draw_regions})
+	ctx.destructibles = pieces
+	ctx.player.bind_destructibles(pieces, Callable(ctx.run, "heft_class"))
+
+
+func _release_destructibles() -> void:
+	if ctx == null or ctx.destructibles == null:
+		return
+	var pieces: Node = ctx.destructibles
+	ctx.destructibles = null
+	ctx.player.bind_destructibles(null)
+	if is_instance_valid(pieces):
+		pieces.teardown()
+		pieces.queue_free()
+
+
+static func _destructible_rows(map) -> Array:
+	if "park" in map and (map.park as Dictionary).has("destructible_rows"):
+		return map.park["destructible_rows"]
+	if "destructible_rows" in map:
+		return map.destructible_rows
+	return []
+
+
+# The ids the stage's contraptions already own, which a destructible row may not take.
+static func _contraption_ids(map) -> Array:
+	var ids: Array = []
+	if "contraptions" in map:
+		for spec in map.contraptions:
+			ids.append(String(spec.get("id", "")))
+	return ids
 
 
 func _mark_landing(stage: int, retry: bool) -> void:
@@ -442,6 +489,8 @@ func _physics_process(delta: float) -> void:
 		_hold_ride(delta)
 	var ball: Vector3 = player.ball_position()
 	var velocity: Vector3 = player.state.velocity
+	if is_instance_valid(ctx.destructibles):
+		ctx.destructibles.on_ball(ball, velocity, ctx.run.heft_class(), delta)
 	var riding: bool = ride != null or launch.flying()
 	for fact in bay.step(delta, ball, velocity, riding):
 		_bay_fact(fact)

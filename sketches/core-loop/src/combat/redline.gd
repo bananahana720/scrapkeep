@@ -46,6 +46,8 @@ const OFF := "off"
 const WATCH := "watch"
 const ON := "on"
 
+# (at, radius, source) -> void: the shell's blast reaching the stage's destructibles, wired by the ball; unwired, none.
+var blast_props := Callable()
 var mode := OFF
 var value := 0.0
 # Seconds the redline shell has waited for a hit; the cook-off fires at COOK_OFF_S.
@@ -189,6 +191,8 @@ func spend(kind: String, at: Vector3, force: float) -> float:
 	_set_value(0.0)
 	detonations += 1
 	var blast := force * BLAST_FORCE
+	if blast_props.is_valid():
+		blast_props.call(at, BLAST_RADIUS, "redline")
 	detonated.emit(at, blast)
 	return blast
 

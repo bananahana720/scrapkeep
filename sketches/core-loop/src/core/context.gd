@@ -47,6 +47,9 @@ var boss: Node
 var stages = StageDefs
 # The node modules add their world children to.
 var root: Node3D
+# The stage's heft destructibles (src/world/destructibles.gd), set by world on each stage entry and null
+# outside a stage. Blast sources reach it through break_props only.
+var destructibles: Node
 # One seeded stream per run for anything a module randomizes.
 var rng := RandomNumberGenerator.new()
 # Set by the spine tests that measure momentum: while true, modules spawn no enemies
@@ -90,6 +93,13 @@ func heading() -> Vector3:
 # for the spawner only need that method.
 func can_spawn() -> bool:
 	return spawner != null and spawner.has_method("spawn_enemy")
+
+
+# One blast a source already resolved: `radius` is the ring it committed, never a second one. Breaks every
+# destructible the ring reaches that the run's heft class plus one meets. Safe with no stage standing.
+func break_props(at: Vector3, radius: float, source: String) -> void:
+	if destructibles != null and is_instance_valid(destructibles):
+		destructibles.on_blast(at, radius, source, 1, run.heft_class() if run != null else -1)
 
 
 # A short freeze on a big player-caused hit, for weight. The spine caps it at 60 ms
