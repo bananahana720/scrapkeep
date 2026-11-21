@@ -69,9 +69,10 @@ const PARTS := [
 	# 2026-11-21 (wave 45 B1): the two weapon-pattern transformers (Fan Spread, Helix Drill) and a
 	# curated set of high-identity authored rows from items.gd, each with a touch verb. The nine
 	# shift-board unlock rows, the burden parts, Spare Frame and the three seam-gated non-pattern
-	# rows (Vault Battery, Anchor Spring, Feedback Loop) stay out.
+	# rows (Vault Battery, Anchor Spring, Feedback Loop) stay out, and so does Slipstream: it carries an air_control
+	# movement mod, and no shared part may (parts_pool_movement_test).
 	"fan_spread", "helix_drill", "domino_wire", "echo_charge", "overcharge_coil", "ten_pin",
-	"synergy_lens", "long_lane", "slipstream", "crush_guard", "last_word", "warden_ward", "par_chip",
+	"synergy_lens", "long_lane", "crush_guard", "last_word", "warden_ward", "par_chip",
 	"cloak_flask", "jet_vent", "quick_spool", "reserve_tank", "gutter_guard", "tumbler_bearing",
 	"tracer_round", "magnet_coil",
 ]

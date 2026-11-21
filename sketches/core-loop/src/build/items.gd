@@ -144,7 +144,7 @@ const TABLE := {
 	"tumbler_bearing": {"maker": "highdraft_roosts", "touches": "jump", "base": "mobility", "rarity": "uncommon", "trigger": "on_land", "stack": "capped", "cap": 1,
 		"tags": ["speed", "mass"], "verb": "Hard landings refill your air jump", "text": "Hard landings refill your air jump",
 		"effect": {"do": "air_jump", "every": 1.0}},
-	"slipstream": {"maker": "highdraft_roosts", "touches": "boost", "base": "mobility", "rarity": "rare", "trigger": "on_speed_tier_up", "stack": "linear", "tags": ["speed", "spiral"],
+	"slipstream": {"maker": "highdraft_roosts", "base": "mobility", "rarity": "rare", "trigger": "on_speed_tier_up", "stack": "linear", "tags": ["speed", "spiral"],
 		"verb": "Speeding up adds a speed burst", "text": "Speeding up adds 10% speed, to a limit",
 		"effect": {"do": "speed", "gain": 0.1, "max_speed": 45.0, "every": 1.0}, "mods": {"air_control": 1.15}},
 	"anchor_spring": {"maker": "waking", "base": "mobility", "rarity": "uncommon", "stack": "linear", "cap": 3, "tags": ["anchor", "speed"],
