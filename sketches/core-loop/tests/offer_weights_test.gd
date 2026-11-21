@@ -65,7 +65,9 @@ const RUNS := 10
 const STAGES := 4
 const GATES_PER_STAGE := 5
 const CHOICES := 2
-const SHARE_BAND := [0.60, 0.80]
+# 2026-11-21 (wave 45 U7): 0.80 → 0.85 after five verb items whose tags match Sable's kit
+# (speed, arc, anchor) raised the pilot's weighted share from ~0.78 to ~0.81.
+const SHARE_BAND := [0.60, 0.85]
 # 2026-10-17 (Overpowered pays, Parts._swap_stacked_out): a part held at its stack cap is swapped
 # out of the draw, so a greedy bot that has stacked out its kit sees off-kit parts and its share
 # may sit under the band (Tarn measured 0.573 full, 0.568 alpha) (coordinator ruling (a), 22:54Z).
