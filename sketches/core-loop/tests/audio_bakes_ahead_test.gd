@@ -63,34 +63,34 @@ func _run() -> void:
 	# Moss's bay line rendered 30 to 45 ms on the frame the ball rolled in: it renders on a worker
 	# and sounds the frame it is done, so the frame that asks for it does no synth work.
 	var line := "Pad's hot. Go on, before the clock notices."
-	var cues: int = audio.cue_log.size()
+	var cues: int = audio.cue_log_total
 	var spoke: bool = audio.speak("shop_left", line, 0)
 	_t.check("BA-4 a babble line is asked for without rendering it on the asking frame",
-		spoke and audio.babble_state(line, 0) == "rendering" and audio.cue_log.size() == cues,
-		"spoke %s, state %s, cues %d -> %d" % [spoke, audio.babble_state(line, 0), cues, audio.cue_log.size()])
+		spoke and audio.babble_state(line, 0) == "rendering" and audio.cue_log_total == cues,
+		"spoke %s, state %s, cues %d -> %d" % [spoke, audio.babble_state(line, 0), cues, audio.cue_log_total])
 	var late: bool = await _settle(audio, line, 0)
-	var said: Array = audio.cue_log.back() if audio.cue_log.size() > cues else []
+	var said: Array = audio.cue_log.back() if audio.cue_log_total > cues else []
 	_t.check("BA-4 it sounds once its worker is done, and is kept", said.size() >= 3 and said[0] == "shop_left" and said[1] == "babble" and said[2] == "now"
 		and audio.babble_state(line, 0) == "ready", "%scue %s, state %s" % ["TIMED OUT: " if late else "", said, audio.babble_state(line, 0)])
-	cues = audio.cue_log.size()
+	cues = audio.cue_log_total
 	audio.speak("shop_left", line, 0)
-	_t.check("BA-4 a kept line sounds on the frame it is asked for", audio.cue_log.size() == cues + 1, "cues %d -> %d" % [cues, audio.cue_log.size()])
+	_t.check("BA-4 a kept line sounds on the frame it is asked for", audio.cue_log_total == cues + 1, "cues %d -> %d" % [cues, audio.cue_log_total])
 	# A stage change drops a line still rendering: it never sounds.
 	var gone := "Back again. The Warden keeps your last shell."
 	audio.speak("shop_entered", gone, 0)
-	cues = audio.cue_log.size()
+	cues = audio.cue_log_total
 	_game.events.stage_entered.emit(2, false)
 	late = await _settle(audio, gone, 0)
-	var babbled: Array = audio.cue_log.slice(cues).filter(func(row: Array): return row[1] == "babble" and row[2] == "now")
+	var babbled: Array = audio.cues_since(cues).filter(func(row: Array): return row[1] == "babble" and row[2] == "now")
 	_t.check("BA-5 a line whose stage changed before it rendered stays silent, and is still rendered and kept",
 		babbled.is_empty() and audio.babble_state(gone, 0) == "ready", "%sbabble cues after: %s, state %s" % ["TIMED OUT: " if late else "", babbled, audio.babble_state(gone, 0)])
 	# A call card closing is no business of a bay line: the line plays out (call_end ends a caller only).
 	var kept := "Shelf's there. Hook's not for sale."
 	audio.speak("shop_entered", kept, 0)
-	cues = audio.cue_log.size()
+	cues = audio.cue_log_total
 	audio.call_end()
 	late = await _settle(audio, kept, 0)
-	babbled = audio.cue_log.slice(cues).filter(func(row: Array): return row[1] == "babble" and row[2] == "now")
+	babbled = audio.cues_since(cues).filter(func(row: Array): return row[1] == "babble" and row[2] == "now")
 	_t.check("BA-6 a call card closing does not silence a bay line still rendering", babbled.size() == 1, "%sbabble cues after: %s" % ["TIMED OUT: " if late else "", babbled])
 	root.remove_child(_game)
 	_t.check("BA-3 leaving the tree lets go of them", not Audio.band_bakes()["held"], "bakes %s" % [Audio.band_bakes()])
