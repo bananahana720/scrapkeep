@@ -88,10 +88,13 @@ func clear() -> void:
 
 # bolt needs: origin, dir, speed, max_dist, damage, kind, weapon_id, radius, knock,
 # chain_jumps, chain_range, chain_falloff, color, wave_amp, wave_hz, phase; bits, the
-# shot's ShotBits set, is optional and defaults to the empty set.
+# shot's ShotBits set, is optional and defaults to the empty set, and so is spent, the bits
+# already used up (the pierce bit after its one pass).
 func fire(bolt: Dictionary) -> void:
 	if not bolt.has("bits"):
 		bolt["bits"] = 0
+	if not bolt.has("spent"):
+		bolt["spent"] = 0
 	if _bolts.size() >= MAX_LIVE:
 		_bolts.pop_front()
 		retired += 1
@@ -110,8 +113,8 @@ func fire(bolt: Dictionary) -> void:
 
 
 # A child bolt (a split, a chain jump) from its parent: the parent's record with the
-# overrides applied and its flight restarted, and always the parent's ShotBits set, so a
-# child can neither gain nor lose a bit (SI4).
+# overrides applied and its flight restarted, and always the parent's ShotBits set and the
+# bits it has spent, so a child can neither gain a bit nor use one twice (SI4).
 static func child(parent: Dictionary, overrides: Dictionary) -> Dictionary:
 	var out := parent.duplicate()
 	for key in ["travelled", "age", "shown", "right", "up", "exclude"]:
@@ -119,7 +122,19 @@ static func child(parent: Dictionary, overrides: Dictionary) -> Dictionary:
 	for key in overrides:
 		out[key] = overrides[key]
 	out["bits"] = ShotBits.union(0, int(parent.get("bits", 0)))
+	out["spent"] = ShotBits.union(0, int(parent.get("spent", 0)))
 	return out
+
+
+# How many more machines the bolt passes through: its pattern pierce plus one while it holds
+# the pierce bit unspent (ABILITY-MUTATIONS.md B3), so the two add.
+static func passes_left(bolt: Dictionary) -> int:
+	return int(bolt.get("pierce", 0)) + (1 if _pierce_bit_ready(bolt) else 0)
+
+
+static func _pierce_bit_ready(bolt: Dictionary) -> bool:
+	var pierce := ShotBits.bit("pierce")
+	return ShotBits.has(int(bolt.get("bits", 0)), pierce) and not ShotBits.has(int(bolt.get("spent", 0)), pierce)
 
 
 func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells: Array = []) -> void:
@@ -148,23 +163,27 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 			fresh = false
 			if on_shell.is_valid() and on_shell.call(bolt, shell["shell"]):
 				continue
-		var spent := false
+		var stopped := false
 		while not target.is_empty():
 			fresh = false
 			var hit_id: int = target["enemy"].get_instance_id()
 			if on_hit.is_valid():
 				on_hit.call(bolt, target["enemy"], target["point"], target["part"])
-			if bolt["pierce"] <= 0:
-				spent = true
-				break
 			# A piercing bolt passes through: it keeps its line and corkscrew phase and
-			# looks for the next machine further along the same segment.
-			bolt["pierce"] -= 1
+			# looks for the next machine further along the same segment. The pattern's
+			# pierce goes first, then the pierce bit's one pass, which it then spends.
+			if bolt["pierce"] > 0:
+				bolt["pierce"] -= 1
+			elif _pierce_bit_ready(bolt):
+				bolt["spent"] = ShotBits.union(int(bolt["spent"]), ShotBits.bit("pierce"))
+			else:
+				stopped = true
+				break
 			(bolt["exclude"] as Array).append(hit_id)
 			snapshot = _snapshot(enemies)
 			fresh = true
 			target = _first_enemy(from, end, bolt["radius"], snapshot, bolt["exclude"])
-		if spent:
+		if stopped:
 			continue
 		if blocked:
 			fresh = false

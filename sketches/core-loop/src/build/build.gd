@@ -28,6 +28,7 @@ const MakerBonuses := preload("res://src/build/maker_bonuses.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const Panels := preload("res://src/build/panels.gd")
 const PanelShell := preload("res://src/build/panel_shell.gd")
+const ShotBits := preload("res://src/build/shot_bits.gd")
 
 # Writer B's module: build and growth. Scrap magnetizes to the ball and sticks to it;
 # drive-through fabricators turn scrap into parts on the roll; the reward gates after
@@ -167,6 +168,11 @@ var sheet
 # SI5: the derived sheet between part-list changes; recompute() reads it, so pickup,
 # respec, run start and stage entry refold only the categories the changed parts touch.
 var stat_cache = StatCache.new()
+# The held parts' ShotBits masks in held order, refreshed with the stat cache (recompute), and
+# the shot they make under the live mask it was folded at (shot_bits()).
+var _shot_masks: Array = []
+var _shot := {}
+var _shot_live := -1
 # v2 W4 loot: the trigger bus, what held items do, and the loot's own seeded stream
 # (reseeded each stage entry, so a retry replays the same procs and never draws from
 # the run's shared ctx.rng).
@@ -345,6 +351,40 @@ func punch_bonus() -> float:
 # Flat damage Punch Rivet panels add to every weapon hit and ball contact (combat.gd).
 func panel_punch() -> float:
 	return sheet.panel_punch
+
+
+# The shot's behaviour bits (design-v3/ABILITY-MUTATIONS.md B1): the held parts' bits in held
+# order under the live mask (tuning shot_bits_live), capped by ShotBits.shot(). A bit the
+# live mask leaves out never takes a slot. 0 while the weapon row says it fires no bolts.
+func shot_bits() -> int:
+	return int(_shot_fold()["bits"]) if _weapon_fires_bolts() else 0
+
+
+# The live bits held past the cap, by name in table order: the build readout strikes them out.
+func dropped_shot_bits() -> Array:
+	return ShotBits.names(int(_shot_fold()["dropped"])) if _weapon_fires_bolts() else []
+
+
+func _shot_fold() -> Dictionary:
+	var live_mask := int(ctx.tuning.f("shot_bits_live"))
+	if _shot.is_empty() or live_mask != _shot_live:
+		_shot_live = live_mask
+		_shot = ShotBits.shot(_shot_masks.map(func(mask: int) -> int: return ShotBits.live(mask, live_mask)))
+	return _shot
+
+
+func _weapon_fires_bolts() -> bool:
+	var abilities = ctx.player.get("abilities") if ctx.player != null else null
+	return abilities == null or bool(abilities.cap(AbilityState.WEAPON, "bolts", true))
+
+
+func _fold_shot_masks() -> void:
+	_shot_masks = []
+	for part_id in ctx.run.parts:
+		var d: Resource = Parts.def(part_id)
+		if d != null:
+			_shot_masks.append(int(d.bits))
+	_shot = {}
 
 
 func active_synergies() -> Array:
@@ -599,6 +639,7 @@ func _step_loot(delta: float) -> void:
 func recompute() -> void:
 	_sync_scrap_flags()
 	sheet = stat_cache.sync(ctx.run.parts)
+	_fold_shot_masks()
 	_fold_panels()
 	effects.refresh(ctx.run.parts)
 	var mass_hp: float = effects.mass_health(ctx.run.mass)

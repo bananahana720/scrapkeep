@@ -122,6 +122,9 @@ const SPECS := [
 	# The world whose boss ends the run won (W1-60, Andrew 12 Nov 22:06Z): "last" runs the whole
 	# stage table; "1" ends the world 1 sitting at Brindle, with its summary and HARD rung 1, instead
 	# of rolling on into the parked Dig.
+	# The shot bits the live game honours, as a ShotBits mask (design-v3/ABILITY-MUTATIONS.md
+	# B4): 17 is pierce (1) and heat (16). Bounce, pull and split join in later units.
+	{"key": "shot_bits_live", "label": "Live shot bits", "min": 0.0, "max": 31.0, "step": 1.0, "value": 17.0},
 	{"key": "final_world", "label": "Run ends after", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["last", "1"]},
 ]
 

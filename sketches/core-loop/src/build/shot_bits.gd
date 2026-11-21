@@ -122,6 +122,12 @@ static func shot(part_masks: Array) -> Dictionary:
 	return {"bits": bits, "dropped": without(dropped, bits)}
 
 
+# The bits of a set the live game honours: the tuning knob shot_bits_live is that mask
+# (ABILITY-MUTATIONS.md B4, rolled out a pair at a time).
+static func live(mask: int, live_mask: int) -> int:
+	return mask & live_mask
+
+
 # One tell per set bit, read off its single TABLE row: colour, sound and rule together.
 static func tells(mask: int) -> Array:
 	var out: Array = []
