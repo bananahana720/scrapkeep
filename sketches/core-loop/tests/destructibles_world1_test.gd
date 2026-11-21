@@ -22,10 +22,11 @@ extends SceneTree
 #         the tier ceiling (tier 5 ships only where class V is the median); breaking every stage piece adds at most
 #         0.078 heft (under 16% of the smallest class interval) and at most 3% of a stage's median cogs. Planted: an
 #         uncapped 100-scrap arm fails the bound.
-# Shortcuts (spec section 6): no world 1 row carries "shortcut" today. A shortcut must keep every rule above, so it
-# stands 20 m or more off every route leg; a graph search over both parks for a legal wall that forces a detour beyond
-# walking round the wall itself (the dam's best was 23 m, the same at every open-ground spot) found no narrow passage
-# for one to close. The check stays so a later card that finds one is held to it.
+# Shortcuts (spec section 6, W45 P3): each park carries one "shortcut" row, a long low run on open ground off every
+# line that keeps every rule above (no world 1 ground has a narrow passage a legal piece could close). Breaking it
+# saves the ride round its end: tests/w45_exploration_test.gd measures that on the committed graph and asks at
+# least SHORTCUT_SAVE_S at cruise. The anchor-post rule measures from the piece's footprint, so a long piece keeps
+# POST_CLEAR_M from its faces as a short one does.
 # T11, the snag roll, boots the game and is a separate mode of this file (the default run stays static):
 #   $GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop -s tests/destructibles_world1_test.gd -- --snag=park_dam
 # It rolls tools/qa/snag_probe.gd's lanes (ride lanes over a low piece, graze lanes along a tall one's faces) at
@@ -205,9 +206,10 @@ static func placement_errors(row: Dictionary, w: Dictionary) -> Array[String]:
 			continue
 		if not Geometry2D.intersect_polygons(grown, row_quad(prow)).is_empty():
 			out.append("row: on or beside %s %s" % [element, prow["id"]])
+	var quad := footprint_quad(row)
 	for post: Vector2 in w["posts"]:
-		if post.distance_to(p) < POST_CLEAR_M + r:
-			out.append("anchor: %.1f m from an anchor post" % post.distance_to(p))
+		if post.distance_to(p) < POST_CLEAR_M + r and quad_distance(quad, post) < POST_CLEAR_M:
+			out.append("anchor: %.1f m from an anchor post" % quad_distance(quad, post))
 			break
 	for c: Dictionary in park.get("contraption_rows", []):
 		if c.has("at"):
@@ -219,7 +221,7 @@ static func placement_errors(row: Dictionary, w: Dictionary) -> Array[String]:
 		if yp.distance_to(p) < YARD_CLEAR_M + r:
 			out.append("yard: %.1f m from %s" % [yp.distance_to(p), y["id"]])
 	if out.is_empty():
-		var why_apron := apron_error(w, p, r, foot)
+		var why_apron := apron_error(w, row, foot)
 		if why_apron != "":
 			out.append(why_apron)
 	return out
@@ -227,25 +229,52 @@ static func placement_errors(row: Dictionary, w: Dictionary) -> Array[String]:
 
 # The ground round a piece: within APRON_M of its footprint no sample is more than APRON_RISE_M off its foot (no cliff
 # edge or bank beside it), and no two neighbouring samples differ by more than APRON_LIP_M (no lip). "" when clear.
-static func apron_error(w: Dictionary, p: Vector2, r: float, foot: float) -> String:
-	var half := r + APRON_M
-	var n := ceili(half * 2.0 / APRON_STEP_M) + 1
+# The samples run in the piece's own frame over its footprint grown by APRON_M, so a long run is judged on the
+# ground beside it, not on a square round its half-diagonal.
+static func apron_error(w: Dictionary, row: Dictionary, foot: float) -> String:
+	var at := _v3(row["at"])
+	var body := Vector2(float(row["size"][0]), float(row["size"][2])) * 0.5
+	var half := body + Vector2.ONE * APRON_M
+	var basis := Basis(Vector3.UP, deg_to_rad(float(row.get("yaw_deg", 0.0))))
+	var nx := ceili(half.x * 2.0 / APRON_STEP_M) + 1
+	var nz := ceili(half.y * 2.0 / APRON_STEP_M) + 1
 	var heights := PackedFloat32Array()
-	heights.resize(n * n)
+	heights.resize(nx * nz)
+	heights.fill(NAN)
 	var rise := 0.0
-	for j in n:
-		for i in n:
-			var h := ground_y(w, p + Vector2(-half + i * APRON_STEP_M, -half + j * APRON_STEP_M))
-			heights[j * n + i] = h
+	for j in nz:
+		for i in nx:
+			var x := -half.x + i * APRON_STEP_M
+			var z := -half.y + j * APRON_STEP_M
+			# Only ground within APRON_M of the footprint's edge: the rounded apron, not the grown box's corners.
+			if Vector2(maxf(absf(x) - body.x, 0.0), maxf(absf(z) - body.y, 0.0)).length() > APRON_M:
+				continue
+			var local: Vector3 = basis * Vector3(x, 0.0, z)
+			var h := ground_y(w, Vector2(at.x + local.x, at.z + local.z))
+			heights[j * nx + i] = h
 			rise = maxf(rise, absf(h - foot))
 	if rise > APRON_RISE_M:
 		return "apron: ground within %.0f m is %.1f m off the foot, want at most %.1f" % [APRON_M, rise, APRON_RISE_M]
-	for j in n:
-		for i in n:
-			var h := heights[j * n + i]
-			if (i + 1 < n and absf(heights[j * n + i + 1] - h) > APRON_LIP_M) or (j + 1 < n and absf(heights[(j + 1) * n + i] - h) > APRON_LIP_M):
-				return "apron: a ground lip within %.0f m" % APRON_M
+	for j in nz:
+		for i in nx:
+			var h := heights[j * nx + i]
+			if is_nan(h):
+				continue
+			for n in [[i + 1, j], [i, j + 1]]:
+				if n[0] < nx and n[1] < nz and not is_nan(heights[n[1] * nx + n[0]]) and absf(heights[n[1] * nx + n[0]] - h) > APRON_LIP_M:
+					return "apron: a ground lip within %.0f m" % APRON_M
 	return ""
+
+
+# The plan distance from a point to a footprint quad, 0 inside it. A long piece keeps POST_CLEAR_M from its faces,
+# not from a circle round its centre that would ask 44 m of a 64 m wall's middle.
+static func quad_distance(quad: PackedVector2Array, q: Vector2) -> float:
+	if Geometry2D.is_point_in_polygon(q, quad):
+		return 0.0
+	var best := INF
+	for k in quad.size():
+		best = minf(best, q.distance_to(Geometry2D.get_closest_point_to_segment(q, quad[k], quad[(k + 1) % quad.size()])))
+	return best
 
 
 # Pairs of rows whose footprints stand closer than PIECE_GAP_M: ["a b distance"].
@@ -593,6 +622,13 @@ func _planted(w: Dictionary) -> void:
 	# On a forbidden row: the dam's gate_piers anchor field.
 	var piers := _moved(w, good, Vector2(0.0, 605.0))
 	t.check("planted: a row on the gate piers fails", _has(placement_errors(piers, w), "row") or _has(placement_errors(piers, w), "keepout"))
+	# A foot 2 m above the ground round it (a piece on a shelf's edge): the apron reads the drop.
+	var foot := float(good["at"][1]) - float(good["size"][1]) * 0.5
+	t.check("planted: ground 2 m under the foot fails the apron", apron_error(w, good, foot + 2.0).begins_with("apron:"))
+	# Beside an anchor post: 5 m off the nearest post, measured from the piece's footprint.
+	var post: Vector2 = (w["posts"] as PackedVector2Array)[0]
+	var by_post := _moved(w, good, post + Vector2(5.0 + radius_of(good), 0.0))
+	t.check("planted: a row 5 m from an anchor post fails", _has(placement_errors(by_post, w), "anchor"))
 	var guarded := good.duplicate(true)
 	guarded["society"] = "hohokam"
 	t.check("planted: a guarded-society row is refused", _has(placement_errors(guarded, w), "refused"))

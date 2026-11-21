@@ -138,6 +138,35 @@ const DOOR := {
 const DOOR_RUNS := "door.runs_started"
 const DOOR_FOR := "door.brindle_clock_run"
 
+# Mend wards (W45 P3): one per Spillway park, standing in a dead end off every line, so it is found by leaving the
+# route. activities.gd builds and runs them (its MendWard). A ward mends only a ball that stops in its ring while the
+# guard it wakes presses it (ruling cu: anything that eases play ships with a matching pressure).
+const WARDS := {
+	"dam_ledge_ward": {"world": 1, "map": "park_dam", "site": "lobber_ledge", "at": [-185, 455]},
+	"flume_pond_ward": {"world": 1, "map": "park_flume", "site": "weir_pond", "at": [-650, -690]},
+}
+
+# Lore plates (W45 P3): a park row's `fragment` names the crew record left at that spot; the plates that have one
+# are flush bronze survey discs set in the ground at the row (the landmark's at its bay dock). Rolling over a disc
+# files the field note it carries (lore_rows.gd) once, quietly: no card, no word on screen. No ref_ fragment is
+# listed, so a guarded row (park_schema.gd GUARDED_SOCIETIES carries only those) never gets a plate.
+const PLATES := {
+	"dam_era_survey_deck": "lore.park_dam.note.plumb",
+	"dam_era_gate_flags": "lore.park_dam.note.gate_log",
+	"ancient_eye_marks": "lore.park_dam.note.eye",
+	"dam_era_incline_tally": "lore.park_dam.note.incline",
+	"dam_era_haul_sign": "lore.park_dam.note.fleet",
+	"dam_dedication_plaque": "lore.park_dam.note.apron",
+	"dam_era_flume_survey": "lore.park_flume.note.weir",
+	"dam_era_trestle_tag": "lore.park_flume.note.bents",
+	"dam_era_siphon_plate": "lore.park_flume.note.siphon",
+	"dam_era_rim_milepost": "lore.park_flume.note.milepost",
+	"dam_era_boom_tag": "lore.park_flume.note.boom",
+	"dam_era_wasteway_gauge": "lore.park_flume.note.wasteway",
+	"dam_era_annex_dial": "lore.park_flume.note.annex",
+	"headhouse_relic_plate": "lore.park_flume.note.drum",
+}
+
 # The world codex rows each world's camp count reads: its field finds, then the parks' authored
 # secret caches (the contraption rows that carry a codex id).
 const WORLD_CODEX := {1: ["spillway_turbine_seep", "spillway_shift_radio", "spillway_flume_seep", "spillway_crew_radio",
@@ -209,6 +238,34 @@ static func find_sites(map_id: String, seed: int) -> Array:
 		out.append({"id": "cracked_cache", "row": id, "site": spot["site"], "find": id, "kind": f["kind"],
 			"at": Vector2(float(spot["at"][0]), float(spot["at"][1])), "pay": FIND_PAY.duplicate(true),
 			"face": Vector2(float(spot["face"][0]), float(spot["face"][1])).normalized()})
+	return out
+
+
+# The mend wards a park map holds: [{id, site, at: Vector2}]. Every profile and every run gets them.
+static func ward_sites(map_id: String) -> Array:
+	var out := []
+	for id in WARDS:
+		var w: Dictionary = WARDS[id]
+		if w["map"] == map_id:
+			out.append({"id": id, "site": w["site"], "at": Vector2(float(w["at"][0]), float(w["at"][1]))})
+	return out
+
+
+# The lore plates a park holds: [{fragment, note, row, at: Vector2}], in the park file's order (its landmark first).
+# A plate stands on its row's centre; the landmark's stands on its bay dock, off the Warden's floor.
+static func plate_sites(park: Dictionary) -> Array:
+	var out := []
+	var landmark: Dictionary = park.get("landmark", {})
+	var fragment := String(landmark.get("fragment", ""))
+	if PLATES.has(fragment):
+		var dock: Array = landmark.get("bay_dock", {}).get("at", landmark.get("beacon", landmark.get("at", [0, 0])))
+		out.append({"fragment": fragment, "note": PLATES[fragment], "row": String(landmark.get("id", "")),
+			"at": Vector2(float(dock[0]), float(dock[1]))})
+	for row: Dictionary in park.get("park_rows", []):
+		fragment = String(row.get("fragment", ""))
+		if PLATES.has(fragment):
+			out.append({"fragment": fragment, "note": PLATES[fragment], "row": String(row["id"]),
+				"at": Vector2(float(row["at"][0]), float(row["at"][1]))})
 	return out
 
 
