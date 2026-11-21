@@ -102,6 +102,11 @@ const MASS_K_SATURATION := 990.0
 # A build synergy's strike: its force is the punch (build scales it by heft), and it
 # always meets body plating, since it is never a landing on a weak point.
 const SYNERGY := "synergy"
+# A shattered destructible's shrapnel (world/destructibles.gd _shrapnel): a strike like any other through the
+# damage door, so crit, armour, elite affixes and every on-hit listener see it. Its source is one class, whatever
+# piece threw it, so the delivered-damage ledger keeps one bucket instead of one per piece. It is not a ball
+# contact, so Redline (SPEND_KINDS) never spends on it.
+const DEBRIS := "debris"
 const FIGHT_GROUPS := ["enemy", "enemy_shot", "telegraph"]
 const CHIP := 0.2
 # The spec's values, used only for a warden field a stage def is missing.
@@ -1241,6 +1246,8 @@ static func _bump(map: Dictionary, key: String, amount: float) -> void:
 
 
 func _classify_source(kind: String, explicit: String) -> String:
+	if kind == DEBRIS:
+		return DEBRIS
 	if explicit != "":
 		return explicit
 	if kind == SYNERGY:
@@ -2836,6 +2843,7 @@ func _ult_peak(at: Vector3) -> void:
 func _ult_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 	var radius: float = ultimate.landing_radius()
 	effects.ring(at, radius, ctx.player.class_color())
+	ctx.break_props(at, radius, "ultimate")
 	var hits := 0
 	var dealt := 0.0
 	for enemy in get_tree().get_nodes_in_group("enemy"):
@@ -3397,6 +3405,7 @@ func tally_landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	var radius: float = ultimate.landing_radius() + (Weapons.FLY_LANDING_BONUS if id == "plate_flywheel" else 0.0)
 	var amount: float = Ultimate.LANDING_DAMAGE * heft * chain
 	effects.ring(at, radius, ClassDef.TALLY_COLOR)
+	ctx.break_props(at, radius, "ultimate")
 	if not link_group.is_empty():
 		link_group["spent"] = true
 	var struck := {}
