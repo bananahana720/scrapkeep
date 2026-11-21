@@ -2275,14 +2275,15 @@ func _on_bolt_flight(bolt: Dictionary, from: Vector3, to: Vector3) -> bool:
 	return int(burst["detonated"]) > 0
 
 
-# Hoar Barrel: frost round a machine the marked shot hit; a slab that frost froze is spared from
-# the same shot's crossing, so it never bursts the ice it just laid.
-func _hoar_patch(bolt: Dictionary, at: Vector3) -> void:
+# Hoar Barrel: frost round a machine the marked shot hit, with an ice crystal where the shot
+# struck (`point`, on the body's near face, so the body never hides it); a slab that frost froze
+# is spared from the same shot's crossing, so it never bursts the ice it just laid.
+func _hoar_patch(bolt: Dictionary, at: Vector3, point: Vector3) -> void:
 	var field = _field()
 	if field == null:
 		return
 	var slab: Dictionary = field.frost_patch(at, HOAR_FROST_RADIUS, "item_proc")
-	effects.frost_flash(at)
+	effects.frost_flash(point)
 	if not slab.is_empty() and bolt.get("hoar_spared") is Array:
 		(bolt["hoar_spared"] as Array).append(int(slab["id"]))
 
@@ -2416,7 +2417,7 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 	var hit_knock := 0.0 if not pull_plan.is_empty() else float(bolt["knock"])
 	_hit(enemy, bolt["kind"], damage, bolt["dir"], hit_knock, part, bolt.get("source", "weapon"))
 	if bool(bolt.get("hoar", false)) and String(bolt.get("source", "")) == "weapon":
-		_hoar_patch(bolt, from)
+		_hoar_patch(bolt, from, point)
 	if not pull_plan.is_empty() and is_instance_valid(enemy) and not enemy.is_dead():
 		enemy.knock(pull_plan["dir"], float(pull_plan["force"]))
 		acts = ShotBits.union(acts, ShotBits.bit("pull"))

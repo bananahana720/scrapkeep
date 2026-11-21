@@ -25,12 +25,13 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # 8    planted: a pull bolt on a machine heavier than the pilot draws no pull arrow.
 # 9    Grapeshot Press: the split fork narrows to +/- 8 deg and pops a brighter brass flash; a
 #      plain split stays at +/- 18 deg with no pop.
-# 10-11 Hoar Barrel: a piercing weapon hit lands a six-armed ice crystal on the struck machine,
-#      inside the field's frost ring (never a second ring on it); planted: a piercing shot without
-#      the evolution lands none.
+# 10-11 Hoar Barrel: a piercing weapon hit lands a six-armed ice crystal where the shot struck, on
+#      the face toward the shooter, inside the field's frost ring (never a second ring on it);
+#      planted: a piercing shot without the evolution lands none.
 # 12-13 Fault Hammer: a slate rim on the committed radius from detonation to fade, and the pilot's
 #      ring running out inside it; planted: without the evolution no aftershock ring.
-# 14   100 rapid bit tells hold at Effects.BIT_CAP, newest kept, and never evict a live aftershock.
+# 14   100 rapid bit tells hold at Effects.BIT_CAP, newest kept, and 20 crystals hold at
+#      Effects.PAYOFF_CAP; neither evicts a live aftershock.
 # 15   the density governor thins every flair mark's alpha and life in a crowd, a bit shape's size
 #      too, and never a payoff's committed radius.
 # 16   Reduce flashes cuts every flair mark to FlashGuard's information share and tones the pop.
@@ -459,11 +460,13 @@ func _check_hoar() -> void:
 		var reach := 0.0
 		for seg in lines:
 			reach = maxf(reach, maxf(_flat((seg[0] as Vector3) - at).length(), _flat((seg[1] as Vector3) - at).length()))
-		ok = _all_colour(lines, Palette.ICE) and _flat((frost[0]["at"] as Vector3) - at).length() < 0.01 \
-			and lines.size() == 3 * Effects.FROST_POINTS and reach > 0.3 and reach < Combat.HOAR_FROST_RADIUS * 0.5
-		detail = "one ice crystal on the struck machine, %d arms reaching %.2f m inside the %.1f m frost ring, %d lines in %s; bit marks %s" % [
-			Effects.FROST_POINTS, reach, Combat.HOAR_FROST_RADIUS, lines.size(), lines[0][2], hoar["bits"]]
-	_report("hoar barrel lands an ice crystal on the machine", ok, detail)
+		# The shot flies -z, so the struck point is on the machine's +z face, toward the shooter.
+		var near_face: float = (frost[0]["at"] as Vector3).z - at.z
+		ok = _all_colour(lines, Palette.ICE) and _flat((frost[0]["at"] as Vector3) - at).length() < 1.5 and near_face > 0.1 \
+			and lines.size() == 3 * Effects.FROST_POINTS and reach > 0.3 and reach < Combat.HOAR_FROST_RADIUS
+		detail = "one ice crystal at the struck point, %.2f m toward the shooter, %d arms reaching %.2f m inside the %.1f m frost ring, %d lines in %s; bit marks %s" % [
+			near_face, Effects.FROST_POINTS, reach, Combat.HOAR_FROST_RADIUS, lines.size(), lines[0][2], hoar["bits"]]
+	_report("hoar barrel lands an ice crystal where the shot struck", ok, detail)
 	_hold([])
 	var plain := _record(BALL + HOAR_SITE, Vector3.FORWARD, ShotBits.bit("pierce"))
 	var bare := _frost_after(plain, HOAR_SITE + Vector3(0.0, 0.0, 60.0))
@@ -528,17 +531,20 @@ func _check_cap() -> void:
 		var name: String = ShotBits.NAMES[i % ShotBits.NAMES.size()]
 		var bolt := _record(BALL + Vector3(0.0, 0.0, float(i)), Vector3.FORWARD, ShotBits.bit(name))
 		combat._bit_tell(ShotBits.bit(name), bolt, BALL + Vector3(0.0, 0.0, float(i)))
+	for i in 20:
+		_effects().frost_flash(BALL + Vector3(float(i), 0.0, 0.0))
 	var flair: Array = _effects().get("_flair")
 	var bits: Array = flair.filter(func(e): return Effects.is_bit_mark(e))
 	var quakes: Array = flair.filter(func(e): return e["kind"] == "quake")
+	var crystals: Array = flair.filter(func(e): return e["kind"] == "frost")
 	var newest: Vector3 = bits[bits.size() - 1]["at"] if not bits.is_empty() else Vector3.INF
 	var lines := 0
 	for entry in flair:
 		lines += Effects.flair_lines(entry).size()
-	_report("100 rapid bit tells stay within the cap", bits.size() == Effects.BIT_CAP and quakes.size() == 1
-		and newest.is_equal_approx(BALL + Vector3(0.0, 0.0, 99.0)),
-		"%d bit marks held (cap %d), newest at z %+.0f, aftershock still live %d, %d lines drawn" % [bits.size(), Effects.BIT_CAP,
-			newest.z - BALL.z, quakes.size(), lines])
+	_report("100 bit tells and 20 crystals stay within their caps", bits.size() == Effects.BIT_CAP and quakes.size() == 1
+		and crystals.size() == Effects.PAYOFF_CAP and newest.is_equal_approx(BALL + Vector3(0.0, 0.0, 99.0)),
+		"%d bit marks held (cap %d), newest at z %+.0f; %d crystals (cap %d); aftershock still live %d; %d lines drawn" % [bits.size(),
+			Effects.BIT_CAP, newest.z - BALL.z, crystals.size(), Effects.PAYOFF_CAP, quakes.size(), lines])
 	_effects().clear()
 
 

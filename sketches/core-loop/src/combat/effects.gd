@@ -24,8 +24,8 @@ const RING_SEGMENTS := 40
 # All are P5 player effects (FEEL-READABILITY.md 1.1): the density governor's band thins their
 # alpha and life in a crowd, and a bit shape's size too; a payoff's radius is the committed one and
 # never shrinks. Reduce flashes cuts them to FlashGuard's information share. Bit shapes hold at most
-# BIT_CAP (the hit-spark budget, FEEL-READABILITY.md 1.2) and payoffs PAYOFF_CAP, each dropping its
-# own oldest, so a burst of hits never erases an aftershock. Each mark's lines come from
+# BIT_CAP (the hit-spark budget, FEEL-READABILITY.md 1.2) and each payoff kind PAYOFF_CAP, each
+# dropping its own oldest, so neither a burst of hits nor a volley of crystals erases an aftershock. Each mark's lines come from
 # flair_lines(), the one place its shape is worked out.
 const BIT_LIFE := 0.16
 const PAYOFF_LIFE := 0.3
@@ -100,8 +100,8 @@ func bit_hit(bit_name: String, point: Vector3, dir: Vector3, aim := Vector3.ZERO
 		"color": ShotBits.TABLE[bit_name]["color"]}, BIT_ALPHA, BIT_LIFE, BIT_CAP)
 
 
-# Hoar Barrel's frost landing: a six-armed ice crystal on the struck machine, inside the frost
-# ring the element field draws round it (element_field.gd frost_patch).
+# Hoar Barrel's frost landing: a six-armed ice crystal where the shot struck, inside the frost
+# ring the element field draws round the machine (element_field.gd frost_patch).
 func frost_flash(at: Vector3) -> void:
 	_add_flair({"kind": "frost", "at": at, "color": Palette.ICE}, PAYOFF_ALPHA, PAYOFF_LIFE, PAYOFF_CAP)
 
@@ -116,14 +116,19 @@ static func is_bit_mark(entry: Dictionary) -> bool:
 	return String(entry["kind"]) in ShotBits.NAMES
 
 
+# The group a mark shares its cap with: every bit shape together, each payoff kind alone.
+static func cap_group(entry: Dictionary) -> String:
+	return "bit" if is_bit_mark(entry) else String(entry["kind"])
+
+
 func _add_flair(entry: Dictionary, alpha: float, life: float, cap: int) -> void:
 	var governed: Vector3 = Density.live().apply(FLAIR_CLASS, alpha, 1.0, life)
 	entry["shade"] = governed.x
 	entry["size"] = governed.y
 	entry["life"] = governed.z
 	entry["span"] = governed.z
-	var bit := is_bit_mark(entry)
-	var same: Array = _flair.filter(func(e): return is_bit_mark(e) == bit)
+	var group := cap_group(entry)
+	var same: Array = _flair.filter(func(e): return cap_group(e) == group)
 	for i in maxi(0, same.size() - cap + 1):
 		_flair.erase(same[i])
 	_flair.append(entry)
@@ -310,7 +315,7 @@ static func flair_lines(entry: Dictionary) -> Array:
 		"frost":
 			# A six-armed crystal on the machine: each arm with a barb either side near its tip.
 			var arm := FROST_REACH * lerpf(0.8, 1.0, grown)
-			var centre := at + Vector3.UP * 0.6
+			var centre := at
 			for i in FROST_POINTS:
 				var a := TAU * i / FROST_POINTS
 				var out_dir := Vector3(cos(a), 0.0, sin(a))
