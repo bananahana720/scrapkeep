@@ -2282,7 +2282,7 @@ func _hoar_patch(bolt: Dictionary, at: Vector3) -> void:
 	if field == null:
 		return
 	var slab: Dictionary = field.frost_patch(at, HOAR_FROST_RADIUS, "item_proc")
-	effects.frost_flash(at, HOAR_FROST_RADIUS)
+	effects.frost_flash(at)
 	if not slab.is_empty() and bolt.get("hoar_spared") is Array:
 		(bolt["hoar_spared"] as Array).append(int(slab["id"]))
 

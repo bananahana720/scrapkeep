@@ -8,6 +8,7 @@ const Effects := preload("res://src/combat/effects.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # W45 polish unit P4: each shot bit's own shape where it acts, and the verb evolutions' payoffs, in
 # the running game. Real bolts fly through Bolts.step into combat's hit and glance seams, real
@@ -24,19 +25,22 @@ const Weapons := preload("res://src/combat/weapons.gd")
 # 8    planted: a pull bolt on a machine heavier than the pilot draws no pull arrow.
 # 9    Grapeshot Press: the split fork narrows to +/- 8 deg and pops a brighter brass flash; a
 #      plain split stays at +/- 18 deg with no pop.
-# 10-11 Hoar Barrel: a piercing weapon hit lands an ice crystal at the frost radius; planted: a
-#      piercing shot without the evolution lands none.
-# 12-13 Fault Hammer: the aftershock runs two rings out, the pilot's colour inside a slate rim that
-#      lands on the committed radius; planted: without the evolution no aftershock ring.
-# 14   100 rapid bit tells hold the list at Effects.FLAIR_CAP, newest kept.
-# 15   the density governor thins a bit shape in a crowd and leaves a payoff alone.
-# 16   no flair line seen in this run is drawn in Palette.HAZARD.
-# 17   effects.gd names no HAZARD and makes no words (no Label3D).
+# 10-11 Hoar Barrel: a piercing weapon hit lands a six-armed ice crystal on the struck machine,
+#      inside the field's frost ring (never a second ring on it); planted: a piercing shot without
+#      the evolution lands none.
+# 12-13 Fault Hammer: a slate rim on the committed radius from detonation to fade, and the pilot's
+#      ring running out inside it; planted: without the evolution no aftershock ring.
+# 14   100 rapid bit tells hold at Effects.BIT_CAP, newest kept, and never evict a live aftershock.
+# 15   the density governor thins every flair mark's alpha and life in a crowd, a bit shape's size
+#      too, and never a payoff's committed radius.
+# 16   Reduce flashes cuts every flair mark to FlashGuard's information share and tones the pop.
+# 17   no flair line seen in this run is drawn in Palette.HAZARD.
+# 18   effects.gd names no HAZARD and makes no words (no Label3D).
 # Evidence limit: drawn line geometry and colour in a headless run, not a rendered capture, the
 # sound or the feel at Andrew's screen.
 
 const DT := 1.0 / 90.0
-const EXPECTED_REPORTS := 17
+const EXPECTED_REPORTS := 18
 const BALL := Measurement.BALL
 const PILOT_HEFT := 2.0
 const LIGHT := "chaser"
@@ -108,9 +112,11 @@ func _physics_process(_delta: float) -> bool:
 	_check_fault()
 	_check_cap()
 	_check_density()
+	_check_reduce_flashes()
 	_check_never_hazard()
 	_check_source()
 	Density.live().reset()
+	FlashGuard.on = false
 	if _reports != EXPECTED_REPORTS:
 		_failures += 1
 		print("FAIL report count: %d of %d checks reported (a check died mid-way)" % [_reports, EXPECTED_REPORTS])
@@ -281,7 +287,7 @@ func _check_pierce() -> void:
 	if ok:
 		var lines := Effects.flair_lines(marks[0])
 		var streak := _seg_dir(lines[0])
-		ok = _all_colour(lines, ShotBits.TABLE["pierce"]["color"]) and streak.dot(Vector3.FORWARD) > 0.999 and lines.size() == 6
+		ok = _all_colour(lines, ShotBits.TABLE["pierce"]["color"]) and streak.dot(Vector3.FORWARD) > 0.999 and lines.size() == 3
 		detail = "one pierce mark, %d lines in %s, streak %s along the shot" % [lines.size(), lines[0][2], streak]
 	_report("pierce: a streak and chevron along the line, in ledger", ok, detail)
 
@@ -449,14 +455,15 @@ func _check_hoar() -> void:
 	var detail := "granted %s, marked %s, crystals %d" % ["hoar_barrel" in _game.run.parts, marked.get("hoar", false), frost.size()]
 	if ok:
 		var lines := Effects.flair_lines(frost[0])
-		var centre: Vector3 = (frost[0]["at"] as Vector3) + Vector3.UP * 0.4
-		var corner := _flat((lines[0][0] as Vector3) - centre).length()
-		ok = _all_colour(lines, Palette.ICE) and is_equal_approx(float(frost[0]["radius"]), Combat.HOAR_FROST_RADIUS) \
-			and absf(corner - Combat.HOAR_FROST_RADIUS) < 0.01 and _flat((frost[0]["at"] as Vector3) - (hoar["at"] as Vector3)).length() < 0.01 \
-			and lines.size() == 2 * Effects.FROST_POINTS
-		detail = "one ice crystal on the struck machine, corners at %.2f m (frost %.1f m), %d lines in %s; bit marks %s" % [
-			corner, Combat.HOAR_FROST_RADIUS, lines.size(), lines[0][2], hoar["bits"]]
-	_report("hoar barrel lands an ice crystal at the frost radius", ok, detail)
+		var at: Vector3 = hoar["at"]
+		var reach := 0.0
+		for seg in lines:
+			reach = maxf(reach, maxf(_flat((seg[0] as Vector3) - at).length(), _flat((seg[1] as Vector3) - at).length()))
+		ok = _all_colour(lines, Palette.ICE) and _flat((frost[0]["at"] as Vector3) - at).length() < 0.01 \
+			and lines.size() == 3 * Effects.FROST_POINTS and reach > 0.3 and reach < Combat.HOAR_FROST_RADIUS * 0.5
+		detail = "one ice crystal on the struck machine, %d arms reaching %.2f m inside the %.1f m frost ring, %d lines in %s; bit marks %s" % [
+			Effects.FROST_POINTS, reach, Combat.HOAR_FROST_RADIUS, lines.size(), lines[0][2], hoar["bits"]]
+	_report("hoar barrel lands an ice crystal on the machine", ok, detail)
 	_hold([])
 	var plain := _record(BALL + HOAR_SITE, Vector3.FORWARD, ShotBits.bit("pierce"))
 	var bare := _frost_after(plain, HOAR_SITE + Vector3(0.0, 0.0, 60.0))
@@ -482,26 +489,30 @@ func _check_fault() -> void:
 	var ok: bool = "fault_hammer" in _game.run.parts and quakes.size() == 1
 	var detail := "granted %s, quakes %d" % ["fault_hammer" in _game.run.parts, quakes.size()]
 	if ok:
-		var landed: Dictionary = quakes[0].duplicate()
-		landed["life"] = 0.0
-		var lines := Effects.flair_lines(landed)
-		var reach := 0.0
-		var inner := INF
-		for seg in lines:
-			var r := _flat((seg[0] as Vector3) - at).length()
-			if seg[2] == Palette.SLATE:
-				reach = maxf(reach, r)
-			elif seg[2] == pilot:
-				inner = minf(inner, r)
+		var rims: Array = []
+		var inners: Array = []
 		var colours: Array = []
-		for seg in lines:
-			if not seg[2] in colours:
-				colours.append(seg[2])
-		ok = is_equal_approx(float(quakes[0]["radius"]), radius) and absf(reach - radius) < 0.01 and inner < reach \
+		for share in [1.0, 0.5, 0.05]:
+			var now: Dictionary = quakes[0].duplicate()
+			now["life"] = float(now["span"]) * share
+			var rim := 0.0
+			var inner := 0.0
+			for seg in Effects.flair_lines(now):
+				var r := _flat((seg[0] as Vector3) - at).length()
+				if seg[2] == Palette.SLATE:
+					rim = maxf(rim, r)
+				elif seg[2] == pilot:
+					inner = maxf(inner, r)
+				if not seg[2] in colours:
+					colours.append(seg[2])
+			rims.append(rim)
+			inners.append(inner)
+		ok = is_equal_approx(float(quakes[0]["radius"]), radius) and rims.all(func(r): return absf(r - radius) < 0.01) \
+			and inners[0] < inners[1] and inners[1] < inners[2] and inners[2] < radius \
 			and colours.size() == 2 and pilot in colours and Palette.SLATE in colours
-		detail = "committed radius %.2f; landed slate rim at %.2f, pilot ring (%s) inside at %.2f; colours %s" % [
-			radius, reach, pilot, inner, colours]
-	_report("fault hammer runs a double ring out to the committed radius", ok, detail)
+		detail = "committed radius %.2f; slate rim at %s from detonation to fade, pilot ring (%s) running out %s; colours %s" % [
+			radius, rims, pilot, inners, colours]
+	_report("fault hammer holds a slate rim on the committed radius", ok, detail)
 	var control := _quakes_after_slam([], at + Vector3(0.0, 0.0, 60.0))
 	_report("planted control: no fault hammer, no aftershock ring", control.is_empty() and not "fault_hammer" in _game.run.parts,
 		"quakes %d" % control.size())
@@ -512,17 +523,22 @@ func _check_fault() -> void:
 func _check_cap() -> void:
 	_effects().clear()
 	var combat = _combat()
+	_effects().shockwave(BALL, 9.0, _game.player.class_color())
 	for i in 100:
 		var name: String = ShotBits.NAMES[i % ShotBits.NAMES.size()]
 		var bolt := _record(BALL + Vector3(0.0, 0.0, float(i)), Vector3.FORWARD, ShotBits.bit(name))
 		combat._bit_tell(ShotBits.bit(name), bolt, BALL + Vector3(0.0, 0.0, float(i)))
 	var flair: Array = _effects().get("_flair")
-	var newest: Vector3 = flair[flair.size() - 1]["at"] if not flair.is_empty() else Vector3.INF
+	var bits: Array = flair.filter(func(e): return Effects.is_bit_mark(e))
+	var quakes: Array = flair.filter(func(e): return e["kind"] == "quake")
+	var newest: Vector3 = bits[bits.size() - 1]["at"] if not bits.is_empty() else Vector3.INF
 	var lines := 0
 	for entry in flair:
 		lines += Effects.flair_lines(entry).size()
-	_report("100 rapid bit tells stay within the cap", flair.size() == Effects.FLAIR_CAP and newest.is_equal_approx(BALL + Vector3(0.0, 0.0, 99.0)),
-		"%d marks held (cap %d), newest at z %+.0f, %d lines drawn" % [flair.size(), Effects.FLAIR_CAP, newest.z - BALL.z, lines])
+	_report("100 rapid bit tells stay within the cap", bits.size() == Effects.BIT_CAP and quakes.size() == 1
+		and newest.is_equal_approx(BALL + Vector3(0.0, 0.0, 99.0)),
+		"%d bit marks held (cap %d), newest at z %+.0f, aftershock still live %d, %d lines drawn" % [bits.size(), Effects.BIT_CAP,
+			newest.z - BALL.z, quakes.size(), lines])
 	_effects().clear()
 
 
@@ -536,12 +552,51 @@ func _check_density() -> void:
 	Density.live().reset()
 	var bit: Dictionary = flair[0]
 	var payoff: Dictionary = flair[1]
-	_report("the governor thins a bit shape in a crowd, not a payoff",
+	var rim := 0.0
+	for seg in Effects.flair_lines(payoff):
+		if seg[2] == Palette.SLATE:
+			rim = maxf(rim, _flat((seg[0] as Vector3) - BALL).length())
+	_report("the governor thins flair in a crowd, never a committed radius",
 		is_equal_approx(float(bit["shade"]), float(band["alpha"])) and is_equal_approx(float(bit["span"]), Effects.BIT_LIFE * float(band["lifetime"]))
-		and is_equal_approx(float(bit["size"]), float(band["size"])) and is_equal_approx(float(payoff["shade"]), 1.0)
-		and is_equal_approx(float(payoff["span"]), Effects.PAYOFF_LIFE),
-		"density 0.9: bit alpha %.2f life %.3f size %.2f; payoff alpha %.2f life %.2f" % [bit["shade"], bit["span"], bit["size"],
-			payoff["shade"], payoff["span"]])
+		and is_equal_approx(float(bit["size"]), float(band["size"])) and float(payoff["shade"]) <= float(band["alpha"]) + 0.001
+		and is_equal_approx(float(payoff["span"]), Effects.PAYOFF_LIFE * float(band["lifetime"])) and absf(rim - 6.0) < 0.01,
+		"density 0.9: bit alpha %.2f life %.3f size %.2f; payoff alpha %.2f life %.3f, rim %.2f of 6.00" % [bit["shade"], bit["span"],
+			bit["size"], payoff["shade"], payoff["span"], rim])
+	_effects().clear()
+
+
+func _check_reduce_flashes() -> void:
+	var marks := func() -> Array:
+		_effects().clear()
+		_effects().bit_hit("split", BALL, Vector3.FORWARD, Vector3.ZERO, Combat.GRAPESHOT_ANGLE_DEG)
+		_effects().frost_flash(BALL)
+		_effects().shockwave(BALL, 6.0, _game.player.class_color())
+		return (_effects().get("_flair") as Array).duplicate()
+	var brass: Color = ShotBits.TABLE["split"]["color"]
+	var pop_of := func(entry: Dictionary) -> float:
+		var best := 0.0
+		for seg in Effects.flair_lines(entry):
+			if seg[2] != brass:
+				best = maxf(best, (seg[2] as Color).get_luminance())
+		return best
+	FlashGuard.on = false
+	var off: Array = marks.call()
+	var brightest_off: float = _effects().brightest()
+	var alpha_off: Array = off.map(func(e): return Effects.flair_alpha(e))
+	var pop_off: float = pop_of.call(off[0])
+	FlashGuard.on = true
+	var on: Array = marks.call()
+	var brightest_on: float = _effects().brightest()
+	var alpha_on: Array = on.map(func(e): return Effects.flair_alpha(e))
+	var pop_on: float = pop_of.call(on[0])
+	FlashGuard.on = false
+	var cut := true
+	for i in off.size():
+		cut = cut and is_equal_approx(float(alpha_on[i]), float(alpha_off[i]) * FlashGuard.INFO_SHARE)
+	_report("reduce flashes cuts every flair mark and tones the pop", off.size() == 3 and cut and brightest_on <= FlashGuard.INFO_SHARE + 0.001
+		and brightest_off > FlashGuard.INFO_SHARE and pop_on < pop_off and pop_on > brass.get_luminance(),
+		"brightest %.2f off, %.2f on (share %.2f); pop luminance %.3f off, %.3f on, brass %.3f" % [brightest_off, brightest_on,
+			FlashGuard.INFO_SHARE, pop_off, pop_on, brass.get_luminance()])
 	_effects().clear()
 
 
