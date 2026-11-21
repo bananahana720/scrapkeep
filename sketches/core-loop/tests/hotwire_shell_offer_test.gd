@@ -112,4 +112,8 @@ func _loot_parity() -> void:
 	# 4f7ed07d byte for byte. Was 4f7ed07d (SQ19b).
 	# 2026-10-27 W20 cobalt rung re-pin: impact_driver becomes rare (tier 2 kept) and four catalogue
 	# rares gain a touches verb; ids and row count stay 100 and 100.
-	_check("loot parity", digest == "a7edaf46de2b9dde92bdb2f9ea55341bb27870abde5ddc591dc0a8c10edfe1a6", "digest matches the W20 pin (2026-10-27: cobalt rung rows; W19 pin was afb3d540, SQ19b pin was 4f7ed07d, PC-POOL pin was 7bb9a5f9, SR9 pin was f45eadc3, GP5 pin was a443c521, RR1 pin was e65c5020)")
+	# 2026-11-21 W45-B1 re-pin: six seamless admitted items.gd rows (overcharge_coil, ten_pin,
+	# echo_charge, domino_wire, last_word, par_chip) plus seam-gated helix_drill move from rare_plus
+	# (relic) to cobalt rare per ruling bn so Spare Frame stays the park table's only relic; ids and
+	# row count stay 100 and 100, and those six move from the relic pool into the rare pool. Was a7edaf46 (W20).
+	_check("loot parity", digest == "afa1d8ccee3376f49c4ac3b4f35ec83a3f6b60d25e5847e8f1c82e9c604d3ff4", "digest matches the W45-B1 pin (2026-11-21: cobalt ceiling re-tier; W20 pin was a7edaf46, W19 pin was afb3d540, SQ19b pin was 4f7ed07d, PC-POOL pin was 7bb9a5f9, SR9 pin was f45eadc3, GP5 pin was a443c521, RR1 pin was e65c5020)")
