@@ -147,6 +147,10 @@ const WALK_REACH := 6.0
 const WAKE_DAMAGE := 0.5
 const WAKE_MIN_TRAVEL := 1.0
 const WAKE_GRACE := 0.5
+# Slag Pike's fused bolt is this many times as wide (both hit test and drawn streak) as one plain bolt.
+const PIKE_RADIUS_MULT := 2.0
+# The copper ring that lights the muzzle on the volley before the fuse, in metres.
+const PIKE_RING_RADIUS := 1.5
 
 # Ball contacts: base damage plus a share of the contact's force.
 const STRIKE_DAMAGE := {
@@ -192,6 +196,10 @@ var effects
 # boss floor in the arena.
 var ground
 var volleys := 0
+# Slag Pike's cadence (item_effects.gd pike): weapon volleys fired since the last fuse, and the
+# clock of the last one. Both clear on every attempt and when the pike leaves the build.
+var _pike_count := 0
+var _pike_last := -INF
 # The last committed volley and discharge, for tests and anything that wants to read them.
 var last_shot := {}
 var last_burst := {}
@@ -1793,15 +1801,100 @@ func _fire(weapon: String, source := "weapon") -> void:
 	# Only the player's own press carries the build's shot bits; a proc volley carries none,
 	# so proc depth stays 1 (ABILITY-MUTATIONS.md B1).
 	var shot: int = _shot_bits() if source == "weapon" else 0
-	for entry in layout:
-		bolts.fire(_bolt_record(weapon, p, entry, muzzle, reach, damage, source, shot))
+	var pike := _pike_press(source)
+	var fired := layout.size()
+	if pike.get("ring", false):
+		effects.ring(muzzle, PIKE_RING_RADIUS, Palette.COPPER)
+	if pike.get("fuse", false):
+		var centre: Dictionary = layout[0]
+		for entry in layout:
+			if entry["centre"]:
+				centre = entry
+				break
+		bolts.fire(pike_bolt(_bolt_record(weapon, p, {"dir": forward, "centre": true, "phase": centre["phase"]}, muzzle, reach, damage, source, shot),
+			layout.size(), _pike_row()))
+		fired = 1
+		_pike_cue()
+	else:
+		for entry in layout:
+			bolts.fire(_bolt_record(weapon, p, entry, muzzle, reach, damage, source, shot))
 	if rake_follows(source, ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")):
 		_rakes.append({"at": _clock + RAKE_DELAY, "weapon": weapon, "forward": forward,
 			"damage": p.damage * _damage_mod(weapon), "volley": volleys})
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": aim["to"], "point": point,
-		"blocked": aim["blocked"], "bolts": layout.size(), "volley": volleys, "sprung": sprung}
+		"blocked": aim["blocked"], "bolts": fired, "volley": volleys, "sprung": sprung, "fused": pike.get("fuse", false)}
 	ctx.events.shot_fired.emit(weapon, muzzle, aim["to"])
+
+
+# --- Slag Pike (ABILITY-MUTATIONS.md C1) ----------------------------------------------
+
+# The pike's table while the build holds it, else empty.
+func _pike_row() -> Dictionary:
+	var build = ctx.build if ctx != null else null
+	var held = build.get("effects") if build != null else null
+	return held.pike_fuse() if held != null and held.has_method("pike_fuse") else {}
+
+
+# Where this press falls in the pike's cycle: {} for a proc volley or with no pike, else
+# {"ring": volley five, "fuse": volley six}. Only the player's own press advances the count.
+func _pike_press(source: String) -> Dictionary:
+	if source != "weapon":
+		return {}
+	var row := _pike_row()
+	if row.is_empty():
+		_pike_count = 0
+		return {}
+	var step := pike_advance(_pike_count, _pike_last, _clock, row)
+	_pike_count = int(step["count"])
+	_pike_last = _clock
+	return step
+
+
+# The next count after one weapon press at `now`: the count restarts after `idle_s` without a
+# press; the press that reaches `every` fuses and the count resets. Pure, so tests can walk it.
+static func pike_advance(count: int, last: float, now: float, row: Dictionary) -> Dictionary:
+	var every := int(row.get("every", 6))
+	var n := 0 if now - last >= float(row.get("idle_s", 3.0)) else count
+	n += 1
+	var fuse := n >= every
+	return {"count": 0 if fuse else n, "ring": n == every - 1, "fuse": fuse}
+
+
+# The fused bolt: the volley's damage summed and capped at cap_mult times one bolt, range and
+# width up, the pierce colour, and the held bits with pierce on.
+static func pike_bolt(record: Dictionary, volley_size: int, row: Dictionary) -> Dictionary:
+	var out := record.duplicate()
+	var one: float = float(record["damage"])
+	out["damage"] = minf(one * volley_size, one * float(row.get("cap_mult", 6.0)))
+	out["max_dist"] = float(record["max_dist"]) * float(row.get("range_mult", 1.25))
+	out["radius"] = float(record["radius"]) * PIKE_RADIUS_MULT
+	out["width_scale"] = PIKE_RADIUS_MULT
+	out["color"] = ShotBits.TABLE["pierce"]["color"]
+	out["bits"] = fused_bits(int(record.get("bits", 0)))
+	return out
+
+
+# Held bits with pierce on, never past MAX_SHOT_BITS: a full set without pierce gives its
+# last bit in table order up to it, on this one bolt.
+static func fused_bits(bits: int) -> int:
+	var pierce := ShotBits.bit("pierce")
+	if ShotBits.has(bits, pierce):
+		return bits
+	if ShotBits.count(bits) >= ShotBits.MAX_SHOT_BITS:
+		for i in range(ShotBits.NAMES.size() - 1, -1, -1):
+			var b := ShotBits.bit(ShotBits.NAMES[i])
+			if ShotBits.has(bits, b):
+				bits = ShotBits.without(bits, b)
+				break
+	return ShotBits.union(bits, pierce)
+
+
+func _pike_cue() -> void:
+	var presentation = ctx.root.get("presentation") if ctx != null and ctx.root != null else null
+	var audio = presentation.get("audio") if presentation != null else null
+	if audio != null:
+		audio.play("shot_pierce", 0.0, 1.0, "SFX", String(ShotBits.TABLE["pierce"]["sound"]))
 
 
 # One bolt of a volley: the pattern's numbers for this layout entry, fired from `muzzle`.
@@ -4660,6 +4753,8 @@ func _start_attempt() -> void:
 	_rakes.clear()
 	_heated.clear()
 	_exposed.clear()
+	_pike_count = 0
+	_pike_last = -INF
 	_spring_until = -1.0
 	_warden_slam_hits = 0
 	_cooldown = 0.0
