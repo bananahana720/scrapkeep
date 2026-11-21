@@ -234,12 +234,14 @@ func _physics_process(_delta: float) -> bool:
 				# The first Highdraft piece hints at its maker's trick; the second piece is any part of that maker.
 				_report("synergy hint", find["link"] == "hint" and find["synergy"] in Synergies.of_maker("highdraft_roosts") and find["partner"] == "",
 					"loose_trigger with no Highdraft part held feeds %s: link %s, partner '%s'" % [find["synergy"], find["link"], find["partner"]])
+				# Two Redjaw parts that form no evolution (cross_split and pin_setter evolve into
+				# Grapeshot Press since W45-B2 U8, whose own ceremony would queue here).
 				_game.run.add_part("pin_setter", "test")
-				_game.run.add_part("cross_split", "test")
-				var wired: Dictionary = _ceremony.find_of("cross_split", "test")
+				_game.run.add_part("hairline_fracture", "test")
+				var wired: Dictionary = _ceremony.find_of("hairline_fracture", "test")
 				var card: Dictionary = _ceremony.card_state(wired, int(_clock_ms), false)
 				_report("synergy snaps", wired["link"] == "lit" and wired["tier"] == "reveal" and card["partner_icon"] == Ceremony.icon_of("pin_setter"),
-					"cross_split after pin_setter (both Redjaw) completes %s: link %s, tier %s, partner glyph %s"
+					"hairline_fracture after pin_setter (both Redjaw) completes %s: link %s, tier %s, partner glyph %s"
 						% [wired["synergy"], wired["link"], wired["tier"], card["partner_icon"]])
 				var crest: Dictionary = _ceremony.card_state(_ceremony.find_of(BossRules.CREST_PART, "boss"), int(_clock_ms), false)
 				_report("crest card", crest["name"] == "Admiral's Crest" and crest["stamp"] == "TROPHY" and crest["verb"] == "Fleet property. Yours now.",
