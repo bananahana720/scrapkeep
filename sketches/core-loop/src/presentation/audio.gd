@@ -1916,10 +1916,33 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	return true
 
 
+# A sound from a place in the world (a shattered piece): full within HEARD_NEAR_M of the ball, falling
+# to HEARD_FAR_DB by HEARD_FAR_M, so a break across the yard sits under one beside you. The mix is
+# one stereo voice bank, so the place sets the level, not a pan.
+const HEARD_NEAR_M := 10.0
+const HEARD_FAR_M := 45.0
+const HEARD_FAR_DB := -12.0
+
+
+func play_at(kind: String, at: Vector3, db := 0.0, pitch := 1.0, bus := "SFX", sound_override := "") -> bool:
+	return play(kind, db + distance_db(at), pitch, bus, sound_override)
+
+
+# The level a sound at `at` loses to its distance from the ball; 0 with no ball.
+func distance_db(at: Vector3) -> float:
+	var ball = ctx.player if ctx != null else null
+	if ball == null or not is_instance_valid(ball) or not ball.has_method("shown_position"):
+		return 0.0
+	var far := (at.distance_to(ball.shown_position()) - HEARD_NEAR_M) / (HEARD_FAR_M - HEARD_NEAR_M)
+	return HEARD_FAR_DB * clampf(far, 0.0, 1.0)
+
+
 # World 1's story stings (spillway_story.gd): one designed one-shot per story row, played now
 # when the row starts, from assets/audio/stingers/1_1/<name>.wav. The bus fact of the same moment
 # (the generic stage, world, rescue or unseal sound) is not dropped, because its beat also starts
 # the stage music; it is ducked STORY_DUCK_DB for STORY_HOLD_MS so the sting is the moment's voice.
+# world.gd WARDEN_FIGHT: the stage Warden's fight id on fight_phase_changed.
+const WARDEN_FIGHT := "warden"
 const STORY_KIND := "story_sting"
 const STORY_DUCKED := ["run_started", "world_entered", "stage_entered", "rescue_completed", "beacon_unsealed"]
 const STORY_QUESTS := ["rivet"]
@@ -2365,12 +2388,14 @@ func wire_optional() -> void:
 		end_moment("jukebox", "bay_jukebox")
 		end_moment("shop", "bay"))
 	# v2 W6 world: one row per world_fact kind (event_kinds.gd WORLD_ROWS); a kind with
-	# no row plays nothing, since play() already skips an empty sound override.
+	# no row plays nothing here (an empty override would fall back to the bare world_fact row's tick):
+	# its sound is its sender's (a shattered piece's family, the fabricator's tune).
 	_listen_optional(events, "world_fact", func(kind: String, _at: Vector3):
 		# A world row's own priority, not the bare world_fact kind's 0: the Overtime ring, the sluice and
 		# the Called Shot results were 6 dB under a pickup and never dipped the band (sound-gaps 12 Nov).
 		var row := EventKinds.world_row(kind)
-		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(row, cue_context()), int(row.get("priority", 0)))
+		if not row.is_empty():
+			play("world_fact", 0.0, 1.0, "SFX", Rows.heard(row, cue_context()), int(row.get("priority", 0)))
 		_set_world_fact(kind)
 		if kind == "bay_jukebox":
 			jukebox_flipped()
@@ -4501,8 +4526,15 @@ func _on_boss_telegraph(attack_id: String, seconds_until: float) -> void:
 
 # A mini-boss's later phase (fight_phases.gd): its live anthem moment moves to the phase
 # variant, "<tune>-heavy", on the next downbeat, when that tune's pack is on disk. Bosses
-# follow boss_phase_changed (phase_music) instead.
+# follow boss_phase_changed (phase_music) instead. The stage Warden's chunk phases (world.gd
+# WARDEN_FIGHT) land their drop on the chunk's shatter (_follow_warden_form); a later phase
+# pushes the fight's danger onto the band and moves no mini-boss's anthem.
 func _on_fight_phase(fight_id: String, phase: int, _phases: int) -> void:
+	if fight_id == WARDEN_FIGHT:
+		if phase >= 2:
+			engine.parameter_danger("warden_engaged")
+			cue_log.append(["fight_phase_changed", fight_id, "phase", engine.clock, float(phase)])
+		return
 	if phase < 2 or PhaseMusic.BOSS_SYNTH_THEME.has(fight_id):
 		return
 	var moved := false

@@ -242,9 +242,14 @@ static func stick(state, delta: float) -> Vector3:
 	return -n * Tuning.STICK_ACCEL * delta * 0.12
 
 
+# A press during the cooldown is held for Tuning.BOOST_BUFFER and fires on the first tick the cooldown
+# allows, with the same direction, impulse and cooldown as a press on that tick.
 static func boost(state, tuning, intent, wish: Vector3, fallback: Vector3) -> Vector3:
-	if not intent.boost_pressed or state.boost_cooldown > 0.0:
+	if intent.boost_pressed and state.boost_cooldown > 0.0:
+		state.boost_buffer = Tuning.BOOST_BUFFER
+	if state.boost_cooldown > 0.0 or not (intent.boost_pressed or state.boost_buffer > 0.0):
 		return Vector3.ZERO
+	state.boost_buffer = 0.0
 	var dir: Vector3
 	if state.velocity.length() > 2.5:
 		dir = state.velocity.normalized()

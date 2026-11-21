@@ -150,6 +150,9 @@ const BOOST_COOLDOWN := 1.1
 const BOOST_COOLDOWN_FLOOR := 0.15
 const COYOTE_TIME := 0.10
 const JUMP_BUFFER := 0.14
+# A boost pressed this close before its cooldown ends fires on the first tick it may, as a jump
+# pressed before landing does; one pressed earlier is spent. Speed, impulse and cooldown are unchanged.
+const BOOST_BUFFER := JUMP_BUFFER
 const MAX_SLOPE_DOT := 0.45
 const STICK_ACCEL := 22.0
 const STICK_SPEED := 18.0
