@@ -131,6 +131,16 @@ const SPRING_MULT := 1.5
 # Rake Heart: the return sweep comes this long after the first, at this share of its damage (start).
 const RAKE_DELAY := 0.25
 const RAKE_DAMAGE := 0.6
+# Walking Lane (cannon_lane_walk): a lane called within WALK_WINDOW of the last starts where it ended
+# and runs WALK_REACH further; the chain is two links, so the next call starts fresh.
+const WALK_WINDOW := 2.0
+const WALK_REACH := 6.0
+# Rush Wake (cannon_rush_wake): the landing lays one lane back along the rush's travel line at this share
+# of the lane's damage. A drift under WAKE_MIN_TRAVEL (a straight drop) lays it back along the aim. The
+# slam's start stays valid for WAKE_GRACE after the slam ends, so a landing a tick later still finds it.
+const WAKE_DAMAGE := 0.5
+const WAKE_MIN_TRAVEL := 1.0
+const WAKE_GRACE := 0.5
 
 # Ball contacts: base damage plus a share of the contact's force.
 const STRIKE_DAMAGE := {
@@ -301,6 +311,10 @@ var _rakes: Array = []
 # mark}), so a plate row and an arc row on one enemy never collide.
 var _cannon := []
 var _cannon_count := 0
+# Walking Lane's open link ({} or {"end", "at"}) and Rush Wake's slam start ({} or {"from", "until"}).
+# Both clear with the committed volleys, on a run start and every attempt.
+var _walk := {}
+var _wake := {}
 var _exposed := {}
 # Tally's program cards. bay is the selected card (0, 1 or 2); plate is Gather's plate ({}
 # or {"at", "until"}); link_group the live clips ({} or {"ids", "until", "spent"}); last_card
@@ -2235,6 +2249,7 @@ func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: fl
 
 func _step_cannon(delta: float) -> void:
 	_step_cannon_exposure()
+	_track_wake()
 	if ctx.player.abilities.selected == AbilityState.LINE and ctx.player.abilities.id_of(AbilityState.LINE) == "cannon_lane_charge" and ctx.player.kit.hooked:
 		ctx.player.indicator.set_shape(AbilityState.LINE, _cannon_line_geometry(1.0))
 	elif ctx.player.abilities.id_of(AbilityState.LINE) == "cannon_lane_charge":
@@ -2313,6 +2328,8 @@ func _free_cannon() -> void:
 					h.get_parent().remove_child(h)
 				h.queue_free()
 	_cannon = []
+	_walk = {}
+	_wake = {}
 
 
 # The weapon: one Mind lane from the ground under the ball down the aim, per cooldown.
@@ -2326,7 +2343,17 @@ func _fire_cannon_lane(weapon: String) -> void:
 	var target := point
 	if Vector2(point.x - centre.x, point.z - centre.z).length() < 1.5:
 		target = centre + _flat_aim() * 10.0
-	var entry := _commit_cannon("lane", target, centre, reach, Weapons.LANE_DAMAGE, "weapon")
+	var mutation: String = ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")
+	var walked := walk_extends(mutation, _walk, _clock)
+	var radius := reach
+	if walked:
+		var flat := Vector3(target.x - centre.x, 0.0, target.z - centre.z)
+		var dir := flat.normalized() if flat.length_squared() > 0.0001 else _flat_aim()
+		var end_at: Vector3 = _walk["end"]
+		centre = _floor_at(end_at + Vector3.UP)
+		target = centre + dir * 10.0
+		radius = WALK_REACH + MindAttacks.LANE_HALF
+	var entry := _commit_cannon("lane", target, centre, radius, Weapons.LANE_DAMAGE, "weapon")
 	var h = entry["hazards"][0]
 	# The body the ball's line holds is struck when the lane's footprint covers it, however high it
 	# hangs: the lane reaches 3 m over the ground, and the stage-2 flume relic hangs 12 m over the
@@ -2339,11 +2366,19 @@ func _fire_cannon_lane(weapon: String) -> void:
 		if h.contains(Vector3(held.x, h.ground_at(held) + 1.0, held.z)) and not h.contains(held):
 			entry["options"] = {"forced": kit.anchor_body}
 	var end: Vector3 = h.centre + h.heading * h.length
+	if mutation == "cannon_lane_walk":
+		_walk = {} if walked else {"end": end, "at": _clock}
 	var muzzle: Vector3 = ball + h.heading * MUZZLE
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": end, "point": point, "blocked": aim["blocked"], "bolts": 0,
 		"volley": volleys, "sprung": false}
 	ctx.events.shot_fired.emit(weapon, muzzle, end)
+
+
+# Walking Lane: the call extends the open link when it comes within WALK_WINDOW of the last lane.
+# One link is open at most, and the extension closes it, so a third call never extends again.
+static func walk_extends(mutation: String, walk: Dictionary, clock: float) -> bool:
+	return mutation == "cannon_lane_walk" and not walk.is_empty() and clock - float(walk["at"]) <= WALK_WINDOW
 
 
 # The movement: the recoil kicks the ball along the aim; the split lands behind it.
@@ -2386,6 +2421,41 @@ func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 			target = enemy.global_position
 	_commit_cannon("rush", target, landing, Weapons.RUSH_REACH, Weapons.RUSH_DAMAGE * clampf(strength, 0.5, 1.5),
 		"drop_or_slam")
+	if wake_follows("drop_or_slam", ctx.player.abilities.cap(AbilityState.SMASH, "mutation", "")):
+		_lay_wake(landing)
+
+
+# Rush Wake: only the player's own rush landing lays a wake. The wake lane commits as item_proc and
+# is a lane, never a rush landing, so it can neither lay another nor walk (proc depth 1).
+static func wake_follows(source: String, mutation: String) -> bool:
+	return source == "drop_or_slam" and mutation == "cannon_rush_wake"
+
+
+# Remembers where a Rush Wake slam began: the ball's position on the tick the slam starts, kept until
+# WAKE_GRACE after it ends. A slam that never lands is overwritten by the next one.
+func _track_wake() -> void:
+	if ctx.player.abilities.cap(AbilityState.SMASH, "mutation", "") != "cannon_rush_wake":
+		_wake = {}
+		return
+	if ctx.player.kit.slamming:
+		if _wake.is_empty() or float(_wake["until"]) < INF:
+			_wake = {"from": ctx.player.ball_position(), "until": INF}
+	elif not _wake.is_empty() and float(_wake["until"]) == INF:
+		_wake["until"] = _clock + WAKE_GRACE
+
+
+# One lane from the landing back along the rush's flattened travel line, at half lane damage and the
+# lane's own telegraph. No recorded start, or a start gone stale, lays nothing.
+func _lay_wake(landing: Vector3) -> void:
+	var wake := _wake
+	_wake = {}
+	if wake.is_empty() or _clock > float(wake["until"]):
+		return
+	var from: Vector3 = wake["from"]
+	var back := Vector3(from.x - landing.x, 0.0, from.z - landing.z)
+	back = back.normalized() if back.length() >= WAKE_MIN_TRAVEL else -_flat_aim()
+	var reach: float = Weapons.CANNON_LANE_REACH * ctx.tuning.mod("weapon_range")
+	_commit_cannon("lane", landing + back * 10.0, landing, reach, Weapons.LANE_DAMAGE * WAKE_DAMAGE, "item_proc")
 
 
 # --- PC-CANNON: the cable lane and the set-piece zones --------------------------------

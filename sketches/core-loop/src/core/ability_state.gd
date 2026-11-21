@@ -148,9 +148,11 @@ const ABILITIES := {
 	"flywheel_surge": {"icon": "ab_tally_move", "cooldown": 4.0, "augments": ["surge"]},
 	"stamp_slam": {"icon": "ab_tally_smash", "cooldown": 0.0, "flavour": "stamp"},
 	"cannon_lane": {"icon": "ab_cannon_weapon", "cooldown": 0.0, "family": "lane"},
+	"cannon_lane_walk": {"icon": "ab_cannon_weapon", "cooldown": 0.0, "family": "lane", "pattern": "cannon_lane", "mutation": "cannon_lane_walk"},
 	"cannon_recoil": {"icon": "ab_cannon_move", "cooldown": 3.5, "augments": ["recoil"], "family": "split_lane"},
 	"cannon_plate": {"icon": "ab_cannon_special", "cooldown": 6.0, "charge_max": 0.8, "family": "plate"},
 	"cannon_rush": {"icon": "ab_cannon_smash", "cooldown": 0.0, "flavour": "rush", "family": "rush"},
+	"cannon_rush_wake": {"icon": "ab_cannon_smash", "cooldown": 0.0, "flavour": "rush", "family": "rush", "mutation": "cannon_rush_wake"},
 	# The shared placeholders until wave P-C: one line skill (a 4 m yank on a body, a reel
 	# burst on the world) and one ultimate (B3 builds its set piece).
 	"line_reel": {"icon": "ab_sable_reel", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
