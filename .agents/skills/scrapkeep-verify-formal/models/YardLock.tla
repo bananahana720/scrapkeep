@@ -8,9 +8,9 @@
    the Warden when the ball is in the beacon ring), the ball's own tick (player_ball.gd, which moves it), then
    StageLocks (added to the game root by world.gd after the ball). Kills, deaths, retries, quits, Continues and the
    bell's rams come between frames. The ball's place is one of four zones measured flat from the beacon: "out"
-   (outside the lock row's any-ground share), "circle" (inside it, too far for a yard shut there to reach the
-   beacon ring), "near" (outside the ring, close enough that a yard shut there holds part of the ring) and "ring"
-   (inside the beacon ring, beacon.gd in_ring). *)
+   (outside the lock row's any-ground share), "circle" (inside it, too far for a yard shut there to hold the ball
+   within the beacon ring or a strike's reach of the Warden), "near" (outside the ring, close enough that a yard shut
+   there does) and "ring" (inside the beacon ring, beacon.gd in_ring). *)
 EXTENDS Naturals
 
 CONSTANTS
@@ -189,6 +189,14 @@ KillCrew ==
                  grounded>>
   /\ UNCHANGED bell
 
+\* A hit on the sealed Warden from any source (combat.gd emits enemy_struck for every hit): flow._on_enemy_struck ->
+\* _engage, wherever the ball is. The longest strike is a scrap_rockets lock (LOCK_REACH 42 m), so the ball is near.
+StrikeWarden ==
+  /\ Ev("StrikeWarden")
+  /\ flow = "stage" /\ ~engaged /\ zone \in {"near", "ring"}
+  /\ engaged' = TRUE
+  /\ UNCHANGED <<flow, stage, entries, saved, zone, grounded>> /\ UNCHANGED yard /\ UNCHANGED bell
+
 \* The Warden broken (flow._on_enemy_killed -> _unseal -> _set_state(GATES)).
 KillWarden ==
   /\ Ev("KillWarden")
@@ -234,10 +242,11 @@ Retry ==
   /\ ~Store /\ flow \in InStage \cup {"dead"} /\ entries < MaxEntries
   /\ Enter(stage)
 
-\* flow.new_run from the dead screen or the summary: stage 1 again.
+\* flow.new_run from the dead screen or the summary, or a restart in play (the pause menu's restart, a held R with
+\* a store: game.gd step_restart_hold): stage 1 again.
 NewRun ==
   /\ Ev("NewRun")
-  /\ flow \in {"dead", "summary"} /\ entries < MaxEntries
+  /\ flow \in InStage \cup {"dead", "summary"} /\ entries < MaxEntries
   /\ Enter(1)
 
 \* Quit to the title (show_title) or to the desktop and back; the run document stays.
@@ -247,11 +256,12 @@ Quit ==
   /\ FlowTo("title")
   /\ UNCHANGED <<stage, entries, saved, engaged, zone, grounded>>
 
-\* flow.resume_run: the saved entrance, entered again.
+\* flow.resume_run: the saved entrance entered again, or a save written at the launch (a cleared stage) landing its
+\* flight in the next stage.
 Continue ==
   /\ Ev("Continue")
   /\ flow = "title" /\ saved /\ entries < MaxEntries
-  /\ Enter(stage)
+  /\ \E s \in {stage, Min(stage + 1, Stages)} : Enter(s)
 
 \* overtime.gd _step_touches: a ram at the bell rings it; at the pot cashes it. The ball rams only in play.
 Ring ==
@@ -282,7 +292,7 @@ Start ==
   /\ flow = "title" /\ entries < MaxEntries
   /\ Enter(1)
 
-Events == KillCrew \/ KillWarden \/ WardenVanished \/ Launch \/ Land \/ Death \/ Retry \/ NewRun \/ Quit \/ Continue \/ Ring \/ Cash
+Events == KillCrew \/ StrikeWarden \/ KillWarden \/ WardenVanished \/ Launch \/ Land \/ Death \/ Retry \/ NewRun \/ Quit \/ Continue \/ Ring \/ Cash
           \/ Start
 
 Next == FlowTick \/ BallTick \/ LocksTick \/ EndEvents \/ Events
@@ -309,8 +319,13 @@ WallOnlyWhileLocked == wall => (lock = "locked" /\ flow \in InStage)
 \* A shut yard always opens while the stage plays on: the wall never traps the ball.
 LockAlwaysOpens == (lock = "locked" /\ flow \in InStage) ~> (lock # "locked" \/ flow \notin InStage)
 
-\* Read at the end of a frame (after the locks tick): the yard is never shut while the Warden is awake.
-NoLockInWardenFight == phase = "events" => ~(lock = "locked" /\ engaged)
+\* The steps LocksTick names itself by.
+LocksSteps == {"LocksTick", "Lock", "Yield", "UnlockTimeout", "UnlockWon", "WaveWhistle", "WaveLands", "SkipEngaged",
+               "SkipUnsealed"}
+
+\* Read as the locks tick ends (VFM-08): the yard is never shut while the Warden is awake. A strike lands between
+\* frames, after the locks have ticked, so the first locks tick to see it is the next frame's.
+NoLockInWardenFight == last \in LocksSteps => ~(lock = "locked" /\ engaged)
 
 \* A yard pays its panel (build.gd yard_cleared) at most once an activation.
 YardPaysOnce == paid <= 1
@@ -333,6 +348,7 @@ ProbeRing == last # "Ring"
 ProbeCash == last # "Cash"
 ProbeFlowSpend == ~(lock = "spent" /\ ~won /\ flow \in {"gates", "summary", "title"} /\ yardAt # "none")
 ProbeEngaged == ~engaged
+ProbeStrike == last # "StrikeWarden"
 ProbeContinue == last # "Continue"
 ProbeRetry == last # "Retry"
 ProbeSecondStage == ~(stage = 2 /\ lock = "locked")

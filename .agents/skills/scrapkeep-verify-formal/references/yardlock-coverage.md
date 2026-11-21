@@ -1,6 +1,6 @@
 # What YardLock.tla stands for
 
-`models/YardLock.tla` checks the Spillway's yard lock (the ring wall that shuts round the ball near the beacon and lands its crew in waves) and the overtime bell a won yard offers, under every interruption the run flow allows: a Warden that wakes, breaks or vanishes, a death, a retry, a new run, a quit and a Continue, and the next stage's entry. This page maps each step to the code. `scripts/gate/model-receipts.mjs` reads every source path on this page as the list of covered files, and the last line as the sync commit.
+`models/YardLock.tla` checks the Spillway's yard lock (the ring wall that shuts round the ball near the beacon and lands its crew in waves) and the overtime bell a won yard offers, under every interruption the run flow allows: a Warden that wakes (by the ring or a strike), breaks or vanishes, a death, a retry, a new run, a quit and a Continue, and the next stage's entry. This page maps each step to the code. `scripts/gate/model-receipts.mjs` reads every source path on this page as the list of covered files, and the last line as the sync commit.
 
 The covered files:
 
@@ -12,6 +12,8 @@ The covered files:
 - `sketches/core-loop/src/game.gd`: the tree order behind the frame (the ball is added before the world module, whose `setup` adds StageLocks to the game root; `_physics_process` calls `flow.physics_step`).
 - `sketches/core-loop/src/world/world.gd`: `locks = StageLocks.new()` and `ctx.root.add_child(locks)`.
 - `sketches/core-loop/src/movement/player_ball.gd`: the ball's own physics tick, `reset_to`, and `state.grounded`.
+- `sketches/core-loop/src/combat/combat.gd`: every hit emits `enemy_struck`, which wakes a sealed Warden.
+- `sketches/core-loop/src/combat/actives/scrap_rockets.gd`: `LOCK_REACH` 42 m, the longest reach a player's strike has.
 
 ## Steps
 
@@ -24,14 +26,15 @@ The covered files:
 | `Spend` | `_on_flow_changed` for `gates`, `launch`, `summary`, `title`, `victory`: a shut yard is spent and its wall dropped, the collar dropped, `overtime.clear()`. `dead`, `boss` and `lap` are not in the list. No `show_start_card` |
 | `Enter(s)` | `stage_entered`, emitted by `enter_stage` (from `_begin_run`, `resume_run`, `_advance_from`) and `retry_stage`: `_on_stage_entered` -> `_clear` (wall, collar, overtime) and the map's row arms the lock; flow's `_place_beacon` seals the stage and clears `_engaged` |
 | `KillCrew` | the shut yard's crew dies (`crew_alive()` empty). `ctx.can_spawn()` refusing a wave is the `crewDown` choice in `_lock` and `WaveLands` |
+| `StrikeWarden` | combat.gd emits `enemy_struck` for every hit; flow.gd `_on_enemy_struck` calls `_engage` for a hit on the sealed Warden, wherever the ball is. The longest strike is a scrap_rockets lock (`LOCK_REACH` 42 m; the glass lance reaches 40), so the model lets it land from the near and ring zones |
 | `KillWarden` | `_on_enemy_killed` -> `_unseal` -> `_set_state(GATES)`. The clamp (`locked()`, `max_s`) is not modelled; the model lets the Warden break once it is awake and the ball is in its ring |
 | `WardenVanished` | `physics_step`'s `_warden_vanished` -> `_unseal`: the gates open with no engagement |
 | `Launch`, `Land` | `_on_reward_chosen` / `_on_launched` -> LAUNCH; the flight's end -> `_finish_stage` -> the next stage's `enter_stage`, or the summary after the run's last stage |
 | `Death` | `_on_player_died`: with a store `_end_run(false)` -> SUMMARY; without one `_set_state(DEAD)` |
-| `Retry`, `NewRun`, `Quit`, `Continue`, `Start` | `retry_stage` (storeless flows: a held R, the dead screen's key), `new_run`, `show_title` or a quit to the desktop and back, `resume_run`, the title's `press_start` and `choose_class` |
+| `Retry`, `NewRun`, `Quit`, `Continue`, `Start` | `retry_stage` (storeless flows: a held R, the dead screen's key); `new_run` from the dead screen, the summary, or in play (the pause menu's restart, and a held R with a store: game.gd `step_restart_hold`); `show_title` or a quit to the desktop and back; `resume_run`, which enters the saved entrance again or, from a save written at the launch, lands the flight in the next stage (`_finish_stage`); the title's `press_start` and `choose_class` |
 | `Ring`, `Cash` | overtime.gd `_step_touches`: a ram at the bell calls `ring()` (refused at `MAX_RINGS`), at the pot `cash()` (refused with no ring; `state = "spent"`) |
 
-The ball's place is one of four zones measured flat from the beacon. On the dam (beacon ring 30 m, `within_m` 200, so any ground counts inside 150 m; the yard centred `ahead_m` 10 m on from the ball, `radius_m` 26, `WALL_SLACK` 4): "ring" is inside the 30 m ring; "near" is outside it but within about 70 m, where a yard shut on the ball holds part of the ring (30 + 26 + 4 + 10); "circle" is the rest of the any-ground share; "out" is everything else, the incline's 150 to 200 m band included (it shuts the yard only on level ground, which the model counts as "circle").
+The ball's place is one of four zones measured flat from the beacon. On the dam (beacon ring 30 m, `within_m` 200, so any ground counts inside 150 m; the yard centred `ahead_m` 10 m on from the ball, `radius_m` 26, `WALL_SLACK` 4): "ring" is inside the 30 m ring; "near" is outside it but within about 82 m, where a yard shut on the ball can hold it within the ring (30 + 10 + 26 + 4 = 70 m) or within a strike's 42 m of the Warden (42 + 40 = 82 m); "circle" is the rest of the any-ground share, from about 82 m to 150 m; "out" is everything else, the incline's 150 to 200 m band included (it shuts the yard only on level ground, which the model counts as "circle").
 
 ## Guards
 
@@ -53,7 +56,7 @@ Each plant starts from `yardlock-guarded` (both fixes on), so it breaks only its
 
 ## Assumptions
 
-- `LongFlight`: the ball can reach the near or ring zone with the yard still armed, which needs it to cross the any-ground share (150 to about 70 m from the beacon) without touching ground: a jump, a launch, a harpoon swing or a fall from height. With it off, a ball that touches ground in the circle shuts the yard there, too far from the Warden for it to wake inside the yard (`yardlock-today-rolling`).
+- `LongFlight`: the ball can reach the near or ring zone with the yard still armed, which needs it to cross the any-ground share (150 to about 82 m from the beacon) without touching ground: a jump, a launch, a harpoon swing or a fall from height. With it off, a ball that touches ground in the circle shuts the yard there, too far from the Warden for the ball to enter the ring or strike it from inside the yard (`yardlock-today-rolling`). Every stage entry, retry and Continue places the ball outside the circle (the dam's entry is about 1,270 m out), so a rolling ball always meets the share first.
 - One locks tick runs out a wave's whistle; `max_s` is 5 locks ticks and the lock row 2 waves, so a won yard keeps time on its clock (as a 60 s lock does) and a slow one times out.
 
 ## Bounds
@@ -67,11 +70,11 @@ Run `bash models/make-yardlock-configs.sh`, then plain TLC on each `yardlock-*.c
 | Config | Stands for | Must report |
 | --- | --- | --- |
 | `yardlock-today` | the code at the sync commit, in a played game | `NoLockInWardenFight` (finding YL-1) |
-| `yardlock-today-rolling` | the same code, with `LongFlight` off | no break, in at least the pinned 47,615 distinct states |
+| `yardlock-today-rolling` | the same code, with `LongFlight` off | no break, in at least the pinned 47,997 distinct states |
 | `yardlock-today-nostore` | the code in a storeless flow (tests, bots), `NoLockInWardenFight` left out | `WallOnlyWhileLocked` (finding YL-2) |
-| `yardlock-guarded`, `yardlock-guarded-nostore` | both fixes on, with and without a store | no break (117,135 and 107,190 distinct states) |
+| `yardlock-guarded`, `yardlock-guarded-nostore` | both fixes on, with and without a store | no break (144,089 and 131,620 distinct states) |
 | `yardlock-broken-*` | one guard off from `guarded`, as the Guards table lists | the named rule breaks |
-| `yardlock-reach-*` | one probe each that says "never" about a thing that must happen: a lock shuts, shuts near the beacon, is won, times out, is skipped for an awake Warden, is skipped on an unsealed stage, lands a second wave, is spent by a flow change, the bell rings and is cashed, the Warden wakes, a Continue, a retry (storeless), a lock on the second stage | the probe breaks; one that holds means an action can no longer fire |
+| `yardlock-reach-*` | one probe each that says "never" about a thing that must happen: a lock shuts, shuts near the beacon, is won, times out, is skipped for an awake Warden, is skipped on an unsealed stage, lands a second wave, is spent by a flow change, the bell rings and is cashed, the Warden wakes, a strike lands on it, a Continue, a retry (storeless), a lock on the second stage | the probe breaks; one that holds means an action can no longer fire |
 
 `node scripts/gate/model-receipts.mjs --out <dir> --row yard-lock-safe` writes the receipt from `yardlock-today-rolling` and the nine `yardlock-broken-*` plants. `yardlock-today` is not in the receipt while YL-1 is open: the receipt names YL-1 and YL-2 as gaps on every run. When the YL-1 fix lands, `LockedYields` flips to TRUE in the script's table, `yardlock-today` must report no break, and it replaces `yardlock-today-rolling` in the receipt.
 

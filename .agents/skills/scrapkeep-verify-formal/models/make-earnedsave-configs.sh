@@ -38,6 +38,8 @@ ecfg today-nofail "SaveOnce" MaxFails=0
 # window between the refused write and the next one that lands still hands the save back, which this config shows.
 ecfg guarded "SaveOnce" SpendOwed=TRUE Crashes=FALSE
 ecfg guarded-crash "SaveOnce" SpendOwed=TRUE
+# The fix, no crash, with every write refused until the game closes: the owed spend never lands, so SaveOnce breaks.
+ecfg guarded-allfail "SaveOnce" SpendOwed=TRUE Crashes=FALSE MaxFails=3
 # The guard the code has, off, from today-nofail: SaveOnce must break.
 ecfg broken-spendwrite "SaveOnce" MaxFails=0 SpendWrite=FALSE
 # Probes: every one must break.

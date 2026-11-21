@@ -174,7 +174,7 @@ export const ROWS = {
     real: [
       {
         cfg: "yardlock-today-rolling.cfg",
-        minStates: 47615,
+        minStates: 47997,
         label:
           "a played game's yard lock and overtime bell over two stages, a ball that touches ground in the lock's circle before it reaches the Warden's side (W45 FV-2)",
       },
@@ -192,7 +192,7 @@ export const ROWS = {
     ],
     coverage: "references/yardlock-coverage.md",
     gaps: [
-      "finding YL-1 is open: a ball that first touches ground within about 70 m of the beacon (after a jump, launch or swing over the lock's circle) shuts the yard round the Warden's fight, and the yard stays shut while the Warden is awake (yardlock-today breaks NoLockInWardenFight; replayed on the dam)",
+      "finding YL-1 is open: a ball that first touches ground within about 82 m of the beacon (after a jump, launch or swing over the lock's 150 m any-ground share) shuts the yard where the ball can reach the beacon ring or strike the Warden from inside it, and the yard stays shut while the Warden is awake (yardlock-today breaks NoLockInWardenFight; the ring, roll-in and strike paths replayed on the dam)",
       "finding YL-2 is open: in a storeless flow (tests and bots) the dead screen keeps the yard shut and its wall standing until a retry (yardlock-today-nostore breaks WallOnlyWhileLocked); a played game's death goes through the summary and drops it",
       "the Warden's clamp, the sentry, the wall's spring, the sluice and seconds are not modelled; max_s is 5 ticks and the lock row 2 waves",
     ],

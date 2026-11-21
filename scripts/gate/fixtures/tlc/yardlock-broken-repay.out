@@ -1,12 +1,12 @@
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 35 and seed -7788348016709563560 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Running breadth-first search Model-Checking with fp 68 and seed -4302399000337892384 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
 Parsing file <tmp>/YardLock.tla
 Parsing file <tmp>/Naturals.tla
 Semantic processing of module Naturals
 Semantic processing of module YardLock
-Starting... (2026-11-21 13:19:48)
+Starting... (2026-11-21 13:32:39)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-11-21 13:19:48.
+Finished computing initial states: 1 distinct state generated at 2026-11-21 13:32:39.
 Error: Invariant YardPaysOnce is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -34,7 +34,7 @@ State 1: <Initial predicate>
 /\ yardAt = "none"
 /\ crewDown = FALSE
 
-State 2: <Start line 281, col 3 to line 283, col 13 of module YardLock>
+State 2: <Start line 291, col 3 to line 293, col 13 of module YardLock>
 /\ phase = "events"
 /\ rings = 0
 /\ flow = "stage"
@@ -419,7 +419,7 @@ State 17: <BallTick line 112, col 3 to line 119, col 67 of module YardLock>
 /\ cards = 0
 /\ lock = "locked"
 /\ wave = 1
-/\ grounded = FALSE
+/\ grounded = TRUE
 /\ left = 3
 /\ gap = FALSE
 /\ last = "BallTick"
@@ -444,7 +444,7 @@ State 18: <LocksTick line 139, col 3 to line 172, col 71 of module YardLock>
 /\ cards = 1
 /\ lock = "locked"
 /\ wave = 1
-/\ grounded = FALSE
+/\ grounded = TRUE
 /\ left = 2
 /\ gap = FALSE
 /\ last = "UnlockWon"
@@ -469,7 +469,7 @@ State 19: <EndEvents line 177, col 3 to line 179, col 83 of module YardLock>
 /\ cards = 1
 /\ lock = "locked"
 /\ wave = 1
-/\ grounded = FALSE
+/\ grounded = TRUE
 /\ left = 2
 /\ gap = FALSE
 /\ last = "EndEvents"
@@ -494,7 +494,7 @@ State 20: <FlowTick line 103, col 3 to line 106, col 74 of module YardLock>
 /\ cards = 1
 /\ lock = "locked"
 /\ wave = 1
-/\ grounded = FALSE
+/\ grounded = TRUE
 /\ left = 2
 /\ gap = FALSE
 /\ last = "FlowTick"
@@ -519,7 +519,7 @@ State 21: <BallTick line 112, col 3 to line 119, col 67 of module YardLock>
 /\ cards = 1
 /\ lock = "locked"
 /\ wave = 1
-/\ grounded = TRUE
+/\ grounded = FALSE
 /\ left = 2
 /\ gap = FALSE
 /\ last = "BallTick"
@@ -544,7 +544,7 @@ State 22: <LocksTick line 139, col 3 to line 172, col 71 of module YardLock>
 /\ cards = 2
 /\ lock = "locked"
 /\ wave = 1
-/\ grounded = TRUE
+/\ grounded = FALSE
 /\ left = 1
 /\ gap = FALSE
 /\ last = "UnlockWon"
@@ -559,7 +559,7 @@ State 22: <LocksTick line 139, col 3 to line 172, col 71 of module YardLock>
 /\ yardAt = "circle"
 /\ crewDown = TRUE
 
-58767 states generated, 25951 distinct states found, 3730 states left on queue.
+100475 states generated, 39064 distinct states found, 5322 states left on queue.
 The depth of the complete state graph search is 22.
 The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 8 and the 95th percentile is 4).
-Finished in 00s at (2026-11-21 13:19:48)
+Finished in 00s at (2026-11-21 13:32:39)

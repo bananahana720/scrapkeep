@@ -6,11 +6,15 @@ extends SceneTree
 #         yard first; the next frame, flow engages the Warden and the yard stays shut.
 #   near  (the same rule by the second path): the ball first touches ground near the beacon, outside its ring; the
 #         yard shuts; the ball rolls inside the yard into the ring; flow engages; the yard stays shut.
+#   strike (the same rule by StrikeWarden): the yard shuts 75 m from the beacon, the ball stays outside the ring inside
+#         the yard, 40 m from the Warden, and a hit lands on the Warden (the enemy_struck that combat.gd emits for every
+#         hit, as a scrap_rockets lock at 42 m would); flow engages; the yard stays shut.
 #   dead  (yardlock-today-nostore, WallOnlyWhileLocked, finding YL-2): a storeless flow; the yard shuts; the ball dies;
 #         the dead screen comes up with the lock still "locked" and its wall standing.
 #   control (dead with a store, as a played game): the death goes to the summary and the wall goes.
 # Each prints its steps and REPRODUCED or NOT REPRODUCED. The ball is placed with player.reset_to, which stands in
-# for the flight that brings it there; the tick it lands in is the game's own.
+# for the flight that brings it there, and in near and strike for the roll inside the yard (the wall's hold is not
+# exercised); every tick after it is the game's own.
 # Copy it into sketches/core-loop/tests/ to run it (SKILL.md, "Read a result"); it is not a suite test. Run it with
 # HOME (and XDG_DATA_HOME on the PC) set to a scratch folder so no real save is touched.
 
@@ -29,6 +33,8 @@ func _run() -> void:
 	print("ring: %s" % ("REPRODUCED" if ring else "NOT REPRODUCED"))
 	var near := await _near()
 	print("near: %s" % ("REPRODUCED" if near else "NOT REPRODUCED"))
+	var strike := await _strike()
+	print("strike: %s" % ("REPRODUCED" if strike else "NOT REPRODUCED"))
 	var dead := await _dead(false)
 	print("dead: %s" % ("REPRODUCED" if dead else "NOT REPRODUCED"))
 	var control := await _dead(true)
@@ -135,6 +141,39 @@ func _near() -> bool:
 	game.free()
 	await process_frame
 	return shut and both and held
+
+
+func _strike() -> bool:
+	print("strike:")
+	var game = await _game(true)
+	var locks = game.flow.gate
+	var at: Array = _toward(game, 75.0)
+	game.player.reset_to(at[0], Vector3.ZERO)
+	var waited := 0
+	while locks.lock_state == "armed" and waited < 60:
+		await physics_frame
+		waited += 1
+	_say(game, "Lock (after %d frames)" % waited)
+	var shut: bool = locks.lock_state == "locked" and not game.flow.engaged()
+	var centre: Vector3 = locks.lock_centre
+	var inner: Array = _toward(game, 40.0)
+	print("  yard centre %.1f m from the beacon; the ball goes to a point %.1f m from the yard centre" % [
+		_flat(centre, game.flow.beacon.global_position), _flat(inner[0], centre)])
+	game.player.reset_to(inner[0], Vector3.ZERO)
+	await physics_frame
+	await physics_frame
+	_say(game, "rolled to 40 m, outside the ring")
+	var before: bool = not game.flow.engaged()
+	game.events.enemy_struck.emit(game.flow.warden, "rockets", 10.0)
+	_say(game, "StrikeWarden")
+	for i in 30:
+		await physics_frame
+	_say(game, "half a second later")
+	var held: bool = locks.lock_state == "locked" and game.flow.engaged() \
+			and not game.flow.beacon.in_ring(game.player.ball_position())
+	game.free()
+	await process_frame
+	return shut and before and held
 
 
 func _dead(store: bool) -> bool:

@@ -63,7 +63,7 @@ ycfg broken-cash "OvertimeOnlyAfterWin" "" "${GUARDS[@]}" CashSpends=FALSE
 ycfg broken-ringcap "OvertimeOnlyAfterWin" "" "${GUARDS[@]}" RingCap=FALSE
 # Probes: every one must break, or an action can no longer fire. One probe per config, because a break stops the
 # checker. The storeless probes reach the retry; the rest run on today.
-for probe in Lock LockNear Won Timeout SkipEngaged SkipUnsealed Wave Ring Cash FlowSpend Engaged Continue SecondStage; do
+for probe in Lock LockNear Won Timeout SkipEngaged SkipUnsealed Wave Ring Cash FlowSpend Engaged Strike Continue SecondStage; do
   ycfg "reach-$probe" "Probe$probe" ""
 done
 ycfg reach-Retry "ProbeRetry" "" Store=FALSE

@@ -134,7 +134,7 @@ Run `bash $F/models/make-destructibles-configs.sh`, then plain TLC on each `dest
 | --- | --- | --- |
 | `WallOnlyWhileLocked` | The wall stands only while the yard is shut on a stage in play. | A wall left over a stage the run has left. |
 | `LockAlwaysOpens` | A shut yard always opens while the stage plays on. | The ball is trapped. |
-| `NoLockInWardenFight` | At a frame's end the yard is never shut while the Warden is awake. | The Warden's fight happens inside the yard's wall, with its crew. |
+| `NoLockInWardenFight` | As the locks tick ends, the yard is never shut while the Warden is awake (woken by the ring or a strike). | The Warden's fight happens inside the yard's wall, with its crew. |
 | `YardPaysOnce` | A yard pays its panel at most once an activation. | The yard pays twice. |
 | `OvertimeOnlyAfterWin` | The bell is offered, rung and cashed only after a won yard, three rings at most, one payout. | The pot pays without the yard won, or twice. |
 | `StartCardOnce` | The lock calls `show_start_card` at most once an activation. | The start card pops twice. |

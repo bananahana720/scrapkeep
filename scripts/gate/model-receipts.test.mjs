@@ -425,7 +425,7 @@ test("the yard lock row's pin and plants match captured TLC output, and its open
     gaps: yl.gaps,
   });
   assert.equal(held.pass, true);
-  assert.match(held.measured, /yardlock-today-rolling: no break in 47,615 distinct states/);
+  assert.match(held.measured, /yardlock-today-rolling: no break in 47,997 distinct states/);
   assert.match(held.measured, /yardlock-broken-maxs broke LockAlwaysOpens/);
   assert.match(held.measured, /not checked: finding YL-1 is open/);
   assert.equal(

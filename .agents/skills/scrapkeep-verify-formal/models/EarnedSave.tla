@@ -79,7 +79,8 @@ Hit ==
             /\ last' = "Died" /\ UNCHANGED <<spent, fired, fails>>
   /\ UNCHANGED <<proc, part, writes>>
 
-\* The pause menu's Quit: get_tree().quit(). Under the fix an owed spend is written first (it may be refused too).
+\* A clean exit: the pause menu's Quit (get_tree().quit()) or the window's close (boot.gd sets auto_accept_quit), neither
+\* of which writes the run today. Under the fix an owed spend is written first (it may be refused too).
 QuitMenu ==
   /\ proc = "up"
   /\ IF SpendOwed /\ owed THEN Write(Doc(part, TRUE)) ELSE UNCHANGED <<disk, fails>>

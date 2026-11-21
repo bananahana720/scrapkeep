@@ -1,13 +1,13 @@
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 20 and seed 8634353909553829190 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Running breadth-first search Model-Checking with fp 84 and seed -5424359468396670524 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
 Parsing file <tmp>/YardLock.tla
 Parsing file <tmp>/Naturals.tla
 Semantic processing of module Naturals
 Semantic processing of module YardLock
-Starting... (2026-11-21 13:20:05)
+Starting... (2026-11-21 13:32:56)
 Implied-temporal checking--satisfiability problem has 1 branches.
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-11-21 13:20:05.
+Finished computing initial states: 1 distinct state generated at 2026-11-21 13:32:56.
 Error: Invariant NoLockInWardenFight is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -35,7 +35,7 @@ State 1: <Initial predicate>
 /\ yardAt = "none"
 /\ crewDown = FALSE
 
-State 2: <Start line 281, col 3 to line 283, col 13 of module YardLock>
+State 2: <Start line 291, col 3 to line 293, col 13 of module YardLock>
 /\ phase = "events"
 /\ rings = 0
 /\ flow = "stage"
@@ -45,7 +45,7 @@ State 2: <Start line 281, col 3 to line 283, col 13 of module YardLock>
 /\ cards = 0
 /\ lock = "armed"
 /\ wave = 0
-/\ grounded = FALSE
+/\ grounded = TRUE
 /\ left = 0
 /\ gap = FALSE
 /\ last = "Start"
@@ -70,7 +70,7 @@ State 3: <EndEvents line 177, col 3 to line 179, col 83 of module YardLock>
 /\ cards = 0
 /\ lock = "armed"
 /\ wave = 0
-/\ grounded = FALSE
+/\ grounded = TRUE
 /\ left = 0
 /\ gap = FALSE
 /\ last = "EndEvents"
@@ -95,7 +95,7 @@ State 4: <FlowTick line 103, col 3 to line 106, col 74 of module YardLock>
 /\ cards = 0
 /\ lock = "armed"
 /\ wave = 0
-/\ grounded = FALSE
+/\ grounded = TRUE
 /\ left = 0
 /\ gap = FALSE
 /\ last = "FlowTick"
@@ -260,7 +260,7 @@ State 10: <LocksTick line 139, col 3 to line 172, col 71 of module YardLock>
 /\ yardAt = "ring"
 /\ crewDown = FALSE
 
-1105 states generated, 604 distinct states found, 210 states left on queue.
+1816 states generated, 860 distinct states found, 319 states left on queue.
 The depth of the complete state graph search is 10.
-The average outdegree of the complete state graph is 2 (minimum is 0, the maximum 8 and the 95th percentile is 4).
-Finished in 00s at (2026-11-21 13:20:05)
+The average outdegree of the complete state graph is 2 (minimum is 0, the maximum 8 and the 95th percentile is 5).
+Finished in 00s at (2026-11-21 13:32:56)
