@@ -128,6 +128,9 @@ const PROW_SHOVE := 12.0
 const PROW_STAGGER := 0.8
 const SPRING_WINDOW := 3.0
 const SPRING_MULT := 1.5
+# Rake Heart: the return sweep comes this long after the first, at this share of its damage (start).
+const RAKE_DELAY := 0.25
+const RAKE_DAMAGE := 0.6
 
 # Ball contacts: base damage plus a share of the contact's force.
 const STRIKE_DAMAGE := {
@@ -288,6 +291,8 @@ var escape_lane := {}
 var _escape := {}
 # Tarn's clamp: caught enemies (instance id -> clock the clamp ends) take CLAMP_BONUS from claw sweeps. Cleared on run start and every attempt; a kill drops its entry.
 var _clamped := {}
+# Rake Heart: return passes waiting on their clock, {at, weapon, forward, damage}.
+var _rakes: Array = []
 # The remembered cannon: committed volleys ({family, hazards, damage, source, struck,
 # expose, verb, window, and the commit's seed, target, centre, radius and phase}), how many it has committed (its seed counter),
 # and plate-exposed enemies (instance id -> {until, verb}) that take MindAttacks.BRACE_MULT
@@ -518,6 +523,7 @@ func setup(ctx_ref) -> void:
 		last_assist = {}
 		_prow_until = {}
 		_clamped = {}
+		_rakes = []
 		_escape = {}
 		escape_lane = {}
 		escape_acts = 0
@@ -1576,7 +1582,9 @@ func active_weapon() -> String:
 	# Air Turret: airborne counts as mounted for the weapon.
 	if mounted_as != null and (ctx.player.kit.mounted or (_knob("air_turret") and not ctx.player.state.on_floor())):
 		return mounted_as
-	return weapon
+	# A swapped row that borrows another weapon's pattern (claw_rake plays claw_sweep) fires
+	# through that weapon, so every pattern op and transformer on it applies unchanged.
+	return String(abilities.cap(AbilityState.WEAPON, "pattern", weapon))
 
 
 # The discharge a given speed would fire right now, with the current parts.
@@ -1739,23 +1747,70 @@ func _fire(weapon: String, source := "weapon") -> void:
 	var muzzle := ball + forward * MUZZLE
 	if sprung:
 		effects.ring(muzzle, 1.5, Palette.VERDIGRIS)
-	var color := Weapons.color(weapon)
-	var kind := Weapons.strike_kind(weapon)
 	var layout: Array = p.layout(forward, volleys)
 	for entry in layout:
-		bolts.fire({
-			"origin": muzzle, "dir": entry["dir"], "speed": p.speed, "max_dist": reach,
-			"damage": damage, "kind": kind, "weapon_id": weapon, "radius": p.bolt_radius,
-			"knock": p.knock, "chain_jumps": p.chain_jumps, "chain_range": p.chain_range,
-			"chain_falloff": p.chain_falloff, "lattice_chain_falloff": p.lattice_chain_falloff, "color": color,
-			"wave_amp": 0.0 if entry["centre"] else p.wave_amp, "wave_hz": p.wave_hz, "phase": entry["phase"],
-			"pierce": p.pierce,
-			"source": source,
-		})
+		bolts.fire(_bolt_record(weapon, p, entry, muzzle, reach, damage, source))
+	if rake_follows(source, ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")):
+		_rakes.append({"at": _clock + RAKE_DELAY, "weapon": weapon, "forward": forward,
+			"damage": p.damage * _damage_mod(weapon)})
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": aim["to"], "point": point,
 		"blocked": aim["blocked"], "bolts": layout.size(), "volley": volleys, "sprung": sprung}
 	ctx.events.shot_fired.emit(weapon, muzzle, aim["to"])
+
+
+# One bolt of a volley: the pattern's numbers for this layout entry, fired from `muzzle`.
+func _bolt_record(weapon: String, p: Resource, entry: Dictionary, muzzle: Vector3, reach: float, damage: float, source: String) -> Dictionary:
+	return {
+		"origin": muzzle, "dir": entry["dir"], "speed": p.speed, "max_dist": reach,
+		"damage": damage, "kind": Weapons.strike_kind(weapon), "weapon_id": weapon, "radius": p.bolt_radius,
+		"knock": p.knock, "chain_jumps": p.chain_jumps, "chain_range": p.chain_range,
+		"chain_falloff": p.chain_falloff, "lattice_chain_falloff": p.lattice_chain_falloff, "color": Weapons.color(weapon),
+		"wave_amp": 0.0 if entry["centre"] else p.wave_amp, "wave_hz": p.wave_hz, "phase": entry["phase"],
+		"pierce": p.pierce,
+		"source": source,
+	}
+
+
+# Rake Heart (claw_rake): only the player's own press queues a return, so the return pass,
+# which fires as item_proc, can never queue another (proc depth 1).
+static func rake_follows(source: String, mutation: String) -> bool:
+	return source == "weapon" and mutation == "claw_rake"
+
+
+# The queued return passes whose time has come; each fires once and leaves the queue.
+func _tick_rakes() -> void:
+	var waiting: Array = []
+	for rake in _rakes:
+		if float(rake["at"]) > _clock:
+			waiting.append(rake)
+		else:
+			_rake_return(rake)
+	_rakes = waiting
+
+
+# The same arc mirrored about the aim line, from where the ball is now: item_proc, no bits,
+# RAKE_DAMAGE of the sweep's damage. It fires through bolts directly, so it queues nothing.
+func _rake_return(rake: Dictionary) -> void:
+	var weapon: String = rake["weapon"]
+	if not _patterns.has(weapon):
+		return
+	var p: Resource = _patterns[weapon]
+	var forward: Vector3 = rake["forward"]
+	var muzzle: Vector3 = ctx.player.ball_position() + forward * MUZZLE
+	var reach: float = p.range_m * ctx.tuning.mod("weapon_range")
+	var damage: float = float(rake["damage"]) * RAKE_DAMAGE
+	var up_hint := Vector3.UP if absf(forward.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
+	var right := forward.cross(up_hint).normalized()
+	var up := right.cross(forward).normalized()
+	for entry in p.layout(forward, volleys):
+		var dir: Vector3 = entry["dir"]
+		var mirrored := (forward * dir.dot(forward) - right * dir.dot(right) + up * dir.dot(up)).normalized()
+		var bolt := _bolt_record(weapon, p, {"dir": mirrored, "centre": entry["centre"], "phase": PI - float(entry["phase"])},
+			muzzle, reach, damage, "item_proc")
+		bolt["wave_hz"] = -float(p.wave_hz)
+		bolt["bits"] = 0
+		bolts.fire(bolt)
 
 
 func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -> void:
@@ -3876,6 +3931,7 @@ func _proc_charges(scale: float) -> void:
 func _tick_upgrades(delta: float) -> void:
 	var kit = ctx.player.kit
 	_tick_echo(delta)
+	_tick_rakes()
 	_pulse_left = maxf(0.0, _pulse_left - delta)
 	if _pulse_left <= 0.0:
 		if kit.hooked and _knob("anchor_pulse") > 0.0:
@@ -4326,6 +4382,7 @@ func _start_attempt() -> void:
 	_primed.clear()
 	assist_charge = 0.0
 	_clamped.clear()
+	_rakes.clear()
 	_exposed.clear()
 	_spring_until = -1.0
 	_warden_slam_hits = 0
