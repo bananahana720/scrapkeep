@@ -244,6 +244,9 @@ func _physics_process(_delta: float) -> bool:
 				var crest: Dictionary = _ceremony.card_state(_ceremony.find_of(BossRules.CREST_PART, "boss"), int(_clock_ms), false)
 				_report("crest card", crest["name"] == "Admiral's Crest" and crest["stamp"] == "TROPHY" and crest["verb"] == "Fleet property. Yours now.",
 					"Brindle's crest reveals as %s · %s, \"%s\"" % [crest["stamp"], crest["name"], crest["verb"]])
+				_next("drain_evolutions")
+		"drain_evolutions":
+			if _ceremony.queued() == 0 and not _ceremony.active() or _elapsed() > 5000:
 				_next("short")
 		"short":
 			if _elapsed() > FIND_MS:
@@ -254,7 +257,8 @@ func _physics_process(_delta: float) -> bool:
 				var last: Array = _ceremony.presented.back()
 				var stops: Array = _game.presentation.juice.hit_stop_log.slice(before).filter(func(s: Array): return s[2] == "reward_rare")
 				var row := EventKinds.reward_row("rare")
-				_report("short is rare", last[1] == "rare" and _ceremony.queued() == 0 and not _ceremony.active() and not paused
+				# queued <= 1: the synergy snap's evolution may leave one reveal card pending.
+				_report("short is rare", last[1] == "rare" and _ceremony.queued() <= 1 and not _ceremony.active() and not paused
 						and stops.size() == 1 and float(stops[0][1]) <= float(row["stop_ms"]) / 1000.0 + 0.0001,
 					"a gate find with short on: tier %s, queued %d, paused %s, stop asked %s" % [last[1], _ceremony.queued(), paused, stops])
 				_ceremony.short = false
@@ -282,10 +286,12 @@ func _physics_process(_delta: float) -> bool:
 
 
 func _on_started(part: String) -> void:
+	if part != "gatling_heart":
+		return
 	_started = part
 	_v0 = _game.player.body().linear_velocity
 	_s0 = _game.player.state.velocity
-	_report("pauses when calm", part == "gatling_heart" and paused and _ceremony.queued() == 0,
+	_report("pauses when calm", paused and _ceremony.queued() == 0,
 		"the enemy gone: began %s, paused %s, queued %d, velocity %s" % [part, paused, _ceremony.queued(), _v0])
 
 
