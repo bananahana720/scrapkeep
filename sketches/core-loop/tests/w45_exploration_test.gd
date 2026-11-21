@@ -186,7 +186,7 @@ func _far_caches(map_id: String, w: Dictionary) -> void:
 # ---- mend wards ----------------------------------------------------------------------------------------------
 
 func _ward_site(map_id: String, w: Dictionary, graph) -> void:
-	var specs := Secrets.ward_sites(map_id)
+	var specs := Secrets.ward_sites(w["park"])
 	if not t.eq("%s mend wards" % map_id, specs.size(), 1):
 		return
 	var spec: Dictionary = specs[0]
@@ -290,7 +290,7 @@ func _live_wards(map_id: String, game) -> void:
 	if not t.eq("%s builds its mend ward" % map_id, acts.wards.size(), 1):
 		return
 	var ward = acts.wards[0]
-	var spec: Dictionary = Secrets.ward_sites(map_id)[0]
+	var spec: Dictionary = Secrets.ward_sites(game.world.activities.ctx.terrain.map().park)[0]
 	t.check("%s ward stands at its spot" % map_id, Vector2(ward.global_position.x, ward.global_position.z).distance_to(spec["at"]) < 0.5)
 	t.eq("%s ward carries no word" % map_id, ward.find_children("*", "Label3D", true, false).size(), 0)
 	var run = game.run

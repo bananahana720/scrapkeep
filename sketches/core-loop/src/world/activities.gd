@@ -2731,7 +2731,7 @@ const PLATE_H := 0.1
 
 
 func _build_wards_and_plates(map) -> void:
-	for spec in Secrets.ward_sites(_graph_map):
+	for spec in Secrets.ward_sites(map.park):
 		wards.append(_build_ward(spec))
 	for spec in Secrets.plate_sites(map.park):
 		plates.append(_build_plate(spec))
@@ -2831,6 +2831,7 @@ func _watch_plate(p: LorePlate, ball: Vector3) -> void:
 func read_plate(p: LorePlate) -> bool:
 	if not p.touch():
 		return false
+	print("DEBUGPLATE ", p.note, " ", p.global_position)
 	p.disc.material_override = _solid(Palette.REDJAW_ASH)
 	var codex = ctx.get("codex")
 	if codex == null or not codex.mark_known(p.note):

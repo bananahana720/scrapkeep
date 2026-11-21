@@ -140,10 +140,11 @@ const DOOR_FOR := "door.brindle_clock_run"
 
 # Mend wards (W45 P3): one per Spillway park, standing in a dead end off every line, so it is found by leaving the
 # route. activities.gd builds and runs them (its MendWard). A ward mends only a ball that stops in its ring while the
-# guard it wakes presses it (ruling cu: anything that eases play ships with a matching pressure).
+# guard it wakes presses it (ruling cu: anything that eases play ships with a matching pressure). A ward names the
+# park row it stands by, and that row places it: no map is named here.
 const WARDS := {
-	"dam_ledge_ward": {"world": 1, "map": "park_dam", "site": "lobber_ledge", "at": [-185, 455]},
-	"flume_pond_ward": {"world": 1, "map": "park_flume", "site": "weir_pond", "at": [-650, -690]},
+	"dam_ledge_ward": {"site": "lobber_ledge", "at": [-185, 455]},
+	"flume_pond_ward": {"site": "weir_pond", "at": [-650, -690]},
 }
 
 # Lore plates (W45 P3): a park row's `fragment` names the crew record left at that spot; the plates that have one
@@ -241,12 +242,16 @@ static func find_sites(map_id: String, seed: int) -> Array:
 	return out
 
 
-# The mend wards a park map holds: [{id, site, at: Vector2}]. Every profile and every run gets them.
-static func ward_sites(map_id: String) -> Array:
+# The mend wards a park holds (a ward whose site is one of its rows): [{id, site, at: Vector2}]. Every profile and
+# every run gets them.
+static func ward_sites(park: Dictionary) -> Array:
+	var rows := {}
+	for row: Dictionary in park.get("park_rows", []):
+		rows[String(row["id"])] = true
 	var out := []
 	for id in WARDS:
 		var w: Dictionary = WARDS[id]
-		if w["map"] == map_id:
+		if rows.has(w["site"]):
 			out.append({"id": id, "site": w["site"], "at": Vector2(float(w["at"][0]), float(w["at"][1]))})
 	return out
 
