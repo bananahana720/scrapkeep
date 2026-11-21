@@ -171,7 +171,9 @@ static func split_spent(parent_spent: int) -> int:
 # `struck_id`: +/- SPLIT_ANGLE_DEG about its up axis, SPLIT_DAMAGE of its damage, the rest of
 # its range up to SPLIT_REACH (measured at `used_dist` when given, so fast bolts do not lose
 # a step of range), and that machine excluded. [] when the bolt cannot split or has no range left.
-static func split_children(parent: Dictionary, point: Vector3, struck_id: int, used_dist := -1.0) -> Array:
+# Grapeshot Press passes angle_deg < SPLIT_ANGLE_DEG for the tight cone and extra_knock > 0 for
+# forward knockback on each child.
+static func split_children(parent: Dictionary, point: Vector3, struck_id: int, used_dist := -1.0, angle_deg := SPLIT_ANGLE_DEG, extra_knock := 0.0) -> Array:
 	if not bit_ready(parent, "split"):
 		return []
 	var used := used_dist if used_dist >= 0.0 else float(parent.get("travelled", 0.0))
@@ -184,10 +186,12 @@ static func split_children(parent: Dictionary, point: Vector3, struck_id: int, u
 	exclude.append(struck_id)
 	var out: Array = []
 	for side in [-1.0, 1.0]:
-		var kid := child(parent, {"origin": point, "dir": dir.rotated(axis, deg_to_rad(SPLIT_ANGLE_DEG) * side).normalized(),
+		var kid := child(parent, {"origin": point, "dir": dir.rotated(axis, deg_to_rad(angle_deg) * side).normalized(),
 			"max_dist": left, "damage": float(parent["damage"]) * SPLIT_DAMAGE, "pierce": 0})
 		kid["spent"] = split_spent(int(parent.get("spent", 0)))
 		kid["exclude"] = exclude.duplicate()
+		if extra_knock > 0.0:
+			kid["knock"] = extra_knock
 		out.append(kid)
 	return out
 
@@ -255,8 +259,11 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 				on_hit.call(bolt, target["enemy"], target["point"], target["part"])
 			bolt["acts"] = 0
 			# The split bit spends on the first machine and throws two children from it.
+			# Grapeshot Press narrows the cone and adds forward knock via keys on the bolt.
 			if ShotBits.has(acts, ShotBits.bit("split")):
-				spawned.append_array(split_children(bolt, target["point"], hit_id, hit_used))
+				var gs_angle := float(bolt.get("grapeshot_angle", SPLIT_ANGLE_DEG))
+				var gs_knock := float(bolt.get("grapeshot_knock", 0.0))
+				spawned.append_array(split_children(bolt, target["point"], hit_id, hit_used, gs_angle, gs_knock))
 				bolt["spent"] = ShotBits.union(int(bolt["spent"]), ShotBits.bit("split"))
 			# A piercing bolt passes through: it keeps its line and corkscrew phase and
 			# looks for the next machine further along the same segment. The pattern's

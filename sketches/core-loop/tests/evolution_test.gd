@@ -6,7 +6,7 @@ const Parts := preload("res://src/build/parts.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 
-# Four evolutions: part pairs (Synergies.EVOLUTIONS) that become an Evolved part, the top rung
+# Seven evolutions: part pairs (Synergies.EVOLUTIONS) that become an Evolved part, the top rung
 # of the ladder. Since the systems audit fold (11 Nov 2026) an evolution is its own rule, apart
 # from the maker tricks. Holding one ingredient does nothing; holding both gains the Evolved part
 # once, announced as part_gained with source "evolution" at rarity evolved; the Evolved effect is
@@ -18,6 +18,9 @@ const CASES := [
 	{"into": "bladestorm_rotor", "parts": ["spiral_wave", "loose_trigger"]},
 	{"into": "storm_mast", "parts": ["focus_lens", "live_line"]},
 	{"into": "grounding_spike", "parts": ["arc_coil", "drop_weight"]},
+	{"into": "grapeshot_press", "parts": ["cross_split", "pin_setter"]},
+	{"into": "hoar_barrel", "parts": ["frost_barb", "rime_rounds"]},
+	{"into": "fault_hammer", "parts": ["echo_locator", "brace_frame"]},
 ]
 
 var _game
@@ -119,10 +122,11 @@ func _check_case(c: Dictionary) -> void:
 	run.parts.erase(c["parts"][1])
 	_build.recompute()
 	var dormant: bool = _build.sheet.punch < sheet_before["punch"] + 0.01 and into in run.parts
-	var dormant_mods_lower: bool = _build.weapon_mod("weapon_damage") * _build.weapon_mod("weapon_rate") + float(_build.pattern_level("spiral_wave")) < after - 0.01
+	var dormant_knobs: float = _build.weapon_mod("weapon_damage") * _build.weapon_mod("weapon_rate") + float(_build.pattern_level("spiral_wave"))
+	var dormant_effect_lower: bool = dormant_knobs < after - 0.01 or _build.punch_bonus() < punch_before + 1.0
 	run.add_part(c["parts"][1], "test")
-	_report(into + " dropped ingredient", dormant and dormant_mods_lower and run.parts.count(into) == 1,
-		"dormant %s (effect lower %s); regained: held %d" % [dormant, dormant_mods_lower, run.parts.count(into)])
+	_report(into + " dropped ingredient", dormant and dormant_effect_lower and run.parts.count(into) == 1,
+		"dormant %s (effect lower %s); regained: held %d" % [dormant, dormant_effect_lower, run.parts.count(into)])
 
 
 func _check_never_rolls() -> void:
@@ -141,7 +145,7 @@ func _check_never_rolls() -> void:
 				for seed in 40:
 					var rng := RandomNumberGenerator.new()
 					rng.seed = seed * 7919 + 13
-					var held: Array = ["double_feed", "hot_rivets", "spiral_wave", "loose_trigger", "focus_lens", "live_line", "arc_coil", "drop_weight"] if seed % 2 == 0 else []
+					var held: Array = ["double_feed", "hot_rivets", "spiral_wave", "loose_trigger", "focus_lens", "live_line", "arc_coil", "drop_weight", "cross_split", "pin_setter", "frost_barb", "rime_rounds", "echo_locator", "brace_frame"] if seed % 2 == 0 else []
 					for id in Parts.roll(rng, rarities, cls, held, 3):
 						draws += 1
 						if id in evolved_ids:

@@ -128,6 +128,9 @@ const EVOLUTIONS := {
 	"bladestorm_rotor": ["spiral_wave", "loose_trigger"],
 	"storm_mast": ["focus_lens", "live_line"],
 	"grounding_spike": ["arc_coil", "drop_weight"],
+	"grapeshot_press": ["cross_split", "pin_setter"],
+	"hoar_barrel": ["frost_barb", "rime_rounds"],
+	"fault_hammer": ["echo_locator", "brace_frame"],
 }
 # The trick each evolution grew out of, the name its text ends on ("From Wrecking Ball.").
 const EVOLVED_FROM := {
@@ -135,6 +138,9 @@ const EVOLVED_FROM := {
 	"bladestorm_rotor": "pinwheel",
 	"storm_mast": "tesla_pylon",
 	"grounding_spike": "lightning_rod",
+	"grapeshot_press": "shrapnel_bloom",
+	"hoar_barrel": "shatter_crew",
+	"fault_hammer": "thermal_shock",
 }
 
 
