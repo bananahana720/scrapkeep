@@ -25,7 +25,7 @@ const cfg = (name) => cfgRules(readFileSync(new URL(`models/${name}`, SKILL), "u
 // ParkFlood.tla with the step past the live time (finding PF-2), and the destructibles-* files the same day from
 // Destructibles.tla (W45), untrimmed but for the temp folder, process and host. The yardlock-*, earnedsave-* and
 // deferred-* files were captured the same way on 21 November 2026 from YardLock.tla, EarnedSave.tla and
-// DeferredEffects.tla at the P7 sync (W45 FV-3).
+// DeferredEffects.tla at the P7 sync (W45 FV-3); earnedsave-* recaptured on 21 November 2026 after P9 closed ES-2 and ES-3.
 const fixture = (name) =>
   readFileSync(new URL(`fixtures/tlc/${name}.out`, import.meta.url), "utf8");
 const out = {
@@ -461,33 +461,39 @@ test("the yard lock row runs the full played game and the storeless flow now tha
   assert.match(held.measured, /yardlock-broken-maxs broke LockAlwaysOpens/);
 });
 
-test("the earned save row holds with P7's owed spend, catches each of its flushes taken out, and names ES-2 and ES-3 as gaps", () => {
+test("the earned save row runs the two-refusal and sustained-refusal tables now that P9 closed ES-2 and ES-3", () => {
   const { row, held } = checkRow("earned-save-safe", {
     rules: ["SaveOnce"],
     files: ["core/flow.gd", "core/run_state.gd", "core/run_store.gd", "core/safe_store.gd"],
   });
+  assert.deepEqual(
+    row.real.map((r) => r.cfg),
+    [
+      "earnedsave-today.cfg",
+      "earnedsave-today-inprocess.cfg",
+      "earnedsave-today-clearfail.cfg",
+      "earnedsave-today-sustained.cfg",
+    ],
+  );
+  // The P7 and P9 fixes taken out again are plants now, and neither ES-2 nor ES-3 is a gap.
   assert.ok(row.plants.some((p) => p.cfg === "earnedsave-broken-spendowed.cfg"));
-  assert.ok(row.gaps.some((g) => /ES-2/.test(g)) && row.gaps.some((g) => /crash/.test(g)));
-  assert.ok(row.gaps.some((g) => /ES-3/.test(g) && /Restart/.test(g)));
-  // The open findings' configs break the rule and stay off the code's list until their fixes land.
-  for (const open of [
-    "earnedsave-today-clearfail",
-    "earnedsave-es2-only",
-    "earnedsave-today-inprocess",
-  ]) {
-    assert.ok(
-      row.real.every((r) => r.cfg !== `${open}.cfg`),
-      open,
-    );
-    assert.deepEqual(parseTlc(fixture(open)).rules, ["SaveOnce"], open);
-  }
-  // es2-only is ES-2's path (a refused tombstone, then a quit), today-inprocess ES-3's (a refused restart, no quit).
-  assert.match(fixture("earnedsave-es2-only"), /last = "ClearRefused"[\s\S]*last = "Quit"/);
-  assert.match(fixture("earnedsave-today-inprocess"), /last = "NewRunOwed"/);
-  assert.doesNotMatch(fixture("earnedsave-today-inprocess"), /last = "Quit"/);
+  assert.ok(row.plants.some((p) => p.cfg === "earnedsave-broken-clearflush.cfg"));
+  assert.ok(row.plants.some((p) => p.cfg === "earnedsave-broken-newrunflush.cfg"));
+  assert.ok(row.gaps.every((g) => !/ES-2|ES-3/.test(g)));
+  assert.ok(row.gaps.some((g) => /crash/.test(g)) && row.gaps.some((g) => /allfail/.test(g)));
+  // broken-clearflush breaks by ES-2's path (a refused tombstone, then a quit), broken-newrunflush by ES-3's (a refused restart, no quit).
+  assert.match(
+    fixture("earnedsave-broken-clearflush"),
+    /last = "ClearRefused"[\s\S]*last = "Quit"/,
+  );
+  assert.match(fixture("earnedsave-broken-newrunflush"), /last = "NewRunOwed"/);
+  assert.doesNotMatch(fixture("earnedsave-broken-newrunflush"), /last = "Quit"/);
   assert.match(held.measured, /earnedsave-today: no break in 3,014 distinct states/);
-  assert.match(held.measured, /not checked: finding ES-2 is open/);
-  assert.match(held.measured, /; finding ES-3 is open/);
+  assert.match(held.measured, /earnedsave-today-inprocess: no break in 3,361 distinct states/);
+  assert.match(held.measured, /earnedsave-today-clearfail: no break in 6,407 distinct states/);
+  assert.match(held.measured, /earnedsave-today-sustained: no break in 11,102 distinct states/);
+  assert.match(held.measured, /earnedsave-broken-clearflush broke SaveOnce/);
+  assert.match(held.measured, /earnedsave-broken-newrunflush broke SaveOnce/);
 });
 
 test("the deferred effects row holds on the code and every plant breaks its rule", () => {
