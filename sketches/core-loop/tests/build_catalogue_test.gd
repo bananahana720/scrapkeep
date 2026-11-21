@@ -250,7 +250,8 @@ func _check_table_present() -> void:
 	var happy: int = Items.TABLE.values().filter(func(r): return r.get("happy", false)).size()
 	var charge: int = Items.TABLE.values().filter(func(r): return r.get("base", "") == "charge" and not r.get("happy", false)).size()
 	# 2026-11-21 (wave 45 U7): 69 items (64 + 5 verb items); was 64.
-	_report("69-item table in the pool", missing.is_empty() and table == 69 and bowling == 8 and happy == 5 and charge == 8,
+	# charge 8 → 9 after second_bell (base "charge").
+	_report("69-item table in the pool", missing.is_empty() and table == 69 and bowling == 8 and happy == 5 and charge == 9,
 		"%d table items (66 new + 3 pattern rows), %d authored rows in all; bowling %d, happy accidents %d, charge %d; missing %s"
 			% [table, Parts.ids().size(), bowling, happy, charge, missing])
 
