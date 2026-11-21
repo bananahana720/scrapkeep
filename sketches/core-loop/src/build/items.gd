@@ -84,6 +84,10 @@ const TABLE := {
 	"helix_drill": {"maker": "waking", "touches": "fire", "base": "pattern", "rarity": "rare", "stack": "linear", "cap": 3, "tags": ["spiral", "kinetic"],
 		"needs": "spawner.helix_drill", "verb": "Shots corkscrew through two machines", "text": "shots corkscrew through two machines",
 		"patterns": {"helix_drill": 1}},
+	# Wave 45 U6 (ABILITY-MUTATIONS.md C2): a ring of bolts around the aim line instead of a fan.
+	"halo_rig": {"maker": "highdraft_roosts", "touches": "fire", "base": "pattern", "rarity": "uncommon", "stack": "linear", "cap": 3, "tags": ["split"],
+		"verb": "Fires shots in a wide ring", "text": "Adds 5 ring arms around aim at 55% hit damage.",
+		"patterns": {"halo": 1}},
 
 	# Designed happy accidents (5): rare, capped, fun because they are bounded.
 	"scrap_geyser": {"maker": "spillway_works", "base": "utility", "rarity": "rare", "trigger": "on_pickup", "stack": "capped", "cap": 1,
@@ -109,6 +113,11 @@ const TABLE := {
 	"barrage_spring": {"maker": "redjaw", "touches": "fire", "base": "weapon", "rarity": "uncommon", "trigger": "on_kill", "stack": "capped", "cap": 1,
 		"tags": ["speed", "split"], "punch": 6.0, "verb": "Kills refill a weapon charge", "text": "A kill refills a weapon charge",
 		"effect": {"do": "grant_charge", "slot": "weapon", "every": 1.0}},
+	# Wave 45 U6 (ABILITY-MUTATIONS.md C1): a cadence you roll through, never a hold. Volley five lights the
+	# muzzle ring, volley six is one thick piercing bolt (combat.gd _fire; the table is item_effects.gd pike).
+	"slag_pike": {"maker": "fleet_surplus", "touches": "fire", "base": "weapon", "rarity": "rare", "stack": "capped", "cap": 1, "tags": ["kinetic"],
+		"verb": "Every sixth volley fuses into one", "text": "Every 6th volley fuses into one piercing bolt, up to 6x damage.",
+		"effect": {"do": "pike_fuse", "every": 6, "cap_mult": 6.0, "range_mult": 1.25, "idle_s": 3.0}},
 	"warhead_slug": {"maker": "fleet_surplus", "base": "weapon", "rarity": "rare", "trigger": "on_smash", "stack": "linear", "cap": 3,
 		"tags": ["kinetic", "mass"], "punch": 10.0, "verb": "Smashes burst on nearby machines", "text": "Smashes burst, hitting nearby machines",
 		"effect": {"do": "burst", "radius": 5.0, "damage": 14.0}},

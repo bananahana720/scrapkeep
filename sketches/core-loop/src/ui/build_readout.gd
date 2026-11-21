@@ -37,7 +37,7 @@ const STAT_WORDS := {
 	"movement_charges": "Movement charges", "movement_cooldown": "Movement cooldown",
 	"overcharge.damage": "Overcharge damage", "part_count": "Fitted parts",
 	"pattern.chain_arc": "Chain arcs", "pattern.cross_split": "Cross splits", "pattern.fan_spread": "Fan spreads",
-	"pattern.helix_drill": "Helix drills", "pattern.spiral_wave": "Spiral waves",
+	"pattern.halo": "Halo rings", "pattern.helix_drill": "Helix drills", "pattern.spiral_wave": "Spiral waves",
 	"pin_bonus.bonus": "Extra knocked machine damage", "pin_chain.count": "Extra machines knocked on", "pin_count": "Machines knocked on",
 	"pin_damage": "Knocked machine damage", "pin_speed": "Knocked machine speed", "planar_speed": "Rolling speed",
 	"price_scale": "Shop prices", "price_scale.per": "Shop discount", "proc_coefficient": "Trigger strength",

@@ -76,6 +76,9 @@ const PARTS := [
 	"fan_spread", "helix_drill", "domino_wire", "echo_charge", "overcharge_coil", "ten_pin",
 	"synergy_lens", "crush_guard", "last_word", "par_chip",
 	"cloak_flask", "jet_vent", "quick_spool", "tracer_round", "magnet_coil",
+	# 2026-11-21 (wave 45 U6): Slag Pike (rare, cobalt) and Halo Rig, the two weapon-pattern items of
+	# ABILITY-MUTATIONS.md C1 and C2; neither is a relic (ruling bn).
+	"slag_pike", "halo_rig",
 ]
 
 # SG4 burden parts: a second list beside PARTS, so the normal loot list (build_synergy_test pins
