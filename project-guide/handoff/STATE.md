@@ -14,7 +14,7 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
-## Now (20 Nov 2026, wave 44 closing)
+## Now (21 Nov 2026, wave 45 open)
 
 **Wave 44 closes on the Mac Studio (20 Nov)** after stacking the CI speed stack (PRs 1174 to 1178: parallel PR CI with concurrency cancel, blobless checkout and seeded caches; oxlint + oxfmt replacing prettier; 23x faster `check:docs`; LPT-balanced Godot sharding and affected selection; tracked `<9s` pre-push hook), the audit fixes reviewed `PASS+NOTES` on the wave board (PRs 1165 to 1170 and 1172: reward-gate jump pickup, full-hull mend guard, unmeasured-stop-tax labels in `bot_fairness_test`, incoming-event edge markers, slam-lesson line guard, dynamic Interact prompt binding, audit records), and the two paused bot/reactor branches (`w44/brindle-bot-camera` lens crosshair aim and `w44/reactor-bands-lead` 9-seed reactor bands). Excluded from wave 44: PR 1171 (parked/fail), PR 1173 (awaits Andrew's nod on `AGENTS.md` rule 11 / its draft ruling `eg`), PR 1120 (parked), and open promise-card PRs 1144 to 1158.
 

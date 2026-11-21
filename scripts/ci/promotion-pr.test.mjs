@@ -16,7 +16,10 @@ test("godot-affected skips stage promotion pull requests into main", () => {
   const job = jobBlock("godot-affected");
   assert.match(job, /github\.event\.pull_request\.base\.ref == 'main'/);
   assert.match(job, /startsWith\(github\.event\.pull_request\.head\.ref, 'stage\/'\)/);
-  assert.match(job, /&& !\(github\.event_name == 'pull_request' && .*base\.ref == 'main' && .*startsWith/);
+  assert.match(
+    job,
+    /&& !\(github\.event_name == 'pull_request' && .*base\.ref == 'main' && .*startsWith/,
+  );
 });
 
 test("godot-affected still runs on ordinary pull requests and pushes", () => {

@@ -18,6 +18,8 @@
 - [OWNER-INTERVIEW-2026-10-02.md](OWNER-INTERVIEW-2026-10-02.md): Accepted owner answers and provenance.
 - [LORE-TONE-SAMPLE.md](LORE-TONE-SAMPLE.md): Lore tone sample retained by the unit instruction.
 - [STORY-MAP.md](STORY-MAP.md): What the world is and what every place, system, enemy and item means in it, with what each should look, sound and play like. Owns story facts and meaning; read before any design, art or sound work.
+- [ABILITY-MUTATIONS.md](ABILITY-MUTATIONS.md): Wave 45 W45-B2 research-first proposal for World 1 kit-swap relics (Tarn, Tally, Cannon), live `ShotBits` plumbing, verb-rewriting items and three evolutions (ruling eg).
+- [HEFT-DESTRUCTIBLES.md](HEFT-DESTRUCTIBLES.md): Wave 45 W45-C research-first proposal for heft-scaled destructible props, shortcuts and capped light loot under `BACKLOG.md#q-p22` (ruling eh).
 
 ## Archived documents
 
