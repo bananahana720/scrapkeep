@@ -336,6 +336,13 @@ var _run_settles := 0
 var _stage_clip_casts := 0
 var _tally_cards := {}
 var _tally_card_frame := -1
+# The ledger clip ids (link_double is Double Entry's swap of link_clips). Ink Heart's books: a
+# machine the stamp reached (instance id -> {"until", "mark"}), settled by balance due.
+const CLIP_IDS := ["link_clips", "link_double"]
+const INK_SECONDS := 3.0
+const INK_HEIGHT := 2.2
+var _ink := {}
+static var _ink_mesh: ArrayMesh
 # The dodge read (near_miss.gd), and the last hit the ball took: where it came from, for
 # presentation's edge flash. last_impact names the IMPACT row and the enemy of the strike
 # whose enemy_struck is out right now, because a blast publishes under a gun kind; it is
@@ -449,6 +456,7 @@ func setup(ctx_ref) -> void:
 		# --- end Tarn ---
 		# --- P-C Tally line skill ---
 		"link_clips": {"on_body": _link_clips_body, "on_world": _link_clips_world, "geometry": _clip_geometry},
+		"link_double": {"on_body": _link_clips_body, "on_world": _link_clips_world, "geometry": _clip_geometry},
 		# --- end Tally ---
 		# --- P-C Cannon line skill ---
 		"cannon_lane_charge": {"on_body": _cannon_line_body, "on_world": _cannon_line_world, "geometry": _cannon_line_geometry},
@@ -473,9 +481,12 @@ func setup(ctx_ref) -> void:
 	_cards = {"balance_due": _run_balance}
 	ctx.events.enemy_struck.connect(_on_card_struck)
 	ctx.events.harpoon_smashed.connect(func(_enemy: Node3D, _at: Vector3, _speed: float): _grant_pressure(1))
-	ctx.events.slammed.connect(func(_at: Vector3, _strength: float, _flatness: float):
-		if ctx.player.abilities.cap(AbilityState.SMASH, "flavour", "") != "stamp":
-			_grant_pressure(1))
+	ctx.events.slammed.connect(func(at: Vector3, _strength: float, _flatness: float):
+		var smash = ctx.player.abilities
+		if smash.cap(AbilityState.SMASH, "flavour", "") != "stamp":
+			_grant_pressure(1)
+		elif smash.cap(AbilityState.SMASH, "mutation", "") == "stamp_ink":
+			_book_ink(at))
 	_wire_tally()
 	_actions = _proc_actions()
 	# Every bus fact any tree's procs listen for, connected once; the tree decides who fires.
@@ -2852,6 +2863,7 @@ func _reset_cards() -> void:
 	_restored_frame = {}
 	_clear_clip_post()
 	_clear_tally_piece()
+	_clear_ink()
 	tally_last_settle = {}
 	_tally_cards = {}
 
@@ -2863,7 +2875,7 @@ func _wire_tally() -> void:
 		if ctx.player.abilities.id_of(AbilityState.MOVEMENT) == "flywheel_surge":
 			_grant_pressure(Weapons.SURGE_PRESSURE))
 	ev.line_skill_fired.connect(func(id: String, _target: Node3D, at: Vector3, _on: String):
-		if id != "link_clips":
+		if not id in CLIP_IDS:
 			return
 		_stage_clip_casts += 1
 		if _stage_clip_casts >= PUNCH_TAPE_CASTS:
@@ -2871,6 +2883,8 @@ func _wire_tally() -> void:
 	ev.stage_entered.connect(func(_stage: int, _retry: bool):
 		_stage_clip_casts = 0
 		_clear_clip_post())
+	ev.stage_content_cleared.connect(func(_reason: String): _clear_ink())
+	ev.player_died.connect(_clear_ink)
 	ev.run_started.connect(func(_class_id: String):
 		_run_settles = 0
 		_stage_clip_casts = 0)
@@ -2899,6 +2913,7 @@ func _step_cards(intent, delta: float) -> void:
 	_step_clip_preview()
 	_step_tally_piece(delta)
 	_step_tally_cards()
+	_step_ink()
 	if not intent.fire_pressed or _cooldown > 0.0:
 		return
 	var card: String = cards[bay]
@@ -3018,6 +3033,7 @@ func _run_balance(point: Vector3, valid: bool) -> bool:
 			continue
 		_ledger_hit(enemy, damage, point, Weapons.LEDGER_KNOCK, "weapon")
 		hits += 1
+		_settle_ink(enemy)
 	effects.ring(point, Weapons.BALANCE_RADIUS, ClassDef.TALLY_COLOR)
 	last_card["hits"] = hits
 	last_card["damage"] = damage
@@ -3043,7 +3059,7 @@ func _clip_ring(centre: Vector3, radius: float) -> Dictionary:
 # While slot 3 is picked and a line stands, the ring the clip will commit to is drawn.
 func _step_clip_preview() -> void:
 	var abilities = ctx.player.abilities
-	if abilities.selected == AbilityState.LINE and abilities.id_of(AbilityState.LINE) == "link_clips" and ctx.player.kit.hooked:
+	if abilities.selected == AbilityState.LINE and abilities.id_of(AbilityState.LINE) in CLIP_IDS and ctx.player.kit.hooked:
 		ctx.player.indicator.set_shape("tally_clip", _clip_geometry(1.0))
 	else:
 		ctx.player.indicator.clear("tally_clip")
@@ -3061,7 +3077,7 @@ func _link_clips_body(target: Node3D, _fraction: float, mult: float) -> void:
 # enemies inside its ring within CLIP_POST_SECONDS.
 func _link_clips_world(anchor: Vector3, fraction: float, mult: float) -> void:
 	_reel_burst(anchor, fraction, mult)
-	link_group = {"ids": [], "until": _clock + Weapons.CLIP_POST_SECONDS, "spent": false, "mult": mult}
+	link_group = _new_link_group(Weapons.CLIP_POST_SECONDS, mult)
 	clip_post = {"at": anchor, "until": _clock + Weapons.CLIP_POST_SECONDS, "shape": _clip_ring(anchor, Weapons.CLIP_POST_RADIUS)}
 	ctx.player.indicator.set_shape("tally_post", clip_post["shape"])
 	effects.ring(anchor, Weapons.CLIP_POST_RADIUS, ClassDef.TALLY_COLOR)
@@ -3079,13 +3095,19 @@ func _link_from(first: Node3D, mult := 1.0, shape := {}) -> int:
 			break
 		if enemy != first and in_ring(centre, radius, enemy):
 			clips.append(enemy)
-	link_group = {"ids": [], "until": _clock + Weapons.LINK_SECONDS, "spent": false, "mult": mult}
+	link_group = _new_link_group(Weapons.LINK_SECONDS, mult)
 	for clip in clips:
 		_add_clip(clip)
 	last_card = {"card": "link_clips", "at": first.global_position, "hits": clips.size(), "spent": false}
 	if clips.size() > Weapons.LINK_NEIGHBOURS:
 		_tally_discover("tally_skim", "loaded_line", first.global_position)
 	return clips.size()
+
+
+# Double Entry (link_double) marks its group "double": one settled clip may jump once.
+func _new_link_group(seconds: float, mult: float) -> Dictionary:
+	return {"ids": [], "until": _clock + seconds, "spent": false, "mult": mult, "jumped": false,
+		"double": ctx.player.abilities.cap(AbilityState.LINE, "mutation", "") == "link_double"}
 
 
 func _add_clip(enemy: Node3D) -> void:
@@ -3149,7 +3171,122 @@ func _on_card_struck(enemy: Node3D, kind: String, force: float) -> void:
 		var to: Vector3 = other.global_position
 		effects.arc(from, to, ClassDef.TALLY_COLOR)
 		_ledger_hit(other, damage, from, Weapons.LEDGER_KNOCK, "weapon")
+	if bool(link_group.get("double", false)) and not bool(link_group.get("jumped", false)):
+		link_group["jumped"] = true
+		_clip_jump(from, damage)
 	_arcing = false
+
+
+# Double Entry: the settled machine's clip jumps once to the nearest live machine inside
+# LINK_NEIGHBOUR_REACH that holds no clip, as a fresh ledger link and one ledger strike. The group's
+# "jumped" flag is set before this runs and the strike is tagged item_proc inside the _arcing
+# guard, so a jumped clip settles nothing and never jumps again.
+func _clip_jump(from: Vector3, damage: float) -> void:
+	var ids: Array = link_group["ids"]
+	var best: Node3D = null
+	var best_gap := INF
+	for other in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(other) or DamageDoor.dead(other) or ids.has(other.get_instance_id()):
+			continue
+		var gap: float = other.global_position.distance_to(from)
+		if gap <= Weapons.LINK_NEIGHBOUR_REACH and gap < best_gap:
+			best = other
+			best_gap = gap
+	if best == null:
+		return
+	link_group["jump_to"] = best.get_instance_id()
+	effects.arc(from, best.global_position, ClassDef.TALLY_COLOR)
+	_ledger_hit(best, damage, from, Weapons.LEDGER_KNOCK, "item_proc")
+
+
+# --- Ink Heart (stamp_ink) --------------------------------------------------------------
+# The stamp books every live machine in its disc for INK_SECONDS, a ledger tick floating over each.
+# A balance due strike on a booked machine takes the book and refills one pressure (the bank's
+# own cap holds), so each machine pays once per stamp. The stamp itself still pays its base
+# pressure (flavour stamp), and nothing here touches the ball.
+
+func _book_ink(at: Vector3) -> void:
+	var reach: float = ctx.player.slam_radius()
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(enemy) or DamageDoor.dead(enemy) or (enemy.global_position - at).length() > reach:
+			continue
+		var id: int = enemy.get_instance_id()
+		var row: Dictionary = _ink.get(id, {})
+		if row.is_empty() or not is_instance_valid(row["mark"]):
+			row = {"mark": _ink_mark(enemy)}
+		row["until"] = _clock + INK_SECONDS
+		_ink[id] = row
+
+
+func _settle_ink(enemy: Node3D) -> void:
+	var id := enemy.get_instance_id()
+	if not _ink.has(id):
+		return
+	var live: bool = float(_ink[id]["until"]) > _clock
+	_drop_ink(id)
+	if live:
+		_grant_pressure(1)
+		last_card["ink"] = int(last_card.get("ink", 0)) + 1
+
+
+func _step_ink() -> void:
+	for id in _ink.keys():
+		var row: Dictionary = _ink[id]
+		var enemy = instance_from_id(id)
+		var left := float(row["until"]) - _clock
+		if enemy == null or not is_instance_valid(enemy) or DamageDoor.dead(enemy) or left <= 0.0:
+			_drop_ink(id)
+		elif is_instance_valid(row["mark"]):
+			# The tick blinks through its last three-quarters of a second.
+			row["mark"].visible = left > 0.75 or int(left * 8.0) % 2 == 0
+
+
+func _drop_ink(id: int) -> void:
+	var mark = _ink.get(id, {}).get("mark")
+	if is_instance_valid(mark):
+		if mark.get_parent() != null:
+			mark.get_parent().remove_child(mark)
+		mark.queue_free()
+	_ink.erase(id)
+
+
+func _clear_ink() -> void:
+	for id in _ink.keys():
+		_drop_ink(id)
+
+
+func _ink_mark(enemy: Node3D) -> MeshInstance3D:
+	var mark := MeshInstance3D.new()
+	mark.name = "InkTick"
+	mark.mesh = _ink_tick()
+	enemy.add_child(mark)
+	var parent_scale: Vector3 = enemy.global_basis.get_scale()
+	mark.scale = Vector3(1.0 / maxf(parent_scale.x, 0.0001), 1.0 / maxf(parent_scale.y, 0.0001), 1.0 / maxf(parent_scale.z, 0.0001))
+	mark.position = Vector3(0.0, INK_HEIGHT / maxf(parent_scale.y, 0.0001), 0.0)
+	return mark
+
+
+# A ledger tick (a check mark of two bars), always facing the camera, in the Tally ledger colour.
+static func _ink_tick() -> ArrayMesh:
+	if _ink_mesh != null:
+		return _ink_mesh
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for bar in [[Vector2(-0.30, 0.02), Vector2(-0.10, -0.24)], [Vector2(-0.10, -0.24), Vector2(0.34, 0.34)]]:
+		var a: Vector2 = bar[0]
+		var b: Vector2 = bar[1]
+		var side := (b - a).orthogonal().normalized() * 0.06
+		for p in [a - side, a + side, b - side, a + side, b + side, b - side]:
+			surface.add_vertex(Vector3(p.x, p.y, 0.0))
+	_ink_mesh = surface.commit()
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.no_depth_test = true
+	material.albedo_color = ClassDef.TALLY_COLOR
+	_ink_mesh.surface_set_material(0, material)
+	return _ink_mesh
 
 
 # One ledger strike from a Tally source: a boss takes BOSS_MULT and no knock.
