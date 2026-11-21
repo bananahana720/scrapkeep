@@ -4403,7 +4403,7 @@ func _on_dash_wake(direction: Vector3) -> void:
 	if row.is_empty() or not ctx.flow.in_play():
 		return
 	var ball: Vector3 = ctx.player.ball_position()
-	var back := -direction.normalized() if direction.length() > 0.01 else -ctx.aim_forward()
+	var back: Vector3 = -direction.normalized() if direction.length() > 0.01 else -ctx.aim_forward()
 	back.y = 0.0
 	back = back.normalized()
 	var length: float = float(row["length"])
@@ -4445,7 +4445,7 @@ func _on_slam_crack(at: Vector3, _strength: float, _flatness: float) -> void:
 	var row := _verb_row("slam_crack")
 	if row.is_empty() or not ctx.flow.in_play():
 		return
-	var heading := ctx.aim_forward()
+	var heading: Vector3 = ctx.aim_forward()
 	heading.y = 0.0
 	heading = heading.normalized() if heading.length() > 0.01 else Vector3.FORWARD
 	var length: float = float(row["length"])
@@ -4528,7 +4528,7 @@ func _bell_gather(share: float) -> void:
 		if DamageDoor.dead(enemy):
 			continue
 		if enemy.global_position.distance_to(at) <= radius * (1.0 + AbilityState.FORGIVENESS):
-			var pull := at - enemy.global_position
+			var pull: Vector3 = at - enemy.global_position
 			pull.y = 0.0
 			if pull.length() > 0.1 and enemy.has_method("knock"):
 				enemy.knock(pull.normalized(), 4.0)
@@ -4582,7 +4582,7 @@ func _nearest_n(at: Vector3, reach: float, exclude: Array, n: int) -> Array:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if DamageDoor.dead(enemy) or exclude.has(enemy):
 			continue
-		var d := enemy.global_position.distance_to(at)
+		var d: float = enemy.global_position.distance_to(at)
 		if d <= reach:
 			picks.append([d, enemy])
 	picks.sort_custom(func(a, b): return a[0] < b[0])
