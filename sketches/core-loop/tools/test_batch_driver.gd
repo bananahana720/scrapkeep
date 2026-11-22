@@ -60,6 +60,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const ModelVariants := preload("res://src/presentation/model_variants.gd")
+const Audio := preload("res://src/presentation/audio.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -201,6 +202,7 @@ func _reset() -> void:
 	UpgradeTree.reset_for_tests()
 	Harmony.reset_for_tests()
 	ScrapField.reset_for_tests()
+	Audio.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"

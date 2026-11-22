@@ -1,0 +1,72 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 12 and seed -346575176348774660 with 18 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: 5963] (Mac OS X 27.2.1 aarch64, Homebrew 27.0.1.0.3 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/tmp.1Apaj7TFWS/SoundArbiter.tla
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/Naturals.tla
+Semantic processing of module Naturals
+Semantic processing of module SoundArbiter
+Starting... (2026-11-21 21:35:08)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-21 21:35:08.
+Error: Invariant NoStaleTrim is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "stage"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
+/\ warden_sealed = FALSE
+
+State 2: <DjStartJuneAnswer line 269, col 5 to line 276, col 53 of module SoundArbiter>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "stage"
+/\ melody_owner = "june_answer"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ deck_pump = FALSE
+/\ trim_active = TRUE
+/\ warden_section = "build"
+/\ warden_sealed = FALSE
+
+State 3: <ChampionJoins line 156, col 5 to line 162, col 55 of module SoundArbiter>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "stage"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = TRUE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 1
+/\ deck_shot = "none"
+/\ dj_epoch = 1
+/\ deck_pack = "flat_champ"
+/\ deck_pump = FALSE
+/\ trim_active = TRUE
+/\ warden_section = "build"
+/\ warden_sealed = FALSE
+
+718 states generated, 298 distinct states found, 198 states left on queue.
+The depth of the complete state graph search is 6.
+The average outdegree of the complete state graph is 3 (minimum is 0, the maximum 12 and the 95th percentile is 8).
+Finished in 00s at (2026-11-21 21:35:08)

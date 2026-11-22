@@ -69,6 +69,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const ModelVariants := preload("res://src/presentation/model_variants.gd")
+const Audio := preload("res://src/presentation/audio.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W46-T1: tools/test_batch_driver.gd _reset() clears reduced-motion and other process-wide
@@ -434,6 +435,12 @@ func _run() -> void:
 			stress_bad.append("iter %d: calls=%d events=%s" % [iter, calls[0], str(_order_events)])
 	t.check("fast-frame burst stress (20x20 process_frames) preserves exact tick/frame order",
 		stress_bad.is_empty(), "; ".join(stress_bad))
+
+	Audio._baked = true
+	Audio._bake_done = true
+	driver._reset()
+	t.check("Audio.reset_for_tests clears _baked, _bake_done, and bake tasks",
+		not Audio._baked and not Audio._bake_done and Audio._bake_task == -1 and Audio._rest_task == -1 and Audio._opening_task == -1)
 
 	quit(t.verdict())
 
