@@ -30,20 +30,23 @@ class SluicePayDevice extends "res://src/world/device.gd":
 
 	func ready_now() -> bool:
 		return owner_contraptions != null and is_instance_valid(owner_contraptions) \
-			and owner_contraptions._sluice_can_pay(valve_id)
+			and bool(owner_contraptions.sluice_pay_read(valve_id)["can_pay"])
 
 	func gauge() -> float:
-		return owner_contraptions._sluice_gauge(valve_id) if owner_contraptions != null and is_instance_valid(owner_contraptions) else -1.0
+		return float(owner_contraptions.sluice_pay_read(valve_id)["gauge"]) \
+			if owner_contraptions != null and is_instance_valid(owner_contraptions) else -1.0
 
 	func show_prompt(_targeted: bool) -> void:
 		if prompt == null or _prompt_anchor == null:
 			return
 		_prompt_anchor.global_position = reach_point() + Vector3.UP * 2.2
-		if owner_contraptions == null or not is_instance_valid(owner_contraptions) or not owner_contraptions._sluice_active():
+		var info: Dictionary = owner_contraptions.sluice_pay_read(valve_id) \
+			if owner_contraptions != null and is_instance_valid(owner_contraptions) else {"active": false}
+		if not bool(info["active"]):
 			prompt.set_interact("", "", "", -1.0)
 			return
 		var icon: String = Interactables.row(family)["icon"]
-		prompt.set_interact(icon, "", "", gauge() if not ready_now() else -1.0)
+		prompt.set_interact(icon, "", "", float(info["gauge"]) if not bool(info["can_pay"]) else -1.0)
 
 	func fire() -> bool:
 		return owner_contraptions != null and is_instance_valid(owner_contraptions) \
@@ -1532,32 +1535,21 @@ func _sluice_by_id(id: String) -> Dictionary:
 	return {}
 
 
-func _sluice_can_pay(id: String) -> bool:
-	if not _sluice_active():
-		return false
-	var s := _sluice_by_id(id)
-	if s.is_empty() or s["state"] != "ready":
-		return false
-	var price: int = int(s["price"])
-	if price <= 0:
-		return false
-	var run_ref = _ctx_field("run")
-	if run_ref == null or not run_ref.has_method("spend_scrap"):
-		return false
-	return int(run_ref.get("scrap")) >= price
-
-
-func _sluice_gauge(id: String) -> float:
+func sluice_pay_read(id: String) -> Dictionary:
+	var active := _sluice_active()
 	var s := _sluice_by_id(id)
 	if s.is_empty():
-		return -1.0
+		return {"active": false, "can_pay": false, "gauge": -1.0}
+	var price: int = int(s["price"])
+	var run_ref = _ctx_field("run")
+	var can_pay := active and s["state"] == "ready" and price > 0 \
+		and run_ref != null and run_ref.has_method("spend_scrap") and int(run_ref.get("scrap")) >= price
+	var g := -1.0
 	if s["state"] == "charging":
-		return clampf(1.0 - float(s["charge_left"]) / float(s["charge"]), 0.0, 1.0)
-	if s["state"] == "ready" and int(s["price"]) > 0:
-		var run_ref = _ctx_field("run")
-		if run_ref != null:
-			return clampf(float(run_ref.get("scrap")) / float(s["price"]), 0.0, 1.0)
-	return -1.0
+		g = clampf(1.0 - float(s["charge_left"]) / float(s["charge"]), 0.0, 1.0)
+	elif s["state"] == "ready" and price > 0 and run_ref != null:
+		g = clampf(float(run_ref.get("scrap")) / float(price), 0.0, 1.0)
+	return {"active": active, "can_pay": can_pay, "gauge": g}
 
 
 func _resolve_interact() -> Variant:
