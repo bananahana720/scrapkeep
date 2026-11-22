@@ -343,8 +343,9 @@ static func answer_score(id: String) -> Array:
 	var land: Array = cells[count - 1]
 	var land_step := int(land[0])
 	var land_midi := int(land[1])
-	var land_dur := maxi(2, mini(int(land[2]), 16 - land_step))
-	if land_step < 16:
+	var land_dur := mini(maxi(2, int(land[2])), 16 - land_step)
+	var land_safe := not (posmod(land_midi, 12) in THREAT_PITCH_CLASSES)
+	if land_step < 16 and land_dur > 0:
 		match book_name:
 			"lull", "release", "hanging":
 				for chord_midi in [62, 69]:
@@ -353,14 +354,14 @@ static func answer_score(id: String) -> Array:
 				for chord_midi in [62, 69]:
 					score.append([land_step, chord_midi, land_dur, "keys", 0.26])
 			"peak":
-				score.append([land_step, land_midi - 12, land_dur, "brass", 0.28])
-				if not posmod(land_midi + 12, 12) in THREAT_PITCH_CLASSES:
+				if land_safe:
+					score.append([land_step, land_midi - 12, land_dur, "brass", 0.28])
 					score.append([land_step, land_midi + 12, mini(land_dur, 3), "bell", 0.22])
 			"hot":
 				score.append([land_step, 62, land_dur, "clav", 0.26])
 				score.append([land_step, 69, land_dur, "keys", 0.22])
 			"overtime":
-				if not posmod(land_midi - 12, 12) in THREAT_PITCH_CLASSES:
+				if land_safe:
 					score.append([land_step, land_midi - 12, land_dur, "brass", 0.32])
 	return score
 

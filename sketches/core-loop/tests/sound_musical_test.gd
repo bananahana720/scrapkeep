@@ -52,6 +52,8 @@ func _rack_voices() -> void:
 			bad_edges.append("chord(%s)" % ", ".join(faults))
 	t.check("every upgraded rack voice is deterministic and peak-safe", bad_peak.is_empty(), str(bad_peak))
 	t.check("every upgraded rack voice starts and ends at rest", bad_edges.is_empty(), str(bad_edges))
+	t.check("direct uncached synth voices are deterministic",
+		Synth.lead(74, 4096) == Synth.lead(74, 4096) and Synth.kick() == Synth.kick() and Synth.clap() == Synth.clap())
 
 
 # Warm alto sax check: high-frequency harshness (first-difference RMS / signal RMS) stays well
@@ -107,3 +109,28 @@ func _music_engine_pump_pocket() -> void:
 	t.check("Warden drop sidechain dips into kick pocket and breathes back cleanly",
 		at_0 >= 0.99 and at_pocket <= 0.40 and at_mid > at_pocket + 0.25 and at_end >= 0.99,
 		"start=%.2f pocket=%.2f mid=%.2f end=%.2f" % [at_0, at_pocket, at_mid, at_end])
+	# Verify render() splits at the hold corner so the flat kick pocket reaches the audio mix
+	# even when rendered in large chunks (comparing single-beat render vs 64-frame chunks after
+	# filter warmup, soloed to pumped layers so the pocket is isolated cleanly).
+	var eng_big := MusicEngine.new()
+	var eng_fine := MusicEngine.new()
+	for e in [eng_big, eng_fine]:
+		e.force_track("warden", 0, "drop", true)
+		e.solo = [MusicEngine.KEYS, MusicEngine.PAD, MusicEngine.REESE]
+		e.render(e.bar_len())
+	var hold := int(beat * MusicEngine.PUMP_HOLD_FRAC)
+	eng_big.render(beat)
+	var big_out: PackedVector2Array = eng_big.out_music.duplicate()
+	var fine_out := PackedVector2Array()
+	var done := 0
+	while done < beat:
+		var chunk := mini(64, beat - done)
+		eng_fine.render(chunk)
+		fine_out.append_array(eng_fine.out_music)
+		done += chunk
+	var max_hold_err := 0.0
+	for i in range(MusicEngine.PUMP_ATTACK, hold):
+		max_hold_err = maxf(max_hold_err, absf(big_out[i].x - fine_out[i].x))
+		max_hold_err = maxf(max_hold_err, absf(big_out[i].y - fine_out[i].y))
+	t.check("Warden drop sidechain hold pocket reaches rendered audio on large chunks",
+		max_hold_err < 0.001, "max_hold_err=%.6f across [%d, %d)" % [max_hold_err, MusicEngine.PUMP_ATTACK, hold])

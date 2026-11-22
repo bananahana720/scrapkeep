@@ -3094,8 +3094,8 @@ static func _bay_slingshot_out() -> PackedFloat32Array:
 		[_noise(0.25, 800.0, 4000.0, 9.0, 0.01), Synth.seconds(0.16), 0.35]])
 
 
-# The big move is charged: D, F, A, D climbing fast on the mallet, then a warm Rhodes Dm9
-# cushion and bell shimmer on top.
+# The big move is charged: D, F, A, D climbing fast on the mallet, then a warm Rhodes
+# fifth-and-ninth cushion (D-A-E) and bell shimmer on top.
 static func _ultimate_ready() -> PackedFloat32Array:
 	var parts := []
 	var notes := [74, 77, 81, 86]

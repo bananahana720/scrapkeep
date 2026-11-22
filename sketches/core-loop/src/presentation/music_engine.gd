@@ -111,6 +111,7 @@ const PHASE3_STEP := 4410
 # The sidechain pump: the pumped layers dip under each kick, hold a short pocket for
 # the kick transient, and breathe back smoothly like a 2010s French-house / club limiter.
 const PUMP_ATTACK := 220
+const PUMP_HOLD_FRAC := 0.07
 const PUMPED := [KEYS, SUB, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER]
 # Brindle's phases add layers: phase 1 at 0.8 (pad, arp, choir, lead, half the echo),
 # phase 2 brings the echo and half the counter, phase 3 everything.
@@ -1618,9 +1619,13 @@ func render(frames: int) -> void:
 		var n := mini(frames - done, step_len - posmod(clock - grid_origin, step_len))
 		n = mini(n, _to_next_action())
 		if _pump_depth > 0.0:
-			var in_beat := posmod(clock - grid_origin, beat_len())
+			var beat := beat_len()
+			var in_beat := posmod(clock - grid_origin, beat)
+			var hold := int(beat * PUMP_HOLD_FRAC)
 			if in_beat < PUMP_ATTACK:
 				n = mini(n, PUMP_ATTACK - in_beat)
+			elif in_beat < hold:
+				n = mini(n, hold - in_beat)
 		n = maxi(n, 1)
 		_mix(done, n)
 		clock += n
@@ -3083,7 +3088,7 @@ func _pump_at(sample: int) -> float:
 	var low := 1.0 - _pump_depth
 	if pos < PUMP_ATTACK:
 		return lerpf(1.0, low, float(pos) / PUMP_ATTACK)
-	var hold := int(beat * 0.07)
+	var hold := int(beat * PUMP_HOLD_FRAC)
 	if pos < hold:
 		return low
 	var x := clampf(float(pos - hold) / maxf(beat * 0.68 - hold, 1.0), 0.0, 1.0)

@@ -670,10 +670,11 @@ static func clap() -> PackedFloat32Array:
 	var low := 0.0
 	var band := 0.0
 	var g := 2.0 * sin(PI * 1450.0 * INV_RATE)
+	var taps := [0.0, 0.009, 0.019, 0.029]
 	for i in n:
 		var t := i * INV_RATE
 		var burst := 0.0
-		for tap in [0.0, 0.009, 0.019, 0.029]:
+		for tap in taps:
 			if t >= tap:
 				burst += exp(-(t - tap) * (240.0 if tap < 0.025 else 16.0))
 		var x := rng.randf_range(-1.0, 1.0) * burst
