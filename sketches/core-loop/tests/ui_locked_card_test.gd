@@ -94,6 +94,23 @@ func _run() -> void:
 	await _settle(0.7)
 	var open_words := _text_of("open")
 	_t.check("P3-1 the hint shows when the card is open", card.is_open() and open_words.contains(HINT), open_words)
+	# PF-40: at six cards every pilot's real hint (its unlock words, then its beat) wraps to four or
+	# five lines; on the open card it stays inside the preview and covers neither the name nor the tag.
+	for def in ClassDef.all():
+		if def.starter:
+			continue
+		var real := "%s\n%s" % [ClassCard.unlock_hint(def, null), Achievements.beat_of(Achievements.for_pilot(def.id))]
+		card.set_locked(true, real)
+		await _settle(0.3)
+		var plate: Rect2 = card.hint_rect()
+		var shell: Rect2 = card.preview.get_global_rect()
+		var clear: bool = plate.size.y > 0.0 and not plate.intersects(card.name_label().get_global_rect()) \
+			and not plate.intersects(card.role_label().get_global_rect()) \
+			and plate.position.y >= shell.position.y - 0.5 and plate.end.y <= shell.end.y + 0.5
+		_t.check("PF-40 %s's hint stays on the preview at six cards" % def.display_name, clear,
+			"plate %s, preview %s, name %s, tag %s" % [plate, shell, card.name_label().get_global_rect(), card.role_label().get_global_rect()])
+	card.set_locked(true, HINT)
+	await _settle(0.3)
 	Push.click(root, card)
 	await _frames(3)
 	_t.check("P3-1 a click on the locked card starts nothing", _game.flow.state_name() == "class_select" and not _game.flow.in_play(), "state %s" % _game.flow.state_name())

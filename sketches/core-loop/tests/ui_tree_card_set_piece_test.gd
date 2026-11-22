@@ -3,6 +3,7 @@ extends SceneTree
 const TreeCard := preload("res://src/ui/tree_card.gd")
 const Cards := preload("res://src/core/trees/world_one_cards.gd")
 const T := preload("res://tests/support/t.gd")
+const Keycap := preload("res://src/ui/keycap.gd")
 
 # The tree card's set-piece line (SKILL-BAR section 12, item 5), wave 13 unit b6b, 2026-10-11.
 # The shipped SET_PIECE_LINES table is still empty until the P-C units fill it, so the card
@@ -89,5 +90,6 @@ func _initialize() -> void:
 	var first_room: float = TreeCard.HEIGHT - 14.0 - (first_box.global_position.y - first.global_position.y)
 	t.check("7b the longest world-one line fits a plain card", first.effect_text() == wordiest and first_sum <= first_room,
 		"heights %s with separations = %.1f of %.1f px for \"%s\"" % [first_parts, first_sum, first_room, wordiest])
-	t.check("8 drawn_words counts keycap words only", fit.drawn_words().size() == 2, "got %s" % [fit.drawn_words()])
+	# The number key that takes the card is its only keycap; the slot's key is not drawn (PF-01).
+	t.check("8 drawn_words counts the pick keycap only", fit.drawn_words() == Keycap.words("key_1"), "got %s" % [fit.drawn_words()])
 	quit(t.verdict())

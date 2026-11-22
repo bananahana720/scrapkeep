@@ -2,25 +2,23 @@ extends Button
 
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
-const AbilityState := preload("res://src/core/ability_state.gd")
-const Bindings := preload("res://src/core/bindings.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
-const BuildReadout := preload("res://src/ui/build_readout.gd")
 
 # One side of an upgrade pick. The middle is the ability bar's own slot: the node's ab_
-# glyph on a rounded square with one notch per depth along its top edge and the key it
-# changes under it, so the card reads as "this slot, changed". Under that, the node's
-# name and its effect line. The number key that takes it sits top left, as on the class
-# cards. The edge wears the class colour; hover and focus thicken it and lift the slot.
+# glyph on a rounded square with one notch per depth along its top edge, the same glyph the
+# bar wears, so the card reads as "this slot, changed". Under that, the node's name and its
+# effect line. The number key that takes it sits top left, as on the class cards, and is the
+# card's only keycap: a second keycap under the slot read as a second way to take the card,
+# and two cards that change one key read as "both on Shift" (PF-01). The edge wears the class
+# colour; hover and focus thicken it and lift the slot.
 
 const KEY_H := 28.0
 const SLOT := 88.0
-const SLOT_KEY_H := 24.0
 const NOTCH := 9.0
 const WIDTH := 340.0
 const HEIGHT := 390.0
@@ -35,7 +33,6 @@ var _name: Label
 var _effect: Label
 var _set_piece: Label
 var _skip_prompt: Label
-var _depth_table: Button
 var _taken := false
 var _lift := 0.0
 
@@ -57,7 +54,7 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	add_theme_stylebox_override("disabled", ClassCard._plate(Color(color, 0.3), 2))
 	var box := VBoxContainer.new()
 	box.set_anchors_preset(Control.PRESET_FULL_RECT)
-	box.offset_top = 24.0 + SLOT + SLOT_KEY_H + 26.0
+	box.offset_top = 24.0 + SLOT + 26.0
 	box.offset_left = 20.0
 	box.offset_right = -20.0
 	box.offset_bottom = -14.0
@@ -78,16 +75,6 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	_skip_prompt = _text(SKIP_PROMPT if offer_kind == UpgradeTree.OFFER_TAKE_OR_SKIP else "", UiTokens.BODY, Palette.AMBER)
 	_skip_prompt.visible = offer_kind == UpgradeTree.OFFER_TAKE_OR_SKIP
 	box.add_child(_skip_prompt)
-	_depth_table = BuildReadout.new()
-	# The face says "Build" (the readout's own word); how deep the picks go in each world, in the
-	# order the worlds are played, is the button's hover line, so the page keeps its word budget.
-	_depth_table.tooltip_text = depth_sentence()
-	_depth_table.add_theme_font_override("font", UiFonts.bold())
-	_depth_table.add_theme_font_size_override("font_size", UiTokens.CAPTION)
-	box.add_child(_depth_table)
-	# Nothing here a first pick can use: the Build page and the slot's key tag come in with the
-	# second pick (PF-01).
-	_depth_table.visible = depth > 1
 	mouse_entered.connect(func():
 		if not disabled:
 			grab_focus())
@@ -102,16 +89,6 @@ func mark_taken() -> void:
 
 func is_taken() -> bool:
 	return _taken
-
-
-# The slot key the node changes, as a key glyph id (design-v3/SKILL-BAR.md section 5): the bar
-# slots their number (weapon key_1, special key_2, line key_3), the chips key_shift and
-# key_ctrl, the ultimate key_q.
-static func slot_key(node_row: Dictionary) -> String:
-	var slot := String(node_row.get("key", ""))
-	if slot == AbilityState.ULTIMATE:
-		return Bindings.glyph("ultimate")
-	return "key_" + String(AbilityState.KEYS.get(slot, "")).to_lower()
 
 
 # The effect line as drawn: the world-one copy under the flag, else the node's own.
@@ -157,8 +134,10 @@ static func depth_sentence() -> String:
 	return "Picks go " + ", ".join(parts) + "."
 
 
+# How deep the picks go: the hover line of the pick screen's one parts button (tree_pick.gd), which
+# took the place of a "Build" button on each card (PF-01).
 func depth_text() -> String:
-	return _depth_table.tooltip_text
+	return depth_sentence()
 
 
 func node_id() -> String:
@@ -166,10 +145,7 @@ func node_id() -> String:
 
 
 func drawn_words() -> PackedStringArray:
-	var out := Keycap.words(key)
-	if depth > 1:
-		out.append_array(Keycap.words(slot_key(node)))
-	return out
+	return Keycap.words(key)
 
 
 func _text(value: String, font_size: int, tint: Color) -> Label:
@@ -209,6 +185,3 @@ func _draw() -> void:
 		var x := rect.position.x + rect.size.x * 0.5 + (float(i) - (depth - 1) * 0.5) * (NOTCH + 4.0)
 		draw_rect(Rect2(x - NOTCH * 0.5, rect.position.y - 5.0, NOTCH, 8.0), Palette.CHARCOAL)
 		draw_rect(Rect2(x - NOTCH * 0.5 + 1.5, rect.position.y - 3.5, NOTCH - 3.0, 5.0), color)
-	if depth > 1:
-		var sk := slot_key(node)
-		Keycap.draw(self, Vector2(centre.x, rect.end.y + 8.0 + SLOT_KEY_H * 0.5), sk, bright, SLOT_KEY_H)
