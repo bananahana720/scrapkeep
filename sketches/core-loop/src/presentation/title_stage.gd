@@ -80,7 +80,6 @@ var hero_id := ""
 var _hero: Node3D
 var _disc: Sprite3D
 var _disc_ink: ShaderMaterial
-var _print: ShaderMaterial
 const PUSH_RISE := Vector3(-0.6, -1.5, -7.6)
 const PUSH_LOOK := Vector3(0.0, -1.4, 0.0)
 const PUSH_FOV := 24.0
@@ -90,22 +89,23 @@ const PUSH_FOV := 24.0
 # the wordmark and thumps on the music's bar (thump()). Three framings were judged on one sheet (ruling cq); POSTER is
 # the one picked, and --title-poster=<id> shows another. A row: the camera (at, look, fov), the hero's spot, yaw and
 # scale, the crew's spots, deck rows moved from DECK's place (name: [at, yaw, scale]), the sun's middle and diameter
-# as shares of the screen, the sky's ink and the print pass's strength.
+# as shares of the screen, and the sky's ink. The picture itself stays unfiltered: a screen-space halftone over it
+# turned the camera's slow drift into a crawl of dots, and the menu would never hold still for a press to read.
 const POSTERS := {
 	"bow": {"at": Vector3(2.4, 1.7, 10.6), "look": Vector3(0.1, 3.0, -2.0), "fov": 42.0,
 		"hero": Vector3(0.4, 1.35, 3.6), "hero_yaw": -0.5, "hero_scale": 1.3,
 		"crew": [Vector3(-3.6, 1.04, -1.6), Vector3(3.4, 1.04, -2.2), Vector3(-0.6, 1.04, -3.2)],
-		"deck": {}, "sun": Vector2(0.5, 0.15), "sun_size": 0.62, "sky": Color("c9552c"), "ink": 0.8},
+		"deck": {}, "sun": Vector2(0.5, 0.15), "sun_size": 0.62, "sky": Color("c9552c")},
 	"crest": {"at": Vector3(-6.4, 2.2, 8.6), "look": Vector3(1.8, 3.4, -3.0), "fov": 44.0,
 		"hero": Vector3(-2.2, 1.3, 2.2), "hero_yaw": 0.6, "hero_scale": 1.25,
 		"crew": [Vector3(1.6, 1.04, -1.0), Vector3(4.2, 1.04, 0.6), Vector3(3.0, 1.04, -3.0)],
 		"deck": {"Brindle": [Vector3(26.0, 14.0, -70.0), 2.9, Vector3(2.2, 2.2, 2.2)]},
-		"sun": Vector2(0.62, 0.16), "sun_size": 0.7, "sky": Color("b2402f"), "ink": 0.6},
+		"sun": Vector2(0.62, 0.16), "sun_size": 0.7, "sky": Color("b2402f")},
 	"profile": {"at": Vector3(12.4, 2.0, 1.6), "look": Vector3(-2.0, 3.0, 1.2), "fov": 40.0,
 		"hero": Vector3(3.6, 1.3, 1.8), "hero_yaw": 1.2, "hero_scale": 1.3,
 		"crew": [Vector3(-1.4, 1.04, -1.8), Vector3(-3.6, 1.04, 0.8), Vector3(-0.6, 1.04, 2.6)],
 		"deck": {"Brindle": [Vector3(-60.0, 18.0, -30.0), 1.2, Vector3(2.0, 2.0, 2.0)]},
-		"sun": Vector2(0.36, 0.14), "sun_size": 0.58, "sky": Color("d89048"), "ink": 1.0},
+		"sun": Vector2(0.36, 0.14), "sun_size": 0.58, "sky": Color("d89048")},
 }
 const POSTER := "bow"
 # The Spillway's skyline, far below and behind the barge: the dam the opening's postcard shows (title_intro_player.gd
@@ -116,7 +116,7 @@ const SKYLINE := [
 # The skyline prints as one flat ink, a silhouette a shade under the sky, as a screen print lays its back plate.
 const SKYLINE_INK := Color("8e3a2c")
 # The sun is a sprite in the stage's own world, so the skyline stands in front of it and the deck lights never touch
-# it: SUN_DEPTH metres off the camera, on a SUN_DOTS by SUN_DOTS halftone screen in the sun ink.
+# it: SUN_DEPTH metres off the camera, on a halftone screen in the sun ink.
 const SUN_DEPTH := 420.0
 const SUN_INK := Color("ffe2a8")
 const SUN_SHADER := """shader_type spatial;
@@ -134,28 +134,6 @@ void fragment() {
 	float d = 1.0 - smoothstep(radius - aa, radius + aa, length(cell));
 	ALBEDO = ink.rgb;
 	ALPHA = d * step(r, 1.0);
-}
-"""
-# The print pass over the stage picture: the picture held to a few ink levels, and a halftone screen laid into its
-# shadows in SHADOW_INK, as a screen-printed poster prints them. Its cell is a share of the screen's height.
-const SHADOW_INK := Color("2a1a2e")
-const PRINT_CELL := 1.0 / 150.0
-const PRINT_SHADER := """shader_type canvas_item;
-uniform float ink = 0.0;
-uniform vec4 shadow_ink : source_color;
-uniform float cell = 6.0;
-void fragment() {
-	vec4 c = texture(TEXTURE, UV);
-	vec3 held = floor(c.rgb * 6.0 + 0.5) / 6.0;
-	vec3 col = mix(c.rgb, held, 0.3 * ink);
-	float l = dot(c.rgb, vec3(0.299, 0.587, 0.114));
-	vec2 g = FRAGCOORD.xy / cell;
-	g = vec2(g.x * 0.966 - g.y * 0.259, g.x * 0.259 + g.y * 0.966);
-	vec2 at = fract(g) - 0.5;
-	float shade = clamp((0.34 - l) / 0.34, 0.0, 1.0);
-	float radius = 0.6 * sqrt(shade);
-	float d = 1.0 - smoothstep(radius - 0.1, radius + 0.1, length(at));
-	COLOR = vec4(mix(col, shadow_ink.rgb, d * 0.6 * ink), c.a);
 }
 """
 # The thump on each bar of the music's grid: up at once, back over THUMP_DECAY seconds (thump()).
@@ -207,11 +185,6 @@ func setup(ctx) -> void:
 	_picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	_picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_picture.texture = viewport.get_texture()
-	_print = ShaderMaterial.new()
-	_print.shader = Shader.new()
-	_print.shader.code = PRINT_SHADER
-	_print.set_shader_parameter("shadow_ink", SHADOW_INK)
-	_picture.material = _print
 	_layer.add_child(_picture)
 	get_viewport().size_changed.connect(_resize)
 	intro = TitleIntroPlayer.new()
@@ -328,7 +301,6 @@ func _sync_dressing() -> void:
 	_fill.light_energy = WorldLook.TITLE.fill
 	var row: Dictionary = POSTERS[poster]
 	_environment.background_color = row.sky
-	_print.set_shader_parameter("ink", row.ink)
 	_resize()
 	if intro_playing():
 		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -348,8 +320,6 @@ func _resize() -> void:
 	if GraphicsPreset.current == "low":
 		pixels /= 2
 	viewport.size = Vector2i(maxi(1, pixels.x), maxi(1, pixels.y))
-	if _print != null:
-		_print.set_shader_parameter("cell", maxf(3.0, get_viewport().get_visible_rect().size.y * PRINT_CELL))
 	if active and GraphicsPreset.current == "low":
 		viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
