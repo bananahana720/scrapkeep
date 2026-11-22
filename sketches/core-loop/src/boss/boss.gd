@@ -97,6 +97,9 @@ const CHARGE_RECOVER := "recover"
 const CHARGE_STUN := "stun"
 const CHARGE_HOOK := "hook"
 var _charge := {}
+# The hook charge's hazard id, the brace cue's once-only key (an identity, kept out of _charge
+# so no arithmetic on the charge reads it).
+var _hook_token := 0
 var _grace := {}
 var _eject := {}
 var _ship_angle := 0.0
@@ -1198,7 +1201,7 @@ func _step_charges(delta: float, ball: Vector3) -> void:
 				# The hook turn starts on its cue: the hull digs in and swings its bow round after
 				# the ball, so the short tell that follows has only the last of the turn left.
 				if _reel_plant != "no_brace" and not ship.bracing():
-					ship.set_hook_brace(true, int(_charge.get("token", 0)))
+					ship.set_hook_brace(true, _hook_token)
 				_turn_ship(_aim_at(ball), Rules.CHARGE_TURN_RATE, delta)
 			if _charge["state"] == CHARGE_STUN:
 				_last_commit_at = clock
@@ -1354,7 +1357,8 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 			_phases.cue("charge")
 			if _reel_plant != "no_brace":
 				ship.set_hook_brace(true, h.get_instance_id())
-			_charge = {"state": CHARGE_HOOK, "timer": FightPhases.CUE_LEAD, "token": h.get_instance_id()}
+			_hook_token = h.get_instance_id()
+			_charge = {"state": CHARGE_HOOK, "timer": FightPhases.CUE_LEAD}
 		else:
 			ship.set_hook_brace(false)
 			_note_missed_charge()
