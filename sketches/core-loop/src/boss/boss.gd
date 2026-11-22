@@ -1031,6 +1031,15 @@ func _in_transition() -> bool:
 	return _phases != null and _phases.in_transition()
 
 
+func trace_snapshot() -> Dictionary:
+	return {
+		"charge_state": String(_charge.get("state", "")),
+		"charge_timer": float(_charge.get("timer", 0.0)),
+		"held": _held(),
+		"in_transition": _in_transition(),
+	}
+
+
 func _follow_ups() -> int:
 	return _phases.follow_ups() if _phases != null else 0
 

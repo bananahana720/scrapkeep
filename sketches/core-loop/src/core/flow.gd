@@ -185,6 +185,14 @@ func state_name() -> String:
 	return NAMES[state]
 
 
+func trace_snapshot() -> Dictionary:
+	return {
+		"launched": _launched,
+		"flight": _flight,
+		"seam_take": _seam_take,
+	}
+
+
 # Whether this stage attempt's Warden has been engaged (the ring or a strike).
 func engaged() -> bool:
 	return _engaged

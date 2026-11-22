@@ -3458,6 +3458,19 @@ func _boss():
 	return boss
 
 
+func trace_snapshot() -> Dictionary:
+	return {
+		"boss": _boss(),
+		"boss_clock": _boss_clock,
+		"goal": _goal,
+		"offers": _offers,
+		"gate_pick": _gate_pick,
+		"gate_time": _gate_time,
+		"gate_run": _gate_run,
+		"fight_climb_pts": _fight_climb.size(),
+	}
+
+
 # A boss without a ship is the stub's one posture Warden on a flat pad (stub_boss.gd, its
 # `warden` field). The bot fights it with the routine it uses on a stage Warden.
 func _fight_posture_boss(boss, delta: float) -> void:
