@@ -1,4 +1,5 @@
 extends SceneTree
+# smoke: solo (audio.gd static _baked persists across warm-batch tests and can trigger title ACE load before boot pins ace_manifest; needs Audio.reset_for_tests() from Sound thread)
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")

@@ -41,6 +41,9 @@ func _physics_process(_delta: float) -> bool:
 	_wait += 1
 	if _wait < 3:
 		return false
+	# Ensure HUD play-piece visibility catches up to flow.in_play() when choose_class()
+	# causes consecutive physics ticks before the next frame's _process().
+	_game.hud._process(0.016)
 	var glyphs = _game.hud.key_glyphs
 	var ready := {"harpoon": true, "haul": false, "boost": true, "interact": false, "jump": false}
 	# Re-pinned 2026-10-10 (wave 13 unit B2): the prompts' words count only for a prompt the screen
