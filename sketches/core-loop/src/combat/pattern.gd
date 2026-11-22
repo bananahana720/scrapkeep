@@ -26,6 +26,27 @@ const MAX_WAVE := 1.2
 const MAX_ARM_OFFSET := 14.0
 const MAX_ARMS := 8
 const MAX_PIERCE := 3
+# Pilot cadence modes and safety clamps (PILOT-CADENCE.md section 7).
+const TRIGGER_HOLD_AUTO := "hold_auto"
+const TRIGGER_PRESS := "press"
+const TRIGGER_TAP_CHARGE := "tap_charge"
+const TRIGGER_LOB_SNAP := "lob_snap"
+const TRIGGER_BEATS := "beats"
+const TRIGGER_STAMP := "stamp"
+const TRIGGER_LOCK := "lock"
+const DEFAULT_TRIGGER := TRIGGER_HOLD_AUTO
+const TRIGGERS := [TRIGGER_HOLD_AUTO, TRIGGER_PRESS, TRIGGER_TAP_CHARGE, TRIGGER_LOB_SNAP,
+	TRIGGER_BEATS, TRIGGER_STAMP, TRIGGER_LOCK]
+const MAX_FLOOR_S := 5.0
+const MAX_MAG := 32
+const MAX_RELOAD_S := 6.0
+const MAX_WINDOW_S := 5.0
+const MIN_WINDOW_MULT := 1.0
+const MAX_WINDOW_MULT := 4.0
+const MAX_CHARGE_S := 5.0
+const MAX_TAP_THRESHOLD_S := 1.0
+const MAX_RECOVER_S := 5.0
+const MAX_REFUND := 1.0
 
 @export var count := 1
 @export var spread_deg := 0.0
@@ -51,10 +72,27 @@ const MAX_PIERCE := 3
 # Class-mod scales the specials read: the pylon's opening burst and the runner's overdrive.
 @export var burst_scale := 1.0
 @export var special_scale := 1.0
+# Pilot cadence fields (PILOT-CADENCE.md section 7). Omitted rows default to hold_auto.
+@export var trigger := DEFAULT_TRIGGER
+@export var floor_s := 0.0
+@export var beat_floors_s: Array = []
+@export var mag := 0
+@export var reload_s := 0.0
+@export var window_s := Vector2.ZERO
+@export var window_mult := 1.0
+@export var charge_s := 0.0
+@export var charge_min := 0.0
+@export var tap_threshold_s := 0.0
+@export var recover_s := 0.0
+@export var beat_window_s := 0.0
+@export var refund := 0.0
+@export var fan := false
 
 const FIELDS := ["count", "spread_deg", "arms", "arm_offset_deg", "rotation_deg", "spin_deg",
 	"wave_amp", "wave_hz", "pierce", "damage", "rate", "range_m", "speed", "bolt_radius", "knock",
-	"chain_jumps", "chain_range", "chain_falloff", "lattice_chain_falloff", "burst_scale", "special_scale"]
+	"chain_jumps", "chain_range", "chain_falloff", "lattice_chain_falloff", "burst_scale", "special_scale",
+	"trigger", "floor_s", "beat_floors_s", "mag", "reload_s", "window_s", "window_mult",
+	"charge_s", "charge_min", "tap_threshold_s", "recover_s", "beat_window_s", "refund", "fan"]
 
 # The transformer catalogue. Each row is pure data: `add` then `mul` then `min` (a
 # floor), applied in that order, once per stack. Writer B's parts name these ids.
@@ -109,14 +147,15 @@ const TRANSFORMERS := {
 static func make(values: Dictionary) -> Resource:
 	var pattern: Resource = load("res://src/combat/pattern.gd").new()
 	for key in values:
-		pattern.set(key, values[key])
+		pattern._assign(key, values[key])
 	return pattern
 
 
 func copy() -> Resource:
 	var twin: Resource = load("res://src/combat/pattern.gd").new()
 	for key in FIELDS:
-		twin.set(key, get(key))
+		var val = get(key)
+		twin.set(key, val.duplicate() if val is Array else val)
 	return twin
 
 
@@ -135,16 +174,42 @@ func transformed(ids: Array) -> Resource:
 	return out
 
 
+func _assign(key: String, value) -> void:
+	if key == "window_s" and value is Array and value.size() >= 2:
+		window_s = Vector2(float(value[0]), float(value[1]))
+	elif key == "beat_floors_s" and value is Array:
+		var floors: Array = []
+		for v in value:
+			floors.append(float(v))
+		beat_floors_s = floors
+	else:
+		set(key, value)
+
+
 func _apply(row: Dictionary) -> void:
+	var assigned: Dictionary = row.get("set", {})
+	for key in assigned:
+		_assign(key, assigned[key])
 	var add: Dictionary = row.get("add", {})
 	for key in add:
 		set(key, get(key) + add[key])
 	var mul: Dictionary = row.get("mul", {})
 	for key in mul:
-		set(key, get(key) * mul[key])
+		var cur = get(key)
+		if cur is Array:
+			var scaled: Array = []
+			for v in cur:
+				scaled.append(float(v) * float(mul[key]))
+			set(key, scaled)
+		else:
+			set(key, cur * mul[key])
 	var floor_row: Dictionary = row.get("min", {})
 	for key in floor_row:
 		set(key, maxf(get(key), floor_row[key]) if typeof(get(key)) == TYPE_FLOAT else maxi(get(key), floor_row[key]))
+
+
+static func _clamp_f(value: float, lo: float, hi: float) -> float:
+	return lo if not is_finite(value) else clampf(value, lo, hi)
 
 
 # The visual-clarity caps (principle 4): stacking can multiply damage without limit,
@@ -156,6 +221,26 @@ func _clamp() -> void:
 	wave_amp = minf(wave_amp, MAX_WAVE)
 	pierce = clampi(pierce, 0, MAX_PIERCE)
 	arm_offset_deg = minf(arm_offset_deg, MAX_ARM_OFFSET)
+	if not (trigger in TRIGGERS):
+		trigger = DEFAULT_TRIGGER
+	floor_s = _clamp_f(floor_s, 0.0, MAX_FLOOR_S)
+	if not beat_floors_s.is_empty():
+		var clamped_floors: Array = []
+		for v in beat_floors_s:
+			clamped_floors.append(_clamp_f(float(v), 0.0, MAX_FLOOR_S))
+		beat_floors_s = clamped_floors
+	mag = clampi(mag, 0, MAX_MAG)
+	reload_s = _clamp_f(reload_s, 0.0, MAX_RELOAD_S)
+	var w_open := _clamp_f(window_s.x, 0.0, MAX_WINDOW_S)
+	var w_close := _clamp_f(window_s.y, w_open, MAX_WINDOW_S)
+	window_s = Vector2(w_open, w_close)
+	window_mult = _clamp_f(window_mult, MIN_WINDOW_MULT, MAX_WINDOW_MULT)
+	charge_s = _clamp_f(charge_s, 0.0, MAX_CHARGE_S)
+	charge_min = _clamp_f(charge_min, 0.0, 1.0)
+	tap_threshold_s = _clamp_f(tap_threshold_s, 0.0, MAX_TAP_THRESHOLD_S)
+	recover_s = _clamp_f(recover_s, 0.0, MAX_RECOVER_S)
+	beat_window_s = _clamp_f(beat_window_s, 0.0, MAX_WINDOW_S)
+	refund = _clamp_f(refund, 0.0, MAX_REFUND)
 
 
 func volley_size() -> int:

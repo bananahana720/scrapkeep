@@ -12,6 +12,7 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Projectile := preload("res://src/combat/projectile.gd")
 const Hitscan := preload("res://src/combat/hitscan.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
+const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Bolts := preload("res://src/combat/bolts.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
@@ -265,7 +266,13 @@ var stage_defs = null
 
 var _patterns := {}
 var _part_map := {}
-var _cooldown := 0.0
+var weapon_driver := WeaponDriver.new()
+# Legacy compatibility property for kit tests outside E1-01 that still read/write _cooldown.
+var _cooldown: float:
+	get:
+		return weapon_driver.cooldown_s()
+	set(value):
+		weapon_driver.set_cooldown_s(value)
 var _overdrive := 0.0
 var _since_slingshot := INF
 var _crushes: Array = []
@@ -639,6 +646,7 @@ func setup(ctx_ref) -> void:
 		_sentry = {}
 		_pulse_left = 0.0
 		_boss_add_ids = {}
+		weapon_driver.reset()
 		_reset_ledger()
 		_rebuild_patterns())
 	ctx.events.beacon_unsealed.connect(func(stage: int):
@@ -652,10 +660,14 @@ func setup(ctx_ref) -> void:
 	# that too), so it is where the "boss" retirement belongs instead.
 	ctx.events.boss_defeated.connect(func(): _record_retirement("boss"))
 	ctx.events.dismounted.connect(func(v: Vector3):
+		weapon_driver.interrupt(WeaponDriver.INTERRUPT_MOUNT)
 		if v.length() > 0.1:
 			_since_slingshot = 0.0)
 	ctx.events.part_gained.connect(func(_part: String, _source: String): _rebuild_patterns())
+	ctx.events.mounted.connect(func(_at: Vector3, _banked_speed: float): weapon_driver.interrupt(WeaponDriver.INTERRUPT_MOUNT))
 	ctx.events.mounted.connect(_on_mounted)
+	ctx.events.ultimate_started.connect(func(_id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float):
+		weapon_driver.interrupt(WeaponDriver.INTERRUPT_ULTIMATE))
 	_rebuild_patterns()
 	_declare_codex()
 
@@ -1717,7 +1729,6 @@ func _physics_process(delta: float) -> void:
 		return
 	_clock += delta
 	_since_slingshot += delta
-	_cooldown -= delta
 	_overdrive = maxf(0.0, _overdrive - delta)
 	_rocket_left = maxf(0.0, _rocket_left - delta)
 	_tick_cloak(delta)
@@ -1725,21 +1736,24 @@ func _physics_process(delta: float) -> void:
 	_step_escape_lane()
 	var intent = ctx.player.intent
 	var weapon := active_weapon()
+	var is_cards: bool = ctx.player.abilities.cap(AbilityState.WEAPON, "cards", null) != null
+	var is_lane: bool = not is_cards and ctx.player.abilities.cap(AbilityState.WEAPON, "family", "") == "lane"
+	var is_lob: bool = not is_cards and not is_lane and ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 0) > 0
+	var p: Resource = _patterns.get(weapon)
+	var cadence_rate: float = _rate(weapon) if not is_cards and not is_lob and p != null else 0.0
+	var shots: Array = weapon_driver.step(delta, intent, weapon, p, cadence_rate)
 	# Tally's reader runs cards, never bolts: this branch comes first so _fire never sees
 	# the ledger_reader row, which exists only for _patterns and _damage_mod.
-	if ctx.player.abilities.cap(AbilityState.WEAPON, "cards", null) != null:
-		_step_cards(intent, delta)
-	elif ctx.player.abilities.cap(AbilityState.WEAPON, "family", "") == "lane":
-		if intent.fire_held and _cooldown <= 0.0 and _patterns.has(weapon):
+	if is_cards:
+		_step_cards(delta, not shots.is_empty())
+	elif is_lane:
+		for _shot in shots:
 			_fire_cannon_lane(weapon)
-			_cooldown += 1.0 / _rate(weapon)
-	elif ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 0) > 0:
+	elif is_lob:
 		_step_sticky_weapon(intent, delta)
-	elif intent.fire_held and _cooldown <= 0.0 and _patterns.has(weapon):
-		_fire(weapon)
-		_cooldown += 1.0 / _rate(weapon)
-	if not intent.fire_held:
-		_cooldown = maxf(_cooldown, 0.0)
+	else:
+		for _shot in shots:
+			_fire(weapon)
 	_step_cast()
 	_step_special(intent, delta)
 	_step_line(intent, delta)
@@ -3693,7 +3707,7 @@ func _wire_tally() -> void:
 # Since the skill bar (SKILL-BAR section 1, "Tally's deck, re-cut") the reader holds one card,
 # balance due, on slot 1, so `bay` stays 0. The same tick runs her plates, the clip post, the
 # clip preview and her codex queue.
-func _step_cards(intent, delta: float) -> void:
+func _step_cards(delta: float, can_fire: bool) -> void:
 	var abilities = ctx.player.abilities
 	var cards: Array = abilities.cap(AbilityState.WEAPON, "cards", [])
 	bay = clampi(bay, 0, cards.size() - 1)
@@ -3707,7 +3721,7 @@ func _step_cards(intent, delta: float) -> void:
 	_step_tally_piece(delta)
 	_step_tally_cards()
 	_step_ink()
-	if not intent.fire_pressed or _cooldown > 0.0:
+	if not can_fire:
 		return
 	var card: String = cards[bay]
 	if not _cards.has(card):
@@ -3715,7 +3729,7 @@ func _step_cards(intent, delta: float) -> void:
 	var aim := _card_aim()
 	if not _cards[card].call(aim["point"], aim["valid"]):
 		return
-	_cooldown = maxf(_cooldown, 0.0) + Weapons.CARD_RECOVERY
+	weapon_driver.commit_recovery(Weapons.CARD_RECOVERY)
 	ctx.events.shot_fired.emit(card, ctx.player.ball_position(), aim["point"])
 
 
@@ -5306,6 +5320,7 @@ func _on_player_died() -> void:
 	_clear_verb_items()
 	_clear_aftershocks()
 	_rakes.clear()
+	weapon_driver.reset()
 
 
 # The arena is not a stage (DESIGN-NOTES spine call 34). Flow publishes this before the
@@ -5351,7 +5366,7 @@ func _start_attempt() -> void:
 	_clear_verb_items()
 	_spring_until = -1.0
 	_warden_slam_hits = 0
-	_cooldown = 0.0
+	weapon_driver.reset()
 	_overdrive = 0.0
 	_rocket_left = 0.0
 	cloak_left = 0.0
