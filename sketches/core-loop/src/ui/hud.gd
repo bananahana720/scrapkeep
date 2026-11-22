@@ -401,6 +401,7 @@ func setup(game_ref) -> void:
 	add_child(reticle)
 	reticle.setup(game.player, game.camera.cam)
 	game.events.verb_failed.connect(_on_verb_failed)
+	game.player.talk_claim = _talk_takes_interact
 	why_callout = WhyCallout.new()
 	add_child(why_callout)
 	why_callout.setup(game, profile)
@@ -1612,13 +1613,25 @@ func _set_piece_left(fill: float) -> float:
 
 
 # A refused pick shakes the slot the number named (SKILL-BAR section 5). The router emits the
-# refusal on the tick the pick is read, while the intent still holds it.
+# refusal on the tick the pick is read, while the intent still holds it. A refused Ctrl shakes
+# its chip, so the press is seen as well as heard (MG-10).
 func _on_verb_failed(verb: String, _reason: String, _at: Vector3) -> void:
+	if verb == "haul":
+		ability_bar.refuse(AbilitySlots.AbilityState.SMASH)
+		return
 	if verb != "select" or game.player == null:
 		return
 	var pick: int = int(game.player.intent.slot_pick)
 	var bar: Array = AbilitySlots.AbilityState.BAR
 	ability_bar.refuse(bar[pick] if pick >= 0 and pick < bar.size() else "line")
+
+
+# Moss's bubble reads the interact key while it speaks (moss_bubble.gd), so E there is never a
+# refused press. The workshop is built on the way into a run; before it is, nothing speaks.
+func _talk_takes_interact() -> bool:
+	var shop = game.get_node_or_null("Workshop")
+	var bubble = shop.get("bubble") if shop != null else null
+	return bubble != null and bubble.showing()
 
 
 # Simulated time: the tally of a build's trying and the part name's 1.2 s run on the physics
