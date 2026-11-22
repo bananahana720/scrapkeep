@@ -116,7 +116,7 @@ func _init() -> void:
 	_part_icons = HBoxContainer.new()
 	_part_icons.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_part_icons.alignment = BoxContainer.ALIGNMENT_CENTER
-	_part_icons.add_theme_constant_override("separation", 6)
+	_part_icons.add_theme_constant_override("separation", UiTokens.GAP_XS)
 	_part_icons.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_parts.add_child(_part_icons)
 	_parts.visible = false
