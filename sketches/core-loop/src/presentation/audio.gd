@@ -35,6 +35,7 @@ const SetDirector := preload("res://src/presentation/set_director.gd")
 const MusicArbiter := preload("res://src/presentation/music_arbiter.gd")
 const MelodyLease := preload("res://src/presentation/melody_lease.gd")
 const SfxBudget := preload("res://src/presentation/sfx_budget.gd")
+const MusicDsp := preload("res://src/presentation/music_dsp.gd")
 # SR7: the shortest gap between two chirps of one companion cue (start value, comps
 # ror2/companions.md "Lab measure": at most once per trigger within a cooldown).
 const CHIRP_COOLDOWN := 0.75
@@ -325,6 +326,7 @@ var _ui_player: AudioStreamPlayer
 var _voices := {}
 var _sfx_budget := SfxBudget.new()
 var _melody_lease := MelodyLease.new()
+var music_dsp := MusicDsp.new()
 var _boss_arena_track := ""
 var _last_start := {}
 var clock := 0.0
@@ -525,7 +527,7 @@ func setup(ctx_ref) -> void:
 		engine.set_parameter_source(sample_run_parameters)
 		engine.parameter_commit.connect(_commit_band_parameters)
 	_music_player = _generator_player("Music", "MusicStream")
-	_stinger_player = _generator_player("SFX", "StingerStream")
+	_stinger_player = _generator_player(MusicDsp.STINGER_BUS, "StingerStream")
 	_sfx_player = _poly_player("SFX", "SfxVoices")
 	_ui_player = _poly_player("UI", "UiVoices")
 	_make_overlay()
@@ -778,6 +780,7 @@ func _exit_tree() -> void:
 			child.stop()
 	_sfx = null
 	_sfx_budget.clear()
+	music_dsp.reset()
 	_voice_db.clear()
 	_roomed.clear()
 	_ui = null
@@ -864,6 +867,7 @@ func _make_buses() -> void:
 	if AudioServer.get_bus_effect_count(master) == 0:
 		AudioServer.add_bus_effect(master, _compressor(MixRows.MASTER_COMP))
 		AudioServer.add_bus_effect(master, _limiter(MixRows.MASTER_CEILING_DB))
+	music_dsp.setup()
 	_apply_volumes()
 
 
@@ -905,6 +909,23 @@ func _tend_mix(delta: float) -> void:
 		mix_db[bus] = next
 	if moved:
 		_apply_volumes()
+	music_dsp.step(delta, _dsp_state())
+
+
+func _dsp_state() -> Dictionary:
+	var low_hull := ace != null and ace.parameters.has("armour") and float(ace.parameters["armour"]) < 0.3
+	var tension := 0.0
+	if _launch_armed or _ult_armed:
+		tension = 1.0
+	elif ace_playing() and ace.mode == "warden" and ace.section == "telegraph":
+		tension = 0.65
+	return {
+		"focus": clock < _focus_until,
+		"slowed": _slowed,
+		"low_hull": low_hull,
+		"build_tension": tension,
+		"dj_sweep": ace.sweep if ace_playing() else 0.0,
+	}
 
 
 # Room for the Warden form's drop (tuning drop_room, mix_rows.gd DROP_ROOM): the band that
@@ -1328,7 +1349,8 @@ func ace_ready() -> bool:
 		push_warning("ACE music: missing %s; playing the synth engine instead" % ace_missing)
 		return false
 	if ace != null:
-		ace.stop(AceSequencer.STOP_RAMP)
+		var swap_ramp: int = clampi(ace.grid_beat / 2, AceSequencer.STOP_RAMP, int(AceSequencer.RATE * 0.25))
+		ace.stop(swap_ramp)
 		loaded.fading.append_array(ace.fading)
 	ace = loaded
 	_ace_from = ace_manifest
