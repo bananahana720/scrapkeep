@@ -915,7 +915,7 @@ static func _bake(id: String) -> PackedFloat32Array:
 		return Synth.render_score(kest_score(id), 0.7)
 	match id:
 		"ui_tick":
-			return _tone(0.03, _hz(86), _hz(86), "sine", 120.0)
+			return _mix([[_cut(_n("mallet", 86), 0.045, 240), 0, 0.85], [_cut(_n("bell", 98), 0.035, 200), 0, 0.22]], false, 0.72)
 		"hop":
 			return _mix([[_tone(0.11, 380.0, 640.0, "sine", 28.0), 0, 1.0], [_noise(0.02, 3000.0, 3000.0, 200.0), 0, 0.3]])
 		"boost_whoosh":
