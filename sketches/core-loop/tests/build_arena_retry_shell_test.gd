@@ -63,7 +63,7 @@ func _physics_process(_delta: float) -> bool:
 	var want_chunks := Accretion.chunks_for(run.mass)
 	_report("shell after arena retry", entry_class > robbed_class and run.heft_class() == entry_class
 			and shell.shell_class() == run.heft_class() and shell.chunk_count() == want_chunks
-			and is_equal_approx(shell.scale.x, Accretion.shell_scale(run.heft_class())),
+			and is_equal_approx(shell.scale.x, Accretion.shell_scale(run.heft_class(), shell.lattice)),
 		"entered the arena at class %d, a crane theft drew the shell at class %d; after R the run is class %d with mass %.0f and the shell shows class %d, %d chunks (want %d), scale %.2f"
 			% [entry_class, robbed_class, run.heft_class(), run.mass, shell.shell_class(), shell.chunk_count(), want_chunks, shell.scale.x])
 	print("build_arena_retry_shell_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))

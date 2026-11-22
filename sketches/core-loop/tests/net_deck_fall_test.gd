@@ -37,6 +37,9 @@ func _run() -> void:
 	var hp: int = _game.run.hp
 	var spawn: Vector3 = _game.ctx.terrain.spawn_point(1)
 
+	# Align with a physics_frame boundary before placing the ball so the next physics tick's
+	# flow._physics_process() always runs before the following await physics_frame resumes.
+	await physics_frame
 	_game.ctx.terrain.maps[_game.run.stage - 1] = Deck.new()
 	Harness.put_ball(_game, Vector3(spawn.x, Deck.NET_H - 10.0, spawn.z), Vector3(8.0, -20.0, 0.0))
 	await physics_frame
