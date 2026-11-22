@@ -177,9 +177,25 @@ func _schema_district_rows() -> void:
 	errs = ParkSchema.validate(valid_flume)
 	_t.check("flume with 3 valid NAMES.md districts passes", errs.is_empty(), ParkSchema.describe(errs))
 
-	# Planted district_rows errors.
+	# World 2/3 extensibility (WAYFINDING.md §7): parks outside World 1 accept unique non-empty district names
+	# with no code change while still checking non-empty name, uniqueness, non-overlap and non-empty grade.
+	var pit := _load_json("park_pit")
+	var valid_pit := pit.duplicate(true)
+	valid_pit["district_rows"] = [
+		{"id": "upper_bench", "name": "Upper Haul Bench", "rect": [-780, -790, 1560, 520], "grade": "pit_upper"},
+		{"id": "pit_floor", "name": "Main Pit Floor", "rect": [-780, -270, 1560, 540], "grade": "pit_floor"},
+		{"id": "tailings", "name": "Tailings Rim", "rect": [-780, 270, 1560, 520], "grade": "pit_tailings"},
+	]
+	errs = ParkSchema.validate(valid_pit)
+	_t.check("world 2 park_pit accepts valid non-W1 district_rows without code change", errs.is_empty(), ParkSchema.describe(errs))
+	_plant(valid_pit, "world 2 blank district name", "upper_bench", "district", func(p): p["district_rows"][0]["name"] = "   ")
+	_plant(valid_pit, "world 2 duplicate district name", "pit_floor", "duplicate", func(p): p["district_rows"][1]["name"] = "Upper Haul Bench")
+	_plant(valid_pit, "world 2 overlapping districts", "pit_floor", "district", func(p): p["district_rows"][1]["rect"] = [-780, -300, 1560, 570])
+
+	# Planted district_rows errors on World 1.
 	_plant(valid_dam, "district_rows not an array", "district_rows", "type", func(p): p["district_rows"] = "intake")
 	_plant(valid_dam, "district name not in NAMES.md", "intake", "enum", func(p): p["district_rows"][0]["name"] = "The Sump")
+	_plant(valid_dam, "world 1 blank district name", "intake", "district", func(p): p["district_rows"][0]["name"] = "  ")
 	_plant(valid_dam, "duplicate district name", "apron", "duplicate", func(p): p["district_rows"][1]["name"] = "Intake Catwalks")
 	_plant(valid_dam, "overlapping districts", "apron", "district", func(p): p["district_rows"][1]["rect"] = [-760, -250, 1520, 450])
 	_plant(valid_dam, "zero-width district rect", "intake", "district", func(p): p["district_rows"][0]["rect"] = [-760, -780, 0, 580])
@@ -373,11 +389,29 @@ func _site_markers_visited() -> void:
 	markers.sync([
 		{"key": "cache:50:60", "kind": "cache", "at": Vector3(5.0, 1.0, 6.0)},
 		{"key": "furnace", "kind": "furnace", "at": Vector3(900.0, 0.0, 480.0)},
+		{"key": "rogue:dam_mb_mid", "kind": "rogue", "at": Vector3(104.0, 5.0, 96.0)},
 	], false)
 	_t.check("sync without fade leaves sites unvisited", markers.visited_sites().is_empty())
-	# Leave view.visible == false (as when eye is inside GONE_M) and drop both with fade=true.
+	# Leave view.visible == false (as when eye is inside GONE_M) and drop all three with fade=true.
+	# Waking a rogue drops its sleeping smoke plume WITHOUT marking it visited.
 	markers.sync([], true)
 	_t.check("cache disappearing in live sync flips to visited even while plume hidden", markers.is_visited("cache:50:60"))
 	_t.check("furnace disappearing in live sync never flips to visited", not markers.is_visited("furnace"))
+	_t.check("waking a rogue removes its plume without marking it visited",
+		not markers.views.has("rogue:dam_mb_mid") and not markers.is_visited("rogue:dam_mb_mid"))
+
+	# Non-rogue kills never flip the rogue; defeating a Rogue.ROWS kind flips it once at its death spot.
+	events.enemy_killed.emit("chaser", Vector3(110.0, 5.0, 100.0), 4)
+	_t.check("plain enemy kill does not mark rogue visited", not markers.is_visited("rogue:dam_mb_mid"))
+	var death_at := Vector3(142.0, 4.0, 128.0)
+	events.enemy_killed.emit("rogue_crane", death_at, 30)
+	_t.check("defeating a rogue flips its site to visited", markers.is_visited("rogue:dam_mb_mid"))
+	var rogue_state := markers.visited_state("rogue:dam_mb_mid")
+	_t.eq("rogue visited mark is wreck", rogue_state["mark"], "wreck")
+	_t.eq("rogue visited position is its death spot, not spawn", rogue_state["at"], death_at)
+	events.enemy_killed.emit("rogue_crane", Vector3(999.0, 9.0, 999.0), 30)
+	_t.eq("repeat rogue kill keeps first death spot (idempotent)", markers.visited_state("rogue:dam_mb_mid")["at"], death_at)
+	events.stage_entered.emit(1, true)
+	_t.eq("retry clears rogue visited state and tracked key", markers.visited_sites(), [])
 
 	holder.free()

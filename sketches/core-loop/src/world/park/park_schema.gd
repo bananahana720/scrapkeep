@@ -193,13 +193,15 @@ const FAR_CARD_FIELDS := {"at": "v2", "to": "s"}
 # Optional at the top (design-v3/WAYFINDING.md sections 3 and 6, ruling ek): command cables from the clamp to crew
 # homes, ordered by pip 1..N where N is the park gate's packs in lock_rows.gd (0 packs -> no cables).
 const CABLE_FIELDS := {"id": "s", "pip": "n", "to": "s", "via": "a"}
-# Optional at the top (design-v3/WAYFINDING.md sections 2.2 and 6, ruling ek): non-overlapping park districts whose
-# names come from design-v3/NAMES.md ("Places in world 1") and each carrying its picture-grade row key.
+# Optional at the top (design-v3/WAYFINDING.md sections 2.2, 6 and 7, ruling ek): non-overlapping park districts.
+# World 1 names are checked against design-v3/NAMES.md ("Places in world 1"); parked worlds 2 and 3 accept any
+# unique non-empty name until their name tables land, with no code change.
 const DISTRICT_NAMES := [
 	"Intake Catwalks", "Spillway Apron", "Sunken Pump Yard",
 	"Weir Bobsled", "Trestle Span", "Headhouse Overlook",
 ]
-const DISTRICT_FIELDS := {"id": "s", "name": DISTRICT_NAMES, "rect": "v4", "grade": "s"}
+const WORLD_DISTRICT_NAMES := {1: DISTRICT_NAMES}
+const DISTRICT_FIELDS := {"id": "s", "name": "s", "rect": "v4", "grade": "s"}
 const LANDMARK_FIELDS := {
 	"id": "s", "kind": LANDMARK_KINDS, "at": "v2", "size": "v3", "yaw_deg": "n", "recipe": "s",
 	"budget": ["hero_landmark"], "sight_top": "v3", "sight_share": "n", "beacon": "v2", "reach_m": "n",
@@ -318,7 +320,7 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	if park.has("cable_rows"):
 		_cable_rows(out, park, homes, ctx)
 	if park.has("district_rows"):
-		_district_rows(out, park)
+		_district_rows(out, park, ctx)
 
 	var landmark: Dictionary = park["landmark"]
 	_landmark(out, landmark, ctx)
@@ -532,22 +534,28 @@ static func _cable_rows(out: Array, park: Dictionary, homes: Dictionary, ctx: Di
 			_add(out, "cable_rows", "cable", "missing cable for pip %d of %d" % [k, want])
 
 
-static func _district_rows(out: Array, park: Dictionary) -> void:
+static func _district_rows(out: Array, park: Dictionary, ctx: Dictionary) -> void:
 	if not park["district_rows"] is Array:
 		_add(out, "district_rows", "type", "district_rows is not an array")
 		return
 	var districts := _rows(out, park, "district_rows", DISTRICT_FIELDS)
+	var allowed = ctx.get("district_names", WORLD_DISTRICT_NAMES.get(int(ctx.get("world", 0)), []))
 	var seen_names := {}
 	var boxes: Array = []
 	for id in districts:
 		var row: Dictionary = districts[id]
 		if String(row["grade"]).strip_edges() == "":
 			_add(out, id, "district", "district grade key must be non-empty")
-		var title := String(row["name"])
-		if seen_names.has(title):
-			_add(out, id, "duplicate", "district name %s repeats" % title)
-		else:
-			seen_names[title] = id
+		var title := String(row["name"]).strip_edges()
+		if title == "":
+			_add(out, id, "district", "district name must be non-empty")
+		elif allowed is Array and not allowed.is_empty() and not allowed.has(String(row["name"])):
+			_add(out, id, "enum", "name %s is not in its list" % str(row["name"]))
+		if title != "":
+			if seen_names.has(title):
+				_add(out, id, "duplicate", "district name %s repeats" % title)
+			else:
+				seen_names[title] = id
 		var r: Array = row["rect"]
 		if float(r[2]) <= 0.0 or float(r[3]) <= 0.0:
 			_add(out, id, "district", "rect %s needs width and height above 0" % str(r))

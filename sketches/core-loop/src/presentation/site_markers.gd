@@ -30,6 +30,7 @@ extends Node3D
 const Shade := preload("res://src/presentation/site_markers.gdshader")
 const Arena := preload("res://src/boss/arena.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Rogue := preload("res://src/combat/rogue.gd")
 const Yard := preload("res://src/presentation/arena_bowl_yard.gd")
 
 const CREW_SMOKE := Color("ece6d8")
@@ -92,6 +93,8 @@ var _furnace: Array = [0, null]
 # key -> {key, kind, at, mark, color, tie, glow, still}: finished sites that flipped this attempt.
 # Instance state only (zero static var leaks); cleared on stage entry, retry, stage clear and reset_visited().
 var _visited := {}
+# The sleeping rogue plume's key for this stage attempt, kept across wake so enemy_killed flips it at death.
+var _rogue_key := ""
 static var _materials := {}
 static var _meshes := {}
 
@@ -108,6 +111,8 @@ func setup(ctx_ref) -> void:
 			events.activity_done.connect(_on_activity_done)
 		if events.has_signal("rescue_completed"):
 			events.rescue_completed.connect(_on_rescue_completed)
+		if events.has_signal("enemy_killed"):
+			events.enemy_killed.connect(_on_enemy_killed)
 
 
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
@@ -134,6 +139,13 @@ func _on_rescue_completed(quest_id: String) -> void:
 	var key := "cage:" + quest_id
 	var at: Vector3 = views[key].get_meta("at") if views.has(key) else Vector3.ZERO
 	mark_visited(key, "cage", at)
+
+
+func _on_enemy_killed(kind: String, at: Vector3, _scrap_value: int) -> void:
+	if not Rogue.ROWS.has(kind):
+		return
+	var key := _rogue_key if _rogue_key != "" else "rogue:" + kind
+	mark_visited(key, "rogue", at)
 
 
 # Read-only spec for one site kind's finished state, or {} for an unknown kind.
@@ -174,6 +186,7 @@ func visited_sites() -> Array:
 
 func reset_visited() -> void:
 	_visited.clear()
+	_rogue_key = ""
 
 
 # The share of a plume's alpha it shows for an eye distance_m away (horizontal): the one rule for distance. A far kind
@@ -247,6 +260,8 @@ func sync(list: Array, fade := false) -> void:
 	var wanted := {}
 	for s in list:
 		wanted[s["key"]] = true
+		if String(s["kind"]) == "rogue":
+			_rogue_key = String(s["key"])
 		if not views.has(s["key"]):
 			views[s["key"]] = _plume(String(s["kind"]), s["at"], String(s["key"]))
 			_last_eye = Vector3.INF
@@ -254,8 +269,11 @@ func sync(list: Array, fade := false) -> void:
 		if not wanted.has(key):
 			var view: MeshInstance3D = views[key]
 			views.erase(key)
-			if fade:
-				mark_visited(key, String(view.get_meta("kind")), view.get_meta("at"))
+			var kind := String(view.get_meta("kind"))
+			# A sleeping rogue's plume leaves when the machine wakes at 63 m (world.gd _watch_rogue),
+			# not when it dies; _on_enemy_killed flips the rogue once it actually falls.
+			if fade and kind != "rogue":
+				mark_visited(key, kind, view.get_meta("at"))
 			if fade and view.visible:
 				view.set_meta("leave", 1.0)
 				leaving.append(view)
