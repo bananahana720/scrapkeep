@@ -378,7 +378,8 @@ func dismiss_exchange() -> void:
 
 
 # Moss lets go of all he has to say: the hello that is up, held or waiting its turn, an intro up
-# or queued, a call waiting, and the line on screen. None of it comes back this stage.
+# or queued, a call waiting, and the line on screen. None of it comes back this stage. Public so a
+# test or a capture tool can silence Moss through one call.
 func stand_down() -> void:
 	_hello_due = 0
 	_call = {}
