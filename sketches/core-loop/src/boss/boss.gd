@@ -630,8 +630,9 @@ func _crane_catch(i: int, ball: Vector3, magnet_at: Vector3) -> void:
 	_tug(ball, magnet_at)
 	if ctx.run.mass < 1.0:
 		return
+	var steal_share := Rules.REEL_STEAL_SHARE if reeling() else Rules.STEAL_SHARE
 	var steal_cap := Rules.REEL_STEAL_MAX if reeling() else Rules.STEAL_MAX
-	var amount := clampi(int(round(ctx.run.mass * Rules.STEAL_SHARE)), Rules.STEAL_MIN, steal_cap)
+	var amount := clampi(int(round(ctx.run.mass * steal_share)), Rules.STEAL_MIN, steal_cap)
 	var taken: int = ctx.run.lose_scrap(amount, ball, "crane")
 	if taken <= 0:
 		return
@@ -640,7 +641,7 @@ func _crane_catch(i: int, ball: Vector3, magnet_at: Vector3) -> void:
 	if reeling():
 		# While reeling, the magnet swings stolen scrap out toward the outer floor so camping
 		# under the hull sheds excess scrap armour unless the player chases the trail or shoots it.
-		r = clampf(maxf(r + 10.0, 26.0), 26.0, Arena.FLOOR_R - 4.0)
+		r = clampf(maxf(r + 12.0, 30.0), 30.0, Arena.FLOOR_R - 4.0)
 	var start: float = atan2(ball.z - h.centre.z, ball.x - h.centre.x)
 	var sweep := signf(h.a_to - h.a_from)
 	var trail: Array = []
@@ -923,18 +924,10 @@ func _step_furnace(delta: float) -> void:
 		var ball: Vector3 = ctx.player.ball_position()
 		if reeling():
 			var slot := _pick_slag_slot(ball, _slag_turn)
-			var slag_warn := _commit_slag(slot, false, Rules.REEL_SLAG_LIVE)
+			_commit_slag(slot, false, Rules.REEL_SLAG_LIVE)
 			_slag_turn += 1
 			_combo_left = -1
-			if _follow_ups() > 0:
-				# Slowed 1-2 reel pressure: the lead ring vents under the ball, then its cued
-				# reprise (with W1-105 bone preview) fires on the ball's new band 5.3 s later.
-				var at := clock + slag_warn + Rules.REEL_SLAG_LIVE
-				_reprise = {"at": at, "cue_at": at - FightPhases.CUE_LEAD, "cued": false,
-					"turn": (slot + 1) % 3, "reel": true}
-				_next_attack = at + Rules.REEL_SLAG_PERIOD
-			else:
-				_next_attack = clock + Rules.REEL_SLAG_PERIOD
+			_next_attack = clock + Rules.REEL_SLAG_PERIOD
 		else:
 			var slot := _slag_turn % 3
 			var lead_live := Rules.REEL_SLAG_LIVE if slot == 2 else Rules.SLAG_LIVE
@@ -1039,25 +1032,21 @@ func _follow_ups() -> int:
 func _step_reprise() -> void:
 	if _reprise.is_empty():
 		return
-	# Entering a reel drops an uncued normal reprise (the reel's own slag cadence takes over, or
-	# the stop plant halts attacks); a reel's own reprise or an already-cued reprise keeps going.
-	if reeling() and not _reprise["cued"] and (not bool(_reprise.get("reel", false)) or _reel_plant == "stop"):
+	# A reel drops an uncued reprise (the reel's own slag cadence takes over, or the stop plant
+	# halts attacks); an already-cued reprise always keeps its cue's promise.
+	if reeling() and not _reprise["cued"]:
 		_reprise = {}
 		return
 	if not _reprise["cued"] and clock >= _reprise["cue_at"]:
 		_reprise["cued"] = true
 		var reprise_turn := int(_reprise["turn"])
-		if bool(_reprise.get("reel", false)):
-			reprise_turn = _pick_slag_slot(ctx.player.ball_position(), maxi(1, _slag_turn))
-			_reprise["turn"] = reprise_turn
 		_phases.cue("slag_ring_a" if reprise_turn % 3 == 0 else ("slag_ring_b" if reprise_turn % 3 == 1 else "slag_ring_inner"))
 		_show_reprise_preview(reprise_turn)
 	if clock >= _reprise["at"]:
 		var turn: int = _reprise["turn"]
-		var is_reel := bool(_reprise.get("reel", false))
 		_reprise = {}
 		_clear_reprise_preview()
-		_commit_slag(turn, true, Rules.REEL_SLAG_LIVE if reeling() or is_reel or turn % 3 == 2 else -1.0)
+		_commit_slag(turn, true, Rules.REEL_SLAG_LIVE if reeling() or turn % 3 == 2 else -1.0)
 		if reeling() and _reel_plant != "stop":
 			_next_attack = minf(_next_attack, clock + Rules.REEL_SLAG_PERIOD)
 

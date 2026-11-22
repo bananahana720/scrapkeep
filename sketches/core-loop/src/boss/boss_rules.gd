@@ -37,9 +37,10 @@ const REEL_REACH := 9.0
 const REEL_SPREAD := 1.6
 const REEL_PERIOD_MULT := 1.5
 const REEL_MAX_GAP := 5.5
-const REEL_SLAG_PERIOD := 4.2
-const REEL_SLAG_LIVE := 2.8
-const REEL_STEAL_MAX := 360
+const REEL_SLAG_PERIOD := 3.0
+const REEL_SLAG_LIVE := 3.0
+const REEL_STEAL_SHARE := 0.45
+const REEL_STEAL_MAX := 700
 # No attack lands before this, so the entry and the hull readout are free to read.
 const INTRO_SECONDS := 3.0
 
