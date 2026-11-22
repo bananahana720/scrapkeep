@@ -543,6 +543,11 @@ func _rest_time() -> float:
 
 func _step_cranes(delta: float, ball: Vector3) -> void:
 	_move_ship_on_circle(delta)
+	# Entering a reel clamps a pre-existing normal crane timer so a high period_mult dial cannot
+	# open a gap over REEL_MAX_GAP.
+	if reeling() and not _was_reeling and _reel_plant != "stop":
+		var base_period := ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1)
+		_next_attack = minf(_next_attack, clock + minf(base_period * Rules.REEL_PERIOD_MULT, Rules.REEL_MAX_GAP))
 	if clock >= _next_attack and not (reeling() and _reel_plant == "stop"):
 		var committed := _commit_crane(_crane_turn, ball)
 		if not committed:
@@ -961,8 +966,9 @@ func _ball_slag_slot(ball: Vector3) -> int:
 	return 1
 
 
-# Turn 0 stays Arena.RING_A to match the FX-03 phase preview; later leads and reel rings target
-# the band under the ball, stepping to an adjacent free band if that ring is already active.
+# Reel slag rings target the band under the ball, stepping to an adjacent free band if that ring
+# is already active (turn 0 stays Arena.RING_A to match the FX-03 phase preview). Normal Furnace
+# leads rotate A, B and the close vent in _step_furnace.
 func _pick_slag_slot(ball: Vector3, turn: int) -> int:
 	if turn == 0:
 		return 0

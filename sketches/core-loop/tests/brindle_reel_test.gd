@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
+const BossModel := preload("res://src/boss/boss_model.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -195,6 +196,14 @@ func _run_hook_brace_probe(plant: String) -> Dictionary:
 	_boss._reel_plant = plant
 	_boss.jump_to_phase(3)
 	var ship = _boss.ship
+	var anim: AnimationPlayer = BossModel.player_of(ship.model) if ship.model != null else null
+	var brace_clips: Array = []
+	var track := {"on": false}
+	var on_anim_started := func(clip: StringName) -> void:
+		if bool(track["on"]):
+			brace_clips.append(String(clip))
+	if anim != null:
+		anim.animation_started.connect(on_anim_started)
 	var centre: Vector3 = _boss.arena.global_position
 	var inward := Vector3(centre.x - ship.global_position.x, 0.0, centre.z - ship.global_position.z).normalized()
 	var bait: Vector3 = ship.global_position + inward * 12.0
@@ -203,6 +212,7 @@ func _run_hook_brace_probe(plant: String) -> Dictionary:
 	var commit_idx := _commits.size()
 	var lead_seen := false
 	var brace_start := -1.0
+	var brace_clip_played := false
 	var cue_at := -1.0
 	var hook_commit_at := -1.0
 	var held_through_cue := true
@@ -215,7 +225,12 @@ func _run_hook_brace_probe(plant: String) -> Dictionary:
 			Harness.put_ball(_game, bait + Vector3.UP * 40.0)
 		elif st == _boss.CHARGE_HOOK:
 			Harness.put_ball(_game, bait + Vector3.UP * 40.0)
+		var was_bracing: bool = ship.bracing()
+		track["on"] = lead_seen and not was_bracing and hook_commit_at < 0.0
 		_boss.advance(DT)
+		if anim != null:
+			anim.advance(DT)
+		track["on"] = false
 		while commit_idx < _commits.size():
 			var row: Dictionary = _commits[commit_idx]
 			commit_idx += 1
@@ -232,10 +247,14 @@ func _run_hook_brace_probe(plant: String) -> Dictionary:
 		if lead_seen and hook_commit_at < 0.0:
 			if ship.bracing() and brace_start < 0.0:
 				brace_start = _boss.clock
+				brace_clip_played = "charge_warn" in brace_clips \
+					and (anim == null or anim.assigned_animation == &"charge_warn")
 			if cue_at > 0.0 and not ship.bracing():
 				held_through_cue = false
 		if hook_commit_at >= 0.0:
 			break
+	if anim != null and anim.animation_started.is_connected(on_anim_started):
+		anim.animation_started.disconnect(on_anim_started)
 	_boss._reel_plant = ""
 	var visible_s := (hook_commit_at - brace_start) if (brace_start >= 0.0 and hook_commit_at > 0.0) else 0.0
 	return {
@@ -247,6 +266,9 @@ func _run_hook_brace_probe(plant: String) -> Dictionary:
 		"held_through_cue": held_through_cue,
 		"cleared": cleared_on_commit,
 		"timing_ok": cue_at > 0.0 and hook_commit_at > 0.0 and absf(hook_commit_at - cue_at - FightPhases.CUE_LEAD) <= DT * 2.0,
+		"model_loaded": anim != null and anim.has_animation("charge_warn"),
+		"brace_clip_played": brace_clip_played,
+		"brace_clips": brace_clips,
 	}
 
 
@@ -398,10 +420,26 @@ func _run() -> void:
 		"visible %.3f s (>= %.1f s), started before cue %s, held through cue %s, cleared on commit %s, timing ok %s"
 			% [brace["visible_s"], ChallengeDials.TELL_FLOOR, brace["before_cue"], brace["held_through_cue"],
 				brace["cleared"], brace["timing_ok"]])
+	_report("W1-106 hook brace starts the charge_warn clip after the lead charge",
+		not brace["model_loaded"] or brace["brace_clip_played"],
+		"model_loaded %s, charge_warn started on brace %s, clips %s"
+			% [brace["model_loaded"], brace["brace_clip_played"], str(brace["brace_clips"])])
 	var brace_plant := _run_hook_brace_probe("no_brace")
 	_report("W1-106 planted missing hull brace fails the >= 0.6 s visibility check",
 		float(brace_plant["visible_s"]) < ChallengeDials.TELL_FLOOR and not brace_plant["before_cue"],
 		"planted no_brace: visible %.3f s, before_cue %s" % [brace_plant["visible_s"], brace_plant["before_cue"]])
+
+	# Phase 1 reel entry clamps a pre-existing slow crane timer (e.g. high brindle.period_mult)
+	# so no gap over 6 s opens when the reel begins.
+	ChallengeDials.set_overrides({"brindle.period_mult": 4.0})
+	_boss.jump_to_phase(1)
+	_advance(Rules.CRANE_PERIOD * 0.5)
+	await _break_chunk(hull)
+	var p1_clamped := _watch_reel(8.0)
+	ChallengeDials.reset()
+	_report("phase 1 reel entry clamps a high-period_mult crane timer within 6 s",
+		p1_clamped["commits"] >= 1 and p1_clamped["worst_gap"] <= MAX_REEL_GAP_S and _boss.reeling(),
+		"%d commits over %.1f s, worst gap %.2f s (<= %.1f s)" % [p1_clamped["commits"], p1_clamped["span"], p1_clamped["worst_gap"], MAX_REEL_GAP_S])
 
 	print("brindle_reel_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

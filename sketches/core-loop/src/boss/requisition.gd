@@ -463,17 +463,17 @@ func set_hook_brace(on: bool, token := 0) -> void:
 		_hull_prim_mat.emission = Palette.HAZARD
 		_hull_prim_mat.emission_energy_multiplier = 1.6 if on else 0.0
 	if on and changed:
-		_cue("charge_warn", token)
+		_cue("charge_warn", token, "hook")
 
 
 func bracing() -> bool:
 	return _bracing
 
 
-func _cue(clip: String, token: int) -> void:
+func _cue(clip: String, token: int, tag := "") -> void:
 	if model == null or _anim == null:
 		return
-	var key := "%s:%d" % [clip, token]
+	var key := "%s:%d:%s" % [clip, token, tag] if tag != "" else "%s:%d" % [clip, token]
 	if key == _cue_key:
 		return
 	_cue_key = key
