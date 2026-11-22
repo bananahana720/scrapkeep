@@ -100,9 +100,12 @@ const LOW_GROUND_ELEMENTS := ["flow_line", "bowl", "drop", "sky_island"]
 const LITTER_BAND_MIN_M := 6.0
 const LITTER_BAND_MAX_M := 64.0
 
-# Visibility ranges by class, LOD0 to LOD2: [begin, end] metres (the contract's "Frame cost").
-const HERO_RANGES := [[0.0, 70.0], [70.0, 180.0], [180.0, 450.0]]
-const PROP_RANGES := [[0.0, 35.0], [35.0, 90.0], [90.0, 200.0]]
+# Visibility ranges by class, LOD0 to LOD2: [begin, end] metres (the contract's "Frame cost": hand-overs at 70 and 180 m
+# for a hero, 35 and 90 m for a prop). A level fades itself out over its end +- margin (Godot's FADE_SELF). The next level
+# comes in whole (no begin margin) one margin before the hand-over, so it stands opaque behind the fading one: a cross-fade
+# of two half-drawn levels read as a see-through ghost at the hand-over (PF-47, the flume sluice shed at 70 m).
+const HERO_RANGES := [[0.0, 70.0], [62.0, 180.0], [172.0, 450.0]]
+const PROP_RANGES := [[0.0, 35.0], [32.0, 90.0], [87.0, 200.0]]
 const LITTER_RANGE := [0.0, 70.0]
 const HERO_MARGIN_M := 8.0
 const PROP_MARGIN_M := 3.0
@@ -1422,13 +1425,23 @@ static func prepare(id: String, park_map, ground: Callable, stage: int, low: boo
 	return {"kit": kit, "list": list, "paths": mesh_paths(list, kit, low), "errors": []}
 
 
-# The lowest preset halves LOD0 and LOD1; LOD2 begins where the halved LOD1 ends, so no gap opens.
+# The lowest preset halves LOD0 and LOD1's ends; each level after the first still comes in one margin before the halved
+# hand-over, so no gap and no ghost opens.
 static func _range(base: Array, low: bool, lod: int) -> Array:
 	if not low:
 		return base
-	if lod < 2:
-		return [float(base[0]) * LOW_RANGE_SCALE, float(base[1]) * LOW_RANGE_SCALE]
-	return [float(PROP_RANGES[1][1]) * LOW_RANGE_SCALE, base[1]]
+	var end := float(base[1]) * LOW_RANGE_SCALE if lod < 2 else float(base[1])
+	var begin := 0.0 if lod == 0 else float(PROP_RANGES[lod - 1][1]) * LOW_RANGE_SCALE - PROP_MARGIN_M
+	return [begin, end]
+
+
+# A prop's (or a hero's) detail levels as built: [begin, end, begin margin, end margin] per LOD, for the preset.
+static func levels(hero: bool, low := false) -> Array:
+	var out := []
+	for lod in 3:
+		var span: Array = HERO_RANGES[lod] if hero else _range(PROP_RANGES[lod], low, lod)
+		out.append([float(span[0]), float(span[1]), 0.0, HERO_MARGIN_M if hero else PROP_MARGIN_M])
+	return out
 
 
 static func _lod_paths(kit: Dictionary, inst: Dictionary) -> Array:
@@ -1633,7 +1646,8 @@ static func _far_source(path: String) -> Array:
 static func _ranges(view: GeometryInstance3D, begin_end: Array, margin: float) -> void:
 	view.visibility_range_begin = begin_end[0]
 	view.visibility_range_end = begin_end[1]
-	view.visibility_range_begin_margin = 0.0 if float(begin_end[0]) <= 0.0 else margin
+	# No begin fade: a level comes in whole behind the fading one (PF-47, HERO_RANGES).
+	view.visibility_range_begin_margin = 0.0
 	view.visibility_range_end_margin = margin
 	view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 
