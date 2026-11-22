@@ -1719,7 +1719,14 @@ func _process(delta: float) -> void:
 				_close_ending()
 	_step_latch_cue(delta)
 	_deal_cards(delta)
+	_thump_name()
 	_update_enabled()
+
+
+# The wordmark keeps the title stage's thump (title_stage.gd), on the title only.
+func _thump_name() -> void:
+	var stage = game.presentation.get("title_stage") if game.presentation != null else null
+	Wordmark.thump(_wordmark, stage.thump() if _wordmark.visible and _state == "title" and stage != null else 0.0)
 
 
 # Buttons take clicks only on a live screen, after its guard, and never while the
