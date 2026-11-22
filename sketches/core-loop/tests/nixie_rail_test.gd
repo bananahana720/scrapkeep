@@ -16,6 +16,9 @@ const T := preload("res://tests/support/t.gd")
 #   - the lit numeral is 2.5% of the window height or more at each size, and the cathode stack shows
 #     only where the glass is 45 px or taller on screen;
 #   - a numeral lights for a count and only in a timer's last 9 s, and steps 100/80/60% over the last 3 s;
+#   - the buff ledger's own rows (buff_ledger.gd _to_row) read right: a lone timer has no numeral until
+#     its last 9 s, a count shows its stacks, a timed count shows both numeral and drain, icons and ids
+#     map onto filaments, and a row's tone (mint here) is never drawn;
 #   - every filament has its own topology, and no ink the rail draws is mint, hazard red, brass or purple;
 #   - new tubes join at the inner end, a gone row retracts and the rail hides after the last;
 #   - reduced motion keeps the needle steady and skips the slide and the rise;
@@ -70,6 +73,7 @@ func _process(_delta: float) -> bool:
 				_hidden_when_empty()
 				_digits()
 				_shapes_and_inks()
+				_ledger_rows()
 				_order_and_retract()
 				_reduced_motion()
 				_hud_geometry()
@@ -93,11 +97,11 @@ func _hidden_when_empty() -> void:
 	root.add_child(rail)
 	rail.place(Vector2(1582.0, 888.0))
 	rail.set_rows([])
-	_t.check("no rows: hidden, no rectangle", not rail.showing() and not rail.piece_rect().has_area() and rail.tube_count() == 0,
+	_t.check("no rows: hidden, no rectangle", not rail.showing() and not rail.piece_rect().has_area() and rail.shown_filaments().size() == 0,
 		"showing %s, rect %s" % [rail.showing(), rail.piece_rect()])
 	rail.set_rows([{"id": "cloak", "filament": "plain", "seconds_left": 1.5, "seconds_total": 1.5},
 		{"id": "jam", "filament": "chain", "seconds_left": 2.0, "seconds_total": 2.0}])
-	_t.check("rows under 3 s with no count get no tube", not rail.showing() and rail.tube_count() == 0, "%d tubes" % rail.tube_count())
+	_t.check("rows under 3 s with no count get no tube", not rail.showing() and rail.shown_filaments().size() == 0, "%d tubes" % rail.shown_filaments().size())
 	_t.eq("the HUD reads no rows while the game has no buff ledger", _hud.buff_rows(), [])
 	rail.free()
 
@@ -133,7 +137,7 @@ func _shapes_and_inks() -> void:
 	_t.check("frost is ICE, heat warm, overdrive copper, chain steel with bone",
 		NixieRail.FILAMENTS["frost"]["ink"] == Palette.ICE and NixieRail.FILAMENTS["heat"]["ink"] == Palette.AMBER
 			and NixieRail.FILAMENTS["overdrive"]["ink"] == Palette.COPPER and NixieRail.FILAMENTS["chain"]["ink"] == Palette.STEEL
-			and NixieRail.FILAMENTS["chain"]["core"] == NixieRail.BONE and NixieRail.shape_of("arc") == "chain", "")
+			and NixieRail.FILAMENTS["chain"]["core"] == NixieRail.BONE and NixieRail.filament_of({"filament": "arc"}) == "chain", "")
 	# Brass is held to the separation the palette already keeps between AMBER (the relic, the lit
 	# numeral) and BRASS (Brindle); every other forbidden colour to 0.2 in RGB.
 	var bad := []
@@ -158,6 +162,46 @@ static func _rgb(a: Color, b: Color) -> float:
 	return Vector3(a.r - b.r, a.g - b.g, a.b - b.b).length()
 
 
+# Rows exactly as BuffLedger._to_row() writes them, each with a mint tone the rail must not draw.
+static func _ledger_row(id: String, icon: String, kind: String, left: float, duration: float, stacks: int, show_digit: bool) -> Dictionary:
+	return {"id": id, "icon": icon, "tone": Palette.ARC, "kind": kind, "left_s": left, "duration_s": duration,
+		"frac": clampf(left / duration, 0.0, 1.0) if duration > 0.0 else 1.0, "stacks": stacks, "max_stacks": maxi(stacks, 3),
+		"show_digit": show_digit}
+
+
+func _ledger_rows() -> void:
+	var drone := _ledger_row("item_drone", "cat_utility", "timer", 12.0, 15.0, 1, false)
+	var brace := _ledger_row("item_brace", "cat_defense", "timer", 4.0, 6.0, 1, false)
+	var armed := _ledger_row("item_armed_hit", "cat_damage", "count", 0.0, 0.0, 3, true)
+	var rebound := _ledger_row("item_rebound_crit", "cat_damage", "count", 3.0, 4.0, 2, true)
+	var sprint := _ledger_row("ability_overdrive_sprint", "ab_rivet_move", "timer", 5.0, 5.0, 1, false)
+	var stacked := _ledger_row("item_frost_pin", "cat_frost", "timer", 20.0, 30.0, 2, true)
+	var seen := [drone, brace, armed, rebound, sprint, stacked].map(func(r): return NixieRail.read_row(r))
+	_t.eq("ledger rows read: numeral only where show_digit says, time from left_s and duration_s",
+		seen.map(func(r): return [r["count"], r["left"], r["total"]]),
+		[[-1, 12.0, 15.0], [-1, 4.0, 6.0], [3, 0.0, 0.0], [2, 3.0, 4.0], [-1, 5.0, 5.0], [2, 20.0, 30.0]])
+	_t.eq("a lone 12 s timer is dark, at 4 s it counts down; a count shows its stacks", [
+		NixieRail.digit_of(seen[0]["left"], seen[0]["total"], seen[0]["count"]), NixieRail.digit_of(seen[1]["left"], seen[1]["total"], seen[1]["count"]),
+		NixieRail.digit_of(seen[2]["left"], seen[2]["total"], seen[2]["count"])], [-1, 4, 3])
+	_t.check("a timed count keeps both its numeral and its drain",
+		NixieRail.digit_of(seen[3]["left"], seen[3]["total"], seen[3]["count"]) == 2 and is_equal_approx(NixieRail.fill_of(seen[3]["left"], seen[3]["total"]), 0.75),
+		"digit %d, fill %.2f" % [NixieRail.digit_of(seen[3]["left"], seen[3]["total"], seen[3]["count"]), NixieRail.fill_of(seen[3]["left"], seen[3]["total"])])
+	_t.eq("icons and ids map onto filaments", seen.map(func(r): return r["filament"]),
+		["utility", "guard", "overdrive", "overdrive", "overdrive", "frost"])
+	_t.eq("a row under 3 s with no numeral gets no tube; a count with no timer does",
+		[NixieRail.wants_tube(_ledger_row("ability_cloak", "ab_kest_move", "timer", 1.5, 1.5, 1, false)), NixieRail.wants_tube(armed)], [false, true])
+	var rail := NixieRail.new()
+	root.add_child(rail)
+	rail.place(Vector2(1582.0, 888.0))
+	rail.set_rows([drone, brace, armed, rebound])
+	var drawn: Array = rail.shown_filaments().map(func(shape): return NixieRail.FILAMENTS[shape]["ink"])
+	_t.check("the rail draws its own filament inks, never a row's mint tone", rail.shown_filaments().size() == 4 and not drawn.has(Palette.ARC),
+		"%s" % [rail.shown_filaments()])
+	var source := FileAccess.get_file_as_string("res://src/ui/nixie_rail.gd")
+	_t.check("the rail source never reads a row's tone", not source.contains("\"tone\""), "")
+	rail.free()
+
+
 func _order_and_retract() -> void:
 	var rail := NixieRail.new()
 	root.add_child(rail)
@@ -166,19 +210,19 @@ func _order_and_retract() -> void:
 	rail.set_rows(_rows(3))
 	_t.eq("a new tube joins at the inner end", rail.shown_filaments(), ["overdrive", "heat", "frost"])
 	rail.set_rows(_rows(6))
-	_t.check("a fifth and sixth row never widen the rail", rail.tube_count() == 4 and rail.piece_rect().size.x <= NixieRail.PITCH * 4,
-		"%d tubes, %.0f px" % [rail.tube_count(), rail.piece_rect().size.x])
+	_t.check("a fifth and sixth row never widen the rail", rail.shown_filaments().size() == 4 and rail.piece_rect().size.x <= NixieRail.PITCH * 4,
+		"%d tubes, %.0f px" % [rail.shown_filaments().size(), rail.piece_rect().size.x])
 	var rows := _rows(4)
 	rows.remove_at(1)
 	rail.set_rows(rows)
 	rail.set_rows(rows + [{"id": "late", "filament": "plain", "count": 2}])
-	_t.check("a new row takes a retracting tube's socket, four at most", rail.tube_count() == 4 and rail.piece_rect().size.x <= NixieRail.PITCH * 4,
-		"%d tubes, %s" % [rail.tube_count(), rail.shown_filaments()])
+	_t.check("a new row takes a retracting tube's socket, four at most", rail.shown_filaments().size() == 4 and rail.piece_rect().size.x <= NixieRail.PITCH * 4,
+		"%d tubes, %s" % [rail.shown_filaments().size(), rail.shown_filaments()])
 	rail.set_rows([])
 	for i in 60:
 		rail.advance(1.0 / 60.0)
-	_t.check("after the last row ends the rail retracts and hides", not rail.showing() and rail.tube_count() == 0 and not rail.piece_rect().has_area(),
-		"showing %s, %d tubes" % [rail.showing(), rail.tube_count()])
+	_t.check("after the last row ends the rail retracts and hides", not rail.showing() and rail.shown_filaments().size() == 0 and not rail.piece_rect().has_area(),
+		"showing %s, %d tubes" % [rail.showing(), rail.shown_filaments().size()])
 	rail.free()
 
 

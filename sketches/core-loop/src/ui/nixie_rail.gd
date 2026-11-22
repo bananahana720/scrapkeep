@@ -16,8 +16,10 @@ const LaunchCard := preload("res://src/ui/launch_card.gd")
 # never mint (the live colour), never hazard red, never the Kindness purple.
 #
 # The rail reads rows and never counts down by itself, so a pause, a time-scale change or a
-# refresh cannot let it drift. A row: {id, filament, seconds_left, seconds_total, count}, where
-# count is a whole number to show (or absent) and seconds_total is 0 for an untimed count.
+# refresh cannot let it drift. It reads the buff ledger's rows (buff_ledger.gd active_rows: id,
+# icon, kind, left_s, duration_s, stacks, show_digit) through read_row(), which also takes the
+# plain {id, filament, seconds_left, seconds_total, count}. A row's tone is never drawn: every
+# colour comes from FILAMENTS, which the colour law is checked against.
 # Drawn in _draw only, no SubViewport, no textures; it redraws only when what it draws changes.
 
 const BONE := LaunchCard.BONE
@@ -93,7 +95,7 @@ const FILAMENTS := {
 		[Vector2(0.28, 0.3), Vector2(0.38, 0.0)],
 		[Vector2(0.72, 0.3), Vector2(0.62, 0.0)],
 		[Vector2(0.72, 0.3), Vector2(0.86, 0.0)]]},
-	# A coil of loops on a short stem: open and coiled, no corner.
+	# A coil of tight loops: open, its hairpin turns its only corners.
 	"heat": {"ink": Palette.AMBER, "cool": Palette.COPPER, "strokes": [
 		[Vector2(0.1, 0.5), Vector2(0.16, 0.16), Vector2(0.24, 0.02), Vector2(0.3, 0.16), Vector2(0.26, 0.5), Vector2(0.22, 0.84),
 			Vector2(0.3, 0.98), Vector2(0.38, 0.84), Vector2(0.4, 0.5), Vector2(0.42, 0.16), Vector2(0.5, 0.02), Vector2(0.58, 0.16),
@@ -106,10 +108,27 @@ const FILAMENTS := {
 	# A struck bolt: one stroke, four sharp corners. Steel with a bone core, never mint.
 	"chain": {"ink": Palette.STEEL, "core": BONE, "strokes": [
 		[Vector2(0.08, 0.1), Vector2(0.4, 0.1), Vector2(0.28, 0.55), Vector2(0.68, 0.45), Vector2(0.56, 0.9), Vector2(0.92, 0.9)]]},
-	# Any effect without a row yet: one straight wire, which no named effect uses.
+	# Defence: one closed ring, the only closed shape.
+	"guard": {"ink": BONE, "strokes": [
+		[Vector2(0.5, 0.0), Vector2(0.72, 0.1), Vector2(0.8, 0.45), Vector2(0.72, 0.8), Vector2(0.5, 1.0), Vector2(0.28, 0.8),
+			Vector2(0.2, 0.45), Vector2(0.28, 0.1), Vector2(0.5, 0.0)]]},
+	# Utility (a drone, a tool): two wires crossed, two strokes with no corner.
+	"utility": {"ink": Palette.STEEL, "strokes": [
+		[Vector2(0.2, 0.5), Vector2(0.8, 0.5)],
+		[Vector2(0.5, 0.0), Vector2(0.5, 1.0)]]},
+	# Movement and anything without a row yet: one straight wire.
 	"plain": {"ink": Palette.STEEL, "strokes": [[Vector2(0.15, 0.5), Vector2(0.85, 0.5)]]},
 }
-const ALIASES := {"arc": "chain", "shock": "chain", "burn": "heat", "fire": "heat", "ice": "frost", "slow": "frost"}
+# Words in a row's filament, icon or id that name a filament, checked in this order. The ledger's
+# icons are category ids (cat_damage, cat_defense, cat_utility) and ability ids (ab_rivet_move).
+const KEYWORDS := [
+	["frost", ["frost", "ice", "slow", "chill"]],
+	["heat", ["heat", "fire", "burn"]],
+	["overdrive", ["overdrive", "damage", "crit", "blast"]],
+	["chain", ["chain", "arc", "charge", "shock", "spark"]],
+	["guard", ["guard", "defense", "defence", "brace", "armor", "armour", "shield"]],
+	["utility", ["utility", "drone"]],
+]
 
 # The hardware inks: everything the rail draws is one of these or a FILAMENTS ink.
 const BODY := Palette.CHARCOAL
@@ -159,10 +178,11 @@ func place(outer_bottom_right: Vector2) -> void:
 func set_rows(rows: Array) -> void:
 	var live := {}
 	var order: Array[String] = []
-	for row in rows:
-		if not (row is Dictionary) or not wants_tube(row):
+	for source in rows:
+		if not (source is Dictionary) or not wants_tube(source):
 			continue
-		var id := str(row.get("id", ""))
+		var row := read_row(source)
+		var id: String = row["id"]
 		if id == "" or live.has(id) or live.size() >= MAX_TUBES:
 			continue
 		live[id] = row
@@ -174,8 +194,8 @@ func set_rows(rows: Array) -> void:
 				tube["end_age"] = 0.0
 			continue
 		var row: Dictionary = live[id]
-		var left := float(row.get("seconds_left", 0.0))
-		var count := int(row.get("count", -1))
+		var left: float = row["left"]
+		var count: int = row["count"]
 		if tube["end_age"] >= 0.0:
 			tube["age"] = 0.0
 			tube["strike"] = 0.0
@@ -254,10 +274,6 @@ func showing() -> bool:
 	return visible
 
 
-func tube_count() -> int:
-	return _tubes.size()
-
-
 # The rail's rectangle in the parent's space, empty while nothing is shown.
 func piece_rect() -> Rect2:
 	return Rect2(position, size) if visible else Rect2()
@@ -301,7 +317,36 @@ func shown_needles() -> Array[float]:
 
 
 static func wants_tube(row: Dictionary) -> bool:
-	return int(row.get("count", -1)) >= 0 or float(row.get("seconds_total", 0.0)) >= MIN_TIMED
+	var seen := read_row(row)
+	return seen["count"] >= 0 or seen["total"] >= MIN_TIMED
+
+
+# A row as the rail draws it: {id, filament, left, total, count}, count -1 for no numeral. A ledger
+# row's numeral is its stacks when show_digit says so (a count, or a timer stacked past one); a
+# lone timer has none, so its last 9 s count down. A timed count keeps both numeral and drain.
+static func read_row(row: Dictionary) -> Dictionary:
+	var count := int(row.get("count", -1))
+	if count < 0:
+		var digit: bool = bool(row["show_digit"]) if row.has("show_digit") \
+			else str(row.get("kind", "")) == "count" or int(row.get("stacks", 0)) > 1
+		if digit:
+			count = int(row.get("stacks", 0))
+	return {"id": str(row.get("id", "")), "filament": filament_of(row), "count": count,
+		"left": float(row.get("left_s", row.get("seconds_left", 0.0))),
+		"total": float(row.get("duration_s", row.get("seconds_total", 0.0)))}
+
+
+# The filament a row wears: its own filament name, else the first KEYWORDS word in its icon, then its id.
+static func filament_of(row: Dictionary) -> String:
+	var named := str(row.get("filament", "")).to_lower()
+	if FILAMENTS.has(named):
+		return named
+	for text in [named, str(row.get("icon", "")).to_lower(), str(row.get("id", "")).to_lower()]:
+		for entry in KEYWORDS:
+			for word in entry[1]:
+				if text.contains(word):
+					return entry[0]
+	return "plain"
 
 
 # The numeral a tube shows, or -1 when it is dark: a count always (9 at most), a timer only in its last 9 s.
@@ -330,11 +375,6 @@ static func fill_of(left: float, total: float) -> float:
 # The needle on the plinth dial, in degrees: 0 points right (full), 180 left (spent).
 static func needle_deg(fill: float) -> float:
 	return 180.0 * (1.0 - clampf(fill, 0.0, 1.0))
-
-
-static func shape_of(filament: String) -> String:
-	var key: String = ALIASES.get(filament.to_lower(), filament.to_lower())
-	return key if FILAMENTS.has(key) else "plain"
 
 
 # A shape's topology, read with no colour: [strokes, branch points, closed loops, sharp corners,
@@ -390,10 +430,8 @@ static func cathodes_shown(scale: float) -> bool:
 
 
 func _take(tube: Dictionary, row: Dictionary) -> void:
-	tube["filament"] = shape_of(str(row.get("filament", "")))
-	tube["left"] = float(row.get("seconds_left", 0.0))
-	tube["total"] = float(row.get("seconds_total", 0.0))
-	tube["count"] = int(row.get("count", -1))
+	for key in ["filament", "left", "total", "count"]:
+		tube[key] = row[key]
 
 
 # A socket for one more tube: a retracting tube gives its place up at once when all are taken.
