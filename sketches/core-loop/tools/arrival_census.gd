@@ -3,21 +3,25 @@ extends RefCounted
 # Headless witness of the crew's collider through the rider's lens. The drawn
 # footprint at a mouth is a separate look-harness measurement. World geometry
 # is layer 1; the ball and other moving crews use different layers.
+const Chaser := preload("res://src/combat/chaser.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 
 var _active := {}
 var _rows := {}
 
 
-func spawned(body: Node3D, kind: String) -> void:
+func spawned(body: Node3D, kind: String, stage := 1) -> void:
 	# These two anchored set pieces also pass through spawn_enemy.
 	if kind in ["warden", "vault"]:
 		return
-	var row := {"kind": kind, "seen": false, "pop_in": false, "warned": false,
+	var row := {"kind": kind, "stage": stage, "ref": weakref(body), "died": false, "seen": false, "pop_in": false, "warned": false,
 		"seen_before_warning_s": 0.0}
 	var id := body.get_instance_id()
 	_rows[id] = row
-	_active[id] = {"ref": weakref(body), "row": row, "was_visible": false, "points": _points(body)}
+	_active[id] = {"ref": row.ref, "row": row, "was_visible": false, "points": _points(body)}
+	# A death can free the body between two samples.
+	if body.has_signal("died"):
+		body.connect("died", func(_at: Vector3, _scrap: int): row.died = true, CONNECT_ONE_SHOT)
 	if body.has_signal("attack_phase"):
 		body.connect("attack_phase", _phase.bind(row))
 	if body.has_signal("special_tell"):
@@ -102,12 +106,46 @@ func reading(ids = null) -> Dictionary:
 		out.seen += int(row.seen)
 		out.pop_ins += int(row.pop_in)
 		var lead := float(row.seen_before_warning_s)
-		if not row.warned and lead + 0.000001 < 0.6:
+		if not row.warned and not _enough_lead(lead):
 			out.short_unwarned += 1
 		if row.warned:
 			out.warnings += 1
-			if lead + 0.000001 < 0.6:
+			if not _enough_lead(lead):
 				out.early_warnings += 1
 			if out.seen_before_warning_s == null or lead < out.seen_before_warning_s:
 				out.seen_before_warning_s = lead
+	# The same coverage rule applies to a whole ride and an individual yard wave.
+	out["crew_coverage_complete"] = out.crews > 0 and out.seen == out.crews and out.short_unwarned == 0
+	return out
+
+
+static func _enough_lead(seconds: float) -> bool:
+	return seconds + 0.000001 >= Chaser.WINDUP
+
+
+func _observation(row: Dictionary) -> String:
+	if not row.seen:
+		return "unseen"
+	if row.warned:
+		return "warned" if _enough_lead(row.seen_before_warning_s) else "early_warning"
+	return "lead_observed" if _enough_lead(row.seen_before_warning_s) else "short_unwarned"
+
+
+# Keep one entry per spawn in spawn order, including crews already freed. The
+# way a crew left the ride never excuses a missing first sighting or warning lead.
+func ordinary_reading(ending: String) -> Dictionary:
+	var out := reading()
+	var members := []
+	for row: Dictionary in _rows.values():
+		var body: Node3D = row.ref.get_ref()
+		var fate := "present_at_end"
+		if row.died:
+			fate = "died"
+		elif body == null or not body.is_inside_tree() or body.is_queued_for_deletion():
+			fate = "removed"
+		members.append({"spawn": members.size() + 1, "stage": row.stage, "kind": row.kind,
+			"fate": fate, "observation": _observation(row), "warned": row.warned,
+			"seen_before_warning_s": row.seen_before_warning_s, "pop_in": row.pop_in})
+	out["members"] = members
+	out["ending"] = ending
 	return out
