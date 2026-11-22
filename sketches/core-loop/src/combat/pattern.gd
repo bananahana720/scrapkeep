@@ -147,7 +147,7 @@ const TRANSFORMERS := {
 static func make(values: Dictionary) -> Resource:
 	var pattern: Resource = load("res://src/combat/pattern.gd").new()
 	for key in values:
-		pattern._assign(key, values[key])
+		pattern.set(key, _coerce(key, values[key]))
 	return pattern
 
 
@@ -174,22 +174,21 @@ func transformed(ids: Array) -> Resource:
 	return out
 
 
-func _assign(key: String, value) -> void:
+static func _coerce(key: String, value):
 	if key == "window_s" and value is Array and value.size() >= 2:
-		window_s = Vector2(float(value[0]), float(value[1]))
-	elif key == "beat_floors_s" and value is Array:
+		return Vector2(float(value[0]), float(value[1]))
+	if key == "beat_floors_s" and value is Array:
 		var floors: Array = []
 		for v in value:
 			floors.append(float(v))
-		beat_floors_s = floors
-	else:
-		set(key, value)
+		return floors
+	return value
 
 
 func _apply(row: Dictionary) -> void:
 	var assigned: Dictionary = row.get("set", {})
 	for key in assigned:
-		_assign(key, assigned[key])
+		set(key, _coerce(key, assigned[key]))
 	var add: Dictionary = row.get("add", {})
 	for key in add:
 		set(key, get(key) + add[key])
