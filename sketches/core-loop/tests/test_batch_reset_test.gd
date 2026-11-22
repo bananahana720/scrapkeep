@@ -39,6 +39,10 @@ const T := preload("res://tests/support/t.gd")
 # statics between tests in a warm batch so no test leaks state into a later test.
 
 func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
 	var t := T.new("test_batch_reset_test")
 	var driver := Driver.new(self, [])
 
