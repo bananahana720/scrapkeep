@@ -85,6 +85,14 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     hasDocsOrPkg: true,
     hasKnownFailing: true,
   });
+
+  const nearMissLedger = planHookChecks(["docs/KNOWN-FAILING.tsv"], (f) => existing.has(f));
+  assert.deepEqual(nearMissLedger, {
+    jsFiles: [],
+    hasSketch: false,
+    hasDocsOrPkg: false,
+    hasKnownFailing: false,
+  });
 });
 
 test("parseHookArgs validates --base values", () => {
