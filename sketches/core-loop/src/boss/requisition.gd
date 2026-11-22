@@ -59,6 +59,7 @@ var _magnet_mats: Array = []
 var _cap_meshes: Array = []
 var _plates: Array = []
 var _cockpit: MeshInstance3D
+var _hull_prim_mat: StandardMaterial3D
 # The model and its parts, when it loaded; null model means the primitives are the body.
 var model: Node3D
 var _prims: Array = []
@@ -70,7 +71,9 @@ var _model_cranes: Array = []
 var _model_armour: Array = []
 var _model_magnets: Array = []
 var _model_magnet_meshes: Array = []
+var _model_bow_ram: MeshInstance3D
 var _model_shield: Node3D
+var _bracing := false
 var _pending_hides := {}
 # [node, local AABB] of each drawn part, found once (drawn_boxes).
 var _drawn_parts: Array = []
@@ -86,7 +89,8 @@ func build(boss) -> void:
 	hull.position = Vector3.UP * HULL.y * 0.5
 	add_child(hull)
 	hull.body_boxes = drawn_boxes
-	_box(hull, HULL, Palette.solid(Palette.RUST), Vector3.ZERO)
+	_hull_prim_mat = Palette.solid(Palette.RUST)
+	_box(hull, HULL, _hull_prim_mat, Vector3.ZERO)
 	for side in [-1.0, 1.0]:
 		for z in [-3.5, 3.5]:
 			var plate_mat := Palette.solid(Color("5d6b78"))
@@ -414,6 +418,7 @@ func _dress() -> void:
 		BossModel.strip_tracks(_anim, "Cap1", ["drone_deploy"])
 		BossModel.strip_tracks(_anim, "Cap2", ["drone_deploy"])
 	_model_shield = model.find_child("CockpitShield", true, false)
+	_model_bow_ram = model.find_child("BowRam", true, false) as MeshInstance3D
 	_model_cranes = [model.find_child("CraneMasts", true, false), model.find_child("CranePort", true, false),
 		model.find_child("CraneStarboard", true, false), model.find_child("MagnetSocketPort", true, false),
 		model.find_child("MagnetSocketStarboard", true, false)]
@@ -436,6 +441,33 @@ func _dress() -> void:
 # such as a new committed hazard, plays it again. A missing clip is a quiet no-op.
 func cue(clip: String, token := 0) -> void:
 	_cue(clip, token)
+
+
+# W1-106 (A11): visible hull brace ahead of the Scuttle's hook turn. Crouches and pitches the
+# drawn fortress bow-down, plays the charge_warn pull-back clip, and lights the BowRam's M4
+# signal lip in HAZARD so the brace reads on High and Low presets without moving any collider.
+const BRACE_DROP := 0.35
+const BRACE_PITCH := -0.075
+const BRACE_GLOW := 3.0
+
+
+func set_hook_brace(on: bool, token := 0) -> void:
+	var changed := on != _bracing
+	_bracing = on
+	if model != null:
+		model.position.y = -BRACE_DROP if on else 0.0
+		model.rotation.x = BRACE_PITCH if on else 0.0
+		BossModel.signal_glow(_model_bow_ram, Palette.HAZARD, BRACE_GLOW if on else 0.0)
+	if _hull_prim_mat != null:
+		_hull_prim_mat.emission_enabled = on
+		_hull_prim_mat.emission = Palette.HAZARD
+		_hull_prim_mat.emission_energy_multiplier = 1.6 if on else 0.0
+	if on and changed:
+		_cue("charge_warn", token)
+
+
+func bracing() -> bool:
+	return _bracing
 
 
 func _cue(clip: String, token: int) -> void:
