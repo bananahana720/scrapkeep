@@ -63,7 +63,7 @@ Run `bash models/make-sound-configs.sh`, then plain TLC on each `sound-*.cfg` wi
 
 ## The tests behind it
 
-`sketches/core-loop/tests/sound_arbiter_test.gd` exercises the live `Audio` and `AceSequencer` stack on the arbiter, melody lease, trim epochs, and SFX voice-class budgets. `sketches/core-loop/tests/deck_moves_test.gd` exercises festival deck off-parity, pump breakpoints and non-pumped/flat/arbiter gating, build/breath/drop shot timing and cleanup on `stop`, pack change, death, and `invalidate_trims`, and `deck_fx` warning-lane notch and peak bounds. `set_director_test.gd`, `warden_form_test.gd`, `phase_music_test.gd`, and `radio_test.gd` cover the individual subsystems.
+`sketches/core-loop/tests/sound_arbiter_test.gd` exercises the live `Audio` and `AceSequencer` stack on the arbiter, melody lease, trim epochs, and SFX voice-class budgets. `sketches/core-loop/tests/deck_moves_test.gd` exercises festival deck off-parity, pump breakpoints and non-pumped/flat/arbiter gating, build/breath/drop shot timing and cleanup on `stop`, pack change, death, and `invalidate_trims`, and `deck_fx` warning-lane notch and peak bounds. `sketches/core-loop/tests/set_director_test.gd`, `sketches/core-loop/tests/warden_form_test.gd`, `sketches/core-loop/tests/phase_music_test.gd`, and `sketches/core-loop/tests/radio_test.gd` cover the individual subsystems.
 
 ## Not modelled
 
