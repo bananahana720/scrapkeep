@@ -38,7 +38,8 @@ const REEL_SPREAD := 1.6
 const REEL_PERIOD_MULT := 1.5
 const REEL_MAX_GAP := 5.5
 const REEL_SLAG_PERIOD := 4.2
-const REEL_SLAG_LIVE := 3.0
+const REEL_SLAG_LIVE := 2.8
+const REEL_STEAL_MAX := 360
 # No attack lands before this, so the entry and the hull readout are free to read.
 const INTRO_SECONDS := 3.0
 
@@ -75,7 +76,7 @@ const CRANE_REACH := 5.0
 # A catch steals this share of mass, clamped, and lifts and tugs the ball; it never pins.
 const STEAL_SHARE := 0.2
 const STEAL_MIN := 10
-const STEAL_MAX := 360
+const STEAL_MAX := 60
 const TUG_LIFT := 7.0
 const TUG_PULL := 1.2
 # The magnet holds what it stole and drips it as a trail, one pickup per DRIP seconds.
