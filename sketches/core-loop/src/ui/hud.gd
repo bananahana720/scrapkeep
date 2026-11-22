@@ -401,6 +401,7 @@ func setup(game_ref) -> void:
 	add_child(reticle)
 	reticle.setup(game.player, game.camera.cam)
 	game.events.verb_failed.connect(_on_verb_failed)
+	game.player.talk_claim = _talk_takes_interact
 	why_callout = WhyCallout.new()
 	add_child(why_callout)
 	why_callout.setup(game, profile)
@@ -1559,6 +1560,7 @@ func _process(delta: float) -> void:
 	var slots: Array = _slots.slots(game)
 	ability_bar.update_slots(slots, tint, shape)
 	ability_bar.hide_keys(key_glyphs.shown_glyphs())
+	ability_bar.point_at(tip_slot(field_tips.showing, slots))
 	if part_name.visible or danger_mark.visible:
 		var cam: Camera3D = game.camera.cam
 		var top: Vector3 = game.player.shown_position() + cam.global_basis.y * Tuning.RADIUS
@@ -1583,6 +1585,17 @@ func _process(delta: float) -> void:
 	var hold: float = game.restart_hold_fraction()
 	_restart.set_fraction(hold)
 	_restart.visible = hold > 0.0
+
+
+# The bar slot a first-meet tip on screen speaks of, so the bar points at it (PF-21): the active's
+# tip names the active's chip. "" for a tip that names no slot, or a slot the bar does not hold.
+static func tip_slot(tip: String, slots: Array) -> String:
+	if tip != "active":
+		return ""
+	for entry in slots:
+		if String(entry.get("id", "")).begins_with("active_"):
+			return AbilityBar.slot_name(entry)
+	return ""
 
 
 # The skill bar's live reads (SKILL-BAR section 5): the ultimate meter on the reticle, the set
@@ -1612,13 +1625,26 @@ func _set_piece_left(fill: float) -> float:
 
 
 # A refused pick shakes the slot the number named (SKILL-BAR section 5). The router emits the
-# refusal on the tick the pick is read, while the intent still holds it.
+# refusal on the tick the pick is read, while the intent still holds it. A refused Ctrl shakes
+# its chip, so the press is seen as well as heard (MG-10).
 func _on_verb_failed(verb: String, _reason: String, _at: Vector3) -> void:
+	if verb == "haul":
+		ability_bar.refuse(AbilitySlots.AbilityState.SMASH)
+		return
 	if verb != "select" or game.player == null:
 		return
 	var pick: int = int(game.player.intent.slot_pick)
 	var bar: Array = AbilitySlots.AbilityState.BAR
 	ability_bar.refuse(bar[pick] if pick >= 0 and pick < bar.size() else "line")
+
+
+# Moss's bubble reads the interact key on an intro or an exchange (moss_bubble.gd takes_interact),
+# so E there is never a refused press. The workshop is built on the way into a run; before it is,
+# nothing speaks.
+func _talk_takes_interact() -> bool:
+	var shop = game.get_node_or_null("Workshop")
+	var bubble = shop.get("bubble") if shop != null else null
+	return bubble != null and bubble.takes_interact()
 
 
 # Simulated time: the tally of a build's trying and the part name's 1.2 s run on the physics

@@ -19,8 +19,17 @@ const Keycap := preload("res://src/ui/keycap.gd")
 # While the radio's first-meet tip is up (field_tips.gd calls teach), the dial hangs its own keys
 # under the plate for TEACH seconds: back, next and skip, each cap with a drawn arrow, read from
 # the InputMap so a rebinding shows. A toast cannot draw a keycap; the dial can.
+# The words are news, not furniture (PF-19: the panel stood up all run, its line past its edge).
+# The chip shows its words for PEEK seconds when they change (a run's start, a new signal, a turn)
+# and then folds to the knob and the meter bars, which still carry the station and the band. Every
+# line it draws is cut to the plate's width with an ellipsis, so no word runs past its edge.
 
 const CHIP := Vector2(320.0, 46.0)
+# Folded: the knob and the meter bars, no words.
+const FOLDED := Vector2(84.0, 46.0)
+const PEEK := 4.0
+const ELLIPSIS := "…"
+const FITS_KEPT := 64
 # Swollen, the plate holds the station's name and its blurb on up to BLURB_LINES lines, wrapped
 # at a word: a blurb stopped mid-word read as broken (w37 film 012, "played however th"). The
 # plate still ends inside the top band (screen_regions.gd) at 900 px high.
@@ -44,6 +53,9 @@ var deck
 var _swell := 0.0
 var _stamp := 0.0
 var _teach := 0.0
+var _peek := 0.0
+var _said := ""
+static var _fits := {}
 var _read := {}
 var _bars := PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
 
@@ -76,6 +88,39 @@ func swollen() -> bool:
 	return _swell > 0.0
 
 
+# Whether the chip shows its words: swollen, teaching its keys, or inside PEEK of a change.
+func says() -> bool:
+	return swollen() or teaching() or _peek > 0.0
+
+
+# The size the chip is headed for: swollen, with its words, or folded to the knob and bars.
+func target_size() -> Vector2:
+	if swollen():
+		return SWOLLEN
+	return CHIP if says() else FOLDED
+
+
+# `text` cut at the end with an ellipsis so it fits `width` at `font_size`; whole when it fits.
+# Each answer is kept by (text, width, size), so a plate that is not changing shapes no text.
+static func fit(text: String, width: float, font_size: int) -> String:
+	width = floorf(width)
+	if width <= 0.0:
+		return ""
+	var key := "%s|%d|%d" % [text, int(width), font_size]
+	if _fits.has(key):
+		return _fits[key]
+	var out := text
+	if UiFonts.width(text, font_size) > width:
+		var cut := text
+		while cut != "" and UiFonts.width(cut.strip_edges(false, true) + ELLIPSIS, font_size) > width:
+			cut = cut.left(cut.length() - 1)
+		out = cut.strip_edges(false, true) + ELLIPSIS if cut != "" else ""
+	if _fits.size() >= FITS_KEPT:
+		_fits.clear()
+	_fits[key] = out
+	return out
+
+
 const TINTS := {"AMBER": Palette.AMBER, "COPPER": Palette.COPPER, "SANDSTONE": Palette.SANDSTONE, "LEDGER": Palette.LEDGER,
 	"ARC": Palette.ARC, "MINT": Palette.ARC, "BRASS": Palette.BRASS, "SLATE": Palette.SLATE, "RUST": Palette.RUST,
 	"VERDIGRIS": Palette.VERDIGRIS, "SAND": Palette.SAND}
@@ -88,11 +133,19 @@ static func tint(name: String) -> Color:
 func _process(delta: float) -> void:
 	visible = deck != null and deck._live()
 	if not visible:
+		# Away between runs: the next run's first words are news again, even if they match the last.
+		_said = ""
+		_peek = 0.0
 		return
 	_swell = maxf(0.0, _swell - delta)
 	_stamp = maxf(0.0, _stamp - delta)
 	_teach = maxf(0.0, _teach - delta)
+	_peek = maxf(0.0, _peek - delta)
 	_read = deck.reading()
+	var said := "%s|%s|%s" % [_read.get("call", ""), _read.get("dial", ""), _read.get("line", "")]
+	if said != _said:
+		_said = said
+		_peek = PEEK
 	var engine = deck._audio.engine if deck._audio != null else null
 	for i in LAYERS:
 		var want := 0.0
@@ -102,8 +155,7 @@ func _process(delta: float) -> void:
 			var beat: int = maxi(1, engine.beat_len())
 			want *= 0.75 + 0.25 * (1.0 - float(engine.clock % beat) / beat)
 		_bars[i] = move_toward(_bars[i], want, delta * 6.0)
-	var target := SWOLLEN if swollen() else CHIP
-	size = size.lerp(target, clampf(delta * 12.0, 0.0, 1.0))
+	size = size.lerp(target_size(), clampf(delta * 12.0, 0.0, 1.0))
 	var screen := get_viewport().get_visible_rect().size
 	var top := ScreenRegions.rect("top", screen)
 	position = Vector2(screen.x - size.x - MARGIN, top.position.y + 12.0)
@@ -129,22 +181,27 @@ func _draw() -> void:
 	draw_line(knob, knob + Vector2(cos(angle), sin(angle)) * 11.0, Palette.SAND if not off else Palette.SLATE, 2.5)
 	var font := UiFonts.bold()
 	var x := 46.0
-	draw_string(font, Vector2(x, 21.0), String(_read.get("call", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.BODY, edge)
-	var dial_words := String(_read.get("dial", ""))
-	if dial_words != "":
-		draw_string(font, Vector2(x + UiFonts.width(String(_read.get("call", "")), UiTokens.BODY) + 8.0, 21.0), dial_words, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION, UiTokens.quiet())
 	var meter_w := 4.0 * 7.0
 	var line_w := size.x - x - meter_w - 18.0
-	draw_string(font, Vector2(x, 39.0), String(_read.get("line", "")), HORIZONTAL_ALIGNMENT_LEFT, line_w, UiTokens.CAPTION, UiTokens.quiet() if off else Palette.SAND)
-	if _read.get("pinned", false):
-		draw_string(font, Vector2(size.x - meter_w - 52.0, 21.0), "PIN", HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION, Palette.BRASS)
+	# The words draw only once the plate has opened far enough to hold some of them.
+	if says() and line_w >= UiFonts.width("MMM", UiTokens.CAPTION):
+		var pin_w := UiFonts.width("PIN", UiTokens.CAPTION) + 8.0 if _read.get("pinned", false) else 0.0
+		var call := fit(String(_read.get("call", "")), line_w - pin_w, UiTokens.BODY)
+		draw_string(font, Vector2(x, 21.0), call, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.BODY, edge)
+		var dial_x := x + UiFonts.width(call, UiTokens.BODY) + 8.0
+		var dial_words := fit(String(_read.get("dial", "")), x + line_w - pin_w - dial_x, UiTokens.CAPTION)
+		if dial_words != "":
+			draw_string(font, Vector2(dial_x, 21.0), dial_words, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION, UiTokens.quiet())
+		draw_string(font, Vector2(x, 39.0), fit(String(_read.get("line", "")), line_w, UiTokens.CAPTION), HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION, UiTokens.quiet() if off else Palette.SAND)
+		if pin_w > 0.0:
+			draw_string(font, Vector2(x + line_w - pin_w + 8.0, 21.0), "PIN", HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION, Palette.BRASS)
 	for i in LAYERS:
 		var h := 4.0 + _bars[i] * 26.0
 		var bx := size.x - meter_w - 10.0 + i * 7.0
 		draw_rect(Rect2(bx, 40.0 - h, 5.0, h), Color(color, 0.35 + 0.65 * _bars[i]) if not off else Color(Palette.SLATE, 0.4))
 	if swollen() and size.y > 70.0:
 		var a := clampf(_swell / 0.4, 0.0, 1.0)
-		draw_string(font, Vector2(12.0, NAME_Y), String(_read.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, UiTokens.BODY, Color(color, a))
+		draw_string(font, Vector2(12.0, NAME_Y), fit(String(_read.get("name", "")), size.x - 24.0, UiTokens.BODY), HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.BODY, Color(color, a))
 		var blurb := String(RadioTakes.station(String(_read.get("station", ""))).get("blurb", ""))
 		draw_multiline_string(font, Vector2(12.0, BLURB_Y), blurb, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, UiTokens.CAPTION, BLURB_LINES, Color(Palette.SAND, 0.75 * a))
 	if teaching():
