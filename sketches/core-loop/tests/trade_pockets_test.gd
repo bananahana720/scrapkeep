@@ -486,6 +486,14 @@ func _kindness_hue(model) -> void:
 		for c in _colours_in(rows, []):
 			if _in_band(c):
 				strays.append("WorldLook.%s %s" % [key, c.to_html()])
+	# World 1's other looks: the Brindle arena, the title, the two parks' fog, the camp's lights.
+	var looks := {"arena_look brindle": WorldLook.arena_look("brindle"), "TITLE": WorldLook.TITLE,
+		"park_fog park_dam": WorldLook.park_fog("park_dam"), "park_fog park_flume": WorldLook.park_fog("park_flume"),
+		"CampHub.LIGHT_KINDS": CampHub.LIGHT_KINDS}
+	for source in looks:
+		for c in _colours_in(looks[source], []):
+			if _in_band(c):
+				strays.append("%s %s" % [source, c.to_html()])
 	for material in [Stake.cast_material(), Stake.bolt_material(), Stake.chalk_material()]:
 		for c in [material.albedo_color, material.emission]:
 			if _in_band(c):
