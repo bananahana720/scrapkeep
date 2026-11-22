@@ -5,6 +5,7 @@ const Fabricators := preload("res://src/build/fabricators.gd")
 const HullMark := preload("res://src/world/hull_mark.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Parts := preload("res://src/build/parts.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 
@@ -66,10 +67,11 @@ const WARD_RADIUS_BONUS := 1.5
 const OWNERS := ["gamble", "kindness"]
 # The bus fact the kindness sends the first time it makes its offer (the ball reaches it and its price comes up):
 # world_fact(KINDNESS_FACT, reach point). The Foreman's voice hooks it (W46-A1). It has no WORLD_ROWS row, so the bus
-# plays nothing for it; the device sounds KINDNESS_CHIME itself, and a row that gives the fact a sound replaces that.
+# plays nothing for it; the device sounds KINDNESS_CHIME itself only while that stays so, and a row that gives the fact a
+# sound replaces it.
 const KINDNESS_FACT := "kindness_offered"
 # The offer's sound: the pilot's own motif played back one note wrong (sfx_bank.gd mind_wrong_<motif>; STORY-MAP, the
-# foreman's kindness row), and the glow swells with it to KINDNESS_PULSE and settles back over PULSE_S.
+# foreman's kindness row), and this device's glow swells with it to KINDNESS_PULSE and settles back over PULSE_S.
 const KINDNESS_CHIME := "mind_wrong_"
 const KINDNESS_GLOW := 1.0
 const KINDNESS_PULSE := 2.6
@@ -298,21 +300,25 @@ func _offer_made() -> void:
 	if ctx != null and ctx.run != null and ctx.run.class_def != null:
 		motif = String(ctx.run.class_def.motif)
 	var audio = _audio()
-	if audio != null and SfxBank.has_recipe(KINDNESS_CHIME + motif):
+	if EventKinds.world_row(KINDNESS_FACT).is_empty() and audio != null and SfxBank.has_recipe(KINDNESS_CHIME + motif):
 		audio.play_at("world_fact", at, 0.0, 1.0, "SFX", KINDNESS_CHIME + motif)
+	_swell()
+
+
+# The swell lights this device's own copy of the glow, so the shared material never moves and a second kindness in the
+# pocket swells on its own; the copy hands back to the shared material when it settles.
+func _swell() -> void:
+	var view := get_node_or_null("KindnessGlow") as MeshInstance3D
+	if view == null:
+		return
 	if _pulse != null and _pulse.is_valid():
 		_pulse.kill()
-	var glow := glow_material()
+	var own := glow_material().duplicate() as StandardMaterial3D
+	view.material_override = own
 	_pulse = create_tween()
-	_pulse.tween_property(glow, "emission_energy_multiplier", KINDNESS_PULSE, PULSE_S * 0.25).set_ease(Tween.EASE_OUT)
-	_pulse.tween_property(glow, "emission_energy_multiplier", KINDNESS_GLOW, PULSE_S * 0.75).set_ease(Tween.EASE_IN)
-
-
-# The glow material is shared, so a device that leaves mid-swell sets it back.
-func _exit_tree() -> void:
-	if _pulse != null and _pulse.is_valid():
-		_pulse.kill()
-		glow_material().emission_energy_multiplier = KINDNESS_GLOW
+	_pulse.tween_property(own, "emission_energy_multiplier", KINDNESS_PULSE, PULSE_S * 0.25).set_ease(Tween.EASE_OUT)
+	_pulse.tween_property(own, "emission_energy_multiplier", KINDNESS_GLOW, PULSE_S * 0.75).set_ease(Tween.EASE_IN)
+	_pulse.finished.connect(func(): view.material_override = glow_material())
 
 
 func _audio():
@@ -455,6 +461,14 @@ static var _cast: StandardMaterial3D
 static var _glow: StandardMaterial3D
 static var _bolt: StandardMaterial3D
 static var _chalk: StandardMaterial3D
+
+
+# Tests share one engine: drop the shared materials, so the next body builds them fresh at rest.
+static func reset_for_tests() -> void:
+	_cast = null
+	_glow = null
+	_bolt = null
+	_chalk = null
 
 
 # Cast enamel: the old works' dull petrol (Roster's ancient enamel), satin, a little metal; the foot a shade darker

@@ -24,7 +24,8 @@ const Parts := preload("res://src/build/parts.gd")
 #   - the keeper's gamble is the greybox body with its bolts and its chalk added, the same colliders as a plain device;
 #   - the owner changes no offer: a device's offer is make_offer's from its luck stream, owner or not;
 #   - the kindness's offer, the first time the ball reaches it, is one world_fact("kindness_offered") at its reach point
-#     with the pilot's motif one note wrong; once, however often the ball comes back; a gamble sends none.
+#     with the pilot's motif one note wrong (exactly one cue); once, however often the ball comes back; a gamble sends
+#     none; its glow swells in its own copy of the glow material and hands back to the shared one, which never moves.
 # Then in the game: one trade chest placed by the interact system's own registry, taken
 # with a held E, charges what it showed; a second hold buys nothing (one purchase per
 # device per stage); a stage restart refunds the stake and rebuilds the same offer.
@@ -383,10 +384,18 @@ func _check_bodies() -> void:
 	var ward = _bodies_at["w46_kindness_ward"]
 	var body := kindness.get_node_or_null("KindnessBody") as MeshInstance3D
 	var glow := kindness.get_node_or_null("KindnessGlow") as MeshInstance3D
+	var twin_glow := twin.get_node("KindnessGlow") as MeshInstance3D
 	_report("kindness body", body != null and glow != null and body.mesh is ArrayMesh and glow.mesh is ArrayMesh
-		and body.material_override == StakeDevices.cast_material() and glow.material_override == StakeDevices.glow_material(), "a cast mesh and a glow mesh")
-	_report("kindness shares its meshes and materials", twin.get_node("KindnessBody").mesh == body.mesh and twin.get_node("KindnessGlow").mesh == glow.mesh
+		and body.material_override == StakeDevices.cast_material() and twin_glow.material_override == StakeDevices.glow_material(), "a cast mesh and a glow mesh")
+	_report("kindness shares its meshes and materials", twin.get_node("KindnessBody").mesh == body.mesh and twin_glow.mesh == glow.mesh
 		and twin.get_node("KindnessBody").material_override == body.material_override, "one cached mesh per piece")
+	# The swell lights the offering device's own copy; the shared glow, on its twin, stays at rest.
+	var own := glow.material_override as StandardMaterial3D
+	_report("the swell is the offering kindness's own, the shared glow stays at rest", own != StakeDevices.glow_material()
+		and own.emission == StakeDevices.glow_material().emission and is_equal_approx(StakeDevices.glow_material().emission_energy_multiplier, StakeDevices.KINDNESS_GLOW),
+		"%s / %.2f" % [own, StakeDevices.glow_material().emission_energy_multiplier])
+	kindness._pulse.custom_step(StakeDevices.PULSE_S + 0.1)
+	_report("settled, the kindness draws the shared glow again", glow.material_override == StakeDevices.glow_material(), str(glow.material_override))
 	var prims: Array = []
 	for id in ["w46_kindness_chest", "w46_kindness_ward"]:
 		for view: MeshInstance3D in _bodies_at[id].find_children("*", "MeshInstance3D", true, false):
@@ -409,9 +418,10 @@ func _check_bodies() -> void:
 	_report("the kindness made its offer once, on the bus", _facts.size() == 1 and _facts[0][0] == StakeDevices.KINDNESS_FACT
 		and (_facts[0][1] as Vector3).is_equal_approx(kindness.reach_point()) and kindness.offered(), str(_facts))
 	var audio = _game.audio()
+	_report("the game has audio to hear the chime", audio != null, "")
 	if audio != null:
 		var cues: Array = audio.cues_since(_cue_mark).filter(func(row: Array): return String(row[1]).begins_with(StakeDevices.KINDNESS_CHIME))
-		_report("its sound is the pilot's motif one note wrong", cues.size() <= 1 and (cues.is_empty() or cues[0][1] == StakeDevices.KINDNESS_CHIME + "rivet"),
+		_report("its sound is the pilot's motif one note wrong, once", cues.size() == 1 and cues[0][1] == StakeDevices.KINDNESS_CHIME + "rivet",
 			str(cues))
 
 
