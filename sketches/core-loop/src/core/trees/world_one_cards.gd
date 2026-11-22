@@ -10,23 +10,25 @@ extends RefCounted
 # A run's first pick is a depth-1 pair, read before the pilot has rolled a metre, so the three
 # starting pilots' depth-1 rows say the effect in the words the pilot card and the HUD already use
 # (vault kick, mount, charges, cloak, laser), and only what the card itself gives: Sable's two set
-# the weight launch ("a heavier ball launches farther"); Kest's blasts widen with weight whether or
-# not a card is taken, so her cards do not claim it (player's-eye pass, 10 Nov 2026: a first-time
-# reader could not say what either Sable card did).
+# the weight launch, and Cannonball says what makes the ball heavy (scrap, the HUD's "Scrap = heft"
+# callout) before the launch it buys; Kest's blasts widen with weight whether or not a card is taken,
+# so her cards do not claim it (player's-eye pass, 10 Nov 2026: a first-time reader could not say
+# what either Sable card did; PF-01). No row uses the game's own terms for a mounted pilot or the
+# shell's steering: "on a wall" says mounted, and "steer sharper" says what the shell inversion does.
 const ROWS := {
 	# Sable, S1 to S6.
-	"s_cannonball": "Kick off a wall to zap what's near. A heavier ball launches farther.",
+	"s_cannonball": "Kick off a wall to zap what's near. Scrap makes you heavier. Heavier launches farther.",
 	"s_beachhead": "Grab a wall from twice as far.",
 	"s_coil_hook": "Let go of the rope to fling yourself.",
-	"s_face_runner": "Kick off a wall to jump again. A heavier shell steers sharper.",
-	"s_arc_nest": "Mounted bolts chain to another target.",
-	"s_bulwark": "Mounted, shrug off crowd control.",
+	"s_face_runner": "Kick off a wall to jump again. Steer sharper after each kick.",
+	"s_arc_nest": "On a wall, bolts chain to another target.",
+	"s_bulwark": "On a wall, nothing shoves or snares you.",
 	# Kest, K1 to K6.
 	"k_trapper": "Charges wait longer. Five can wait at once.",
 	"k_ghost": "Cloaked, machines spot you only up close.",
 	"k_tripwire": "Charges spring when machines approach.",
 	"k_demo_expert": "Smash scatters five payloads.",
-	"k_smoke_trail": "Glide cloaked. Heavy fins steer harder.",
+	"k_smoke_trail": "Glide cloaked. Steer sharper while you glide.",
 	"k_ambush": "Throw payloads without breaking cloak.",
 	# Rivet, R1 to R6.
 	"r_gunline": "Your laser fires twin bolts.",
@@ -34,7 +36,7 @@ const ROWS := {
 	"r_tracer": "Running fire jumps to a neighbour.",
 	"r_run_gun": "Sustain fire. Worn scrap sparks behind you.",
 	"r_ram_fins": "Sprint through bodies instead of bouncing.",
-	"r_second_wind": "Bank two sprints. Heavy fins open during sprint.",
+	"r_second_wind": "Bank two sprints. Sprinting, you steer freely midair.",
 	# Tarn, T1 to T6.
 	"t_long_claw": "Reach two metres farther. Close the gap.",
 	"t_anchor_line": "Every claw pull throws a shockwave.",
