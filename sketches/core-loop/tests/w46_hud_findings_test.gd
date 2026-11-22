@@ -22,8 +22,10 @@ const WALL_OUT := Tuning.RADIUS + Augments.FACE_REACH * 1.5 + 0.5
 #          brake) or in the air (the slam every pilot carries); E on each line of Moss's exchange, the
 #          press that closes its last line and the press that closes an intro (the bubble clears itself
 #          before the ball reads the key); E where Sable's doubled mount reach plants her at 1.5 times
-#          the base reach. Refused: E with nothing in reach while a call-in talks (it never reads E),
-#          and E at 1.5 times the base reach without the upgrade (the control for the wall's place).
+#          the base reach. Refused: E with nothing in reach while a call-in talks or a
+#          bark is up (neither reads E), and E at 1.5 times the base reach without the upgrade (the
+#          control for the wall's place). The run's opening and Moss's stage 1 hello are put away
+#          before any key goes in (MossBubble.stand_down).
 #   PF-21  the bar points at the slot a tip names: the active's tip names the active's chip, and a
 #          chevron stands over that chip; a slot the bar does not hold points at nothing.
 #   PF-19  the radio chip folds to its knob and bars once its words have stood PEEK seconds, opens
@@ -60,6 +62,7 @@ func _run() -> void:
 	_game.run.set_max_hp(99999.0)
 	_game.events.verb_failed.connect(func(verb: String, reason: String, _at: Vector3): _fails.append([verb, reason]))
 	await _physics(90)
+	await _quiet()
 	await _refusals()
 	# Sable's reach is read while nothing speaks, so only her reach can keep E from being refused.
 	await _sable_reach()
@@ -155,6 +158,20 @@ func _bubble():
 	return _game.get_node("Workshop").bubble
 
 
+# The run's opening, its cold open card and Moss's stage 1 hello are put away before any key goes
+# in: a key would skip the cold open and bring the hello up, and E would then be the hello's.
+func _quiet() -> void:
+	var presentation = _game.presentation
+	_game.opening.finish()
+	if presentation != null:
+		presentation.flourish.stop_all()
+	var bubble = _bubble()
+	bubble.stand_down()
+	var settled := func(): return not bubble.takes_interact() and not bubble.showing() and (presentation == null or not presentation.reading())
+	var quiet: bool = await _until(settled)
+	_t.check("the opening and Moss's hello are put away before any key goes in", quiet and not _game.opening.live)
+
+
 func _until(condition: Callable, ticks := 180) -> bool:
 	for i in ticks:
 		if condition.call():
@@ -163,7 +180,7 @@ func _until(condition: Callable, ticks := 180) -> bool:
 	return condition.call()
 
 
-# Moss's bubble, live: an exchange pressed through to its end, a boss's intro closed with E, and a call-in.
+# Moss's bubble, live: an exchange pressed through to its end, a boss's intro closed with E, a call-in and a bark.
 func _talk() -> void:
 	var bubble = _bubble()
 	await _rest()
@@ -188,11 +205,20 @@ func _talk() -> void:
 		"intro up %s, fails %s" % [intro, closed])
 
 	await _rest()
-	bubble.bark({"text": "Mind the sluice."}, "shop_bought")
-	var talking: bool = await _until(func(): return bubble.showing())
+	var caller: Dictionary = bubble.call_caused("evolution_fired", [])
+	var calling: bool = await _until(func(): return bubble.mood == "call" and bubble.showing())
 	var call: Array = await _press("cl_interact")
-	_t.check("refused: E with nothing in reach while a call-in talks (it never reads E)", talking
-		and _count(call, ["interact", "nothing"]) == 1, "talking %s, fails %s" % [talking, call])
+	_t.check("refused: E with nothing in reach while a call-in talks (it never reads E)", calling
+		and _count(call, ["interact", "nothing"]) == 1, "call %s, up %s, fails %s" % [caller.get("id", ""), calling, call])
+	bubble.hush()
+	await _until(func(): return not bubble.showing())
+
+	await _rest()
+	bubble.bark({"text": "Mind the sluice."}, "shop_bought")
+	var barking: bool = await _until(func(): return bubble.showing())
+	var bark: Array = await _press("cl_interact")
+	_t.check("refused: E with nothing in reach while a bark is up (it never reads E)", barking
+		and _count(bark, ["interact", "nothing"]) == 1, "up %s, fails %s" % [barking, bark])
 	bubble.hush()
 
 
