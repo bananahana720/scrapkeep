@@ -1247,24 +1247,12 @@ func mobility_started() -> bool:
 	return (kit.hooked and kit.on(Augments.PYLON)) or kit.plant_time > 0.0 or kit.slingshot.charging
 
 
-# The pylon's own test (augments.gd _mount_spot): a steep face within a ball's reach,
-# or the wall the hook is in when the ball is close to it.
+# The pylon's own test (Augments.mount_face, the one the mount asks): a steep face within the
+# ball's reach, or the wall the hook is in when the ball is close to it, at the kit's mount_reach.
 func face_in_reach() -> bool:
-	var origin := ball_position()
-	if kit.hooked and kit.on(Augments.GRAPPLE) and not kit.on_body and kit.anchor_normal != Vector3.ZERO \
-			and absf(kit.anchor_normal.y) < Augments.FACE_MAX_TILT and origin.distance_to(kit.anchor) <= Augments.MOUNT_HOOK_REACH:
-		return true
 	if not is_inside_tree():
 		return false
-	var space := get_world_3d().direct_space_state
-	var reach: float = Tuning.RADIUS + Augments.FACE_REACH
-	for i in Augments.FACE_RAYS:
-		var angle := TAU * float(i) / float(Augments.FACE_RAYS)
-		var dir := Vector3(cos(angle), 0.0, sin(angle))
-		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(origin, origin + dir * reach, Augments.WORLD_MASK))
-		if not hit.is_empty() and absf((hit["normal"] as Vector3).y) < Augments.FACE_MAX_TILT:
-			return true
-	return false
+	return not Augments.mount_face(kit, get_world_3d().direct_space_state, ball_position()).is_empty()
 
 
 # Mass-S: under --world-one-builds a pilot who took the depth-1 pick has the mass launch verb.
