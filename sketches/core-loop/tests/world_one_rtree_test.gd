@@ -45,7 +45,7 @@ const CODEX := {
 	"r_tracer": "Running fire jumps to a neighbour.",
 	"r_run_gun": "Sustain fire. Worn scrap sparks behind you.",
 	"r_ram_fins": "Sprint through bodies instead of bouncing.",
-	"r_second_wind": "Bank two sprints. Heavy fins open during sprint.",
+	"r_second_wind": "Bank two sprints. Sprinting, you steer freely midair.",
 }
 const CLASS := "runner_gunner"
 

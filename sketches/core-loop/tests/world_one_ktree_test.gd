@@ -36,7 +36,7 @@ const CODEX := {
 	"k_ghost": "Cloaked, machines spot you only up close.",
 	"k_tripwire": "Charges spring when machines approach.",
 	"k_demo_expert": "Smash scatters five payloads.",
-	"k_smoke_trail": "Glide cloaked. Heavy fins steer harder.",
+	"k_smoke_trail": "Glide cloaked. Steer sharper while you glide.",
 	"k_ambush": "Throw payloads without breaking cloak.",
 }
 const LANDING := Vector3(6.0, 0.0, 6.0)

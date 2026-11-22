@@ -415,8 +415,10 @@ func _check_tree() -> void:
 	_report("depth table", rows.size() == 3 and rows.map(func(r): return r["depth"]) == [2, 3, 4]
 		and rows.all(func(r): return r["depth"] == UpgradeTree.depth_cap(r["world"]))
 		and "2" in card.depth_text() and "3" in card.depth_text() and "4" in card.depth_text(), card.depth_text())
-	var views: Array = card.find_children("BuildReadout", "", true, false)
-	_report("build screen wired", views.size() == 1, "tree card carries clickable Build readout")
+	# One parts button on the pick screen (PF-01), not a "Build" button on each card.
+	var views: Array = workshop.pick.find_children("BuildReadout", "", true, false)
+	_report("build screen wired", views.size() == 1 and card.find_children("BuildReadout", "", true, false).is_empty(),
+		"the pick screen carries one clickable parts readout and the card none")
 	if views.size() == 1:
 		views[0].pressed.emit()
 		_report("live build opens", views[0].popup_visible() and views[0].snapshot()["parts"].size() > 0, views[0].visible_text())

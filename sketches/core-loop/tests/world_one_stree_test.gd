@@ -38,15 +38,15 @@ const BASE_EFFECT := {
 	"s_coil_hook": "Letting go of the rope flings you",
 	"s_live_wire": "Discharge fills twice as fast airborne",
 	"s_arc_nest": "Turret arcs reach one more machine",
-	"s_bulwark": "Mounted, crowd control slides off you",
+	"s_bulwark": "On a wall, nothing shoves or snares you",
 }
 const CODEX := {
-	"s_cannonball": "Kick off a wall to zap what's near. A heavier ball launches farther.",
+	"s_cannonball": "Kick off a wall to zap what's near. Scrap makes you heavier. Heavier launches farther.",
 	"s_beachhead": "Grab a wall from twice as far.",
 	"s_coil_hook": "Let go of the rope to fling yourself.",
-	"s_face_runner": "Kick off a wall to jump again. A heavier shell steers sharper.",
-	"s_arc_nest": "Mounted bolts chain to another target.",
-	"s_bulwark": "Mounted, shrug off crowd control.",
+	"s_face_runner": "Kick off a wall to jump again. Steer sharper after each kick.",
+	"s_arc_nest": "On a wall, bolts chain to another target.",
+	"s_bulwark": "On a wall, nothing shoves or snares you.",
 }
 
 var _game
