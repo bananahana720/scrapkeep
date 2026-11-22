@@ -185,7 +185,6 @@ func show_build(mass: float, parts: Array, synergies: Array, heft_class := 1) ->
 	var want := chunks_for(mass)
 	while _chunks.size() > want:
 		_chunks.pop_back().queue_free()
-	# A new chunk or piece pops; _process settles it, then sleeps.
 	if _chunks.size() < want or parts != _shown_parts:
 		set_process(true)
 	while _chunks.size() < want:
@@ -247,7 +246,6 @@ func _rebuild_pieces(parts: Array) -> void:
 	for i in shown:
 		var part_id: String = parts[i]
 		var piece := _piece(part_id)
-		# The shell casts the ball's shadow; its hardware adds none.
 		for mesh: MeshInstance3D in piece.find_children("*", "MeshInstance3D", true, false):
 			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var dir := _slot(i, MAX_PIECES, 1.1)

@@ -97,8 +97,6 @@ var _refund_flashes := {}
 var _refund_count := 0
 # The set piece's solid plates behind the dimmed slots: a child, so self_modulate leaves it whole.
 var _plates := Plates.new()
-# One box per role a slot draws, reused across redraws: draw_style_box emits its commands at once, and
-# each role sets every field it uses before each draw, so no field carries from one slot to the next.
 var _sb_back := StyleBoxFlat.new()
 var _sb_wash := StyleBoxFlat.new()
 var _sb_frame := StyleBoxFlat.new()

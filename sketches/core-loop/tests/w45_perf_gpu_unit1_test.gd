@@ -8,12 +8,6 @@ const ScrapField := preload("res://src/build/scrap_field.gd")
 const Panels := preload("res://src/build/panels.gd")
 const WardenRing := preload("res://src/presentation/warden_ring.gd")
 
-# W45 perf unit 1: the ball's build hardware, the field's pickups and the Warden's floor marks add no
-# shadow draws, the ball's small primitives stay under a sane triangle count, the accretion sleeps once
-# its pops settle, and a pickup past SPIN_RANGE writes no transform while every near one still turns,
-# homes, lands and expires as before.
-
-# The halo torus (32 x 12) is the largest primitive left on the ball.
 const MAX_PRIM_TRIANGLES := 768
 
 var _t := T.new("w45_perf_gpu_unit1_test")
@@ -131,7 +125,6 @@ func _check_scrap_field() -> void:
 		(far_items if item.position.distance_to(Vector3.ZERO) > ScrapField.SPIN_RANGE else near_items).append(item)
 	var far_before := far_items.map(func(item: Node3D) -> Vector3: return item.rotation)
 	var near_before := near_items.map(func(item: Node3D) -> Vector3: return item.rotation)
-	# Outside the magnet: nothing is caught, so only distance decides the turn.
 	var ball := Vector3(0.0, 0.0, -40.0)
 	field.step(ball, 0.0, 0.1)
 	var near_turned := range(near_items.size()).all(func(i: int) -> bool:

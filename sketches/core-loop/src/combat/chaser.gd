@@ -69,7 +69,6 @@ var _mesh: Node3D
 # Test seam: only the attack pose is disabled; facing and physics keep running.
 var windup_pose_enabled := true
 var _pose_parts: Dictionary = {}
-# A part left off its rest transform: the next unposed tick puts every part back once.
 var _posed_dirty := false
 # The body cues (LEGIBILITY section 6): while the lunge can still be broken the back wears the
 # will_break state row, and a broken wind-up plays the interrupted row. Colour, motion and

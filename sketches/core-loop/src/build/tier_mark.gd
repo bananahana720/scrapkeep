@@ -63,7 +63,6 @@ static func foot(rarity: String, mat: Material, size := 1.0) -> Node3D:
 				_add(root, _sphere(0.07 * size), bolt, Vector3(cos(a), 0.4, sin(a)) * 0.24 * size)
 		"crown":
 			_crown(root, 0.36 * size, 0.26 * size, 0.04 * size, mat, Vector3.ZERO)
-	# A foot lies flat on the ball's shell, which casts the shadow.
 	for node: MeshInstance3D in root.get_children():
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return root

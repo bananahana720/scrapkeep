@@ -67,8 +67,6 @@ var _shake_left := 0.0
 var _shake_clock := 0.0
 var _breath_clock := 0.0
 var _cover := 0.0
-# The centre ray's out-of-range reading, cast at most once per OUT_OF_RANGE_FRAMES physics frames
-# while the camera, the ball and the line's reach hold still, and the process frame it was read on.
 const OUT_OF_RANGE_FRAMES := 6
 var _out_of_range_cached := false
 var _out_of_range_frame := -1
@@ -76,7 +74,6 @@ var _cast_frame := -1
 var _cast_camera := Transform3D()
 var _cast_ball := Vector3.INF
 var _cast_reach := -1.0
-# What _draw showed last, so a still reticle is not redrawn; a shake or a breath redraws every frame.
 var _drawn_state: Array = []
 var _was_animating := false
 
@@ -118,8 +115,6 @@ func _process(delta: float) -> void:
 	_was_animating = animating
 
 
-# Reads _out_of_range for this frame, recasting only when the camera, the ball or the reach moved, or
-# OUT_OF_RANGE_FRAMES physics frames have passed since the last cast.
 func _refresh_out_of_range(aim: Dictionary) -> void:
 	_out_of_range_frame = Engine.get_process_frames()
 	if camera == null or not camera.is_inside_tree() or not player.kit.on(Augments.GRAPPLE) \

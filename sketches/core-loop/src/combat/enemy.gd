@@ -47,7 +47,6 @@ const RING_OUT_DROP := 6.0
 const RING_OUT_KEPT := ["warden", "vault", "miniboss", "reactor_relic", "swarm_remnant", "mind_hand",
 	"foreman", "dispatcher", "splitter", "linker", "rogue_crane", "rogue_skip", "rogue_tender"]
 static var _ring_out_kept := _as_set(RING_OUT_KEPT)
-# The kinds that take no ordinary reaction (boss pieces aside).
 const _NON_ORDINARY := {"warden": true, "vault": true, "miniboss": true, "rogue_crane": true, "rogue_skip": true, "rogue_tender": true}
 # The plating dress reads the colour law (LEGIBILITY, STATE_ROWS): "breaks now" is a rim and
 # an open-crack glyph in the live colour, pulsing; "not yet" is a steady slate rim and no
@@ -220,7 +219,6 @@ func _visual_parent() -> Node3D:
 	return reaction_pivot
 
 
-# Read every tick, so it is worked out once per kind (setup sets kind after the node exists).
 var _ordinary_kind := ""
 var _ordinary_cached := true
 
@@ -352,7 +350,6 @@ func _update_reaction(delta: float) -> void:
 		# The reaction and line lean are in the body's frame; the turn carries the model, and the
 		# idle, wind-up and release poses ride inside it, so a nose-up stays nose-up when it is turned.
 		var next_xform := tilt * Transform3D(Basis(lean_pose * _react_pose), Vector3.ZERO) * turn * Transform3D(_idle_pose, idle_offset)
-		# A still pivot is not rewritten: each write re-dirties every visual under it.
 		if reaction_pivot.transform != next_xform:
 			reaction_pivot.transform = next_xform
 
@@ -439,7 +436,6 @@ func _attack_pose() -> Basis:
 func winding_up() -> bool:
 	if not _atk.is_empty() or telegraph() != null:
 		return true
-	# Only these two kinds publish state facts; the rest skip building the empty list every tick.
 	if kind != "warden" and kind != "swarm_remnant":
 		return false
 	return not WindupRows.state_facts(self).is_empty()
@@ -763,8 +759,6 @@ func ring_out() -> void:
 	_die()
 
 
-# The ground last sampled for the rescue, by 2 m cell and terrain: a body standing in that cell, well
-# above the line, needs no new sample. Off the floor, in a new cell or on new terrain it samples again.
 var _rescue_cell := Vector2i(1 << 20, 1 << 20)
 var _rescue_ground := -INF
 var _rescue_terrain_id := 0

@@ -297,9 +297,7 @@ var _armor_peak := ARMOR_PEAK_FLOOR
 var _companion: TextureRect
 var _companion_state := "none"
 var _companion_cues: Array[String] = []
-# The run.companion record _companion_state was read from, so an unchanged record is not parsed again.
 var _companion_doc := {}
-# The pieces shown only in play, and those the quiet mode hides as well (setup fills both once).
 var _play_pieces: Array[Control] = []
 var _quiet_pieces: Array[Control] = []
 var _threat := 0

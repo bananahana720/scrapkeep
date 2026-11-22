@@ -102,7 +102,6 @@ var _trail := {}
 var _cache_column: CylinderMesh
 const CACHE_COLUMN := 14.0
 const CACHE_HEAR := 45.0
-# Past this distance an uncaught pickup holds its last turn, so the far field writes no transforms.
 const SPIN_RANGE := 120.0
 
 var _value := {}
@@ -677,7 +676,6 @@ func _add(at: Vector3, mesh: Mesh = null, material: Material = null) -> MeshInst
 	var item := MeshInstance3D.new()
 	item.mesh = mesh if mesh != null else _mesh
 	item.material_override = material if material != null else _material
-	# A pickup glows over the ground; its shadow is a draw nobody reads.
 	item.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	if not _pickup_mesh_cache.is_empty() and (mesh == null or mesh == _cluster_mesh):
 		# Position is already seeded by the field; visual selection never draws RNG.

@@ -2019,7 +2019,6 @@ func _strike_strip(strip: Dictionary, enemies = null) -> void:
 
 # The strips strike what enters them and go when their life ends; a bell rings when it is due.
 func _step_verb_items(enemies = null) -> void:
-	# Checked before the copy: both lists are empty on most ticks.
 	if not _strips.is_empty():
 		for strip in _strips.duplicate():
 			if _clock >= float(strip["until"]):

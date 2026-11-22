@@ -11,18 +11,6 @@ const Companion := preload("res://src/core/companion.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const T := preload("res://tests/support/t.gd")
 
-# The HUD draws only what changed (w45 perf unit 3), and reads the same as before:
-#   - the run status redraws on a change and not on an identical status, and a threat rise still blinks;
-#   - the reticle stays undrawn while nothing it shows moves, redraws at once on a change to the aim,
-#     gauge, harpoon ring or meter, every frame through a shake or a full meter's breath, and casts
-#     its out-of-range ray at most once per six physics frames while the camera and ball hold still;
-#   - the edge markers build a map's pocket doors once, skip the sight march while the ball and camera
-#     hold still, and still latch a door once the ball moves into sight;
-#   - the companion pip still goes none, ready, spent, none with the same chirps, including a record
-#     changed in place;
-#   - the ability bar draws every slot state with its reused boxes, and (windowed) each slot of a full
-#     bar matches the same slot drawn alone, pixel for pixel.
-
 var _t := T.new("w45_perf_hud_unit3_test")
 
 
@@ -161,7 +149,6 @@ func _reticle() -> void:
 	_t.check("reticle: a still view casts at most once per six physics frames", reticle.casts - c0 <= physics / AimReticle.OUT_OF_RANGE_FRAMES + 1,
 		"%d casts over %d physics frames" % [reticle.casts - c0, physics])
 
-	# The world moves under a still camera: the reading catches up within six physics frames.
 	wall.position = Vector3(0.0, 0.0, -10.0)
 	await _physics(AimReticle.OUT_OF_RANGE_FRAMES + 2)
 	await _frames(2)
@@ -423,7 +410,6 @@ func _companion() -> void:
 			and pip.modulate == EventKinds.UI_ROWS["companion_ready"]["color"])
 	hud._step_companion(false)
 	_t.check("companion: out of play the pip hides", not pip.visible)
-	# The run spends the charge in place: the same dictionary, new contents.
 	var doc: Dictionary = game.run.companion
 	doc.clear()
 	doc.merge(spent.duplicate(true))

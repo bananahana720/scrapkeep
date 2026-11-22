@@ -120,11 +120,9 @@ var sign_rects: Array[Rect2] = []
 # Pocket doors the player has had in view inside POCKET_RANGE (pocket_doors' key to true). A door
 # is discovered once and stays so for the run; an undiscovered door never gets a marker.
 var discovered := {}
-# pocket_doors of the map in play, rebuilt only when the map changes.
 var _doors_cache: Array[Dictionary] = []
 var _doors_map_id := 0
 var _doors_count := -1
-# What the last full note_pockets pass looked from, so a still ball and camera skip the sight march.
 const POCKET_STILL_M := 0.2
 var _pockets_ball := Vector3.INF
 var _pockets_cam_xform := Transform3D()
@@ -314,7 +312,6 @@ static func sight_clear(ground: Callable, from: Vector3, to: Vector3) -> bool:
 	return true
 
 
-# The map's pocket doors, cached against the map in play.
 func _doors_of(map) -> Array[Dictionary]:
 	var id: int = map.get_instance_id() if map != null else 0
 	var count: int = map.contraptions.size() if map != null and "contraptions" in map else -1

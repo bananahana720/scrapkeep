@@ -46,7 +46,6 @@ var has_boss := false
 var in_arena := false
 var threat := 0
 var _rise_left := 0.0
-# Whether set_status has drawn once, so an unchanged status skips its redraw.
 var _drawn := false
 
 

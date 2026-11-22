@@ -1,17 +1,10 @@
 extends SceneTree
 
-# The 90 Hz enemy and combat hot paths skip work only when the result is the same: a chaser at rest
-# leaves its parts alone yet always comes back to rest after a pose, its broken wind-up shows the
-# interrupted cue for INTERRUPT_SHOWN, the cached reaction and ring-out reads answer as the rules say
-# for every kind and world, winding_up still sees a Warden's charge and a remnant's lock, a body that
-# falls through the map is still rescued, and the verb strips, bells and shred step the same.
-
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
 const PART_NAMES := ["ChaserBody", "ChaserFin", "ChaserClaws"]
 
-# kind -> [takes an ordinary reaction, rings out in world 3]
 const KINDS := {
 	"chaser": [true, true], "lobber": [true, true], "splitter": [true, false], "reactor_relic": [true, false],
 	"swarm_remnant": [true, false], "mind_hand": [true, false], "warden": [false, false], "vault": [false, false],
@@ -124,7 +117,6 @@ func _pose_settles() -> void:
 	enemy.state = enemy.State.CHASE
 	enemy._pose()
 	_t.check("chase stays at rest", _at_rest(enemy) and not enemy._posed_dirty)
-	# A wind-up whose pose is switched off never leaves rest.
 	enemy.windup_pose_enabled = false
 	enemy._rest = 0.0
 	enemy._begin_windup(Vector3.FORWARD)
@@ -134,13 +126,10 @@ func _pose_settles() -> void:
 	enemy.free()
 
 
-# The broken wind-up's tick shows the cue and so does every tick until INTERRUPT_SHOWN has passed:
-# 0.9 s at 0.25 s ticks is the breaking tick plus three more.
 func _interrupted_lasts() -> void:
 	var enemy = _spawn()
 	enemy.set_physics_process(false)
 	enemy._begin_windup(Vector3.FORWARD)
-	# A 0.25 s tick bleeds KNOCK_DECAY / 4 off the knock before the wind-up reads it.
 	enemy._knock = Vector3(enemy.INTERRUPT + enemy.KNOCK_DECAY * 0.25 + 2.0, 0.0, 0.0)
 	var shown := 0
 	var painted := true
@@ -161,7 +150,6 @@ func _kind_reads() -> void:
 	var ground := WorldGround.new()
 	enemy.terrain = ground
 	var wrong: Array = []
-	# One body walks through every kind, so a cached answer must follow the kind.
 	for pass_index in 2:
 		for kind in KINDS:
 			enemy.kind = kind
@@ -198,7 +186,6 @@ func _winding_up() -> void:
 	_t.check("hunting remnant is not winding up", not remnant.winding_up())
 	remnant.swarm.state = FakeSwarm.State.LOCKED
 	_t.check("locked remnant is winding up", remnant.winding_up())
-	# The same lock on a body of another kind publishes nothing.
 	remnant.kind = "chaser"
 	_t.check("a lock on another kind is not a wind-up", not remnant.winding_up())
 	remnant._atk = {"row": "E01"}
@@ -221,7 +208,6 @@ func _rescue() -> void:
 	var ground: float = _game.ctx.terrain.height(at.x, at.z)
 	enemy._rescue()
 	_t.check("standing body stays put", enemy.global_position == at and enemy.is_on_floor(), "y %.2f ground %.2f" % [at.y, ground])
-	# Dropped in the same cell while still reading as on the floor: the cached ground must not hide it.
 	enemy.global_position = Vector3(at.x, ground - enemy.FLOOR_RESCUE - 5.0, at.z)
 	enemy._rescue()
 	_t.check("dropped body is rescued", enemy.global_position.y > ground - enemy.FLOOR_RESCUE, "y %.2f ground %.2f" % [enemy.global_position.y, ground])
