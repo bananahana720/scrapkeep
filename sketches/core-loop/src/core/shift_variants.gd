@@ -13,6 +13,7 @@ extends RefCounted
 
 const ShiftBoard := preload("res://src/core/shift_board.gd")
 const Panels := preload("res://src/build/panels.gd")
+const ParkDefs := preload("res://src/core/park_defs.gd")
 
 const OVERTIME := "overtime"
 const DAM_NIGHT_SHIFT := "dam_night_shift"
@@ -247,20 +248,27 @@ static func claim_overtime_panel(run) -> String:
 
 
 # False on stage 1 when Short Crew closes the dam shop; true everywhere else.
-static func dam_shop_open(run, stage: int) -> bool:
-	return not (stage == 1 and has(run, CREW_SHORT))
+static func dam_shop_open(run, stage := -1) -> bool:
+	if run == null:
+		return true
+	var stage_now := stage if stage > 0 else int(run.stage)
+	return not (stage_now == 1 and has(run, CREW_SHORT))
+
+
+static func _is_dam_stage(map_id: String, run) -> bool:
+	return run != null and int(run.stage) == 1 and map_id == String(ParkDefs.of(1).get("map", ""))
 
 
 # Extra standing activity sites added by active variants on `map_id` for `run`.
 static func extra_sites(map_id: String, run) -> Array:
-	if run == null or map_id != "park_dam" or int(run.stage) != 1 or not has(run, CREW_SHORT):
+	if not _is_dam_stage(map_id, run) or not has(run, CREW_SHORT):
 		return []
 	return [CREW_SHORT_CACHE.duplicate(true)]
 
 
 # Extra rescue cages built by active variants on `map_id` for `run`.
 static func extra_cages(map_id: String, run) -> Array:
-	if run == null or map_id != "park_dam" or int(run.stage) != 1 or not has(run, DAM_NIGHT_SHIFT):
+	if not _is_dam_stage(map_id, run) or not has(run, DAM_NIGHT_SHIFT):
 		return []
 	return [NIGHT_SHIFT_CAGE.duplicate(true)]
 

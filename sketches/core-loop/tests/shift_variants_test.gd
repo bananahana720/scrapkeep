@@ -372,8 +372,8 @@ func _physics_process(_delta: float) -> bool:
 				"cogs": _game.ctx.run.cogs,
 			}
 			_t.eq("no lasting stat buff after variant runs", after_stats, _base_stats)
+			_phase = 6
 			_cleanup_and_quit()
-			return true
 	return false
 
 
@@ -406,10 +406,15 @@ func _move_from_warden(distance: float) -> void:
 
 func _cleanup_and_quit() -> void:
 	ShiftVariants.clear_force()
+	_finish.call_deferred()
+
+
+func _finish() -> void:
 	if is_instance_valid(_game):
-		root.remove_child(_game)
-		_game.free()
+		_game.queue_free()
 		_game = null
+		await process_frame
+		await process_frame
 	for p in _paths:
 		if FileAccess.file_exists(p):
 			DirAccess.remove_absolute(p)
