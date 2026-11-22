@@ -33,6 +33,7 @@ const PartName := preload("res://src/ui/part_name.gd")
 const DangerMark := preload("res://src/ui/danger_mark.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
+const NixieRail := preload("res://src/ui/nixie_rail.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const PickupLines := preload("res://src/ui/pickup_lines.gd")
@@ -191,6 +192,7 @@ const PLATE_GAP := float(UiTokens.GAP_M)
 const TOAST_WIDTH := 800.0
 const MARGIN := 18.0
 const BOTTOM_GAP := float(UiTokens.GAP_L)
+const WALLET_GAP := float(UiTokens.GAP_XS)
 const HEALTH_BAR := 190.0
 # The word under each bar (ui/gauge.gd caption): the game's own words for them, as the perk
 # rows say "max health" and the wear stamp says "ARMOUR OFF".
@@ -286,6 +288,7 @@ const ARMOR_PEAK_FLOOR := 100.0
 var _armor: Control
 var _cogs: CogChip
 var chain_counter: Control
+var nixie_rail: Control
 # SR6: floating damage numbers, one layer over the world (presentation/damage_numbers.gd).
 var damage_numbers: Control
 # Grey panel pickup lines at the HUD's edge, off the fight (ui/pickup_lines.gd, PF-14).
@@ -374,6 +377,8 @@ func setup(game_ref) -> void:
 	add_child(_cogs)
 	chain_counter = ChainCounter.new()
 	add_child(chain_counter)
+	nixie_rail = NixieRail.new()
+	add_child(nixie_rail)
 	damage_numbers = DamageNumbers.new()
 	damage_numbers.project = _project_to_screen
 	damage_numbers.keep_off = func() -> Dictionary:
@@ -1091,14 +1096,27 @@ func layout(size: Vector2) -> void:
 	_companion.position = Vector2(_armor.position.x - BOTTOM_GAP - _companion.size.x, slot_mid - _companion.size.y * 0.5)
 	_speed.position = Vector2(MARGIN, slot_mid - _speed.size.y * 0.5)
 	_cogs.position = Vector2(_speed.position.x + _speed.size.x + BOTTOM_GAP, slot_mid - _cogs.size.y * 0.5)
+	# The gauges grow left from the bar; when the wallet with Moss's hook pinned would reach the
+	# leftmost one shown, the wallet sits under the speed glyph instead, so neither covers the other.
+	var gauges_from := _health.position.x
+	for gauge in [_armor, _companion]:
+		if gauge.visible:
+			gauges_from = gauge.position.x
+	if _cogs.position.x + _cogs.size.x + BOTTOM_GAP > gauges_from:
+		var pair := _speed.size.y + WALLET_GAP + _cogs.size.y
+		_speed.position.y = slot_mid - pair * 0.5
+		_cogs.position = Vector2(MARGIN, _speed.position.y + _speed.size.y + WALLET_GAP)
 	pickup_lines.layout(size, PanelFx.POP_ROWS)
 	chain_counter.position = Vector2(ability_bar.position.x + bar_size.x + BOTTOM_GAP, slot_mid - chain_counter.size.y * 0.5)
+	# The tube rail last, right-aligned to the margin and growing leftward (ruling ek).
+	nixie_rail.place(Vector2(size.x - MARGIN, bottom.end.y - NixieRail.FLOOR))
 
 
 # The sizes layout() depends on. Relayout when one changes, not every frame: each
 # extent() call shapes text.
 func _piece_sizes() -> Array:
-	return [_objective.custom_minimum_size, _health.size, _armor.size, maxi(ability_bar.slots.size(), AbilityBar.NUMBERED + 2), _plate_size()]
+	return [_objective.custom_minimum_size, _health.size, _armor.size, maxi(ability_bar.slots.size(), AbilityBar.NUMBERED + 2), _plate_size(),
+		_cogs.size, _armor.visible, _companion.visible]
 
 
 # The slot's plate: a boss plate (about 420 by 44 at 1080p) that the coordinator mounts. Its
@@ -1128,15 +1146,27 @@ func _plate_size() -> Vector2:
 	return _plate.get_combined_minimum_size().max(_plate.custom_minimum_size).max(_plate_floor) if _plate != null else Vector2.ZERO
 
 
-# The screen rect of each piece, for the layout test: {region: [Rect2, ...]}.
+# The screen rect of each piece, for the layout test: {region: [Rect2, ...]}. The cog wallet and the
+# chain counter are listed at their laid-out places even while hidden, so a neighbour can never move onto them.
 func piece_rects() -> Dictionary:
 	return {
 		"top": [_rect_of(_objective), _rect_of(_status)] + ([_rect_of(_plate)] if _plate != null else []),
 		"toasts": [_rect_of(_toasts)],
-		"bottom": [_rect_of(ability_bar), _rect_of(_health), _rect_of(_speed)]
+		"bottom": [_rect_of(ability_bar), _rect_of(_health), _rect_of(_speed), _rect_of(_cogs), _rect_of(chain_counter)]
 			+ ([_rect_of(_armor)] if _armor.visible else [])
-			+ ([_rect_of(_companion)] if _companion.visible else []),
+			+ ([_rect_of(_companion)] if _companion.visible else [])
+			+ ([nixie_rail.piece_rect()] if nixie_rail.showing() else []),
 	}
+
+
+# The timed effects and counts the tube rail shows: the buff ledger's rows when the game has one
+# (ctx.buffs, E1-02), else none.
+func buff_rows() -> Array:
+	var ctx = game.get("ctx")
+	var buffs = ctx.get("buffs") if ctx != null else null
+	if buffs == null or not buffs.has_method("active_rows"):
+		return []
+	return buffs.active_rows(NixieRail.MAX_TUBES)
 
 
 # The wallet the HUD shows: the cogs the run holds.
@@ -1515,8 +1545,10 @@ func _process(delta: float) -> void:
 		_restart.set_fraction(0.0)
 		chain_counter.step(delta, 0)
 		chain_counter.visible = false
+		nixie_rail.clear()
 		return
 	chain_counter.step(delta, game.player.chain.combo)
+	nixie_rail.set_rows(buff_rows())
 
 	var run = game.run
 	var goal := objective_reading()
@@ -1579,6 +1611,7 @@ func _process(delta: float) -> void:
 		reticle.gauge = maxf(reticle.gauge, interact.hold_fraction())
 	reticle.gauge_color = tint
 	_step_ultimate(tint)
+	nixie_rail.set_piece = ability_bar.set_piece
 	if _piece_sizes() != _laid_pieces:
 		layout(size)
 
