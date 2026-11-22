@@ -13,6 +13,9 @@ const CHARGE_RIM_CLEAR := 1.0
 # A led lane clipped shorter than this is no charge (a hull resting at the bank with the led point beyond it
 # would clip to nothing or less): that charge is aimed at the ball, as the stage aimed it.
 const CHARGE_MIN_LANE := 4.0
+# Clearance kept outside the solid hull box plus ball radius when a pickup lands inside the hull
+# or the moving hull drives over one, so no pickup sits unreachable for PICKUP_LIFE.
+const PICKUP_HULL_MARGIN := 0.25
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -345,7 +348,7 @@ func _reel_hit() -> void:
 		var out := Vector2(spot.x - centre.x, spot.z - centre.z).limit_length(Arena.FLOOR_R - 4.0)
 		spot = Vector3(centre.x + out.x, 0.0, centre.z + out.y)
 		var value := Rules.REEL_SCRAP / Rules.REEL_PICKUPS + (1 if k < Rules.REEL_SCRAP % Rules.REEL_PICKUPS else 0)
-		_spawn_pickup(Vector3(spot.x, arena.ground(spot) + 0.9, spot.z), value, "reel")
+		_place_pickup(Vector3(spot.x, arena.ground(spot) + 0.9, spot.z), value, "reel")
 	_publish("boss_reeled", [Vector3(mid.x, arena.ground(mid), mid.z), Rules.REEL_SCRAP])
 
 
@@ -598,7 +601,7 @@ func _drip(c: Dictionary) -> void:
 	if k >= c["trail"].size():
 		c["held"] = 0
 		return
-	_spawn_pickup(c["trail"][k], c["values"][k], "returned")
+	_place_pickup(c["trail"][k], c["values"][k], "returned")
 	c["held"] -= c["values"][k]
 	c["dripped"] = k + 1
 	ship.cue("magnet_hold_drip", int(c["dripped"]))
@@ -620,8 +623,65 @@ func _drop_held(i: int) -> void:
 	for k in piles:
 		var value := rest / piles + (1 if k < rest % piles else 0)
 		if value > 0:
-			_spawn_pickup(ground + Arena.dir(TAU * k / piles) * 1.2, value, "returned")
+			_place_pickup(ground + Arena.dir(TAU * k / piles) * 1.2, value, "returned")
 	_discover(CodexEntries.CRANE_DROP, ground)
+
+
+func _pickup_hull_extents() -> Vector2:
+	return Vector2(Requisition.HULL.x * 0.5 + Tuning.RADIUS + PICKUP_HULL_MARGIN,
+		Requisition.HULL.z * 0.5 + Tuning.RADIUS + PICKUP_HULL_MARGIN)
+
+
+func _inside_hull(at: Vector3) -> bool:
+	if not is_instance_valid(ship):
+		return false
+	var loc: Vector3 = ship.to_local(at)
+	var ext := _pickup_hull_extents()
+	return absf(loc.x) < ext.x and absf(loc.z) < ext.y
+
+
+# Keeps every arena pickup outside the Requisition's solid hull footprint while staying on
+# the playable floor (for shed/reel piles) or inside the bowl wall. Pickups already clear
+# of the hull keep their exact spot.
+func _clear_of_hull(at: Vector3, floor_only: bool) -> Vector3:
+	if not is_instance_valid(ship) or not is_instance_valid(arena) or not _inside_hull(at):
+		return at
+	var loc: Vector3 = ship.to_local(at)
+	var push := _pickup_hull_extents() + Vector2(0.05, 0.05)
+	var centre: Vector3 = arena.global_position
+	var max_r := Arena.FLOOR_R - 4.0 if floor_only else Arena.BANK_R - 4.0
+	var candidates: Array[Vector3] = [
+		Vector3(push.x, 0.0, loc.z),
+		Vector3(-push.x, 0.0, loc.z),
+		Vector3(loc.x, 0.0, push.y),
+		Vector3(loc.x, 0.0, -push.y),
+		Vector3(push.x, 0.0, push.y),
+		Vector3(push.x, 0.0, -push.y),
+		Vector3(-push.x, 0.0, push.y),
+		Vector3(-push.x, 0.0, -push.y),
+	]
+	var best := Vector3.INF
+	var best_d := INF
+	for c in candidates:
+		var w: Vector3 = ship.to_global(c)
+		if Vector2(w.x - centre.x, w.z - centre.z).length() > max_r:
+			continue
+		var d := Vector2(w.x - at.x, w.z - at.z).length()
+		if d < best_d:
+			best_d = d
+			best = w
+	if best == Vector3.INF:
+		var ship_pos: Vector3 = ship.global_position
+		var inward := Vector3(centre.x - ship_pos.x, 0.0, centre.z - ship_pos.z)
+		inward = inward.normalized() if inward.length() > 0.1 else Vector3.FORWARD
+		var spot: Vector3 = ship_pos + inward * (push.length() + 0.5)
+		var out := Vector2(spot.x - centre.x, spot.z - centre.z).limit_length(max_r)
+		best = Vector3(centre.x + out.x, 0.0, centre.z + out.y)
+	return Vector3(best.x, arena.ground(best) + 0.9, best.z)
+
+
+func _place_pickup(at: Vector3, value: int, source: String) -> void:
+	_spawn_pickup(_clear_of_hull(at, source in ["shed", "reel"]), value, source)
 
 
 func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
@@ -697,6 +757,10 @@ func _step_trail(ball: Vector3) -> void:
 	for p in _pickups:
 		p["age"] += _delta
 		var node: Node3D = p["node"]
+		if _inside_hull(p["at"]):
+			var moved := _clear_of_hull(p["at"], p["source"] in ["shed", "reel"])
+			p["at"] = moved
+			node.global_position = Vector3(moved.x, moved.y - 0.9, moved.z)
 		if ball.distance_to(p["at"]) <= Rules.PICKUP_REACH:
 			# A shed pile is the ball's own armour coming back, as a stage spill cluster pays:
 			# mass only, through recover_mass, with no wallet scrap, cogs or pickup event.
@@ -728,7 +792,7 @@ func _spill_break() -> void:
 	for k in Rules.BREAK_PICKUPS:
 		var p: Vector3 = at + Arena.dir(TAU * k / Rules.BREAK_PICKUPS) * Rules.BREAK_RADIUS
 		var value := Rules.BREAK_SPILL / Rules.BREAK_PICKUPS + (1 if k < Rules.BREAK_SPILL % Rules.BREAK_PICKUPS else 0)
-		_spawn_pickup(Vector3(p.x, arena.ground(p) + 0.9, p.z), value, "spill")
+		_place_pickup(Vector3(p.x, arena.ground(p) + 0.9, p.z), value, "spill")
 
 
 # An armour hit in the bowl spills the way a stage hit does (ruling aw): the hit's spill
@@ -751,7 +815,7 @@ func take_spill(from: Vector3, heading: Vector3, spill: int) -> bool:
 		var out := Vector2(spot.x - centre.x, spot.z - centre.z).limit_length(Arena.FLOOR_R - 4.0)
 		spot = Vector3(centre.x + out.x, 0.0, centre.z + out.y)
 		var value := spill / n + (1 if k < spill % n else 0)
-		_spawn_pickup(Vector3(spot.x, arena.ground(spot) + 0.9, spot.z), value, "shed")
+		_place_pickup(Vector3(spot.x, arena.ground(spot) + 0.9, spot.z), value, "shed")
 	return true
 
 
@@ -760,7 +824,7 @@ func take_spill(from: Vector3, heading: Vector3, spill: int) -> bool:
 func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 	if not active() or kind != "lobber" or not is_instance_valid(arena):
 		return
-	_spawn_pickup(Vector3(at.x, arena.ground(at) + 0.9, at.z), maxi(1, scrap_value), "kill")
+	_place_pickup(Vector3(at.x, arena.ground(at) + 0.9, at.z), maxi(1, scrap_value), "kill")
 
 
 func pickups_left() -> Array:
@@ -971,8 +1035,12 @@ func _step_charges(delta: float, ball: Vector3) -> void:
 				else:
 					_charge = {"state": CHARGE_REST, "timer": _rest_time()}
 		CHARGE_BRACE:
+			var h = _charge.get("hazard")
+			if h == null or not is_instance_valid(h) or h.is_done():
+				_charge = {"state": CHARGE_REST, "timer": _rest_time()}
+				return
 			_brace_turn(delta)
-			if _charge["hazard"].is_live():
+			if h.is_live():
 				_charge["state"] = CHARGE_RUN
 		CHARGE_RUN:
 			_run_charge(delta, ball)
