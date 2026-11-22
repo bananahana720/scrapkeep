@@ -378,8 +378,8 @@ func _run() -> void:
 		root.add_child(probe)
 		gate_done[0] = true
 	)
-	var deadline := Time.get_ticks_msec() + 1000
-	while Time.get_ticks_msec() < deadline:
+	for _i in 8:
+		await physics_frame
 		await process_frame
 		if gate_done[0] and _order_events.has("tree_physics") and _order_events.has("child_physics") and _order_events.has("child_process"):
 			break
@@ -422,8 +422,8 @@ func _run() -> void:
 			s_probe[0] = p
 			root.add_child(p)
 		)
-		var s_deadline := Time.get_ticks_msec() + 1000
-		while Time.get_ticks_msec() < s_deadline:
+		for _w in 8:
+			await physics_frame
 			await process_frame
 			if calls[0] > 0 and _order_events.size() >= 4:
 				break
