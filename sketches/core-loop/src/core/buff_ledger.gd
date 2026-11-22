@@ -183,11 +183,6 @@ func active_rows(limit := DEFAULT_LIMIT) -> Array[Dictionary]:
 	return out
 
 
-# True when `id` is currently tracked (including sub-rail_min_s entries).
-func has_id(id: String) -> bool:
-	return _entries.has(id)
-
-
 func _is_rail_visible(e: Dictionary) -> bool:
 	var duration_s := float(e["duration_s"])
 	if String(e["kind"]) == KIND_COUNT and duration_s <= EPSILON:
