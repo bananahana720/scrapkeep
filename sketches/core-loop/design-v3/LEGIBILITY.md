@@ -376,6 +376,62 @@ This section binds every screen, card, tip, toast, caption, prompt and menu in e
 
 **How it is checked.** A review of any change a player can read or navigate cites this section by code. `npm run sketch:lint` checks W1, W2, W4, W6, W7 and S8 over the player strings its source list reads (`scripts/sketch-lint-words.mjs`, with a planted bad case for each), taking W7's banned names from [NAMES.md](NAMES.md), the one home for names; S1 to S5, S6, S7, W3, W5, W8 and W9 stay with the reviewer and with a blind read of a still. This section is principle P10 of [the UI audit loop](ui-audit/README.md), which holds the others (contrast, text size, colour-blind separation, pad focus, motion and the rest) and the findings ledger.
 
+## 14. The reticle, the tube rail and the four hands (ruling ek)
+
+Ruling ek ([DECISIONS.md](../../../project-guide/handoff/DECISIONS.md), 22 Nov 2026) adds two HUD instruments and four screen styles. This section is their one home. Nothing in it is built. It binds every world.
+
+### 14.1 The split: this half second, or the next few seconds
+
+| Fact | Where it shows | Never |
+| --- | --- | --- |
+| What the weapon is doing this half second: chambers, a charge, a beat, a fuse, an audit tick, a lock | The **aim reticle's instrument**, inside the reticle's ring and never over the centre dot. [PILOT-CADENCE.md](PILOT-CADENCE.md) section 5 owns the six instruments and their four states | On the tube rail |
+| An effect that lasts 3 s or more, and a count the player spends | The **tube rail** | On the reticle |
+| An effect under 3 s | On the ball and the reticle, as today | A tube |
+
+Nothing is shown in both places (pattern S7). A property of the loaded weapon is a reticle fact however long it lasts: Rivet's hot rounds are copper chambers on the reticle and get no tube.
+
+### 14.2 The tube rail
+
+A short row of Nixie tubes at the bottom right of the HUD. Its code name is `nixie_rail.gd` and its plain name is "the tube rail" ([NAMES.md](NAMES.md)).
+
+| Property | Rule |
+| --- | --- |
+| Place | Bottom right, x 1366 to 1582 on the 1600 by 900 layout. The first tube sits at the right and the row grows leftward |
+| Size | Each housing is 48 by 76 px. Four tubes at most |
+| When it draws | Only while an effect runs. With none, nothing is there: no empty housings and no frame |
+| A timed effect | The tube's fill drains and a bone needle sweeps with it. No digits. The carrier is the level and the needle's angle, so it reads without colour |
+| A count | One glowing digit, with no leading zero |
+| Which effect | The filament's shape names it. Every shape has a different outline, so it reads without colour. No words and no label |
+| Hardware | Copper and bone. Never brass: brass is the Fleet's and a boss's, never the player's |
+| Colours it may not use | Mint, which means press now (section 1). Purple: a jam is shown on the picks it jams, as today, and there is no purple Jam tube |
+| A fifth effect | It takes the place of the tube with the least time left |
+| What feeds it | `BuffLedger`, the one record of timed and counted effects. A producer posts a timed row or a counter row and the rail reads `active_rows(4)`. The ledger is not saved and is cleared at every attempt boundary. The rail reads no private field of combat, items or abilities |
+| How it is drawn | One `Control` that draws every tube, so the rail costs one canvas item |
+
+A tube appearing and a tube running out each have a sound twin, a short clack, in the player voice class.
+
+### 14.3 Four hands
+
+Every screen, card and plate is drawn in the hand of whoever made the thing it shows. The four hands are the four makers of [SIGHT-PERSONA.md](SIGHT-PERSONA.md) section 3, and `scrap_frame.gd` is the one module that draws all four.
+
+| Hand | Looks like | Screens and plates |
+| --- | --- | --- |
+| Keeper | Cut plates, rivets, tape, halftone corners, a slight tilt (none with reduced motion). Copper, bone and ledger cream. Never brass | The title, pilot select, the workshop and the tree pick, **Moss's shop and Last Call** (Moss is a Keeper), crew call-ins, Keeper's Gamble, the run summary |
+| The Fleet | A brass bezel on iron oxide, one notched card corner, ledger digits in the mono face, a rubber stamp | Brindle's call-ins, bounty and hauler cards, Brindle's plate, the Slag Bowl tally, the tag on a Fleet item |
+| The old works | Seamless cast glass with no fastener and no tilt, a notched seam of uranium green (`Palette.ANCIENT`), a clean geometric face, straight-line motion only | The stage card's memo, the run-over line, Warden plates, the Kindness prompt, and the **camp shift board** |
+| Rogues | A stencilled number and no words | A Rogue's plate |
+
+Rules:
+
+- **One hand to a screen.** A screen is drawn in one hand. A second maker appears on it only as a mark laid on top, the way the makers mark each other's things in the world.
+- **The camp shift board is the one mixed surface, and it is mixed on purpose.** It is an old-works Solari split-flap board that the Keepers reclaimed: cast frame, clacking flaps, and Keeper chalk written over it. A hired pilot's row carries a three-hole timecard stamped `HIRED`.
+- **`HIRED` is the shift board's stamp and `PAID` is Tally's alone.** `PAID` appears only where Tally's stamp lands. No shop, summary, cache or site uses it.
+- **On a screen, purple is the Kindness and nothing else.** `Palette.KINDNESS`, `#D936B0`, hue 315 degrees, is used on the Kindness only. Every other old-works surface, the Foreman's other memos included, carries the uranium-green seam. On a model in the world, purple stays the mark of the Mind's takeover (SIGHT-PERSONA section 3).
+- **Mint is press now, or act here.** `#8BF0D3` marks the one thing on a screen the player's press works on right now, as in the world (section 1). It is never a frame, a heading, a decoration or a mark of something finished.
+- **The HUD is not a hand.** The health, heft and pick instruments keep one neutral instrument look in copper, bone, steel and slate. Only what a maker made takes a maker's hand.
+- **Combat numbers keep the two Noto faces** in every hand. A new display face changes what ships, so it needs Andrew's go-ahead; until he gives it, the hands differ by frame, edge, mark and motion.
+- The caption floor (15 px) and 4.5 to 1 contrast hold in every hand, and section 13 binds every word in all four.
+
 ## Changes to the plan
 
 - The fight axis and the harpoon-input axis are gone. There is no `--variant=` row.

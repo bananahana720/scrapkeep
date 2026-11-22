@@ -2,6 +2,8 @@
 
 Status: design spec for wave 13, unit A2-sable. Written 2026-10-10 on `cand/alpha-w13` (head `38ceda3`). Nothing here is built or played. Paths without a prefix are under `sketches/core-loop/`. A number marked **start** is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 collects them as the veto list.
 
+**Weapon fire (ruling ek, 22 Nov 2026):** how this pilot's weapon fires, with its timers, damage and first tree pick, is now [PILOT-CADENCE.md](../PILOT-CADENCE.md) section 3.2. Where this sheet's weapon text differs, that page wins.
+
 Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (the bar, the line-skill hook and the set-piece contract; every interface name here is that file's), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (the Hoberman mecha), [PARK.md](../PARK.md) (the stages and Warden anchors), [LEGIBILITY.md](../LEGIBILITY.md) and [HOOK-CHAIN.md](../HOOK-CHAIN.md). Settled inputs: the "Decisions settled today" table and the creative-charge list in `~/.claude/plans/let-s-plan-this-session-glowing-beaver.md`.
 
 Terms, defined once:
