@@ -201,6 +201,7 @@ func _box(st: SurfaceTool, centre: Vector3, size: Vector3, colour: Color) -> voi
 # --- The fight's facts ---------------------------------------------------------------------
 
 func _on_phase(phase: int, _name: String) -> void:
+	_links = 0
 	if phase <= 1:
 		return
 	_start("clash")
@@ -214,9 +215,14 @@ func _on_tell() -> void:
 
 
 func _send_freeze() -> void:
-	if not _freeze_pending:
+	if not _freeze_pending or not is_inside_tree():
 		return
 	_freeze_pending = false
+	# A warning that outlives the turn (a phase 2 lobber's landing ring) also calls the freeze off;
+	# the hazards the turn itself cancelled are already queued for deletion.
+	for node in get_tree().get_nodes_in_group("threat"):
+		if not node.is_queued_for_deletion():
+			return
 	if _freeze.is_valid():
 		_freeze.call(CLASH_FREEZE, FREEZE_FACT)
 
@@ -232,6 +238,7 @@ func _on_line(state: String, _target: Node3D, _at: Vector3, _cause: String) -> v
 
 
 func _on_rout() -> void:
+	_links = 0
 	_start("rout")
 
 

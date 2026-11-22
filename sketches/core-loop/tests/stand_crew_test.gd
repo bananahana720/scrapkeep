@@ -59,7 +59,7 @@ func _run() -> void:
 	_rest_in_hand(crew, yard, fans)
 	await _colliders(crew, yard)
 	_targets(crew, yard)
-	# The tells first, on the fresh fight: a jump back to phase 1 keeps its broken chunk, and a held phase never attacks.
+	# The tells first, on the fresh fight: a jump back to phase 1 restores its chunks (W46-05) before the turns are played.
 	await _no_tell(crew)
 	await _reacts(crew, arena)
 	_rout(crew)
@@ -100,7 +100,7 @@ func _colliders(crew, yard) -> void:
 	crew.add_child(planted)
 	planted.global_position = at
 	await physics_frame
-	t.check("planted: a body at a board fails the no-collider check", not (_collider_free(crowds) and _query_hits(at).is_empty()),
+	t.check("planted: a body at a board fails the no-collider check", not _collider_free(crowds) and not _query_hits(at).is_empty(),
 		"%d hits" % _query_hits(at).size())
 	planted.free()
 
