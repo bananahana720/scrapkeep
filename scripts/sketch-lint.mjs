@@ -152,7 +152,7 @@ export function lintL5(text, tests, file = "sketches/core-loop/tests/QUARANTINE.
 export const LIGHT_OWNERS = {
   "src/presentation/hero_assets.gd": { sites: 2, owner: "MossBay barge, made once per session by world.gd (workshop warm fills)" },
   "src/presentation/graphics_preset.gd": { sites: 1, owner: "sibling of the world sun, session-lived" },
-  "src/presentation/world_look.gd": { sites: 1, owner: "the Dig's LampPool under its stage geometry root, kept across stage changes" },
+  "src/presentation/world_look.gd": { sites: 3, owner: "the Dig's LampPool under its stage geometry root, kept across stage changes; Night Shift's NightLights under the stage roots' parent, session-lived and darkened when the day returns" },
   "src/presentation/title_stage.gd": { sites: 3, owner: "presentation's title stage, session-lived" },
   "src/ui/class_preview.gd": { sites: 2, owner: "class select screen, directional, closes before any stage" },
   "src/ui/build_read.gd": { sites: 1, owner: "pause menu's build read, its own-world SubViewport under the session-lived pause menu" },
