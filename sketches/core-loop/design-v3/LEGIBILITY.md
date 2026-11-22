@@ -424,7 +424,7 @@ Every screen, card and plate is drawn in the hand of whoever made the thing it s
 Rules:
 
 - **One hand to a screen.** A screen is drawn in one hand. A second maker appears on it only as a mark laid on top, the way the makers mark each other's things in the world.
-- **The camp shift board is the one mixed surface, and it is mixed on purpose.** It is an old-works Solari split-flap board that the Keepers reclaimed: cast frame, clacking flaps, and Keeper chalk written over it. A hired pilot's row carries a `HIRED` timecard.
+- **The camp shift board is the one mixed surface, and it is mixed on purpose.** It is an old-works Solari split-flap board that the Keepers reclaimed: cast frame, clacking flaps, and Keeper chalk written over it. A hired pilot's row carries a three-hole timecard stamped `HIRED`.
 - **`HIRED` is the shift board's stamp and `PAID` is Tally's alone.** `PAID` appears only where Tally's stamp lands. No shop, summary, cache or site uses it.
 - **On a screen, purple is the Kindness and nothing else.** `Palette.KINDNESS`, `#D936B0`, hue 315 degrees, is used on the Kindness only. Every other old-works surface, the Foreman's other memos included, carries the uranium-green seam. On a model in the world, purple stays the mark of the Mind's takeover (SIGHT-PERSONA section 3).
 - **Mint is press now, or act here.** `#8BF0D3` marks the one thing on a screen the player's press works on right now, as in the world (section 1). It is never a frame, a heading, a decoration or a mark of something finished.

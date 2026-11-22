@@ -187,20 +187,22 @@ Tally already taps. Now a press on the beat stamps PAID.
 
 | Step | Value |
 | --- | --- |
-| Press | Balance Due at the aim point at once, as today. It costs 1 pressure. |
+| Press | Balance Due at the aim point at once, as today. It costs 1 pressure, and needs at least 1 in the bar. |
 | Damage | 8 + planar speed, to a top of 22, which the ball reaches at cruise. It was 10 + 1.2 × speed, to 56. A slow ball stamps soft; a ball at cruise or faster stamps at full weight. |
 | Floor between casts | 0.40 s, today's card recovery. |
-| Pressure | 3, refilled 1 every 2.0 s while the ball rolls at cruise or faster. Unchanged. |
+| Pressure | A fraction, from 0 to a cap of 3.0. It refills **continuously at 0.5 a second** while the ball is on the ground at cruise or faster, and not otherwise. The rate and the conditions are today's; holding a fraction is new (see the note under the table). |
 | The window | Opens 0.40 s after a Balance Due lands and closes at 0.60 s. |
 | A press in the window | **PAID**: a Balance Due at 1.2 times (26.4) that refunds 0.5 pressure. It is a hit, so it opens the next window. |
 | A press before the window | Spends it. The next cast is plain. |
 
-Arithmetic. Pressure comes in at 0.5 a second, so sustained damage is damage bought per pressure times 0.5:
+**Pressure becomes a fraction.** Today the slot holds whole charges (`s.charges`, an integer, in `combat.gd` `_step_roll_restore`) and gains one each time a 2.0 s clock runs out. A stamp gives back half a pressure and the first tree pick deals in halves and quarters, so the Tally code unit of phase E2 turns the count into a fraction that fills at 0.5 a second. For whole costs nothing changes: today's clock already holds the part-filled charge between two whole ones, so a plain cast and the `hold_auto` row are ready at exactly the times they are today. The pressure pips fill partway, so the half a stamp gave back is seen.
+
+Arithmetic. Pressure comes in at 0.5 a second, so sustained damage is damage bought per pressure times 0.5. A one-second span is counted with both of its ends in it:
 
 - Careless, sustained: a plain cast buys 22 for 1 pressure, so 22 × 0.5 = **11.0**.
 - Most by arithmetic, sustained: a stamp buys 26.4 for a net 0.5 pressure, so 26.4 × 0.5 / 0.5 = **26.4**. The refund is half what the stamp cost, so pressure can never grow without rolling.
-- Skilled, sustained: a chain is one plain opener and then stamps. From a full bar the chain runs 5 stamps if each is pressed as its window opens and 7 if each is pressed as it closes, because later presses let more pressure roll in. That is (22 + 5 × 26.4) / 7 s = **22.0** and (22 + 7 × 26.4) / 9 s = **23.0**. The opener is why skilled play sits under 26.4.
-- Most in any one second: windows open 0.40 s apart, so a one-second span holds three hits and never four. Three stamps are 3 × 26.4 = **79.2**. Careless, three plain casts are 66.0. Today's three casts are 80.4.
+- Skilled, sustained: a chain is one plain opener and then stamps, until the bar holds less than 1. From a full bar, pressed as each window opens (0.40 s apart), the bar reads 2.0 after the opener and falls 0.3 a stamp (0.2 rolls in, 1 is spent, 0.5 comes back): 1.7, 1.4, 1.1, 0.8, and the fifth stamp at 2.0 s leaves 0.5. The bar reads exactly 1.0 before that fifth stamp, so the code compares with a small tolerance. Refilling to 3.0 takes 5.0 s, so the cycle is (22 + 5 × 26.4) / 7 s = **22.0**. Pressed as each window closes (0.60 s apart) the bar falls 0.2 a stamp, the chain runs 7 stamps to 4.2 s and leaves 0.6, and the cycle is (22 + 7 × 26.4) / 9 s = **23.0**. The opener is why skilled play sits under 26.4.
+- Most in any one second: windows open 0.40 s apart, so a one-second span holds three hits (at 0, 0.40 and 0.80 s) and never four. Three stamps are 3 × 26.4 = **79.2**. Careless, three plain casts are 66.0. Today's three casts are 80.4.
 
 Link Clips, the gather plate and the World 1 relics are unchanged. A stamp is a direct hit, so it copies to clips exactly as a Balance Due does today.
 
@@ -276,7 +278,7 @@ Every state in the table has a sound twin, one plain effect per fact, in the pla
 
 Depth 1 of each pilot's tree becomes a pair of weapon feels, one fast and light, one slow and heavy. World 1 still gives two picks and the tree keeps its two-card shape. Each row below is data: it sets the cadence fields of section 7 and nothing else. A keystone changes the shape of the damage, never the pilot's ceiling.
 
-Each keystone takes a root's slot, so the perk that root gives today moves down to depth 2 in the same half of the tree, in the World 1 table (`NODES_WORLD_ONE`, the same way Sable's Face Runner already stands in for Live Wire). It takes the slot of that half's node that only adds a count, or, where the half has none, the node named below. The moved row keeps its id, its op and its numbers.
+Each keystone takes a root's slot, so the perk that root gives today moves down to depth 2 in the same half of the tree, in the World 1 table (`NODES_WORLD_ONE`, the same way Sable's Face Runner already stands in for Live Wire). It takes the slot of a node in that half that no other module reads: the one that only adds a count where there is one, and otherwise the node named below. The moved row keeps its id, its op and its numbers.
 
 ### 6.1 The pairs
 
@@ -284,16 +286,19 @@ Figures are careless, skilled and most by arithmetic, as in section 1, from the 
 
 | Pilot | Fast and light | Slow and heavy |
 | --- | --- | --- |
-| Rivet | **Fan the Hammer** (`r_fan_hammer`). The cylinder holds 12 rounds of 6 (hot 7.2). A held button fans them, one every 0.10 s, in a 5 degree cone. Reload and notch as the baseline. 35.1, 58.4, 60.0. | **Big Iron** (`r_big_iron`). Two shells of 28.8 (hot 34.6), 0.60 s apart. Each pierces one machine, throws three times the knock and breaks props one heft tier up. Reload and notch as the baseline. 37.2, 70.5, 70.5. |
+| Rivet | **Fan the Hammer** (`r_fan_hammer`). The cylinder holds 12 rounds of 6 (hot 7.2). A held button fans them, one every 0.10 s, in a 5 degree cone. Reload and notch as the baseline. 35.1, 58.4, 60.0. | **Big Iron** (`r_big_iron`). Two shells of 28.8 (hot 34.56, 1.2 times), 0.60 s apart. Each pierces one machine, throws three times the knock and breaks props one heft tier up. Reload and notch as the baseline. 37.2, 70.5 (2 × 34.56 / 0.98 s), 70.5. |
 | Sable | **Static Flutter** (`s_static_flutter`). A press flutters three sparks of 3. The charge fills in 0.40 s and lets go as six pulses of 4 over 0.5 s; the trigger is ready 0.12 s after release while the pulses run on. 30.0, 68.8 at blazing, 68.8. | **Rail Lance** (`s_rail_lance`). The charge takes 1.00 s and lets go one bolt of 42 that passes through two machines and does not chain. 26.7, 64.1 at blazing, 64.1. |
-| Kest | **Carpet** (`k_carpet`). Each throw scatters three small charges of 3.85 (snapped 7.7) that share one window. With all three on one target: 19.3, 38.5, 38.5. | **Keg** (`k_keg`). One live charge at a time, 1.40 s between throws, 24 (snapped 48), twice the blast radius, and it breaks props one heft tier up. 17.1, 34.3, 34.3. |
+| Kest | **Cluster** (`k_cluster`). Each throw scatters three small charges of 3.85 (snapped 7.7) that share one window. With all three on one target: 19.3, 38.5, 38.5. | **Keg** (`k_keg`). One live charge at a time, 1.40 s between throws, 24 (snapped 48), twice the blast radius, and it breaks props one heft tier up. 17.1, 34.3, 34.3. |
 | Tarn | **Saw Flurry** (`t_saw_flurry`). Every beat does half the damage on half the floor: 9, 11, then 21.5 + 0.25 × speed. The window opens 0.20 s after beat two and keeps its 0.24 s width. Every fifth hit pierces. 40.0, 66.7, 72.6. | **Guillotine** (`t_guillotine`). Beats one and two keep their damage on floors of 0.60 s and 0.70 s. The window opens at 0.40 s. The third beat is 60 + 0.8 × speed (71.2 at cruise, 84.0 at most), in a 7 m cone, three times the knock, and breaks props one heft tier up; 0.60 s follows it. 30.8, 69.5, 77.5. |
-| Tally | **Petty Cash** (`tl_petty_cash`). A cast costs half a pressure and does half the damage (11). The window opens at 0.25 s and closes at 0.45 s. A stamp is 13.2 and refunds a quarter. Sustained 11.0, 24.9 to 26.1, 26.4. Most in one second 66.0. | **Compound Interest** (`tl_compound_interest`). The window opens at 0.55 s and closes at 0.75 s. Each stamp in a row adds 8 (30, then 38 at most) and refunds a quarter. Sustained 11.0, 19.7 to 20.8, 25.3. Most in one second 76.0. |
+| Tally | **Petty Cash** (`tl_petty_cash`). A cast costs half a pressure and does half the damage (11). The window opens at 0.25 s and closes at 0.45 s. A stamp is 13.2 and refunds a quarter. Sustained 11.0, 24.9 to 26.1, 26.4. Most in one second 66.0: five stamps at 0, 0.25, 0.50, 0.75 and 1.00 s, with both ends of the second counted (52.8 if the last is left out). | **Compound Interest** (`tl_compound_interest`). The window opens at 0.55 s and closes at 0.75 s. Each stamp in a row adds 8 (30, then 38 at most) and refunds a quarter. Sustained 11.0, 19.7 to 20.8, 25.3. Most in one second 76.0. |
 | Cannon | **Snap Battery** (`c_snap_battery`). The lock is 0.15 s to 0.31 s and 0.40 s passes between shots. Pulse 9, rail 26, barrage 16. 22.5, 47.3, 47.3. | **Siege Rail** (`c_siege_rail`). The lock is 0.60 s to 0.76 s and 1.00 s passes between shots. The rail is 66, half as wide, 40 m long, and breaks props one heft tier up. Pulse 16, barrage 30. 16.0, 41.3, 41.3. |
 
 Three notes on the table:
 
 - Sable's two keystones both keep `mass_launch`, the weight launch that both of her roots set today, so no Sable run loses it.
+- Sable's keystones change the mounted weapon too, so one run has one feel on the ball and on the perch. Mounted Static Flutter keeps three sparks of 3 and lets go six pulses of 4.5: 30.0 careless, (9 + 27) / 0.48 = 75.0 for 3 s after a blazing plant, 52.9 after. Mounted Rail Lance has a spark of 9 and a bolt of 45 that passes through two machines and does not chain: 30.0, 54 / 0.78 = 69.2, then 42.2. Both stay under the mounted ceiling of 80.
+- Kest's fast keystone is named Cluster because `k_carpet`, Carpet Bomb, is already a deeper Kest node. A parked depth-4 node, `k_sticky_rain`, says the same thing in words ("each throw scatters three smaller charges"). World 1 never offers it; the unit that reopens worlds 2 and 3 re-cuts that row.
+- All twelve new ids were checked against every row in `src/core/trees/` and `world_one_cards.gd` at `c0a4bba6f`: none is in use.
 - The heavy keystones may pass Tarn's baseline hit. Tarn's own Guillotine, at 84.0, is the heaviest hit any first pick gives.
 - Start names are three words or fewer. The card's one line is unit E2-09's to write and to hold to the eight-word limit. A run's first pick is read before the pilot has fired, so each card says its effect in words the pilot card already uses, and shows the trigger as a picture before a word (LEGIBILITY section 13, carrier order).
 
@@ -301,16 +306,27 @@ Three notes on the table:
 
 | Pilot | Keystone in the left root | Root perk it displaces | The perk moves to | Keystone in the right root | Root perk it displaces | The perk moves to |
 | --- | --- | --- | --- | --- | --- | --- |
-| Rivet | Fan the Hammer | `r_gunline`, Gunline: the weapon fires twin rounds at 0.6 times each | The slot of `r_run_gun`, Run and Gun. The half has no count-only node; Run and Gun is a drain scalar the slower trigger already eases | Big Iron | `r_juggernaut`, Juggernaut: starting a sprint blasts machines back | The slot of `r_second_wind`, Second Wind, which only banks a second sprint |
+| Rivet | Fan the Hammer | `r_gunline`, Gunline: the weapon fires twin rounds at 0.6 times each | The slot of `r_tracer`, Tracer Rounds. The half has no count-only node, and Run and Gun must stay: the wear trail reads it | Big Iron | `r_juggernaut`, Juggernaut: starting a sprint blasts machines back | The slot of `r_ram_fins`, Ram Fins. Second Wind is the half's count-only node, and it must stay: the Riveted Shell reads it |
 | Sable | Static Flutter | `s_cannonball`, Cannonball: vault kicks set off a small discharge | The slot of `s_coil_hook`, Coil Hook. The half has no count-only node; Coil Hook is a flat fling scalar | Rail Lance | `s_beachhead`, Beachhead: plant a pylon from twice as far | The slot of `s_arc_nest`, Arc Nest, which only adds one turret chain jump |
-| Kest | Carpet | `k_trapper`, Trapper: charges wait longer and five can be live | The slot of `k_demo_expert`, Demo Expert, which only raises the slam's charge count to five | Keg | `k_ghost`, Ghost: cloaked, machines spot you only up close | The slot of `k_smoke_trail`, Smoke Trail. The half has no count-only node; Ambush stays because a hidden throw is what Keg wants |
+| Kest | Cluster | `k_trapper`, Trapper: charges wait longer and five can be live | The slot of `k_demo_expert`, Demo Expert, which only raises the slam's charge count to five | Keg | `k_ghost`, Ghost: cloaked, machines spot you only up close | The slot of `k_ambush`, Ambush. The half has no count-only node, and Smoke Trail must stay: the Riveted Shell reads it |
 | Tarn | Saw Flurry | `t_long_claw`, Long Claw: sweeps reach two metres farther | The slot of `t_twin_talons`, Twin Talons, which only adds a second, lighter talon | Guillotine | `t_anchor_line`, Anchor Line: each claw pull sends a shockwave | The slot of `t_spare_claw`, Spare Claw, which only banks a second claw pull |
 | Tally | Petty Cash | `tl_audit_stamp`, Audit Stamp: stamp slams send a shockwave | The slot of `tl_line_feed`, Line Feed. The half has no count-only node; Line Feed is the same shockwave on a rarer event | Compound Interest | `tl_steam_bank`, Steam Bank: bank two flywheel surges | The slot of `tl_spring_vent`, Spring Vent. The half has no count-only node; Corner Plate stays because a surge pays pressure |
 | Cannon | Snap Battery | `c_quick_lane`, Quick Lane: call lanes a quarter faster | The slot of `c_spare_kick`, Spare Kick, which only banks a second recoil kick | Siege Rail | `c_brace_kick`, Brace Kick: every plate refills a recoil kick | The slot of `c_spare_plate`, Spare Plate, which only banks a second plate |
 
-Under the lock trigger, Quick Lane's "a quarter faster" divides the Cannon's time between shots by 1.25, from 0.70 s to 0.56 s. With it the rail gives 42 / 0.86 = 48.8, still under the Cannon's ceiling of 50.
+**Four World 1 nodes are read by other modules, and none of them moves or leaves.** Each keeps its id and its slot, so the code that reads it needs no change.
 
-The twelve nodes that give up a depth-2 slot leave the World 1 table. Their rows stay in the tree files, and where they sit in the full tree is for the unit that reopens worlds 2 and 3.
+| Node | Slot | What reads it | After this change it is offered under |
+| --- | --- | --- | --- |
+| `s_face_runner`, Face Runner | Index 3, left half | The Riveted Shell's air-control inversion S4 (`build.gd`), on by default with `--hotwire-shell` | Static Flutter |
+| `r_second_wind`, Second Wind | Index 5, right half | The Riveted Shell's inversion R6 (`build.gd`): sprinting, you steer freely in the air | Big Iron |
+| `k_smoke_trail`, Smoke Trail | Index 4, right half | The Riveted Shell's inversion K5 (`build.gd`): steer sharper while you glide | Keg |
+| `r_run_gun`, Run and Gun | Index 3, left half | The wear trail (`src/combat/wear_trail.gd`) | Fan the Hammer |
+
+So `build.gd`, the three shell rows of `world_one_cards.gd` (`UNFITTED_ROWS` included) and `wear_trail.gd` are untouched. What does change, on purpose, in unit E2-09: a depth-2 node is offered only under its own root (`upgrade_tree.gd` `_pair_indices`), so the pick paths that reach the three inversions start with a keystone. The hotwire tests reach them today through `r_juggernaut`, `k_ghost` and `s_cannonball` (`hotwire_cue_test`, `hotwire_r6_test`, `hotwire_k5_test`, `hotwire_s4_test`, `hotwire_shell_held_test`); those paths become Big Iron, Keg and Static Flutter, and the K5 test's control path, which picks Ambush today, picks Ghost. The tests that pin the World 1 tables (`world_one_rtree_test`, `world_one_ktree_test`, `world_one_stree_test`, `sable_kit_test`, `tree_data_test`, `tree_safe_picks_test`) are re-cut in the same unit.
+
+The twelve nodes that give up a depth-2 slot leave the World 1 table: `r_tracer`, `r_ram_fins`, `s_coil_hook`, `s_arc_nest`, `k_demo_expert`, `k_ambush`, `t_twin_talons`, `t_spare_claw`, `tl_line_feed`, `tl_spring_vent`, `c_spare_kick` and `c_spare_plate`. No module outside the tree files and `world_one_cards.gd` reads any of them. Their rows stay in the tree files, and where they sit in the full tree is for the unit that reopens worlds 2 and 3.
+
+**A moved perk is an upgrade, and upgrades sit outside section 1.** The ceilings bind a weapon with no upgrades and each keystone alone. A moved perk is offered only under its keystone, so the build a World 1 run can reach is the keystone with the perk. The one that passes a ceiling is the Cannon's. Under the lock trigger, Quick Lane's "a quarter faster" divides the time between shots by 1.25. On the baseline Cannon that would be 0.70 s to 0.56 s and 42 / 0.86 = 48.8, under 50, but World 1 cannot reach that build. Under Snap Battery, where Quick Lane now sits, it is 0.40 s to 0.32 s and 26 / 0.47 = **55.3**. `weapon_envelope_test` holds the ceiling of 50 on the baseline and on each keystone with no depth-2 pick; Snap Battery with Quick Lane is read in calibration as any upgraded build is.
 
 ## 7. The data a weapon row carries
 
@@ -352,7 +368,10 @@ Each is a taste call taken inside ruling ek.
 10. Tally's cast reaches full weight at cruise and grows no further with speed. Today it grows to 56 at 38 m/s. Holding the ceilings at every speed is worth more than the scaling, and pressure already asks for cruise.
 11. Tally's burst limit is read as the most damage in any one second, which is how today's three casts in 0.8 s make 80.4.
 12. The Cannon's rail gives no recoil kick. Movement stays the pilot's.
-13. Which node gives up its depth-2 slot, in the six halves of section 6.2 that have no count-only node.
+13. Which node gives up its depth-2 slot, in the halves of section 6.2 where the choice is free. Tracer Rounds, Ram Fins and Ambush leave World 1 so that Run and Gun, Second Wind and Smoke Trail can stay.
+14. Snap Battery with Quick Lane reaches 55.3, above the Cannon's unupgraded ceiling of 50. If that is too much, Quick Lane's share under the lock trigger is the number to cut.
+15. Sable's keystones change the mounted weapon as well as the one on the ball.
+16. Tally's pressure is a fraction that fills at 0.5 a second, and the pips show the part-filled one.
 
 ## How the figures were checked
 
