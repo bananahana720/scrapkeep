@@ -68,6 +68,7 @@ const Arena := preload("res://src/boss/arena.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
+const ModelVariants := preload("res://src/presentation/model_variants.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W46-T1: tools/test_batch_driver.gd _reset() clears reduced-motion and other process-wide
@@ -84,6 +85,12 @@ func _initialize() -> void:
 func _physics_process(_delta: float) -> bool:
 	if _recording_order and not _order_events.has("tree_physics"):
 		_order_events.append("tree_physics")
+	return false
+
+
+func _process(_delta: float) -> bool:
+	if _recording_order and not _order_events.has("tree_process"):
+		_order_events.append("tree_process")
 	return false
 
 
@@ -371,7 +378,8 @@ func _run() -> void:
 		root.add_child(probe)
 		gate_done[0] = true
 	)
-	for _i in 6:
+	var deadline := Time.get_ticks_msec() + 1000
+	while Time.get_ticks_msec() < deadline:
 		await process_frame
 		if gate_done[0] and _order_events.has("tree_physics") and _order_events.has("child_physics") and _order_events.has("child_process"):
 			break
@@ -385,6 +393,47 @@ func _run() -> void:
 		gate_done[0] and i_tree >= 0 and i_child_proc > i_tree, str(_order_events))
 	t.check("next() test _physics_process() runs before child _physics_process()",
 		gate_done[0] and i_tree >= 0 and i_child_phys > i_tree, str(_order_events))
+
+	# Stress-test MainTimerSync / delta smoothing: 20 iterations each preceded by 20 fast
+	# process_frames and a killed tween must still hand off on a real physics tick with exact
+	# order ["tree_physics", "child_physics", "tree_process", "child_process"], empty root,
+	# empty processed tweens, and callback invoked once.
+	var want_order: Array[String] = ["tree_physics", "child_physics", "tree_process", "child_process"]
+	var stress_bad: Array[String] = []
+	for iter in 20:
+		for _f in 20:
+			await process_frame
+		var s_node := Node3D.new()
+		root.add_child(s_node)
+		var s_tw := s_node.create_tween()
+		s_tw.tween_property(s_node, "position", Vector3.UP, 10.0)
+		driver._reset()
+		var calls := [0]
+		var s_probe := [null]
+		driver._schedule_next(func() -> void:
+			calls[0] += 1
+			if not get_processed_tweens().is_empty():
+				stress_bad.append("iter %d: tweens not drained" % iter)
+			if not root.get_children().is_empty():
+				stress_bad.append("iter %d: root not empty" % iter)
+			_order_events.clear()
+			_recording_order = true
+			var p := _OrderProbe.new(_order_events)
+			s_probe[0] = p
+			root.add_child(p)
+		)
+		var s_deadline := Time.get_ticks_msec() + 1000
+		while Time.get_ticks_msec() < s_deadline:
+			await process_frame
+			if calls[0] > 0 and _order_events.size() >= 4:
+				break
+		_recording_order = false
+		if s_probe[0] != null and is_instance_valid(s_probe[0]):
+			s_probe[0].free()
+		if calls[0] != 1 or _order_events != want_order:
+			stress_bad.append("iter %d: calls=%d events=%s" % [iter, calls[0], str(_order_events)])
+	t.check("fast-frame burst stress (20x20 process_frames) preserves exact tick/frame order",
+		stress_bad.is_empty(), "; ".join(stress_bad))
 
 	quit(t.verdict())
 

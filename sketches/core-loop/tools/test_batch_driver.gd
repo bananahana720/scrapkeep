@@ -57,6 +57,7 @@ const Arena := preload("res://src/boss/arena.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
+const ModelVariants := preload("res://src/presentation/model_variants.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -96,10 +97,10 @@ func finish(code: int) -> void:
 # Godot's SceneTree::process() emits process_frame and flushes deferred calls before sending
 # NOTIFICATION_PROCESS to child nodes and before process_tweens() removes killed tweens. A
 # temporary gate node under tree.root waits in _process() until get_processed_tweens() is empty,
-# detaches and queue_frees itself, and calls next.call_deferred(). That runs next() during the
-# end-of-frame deferred flush — after NOTIFICATION_PROCESS and process_tweens() have finished —
-# so the next test starts with no root children, no dead tweens, no early child _process() before
-# its first physics tick, and its own _physics_process() running before child _physics_process().
+# detaches and queue_frees itself, and hooks the next real tree.physics_frame (CONNECT_ONE_SHOT).
+# On that physics tick, _fire() runs next() with an empty root and no dead tweens, then forwards
+# tree._physics_process(delta) before child _physics_process() and before _process() — with zero
+# sleeps and zero dependence on MainTimerSync / delta smoothing.
 func _close(code: int) -> void:
 	_reset()
 	print("BATCH END %s exit=%d ms=%d" % [current, code, Time.get_ticks_msec() - started])
@@ -243,16 +244,9 @@ class _NextGate extends Node:
 		set_process(false)
 		get_parent().remove_child(self)
 		queue_free()
-		_fire.call_deferred(_done)
+		_tree.physics_frame.connect(_fire.bind(_tree, _done), CONNECT_ONE_SHOT)
 
-	# Run callback in the end-of-frame deferred flush (after NOTIFICATION_PROCESS and
-	# process_tweens()), then top up the remaining fraction of one physics tick if callback
-	# was faster than a tick so the next iteration always runs a physics step before _process().
-	static func _fire(callback: Callable) -> void:
-		var step_usec := 1_000_000.0 / maxf(1.0, float(Engine.physics_ticks_per_second))
-		var need_usec := ceili((1.0 - clampf(Engine.get_physics_interpolation_fraction(), 0.0, 1.0)) * step_usec) + 2000
-		var t0 := Time.get_ticks_usec()
+	static func _fire(owner: SceneTree, callback: Callable) -> void:
 		callback.call()
-		var elapsed := Time.get_ticks_usec() - t0
-		if elapsed < need_usec:
-			OS.delay_usec(need_usec - elapsed)
+		if owner.has_method("_physics_process"):
+			owner.call("_physics_process", Engine.time_scale / maxf(1.0, float(Engine.physics_ticks_per_second)))
