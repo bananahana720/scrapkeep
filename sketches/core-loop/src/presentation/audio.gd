@@ -1359,7 +1359,7 @@ func ace_ready() -> bool:
 	# rendered this block yet: it starts where the block did, or it runs ahead of the transport.
 	ace.clock = _render_from if _render_from >= 0 else engine.clock
 	ace.set_breath(breath())
-	ace.set_pump(DeckMoves.PUMP if deck_festival_on() and not ace.flat and bool(MusicArbiter.resolve(_arbiter_state())["allow_dj"]) else {})
+	ace.set_pump(DeckMoves.pump_for(deck_style()) if not ace.flat and bool(MusicArbiter.resolve(_arbiter_state())["allow_dj"]) else {})
 	ace.ultimate_lift = _ult_lift
 	_melody_lease.bump_epoch()
 	_prime_band_parameters()
@@ -1629,6 +1629,7 @@ func radio_play(id: String, record: String, pinned := false) -> bool:
 		return false
 	radio_hold = id
 	radio_pinned = pinned
+	_tend_deck()
 	if boss_before != "" and _radio_boss.is_empty():
 		_radio_boss = ["boss_arena_entered", boss_before]
 	_radio_args = [id, record, pinned]
@@ -4546,7 +4547,7 @@ func _follow_warden_form(posture: float, staggered: bool, landed: bool) -> void:
 		_log_cue(["warden_form", "drop", "beat", at, 1.0, 0.0])
 		_make_drop_room(at)
 		_tend_deck()
-		deck_moves.on_drop(ace, at)
+		deck_moves.on_drop(ace, at, deck_style())
 
 
 func _stagger_chord() -> void:
@@ -5429,14 +5430,14 @@ func set_director_on() -> bool:
 	return tuning != null and tuning.option(Tuning.SET_DIRECTOR_KEY) == "on"
 
 
-func deck_festival_on() -> bool:
+func deck_style() -> String:
 	var tuning = ctx.get("tuning") if ctx != null else null
-	return tuning != null and tuning.option(Tuning.DECK_KEY) == "festival"
+	return tuning.option(Tuning.DECK_KEY) if tuning != null else "off"
 
 
 func _tend_deck() -> void:
 	var allow := ace_playing() and not ace.flat and _handover_at < 0 and bool(MusicArbiter.resolve(_arbiter_state())["allow_dj"])
-	deck_moves.tend(ace, {"on": deck_festival_on(), "allow": allow, "posture": _warden_posture, "staggered": _warden_staggered})
+	deck_moves.tend(ace, {"style": deck_style(), "allow": allow, "posture": _warden_posture, "staggered": _warden_staggered})
 
 
 func _tend_set() -> void:

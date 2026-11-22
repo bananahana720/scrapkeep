@@ -414,7 +414,6 @@ func trim_bar(at: int, next: Dictionary, bar: int, ramp: int, depth := 0.0, epoc
 
 func invalidate_trims(ramp := STOP_RAMP) -> void:
 	trim_epoch += 1
-	cancel_shots("", ramp)
 	actions = actions.filter(func(a: Dictionary) -> bool:
 		var t := String(a.get("type", ""))
 		if t == "sweep":
@@ -435,22 +434,26 @@ func set_pump(depth_by_section: Dictionary) -> void:
 	var ramp := float(maxi(grid_beat, 1))
 	for list in [voices, fading]:
 		for v: Voice in list:
-			var want := _pump_depth_for(v.stem, v.section_name)
+			var want := pump_depth_for(v.stem, v.section_name)
 			if not is_equal_approx(want, v.pump_target):
 				v.pump_target = want
 				v.pump_step = maxf(absf(want - v.pump_depth), 0.000001) / ramp
 	if not pending.is_empty() and not bool(pending.get("begun", false)):
 		for v: Voice in pending["voices"]:
-			var want := _pump_depth_for(v.stem, v.section_name)
+			var want := pump_depth_for(v.stem, v.section_name)
 			v.pump_depth = want
 			v.pump_target = want
 			v.pump_step = 0.0
 
 
-func _pump_depth_for(stem: String, sec_name: String) -> float:
+func pump_depth_for(stem: String, sec_name: String) -> float:
 	if flat or not stem in DeckMoves.PUMP_STEMS:
 		return 0.0
 	return clampf(float(_pump_depths.get(sec_name, 0.0)), 0.0, 1.0)
+
+
+func pump_active() -> bool:
+	return not flat and not _pump_depths.is_empty()
 
 
 func _has_active_pump() -> bool:
@@ -1090,7 +1093,7 @@ func _continues(want: String) -> bool:
 	var ramp := float(maxi(grid_beat, 1))
 	for v: Voice in voices:
 		v.section_name = want
-		var pd := _pump_depth_for(v.stem, want)
+		var pd := pump_depth_for(v.stem, want)
 		if not is_equal_approx(pd, v.pump_target):
 			v.pump_target = pd
 			v.pump_step = maxf(absf(pd - v.pump_depth), 0.000001) / ramp
@@ -1163,7 +1166,7 @@ func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: i
 	var v := Voice.new()
 	v.stem = stem
 	v.section_name = name
-	var pd := _pump_depth_for(stem, name)
+	var pd := pump_depth_for(stem, name)
 	v.pump_depth = pd
 	v.pump_target = pd
 	v.pb = streams[clip["paths"][stem]].instantiate_playback()

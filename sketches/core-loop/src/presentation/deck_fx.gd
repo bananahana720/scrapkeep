@@ -1,14 +1,18 @@
 extends RefCounted
 
-# Synthesized festival-deck one-shots (design-v3/SOUND-BIBLE.md, "The moves"):
-# snare-roll and noise-riser builds, breath downlifter, pre-drop swell, and drop impact.
+# Synthesized deck one-shots (design-v3/SOUND-BIBLE.md, "The moves"):
+# snare-roll and noise-riser builds, blog-house warehouse-kick builds and impacts,
+# breath downlifter, pre-drop swell, and drop impact.
 # Every buffer is deterministic (fixed seed), 44100 Hz stereo, cached by kind and tempo,
-# and bandstop-filtered across 1.8 to 4.4 kHz so the 2 to 4 kHz warning lane stays clear.
-# No pitched voices: the only tone is the impact's short sub sweep (125 to 40 Hz, 0.34 s).
+# bandstop-filtered across 1.8 to 4.4 kHz so the 2 to 4 kHz warning lane stays clear,
+# and edge-faded after filtering so both endpoints are exact zero.
+# No pitched voices: the only tone is the impact's short sub sweep (125 to 40 Hz, 0.34 s)
+# and the unpitched warehouse kick pitch drop (170 to 48 Hz, 0.18 s).
 
 const RATE := 44100
 const RATE_F := 44100.0
 const PEAK_CAP := 0.58
+const SWELL_BASE_FRAMES := RATE
 
 # Relative levels ported from the audition prototype (dj_proto.reference.py fight_arc).
 const ROLL_GAIN := 0.28
@@ -17,6 +21,9 @@ const DOWNLIFTER_GAIN := 0.02
 const SWELL_GAIN := 0.07
 const IMPACT_CRASH_GAIN := 0.13
 const IMPACT_BOOM_GAIN := 0.26
+const VIKING_KICK_BUILD_GAIN := 0.24
+const VIKING_KICK_IMPACT_GAIN := 0.34
+const VIKING_CLICK_HP_HZ := 4800.0
 
 # Warning-lane notch: 4th-order Butterworth bandstop across 1800 to 4400 Hz.
 const NOTCH_LO_HZ := 1800.0
@@ -34,10 +41,15 @@ const BUILD_TIERS := [
 static var _cache := {}
 static var _notch_sos: Array = []
 static var _snare_bp_sos: Array = []
+static var _viking_click_hp_sos: Array = []
 
 
 static func clear_cache() -> void:
 	_cache.clear()
+
+
+static func cache_size() -> int:
+	return _cache.size()
 
 
 static func build(tier: int, bar_frames: int, beat_frames: int) -> PackedVector2Array:
@@ -57,8 +69,33 @@ static func build(tier: int, bar_frames: int, beat_frames: int) -> PackedVector2
 	for i in bar_frames:
 		var s := roll_mono[i] * ROLL_GAIN
 		out[i] += Vector2(s, s)
-	_edge_fade(out, 48, 64)
 	_apply_sos_stereo(out, _get_notch_sos())
+	_edge_fade(out, 48, 64)
+	_cap_peak(out)
+	_cache[key] = out
+	return out
+
+
+static func viking_build(tier: int, bar_frames: int, beat_frames: int) -> PackedVector2Array:
+	var t := clampi(tier, 0, BUILD_TIERS.size() - 1)
+	if bar_frames <= 0 or beat_frames <= 0:
+		return PackedVector2Array()
+	var key := "vbuild:%d:%d:%d" % [t, bar_frames, beat_frames]
+	if _cache.has(key):
+		return _cache[key]
+	var row: Dictionary = BUILD_TIERS[t]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 0x17240 + t * 97 + bar_frames
+	var p0 := float(row["p0"])
+	var p1 := float(row["p1"])
+	var out := _riser_noise(bar_frames, float(row["f0"]), float(row["f1"]), p0, p1, RISER_GAIN * 1.15, rng)
+	var roll_mono := _snare_roll(bar_frames, beat_frames, row["steps"], p0, p1, rng)
+	var kick_mono := _kick_roll(bar_frames, beat_frames, row["steps"], p0, p1, rng)
+	for i in bar_frames:
+		var s := roll_mono[i] * (ROLL_GAIN * 0.85) + kick_mono[i] * VIKING_KICK_BUILD_GAIN
+		out[i] += Vector2(s, s)
+	_apply_sos_stereo(out, _get_notch_sos())
+	_edge_fade(out, 48, 64)
 	_cap_peak(out)
 	_cache[key] = out
 	return out
@@ -80,35 +117,56 @@ static func downlifter(bar_frames: int) -> PackedVector2Array:
 		var atk := rise / maxf(rise, 0.001)
 		var amp := atk * pow(1.0 - u, 1.5) * DOWNLIFTER_GAIN
 		out[i] *= amp
-	_edge_fade(out, 64, 128)
 	_apply_sos_stereo(out, _get_notch_sos())
+	_edge_fade(out, 64, 128)
 	_cap_peak(out)
 	_cache[key] = out
 	return out
 
 
+# Slices and shapes a single cached HPF+notched stereo noise base so variable drop-wait lengths
+# never grow _cache unboundedly.
 static func swell(frames: int) -> PackedVector2Array:
 	if frames <= 0:
 		return PackedVector2Array()
-	var key := "swell:%d" % frames
+	var out := PackedVector2Array()
+	out.resize(frames)
+	var inv_n := 1.0 / float(frames)
+	if frames <= SWELL_BASE_FRAMES:
+		var base := _get_swell_noise()
+		var start := base.size() - frames
+		for i in frames:
+			var u := float(i) * inv_n
+			out[i] = base[start + i] * (u * u * u * SWELL_GAIN)
+	else:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 0x17220 + frames
+		for i in frames:
+			out[i] = Vector2(rng.randfn(0.0, 1.0), rng.randfn(0.0, 1.0))
+		_apply_sos_stereo(out, [_highpass_biquad(2500.0)])
+		for i in frames:
+			var u := float(i) * inv_n
+			out[i] *= u * u * u * SWELL_GAIN
+		_apply_sos_stereo(out, _get_notch_sos())
+	_edge_fade(out, 32, 32)
+	_cap_peak(out)
+	return out
+
+
+static func _get_swell_noise() -> PackedVector2Array:
+	var key := "swell_noise"
 	if _cache.has(key):
 		return _cache[key]
 	var rng := RandomNumberGenerator.new()
-	rng.seed = 0x17220 + frames
-	var out := PackedVector2Array()
-	out.resize(frames)
-	for i in frames:
-		out[i] = Vector2(rng.randfn(0.0, 1.0), rng.randfn(0.0, 1.0))
-	_apply_sos_stereo(out, [_highpass_biquad(2500.0)])
-	var inv_n := 1.0 / float(frames)
-	for i in frames:
-		var u := float(i) * inv_n
-		out[i] *= u * u * u * SWELL_GAIN
-	_edge_fade(out, 32, 32)
-	_apply_sos_stereo(out, _get_notch_sos())
-	_cap_peak(out)
-	_cache[key] = out
-	return out
+	rng.seed = 0x17220
+	var base := PackedVector2Array()
+	base.resize(SWELL_BASE_FRAMES)
+	for i in SWELL_BASE_FRAMES:
+		base[i] = Vector2(rng.randfn(0.0, 1.0), rng.randfn(0.0, 1.0))
+	_apply_sos_stereo(base, [_highpass_biquad(2500.0)])
+	_apply_sos_stereo(base, _get_notch_sos())
+	_cache[key] = base
+	return base
 
 
 static func impact() -> PackedVector2Array:
@@ -129,23 +187,58 @@ static func impact() -> PackedVector2Array:
 		if i < 32:
 			env *= float(i) / 31.0
 		out[i] *= env
-	_edge_fade(out, 0, 256)
 	# Short sub sweep: 125 Hz down to 40 Hz over 0.34 s (<= 0.35 s, SOUND-BIBLE rule 2).
-	var n := int(0.34 * RATE)
+	_add_impact_boom(out, IMPACT_BOOM_GAIN)
+	_apply_sos_stereo(out, _get_notch_sos())
+	_edge_fade(out, 16, 256)
+	_cap_peak(out)
+	_cache[key] = out
+	return out
+
+
+static func viking_impact() -> PackedVector2Array:
+	var key := "vimpact"
+	if _cache.has(key):
+		return _cache[key]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 0x17250
+	var m := int(2.2 * RATE)
+	var out := PackedVector2Array()
+	out.resize(m)
+	for i in m:
+		out[i] = Vector2(rng.randfn(0.0, 1.0), rng.randfn(0.0, 1.0))
+	_apply_sos_stereo(out, [_highpass_biquad(3600.0)])
+	for i in m:
+		var tc := float(i) / RATE_F
+		var env := exp(-tc / 0.6) * (IMPACT_CRASH_GAIN * 1.05)
+		if i < 32:
+			env *= float(i) / 31.0
+		out[i] *= env
+	_add_impact_boom(out, IMPACT_BOOM_GAIN * 1.05)
+	var kick := _warehouse_kick(1.0, rng)
+	var take := mini(kick.size(), m)
+	for i in take:
+		var k := kick[i] * VIKING_KICK_IMPACT_GAIN
+		out[i] += Vector2(k, k)
+	_apply_sos_stereo(out, _get_notch_sos())
+	_edge_fade(out, 16, 256)
+	_cap_peak(out)
+	_cache[key] = out
+	return out
+
+
+static func _add_impact_boom(out: PackedVector2Array, gain: float) -> void:
+	var n := mini(int(0.34 * RATE), out.size())
 	var phase := 0.0
 	var fade_start := n - 256
 	for i in n:
 		var t := float(i) / RATE_F
 		var freq := 40.0 + 85.0 * exp(-t / 0.035)
 		phase += TAU * freq / RATE_F
-		var b := sin(phase) * exp(-t / 0.11) * IMPACT_BOOM_GAIN
+		var b := sin(phase) * exp(-t / 0.11) * gain
 		if i >= fade_start:
 			b *= float(n - 1 - i) / 255.0
 		out[i] += Vector2(b, b)
-	_apply_sos_stereo(out, _get_notch_sos())
-	_cap_peak(out)
-	_cache[key] = out
-	return out
 
 
 # --- Synthesis helpers ----------------------------------------------------------------
@@ -252,15 +345,76 @@ static func _sweep_noise(length: int, f0: float, f1: float, rng: RandomNumberGen
 	return out
 
 
+static func _warehouse_kick(vel: float, rng: RandomNumberGenerator) -> PackedFloat32Array:
+	var n := int(0.18 * RATE)
+	var click_n := int(0.024 * RATE)
+	var click := PackedFloat32Array()
+	click.resize(click_n)
+	for i in click_n:
+		click[i] = rng.randfn(0.0, 1.0)
+	_apply_sos_mono(click, _get_viking_click_hp_sos())
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var phase := 0.0
+	var fade_start := n - 64
+	for i in n:
+		var t := float(i) / RATE_F
+		var freq := 48.0 + 122.0 * exp(-t / 0.014)
+		phase += TAU * freq / RATE_F
+		var body := tanh(sin(phase) * exp(-t / 0.062) * 1.45)
+		var beater := 0.0
+		if i < click_n:
+			beater = click[i] * exp(-t / 0.0045) * 0.42
+		var x := 0.85 * body + beater
+		if i < 16:
+			x *= float(i) / 15.0
+		elif i >= fade_start:
+			x *= float(n - 1 - i) / 63.0
+		out[i] = x * vel
+	return out
+
+
+static func _kick_roll(length: int, beat: int, steps: Array, p0: float, p1: float, rng: RandomNumberGenerator) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(length)
+	var total_beats := 0.0
+	for s in steps:
+		total_beats += float(s[0])
+	var total := maxf(total_beats * float(beat), 1.0)
+	var pos := 0.0
+	for s in steps:
+		var beats := float(s[0])
+		var div := float(s[1])
+		var hits := int(round(beats * div))
+		for h in hits:
+			var at := int(pos + float(h) * float(beat) / div)
+			if at >= length:
+				continue
+			var u := clampf(float(at) / total, 0.0, 1.0)
+			var prog := lerpf(p0, p1, u)
+			var hit := _warehouse_kick(0.45 + 0.55 * prog, rng)
+			var take := mini(hit.size(), length - at)
+			for i in take:
+				out[at + i] += hit[i]
+		pos += beats * float(beat)
+	return out
+
+
 static func _edge_fade(buf: PackedVector2Array, fade_in: int, fade_out: int) -> void:
 	var n := buf.size()
+	if n == 0:
+		return
 	var fi := mini(fade_in, n)
-	if fi > 1:
+	if fi == 1:
+		buf[0] = Vector2.ZERO
+	elif fi > 1:
 		var inv := 1.0 / float(fi - 1)
 		for i in fi:
 			buf[i] *= float(i) * inv
 	var fo := mini(fade_out, n)
-	if fo > 1:
+	if fo == 1:
+		buf[n - 1] = Vector2.ZERO
+	elif fo > 1:
 		var inv := 1.0 / float(fo - 1)
 		var start := n - fo
 		for i in fo:
@@ -290,6 +444,12 @@ static func _get_snare_bp_sos() -> Array:
 	if _snare_bp_sos.is_empty():
 		_snare_bp_sos = _butter_band_sos(2, 1400.0, 9000.0, false)
 	return _snare_bp_sos
+
+
+static func _get_viking_click_hp_sos() -> Array:
+	if _viking_click_hp_sos.is_empty():
+		_viking_click_hp_sos = [_highpass_biquad(VIKING_CLICK_HP_HZ)]
+	return _viking_click_hp_sos
 
 
 static func _highpass_biquad(hz: float) -> PackedFloat64Array:

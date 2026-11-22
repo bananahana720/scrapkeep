@@ -45,8 +45,8 @@ So the score is one set, and the player is the room the DJ is reading. Every mov
 | Mix in key | Each world has one key (D, E, G) and each pack declares it | Declared; not checked when a pack is swapped |
 | Answer the phrase: the lead steps back and June plays a bar | The room's mood and colour, on each phrase's last bar | The set director, behind `--set-director=on` |
 | Swap the bass out the bar before a peak | The room rising toward the peak; a set piece announced to land next bar | The set director, behind `--set-director=on` |
-| Pump the chords against the kick | The Warden fight's build, tight build and drop | Behind `--deck=festival` |
-| Ride a build into the drop | The Warden's guard tightening toward breaking, the held breath on a stagger, and the chunk-shattering hit | Behind `--deck=festival` |
+| Pump the chords against the kick | The Warden fight's build, tight build and drop | Behind `--deck=festival` or `--deck=viking` |
+| Ride a build into the drop | The Warden's guard tightening toward breaking, the held breath on a stagger, and the chunk-shattering hit | Behind `--deck=festival` or `--deck=viking` |
 | Tape stop, switch-hit | A kill chain, the last phase | After the world 1 sitting |
 | Cue the next record before the room needs it | The conductor's warning of what is coming | After the world 1 sitting |
 
@@ -133,12 +133,13 @@ He gave the threads their own judgement on mechanics and tuning for this build-o
 - The director stays out of the fight's sections: it adds June's answer while the guard holds, never in the breath, the drop or the break, and never trims a directed section.
 - The combat feedback sounds (rule 7) sit at about the loudness they had, the shot a little under (it plays ten times a second): trims weapon_zap -9, hit_thwack -1, crit_ping -5, kill_pop -5, kill_chain_tier 0, ui_tick -8, and the on-beat clap about at a ranged hit's level, 8 dB under where the sax stab sat. Over the recorded world 1 fight these cut the effects' cover of the melody from a median 6.8 dB to 2.0 dB, and every cue still leads its best third of an octave over the band; over Brindle's anthem the chain's ratchet sits 3 dB under its own kill, so it is heard as part of the kill. The PC take of a world 1 run (13 November, job P) found the hit buried under its own shot, so the shot's crack sits at 2.5 to 5 kHz and the hit's tick above 5 kHz, and the hit and the chain went up 2 and 5 dB; in a rebuild of that run the hit leads its best band by +2.1 dB and the shot by +1.8. A chain link that lands with a special's blast stays under it, as a tick under its own event's big sound.
 - Kest's kick reads a tenth of a decibel over the peak line after its trim. It is left alone: the limiter holds it, and lowering it would change how loud it is.
-- The festival deck moves sit behind `--deck=festival`, off by default until Andrew has heard them on and off, and run only on sectioned stage packs while the music arbiter allows the DJ.
-- Pump depths by section (`deck_moves.gd` `PUMP`): 0.45 in the Warden build, 0.60 in the tight build, 0.55 in the drop, and 0 everywhere else; only the bass and chords pump, never the drums.
+- The deck moves sit behind `--deck=festival` and `--deck=viking`, off by default until Andrew has heard them on and off, and run only on sectioned stage packs while the music arbiter allows the DJ.
+- Pump depths by section (`deck_moves.gd` `PUMP` / `PUMP_VIKING`): festival pumps 0.45 in the Warden build, 0.60 in the tight build and 0.55 in the drop; viking pumps deeper at 0.58, 0.72 and 0.68; every other section is 0, and only the bass and chords pump, never the drums.
 - Pump shape across each beat (`deck_moves.gd` `PUMP_SHAPE`): drops over the first 220 frames (5 ms) to avoid clicks, holds full depth to 0.07 of the beat, and recovers piecewise linearly through 0.20, 0.345 and 0.49 to full level by 0.62 of the beat; depth changes ramp over one beat.
 - Warden tight-build roll tiers by posture (`deck_moves.gd` `BUILD_TIERS`): quarter notes from 75, eighth notes from 85, and sixteenths turning to thirty-seconds on the bar's last beat from 95, booked one bar at a time half a bar before each bar line.
 - Festival deck one-shot levels and lengths (`deck_fx.gd`): snare roll at 0.28 and rising noise at 0.08 per build bar, one-bar falling breath noise at 0.02 on entering open, up-to-one-beat rising noise swell at 0.07 ending on the drop sample, and a drop impact combining a 0.34 s 125-to-40 Hz sub sweep at 0.26 with a 2.2 s crash at 0.13.
-- Every festival deck one-shot is notched with a fourth-order bandstop from 1.8 to 4.4 kHz so the 2 to 4 kHz warning lane stays at least 12 dB under its own loudest band, and capped under 0.58 peak.
+- Viking deck preset (`--deck=viking`, `deck_fx.gd`): layers a 0.18 s warehouse kick (170-to-48 Hz body with a 4.8 kHz high-pass beater click) into each tight-build bar at 0.24 alongside the snare roll (0.85x) and rising noise (1.15x), and into the drop impact at 0.34 alongside the sub sweep and 3.6 kHz high-pass crash (1.05x).
+- Every deck one-shot is notched with a fourth-order bandstop from 1.8 to 4.4 kHz so the 2 to 4 kHz warning lane stays at least 12 dB under its own loudest band, edge-faded to exact zero after filtering, and capped under 0.58 peak.
 
 ## Tone: a game that loves having fun
 

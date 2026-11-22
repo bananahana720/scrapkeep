@@ -11,7 +11,7 @@ const AceStub := preload("res://tests/support/ace_stub.gd")
 #
 # Usage:
 #   godot --headless --path sketches/core-loop --script res://tools/deck_bounce.gd -- \
-#     --deck=off|festival [--stems=<sidecar dir>] --out=<wav path>
+#     --deck=off|festival|viking [--stems=<sidecar dir>] --out=<wav path>
 
 const BLOCK := 512
 
@@ -19,8 +19,8 @@ const BLOCK := 512
 func _initialize() -> void:
 	var args := _parse_args()
 	var deck_mode := String(args.get("deck", "off"))
-	if not deck_mode in ["off", "festival"]:
-		printerr("deck_bounce: --deck must be off or festival, got %s" % deck_mode)
+	if not deck_mode in ["off", "festival", "viking"]:
+		printerr("deck_bounce: --deck must be off, festival or viking, got %s" % deck_mode)
 		quit(2)
 		return
 	var out_path := String(args.get("out", ""))
@@ -43,14 +43,13 @@ func _initialize() -> void:
 		quit(1)
 		return
 
-	var deck_on := deck_mode == "festival"
 	var deck := DeckMoves.new()
-	var room := {"on": deck_on, "allow": true, "posture": 30.0, "staggered": false}
+	var room := {"style": deck_mode, "allow": true, "posture": 30.0, "staggered": false}
 
 	# Preroll through the 1-bar pivot so recording begins sample-exact on build bar 0.
 	seq.start_level(0, true)
-	if deck_on:
-		seq.set_pump(DeckMoves.PUMP)
+	if deck_mode != "off":
+		seq.set_pump(DeckMoves.pump_for(deck_mode))
 	while seq.section != "build":
 		if not seq.pending.is_empty() and String(seq.pending["section"]) == "build":
 			var rem: int = int(seq.pending["at"]) - seq.clock
@@ -103,7 +102,7 @@ func _initialize() -> void:
 			room["staggered"] = false
 			drop_booked_at = seq.follow_guard(0.0, false, true)
 			deck.tend(seq, room)
-			deck.on_drop(seq, drop_booked_at)
+			deck.on_drop(seq, drop_booked_at, deck_mode)
 		deck.tend(seq, room)
 
 		var next_ev := t0 + total_frames

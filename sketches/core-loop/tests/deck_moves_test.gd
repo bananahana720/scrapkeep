@@ -73,6 +73,7 @@ func _initialize() -> void:
 	_test_pump_zero_sections_and_flat()
 	_test_build_breath_drop_shots()
 	_test_shot_cleanup_and_arbiter()
+	_test_viking_preset()
 	_test_deck_fx_spectrum_and_peak()
 	MusicRows.stem_dir = _prev_stem_dir
 	quit(_t.verdict())
@@ -230,13 +231,15 @@ func _enter_warden_section(seq: AceSequencer, sec_name: String) -> void:
 func _test_pump_zero_sections_and_flat() -> void:
 	var seq := AceSequencer.new(_manifest())
 	seq.set_pump(DeckMoves.PUMP)
+	_t.check("pump_active true when pump set on sectioned pack", seq.pump_active())
 	for sec in ["pivot", "open", "break", "return", "home", "calm", "travel", "cadence"]:
-		_t.eq("pump depth is 0 on %s bass" % sec, seq._pump_depth_for("bass", sec), 0.0)
-		_t.eq("pump depth is 0 on %s other" % sec, seq._pump_depth_for("other", sec), 0.0)
+		_t.eq("pump depth is 0 on %s bass" % sec, seq.pump_depth_for("bass", sec), 0.0)
+		_t.eq("pump depth is 0 on %s other" % sec, seq.pump_depth_for("other", sec), 0.0)
 	seq.flat = true
+	_t.check("pump_active false on flat pack", not seq.pump_active())
 	for sec in ["build", "telegraph", "drop", "main"]:
-		_t.eq("pump depth is 0 on flat pack %s" % sec, seq._pump_depth_for("bass", sec), 0.0)
-		_t.eq("pump depth is 0 on flat pack %s other" % sec, seq._pump_depth_for("other", sec), 0.0)
+		_t.eq("pump depth is 0 on flat pack %s" % sec, seq.pump_depth_for("bass", sec), 0.0)
+		_t.eq("pump depth is 0 on flat pack %s other" % sec, seq.pump_depth_for("other", sec), 0.0)
 
 
 func _test_build_breath_drop_shots() -> void:
@@ -307,33 +310,52 @@ func _test_build_breath_drop_shots() -> void:
 	_t.check("impact starts sample-exact on drop sample", has_impact)
 	_t.check("swell ends sample-exact on drop sample", has_swell)
 
+	# Regression #1: calling tend() between on_drop() and the drop commit must NOT re-book TAG_BREATH.
+	_t.eq("still in open before drop commits", seq.section, "open")
+	_t.eq("drop is pending", String(seq.pending.get("section", "")), "drop")
+	seq.render(AceSequencer.GAP_RAMP + 4)
+	deck.tend(seq, {"style": "festival", "allow": true, "posture": 0.0, "staggered": false})
+	_t.eq("tend between on_drop and drop commit never re-fires TAG_BREATH",
+		seq.shots.filter(func(s): return s.tag == DeckMoves.TAG_BREATH).size(), 0)
+
+	# Regression #3: back-to-back on_drop() cancels prior TAG_DROP shots (no orphans).
+	var drop_at_2 := drop_at + 1024
+	deck.on_drop(seq, drop_at_2)
+	var after_second_drop := seq.shots.filter(func(s): return s.tag == DeckMoves.TAG_DROP and s.env_target > 0.0)
+	_t.eq("back-to-back on_drop leaves only the new swell+impact active", after_second_drop.size(), 2)
+	seq.render(AceSequencer.GAP_RAMP + 4)
+	var live_drop_shots := seq.shots.filter(func(s): return s.tag == DeckMoves.TAG_DROP)
+	_t.eq("prior TAG_DROP shots cleared after GAP_RAMP", live_drop_shots.size(), 2)
+	_t.check("surviving impact belongs to second on_drop",
+		live_drop_shots.any(func(s): return s.at == drop_at_2 and s.pcm == DeckFx.impact()))
+
 
 func _test_shot_cleanup_and_arbiter() -> void:
-	# stop() and invalidate_trims() clear both future and live shots.
+	# Regression #2: invalidate_trims() must NOT cancel deck shots (set-director preemption coexists with deck).
 	var seq := AceSequencer.new(_manifest())
 	_enter_warden_section(seq, "build")
 	var pcm := DeckFx.impact()
-	seq.shot_at(seq.clock - 10, pcm, "live", 1.0)
-	seq.shot_at(seq.clock + 2000, pcm, "future", 1.0)
+	seq.shot_at(seq.clock - 10, pcm, DeckMoves.TAG_BUILD, 1.0)
+	seq.shot_at(seq.clock + 2000, pcm, DeckMoves.TAG_DROP, 1.0)
 	seq.invalidate_trims(AceSequencer.GAP_RAMP)
-	_t.eq("invalidate_trims drops unstarted shot immediately", seq.shots.filter(func(s): return s.tag == "future").size(), 0)
+	_t.eq("invalidate_trims preserves future deck shots", seq.shots.filter(func(s): return s.tag == DeckMoves.TAG_DROP).size(), 1)
 	seq.render(AceSequencer.GAP_RAMP + 4)
-	_t.eq("invalidate_trims fades out live shot", seq.shots.size(), 0)
+	_t.eq("invalidate_trims preserves live deck shots", seq.shots.filter(func(s): return s.tag == DeckMoves.TAG_BUILD).size(), 1)
 
-	seq.shot_at(seq.clock - 10, pcm, "live", 1.0)
-	seq.shot_at(seq.clock + 2000, pcm, "future", 1.0)
+	# stop() clears both future and live shots.
 	seq.stop(AceSequencer.STOP_RAMP)
-	_t.eq("stop drops unstarted shot immediately", seq.shots.filter(func(s): return s.tag == "future").size(), 0)
+	_t.eq("stop drops unstarted shot immediately", seq.shots.filter(func(s): return s.tag == DeckMoves.TAG_DROP).size(), 0)
 	seq.render(AceSequencer.STOP_RAMP + 4)
 	_t.eq("stop fades out live shot", seq.shots.size(), 0)
 
-	# Full Audio + MusicArbiter integration: arbiter disallow, pack change, death.
+	# Full Audio + MusicArbiter + SetDirector integration: combined preemption, radio pin, pack change, death.
 	var events := GameEvents.new()
 	var flow := FakeFlow.new()
 	var run := FakeRun.new()
 	var tuning := Tuning.new()
 	tuning.set_option(Tuning.MUSIC_KEY, "ace")
 	tuning.set_option(Tuning.WARDEN_FORM_KEY, "form")
+	tuning.set_option(Tuning.SET_DIRECTOR_KEY, "on")
 	tuning.set_option(Tuning.DECK_KEY, "festival")
 	var ctx := FakeCtx.new()
 	ctx.events = events
@@ -354,18 +376,33 @@ func _test_shot_cleanup_and_arbiter() -> void:
 	events.warden_engaged.emit(1)
 	_pump(audio, audio.engine.bar_len() * 2)
 	audio._tend_set()
-	_t.check("arbiter allows deck pump in warden fight", not audio.ace._pump_depths.is_empty())
-	audio.ace.shot_at(audio.ace.clock + 4000, pcm, DeckMoves.TAG_BUILD, 1.0)
+	_t.check("arbiter allows deck pump in warden fight", audio.ace.pump_active())
 
-	# Radio pin revokes allow_dj and swaps pack -> pump off, no shots survive pack change.
-	audio.radio_play("roam-1-1", "roam-1-1", true)
+	# Regression #2 combined: --set-director=on + --deck=festival; spoiling June's answer
+	# calls ace.invalidate_trims() without killing active deck shots.
+	audio._follow_warden_form(90.0, false, false)
+	_pump(audio, audio.engine.bar_len())
+	audio.ace.shot_at(audio.ace.clock + 4000, pcm, DeckMoves.TAG_BUILD, 1.0)
+	audio._set_answer = "set_answer_test"
+	audio._set_answer_at = audio.ace.clock
+	audio._focus_until = audio.clock + 2.0
+	var epoch_before := audio.ace.trim_epoch
 	audio._tend_set()
+	_t.check("set-director preemption invalidated trims", audio.ace.trim_epoch > epoch_before and audio._set_answer == "")
+	_t.eq("set-director preemption preserved deck shots",
+		audio.ace.shots.filter(func(s): return s.tag == DeckMoves.TAG_BUILD).size(), 1)
+	audio._focus_until = -1.0
+
+	# Regression #6: radio_play revokes pump immediately (before _tend_set) and clears shots on pack change.
+	audio.radio_play("roam-1-1", "roam-1-1", true)
+	_t.check("radio_play clears deck pump immediately with no transient window", not audio.ace.pump_active())
 	_t.eq("pack change clears shots", audio.ace.shots.size(), 0)
-	_t.eq("radio pin turns deck pump off", audio.ace._pump_depths, {})
+	audio._tend_set()
+	_t.check("radio pin keeps deck pump off", not audio.ace.pump_active())
 	audio.radio_release()
 	_pump(audio, audio.engine.bar_len() * 2)
 	audio._tend_set()
-	_t.check("unpin restores deck pump in warden fight", not audio.ace._pump_depths.is_empty())
+	_t.check("unpin restores deck pump in warden fight", audio.ace.pump_active())
 
 	# Death clears both pump and shots immediately.
 	audio.ace.shot_at(audio.ace.clock + 4000, pcm, DeckMoves.TAG_BUILD, 1.0)
@@ -373,13 +410,68 @@ func _test_shot_cleanup_and_arbiter() -> void:
 	events.player_died.emit()
 	audio._flush_flow()
 	audio._tend_set()
-	_t.eq("death clears deck pump", audio.ace._pump_depths, {})
+	_t.check("death clears deck pump", not audio.ace.pump_active())
 	_t.eq("death drops unstarted shots", audio.ace.shots.filter(func(s): return s.tag == DeckMoves.TAG_BUILD).size(), 0)
 	audio.ace.render(AceSequencer.GAP_RAMP + 4)
 	_t.eq("death fades out live shots", audio.ace.shots.size(), 0)
 
 	audio.free()
 	events.free()
+
+
+func _test_viking_preset() -> void:
+	# Verify --deck=viking pump depths (0.58 / 0.72 / 0.68), drums untouched, never raises level.
+	for sec_name in ["build", "telegraph", "drop"]:
+		var depth: float = DeckMoves.PUMP_VIKING[sec_name]
+		for stem in ["drums", "bass", "other"]:
+			var ref := AceSequencer.new(_manifest())
+			var pumped := AceSequencer.new(_manifest())
+			ref.solo = [stem]
+			pumped.solo = [stem]
+			pumped.set_pump(DeckMoves.pump_for("viking"))
+			_enter_warden_section(ref, sec_name)
+			_enter_warden_section(pumped, sec_name)
+			var beat := ref.grid_beat
+			var to_beat := ref.next_beat() - ref.clock
+			if to_beat > 0:
+				ref.render(to_beat)
+				pumped.render(to_beat)
+			var buf_ref := ref.render(beat * 2)
+			var buf_p := pumped.render(beat * 2)
+			if stem == "drums":
+				_t.check("viking %s drums untouched by pump" % sec_name, buf_ref == buf_p)
+				continue
+			var exceeded := 0
+			for i in buf_ref.size():
+				if absf(buf_p[i].x) > absf(buf_ref[i].x) + 1e-5 or absf(buf_p[i].y) > absf(buf_ref[i].y) + 1e-5:
+					exceeded += 1
+			_t.eq("viking %s %s pump never raises level" % [sec_name, stem], exceeded, 0)
+			var got_dip := _measure_gain_near(buf_ref, buf_p, beat + DeckMoves.PUMP_ATTACK_FRAMES)
+			_t.check("viking %s %s dip=%.3f want=%.3f" % [sec_name, stem, got_dip, 1.0 - depth],
+				absf(got_dip - (1.0 - depth)) <= 0.015, "got=%.4f want=%.4f" % [got_dip, 1.0 - depth])
+			var got_rec := _measure_gain_near(buf_ref, buf_p, beat + int(round(0.62 * beat)))
+			_t.check("viking %s %s recover=%.3f want=1.0" % [sec_name, stem, got_rec],
+				absf(got_rec - 1.0) <= 0.015, "got=%.4f" % got_rec)
+
+	# Verify DeckMoves with style="viking" books viking_build and viking_impact.
+	var seq := AceSequencer.new(_manifest())
+	var deck := DeckMoves.new()
+	_enter_warden_section(seq, "telegraph")
+	var to_win := (seq.next_bar() - seq.grid_bar / 2 + 10) - seq.clock
+	if to_win > 0:
+		seq.render(to_win)
+	deck.tend(seq, {"style": "viking", "allow": true, "posture": 90.0, "staggered": false})
+	_t.eq("viking telegraph books one build bar", seq.shots.size(), 1)
+	_t.check("viking telegraph uses viking_build tier 1",
+		seq.shots[0].pcm == DeckFx.viking_build(1, seq.grid_bar, seq.grid_beat))
+	seq.follow_guard(100.0, true, false)
+	_advance_to_section(seq, "open")
+	deck.tend(seq, {"style": "viking", "allow": true, "posture": 100.0, "staggered": true})
+	var drop_at := seq.follow_guard(0.0, false, true)
+	deck.on_drop(seq, drop_at, "viking")
+	var drop_shots := seq.shots.filter(func(s): return s.tag == DeckMoves.TAG_DROP)
+	_t.check("viking drop books viking_impact sample-exact on drop",
+		drop_shots.any(func(s): return s.at == drop_at and s.pcm == DeckFx.viking_impact()))
 
 
 func _pump(audio: Audio, frames: int) -> void:
@@ -396,15 +488,31 @@ func _test_deck_fx_spectrum_and_peak() -> void:
 		["build_tier0", DeckFx.build(0, bar, beat)],
 		["build_tier1", DeckFx.build(1, bar, beat)],
 		["build_tier2", DeckFx.build(2, bar, beat)],
+		["viking_build_tier0", DeckFx.viking_build(0, bar, beat)],
+		["viking_build_tier1", DeckFx.viking_build(1, bar, beat)],
+		["viking_build_tier2", DeckFx.viking_build(2, bar, beat)],
 		["downlifter", DeckFx.downlifter(bar)],
-		["swell", DeckFx.swell(beat)],
+		["swell_beat", DeckFx.swell(beat)],
+		["swell_short", DeckFx.swell(beat / 3)],
 		["impact", DeckFx.impact()],
+		["viking_impact", DeckFx.viking_impact()],
 	]
 	# Determinism check: calling again after clearing cache yields identical PCM.
 	var impact_a := DeckFx.impact()
+	var vimpact_a := DeckFx.viking_impact()
 	DeckFx.clear_cache()
 	var impact_b := DeckFx.impact()
-	_t.check("deck_fx is deterministic across cache resets", impact_a == impact_b)
+	var vimpact_b := DeckFx.viking_impact()
+	_t.check("deck_fx festival impact is deterministic across cache resets", impact_a == impact_b)
+	_t.check("deck_fx viking impact is deterministic across cache resets", vimpact_a == vimpact_b)
+
+	# Bounded swell cache check: variable swell lengths reuse one base buffer.
+	DeckFx.clear_cache()
+	var _s0 := DeckFx.swell(beat)
+	var after_one := DeckFx.cache_size()
+	for extra_len in [1000, 2345, 5120, 7777, 11111, 15000, 19999, 20500]:
+		var _sv := DeckFx.swell(extra_len)
+	_t.eq("variable swell lengths do not grow DeckFx cache", DeckFx.cache_size(), after_one)
 
 	for row in cases:
 		var label: String = row[0]
@@ -414,6 +522,9 @@ func _test_deck_fx_spectrum_and_peak() -> void:
 			peak = maxf(peak, maxf(absf(v.x), absf(v.y)))
 		_t.check("%s non-empty and peak <= 0.6 (%.3f)" % [label, peak], buf.size() > 0 and peak > 0.001 and peak <= 0.6,
 			"size=%d peak=%.4f" % [buf.size(), peak])
+		_t.check("%s exact-zero endpoints after filtering" % label,
+			buf[0] == Vector2.ZERO and buf[buf.size() - 1] == Vector2.ZERO,
+			"first=%s last=%s" % [buf[0], buf[buf.size() - 1]])
 		var margin_db := _warning_lane_margin_db(buf)
 		_t.check("%s 2-4 kHz lane at least 12 dB under loudest band (%.1f dB)" % [label, margin_db],
 			margin_db <= -12.0, "margin=%.2f dB" % margin_db)
