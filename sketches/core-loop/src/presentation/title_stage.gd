@@ -23,7 +23,8 @@ const LOOK := Vector3(0.0, 2.6, 0.0)
 const CAMERA_AT := Vector3(0.6, 5.1, 12.8)
 const COMPANION_AT := Vector3(5.1, 1.7, 1.0)
 # Every ANTIC_PERIOD seconds one deck pilot, in turn, climbs out and does their bit
-# (pilot_antics.gd), starting ANTIC_DELAY into the slot so the first frames stay still.
+# (pilot_antics.gd), starting ANTIC_DELAY into the slot so the first frames stay still. The poster's hero at the bow
+# holds the pose: their turn is a still beat, so the picture the menu sits on only moves behind it.
 const ANTIC_PERIOD := 11.0
 const ANTIC_DELAY := 4.0
 # Look closer: drag with the right mouse button (or the right stick) to orbit a deck pilot,
@@ -72,9 +73,70 @@ var _stick := Vector2.ZERO
 # over to the dam: 0 at rest, 1 at full rush. show_flow puts it back on every state but pilot select.
 var push := 0.0
 var _push_tween: Tween
+var poster := POSTER
+# The pilot the poster casts at the bow (cast_hero), by class id.
+var hero_id := ""
+var _hero: Node3D
+var _disc: Sprite3D
+var _disc_ink: ShaderMaterial
 const PUSH_RISE := Vector3(-0.6, -1.5, -7.6)
 const PUSH_LOOK := Vector3(0.0, -1.4, 0.0)
 const PUSH_FOV := 24.0
+
+# The gig poster (W46-C1, ruling ei): the pilot the camp gate would launch (game.gate_pilot) rides their ball at the
+# barge's bow over the Spillway's skyline, the rest of the crew behind them, under a halftone sun that stands behind
+# the wordmark and thumps on the music's bar (thump()). Three framings were judged on one sheet (ruling cq); POSTER is
+# the one picked, and --title-poster=<id> shows another. A row: the camera (at, look, fov), the hero's spot, yaw and
+# scale, the crew's spots, deck rows moved from DECK's place (name: [at, yaw, scale]), the sun's middle and diameter
+# as shares of the screen, and the sky's ink. The picture itself stays unfiltered: a screen-space halftone over it
+# turned the camera's slow drift into a crawl of dots, and the menu would never hold still for a press to read.
+const POSTERS := {
+	"bow": {"at": Vector3(2.4, 1.7, 10.6), "look": Vector3(0.1, 3.0, -2.0), "fov": 42.0,
+		"hero": Vector3(0.4, 1.35, 3.6), "hero_yaw": -0.5, "hero_scale": 1.3,
+		"crew": [Vector3(-3.6, 1.04, -1.6), Vector3(3.4, 1.04, -2.2), Vector3(-0.6, 1.04, -3.2)],
+		"deck": {}, "sun": Vector2(0.5, 0.15), "sun_size": 0.62, "sky": Color("c9552c")},
+	"crest": {"at": Vector3(-6.4, 2.2, 8.6), "look": Vector3(1.8, 3.4, -3.0), "fov": 44.0,
+		"hero": Vector3(-2.2, 1.3, 2.2), "hero_yaw": 0.6, "hero_scale": 1.25,
+		"crew": [Vector3(1.6, 1.04, -1.0), Vector3(4.2, 1.04, 0.6), Vector3(3.0, 1.04, -3.0)],
+		"deck": {"Brindle": [Vector3(26.0, 14.0, -70.0), 2.9, Vector3(2.2, 2.2, 2.2)]},
+		"sun": Vector2(0.62, 0.16), "sun_size": 0.7, "sky": Color("b2402f")},
+	"profile": {"at": Vector3(12.4, 2.0, 1.6), "look": Vector3(-2.0, 3.0, 1.2), "fov": 40.0,
+		"hero": Vector3(3.6, 1.3, 1.8), "hero_yaw": 1.2, "hero_scale": 1.3,
+		"crew": [Vector3(-1.4, 1.04, -1.8), Vector3(-3.6, 1.04, 0.8), Vector3(-0.6, 1.04, 2.6)],
+		"deck": {"Brindle": [Vector3(-60.0, 18.0, -30.0), 1.2, Vector3(2.0, 2.0, 2.0)]},
+		"sun": Vector2(0.36, 0.14), "sun_size": 0.58, "sky": Color("d89048")},
+}
+const POSTER := "bow"
+# The Spillway's skyline, far below and behind the barge: the dam the opening's postcard shows (title_intro_player.gd
+# WORLDS), its crest just over the barge's rim; the facade has one face, toward the deck. Rows as DECK's.
+const SKYLINE := [
+	["SpillwayDam", "res://assets/models/world_one/dam.glb", Vector3(0.0, -262.0, -420.0), 0.0, Vector3(2.4, 2.4, 2.4)],
+]
+# The skyline prints as one flat ink, a silhouette a shade under the sky, as a screen print lays its back plate.
+const SKYLINE_INK := Color("8e3a2c")
+# The sun is a sprite in the stage's own world, so the skyline stands in front of it and the deck lights never touch
+# it: SUN_DEPTH metres off the camera, on a halftone screen in the sun ink.
+const SUN_DEPTH := 420.0
+const SUN_INK := Color("ffe2a8")
+const SUN_SHADER := """shader_type spatial;
+render_mode unshaded, cull_disabled, fog_disabled, depth_draw_never, shadows_disabled;
+uniform vec4 ink : source_color;
+uniform float dots = 30.0;
+uniform float swell = 0.0;
+void fragment() {
+	vec2 p = UV * 2.0 - 1.0;
+	float r = length(p);
+	vec2 cell = fract(UV * dots) - 0.5;
+	float fill = clamp(1.0 - smoothstep(0.38, 1.0, r) + swell * 0.22, 0.0, 1.0);
+	float radius = 0.71 * sqrt(fill);
+	float aa = 0.06;
+	float d = 1.0 - smoothstep(radius - aa, radius + aa, length(cell));
+	ALBEDO = ink.rgb;
+	ALPHA = d * step(r, 1.0);
+}
+"""
+# The thump on each bar of the music's grid: up at once, back over THUMP_DECAY seconds (thump()).
+const THUMP_DECAY := 0.11
 
 
 func setup(ctx) -> void:
@@ -85,6 +147,9 @@ func setup(ctx) -> void:
 	intro_autoplay = ctx.root != null and not bool(ctx.root.get("bot_driven")) and not bool(ctx.root.get("test_mode")) \
 		and not AppShell.headless() and not "--no-intro" in OS.get_cmdline_user_args()
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--title-poster=") and POSTERS.has(arg.get_slice("=", 1)):
+			poster = arg.get_slice("=", 1)
 	viewport = SubViewport.new()
 	viewport.name = "TitleViewport"
 	viewport.own_world_3d = true
@@ -98,12 +163,15 @@ func setup(ctx) -> void:
 	_build_deck()
 	_build_heroes()
 	_build_companion()
+	_build_skyline()
 	camera = Camera3D.new()
 	camera.name = "TitleCamera"
 	camera.fov = 48.0
 	camera.environment = _environment
 	stage.add_child(camera)
 	camera.current = true
+	_build_sun()
+	cast_hero()
 	_frame()
 	_layer = CanvasLayer.new()
 	_layer.name = "TitleBackdrop"
@@ -134,6 +202,8 @@ func show_flow(state: String) -> void:
 	# pilot select reached again from the summary or a death opens at rest, not mid-rush.
 	if state != "class_select":
 		_set_push(0.0)
+	if state == "title":
+		cast_hero()
 	active = state in ["title", "class_select"] and not camp_walk
 	_layer.visible = active
 	stage.visible = active
@@ -228,6 +298,8 @@ func _sync_dressing() -> void:
 	_sun.light_energy = WorldLook.TITLE.sun_energy
 	_sun.shadow_enabled = not low
 	_fill.light_energy = WorldLook.TITLE.fill
+	var row: Dictionary = POSTERS[poster]
+	_environment.background_color = row.sky
 	_resize()
 	if intro_playing():
 		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -258,18 +330,50 @@ func _process(delta: float) -> void:
 	_step_antics()
 	_step_look(delta)
 	_frame()
+	if _disc_ink != null:
+		_disc_ink.set_shader_parameter("swell", thump())
 	companion.position = COMPANION_AT + Vector3(0.0, sin(_clock * 1.25) * 0.09, 0.0)
 	companion.rotation.y = -0.3 + sin(_clock * 0.35) * 0.08
 
 
 func _frame() -> void:
-	var drift := Vector3(sin(_clock * 0.12) * 0.55, sin(_clock * 0.17) * 0.12, cos(_clock * 0.12) * 0.18)
+	var row: Dictionary = POSTERS[poster]
+	var drift := Vector3(sin(_clock * 0.12) * 0.35, sin(_clock * 0.17) * 0.08, cos(_clock * 0.12) * 0.12)
 	var rush := push * push
-	camera.position = CAMERA_AT + drift + PUSH_RISE * rush
-	camera.look_at(LOOK + PUSH_LOOK * rush)
-	camera.fov = 48.0 + PUSH_FOV * rush
+	camera.position = row.at + drift + PUSH_RISE * rush
+	camera.look_at(row.look + PUSH_LOOK * rush)
+	camera.fov = row.fov + PUSH_FOV * rush
+	_hang_sun(row)
 	if look_weight > 0.001 and push <= 0.0:
 		camera.transform = camera.transform.interpolate_with(_orbit(), smoothstep(0.0, 1.0, look_weight))
+
+
+# The sun keeps its place on the poster (the row's share of the screen) however the camera drifts or rushes: SUN_DEPTH
+# metres out along the ray through that point, as wide as the row's share of the screen's height at that depth.
+func _hang_sun(row: Dictionary) -> void:
+	if _disc == null or not camera.is_inside_tree():
+		return
+	var at: Vector2 = row.sun
+	var tall := 2.0 * SUN_DEPTH * tan(deg_to_rad(camera.fov) * 0.5)
+	var aspect := float(viewport.size.x) / maxf(1.0, float(viewport.size.y))
+	var local := Vector3((at.x * 2.0 - 1.0) * tall * 0.5 * aspect, (1.0 - at.y * 2.0) * tall * 0.5, -SUN_DEPTH)
+	_disc.global_transform = Transform3D(camera.global_basis, camera.global_transform * local)
+	_disc.pixel_size = tall * float(row.sun_size) / float(_disc.texture.get_height())
+
+
+# How far into its thump the poster is, 1 on the bar line the player hears falling to 0 over THUMP_DECAY. The bar comes
+# from audio's bar_since_s(): seconds since the last bar line of the grid that sounds (the recorded title pack's when it
+# plays, else the band's), INF while no music sounds. audio.gd does not offer that call yet (the Sound thread owns it
+# this wave), and without it the poster holds still. 0 under reduced motion, during the intro and off the title (pilot
+# select's cards hold the stage still behind them).
+func thump() -> float:
+	if HighdraftFx.preferred or not active or _flow_state != "title" or intro_playing():
+		return 0.0
+	var audio = get_parent().get("audio") if get_parent() != null else null
+	if audio == null or not audio.has_method("bar_since_s"):
+		return 0.0
+	var since: float = audio.bar_since_s()
+	return exp(-since / THUMP_DECAY) if since >= 0.0 and since < THUMP_DECAY * 4.0 else 0.0
 
 
 # The deck camera's rush for the launch take, over seconds. Reduced motion leaves the camera where it is.
@@ -300,7 +404,8 @@ func _step_antics() -> void:
 	var t := (_clock - slot * ANTIC_PERIOD - ANTIC_DELAY) / PilotAntics.LENGTH
 	for i in deck_antics.size():
 		if deck_antics[i] != null:
-			deck_antics[i].apply(t if i == slot % deck_antics.size() else -1.0)
+			var turn: bool = i == slot % deck_antics.size() and deck_antics[i].holder != _hero
+			deck_antics[i].apply(t if turn else -1.0)
 
 
 func _seat_deck() -> void:
@@ -315,9 +420,22 @@ func looking() -> bool:
 	return _look_dragging or _look_idle < LOOK_HOLD
 
 
+# Where look closer can orbit: the deck's three pilots in PILOTS' order (look_target indexes this), then the bow's
+# HeroShell when the gate pilot is not one of them.
+func _look_spots() -> Array:
+	var spots := []
+	for row in PILOTS:
+		var holder: Node3D = stage.get_node_or_null(String(row.name))
+		spots.append(holder.position if holder != null else Vector3(row.at))
+	var spare: Node3D = stage.get_node_or_null("HeroShell")
+	if spare != null:
+		spots.append(spare.position)
+	return spots
+
+
 func _orbit() -> Transform3D:
-	var holder: Node3D = stage.get_node_or_null(String(PILOTS[look_target].name))
-	var centre: Vector3 = (holder.position if holder != null else Vector3(PILOTS[look_target].at)) + Vector3(0.0, 0.5, 0.0)
+	var spots := _look_spots()
+	var centre: Vector3 = spots[clampi(look_target, 0, spots.size() - 1)] + Vector3(0.0, 0.5, 0.0)
 	var dir := Vector3(sin(_look.yaw) * cos(_look.pitch), sin(_look.pitch), cos(_look.yaw) * cos(_look.pitch))
 	var at: Vector3 = centre + dir * float(_look.dist)
 	return Transform3D(Basis.looking_at(centre - at), at)
@@ -337,9 +455,9 @@ func look_begin(at_screen := Vector2(-1.0, -1.0)) -> void:
 	if at_screen.x >= 0.0 and camera.is_inside_tree():
 		var best := INF
 		var scale := Vector2(viewport.size) / get_viewport().get_visible_rect().size
-		for i in PILOTS.size():
-			var spot := camera.unproject_position(Vector3(PILOTS[i].at))
-			var gap := spot.distance_to(at_screen * scale)
+		var spots := _look_spots()
+		for i in spots.size():
+			var gap := camera.unproject_position(spots[i]).distance_to(at_screen * scale)
 			if gap < best:
 				best = gap
 				look_target = i
@@ -365,7 +483,7 @@ func look_zoom(step: float) -> void:
 
 func look_cycle() -> void:
 	look_begin()
-	look_target = (look_target + 1) % PILOTS.size()
+	look_target = (look_target + 1) % _look_spots().size()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -464,41 +582,149 @@ func _build_deck() -> void:
 
 
 func _build_heroes() -> void:
-	var painter := HeroAssets.new()
 	deck_antics.resize(PILOTS.size())
 	for row in PILOTS:
-		var holder := Node3D.new()
-		holder.name = row.name
-		holder.position = row.at
-		holder.rotation.y = -0.22
-		stage.add_child(holder)
-		var path: String = HeroAssets.SHELLS[row.id]
-		var shell := visual_scene(path)
-		var pod := shell.find_child("Pod", true, false) as Node3D if shell != null else null
-		var core := shell.find_child("Core", true, false) as Node3D if shell != null else null
-		if pod == null or core == null:
-			if shell != null:
-				shell.free()
-			_warn(path)
-			_fallback_shell(holder, row.color)
-			continue
-		painter.paint(shell, {"class": row.color})
-		var fitted := painter.fit_pilot_into(pod, row.id, row.color)
-		if not fitted.is_empty() and fitted.animator != null:
-			fitted.animator.stop()
-			for skeleton in fitted.pilot.find_children("*", "Skeleton3D", true, false):
-				skeleton.reset_bone_poses()
-		if not _visual_only(shell):
+		deck_antics[PILOTS.find(row)] = _build_shell(row)
+
+
+# One pilot in their ball on the deck, under a holder named row.name; its antics, or null with no seated pilot.
+func _build_shell(row: Dictionary) -> PilotAntics:
+	var holder := Node3D.new()
+	holder.name = row.name
+	holder.position = row.at
+	holder.rotation.y = -0.22
+	stage.add_child(holder)
+	var path: String = HeroAssets.SHELLS[row.id]
+	var shell := visual_scene(path)
+	var pod := shell.find_child("Pod", true, false) as Node3D if shell != null else null
+	var core := shell.find_child("Core", true, false) as Node3D if shell != null else null
+	if pod == null or core == null:
+		if shell != null:
 			shell.free()
-			_warn(HeroAssets.PILOTS[row.id])
-			_fallback_shell(holder, row.color)
-			continue
-		holder.add_child(shell)
-		_freeze_visual(shell)
-		if not fitted.is_empty():
-			deck_antics[PILOTS.find(row)] = PilotAntics.new({"holder": holder, "core": core, "pod": pod,
-				"pilot": fitted.pilot, "animator": fitted.animator}, row.id)
+		_warn(path)
+		_fallback_shell(holder, row.color)
+		return null
+	var painter := HeroAssets.new()
+	painter.paint(shell, {"class": row.color})
+	var fitted := painter.fit_pilot_into(pod, row.id, row.color)
 	painter.free()
+	if not fitted.is_empty() and fitted.animator != null:
+		fitted.animator.stop()
+		for skeleton in fitted.pilot.find_children("*", "Skeleton3D", true, false):
+			skeleton.reset_bone_poses()
+	if not _visual_only(shell):
+		shell.free()
+		_warn(HeroAssets.PILOTS[row.id])
+		_fallback_shell(holder, row.color)
+		return null
+	holder.add_child(shell)
+	_freeze_visual(shell)
+	if fitted.is_empty():
+		return null
+	return PilotAntics.new({"holder": holder, "core": core, "pod": pod, "pilot": fitted.pilot, "animator": fitted.animator}, row.id)
+
+
+# Casts the poster: the pilot the camp gate would launch takes the bow at the row's scale, and the deck's other pilots
+# stand back on the crew's spots. A pilot not among the deck's three is built once, as HeroShell.
+func cast_hero(id := "") -> void:
+	if id == "":
+		var root = _ctx.root if _ctx != null else null
+		var def = root.gate_pilot() if root != null and root.has_method("gate_pilot") else null
+		id = String(def.id) if def != null else HeroAssets.DEFAULT_CLASS
+	var row: Dictionary = POSTERS[poster]
+	# The deck and the skyline are placed on every cast, in the tree: placed only as they were built, before they
+	# entered it, the frozen models were drawn at a stale transform (the barge at full depth, its rim at the lens,
+	# and the facade not at all).
+	for line in DECK + SKYLINE:
+		_place(stage.get_node_or_null(String(line[0])), line[2], line[3], line[4])
+	for name in row.deck:
+		_place(stage.get_node_or_null(String(name)), row.deck[name][0], row.deck[name][1], row.deck[name][2])
+	hero_id = id
+	_hero = null
+	var spare: Node3D = stage.get_node_or_null("HeroShell")
+	if spare != null and spare.get_meta(&"pilot", "") != id:
+		var antic := deck_antics.find_custom(func(a): return a != null and a.holder == spare)
+		if antic >= 0:
+			deck_antics.remove_at(antic)
+		spare.free()
+		spare = null
+	var crew := 0
+	for row_pilot in PILOTS:
+		var holder: Node3D = stage.get_node_or_null(String(row_pilot.name))
+		if holder == null:
+			continue
+		if row_pilot.id == id:
+			_hero = holder
+			continue
+		holder.position = row.crew[crew % row.crew.size()]
+		holder.rotation.y = -0.22
+		holder.scale = Vector3.ONE
+		crew += 1
+	if _hero == null and HeroAssets.SHELLS.has(id):
+		if spare == null:
+			var def = ClassDef.by_id(id)
+			var antic := _build_shell({"id": id, "name": "HeroShell", "color": def.color if def != null else Palette.SAND, "at": row.hero})
+			spare = stage.get_node_or_null("HeroShell")
+			spare.set_meta(&"pilot", id)
+			if antic != null:
+				deck_antics.append(antic)
+		_hero = spare
+	if _hero != null:
+		_hero.position = row.hero
+		_hero.rotation.y = row.hero_yaw
+		_hero.scale = Vector3.ONE * float(row.hero_scale)
+	_seat_deck()
+
+
+func _place(model: Node3D, at: Vector3, yaw: float, size: Vector3) -> void:
+	if model == null:
+		return
+	model.position = at
+	model.rotation.y = yaw
+	model.scale = size
+
+
+# Shows another of the three poster framings (the comparison sheet, ruling cq).
+func use_poster(id: String) -> void:
+	if not POSTERS.has(id):
+		return
+	poster = id
+	cast_hero(hero_id)
+	_sync_dressing()
+	_frame()
+
+
+func _build_skyline() -> void:
+	for row in SKYLINE:
+		var model := visual_scene(row[1])
+		if model == null:
+			_warn(row[1])
+			continue
+		model.name = row[0]
+		stage.add_child(model)
+		_freeze_visual(model)
+		var ink := StandardMaterial3D.new()
+		ink.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		ink.albedo_color = SKYLINE_INK
+		for view: GeometryInstance3D in model.find_children("*", "GeometryInstance3D", true, false):
+			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			view.material_override = ink
+
+
+func _build_sun() -> void:
+	var face := Image.create(64, 64, false, Image.FORMAT_L8)
+	face.fill(Color.WHITE)
+	_disc = Sprite3D.new()
+	_disc.name = "PosterSun"
+	_disc.texture = ImageTexture.create_from_image(face)
+	_disc.shaded = false
+	_disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_disc_ink = ShaderMaterial.new()
+	_disc_ink.shader = Shader.new()
+	_disc_ink.shader.code = SUN_SHADER
+	_disc_ink.set_shader_parameter("ink", SUN_INK)
+	_disc.material_override = _disc_ink
+	stage.add_child(_disc)
 
 
 func _fallback_shell(holder: Node3D, color: Color) -> void:

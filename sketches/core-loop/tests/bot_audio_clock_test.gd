@@ -17,8 +17,8 @@ func _run() -> void:
 	audio.live_output = false
 	audio.engine = Audio.MusicEngine.new()
 	audio.engine.bot_skip_samples = true
-	audio.set_process(false)
 	root.add_child(audio)
+	audio.set_process(false)
 	audio._on_ready()
 	audio._pump()
 	var before: int = audio.engine.clock
@@ -40,8 +40,8 @@ func _run() -> void:
 	audio.live_output = false
 	audio.engine = Audio.MusicEngine.new()
 	audio.engine.bot_skip_samples = true
-	audio.set_process(false)
 	root.add_child(audio)
+	audio.set_process(false)
 	audio._on_ready()
 	before = audio.engine.clock
 	ChildRuns.elapse_wall(40)

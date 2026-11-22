@@ -100,6 +100,12 @@ static func publish_fill_scale(value: float) -> void:
 	RenderingServer.global_shader_parameter_set(FILL_GLOBAL, value)
 
 
+static func reset_for_tests() -> void:
+	if _live != null:
+		_live.reset()
+	publish_fill_scale(1.0)
+
+
 static func fill_scale(density: float) -> float:
 	return lerpf(1.0, FILL_FLOOR, clampf((density - FILL_FROM) / (1.0 - FILL_FROM), 0.0, 1.0))
 

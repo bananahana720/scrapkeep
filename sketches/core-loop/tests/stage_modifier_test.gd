@@ -54,9 +54,11 @@ const BallState := preload("res://src/movement/ball_state.gd")
 # (2428bea9 moved apron_kicker_ramp from z 448 to z 476; sight_ok 8422 -> 8425, line and door_ok unchanged), and
 # that bake did not move the draw: the wave 41 gate head e2770d85, which holds it, and this head draw ae7ed324.... The pin sat red for a wave under this
 # test's known-failing row for the stage 5 check, which names only that check.
+# Wave 46 re-cut stage 2 (6a062ee3... -> ab9f5cb2...): the flume map changes stacked in wave 46 (W46-02 and W46-07)
+# moved the flume's no-modifier draw, red on stage head 7975333d; the draw rule is unchanged.
 const GOLDEN := {
 	1: "ae7ed324419020fbd8c81a6fb71107220f87c991fc84611aa790cd30b93ca70e",
-	2: "6a062ee367b7523c7260c9e5c742929d66b7383cf1e0d84c38a6d313d0eb8651",
+	2: "ab9f5cb2fbca9396eea102a8d15a3702b4593e67b3ac040cdd37498930c6c3b7",
 	3: "55d86bc8cf198a63c7a692c8c29f5e4efe58b7aa99312e02c345f42de7c22f7b",
 	4: "09e28c2ca5f2f22a286ee5e4495eab8d1e3d3724483816f053be9cccc4bcb99b",
 	5: "70807e398a40a6dfd76baa8a6fa437b864ba47603fc390402cec108c8325a12d",

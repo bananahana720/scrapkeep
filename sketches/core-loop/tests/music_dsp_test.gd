@@ -24,6 +24,8 @@ class FakeRun extends RefCounted:
 	var armor_mode := false
 	var run_id := "dsp_test"
 	var mass := 100.0
+	var max_hp := 100.0
+	var hp := 100.0
 
 class FakeCtx extends RefCounted:
 	var events: Node
@@ -50,6 +52,7 @@ func _initialize() -> void:
 	_test_bus_setup_and_idempotency()
 	_test_warning_eq_carving()
 	_test_lpf_low_hull_slowmo_and_sweep()
+	_test_empty_starting_shell_not_low_hull()
 	_test_hpf_build_tension_and_release()
 	_test_pack_swap_smooth_crossfade()
 	MusicRows.stem_dir = _prev_stem_dir
@@ -136,6 +139,48 @@ func _test_lpf_low_hull_slowmo_and_sweep() -> void:
 	_t.check("LPF recovers to transparent and bypasses at rest",
 		not clean["lpf_enabled"] and float(clean["lpf_hz"]) >= 20400.0,
 		str(clean))
+	_free_audio(rig)
+
+
+func _test_empty_starting_shell_not_low_hull() -> void:
+	var rig := _make_audio()
+	var events: GameEvents = rig["events"]
+	var ctx: FakeCtx = rig["ctx"]
+	var audio: Audio = rig["audio"]
+	audio.pack_available = func(_id: String) -> bool: return true
+	audio.tune_available = func(_id: String) -> bool: return true
+	ctx.run.armor_mode = true
+	ctx.run.mass = 0.0
+	ctx.run.max_hp = 100.0
+	ctx.run.hp = 100.0
+	events.run_started.emit("sable")
+	audio._remixes = {}
+	events.stage_entered.emit(1, false)
+	audio._flush_flow()
+	audio.ace.parameters["armour"] = 0.0
+	for i in 10:
+		audio._tend_mix(0.05)
+	var fresh_state := audio._dsp_state()
+	var fresh_dsp := audio.music_dsp.snapshot()
+	_t.check("empty starting shell (mass 0, full hp, no hull damage) is not low_hull and keeps LPF bypassed",
+		not bool(fresh_state["low_hull"]) and not fresh_dsp["lpf_enabled"],
+		"state=%s dsp=%s" % [str(fresh_state), str(fresh_dsp)])
+	audio._hull_seen = 12.0
+	audio.ace.parameters["armour"] = 0.2
+	for i in 10:
+		audio._tend_mix(0.05)
+	var hurt_state := audio._dsp_state()
+	var hurt_dsp := audio.music_dsp.snapshot()
+	_t.check("damaged hull with low armour engages 700 Hz LPF",
+		bool(hurt_state["low_hull"]) and hurt_dsp["lpf_enabled"] and float(hurt_dsp["lpf_hz"]) <= 900.0,
+		"state=%s dsp=%s" % [str(hurt_state), str(hurt_dsp)])
+	audio._hull_seen = 0.0
+	audio.ace.parameters["armour"] = 0.8
+	ctx.run.hp = 20.0
+	var hp_state := audio._dsp_state()
+	_t.check("low hull HP below 30% engages low_hull even with armour restored",
+		bool(hp_state["low_hull"]),
+		str(hp_state))
 	_free_audio(rig)
 
 

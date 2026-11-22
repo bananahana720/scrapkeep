@@ -3044,6 +3044,46 @@
    ],
    "yaw_deg": -104,
    "near": "cannon line z 119: A cold fire ring with pails and a sandbag seat."
+  },
+  {
+   "id": "wheelhouse_yard_intake",
+   "template": "wheelhouse_yard",
+   "at": [
+    -170,
+    120
+   ],
+   "yaw_deg": 150,
+   "near": "the eye, intake catwalks: the sluice crew's wheelhouse at the intake"
+  },
+  {
+   "id": "mid_hat_wall_intake",
+   "template": "mid_hat_wall",
+   "at": [
+    -178,
+    198
+   ],
+   "yaw_deg": -30,
+   "near": "intake_zip head: the catwalk crew's hat wall"
+  },
+  {
+   "id": "tool_wall_intake",
+   "template": "tool_wall",
+   "at": [
+    -124,
+    190
+   ],
+   "yaw_deg": 170,
+   "near": "intake_zip head: a works wall at the top of the zip"
+  },
+  {
+   "id": "flood_gauge_apron",
+   "template": "flood_gauge",
+   "at": [
+    34,
+    445
+   ],
+   "yaw_deg": -90,
+   "near": "spillway apron, yard east rim: the apron's water-level staff"
   }
  ],
  "litter": {
@@ -3072,5 +3112,5 @@
   ],
   "seed": 11
  },
- "pin": 3216723680
+ "pin": 618595952
 }

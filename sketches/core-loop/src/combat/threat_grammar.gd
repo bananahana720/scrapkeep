@@ -270,6 +270,14 @@ static func set_look(name: String) -> void:
 	Painter._look = name if name in LOOKS else "haze"
 
 
+static func reset_for_tests() -> void:
+	Painter._look = ""
+	Painter._held_looks.clear()
+	Painter._materials.clear()
+	Painter.materials_built = 0
+	Painter._warmed = false
+
+
 # Whether hostile fills carry the stripe pattern in this look (classic, tape).
 static func striped() -> bool:
 	return Painter.striped_on()

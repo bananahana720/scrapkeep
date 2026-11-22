@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const BowlDress := preload("res://src/presentation/arena_bowl_dress.gd")
+const StandCrew := preload("res://src/presentation/stand_crew.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
 # The crane mast, its boom and the vent nozzle (tools/blender/world_one/slag_bowl_kit.py), each about its centre.
@@ -136,13 +137,17 @@ static func warm_ahead() -> bool:
 
 
 static func drop_ahead() -> void:
-	if _ahead_bowl != null:
+	if is_instance_valid(_ahead_bowl):
 		_ahead_bowl.free()
-		_ahead_bowl = null
+	_ahead_bowl = null
 	Requisition.drop_ahead()
 	BowlDress.drop_ahead()
 	Palette.drop_checkers()
 	_looks_warm = false
+
+
+static func reset_for_tests() -> void:
+	drop_ahead()
 
 
 # The checkers, then the neutral plate looks the dressing (arena_bowl_dress.gd) and the floor paint, a few rows a call.
@@ -240,14 +245,16 @@ class Ground:
 	func _init(bowl_ref) -> void:
 		bowl = bowl_ref
 
+	# A query can outlive the bowl: a downed drone's brass tag or death scatter keeps it after
+	# exit_arena frees the arena, so a freed bowl reads as no floor (-INF), the tag's own sentinel.
 	func height(x: float, z: float) -> float:
-		return bowl.ground(Vector3(x, 0.0, z))
+		return bowl.ground(Vector3(x, 0.0, z)) if is_instance_valid(bowl) else -INF
 
 	func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 		return Vector3(x, height(x, z) + clearance, z)
 
 	func contains(point: Vector3) -> bool:
-		return bowl.contains(point)
+		return is_instance_valid(bowl) and bowl.contains(point)
 
 
 func ground_query() -> RefCounted:
@@ -316,6 +323,7 @@ func _ready() -> void:
 	while not build_step():
 		pass
 	BowlDress.bind_yard(self)
+	StandCrew.bind_bowl(self)
 
 
 # The bowl a piece a call: its geometry is local, so it builds off the tree too; only the yard's bus
@@ -354,6 +362,8 @@ func build_step() -> bool:
 				_vent(deg_to_rad(a))
 		5:
 			BowlDress.build(self)
+			# The yard's fans take their clipboards (W46-12); nothing when the yard kit is missing.
+			StandCrew.build(self)
 		_:
 			return true
 	_built += 1

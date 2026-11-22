@@ -142,6 +142,10 @@ const KEEP_GROUP := "word_keep_clear"
 const ROOM_GROUP := "word_room"
 # Rect-versus-rect tests made by word placement (a count for the notes and the cost check).
 static var rect_tests := 0
+
+
+static func reset_for_tests() -> void:
+	rect_tests = 0
 const WORD_LIFE := 0.6
 const WORD_STAMP_S := 0.1
 const WORD_EXIT_S := 0.2
@@ -1643,6 +1647,9 @@ func _build_aura() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.vertex_color_use_as_albedo = true
+	# The colours written into the mesh are the palette's sRGB values: the switch makes the PC's renderer read them so,
+	# not as linear light, which washed the motes out (tools/vertex_colour_probe.gd --marks=1, W46-13).
+	mat.vertex_color_is_srgb = true
 	mesh.material = mat
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D

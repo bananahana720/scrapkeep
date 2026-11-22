@@ -47,6 +47,9 @@ func _physics_process(_delta: float) -> bool:
 	_wait += 1
 	if _wait < 3:
 		return false
+	# Ensure HUD play-piece visibility catches up to flow.in_play() when choose_class()
+	# causes consecutive physics ticks before the next frame's _process().
+	_game.hud._process(0.016)
 	var lessons = _game.hud.first_steps
 	var profile = _game.hud.profile
 	var player = _game.player

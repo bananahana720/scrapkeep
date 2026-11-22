@@ -16,6 +16,10 @@ const SiltBoil := preload("res://src/combat/silt_boil.gd")
 # environment; the game never sets it and reads no environment here. skip_enemies makes every hazard pass over
 # enemies; storm_seek.gd reads no_tell and seek_rolling. The test must go red under each.
 static var plants: Array[String] = []
+
+
+static func reset_for_tests() -> void:
+	plants.clear()
 # Set on an enemy for the length of a hazard's hit: a kill it lands is credited as a hazard's (run_state.gd
 # TRIGGERLESS_SOURCES), so it drops and counts but fires no on-kill item or tree effect.
 const STRUCK := "hazard_struck"

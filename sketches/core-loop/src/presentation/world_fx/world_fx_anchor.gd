@@ -16,6 +16,10 @@ const WorldSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
 
 static var live: Array[WeakRef] = []
 
+
+static func reset_for_tests() -> void:
+	live.clear()
+
 @export var set_id := ""
 var emitters: Array[GPUParticles3D] = []
 var impostors: Array[MeshInstance3D] = []

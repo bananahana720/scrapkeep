@@ -57,6 +57,12 @@ static var asset_dir := ASSET_DIR
 static var spillway_dir := SPILLWAY_DIR
 
 
+static func reset_for_tests() -> void:
+	drop_ahead()
+	asset_dir = ASSET_DIR
+	spillway_dir = SPILLWAY_DIR
+
+
 # Each kit's parts read ahead by warm(), by file path until build takes them.
 static var _ahead := {}
 # The kit warm() is part way through: its path, the loaded scene, the views still to copy and the parts so far.

@@ -151,9 +151,16 @@ static func pylon_wall(parent: Node3D, foot: Vector3, length: float, height_m: f
 
 
 # Mesh-local metres keep arbitrary slabs and the moving bay's paint from stretching.
-static var surface_shader_path := "res://assets/materials/gpw_workshop.gdshader"
+const SURFACE_SHADER_PATH := "res://assets/materials/gpw_workshop.gdshader"
+static var surface_shader_path := SURFACE_SHADER_PATH
 static var _surface_materials := {}
 static var _surface_warnings := {}
+
+
+static func reset_for_tests() -> void:
+	surface_shader_path = SURFACE_SHADER_PATH
+	_surface_materials.clear()
+	_surface_warnings.clear()
 
 
 static func dressed_surface(color: Color, kind := 1, size := Vector3.ZERO,

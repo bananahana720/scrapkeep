@@ -13,6 +13,11 @@ extends Node
 # "-col" mesh as a world-layer StaticBody3D, all through park_recipes.gd's helpers), a ground disc and rim berm, the
 # cottonwoods, Moss's jukebox and hover barge (recipe_props.gd), a light at chosen light_* sockets, and the zones.
 #
+# Living camp (W46-14), refreshed on every walk from the profile: the freed pilots stand round the fire pit (all but the
+# one the gate launches), each saying one line on the caller plate as the ball rolls past (pilot_quipped hands the
+# caller id and the words to whoever voices them), and every B-side found stands as a record sleeve in the bin by Moss's
+# jukebox. All of it is drawn only: no collider, no target, the layout and its solids as they were.
+#
 # Public API for the features that plug in (camp_skee.gd, camp_trial.gd, camp_sandbox.gd and the like):
 #   root          the hub's top node, at HUB_ORIGIN; layout coordinates are local to it.
 #   piece(id)     the placed instance of a GLB stem ("camp_skee_lane"), or null.
@@ -30,6 +35,11 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const LoreRows := preload("res://src/core/lore_rows.gd")
+const RadioTakes := preload("res://src/core/radio_takes.gd")
+const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const CallerTile := preload("res://src/ui/caller_tile.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 # Features that plug into the hub. Each is a script with `static func attach(hub)`.
 const FEATURES: Array = [
@@ -79,10 +89,51 @@ const LIGHT_KINDS := {
 	"marquee": {"color": Color("e5a044"), "energy": 2.6, "range": 20.0},
 }
 
+# The crew round the fire: one spot per roster place, [bearing, radius] in the layout's terms (camp_layout.gd), about
+# the fire pit at bearing 160 and the benches either side of it, so the ball's way through the plaza stays open. A
+# pilot stands at their own spot every walk. The ball within CREW_ZONE_M has them say their line, once a walk.
+const CREW_SPOTS := [[148.0, 12.0], [172.0, 12.0], [138.0, 16.5], [182.0, 16.5], [160.0, 21.5], [160.0, 9.6]]
+const CREW_ZONE_M := 6.0
+const CREW_SCALE := 1.6
+const CREW_FIRE := [160.0, 15.0]
+# Past this the crew is not drawn (they are a few hundred triangles' worth of skin each, not a landmark).
+const CREW_FADE_M := 80.0
+const CREW_FADE_MARGIN_M := 10.0
+# The loop a standing pilot idles in (the freed pilot's idle at the rescue cage, rescue_site.gd), each pilot CREW_OFFSET_S
+# further into it than the last so the crew never moves in unison (that is the Foreman's look), and the clip they
+# strike when they speak, back to the idle after.
+const CREW_IDLE_CLIP := "idle_loop"
+const CREW_TALK_CLIP := "big_cheer"
+const CREW_OFFSET_S := 0.7
+# A quip's card stays QUIP_HOLD_S plus QUIP_PER_WORD_S a word, then fades over QUIP_FADE_S.
+const QUIP_HOLD_S := 2.2
+const QUIP_PER_WORD_S := 0.28
+const QUIP_FADE_S := 0.3
+const QUIP_WIDTH := 330.0
+# The record bins by the jukebox, in the jukebox socket's frame (+Z its face): BIN_AT is the first bin's centre, the
+# next stand BIN_STEP along. A bin stands on legs BIN_LIFT high, a shelf at the cabinet's side, and holds BIN_SLOTS
+# sleeves upright, SLEEVE_STEP apart, leaning back, so their tops and the front one's face show over its walls.
+const BIN_AT := Vector3(1.9, 0.0, 0.9)
+const BIN_LIFT := 0.55
+const BIN_STEP := Vector3(0.0, 0.0, 1.35)
+const BIN_SLOTS := 24
+const BIN_MAX := 3
+const BIN_SIZE := Vector3(0.66, 0.3, 1.2)
+const SLEEVE_SIDE := 0.5
+const SLEEVE_STEP := 0.045
+const SLEEVE_LEAN := 0.16
+# Sleeve colours: album-cover pop from the palette, none of them a colour that means a thing in play (no hazard red,
+# no relic amber, no reward cobalt or arc, never the Kindness purple). A sleeve's colour is its id's, the same every walk.
+const SLEEVE_INKS := [Palette.COPPER, Palette.BRASS, Palette.VERDIGRIS, Palette.OLD_VERDIGRIS, Palette.SAND,
+	Palette.LEDGER_CREAM, Palette.SLATE, Palette.TURQUOISE, Palette.APRICOT, Palette.SODIUM, Palette.RUST]
+
 signal walk_entered
 signal walk_left
 signal station_entered(id: String)
 signal station_left(id: String)
+# A freed pilot in the camp said their line: who (a LoreRows.SPEAKERS id, what a voice reads), the quip row's id and
+# the words on the plate. The line is silent until something that voices callers hooks this.
+signal pilot_quipped(speaker: String, row_id: String, words: String)
 
 var game
 var ball
@@ -93,6 +144,8 @@ var built := false
 var walking := false
 var pet_reactions := 0
 var light_count := 0
+# Walks taken this session: a quip's line steps through its list by it.
+var walks := 0
 
 var _pieces := {}
 var _zones := {}
@@ -106,6 +159,18 @@ var _pet_home := Vector3.ZERO
 var _pet_tween: Tween
 var _look_owner: Node3D
 var _spawn := Vector3.ZERO
+# The crew: class id -> the figure's holder; who has spoken this walk; the quip card and its plate.
+var _crew := {}
+var _quipped := {}
+var _quip: Control
+var _quip_tile
+var _quip_label: Label
+var _quip_hold := 0.0
+var _quip_tween: Tween
+# The records: the bins' and the sleeves' MultiMeshes, and the ids standing in them, in the order they were found.
+var _bins: MultiMeshInstance3D
+var _sleeves: MultiMeshInstance3D
+var _shelved: Array = []
 
 
 func setup(game_ref) -> void:
@@ -239,6 +304,10 @@ func enter_walk() -> void:
 	_place_ball()
 	if game.has_method("gate_label"):
 		set_label("gate", game.gate_label())
+	walks += 1
+	_quipped.clear()
+	_stand_crew()
+	_shelve_records()
 	_prompts.visible = true
 	walk_entered.emit()
 
@@ -250,6 +319,7 @@ func leave_walk() -> void:
 	_inside.clear()
 	_refresh_prompts()
 	set_clock("")
+	_end_quip(true)
 	_set_zones_monitoring(false)
 	root.visible = false
 	_prompts.visible = false
@@ -283,6 +353,13 @@ func _title_stage():
 	return presentation.get("title_stage") if presentation != null else null
 
 
+func _process(delta: float) -> void:
+	if _quip_hold > 0.0:
+		_quip_hold -= delta
+		if _quip_hold <= 0.0:
+			_end_quip(false)
+
+
 func _physics_process(_delta: float) -> void:
 	if not walking:
 		return
@@ -307,6 +384,8 @@ func ensure_built() -> void:
 	_build_lights()
 	_build_stations()
 	_build_prompts()
+	_build_quip()
+	_build_records()
 	for feature in FEATURES:
 		feature.attach(self)
 
@@ -716,3 +795,315 @@ func _pet_react() -> void:
 	var audio = game.audio()
 	if audio != null:
 		audio.chirp("primer_set")
+
+
+# --- the crew round the fire ---
+
+# Who stands this walk: every pilot the profile has freed, but the one the gate launches (the ball is them). A pilot
+# is built at their spot the first walk they stand, and shown or hidden after; a hidden one's quip zone stops listening,
+# and every walk starts with the crew facing the fire.
+func _stand_crew() -> void:
+	var flying = game.gate_pilot() if game.has_method("gate_pilot") else null
+	var classes: Array = game.flow.classes if game.flow != null else []
+	for i in mini(classes.size(), CREW_SPOTS.size()):
+		var def = classes[i]
+		var stands: bool = def != flying and game.pilot_unlocked(def) and not LoreRows.camp_quip(String(def.id)).is_empty()
+		var figure: Node3D = _crew.get(String(def.id))
+		if stands and figure == null:
+			figure = _build_figure(def, i)
+		if figure != null:
+			figure.visible = stands
+			_zones["crew_" + String(def.id)]["area"].set_deferred("monitoring", stands)
+			_face_fire(figure)
+
+
+# The pilots standing now, by class id.
+func crew_standing() -> Array:
+	return _crew.keys().filter(func(id): return (_crew[id] as Node3D).visible)
+
+
+func crew_figure(class_id: String) -> Node3D:
+	return _crew.get(class_id)
+
+
+func crew_spot(index: int) -> Vector3:
+	var spot: Array = CREW_SPOTS[index]
+	return Layout.at(spot[0], spot[1])
+
+
+# One pilot: the pilot's own model at rest (hero_assets.gd fit_pilot_into, as the title's deck builds them), painted in
+# their colour, facing the fire, standing on the plaza, faded out past CREW_FADE_M, and their quip zone.
+func _build_figure(def, index: int) -> Node3D:
+	var holder := Node3D.new()
+	holder.name = "Crew_" + String(def.id)
+	root.add_child(holder)
+	var at := crew_spot(index)
+	var fire := Layout.at(CREW_FIRE[0], CREW_FIRE[1])
+	holder.transform = Layout.place(at, Layout.yaw_to_centre(at.x - fire.x, at.z - fire.z) + PI)
+	var pod := Node3D.new()
+	pod.name = "Pod"
+	pod.scale = Vector3.ONE * CREW_SCALE
+	holder.add_child(pod)
+	var painter := HeroAssets.new()
+	var fitted: Dictionary = painter.fit_pilot_into(pod, String(def.id), def.color)
+	painter.free()
+	if fitted.is_empty():
+		holder.queue_free()
+		return null
+	var animator := fitted.animator as AnimationPlayer
+	if animator != null:
+		animator.stop()
+		for skeleton: Skeleton3D in fitted.pilot.find_children("*", "Skeleton3D", true, false):
+			skeleton.reset_bone_poses()
+		if animator.has_animation(CREW_IDLE_CLIP):
+			animator.play(CREW_IDLE_CLIP)
+			animator.seek(fmod(CREW_OFFSET_S * index, animator.current_animation_length), true)
+	for view: GeometryInstance3D in holder.find_children("*", "GeometryInstance3D", true, false):
+		view.visibility_range_end = CREW_FADE_M
+		view.visibility_range_end_margin = CREW_FADE_MARGIN_M
+		view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	holder.set_meta("animator", animator)
+	holder.set_meta("rest_yaw", holder.rotation.y)
+	_stand_on_plaza(holder)
+	_crew[String(def.id)] = holder
+	add_zone("crew_" + String(def.id), holder.global_position + Vector3.UP, CREW_ZONE_M, _quip_from.bind(String(def.id)))
+	return holder
+
+
+# Sets a figure's lowest drawn point on the plaza under it (or the sandstone disc's top where no plaza is). The figure's
+# views sit deep under its holder, so this reads them in the hub's frame, where _seat reads direct children.
+func _stand_on_plaza(holder: Node3D) -> void:
+	var to_hub := root.global_transform.affine_inverse()
+	var foot := INF
+	for view: MeshInstance3D in holder.find_children("*", "MeshInstance3D", true, false):
+		if view.mesh != null:
+			foot = minf(foot, (to_hub * view.global_transform * view.mesh.get_aabb()).position.y)
+	var top := plaza_top(Vector2(holder.position.x, holder.position.z)) if _pieces.has("camp_plaza") else -INF
+	if foot < INF:
+		holder.position.y += (top if top > -INF else 0.0) - foot
+
+
+# The ball rolled up to a standing pilot: their line goes up on the plate, once a walk, and they turn to the ball.
+func _quip_from(class_id: String) -> void:
+	var figure: Node3D = _crew.get(class_id)
+	if not walking or figure == null or not figure.visible or _quipped.has(class_id):
+		return
+	var row := LoreRows.camp_quip(class_id)
+	if row.is_empty():
+		return
+	_quipped[class_id] = true
+	var words := LoreRows.camp_quip_text(row, walks)
+	var speaker := String(row["speaker"])
+	_show_quip(speaker, words)
+	_face_ball(figure)
+	pilot_quipped.emit(speaker, String(row["id"]), words)
+
+
+# The pilot turns the short way round until their face is to the ball, and cheers. A pilot model faces its local -Z
+# (so _build_figure turns it PI past the yaw that points -Z away from the fire); yaw atan2(-x, -z) points -Z along (x, z).
+func _face_ball(figure: Node3D) -> void:
+	var to_ball: Vector3 = root.global_basis.inverse() * (ball.ball_position() - figure.global_position)
+	if Vector2(to_ball.x, to_ball.z).length() > 0.01:
+		var heading := atan2(-to_ball.x, -to_ball.z)
+		_turn(figure).tween_property(figure, "rotation:y", figure.rotation.y + angle_difference(figure.rotation.y, heading), 0.25) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	var animator = figure.get_meta("animator") if figure.has_meta("animator") else null
+	if animator is AnimationPlayer and (animator as AnimationPlayer).has_animation(CREW_TALK_CLIP):
+		(animator as AnimationPlayer).play(CREW_TALK_CLIP)
+		if (animator as AnimationPlayer).has_animation(CREW_IDLE_CLIP):
+			(animator as AnimationPlayer).queue(CREW_IDLE_CLIP)
+
+
+# Back to the spot's own yaw, facing the fire, any turn still running dropped.
+func _face_fire(figure: Node3D) -> void:
+	_turn(figure).kill()
+	figure.rotation.y = float(figure.get_meta("rest_yaw", figure.rotation.y))
+
+
+# A figure's one turn: the one before it is killed, so two turns never fight over the yaw.
+func _turn(figure: Node3D) -> Tween:
+	var last = figure.get_meta("turn") if figure.has_meta("turn") else null
+	if last is Tween and (last as Tween).is_valid():
+		(last as Tween).kill()
+	var turn := figure.create_tween()
+	figure.set_meta("turn", turn)
+	return turn
+
+
+# --- the quip card: the caller plate (caller_tile.gd, the call-ins' own) beside a line, upper left ---
+
+func _build_quip() -> void:
+	_quip = Control.new()
+	_quip.name = "Quip"
+	_quip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_quip.visible = false
+	_quip.position = Vector2(28.0, 150.0)
+	_prompts.add_child(_quip)
+	var panel := PanelContainer.new()
+	panel.name = "Line"
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.position = Vector2(CallerTile.SIDE - 10.0, 12.0)
+	_quip.add_child(panel)
+	_quip_label = Label.new()
+	_quip_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_quip_label.custom_minimum_size = Vector2(QUIP_WIDTH, 0.0)
+	_quip_label.add_theme_font_override("font", UiFonts.bold())
+	_quip_label.add_theme_font_size_override("font_size", UiTokens.BODY)
+	_quip_label.add_theme_color_override("font_color", Palette.SAND)
+	_quip_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(_quip_label)
+	_quip_tile = CallerTile.new()
+	_quip_tile.name = "Caller"
+	_quip.add_child(_quip_tile)
+
+
+func _show_quip(speaker: String, words: String) -> void:
+	if _quip == null:
+		return
+	_quip_tile.pilots = game.flow.classes if game.flow != null else []
+	if not _quip_tile.present(speaker, String(LoreRows.SPEAKERS.get(speaker, speaker))):
+		return
+	var panel := _quip.get_node("Line") as PanelContainer
+	var style := UiTokens.plate(_quip_tile.tint())
+	style.content_margin_left = 24.0
+	panel.add_theme_stylebox_override("panel", style)
+	_quip_label.text = words
+	_quip_hold = QUIP_HOLD_S + QUIP_PER_WORD_S * words.split(" ", false).size()
+	if _quip_tween != null and _quip_tween.is_valid():
+		_quip_tween.kill()
+	_quip.modulate.a = 1.0
+	_quip.visible = true
+
+
+func _end_quip(now: bool) -> void:
+	_quip_hold = 0.0
+	if _quip == null or not _quip.visible:
+		return
+	if _quip_tween != null and _quip_tween.is_valid():
+		_quip_tween.kill()
+	if now:
+		_quip.visible = false
+		_quip_tile.clear()
+		return
+	_quip_tween = _quip.create_tween()
+	_quip_tween.tween_property(_quip, "modulate:a", 0.0, QUIP_FADE_S)
+	_quip_tween.tween_callback(func():
+		_quip.visible = false
+		_quip_tile.clear())
+
+
+# The line on the plate now, "" when none is up; and who says it.
+func quip_words() -> String:
+	return _quip_label.text if _quip != null and _quip.visible else ""
+
+
+func quip_caller() -> String:
+	return String(_quip_tile.speaker) if _quip != null and _quip.visible else ""
+
+
+# --- the records: found B-sides as sleeves in the bins by Moss's jukebox ---
+
+# The bins and the sleeves are two MultiMeshes, one draw each, whatever the count. Each walk restocks them.
+func _build_records() -> void:
+	var cabinet: Node3D = _pieces.get("moss_jukebox")
+	if cabinet == null:
+		return
+	var shelf := Node3D.new()
+	shelf.name = "Records"
+	cabinet.add_child(shelf)
+	_bins = _multi("Bins", bin_mesh(), _record_material("record_bin", false), shelf)
+	_sleeves = _multi("Sleeves", sleeve_mesh(), _record_material("record_sleeve", true), shelf)
+	# A sleeve's shadow falls inside its bin, where the bin's own already is.
+	_sleeves.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+func _multi(node_name: String, mesh: Mesh, material: Material, parent: Node3D) -> MultiMeshInstance3D:
+	var view := MultiMeshInstance3D.new()
+	view.name = node_name
+	var multi := MultiMesh.new()
+	multi.transform_format = MultiMesh.TRANSFORM_3D
+	multi.use_colors = true
+	multi.mesh = mesh
+	view.multimesh = multi
+	view.material_override = material
+	parent.add_child(view)
+	return view
+
+
+# The B-sides the camp's records hold, in the order they were found: a jukebox record that is no rare pressing, or
+# a radio take of the b-side tier (radio_takes.gd track).
+func found_b_sides() -> Array:
+	var ids: Array = camp_store.tune_ids() if camp_store != null and camp_store.has_method("tune_ids") else []
+	return ids.filter(func(id): return String(RadioTakes.track(String(id)).get("tier", "")) == "b-side")
+
+
+func shelved_records() -> Array:
+	return _shelved.duplicate()
+
+
+func _shelve_records() -> void:
+	if _sleeves == null:
+		return
+	_shelved = found_b_sides().slice(0, BIN_SLOTS * BIN_MAX)
+	var bins := clampi(ceili(float(_shelved.size()) / BIN_SLOTS), 1, BIN_MAX)
+	_bins.multimesh.instance_count = bins
+	for b in bins:
+		_bins.multimesh.set_instance_transform(b, Transform3D(Basis.IDENTITY, BIN_AT + BIN_STEP * b))
+		_bins.multimesh.set_instance_color(b, Color.WHITE)
+	_sleeves.multimesh.instance_count = _shelved.size()
+	var lean := Basis(Vector3.RIGHT, -SLEEVE_LEAN)
+	for i in _shelved.size():
+		var slot := i % BIN_SLOTS
+		var bin_at := BIN_AT + BIN_STEP * floori(float(i) / BIN_SLOTS)
+		var z := -BIN_SIZE.z * 0.5 + 0.08 + SLEEVE_STEP * slot
+		# Each sleeve stands on the bin floor, its face to the jukebox's front, the next one behind it.
+		var at := bin_at + Vector3(0.0, BIN_LIFT + 0.05, z)
+		_sleeves.multimesh.set_instance_transform(i, Transform3D(lean, at))
+		_sleeves.multimesh.set_instance_color(i, sleeve_ink(String(_shelved[i])))
+
+
+# A record's sleeve colour: its id's pick from SLEEVE_INKS, the same every walk.
+static func sleeve_ink(id: String) -> Color:
+	return SLEEVE_INKS[absi(hash(id)) % SLEEVE_INKS.size()]
+
+
+# A bin: an open crate, BIN_SIZE outside, its walls 4 cm, on four legs BIN_LIFT high, centred on x and z, feet at y 0.
+static func bin_mesh() -> ArrayMesh:
+	return RecipeProps.piece("camp_record_bin", func(st: SurfaceTool):
+		var h := BIN_SIZE * 0.5
+		var wall := 0.04
+		var y0 := BIN_LIFT
+		var tone := Color(0.82, 0.82, 0.82)
+		for sx: float in [-1.0, 1.0]:
+			for sz: float in [-1.0, 1.0]:
+				var leg := Vector3(sx * (h.x - 0.05), 0.0, sz * (h.z - 0.05))
+				RecipeProps.add_hull(st, RecipeProps.bevel_box(leg - Vector3(0.035, 0.0, 0.035), leg + Vector3(0.035, y0, 0.035), 0.008), tone)
+		RecipeProps.add_hull(st, RecipeProps.bevel_box(Vector3(-h.x, y0, -h.z), Vector3(h.x, y0 + 0.05, h.z), 0.01), tone)
+		for sx: float in [-1.0, 1.0]:
+			var x0 := sx * h.x - wall * 0.5 - sx * wall * 0.5
+			RecipeProps.add_hull(st, RecipeProps.bevel_box(Vector3(x0, y0, -h.z), Vector3(x0 + wall, y0 + BIN_SIZE.y, h.z), 0.012))
+		for sz: float in [-1.0, 1.0]:
+			var z0 := sz * h.z - wall * 0.5 - sz * wall * 0.5
+			RecipeProps.add_hull(st, RecipeProps.bevel_box(Vector3(-h.x, y0, z0), Vector3(h.x, y0 + BIN_SIZE.y * (0.6 if sz > 0.0 else 1.0), z0 + wall), 0.012)))
+
+
+# A sleeve: a thin square card, face +Z and -Z, standing on its bottom edge, a printed band across its face a shade
+# darker, and the record's black edge showing over the top. One material, so the tint comes from the instance.
+static func sleeve_mesh() -> ArrayMesh:
+	return RecipeProps.piece("camp_record_sleeve", func(st: SurfaceTool):
+		var s := SLEEVE_SIDE
+		var t := 0.016
+		RecipeProps.add_hull(st, RecipeProps.bevel_box(Vector3(-s * 0.5, 0.0, -t * 0.5), Vector3(s * 0.5, s, t * 0.5), 0.004))
+		for face in [1.0, -1.0]:
+			RecipeProps.add_hull(st, RecipeProps.bevel_box(Vector3(-s * 0.5 + 0.002, s * 0.58, face * t * 0.5 - 0.001), Vector3(s * 0.5 - 0.002, s * 0.7, face * t * 0.5 + 0.001), 0.0), Color(0.55, 0.55, 0.55))
+		var disc := RecipeProps.prism(Vector3.ZERO, 16, s * 0.46, s * 0.46, -0.004, 0.004)
+		RecipeProps.add_hull(st, disc, Color(0.07, 0.07, 0.08), Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(0.0, s * 0.6, 0.0))))
+
+
+static func _record_material(material_name: String, sleeve: bool) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.resource_name = material_name
+	mat.vertex_color_use_as_albedo = true
+	mat.albedo_color = Color.WHITE if sleeve else Palette.COPPER.darkened(0.35)
+	mat.roughness = 0.55 if sleeve else 0.85
+	return mat

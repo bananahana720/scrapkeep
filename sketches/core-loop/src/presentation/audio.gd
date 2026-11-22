@@ -477,6 +477,21 @@ static var _rest_task := -1
 static var _opening_task := -1
 
 
+static func reset_for_tests() -> void:
+	if _bake_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_bake_task)
+		_bake_task = -1
+	if _rest_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_rest_task)
+		_rest_task = -1
+	if _opening_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_opening_task)
+		_opening_task = -1
+	_baked = false
+	_bake_done = false
+	SfxBank.bake_cancel = false
+
+
 func _init() -> void:
 	_pitch_rng.seed = 0xA0D10
 
@@ -915,7 +930,12 @@ func _tend_mix(delta: float) -> void:
 
 
 func _dsp_state() -> Dictionary:
-	var low_hull := ace != null and ace.parameters.has("armour") and float(ace.parameters["armour"]) < 0.3
+	var hp_low := false
+	if ctx != null and ctx.run != null and ctx.run.get("max_hp") != null:
+		var max_hp := float(ctx.run.max_hp)
+		hp_low = max_hp > 0.0 and float(ctx.run.hp) < max_hp * 0.3
+	var armour_low := _hull_seen > 0.0 and ace != null and ace.parameters.has("armour") and float(ace.parameters["armour"]) < 0.3
+	var low_hull := hp_low or armour_low
 	var tension := 0.0
 	if _launch_armed or _ult_armed:
 		tension = 1.0
@@ -2924,6 +2944,8 @@ func _stop_hum() -> void:
 # Follows the line each frame: its pitch from the gap on a body, and an end the line never
 # announced (a reset or a restore) stops it.
 func _tend_hum() -> void:
+	if ctx == null:
+		return
 	var player = ctx.get("player")
 	if player == null or player.get("kit") == null:
 		return
@@ -4727,7 +4749,7 @@ func _on_heft_dropped(heft_class: int, _heft: float) -> void:
 # (the Mind's, the Warden's) keeps the shared boss_telegraph.
 const BRINDLE_TELEGRAPHS := {
 	"crane_sweep": "tele_crane_sweep", "slag_ring_a": "tele_slag_ring", "slag_ring_b": "tele_slag_ring",
-	"charge": "tele_charge", "charge_wall": "tele_charge_wall", "eject": "tele_eject",
+	"slag_ring_inner": "tele_slag_ring", "charge": "tele_charge", "charge_wall": "tele_charge_wall", "eject": "tele_eject",
 }
 
 
@@ -4814,7 +4836,7 @@ func sample_run_parameters() -> Dictionary:
 		var span: float = _parameter_graph.d_landmark(_parameter_graph.spawn_node)
 		var remaining: float = _parameter_graph.d_landmark(at)
 		if span > 0.0 and is_finite(remaining):
-			values["approach"] = 1.0 - remaining / span
+			values["approach"] = clampf(1.0 - remaining / span, 0.0, 1.0)
 	if ctx.run.run_id != _parameter_run:
 		_parameter_run = ctx.run.run_id
 		_parameter_armour_peak = 100.0

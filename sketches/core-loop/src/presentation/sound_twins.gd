@@ -42,7 +42,7 @@ extends RefCounted
 # Moving a row to ACT means building the twin first; the test cannot see game changes that add a
 # new warning, only that the new fact is listed.
 
-const OPEN_PINNED := 6
+const OPEN_PINNED := 5
 # Rows read only by name, not traced through code. This number may only go down.
 const UNTRACED_PINNED := 305
 # Not-act rows for a cue in DANGER_SOUNDS (printed by the test with their reasons).
@@ -122,6 +122,8 @@ const ACT := [
 		"script": "res://src/boss/mind.gd", "fn": "_commit_attack", "token": "laid.append(h)"},
 	{"facts": ["cued@boss.gd:_run_charge:charge"], "traced": true, "what": "the hull swings its bow round after the ball through the cue lead",
 		"script": "res://src/boss/boss.gd", "fn": "_step_charges", "token": "_turn_ship(_aim_at(ball), Rules.CHARGE_TURN_RATE, delta)"},
+	{"facts": ["cued@boss.gd:_step_reprise:slag_ring_a"], "traced": true, "what": "Brindle's cued slag ring reprise lays a harmless preview band on the coming ring through the cue lead (W1-105)",
+		"script": "res://src/boss/boss.gd", "fn": "_show_reprise_preview", "token": "_reprise_preview = _bone_ring(\"preview_reprise_slag\""},
 	{"facts": ["cued@miniboss.gd:_after_slam:E04"], "traced": true, "what": "the miniboss raises its fists through the cue lead",
 		"script": "res://src/combat/miniboss.gd", "fn": "_model_pose", "token": "fists = Vector3(0.0, 0.2, -0.5) * t"},
 	{"facts": ["emit:arena_locked@stage_locks.gd:_lock"], "traced": true, "what": "the yard wall rises",
@@ -212,8 +214,6 @@ const OPEN := [
 		"what": "the Mind's riser, ancient family: same missing mark (world 3, not traced)", "severity": "info"},
 	{"fact": "WORLD_ROWS:sluice_siren", "traced": true, "plays": "src/world/event_director.gd:_advance_park", "pattern": "_park_world(selected, selected.row.telegraph.form, \"telegraph\")",
 		"what": "the flume head gate's siren: industrial.gd handle returns for sluice_surge so no mark is laid; the toast and edge marker show. The water chases but never hurts, hence info. The sound is sluice_siren_two_tone, shared with no other row", "severity": "info"},
-	{"fact": "cued@boss.gd:_step_reprise:slag_ring_a", "traced": true, "plays": "src/boss/boss.gd:_step_reprise", "pattern": "_phases.cue(",
-		"what": "Brindle's slag ring reprise: the cue sounds, the ring commits CUE_LEAD later with the shorter CUED_WARN because the cue paid for it; nothing is drawn during the lead, so a muted player gets a shorter warning and no tell", "severity": "fairness"},
 	{"fact": "sig:weak_point_opened@mind_hand.gd:_go_live", "traced": false, "plays": "src/combat/mind_hand.gd:_go_live", "pattern": "weak_point_opened.emit(",
 		"what": "the Mind hand's lens opens on go-live; world 3, no twin traced", "severity": "info"},
 ]

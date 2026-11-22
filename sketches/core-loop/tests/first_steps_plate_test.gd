@@ -54,6 +54,7 @@ func _physics_process(_delta: float) -> bool:
 		_game.run.set_max_hp(99999.0)
 		return false
 	if _step == 3:
+		_game.camera._process(0.016)
 		_combat = _game.ctx.spawner
 		_combat.heft_override = 1.0
 		var cam: Camera3D = _game.camera.cam
@@ -68,6 +69,8 @@ func _physics_process(_delta: float) -> bool:
 	if _step < 6:
 		return false
 	if _step == 6:
+		_game.camera._process(0.016)
+		_game.hud._process(0.016)
 		_check()
 		return false
 	# The rim's beat runs on the enemy's own physics ticks: let a second of them pass.

@@ -85,6 +85,11 @@ func _physics_process(_delta: float) -> bool:
 	_wait += 1
 	if _wait < 4:
 		return false
+	# Ensure HUD play-piece and radio-dial visibility catch up to flow.in_play() when
+	# choose_class() causes consecutive physics ticks before the next frame's _process().
+	_game.hud._process(0.016)
+	if _game.get("radio_deck") != null and _game.radio_deck.dial != null:
+		_game.radio_deck.dial._process(0.016)
 	_run()
 	print("field_tips_test: %s" % ["PASS" if _failures == 0 else "FAIL (%d)" % _failures])
 	quit(_failures)
@@ -364,7 +369,9 @@ func _run() -> void:
 func _radio_waits_for_the_pick() -> void:
 	var tips = _game.hud.field_tips
 	var old_profile = tips.profile
-	var fresh_dir := "user://field_tips_test_fresh_%d" % OS.get_process_id()
+	var fresh_dir: String = _game.storage_dir.path_join("fresh")
+	DirAccess.make_dir_recursive_absolute(fresh_dir)
+	DirAccess.remove_absolute(fresh_dir.path_join(UiProfile.FILE))
 	tips.profile = UiProfile.new(fresh_dir)
 	_game.events.stage_cleared.emit(1)
 	tips.pending.append("radio")
@@ -389,7 +396,10 @@ func _radio_waits_for_the_pick() -> void:
 	_report("the radio tip follows the pick", after.count("radio") > 0 and tips.seen("radio"), "frames %d" % after.count("radio"))
 	card.visible = card_was
 	tips.profile = old_profile
-	DirAccess.remove_absolute(fresh_dir.path_join(UiProfile.FILE))
+	var fresh_open := DirAccess.open(fresh_dir)
+	if fresh_open != null:
+		for file in fresh_open.get_files():
+			fresh_open.remove(file)
 	DirAccess.remove_absolute(fresh_dir)
 
 

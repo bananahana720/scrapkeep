@@ -21,20 +21,30 @@ const MAX_HP := 4.0
 const PHASE_NAMES := ["Requisition", "Furnace", "Scuttle"]
 const PHASE_MIN_SECONDS := [28.0, 24.0, 22.0]
 const HELD_BANK := 50.0
-# The reel (W1-61): for the rest of a held phase Brindle reels. He commits no new attack (what
-# is already drawn plays out, a cued follow-up keeps its cue's promise, and a charge that ends
-# in the reel takes no hook turn), and each ball contact on the hull (stomp, ram or slam),
+# The reel (W1-61, ruling ed / W1-139d): for the rest of a held phase Brindle reels. He keeps
+# pressing at a slowed cadence (never leaving more than REEL_MAX_GAP seconds between committed
+# attacks outside an earned stun, W1-139g), and each ball contact on the hull (stomp, ram or slam),
 # at most one per REEL_GAP seconds and REEL_HITS a reel, sheds REEL_SCRAP as REEL_PICKUPS
 # pickups REEL_REACH metres from the hull's centre toward the ball (scrap and cogs, as a break
 # spill pays) and pays the ultimate meter's "reel" weight. A build that breaks no chunk early
-# never sees it; a strong one gets a loot shower where it used to wait. 2026-11-12, tuning
-# taste Andrew can overturn: 12 hits of 10 scrap is 1.5 phase-break spills a reel.
+# never sees it; a strong one gets a loot shower under slowed pressure instead of a quiet wait.
+# 2026-11-12, tuning taste Andrew can overturn: 12 hits of 10 scrap is 1.5 phase-break spills a reel.
 const REEL_GAP := 0.5
 const REEL_HITS := 12
 const REEL_SCRAP := 10
 const REEL_PICKUPS := 2
 const REEL_REACH := 9.0
 const REEL_SPREAD := 1.6
+const REEL_PERIOD_MULT := 1.5
+const REEL_MAX_GAP := 5.5
+const REEL_SLAG_PERIOD := 3.0
+const REEL_SLAG_LIVE := 3.0
+const REEL_STEAL_SHARE := 0.45
+const REEL_STEAL_MAX := 700
+# While reeling, molten slag and desperate Scuttle charges sear away this share of loose scrap
+# armour (capped) before the hit lands, so overfed late-World-1 builds cannot shrug off 6+ hits.
+const REEL_SEAR_SHARE := 0.45
+const REEL_SEAR_MAX := 650
 # No attack lands before this, so the entry and the hull readout are free to read.
 const INTRO_SECONDS := 3.0
 
@@ -89,6 +99,10 @@ const CIRCLE_SPEED := 4.0
 const CIRCLE_RADIUS := 16.0
 
 # Phase 2: slag rings, announced by a klaxon before they fill, and lobber drones.
+# FURNACE_CLOSE_BAND covers the floor directly around the parked hull (clear of the hull's
+# 4.5 m half-width, meeting Arena.RING_A's 16 m inner edge) so camping under the furnace draws a
+# telegraphed vent ring on turn 2 onward and during reels.
+const FURNACE_CLOSE_BAND := Vector2(5.5, 16.0)
 const SLAG_WARN := 2.5
 const SLAG_LIVE := 6.0
 const SLAG_GAP := 1.5
@@ -133,6 +147,10 @@ const CHARGE_STOP_R := 49.0
 const CHARGE_TURN_RATE := 2.88
 const CHARGE_TURN_SETTLE := 0.15
 const CHARGE_TURN_SNAP := 0.002
+# W1-106 (A11): the hull starts bracing this long before a lead charge stops short of the rim,
+# then holds the brace through FightPhases.CUE_LEAD (0.5 s), so the visible brace runs for
+# HOOK_BRACE_LEAD + CUE_LEAD = 0.7 s (>= 0.6 s fairness floor) without moving commit time.
+const HOOK_BRACE_LEAD := 0.2
 # The Scuttle's hint for a build that cannot hit its way in (boss.gd take_hint): the UI row
 # it shows and the seconds before it may show again while he has still not been stunned.
 const SCUTTLE_HINT := "hint_wall_bait"

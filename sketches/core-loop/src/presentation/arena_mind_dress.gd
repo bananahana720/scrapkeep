@@ -62,6 +62,12 @@ static func settle() -> void:
 	_kit_ahead = {}
 
 
+static func reset_for_tests() -> void:
+	settle()
+	dir = DIR
+	_sky_material = null
+
+
 # Rebuilds the next kit part on the main thread, once its file has loaded: one part a call, so the
 # approach's frames share the rebuild that _load_kit did in the boss-entry frame (16 to 20 ms of it
 # on the cloud, scrapkeep#322 row 30). True once every part is ready.

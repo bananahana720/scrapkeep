@@ -118,6 +118,44 @@ static func call_signals() -> Array:
 			out.append(row["on"])
 	return out
 
+
+# Camp quips (W46-14, living camp): a freed pilot stands round Moss's fire pit and says one line
+# as the ball rolls past, on the caller plate and silent for now. speaker is the SPEAKERS id a
+# voice reads (the camp hands it out with the words), pilot the class that stands there. Each
+# pilot keeps their one fixed opinion; dry and workplace, never cruel. text is a list: the camp's
+# visit count picks one (camp_quip_text), so the next walk sounds different.
+const CAMP_QUIPS := [
+	{"id": "camp.quip.sable", "speaker": "sable", "pilot": "pylon_engineer",
+		"text": ["Nice roll. I'd have launched off the lamp post.", "Gate's slow. I go over it. Don't tell Moss.", "The fence is a perfectly good ramp, you know."]},
+	{"id": "camp.quip.rivet", "speaker": "rivet", "pilot": "runner_gunner",
+		"text": ["Heard you roll past. Lovely. Which way's the fire?", "Felt that through the bench. Good shift coming.", "I'm already at the gate. Or a bench. Something wooden."]},
+	{"id": "camp.quip.kest", "speaker": "kest", "pilot": "demolitions_caster",
+		"text": ["Measured your line twice. You'll be fine. Probably.", "Still deciding about the tea. Don't wait for me.", "You went straight past. I'd have circled first. Twice."]},
+	{"id": "camp.quip.tarn", "speaker": "tarn", "pilot": "tarn",
+		"text": ["Mind the bench. It's had a long day.", "Say sorry to the gate on your way out.", "Easy. The fire's only just got comfortable."]},
+	{"id": "camp.quip.tally", "speaker": "tally", "pilot": "tally",
+		"text": ["Rolled past at speed. Logged as present. Well done.", "One lap of camp. No charge. I checked.", "Ledger says you owe Moss a biscuit. Interest waived."]},
+	{"id": "camp.quip.cannon", "speaker": "cannon", "pilot": "remembered_cannon",
+		"text": ["Good roll. Very efficient. Sorry. Old habit.", "I used to count shots. Now I count biscuits.", "Nice line. I'd have scheduled it. I don't do that now."]},
+]
+
+
+# The quip row of the pilot who stands for this class, {} when the class has none.
+static func camp_quip(class_id: String) -> Dictionary:
+	for row in CAMP_QUIPS:
+		if row["pilot"] == class_id:
+			return row
+	return {}
+
+
+# The words a quip says on this visit: visits step through the list from a place the row's id
+# picks, so two pilots on one visit do not say their first line together.
+static func camp_quip_text(row: Dictionary, visit: int) -> String:
+	var lines: Array = row.get("text", [])
+	if lines.is_empty():
+		return ""
+	return String(lines[posmod(absi(hash(String(row.get("id", "")))) + visit, lines.size())])
+
 # One row per readable line. Exchange lines share an exchange id and follow array order.
 # Zone ids name the alpha route, independently of the sketch's current stage slots.
 # Park era (LORE-REPLACE, decisions.tsv): park notes lead each zone; approved sample

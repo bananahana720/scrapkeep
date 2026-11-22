@@ -30,6 +30,7 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const StageModifier := preload("res://src/world/events/stage_modifier.gd")
+const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const SurgeCourse := preload("res://src/world/surge_course.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 
@@ -707,6 +708,9 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 		# A fast Brindle rout last run: the timed door stands open this run (secrets.gd DOOR).
 		for door_spec in Secrets.door_sites(_graph_map, ctx.get("profile")):
 			out.append({"kind": "door", "id": "cracked_cache", "at": door_spec["at"], "spec": door_spec})
+		# Active shift variants may add standing sites on this map (shift_variants.gd).
+		for variant_spec in ShiftVariants.extra_sites(_graph_map, ctx.run):
+			out.append({"kind": "row", "id": String(variant_spec["id"]), "at": variant_spec["at"], "spec": variant_spec})
 	if _graph != null:
 		var pool: PackedInt32Array = entry_data.pool
 		var trade_spec := TradePockets.stage_site(_graph, map, ctx.run, ctx.rng.seed, pool)

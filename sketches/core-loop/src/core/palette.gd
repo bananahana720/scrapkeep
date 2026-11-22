@@ -40,6 +40,20 @@ const ICE := Color("c8f0ff")
 const REDJAW_ASH := Color("5e5a54")
 const LEDGER_CREAM := Color("f7f1e3")
 const OLD_VERDIGRIS := Color("4f7f7a")
+# The one purple thing in World 1: the Foreman's Kindness, the safe trade spot (ruling ci). The Mind's purple
+# (world_look.gd CONSUMED_GLOW), hue 315, so purple means the Mind wherever it shows. Read by W46-14's body only.
+const KINDNESS := Color("d936b0")
+# A sodium floodlight's light, for Dam Night Shift (W46-13): warmer and paler than AMBER (the relic), far from HAZARD.
+const SODIUM := Color("ffc070")
+# World 1's first two acts of light (WORLD1-DEMO-CATALYST.md C1; world_look.gd TIME_ROWS dawn and morning): light
+# colours for suns and ambients, never a surface meaning. The dam's cool desert dawn: violet-indigo canyon shade under a
+# low apricot sun. The flume's morning: turquoise sky and water light.
+const DAWN_VIOLET := Color("a8a4de")
+const APRICOT := Color("ffac74")
+const TURQUOISE := Color("a4d6d0")
+# One brass (SIGHT-PERSONA.md section 6 item 7): satin, never glossy, and enough diffuse left that a horn bell or a tag
+# does not drop dark in dawn shade. Every brass surface takes it: Palette.solid(BRASS, ...) and BakeLook.dress's brass slots.
+const BRASS_FINISH := {"roughness": 0.5, "metallic": 0.35, "specular": 0.5}
 
 
 # The colour of "your verb works on this right now". Mint for every pilot until a swatch
@@ -279,6 +293,8 @@ static func solid(color: Color, emit := 0.0, grain := true) -> StandardMaterial3
 	mat.roughness = 0.8
 	# The flat-colour signature dress_material_test counts on a box, whatever surface it wears.
 	mat.set_meta("palette_solid", true)
+	if color == BRASS:
+		brass_finish(mat)
 	if grain:
 		surface_grain(mat)
 	if emit > 0.0:
@@ -286,6 +302,14 @@ static func solid(color: Color, emit := 0.0, grain := true) -> StandardMaterial3
 		mat.emission = color
 		mat.emission_energy_multiplier = emit
 	return mat
+
+
+# Gives `mat` the one satin brass finish in place; its colour and glow stay the caller's.
+static func brass_finish(mat: StandardMaterial3D) -> void:
+	mat.roughness = BRASS_FINISH.roughness
+	mat.metallic = BRASS_FINISH.metallic
+	mat.metallic_specular = BRASS_FINISH.specular
+	mat.set_meta("brass_finish", true)
 
 
 static func striped(a: Color, b: Color) -> StandardMaterial3D:
@@ -391,10 +415,25 @@ static func settle_sky_on_exit(owner: Node) -> void:
 
 
 static func _fill_waiting_skies() -> void:
+	if _sky_waiting.is_empty():
+		return
 	var texture := workshop_sky().panorama
 	for material in _sky_waiting:
 		material.panorama = texture
 	_sky_waiting.clear()
+
+
+static func reset_for_tests() -> void:
+	if _sky_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_sky_task)
+		_sky_task = -1
+	_sky_out.clear()
+	_sky_waiting.clear()
+	_sky_texture = null
+	_hdri_sky = null
+	_look_jobs.clear()
+	_target_surfaces.clear()
+	_target_clutter.clear()
 
 
 static func _sky_material(texture: Texture2D) -> PanoramaSkyMaterial:

@@ -18,6 +18,14 @@ const Parts := preload("res://src/build/parts.gd")
 #   - no option can kill: a health price is refused unless the hull keeps the stated floor;
 #   - an offer is a pure function of the device's luck stream (Interact.luck_seed), so a
 #     stage restart replays it.
+# The trade spots' bodies (W46-14, ruling ci), placed through the same registry:
+#   - the foreman's kindness is one cached cast mesh and one glow mesh per device, the same resources on every kindness,
+#     no primitive mesh; its chest stands on the greybox chest's own collider and its ward, like the greybox ward, on none;
+#   - the keeper's gamble is the greybox body with its bolts and its chalk added, the same colliders as a plain device;
+#   - the owner changes no offer: a device's offer is make_offer's from its luck stream, owner or not;
+#   - the kindness's offer, the first time the ball reaches it, is one world_fact("kindness_offered") at its reach point
+#     with the pilot's motif one note wrong (exactly one cue); once, however often the ball comes back; a gamble sends
+#     none; its glow swells in its own copy of the glow material and hands back to the shared one, which never moves.
 # Then in the game: one trade chest placed by the interact system's own registry, taken
 # with a held E, charges what it showed; a second hold buys nothing (one purchase per
 # device per stage); a stage restart refunds the stake and rebuilds the same offer.
@@ -35,6 +43,9 @@ var _entered := false
 var _device
 var _before := {}
 var _first_offer := {}
+var _bodies_at := {}
+var _facts: Array = []
+var _cue_mark := 0
 
 
 func _initialize() -> void:
@@ -87,6 +98,10 @@ func _begin() -> void:
 		[_noop, 45, _check_once],
 		[_restart, 4, _check_restart],
 		[_noop, 1, _sweep],
+		[_bodies, 10, _check_bodies],
+		[_away, 6, _noop],
+		[_back, 10, _check_once_offered],
+		[_to_gamble, 10, _check_gamble_silent],
 	]
 
 
@@ -308,3 +323,123 @@ func _restart() -> void:
 func _check_restart() -> void:
 	_report("a restart replays the same offer", _device.offer == _first_offer and _device.ready_now() and _game.run.retries == 1,
 		"after retry %d the chest offers %s (first %s)" % [_game.run.retries, _device.offer, _first_offer])
+
+
+
+# --- the bodies ---
+
+func _new_device(id: String, kind: String, pay: String, owner: String, at: Vector3, tier := 1):
+	var interact = _game.world.interact
+	var device = Interact.DEVICES[kind].new()
+	interact.add_child(device)
+	device.global_position = at
+	var spec := {"id": id, "device": kind, "tier": tier, "pay": pay, "at": Vector2(at.x, at.z)}
+	if owner != "":
+		spec["owner"] = owner
+	device.setup(_game.ctx, interact, spec)
+	interact.register(device)
+	_bodies_at[id] = device
+	return device
+
+
+func _shapes(device) -> Array:
+	var out: Array = []
+	for shape: CollisionShape3D in device.find_children("*", "CollisionShape3D", true, false):
+		out.append([(shape.shape as BoxShape3D).size if shape.shape is BoxShape3D else shape.shape.get_class(), (shape.get_parent() as Node3D).position])
+	return out
+
+
+func _bodies() -> void:
+	_game.run.hp = _game.run.max_hp
+	_game.run.cogs = 500
+	var ball: Vector3 = _game.player.ball_position()
+	var drop := func(dx: float, dz: float) -> Vector3: return _game.ctx.terrain.drop_point(ball.x + dx, ball.z + dz, 0.0)
+	var kindness = _new_device("w46_kindness_chest", "trade_chest", "cogs", "kindness", drop.call(0.0, 10.0), 2)
+	_new_device("w46_kindness_chest_b", "trade_chest", "cogs", "kindness", drop.call(40.0, 10.0), 2)
+	_new_device("w46_kindness_ward", "healing_ward", "cores", "kindness", drop.call(-40.0, 10.0))
+	_new_device("w46_plain_ward", "healing_ward", "cores", "", drop.call(-40.0, 40.0))
+	_new_device("w46_gamble_chest", "trade_chest", "health", "gamble", drop.call(40.0, 40.0), 2)
+	_new_device("w46_plain_chest", "trade_chest", "health", "", drop.call(0.0, 60.0), 2)
+	_new_device("w46_gamble_shrine", "blood_shrine", "health", "gamble", drop.call(80.0, 40.0))
+	_game.ctx.events.world_fact.connect(func(kind: String, at: Vector3): _facts.append([kind, at]))
+	var audio = _game.audio()
+	_cue_mark = audio.cue_log_total if audio != null else 0
+	_face(kindness)
+
+
+# The ball set 4 m in front of a device, looking at it, so the interact system reaches it.
+func _face(device) -> void:
+	var front: Vector3 = device.global_position + device.global_basis.z * 4.0
+	var spot: Vector3 = _game.ctx.terrain.drop_point(front.x, front.z, 1.05)
+	_game.player.set_frozen(false)
+	_game.player.reset_to(spot, Vector3.ZERO)
+	_game.player.body().global_position = spot
+	_game.player.set_frozen(true)
+	_game.camera.snap(-device.global_basis.z)
+
+
+func _check_bodies() -> void:
+	var kindness = _bodies_at["w46_kindness_chest"]
+	var twin = _bodies_at["w46_kindness_chest_b"]
+	var ward = _bodies_at["w46_kindness_ward"]
+	var body := kindness.get_node_or_null("KindnessBody") as MeshInstance3D
+	var glow := kindness.get_node_or_null("KindnessGlow") as MeshInstance3D
+	var twin_glow := twin.get_node("KindnessGlow") as MeshInstance3D
+	_report("kindness body", body != null and glow != null and body.mesh is ArrayMesh and glow.mesh is ArrayMesh
+		and body.material_override == StakeDevices.cast_material() and twin_glow.material_override == StakeDevices.glow_material(), "a cast mesh and a glow mesh")
+	_report("kindness shares its meshes and materials", twin.get_node("KindnessBody").mesh == body.mesh and twin_glow.mesh == glow.mesh
+		and twin.get_node("KindnessBody").material_override == body.material_override, "one cached mesh per piece")
+	# The swell lights the offering device's own copy; the shared glow, on its twin, stays at rest.
+	var own := glow.material_override as StandardMaterial3D
+	_report("the swell is the offering kindness's own, the shared glow stays at rest", own != StakeDevices.glow_material()
+		and own.emission == StakeDevices.glow_material().emission and is_equal_approx(StakeDevices.glow_material().emission_energy_multiplier, StakeDevices.KINDNESS_GLOW),
+		"%s / %.2f" % [own, StakeDevices.glow_material().emission_energy_multiplier])
+	kindness._pulse.custom_step(StakeDevices.PULSE_S + 0.1)
+	_report("settled, the kindness draws the shared glow again", glow.material_override == StakeDevices.glow_material(), str(glow.material_override))
+	var prims: Array = []
+	for id in ["w46_kindness_chest", "w46_kindness_ward"]:
+		for view: MeshInstance3D in _bodies_at[id].find_children("*", "MeshInstance3D", true, false):
+			if view.mesh is PrimitiveMesh:
+				prims.append("%s/%s" % [id, view.name])
+	_report("kindness draws no primitive", prims.is_empty(), str(prims))
+	_report("kindness chest stands on the greybox chest's collider", _shapes(kindness) == _shapes(_bodies_at["w46_plain_chest"]), str(_shapes(kindness)))
+	_report("kindness ward has the greybox ward's colliders (none)", _shapes(ward) == _shapes(_bodies_at["w46_plain_ward"]), str(_shapes(ward)))
+	var gamble = _bodies_at["w46_gamble_chest"]
+	_report("gamble is bolted and chalked", gamble.get_node_or_null("GambleBolts") != null and gamble.get_node_or_null("GambleChalk") != null
+		and _bodies_at["w46_gamble_shrine"].get_node_or_null("GambleChalk") != null, "")
+	_report("gamble keeps the greybox colliders", _shapes(gamble) == _shapes(_bodies_at["w46_plain_chest"]), str(_shapes(gamble)))
+	var same := true
+	for id in _bodies_at:
+		var device = _bodies_at[id]
+		var o: Dictionary = StakeDevices.make_offer(device.kind, int(device.spec.get("tier", 1)), String(device.spec.get("pay", "")), _game.run,
+			_game.world.interact.luck(id), _game.ctx.tuning != null and _game.ctx.tuning.option("marked_hull") == "on")
+		same = same and o == device.offer
+	_report("an owner changes no offer", same, "every device's offer is make_offer's")
+	_report("the kindness made its offer once, on the bus", _facts.size() == 1 and _facts[0][0] == StakeDevices.KINDNESS_FACT
+		and (_facts[0][1] as Vector3).is_equal_approx(kindness.reach_point()) and kindness.offered(), str(_facts))
+	var audio = _game.audio()
+	_report("the game has audio to hear the chime", audio != null, "")
+	if audio != null:
+		var cues: Array = audio.cues_since(_cue_mark).filter(func(row: Array): return String(row[1]).begins_with(StakeDevices.KINDNESS_CHIME))
+		_report("its sound is the pilot's motif one note wrong, once", cues.size() == 1 and cues[0][1] == StakeDevices.KINDNESS_CHIME + "rivet",
+			str(cues))
+
+
+func _away() -> void:
+	_face(_bodies_at["w46_plain_chest"])
+
+
+func _back() -> void:
+	_face(_bodies_at["w46_kindness_chest"])
+
+
+func _check_once_offered() -> void:
+	_report("the offer is made once", _facts.size() == 1, str(_facts))
+
+
+func _to_gamble() -> void:
+	_face(_bodies_at["w46_gamble_chest"])
+
+
+func _check_gamble_silent() -> void:
+	_report("a gamble makes no kindness offer", _facts.size() == 1 and not _bodies_at["w46_gamble_chest"].offered(), str(_facts))

@@ -14,6 +14,15 @@ static var _cog_model: Mesh = null
 static var model_path := PICKUP_GLB
 static var _pickup_assets := {}
 
+
+static func reset_for_tests() -> void:
+	model_path = PICKUP_GLB
+	_pickup_mesh_cache.clear()
+	_recovery_mesh_cache.clear()
+	_cog_model = null
+	_pickup_assets.clear()
+	_ground_plates.clear()
+
 # Scrap laid along the terrain's scrap lines. The magnet grows with heft (6 m times the
 # square root of heft, capped at 18 m) and reaches further again the faster you roll,
 # and a piece it catches homes in faster than the ball can outrun it, so taking scrap

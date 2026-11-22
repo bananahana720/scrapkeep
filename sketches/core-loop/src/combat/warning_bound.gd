@@ -35,6 +35,11 @@ static var test_pad_scale := 1.0
 # play; nothing in src/ sets it.
 static var test_skip_hazard_merge := false
 
+
+static func reset_for_tests() -> void:
+	test_pad_scale = 1.0
+	test_skip_hazard_merge = false
+
 # How far a line's charcoal underlay widens it (_lined's draw(UNDERLAY)).
 const GROW := Threat.UNDERLAY
 

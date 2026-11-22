@@ -1131,9 +1131,9 @@ func set_quality(level: int) -> void:
 		GraphicsPreset.apply(preset)
 
 
-# Reduced motion: the camera holds still, the hit-edge flash drops to a quarter, enemy idle
-# and the net-deck fx go quiet. Telegraph motion reads none of these, so it keeps its timing.
-func set_reduced_motion(on: bool) -> void:
+# All process-wide reduced-motion statics in one place. set_reduced_motion() uses it,
+# and tools/test_batch_driver.gd calls set_motion_statics(false) between batched tests.
+static func set_motion_statics(on: bool) -> void:
 	EnemyMotion.motion_scale = 0.0 if on else 1.0
 	HighdraftFx.preferred = on
 	AbilityBar.reduced_motion = on
@@ -1141,12 +1141,19 @@ func set_reduced_motion(on: bool) -> void:
 	AimReticle.reduced_motion = on
 	RewardView.reduced_motion = on
 	MossBubble.reduced_motion = on
+	preload("res://src/ui/caller_tile.gd").reduced_motion = on
 	ClassCard.reduced_motion = on
 	PilotAntics.reduced_motion = on
 	ClassPreview.reduced_motion = on
 	BossPlate.reduced_motion = on
 	WorldFx.preferred = on
 	preload("res://src/presentation/flourish_player.gd").reduced_motion = on
+
+
+# Reduced motion: the camera holds still, the hit-edge flash drops to a quarter, enemy idle
+# and the net-deck fx go quiet. Telegraph motion reads none of these, so it keeps its timing.
+func set_reduced_motion(on: bool) -> void:
+	set_motion_statics(on)
 	if is_instance_valid(WorldFx.current):
 		WorldFx.current.set_quality(WorldFx.current.low, on)
 	if presentation != null and presentation.get("juice") != null:

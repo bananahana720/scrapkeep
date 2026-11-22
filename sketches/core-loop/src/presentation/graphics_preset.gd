@@ -37,6 +37,17 @@ static var _materials: Array = []
 static var _dressing_hosts: Array[WeakRef] = []
 static var _lighting: Array[Dictionary] = []
 
+
+static func reset_for_tests() -> void:
+	_worlds.clear()
+	_scenery.clear()
+	_materials.clear()
+	_dressing_hosts.clear()
+	_lighting.clear()
+	if _target_server_active:
+		_restore_target_server()
+	current = "high"
+
 static func apply(preset: String) -> bool:
 	if not PRESETS.has(preset):
 		return false

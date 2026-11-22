@@ -144,6 +144,7 @@ func _physics_process(_delta: float) -> bool:
 	_check_game()
 	print("hero_assets_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
+	OS.remove_logger(_errors)
 	quit(0 if _failures == 0 else 1)
 	return true
 
@@ -396,9 +397,10 @@ static func _accent_color(pod: Node) -> Color:
 
 # --- the Hoberman gimbal on a stub (PD-0b) ------------------------------------------------
 
-# Fits each GyroInner shell on a stub and steers it while root is still outside the tree
-# (_initialize runs before root enters it): the neutral shell as Sable's, plus every pilot
-# whose own shell has GyroInner.
+# Fits each GyroInner shell on a stub and steers it outside the tree before parenting it to
+# root: the neutral shell as Sable's, plus every pilot whose own shell has GyroInner. Keeping
+# hook and stub unparented during the check holds in both solo runs (where _initialize runs
+# before root enters the tree) and warm batches (where root is already in the tree).
 func _fit_gimbals() -> void:
 	var setups: Array = [["neutral", "pylon_engineer", {"pylon_engineer": NEUTRAL_SHELL}]]
 	for id in _gimbal_ids:
@@ -406,10 +408,8 @@ func _fit_gimbals() -> void:
 	for setup in setups:
 		var hook := HeroAssets.new()
 		hook.shell_assets = setup[2]
-		root.add_child(hook)
 		var stub := StubPlayer.new()
 		stub.class_def = ClassDef.by_id(setup[1])
-		root.add_child(stub)
 		hook.attach_player(stub)
 		var before := _errors.errors.size()
 		hook._process(0.016)
@@ -417,6 +417,8 @@ func _fit_gimbals() -> void:
 		var fitted: bool = pod != null and pod.has_node("Gyro/GyroInner") and not pod.is_inside_tree()
 		_report("gimbal %s out of tree" % setup[0], fitted and _errors.errors.size() == before,
 			"GyroInner shell steered outside the tree, engine errors %s" % [_errors.errors.slice(before)])
+		root.add_child(hook)
+		root.add_child(stub)
 		_gimbals.append([hook, stub, setup[0]])
 
 

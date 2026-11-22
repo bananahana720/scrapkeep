@@ -33,6 +33,10 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # wedge with a sand hand at its edge and the icon over it, so the slot is never a blank grey
 # square; an empty charge that time does not refill (refill "contact", Tally's pressure) is a
 # dashed frame over hollow pips, the same hollow pips its pool slot wears, and no clock.
+#
+# A tip that speaks of a slot ("Your active waits on the bar", w37 film 014, PF-21) is answered
+# by the bar, not by more words: while the HUD names a slot (point_at), a chevron in the class
+# colour bobs over it, pointing down at it. Less motion holds the chevron still.
 
 const SLOT := UiTokens.TARGET
 const GAP := float(UiTokens.GAP_M)
@@ -57,6 +61,11 @@ const BADGE := 18.0
 const SET_PIECE_ALPHA := 0.4
 const HAND := 2.0
 const DASHES := 4
+const POINT_W := 22.0
+const POINT_H := 14.0
+const POINT_GAP := float(UiTokens.GAP_S)
+const POINT_BOB := 4.0
+const POINT_HZ := 2.0
 
 # Reduced motion (Game.set_reduced_motion keeps it current): a refused pick no longer shakes.
 static var reduced_motion := false
@@ -86,6 +95,7 @@ var _glyph_from := 0.0
 var _glyph_to := -1.0
 var _glyph_t := GLYPH_SLIDE
 var _refusals := {}
+var _pointed := ""
 var _clock := 0.0
 var _hidden: Array[String] = []
 var _pulses := {}
@@ -306,6 +316,24 @@ func _step_refunds(delta: float) -> void:
 		queue_redraw()
 
 
+# The slot a tip on screen speaks of, by slot name; "" for none. A name the bar does not hold
+# points at nothing.
+func point_at(slot: String) -> void:
+	if slot == _pointed:
+		return
+	_pointed = slot
+	queue_redraw()
+
+
+# The rect of the chevron over the pointed slot in bar space, at its rest (no bob); empty when none.
+func pointer_rect() -> Rect2:
+	var rects := slot_rects()
+	if _pointed == "" or not rects.has(_pointed):
+		return Rect2()
+	var slot: Rect2 = rects[_pointed]
+	return Rect2(Vector2(slot.get_center().x - POINT_W * 0.5, slot.position.y - POINT_GAP - POINT_H), Vector2(POINT_W, POINT_H))
+
+
 # A pick the ball refused: the slot shakes and flashes slate for SHAKE_TIME.
 func refuse(slot: String) -> void:
 	_refusals[slot] = SHAKE_TIME
@@ -386,7 +414,8 @@ func step(delta: float) -> void:
 		glyph_x = lerpf(_glyph_from, _glyph_to, smoothstep(0.0, 1.0, _glyph_t / GLYPH_SLIDE))
 	# Only the swell, a refusal, the glide and the draining underline animate on their own;
 	# slot readings redraw in update_slots.
-	if not _pulses.is_empty() or _was_pulsing or refusing or gliding or underline_share() > 0.0:
+	if not _pulses.is_empty() or _was_pulsing or refusing or gliding or underline_share() > 0.0 \
+			or (_pointed != "" and not reduced_motion):
 		queue_redraw()
 	_was_pulsing = not _pulses.is_empty()
 
@@ -410,6 +439,20 @@ func _draw() -> void:
 		_draw_slot(entry, rects[name], CHIP_SCALE if is_chip(entry) else 1.0)
 	if not slots.is_empty():
 		_draw_glyph()
+	_draw_pointer()
+
+
+# The chevron over the pointed slot: ink-edged, in the class colour, bobbing toward the slot.
+func _draw_pointer() -> void:
+	var rect := pointer_rect()
+	if not rect.has_area():
+		return
+	if not reduced_motion:
+		rect.position.y -= POINT_BOB * 0.5 * (1.0 + sin(_clock * TAU * POINT_HZ))
+	var tip := Vector2(rect.get_center().x, rect.end.y)
+	var points := PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), tip])
+	draw_colored_polygon(points, tint)
+	draw_polyline(PackedVector2Array([points[0], points[1], points[2], points[0]]), UiTokens.INK, 1.5)
 
 
 func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:

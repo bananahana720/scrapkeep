@@ -44,3 +44,12 @@ static func restore(hidden: Array) -> void:
 	if _total <= 0:
 		_total = 0
 		WordFxWord.quiet(false)
+
+
+static func reset_for_tests() -> void:
+	for hud in _holds.keys():
+		if is_instance_valid(hud):
+			hud.quiet(false)
+	_holds.clear()
+	_total = 0
+	WordFxWord.quiet(false)

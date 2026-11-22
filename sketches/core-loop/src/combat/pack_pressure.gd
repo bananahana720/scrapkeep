@@ -129,6 +129,16 @@ static var _cruise := 0.0
 static var _record := HeadingRecord.new()
 
 
+static func reset_for_tests() -> void:
+	lead_plant = ""
+	_frame = -1
+	_heading = 0.0
+	_turn = 0.0
+	_have_heading = false
+	_cruise = 0.0
+	_record.clear()
+
+
 # The dial overrides a --pack-pressure value names, as a --tune payload: "A", "A+D", "" for none. Unknown
 # letters are reported in `unknown`.
 static func tune_spec(value: String, unknown: Array = []) -> String:
