@@ -1,31 +1,31 @@
 {
-  "bake_sha256": "8245e65d790fddcfd0e0076d7667056662534c7e840610b9b66f051c42b67f37",
+  "bake_sha256": "693d25e82b2f7a784723c17adc710614ef37c789e0ea5ecc4eb30fe4ae767ada",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1093412,
-  "edges": 315434,
+  "bytes": 1095056,
+  "edges": 315427,
   "first_failed": "",
   "flags": {
     "deck": 796,
-    "door_ok": 40322,
+    "door_ok": 40318,
     "line": 322,
     "open": 40960,
-    "sight_ok": 10673,
+    "sight_ok": 10650,
     "under": 0
   },
   "full_visit_m": 2193,
   "full_visit_ratio": "1.567",
-  "graph_sha256": "7226c604d38edf31bbdc0dc594743442ba1854ec390def7545c18a4092304c32",
+  "graph_sha256": "5876981aa2ba27cdbdc546c040385bd53f1bb0e6dbbba16818fa9d2c5d12b967",
   "line_errors": [],
   "line_path_nodes": 125,
   "longest_est_m": 2954,
   "map": "park_flume",
   "nodes": 41197,
-  "park_sha256": "fb35d58431e7f39ad87224e3ad5b743a3e459e7c65ad2fc998f24095246807ab",
+  "park_sha256": "e0230e1114b3e6d83db1152b1818d206f52e5cbfff7dda2fce73a66332073894",
   "pockets": [
     {
       "clear_ring": [],
-      "d_landmark": 414,
+      "d_landmark": 415,
       "d_spawn": 999,
       "detour_m": 0,
       "door_at": [
@@ -109,12 +109,12 @@
       "clear_ring": [],
       "d_landmark": 415,
       "d_spawn": 1127,
-      "detour_m": 171,
+      "detour_m": 179,
       "door_at": [
         -120,
         336
       ],
-      "door_m": 171,
+      "door_m": 179,
       "flags": [
         "open",
         "door_ok",
@@ -271,7 +271,7 @@
         "viable": true
       },
       {
-        "cost": 1451.0,
+        "cost": 1450.9,
         "d_landmark": 64.6,
         "name": "head_house_trusses",
         "on_route": false,
@@ -346,14 +346,6 @@
         "cost": 1256.4,
         "d_landmark": 170.2,
         "name": "bluff_ride_pier_18",
-        "on_route": false,
-        "rank": 0,
-        "viable": false
-      },
-      {
-        "cost": 1208.2,
-        "d_landmark": 203.3,
-        "name": "bluff_ride_pier_11",
         "on_route": false,
         "rank": 0,
         "viable": false
@@ -440,7 +432,7 @@
       },
       {
         "cost": 914.0,
-        "d_landmark": 494.3,
+        "d_landmark": 495.4,
         "name": "siphon_turn_coping",
         "on_route": false,
         "rank": 0,
@@ -807,11 +799,11 @@
         "viable": false
       }
     ],
-    "count": 168,
+    "count": 170,
     "crossings": {
-      "drop": 78,
+      "drop": 80,
       "ride": 78,
-      "walk": 239
+      "walk": 245
     },
     "hidden": [
       {

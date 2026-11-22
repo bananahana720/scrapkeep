@@ -46,9 +46,7 @@ const BAKE_SIDE := 801
 
 # Stages under their line today. {"<stage>": {"value": measured median m, "why": "..."}}. Pruned by the
 # test itself: an entry that now meets the line fails it.
-const OWED := {
-	"park_flume": {"value": -0.41, "why": "both lock sites (the ball crossing 210 m from the beacon on the two lines) stand on flat forecourt ground; the ring rim reads no higher than the floor, and 10 m lower in places"},
-}
+const OWED := {}
 
 var t := T.new("park_fight_bowl_test")
 
