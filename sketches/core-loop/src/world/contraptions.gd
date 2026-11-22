@@ -611,6 +611,7 @@ const SHEEN_LIFT := 0.06
 func _glaze_sheen(strips: Array) -> void:
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
+	mat.vertex_color_is_srgb = true
 	mat.roughness = 0.25
 	mat.metallic_specular = 0.6
 	var st := SurfaceTool.new()
