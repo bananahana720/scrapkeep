@@ -188,7 +188,8 @@ const WEATHER_SKY := {
 # brighter. Candidate A of three on the W46-13 contact sheet (ruling cq; the sheet and its numbers are on that pull
 # request): a lobber's ring stood further off the ground than at dawn both in the open (CIE76 58.5 against 36.1) and
 # under a floodlight (47.6 against 42.4), where the lighter rows fell under dawn's under the lamp; its floor reads L* 15
-# to 18 against dawn's 29 to 34, so the lamps carry the night.
+# to 18 against dawn's 29 to 34, so the lamps carry the night. The dam's lamps light the yard's terracotta toward
+# HAZARD, so they stay low: at energy 4 a ring in the yard reads 48.5 against dawn's 44.9 (7 read 44.5, 40 read 30.3).
 const LOOK_ROWS := {
 	"dam_night": {"sun_rotation": Vector3(-40.0, 150.0, 0.0), "sun_color": Color("8fa8dc"), "sun_energy": 0.45,
 		"ambient": Color("4e6394"), "energy": 0.26, "fog_tint": Color("1f3152"), "fog_color": Color("24344f"),
@@ -201,7 +202,7 @@ const LOOK_ROWS := {
 				[-18, -296, 315], [-237, -475, 146], [97, -593, 315], [-24, 168, 79], [70, 30, 270], [-149, 8, 113]],
 			"lamps": {"color": Palette.SODIUM, "count": 6, "energy": 6.0, "range": 36.0, "attenuation": 0.9, "drop": 0.4, "every": 0.25},
 			"dam": {"at": [[-70.0, 118.0, 632.0], [0.0, 124.0, 632.0], [70.0, 118.0, 632.0]], "aim_z": 470.0,
-				"color": Palette.SODIUM, "energy": 40.0, "range": 260.0, "angle": 24.0}},
+				"color": Palette.SODIUM, "energy": 4.0, "range": 260.0, "angle": 24.0}},
 		"seams": {"energy": 6.0}},
 }
 # The Mind's consumed purple under the day's light (card: "Should the Mind's purple stay purple at
