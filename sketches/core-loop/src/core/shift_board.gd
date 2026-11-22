@@ -69,8 +69,8 @@ const CARDS := [
 
 # Seeds for the layered variation that comes after the world 1 core (Andrew, 23 Oct: stage
 # variants, run modifiers and unlock-gated anticipation in the spirit of Isaac's variant floors).
-# Nothing reads these yet: a variant or modifier system asks open_seeds() which are open and
-# builds only those. Each names the rung that opens it, so the player sees it coming on the board.
+# ShiftVariants (src/core/shift_variants.gd) asks open_seeds() which are open and plays only the
+# built ones. Each names the rung that opens it, so the player sees it coming on the board.
 # A seed shows to the player only once its variant or modifier is built (Andrew, 12 Nov 2026, card on
 # W1-72): a teaser for something stamping the rung would not deliver is a broken promise.
 # kind   stage_variant or run_modifier
