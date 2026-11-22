@@ -1,6 +1,8 @@
 extends "res://tools/band_run.gd"
 
-# Tick-level replay and trace tool for World 1 band runs (PF-48, PF-49, W46-01).
+# Diagnostic tick-level replay and trace tool for World 1 band runs (PF-48, PF-49, W46-01).
+# Because this is a diagnostic tool, optional private reads into BotDriver, Flow and Boss are
+# guarded with .get() / has_method() so a rename degrades to a blank field instead of crashing.
 # Built on tools/band_run.gd and tools/bot_run.gd so a seed replays identically with or without it.
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/band_trace.gd \
@@ -87,7 +89,7 @@ func _physics_process(delta: float) -> bool:
 	var tick: int = _driver.ticks
 	var flow_state: String = _game.flow.state_name()
 	var stage: int = _game.run.stage
-	var boss = _driver._boss() if flow_state == "boss" else null
+	var boss = _driver.call("_boss") if flow_state == "boss" and _driver.has_method("_boss") else null
 	var boss_phase: int = int(boss.phase) if boss != null and "phase" in boss else -1
 	var changed := flow_state != _last_flow or boss_phase != _last_boss_phase
 	_last_flow = flow_state
@@ -118,10 +120,15 @@ func _hook_trace_events() -> void:
 			print("band_trace: EVENT boss_arena_entered stage=%d run_t=%.2f tick=%d" % [_game.run.stage, _game.run.run_time, _driver.ticks]))
 	if _game.events.has_signal("boss_phase_changed"):
 		_game.events.boss_phase_changed.connect(func(phase: int, phase_name: String):
-			print("band_trace: EVENT boss_phase_changed phase=%d name=%s boss_t=%.2f tick=%d" % [phase, phase_name, _driver._boss_clock, _driver.ticks]))
+			print("band_trace: EVENT boss_phase_changed phase=%d name=%s boss_t=%s tick=%d" % [phase, phase_name, _boss_clock_text(), _driver.ticks]))
 	if _game.events.has_signal("boss_defeated"):
 		_game.events.boss_defeated.connect(func():
-			print("band_trace: EVENT boss_defeated boss_t=%.2f tick=%d" % [_driver._boss_clock, _driver.ticks]))
+			print("band_trace: EVENT boss_defeated boss_t=%s tick=%d" % [_boss_clock_text(), _driver.ticks]))
+
+
+func _boss_clock_text() -> String:
+	var clock = _driver.get("_boss_clock")
+	return "%.2f" % float(clock) if clock != null else ""
 
 
 func _should_emit(tick: int, stage: int, flow_state: String) -> bool:
@@ -141,7 +148,8 @@ func _emit_row(tick: int, stage: int, flow_state: String, boss, transition: bool
 	var vel: Vector3 = _game.player.body().linear_velocity
 	var spd: float = _game.player.planar_velocity().length()
 	var grounded: bool = _game.player.state.grounded
-	var goal := String(_driver.get("_goal"))
+	var raw_goal = _driver.get("_goal")
+	var goal := String(raw_goal) if raw_goal != null else ""
 	var row := {
 		"tick": tick,
 		"stage": stage,
@@ -164,17 +172,34 @@ func _emit_row(tick: int, stage: int, flow_state: String, boss, transition: bool
 		ball.x, ball.y, ball.z, vel.x, vel.y, vel.z, spd, str(grounded), _game.run.hp, _game.run.heft(), _game.flow.punch_now()
 	]
 	if flow_state == "gates" or flow_state == "launch":
-		var offers: Array = _driver._offers
-		var pick: int = _driver._gate_pick
+		# Diagnostic tool: guard private BotDriver/Flow reads so renames degrade to blank fields.
+		var raw_offers = _driver.get("_offers")
+		var offers: Array = raw_offers if raw_offers is Array else []
+		var raw_pick = _driver.get("_gate_pick")
+		var pick: int = int(raw_pick) if raw_pick != null else -1
+		var raw_gate_time = _driver.get("_gate_time")
+		var gate_time = snappedf(float(raw_gate_time), 0.01) if raw_gate_time != null else ""
+		var gate_time_text := "%.1f" % float(raw_gate_time) if raw_gate_time != null else ""
+		var raw_gate_run = _driver.get("_gate_run")
+		var gate_run := String(raw_gate_run) if raw_gate_run != null else ""
+		var raw_climb = _driver.get("_fight_climb")
+		var climb_pts = raw_climb.size() if raw_climb is Array else ""
+		var raw_launched = _game.flow.get("_launched")
+		var launched = bool(raw_launched) if raw_launched != null else ""
+		var raw_flight = _game.flow.get("_flight")
+		var flight = snappedf(float(raw_flight), 0.02) if raw_flight != null else ""
+		var flight_text := "%.2f" % float(raw_flight) if raw_flight != null else ""
+		var raw_seam_take = _game.flow.get("_seam_take")
+		var seam_take = bool(raw_seam_take) if raw_seam_take != null else ""
 		var gate_info := {
-			"pick": pick,
-			"offers": offers.size(),
-			"gate_time": snappedf(_driver._gate_time, 0.01),
-			"gate_run": String(_driver._gate_run),
-			"climb_pts": _driver._fight_climb.size(),
-			"launched": _game.flow._launched,
-			"flight": snappedf(_game.flow._flight, 0.02),
-			"seam_take": _game.flow._seam_take,
+			"pick": pick if raw_pick != null else "",
+			"offers": offers.size() if raw_offers is Array else "",
+			"gate_time": gate_time,
+			"gate_run": gate_run,
+			"climb_pts": climb_pts,
+			"launched": launched,
+			"flight": flight,
+			"seam_take": seam_take,
 		}
 		if not offers.is_empty() and pick >= 0 and pick < offers.size():
 			var offer: Dictionary = offers[pick]
@@ -187,20 +212,27 @@ func _emit_row(tick: int, stage: int, flow_state: String, boss, transition: bool
 			gate_info["along"] = snappedf(along, 0.1)
 			gate_info["side"] = snappedf(side, 0.1)
 			gate_info["dy"] = snappedf(rel.y, 0.1)
-			line += " | gate=%d/%d gt=%.1f run=%s climb=%d at=(%.1f,%.1f,%.1f) along=%.1f side=%.1f dy=%.1f lnch=%s fl=%.2f" % [
-				pick, offers.size(), _driver._gate_time, String(_driver._gate_run), _driver._fight_climb.size(),
-				at.x, at.y, at.z, along, side, rel.y, str(_game.flow._launched), _game.flow._flight
+			line += " | gate=%s/%s gt=%s run=%s climb=%s at=(%.1f,%.1f,%.1f) along=%.1f side=%.1f dy=%.1f lnch=%s fl=%s" % [
+				str(gate_info["pick"]), str(gate_info["offers"]), gate_time_text, gate_run, str(climb_pts),
+				at.x, at.y, at.z, along, side, rel.y, str(launched), flight_text
 			]
 		else:
-			line += " | gate=%d/%d gt=%.1f lnch=%s fl=%.2f" % [pick, offers.size(), _driver._gate_time, str(_game.flow._launched), _game.flow._flight]
+			line += " | gate=%s/%s gt=%s lnch=%s fl=%s" % [
+				str(gate_info["pick"]), str(gate_info["offers"]), gate_time_text, str(launched), flight_text
+			]
 		row["gate"] = gate_info
 	elif flow_state == "boss" and boss != null:
-		var chg: Dictionary = boss.get("_charge") if boss.get("_charge") is Dictionary else {}
+		var raw_chg = boss.get("_charge")
+		var chg: Dictionary = raw_chg if raw_chg is Dictionary else {}
 		var hull_dist := -1.0
 		var hull_pos := Vector3.ZERO
 		if boss.get("ship") != null and is_instance_valid(boss.ship.hull):
 			hull_pos = boss.ship.hull.global_position
 			hull_dist = Vector2(ball.x - hull_pos.x, ball.z - hull_pos.z).length()
+		var held = bool(boss.call("_held")) if boss.has_method("_held") else ""
+		var in_trans = bool(boss.call("_in_transition")) if boss.has_method("_in_transition") else ""
+		var chg_timer = snappedf(float(chg["timer"]), 0.02) if chg.has("timer") else ""
+		var chg_timer_text := "%.2f" % float(chg["timer"]) if chg.has("timer") else ""
 		var boss_info := {
 			"state": boss.state_name(),
 			"phase": int(boss.phase),
@@ -212,12 +244,12 @@ func _emit_row(tick: int, stage: int, flow_state: String, boss, transition: bool
 			"staggered": bool(boss.staggered()) if boss.has_method("staggered") else false,
 			"stagger_left": snappedf(float(boss.stagger_left()), 0.02) if boss.has_method("stagger_left") else 0.0,
 			"cracked": bool(boss.chunk_cracked()) if boss.has_method("chunk_cracked") else false,
-			"held": bool(boss._held()) if boss.has_method("_held") else false,
+			"held": held,
 			"reeling": bool(boss.reeling()) if boss.has_method("reeling") else false,
-			"transition": bool(boss._in_transition()) if boss.has_method("_in_transition") else false,
+			"transition": in_trans,
 			"stunned": bool(boss.stunned()) if boss.has_method("stunned") else false,
 			"charge_state": String(chg.get("state", "")),
-			"charge_timer": snappedf(float(chg.get("timer", 0.0)), 0.02),
+			"charge_timer": chg_timer,
 			"stuns": int(boss.stuns) if "stuns" in boss else 0,
 			"clashes": int(boss.clashes) if "clashes" in boss else 0,
 			"hull_pos": [snappedf(hull_pos.x, 0.1), snappedf(hull_pos.y, 0.1), snappedf(hull_pos.z, 0.1)],
@@ -225,11 +257,11 @@ func _emit_row(tick: int, stage: int, flow_state: String, boss, transition: bool
 			"hazards": boss.active_hazards().size() if boss.has_method("active_hazards") else 0,
 			"pickups": boss.pickups_left().size() if boss.has_method("pickups_left") else 0,
 		}
-		line += " | boss=%s ph=%d clk=%.1f pclk=%.1f ch=%d post=%.1f stag=%s(%.1f) crk=%s held=%s reel=%s trans=%s stun=%s chg=%s(%.2f) stuns=%d hd=%.1f pku=%d" % [
+		line += " | boss=%s ph=%d clk=%.1f pclk=%.1f ch=%d post=%.1f stag=%s(%.1f) crk=%s held=%s reel=%s trans=%s stun=%s chg=%s(%s) stuns=%d hd=%.1f pku=%d" % [
 			boss_info["state"], boss_info["phase"], boss_info["clock"], boss_info["phase_clock"],
 			boss_info["chunks"], boss_info["posture"], str(boss_info["staggered"]), boss_info["stagger_left"],
 			str(boss_info["cracked"]), str(boss_info["held"]), str(boss_info["reeling"]), str(boss_info["transition"]),
-			str(boss_info["stunned"]), boss_info["charge_state"], boss_info["charge_timer"],
+			str(boss_info["stunned"]), boss_info["charge_state"], chg_timer_text,
 			boss_info["stuns"], boss_info["hull_dist"], boss_info["pickups"]
 		]
 		row["boss"] = boss_info
