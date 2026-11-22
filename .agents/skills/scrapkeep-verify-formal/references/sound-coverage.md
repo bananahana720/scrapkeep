@@ -69,4 +69,4 @@ Run `bash models/make-sound-configs.sh`, then plain TLC on each `sound-*.cfg` wi
 
 Audio sample timing in seconds, bus DSP filter cutoffs and reverb (music_dsp.gd, covered by music_dsp_test.gd), SFX polyphony counts (sfx_budget.gd, covered by sound_arbiter_test.gd), festival deck synthesis and warning-lane spectrum (deck_fx.gd, covered by deck_moves_test.gd), jukebox spins on the title screen, launch-to-next-stage landings (`RunFlow.tla` models launch flow), minibosses and moment tunes below champion priority, and anything drawn or heard on speakers.
 
-Sync commit: c29eacb2d (branch w45/sound-deck-festival, 21 November 2026: close deck shot lifecycle bugs, split PumpSectionAllowed from DeckSectionAllowed, and add --deck=viking preset)
+Sync commit: 338de58c1 (branch w46/sound-v4-stack, 22 November 2026: merged stage/alpha-w46 carrying Brindle inner slag ring telegraph plus test reset, empty-shell DSP guard, null-ctx hum guard, and approach clamp, all outside the arbiter, lease, and deck state machine)
