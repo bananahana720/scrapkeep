@@ -153,7 +153,7 @@ static func _counts(path: String, in_play: bool) -> Dictionary:
 		for s in mi.mesh.get_surface_count():
 			out.draws += 1
 			var arrays := mi.mesh.surface_get_arrays(s)
-			var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
-			out.tris += idx.size() / 3 if idx.size() > 0 else (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size() / 3
+			var idx = arrays[Mesh.ARRAY_INDEX]
+			out.tris += idx.size() / 3 if idx != null and idx.size() > 0 else (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size() / 3
 	scene.free()
 	return out

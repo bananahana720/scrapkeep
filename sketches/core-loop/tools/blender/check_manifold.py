@@ -135,10 +135,17 @@ def check(path, weld=WELD, only=None):
         rows.append((names[i], r))
         for key in ("tris", "islands", "open_islands", "open_edges", "nonmanifold_edges"):
             total[key] += r[key]
+    if only and not rows:
+        raise ValueError("no mesh matching %s" % ", ".join(only))
     print("FILE %s" % path)
     width = max([len(n) for n, _ in rows] + [4])
     for name, r in rows:
-        state = "closed" if r["open_edges"] == 0 and r["nonmanifold_edges"] == 0 else "OPEN"
+        if r["open_edges"] == 0 and r["nonmanifold_edges"] == 0:
+            state = "closed"
+        elif r["open_edges"] > 0:
+            state = "OPEN"
+        else:
+            state = "NON-MANIFOLD"
         print("  %-*s %6d tris %5d islands %5d open %6d open edges %4d non-manifold  %s"
               % (width, name, r["tris"], r["islands"], r["open_islands"], r["open_edges"], r["nonmanifold_edges"], state))
         if r["open_sizes"]:
@@ -157,6 +164,9 @@ def main(argv=None):
     ap.add_argument("--mesh", action="append", help="check only this mesh (node name); repeatable")
     ap.add_argument("--weld", type=float, default=WELD, help="weld distance in metres (default %g)" % WELD)
     a = ap.parse_args(argv)
+    if a.weld <= 0.0:
+        print("ERROR --weld must be > 0 (got %g)" % a.weld, file=sys.stderr)
+        return 2
     over = []
     for path in a.files:
         try:
