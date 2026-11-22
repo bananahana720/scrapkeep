@@ -415,10 +415,25 @@ static func settle_sky_on_exit(owner: Node) -> void:
 
 
 static func _fill_waiting_skies() -> void:
+	if _sky_waiting.is_empty():
+		return
 	var texture := workshop_sky().panorama
 	for material in _sky_waiting:
 		material.panorama = texture
 	_sky_waiting.clear()
+
+
+static func reset_for_tests() -> void:
+	if _sky_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_sky_task)
+		_sky_task = -1
+	_sky_out.clear()
+	_sky_waiting.clear()
+	_sky_texture = null
+	_hdri_sky = null
+	_look_jobs.clear()
+	_target_surfaces.clear()
+	_target_clutter.clear()
 
 
 static func _sky_material(texture: Texture2D) -> PanoramaSkyMaterial:

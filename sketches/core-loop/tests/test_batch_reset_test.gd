@@ -148,6 +148,13 @@ func _run() -> void:
 	Threat.Painter._held_looks["plain"] = StandardMaterial3D.new()
 	Threat.Painter._warmed = true
 	Projectile._held_rim = StandardMaterial3D.new()
+	var stray_node := Node3D.new()
+	root.add_child(stray_node)
+	var stray_tween := stray_node.create_tween()
+	stray_tween.tween_property(stray_node, "position", Vector3.UP, 10.0)
+	t.check("stray tween registered before reset", get_processed_tweens().size() >= 1)
+	Palette.workshop_sky_later()
+	t.check("Palette sky paint active or cached before reset", Palette._sky_task >= 0 or Palette._sky_texture != null)
 	var test_dir := "user://test-%d" % OS.get_process_id()
 	DirAccess.make_dir_recursive_absolute(test_dir)
 	var marker_path := test_dir.path_join("leaked_profile.json")
@@ -200,6 +207,9 @@ func _run() -> void:
 		and Threat.Painter._held_looks.is_empty() and Threat.Painter._materials.is_empty()
 		and Threat.Painter.materials_built == 0 and not Threat.Painter._warmed)
 	t.eq("Projectile._held_rim resets to null", Projectile._held_rim, null)
+	t.check("Palette sky cache and task reset cleanly", Palette._sky_task == -1 and Palette._sky_texture == null
+		and Palette._sky_waiting.is_empty() and Palette._sky_out.is_empty() and Palette._hdri_sky == null)
+	t.check("processed tweens are killed on reset", get_processed_tweens().all(func(tw): return not tw.is_valid()))
 	t.check("user://test-<pid> is cleared on reset", not FileAccess.file_exists(marker_path))
 
 	t.near("EnemyMotion.motion_scale resets to 1.0", EnemyMotion.motion_scale, 1.0)

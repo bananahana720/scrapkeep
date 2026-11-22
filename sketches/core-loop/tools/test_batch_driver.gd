@@ -89,7 +89,11 @@ func _close(code: int) -> void:
 	print("BATCH END %s exit=%d ms=%d" % [current, code, Time.get_ticks_msec() - started])
 	worst = maxi(worst, code)
 	tree.set_script(null)
-	tree.physics_frame.connect(next, CONNECT_ONE_SHOT)
+	if tree.get_processed_tweens().is_empty():
+		tree.physics_frame.connect(next, CONNECT_ONE_SHOT)
+	else:
+		# Killed tweens leave get_processed_tweens() when Godot steps process_tweens on the next frame.
+		tree.process_frame.connect(func() -> void: tree.physics_frame.connect(next, CONNECT_ONE_SHOT), CONNECT_ONE_SHOT | CONNECT_DEFERRED)
 
 
 func next() -> void:
@@ -116,8 +120,12 @@ func next() -> void:
 
 
 func _reset() -> void:
+	for tw in tree.get_processed_tweens():
+		tw.kill()
 	for child in tree.root.get_children():
 		child.free()
+	for tw in tree.get_processed_tweens():
+		tw.kill()
 	# The process-wide settings a test may change, back to how the process started.
 	tree.paused = false
 	if tree.root.size != root_size:
@@ -159,6 +167,7 @@ func _reset() -> void:
 	ParkProps.reset_for_tests()
 	Threat.reset_for_tests()
 	Projectile.reset_for_tests()
+	Palette.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"
