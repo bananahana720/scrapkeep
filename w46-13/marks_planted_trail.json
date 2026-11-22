@@ -1,0 +1,134 @@
+{
+	"adapter": "Apple M5 Max (Apple9)",
+	"max_de": 3.0,
+	"method": "forward_plus",
+	"plant_mark": "trail",
+	"rows": [
+		{
+			"de": 0.0,
+			"drawn": [
+				139,
+				240,
+				211
+			],
+			"mark": "bolts",
+			"ok": true,
+			"plain": [
+				139,
+				240,
+				211
+			],
+			"planted": false,
+			"srgb": true,
+			"tone": "8bf0d3"
+		},
+		{
+			"de": 0.0,
+			"drawn": [
+				54,
+				87,
+				84
+			],
+			"mark": "attack lines and rings",
+			"ok": true,
+			"plain": [
+				54,
+				87,
+				84
+			],
+			"planted": false,
+			"srgb": true,
+			"tone": "365754"
+		},
+		{
+			"de": 18.8,
+			"drawn": [
+				190,
+				178,
+				122
+			],
+			"mark": "trail",
+			"ok": false,
+			"plain": [
+				190,
+				164,
+				76
+			],
+			"planted": true,
+			"srgb": false,
+			"tone": "ffd959"
+		},
+		{
+			"de": 0.4,
+			"drawn": [
+				107,
+				172,
+				135
+			],
+			"mark": "speed lines",
+			"ok": true,
+			"plain": [
+				108,
+				173,
+				136
+			],
+			"planted": false,
+			"srgb": true,
+			"tone": "8ce6b3"
+		},
+		{
+			"de": 0.0,
+			"drawn": [
+				139,
+				240,
+				211
+			],
+			"mark": "aura motes",
+			"ok": true,
+			"plain": [
+				139,
+				240,
+				211
+			],
+			"planted": false,
+			"srgb": true,
+			"tone": "8bf0d3"
+		},
+		{
+			"de": 0.4,
+			"drawn": [
+				157,
+				149,
+				126
+			],
+			"mark": "cable arcs",
+			"ok": true,
+			"plain": [
+				158,
+				149,
+				126
+			],
+			"planted": false,
+			"srgb": true,
+			"tone": "d2c5a5"
+		},
+		{
+			"de": 0.0,
+			"drawn": [
+				210,
+				197,
+				165
+			],
+			"mark": "aim",
+			"ok": true,
+			"plain": [
+				210,
+				197,
+				165
+			],
+			"planted": false,
+			"srgb": true,
+			"tone": "d2c5a5"
+		}
+	]
+}

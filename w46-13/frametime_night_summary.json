@@ -1,0 +1,51 @@
+{
+  "log": "/Users/hanabanana/.t3/worktrees/scrapkeep/t3-3d11c81e-33586d317cbd9131/artifacts/local/frametime/2026-11-22T21-14-58Z/frames.csv",
+  "frames": 16696,
+  "seconds": 90,
+  "p50_ms": 5.56,
+  "p95_ms": 10.01,
+  "p99_ms": 10.41,
+  "max_ms": 23.71,
+  "over_hitch": 0,
+  "over_severe": 0,
+  "hitches": [],
+  "budget": {
+    "p99_ms": 16.7,
+    "hitch_ms": 33
+  },
+  "p99_ok": true,
+  "hitch_ok": true,
+  "pass": true,
+  "self_play": {
+    "exit": 0,
+    "stages": [
+      {
+        "stage": 1,
+        "retry": false,
+        "launch_s": 14.26,
+        "log_s": -5.74,
+        "worst_frame_ms": 0
+      },
+      {
+        "stage": 2,
+        "retry": false,
+        "launch_s": 187.3,
+        "log_s": 167.3,
+        "worst_frame_ms": 0
+      }
+    ],
+    "stalled": null,
+    "lines": [
+      "self-play: stage 1 entered at 14.26 s",
+      "self-play: carry stage=1 hp=115.00 mass=0.00 cogs=0 parts= picks=r_juggernaut",
+      "self-play: skipper seed 1 until 2 started at 14.41 s",
+      "self-play: stage 1 exit taken at 187.28 s",
+      "self-play: stage 2 entered at 187.30 s",
+      "self-play: carry stage=2 hp=144.00 mass=812.00 cogs=971 parts=impact_driver picks=r_juggernaut+r_second_wind",
+      "self-play: done at 217.30 s",
+      "self-play: probe 52 slow frames in /Users/hanabanana/.t3/worktrees/scrapkeep/t3-3d11c81e-33586d317cbd9131/artifacts/local/w46-13/frame_probe_night.ndjson"
+    ]
+  },
+  "target": "debug-editor",
+  "cache": "cold"
+}
