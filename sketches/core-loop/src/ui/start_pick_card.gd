@@ -92,6 +92,11 @@ func _init() -> void:
 	add_to_group("flourish_avoid")
 
 
+func _ready() -> void:
+	set_process_input(_interactive)
+	set_process_unhandled_input(false)
+
+
 func set_interactive(enabled: bool) -> void:
 	_interactive = enabled
 	mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
