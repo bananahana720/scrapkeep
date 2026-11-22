@@ -53,6 +53,14 @@ extends SceneTree
 # `noise` should be next to nothing.
 # --plant=1 greys each script's candidates instead of turning the switch on, to show that the
 # count sees a change on a renderer that ignores the switch.
+#
+# Where the seven code-drawn player marks set their colour (W46-03's hand-off to W46-13): every run
+# writes `mark_sites` into probe.json, and --sites=1 prints them alone, headless, and quits:
+#   <godot> --headless --path sketches/core-loop --script res://tools/vertex_colour_probe.gd -- --sites=1 [--out=/abs/dir]
+# Each row names the file, the line that builds the mark's material and whether that material
+# turns vertex_color_is_srgb on, the line that writes the colour into the mesh, and where the
+# colour comes from. The lines are found by MARK_SITES' text, so they follow the code as it moves;
+# a row whose text is gone says so (tests/world_look_acts_test.gd fails on it).
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -78,6 +86,24 @@ const MARK_WEAPONS := [Weapons.PYLON_TURRET, Weapons.ARC_CASTER, Weapons.RAPID_L
 	Weapons.LEDGER_READER, Weapons.CANNON_LANE]
 const MARKS_M := 5.0
 const MARK_TICKS := 4
+# The seven marks: [anchor, text] finds the first line holding `text` at or after the first line holding `anchor`.
+const MAT_LINE := ["", "vertex_color_use_as_albedo = true"]
+const MARK_SITES := [
+	{"mark": "bolts", "file": "res://src/combat/bolts.gd", "material": MAT_LINE,
+		"colour": ["", "_multimesh.set_instance_color(i, drawn[1])"], "source": "tint(): the first shot bit's colour, else the weapon's"},
+	{"mark": "attack lines and rings", "file": "res://src/combat/effects.gd", "material": MAT_LINE,
+		"colour": ["func _line(a", "_mesh.surface_set_color(color)"], "source": "the caller's colour (arc, ring, spark, beam, shockwave)"},
+	{"mark": "trail", "file": "res://src/presentation/vfx.gd", "material": MAT_LINE,
+		"colour": ["func _draw_trail(", "mesh.surface_set_color("], "source": "SpeedTier.COLORS[tier] (src/movement/speed_tier.gd)"},
+	{"mark": "speed lines", "file": "res://src/presentation/vfx.gd", "material": MAT_LINE,
+		"colour": ["func _draw_lines(", "mesh.surface_set_color("], "source": "SpeedTier.COLORS[tier] (src/movement/speed_tier.gd)"},
+	{"mark": "aura motes", "file": "res://src/presentation/player_fx.gd", "material": MAT_LINE,
+		"colour": ["", "mm.set_instance_color(i, c.lerp(Color.WHITE"], "source": "heat_tint(part_color()): ELEMENT_COLORS, leaning to HEAT_COLOR"},
+	{"mark": "cable arcs", "file": "res://src/presentation/machine_fx.gd", "material": MAT_LINE,
+		"colour": ["", "_cable_mesh.surface_set_color(color)"], "source": "Palette.SAND, its alpha the arc's life"},
+	{"mark": "aim", "file": "res://src/movement/indicator.gd", "material": MAT_LINE,
+		"colour": ["", "_tris.surface_set_color(color)"], "source": "the shape's colour: class_color(), SAND when blocked, CHARCOAL keyline"},
+]
 # Slower than any weapon's, so the bolts are still in view when the game is held; a bolt's
 # colour does not change with its speed.
 const MARK_SPEED := 20.0
@@ -98,6 +124,10 @@ var _report := {}
 
 
 func _initialize() -> void:
+	var sites := false
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--sites="):
+			sites = arg.trim_prefix("--sites=") != "0"
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			out = arg.trim_prefix("--out=")
@@ -105,6 +135,9 @@ func _initialize() -> void:
 			boss = arg.trim_prefix("--boss=") != "0"
 		elif arg.begins_with("--plant="):
 			plant = arg.trim_prefix("--plant=") != "0"
+	if sites:
+		quit(_print_sites())
+		return
 	if out.is_empty() or DisplayServer.get_name() == "headless":
 		push_error("usage: --script res://tools/vertex_colour_probe.gd -- --out=/abs/dir [--boss=0] [--plant=1], on a display")
 		quit(2)
@@ -119,7 +152,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_report = {"tool": "vertex_colour_probe.gd", "method": RenderingServer.get_current_rendering_method(),
-		"adapter": RenderingServer.get_video_adapter_name(), "planted": plant}
+		"adapter": RenderingServer.get_video_adapter_name(), "planted": plant, "mark_sites": mark_sites()}
 	await _swatches()
 	await _boot()
 	if failed != "":
@@ -152,6 +185,67 @@ func _run() -> void:
 	file.store_string(JSON.stringify(_report, "\t"))
 	file.close()
 	quit(0)
+
+
+# --- Where the marks set their colour ---------------------------------------------------------
+
+# One row per MARK_SITES entry: {mark, file, material_line, srgb, colour_line, source}, or with "error" when its text is gone.
+# srgb is whether the material's function turns vertex_color_is_srgb on.
+static func mark_sites() -> Array:
+	var rows := []
+	for site: Dictionary in MARK_SITES:
+		var lines := FileAccess.get_file_as_string(site.file).split("\n")
+		var row := {"mark": site.mark, "file": String(site.file).trim_prefix("res://"), "source": site.source}
+		var at := _find(lines, site.material)
+		var write := _find(lines, site.colour)
+		if at < 0 or write < 0:
+			row["error"] = "the %s text is no longer in the file" % ("material" if at < 0 else "colour")
+			rows.append(row)
+			continue
+		var srgb := false
+		for i in range(at, lines.size()):
+			if i > at and (lines[i].begins_with("func ") or lines[i].begins_with("static func ")):
+				break
+			srgb = srgb or lines[i].contains("vertex_color_is_srgb = true")
+		row["material_line"] = at + 1
+		row["srgb"] = srgb
+		row["colour_line"] = write + 1
+		rows.append(row)
+	return rows
+
+
+static func _find(lines: PackedStringArray, spec: Array) -> int:
+	var from := 0
+	if not String(spec[0]).is_empty():
+		from = -1
+		for i in lines.size():
+			if lines[i].contains(spec[0]):
+				from = i
+				break
+		if from < 0:
+			return -1
+	for i in range(from, lines.size()):
+		if lines[i].contains(spec[1]):
+			return i
+	return -1
+
+
+func _print_sites() -> int:
+	var rows := mark_sites()
+	var bad := 0
+	for row: Dictionary in rows:
+		if row.has("error"):
+			bad += 1
+			print("MARK %s  %s  %s" % [row.mark, row.file, row.error])
+		else:
+			print("MARK %s  material %s:%d (srgb %s)  colour %s:%d  from %s" % [row.mark, row.file, row.material_line,
+				"on" if row.srgb else "off", row.file, row.colour_line, row.source])
+	if not out.is_empty():
+		DirAccess.make_dir_recursive_absolute(out)
+		var file := FileAccess.open(out.path_join("mark_sites.json"), FileAccess.WRITE)
+		if file != null:
+			file.store_string(JSON.stringify(rows, "\t"))
+	return 1 if bad > 0 else 0
 
 
 # --- Swatches ---------------------------------------------------------------------------------
