@@ -55,6 +55,8 @@ const CHIP_CAP := 20.0
 const TRADEOFF_H := 48.0
 const WORD_SIZE := UiTokens.CAPTION
 const SHAKE := 0.25
+const HINT_GAP := 4.0
+const HINT_INSET := 8.0
 const LOCK_DIM := 0.4
 const GREY := """shader_type canvas_item;
 uniform float level = 0.4;
@@ -282,7 +284,7 @@ func shrink_preview(by: float) -> void:
 	_preview_h = maxf(PREVIEW_MIN, PREVIEW_H - by)
 	preview.custom_minimum_size.y = _preview_h
 	var top := PAD + KEY_H + 8.0 + _preview_h - 40.0
-	_hint.position.y = top
+	_seat_hint()
 	_paint_row.position.y = top
 	_fade_rect.position.y = PAD + KEY_H + 8.0 + _preview_h - UiTokens.EDGE
 	queue_redraw()
@@ -309,15 +311,30 @@ func words() -> String:
 
 # The foot of the preview: the locked hint, or the paint swatch and name. Both are card
 # details, so they read only on the open card and the calm screen keeps its word count.
+# The hint sits on a plate whose bottom edge is pinned to the preview's foot and grows upward
+# over the greyed shell as it wraps, so at six cards its four or five lines never reach the
+# name and the tag below the preview (PF-40).
 func _build_overlay(width: float, color: Color) -> void:
 	var top := PAD + KEY_H + 8.0 + PREVIEW_H - 40.0
 	var span := Vector2(width - 2.0 * PAD, 34.0)
 	_hint = _text("", UiTokens.CAPTION, Color(Palette.SAND, 0.9))
-	_hint.position = Vector2(PAD, top)
-	_hint.size = span
-	_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_hint.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	var plate := StyleBoxFlat.new()
+	plate.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
+	plate.set_corner_radius_all(UiTokens.RADIUS)
+	plate.content_margin_left = HINT_INSET
+	plate.content_margin_right = HINT_INSET
+	plate.content_margin_top = 4.0
+	plate.content_margin_bottom = 4.0
+	_hint.add_theme_stylebox_override("normal", plate)
+	_hint.add_theme_constant_override("line_spacing", -2)
+	# The plate spans the card's face, not the padded column, so a six-card hint wraps to fewer lines.
+	_hint.position.x = HINT_INSET
+	_hint.size.x = width - 2.0 * HINT_INSET
 	_hint.visible = false
 	add_child(_hint)
+	_seat_hint()
 	_details.append(_hint)
 	_paint_row = HBoxContainer.new()
 	_paint_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -337,6 +354,19 @@ func _build_overlay(width: float, color: Color) -> void:
 	_paint_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_paint_row.add_child(_paint_label)
 	_details.append(_paint_row)
+
+
+# The hint's plate ends HINT_GAP above the preview's foot; the plate's height is the wrapped
+# text's own, grown upward (grow_vertical), so a longer hint covers more shell, never the name.
+func _seat_hint() -> void:
+	var foot := PAD + KEY_H + 8.0 + _preview_h - HINT_GAP
+	_hint.offset_bottom = foot
+	_hint.offset_top = foot - 34.0
+
+
+# The locked hint's plate as drawn, in global coordinates (zero size while it is hidden).
+func hint_rect() -> Rect2:
+	return _hint.get_global_rect() if _hint.visible else Rect2()
 
 
 # A locked pilot's card: still clickable (the gate refuses it), but slate, grey and quiet.
