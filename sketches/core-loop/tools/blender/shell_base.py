@@ -294,8 +294,11 @@ BAR_WIDTH = 0.06
 CAP_WIDTH = 0.10
 CHAIN_WIDTH = 0.12
 HUB_BODY = (0.10, 0.937, LATTICE_OUTER)      # radius, inner and outer reach of the copper drum
-HUB_CAP = (CAP_WIDTH / 2, 0.962, 0.9824)     # the rubber tread cap; its rim reaches CORE_LIMIT
+# The rubber tread cap: radius, the reach of its buried point and of its tread face, whose rim
+# reaches CORE_LIMIT. Its sides close to the point inside the copper drum (_tread_cap).
+HUB_CAP = (CAP_WIDTH / 2, 0.940, 0.9824)
 HUB_CLEAR = 0.075                            # chain ends tuck under the hub drum
+PIN_DEPTH = 0.012                            # a pin's buried point, inside the outer bar
 # One equator gap faces the front (+Y) and one the rear, so the face and the head show
 # through open diamonds in the rest pose.
 LATTICE_TWIST = math.radians(72)
@@ -370,23 +373,70 @@ def _frame(n):
     return e1, n.cross(e1)
 
 
-def _bar(part, a, b, width, thick, slot, color=None):
-    """A flat bar from a to b lying on the sphere: width across the surface, thick radially.
-    Four faces, open ends (8 triangles); the ends hide under a pin, the next bar or a hub."""
+# Watertight rule (POLISH.md, "Watertight"): every piece the base builds is a closed island, so
+# the light bake and cull_back shadows cannot see through it; check_manifold.py proves a GLB.
+# Each closed piece costs no more triangles than the open piece it replaced.
+
+def _bar(part, a, b, width, thick, slot, color=None, facing=1):
+    """A closed bar from a to b lying on the sphere: a three-sided prism with a flat face width
+    across and a ridge thick from it. facing 1 turns the flat face away from the centre, -1
+    toward it. Three sides and two end caps are 8 triangles, as many as the old open tube."""
     a, b = Vector(a), Vector(b)
     d = (b - a).normalized()
     n = ((a + b) / 2).normalized()
     u = d.cross(n).normalized()
     n = u.cross(d)
-    corners = [(1, 1), (-1, 1), (-1, -1), (1, -1)]
+    corners = [(facing, facing), (-facing, facing), (0, -facing)]
     ra = [part.bm.verts.new(a + u * (sx * width / 2) + n * (sy * thick / 2)) for sx, sy in corners]
     rb = [part.bm.verts.new(b + u * (sx * width / 2) + n * (sy * thick / 2)) for sx, sy in corners]
-    faces = [part.bm.faces.new((ra[k], rb[k], rb[(k + 1) % 4], ra[(k + 1) % 4])) for k in range(4)]
+    faces = [part.bm.faces.new((ra[k], rb[k], rb[(k + 1) % 3], ra[(k + 1) % 3])) for k in range(3)]
+    faces.append(part.bm.faces.new(ra))
+    faces.append(part.bm.faces.new(list(reversed(rb))))
+    return part.paint(faces, slot, color)
+
+
+# A stud's corners sit this far out for the old disc's radius, so its triangle keeps most of the
+# hexagon's area (72%) and still sits on its bar.
+STUD_SPAN = 1.2
+
+
+def _stud(part, centre, normal, radius, depth, slot, color=None, toward=None, roll=0.0):
+    """A closed pin head: a flat triangle facing along normal at centre, closed by three faces to a
+    point depth below it, buried in the part under it. 4 triangles, as many as a 6-sided _disc.
+    One corner points along toward when given (a link's direction), else at roll."""
+    c, nrm = Vector(centre), Vector(normal).normalized()
+    e1, e2 = _frame(nrm)
+    if toward is not None:
+        t = Vector(toward)
+        t = t - nrm * t.dot(nrm)
+        if t.length > 1e-9:
+            e1 = t.normalized()
+            e2 = nrm.cross(e1)
+            roll = 0.0
+    r = radius * STUD_SPAN
+    vs = [part.bm.verts.new(c + r * (math.cos(roll + k * math.tau / 3) * e1 + math.sin(roll + k * math.tau / 3) * e2))
+          for k in range(3)]
+    tip = part.bm.verts.new(c - nrm * depth)
+    faces = [part.bm.faces.new(vs)] + [part.bm.faces.new((vs[(k + 1) % 3], vs[k], tip)) for k in range(3)]
+    return part.paint(faces, slot, color)
+
+
+def _tread_cap(part, direction, radius, r_tip, r_out, sides, slot, roll=0.0, color=None):
+    """A closed cap on the radial axis through direction: a flat face at r_out from the centre
+    whose sides close to a point at r_tip, buried in the part under it. 2 x sides - 2 triangles,
+    sides fewer than an open-bottomed _drum (3 x sides - 2)."""
+    n = Vector(direction).normalized()
+    e1, e2 = _frame(n)
+    hi = [part.bm.verts.new(n * r_out + radius * (math.cos(roll + k * math.tau / sides) * e1
+                                                  + math.sin(roll + k * math.tau / sides) * e2)) for k in range(sides)]
+    tip = part.bm.verts.new(n * r_tip)
+    faces = [part.bm.faces.new(hi)] + [part.bm.faces.new((hi[(k + 1) % sides], hi[k], tip)) for k in range(sides)]
     return part.paint(faces, slot, color)
 
 
 def _disc(part, centre, normal, radius, sides, slot, color=None, roll=0.0):
-    """A flat polygon facing along normal (a pin head, a stud, the chalk mark)."""
+    """A flat polygon facing along normal: one face, so an open island. The base's own pins,
+    studs and chalk mark use _stud; this stays for recipe marks that sit flush on a face."""
     c = Vector(centre)
     e1, e2 = _frame(normal)
     vs = [part.bm.verts.new(c + radius * (math.cos(roll + k * math.tau / sides) * e1
@@ -426,7 +476,8 @@ def _slerp(a, b, t):
 
 
 def lattice(part, enamel="petrol", pairs=2, hub_sides=8, cap_sides=8, rng=None, strut_width=BAR_WIDTH, cap_width=CAP_WIDTH):
-    """The Core: hubs with tread caps and the scissor chains between them. Returns the layout."""
+    """The Core: hubs with tread caps and the scissor chains between them, every piece a closed
+    island. Returns the layout."""
     rng = rng or random.Random("scrapkeep-hoberman")
     cap_r = cap_width / 2
     hubs, links, gaps = lattice_layout()
@@ -440,24 +491,25 @@ def lattice(part, enamel="petrol", pairs=2, hub_sides=8, cap_sides=8, rng=None, 
             t0 = span + (1 - 2 * span) * k / pairs
             t1 = span + (1 - 2 * span) * (k + 1) / pairs
             c0, c1, cm = _slerp(a, b, t0), _slerp(a, b, t1), _slerp(a, b, (t0 + t1) / 2)
+            # The pair's flat faces are its outer and inner faces (LATTICE_OUTER and LATTICE_INNER);
+            # the two ridges point at each other between them.
             _bar(part, c0 * r_outer_bar - s * CHAIN_WIDTH / 2, c1 * r_outer_bar + s * CHAIN_WIDTH / 2,
-                 strut_width, STRUT_PAIR / 2, "paint", enamel)
+                 strut_width, STRUT_PAIR / 2, "paint", enamel, facing=1)
             _bar(part, c0 * r_inner_bar + s * CHAIN_WIDTH / 2, c1 * r_inner_bar - s * CHAIN_WIDTH / 2,
-                 strut_width, STRUT_PAIR / 2, "paint", enamel)
-            _disc(part, cm * (LATTICE_OUTER + 0.002), cm, 0.028, 6, "copper")
+                 strut_width, STRUT_PAIR / 2, "paint", enamel, facing=-1)
+            _stud(part, cm * (LATTICE_OUTER + 0.002), cm, 0.028, PIN_DEPTH, "copper", toward=b - a)
             if k > 0:
                 for side in (-1, 1):
                     p = c0 * (LATTICE_OUTER + 0.002) + s * (side * CHAIN_WIDTH / 2)
-                    _disc(part, p, p, 0.022, 6, "copper")
+                    _stud(part, p, p, 0.022, PIN_DEPTH, "copper", toward=b - a)
     for h, d in enumerate(hubs):
         _drum(part, d, HUB_BODY[0], HUB_BODY[1], HUB_BODY[2], hub_sides, "copper", roll=0.0)
         # Rule 8: each cap's tread turns differently, so the pattern cannot strobe.
-        _drum(part, d, cap_r, HUB_CAP[1], HUB_CAP[2], cap_sides, "rubber",
-              roll=rng.uniform(0, math.tau), bottom=False)
+        _tread_cap(part, d, cap_r, HUB_CAP[1], HUB_CAP[2], cap_sides, "rubber", roll=rng.uniform(0, math.tau))
     # The chalk balance mark on one tread cap, so the eye can count a turn (rule 8); it scales
     # with the cap (0.035 m out, 0.018 m radius on the 0.14 m cap).
     e1, _ = _frame(hubs[0])
-    _disc(part, hubs[0] * (HUB_CAP[2] + 0.0003) + e1 * (cap_r * 0.5), hubs[0], cap_r * 0.018 / 0.07, 6, "paint", "bone")
+    _stud(part, hubs[0] * (HUB_CAP[2] + 0.0003) + e1 * (cap_r * 0.5), hubs[0], cap_r * 0.018 / 0.07, 0.004, "paint", "bone")
     _sharpen(part)
     return hubs, links, gaps
 
@@ -486,7 +538,7 @@ def weapon_ring(enamel_band="bone"):
     for k in range(12):
         a = k * math.tau / 12 + 0.13
         n = Vector((math.cos(a), math.sin(a), 0))
-        _disc(r, n * (c_out + 0.002) + Vector((0, 0, c_z)), n, 0.012, 6, "rubber")
+        _stud(r, n * (c_out + 0.002) + Vector((0, 0, c_z)), n, 0.012, 0.006, "rubber")
     # Neutral weapon seat at 12 o'clock; a pilot recipe replaces it with its weapon.
     r.box("rubber", (0.14, 0.07, 0.11), loc=(0, b_out + 0.03, b_z))
     r.rod("rubber", (0, b_out + 0.06, b_z), (0, b_out + 0.13, b_z), 0.025, 8)
