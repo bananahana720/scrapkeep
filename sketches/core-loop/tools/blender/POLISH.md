@@ -137,6 +137,42 @@ landform caps are unchanged. Scenery rose from 120 / 110 / 2 to 1,500 / 3,000 / 
 polished Highdraft cloud, mesa and thermal air (PR #143; largest member sky_cloud 896 T,
 sky_mesa 566 V); the recipes and their tests hold those three at 1,000 / 1,000 and 800 / 500.
 
+## Watertight
+
+Every piece of a model should be a closed island: each edge is shared by exactly two
+triangles. An open piece lets the AO bake see through it, so its inside reads lighter than it
+should, and with `cull_back` shadows its open end lets a line of light through. Pieces may
+overlap (`common.Part` allows it); they must not share faces, since a strip welded onto a body
+makes edges with three or more triangles.
+
+`check_manifold.py` reads a GLB with no Blender, welds each mesh by position and lists, per
+mesh, its islands, open islands by size, open edges and non-manifold edges:
+
+```sh
+python3 sketches/core-loop/tools/blender/check_manifold.py \
+  sketches/core-loop/assets/models/world_one/shell_rivet.glb
+```
+
+It exits 0 in report mode. `--strict` exits 1 when a file has more than `--max-open` open
+edges or more than `--max-nonmanifold` non-manifold edges (both 0 by default); `--mesh Core`
+checks one mesh.
+
+`shell_base.py` builds the shared Hoberman base closed, at no more triangles than the open
+pieces it replaced:
+
+| Piece | Was (open) | Now (closed) |
+| --- | --- | --- |
+| Strut bar (`_bar`) | four-sided tube, open ends, 8 tris | three-sided prism with end caps, 8 tris; the outer bar's flat face points out, the inner bar's in, so the pair still runs 0.94 to 0.975 m |
+| Pin, collar stud, chalk mark (`_stud`) | 6-sided `_disc`, one face, 4 tris | triangle head closed to a point buried in the part under it, 4 tris |
+| Hub tread cap (`_tread_cap`) | `_drum` with no bottom, 3 × sides − 2 tris | same face, sides closed to a point inside the copper hub drum, 2 × sides − 2 tris |
+
+The tread caps save 192 triangles on a 6-sided shell and 256 on an 8-sided one, and the
+lattice's outer reach (0.9837 m) does not move. Recipe parts outside `shell_base.py` (Rivet's
+drill and pods, Kest's vanes, Tally's drum faces, Tarn's and the Cannon's welded strips) are
+still open or non-manifold until their own units close them. `_disc` stays for recipe marks
+that sit flush on a face. The six shells' triangle and draw budgets are held by
+`tests/hero_six_pilot_budget_test.gd`.
+
 ## Before and after
 
 `polish_compare.py` builds a recipe with polish off and on and writes one JPEG, today's
