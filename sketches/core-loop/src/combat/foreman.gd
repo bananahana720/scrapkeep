@@ -21,6 +21,7 @@ const AttackBudget := preload("res://src/combat/attack_budget.gd")
 
 signal special_tell(moment: String)
 signal wiped(crew: Array)
+signal synced(members: Array)
 
 const SpecialRig := preload("res://src/presentation/special_rig.gd")
 const MODEL := "res://assets/models/world_one/enemy_foreman.glb"
@@ -33,6 +34,13 @@ const BEAT := 60.0 / 129.0
 const HORN_LEAD := BEAT
 const CLOCK_OUT := 1.5
 const CLAIM_RADIUS := 30.0
+# Quick sync (STORY-MAP.md, WORLD1-DEMO-CATALYST.md): the horn snaps nearby chasers into a tight
+# ball-facing arc ahead of the Shift Boss in one beat, then releases them to press together.
+const FORMATION_RADIUS := 6.5
+const FORMATION_SLOT_RADIUS := 3.8
+const FORMATION_ARC := PI * 0.65
+const SYNC_REACH := CLAIM_RADIUS
+const SYNC_BEAT_MARGIN := 0.85
 # The lobber's 2.4 m footprint, raised to cover the clock cabinet (Y -2 to 3.6, enemy_foreman.py).
 const BODY_SIZE := Vector3(2.4, 5.6, 2.4)
 const BODY_CENTER := Vector3(0.0, 0.8, 0.0)
@@ -41,6 +49,7 @@ const TETHER_FALLBACK := Vector3(0.0, 4.2, 0.0)
 var crew: Array = []
 var wipes := 0
 var horns := 0
+var syncs := 0
 
 var _claimed := false
 var _clock := 0.0
@@ -49,6 +58,8 @@ var _signal_material: StandardMaterial3D
 var _hand: Node3D
 var _tether_mesh: ImmediateMesh
 var _tethers: MeshInstance3D
+var _tether_material: StandardMaterial3D
+var _sync_ring: MeshInstance3D
 var _reels: Array = []
 static var _shared: Array = []
 static var _sockets: Dictionary = {}
@@ -176,7 +187,8 @@ static func _asset_warning() -> void:
 		push_warning("foreman: missing or malformed model; using fallback body")
 
 
-# The tethers: one line mesh in world space, redrawn each tick from the reels to the crew.
+# The tethers: one line mesh in world space, redrawn each tick from the reels to the crew,
+# plus a brass ground formation ring shown only during the one-beat horn sync.
 func _build_tethers() -> void:
 	_tether_mesh = ImmediateMesh.new()
 	_tethers = MeshInstance3D.new()
@@ -184,10 +196,23 @@ func _build_tethers() -> void:
 	_tethers.mesh = _tether_mesh
 	_tethers.top_level = true
 	_tethers.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var line := Palette.solid(Palette.CABLE, 0.0, false)
-	line.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_tethers.material_override = line
+	_tether_material = Palette.solid(Palette.CABLE, 0.0, false)
+	_tether_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_tethers.material_override = _tether_material
 	add_child(_tethers)
+	_sync_ring = MeshInstance3D.new()
+	_sync_ring.name = "ForemanSyncRing"
+	var torus := TorusMesh.new()
+	torus.inner_radius = FORMATION_SLOT_RADIUS - 0.14
+	torus.outer_radius = FORMATION_SLOT_RADIUS + 0.14
+	torus.rings = 48
+	torus.ring_segments = 8
+	_sync_ring.mesh = torus
+	_sync_ring.material_override = Palette.unshaded(Color(Palette.BRASS, 0.85))
+	_sync_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_sync_ring.position = Vector3(0.0, -half_height + 0.15, 0.0)
+	_sync_ring.visible = false
+	add_child(_sync_ring)
 
 
 func _physics_process(delta: float) -> void:
@@ -255,13 +280,50 @@ func standing_crew() -> Array:
 	return crew
 
 
-# The horn: the special's tell, on the beat before the wipe. Picture and sound start here.
+# The horn: the special's tell, on the beat before the wipe. Picture and sound start here,
+# and nearby chasers snap into a tight formation ahead of the Shift Boss in that beat.
 func _horn() -> void:
 	horns += 1
 	if ResourceLoader.exists(SPECIAL_CUES):
 		load(SPECIAL_CUES).tell(self)
 	else:
 		special_tell.emit("tell")
+	_snap_formation()
+
+
+func _snap_formation() -> void:
+	if not _in_pack():
+		_claim()
+	var chasers: Array = []
+	for member in standing_crew():
+		if String(member.get("kind")) != "chaser":
+			continue
+		var flat := Vector2(member.global_position.x - global_position.x, member.global_position.z - global_position.z).length()
+		if flat <= SYNC_REACH:
+			chasers.append(member)
+	if chasers.is_empty():
+		return
+	var forward := _flat_to_ball()
+	forward = forward.normalized() if forward.length_squared() > 0.01 else -global_basis.z
+	forward.y = 0.0
+	forward = forward.normalized() if forward.length_squared() > 0.001 else Vector3.FORWARD
+	var right := Vector3(-forward.z, 0.0, forward.x)
+	# Order left-to-right relative to the ball direction so chasers never cross paths on the snap.
+	chasers.sort_custom(func(a: Node3D, b: Node3D) -> bool:
+		var da := a.global_position - global_position
+		var db := b.global_position - global_position
+		return atan2(da.dot(right), da.dot(forward)) < atan2(db.dot(right), db.dot(forward)))
+	var count := chasers.size()
+	var duration := HORN_LEAD * SYNC_BEAT_MARGIN
+	for i in count:
+		var angle := 0.0 if count == 1 else lerpf(-FORMATION_ARC * 0.5, FORMATION_ARC * 0.5, float(i) / float(count - 1))
+		var dir := forward.rotated(Vector3.UP, angle)
+		var slot := global_position + dir * FORMATION_SLOT_RADIUS
+		var chaser: Node3D = chasers[i]
+		chaser.rally_to(slot, duration)
+		chaser.react("flinch", slot - chaser.global_position, false, false)
+	syncs += 1
+	synced.emit(chasers)
 
 
 func _wipe() -> void:
@@ -287,11 +349,17 @@ func _combat():
 
 
 func _show_signal(level: float) -> void:
-	if _signal_material == null:
-		return
-	_signal_material.emission_enabled = level > 0.0
-	_signal_material.emission = Palette.AMBER
-	_signal_material.emission_energy_multiplier = FlashGuard.spike(0.0, 3.0 * level)
+	if _signal_material != null:
+		_signal_material.emission_enabled = level > 0.0
+		_signal_material.emission = Palette.AMBER
+		_signal_material.emission_energy_multiplier = FlashGuard.spike(0.0, 3.0 * level)
+	if _tether_material != null:
+		_tether_material.albedo_color = Palette.BRASS if level > 0.0 else Palette.CABLE
+	if _sync_ring != null:
+		_sync_ring.visible = level > 0.0 and not _dead
+		if _sync_ring.visible:
+			var pulse := 1.0 + 0.06 * sin(level * PI)
+			_sync_ring.scale = Vector3(pulse, 1.0, pulse)
 
 
 # The clock's one hand ticks a twelfth of a turn on every beat (the presence loop's tick).
@@ -331,6 +399,7 @@ func _die() -> void:
 			fleet.discover("shift_over", global_position)
 	for member in members:
 		AttackBudget.clock_out(member, CLOCK_OUT)
+		member.cancel_rally()
 		member.remove_meta("foreman")
 	crew.clear()
 	if _tether_mesh != null:
@@ -338,6 +407,8 @@ func _die() -> void:
 	# The tethers are not debris: the death scatter takes every visible mesh.
 	if _tethers != null:
 		_tethers.visible = false
+	if _sync_ring != null:
+		_sync_ring.visible = false
 	super._die()
 
 

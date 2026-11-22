@@ -34,6 +34,13 @@ const _Roster := preload("res://src/combat/roster.gd")
 const GRAVITY := 26.0
 const KNOCK_DECAY := 16.0
 const FLOOR_RESCUE := 30.0
+# Formation rally (foreman.gd "Quick sync."): a chaser told to snap into a slot sprints there
+# through _move() and hands straight back to its own chase the tick it arrives or the beat ends,
+# so it is never held in place and never overrides a committed attack telegraph or a player knock.
+const RALLY_ARRIVE := 0.5
+const RALLY_MAX_SPEED := 48.0
+const RALLY_MIN_SPEED := 8.0
+const RALLY_INTERRUPT_KNOCK := 5.0
 # Ring-outs (design-v3/WORLD-ROSTERS.md, Andrew's "Ring-outs" tap, 17 Oct 20:03Z): in the
 # Highdraft an enemy knocked off an island edge is gone, a kill for the pilot. Only a knock
 # counts: one that walks off is still rescued. A knock opens the fall; in the air over ground
@@ -140,6 +147,8 @@ var wall_slams := 0
 var _walled_knock := -1
 
 var _knock := Vector3.ZERO
+var _rally_left := 0.0
+var _rally_target := Vector3.ZERO
 var _flash := 0.0
 # The attack's release flash (FX-05): physics frames of the HAZARD tint still to show, or
 # STRIKE_DONE when the last has shown and the rest look is owed.
@@ -596,6 +605,7 @@ func telegraph() -> Node3D:
 # The break-up (EnemyMotion.scatter) lives in its own detached node and frees itself.
 func _die() -> void:
 	_dead = true
+	_rally_left = 0.0
 	_settle_look()
 	_facts_end(true)
 	collision_layer = 0
@@ -607,6 +617,9 @@ func _die() -> void:
 	var land := Callable(terrain, "height") if not ringed_out and is_on_floor() and terrain != null else Callable()
 	if ringed_out or not (is_instance_valid(_clips) and _clips.die(_death_direction(), land)):
 		EnemyMotion.scatter(self, kind, _death_direction(), land)
+	if not ringed_out:
+		var tag_land := Callable(terrain, "height") if terrain != null else Callable()
+		EnemyMotion.pop_shift_tag(self, kind, _death_direction(), tag_land)
 	died.emit(global_position, scrap_value)
 	queue_free()
 
@@ -655,11 +668,45 @@ func _flat_to_ball() -> Vector3:
 	return to
 
 
+func rally_to(spot: Vector3, seconds: float) -> void:
+	if _dead or seconds <= 0.0:
+		return
+	_rally_target = spot
+	_rally_left = seconds
+
+
+func is_rallying() -> bool:
+	return _rally_left > 0.0 and not _dead
+
+
+func cancel_rally() -> void:
+	_rally_left = 0.0
+
+
+func _rally_velocity(delta: float, desired: Vector3) -> Vector3:
+	if _rally_left <= 0.0:
+		return desired
+	_rally_left = maxf(0.0, _rally_left - delta)
+	if winding_up():
+		_rally_left = 0.0
+		return desired
+	var to_slot := Vector3(_rally_target.x - global_position.x, 0.0, _rally_target.z - global_position.z)
+	var dist := to_slot.length()
+	if dist <= RALLY_ARRIVE:
+		_rally_left = 0.0
+		return desired
+	var rem := maxf(delta, _rally_left)
+	var speed := clampf(dist / rem, maxf(desired.length(), RALLY_MIN_SPEED), RALLY_MAX_SPEED)
+	return to_slot / dist * speed
+
+
 # Knockback wins over the enemy's own intent until it has bled below walking pace.
 func _move(delta: float, desired: Vector3) -> void:
+	if _knocked_speed() >= RALLY_INTERRUPT_KNOCK:
+		_rally_left = 0.0
 	var horizontal := Vector3(_knock.x, 0.0, _knock.z)
 	if horizontal.length() < 1.0:
-		horizontal = desired
+		horizontal = _rally_velocity(delta, desired)
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z
 	if _knock.y > 0.0:
