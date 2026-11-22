@@ -589,13 +589,62 @@ func _build_cinder(spec: Dictionary) -> Dictionary:
 
 
 # A glaze spec's strips are [x, z, yaw_deg, length, inner, outer]: the band between inner and outer metres off the
-# tube's centre line, both walls. The wash models draw it (tools/blender/park/sinkhole_tubes.py's polished band).
+# tube's centre line, both walls. The wash models draw it (tools/blender/park/sinkhole_tubes.py's polished band); a
+# spec with "sheen": true sits on a wall no model polishes (the dam's culvert), so it draws its own wet band.
 func _build_glaze(spec: Dictionary) -> Dictionary:
 	var strips := []
 	for s: Array in spec["strips"]:
 		var yaw := deg_to_rad(float(s[2]))
 		strips.append({"centre": Vector2(float(s[0]), float(s[1])), "along": Vector2(sin(yaw), cos(yaw)), "half": float(s[3]) * 0.5, "inner": float(s[4]), "outer": float(s[5])})
+	if bool(spec.get("sheen", false)):
+		_glaze_sheen(strips)
 	return {"spec": spec, "strips": strips}
+
+
+# The sheen: a polished band laid on the ground over each strip's two walls, dashed along its length, so the fast line
+# reads as a slick lane before the glaze_skim tell plays. A mesh built in code that follows the ground, not a primitive.
+const SHEEN_STEP_M := 6.0
+const SHEEN_ACROSS_M := 2.0
+const SHEEN_LIFT := 0.06
+
+
+func _glaze_sheen(strips: Array) -> void:
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.25
+	mat.metallic_specular = 0.6
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_material(mat)
+	for strip: Dictionary in strips:
+		var along: Vector2 = strip["along"]
+		var side := Vector2(along.y, -along.x)
+		var half: float = strip["half"]
+		var rows := maxi(1, ceili(half * 2.0 / SHEEN_STEP_M))
+		var cols := maxi(1, ceili((float(strip["outer"]) - float(strip["inner"])) / SHEEN_ACROSS_M))
+		for sign_v: float in [-1.0, 1.0]:
+			for r in rows:
+				for c in cols:
+					var quad: Array[Vector3] = []
+					for corner: Vector2 in [Vector2(r, c), Vector2(r + 1, c), Vector2(r + 1, c + 1), Vector2(r, c + 1)]:
+						var u: float = -half + half * 2.0 * corner.x / rows
+						var v: float = lerpf(float(strip["inner"]), float(strip["outer"]), corner.y / cols) * sign_v
+						var p: Vector2 = strip["centre"] + along * u + side * v
+						quad.append((ground.call(p.x, p.y, 0.0) as Vector3) + Vector3.UP * SHEEN_LIFT)
+					# Alternate rows light and dark, so the band reads as dashes running down the line.
+					st.set_color(Palette.VERDIGRIS.lightened(0.35) if r % 2 == 0 else Palette.VERDIGRIS)
+					for tri: Array in [[quad[0], quad[1], quad[2]], [quad[0], quad[2], quad[3]]]:
+						# Godot faces the normal against (b - a) x (c - a): keep every triangle facing up.
+						if (tri[1] - tri[0]).cross(tri[2] - tri[0]).y > 0.0:
+							tri = [tri[0], tri[2], tri[1]]
+						for p3: Vector3 in tri:
+							st.add_vertex(p3)
+	st.generate_normals()
+	var band := MeshInstance3D.new()
+	band.name = "GlazeSheen"
+	band.mesh = st.commit()
+	band.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(band)
 
 
 func _on_glaze(g: Dictionary, ball: Vector3, velocity: Vector3) -> bool:
@@ -643,6 +692,17 @@ func _process(delta: float) -> void:
 	for s in sluice_valves:
 		if s["state"] == "warning" or s["state"] == "surging":
 			(s["wheel"] as Node3D).rotation.z += delta * 4.0
+
+
+# A stage parked out of sight (terrain.gd _park, park_all) mid-warning or mid-surge drops its surge, so no
+# hazard stays in Threat.GROUP for near_miss.gd to mark in the arena or the next run's stage 1. The valve
+# goes to its recharge, as after a surge; the next stage entry resets it.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_VISIBILITY_CHANGED or is_visible_in_tree():
+		return
+	for s in sluice_valves:
+		if s["state"] == "warning" or s["state"] == "surging":
+			_enter_sluice_charge(s)
 
 
 func _exit_tree() -> void:
@@ -1336,6 +1396,8 @@ func _drop_sluice_hazard(s: Dictionary) -> void:
 	var h: Hazard = s.get("hazard")
 	if h != null and is_instance_valid(h):
 		h.finish()
+		if h.is_in_group(Threat.GROUP):
+			h.remove_from_group(Threat.GROUP)
 		h.queue_free()
 	s["hazard"] = null
 
@@ -1545,7 +1607,9 @@ func sluice_pay_read(id: String) -> Dictionary:
 	var can_pay: bool = active and s["state"] == "ready" and price > 0 \
 		and run_ref != null and run_ref.has_method("spend_scrap") and int(run_ref.get("scrap")) >= price
 	var g := -1.0
-	if s["state"] == "charging":
+	if s["state"] == "warning" or s["state"] == "surging":
+		g = 0.0
+	elif s["state"] == "charging":
 		g = clampf(1.0 - float(s["charge_left"]) / float(s["charge"]), 0.0, 1.0)
 	elif s["state"] == "ready" and price > 0 and run_ref != null:
 		g = clampf(float(run_ref.get("scrap")) / float(price), 0.0, 1.0)
