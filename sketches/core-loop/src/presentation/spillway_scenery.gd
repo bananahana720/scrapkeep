@@ -10,10 +10,15 @@ const ParkSites := preload("res://src/presentation/park_sites.gd")
 # The existing cast slabs keep their exact geometry. Their finishes share the workshop's
 # concrete/paint/shutter kit; the signal insert adds directional safety paint, open grates
 # and recessed ancient lenses. A missing insert leaves every original material intact.
-static var prop_shader_path := "res://assets/materials/wog_signal.gdshader"
+const PROP_SHADER_PATH := "res://assets/materials/wog_signal.gdshader"
+static var prop_shader_path := PROP_SHADER_PATH
 static var _prop_shaders := {}
 static var _prop_warnings := {}
 static var _prop_materials := {}
+
+
+static func reset_for_tests() -> void:
+	prop_shader_path = PROP_SHADER_PATH
 
 
 static func dress_props(parent: Node, keep: Node = null) -> void:

@@ -8,6 +8,11 @@ const STONE_DIR := "res://assets/models/dig_stone/"
 const MECH_DIR := "res://assets/models/dig_mechanical/"
 static var stone_dir := STONE_DIR
 static var mech_dir := MECH_DIR
+
+
+static func reset_for_tests() -> void:
+	stone_dir = STONE_DIR
+	mech_dir = MECH_DIR
 const STONE_FILES := ["cut_face_long.glb", "cut_face_scoop.glb"]
 const MECH_FILES := ["lamp_curve_module.glb", "strut_tall.glb", "strut_bent.glb", "shell_crescent.glb", "shell_saddle.glb"]
 const ENV_PROPERTIES := ["background_mode", "background_color", "ambient_light_source", "ambient_light_color", "ambient_light_energy", "reflected_light_source", "fog_enabled", "fog_density", "fog_light_color", "fog_light_energy", "fog_sun_scatter"]

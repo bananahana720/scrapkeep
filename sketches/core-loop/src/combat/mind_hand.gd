@@ -43,6 +43,10 @@ static var model_path := MODEL
 static var _warned_models := {}
 static var _rim_masks := {}
 
+
+static func reset_for_tests() -> void:
+	model_path = MODEL
+
 var habit := ""
 var braced_kinds: Array = []
 var adaptations := 0

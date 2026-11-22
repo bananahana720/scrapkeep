@@ -128,6 +128,11 @@ static var _far_sources := {}
 static var far_reads := 0
 static var _material: StandardMaterial3D
 
+
+static func reset_for_tests() -> void:
+	file_overrides.clear()
+	far_reads = 0
+
 var ctx
 const PropKicks := preload("res://src/presentation/prop_kicks.gd")
 const Tuning := preload("res://src/movement/tuning.gd")

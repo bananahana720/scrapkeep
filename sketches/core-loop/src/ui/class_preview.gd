@@ -126,6 +126,10 @@ const LOOK_DRAG := 0.009
 static var _sitting_unlocks := {}
 
 
+static func reset_for_tests() -> void:
+	_sitting_unlocks.clear()
+
+
 func _init(class_def: Resource = null, size_hint := Vector2(380.0, 260.0)) -> void:
 	def = class_def
 	stretch = true

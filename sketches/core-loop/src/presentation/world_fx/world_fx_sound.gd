@@ -19,6 +19,10 @@ static var audio = null
 static var _streams := {}
 
 
+static func reset_for_tests() -> void:
+	audio = null
+
+
 static func row(key: String) -> Dictionary:
 	return Specs.SOUNDS.get(key, {})
 

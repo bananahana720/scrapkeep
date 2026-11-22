@@ -28,6 +28,10 @@ const PENDING_ART := []
 # Test-only: ids treated as extra PENDING_ART so tests reach the pending paths while the list is
 # empty. Production never sets it; a test that sets it clears it before it finishes.
 static var _test_pending: Array[String] = []
+
+
+static func reset_for_tests() -> void:
+	_test_pending.clear()
 const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "asset", "mask"]
 const HOSTILE := [Palette.HAZARD, Palette.BRASS]
 const HOSTILE_DISTANCE := 0.2

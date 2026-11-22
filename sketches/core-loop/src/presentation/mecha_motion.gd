@@ -87,6 +87,10 @@ const EASE_RATE := 12.0
 # skip_lines instead. Static, because rows are read (and lines made) in _init.
 static var echo := true
 
+
+static func reset_for_tests() -> void:
+	echo = true
+
 var class_id := ""
 var skip_lines: Array = []
 var _pod: Node3D

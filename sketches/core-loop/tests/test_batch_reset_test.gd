@@ -18,8 +18,30 @@ const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const WorldFxKit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const WorldFxWord := preload("res://src/presentation/world_fx/world_fx_word.gd")
+const WorldFxGrain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
+const WorldFxSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
+const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const Density := preload("res://src/presentation/density.gd")
+const PickQuiet := preload("res://src/ui/pick_quiet.gd")
+const Parts := preload("res://src/build/parts.gd")
+const WarningBound := preload("res://src/combat/warning_bound.gd")
+const DigScenery := preload("res://src/presentation/dig_scenery.gd")
+const ArenaWakingDress := preload("res://src/presentation/arena_waking_dress.gd")
+const DigFx := preload("res://src/presentation/dig_fx.gd")
+const ArenaBowlDress := preload("res://src/presentation/arena_bowl_dress.gd")
+const Requisition := preload("res://src/boss/requisition.gd")
+const WakingDress := preload("res://src/boss/waking_dress.gd")
+const MindDress := preload("res://src/boss/mind_dress.gd")
+const MindHand := preload("res://src/combat/mind_hand.gd")
+const SpillwayScenery := preload("res://src/presentation/spillway_scenery.gd")
+const PackPressure := preload("res://src/combat/pack_pressure.gd")
+const Cosmetics := preload("res://src/core/cosmetics.gd")
+const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
+const ThreadGuard := preload("res://src/core/thread_guard.gd")
+const PlayerFx := preload("res://src/presentation/player_fx.gd")
+const ParkProps := preload("res://src/presentation/park_props.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
@@ -75,7 +97,91 @@ func _run() -> void:
 	RescueSite.model_path = "res://assets/models/__missing_cage__.glb"
 	MusicRows.stem_dir = "user://no_stems"
 
+	# Dirty module-owned statics (W46-T2) and root viewport state.
+	var start_size := root.size
+	var start_scale_size := root.content_scale_size
+	var start_aspect := root.content_scale_aspect
+	root.size = Vector2i(1920, 1080)
+	root.content_scale_size = Vector2i(1920, 1080)
+	root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+	WorldFxGrain.run_seed = 4242
+	WorldFxSound.audio = root
+	Density.live().force(0.85)
+	Density.publish_fill_scale(0.45)
+	var fake_hud := _FakeHud.new()
+	PickQuiet.hush(_FakeHost.new(fake_hud))
+	t.check("PickQuiet.hush marks hud quiet and raises holds", fake_hud.is_quiet and PickQuiet._total == 1)
+	Parts.maker_nudge_on = false
+	Parts.answer_nudge_on = false
+	Parts.seams = {"spawner.extend_cloak": true}
+	Parts.opened_items = {"strike_pocket": true}
+	WarningBound.test_pad_scale = 0.0
+	WarningBound.test_skip_hazard_merge = true
+	DigScenery.stone_dir = "res://missing_stone/"
+	DigScenery.mech_dir = "res://missing_mech/"
+	DigScenery.cart_dir = "res://missing_cart/"
+	ArenaWakingDress.stone_dir = "res://missing_stone/"
+	ArenaWakingDress.mech_dir = "res://missing_mech/"
+	DigFx.lamp_shader_path = "res://missing_lamp.gdshader"
+	ArenaBowlDress.asset_dir = "res://missing_bowl/"
+	ArenaBowlDress.spillway_dir = "res://missing_spillway/"
+	Requisition.model_path = "res://missing_req.glb"
+	Requisition.scooter_path = "res://missing_scooter.glb"
+	WakingDress.base_path = "res://missing_waking.glb"
+	WakingDress.kit_path = "res://missing_waking_kit.glb"
+	MindDress.base_path = "res://missing_mind.glb"
+	MindDress.kit_path = "res://missing_mind_kit.glb"
+	MindHand.model_path = "res://missing_hand.glb"
+	SpillwayScenery.prop_shader_path = "res://missing_prop.gdshader"
+	PackPressure.lead_plant = "none"
+	Cosmetics._test_pending = ["outfit_rivet_hood"]
+	MechaMotion.echo = false
+	ClassPreview._sitting_unlocks = {"tally": true}
+	ThreadGuard.violations = 2
+	ThreadGuard.last_violation = "planted"
+	PlayerFx.rect_tests = 11
+	ParkProps.file_overrides = {"a": "b"}
+	ParkProps.far_reads = 5
+
 	driver._reset()
+
+	t.eq("root.size resets to startup size", root.size, start_size)
+	t.eq("root.content_scale_size resets to startup size", root.content_scale_size, start_scale_size)
+	t.eq("root.content_scale_aspect resets to startup aspect", root.content_scale_aspect, start_aspect)
+	t.eq("WorldFxGrain.run_seed resets to 0", WorldFxGrain.run_seed, 0)
+	t.eq("WorldFxSound.audio resets to null", WorldFxSound.audio, null)
+	t.check("WorldFxAnchor.live clears on reset", WorldFxAnchor.live.is_empty())
+	t.check("Density governor resets value and hold", is_zero_approx(Density.live().value) and not Density.live().hold)
+	t.near("Density.last_published resets to 1.0", Density.last_published, 1.0)
+	t.check("GraphicsPreset clears tracked state and resets to high", GraphicsPreset.current == "high"
+		and not GraphicsPreset._target_server_active and GraphicsPreset._lighting.is_empty()
+		and GraphicsPreset._dressing_hosts.is_empty() and GraphicsPreset._worlds.is_empty())
+	t.check("PickQuiet clears holds and restores hud", PickQuiet._holds.is_empty() and PickQuiet._total == 0 and not fake_hud.is_quiet)
+	t.check("Parts resets nudges, seams and opened_items", Parts.maker_nudge_on and Parts.answer_nudge_on
+		and Parts.seams.is_empty() and Parts.opened_items.is_empty())
+	t.check("WarningBound resets test overrides", is_equal_approx(WarningBound.test_pad_scale, 1.0) and not WarningBound.test_skip_hazard_merge)
+	t.check("DigScenery resets all three dirs", DigScenery.stone_dir == DigScenery.STONE_DIR
+		and DigScenery.mech_dir == DigScenery.MECH_DIR and DigScenery.cart_dir == DigScenery.CART_DIR)
+	t.check("ArenaWakingDress resets both dirs", ArenaWakingDress.stone_dir == ArenaWakingDress.STONE_DIR
+		and ArenaWakingDress.mech_dir == ArenaWakingDress.MECH_DIR)
+	t.eq("DigFx.lamp_shader_path resets to constant", DigFx.lamp_shader_path, DigFx.LAMP_SHADER_PATH)
+	t.check("ArenaBowlDress resets both dirs", ArenaBowlDress.asset_dir == ArenaBowlDress.ASSET_DIR
+		and ArenaBowlDress.spillway_dir == ArenaBowlDress.SPILLWAY_DIR)
+	t.check("Requisition resets both paths", Requisition.model_path == Requisition.MODEL
+		and Requisition.scooter_path == Requisition.SCOOTER_MODEL)
+	t.check("WakingDress resets both paths", WakingDress.base_path == WakingDress.BASE
+		and WakingDress.kit_path == WakingDress.KIT)
+	t.check("MindDress resets both paths", MindDress.base_path == MindDress.BASE
+		and MindDress.kit_path == MindDress.KIT)
+	t.eq("MindHand.model_path resets to MODEL", MindHand.model_path, MindHand.MODEL)
+	t.eq("SpillwayScenery.prop_shader_path resets to constant", SpillwayScenery.prop_shader_path, SpillwayScenery.PROP_SHADER_PATH)
+	t.eq("PackPressure.lead_plant resets to empty", PackPressure.lead_plant, "")
+	t.check("Cosmetics._test_pending clears on reset", Cosmetics._test_pending.is_empty())
+	t.check("MechaMotion.echo resets to true", MechaMotion.echo)
+	t.check("ClassPreview._sitting_unlocks clears on reset", ClassPreview._sitting_unlocks.is_empty())
+	t.check("ThreadGuard resets violations", ThreadGuard.violations == 0 and ThreadGuard.last_violation == "")
+	t.eq("PlayerFx.rect_tests resets to 0", PlayerFx.rect_tests, 0)
+	t.check("ParkProps resets file_overrides and far_reads", ParkProps.file_overrides.is_empty() and ParkProps.far_reads == 0)
 
 	t.near("EnemyMotion.motion_scale resets to 1.0", EnemyMotion.motion_scale, 1.0)
 	t.check("HighdraftFx.preferred resets to false", not HighdraftFx.preferred)
@@ -112,3 +218,24 @@ func _run() -> void:
 	t.eq("MusicRows.stem_dir resets to empty", MusicRows.stem_dir, "")
 
 	quit(t.verdict())
+
+
+class _FakeHud extends RefCounted:
+	var is_quiet := false
+
+	func quiet(on: bool) -> void:
+		is_quiet = on
+
+
+class _FakeGame extends RefCounted:
+	var hud
+
+	func _init(h) -> void:
+		hud = h
+
+
+class _FakeHost extends RefCounted:
+	var game
+
+	func _init(h) -> void:
+		game = _FakeGame.new(h)

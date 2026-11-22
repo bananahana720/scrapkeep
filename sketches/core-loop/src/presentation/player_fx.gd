@@ -142,6 +142,10 @@ const KEEP_GROUP := "word_keep_clear"
 const ROOM_GROUP := "word_room"
 # Rect-versus-rect tests made by word placement (a count for the notes and the cost check).
 static var rect_tests := 0
+
+
+static func reset_for_tests() -> void:
+	rect_tests = 0
 const WORD_LIFE := 0.6
 const WORD_STAMP_S := 0.1
 const WORD_EXIT_S := 0.2

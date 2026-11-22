@@ -457,6 +457,14 @@ static var seams := {}
 static var opened_items := {}
 
 
+static func reset_for_tests() -> void:
+	maker_nudge_on = true
+	answer_nudge_on = true
+	_run_ref = null
+	seams = {}
+	opened_items = {}
+
+
 # Every authored row: the catalogue above, the v2 item table and Moss's cells, finished
 # by the generator. Generated recipes are not listed; row() builds them on demand.
 static func rows() -> Dictionary:

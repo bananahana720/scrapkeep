@@ -37,6 +37,11 @@ const SCOOTER_MODEL := "res://assets/models/bosses/boss_brindle_scooter.glb"
 # Test seam: a test points these at a missing file to prove the primitive fallback builds.
 static var model_path := MODEL
 static var scooter_path := SCOOTER_MODEL
+
+
+static func reset_for_tests() -> void:
+	model_path = MODEL
+	scooter_path = SCOOTER_MODEL
 # The model parts the loader needs; a model that lacks any of them is dropped, not half used.
 # The model parts drawn_boxes() lists.
 const BODY_PARTS := ["Hull", "BowRam", "CockpitShield", "CraneMasts", "CraneElbowPort", "CraneElbowStarboard", "DeckDressing",
