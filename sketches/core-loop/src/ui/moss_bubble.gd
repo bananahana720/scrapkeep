@@ -100,6 +100,8 @@ var _calls_played := {}
 var _call := {}
 var _call_fresh := 0.0
 var _call_quiet := LoreRows.CALL_GAP_S
+# The physics frame on which the bubble last acted on the interact key (takes_interact).
+var _took_interact := -1000
 
 
 class ExchangeInput extends Node:
@@ -342,6 +344,8 @@ func _exchange_input(event: InputEvent) -> void:
 		return
 	if _intro_showing:
 		if event.is_action_pressed("cl_interact") or event.is_action_pressed("cl_fire") or event.is_action_pressed("cl_harpoon"):
+			if event.is_action_pressed("cl_interact"):
+				_took_interact = Engine.get_physics_frames()
 			_end_intro()
 		return
 	if _exchange.is_empty():
@@ -351,10 +355,20 @@ func _exchange_input(event: InputEvent) -> void:
 		# the beat as any spare key does (flourish_player.gd), and the hello comes back.
 		if _exchange_held:
 			return
+		_took_interact = Engine.get_physics_frames()
 		_advance_exchange()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("cl_fire") or event.is_action_pressed("cl_harpoon"):
 		_end_exchange()
+
+
+# Whether the interact key is this bubble's now (MG-10: the ball never refuses a press it takes):
+# while an intro or an unheld exchange line is up, and on the physics frame the bubble acted on a
+# press and the one after, since a press that closes the last line has already cleared it by the
+# time the ball reads the key. A call-in, a bark or a beat never reads the key.
+func takes_interact() -> bool:
+	return _intro_showing or (not _exchange.is_empty() and not _exchange_held) \
+			or Engine.get_physics_frames() - _took_interact <= 2
 
 
 # Ends a zone-entry exchange early, as the fire and hook keys do. Public so a test can clear it.

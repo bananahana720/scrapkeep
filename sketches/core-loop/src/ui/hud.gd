@@ -1638,12 +1638,13 @@ func _on_verb_failed(verb: String, _reason: String, _at: Vector3) -> void:
 	ability_bar.refuse(bar[pick] if pick >= 0 and pick < bar.size() else "line")
 
 
-# Moss's bubble reads the interact key while it speaks (moss_bubble.gd), so E there is never a
-# refused press. The workshop is built on the way into a run; before it is, nothing speaks.
+# Moss's bubble reads the interact key on an intro or an exchange (moss_bubble.gd takes_interact),
+# so E there is never a refused press. The workshop is built on the way into a run; before it is,
+# nothing speaks.
 func _talk_takes_interact() -> bool:
 	var shop = game.get_node_or_null("Workshop")
 	var bubble = shop.get("bubble") if shop != null else null
-	return bubble != null and bubble.showing()
+	return bubble != null and bubble.takes_interact()
 
 
 # Simulated time: the tally of a build's trying and the part name's 1.2 s run on the physics
