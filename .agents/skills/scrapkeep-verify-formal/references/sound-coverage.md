@@ -6,9 +6,9 @@ The covered files:
 
 - `sketches/core-loop/src/presentation/music_arbiter.gd`: pure priority stack `resolve(state)` deciding the active deck owner (`dead`, `menu`, `boss_finale`, `launch`, `boss`, `warden`, `ult`, `radio`, `champion`, `moment`, `stage`).
 - `sketches/core-loop/src/presentation/melody_lease.gd`: melodic lane booking (`book`, `release`, `bump_epoch`) and June preemption (`should_preempt`).
-- `sketches/core-loop/src/presentation/deck_moves.gd`: festival deck policy (`tend`, `on_drop`, `PUMP`, `BUILD_TIERS`) gating pump and build/breath/drop one-shots on the arbiter and live Warden section.
+- `sketches/core-loop/src/presentation/deck_moves.gd`: deck preset policy (`tend`, `on_drop`, `PUMP`, `PUMP_VIKING`, `BUILD_TIERS`) gating pump and build/breath/drop one-shots for `--deck=festival` and `--deck=viking` on the arbiter and live Warden section.
 - `sketches/core-loop/src/presentation/audio.gd`: `_arbiter_state`, `radio_play`, `radio_release`, `_ace_return`, `_begin_boss`, `phase_music`, `_champion_joined`, `_champion_gone`, `warden_took_band`, `warden_engaged`, `_tend_champions`, `_flush_flow` (`dead`/`end`/`run`/`idle`), `_tend_set`, `_tend_deck`, `_follow_warden_form`, `_ace_end_at`, `_set_answer_spoiled`, and `_drop_set_answer`.
-- `sketches/core-loop/src/presentation/ace_sequencer.gd`: `trim_epoch`, `trim_at`, `trim_bar`, `invalidate_trims`, `_run` epoch validation on `"trim"` and `"sweep"`, `set_pump`, `shot_at`, `cancel_shots`, and shot cleanup on `stop`, `start_level` and `invalidate_trims`.
+- `sketches/core-loop/src/presentation/ace_sequencer.gd`: `trim_epoch`, `trim_at`, `trim_bar`, `invalidate_trims`, `_run` epoch validation on `"trim"` and `"sweep"`, `set_pump`, `pump_depth_for`, `pump_active`, `shot_at`, `cancel_shots`, and shot cleanup on `stop` and `start_level` (`invalidate_trims` leaves deck shots intact so `--set-director=on` and `--deck=*` coexist).
 
 ## Steps
 
@@ -42,8 +42,8 @@ The covered files:
 | `GuardDeathClearsUlt`  | `_flush_flow` `"dead"` calls `_disarm_ultimate()` clearing `_ult_armed` and `_ult_took_band`. | `sound-broken-death-ult` | `DeathClearsUltFlight` |
 | `GuardMelodyLease`     | `MelodyLease.should_preempt` drops June's answer on warning, directed section, or pack switch. | `sound-broken-melody-clash` | `OneMelodyNoClash` |
 | `GuardEpochTrim`       | ace_sequencer.gd `trim_epoch` + `invalidate_trims` skips stale epoch-stamped trims and sweeps. | `sound-broken-stale-trim` | `NoStaleTrim` |
-| `GuardDeckArbiter`     | audio.gd `_tend_deck` + deck_moves.gd `tend` + ace_sequencer.gd `_pump_depth_for` gate pump and deck shots on arbiter `allow_dj`, sectioned packs, and allowed Warden sections. | `sound-broken-deck-arbiter` | `DeckObeysArbiter` |
-| `GuardDeckShotClean`   | deck_moves.gd `tend` / `on_drop` + ace_sequencer.gd `cancel_shots` / `stop` / `invalidate_trims` + audio.gd `_ace_end_at` cancel shots on stop, pack change, death, or leaving the causing section. | `sound-broken-stale-shot` | `NoStaleShot` |
+| `GuardDeckArbiter`     | audio.gd `_tend_deck` / `radio_play` + deck_moves.gd `tend` + ace_sequencer.gd `pump_depth_for` gate pump (`build`/`telegraph`/`drop`) and deck shots (`build`/`telegraph`/`open`/`drop`) on arbiter `allow_dj`, sectioned packs, and allowed Warden sections. | `sound-broken-deck-arbiter` | `DeckObeysArbiter` |
+| `GuardDeckShotClean`   | deck_moves.gd `tend` / `on_drop` + ace_sequencer.gd `cancel_shots` / `stop` / `start_level` + audio.gd `_ace_end_at` cancel shots on stop, pack change, death, back-to-back drop, or leaving the causing section. | `sound-broken-stale-shot` | `NoStaleShot` |
 
 ## Bounds
 
@@ -55,7 +55,7 @@ Run `bash models/make-sound-configs.sh`, then plain TLC on each `sound-*.cfg` wi
 
 | Config | Stands for | Must report |
 | ------ | ---------- | ----------- |
-| `sound-today` | the code at the sync commit, every guard in place | no break, in at least the pinned 5,226 distinct states |
+| `sound-today` | the code at the sync commit, every guard in place | no break, in at least the pinned 4,890 distinct states |
 | `sound-broken-*` | one guard off, as the Guards table lists | the named rule breaks |
 | `sound-reach-*` | one probe each for Warden-over-champion, boss finale, boss radio pin, ultimate flight, June answer, deck pump, deck shot, and death | every probe breaks |
 
@@ -63,10 +63,10 @@ Run `bash models/make-sound-configs.sh`, then plain TLC on each `sound-*.cfg` wi
 
 ## The tests behind it
 
-`sketches/core-loop/tests/sound_arbiter_test.gd` exercises the live `Audio` and `AceSequencer` stack on the arbiter, melody lease, trim epochs, and SFX voice-class budgets. `sketches/core-loop/tests/deck_moves_test.gd` exercises festival deck off-parity, pump breakpoints and non-pumped/flat/arbiter gating, build/breath/drop shot timing and cleanup on `stop`, pack change, death, and `invalidate_trims`, and `deck_fx` warning-lane notch and peak bounds. `sketches/core-loop/tests/set_director_test.gd`, `sketches/core-loop/tests/warden_form_test.gd`, `sketches/core-loop/tests/phase_music_test.gd`, and `sketches/core-loop/tests/radio_test.gd` cover the individual subsystems.
+`sketches/core-loop/tests/sound_arbiter_test.gd` exercises the live `Audio` and `AceSequencer` stack on the arbiter, melody lease, trim epochs, and SFX voice-class budgets. `sketches/core-loop/tests/deck_moves_test.gd` exercises `--deck=off` parity, `--deck=festival` and `--deck=viking` pump breakpoints and non-pumped/flat/arbiter gating, build/breath/drop shot timing and cleanup on `stop`, pack change, death, back-to-back drops, and `--set-director=on` preemption, and `deck_fx` warning-lane notch, peak bounds, and exact-zero endpoints. `sketches/core-loop/tests/set_director_test.gd`, `sketches/core-loop/tests/warden_form_test.gd`, `sketches/core-loop/tests/phase_music_test.gd`, and `sketches/core-loop/tests/radio_test.gd` cover the individual subsystems.
 
 ## Not modelled
 
 Audio sample timing in seconds, bus DSP filter cutoffs and reverb (music_dsp.gd, covered by music_dsp_test.gd), SFX polyphony counts (sfx_budget.gd, covered by sound_arbiter_test.gd), festival deck synthesis and warning-lane spectrum (deck_fx.gd, covered by deck_moves_test.gd), jukebox spins on the title screen, launch-to-next-stage landings (`RunFlow.tla` models launch flow), minibosses and moment tunes below champion priority, and anything drawn or heard on speakers.
 
-Sync commit: 16169bdd2 (branch w45/sound-deck-festival, 21 November 2026: add festival deck pump, one-shots, and --deck=festival switch with arbiter and stale-shot invariants)
+Sync commit: c29eacb2d (branch w45/sound-deck-festival, 21 November 2026: close deck shot lifecycle bugs, split PumpSectionAllowed from DeckSectionAllowed, and add --deck=viking preset)

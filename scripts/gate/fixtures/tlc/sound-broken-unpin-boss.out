@@ -1,12 +1,12 @@
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 55 and seed -3186647262601181950 with 2 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
-Parsing file <tmp>/SoundArbiter.tla
+Running breadth-first search Model-Checking with fp 52 and seed -8509527850780579292 with 18 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: 5916] (Mac OS X 27.2.1 aarch64, Homebrew 27.0.1.0.3 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/tmp.1Apaj7TFWS/SoundArbiter.tla
 Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/Naturals.tla
 Semantic processing of module Naturals
 Semantic processing of module SoundArbiter
-Starting... (2026-11-21 20:31:37)
+Starting... (2026-11-21 21:35:06)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-11-21 20:31:37.
+Finished computing initial states: 1 distinct state generated at 2026-11-21 21:35:06.
 Error: Invariant BossMusicInArena is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -28,7 +28,7 @@ State 1: <Initial predicate>
 /\ warden_section = "build"
 /\ warden_sealed = FALSE
 
-State 2: <EnterBossArena line 189, col 5 to line 199, col 44 of module SoundArbiter>
+State 2: <EnterBossArena line 195, col 5 to line 205, col 44 of module SoundArbiter>
 /\ warning_on = FALSE
 /\ ult_armed = FALSE
 /\ flow = "boss"
@@ -47,7 +47,7 @@ State 2: <EnterBossArena line 189, col 5 to line 199, col 44 of module SoundArbi
 /\ warden_section = "build"
 /\ warden_sealed = FALSE
 
-State 3: <RadioPin line 212, col 5 to line 219, col 58 of module SoundArbiter>
+State 3: <RadioPin line 218, col 5 to line 225, col 58 of module SoundArbiter>
 /\ warning_on = FALSE
 /\ ult_armed = FALSE
 /\ flow = "boss"
@@ -66,7 +66,7 @@ State 3: <RadioPin line 212, col 5 to line 219, col 58 of module SoundArbiter>
 /\ warden_section = "build"
 /\ warden_sealed = FALSE
 
-State 4: <RadioUnpin line 222, col 5 to line 231, col 58 of module SoundArbiter>
+State 4: <RadioUnpin line 228, col 5 to line 237, col 58 of module SoundArbiter>
 /\ warning_on = FALSE
 /\ ult_armed = FALSE
 /\ flow = "boss"
@@ -85,7 +85,7 @@ State 4: <RadioUnpin line 222, col 5 to line 231, col 58 of module SoundArbiter>
 /\ warden_section = "build"
 /\ warden_sealed = FALSE
 
-395 states generated, 191 distinct states found, 139 states left on queue.
-The depth of the complete state graph search is 5.
-The average outdegree of the complete state graph is 4 (minimum is 0, the maximum 11 and the 95th percentile is 9).
-Finished in 00s at (2026-11-21 20:31:37)
+789 states generated, 328 distinct states found, 222 states left on queue.
+The depth of the complete state graph search is 6.
+The average outdegree of the complete state graph is 3 (minimum is 0, the maximum 11 and the 95th percentile is 8).
+Finished in 00s at (2026-11-21 21:35:06)

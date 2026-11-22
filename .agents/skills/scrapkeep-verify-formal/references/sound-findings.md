@@ -4,7 +4,7 @@ Each finding is a break the model found that replayed on the real game. A closed
 
 ## None open
 
-`sound-today` reports no break at the sync commit (5,226 distinct states, checked with TLC 2.19 from tla2tools 1.7.4 on the Mac Studio on 21 November 2026, including festival deck arbiter and stale-shot rules `DeckObeysArbiter` and `NoStaleShot`). All four findings discovered on baseline `c1b7bdc26` are closed and covered by regression checks in `sketches/core-loop/tests/sound_arbiter_test.gd`.
+`sound-today` reports no break at the sync commit (4,890 distinct states, checked with TLC 2.19 from tla2tools 1.7.4 on the Mac Studio on 21 November 2026, including deck arbiter and stale-shot rules `DeckObeysArbiter` with `PumpSectionAllowed` split from `DeckSectionAllowed`, and `NoStaleShot`). All four findings discovered on baseline `c1b7bdc26` are closed and covered by regression checks in `sketches/core-loop/tests/sound_arbiter_test.gd`.
 
 ## Closed findings
 

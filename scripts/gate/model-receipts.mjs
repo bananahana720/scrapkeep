@@ -289,9 +289,9 @@ export const ROWS = {
     real: [
       {
         cfg: "sound-today.cfg",
-        minStates: 5226,
+        minStates: 4890,
         label:
-          "music deck ownership arbiter, melody lease, epoch-stamped trims and festival deck pump/shots across stage, champion, Warden, boss, radio, ultimate, warning and death (Sound V4)",
+          "music deck ownership arbiter, melody lease, epoch-stamped trims and deck pump/shots across stage, champion, Warden, boss, radio, ultimate, warning and death (Sound V4)",
       },
     ],
     plants: [

@@ -84,6 +84,12 @@ ReconcileMelody(fl, we, ws, wsec, dp, warn, cur_owner, cur_epoch, cur_trim, cur_
     ELSE
         [owner |-> cur_owner, trim |-> cur_trim, tepoch |-> cur_tepoch]
 
+PumpSectionAllowed(fl, we, ws, wsec, dp) ==
+    /\ fl = "stage"
+    /\ dp = "stage_sec"
+    /\ we /\ ws
+    /\ wsec \in {"build", "telegraph", "drop"}
+
 DeckSectionAllowed(fl, we, ws, wsec, dp) ==
     /\ fl = "stage"
     /\ dp = "stage_sec"
@@ -100,7 +106,7 @@ ShotMatchesSection(shot, fl, we, ws, wsec, dp) ==
          [] OTHER           -> FALSE
 
 ReconcileDeck(fl, we, ws, wsec, dp, cur_pump, cur_shot, cur_sepoch, ep) ==
-    LET pump_ok == DeckSectionAllowed(fl, we, ws, wsec, dp)
+    LET pump_ok == PumpSectionAllowed(fl, we, ws, wsec, dp)
         shot_ok == cur_shot /= "none" /\ cur_sepoch = ep /\ ShotMatchesSection(cur_shot, fl, we, ws, wsec, dp)
     IN [pump   |-> IF pump_ok THEN cur_pump
                    ELSE IF GuardDeckArbiter THEN FALSE ELSE cur_pump,
@@ -280,7 +286,7 @@ DjEndJuneAnswer ==
 
 DeckEnablePump ==
     /\ ~deck_pump
-    /\ (DeckSectionAllowed(flow, warden_engaged, warden_sealed, warden_section, deck_pack) \/ ~GuardDeckArbiter)
+    /\ (PumpSectionAllowed(flow, warden_engaged, warden_sealed, warden_section, deck_pack) \/ ~GuardDeckArbiter)
     /\ deck_pump' = TRUE
     /\ UNCHANGED <<flow, warden_engaged, warden_sealed, warden_section, boss_phase,
                    radio_state, champion_hyped, ult_armed, warning_on, deck_pack,
@@ -370,7 +376,7 @@ NoStaleTrim ==
     trim_active => (trim_epoch = dj_epoch /\ melody_owner = "june_answer")
 
 DeckObeysArbiter ==
-    /\ (deck_pump => DeckSectionAllowed(flow, warden_engaged, warden_sealed, warden_section, deck_pack))
+    /\ (deck_pump => PumpSectionAllowed(flow, warden_engaged, warden_sealed, warden_section, deck_pack))
     /\ (deck_shot /= "none" => DeckSectionAllowed(flow, warden_engaged, warden_sealed, warden_section, deck_pack))
 
 NoStaleShot ==
