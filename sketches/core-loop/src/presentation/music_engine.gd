@@ -1621,7 +1621,7 @@ func render(frames: int) -> void:
 		if _pump_depth > 0.0:
 			var beat := beat_len()
 			var in_beat := posmod(clock - grid_origin, beat)
-			var hold := int(beat * PUMP_HOLD_FRAC)
+			var hold := maxi(PUMP_ATTACK, int(beat * PUMP_HOLD_FRAC))
 			if in_beat < PUMP_ATTACK:
 				n = mini(n, PUMP_ATTACK - in_beat)
 			elif in_beat < hold:
@@ -3088,7 +3088,7 @@ func _pump_at(sample: int) -> float:
 	var low := 1.0 - _pump_depth
 	if pos < PUMP_ATTACK:
 		return lerpf(1.0, low, float(pos) / PUMP_ATTACK)
-	var hold := int(beat * PUMP_HOLD_FRAC)
+	var hold := maxi(PUMP_ATTACK, int(beat * PUMP_HOLD_FRAC))
 	if pos < hold:
 		return low
 	var x := clampf(float(pos - hold) / maxf(beat * 0.68 - hold, 1.0), 0.0, 1.0)

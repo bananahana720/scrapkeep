@@ -55,20 +55,35 @@ func _rack_voices() -> void:
 	t.check("every upgraded rack voice is deterministic and peak-safe", bad_peak.is_empty(), str(bad_peak))
 	t.check("every upgraded rack voice starts and ends at rest", bad_edges.is_empty(), str(bad_edges))
 	t.check("direct uncached synth voices are deterministic",
-		Synth.lead(74, 4096) == Synth.lead(74, 4096) and Synth.kick() == Synth.kick() and Synth.clap() == Synth.clap()
-		and Synth.talk(62, 4096) == Synth.talk(62, 4096) and Synth.choir(62, "ah", 4096) == Synth.choir(62, "ah", 4096)
+		Synth.lead(74, 4096) == Synth.lead(74, 4096)
+		and Synth.keys(62, 4096) == Synth.keys(62, 4096)
+		and Synth.brass(62, 4096) == Synth.brass(62, 4096)
+		and Synth.bell(74, 4096) == Synth.bell(74, 4096)
+		and Synth.mallet(74, 4096) == Synth.mallet(74, 4096)
+		and Synth.fbass(50, 4096) == Synth.fbass(50, 4096)
+		and Synth.reese(50, 4096) == Synth.reese(50, 4096)
+		and Synth.clav(62, 4096) == Synth.clav(62, 4096)
+		and Synth.sub(50, 4096) == Synth.sub(50, 4096)
+		and Synth.talk(62, 4096) == Synth.talk(62, 4096)
+		and Synth.choir(62, "ah", 4096) == Synth.choir(62, "ah", 4096)
+		and Synth.tom(50, 4096) == Synth.tom(50, 4096)
+		and Synth.sub808(50, 4096) == Synth.sub808(50, 4096)
+		and Synth.chime(74, 4096) == Synth.chime(74, 4096)
+		and Synth.kick() == Synth.kick() and Synth.snare() == Synth.snare() and Synth.clap() == Synth.clap()
+		and Synth.hat(false) == Synth.hat(false) and Synth.hat(true) == Synth.hat(true)
 		and Synth.ride() == Synth.ride() and Synth.crash() == Synth.crash())
 	var bad_cues: Array = []
 	for cue_id in ["menu_move", "menu_confirm", "menu_back", "lounge_flip", "bay_lounge_in", "found_twinkle",
-			"achievement_chime", "rescue_fanfare", "part_get", "panel_jackpot", "pickup_fountain",
-			"gates_open", "warden_gate_release", "overtime_pay", "arena_unlock_bells",
-			"synergy_fired", "evolution_fired", "stinger_boss_defeated"]:
+			"panel_jackpot", "gates_open", "warden_gate_release", "overtime_pay", "arena_unlock_bells",
+			"synergy_fired", "evolution_fired", "ceremony_resolve", "ultimate_ready"]:
+		if cue_id in SfxBank.EVENT_CUES:
+			bad_cues.append("%s(shadowed_by_event_set)" % cue_id)
 		var buf := SfxBank.samples(cue_id)
 		var pk := Synth.peak(buf)
 		var faults := Edges.faults(buf)
 		if pk < 0.2 or pk > 0.95 or not faults.is_empty():
 			bad_cues.append("%s(peak=%.3f,faults=%s)" % [cue_id, pk, str(faults)])
-	t.check("every enriched UI, camp, reward and boss cue is peak-safe and edge-clean", bad_cues.is_empty(), str(bad_cues))
+	t.check("every enriched live procedural cue is unshadowed, peak-safe and edge-clean", bad_cues.is_empty(), str(bad_cues))
 
 
 # Warm alto sax check: high-frequency harshness (first-difference RMS / signal RMS) stays well

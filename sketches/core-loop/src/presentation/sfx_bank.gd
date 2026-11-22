@@ -915,7 +915,7 @@ static func _bake(id: String) -> PackedFloat32Array:
 		return Synth.render_score(kest_score(id), 0.7)
 	match id:
 		"ui_tick":
-			return _mix([[_cut(_n("mallet", 86), 0.045, 240), 0, 0.85], [_cut(_n("bell", 98), 0.035, 200), 0, 0.22]], false, 0.72)
+			return _tone(0.03, _hz(86), _hz(86), "sine", 120.0)
 		"hop":
 			return _mix([[_tone(0.11, 380.0, 640.0, "sine", 28.0), 0, 1.0], [_noise(0.02, 3000.0, 3000.0, 200.0), 0, 0.3]])
 		"boost_whoosh":
@@ -1079,9 +1079,7 @@ static func _bake(id: String) -> PackedFloat32Array:
 			# scrap_tick's shape in brass: the bell's attack over a short brass body, a touch lower in the noise.
 			return _mix([[_cut(_n("bell", 74), 0.16), 0, 1.0], [_cut(_n("brass", 62), 0.09), 0, 0.45], [_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.15]])
 		"part_get":
-			return _mix([[_arpeggio([74, 77, 81, 86], 0.05, "bell", 0.8), 0, 0.9],
-				[_cut(_n("keys", 62), 0.55, 1600), Synth.seconds(0.15), 0.24],
-				[_cut(_n("keys", 69), 0.55, 1600), Synth.seconds(0.15), 0.22]])
+			return _arpeggio([74, 77, 81, 86], 0.05, "bell", 0.8)
 		"panel_ratchet":
 			# Three pawl clicks over a short steel ring: a socket wrench seating a plate.
 			return _mix([[_noise(0.012, 5200.0, 5200.0, 260.0), 0, 0.7], [_noise(0.012, 4600.0, 4600.0, 260.0), Synth.seconds(0.035), 0.6],
@@ -1155,16 +1153,11 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"synergy_fanfare":
 			return Synth.render_score(_score_synergy(), 1.4)
 		"achievement_chime":
-			return _mix([[_cut(_n("bell", 84), 0.45), 0, 0.8], [_cut(_n("bell", 91), 0.48, 1600), Synth.seconds(0.08), 0.72],
-				[_cut(_n("keys", 60), 0.52, 1800), Synth.seconds(0.08), 0.28], [_cut(_n("keys", 67), 0.52, 1800), Synth.seconds(0.08), 0.26],
-				[_cut(_n("keys", 74), 0.52, 1800), Synth.seconds(0.08), 0.24]])
+			return _mix([[_cut(_n("bell", 84), 0.45), 0, 0.8], [_cut(_n("bell", 91), 0.4), Synth.seconds(0.08), 0.6]])
 		"rescue_fanfare":
-			return _mix([[_noise(0.02, 5000.0, 5000.0, 250.0), 0, 0.45], [_cut(_n("brass", 50), 0.14), 0, 0.48],
-				[_cut(_n("sub", 38), 0.55, 1600), Synth.seconds(0.35), 0.4],
-				[_cut(_n("bell", 74), 0.35), Synth.seconds(0.08), 0.62], [_cut(_n("bell", 79), 0.35), Synth.seconds(0.17), 0.66],
-				[_cut(_n("bell", 83), 0.35), Synth.seconds(0.26), 0.72], [_cut(_n("bell", 86), 0.55, 1800), Synth.seconds(0.35), 0.82],
-				[_cut(_n("keys", 62), 0.55, 1800), Synth.seconds(0.35), 0.3], [_cut(_n("keys", 66), 0.55, 1800), Synth.seconds(0.35), 0.28],
-				[_cut(_n("keys", 69), 0.55, 1800), Synth.seconds(0.35), 0.28]])
+			return _mix([[_noise(0.02, 5000.0, 5000.0, 250.0), 0, 0.5], [_tone(0.07, 220.0, 110.0, "square_dark", 30.0), 0, 0.7],
+				[_cut(_n("bell", 74), 0.35), Synth.seconds(0.08), 0.6], [_cut(_n("bell", 79), 0.35), Synth.seconds(0.17), 0.6],
+				[_cut(_n("bell", 83), 0.35), Synth.seconds(0.26), 0.65], [_cut(_n("bell", 86), 0.45), Synth.seconds(0.35), 0.7]])
 		"companion_chirp_ready":
 			return _mix([[_cut(_n("mallet", 79), 0.16), 0, 0.7], [_cut(_n("mallet", 86), 0.22), Synth.seconds(0.07), 0.75]])
 		"companion_chirp_spent":
@@ -1638,27 +1631,24 @@ static func _find_radio() -> PackedFloat32Array:
 # --- Scores ----------------------------------------------------------------------------
 
 static func _score_run(at: int) -> Array:
-	return [[at, 0, 2, "kick", 1.0], [at, 0, 16, "crash", 0.55], [at, 38, 10, "sub", 0.55],
-		[at, 62, 2, "lead", 0.65], [at + 2, 69, 2, "lead", 0.7],
-		[at + 4, 72, 1, "lead", 0.68], [at + 5, 74, 3, "lead", 0.78], [at + 8, 77, 2, "lead", 0.8], [at + 10, 76, 2, "lead", 0.72],
-		[at + 12, 74, 4, "lead", 0.82], [at + 12, 86, 4, "bell", 0.24], [at + 12, 62, 4, "brass", 0.32],
-		[at, 53, 3, "keys", 0.38], [at, 57, 3, "keys", 0.36], [at, 60, 3, "keys", 0.36],
-		[at, 64, 3, "keys", 0.36], [at + 10, 53, 5, "keys", 0.38], [at + 10, 57, 5, "keys", 0.36], [at + 10, 60, 5, "keys", 0.36],
-		[at + 10, 64, 5, "keys", 0.38], [at + 4, 0, 1, "snare", 0.7], [at + 12, 0, 1, "snare", 0.82], [at + 10, 0, 1, "kick", 0.85]]
+	return [[at, 0, 2, "kick", 1.0], [at, 0, 16, "crash", 0.55], [at, 62, 2, "lead", 0.7], [at + 2, 69, 2, "lead", 0.7],
+		[at + 4, 72, 1, "lead", 0.7], [at + 5, 74, 3, "lead", 0.75], [at + 8, 77, 2, "lead", 0.75], [at + 10, 76, 2, "lead", 0.7],
+		[at + 12, 74, 4, "lead", 0.75], [at, 53, 3, "keys", 0.35], [at, 57, 3, "keys", 0.35], [at, 60, 3, "keys", 0.35],
+		[at, 64, 3, "keys", 0.35], [at + 10, 53, 4, "keys", 0.35], [at + 10, 57, 4, "keys", 0.35], [at + 10, 60, 4, "keys", 0.35],
+		[at + 10, 64, 4, "keys", 0.35], [at + 4, 0, 1, "snare", 0.7], [at + 12, 0, 1, "snare", 0.8], [at + 10, 0, 1, "kick", 0.8]]
 
 
 # The end-of-cycle melody. It climbs the A7 chord, turns, and lands on D, then the
 # two little "done" beeps land on the home note an octave up.
 static func _score_clear(at: int) -> Array:
-	var tune := [[0, 69, 0.74], [2, 73, 0.78], [4, 76, 0.82], [6, 81, 0.88], [8, 79, 0.82], [10, 76, 0.78], [12, 73, 0.76], [14, 76, 0.82]]
-	var score := [[at, 57, 14, "keys", 0.24], [at, 61, 14, "keys", 0.22], [at, 64, 14, "keys", 0.22], [at, 67, 14, "keys", 0.22]]
+	var tune := [[0, 69], [2, 73], [4, 76], [6, 81], [8, 79], [10, 76], [12, 73], [14, 76]]
+	var score := []
 	for note in tune:
-		score.append([at + note[0], note[1], 2, "mallet", note[2]])
-		score.append([at + note[0], note[1], 2, "beep", 0.22])
-	score.append_array([[at + 16, 38, 12, "sub", 0.5], [at + 16, 62, 10, "keys", 0.3], [at + 16, 66, 10, "keys", 0.28], [at + 16, 69, 10, "keys", 0.28], [at + 16, 76, 10, "keys", 0.26],
-		[at + 16, 74, 8, "mallet", 0.9], [at + 16, 74, 8, "beep", 0.28], [at + 16, 86, 8, "bell", 0.5],
-		[at + 16, 0, 16, "crash", 0.4], [at + 24, 78, 2, "mallet", 0.65], [at + 26, 81, 2, "mallet", 0.72],
-		[at + 28, 86, 4, "bell", 0.28], [at + 28, 86, 4, "mallet", 0.85], [at + 28, 86, 4, "beep", 0.28]])
+		score.append([at + note[0], note[1], 2, "mallet", 0.8])
+		score.append([at + note[0], note[1], 2, "beep", 0.25])
+	score.append_array([[at + 16, 74, 8, "mallet", 0.9], [at + 16, 74, 8, "beep", 0.3], [at + 16, 86, 8, "bell", 0.5],
+		[at + 16, 0, 16, "crash", 0.4], [at + 24, 78, 2, "mallet", 0.6], [at + 26, 81, 2, "mallet", 0.6],
+		[at + 28, 86, 4, "mallet", 0.8], [at + 28, 86, 4, "beep", 0.3]])
 	return score
 
 
@@ -1666,10 +1656,10 @@ static func _score_milestone() -> Array:
 	var score := []
 	var rung := 0
 	for step in 8:
-		score.append([step, 74 + Harmony.pentatonic_step(rung), 1, "bell", 0.45 + 0.03 * step])
+		score.append([step, 74 + Harmony.pentatonic_step(rung), 1, "bell", 0.55])
 		rung += 1
-	score.append_array([[8, 0, 2, "kick", 1.0], [8, 0, 16, "crash", 0.6], [8, 38, 8, "sub", 0.55], [8, 53, 8, "keys", 0.4], [8, 57, 8, "keys", 0.4],
-		[8, 60, 8, "keys", 0.4], [8, 64, 8, "keys", 0.42], [8, 86, 8, "lead", 0.68], [8, 74, 8, "brass", 0.34], [12, 0, 1, "snare", 0.8]])
+	score.append_array([[8, 0, 2, "kick", 1.0], [8, 0, 16, "crash", 0.6], [8, 53, 8, "keys", 0.4], [8, 57, 8, "keys", 0.4],
+		[8, 60, 8, "keys", 0.4], [8, 64, 8, "keys", 0.4], [8, 86, 8, "lead", 0.6], [12, 0, 1, "snare", 0.8]])
 	return score
 
 
@@ -2149,8 +2139,8 @@ static func _boss_defeated() -> PackedFloat32Array:
 	var score := [[0, 0, 2, "boom", 1.0], [0, 0, 16, "crash", 0.7], [0, 62, 2, "brass", 0.6], [2, 66, 2, "brass", 0.6],
 		[4, 69, 2, "brass", 0.65], [6, 74, 2, "brass", 0.7], [8, 0, 2, "kick", 1.0], [8, 78, 4, "brass", 0.7],
 		[12, 76, 2, "brass", 0.6], [14, 73, 2, "brass", 0.65], [16, 0, 2, "kick", 1.0], [16, 0, 16, "crash", 0.6],
-		[16, 74, 16, "brass", 0.75], [16, 74, 16, "lead", 0.45], [16, 86, 16, "bell", 0.52], [16, 50, 16, "keys", 0.4], [16, 54, 16, "keys", 0.4],
-		[16, 57, 16, "keys", 0.4], [16, 62, 16, "keys", 0.4], [16, 64, 16, "keys", 0.3], [16, 38, 16, "sub", 0.72]]
+		[16, 74, 16, "brass", 0.75], [16, 86, 16, "bell", 0.5], [16, 50, 16, "keys", 0.4], [16, 54, 16, "keys", 0.4],
+		[16, 57, 16, "keys", 0.4], [16, 62, 16, "keys", 0.4], [16, 38, 16, "sub", 0.7]]
 	for i in 8:
 		score.append([8 + i, 0, 1, "hat", 0.4])
 		score.append([8 + i, [74, 78, 81, 86, 90, 93, 98, 93][i], 1, "bell", 0.3])
@@ -2740,8 +2730,6 @@ static func _pickup_fountain() -> PackedFloat32Array:
 	for i in notes.size():
 		parts.append([_cut(_n("mallet", notes[i]), 0.2), i * step, 0.75 + 0.07 * i])
 		parts.append([_cut(_n("bell", notes[i] + 12), 0.2), i * step, 0.25])
-	parts.append([_cut(_n("keys", 62), 0.2), 3 * step, 0.28])
-	parts.append([_cut(_n("keys", 69), 0.2), 3 * step, 0.26])
 	parts.append([_noise(0.08, 5200.0, 3200.0, 30.0), 3 * step, 0.3])
 	return _mix(parts)
 
