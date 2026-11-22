@@ -81,9 +81,13 @@ const ARENAS := {
 # enters (arena_look). The Slag Bowl is the Spillway at noon (world 1 unit 12: dawn dam, morning
 # flume, noon bowl), so Brindle's fight is the day's high sun and the pit after it keeps noon.
 const BOWL_SCRIPT := "res://src/boss/arena.gd"
-# `over` lays the arena's own air over that: the bowl's furnace smoke, a gold haze that thickens toward the stands.
-const DAYLIT_ARENAS := {"brindle": {"world": 1, "time": "noon",
-	"over": {"fog": {"color": Color("c8a46e"), "density": 0.0016}, "fill_color": Color("c9b898")}}}
+# `over` lays the arena's own light over that, keeping noon's sun angle and energies: the bowl's smoky furnace gold (world
+# 1's third act, its W46-03 sheet pick), a warm sun through smoke, a gold haze that thickens toward the stands.
+const DAYLIT_ARENAS := {"brindle": {"world": 1, "time": "noon", "over": {
+	"sun_color": Color("ffe5b6"), "ambient": Color("e6dac2"), "fog_tint": Color("e8d2a8"),
+	"grade": {"top": Color("f0e6d2"), "horizon": Color("ffe2af"), "recolor": 0.2, "highlight": 8.0,
+		"glow": Color("4a2c10"), "energy": 1.05},
+	"fog": {"color": Color("c8a46e"), "density": 0.0016}, "fill_color": Color("c9b898")}}}
 # The camp walk (camp_hub.gd): the Spillway's daylight turned toward late afternoon, a warm low sun over the plaza, thin
 # haze and no volumetric air, so the lamps and marquees carry the evening. Entered on the "camp" slot over the stage row.
 const CAMP := {"name": "camp", "sky": "hdri", "background": Color("243b43"),
@@ -124,8 +128,9 @@ const NODE := "WorldLook"
 const TIME_ORDER := ["dawn", "morning", "noon", "afternoon", "golden", "dusk"]
 const STAGE_TIME := {1: "dawn", 2: "morning", 3: "noon", 4: "afternoon", 5: "golden", 6: "dusk"}
 const TIME_ROWS := {
-	# World 1's three acts (WORLD1-DEMO-CATALYST.md C1, ruling ei): the light colours are the picks off the W46-03 sheet
-	# (its pull request, ruling cq); the energies, angles and grade energies are the day arc's and stay as they were.
+	# World 1's three acts (WORLD1-DEMO-CATALYST.md C1, ruling ei): dawn and morning are world 1's own two stages, and their
+	# light colours are the picks off the W46-03 sheet (its pull request, ruling cq); the energies, angles and grade
+	# energies are the day arc's and stay as they were. The third act, the Slag Bowl, is DAYLIT_ARENAS.brindle.
 	# The dam's cool desert dawn: violet-indigo canyon shade under a low apricot sun.
 	"dawn": {"sun_rotation": Vector3(-8.0, -100.0, 0.0), "sun_color": Palette.APRICOT, "sun_energy": 1.4,
 		"ambient": Palette.DAWN_VIOLET, "energy": 0.22, "fog_tint": Color("e8bcc4"),
@@ -136,11 +141,12 @@ const TIME_ROWS := {
 		"ambient": Palette.TURQUOISE, "energy": 0.26, "fog_tint": Color("d2eee8"),
 		"grade": {"top": Color("d4f4f0"), "horizon": Color("f5d4c3"), "recolor": 0.2, "highlight": 8.0,
 			"glow": Color("3a2414"), "energy": 1.0}},
-	# The Slag Bowl's smoky furnace gold (DAYLIT_ARENAS adds its smoke). The park's open pit (world 2, parked) is noon too.
-	"noon": {"sun_rotation": Vector3(-62.0, -40.0, 0.0), "sun_color": Color("ffe5b6"), "sun_energy": 1.4,
-		"ambient": Color("e6dac2"), "energy": 0.32, "fog_tint": Color("e8d2a8"),
-		"grade": {"top": Color("f0e6d2"), "horizon": Color("ffe2af"), "recolor": 0.2, "highlight": 8.0,
-			"glow": Color("4a2c10"), "energy": 1.05}},
+	# Noon is world 2's first stage (the open pit, parked by ruling at), so it stays as it was; the Slag Bowl's gold is
+	# its own arena row (DAYLIT_ARENAS).
+	"noon": {"sun_rotation": Vector3(-62.0, -40.0, 0.0), "sun_color": Color("fff1dc"), "sun_energy": 1.4,
+		"ambient": Color("dbe6ec"), "energy": 0.32, "fog_tint": Color("dfe6ea"),
+		"grade": {"top": Color("ffffff"), "horizon": Color("ffffff"), "recolor": 0.0, "highlight": 65504.0,
+			"glow": Color("000000"), "energy": 1.05}},
 	"afternoon": {"sun_rotation": Vector3(-45.0, -15.0, 0.0), "sun_color": Color("ffd7a0"), "sun_energy": 1.7,
 		"ambient": Color("c9c0a8"), "energy": 0.29, "fog_tint": Color("e6dcc8"),
 		"grade": {"top": Color("fbf6ee"), "horizon": Color("ffe6c4"), "recolor": 0.1, "highlight": 8.0,

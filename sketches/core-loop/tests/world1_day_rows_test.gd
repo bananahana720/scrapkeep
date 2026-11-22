@@ -3,7 +3,7 @@ extends SceneTree
 # World 1 day-cycle rows (world 1 unit 12): every world 1 scene the sitting walks through (title,
 # camp, dam, flume, Brindle's Slag Bowl) has a complete light row, the daylit ones carry a time of
 # day and a sky grade, and the run's scenes walk the day forward: dawn dam, morning flume, noon bowl.
-# Then the real fight entry: the bowl's noon row covers the flume's look on the arena slot and
+# Then the real fight entry: the bowl's arena row (noon's sun, its own gold) covers the flume's look on the arena slot and
 # leaves with the arena. Evidence limit: headless values; the look is judged from rendered stills
 # (tools/day_arc_capture.gd) and frame times on the 4080.
 
@@ -15,7 +15,7 @@ const Palette := preload("res://src/core/palette.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
 const LIGHT_KEYS := ["ambient", "energy", "sun_color", "sun_energy", "sun_rotation", "fill", "fill_color"]
-const EXPECTED_CHECKS := 19
+const EXPECTED_CHECKS := 20
 var _t := T.new("world1_day_rows_test")
 var game
 
@@ -58,6 +58,11 @@ func _rows() -> void:
 	_t.check("the run walks the day forward", order[0] < order[1] and order[1] < order[2], str(order))
 	_t.check("the bowl's sun is the noon sun, higher than the flume's", scenes.bowl.sun_rotation == WorldLook.TIME_ROWS.noon.sun_rotation
 		and -scenes.bowl.sun_rotation.x > -scenes.flume.sun_rotation.x)
+	# The bowl's gold rides in its arena row; noon itself is world 2's open pit (parked, ruling at) and keeps its light.
+	var pit := WorldLook.stage_look(3, 2, "park_pit")
+	var noon: Dictionary = WorldLook.TIME_ROWS.noon
+	_t.check("the park pit keeps the noon row's light", ["sun_color", "ambient", "fog_tint", "grade"].all(func(key): return pit[key] == noon[key])
+		and noon.ambient == Color("dbe6ec") and noon.grade.horizon == Color("ffffff"), str(pit.ambient))
 	_t.check("the camp's grade is warm at the horizon", (scenes.camp.grade.horizon as Color).r > (scenes.camp.grade.horizon as Color).b)
 
 
@@ -77,11 +82,11 @@ func _fight() -> void:
 	var before_horizon = material.get_shader_parameter("horizon_tint")
 	Harness.enter(game, Vector3(18, 0, 0))
 	await physics_frame
-	var noon: Dictionary = WorldLook.TIME_ROWS.noon
+	var bowl := WorldLook.arena_look("brindle")
 	_t.check("the bowl enters", game.boss.arena != null)
-	_t.check("the bowl's ambient is noon's", env.ambient_light_color.is_equal_approx(noon.ambient)
-		and is_equal_approx(env.ambient_light_energy, noon.energy), str(env.ambient_light_color))
-	_t.eq("the bowl's sky horizon is noon's", material.get_shader_parameter("horizon_tint"), noon.grade.horizon)
+	_t.check("the bowl's ambient is its arena row's", env.ambient_light_color.is_equal_approx(bowl.ambient)
+		and is_equal_approx(env.ambient_light_energy, bowl.energy), str(env.ambient_light_color))
+	_t.eq("the bowl's sky horizon is its arena row's", material.get_shader_parameter("horizon_tint"), bowl.grade.horizon)
 	game.boss.exit_arena()
 	await physics_frame
 	_t.check("leaving the bowl restores the look it covered", env.ambient_light_color.is_equal_approx(before_ambient)
