@@ -158,6 +158,25 @@ func playing() -> bool:
 	return open > 0.5
 
 
+# Back to how a new preview stands: closed, its clock at zero (no antic for a period), the pilot seated and the look
+# let go, the camera at rest.
+func reset() -> void:
+	open = 0.0
+	clock = 0.0
+	_time = 0.0
+	_focused = false
+	look_dragging = false
+	look_weight = 0.0
+	_look_idle = LOOK_HOLD
+	_look = {"yaw": 0.0, "pitch": 0.2, "dist": LOOK_DIST}
+	if antic != null:
+		antic.apply(-1.0)
+	seat_pilot()
+	if ball != null:
+		_follow = ball.position
+		_frame(0.0)
+
+
 func _rest_phase() -> float:
 	return REST.get(def.id, 0.5) if def != null else 0.5
 

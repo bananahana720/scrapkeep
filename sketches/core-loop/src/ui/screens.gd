@@ -382,8 +382,8 @@ func _on_flow_changed(state: String) -> void:
 		for child in row.get_children():
 			row.remove_child(child)
 			if child in _deck:
-				# Back in the deck closed, so the next pilot select opens at rest.
-				child.openness = 0.0
+				# Back in the deck at rest, so the next pilot select opens as the first did.
+				child.reset()
 			else:
 				child.queue_free()
 	_deal_wait = DEAL_AFTER

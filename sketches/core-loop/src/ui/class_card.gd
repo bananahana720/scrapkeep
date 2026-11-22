@@ -292,6 +292,17 @@ func is_open() -> bool:
 	return has_focus()
 
 
+# Back to how a new card stands: closed, unshaken, full size and colour, its pilot seated and the look let go. A card
+# kept for the next pilot select (screens.gd's deck) is reset as it leaves the screen.
+func reset() -> void:
+	openness = 0.0
+	_shake = 0.0
+	rotation = 0.0
+	_apply()
+	if preview != null:
+		preview.reset()
+
+
 func words() -> String:
 	return "%s, %s. %s" % [def.display_name, ClassKit.role_line(def), ClassKit.fantasy(def)] if def != null else ""
 
