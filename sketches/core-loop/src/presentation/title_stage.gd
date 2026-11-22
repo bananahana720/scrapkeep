@@ -25,7 +25,8 @@ const LOOK := Vector3(0.0, 2.6, 0.0)
 const CAMERA_AT := Vector3(0.6, 5.1, 12.8)
 const COMPANION_AT := Vector3(5.1, 1.7, 1.0)
 # Every ANTIC_PERIOD seconds one deck pilot, in turn, climbs out and does their bit
-# (pilot_antics.gd), starting ANTIC_DELAY into the slot so the first frames stay still.
+# (pilot_antics.gd), starting ANTIC_DELAY into the slot so the first frames stay still. The poster's hero at the bow
+# holds the pose: their turn is a still beat, so the picture the menu sits on only moves behind it.
 const ANTIC_PERIOD := 11.0
 const ANTIC_DELAY := 4.0
 # Look closer: drag with the right mouse button (or the right stick) to orbit a deck pilot,
@@ -404,7 +405,8 @@ func _step_antics() -> void:
 	var t := (_clock - slot * ANTIC_PERIOD - ANTIC_DELAY) / PilotAntics.LENGTH
 	for i in deck_antics.size():
 		if deck_antics[i] != null:
-			deck_antics[i].apply(t if i == slot % deck_antics.size() else -1.0)
+			var turn: bool = i == slot % deck_antics.size() and deck_antics[i].holder != _hero
+			deck_antics[i].apply(t if turn else -1.0)
 
 
 func _seat_deck() -> void:
@@ -623,17 +625,9 @@ func cast_hero(id := "") -> void:
 	# entered it, the frozen models were drawn at a stale transform (the barge at full depth, its rim at the lens,
 	# and the facade not at all).
 	for line in DECK + SKYLINE:
-		var model: Node3D = stage.get_node_or_null(String(line[0]))
-		if model != null:
-			model.position = line[2]
-			model.rotation.y = line[3]
-			model.scale = line[4]
+		_place(stage.get_node_or_null(String(line[0])), line[2], line[3], line[4])
 	for name in row.deck:
-		var model: Node3D = stage.get_node_or_null(String(name))
-		if model != null:
-			model.position = row.deck[name][0]
-			model.rotation.y = row.deck[name][1]
-			model.scale = row.deck[name][2]
+		_place(stage.get_node_or_null(String(name)), row.deck[name][0], row.deck[name][1], row.deck[name][2])
 	hero_id = id
 	_hero = null
 	var spare: Node3D = stage.get_node_or_null("HeroShell")
@@ -669,6 +663,14 @@ func cast_hero(id := "") -> void:
 		_hero.rotation.y = row.hero_yaw
 		_hero.scale = Vector3.ONE * float(row.hero_scale)
 	_seat_deck()
+
+
+func _place(model: Node3D, at: Vector3, yaw: float, size: Vector3) -> void:
+	if model == null:
+		return
+	model.position = at
+	model.rotation.y = yaw
+	model.scale = size
 
 
 # Shows another of the three poster framings (the comparison sheet, ruling cq).
