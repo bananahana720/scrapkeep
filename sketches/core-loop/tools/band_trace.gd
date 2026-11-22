@@ -75,6 +75,11 @@ func _reexec_with_defaults(s: Dictionary) -> void:
 func _physics_process(delta: float) -> bool:
 	var over := super._physics_process(delta)
 	if _game == null or _game.flow == null or _driver == null:
+		# bot_run frees the game when a run ends and never returns true.
+		if _game == null and _trace_file != null:
+			_trace_file.flush()
+			_trace_file.close()
+			_trace_file = null
 		return over
 	if not _trace_hooked:
 		_trace_hooked = true

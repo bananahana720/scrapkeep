@@ -207,7 +207,8 @@ func _check_boss_invariants() -> void:
 		"%d/%d pickups trapped inside hull after hull moved onto them" % [trapped_after.size(), boss.pickups_left().size()])
 
 	# 3. Even when the hull is buried at the rim (CHARGE_STOP_R), shed/reel pickups pushed clear stay on the floor.
-	var rim_pos: Vector3 = boss.arena.point_at(0.0, Rules.CHARGE_STOP_R)
+	# 3 m inside the stop radius, so the floor clamp alone leaves piles inside the hull.
+	var rim_pos: Vector3 = boss.arena.point_at(0.0, Rules.CHARGE_STOP_R - 3.0)
 	boss.ship.move_to(Vector3(rim_pos.x, boss.arena.ground(rim_pos), rim_pos.z), Vector3.RIGHT)
 	var before_rim: int = boss._pickups.size()
 	boss.take_spill(rim_pos - Vector3.RIGHT * Rules.SPILL_AHEAD, Vector3.RIGHT, 30)
