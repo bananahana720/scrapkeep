@@ -3,6 +3,7 @@ extends VBoxContainer
 const Secrets := preload("res://src/core/secrets.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const ShiftBoard := preload("res://src/core/shift_board.gd")
+const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -20,12 +21,14 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 
 const COLUMNS := 2
 const ROW_WIDTH := 600.0
+const VARIANT_WIDTH := 396.0
 const PLATE_PAD := 10.0
 const HIDDEN_NAME := "???"
 const HIDDEN_TEXT := "Keep playing."
 
 var back: Button
 var rows := {}
+var variant_cards := {}
 
 var _grid: GridContainer
 var _plate: PanelContainer
@@ -95,6 +98,7 @@ func refresh(profile, progress, sitting := false) -> void:
 		var row := _row(id, profile, progress)
 		_grid.add_child(row)
 		rows[id] = row
+	_scroll.scroll_vertical = 0
 	_focus_first.call_deferred()
 
 
@@ -115,21 +119,88 @@ static func board_lines(profile, sitting := false) -> PackedStringArray:
 	return out
 
 
+# Built shift variants shown on the board, each paired with the rung that opens it.
+static func variant_entries(profile, sitting := false) -> Array:
+	return ShiftVariants.board_entries(profile, sitting)
+
+
 func _fill_board(profile, sitting: bool) -> void:
 	for child in _board.get_children():
 		_board.remove_child(child)
 		child.queue_free()
+	variant_cards.clear()
 	var lines := board_lines(profile, sitting)
 	for i in lines.size():
 		var label := _label(lines[i], 26 if i == 0 else 18, Palette.AMBER if i == 0 else Palette.SAND)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.name = ["Count", "Next", "Card"][i]
 		_board.add_child(label)
+	var variants := variant_entries(profile, sitting)
+	if variants.is_empty():
+		return
+	var strip := HBoxContainer.new()
+	strip.name = "Variants"
+	strip.alignment = BoxContainer.ALIGNMENT_CENTER
+	strip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	strip.add_theme_constant_override("separation", UiTokens.GAP_M)
+	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for entry in variants:
+		var card := _variant_card(entry)
+		strip.add_child(card)
+		variant_cards[String(entry["id"])] = card
+	_board.add_child(strip)
+
+
+func _variant_card(entry: Dictionary) -> PanelContainer:
+	var open := bool(entry["open"])
+	var card := PanelContainer.new()
+	card.name = String(entry["id"])
+	card.custom_minimum_size = Vector2(VARIANT_WIDTH, 0.0)
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
+	style.border_color = UiTokens.ACCENT if open else UiTokens.LINE
+	style.set_border_width_all(UiTokens.EDGE)
+	style.set_corner_radius_all(UiTokens.RADIUS)
+	style.corner_detail = 1
+	style.content_margin_left = UiTokens.GAP_M
+	style.content_margin_right = UiTokens.GAP_M
+	style.content_margin_top = UiTokens.GAP_S
+	style.content_margin_bottom = UiTokens.GAP_S
+	card.add_theme_stylebox_override("panel", style)
+	var body := VBoxContainer.new()
+	body.add_theme_constant_override("separation", UiTokens.GAP_XS)
+	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(body)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", UiTokens.GAP_S)
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	body.add_child(head)
+	var mark := TextureRect.new()
+	mark.texture = Icons.shape("star" if open else "ring")
+	mark.modulate = UiTokens.ACCENT if open else UiTokens.quiet(UiTokens.TEXT)
+	mark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	mark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	mark.custom_minimum_size = Vector2(UiTokens.BODY, UiTokens.BODY)
+	mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(mark)
+	var rung := _label(String(entry["rung_name"]), UiTokens.BODY, UiTokens.ACCENT if open else UiTokens.TEXT)
+	rung.name = "Rung"
+	head.add_child(rung)
+	var text := _label(String(entry["text"]), UiTokens.CAPTION, UiTokens.TEXT if open else UiTokens.quiet(UiTokens.TEXT))
+	text.name = "Text"
+	text.custom_minimum_size = Vector2(VARIANT_WIDTH - 2.0 * (UiTokens.GAP_M + UiTokens.EDGE), 0.0)
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(text)
+	return card
 
 
 func _focus_first() -> void:
 	if is_visible_in_tree() and not rows.is_empty():
 		rows.values()[0].grab_focus()
+		_scroll.scroll_vertical = 0
+		_scroll.set_deferred("scroll_vertical", 0)
 
 
 func _move(direction: int) -> void:

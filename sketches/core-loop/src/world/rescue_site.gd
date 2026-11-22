@@ -2,6 +2,7 @@ class_name RescueSite
 extends Node3D
 
 const Interactables := preload("res://src/world/interactables.gd")
+const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const Palette := preload("res://src/core/palette.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
@@ -320,12 +321,20 @@ func setup(ctx_ref, interact_ref) -> void:
 	ctx.events.run_started.connect(func(_class_id: String): _done.clear())
 
 
-func _on_stage_entered(_stage: int, _retry: bool) -> void:
+func _on_stage_entered(_stage: int, retry: bool) -> void:
 	clear()
+	if retry:
+		# A retry rewinds run scrap to stage entry, so salvage-only variant cages re-arm alongside it.
+		for quest in _done.keys():
+			if ShiftVariants.cage_salvage_scrap(String(quest)) > 0:
+				_done.erase(quest)
 	var map = ctx.terrain.map()
-	if not "rescue_sites" in map:
-		return
-	for spec in map.rescue_sites:
+	var specs: Array = []
+	if "rescue_sites" in map:
+		specs.append_array(map.rescue_sites)
+	var map_id := String(map.park.get("map", "")) if "park" in map and map.park is Dictionary else ""
+	specs.append_array(ShiftVariants.extra_cages(map_id, ctx.run))
+	for spec in specs:
 		var cage := Cage.new()
 		cage.owner_site = self
 		add_child(cage)
@@ -371,4 +380,9 @@ func complete(quest: String) -> void:
 	if is_done(quest):
 		return
 	_done[quest] = true
+	var salvage := ShiftVariants.cage_salvage_scrap(quest)
+	if salvage > 0 and ctx.run != null and (ctx.build == null or not ctx.build.scrapless()):
+		var found = cage(quest)
+		var at: Vector3 = found.global_position if found != null else Vector3.ZERO
+		ctx.run.add_scrap(salvage, at)
 	ctx.events.rescue_completed.emit(quest)
