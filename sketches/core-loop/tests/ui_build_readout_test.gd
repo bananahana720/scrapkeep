@@ -149,7 +149,7 @@ func _esc_setup() -> void:
 	workshop.armed = true
 	var def = ClassDef.all()[0]
 	workshop.pick.open(def.id, 2, UpgradeTree.nodes(def.id).slice(0, 2), [], def.color)
-	_esc_view = workshop.pick.cards()[0].find_children("BuildReadout", "", true, false)[0]
+	_esc_view = workshop.pick.parts_button()
 	_esc_view.pressed.emit()
 
 
@@ -417,7 +417,7 @@ func _check_tree() -> void:
 		and "2" in card.depth_text() and "3" in card.depth_text() and "4" in card.depth_text(), card.depth_text())
 	# One parts button on the pick screen (PF-01), not a "Build" button on each card.
 	var views: Array = workshop.pick.find_children("BuildReadout", "", true, false)
-	_report("build screen wired", views.size() == 1 and card.find_children("BuildReadout", "", true, false).is_empty(),
+	_report("build screen wired", views.size() == 1 and views[0] == workshop.pick.parts_button() and card.find_children("BuildReadout", "", true, false).is_empty(),
 		"the pick screen carries one clickable parts readout and the card none")
 	if views.size() == 1:
 		views[0].pressed.emit()

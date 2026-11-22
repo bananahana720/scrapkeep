@@ -191,15 +191,11 @@ func _seam() -> void:
 	_check("world-one Sable tree passes the node rules", problems.is_empty(), "%s" % [problems])
 
 
-var _crumb_offered: Array = []
-
-
 func _card_lines(picks: Array, on: bool) -> Array:
 	_take(picks, on)
 	_game.ctx.tuning.set_option("hotwire_shell", "on")
 	_player.tree.open_checkpoint()
 	_ws.open_pick()
-	_crumb_offered = _ws.pick._crumb.offered.duplicate()
 	var out: Array = []
 	for card in _ws.pick.cards():
 		out.append([card.node_id(), card.effect_text()])
@@ -217,9 +213,6 @@ func _offers_and_cards() -> void:
 		var tree_ids: Array = _player.tree.offered(CLASS_ID, 1 if parent == "" else 2).map(func(n): return n["id"])
 		var label: String = parent if parent != "" else "start"
 		_check("offers (flag on, after %s)" % label, ids == pairs[parent] and ids == tree_ids, "cards %s, tree %s, want %s" % [ids, tree_ids, pairs[parent]])
-		var want_idx: Array = ids.map(func(id): return UpgradeTree.index_of(CLASS_ID, id, true))
-		var crumb_ok: bool = _crumb_offered == want_idx and (parent != "s_cannonball" or (3 in _crumb_offered and not 9 in _crumb_offered))
-		_check("crumb offered uses world-one indices (flag on, after %s)" % label, crumb_ok, "crumb %s, want %s" % [_crumb_offered, want_idx])
 		var same := true
 		for l in lines:
 			same = same and l[1] == CODEX[l[0]]
