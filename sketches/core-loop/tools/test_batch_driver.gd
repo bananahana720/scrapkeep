@@ -243,4 +243,16 @@ class _NextGate extends Node:
 		set_process(false)
 		get_parent().remove_child(self)
 		queue_free()
-		_done.call_deferred()
+		_fire.call_deferred(_done)
+
+	# Run callback in the end-of-frame deferred flush (after NOTIFICATION_PROCESS and
+	# process_tweens()), then top up the remaining fraction of one physics tick if callback
+	# was faster than a tick so the next iteration always runs a physics step before _process().
+	static func _fire(callback: Callable) -> void:
+		var step_usec := 1_000_000.0 / maxf(1.0, float(Engine.physics_ticks_per_second))
+		var need_usec := ceili((1.0 - clampf(Engine.get_physics_interpolation_fraction(), 0.0, 1.0)) * step_usec) + 2000
+		var t0 := Time.get_ticks_usec()
+		callback.call()
+		var elapsed := Time.get_ticks_usec() - t0
+		if elapsed < need_usec:
+			OS.delay_usec(need_usec - elapsed)
