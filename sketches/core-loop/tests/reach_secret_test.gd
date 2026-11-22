@@ -77,7 +77,9 @@ func _run() -> void:
 	_game.events.world_fact.connect(func(kind: String, _at: Vector3): _facts.append(kind))
 	_game.events.cogs_collected.connect(func(amount: int, _total: int): _burst_cogs += amount)
 	_game.flow.press_start()
-	_game.flow.choose_class(0)
+	# Non-mounting pilot: Sable's wall-mount prompt fires prompt_shown("interact") whenever a
+	# _process frame lands while the ball is placed against the valve door or cache pocket walls.
+	_game.flow.choose_class(1)
 	var parked = _game.world.contraptions.get(2)
 	_report("parked Reach has no active cache colliders", parked != null and not _secret(parked).has("cache_site"),
 		"cache is built only on Reach entry")

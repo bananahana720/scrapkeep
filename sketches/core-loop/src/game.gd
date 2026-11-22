@@ -387,8 +387,6 @@ func _ready() -> void:
 		ctx.terrain.stage_built.connect(_park_on_title_ground)
 	_boot("ui")
 	flow.show_title()
-	_progress_ready = true
-	progress.setup(events, run, ctx.profile, Callable(), codex)
 	_boot("title")
 	if not test_mode:
 		_menu_wait = MENU_MODULES_FRAMES_APART
@@ -617,6 +615,11 @@ func _exit_tree() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	# The listener joins the bus after the first frame, once the scene is built, so a test that
+	# builds its own Progress on this bus in its first frame hears each fact once.
+	if not _progress_ready:
+		_progress_ready = true
+		progress.setup(events, run, ctx.profile, Callable(), codex)
 	if _stop_ticks_left > 0:
 		_stop_ticks_left -= 1
 		if _stop_ticks_left == 0:

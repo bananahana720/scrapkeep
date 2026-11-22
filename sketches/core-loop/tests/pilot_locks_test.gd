@@ -50,15 +50,10 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	_game.ctx.calm = true
 	_gp5_3_labels()
-	_gp5_4_bot_pick()
-	# Isolate the bus-driven unlock sequences from the Game's own Progress listener (which shares _game.run).
-	if _game.progress != null:
-		_game.progress.free()
-		_game.progress = null
-		_game.ctx.progress = null
 	_gp5_1_sequence()
 	_gp5_2_v2_fixture()
 	_gp5_5_either_path()
+	_gp5_4_bot_pick()
 	_game.queue_free()
 	quit(_t.verdict())
 	return true

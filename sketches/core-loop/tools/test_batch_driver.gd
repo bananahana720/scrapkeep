@@ -91,18 +91,16 @@ func finish(code: int) -> void:
 
 # A solo run frees the test's nodes as the process exits, and what they print then (an await
 # resumed on a freed node, say) is that test's output. The batch frees them the same way,
-# without removing them first, before it closes the test's output. Starting the next test on
-# physics_frame keeps every test's first callback in _physics_process, matching solo.
+# without removing them first, before it closes the test's output. Deferring next() past
+# process_frame both drains killed tweens in process_tweens and starts the next test between
+# engine iterations (not mid-physics_frame), so the test's own _physics_process runs before
+# its child nodes' _physics_process — matching solo.
 func _close(code: int) -> void:
 	_reset()
 	print("BATCH END %s exit=%d ms=%d" % [current, code, Time.get_ticks_msec() - started])
 	worst = maxi(worst, code)
 	tree.set_script(null)
-	if tree.get_processed_tweens().is_empty():
-		tree.physics_frame.connect(next, CONNECT_ONE_SHOT)
-	else:
-		# Killed tweens leave get_processed_tweens() when Godot steps process_tweens on the next frame.
-		tree.process_frame.connect(func() -> void: tree.physics_frame.connect(next, CONNECT_ONE_SHOT), CONNECT_ONE_SHOT | CONNECT_DEFERRED)
+	tree.process_frame.connect(next, CONNECT_ONE_SHOT | CONNECT_DEFERRED)
 
 
 func next() -> void:

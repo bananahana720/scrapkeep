@@ -260,8 +260,8 @@ func _run() -> void:
 	t.check("ClassPreview._sitting_unlocks clears on reset", ClassPreview._sitting_unlocks.is_empty())
 	t.check("ThreadGuard resets violations", ThreadGuard.violations == 0 and ThreadGuard.last_violation == "")
 	t.eq("PlayerFx.rect_tests resets to 0", PlayerFx.rect_tests, 0)
-	t.check("ParkProps resets overrides, far_reads, caches and stand_ins", ParkProps.file_overrides.is_empty()
-		and ParkProps.far_reads == 0 and ParkProps._meshes.is_empty() and ParkProps._far_sources.is_empty()
+	t.check("ParkProps resets file_overrides and far_reads", ParkProps.file_overrides.is_empty() and ParkProps.far_reads == 0)
+	t.check("ParkProps resets shared caches and stand_ins", ParkProps._meshes.is_empty() and ParkProps._far_sources.is_empty()
 		and ParkProps._cache_owner == "" and ParkProps._stand_ins.is_empty() and ParkProps._stand_ins_stamp == -1)
 	t.check("Threat resets look, held looks, materials and warmed", Threat.Painter._look == ""
 		and Threat.Painter._held_looks.is_empty() and Threat.Painter._materials.is_empty()

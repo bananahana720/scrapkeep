@@ -29,11 +29,6 @@ func _initialize() -> void:
 func _physics_process(_delta: float) -> bool:
 	if _game.flow == null:
 		return false
-	# Isolate the test's own Progress listeners from the Game's listener on the shared bus and run.
-	if _game.progress != null:
-		_game.progress.free()
-		_game.progress = null
-		_game.ctx.progress = null
 	_game.events.achievement_earned.connect(func(id: String): _earned.append(id))
 	_p1()
 	_p2()

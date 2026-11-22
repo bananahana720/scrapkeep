@@ -107,6 +107,7 @@ func _boot() -> void:
 	while _game.flow == null:
 		await physics_frame
 	_game.ctx.rng.seed = SEED
+	_game.run.run_seed_override = SEED
 	_game.player.source = _source
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
