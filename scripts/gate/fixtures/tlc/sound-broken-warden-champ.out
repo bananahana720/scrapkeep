@@ -1,0 +1,63 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 111 and seed -4253935068755709649 with 2 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/SoundArbiter.tla
+Parsing file <tmp>/Naturals.tla
+Semantic processing of module Naturals
+Semantic processing of module SoundArbiter
+Starting... (2026-11-21 18:28:17)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-21 18:28:18.
+Error: Invariant WardenOwnsFightMusic is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ trim_epoch = 0
+/\ warning_on = FALSE
+/\ warden_section = "build"
+/\ ult_armed = FALSE
+/\ trim_active = FALSE
+/\ melody_owner = "lead_stem"
+/\ flow = "stage"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ champion_hyped = FALSE
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ warden_engaged = FALSE
+/\ warden_sealed = FALSE
+
+State 2: <ChampionJoins line 109, col 5 to line 115, col 55 of module SoundArbiter>
+/\ trim_epoch = 0
+/\ warning_on = FALSE
+/\ warden_section = "build"
+/\ ult_armed = FALSE
+/\ trim_active = FALSE
+/\ melody_owner = "lead_stem"
+/\ flow = "stage"
+/\ dj_epoch = 1
+/\ deck_pack = "flat_champ"
+/\ champion_hyped = TRUE
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ warden_engaged = FALSE
+/\ warden_sealed = FALSE
+
+State 3: <WardenEngages line 126, col 5 to line 133, col 89 of module SoundArbiter>
+/\ trim_epoch = 0
+/\ warning_on = FALSE
+/\ warden_section = "build"
+/\ ult_armed = FALSE
+/\ trim_active = FALSE
+/\ melody_owner = "lead_stem"
+/\ flow = "stage"
+/\ dj_epoch = 1
+/\ deck_pack = "flat_champ"
+/\ champion_hyped = TRUE
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ warden_engaged = TRUE
+/\ warden_sealed = TRUE
+
+29 states generated, 27 distinct states found, 22 states left on queue.
+The depth of the complete state graph search is 4.
+The average outdegree of the complete state graph is 8 (minimum is 8, the maximum 8 and the 95th percentile is 8).
+Finished in 00s at (2026-11-21 18:28:18)
