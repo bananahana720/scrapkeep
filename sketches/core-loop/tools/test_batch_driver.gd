@@ -189,7 +189,10 @@ func _reset() -> void:
 	QuietGun.housing_path = QuietGun.HOUSING
 
 
+# Only ever the batch's own scratch folder: never user:// itself, a parent, or Andrew's saves.
 static func _clear_dir(path: String) -> void:
+	if not path.begins_with("user://test-") or path.contains(".."):
+		return
 	var dir := DirAccess.open(path)
 	if dir == null:
 		return

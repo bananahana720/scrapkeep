@@ -32,6 +32,7 @@ static var _test_pending: Array[String] = []
 
 static func reset_for_tests() -> void:
 	_test_pending.clear()
+	_warning_counts.clear()
 const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "asset", "mask"]
 const HOSTILE := [Palette.HAZARD, Palette.BRASS]
 const HOSTILE_DISTANCE := 0.2
