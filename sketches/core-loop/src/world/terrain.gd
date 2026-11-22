@@ -75,6 +75,8 @@ var _worlds: Array[int] = []
 var _parent: Node3D
 # The physics frame use() last brought a stage up in (top_surface waits SETTLE_FRAMES past it).
 var _used_frame := -1000
+# The physics frame of the last surface_moved(): top_surface waits SETTLE_FRAMES after it, as after use().
+var _changed_frame := -1000
 var _arena := false
 # Per global stage: whether it stands on a park file, its park ground node (null until built
 # or preparing), and its hole cells and their floors (empty off the park).
@@ -110,6 +112,10 @@ var _perch_patch := {}
 signal stage_freed(index: int)
 # A park stage's ground and props were built and its rows started placing, by stage number.
 signal stage_built(index: int)
+# The ground of the current stage moved where top_surface reads it: an event's swap landed or reverted, a collapse's
+# sheet or a cave roof stepped (event_ground.gd, through surface_moved). top_surface answers {} for SETTLE_FRAMES
+# after, and then the new surface.
+signal surface_changed
 
 # A first stage built behind the menu (build threaded_first).
 var _threaded_first := false
@@ -570,26 +576,31 @@ func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 	return Vector3(x, height(x, z) + clearance, z)
 
 
-# The surface a ball rolling at (x, z) stands on, as {"point", "normal"}: the highest permanent face within
-# SURFACE_REACH_M over height(), else height() and its slope. Permanent means a body this module built for the stage
-# and nothing moves or breaks: the ground's own tiles and the placed park rows' decks and props (_is_surface). A
-# moving body, a destructible, a door, a device, a mast or an ice slab never answers; a landed overlay sheet or a
-# cave roof answers through height(), which already carries them, so no face below height() counts. With a radius, the normal is the plane that fits that surface over the disc of that radius, and the
-# point lies on the plane under (x, z), lowered to the disc's lowest sample, so a flat disc set on it stands proud
-# nowhere. {} while the stage's colliders are not yet where a query finds them: its rows still placing, or the
-# stage brought up from parking under SETTLE_FRAMES physics frames ago (a moved body answers from its old place
-# until the next step); ask again on a later tick.
+# The surface a ball rolling at (x, z) stands on now, as {"point", "normal"}: the highest permanent face within
+# SURFACE_REACH_M over height(), else height() and its slope. Permanent means a body this module built for the
+# stage that nothing moves every tick or breaks: the ground's own tiles and the placed park rows' decks and props
+# (_is_surface). A moving body or a row the placer marks as moving (ParkRecipes.moves), a destructible, a door, a
+# device, a mast and an ice slab never answer. A row an event swaps out answers while it is in place; parked, the
+# ray misses it, and a landed overlay sheet or a cave roof answers through height(), which carries them, so no
+# face below height() counts. When an event moves the ground, surface_changed says so.
+# With a radius, the normal is the plane that fits that surface over the disc of that radius, and the point lies
+# on the plane under (x, z), lowered to the disc's lowest sample, so a flat disc set on it stands proud nowhere.
+# {} while the stage's colliders are not yet where a query finds them: its rows still placing, or under
+# SETTLE_FRAMES physics frames since use() brought the stage up from parking or since surface_moved() (a moved
+# body answers from its old place until the next step); ask again on a later tick.
 const SURFACE_REACH_M := 40.0
-# How far under height() a face may sit and still be the ground's (a tile's trimesh against height()'s triangles).
+# How far under height() a face may sit and still be the ground's (a tile's trimesh against height()'s
+# triangles).
 const SURFACE_BELOW_M := 0.05
-# Faces a ray steps through before it gives up and answers height(): stacked doors, crates and pieces can sit over a deck.
+# Faces a ray steps through before it gives up and answers height(): stacked doors, crates and pieces can sit
+# over a deck.
 const SURFACE_SKIPS := 8
 const SETTLE_FRAMES := 2
 const SURFACE_RING := 16
 
 
 func top_surface(x: float, z: float, radius := 0.0) -> Dictionary:
-	if not rows_ready(stage) or Engine.get_physics_frames() < _used_frame + SETTLE_FRAMES:
+	if not rows_ready(stage) or Engine.get_physics_frames() < maxi(_used_frame, _changed_frame) + SETTLE_FRAMES:
 		return {}
 	var space: PhysicsDirectSpaceState3D = null
 	if _parent != null and _parent.is_inside_tree():
@@ -624,6 +635,13 @@ func top_surface(x: float, z: float, radius := 0.0) -> Dictionary:
 	return {"point": Vector3(x, mean_y + lowest, z), "normal": Vector3(-b, 1.0, -c).normalized()}
 
 
+# An event moved the current stage's ground (event_ground.gd calls this where a swap lands or reverts and where a
+# collapse's sheet or a cave roof steps): top_surface waits SETTLE_FRAMES, and surface_changed tells its readers.
+func surface_moved() -> void:
+	_changed_frame = Engine.get_physics_frames()
+	surface_changed.emit()
+
+
 func _surface_hit(space: PhysicsDirectSpaceState3D, x: float, z: float) -> Dictionary:
 	var ground := height(x, z)
 	if space != null:
@@ -642,12 +660,13 @@ func _surface_hit(space: PhysicsDirectSpaceState3D, x: float, z: float) -> Dicti
 
 
 # A collider top_surface stands a thing on: a plain static body under a node this module built for the current
-# stage, the park ground's tiles (_grounds), the placed park rows (park_rows), or an old map's Ground body. Every
-# other world-layer body hangs elsewhere (enemies, masts, the boss arena, the element field's ice, activities'
-# devices and caches, the destructibles, the barge: the game root; contraptions' doors, barges and lifts: their own
-# node under the stage root) or moves (an AnimatableBody3D, such as the isle's tip under its landmark row).
+# stage (the park ground's tiles, _grounds; the placed park rows, park_rows; an old map's Ground body), and not
+# under a row the placer marks as moving (ParkRecipes.moves: the hanging isle, which its rig poses every tick).
+# Every other world-layer body hangs elsewhere (enemies, masts, the boss arena, the element field's ice,
+# activities' devices and caches, the destructibles, the barge: the game root; contraptions' doors, barges and
+# lifts: their own node under the stage root) or moves (an AnimatableBody3D, such as the isle's tip).
 func _is_surface(collider: Object) -> bool:
-	if not (collider is StaticBody3D) or collider is AnimatableBody3D:
+	if not (collider is StaticBody3D) or collider is AnimatableBody3D or ParkRecipes.moves(collider as Node):
 		return false
 	var i := _index(stage)
 	var owners: Array[Node] = []

@@ -478,6 +478,8 @@ class LorePlate extends Node3D:
 	var note := ""
 	var read := false
 	var seated := false
+	# The ground under it moved (terrain surface_changed): it sits where it was until top_surface answers again.
+	var reseat := false
 	var at := Vector2.ZERO
 	var face: MeshInstance3D
 
@@ -498,6 +500,8 @@ func setup(ctx_ref) -> void:
 		_drop_ahead())
 	ctx.events.launched.connect(_on_launched)
 	ctx.events.flow_changed.connect(_on_flow_changed)
+	if ctx.terrain != null and ctx.terrain.has_signal("surface_changed"):
+		ctx.terrain.surface_changed.connect(_on_surface_changed)
 	ctx.events.slammed.connect(func(at: Vector3, strength: float, _flatness: float): _slammed(at, strength))
 	ctx.events.world_fact.connect(_on_world_fact)
 	ctx.events.player_died.connect(_forfeit_yards)
@@ -2787,6 +2791,7 @@ func _build_plate(spec: Dictionary) -> LorePlate:
 	p.at = spec["at"]
 	add_child(p)
 	p.global_position = Vector3(p.at.x, ctx.terrain.height(p.at.x, p.at.y), p.at.y)
+	p.visible = false
 	var rim := MeshInstance3D.new()
 	var disc := CylinderMesh.new()
 	disc.top_radius = PLATE_RADIUS
@@ -2811,13 +2816,23 @@ func _build_plate(spec: Dictionary) -> LorePlate:
 
 
 # The plate stands on the surface a ball rolling there stands on, tilted to it. Until the stage's colliders can be
-# asked (the rows still placing, or the stage just brought up), it waits hidden, and the next tick asks again.
+# asked (the rows still placing, or the stage just brought up), it waits hidden, and the next tick asks again. When
+# an event moves the ground (_on_surface_changed), it keeps its seat, shown and readable, until terrain answers,
+# then takes the new one: read or not, it files nothing and plays nothing.
 func _seat_plate(p: LorePlate) -> void:
 	var seat: Dictionary = ctx.terrain.top_surface(p.at.x, p.at.y, PLATE_RADIUS * 1.08)
-	p.seated = not seat.is_empty()
-	p.visible = p.seated
-	if p.seated:
-		p.global_transform = Transform3D(Basis(Quaternion(Vector3.UP, seat.normal)), seat.point)
+	if seat.is_empty():
+		return
+	p.seated = true
+	p.reseat = false
+	p.visible = true
+	p.global_transform = Transform3D(Basis(Quaternion(Vector3.UP, seat.normal)), seat.point)
+
+
+func _on_surface_changed() -> void:
+	for p in plates:
+		if is_instance_valid(p):
+			p.reseat = true
 
 
 # Unread, the amber face stands proud and glows; read, it sinks flush with the rim and goes to bare copper.
@@ -2868,12 +2883,13 @@ func _ward_cue(kind: String) -> void:
 		presentation.audio.play(kind)
 
 
-# The ball's centre within REACH_M of the plate's axis and within HEIGHT_M of its face, both read in the plate's
-# own tilt: a ball on a sloped plate is over it, and one on the ground under a deck plate is not.
+# The ball's centre within REACH_M of the plate's axis, and from BELOW_M under its face to HEIGHT_M over it, both
+# read in the plate's own tilt: a ball on a sloped plate is over it, and one under a deck plate (on the ground or
+# against the deck's underside) is not.
 func _watch_plate(p: LorePlate, ball: Vector3) -> void:
 	if not is_instance_valid(p):
 		return
-	if not p.seated:
+	if not p.seated or p.reseat:
 		_seat_plate(p)
 	if p.read or not p.seated:
 		return

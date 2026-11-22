@@ -121,7 +121,8 @@ func _spot(fragment: String) -> Vector2:
 	return Vector2.INF
 
 
-# The highest static world face under (x, z), as the plate seat test reads it.
+# The highest static world face under (x, z), any static body at all: it only places the camera over the ground,
+# so one pose serves every build. It is not the seat test's ground, nor terrain.gd top_surface.
 func _top(x: float, z: float) -> float:
 	var ground: float = _game.ctx.terrain.height(x, z)
 	var query := PhysicsRayQueryParameters3D.create(Vector3(x, ground + REACH_M, z), Vector3(x, ground - 1.0, z), 1)

@@ -58,6 +58,9 @@ const GREYBOX := "greybox:"
 # Rows something else dresses place only their ride sensor: "landmark", the landmark's own model (the sinkhole's
 # gallery deck); "scatter", the park's ground scatter, which park_map.gd then lets into the footprint.
 const LANDMARK_DRESSED := "landmark"
+# A placed row whose node something moves every physics tick (the hanging isle, which isle_rig.gd poses): its
+# colliders are no ground to stand a thing on (terrain.gd top_surface). moves() is the question.
+const MOVING_GROUP := "park_row_moving"
 const SCATTER_DRESSED := "scatter"
 const SENSOR_ONLY := [LANDMARK_DRESSED, SCATTER_DRESSED]
 # A recipe's collision mesh is the node named "<name>-col". Godot 4.7.2 keeps that node as a MeshInstance3D and adds a
@@ -750,9 +753,19 @@ static func place_landmark(park: Dictionary, parent: Node3D, ground := Callable(
 		LandmarkBeam.make(node, node.transform * (root as Vector3), float(row["sight_top"][1]), anchor_y)
 	if kind == "sky_island":
 		IsleRig.attach(node, null if node.has_meta("landmark_proxy") else _tip_shape(row))
+		node.add_to_group(MOVING_GROUP)
 	if kind == "dam" and not node.has_meta("landmark_proxy"):
 		DamRig.attach(node)
 	return node
+
+
+# True when node is, or hangs under, a placed row something moves every tick (MOVING_GROUP).
+static func moves(node: Node) -> bool:
+	while node != null:
+		if node.is_in_group(MOVING_GROUP):
+			return true
+		node = node.get_parent()
+	return false
 
 
 # The Hanging Isle's moving tip (ISLE-TIP): the tip GLB's -col trimesh at its place in the landmark node, for
