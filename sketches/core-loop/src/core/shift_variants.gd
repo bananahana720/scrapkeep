@@ -226,21 +226,32 @@ static func stage_def(def: Dictionary, run, stage: int) -> Dictionary:
 
 
 # True when Overtime wakes the stage's sealed Warden ahead of the beacon ring.
-static func wakes_warden(run, beacon_radius: float, flat_distance: float) -> bool:
-	return has(run, OVERTIME) and flat_distance <= beacon_radius * OVERTIME_WAKE_SCALE
+# Waits while a stage yard lock is armed or shut so approaching the yard never opens it early
+# or forfeits the yard's panel and bell.
+static func wakes_warden(run, beacon_radius: float, flat_distance: float, yard_ahead := false) -> bool:
+	return not yard_ahead and has(run, OVERTIME) and flat_distance <= beacon_radius * OVERTIME_WAKE_SCALE
+
+
+# Rewinds an Overtime panel claim made on or after the stage being retried, because run.restore()
+# rewinds run.panels back to stage entry. Claims banked on earlier stages stay intact.
+static func on_stage_retry(run) -> void:
+	if run == null or not ("extra" in run):
+		return
+	var paid_stage := int(run.extra.get(OVERTIME_PAID_KEY, 0))
+	if paid_stage > 0 and paid_stage >= int(run.stage):
+		run.extra.erase(OVERTIME_PAID_KEY)
 
 
 # Claims Overtime's extra grey panel on a Warden break: at most one panel per run, banked once
-# across stages and Continue (a retry of the same stage rewinds run.panels via restore(), so
-# keeping the stage number lets a retried stage still pay its single panel without ever paying
-# on a second stage). Drawn on its own stream so shared and panel-drop RNG never drift.
+# across stages and Continue (retry_stage calls on_stage_retry after run.restore() so a retried
+# stage can still pay on this stage or a later one without ever paying twice in one run). Drawn
+# on its own stream so shared and panel-drop RNG never drift.
 static func claim_overtime_panel(run) -> String:
 	if run == null or not has(run, OVERTIME):
 		return ""
-	var stage_now := int(run.stage)
-	var paid_stage := int(run.extra.get(OVERTIME_PAID_KEY, 0))
-	if paid_stage > 0 and paid_stage != stage_now:
+	if int(run.extra.get(OVERTIME_PAID_KEY, 0)) > 0:
 		return ""
+	var stage_now := int(run.stage)
 	run.extra[OVERTIME_PAID_KEY] = stage_now
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([int(run.run_seed), stage_now, "overtime_panel"])

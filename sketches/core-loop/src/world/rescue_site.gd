@@ -321,8 +321,13 @@ func setup(ctx_ref, interact_ref) -> void:
 	ctx.events.run_started.connect(func(_class_id: String): _done.clear())
 
 
-func _on_stage_entered(_stage: int, _retry: bool) -> void:
+func _on_stage_entered(_stage: int, retry: bool) -> void:
 	clear()
+	if retry:
+		# A retry rewinds run scrap to stage entry, so salvage-only variant cages re-arm alongside it.
+		for quest in _done.keys():
+			if ShiftVariants.cage_salvage_scrap(String(quest)) > 0:
+				_done.erase(quest)
 	var map = ctx.terrain.map()
 	var specs: Array = []
 	if "rescue_sites" in map:

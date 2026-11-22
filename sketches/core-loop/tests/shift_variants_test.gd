@@ -30,6 +30,9 @@ const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
 const Panels := preload("res://src/build/panels.gd")
+const Activities := preload("res://src/world/activities.gd")
+const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
+const ParkPlacement := preload("res://src/world/park/park_placement.gd")
 const T := preload("res://tests/support/t.gd")
 
 const DIR := "user://test-shift-variants/"
@@ -243,7 +246,8 @@ func _physics_process(_delta: float) -> bool:
 			_t.eq("base look_id is empty", _game.flow.stage_look_id(), "")
 			_t.check("base dam has no crew_short_cache site", not _has_crew_short_site())
 			_t.check("base dam has no night_shift_cage", _game.world.rescue.cage(ShiftVariants.NIGHT_SHIFT_CAGE_QUEST) == null)
-			# Base Warden does not wake at 50 m (outside 30 m ring).
+			# Base Warden does not wake at 50 m (outside 30 m ring), even with yard lock spent.
+			_game.flow.gate.lock_state = "spent"
 			_move_from_warden(50.0)
 			_game.flow.physics_step(0.016)
 			_t.check("base Warden stays unengaged at 50 m", not _game.flow.engaged())
@@ -274,6 +278,17 @@ func _physics_process(_delta: float) -> bool:
 			_t.eq("night shift builds two cages total on the dam", _game.world.rescue.cages.size(), 2)
 			var cage_at: Vector2 = ShiftVariants.NIGHT_SHIFT_CAGE["at"]
 			_t.check("night shift cage sits outside the 200 m yard-lock trigger", cage_at.distance_to(Vector2(0.0, 575.0)) > 250.0)
+			var dam_map = _game.world.terrain.map()
+			var dam_graph = Activities.shared_graph(Activities.graph_path(String(dam_map.park.map)))
+			var dam_layout := PocketDraw.prepare(dam_graph, dam_map)
+			var cage_clear := true
+			var min_anchor_dist := INF
+			for anchor in dam_layout.anchors:
+				var dist: float = cage_at.distance_to(anchor.at)
+				min_anchor_dist = minf(min_anchor_dist, dist)
+				if dist <= ParkPlacement.RING_M:
+					cage_clear = false
+			_t.check("night shift cage stands clear of every PocketDraw anchor", cage_clear, "min_dist=%.1f" % min_anchor_dist)
 			var scrap_before: int = _game.ctx.run.scrap
 			var panels_before: int = _game.ctx.run.panels.size()
 			var pilots_before: int = _unlocked_pilot_count()
@@ -281,33 +296,58 @@ func _physics_process(_delta: float) -> bool:
 			_t.eq("freeing night shift cage pays scrap burst", _game.ctx.run.scrap, scrap_before + ShiftVariants.NIGHT_SHIFT_CAGE_SCRAP)
 			_t.eq("freeing night shift cage pays no panel", _game.ctx.run.panels.size(), panels_before)
 			_t.eq("freeing night shift cage unlocks no pilot", _unlocked_pilot_count(), pilots_before)
-			# Completing again in the same run pays nothing extra.
+			# Completing again in the same attempt pays nothing extra.
 			_game.world.rescue.complete(ShiftVariants.NIGHT_SHIFT_CAGE_QUEST)
-			_t.eq("night shift cage pays at most once per run", _game.ctx.run.scrap, scrap_before + ShiftVariants.NIGHT_SHIFT_CAGE_SCRAP)
+			_t.eq("night shift cage pays at most once per attempt", _game.ctx.run.scrap, scrap_before + ShiftVariants.NIGHT_SHIFT_CAGE_SCRAP)
+			# Retrying stage 1 rewinds run scrap and re-arms the salvage cage so freeing it again
+			# leaves a single 180-scrap burst (never 0 and never 360).
+			_game.flow.retry_stage()
+			_t.eq("retry rewinds night shift cage scrap to stage entry", _game.ctx.run.scrap, scrap_before)
+			var retried_cage = _game.world.rescue.cage(ShiftVariants.NIGHT_SHIFT_CAGE_QUEST)
+			_t.check("retry rebuilds night shift cage armed", retried_cage != null and not retried_cage.spent and retried_cage.ready_now())
+			_game.world.rescue.complete(ShiftVariants.NIGHT_SHIFT_CAGE_QUEST)
+			_t.eq("freeing retried night shift cage leaves single scrap burst", _game.ctx.run.scrap, scrap_before + ShiftVariants.NIGHT_SHIFT_CAGE_SCRAP)
 			_phase = 2
 		2:
-			# Overtime: wakes Warden early at 50 m and breaking a Warden pays one panel per run, banked once.
+			# Overtime: wakes Warden early at 50 m only once no yard lock is armed/locked, and
+			# breaking a Warden pays one panel per run, banked once.
 			_start_run([ShiftVariants.OVERTIME], 404)
 			var panels_before: int = _game.ctx.run.panels.size()
+			_t.eq("dam starts with yard lock armed", _game.flow.gate.lock_state, "armed")
 			_move_from_warden(50.0)
 			_game.flow.physics_step(0.016)
-			_t.check("overtime wakes Warden early at 50 m", _game.flow.engaged())
+			_t.check("overtime does not wake Warden at 50 m while yard lock is armed", not _game.flow.engaged())
+			_t.eq("armed yard lock stays armed at 50 m under overtime", _game.flow.gate.lock_state, "armed")
+			_game.flow.gate.lock_state = "locked"
+			_game.flow.physics_step(0.016)
+			_t.check("overtime does not wake Warden at 50 m while yard lock is locked", not _game.flow.engaged())
+			_t.eq("locked yard lock stays locked at 50 m under overtime", _game.flow.gate.lock_state, "locked")
+			_game.flow.gate.lock_state = "spent"
+			_game.flow.physics_step(0.016)
+			_t.check("overtime wakes Warden early at 50 m once yard lock is spent", _game.flow.engaged())
 			# Break stage 1 Warden: pays 1 panel.
 			_break_warden()
 			_t.eq("overtime Warden break pays one extra panel", _game.ctx.run.panels.size(), panels_before + 1)
-			# Retry restores stage-entry panels so retrying cannot farm panels.
+			# Retry restores stage-entry panels and clears stage 1's claim; if stage 1 Warden then
+			# vanishes without paying, stage 2 Warden break still pays the run's single panel.
 			_game.flow.retry_stage()
 			_t.eq("retry restores panels before Warden break", _game.ctx.run.panels.size(), panels_before)
-			# A vanished Warden does not pay the bonus panel.
 			_game.flow._warden_vanished()
 			_t.eq("vanished Warden pays no overtime panel", _game.ctx.run.panels.size(), panels_before)
-			# Retry and break stage 1 Warden legitimately, then advance to stage 2: stage 2 break pays 0 extra.
-			_game.flow.retry_stage()
-			_break_warden()
-			_t.eq("retried stage 1 Warden break pays the run's one panel", _game.ctx.run.panels.size(), panels_before + 1)
 			_game.flow.enter_stage(2, Vector3.ZERO, false)
 			_break_warden()
-			_t.eq("stage 2 Warden break pays no second overtime panel (one per run)", _game.ctx.run.panels.size(), panels_before + 1)
+			_t.eq("stage 2 Warden break pays the run's panel after stage 1 retry+vanish", _game.ctx.run.panels.size(), panels_before + 1)
+			_t.eq("later claim in same run pays nothing extra", ShiftVariants.claim_overtime_panel(_game.ctx.run), "")
+			# Normal path: break stage 1 Warden, advance to stage 2, retry stage 2, break stage 2
+			# Warden -> still only 1 panel total across the run.
+			_start_run([ShiftVariants.OVERTIME], 405)
+			var panels_second: int = _game.ctx.run.panels.size()
+			_break_warden()
+			_t.eq("stage 1 Warden break pays one panel on fresh run", _game.ctx.run.panels.size(), panels_second + 1)
+			_game.flow.enter_stage(2, Vector3.ZERO, false)
+			_game.flow.retry_stage()
+			_break_warden()
+			_t.eq("stage 2 Warden break pays no second overtime panel (one per run)", _game.ctx.run.panels.size(), panels_second + 1)
 			_t.check("overtime appears on stage 1 and stage 2 card lines",
 				StageModifier.card_line(_game.ctx.run, _game.world.terrain, 1).contains("Overtime")
 				and StageModifier.card_line(_game.ctx.run, _game.world.terrain, 2).contains("Overtime"))

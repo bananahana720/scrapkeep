@@ -850,6 +850,7 @@ func retry_stage() -> void:
 		return
 	_untake()
 	ctx.run.restore()
+	ShiftVariants.on_stage_retry(ctx.run)
 	_launched = false
 	_flight = 0.0
 	_last_percent = -1
@@ -1125,7 +1126,8 @@ func physics_step(delta: float) -> void:
 				var charge: float = 1.0 - warden_integrity()
 				beacon.show_progress(beacon.duration * minf(SEALED_CAP, charge))
 				var to_warden := Vector2(ball.x - _warden_at.x, ball.z - _warden_at.z).length()
-				if beacon.phase != Beacon.IDLE or ShiftVariants.wakes_warden(ctx.run, beacon.radius, to_warden):
+				var yard_waiting: bool = gate != null and gate.yard_ahead()
+				if beacon.phase != Beacon.IDLE or ShiftVariants.wakes_warden(ctx.run, beacon.radius, to_warden, yard_waiting):
 					_engage()
 				else:
 					_read_sighting(ball)
