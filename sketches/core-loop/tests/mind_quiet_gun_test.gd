@@ -107,10 +107,10 @@ func _cases() -> void:
 	_t.check("answer dresses the Mind adaptation fact", audio.cue_log.back()[0] == "mind_adapted" and audio.cue_log.back()[1] == answer_sound and audio.cue_log.back()[2] == "now", str(audio.cue_log.back()))
 	var cues: Dictionary = audio.get_script().get_script_constant_map().get("CANNON_CUES", {})
 	_t.check("Cannon cue table has no absolute db rows", not cues.is_empty() and cues.values().all(func(row): return not row.has("db")), str(cues))
-	var cue_count: int = audio.cue_log.size()
+	var cue_count: int = audio.cue_log_total
 	audio.sound_ready = false
 	audio.cannon_line(1)
-	_t.check("Cannon uses shared admission while the bank is cold", audio.cue_log.size() == cue_count + 1 and audio.cue_log.back()[2] == "skip")
+	_t.check("Cannon uses shared admission while the bank is cold", audio.cue_log_total == cue_count + 1 and audio.cue_log.back()[2] == "skip")
 	audio.sound_ready = true
 	audio._cannon_threat_at = audio.clock
 	var beat_delay: float = float(audio.engine.next_beat() - audio.engine.clock) / Harmony.RATE

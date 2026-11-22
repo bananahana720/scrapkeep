@@ -123,8 +123,8 @@ var discovered := {}
 var _shown: Array[Dictionary] = []
 # How far each off-screen arrow stands from its own spot along the edge, by the point it names.
 var _slide := {}
-# Events announced with a place and not started: {event_id: {at, left}}, left in seconds and held at
-# zero while the event waits to land.
+# Events announced with a place and not started: {event_id: {at}}. An entry stands from its announcement
+# to its start or end, however long the event waits to land, so there is no countdown to keep.
 var _incoming := {}
 
 
@@ -157,14 +157,14 @@ func setup(game_ref) -> void:
 # An event announced `seconds` ahead of landing at `at`; one with no lead or no place is not marked.
 func note_incoming(event_id: String, seconds: float, at: Vector3) -> void:
 	if seconds > 0.0 and at.is_finite():
-		_incoming[event_id] = {"at": at, "left": seconds}
+		_incoming[event_id] = {"at": at}
 	else:
 		_incoming.erase(event_id)
 
 
-func step_incoming(delta: float) -> void:
-	for id in _incoming:
-		_incoming[id]["left"] = maxf(0.0, _incoming[id]["left"] - delta)
+# Kept for callers that still step the marker each frame: an incoming mark has no clock to advance.
+func step_incoming(_delta: float) -> void:
+	pass
 
 
 func incoming_targets() -> Array[Dictionary]:
@@ -489,7 +489,7 @@ static func arrow_slide(view: Rect2, tip: Vector2, dir: Vector2, span: float, si
 	if held == 0.0:
 		if clear.call(0.0, 0.0):
 			return 0.0
-	elif clear.call(held, 0.0):
+	elif held >= low and held <= high and clear.call(held, 0.0):
 		return 0.0 if clear.call(0.0, ARROW_HOLD) else held
 	var first := -1.0 if held < 0.0 else 1.0
 	for room in [ARROW_HOLD, 0.0]:
@@ -498,7 +498,7 @@ static func arrow_slide(view: Rect2, tip: Vector2, dir: Vector2, span: float, si
 				var offset: float = way * step
 				if offset >= low and offset <= high and clear.call(offset, room):
 					return offset
-	return held
+	return clampf(held, low, high)
 
 
 # Viewport bounds of the arrow tip, its two fins and the square objective glyph.
@@ -668,7 +668,6 @@ static func _on_edge(view: Rect2, centre: Vector2, dir: Vector2) -> Vector2:
 func _process(delta: float) -> void:
 	if game == null:
 		return
-	step_incoming(delta)
 	note_pockets(get_viewport_rect().size)
 	var now := markers(get_viewport_rect().size)
 	# A mark breathes, so it is drawn every frame while one is up.

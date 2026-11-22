@@ -177,12 +177,12 @@ func _lead_pass(speed: float, overrides: Dictionary) -> Dictionary:
 
 func _run() -> void:
 	ChallengeDials.reset()
-	_t.eq("01 terrain stops shells on the dam and the flume only", ChallengeDials.value("hazard.shell_cover_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
-	_t.eq("02 lobbers lead 0.75 on the dam and the flume", ChallengeDials.value("mobs.lobber_lead_by_stage"), [0.75, 0.75, 0.5, 0.5, 0.5, 0.5])
+	_t.eq("01 terrain stops shells across all stages", ChallengeDials.value("hazard.shell_cover_by_stage"), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+	_t.eq("02 lobbers lead 0.75 across all stages", ChallengeDials.value("mobs.lobber_lead_by_stage"), [0.75, 0.75, 0.75, 0.75, 0.75, 0.75])
 	_t.eq("03 the lobber share step ships at the old 0.07 on every stage", ChallengeDials.value("mobs.lobber_share_step_by_stage"), [0.07, 0.07, 0.07, 0.07, 0.07, 0.07])
-	_t.near("04 stage 3 reads the old lead", ChallengeDials.by_stage_or("mobs.lobber_lead_by_stage", 3, 0.5), Lobber.LEAD)
+	_t.near("04 stage 3 inherits the 0.75 lead", ChallengeDials.by_stage_or("mobs.lobber_lead_by_stage", 3, 0.5), 0.75)
 	_t.near("05 stage 3 reads the old share step", ChallengeDials.by_stage_or("mobs.lobber_share_step_by_stage", 3, 0.0), 0.07)
-	_t.near("06 stage 3 has no cover", ChallengeDials.by_stage_or("hazard.shell_cover_by_stage", 3, 1.0), 0.0)
+	_t.near("06 stage 3 inherits shell cover", ChallengeDials.by_stage_or("hazard.shell_cover_by_stage", 3, 0.0), 1.0)
 	_t.near("07 the tell is as long as it was", Lobber.TELEGRAPH, 1.3)
 	_t.near("08 the flight is as long as it was", Lobber.FLIGHT, 1.9)
 	_t.check("09 the tell is at least the tell floor", Lobber.TELEGRAPH >= ChallengeDials.TELL_FLOOR, "TELEGRAPH %.2f s, floor %.2f s" % [Lobber.TELEGRAPH, ChallengeDials.TELL_FLOOR])

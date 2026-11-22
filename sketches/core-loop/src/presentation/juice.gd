@@ -15,6 +15,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 
 # Feel: squash and stretch, camera punches and kicks, hit-stop, the pylon's plant and
 # eject, and (v3 W11) how a hit, a kill, a pickup, a dodge and a hit taken land. Every
@@ -44,8 +45,10 @@ const SHAKE_CAP := 0.5
 # card or a beacon asks for a stop that is logged at zero and never sent, and so does any
 # new fact nobody has listed (ror2/characters-and-feel: no hitstop on ball rolling;
 # BIBLE: momentum is sacred). "test" and "comfort" are the names the presentation tests
-# send straight to the budget.
-const STRIKE_STOP_FACTS := ["enemy_struck", "boss_weak_point_hit", "multi_kill", "harpoon_bit", "test", "comfort"]
+# send straight to the budget. The weighed facts (EventKinds.WEIGHTED, allegiance player) are the
+# strike's own consequence: a Warden staggered or broken, a boss felled, a heavy piece shattered.
+const STRIKE_STOP_FACTS := ["enemy_struck", "boss_weak_point_hit", "multi_kill", "harpoon_bit", "posture_changed",
+	"posture_break", "boss_defeated", "piece_shattered", "test", "comfort"]
 const STOP_FLOOR_MS := 4.0
 const STOP_TRIM_FLOOR_MS := 8.0
 # The harpoon biting a body stops time this long (LEGIBILITY section 3). A world latch sends none.
@@ -60,6 +63,10 @@ const CONTACT_KINDS := ["ram", "stomp", "slam"]
 const THROW_LO := 11.0
 const THROW_STOP_MS := [22.0, 58.0]
 const THROW_SHAKE := [0.2, 0.5]
+# A heft destructible's break (destructibles.gd) by tier, as an EventKinds.WEIGHT class and the damage its
+# stop is read at: light clutter (tiers 1 and 2) never stops time, so a run through it keeps its flow; a tier
+# 3 piece lands a hit's punch, tier 4 a heavy crunch and tier 5 a heavier one. One stop budget for all.
+const SHATTER_WEIGHT := {3: ["hit", 0.0], 4: ["heavy", 0.0], 5: ["heavy", 30.0]}
 # Bursts per frame, so a blast through a crowd costs a handful of emitters, not one each.
 const MAX_BURSTS := 6
 # The outline stays the collision ball's size at every heft class (DECISIONS "Fixed outline"):
@@ -104,6 +111,10 @@ const RUMBLE := {
 	"player_hit": {"weak": 0.45, "strong": 0.7, "ms": 170},
 	"multi_kill": {"weak": 0.4, "strong": 0.3, "ms": 90},
 	"boss_weak_point_hit": {"weak": 0.5, "strong": 0.65, "ms": 120},
+	"posture_changed": {"weak": 0.35, "strong": 0.8, "ms": 180},
+	"posture_break": {"weak": 0.45, "strong": 1.0, "ms": 260},
+	"boss_defeated": {"weak": 0.5, "strong": 1.0, "ms": 400},
+	"piece_shattered": {"weak": 0.3, "strong": 0.55, "ms": 90},
 	"heft_class_changed": {"weak": 0.15, "strong": 0.5, "ms": 220},
 	"beacon_unsealed": {"weak": 0.3, "strong": 0.85, "ms": 320},
 	# The loops prototypes (docs/design/loops.md). Heat: a skim's tick, the redline buzz held
@@ -154,6 +165,7 @@ var multi_log: Array = []
 # the census read it.
 var rumble_log: Array = []
 const RUMBLE_LOG_CAP := 512
+const LOG_CAP := 2048
 
 var _squash := 0.0
 var _squash_velocity := 0.0
@@ -168,6 +180,10 @@ var _stops: Array = []
 var _hits: Array = []
 var _kills: Array = []
 var _blasts: Array = []
+# EventKinds.weigh records (plus "at") waiting for the frame's one stop and shake.
+var _weighed: Array = []
+# Instance id -> [staggered, chunks left] at the last posture reading, so only an edge lands.
+var _posture_seen := {}
 var _flush_queued := false
 var _multi_size := 0
 var _multi_last := -100000
@@ -244,6 +260,8 @@ func wire_optional() -> void:
 	SignalWire.listen(events, "carved", _on_carved)
 	SignalWire.listen(events, "bumped", _on_bumped)
 	SignalWire.listen(events, "enemy_walled", _on_walled)
+	SignalWire.listen(events, "posture_changed", _on_posture)
+	SignalWire.listen(events, "boss_defeated", _on_boss_defeated)
 
 
 func _on_harpoon_bit(_enemy: Node3D, _at: Vector3) -> void:
@@ -324,6 +342,8 @@ func _reset() -> void:
 	_hits.clear()
 	_kills.clear()
 	_blasts.clear()
+	_weighed.clear()
+	_posture_seen.clear()
 	_multi_size = 0
 	for ghost in _ghosts:
 		if is_instance_valid(ghost["node"]):
@@ -586,13 +606,63 @@ func flush() -> void:
 		_camera("punch_fov", "sticky_detonated", Vector3.ZERO,
 			minf(float(b_row["punch_fov"]) + float(b_row["punch_per_enemy"]) * caught, float(b_row["punch_cap"])), 0.3)
 	_blasts.clear()
-	_flush_hits()
+	var landed := _flush_weighed()
+	var struck := _flush_hits()
+	var shake := maxf(float(landed["shake"]), float(struck["shake"]))
+	if camera != null and shake > 0.0:
+		request_shake(shake, 0.3 if float(landed["shake"]) > float(struck["shake"]) else 0.2, String(landed["fact"]) if float(landed["shake"]) > float(struck["shake"]) else "enemy_struck")
+	# One stop for the frame: the hits' or the weighed fact's, whichever asks more.
+	var stop := maxf(float(landed["stop"]), float(struck["stop"]))
+	if stop > 0.0:
+		request_hit_stop(stop / 1000.0, String(landed["fact"]) if float(landed["stop"]) > float(struck["stop"]) else "enemy_struck")
 	_flush_kills()
 
 
-func _flush_hits() -> void:
+# The frame's weighed facts: their camera kick and zoom now, their stop and shake for flush() to merge
+# with the hits'. Returns the largest {stop (ms), shake, fact}.
+func _flush_weighed() -> Dictionary:
+	var out := {"stop": 0.0, "shake": 0.0, "fact": ""}
+	var kick := 0.0
+	var kick_fact := ""
+	var fov := 0.0
+	var fov_fact := ""
+	var rumble_strength := 0.0
+	var rumble_fact := ""
+	for record in _weighed:
+		var fact := String(record["fact"])
+		var rec_kick := float(record["kick"])
+		if rec_kick > kick:
+			kick = rec_kick
+			kick_fact = fact
+		var rec_fov := float(record["punch_fov"])
+		if absf(rec_fov) > absf(fov):
+			fov = rec_fov
+			fov_fact = fact
+		var rec_rumble := maxf(float(record["strength"]), 0.35)
+		if rec_rumble > rumble_strength:
+			rumble_strength = rec_rumble
+			rumble_fact = fact
+		if float(record["stop_ms"]) > float(out["stop"]):
+			out["stop"] = float(record["stop_ms"])
+			out["fact"] = fact
+		out["shake"] = maxf(float(out["shake"]), float(record["shake"]))
+		if out["fact"] == "":
+			out["fact"] = fact
+	if kick > 0.0:
+		_camera("kick", kick_fact, Vector3.DOWN, kick)
+	if not is_zero_approx(fov):
+		_camera("punch_fov", fov_fact, Vector3.ZERO, fov, 0.35)
+	if rumble_strength > 0.0:
+		rumble(rumble_fact, rumble_strength)
+	_weighed.clear()
+	return out
+
+
+# The frame's hits: bursts, numbers, the crit ping and the heavy thump now; returns the stop (ms) and
+# shake they ask for, which flush() lands with the weighed facts'.
+func _flush_hits() -> Dictionary:
 	if _hits.is_empty():
-		return
+		return {"stop": 0.0, "shake": 0.0}
 	var row := EventKinds.juice("enemy_struck")
 	var stop := 0.0
 	var shake := 0.0
@@ -625,11 +695,8 @@ func _flush_hits() -> void:
 		for hit in _hits:
 			throw_max = maxf(throw_max, float(hit.get("throw", -1.0)))
 		rumble("ram", lerpf(0.45, 1.0, throw_share(throw_max)))
-	if camera != null and shake > 0.0:
-		request_shake(shake, 0.2, "enemy_struck")
 	_hits.clear()
-	if stop > 0.0:
-		request_hit_stop(stop / 1000.0, "enemy_struck")
+	return {"stop": stop, "shake": shake}
 
 
 # The ram's weight: the camera kicked along the ball's travel, dust at the contact and
@@ -657,6 +724,64 @@ func _on_weak_point(_point_id: String) -> void:
 	_camera("kick", "boss_weak_point_hit", Vector3.DOWN, 0.25)
 	rumble("boss_weak_point_hit")
 	request_hit_stop(stop_ms_for(30.0, true) / 1000.0, "boss_weak_point_hit")
+
+
+# The Warden's posture (posture_changed carries every reading): only an edge lands, through
+# EventKinds.weigh. The reading that opens a stagger is massive, the one that breaks the last chunk
+# is the posture_break sub-fact (massive), and a chunk shattered short of either is heavy by the
+# share of the bar it took. A reading with no edge lands nothing.
+func _on_posture(enemy: Node3D, _posture: float, staggered: bool) -> void:
+	if not is_instance_valid(enemy):
+		return
+	var id := enemy.get_instance_id()
+	var seen: Array = _posture_seen.get(id, [false, BossPosture.CHUNKS])
+	var chunks: int = int(enemy.chunks_left()) if enemy.has_method("chunks_left") else int(seen[1])
+	_posture_seen[id] = [staggered, chunks]
+	var lost := maxi(int(seen[1]) - chunks, 0)
+	var at: Vector3 = enemy.global_position if enemy.is_inside_tree() else player.shown_position()
+	if lost > 0 and chunks <= 0:
+		weigh("posture_break", {"staggered": true}, at)
+	elif staggered and not bool(seen[0]):
+		weigh("posture_changed", {"staggered": true, "chunks_lost": lost}, at)
+	elif lost > 0:
+		weigh("posture_changed", {"chunks_lost": lost}, at)
+
+
+# A boss felled: the climax row, the biggest stop and shake the spine allows.
+func _on_boss_defeated() -> void:
+	weigh("boss_defeated", {}, player.shown_position() if player != null else Vector3.ZERO)
+
+
+# A heft destructible broke at `at` (destructibles.gd): its tier's SHATTER_WEIGHT class. Tiers 1 and 2
+# ask for nothing, so light clutter never hitches a run.
+func on_piece_shattered(tier: int, at: Vector3) -> void:
+	var record := shatter_weight(tier)
+	if record.is_empty():
+		return
+	record["at"] = at
+	_weighed.append(record)
+	_queue_flush()
+
+
+# The weight record for a tier's break, in EventKinds.weigh's shape, or {} for a tier that lands none.
+static func shatter_weight(tier: int) -> Dictionary:
+	if not SHATTER_WEIGHT.has(tier):
+		return {}
+	var key := String(SHATTER_WEIGHT[tier][0])
+	var profile: Dictionary = EventKinds.WEIGHT[key]
+	var stop := float(profile["stop_ms"]) if not profile["stop_ms"] is String else stop_ms_for(float(SHATTER_WEIGHT[tier][1]), false, profile["stop_ms"] == "heavy")
+	return {"fact": "piece_shattered", "weight": key, "strength": 1.0, "stop_ms": stop, "shake": float(profile["shake"]),
+		"kick": float(profile["kick"]), "punch_fov": float(profile["punch_fov"])}
+
+
+# Lands a WEIGHTED fact with the frame's other hits: its record from EventKinds.weigh, its stop and
+# shake merged into the frame's one stop in flush().
+func weigh(fact: String, args: Dictionary, at: Vector3) -> Dictionary:
+	var record := EventKinds.weigh(fact, args)
+	record["at"] = at
+	_weighed.append(record)
+	_queue_flush()
+	return record
 
 
 func _on_unsealed(_stage: int) -> void:
@@ -689,7 +814,7 @@ func _flush_kills() -> void:
 	# One ram or blast that takes several: an extra beat at 2, 4 and 8.
 	for mark in [2, 4, 8]:
 		if before < mark and _multi_size >= mark:
-			multi_log.append([mark, now])
+			_log_push(multi_log, [mark, now])
 			request_hit_stop(float(row["multi_stop_ms"]) / 1000.0, "multi_kill")
 			rumble("multi_kill", minf(0.5 + mark / 8.0, 1.0))
 			_camera("punch_fov", "multi_kill", Vector3.ZERO, -2.0 - mark * 0.5, 0.3)
@@ -766,7 +891,7 @@ func _on_near_miss(_kind: String, at: Vector3) -> void:
 # A hit taken: the screen edge toward the source flashes and the shell winces. Never a camera shake: it would hide whether the hit was dodged.
 func _on_player_hit(amount: float, source: String) -> void:
 	var row := EventKinds.juice("player_hit")
-	hook_log.append(["edge_flash", "player_hit"])
+	_log_push(hook_log, ["edge_flash", "player_hit"])
 	squash(float(row["squash"]), Vector3.ZERO)
 	rumble("player_hit", clampf(0.5 + amount / 30.0, 0.5, 1.0))
 	# The number and the flash keep the player_hit juice row's HAZARD for either source.
@@ -852,7 +977,7 @@ func _on_heft_class(heft_class: int, _heft: float) -> void:
 	if heft_class > _heft_class:
 		squash(0.32, Vector3.UP)
 		rumble("heft_class_changed")
-		hook_log.append(["class_up", "heft_class_changed"])
+		_log_push(hook_log, ["class_up", "heft_class_changed"])
 	_heft_class = heft_class
 
 
@@ -860,8 +985,14 @@ func shell_target() -> float:
 	return 1.0 + SHELL_PER_CLASS * (_heft_class - 1)
 
 
+static func _log_push(log_arr: Array, entry: Variant, cap := LOG_CAP) -> void:
+	if log_arr.size() >= cap:
+		log_arr.pop_front()
+	log_arr.append(entry)
+
+
 func _camera(hook: String, fact: String, direction: Vector3, amount: float, time := 0.3) -> void:
-	hook_log.append([hook, fact])
+	_log_push(hook_log, [hook, fact])
 	if camera == null:
 		return
 	match hook:
@@ -949,7 +1080,7 @@ func request_shake(amount: float, time: float, _fact: String) -> void:
 func request_hit_stop(seconds: float, fact: String) -> void:
 	var now := SimClock.msec()
 	if not STRIKE_STOP_FACTS.has(fact):
-		hit_stop_log.append([seconds, 0.0, fact, now])
+		_log_push(hit_stop_log, [seconds, 0.0, fact, now])
 		return
 	var wanted := minf(seconds * 1000.0, SPINE_CAP_MS) * stop_scale
 	_stops = _stops.filter(func(stop: Array): return now - int(stop[0]) < 1000)
@@ -963,11 +1094,11 @@ func request_hit_stop(seconds: float, fact: String) -> void:
 	var spaced := _stops.is_empty() or now - int(_stops.back()[0]) - float(_stops.back()[1]) >= EventKinds.STOP_GAP_MS
 	var in_play: bool = ctx.flow == null or ctx.flow.in_play()
 	if not in_play or not spaced or wanted < STOP_FLOOR_MS or sent < minf(wanted, STOP_TRIM_FLOOR_MS):
-		hit_stop_log.append([seconds, 0.0, fact, now])
+		_log_push(hit_stop_log, [seconds, 0.0, fact, now])
 		return
 	_stops.append([now, sent])
-	hit_stop_log.append([seconds, sent / 1000.0, fact, now])
-	hook_log.append(["hit_stop", fact])
+	_log_push(hit_stop_log, [seconds, sent / 1000.0, fact, now])
+	_log_push(hook_log, ["hit_stop", fact])
 	if hit_stop_sink.is_valid():
 		hit_stop_sink.call(sent / 1000.0)
 

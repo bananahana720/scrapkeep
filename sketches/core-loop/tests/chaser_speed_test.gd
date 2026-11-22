@@ -116,9 +116,9 @@ func _chase(speed: float, overrides: Dictionary) -> Dictionary:
 func _run() -> void:
 	ChallengeDials.reset()
 	var cruise := _cruise()
-	_t.eq("01 chasers ship at 9 m/s on the dam and the flume, their own speed after them", ChallengeDials.value("mobs.chaser_speed_by_stage"), [9.0, 9.0, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("01 chasers ship at 9 m/s across all stages", ChallengeDials.value("mobs.chaser_speed_by_stage"), [9.0, 9.0, 9.0, 9.0, 9.0, 9.0])
 	_t.near("02 a dam chaser runs at 9", Chaser.stage_speed(1), 9.0)
-	_t.near("03 a Dig chaser runs at its own speed", Chaser.stage_speed(3), Chaser.SPEED)
+	_t.near("03 a Dig chaser inherits 9 m/s", Chaser.stage_speed(3), 9.0)
 	_t.check("04 the ceiling is under the ball's cruise", cruise > 0.0 and Chaser.SPEED_CEILING < cruise, "ceiling %.1f m/s, cruise %.1f m/s" % [Chaser.SPEED_CEILING, cruise])
 	_t.check("05 the shipped speed is above the old walk and under cruise", Chaser.stage_speed(1) > Chaser.SPEED and Chaser.stage_speed(1) < cruise, "%.1f m/s between %.1f and %.1f" % [Chaser.stage_speed(1), Chaser.SPEED, cruise])
 	ChallengeDials.set_overrides({"mobs.chaser_speed_by_stage": [99.0, 2.0, 0.0, 0.0, 0.0, 0.0]})

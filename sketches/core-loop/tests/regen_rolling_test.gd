@@ -33,7 +33,7 @@ func _healed(run, seconds: float, rolling: bool) -> float:
 
 
 func _rules() -> void:
-	_t.eq("01 the rule ships on world 1, off after it", ChallengeDials.value("pilot.regen_rolling_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("01 the rule ships across all stages", ChallengeDials.value("pilot.regen_rolling_by_stage"), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("02 it is a plain tune: ruled, so no --tune-unruled", ChallengeDials.parse("pilot.regen_rolling_by_stage=0/0/0/0/0/0").size(), 1)
 	ChallengeDials.quiet = true
 	_t.eq("03 the unruled pilot dials are still refused", ChallengeDials.parse("pilot.regen_rate_mult=2").size(), 0)
@@ -55,8 +55,8 @@ func _rules() -> void:
 	_t.near("07 the wait after a hit runs while parked; rolling then heals at once", run.hp - before, RunState.REGEN_RATE, 0.2)
 	_t.near("08 a caller with no ball heals as before", _default_arg(run), RunState.REGEN_RATE * 2.0, 0.2)
 	run.stage = 3
-	_t.check("09 the Dig heals at any speed", not run.regen_needs_roll())
-	_t.near("10 a parked ball heals in the Dig", _healed(run, 2.0, false), RunState.REGEN_RATE * 2.0, 0.2)
+	_t.check("09 the Dig inherits the rolling-regen rule", run.regen_needs_roll())
+	_t.near("10 a parked ball does not heal in the Dig", _healed(run, 2.0, false), 0.0)
 	# The planted case: the dial off is the game before this unit; the parked ball on the dam must heal, or
 	# check 06 says nothing about the rule.
 	run.stage = 1

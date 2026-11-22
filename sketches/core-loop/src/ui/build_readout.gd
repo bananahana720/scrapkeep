@@ -10,8 +10,10 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Attachments := preload("res://src/build/attachments.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const Icons := preload("res://src/ui/icons.gd")
+const ShotBits := preload("res://src/build/shot_bits.gd")
 
 const PIP := 6.0
+const CHIP := 24.0
 const ROW_WORDS := 9
 
 const STAT_WORDS := {
@@ -35,7 +37,7 @@ const STAT_WORDS := {
 	"movement_charges": "Movement charges", "movement_cooldown": "Movement cooldown",
 	"overcharge.damage": "Overcharge damage", "part_count": "Fitted parts",
 	"pattern.chain_arc": "Chain arcs", "pattern.cross_split": "Cross splits", "pattern.fan_spread": "Fan spreads",
-	"pattern.helix_drill": "Helix drills", "pattern.spiral_wave": "Spiral waves",
+	"pattern.halo": "Halo rings", "pattern.helix_drill": "Helix drills", "pattern.spiral_wave": "Spiral waves",
 	"pin_bonus.bonus": "Extra knocked machine damage", "pin_chain.count": "Extra machines knocked on", "pin_count": "Machines knocked on",
 	"pin_damage": "Knocked machine damage", "pin_speed": "Knocked machine speed", "planar_speed": "Rolling speed",
 	"price_scale": "Shop prices", "price_scale.per": "Shop discount", "proc_coefficient": "Trigger strength",
@@ -102,7 +104,9 @@ func _open() -> void:
 		if ancestor.has_method("tree") and ancestor.has_method("shop"):
 			var game = ancestor.get("game")
 			if game != null:
-				show_build(game.run.parts)
+				var build = game.get("build")
+				show_build(game.run.parts, {}, build.dropped_shot_bits() if build != null else [],
+					ShotBits.names(build.shot_bits()) if build != null else [])
 				_popup.popup_centered()
 			return
 		ancestor = ancestor.get_parent()
@@ -128,8 +132,13 @@ func visible_text() -> String:
 	return "\n".join(_rows.find_children("*", "Label", true, false).map(func(label): return label.text))
 
 
-func show_build(held: Array, loadout := {}) -> void:
+# kept: the shot's bits (Build.shot_bits), each drawn as its chip; dropped: the bits held past
+# the cap (Build.dropped_shot_bits), each its chip struck through after them, so a struck chip
+# sits beside the whole ones it lost to. No words (design-v3/ABILITY-MUTATIONS.md B2).
+func show_build(held: Array, loadout := {}, dropped: Array = [], kept: Array = []) -> void:
 	_data = describe(held)
+	_data["shot_bits"] = kept.duplicate()
+	_data["struck_bits"] = dropped.duplicate()
 	for child in _rows.get_children():
 		_rows.remove_child(child)
 		child.queue_free()
@@ -142,6 +151,15 @@ func show_build(held: Array, loadout := {}) -> void:
 			_line(words)
 	for row in _data["parts"]:
 		_part_row(row)
+	if not (kept.is_empty() and dropped.is_empty()):
+		var chips := HBoxContainer.new()
+		chips.name = "ShotBits"
+		chips.add_theme_constant_override("separation", 8)
+		for bit in kept:
+			chips.add_child(BitChip.new(String(bit), false))
+		for bit in dropped:
+			chips.add_child(BitChip.new(String(bit), true))
+		_rows.add_child(chips)
 	if _data["parts"].is_empty():
 		_line("No parts fitted")
 
@@ -194,6 +212,51 @@ func _part_row(row: Dictionary) -> void:
 		var mark := PipRow.new(1, 1)
 		mark.name = "CapMark"
 		box.add_child(mark)
+
+
+# One shot bit as a chip: a ring and a glyph in the bit's ShotBits colour, struck through
+# corner to corner when the bit is held past the cap. Shape and colour carry it, no words.
+class BitChip extends Control:
+	var bit := ""
+	var struck := false
+
+	func _init(bit_name := "", is_struck := false) -> void:
+		bit = bit_name
+		struck = is_struck
+		name = "Bit_" + bit
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		custom_minimum_size = Vector2(CHIP, CHIP)
+
+	func color() -> Color:
+		return ShotBits.TABLE.get(bit, {}).get("color", Palette.SAND)
+
+	func _draw() -> void:
+		var c := Vector2(CHIP, CHIP) * 0.5
+		var r := CHIP * 0.5 - 1.5
+		var tint := color()
+		draw_arc(c, r, 0.0, TAU, 24, tint, 2.0)
+		var g := r * 0.5
+		match bit:
+			"pierce":
+				draw_line(c + Vector2(-g, 0.0), c + Vector2(g, 0.0), tint, 2.0)
+				draw_line(c + Vector2(g * 0.4, -g * 0.5), c + Vector2(g, 0.0), tint, 2.0)
+				draw_line(c + Vector2(g * 0.4, g * 0.5), c + Vector2(g, 0.0), tint, 2.0)
+				draw_line(c + Vector2(-g * 0.2, -g * 0.7), c + Vector2(-g * 0.2, g * 0.7), tint, 2.0)
+			"bounce":
+				draw_polyline(PackedVector2Array([c + Vector2(-g, -g * 0.6), c + Vector2(0.0, g * 0.6), c + Vector2(g, -g * 0.6)]), tint, 2.0)
+			"split":
+				draw_line(c + Vector2(-g, 0.0), c, tint, 2.0)
+				draw_line(c, c + Vector2(g, -g * 0.7), tint, 2.0)
+				draw_line(c, c + Vector2(g, g * 0.7), tint, 2.0)
+			"pull":
+				draw_line(c + Vector2(g, 0.0), c + Vector2(-g, 0.0), tint, 2.0)
+				draw_line(c + Vector2(-g * 0.4, -g * 0.5), c + Vector2(-g, 0.0), tint, 2.0)
+				draw_line(c + Vector2(-g * 0.4, g * 0.5), c + Vector2(-g, 0.0), tint, 2.0)
+			"heat":
+				draw_colored_polygon(PackedVector2Array([c + Vector2(0.0, -g), c + Vector2(g * 0.7, g * 0.7), c + Vector2(-g * 0.7, g * 0.7)]), tint)
+		if struck:
+			draw_line(c + Vector2(-r, r) * 0.85, c + Vector2(r, -r) * 0.85, Palette.SAND, 2.5)
 
 
 # Filled and empty round pips: how many copies are held out of how many count.

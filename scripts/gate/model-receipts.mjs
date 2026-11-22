@@ -1,14 +1,19 @@
 #!/usr/bin/env node
 // Writes the receipts for the rows backed by the TLA+ models in .agents/skills/scrapkeep-verify-formal:
 // "run-always-ends" (RunFlow.tla) and "rewards-banked-once" (Rewards.tla), which scripts/world1-bands.mjs reads,
-// "flood-never-held" (ParkFlood.tla), and "hazards-hit-everyone" (HazardCycle.tla, W44), which no band row reads yet.
+// "flood-never-held" (ParkFlood.tla), "hazards-hit-everyone" (HazardCycle.tla, W44), "destructibles-safe"
+// (Destructibles.tla, W45), "yard-lock-safe" (YardLock.tla, W45 FV-2), "earned-save-safe" (EarnedSave.tla, W45 FV-3)
+// and "deferred-effects-safe" (DeferredEffects.tla, W45 FV-3), which no band row reads yet.
 //   { head, pass, measured, plant_caught }
 // For each row it runs TLC, the TLA+ model checker, on every config that stands for the code (the skill's today-*
 // configs) and on each planted fault (a broken-* config with one guard off). It passes only when every code config
 // reports no break, every plant reports a break of the rule it names (plant_caught), and no source file the model's
 // coverage page cites changed since the model's sync commit (the skill's "Is this change covered?" step 1: a changed
 // file means the model may no longer describe the code until someone reads the diff and moves the sync commit).
-// A gap the model cannot see is named in measured on every run.
+// A gap the model cannot see is named in measured on every run. An open finding the code still has is a gap too: its
+// row runs the code's configs with the finding's trigger left out, as the flood row does for PF-3, and swaps in the
+// full configs once the fix lands, as the yard lock row did when P7 closed YL-1 and YL-2 and the earned save row did
+// when P9 closed ES-2 and ES-3.
 //
 //   node scripts/gate/model-receipts.mjs --out <dir> [--row <id>] [--jar <tla2tools.jar>] [--workers <n>] [--timeout-min <n>]
 //
@@ -117,8 +122,9 @@ export const ROWS = {
       { cfg: "flood-today-noclock.cfg", minStates: 1792, label: "a flood with no live time" },
       {
         cfg: "flood-today-longfill.cfg",
-        minStates: 14336,
-        label: "a fill that outlasts the live time less the wait",
+        minStates: 63392,
+        label:
+          "a fill that outlasts the live time less the wait, still rising past the live time under a parked ball",
       },
     ],
     plants: [
@@ -129,12 +135,153 @@ export const ROWS = {
       { cfg: "flood-broken-nocap.cfg", rule: "WithinCap" },
       { cfg: "flood-broken-nohold.cfg", rule: "HoldEnds" },
       { cfg: "flood-broken-endspent.cfg", rule: "NeverEndsUnderBall" },
+      { cfg: "flood-broken-endstop.cfg", rule: "FullWaterNeverHeld" },
+      { cfg: "flood-broken-endstop-hold.cfg", rule: "HoldEnds" },
     ],
     coverage: "references/flood-coverage.md",
     gaps: [
       "the wait is counted in ticks (HoldTicks 1 against the real 2 s); the wait for a ball near the basin but outside it (hold_clear_m, 12 to 20 m on real flood rows) is not capped and not modelled, so such a ball still holds the water off (finding PF-3)",
-      "after its live time is up, a flood that cannot end because the ball is near is no longer stepped (finding PF-2)",
       "collapses and cave-ins are not modelled; their clock shares the rise's helper and park_events_test.gd sweeps it",
+    ],
+  },
+  "destructibles-safe": {
+    spec: "Destructibles.tla",
+    real: [
+      {
+        cfg: "destructibles-today.cfg",
+        minStates: 27096,
+        label: "two pieces (tiers 1 and 3), every heft class, two retries, either tick order (W45)",
+      },
+    ],
+    plants: [
+      { cfg: "destructibles-broken-repay.cfg", rule: "PaysOnce" },
+      { cfg: "destructibles-broken-nocap.cfg", rule: "PaysOnce" },
+      { cfg: "destructibles-broken-cutline.cfg", rule: "NoLineOnRubble" },
+      { cfg: "destructibles-broken-dismount.cfg", rule: "NoLineOnRubble" },
+      { cfg: "destructibles-broken-staleaim.cfg", rule: "NoLineOnRubble" },
+      { cfg: "destructibles-broken-collider.cfg", rule: "NoColliderAfterShatter" },
+      { cfg: "destructibles-broken-retryfarm.cfg", rule: "RetryNoFarm" },
+      { cfg: "destructibles-broken-keepdrops.cfg", rule: "RetryNoFarm" },
+      { cfg: "destructibles-broken-tierstack.cfg", rule: "TierCapNeverStacks" },
+    ],
+    coverage: "references/destructibles-coverage.md",
+    gaps: [
+      "the caps are shrunk to bind on two pieces (3 scrap and 1 cog against the real 35 and 20 over 14 pieces); the sweep's geometry, speeds and the refused cue are left to tests/destructibles_test.gd",
+      "a line on a body (an enemy, a stake, a moving world anchor) is never cut by a break; a destructible is none of those, so its lines are world lines",
+      "a Continue after a quit (it loads the stage-entry save and enters the stage again) is not modelled apart from the retry; lifetime tallies a pickup feeds outside the run are not modelled",
+    ],
+  },
+  "yard-lock-safe": {
+    spec: "YardLock.tla",
+    real: [
+      {
+        cfg: "yardlock-today.cfg",
+        minStates: 146341,
+        label:
+          "a played game's yard lock and overtime bell over two stages, any flight or shot at the Warden (W45 FV-2, YL-1 closed by P7)",
+      },
+      {
+        cfg: "yardlock-today-nostore.cfg",
+        minStates: 133885,
+        label: "the storeless flow's dead screen (tests and bots, YL-2 closed by P7)",
+      },
+    ],
+    plants: [
+      { cfg: "yardlock-broken-armedguard.cfg", rule: "NoLockInWardenFight" },
+      { cfg: "yardlock-broken-lockedyields.cfg", rule: "NoLockInWardenFight" },
+      { cfg: "yardlock-broken-flowspend.cfg", rule: "WallOnlyWhileLocked" },
+      { cfg: "yardlock-broken-deadspends.cfg", rule: "WallOnlyWhileLocked" },
+      { cfg: "yardlock-broken-wall.cfg", rule: "WallOnlyWhileLocked" },
+      { cfg: "yardlock-broken-maxs.cfg", rule: "LockAlwaysOpens" },
+      { cfg: "yardlock-broken-repay.cfg", rule: "YardPaysOnce" },
+      { cfg: "yardlock-broken-elif.cfg", rule: "StartCardOnce" },
+      { cfg: "yardlock-broken-offer.cfg", rule: "OvertimeOnlyAfterWin" },
+      { cfg: "yardlock-broken-cash.cfg", rule: "OvertimeOnlyAfterWin" },
+      { cfg: "yardlock-broken-ringcap.cfg", rule: "OvertimeOnlyAfterWin" },
+    ],
+    coverage: "references/yardlock-coverage.md",
+    gaps: [
+      "a yard opened by a waking Warden pays no panel and offers no bell (the P7 handler calls _unlock(false)); that is a recorded design assumption, not a rule the model checks",
+      "the Warden's clamp, the sentry, the wall's spring, the sluice and seconds are not modelled; max_s is 5 ticks and the lock row 2 waves",
+    ],
+  },
+  "earned-save-safe": {
+    spec: "EarnedSave.tla",
+    real: [
+      {
+        cfg: "earnedsave-today.cfg",
+        minStates: 3014,
+        label:
+          "the Spare Frame's earned save with one refused run write and a quit, restart or Continue anywhere (ES-1 closed by P7)",
+      },
+      {
+        cfg: "earnedsave-today-inprocess.cfg",
+        minStates: 3361,
+        label: "two refused writes in one process across a restart or Continue (ES-3 closed by P9)",
+      },
+      {
+        cfg: "earnedsave-today-clearfail.cfg",
+        minStates: 6407,
+        label: "two refused writes and a quit whose exit flush lands (ES-2 closed by P9)",
+      },
+      {
+        cfg: "earnedsave-today-sustained.cfg",
+        minStates: 11102,
+        label: "three refused writes across a refused death or restart, disk back before exit (P9)",
+      },
+    ],
+    plants: [
+      { cfg: "earnedsave-broken-spendowed.cfg", rule: "SaveOnce" },
+      { cfg: "earnedsave-broken-exitflush.cfg", rule: "SaveOnce" },
+      { cfg: "earnedsave-broken-resumeforce.cfg", rule: "SaveOnce" },
+      { cfg: "earnedsave-broken-clearowed.cfg", rule: "SaveOnce" },
+      { cfg: "earnedsave-broken-spendwrite.cfg", rule: "SaveOnce" },
+      { cfg: "earnedsave-broken-clearflush.cfg", rule: "SaveOnce" },
+      { cfg: "earnedsave-broken-newrunflush.cfg", rule: "SaveOnce" },
+    ],
+    coverage: "references/earnedsave-coverage.md",
+    gaps: [
+      "no write order closes a hard crash between the refused spend write and the next write that lands (earnedsave-guarded-crash), or a disk that refuses every write until the game closes (earnedsave-guarded-allfail)",
+      "the model holds one run file and one Spare Frame; seconds, the boss arena's own saves and the run's other fields are not modelled",
+    ],
+  },
+  "deferred-effects-safe": {
+    spec: "DeferredEffects.tla",
+    real: [
+      {
+        cfg: "deferred-today.cfg",
+        minStates: 2196005,
+        label:
+          "combat's deferred queues, follow-up procs, shot bits and exposure marks across stage entries, arena clears, deaths, quits and new runs (W45 FV-3)",
+      },
+    ],
+    plants: [
+      { cfg: "deferred-broken-ungated.cfg", rule: "NoEchoAcrossAttempt" },
+      { cfg: "deferred-broken-keepecho.cfg", rule: "NoEchoAcrossAttempt" },
+      { cfg: "deferred-broken-keepcast.cfg", rule: "NoEchoAcrossAttempt" },
+      { cfg: "deferred-broken-keepguards.cfg", rule: "NoEchoAcrossAttempt" },
+      { cfg: "deferred-broken-keeppike.cfg", rule: "NoEchoAcrossAttempt" },
+      { cfg: "deferred-broken-keepbolts.cfg", rule: "NoEchoAcrossAttempt" },
+      { cfg: "deferred-broken-rakeproc.cfg", rule: "ProcDepthOne" },
+      { cfg: "deferred-broken-pikeproc.cfg", rule: "ProcDepthOne" },
+      { cfg: "deferred-broken-procbits.cfg", rule: "ProcDepthOne" },
+      { cfg: "deferred-broken-echoagain.cfg", rule: "ProcDepthOne" },
+      { cfg: "deferred-broken-tollagain.cfg", rule: "ProcDepthOne" },
+      { cfg: "deferred-broken-shockagain.cfg", rule: "ProcDepthOne" },
+      { cfg: "deferred-broken-reelagain.cfg", rule: "ProcDepthOne" },
+      { cfg: "deferred-broken-childsplit.cfg", rule: "ShotBitsCap" },
+      { cfg: "deferred-broken-childpull.cfg", rule: "ShotBitsCap" },
+      { cfg: "deferred-broken-childhoar.cfg", rule: "ShotBitsCap" },
+      { cfg: "deferred-broken-rebounce.cfg", rule: "ShotBitsCap" },
+      { cfg: "deferred-broken-pikebits.cfg", rule: "ShotBitsCap" },
+      { cfg: "deferred-broken-contactmark.cfg", rule: "ShotBitsCap" },
+      { cfg: "deferred-broken-deathmark.cfg", rule: "ShotBitsCap" },
+    ],
+    coverage: "references/deferred-coverage.md",
+    gaps: [
+      "each queue holds one waiting item, one bolt lineage is followed through a split and one enemy carries the exposure marks; MAX_LIVE eviction, seconds and geometry are left to tests/w45_combat_formal_fixes_test.gd",
+      "the upgrade tree's own procs are kept from leading back to their trigger by UpgradeTree.problems at build time, which the model does not check; it checks only that the verb items and shot bits named here stay at depth 1",
+      "Backwash's strip is laid on a dash or boost fact without an in_play check; the model lets the ball dash only in play (its input is frozen otherwise)",
     ],
   },
 };

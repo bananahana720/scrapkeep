@@ -38,8 +38,13 @@ extends SceneTree
 # --plant=slow holds one named press (jump) for PLANT_HOLD_US inside the tool before it is released to the
 # game: that case must fail, and the run exits 1. Real run: exit 0 pass, 1 fail. Both: 2 with no display or
 # no --out. 3 when the plant run's control reports a false change.
-# haul and interact are pressed with no line out and nothing in reach (each case's `context`); their answer with a
-# line or a pylon is not measured here. The menu cases run with the prologue off (see _boot_menu).
+# haul and interact are pressed with no line out and nothing in reach (each case's `context`). The payoff verbs are
+# Ctrl again with a line out, set before each window by the case's `line` (_rest_with_line): haul_line winches a line
+# on a world point, reel_body commits the haul onto a held machine's body, and dunk does that with a slam's dunk
+# charge held (dunk.gd), the press that spends it. The machine is held still (its processing off) so a control reads
+# zero, and a fresh one stands for every window; the ball stays held through these windows, so their answer is the
+# line's cue or rope, never the ball's flight. An interact with a pylon is not measured here. The menu cases run
+# with the prologue off (see _boot_menu).
 #   PC:  gpu-run.sh <worktree> ua08 --path sketches/core-loop --script res://tools/press_latency_capture.gd -- \
 #     --out=<abs dir> [--part=verbs|menu|all] [--cases=a,b] [--trials=N] [--plant=slow]
 #   Mac (in a window; HOME and XDG_DATA_HOME point at a scratch folder, as Godot on macOS ignores XDG_DATA_HOME):
@@ -49,6 +54,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
+const Augments := preload("res://src/movement/augments.gd")
 
 const SIZE := Vector2i(1280, 720)
 const SMALL := Vector2i(256, 144)
@@ -80,7 +86,15 @@ const VERBS := [
 	{"name": "ultimate", "kind": "key", "code": KEY_Q},
 	{"name": "active", "kind": "key", "code": KEY_F},
 	{"name": "pause", "kind": "key", "code": KEY_P},
+	{"name": "haul_line", "kind": "key", "code": KEY_CTRL, "line": "world", "context": "a line out on a world point: Ctrl winches"},
+	{"name": "reel_body", "kind": "key", "code": KEY_CTRL, "line": "body", "context": "a line out on a held chaser: Ctrl commits the haul onto it"},
+	{"name": "dunk", "kind": "key", "code": KEY_CTRL, "line": "dunk", "context": "a line out on a held chaser with a dunk charge stored: Ctrl hauls it home"},
 ]
+# Where a payoff verb's line bites, from the ball at rest: ahead along the camera's flat forward and up.
+const LINE_REACH := 10.0
+const LINE_RISE := 3.0
+# The dunk charge a slam stores before the dunk case's press (dunk.gd store): a mid slam's damage.
+const DUNK_DAMAGE := 30.0
 
 var out := ""
 var plant := ""
@@ -94,6 +108,8 @@ var _rest_pose := Transform3D()
 var _min_px := MIN_PX
 var _dead := false
 var _pilot := ""
+# The held machine the body-line cases bite, replaced before every window.
+var _target: Node3D = null
 
 
 # The first frame that answers a press. `frames` is a list of {"t": usec, "px": pixels differing from the
@@ -330,13 +346,13 @@ func _audio():
 
 func _cues() -> int:
 	var a = _audio()
-	return a.cue_log.size() if a != null else 0
+	return a.cue_log_total if a != null else 0
 
 
-# The sounds started since cue_log held `from` rows.
+# The sounds started since audio.cue_log_total held `from`.
 func _started_since(from: int) -> Array:
 	var a = _audio()
-	return sounds_started(a.cue_log.slice(from)) if a != null else []
+	return sounds_started(a.cues_since(from)) if a != null else []
 
 
 # --- the verbs ---
@@ -348,10 +364,11 @@ func _verbs() -> void:
 	game.flow.press_start()
 	_pilot = str(game.flow.classes[0].display_name)
 	game.flow.choose_class(0)
-	game.run.set_max_hp(999999.0)
 	var keyboard := Intent.Keyboard.new()
 	game.player.source = keyboard
 	game.flow.enter_stage(1, Vector3.ZERO, false)
+	# After the stage entry, which sets the pilot's own hull: a ball that dies mid-case freezes and answers nothing.
+	game.run.set_max_hp(999999.0)
 	await _frames(60)
 	var wait := 0
 	while game.hud.launch_card.showing() and wait < 900:
@@ -364,7 +381,9 @@ func _verbs() -> void:
 	await _frames(600)
 	for spec in VERBS:
 		if _wanted(spec["name"]):
-			await _case(spec, "verbs", Callable(self, "_rest_ball"))
+			var settle := Callable(self, "_rest_ball") if not spec.has("line") else Callable(self, "_rest_with_line").bind(String(spec["line"]))
+			await _case(spec, "verbs", settle)
+			await _clear_line()
 	await _drop_game()
 
 
@@ -397,6 +416,46 @@ func _rest_ball() -> bool:
 			_rest_pose = body.global_transform
 			return await _rest_ball()
 	return false
+
+
+# A payoff verb's window: the ball at rest with a line out, set while it is held so the latch's own cue and rope
+# settle before the window (the rest's short let-go publishes them). `line` is "world", "body" or "dunk".
+func _rest_with_line(line: String) -> bool:
+	await _clear_line()
+	var ball: Vector3 = game.player.ball_position()
+	var cam = game.camera.cam if game.camera != null else null
+	var ahead: Vector3 = (-cam.global_basis.z if cam != null else Vector3.FORWARD) * Vector3(1.0, 0.0, 1.0)
+	ahead = ahead.normalized() if ahead.length() > 0.01 else Vector3.FORWARD
+	var point := ball + ahead * LINE_REACH + Vector3.UP * LINE_RISE
+	var kit = game.player.kit
+	if line == "world":
+		Augments.attach(kit, ball, point, -ahead)
+	else:
+		_target = game.ctx.spawner.spawn_enemy("chaser", ball + ahead * LINE_REACH)
+		if _target == null:
+			_die("spawn_enemy gave no chaser; the body-line cases have nothing to bite")
+			return false
+		_target.process_mode = Node.PROCESS_MODE_DISABLED
+		Augments.attach(kit, ball, _target.global_position, -ahead, _target)
+	game.run.heal(INF)
+	var rested: bool = await _rest_ball()
+	# Stored after the rest, whose ~3 s would outlast the charge's window (dunk.gd WINDOW), and given a few
+	# frames so its glow is up before the window opens.
+	if line == "dunk":
+		game.player.dunk.store(DUNK_DAMAGE, "slam", _pilot, Color.WHITE)
+		await _frames(10)
+	return rested
+
+
+# Lets the line go and frees the held machine, so the next window starts from its own.
+func _clear_line() -> void:
+	if game != null and game.player != null:
+		game.player.kit.drop_line()
+		game.player.dunk.clear("reset")
+	if is_instance_valid(_target):
+		_target.queue_free()
+	_target = null
+	await _frames(4)
 
 
 # --- the menu ---
@@ -647,8 +706,10 @@ func _window(spec: Dictionary, press: bool, hold_us: int) -> Dictionary:
 	while Time.get_ticks_usec() < wait_until:
 		pass
 	var t0 := Time.get_ticks_usec()
-	# The held ball is let go at the same moment in the press and in its control, from rest.
-	_let_go()
+	# The held ball is let go at the same moment in the press and in its control, from rest. A ball on a line stays
+	# held, as its swing on the rope would read as change in every control; the press still reaches the player.
+	if not spec.has("line"):
+		_let_go()
 	var grabs: Array = []
 	var injected := not press
 	while window_open(Time.get_ticks_usec() - t0, grabs.size(), WINDOW_US, hold_us):
@@ -682,7 +743,7 @@ func _window(spec: Dictionary, press: bool, hold_us: int) -> Dictionary:
 	var logged: Array = []
 	if _audio() != null:
 		rows = _started_since(cue0)
-		for r in _audio().cue_log.slice(cue0).slice(0, 8):
+		for r in _audio().cues_since(cue0).slice(0, 8):
 			logged.append([str(r[1]), str(r[2])] if r is Array and r.size() > 2 else [str(r), ""])
 	var result := {"answered": false, "us": -1, "by": "none", "frame": -1}
 	if press:

@@ -93,7 +93,7 @@ func setup(ctx_ref) -> void:
 	name = "StageLocks"
 	ctx.flow.gate = self
 	ctx.events.stage_entered.connect(_on_stage_entered)
-	ctx.events.warden_engaged.connect(func(_stage: int): _engaged_s = maxf(_engaged_s, 0.0))
+	ctx.events.warden_engaged.connect(_on_warden_engaged)
 	ctx.events.enemy_struck.connect(_on_enemy_struck)
 	ctx.events.activity_done.connect(_on_activity_done)
 	ctx.events.flow_changed.connect(_on_flow_changed)
@@ -287,8 +287,14 @@ func _clear() -> void:
 	overtime.clear()
 
 
+func _on_warden_engaged(_stage: int) -> void:
+	_engaged_s = maxf(_engaged_s, 0.0)
+	if lock_active():
+		_unlock(false)
+
+
 func _on_flow_changed(state: String) -> void:
-	if state in ["gates", "launch", "summary", "title", "victory"]:
+	if state in ["dead", "gates", "launch", "summary", "title", "victory"]:
 		if lock_active():
 			lock_state = "spent"
 			for enemy in crew_alive():
@@ -376,6 +382,9 @@ func _step_lock(delta: float) -> void:
 			if lock_arms(true, ctx.player.state.contact_normal.y, _flat(ball, beacon), float(lock_row().get("within_m", 0.0))):
 				_lock(ball, beacon)
 		"locked":
+			if _engaged_s >= 0.0 or not ctx.flow.sealed:
+				_unlock(false)
+				return
 			lock_left -= delta
 			_hold_ball()
 			if _wall != null and _wall_rise < 1.0:

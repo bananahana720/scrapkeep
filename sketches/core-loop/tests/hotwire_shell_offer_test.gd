@@ -112,4 +112,12 @@ func _loot_parity() -> void:
 	# 4f7ed07d byte for byte. Was 4f7ed07d (SQ19b).
 	# 2026-10-27 W20 cobalt rung re-pin: impact_driver becomes rare (tier 2 kept) and four catalogue
 	# rares gain a touches verb; ids and row count stay 100 and 100.
-	_check("loot parity", digest == "a7edaf46de2b9dde92bdb2f9ea55341bb27870abde5ddc591dc0a8c10edfe1a6", "digest matches the W20 pin (2026-10-27: cobalt rung rows; W19 pin was afb3d540, SQ19b pin was 4f7ed07d, PC-POOL pin was 7bb9a5f9, SR9 pin was f45eadc3, GP5 pin was a443c521, RR1 pin was e65c5020)")
+	# 2026-11-21 W45-B1 re-pin: six seamless admitted items.gd rows (overcharge_coil, ten_pin,
+	# echo_charge, domino_wire, last_word, par_chip) plus seam-gated helix_drill move from rare_plus
+	# (relic) to cobalt rare per ruling bn so Spare Frame stays the park table's only relic; ids and
+	# row count stay 100 and 100, and those six move from the relic pool into the rare pool. Was a7edaf46 (W20).
+	# 2026-11-21 W45-B2 U6 re-pin: Slag Pike and Halo Rig join the catalogue and the alpha table, so
+	# ids and rows go from 100 to 102 and the pools and seeded rolls can draw them. Was afa1d8cc (W45-B1).
+	# 2026-11-21 W45-B2 U7 re-pin: the five verb items (backwash, barbed_reel, faultline_cap, second_bell,
+	# long_leash) join the catalogue and the alpha table, so ids and rows go from 102 to 107. Was b15787f4 (U6).
+	_check("loot parity", digest == "43ea16b31ad334a7c16c6f8a48d3160cd8a3f3621f092ade8597f8f64002e719", "digest matches the W45-B2 U7 pin (2026-11-21: the five verb items; U6 pin was b15787f4; W45-B1 pin was afa1d8cc; W20 pin was a7edaf46, W19 pin was afb3d540, SQ19b pin was 4f7ed07d, PC-POOL pin was 7bb9a5f9, SR9 pin was f45eadc3, GP5 pin was a443c521, RR1 pin was e65c5020)")

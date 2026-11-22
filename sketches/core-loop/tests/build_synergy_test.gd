@@ -58,6 +58,7 @@ func _physics_process(_delta: float) -> bool:
 	_check_each_goes_live()
 	_check_marks_and_discovery()
 	_check_thermal_shock()
+	_check_evolution_makers()
 	print("build_synergy_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
@@ -175,8 +176,12 @@ func _check_alpha_parts() -> void:
 	# 2026-10-15 (wave 14 SQ19b): 45 parts (kit commons, four shelf parts, Tally's winch_pawl, the
 	# seventh part with a pitch); was 19 parts, 19 distinct ids and 6 with a pitch.
 	# 2026-10-27 (wave 20 cobalt rung): 49 parts, adding four catalogue rares; was 45 and 45.
+	# 2026-11-21 (wave 45 U6): 66 parts, adding Slag Pike and Halo Rig; was 64 and 64.
+	# 2026-11-21 (wave 45 U7): 71 parts, adding the five verb items (Backwash, Barbed Reel, Faultline Cap,
+	# Second Bell, Long Leash); was 66 and 66.
+	# 2026-11-21 (wave 45 B1): 64 parts, adding Fan Spread, Helix Drill and 13 authored items.gd rows (shared movement rows kept out per BIBLE.md:537; cobalt ceiling per ruling bn); was 49 and 49.
 	# 2026-11-12 (W1-64): Spare Cell gains a kill refill, two numbers, so it leaves the pitch parts; was 7.
-	_report("alpha parts", bad.is_empty() and AlphaDefs.PARTS.size() == 49 and distinct.size() == 49 and added.size() == 6,
+	_report("alpha parts", bad.is_empty() and AlphaDefs.PARTS.size() == 71 and distinct.size() == 71 and added.size() == 6,
 		"%d parts by verb %s, %d with a pitch %s; problems %s" % [AlphaDefs.PARTS.size(), families, added.size(), added, bad])
 
 
@@ -271,3 +276,25 @@ func _check_thermal_shock() -> void:
 			and _build.accretion.halo_visible("thermal_shock"),
 		"slam elements %s with Spiral Wave alone, %s with Echo Locator too (Waking); shatter x%.1f; live %s"
 			% [before, after, _build.field.shatter_scale, _build.active_synergies()])
+
+
+# The three W45-B2 U8 evolutions (Parts.VERB_EVOLVED) close the makers that had none (Redjaw,
+# Spillway Works, Waking): each pair is two distinct pieces of its trick's maker, so holding it
+# wakes the trick the Evolved card names ("From Shrapnel Bloom."). Bladestorm Rotor's older pair
+# crosses two makers, so the rule is checked on the three. Planted: a pair across two makers wakes
+# nothing.
+func _check_evolution_makers() -> void:
+	var wrong: Array = []
+	var makers := {}
+	for into in Parts.VERB_EVOLVED:
+		var pair: Array = Synergies.EVOLUTIONS[into]
+		var trick := Synergies.evolution_of(into)
+		var maker := String(Synergies.ROWS.get(trick, {}).get("maker", ""))
+		makers[maker] = true
+		var awake := Synergies.active(Parts.maker_counts(pair))
+		if maker == "" or not pair.all(func(id): return Parts.maker_of(id) == maker) or not trick in awake:
+			wrong.append("%s: trick %s of %s, pair makers %s, awake %s" % [into, trick, maker, pair.map(func(id): return Parts.maker_of(id)), awake])
+	var mixed := Synergies.active(Parts.maker_counts(["cross_split", "rime_rounds"]))
+	_report("each new evolution wakes its own trick", wrong.is_empty() and makers.keys() == ["redjaw", "spillway_works", "waking"]
+		and mixed.is_empty(),
+		"%d verb evolutions over makers %s; wrong %s; planted Redjaw + Spillway pair wakes %s" % [Parts.VERB_EVOLVED.size(), makers.keys(), wrong, mixed])

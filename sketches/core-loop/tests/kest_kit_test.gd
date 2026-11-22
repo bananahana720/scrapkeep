@@ -246,9 +246,9 @@ func _cases() -> void:
 	_game.ctx.codex._run_seen.erase("loaded_line")
 	_card_events.clear()
 	var audio = _game.presentation.audio
-	var cue_start: int = audio.cue_log.size()
+	var cue_start: int = audio.cue_log_total
 	_cast()
-	_t.eq("slot_cast on load plays no cue", audio.cue_log.slice(cue_start).filter(func(c): return c[0] == "slot_cast" or c[1] in audio.KEST_SOUNDS).size(), 0)
+	_t.eq("slot_cast on load plays no cue", audio.cues_since(cue_start).filter(func(c): return c[0] == "slot_cast" or c[1] in audio.KEST_SOUNDS).size(), 0)
 	_t.eq("unhooked cast loads Cable Charge", _combat.line_load()["id"], "cable_charge")
 	_t.eq("load press emits no line-skill bite", _line_fired.size(), 0)
 	_tick({}, 3.85)

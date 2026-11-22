@@ -151,8 +151,7 @@ func _releases() -> void:
 # Menu cues the director chose since `from`, as their kinds.
 func _menu_cues(audio, from: int) -> Array:
 	var out: Array = []
-	for i in range(from, audio.cue_log.size()):
-		var entry: Array = audio.cue_log[i]
+	for entry in audio.cues_since(from):
 		if String(entry[0]).begins_with("menu_") and entry[2] == "now":
 			out.append(String(entry[0]))
 	return out
@@ -197,7 +196,7 @@ func _menus() -> void:
 	_game.ctx.calm = true
 	_t.eq("menu: the game starts on the title", flow.state_name(), "title")
 	# Title: a d-pad press moves focus onto a button once.
-	var from: int = audio.cue_log.size()
+	var from: int = audio.cue_log_total
 	await _press(JOY_BUTTON_DPAD_DOWN)
 	_t.eq("menu title: d-pad down plays one move", _menu_cues(audio, from), ["menu_move"])
 	if root.gui_get_focus_owner() != null:
@@ -207,11 +206,11 @@ func _menus() -> void:
 	flow.open_class_select()
 	_game.screens._on_flow_changed("class_select")
 	await _frames(40)
-	from = audio.cue_log.size()
+	from = audio.cue_log_total
 	_t.eq("menu class select: opening the page and its focus play nothing", _menu_cues(audio, from), [])
 	await _press(JOY_BUTTON_DPAD_RIGHT)
 	_t.eq("menu class select: d-pad right plays one move", _menu_cues(audio, from), ["menu_move"])
-	from = audio.cue_log.size()
+	from = audio.cue_log_total
 	await _press(JOY_BUTTON_B)
 	_t.eq("menu class select: B plays one back", _menu_cues(audio, from), ["menu_back"])
 	await _frames(20)
@@ -231,21 +230,21 @@ func _menus() -> void:
 		root.gui_get_focus_owner().release_focus()
 	await _frames(3)
 	_t.check("menu: a run is in play", flow.in_play())
-	from = audio.cue_log.size()
+	from = audio.cue_log_total
 	_game.get_node("PauseMenu").open()
 	await _frames(20)
 	_t.check("menu pause: it opened", _game.get_node("PauseMenu").is_open())
 	_t.eq("menu pause: opening it plays nothing", _menu_cues(audio, from), [])
 	await _press(JOY_BUTTON_DPAD_DOWN)
 	_t.eq("menu pause: d-pad down plays one move", _menu_cues(audio, from), ["menu_move"])
-	from = audio.cue_log.size()
+	from = audio.cue_log_total
 	await _press(JOY_BUTTON_B)
 	_t.eq("menu pause: B plays one back", _menu_cues(audio, from), ["menu_back"])
 	await _frames(20)
 	_t.check("menu pause: B closed it", not _game.get_node("PauseMenu").is_open())
 	_game.get_node("PauseMenu").open()
 	await _frames(20)
-	from = audio.cue_log.size()
+	from = audio.cue_log_total
 	await _press(JOY_BUTTON_A)
 	_t.eq("menu pause: A on Resume plays one confirm", _menu_cues(audio, from), ["menu_confirm"])
 	await _frames(20)
@@ -257,7 +256,7 @@ func _menus() -> void:
 	hold.pressed = true
 	Input.parse_input_event(hold)
 	await _frames(6)
-	from = audio.cue_log.size()
+	from = audio.cue_log_total
 	_game.get_node("PauseMenu").open()
 	await _frames(20)
 	_t.check("menu pause: opened with a direction held", _game.get_node("PauseMenu").is_open() and Input.is_action_pressed("ui_down"))
@@ -274,6 +273,6 @@ func _menus() -> void:
 	if root.gui_get_focus_owner() != null:
 		root.gui_get_focus_owner().release_focus()
 	await _frames(3)
-	from = audio.cue_log.size()
+	from = audio.cue_log_total
 	await _press(JOY_BUTTON_A)
 	_t.eq("menu: A with nothing focused plays no confirm", _menu_cues(audio, from), [])

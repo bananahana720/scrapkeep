@@ -298,6 +298,9 @@ var last_ahead_steps := PackedStringArray()
 var last_entry_adopted := 0
 # The holders whose sites this stage adopted.
 var _holders: Array = []
+# This stage entry's mend wards and lore plates (W45 P3).
+var wards: Array = []
+var plates: Array = []
 # The trade interior's block material, built once instead of a checker texture a block;
 # dress_props reads its two colours and replaces it, so every block can share it.
 static var _interior_block: StandardMaterial3D
@@ -327,6 +330,8 @@ const SURGE_WORDS := {
 # One standing activity: its rule, its look, its state and, once it has finished, its pay.
 class Site extends Node3D:
 	var id := ""
+	# The park row it stands at ("" for a site no row authors).
+	var row_id := ""
 	var rule := {}
 	var view
 	var done := false
@@ -413,6 +418,78 @@ class Site extends Node3D:
 			yard_mast.queue_free()
 
 
+# A mend ward (W45 P3, secrets.gd WARDS): a slate post and a ground ring in a dead end off every line. The ball
+# rolling into the ring wakes its guard; while the ball holds inside, the ring fills over CHARGE_S and drains at
+# DRAIN outside it; full, it mends HEAL_SHARE of the hull, once a stage entry. Ruling cu: the mend asks the ball to
+# stop while a pack presses it, so a ward whose guard never stood (calm, or ground that refused every spawn) never
+# fills. step() is the whole rule; activities.gd spawns the guard and pays the mend.
+class MendWard extends Node3D:
+	const RING_M := 5.0
+	const GUARD_M := 9.0
+	const CHARGE_S := 8.0
+	const DRAIN := 0.5
+	const HEAL_SHARE := 0.4
+	const PACK := ["chaser", "chaser", "lobber"]
+
+	var ward_id := ""
+	var charge := 0.0
+	var woke := false
+	var paid := false
+	var guard: Array = []
+	var fill: MeshInstance3D
+
+	# One tick: "wake" the tick the ball first enters, "mend" the tick the ring fills, else "".
+	func step(delta: float, inside: bool) -> String:
+		if paid:
+			return ""
+		if not woke:
+			if not inside:
+				return ""
+			woke = true
+			return "wake"
+		if guard.is_empty():
+			return ""
+		charge = clampf(charge + (delta if inside else -delta * DRAIN), 0.0, CHARGE_S)
+		if charge < CHARGE_S:
+			return ""
+		paid = true
+		return "mend"
+
+	func share() -> float:
+		return charge / CHARGE_S
+
+	func _exit_tree() -> void:
+		for enemy in guard:
+			if is_instance_valid(enemy):
+				enemy.queue_free()
+
+
+# A lore plate (W45 P3, secrets.gd PLATES): a flush disc at a row's fragment, set on the surface the ball rolls on
+# there and tilted to it (terrain.gd top_surface). Unread, an amber face stands proud of a charcoal rim and glows
+# faintly: the dark rim reads on pale ground, the amber on dark. The ball rolling over it files its field note once;
+# the face then sinks flush and goes to bare copper. touch() is the rule: true only the first time.
+class LorePlate extends Node3D:
+	const REACH_M := 2.6
+	const HEIGHT_M := 3.0
+	# A ball centre this far under the face still counts (a ball on the face rides 1 m over it); deeper is a ball
+	# rolling under the deck the plate sits on.
+	const BELOW_M := 0.25
+
+	var note := ""
+	var read := false
+	var seated := false
+	# The ground under it moved (terrain surface_changed): it sits where it was until top_surface answers again.
+	var reseat := false
+	var at := Vector2.ZERO
+	var face: MeshInstance3D
+
+	func touch() -> bool:
+		if read:
+			return false
+		read = true
+		return true
+
+
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	_owns_shared = true
@@ -423,6 +500,8 @@ func setup(ctx_ref) -> void:
 		_drop_ahead())
 	ctx.events.launched.connect(_on_launched)
 	ctx.events.flow_changed.connect(_on_flow_changed)
+	if ctx.terrain != null and ctx.terrain.has_signal("surface_changed"):
+		ctx.terrain.surface_changed.connect(_on_surface_changed)
 	ctx.events.slammed.connect(func(at: Vector3, strength: float, _flatness: float): _slammed(at, strength))
 	ctx.events.world_fact.connect(_on_world_fact)
 	ctx.events.player_died.connect(_forfeit_yards)
@@ -572,6 +651,8 @@ func _enter_stage(retry: bool) -> void:
 		sites.append(site)
 	if not ahead.is_empty():
 		_uncover(ahead)
+	if _graph_map != "":
+		_build_wards_and_plates(map)
 	StageModifier.set_air(stage_modifier)
 	_pending_stage = true
 
@@ -894,6 +975,11 @@ func clear() -> void:
 		if is_instance_valid(holder):
 			holder.queue_free()
 	_holders.clear()
+	for node in wards + plates:
+		if is_instance_valid(node):
+			node.queue_free()
+	wards.clear()
+	plates.clear()
 	_pending_stage = false
 
 
@@ -937,6 +1023,7 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	var s := Site.new()
 	s.id = id
+	s.row_id = String(spec.get("row", ""))
 	s.rule = RULES[id]
 	s.interior = spec.get("interior", {})
 	s.drawn = spec.get("drawn", false)
@@ -1472,6 +1559,10 @@ func _physics_process(delta: float) -> void:
 					_watch_wall(s, ball)
 			_advance_hazards(s, delta, ball)
 		_watch_pickup(s, ball)
+	for ward in wards:
+		_watch_ward(ward, delta, ball)
+	for plate in plates:
+		_watch_plate(plate, ball)
 
 
 func _planar(a: Vector3, b: Vector3) -> float:
@@ -2516,12 +2607,16 @@ func _finish(s: Site, at: Vector3) -> void:
 		elif s.relay != null:
 			s.pickup_parts = _roll_many(s.id, table["rarities"], s.relay.rewards())
 			s.pickup_part = String(s.pickup_parts[0]) if not s.pickup_parts.is_empty() else ""
+		elif far_rung(s):
+			s.pickup_part = _far_roll(s)
 		else:
 			s.pickup_part = _roll(_luck_id(s), table["rarities"])
 	if s.pickup_part != "":
 		s.pickup = ActivityView.gem(String(s.rule.cue.view) if s.rule.has("bundle") or s.yard != null else s.id)
 		s.add_child(s.pickup)
 		s.pickup.global_position = at
+		if far_rung(s):
+			WorldFx.fire("secret_found", at + Vector3.UP)
 		s.inside_pickup = _planar(ctx.player.ball_position(), at) <= PICKUP_REACH
 	else:
 		_pay_scrap(s, at)
@@ -2603,3 +2698,219 @@ func _watch_pickup(s: Site, ball: Vector3) -> void:
 			_cue(s, "pay")
 		return
 	s.inside_pickup = now
+
+
+# ---- The far rung (W45 P3) ----
+
+# An authored cache on the pay ladder's far rung (park_placement.gd PAY_FAR: cobalt only, the larger detour) is a
+# dead end worth the ride: it pays a cobalt weapon, from the pilot's own kit when the kit names weapons. The rung
+# never moves (ruling bn: cobalt is the top ordinary rung), so relic never enters; the count, the scrap and the
+# stream stay the site's own. A field find, a room, the timed door and a drawn pocket keep their rolls.
+const FAR_RUNG := ["rare"]
+
+
+func far_rung(s: Site) -> bool:
+	if s.id != "cracked_cache" or s.drawn or s.has_meta("find") or s.has_meta("room") or s.has_meta("door"):
+		return false
+	var table := pay_table(s)
+	return table["named"] == "" and table["rarities"] == FAR_RUNG
+
+
+# The far rung's pool for a pilot: the cobalt weapons it may be offered and does not hold at the top, its kit's
+# own first. Sorted, so a seed draws the same part.
+static func far_pool(class_id: String, held: Array) -> Array:
+	var weapons: Array = Parts.offer_pool(class_id, FAR_RUNG).filter(func(key) -> bool:
+		var r: Dictionary = Parts.rows().get(key, {})
+		return String(r.get("family", "")) == "weapon" and String(r.get("rarity", "")) == FAR_RUNG[0] and not Parts.maxed(key, held))
+	weapons.sort()
+	var kit: Array = weapons.filter(func(key) -> bool: return Parts.in_kit(class_id, key))
+	return kit if not kit.is_empty() else weapons
+
+
+func _far_roll(s: Site) -> String:
+	return _far_pick(s, far_pool(ctx.run.class_id(), ctx.run.parts))
+
+
+# Seeded by the park row, so two far caches in one stage (the Dam's rim and incline caches share the cache's luck id)
+# roll apart; a site no row authors keeps its luck id. A pool with nothing left in it (no pilot's is today: every
+# cobalt weapon is unlevelled, so none is ever held at the top) rolls the rung itself.
+func _far_pick(s: Site, pool: Array) -> String:
+	var stream := s.row_id if s.row_id != "" else _luck_id(s)
+	if pool.is_empty():
+		return _roll(stream, FAR_RUNG)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = Interact.luck_seed(ctx.rng.seed, ctx.run.run_id, ctx.run.stage, stream)
+	return String(pool[rng.randi_range(0, pool.size() - 1)])
+
+
+# ---- Mend wards and lore plates (W45 P3) ----
+
+const WARD_POST := Vector3(0.9, 2.4, 0.9)
+const WARD_RING_H := 0.08
+const PLATE_RADIUS := 1.1
+const PLATE_H := 0.1
+# The lit face: its radius, and how far it stands proud of the rim until it is read.
+const PLATE_FACE_RADIUS := 0.78
+const PLATE_FACE_RAISE := 0.06
+const PLATE_GLOW := 0.6
+
+
+func _build_wards_and_plates(map) -> void:
+	for spec in Secrets.ward_sites(map.park):
+		wards.append(_build_ward(spec))
+	for spec in Secrets.plate_sites(map.park):
+		plates.append(_build_plate(spec))
+
+
+func _build_ward(spec: Dictionary) -> MendWard:
+	var w := MendWard.new()
+	w.name = "Ward_" + String(spec["id"])
+	w.ward_id = String(spec["id"])
+	add_child(w)
+	var at: Vector2 = spec["at"]
+	w.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
+	_mesh_box(w, WARD_POST, Vector3.UP * WARD_POST.y * 0.5, _solid(Palette.SLATE))
+	_mesh_cylinder(w, MendWard.RING_M, WARD_RING_H, Vector3.UP * WARD_RING_H * 0.5, _solid(Palette.CHARCOAL))
+	w.fill = MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = MendWard.RING_M
+	disc.bottom_radius = MendWard.RING_M
+	disc.height = WARD_RING_H
+	w.fill.mesh = disc
+	w.fill.material_override = _solid(Palette.OLD_VERDIGRIS)
+	w.fill.position = Vector3.UP * WARD_RING_H * 1.5
+	w.fill.scale = Vector3(0.001, 1.0, 0.001)
+	w.add_child(w.fill)
+	return w
+
+
+func _build_plate(spec: Dictionary) -> LorePlate:
+	var p := LorePlate.new()
+	p.name = "Plate_" + String(spec["fragment"])
+	p.note = String(spec["note"])
+	p.at = spec["at"]
+	add_child(p)
+	p.global_position = Vector3(p.at.x, ctx.terrain.height(p.at.x, p.at.y), p.at.y)
+	p.visible = false
+	var rim := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = PLATE_RADIUS
+	disc.bottom_radius = PLATE_RADIUS * 1.08
+	disc.height = PLATE_H
+	rim.mesh = disc
+	rim.material_override = _solid(Palette.CHARCOAL)
+	rim.position = Vector3.UP * PLATE_H * 0.5
+	p.add_child(rim)
+	p.face = MeshInstance3D.new()
+	var face := CylinderMesh.new()
+	face.top_radius = PLATE_FACE_RADIUS
+	face.bottom_radius = PLATE_FACE_RADIUS
+	face.height = PLATE_H
+	p.face.mesh = face
+	p.add_child(p.face)
+	# A known note's plate is spent from the start: the disc is the fact, not a prompt.
+	p.read = ctx.get("codex") != null and ctx.codex.known(p.note)
+	_show_plate(p)
+	_seat_plate(p)
+	return p
+
+
+# The plate stands on the surface a ball rolling there stands on, tilted to it. Until the stage's colliders can be
+# asked (the rows still placing, or the stage just brought up), it waits hidden, and the next tick asks again. When
+# an event moves the ground (_on_surface_changed), it keeps its seat, shown and readable, until terrain answers,
+# then takes the new one: read or not, it files nothing and plays nothing.
+func _seat_plate(p: LorePlate) -> void:
+	var seat: Dictionary = ctx.terrain.top_surface(p.at.x, p.at.y, PLATE_RADIUS * 1.08)
+	if seat.is_empty():
+		return
+	p.seated = true
+	p.reseat = false
+	p.visible = true
+	p.global_transform = Transform3D(Basis(Quaternion(Vector3.UP, seat.normal)), seat.point)
+
+
+func _on_surface_changed() -> void:
+	for p in plates:
+		if is_instance_valid(p):
+			p.reseat = true
+
+
+# Unread, the amber face stands proud and glows; read, it sinks flush with the rim and goes to bare copper.
+func _show_plate(p: LorePlate) -> void:
+	if p.read:
+		p.face.material_override = _solid(Palette.COPPER)
+		p.face.position = Vector3.UP * (PLATE_H * 0.5 + 0.005)
+		return
+	if not _parts.has("plate_glow"):
+		_parts["plate_glow"] = Palette.solid(Palette.AMBER, PLATE_GLOW)
+	p.face.material_override = _parts["plate_glow"]
+	p.face.position = Vector3.UP * (PLATE_H * 0.5 + PLATE_FACE_RAISE)
+
+
+func _watch_ward(w: MendWard, delta: float, ball: Vector3) -> void:
+	if not is_instance_valid(w):
+		return
+	var inside := _planar(ball, w.global_position) <= MendWard.RING_M and absf(ball.y - w.global_position.y) < PICKUP_HEIGHT
+	match w.step(delta, inside):
+		"wake":
+			_raise_guard(w, ball)
+			_ward_cue("event_announced")
+		"mend":
+			ctx.run.heal(ctx.run.max_hp * MendWard.HEAL_SHARE)
+			_ward_cue("event_ended")
+	var s := maxf(w.share(), 0.001)
+	w.fill.scale = Vector3(s, 1.0, s)
+
+
+# The ward's guard: PACK on GUARD_M round the ward, the first opposite the way the ball came in, so the pack closes
+# on a ball that stops. Calm spawns nothing, and the ward then never fills.
+func _raise_guard(w: MendWard, ball: Vector3) -> void:
+	if ctx.calm or ctx.spawner == null:
+		return
+	var entry: Vector3 = ball - w.global_position
+	var first := atan2(entry.z, entry.x) + PI
+	for i in MendWard.PACK.size():
+		var a := first + TAU * float(i) / MendWard.PACK.size()
+		var spot := w.global_position + Vector3(cos(a), 0.0, sin(a)) * MendWard.GUARD_M
+		var enemy = ctx.spawner.spawn_enemy(String(MendWard.PACK[i]), ctx.terrain.drop_point(spot.x, spot.z, SPAWN_CLEARANCE))
+		if enemy != null:
+			w.guard.append(enemy)
+
+
+func _ward_cue(kind: String) -> void:
+	var presentation: Node = ctx.root.get_node_or_null("Presentation")
+	if presentation != null:
+		presentation.audio.play(kind)
+
+
+# The ball's centre within REACH_M of the plate's axis, and from BELOW_M under its face to HEIGHT_M over it, both
+# read in the plate's own tilt: a ball on a sloped plate is over it, and one under a deck plate (on the ground or
+# against the deck's underside) is not.
+func _watch_plate(p: LorePlate, ball: Vector3) -> void:
+	if not is_instance_valid(p):
+		return
+	if not p.seated or p.reseat:
+		_seat_plate(p)
+	if p.read or not p.seated:
+		return
+	var offset := ball - p.global_position
+	var up := p.global_basis.y.normalized()
+	var rise := offset.dot(up)
+	if (offset - up * rise).length() > LorePlate.REACH_M or rise < -LorePlate.BELOW_M or rise > LorePlate.HEIGHT_M:
+		return
+	read_plate(p)
+
+
+# The ball rolled over a plate: the codex files its note (its quiet record, then the HUD's note pulse), the lore
+# chime plays, and the face sinks to bare copper. True when this touch filed it.
+func read_plate(p: LorePlate) -> bool:
+	if not p.touch():
+		return false
+	_show_plate(p)
+	var codex = ctx.get("codex")
+	if codex == null or not codex.file_note(p.note):
+		return false
+	var presentation: Node = ctx.root.get_node_or_null("Presentation")
+	if presentation != null:
+		presentation.audio.play("interaction_found", 0.0, 1.0, "SFX", "lore_found")
+	return true

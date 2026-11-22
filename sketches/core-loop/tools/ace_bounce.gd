@@ -107,6 +107,8 @@ func _physics_process(delta: float) -> bool:
 		return false
 	var audio = _game.presentation.audio
 	if _driver == null:
+		# Offline bounce dumps the full cue log to JSON; opt out of the live ring cap.
+		audio.cue_log_cap = 0
 		if not audio.sound_ready:
 			# Before the bake lands, so _on_ready starts the players on the Dummy driver; the
 			# recorder goes last on Master, after the limiter audio.gd put there.

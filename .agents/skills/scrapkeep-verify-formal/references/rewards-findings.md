@@ -8,6 +8,115 @@ None.
 
 ## Closed
 
+### ES-3. A refused spend write and then a refused restart: the old run Continues with the save back
+
+- Closed (21 November 2026, P9, `93e3431d4`): `sketches/core-loop/src/core/flow.gd` holds `_owed_entrance` separately from `_entrance`, calls `_flush_save_spend()` at the start of `_begin_run`, and clears the debt (`_clear_save_spend`) only once a run write or tombstone actually lands. `_save(doc)` stamps `death_save_spent` only when `ctx.run.death_save_spent` is true, so a new run's entrance replaces the old run on disk and clears the debt without poisoning the new run's own earned save; if both the flush and the new entrance are refused, `_owed_entrance` stays held so `show_title`, `_exit_tree` or an in-process `resume_run` still carries the old run's spend once the disk recovers. The model's `NewRunFlushes` (plus `owedDoc`) stands for this (`models/EarnedSave.tla`, [earnedsave-coverage.md](earnedsave-coverage.md)). `earnedsave-today-inprocess` now holds (3,361 distinct states), `earnedsave-today-sustained` holds (11,102 distinct states), and `earnedsave-broken-newrunflush` (`NewRunFlushes=FALSE`) breaks `SaveOnce` by ES-3's exact 9-state path (`NewRun`, `TakePart`, `Entrance`, `Saved`, `NewRunOwed`, `ToTitle`, `Continue`, `Saved`) (TLC 2.19, tla2tools 1.7.4, 8 workers, Mac Studio). Covered by `sketches/core-loop/tests/w45_combat_formal_fixes_test.gd` (`_test_es3_refused_restart_keeps_save_spend`). `replay/earned_save_after_p7.gd`, run in place on `93e3431d4` (Godot 4.7.2.stable.official.ed1daf0bf, `HOME` and `XDG_DATA_HOME` set to `artifacts/local/test-home`), prints for `es3`:
+
+  ```
+  es3:
+    take part: disk parts hold it true, disk death_save_spent false
+    hit (spend refused): alive true, run death_save_spent true, owed true, disk death_save_spent false
+    restart (entrance refused): flow stage, store_error 'write_failed', owed true, run parts hold it false, disk parts hold it true, disk death_save_spent false
+    title (disk back): owed false, disk death_save_spent true, continue offered true
+    continue: resumed true, run death_save_spent true, parts hold it true
+    hit again: alive false, flow summary, player_died 1, run over true
+  es3: NOT REPRODUCED
+  ```
+
+  The record below is the finding as it was opened on `e362998b2`.
+
+- Rule: `SaveOnce`. Config (before P9): `earnedsave-today-inprocess` (the code at e362998b2 with two refused writes in one process, no quit): broke (2,565 distinct states in the receipt's fixture; a break's count varies a little between runs with 8 workers), a 9-state path: `NewRun`, `TakePart`, `Entrance`, `Saved` (the spend refused), `NewRunOwed` (the restart's first entrance refused), `ToTitle`, `Continue`, `Saved`. TLC 2.19 (tla2tools 1.7.4), 8 workers, Mac Studio, 21 November 2026.
+- Steps, in the code's words: a run takes the Spare Frame and a stage entrance writes it; a killing hit is held by the earned save and `_on_death_saved`'s write is refused, so the spend is owed. The player restarts from play: the pause menu's Restart (`sketches/core-loop/src/ui/pause_menu.gd`, the "restart" row) or a held R (`sketches/core-loop/src/game.gd` `step_restart_hold`, with a run store) calls `flow.new_run()`, so `_begin_run`, which set `_save_spend_owed = false` and flushed nothing. Its first entrance (`enter_stage`) was refused too, so the file kept the old run with the Spare Frame and `death_save_spent` false. The disk came back; the title (`show_title`) had nothing owed to flush, and Continue (`resume_run`) loaded the old run; its next killing hit was held again.
+- Harm: a run the player gave up on came back from its last entrance with its earned save unspent, a second free life. It needed two refused run writes in a row (a full disk, a read-only or removed save folder) around a restart, and the disk back before the Continue.
+- Replay before the fix (`e362998b2`): `replay/earned_save_after_p7.gd`, the `es3` path. Both refused writes were real (a directory where `sketches/core-loop/src/core/safe_store.gd` puts the temp file), the restart was `flow.new_run()`, and the Continue was in the same process. **REPRODUCED**:
+
+  ```
+  es3:
+    take part: disk parts hold it true, disk death_save_spent false
+    hit (spend refused): alive true, run death_save_spent true, owed true, disk death_save_spent false
+    restart (entrance refused): flow stage, store_error 'write_failed', owed false, run parts hold it false, disk parts hold it true, disk death_save_spent false
+    title (disk back): owed false, disk death_save_spent false, continue offered true
+    continue: resumed true, run death_save_spent false, parts hold it true
+    hit again: alive true, flow stage, player_died 0, run over false
+  es3: REPRODUCED
+  ```
+
+### ES-2. A refused spend write and then a refused tombstone: the dead run Continues with the save back
+
+- Closed (21 November 2026, P9, `93e3431d4`): `sketches/core-loop/src/core/flow.gd` holds `_owed_entrance` separately from `_entrance`. In `_record_end`, a landed `store.clear()` calls `_clear_save_spend()`; when `store.clear()` is refused, `_record_end` calls `_flush_save_spend()` on `_owed_entrance`, sets `store_error = "clear_failed"`, and keeps `_owed_entrance` and `_save_spend_owed` if that write is refused too, so `show_title`, `_exit_tree` or `_notification` flushes `death_save_spent` once the disk recovers. The model's `ClearFlushes` (plus `owedDoc`) stands for this (`models/EarnedSave.tla`, [earnedsave-coverage.md](earnedsave-coverage.md)). `earnedsave-today-clearfail` now holds (6,407 distinct states), `earnedsave-today-sustained` holds (11,102 distinct states), and `earnedsave-broken-clearflush` (`ClearFlushes=FALSE`) breaks `SaveOnce` by ES-2's exact 10-state path (`NewRun`, `TakePart`, `Entrance`, `Saved`, `ClearRefused`, `Quit`, `Launch`, `Continue`, `Saved`) (TLC 2.19, tla2tools 1.7.4, 8 workers, Mac Studio). Covered by `sketches/core-loop/tests/w45_combat_formal_fixes_test.gd` (`_test_es2_refused_clear_keeps_save_spend`). `replay/earned_save_after_p7.gd`, run in place on `93e3431d4` (Godot 4.7.2.stable.official.ed1daf0bf, `HOME` and `XDG_DATA_HOME` set to `artifacts/local/test-home`), prints for `es2`:
+
+  ```
+  es2:
+    take part: disk parts hold it true, disk death_save_spent false
+    hit (spend refused): alive true, run death_save_spent true, store_error 'write_failed', owed true, disk death_save_spent false
+    hit (dies, clear refused): alive false, flow summary, store_error 'clear_failed', owed true, entrance held false, disk holds the run true
+    quit (disk back): disk death_save_spent true
+    continue: offered true, resumed true, run death_save_spent true, parts hold it true
+    hit again: alive false, flow summary, player_died 2, run over true
+  es2: NOT REPRODUCED
+  ```
+
+  The record below is the finding as it was opened on `e362998b2`.
+
+- Rule: `SaveOnce`. Config (before P9): `earnedsave-es2-only` (the code at e362998b2 with two refused writes and the exit's write landing, and ES-3's fix on so the break was this finding's alone): broke (4,908 distinct states in the receipt's fixture), a 10-state path: `NewRun`, `TakePart`, `Entrance`, `Saved`, `ClearRefused`, `Quit`, `Launch`, `Continue`, `Saved`. TLC 2.19 (tla2tools 1.7.4), 8 workers, Mac Studio, 21 November 2026.
+- Steps, in the code's words: a run took the Spare Frame and a stage entrance wrote it; a killing hit was held by the earned save and `_on_death_saved`'s write was refused, so the spend was owed; the next killing hit ended the run: `_record_end` set `_entrance = {}`, then `store.clear()` could not write its tombstone (`sketches/core-loop/src/core/run_store.gd` `clear`), so the file kept the run with `death_save_spent` false and the debt stayed owed. The disk came back and the player quit: `_exit_tree` called `_flush_save_spend`, which needed a held entrance and found none. The next launch offered Continue on the dead run; its next killing hit was held again.
+- Harm: a run that died came back from its last entrance (a refused tombstone already allows that), and with its earned save unspent, a second free life. It needed two refused run writes in a row (a full disk, a read-only or removed save folder) and the disk back by the time the game closed.
+- Replay before the fix (`e362998b2`): `replay/earned_save_after_p7.gd`, the `es2` path. Each refused write was real (a directory where `sketches/core-loop/src/core/safe_store.gd` puts the temp file). **REPRODUCED**:
+
+  ```
+  es2:
+    hit (spend refused): alive true, run death_save_spent true, store_error 'write_failed', owed true, disk death_save_spent false
+    hit (dies, clear refused): alive false, flow summary, store_error 'clear_failed', owed true, entrance held false, disk holds the run true
+    quit (disk back): disk death_save_spent false
+    continue: offered true, resumed true, run death_save_spent false, parts hold it true
+    hit again: alive true, flow stage, player_died 1, run over false
+  es2: REPRODUCED
+  ```
+
+### ES-1. A refused write of the earned save's spend, then a quit and Continue, hands the save back for a second free life
+
+- Closed (21 November 2026, P7, a12e9adf3, stacked on stage/alpha-w45 as e362998b2): flow.gd keeps a refused spend owed (`_save_spend_owed`). Every later `_save` carries the flag, `show_title`, `retry_stage`, `_exit_tree` and the window's close request (`_notification`) flush it, `resume_run` in the same process sets it on the doc and the run, `_begin_run` and a landed `store.clear()` clear it. The model's `SpendOwed`, `OwedOnExit`, `OwedOnResume` and `ClearKeepsOwed` stand for those (`models/EarnedSave.tla`, [earnedsave-coverage.md](earnedsave-coverage.md)). `earnedsave-today` holds (3,014 distinct states, with a restart from play since FV-3's second round), and `earnedsave-broken-spendowed` (the code before P7) breaks `SaveOnce` (TLC 2.19, tla2tools 1.7.4, 8 workers, Mac Studio). `replay/earned_save_after_p7.gd`, run in place on e362998b2 (Godot 4.7.2.stable.official.ed1daf0bf, `HOME` and `XDG_DATA_HOME` set to `artifacts/local/test-home`), prints for this path:
+
+  ```
+  es1:
+    hit (spend refused): alive true, run death_save_spent true, store_error 'write_failed', owed true, disk death_save_spent false
+    quit (disk back): disk death_save_spent true
+    continue: offered true, resumed true, run death_save_spent true, parts hold it true
+    hit again: alive false, flow summary, player_died 1, run over true
+  es1: NOT REPRODUCED
+  ```
+
+  P7 left two paths open, ES-2 and ES-3 above (two refused writes in a row). What no write order closes stays a gap of the `earned-save-safe` receipt too: a hard crash before any write lands (`earnedsave-guarded-crash`) and a disk that refuses every write until the game closes (`earnedsave-guarded-allfail`). The record below is the finding as it was opened, with FV-2's config table (its `earnedsave-today` was then the code before P7).
+
+This finding comes from a second, smaller model beside `Rewards.tla`: `models/EarnedSave.tla`, written for FV-2 from `e7715dcfa`, with its configs from `models/make-earnedsave-configs.sh`. It covers the Spare Frame's earned save and the run document that carries its spend, and leaves `Rewards.tla` and its configs as they were.
+
+- Rule: `SaveOnce` (the earned save fires at most once in a run, across every quit and Continue). Config: `earnedsave-today` (one refused write, a quit or a crash anywhere): breaks in 387 distinct states. `earnedsave-today-nofail` (no refused write) holds in 109. `earnedsave-guarded` (the fix below, no crash) holds in 227. `earnedsave-guarded-crash` (the fix, with a crash) breaks in 382: a crash before any write lands is a gap no write order closes. `earnedsave-guarded-allfail` (the fix, no crash, every write refused) breaks in 576. `earnedsave-broken-spendwrite` (no spend write at all, no refused write) breaks in 190. The probes `earnedsave-reach-Saved`, `-Died`, `-ContinueHolding` and `-Refused` all break. TLC 2.19 (tla2tools 1.7.4), 8 workers, Mac Studio, 21 November 2026.
+- Code behind the steps: `sketches/core-loop/src/core/run_state.gd` `_try_death_save` (`sketches/core-loop/src/core/run_state.gd:795-803`) sets `death_save_spent` and emits `death_saved`; `sketches/core-loop/src/core/flow.gd` `_on_death_saved` (`sketches/core-loop/src/core/flow.gd:649-654`) sets the flag on the held `_entrance` and calls `_save`, which records a refusal in `store_error` and warns once (`:703-707`) and does nothing else; `sketches/core-loop/src/core/run_store.gd` `save` returns `write_failed` and leaves the file and its held `_doc` as they were (`sketches/core-loop/src/core/run_store.gd:108-155`). The pause menu's Quit calls `get_tree().quit()` and writes nothing (`sketches/core-loop/src/ui/pause_menu.gd:293-296`), and neither does closing the window (`sketches/core-loop/src/boot/boot.gd:169` sets `auto_accept_quit`). `resume_run` loads the file and `from_entrance_doc` reads `death_save_spent` from it (`sketches/core-loop/src/core/flow.gd:579-614`, `sketches/core-loop/src/core/run_state.gd:1380`). The next stage entrance or launch writes the flag from memory (`to_entrance_doc`, `sketches/core-loop/src/core/run_state.gd:1164`), so the window runs from the refused write to the next write that lands.
+- Steps, in the code's words: a run takes the Spare Frame and a stage entrance writes it into the run file; a killing hit is held by the earned save; `_on_death_saved`'s write is refused; the player quits to the desktop before the next stage entrance or launch; the game is launched again and the run Continued: the run holds the Spare Frame with `death_save_spent` false, and its next killing hit is held again.
+- Harm: a second free life from a once-a-run save, and `clean_win` (which reads the flag) can be earned by a run that spent the save. It needs the run file's write to be refused at the moment of the save: a full disk, a read-only or removed save folder, or another program holding the temp file. A refusal is otherwise survivable (the run plays on), which is why nothing retries it.
+- Replay: `replay/earned_save_back_on_continue.gd`, copied into `sketches/core-loop/tests/` as zz_replay_earnedsave.gd and run with `"$GODOT_BIN" --headless --path sketches/core-loop --script res://tests/<copy>.gd` (Godot 4.7.2.stable.official.ed1daf0bf, `HOME` and `XDG_DATA_HOME` set to `artifacts/local/test-home`) on `e7715dcfa`, 21 November 2026, then deleted. The refused write is real: a directory sits where `sketches/core-loop/src/core/safe_store.gd` puts the run file's temp file, so `store.save` fails through its own write path; no game code was changed. **REPRODUCED**:
+
+  ```
+  step take part: disk parts hold it true, disk death_save_spent false, store_error ''
+  WARNING: flow: run not saved (write_failed): could not write user://replay_earned_save/run.json: Can't open file
+  step hit: alive true, flow stage, run death_save_spent true, store_error 'write_failed', disk death_save_spent false
+  step quit: disk death_save_spent false
+  step continue: offered true, resumed true, run death_save_spent false, parts hold it true
+  step hit again: alive true, flow stage, player_died 0, run over false
+  REPRODUCED
+  ```
+
+  The control (`-- --control`, the same steps with no refused write) ends the run on the second hit:
+
+  ```
+  step hit: alive true, flow stage, run death_save_spent true, store_error '', disk death_save_spent true
+  step continue: offered true, resumed true, run death_save_spent true, parts hold it true
+  step hit again: alive false, flow summary, player_died 1, run over true
+  NOT REPRODUCED
+  ```
+
+- Proposed fix (made in P7): when `_on_death_saved`'s `_save` is refused, keep the spend owed (a flow flag set from `store_error`), write `_entrance` again on every later `_save` and on each clean exit before it happens (the pause menu's Quit before `get_tree().quit()`, and the window's close request, which then needs `auto_accept_quit` off and its own handler), and clear the flag once a write lands; `resume_run` in the same process applies `death_save_spent = true` while the flag is held. That is `SpendOwed`, and `earnedsave-guarded` holds. A crash still hands the save back (`earnedsave-guarded-crash`), and so does a disk that refuses every write until the game closes (`earnedsave-guarded-allfail`); under a disk that refuses everything the Continue also rolls back the rest of the stage, so the save is then the only thing gained.
+
 ### R-3. A run file from a build before 8 November, holding only the old reward key, makes the earn in a continued run settle the reward unpaid, for good
 
 - Closed (17 November 2026, W1-117, branch w44/rewards-once): the legacy branch of `_grant_reward` reads the legacy key from the profile only (`sketches/core-loop/src/core/progress.gd:143`). A run file's legacy key no longer counts as paid, so the earn pays the reward. `rewards-today-one` holds all rules (98,319 states, starts that include an older build's run file); `rewards-broken-legacyrun` and `rewards-guarded-one` break `NeverLost`.
@@ -24,6 +133,7 @@ None.
   ```
 
   With the fix all 28 checks of the test pass. The test builds the older build's files with this build's stores: a profile saved without the earn, and a run file whose settled list holds `reward:routes_row:cosmetic` alone. No build from before 8 November was run.
+
 - Evidence limit: the run file's shape is this build's entrance document with the old key in its settled list; `settled` is optional in that document (`sketches/core-loop/src/core/run_state.gd:1112`), and the run store's schema has not changed since (still 1).
 
 ### R-2. Two games on one profile each pay the same reward
@@ -37,6 +147,7 @@ None.
   ```
 
   The interleaving that needs the lock (B reads the file inside its save, A writes, B writes) cannot be made in one headless process; only the model checks it. The skill's replays `replay/reward_twice_two_games.gd` and `replay/reward_lost_on_continue.gd` both print NOT REPRODUCED at `4aa18e666` (17 November 2026, copied into `sketches/core-loop/tests/` and run through `scripts/sketch-smoke.mjs`).
+
 - Rule: `AtMostOnce`. Configs: `rewards-broken-stale`, `rewards-guarded-two-once` (the code before the fix).
 - Steps: two game processes load the same profile before either earns the row. Game A earns the row, grants it and saves. Game B earns it too. B's own profile in memory has no settled key, so B grants again. B's save finds a newer generation on disk and merges (a union). The model needs no crash and no failed write for this.
 - Harm: both games announce the earn and run the grant. The file holds the unlock once, because every unlock is a set member, so nothing is doubled on disk. A reward that is not a set member would be paid twice.

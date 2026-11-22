@@ -146,6 +146,13 @@ var lap: Node3D = null
 var lap_stats := {}
 # The entrance doc last written, kept so the earned save's spend rewrites the entrance, never the arena.
 var _entrance := {}
+# True when the earned save fired while disk writes failed; retried on subsequent saves and clean exits
+# and applied to an in-process Continue so a failed write can never hand the earned save back.
+var _save_spend_owed := false
+# The entrance doc that still owes a death_save_spent write on disk, kept separate from _entrance so a
+# refused tombstone in _record_end (ES-2) or a refused restart in _begin_run (ES-3) cannot lose the debt
+# before a write or tombstone lands.
+var _owed_entrance := {}
 
 
 func setup(ctx_ref, beacon_ref) -> void:
@@ -228,7 +235,13 @@ func _scene_boss() -> Node:
 # Teardown: a boss script still on its loader thread is collected, and a read-ahead script settles
 # what its prepare_arena started (a quit before the boss entry aborted Godot, exit 134, scrapkeep#322).
 # Brindle's arena read ahead is held outside the tree; it goes with the flow.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_flush_save_spend()
+
+
 func _exit_tree() -> void:
+	_flush_save_spend()
 	for path in _boss_reads:
 		var script = _boss_reads[path]
 		if script == null and ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
@@ -360,6 +373,7 @@ func stage_def() -> Dictionary:
 
 
 func show_title() -> void:
+	_flush_save_spend()
 	_drop_lap()
 	ctx.player.set_frozen(true)
 	state = TITLE
@@ -485,6 +499,11 @@ func choose_run_tier(value: int, check_unlock := true) -> bool:
 func _begin_run(chosen: Resource) -> void:
 	# A new run begun in a launch flight holds no part: the swipe still on screen must not name the old run's.
 	_untake()
+	# Flush an owed earned-save spend before starting the next run so a refused restart cannot leave the old
+	# run unspent on disk (ES-3); if writes are still refused, _owed_entrance holds the debt until one lands.
+	_flush_save_spend()
+	if store == null:
+		_clear_save_spend()
 	in_arena = false
 	boss_active = false
 	lap_stats = {}
@@ -593,6 +612,9 @@ func resume_run() -> bool:
 	_taken_part = ""
 	ctx.events.run_started.emit(chosen.id)
 	ctx.run.from_entrance_doc(doc)
+	if _save_spend_owed:
+		doc["death_save_spent"] = true
+		ctx.run.death_save_spent = true
 	_keep_found_pieces()
 	# The run document's settled ids and the profile's become one set again.
 	if ctx.progress != null:
@@ -604,6 +626,9 @@ func resume_run() -> bool:
 	if ctx.run.cleared:
 		# The loaded doc stays the one the earned save's spend rewrites (the boss arena writes none).
 		_entrance = doc
+		if _save_spend_owed:
+			_owed_entrance = doc.duplicate(true)
+		_flush_save_spend()
 		if ctx.run.extra.has(BOSS_WON_KEY):
 			_resume_after_boss(Vector3(p[0], p[1], p[2]))
 		else:
@@ -645,12 +670,31 @@ func _apply_tree_picks() -> void:
 
 
 # The earned save fired: the entrance on disk carries the spent flag, so a quit and Continue
-# cannot hand the save back.
+# cannot hand the save back. If the disk write fails, the spend stays owed until a write succeeds.
 func _on_death_saved() -> void:
-	if store == null or _entrance.is_empty():
+	if store == null:
+		return
+	_save_spend_owed = true
+	if _entrance.is_empty():
 		return
 	_entrance["death_save_spent"] = true
+	_owed_entrance = _entrance.duplicate(true)
 	_save(_entrance)
+
+
+func _flush_save_spend() -> void:
+	if not _save_spend_owed or store == null:
+		return
+	var doc: Dictionary = _owed_entrance if not _owed_entrance.is_empty() else _entrance
+	if doc.is_empty():
+		return
+	doc["death_save_spent"] = true
+	_save(doc)
+
+
+func _clear_save_spend() -> void:
+	_save_spend_owed = false
+	_owed_entrance = {}
 
 
 # Pieces found carry across runs: a run that starts with no companion takes the profile's.
@@ -701,8 +745,14 @@ func _save_profile(warn_id: String) -> void:
 
 
 func _save(doc: Dictionary) -> void:
+	if _save_spend_owed and ctx != null and ctx.run != null and ctx.run.death_save_spent:
+		doc["death_save_spent"] = true
 	_persist_companion()
 	store_error = store.save(doc)
+	if store_error == "" and _save_spend_owed:
+		_clear_save_spend()
+	elif store_error != "" and _save_spend_owed and bool(doc.get("death_save_spent", false)):
+		_owed_entrance = doc.duplicate(true)
 	if store_error != "":
 		warn_once("run_save_" + store_error, "flow: run not saved (%s): %s" % [store_error, store.last_error])
 
@@ -774,6 +824,7 @@ func run_key() -> int:
 func retry_stage() -> void:
 	if not ctx.run.has_snapshot() or state == TITLE or state == CLASS_SELECT or state == SUMMARY or state == VICTORY or state == LAP:
 		return
+	_flush_save_spend()
 	if in_arena:
 		_retry_arena()
 		return
@@ -1256,9 +1307,17 @@ func _record_end(won: bool) -> void:
 	ctx.run.end_ride()
 	_persist_companion()
 	# A save this build never owned (store refused it: newer_schema) is not ours to delete.
-	if store != null and store.refusal == "" and not store.clear():
-		store_error = "clear_failed"
-		push_warning("flow: run save not cleared: %s" % store.last_error)
+	if store != null and store.refusal == "":
+		if store.clear():
+			_clear_save_spend()
+		else:
+			push_warning("flow: run save not cleared: %s" % store.last_error)
+			# A refused tombstone leaves the dead run on disk: try writing the spent flag now, and keep
+			# _owed_entrance held if writes are still refused so a later flush lands it before exit (ES-2).
+			_flush_save_spend()
+			store_error = "clear_failed"
+	else:
+		_clear_save_spend()
 
 
 func _on_reward_chosen(part_id: String) -> void:

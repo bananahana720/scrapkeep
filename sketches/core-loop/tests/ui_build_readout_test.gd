@@ -57,7 +57,12 @@ const EXPECTED_LAYERS := {
 	"par_chip": "global", "cell_weapon": "global", "cell_movement": "global",
 	"cell_special": "global", "cell_smash": "global",
 	"breaker_drive": "local", "bladestorm_rotor": "local", "storm_mast": "local",
-	"grounding_spike": "local",
+	"grounding_spike": "local", "grapeshot_press": "local", "hoar_barrel": "local", "fault_hammer": "local",
+	# 2026-11-21 W45-B2 U6: Halo Rig is a pattern row (local); Slag Pike's fuse reads no weapon stat (global).
+	"halo_rig": "local", "slag_pike": "global",
+	# 2026-11-21 W45-B2 U7: the five verb items are effect rows that read no weapon stat (global).
+	"backwash": "global", "barbed_reel": "global", "faultline_cap": "global", "second_bell": "global",
+	"long_leash": "global",
 }
 const FIXED_CHECKS := 29
 const FITTED_PARTS := ["hot_rivets", "hot_rivets", "slag_rounds", "rivet_plating", "quick_spool",

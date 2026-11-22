@@ -152,7 +152,7 @@ func _measure(row: Dictionary) -> String:
 	await _frames(2)
 	_park()
 	before = await _grab(render)
-	var cues_before: int = audio.cue_log.size()
+	var cues_before: int = audio.cue_log_total
 	var spawned_before := _spawned_total()
 	var hp_before: float = target.hp
 	var start: Vector3 = target.global_position
@@ -198,7 +198,7 @@ func _measure(row: Dictionary) -> String:
 	row["area_sum"] = area_sum
 	row["peak_frame"] = peak_frame
 	row["rendered"] = render
-	var fired: Array = audio.cue_log.slice(cues_before)
+	var fired: Array = audio.cues_since(cues_before)
 	var now := fired.filter(func(c: Array) -> bool: return c[2] == "now")
 	var sounds := {}
 	for c in now:

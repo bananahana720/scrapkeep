@@ -67,7 +67,7 @@ func set_drop_scale(scale: float) -> void:
 func _refresh() -> void:
 	var scale: float = game.build.dropper.scale if game != null and game.build != null else 1.0
 	var world: int = game.build.dropper.world if game != null and game.build != null else 1
-	var chance: float = Panels.DROP_BY_WORLD.get(world, Panels.DROP)["chance"]
+	var chance: float = Panels.drop_row(world)["chance"]
 	_scale_label.text = "Kill drop rate x%s (world %d ordinary kill %.0f%%)" % [str(scale), world, chance * 100.0 * scale]
 
 

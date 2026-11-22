@@ -172,9 +172,9 @@ func _arrivals() -> void:
 	_events.run_started.emit("demolitions_caster")
 	var growls: Array = []
 	for kind in Roster.ANCIENTS + ["warden"]:
-		var before: int = _audio.cue_log.size()
+		var before: int = _audio.cue_log_total
 		_events.enemy_spawned.emit(null, kind)
-		for cue in _audio.cue_log.slice(before):
+		for cue in _audio.cues_since(before):
 			growls.append("%s: %s" % [kind, cue[1]])
 	_events.enemy_spawned.emit(null, "chaser")
 	var fleet := _last("enemy_spawned")

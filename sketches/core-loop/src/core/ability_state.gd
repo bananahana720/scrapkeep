@@ -105,7 +105,8 @@ const UNSTARTED := ""
 #   weapon    pattern (the Pattern it fires, default its id), mounted (the weapon it
 #             becomes on a pylon), lob (how many sticky charges one throw scatters),
 #             cards (the bay programs in bay order; the weapon runs the selected one on a
-#             press), pressure (the slot's charges are shared pressure that time never refills)
+#             press), pressure (the slot's charges are shared pressure that time never refills),
+#             bolts (false for a weapon that fires no bolts, so it carries no shot bits; default true)
 #   movement  augments (the movement kit it fits), rocket, cloak (Kest's passives)
 #   special   plant_discharge (planting a pylon fires it free)
 #   smash     flavour (arc, skid or demo landing), spends_special
@@ -117,7 +118,8 @@ const UNSTARTED := ""
 #   any slot  cast (seconds from the press to the effect, 0 or absent for none), plant (the
 #             pilot plants, braking to a stop, through that cast), family (lane, split_lane, plate or rush: the Mind family this slot commits),
 #             pool (the slot whose charges this row spends: Tally's slots 2 and 3 spend
-#             slot 1's pressure). A special or line row with no charge_max is a tap: it
+#             slot 1's pressure), mutation (authored kit-swap behaviour id read by the slot's
+#             owning module). A special or line row with no charge_max is a tap: it
 #             casts on the press.
 # Each pilot owns one marked block below for its wave P-C rows (SKILL-BAR section 12, item
 # 4), so the six pilot units never edit the same lines.
@@ -132,22 +134,27 @@ const ABILITIES := {
 	"overdrive_blast": {"icon": "ab_rivet_special", "cooldown": 6.0, "charge_max": 1.0},
 	"point_blank": {"icon": "ab_rivet_special", "cooldown": 6.0, "charge_max": 1.0},
 	"shockwave_skid": {"icon": "ab_rivet_smash", "cooldown": 0.0, "flavour": "skid"},
-	"sticky_charge": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6, "lob": 1},
-	"sticky_rain": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6, "lob": 3, "pattern": "sticky_charge"},
+	"sticky_charge": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6, "lob": 1, "bolts": false},
+	"sticky_rain": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6, "lob": 3, "pattern": "sticky_charge", "bolts": false},
 	"smoke_blink": {"icon": "ab_kest_move", "cooldown": 4.0, "augments": ["blink", "glide"], "rocket": true, "cloak": true},
 	"detonation_line": {"icon": "ab_kest_special", "cooldown": 6.0, "charge_max": 0.8},
 	"demo_slam": {"icon": "ab_kest_smash", "cooldown": 0.0, "flavour": "demo"},
 	"claw_sweep": {"icon": "ab_tarn_weapon", "cooldown": 0.0},
+	"claw_rake": {"icon": "ab_tarn_weapon", "cooldown": 0.0, "pattern": "claw_sweep", "mutation": "claw_rake"},
 	"claw_pull": {"icon": "ab_tarn_move", "cooldown": 3.0, "augments": ["claw_pull"]},
 	"clamp": {"icon": "ab_tarn_special", "cooldown": 6.0, "charge_max": 0.8},
 	"rend_slam": {"icon": "ab_tarn_smash", "cooldown": 0.0, "flavour": "rend"},
+	"rend_drag": {"icon": "ab_tarn_smash", "cooldown": 0.0, "flavour": "rend", "mutation": "rend_drag"},
 	# Tally's slot 1, chip rows and smash; her bar and Q rows sit in her P-C block below.
 	"flywheel_surge": {"icon": "ab_tally_move", "cooldown": 4.0, "augments": ["surge"]},
 	"stamp_slam": {"icon": "ab_tally_smash", "cooldown": 0.0, "flavour": "stamp"},
-	"cannon_lane": {"icon": "ab_cannon_weapon", "cooldown": 0.0, "family": "lane"},
+	"stamp_ink": {"icon": "ab_tally_smash", "cooldown": 0.0, "flavour": "stamp", "mutation": "stamp_ink"},
+	"cannon_lane": {"icon": "ab_cannon_weapon", "cooldown": 0.0, "family": "lane", "bolts": false},
+	"cannon_lane_walk": {"icon": "ab_cannon_weapon", "cooldown": 0.0, "family": "lane", "pattern": "cannon_lane", "mutation": "cannon_lane_walk", "bolts": false},
 	"cannon_recoil": {"icon": "ab_cannon_move", "cooldown": 3.5, "augments": ["recoil"], "family": "split_lane"},
 	"cannon_plate": {"icon": "ab_cannon_special", "cooldown": 6.0, "charge_max": 0.8, "family": "plate"},
 	"cannon_rush": {"icon": "ab_cannon_smash", "cooldown": 0.0, "flavour": "rush", "family": "rush"},
+	"cannon_rush_wake": {"icon": "ab_cannon_smash", "cooldown": 0.0, "flavour": "rush", "family": "rush", "mutation": "cannon_rush_wake"},
 	# The shared placeholders until wave P-C: one line skill (a 4 m yank on a body, a reel
 	# burst on the world) and one ultimate (B3 builds its set piece).
 	"line_reel": {"icon": "ab_sable_reel", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
@@ -180,9 +187,10 @@ const ABILITIES := {
 	# --- P-C Tally rows ------------------------------------------------------------------
 	# pilots/tally.md section 3: Balance Due alone spends pressure; Gather Plate and the Ledger
 	# Clip keep their own cooldowns and pay into it; Q's meter is Plate Return's charge.
-	"ledger_reader": {"icon": "ab_tally_weapon", "cooldown": 0.0, "cards": ["balance_due"], "pressure": 3},
+	"ledger_reader": {"icon": "ab_tally_weapon", "cooldown": 0.0, "cards": ["balance_due"], "pressure": 3, "bolts": false},
 	"gather_plate": {"icon": "ab_tally_gather", "cooldown": 6.0, "cast": 0.3},
 	"link_clips": {"icon": "ab_tally_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
+	"link_double": {"icon": "ab_tally_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0, "mutation": "link_double"},
 	"plate_return": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
 	"plate_audit": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "plate_return", "cast": VARIANT_CAST},
 	"plate_flywheel": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["arc", "rail", "line"], "variant_of": "plate_return", "cast": VARIANT_CAST},

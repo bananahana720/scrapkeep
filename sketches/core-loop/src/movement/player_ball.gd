@@ -54,6 +54,9 @@ const SKID_REFUND := 0.5
 # Tarn's rend turns the slam's outward shove into an inward pull this strong, so the
 # crowd lands in claw reach.
 const REND_PULL := 0.8
+# Gutter Heart (rend_drag): a machine no heavier than the ball slides to the crater centre over
+# this long; a heavier one holds. Machines move, the ball's own motion is never touched.
+const DRAG_SECONDS := 0.4
 const AIM_CONE_LENGTH := 5.0
 const AIM_CONE_HALF := 0.3
 # An aim mark starts this far from the ball's centre, clear of the cage, so it never draws over the ball.
@@ -63,6 +66,8 @@ const DRY_FIRE_HOLD := 0.25
 const LET_GO_HOLD := 0.15
 const BROKE_HOLD := 0.3
 const LANDS_HOLD := 0.1
+# A line or mount on a piece's face counts as on the piece within this many metres when it breaks.
+const SHATTER_MARGIN := 0.25
 
 signal shockwave(position: Vector3, strength: float)
 # A physical contact the ball made, for combat to turn into damage. Local, not the bus:
@@ -108,6 +113,8 @@ var _cc_ignored_at := {}
 var immune_left := 0.0
 # The landing each smash flavour adds to the shared slam.
 var _smashes := {}
+# Gutter Heart slides in flight, by enemy instance id: {enemy, to, t}.
+var _drags := {}
 # The enemy a harpoon smash is landing on while that landing's strikes resolve; combat reads it.
 var smash_landing: Node3D
 # The harpoon chain; this player is its only writer (HOOK-CHAIN.md).
@@ -190,6 +197,9 @@ var _bow_check_queued := false
 var _crushing := {}
 # Every collision exception the ball takes goes through here, so none ends with the ball inside.
 var exceptions
+# The stage's heft destructibles and the Callable that answers the run's heft class (bind_destructibles).
+var _destructibles: Node = null
+var _destructibles_class := Callable()
 
 
 func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
@@ -370,6 +380,7 @@ func frozen() -> bool:
 
 func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	_bank_pending = {}
+	_drags.clear()
 	_clear_speed_bank()
 	_speed_bank_move_held = false
 	_speed_bank_brake_held = false
@@ -567,6 +578,48 @@ func heft() -> float:
 	return float(heft_of.call()) if heft_of.is_valid() else 1.0
 
 
+# The stage's heft destructibles (world calls this on each stage entry, and with null at its end): the ball's
+# blasts (slam, Redline) reach them with the class `class_of` answers, and a piece that breaks lets go of any
+# line, mount or aim that stood on it the same tick.
+func bind_destructibles(pieces: Node, class_of := Callable()) -> void:
+	if is_instance_valid(_destructibles) and _destructibles.piece_shattered.is_connected(_on_piece_shattered):
+		_destructibles.piece_shattered.disconnect(_on_piece_shattered)
+	_destructibles = pieces
+	_destructibles_class = class_of
+	redline.blast_props = _break_props if pieces != null else Callable()
+	if pieces != null:
+		pieces.piece_shattered.connect(_on_piece_shattered)
+
+
+func _break_props(at: Vector3, radius: float, source: String) -> void:
+	if is_instance_valid(_destructibles):
+		_destructibles.on_blast(at, radius, source, 1, int(_destructibles_class.call()) if _destructibles_class.is_valid() else -1)
+
+
+# True when `point` lies in the piece that just broke (its own oriented box when the module can say, else the
+# world box), grown by a quarter metre so a face the line or mount sat on still counts.
+func _point_in_shattered(bounds: AABB, point: Vector3) -> bool:
+	var id: String = _destructibles.last_shattered_id() if is_instance_valid(_destructibles) else ""
+	if id != "":
+		return _destructibles.contains_point(id, point, SHATTER_MARGIN)
+	return bounds.grow(SHATTER_MARGIN).has_point(point)
+
+
+# A world line, a pylon mount or a harpoon aim that rested on the piece cannot outlive it: the line is cut, the
+# mount is dropped and the aim is cleared on the tick of the break, so a press the same tick finds no surface.
+func _on_piece_shattered(bounds: AABB) -> void:
+	if kit.hooked and not kit.on_body and _point_in_shattered(bounds, kit.anchor):
+		cut_line("shattered")
+	if kit.mounted and _point_in_shattered(bounds, kit.mount_face):
+		kit.mounted = false
+		kit.slingshot.cancel()
+		kit.mount_block = Augments.MOUNT_COOLDOWN
+		kit.dismount_velocity = Vector3.ZERO
+		kit.dismount_fired = true
+	if kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE and kit.aim.get("body") == null and _point_in_shattered(bounds, kit.aim["point"]):
+		kit.aim = Augments.no_aim()
+
+
 # The one door for crowd control: a knock, the Warden's pulse and magnet, Brindle's
 # shoves, and wave 3's pits, tethers and nets. Rivet's sprint ignores all of it and
 # says so (true means it landed). An interrupting hit force-cancels every charging
@@ -647,6 +700,7 @@ func grapple_range() -> float:
 
 func _physics_process(delta: float) -> void:
 	exceptions.step(delta)
+	_step_drags(delta)
 	source.poll(intent)
 	_route_slots(delta)
 	abilities.movement_key = _burst_key()
@@ -961,8 +1015,8 @@ func _read_shift() -> void:
 			_fail("boost", "busy" if Augments.holding(kit) else "uncharged")
 	else:
 		intent.boost_pressed = intent.boost_pressed \
-				or (intent.shift_pressed and (state.boost_cooldown <= 0.0 or kit.plant_time > 0.0))
-		if intent.shift_pressed and state.boost_cooldown > 0.0:
+				or (intent.shift_pressed and (state.boost_cooldown <= Tuning.BOOST_BUFFER or kit.plant_time > 0.0))
+		if intent.shift_pressed and state.boost_cooldown > Tuning.BOOST_BUFFER:
 			_fail("boost", "cooldown")
 		elif intent.shift_pressed and kit.mounted:
 			_fail("boost", "busy")
@@ -1418,6 +1472,7 @@ func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	events.slammed.emit(at, strength, flatness)
 	if strength >= 0.05:
 		shockwave.emit(at, strength)
+		_break_props(at, slam_radius(), "slam")
 		var hits := _push_enemies(at, slam_radius(), Augments.SLAM_KNOCK * strength, SLAM, Contact.heft_knock(heft()))
 		if hits > 0:
 			events.drop_landed.emit(hits)
@@ -1442,6 +1497,9 @@ func _smash_demo(at: Vector3, _speed: float) -> void:
 
 # The shared slam already struck these enemies; the rend only pulls, so no second strike.
 func _smash_rend(at: Vector3, speed: float) -> void:
+	if abilities.cap(AbilityState.SMASH, "mutation", "") == "rend_drag":
+		_drag_in(at)
+		return
 	var strength := clampf(speed / 30.0, 0.4, 1.6)
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.has_method("is_dead") and enemy.is_dead():
@@ -1453,6 +1511,44 @@ func _smash_rend(at: Vector3, speed: float) -> void:
 		inward = inward.normalized() if inward.length() > 0.01 else Vector3.FORWARD
 		enemy.knock(inward + Vector3.UP * 0.2, Contact.heft_shove(Augments.SLAM_KNOCK * strength * REND_PULL, heft()))
 		enemy.flash()
+
+
+# Rend drag: every machine in the disc no heavier than the ball (Grip.heft_of, the weight rule of
+# POLES-FLAILS) starts a slide to the centre; a heavier one took the slam and holds. One inward
+# pull per landing, and nothing here reads or writes the ball's velocity.
+func _drag_in(at: Vector3) -> void:
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.has_method("is_dead") and enemy.is_dead():
+			continue
+		var offset: Vector3 = at - enemy.global_position
+		if offset.length() > slam_radius() or Grip.heft_of(enemy) > heft():
+			continue
+		_drags[enemy.get_instance_id()] = {"enemy": weakref(enemy), "to": at, "t": 0.0}
+		enemy.flash()
+
+
+# Closes each dragged machine's gap to the centre by the slide's share of this frame, so the
+# shove of the shared slam cannot carry it off the line and it arrives at DRAG_SECONDS. A body
+# the world blocks stops where it stands.
+func _step_drags(delta: float) -> void:
+	for id in _drags.keys():
+		var drag: Dictionary = _drags[id]
+		var enemy = drag["enemy"].get_ref()
+		if enemy == null or (enemy.has_method("is_dead") and enemy.is_dead()):
+			_drags.erase(id)
+			continue
+		var before: float = smoothstep(0.0, 1.0, drag["t"] / DRAG_SECONDS)
+		drag["t"] = minf(float(drag["t"]) + delta, DRAG_SECONDS)
+		var after: float = smoothstep(0.0, 1.0, drag["t"] / DRAG_SECONDS)
+		var gap: Vector3 = drag["to"] - enemy.global_position
+		gap.y = 0.0
+		var step: Vector3 = gap * (after - before) / maxf(1.0 - before, 0.0001)
+		if enemy is CharacterBody3D:
+			enemy.move_and_collide(step)
+		else:
+			enemy.global_position += step
+		if drag["t"] >= DRAG_SECONDS:
+			_drags.erase(id)
 
 
 # The shared slam already struck these enemies as "slam"; the stamp turns each one it

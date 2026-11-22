@@ -48,10 +48,11 @@ const AIM_ROOT := Vector2(0.3, 0.15)
 # the lens is a bar across the view.
 const LENS_CLEAR := 1.5
 const LENS_FULL := 4.0
+const LAST_SHAPE_CAP := 64
 
 var shapes := {}
 # The last record each layer drew before it was cleared, so a test can compare what
-# was on screen with what the release committed.
+# was on screen with what the release committed. Bounded so monotonic layer ids never leak.
 var last_shape := {}
 var _collapsing := {}
 
@@ -60,6 +61,8 @@ var _tris: ImmediateMesh
 var _materials: Array = []
 var _k := 1.0
 var _anchor := Vector3.ZERO
+var _dirty := false
+var _rebuild_count := 0
 
 
 func _ready() -> void:
@@ -113,17 +116,26 @@ static func draws(shape: Dictionary) -> bool:
 
 func set_shape(layer: String, shape: Dictionary) -> void:
 	shapes[layer] = shape
+	if last_shape.has(layer):
+		last_shape.erase(layer)
 	last_shape[layer] = shape
+	while last_shape.size() > LAST_SHAPE_CAP:
+		last_shape.erase(last_shape.keys()[0])
 	_collapsing.erase(layer)
+	_dirty = true
 
 
 func clear(layer: String) -> void:
-	shapes.erase(layer)
+	if shapes.erase(layer):
+		_dirty = true
 
 
 func clear_all() -> void:
+	if not shapes.is_empty() or not _collapsing.is_empty():
+		_dirty = true
 	shapes.clear()
 	_collapsing.clear()
+	last_shape.clear()
 
 
 # A cancel or knock: the shape shrinks into its origin in COLLAPSE seconds and goes.
@@ -131,6 +143,7 @@ func collapse(layer: String) -> void:
 	if shapes.has(layer):
 		_collapsing[layer] = {"shape": shapes[layer], "t": 0.0}
 		shapes.erase(layer)
+		_dirty = true
 
 
 func collapse_all() -> void:
@@ -187,13 +200,26 @@ static func _cone_side(dir: Vector3) -> Vector3:
 	return side.normalized() if side.length_squared() > 0.001 else Vector3.RIGHT
 
 
+func _has_breathing() -> bool:
+	for shape in shapes.values():
+		if not bool(shape.get("blocked", false)) and float(shape.get("fill", 0.0)) >= 1.0:
+			return true
+	return false
+
+
 func _process(delta: float) -> void:
 	if _tris == null:
 		return
-	for layer in _collapsing.keys():
-		_collapsing[layer]["t"] += delta
-		if _collapsing[layer]["t"] >= COLLAPSE:
-			_collapsing.erase(layer)
+	if not _collapsing.is_empty():
+		_dirty = true
+		for layer in _collapsing.keys():
+			_collapsing[layer]["t"] += delta
+			if _collapsing[layer]["t"] >= COLLAPSE:
+				_collapsing.erase(layer)
+	if not _dirty and not _has_breathing():
+		return
+	_dirty = false
+	_rebuild_count += 1
 	_tris.clear_surfaces()
 	if shapes.is_empty() and _collapsing.is_empty():
 		return
