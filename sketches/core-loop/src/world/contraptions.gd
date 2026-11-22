@@ -601,18 +601,18 @@ func _build_glaze(spec: Dictionary) -> Dictionary:
 	return {"spec": spec, "strips": strips}
 
 
-# The sheen: a wet, glossy band laid on the ground over each strip's two walls, so the fast line reads as a slick
-# surface before the glaze_skim tell plays. A mesh built in code that follows the ground, not a primitive.
-const SHEEN_STEP_M := 4.0
+# The sheen: a polished band laid on the ground over each strip's two walls, dashed along its length, so the fast line
+# reads as a slick lane before the glaze_skim tell plays. A mesh built in code that follows the ground, not a primitive.
+const SHEEN_STEP_M := 6.0
 const SHEEN_ACROSS_M := 2.0
 const SHEEN_LIFT := 0.06
 
 
 func _glaze_sheen(strips: Array) -> void:
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Palette.VERDIGRIS.lightened(0.15)
-	mat.roughness = 0.08
-	mat.metallic_specular = 0.9
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.25
+	mat.metallic_specular = 0.6
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	st.set_material(mat)
@@ -631,6 +631,8 @@ func _glaze_sheen(strips: Array) -> void:
 						var v: float = lerpf(float(strip["inner"]), float(strip["outer"]), corner.y / cols) * sign_v
 						var p: Vector2 = strip["centre"] + along * u + side * v
 						quad.append((ground.call(p.x, p.y, 0.0) as Vector3) + Vector3.UP * SHEEN_LIFT)
+					# Alternate rows light and dark, so the band reads as dashes running down the line.
+					st.set_color(Palette.VERDIGRIS.lightened(0.35) if r % 2 == 0 else Palette.VERDIGRIS)
 					for tri: Array in [[quad[0], quad[1], quad[2]], [quad[0], quad[2], quad[3]]]:
 						# Godot faces the normal against (b - a) x (c - a): keep every triangle facing up.
 						if (tri[1] - tri[0]).cross(tri[2] - tri[0]).y > 0.0:

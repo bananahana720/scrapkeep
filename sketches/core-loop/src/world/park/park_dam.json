@@ -201,7 +201,7 @@
   {"id": "intake_zip", "kind": "cable", "site": "lobber_ledge", "recipe": "", "from": [-150, 92.0, 210], "to": [-185, 26.4, 452], "radius": 5.0, "floor": 22.0},
   {"id": "culvert_glaze", "kind": "glaze", "site": "west_wash", "recipe": "", "strips": [[-102.5, -75.0, 16.8, 340.0, 10.0, 18.0]], "push": 6.0, "cap": 30.0, "sheen": true},
   {"id": "apron_sluice", "kind": "sluice_valve", "site": "toe_apron", "recipe": "", "at": [-6, 502], "lane": {"from": [4, 506], "to": [80, 564], "half_width": 5.0, "reach": 4.0}, "charge": 16.0, "price": 20},
-  {"id": "pump_yard_sluice", "kind": "sluice_valve", "site": "east_bench_flats", "recipe": "", "at": [194, 490], "lane": {"from": [190, 476], "to": [122, 476], "half_width": 7.0, "reach": 7.0}, "charge": 14.0, "price": 20}
+  {"id": "pump_yard_sluice", "kind": "sluice_valve", "site": "east_bench_flats", "recipe": "", "at": [176, 492], "lane": {"from": [172, 478], "to": [138, 478], "half_width": 7.0, "reach": 7.0}, "charge": 14.0, "price": 20}
  ],
  "weather_rows": [
   {"id": "dawn_still", "kind": "clear", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0006, "color": "#a3bdd0"}, "sky": "clear", "sound": "canyon_dawn_bed", "music_layer": "", "event_odds": {}, "handling": "none"},
