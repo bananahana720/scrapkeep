@@ -137,13 +137,17 @@ static func warm_ahead() -> bool:
 
 
 static func drop_ahead() -> void:
-	if _ahead_bowl != null:
+	if is_instance_valid(_ahead_bowl):
 		_ahead_bowl.free()
-		_ahead_bowl = null
+	_ahead_bowl = null
 	Requisition.drop_ahead()
 	BowlDress.drop_ahead()
 	Palette.drop_checkers()
 	_looks_warm = false
+
+
+static func reset_for_tests() -> void:
+	drop_ahead()
 
 
 # The checkers, then the neutral plate looks the dressing (arena_bowl_dress.gd) and the floor paint, a few rows a call.

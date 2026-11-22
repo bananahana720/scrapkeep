@@ -153,6 +153,10 @@ func _init(events_ref = null) -> void:
 static var unknown_warned := {}
 
 
+static func reset_for_tests() -> void:
+	unknown_warned.clear()
+
+
 static func depth_cap(world_index: int) -> int:
 	return clampi(world_index + 1, WORLD_ONE_DEPTHS, DEPTHS)
 

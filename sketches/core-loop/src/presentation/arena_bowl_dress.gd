@@ -58,6 +58,7 @@ static var spillway_dir := SPILLWAY_DIR
 
 
 static func reset_for_tests() -> void:
+	drop_ahead()
 	asset_dir = ASSET_DIR
 	spillway_dir = SPILLWAY_DIR
 

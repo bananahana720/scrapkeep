@@ -48,6 +48,15 @@ const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const HighdraftScenery := preload("res://src/presentation/highdraft_scenery.gd")
 const ArenaMindDress := preload("res://src/presentation/arena_mind_dress.gd")
 const QuietGun := preload("res://src/presentation/quiet_gun.gd")
+const HazardHits := preload("res://src/world/events/hazard_hits.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
+const StageMap := preload("res://src/world/stage_map.gd")
+const Terrain := preload("res://src/world/terrain.gd")
+const Screens := preload("res://src/ui/screens.gd")
+const Arena := preload("res://src/boss/arena.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const Harmony := preload("res://src/presentation/harmony.gd")
+const ScrapField := preload("res://src/build/scrap_field.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -164,10 +173,22 @@ func _reset() -> void:
 	ClassPreview.reset_for_tests()
 	ThreadGuard.reset_for_tests()
 	PlayerFx.reset_for_tests()
+	ModelVariants.reset_for_tests()
 	ParkProps.reset_for_tests()
 	Threat.reset_for_tests()
 	Projectile.reset_for_tests()
 	Palette.reset_for_tests()
+	HazardHits.reset_for_tests()
+	ParkTerrain.reset_for_tests()
+	StageMap.reset_for_tests()
+	Terrain.reset_for_tests()
+	Screens.reset_for_tests()
+	ArenaMindDress.reset_for_tests()
+	HighdraftScenery.reset_for_tests()
+	Arena.reset_for_tests()
+	UpgradeTree.reset_for_tests()
+	Harmony.reset_for_tests()
+	ScrapField.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"
@@ -184,8 +205,6 @@ func _reset() -> void:
 	RescueSite.model_path = RescueSite.MODEL
 	MusicRows.stem_dir = ""
 	HighdraftFx.shader_dir = HighdraftFx.SHADER_DIR
-	HighdraftScenery.dir = HighdraftScenery.DIR
-	ArenaMindDress.dir = ArenaMindDress.DIR
 	QuietGun.housing_path = QuietGun.HOUSING
 
 

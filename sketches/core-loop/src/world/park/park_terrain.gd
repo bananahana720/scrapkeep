@@ -175,6 +175,11 @@ const MAP_TYPES := [2, 0, 1]
 const MAP_GAP_FRAMES := 10
 # The pool threads a threaded build takes, leaving the rest to the renderer and Jolt (see _pump).
 static var build_tasks := maxi(1, OS.get_processor_count() / 2)
+
+
+static func reset_for_tests() -> void:
+	draw_regions = true
+	build_tasks = maxi(1, OS.get_processor_count() / 2)
 # The pool threads the tile shape build takes (_shapes_ahead). On build_tasks the 100 Jolt builds (~7 ms each on the 4080)
 # finished in about four frames and those frames drew slow (draw 5.5-7.3 ms, net 17-21; #607 6540029016, #609's row): two
 # threads spread the same work over ~350 ms (20-30 frames), still well before the bodies are wanted.

@@ -57,6 +57,17 @@ const Synth := preload("res://src/presentation/synth.gd")
 const Footings := preload("res://src/world/park/footings.gd")
 const RescueSite := preload("res://src/world/rescue_site.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
+const HazardHits := preload("res://src/world/events/hazard_hits.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
+const StageMap := preload("res://src/world/stage_map.gd")
+const Terrain := preload("res://src/world/terrain.gd")
+const Screens := preload("res://src/ui/screens.gd")
+const ArenaMindDress := preload("res://src/presentation/arena_mind_dress.gd")
+const HighdraftScenery := preload("res://src/presentation/highdraft_scenery.gd")
+const Arena := preload("res://src/boss/arena.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const Harmony := preload("res://src/presentation/harmony.gd")
+const ScrapField := preload("res://src/build/scrap_field.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W46-T1: tools/test_batch_driver.gd _reset() clears reduced-motion and other process-wide
@@ -144,10 +155,57 @@ func _run() -> void:
 	PlayerFx.rect_tests = 11
 	ParkProps.file_overrides = {"a": "b"}
 	ParkProps.far_reads = 5
+	ParkProps._meshes["res://fake.glb"] = BoxMesh.new()
+	ParkProps._far_sources["res://fake.glb"] = [1]
+	ParkProps._cache_owner = "park_dam"
+	ParkProps._stand_ins["fake"] = ["res://fake.glb"]
+	ParkProps._stand_ins_stamp = 4
 	Threat.set_look("classic")
 	Threat.Painter._held_looks["plain"] = StandardMaterial3D.new()
 	Threat.Painter._warmed = true
 	Projectile._held_rim = StandardMaterial3D.new()
+	# Dirty W46-T3 statics: world, screens, background-task caches, arena ahead builds, warnings and overrides.
+	HazardHits.plants = ["skip_enemies"]
+	ParkTerrain.draw_regions = false
+	ParkTerrain.build_tasks = 1
+	StageMap.surface_shader_path = "res://assets/materials/__missing_workshop__.gdshader"
+	StageMap._surface_materials["fake"] = StandardMaterial3D.new()
+	StageMap._surface_warnings["fake"] = true
+	Terrain.threaded_in_bot_runs = true
+	Screens._ready_announced = true
+	ArenaMindDress.dir = "res://assets/models/__missing_mind__/"
+	ArenaMindDress._sky_material = null
+	ArenaMindDress.prepare()
+	t.check("ArenaMindDress panorama worker started before reset", ArenaMindDress._panorama_task >= 0)
+	ArenaMindDress._sky_material = ShaderMaterial.new()
+	ArenaMindDress._kit_ahead["fake"] = BoxMesh.new()
+	HighdraftScenery.dir = "res://assets/models/__missing_highdraft__/"
+	HighdraftScenery._sky = PanoramaSkyMaterial.new()
+	HighdraftScenery._warned["fake"] = true
+	HighdraftScenery._coloured[12345] = StandardMaterial3D.new()
+	HighdraftScenery._start_cloud()
+	t.check("HighdraftScenery cloud bake task started before reset", HighdraftScenery._cloud_task >= 0)
+	Arena._looks_warm = true
+	var ahead_bowl := Arena.new()
+	var ahead_bowl_id := ahead_bowl.get_instance_id()
+	Arena._ahead_bowl = ahead_bowl
+	var req_ahead := Node3D.new()
+	var req_ahead_id := req_ahead.get_instance_id()
+	Requisition._ahead["fake"] = req_ahead
+	Requisition._ahead_reads["fake"] = null
+	var bowl_reading_scene := Node3D.new()
+	var bowl_reading_id := bowl_reading_scene.get_instance_id()
+	ArenaBowlDress._ahead["fake"] = {}
+	ArenaBowlDress._reading = {"path": "fake", "scene": bowl_reading_scene, "views": [], "result": {}, "ok": true}
+	UpgradeTree.unknown_warned["probe_pilot"] = true
+	Harmony.unknown_warned["probe_motif"] = true
+	ScrapField.model_path = "res://assets/models/__missing_scrap__.glb"
+	ScrapField._pickup_mesh_cache = [BoxMesh.new()]
+	ScrapField._recovery_mesh_cache = [BoxMesh.new()]
+	ScrapField._cog_model = BoxMesh.new()
+	ScrapField._pickup_assets["fake"] = {}
+	ModelVariants.set_enabled(true, true)
+	ModelVariants.set_rejected({})
 	var stray_node := Node3D.new()
 	root.add_child(stray_node)
 	var stray_tween := stray_node.create_tween()
@@ -202,11 +260,45 @@ func _run() -> void:
 	t.check("ClassPreview._sitting_unlocks clears on reset", ClassPreview._sitting_unlocks.is_empty())
 	t.check("ThreadGuard resets violations", ThreadGuard.violations == 0 and ThreadGuard.last_violation == "")
 	t.eq("PlayerFx.rect_tests resets to 0", PlayerFx.rect_tests, 0)
-	t.check("ParkProps resets file_overrides and far_reads", ParkProps.file_overrides.is_empty() and ParkProps.far_reads == 0)
+	t.check("ParkProps resets overrides, far_reads, caches and stand_ins", ParkProps.file_overrides.is_empty()
+		and ParkProps.far_reads == 0 and ParkProps._meshes.is_empty() and ParkProps._far_sources.is_empty()
+		and ParkProps._cache_owner == "" and ParkProps._stand_ins.is_empty() and ParkProps._stand_ins_stamp == -1)
 	t.check("Threat resets look, held looks, materials and warmed", Threat.Painter._look == ""
 		and Threat.Painter._held_looks.is_empty() and Threat.Painter._materials.is_empty()
 		and Threat.Painter.materials_built == 0 and not Threat.Painter._warmed)
 	t.eq("Projectile._held_rim resets to null", Projectile._held_rim, null)
+	t.check("HazardHits.plants clears on reset", HazardHits.plants.is_empty())
+	t.check("ParkTerrain resets draw_regions and build_tasks", ParkTerrain.draw_regions
+		and ParkTerrain.build_tasks == maxi(1, OS.get_processor_count() / 2))
+	t.check("StageMap resets shader path, material cache and warnings",
+		StageMap.surface_shader_path == StageMap.SURFACE_SHADER_PATH
+		and StageMap._surface_materials.is_empty() and StageMap._surface_warnings.is_empty())
+	t.check("Terrain.threaded_in_bot_runs resets to false", not Terrain.threaded_in_bot_runs)
+	t.check("Screens._ready_announced resets to false", not Screens._ready_announced)
+	t.check("ArenaMindDress resets dir, sky material, panorama task and kit cache",
+		ArenaMindDress.dir == ArenaMindDress.DIR and ArenaMindDress._sky_material == null
+		and ArenaMindDress._panorama_task == -1 and ArenaMindDress._panorama_out.is_empty()
+		and ArenaMindDress._kit_ahead.is_empty())
+	t.check("HighdraftScenery resets dir, sky, cloud task/cache, warnings and coloured cache",
+		HighdraftScenery.dir == HighdraftScenery.DIR and HighdraftScenery._sky == null
+		and HighdraftScenery._cloud == null and HighdraftScenery._cloud_image == null
+		and HighdraftScenery._cloud_task == -1 and HighdraftScenery._warned.is_empty()
+		and HighdraftScenery._coloured.is_empty())
+	t.check("Arena drops ahead bowl and resets _looks_warm", not Arena._looks_warm
+		and Arena._ahead_bowl == null and not is_instance_id_valid(ahead_bowl_id))
+	t.check("Requisition drops ahead scenes and caches", Requisition._ahead.is_empty()
+		and Requisition._ahead_reads.is_empty() and Requisition._dressing.is_empty()
+		and not is_instance_id_valid(req_ahead_id))
+	t.check("ArenaBowlDress drops ahead kits and in-flight reading", ArenaBowlDress._ahead.is_empty()
+		and ArenaBowlDress._reading.is_empty() and ArenaBowlDress._requested.is_empty()
+		and not is_instance_id_valid(bowl_reading_id))
+	t.check("UpgradeTree.unknown_warned clears on reset", UpgradeTree.unknown_warned.is_empty())
+	t.check("Harmony.unknown_warned clears on reset", Harmony.unknown_warned.is_empty())
+	t.check("ScrapField resets model_path and pickup mesh caches", ScrapField.model_path == ScrapField.PICKUP_GLB
+		and ScrapField._pickup_mesh_cache.is_empty() and ScrapField._recovery_mesh_cache.is_empty()
+		and ScrapField._cog_model == null and ScrapField._pickup_assets.is_empty())
+	t.check("ModelVariants resets _on, _rejected and _stamp", ModelVariants._on == -1
+		and ModelVariants._rejected == ModelVariants.REJECTED and ModelVariants._stamp == 0)
 	t.check("Palette sky cache and task reset cleanly", Palette._sky_task == -1 and Palette._sky_texture == null
 		and Palette._sky_waiting.is_empty() and Palette._sky_out.is_empty() and Palette._hdri_sky == null)
 	t.check("processed tweens are killed on reset", get_processed_tweens().all(func(tw): return not tw.is_valid()))
