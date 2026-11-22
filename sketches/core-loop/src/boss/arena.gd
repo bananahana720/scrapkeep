@@ -241,14 +241,16 @@ class Ground:
 	func _init(bowl_ref) -> void:
 		bowl = bowl_ref
 
+	# A query can outlive the bowl: a downed drone's brass tag or death scatter keeps it after
+	# exit_arena frees the arena, so a freed bowl reads as no floor (-INF), the tag's own sentinel.
 	func height(x: float, z: float) -> float:
-		return bowl.ground(Vector3(x, 0.0, z))
+		return bowl.ground(Vector3(x, 0.0, z)) if is_instance_valid(bowl) else -INF
 
 	func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 		return Vector3(x, height(x, z) + clearance, z)
 
 	func contains(point: Vector3) -> bool:
-		return bowl.contains(point)
+		return is_instance_valid(bowl) and bowl.contains(point)
 
 
 func ground_query() -> RefCounted:
