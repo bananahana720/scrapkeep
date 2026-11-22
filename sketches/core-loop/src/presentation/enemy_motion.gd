@@ -248,8 +248,9 @@ static func _build_tag_mesh() -> ArrayMesh:
 static func _build_tag_material() -> StandardMaterial3D:
 	if _tag_material != null:
 		return _tag_material
-	# Satin brass finish (Palette.BRASS_FINISH) with vertex colours and surface grain: matches
-	# ForemanSignal's opaque shader flags and never drops dark in dawn shade.
+	# Satin brass finish (Palette.BRASS_FINISH) with vertex colours and surface grain, so it never drops
+	# dark in dawn shade. The stage's activity props (ambush altar, cracked cache, bet crate, rescue site)
+	# draw the same opaque vertex-coloured solid from stage entry, so the first kill compiles no new shader.
 	_tag_material = Palette.solid(Color.WHITE, 0.0)
 	Palette.brass_finish(_tag_material)
 	_tag_material.vertex_color_use_as_albedo = true

@@ -204,7 +204,7 @@ static func _ring_mesh() -> ArrayMesh:
 		var o0 := Vector3(cos(a0) * outer, 0.0, sin(a0) * outer)
 		var i1 := Vector3(cos(a1) * inner, 0.0, sin(a1) * inner)
 		var o1 := Vector3(cos(a1) * outer, 0.0, sin(a1) * outer)
-		for p in [i0, o1, o0, i0, i1, o1]:
+		for p in [i0, o0, o1, i0, o1, i1]:
 			st.set_normal(Vector3.UP)
 			st.add_vertex(p)
 	_sync_ring_mesh = st.commit()
