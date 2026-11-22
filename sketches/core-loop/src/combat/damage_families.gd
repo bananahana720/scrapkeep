@@ -4,10 +4,11 @@ extends RefCounted
 # one of three families (the element table's kinetic, arc and frost), and its source class is
 # the second axis: an "ability" is the special source (slots 2 and 3 and the set piece). An
 # armour row says which it resists and which it is weak to. Andrew's "Lean, never a wall" (Q5,
-# 2026-10-17 22:12:39Z): resisted deals about 60%, weak about 150%, and nothing is immune, so a
-# strong build always pays. Weak beats resisted on the same hit: a kinetic ability on plate is
-# weak, because casts beat plates. Applied in combat's caps stage to a hit that beat the
-# plating; the armour stage and its 20% chip are unchanged.
+# 2026-10-17 22:12:39Z; trimmed to 125% under ruling ek, 2026-11-22): resisted deals about 60%,
+# weak about 125%, and nothing is immune, so a strong build always pays. Weak beats resisted on
+# the same hit: a kinetic ability on plate is weak, because casts beat plates. Applied in
+# combat's caps stage to a hit that beat the plating; the armour stage and its 20% chip are
+# unchanged.
 #
 # Where armour lives is deliberate, not uniform. The Spillway's Flow conducts through water
 # (elements.gd arc:water) and through its own wet crews (the "wet" row: weak to arc, resists
@@ -15,7 +16,7 @@ extends RefCounted
 # enemy may name its own class with armour_class() (an elite affix).
 
 const RESISTED := 0.6
-const WEAK := 1.5
+const WEAK := 1.25
 const KINETIC := "kinetic"
 const ARC := "arc"
 const FROST := "frost"

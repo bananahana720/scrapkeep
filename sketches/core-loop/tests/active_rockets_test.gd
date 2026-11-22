@@ -9,11 +9,12 @@ const T := preload("res://tests/support/t.gd")
 
 # The active slot on F and its first active, the Scrap Rocket Rack (design page "Makers and
 # Actives", 17 Oct 2026). A real Game with the first pilot. Covers: --actives is on by default;
-# off, an F press does nothing; on, a run opens racked with full charges and a valid bar chip
-# on F; a press fires four homing rockets that strike machines as "rocket" and all burst; the
-# charges spend and a dry press is refused "cooling"; a Jam lock refuses "jammed"; kills pay
-# charge and, with the ultimate meter full, bank overflow rockets; weapon damage mods scale the
-# rockets; a new run clears the rack. Evidence limit: rules in a headless run, not the feel.
+# off, an F press does nothing; on, a run opens racked empty (0 charges, ruling ek) with a valid
+# cooling bar chip on F; a press with a charge fires four homing rockets that strike machines as
+# "rocket" and all burst; the charges spend and a dry press is refused "cooling"; a Jam lock
+# refuses "jammed"; kills pay charge and, with the ultimate meter full, bank overflow rockets;
+# weapon damage mods scale the rockets; a new run clears the rack. Evidence limit: rules in a
+# headless run, not the feel.
 
 const FLAT_SHELF := Vector3(-45.0, 15.0, 6.0)
 
@@ -105,19 +106,28 @@ func _run() -> void:
 		_rack.active_id == "" and _fired.is_empty() and _fails.is_empty() and _rack.slot_record().is_empty(),
 		"racked '%s' fired %s fails %s" % [_rack.active_id, _fired, _fails])
 
-	# --- On: the starter is racked full --------------------------------------------------
+	# --- On: the starter is racked empty (ruling ek) -------------------------------------
 	_game.tuning.set_option("actives", "on")
 	await _sim(0.1)
 	var cap := int(ActiveDefs.row(ActiveDefs.SCRAP_ROCKET)["max_charges"])
-	_t.check("03 on: the run racks the Scrap Rocket Rack full",
-		_rack.active_id == ActiveDefs.SCRAP_ROCKET and _rack.charges == cap, "racked '%s' charges %d" % [_rack.active_id, _rack.charges])
+	_t.check("03 on: the run racks the Scrap Rocket Rack empty and charging",
+		_rack.active_id == ActiveDefs.SCRAP_ROCKET and _rack.charges == 0 and _rack.progress > 0.0,
+		"racked '%s' charges %d progress %.3f" % [_rack.active_id, _rack.charges, _rack.progress])
 	var record: Dictionary = _rack.slot_record()
-	_t.check("04 the bar chip is a valid slot on F", AbilitySlots.valid_slot(record) and record["key"] == "key_f" and record["group"] == "chip",
+	_t.check("04 the bar chip is a valid cooling slot on F",
+		AbilitySlots.valid_slot(record) and record["key"] == "key_f" and record["group"] == "chip" and record["state"] == "cooling",
 		str(record))
 	var bar: Array = AbilitySlots.new().slots(_game)
 	_t.check("05 the HUD's slot list carries the active chip", bar.any(func(e): return e["id"] == "active_scrap_rocket"), str(bar.map(func(e): return e["id"])))
+	await _press()
+	_t.check("05b an opening press with zero charges is refused cooling",
+		_fails == ["cooling"] and _fired.is_empty(), "fails %s fired %s" % [_fails, _fired])
+	_fails.clear()
+	_fired.clear()
 
 	# --- A press: four homing rockets strike and burst ----------------------------------
+	_rack.charges = cap
+	_rack.progress = 0.0
 	_player.reset_to(_ground(0.0) + Vector3.UP)
 	await _sim(0.1)
 	var ball: Vector3 = _player.ball_position()
