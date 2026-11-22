@@ -67,15 +67,26 @@ func _process(_delta: float) -> void:
 
 # The scale the stand-in takes for an eye with far plane far: 1 while the whole landmark stands inside FAR_SHARE of it.
 func scale_for(eye: Vector3, far: float) -> float:
-	var reach := far * FAR_SHARE
-	var span := global_position.distance_to(eye) + radius
-	return 1.0 if span <= reach else reach / span
+	return reach_scale(global_position, radius, eye, far)
 
 
 # The stand-in's world transform for that eye: the landmark's own, scaled about the eye by scale_for.
 func impostor(eye: Vector3, far: float) -> Transform3D:
-	var own := global_transform
-	var k := scale_for(eye, far)
+	return about_eye(global_transform, radius, eye, far)
+
+
+# The method for any far stand-in (the landmark's, the smoke column's): the scale for a thing at origin reaching radius
+# from it, 1 while all of it stands inside FAR_SHARE of the far plane.
+static func reach_scale(origin: Vector3, reach_radius: float, eye: Vector3, far: float) -> float:
+	var reach := far * FAR_SHARE
+	var span := origin.distance_to(eye) + reach_radius
+	return 1.0 if span <= reach else reach / span
+
+
+# own scaled about the eye by reach_scale: every vertex stays on its ray from the eye, so the thing covers the same
+# pixels, and its farthest point stays inside the far plane.
+static func about_eye(own: Transform3D, reach_radius: float, eye: Vector3, far: float) -> Transform3D:
+	var k := reach_scale(own.origin, reach_radius, eye, far)
 	return Transform3D(own.basis.scaled(Vector3.ONE * k), eye + (own.origin - eye) * k)
 
 

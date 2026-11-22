@@ -721,5 +721,13 @@ def pipe_section(p, v, rng):
         p.cyl(0.14, 0.3, (-1.9, -0.9, 0.15), C["iron_light"], segs=8, style="hard_smooth")
 
 
+# --------------------------------------------------------------------------------------
+# Sight gags (W46-07): the shared builders in kit.py, so the dam and the flume carry the same two kinds.
+K.kind("foreman_billboard", hero=True, tags=["sign", "tall"], variants="ab",
+       story="A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk.")(kit.foreman_billboard)
+K.kind("shift_table", tags=["machine"], variants="ab",
+       story="A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell.")(kit.shift_table)
+
+
 if __name__ == "__main__":
     K.main()

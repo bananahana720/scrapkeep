@@ -954,5 +954,13 @@ def desert_scrub(p, v, rng):
         tuft(p, -1.0, 0.7, 0.5, rng, n=7, h=0.5)
 
 
+# --------------------------------------------------------------------------------------
+# Sight gags (W46-07): the shared builders in kit.py, so the dam and the flume carry the same two kinds.
+K.kind("foreman_billboard", hero=True, tags=["sign", "tall"], variants="ab",
+       story="A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk.")(kit.foreman_billboard)
+K.kind("shift_table", tags=["machine"], variants="ab",
+       story="A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell.")(kit.shift_table)
+
+
 if __name__ == "__main__":
     K.main()

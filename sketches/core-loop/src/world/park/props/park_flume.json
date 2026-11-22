@@ -3,6 +3,19 @@
  "map": "park_flume",
  "kit": "res://assets/models/park/props/flume/manifest.json",
  "templates": {
+  "foreman_notice": {
+   "story": "The Foreman's notice over the weir: water drop, arrow, crate, and a ball-shaped hole where the arrow was.",
+   "props": [
+    {"kind": "foreman_billboard", "v": "a", "at": [0.0, 0.0], "yaw_deg": 0, "scale": 1.0, "tilt_deg": 0},
+    {"kind": "saltbush", "v": "*", "at": [-3.6, 1.6], "yaw_deg": 40, "scale": 0.9, "tilt_deg": 0}
+   ]
+  },
+  "shift_break": {
+   "story": "A cast shift table set for a crew that left, one glove gone and chalked where it lay.",
+   "props": [
+    {"kind": "shift_table", "v": "b", "at": [0.0, 0.0], "yaw_deg": 0, "scale": 1.0, "tilt_deg": 0}
+   ]
+  },
   "cold_hearth": {
    "story": "A cold hearth and a dragged-out cot: the crew went up the ledge for the shift.",
    "props": [
@@ -3167,7 +3180,9 @@
    ],
    "yaw_deg": -50.9,
    "near": "pad_bank_5: A yard of spare ties and pipe, bundled and left where the"
-  }
+  },
+  {"id": "flume_g01", "template": "foreman_notice", "at": [-432.0, -478.0], "yaw_deg": -170.8, "near": "weir_mesa: the notice the drop-in faces"},
+  {"id": "flume_g02", "template": "shift_break", "at": [64.0, 464.0], "yaw_deg": -165.0, "near": "forecourt turn: the table past the bank the floor line rides"}
  ],
  "litter": {
   "kinds": [
@@ -3195,5 +3210,5 @@
   ],
   "seed": 1021
  },
- "pin": 1521978673
+ "pin": 1059536565
 }

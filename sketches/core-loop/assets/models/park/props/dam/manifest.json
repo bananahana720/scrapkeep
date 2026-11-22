@@ -723,6 +723,91 @@
      "height": 2.216
     }
    }
+  },
+  "foreman_billboard": {
+   "class": "dress_hero",
+   "tags": [
+    "sign",
+    "tall"
+   ],
+   "story": "A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/foreman_billboard_a.glb",
+      "res://assets/models/park/props/dam/foreman_billboard_a_lod1.glb",
+      "res://assets/models/park/props/dam/foreman_billboard_a_lod2.glb"
+     ],
+     "tris": [
+      6176,
+      3088,
+      916
+     ],
+     "radius": 5.301,
+     "height": 9.385,
+     "perch": [
+      0.0,
+      9.367,
+      0.017
+     ]
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/foreman_billboard_b.glb",
+      "res://assets/models/park/props/dam/foreman_billboard_b_lod1.glb",
+      "res://assets/models/park/props/dam/foreman_billboard_b_lod2.glb"
+     ],
+     "tris": [
+      6152,
+      3076,
+      915
+     ],
+     "radius": 5.301,
+     "height": 9.385,
+     "perch": [
+      0.0,
+      9.367,
+      0.017
+     ]
+    }
+   }
+  },
+  "shift_table": {
+   "class": "dress_prop",
+   "tags": [
+    "machine"
+   ],
+   "story": "A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/shift_table_a.glb",
+      "res://assets/models/park/props/dam/shift_table_a_lod1.glb",
+      "res://assets/models/park/props/dam/shift_table_a_lod2.glb"
+     ],
+     "tris": [
+      2388,
+      1194,
+      446
+     ],
+     "radius": 2.731,
+     "height": 2.19
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/shift_table_b.glb",
+      "res://assets/models/park/props/dam/shift_table_b_lod1.glb",
+      "res://assets/models/park/props/dam/shift_table_b_lod2.glb"
+     ],
+     "tris": [
+      2044,
+      1022,
+      376
+     ],
+     "radius": 2.731,
+     "height": 2.19
+    }
+   }
   }
  }
 }
