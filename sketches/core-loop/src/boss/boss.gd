@@ -121,6 +121,15 @@ var _reel_last := -INF
 # The phase beat's preview (FX-03): the next phase's signature mark in the harmless bone style,
 # drawn through the transition beat and cleared when it ends; null when none shows.
 var _preview: Node3D
+# W1-105 (A11): the Furnace reprise's harmless preview band, drawn for FightPhases.CUE_LEAD
+# while the ratchet cue plays and cleared when the reprise commits or cancels.
+var _reprise_preview: Node3D
+# Fight clock of the last committed attack (used to keep reel gaps <= Rules.REEL_MAX_GAP)
+# and whether the previous tick was reeling (to clamp a pending phase 2 timer on reel entry).
+var _last_commit_at := -INF
+var _was_reeling := false
+# Planted fault seam for tests/brindle_reel_test.gd only ("stop" or "no_brace"); always "" in play.
+var _reel_plant := ""
 
 
 func setup(ctx_ref) -> void:
@@ -230,6 +239,9 @@ func exit_arena() -> void:
 	_charge = {}
 	_eject = {}
 	_preview = null
+	_reprise_preview = null
+	_last_commit_at = -INF
+	_was_reeling = false
 	_drones.clear()
 	_ghost_until = -1.0
 	if state != DEFEATED:
@@ -275,6 +287,7 @@ func advance(delta: float) -> void:
 				_step_furnace(delta)
 			3:
 				_step_charges(delta, ball)
+		_was_reeling = reeling()
 		_maybe_turn_phase()
 	elif state == EJECT:
 		_step_scooter(delta)
@@ -321,8 +334,9 @@ func banking() -> bool:
 	return _held() and phase < 3 and not _in_transition()
 
 
-# The reel (W1-61): a held phase past its transition beat. Brindle commits no new attack, and
-# a hull hit sheds scrap and fills the ultimate (_reel_hit). Effects and bots read this.
+# The reel (W1-61, ruling ed): a held phase past its transition beat. Brindle keeps attacking
+# at a slowed cadence, and a hull hit sheds scrap and fills the ultimate (_reel_hit). Effects
+# and bots read this.
 func reeling() -> bool:
 	return _held() and not _in_transition()
 
@@ -373,6 +387,9 @@ func _enter_phase(next: int) -> void:
 	phase_clock = 0.0
 	_reel_hits = 0
 	_reel_last = -INF
+	_last_commit_at = clock
+	_was_reeling = false
+	ship.set_hook_brace(false)
 	ship.show_cranes(next == 1)
 	ship.open_caps(next == 2)
 	match next:
@@ -400,6 +417,19 @@ func _enter_phase(next: int) -> void:
 	_show_preview(next)
 
 
+# Harmless bone-style annulus preview shared by the Furnace phase beat (FX-03) and the cued
+# slag reprise (W1-105 / A11): never hurts, never joins Threat.GROUP or hazards.
+func _bone_ring(id: String, band: Vector2, warn_s: float, floor_s := -1.0) -> Node3D:
+	var h = Hazard.new()
+	h.ground = arena.ground
+	h.color = Palette.SAND
+	if floor_s > 0.0:
+		h.warn_floor = floor_s
+	h.commit_annulus(id, Hazard.Threat.Type.INSTANT, arena.global_position, band, 0.0, warn_s, 0.01)
+	arena.add_child(h)
+	return h
+
+
 # FX-03: through the beat that opens the Furnace or the Scuttle, while no attack can commit, the
 # phase's signature mark draws once in the harmless bone style (threat_grammar.gd, a dashed
 # outline): the slag ring its first lead fills, or a charge lane from the hull's nose toward the
@@ -408,19 +438,19 @@ func _show_preview(next: int) -> void:
 	_clear_preview()
 	if not _in_transition() or not next in [2, 3]:
 		return
+	var beat: float = _phases.transition()
+	if next == 2:
+		_preview = _bone_ring("preview_slag", Arena.RING_A, beat)
+		return
 	var h = Hazard.new()
 	h.ground = arena.ground
 	h.color = Palette.SAND
-	var beat: float = _phases.transition()
-	if next == 2:
-		h.commit_annulus("preview_slag", Hazard.Threat.Type.INSTANT, arena.global_position, Arena.RING_A, 0.0, beat, 0.01)
-	else:
-		var from: Vector3 = ship.global_position
-		var heading := _aim_at(ctx.player.ball_position())
-		var half := Requisition.HULL.z * 0.5
-		var length := minf(Rules.CHARGE_STOP_R, _travel_to_rim(from, heading))
-		h.commit_lane("preview_charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
-			0.0, beat, 0.01)
+	var from: Vector3 = ship.global_position
+	var heading := _aim_at(ctx.player.ball_position())
+	var half := Requisition.HULL.z * 0.5
+	var length := minf(Rules.CHARGE_STOP_R, _travel_to_rim(from, heading))
+	h.commit_lane("preview_charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
+		0.0, beat, 0.01)
 	arena.add_child(h)
 	_preview = h
 
@@ -429,13 +459,36 @@ func preview() -> Node3D:
 	return _preview if is_instance_valid(_preview) else null
 
 
+# W1-105 (A11): harmless bone-style preview band for the cued Furnace reprise slag ring.
+func reprise_preview() -> Node3D:
+	return _reprise_preview if is_instance_valid(_reprise_preview) else null
+
+
+func _show_reprise_preview(turn: int) -> void:
+	_clear_reprise_preview()
+	if state != FIGHT or phase != 2 or not is_instance_valid(arena):
+		return
+	_reprise_preview = _bone_ring("preview_reprise_slag", _slag_band(turn), FightPhases.CUE_LEAD, FightPhases.CUE_LEAD)
+
+
+func _clear_reprise_preview() -> void:
+	if is_instance_valid(_reprise_preview):
+		_reprise_preview.queue_free()
+	_reprise_preview = null
+
+
 func _step_preview(delta: float) -> void:
-	if _preview == null:
-		return
-	if not is_instance_valid(_preview) or state != FIGHT or not _in_transition():
-		_clear_preview()
-		return
-	_preview.step(delta)
+	if _preview != null:
+		if not is_instance_valid(_preview) or state != FIGHT or not _in_transition():
+			_clear_preview()
+		else:
+			_preview.step(delta)
+	if _reprise_preview != null:
+		if not is_instance_valid(_reprise_preview) or state != FIGHT or phase != 2 \
+				or _reprise.is_empty() or not bool(_reprise.get("cued", false)):
+			_clear_reprise_preview()
+		else:
+			_reprise_preview.step(delta)
 
 
 func _clear_preview() -> void:
@@ -450,7 +503,7 @@ func _clear_preview() -> void:
 func jump_to_phase(next: int) -> void:
 	if not active():
 		return
-	if next > 1:
+	if next >= 1:
 		_posture.chunks = BossPosture.CHUNKS - (mini(next, 4) - 1)
 		hp = float(_posture.chunks)
 	if next > 3:
@@ -476,32 +529,48 @@ func _paced(normal: float) -> float:
 	return normal
 
 
-# The rest before the next charge: WARN_GAP while a combo is owed, else CHARGE_REST scaled.
+# The rest before the next charge: WARN_GAP while a combo is owed, else CHARGE_REST scaled
+# (slowed during a reel, ruling ed).
 func _rest_time() -> float:
 	if _combo_left > 0:
 		return ChallengeDials.WARN_GAP
 	_combo_left = -1
-	return ChallengeDials.period("brindle", Rules.CHARGE_REST, 3)
+	var rest := ChallengeDials.period("brindle", Rules.CHARGE_REST, 3)
+	if reeling():
+		return minf(rest * Rules.REEL_PERIOD_MULT, Rules.REEL_MAX_GAP)
+	return rest
 
 
 func _step_cranes(delta: float, ball: Vector3) -> void:
 	_move_ship_on_circle(delta)
-	if clock >= _next_attack and not reeling():
-		_commit_crane(_crane_turn, ball)
-		_crane_turn = 1 - _crane_turn
-		_next_attack = clock + _paced(ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1))
+	# Entering a reel clamps a pre-existing normal crane timer so a high period_mult dial cannot
+	# open a gap over REEL_MAX_GAP.
+	if reeling() and not _was_reeling and _reel_plant != "stop":
+		var base_period := ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1)
+		_next_attack = minf(_next_attack, clock + minf(base_period * Rules.REEL_PERIOD_MULT, Rules.REEL_MAX_GAP))
+	if clock >= _next_attack and not (reeling() and _reel_plant == "stop"):
+		var committed := _commit_crane(_crane_turn, ball)
+		if not committed:
+			committed = _commit_crane(1 - _crane_turn, ball)
+		if committed:
+			_crane_turn = 1 - _crane_turn
+			var base_period := ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1)
+			var cadence := minf(base_period * Rules.REEL_PERIOD_MULT, Rules.REEL_MAX_GAP) if reeling() else _paced(base_period)
+			_next_attack = clock + cadence
+		else:
+			_next_attack = clock + 0.25
 	for i in 2:
 		_step_crane(i, delta, ball)
 
 
 # The sector is centred on the ground under the crane's pivot and aimed at the ball's
 # bearing when it commits; it does not follow the ball after that.
-func _commit_crane(i: int, ball: Vector3) -> void:
+func _commit_crane(i: int, ball: Vector3) -> bool:
 	var c: Dictionary = _cranes[i]
 	if c.has("hazard") and is_instance_valid(c["hazard"]) and not c["hazard"].is_done():
-		return
+		return false
 	if c.get("held", 0) > 0:
-		return
+		return false
 	var pivot: Vector3 = ship.pivot(i)
 	var centre := Vector3(pivot.x, arena.ground(pivot), pivot.z)
 	var to_ball := Vector3(ball.x - centre.x, 0.0, ball.z - centre.z)
@@ -511,9 +580,11 @@ func _commit_crane(i: int, ball: Vector3) -> void:
 	h.commit_sector("crane_%d" % i, Hazard.Threat.Type.WAVE, centre, Rules.CRANE_BAND, bearing - sweep * Rules.CRANE_SPAN * 0.5,
 		bearing + sweep * Rules.CRANE_SPAN * 0.5, Rules.CRANE_REACH, ChallengeDials.tell("brindle", Rules.CRANE_WARN, Hazard.MIN_WARN), Rules.CRANE_SWEEP)
 	_add_hazard(h)
+	_last_commit_at = clock
 	ship.cue("crane_warn", h.get_instance_id())
 	_cranes[i] = {"hazard": h, "caught": false, "held": 0, "trail": [], "values": [], "dripped": 0, "drip": 0.0}
 	_publish("boss_attack_telegraphed", ["crane_sweep", h.warn_seconds])
+	return true
 
 
 func _step_crane(i: int, delta: float, ball: Vector3) -> void:
@@ -564,12 +635,18 @@ func _crane_catch(i: int, ball: Vector3, magnet_at: Vector3) -> void:
 	_tug(ball, magnet_at)
 	if ctx.run.mass < 1.0:
 		return
-	var amount := clampi(int(round(ctx.run.mass * Rules.STEAL_SHARE)), Rules.STEAL_MIN, Rules.STEAL_MAX)
+	var steal_share := Rules.REEL_STEAL_SHARE if reeling() else Rules.STEAL_SHARE
+	var steal_cap := Rules.REEL_STEAL_MAX if reeling() else Rules.STEAL_MAX
+	var amount := clampi(int(round(ctx.run.mass * steal_share)), Rules.STEAL_MIN, steal_cap)
 	var taken: int = ctx.run.lose_scrap(amount, ball, "crane")
 	if taken <= 0:
 		return
 	var h = c["hazard"]
 	var r := Vector2(ball.x - h.centre.x, ball.z - h.centre.z).length()
+	if reeling():
+		# While reeling, the magnet swings stolen scrap out toward the outer floor so camping
+		# under the hull sheds excess scrap armour unless the player chases the trail or shoots it.
+		r = clampf(maxf(r + 12.0, 30.0), 30.0, Arena.FLOOR_R - 4.0)
 	var start: float = atan2(ball.z - h.centre.z, ball.x - h.centre.x)
 	var sweep := signf(h.a_to - h.a_from)
 	var trail: Array = []
@@ -841,39 +918,110 @@ func _step_furnace(delta: float) -> void:
 		var move := minf(to_centre.length(), Rules.CIRCLE_SPEED * delta)
 		var at := here + to_centre.normalized() * move
 		ship.move_to(Vector3(at.x, arena.ground(at), at.z), ship.heading)
+	# Entering a reel clamps a long pending normal slag timer so no gap over 6 s opens, while
+	# honouring any reprise whose sound cue has already started.
+	if reeling() and not _was_reeling and _reel_plant != "stop":
+		if _reprise.is_empty() or not bool(_reprise.get("cued", false)):
+			_reprise = {}
+			_next_attack = minf(_next_attack, clock + Rules.REEL_SLAG_PERIOD)
 	_step_reprise()
-	if clock >= _next_attack and not _in_transition() and not reeling():
-		var slag_warn := _commit_slag(_slag_turn, false)
-		_slag_turn += 1
-		var gap := ChallengeDials.period("brindle", Rules.SLAG_GAP, 2)
-		if _follow_ups() > 0:
-			# The reprise fills the other ring the moment this one drains, and the next lead opens
-			# on that same ring, so leads alternate. It is the phase's follow-up: no combo rides on it.
-			var at := clock + slag_warn + Rules.SLAG_LIVE
-			_reprise = {"at": at, "cue_at": at - FightPhases.CUE_LEAD, "cued": false, "turn": _slag_turn}
+	if clock >= _next_attack and not _in_transition() and not (reeling() and _reel_plant == "stop"):
+		var ball: Vector3 = ctx.player.ball_position()
+		if reeling():
+			var slot := _pick_slag_slot(ball, _slag_turn)
+			_commit_slag(slot, false, Rules.REEL_SLAG_LIVE)
+			_slag_turn += 1
 			_combo_left = -1
-			_next_attack = at + FightPhases.CUED_WARN + Rules.SLAG_LIVE + gap
+			_next_attack = clock + Rules.REEL_SLAG_PERIOD
 		else:
-			_next_attack = clock + _paced(slag_warn + Rules.SLAG_LIVE + gap)
+			var slot := _slag_turn % 3
+			var lead_live := Rules.REEL_SLAG_LIVE if slot == 2 else Rules.SLAG_LIVE
+			var slag_warn := _commit_slag(slot, false, lead_live)
+			_slag_turn += 1
+			var gap := ChallengeDials.period("brindle", Rules.SLAG_GAP, 2)
+			if _follow_ups() > 0:
+				# The reprise fills the next ring in the rotation the moment this one drains.
+				var at := clock + slag_warn + lead_live
+				var reprise_slot := _slag_turn % 3
+				var reprise_live := Rules.REEL_SLAG_LIVE if reprise_slot == 2 else Rules.SLAG_LIVE
+				_reprise = {"at": at, "cue_at": at - FightPhases.CUE_LEAD, "cued": false, "turn": reprise_slot}
+				_combo_left = -1
+				_next_attack = at + FightPhases.CUED_WARN + reprise_live + gap
+			else:
+				_next_attack = clock + _paced(slag_warn + lead_live + gap)
 	# Drones wait for the ship to park, so a pad is never swept by the hull.
-	if parked and clock >= _next_lobber and not _in_transition() and not reeling():
-		_next_lobber = clock + Rules.LOBBER_PERIOD
+	if parked and clock >= _next_lobber and not _in_transition() and not (reeling() and _reel_plant == "stop"):
+		_next_lobber = clock + (Rules.LOBBER_PERIOD * Rules.REEL_PERIOD_MULT if reeling() else Rules.LOBBER_PERIOD)
 		_launch_lobber()
 
 
-# Commits slag ring `turn` (even turns ring A, odd ring B) and returns its warn. A cued ring
-# draws the short tell its ratchet cue paid for.
-func _commit_slag(turn: int, cued: bool) -> float:
-	var band: Vector2 = Arena.RING_A if turn % 2 == 0 else Arena.RING_B
-	var id := "slag_ring_a" if turn % 2 == 0 else "slag_ring_b"
+# Maps the ball's bowl radius onto the Furnace band that covers it: close vent (< 16 m),
+# Ring A (16..25.5 m) or Ring B (>= 25.5 m).
+func _ball_slag_slot(ball: Vector3) -> int:
+	var r: float = arena.radius_of(ball)
+	if r < Arena.RING_A.x:
+		return 2
+	if r < (Arena.RING_A.y + Arena.RING_B.x) * 0.5:
+		return 0
+	return 1
+
+
+# Reel slag rings target the band under the ball, stepping to an adjacent free band if that ring
+# is already active (turn 0 stays Arena.RING_A to match the FX-03 phase preview). Normal Furnace
+# leads rotate A, B and the close vent in _step_furnace.
+func _pick_slag_slot(ball: Vector3, turn: int) -> int:
+	if turn == 0:
+		return 0
+	var slot := _ball_slag_slot(ball)
+	for offset in 3:
+		var cand := (slot + offset) % 3
+		var id := _slag_id(cand)
+		var busy := false
+		for h in hazards:
+			if is_instance_valid(h) and not h.is_done() and h.attack_id == id:
+				busy = true
+				break
+		if not busy:
+			return cand
+	return slot
+
+
+func _slag_band(turn: int) -> Vector2:
+	match turn % 3:
+		0:
+			return Arena.RING_A
+		1:
+			return Arena.RING_B
+		_:
+			return Rules.FURNACE_CLOSE_BAND
+
+
+func _slag_id(turn: int) -> String:
+	match turn % 3:
+		0:
+			return "slag_ring_a"
+		1:
+			return "slag_ring_b"
+		_:
+			return "slag_ring_inner"
+
+
+# Commits slag ring `turn` (turn 0 ring A, turn 1 ring B, then rotating A, B and the close
+# furnace vent band around the hull) and returns its warn. A cued ring draws the short tell its
+# ratchet cue paid for.
+func _commit_slag(turn: int, cued: bool, live_override := -1.0) -> float:
+	var band := _slag_band(turn)
+	var id := _slag_id(turn)
 	var h = _new_hazard()
 	var slag_warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.SLAG_WARN, Hazard.MIN_WARN)
+	var live := live_override if live_override > 0.0 else Rules.SLAG_LIVE
 	if cued:
 		h.warn_floor = FightPhases.CUED_WARN
 		h.cued = true
-	h.commit_annulus(id, Hazard.Threat.Type.INSTANT, arena.global_position, band, Rules.SLAG_REACH, slag_warn, Rules.SLAG_LIVE)
+	h.commit_annulus(id, Hazard.Threat.Type.INSTANT, arena.global_position, band, Rules.SLAG_REACH, slag_warn, live)
 	h.excluded = func(point: Vector3) -> bool: return arena.is_quenched(point, clock)
 	_add_hazard(h)
+	_last_commit_at = clock
 	ship.cue("slag_warn", turn)
 	_publish("boss_attack_telegraphed", [id, h.warn_seconds])
 	return h.warn_seconds
@@ -890,17 +1038,23 @@ func _follow_ups() -> int:
 func _step_reprise() -> void:
 	if _reprise.is_empty():
 		return
-	# A reel drops a reprise whose cue has not sounded; a cued one keeps its cue's promise.
+	# A reel drops an uncued reprise (the reel's own slag cadence takes over, or the stop plant
+	# halts attacks); an already-cued reprise always keeps its cue's promise.
 	if reeling() and not _reprise["cued"]:
 		_reprise = {}
 		return
 	if not _reprise["cued"] and clock >= _reprise["cue_at"]:
 		_reprise["cued"] = true
-		_phases.cue("slag_ring_a" if int(_reprise["turn"]) % 2 == 0 else "slag_ring_b")
+		var reprise_turn := int(_reprise["turn"])
+		_phases.cue("slag_ring_a" if reprise_turn % 3 == 0 else ("slag_ring_b" if reprise_turn % 3 == 1 else "slag_ring_inner"))
+		_show_reprise_preview(reprise_turn)
 	if clock >= _reprise["at"]:
 		var turn: int = _reprise["turn"]
 		_reprise = {}
-		_commit_slag(turn, true)
+		_clear_reprise_preview()
+		_commit_slag(turn, true, Rules.REEL_SLAG_LIVE if reeling() or turn % 3 == 2 else -1.0)
+		if reeling() and _reel_plant != "stop":
+			_next_attack = minf(_next_attack, clock + Rules.REEL_SLAG_PERIOD)
 
 
 # Lobber drones drop off the deck onto a pad marked DRONE_WARN ahead, off the hull's side
@@ -963,7 +1117,16 @@ func _step_vents(ball: Vector3) -> void:
 		arena.quench(vent, clock)
 
 
+func _reel_sear(ball: Vector3, cause: String) -> void:
+	if not reeling() or not ctx.run.armor_mode or ctx.run.mass < 1.0:
+		return
+	var sear := clampi(int(round(ctx.run.mass * Rules.REEL_SEAR_SHARE)), 0, Rules.REEL_SEAR_MAX)
+	if sear > 0:
+		ctx.run.lose_scrap(sear, ball, cause)
+
+
 func _slag_hit(h, ball: Vector3) -> void:
+	_reel_sear(ball, "brindle_slag")
 	ctx.run.damage(ChallengeDials.damage("brindle", Rules.SLAG_DAMAGE, phase), "brindle_slag")
 	# A killing hit ends the run inside damage(), and flow tears the arena down before it returns.
 	if not ctx.flow.in_play():
@@ -973,7 +1136,9 @@ func _slag_hit(h, ball: Vector3) -> void:
 		return
 	var r: float = arena.radius_of(ball)
 	var out := Vector3(ball.x - arena.global_position.x, 0.0, ball.z - arena.global_position.z).normalized()
-	var toward := out if r >= (h.r_in + h.r_out) * 0.5 else -out
+	# The close furnace vent ring wraps the hull, so bouncing outward always clears it instead of
+	# knocking the ball back into the hull and re-trapping it on the ring.
+	var toward := out if h.attack_id == "slag_ring_inner" or r >= (h.r_in + h.r_out) * 0.5 else -out
 	var across: Vector3 = Vector3.UP.cross(out)
 	var way := toward
 	for candidate in [toward, -toward, across, -across]:
@@ -1023,11 +1188,18 @@ func _step_charges(delta: float, ball: Vector3) -> void:
 			if _charge["state"] == CHARGE_HOOK:
 				# The hook turn starts on its cue: the hull digs in and swings its bow round after
 				# the ball, so the short tell that follows has only the last of the turn left.
+				if _reel_plant != "no_brace" and not ship.bracing():
+					ship.set_hook_brace(true, int(_charge.get("token", 0)))
 				_turn_ship(_aim_at(ball), Rules.CHARGE_TURN_RATE, delta)
+			if _charge["state"] == CHARGE_STUN:
+				_last_commit_at = clock
 			_charge["timer"] -= delta
+			if _charge["state"] == CHARGE_REST and reeling() and _reel_plant != "stop" and not _in_transition() \
+					and _last_commit_at >= 0.0 and clock + float(_charge["timer"]) - _last_commit_at > Rules.REEL_MAX_GAP:
+				_charge["timer"] = maxf(0.0, _last_commit_at + Rules.REEL_MAX_GAP - clock)
 			if _charge["timer"] <= 0.0:
 				if _charge["state"] == CHARGE_REST:
-					if _in_transition() or reeling():
+					if _in_transition() or (reeling() and _reel_plant == "stop"):
 						return
 					_commit_charge()
 				elif _charge["state"] == CHARGE_HOOK:
@@ -1122,6 +1294,8 @@ func _commit_charge(cued := false) -> void:
 	# Only the hull's nose hurts once the lane is live, and it starts at the ship.
 	h.lane_front = half + CHARGE_REACH
 	_add_hazard(h)
+	_last_commit_at = clock
+	ship.set_hook_brace(false)
 	# The hull keeps its heading at the commit: _brace_turn owns the turn onto this one.
 	ship.cue("charge_warn", h.get_instance_id())
 	_charge = {"state": CHARGE_BRACE, "hazard": h, "from": from, "heading": heading, "length": length,
@@ -1148,23 +1322,32 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 	ship.move_to(Vector3(at.x, arena.ground(at), at.z), _charge["heading"])
 	var front: float = _charge["travelled"] + half
 	h.lane_front = front + CHARGE_REACH
-	if h.contains(ball) and clock >= _grace.get(h.get_instance_id(), -1.0):
+	if h.contains(ball) and clock >= _grace.get(h.get_instance_id(), -1.0) \
+			and (not h.cued or h.age >= h.warn_seconds + 0.025):
 		var along: float = h.lane_along(ball)
 		if along >= front_before - 1.0 and along <= front + CHARGE_REACH:
 			_charge_hit(h, ball)
 			if not ctx.flow.in_play():
 				return
+	var will_hook: bool = not _charge["into_wall"] and not _charge.get("cued", false) \
+		and _follow_ups() > 0 and not (reeling() and _reel_plant == "stop")
+	var rem_s: float = maxf(0.0, (float(_charge["length"]) - float(_charge["travelled"])) / Rules.CHARGE_SPEED)
+	if will_hook and rem_s <= Rules.HOOK_BRACE_LEAD and _reel_plant != "no_brace":
+		ship.set_hook_brace(true, h.get_instance_id())
 	if _charge["travelled"] >= _charge["length"]:
 		h.finish()
 		if _charge["into_wall"]:
 			_stun(ChallengeDials.punish("brindle", Rules.WALL_STUN))
 			_discover(CodexEntries.WALL_BAIT, ship.global_position)
-		elif not _charge.get("cued", false) and _follow_ups() > 0 and not reeling():
+		elif will_hook:
 			_note_missed_charge()
 			# The hook turn: the cue sounds as the hull digs in, the lane draws CUE_LEAD later.
 			_phases.cue("charge")
-			_charge = {"state": CHARGE_HOOK, "timer": FightPhases.CUE_LEAD}
+			if _reel_plant != "no_brace":
+				ship.set_hook_brace(true, h.get_instance_id())
+			_charge = {"state": CHARGE_HOOK, "timer": FightPhases.CUE_LEAD, "token": h.get_instance_id()}
 		else:
+			ship.set_hook_brace(false)
 			_note_missed_charge()
 			_charge = {"state": CHARGE_RECOVER, "timer": Rules.CHARGE_RECOVER}
 
@@ -1172,6 +1355,7 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 # A charge hit shoves the ball sideways out of the lane and up, never along it, so the
 # hull can never carry the ball into the wall.
 func _charge_hit(h, ball: Vector3) -> void:
+	_reel_sear(ball, "brindle_charge")
 	ctx.run.damage(ChallengeDials.damage("brindle", Rules.CHARGE_DAMAGE, phase), "brindle_charge")
 	if not ctx.flow.in_play():
 		return
@@ -1205,9 +1389,12 @@ func _step_ghost() -> void:
 
 func _stun(seconds: float) -> void:
 	_combo_left = -1  # a punish window ends any combo
+	if is_instance_valid(ship):
+		ship.set_hook_brace(false)
 	if _charge.has("hazard") and is_instance_valid(_charge["hazard"]):
 		_charge["hazard"].finish()
 	_charge = {"state": CHARGE_STUN, "timer": seconds}
+	_last_commit_at = clock
 	stuns += 1
 	ship.cue("wall_stun", stuns)
 
@@ -1461,6 +1648,9 @@ func _add_hazard(h) -> void:
 # the cranes, so a hold left at the phase end would never be paid back.
 func _cancel_hazards() -> void:
 	_clear_preview()
+	_clear_reprise_preview()
+	if is_instance_valid(ship):
+		ship.set_hook_brace(false)
 	var mark = eject_mark()
 	if mark != null:
 		mark.queue_free()
@@ -1494,7 +1684,8 @@ func _step_hazards(delta: float, ball: Vector3) -> void:
 		if not is_instance_valid(h):
 			continue
 		h.step(delta)
-		if h.shape == Hazard.Shape.ANNULUS and h.is_live():
+		if h.shape == Hazard.Shape.ANNULUS and h.is_live() \
+				and (not h.cued or h.age >= h.warn_seconds + 0.025):
 			if h.contains(ball) and clock >= _grace.get(h.get_instance_id(), -1.0):
 				_slag_hit(h, ball)
 				# A killing ring ended the run and exit_arena cleared the list: keep it cleared.
