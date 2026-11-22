@@ -503,7 +503,7 @@ func _clear_preview() -> void:
 func jump_to_phase(next: int) -> void:
 	if not active():
 		return
-	if next > 1:
+	if next >= 1:
 		_posture.chunks = BossPosture.CHUNKS - (mini(next, 4) - 1)
 		hp = float(_posture.chunks)
 	if next > 3:

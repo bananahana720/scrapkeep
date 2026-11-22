@@ -1,6 +1,7 @@
 {
   "brindle-presses": {
     "spec": "BrindleReel.tla",
+    "coverage": "references/brindlereel-coverage.md",
     "real": [
       {
         "cfg": "brindlereel-today.cfg",

@@ -421,7 +421,7 @@ func _run() -> void:
 			% [brace["visible_s"], ChallengeDials.TELL_FLOOR, brace["before_cue"], brace["held_through_cue"],
 				brace["cleared"], brace["timing_ok"]])
 	_report("W1-106 hook brace starts the charge_warn clip after the lead charge",
-		not brace["model_loaded"] or brace["brace_clip_played"],
+		brace["model_loaded"] and brace["brace_clip_played"],
 		"model_loaded %s, charge_warn started on brace %s, clips %s"
 			% [brace["model_loaded"], brace["brace_clip_played"], str(brace["brace_clips"])])
 	var brace_plant := _run_hook_brace_probe("no_brace")
@@ -431,15 +431,30 @@ func _run() -> void:
 
 	# Phase 1 reel entry clamps a pre-existing slow crane timer (e.g. high brindle.period_mult)
 	# so no gap over 6 s opens when the reel begins.
-	ChallengeDials.set_overrides({"brindle.period_mult": 4.0})
+	ChallengeDials.set_overrides({"brindle.period_mult": 8.0})
 	_boss.jump_to_phase(1)
-	_advance(Rules.CRANE_PERIOD * 0.5)
-	await _break_chunk(hull)
+	var pre_commits := _commits.size()
+	for _i in int(ceil(3.0 / DT)):
+		_above()
+		_boss.advance(DT)
+		if _commits.size() > pre_commits:
+			break
+	var open_before_break: bool = not _boss.reeling() and _commits.size() > pre_commits
+	await _stagger_by_rams(hull)
+	await _hit(hull, "ram", RAM_FORCE)
+	_advance(BossPosture.STAGGER_SECONDS + 0.1)
+	await _stagger_by_rams(hull)
+	var open_before_shatter: bool = not _boss.reeling()
+	var pending_before_shatter: float = _boss._next_attack - _boss.clock
+	await _hit(hull, "ram", RAM_FORCE)
 	var p1_clamped := _watch_reel(8.0)
 	ChallengeDials.reset()
 	_report("phase 1 reel entry clamps a high-period_mult crane timer within 6 s",
-		p1_clamped["commits"] >= 1 and p1_clamped["worst_gap"] <= MAX_REEL_GAP_S and _boss.reeling(),
-		"%d commits over %.1f s, worst gap %.2f s (<= %.1f s)" % [p1_clamped["commits"], p1_clamped["span"], p1_clamped["worst_gap"], MAX_REEL_GAP_S])
+		open_before_break and open_before_shatter and pending_before_shatter > MAX_REEL_GAP_S
+			and p1_clamped["commits"] >= 1 and p1_clamped["worst_gap"] <= MAX_REEL_GAP_S and _boss.reeling(),
+		"open_before_break %s, open_before_shatter %s, pending_before_shatter %.2f s (> %.1f s), %d commits over %.1f s, worst gap %.2f s (<= %.1f s)"
+			% [open_before_break, open_before_shatter, pending_before_shatter, MAX_REEL_GAP_S,
+				p1_clamped["commits"], p1_clamped["span"], p1_clamped["worst_gap"], MAX_REEL_GAP_S])
 
 	print("brindle_reel_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
