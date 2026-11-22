@@ -1,4 +1,11 @@
-import { existsSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { WORD_RULES, lintWords } from "./sketch-lint-words.mjs";
@@ -19,27 +26,40 @@ export function formatFinding(item) {
 }
 
 function codeLines(text) {
-  return text.split("\n").map((raw, index) => ({ raw, number: index + 1, code: raw.trim() }))
+  return text
+    .split("\n")
+    .map((raw, index) => ({ raw, number: index + 1, code: raw.trim() }))
     .filter((line) => !line.code.startsWith("#") && !line.code.startsWith("//"));
 }
 
-const wallClock = /Time\.get_ticks_(?:msec|usec)|Time\.get_unix_time_from_system|Time\.get_datetime_\w+|OS\.delay_(?:msec|usec)|\bcreate_timer\b/;
+const wallClock =
+  /Time\.get_ticks_(?:msec|usec)|Time\.get_unix_time_from_system|Time\.get_datetime_\w+|OS\.delay_(?:msec|usec)|\bcreate_timer\b/;
 
 // L1: a test that reads real time. Tests step frames or use the sim clock.
 export function lintL1(file, text) {
   return codeLines(text)
     .filter((line) => wallClock.test(line.raw))
-    .map((line) => finding("L1", file, line.number, `wall-clock read (${line.raw.match(wallClock)[0]}); step frames or use the sim clock`));
+    .map((line) =>
+      finding(
+        "L1",
+        file,
+        line.number,
+        `wall-clock read (${line.raw.match(wallClock)[0]}); step frames or use the sim clock`,
+      ),
+    );
 }
 
 const writeOpen = /FileAccess\.open\([^)]*\b(?:WRITE|READ_WRITE|WRITE_READ)\b/;
-const storeCall = /\.store_(?:string|line|buffer|var|8|16|32|64|float|double|half|real|csv_line|pascal_string)\(/;
+const storeCall =
+  /\.store_(?:string|line|buffer|var|8|16|32|64|float|double|half|real|csv_line|pascal_string)\(/;
 
 // L2: a save written outside SafeStore. The caller exempts src/core/safe_store.gd.
 export function lintL2(file, text) {
   return codeLines(text)
     .filter((line) => writeOpen.test(line.raw) || storeCall.test(line.raw))
-    .map((line) => finding("L2", file, line.number, "raw file write; saves go through SafeStore.write_atomic"));
+    .map((line) =>
+      finding("L2", file, line.number, "raw file write; saves go through SafeStore.write_atomic"),
+    );
 }
 
 const toolsLoad = /res:\/\/tools\//;
@@ -51,24 +71,37 @@ const toolsLoad = /res:\/\/tools\//;
 // tools/ path in src/, or the same line in another file or without the exists guard, still fails.
 const selfPlayLine = /^const SELF_PLAY := "res:\/\/tools\/self_play\.gd"$/;
 export function lintL7(file, text) {
-  const guarded = /(^|\/)src\/game\.gd$/.test(file) && text.includes("ResourceLoader.exists(script_path)");
+  const guarded =
+    /(^|\/)src\/game\.gd$/.test(file) && text.includes("ResourceLoader.exists(script_path)");
   return codeLines(text)
     .filter((line) => toolsLoad.test(line.raw) && !(guarded && selfPlayLine.test(line.code)))
-    .map((line) => finding("L7", file, line.number, "game code names a res://tools/ path, which the release pack leaves out; move the shared code under src/"));
+    .map((line) =>
+      finding(
+        "L7",
+        file,
+        line.number,
+        "game code names a res://tools/ path, which the release pack leaves out; move the shared code under src/",
+      ),
+    );
 }
 
 export function parseTuning(text) {
   const table = text.match(/const FLAGS\s*:?=\s*\{([\s\S]*?)\n\}/);
-  const flags = table ? [...table[1].matchAll(/^\s*"([a-z][a-z0-9-]*)"\s*:/gm)].map((match) => match[1]) : [];
+  const flags = table
+    ? [...table[1].matchAll(/^\s*"([a-z][a-z0-9-]*)"\s*:/gm)].map((match) => match[1])
+    : [];
   const keys = [...text.matchAll(/\{"key":\s*"([^"]+)"/g)].map((match) => match[1]);
   if (flags.length === 0 || keys.length === 0) {
-    throw new Error(`sketch-lint: parsed ${flags.length} FLAGS names and ${keys.length} row keys from tuning.gd; the lint cannot check flags without both`);
+    throw new Error(
+      `sketch-lint: parsed ${flags.length} FLAGS names and ${keys.length} row keys from tuning.gd; the lint cannot check flags without both`,
+    );
   }
   return { flags: new Set(flags), keys: new Set(keys) };
 }
 
 const flagLiteral = /--([a-z][a-z0-9-]*)=/g;
-const parsedFlag = /(?:begins_with|trim_prefix|startsWith|startswith|replace)\(\s*["']--([a-z][a-z0-9-]*)=/g;
+const parsedFlag =
+  /(?:begins_with|trim_prefix|startsWith|startswith|replace)\(\s*["']--([a-z][a-z0-9-]*)=/g;
 const tuningCall = /\.(?:option|set_option|f|set_value)\(\s*"([^"]+)"/g;
 
 // L3: files is a list of { path, text } from tests/, tools/ and the scripts that hand
@@ -85,16 +118,31 @@ export function lintL3(files, tuning) {
   }
   const findings = [];
   for (const file of files) {
-    const owned = (name) => parsed.has(name) || files.some((other) => other.text.includes(`"${name}"`));
+    const owned = (name) =>
+      parsed.has(name) || files.some((other) => other.text.includes(`"${name}"`));
     for (const line of codeLines(file.text)) {
       for (const match of line.raw.matchAll(flagLiteral)) {
         if (!tuning.flags.has(match[1]) && !owned(match[1])) {
-          findings.push(finding("L3", file.path, line.number, `launch flag --${match[1]}= is not a FLAGS name in tuning.gd`));
+          findings.push(
+            finding(
+              "L3",
+              file.path,
+              line.number,
+              `launch flag --${match[1]}= is not a FLAGS name in tuning.gd`,
+            ),
+          );
         }
       }
       for (const match of line.raw.matchAll(tuningCall)) {
         if (!tuning.keys.has(match[1])) {
-          findings.push(finding("L3", file.path, line.number, `tuning key "${match[1]}" is not a row key in tuning.gd`));
+          findings.push(
+            finding(
+              "L3",
+              file.path,
+              line.number,
+              `tuning key "${match[1]}" is not a row key in tuning.gd`,
+            ),
+          );
         }
       }
     }
@@ -112,9 +160,24 @@ export function lintL4(entries, testsPath = "sketches/core-loop/tests") {
       const known = entry.dir
         ? TEST_FOLDERS.has(name)
         : /^\w+\.gd(?:\.uid)?$/.test(name) || name === "QUARANTINE.tsv";
-      if (!known) findings.push(finding("L4", `${testsPath}/${entry.rel}`, 1, "stray entry under tests/; allowed: NAME.gd, NAME.gd.uid, QUARANTINE.tsv, unit, support, doubles, fixtures, trees, workshop"));
-    } else if (parts[0] === "unit" && parts.length === 2 && !entry.dir && !/^\w+_case\.gd(?:\.uid)?$/.test(name)) {
-      findings.push(finding("L4", `${testsPath}/${entry.rel}`, 1, "file under tests/unit/ is not NAME_case.gd"));
+      if (!known)
+        findings.push(
+          finding(
+            "L4",
+            `${testsPath}/${entry.rel}`,
+            1,
+            "stray entry under tests/; allowed: NAME.gd, NAME.gd.uid, QUARANTINE.tsv, unit, support, doubles, fixtures, trees, workshop",
+          ),
+        );
+    } else if (
+      parts[0] === "unit" &&
+      parts.length === 2 &&
+      !entry.dir &&
+      !/^\w+_case\.gd(?:\.uid)?$/.test(name)
+    ) {
+      findings.push(
+        finding("L4", `${testsPath}/${entry.rel}`, 1, "file under tests/unit/ is not NAME_case.gd"),
+      );
     }
   }
   return findings;
@@ -122,24 +185,35 @@ export function lintL4(entries, testsPath = "sketches/core-loop/tests") {
 
 // L5: text is QUARANTINE.tsv, tests the base names of the existing top-level tests.
 export function lintL5(text, tests, file = "sketches/core-loop/tests/QUARANTINE.tsv") {
-  const lines = text.split("\n").map((line) => line.replace(/\r$/, "")).filter((line) => line.trim() !== "");
-  if (lines[0] !== QUARANTINE_HEADER) return [finding("L5", file, 1, `header must be: ${QUARANTINE_HEADER.replaceAll("\t", " TAB ")}`)];
+  const lines = text
+    .split("\n")
+    .map((line) => line.replace(/\r$/, ""))
+    .filter((line) => line.trim() !== "");
+  if (lines[0] !== QUARANTINE_HEADER)
+    return [
+      finding("L5", file, 1, `header must be: ${QUARANTINE_HEADER.replaceAll("\t", " TAB ")}`),
+    ];
   const entries = lines.slice(1);
   const findings = [];
-  if (entries.length > MAX_QUARANTINE) findings.push(finding("L5", file, 1, `${entries.length} entries; at most ${MAX_QUARANTINE}`));
+  if (entries.length > MAX_QUARANTINE)
+    findings.push(finding("L5", file, 1, `${entries.length} entries; at most ${MAX_QUARANTINE}`));
   const seen = new Set();
   entries.forEach((entry, index) => {
     const number = index + 2;
     const cells = entry.split("\t");
     if (cells.length !== 5 || cells.some((cell) => cell.trim() === "")) {
-      findings.push(finding("L5", file, number, "entry needs test, owner, reason, added and deadline"));
+      findings.push(
+        finding("L5", file, number, "entry needs test, owner, reason, added and deadline"),
+      );
       return;
     }
     const [test, , , added] = cells;
-    if (!tests.has(test)) findings.push(finding("L5", file, number, `${test} is not an existing top-level test`));
+    if (!tests.has(test))
+      findings.push(finding("L5", file, number, `${test} is not an existing top-level test`));
     if (seen.has(test)) findings.push(finding("L5", file, number, `${test} is listed twice`));
     seen.add(test);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(added)) findings.push(finding("L5", file, number, `added date "${added}" is not YYYY-MM-DD`));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(added))
+      findings.push(finding("L5", file, number, `added date "${added}" is not YYYY-MM-DD`));
   });
   return findings;
 }
@@ -150,19 +224,57 @@ export function lintL5(text, tests, file = "sketches/core-loop/tests/QUARANTINE.
 // finding, so a new light in a listed file is classified too. open: a known stage-freed owner left
 // for its own card; it stays quiet but main prints it on every run.
 export const LIGHT_OWNERS = {
-  "src/presentation/hero_assets.gd": { sites: 2, owner: "MossBay barge, made once per session by world.gd (workshop warm fills)" },
-  "src/presentation/graphics_preset.gd": { sites: 1, owner: "sibling of the world sun, session-lived" },
-  "src/presentation/world_look.gd": { sites: 3, owner: "the Dig's LampPool under its stage geometry root, kept across stage changes; Night Shift's NightLights under the stage roots' parent, session-lived and darkened when the day returns" },
-  "src/presentation/title_stage.gd": { sites: 3, owner: "presentation's title stage, session-lived" },
-  "src/ui/class_preview.gd": { sites: 2, owner: "class select screen, directional, closes before any stage" },
-  "src/ui/build_read.gd": { sites: 1, owner: "pause menu's build read, its own-world SubViewport under the session-lived pause menu" },
-  "src/ui/ending_sequence.gd": { sites: 1, owner: "ending screen, directional, after the last stage" },
-  "src/world/flood.gd": { sites: 1, owner: "world.gd Flood, session-lived and reconfigured per stage" },
-  "src/world/map_gorge.gd": { sites: 1, owner: "landmark under its stage geometry root, kept across stage changes" },
-  "src/world/map_reach.gd": { sites: 1, owner: "landmark under its stage geometry root, kept across stage changes" },
+  "src/presentation/hero_assets.gd": {
+    sites: 2,
+    owner: "MossBay barge, made once per session by world.gd (workshop warm fills)",
+  },
+  "src/presentation/graphics_preset.gd": {
+    sites: 1,
+    owner: "sibling of the world sun, session-lived",
+  },
+  "src/presentation/world_look.gd": {
+    sites: 3,
+    owner:
+      "the Dig's LampPool under its stage geometry root, kept across stage changes; Night Shift's NightLights under the stage roots' parent, session-lived and darkened when the day returns",
+  },
+  "src/presentation/title_stage.gd": {
+    sites: 3,
+    owner: "presentation's title stage, session-lived",
+  },
+  "src/ui/class_preview.gd": {
+    sites: 2,
+    owner: "class select screen, directional, closes before any stage",
+  },
+  "src/ui/build_read.gd": {
+    sites: 1,
+    owner: "pause menu's build read, its own-world SubViewport under the session-lived pause menu",
+  },
+  "src/ui/ending_sequence.gd": {
+    sites: 1,
+    owner: "ending screen, directional, after the last stage",
+  },
+  "src/world/flood.gd": {
+    sites: 1,
+    owner: "world.gd Flood, session-lived and reconfigured per stage",
+  },
+  "src/world/map_gorge.gd": {
+    sites: 1,
+    owner: "landmark under its stage geometry root, kept across stage changes",
+  },
+  "src/world/map_reach.gd": {
+    sites: 1,
+    owner: "landmark under its stage geometry root, kept across stage changes",
+  },
   "src/world/terrain.gd": { sites: 1, owner: "the world sun, session-lived" },
-  "src/world/camp_hub.gd": { sites: 1, owner: "the camp hub's root under the game node, session-lived and hidden outside the walk" },
-  "src/presentation/arena_waking_dress.gd": { sites: 4, owner: "WakingLightPool under ctx.root, session-lived; lent to the arena and floors, darkened and returned before exit or drop" },
+  "src/world/camp_hub.gd": {
+    sites: 1,
+    owner: "the camp hub's root under the game node, session-lived and hidden outside the walk",
+  },
+  "src/presentation/arena_waking_dress.gd": {
+    sites: 4,
+    owner:
+      "WakingLightPool under ctx.root, session-lived; lent to the arena and floors, darkened and returned before exit or drop",
+  },
 };
 
 const lightNew = /\b(?:Omni|Spot|Directional)Light3D\.new\(/;
@@ -173,10 +285,24 @@ export function lintL6(file, rel, text, owners = LIGHT_OWNERS) {
   if (sites.length === 0) return [];
   const listed = owners[rel];
   if (listed === undefined) {
-    return sites.map((line) => finding("L6", file, line.number, "runtime Light3D in a file LIGHT_OWNERS does not list; a light freed with a stage-freed node crashes Forward+, so glow on the node's own mesh or list an owner that outlives the stage"));
+    return sites.map((line) =>
+      finding(
+        "L6",
+        file,
+        line.number,
+        "runtime Light3D in a file LIGHT_OWNERS does not list; a light freed with a stage-freed node crashes Forward+, so glow on the node's own mesh or list an owner that outlives the stage",
+      ),
+    );
   }
   if (sites.length !== listed.sites) {
-    return sites.map((line) => finding("L6", file, line.number, `${sites.length} runtime Light3D sites, LIGHT_OWNERS lists ${listed.sites}; classify the new light's owner`));
+    return sites.map((line) =>
+      finding(
+        "L6",
+        file,
+        line.number,
+        `${sites.length} runtime Light3D sites, LIGHT_OWNERS lists ${listed.sites}; classify the new light's owner`,
+      ),
+    );
   }
   return [];
 }
@@ -185,7 +311,14 @@ export function lintL6(file, rel, text, owners = LIGHT_OWNERS) {
 export function lintL6Owners(counts, relative, owners = LIGHT_OWNERS) {
   return Object.keys(owners)
     .filter((rel) => !counts.has(rel))
-    .map((rel) => finding("L6", `${relative}/${rel}`, 1, "LIGHT_OWNERS lists a file with no runtime Light3D: remove the entry"));
+    .map((rel) =>
+      finding(
+        "L6",
+        `${relative}/${rel}`,
+        1,
+        "LIGHT_OWNERS lists a file with no runtime Light3D: remove the entry",
+      ),
+    );
 }
 
 // L8: drawing code that asks where the ball is at the physics tick. Under src/presentation and src/ui
@@ -199,10 +332,22 @@ export function lintL6Owners(counts, relative, owners = LIGHT_OWNERS) {
 // only a has_method("ball_position") guard does not. Asking the ball's body for its place
 // (body().global_position) is the same read by another door and counts too.
 export const SIM_READS = {
-  "src/presentation/audio.gd": { sites: 1, why: "the landing-sound guard repeats the director's own clearance check, so it asks about the same ball the director does" },
-  "src/presentation/hero_assets.gd": { sites: 1, why: "the Warden's lens asks its Sight, which answers with the last seen place while the ball is cloaked and has no drawn place" },
-  "src/presentation/reward_ceremony.gd": { sites: 1, why: "calm() decides whether a ceremony may stop the world: a rule read against threats and enemies at the tick" },
-  "src/ui/workshop.gd": { sites: 1, why: "pulling up to Moss opens the counter: a rule about where the ball is, not a picture of it" },
+  "src/presentation/audio.gd": {
+    sites: 1,
+    why: "the landing-sound guard repeats the director's own clearance check, so it asks about the same ball the director does",
+  },
+  "src/presentation/hero_assets.gd": {
+    sites: 1,
+    why: "the Warden's lens asks its Sight, which answers with the last seen place while the ball is cloaked and has no drawn place",
+  },
+  "src/presentation/reward_ceremony.gd": {
+    sites: 1,
+    why: "calm() decides whether a ceremony may stop the world: a rule read against threats and enemies at the tick",
+  },
+  "src/ui/workshop.gd": {
+    sites: 1,
+    why: "pulling up to Moss opens the counter: a rule about where the ball is, not a picture of it",
+  },
 };
 
 const tickGuard = /has_method\(\s*["']ball_position["']\s*\)/g;
@@ -211,13 +356,24 @@ const tickRead = /\bball_position\b|\b(?:active_)?body\(\)\s*\.\s*global_(?:posi
 // L8: rel is the path inside the sketch, file the repo path for the finding.
 export function lintL8(file, rel, text, allowed = SIM_READS) {
   if (!/^src\/(?:presentation|ui)\//.test(rel)) return [];
-  const reads = codeLines(text).flatMap((line) => (line.raw.replace(tickGuard, "").match(tickRead) ?? []).map(() => line));
+  const reads = codeLines(text).flatMap((line) =>
+    (line.raw.replace(tickGuard, "").match(tickRead) ?? []).map(() => line),
+  );
   const listed = allowed[rel]?.sites ?? 0;
   if (reads.length === listed) return [];
-  if (reads.length === 0) return [finding("L8", file, 1, "SIM_READS lists a file with no tick read of the ball left: remove the entry")];
-  const message = listed === 0
-    ? "drawing code reads the ball's place at the physics tick (ball_position(), or the body's global_position); read shown_position(), where the ball is drawn this frame"
-    : `${reads.length} tick reads of the ball, SIM_READS lists ${listed}; a new read takes shown_position()`;
+  if (reads.length === 0)
+    return [
+      finding(
+        "L8",
+        file,
+        1,
+        "SIM_READS lists a file with no tick read of the ball left: remove the entry",
+      ),
+    ];
+  const message =
+    listed === 0
+      ? "drawing code reads the ball's place at the physics tick (ball_position(), or the body's global_position); read shown_position(), where the ball is drawn this frame"
+      : `${reads.length} tick reads of the ball, SIM_READS lists ${listed}; a new read takes shown_position()`;
   return reads.map((line) => finding("L8", file, line.number, message));
 }
 
@@ -226,13 +382,21 @@ export function lintL8(file, rel, text, allowed = SIM_READS) {
 // run and nothing fails loudly: a rule measured from it never fires and a picture placed from it
 // sits at the origin. A rule asks ball_position(), a picture asks shown_position(). A line that
 // guards with has_method (a caller that may also be handed a plain Node3D) passes.
-const ownPlace = /(?<![\w.])(?:\w+\s*\.\s*)*_?player\s*\.\s*(?:global_position|global_transform|position)\b/;
+const ownPlace =
+  /(?<![\w.])(?:\w+\s*\.\s*)*_?player\s*\.\s*(?:global_position|global_transform|position)\b/;
 const placeGuard = /has_method\(\s*["'](?:ball_position|shown_position)["']\s*\)/;
 
 export function lintL9(file, text) {
   return codeLines(text)
     .filter((line) => ownPlace.test(line.raw) && !placeGuard.test(line.raw))
-    .map((line) => finding("L9", file, line.number, "the player node never leaves the origin: ask ball_position() for a rule or shown_position() for a picture, not the node's own place"));
+    .map((line) =>
+      finding(
+        "L9",
+        file,
+        line.number,
+        "the player node never leaves the origin: ask ball_position() for a rule or shown_position() for a picture, not the node's own place",
+      ),
+    );
 }
 
 // L10: game code that moves the ball's body by hand. PlayerBall.reset_to(point, velocity) places the
@@ -244,20 +408,35 @@ export function lintL9(file, text) {
 // HAND_MOVED lists the writes that are not a placement: the file, how many, and why. A count that
 // drifts is a finding, and so is an entry with no write left.
 export const HAND_MOVED = {
-  "src/combat/kest_kit.gd": { sites: 1, why: "an ultimate's flight leg ends exactly on its mark and the next leg leaves from there with the kit, the chain and the speed intact, which a reset would clear" },
+  "src/combat/kest_kit.gd": {
+    sites: 1,
+    why: "an ultimate's flight leg ends exactly on its mark and the next leg leaves from there with the kit, the chain and the speed intact, which a reset would clear",
+  },
 };
 
-const handMove = /\b(?:(?:active_|_ball_)?body\(\)|_rigid)\s*\.\s*(?:(?:global_)?(?:position|transform)\b(?:\s*\.\s*\w+)*\s*[-+*\/]?=(?!=)|(?:set_(?:global_)?(?:position|transform)|global_translate|translate)\s*\()/g;
+const handMove =
+  /\b(?:(?:active_|_ball_)?body\(\)|_rigid)\s*\.\s*(?:(?:global_)?(?:position|transform)\b(?:\s*\.\s*\w+)*\s*[-+*\/]?=(?!=)|(?:set_(?:global_)?(?:position|transform)|global_translate|translate)\s*\()/g;
 
 // L10: rel is the path inside the sketch, file the repo path for the finding.
 export function lintL10(file, rel, text, allowed = HAND_MOVED) {
-  const writes = codeLines(text).flatMap((line) => (line.raw.match(handMove) ?? []).map(() => line));
+  const writes = codeLines(text).flatMap((line) =>
+    (line.raw.match(handMove) ?? []).map(() => line),
+  );
   const listed = allowed[rel]?.sites ?? 0;
   if (writes.length === listed) return [];
-  if (writes.length === 0) return [finding("L10", file, 1, "HAND_MOVED lists a file that no longer moves the ball's body by hand: remove the entry")];
-  const message = listed === 0
-    ? "the ball's body is moved by hand: PlayerBall.reset_to(point, velocity) places it in one call and it reads at the new spot at once"
-    : `${writes.length} writes to the ball's body, HAND_MOVED lists ${listed}; a placement takes reset_to(point, velocity)`;
+  if (writes.length === 0)
+    return [
+      finding(
+        "L10",
+        file,
+        1,
+        "HAND_MOVED lists a file that no longer moves the ball's body by hand: remove the entry",
+      ),
+    ];
+  const message =
+    listed === 0
+      ? "the ball's body is moved by hand: PlayerBall.reset_to(point, velocity) places it in one call and it reads at the new spot at once"
+      : `${writes.length} writes to the ball's body, HAND_MOVED lists ${listed}; a placement takes reset_to(point, velocity)`;
   return writes.map((line) => finding("L10", file, line.number, message));
 }
 
@@ -287,7 +466,14 @@ export function applyBaseline(findings, baseline, exists) {
   for (const rule of BASELINED_RULES) {
     for (const file of baseline[rule] ?? []) {
       if (offending.has(`${rule} ${file}`)) continue;
-      kept.push(finding("BASELINE", file, 1, `${rule} no longer offends${exists(file) ? "" : " (file is gone)"}: remove from baseline`));
+      kept.push(
+        finding(
+          "BASELINE",
+          file,
+          1,
+          `${rule} no longer offends${exists(file) ? "" : " (file is gone)"}: remove from baseline`,
+        ),
+      );
     }
   }
   for (const rule of WORD_RULES) {
@@ -296,13 +482,34 @@ export function applyBaseline(findings, baseline, exists) {
       if (!key.startsWith(`${rule} `)) continue;
       const allowed = listed[items[0].path] ?? 0;
       if (items.length > allowed) {
-        kept.push(...items.map((item) => ({ ...item, message: `${item.message}${allowed > 0 ? ` (${items.length} in this file, baseline ${allowed})` : ""}` })));
+        kept.push(
+          ...items.map((item) => ({
+            ...item,
+            message: `${item.message}${allowed > 0 ? ` (${items.length} in this file, baseline ${allowed})` : ""}`,
+          })),
+        );
       }
     }
     for (const [file, allowed] of Object.entries(listed)) {
       const now = words.get(`${rule} ${file}`)?.length ?? 0;
-      if (now === 0) kept.push(finding("BASELINE", file, 1, `${rule} no longer offends${exists(file) ? "" : " (file is gone)"}: remove from baseline`));
-      else if (now < allowed) kept.push(finding("BASELINE", file, 1, `${rule} fell to ${now} from ${allowed}: lower the baseline to ${now}`));
+      if (now === 0)
+        kept.push(
+          finding(
+            "BASELINE",
+            file,
+            1,
+            `${rule} no longer offends${exists(file) ? "" : " (file is gone)"}: remove from baseline`,
+          ),
+        );
+      else if (now < allowed)
+        kept.push(
+          finding(
+            "BASELINE",
+            file,
+            1,
+            `${rule} fell to ${now} from ${allowed}: lower the baseline to ${now}`,
+          ),
+        );
     }
   }
   return kept;
@@ -311,12 +518,17 @@ export function applyBaseline(findings, baseline, exists) {
 export function baselineFrom(findings) {
   const baseline = {};
   for (const rule of BASELINED_RULES) {
-    baseline[rule] = [...new Set(findings.filter((item) => item.rule === rule).map((item) => item.path))].sort();
+    baseline[rule] = [
+      ...new Set(findings.filter((item) => item.rule === rule).map((item) => item.path)),
+    ].sort();
   }
   for (const rule of WORD_RULES) {
     const counts = {};
-    for (const item of findings.filter((entry) => entry.rule === rule)) counts[item.path] = (counts[item.path] ?? 0) + 1;
-    baseline[rule] = Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
+    for (const item of findings.filter((entry) => entry.rule === rule))
+      counts[item.path] = (counts[item.path] ?? 0) + 1;
+    baseline[rule] = Object.fromEntries(
+      Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)),
+    );
   }
   return baseline;
 }
@@ -335,7 +547,11 @@ function walk(directory, base = directory) {
   if (!existsSync(directory)) return entries;
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const full = path.join(directory, entry.name);
-    entries.push({ rel: path.relative(base, full).split(path.sep).join("/"), dir: entry.isDirectory(), full });
+    entries.push({
+      rel: path.relative(base, full).split(path.sep).join("/"),
+      dir: entry.isDirectory(),
+      full,
+    });
     if (entry.isDirectory()) entries.push(...walk(full, base));
   }
   return entries;
@@ -344,19 +560,25 @@ function walk(directory, base = directory) {
 function sources(directory, extensions) {
   return walk(directory)
     .filter((entry) => !entry.dir && extensions.has(path.extname(entry.rel)))
-    .map((entry) => ({ path: path.relative(root, entry.full).split(path.sep).join("/"), text: readFileSync(entry.full, "utf8") }));
+    .map((entry) => ({
+      path: path.relative(root, entry.full).split(path.sep).join("/"),
+      text: readFileSync(entry.full, "utf8"),
+    }));
 }
 
 export function lintSketch(sketch) {
   const directory = path.join(root, "sketches", sketch);
   const relative = `sketches/${sketch}`;
-  const tuning = parseTuning(readFileSync(path.join(directory, "src", "movement", "tuning.gd"), "utf8"));
+  const tuning = parseTuning(
+    readFileSync(path.join(directory, "src", "movement", "tuning.gd"), "utf8"),
+  );
   const findings = [];
   const testFiles = sources(path.join(directory, "tests"), new Set([".gd"]));
   for (const file of testFiles) findings.push(...lintL1(file.path, file.text));
   const lit = new Set();
   for (const file of sources(path.join(directory, "src"), new Set([".gd"]))) {
-    if (file.path !== `${relative}/src/core/safe_store.gd`) findings.push(...lintL2(file.path, file.text));
+    if (file.path !== `${relative}/src/core/safe_store.gd`)
+      findings.push(...lintL2(file.path, file.text));
     findings.push(...lintL7(file.path, file.text));
     // LIGHT_OWNERS describes core-loop; another sketch has no owner table yet.
     if (sketch !== "core-loop") continue;
@@ -383,22 +605,33 @@ export function lintSketch(sketch) {
   const flagFiles = [
     ...testFiles,
     ...sources(path.join(directory, "tools"), SOURCE_EXTENSIONS),
-    ...sources(path.join(root, "scripts"), SOURCE_EXTENSIONS).filter((file) => !lintSelf.has(file.path) && launchesGame.test(file.text)),
+    ...sources(path.join(root, "scripts"), SOURCE_EXTENSIONS).filter(
+      (file) => !lintSelf.has(file.path) && launchesGame.test(file.text),
+    ),
   ];
   findings.push(...lintL3(flagFiles, tuning));
   const tests = walk(path.join(directory, "tests"));
   findings.push(...lintL4(tests, `${relative}/tests`));
   const quarantine = path.join(directory, "tests", "QUARANTINE.tsv");
   if (existsSync(quarantine)) {
-    const names = new Set(tests.filter((entry) => !entry.dir && /^[^/]+\.gd$/.test(entry.rel)).map((entry) => entry.rel.replace(/\.gd$/, "")));
-    findings.push(...lintL5(readFileSync(quarantine, "utf8"), names, `${relative}/tests/QUARANTINE.tsv`));
+    const names = new Set(
+      tests
+        .filter((entry) => !entry.dir && /^[^/]+\.gd$/.test(entry.rel))
+        .map((entry) => entry.rel.replace(/\.gd$/, "")),
+    );
+    findings.push(
+      ...lintL5(readFileSync(quarantine, "utf8"), names, `${relative}/tests/QUARANTINE.tsv`),
+    );
   }
   return findings;
 }
 
 function main() {
   const options = parseLintArgs(process.argv.slice(2));
-  if (!options.sketch || !existsSync(path.join(root, "sketches", options.sketch, "project.godot"))) {
+  if (
+    !options.sketch ||
+    !existsSync(path.join(root, "sketches", options.sketch, "project.godot"))
+  ) {
     console.error("sketch-lint: pass --sketch NAME for a folder under sketches/");
     process.exit(2);
   }
@@ -407,12 +640,20 @@ function main() {
   if (options.writeBaseline) {
     const baseline = baselineFrom(raw);
     writeFileSync(BASELINE_FILE, JSON.stringify(baseline, null, 2) + "\n");
-    for (const rule of BASELINED_RULES) console.log(`${rule} ${baseline[rule].length} baseline paths`);
-    for (const rule of WORD_RULES) console.log(`${rule} ${Object.values(baseline[rule]).reduce((a, b) => a + b, 0)} baseline offences in ${Object.keys(baseline[rule]).length} files`);
+    for (const rule of BASELINED_RULES)
+      console.log(`${rule} ${baseline[rule].length} baseline paths`);
+    for (const rule of WORD_RULES)
+      console.log(
+        `${rule} ${Object.values(baseline[rule]).reduce((a, b) => a + b, 0)} baseline offences in ${Object.keys(baseline[rule]).length} files`,
+      );
     return;
   }
   const baseline = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, "utf8")) : {};
-  const findings = applyBaseline(raw, baseline, (file) => existsSync(path.join(root, file)) && statSync(path.join(root, file)).isFile());
+  const findings = applyBaseline(
+    raw,
+    baseline,
+    (file) => existsSync(path.join(root, file)) && statSync(path.join(root, file)).isFile(),
+  );
   for (const item of findings) console.log(formatFinding(item));
   if (options.sketch === "core-loop") {
     for (const [rel, entry] of Object.entries(LIGHT_OWNERS).filter(([, entry]) => entry.open)) {
@@ -420,13 +661,22 @@ function main() {
     }
   }
   if (raw.words) {
-    for (const entry of raw.words.read) console.log(`words read ${String(entry.count).padStart(4)} ${entry.source}`);
-    const byRule = WORD_RULES.map((rule) => `${rule}=${raw.filter((item) => item.rule === rule).length}`).join(" ");
-    console.log(`words: ${raw.words.total} player strings read; offences before baseline ${byRule}`);
+    for (const entry of raw.words.read)
+      console.log(`words read ${String(entry.count).padStart(4)} ${entry.source}`);
+    const byRule = WORD_RULES.map(
+      (rule) => `${rule}=${raw.filter((item) => item.rule === rule).length}`,
+    ).join(" ");
+    console.log(
+      `words: ${raw.words.total} player strings read; offences before baseline ${byRule}`,
+    );
   }
-  const wordBaseline = WORD_RULES.map((rule) => `${rule}=${Object.values(baseline[rule] ?? {}).reduce((a, b) => a + b, 0)}`).join(" ");
+  const wordBaseline = WORD_RULES.map(
+    (rule) => `${rule}=${Object.values(baseline[rule] ?? {}).reduce((a, b) => a + b, 0)}`,
+  ).join(" ");
   const baselined = `${BASELINED_RULES.map((rule) => `${rule}=${(baseline[rule] ?? []).length}`).join(" ")} ${wordBaseline}`;
-  console.log(`sketch-lint ${findings.length === 0 ? "pass" : "fail"}: ${findings.length} findings, baseline entries ${baselined}, ${Date.now() - started}ms`);
+  console.log(
+    `sketch-lint ${findings.length === 0 ? "pass" : "fail"}: ${findings.length} findings, baseline entries ${baselined}, ${Date.now() - started}ms`,
+  );
   process.exit(findings.length === 0 ? 0 : 1);
 }
 
