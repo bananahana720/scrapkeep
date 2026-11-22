@@ -29,6 +29,7 @@ extends Node3D
 
 const Shade := preload("res://src/presentation/site_markers.gdshader")
 const Arena := preload("res://src/boss/arena.gd")
+const Palette := preload("res://src/core/palette.gd")
 const Yard := preload("res://src/presentation/arena_bowl_yard.gd")
 
 const CREW_SMOKE := Color("ece6d8")
@@ -48,6 +49,18 @@ const KINDS := {
 	"furnace": {"tint": WORKS_SMOKE, "height": 170.0, "width": 80.0, "alpha": 1.8, "foot": 0.3, "crown": 0.95, "rim_dark": 0.7,
 		"sway": 0.06, "sway_hz": 0.05, "rise": 0.035, "grain": Vector2(2.0, 3.5), "puffs": 0.0, "stutter": 0.0,
 		"glow": Color(FURNACE_GLOW, 0.85), "far": true, "near": Vector2(60.0, 140.0)},
+}
+# What each site kind shows once finished (design-v3/WAYFINDING.md section 4, ruling ek).
+# Every finished mark is quiet (no glow, no motion, no text label) and never mint (Palette.ARC /
+# Palette.live() is strictly "press now" / "act here"). Furnace never flips.
+const VISITED_SPECS := {
+	"cache": {"flips": true, "mark": "flag", "color": Palette.SAND, "tie": Palette.COPPER, "glow": 0.0, "still": true},
+	"crew": {"flips": true, "mark": "chalk_x", "color": Palette.SAND, "tie": Palette.SAND, "glow": 0.0, "still": true},
+	"cage": {"flips": true, "mark": "scarf_post", "color": Palette.SAND, "tie": Palette.COPPER, "glow": 0.0, "still": true},
+	"rogue": {"flips": true, "mark": "wreck", "color": Palette.CHARCOAL, "tie": Palette.CHARCOAL, "glow": 0.0, "still": true},
+	"shortcut": {"flips": true, "mark": "scorched_frame", "color": Palette.CHARCOAL, "tie": Palette.CHARCOAL, "glow": 0.0, "still": true},
+	"cable": {"flips": true, "mark": "severed", "color": Palette.CHARCOAL, "tie": Palette.CHARCOAL, "glow": 0.0, "still": true},
+	"furnace": {"flips": false, "mark": "", "color": WORKS_SMOKE, "tie": WORKS_SMOKE, "glow": 0.0, "still": true},
 }
 # The boss whose bowl stands a furnace column, by Worlds' boss kind.
 const FURNACE_BOSS := "brindle"
@@ -76,6 +89,9 @@ var _clock := 0.0
 var _last_eye := Vector3.INF
 # The furnace column's foot for the stage it was read on: [stage, foot], foot null for none. Read once a stage.
 var _furnace: Array = [0, null]
+# key -> {key, kind, at, mark, color, tie, glow, still}: finished sites that flipped this attempt.
+# Instance state only (zero static var leaks); cleared on stage entry, retry, stage clear and reset_visited().
+var _visited := {}
 static var _materials := {}
 static var _meshes := {}
 
@@ -88,17 +104,76 @@ func setup(ctx_ref) -> void:
 		# A new stage reads its sites on the next frame; leaving one takes every plume down at once.
 		events.stage_entered.connect(_on_stage_entered)
 		events.stage_content_cleared.connect(_on_cleared)
+		if events.has_signal("activity_done"):
+			events.activity_done.connect(_on_activity_done)
+		if events.has_signal("rescue_completed"):
+			events.rescue_completed.connect(_on_rescue_completed)
 
 
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	sync([])
+	reset_visited()
 	_furnace = [0, null]
 	_clock = 0.0
 
 
 func _on_cleared(_reason: String) -> void:
 	sync([])
+	reset_visited()
 	_clock = READ_EVERY
+
+
+func _on_activity_done(id: String, at: Vector3) -> void:
+	if id == "cracked_cache":
+		mark_visited("cache:%d:%d" % [roundi(at.x * 10.0), roundi(at.z * 10.0)], "cache", at)
+	elif id == "enemy_camp":
+		mark_visited("crew:%d:%d" % [roundi(at.x * 10.0), roundi(at.z * 10.0)], "crew", at)
+
+
+func _on_rescue_completed(quest_id: String) -> void:
+	var key := "cage:" + quest_id
+	var at: Vector3 = views[key].get_meta("at") if views.has(key) else Vector3.ZERO
+	mark_visited(key, "cage", at)
+
+
+# Read-only spec for one site kind's finished state, or {} for an unknown kind.
+static func visited_spec(kind: String) -> Dictionary:
+	return VISITED_SPECS.get(kind, {}).duplicate()
+
+
+# Flips site `key` of `kind` from unvisited to visited once; returns true only on the first flip.
+# Idempotent on repeat calls, and false for unknown kinds, empty keys, or kinds that never flip (furnace).
+func mark_visited(key: String, kind: String, at: Vector3 = Vector3.ZERO) -> bool:
+	if key == "" or _visited.has(key) or not VISITED_SPECS.has(kind):
+		return false
+	var spec: Dictionary = VISITED_SPECS[kind]
+	if not bool(spec["flips"]):
+		return false
+	_visited[key] = {
+		"key": key, "kind": kind, "at": at, "mark": String(spec["mark"]),
+		"color": spec["color"], "tie": spec["tie"], "glow": float(spec["glow"]),
+		"still": bool(spec["still"]),
+	}
+	return true
+
+
+func is_visited(key: String) -> bool:
+	return _visited.has(key)
+
+
+func visited_state(key: String) -> Dictionary:
+	return _visited.get(key, {}).duplicate()
+
+
+func visited_sites() -> Array:
+	var out := []
+	for row: Dictionary in _visited.values():
+		out.append(row.duplicate())
+	return out
+
+
+func reset_visited() -> void:
+	_visited.clear()
 
 
 # The share of a plume's alpha it shows for an eye distance_m away (horizontal): the one rule for distance. A far kind
@@ -179,6 +254,8 @@ func sync(list: Array, fade := false) -> void:
 		if not wanted.has(key):
 			var view: MeshInstance3D = views[key]
 			views.erase(key)
+			if fade:
+				mark_visited(key, String(view.get_meta("kind")), view.get_meta("at"))
 			if fade and view.visible:
 				view.set_meta("leave", 1.0)
 				leaving.append(view)

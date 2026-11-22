@@ -156,6 +156,7 @@ func _gate() -> void:
 	_t.check("flow.gate is the world's locks", locks != null and locks == game.world.locks)
 	_t.eq("stage 1 is park_dam", String(game.ctx.terrain.map().title), "park_dam")
 	_t.check("gate shut on entry", locks.locked())
+	_t.eq("zero pips lit on entry", locks.pips_lit(), 0)
 	_t.check("the clamp keeps quiet before the Warden wakes", not game.flow.objective_text().contains("clamp"), game.flow.objective_text())
 	var warden = game.flow.warden
 	_t.check("park Warden spec carries the gate", is_instance_valid(warden) and warden.spec.get("posture_gate") is Callable)
@@ -198,6 +199,7 @@ func _gate() -> void:
 	for i in 2:
 		await physics_frame
 	_t.eq("a broken pack lights one pip", locks.cleared, 1)
+	_t.eq("pips_lit reports 1", locks.pips_lit(), 1)
 	_t.eq("the pip plays", _count("warden_gate_pip"), 1)
 	var collar: Node3D = locks.get_node_or_null("WardenGateCollar")
 	_t.check("the collar shows on the Warden", collar != null and collar.global_position.distance_to(warden.global_position) < 0.1)
@@ -222,6 +224,7 @@ func _gate() -> void:
 		for i in 2:
 			await physics_frame
 	_t.check("the wanted packs open the clamp", not locks.locked(), "cleared %d of %d" % [locks.cleared, locks.packs_wanted()])
+	_t.eq("open clamp reports all pips lit", locks.pips_lit(), locks.packs_wanted())
 	_t.eq("the release plays once", _count("warden_gate_opened"), 1)
 	_t.eq("the open clamp hands the plate back to the dam Warden's own row", game.hud.objective_reading()["id"], "ride_sheet")
 	await process_frame
@@ -522,6 +525,7 @@ func _off() -> void:
 	var game = await _game()
 	var locks = game.flow.gate
 	_t.check("off: no clamp", not locks.locked() and not locks.has_gate())
+	_t.eq("off: zero pips lit", locks.pips_lit(), 0)
 	_t.eq("off: no lock", locks.lock_state, "")
 	_t.check("off: the start pick comes at the drop", not game.flow.start_pick_waits() and not game.flow.start_pick_at_yard())
 	_t.check("off: the Warden spec has no gate", not game.flow.warden.spec.has("posture_gate"))
