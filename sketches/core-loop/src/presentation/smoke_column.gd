@@ -114,6 +114,9 @@ static func column_mesh() -> ArrayMesh:
 
 
 func _process(_delta: float) -> void:
+	# A parked stage hides its root; nothing to place until the flume shows again.
+	if not is_visible_in_tree():
+		return
 	var viewport := get_viewport()
 	var camera := viewport.get_camera_3d() if viewport != null else null
 	if camera != null:
