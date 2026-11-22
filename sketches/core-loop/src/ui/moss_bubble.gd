@@ -169,6 +169,7 @@ func _on_run_started(_class_id: String) -> void:
 	if mood == "call":
 		_clear_line()
 	_hello_due = 0
+	_took_interact = -1000
 	_zones_played.clear()
 	_intros_played.clear()
 
@@ -368,12 +369,22 @@ func _exchange_input(event: InputEvent) -> void:
 # time the ball reads the key. A call-in, a bark or a beat never reads the key.
 func takes_interact() -> bool:
 	return _intro_showing or (not _exchange.is_empty() and not _exchange_held) \
-			or Engine.get_physics_frames() - _took_interact <= 2
+			or Engine.get_physics_frames() - _took_interact <= 1
 
 
 # Ends a zone-entry exchange early, as the fire and hook keys do. Public so a test can clear it.
 func dismiss_exchange() -> void:
 	_end_exchange()
+
+
+# Moss lets go of all he has to say: the hello that is up, held or waiting its turn, an intro up
+# or queued, a call waiting, and the line on screen. None of it comes back this stage.
+func stand_down() -> void:
+	_hello_due = 0
+	_call = {}
+	_end_exchange(false)
+	_end_intro()
+	hush()
 
 
 # --- Call-ins ---------------------------------------------------------------------------------
