@@ -41,6 +41,10 @@ const REEL_SLAG_PERIOD := 3.0
 const REEL_SLAG_LIVE := 3.0
 const REEL_STEAL_SHARE := 0.45
 const REEL_STEAL_MAX := 700
+# While reeling, molten slag and desperate Scuttle charges sear away this share of loose scrap
+# armour (capped) before the hit lands, so overfed late-World-1 builds cannot shrug off 6+ hits.
+const REEL_SEAR_SHARE := 0.45
+const REEL_SEAR_MAX := 650
 # No attack lands before this, so the entry and the hull readout are free to read.
 const INTRO_SECONDS := 3.0
 

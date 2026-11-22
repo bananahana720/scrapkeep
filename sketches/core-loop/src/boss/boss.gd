@@ -1111,7 +1111,16 @@ func _step_vents(ball: Vector3) -> void:
 		arena.quench(vent, clock)
 
 
+func _reel_sear(ball: Vector3, cause: String) -> void:
+	if not reeling() or not ctx.run.armor_mode or ctx.run.mass < 1.0:
+		return
+	var sear := clampi(int(round(ctx.run.mass * Rules.REEL_SEAR_SHARE)), 0, Rules.REEL_SEAR_MAX)
+	if sear > 0:
+		ctx.run.lose_scrap(sear, ball, cause)
+
+
 func _slag_hit(h, ball: Vector3) -> void:
+	_reel_sear(ball, "brindle_slag")
 	ctx.run.damage(ChallengeDials.damage("brindle", Rules.SLAG_DAMAGE, phase), "brindle_slag")
 	# A killing hit ends the run inside damage(), and flow tears the arena down before it returns.
 	if not ctx.flow.in_play():
@@ -1340,6 +1349,7 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 # A charge hit shoves the ball sideways out of the lane and up, never along it, so the
 # hull can never carry the ball into the wall.
 func _charge_hit(h, ball: Vector3) -> void:
+	_reel_sear(ball, "brindle_charge")
 	ctx.run.damage(ChallengeDials.damage("brindle", Rules.CHARGE_DAMAGE, phase), "brindle_charge")
 	if not ctx.flow.in_play():
 		return
