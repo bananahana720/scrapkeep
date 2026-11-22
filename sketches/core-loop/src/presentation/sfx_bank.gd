@@ -93,7 +93,9 @@ const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue",
 	# The park hazards' own warnings, each family's falling tone and the ground's grind: they took over the
 	# threat whistle and tick, so they pull the bass down as those do.
 	"flood_falling_pure", "fleet_falling_pure", "boiler_falling_pure", "lightning_falling_pure", "ancient_falling_pure",
-	"rock_grind_dust_hiss"]
+	"rock_grind_dust_hiss",
+	# Wave 46 C2/C3: Works sluice valve warning took over the shared whistle and stays in the danger lane.
+	"sluice_valve_warning"]
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb). The combat
 # feedback percussion (feedback_set.py) has no key, so it is not here.
 const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "part_get", "core_socket", "found_chime", "gate_through",
@@ -129,6 +131,8 @@ const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_r
 	# --- P-C Tally keyed sounds ---
 	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
 	# --- end Tally ---
+	# Wave 46 C2/C3/C4 pitched cues: Foreman's Kindness chime, Works sluice valve warning, Shift Boss quick-sync horn.
+	"kindness_chime", "sluice_valve_warning", "quick_sync_horn",
 ]
 # --- P-C Kest sounds ---
 const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "raid_kest_tick",
@@ -312,6 +316,10 @@ const TRIM_DB := {
 	"ballast_brace_tell": -4.0, "ballast_brace_slam": -2.0, "gap_net_charge_tell": -6.0, "gap_net_charge_live": -4.0,
 	"ring_out_fall": -8.0,
 	"stinger_world": -5.0, "stinger_world_down5": -5.0, "stinger_world_up5": -5.0,
+	# Wave 46 C2/C3/C4 own sounds: Foreman's Kindness sterile chime, Works sluice valve warning/open,
+	# Shift Boss quick-sync horn snap, and downed-machine shift-over spinning-tag sigh.
+	"kindness_chime": -6.0, "sluice_valve_warning": -8.0, "sluice_valve_open": -3.0,
+	"quick_sync_horn": -5.0, "shift_over_sigh": -5.0,
 }
 # The Warden's break phrase (LEGIBILITY section 4): four notes that climb with the guard,
 # one per quarter, then the same notes together when it staggers. Variant 0 is wired in;
@@ -3507,7 +3515,7 @@ static func _world1_own(id: String) -> PackedFloat32Array:
 
 const MOTIF_CUES := ["motif_accumulate", "motif_line", "motif_stinger"]
 const LANDINGS := ["flood_drop", "fleet_anvil_brass_drop", "lightning_strike", "rockfall_boom", "crater_crump_sub_boom",
-	"steam_whistle_percussion_drop", "ancient_family_drop"]
+	"steam_whistle_percussion_drop", "ancient_family_drop", "sluice_valve_open"]
 const LANDING_S := 0.8
 # The generic motif cues, heard only with no class in context: a plain D, A, D on the mallet.
 const NEUTRAL_MOTIF := {"cells": [[0, 62, 1], [1, 69, 1], [2, 74, 2]], "voice": "mallet"}
@@ -3674,6 +3682,38 @@ static func _world1_recipe(id: String) -> PackedFloat32Array:
 			# The arc slam rings: D3 and A3 on the mallet, the octave over them.
 			return _mix([[_cut(_n("mallet", 50), 0.45, 1200), 0, 0.9], [_cut(_n("mallet", 57), 0.45, 1200), Synth.seconds(0.03), 0.8],
 				[_cut(_n("mallet", 62), 0.35), Synth.seconds(0.06), 0.35]])
+		"kindness_chime":
+			# Foreman's Kindness: clinical pure-sine chime on the grid with flat shoulders, no bend, D5-A5-D6.
+			var step_s := float(Harmony.STEP) / float(Harmony.RATE)
+			return _mix([[_letter(PURE, 74, step_s * 0.7, 0.0), 0, 0.85],
+				[_letter(PURE, 81, step_s * 0.7, 0.0), Synth.seconds(step_s), 0.9],
+				[_letter(PURE, 86, step_s * 1.4, 0.0), Synth.seconds(step_s * 2.0), 0.75]])
+		"sluice_valve_warning":
+			# Works sluice valve warning: brass valve clicks, pressurized hiss, and a taut falling tone Ab5-Eb5.
+			return _mix([[_noise(0.025, 3200.0, 1800.0, 110.0, 0.002), 0, 0.55],
+				[_noise(0.025, 3600.0, 2000.0, 110.0, 0.002), Synth.seconds(0.08), 0.55],
+				[_noise(0.7, 1600.0, 3200.0, 2.2, 0.08), Synth.seconds(0.04), 0.35],
+				[_pure_fall(0.72, 80, 75, 1.9, 6.0, 0.18), Synth.seconds(0.06), 1.0]])
+		"sluice_valve_open":
+			# Works sluice valve open: iron unlatch clank, low hydraulic thud, and surging water release.
+			return _mix([[_fm(0.09, 340.0, 2.7, 3.0, 28.0), 0, 0.75],
+				[_tone(0.28, 95.0, 40.0, "sine", 9.5), 0, 0.95],
+				[_noise(0.75, 2600.0, 450.0, 3.8, 0.015), Synth.seconds(0.02), 0.85],
+				[_noise(0.45, 500.0, 1600.0, 5.0, 0.04), Synth.seconds(0.08), 0.45]], true)
+		"quick_sync_horn":
+			# Shift Boss "Quick sync." horn snap: crisp twin-horn brass punch D4-A4-D5 with relay click.
+			return _mix([[_noise(0.02, 2800.0, 1400.0, 120.0, 0.002), 0, 0.45],
+				[_cut(_n("brass", 62), 0.14, 1200), 0, 0.85],
+				[_cut(_n("brass", 69), 0.14, 1200), Synth.seconds(0.06), 0.9],
+				[_cut(_n("brass", 74), 0.24, 1600), Synth.seconds(0.12), 0.95]])
+		"shift_over_sigh":
+			# Downed Foreman "shift_over" sigh: slowing brass tag ticks over a releasing steam exhale.
+			return _mix([[_noise(0.68, 3600.0, 650.0, 3.2, 0.04), 0, 0.75],
+				[_pure_fall(0.58, 72, 60, 2.8), Synth.seconds(0.02), 0.55],
+				[_fm(0.04, 1480.0, 2.3, 1.5, 45.0), Synth.seconds(0.03), 0.55],
+				[_fm(0.045, 1340.0, 2.3, 1.5, 42.0), Synth.seconds(0.13), 0.5],
+				[_fm(0.055, 1180.0, 2.3, 1.5, 36.0), Synth.seconds(0.26), 0.42],
+				[_fm(0.07, 1020.0, 2.3, 1.5, 30.0), Synth.seconds(0.43), 0.35]])
 	return PackedFloat32Array()
 
 

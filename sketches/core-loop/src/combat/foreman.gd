@@ -358,6 +358,9 @@ func _snap_formation() -> void:
 		return
 	syncs += 1
 	synced.emit(joined)
+	var events = _events()
+	if events != null:
+		events.world_fact.emit("quick_sync", global_position)
 
 
 func _wipe() -> void:
@@ -380,6 +383,12 @@ func _in_pack() -> bool:
 func _combat():
 	var fleet = spec.get("fleet")
 	return fleet.combat if fleet != null and is_instance_valid(fleet) else null
+
+
+func _events():
+	var fleet = spec.get("fleet")
+	var fleet_ctx = fleet.get("ctx") if fleet != null and is_instance_valid(fleet) else null
+	return fleet_ctx.events if fleet_ctx != null else null
 
 
 func _show_signal(level: float) -> void:
@@ -431,6 +440,9 @@ func _die() -> void:
 		var fleet = spec.get("fleet")
 		if fleet != null and is_instance_valid(fleet):
 			fleet.discover("shift_over", global_position)
+		var events = _events()
+		if events != null:
+			events.world_fact.emit("shift_over", global_position)
 	for member in members:
 		AttackBudget.clock_out(member, CLOCK_OUT)
 		member.cancel_rally()

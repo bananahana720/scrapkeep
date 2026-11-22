@@ -1261,7 +1261,7 @@ const WORLD_ROWS := {
 	"overtime_offered": {"group": "event", "color": Palette.BRASS, "shape": "ring", "sound": "overtime_offer", "hud": "", "objective": "", "priority": 1},
 	"overtime_rung": {"group": "event", "color": Palette.BRASS, "shape": "burst", "sound": "overtime_ring", "hud": "", "objective": "", "priority": 2},
 	"overtime_paid": {"group": "event", "color": Palette.BRASS, "shape": "star", "sound": "overtime_pay", "hud": "", "objective": "", "priority": 2},
-	"sluice_warning": {"group": "event", "color": Palette.HAZARD, "shape": "arrow", "sound": "threat_whistle", "sound_next": "arena_wave_whistle", "hud": "", "objective": "", "priority": 2},
+	"sluice_warning": {"group": "event", "color": Palette.HAZARD, "shape": "arrow", "sound": "threat_whistle", "sound_next": "sluice_valve_warning", "hud": "", "objective": "", "priority": 2},
 	# Called Shot (src/build/called_shot.gd, loops.md Spec 3): the window opens on a pip (no hazard
 	# colour or threat sound: a call is the player's, LEGIBILITY section 1), the call inks with a
 	# stamp that climbs (call_ink), a met call rings the gate's release, a miss drops dry (call_drop).
@@ -1269,7 +1269,11 @@ const WORLD_ROWS := {
 	"shot_called": {"group": "event", "color": Palette.BRASS, "shape": "square", "sound": "clank", "sound_next": "call_ink", "hud": "", "objective": "", "priority": 2},
 	"call_met": {"group": "event", "color": Palette.BRASS, "shape": "star", "sound": "found_chime", "sound_next": "warden_gate_release", "hud": "", "objective": "", "priority": 2},
 	"call_missed": {"group": "event", "color": Palette.CHARCOAL, "shape": "square", "sound": "clank", "sound_next": "call_drop", "hud": "", "objective": "", "priority": 1},
-	"sluice_open": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "slam_boom", "sound_next": "arena_lock_slam", "hud": "", "objective": "", "priority": 2},
+	"sluice_open": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "slam_boom", "sound_next": "sluice_valve_open", "hud": "", "objective": "", "priority": 2},
+	# Wave 46 C2/C3/C4: Foreman's Kindness sterile chime, Shift Boss quick-sync horn snap, and downed-machine shift-over sigh.
+	"kindness_offered": {"group": "event", "color": Palette.KINDNESS, "shape": "ring", "sound": "kindness_chime", "hud": "", "objective": "", "priority": 1},
+	"quick_sync": {"group": "event", "color": Palette.BRASS, "shape": "ring", "sound": "quick_sync_horn", "hud": "", "objective": "", "priority": 2},
+	"shift_over": {"group": "event", "color": Palette.AMBER, "shape": "burst", "sound": "shift_over_sigh", "hud": "", "objective": "", "priority": 2},
 }
 
 

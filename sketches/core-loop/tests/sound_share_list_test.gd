@@ -57,8 +57,6 @@ const SHARED := {
 	"shop_bell": {"count": 2, "why": "the shop bell for a buy and for a charge"},
 	"bench_clank": {"count": 2, "why": "the bench: a reroll and a sale"},
 	"rarity_bell": {"count": 2, "why": "a rare reward and a payoff: both the rarity bell"},
-	"arena_lock_slam": {"count": 2, "why": "a gate slamming: the arena locking and the sluice opening"},
-	"arena_wave_whistle": {"count": 2, "why": "a crew arriving: an arena wave and the sluice warning; both danger cues"},
 	"warden_gate_pip": {"count": 2, "why": "a pip at the Warden gate: the pip and the call window"},
 	"warden_gate_release": {"count": 2, "why": "the Warden gate letting go: the gate opened and a call met"},
 }
