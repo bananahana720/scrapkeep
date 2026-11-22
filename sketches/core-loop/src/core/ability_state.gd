@@ -7,6 +7,8 @@ extends RefCounted
 
 const Bindings := preload("res://src/core/bindings.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
+const Palette := preload("res://src/core/palette.gd")
+const BuffLedger := preload("res://src/core/buff_ledger.gd")
 
 const WEAPON := "weapon"
 const MOVEMENT := "movement"
@@ -324,11 +326,18 @@ var _cast_done := UNSTARTED
 var _swap_dropped := ""
 var jam_left := 0.0
 var jams := 0
+var _buffs = null
+var _running_buff_id := ""
 
 
 func _init() -> void:
 	for name in SLOTS:
 		_slots[name] = Slot.new()
+
+
+func bind_buffs(ledger) -> void:
+	_buffs = ledger
+	_running_buff_id = ""
 
 
 # Fills the five slots and the ultimate from a class row. Charges start full; a stage entry
@@ -505,6 +514,7 @@ func refill() -> void:
 	jam_left = 0.0
 	running = ""
 	running_left = 0.0
+	_clear_running_buff()
 	_requests = []
 	_sprint_cancel = false
 	for name in SLOTS:
@@ -529,6 +539,8 @@ func set_cooldown_scale(name: String, scale: float) -> void:
 
 
 func tick(delta: float) -> void:
+	if _buffs != null:
+		_buffs.step(delta)
 	_resolve(delta)
 	_tick_cast(delta)
 	jam_left = maxf(0.0, jam_left - delta)
@@ -607,6 +619,7 @@ func _resolve(delta: float) -> void:
 		if (_slots[name] as Slot).cancels_sprint:
 			_sprint_cancel = true
 			sprint_cancels += 1
+		_post_running_buff()
 		return
 	if running != "":
 		running_left -= delta
@@ -614,6 +627,34 @@ func _resolve(delta: float) -> void:
 			running = ""
 			running_left = 0.0
 			state_changes += 1
+			_clear_running_buff()
+
+
+func _post_running_buff() -> void:
+	if _buffs == null:
+		return
+	var s: Slot = _slots.get(running)
+	if s == null or running_left <= RUN_EPSILON:
+		_clear_running_buff()
+		return
+	var buff_id := "ability_" + s.id
+	if _running_buff_id != "" and _running_buff_id != buff_id:
+		_buffs.clear_id(_running_buff_id)
+	_running_buff_id = buff_id
+	_buffs.post(buff_id, {
+		"icon": s.icon,
+		"tone": Palette.AMBER,
+		"duration_s": running_left,
+		"kind": BuffLedger.KIND_TIMER,
+		"stacks": 1,
+		"max_stacks": 1,
+	})
+
+
+func _clear_running_buff() -> void:
+	if _buffs != null and _running_buff_id != "":
+		_buffs.clear_id(_running_buff_id)
+	_running_buff_id = ""
 
 
 # One charge at a time: time only ever fills the charge now recharging.

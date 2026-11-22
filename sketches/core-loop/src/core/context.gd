@@ -1,6 +1,7 @@
 extends RefCounted
 
 const GameEvents := preload("res://src/core/game_events.gd")
+const BuffLedger := preload("res://src/core/buff_ledger.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -11,10 +12,28 @@ const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 # the spine and to each other only through these refs and the GameEvents bus; none
 # reaches into another module's folder. CONTRACTS.md is the reading guide.
 
-var events: GameEvents
+# Live active run-only temporary buffs and counters (never persisted to saves).
+var buffs: BuffLedger = BuffLedger.new():
+	set(value):
+		if buffs != null and buffs != value:
+			buffs.bind_events(null)
+		buffs = value
+		if buffs != null and events != null:
+			buffs.bind_events(events)
+		if player != null and player.get("abilities") != null and player.abilities.has_method("bind_buffs"):
+			player.abilities.bind_buffs(buffs)
+var events: GameEvents:
+	set(value):
+		events = value
+		if buffs != null:
+			buffs.bind_events(value)
 var run: RunState
 var tuning: Tuning
-var player: PlayerBall
+var player: PlayerBall:
+	set(value):
+		player = value
+		if value != null and value.get("abilities") != null and value.abilities.has_method("bind_buffs"):
+			value.abilities.bind_buffs(buffs)
 var camera: ChaseCamera
 # The flow state machine (src/core/flow.gd), read-only for modules: in_play(),
 # state_name(), stage(), stage_def(). A node, so it and the context do not hold

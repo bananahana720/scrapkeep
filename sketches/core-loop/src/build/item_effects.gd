@@ -5,6 +5,7 @@ const Parts := preload("res://src/build/parts.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ElementField := preload("res://src/build/element_field.gd")
+const BuffLedger := preload("res://src/core/buff_ledger.gd")
 
 # What held items do (v2 W4 loot). refresh() folds the part list into two tables: the
 # passive numbers (charges, cooldowns, damage taken, prices, perks) and, per trigger
@@ -228,6 +229,12 @@ func mass_health(mass: float) -> float:
 
 
 func reset_stage() -> void:
+	for pin_id in _pin_until:
+		_clear_buff("item_" + String(pin_id))
+	_clear_buff("item_armed_hit")
+	_clear_buff("item_rebound_crit")
+	_clear_buff("item_brace")
+	_clear_buff("item_drone")
 	_ready_at = {}
 	_armed_hit = 0.0
 	if _last_word_pending:
@@ -287,6 +294,7 @@ func resolve(c, draw: float) -> void:
 		var bonus: float = _armed_hit
 		_armed_hit = 0.0
 		_last_word_pending = false
+		_clear_buff("item_armed_hit")
 		build.item_hit(c.enemy, c.amount * bonus, "")
 		_count("armed_hit")
 	for entry in by_kind.get(c.kind, []):
@@ -348,6 +356,14 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			return true
 		"arm_hit":
 			_armed_hit = maxf(_armed_hit, power)
+			_post_buff("item_armed_hit", {
+				"icon": "cat_damage",
+				"tone": Palette.AMBER,
+				"duration_s": 0.0,
+				"kind": BuffLedger.KIND_COUNT,
+				"stacks": 1,
+				"max_stacks": 1,
+			})
 			return true
 		"last_word":
 			if _last_word_used or ctx.run.hp > ctx.run.max_hp * fx.get("below", 0.25) or not ctx.run.alive():
@@ -355,6 +371,14 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			_last_word_used = true
 			_last_word_pending = true
 			_armed_hit = maxf(_armed_hit, power)
+			_post_buff("item_armed_hit", {
+				"icon": "cat_damage",
+				"tone": Palette.AMBER,
+				"duration_s": 0.0,
+				"kind": BuffLedger.KIND_COUNT,
+				"stacks": 1,
+				"max_stacks": 1,
+			})
 			return true
 		"speed":
 			return _surge(power, fx.get("max_speed", 45.0), c)
@@ -379,17 +403,40 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 		"echo_release":
 			return _burst(ctx.player.ball_position(), fx.get("radius", 8.0), fx.get("damage", 16.0) * maxf(0.3, c.amount), element, 0.0, c)
 		"pin_bonus", "pin_chain", "domino":
-			_pin_until[id] = _clock + fx.get("window", 1.5)
+			var pin_window := float(fx.get("window", 1.5))
+			_pin_until[id] = _clock + pin_window
 			if fx.get("do") == "domino":
 				_domino_count = 0
+			_post_buff("item_" + id, {
+				"icon": "cat_" + d.icon_category,
+				"tone": Palette.SAND,
+				"duration_s": pin_window,
+				"kind": BuffLedger.KIND_TIMER,
+				"stacks": 1,
+				"max_stacks": 1,
+			})
 			return true
 		"rebound_crit":
+			var rebound_window := float(fx.get("window", 4.0))
+			var rebound_need := int(fx.get("count", 3))
 			_rebounds.append(_clock)
-			while not _rebounds.is_empty() and _clock - _rebounds[0] > fx.get("window", 4.0):
+			while not _rebounds.is_empty() and _clock - _rebounds[0] > rebound_window:
 				_rebounds.pop_front()
-			if _rebounds.size() < int(fx.get("count", 3)) or not is_instance_valid(c.enemy):
+			if _rebounds.size() < rebound_need or not is_instance_valid(c.enemy):
+				if not _rebounds.is_empty():
+					var left := maxf(0.0, rebound_window - (_clock - _rebounds[0]))
+					_post_buff("item_rebound_crit", {
+						"icon": "cat_damage",
+						"tone": Palette.COPPER,
+						"duration_s": rebound_window,
+						"left_s": left,
+						"kind": BuffLedger.KIND_COUNT,
+						"stacks": _rebounds.size(),
+						"max_stacks": rebound_need,
+					})
 				return false
 			_rebounds.clear()
+			_clear_buff("item_rebound_crit")
 			build.item_hit(c.enemy, c.amount * fx.get("mult", 2.0), element)
 			return true
 		"rebound_strike":
@@ -428,9 +475,18 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			if c.kind == Triggers.Kind.ON_LAND and c.amount < fx.get("min_impact", 0.0):
 				return false
 			var held_share: float = _brace_share if _clock < _brace_until else 0.0
-			_brace_until = _clock + fx.get("window", 1.0)
+			var brace_window := float(fx.get("window", 1.0))
+			_brace_until = _clock + brace_window
 			_brace_share = maxf(held_share, power)
 			_brace_source = c.enemy.get("kind") if c.kind == Triggers.Kind.ON_REBOUND and is_instance_valid(c.enemy) else ""
+			_post_buff("item_brace", {
+				"icon": "cat_defense",
+				"tone": Palette.STEEL,
+				"duration_s": brace_window,
+				"kind": BuffLedger.KIND_TIMER,
+				"stacks": 1,
+				"max_stacks": 1,
+			})
 			return true
 		"floor_hp":
 			# Armour mode holds the floor inside run.damage (ward_floor_for).
@@ -448,8 +504,17 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			build.scrap.drop(c.at, int(fx.get("amount", 12)), build.loot_rng)
 			return true
 		"drone":
-			_drone_until = _clock + fx.get("seconds", 4.0)
+			var drone_seconds := float(fx.get("seconds", 4.0))
+			_drone_until = _clock + drone_seconds
 			_drone_magnet = fx.get("magnet", 3.0)
+			_post_buff("item_drone", {
+				"icon": "cat_utility",
+				"tone": Palette.ARC,
+				"duration_s": drone_seconds,
+				"kind": BuffLedger.KIND_TIMER,
+				"stacks": 1,
+				"max_stacks": 1,
+			})
 			return true
 		"ping":
 			return _ping(fx.get("target", "beacon"))
@@ -663,6 +728,25 @@ func _domino(id: String, d: Resource, n: int, victim: Node3D) -> void:
 
 static func _pinnable(enemy) -> bool:
 	return is_instance_valid(enemy) and enemy.has_method("knock") and enemy.has_method("is_dead") and not enemy.is_dead()
+
+
+func _buffs():
+	if build == null:
+		return null
+	var ctx = build.get("ctx")
+	return ctx.get("buffs") if ctx != null else null
+
+
+func _post_buff(id: String, spec: Dictionary) -> void:
+	var ledger = _buffs()
+	if ledger != null:
+		ledger.post(id, spec)
+
+
+func _clear_buff(id: String) -> void:
+	var ledger = _buffs()
+	if ledger != null:
+		ledger.clear_id(id)
 
 
 func _step() -> float:
