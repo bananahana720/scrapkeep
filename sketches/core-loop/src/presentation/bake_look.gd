@@ -29,29 +29,40 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 # enamel) bakes with edge 0 (POLISH.md), so its wear reads neutral and it stays spotless whatever slot it is in.
 # The multiply above cannot brighten, so the bone comes from one shared layer drawn after the paint (next_pass):
 # where the bake's wear says convex it mixes the lit paint toward lit bone, up to LIFT at the most worn edge, and
-# draws nothing on a neutral or creased face. The rim is the material's own (rim_tint 0 takes the light's colour), so
-# in the sun's shade it is the shadowless sky fill's cool tint: rust paint keeps a pale edge against warm sandstone
-# (visual-assets-audit.md finding 8). The candidates and their numbers are on the W46-03 pull request's sheet (ruling cq).
+# at the silhouette (RIM, rising as the face turns from the eye) it does the same. Both glow faintly in SKY_TINT
+# (SKY_GLOW), light no sun gives, so in shade the rust keeps a pale cool edge against warm sandstone instead of going
+# near black (visual-assets-audit.md finding 8). It draws nothing on a neutral face that looks at the eye.
+# The candidates and their numbers are on the W46-03 pull request's sheet (ruling cq).
 const LIFT_SLOTS := ["fleet_paint"]
 const LIFT := 0.55
 # Wear below LIFT_FROM of the most worn reads as unworn: the bake's soft falloff stays paint, the edge goes bone.
 const LIFT_FROM := 0.2
-const RIM := 0.35
+const RIM := 0.45
+const RIM_POWER := 3.0
+const SKY_TINT := Color("c4d2e8")
+const SKY_GLOW := 0.18
 const BRASS_SLOTS := ["brass", "requisition_tag"]
 const LIFT_SHADER := """shader_type spatial;
 render_mode blend_mix, depth_draw_never, cull_back, diffuse_burley, specular_schlick_ggx;
 uniform vec4 bone : source_color;
+uniform vec4 sky : source_color;
 uniform float lift = 0.55;
 uniform float from = 0.2;
+uniform float rim = 0.45;
+uniform float rim_power = 3.0;
+uniform float glow = 0.18;
 void fragment() {
 	// UV2.y is the bake's wear with glTF's flipped V: 0.5 neutral, 0 the most worn convex edge, 1 the deepest crease.
 	float worn = clamp((0.5 - UV2.y) * 2.0, 0.0, 1.0);
-	float a = lift * smoothstep(from, 1.0, worn);
+	float edge = lift * smoothstep(from, 1.0, worn);
+	float side = rim * pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), rim_power);
+	float a = max(edge, side);
 	if (a < 0.004) {
 		discard;
 	}
 	ALBEDO = bone.rgb;
 	ROUGHNESS = 0.9;
+	EMISSION = sky.rgb * glow;
 	ALPHA = a;
 }
 """
@@ -72,13 +83,19 @@ static func edge_lift() -> ShaderMaterial:
 		_lift.set_shader_parameter("bone", Palette.SAND)
 		_lift.set_shader_parameter("lift", LIFT)
 		_lift.set_shader_parameter("from", LIFT_FROM)
+		_lift.set_shader_parameter("rim", RIM)
+		_lift.set_shader_parameter("rim_power", RIM_POWER)
+		_lift.set_shader_parameter("sky", SKY_TINT)
+		_lift.set_shader_parameter("glow", SKY_GLOW)
 	return _lift
 
 
-# The bone the edge layer mixes in at bake wear `wear_v` (UV2.y), as its shader draws it: none on a neutral face (a
-# casting baked with edge 0 reads 0.5 everywhere) or a crease, LIFT at the most worn convex edge.
-static func lift_alpha(wear_v: float) -> float:
-	var a := LIFT * smoothstep(LIFT_FROM, 1.0, clampf((0.5 - wear_v) * 2.0, 0.0, 1.0))
+# The bone the edge layer mixes in at bake wear `wear_v` (UV2.y) on a face whose normal meets the eye at `facing`
+# (dot(normal, view), 1 head on), as its shader draws it: none on a neutral face (a casting baked with edge 0 reads 0.5
+# everywhere) or a crease that looks at the eye, LIFT at the most worn convex edge, RIM at the silhouette.
+static func lift_alpha(wear_v: float, facing := 1.0) -> float:
+	var edge := LIFT * smoothstep(LIFT_FROM, 1.0, clampf((0.5 - wear_v) * 2.0, 0.0, 1.0))
+	var a := maxf(edge, RIM * pow(1.0 - clampf(facing, 0.0, 1.0), RIM_POWER))
 	return a if a >= 0.004 else 0.0
 
 
@@ -94,12 +111,9 @@ static func finish_of(mesh: Mesh, surface: int) -> String:
 	return ""
 
 
-# Gives `mat` its slot finish in place: Fleet paint its rim and bone edge layer, brass the one satin brass.
+# Gives `mat` its slot finish in place: Fleet paint the bone edge and rim layer, brass the one satin brass.
 static func finish(mat: StandardMaterial3D, kind: String) -> void:
 	if kind == "lift":
-		mat.rim_enabled = true
-		mat.rim = RIM
-		mat.rim_tint = 0.0
 		mat.next_pass = edge_lift()
 	elif kind == "brass":
 		Palette.brass_finish(mat)

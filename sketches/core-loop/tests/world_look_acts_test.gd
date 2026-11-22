@@ -4,7 +4,7 @@ extends SceneTree
 #   - The dam (dawn), the flume (morning) and the Slag Bowl (noon, plus its smoke) are three looks, not one: every pair's
 #     light colours (sun, ambient, fog lean, sky zenith, horizon and glow) sit ACT_MIN_DE or more apart, mean CIE76.
 #   - The colour law: HAZARD is for live danger only, so no colour in any act's row sits within HAZARD_MIN_DE of it.
-#   - Fleet paint takes the bone edge layer and the shade rim; a casting (edge 0 bake, wear 0.5 everywhere) gets no bone;
+#   - Fleet paint takes the bone edge and rim layer, which glows a cool sky tint in shade; a casting (edge 0 bake, wear 0.5 everywhere) gets no bone;
 #     brass is one satin finish whether a script builds it or a model's brass slot carries it.
 #   - The palette holds the wave's later colours: the Kindness purple inside hue 300 to 330 (ruling ci) and a sodium
 #     floodlight amber apart from AMBER and HAZARD.
@@ -28,7 +28,7 @@ const ACT_MIN_DE := 12.0
 const HAZARD_MIN_DE := 25.0
 const ACT_KEYS := ["sun_color", "ambient", "fog_tint"]
 const GRADE_KEYS := ["top", "horizon", "glow"]
-const EXPECTED_CHECKS := 31
+const EXPECTED_CHECKS := 32
 
 var _t := T.new("world_look_acts_test")
 
@@ -150,18 +150,22 @@ func _finish() -> void:
 	root_node.add_child(view)
 	BakeLook.dress(root_node, [paint])
 	var mesh := view.mesh
-	_t.check("owned Fleet paint takes the bone edge layer and a light-tinted rim in place", mesh.surface_get_material(0) == paint
-		and paint.next_pass == BakeLook.edge_lift() and paint.rim_enabled and paint.rim_tint == 0.0 and is_equal_approx(paint.rim, BakeLook.RIM))
+	_t.check("owned Fleet paint takes the bone edge and rim layer in place", mesh.surface_get_material(0) == paint
+		and paint.next_pass == BakeLook.edge_lift())
 	var shader := (BakeLook.edge_lift().shader as Shader).code
-	_t.check("the edge layer mixes toward bone and draws nothing where it lifts nothing", shader.contains("blend_mix") and shader.contains("discard")
-		and BakeLook.edge_lift().get_shader_parameter("bone") == Palette.SAND)
+	var sky: Color = BakeLook.edge_lift().get_shader_parameter("sky")
+	_t.check("the layer mixes toward bone, glows a cool sky tint in shade and draws nothing where it lifts nothing", shader.contains("blend_mix")
+		and shader.contains("discard") and BakeLook.edge_lift().get_shader_parameter("bone") == Palette.SAND and sky.b > sky.r
+		and float(BakeLook.edge_lift().get_shader_parameter("glow")) > 0.0)
+	_t.check("the rim rises toward the silhouette and is none head on", BakeLook.lift_alpha(0.5, 1.0) == 0.0
+		and is_equal_approx(BakeLook.lift_alpha(0.5, 0.0), BakeLook.RIM) and BakeLook.lift_alpha(0.5, 0.2) > BakeLook.lift_alpha(0.5, 0.6))
 	var shaded := mesh.surface_get_material(1) as StandardMaterial3D
-	_t.check("rubber is shaded but takes no edge layer or rim", shaded.get_meta("bake_look", false) and shaded.next_pass == null and not shaded.rim_enabled)
+	_t.check("rubber is shaded but takes no edge layer", shaded.get_meta("bake_look", false) and shaded.next_pass == null)
 	var brass_twin := mesh.surface_get_material(2) as StandardMaterial3D
 	_t.check("a model's brass slot takes the one satin brass", brass_twin.get_meta("brass_finish", false)
 		and is_equal_approx(brass_twin.roughness, Palette.BRASS_FINISH.roughness) and is_equal_approx(brass_twin.metallic, Palette.BRASS_FINISH.metallic))
 	var shell := mesh.surface_get_material(3) as StandardMaterial3D
-	_t.check("a casting's shell takes no edge layer, and its edge 0 bake gives no bone", shell.next_pass == null and BakeLook.lift_alpha(0.5) == 0.0)
+	_t.check("a casting's shell takes no edge layer, and its edge 0 bake gives no bone head on", shell.next_pass == null and BakeLook.lift_alpha(0.5) == 0.0)
 	var script_brass := Palette.solid(Palette.BRASS, 0.8)
 	_t.check("a script's brass solid is the same satin brass, its glow kept", script_brass.get_meta("brass_finish", false)
 		and is_equal_approx(script_brass.roughness, brass_twin.roughness) and is_equal_approx(script_brass.metallic, brass_twin.metallic)
