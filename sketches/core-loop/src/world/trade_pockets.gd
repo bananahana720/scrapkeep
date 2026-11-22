@@ -79,11 +79,14 @@ static func door_words(offer: Dictionary, counter: String) -> String:
 	var row: Dictionary = DOOR_WORDS[String(offer.family)]
 	return "%s: %s\n%s" % [row.name, counter, row.line]
 
+# The two devices a trade spot stands. owner is whose spot it is (stake_devices.gd OWNERS draws the body):
+# the keeper's gamble is bolted and chalked, the foreman's kindness is cast and wears World 1's one purple.
 static func devices(offer: Dictionary) -> Array:
 	var risk: bool = offer.family == "risk"
+	var owner := "gamble" if risk else "kindness"
 	return [{"device": "blood_shrine" if risk else "healing_ward", "tier": 1,
-		"pay": "health" if risk else "cores"},
-		{"device": "trade_chest", "tier": int(offer.get("tier", 1)), "pay": "health" if risk else "cogs"}]
+		"pay": "health" if risk else "cores", "owner": owner},
+		{"device": "trade_chest", "tier": int(offer.get("tier", 1)), "pay": "health" if risk else "cogs", "owner": owner}]
 
 # Curse lowers the rarer tier weights, but never below the sourced 0.2 floor.
 static func curse_tier(rng: RandomNumberGenerator) -> int:

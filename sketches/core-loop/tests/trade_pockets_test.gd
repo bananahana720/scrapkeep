@@ -18,6 +18,7 @@ func _run() -> void:
 		quit(t.verdict())
 		return
 	_entrance_round_trip(model)
+	_kindness_hue(model)
 	var memory: Dictionary = model.memory()
 	model.decide(memory, {"stage": 1, "family": "risk"}, true)
 	t.eq("risk trade closes safe family", model.odds(memory, 2).safe_share, 0.0)
@@ -441,3 +442,68 @@ func _entrance_round_trip(model) -> void:
 		var untouched = Run.new()
 		untouched.run_id = "unchanged"
 		t.check("malformed trade entrance is atomic " + str(change.keys()), not untouched.from_entrance_doc(bad) and untouched.run_id == "unchanged")
+
+
+# Ruling ci: purple means the Kindness, and the Mind elsewhere. The Kindness glow (stake_devices.gd glow_material) is
+# hue 300 to 330, lit and unlit; nothing else World 1 draws falls in that band: no other Palette colour, no World 1
+# light (WorldLook's world row, its dawn and morning acts, the camp), no material on a gamble's or a kindness's body
+# but the glow, and no record sleeve in the camp. A grey has no hue, so a colour under KIND_S saturation is not one.
+const KIND_LOW := 300.0
+const KIND_HIGH := 330.0
+const KIND_S := 0.15
+
+func _in_band(c: Color) -> bool:
+	return c.s >= KIND_S and c.h * 360.0 >= KIND_LOW and c.h * 360.0 <= KIND_HIGH
+
+func _colours_in(value, out: Array) -> Array:
+	if value is Color:
+		out.append(value)
+	elif value is Dictionary:
+		for k in value:
+			_colours_in(value[k], out)
+	elif value is Array:
+		for v in value:
+			_colours_in(v, out)
+	return out
+
+func _kindness_hue(model) -> void:
+	var Stake = load("res://src/world/stake_devices.gd")
+	var Palette = load("res://src/core/palette.gd")
+	var WorldLook = load("res://src/presentation/world_look.gd")
+	var CampHub = load("res://src/world/camp_hub.gd")
+	var glow: StandardMaterial3D = Stake.glow_material()
+	t.check("the Kindness glow is hue 300 to 330, its light and its colour", _in_band(glow.emission) and _in_band(glow.albedo_color),
+		"emission %.1f, albedo %.1f" % [glow.emission.h * 360.0, glow.albedo_color.h * 360.0])
+	t.check("the Kindness glow is Palette.KINDNESS", glow.emission == Palette.KINDNESS)
+	var strays: Array = []
+	var consts: Dictionary = Palette.get_script_constant_map()
+	for name in consts:
+		if consts[name] is Color and name != "KINDNESS" and _in_band(consts[name]):
+			strays.append("Palette.%s" % name)
+	for key in ["ROWS", "TIME_ROWS", "CAMP"]:
+		var table = WorldLook.get_script_constant_map()[key]
+		var rows: Array = [table[1]] if key == "ROWS" else [table["dawn"], table["morning"]] if key == "TIME_ROWS" else [table]
+		for c in _colours_in(rows, []):
+			if _in_band(c):
+				strays.append("WorldLook.%s %s" % [key, c.to_html()])
+	# World 1's other looks: the Brindle arena, the title, the two parks' fog, the camp's lights.
+	var looks := {"arena_look brindle": WorldLook.arena_look("brindle"), "TITLE": WorldLook.TITLE,
+		"park_fog park_dam": WorldLook.park_fog("park_dam"), "park_fog park_flume": WorldLook.park_fog("park_flume"),
+		"CampHub.LIGHT_KINDS": CampHub.LIGHT_KINDS}
+	for source in looks:
+		for c in _colours_in(looks[source], []):
+			if _in_band(c):
+				strays.append("%s %s" % [source, c.to_html()])
+	for material in [Stake.cast_material(), Stake.bolt_material(), Stake.chalk_material()]:
+		for c in [material.albedo_color, material.emission]:
+			if _in_band(c):
+				strays.append("stake_devices %s" % material.resource_name)
+	for c in CampHub.SLEEVE_INKS:
+		if _in_band(c):
+			strays.append("camp sleeve %s" % c.to_html())
+	t.check("no other World 1 colour or material is in the Kindness band", strays.is_empty(), str(strays))
+	# The spot's owner rides on its devices: the gamble's two are the gamble's, the kindness's two the kindness's.
+	var risk: Array = model.devices({"family": "risk", "tier": 2})
+	var safe: Array = model.devices({"family": "safe", "tier": 1})
+	t.check("a risky spot's devices are the gamble's, a safe spot's the kindness's",
+		risk.all(func(d): return d.owner == "gamble") and safe.all(func(d): return d.owner == "kindness") and risk.size() == 2 and safe.size() == 2)
