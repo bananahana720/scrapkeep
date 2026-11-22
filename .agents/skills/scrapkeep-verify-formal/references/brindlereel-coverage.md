@@ -8,13 +8,13 @@ The covered files: `sketches/core-loop/src/boss/boss.gd` (the fight loop, reel c
 
 | Model step | Code |
 | --- | --- |
-| `Held`, `Reeling` | `boss.gd` `_held()` (`_chunks_lost() >= phase`) and `reeling()` (`_held() and not _in_transition()`) |
-| `TurnPhase` | `boss.gd` `_maybe_turn_phase()` and `_enter_phase()`: advances phase 1 -> 2 -> 3 -> 4 (`_begin_eject()`) once `_chunks_lost() >= phase` and `phase_clock >= Rules.PHASE_MIN_SECONDS[phase - 1]`, starting a `FightPhases.TRANSITION_SECONDS` beat in phases 2 and 3 |
-| `BreakChunk` | `boss.gd` `_step_posture()` chunk shatter while `not _in_transition()`, paired with reel-entry timer clamping in `_step_cranes()` (phase 1, clamping a high `brindle.period_mult` timer to `REEL_MAX_GAP`), `_step_furnace()` (phase 2, clamping `_next_attack` to `clock + Rules.REEL_SLAG_PERIOD` while preserving any already-cued `_reprise`), and `_step_charges()` (phase 3, clamping `CHARGE_REST` timer to `REEL_MAX_GAP`) |
-| `StepPhase1` | `boss.gd` `_step_cranes()` and `_commit_crane()`: commits crane sweeps at slowed reel cadence `minf(base_period * Rules.REEL_PERIOD_MULT, Rules.REEL_MAX_GAP)` with `ChallengeDials.tell("brindle", Rules.CRANE_WARN, Hazard.MIN_WARN)` (`>= 0.6 s`) |
-| `StepPhase2` | `boss.gd` `_step_furnace()`, `_step_reprise()` and `_commit_slag()`: waits out the transition beat, honours any already-cued reprise at `FightPhases.CUED_WARN` (`0.6 s`), and commits ball-targeted reel slag rings every `Rules.REEL_SLAG_PERIOD` (`3.0 s`) with full `Rules.SLAG_WARN` (`2.5 s`) |
-| `StepPhase3` | `boss.gd` `_step_charges()`, `_commit_charge()` and `_run_charge()`: steps `CHARGE_REST` -> `CHARGE_BRACE` -> `CHARGE_RUN` -> `CHARGE_HOOK` / `CHARGE_RECOVER` / `CHARGE_STUN`, keeping slowed `REEL_PERIOD_MULT` rest clamped to `Rules.REEL_MAX_GAP`, continuing hook turns during reels with `FightPhases.CUED_WARN` (`0.6 s`), and pausing the gap clock during an earned `CHARGE_STUN` |
-| `StepChase` | `boss.gd` `_begin_eject()` and `_step_scooter()`: phase 4 scooter chase after the third hull chunk and phase 3 floor complete |
+| `Held`, `Reeling` | `_held()` (`_chunks_lost() >= phase`) and `reeling()` (`_held() and not _in_transition()`) in Brindle's fight controller |
+| `TurnPhase` | `_maybe_turn_phase()` and `_enter_phase()`: advances phase 1 -> 2 -> 3 -> 4 (`_begin_eject()`) once `_chunks_lost() >= phase` and `phase_clock >= Rules.PHASE_MIN_SECONDS[phase - 1]`, starting a `FightPhases.TRANSITION_SECONDS` beat in phases 2 and 3 |
+| `BreakChunk` | `_step_posture()` chunk shatter while `not _in_transition()`, paired with reel-entry timer clamping in `_step_cranes()` (phase 1, clamping a high `brindle.period_mult` timer to `REEL_MAX_GAP`), `_step_furnace()` (phase 2, clamping `_next_attack` to `clock + Rules.REEL_SLAG_PERIOD` while preserving any already-cued `_reprise`), and `_step_charges()` (phase 3, clamping `CHARGE_REST` timer to `REEL_MAX_GAP`) |
+| `StepPhase1` | `_step_cranes()` and `_commit_crane()`: commits crane sweeps at slowed reel cadence `minf(base_period * Rules.REEL_PERIOD_MULT, Rules.REEL_MAX_GAP)` with `ChallengeDials.tell("brindle", Rules.CRANE_WARN, Hazard.MIN_WARN)` (`>= 0.6 s`) |
+| `StepPhase2` | `_step_furnace()`, `_step_reprise()` and `_commit_slag()`: waits out the transition beat, honours any already-cued reprise at `FightPhases.CUED_WARN` (`0.6 s`), and commits ball-targeted reel slag rings every `Rules.REEL_SLAG_PERIOD` (`3.0 s`) with full `Rules.SLAG_WARN` (`2.5 s`) |
+| `StepPhase3` | `_step_charges()`, `_commit_charge()` and `_run_charge()`: steps `CHARGE_REST` -> `CHARGE_BRACE` -> `CHARGE_RUN` -> `CHARGE_HOOK` / `CHARGE_RECOVER` / `CHARGE_STUN`, keeping slowed `REEL_PERIOD_MULT` rest clamped to `Rules.REEL_MAX_GAP`, continuing hook turns during reels with `FightPhases.CUED_WARN` (`0.6 s`), and pausing the gap clock during an earned `CHARGE_STUN` |
+| `StepChase` | `_begin_eject()` and `_step_scooter()`: phase 4 scooter chase after the third hull chunk and phase 3 floor complete |
 
 ## Ticks and seconds
 
@@ -33,6 +33,6 @@ One model tick is 1 s (`MaxReelGap = 6` stands for the 6 s promise from W1-139g,
 
 ## Not modelled
 
-3D arena geometry, ball physics, aim lead, knockback arcs, crane scrap theft and trail placement, `_reel_sear` armour shedding, lobber drones, the phase 4 chase scooter, and anything drawn or heard (including the W1-105 harmless reprise preview ring and the W1-106 hull crouch, BowRam glow and `charge_warn` animation clip in `requisition.gd`, and `FightPhases` transition/cue helpers in `fight_phases.gd`). Those are covered by `sketches/core-loop/tests/brindle_reel_test.gd`, `sketches/core-loop/tests/boss_telegraph_test.gd`, `sketches/core-loop/tests/boss_lead_line_test.gd`, `sketches/core-loop/tests/brindle_charge_turn_test.gd`, and `sketches/core-loop/tests/brindle_phase_preview_test.gd`.
+3D arena geometry, ball physics, aim lead, knockback arcs, crane scrap theft and trail placement, `_reel_sear` armour shedding, lobber drones, the phase 4 chase scooter, and anything drawn or heard (including the W1-105 harmless reprise preview ring, the W1-106 hull crouch, BowRam glow and `charge_warn` animation clip on the Requisition hull, and `FightPhases` transition and cue helpers). Those are covered by `sketches/core-loop/tests/brindle_reel_test.gd`, `sketches/core-loop/tests/boss_telegraph_test.gd`, `sketches/core-loop/tests/boss_lead_line_test.gd`, `sketches/core-loop/tests/brindle_charge_turn_test.gd`, and `sketches/core-loop/tests/brindle_phase_preview_test.gd`.
 
 Sync commit: 8612ee532 (branch w46/05-brindle-presses, 22 November 2026, W46-05 fix round: boss.gd and boss_rules.gd match BrindleReel.tla)
