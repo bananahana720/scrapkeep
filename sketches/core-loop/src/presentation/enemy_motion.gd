@@ -176,7 +176,11 @@ static func _is_ordinary_kind(kind: String) -> bool:
 	return _enemy_script.is_ordinary_kind(kind)
 
 
-static func _st_quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, color: Color) -> void:
+static func _st_quad(st: SurfaceTool, quad: Array, normal: Vector3, color: Color) -> void:
+	var a: Vector3 = quad[0]
+	var b: Vector3 = quad[1]
+	var c: Vector3 = quad[2]
+	var d: Vector3 = quad[3]
 	var verts := [a, b, c, a, c, d] if (c - a).cross(b - a).dot(normal) > 0.0 else [a, c, b, a, d, c]
 	for v in verts:
 		st.set_normal(normal)
@@ -192,16 +196,18 @@ static func _st_box(st: SurfaceTool, center: Vector3, size: Vector3, color: Colo
 		center + Vector3(-h.x, -h.y, h.z), center + Vector3(h.x, -h.y, h.z),
 		center + Vector3(h.x, h.y, h.z), center + Vector3(-h.x, h.y, h.z),
 	]
-	_st_quad(st, p[3], p[2], p[6], p[7], Vector3.UP, color)
-	_st_quad(st, p[0], p[4], p[5], p[1], Vector3.DOWN, color)
-	_st_quad(st, p[4], p[7], p[6], p[5], Vector3.BACK, color)
-	_st_quad(st, p[0], p[1], p[2], p[3], Vector3.FORWARD, color)
-	_st_quad(st, p[1], p[5], p[6], p[2], Vector3.RIGHT, color)
-	_st_quad(st, p[0], p[3], p[7], p[4], Vector3.LEFT, color)
+	_st_quad(st, [p[3], p[2], p[6], p[7]], Vector3.UP, color)
+	_st_quad(st, [p[0], p[4], p[5], p[1]], Vector3.DOWN, color)
+	_st_quad(st, [p[4], p[7], p[6], p[5]], Vector3.BACK, color)
+	_st_quad(st, [p[0], p[1], p[2], p[3]], Vector3.FORWARD, color)
+	_st_quad(st, [p[1], p[5], p[6], p[2]], Vector3.RIGHT, color)
+	_st_quad(st, [p[0], p[3], p[7], p[4]], Vector3.LEFT, color)
 
 
-static func _st_prism(st: SurfaceTool, center: Vector3, radius: float, height: float, sides: int, color: Color) -> void:
-	var hy := height * 0.5
+static func _st_prism(st: SurfaceTool, center: Vector3, dims: Vector2, color: Color) -> void:
+	var radius := dims.x
+	var hy := dims.y * 0.5
+	var sides := 12
 	var top_c := center + Vector3(0.0, hy, 0.0)
 	var bot_c := center + Vector3(0.0, -hy, 0.0)
 	for i in sides:
@@ -214,7 +220,7 @@ static func _st_prism(st: SurfaceTool, center: Vector3, radius: float, height: f
 		var b0 := bot_c + d0 * radius
 		var b1 := bot_c + d1 * radius
 		var side_n := (d0 + d1).normalized()
-		_st_quad(st, b0, b1, t1, t0, side_n, color)
+		_st_quad(st, [b0, b1, t1, t0], side_n, color)
 		for tri in [[top_c, t1, t0, Vector3.UP], [bot_c, b0, b1, Vector3.DOWN]]:
 			var v0: Vector3 = tri[0]
 			var v1: Vector3 = tri[1]
@@ -233,7 +239,7 @@ static func _build_tag_mesh() -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	_st_box(st, Vector3.ZERO, TAG_SIZE, Palette.BRASS)
-	_st_prism(st, Vector3(-TAG_SIZE.x * 0.32, 0.0, 0.0), 0.06, TAG_SIZE.y + 0.015, 12, Palette.CHARCOAL)
+	_st_prism(st, Vector3(-TAG_SIZE.x * 0.32, 0.0, 0.0), Vector2(0.06, TAG_SIZE.y + 0.015), Palette.CHARCOAL)
 	_st_box(st, Vector3(TAG_SIZE.x * 0.12, 0.0, 0.0), Vector3(TAG_SIZE.x * 0.44, TAG_SIZE.y + 0.012, TAG_SIZE.z * 0.26), Palette.RUST)
 	_tag_mesh = st.commit()
 	return _tag_mesh
