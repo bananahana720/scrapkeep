@@ -2,6 +2,7 @@ extends RefCounted
 
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 const TuneMoments := preload("res://src/presentation/tune_moments.gd")
+const DeckMoves := preload("res://src/presentation/deck_moves.gd")
 
 # The ACE band for Spillway (design-v3 ACE-MUSIC-SYSTEM; the runtime rules proven by the
 # POC sequencer, core-loop-v3-seq 43453ab). ACE-Step performed the music; this plays its
@@ -68,6 +69,7 @@ const SHELF_CLIPS := ["calm", "travel"]
 
 class Voice:
 	var stem := ""
+	var section_name := ""
 	var pb: AudioStreamPlayback
 	var pos := 0
 	var exit := 0
@@ -82,8 +84,21 @@ class Voice:
 	var wet := 0.0
 	var wet_target := 0.0
 	var wet_step := 0.0
+	var pump_depth := 0.0
+	var pump_target := 0.0
+	var pump_step := 0.0
 	# A shelf voice whose harmony has cleared for the pivot: nothing raises it again.
 	var cleared := false
+
+
+class Shot:
+	var at := 0
+	var pcm: PackedVector2Array
+	var tag := ""
+	var gain := 1.0
+	var env := 1.0
+	var env_target := 1.0
+	var env_step := 0.0
 
 
 var manifest := {}
@@ -122,6 +137,8 @@ var misses := 0
 var render_usec := 0
 var trims := {}
 var trim_epoch := 0
+var _pump_depths := {}
+var shots: Array = []
 # The set director's low-pass sweep: the wet share of SWEEP_HZ on every voice whose profile has
 # no low-pass of its own, in the sections trims reach.
 var sweep := 0.0
@@ -268,7 +285,7 @@ func ready() -> bool:
 
 # Something is sounding or about to: the director renders the band while this is true.
 func active() -> bool:
-	return mode != "off" or not voices.is_empty() or not fading.is_empty()
+	return mode != "off" or not voices.is_empty() or not fading.is_empty() or not shots.is_empty()
 
 
 # The transport sample the band first sounds from: now when voices play, the pending
@@ -308,6 +325,7 @@ func start_level(at: int, fight := false) -> void:
 	trims = {}
 	trim_epoch += 1
 	sweep = 0.0
+	cancel_shots("", STOP_RAMP)
 	mode = "level"
 	built = false
 	lead_returned = false
@@ -339,6 +357,7 @@ func stop(ramp := STOP_RAMP) -> void:
 	trims = {}
 	trim_epoch += 1
 	sweep = 0.0
+	cancel_shots("", ramp)
 	events_log.append(["stop", clock, ""])
 
 
@@ -404,6 +423,75 @@ func invalidate_trims(ramp := STOP_RAMP) -> void:
 		return true)
 	if not trims.is_empty() or sweep > 0.0:
 		_add({"at": clock, "type": "trim", "trims": {}, "frames": maxi(ramp, 1), "sweep": 0.0, "epoch": -1})
+
+
+# Festival deck sidechain pump: linear dip depth (0 to 1) by section name. `{}` turns it off.
+# Each voice reads its own opening section name, and depth changes ramp over one beat.
+func set_pump(depth_by_section: Dictionary) -> void:
+	if depth_by_section == _pump_depths:
+		return
+	_pump_depths = depth_by_section.duplicate()
+	var ramp := float(maxi(grid_beat, 1))
+	for list in [voices, fading]:
+		for v: Voice in list:
+			var want := pump_depth_for(v.stem, v.section_name)
+			if not is_equal_approx(want, v.pump_target):
+				v.pump_target = want
+				v.pump_step = maxf(absf(want - v.pump_depth), 0.000001) / ramp
+	if not pending.is_empty() and not bool(pending.get("begun", false)):
+		for v: Voice in pending["voices"]:
+			var want := pump_depth_for(v.stem, v.section_name)
+			v.pump_depth = want
+			v.pump_target = want
+			v.pump_step = 0.0
+
+
+func pump_depth_for(stem: String, sec_name: String) -> float:
+	if flat or not stem in DeckMoves.PUMP_STEMS:
+		return 0.0
+	return clampf(float(_pump_depths.get(sec_name, 0.0)), 0.0, 1.0)
+
+
+func pump_active() -> bool:
+	return not flat and not _pump_depths.is_empty()
+
+
+func _has_active_pump() -> bool:
+	for list in [voices, fading]:
+		for v: Voice in list:
+			if v.pump_depth > 0.0 or v.pump_target > 0.0:
+				return true
+	return false
+
+
+# Mixes a sample-exact one-shot into the sequencer's Music-bus output starting at transport sample `at`.
+func shot_at(at: int, pcm: PackedVector2Array, tag: String, gain := 1.0) -> void:
+	if pcm.is_empty() or gain <= 0.0 or at + pcm.size() <= clock:
+		return
+	var s := Shot.new()
+	s.at = at
+	s.pcm = pcm
+	s.tag = tag
+	s.gain = gain
+	shots.append(s)
+
+
+# Drops unstarted shots matching `tag` (or all when `tag == ""`) and fades live ones over `ramp` frames.
+func cancel_shots(tag := "", ramp := GAP_RAMP) -> void:
+	if shots.is_empty():
+		return
+	var kept: Array = []
+	for s: Shot in shots:
+		if tag != "" and s.tag != tag:
+			kept.append(s)
+			continue
+		if s.at >= clock or ramp <= 0:
+			continue
+		s.env_target = 0.0
+		s.env_step = maxf(s.env_step, maxf(s.env, 0.000001) / float(maxi(ramp, 1)))
+		if s.env > 0.0:
+			kept.append(s)
+	shots = kept
 
 
 # The live voices move toward a sweep depth over frames.
@@ -724,6 +812,7 @@ func render(n: int) -> PackedVector2Array:
 			span = mini(span, int(actions[0]["at"]) - clock)
 		var ended: Voice = null
 		var faded: Voice = null
+		var pump_on := false
 		for list in [voices, fading]:
 			for v: Voice in list:
 				if not v.loop:
@@ -738,6 +827,10 @@ func render(n: int) -> PackedVector2Array:
 					span = mini(span, maxi(1, int(ceil(absf(v.target - v.gain) / v.step - 0.001))))
 				if v.wet != v.wet_target:
 					span = mini(span, maxi(1, int(ceil(absf(v.wet_target - v.wet) / v.wet_step - 0.001))))
+				if v.pump_depth > 0.0 or v.pump_target > 0.0:
+					pump_on = true
+					if v.pump_depth != v.pump_target:
+						span = mini(span, maxi(1, int(ceil(absf(v.pump_target - v.pump_depth) / v.pump_step - 0.001))))
 		if faded != null:
 			# A one-shot fading out under its follower reached its exit: nothing is lost.
 			fading.erase(faded)
@@ -748,10 +841,31 @@ func render(n: int) -> PackedVector2Array:
 			events_log.append(["miss", clock, ended.stem])
 			voices.erase(ended)
 			continue
+		if pump_on and grid_beat > 0:
+			var k0 := posmod(clock - origin, grid_beat)
+			span = mini(span, DeckMoves.next_pump_breakpoint(k0, grid_beat) - k0)
+		if not shots.is_empty():
+			var dead_shot: Shot = null
+			for s: Shot in shots:
+				if s.at > clock:
+					span = mini(span, s.at - clock)
+				else:
+					var sleft := s.at + s.pcm.size() - clock
+					if sleft <= 0 or (s.env <= 0.0 and s.env_target <= 0.0):
+						dead_shot = s
+						break
+					span = mini(span, sleft)
+					if s.env != s.env_target:
+						span = mini(span, maxi(1, int(ceil(absf(s.env_target - s.env) / s.env_step - 0.001))))
+			if dead_shot != null:
+				shots.erase(dead_shot)
+				continue
 		_mix(done, span)
 		done += span
 		clock += span
 	fading = fading.filter(func(v: Voice) -> bool: return v.gain > 0.0 or v.target > 0.0)
+	if not shots.is_empty():
+		shots = shots.filter(func(s: Shot) -> bool: return clock < s.at + s.pcm.size() and (s.env > 0.0 or s.env_target > 0.0))
 	render_usec += Time.get_ticks_usec() - t0
 	rendered += n
 	return out
@@ -766,6 +880,13 @@ func _mix(at: int, span: int) -> void:
 	pause_level = move_toward(pause_level, pause_gain, span / PAUSE_RAMP)
 	var l0 := level * d0 * p0
 	var l1 := level * duck_level * pause_level
+	var pump_on := _has_active_pump() and grid_beat > 0
+	var pump_s0 := 0.0
+	var pump_s1 := 0.0
+	if pump_on:
+		var k0 := posmod(clock - origin, grid_beat)
+		pump_s0 = DeckMoves.pump_share(k0, grid_beat)
+		pump_s1 = DeckMoves.pump_share(k0 + span, grid_beat)
 	var heard: Array = []
 	var starts := PackedFloat64Array()
 	var ends := PackedFloat64Array()
@@ -785,20 +906,28 @@ func _mix(at: int, span: int) -> void:
 				v.gain = v.target
 			var w0 := v.wet
 			v.wet = move_toward(v.wet, v.wet_target, v.wet_step * span)
+			var pd0 := v.pump_depth
+			if pump_on and v.pump_depth != v.pump_target:
+				v.pump_depth = move_toward(v.pump_depth, v.pump_target, v.pump_step * span)
+				if absf(v.pump_depth - v.pump_target) < 1e-9:
+					v.pump_depth = v.pump_target
 			if (not solo.is_empty() and not v.stem in solo) or (g0 <= 0.00001 and v.gain <= 0.00001):
 				continue
 			if w0 > 0.0 or v.wet > 0.0:
 				_lowpass(got, v, w0)
 			heard.append(got)
-			starts.append(g0 * l0)
-			ends.append(v.gain * l1)
+			if pump_on and (pd0 > 0.0 or v.pump_depth > 0.0):
+				starts.append(g0 * l0 * (1.0 - pd0 * pump_s0))
+				ends.append(v.gain * l1 * (1.0 - v.pump_depth * pump_s1))
+			else:
+				starts.append(g0 * l0)
+				ends.append(v.gain * l1)
 			var last := starts.size() - 1
 			plain = plain and starts[last] == ends[last] and starts[last] == starts[0]
 	if heard.is_empty():
 		for i in span:
 			out[at + i] = Vector2.ZERO
-		return
-	if plain:
+	elif plain:
 		var g := starts[0]
 		var a: PackedVector2Array = heard[0]
 		if heard.size() == 3:
@@ -806,25 +935,52 @@ func _mix(at: int, span: int) -> void:
 			var c: PackedVector2Array = heard[2]
 			for i in span:
 				out[at + i] = (a[i] + b[i] + c[i]) * g
-			return
-		for i in span:
-			out[at + i] = a[i] * g
-		for k in range(1, heard.size()):
-			var b: PackedVector2Array = heard[k]
-			for i in span:
-				out[at + i] += b[i] * g
-		return
-	var inv := 1.0 / span
-	for k in heard.size():
-		var b: PackedVector2Array = heard[k]
-		var g0 := starts[k]
-		var dg := (ends[k] - g0) * inv
-		if k == 0:
-			for i in span:
-				out[at + i] = b[i] * (g0 + dg * i)
 		else:
 			for i in span:
-				out[at + i] += b[i] * (g0 + dg * i)
+				out[at + i] = a[i] * g
+			for k in range(1, heard.size()):
+				var b: PackedVector2Array = heard[k]
+				for i in span:
+					out[at + i] += b[i] * g
+	else:
+		var inv := 1.0 / span
+		for k in heard.size():
+			var b: PackedVector2Array = heard[k]
+			var g0 := starts[k]
+			var dg := (ends[k] - g0) * inv
+			if k == 0:
+				for i in span:
+					out[at + i] = b[i] * (g0 + dg * i)
+			else:
+				for i in span:
+					out[at + i] += b[i] * (g0 + dg * i)
+	if not shots.is_empty():
+		_mix_shots(at, span, l0, l1)
+
+
+func _mix_shots(at: int, span: int, l0: float, l1: float) -> void:
+	var inv := 1.0 / float(span)
+	for s: Shot in shots:
+		if s.at > clock:
+			continue
+		var offset := clock - s.at
+		var e0 := s.env
+		if s.env != s.env_target:
+			s.env = move_toward(s.env, s.env_target, s.env_step * span)
+			if absf(s.env - s.env_target) < 1e-9:
+				s.env = s.env_target
+		if e0 <= 0.00001 and s.env <= 0.00001:
+			continue
+		var g0 := s.gain * e0 * l0
+		var g1 := s.gain * s.env * l1
+		var pcm := s.pcm
+		if g0 == g1:
+			for i in span:
+				out[at + i] += pcm[offset + i] * g0
+		else:
+			var dg := (g1 - g0) * inv
+			for i in span:
+				out[at + i] += pcm[offset + i] * (g0 + dg * i)
 
 
 # Second-order Butterworth low-pass, direct form I, mixed wet over dry as the breath asks.
@@ -934,6 +1090,13 @@ func _continues(want: String) -> bool:
 	if sections[want]["clip"] != sections[section]["clip"] or voices.is_empty():
 		return false
 	section = want
+	var ramp := float(maxi(grid_beat, 1))
+	for v: Voice in voices:
+		v.section_name = want
+		var pd := pump_depth_for(v.stem, want)
+		if not is_equal_approx(pd, v.pump_target):
+			v.pump_target = pd
+			v.pump_step = maxf(absf(pd - v.pump_depth), 0.000001) / ramp
 	_retarget(BAY_RAMP)
 	return true
 
@@ -1002,6 +1165,10 @@ func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: i
 	var began := Time.get_ticks_usec()
 	var v := Voice.new()
 	v.stem = stem
+	v.section_name = name
+	var pd := pump_depth_for(stem, name)
+	v.pump_depth = pd
+	v.pump_target = pd
 	v.pb = streams[clip["paths"][stem]].instantiate_playback()
 	v.pb.start((from + 0.5) / RATE)
 	var lead := v.pb.mix_audio(rate_scale, LEAD_IN)

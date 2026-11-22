@@ -1,63 +1,72 @@
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 130 and seed 1448255362601528976 with 2 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
-Parsing file <tmp>/SoundArbiter.tla
-Parsing file <tmp>/Naturals.tla
+Running breadth-first search Model-Checking with fp 36 and seed 1661728952784479724 with 18 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: 5936] (Mac OS X 27.2.1 aarch64, Homebrew 27.0.1.0.3 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/tmp.1Apaj7TFWS/SoundArbiter.tla
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/Naturals.tla
 Semantic processing of module Naturals
 Semantic processing of module SoundArbiter
-Starting... (2026-11-21 18:43:37)
+Starting... (2026-11-21 21:35:07)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-11-21 18:43:37.
+Finished computing initial states: 1 distinct state generated at 2026-11-21 21:35:07.
 Error: Invariant DeathClearsUltFlight is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
-/\ trim_epoch = 0
 /\ warning_on = FALSE
-/\ warden_section = "build"
 /\ ult_armed = FALSE
-/\ trim_active = FALSE
-/\ melody_owner = "lead_stem"
 /\ flow = "stage"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
 /\ dj_epoch = 0
 /\ deck_pack = "stage_sec"
-/\ champion_hyped = FALSE
-/\ boss_phase = 1
-/\ radio_state = "live"
-/\ warden_engaged = FALSE
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
 /\ warden_sealed = FALSE
 
-State 2: <UltimateStarts line 193, col 5 to line 199, col 60 of module SoundArbiter>
-/\ trim_epoch = 0
+State 2: <UltimateStarts line 240, col 5 to line 246, col 60 of module SoundArbiter>
 /\ warning_on = FALSE
-/\ warden_section = "build"
 /\ ult_armed = TRUE
-/\ trim_active = FALSE
-/\ melody_owner = "lead_stem"
 /\ flow = "stage"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
 /\ dj_epoch = 1
 /\ deck_pack = "ult_flight"
-/\ champion_hyped = FALSE
-/\ boss_phase = 1
-/\ radio_state = "live"
-/\ warden_engaged = FALSE
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
 /\ warden_sealed = FALSE
 
-State 3: <PlayerDies line 239, col 5 to line 246, col 94 of module SoundArbiter>
-/\ trim_epoch = 0
+State 3: <PlayerDies line 317, col 5 to line 324, col 94 of module SoundArbiter>
 /\ warning_on = FALSE
-/\ warden_section = "build"
 /\ ult_armed = TRUE
-/\ trim_active = FALSE
-/\ melody_owner = "lead_stem"
 /\ flow = "dead"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
 /\ dj_epoch = 2
 /\ deck_pack = "dead_cadence"
-/\ champion_hyped = FALSE
-/\ boss_phase = 1
-/\ radio_state = "live"
-/\ warden_engaged = FALSE
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
 /\ warden_sealed = FALSE
 
-96 states generated, 74 distinct states found, 58 states left on queue.
-The depth of the complete state graph search is 4.
-The average outdegree of the complete state graph is 5 (minimum is 0, the maximum 9 and the 95th percentile is 9).
-Finished in 00s at (2026-11-21 18:43:37)
+529 states generated, 272 distinct states found, 199 states left on queue.
+The depth of the complete state graph search is 7.
+The average outdegree of the complete state graph is 4 (minimum is 0, the maximum 11 and the 95th percentile is 9).
+Finished in 00s at (2026-11-21 21:35:07)

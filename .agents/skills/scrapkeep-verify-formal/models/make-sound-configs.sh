@@ -8,9 +8,10 @@ scfg() {
   local name=$1 rules=$2
   shift 2
   # Plain variables, not an associative array, so the system bash 3.2 on macOS runs it.
-  local keys="GuardWardenOverChamp GuardUnpinBoss GuardUltStack GuardDeathClearsUlt GuardMelodyLease GuardEpochTrim"
+  local keys="GuardWardenOverChamp GuardUnpinBoss GuardUltStack GuardDeathClearsUlt GuardMelodyLease GuardEpochTrim GuardDeckArbiter GuardDeckShotClean"
   local c_GuardWardenOverChamp=TRUE c_GuardUnpinBoss=TRUE c_GuardUltStack=TRUE
   local c_GuardDeathClearsUlt=TRUE c_GuardMelodyLease=TRUE c_GuardEpochTrim=TRUE
+  local c_GuardDeckArbiter=TRUE c_GuardDeckShotClean=TRUE
   local kv key v
   for kv in "$@"; do
     key=${kv%%=*}
@@ -32,7 +33,7 @@ scfg() {
     echo "INVARIANTS TypeOK $rules"
   } > "sound-$name.cfg"
 }
-SAFE="WardenOwnsFightMusic BossMusicInArena BossFinaleWinsOverAll UltimateRestoresChampion DeathClearsUltFlight OneMelodyNoClash NoStaleTrim"
+SAFE="WardenOwnsFightMusic BossMusicInArena BossFinaleWinsOverAll UltimateRestoresChampion DeathClearsUltFlight OneMelodyNoClash NoStaleTrim DeckObeysArbiter NoStaleShot"
 # The code at the sync commit: every guard in place.
 scfg today "$SAFE"
 # One guard off each, from today: the named rule must break.
@@ -42,7 +43,9 @@ scfg broken-ult-champ "UltimateRestoresChampion" GuardUltStack=FALSE
 scfg broken-death-ult "DeathClearsUltFlight" GuardDeathClearsUlt=FALSE
 scfg broken-melody-clash "OneMelodyNoClash" GuardMelodyLease=FALSE
 scfg broken-stale-trim "NoStaleTrim" GuardEpochTrim=FALSE
+scfg broken-deck-arbiter "DeckObeysArbiter" GuardDeckArbiter=FALSE
+scfg broken-stale-shot "NoStaleShot" GuardDeckShotClean=FALSE
 # Probes: every one must break, or an action can no longer fire.
-for probe in WardenOverChamp BossFinale BossRadioPin UltFlight JuneAnswer Death; do
+for probe in WardenOverChamp BossFinale BossRadioPin UltFlight JuneAnswer DeckPump DeckShot Death; do
   scfg "reach-$probe" "Probe$probe"
 done

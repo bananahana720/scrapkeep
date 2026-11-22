@@ -57,6 +57,10 @@ const SPECS := [
 	# the recorded band to it, with June's sax answering each phrase. Off by default until Andrew
 	# has heard it on and off (ruling cq); `--set-director=on` turns it on.
 	{"key": "set_director", "label": "Set director", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# The deck preset (presentation/deck_moves.gd): kick-locked sidechain pump on the bass
+	# and chords and Warden build, breath and drop effects. Off by default until Andrew has heard
+	# it on and off (ruling cq); `--deck=festival` or `--deck=viking` turns it on.
+	{"key": "deck", "label": "Deck", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["off", "festival", "viking"]},
 	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["banner", "cards"]},
 	# The attack warnings' look (threat_grammar.gd LOOKS). "clear" (the default since 13 Nov 2026, a
 	# taste call Andrew can overturn) and "edges" are haze made less obstructive.
@@ -134,6 +138,7 @@ const BREATH_KEY := "breath"
 const WARDEN_FORM_KEY := "warden_form"
 const DROP_ROOM_KEY := "drop_room"
 const SET_DIRECTOR_KEY := "set_director"
+const DECK_KEY := "deck"
 const DISCOVERY_KEY := "discovery"
 const TELEGRAPH_KEY := "telegraph"
 const BALL_LOOK_KEY := "ball_look"
@@ -256,6 +261,7 @@ const FLAGS := {
 	"warden-form": ["warden_form", "option", "launch"],
 	"drop-room": ["drop_room", "option", "launch"],
 	"set-director": ["set_director", "option", "launch"],
+	"deck": ["deck", "option", "launch"],
 	"discovery": ["discovery", "option", "launch"],
 	"telegraph": ["telegraph", "option", "launch"],
 	"ball-look": ["ball_look", "option", "launch"],

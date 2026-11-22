@@ -289,9 +289,9 @@ export const ROWS = {
     real: [
       {
         cfg: "sound-today.cfg",
-        minStates: 1116,
+        minStates: 4890,
         label:
-          "music deck ownership arbiter, melody lease and epoch-stamped trims across stage, champion, Warden, boss, radio, ultimate, warning and death (Sound V4)",
+          "music deck ownership arbiter, melody lease, epoch-stamped trims and deck pump/shots across stage, champion, Warden, boss, radio, ultimate, warning and death (Sound V4)",
       },
     ],
     plants: [
@@ -301,10 +301,12 @@ export const ROWS = {
       { cfg: "sound-broken-death-ult.cfg", rule: "DeathClearsUltFlight" },
       { cfg: "sound-broken-melody-clash.cfg", rule: "OneMelodyNoClash" },
       { cfg: "sound-broken-stale-trim.cfg", rule: "NoStaleTrim" },
+      { cfg: "sound-broken-deck-arbiter.cfg", rule: "DeckObeysArbiter" },
+      { cfg: "sound-broken-stale-shot.cfg", rule: "NoStaleShot" },
     ],
     coverage: "references/sound-coverage.md",
     gaps: [
-      "sample-accurate timing, Music bus DSP filter cutoffs and StingerMusic reverb (music_dsp.gd) are left to tests/music_dsp_test.gd; SFX voice-class budgets (sfx_budget.gd) are left to tests/sound_arbiter_test.gd",
+      "sample-accurate timing, Music bus DSP filter cutoffs and StingerMusic reverb (music_dsp.gd) are left to tests/music_dsp_test.gd; SFX voice-class budgets (sfx_budget.gd) are left to tests/sound_arbiter_test.gd; festival deck synthesis and warning-lane spectrum (deck_fx.gd) are left to tests/deck_moves_test.gd",
       "jukebox title spins, launch-to-next-stage landings (covered by RunFlow.tla), and miniboss or moment tunes below champion priority are not modelled",
     ],
   },
