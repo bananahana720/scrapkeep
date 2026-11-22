@@ -69,7 +69,7 @@ var _mesh: Node3D
 # Test seam: only the attack pose is disabled; facing and physics keep running.
 var windup_pose_enabled := true
 var _pose_parts: Dictionary = {}
-var _posed_dirty := false
+var _parts_off_rest := false
 # The body cues (LEGIBILITY section 6): while the lunge can still be broken the back wears the
 # will_break state row, and a broken wind-up plays the interrupted row. Colour, motion and
 # glyph shape come from STATE_ROWS; only the body paint's emission and a reaction move. Test
@@ -360,12 +360,12 @@ func _pose() -> void:
 			pitch = lerpf(deg_to_rad(REAR_PITCH), deg_to_rad(-12.0), snap)
 			flare = deg_to_rad(32.0) * (1.0 - snap)
 	if pitch == 0.0 and shift == Vector3.ZERO and flare == 0.0:
-		if _posed_dirty:
-			_posed_dirty = false
+		if _parts_off_rest:
+			_parts_off_rest = false
 			for part in _pose_parts.values():
 				part.node.transform = part.rest
 		return
-	_posed_dirty = true
+	_parts_off_rest = true
 	var body_pose := Transform3D(Basis(Vector3.RIGHT, pitch), shift)
 	for part_name in _pose_parts:
 		var part: Dictionary = _pose_parts[part_name]

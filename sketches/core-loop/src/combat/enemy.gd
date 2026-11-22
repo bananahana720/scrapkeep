@@ -436,7 +436,7 @@ func _attack_pose() -> Basis:
 func winding_up() -> bool:
 	if not _atk.is_empty() or telegraph() != null:
 		return true
-	if kind != "warden" and kind != "swarm_remnant":
+	if not WindupRows.has_state_facts(kind):
 		return false
 	return not WindupRows.state_facts(self).is_empty()
 
@@ -678,7 +678,9 @@ func _move(delta: float, desired: Vector3) -> void:
 
 
 func _knocked_speed() -> float:
-	return Vector3(_knock.x, 0.0, _knock.z).length()
+	if _knock.x == 0.0 and _knock.z == 0.0:
+		return 0.0
+	return Vector2(_knock.x, _knock.z).length()
 
 
 # A knock that drives this enemy into a world face lands as a slam: a stagger and one enemy_walled,

@@ -159,6 +159,7 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3, land := Cal
 	var seed_hash := absi(hash(Vector3i(at.round())))
 	for i in count:
 		var piece := MeshInstance3D.new()
+		piece.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var angle := TAU * (float(i) + float((seed_hash >> (i % 16)) % 7) / 14.0) / float(count)
 		var out := Vector3(cos(angle), 0.0, sin(angle))
 		node.add_child(piece)

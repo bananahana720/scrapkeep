@@ -17,7 +17,9 @@ const PanelShell := preload("res://src/build/panel_shell.gd")
 # ground_plate builds it; lay_out, magnet, collection, value and timing unchanged.
 # Re-pinned 2026-11-21 (W45 perf unit 1): step() writes no spin to an uncaught pickup past SPIN_RANGE (120 m);
 # lay_out, magnet, collection, value, timing and every near spin unchanged.
-const LOGIC_SHA := "fac20ceea02b7d1accc9912231f7dd5cbc5df22db3c363341b617062961c04a7"
+# Re-pinned 2026-11-21 (W45 perf unit 4): step() skips length() sqrt on uncaught pickups past max(reach, SPIN_RANGE, COLLECT);
+# lay_out, magnet, collection, recovery expiry, value, timing and near spins unchanged.
+const LOGIC_SHA := "f6c021fc040f80aeca0eed3acae2bf3086567a285d802f6457d40de774d4e83d"
 
 var failures: Array[String] = []
 var game

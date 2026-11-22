@@ -101,28 +101,28 @@ func _pose_settles() -> void:
 	var enemy = _spawn()
 	enemy.set_physics_process(false)
 	enemy._pose()
-	_t.check("chase pose is rest", _at_rest(enemy) and not enemy._posed_dirty)
+	_t.check("chase pose is rest", _at_rest(enemy) and not enemy._parts_off_rest)
 	enemy._begin_windup(Vector3.FORWARD)
 	enemy._clock = enemy.WINDUP * 0.5
 	enemy._pose()
 	var body: Dictionary = enemy._pose_parts["ChaserBody"]
-	_t.check("wind-up poses the body", body.node.transform != body.rest and enemy._posed_dirty)
+	_t.check("wind-up poses the body", body.node.transform != body.rest and enemy._parts_off_rest)
 	enemy.state = enemy.State.LUNGE
 	enemy._clock = 0.04
 	enemy._pose()
 	_t.check("lunge poses the body", body.node.transform != body.rest)
 	enemy._end_attack(enemy.State.RECOVER)
 	enemy._pose()
-	_t.check("recover puts every part back to rest", _at_rest(enemy) and not enemy._posed_dirty)
+	_t.check("recover puts every part back to rest", _at_rest(enemy) and not enemy._parts_off_rest)
 	enemy.state = enemy.State.CHASE
 	enemy._pose()
-	_t.check("chase stays at rest", _at_rest(enemy) and not enemy._posed_dirty)
+	_t.check("chase stays at rest", _at_rest(enemy) and not enemy._parts_off_rest)
 	enemy.windup_pose_enabled = false
 	enemy._rest = 0.0
 	enemy._begin_windup(Vector3.FORWARD)
 	enemy._clock = enemy.WINDUP * 0.5
 	enemy._pose()
-	_t.check("disabled pose stays at rest", _at_rest(enemy) and not enemy._posed_dirty)
+	_t.check("disabled pose stays at rest", _at_rest(enemy) and not enemy._parts_off_rest)
 	enemy.free()
 
 

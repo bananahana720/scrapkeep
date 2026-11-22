@@ -1164,17 +1164,18 @@ func _step_companion(playing: bool) -> void:
 	if doc != _companion_doc:
 		_companion_doc = doc.duplicate(true)
 		state = companion_state_of(doc)
-	if state != _companion_state and state != "none" and _companion_state != "none":
-		var kind := "companion_" + state
-		_companion_cues.append(kind)
-		var audio = game.audio()
-		if audio != null and audio.has_method("play"):
-			audio.play(kind, 0.0, 1.0, "UI")
-	_companion_state = state
-	if state != "none":
-		var row: Dictionary = EventKinds.UI_ROWS["companion_" + state]
-		_companion.texture = Icons.shape(String(row["shape"]))
-		_companion.modulate = row["color"]
+	if state != _companion_state:
+		if state != "none" and _companion_state != "none":
+			var kind := "companion_" + state
+			_companion_cues.append(kind)
+			var audio = game.audio()
+			if audio != null and audio.has_method("play"):
+				audio.play(kind, 0.0, 1.0, "UI")
+		_companion_state = state
+		if state != "none":
+			var row: Dictionary = EventKinds.UI_ROWS["companion_" + state]
+			_companion.texture = Icons.shape(String(row["shape"]))
+			_companion.modulate = row["color"]
 	_companion.visible = playing and state != "none"
 
 

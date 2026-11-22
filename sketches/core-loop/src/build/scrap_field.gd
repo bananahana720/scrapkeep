@@ -550,12 +550,15 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 	var taken: Array[Vector3] = []
 	var reach := magnet_reach(ball_speed)
 	var home := (HOME_SPEED + ball_speed * HOME_OVER_BALL) * pull_scale()
+	var active_range := maxf(maxf(reach, SPIN_RANGE), COLLECT)
+	var active_sq := active_range * active_range
 	var i := _items.size() - 1
 	while i >= 0:
 		var item := _items[i]
 		var offset := ball - item.global_position
-		var distance := offset.length()
-		if _value.has(item) and not _caught.has(item):
+		var is_caught := _caught.has(item)
+		var is_recovery := _value.has(item)
+		if is_recovery and not is_caught:
 			_age[item] += delta
 			if _age[item] >= RECOVERY_LIFE:
 				expired_values.append(int(_value[item]))
@@ -564,8 +567,12 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 				item.queue_free()
 				i -= 1
 				continue
-		if distance <= COLLECT or (_caught.has(item) and distance <= home * delta):
-			if _value.has(item):
+		if not is_caught and offset.length_squared() > active_sq:
+			i -= 1
+			continue
+		var distance := offset.length()
+		if distance <= COLLECT or (is_caught and distance <= home * delta):
+			if is_recovery:
 				recovered_values.append(int(_value[item]))
 				recovered.emit(int(_value[item]))
 			elif _cogs.has(item):
@@ -580,16 +587,17 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 			_caught.erase(item)
 			item.queue_free()
 		else:
-			if distance < reach and not _caught.has(item):
+			if distance < reach and not is_caught:
 				_caught[item] = _catch_side(item)
-			if _caught.has(item):
+				is_caught = true
+			if is_caught:
 				var far := clampf(distance / reach, 0.0, 1.0)
 				var side := offset.cross(Vector3.UP)
 				side = side.normalized() * float(_caught[item]) if side.length() > 0.01 else Vector3.ZERO
 				item.global_position += (offset / distance + side * ARC_SIDE * far + Vector3.UP * ARC_LIFT * far) * home * delta
 				item.scale = Vector3.ONE * clampf(distance / reach, 0.45, 1.0)
 			# A panel turns upright so its light column stays a column.
-			if distance <= SPIN_RANGE or _caught.has(item):
+			if distance <= SPIN_RANGE or is_caught:
 				item.rotation = Vector3(0.0 if _panels.has(item) else _spin * 0.7, _spin, 0.0)
 		i -= 1
 	return taken

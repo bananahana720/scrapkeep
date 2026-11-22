@@ -124,11 +124,23 @@ var _doors_cache: Array[Dictionary] = []
 var _doors_map_id := 0
 var _doors_count := -1
 const POCKET_STILL_M := 0.2
+const _NO_OVERLAYS: Array = []
+const _EMPTY_TARGETS: Array[Dictionary] = []
 var _pockets_ball := Vector3.INF
 var _pockets_cam_xform := Transform3D()
 var _pockets_size := Vector2.ZERO
 var _pockets_map_id := 0
+var _pockets_doors_count := -1
 var _pockets_found := -1
+var _pockets_overlays: Array = []
+var _targets_ball := Vector3.INF
+var _targets_map_id := 0
+var _targets_doors_count := -1
+var _targets_found := Vector2i.ZERO
+var _targets_opened := Vector2i.ZERO
+var _targets_stage := -1
+var _targets_overlays: Array = []
+var _targets_cache: Array[Dictionary] = []
 var _shown: Array[Dictionary] = []
 # How far each off-screen arrow stands from its own spot along the edge, by the point it names.
 var _slide := {}
@@ -153,10 +165,13 @@ func setup(game_ref) -> void:
 	# Door keys repeat across runs, so a new run forgets what the last one found.
 	game.events.run_started.connect(func(_class_id: String):
 		discovered.clear()
-		_incoming.clear())
+		_incoming.clear()
+		_reset_pocket_caches())
 	game.events.event_announced.connect(note_incoming)
 	# A retry or a new stage ends what was announced without an end for each event.
-	game.events.stage_entered.connect(func(_stage: int, _retry: bool): _incoming.clear())
+	game.events.stage_entered.connect(func(_stage: int, _retry: bool):
+		_incoming.clear()
+		_reset_pocket_caches())
 	# The arena and the lap clear the stage's content with no stage change and no end per event.
 	game.events.stage_content_cleared.connect(func(_reason: String): _incoming.clear())
 	game.events.event_started.connect(func(id: String): _incoming.erase(id))
@@ -322,20 +337,71 @@ func _doors_of(map) -> Array[Dictionary]:
 	return _doors_cache
 
 
+func _reset_pocket_caches() -> void:
+	_pockets_ball = Vector3.INF
+	_targets_ball = Vector3.INF
+	_targets_cache.clear()
+
+
+static func _overlays_of(terrain) -> Array:
+	return terrain.overlays if terrain != null and "overlays" in terrain else _NO_OVERLAYS
+
+
+static func _opened_sig(contraptions) -> Vector2i:
+	if contraptions == null:
+		return Vector2i.ZERO
+	var count := 0
+	var bits := 0
+	for v in contraptions.valves:
+		if v["open"]:
+			count += 1
+			bits ^= hash(v["spec"]["id"])
+	for w in contraptions.walls:
+		if w["broken"]:
+			count += 1
+			bits ^= hash(w["spec"]["id"])
+	return Vector2i(count, bits)
+
+
+func _discovered_sig() -> Vector2i:
+	var bits := 0
+	for key in discovered:
+		bits ^= hash(key)
+	return Vector2i(discovered.size(), bits)
+
+
 # The pocket targets for the stage in play, doors the player has opened left out.
 func _pocket_targets_now() -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	if game == null or game.world == null or game.player == null:
-		return out
+	if discovered.is_empty() or game == null or game.world == null or game.player == null:
+		return _EMPTY_TARGETS
 	var terrain = game.world.terrain
-	if _doors_of(terrain.map()).is_empty():
-		return out
-	var opened := _opened_ids(game.world.contraptions.get(terrain.stage))
+	var all_doors := _doors_of(terrain.map())
+	if all_doors.is_empty():
+		return _EMPTY_TARGETS
+	var contraptions = game.world.contraptions.get(terrain.stage)
+	var opened_sig := _opened_sig(contraptions)
+	var found_sig := _discovered_sig()
+	var ball: Vector3 = game.player.shown_position()
+	var overlays := _overlays_of(terrain)
+	if ball.distance_to(_targets_ball) < POCKET_STILL_M and _doors_map_id == _targets_map_id \
+			and _doors_count == _targets_doors_count and found_sig == _targets_found \
+			and opened_sig == _targets_opened and terrain.stage == _targets_stage \
+			and overlays == _targets_overlays:
+		return _targets_cache
+	_targets_ball = ball
+	_targets_map_id = _doors_map_id
+	_targets_doors_count = _doors_count
+	_targets_found = found_sig
+	_targets_opened = opened_sig
+	_targets_stage = terrain.stage
+	_targets_overlays = overlays.duplicate()
+	var opened := _opened_ids(contraptions)
 	var doors: Array[Dictionary] = []
-	for door in _doors_cache:
+	for door in all_doors:
 		if not opened.has(door["id"]):
 			doors.append(door)
-	return pocket_targets(doors, discovered, game.player.shown_position(), Callable(terrain, "height"))
+	_targets_cache = pocket_targets(doors, discovered, ball, Callable(terrain, "height"))
+	return _targets_cache
 
 
 # Latches every door that is in view, in range and in sight as discovered. Called each frame.
@@ -343,19 +409,24 @@ func note_pockets(size: Vector2) -> void:
 	if game == null or game.world == null or game.player == null or not game.flow.in_play():
 		return
 	var terrain = game.world.terrain
-	if _doors_of(terrain.map()).is_empty() or _all_found():
+	var doors := _doors_of(terrain.map())
+	if doors.is_empty() or _all_found(doors):
 		return
 	var cam: Camera3D = game.camera.cam
 	var ball: Vector3 = game.player.shown_position()
+	var overlays := _overlays_of(terrain)
 	if ball.distance_to(_pockets_ball) < POCKET_STILL_M and cam.global_transform == _pockets_cam_xform and size == _pockets_size \
-			and _doors_map_id == _pockets_map_id and discovered.size() == _pockets_found:
+			and _doors_map_id == _pockets_map_id and _doors_count == _pockets_doors_count \
+			and discovered.size() == _pockets_found and overlays == _pockets_overlays:
 		return
 	_pockets_ball = ball
 	_pockets_cam_xform = cam.global_transform
 	_pockets_size = size
 	_pockets_map_id = _doors_map_id
+	_pockets_doors_count = _doors_count
+	_pockets_overlays = overlays.duplicate()
 	var ground := Callable(terrain, "height")
-	for door in _doors_cache:
+	for door in doors:
 		if discovered.has(door["key"]):
 			continue
 		var seen := pocket_targets([door], {door["key"]: true}, ball, ground)
@@ -367,10 +438,10 @@ func note_pockets(size: Vector2) -> void:
 	_pockets_found = discovered.size()
 
 
-func _all_found() -> bool:
-	if discovered.size() < _doors_cache.size():
+func _all_found(doors: Array[Dictionary]) -> bool:
+	if discovered.size() < doors.size():
 		return false
-	for door in _doors_cache:
+	for door in doors:
 		if not discovered.has(door["key"]):
 			return false
 	return true
