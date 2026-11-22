@@ -456,8 +456,10 @@ func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, ste
 		riding = true
 	for v in valves:
 		_step_valve(v, delta, ball, planar, facts)
-	for s in sluice_valves:
-		_step_sluice_valve(s, delta, ball, velocity, planar, riding, facts)
+	if not sluice_valves.is_empty():
+		var motion := {"pos": ball, "vel": velocity, "planar": planar, "riding": riding}
+		for s in sluice_valves:
+			_step_sluice_valve(s, delta, motion, facts)
 	for w in walls:
 		_step_wall(w, ball, velocity, kit, facts)
 	_thermal_quiet = maxf(0.0, _thermal_quiet - delta)
@@ -1320,7 +1322,9 @@ func _arm_sluice(s: Dictionary, facts: Array, paid: bool) -> bool:
 	return true
 
 
-func _step_sluice_valve(s: Dictionary, delta: float, ball: Vector3, velocity: Vector3, planar: float, riding: bool, facts: Array) -> void:
+func _step_sluice_valve(s: Dictionary, delta: float, motion: Dictionary, facts: Array) -> void:
+	var ball: Vector3 = motion["pos"]
+	var planar: float = float(motion["planar"])
 	match String(s["state"]):
 		"ready":
 			var at: Vector3 = s["at"]
@@ -1352,7 +1356,7 @@ func _step_sluice_valve(s: Dictionary, delta: float, ball: Vector3, velocity: Ve
 			_puff(s["lane_from"] + Vector3.UP * 1.2, 5.0)
 			_puff((s["lane_from"] as Vector3) + (s["dir"] as Vector3) * (float(s["length"]) * 0.5) + Vector3.UP * 1.2, 4.0)
 			h.lane_front = h.live_fraction() * float(s["length"])
-			_apply_surge(s, h, ball, velocity, planar, riding)
+			_apply_surge(s, h, motion)
 			if h.is_done():
 				_enter_sluice_charge(s)
 		"surging":
@@ -1363,7 +1367,7 @@ func _step_sluice_valve(s: Dictionary, delta: float, ball: Vector3, velocity: Ve
 			h.step(delta)
 			h.lane_front = h.live_fraction() * float(s["length"])
 			if h.is_live():
-				_apply_surge(s, h, ball, velocity, planar, riding)
+				_apply_surge(s, h, motion)
 			if h.is_done():
 				_enter_sluice_charge(s)
 		"charging":
@@ -1387,7 +1391,11 @@ func _enter_sluice_charge(s: Dictionary) -> void:
 	_needle(s["needle"], 0.0)
 
 
-func _apply_surge(s: Dictionary, h: Hazard, ball: Vector3, velocity: Vector3, planar: float, riding: bool) -> void:
+func _apply_surge(s: Dictionary, h: Hazard, motion: Dictionary) -> void:
+	var ball: Vector3 = motion["pos"]
+	var velocity: Vector3 = motion["vel"]
+	var planar: float = float(motion["planar"])
+	var riding: bool = bool(motion["riding"])
 	var dir: Vector3 = s["dir"]
 	if not bool(s["props_broken_this_surge"]):
 		s["props_broken_this_surge"] = true
