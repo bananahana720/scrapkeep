@@ -97,6 +97,11 @@ var _refund_flashes := {}
 var _refund_count := 0
 # The set piece's solid plates behind the dimmed slots: a child, so self_modulate leaves it whole.
 var _plates := Plates.new()
+var _sb_back := StyleBoxFlat.new()
+var _sb_wash := StyleBoxFlat.new()
+var _sb_frame := StyleBoxFlat.new()
+var _sb_outer := StyleBoxFlat.new()
+var _sb_cap := StyleBoxFlat.new()
 
 
 func _init() -> void:
@@ -422,10 +427,9 @@ func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:
 		rect = rect.grow(2.0)
 	rect.position.y -= look["lift"]
 	var radius := int(UiTokens.RADIUS * scale)
-	var back := StyleBoxFlat.new()
-	back.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA) if state != "unavailable" else Color(Palette.VERDIGRIS, 0.5)
-	back.set_corner_radius_all(radius)
-	draw_style_box(back, rect)
+	_sb_back.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA) if state != "unavailable" else Color(Palette.VERDIGRIS, 0.5)
+	_sb_back.set_corner_radius_all(radius)
+	draw_style_box(_sb_back, rect)
 
 	var reason := slot_reason(entry)
 	if reason == "clock":
@@ -440,33 +444,30 @@ func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:
 		draw_line(rect.position + Vector2(inset, rect.size.y - inset), rect.end - Vector2(inset, rect.size.y - inset), Color(color, 0.9), 3.0)
 	var flash := flash_color(name)
 	if flash.a > 0.0:
-		var wash := StyleBoxFlat.new()
-		wash.bg_color = Color(flash, flash.a * 0.55)
-		wash.set_corner_radius_all(radius)
-		draw_style_box(wash, rect)
+		_sb_wash.bg_color = Color(flash, flash.a * 0.55)
+		_sb_wash.set_corner_radius_all(radius)
+		draw_style_box(_sb_wash, rect)
 
 	var frame_color: Color = tint if left > 0.0 else (Color(flash, 1.0) if flash.a > 0.0 else color)
 	if reason == "empty":
 		_draw_dashed(rect, frame_color)
 	else:
-		var frame := StyleBoxFlat.new()
-		frame.draw_center = false
-		frame.border_color = frame_color
-		frame.set_border_width_all({"ready": 3, "active": 3, "cooling": 1, "unavailable": 1}[state])
-		frame.set_corner_radius_all(radius)
-		draw_style_box(frame, rect)
+		_sb_frame.draw_center = false
+		_sb_frame.border_color = frame_color
+		_sb_frame.set_border_width_all({"ready": 3, "active": 3, "cooling": 1, "unavailable": 1}[state])
+		_sb_frame.set_corner_radius_all(radius)
+		draw_style_box(_sb_frame, rect)
 	var refund_left := refund_flash_left(name)
 	if refund_left > 0.0:
 		var row: Dictionary = EventKinds.UI_ROWS["cooldown_refunded"]
 		var refund_color := Color(row["color"], refund_left / PULSE_SECONDS)
 		draw_texture_rect(Icons.shape(row["shape"]), rect.grow(-rect.size.x * 0.2), false, refund_color)
 	if look["doubled"]:
-		var outer := StyleBoxFlat.new()
-		outer.draw_center = false
-		outer.border_color = Color(color, 0.55)
-		outer.set_border_width_all(2)
-		outer.set_corner_radius_all(radius + 3)
-		draw_style_box(outer, rect.grow(5.0))
+		_sb_outer.draw_center = false
+		_sb_outer.border_color = Color(color, 0.55)
+		_sb_outer.set_border_width_all(2)
+		_sb_outer.set_corner_radius_all(radius + 3)
+		draw_style_box(_sb_outer, rect.grow(5.0))
 
 	if left > 0.0:
 		var t := 1.0 - left / PULSE_SECONDS
@@ -499,13 +500,12 @@ func _draw_cap(at: Vector2, key: String, look: Dictionary, height: float) -> voi
 		Keycap.draw(self, at, key, look["cap_ink"], height)
 		return
 	var cap := Keycap.size_of(key, height)
-	var box := StyleBoxFlat.new()
-	box.bg_color = look["cap_fill"]
-	box.border_color = look["cap_fill"]
-	box.set_border_width_all(2)
-	box.border_width_bottom = 4
-	box.set_corner_radius_all(int(cap.y * 0.2))
-	draw_style_box(box, Rect2(at - cap * 0.5, cap))
+	_sb_cap.bg_color = look["cap_fill"]
+	_sb_cap.border_color = look["cap_fill"]
+	_sb_cap.set_border_width_all(2)
+	_sb_cap.border_width_bottom = 4
+	_sb_cap.set_corner_radius_all(int(cap.y * 0.2))
+	draw_style_box(_sb_cap, Rect2(at - cap * 0.5, cap))
 	var fs := Keycap.font_size(height)
 	var text := Keycap.label(key)
 	var font := UiFonts.bold()

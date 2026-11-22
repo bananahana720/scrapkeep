@@ -102,6 +102,7 @@ var _trail := {}
 var _cache_column: CylinderMesh
 const CACHE_COLUMN := 14.0
 const CACHE_HEAR := 45.0
+const SPIN_RANGE := 120.0
 
 var _value := {}
 var _age := {}
@@ -549,12 +550,15 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 	var taken: Array[Vector3] = []
 	var reach := magnet_reach(ball_speed)
 	var home := (HOME_SPEED + ball_speed * HOME_OVER_BALL) * pull_scale()
+	var active_range := maxf(maxf(reach, SPIN_RANGE), COLLECT)
+	var active_sq := active_range * active_range
 	var i := _items.size() - 1
 	while i >= 0:
 		var item := _items[i]
 		var offset := ball - item.global_position
-		var distance := offset.length()
-		if _value.has(item) and not _caught.has(item):
+		var is_caught := _caught.has(item)
+		var is_recovery := _value.has(item)
+		if is_recovery and not is_caught:
 			_age[item] += delta
 			if _age[item] >= RECOVERY_LIFE:
 				expired_values.append(int(_value[item]))
@@ -563,8 +567,12 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 				item.queue_free()
 				i -= 1
 				continue
-		if distance <= COLLECT or (_caught.has(item) and distance <= home * delta):
-			if _value.has(item):
+		if not is_caught and offset.length_squared() > active_sq:
+			i -= 1
+			continue
+		var distance := offset.length()
+		if distance <= COLLECT or (is_caught and distance <= home * delta):
+			if is_recovery:
 				recovered_values.append(int(_value[item]))
 				recovered.emit(int(_value[item]))
 			elif _cogs.has(item):
@@ -579,16 +587,18 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 			_caught.erase(item)
 			item.queue_free()
 		else:
-			if distance < reach and not _caught.has(item):
+			if distance < reach and not is_caught:
 				_caught[item] = _catch_side(item)
-			if _caught.has(item):
+				is_caught = true
+			if is_caught:
 				var far := clampf(distance / reach, 0.0, 1.0)
 				var side := offset.cross(Vector3.UP)
 				side = side.normalized() * float(_caught[item]) if side.length() > 0.01 else Vector3.ZERO
 				item.global_position += (offset / distance + side * ARC_SIDE * far + Vector3.UP * ARC_LIFT * far) * home * delta
 				item.scale = Vector3.ONE * clampf(distance / reach, 0.45, 1.0)
 			# A panel turns upright so its light column stays a column.
-			item.rotation = Vector3(0.0 if _panels.has(item) else _spin * 0.7, _spin, 0.0)
+			if distance <= SPIN_RANGE or is_caught:
+				item.rotation = Vector3(0.0 if _panels.has(item) else _spin * 0.7, _spin, 0.0)
 		i -= 1
 	return taken
 
@@ -674,6 +684,7 @@ func _add(at: Vector3, mesh: Mesh = null, material: Material = null) -> MeshInst
 	var item := MeshInstance3D.new()
 	item.mesh = mesh if mesh != null else _mesh
 	item.material_override = material if material != null else _material
+	item.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	if not _pickup_mesh_cache.is_empty() and (mesh == null or mesh == _cluster_mesh):
 		# Position is already seeded by the field; visual selection never draws RNG.
 		var seed_key := "%d:%d:%d" % [roundi(at.x * 1000.0), roundi(at.y * 1000.0), roundi(at.z * 1000.0)]

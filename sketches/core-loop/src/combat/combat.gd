@@ -1793,6 +1793,8 @@ func _add_shred(enemy: Node3D, punch: float) -> void:
 
 
 func _decay_shred(delta: float) -> void:
+	if _shred.is_empty():
+		return
 	for id in _shred.keys():
 		var enemy := instance_from_id(id) as Node3D
 		if DamageDoor.dead(enemy):
@@ -2017,16 +2019,18 @@ func _strike_strip(strip: Dictionary, enemies = null) -> void:
 
 # The strips strike what enters them and go when their life ends; a bell rings when it is due.
 func _step_verb_items(enemies = null) -> void:
-	for strip in _strips.duplicate():
-		if _clock >= float(strip["until"]):
-			ctx.player.indicator.clear(String(strip["layer"]))
-			_strips.erase(strip)
-		else:
-			_strike_strip(strip, enemies)
-	for bell in _bells.duplicate():
-		if _clock >= float(bell["at"]):
-			_bells.erase(bell)
-			_toll(bell, enemies)
+	if not _strips.is_empty():
+		for strip in _strips.duplicate():
+			if _clock >= float(strip["until"]):
+				ctx.player.indicator.clear(String(strip["layer"]))
+				_strips.erase(strip)
+			else:
+				_strike_strip(strip, enemies)
+	if not _bells.is_empty():
+		for bell in _bells.duplicate():
+			if _clock >= float(bell["at"]):
+				_bells.erase(bell)
+				_toll(bell, enemies)
 
 
 func _clear_verb_items() -> void:
@@ -4964,25 +4968,29 @@ func _on_slammed_upgrade(at: Vector3, _strength: float, _flatness: float) -> voi
 # to hull) hits it once per knock, keyed by the carrier's instance and knock count, and
 # hands on PIN_CARRY of its speed, so a chain always runs down below the bar.
 func _pin_step(enemies: Array) -> void:
-	for key in _pinned.keys():
-		if _clock - float(_pinned[key]) > 3.0:
-			_pinned.erase(key)
+	if not _pinned.is_empty():
+		for key in _pinned.keys():
+			if _clock - float(_pinned[key]) > 3.0:
+				_pinned.erase(key)
 	for carrier in enemies:
-		if not _pinnable(carrier) or not carrier.has_method("_knocked_speed"):
+		if not _pinnable(carrier) or not (carrier is EnemyBase or carrier.has_method("_knocked_speed")):
 			continue
 		var speed: float = carrier._knocked_speed()
 		if speed <= Weapons.PIN_MIN_SPEED:
 			continue
 		var heading := Vector3(carrier.velocity.x, 0.0, carrier.velocity.z)
-		heading = heading.normalized() if heading.length() > 0.1 else Vector3.ZERO
+		heading = heading.normalized() if heading.length_squared() > 0.01 else Vector3.ZERO
+		if heading == Vector3.ZERO:
+			continue
 		for victim in enemies:
 			if victim == carrier or not _pinnable(victim) or victim.get("weight") == null:
 				continue
 			var to: Vector3 = victim.global_position - carrier.global_position
 			to.y = 0.0
-			if to.length() - _hull(carrier) - _hull(victim) > Weapons.PIN_RADIUS:
+			var reach := _hull(carrier) + _hull(victim) + Weapons.PIN_RADIUS
+			if to.length_squared() > reach * reach:
 				continue
-			if heading == Vector3.ZERO or to.normalized().dot(heading) < 0.5:
+			if to.normalized().dot(heading) < 0.5:
 				continue
 			var key := "%d:%d:%d" % [carrier.get_instance_id(), carrier.knocks, victim.get_instance_id()]
 			if _pinned.has(key):
@@ -5053,7 +5061,11 @@ func _hulk_step(enemies: Array, delta: float) -> void:
 
 
 static func _pinnable(enemy) -> bool:
-	return is_instance_valid(enemy) and enemy.has_method("knock") and enemy.has_method("is_dead") and not enemy.is_dead()
+	if not is_instance_valid(enemy):
+		return false
+	if enemy is EnemyBase:
+		return not enemy.is_dead()
+	return enemy.has_method("knock") and enemy.has_method("is_dead") and not enemy.is_dead()
 
 
 # --- Enemy attacks ------------------------------------------------------------------

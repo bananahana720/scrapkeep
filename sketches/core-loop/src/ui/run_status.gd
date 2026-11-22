@@ -46,6 +46,7 @@ var has_boss := false
 var in_arena := false
 var threat := 0
 var _rise_left := 0.0
+var _drawn := false
 
 
 func _init() -> void:
@@ -55,6 +56,8 @@ func _init() -> void:
 
 
 func set_status(stage_now: int, stage_count: int, boss_exists: bool, arena: bool, threat_tier: int) -> void:
+	if _drawn and stage_now == stage and stage_count == stages and boss_exists == has_boss and arena == in_arena and threat_tier == threat:
+		return
 	stage = stage_now
 	stages = stage_count
 	has_boss = boss_exists
@@ -62,6 +65,7 @@ func set_status(stage_now: int, stage_count: int, boss_exists: bool, arena: bool
 	if steps_lit_at(threat_tier) > steps_lit():
 		_rise_left = RISE_BLINK
 	threat = threat_tier
+	_drawn = true
 	queue_redraw()
 
 

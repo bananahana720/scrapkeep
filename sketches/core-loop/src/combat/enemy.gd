@@ -13,6 +13,8 @@ const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WindupPoses := preload("res://src/presentation/windup_poses.gd")
 const EnemyGait := preload("res://src/presentation/enemy_gait.gd")
+# Not "Roster": counter, crew_fitter, swarm_remnant and warden extend this script and declare their own.
+const _Roster := preload("res://src/combat/roster.gd")
 
 # What every enemy shares: health, plating, weight, knockback, the flash, the plating
 # tint, death and its telegraph. The spine's ball calls knock() and flash() on contact
@@ -44,6 +46,8 @@ const RING_OUT_DROP := 6.0
 # move on their own _move, so a knock never drops them.
 const RING_OUT_KEPT := ["warden", "vault", "miniboss", "reactor_relic", "swarm_remnant", "mind_hand",
 	"foreman", "dispatcher", "splitter", "linker", "rogue_crane", "rogue_skip", "rogue_tender"]
+static var _ring_out_kept := _as_set(RING_OUT_KEPT)
+const _NON_ORDINARY := {"warden": true, "vault": true, "miniboss": true, "rogue_crane": true, "rogue_skip": true, "rogue_tender": true}
 # The plating dress reads the colour law (LEGIBILITY, STATE_ROWS): "breaks now" is a rim and
 # an open-crack glyph in the live colour, pulsing; "not yet" is a steady slate rim and no
 # crack. The tint_state names ("amber" for will break, "slate" for glances) stay as combat
@@ -215,8 +219,22 @@ func _visual_parent() -> Node3D:
 	return reaction_pivot
 
 
+var _ordinary_kind := ""
+var _ordinary_cached := true
+
+
 func _ordinary_reaction() -> bool:
-	return kind not in ["warden", "vault", "miniboss", "rogue_crane", "rogue_skip", "rogue_tender"] and not preload("res://src/combat/roster.gd").is_boss_piece(kind)
+	if kind != _ordinary_kind:
+		_ordinary_kind = kind
+		_ordinary_cached = not _NON_ORDINARY.has(kind) and not _Roster.is_boss_piece(kind)
+	return _ordinary_cached
+
+
+static func _as_set(names: Array) -> Dictionary:
+	var out := {}
+	for entry in names:
+		out[entry] = true
+	return out
 
 
 # `struck` false is a reaction to something seen, not a blow: it plays no hit clip.
@@ -331,7 +349,9 @@ func _update_reaction(delta: float) -> void:
 			lean_pose = Quaternion(_reaction_axis(_reaction_ball() - global_position), deg_to_rad(LINE_LEAN) * _line_lean)
 		# The reaction and line lean are in the body's frame; the turn carries the model, and the
 		# idle, wind-up and release poses ride inside it, so a nose-up stays nose-up when it is turned.
-		reaction_pivot.transform = tilt * Transform3D(Basis(lean_pose * _react_pose), Vector3.ZERO) * turn * Transform3D(_idle_pose, idle_offset)
+		var next_xform := tilt * Transform3D(Basis(lean_pose * _react_pose), Vector3.ZERO) * turn * Transform3D(_idle_pose, idle_offset)
+		if reaction_pivot.transform != next_xform:
+			reaction_pivot.transform = next_xform
 
 
 # The model breathes between attacks and holds still (or takes its row's pose) through
@@ -414,7 +434,11 @@ func _attack_pose() -> Basis:
 # An attack is open: a wind-up or strike instance, a committed telegraph, or the state the
 # Warden and swarm remnant publish instead.
 func winding_up() -> bool:
-	return not _atk.is_empty() or telegraph() != null or not WindupRows.state_facts(self).is_empty()
+	if not _atk.is_empty() or telegraph() != null:
+		return true
+	if not WindupRows.has_state_facts(kind):
+		return false
+	return not WindupRows.state_facts(self).is_empty()
 
 
 func _death_direction() -> Vector3:
@@ -654,7 +678,9 @@ func _move(delta: float, desired: Vector3) -> void:
 
 
 func _knocked_speed() -> float:
-	return Vector3(_knock.x, 0.0, _knock.z).length()
+	if _knock.x == 0.0 and _knock.z == 0.0:
+		return 0.0
+	return Vector2(_knock.x, _knock.z).length()
 
 
 # A knock that drives this enemy into a world face lands as a slam: a stagger and one enemy_walled,
@@ -718,8 +744,9 @@ func open_ring_out() -> void:
 
 
 func ring_outs_here() -> bool:
-	return terrain != null and terrain.has_method("world") and terrain.world() == RING_OUT_WORLD \
-		and not kind in RING_OUT_KEPT and not preload("res://src/combat/roster.gd").is_boss_piece(kind)
+	if terrain == null or not terrain.has_method("world") or terrain.world() != RING_OUT_WORLD:
+		return false
+	return not _ring_out_kept.has(kind) and not _Roster.is_boss_piece(kind)
 
 
 # Knocked off the edge: a kill the pilot earned, whatever health or plating was left.
@@ -734,12 +761,25 @@ func ring_out() -> void:
 	_die()
 
 
+var _rescue_cell := Vector2i(1 << 20, 1 << 20)
+var _rescue_ground := -INF
+var _rescue_terrain_id := 0
+
+
 # An enemy that falls through the map is put back on the ground, not killed: a kill
 # would hand out scrap nobody earned.
 func _rescue() -> void:
 	if terrain == null:
 		return
+	var terrain_id: int = terrain.get_instance_id()
+	var cell := Vector2i(floori(global_position.x * 0.5), floori(global_position.z * 0.5))
+	if is_on_floor() and terrain_id == _rescue_terrain_id and cell == _rescue_cell \
+			and global_position.y >= _rescue_ground - FLOOR_RESCUE * 0.5:
+		return
 	var ground: float = terrain.height(global_position.x, global_position.z)
+	_rescue_terrain_id = terrain_id
+	_rescue_cell = cell
+	_rescue_ground = ground
 	if global_position.y < ground - FLOOR_RESCUE:
 		global_position = terrain.drop_point(global_position.x, global_position.z, half_height + 0.5)
 		velocity = Vector3.ZERO
@@ -949,6 +989,7 @@ func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
 		box.size = Vector3(0.09, size * 0.45, 0.06)
 		stroke.mesh = box
 		stroke.material_override = mat
+		stroke.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		stroke.position = Vector3((i - 1) * size * 0.18, (1 - i) * size * 0.28, 0.0)
 		stroke.rotation.z = 0.6 if i % 2 == 0 else -0.6
 		glyph.add_child(stroke)

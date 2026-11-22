@@ -297,6 +297,9 @@ var _armor_peak := ARMOR_PEAK_FLOOR
 var _companion: TextureRect
 var _companion_state := "none"
 var _companion_cues: Array[String] = []
+var _companion_doc := {}
+var _play_pieces: Array[Control] = []
+var _quiet_pieces: Array[Control] = []
 var _threat := 0
 var _laid_out := Vector2.ZERO
 # What layout() last read besides the screen: the pieces whose own size moves their neighbours.
@@ -405,6 +408,8 @@ func setup(game_ref) -> void:
 	add_child(part_name)
 	danger_mark = DangerMark.new()
 	add_child(danger_mark)
+	_play_pieces.assign([_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, first_steps, edge_markers, why_callout, damage_numbers, pickup_lines])
+	_quiet_pieces.assign([_toasts, why_callout, damage_numbers, part_name])
 
 	_build_ach_toast()
 	_build_lore_pulse()
@@ -1151,18 +1156,26 @@ static func row_color(id: String) -> Color:
 
 # A change between ready and spent plays that row's chirp; a change from or to "none" is silent.
 func _step_companion(playing: bool) -> void:
-	var state := companion_state_of(game.run.companion)
-	if state != _companion_state and state != "none" and _companion_state != "none":
-		var kind := "companion_" + state
-		_companion_cues.append(kind)
-		var audio = game.audio()
-		if audio != null and audio.has_method("play"):
-			audio.play(kind, 0.0, 1.0, "UI")
-	_companion_state = state
-	if state != "none":
-		var row: Dictionary = EventKinds.UI_ROWS["companion_" + state]
-		_companion.texture = Icons.shape(String(row["shape"]))
-		_companion.modulate = row["color"]
+	var doc: Dictionary = game.run.companion
+	if doc.is_empty() and _companion_state == "none":
+		_companion.visible = false
+		return
+	var state := _companion_state
+	if doc != _companion_doc:
+		_companion_doc = doc.duplicate(true)
+		state = companion_state_of(doc)
+	if state != _companion_state:
+		if state != "none" and _companion_state != "none":
+			var kind := "companion_" + state
+			_companion_cues.append(kind)
+			var audio = game.audio()
+			if audio != null and audio.has_method("play"):
+				audio.play(kind, 0.0, 1.0, "UI")
+		_companion_state = state
+		if state != "none":
+			var row: Dictionary = EventKinds.UI_ROWS["companion_" + state]
+			_companion.texture = Icons.shape(String(row["shape"]))
+			_companion.modulate = row["color"]
 	_companion.visible = playing and state != "none"
 
 
@@ -1400,7 +1413,8 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 		var d: float = cam.global_position.distance_to(at)
 		if d <= prompt.reach:
 			near.append([d, prompt, at])
-	near.sort_custom(func(a, b): return a[0] < b[0])
+	if near.size() > 1:
+		near.sort_custom(func(a, b): return a[0] < b[0])
 	# The pickup lines rise over the band's lower left; a prompt stands clear of them while they show.
 	var taken: Array[Rect2] = []
 	if pickup_lines.rect().has_area():
@@ -1480,13 +1494,13 @@ func _process(delta: float) -> void:
 	var flow = game.flow
 	var playing: bool = flow.in_play()
 	place_prompts(size, playing)
-	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, first_steps, edge_markers, why_callout, damage_numbers, pickup_lines]:
+	for piece in _play_pieces:
 		piece.visible = playing
 	if _plate != null:
 		_plate.visible = playing
 	part_name.visible = playing and part_name.left > 0.0
 	if _quiet:
-		for piece in [_toasts, why_callout, damage_numbers, part_name]:
+		for piece in _quiet_pieces:
 			piece.visible = false
 	danger_mark.show_run(game.combat.near_miss.standing_in() if playing else -1.0)
 	if playing:

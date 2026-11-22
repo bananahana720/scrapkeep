@@ -63,6 +63,8 @@ static func foot(rarity: String, mat: Material, size := 1.0) -> Node3D:
 				_add(root, _sphere(0.07 * size), bolt, Vector3(cos(a), 0.4, sin(a)) * 0.24 * size)
 		"crown":
 			_crown(root, 0.36 * size, 0.26 * size, 0.04 * size, mat, Vector3.ZERO)
+	for node: MeshInstance3D in root.get_children():
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return root
 
 
@@ -71,6 +73,8 @@ static func _crown(root: Node3D, radius: float, tall: float, band: float, mat: M
 	var torus := TorusMesh.new()
 	torus.inner_radius = radius - band
 	torus.outer_radius = radius + band
+	torus.rings = 24
+	torus.ring_segments = 10
 	_add(root, torus, mat, base)
 	for k in CROWN_POINTS:
 		var a := TAU * k / CROWN_POINTS

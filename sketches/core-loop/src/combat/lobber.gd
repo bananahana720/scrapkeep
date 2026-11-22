@@ -38,6 +38,8 @@ var _cart: Node3D
 var _barrel: MeshInstance3D
 var _cart_rest := Transform3D.IDENTITY
 var _barrel_rest := Transform3D.IDENTITY
+var _muzzle_at_rest := false
+var _parts_off_rest := false
 
 const TUBE_RAISE := deg_to_rad(26.0)
 const CART_SETTLE := deg_to_rad(4.0)
@@ -140,7 +142,7 @@ func _physics_process(delta: float) -> void:
 		_pose(0.0)
 		return
 	var to_ball: Vector3 = _ball() - global_position
-	if to_ball.length() > SHOT_RANGE:
+	if to_ball.length_squared() > SHOT_RANGE * SHOT_RANGE:
 		_clock = 0.0
 		_show_charge(0.0)
 		return
@@ -181,9 +183,24 @@ func _shell_ring() -> Dictionary:
 
 func _show_charge(value: float) -> void:
 	charge = value
-	_muzzle_material.emission_energy_multiplier = FlashGuard.spike(0.8, 0.8 + value * 5.0)
-	_muzzle.scale = Vector3.ONE * (1.0 + value * 0.9)
+	if value <= 0.0:
+		if not _muzzle_at_rest:
+			_muzzle_at_rest = true
+			_muzzle_material.emission_energy_multiplier = FlashGuard.spike(0.8, 0.8)
+			_muzzle.scale = Vector3.ONE
+	else:
+		_muzzle_at_rest = false
+		_muzzle_material.emission_energy_multiplier = FlashGuard.spike(0.8, 0.8 + value * 5.0)
+		_muzzle.scale = Vector3.ONE * (1.0 + value * 0.9)
 	_pose()
+
+
+func _reset_parts() -> void:
+	if not _parts_off_rest:
+		return
+	_parts_off_rest = false
+	_cart.transform = _cart_rest
+	_barrel.transform = _barrel_rest
 
 
 # e02_tube_raise uses only the existing charge and cycle clock. The cart and barrel
@@ -191,11 +208,11 @@ func _show_charge(value: float) -> void:
 func _pose(progress := -1.0) -> void:
 	if _cart == null or _barrel == null:
 		return
-	_cart.transform = _cart_rest
-	_barrel.transform = _barrel_rest
 	if not windup_pose_enabled or _dead or not _in_play() or not is_instance_valid(target) or not is_on_floor() or _line_lean_goal < 0.0:
+		_reset_parts()
 		return
-	if (_ball() - global_position).length() > SHOT_RANGE:
+	if (_ball() - global_position).length_squared() > SHOT_RANGE * SHOT_RANGE:
+		_reset_parts()
 		return
 	var lift := smoothstep(0.0, 1.0, charge if progress < 0.0 else progress)
 	var kick := 0.0
@@ -205,6 +222,10 @@ func _pose(progress := -1.0) -> void:
 		lift = 1.0 - smoothstep(0.0, 1.0, recovery)
 		kick = sin(PI * recovery) * 0.24
 		rock = sin(TAU * recovery) * deg_to_rad(5.0) * (1.0 - recovery)
+	if lift == 0.0 and kick == 0.0 and rock == 0.0:
+		_reset_parts()
+		return
+	_parts_off_rest = true
 	# Rock about the rear wheel axle rather than sliding the enemy or its collider.
 	var axle := Vector3(0.0, -1.5, -0.68)
 	var cart_turn := Basis(Vector3.RIGHT, -CART_SETTLE * lift + rock)

@@ -67,6 +67,35 @@ var _shake_left := 0.0
 var _shake_clock := 0.0
 var _breath_clock := 0.0
 var _cover := 0.0
+const OUT_OF_RANGE_FRAMES := 6
+var _out_of_range_cached := false
+var _cast_frame := -1
+var _cast_camera := Transform3D()
+var _cast_ball := Vector3.INF
+var _cast_reach := -1.0
+var _prepared_frame := -1
+var _drawn_style := {}
+var _drawn_centre := Vector2.ZERO
+var _has_drawn := false
+var _d_aim_state := -1
+var _d_far := false
+var _d_hooked := false
+var _d_grapple := false
+var _d_harpoon_fill := 0.0
+var _d_gauge := 0.0
+var _d_gauge_color := Color.WHITE
+var _d_meter := 0.0
+var _d_meter_full := false
+var _d_meter_active := false
+var _d_meter_color := Color.WHITE
+var _d_hide_q := false
+var _d_cover := 0.0
+var _d_view := Vector2.ZERO
+var _d_glyph := ""
+var _d_snap_point := Vector3.INF
+var _d_cam_xform := Transform3D()
+var _d_cam_fov := 0.0
+var _was_animating := false
 
 
 func setup(player_ref, camera_ref: Camera3D) -> void:
@@ -84,8 +113,79 @@ func reading() -> Dictionary:
 
 
 func _process(delta: float) -> void:
+	if player == null:
+		return
 	step(delta)
-	queue_redraw()
+	if not is_visible_in_tree():
+		return
+	var aim := reading()
+	_refresh_out_of_range(aim)
+	var view := get_viewport_rect().size
+	var centre := view * 0.5 + shake_offset()
+	_cover = cover(centre)
+	var aim_state: int = aim.get("state", Augments.AIM_NONE)
+	var hooked: bool = player.kit.hooked
+	var grapple: bool = player.kit.on(Augments.GRAPPLE)
+	if _drawn_style.is_empty() or aim_state != _d_aim_state or _out_of_range_cached != _d_far:
+		_drawn_style = AimStyle.of(aim, _out_of_range_cached)
+	var shape := drawn_shape(_drawn_style)
+	var has_snap := shape == "brackets" or shape == "diamond"
+	var snap_point: Vector3 = aim.get("point", Vector3.INF) if has_snap and aim.get("point") is Vector3 else Vector3.INF
+	var cam_xform := camera.global_transform if has_snap and camera != null else Transform3D()
+	var cam_fov := camera.fov if has_snap and camera != null else 0.0
+	var glyph := q_glyph() if q_shown() else ""
+	var animating := _shake_left > 0.0 or meter_full
+	var dirty := not _has_drawn or animating or _was_animating \
+		or aim_state != _d_aim_state or _out_of_range_cached != _d_far \
+		or hooked != _d_hooked or grapple != _d_grapple \
+		or harpoon_fill != _d_harpoon_fill or gauge != _d_gauge or gauge_color != _d_gauge_color \
+		or meter != _d_meter or meter_full != _d_meter_full or meter_active != _d_meter_active \
+		or meter_color != _d_meter_color or hide_q != _d_hide_q \
+		or _cover != _d_cover or view != _d_view or glyph != _d_glyph \
+		or (has_snap and (snap_point != _d_snap_point or cam_xform != _d_cam_xform or cam_fov != _d_cam_fov))
+	if dirty:
+		_has_drawn = true
+		_d_aim_state = aim_state
+		_d_far = _out_of_range_cached
+		_d_hooked = hooked
+		_d_grapple = grapple
+		_d_harpoon_fill = harpoon_fill
+		_d_gauge = gauge
+		_d_gauge_color = gauge_color
+		_d_meter = meter
+		_d_meter_full = meter_full
+		_d_meter_active = meter_active
+		_d_meter_color = meter_color
+		_d_hide_q = hide_q
+		_d_cover = _cover
+		_d_view = view
+		_d_glyph = glyph
+		_d_snap_point = snap_point
+		_d_cam_xform = cam_xform
+		_d_cam_fov = cam_fov
+		queue_redraw()
+	_drawn_centre = centre
+	_prepared_frame = Engine.get_process_frames()
+	_was_animating = animating
+
+
+func _refresh_out_of_range(aim: Dictionary) -> void:
+	if camera == null or not camera.is_inside_tree() or not player.kit.on(Augments.GRAPPLE) \
+			or aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE:
+		_out_of_range_cached = false
+		_cast_frame = -1
+		return
+	var at := camera.global_transform
+	var ball: Vector3 = player.shown_position()
+	var reach: float = player.grapple_range()
+	var now := Engine.get_physics_frames()
+	if _cast_frame >= 0 and now - _cast_frame < OUT_OF_RANGE_FRAMES and at == _cast_camera and ball == _cast_ball and reach == _cast_reach:
+		return
+	_cast_frame = now
+	_cast_camera = at
+	_cast_ball = ball
+	_cast_reach = reach
+	_out_of_range_cached = _out_of_range(aim)
 
 
 func step(delta: float) -> void:
@@ -211,12 +311,19 @@ func _draw() -> void:
 	if player == null:
 		return
 	var aim := reading()
-	var style := AimStyle.of(aim, _out_of_range(aim))
+	var style: Dictionary
+	var centre: Vector2
+	if _prepared_frame == Engine.get_process_frames() and not _drawn_style.is_empty() \
+			and int(aim.get("state", Augments.AIM_NONE)) == _d_aim_state:
+		style = _drawn_style
+		centre = _drawn_centre
+	else:
+		style = AimStyle.of(aim, _out_of_range(aim))
+		# The reticle marks the camera's centre ray, which is the viewport centre whatever
+		# size layout gave this control.
+		centre = get_viewport_rect().size * 0.5 + shake_offset()
+		_cover = cover(centre)
 	var color: Color = style["color"]
-	# The reticle marks the camera's centre ray, which is the viewport centre whatever
-	# size layout gave this control.
-	var centre := get_viewport_rect().size * 0.5 + shake_offset()
-	_cover = cover(centre)
 	if player.kit.on(Augments.GRAPPLE):
 		var ready := EventKinds.line_color("locked")
 		draw_arc(centre, HARPOON_RING, 0.0, TAU, 48, _back(Color(ready, 0.25)), HARPOON_WIDTH)

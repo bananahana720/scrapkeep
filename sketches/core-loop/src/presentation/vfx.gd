@@ -642,6 +642,7 @@ func _on_struck(enemy: Node3D, _kind: String, force: float) -> void:
 
 func _make_sparkle() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	p.emitting = false
 	p.one_shot = true
 	p.amount = 10

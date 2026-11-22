@@ -113,6 +113,10 @@ static func row(kind: String, enemy: Object, attack: String) -> Dictionary:
 		"color_role": spec.color_role, "shape": shape, "lead_seconds": lead, "sound": spec.sound}
 
 
+static func has_state_facts(kind: String) -> bool:
+	return kind == "warden" or kind == "swarm_remnant"
+
+
 # These actors have no Enemy.attack_phase publication. Read their existing state,
 # including the Warden pulse warning and the shared rack lane.
 static func state_facts(enemy: Object) -> Array[Dictionary]:
