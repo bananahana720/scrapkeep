@@ -937,7 +937,6 @@ func _build_quip() -> void:
 func _show_quip(speaker: String, words: String) -> void:
 	if _quip == null:
 		return
-	CallerTile.reduced_motion = false
 	_quip_tile.pilots = game.flow.classes if game.flow != null else []
 	if not _quip_tile.present(speaker, String(LoreRows.SPEAKERS.get(speaker, speaker))):
 		return
@@ -991,6 +990,8 @@ func _build_records() -> void:
 	cabinet.add_child(shelf)
 	_bins = _multi("Bins", bin_mesh(), _record_material("record_bin", false), shelf)
 	_sleeves = _multi("Sleeves", sleeve_mesh(), _record_material("record_sleeve", true), shelf)
+	# A sleeve's shadow falls inside its bin, where the bin's own already is.
+	_sleeves.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 func _multi(node_name: String, mesh: Mesh, material: Material, parent: Node3D) -> MultiMeshInstance3D:
@@ -1035,8 +1036,12 @@ func _shelve_records() -> void:
 		# Each sleeve stands on the bin floor, its face to the jukebox's front, the next one behind it.
 		var at := bin_at + Vector3(0.0, BIN_LIFT + 0.05, z)
 		_sleeves.multimesh.set_instance_transform(i, Transform3D(lean, at))
-		var id := String(_shelved[i])
-		_sleeves.multimesh.set_instance_color(i, SLEEVE_INKS[absi(hash(id)) % SLEEVE_INKS.size()])
+		_sleeves.multimesh.set_instance_color(i, sleeve_ink(String(_shelved[i])))
+
+
+# A record's sleeve colour: its id's pick from SLEEVE_INKS, the same every walk.
+static func sleeve_ink(id: String) -> Color:
+	return SLEEVE_INKS[absi(hash(id)) % SLEEVE_INKS.size()]
 
 
 # A bin: an open crate, BIN_SIZE outside, its walls 4 cm, on four legs BIN_LIFT high, centred on x and z, feet at y 0.
