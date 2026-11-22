@@ -38,6 +38,7 @@ const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Palette := preload("res://src/core/palette.gd")
+const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const WorldFxWord := preload("res://src/presentation/world_fx/world_fx_word.gd")
 const Synth := preload("res://src/presentation/synth.gd")
@@ -168,6 +169,7 @@ func _reset() -> void:
 	Threat.reset_for_tests()
 	Projectile.reset_for_tests()
 	Palette.reset_for_tests()
+	ShiftVariants.clear_force()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"
