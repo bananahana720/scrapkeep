@@ -18,21 +18,23 @@ var buffs: BuffLedger = BuffLedger.new():
 		if buffs != null and buffs != value:
 			buffs.bind_events(null)
 		buffs = value
-		if buffs != null and events != null:
+		if buffs != null and is_instance_valid(events):
 			buffs.bind_events(events)
-		if player != null and player.get("abilities") != null and player.abilities.has_method("bind_buffs"):
+		if is_instance_valid(player) and player.get("abilities") != null and player.abilities.has_method("bind_buffs"):
 			player.abilities.bind_buffs(buffs)
 var events: GameEvents:
 	set(value):
 		events = value
 		if buffs != null:
-			buffs.bind_events(value)
+			buffs.bind_events(value if is_instance_valid(value) else null)
 var run: RunState
 var tuning: Tuning
 var player: PlayerBall:
 	set(value):
+		if is_instance_valid(player) and player != value and player.get("abilities") != null and player.abilities.has_method("bind_buffs"):
+			player.abilities.bind_buffs(null)
 		player = value
-		if value != null and value.get("abilities") != null and value.abilities.has_method("bind_buffs"):
+		if is_instance_valid(value) and value.get("abilities") != null and value.abilities.has_method("bind_buffs"):
 			value.abilities.bind_buffs(buffs)
 var camera: ChaseCamera
 # The flow state machine (src/core/flow.gd), read-only for modules: in_play(),

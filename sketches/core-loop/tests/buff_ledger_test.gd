@@ -3,6 +3,8 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const BuffLedger := preload("res://src/core/buff_ledger.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const Context := preload("res://src/core/context.gd")
+const PlayerBall := preload("res://src/movement/player_ball.gd")
 const Triggers := preload("res://src/build/triggers.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Game := preload("res://src/game.gd")
@@ -17,10 +19,11 @@ const Driver := preload("res://tools/test_batch_driver.gd")
 # - refresh, stacking, Call H show_digit split (timers drain without digits, counts show digits),
 #   and signal hygiene (buff_changed only on visible state changes, buff_expired on expiry);
 # - pause and Engine.time_scale safety through live Game physics ticking;
-# - attempt-boundary clearing (run_started, stage_entered, stage_content_cleared, player_died);
-# - live ItemEffects and AbilityState hooks (drone, armed_hit, rebound_crit, brace filtered,
-#   running ability >= 3 s vs < 3 s, and zero purple Jam tube);
-# - zero save persistence in RunState entrance doc and Profile;
+# - attempt-boundary clearing (run_started, stage_entered, stage_content_cleared, player_died, run_ended);
+# - GameContext player/buffs reassignment safety (no double-step, freed Node3D guard, stale running buff cleared);
+# - live ItemEffects and AbilityState hooks (drone non-mint tone, armed_hit, rebound_crit sliding window,
+#   brace filtered, running ability >= 3 s vs < 3 s, and zero purple Jam tube);
+# - zero save persistence in RunState entrance doc;
 # - warm-batch reset via tools/test_batch_driver.gd _reset().
 
 
@@ -33,6 +36,7 @@ func _run() -> void:
 	_check_cap_and_eviction(t)
 	_check_short_timer_filter(t)
 	_check_refresh_stacking_and_signals(t)
+	_check_context_reassignment_safety(t)
 	await _check_live_game_pause_timescale_boundaries_and_hooks(t)
 	_check_warm_batch_reset(t)
 	quit(t.verdict())
@@ -40,9 +44,9 @@ func _run() -> void:
 
 func _check_cap_and_eviction(t) -> void:
 	var ledger := BuffLedger.new()
-	ledger.post("a", {"icon": "cat_utility", "tone": Palette.ARC, "duration_s": 10.0, "kind": "timer"})
+	ledger.post("a", {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 10.0, "kind": "timer"})
 	ledger.post("b", {"icon": "cat_damage", "tone": Palette.AMBER, "duration_s": 4.0, "kind": "timer"})
-	ledger.post("c", {"icon": "cat_defense", "tone": Palette.STEEL, "duration_s": 8.0, "kind": "timer"})
+	ledger.post("c", {"icon": "cat_defense", "tone": Palette.SAND, "duration_s": 8.0, "kind": "timer"})
 	ledger.post("d", {"icon": "cat_mobility", "tone": Palette.COPPER, "duration_s": 6.0, "kind": "timer"})
 	ledger.step(0.5)
 	var before := ledger.active_rows(4)
@@ -69,10 +73,10 @@ func _check_cap_and_eviction(t) -> void:
 	# Untimed counter (INF time left) is never evicted ahead of a finite timer.
 	var tie := BuffLedger.new()
 	tie.post("cnt", {"icon": "cat_damage", "tone": Palette.AMBER, "duration_s": 0.0, "kind": "count", "stacks": 2, "max_stacks": 3})
-	tie.post("t1", {"icon": "cat_utility", "tone": Palette.ARC, "duration_s": 5.0, "kind": "timer"})
-	tie.post("t2", {"icon": "cat_utility", "tone": Palette.ARC, "duration_s": 5.0, "kind": "timer"})
-	tie.post("t3", {"icon": "cat_utility", "tone": Palette.ARC, "duration_s": 7.0, "kind": "timer"})
-	tie.post("t4", {"icon": "cat_utility", "tone": Palette.ARC, "duration_s": 6.0, "kind": "timer"})
+	tie.post("t1", {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 5.0, "kind": "timer"})
+	tie.post("t2", {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 5.0, "kind": "timer"})
+	tie.post("t3", {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 7.0, "kind": "timer"})
+	tie.post("t4", {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 6.0, "kind": "timer"})
 	# t1 and t2 tied at 5.0 s -> oldest (t1) evicted; cnt survives.
 	t.eq("equal remaining time evicts oldest finite timer and keeps untimed counter", _ids(tie.active_rows(4)), ["cnt", "t2", "t3", "t4"])
 
@@ -92,7 +96,7 @@ func _check_short_timer_filter(t) -> void:
 
 	# Sub-3s timers never evict a full 4-tube rail.
 	for i in 4:
-		ledger.post("long_%d" % i, {"icon": "cat_utility", "tone": Palette.ARC, "duration_s": 4.0 + i, "kind": "timer"})
+		ledger.post("long_%d" % i, {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 4.0 + i, "kind": "timer"})
 	var before_short := _ids(ledger.active_rows(4))
 	var changes_before: int = changed[0]
 	ledger.post("flash_3", {"icon": "cat_defense", "tone": Palette.STEEL, "duration_s": 2.0, "kind": "timer"})
@@ -103,7 +107,7 @@ func _check_short_timer_filter(t) -> void:
 	var drain := BuffLedger.new()
 	var drain_expired: Array[String] = []
 	drain.buff_expired.connect(func(id: String): drain_expired.append(id))
-	drain.post("exact_3s", {"icon": "cat_utility", "tone": Palette.ARC, "duration_s": 3.0, "kind": "timer"})
+	drain.post("exact_3s", {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 3.0, "kind": "timer"})
 	var rows := drain.active_rows(4)
 	t.eq("exact 3.0s timer is visible on rail", _ids(rows), ["exact_3s"])
 	t.check("pure timer hides digit (Call H)", not bool(rows[0]["show_digit"]))
@@ -116,7 +120,7 @@ func _check_short_timer_filter(t) -> void:
 	t.eq("buff_expired fires with expired id", drain_expired, ["exact_3s"])
 
 	# Custom rail_min_s override is honored.
-	drain.post("custom_min", {"icon": "cat_utility", "tone": Palette.ARC, "duration_s": 2.0, "kind": "timer", "rail_min_s": 1.5})
+	drain.post("custom_min", {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 2.0, "kind": "timer", "rail_min_s": 1.5})
 	t.eq("custom rail_min_s allows 2.0s timer", _ids(drain.active_rows(4)), ["custom_min"])
 
 
@@ -156,7 +160,7 @@ func _check_refresh_stacking_and_signals(t) -> void:
 	t.near("untimed counter frac reflects stacks/max_stacks", float(ledger.active_rows(4)[0]["frac"]), 1.0, 0.001)
 
 	# Timer refresh preserves slot order and restores full duration.
-	ledger.post("drone", {"icon": "cat_utility", "tone": Palette.ARC, "duration_s": 4.0, "kind": "timer"})
+	ledger.post("drone", {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 4.0, "kind": "timer"})
 	ledger.post("second", {"icon": "cat_mobility", "tone": Palette.COPPER, "duration_s": 6.0, "kind": "timer"})
 	ledger.step(2.0)
 	t.near("drone drains to 2.0s", float(ledger.active_rows(4)[1]["left_s"]), 2.0, 0.001)
@@ -169,6 +173,37 @@ func _check_refresh_stacking_and_signals(t) -> void:
 	# Posting stacks=0 on a counter clears it.
 	ledger.post("armed", {"stacks": 0})
 	t.eq("stacks=0 clears counter entry", _ids(ledger.active_rows(4)), ["drone", "second"])
+
+
+func _check_context_reassignment_safety(t) -> void:
+	var ctx := Context.new()
+	var old_player := PlayerBall.new()
+	var new_player := PlayerBall.new()
+	ctx.player = old_player
+
+	# Start a >= 3s running ability on old_player so it posts to ctx.buffs.
+	old_player.abilities.swap(AbilityState.MOVEMENT, "overdrive_sprint")
+	old_player.abilities.set_attack_speed(0.5)
+	old_player.abilities.request(AbilityState.MOVEMENT)
+	old_player.abilities.tick(0.01)
+	t.eq("old_player posts running ability buff", _ids(ctx.buffs.active_rows(4)), ["ability_overdrive_sprint"])
+
+	# Reassigning ctx.player unbinds old_player (clearing its stale running buff) and prevents double-stepping.
+	ctx.player = new_player
+	t.eq("reassigned ctx.player clears old running ability buff", ctx.buffs.active_rows(4), [])
+	ctx.buffs.post("probe", {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 6.0, "kind": "timer"})
+	old_player.abilities.tick(1.0)
+	t.near("unbound old_player does not step ctx.buffs", float(_row_by_id(ctx.buffs.active_rows(4), "probe")["left_s"]), 6.0, 0.001)
+	new_player.abilities.tick(1.0)
+	t.near("bound new_player steps ctx.buffs once", float(_row_by_id(ctx.buffs.active_rows(4), "probe")["left_s"]), 5.0, 0.001)
+
+	# Freeing the Node3D player and then reassigning ctx.buffs / ctx.player must not crash.
+	old_player.free()
+	new_player.free()
+	var fresh_ledger := BuffLedger.new()
+	ctx.buffs = fresh_ledger
+	ctx.player = null
+	t.check("reassigning ctx.buffs and ctx.player after freed player succeeds cleanly", ctx.buffs == fresh_ledger and ctx.player == null)
 
 
 func _check_live_game_pause_timescale_boundaries_and_hooks(t) -> void:
@@ -187,7 +222,7 @@ func _check_live_game_pause_timescale_boundaries_and_hooks(t) -> void:
 	t.check("GameContext owns ctx.buffs", buffs != null)
 
 	# 1. Pause safety: while SceneTree is paused, live buff left_s does not advance.
-	buffs.post("pause_probe", {"icon": "cat_utility", "tone": Palette.ARC, "duration_s": 6.0, "kind": "timer"})
+	buffs.post("pause_probe", {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 6.0, "kind": "timer"})
 	var start_left := float(buffs.active_rows(4)[0]["left_s"])
 	paused = true
 	for _i in 6:
@@ -202,7 +237,7 @@ func _check_live_game_pause_timescale_boundaries_and_hooks(t) -> void:
 	Engine.time_scale = 1.0
 	await process_frame
 	await physics_frame
-	buffs.post("scale_probe", {"icon": "cat_utility", "tone": Palette.ARC, "duration_s": 10.0, "kind": "timer"})
+	buffs.post("scale_probe", {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 10.0, "kind": "timer"})
 	var before_full := float(_row_by_id(buffs.active_rows(4), "scale_probe")["left_s"])
 	for _i in ticks:
 		await physics_frame
@@ -211,7 +246,7 @@ func _check_live_game_pause_timescale_boundaries_and_hooks(t) -> void:
 	Engine.time_scale = 0.25
 	await process_frame
 	await physics_frame
-	buffs.post("scale_probe", {"icon": "cat_utility", "tone": Palette.ARC, "duration_s": 10.0, "kind": "timer"})
+	buffs.post("scale_probe", {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 10.0, "kind": "timer"})
 	var before_slow := float(_row_by_id(buffs.active_rows(4), "scale_probe")["left_s"])
 	for _i in ticks:
 		await physics_frame
@@ -221,17 +256,17 @@ func _check_live_game_pause_timescale_boundaries_and_hooks(t) -> void:
 		drained_full > 0.0 and drained_slow > 0.0 and absf(drained_slow / drained_full - 0.25) < 0.05,
 		"full=%.4f slow=%.4f ratio=%.3f" % [drained_full, drained_slow, drained_slow / maxf(0.0001, drained_full)])
 
-	# 3. Zero save persistence: RunState entrance doc and Profile never serialize buffs.
+	# 3. Zero save persistence: RunState entrance doc never serializes buffs.
 	var entrance_doc: Dictionary = game.run.to_entrance_doc(game.player.tree)
 	var doc_text := JSON.stringify(entrance_doc)
 	t.check("RunState entrance doc persists no buffs",
 		not entrance_doc.has("buffs") and not doc_text.contains("pause_probe") and not doc_text.contains("scale_probe"),
 		"keys=%s" % [entrance_doc.keys()])
 
-	# 4. Attempt-boundary clearing on all four GameEvents boundaries.
+	# 4. Attempt-boundary clearing on all five GameEvents boundaries.
 	buffs.clear()
-	for boundary in ["run_started", "stage_entered", "stage_content_cleared", "player_died"]:
-		buffs.post("boundary_probe", {"icon": "cat_utility", "tone": Palette.ARC, "duration_s": 8.0, "kind": "timer"})
+	for boundary in ["run_started", "stage_entered", "stage_content_cleared", "player_died", "run_ended"]:
+		buffs.post("boundary_probe", {"icon": "cat_utility", "tone": Palette.STEEL, "duration_s": 8.0, "kind": "timer"})
 		t.eq("buff active before " + boundary, _ids(buffs.active_rows(4)), ["boundary_probe"])
 		match boundary:
 			"run_started":
@@ -242,14 +277,16 @@ func _check_live_game_pause_timescale_boundaries_and_hooks(t) -> void:
 				game.events.stage_content_cleared.emit("test")
 			"player_died":
 				game.events.player_died.emit()
+			"run_ended":
+				game.events.run_ended.emit(true)
 		t.eq("buffs clear on " + boundary, buffs.active_rows(4), [])
 
-	# Re-enter stage 1 cleanly after synthetic player_died for live producer checks.
+	# Re-enter stage 1 cleanly after synthetic boundaries for live producer checks.
 	game.flow.new_run()
 	await physics_frame
 	buffs.clear()
 
-	# 5. Live ItemEffects hooks: drone (>= 3s), armed_hit (counter), rebound_crit (timed counter), brace (< 3s filtered).
+	# 5. Live ItemEffects hooks: drone (>= 3s, non-mint), armed_hit (counter), rebound_crit (sliding window), brace (< 3s filtered).
 	var effects = game.ctx.build.effects
 	var bus = game.ctx.build.bus
 	var rng = game.ctx.build.loot_rng
@@ -266,7 +303,7 @@ func _check_live_game_pause_timescale_boundaries_and_hooks(t) -> void:
 	bus.run(effects.resolve, rng)
 	t.check("consuming armed_hit clears item_armed_hit", _row_by_id(buffs.active_rows(4), "item_armed_hit").is_empty())
 
-	# Drone (4.0 s >= 3.0 s) shows as draining timer; brace (1.0 s < 3.0 s) is filtered off rail.
+	# Drone (4.0 s >= 3.0 s) shows as draining timer in non-mint Palette.STEEL; brace (1.0 s < 3.0 s) is filtered off rail.
 	var Parts := preload("res://src/build/parts.gd")
 	game.run.add_part("salvage_drone", "test")
 	game.run.add_part("brace_frame", "test")
@@ -277,11 +314,17 @@ func _check_live_game_pause_timescale_boundaries_and_hooks(t) -> void:
 	effects._apply("brace_frame", brace_def, brace_def.effect,
 		Triggers.Commitment.new(Triggers.Kind.ON_LAND, "land", Triggers.DISCRETE_PROC, Vector3.ZERO, null, 20.0), 0.2, 0.0, 1)
 	var drone_row := _row_by_id(buffs.active_rows(4), "item_drone")
-	t.check("ItemEffects drone posts >= 3s timer with show_digit=false",
-		not drone_row.is_empty() and drone_row["kind"] == "timer" and not bool(drone_row["show_digit"]) and float(drone_row["duration_s"]) >= 4.0)
+	t.check("ItemEffects drone posts >= 3s timer with show_digit=false and non-mint tone",
+		not drone_row.is_empty()
+		and drone_row["kind"] == "timer"
+		and not bool(drone_row["show_digit"])
+		and float(drone_row["duration_s"]) >= 4.0
+		and drone_row["tone"] == Palette.STEEL
+		and drone_row["tone"] != Palette.ARC)
 	t.check("ItemEffects brace (< 3s) is filtered off rail", _row_by_id(buffs.active_rows(4), "item_brace").is_empty())
 
-	# Rebound crit (4.0 s window, count 3): stacks 1 -> 2, then clears on 3rd payout.
+	# Rebound crit (4.0 s sliding window, count 3): bounce 1 -> bounce 2 at +2s -> bounce 1 expires at +4.1s
+	# dropping cleanly to stack 1 with ~1.9s left; then two more bounces pay out and clear.
 	var bounce_def := Parts.def("strike_pocket")
 	t.check("strike_pocket (rebound_crit) exists in catalogue", bounce_def != null)
 	if bounce_def != null:
@@ -290,11 +333,20 @@ func _check_live_game_pause_timescale_boundaries_and_hooks(t) -> void:
 		var r1 := _row_by_id(buffs.active_rows(4), "item_rebound_crit")
 		t.check("rebound_crit 1st bounce posts timed count stack 1",
 			not r1.is_empty() and int(r1["stacks"]) == 1 and int(r1["max_stacks"]) == 3 and bool(r1["show_digit"]))
+		buffs.step(2.0)
+		effects.tick(2.0, bus)
 		effects._apply(bounce_def.id, bounce_def, bounce_def.effect, reb_c, 0.0, 0.0, 2)
 		var r2 := _row_by_id(buffs.active_rows(4), "item_rebound_crit")
 		t.eq("rebound_crit 2nd bounce increments stack to 2", int(r2.get("stacks", 0)), 2)
+		buffs.step(2.1)
+		effects.tick(2.1, bus)
+		var r_slide := _row_by_id(buffs.active_rows(4), "item_rebound_crit")
+		t.check("rebound_crit sliding window drops oldest bounce and keeps stack 1 with remaining time",
+			not r_slide.is_empty() and int(r_slide["stacks"]) == 1 and float(r_slide["left_s"]) > 1.5 and float(r_slide["left_s"]) < 2.1,
+			"row=%s" % [r_slide])
 		effects._apply(bounce_def.id, bounce_def, bounce_def.effect, reb_c, 0.0, 0.0, 2)
-		t.check("rebound_crit 3rd bounce pays out and clears buff", _row_by_id(buffs.active_rows(4), "item_rebound_crit").is_empty())
+		effects._apply(bounce_def.id, bounce_def, bounce_def.effect, reb_c, 0.0, 0.0, 2)
+		t.check("rebound_crit 3rd active bounce pays out and clears buff", _row_by_id(buffs.active_rows(4), "item_rebound_crit").is_empty())
 
 	dummy.free()
 

@@ -336,8 +336,10 @@ func _init() -> void:
 
 
 func bind_buffs(ledger) -> void:
+	if _buffs == ledger:
+		return
+	_clear_running_buff()
 	_buffs = ledger
-	_running_buff_id = ""
 
 
 # Fills the five slots and the ultimate from a class row. Charges start full; a stage entry

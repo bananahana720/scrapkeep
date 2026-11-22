@@ -75,6 +75,8 @@ var _pin_until := {}
 var _pins: Array = []
 var _recent_pins: Array = []
 var _rebounds: Array[float] = []
+var _rebound_window := 4.0
+var _rebound_need := 3
 var _last_word_used := false
 # Last Word armed its hit and has not paid it yet: a stage change that drops the armed hit
 # gives the once back, so the item is never spent on a bonus that never landed.
@@ -277,6 +279,34 @@ func tick(delta: float, bus) -> void:
 				build.ctx.player.ball_position()))
 		_timers[entry["id"]] = t
 	_step_pins()
+	_step_rebounds()
+
+
+func _step_rebounds() -> void:
+	if _rebounds.is_empty():
+		return
+	var before := _rebounds.size()
+	while not _rebounds.is_empty() and _clock - _rebounds[0] > _rebound_window:
+		_rebounds.pop_front()
+	if _rebounds.size() == before:
+		return
+	_sync_rebound_buff()
+
+
+func _sync_rebound_buff() -> void:
+	if _rebounds.is_empty():
+		_clear_buff("item_rebound_crit")
+		return
+	var left := maxf(0.0, _rebound_window - (_clock - _rebounds[-1]))
+	_post_buff("item_rebound_crit", {
+		"icon": "cat_damage",
+		"tone": Palette.COPPER,
+		"duration_s": _rebound_window,
+		"left_s": left,
+		"kind": BuffLedger.KIND_COUNT,
+		"stacks": _rebounds.size(),
+		"max_stacks": _rebound_need,
+	})
 
 
 # A pin combat resolved (enemy_pinned). The smash-armed items answer it in the next
@@ -417,23 +447,13 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			})
 			return true
 		"rebound_crit":
-			var rebound_window := float(fx.get("window", 4.0))
-			var rebound_need := int(fx.get("count", 3))
+			_rebound_window = float(fx.get("window", 4.0))
+			_rebound_need = int(fx.get("count", 3))
 			_rebounds.append(_clock)
-			while not _rebounds.is_empty() and _clock - _rebounds[0] > rebound_window:
+			while not _rebounds.is_empty() and _clock - _rebounds[0] > _rebound_window:
 				_rebounds.pop_front()
-			if _rebounds.size() < rebound_need or not is_instance_valid(c.enemy):
-				if not _rebounds.is_empty():
-					var left := maxf(0.0, rebound_window - (_clock - _rebounds[0]))
-					_post_buff("item_rebound_crit", {
-						"icon": "cat_damage",
-						"tone": Palette.COPPER,
-						"duration_s": rebound_window,
-						"left_s": left,
-						"kind": BuffLedger.KIND_COUNT,
-						"stacks": _rebounds.size(),
-						"max_stacks": rebound_need,
-					})
+			if _rebounds.size() < _rebound_need or not is_instance_valid(c.enemy):
+				_sync_rebound_buff()
 				return false
 			_rebounds.clear()
 			_clear_buff("item_rebound_crit")
@@ -509,7 +529,7 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			_drone_magnet = fx.get("magnet", 3.0)
 			_post_buff("item_drone", {
 				"icon": "cat_utility",
-				"tone": Palette.ARC,
+				"tone": Palette.STEEL,
 				"duration_s": drone_seconds,
 				"kind": BuffLedger.KIND_TIMER,
 				"stacks": 1,
