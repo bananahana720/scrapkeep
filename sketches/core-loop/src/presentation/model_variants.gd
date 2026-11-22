@@ -24,6 +24,12 @@ static var _rejected: Dictionary = REJECTED
 static var _stamp := 0
 
 
+static func reset_for_tests() -> void:
+	_on = -1
+	_rejected = REJECTED
+	_stamp = 0
+
+
 # The path to load for `authored`: its Tripo sibling when the switch is on and the sibling exists.
 static func path(authored: String) -> String:
 	if not enabled():

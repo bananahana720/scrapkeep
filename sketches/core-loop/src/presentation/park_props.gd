@@ -132,6 +132,11 @@ static var _material: StandardMaterial3D
 static func reset_for_tests() -> void:
 	file_overrides.clear()
 	far_reads = 0
+	release_shared()
+	_stand_ins_lock.lock()
+	_stand_ins.clear()
+	_stand_ins_stamp = -1
+	_stand_ins_lock.unlock()
 
 var ctx
 const PropKicks := preload("res://src/presentation/prop_kicks.gd")

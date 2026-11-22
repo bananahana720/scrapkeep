@@ -50,6 +50,16 @@ const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const HighdraftScenery := preload("res://src/presentation/highdraft_scenery.gd")
 const ArenaMindDress := preload("res://src/presentation/arena_mind_dress.gd")
 const QuietGun := preload("res://src/presentation/quiet_gun.gd")
+const HazardHits := preload("res://src/world/events/hazard_hits.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
+const StageMap := preload("res://src/world/stage_map.gd")
+const Terrain := preload("res://src/world/terrain.gd")
+const Screens := preload("res://src/ui/screens.gd")
+const Arena := preload("res://src/boss/arena.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const Harmony := preload("res://src/presentation/harmony.gd")
+const ScrapField := preload("res://src/build/scrap_field.gd")
+const ModelVariants := preload("res://src/presentation/model_variants.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -84,18 +94,25 @@ func finish(code: int) -> void:
 
 # A solo run frees the test's nodes as the process exits, and what they print then (an await
 # resumed on a freed node, say) is that test's output. The batch frees them the same way,
-# without removing them first, before it closes the test's output. Starting the next test on
-# physics_frame keeps every test's first callback in _physics_process, matching solo.
+# without removing them first, before it closes the test's output.
+#
+# Godot's SceneTree::process() emits process_frame and flushes deferred calls before sending
+# NOTIFICATION_PROCESS to child nodes and before process_tweens() removes killed tweens. A
+# temporary gate node under tree.root waits in _process() until get_processed_tweens() is empty,
+# detaches and queue_frees itself, and hooks the next real tree.physics_frame (CONNECT_ONE_SHOT).
+# On that physics tick, _fire() runs next() with an empty root and no dead tweens, then forwards
+# tree._physics_process(delta) before child _physics_process() and before _process() — with zero
+# sleeps and zero dependence on MainTimerSync / delta smoothing.
 func _close(code: int) -> void:
 	_reset()
 	print("BATCH END %s exit=%d ms=%d" % [current, code, Time.get_ticks_msec() - started])
 	worst = maxi(worst, code)
 	tree.set_script(null)
-	if tree.get_processed_tweens().is_empty():
-		tree.physics_frame.connect(next, CONNECT_ONE_SHOT)
-	else:
-		# Killed tweens leave get_processed_tweens() when Godot steps process_tweens on the next frame.
-		tree.process_frame.connect(func() -> void: tree.physics_frame.connect(next, CONNECT_ONE_SHOT), CONNECT_ONE_SHOT | CONNECT_DEFERRED)
+	_schedule_next(next)
+
+
+func _schedule_next(callback: Callable) -> void:
+	tree.root.add_child(_NextGate.new(tree, callback))
 
 
 func next() -> void:
@@ -166,12 +183,24 @@ func _reset() -> void:
 	ClassPreview.reset_for_tests()
 	ThreadGuard.reset_for_tests()
 	PlayerFx.reset_for_tests()
+	ModelVariants.reset_for_tests()
 	ParkProps.reset_for_tests()
 	Threat.reset_for_tests()
 	Projectile.reset_for_tests()
 	Palette.reset_for_tests()
 	ShiftVariants.clear_force()
 	StakeDevices.reset_for_tests()
+	HazardHits.reset_for_tests()
+	ParkTerrain.reset_for_tests()
+	StageMap.reset_for_tests()
+	Terrain.reset_for_tests()
+	Screens.reset_for_tests()
+	ArenaMindDress.reset_for_tests()
+	HighdraftScenery.reset_for_tests()
+	Arena.reset_for_tests()
+	UpgradeTree.reset_for_tests()
+	Harmony.reset_for_tests()
+	ScrapField.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"
@@ -188,8 +217,6 @@ func _reset() -> void:
 	RescueSite.model_path = RescueSite.MODEL
 	MusicRows.stem_dir = ""
 	HighdraftFx.shader_dir = HighdraftFx.SHADER_DIR
-	HighdraftScenery.dir = HighdraftScenery.DIR
-	ArenaMindDress.dir = ArenaMindDress.DIR
 	QuietGun.housing_path = QuietGun.HOUSING
 
 
@@ -205,3 +232,25 @@ static func _clear_dir(path: String) -> void:
 	for folder in dir.get_directories():
 		_clear_dir(path.path_join(folder))
 		dir.remove(folder)
+
+
+class _NextGate extends Node:
+	var _tree: SceneTree
+	var _done: Callable
+
+	func _init(owner: SceneTree, callback: Callable) -> void:
+		_tree = owner
+		_done = callback
+
+	func _process(_delta: float) -> void:
+		if not _tree.get_processed_tweens().is_empty():
+			return
+		set_process(false)
+		get_parent().remove_child(self)
+		queue_free()
+		_tree.physics_frame.connect(_fire.bind(_tree, _done), CONNECT_ONE_SHOT)
+
+	static func _fire(owner: SceneTree, callback: Callable) -> void:
+		callback.call()
+		if owner.has_method("_physics_process"):
+			owner.call("_physics_process", Engine.time_scale / maxf(1.0, float(Engine.physics_ticks_per_second)))

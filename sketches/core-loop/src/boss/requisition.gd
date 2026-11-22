@@ -40,6 +40,7 @@ static var scooter_path := SCOOTER_MODEL
 
 
 static func reset_for_tests() -> void:
+	drop_ahead()
 	model_path = MODEL
 	scooter_path = SCOOTER_MODEL
 # The model parts the loader needs; a model that lacks any of them is dropped, not half used.
@@ -564,12 +565,12 @@ static func warm() -> bool:
 # Frees what warm() holds outside the tree, when the run that read it goes.
 static func drop_ahead() -> void:
 	for scene in _ahead.values():
-		if scene != null:
+		if is_instance_valid(scene):
 			scene.free()
 	_ahead.clear()
 	_ahead_reads.clear()
 	for entry in _dressing.values():
-		if entry[0] != null:
+		if is_instance_valid(entry[0]):
 			entry[0].free()
 	_dressing.clear()
 

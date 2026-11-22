@@ -268,6 +268,10 @@ static func _worker_builds() -> bool:
 static var threaded_in_bot_runs := false
 
 
+static func reset_for_tests() -> void:
+	threaded_in_bot_runs = false
+
+
 func _build_stage(i: int) -> void:
 	if _is_park[i]:
 		_build_park_stage(i, false)

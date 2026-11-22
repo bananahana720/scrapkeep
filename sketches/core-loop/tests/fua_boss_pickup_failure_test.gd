@@ -1,3 +1,4 @@
+# smoke: solo (calls PackedScene.take_over_path on boss_pickup.glb, overwriting the process ResourceCache, and checks Boss._pickup_mesh cold load)
 extends SceneTree
 
 const Boss := preload("res://src/boss/boss.gd")

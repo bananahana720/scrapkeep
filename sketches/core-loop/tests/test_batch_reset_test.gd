@@ -57,13 +57,41 @@ const Synth := preload("res://src/presentation/synth.gd")
 const Footings := preload("res://src/world/park/footings.gd")
 const RescueSite := preload("res://src/world/rescue_site.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
+const HazardHits := preload("res://src/world/events/hazard_hits.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
+const StageMap := preload("res://src/world/stage_map.gd")
+const Terrain := preload("res://src/world/terrain.gd")
+const Screens := preload("res://src/ui/screens.gd")
+const ArenaMindDress := preload("res://src/presentation/arena_mind_dress.gd")
+const HighdraftScenery := preload("res://src/presentation/highdraft_scenery.gd")
+const Arena := preload("res://src/boss/arena.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const Harmony := preload("res://src/presentation/harmony.gd")
+const ScrapField := preload("res://src/build/scrap_field.gd")
+const ModelVariants := preload("res://src/presentation/model_variants.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W46-T1: tools/test_batch_driver.gd _reset() clears reduced-motion and other process-wide
 # statics between tests in a warm batch so no test leaks state into a later test.
 
+var _recording_order := false
+var _order_events: Array[String] = []
+
+
 func _initialize() -> void:
 	_run.call_deferred()
+
+
+func _physics_process(_delta: float) -> bool:
+	if _recording_order and not _order_events.has("tree_physics"):
+		_order_events.append("tree_physics")
+	return false
+
+
+func _process(_delta: float) -> bool:
+	if _recording_order and not _order_events.has("tree_process"):
+		_order_events.append("tree_process")
+	return false
 
 
 func _run() -> void:
@@ -144,10 +172,58 @@ func _run() -> void:
 	PlayerFx.rect_tests = 11
 	ParkProps.file_overrides = {"a": "b"}
 	ParkProps.far_reads = 5
+	ParkProps._meshes["res://fake.glb"] = BoxMesh.new()
+	ParkProps._far_sources["res://fake.glb"] = [1]
+	ParkProps._cache_owner = "park_dam"
+	ParkProps._stand_ins["fake"] = ["res://fake.glb"]
+	ParkProps._stand_ins_stamp = 4
 	Threat.set_look("classic")
 	Threat.Painter._held_looks["plain"] = StandardMaterial3D.new()
 	Threat.Painter._warmed = true
 	Projectile._held_rim = StandardMaterial3D.new()
+	# Dirty W46-T3 statics: world, screens, background-task caches, arena ahead builds, warnings and overrides.
+	HazardHits.plants = ["skip_enemies"]
+	ParkTerrain.draw_regions = false
+	ParkTerrain.build_tasks = 1
+	StageMap.surface_shader_path = "res://assets/materials/__missing_workshop__.gdshader"
+	StageMap._surface_materials["fake"] = StandardMaterial3D.new()
+	StageMap._surface_warnings["fake"] = true
+	Terrain.threaded_in_bot_runs = true
+	Screens._ready_announced = true
+	ArenaMindDress.dir = "res://assets/models/__missing_mind__/"
+	ArenaMindDress._sky_material = null
+	ArenaMindDress.prepare()
+	t.check("ArenaMindDress panorama worker started before reset", ArenaMindDress._panorama_task >= 0)
+	ArenaMindDress._sky_material = ShaderMaterial.new()
+	ArenaMindDress._kit_ahead["fake"] = BoxMesh.new()
+	HighdraftScenery.dir = "res://assets/models/__missing_highdraft__/"
+	HighdraftScenery._sky = PanoramaSkyMaterial.new()
+	HighdraftScenery._warned["fake"] = true
+	HighdraftScenery._coloured[12345] = StandardMaterial3D.new()
+	HighdraftScenery._start_cloud()
+	t.check("HighdraftScenery cloud bake task started before reset", HighdraftScenery._cloud_task >= 0)
+	Arena._looks_warm = true
+	var ahead_bowl := Arena.new()
+	var ahead_bowl_id := ahead_bowl.get_instance_id()
+	Arena._ahead_bowl = ahead_bowl
+	var req_ahead := Node3D.new()
+	var req_ahead_id := req_ahead.get_instance_id()
+	Requisition._ahead["fake"] = req_ahead
+	Requisition._ahead_reads["fake"] = null
+	var bowl_reading_scene := Node3D.new()
+	var bowl_reading_id := bowl_reading_scene.get_instance_id()
+	ArenaBowlDress._ahead["fake"] = {}
+	ArenaBowlDress._reading = {"path": "fake", "scene": bowl_reading_scene, "views": [], "result": {}, "ok": true}
+	UpgradeTree.unknown_warned["probe_pilot"] = true
+	Harmony.unknown_warned["probe_motif"] = true
+	ScrapField.model_path = "res://assets/models/__missing_scrap__.glb"
+	ScrapField._pickup_mesh_cache = [BoxMesh.new()]
+	ScrapField._recovery_mesh_cache = [BoxMesh.new()]
+	ScrapField._cog_model = BoxMesh.new()
+	ScrapField._pickup_assets["fake"] = {}
+	ScrapField._ground_plates["fake"] = BoxMesh.new()
+	ModelVariants.set_enabled(true, true)
+	ModelVariants.set_rejected({})
 	var stray_node := Node3D.new()
 	root.add_child(stray_node)
 	var stray_tween := stray_node.create_tween()
@@ -203,10 +279,45 @@ func _run() -> void:
 	t.check("ThreadGuard resets violations", ThreadGuard.violations == 0 and ThreadGuard.last_violation == "")
 	t.eq("PlayerFx.rect_tests resets to 0", PlayerFx.rect_tests, 0)
 	t.check("ParkProps resets file_overrides and far_reads", ParkProps.file_overrides.is_empty() and ParkProps.far_reads == 0)
+	t.check("ParkProps resets shared caches and stand_ins", ParkProps._meshes.is_empty() and ParkProps._far_sources.is_empty()
+		and ParkProps._cache_owner == "" and ParkProps._stand_ins.is_empty() and ParkProps._stand_ins_stamp == -1)
 	t.check("Threat resets look, held looks, materials and warmed", Threat.Painter._look == ""
 		and Threat.Painter._held_looks.is_empty() and Threat.Painter._materials.is_empty()
 		and Threat.Painter.materials_built == 0 and not Threat.Painter._warmed)
 	t.eq("Projectile._held_rim resets to null", Projectile._held_rim, null)
+	t.check("HazardHits.plants clears on reset", HazardHits.plants.is_empty())
+	t.check("ParkTerrain resets draw_regions and build_tasks", ParkTerrain.draw_regions
+		and ParkTerrain.build_tasks == maxi(1, OS.get_processor_count() / 2))
+	t.check("StageMap resets shader path, material cache and warnings",
+		StageMap.surface_shader_path == StageMap.SURFACE_SHADER_PATH
+		and StageMap._surface_materials.is_empty() and StageMap._surface_warnings.is_empty())
+	t.check("Terrain.threaded_in_bot_runs resets to false", not Terrain.threaded_in_bot_runs)
+	t.check("Screens._ready_announced resets to false", not Screens._ready_announced)
+	t.check("ArenaMindDress resets dir, sky material, panorama task and kit cache",
+		ArenaMindDress.dir == ArenaMindDress.DIR and ArenaMindDress._sky_material == null
+		and ArenaMindDress._panorama_task == -1 and ArenaMindDress._panorama_out.is_empty()
+		and ArenaMindDress._kit_ahead.is_empty())
+	t.check("HighdraftScenery resets dir, sky, cloud task/cache, warnings and coloured cache",
+		HighdraftScenery.dir == HighdraftScenery.DIR and HighdraftScenery._sky == null
+		and HighdraftScenery._cloud == null and HighdraftScenery._cloud_image == null
+		and HighdraftScenery._cloud_task == -1 and HighdraftScenery._warned.is_empty()
+		and HighdraftScenery._coloured.is_empty())
+	t.check("Arena drops ahead bowl and resets _looks_warm", not Arena._looks_warm
+		and Arena._ahead_bowl == null and not is_instance_id_valid(ahead_bowl_id))
+	t.check("Requisition drops ahead scenes and caches", Requisition._ahead.is_empty()
+		and Requisition._ahead_reads.is_empty() and Requisition._dressing.is_empty()
+		and not is_instance_id_valid(req_ahead_id))
+	t.check("ArenaBowlDress drops ahead kits and in-flight reading", ArenaBowlDress._ahead.is_empty()
+		and ArenaBowlDress._reading.is_empty() and ArenaBowlDress._requested.is_empty()
+		and not is_instance_id_valid(bowl_reading_id))
+	t.check("UpgradeTree.unknown_warned clears on reset", UpgradeTree.unknown_warned.is_empty())
+	t.check("Harmony.unknown_warned clears on reset", Harmony.unknown_warned.is_empty())
+	t.check("ScrapField resets model_path and pickup mesh caches", ScrapField.model_path == ScrapField.PICKUP_GLB
+		and ScrapField._pickup_mesh_cache.is_empty() and ScrapField._recovery_mesh_cache.is_empty()
+		and ScrapField._cog_model == null and ScrapField._pickup_assets.is_empty()
+		and ScrapField._ground_plates.is_empty())
+	t.check("ModelVariants resets _on, _rejected and _stamp", ModelVariants._on == -1
+		and ModelVariants._rejected == ModelVariants.REJECTED and ModelVariants._stamp == 0)
 	t.check("Palette sky cache and task reset cleanly", Palette._sky_task == -1 and Palette._sky_texture == null
 		and Palette._sky_waiting.is_empty() and Palette._sky_out.is_empty() and Palette._hdri_sky == null)
 	t.check("processed tweens are killed on reset", get_processed_tweens().all(func(tw): return not tw.is_valid()))
@@ -246,7 +357,100 @@ func _run() -> void:
 	t.eq("RescueSite.model_path resets to MODEL", RescueSite.model_path, RescueSite.MODEL)
 	t.eq("MusicRows.stem_dir resets to empty", MusicRows.stem_dir, "")
 
+	# Verify _schedule_next() runs only after process_tweens() drains killed tweens and after
+	# NOTIFICATION_PROCESS finishes, so the next test starts with no root children, no dead
+	# tweens, and its first _physics_process() runs before any child _physics_process() or _process().
+	var drain_node := Node3D.new()
+	root.add_child(drain_node)
+	var drain_tween := drain_node.create_tween()
+	drain_tween.tween_property(drain_node, "position", Vector3.UP, 10.0)
+	t.check("dead tween present before _schedule_next drains it", get_processed_tweens().size() >= 1)
+	driver._reset()
+	var gate_done := [false]
+	var probe_ref := [null]
+	driver._schedule_next(func() -> void:
+		t.check("dead tweens are drained before next() runs", get_processed_tweens().is_empty())
+		t.check("root has no gate or leftover children when next() runs", root.get_children().is_empty())
+		_order_events.clear()
+		_recording_order = true
+		var probe := _OrderProbe.new(_order_events)
+		probe_ref[0] = probe
+		root.add_child(probe)
+		gate_done[0] = true
+	)
+	for _i in 8:
+		await physics_frame
+		await process_frame
+		if gate_done[0] and _order_events.has("tree_physics") and _order_events.has("child_physics") and _order_events.has("child_process"):
+			break
+	_recording_order = false
+	if probe_ref[0] != null and is_instance_valid(probe_ref[0]):
+		probe_ref[0].free()
+	var i_tree := _order_events.find("tree_physics")
+	var i_child_phys := _order_events.find("child_physics")
+	var i_child_proc := _order_events.find("child_process")
+	t.check("next() child _process() does not run before the test's first physics frame",
+		gate_done[0] and i_tree >= 0 and i_child_proc > i_tree, str(_order_events))
+	t.check("next() test _physics_process() runs before child _physics_process()",
+		gate_done[0] and i_tree >= 0 and i_child_phys > i_tree, str(_order_events))
+
+	# Stress-test MainTimerSync / delta smoothing: 20 iterations each preceded by 20 fast
+	# process_frames and a killed tween must still hand off on a real physics tick with exact
+	# order ["tree_physics", "child_physics", "tree_process", "child_process"], empty root,
+	# empty processed tweens, and callback invoked once.
+	var want_order: Array[String] = ["tree_physics", "child_physics", "tree_process", "child_process"]
+	var stress_bad: Array[String] = []
+	for iter in 20:
+		for _f in 20:
+			await process_frame
+		var s_node := Node3D.new()
+		root.add_child(s_node)
+		var s_tw := s_node.create_tween()
+		s_tw.tween_property(s_node, "position", Vector3.UP, 10.0)
+		driver._reset()
+		var calls := [0]
+		var s_probe := [null]
+		driver._schedule_next(func() -> void:
+			calls[0] += 1
+			if not get_processed_tweens().is_empty():
+				stress_bad.append("iter %d: tweens not drained" % iter)
+			if not root.get_children().is_empty():
+				stress_bad.append("iter %d: root not empty" % iter)
+			_order_events.clear()
+			_recording_order = true
+			var p := _OrderProbe.new(_order_events)
+			s_probe[0] = p
+			root.add_child(p)
+		)
+		for _w in 8:
+			await physics_frame
+			await process_frame
+			if calls[0] > 0 and _order_events.size() >= 4:
+				break
+		_recording_order = false
+		if s_probe[0] != null and is_instance_valid(s_probe[0]):
+			s_probe[0].free()
+		if calls[0] != 1 or _order_events != want_order:
+			stress_bad.append("iter %d: calls=%d events=%s" % [iter, calls[0], str(_order_events)])
+	t.check("fast-frame burst stress (20x20 process_frames) preserves exact tick/frame order",
+		stress_bad.is_empty(), "; ".join(stress_bad))
+
 	quit(t.verdict())
+
+
+class _OrderProbe extends Node:
+	var _events: Array[String]
+
+	func _init(events: Array[String]) -> void:
+		_events = events
+
+	func _process(_delta: float) -> void:
+		if not _events.has("child_process"):
+			_events.append("child_process")
+
+	func _physics_process(_delta: float) -> void:
+		if not _events.has("child_physics"):
+			_events.append("child_physics")
 
 
 class _FakeHud extends RefCounted:

@@ -1623,6 +1623,10 @@ func _stamp(target: Label = null) -> void:
 static var _ready_announced := false
 
 
+static func reset_for_tests() -> void:
+	_ready_announced = false
+
+
 func _announce_ready() -> void:
 	if _ready_announced:
 		return
