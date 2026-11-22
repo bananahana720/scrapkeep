@@ -2,6 +2,8 @@
 
 Status: design spec for wave P-C, unit A2-tally of wave 13. Written 2026-10-10 on `cand/alpha-w13` at `38ceda3`. Nothing here is built or played. Every `file:line` cites that commit. Paths without a prefix are under `sketches/core-loop/`. A number marked **start** is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 collects them as the veto list.
 
+**Weapon fire (ruling ek, 22 Nov 2026):** how this pilot's weapon fires, with its timers, damage and first tree pick, is now [PILOT-CADENCE.md](../PILOT-CADENCE.md) section 3.5. Where this sheet's weapon text differs, that page wins.
+
 Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (the bar, the line-skill hook and the set-piece contract; this sheet uses its names exactly), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (the Hoberman mecha language; section 0 is the live design), [DESIGN-V3.md "Tally's program cards"](../DESIGN-V3.md) (`DESIGN-V3.md:192-241`, the kit decisions D1 to D15 this sheet keeps or replaces) and [LEGIBILITY.md](../LEGIBILITY.md). It supersedes the Tally text in DESIGN-V3 where the two disagree.
 
 Terms, defined once:

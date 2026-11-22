@@ -36,6 +36,36 @@ The `Lint` column holds the exact strings `npm run sketch:lint` bans from player
 | A thing earned and listed on the Achievements page | achievement | "badge" | `badge`, `badges` |
 | A record's second version | B-side | "remix", "radio song" | `remix`, `radio song` |
 
+## Places in world 1 (ruling ek)
+
+One name for each district of the Dam and the Flume, the two stages of world 1, and for Brindle's arena. An old-works sign in the world uses these names and no others ([SIGHT-PERSONA.md](SIGHT-PERSONA.md) section 3), and so does every doc, brief and park row. The HUD never prints a district name ([WAYFINDING.md](WAYFINDING.md)). These tables have three columns on purpose: the lint reads a wider row as a row of the table above.
+
+| Place | Name | Do not call it |
+| --- | --- | --- |
+| The Dam's first district, the high line | Intake Catwalks | "the gantries", "the high route" |
+| The Dam's second district, the broad plunge to the Warden | Spillway Apron | "the half-pipe", "the bowl" (the bowl is Brindle's) |
+| The Dam's third district, the low pump works | Sunken Pump Yard | "the sump", "the pump room" |
+| The Flume's first district, the water channels | Weir Bobsled | "the canal run" |
+| The Flume's second district, the raised lines over the gorge | Trestle Span | "the gantry", "the bridge" |
+| The Flume's third district, above the drum | Headhouse Overlook | "the lookout", "the tower top" |
+| Brindle's arena | Slag Bowl | "the arena", "the furnace bowl" |
+
+## Code and doc names (ruling ek)
+
+One name for each new module and idea, in code, briefs and docs. None of these is player text.
+
+| Thing | Name | Do not call it |
+| --- | --- | --- |
+| The module that owns every weapon's trigger, timers and windows | the weapon module, `weapon_driver.gd` | "weapon controller", "cadence manager", "fire system" |
+| The record of timed and counted effects the HUD reads | `BuffLedger` | "buff manager", "status list" |
+| The row of tubes at the bottom right of the HUD | the tube rail, `nixie_rail.gd` | "diegetic HUD", "manifold", "buff bar" |
+| The four screen styles | hands: the Keeper hand, the Fleet hand, the old-works hand, the Rogue hand | "themes", "skins"; "maker" for a screen style ("maker" stays an item's brand, `maker_sets.gd`) |
+| A short span in which a press pays more | window | "QTE", "perfect", "sweet spot" |
+| The least time between two shots | floor | "cooldown" for a weapon's own trigger (a cooldown is a pick's) |
+| The Warden's line from its clamp to a crew home | command cable | "conduit", "power line", "leash" |
+| What a finished site shows | visited state | "cleared marker", "completion flag" for the idea (the cache's mark is a flag) |
+| The weapon behaviour kept as data from before ruling ek | `hold_auto` | "legacy mode", "classic fire" |
+
 Not changed, and on Andrew's veto page instead: whether "The Foreman" and "The Mind" are one voice by design (a story call), and the "NEXT SHIFT" plate on the run summary (in-world voice).
 
 The word "class" must never reach the player (rule W4 in the lint). One line still did at the wave 35 stage head: `src/build/lanes.gd:25` ("once your heft reaches the next class"); use "tier".

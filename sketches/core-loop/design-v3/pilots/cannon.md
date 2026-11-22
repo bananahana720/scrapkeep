@@ -2,6 +2,8 @@
 
 Status: design spec for wave P-C, unit A2-cannon of wave 13. Written 2026-10-10 on `cand/alpha-w13` at `38ceda3`. Nothing here is built or played. Every `file:line` cites that commit. The body passages follow the Hoberman mecha in `design-v3/ROSTER-LOOK.md` section 0, which replaced the open cage on the evening of 2026-10-10. Paths without a prefix are under `sketches/core-loop/`; `BIBLE.md`, `docs/` and `adr/` are under the repo root. A number marked **start** is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 lists them as vetoes.
 
+**Weapon fire (ruling ek, 22 Nov 2026):** how this pilot's weapon fires, with its timers, damage and first tree pick, is now [PILOT-CADENCE.md](../PILOT-CADENCE.md) section 3.6. Where this sheet's weapon text differs, that page wins.
+
 This sheet fills the per-pilot contract in [SKILL-BAR.md](../SKILL-BAR.md) and uses its names exactly. It replaces the Cannon text in `design-v3/DESIGN-V3.md:185`. Its tree follows the structure the [Sable sheet](sable.md) set in its sections 3.6 and 3.7: every deep node keeps its op and gains one ultimate op, so the six trees read alike.
 
 Terms, defined once:
