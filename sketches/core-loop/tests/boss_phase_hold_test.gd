@@ -3,7 +3,6 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/module_harness.gd")
-const SimClock := preload("res://src/core/sim_clock.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The phase-minimum hold (PHASE_MIN_SECONDS in waking.gd and mind.gd times the dial <boss>.phase_min_by_phase, stub_boss.gd hold_active), on the
@@ -32,8 +31,6 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	var prev_ticks := SimClock.ticks
-	SimClock.ticks = true
 	for world in BOSSES:
 		var boss: String = BOSSES[world]
 		var hold: float = (Waking.PHASE_MIN_SECONDS if world == 2 else Mind.PHASE_MIN_SECONDS)[0]
@@ -55,14 +52,16 @@ func _run() -> void:
 			runs[name] = await _fight(world, threshold, name == "rising", name == "idle")
 		ChallengeDials.reset()
 		_check(boss, hold, runs)
-	SimClock.ticks = prev_ticks
 	ChallengeDials.reset()
 	quit(_t.verdict())
 
 
-# Compares later chunk-loss timestamps within tol seconds. Chunk 1 breaks earlier in rising,
-# reordering hit-stop Engine.time_scale deltas on stub_boss.clock (IEEE-754 sum-order ULP drift
-# and up to one physics frame of time-scale quantization), without affecting the hold itself.
+# Compares later chunk-loss clocks within tol seconds (pair with exact loss_frames equality).
+# Wave 45 P2 (0b3624907) wired posture_changed into Juice hit-stops: breaking chunk 1 earlier in
+# rising adds those slowed 0.05/90 deltas to stub_boss.clock at a different magnitude (~0.67 s vs
+# ~2.00 s), producing a 1-ULP IEEE-754 sum-order mismatch even on identical break frames, and
+# Juice's wall-clock STOP_GAP_MS gate (SimClock.ticks=false, so game.gd keeps tick-counted stops)
+# can admit or skip a 3-tick shatter stop (0.032 s) under load without moving any break frame.
 func _losses_close(a: Array, b: Array, tol: float) -> bool:
 	if a.size() != b.size():
 		return false
@@ -118,8 +117,9 @@ func _check(boss: String, hold: float, runs: Dictionary) -> void:
 			"held frames %d, losses %s" % [ordinary["held_frames"], str(ordinary["losses"])])
 	var rising: Dictionary = runs["rising"]
 	_t.check("%s heft rising over the threshold mid-fight stays held" % boss, rising["held_frames"] > 0 and rising["losses"][1] >= hold - 0.1
-			and _losses_close(rising["losses"].slice(1), ordinary["losses"].slice(1), 2.0 / 90.0),
-			"held frames %d, %s vs %s" % [rising["held_frames"], str(rising["losses"]), str(ordinary["losses"])])
+			and rising["loss_frames"].slice(1) == ordinary["loss_frames"].slice(1)
+			and _losses_close(rising["losses"].slice(1), ordinary["losses"].slice(1), 0.1),
+			"held frames %d, frames %s vs %s, %s vs %s" % [rising["held_frames"], str(rising["loss_frames"]), str(ordinary["loss_frames"]), str(rising["losses"]), str(ordinary["losses"])])
 	# (The first chunk can fall sooner: the live monster lift on posture gain is #222's and unchanged.)
 	_t.check("%s monster fixture is never held" % boss, monster["held_frames"] == 0 and monster["won"],
 			"held frames %d, won %s" % [monster["held_frames"], monster["won"]])
@@ -144,7 +144,7 @@ func _fight(world: int, threshold := NAN, rising := false, idle := false) -> Dic
 	if not is_nan(threshold):
 		mod.warden.spec["monster_heft"] = threshold
 		mod.latch_monster()
-	var out := {"won": false, "losses": [], "telegraphs": [], "held_frames": 0, "posture_while_held": 0.0,
+	var out := {"won": false, "losses": [], "loss_frames": [], "telegraphs": [], "held_frames": 0, "posture_while_held": 0.0,
 			"lost_while_held": 0, "phase_moved_while_held": 0, "end": 0.0, "capped_frames": 0, "staggered_while_held": 0,
 			"signature_at_cap": -1, "release_checked": false, "release_staggers": false, "auto_stagger": 0, "hold_s": 0.0,
 			"hold_bound_s": 0.0, "capped_text": ""}
@@ -175,6 +175,7 @@ func _fight(world: int, threshold := NAN, rising := false, idle := false) -> Dic
 		var now: int = mod.warden.chunks_left()
 		if now < chunks:
 			out["losses"].append(mod.clock)
+			out["loss_frames"].append(frames)
 			if held_before:
 				out["lost_while_held"] += 1
 		chunks = now
