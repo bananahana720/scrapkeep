@@ -9,6 +9,7 @@ const Companion := preload("res://src/core/companion.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
+const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const DeathCause := preload("res://src/core/death_cause.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const DeathTips := preload("res://src/core/death_tips.gd")
@@ -377,7 +378,15 @@ func stage() -> int:
 
 
 func stage_def() -> Dictionary:
-	return ctx.stages.of(ctx.run.stage)
+	return ShiftVariants.stage_def(ctx.stages.of(ctx.run.stage), ctx.run, ctx.run.stage)
+
+
+func stage_look_id() -> String:
+	return ShiftVariants.look_id(ctx.run, ctx.run.stage)
+
+
+func _is_bot() -> bool:
+	return ctx != null and ctx.root != null and bool(ctx.root.get("bot_driven"))
 
 
 func show_title() -> void:
@@ -528,14 +537,17 @@ func _begin_run(chosen: Resource) -> void:
 	# The gate launches this pilot next time (game.gate_pilot); saved with the profile's next save.
 	if ctx.profile != null:
 		ctx.profile.set_last_pilot(chosen.id)
-	# A new run, never a Continue: the timed door opens for exactly the run after a fast rout.
+	# A new run, never a Continue: the timed door opens for exactly the run after a fast rout,
+	# and newly opened shift variants consume their guaranteed debut before the profile saves.
 	Secrets.roll_door(ctx.profile)
+	var variant_debuts := ShiftVariants.consume_debuts(ctx.profile, _is_bot())
 	_save_profile("profile_door_save")
 	# A fixed route names the run seed (not the run id, which the tally ledger keys on), so the
 	# streams that read the run (pockets, stage modifiers, panels) repeat with the route. Read
 	# every run, so turning the slider back to 0 gives the next run its own seed again.
 	ctx.run.route_seed = int(ctx.tuning.base("route_seed")) if ctx.tuning != null else 0
 	ctx.run.begin(chosen)
+	ShiftVariants.attach_run(ctx.run, ctx.profile, variant_debuts, _is_bot())
 	_seed_companion()
 	_taken_part = ""
 	ctx.events.run_started.emit(chosen.id)
@@ -1112,7 +1124,8 @@ func physics_step(delta: float) -> void:
 			if sealed:
 				var charge: float = 1.0 - warden_integrity()
 				beacon.show_progress(beacon.duration * minf(SEALED_CAP, charge))
-				if beacon.phase != Beacon.IDLE:
+				var to_warden := Vector2(ball.x - _warden_at.x, ball.z - _warden_at.z).length()
+				if beacon.phase != Beacon.IDLE or ShiftVariants.wakes_warden(ctx.run, beacon.radius, to_warden):
 					_engage()
 				else:
 					_read_sighting(ball)
@@ -1403,6 +1416,10 @@ func _on_enemy_killed(kind: String, at: Vector3, _scrap_value: int) -> void:
 		return
 	if not _is_this_warden(at):
 		return
+	if ctx.build == null or not ctx.build.scrapless():
+		var bonus_panel := ShiftVariants.claim_overtime_panel(ctx.run)
+		if bonus_panel != "":
+			ctx.run.add_panel(bonus_panel, _warden_at)
 	_unseal()
 
 

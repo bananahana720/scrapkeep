@@ -25,6 +25,7 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 const Breach := preload("res://src/world/breach.gd")
 const EventFamilies := preload("res://src/world/events/families.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
+const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const RogueDirector := preload("res://src/world/rogue_director.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
@@ -993,7 +994,7 @@ func _watch_layer(delta: float, ball: Vector3) -> void:
 
 
 func _on_reward_offered(offers: Array) -> void:
-	if ctx.flow.in_stage() and ctx.flow.state_name() == "gates":
+	if ctx.flow.in_stage() and ctx.flow.state_name() == "gates" and ShiftVariants.dam_shop_open(ctx.run, ctx.run.stage):
 		bay.dock(offers, Callable(terrain, "height"), ctx.root.get_world_3d().direct_space_state if ctx.root.is_inside_tree() else null, terrain.map())
 
 
