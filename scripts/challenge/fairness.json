@@ -13,6 +13,6 @@
     "brindle_charge": ["charge"],
     "crane": ["crane_"]
   },
-  "worldCauses": ["lightning", "impact", "boiler_burst", "reactor_blow", "flood", "cave_in"],
+  "worldCauses": ["lightning", "impact", "boiler_burst", "reactor_blow", "flood", "cave_in", "works_surge"],
   "unownedSources": ["warden", "warden_counter", "vault", "silt_boil", "mind_hand"]
 }

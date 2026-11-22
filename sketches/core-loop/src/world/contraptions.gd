@@ -12,6 +12,42 @@ const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const Interactables := preload("res://src/world/interactables.gd")
+
+
+# Registered interactable for paying a works sluice valve's scrap price through world.interact.
+# Uses the ally family (cost: scrap, consent: hold) so an accidental tap never spends scrap, and
+# draws only the family glyph + gauge (zero new words on screen, ruling cx).
+class SluicePayDevice extends "res://src/world/device.gd":
+	var owner_contraptions
+	var valve_id := ""
+
+	func _init() -> void:
+		family = "ally"
+
+	func build() -> void:
+		pass
+
+	func ready_now() -> bool:
+		return owner_contraptions != null and is_instance_valid(owner_contraptions) \
+			and owner_contraptions._sluice_can_pay(valve_id)
+
+	func gauge() -> float:
+		return owner_contraptions._sluice_gauge(valve_id) if owner_contraptions != null and is_instance_valid(owner_contraptions) else -1.0
+
+	func show_prompt(_targeted: bool) -> void:
+		if prompt == null or _prompt_anchor == null:
+			return
+		_prompt_anchor.global_position = reach_point() + Vector3.UP * 2.2
+		if owner_contraptions == null or not is_instance_valid(owner_contraptions) or not owner_contraptions._sluice_active():
+			prompt.set_interact("", "", "", -1.0)
+			return
+		var icon: String = Interactables.row(family)["icon"]
+		prompt.set_interact(icon, "", "", gauge() if not ready_now() else -1.0)
+
+	func fire() -> bool:
+		return owner_contraptions != null and is_instance_valid(owner_contraptions) \
+			and owner_contraptions.pay_sluice(valve_id)
 
 # The gorge's contraptions, built from the map's specs and run from world's physics
 # tick (DESIGN-V2 section 9, VISUAL-LANGUAGE section 11). Every one is a momentum tool
@@ -48,7 +84,6 @@ const SURGE_DEFAULT_CHARGE := 12.0
 const SURGE_DEFAULT_LENGTH := 24.0
 const SURGE_DEFAULT_HALF_WIDTH := 4.5
 const SURGE_REACH := 3.0
-const SURGE_PAY_REACH := 6.0
 const SURGE_ENEMY_DAMAGE := 25.0
 const SURGE_ENEMY_TOSS := 18.0
 const SURGE_BALL_DAMAGE := 16.0
@@ -296,6 +331,7 @@ func reset() -> void:
 			v["plume"].visible = false
 	for s in sluice_valves:
 		_reset_sluice_valve(s)
+	_register_sluice_devices()
 	for w in walls:
 		w["broken"] = false
 		w["body"].position = w["home"]
@@ -352,14 +388,17 @@ func note_slam(at: Vector3) -> void:
 
 
 # Optional context binding for standalone tests or callers without an ancestor holding `ctx`.
-# Accepts a Context object or a Dictionary with any of {run, player, destructibles, calm}.
+# Accepts a Context object or a Dictionary with any of {run, player, destructibles, interact, root, calm}.
 func bind_context(ctx_ref: Variant) -> void:
 	_ctx = ctx_ref
+	_register_sluice_devices()
 
 
 # One small call to pay a sluice valve's scrap price and arm its warning. Returns true only
-# when the valve was ready and the scrap spend succeeded; spends nothing otherwise.
+# when the stage is active, the valve is ready, price > 0, and the scrap spend succeeded.
 func pay_sluice(id: String, run_ref: Variant = null) -> bool:
+	if not _sluice_active():
+		return false
 	for s in sluice_valves:
 		if String(s["spec"]["id"]) == id:
 			return _try_pay_sluice(s, run_ref if run_ref != null else _ctx_field("run"), _pending_facts)
@@ -385,6 +424,8 @@ func sluice_state(id: String) -> Dictionary:
 				"props_broken": int(s["props_broken"]),
 				"warning_visible": warn_vis,
 				"last_ball_toss": s["last_ball_toss"],
+				"lane_front": h.lane_front if h != null and is_instance_valid(h) else -1.0,
+				"device": s.get("device"),
 			}
 	return {}
 
@@ -392,11 +433,17 @@ func sluice_state(id: String) -> Dictionary:
 # Published telegraphs for tools/bot_fairness.gd (group "world_telegraphs").
 func telegraphs(ball: Vector3) -> Array:
 	var out: Array = []
+	if not _sluice_active():
+		return out
 	for s in sluice_valves:
 		var h: Hazard = s["hazard"]
 		if h != null and is_instance_valid(h) and not h.is_done():
 			out.append({"id": h.get_instance_id(), "cause": SURGE_SOURCE, "covers": h.contains(ball)})
 	return out
+
+
+func _sluice_active() -> bool:
+	return live and is_inside_tree() and is_visible_in_tree()
 
 
 # One physics tick. riding is true while world already holds the ball to a rail.
@@ -598,6 +645,10 @@ func _process(delta: float) -> void:
 func _exit_tree() -> void:
 	for s in sluice_valves:
 		_drop_sluice_hazard(s)
+		var dev: Node3D = s.get("device")
+		if dev != null and is_instance_valid(dev) and dev.system != null and is_instance_valid(dev.system) and dev.system.has_method("unregister"):
+			dev.system.unregister(dev)
+			dev.system = null
 
 
 static func _at_mouth(ball: Vector3, mouth: Vector3, radius: float) -> bool:
@@ -1201,6 +1252,7 @@ func _build_sluice_valve(spec: Dictionary) -> Dictionary:
 	var side := Vector3.UP.cross(dir).normalized()
 	var needle := _dial(foot + side * 2.2, spec)
 	var pay_ring: MeshInstance3D = null
+	var pay_device: SluicePayDevice = null
 	if price > 0:
 		pay_ring = MeshInstance3D.new()
 		pay_ring.name = id + "_pay_ring"
@@ -1211,6 +1263,12 @@ func _build_sluice_valve(spec: Dictionary) -> Dictionary:
 		pay_ring.material_override = _ring_mat
 		pay_ring.position = foot + Vector3.UP * 0.45
 		holder.add_child(pay_ring)
+		pay_device = SluicePayDevice.new()
+		pay_device.owner_contraptions = self
+		pay_device.valve_id = id
+		pay_device.position = foot
+		holder.add_child(pay_device)
+		pay_device.setup(_resolve_ctx(), _resolve_interact(), {"id": id})
 	if not is_in_group("world_telegraphs"):
 		add_to_group("world_telegraphs")
 	return {
@@ -1219,6 +1277,7 @@ func _build_sluice_valve(spec: Dictionary) -> Dictionary:
 		"wheel": wheel,
 		"needle": needle,
 		"pay_ring": pay_ring,
+		"device": pay_device,
 		"at": wheel.position,
 		"lane_from": lane_from,
 		"dir": dir,
@@ -1279,12 +1338,13 @@ func _drop_sluice_hazard(s: Dictionary) -> void:
 
 
 func _try_pay_sluice(s: Dictionary, run_ref: Variant, facts: Array) -> bool:
-	if s["state"] != "ready":
+	if not _sluice_active() or s["state"] != "ready":
 		return false
 	var price: int = int(s["price"])
-	if price > 0:
-		if run_ref == null or not run_ref.has_method("spend_scrap") or not bool(run_ref.spend_scrap(price)):
-			return false
+	if price <= 0:
+		return false
+	if run_ref == null or not run_ref.has_method("spend_scrap") or not bool(run_ref.spend_scrap(price)):
+		return false
 	return _arm_sluice(s, facts, true)
 
 
@@ -1297,8 +1357,9 @@ func _arm_sluice(s: Dictionary, facts: Array, paid: bool) -> bool:
 	h.ground = func(point: Vector3) -> float: return (g.call(point.x, point.z, 0.0) as Vector3).y
 	var warn := 0.0
 	if test_no_warn:
-		h.warn_floor = 0.0
-		warn = 0.0
+		# Tiny epsilon avoids 0.0/0.0 NaN in Hazard.descriptor() while still going live on tick 0.
+		h.warn_floor = 0.0001
+		warn = 0.0001
 	else:
 		h.warn_floor = SURGE_MIN_WARN
 		warn = maxf(SURGE_MIN_WARN, float(s["spec"].get("warn", SURGE_WARN_S)))
@@ -1323,6 +1384,8 @@ func _arm_sluice(s: Dictionary, facts: Array, paid: bool) -> bool:
 
 
 func _step_sluice_valve(s: Dictionary, delta: float, motion: Dictionary, facts: Array) -> void:
+	if s.get("device") != null and (s["device"] as Node3D).system == null:
+		_register_sluice_device(s)
 	var ball: Vector3 = motion["pos"]
 	var planar: float = float(motion["planar"])
 	match String(s["state"]):
@@ -1335,19 +1398,17 @@ func _step_sluice_valve(s: Dictionary, delta: float, motion: Dictionary, facts: 
 					rammed = true
 			if rammed:
 				_arm_sluice(s, facts, false)
-				return
-			if flat_dist <= SURGE_PAY_REACH and absf(ball.y - at.y) < 4.0 and _interact_pressed():
-				_try_pay_sluice(s, _ctx_field("run"), facts)
 		"warning":
 			var h: Hazard = s["hazard"]
 			if h == null or not is_instance_valid(h):
 				_enter_sluice_charge(s)
 				return
+			var age_before := h.age
 			var vis_before := h.state == Hazard.WARN and h.visible and h.painter() != null
 			h.step(delta)
+			if vis_before:
+				s["warn_elapsed"] = float(s["warn_elapsed"]) + minf(delta, maxf(0.0, h.warn_seconds - age_before))
 			if h.state == Hazard.WARN:
-				if vis_before:
-					s["warn_elapsed"] = float(s["warn_elapsed"]) + delta
 				return
 			s["last_warn_visible_s"] = float(s["warn_elapsed"])
 			s["state"] = "surging"
@@ -1355,7 +1416,6 @@ func _step_sluice_valve(s: Dictionary, delta: float, motion: Dictionary, facts: 
 			facts.append({"kind": "fact", "fact": "sluice_open", "at": s["lane_from"]})
 			_puff(s["lane_from"] + Vector3.UP * 1.2, 5.0)
 			_puff((s["lane_from"] as Vector3) + (s["dir"] as Vector3) * (float(s["length"]) * 0.5) + Vector3.UP * 1.2, 4.0)
-			h.lane_front = h.live_fraction() * float(s["length"])
 			_apply_surge(s, h, motion)
 			if h.is_done():
 				_enter_sluice_charge(s)
@@ -1365,7 +1425,6 @@ func _step_sluice_valve(s: Dictionary, delta: float, motion: Dictionary, facts: 
 				_enter_sluice_charge(s)
 				return
 			h.step(delta)
-			h.lane_front = h.live_fraction() * float(s["length"])
 			if h.is_live():
 				_apply_surge(s, h, motion)
 			if h.is_done():
@@ -1466,12 +1525,76 @@ func _ctx_field(key: String, fallback: Variant = null) -> Variant:
 	return fallback
 
 
-func _interact_pressed() -> bool:
-	var player_ref = _ctx_field("player")
-	if player_ref == null:
+func _sluice_by_id(id: String) -> Dictionary:
+	for s in sluice_valves:
+		if String(s["spec"]["id"]) == id:
+			return s
+	return {}
+
+
+func _sluice_can_pay(id: String) -> bool:
+	if not _sluice_active():
 		return false
-	var intent = player_ref.get("intent")
-	return intent != null and bool(intent.get("interact_pressed"))
+	var s := _sluice_by_id(id)
+	if s.is_empty() or s["state"] != "ready":
+		return false
+	var price: int = int(s["price"])
+	if price <= 0:
+		return false
+	var run_ref = _ctx_field("run")
+	if run_ref == null or not run_ref.has_method("spend_scrap"):
+		return false
+	return int(run_ref.get("scrap")) >= price
+
+
+func _sluice_gauge(id: String) -> float:
+	var s := _sluice_by_id(id)
+	if s.is_empty():
+		return -1.0
+	if s["state"] == "charging":
+		return clampf(1.0 - float(s["charge_left"]) / float(s["charge"]), 0.0, 1.0)
+	if s["state"] == "ready" and int(s["price"]) > 0:
+		var run_ref = _ctx_field("run")
+		if run_ref != null:
+			return clampf(float(run_ref.get("scrap")) / float(s["price"]), 0.0, 1.0)
+	return -1.0
+
+
+func _resolve_interact() -> Variant:
+	var direct = _ctx_field("interact")
+	if direct != null and is_instance_valid(direct) and direct.has_method("register"):
+		return direct
+	var root_node = _ctx_field("root")
+	if root_node is Node and is_instance_valid(root_node):
+		var found := (root_node as Node).get_node_or_null("Interact")
+		if found != null and found.has_method("register"):
+			return found
+	var walk := get_parent()
+	while walk != null:
+		var found := walk.get_node_or_null("Interact")
+		if found != null and found.has_method("register"):
+			return found
+		walk = walk.get_parent()
+	return null
+
+
+func _register_sluice_devices() -> void:
+	for s in sluice_valves:
+		_register_sluice_device(s)
+
+
+func _register_sluice_device(s: Dictionary) -> void:
+	var dev: Node3D = s.get("device")
+	if dev == null or not is_instance_valid(dev):
+		return
+	var interact = _resolve_interact()
+	if interact == null or not is_instance_valid(interact) or not interact.has_method("register"):
+		return
+	if dev.system != null and dev.system != interact and is_instance_valid(dev.system) and dev.system.has_method("unregister"):
+		dev.system.unregister(dev)
+	dev.ctx = _resolve_ctx()
+	dev.system = interact
+	interact.register(dev)
 
 
 static func _vec2_of(value: Variant, fallback := Vector2.ZERO) -> Vector2:
