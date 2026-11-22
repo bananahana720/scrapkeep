@@ -63,6 +63,8 @@ func _initialize() -> void:
 	_test_melody_lease_and_trim_epochs()
 	_test_sfx_budget_protects_threats()
 	_test_champion_yields_to_warden()
+	_test_boss_radio_record_on_stage_returns_to_stage()
+	_test_boss_phase2_radio_unpin_restores_phase2()
 	_test_boss_finale_beats_mid_arena_radio_pin()
 	_test_boss_radio_unpin_restores_boss()
 	_test_ultimate_and_radio_restore_live_champion()
@@ -134,12 +136,21 @@ func _test_arbiter_priority_lattice() -> void:
 
 func _test_melody_lease_and_trim_epochs() -> void:
 	var lease := MelodyLease.new()
-	var ep := lease.book_june("set_answer_a", 1000)
-	_t.check("lease blocks preemption while clear", not lease.should_preempt(1050, 400, true, false, false, "level", "travel", ""))
-	_t.check("lease preempts on warning", lease.should_preempt(1050, 400, true, true, false, "level", "travel", ""))
-	_t.check("lease preempts on directed section", lease.should_preempt(1050, 400, true, false, false, "warden", "drop", ""))
+	var ep := lease.book("set_answer_a", 1000)
+	_t.check("lease blocks preemption while clear", not lease.should_preempt({
+		"clock_samples": 1050, "bar_samples": 400, "allowed": true, "warning": false, "busy": false,
+		"ace_mode": "level", "ace_section": "travel", "pending_section": "",
+	}))
+	_t.check("lease preempts on warning", lease.should_preempt({
+		"clock_samples": 1050, "bar_samples": 400, "allowed": true, "warning": true, "busy": false,
+		"ace_mode": "level", "ace_section": "travel", "pending_section": "",
+	}))
+	_t.check("lease preempts on directed section", lease.should_preempt({
+		"clock_samples": 1050, "bar_samples": 400, "allowed": true, "warning": false, "busy": false,
+		"ace_mode": "warden", "ace_section": "drop", "pending_section": "",
+	}))
 	_t.eq("lease release returns id and bumps epoch", lease.release(), "set_answer_a")
-	_t.check("stale epoch rejected after release", not lease.trim_valid(ep))
+	_t.check("epoch advances after release", lease.epoch > ep)
 
 	var ace := AceSequencer.new()
 	ace.mode = "level"
@@ -158,7 +169,9 @@ func _test_sfx_budget_protects_threats() -> void:
 	var playing := {}
 	var is_playing := func(id: int) -> bool: return playing.has(id)
 	var next_id := 1
-	for i in 4:
+	for i in 10:
+		var ev := budget.reserve("threat", is_playing)
+		_t.eq("nothing steals a threat voice (%d)" % i, ev, [])
 		var id := next_id
 		next_id += 1
 		playing[id] = true
@@ -171,9 +184,11 @@ func _test_sfx_budget_protects_threats() -> void:
 		next_id += 1
 		playing[id] = true
 		budget.record(cls, id)
-	_t.eq("all 4 threat voices survive player and reward flood", budget.live_ids("threat").size(), 4)
-	_t.check("every threat id stays playing", [1, 2, 3, 4].all(func(id): return playing.has(id)))
-	_t.check("total live SFX voices stay under 32 polyphony cap", playing.size() <= 28, "live=%d" % playing.size())
+	_t.eq("all 10 threat voices survive player and reward flood", budget.live_ids("threat").size(), 10)
+	_t.check("every threat id stays playing", range(1, 11).all(func(id): return playing.has(id)))
+	_t.check("player and reward stay capped at 20 leaving headroom under 32",
+		budget.live_ids("player").size() <= 12 and budget.live_ids("reward").size() <= 8 and playing.size() <= 30,
+		"live=%d" % playing.size())
 
 
 func _test_champion_yields_to_warden() -> void:
@@ -199,6 +214,42 @@ func _test_champion_yields_to_warden() -> void:
 		audio.ace_playing() and not audio.ace.flat and audio.ace.mode == "warden",
 		"from=%s mode=%s" % [audio._ace_from, audio.ace.mode if audio.ace != null else "null"])
 	_free_rig(rig, [elite])
+
+
+func _test_boss_radio_record_on_stage_returns_to_stage() -> void:
+	var rig := _make_rig()
+	var audio: Audio = rig["audio"]
+	var spun := audio.radio_play("boss-brindle", "boss-brindle", false)
+	_t.check("boss-backed radio record plays on stage 1", spun and audio.radio_hold == "boss-brindle")
+	_pump(audio, audio.engine.bar_len())
+	audio.radio_release()
+	_pump(audio, audio.engine.bar_len() * 2)
+	_t.check("releasing boss-backed radio record on stage 1 returns to stage 1 roam, never boss arena",
+		audio.radio_hold == "" and audio.engine.track == "level" and "spillway" in audio._ace_from and audio._boss_arena_track == "",
+		"track=%s from=%s boss_track=%s" % [audio.engine.track, audio._ace_from, audio._boss_arena_track])
+	_free_rig(rig)
+
+
+func _test_boss_phase2_radio_unpin_restores_phase2() -> void:
+	var rig := _make_rig()
+	var events: GameEvents = rig["events"]
+	var flow: FakeFlow = rig["flow"]
+	var audio: Audio = rig["audio"]
+	flow.state = "boss"
+	events.flow_changed.emit("boss")
+	events.boss_arena_entered.emit()
+	_pump(audio, audio.engine.bar_len() * 2)
+	audio._on_boss_phase_with(2)
+	_pump(audio, audio.engine.bar_len() * 2)
+	_t.check("boss phase 2 active before radio pin", "heavy" in audio._ace_from or "furnace" in audio._ace_from, audio._ace_from)
+	audio.radio_play("roam-1-1", "roam-1-1", true)
+	_pump(audio, audio.engine.bar_len())
+	audio.radio_release()
+	_pump(audio, audio.engine.bar_len() * 3)
+	_t.check("unpinning radio in boss phase 2 restores phase 2 music and brindle track",
+		audio.radio_hold == "" and audio.engine.track == "brindle" and ("heavy" in audio._ace_from or "furnace" in audio._ace_from),
+		"track=%s from=%s" % [audio.engine.track, audio._ace_from])
+	_free_rig(rig)
 
 
 func _test_boss_finale_beats_mid_arena_radio_pin() -> void:

@@ -714,6 +714,7 @@ func _notification(what: int) -> void:
 		for task in _ace_ahead.values():
 			WorkerThreadPool.wait_for_task_completion(task)
 		_ace_ahead.clear()
+		music_dsp.reset()
 
 
 # Blocks until stage 1's whole band is baked, as a player's time on the title allows for.
@@ -924,7 +925,6 @@ func _dsp_state() -> Dictionary:
 		"slowed": _slowed,
 		"low_hull": low_hull,
 		"build_tension": tension,
-		"dj_sweep": ace.sweep if ace_playing() else 0.0,
 	}
 
 
@@ -1653,6 +1653,7 @@ func radio_release() -> void:
 	if plan["owner"] in [MusicArbiter.OWNER_BOSS, MusicArbiter.OWNER_BOSS_FINALE] and held_boss in MusicEngine.BOSS_TRACKS:
 		engine.cancel_pending()
 		_begin_boss("boss_arena_entered", held_boss)
+		engine.set_brindle_phase(_boss_phase)
 		if _boss_phase > 1 or bool(plan["is_boss_finale"]):
 			_phase_music_done = 1
 			phase_music(_boss_phase)
@@ -1800,8 +1801,6 @@ func _active_boss_track() -> String:
 		return String(_radio_boss[1])
 	if _boss_arena_track != "":
 		return _boss_arena_track
-	if engine != null and engine.track in MusicEngine.BOSS_TRACKS:
-		return engine.track
 	if _in_boss_arena():
 		return _boss_track()
 	return ""
@@ -1833,7 +1832,7 @@ func _arbiter_state() -> Dictionary:
 		in_play = bool(flow_node.in_play())
 	elif _flow_state != "":
 		in_play = _flow_state in ["stage", "beacon", "gates", "launch", "boss"]
-	var boss_active := _in_boss_arena() or (engine != null and engine.track in MusicEngine.BOSS_TRACKS)
+	var boss_active := _in_boss_arena() or _boss_arena_track != ""
 	var sealed := flow_node != null and bool(flow_node.get("sealed"))
 	return {
 		"flow": _flow_state,
@@ -1877,6 +1876,8 @@ func _ace_return(stage: int, at: int) -> void:
 		MusicArbiter.OWNER_CHAMPION:
 			if not _restore_champion_pack(at):
 				_ace_stage(stage, at, false)
+		MusicArbiter.OWNER_ULT, MusicArbiter.OWNER_LAUNCH, MusicArbiter.OWNER_DEAD:
+			return
 		_:
 			_ace_stage(stage, at, false)
 
@@ -3582,6 +3583,8 @@ func phase_music(phase: int) -> Dictionary:
 		radio_finale = true
 	if radio_hold != "":
 		return {}
+	if not boss in MusicEngine.BOSS_TRACKS and (_in_boss_arena() or _boss_arena_track != ""):
+		boss = _active_boss_track()
 	if not sound_ready or phase <= _phase_music_done or not ace_wanted():
 		return {}
 	if not boss in MusicEngine.BOSS_TRACKS:
@@ -3792,13 +3795,13 @@ func _tend_champions() -> void:
 	var final_track := PhaseMusic.champion_final(pack_available)
 	if not _champion_hyped or final_track == "":
 		return
-	if MusicArbiter.resolve(_arbiter_state())["owner"] != MusicArbiter.OWNER_CHAMPION:
-		return
 	for id in _champions.keys():
 		var enemy = _champions[id]
 		if not is_instance_valid(enemy) or _champion_euro.has(id):
 			continue
 		if PhaseMusic.champion_in_final_third(_num(enemy, "hp", 1.0), _num(enemy, "max_hp", 1.0)):
+			if MusicArbiter.resolve(_arbiter_state())["owner"] != MusicArbiter.OWNER_CHAMPION:
+				return
 			_champion_euro[id] = true
 			var when := PhaseMusic.drop_plan(engine.clock, engine.next_bar(), engine.bar_len(), Harmony.RATE)
 			engine.schedule_stinger_at("hype_drop", int(when["start"]))
@@ -5423,7 +5426,6 @@ func _tend_set() -> void:
 	if _set_answer != "" and _set_answer_spoiled():
 		_drop_set_answer()
 		ace.invalidate_trims(grid_unit(4))
-		ace.trim_at(maxi(ace.clock, _set_answer_at - grid_unit(4)), {}, grid_unit(4))
 	var at: int = ace.next_bar()
 	if at == _set_bar_at or at - ace.clock > ace.grid_bar / 2:
 		return
@@ -5435,7 +5437,7 @@ func _tend_set() -> void:
 	if plan.answer != "":
 		_set_answer = SfxBank.SET_ANSWER + plan.answer
 		_set_answer_at = at
-		_melody_lease.book_june(_set_answer, at)
+		_melody_lease.book(_set_answer, at)
 		engine.schedule_stinger_at(_set_answer, at, PRIORITY_DB[1], false, ramp)
 		_log_cue(["set_answer", _set_answer, "grid", at, 1.0, PRIORITY_DB[1] + SfxBank.trim_db(_set_answer)])
 	if plan.move != "hold":
@@ -5445,11 +5447,20 @@ func _tend_set() -> void:
 # June's booked answer gives way when the bar it was booked for turns into a fight section,
 # a warning, a caller or a pilot quote after it was booked, through to the end of its bar.
 func _set_answer_spoiled() -> bool:
-	_melody_lease.answer_id = _set_answer
-	_melody_lease.answer_at = _set_answer_at
-	var next := String(ace.pending.get("section", ""))
-	var spoiled := _melody_lease.should_preempt(ace.clock, ace.grid_bar, true, clock < _focus_until or _warden_charging, _set_busy(), ace.mode, ace.section, next)
-	if _melody_lease.answer_id == "":
+	var allowed := bool(MusicArbiter.resolve(_arbiter_state())["allow_dj"]) and not ace.flat
+	var spoiled := _melody_lease.should_preempt({
+		"answer_id": _set_answer,
+		"answer_at": _set_answer_at,
+		"clock_samples": ace.clock,
+		"bar_samples": ace.grid_bar,
+		"allowed": allowed,
+		"warning": clock < _focus_until or _warden_charging,
+		"busy": _set_busy(),
+		"ace_mode": ace.mode,
+		"ace_section": ace.section,
+		"pending_section": String(ace.pending.get("section", "")),
+	})
+	if ace.clock >= _set_answer_at + ace.grid_bar:
 		_set_answer = ""
 	return spoiled
 

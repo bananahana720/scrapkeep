@@ -1,8 +1,8 @@
 extends RefCounted
 
-# Per-class SFX voice budgets (SOUND-STORY.md section 4).
-# Total SFX classes sum to 28 <= 32 polyphony (+ 4 UI on its own player), so a flood of
-# player or reward cues can never evict a threat voice.
+# Per-class SFX voice budgets (SOUND-STORY.md:189).
+# Player (12) + reward (8) = 20 of 32 SFX polyphony slots, leaving 12 slots for threats and hum.
+# Nothing steals a threat voice: threat class never evicts existing playing threat voices.
 
 const BUDGET := {
 	"threat": 8,
@@ -64,10 +64,11 @@ func reserve(cls: String, is_playing: Callable) -> Array:
 	for id in list:
 		if is_playing.call(id):
 			kept.append(id)
-	var limit: int = int(BUDGET.get(cls, BUDGET["player"]))
 	var evict: Array = []
-	while kept.size() >= limit:
-		evict.append(kept.pop_front())
+	if cls != "threat":
+		var limit: int = int(BUDGET.get(cls, BUDGET["player"]))
+		while kept.size() >= limit:
+			evict.append(kept.pop_front())
 	_live[cls] = kept
 	return evict
 

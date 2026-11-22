@@ -3,10 +3,10 @@ extends RefCounted
 # Dynamic Music bus DSP chain and StingerMusic room cohesion bus (Sound V4).
 # Owns:
 #   - Music bus: AudioEffectEQ6 (dynamic 2-4 kHz warning carving),
-#     AudioEffectLowPassFilter (low-hull / slow-motion / DJ sweep),
-#     AudioEffectHighPassFilter (build tension & drop release).
-#   - StingerMusic bus -> SFX: subtle studio room reverb so stingers and June's answers sit
-#     inside the same acoustic space as the recorded ACE band while obeying SFX volume/mute.
+#     AudioEffectLowPassFilter (low-hull / slow-motion),
+#     AudioEffectHighPassFilter (build tension and drop release).
+#   - StingerMusic bus -> SFX: studio room reverb so stingers and June's answers sit inside
+#     the same acoustic space as the recorded band while obeying SFX volume and mute.
 
 const MUSIC_BUS := "Music"
 const STINGER_BUS := "StingerMusic"
@@ -20,7 +20,6 @@ const EQ_3K2_WARNING_DB := -4.0
 const LPF_REST_HZ := 20500.0
 const LPF_SLOW_HZ := 2500.0
 const LPF_LOW_HULL_HZ := 700.0
-const LPF_DJ_SWEEP_HZ := 420.0
 
 const HPF_REST_HZ := 20.0
 const HPF_BUILD_MAX_HZ := 320.0
@@ -47,6 +46,7 @@ var _reverb: AudioEffectReverb
 var eq_amount := 0.0
 var lpf_hz := LPF_REST_HZ
 var hpf_hz := HPF_REST_HZ
+var _dirty := true
 
 
 func setup() -> void:
@@ -92,6 +92,7 @@ func reset() -> void:
 	eq_amount = 0.0
 	lpf_hz = LPF_REST_HZ
 	hpf_hz = HPF_REST_HZ
+	_dirty = true
 	_apply()
 
 
@@ -99,41 +100,45 @@ func step(delta: float, state: Dictionary) -> void:
 	if _music_idx < 0 or _eq == null or _lpf == null or _hpf == null:
 		return
 	var dt := maxf(delta, 0.0)
+	var prev_eq := eq_amount
+	var prev_lpf := lpf_hz
+	var prev_hpf := hpf_hz
+
 	var want_eq := 1.0 if bool(state.get("focus", false)) else 0.0
 	var eq_rate := (1.0 / GLIDE_DOWN_S) if want_eq > eq_amount else (1.0 / GLIDE_UP_S)
 	eq_amount = move_toward(eq_amount, want_eq, dt * eq_rate)
 
 	var want_lpf := LPF_REST_HZ
-	var dj_sweep := clampf(float(state.get("dj_sweep", 0.0)), 0.0, 1.0)
-	if dj_sweep > 0.01:
-		want_lpf = minf(want_lpf, lerpf(LPF_REST_HZ, LPF_DJ_SWEEP_HZ, dj_sweep))
 	if bool(state.get("low_hull", false)):
 		want_lpf = minf(want_lpf, LPF_LOW_HULL_HZ)
 	if bool(state.get("slowed", false)):
 		want_lpf = minf(want_lpf, LPF_SLOW_HZ)
 	var lpf_time := GLIDE_DOWN_S if want_lpf < lpf_hz else GLIDE_UP_S
-	lpf_hz = _glide_hz(lpf_hz, want_lpf, dt, lpf_time, LPF_DJ_SWEEP_HZ, LPF_REST_HZ)
+	lpf_hz = _glide_hz(lpf_hz, want_lpf, dt, lpf_time)
 
 	var tension := clampf(float(state.get("build_tension", 0.0)), 0.0, 1.0)
 	var want_hpf := lerpf(HPF_REST_HZ, HPF_BUILD_MAX_HZ, tension)
 	var hpf_time := GLIDE_UP_S if want_hpf > hpf_hz else GLIDE_DOWN_S
-	hpf_hz = _glide_hz(hpf_hz, want_hpf, dt, hpf_time, HPF_REST_HZ, HPF_BUILD_MAX_HZ)
+	hpf_hz = _glide_hz(hpf_hz, want_hpf, dt, hpf_time)
 
-	_apply()
+	if _dirty or not is_equal_approx(eq_amount, prev_eq) or not is_equal_approx(lpf_hz, prev_lpf) or not is_equal_approx(hpf_hz, prev_hpf):
+		_apply()
 
 
-static func _glide_hz(now: float, want: float, dt: float, duration: float, lo_hz: float, hi_hz: float) -> float:
-	if is_equal_approx(now, want) or dt <= 0.0:
-		return want
-	var log_span := maxf(log(maxf(hi_hz, 2.0)) - log(maxf(lo_hz, 1.0)), 0.1)
+static func _glide_hz(now: float, want: float, dt: float, duration: float) -> float:
+	if dt <= 0.0 or is_equal_approx(now, want):
+		return now
+	var log_span := log(LPF_REST_HZ) - log(HPF_REST_HZ)
 	var step_log := (log_span / maxf(duration, 0.001)) * dt
-	var next_log := move_toward(log(maxf(now, 1.0)), log(maxf(want, 1.0)), step_log)
-	if is_equal_approx(next_log, log(maxf(want, 1.0))):
+	var target_log := log(maxf(want, 1.0))
+	var next_log := move_toward(log(maxf(now, 1.0)), target_log, step_log)
+	if is_equal_approx(next_log, target_log):
 		return want
 	return exp(next_log)
 
 
 func _apply() -> void:
+	_dirty = false
 	if _music_idx < 0:
 		return
 	if _eq != null:

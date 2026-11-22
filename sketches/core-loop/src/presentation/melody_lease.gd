@@ -1,16 +1,28 @@
 extends RefCounted
 
 # Single melodic lane lease (Sound V4, verified by SoundArbiter.tla).
-# Tracks who owns the foreground melodic lane (June's answer vs callers, quotes, warnings,
-# and directed sections) and stamps DJ trims with a monotonic epoch so stale trims cancel.
+# Owns June's active set-director answer booking and decides when warnings, callers,
+# pilot quotes, pack changes, or directed sections preempt it.
 
 const YIELD_SECTIONS := ["open", "drop", "break"]
 
-var owner := "none"
-var epoch := 0
 var answer_id := ""
 var answer_at := -1
-var trim_epoch := -1
+var epoch := 0
+
+
+func book(id: String, at: int) -> int:
+	answer_id = id
+	answer_at = at
+	return epoch
+
+
+func release() -> String:
+	var dropped := answer_id
+	answer_id = ""
+	answer_at = -1
+	epoch += 1
+	return dropped
 
 
 func bump_epoch() -> int:
@@ -18,47 +30,20 @@ func bump_epoch() -> int:
 	return epoch
 
 
-func can_book_june(allowed: bool, warning: bool, busy: bool) -> bool:
-	return allowed and not warning and not busy
-
-
-func book_june(id: String, at: int) -> int:
-	owner = "june"
-	answer_id = id
-	answer_at = at
-	trim_epoch = epoch
-	return epoch
-
-
-func should_preempt(clock_samples: int, bar_samples: int, allowed: bool, warning: bool, busy: bool, ace_mode: String, ace_section: String, pending_section: String) -> bool:
-	if answer_id == "":
+func should_preempt(state: Dictionary) -> bool:
+	var id := String(state.get("answer_id", answer_id))
+	if id == "":
 		return false
-	if bar_samples > 0 and clock_samples >= answer_at + bar_samples:
+	var at := int(state.get("answer_at", answer_at))
+	var bar_samples := int(state.get("bar_samples", 0))
+	var clock_samples := int(state.get("clock_samples", 0))
+	if bar_samples > 0 and clock_samples >= at + bar_samples:
 		answer_id = ""
 		answer_at = -1
-		owner = "none"
 		return false
-	if not allowed or warning or busy:
+	if not bool(state.get("allowed", true)) or bool(state.get("warning", false)) or bool(state.get("busy", false)):
 		return true
-	return ace_mode == "piece" or ace_section in YIELD_SECTIONS or pending_section in YIELD_SECTIONS
-
-
-func release() -> String:
-	var dropped := answer_id
-	answer_id = ""
-	answer_at = -1
-	owner = "none"
-	epoch += 1
-	return dropped
-
-
-func trim_valid(action_epoch: int) -> bool:
-	return action_epoch < 0 or action_epoch == epoch
-
-
-func reset() -> void:
-	owner = "none"
-	answer_id = ""
-	answer_at = -1
-	trim_epoch = -1
-	epoch += 1
+	var mode := String(state.get("ace_mode", ""))
+	var sec := String(state.get("ace_section", ""))
+	var pending := String(state.get("pending_section", ""))
+	return mode == "piece" or sec in YIELD_SECTIONS or pending in YIELD_SECTIONS
