@@ -13,8 +13,6 @@ const TitleIntroPlayer := preload("res://src/presentation/title_intro_player.gd"
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
-const Harmony := preload("res://src/presentation/harmony.gd")
-const MusicEngine := preload("res://src/presentation/music_engine.gd")
 
 const PILOTS := [
 	{"id": "pylon_engineer", "name": "SableShell", "color": ClassDef.SABLE_COLOR, "at": Vector3(-3.5, 1.04, 0.0)},
@@ -363,18 +361,19 @@ func _hang_sun(row: Dictionary) -> void:
 	_disc.pixel_size = tall * float(row.sun_size) / float(_disc.texture.get_height())
 
 
-# How far into its thump the poster is, 1 on the music's bar line falling to 0 over THUMP_DECAY: the music engine's
-# own clock and bar (music_engine.gd), so the beat the player hears is the one the poster keeps. 0 with no music
-# playing, under reduced motion, and off the title (pilot select's cards hold the stage still behind them).
+# How far into its thump the poster is, 1 on the bar line the player hears falling to 0 over THUMP_DECAY. The bar comes
+# from audio's bar_since_s(): seconds since the last bar line of the grid that sounds (the recorded title pack's when it
+# plays, else the band's), INF while no music sounds. audio.gd does not offer that call yet (the Sound thread owns it
+# this wave), and without it the poster holds still. 0 under reduced motion, during the intro and off the title (pilot
+# select's cards hold the stage still behind them).
 func thump() -> float:
 	if HighdraftFx.preferred or not active or _flow_state != "title" or intro_playing():
 		return 0.0
 	var audio = get_parent().get("audio") if get_parent() != null else null
-	var engine = audio.engine if audio != null and bool(audio.get("sound_ready")) else null
-	if engine == null or engine.mode != MusicEngine.PLAY:
+	if audio == null or not audio.has_method("bar_since_s"):
 		return 0.0
-	var since := float(posmod(engine.clock - engine.grid_origin, maxi(1, engine.bar_len()))) / Harmony.RATE
-	return exp(-since / THUMP_DECAY) if since < THUMP_DECAY * 4.0 else 0.0
+	var since: float = audio.bar_since_s()
+	return exp(-since / THUMP_DECAY) if since >= 0.0 and since < THUMP_DECAY * 4.0 else 0.0
 
 
 # The deck camera's rush for the launch take, over seconds. Reduced motion leaves the camera where it is.
@@ -421,9 +420,22 @@ func looking() -> bool:
 	return _look_dragging or _look_idle < LOOK_HOLD
 
 
+# Where look closer can orbit: the deck's three pilots in PILOTS' order (look_target indexes this), then the bow's
+# HeroShell when the gate pilot is not one of them.
+func _look_spots() -> Array:
+	var spots := []
+	for row in PILOTS:
+		var holder: Node3D = stage.get_node_or_null(String(row.name))
+		spots.append(holder.position if holder != null else Vector3(row.at))
+	var spare: Node3D = stage.get_node_or_null("HeroShell")
+	if spare != null:
+		spots.append(spare.position)
+	return spots
+
+
 func _orbit() -> Transform3D:
-	var holder: Node3D = stage.get_node_or_null(String(PILOTS[look_target].name))
-	var centre: Vector3 = (holder.position if holder != null else Vector3(PILOTS[look_target].at)) + Vector3(0.0, 0.5, 0.0)
+	var spots := _look_spots()
+	var centre: Vector3 = spots[clampi(look_target, 0, spots.size() - 1)] + Vector3(0.0, 0.5, 0.0)
 	var dir := Vector3(sin(_look.yaw) * cos(_look.pitch), sin(_look.pitch), cos(_look.yaw) * cos(_look.pitch))
 	var at: Vector3 = centre + dir * float(_look.dist)
 	return Transform3D(Basis.looking_at(centre - at), at)
@@ -443,10 +455,9 @@ func look_begin(at_screen := Vector2(-1.0, -1.0)) -> void:
 	if at_screen.x >= 0.0 and camera.is_inside_tree():
 		var best := INF
 		var scale := Vector2(viewport.size) / get_viewport().get_visible_rect().size
-		for i in PILOTS.size():
-			var holder: Node3D = stage.get_node_or_null(String(PILOTS[i].name))
-			var spot := camera.unproject_position(holder.position if holder != null else Vector3(PILOTS[i].at))
-			var gap := spot.distance_to(at_screen * scale)
+		var spots := _look_spots()
+		for i in spots.size():
+			var gap := camera.unproject_position(spots[i]).distance_to(at_screen * scale)
 			if gap < best:
 				best = gap
 				look_target = i
@@ -472,7 +483,7 @@ func look_zoom(step: float) -> void:
 
 func look_cycle() -> void:
 	look_begin()
-	look_target = (look_target + 1) % PILOTS.size()
+	look_target = (look_target + 1) % _look_spots().size()
 
 
 func _unhandled_input(event: InputEvent) -> void:
