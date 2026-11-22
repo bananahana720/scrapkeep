@@ -175,6 +175,8 @@ func reset() -> void:
 	if ball != null:
 		# A card dealt away mid-antic comes back at rest, not on the frame it left on.
 		if def != null and HeroAssets.SHELLS.has(def.id):
+			# Two poses, as _init does, so the pod's heading is the rest move's and not the jump back.
+			_pose(_rest_phase() - 0.01)
 			_pose(_rest_phase())
 		_follow = ball.position
 		_frame(0.0)

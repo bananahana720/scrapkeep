@@ -101,12 +101,14 @@ func _run() -> void:
 	flow.show_title()
 	await _frames(2)
 	title_stage.active = true
+	# Each title poster frames at its own fov (W46-09); the rush widens it by the push's full span.
+	var rest_fov: float = title_stage.camera.fov
 	title_stage.launch_push(0.05)
 	for i in 600:
 		if title_stage.push >= 1.0:
 			break
 		await process_frame
-	_t.check("launch_push rushes the deck camera in", title_stage.push >= 1.0 and title_stage.camera.fov > 70.0, "%s fov %s" % [title_stage.push, title_stage.camera.fov])
+	_t.check("launch_push rushes the deck camera in", title_stage.push >= 1.0 and title_stage.camera.fov > rest_fov + title_stage.PUSH_FOV - 2.0, "%s fov %s from %s" % [title_stage.push, title_stage.camera.fov, rest_fov])
 	flow.show_title()
 	await _frames(2)
 
