@@ -348,7 +348,7 @@ func _reel_hit() -> void:
 		var out := Vector2(spot.x - centre.x, spot.z - centre.z).limit_length(Arena.FLOOR_R - 4.0)
 		spot = Vector3(centre.x + out.x, 0.0, centre.z + out.y)
 		var value := Rules.REEL_SCRAP / Rules.REEL_PICKUPS + (1 if k < Rules.REEL_SCRAP % Rules.REEL_PICKUPS else 0)
-		_spawn_pickup(Vector3(spot.x, arena.ground(spot) + 0.9, spot.z), value, "reel")
+		_place_pickup(Vector3(spot.x, arena.ground(spot) + 0.9, spot.z), value, "reel")
 	_publish("boss_reeled", [Vector3(mid.x, arena.ground(mid), mid.z), Rules.REEL_SCRAP])
 
 
@@ -601,7 +601,7 @@ func _drip(c: Dictionary) -> void:
 	if k >= c["trail"].size():
 		c["held"] = 0
 		return
-	_spawn_pickup(c["trail"][k], c["values"][k], "returned")
+	_place_pickup(c["trail"][k], c["values"][k], "returned")
 	c["held"] -= c["values"][k]
 	c["dripped"] = k + 1
 	ship.cue("magnet_hold_drip", int(c["dripped"]))
@@ -623,7 +623,7 @@ func _drop_held(i: int) -> void:
 	for k in piles:
 		var value := rest / piles + (1 if k < rest % piles else 0)
 		if value > 0:
-			_spawn_pickup(ground + Arena.dir(TAU * k / piles) * 1.2, value, "returned")
+			_place_pickup(ground + Arena.dir(TAU * k / piles) * 1.2, value, "returned")
 	_discover(CodexEntries.CRANE_DROP, ground)
 
 
@@ -680,8 +680,11 @@ func _clear_of_hull(at: Vector3, floor_only: bool) -> Vector3:
 	return Vector3(best.x, arena.ground(best) + 0.9, best.z)
 
 
+func _place_pickup(at: Vector3, value: int, source: String) -> void:
+	_spawn_pickup(_clear_of_hull(at, source in ["shed", "reel"]), value, source)
+
+
 func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
-	at = _clear_of_hull(at, source in ["shed", "reel"])
 	var node := Node3D.new()
 	node.name = "BrindleReward"
 	if _pickup_mesh == null:
@@ -789,7 +792,7 @@ func _spill_break() -> void:
 	for k in Rules.BREAK_PICKUPS:
 		var p: Vector3 = at + Arena.dir(TAU * k / Rules.BREAK_PICKUPS) * Rules.BREAK_RADIUS
 		var value := Rules.BREAK_SPILL / Rules.BREAK_PICKUPS + (1 if k < Rules.BREAK_SPILL % Rules.BREAK_PICKUPS else 0)
-		_spawn_pickup(Vector3(p.x, arena.ground(p) + 0.9, p.z), value, "spill")
+		_place_pickup(Vector3(p.x, arena.ground(p) + 0.9, p.z), value, "spill")
 
 
 # An armour hit in the bowl spills the way a stage hit does (ruling aw): the hit's spill
@@ -812,7 +815,7 @@ func take_spill(from: Vector3, heading: Vector3, spill: int) -> bool:
 		var out := Vector2(spot.x - centre.x, spot.z - centre.z).limit_length(Arena.FLOOR_R - 4.0)
 		spot = Vector3(centre.x + out.x, 0.0, centre.z + out.y)
 		var value := spill / n + (1 if k < spill % n else 0)
-		_spawn_pickup(Vector3(spot.x, arena.ground(spot) + 0.9, spot.z), value, "shed")
+		_place_pickup(Vector3(spot.x, arena.ground(spot) + 0.9, spot.z), value, "shed")
 	return true
 
 
@@ -821,7 +824,7 @@ func take_spill(from: Vector3, heading: Vector3, spill: int) -> bool:
 func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 	if not active() or kind != "lobber" or not is_instance_valid(arena):
 		return
-	_spawn_pickup(Vector3(at.x, arena.ground(at) + 0.9, at.z), maxi(1, scrap_value), "kill")
+	_place_pickup(Vector3(at.x, arena.ground(at) + 0.9, at.z), maxi(1, scrap_value), "kill")
 
 
 func pickups_left() -> Array:
