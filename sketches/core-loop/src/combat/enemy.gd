@@ -232,10 +232,14 @@ var _ordinary_kind := ""
 var _ordinary_cached := true
 
 
+static func is_ordinary_kind(enemy_kind: String) -> bool:
+	return not _NON_ORDINARY.has(enemy_kind) and not _Roster.is_boss_piece(enemy_kind)
+
+
 func _ordinary_reaction() -> bool:
 	if kind != _ordinary_kind:
 		_ordinary_kind = kind
-		_ordinary_cached = not _NON_ORDINARY.has(kind) and not _Roster.is_boss_piece(kind)
+		_ordinary_cached = is_ordinary_kind(kind)
 	return _ordinary_cached
 
 
@@ -617,7 +621,7 @@ func _die() -> void:
 	var land := Callable(terrain, "height") if not ringed_out and is_on_floor() and terrain != null else Callable()
 	if ringed_out or not (is_instance_valid(_clips) and _clips.die(_death_direction(), land)):
 		EnemyMotion.scatter(self, kind, _death_direction(), land)
-	if not ringed_out:
+	if not ringed_out and is_ordinary_kind(kind):
 		var tag_land := Callable(terrain, "height") if terrain != null else Callable()
 		EnemyMotion.pop_shift_tag(self, kind, _death_direction(), tag_land)
 	died.emit(global_position, scrap_value)
@@ -668,11 +672,16 @@ func _flat_to_ball() -> Vector3:
 	return to
 
 
-func rally_to(spot: Vector3, seconds: float) -> void:
-	if _dead or seconds <= 0.0:
-		return
+func can_rally() -> bool:
+	return not _dead and not winding_up() and _knocked_speed() < RALLY_INTERRUPT_KNOCK
+
+
+func rally_to(spot: Vector3, seconds: float) -> bool:
+	if seconds <= 0.0 or not can_rally():
+		return false
 	_rally_target = spot
 	_rally_left = seconds
+	return true
 
 
 func is_rallying() -> bool:
@@ -707,6 +716,8 @@ func _move(delta: float, desired: Vector3) -> void:
 	var horizontal := Vector3(_knock.x, 0.0, _knock.z)
 	if horizontal.length() < 1.0:
 		horizontal = _rally_velocity(delta, desired)
+	elif _rally_left > 0.0:
+		_rally_left = maxf(0.0, _rally_left - delta)
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z
 	if _knock.y > 0.0:

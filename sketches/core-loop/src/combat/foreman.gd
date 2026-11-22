@@ -64,6 +64,8 @@ var _reels: Array = []
 static var _shared: Array = []
 static var _sockets: Dictionary = {}
 static var _asset_warned := false
+static var _sync_ring_mesh: ArrayMesh
+static var _sync_ring_material: StandardMaterial3D
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -187,8 +189,36 @@ static func _asset_warning() -> void:
 		push_warning("foreman: missing or malformed model; using fallback body")
 
 
+static func _ring_mesh() -> ArrayMesh:
+	if _sync_ring_mesh != null:
+		return _sync_ring_mesh
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var inner := FORMATION_SLOT_RADIUS - 0.14
+	var outer := FORMATION_SLOT_RADIUS + 0.14
+	var segments := 48
+	for i in segments:
+		var a0 := TAU * float(i) / float(segments)
+		var a1 := TAU * float(i + 1) / float(segments)
+		var i0 := Vector3(cos(a0) * inner, 0.0, sin(a0) * inner)
+		var o0 := Vector3(cos(a0) * outer, 0.0, sin(a0) * outer)
+		var i1 := Vector3(cos(a1) * inner, 0.0, sin(a1) * inner)
+		var o1 := Vector3(cos(a1) * outer, 0.0, sin(a1) * outer)
+		for p in [i0, o1, o0, i0, i1, o1]:
+			st.set_normal(Vector3.UP)
+			st.add_vertex(p)
+	_sync_ring_mesh = st.commit()
+	return _sync_ring_mesh
+
+
+static func _ring_material() -> StandardMaterial3D:
+	if _sync_ring_material == null:
+		_sync_ring_material = Palette.unshaded(Palette.BRASS)
+	return _sync_ring_material
+
+
 # The tethers: one line mesh in world space, redrawn each tick from the reels to the crew,
-# plus a brass ground formation ring shown only during the one-beat horn sync.
+# plus a shared brass ribbon on the ground shown only during the one-beat horn sync.
 func _build_tethers() -> void:
 	_tether_mesh = ImmediateMesh.new()
 	_tethers = MeshInstance3D.new()
@@ -202,13 +232,8 @@ func _build_tethers() -> void:
 	add_child(_tethers)
 	_sync_ring = MeshInstance3D.new()
 	_sync_ring.name = "ForemanSyncRing"
-	var torus := TorusMesh.new()
-	torus.inner_radius = FORMATION_SLOT_RADIUS - 0.14
-	torus.outer_radius = FORMATION_SLOT_RADIUS + 0.14
-	torus.rings = 48
-	torus.ring_segments = 8
-	_sync_ring.mesh = torus
-	_sync_ring.material_override = Palette.unshaded(Color(Palette.BRASS, 0.85))
+	_sync_ring.mesh = _ring_mesh()
+	_sync_ring.material_override = _ring_material()
 	_sync_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_sync_ring.position = Vector3(0.0, -half_height + 0.15, 0.0)
 	_sync_ring.visible = false
@@ -291,12 +316,17 @@ func _horn() -> void:
 	_snap_formation()
 
 
+func prime_horn(lead_margin := 0.1) -> void:
+	_clock = maxf(0.0, WIPE_EVERY - HORN_LEAD - lead_margin)
+	_horned = false
+
+
 func _snap_formation() -> void:
 	if not _in_pack():
 		_claim()
 	var chasers: Array = []
 	for member in standing_crew():
-		if String(member.get("kind")) != "chaser":
+		if String(member.get("kind")) != "chaser" or not member.can_rally():
 			continue
 		var flat := Vector2(member.global_position.x - global_position.x, member.global_position.z - global_position.z).length()
 		if flat <= SYNC_REACH:
@@ -315,15 +345,19 @@ func _snap_formation() -> void:
 		return atan2(da.dot(right), da.dot(forward)) < atan2(db.dot(right), db.dot(forward)))
 	var count := chasers.size()
 	var duration := HORN_LEAD * SYNC_BEAT_MARGIN
+	var joined: Array = []
 	for i in count:
 		var angle := 0.0 if count == 1 else lerpf(-FORMATION_ARC * 0.5, FORMATION_ARC * 0.5, float(i) / float(count - 1))
 		var dir := forward.rotated(Vector3.UP, angle)
 		var slot := global_position + dir * FORMATION_SLOT_RADIUS
 		var chaser: Node3D = chasers[i]
-		chaser.rally_to(slot, duration)
-		chaser.react("flinch", slot - chaser.global_position, false, false)
+		if chaser.rally_to(slot, duration):
+			chaser.react("flinch", slot - chaser.global_position, false, false)
+			joined.append(chaser)
+	if joined.is_empty():
+		return
 	syncs += 1
-	synced.emit(chasers)
+	synced.emit(joined)
 
 
 func _wipe() -> void:
@@ -416,5 +450,6 @@ func _die() -> void:
 func _exit_tree() -> void:
 	for member in crew:
 		if is_instance_valid(member) and int(member.get_meta("foreman", 0)) == get_instance_id():
+			member.cancel_rally()
 			member.remove_meta("foreman")
 	super._exit_tree()
