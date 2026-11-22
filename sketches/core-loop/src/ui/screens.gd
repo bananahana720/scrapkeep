@@ -170,6 +170,16 @@ var _state := ""
 var prologue_enabled := true
 var _prologue_line := -1
 var _level_tries := 0
+# Pilot select opens in the frame of the press (MG-09, principle P5): each card's live preview takes about 20 ms
+# to build, so six built on the press held the frame 140 ms. The title deals the row ahead, one card a frame once
+# it has settled (_deal_cards), pilot select takes the dealt cards, and leaving it puts them back unfreed.
+# A deck dealt for another width or roster is dealt again. _deck_lock keeps the [locked, hint] each card was
+# last given, so an unchanged lock is not set again (set_locked builds its grey shader every call).
+var _deck: Array = []
+var _deck_for := ""
+var _deck_lock := {}
+var _deal_wait := 0.0
+const DEAL_AFTER := 0.6
 
 
 func setup(game_ref) -> void:
@@ -371,7 +381,12 @@ func _on_flow_changed(state: String) -> void:
 	for row in [_stats, _comic_row, _choices, _actions]:
 		for child in row.get_children():
 			row.remove_child(child)
-			child.queue_free()
+			if child in _deck:
+				# Back in the deck at rest, so the next pilot select opens as the first did.
+				child.reset()
+			else:
+				child.queue_free()
+	_deal_wait = DEAL_AFTER
 	match state:
 		"title":
 			# Continue (RS6) leads when a saved run is valid, so a pad's first focus lands on
@@ -408,15 +423,13 @@ func _on_flow_changed(state: String) -> void:
 			for row in [_stats, _comic_row, _actions]:
 				row.visible = false
 			var classes: Array = game.flow.classes
-			var gap := CARD_GAP if classes.size() <= 4 else CARD_GAP_TIGHT
-			_choices.add_theme_constant_override("separation", int(gap))
-			var width := minf(CARD_MAX, (_screen().x - 2.0 * SIDE - (classes.size() - 1) * gap) / maxf(1.0, classes.size()))
-			for i in classes.size():
-				var card := ClassCard.new(classes[i], "key_%d" % (i + 1), width)
-				card.pressed.connect(_press.bind(card.key))
+			_choices.add_theme_constant_override("separation", int(_card_gap(classes.size())))
+			while _deal_card():
+				pass
+			for card in _deck:
 				_choices.add_child(card)
 				card.bind_profile(game.ctx.profile)
-				card.set_locked(not game.pilot_unlocked(classes[i]), _unlock_hint(classes[i]))
+				_lock_card(card)
 			_queue_level()
 			_footer.setup([{"cap": "key_enter", "say": "Enter"}, {"say": "start"}])
 			_footer.visible = true
@@ -1705,7 +1718,15 @@ func _process(delta: float) -> void:
 			else:
 				_close_ending()
 	_step_latch_cue(delta)
+	_deal_cards(delta)
+	_thump_name()
 	_update_enabled()
+
+
+# The wordmark keeps the title stage's thump (title_stage.gd), on the title only.
+func _thump_name() -> void:
+	var stage = game.presentation.get("title_stage") if game.presentation != null else null
+	Wordmark.thump(_wordmark, stage.thump() if _wordmark.visible and _state == "title" and stage != null else 0.0)
 
 
 # Buttons take clicks only on a live screen, after its guard, and never while the
@@ -1781,6 +1802,65 @@ func button_for(action: String) -> Button:
 
 func class_cards() -> Array:
 	return _choices.get_children()
+
+
+func _card_gap(count: int) -> float:
+	return CARD_GAP if count <= 4 else CARD_GAP_TIGHT
+
+
+func _card_width(count: int) -> float:
+	return minf(CARD_MAX, (_screen().x - 2.0 * SIDE - (count - 1) * _card_gap(count)) / maxf(1.0, count))
+
+
+# Deals the next card of the deck the roster and the screen's width want; false once the deck is whole. A deck
+# dealt for another roster or width (the window resized) is dropped first; a card on screen is left to its row.
+func _deal_card() -> bool:
+	var classes: Array = game.flow.classes
+	var width := _card_width(classes.size())
+	var wanted := "%s@%d" % [",".join(classes.map(func(def): return String(def.id))), roundi(width)]
+	if wanted != _deck_for:
+		_drop_deck()
+		_deck_for = wanted
+	if _deck.size() >= classes.size():
+		return false
+	var def = classes[_deck.size()]
+	var card := ClassCard.new(def, "key_%d" % (_deck.size() + 1), width)
+	card.pressed.connect(_press.bind(card.key))
+	_deck.append(card)
+	_lock_card(card)
+	return true
+
+
+func _lock_card(card) -> void:
+	var lock := [not game.pilot_unlocked(card.def), _unlock_hint(card.def)]
+	if _deck_lock.get(card) != lock:
+		_deck_lock[card] = lock
+		card.set_locked(lock[0], lock[1])
+
+
+func _drop_deck() -> void:
+	for card in _deck:
+		if is_instance_valid(card) and card.get_parent() == null:
+			card.free()
+	_deck.clear()
+	_deck_lock.clear()
+	_deck_for = ""
+
+
+# One card a frame while the title idles, after its fade has settled and never under the opening.
+func _deal_cards(delta: float) -> void:
+	if _state != "title" or game.flow == null:
+		return
+	_deal_wait = maxf(0.0, _deal_wait - delta)
+	var stage = game.presentation.get("title_stage") if game.presentation != null else null
+	if _deal_wait > 0.0 or (stage != null and stage.intro_playing()):
+		return
+	_deal_card()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		_drop_deck()
 
 
 # Every card's name, role and fantasy line take the row's tallest, so a line that wraps on one

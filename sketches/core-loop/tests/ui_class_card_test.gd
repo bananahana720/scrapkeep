@@ -111,6 +111,21 @@ func _process(delta: float) -> bool:
 			_report("open words", open_words > _calm and open_words <= CALM_BUDGET and range(now.size()).all(func(j): return j == 1 or now[j] == _calm_cards[j])
 					and open_words - _calm == now[1] - _calm_cards[1],
 				"%d words with Rivet open (budget %d, %d shut); per card %s at rest, %s now" % [open_words, CALM_BUDGET, _calm, _calm_cards, now])
+			# The title deals these cards once and keeps them (MG-09): one leaving pilot select open, shaken and
+			# looked at comes back as a new card stands.
+			var rivet = cards[1]
+			rivet._shake = 0.2
+			rivet.preview.look_drag(Vector2(30.0, 0.0))
+			rivet.preview.look_dragging = true
+			_game.flow.show_title()
+			var preview = rivet.preview
+			_report("a dealt card leaves pilot select at rest", is_instance_valid(rivet) and rivet.openness == 0.0 and rivet.scale == Vector2.ONE
+					and rivet.modulate == Color.WHITE and rivet.rotation == 0.0 and preview.open == 0.0 and preview._time == 0.0
+					and not preview.looking() and preview.look_weight == 0.0,
+				"openness %.2f scale %s modulate %s rotation %.3f; preview open %.2f time %.2f looking %s weight %.2f" % [rivet.openness,
+					rivet.scale, rivet.modulate, rivet.rotation, preview.open, preview._time, preview.looking(), preview.look_weight])
+			_game.flow.press_start()
+			_report("and comes back in the next pilot select", _game.screens.class_cards().has(rivet), "the same card dealt again")
 			var away := InputEventMouseMotion.new()
 			away.position = Vector2(4.0, 4.0)
 			away.global_position = away.position
