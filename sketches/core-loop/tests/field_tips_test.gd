@@ -85,6 +85,11 @@ func _physics_process(_delta: float) -> bool:
 	_wait += 1
 	if _wait < 4:
 		return false
+	# Ensure HUD play-piece and radio-dial visibility catch up to flow.in_play() when
+	# choose_class() causes consecutive physics ticks before the next frame's _process().
+	_game.hud._process(0.016)
+	if _game.get("radio_deck") != null and _game.radio_deck.dial != null:
+		_game.radio_deck.dial._process(0.016)
 	_run()
 	print("field_tips_test: %s" % ["PASS" if _failures == 0 else "FAIL (%d)" % _failures])
 	quit(_failures)

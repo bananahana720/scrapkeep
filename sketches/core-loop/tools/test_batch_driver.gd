@@ -27,6 +27,8 @@ const ClassPreview := preload("res://src/ui/class_preview.gd")
 const ThreadGuard := preload("res://src/core/thread_guard.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
+const Projectile := preload("res://src/combat/projectile.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
@@ -155,6 +157,9 @@ func _reset() -> void:
 	ThreadGuard.reset_for_tests()
 	PlayerFx.reset_for_tests()
 	ParkProps.reset_for_tests()
+	Threat.reset_for_tests()
+	Projectile.reset_for_tests()
+	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"
 	SettingsPages.last_page = 0
@@ -173,3 +178,14 @@ func _reset() -> void:
 	HighdraftScenery.dir = HighdraftScenery.DIR
 	ArenaMindDress.dir = ArenaMindDress.DIR
 	QuietGun.housing_path = QuietGun.HOUSING
+
+
+static func _clear_dir(path: String) -> void:
+	var dir := DirAccess.open(path)
+	if dir == null:
+		return
+	for file in dir.get_files():
+		dir.remove(file)
+	for folder in dir.get_directories():
+		_clear_dir(path.path_join(folder))
+		dir.remove(folder)

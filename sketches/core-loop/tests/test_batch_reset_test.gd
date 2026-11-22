@@ -42,6 +42,8 @@ const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 const ThreadGuard := preload("res://src/core/thread_guard.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
+const Projectile := preload("res://src/combat/projectile.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
@@ -142,6 +144,18 @@ func _run() -> void:
 	PlayerFx.rect_tests = 11
 	ParkProps.file_overrides = {"a": "b"}
 	ParkProps.far_reads = 5
+	Threat.set_look("classic")
+	Threat.Painter._held_looks["plain"] = StandardMaterial3D.new()
+	Threat.Painter._warmed = true
+	Projectile._held_rim = StandardMaterial3D.new()
+	var test_dir := "user://test-%d" % OS.get_process_id()
+	DirAccess.make_dir_recursive_absolute(test_dir)
+	var marker_path := test_dir.path_join("leaked_profile.json")
+	var marker := FileAccess.open(marker_path, FileAccess.WRITE)
+	if marker != null:
+		marker.store_string("{}")
+		marker.close()
+	t.check("leaked file written into user://test-<pid> before reset", FileAccess.file_exists(marker_path))
 
 	driver._reset()
 
@@ -182,6 +196,11 @@ func _run() -> void:
 	t.check("ThreadGuard resets violations", ThreadGuard.violations == 0 and ThreadGuard.last_violation == "")
 	t.eq("PlayerFx.rect_tests resets to 0", PlayerFx.rect_tests, 0)
 	t.check("ParkProps resets file_overrides and far_reads", ParkProps.file_overrides.is_empty() and ParkProps.far_reads == 0)
+	t.check("Threat resets look, held looks, materials and warmed", Threat.Painter._look == ""
+		and Threat.Painter._held_looks.is_empty() and Threat.Painter._materials.is_empty()
+		and Threat.Painter.materials_built == 0 and not Threat.Painter._warmed)
+	t.eq("Projectile._held_rim resets to null", Projectile._held_rim, null)
+	t.check("user://test-<pid> is cleared on reset", not FileAccess.file_exists(marker_path))
 
 	t.near("EnemyMotion.motion_scale resets to 1.0", EnemyMotion.motion_scale, 1.0)
 	t.check("HighdraftFx.preferred resets to false", not HighdraftFx.preferred)
