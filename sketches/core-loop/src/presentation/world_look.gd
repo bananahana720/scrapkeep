@@ -519,6 +519,7 @@ class NightShift extends Node3D:
 		var spec: Dictionary = look.get("floods", {})
 		if spec.is_empty() or holder == null or host == null:
 			if dress != null:
+				holder.remove_child(dress)
 				dress.queue_free()
 			if lights != null:
 				lights.go_dark()
@@ -580,6 +581,7 @@ class NightShift extends Node3D:
 	func go_dark() -> void:
 		for omni in _pool:
 			omni.visible = false
+			omni.light_energy = 0.0
 		for spot in _dam:
 			spot.visible = false
 			spot.light_energy = 0.0
@@ -589,7 +591,7 @@ class NightShift extends Node3D:
 	# The pool sits on the masts nearest the ball, a little under each lamp head.
 	func _process(delta: float) -> void:
 		_wait -= delta
-		if _wait > 0.0 or _heads.is_empty() or _player == null:
+		if _wait > 0.0 or _heads.is_empty() or not is_instance_valid(_player):
 			return
 		_wait = _spec.lamps.every
 		var ball: Vector3 = _player.shown_position()
@@ -651,9 +653,15 @@ class NightShift extends Node3D:
 				return
 			_next = SEAM_EVERY_S
 			_tries += 1
+			var stage_root := get_parent().get_parent()
+			var placer := stage_root.get_node_or_null("ParkRows")
+			if placer != null and placer.has_method("is_ready") and not placer.is_ready():
+				if _tries >= SEAM_TRIES:
+					set_process(false)
+				return
 			var rows := []
 			var seen := {}
-			for view: MeshInstance3D in get_parent().get_parent().find_children("*", "MeshInstance3D", true, false):
+			for view: MeshInstance3D in stage_root.find_children("*", "MeshInstance3D", true, false):
 				var mesh := view.mesh as ArrayMesh
 				if mesh == null:
 					continue
