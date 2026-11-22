@@ -7,12 +7,23 @@ const RadioDial := preload("res://src/ui/radio_dial.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const T := preload("res://tests/support/t.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+const Augments := preload("res://src/movement/augments.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
-# W46-10, the HUD findings, on a real game in play.
+# Sable's mount wall stands beside the open spot where E found nothing, its face 1.5 times the base reach out.
+const WALL_OUT := Tuning.RADIUS + Augments.FACE_REACH * 1.5 + 0.5
+
+# W46-10, the HUD findings, on a real game in play. Keys go in as real input events (the game's input
+# path, the keyboard source, Moss's bubble's own listener), as a player presses them.
 #   MG-10  Ctrl with no line on a ball at rest, and E with nothing in reach, are refused on the tick
 #          of the press (verb_failed haul/no_line and interact/nothing, the sounds that already exist),
-#          and the Ctrl chip shakes. Controls: Ctrl on a rolling ball brakes and is not refused; E while
-#          Moss's bubble reads the key (talk_claim) is not refused.
+#          once for a key held down, and the Ctrl chip shakes. Not refused: Ctrl on a rolling ball (the
+#          brake) or in the air (the slam every pilot carries); E on each line of Moss's exchange, the
+#          press that closes its last line and the press that closes an intro (the bubble clears itself
+#          before the ball reads the key); E where Sable's doubled mount reach plants her at 1.5 times
+#          the base reach. Refused: E with nothing in reach while a call-in talks (it never reads E),
+#          and E at 1.5 times the base reach without the upgrade (the control for the wall's place).
 #   PF-21  the bar points at the slot a tip names: the active's tip names the active's chip, and a
 #          chevron stands over that chip; a slot the bar does not hold points at nothing.
 #   PF-19  the radio chip folds to its knob and bars once its words have stood PEEK seconds, opens
@@ -21,7 +32,9 @@ const T := preload("res://tests/support/t.gd")
 var _t := T.new("w46_hud_findings_test")
 var _fails: Array = []
 var _game
-var _script: Intent.Scripted
+var _wall: StaticBody3D
+# Where E with nothing in reach was refused: open ground with no face in reach.
+var _open_at := Vector3.INF
 
 
 func _initialize() -> void:
@@ -43,12 +56,14 @@ func _run() -> void:
 	_game.ctx.calm = true
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
-	_script = Intent.Scripted.new()
-	_game.player.source = _script
+	_game.player.source = Intent.Keyboard.new()
 	_game.run.set_max_hp(99999.0)
 	_game.events.verb_failed.connect(func(verb: String, reason: String, _at: Vector3): _fails.append([verb, reason]))
 	await _physics(90)
 	await _refusals()
+	# Sable's reach is read while nothing speaks, so only her reach can keep E from being refused.
+	await _sable_reach()
+	await _talk()
 	_pointer()
 	await _radio()
 	quit(_t.verdict())
@@ -80,42 +95,154 @@ func _rest() -> bool:
 	return false
 
 
-func _pressed(press: Dictionary) -> Array:
+func _act(action: String, pressed: bool) -> void:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = pressed
+	Input.parse_input_event(event)
+
+
+# Presses `action` as a player does, holds it `ticks` physics ticks and lets go: the refusals heard.
+func _press(action: String, ticks := 1) -> Array:
 	_fails.clear()
-	_script.press = press
-	await _physics(2)
+	_act(action, true)
+	await _physics(ticks)
+	_act(action, false)
+	await _physics(3)
 	return _fails.duplicate()
+
+
+func _count(fails: Array, row: Array) -> int:
+	return fails.filter(func(f): return f == row).size()
 
 
 func _refusals() -> void:
 	var player = _game.player
 	var hud = _game.hud
 	var grounded: bool = await _rest()
-	var ctrl: Array = await _pressed({"brake_held": true})
-	_t.check("Ctrl with no line on a ball at rest is refused on the press's tick", grounded and ctrl.has(["haul", "no_line"]),
+	var ctrl: Array = await _press("cl_haul", 12)
+	_t.check("Ctrl with no line on a ball at rest is refused, once for a key held 12 ticks", grounded and _count(ctrl, ["haul", "no_line"]) == 1,
 		"grounded %s, speed %.2f, fails %s" % [grounded, player.planar_velocity().length(), ctrl])
 	_t.check("and the Ctrl chip shakes", hud.ability_bar.flash_color("smash").a > 0.0)
 	await _physics(30)
 
-	grounded = await _rest()
+	await _rest()
 	var forward: Vector3 = -_game.camera.cam.global_basis.z
 	forward.y = 0.0
 	player.reset_to(player.ball_position(), forward.normalized() * 10.0)
 	await physics_frame
-	var rolling: Array = await _pressed({"brake_held": true})
-	_t.check("control: Ctrl on a rolling ball brakes and is not refused", not rolling.has(["haul", "no_line"]),
+	var rolling: Array = await _press("cl_haul")
+	_t.check("not refused: Ctrl on a rolling ball brakes", _count(rolling, ["haul", "no_line"]) == 0,
 		"speed %.2f, fails %s" % [player.planar_velocity().length(), rolling])
 	await _physics(30)
 
 	await _rest()
-	var e: Array = await _pressed({"mount_pressed": true})
-	_t.check("E with nothing in reach is refused on the press's tick", e.has(["interact", "nothing"]), str(e))
-	var claim: Callable = player.talk_claim
-	player.talk_claim = func() -> bool: return true
-	var talk: Array = await _pressed({"mount_pressed": true})
-	player.talk_claim = claim
-	_t.check("control: E while the talk bubble reads the key is not refused", not talk.has(["interact", "nothing"]), str(talk))
-	_t.check("the HUD wired the talk claim", claim.is_valid())
+	player.reset_to(player.ball_position() + Vector3.UP * 8.0, Vector3.ZERO)
+	await _physics(3)
+	var airborne: bool = not player.state.grounded and player.kit.on(Augments.SLAM)
+	var air: Array = await _press("cl_haul")
+	_t.check("not refused: Ctrl in the air starts the slam", airborne and _count(air, ["haul", "no_line"]) == 0,
+		"airborne with slam %s, fails %s" % [airborne, air])
+	await _physics(120)
+
+	await _rest()
+	_open_at = player.ball_position()
+	var e: Array = await _press("cl_interact", 12)
+	_t.check("E with nothing in reach is refused, once for a key held 12 ticks", _count(e, ["interact", "nothing"]) == 1, str(e))
+
+
+func _bubble():
+	return _game.get_node("Workshop").bubble
+
+
+func _until(condition: Callable, ticks := 180) -> bool:
+	for i in ticks:
+		if condition.call():
+			return true
+		await physics_frame
+	return condition.call()
+
+
+# Moss's bubble, live: an exchange pressed through to its end, a boss's intro closed with E, and a call-in.
+func _talk() -> void:
+	var bubble = _bubble()
+	await _rest()
+	bubble._zones_played.clear()
+	bubble._begin_exchange(_game.run.stage)
+	var up: bool = await _until(func(): return not bubble._exchange.is_empty() and bubble.showing())
+	var lines: int = bubble._exchange.size()
+	var heard: Array = []
+	var presses := 0
+	while not bubble._exchange.is_empty() and presses < lines + 2:
+		heard.append_array(await _press("cl_interact"))
+		presses += 1
+	_t.check("not refused: E on each of the exchange's lines, the last one closing it", up and lines >= 2 and presses == lines
+		and bubble._exchange.is_empty() and not bubble.showing() and _count(heard, ["interact", "nothing"]) == 0,
+		"up %s, lines %d, presses %d, fails %s" % [up, lines, presses, heard])
+
+	await _rest()
+	bubble._queue_intro("1-1", false)
+	var intro: bool = await _until(func(): return bubble._intro_showing and bubble.showing())
+	var closed: Array = await _press("cl_interact")
+	_t.check("not refused: E that closes a boss's intro line", intro and not bubble._intro_showing and _count(closed, ["interact", "nothing"]) == 0,
+		"intro up %s, fails %s" % [intro, closed])
+
+	await _rest()
+	bubble.bark({"text": "Mind the sluice."}, "shop_bought")
+	var talking: bool = await _until(func(): return bubble.showing())
+	var call: Array = await _press("cl_interact")
+	_t.check("refused: E with nothing in reach while a call-in talks (it never reads E)", talking
+		and _count(call, ["interact", "nothing"]) == 1, "talking %s, fails %s" % [talking, call])
+	bubble.hush()
+
+
+# Sable at a wall whose face is 1.5 times the base reach out, on the open spot where E found nothing: E plants her with the doubled reach
+# (s_beachhead, mount_reach 2.0) and is not refused; without it E does nothing and is refused.
+func _sable_reach() -> void:
+	var player = _game.player
+	var def: Resource = ClassDef.by_id("pylon_engineer")
+	_game.run.class_def = def
+	player.fit_class(def)
+	_wall = StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(1.0, 40.0, 40.0)
+	shape.shape = box
+	_wall.add_child(shape)
+	_wall.collision_layer = 1
+	_game.ctx.root.add_child(_wall)
+	var quiet: bool = await _until(func(): return not _bubble().showing())
+	_t.check("nothing speaks while Sable's reach is read", quiet)
+	for doubled in [false, true]:
+		_game.ctx.tuning.set_option("world_one_builds", "on")
+		var tree = player.tree
+		tree.reset("pylon_engineer")
+		tree.max_depth = 2
+		tree.world_one = true
+		if doubled:
+			tree.open_checkpoint()
+			tree.pick("s_beachhead")
+		player.kit.mounted = false
+		player.kit.mount_block = 0.0
+		player.reset_to(_open_at, Vector3.ZERO)
+		await _physics(2)
+		player.reset_to(player.ball_position(), Vector3.ZERO)
+		_wall.global_position = player.ball_position() + Vector3(WALL_OUT, 0.0, 0.0)
+		await physics_frame
+		var reach: float = tree.knob("mount_reach")
+		var where := "ball %s, face in the ball's reach %s" % [player.ball_position(), player.face_in_reach()]
+		var fails: Array = await _press("cl_interact")
+		var mounted: bool = player.kit.mounted
+		if doubled:
+			_t.check("not refused: E at 1.5 times the base reach plants Sable with the doubled reach", is_equal_approx(reach, 2.0) and mounted
+				and _count(fails, ["interact", "nothing"]) == 0, "reach %.1f, mounted %s, fails %s, %s" % [reach, mounted, fails, where])
+		else:
+			_t.check("control: at base reach the same wall is out of reach, and E is refused", is_equal_approx(reach, 1.0) and not mounted
+				and _count(fails, ["interact", "nothing"]) == 1, "reach %.1f, mounted %s, fails %s, %s" % [reach, mounted, fails, where])
+		player.kit.mounted = false
+	_wall.queue_free()
+	player.reset_to(_open_at, Vector3.ZERO)
+	await _physics(30)
 
 
 func _pointer() -> void:
