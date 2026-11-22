@@ -589,13 +589,60 @@ func _build_cinder(spec: Dictionary) -> Dictionary:
 
 
 # A glaze spec's strips are [x, z, yaw_deg, length, inner, outer]: the band between inner and outer metres off the
-# tube's centre line, both walls. The wash models draw it (tools/blender/park/sinkhole_tubes.py's polished band).
+# tube's centre line, both walls. The wash models draw it (tools/blender/park/sinkhole_tubes.py's polished band); a
+# spec with "sheen": true sits on a wall no model polishes (the dam's culvert), so it draws its own wet band.
 func _build_glaze(spec: Dictionary) -> Dictionary:
 	var strips := []
 	for s: Array in spec["strips"]:
 		var yaw := deg_to_rad(float(s[2]))
 		strips.append({"centre": Vector2(float(s[0]), float(s[1])), "along": Vector2(sin(yaw), cos(yaw)), "half": float(s[3]) * 0.5, "inner": float(s[4]), "outer": float(s[5])})
+	if bool(spec.get("sheen", false)):
+		_glaze_sheen(strips)
 	return {"spec": spec, "strips": strips}
+
+
+# The sheen: a wet, glossy band laid on the ground over each strip's two walls, so the fast line reads as a slick
+# surface before the glaze_skim tell plays. A mesh built in code that follows the ground, not a primitive.
+const SHEEN_STEP_M := 4.0
+const SHEEN_ACROSS_M := 2.0
+const SHEEN_LIFT := 0.06
+
+
+func _glaze_sheen(strips: Array) -> void:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Palette.VERDIGRIS.lightened(0.15)
+	mat.roughness = 0.08
+	mat.metallic_specular = 0.9
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_material(mat)
+	for strip: Dictionary in strips:
+		var along: Vector2 = strip["along"]
+		var side := Vector2(along.y, -along.x)
+		var half: float = strip["half"]
+		var rows := maxi(1, ceili(half * 2.0 / SHEEN_STEP_M))
+		var cols := maxi(1, ceili((float(strip["outer"]) - float(strip["inner"])) / SHEEN_ACROSS_M))
+		for sign_v: float in [-1.0, 1.0]:
+			for r in rows:
+				for c in cols:
+					var quad: Array[Vector3] = []
+					for corner: Vector2 in [Vector2(r, c), Vector2(r + 1, c), Vector2(r + 1, c + 1), Vector2(r, c + 1)]:
+						var u: float = -half + half * 2.0 * corner.x / rows
+						var v: float = lerpf(float(strip["inner"]), float(strip["outer"]), corner.y / cols) * sign_v
+						var p: Vector2 = strip["centre"] + along * u + side * v
+						quad.append((ground.call(p.x, p.y, 0.0) as Vector3) + Vector3.UP * SHEEN_LIFT)
+					for tri: Array in [[quad[0], quad[1], quad[2]], [quad[0], quad[2], quad[3]]]:
+						# Godot faces the normal against (b - a) x (c - a): keep every triangle facing up.
+						if (tri[1] - tri[0]).cross(tri[2] - tri[0]).y > 0.0:
+							tri = [tri[0], tri[2], tri[1]]
+						for p3: Vector3 in tri:
+							st.add_vertex(p3)
+	st.generate_normals()
+	var band := MeshInstance3D.new()
+	band.name = "GlazeSheen"
+	band.mesh = st.commit()
+	band.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(band)
 
 
 func _on_glaze(g: Dictionary, ball: Vector3, velocity: Vector3) -> bool:
