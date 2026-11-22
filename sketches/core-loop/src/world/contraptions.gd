@@ -645,6 +645,17 @@ func _process(delta: float) -> void:
 			(s["wheel"] as Node3D).rotation.z += delta * 4.0
 
 
+# A stage parked out of sight (terrain.gd _park, park_all) mid-warning or mid-surge drops its surge, so no
+# hazard stays in Threat.GROUP for near_miss.gd to mark in the arena or the next run's stage 1. The valve
+# goes to its recharge, as after a surge; the next stage entry resets it.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_VISIBILITY_CHANGED or is_visible_in_tree():
+		return
+	for s in sluice_valves:
+		if s["state"] == "warning" or s["state"] == "surging":
+			_enter_sluice_charge(s)
+
+
 func _exit_tree() -> void:
 	for s in sluice_valves:
 		_drop_sluice_hazard(s)
@@ -1336,6 +1347,8 @@ func _drop_sluice_hazard(s: Dictionary) -> void:
 	var h: Hazard = s.get("hazard")
 	if h != null and is_instance_valid(h):
 		h.finish()
+		if h.is_in_group(Threat.GROUP):
+			h.remove_from_group(Threat.GROUP)
 		h.queue_free()
 	s["hazard"] = null
 
@@ -1545,7 +1558,9 @@ func sluice_pay_read(id: String) -> Dictionary:
 	var can_pay: bool = active and s["state"] == "ready" and price > 0 \
 		and run_ref != null and run_ref.has_method("spend_scrap") and int(run_ref.get("scrap")) >= price
 	var g := -1.0
-	if s["state"] == "charging":
+	if s["state"] == "warning" or s["state"] == "surging":
+		g = 0.0
+	elif s["state"] == "charging":
 		g = clampf(1.0 - float(s["charge_left"]) / float(s["charge"]), 0.0, 1.0)
 	elif s["state"] == "ready" and price > 0 and run_ref != null:
 		g = clampf(float(run_ref.get("scrap")) / float(price), 0.0, 1.0)

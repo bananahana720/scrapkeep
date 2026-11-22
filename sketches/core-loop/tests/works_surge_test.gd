@@ -17,6 +17,7 @@ const Interact := preload("res://src/world/interact.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 
 # W46-04: works sluice valve contraption (W1-142, rulings cu, eh, cx, Q-P22).
 # Proves in headless Godot:
@@ -28,7 +29,9 @@ const Gorge := preload("res://src/world/map_gorge.gd")
 #   3. The lane warning is visible on screen for >= 0.6 s (including a 0.6 s spec recording the
 #      full 0.6 s, not 0.583 s), published via world_telegraphs, with lane_front == -1.0, baked
 #      sound ids, zero new screen words, and works_surge listed in scripts/challenge/fairness.json.
-#   4. Parked stages (not visible in tree or live = false) report no telegraphs and refuse payment.
+#   4. Parked stages (not visible in tree or live = false) report no telegraphs and refuse payment;
+#      a stage parked mid-warning or mid-surge drops its surge from Threat.GROUP (near_miss.gd reads it),
+#      and a warning or surging valve shows its pay gauge at 0, never ready.
 #   5. A crew in the lane is thrown down the lane and damaged once; a crew outside is untouched;
 #      a set piece is spared.
 #   6. Destructible props in the lane shatter and pay once (props only, heightfield untouched);
@@ -597,8 +600,31 @@ func _check_price_zero_and_parked_guards() -> void:
 	stage_root.visible = true
 	t.check("active stage accepts pay_sluice", cp.pay_sluice("sluice_a", runp), "")
 	t.check("active warning publishes telegraph", not cp.telegraphs(Vector3(0.0, 1.0, 10.0)).is_empty(), "")
+	var devp: Node3D = cp.sluice_state("sluice_a")["device"]
+	t.eq("warning valve shows its pay gauge at 0 (not ready)", float(cp.sluice_pay_read("sluice_a")["gauge"]), 0.0)
+	t.eq("warning valve's device gauge reads 0", float(devp.gauge()), 0.0)
+	t.check("warning valve does not read ready to pay", not devp.ready_now(), "")
+	t.check("warning surge is in the threat group", _surge_threats() == 1, str(_surge_threats()))
 	stage_root.visible = false
 	t.check("parked (hidden) stage reports no telegraphs", cp.telegraphs(Vector3(0.0, 1.0, 10.0)).is_empty(), "")
+	t.eq("parking mid-warning drops the surge from the threat group", _surge_threats(), 0)
+	t.eq("parking mid-warning sends the valve to its recharge", cp.sluice_state("sluice_a")["state"], "charging")
+	stage_root.visible = true
+	# Parked mid-surge: run a fresh warning into its live surge, then park.
+	for _i in int((CHARGE_S + 0.5) / DT):
+		cp.step(DT, Vector3(40.0, 1.0, 0.0), Vector3.ZERO, null, false)
+	t.check("recharged valve accepts pay_sluice again", cp.pay_sluice("sluice_a", runp), "")
+	var surge_ticks := 0
+	while cp.sluice_state("sluice_a")["state"] == "warning" and surge_ticks < 300:
+		cp.step(DT, Vector3(40.0, 1.0, 0.0), Vector3.ZERO, null, false)
+		surge_ticks += 1
+	t.eq("valve reaches its live surge", cp.sluice_state("sluice_a")["state"], "surging")
+	t.eq("surging valve shows its pay gauge at 0 (not ready)", float(cp.sluice_pay_read("sluice_a")["gauge"]), 0.0)
+	t.check("live surge is in the threat group", _surge_threats() == 1, str(_surge_threats()))
+	stage_root.visible = false
+	t.eq("parking mid-surge drops the surge from the threat group", _surge_threats(), 0)
+	await process_frame
+	t.eq("parked stage leaves no surge hazard behind after a frame", _surge_threats(), 0)
 	stage_root.visible = true
 	cp.live = false
 	t.check("non-live contraptions reports no telegraphs", cp.telegraphs(Vector3(0.0, 1.0, 10.0)).is_empty(), "")
@@ -606,6 +632,14 @@ func _check_price_zero_and_parked_guards() -> void:
 	t.check("non-live contraptions refuses pay_sluice", not cp.pay_sluice("sluice_a", runp), "")
 	await process_frame
 	_drop_rig(rig_parked)
+
+
+func _surge_threats() -> int:
+	var n := 0
+	for node in get_nodes_in_group(Threat.GROUP):
+		if String(node.get("attack_id")).begins_with(Contraptions.SURGE_SOURCE):
+			n += 1
+	return n
 
 
 func _check_planted_no_warning_fails() -> void:
