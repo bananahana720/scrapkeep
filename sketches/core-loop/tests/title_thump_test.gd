@@ -44,6 +44,8 @@ var _t
 
 func _initialize() -> void:
 	_t = T.new("title_thump_test")
+	# Reduced motion is process-wide and a test earlier in the warm batch may leave it on.
+	HighdraftFx.preferred = false
 	var host := Host.new()
 	var stage = TitleStage.new()
 	host.add_child(stage)
