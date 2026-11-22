@@ -4,18 +4,15 @@ const ChallengeDials := preload("res://src/core/challenge_dials.gd")
 const Game := preload("res://src/game.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
-const Density := preload("res://src/presentation/density.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const StageLocks := preload("res://src/world/stage_locks.gd")
-const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Palette := preload("res://src/core/palette.gd")
-const WarningBound := preload("res://src/combat/warning_bound.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const WorldFxWord := preload("res://src/presentation/world_fx/world_fx_word.gd")
 const Synth := preload("res://src/presentation/synth.gd")
@@ -25,10 +22,6 @@ const MusicRows := preload("res://src/presentation/music_rows.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const HighdraftScenery := preload("res://src/presentation/highdraft_scenery.gd")
 const ArenaMindDress := preload("res://src/presentation/arena_mind_dress.gd")
-const ArenaWakingDress := preload("res://src/presentation/arena_waking_dress.gd")
-const DigScenery := preload("res://src/presentation/dig_scenery.gd")
-const DigFx := preload("res://src/presentation/dig_fx.gd")
-const StageMap := preload("res://src/world/stage_map.gd")
 const QuietGun := preload("res://src/presentation/quiet_gun.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
@@ -45,11 +38,6 @@ var frame_func := RegEx.create_from_string("(?m)^func _(physics_)?process\\(")
 var physics_ticks := Engine.physics_ticks_per_second
 var max_steps := Engine.max_physics_steps_per_frame
 var max_fps := Engine.max_fps
-var dig_stone_dir := DigScenery.stone_dir
-var dig_mech_dir := DigScenery.mech_dir
-var dig_cart_dir := DigScenery.cart_dir
-var dig_lamp_shader := DigFx.lamp_shader_path
-var stage_surface_shader := StageMap.surface_shader_path
 
 
 func _init(owner: SceneTree, list: Array) -> void:
@@ -109,19 +97,13 @@ func _reset() -> void:
 	if GraphicsPreset.current != "high":
 		GraphicsPreset.apply("high")
 	SimClock.ticks = false
-	Density.live().reset()
-	Density.publish_fill_scale(1.0)
 	Glyphs.device = "kbm"
 	SettingsPages.last_page = 0
 	StageLocks.active = true
-	Parts.maker_nudge_on = true
-	Parts.answer_nudge_on = true
 	Synergies.table = null
 	EnemyMotion.headless_idle = false
 	EnemyClips.headless = false
 	Enemy.rim_color = Palette.ARC
-	WarningBound.test_pad_scale = 1.0
-	WarningBound.test_skip_hazard_merge = false
 	WorldFx.current = null
 	WorldFxWord.quiet(false)
 	Synth.score_transpose = 0
@@ -131,11 +113,4 @@ func _reset() -> void:
 	HighdraftFx.shader_dir = HighdraftFx.SHADER_DIR
 	HighdraftScenery.dir = HighdraftScenery.DIR
 	ArenaMindDress.dir = ArenaMindDress.DIR
-	ArenaWakingDress.stone_dir = ArenaWakingDress.STONE_DIR
-	ArenaWakingDress.mech_dir = ArenaWakingDress.MECH_DIR
-	DigScenery.stone_dir = dig_stone_dir
-	DigScenery.mech_dir = dig_mech_dir
-	DigScenery.cart_dir = dig_cart_dir
-	DigFx.lamp_shader_path = dig_lamp_shader
-	StageMap.surface_shader_path = stage_surface_shader
 	QuietGun.housing_path = QuietGun.HOUSING
