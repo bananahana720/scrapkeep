@@ -29,6 +29,7 @@ const CHIP := Vector2(320.0, 46.0)
 const FOLDED := Vector2(84.0, 46.0)
 const PEEK := 4.0
 const ELLIPSIS := "…"
+const FITS_KEPT := 64
 # Swollen, the plate holds the station's name and its blurb on up to BLURB_LINES lines, wrapped
 # at a word: a blurb stopped mid-word read as broken (w37 film 012, "played however th"). The
 # plate still ends inside the top band (screen_regions.gd) at 900 px high.
@@ -54,6 +55,7 @@ var _stamp := 0.0
 var _teach := 0.0
 var _peek := 0.0
 var _said := ""
+static var _fits := {}
 var _read := {}
 var _bars := PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
 
@@ -99,15 +101,24 @@ func target_size() -> Vector2:
 
 
 # `text` cut at the end with an ellipsis so it fits `width` at `font_size`; whole when it fits.
+# Each answer is kept by (text, width, size), so a plate that is not changing shapes no text.
 static func fit(text: String, width: float, font_size: int) -> String:
+	width = floorf(width)
 	if width <= 0.0:
 		return ""
-	if UiFonts.width(text, font_size) <= width:
-		return text
-	var cut := text
-	while cut != "" and UiFonts.width(cut.strip_edges(false, true) + ELLIPSIS, font_size) > width:
-		cut = cut.left(cut.length() - 1)
-	return cut.strip_edges(false, true) + ELLIPSIS if cut != "" else ""
+	var key := "%s|%d|%d" % [text, int(width), font_size]
+	if _fits.has(key):
+		return _fits[key]
+	var out := text
+	if UiFonts.width(text, font_size) > width:
+		var cut := text
+		while cut != "" and UiFonts.width(cut.strip_edges(false, true) + ELLIPSIS, font_size) > width:
+			cut = cut.left(cut.length() - 1)
+		out = cut.strip_edges(false, true) + ELLIPSIS if cut != "" else ""
+	if _fits.size() >= FITS_KEPT:
+		_fits.clear()
+	_fits[key] = out
+	return out
 
 
 const TINTS := {"AMBER": Palette.AMBER, "COPPER": Palette.COPPER, "SANDSTONE": Palette.SANDSTONE, "LEDGER": Palette.LEDGER,
@@ -122,6 +133,9 @@ static func tint(name: String) -> Color:
 func _process(delta: float) -> void:
 	visible = deck != null and deck._live()
 	if not visible:
+		# Away between runs: the next run's first words are news again, even if they match the last.
+		_said = ""
+		_peek = 0.0
 		return
 	_swell = maxf(0.0, _swell - delta)
 	_stamp = maxf(0.0, _stamp - delta)
