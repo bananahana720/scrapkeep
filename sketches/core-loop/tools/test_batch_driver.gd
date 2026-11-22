@@ -91,16 +91,25 @@ func finish(code: int) -> void:
 
 # A solo run frees the test's nodes as the process exits, and what they print then (an await
 # resumed on a freed node, say) is that test's output. The batch frees them the same way,
-# without removing them first, before it closes the test's output. Deferring next() past
-# process_frame both drains killed tweens in process_tweens and starts the next test between
-# engine iterations (not mid-physics_frame), so the test's own _physics_process runs before
-# its child nodes' _physics_process — matching solo.
+# without removing them first, before it closes the test's output.
+#
+# Godot's SceneTree::process() emits process_frame and flushes deferred calls before sending
+# NOTIFICATION_PROCESS to child nodes and before process_tweens() removes killed tweens. A
+# temporary gate node under tree.root waits in _process() until get_processed_tweens() is empty,
+# detaches and queue_frees itself, and calls next.call_deferred(). That runs next() during the
+# end-of-frame deferred flush — after NOTIFICATION_PROCESS and process_tweens() have finished —
+# so the next test starts with no root children, no dead tweens, no early child _process() before
+# its first physics tick, and its own _physics_process() running before child _physics_process().
 func _close(code: int) -> void:
 	_reset()
 	print("BATCH END %s exit=%d ms=%d" % [current, code, Time.get_ticks_msec() - started])
 	worst = maxi(worst, code)
 	tree.set_script(null)
-	tree.process_frame.connect(next, CONNECT_ONE_SHOT | CONNECT_DEFERRED)
+	_schedule_next(next)
+
+
+func _schedule_next(callback: Callable) -> void:
+	tree.root.add_child(_NextGate.new(tree, callback))
 
 
 func next() -> void:
@@ -218,3 +227,20 @@ static func _clear_dir(path: String) -> void:
 	for folder in dir.get_directories():
 		_clear_dir(path.path_join(folder))
 		dir.remove(folder)
+
+
+class _NextGate extends Node:
+	var _tree: SceneTree
+	var _done: Callable
+
+	func _init(owner: SceneTree, callback: Callable) -> void:
+		_tree = owner
+		_done = callback
+
+	func _process(_delta: float) -> void:
+		if not _tree.get_processed_tweens().is_empty():
+			return
+		set_process(false)
+		get_parent().remove_child(self)
+		queue_free()
+		_done.call_deferred()

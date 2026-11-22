@@ -21,6 +21,7 @@ static func reset_for_tests() -> void:
 	_recovery_mesh_cache.clear()
 	_cog_model = null
 	_pickup_assets.clear()
+	_ground_plates.clear()
 
 # Scrap laid along the terrain's scrap lines. The magnet grows with heft (6 m times the
 # square root of heft, capped at 18 m) and reaches further again the faster you roll,

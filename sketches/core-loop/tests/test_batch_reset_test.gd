@@ -73,8 +73,18 @@ const T := preload("res://tests/support/t.gd")
 # W46-T1: tools/test_batch_driver.gd _reset() clears reduced-motion and other process-wide
 # statics between tests in a warm batch so no test leaks state into a later test.
 
+var _recording_order := false
+var _order_events: Array[String] = []
+
+
 func _initialize() -> void:
 	_run.call_deferred()
+
+
+func _physics_process(_delta: float) -> bool:
+	if _recording_order and not _order_events.has("tree_physics"):
+		_order_events.append("tree_physics")
+	return false
 
 
 func _run() -> void:
@@ -204,6 +214,7 @@ func _run() -> void:
 	ScrapField._recovery_mesh_cache = [BoxMesh.new()]
 	ScrapField._cog_model = BoxMesh.new()
 	ScrapField._pickup_assets["fake"] = {}
+	ScrapField._ground_plates["fake"] = BoxMesh.new()
 	ModelVariants.set_enabled(true, true)
 	ModelVariants.set_rejected({})
 	var stray_node := Node3D.new()
@@ -296,7 +307,8 @@ func _run() -> void:
 	t.check("Harmony.unknown_warned clears on reset", Harmony.unknown_warned.is_empty())
 	t.check("ScrapField resets model_path and pickup mesh caches", ScrapField.model_path == ScrapField.PICKUP_GLB
 		and ScrapField._pickup_mesh_cache.is_empty() and ScrapField._recovery_mesh_cache.is_empty()
-		and ScrapField._cog_model == null and ScrapField._pickup_assets.is_empty())
+		and ScrapField._cog_model == null and ScrapField._pickup_assets.is_empty()
+		and ScrapField._ground_plates.is_empty())
 	t.check("ModelVariants resets _on, _rejected and _stamp", ModelVariants._on == -1
 		and ModelVariants._rejected == ModelVariants.REJECTED and ModelVariants._stamp == 0)
 	t.check("Palette sky cache and task reset cleanly", Palette._sky_task == -1 and Palette._sky_texture == null
@@ -338,7 +350,58 @@ func _run() -> void:
 	t.eq("RescueSite.model_path resets to MODEL", RescueSite.model_path, RescueSite.MODEL)
 	t.eq("MusicRows.stem_dir resets to empty", MusicRows.stem_dir, "")
 
+	# Verify _schedule_next() runs only after process_tweens() drains killed tweens and after
+	# NOTIFICATION_PROCESS finishes, so the next test starts with no root children, no dead
+	# tweens, and its first _physics_process() runs before any child _physics_process() or _process().
+	var drain_node := Node3D.new()
+	root.add_child(drain_node)
+	var drain_tween := drain_node.create_tween()
+	drain_tween.tween_property(drain_node, "position", Vector3.UP, 10.0)
+	t.check("dead tween present before _schedule_next drains it", get_processed_tweens().size() >= 1)
+	driver._reset()
+	var gate_done := [false]
+	var probe_ref := [null]
+	driver._schedule_next(func() -> void:
+		t.check("dead tweens are drained before next() runs", get_processed_tweens().is_empty())
+		t.check("root has no gate or leftover children when next() runs", root.get_children().is_empty())
+		_order_events.clear()
+		_recording_order = true
+		var probe := _OrderProbe.new(_order_events)
+		probe_ref[0] = probe
+		root.add_child(probe)
+		gate_done[0] = true
+	)
+	for _i in 6:
+		await process_frame
+		if gate_done[0] and _order_events.has("tree_physics") and _order_events.has("child_physics") and _order_events.has("child_process"):
+			break
+	_recording_order = false
+	if probe_ref[0] != null and is_instance_valid(probe_ref[0]):
+		probe_ref[0].free()
+	var i_tree := _order_events.find("tree_physics")
+	var i_child_phys := _order_events.find("child_physics")
+	var i_child_proc := _order_events.find("child_process")
+	t.check("next() child _process() does not run before the test's first physics frame",
+		gate_done[0] and i_tree >= 0 and i_child_proc > i_tree, str(_order_events))
+	t.check("next() test _physics_process() runs before child _physics_process()",
+		gate_done[0] and i_tree >= 0 and i_child_phys > i_tree, str(_order_events))
+
 	quit(t.verdict())
+
+
+class _OrderProbe extends Node:
+	var _events: Array[String]
+
+	func _init(events: Array[String]) -> void:
+		_events = events
+
+	func _process(_delta: float) -> void:
+		if not _events.has("child_process"):
+			_events.append("child_process")
+
+	func _physics_process(_delta: float) -> void:
+		if not _events.has("child_physics"):
+			_events.append("child_physics")
 
 
 class _FakeHud extends RefCounted:
