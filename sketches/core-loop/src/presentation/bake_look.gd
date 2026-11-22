@@ -7,8 +7,8 @@ extends RefCounted
 # state swaps), and those ignore UV2, so every face outside the vertex-colour slots lost the bake.
 # dress() multiplies those surfaces by the bake's shade through StandardMaterial3D's detail layer on
 # UV2, so a script can keep mutating its material (albedo, emission) as before. A multiply cannot
-# brighten, so convex edges stop at neutral (the vertex slots lift them up to 18%): the
-# darkening, which carries the form, matches exactly. The detail layer always writes NORMAL_MAP,
+# brighten, so convex edges stop at neutral (the vertex slots lift them up to 18%, and Fleet paint's
+# edge layer, finish() below, lifts them toward bone): the darkening, which carries the form, matches exactly. The detail layer always writes NORMAL_MAP,
 # so the shaded surfaces need usable tangents: the polished GLBs carry a constant UV1, which
 # leaves theirs constant and, where one runs along its normal, drew that quad black.
 # tangent_safe() rebuilds such a mesh once with tangents square to the normals.
@@ -24,8 +24,85 @@ const RAMP := 256
 const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
+# The 2010 finish (SIGHT-PERSONA.md sections 5 and 6, items 6 and 7). Fleet paint is what a hand repainted, so its
+# convex edges wear toward bone and its rim keeps a pale edge in shade; a casting (an Old Works shell, a Warden's
+# enamel) bakes with edge 0 (POLISH.md), so its wear reads neutral and it stays spotless whatever slot it is in.
+# The multiply above cannot brighten, so the bone comes from one shared layer drawn after the paint (next_pass):
+# where the bake's wear says convex it mixes the lit paint toward lit bone, up to LIFT at the most worn edge, and
+# draws nothing on a neutral or creased face. The rim is the material's own (rim_tint 0 takes the light's colour), so
+# in the sun's shade it is the shadowless sky fill's cool tint: rust paint keeps a pale edge against warm sandstone
+# (visual-assets-audit.md finding 8). The candidates and their numbers are on the W46-03 pull request's sheet (ruling cq).
+const LIFT_SLOTS := ["fleet_paint"]
+const LIFT := 0.55
+# Wear below LIFT_FROM of the most worn reads as unworn: the bake's soft falloff stays paint, the edge goes bone.
+const LIFT_FROM := 0.2
+const RIM := 0.35
+const BRASS_SLOTS := ["brass", "requisition_tag"]
+const LIFT_SHADER := """shader_type spatial;
+render_mode blend_mix, depth_draw_never, cull_back, diffuse_burley, specular_schlick_ggx;
+uniform vec4 bone : source_color;
+uniform float lift = 0.55;
+uniform float from = 0.2;
+void fragment() {
+	// UV2.y is the bake's wear with glTF's flipped V: 0.5 neutral, 0 the most worn convex edge, 1 the deepest crease.
+	float worn = clamp((0.5 - UV2.y) * 2.0, 0.0, 1.0);
+	float a = lift * smoothstep(from, 1.0, worn);
+	if (a < 0.004) {
+		discard;
+	}
+	ALBEDO = bone.rgb;
+	ROUGHNESS = 0.9;
+	ALPHA = a;
+}
+"""
+
 static var _ramp: ImageTexture
 static var _twins := {}
+static var _lift: ShaderMaterial
+
+
+# The shared edge-lift layer (one material for every Fleet-paint surface).
+static func edge_lift() -> ShaderMaterial:
+	if _lift == null:
+		var shader := Shader.new()
+		shader.code = LIFT_SHADER
+		_lift = ShaderMaterial.new()
+		_lift.shader = shader
+		_lift.resource_name = "edge_lift"
+		_lift.set_shader_parameter("bone", Palette.SAND)
+		_lift.set_shader_parameter("lift", LIFT)
+		_lift.set_shader_parameter("from", LIFT_FROM)
+	return _lift
+
+
+# The bone the edge layer mixes in at bake wear `wear_v` (UV2.y), as its shader draws it: none on a neutral face (a
+# casting baked with edge 0 reads 0.5 everywhere) or a crease, LIFT at the most worn convex edge.
+static func lift_alpha(wear_v: float) -> float:
+	var a := LIFT * smoothstep(LIFT_FROM, 1.0, clampf((0.5 - wear_v) * 2.0, 0.0, 1.0))
+	return a if a >= 0.004 else 0.0
+
+
+# What a surface's slot finish is: "lift" for Fleet paint, "brass" for a brass slot, "" for the rest.
+static func finish_of(mesh: Mesh, surface: int) -> String:
+	if not (mesh is ArrayMesh):
+		return ""
+	var slot := (mesh as ArrayMesh).surface_get_name(surface)
+	if slot in LIFT_SLOTS:
+		return "lift"
+	if slot in BRASS_SLOTS:
+		return "brass"
+	return ""
+
+
+# Gives `mat` its slot finish in place: Fleet paint its rim and bone edge layer, brass the one satin brass.
+static func finish(mat: StandardMaterial3D, kind: String) -> void:
+	if kind == "lift":
+		mat.rim_enabled = true
+		mat.rim = RIM
+		mat.rim_tint = 0.0
+		mat.next_pass = edge_lift()
+	elif kind == "brass":
+		Palette.brass_finish(mat)
 
 
 # The shade as a multiplier, capped at 1. x is the unoccluded fraction; y is the wear with glTF's
@@ -73,10 +150,11 @@ static func apply(mat: StandardMaterial3D) -> void:
 
 # A shared material's baked copy, made once per source, for surfaces of a shared mesh. With
 # `shade` false the copy only loses the grain, for a vertex-colour slot that carries the bake.
-static func twin(mat: StandardMaterial3D, shade := true) -> StandardMaterial3D:
+# `kind` is the slot finish (finish_of) the copy also takes.
+static func twin(mat: StandardMaterial3D, shade := true, kind := "") -> StandardMaterial3D:
 	if mat.get_meta("bake_look", false) or mat.get_meta("bake_smooth", false):
 		return mat
-	var key := [mat.get_instance_id(), shade]
+	var key := [mat.get_instance_id(), shade, kind]
 	if not _twins.has(key) or not is_instance_valid(_twins[key]):
 		var copy := mat.duplicate() as StandardMaterial3D
 		if shade:
@@ -84,6 +162,7 @@ static func twin(mat: StandardMaterial3D, shade := true) -> StandardMaterial3D:
 		else:
 			Palette.smooth(copy)
 			copy.set_meta("bake_smooth", true)
+		finish(copy, kind)
 		_twins[key] = copy
 	return _twins[key]
 
@@ -98,6 +177,7 @@ static func unbaked(mat: Material) -> Material:
 		var copy := mat.duplicate() as StandardMaterial3D
 		copy.detail_enabled = false
 		copy.detail_albedo = null
+		copy.next_pass = null
 		copy.set_meta("bake_look", false)
 		_twins[key] = copy
 	return _twins[key]
@@ -116,7 +196,8 @@ static func _warning(mat: StandardMaterial3D) -> bool:
 # other material is swapped for its twin, on the node or on the shared mesh (an imported mesh's
 # cached resource included, so every later instance shares the twin). An owned material that also
 # draws a surface wanting another look stays as it is, since a twin would stop drawing the
-# script's changes. Telegraph stripes stay flat. Shader materials and unbaked meshes are left
+# script's changes. Each surface also takes its slot's finish (finish_of): an owned material asked for two keeps
+# neither. Telegraph stripes stay flat. Shader materials and unbaked meshes are left
 # alone. Safe to call again. Returns the surfaces dressed.
 static func dress(root: Node, owned: Array = []) -> int:
 	var views: Array = root.find_children("*", "MeshInstance3D", true, false)
@@ -124,6 +205,8 @@ static func dress(root: Node, owned: Array = []) -> int:
 		views.append(root)
 	# Which looks each material is asked for: 0 unbaked, 1 shaded, 2 smoothed only.
 	var wants := {}
+	# Which slot finishes each material is asked for: an owned one asked for two keeps its own.
+	var finishes := {}
 	for view: MeshInstance3D in views:
 		if view.mesh == null:
 			continue
@@ -131,7 +214,9 @@ static func dress(root: Node, owned: Array = []) -> int:
 			var mat := view.get_active_material(i)
 			if not wants.has(mat):
 				wants[mat] = {}
+				finishes[mat] = {}
 			wants[mat][_look(view.mesh, i)] = true
+			finishes[mat][finish_of(view.mesh, i)] = true
 	var dressed := 0
 	for view: MeshInstance3D in views:
 		if view.mesh == null:
@@ -140,6 +225,7 @@ static func dress(root: Node, owned: Array = []) -> int:
 		var mesh := view.mesh
 		for i in mesh.get_surface_count():
 			var look := _look(mesh, i)
+			var kind := finish_of(mesh, i)
 			var mat := view.get_active_material(i)
 			if look == 0 or not (mat is StandardMaterial3D) or mat.get_meta("bake_look", false) \
 					or mat.get_meta("bake_smooth", false) or _warning(mat):
@@ -152,14 +238,16 @@ static func dress(root: Node, owned: Array = []) -> int:
 				else:
 					Palette.smooth(mat)
 					mat.set_meta("bake_smooth", true)
+				if finishes[mat].size() == 1:
+					finish(mat, kind)
 			elif view.material_override == mat:
 				if wants[mat].size() > 1:
 					continue
-				view.material_override = twin(mat, look == 1)
+				view.material_override = twin(mat, look == 1, kind)
 			elif view.get_surface_override_material(i) == mat:
-				view.set_surface_override_material(i, twin(mat, look == 1))
+				view.set_surface_override_material(i, twin(mat, look == 1, kind))
 			else:
-				mesh.surface_set_material(i, twin(mat, look == 1))
+				mesh.surface_set_material(i, twin(mat, look == 1, kind))
 			dressed += 1
 	return dressed
 
@@ -174,7 +262,7 @@ static func warm_view(view: MeshInstance3D) -> void:
 		var look := _look(mesh, i)
 		var mat := view.get_active_material(i)
 		if look != 0 and mat is StandardMaterial3D and not _warning(mat):
-			twin(mat, look == 1)
+			twin(mat, look == 1, finish_of(mesh, i))
 
 
 # `mesh`, or once per mesh a copy whose shaded surfaces have tangents square to their normals:
