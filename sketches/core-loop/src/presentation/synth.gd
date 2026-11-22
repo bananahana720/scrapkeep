@@ -164,29 +164,54 @@ static func hat(open := false) -> PackedFloat32Array:
 	var rng := _rng(13 if open else 14)
 	var prev_x := 0.0
 	var prev_y := 0.0
-	var decay := 13.0 if open else 85.0
+	var prev_y2 := 0.0
+	var decay := 12.5 if open else 85.0
+	var inc1 := TAU * 6240.0 * INV_RATE
+	var inc2 := TAU * 7890.0 * INV_RATE
+	var inc3 := TAU * 10180.0 * INV_RATE
+	var p1 := 0.0
+	var p2 := 0.0
+	var p3 := 0.0
 	for i in n:
 		var t := i * INV_RATE
 		var x := rng.randf_range(-1.0, 1.0)
-		# One-pole high-pass near 7 kHz, then a metallic square partial for shimmer.
-		prev_y = 0.42 * (prev_y + x - prev_x)
+		# Two-stage high-pass pushes hat air cleanly above the 2-4 kHz warning lane.
+		var hp1 := 0.44 * (prev_y + x - prev_x)
 		prev_x = x
-		var metal := signf(sin(TAU * 7040.0 * t)) * 0.12 + signf(sin(TAU * 9870.0 * t)) * 0.08
-		buf[i] = (prev_y + metal) * exp(-t * decay)
+		prev_y2 = 0.44 * (prev_y2 + hp1 - prev_y)
+		prev_y = hp1
+		p1 += inc1
+		p2 += inc2
+		p3 += inc3
+		var metal := (sin(p1) * 0.1 + sin(p2) * 0.08 + sin(p3) * 0.06) * exp(-t * (decay * 1.15))
+		buf[i] = (prev_y2 * 1.15 + metal) * exp(-t * decay)
 	return declick(normalize(buf, 0.6 if open else 0.5), 4, 200)
 
 
 static func ride() -> PackedFloat32Array:
 	var n := seconds(0.5)
 	var buf := buffer(n)
-	var phase_c := 0.0
-	var phase_m := 0.0
+	var rng := _rng(16)
+	var prev_x := 0.0
+	var prev_y := 0.0
+	var p_ping := 0.0
+	var p_over1 := 0.0
+	var p_over2 := 0.0
+	var inc_ping := TAU * 1120.0 * INV_RATE
+	var inc_o1 := TAU * 4820.0 * INV_RATE
+	var inc_o2 := TAU * 7340.0 * INV_RATE
 	for i in n:
 		var t := i * INV_RATE
-		phase_c += TAU * 540.0 * INV_RATE
-		phase_m += TAU * 540.0 * 2.41 * INV_RATE
-		var index := 2.8 * exp(-t * 5.0) + 0.6
-		buf[i] = sin(phase_c + index * sin(phase_m)) * exp(-t * 4.2)
+		var x := rng.randf_range(-1.0, 1.0)
+		prev_y = 0.46 * (prev_y + x - prev_x)
+		prev_x = x
+		p_ping += inc_ping
+		p_over1 += inc_o1
+		p_over2 += inc_o2
+		var stick := sin(p_ping) * exp(-t * 36.0) * 0.42
+		var shimmer := (sin(p_over1) * 0.24 + sin(p_over2) * 0.16) * exp(-t * 5.2)
+		var wash := prev_y * exp(-t * 6.8) * 0.55
+		buf[i] = (stick + shimmer + wash) * minf(1.0, t * 1400.0)
 	return declick(normalize(buf, 0.45), 8, 800)
 
 
@@ -196,17 +221,26 @@ static func crash() -> PackedFloat32Array:
 	var rng := _rng(15)
 	var prev_x := 0.0
 	var prev_y := 0.0
-	var phase_c := 0.0
-	var phase_m := 0.0
+	var prev_y2 := 0.0
+	var p1 := 0.0
+	var p2 := 0.0
+	var p3 := 0.0
+	var inc1 := TAU * 4980.0 * INV_RATE
+	var inc2 := TAU * 6710.0 * INV_RATE
+	var inc3 := TAU * 8940.0 * INV_RATE
 	for i in n:
 		var t := i * INV_RATE
 		var x := rng.randf_range(-1.0, 1.0)
-		prev_y = 0.55 * (prev_y + x - prev_x)
+		var hp1 := 0.52 * (prev_y + x - prev_x)
 		prev_x = x
-		phase_c += TAU * 410.0 * INV_RATE
-		phase_m += TAU * 410.0 * 3.73 * INV_RATE
-		var metal := sin(phase_c + 4.0 * exp(-t * 3.0) * sin(phase_m)) * 0.35
-		buf[i] = (prev_y * 0.9 + metal) * exp(-t * 2.4)
+		prev_y2 = 0.48 * (prev_y2 + hp1 - prev_y)
+		prev_y = hp1
+		p1 += inc1
+		p2 += inc2
+		p3 += inc3
+		var shimmer := (sin(p1) * 0.14 + sin(p2) * 0.11 + sin(p3) * 0.08) * exp(-t * 3.1)
+		var strike := hp1 * exp(-t * 28.0) * 0.45
+		buf[i] = (prev_y2 * 0.95 + shimmer + strike) * exp(-t * 2.3) * minf(1.0, t * 500.0)
 	return declick(normalize(buf, 0.6), 8, 2000)
 
 
@@ -321,11 +355,14 @@ static func pad_chord(voicing: Array) -> PackedFloat32Array:
 static func sub(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
+	var inc := TAU * f * INV_RATE
 	var phase := 0.0
 	for i in n:
 		var t := i * INV_RATE
-		phase += TAU * f * INV_RATE
-		buf[i] = (sin(phase) + 0.12 * sin(phase * 2.0)) * minf(1.0, t * 180.0) * exp(-t * 0.35)
+		phase += inc
+		var s := sin(phase)
+		var body := tanh((s + 0.14 * sin(phase * 2.0)) * 1.16)
+		buf[i] = body * minf(1.0, t * 220.0) * exp(-t * 0.35)
 	return declick(normalize(buf, 0.8), 64, 600)
 
 
@@ -487,22 +524,24 @@ static func beep(midi: int, n: int) -> PackedFloat32Array:
 
 # --- The level and boss palettes -----------------------------------------------------
 
-# Clavinet: a narrow pulse through a snapping low-pass, short and percussive.
+# Clavinet: a Hohner D6 narrow pulse with warm double-string bite through a snapping low-pass.
 static func clav(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
-	var phase := 0.0
+	var p1 := 0.0
+	var p2 := 0.17
 	var low := 0.0
 	var band := 0.0
 	for i in n:
 		var t := i * INV_RATE
-		phase = fposmod(phase + f * INV_RATE, 1.0)
-		var x := 1.0 if phase < 0.22 else -0.28
-		var cutoff := 700.0 + 3800.0 * exp(-t * 28.0)
-		var g := 2.0 * sin(PI * minf(cutoff, 6000.0) * INV_RATE)
+		p1 = fposmod(p1 + f * INV_RATE, 1.0)
+		p2 = fposmod(p2 + f * 1.0018 * INV_RATE, 1.0)
+		var x := (1.0 if p1 < 0.22 else -0.28) * 0.72 + (1.0 if p2 < 0.28 else -0.3) * 0.32
+		var cutoff := 620.0 + 3400.0 * exp(-t * 26.0)
+		var g := 2.0 * sin(PI * minf(cutoff, 5200.0) * INV_RATE)
 		low += g * band
-		band += g * (x - low - 0.35 * band)
-		buf[i] = (low + band * 0.4) * minf(1.0, t * 1500.0) * exp(-t * 7.0)
+		band += g * (x - low - 0.44 * band)
+		buf[i] = tanh((low * 1.05 + band * 0.32) * 1.15) * minf(1.0, t * 1500.0) * exp(-t * 6.8)
 	return declick(normalize(buf, 0.6), 8, 600)
 
 
@@ -534,31 +573,34 @@ static func brass(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.6), 32, 800)
 
 
-# Talkbox: a saw through two formant band-passes that glide "oo" to "ah" to "ee",
-# with vibrato, so the lead seems to sing words.
+# Talkbox: a warm saw plus fundamental anchor through two vocal formants that glide
+# "oo" to "ah" to "eh", with late vibrato and soft analog saturation so the lead sings.
 static func talk(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
 	var phase := 0.0
+	var psub := 0.0
 	var l1 := 0.0
 	var b1 := 0.0
 	var l2 := 0.0
 	var b2 := 0.0
 	for i in n:
 		var t := i * INV_RATE
-		var vib := 1.0 + 0.006 * sin(TAU * 5.2 * t) * minf(1.0, t * 4.0)
+		var vib := 1.0 + 0.0055 * sin(TAU * 5.2 * t) * minf(1.0, t * 4.0)
 		phase = fposmod(phase + f * vib * INV_RATE, 1.0)
-		var x := 2.0 * phase - 1.0
-		var vowel := minf(1.0, t * 3.0)
-		var f1 := lerpf(320.0, 750.0, minf(1.0, vowel * 2.0)) if vowel < 0.5 else lerpf(750.0, 300.0, (vowel - 0.5) * 2.0)
-		var f2 := lerpf(850.0, 1150.0, minf(1.0, vowel * 2.0)) if vowel < 0.5 else lerpf(1150.0, 2200.0, (vowel - 0.5) * 2.0)
+		psub += TAU * f * vib * INV_RATE
+		var x := (2.0 * phase - 1.0) * 0.8 + sin(psub) * 0.35
+		var vowel := minf(1.0, t * 2.8)
+		var f1 := lerpf(340.0, 720.0, minf(1.0, vowel * 2.0)) if vowel < 0.5 else lerpf(720.0, 420.0, (vowel - 0.5) * 2.0)
+		var f2 := lerpf(850.0, 1220.0, minf(1.0, vowel * 2.0)) if vowel < 0.5 else lerpf(1220.0, 1980.0, (vowel - 0.5) * 2.0)
 		var g1 := 2.0 * sin(PI * f1 * INV_RATE)
 		var g2 := 2.0 * sin(PI * f2 * INV_RATE)
 		l1 += g1 * b1
-		b1 += g1 * (x - l1 - 0.18 * b1)
+		b1 += g1 * (x - l1 - 0.26 * b1)
 		l2 += g2 * b2
-		b2 += g2 * (x - l2 - 0.2 * b2)
-		buf[i] = (b1 + 0.7 * b2) * minf(1.0, t * 60.0) * exp(-t * 0.5)
+		b2 += g2 * (x - l2 - 0.28 * b2)
+		var voice := tanh((b1 * 0.95 + b2 * 0.62 + l1 * 0.34) * 1.15)
+		buf[i] = voice * minf(1.0, t * 55.0) * exp(-t * 0.48)
 	return declick(normalize(buf, 0.6), 32, 800)
 
 
@@ -583,7 +625,7 @@ static func fbass(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.75), 16, 600)
 
 
-# A drawbar organ chord with a key click and a rotating-speaker shimmer.
+# A Hammond B3 drawbar organ chord with woody key click, dual-rate Leslie shimmer and tube warmth.
 static func organ_chord(voicing: Array) -> PackedFloat32Array:
 	var key := "organ:%s" % str(voicing)
 	var hit = _cached(key)
@@ -591,21 +633,24 @@ static func organ_chord(voicing: Array) -> PackedFloat32Array:
 		return hit
 	var n := HOLD
 	var buf := buffer(n)
-	var bars := [[0.5, 0.5], [1.0, 1.0], [2.0, 0.6], [3.0, 0.35], [4.0, 0.25]]
+	var bars := [[0.5, 0.52], [1.0, 1.0], [1.5, 0.22], [2.0, 0.55], [3.0, 0.28], [4.0, 0.18]]
 	for midi in voicing:
 		var f := Harmony.hz(midi)
 		for bar in bars:
 			var inc: float = TAU * f * bar[0] * INV_RATE
-			var amp: float = bar[1] * 0.2
-			var phase := 0.0
+			var amp: float = bar[1] * 0.18
+			var phase := float((midi * 13) % 17) * 0.19
 			for i in n:
 				phase += inc
 				buf[i] += sin(phase) * amp
 	var rng := _rng(21)
+	var click_lp := 0.0
 	for i in n:
 		var t := i * INV_RATE
-		var click := rng.randf_range(-1.0, 1.0) * exp(-t * 300.0) * 0.3
-		buf[i] = (buf[i] * (0.85 + 0.15 * sin(TAU * 6.3 * t)) + click) * minf(1.0, t * 300.0)
+		click_lp += (rng.randf_range(-1.0, 1.0) - click_lp) * 0.35
+		var click := click_lp * exp(-t * 260.0) * 0.24
+		var leslie := 0.86 + 0.1 * sin(TAU * 6.2 * t) + 0.04 * sin(TAU * 1.15 * t)
+		buf[i] = tanh((buf[i] * leslie + click) * 1.18) * minf(1.0, t * 320.0)
 	declick(normalize(buf, 0.6), 32, 2000)
 	_store(key, buf)
 	return buf
@@ -700,7 +745,7 @@ static func boom() -> PackedFloat32Array:
 # --- The leitmotif voices (SOUND-STORY.md section 2) ------------------------------------
 
 # Kest's tuned floor tom: a skin that settles onto its pitch, a second mode a little
-# over a fifth up, and a felt strike, so a thump sits in key.
+# over a fifth up, and a warm felt beater strike, so a thump sits in key.
 static func tom(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -710,24 +755,26 @@ static func tom(midi: int, n: int) -> PackedFloat32Array:
 	var low := 0.0
 	for i in n:
 		var t := i * INV_RATE
-		var bend := 1.0 + 0.35 * exp(-t * 40.0)
+		var bend := 1.0 + 0.38 * exp(-t * 38.0)
 		phase += TAU * f * bend * INV_RATE
 		mode2 += TAU * f * 1.59 * bend * INV_RATE
-		low += (rng.randf_range(-1.0, 1.0) - low) * 0.15
-		var body := sin(phase) * exp(-t * 5.5) + 0.3 * sin(mode2) * exp(-t * 11.0)
-		buf[i] = (tanh(1.4 * body) + low * exp(-t * 70.0) * 0.6) * minf(1.0, t * 1200.0)
+		low += (rng.randf_range(-1.0, 1.0) - low) * 0.14
+		var body := sin(phase) * exp(-t * 5.2) + 0.28 * sin(mode2) * exp(-t * 11.5)
+		var felt := low * exp(-t * 85.0) * 0.55
+		buf[i] = (tanh(1.55 * body) + felt) * minf(1.0, t * 1300.0)
 	return declick(normalize(buf, 0.8), 8, 1200)
 
 
-# Kest's 808: a sine that drops an octave onto its note and holds, lightly driven.
+# Kest's 808: a punchy sine that drops an octave onto its note and holds with warm analog drive.
 static func sub808(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
 	var phase := 0.0
 	for i in n:
 		var t := i * INV_RATE
-		phase += TAU * f * (1.0 + exp(-t * 28.0)) * INV_RATE
-		buf[i] = tanh(1.6 * sin(phase)) * minf(1.0, t * 600.0) * exp(-t * 2.2)
+		phase += TAU * f * (1.0 + 1.15 * exp(-t * 34.0)) * INV_RATE
+		var core := sin(phase) + 0.14 * sin(phase * 2.0) * exp(-t * 3.0)
+		buf[i] = tanh(1.75 * core) * minf(1.0, t * 750.0) * exp(-t * 2.1)
 	return declick(normalize(buf, 0.85), 16, 1500)
 
 
@@ -758,7 +805,8 @@ static func buzz(midi: int, n: int, loose: float) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.5), 32, 800)
 
 
-# The Mind: a pure sine with a long tail that bends 3 cents flat as it rings.
+# The Mind: blown crystal sine with a delicate glass overtone and a long tail that bends
+# 3 cents flat as it rings.
 static func chime(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -766,7 +814,8 @@ static func chime(midi: int, n: int) -> PackedFloat32Array:
 	for i in n:
 		var t := i * INV_RATE
 		phase += TAU * f * (1.0 - 0.00173 * minf(1.0, t / 1.8)) * INV_RATE
-		buf[i] = sin(phase) * minf(1.0, t * 200.0) * exp(-t * 1.15)
+		var glass := sin(phase) + 0.09 * sin(phase * 2.0) * exp(-t * 5.5) + 0.04 * sin(phase * 3.0) * exp(-t * 18.0)
+		buf[i] = glass * minf(1.0, t * 240.0) * exp(-t * 1.15)
 	return declick(normalize(buf, 0.6), 16, 3000)
 
 
@@ -817,12 +866,12 @@ static func wob(midi: int, period: int, vowel := "wub") -> PackedFloat32Array:
 	return buf
 
 
-# A wordless choir: three detuned saws (a small section) through two vocal formants,
-# "ah" (800 and 1150 Hz) or "ooh" (350 and 600 Hz), with a slow breath of attack and a
-# late vibrato. Warm, not bright: it sits between the pad and the lead.
+# A wordless studio choir: three detuned saws through two natural vocal formants
+# ("ah" 760/1150 Hz or "ooh" 360/620 Hz) with soft breath air, late vibrato and warm fundamental.
 static func choir(midi: int, vowel: String, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
+	var rng := _rng(midi + (203 if vowel == "ah" else 211))
 	var p1 := 0.0
 	var p2 := 0.37
 	var p3 := 0.71
@@ -830,23 +879,25 @@ static func choir(midi: int, vowel: String, n: int) -> PackedFloat32Array:
 	var b1 := 0.0
 	var l2 := 0.0
 	var b2 := 0.0
-	var f1 := 800.0 if vowel == "ah" else 350.0
-	var f2 := 1150.0 if vowel == "ah" else 600.0
+	var air := 0.0
+	var f1 := 760.0 if vowel == "ah" else 360.0
+	var f2 := 1150.0 if vowel == "ah" else 620.0
 	var g1 := 2.0 * sin(PI * f1 * INV_RATE)
 	var g2 := 2.0 * sin(PI * f2 * INV_RATE)
 	for i in n:
 		var t := i * INV_RATE
-		var vib := 1.0 + 0.004 * sin(TAU * 5.2 * t) * minf(1.0, t * 2.5)
+		var vib := 1.0 + 0.0038 * sin(TAU * 5.1 * t) * minf(1.0, t * 2.5)
 		p1 = fposmod(p1 + f * vib * 1.004 * INV_RATE, 1.0)
 		p2 = fposmod(p2 + f * vib * 0.996 * INV_RATE, 1.0)
 		p3 = fposmod(p3 + f * vib * INV_RATE, 1.0)
-		var raw := (2.0 * p1 - 1.0) + (2.0 * p2 - 1.0) + (2.0 * p3 - 1.0)
+		var raw := ((2.0 * p1 - 1.0) + (2.0 * p2 - 1.0) + (2.0 * p3 - 1.0)) * 0.65
 		l1 += g1 * b1
-		b1 += g1 * (raw - l1 - 0.12 * b1)
+		b1 += g1 * (raw - l1 - 0.22 * b1)
 		l2 += g2 * b2
-		b2 += g2 * (raw - l2 - 0.12 * b2)
-		var env := minf(1.0, t / 0.12) * (1.0 - 0.3 * float(i) / n)
-		buf[i] = (b1 + 0.7 * b2 + 0.15 * l1) * env
+		b2 += g2 * (raw - l2 - 0.24 * b2)
+		air += (rng.randf_range(-1.0, 1.0) - air) * 0.16
+		var env := minf(1.0, t / 0.14) * (1.0 - 0.28 * float(i) / n)
+		buf[i] = tanh((b1 * 0.82 + b2 * 0.56 + l1 * 0.28 + air * 0.05) * 1.1) * env
 	return declick(normalize(buf, 0.6), 32, 1200)
 
 

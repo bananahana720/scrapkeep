@@ -22,7 +22,8 @@ func _initialize() -> void:
 
 
 func _rack_voices() -> void:
-	var voiced := ["lead", "sax_lounge", "keys", "brass", "bell", "mallet", "fbass", "reese", "clav", "sub"]
+	var voiced := ["lead", "sax_lounge", "keys", "brass", "bell", "mallet", "fbass", "reese", "clav", "sub",
+		"talk", "choir_ah", "choir_oo", "tom", "sub808", "chime"]
 	var bad_peak: Array = []
 	var bad_edges: Array = []
 	for voice in voiced:
@@ -34,7 +35,7 @@ func _rack_voices() -> void:
 		var faults := Edges.faults(a)
 		if not faults.is_empty():
 			bad_edges.append("%s(%s)" % [voice, ", ".join(faults)])
-	for drum in ["kick", "snare", "clap", "hat", "open_hat"]:
+	for drum in ["kick", "snare", "clap", "hat", "open_hat", "ride", "crash"]:
 		var d := Synth.drum(drum)
 		var pk := Synth.peak(d)
 		if pk < 0.25 or pk > 0.96:
@@ -43,6 +44,7 @@ func _rack_voices() -> void:
 		if not faults.is_empty():
 			bad_edges.append("%s(%s)" % [drum, ", ".join(faults)])
 	for chord_buf in [Synth.chord(Harmony.PROGRESSION[0]["voicing"]), Synth.pad_chord(Harmony.PROGRESSION[0]["voicing"]),
+			Synth.organ_chord(Harmony.PROGRESSION[0]["voicing"]),
 			Synth.stab_chord(Harmony.PROGRESSION[0]["voicing"], true), Synth.stab_chord(Harmony.PROGRESSION[0]["voicing"], false)]:
 		var pk := Synth.peak(chord_buf)
 		if pk < 0.2 or pk > 0.95:
@@ -53,7 +55,20 @@ func _rack_voices() -> void:
 	t.check("every upgraded rack voice is deterministic and peak-safe", bad_peak.is_empty(), str(bad_peak))
 	t.check("every upgraded rack voice starts and ends at rest", bad_edges.is_empty(), str(bad_edges))
 	t.check("direct uncached synth voices are deterministic",
-		Synth.lead(74, 4096) == Synth.lead(74, 4096) and Synth.kick() == Synth.kick() and Synth.clap() == Synth.clap())
+		Synth.lead(74, 4096) == Synth.lead(74, 4096) and Synth.kick() == Synth.kick() and Synth.clap() == Synth.clap()
+		and Synth.talk(62, 4096) == Synth.talk(62, 4096) and Synth.choir(62, "ah", 4096) == Synth.choir(62, "ah", 4096)
+		and Synth.ride() == Synth.ride() and Synth.crash() == Synth.crash())
+	var bad_cues: Array = []
+	for cue_id in ["menu_move", "menu_confirm", "menu_back", "lounge_flip", "bay_lounge_in", "found_twinkle",
+			"achievement_chime", "rescue_fanfare", "part_get", "panel_jackpot", "pickup_fountain",
+			"gates_open", "warden_gate_release", "overtime_pay", "arena_unlock_bells",
+			"synergy_fired", "evolution_fired", "stinger_boss_defeated"]:
+		var buf := SfxBank.samples(cue_id)
+		var pk := Synth.peak(buf)
+		var faults := Edges.faults(buf)
+		if pk < 0.2 or pk > 0.95 or not faults.is_empty():
+			bad_cues.append("%s(peak=%.3f,faults=%s)" % [cue_id, pk, str(faults)])
+	t.check("every enriched UI, camp, reward and boss cue is peak-safe and edge-clean", bad_cues.is_empty(), str(bad_cues))
 
 
 # Warm alto sax check: high-frequency harshness (first-difference RMS / signal RMS) stays well

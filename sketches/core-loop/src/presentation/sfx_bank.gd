@@ -1079,7 +1079,9 @@ static func _bake(id: String) -> PackedFloat32Array:
 			# scrap_tick's shape in brass: the bell's attack over a short brass body, a touch lower in the noise.
 			return _mix([[_cut(_n("bell", 74), 0.16), 0, 1.0], [_cut(_n("brass", 62), 0.09), 0, 0.45], [_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.15]])
 		"part_get":
-			return _arpeggio([74, 77, 81, 86], 0.05, "bell", 0.8)
+			return _mix([[_arpeggio([74, 77, 81, 86], 0.05, "bell", 0.8), 0, 0.9],
+				[_cut(_n("keys", 62), 0.55, 1600), Synth.seconds(0.15), 0.24],
+				[_cut(_n("keys", 69), 0.55, 1600), Synth.seconds(0.15), 0.22]])
 		"panel_ratchet":
 			# Three pawl clicks over a short steel ring: a socket wrench seating a plate.
 			return _mix([[_noise(0.012, 5200.0, 5200.0, 260.0), 0, 0.7], [_noise(0.012, 4600.0, 4600.0, 260.0), Synth.seconds(0.035), 0.6],
@@ -1087,7 +1089,10 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"panel_note":
 			return _cut(_n("mallet", 74), 0.22)
 		"panel_jackpot":
-			return _arpeggio([74, 81, 86, 93], 0.04, "bell", 0.9)
+			return _mix([[_arpeggio([74, 81, 86, 93], 0.04, "bell", 0.9), 0, 0.92],
+				[_cut(_n("keys", 62), 0.65, 1800), Synth.seconds(0.12), 0.28],
+				[_cut(_n("keys", 69), 0.65, 1800), Synth.seconds(0.12), 0.26],
+				[_cut(_n("keys", 76), 0.65, 1800), Synth.seconds(0.12), 0.22]])
 		"panel_cache":
 			# A rib cache's call: two high bell notes, then rest, one 1.86 s bar at 129 BPM, looped.
 			var chime := _mix([[_cut(_n("bell", 86), 0.3), 0, 0.8], [_cut(_n("bell", 93), 0.4), Synth.seconds(0.233), 0.6]])
@@ -1128,9 +1133,10 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"stinger_milestone":
 			return Synth.render_score(_score_milestone(), 1.2)
 		"gates_open":
-			return Synth.render_score([[0, 62, 2, "bell", 0.5], [1, 65, 2, "bell", 0.5], [2, 69, 2, "bell", 0.5],
-				[3, 72, 2, "bell", 0.5], [4, 76, 6, "bell", 0.6], [4, 57, 12, "keys", 0.35], [4, 60, 12, "keys", 0.35],
-				[4, 64, 12, "keys", 0.35], [4, 65, 12, "keys", 0.35], [4, 0, 2, "open_hat", 0.5]], 1.0)
+			return Synth.render_score([[0, 62, 2, "bell", 0.5], [1, 65, 2, "bell", 0.54], [2, 69, 2, "bell", 0.58],
+				[3, 72, 2, "bell", 0.6], [4, 76, 6, "bell", 0.64], [4, 76, 8, "lead", 0.38], [4, 38, 10, "sub", 0.45],
+				[4, 57, 12, "keys", 0.36], [4, 60, 12, "keys", 0.36],
+				[4, 64, 12, "keys", 0.36], [4, 65, 12, "keys", 0.36], [4, 0, 2, "open_hat", 0.48]], 1.0)
 		"stinger_unseal":
 			return _unseal()
 		"class_up":
@@ -1149,11 +1155,16 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"synergy_fanfare":
 			return Synth.render_score(_score_synergy(), 1.4)
 		"achievement_chime":
-			return _mix([[_cut(_n("bell", 84), 0.45), 0, 0.8], [_cut(_n("bell", 91), 0.4), Synth.seconds(0.08), 0.6]])
+			return _mix([[_cut(_n("bell", 84), 0.45), 0, 0.8], [_cut(_n("bell", 91), 0.48, 1600), Synth.seconds(0.08), 0.72],
+				[_cut(_n("keys", 60), 0.52, 1800), Synth.seconds(0.08), 0.28], [_cut(_n("keys", 67), 0.52, 1800), Synth.seconds(0.08), 0.26],
+				[_cut(_n("keys", 74), 0.52, 1800), Synth.seconds(0.08), 0.24]])
 		"rescue_fanfare":
-			return _mix([[_noise(0.02, 5000.0, 5000.0, 250.0), 0, 0.5], [_tone(0.07, 220.0, 110.0, "square_dark", 30.0), 0, 0.7],
-				[_cut(_n("bell", 74), 0.35), Synth.seconds(0.08), 0.6], [_cut(_n("bell", 79), 0.35), Synth.seconds(0.17), 0.6],
-				[_cut(_n("bell", 83), 0.35), Synth.seconds(0.26), 0.65], [_cut(_n("bell", 86), 0.45), Synth.seconds(0.35), 0.7]])
+			return _mix([[_noise(0.02, 5000.0, 5000.0, 250.0), 0, 0.45], [_cut(_n("brass", 50), 0.14), 0, 0.48],
+				[_cut(_n("sub", 38), 0.55, 1600), Synth.seconds(0.35), 0.4],
+				[_cut(_n("bell", 74), 0.35), Synth.seconds(0.08), 0.62], [_cut(_n("bell", 79), 0.35), Synth.seconds(0.17), 0.66],
+				[_cut(_n("bell", 83), 0.35), Synth.seconds(0.26), 0.72], [_cut(_n("bell", 86), 0.55, 1800), Synth.seconds(0.35), 0.82],
+				[_cut(_n("keys", 62), 0.55, 1800), Synth.seconds(0.35), 0.3], [_cut(_n("keys", 66), 0.55, 1800), Synth.seconds(0.35), 0.28],
+				[_cut(_n("keys", 69), 0.55, 1800), Synth.seconds(0.35), 0.28]])
 		"companion_chirp_ready":
 			return _mix([[_cut(_n("mallet", 79), 0.16), 0, 0.7], [_cut(_n("mallet", 86), 0.22), Synth.seconds(0.07), 0.75]])
 		"companion_chirp_spent":
@@ -1452,11 +1463,13 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"bay_slingshot_out":
 			return _bay_slingshot_out()
 		"menu_move":
-			return _cut(_n("mallet", 79), 0.09)
+			return _mix([[_cut(_n("mallet", 79), 0.09), 0, 0.9], [_cut(_n("bell", 91), 0.08), 0, 0.16]])
 		"menu_confirm":
-			return _mix([[_cut(_n("mallet", 74), 0.18), 0, 0.7], [_cut(_n("mallet", 81), 0.22), Synth.seconds(0.07), 0.8]])
+			return _mix([[_cut(_n("mallet", 74), 0.18), 0, 0.72], [_cut(_n("mallet", 81), 0.24), Synth.seconds(0.065), 0.82],
+				[_cut(_n("keys", 62), 0.24), Synth.seconds(0.065), 0.2], [_cut(_n("bell", 93), 0.2), Synth.seconds(0.065), 0.2]])
 		"menu_back":
-			return _mix([[_cut(_n("mallet", 81), 0.18), 0, 0.7], [_cut(_n("mallet", 77), 0.22), Synth.seconds(0.07), 0.7]])
+			return _mix([[_cut(_n("mallet", 81), 0.18), 0, 0.7], [_cut(_n("mallet", 77), 0.22), Synth.seconds(0.065), 0.72],
+				[_cut(_n("keys", 57), 0.22), Synth.seconds(0.065), 0.16]])
 		"ultimate_ready":
 			return _ultimate_ready()
 		"found_twinkle":
@@ -2136,8 +2149,8 @@ static func _boss_defeated() -> PackedFloat32Array:
 	var score := [[0, 0, 2, "boom", 1.0], [0, 0, 16, "crash", 0.7], [0, 62, 2, "brass", 0.6], [2, 66, 2, "brass", 0.6],
 		[4, 69, 2, "brass", 0.65], [6, 74, 2, "brass", 0.7], [8, 0, 2, "kick", 1.0], [8, 78, 4, "brass", 0.7],
 		[12, 76, 2, "brass", 0.6], [14, 73, 2, "brass", 0.65], [16, 0, 2, "kick", 1.0], [16, 0, 16, "crash", 0.6],
-		[16, 74, 16, "brass", 0.75], [16, 86, 16, "bell", 0.5], [16, 50, 16, "keys", 0.4], [16, 54, 16, "keys", 0.4],
-		[16, 57, 16, "keys", 0.4], [16, 62, 16, "keys", 0.4], [16, 38, 16, "sub", 0.7]]
+		[16, 74, 16, "brass", 0.75], [16, 74, 16, "lead", 0.45], [16, 86, 16, "bell", 0.52], [16, 50, 16, "keys", 0.4], [16, 54, 16, "keys", 0.4],
+		[16, 57, 16, "keys", 0.4], [16, 62, 16, "keys", 0.4], [16, 64, 16, "keys", 0.3], [16, 38, 16, "sub", 0.72]]
 	for i in 8:
 		score.append([8 + i, 0, 1, "hat", 0.4])
 		score.append([8 + i, [74, 78, 81, 86, 90, 93, 98, 93][i], 1, "bell", 0.3])
@@ -2727,6 +2740,8 @@ static func _pickup_fountain() -> PackedFloat32Array:
 	for i in notes.size():
 		parts.append([_cut(_n("mallet", notes[i]), 0.2), i * step, 0.75 + 0.07 * i])
 		parts.append([_cut(_n("bell", notes[i] + 12), 0.2), i * step, 0.25])
+	parts.append([_cut(_n("keys", 62), 0.2), 3 * step, 0.28])
+	parts.append([_cut(_n("keys", 69), 0.2), 3 * step, 0.26])
 	parts.append([_noise(0.08, 5200.0, 3200.0, 30.0), 3 * step, 0.3])
 	return _mix(parts)
 
@@ -2734,15 +2749,15 @@ static func _pickup_fountain() -> PackedFloat32Array:
 # Two causes become one: A below and D above close in on F, the minor third of the home
 # key, which rings as a chord of bells over the keys.
 static func _synergy_fired() -> PackedFloat32Array:
-	var score := [[0, 69, 2, "mallet", 0.7], [1, 86, 2, "bell", 0.6], [3, 77, 5, "mallet", 0.85], [3, 77, 5, "bell", 0.4],
-		[3, 65, 5, "keys", 0.35], [3, 62, 5, "keys", 0.3]]
+	var score := [[0, 69, 2, "mallet", 0.72], [1, 86, 2, "bell", 0.62], [3, 77, 5, "mallet", 0.85], [3, 77, 5, "bell", 0.44],
+		[3, 77, 5, "lead", 0.34], [3, 65, 5, "keys", 0.38], [3, 62, 5, "keys", 0.34], [3, 69, 5, "keys", 0.3]]
 	return Synth.render_score(score, 0.05)
 
 
 # Something became more: the fourth A to D, then the octave over it, ringing.
 static func _evolution_fired() -> PackedFloat32Array:
-	var score := [[0, 69, 2, "mallet", 0.7], [2, 74, 2, "mallet", 0.8], [4, 86, 4, "mallet", 0.9], [4, 86, 4, "bell", 0.5],
-		[4, 74, 4, "keys", 0.35], [4, 62, 4, "sub808", 0.4]]
+	var score := [[0, 69, 2, "mallet", 0.72], [2, 74, 2, "mallet", 0.82], [4, 86, 4, "mallet", 0.9], [4, 86, 4, "bell", 0.54],
+		[4, 74, 4, "lead", 0.36], [4, 62, 4, "brass", 0.28], [4, 74, 4, "keys", 0.36], [4, 62, 4, "sub808", 0.45]]
 	return Synth.render_score(score, 0.05)
 
 
@@ -2817,7 +2832,8 @@ static func _arena_wave_whistle() -> PackedFloat32Array:
 # The yard opens: a latch clicks, then three bells climb the pentatonic to the home D, the
 # same walk up as the ceremony's, short.
 static func _arena_unlock_bells() -> PackedFloat32Array:
-	var score := [[0, 69, 1, "mallet", 0.6], [1, 72, 1, "mallet", 0.65], [2, 74, 4, "bell", 0.8], [2, 86, 4, "bell", 0.3]]
+	var score := [[0, 69, 1, "mallet", 0.62], [1, 72, 1, "mallet", 0.68], [2, 74, 4, "bell", 0.82],
+		[2, 86, 4, "bell", 0.32], [2, 62, 4, "keys", 0.28], [2, 69, 4, "keys", 0.24]]
 	return _mix([[_noise(0.04, 2800.0, 1400.0, 80.0), 0, 0.5],
 		[Synth.render_score(score, 0.05), Synth.seconds(0.04), 1.0]])
 
@@ -2838,7 +2854,8 @@ static func _warden_gate_release() -> PackedFloat32Array:
 	var parts := []
 	for i in 6:
 		parts.append([_noise(0.03, 2200.0 + 300.0 * i, 1200.0, 80.0), Synth.seconds(0.05 * i), 0.5])
-	var chord := [[0, 62, 6, "keys", 0.45], [0, 66, 6, "keys", 0.4], [0, 69, 6, "keys", 0.4], [0, 74, 6, "bell", 0.6], [0, 38, 6, "sub", 0.6]]
+	var chord := [[0, 62, 6, "keys", 0.45], [0, 66, 6, "keys", 0.4], [0, 69, 6, "keys", 0.4], [0, 76, 6, "keys", 0.3],
+		[0, 74, 6, "bell", 0.62], [0, 86, 6, "bell", 0.3], [0, 38, 6, "sub", 0.62]]
 	parts.append([Synth.render_score(chord, 0.05), Synth.seconds(0.3), 1.0])
 	return _mix(parts)
 
@@ -2889,7 +2906,8 @@ static func _overtime_pay() -> PackedFloat32Array:
 	var parts := []
 	for i in 5:
 		parts.append([_noise(0.025, 3600.0 + 400.0 * i, 2400.0, 90.0), Synth.seconds(0.04 * i), 0.4])
-	var chord := [[0, 62, 5, "keys", 0.5], [0, 66, 5, "keys", 0.4], [0, 69, 5, "keys", 0.4], [0, 78, 5, "bell", 0.55]]
+	var chord := [[0, 62, 5, "keys", 0.5], [0, 66, 5, "keys", 0.4], [0, 69, 5, "keys", 0.4], [0, 76, 5, "keys", 0.3],
+		[0, 78, 5, "bell", 0.55], [0, 86, 5, "bell", 0.32]]
 	parts.append([Synth.render_score(chord, 0.1), Synth.seconds(0.2), 1.0])
 	return _mix(parts)
 
@@ -3055,9 +3073,11 @@ static func _sluice_gush_roar() -> PackedFloat32Array:
 static func _lounge_flip() -> PackedFloat32Array:
 	var parts := [[_noise(0.9, 3000.0, 5000.0, 3.0, 0.01), 0, 0.12], [_tone(0.09, _hz(43), _hz(38), "sine", 30.0), 0, 0.8],
 		[_noise(0.03, 2000.0, 900.0, 80.0, 0.001), 0, 0.5]]
-	var tune := [[69, 0.12, 0.2], [74, 0.26, 0.2], [77, 0.4, 0.2], [76, 0.54, 0.15], [74, 0.68, 0.45]]
+	var tune := [[69, 0.12, 0.22], [74, 0.26, 0.22], [77, 0.4, 0.22], [76, 0.54, 0.16], [74, 0.68, 0.48]]
 	for note in tune:
-		parts.append([_cut(_n("keys", note[0]), note[2]), Synth.seconds(note[1]), 0.6])
+		parts.append([_cut(_n("keys", note[0]), note[2]), Synth.seconds(note[1]), 0.62])
+	for chord_midi in [50, 57, 65, 69]:
+		parts.append([_cut(_n("keys", chord_midi), 0.48, 1800), Synth.seconds(0.68), 0.22])
 	return _mix(parts)
 
 
@@ -3082,10 +3102,12 @@ static func _pins_crash() -> PackedFloat32Array:
 	return _mix(parts, true)
 
 
-# Back in the workshop: a soft rising fifth on the keys over a breath of room.
+# Back in the workshop: a soft rising fifth on the keys over a warm D5 pillow and room breath.
 static func _bay_lounge_in() -> PackedFloat32Array:
 	return _mix([[_arch(_noise(0.5, 400.0, 1500.0, 0.0, 0.05), 0.5), 0, 0.15], [_cut(_n("keys", 67), 0.35), 0, 0.6],
-		[_cut(_n("keys", 74), 0.5), Synth.seconds(0.1), 0.65]])
+		[_cut(_n("keys", 74), 0.52, 1800), Synth.seconds(0.1), 0.68],
+		[_cut(_n("keys", 62), 0.52, 1800), Synth.seconds(0.1), 0.26],
+		[_cut(_n("keys", 69), 0.52, 1800), Synth.seconds(0.1), 0.24]])
 
 
 # Out of the workshop: the slingshot's band stretches, then lets go.
@@ -3109,10 +3131,13 @@ static func _ultimate_ready() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# A discovery: a bright three-note twinkle up the pentatonic and a glint on top.
+# A discovery: a bright three-note twinkle up the pentatonic over a warm Rhodes pillow and glint.
 static func _found_twinkle() -> PackedFloat32Array:
-	return _mix([[_cut(_n("mallet", 86), 0.2), 0, 0.7], [_cut(_n("mallet", 89), 0.2), Synth.seconds(0.07), 0.7],
-		[_cut(_n("bell", 93), 0.5, 1800), Synth.seconds(0.14), 0.8], [_noise(0.15, 6000.0, 6000.0, 22.0, 0.002), Synth.seconds(0.14), 0.15]])
+	return _mix([[_cut(_n("mallet", 86), 0.2), 0, 0.7], [_cut(_n("mallet", 89), 0.2), Synth.seconds(0.07), 0.72],
+		[_cut(_n("bell", 93), 0.5, 1800), Synth.seconds(0.14), 0.82],
+		[_cut(_n("keys", 74), 0.45, 1600), Synth.seconds(0.14), 0.24],
+		[_cut(_n("keys", 81), 0.45, 1600), Synth.seconds(0.14), 0.22],
+		[_noise(0.15, 6000.0, 6000.0, 22.0, 0.002), Synth.seconds(0.14), 0.15]])
 
 
 # --- The fight facts that had no sound ---------------------------------------------------------
