@@ -374,9 +374,10 @@ static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) ->
 
 
 # The park pass as steps, so it can run whole (build_park) or a step a frame (ParkBuild): the plan and
-# the mist, the cottonwoods' base batches, their detail shells PARK_TREES_PER_STEP trees a step, then the
-# spillway effects. Steps run in the same order either way, and only the plan draws from the seeded
-# stream, so the result is the same.
+# the mist, the cottonwoods' base batches, their detail shells PARK_TREES_PER_STEP trees a step, the
+# spillway effects, then the next stage's smoke on the horizon where the park names one (smoke_column.gd).
+# Steps run in the same order either way, and only the plan draws from the seeded stream, so the result
+# is the same.
 const PARK_TREES_PER_STEP := 4
 
 
@@ -417,7 +418,10 @@ class ParkPass extends RefCounted:
 			3:
 				preload("res://src/presentation/spillway_fx.gd").place(scenery, _stage_root, _map, _sites)
 				_phase = 4
-		return _phase < 4
+			4:
+				preload("res://src/presentation/smoke_column.gd").place(scenery, _map, _sites.height)
+				_phase = 5
+		return _phase < 5
 
 
 # The park's cottonwood seats and its mist batch (under scenery), from the map's own seeded stream.
