@@ -619,13 +619,15 @@ func cast_hero(id := "") -> void:
 		var def = root.gate_pilot() if root != null and root.has_method("gate_pilot") else null
 		id = String(def.id) if def != null else HeroAssets.DEFAULT_CLASS
 	var row: Dictionary = POSTERS[poster]
-	# The skyline is placed on every cast: placed only as it was built, the frozen facade was never drawn.
-	for line in SKYLINE:
-		var far: Node3D = stage.get_node_or_null(String(line[0]))
-		if far != null:
-			far.position = line[2]
-			far.rotation.y = line[3]
-			far.scale = line[4]
+	# The deck and the skyline are placed on every cast, in the tree: placed only as they were built, before they
+	# entered it, the frozen models were drawn at a stale transform (the barge at full depth, its rim at the lens,
+	# and the facade not at all).
+	for line in DECK + SKYLINE:
+		var model: Node3D = stage.get_node_or_null(String(line[0]))
+		if model != null:
+			model.position = line[2]
+			model.rotation.y = line[3]
+			model.scale = line[4]
 	for name in row.deck:
 		var model: Node3D = stage.get_node_or_null(String(name))
 		if model != null:
@@ -674,12 +676,6 @@ func use_poster(id: String) -> void:
 	if not POSTERS.has(id):
 		return
 	poster = id
-	for row in DECK:
-		var model: Node3D = stage.get_node_or_null(String(row[0]))
-		if model != null:
-			model.position = row[2]
-			model.rotation.y = row[3]
-			model.scale = row[4]
 	cast_hero(hero_id)
 	_sync_dressing()
 	_frame()
