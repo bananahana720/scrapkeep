@@ -2,6 +2,7 @@ extends SceneTree
 
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # Every declared zone has unique ids, capped words, three skippable exchange
 # lines, at least fourteen scraps, and Warden/world-boss intros. Per-pilot boss threat lines are
@@ -123,6 +124,7 @@ func _initialize() -> void:
 		for subject in intros[zone]:
 			_report(zone + " " + subject + " intro", intros[zone][subject] == 1, "%d intros; need one" % intros[zone][subject])
 	_calls()
+	_camp_quips()
 	print("lore_rows_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -207,3 +209,42 @@ func _calls() -> void:
 	var signals: Array = LoreRows.call_signals()
 	_report("call signals", signals.size() == 7 and signals.all(func(s): return signals.count(s) == 1 and LoreRows.CALLS.any(func(r): return r["on"] == s)),
 		str(signals))
+
+
+
+# Camp quips (W46-14): one row per pilot, each pilot's caller id a SPEAKERS id (so a voice can say it) and their class
+# a real class; two or three distinct lines within the call cap, none of them unfinished, no exclamation mark (the
+# tone bible's dry log); visits step through every line, and two pilots on one visit do not all open on line one.
+func _camp_quips() -> void:
+	var classes := {}
+	for def in ClassDef.all():
+		classes[String(def.id)] = def
+	var pilots := {}
+	for row in LoreRows.CAMP_QUIPS:
+		var id := String(row.get("id", ""))
+		var speaker := String(row.get("speaker", ""))
+		var pilot := String(row.get("pilot", ""))
+		_report(id + " caller", speaker in PILOT_SPEAKERS and LoreRows.SPEAKERS.has(speaker), speaker)
+		_report(id + " class", classes.has(pilot) and String(classes[pilot].motif) == speaker and not pilots.has(pilot), pilot)
+		pilots[pilot] = true
+		_report(id + " is its class's", LoreRows.camp_quip(pilot) == row, pilot)
+		var lines: Array = row.get("text", [])
+		var distinct := {}
+		for line in lines:
+			var text := String(line)
+			distinct[text] = true
+			var words := WordBudget.words_in(text)
+			_report(id + " words", words > 0 and words <= LoreRows.CALL_LINE_WORD_CAP and not text.contains("!"), "%d words: %s" % [words, text])
+			for marker in FORBIDDEN_TEXT:
+				_report(id + " final text", not text.to_lower().contains(marker), "no " + marker)
+		_report(id + " lines", lines.size() >= 2 and lines.size() <= 3 and distinct.size() == lines.size(), str(lines))
+		var heard := {}
+		for visit in lines.size():
+			heard[LoreRows.camp_quip_text(row, visit)] = true
+		_report(id + " visits step through every line", heard.size() == lines.size(), str(heard.keys()))
+	_report("every pilot has a quip", pilots.size() == classes.size(), str(pilots.keys()))
+	_report("a class with no quip has none", LoreRows.camp_quip("nobody").is_empty(), "")
+	var openers := {}
+	for row in LoreRows.CAMP_QUIPS:
+		openers[(row["text"] as Array).find(LoreRows.camp_quip_text(row, 1))] = true
+	_report("pilots on one visit spread over their lists", openers.size() > 1, str(openers.keys()))
