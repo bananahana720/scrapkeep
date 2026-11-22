@@ -99,3 +99,4 @@ crew_lamp_field.gd	SphereMesh	Node3D/CrewLamps	code	-	crew lamp eyes (W1-83): on
 game.gd	CapsuleMesh	Node3D/DispatchPod	code	-	the Dispatcher's pod in flight (combat/dispatcher.gd), a lobbed projectile hung on the world root for its flight time
 activities.gd	CylinderMesh	Activities/Ward_*/MeshInstance3D	code	-	mend ward ground ring and charge-fill disc (activities.gd _build_ward): a 5 m charcoal pad and expanding verdigris charge mark
 activities.gd	CylinderMesh	Activities/Plate_*/MeshInstance3D	code	-	lore survey plate (activities.gd _build_plate, W45 P8): a flush charcoal rim and glowing amber disc that sinks to copper when read, a ground mark meant to be a shape
+game.gd	QuadMesh	WorldLook/NightDress/Glow	code	-	Dam Night Shift lamp glows (world_look.gd NightShift.Dress._card): a soft sodium lighting card at each floodlight mast's lamp, only on a Night Shift dam; the mast is camp_lamp_post.glb

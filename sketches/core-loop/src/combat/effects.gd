@@ -64,6 +64,9 @@ func setup() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.vertex_color_use_as_albedo = true
+	# The colours written into the mesh are the palette's sRGB values: the switch makes the PC's renderer read them so,
+	# not as linear light, which washed the rings and arcs out (tools/vertex_colour_probe.gd --marks=1, W46-13).
+	mat.vertex_color_is_srgb = true
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.render_priority = PRIORITY
 	view.material_override = mat

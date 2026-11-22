@@ -11,9 +11,13 @@ extends SceneTree
 #   - Worlds 2 and 3 are parked (ruling at): every stage look there, bare and with its map, is the one at 1266fec1.
 #   - PF-47: at every distance a park prop or hero has a detail level drawn whole, so no hand-over is see-through, and
 #     never two at once, so no band draws a prop twice.
-#   - The seven code-drawn player marks' colour sites resolve (tools/vertex_colour_probe.gd, the hand-off to W46-13).
+#   - The seven code-drawn player marks' colour sites resolve (tools/vertex_colour_probe.gd, the hand-off to W46-13), and
+#     every one of their materials reads its colours as sRGB (W46-13), so none washes out on the PC's renderer.
+#   - Dam Night Shift (W46-13): its row is picked only by its look id, sits ACT_MIN_DE or more from each of the three acts,
+#     keeps clear of HAZARD and of the Kindness purple; every floodlight mast passes the park prop placement rules as a
+#     tall prop; the night's dressing carries no collider, and its lights stay in the tree, dark, when the day returns.
 # Planted, each must fail its own judge: an act copied from another, a glow set to HAZARD, the old cross-fade ranges,
-# two levels whole over one band.
+# two levels whole over one band, a night copied from the dawn, a mast stood on a ride line, a mark with the switch off.
 # Evidence limit: headless values. The look is judged from the Mac stills and the sheet on the W46-03 pull request.
 
 const T := preload("res://tests/support/t.gd")
@@ -24,14 +28,19 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
 const Bars := preload("res://src/core/defence_bars.gd")
 const Probe := preload("res://tools/vertex_colour_probe.gd")
+const ShiftVariants := preload("res://src/core/shift_variants.gd")
 
+# The camp lamp post the night stands as a floodlight mast (assets/models/camp/camp_lamp_post.glb, its whole aabb at scale 1):
+# 4.5 m tall, its lamp arm reaching 1.2 m off the pole.
+const MAST_HEIGHT_M := 4.5
+const MAST_RADIUS_M := 1.2
 # Mean CIE76 over the act keys between any two acts; 12 is a step two stills side by side show at a glance (ours, inferred).
 const ACT_MIN_DE := 12.0
 # No act colour within this of HAZARD (colour_cvd_test's 20 floor, plus margin).
 const HAZARD_MIN_DE := 25.0
 const ACT_KEYS := ["sun_color", "ambient", "fog_tint"]
 const GRADE_KEYS := ["top", "horizon", "glow"]
-const EXPECTED_CHECKS := 34
+const EXPECTED_CHECKS := 51
 # sha256 of var_to_str(WorldLook.stage_look(stage, world, map)) at 1266fec1, the wave's base, for every world 2 and 3
 # stage bare, with its stage map and with the park of its time. Re-pin only with a ruling that unparks the world.
 const PARKED_PINS := {
@@ -63,6 +72,9 @@ func _run() -> void:
 	_palette()
 	_hand_overs()
 	_marks()
+	_night()
+	_night_masts()
+	await _night_dress()
 	_t.eq("every check ran", _t.checks, EXPECTED_CHECKS)
 	quit(_t.verdict())
 
@@ -295,3 +307,119 @@ func _marks() -> void:
 	for row: Dictionary in rows:
 		if not row.has("error"):
 			print("MARK %s: material %s:%d srgb %s, colour %s:%d" % [row.mark, row.file, row.material_line, row.srgb, row.file, row.colour_line])
+	var washed := rows.filter(func(row: Dictionary) -> bool: return not washed_free(row))
+	_t.check("every mark's material reads its colours as sRGB (W46-13)", washed.is_empty(), str(washed.map(func(row): return row.mark)))
+	var planted: Dictionary = rows[0].duplicate()
+	planted.srgb = false
+	_t.check("planted: a mark with the switch off fails", not washed_free(planted))
+
+
+# A mark whose material says its written colours are sRGB draws its own colour on the PC's renderer (the probe's
+# --marks=1 measures it on a display).
+static func washed_free(row: Dictionary) -> bool:
+	return not row.has("error") and bool(row.get("srgb", false))
+
+
+func _night() -> void:
+	var dam := StageDefs.first_of(1)
+	var map := String(StageDefs.of(dam).get("map", ""))
+	var night := WorldLook.stage_look(dam, 1, map, {}, ShiftVariants.NIGHT_LOOK_ID)
+	var looks := acts()
+	_t.check("the night is picked by its look id alone: no id and an unknown id are the dam's own look",
+		WorldLook.stage_look(dam, 1, map, {}, "") == looks.dam and WorldLook.stage_look(dam, 1, map, {}, "no_such_look") == looks.dam
+		and night.get("look_id") == ShiftVariants.NIGHT_LOOK_ID and not looks.dam.has("look_id"))
+	_t.check("the night look keeps the dam's own sky kind and fog density", night.sky == looks.dam.sky
+		and is_equal_approx(float(night.fog.density), float(looks.dam.fog.density)))
+	for id in ["dam", "flume", "bowl"]:
+		var d := act_distance(night, looks[id])
+		print("act distance night-%s: %.1f" % [id, d])
+		_t.check("the night and the %s light differ by %.0f or more (mean CIE76)" % [id, ACT_MIN_DE], d >= ACT_MIN_DE, "%.1f" % d)
+	var planted: Dictionary = night.duplicate(true)
+	for key in ACT_KEYS:
+		planted[key] = looks.dam[key]
+	planted.grade = looks.dam.grade.duplicate()
+	_t.check("planted: a night copied from the dawn fails the distance", act_distance(planted, looks.dam) < ACT_MIN_DE)
+	var near := nearest_hazard(night)
+	_t.check("the night uses no colour within %.0f of HAZARD (its sodium lamps included)" % HAZARD_MIN_DE, near >= HAZARD_MIN_DE
+		and colours_in(night, []).has(Palette.SODIUM), "nearest %.1f" % near)
+	var purple := colours_in(night, []).filter(func(c: Color) -> bool:
+		return Bars.cie76(Color(c, 1.0), Palette.KINDNESS) < 20.0 or (c.s > 0.2 and c.h * 360.0 >= 300.0 and c.h * 360.0 <= 330.0))
+	_t.check("the night has no purple: hue 300 to 330 is the Foreman's Kindness alone (ruling ci)", purple.is_empty(), str(purple))
+	_t.check("the night's sky is darker than the dawn's: its zenith and horizon both fall in lightness",
+		(night.grade.top as Color).get_luminance() < (looks.dam.grade.top as Color).get_luminance()
+		and (night.grade.horizon as Color).get_luminance() < (looks.dam.grade.horizon as Color).get_luminance())
+
+
+# A floodlight mast as the park prop rules see it: a tall prop of the mast's own footprint, seated on the ground.
+static func mast_instance(at: Vector2, ground: Callable, floods: Dictionary) -> Dictionary:
+	var radius := MAST_RADIUS_M * float(floods.scale)
+	var y: float = (ground.call(at.x, at.y, 0.0) as Vector3).y
+	var floating := 0.0
+	var steepest := 0.0
+	for k in 8:
+		var rim := at + Vector2.from_angle(k * TAU / 8.0) * radius
+		var rim_y: float = (ground.call(rim.x, rim.y, 0.0) as Vector3).y
+		floating = maxf(floating, y - rim_y)
+		steepest = maxf(steepest, rad_to_deg(atan(absf(rim_y - y) / radius)))
+	return {"vignette": "night_flood", "kind": "night_flood", "class": ParkProps.PROP, "tags": ["tall"], "pos": Vector3(at.x, y, at.y),
+		"radius": radius, "height": MAST_HEIGHT_M * float(floods.scale), "float_m": floating, "slope_deg": steepest, "line_clear_m": 0.0,
+		"litter": false}
+
+
+func _night_masts() -> void:
+	var floods: Dictionary = WorldLook.LOOK_ROWS[ShiftVariants.NIGHT_LOOK_ID].floods
+	var world := ParkProps.world_for("park_dam")
+	var c := ParkProps.context(world["map"], world["ground"], world["stage"])
+	var bad := []
+	for row: Array in floods.at:
+		var fails := ParkProps.check_one(mast_instance(Vector2(row[0], row[1]), world["ground"], floods), c)
+		if not fails.is_empty():
+			bad.append([row, fails.map(func(f): return f.rule)])
+	_t.check("every night floodlight mast passes the park prop placement rules as a tall prop", bad.is_empty() and floods.at.size() >= 10,
+		str(bad))
+	var on_line: Vector2 = Vector2(-150, -690)
+	_t.check("planted: a mast stood on the run's spawn fails the placement rules",
+		not ParkProps.check_one(mast_instance(on_line, world["ground"], floods), c).is_empty())
+
+
+# A ground at height 0 and a terrain double for the night's dressing.
+class FlatTerrain:
+	var environment := Environment.new()
+	func height(_x: float, _z: float) -> float:
+		return 0.0
+
+
+class StillBall:
+	func shown_position() -> Vector3:
+		return Vector3(-30.0, 0.0, -560.0)
+
+
+func _night_dress() -> void:
+	var host := Node3D.new()
+	var stage := Node3D.new()
+	host.add_child(stage)
+	root.add_child(host)
+	var holder := Node3D.new()
+	holder.name = WorldLook.NODE
+	stage.add_child(holder)
+	var terrain := FlatTerrain.new()
+	var night := WorldLook.stage_look(1, 1, "park_dam", {}, ShiftVariants.NIGHT_LOOK_ID)
+	WorldLook.NightShift.enter(stage, terrain, night, StillBall.new())
+	var dress := holder.get_node_or_null(WorldLook.NightShift.DRESS)
+	var lights := host.get_node_or_null(WorldLook.NightShift.LIGHTS)
+	var masts: int = night.floods.at.size()
+	_t.check("the night dresses the stage with its masts and their lamp glows", dress != null
+		and dress.find_children("Glow*", "MeshInstance3D", false, false).size() == masts and dress.heads().size() == masts)
+	var solid := dress.find_children("*", "CollisionObject3D", true, false) + dress.find_children("*", "CollisionShape3D", true, false) if dress != null else [null]
+	_t.check("the night's dressing carries no collider (the camp lamp post's own is dropped)", solid.is_empty(), str(solid))
+	var lamps: Array = lights.find_children("*", "Light3D", false, false) if lights != null else []
+	_t.check("the night's lights hang on the stage roots' parent, sodium, shadowless", lamps.size() == int(night.floods.lamps.count)
+		+ night.floods.dam.at.size() and lamps.all(func(l: Light3D) -> bool: return l.light_color == Palette.SODIUM and not l.shadow_enabled))
+	var ids := lamps.map(func(l): return l.get_instance_id())
+	WorldLook.NightShift.enter(stage, terrain, WorldLook.stage_look(1, 1, "park_dam"), StillBall.new())
+	await process_frame
+	await process_frame
+	var kept := ids.filter(func(id): return instance_from_id(id) != null)
+	_t.check("the day takes the dressing away but keeps every night light, dark", holder.get_node_or_null(WorldLook.NightShift.DRESS) == null
+		and kept.size() == ids.size() and kept.all(func(id): return not (instance_from_id(id) as Light3D).visible))
+	host.free()
