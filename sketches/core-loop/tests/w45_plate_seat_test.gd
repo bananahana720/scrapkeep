@@ -181,8 +181,8 @@ func _seat_checks(label: String, fragment: String, game, p, visuals: Array) -> D
 	return fit
 
 
-# A park event's overlay sheet (a ramp or slide that lands mid-stage) never stands over a plate's face: the plate is
-# seated once, so a sheet landing over it later would bury it.
+# On the calm map, no natural event's prepared overlay sheet (a ramp or slide that lands mid-stage) stands over a
+# plate's face. A sheet that does land under a plate moves it: _events drives those and checks the new seat.
 func _overlays(map_id: String, fragment: String, terrain, p) -> void:
 	var m = terrain.map()
 	if not "profiles" in m:
