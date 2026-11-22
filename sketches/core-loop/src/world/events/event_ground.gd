@@ -55,6 +55,11 @@ class OverlayMap:
 	var swaps := {}
 	var profiles := {}
 	var source
+	# The terrain's surface_moved, told whenever this map moves the ground: a swap, a collapse's sheet, a cave roof.
+	var surface_moved := Callable()
+	func moved() -> void:
+		if surface_moved.is_valid():
+			surface_moved.call()
 	func apply_swap(id: String, changed: bool) -> void:
 		if not swaps.has(id):
 			return
@@ -70,6 +75,7 @@ class OverlayMap:
 			if is_instance_valid(hidden.node):
 				hidden.node.position = hidden.home + Vector3.DOWN * Gorge.SWAP_PARK if changed else hidden.home
 				hidden.node.visible = false if changed else hidden.visible
+		moved()
 	func cave_height(x: float, z: float) -> float:
 		for entry in swaps.values():
 			if entry.get("cave", false):
@@ -445,6 +451,9 @@ static func lower_roof(roof: Dictionary, drop: float) -> void:
 				collider.position = collider.get_meta("home") + (Vector3.ZERO if collider.has_meta("retained") else Vector3.DOWN * drop)
 			else:
 				collider.shape = trimesh(surface)
+	var moved: Callable = roof.get("moved", Callable())
+	if moved.is_valid():
+		moved.call()
 
 
 # The placed nodes of every park row that names this event in hide_on, found once here and kept on the swap entry.
@@ -498,12 +507,15 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 				var value = current.get(property.name)
 				overlay_map.set(property.name, value.duplicate(true) if value is Dictionary or value is Array else value)
 		overlay_map.source = current
+		if world.terrain.has_method("surface_moved"):
+			overlay_map.surface_moved = world.terrain.surface_moved
 		world.terrain.maps[world.terrain.stage - 1] = overlay_map
 	if row.kind == "cave_in":
 		var roof: Dictionary = world.terrain.cave_roof(row.id) if world.terrain.has_method("cave_roof") else {}
 		if roof.is_empty():
 			roof = roof_body(owner, project_surface(world, record.geometry, [_rectangle(-record.geometry.half, record.geometry.half)]))
 		roof.body.name = "Natural_" + row.id
+		roof["moved"] = overlay_map.moved
 		overlay_map.swaps[id] = {"body": roof.body, "roof": roof, "cave": true, "owners": {}, "progress": 0.0}
 		record.overlay = roof.body
 		record.swap = id
@@ -660,6 +672,7 @@ static func install_surface(overlay_map: OverlayMap, id: String, surface: Surfac
 	body.get_child(0).mesh = surface.mesh
 	body.get_child(1).shape = trimesh(surface)
 	overlay_map.profiles[id + "_after"].surface = surface
+	overlay_map.moved()
 
 
 static func set_overlay(world, row: Dictionary, record: Dictionary, changed: bool) -> void:

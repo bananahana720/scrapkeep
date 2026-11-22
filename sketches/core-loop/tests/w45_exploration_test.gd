@@ -14,6 +14,12 @@ extends SceneTree
 #              Planted: a ward with no guard (calm) never mends; a ward at the drop-in fails the dead-end read.
 #   Plates     the game builds one lore plate at every fragment spot secrets.gd lists for the park; rolling over it
 #              files its field note once and puts no word on screen. Planted: a second touch files nothing.
+#              (Where a plate sits and whether a ball reaches it: w45_plate_seat_test.)
+#   Far rolls  the Dam's two far caches roll on their own rows, so over FAR_RUNS run ids they do not always pay the
+#              same part; an empty far pool falls back to the cobalt rung on the row's stream. Planted: two caches on
+#              one stream always pay the same.
+#   Teardown   a retry and the step to the next stage free every ward, its guard and every plate, and the new entry
+#              builds its own.
 # Output: one `EXPLORE <park> <measure> <value>` line per measure, plus PASS or FAIL rows from tests/support/t.gd.
 
 const T := preload("res://tests/support/t.gd")
@@ -36,6 +42,7 @@ const SHORTCUT_SAVE_S := 3.0
 const SHORT_M := 8.0
 const WARD_OFF_LINE_M := 150.0
 const CLASSES := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
+const FAR_RUNS := 24
 
 var t := T.new("w45_exploration_test")
 var cruise := 14.0
@@ -265,6 +272,7 @@ func _live() -> void:
 	game.player.source = source
 	game.flow.press_start()
 	game.flow.choose_class(0)
+	var left: Dictionary = {}
 	for map_id in MAPS:
 		var stage := 0
 		for row in ParkDefs.DEFS:
@@ -279,10 +287,88 @@ func _live() -> void:
 			waited += 1
 		for i in 10:
 			await physics_frame
+		if not left.is_empty():
+			_freed("the step to %s" % map_id, left, game)
 		_live_wards(map_id, game)
 		_live_plates(map_id, game)
+		if map_id == MAPS[0]:
+			_far_rolls(map_id, game)
+			left = _guarded(game)
+			game.flow.retry_stage()
+			for i in 3:
+				await process_frame
+			_freed("%s retry" % map_id, left, game)
+		if map_id != MAPS[-1]:
+			left = _guarded(game)
 	game.queue_free()
 	await process_frame
+
+
+# The entry's wards (one woken with its guard standing) and plates, before a retry or the step to the next stage.
+func _guarded(game) -> Dictionary:
+	var acts = game.world.activities
+	game.ctx.calm = false
+	var ward = acts._build_ward(Secrets.ward_sites(acts.ctx.terrain.map().park)[0])
+	acts.wards.append(ward)
+	acts._watch_ward(ward, 1.0 / 60.0, ward.global_position)
+	game.ctx.calm = true
+	t.check("teardown: the woken ward has its guard up", not ward.guard.is_empty())
+	return {"nodes": acts.wards + acts.plates, "guard": ward.guard.duplicate()}
+
+
+func _freed(when: String, left: Dictionary, game) -> void:
+	var acts = game.world.activities
+	var kept: Array = left["nodes"].filter(func(n) -> bool: return is_instance_valid(n) and not n.is_queued_for_deletion())
+	var guard: Array = left["guard"].filter(func(n) -> bool: return is_instance_valid(n) and not n.is_queued_for_deletion())
+	t.eq("%s frees every ward and plate of the entry before" % when, kept.size(), 0)
+	t.eq("%s frees the ward's guard" % when, guard.size(), 0)
+	var park: Dictionary = acts.ctx.terrain.map().park
+	t.eq("%s builds its own plates" % when, acts.plates.size(), Secrets.plate_sites(park).size())
+	t.eq("%s builds its own wards" % when, acts.wards.size(), Secrets.ward_sites(park).size())
+
+
+# The park's far caches, rolled on the live game's own streams over FAR_RUNS run ids.
+func _far_rolls(map_id: String, game) -> void:
+	var acts = game.world.activities
+	var run = game.run
+	var rows: Array = []
+	for row: Dictionary in acts.ctx.terrain.map().park.get("activity_rows", []):
+		if String(row["activity"]) == "cracked_cache" and row.get("pay", {}).get("rarities", []) == Activities.FAR_RUNG:
+			rows.append(String(row["id"]))
+	print("EXPLORE %s far_rows %s" % [map_id, ",".join(rows)])
+	if not t.check("%s has two far caches in one stage" % map_id, rows.size() >= 2, str(rows)):
+		return
+	var a := _far_site(String(rows[0]))
+	var b := _far_site(String(rows[1]))
+	var shared_a := _far_site("")
+	var shared_b := _far_site("")
+	var run_id: String = run.run_id
+	var apart := 0
+	var shared_apart := 0
+	for i in FAR_RUNS:
+		run.run_id = "far-%d" % i
+		apart += int(acts._far_roll(a) != acts._far_roll(b))
+		shared_apart += int(acts._far_roll(shared_a) != acts._far_roll(shared_b))
+	print("EXPLORE %s far_apart %d of %d" % [map_id, apart, FAR_RUNS])
+	t.check("%s two far caches do not always pay the same part" % map_id, apart > 0, "%d of %d" % [apart, FAR_RUNS])
+	t.eq("planted: two far caches on one stream always pay the same part", shared_apart, 0)
+	# A pool with nothing left in it rolls the rung itself, on the row's own stream.
+	var fallback: String = acts._far_pick(a, [])
+	print("EXPLORE %s far_fallback %s" % [map_id, fallback])
+	t.check("%s an empty far pool falls back to a cobalt part" % map_id, fallback != "" and Parts.rarity_of(fallback) == "rare", fallback)
+	t.eq("%s the fallback rolls the same part again on the same stream" % map_id, acts._far_pick(a, []), fallback)
+	run.run_id = run_id
+	for s in [a, b, shared_a, shared_b]:
+		s.free()
+
+
+func _far_site(row_id: String) -> Activities.Site:
+	var s := Activities.Site.new()
+	s.id = "cracked_cache"
+	s.row_id = row_id
+	s.rule = Activities.RULES["cracked_cache"].duplicate(true)
+	s.rule["pay"]["rarities"] = Activities.FAR_RUNG
+	return s
 
 
 func _live_wards(map_id: String, game) -> void:

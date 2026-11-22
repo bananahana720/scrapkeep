@@ -203,6 +203,15 @@ func mark_known(id: String, participants: Array = ["player"]) -> bool:
 	return first_time
 
 
+# A lore plate filed its field note: known as mark_known makes it (the run's list and its log line), and the HUD's
+# note pulse the first time the profile has it. Returns whether it was new.
+func file_note(id: String) -> bool:
+	if not mark_known(id):
+		return false
+	lore_found.emit(id)
+	return true
+
+
 # An unnamed interaction fired: the first time in a run it logs and chimes. Returns
 # whether the saved Found list had never seen it.
 func mark_found(text: String, category := "world", participants: Array = ["player"]) -> bool:
