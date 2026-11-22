@@ -439,7 +439,7 @@ func _rounds() -> void:
 func _phase_matches(s, phase: String, audio, since: int, count: int) -> bool:
 	var key := String(s.rule.cue[phase])
 	var row := Rows.row(key)
-	var cues: Array = audio.cue_log.slice(since).filter(func(c): return c[0] == key)
+	var cues: Array = audio.cues_since(since).filter(func(c): return c[0] == key)
 	return cues.size() == count and cues.all(func(c): return c[1] == row.sound) and is_instance_valid(s.phase_view) and s.phase_view.get_child(0).material_override.albedo_color == row.color
 
 
@@ -460,12 +460,12 @@ func _cues() -> void:
 		var targets: Array = markers.targets().filter(func(target): return target.has("activity"))
 		valid_markers += int(targets.size() == 1 and targets[0].activity == s.rule.cue.view and EdgeMarkers.marker_color(targets[0]) == Rows.activity_color(s.rule.cue.view))
 		audio._last_start.clear()
-		var since: int = audio.cue_log.size()
+		var since: int = audio.cue_log_total
 		acts.step_pocket(s, H, s.targets[0] if kind == "scattered_marks" else s.global_position)
 		shared = shared and _phase_matches(s, "telegraph", audio, since, 1)
 		var clear_count := 0
 		var pay_count := 0
-		var clear_since: int = audio.cue_log.size()
+		var clear_since: int = audio.cue_log_total
 		match kind:
 			"movement_course", "objective_limit", "scattered_marks":
 				for target in s.targets:
@@ -489,9 +489,9 @@ func _cues() -> void:
 					acts.step_pocket(s, H, s.global_position)
 					clear_count += 1
 		shared = shared and s.done and _phase_matches(s, "clear", audio, clear_since, clear_count)
-		shared = shared and audio.cue_log.slice(clear_since).all(func(c): return c[0] != "activity_done")
+		shared = shared and audio.cues_since(clear_since).all(func(c): return c[0] != "activity_done")
 		audio._last_start.clear()
-		since = audio.cue_log.size()
+		since = audio.cue_log_total
 		if kind == "round_arena":
 			for reward in s.round_rewards.duplicate():
 				audio._last_start.clear()

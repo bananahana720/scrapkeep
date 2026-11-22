@@ -168,6 +168,16 @@ const PLATES := {
 	"headhouse_relic_plate": "lore.park_flume.note.drum",
 }
 
+# A plate whose spot cannot seat it (a prop or a loose stone on it, or ground too curved for a flat disc) moves this
+# far, in metres (x, z), staying within its row's footprint (w45_plate_seat_test reads every seat).
+const PLATE_NUDGES := {
+	# The gate flag's plinth and its fallen stones fill the dome's middle out to about 3 m.
+	"dam_era_gate_flags": [-4, 3],
+	# Loose stones lie under the dock's middle and under the eye's: each plate moves onto clean floor.
+	"dam_dedication_plaque": [0, -2.25],
+	"ancient_eye_marks": [1.5, 0],
+}
+
 # The world codex rows each world's camp count reads: its field finds, then the parks' authored
 # secret caches (the contraption rows that carry a codex id).
 const WORLD_CODEX := {1: ["spillway_turbine_seep", "spillway_shift_radio", "spillway_flume_seep", "spillway_crew_radio",
@@ -265,13 +275,18 @@ static func plate_sites(park: Dictionary) -> Array:
 	if PLATES.has(fragment):
 		var dock: Array = landmark.get("bay_dock", {}).get("at", landmark.get("beacon", landmark.get("at", [0, 0])))
 		out.append({"fragment": fragment, "note": PLATES[fragment], "row": String(landmark.get("id", "")),
-			"at": Vector2(float(dock[0]), float(dock[1]))})
+			"at": Vector2(float(dock[0]), float(dock[1])) + _nudge(fragment)})
 	for row: Dictionary in park.get("park_rows", []):
 		fragment = String(row.get("fragment", ""))
 		if PLATES.has(fragment):
 			out.append({"fragment": fragment, "note": PLATES[fragment], "row": String(row["id"]),
-				"at": Vector2(float(row["at"][0]), float(row["at"][1]))})
+				"at": Vector2(float(row["at"][0]), float(row["at"][1])) + _nudge(fragment)})
 	return out
+
+
+static func _nudge(fragment: String) -> Vector2:
+	var nudge: Array = PLATE_NUDGES.get(fragment, [0, 0])
+	return Vector2(float(nudge[0]), float(nudge[1]))
 
 
 # The spot a find stands on for a run seed: the same seed, the same spot.

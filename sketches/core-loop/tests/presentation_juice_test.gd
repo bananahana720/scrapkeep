@@ -91,14 +91,14 @@ func _process(_delta: float) -> bool:
 			_juice.reset_stops()
 			_game.camera._shake = 0.0
 			var gun_base: int = _juice.hit_stop_log.size()
-			var cues_before: int = _juice.audio.cue_log.size() if _juice.audio != null else 0
+			var cues_before: int = _juice.audio.cue_log_total if _juice.audio != null else 0
 			_juice.resolve_of = func(_e, _k, force): return {"dealt": force * 2.0, "punch": force, "full": true, "part": "", "plating": 0.0}
 			for gun in ["runner", "arc", "turret"]:
 				_game.events.enemy_struck.emit(_enemy, gun, 14.0)
 			_game.events.enemy_struck.emit(_enemy, "runner", 40.0)
 			_juice.flush()
 			_juice.resolve_of = Callable()
-			var pinged: bool = _juice.audio != null and _juice.audio.cue_log.slice(cues_before).any(func(c: Array): return c[1] == "crit_ping")
+			var pinged: bool = _juice.audio != null and _juice.audio.cues_since(cues_before).any(func(c: Array): return c[1] == "crit_ping")
 			_check("guns do not stop", _juice.hit_stop_log.size() == gun_base and _game.camera._shake == 0.0,
 				"laser, arc and turret hits, crits among them, ask for %d stops and the camera shake is %.2f" % [_juice.hit_stop_log.size() - gun_base, _game.camera._shake])
 			_check("gun crit pings", pinged, "a crit on a gun kind still plays crit_ping")

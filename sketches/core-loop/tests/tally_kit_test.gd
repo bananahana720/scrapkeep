@@ -402,7 +402,7 @@ func _check_cooldowns() -> void:
 
 func _gather_start() -> void:
 	_as_class("tally")
-	_record = {"from": _struck.size(), "cue_from": _game.presentation.audio.cue_log.size()}
+	_record = {"from": _struck.size(), "cue_from": _game.presentation.audio.cue_log_total}
 	_press_slot(1)
 
 
@@ -451,7 +451,7 @@ func _check_gather() -> void:
 
 # A second tap inside the 6 s cooldown: refused, the first plate stays.
 func _gather_again_press() -> void:
-	_record["cue_from"] = _game.presentation.audio.cue_log.size()
+	_record["cue_from"] = _game.presentation.audio.cue_log_total
 	_fails.clear()
 	_record["plate"] = _combat.plate.duplicate()
 	_press_slot(1)
@@ -491,7 +491,7 @@ func _invalid_tap_start() -> void:
 
 
 func _invalid_tap_press() -> void:
-	_record["cue_from"] = _game.presentation.audio.cue_log.size()
+	_record["cue_from"] = _game.presentation.audio.cue_log_total
 	_fails.clear()
 	_press_slot(1)
 
@@ -543,7 +543,7 @@ func _link_start() -> void:
 
 
 func _link_press() -> void:
-	_record["cue_from"] = _game.presentation.audio.cue_log.size()
+	_record["cue_from"] = _game.presentation.audio.cue_log_total
 	_set_charges(0)
 	_press_slot(2)
 
@@ -964,7 +964,7 @@ func _check_stamp() -> void:
 
 
 func _check_plate_cues(label: String, expected: int) -> void:
-	var cues: Array = _game.presentation.audio.cue_log.slice(_record["cue_from"])
+	var cues: Array = _game.presentation.audio.cues_since(_record["cue_from"])
 	var admitted := cues.filter(func(n): return n[1] == "plate_tally" and n[2] == "now")
 	_t.eq(label, admitted.size(), expected)
 

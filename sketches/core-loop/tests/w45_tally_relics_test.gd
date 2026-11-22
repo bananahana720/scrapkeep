@@ -451,7 +451,7 @@ func _check_double_far() -> void:
 
 
 func _clip_cues(audio, from: int) -> int:
-	return audio.cue_log.slice(from).filter(func(n): return n[1] == "clip_tally").size()
+	return audio.cues_since(from).filter(func(n): return n[1] == "clip_tally").size()
 
 
 func _check_double_jam_and_audio() -> void:
@@ -467,12 +467,12 @@ func _check_double_jam_and_audio() -> void:
 	# Audio: link_double plays the same clip cues as link_clips.
 	var audio = _game.presentation.audio
 	_equip(AbilityState.LINE, "link_clips")
-	var from: int = audio.cue_log.size()
+	var from: int = audio.cue_log_total
 	var notes_from: int = audio._tally_notes.size()
 	_cast_on("link_clips", s["c0"])
 	var plain: Array = [_clip_cues(audio, from), audio._tally_notes.size() - notes_from]
 	_equip(AbilityState.LINE, "link_double")
-	from = audio.cue_log.size()
+	from = audio.cue_log_total
 	notes_from = audio._tally_notes.size()
 	_cast_on("link_double", s["c0"])
 	var double: Array = [_clip_cues(audio, from), audio._tally_notes.size() - notes_from]

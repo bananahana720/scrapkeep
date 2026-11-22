@@ -311,7 +311,7 @@ func _shatter_juice() -> void:
 	t.check("C: a tier 4 break sends its heavy stop as piece_shattered", crunch.size() == 1 and is_equal_approx(crunch[0] * 1000.0, Juice.shatter_weight(4).stop_ms) and juice.hit_stop_log.back()[2] == "piece_shattered", str(crunch))
 
 	# The game's wiring: a module built with the game's ctx finds the game's juice and audio itself.
-	var heard_from: int = game.presentation.audio.cue_log.size()
+	var heard_from: int = game.presentation.audio.cue_log_total
 	var mod: Node3D = Destructibles.new()
 	var base: Vector3 = game.player.ball_position() + Vector3(30.0, 0.0, 30.0)
 	mod.build([{"id": "w45_live", "tier": 4, "at": base, "size": SIZES[4]}], {"ctx": game.ctx, "root": game.ctx.root})
@@ -321,7 +321,7 @@ func _shatter_juice() -> void:
 	mod.on_blast(base, 10.0, "test", 1, 5)
 	var live := _flush_since(from)
 	t.check("C: the live module lands the game's juice", live.size() == 1 and juice.hit_stop_log.back()[2] == "piece_shattered", str(live))
-	var rows: Array = game.presentation.audio.cue_log.slice(heard_from)
+	var rows: Array = game.presentation.audio.cues_since(heard_from)
 	var shatter_rows := rows.filter(func(r): return r is Array and r[0] == "destructible_shatter")
 	var ticks := rows.filter(func(r): return r is Array and r[0] == "world_fact")
 	t.check("C: the live break asks audio for its family once, and its world fact adds no tick", shatter_rows.size() == 1 and ticks.is_empty(), str(rows))

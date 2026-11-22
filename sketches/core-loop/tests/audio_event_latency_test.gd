@@ -66,7 +66,7 @@ func _run() -> void:
 func _frames(audio, emit: Callable, delay: int) -> int:
 	audio._last_start.clear()
 	var frame := Engine.get_process_frames()
-	var played: int = audio.cue_log.size()
+	var played: int = audio.cue_log_total
 	audio.last_play_frame = -1
 	if delay == 0:
 		emit.call()
@@ -75,6 +75,6 @@ func _frames(audio, emit: Callable, delay: int) -> int:
 			await process_frame
 		emit.call()
 	var sounded := false
-	for i in range(played, audio.cue_log.size()):
-		sounded = sounded or audio.cue_log[i][2] == "now"
+	for cue in audio.cues_since(played):
+		sounded = sounded or cue[2] == "now"
 	return audio.last_play_frame - frame if sounded and audio.last_play_frame >= 0 else -1
