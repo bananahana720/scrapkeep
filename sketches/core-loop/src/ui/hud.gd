@@ -1560,6 +1560,7 @@ func _process(delta: float) -> void:
 	var slots: Array = _slots.slots(game)
 	ability_bar.update_slots(slots, tint, shape)
 	ability_bar.hide_keys(key_glyphs.shown_glyphs())
+	ability_bar.point_at(tip_slot(field_tips.showing, slots))
 	if part_name.visible or danger_mark.visible:
 		var cam: Camera3D = game.camera.cam
 		var top: Vector3 = game.player.shown_position() + cam.global_basis.y * Tuning.RADIUS
@@ -1584,6 +1585,17 @@ func _process(delta: float) -> void:
 	var hold: float = game.restart_hold_fraction()
 	_restart.set_fraction(hold)
 	_restart.visible = hold > 0.0
+
+
+# The bar slot a first-meet tip on screen speaks of, so the bar points at it (PF-21): the active's
+# tip names the active's chip. "" for a tip that names no slot, or a slot the bar does not hold.
+static func tip_slot(tip: String, slots: Array) -> String:
+	if tip != "active":
+		return ""
+	for entry in slots:
+		if String(entry.get("id", "")).begins_with("active_"):
+			return AbilityBar.slot_name(entry)
+	return ""
 
 
 # The skill bar's live reads (SKILL-BAR section 5): the ultimate meter on the reticle, the set
