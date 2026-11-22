@@ -32,6 +32,10 @@ const SpillwayStory := preload("res://src/presentation/spillway_story.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const TuneEar := preload("res://src/presentation/tune_ear.gd")
 const SetDirector := preload("res://src/presentation/set_director.gd")
+const MusicArbiter := preload("res://src/presentation/music_arbiter.gd")
+const MelodyLease := preload("res://src/presentation/melody_lease.gd")
+const SfxBudget := preload("res://src/presentation/sfx_budget.gd")
+const MusicDsp := preload("res://src/presentation/music_dsp.gd")
 # SR7: the shortest gap between two chirps of one companion cue (start value, comps
 # ror2/companions.md "Lab measure": at most once per trigger within a cooldown).
 const CHIRP_COOLDOWN := 0.75
@@ -320,6 +324,10 @@ var _ui: AudioStreamPlaybackPolyphonic
 var _sfx_player: AudioStreamPlayer
 var _ui_player: AudioStreamPlayer
 var _voices := {}
+var _sfx_budget := SfxBudget.new()
+var _melody_lease := MelodyLease.new()
+var music_dsp := MusicDsp.new()
+var _boss_arena_track := ""
 var _last_start := {}
 var clock := 0.0
 var hum_on := false
@@ -519,7 +527,7 @@ func setup(ctx_ref) -> void:
 		engine.set_parameter_source(sample_run_parameters)
 		engine.parameter_commit.connect(_commit_band_parameters)
 	_music_player = _generator_player("Music", "MusicStream")
-	_stinger_player = _generator_player("SFX", "StingerStream")
+	_stinger_player = _generator_player(MusicDsp.STINGER_BUS, "StingerStream")
 	_sfx_player = _poly_player("SFX", "SfxVoices")
 	_ui_player = _poly_player("UI", "UiVoices")
 	_make_overlay()
@@ -706,6 +714,7 @@ func _notification(what: int) -> void:
 		for task in _ace_ahead.values():
 			WorkerThreadPool.wait_for_task_completion(task)
 		_ace_ahead.clear()
+		music_dsp.reset()
 
 
 # Blocks until stage 1's whole band is baked, as a player's time on the title allows for.
@@ -771,6 +780,8 @@ func _exit_tree() -> void:
 		if child is AudioStreamPlayer:
 			child.stop()
 	_sfx = null
+	_sfx_budget.clear()
+	music_dsp.reset()
 	_voice_db.clear()
 	_roomed.clear()
 	_ui = null
@@ -857,6 +868,7 @@ func _make_buses() -> void:
 	if AudioServer.get_bus_effect_count(master) == 0:
 		AudioServer.add_bus_effect(master, _compressor(MixRows.MASTER_COMP))
 		AudioServer.add_bus_effect(master, _limiter(MixRows.MASTER_CEILING_DB))
+	music_dsp.setup()
 	_apply_volumes()
 
 
@@ -898,6 +910,22 @@ func _tend_mix(delta: float) -> void:
 		mix_db[bus] = next
 	if moved:
 		_apply_volumes()
+	music_dsp.step(delta, _dsp_state())
+
+
+func _dsp_state() -> Dictionary:
+	var low_hull := ace != null and ace.parameters.has("armour") and float(ace.parameters["armour"]) < 0.3
+	var tension := 0.0
+	if _launch_armed or _ult_armed:
+		tension = 1.0
+	elif ace_playing() and ace.mode == "warden" and ace.section == "telegraph":
+		tension = 0.65
+	return {
+		"focus": clock < _focus_until,
+		"slowed": _slowed,
+		"low_hull": low_hull,
+		"build_tension": tension,
+	}
 
 
 # Room for the Warden form's drop (tuning drop_room, mix_rows.gd DROP_ROOM): the band that
@@ -955,6 +983,7 @@ func _is_telegraph(kind: String, sound: String) -> bool:
 
 func _focus() -> void:
 	_focus_until = clock + float(MixRows.FOCUS["hold_s"])
+	_melody_lease.bump_epoch()
 
 
 # The world slows for a close-up and comes back (game.slow_motion): a falling sweep as it slows,
@@ -1320,7 +1349,8 @@ func ace_ready() -> bool:
 		push_warning("ACE music: missing %s; playing the synth engine instead" % ace_missing)
 		return false
 	if ace != null:
-		ace.stop(AceSequencer.STOP_RAMP)
+		var swap_ramp: int = clampi(ace.grid_beat / 2, AceSequencer.STOP_RAMP, int(AceSequencer.RATE * 0.25))
+		ace.stop(swap_ramp)
 		loaded.fading.append_array(ace.fading)
 	ace = loaded
 	_ace_from = ace_manifest
@@ -1329,6 +1359,7 @@ func ace_ready() -> bool:
 	ace.clock = _render_from if _render_from >= 0 else engine.clock
 	ace.set_breath(breath())
 	ace.ultimate_lift = _ult_lift
+	_melody_lease.bump_epoch()
 	_prime_band_parameters()
 	return true
 
@@ -1579,6 +1610,9 @@ func radio_play(id: String, record: String, pinned := false) -> bool:
 	var parent := TuneRows.row(record)
 	if parent.is_empty() or not sound_ready:
 		return false
+	if radio_finale and _in_boss_arena():
+		return false
+	var boss_before := _active_boss_track() if _in_boss_arena() else ""
 	var play_id := record
 	var row := parent
 	if id != record and MusicRows.take_manifest(id) != "":
@@ -1593,6 +1627,8 @@ func radio_play(id: String, record: String, pinned := false) -> bool:
 		return false
 	radio_hold = id
 	radio_pinned = pinned
+	if boss_before != "" and _radio_boss.is_empty():
+		_radio_boss = ["boss_arena_entered", boss_before]
 	_radio_args = [id, record, pinned]
 	_radio_respin_due = false
 	_log_cue(["radio", id, "needle", engine.clock, 1.0])
@@ -1604,20 +1640,35 @@ func _radio_respin() -> void:
 		radio_play(_radio_args[0], _radio_args[1], _radio_args[2])
 
 
-# The score takes the air back on the next beat: the stage's band (or the Warden's, or the
-# miniboss's darkened level) with the live moment's tune, as if the radio had never played.
+# The score takes the air back on the next beat: the arbiter decides which music owner
+# holds the floor now (boss finale, boss arena, Warden, champion, miniboss, moment or stage).
 func radio_release() -> void:
 	if radio_hold == "":
 		return
+	var held_boss := _active_boss_track()
 	_radio_drop("")
-	if not sound_ready or _stage_now <= 0 or ctx == null or ctx.get("flow") == null or not ctx.flow.in_play():
+	if not sound_ready or ctx == null or ctx.get("flow") == null or not ctx.flow.in_play():
+		return
+	var plan := MusicArbiter.resolve(_arbiter_state())
+	if plan["owner"] in [MusicArbiter.OWNER_BOSS, MusicArbiter.OWNER_BOSS_FINALE] and held_boss in MusicEngine.BOSS_TRACKS:
+		engine.cancel_pending()
+		_begin_boss("boss_arena_entered", held_boss)
+		engine.set_brindle_phase(_boss_phase)
+		if _boss_phase > 1 or bool(plan["is_boss_finale"]):
+			_phase_music_done = 1
+			phase_music(_boss_phase)
+		_log_cue(["radio", "score", "bar", engine.next_bar(), 1.0])
+		return
+	if _stage_now <= 0:
 		return
 	engine.cancel_pending()
-	if is_instance_valid(_miniboss):
+	if plan["owner"] == MusicArbiter.OWNER_WARDEN:
+		engine.force_track("warden", _stage_theme(_stage_now))
+	elif is_instance_valid(_miniboss):
 		engine.force_track("level", _stage_theme(_stage_now))
 		engine.begin_miniboss()
 	else:
-		engine.force_track("warden" if _warden_engaged and ctx.flow.get("sealed") else "level", _stage_theme(_stage_now))
+		engine.force_track("level", _stage_theme(_stage_now))
 	_moment_playing = ""
 	_ace_return(_stage_now, engine.next_bar())
 	_log_cue(["radio", "score", "bar", engine.next_bar(), 1.0])
@@ -1738,11 +1789,97 @@ func _ace_named(id: String, at: int, boss := false, won := true) -> void:
 	_ace_end(ace.grid_beat if ace_playing() else AceSequencer.STOP_RAMP)
 
 
-# The stage's recorded band comes back at `at` (after a radio hold, an ultimate's drop, a
-# landing). Inside a sealed Warden fight it goes straight to the fight's sections: the shelf
-# (the world's roaming take) never plays inside an arena.
+func _in_boss_arena() -> bool:
+	if _flow_state == "boss":
+		return true
+	var flow_node = ctx.get("flow") if ctx != null else null
+	return flow_node != null and flow_node.has_method("state_name") and String(flow_node.state_name()) == "boss"
+
+
+func _active_boss_track() -> String:
+	if not _radio_boss.is_empty():
+		return String(_radio_boss[1])
+	if _boss_arena_track != "":
+		return _boss_arena_track
+	if _in_boss_arena():
+		return _boss_track()
+	return ""
+
+
+func _has_live_champion() -> bool:
+	for id in _champions:
+		if is_instance_valid(_champions[id]):
+			return true
+	return false
+
+
+func _champion_pack_id() -> String:
+	for id in _champion_euro:
+		if _champions.has(id) and is_instance_valid(_champions[id]):
+			var final_track := PhaseMusic.champion_final(pack_available)
+			if final_track != "":
+				return final_track
+	var champion := TuneMoments.remixed("champion", PhaseMusic.CHAMPION, _remixes, tune_available)
+	if champion == PhaseMusic.CHAMPION and not pack_available.call(PhaseMusic.CHAMPION):
+		return ""
+	return champion
+
+
+func _arbiter_state() -> Dictionary:
+	var flow_node = ctx.get("flow") if ctx != null else null
+	var in_play := true
+	if flow_node != null and flow_node.has_method("in_play"):
+		in_play = bool(flow_node.in_play())
+	elif _flow_state != "":
+		in_play = _flow_state in ["stage", "beacon", "gates", "launch", "boss"]
+	var boss_active := _in_boss_arena() or _boss_arena_track != ""
+	var sealed := flow_node != null and bool(flow_node.get("sealed"))
+	return {
+		"flow": _flow_state,
+		"in_play": in_play,
+		"boss_active": boss_active,
+		"boss_track": _active_boss_track() if boss_active else "",
+		"boss_finale": radio_finale or (boss_active and PhaseMusic.is_final(_boss_phase)),
+		"launch_armed": _launch_armed,
+		"warden_fighting": _warden_fighting,
+		"warden_engaged": _warden_engaged,
+		"warden_sealed": sealed,
+		"ult_flight": _ult_armed and (_ult_took_band or _ace_flight),
+		"radio_hold": radio_hold,
+		"radio_pinned": radio_pinned,
+		"champion_alive": _has_live_champion() and _champion_pack_id() != "",
+		"moment_id": TuneMoments.top(_moments, tune_available),
+		"miniboss_live": is_instance_valid(_miniboss),
+		"stage": _stage_now,
+	}
+
+
+func _restore_champion_pack(at: int) -> bool:
+	var pack := _champion_pack_id()
+	if pack == "":
+		return false
+	_champion_hyped = true
+	_ace_named(pack, at, true)
+	return true
+
+
+func _disarm_ultimate() -> void:
+	_ult_armed = false
+	_ult_took_band = false
+
+
 func _ace_return(stage: int, at: int) -> void:
-	_ace_stage(stage, at, _warden_engaged and bool(ctx.flow.get("sealed")))
+	var plan := MusicArbiter.resolve(_arbiter_state())
+	match plan["owner"]:
+		MusicArbiter.OWNER_WARDEN:
+			_ace_stage(stage, at, true)
+		MusicArbiter.OWNER_CHAMPION:
+			if not _restore_champion_pack(at):
+				_ace_stage(stage, at, false)
+		MusicArbiter.OWNER_ULT, MusicArbiter.OWNER_LAUNCH, MusicArbiter.OWNER_DEAD:
+			return
+		_:
+			_ace_stage(stage, at, false)
 
 
 # The music has moved on from the stage an ultimate took the recorded band from (a launch,
@@ -2162,6 +2299,9 @@ func _admit(kind: String, sound: String, pitch: float) -> bool:
 func _start(kind: String, sound: String, stream: AudioStream, volume: float, pitch: float, bus: String) -> void:
 	var playback := _ui if bus == "UI" else _sfx
 	if playback != null:
+		var cls := SfxBudget.voice_class(kind, _is_telegraph(kind, sound), bus)
+		for old_id in _sfx_budget.reserve(cls, playback.is_stream_playing):
+			playback.stop_stream(old_id)
 		var live: Array = _voices.get(sound, [])
 		live = live.filter(func(id: int): return playback.is_stream_playing(id))
 		if live.size() >= int(VOICE_LIMIT.get(sound, MixRows.VOICE_DEFAULT)):
@@ -2170,6 +2310,7 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 		var id := playback.play_stream(stream, 0.0, volume + room, pitch, AudioServer.PLAYBACK_TYPE_DEFAULT, bus)
 		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
 			live.append(id)
+			_sfx_budget.record(cls, id)
 			if playback == _sfx:
 				_voice_db[id] = [sound, volume, engine.clock]
 				if room != 0.0:
@@ -2472,7 +2613,12 @@ func wire_optional() -> void:
 		_read_ahead_after(engaged)
 		_begin_boss("warden_engaged", "warden")
 		engine.parameter_danger("warden_engaged")
-		if ace_playing():
+		if ace_playing() and ace.flat and radio_hold == "" and _stage_now > 0 \
+				and MusicArbiter.resolve(_arbiter_state())["owner"] == MusicArbiter.OWNER_WARDEN:
+			_champion_hyped = false
+			_moment_playing = ""
+			_ace_stage(_stage_now, engine.next_bar(), true)
+		elif ace_playing():
 			ace.commit_warden()
 		elif _ace_arrival_stage > 0 and _ace_arrival_at >= 0:
 			# A drop still holds the recorded band (an ultimate's, a landing's): the Warden's
@@ -3099,6 +3245,7 @@ func mix_state() -> String:
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_drop_babble()
 	_stage_now = stage
+	_boss_arena_track = ""
 	_set_overtime = false
 	_set_incoming_at = -1.0
 	_champions.clear()
@@ -3369,6 +3516,9 @@ func _begin_boss(kind: String, music: String) -> void:
 		return
 	if kind == "boss_arena_entered":
 		radio_finale = false
+		_champion_hyped = false
+	if music in MusicEngine.BOSS_TRACKS:
+		_boss_arena_track = music
 	if radio_hold != "":
 		if radio_pinned:
 			on_beat(kind, 0.0, true)
@@ -3420,17 +3570,21 @@ func _on_boss_phase_with(phase) -> void:
 func phase_music(phase: int) -> Dictionary:
 	var boss := engine.track
 	if PhaseMusic.is_final(phase) and sound_ready:
-		if radio_hold != "" and not _radio_boss.is_empty():
-			# The finale takes the air from a pinned track: the boss music it held off starts
-			# now, and the final track lands on it. The deck puts the pin back after the fight.
-			var held: Array = _radio_boss
-			_radio_drop("finale")
-			_begin_boss(held[0], held[1])
-			_phase_music_done = 1
-			boss = String(held[1])
+		if radio_hold != "":
+			var held_kind := String(_radio_boss[0]) if not _radio_boss.is_empty() else "boss_arena_entered"
+			var held_boss := _active_boss_track()
+			if held_boss in MusicEngine.BOSS_TRACKS:
+				# The finale takes the air from a pinned track: the boss music starts now
+				# and the final track lands on it. The deck puts the pin back after the fight.
+				_radio_drop("finale")
+				_begin_boss(held_kind, held_boss)
+				_phase_music_done = 1
+				boss = held_boss
 		radio_finale = true
 	if radio_hold != "":
 		return {}
+	if not boss in MusicEngine.BOSS_TRACKS and (_in_boss_arena() or _boss_arena_track != ""):
+		boss = _active_boss_track()
 	if not sound_ready or phase <= _phase_music_done or not ace_wanted():
 		return {}
 	if not boss in MusicEngine.BOSS_TRACKS:
@@ -3467,11 +3621,12 @@ func _champion_joined(enemy: Node3D) -> void:
 	if enemy.has_signal("died"):
 		enemy.connect("died", func(_a = null, _b = null): _champion_gone(id))
 	enemy.tree_exiting.connect(_champion_gone.bind(id), CONNECT_ONE_SHOT)
-	if radio_hold != "" or _champion_hyped or not sound_ready or not ace_wanted() or engine.track != "level":
+	if _champion_hyped or not sound_ready or not ace_wanted() or engine.track != "level":
 		return
-	# A run that rolled the chiptune remix hears it in the champion's place.
-	var champion := TuneMoments.remixed("champion", PhaseMusic.CHAMPION, _remixes, tune_available)
-	if champion == PhaseMusic.CHAMPION and not pack_available.call(PhaseMusic.CHAMPION):
+	if MusicArbiter.resolve(_arbiter_state())["owner"] != MusicArbiter.OWNER_CHAMPION:
+		return
+	var champion := _champion_pack_id()
+	if champion == "":
 		return
 	_champion_hyped = true
 	_ace_named(champion, engine.next_bar(), true)
@@ -3486,8 +3641,10 @@ func _champion_gone(id: int) -> void:
 	if _champions.is_empty() and _champion_hyped:
 		_champion_hyped = false
 		if _stage_now > 0 and engine.track == "level":
-			_ace_stage(_stage_now, engine.next_bar())
-			_log_cue(["champion_gone", "stage", "bar", engine.next_bar(), 1.0])
+			var owner := String(MusicArbiter.resolve(_arbiter_state())["owner"])
+			if owner in [MusicArbiter.OWNER_STAGE, MusicArbiter.OWNER_MOMENT]:
+				_ace_stage(_stage_now, engine.next_bar())
+				_log_cue(["champion_gone", "stage", "bar", engine.next_bar(), 1.0])
 
 
 # --- The place-and-moment tunes (tune_moments.gd, design-v3/sound/tunes.json) -----------
@@ -3604,6 +3761,12 @@ func warden_took_band() -> void:
 	_warden_engaged = true
 	_warden_fighting = true
 	_moments.clear()
+	if _champion_hyped:
+		_champion_hyped = false
+		_moment_playing = ""
+		if radio_hold == "" and sound_ready and ace_wanted() and _stage_now > 0:
+			_ace_stage(_stage_now, engine.next_bar(), true)
+		return
 	_refresh_moment(true)
 
 
@@ -3637,6 +3800,8 @@ func _tend_champions() -> void:
 		if not is_instance_valid(enemy) or _champion_euro.has(id):
 			continue
 		if PhaseMusic.champion_in_final_third(_num(enemy, "hp", 1.0), _num(enemy, "max_hp", 1.0)):
+			if MusicArbiter.resolve(_arbiter_state())["owner"] != MusicArbiter.OWNER_CHAMPION:
+				return
 			_champion_euro[id] = true
 			var when := PhaseMusic.drop_plan(engine.clock, engine.next_bar(), engine.bar_len(), Harmony.RATE)
 			engine.schedule_stinger_at("hype_drop", int(when["start"]))
@@ -3652,6 +3817,7 @@ static func _argc(events: Object, signal_name: String) -> int:
 func _on_boss_defeated() -> void:
 	_radio_drop("victory")
 	radio_finale = false
+	_boss_arena_track = ""
 	on_beat("boss_defeated", 0.0, true)
 	engine.victory()
 
@@ -4691,6 +4857,8 @@ func _flush_flow() -> void:
 			"run":
 				_radio_drop("flow")
 				_disarm_launch()
+				_disarm_ultimate()
+				_boss_arena_track = ""
 				engine.cancel_pending()
 				engine.parameters_run_started()
 				var start := on_beat("run_started", 0.0, true)
@@ -4744,6 +4912,8 @@ func _flush_flow() -> void:
 					engine.schedule_cadence(start)
 			"end":
 				_radio_drop("flow")
+				_disarm_ultimate()
+				_boss_arena_track = ""
 				var won: bool = item[1]
 				# A chain the run's end cut short never lands over the summary.
 				_streak_landed_ms = kill_streak.last_ms
@@ -4772,6 +4942,8 @@ func _flush_flow() -> void:
 			"dead":
 				_radio_drop("flow")
 				_disarm_launch()
+				_disarm_ultimate()
+				_boss_arena_track = ""
 				engine.cancel_pending()
 				# A chain the death cut short never lands: the band reads PLAY until the boom's beat.
 				_streak_landed_ms = kill_streak.last_ms
@@ -4784,6 +4956,8 @@ func _flush_flow() -> void:
 						_note_at("player_died", DEATH_FALL_VOICE, DEATH_FALL[i], at + i * grid_unit(2), SfxBank.DEATH_FALL_DB, true)
 			"idle":
 				_radio_drop("flow")
+				_disarm_ultimate()
+				_boss_arena_track = ""
 				var at := engine.next_beat()
 				engine.schedule_mode(at, MusicEngine.IDLE)
 				# The title's own theme, kept across the class select.
@@ -5251,7 +5425,7 @@ func _tend_set() -> void:
 		return
 	if _set_answer != "" and _set_answer_spoiled():
 		_drop_set_answer()
-		ace.trim_at(maxi(ace.clock, _set_answer_at - grid_unit(4)), {}, grid_unit(4))
+		ace.invalidate_trims(grid_unit(4))
 	var at: int = ace.next_bar()
 	if at == _set_bar_at or at - ace.clock > ace.grid_bar / 2:
 		return
@@ -5259,10 +5433,11 @@ func _tend_set() -> void:
 	var plan := set_director.read(set_room(at))
 	var ramp := grid_unit(4)
 	if not plan.trims.is_empty() or plan.sweep > 0.0:
-		ace.trim_bar(at, plan.trims, ace.grid_bar, ramp, plan.sweep)
+		ace.trim_bar(at, plan.trims, ace.grid_bar, ramp, plan.sweep, ace.trim_epoch)
 	if plan.answer != "":
 		_set_answer = SfxBank.SET_ANSWER + plan.answer
 		_set_answer_at = at
+		_melody_lease.book(_set_answer, at)
 		engine.schedule_stinger_at(_set_answer, at, PRIORITY_DB[1], false, ramp)
 		_log_cue(["set_answer", _set_answer, "grid", at, 1.0, PRIORITY_DB[1] + SfxBank.trim_db(_set_answer)])
 	if plan.move != "hold":
@@ -5272,20 +5447,31 @@ func _tend_set() -> void:
 # June's booked answer gives way when the bar it was booked for turns into a fight section,
 # a warning, a caller or a pilot quote after it was booked, through to the end of its bar.
 func _set_answer_spoiled() -> bool:
+	var allowed := bool(MusicArbiter.resolve(_arbiter_state())["allow_dj"]) and not ace.flat
+	var spoiled := _melody_lease.should_preempt({
+		"answer_id": _set_answer,
+		"answer_at": _set_answer_at,
+		"clock_samples": ace.clock,
+		"bar_samples": ace.grid_bar,
+		"allowed": allowed,
+		"warning": clock < _focus_until or _warden_charging,
+		"busy": _set_busy(),
+		"ace_mode": ace.mode,
+		"ace_section": ace.section,
+		"pending_section": String(ace.pending.get("section", "")),
+	})
 	if ace.clock >= _set_answer_at + ace.grid_bar:
 		_set_answer = ""
-		return false
-	var next := String(ace.pending.get("section", ""))
-	if ace.mode == "piece" or ace.section in SET_ANSWER_YIELDS or next in SET_ANSWER_YIELDS:
-		return true
-	return clock < _focus_until or _warden_charging or _set_busy()
+	return spoiled
 
 
 func _drop_set_answer() -> void:
 	if _set_answer != "":
 		engine.cancel_stinger(_set_answer)
-		_log_cue(["set_answer_dropped", _set_answer, "grid", ace.clock, 1.0])
+		var at: int = ace.clock if ace != null else (engine.clock if engine != null else 0)
+		_log_cue(["set_answer_dropped", _set_answer, "grid", at, 1.0])
 		_set_answer = ""
+		_melody_lease.release()
 
 
 # Another melodic cue owns the bar: a caller still talking, or a pilot quote inside two bars.

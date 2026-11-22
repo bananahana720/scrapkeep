@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-verify-formal
-description: "Check by TLA+ model, kept beside this skill, the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue); that an earned reward or earned save is spent or banked once through crashes, failed saves and two games; that a park flood never holds full water under the ball; that a heft destructible pays once; that a yard lock opens, pays once and never shuts on an awake Warden; and that combat's deferred procs stay one step deep and never outlive their attempt. Use when a change touches flow.gd, launch_take.gd, the swipe calls in game.gd, profile.gd, safe_store.gd, run_store.gd, progress.gd's settle and grant, event_director.gd's park step, destructibles.gd, stage_locks.gd, overtime.gd, combat.gd's queues or bolts.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
+description: "Check by TLA+ model, kept beside this skill, the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue); that an earned reward or earned save is spent or banked once through crashes, failed saves and two games; that a park flood never holds full water under the ball; that a heft destructible pays once; that a yard lock opens, pays once and never shuts on an awake Warden; that combat's deferred procs stay one step deep and never outlive their attempt; and that the music arbiter and melody lease hold. Use when a change touches flow.gd, launch_take.gd, the swipe calls in game.gd, profile.gd, safe_store.gd, run_store.gd, progress.gd, event_director.gd, destructibles.gd, stage_locks.gd, overtime.gd, combat.gd's queues, bolts.gd, music_arbiter.gd, melody_lease.gd, audio.gd or ace_sequencer.gd, or when asked to formally verify or model-check; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
 ---
 
 # Check the run flow against its model
@@ -137,6 +137,22 @@ Run `bash $F/models/make-yardlock-configs.sh`, then plain TLC on each `yardlock-
 ## The deferred effects model
 
 `models/DeferredEffects.tla` (FV-3) checks what `sketches/core-loop/src/combat/combat.gd` holds now and fires later (Rake Heart returns, Fault Hammer aftershocks, Second Bell tolls, Backwash strips, Twin Discharge echoes, pending casts and bites, the Slag Pike count, guard links, heat, exposure marks) and the shot bits `sketches/core-loop/src/combat/bolts.gd` carries through a split or a bounce, across every stage entry, retry, arena clear, death, quit and new run. Its rules: `ProcDepthOne` (nothing a proc fires queues or fires another proc), `NoEchoAcrossAttempt` (nothing an attempt queued fires in another, and play never starts holding one) and `ShotBitsCap` (at most three bits, one split, one glance, children that never pull again or carry hoar, no exposure mark without its row). Run `bash $F/models/make-deferred-configs.sh`, then plain TLC on each `deferred-*.cfg`; [references/deferred-coverage.md](references/deferred-coverage.md) maps the steps and guards, [references/deferred-findings.md](references/deferred-findings.md) holds the findings (none open), and `--row deferred-effects-safe` writes the receipt.
+
+## The sound arbiter model
+
+`models/SoundArbiter.tla` checks the Sound V4 music ownership arbiter and melodic lane lease across `sketches/core-loop/src/presentation/music_arbiter.gd`, `sketches/core-loop/src/presentation/melody_lease.gd`, `sketches/core-loop/src/presentation/audio.gd` and `sketches/core-loop/src/presentation/ace_sequencer.gd`:
+
+| Rule | The promise | What breaks for the player |
+| ---- | ----------- | -------------------------- |
+| `WardenOwnsFightMusic` | An engaged, sealed Warden plays the sectioned stage pack unless radio is pinned. | A live champion flat pack silences Warden form drops. |
+| `BossMusicInArena` | Inside a boss arena with unpinned radio, the boss track owns the deck. | Unpinning radio mid-boss drops back to stage roam. |
+| `BossFinaleWinsOverAll` | Boss phase 3 finale owns the deck even over a pinned radio. | Pinned radio holds over the final boss phase. |
+| `UltimateRestoresChampion` | Leaving an ultimate or radio while a champion lives restores the champion pack. | Returning from an ultimate drops champion music to roam. |
+| `DeathClearsUltFlight` | Player death clears armed ultimate flight state. | Stale flight flags survive death. |
+| `OneMelodyNoClash` | June's set-director answer plays only on allowed stage sections with no warning. | June talks over a warning, drop or directed break. |
+| `NoStaleTrim` | Any active stem trim matches the live deck epoch and June's lease. | A cancelled bar trim dims stems on the next section or pack. |
+
+Run `bash $F/models/make-sound-configs.sh`, then plain TLC on each `sound-*.cfg` with `SoundArbiter.tla`. [references/sound-coverage.md](references/sound-coverage.md) maps each step and guard to the code; [references/sound-findings.md](references/sound-findings.md) records the four closed findings (SA-1 to SA-4). `node scripts/gate/model-receipts.mjs --out <dir> --row sound-arbiter-safe` writes its receipt.
 
 ## Lessons and updates
 

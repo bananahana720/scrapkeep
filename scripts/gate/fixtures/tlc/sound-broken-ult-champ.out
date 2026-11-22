@@ -1,0 +1,79 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 71 and seed -8961168708266575078 with 2 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/SoundArbiter.tla
+Parsing file <tmp>/Naturals.tla
+Semantic processing of module Naturals
+Semantic processing of module SoundArbiter
+Starting... (2026-11-21 18:43:37)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-21 18:43:37.
+Error: Invariant UltimateRestoresChampion is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ trim_epoch = 0
+/\ warning_on = FALSE
+/\ warden_section = "build"
+/\ ult_armed = FALSE
+/\ trim_active = FALSE
+/\ melody_owner = "lead_stem"
+/\ flow = "stage"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ champion_hyped = FALSE
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ warden_engaged = FALSE
+/\ warden_sealed = FALSE
+
+State 2: <ChampionJoins line 109, col 5 to line 115, col 55 of module SoundArbiter>
+/\ trim_epoch = 0
+/\ warning_on = FALSE
+/\ warden_section = "build"
+/\ ult_armed = FALSE
+/\ trim_active = FALSE
+/\ melody_owner = "lead_stem"
+/\ flow = "stage"
+/\ dj_epoch = 1
+/\ deck_pack = "flat_champ"
+/\ champion_hyped = TRUE
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ warden_engaged = FALSE
+/\ warden_sealed = FALSE
+
+State 3: <RadioPin line 171, col 5 to line 178, col 58 of module SoundArbiter>
+/\ trim_epoch = 0
+/\ warning_on = FALSE
+/\ warden_section = "build"
+/\ ult_armed = FALSE
+/\ trim_active = FALSE
+/\ melody_owner = "lead_stem"
+/\ flow = "stage"
+/\ dj_epoch = 2
+/\ deck_pack = "radio_track"
+/\ champion_hyped = TRUE
+/\ boss_phase = 1
+/\ radio_state = "track_pinned"
+/\ warden_engaged = FALSE
+/\ warden_sealed = FALSE
+
+State 4: <RadioUnpin line 181, col 5 to line 190, col 58 of module SoundArbiter>
+/\ trim_epoch = 0
+/\ warning_on = FALSE
+/\ warden_section = "build"
+/\ ult_armed = FALSE
+/\ trim_active = FALSE
+/\ melody_owner = "lead_stem"
+/\ flow = "stage"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ champion_hyped = TRUE
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ warden_engaged = FALSE
+/\ warden_sealed = FALSE
+
+129 states generated, 92 distinct states found, 72 states left on queue.
+The depth of the complete state graph search is 5.
+The average outdegree of the complete state graph is 5 (minimum is 0, the maximum 9 and the 95th percentile is 9).
+Finished in 00s at (2026-11-21 18:43:37)

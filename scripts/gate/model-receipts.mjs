@@ -284,6 +284,30 @@ export const ROWS = {
       "Backwash's strip is laid on a dash or boost fact without an in_play check; the model lets the ball dash only in play (its input is frozen otherwise)",
     ],
   },
+  "sound-arbiter-safe": {
+    spec: "SoundArbiter.tla",
+    real: [
+      {
+        cfg: "sound-today.cfg",
+        minStates: 1116,
+        label:
+          "music deck ownership arbiter, melody lease and epoch-stamped trims across stage, champion, Warden, boss, radio, ultimate, warning and death (Sound V4)",
+      },
+    ],
+    plants: [
+      { cfg: "sound-broken-warden-champ.cfg", rule: "WardenOwnsFightMusic" },
+      { cfg: "sound-broken-unpin-boss.cfg", rule: "BossMusicInArena" },
+      { cfg: "sound-broken-ult-champ.cfg", rule: "UltimateRestoresChampion" },
+      { cfg: "sound-broken-death-ult.cfg", rule: "DeathClearsUltFlight" },
+      { cfg: "sound-broken-melody-clash.cfg", rule: "OneMelodyNoClash" },
+      { cfg: "sound-broken-stale-trim.cfg", rule: "NoStaleTrim" },
+    ],
+    coverage: "references/sound-coverage.md",
+    gaps: [
+      "sample-accurate timing, Music bus DSP filter cutoffs and StingerMusic reverb (music_dsp.gd) are left to tests/music_dsp_test.gd; SFX voice-class budgets (sfx_budget.gd) are left to tests/sound_arbiter_test.gd",
+      "jukebox title spins, launch-to-next-stage landings (covered by RunFlow.tla), and miniboss or moment tunes below champion priority are not modelled",
+    ],
+  },
 };
 
 const num = (s) => Number(s.replaceAll(",", ""));
