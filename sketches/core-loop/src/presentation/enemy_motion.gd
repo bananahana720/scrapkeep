@@ -92,6 +92,33 @@ class ShiftOverTag extends Node3D:
 	var _visual: Node3D
 	var _half_thick := 0.06
 
+	func mount_visual(assets: Dictionary, initial_turn: Basis) -> void:
+		turn = initial_turn
+		_visual = Node3D.new()
+		_visual.name = "BrassTag"
+		_visual.basis = turn
+		add_child(_visual)
+		var plate := MeshInstance3D.new()
+		plate.name = "Plate"
+		plate.mesh = assets["plate"]
+		plate.material_override = assets["brass"]
+		plate.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_visual.add_child(plate)
+		var rivet := MeshInstance3D.new()
+		rivet.name = "Rivet"
+		rivet.mesh = assets["rivet"]
+		rivet.material_override = assets["ink"]
+		rivet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		rivet.position = Vector3(-TAG_SIZE.x * 0.32, 0.0, 0.0)
+		_visual.add_child(rivet)
+		var stripe := MeshInstance3D.new()
+		stripe.name = "Stamp"
+		stripe.mesh = assets["stripe"]
+		stripe.material_override = assets["rust"]
+		stripe.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		stripe.position = Vector3(TAG_SIZE.x * 0.12, 0.0, 0.0)
+		_visual.add_child(stripe)
+
 	func life() -> float:
 		return TAG_LIFE + (TAG_REST if ground.is_valid() else 0.0)
 
@@ -164,30 +191,6 @@ static func pop_shift_tag(enemy: Node3D, kind: String, direction: Vector3, land 
 	enemy.get_parent().add_child(tag)
 	var at := enemy.global_position
 	tag.global_position = at + Vector3.UP * TAG_LIFT
-	var visual := Node3D.new()
-	visual.name = "BrassTag"
-	tag.add_child(visual)
-	tag._visual = visual
-	var plate := MeshInstance3D.new()
-	plate.name = "Plate"
-	plate.mesh = assets["plate"]
-	plate.material_override = assets["brass"]
-	plate.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	visual.add_child(plate)
-	var rivet := MeshInstance3D.new()
-	rivet.name = "Rivet"
-	rivet.mesh = assets["rivet"]
-	rivet.material_override = assets["ink"]
-	rivet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	rivet.position = Vector3(-TAG_SIZE.x * 0.32, 0.0, 0.0)
-	visual.add_child(rivet)
-	var stripe := MeshInstance3D.new()
-	stripe.name = "Stamp"
-	stripe.mesh = assets["stripe"]
-	stripe.material_override = assets["rust"]
-	stripe.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	stripe.position = Vector3(TAG_SIZE.x * 0.12, 0.0, 0.0)
-	visual.add_child(stripe)
 	var seed_hash := absi(hash(Vector3i(at.round())))
 	var angle := TAU * float(seed_hash % 31) / 31.0
 	var toss := Vector3(direction.x, 0.0, direction.z)
@@ -196,8 +199,7 @@ static func pop_shift_tag(enemy: Node3D, kind: String, direction: Vector3, land 
 	var axis := Vector3(-toss.z, 0.35, toss.x).normalized()
 	tag.spin = axis * TAG_SPIN
 	tag.spin_scale = motion_scale
-	tag.turn = Basis(Vector3.UP, angle) * Basis(Vector3.RIGHT, 0.45)
-	visual.basis = tag.turn
+	tag.mount_visual(assets, Basis(Vector3.UP, angle) * Basis(Vector3.RIGHT, 0.45))
 	if land.is_valid():
 		tag.ground = land
 	return tag
