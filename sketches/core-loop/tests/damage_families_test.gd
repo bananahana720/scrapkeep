@@ -7,9 +7,9 @@ const T := preload("res://tests/support/t.gd")
 
 # Damage families (design-v3/FIELDS-AND-CASTS.md section 6). Andrew's Q5 "Lean, never a wall"
 # and Q6 "Learn on first hit" (2026-10-17 22:12:39Z):
-# - plated resists kinetic to 60% and is weak to arc and abilities at 150%; weak beats resisted
-#   on one hit; an unarmoured target and a neutral family take 100%; nothing reads below 60%.
-# - live, a drill crew (plated) loses 60%, 100% and 150% of the same punch to a kinetic weapon
+# - plated resists kinetic to 60% and is weak to arc and abilities at 125% (ruling ek); weak beats
+#   resisted on one hit; an unarmoured target and a neutral family take 100%; nothing reads below 60%.
+# - live, a drill crew (plated) loses 60%, 100% and 125% of the same punch to a kinetic weapon
 #   bolt, a frost hit and an arc hit; a hit that falls short of its plating only chips, unread.
 # - the first resisted and the first weak hit each stamp their word, DENT and ZZAP!, once per
 #   run; would_crush asks the same armour question the strike answers (F005);
@@ -40,11 +40,11 @@ class Specced:
 
 
 func _rows() -> void:
-	_t.eq("Q5 values", [DamageFamilies.RESISTED, DamageFamilies.WEAK], [0.6, 1.5])
+	_t.eq("Q5 values", [DamageFamilies.RESISTED, DamageFamilies.WEAK], [0.6, 1.25])
 	_t.eq("plated: kinetic resisted, arc and abilities weak, frost neutral",
 		[DamageFamilies.mult("plated", "ram", "ram_or_contact"), DamageFamilies.mult("plated", "arc", "item_proc"),
 			DamageFamilies.mult("plated", "claw", "special"), DamageFamilies.mult("plated", "frost", "weapon")],
-		[0.6, 1.5, 1.5, 1.0])
+		[0.6, 1.25, 1.25, 1.0])
 	_t.eq("no armour reads nothing", [DamageFamilies.verdict("", "ram", "weapon"), DamageFamilies.mult("", "arc", "special")], ["", 1.0])
 	var floor := 1.0
 	for armour in DamageFamilies.ARMOUR:
@@ -118,7 +118,7 @@ func _live() -> void:
 	c.plates = 0
 	var lost_arc := _loss(c, "arc", PUNCH)
 	_t.near("kinetic deals 60% of a neutral hit", lost_kinetic / lost_frost, 0.6, 0.01)
-	_t.near("arc deals 150% of a neutral hit", lost_arc / lost_frost, 1.5, 0.01)
+	_t.near("arc deals 125% of a neutral hit", lost_arc / lost_frost, 1.25, 0.01)
 	var d := _crew(16.0)
 	var chip := _loss(d, "test_bolt", 10.0, "weapon")
 	_t.check("a hit short of the plating only chips, unread", String(d.get_meta("armour_read", "x")) == "" and chip < 10.0 * 0.6,
@@ -130,8 +130,8 @@ func _live() -> void:
 	f.plating = 0.0
 	f.hp = 20.0
 	var combat = _game.combat
-	_t.eq("would_crush asks the armour too: 30 kinetic, 15 frost, 15 arc on 20 hp",
-		[combat.would_crush(f, "test_bolt", 30.0), combat.would_crush(f, "frost", 15.0), combat.would_crush(f, "arc", 15.0)],
+	_t.eq("would_crush asks the armour too: 30 kinetic, 17 frost, 17 arc on 20 hp",
+		[combat.would_crush(f, "test_bolt", 30.0), combat.would_crush(f, "frost", 17.0), combat.would_crush(f, "arc", 17.0)],
 		[false, false, true])
 	var e := _crew(24.0)
 	var icon := e.get_node_or_null("ArmourIcon") as Node3D
