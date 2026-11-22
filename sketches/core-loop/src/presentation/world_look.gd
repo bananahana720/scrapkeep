@@ -81,7 +81,9 @@ const ARENAS := {
 # enters (arena_look). The Slag Bowl is the Spillway at noon (world 1 unit 12: dawn dam, morning
 # flume, noon bowl), so Brindle's fight is the day's high sun and the pit after it keeps noon.
 const BOWL_SCRIPT := "res://src/boss/arena.gd"
-const DAYLIT_ARENAS := {"brindle": {"world": 1, "time": "noon"}}
+# `over` lays the arena's own air over that: the bowl's furnace smoke, a gold haze that thickens toward the stands.
+const DAYLIT_ARENAS := {"brindle": {"world": 1, "time": "noon",
+	"over": {"fog": {"color": Color("c8a46e"), "density": 0.0016}, "fill_color": Color("c9b898")}}}
 # The camp walk (camp_hub.gd): the Spillway's daylight turned toward late afternoon, a warm low sun over the plaza, thin
 # haze and no volumetric air, so the lamps and marquees carry the evening. Entered on the "camp" slot over the stage row.
 const CAMP := {"name": "camp", "sky": "hdri", "background": Color("243b43"),
@@ -122,18 +124,23 @@ const NODE := "WorldLook"
 const TIME_ORDER := ["dawn", "morning", "noon", "afternoon", "golden", "dusk"]
 const STAGE_TIME := {1: "dawn", 2: "morning", 3: "noon", 4: "afternoon", 5: "golden", 6: "dusk"}
 const TIME_ROWS := {
-	"dawn": {"sun_rotation": Vector3(-8.0, -100.0, 0.0), "sun_color": Color("ffb27a"), "sun_energy": 1.4,
-		"ambient": Color("9db5cf"), "energy": 0.22, "fog_tint": Color("f2c2b4"),
-		"grade": {"top": Color("8e9ccf"), "horizon": Color("ffc3a6"), "recolor": 0.35, "highlight": 1.5,
+	# World 1's three acts (WORLD1-DEMO-CATALYST.md C1, ruling ei): the light colours are the picks off the W46-03 sheet
+	# (its pull request, ruling cq); the energies, angles and grade energies are the day arc's and stay as they were.
+	# The dam's cool desert dawn: violet-indigo canyon shade under a low apricot sun.
+	"dawn": {"sun_rotation": Vector3(-8.0, -100.0, 0.0), "sun_color": Palette.APRICOT, "sun_energy": 1.4,
+		"ambient": Palette.DAWN_VIOLET, "energy": 0.22, "fog_tint": Color("e8bcc4"),
+		"grade": {"top": Color("8486cc"), "horizon": Color("ffbc94"), "recolor": 0.4, "highlight": 1.5,
 			"glow": Color("b8683a"), "energy": 0.8}},
-	"morning": {"sun_rotation": Vector3(-28.0, -70.0, 0.0), "sun_color": Color("ffd49a"), "sun_energy": 2.0,
-		"ambient": Color("a9c4d6"), "energy": 0.26, "fog_tint": Color("e4ecf2"),
-		"grade": {"top": Color("f2f6ff"), "horizon": Color("fff1e0"), "recolor": 0.0, "highlight": 8.0,
-			"glow": Color("2a2214"), "energy": 1.0}},
-	"noon": {"sun_rotation": Vector3(-62.0, -40.0, 0.0), "sun_color": Color("fff1dc"), "sun_energy": 1.4,
-		"ambient": Color("dbe6ec"), "energy": 0.32, "fog_tint": Color("dfe6ea"),
-		"grade": {"top": Color("ffffff"), "horizon": Color("ffffff"), "recolor": 0.0, "highlight": 65504.0,
-			"glow": Color("000000"), "energy": 1.05}},
+	# The flume's morning: turquoise sky and water light over sunlit terracotta stone.
+	"morning": {"sun_rotation": Vector3(-28.0, -70.0, 0.0), "sun_color": Color("ffd09a"), "sun_energy": 2.0,
+		"ambient": Palette.TURQUOISE, "energy": 0.26, "fog_tint": Color("d2eee8"),
+		"grade": {"top": Color("d4f4f0"), "horizon": Color("f5d4c3"), "recolor": 0.2, "highlight": 8.0,
+			"glow": Color("3a2414"), "energy": 1.0}},
+	# The Slag Bowl's smoky furnace gold (DAYLIT_ARENAS adds its smoke). The park's open pit (world 2, parked) is noon too.
+	"noon": {"sun_rotation": Vector3(-62.0, -40.0, 0.0), "sun_color": Color("ffe5b6"), "sun_energy": 1.4,
+		"ambient": Color("e6dac2"), "energy": 0.32, "fog_tint": Color("e8d2a8"),
+		"grade": {"top": Color("f0e6d2"), "horizon": Color("ffe2af"), "recolor": 0.2, "highlight": 8.0,
+			"glow": Color("4a2c10"), "energy": 1.05}},
 	"afternoon": {"sun_rotation": Vector3(-45.0, -15.0, 0.0), "sun_color": Color("ffd7a0"), "sun_energy": 1.7,
 		"ambient": Color("c9c0a8"), "energy": 0.29, "fog_tint": Color("e6dcc8"),
 		"grade": {"top": Color("fbf6ee"), "horizon": Color("ffe6c4"), "recolor": 0.1, "highlight": 8.0,
@@ -216,6 +223,7 @@ static func arena_look(id: String) -> Dictionary:
 		return {}
 	var look := row(spec.world).duplicate()
 	look.merge(TIME_ROWS[spec.time], true)
+	look.merge(spec.get("over", {}), true)
 	look["name"] = id
 	look["time"] = spec.time
 	return look
