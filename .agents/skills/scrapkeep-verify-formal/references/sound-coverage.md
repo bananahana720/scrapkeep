@@ -5,7 +5,7 @@
 The covered files:
 
 - `sketches/core-loop/src/presentation/music_arbiter.gd`: pure priority stack `resolve(state)` deciding the active deck owner (`dead`, `menu`, `boss_finale`, `launch`, `boss`, `warden`, `ult`, `radio`, `champion`, `moment`, `stage`).
-- `sketches/core-loop/src/presentation/melody_lease.gd`: melodic lane ownership, June preemption (`should_preempt`), and monotonic trim epoch (`bump_epoch`, `release`, `trim_valid`).
+- `sketches/core-loop/src/presentation/melody_lease.gd`: melodic lane booking (`book`, `release`, `bump_epoch`) and June preemption (`should_preempt`).
 - `sketches/core-loop/src/presentation/audio.gd`: `_arbiter_state`, `radio_play`, `radio_release`, `_ace_return`, `_begin_boss`, `phase_music`, `_champion_joined`, `_champion_gone`, `warden_took_band`, `warden_engaged`, `_tend_champions`, `_flush_flow` (`dead`/`end`/`run`/`idle`), `_tend_set`, `_set_answer_spoiled`, and `_drop_set_answer`.
 - `sketches/core-loop/src/presentation/ace_sequencer.gd`: `trim_epoch`, `trim_at`, `trim_bar`, `invalidate_trims`, and `_run` epoch validation on `"trim"` and `"sweep"`.
 
@@ -20,12 +20,12 @@ The covered files:
 | `EnterBossArena`       | audio.gd `boss_arena_entered` -> `_begin_boss`: records `_boss_arena_track`, clears `_champion_hyped` and `radio_finale`, and starts the boss track unless radio is pinned. |
 | `BossPhase3Finale`     | audio.gd `phase_music(3)`: drops any held radio track with reason `"finale"` using `_active_boss_track()`, starts the boss finale track, and locks out `radio_play` while `radio_finale` is true. |
 | `RadioPin`             | audio.gd `radio_play`: refuses during a live boss finale, captures `_radio_boss` before `spin()` overwrites `engine.track`, and pins the radio track. |
-| `RadioUnpin`           | audio.gd `radio_release`: captures `_active_boss_track()`, drops radio, and consults `MusicArbiter.resolve(_arbiter_state())` to restore boss finale, boss arena, Warden, champion, miniboss, moment, or stage. |
+| `RadioUnpin`           | audio.gd `radio_release`: captures `_active_boss_track()`, drops radio, and consults `MusicArbiter.resolve(_arbiter_state())` to restore boss finale, boss arena (including phase 2/3 via `phase_music`), Warden, champion, miniboss, moment, or stage. |
 | `UltimateStarts`       | audio.gd `_on_ultimate_started`: arms `_ult_armed` and stops the stage/champion recorded band for the synth build. |
 | `UltimateEnds`         | audio.gd `_on_ultimate_landed` / `_on_ultimate_cancelled` -> `_ace_return`: consults `MusicArbiter.resolve(_arbiter_state())`, restoring Warden or live champion before falling back to stage roam. |
-| `WarningToggle`        | audio.gd `_focus` and `_tend_set`: bumps `_melody_lease.epoch` on warning onset and preempts June's answer plus trims. |
-| `DjStartJuneAnswer`    | audio.gd `_tend_set`: books June's answer through `_melody_lease.book_june` and stamps trims with `ace.trim_epoch`. |
-| `DjEndJuneAnswer`      | audio.gd `_drop_set_answer` / bar expiry: clears `_set_answer`, calls `_melody_lease.release()`, and calls `ace.invalidate_trims()`. |
+| `WarningToggle`        | audio.gd `_focus` sets `_focus_until`; `_tend_set` checks `clock < _focus_until` via `_melody_lease.should_preempt`, drops June's answer, and calls `ace.invalidate_trims()`. |
+| `DjStartJuneAnswer`    | audio.gd `_tend_set`: books June's answer through `_melody_lease.book` and stamps trims with `ace.trim_epoch`. |
+| `DjEndJuneAnswer`      | audio.gd `_drop_set_answer` (with `ace.invalidate_trims()` on spoiled preemption) or bar expiry clears `_set_answer` and calls `_melody_lease.release()`. |
 | `PlayerDies`           | audio.gd `_flush_flow` `"dead"` branch: drops radio, disarms launch, calls `_disarm_ultimate()`, and clears `_boss_arena_track`. |
 
 ## Guards
@@ -57,10 +57,10 @@ Run `bash models/make-sound-configs.sh`, then plain TLC on each `sound-*.cfg` wi
 
 ## The tests behind it
 
-`sketches/core-loop/tests/sound_arbiter_test.gd` exercises the live `Audio` and `AceSequencer` stack on every rule above: Warden preempting a live champion, boss phase 3 finale overriding a mid-arena radio pin, radio unpin restoring the boss arena, ultimate landing and radio release restoring a live champion, death clearing ultimate flight flags, null-safe `_drop_set_answer`, `MelodyLease` preemption, `trim_epoch` rejection, and SFX voice-class budgets. set_director_test.gd, warden_form_test.gd, phase_music_test.gd, and radio_test.gd cover the individual subsystems.
+`sketches/core-loop/tests/sound_arbiter_test.gd` exercises the live `Audio` and `AceSequencer` stack on every rule above: Warden preempting a live champion, boss-backed radio records on Stage 1 returning to Stage 1, boss phase 2 radio unpin restoring phase 2 music, boss phase 3 finale overriding a mid-arena radio pin, ultimate landing and radio release restoring a live champion, death clearing ultimate flight flags, null-safe `_drop_set_answer`, `MelodyLease` preemption, `trim_epoch` rejection, and SFX voice-class budgets. set_director_test.gd, warden_form_test.gd, phase_music_test.gd, and radio_test.gd cover the individual subsystems.
 
 ## Not modelled
 
 Audio sample timing in seconds, bus DSP filter cutoffs and reverb (music_dsp.gd, covered by music_dsp_test.gd), SFX polyphony counts (sfx_budget.gd, covered by sound_arbiter_test.gd), jukebox spins on the title screen, launch-to-next-stage landings (`RunFlow.tla` models launch flow), minibosses and moment tunes below champion priority, and anything drawn or heard on speakers.
 
-Sync commit: 3ea106468 (branch w45/sound-v4-arbiter-dj, 21 November 2026: Sound V4 music arbiter, melody lease, trim epochs, and bus DSP)
+Sync commit: fb1f3adec (branch w45/sound-v4-arbiter-dj, 21 November 2026: review fixes for boss-radio edge cases, threat budget, MelodyLease encapsulation, and MusicDsp dirty check)

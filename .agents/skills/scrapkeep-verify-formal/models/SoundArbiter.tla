@@ -49,16 +49,14 @@ ResolveDeck(fl, we, ws, bp, rs, ch, ua, old_pack) ==
     IF fl = "dead" THEN "dead_cadence"
     ELSE IF fl = "boss" /\ bp = 3 THEN "boss_finale"
     ELSE IF fl = "boss" /\ rs = "track_pinned" THEN "radio_track"
-    ELSE IF fl = "boss" THEN
-        IF GuardUnpinBoss THEN "boss_p1" ELSE old_pack
+    ELSE IF fl = "boss" THEN "boss_p1"
     ELSE IF we /\ ws /\ rs = "track_pinned" THEN "radio_track"
     ELSE IF we /\ ws THEN
         IF GuardWardenOverChamp THEN "stage_sec"
         ELSE IF ch THEN "flat_champ" ELSE "stage_sec"
     ELSE IF ua THEN "ult_flight"
     ELSE IF rs = "track_pinned" THEN "radio_track"
-    ELSE IF ch THEN
-        IF GuardUltStack THEN "flat_champ" ELSE "stage_sec"
+    ELSE IF ch THEN "flat_champ"
     ELSE "stage_sec"
 
 JuneAllowed(fl, we, ws, wsec, dp, warn) ==
@@ -79,15 +77,17 @@ ReconcileMelody(fl, we, ws, wsec, dp, warn, cur_owner, cur_epoch, cur_trim, cur_
 
 NextEpoch(e) == IF e < 2 THEN e + 1 ELSE 0
 
-ApplyArbiter(fl, we, ws, wsec, bp, rs, ch, ua, warn) ==
-    LET dp == ResolveDeck(fl, we, ws, bp, rs, ch, ua, deck_pack)
-        ep == IF dp /= deck_pack THEN NextEpoch(dj_epoch) ELSE dj_epoch
+ApplyDeck(dp, fl, we, ws, wsec, warn) ==
+    LET ep == IF dp /= deck_pack THEN NextEpoch(dj_epoch) ELSE dj_epoch
         rec == ReconcileMelody(fl, we, ws, wsec, dp, warn, melody_owner, ep, trim_active, trim_epoch)
     IN  /\ deck_pack' = dp
         /\ dj_epoch' = ep
         /\ melody_owner' = rec.owner
         /\ trim_active' = rec.trim
         /\ trim_epoch' = rec.tepoch
+
+ApplyArbiter(fl, we, ws, wsec, bp, rs, ch, ua, warn) ==
+    ApplyDeck(ResolveDeck(fl, we, ws, bp, rs, ch, ua, deck_pack), fl, we, ws, wsec, warn)
 
 Init ==
     /\ flow = "stage"
@@ -181,8 +181,11 @@ RadioUnpin ==
     /\ flow \in {"stage", "boss"}
     /\ radio_state = "track_pinned"
     /\ radio_state' = "live"
-    /\ ApplyArbiter(flow, warden_engaged, warden_sealed, warden_section, boss_phase,
-                    "live", champion_hyped, ult_armed, warning_on)
+    /\ LET dp ==
+            IF flow = "boss" /\ ~GuardUnpinBoss THEN "stage_sec"
+            ELSE IF flow = "stage" /\ champion_hyped /\ ~warden_engaged /\ ~ult_armed /\ ~GuardUltStack THEN "stage_sec"
+            ELSE ResolveDeck(flow, warden_engaged, warden_sealed, boss_phase, "live", champion_hyped, ult_armed, deck_pack)
+       IN ApplyDeck(dp, flow, warden_engaged, warden_sealed, warden_section, warning_on)
     /\ UNCHANGED <<flow, warden_engaged, warden_sealed, warden_section, boss_phase,
                    champion_hyped, ult_armed, warning_on>>
 
@@ -199,8 +202,10 @@ UltimateEnds ==
     /\ flow = "stage"
     /\ ult_armed
     /\ ult_armed' = FALSE
-    /\ ApplyArbiter(flow, warden_engaged, warden_sealed, warden_section, boss_phase,
-                    radio_state, champion_hyped, FALSE, warning_on)
+    /\ LET dp ==
+            IF champion_hyped /\ ~warden_engaged /\ radio_state = "live" /\ ~GuardUltStack THEN "stage_sec"
+            ELSE ResolveDeck(flow, warden_engaged, warden_sealed, boss_phase, radio_state, champion_hyped, FALSE, deck_pack)
+       IN ApplyDeck(dp, flow, warden_engaged, warden_sealed, warden_section, warning_on)
     /\ UNCHANGED <<flow, warden_engaged, warden_sealed, warden_section, boss_phase,
                    radio_state, champion_hyped, warning_on>>
 
