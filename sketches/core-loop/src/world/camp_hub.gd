@@ -115,7 +115,7 @@ const QUIP_WIDTH := 330.0
 # sleeves upright, SLEEVE_STEP apart, leaning back, so their tops and the front one's face show over its walls.
 const BIN_AT := Vector3(1.9, 0.0, 0.9)
 const BIN_LIFT := 0.55
-const BIN_STEP := Vector3(0.0, 0.0, 0.9)
+const BIN_STEP := Vector3(0.0, 0.0, 1.35)
 const BIN_SLOTS := 24
 const BIN_MAX := 3
 const BIN_SIZE := Vector3(0.66, 0.3, 1.2)
