@@ -124,13 +124,19 @@ static func kick() -> PackedFloat32Array:
 	var buf := buffer(n)
 	var rng := _rng(11)
 	var phase := 0.0
+	var prev_x := 0.0
+	var prev_y := 0.0
 	for i in n:
 		var t := i * INV_RATE
-		var f := 46.0 + 120.0 * exp(-t * 32.0)
+		var f := 44.0 + 145.0 * exp(-t * 42.0)
 		phase += TAU * f * INV_RATE
-		var body := tanh(1.8 * sin(phase)) * exp(-t * 8.0)
-		var click := rng.randf_range(-1.0, 1.0) * exp(-t * 500.0) * 0.35
-		buf[i] = body + click
+		var body := tanh(2.1 * sin(phase)) * exp(-t * 9.0)
+		var punch := sin(TAU * 180.0 * t) * exp(-t * 95.0) * 0.22
+		var raw_n := rng.randf_range(-1.0, 1.0)
+		prev_y = 0.72 * (prev_y + raw_n - prev_x)
+		prev_x = raw_n
+		var click := prev_y * exp(-t * 420.0) * 0.3
+		buf[i] = body + punch + click
 	return declick(normalize(buf, 0.95), 8, 400)
 
 
@@ -139,12 +145,16 @@ static func snare() -> PackedFloat32Array:
 	var buf := buffer(n)
 	var rng := _rng(12)
 	var low := 0.0
+	var phase := 0.0
 	for i in n:
 		var t := i * INV_RATE
-		var tone := sin(TAU * 188.0 * t) * exp(-t * 30.0) * 0.55 + sin(TAU * 332.0 * t) * exp(-t * 45.0) * 0.2
+		var f := 165.0 + 55.0 * exp(-t * 55.0)
+		phase += TAU * f * INV_RATE
+		var tone := sin(phase) * exp(-t * 26.0) * 0.58 + sin(phase * 1.85) * exp(-t * 45.0) * 0.18
 		var noise := rng.randf_range(-1.0, 1.0)
-		low += (noise - low) * 0.18
-		buf[i] = tone + (noise - low) * exp(-t * 17.0) * 0.85
+		low += (noise - low) * 0.16
+		var wire := (noise - low) * (0.55 * exp(-t * 28.0) + 0.45 * exp(-t * 14.5)) * 0.9
+		buf[i] = tanh((tone + wire) * 1.25)
 	return declick(normalize(buf, 0.85), 8, 300)
 
 
@@ -256,7 +266,7 @@ static func note(instrument: String, midi: int) -> PackedFloat32Array:
 
 
 # A whole keys voicing mixed into one buffer, so a chord stab is one voice to mix
-# instead of four.
+# instead of four. Soft-limited below full scale so 4- and 5-note jazz voicings never clip.
 static func chord(voicing: Array) -> PackedFloat32Array:
 	var key := "chord:%s" % str(voicing)
 	var hit = _cached(key)
@@ -265,12 +275,14 @@ static func chord(voicing: Array) -> PackedFloat32Array:
 	var buf := buffer(Harmony.BAR)
 	for midi in voicing:
 		add_into(buf, note("keys", midi), 0, 0.5)
+	if peak(buf) > 0.85:
+		normalize(buf, 0.85)
 	_store(key, buf)
 	return buf
 
 
-# A warm pad: soft sines an octave apart with a slow swell and a gentle shimmer,
-# pitched an octave under the keys voicing so it sits under the band like heat.
+# A warm analog Juno-style pad: detuned warm voices an octave under the keys voicing
+# through a gentle low-pass swell so it sits under the band like heat without sounding static.
 static func pad_chord(voicing: Array) -> PackedFloat32Array:
 	var key := "pad:%s" % str(voicing)
 	var hit = _cached(key)
@@ -280,12 +292,27 @@ static func pad_chord(voicing: Array) -> PackedFloat32Array:
 	var buf := buffer(n)
 	for midi in voicing:
 		var f := Harmony.hz(midi - 12)
-		var phase := 0.0
+		var inc1 := TAU * f * 0.9974 * INV_RATE
+		var inc2 := TAU * f * 1.0026 * INV_RATE
+		var p1 := float(midi % 7) * 0.41
+		var p2 := float(midi % 5) * 0.67
 		for i in n:
 			var t := i * INV_RATE
-			phase += TAU * f * INV_RATE
-			var swell := minf(1.0, t * 3.0) * (0.9 + 0.1 * sin(TAU * 4.5 * t))
-			buf[i] += (sin(phase) + 0.3 * sin(phase * 2.0) + 0.12 * sin(phase * 3.0)) * swell * 0.25
+			p1 += inc1
+			p2 += inc2
+			var swell := minf(1.0, t * 2.8) * (0.93 + 0.07 * sin(TAU * 0.6 * t))
+			var s1 := sin(p1)
+			var c1 := cos(p1)
+			var v1 := s1 + 0.68 * s1 * c1 + 0.14 * s1 * (3.0 - 4.0 * s1 * s1)
+			var s2 := sin(p2)
+			var c2 := cos(p2)
+			var v2 := s2 + 0.68 * s2 * c2 + 0.14 * s2 * (3.0 - 4.0 * s2 * s2)
+			buf[i] += (v1 + v2) * swell * 0.14
+	var low := 0.0
+	var a := 1.0 - exp(-TAU * 1500.0 * INV_RATE)
+	for i in n:
+		low += a * (buf[i] - low)
+		buf[i] = low
 	declick(normalize(buf, 0.6), 64, 2000)
 	_store(key, buf)
 	return buf
@@ -302,98 +329,144 @@ static func sub(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.8), 64, 600)
 
 
-# Two detuned saws and a quiet octave through a swept resonant low-pass: the classic
-# drum-and-bass growl, kept dark so it never masks the lead.
+# Two detuned saws, a quiet octave and a rock-solid sub fundamental through a swept
+# resonant low-pass: drum-and-bass and electro-house growl that stays grounded and warm.
 static func reese(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
 	var p1 := 0.0
 	var p2 := 0.37
 	var p3 := 0.71
+	var psub := 0.0
 	var low := 0.0
 	var band := 0.0
 	for i in n:
 		var t := i * INV_RATE
-		p1 = fposmod(p1 + f * 1.0087 * INV_RATE, 1.0)
-		p2 = fposmod(p2 + f * 0.9913 * INV_RATE, 1.0)
+		p1 = fposmod(p1 + f * 1.0082 * INV_RATE, 1.0)
+		p2 = fposmod(p2 + f * 0.9918 * INV_RATE, 1.0)
 		p3 = fposmod(p3 + f * 2.0 * INV_RATE, 1.0)
-		var x := (2.0 * p1 - 1.0) + (2.0 * p2 - 1.0) + (2.0 * p3 - 1.0) * 0.3
-		var cutoff := 260.0 + 900.0 * (0.5 + 0.5 * sin(TAU * 1.4 * t - 1.2)) * exp(-t * 0.8) + 180.0
+		psub += TAU * f * INV_RATE
+		var x := (2.0 * p1 - 1.0) + (2.0 * p2 - 1.0) + (2.0 * p3 - 1.0) * 0.28
+		var cutoff := 240.0 + 940.0 * (0.5 + 0.5 * sin(TAU * 1.4 * t - 1.2)) * exp(-t * 0.8) + 180.0
 		var g := 2.0 * sin(PI * cutoff * INV_RATE)
 		low += g * band
-		var high := x - low - 0.55 * band
+		var high := x - low - 0.52 * band
 		band += g * high
-		buf[i] = tanh(low * 0.9) * minf(1.0, t * 250.0)
+		buf[i] = tanh(low * 0.95 + sin(psub) * 0.42) * minf(1.0, t * 250.0)
 	return declick(normalize(buf, 0.75), 64, 800)
 
 
-# An electric piano: a 1:1 FM tine whose brightness falls away, plus a faint bark.
+# A vintage Rhodes electric piano: warm chorused fundamental, gentle FM tine bloom,
+# soft bell-tine attack ping and slow vintage tremolo.
 static func keys(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
-	var phase := 0.0
-	var bark := 0.0
+	var inc1 := TAU * f * INV_RATE
+	var inc2 := TAU * f * 1.0014 * INV_RATE
+	var p1 := 0.0
+	var p2 := 0.21
 	for i in n:
 		var t := i * INV_RATE
-		phase += TAU * f * INV_RATE
-		bark += TAU * f * 14.0 * INV_RATE
-		var index := 1.3 * exp(-t * 5.0) + 0.22
-		var tine := sin(phase + index * sin(phase))
-		buf[i] = (tine + sin(bark) * 0.05 * exp(-t * 60.0)) * minf(1.0, t * 400.0) * exp(-t * 1.1)
+		p1 += inc1
+		p2 += inc2
+		var index := 0.85 * exp(-t * 6.5) + 0.14
+		var warm := sin(p1 + index * sin(p1)) * 0.65 + sin(p2) * 0.35
+		var tine := sin(p1 * 3.0) * 0.13 * exp(-t * 18.0) + sin(p1 * 7.0) * 0.04 * exp(-t * 55.0)
+		var trem := 0.95 + 0.05 * sin(TAU * 4.2 * t)
+		buf[i] = tanh((warm + tine) * 1.12) * trem * minf(1.0, t * 420.0) * exp(-t * 1.05)
 	return declick(normalize(buf, 0.6), 16, 1500)
 
 
-# The lead is a synth saxophone, for Andrew: a scoop into the pitch, reedy self-FM
-# that brightens with the breath, delayed vibrato and a little air. Moss's lounge plays
+# The lead is a warm jazz-house alto saxophone, for Andrew: a scoop into the pitch,
+# warm even-harmonic reed body shaped through a resonant pitch-tracking horn low-pass,
+# delayed vibrato and a soft tongue-breath puff at the onset. Moss's lounge plays
 # the same horn with a wider scoop and a slower, later vibrato (sax_lounge).
 static func lead(midi: int, n: int, scoop_depth := 0.03, vib_rate := 5.6, vib_depth := 0.0055, vib_delay := 0.16) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
 	var rng := _rng(midi)
 	var phase := 0.0
-	var reed := 0.0
 	var air := 0.0
+	var lp_low := 0.0
+	var lp_band := 0.0
+	var base_cut := clampf(f * 3.0, 900.0, 2400.0)
+	var peak_cut := clampf(f * 4.6, 1400.0, 3400.0)
+	var scoop_e := 1.0
+	var scoop_k := exp(-26.0 * INV_RATE)
+	var idx_e := 1.0
+	var idx_k := exp(-4.5 * INV_RATE)
+	var cut_e := 1.0
+	var cut_k := exp(-5.0 * INV_RATE)
+	var puff_e := 1.0
+	var puff_k := exp(-16.0 * INV_RATE)
+	var env_e := 1.0
+	var env_k := exp(-6.0 * INV_RATE)
+	var tail_e := 1.0
+	var tail_k := exp(-0.24 * INV_RATE)
 	for i in n:
 		var t := i * INV_RATE
 		var vibrato := 0.0
 		if t > vib_delay:
 			vibrato = vib_depth * sin(TAU * vib_rate * (t - vib_delay)) * minf(1.0, (t - vib_delay) * 5.0)
-		var scoop := -scoop_depth * exp(-t * 28.0)
-		var freq := f * (1.0 + vibrato + scoop)
+		var freq := f * (1.0 + vibrato - scoop_depth * scoop_e)
 		phase += TAU * freq * INV_RATE
-		reed += TAU * freq * 3.0 * INV_RATE
-		var breath := minf(1.0, t * 40.0)
-		var index := 0.7 + 1.5 * breath - 0.35 * minf(1.0, t * 1.5)
-		var tone := sin(phase + index * sin(phase) + 0.25 * breath * sin(reed))
-		air += (rng.randf_range(-1.0, 1.0) - air) * 0.3
-		buf[i] = (tone + air * 0.05) * breath * (0.92 + 0.08 * exp(-t * 6.0)) * exp(-t * 0.25)
+		var breath := minf(1.0, t * 38.0)
+		var index := 0.38 + 0.56 * breath * (0.72 + 0.28 * idx_e)
+		var sp := sin(phase)
+		var cp := cos(phase)
+		var reed := sin(phase + index * sp) + 0.72 * sp * cp + 0.11 * sp * (3.0 - 4.0 * sp * sp)
+		var cutoff := lerpf(base_cut, peak_cut, breath * (0.65 + 0.35 * cut_e))
+		var g := 2.0 * sin(PI * cutoff * INV_RATE)
+		lp_low += g * lp_band
+		lp_band += g * (reed - lp_low - 0.78 * lp_band)
+		air += (rng.randf_range(-1.0, 1.0) - air) * 0.22
+		var puff := air * (0.015 + 0.045 * puff_e)
+		var horn := tanh((lp_low + lp_band * 0.18) * 0.85)
+		buf[i] = (horn + puff) * breath * (0.94 + 0.06 * env_e) * tail_e
+		scoop_e *= scoop_k
+		idx_e *= idx_k
+		cut_e *= cut_k
+		puff_e *= puff_k
+		env_e *= env_k
+		tail_e *= tail_k
 	return declick(normalize(buf, 0.6), 32, 600)
 
 
-# An inharmonic FM bell for rewards and chimes.
+# A clean celesta-glass chime bell for rewards and harmonic sparkles.
 static func bell(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
 	var phase := 0.0
-	var mod := 0.0
+	var shimmer := 0.0
+	var inc := TAU * f * INV_RATE
+	var inc_shimmer := TAU * f * 2.0028 * INV_RATE
 	for i in n:
 		var t := i * INV_RATE
-		phase += TAU * f * INV_RATE
-		mod += TAU * f * 3.5 * INV_RATE
-		var index := 2.2 * exp(-t * 9.0) + 0.3
-		buf[i] = (sin(phase + index * sin(mod)) * 0.7 + sin(phase * 2.0) * 0.2 * exp(-t * 5.0)) * minf(1.0, t * 800.0) * exp(-t * 3.2)
+		phase += inc
+		shimmer += inc_shimmer
+		var index := 1.15 * exp(-t * 12.0) + 0.1
+		var body := sin(phase + index * sin(phase * 2.0)) * 0.72
+		var oct := sin(shimmer) * 0.2 * exp(-t * 4.5)
+		var ping := sin(phase * 3.0) * 0.11 * exp(-t * 15.0)
+		buf[i] = (body + oct + ping) * minf(1.0, t * 900.0) * exp(-t * 3.1)
 	return declick(normalize(buf, 0.6), 8, 1500)
 
 
-# A soft mallet, the tone of the end-of-cycle melody.
+# A warm marimba-vibraphone bar, the tone of the end-of-cycle melody and pickups.
 static func mallet(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
+	var rng := _rng(midi + 101)
 	var phase := 0.0
+	var low := 0.0
+	var inc := TAU * f * INV_RATE
 	for i in n:
 		var t := i * INV_RATE
-		phase += TAU * f * INV_RATE
-		buf[i] = (sin(phase) * exp(-t * 5.0) + 0.35 * sin(phase * 4.0) * exp(-t * 22.0) + 0.15 * sin(phase * 10.0) * exp(-t * 60.0)) * minf(1.0, t * 900.0)
+		phase += inc
+		low += (rng.randf_range(-1.0, 1.0) - low) * 0.14
+		var bar := sin(phase) * exp(-t * 4.6) + 0.16 * sin(phase * 2.0) * exp(-t * 11.0) + 0.3 * sin(phase * 4.0) * exp(-t * 22.0)
+		var knock := low * exp(-t * 145.0) * 0.22
+		buf[i] = (bar + knock) * minf(1.0, t * 950.0)
 	return declick(normalize(buf, 0.6), 8, 1200)
 
 
@@ -433,25 +506,31 @@ static func clav(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.6), 8, 600)
 
 
-# Brass: two detuned saws whose filter swells open with the breath, then settles.
+# Brass: a three-voice unison horn section with a warm sub-octave anchor whose filter
+# swells open with the breath and settles rich rather than buzzy.
 static func brass(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
 	var p1 := 0.0
-	var p2 := 0.5
+	var p2 := 0.33
+	var p3 := 0.67
+	var psub := 0.0
 	var low := 0.0
 	var band := 0.0
 	for i in n:
 		var t := i * INV_RATE
-		p1 = fposmod(p1 + f * 1.004 * INV_RATE, 1.0)
-		p2 = fposmod(p2 + f * 0.996 * INV_RATE, 1.0)
-		var x := (2.0 * p1 - 1.0) + (2.0 * p2 - 1.0)
-		var swell := minf(1.0, t * 22.0)
-		var cutoff := 350.0 + 2600.0 * swell * (0.65 + 0.35 * exp(-t * 6.0))
+		p1 = fposmod(p1 + f * 1.0052 * INV_RATE, 1.0)
+		p2 = fposmod(p2 + f * 0.9948 * INV_RATE, 1.0)
+		p3 = fposmod(p3 + f * INV_RATE, 1.0)
+		psub += TAU * f * 0.5 * INV_RATE
+		var x := ((2.0 * p1 - 1.0) + (2.0 * p2 - 1.0) + (2.0 * p3 - 1.0)) * 0.45
+		var swell := minf(1.0, t * 24.0)
+		var bite := 1.0 + 0.28 * exp(-t * 26.0)
+		var cutoff := minf((320.0 + 2150.0 * swell * (0.62 + 0.38 * exp(-t * 5.5))) * bite, 5500.0)
 		var g := 2.0 * sin(PI * cutoff * INV_RATE)
 		low += g * band
-		band += g * (x - low - 0.5 * band)
-		buf[i] = tanh(low * 0.8) * swell * exp(-t * 0.6)
+		band += g * (x - low - 0.58 * band)
+		buf[i] = tanh((low + sin(psub) * 0.24) * 1.05) * swell * exp(-t * 0.58)
 	return declick(normalize(buf, 0.6), 32, 800)
 
 
@@ -483,22 +562,24 @@ static func talk(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.6), 32, 800)
 
 
-# Funk bass: saw and square, plucked through a closing filter.
+# Funk bass: saw and square plucked through a closing filter over a solid sub sine anchor.
 static func fbass(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
 	var phase := 0.0
+	var psub := 0.0
 	var low := 0.0
 	var band := 0.0
 	for i in n:
 		var t := i * INV_RATE
 		phase = fposmod(phase + f * INV_RATE, 1.0)
-		var x := (2.0 * phase - 1.0) * 0.6 + (1.0 if phase < 0.5 else -1.0) * 0.4
-		var cutoff := 220.0 + 1800.0 * exp(-t * 18.0)
+		psub += TAU * f * INV_RATE
+		var x := (2.0 * phase - 1.0) * 0.62 + (1.0 if phase < 0.5 else -1.0) * 0.38
+		var cutoff := 210.0 + 1950.0 * exp(-t * 17.0)
 		var g := 2.0 * sin(PI * cutoff * INV_RATE)
 		low += g * band
-		band += g * (x - low - 0.45 * band)
-		buf[i] = tanh(low * 1.3) * minf(1.0, t * 900.0) * exp(-t * 3.5)
+		band += g * (x - low - 0.44 * band)
+		buf[i] = tanh((low * 1.15 + sin(psub) * 0.48) * 1.25) * minf(1.0, t * 900.0) * exp(-t * 3.3)
 	return declick(normalize(buf, 0.75), 16, 600)
 
 
@@ -530,7 +611,8 @@ static func organ_chord(voicing: Array) -> PackedFloat32Array:
 	return buf
 
 
-# A filtered chord stab: brassy saws, dark for the build and bright for the drop.
+# A filtered French-house / blog-house chord stab: detuned unison saws over a warm
+# fundamental, dark for the build and bright for the drop.
 static func stab_chord(voicing: Array, bright: bool) -> PackedFloat32Array:
 	var key := "stab%s:%s" % ["B" if bright else "D", str(voicing)]
 	var hit = _cached(key)
@@ -538,20 +620,27 @@ static func stab_chord(voicing: Array, bright: bool) -> PackedFloat32Array:
 		return hit
 	var n := seconds(0.6)
 	var buf := buffer(n)
-	var top := 3200.0 if bright else 900.0
+	var top := 3400.0 if bright else 1050.0
 	for midi in voicing:
 		var f := Harmony.hz(midi + 12)
-		var phase := 0.0
+		var p1 := float(midi % 5) * 0.19
+		var p2 := float(midi % 7) * 0.31
+		var psub := 0.0
 		var low := 0.0
 		var band := 0.0
 		for i in n:
 			var t := i * INV_RATE
-			phase = fposmod(phase + f * INV_RATE, 1.0)
-			var cutoff := 300.0 + top * exp(-t * 9.0)
+			p1 = fposmod(p1 + f * 1.0042 * INV_RATE, 1.0)
+			p2 = fposmod(p2 + f * 0.9958 * INV_RATE, 1.0)
+			psub += TAU * f * 0.5 * INV_RATE
+			var raw := ((2.0 * p1 - 1.0) + (2.0 * p2 - 1.0)) * 0.55
+			var cutoff := 280.0 + top * exp(-t * 8.5)
 			var g := 2.0 * sin(PI * cutoff * INV_RATE)
 			low += g * band
-			band += g * ((2.0 * phase - 1.0) - low - 0.4 * band)
-			buf[i] += low * 0.25 * exp(-t * 4.0)
+			band += g * (raw - low - 0.45 * band)
+			buf[i] += (low + sin(psub) * 0.2) * 0.24 * exp(-t * 3.8)
+	for i in n:
+		buf[i] = tanh(buf[i] * 1.15)
 	declick(normalize(buf, 0.6), 16, 800)
 	_store(key, buf)
 	return buf
@@ -575,22 +664,22 @@ static func anvil() -> PackedFloat32Array:
 
 
 static func clap() -> PackedFloat32Array:
-	var n := seconds(0.22)
+	var n := seconds(0.24)
 	var buf := buffer(n)
 	var rng := _rng(32)
 	var low := 0.0
 	var band := 0.0
-	var g := 2.0 * sin(PI * 1300.0 * INV_RATE)
+	var g := 2.0 * sin(PI * 1450.0 * INV_RATE)
 	for i in n:
 		var t := i * INV_RATE
 		var burst := 0.0
-		for tap in [0.0, 0.011, 0.023]:
+		for tap in [0.0, 0.009, 0.019, 0.029]:
 			if t >= tap:
-				burst += exp(-(t - tap) * (220.0 if tap < 0.02 else 18.0))
+				burst += exp(-(t - tap) * (240.0 if tap < 0.025 else 16.0))
 		var x := rng.randf_range(-1.0, 1.0) * burst
 		low += g * band
-		band += g * (x - low - 0.6 * band)
-		buf[i] = band
+		band += g * (x - low - 0.55 * band)
+		buf[i] = tanh((band * 0.85 + x * 0.12) * 1.2)
 	return declick(normalize(buf, 0.8), 4, 400)
 
 

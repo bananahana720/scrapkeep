@@ -1625,24 +1625,27 @@ static func _find_radio() -> PackedFloat32Array:
 # --- Scores ----------------------------------------------------------------------------
 
 static func _score_run(at: int) -> Array:
-	return [[at, 0, 2, "kick", 1.0], [at, 0, 16, "crash", 0.55], [at, 62, 2, "lead", 0.7], [at + 2, 69, 2, "lead", 0.7],
-		[at + 4, 72, 1, "lead", 0.7], [at + 5, 74, 3, "lead", 0.75], [at + 8, 77, 2, "lead", 0.75], [at + 10, 76, 2, "lead", 0.7],
-		[at + 12, 74, 4, "lead", 0.75], [at, 53, 3, "keys", 0.35], [at, 57, 3, "keys", 0.35], [at, 60, 3, "keys", 0.35],
-		[at, 64, 3, "keys", 0.35], [at + 10, 53, 4, "keys", 0.35], [at + 10, 57, 4, "keys", 0.35], [at + 10, 60, 4, "keys", 0.35],
-		[at + 10, 64, 4, "keys", 0.35], [at + 4, 0, 1, "snare", 0.7], [at + 12, 0, 1, "snare", 0.8], [at + 10, 0, 1, "kick", 0.8]]
+	return [[at, 0, 2, "kick", 1.0], [at, 0, 16, "crash", 0.55], [at, 38, 10, "sub", 0.55],
+		[at, 62, 2, "lead", 0.65], [at + 2, 69, 2, "lead", 0.7],
+		[at + 4, 72, 1, "lead", 0.68], [at + 5, 74, 3, "lead", 0.78], [at + 8, 77, 2, "lead", 0.8], [at + 10, 76, 2, "lead", 0.72],
+		[at + 12, 74, 4, "lead", 0.82], [at + 12, 86, 4, "bell", 0.24], [at + 12, 62, 4, "brass", 0.32],
+		[at, 53, 3, "keys", 0.38], [at, 57, 3, "keys", 0.36], [at, 60, 3, "keys", 0.36],
+		[at, 64, 3, "keys", 0.36], [at + 10, 53, 5, "keys", 0.38], [at + 10, 57, 5, "keys", 0.36], [at + 10, 60, 5, "keys", 0.36],
+		[at + 10, 64, 5, "keys", 0.38], [at + 4, 0, 1, "snare", 0.7], [at + 12, 0, 1, "snare", 0.82], [at + 10, 0, 1, "kick", 0.85]]
 
 
 # The end-of-cycle melody. It climbs the A7 chord, turns, and lands on D, then the
 # two little "done" beeps land on the home note an octave up.
 static func _score_clear(at: int) -> Array:
-	var tune := [[0, 69], [2, 73], [4, 76], [6, 81], [8, 79], [10, 76], [12, 73], [14, 76]]
-	var score := []
+	var tune := [[0, 69, 0.74], [2, 73, 0.78], [4, 76, 0.82], [6, 81, 0.88], [8, 79, 0.82], [10, 76, 0.78], [12, 73, 0.76], [14, 76, 0.82]]
+	var score := [[at, 57, 14, "keys", 0.24], [at, 61, 14, "keys", 0.22], [at, 64, 14, "keys", 0.22], [at, 67, 14, "keys", 0.22]]
 	for note in tune:
-		score.append([at + note[0], note[1], 2, "mallet", 0.8])
-		score.append([at + note[0], note[1], 2, "beep", 0.25])
-	score.append_array([[at + 16, 74, 8, "mallet", 0.9], [at + 16, 74, 8, "beep", 0.3], [at + 16, 86, 8, "bell", 0.5],
-		[at + 16, 0, 16, "crash", 0.4], [at + 24, 78, 2, "mallet", 0.6], [at + 26, 81, 2, "mallet", 0.6],
-		[at + 28, 86, 4, "mallet", 0.8], [at + 28, 86, 4, "beep", 0.3]])
+		score.append([at + note[0], note[1], 2, "mallet", note[2]])
+		score.append([at + note[0], note[1], 2, "beep", 0.22])
+	score.append_array([[at + 16, 38, 12, "sub", 0.5], [at + 16, 62, 10, "keys", 0.3], [at + 16, 66, 10, "keys", 0.28], [at + 16, 69, 10, "keys", 0.28], [at + 16, 76, 10, "keys", 0.26],
+		[at + 16, 74, 8, "mallet", 0.9], [at + 16, 74, 8, "beep", 0.28], [at + 16, 86, 8, "bell", 0.5],
+		[at + 16, 0, 16, "crash", 0.4], [at + 24, 78, 2, "mallet", 0.65], [at + 26, 81, 2, "mallet", 0.72],
+		[at + 28, 86, 4, "bell", 0.28], [at + 28, 86, 4, "mallet", 0.85], [at + 28, 86, 4, "beep", 0.28]])
 	return score
 
 
@@ -1650,10 +1653,10 @@ static func _score_milestone() -> Array:
 	var score := []
 	var rung := 0
 	for step in 8:
-		score.append([step, 74 + Harmony.pentatonic_step(rung), 1, "bell", 0.55])
+		score.append([step, 74 + Harmony.pentatonic_step(rung), 1, "bell", 0.45 + 0.03 * step])
 		rung += 1
-	score.append_array([[8, 0, 2, "kick", 1.0], [8, 0, 16, "crash", 0.6], [8, 53, 8, "keys", 0.4], [8, 57, 8, "keys", 0.4],
-		[8, 60, 8, "keys", 0.4], [8, 64, 8, "keys", 0.4], [8, 86, 8, "lead", 0.6], [12, 0, 1, "snare", 0.8]])
+	score.append_array([[8, 0, 2, "kick", 1.0], [8, 0, 16, "crash", 0.6], [8, 38, 8, "sub", 0.55], [8, 53, 8, "keys", 0.4], [8, 57, 8, "keys", 0.4],
+		[8, 60, 8, "keys", 0.4], [8, 64, 8, "keys", 0.42], [8, 86, 8, "lead", 0.68], [8, 74, 8, "brass", 0.34], [12, 0, 1, "snare", 0.8]])
 	return score
 
 
@@ -1723,10 +1726,10 @@ static func _ceremony_build() -> PackedFloat32Array:
 # The lid bursts on a D chord with a kick and a crash, then a little tune walks A, B, C up
 # to the home D: a rice cooker's end-of-cycle song, resolved.
 static func _score_ceremony_resolve() -> Array:
-	return [[0, 0, 2, "kick", 1.0], [0, 0, 12, "crash", 0.6], [0, 38, 10, "sub", 0.7],
-		[0, 62, 10, "keys", 0.4], [0, 69, 10, "keys", 0.4], [0, 74, 10, "keys", 0.4], [0, 77, 10, "keys", 0.4],
-		[0, 86, 2, "bell", 0.5], [2, 81, 1, "mallet", 0.7], [3, 83, 1, "mallet", 0.7], [4, 84, 1, "mallet", 0.75],
-		[5, 86, 6, "bell", 0.8], [5, 74, 6, "lead", 0.45], [5, 98, 6, "bell", 0.25]]
+	return [[0, 0, 2, "kick", 1.0], [0, 0, 12, "crash", 0.6], [0, 38, 10, "sub", 0.72],
+		[0, 62, 10, "keys", 0.42], [0, 69, 10, "keys", 0.4], [0, 74, 10, "keys", 0.4], [0, 77, 10, "keys", 0.4], [0, 76, 10, "keys", 0.3],
+		[0, 86, 2, "bell", 0.5], [2, 81, 1, "mallet", 0.68], [3, 83, 1, "mallet", 0.72], [4, 84, 1, "mallet", 0.78],
+		[5, 86, 6, "bell", 0.84], [5, 74, 6, "lead", 0.52], [5, 62, 6, "brass", 0.28], [5, 98, 6, "bell", 0.26]]
 
 
 # --- Recipe helpers --------------------------------------------------------------------
@@ -3091,15 +3094,18 @@ static func _bay_slingshot_out() -> PackedFloat32Array:
 		[_noise(0.25, 800.0, 4000.0, 9.0, 0.01), Synth.seconds(0.16), 0.35]])
 
 
-# The big move is charged: D, F, A, D climbing fast on the mallet, then a bell and its high shimmer on top.
+# The big move is charged: D, F, A, D climbing fast on the mallet, then a warm Rhodes Dm9
+# cushion and bell shimmer on top.
 static func _ultimate_ready() -> PackedFloat32Array:
 	var parts := []
 	var notes := [74, 77, 81, 86]
 	for i in notes.size():
-		parts.append([_cut(_n("mallet", notes[i]), 0.25), Synth.seconds(i * 0.06), 0.7])
-	parts.append([_cut(_n("bell", 86), 0.8, 2400), Synth.seconds(0.2), 0.8])
-	parts.append([_cut(_n("bell", 93), 0.6, 2400), Synth.seconds(0.24), 0.35])
-	parts.append([_fm_sweep(0.24, 300.0, 1400.0, 0.5, 6.0), 0, 0.3])
+		parts.append([_cut(_n("mallet", notes[i]), 0.26), Synth.seconds(i * 0.06), 0.65 + 0.07 * i])
+	for chord_midi in [62, 69, 76]:
+		parts.append([_cut(_n("keys", chord_midi), 0.55, 1600), Synth.seconds(0.18), 0.28])
+	parts.append([_cut(_n("bell", 86), 0.8, 2400), Synth.seconds(0.2), 0.85])
+	parts.append([_cut(_n("bell", 93), 0.6, 2400), Synth.seconds(0.24), 0.36])
+	parts.append([_fm_sweep(0.24, 300.0, 1400.0, 0.5, 6.0), 0, 0.28])
 	return _mix(parts)
 
 
