@@ -1,0 +1,52 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 117 and seed -8269749560647116283 with 2 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/SoundArbiter.tla
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/Naturals.tla
+Semantic processing of module Naturals
+Semantic processing of module SoundArbiter
+Starting... (2026-11-21 20:31:34)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-21 20:31:34.
+Error: Invariant DeckObeysArbiter is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "stage"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
+/\ warden_sealed = FALSE
+
+State 2: <DeckEnablePump line 282, col 5 to line 287, col 91 of module SoundArbiter>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "stage"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ deck_pump = TRUE
+/\ trim_active = FALSE
+/\ warden_section = "build"
+/\ warden_sealed = FALSE
+
+16 states generated, 16 distinct states found, 12 states left on queue.
+The depth of the complete state graph search is 3.
+Finished in 00s at (2026-11-21 20:31:34)

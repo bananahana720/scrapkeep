@@ -7,13 +7,15 @@ CONSTANTS
     GuardUltStack,         \* TRUE: ultimate/radio exit restores live champion pack
     GuardDeathClearsUlt,   \* TRUE: player death clears armed ultimate flight state
     GuardMelodyLease,      \* TRUE: melody lease preempts June on warning/directed/pack change
-    GuardEpochTrim         \* TRUE: epoch check invalidates stale DJ trims on transition
+    GuardEpochTrim,        \* TRUE: epoch check invalidates stale DJ trims on transition
+    GuardDeckArbiter,      \* TRUE: festival deck pump/shots obey arbiter and allowed Warden sections
+    GuardDeckShotClean     \* TRUE: deck shots clear on stop, pack change, death or leaving causing section
 
 VARIABLES
     flow,             \* "stage" | "boss" | "dead"
     warden_engaged,   \* BOOLEAN
     warden_sealed,    \* BOOLEAN
-    warden_section,   \* "build" | "open" | "drop" | "break"
+    warden_section,   \* "build" | "telegraph" | "open" | "drop" | "break"
     boss_phase,       \* 1..3
     radio_state,      \* "live" | "track_pinned"
     champion_hyped,   \* BOOLEAN
@@ -23,17 +25,21 @@ VARIABLES
     melody_owner,     \* "lead_stem" | "june_answer" | "warning" | "none"
     dj_epoch,         \* 0..2
     trim_active,      \* BOOLEAN
-    trim_epoch        \* 0..2
+    trim_epoch,       \* 0..2
+    deck_pump,        \* BOOLEAN
+    deck_shot,        \* "none" | "build" | "breath" | "drop"
+    shot_epoch        \* 0..2
 
 vars == <<flow, warden_engaged, warden_sealed, warden_section, boss_phase,
           radio_state, champion_hyped, ult_armed, warning_on,
-          deck_pack, melody_owner, dj_epoch, trim_active, trim_epoch>>
+          deck_pack, melody_owner, dj_epoch, trim_active, trim_epoch,
+          deck_pump, deck_shot, shot_epoch>>
 
 TypeOK ==
     /\ flow \in {"stage", "boss", "dead"}
     /\ warden_engaged \in BOOLEAN
     /\ warden_sealed \in BOOLEAN
-    /\ warden_section \in {"build", "open", "drop", "break"}
+    /\ warden_section \in {"build", "telegraph", "open", "drop", "break"}
     /\ boss_phase \in 1..3
     /\ radio_state \in {"live", "track_pinned"}
     /\ champion_hyped \in BOOLEAN
@@ -44,6 +50,9 @@ TypeOK ==
     /\ dj_epoch \in 0..2
     /\ trim_active \in BOOLEAN
     /\ trim_epoch \in 0..2
+    /\ deck_pump \in BOOLEAN
+    /\ deck_shot \in {"none", "build", "breath", "drop"}
+    /\ shot_epoch \in 0..2
 
 ResolveDeck(fl, we, ws, bp, rs, ch, ua, old_pack) ==
     IF fl = "dead" THEN "dead_cadence"
@@ -75,16 +84,45 @@ ReconcileMelody(fl, we, ws, wsec, dp, warn, cur_owner, cur_epoch, cur_trim, cur_
     ELSE
         [owner |-> cur_owner, trim |-> cur_trim, tepoch |-> cur_tepoch]
 
+DeckSectionAllowed(fl, we, ws, wsec, dp) ==
+    /\ fl = "stage"
+    /\ dp = "stage_sec"
+    /\ we /\ ws
+    /\ wsec \in {"build", "telegraph", "open", "drop"}
+
+ShotMatchesSection(shot, fl, we, ws, wsec, dp) ==
+    /\ fl = "stage"
+    /\ dp = "stage_sec"
+    /\ we /\ ws
+    /\ CASE shot = "build"  -> wsec = "telegraph"
+         [] shot = "breath" -> wsec = "open"
+         [] shot = "drop"   -> wsec = "drop"
+         [] OTHER           -> FALSE
+
+ReconcileDeck(fl, we, ws, wsec, dp, cur_pump, cur_shot, cur_sepoch, ep) ==
+    LET pump_ok == DeckSectionAllowed(fl, we, ws, wsec, dp)
+        shot_ok == cur_shot /= "none" /\ cur_sepoch = ep /\ ShotMatchesSection(cur_shot, fl, we, ws, wsec, dp)
+    IN [pump   |-> IF pump_ok THEN cur_pump
+                   ELSE IF GuardDeckArbiter THEN FALSE ELSE cur_pump,
+        shot   |-> IF cur_shot = "none" THEN "none"
+                   ELSE IF shot_ok THEN cur_shot
+                   ELSE IF GuardDeckShotClean THEN "none" ELSE cur_shot,
+        sepoch |-> IF cur_shot /= "none" /\ ~shot_ok /\ GuardDeckShotClean THEN ep ELSE cur_sepoch]
+
 NextEpoch(e) == IF e < 2 THEN e + 1 ELSE 0
 
 ApplyDeck(dp, fl, we, ws, wsec, warn) ==
     LET ep == IF dp /= deck_pack THEN NextEpoch(dj_epoch) ELSE dj_epoch
         rec == ReconcileMelody(fl, we, ws, wsec, dp, warn, melody_owner, ep, trim_active, trim_epoch)
+        dk  == ReconcileDeck(fl, we, ws, wsec, dp, deck_pump, deck_shot, shot_epoch, ep)
     IN  /\ deck_pack' = dp
         /\ dj_epoch' = ep
         /\ melody_owner' = rec.owner
         /\ trim_active' = rec.trim
         /\ trim_epoch' = rec.tepoch
+        /\ deck_pump' = dk.pump
+        /\ deck_shot' = dk.shot
+        /\ shot_epoch' = dk.sepoch
 
 ApplyArbiter(fl, we, ws, wsec, bp, rs, ch, ua, warn) ==
     ApplyDeck(ResolveDeck(fl, we, ws, bp, rs, ch, ua, deck_pack), fl, we, ws, wsec, warn)
@@ -104,6 +142,9 @@ Init ==
     /\ dj_epoch = 0
     /\ trim_active = FALSE
     /\ trim_epoch = 0
+    /\ deck_pump = FALSE
+    /\ deck_shot = "none"
+    /\ shot_epoch = 0
 
 ChampionJoins ==
     /\ flow = "stage"
@@ -136,7 +177,7 @@ WardenSectionChanges ==
     /\ flow = "stage"
     /\ warden_engaged
     /\ warden_sealed
-    /\ \E next_sec \in {"build", "open", "drop", "break"} :
+    /\ \E next_sec \in {"build", "telegraph", "open", "drop", "break"} :
         /\ next_sec /= warden_section
         /\ warden_section' = next_sec
         /\ ApplyArbiter(flow, warden_engaged, warden_sealed, next_sec, boss_phase,
@@ -225,7 +266,8 @@ DjStartJuneAnswer ==
     /\ trim_active' = TRUE
     /\ trim_epoch' = dj_epoch
     /\ UNCHANGED <<flow, warden_engaged, warden_sealed, warden_section, boss_phase,
-                   radio_state, champion_hyped, ult_armed, warning_on, deck_pack, dj_epoch>>
+                   radio_state, champion_hyped, ult_armed, warning_on, deck_pack, dj_epoch,
+                   deck_pump, deck_shot, shot_epoch>>
 
 DjEndJuneAnswer ==
     /\ melody_owner = "june_answer"
@@ -233,7 +275,37 @@ DjEndJuneAnswer ==
     /\ trim_active' = FALSE
     /\ trim_epoch' = dj_epoch
     /\ UNCHANGED <<flow, warden_engaged, warden_sealed, warden_section, boss_phase,
-                   radio_state, champion_hyped, ult_armed, warning_on, deck_pack, dj_epoch>>
+                   radio_state, champion_hyped, ult_armed, warning_on, deck_pack, dj_epoch,
+                   deck_pump, deck_shot, shot_epoch>>
+
+DeckEnablePump ==
+    /\ ~deck_pump
+    /\ (DeckSectionAllowed(flow, warden_engaged, warden_sealed, warden_section, deck_pack) \/ ~GuardDeckArbiter)
+    /\ deck_pump' = TRUE
+    /\ UNCHANGED <<flow, warden_engaged, warden_sealed, warden_section, boss_phase,
+                   radio_state, champion_hyped, ult_armed, warning_on, deck_pack,
+                   melody_owner, dj_epoch, trim_active, trim_epoch, deck_shot, shot_epoch>>
+
+DeckBookShot ==
+    /\ deck_shot = "none"
+    /\ DeckSectionAllowed(flow, warden_engaged, warden_sealed, warden_section, deck_pack)
+    /\ warden_section \in {"telegraph", "open", "drop"}
+    /\ deck_shot' = CASE warden_section = "telegraph" -> "build"
+                      [] warden_section = "open"      -> "breath"
+                      [] warden_section = "drop"      -> "drop"
+                      [] OTHER                        -> "none"
+    /\ shot_epoch' = dj_epoch
+    /\ UNCHANGED <<flow, warden_engaged, warden_sealed, warden_section, boss_phase,
+                   radio_state, champion_hyped, ult_armed, warning_on, deck_pack,
+                   melody_owner, dj_epoch, trim_active, trim_epoch, deck_pump>>
+
+DeckFinishShot ==
+    /\ deck_shot /= "none"
+    /\ deck_shot' = "none"
+    /\ shot_epoch' = dj_epoch
+    /\ UNCHANGED <<flow, warden_engaged, warden_sealed, warden_section, boss_phase,
+                   radio_state, champion_hyped, ult_armed, warning_on, deck_pack,
+                   melody_owner, dj_epoch, trim_active, trim_epoch, deck_pump>>
 
 PlayerDies ==
     /\ flow \in {"stage", "boss"}
@@ -263,6 +335,9 @@ Next ==
     \/ WarningToggle
     \/ DjStartJuneAnswer
     \/ DjEndJuneAnswer
+    \/ DeckEnablePump
+    \/ DeckBookShot
+    \/ DeckFinishShot
     \/ PlayerDies
     \/ Done
 
@@ -294,6 +369,15 @@ OneMelodyNoClash ==
 NoStaleTrim ==
     trim_active => (trim_epoch = dj_epoch /\ melody_owner = "june_answer")
 
+DeckObeysArbiter ==
+    /\ (deck_pump => DeckSectionAllowed(flow, warden_engaged, warden_sealed, warden_section, deck_pack))
+    /\ (deck_shot /= "none" => DeckSectionAllowed(flow, warden_engaged, warden_sealed, warden_section, deck_pack))
+
+NoStaleShot ==
+    deck_shot /= "none" =>
+        /\ shot_epoch = dj_epoch
+        /\ ShotMatchesSection(deck_shot, flow, warden_engaged, warden_sealed, warden_section, deck_pack)
+
 \* --- Reachability probes (each must break on a live model) ---
 
 ProbeWardenOverChamp == ~(flow = "stage" /\ warden_engaged /\ champion_hyped /\ deck_pack = "stage_sec")
@@ -301,6 +385,8 @@ ProbeBossFinale == ~(flow = "boss" /\ boss_phase = 3 /\ deck_pack = "boss_finale
 ProbeBossRadioPin == ~(flow = "boss" /\ radio_state = "track_pinned" /\ deck_pack = "radio_track")
 ProbeUltFlight == ~(flow = "stage" /\ ult_armed /\ deck_pack = "ult_flight")
 ProbeJuneAnswer == ~(melody_owner = "june_answer" /\ trim_active)
+ProbeDeckPump == ~(deck_pump /\ deck_pack = "stage_sec")
+ProbeDeckShot == ~(deck_shot = "build" /\ warden_section = "telegraph")
 ProbeDeath == ~(flow = "dead" /\ deck_pack = "dead_cadence")
 
 Spec == Init /\ [][Next]_vars

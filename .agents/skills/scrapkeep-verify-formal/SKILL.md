@@ -140,7 +140,7 @@ Run `bash $F/models/make-yardlock-configs.sh`, then plain TLC on each `yardlock-
 
 ## The sound arbiter model
 
-`models/SoundArbiter.tla` checks the Sound V4 music ownership arbiter and melodic lane lease across `sketches/core-loop/src/presentation/music_arbiter.gd`, `sketches/core-loop/src/presentation/melody_lease.gd`, `sketches/core-loop/src/presentation/audio.gd` and `sketches/core-loop/src/presentation/ace_sequencer.gd`:
+`models/SoundArbiter.tla` checks the Sound V4 music ownership arbiter, melodic lane lease, and festival deck moves across `sketches/core-loop/src/presentation/music_arbiter.gd`, `sketches/core-loop/src/presentation/melody_lease.gd`, `sketches/core-loop/src/presentation/deck_moves.gd`, `sketches/core-loop/src/presentation/audio.gd` and `sketches/core-loop/src/presentation/ace_sequencer.gd`:
 
 | Rule | The promise | What breaks for the player |
 | ---- | ----------- | -------------------------- |
@@ -151,6 +151,8 @@ Run `bash $F/models/make-yardlock-configs.sh`, then plain TLC on each `yardlock-
 | `DeathClearsUltFlight` | Player death clears armed ultimate flight state. | Stale flight flags survive death. |
 | `OneMelodyNoClash` | June's set-director answer plays only on allowed stage sections with no warning. | June talks over a warning, drop or directed break. |
 | `NoStaleTrim` | Any active stem trim matches the live deck epoch and June's lease. | A cancelled bar trim dims stems on the next section or pack. |
+| `DeckObeysArbiter` | The festival pump and deck shots run only on a sectioned pack in `build`, `telegraph`, `open` or `drop` while the arbiter allows the DJ. | Pump or build shots leak onto flat packs, bosses, radio or directed sections. |
+| `NoStaleShot` | No deck shot outlives a stop, pack change, death or the section that caused it. | A snare build or downlifter keeps playing after leaving its section or dying. |
 
 Run `bash $F/models/make-sound-configs.sh`, then plain TLC on each `sound-*.cfg` with `SoundArbiter.tla`. [references/sound-coverage.md](references/sound-coverage.md) maps each step and guard to the code; [references/sound-findings.md](references/sound-findings.md) records the four closed findings (SA-1 to SA-4). `node scripts/gate/model-receipts.mjs --out <dir> --row sound-arbiter-safe` writes its receipt.
 

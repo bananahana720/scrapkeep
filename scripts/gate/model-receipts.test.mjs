@@ -522,6 +522,8 @@ test("the sound arbiter row's pin and plants match captured TLC output, and its 
   assert.deepEqual(sa.plants.map((p) => p.rule).sort(), [
     "BossMusicInArena",
     "DeathClearsUltFlight",
+    "DeckObeysArbiter",
+    "NoStaleShot",
     "NoStaleTrim",
     "OneMelodyNoClash",
     "UltimateRestoresChampion",
@@ -537,6 +539,7 @@ test("the sound arbiter row's pin and plants match captured TLC output, and its 
   for (const f of [
     "presentation/music_arbiter.gd",
     "presentation/melody_lease.gd",
+    "presentation/deck_moves.gd",
     "presentation/audio.gd",
     "presentation/ace_sequencer.gd",
   ])

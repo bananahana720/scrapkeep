@@ -1,63 +1,72 @@
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 78 and seed -1573059171393704469 with 2 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Running breadth-first search Model-Checking with fp 42 and seed 3946334143126324003 with 2 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
 Parsing file <tmp>/SoundArbiter.tla
-Parsing file <tmp>/Naturals.tla
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/Naturals.tla
 Semantic processing of module Naturals
 Semantic processing of module SoundArbiter
-Starting... (2026-11-21 18:43:35)
+Starting... (2026-11-21 20:31:37)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-11-21 18:43:35.
+Finished computing initial states: 1 distinct state generated at 2026-11-21 20:31:37.
 Error: Invariant WardenOwnsFightMusic is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
-/\ trim_epoch = 0
 /\ warning_on = FALSE
-/\ warden_section = "build"
 /\ ult_armed = FALSE
-/\ trim_active = FALSE
-/\ melody_owner = "lead_stem"
 /\ flow = "stage"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
 /\ dj_epoch = 0
 /\ deck_pack = "stage_sec"
-/\ champion_hyped = FALSE
-/\ boss_phase = 1
-/\ radio_state = "live"
-/\ warden_engaged = FALSE
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
 /\ warden_sealed = FALSE
 
-State 2: <ChampionJoins line 109, col 5 to line 115, col 55 of module SoundArbiter>
-/\ trim_epoch = 0
+State 2: <ChampionJoins line 150, col 5 to line 156, col 55 of module SoundArbiter>
 /\ warning_on = FALSE
-/\ warden_section = "build"
 /\ ult_armed = FALSE
-/\ trim_active = FALSE
-/\ melody_owner = "lead_stem"
 /\ flow = "stage"
-/\ dj_epoch = 1
-/\ deck_pack = "flat_champ"
-/\ champion_hyped = TRUE
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
 /\ boss_phase = 1
 /\ radio_state = "live"
+/\ champion_hyped = TRUE
 /\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
+/\ dj_epoch = 1
+/\ deck_pack = "flat_champ"
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
 /\ warden_sealed = FALSE
 
-State 3: <WardenEngages line 126, col 5 to line 133, col 89 of module SoundArbiter>
-/\ trim_epoch = 0
+State 3: <WardenEngages line 167, col 5 to line 174, col 89 of module SoundArbiter>
 /\ warning_on = FALSE
-/\ warden_section = "build"
 /\ ult_armed = FALSE
-/\ trim_active = FALSE
-/\ melody_owner = "lead_stem"
 /\ flow = "stage"
-/\ dj_epoch = 1
-/\ deck_pack = "flat_champ"
-/\ champion_hyped = TRUE
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
 /\ boss_phase = 1
 /\ radio_state = "live"
+/\ champion_hyped = TRUE
 /\ warden_engaged = TRUE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
+/\ dj_epoch = 1
+/\ deck_pack = "flat_champ"
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
 /\ warden_sealed = TRUE
 
-33 states generated, 31 distinct states found, 25 states left on queue.
-The depth of the complete state graph search is 4.
-The average outdegree of the complete state graph is 7 (minimum is 4, the maximum 8 and the 95th percentile is 8).
-Finished in 00s at (2026-11-21 18:43:35)
+23 states generated, 21 distinct states found, 17 states left on queue.
+The depth of the complete state graph search is 3.
+The average outdegree of the complete state graph is 9 (minimum is 8, the maximum 10 and the 95th percentile is 10).
+Finished in 00s at (2026-11-21 20:31:37)

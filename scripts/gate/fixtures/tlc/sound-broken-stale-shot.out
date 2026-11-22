@@ -1,0 +1,110 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 0 and seed -6328634759687702389 with 2 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file <tmp>/SoundArbiter.tla
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/Naturals.tla
+Semantic processing of module Naturals
+Semantic processing of module SoundArbiter
+Starting... (2026-11-21 20:31:35)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-21 20:31:35.
+Error: Invariant NoStaleShot is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "stage"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
+/\ warden_sealed = FALSE
+
+State 2: <WardenEngages line 167, col 5 to line 174, col 89 of module SoundArbiter>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "stage"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = TRUE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
+/\ warden_sealed = TRUE
+
+State 3: <WardenSectionChanges line 177, col 5 to line 186, col 71 of module SoundArbiter>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "stage"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = TRUE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "telegraph"
+/\ warden_sealed = TRUE
+
+State 4: <DeckBookShot line 290, col 5 to line 300, col 79 of module SoundArbiter>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "stage"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = TRUE
+/\ trim_epoch = 0
+/\ deck_shot = "build"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "telegraph"
+/\ warden_sealed = TRUE
+
+State 5: <WardenSectionChanges line 177, col 5 to line 186, col 71 of module SoundArbiter>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "stage"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = TRUE
+/\ trim_epoch = 0
+/\ deck_shot = "build"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
+/\ warden_sealed = TRUE
+
+916 states generated, 357 distinct states found, 239 states left on queue.
+The depth of the complete state graph search is 6.
+The average outdegree of the complete state graph is 3 (minimum is 0, the maximum 11 and the 95th percentile is 8).
+Finished in 00s at (2026-11-21 20:31:35)

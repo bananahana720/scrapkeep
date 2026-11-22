@@ -1,63 +1,72 @@
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 99 and seed 8524291000789921227 with 2 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Running breadth-first search Model-Checking with fp 0 and seed -8662928536761683737 with 2 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
 Parsing file <tmp>/SoundArbiter.tla
-Parsing file <tmp>/Naturals.tla
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/Naturals.tla
 Semantic processing of module Naturals
 Semantic processing of module SoundArbiter
-Starting... (2026-11-21 18:43:38)
+Starting... (2026-11-21 20:31:34)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-11-21 18:43:38.
+Finished computing initial states: 1 distinct state generated at 2026-11-21 20:31:35.
 Error: Invariant OneMelodyNoClash is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
-/\ trim_epoch = 0
 /\ warning_on = FALSE
-/\ warden_section = "build"
 /\ ult_armed = FALSE
-/\ trim_active = FALSE
+/\ flow = "stage"
 /\ melody_owner = "lead_stem"
-/\ flow = "stage"
-/\ dj_epoch = 0
-/\ deck_pack = "stage_sec"
-/\ champion_hyped = FALSE
+/\ shot_epoch = 0
 /\ boss_phase = 1
 /\ radio_state = "live"
+/\ champion_hyped = FALSE
 /\ warden_engaged = FALSE
-/\ warden_sealed = FALSE
-
-State 2: <DjStartJuneAnswer line 222, col 5 to line 228, col 92 of module SoundArbiter>
 /\ trim_epoch = 0
-/\ warning_on = FALSE
-/\ warden_section = "build"
-/\ ult_armed = FALSE
-/\ trim_active = TRUE
-/\ melody_owner = "june_answer"
-/\ flow = "stage"
+/\ deck_shot = "none"
 /\ dj_epoch = 0
 /\ deck_pack = "stage_sec"
-/\ champion_hyped = FALSE
-/\ boss_phase = 1
-/\ radio_state = "live"
-/\ warden_engaged = FALSE
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
 /\ warden_sealed = FALSE
 
-State 3: <ChampionJoins line 109, col 5 to line 115, col 55 of module SoundArbiter>
-/\ trim_epoch = 1
+State 2: <DjStartJuneAnswer line 263, col 5 to line 270, col 53 of module SoundArbiter>
 /\ warning_on = FALSE
-/\ warden_section = "build"
 /\ ult_armed = FALSE
-/\ trim_active = FALSE
-/\ melody_owner = "june_answer"
 /\ flow = "stage"
+/\ melody_owner = "june_answer"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ deck_pump = FALSE
+/\ trim_active = TRUE
+/\ warden_section = "build"
+/\ warden_sealed = FALSE
+
+State 3: <ChampionJoins line 150, col 5 to line 156, col 55 of module SoundArbiter>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "stage"
+/\ melody_owner = "june_answer"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = TRUE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 1
+/\ deck_shot = "none"
 /\ dj_epoch = 1
 /\ deck_pack = "flat_champ"
-/\ champion_hyped = TRUE
-/\ boss_phase = 1
-/\ radio_state = "live"
-/\ warden_engaged = FALSE
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
 /\ warden_sealed = FALSE
 
-154 states generated, 100 distinct states found, 76 states left on queue.
+146 states generated, 103 distinct states found, 82 states left on queue.
 The depth of the complete state graph search is 5.
-The average outdegree of the complete state graph is 4 (minimum is 0, the maximum 9 and the 95th percentile is 8).
-Finished in 00s at (2026-11-21 18:43:38)
+The average outdegree of the complete state graph is 5 (minimum is 0, the maximum 11 and the 95th percentile is 11).
+Finished in 00s at (2026-11-21 20:31:35)
