@@ -17,6 +17,7 @@ contraptions.gd	CylinderMesh	Contraptions/*_geyser/MeshInstance3D	code	-	geyser 
 rescue_site.gd	BoxMesh	*_cage/Node3D/MeshInstance3D	code	-	the cage's dashed ground ring (device.gd ground_ring), the interact mark every device draws; the cage itself is rescue_cage.glb
 stakes.gd	CylinderMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot body (ruling ci, project-guide/handoff/DECISIONS.md:117: the bodies land after the sitting)
 stakes.gd	TorusMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot body (ruling ci, project-guide/handoff/DECISIONS.md:117: the bodies land after the sitting)
+activities.gd	BoxMesh	Activities/Ward_*/MeshInstance3D	stand-in	W46-17	mend ward post (activities.gd _build_ward): a 0.9 by 2.4 m solid slate box waiting for a modelled ward post
 game.gd	BoxMesh	Node3D/ReactorSheet	code	-	the reactor warden's water sheet (warden_reactor.gd _show_sheet): a translucent 24 by 16 m footprint live for 3 s, an attack effect hung on the world root
 accretion.gd	BoxMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
 accretion.gd	CylinderMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
@@ -95,3 +96,5 @@ warden_look.gd	BoxMesh	Jaws/*/MeshInstance3D	code	-	the Warden's jaw plates and 
 warden_kit.gd	*	CharacterBody3D/WardenKit/MeshInstance3D	code	-	the Warden family kit on the clamp (warden_kit.gd header: reactor stacks, hive cells, mind arm); visual audit may reclassify
 crew_lamp_field.gd	SphereMesh	Node3D/CrewLamps	code	-	crew lamp eyes (W1-83): one multimesh of glowing spheres that brighten through the wind-up, a mark meant to be a shape
 game.gd	CapsuleMesh	Node3D/DispatchPod	code	-	the Dispatcher's pod in flight (combat/dispatcher.gd), a lobbed projectile hung on the world root for its flight time
+activities.gd	CylinderMesh	Activities/Ward_*/MeshInstance3D	code	-	mend ward ground ring and charge-fill disc (activities.gd _build_ward): a 5 m charcoal pad and expanding verdigris charge mark
+activities.gd	CylinderMesh	Activities/Plate_*/MeshInstance3D	code	-	lore survey plate (activities.gd _build_plate, W45 P8): a flush charcoal rim and glowing amber disc that sinks to copper when read, a ground mark meant to be a shape
