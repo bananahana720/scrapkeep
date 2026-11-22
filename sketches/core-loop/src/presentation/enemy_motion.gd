@@ -1,6 +1,7 @@
 extends Node3D
 
 const AppShell := preload("res://src/core/app_shell.gd")
+const Palette := preload("res://src/core/palette.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
@@ -60,6 +61,146 @@ const LAND_REST := 0.9
 # A landed piece's spin under this (rad/s) is still: the skid would shrink it toward 1e-22, where
 # normalized() is no longer unit and Basis.rotated rejects the axis (an engine error a tick).
 const SPIN_STILL := 0.01
+
+# The "shift over" gag (STORY-MAP.md, WORLD1-DEMO-CATALYST.md): a downed machine pops its riveted
+# brass requisition tag upward, spinning end-over-end with a grounded clatter bounce, no gore, no
+# word and no collider. Pure presentation: reads only delta and never touches any gameplay clock.
+const TAG_NAME := "ShiftOverTag"
+const TAG_LIFE := 0.9
+const TAG_REST := 0.8
+const TAG_GRAVITY := 22.0
+const TAG_BOUNCE := 0.45
+const TAG_SKID := 0.6
+const TAG_UP := 7.4
+const TAG_OUT := 2.4
+const TAG_SPIN := 12.0
+const TAG_SIZE := Vector3(0.56, 0.055, 0.32)
+const TAG_LIFT := 0.9
+const TAG_EXEMPT := {"vault": true, "warden": true}
+static var _tag_assets: Dictionary = {}
+
+
+class ShiftOverTag extends Node3D:
+	var ground := Callable()
+	var velocity := Vector3.ZERO
+	var spin := Vector3.ZERO
+	var spin_scale := 1.0
+	var turn := Basis.IDENTITY
+	var t := 0.0
+	var bounces := 0
+	var landed := false
+	var _visual: Node3D
+	var _half_thick := 0.06
+
+	func life() -> float:
+		return TAG_LIFE + (TAG_REST if ground.is_valid() else 0.0)
+
+	func floor_y() -> float:
+		if not ground.is_valid():
+			return -INF
+		return float(ground.call(global_position.x, global_position.z)) + _half_thick
+
+	func _physics_process(delta: float) -> void:
+		t += delta
+		var total := life()
+		var size := clampf((total - t) / (TAG_LIFE * SHRINK), SPECK, 1.0)
+		if not landed and spin_scale > 0.0 and spin.length_squared() > 0.0:
+			turn = turn.rotated(spin.normalized(), spin.length() * spin_scale * delta)
+		if _visual != null:
+			_visual.basis = turn * size
+		if not landed:
+			velocity.y -= TAG_GRAVITY * delta
+			global_position += velocity * delta
+			var y_floor := floor_y()
+			if global_position.y <= y_floor and velocity.y <= 0.0:
+				global_position.y = y_floor
+				if velocity.y < -SETTLE_SPEED:
+					velocity.y = -velocity.y * TAG_BOUNCE
+					velocity.x *= TAG_SKID
+					velocity.z *= TAG_SKID
+					spin = spin * TAG_SKID if spin.length() * TAG_SKID > SPIN_STILL else Vector3.ZERO
+					bounces += 1
+				else:
+					velocity = Vector3.ZERO
+					spin = Vector3.ZERO
+					landed = true
+					var yaw := atan2(turn.z.x, turn.z.z)
+					turn = Basis(Vector3.UP, yaw)
+					if _visual != null:
+						_visual.basis = turn * size
+		if t >= total:
+			queue_free()
+
+
+static func _tag_parts() -> Dictionary:
+	if not _tag_assets.is_empty():
+		return _tag_assets
+	var plate := BoxMesh.new()
+	plate.size = TAG_SIZE
+	var brass := Palette.solid(Palette.BRASS, 0.25)
+	brass.metallic = 0.72
+	brass.roughness = 0.3
+	var rivet := CylinderMesh.new()
+	rivet.top_radius = 0.06
+	rivet.bottom_radius = 0.06
+	rivet.height = TAG_SIZE.y + 0.015
+	rivet.radial_segments = 12
+	var ink := Palette.solid(Palette.CHARCOAL)
+	var stripe := BoxMesh.new()
+	stripe.size = Vector3(TAG_SIZE.x * 0.44, TAG_SIZE.y + 0.012, TAG_SIZE.z * 0.26)
+	var rust := Palette.solid(Palette.RUST)
+	_tag_assets = {"plate": plate, "brass": brass, "rivet": rivet, "ink": ink, "stripe": stripe, "rust": rust}
+	return _tag_assets
+
+
+# Spawns a detached spinning brass tag with a grounded bounce for a downed machine.
+# Separate from DeathScatter so scatter piece counts and warm box checks stay exact.
+static func pop_shift_tag(enemy: Node3D, kind: String, direction: Vector3, land := Callable()) -> Node3D:
+	if enemy == null or enemy.get_parent() == null or TAG_EXEMPT.has(kind) or Roster.is_boss_piece(kind):
+		return null
+	var assets := _tag_parts()
+	var tag := ShiftOverTag.new()
+	tag.name = TAG_NAME
+	enemy.get_parent().add_child(tag)
+	var at := enemy.global_position
+	tag.global_position = at + Vector3.UP * TAG_LIFT
+	var visual := Node3D.new()
+	visual.name = "BrassTag"
+	tag.add_child(visual)
+	tag._visual = visual
+	var plate := MeshInstance3D.new()
+	plate.name = "Plate"
+	plate.mesh = assets["plate"]
+	plate.material_override = assets["brass"]
+	plate.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	visual.add_child(plate)
+	var rivet := MeshInstance3D.new()
+	rivet.name = "Rivet"
+	rivet.mesh = assets["rivet"]
+	rivet.material_override = assets["ink"]
+	rivet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	rivet.position = Vector3(-TAG_SIZE.x * 0.32, 0.0, 0.0)
+	visual.add_child(rivet)
+	var stripe := MeshInstance3D.new()
+	stripe.name = "Stamp"
+	stripe.mesh = assets["stripe"]
+	stripe.material_override = assets["rust"]
+	stripe.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	stripe.position = Vector3(TAG_SIZE.x * 0.12, 0.0, 0.0)
+	visual.add_child(stripe)
+	var seed_hash := absi(hash(Vector3i(at.round())))
+	var angle := TAU * float(seed_hash % 31) / 31.0
+	var toss := Vector3(direction.x, 0.0, direction.z)
+	toss = toss.normalized() if toss.length_squared() > 0.001 else Vector3(cos(angle), 0.0, sin(angle))
+	tag.velocity = toss * TAG_OUT + Vector3.UP * TAG_UP
+	var axis := Vector3(-toss.z, 0.35, toss.x).normalized()
+	tag.spin = axis * TAG_SPIN
+	tag.spin_scale = motion_scale
+	tag.turn = Basis(Vector3.UP, angle) * Basis(Vector3.RIGHT, 0.45)
+	visual.basis = tag.turn
+	if land.is_valid():
+		tag.ground = land
+	return tag
 
 
 static func active() -> bool:
