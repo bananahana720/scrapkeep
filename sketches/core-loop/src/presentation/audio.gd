@@ -32,6 +32,7 @@ const SpillwayStory := preload("res://src/presentation/spillway_story.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const TuneEar := preload("res://src/presentation/tune_ear.gd")
 const SetDirector := preload("res://src/presentation/set_director.gd")
+const DeckMoves := preload("res://src/presentation/deck_moves.gd")
 const MusicArbiter := preload("res://src/presentation/music_arbiter.gd")
 const MelodyLease := preload("res://src/presentation/melody_lease.gd")
 const SfxBudget := preload("res://src/presentation/sfx_budget.gd")
@@ -1358,6 +1359,7 @@ func ace_ready() -> bool:
 	# rendered this block yet: it starts where the block did, or it runs ahead of the transport.
 	ace.clock = _render_from if _render_from >= 0 else engine.clock
 	ace.set_breath(breath())
+	ace.set_pump(DeckMoves.PUMP if deck_festival_on() and not ace.flat and bool(MusicArbiter.resolve(_arbiter_state())["allow_dj"]) else {})
 	ace.ultimate_lift = _ult_lift
 	_melody_lease.bump_epoch()
 	_prime_band_parameters()
@@ -1914,6 +1916,8 @@ func _ace_end_at(at: int) -> void:
 	_ace_arrival_stage = 0
 	_ace_arrival_at = -1
 	_ace_flight = false
+	ace.cancel_shots()
+	ace.set_pump({})
 	ace.stop_at(at, AceSequencer.STOP_RAMP)
 	_handover_at = at
 
@@ -4531,12 +4535,18 @@ func _follow_warden_form(posture: float, staggered: bool, landed: bool) -> void:
 	if not ace_playing() or tuning == null:
 		return
 	if tuning.option(Tuning.WARDEN_FORM_KEY) != "form":
+		_warden_posture = 0.0
+		_warden_staggered = false
 		ace.follow_guard(0.0, false, false)
 		return
+	_warden_posture = posture
+	_warden_staggered = staggered
 	var at: int = ace.follow_guard(posture, staggered, landed)
 	if at >= 0:
 		_log_cue(["warden_form", "drop", "beat", at, 1.0, 0.0])
 		_make_drop_room(at)
+		_tend_deck()
+		deck_moves.on_drop(ace, at)
 
 
 func _stagger_chord() -> void:
@@ -5403,6 +5413,9 @@ func _tally_play(note: Array) -> void:
 # and books that bar's plan: stem trims on the bar, and June's answer as a stinger on the bar.
 # It never moves game time and never touches the synth band.
 var set_director := SetDirector.new()
+var deck_moves := DeckMoves.new()
+var _warden_posture := 0.0
+var _warden_staggered := false
 var _set_bar_at := -1
 var _set_overtime := false
 var _set_incoming_at := -1.0
@@ -5416,7 +5429,18 @@ func set_director_on() -> bool:
 	return tuning != null and tuning.option(Tuning.SET_DIRECTOR_KEY) == "on"
 
 
+func deck_festival_on() -> bool:
+	var tuning = ctx.get("tuning") if ctx != null else null
+	return tuning != null and tuning.option(Tuning.DECK_KEY) == "festival"
+
+
+func _tend_deck() -> void:
+	var allow := ace_playing() and not ace.flat and _handover_at < 0 and bool(MusicArbiter.resolve(_arbiter_state())["allow_dj"])
+	deck_moves.tend(ace, {"on": deck_festival_on(), "allow": allow, "posture": _warden_posture, "staggered": _warden_staggered})
+
+
 func _tend_set() -> void:
+	_tend_deck()
 	if not ace_playing() or not ace.mode in ["level", "warden", "piece"] or ace.section == "" or not set_director_on():
 		_drop_set_answer()
 		if _set_bar_at >= 0:
