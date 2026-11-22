@@ -45,7 +45,8 @@ var _line_fired: Array = []
 
 
 func _initialize() -> void:
-	_t = T.new("kest_kit_test")
+	var label := get_script().resource_path.get_file().get_basename()
+	_t = T.new(label if not label.is_empty() else "kest_kit_test")
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
