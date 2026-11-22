@@ -106,11 +106,16 @@ func _act(action: String, pressed: bool) -> void:
 
 
 # Presses `action` as a player does, holds it `ticks` physics ticks and lets go: the refusals heard.
+# The engine takes in input once a frame, and a loaded machine runs several physics ticks in one
+# frame, so each edge waits a frame before the ticks are counted: a press and its release never
+# reach the engine together, where the press would not be seen.
 func _press(action: String, ticks := 1) -> Array:
 	_fails.clear()
 	_act(action, true)
+	await process_frame
 	await _physics(ticks)
 	_act(action, false)
+	await process_frame
 	await _physics(3)
 	return _fails.duplicate()
 
