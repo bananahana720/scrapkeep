@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const CampLayout := preload("res://src/world/camp_layout.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
@@ -15,6 +16,8 @@ const T := preload("res://tests/support/t.gd")
 #   - each stands on the plaza, at their own spot;
 #   - the ball rolling up to one puts their line on the caller plate (caller id and words from LoreRows.CAMP_QUIPS)
 #     and sends pilot_quipped once a walk, however often the ball comes back; the next walk they speak again;
+#   - the pilot who speaks turns their face (the model's -Z) to the ball; a new walk stands everyone facing the fire, and
+#     a pilot not standing has a quip zone that does not listen;
 #   - the B-sides the profile has found, and only those, stand as sleeves in the record bin by the jukebox, in the
 #     order they were found, drawn as one MultiMesh each for the bins and the sleeves, from code-built meshes;
 #   - a new walk picks up a change of gate pilot and a new B-side.
@@ -54,6 +57,17 @@ func _beside(class_id: String) -> void:
 	var toward: Vector3 = _hub.root.global_position - figure.global_position
 	toward.y = 0.0
 	await _put(figure.global_position + toward.normalized() * 2.5 + Vector3.UP * 1.3)
+
+
+# How square a figure faces a point once its turn has run out: the figure's face (-Z) against the way to the point, on
+# the ground, 1 for dead on, -1 for its back.
+func _faces(figure: Node3D, at: Vector3) -> float:
+	var turn = figure.get_meta("turn") if figure.has_meta("turn") else null
+	if turn is Tween and (turn as Tween).is_valid():
+		(turn as Tween).custom_step(1.0)
+	var face := -figure.global_basis.z
+	var to := at - figure.global_position
+	return Vector2(face.x, face.z).normalized().dot(Vector2(to.x, to.z).normalized())
 
 
 func _away() -> void:
@@ -139,11 +153,15 @@ func _run() -> void:
 	_t.check("the line is one of Rivet's", (rivet["text"] as Array).has(_hub.quip_words()), _hub.quip_words())
 	_t.eq("pilot_quipped hands out the caller id, the row and the words", _said, [["rivet", "camp.quip.rivet", _hub.quip_words()]])
 	_t.check("the plate is the caller plate, in Rivet's colour", _hub._quip_tile.speaker == "rivet" and _hub._quip_tile.visible, "")
+	_t.check("Rivet turns to face the ball (a pilot model's face is its -Z)", _faces(_hub.crew_figure("runner_gunner"), _game.player.body().global_position) > 0.99,
+		"%.3f" % _faces(_hub.crew_figure("runner_gunner"), _game.player.body().global_position))
 	await _away()
 	await _beside("runner_gunner")
 	_t.eq("once a walk: coming back says nothing new", _said.size(), 1)
 	await _beside("tally")
 	_t.eq("Tally speaks too", _said.size() == 2 and _said[1][0] == "tally", true)
+	var fire: Vector3 = _hub.root.global_transform * CampLayout.at(_hub.CREW_FIRE[0], _hub.CREW_FIRE[1])
+	_t.check("Tally faces the ball, not the fire, after the turn", _faces(_hub.crew_figure("tally"), _game.player.body().global_position) > 0.99, "")
 	_hub._process(30.0)
 	if _hub._quip_tween != null and _hub._quip_tween.is_valid():
 		_hub._quip_tween.custom_step(_hub.QUIP_FADE_S + 0.1)
@@ -179,6 +197,11 @@ func _run() -> void:
 	standing = _hub.crew_standing()
 	standing.sort()
 	_t.eq("the next walk stands the crew round the new gate pilot", standing, ["pylon_engineer", "tally"])
+	_t.check("a new walk starts with the crew facing the fire again", _faces(_hub.crew_figure("tally"), fire) > 0.99
+		and _faces(_hub.crew_figure("pylon_engineer"), fire) > 0.99, "%.3f" % _faces(_hub.crew_figure("tally"), fire))
+	_t.check("the hidden pilot's quip zone stops listening, the standing ones listen",
+		not (_hub._zones["crew_runner_gunner"]["area"] as Area3D).monitoring and (_hub._zones["crew_tally"]["area"] as Area3D).monitoring
+		and (_hub._zones["crew_pylon_engineer"]["area"] as Area3D).monitoring, "")
 	_t.eq("the walk count steps", _hub.walks, walks_before + 1)
 	_t.eq("the new b-side joins the bin", _hub.shelved_records(), found + [fourth])
 	_t.eq("four sleeves", sleeves.multimesh.instance_count, 4)

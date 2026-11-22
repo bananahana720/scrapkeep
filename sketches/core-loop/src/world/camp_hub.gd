@@ -800,7 +800,8 @@ func _pet_react() -> void:
 # --- the crew round the fire ---
 
 # Who stands this walk: every pilot the profile has freed, but the one the gate launches (the ball is them). A pilot
-# is built at their spot the first walk they stand, and shown or hidden after.
+# is built at their spot the first walk they stand, and shown or hidden after; a hidden one's quip zone stops listening,
+# and every walk starts with the crew facing the fire.
 func _stand_crew() -> void:
 	var flying = game.gate_pilot() if game.has_method("gate_pilot") else null
 	var classes: Array = game.flow.classes if game.flow != null else []
@@ -812,6 +813,8 @@ func _stand_crew() -> void:
 			figure = _build_figure(def, i)
 		if figure != null:
 			figure.visible = stands
+			_zones["crew_" + String(def.id)]["area"].set_deferred("monitoring", stands)
+			_face_fire(figure)
 
 
 # The pilots standing now, by class id.
@@ -860,6 +863,7 @@ func _build_figure(def, index: int) -> Node3D:
 		view.visibility_range_end_margin = CREW_FADE_MARGIN_M
 		view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	holder.set_meta("animator", animator)
+	holder.set_meta("rest_yaw", holder.rotation.y)
 	_stand_on_plaza(holder)
 	_crew[String(def.id)] = holder
 	add_zone("crew_" + String(def.id), holder.global_position + Vector3.UP, CREW_ZONE_M, _quip_from.bind(String(def.id)))
@@ -895,16 +899,35 @@ func _quip_from(class_id: String) -> void:
 	pilot_quipped.emit(speaker, String(row["id"]), words)
 
 
+# The pilot turns the short way round until their face is to the ball, and cheers. A pilot model faces its local -Z
+# (so _build_figure turns it PI past the yaw that points -Z away from the fire); yaw atan2(-x, -z) points -Z along (x, z).
 func _face_ball(figure: Node3D) -> void:
-	var to_ball: Vector3 = ball.ball_position() - figure.global_position
+	var to_ball: Vector3 = root.global_basis.inverse() * (ball.ball_position() - figure.global_position)
 	if Vector2(to_ball.x, to_ball.z).length() > 0.01:
-		var turn := figure.create_tween()
-		turn.tween_property(figure, "rotation:y", atan2(to_ball.x, to_ball.z), 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	var animator = figure.get_meta("animator", null)
+		var heading := atan2(-to_ball.x, -to_ball.z)
+		_turn(figure).tween_property(figure, "rotation:y", figure.rotation.y + angle_difference(figure.rotation.y, heading), 0.25) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	var animator = figure.get_meta("animator") if figure.has_meta("animator") else null
 	if animator is AnimationPlayer and (animator as AnimationPlayer).has_animation(CREW_TALK_CLIP):
 		(animator as AnimationPlayer).play(CREW_TALK_CLIP)
 		if (animator as AnimationPlayer).has_animation(CREW_IDLE_CLIP):
 			(animator as AnimationPlayer).queue(CREW_IDLE_CLIP)
+
+
+# Back to the spot's own yaw, facing the fire, any turn still running dropped.
+func _face_fire(figure: Node3D) -> void:
+	_turn(figure).kill()
+	figure.rotation.y = float(figure.get_meta("rest_yaw", figure.rotation.y))
+
+
+# A figure's one turn: the one before it is killed, so two turns never fight over the yaw.
+func _turn(figure: Node3D) -> Tween:
+	var last = figure.get_meta("turn") if figure.has_meta("turn") else null
+	if last is Tween and (last as Tween).is_valid():
+		(last as Tween).kill()
+	var turn := figure.create_tween()
+	figure.set_meta("turn", turn)
+	return turn
 
 
 # --- the quip card: the caller plate (caller_tile.gd, the call-ins' own) beside a line, upper left ---
