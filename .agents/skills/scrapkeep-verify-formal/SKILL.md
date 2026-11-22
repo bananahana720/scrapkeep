@@ -138,6 +138,16 @@ Run `bash $F/models/make-yardlock-configs.sh`, then plain TLC on each `yardlock-
 
 `models/DeferredEffects.tla` (FV-3) checks what `sketches/core-loop/src/combat/combat.gd` holds now and fires later (Rake Heart returns, Fault Hammer aftershocks, Second Bell tolls, Backwash strips, Twin Discharge echoes, pending casts and bites, the Slag Pike count, guard links, heat, exposure marks) and the shot bits `sketches/core-loop/src/combat/bolts.gd` carries through a split or a bounce, across every stage entry, retry, arena clear, death, quit and new run. Its rules: `ProcDepthOne` (nothing a proc fires queues or fires another proc), `NoEchoAcrossAttempt` (nothing an attempt queued fires in another, and play never starts holding one) and `ShotBitsCap` (at most three bits, one split, one glance, children that never pull again or carry hoar, no exposure mark without its row). Run `bash $F/models/make-deferred-configs.sh`, then plain TLC on each `deferred-*.cfg`; [references/deferred-coverage.md](references/deferred-coverage.md) maps the steps and guards, [references/deferred-findings.md](references/deferred-findings.md) holds the findings (none open), and `--row deferred-effects-safe` writes the receipt.
 
+## The Brindle reel model
+
+`models/BrindleReel.tla` (W46-05, W1-139g) checks that Brindle, World 1's boss, keeps pressing while it reels across its three hull phases in `sketches/core-loop/src/boss/boss.gd`. Its rules are:
+- `NoLongReelGap`: no gap of over 6 s without a committed attack;
+- `TellFloor`: every tell is at least 0.6 s;
+- `NoTransitionCommit`: no attack commits during a phase turn;
+- `CuedPromiseKept`: a cued follow-up is never dropped on reel entry.
+
+Run `bash $F/models/make-brindlereel-configs.sh`, then plain TLC on each `brindlereel-*.cfg`. [references/brindlereel-coverage.md](references/brindlereel-coverage.md) maps the steps and guards to the code, and lists what is not modelled. `--row brindle-presses` writes the receipt.
+
 ## Lessons and updates
 
 [references/lessons.md](references/lessons.md) holds VFM-01 onward. Status is `established`, `provisional` or `retracted`. When a result overturns a lesson, retract it, fill `Overturned by`, change the rule line above in the same commit, and add a changelog row. `/astack:create-formal-verification-skill maintain` brings the model back in line after changes that skipped this skill.

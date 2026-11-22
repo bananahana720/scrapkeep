@@ -22,7 +22,7 @@ CONSTANTS
     TransTicks,        \* FightPhases.TRANSITION_SECONDS (2)
     CraneNormal,       \* normal phase 1 crane cadence (2 s)
     CraneReel,         \* slowed phase 1 reel cadence (4 s)
-    SlagNormal,        \* normal phase 2 lead-to-next gap (7 s)
+    SlagNormal,        \* normal phase 2 lead-to-next gap (8 s)
     SlagReel,          \* phase 2 reel slag commit cadence (5 s)
     ChargeRunMax,      \* longest charge run modelled (2 s)
     ChargeRestNormal,  \* normal phase 3 rest (1 s)
@@ -31,7 +31,7 @@ CONSTANTS
     MaxReelGap,        \* 6 s promise: no gap over 6 s without a committed attack while reeling
     MinTellTenths,     \* 6 tenths = 0.6 s tell floor (ChallengeDials.TELL_FLOOR)
     ReelAttacks,       \* FALSE (plant): Brindle commits no new attack while reeling -> gap hits 7 s
-    ClampPhase2Reel,   \* FALSE (plant): Phase 2 keeps a 7 s normal slag timer into a reel -> gap hits 7 s
+    ClampPhase2Reel,   \* FALSE (plant): Phase 2 keeps an 8 s normal slag timer into a reel -> gap hits 7 s
     RespectTransition, \* FALSE (plant): commits inside the transition beat -> breaks NoTransitionCommit
     TellGuard,         \* FALSE (plant): cued follow-up draws a 0.4 s tell -> breaks TellFloor
     KeepCuedPromise    \* FALSE (plant): entering reel drops an already-cued follow-up -> breaks CuedPromiseKept

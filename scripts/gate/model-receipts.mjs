@@ -3,7 +3,8 @@
 // "run-always-ends" (RunFlow.tla) and "rewards-banked-once" (Rewards.tla), which scripts/world1-bands.mjs reads,
 // "flood-never-held" (ParkFlood.tla), "hazards-hit-everyone" (HazardCycle.tla, W44), "destructibles-safe"
 // (Destructibles.tla, W45), "yard-lock-safe" (YardLock.tla, W45 FV-2), "earned-save-safe" (EarnedSave.tla, W45 FV-3)
-// and "deferred-effects-safe" (DeferredEffects.tla, W45 FV-3), which no band row reads yet.
+// "deferred-effects-safe" (DeferredEffects.tla, W45 FV-3) and "brindle-presses" (BrindleReel.tla, W46-05),
+// which no band row reads yet.
 //   { head, pass, measured, plant_caught }
 // For each row it runs TLC, the TLA+ model checker, on every config that stands for the code (the skill's today-*
 // configs) and on each planted fault (a broken-* config with one guard off). It passes only when every code config
@@ -282,6 +283,29 @@ export const ROWS = {
       "each queue holds one waiting item, one bolt lineage is followed through a split and one enemy carries the exposure marks; MAX_LIVE eviction, seconds and geometry are left to tests/w45_combat_formal_fixes_test.gd",
       "the upgrade tree's own procs are kept from leading back to their trigger by UpgradeTree.problems at build time, which the model does not check; it checks only that the verb items and shot bits named here stay at depth 1",
       "Backwash's strip is laid on a dash or boost fact without an in_play check; the model lets the ball dash only in play (its input is frozen otherwise)",
+    ],
+  },
+  "brindle-presses": {
+    spec: "BrindleReel.tla",
+    real: [
+      {
+        cfg: "brindlereel-today.cfg",
+        minStates: 635,
+        label:
+          "Brindle keeps pressing across phases 1 to 3 while reeling, with every tell >= 0.6 s and no gap over 6 s without a committed attack (W46-05)",
+      },
+    ],
+    plants: [
+      { cfg: "brindlereel-broken-stop.cfg", rule: "NoLongReelGap" },
+      { cfg: "brindlereel-broken-unclamped.cfg", rule: "NoLongReelGap" },
+      { cfg: "brindlereel-broken-shorttell.cfg", rule: "TellFloor" },
+      { cfg: "brindlereel-broken-transition.cfg", rule: "NoTransitionCommit" },
+      { cfg: "brindlereel-broken-dropcue.cfg", rule: "CuedPromiseKept" },
+    ],
+    coverage: "references/brindlereel-coverage.md",
+    gaps: [
+      "the model steps in 1 s ticks over the three hull phases with shortened phase floors (12 s vs 28/24/22 s) and tracks commit cadence, transition beats, stuns, cued promises and reel gaps; 3D geometry, aim lead, physics knockback and the chase scooter are checked by tests/brindle_reel_test.gd, tests/boss_telegraph_test.gd and tests/boss_lead_line_test.gd",
+      "the Phase 1 reel-entry clamp under a raised brindle.period_mult dial is not modelled (the model's crane cadence is fixed); tests/brindle_reel_test.gd checks it",
     ],
   },
 };

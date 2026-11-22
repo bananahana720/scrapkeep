@@ -4550,7 +4550,7 @@ func _on_heft_dropped(heft_class: int, _heft: float) -> void:
 # (the Mind's, the Warden's) keeps the shared boss_telegraph.
 const BRINDLE_TELEGRAPHS := {
 	"crane_sweep": "tele_crane_sweep", "slag_ring_a": "tele_slag_ring", "slag_ring_b": "tele_slag_ring",
-	"charge": "tele_charge", "charge_wall": "tele_charge_wall", "eject": "tele_eject",
+	"slag_ring_inner": "tele_slag_ring", "charge": "tele_charge", "charge_wall": "tele_charge_wall", "eject": "tele_eject",
 }
 
 
