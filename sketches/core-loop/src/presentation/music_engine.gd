@@ -65,7 +65,7 @@ const CURVES := [
 # and the drop; the fleet row is gated by the difficulty ticks instead (set_fleet_ticks).
 # The melodic layers, in the order they enter: pad, arp, choir, lead, echo, counter.
 const MELODIC := [PAD, ARP, CHOIR, LEAD, ECHO, COUNTER]
-const LEVELS := [0.34, 0.5, 0.22, 0.62, 0.42, 0.42, 0.34, 0.14, 0.3, 0.3, 0.2, 0.2, 0.12, 0.18, 0.3, 1.0]
+const LEVELS := [0.34, 0.54, 0.22, 0.68, 0.44, 0.46, 0.32, 0.13, 0.3, 0.32, 0.22, 0.2, 0.12, 0.18, 0.3, 1.0]
 # The restrained wobble: only in the Warden's and Brindle's drops, at half level.
 const WOB_DROP_GAIN := 0.5
 # The warm layer is not pressure: it is the overcharge, one step per bonus core.
@@ -108,8 +108,10 @@ const BAND_VOICE_CAP := 38
 const OPEN_GAINS := [1.0, 1.0, 0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # Brindle's phase 3 runs at 150.
 const PHASE3_STEP := 4410
-# The sidechain pump: the pumped layers dip under each kick and breathe back.
-const PUMP_ATTACK := 400
+# The sidechain pump: the pumped layers dip under each kick, hold a short pocket for
+# the kick transient, and breathe back smoothly like a 2010s French-house / club limiter.
+const PUMP_ATTACK := 220
+const PUMP_HOLD_FRAC := 0.07
 const PUMPED := [KEYS, SUB, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER]
 # Brindle's phases add layers: phase 1 at 0.8 (pad, arp, choir, lead, half the echo),
 # phase 2 brings the echo and half the counter, phase 3 everything.
@@ -1617,9 +1619,13 @@ func render(frames: int) -> void:
 		var n := mini(frames - done, step_len - posmod(clock - grid_origin, step_len))
 		n = mini(n, _to_next_action())
 		if _pump_depth > 0.0:
-			var in_beat := posmod(clock - grid_origin, beat_len())
+			var beat := beat_len()
+			var in_beat := posmod(clock - grid_origin, beat)
+			var hold := maxi(PUMP_ATTACK, int(beat * PUMP_HOLD_FRAC))
 			if in_beat < PUMP_ATTACK:
 				n = mini(n, PUMP_ATTACK - in_beat)
+			elif in_beat < hold:
+				n = mini(n, hold - in_beat)
 		n = maxi(n, 1)
 		_mix(done, n)
 		clock += n
@@ -3072,8 +3078,8 @@ func _release_all() -> void:
 
 # --- Mixing ---------------------------------------------------------------------------
 
-# The sidechain envelope at a sample: down fast under the kick, back by three-quarters
-# of the beat.
+# The sidechain envelope at a sample: down fast under the kick, holds a short pocket
+# for the kick body, and breathes back smoothly by two-thirds of the beat.
 func _pump_at(sample: int) -> float:
 	if _pump_depth <= 0.0:
 		return 1.0
@@ -3082,7 +3088,10 @@ func _pump_at(sample: int) -> float:
 	var low := 1.0 - _pump_depth
 	if pos < PUMP_ATTACK:
 		return lerpf(1.0, low, float(pos) / PUMP_ATTACK)
-	var x := clampf(float(pos - PUMP_ATTACK) / (beat * 0.75 - PUMP_ATTACK), 0.0, 1.0)
+	var hold := maxi(PUMP_ATTACK, int(beat * PUMP_HOLD_FRAC))
+	if pos < hold:
+		return low
+	var x := clampf(float(pos - hold) / maxf(beat * 0.68 - hold, 1.0), 0.0, 1.0)
 	return low + (1.0 - low) * (1.0 - (1.0 - x) * (1.0 - x))
 
 

@@ -310,9 +310,65 @@ static func _row(id: String) -> Dictionary:
 
 # The answer's score for Synth.render_score: rows of [step, midi, steps, voice, gain] in
 # sixteenths, the sax a little under the pilot's quote so the quote stays the bigger moment.
+# Expressive phrasing shapes passing sixteenths lighter and sustained landings warmer, with
+# an understated in-key harmonic cushion on the phrase's arrival (never on a threat note).
 static func answer_score(id: String) -> Array:
+	var book_name := _book_of(id)
+	var cells: Array = _row(id).get("cells", [])
+	if cells.is_empty():
+		return []
 	var score: Array = []
-	for cell in _row(id).get("cells", []):
+	var count := cells.size()
+	var peak_midi := -1
+	for cell in cells:
+		peak_midi = maxi(peak_midi, int(cell[1]))
+	for i in count:
+		var cell: Array = cells[i]
+		var step := int(cell[0])
+		var midi := int(cell[1])
+		var dur := int(cell[2])
 		var voice: String = cell[3] if cell.size() > 3 else "lead"
-		score.append([int(cell[0]), int(cell[1]), int(cell[2]), voice, 0.55 if voice == "bell" else 0.7])
+		var base_gain := 0.55 if voice == "bell" else 0.7
+		var phrase := 1.0
+		if voice != "bell":
+			if dur >= 4:
+				phrase = 1.12
+			elif midi == peak_midi:
+				phrase = 1.08
+			elif dur == 1 and step % 2 == 1:
+				phrase = 0.86
+		score.append([step, midi, dur, voice, base_gain * phrase])
+	# Add a gentle harmonic cushion on the phrase's landing note, strictly within the 1-bar
+	# grid (step < 16) and strictly off THREAT_PITCH_CLASSES (Eb, Ab, Bb).
+	var land: Array = cells[count - 1]
+	var land_step := int(land[0])
+	var land_midi := int(land[1])
+	var land_dur := mini(maxi(2, int(land[2])), 16 - land_step)
+	var land_safe := not (posmod(land_midi, 12) in THREAT_PITCH_CLASSES)
+	if land_step < 16 and land_dur > 0:
+		match book_name:
+			"lull", "release", "hanging":
+				for chord_midi in [62, 69]:
+					score.append([land_step, chord_midi, land_dur, "keys", 0.24])
+			"build":
+				for chord_midi in [62, 69]:
+					score.append([land_step, chord_midi, land_dur, "keys", 0.26])
+			"peak":
+				if land_safe:
+					score.append([land_step, land_midi - 12, land_dur, "brass", 0.28])
+					score.append([land_step, land_midi + 12, mini(land_dur, 3), "bell", 0.22])
+			"hot":
+				score.append([land_step, 62, land_dur, "clav", 0.26])
+				score.append([land_step, 69, land_dur, "keys", 0.22])
+			"overtime":
+				if land_safe:
+					score.append([land_step, land_midi - 12, land_dur, "brass", 0.32])
 	return score
+
+
+static func _book_of(id: String) -> String:
+	for book in BOOK:
+		for row in BOOK[book]:
+			if row.id == id:
+				return book
+	return ""

@@ -511,3 +511,37 @@ test("the deferred effects row holds on the code and every plant breaks its rule
   assert.match(held.measured, /deferred-today: no break in 2,196,005 distinct states/);
   assert.match(held.measured, /deferred-broken-ungated broke NoEchoAcrossAttempt/);
 });
+
+test("the sound arbiter row's pin and plants match captured TLC output, and its page covers the code it models", () => {
+  const sa = ROWS["sound-arbiter-safe"];
+  for (const r of sa.real) {
+    const parsed = parseTlc(fixture(r.cfg.replace(".cfg", "")));
+    assert.equal(parsed.outcome, "clean", r.cfg);
+    assert.equal(parsed.distinct, r.minStates, r.cfg);
+  }
+  assert.deepEqual(sa.plants.map((p) => p.rule).sort(), [
+    "BossMusicInArena",
+    "DeathClearsUltFlight",
+    "DeckObeysArbiter",
+    "NoStaleShot",
+    "NoStaleTrim",
+    "OneMelodyNoClash",
+    "UltimateRestoresChampion",
+    "WardenOwnsFightMusic",
+  ]);
+  for (const p of sa.plants)
+    assert.equal(
+      brokeRule(parseTlc(fixture(p.cfg.replace(".cfg", ""))), cfg(p.cfg), p.rule),
+      true,
+      `${p.cfg} breaks ${p.rule}`,
+    );
+  const covered = coveredFiles(readFileSync(new URL(sa.coverage, SKILL), "utf8"));
+  for (const f of [
+    "presentation/music_arbiter.gd",
+    "presentation/melody_lease.gd",
+    "presentation/deck_moves.gd",
+    "presentation/audio.gd",
+    "presentation/ace_sequencer.gd",
+  ])
+    assert.ok(covered.includes(`sketches/core-loop/src/${f}`), f);
+});
