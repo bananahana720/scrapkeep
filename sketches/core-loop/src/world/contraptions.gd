@@ -1542,7 +1542,7 @@ func sluice_pay_read(id: String) -> Dictionary:
 		return {"active": false, "can_pay": false, "gauge": -1.0}
 	var price: int = int(s["price"])
 	var run_ref = _ctx_field("run")
-	var can_pay := active and s["state"] == "ready" and price > 0 \
+	var can_pay: bool = active and s["state"] == "ready" and price > 0 \
 		and run_ref != null and run_ref.has_method("spend_scrap") and int(run_ref.get("scrap")) >= price
 	var g := -1.0
 	if s["state"] == "charging":
