@@ -45,14 +45,12 @@ const OLD_VERDIGRIS := Color("4f7f7a")
 const KINDNESS := Color("d936b0")
 # A sodium floodlight's light, for Dam Night Shift (W46-13): warmer and paler than AMBER (the relic), far from HAZARD.
 const SODIUM := Color("ffc070")
-# World 1's three acts of light (WORLD1-DEMO-CATALYST.md C1; world_look.gd TIME_ROWS dawn, morning, noon): light colours
-# for suns, ambients, fog and skies, never a surface meaning. The dam's cool desert dawn: violet-indigo canyon shade under a
-# low apricot sun. The flume's morning: turquoise sky and water over terracotta stone. The Slag Bowl's smoky furnace gold.
+# World 1's first two acts of light (WORLD1-DEMO-CATALYST.md C1; world_look.gd TIME_ROWS dawn and morning): light
+# colours for suns and ambients, never a surface meaning. The dam's cool desert dawn: violet-indigo canyon shade under a
+# low apricot sun. The flume's morning: turquoise sky and water light.
 const DAWN_VIOLET := Color("a8a4de")
 const APRICOT := Color("ffac74")
 const TURQUOISE := Color("a4d6d0")
-const TERRACOTTA := Color("e8a07a")
-const FURNACE_GOLD := Color("ffcf7a")
 # One brass (SIGHT-PERSONA.md section 6 item 7): satin, never glossy, and enough diffuse left that a horn bell or a tag
 # does not drop dark in dawn shade. Every brass surface takes it: Palette.solid(BRASS, ...) and BakeLook.dress's brass slots.
 const BRASS_FINISH := {"roughness": 0.5, "metallic": 0.35, "specular": 0.5}

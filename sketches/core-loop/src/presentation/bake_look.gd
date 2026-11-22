@@ -72,7 +72,8 @@ static var _twins := {}
 static var _lift: ShaderMaterial
 
 
-# The shared edge-lift layer (one material for every Fleet-paint surface).
+# The one shared edge layer every Fleet-paint surface draws after its paint: bone on worn convex edges and a pale,
+# faintly sky-lit rim where a face turns from the eye (the constants above).
 static func edge_lift() -> ShaderMaterial:
 	if _lift == null:
 		var shader := Shader.new()
@@ -257,7 +258,8 @@ static func dress(root: Node, owned: Array = []) -> int:
 			elif view.material_override == mat:
 				if wants[mat].size() > 1:
 					continue
-				view.material_override = twin(mat, look == 1, kind)
+				# One override covers every surface, so like an owned material it takes a finish only when they all share it.
+				view.material_override = twin(mat, look == 1, kind if finishes[mat].size() == 1 else "")
 			elif view.get_surface_override_material(i) == mat:
 				view.set_surface_override_material(i, twin(mat, look == 1, kind))
 			else:
