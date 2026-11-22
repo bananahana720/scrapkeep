@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const BowlDress := preload("res://src/presentation/arena_bowl_dress.gd")
+const StandCrew := preload("res://src/presentation/stand_crew.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
 # The crane mast, its boom and the vent nozzle (tools/blender/world_one/slag_bowl_kit.py), each about its centre.
@@ -316,6 +317,7 @@ func _ready() -> void:
 	while not build_step():
 		pass
 	BowlDress.bind_yard(self)
+	StandCrew.bind_bowl(self)
 
 
 # The bowl a piece a call: its geometry is local, so it builds off the tree too; only the yard's bus
@@ -354,6 +356,8 @@ func build_step() -> bool:
 				_vent(deg_to_rad(a))
 		5:
 			BowlDress.build(self)
+			# The yard's fans take their clipboards (W46-12); nothing when the yard kit is missing.
+			StandCrew.build(self)
 		_:
 			return true
 	_built += 1
