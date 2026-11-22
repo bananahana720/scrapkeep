@@ -364,9 +364,9 @@ func _hang_sun(row: Dictionary) -> void:
 
 # How far into its thump the poster is, 1 on the music's bar line falling to 0 over THUMP_DECAY: the music engine's
 # own clock and bar (music_engine.gd), so the beat the player hears is the one the poster keeps. 0 with no music
-# playing, under reduced motion, and off the title.
+# playing, under reduced motion, and off the title (pilot select's cards hold the stage still behind them).
 func thump() -> float:
-	if HighdraftFx.preferred or not active or intro_playing():
+	if HighdraftFx.preferred or not active or _flow_state != "title" or intro_playing():
 		return 0.0
 	var audio = get_parent().get("audio") if get_parent() != null else null
 	var engine = audio.engine if audio != null and bool(audio.get("sound_ready")) else null
