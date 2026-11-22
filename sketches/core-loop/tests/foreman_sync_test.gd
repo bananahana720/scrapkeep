@@ -16,6 +16,8 @@ const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const Foreman := preload("res://src/combat/foreman.gd")
 const SpecialCues := preload("res://src/combat/special_cues.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const Palette := preload("res://src/core/palette.gd")
+const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const LockRows := preload("res://src/world/lock_rows.gd")
@@ -66,9 +68,9 @@ func _boot() -> void:
 func _clear() -> void:
 	for enemy in get_nodes_in_group("enemy"):
 		enemy.free()
-	if _game != null and _game.combat != null:
-		for child in _game.combat.get_children():
-			if child.name.begins_with(EnemyMotion.TAG_NAME) or child.name.begins_with("DeathScatter"):
+	if _game != null:
+		for child in _game.find_children("*", "Node3D", true, false):
+			if is_instance_valid(child) and (child is EnemyMotion.ShiftOverTag or child.name.begins_with("DeathScatter")):
 				child.free()
 	if root.has_meta(AttackBudget.LAST_META):
 		root.remove_meta(AttackBudget.LAST_META)
@@ -155,9 +157,15 @@ func _check_horn_snap_and_motion() -> void:
 	var snapped := []
 	boss.synced.connect(func(members: Array): snapped.append(members.duplicate()))
 	await _frames(3)
+	var ring := boss.find_child("ForemanSyncRing", true, false) as MeshInstance3D
+	var ring_mat := ring.material_override as StandardMaterial3D if ring != null else null
+	_t.check("sync ring is an opaque shared ArrayMesh (no PrimitiveMesh)",
+		ring != null and ring.mesh is ArrayMesh and not (ring.mesh is PrimitiveMesh)
+		and ring_mat != null and ring_mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED
+		and is_equal_approx(ring_mat.albedo_color.a, 1.0))
 	_t.check("before horn: nearby chasers start outside formation radius", not _all_in_formation(boss, chasers))
 	# Advance to right before the horn while the ball rolls laterally to prove the horn never stuns it.
-	boss._clock = Foreman.WIPE_EVERY - Foreman.HORN_LEAD - 0.1
+	boss.prime_horn(0.1)
 	var horn_tick := -1
 	var beat_ticks := ceili(Foreman.HORN_LEAD * Engine.physics_ticks_per_second)
 	var ball_vel_before := Vector3(14.0, 0.0, 0.0)
@@ -210,7 +218,7 @@ func _check_horn_snap_and_motion() -> void:
 		for m in members:
 			m.cancel_rally())
 	await _frames(3)
-	broken_boss._clock = Foreman.WIPE_EVERY - Foreman.HORN_LEAD - 0.1
+	broken_boss.prime_horn(0.1)
 	var b_horn := -1
 	for tick in 180:
 		_game.player.reset_to(_ball_at, Vector3.ZERO)
@@ -220,7 +228,130 @@ func _check_horn_snap_and_motion() -> void:
 		if b_horn >= 0 and tick - b_horn >= beat_ticks:
 			break
 	_t.check("planted broken snap fails formation radius check", not _all_in_formation(broken_boss, broken_chasers))
-	_t.check("planted stuck crew fails never-held check", not _crew_never_held([0.0, 0.0, 0.0], 5))
+
+	# Planted broken case 2: a real chaser held/pinned at its post-beat spot fails never-held.
+	var pinned_pos := broken_chasers.map(func(c): return c.global_position)
+	for tick in 45:
+		_game.player.reset_to(_ball_at, Vector3.ZERO)
+		broken_chasers[0].global_position = pinned_pos[0]
+		broken_chasers[0].velocity = Vector3.ZERO
+		await physics_frame
+	var pinned_moved := []
+	for i in broken_chasers.size():
+		pinned_moved.append(_flat_dist(broken_chasers[i].global_position, pinned_pos[i]))
+	_t.check("planted pinned chaser fails never-held check", not _crew_never_held(pinned_moved, 0),
+		"pinned_moved=%s" % str(pinned_moved))
+	_clear()
+
+
+func _check_snap_edge_cases() -> void:
+	var beat_ticks := ceili(Foreman.HORN_LEAD * Engine.physics_ticks_per_second)
+
+	# 1. Winding-up chaser is skipped by snap, rejects rally_to, and does not bend the other chaser's arc.
+	_clear()
+	var boss = _game.combat.spawn_enemy("foreman", _at(0.0, 0.0, 2.0))
+	boss.hp = 99999.0
+	var winder = _game.combat.spawn_enemy("chaser", _at(-6.0, 18.0, 1.6))
+	winder.hp = 99999.0
+	var free_chaser = _game.combat.spawn_enemy("chaser", _at(11.0, -3.0, 1.6))
+	free_chaser.hp = 99999.0
+	var synced_lists := []
+	boss.synced.connect(func(members: Array): synced_lists.append(members.duplicate()))
+	var windup_seen := false
+	for tick in 120:
+		_game.player.reset_to(_ball_at, Vector3.ZERO)
+		await physics_frame
+		if winder.winding_up():
+			windup_seen = true
+			break
+	_t.check("chaser enters real wind-up near the ball", windup_seen)
+	_t.check("rally_to refuses a winding-up chaser", not winder.rally_to(_at(0.0, 4.0, 1.6), 0.4))
+	boss.prime_horn(0.03)
+	var horn_tick := -1
+	for tick in 120:
+		_game.player.reset_to(_ball_at, Vector3.ZERO)
+		await physics_frame
+		if boss.horns >= 1 and horn_tick < 0:
+			horn_tick = tick
+		if horn_tick >= 0 and tick - horn_tick >= beat_ticks:
+			break
+	_t.check("snap skips winding-up chaser and syncs only the free chaser",
+		synced_lists.size() == 1 and winder not in synced_lists[0] and free_chaser in synced_lists[0],
+		"synced=%d" % (synced_lists[0].size() if synced_lists.size() == 1 else -1))
+	var forward := Vector3(_ball_at.x - boss.global_position.x, 0.0, _ball_at.z - boss.global_position.z).normalized()
+	var to_free := Vector3(free_chaser.global_position.x - boss.global_position.x, 0.0, free_chaser.global_position.z - boss.global_position.z).normalized()
+	_t.check("skipped winding-up chaser does not bend remaining chaser's center slot",
+		to_free.dot(forward) > 0.9, "dot=%.3f" % to_free.dot(forward))
+
+	# 2. Knocked-back chaser is skipped by snap, and light knock still ticks _rally_left down.
+	_clear()
+	var kboss = _game.combat.spawn_enemy("foreman", _at(0.0, 0.0, 2.0))
+	kboss.hp = 99999.0
+	var knocked = _game.combat.spawn_enemy("chaser", _at(-10.0, -3.0, 1.6))
+	knocked.hp = 99999.0
+	var ready = _game.combat.spawn_enemy("chaser", _at(10.0, -3.0, 1.6))
+	ready.hp = 99999.0
+	var ksync := []
+	kboss.synced.connect(func(members: Array): ksync.append(members.duplicate()))
+	await _frames(15)
+	knocked.knock(Vector3.RIGHT, 12.0)
+	_t.check("rally_to refuses a knocked-back chaser", not knocked.rally_to(_at(0.0, 4.0, 1.6), 0.4))
+	kboss.prime_horn(0.02)
+	for tick in 30:
+		_game.player.reset_to(_ball_at, Vector3.ZERO)
+		await physics_frame
+		if kboss.horns >= 1:
+			break
+	_t.check("snap skips knocked-back chaser and syncs the ready chaser",
+		ksync.size() == 1 and knocked not in ksync[0] and ready in ksync[0] and not knocked.is_rallying())
+
+	# Light knock (between 1.0 and RALLY_INTERRUPT_KNOCK) must count _rally_left down instead of freezing it.
+	_clear()
+	var light_c = _game.combat.spawn_enemy("chaser", _at(-12.0, -4.0, 1.6))
+	light_c.hp = 99999.0
+	await _frames(15)
+	var accepted: bool = light_c.rally_to(_at(14.0, -4.0, 1.6), 0.25)
+	for tick in 32:
+		_game.player.reset_to(_ball_at, Vector3.ZERO)
+		if tick % 4 == 0:
+			light_c.knock(Vector3.RIGHT, 3.0)
+		await physics_frame
+	_t.check("light knock does not freeze rally timer into a late sprint", accepted and not light_c.is_rallying())
+
+	# 3. Shift Boss dying mid-beat cancels crew rally.
+	_clear()
+	var dboss = _game.combat.spawn_enemy("foreman", _at(0.0, 0.0, 2.0))
+	var dcrew := [_game.combat.spawn_enemy("chaser", _at(-13.0, -3.0, 1.6)), _game.combat.spawn_enemy("chaser", _at(13.0, -3.0, 1.6))]
+	for c in dcrew:
+		c.hp = 99999.0
+	await _frames(6)
+	dboss.prime_horn(0.03)
+	for tick in 30:
+		_game.player.reset_to(_ball_at, Vector3.ZERO)
+		await physics_frame
+		if dboss.horns >= 1:
+			break
+	var rallying_before_die := dcrew.all(func(c): return c.is_rallying())
+	dboss.take_damage(1.0e6)
+	_t.check("Shift Boss dying mid-beat cancels crew rally", rallying_before_die and dcrew.all(func(c): return not c.is_rallying()))
+
+	# 4. Shift Boss freed mid-beat (_exit_tree) cancels crew rally too.
+	_clear()
+	var fboss = _game.combat.spawn_enemy("foreman", _at(0.0, 0.0, 2.0))
+	var fcrew := [_game.combat.spawn_enemy("chaser", _at(-13.0, -3.0, 1.6)), _game.combat.spawn_enemy("chaser", _at(13.0, -3.0, 1.6))]
+	for c in fcrew:
+		c.hp = 99999.0
+	await _frames(6)
+	fboss.prime_horn(0.03)
+	for tick in 30:
+		_game.player.reset_to(_ball_at, Vector3.ZERO)
+		await physics_frame
+		if fboss.horns >= 1:
+			break
+	var rallying_before_free := fcrew.all(func(c): return c.is_rallying())
+	fboss.free()
+	_t.check("Shift Boss freed mid-beat cancels crew rally",
+		rallying_before_free and fcrew.all(func(c): return not c.is_rallying() and not c.has_meta("foreman")))
 	_clear()
 
 
@@ -242,7 +373,15 @@ func _check_shift_over_gag() -> void:
 		_t.check("gag adds no floating words (ruling cx)", _tag_has_no_words(tag))
 		_t.check("gag is separate from DeathScatter script", tag.get_script() != EnemyMotion)
 		var meshes := tag.find_children("*", "MeshInstance3D", true, false)
-		_t.check("gag meshes disable shadow casting", not meshes.is_empty() and meshes.all(func(m: MeshInstance3D): return m.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF))
+		var tag_mesh: Mesh = (meshes[0] as MeshInstance3D).mesh if meshes.size() == 1 else null
+		var tag_mat := (meshes[0] as MeshInstance3D).material_override as StandardMaterial3D if meshes.size() == 1 else null
+		_t.check("gag is one ArrayMesh draw with satin brass finish (no PrimitiveMesh)",
+			meshes.size() == 1 and tag_mesh is ArrayMesh and not (tag_mesh is PrimitiveMesh)
+			and (meshes[0] as MeshInstance3D).cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			and tag_mat != null and tag_mat.has_meta("brass_finish")
+			and is_equal_approx(tag_mat.roughness, Palette.BRASS_FINISH.roughness)
+			and is_equal_approx(tag_mat.metallic, Palette.BRASS_FINISH.metallic)
+			and tag_mat.vertex_color_use_as_albedo)
 		# Planted broken collider on tag fails the no-collider check.
 		var plant_shape := CollisionShape3D.new()
 		tag.add_child(plant_shape)
@@ -250,7 +389,7 @@ func _check_shift_over_gag() -> void:
 		plant_shape.free()
 		# Step through flight, spin, grounded bounce, and clean self-free.
 		var ref: WeakRef = weakref(tag)
-		var start_basis: Basis = tag._visual.basis
+		var start_basis: Basis = tag.visual_basis()
 		var spun := false
 		var peaked := false
 		var start_y := tag.global_position.y
@@ -265,7 +404,7 @@ func _check_shift_over_gag() -> void:
 			var live = ref.get_ref()
 			if live == null or live.is_queued_for_deletion():
 				continue
-			if not live._visual.basis.is_equal_approx(start_basis):
+			if not live.visual_basis().is_equal_approx(start_basis):
 				spun = true
 			if live.global_position.y > start_y + 0.5:
 				peaked = true
@@ -307,6 +446,51 @@ func _check_shift_over_gag() -> void:
 	_t.check("isolated gag bounces on delta alone without any gameplay clock", iso != null and iso_bounces >= 1, "bounces=%d" % iso_bounces)
 	bare.free()
 
+	# Tag exemptions: non-ordinary kinds, boss pieces and ring-outs pop no tag.
+	_clear()
+	var probe_parent := Node3D.new()
+	root.add_child(probe_parent)
+	var probe := Node3D.new()
+	probe_parent.add_child(probe)
+	for exempt in ["vault", "warden", "miniboss", "rogue_crane", "rogue_skip", "rogue_tender", "brindle_hull"]:
+		_t.check("tag exempts %s" % exempt, EnemyMotion.pop_shift_tag(probe, exempt, Vector3.RIGHT) == null)
+	probe_parent.free()
+	var ring_victim = _game.combat.spawn_enemy("chaser", _at(0.0, 0.0, 1.6))
+	var ring_parent: Node = ring_victim.get_parent()
+	ring_victim.ringed_out = true
+	ring_victim.take_damage(1.0e6)
+	var ring_tags := ring_parent.get_children().filter(func(n): return n is EnemyMotion.ShiftOverTag and not n.is_queued_for_deletion())
+	_t.eq("ring-out pops no tag", [EnemyMotion.live_tag_count(), ring_tags.size()], [0, 0])
+
+	# Tag cap: 20 downed machines in one tick stay within MAX_TAGS (8 default, 4 on low preset).
+	_clear()
+	var saved_preset := GraphicsPreset.current
+	GraphicsPreset.current = "high"
+	var first_tags := []
+	var tag_parent: Node = null
+	for i in 20:
+		var c = _game.combat.spawn_enemy("chaser", _at(-10.0 + float(i % 5) * 4.0, -6.0 + float(i / 5) * 4.0, 1.6))
+		tag_parent = c.get_parent()
+		c.take_damage(1.0e6)
+		if i == 0:
+			first_tags = tag_parent.get_children().filter(func(n): return n is EnemyMotion.ShiftOverTag)
+	await _frames(2)
+	var live_default := tag_parent.get_children().filter(func(n): return n is EnemyMotion.ShiftOverTag and not n.is_queued_for_deletion())
+	_t.eq("20 deaths in one tick cap at MAX_TAGS on default preset", [EnemyMotion.live_tag_count(), live_default.size()], [EnemyMotion.MAX_TAGS, EnemyMotion.MAX_TAGS])
+	_t.check("oldest tag freed when cap hit", first_tags.size() == 1 and not is_instance_valid(first_tags[0]))
+
+	_clear()
+	GraphicsPreset.current = "low"
+	for i in 20:
+		var c = _game.combat.spawn_enemy("chaser", _at(-10.0 + float(i % 5) * 4.0, -6.0 + float(i / 5) * 4.0, 1.6))
+		tag_parent = c.get_parent()
+		c.take_damage(1.0e6)
+	await _frames(2)
+	var live_low := tag_parent.get_children().filter(func(n): return n is EnemyMotion.ShiftOverTag and not n.is_queued_for_deletion())
+	GraphicsPreset.current = saved_preset
+	_t.eq("20 deaths in one tick cap at half MAX_TAGS on low preset", [EnemyMotion.live_tag_count(), live_low.size()], [EnemyMotion.MAX_TAGS / 2, EnemyMotion.MAX_TAGS / 2])
+	_clear()
+
 
 func _check_lock_rows() -> void:
 	for map in ["park_dam", "park_flume"]:
@@ -328,6 +512,7 @@ func _run() -> void:
 	_check_lock_rows()
 	await _boot()
 	await _check_horn_snap_and_motion()
+	await _check_snap_edge_cases()
 	await _check_shift_over_gag()
 	_game.free()
 	quit(_t.verdict())
