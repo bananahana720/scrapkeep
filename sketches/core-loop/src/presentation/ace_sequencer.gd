@@ -121,6 +121,7 @@ var short_reads := 0
 var misses := 0
 var render_usec := 0
 var trims := {}
+var trim_epoch := 0
 # The set director's low-pass sweep: the wet share of SWEEP_HZ on every voice whose profile has
 # no low-pass of its own, in the sections trims reach.
 var sweep := 0.0
@@ -305,6 +306,7 @@ func start_level(at: int, fight := false) -> void:
 		earliest = clock + _ramp_frames(float(manifest.get("join_ms", 10.0)))
 	section = ""
 	trims = {}
+	trim_epoch += 1
 	sweep = 0.0
 	mode = "level"
 	built = false
@@ -335,6 +337,7 @@ func stop(ramp := STOP_RAMP) -> void:
 	voices.clear()
 	section = ""
 	trims = {}
+	trim_epoch += 1
 	sweep = 0.0
 	events_log.append(["stop", clock, ""])
 
@@ -375,19 +378,32 @@ func stop_at(at: int, ramp := STOP_RAMP) -> void:
 # section's profile and the faders, from transport sample at over frames. An empty dict puts every
 # stem back. The directed sections (PROTECTED) and the Warden's breath and drop ignore them, so the
 # director can never thin a payoff. Starting or stopping the band clears them.
-func trim_at(at: int, next: Dictionary, frames: int) -> void:
-	_add({"at": maxi(at, clock), "type": "trim", "trims": next.duplicate(), "frames": maxi(frames, 1)})
+func trim_at(at: int, next: Dictionary, frames: int, epoch := -1) -> void:
+	_add({"at": maxi(at, clock), "type": "trim", "trims": next.duplicate(), "frames": maxi(frames, 1), "epoch": epoch})
 
 
 # One bar of trims: the cut is full on bar line at, the stems are back on the next, each ramp
 # ending on its edge so the downbeat sounds at its own level.
 # depth rolls the band under the low-pass across the bar; it is gone by the next bar line.
-func trim_bar(at: int, next: Dictionary, bar: int, ramp: int, depth := 0.0) -> void:
+func trim_bar(at: int, next: Dictionary, bar: int, ramp: int, depth := 0.0, epoch := -1) -> void:
 	if not next.is_empty():
-		trim_at(at - ramp, next, ramp)
+		trim_at(at - ramp, next, ramp, epoch)
 	if depth > 0.0:
-		_add({"at": maxi(at, clock), "type": "sweep", "depth": depth, "frames": maxi(bar - ramp, 1)})
-	_add({"at": maxi(at + bar - ramp, clock), "type": "trim", "trims": {}, "frames": maxi(ramp, 1), "sweep": 0.0})
+		_add({"at": maxi(at, clock), "type": "sweep", "depth": depth, "frames": maxi(bar - ramp, 1), "epoch": epoch})
+	_add({"at": maxi(at + bar - ramp, clock), "type": "trim", "trims": {}, "frames": maxi(ramp, 1), "sweep": 0.0, "epoch": -1})
+
+
+func invalidate_trims(ramp := STOP_RAMP) -> void:
+	trim_epoch += 1
+	actions = actions.filter(func(a: Dictionary) -> bool:
+		var t := String(a.get("type", ""))
+		if t == "sweep":
+			return false
+		if t == "trim" and not (a.get("trims", {}) as Dictionary).is_empty():
+			return false
+		return true)
+	if not trims.is_empty() or sweep > 0.0:
+		_add({"at": clock, "type": "trim", "trims": {}, "frames": maxi(ramp, 1), "sweep": 0.0, "epoch": -1})
 
 
 # The live voices move toward a sweep depth over frames.
@@ -1158,8 +1174,14 @@ func _run(action: Dictionary) -> void:
 		"follow":
 			_follow()
 		"sweep":
+			var sweep_epoch := int(action.get("epoch", -1))
+			if sweep_epoch >= 0 and sweep_epoch != trim_epoch:
+				return
 			_sweep_to(float(action.depth), int(action.frames))
 		"trim":
+			var trim_action_epoch := int(action.get("epoch", -1))
+			if not (action.trims as Dictionary).is_empty() and trim_action_epoch >= 0 and trim_action_epoch != trim_epoch:
+				return
 			if action.has("sweep"):
 				_sweep_to(0.0, int(action.frames))
 			var stems: Array = trims.keys()
@@ -1187,6 +1209,7 @@ func _commit() -> void:
 	pending = {}
 	fading = fading.filter(func(v: Voice) -> bool: return v.gain > 0.0 or v.target > 0.0)
 	section = name
+	trim_epoch += 1
 	grid_bar = int(clip["bar"])
 	grid_beat = int(clip["beat"])
 	origin = clock - posmod(entry - int(clip["entry"]), grid_bar)
