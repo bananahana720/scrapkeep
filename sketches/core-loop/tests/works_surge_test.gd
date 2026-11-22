@@ -507,7 +507,9 @@ func _check_real_interact_claim_conflict_and_recharge() -> void:
 	var routed_tap := _press_e_tick(player, interact, true, true)
 	_press_e_tick(player, interact, false, false)
 	t.check("PlayerBall._route_interact() turned mount_pressed into interact_pressed", routed_tap, "")
+	dev.prompt.visible = true
 	t.eq("prompt draws zero words on screen (ruling cx)", WordBudget.words_in(" ".join(dev.prompt.drawn_words())), 0)
+	dev.prompt.visible = false
 	t.eq("a tap without holding does not spend scrap or fire valve", c.sluice_state("sluice_a")["state"], "ready")
 	t.eq("a tap spends no scrap", run.scrap, PRICE * 3)
 
