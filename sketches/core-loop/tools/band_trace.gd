@@ -231,8 +231,8 @@ func _emit_row(tick: int, stage: int, flow_state: String, boss, transition: bool
 			hull_dist = Vector2(ball.x - hull_pos.x, ball.z - hull_pos.z).length()
 		var held = bool(boss.call("_held")) if boss.has_method("_held") else ""
 		var in_trans = bool(boss.call("_in_transition")) if boss.has_method("_in_transition") else ""
-		var chg_timer = snappedf(float(chg["timer"]), 0.02) if chg.has("timer") else ""
-		var chg_timer_text := "%.2f" % float(chg["timer"]) if chg.has("timer") else ""
+		var chg_timer = snappedf(float(chg.get("timer", 0.0)), 0.02) if raw_chg is Dictionary else ""
+		var chg_timer_text := "%.2f" % chg_timer if raw_chg is Dictionary else ""
 		var boss_info := {
 			"state": boss.state_name(),
 			"phase": int(boss.phase),
