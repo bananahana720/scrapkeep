@@ -44,6 +44,7 @@ var _press_held := false
 var _hold_s := 0.0
 var _buffered := false
 var _buffer_s := 0.0
+var _buffer_latched := false
 var _chamber := 0
 var _mag := 0
 var _hot_rounds := 0
@@ -86,6 +87,7 @@ func step(delta: float, intent, weapon: String, pattern: Resource, rate_hz: floa
 	var pressed: bool = bool(intent.fire_pressed) if intent != null else false
 	var released: bool = (bool(intent.fire_released) if intent != null else false) or (was_held and not held)
 	_press_held = held
+	_buffer_latched = false
 	var shots: Array
 	if _trigger == Pattern.TRIGGER_PRESS:
 		shots = _step_press(delta, weapon, pattern, pressed, held, context)
@@ -102,11 +104,11 @@ func step(delta: float, intent, weapon: String, pattern: Resource, rate_hz: floa
 		if _recover_s > 0.0:
 			_recover_s = maxf(0.0, _recover_s - delta)
 		shots = _step_hold_auto(weapon, pattern, rate_hz, pressed, held)
-	# The buffer ages after the trigger has had its chance to spend it, so a press kept
-	# BUFFER_S before ready still acts on the tick the trigger comes ready.
-	if _buffered:
+	# The buffer ages after the trigger has had its chance to spend it, and never on the
+	# tick it was latched, so a press kept BUFFER_S before ready fires on the ready tick.
+	if _buffered and not _buffer_latched:
 		_buffer_s -= delta
-		if _buffer_s <= 0.0:
+		if _buffer_s <= EPS:
 			_buffered = false
 			_buffer_s = 0.0
 	return shots
@@ -160,6 +162,7 @@ func reset(pattern: Resource = null) -> void:
 	_hold_s = 0.0
 	_buffered = false
 	_buffer_s = 0.0
+	_buffer_latched = false
 	_hot_rounds = 0
 	_hot_pierce = false
 	_reloading = false
@@ -331,9 +334,8 @@ func _step_press(delta: float, weapon: String, pattern: Resource, pressed: bool,
 				return shots
 			if _window_state == WINDOW_WAITING:
 				_window_state = WINDOW_SPENT
-			elif _reload_s - _reload_t <= BUFFER_S:
-				_buffered = true
-				_buffer_s = BUFFER_S
+			elif _reload_s - _reload_t <= BUFFER_S * reload_rate_mult + EPS:
+				_latch_buffer()
 		if _reload_t + EPS >= _reload_s:
 			_reloading = false
 			_reload_t = 0.0
@@ -354,11 +356,10 @@ func _step_press(delta: float, weapon: String, pattern: Resource, pressed: bool,
 			_window_state = WINDOW_IDLE
 			_buffered = false
 			_buffer_s = 0.0
-			shots.append(_fire_press_round(weapon, floor_s, sprinting and held and _hold_s > 0.0, rate_mult))
+			shots.append(_fire_press_round(weapon, floor_s, false, rate_mult))
 			return shots
-		if _cooldown > 0.0 and _cooldown <= BUFFER_S and _loaded():
-			_buffered = true
-			_buffer_s = BUFFER_S
+		if _cooldown > 0.0 and _cooldown <= BUFFER_S + EPS and _loaded():
+			_latch_buffer()
 			return shots
 	elif _buffered and _cooldown <= 0.0 and _loaded():
 		_window_state = WINDOW_IDLE
@@ -379,6 +380,12 @@ func _loaded() -> bool:
 	return _mag <= 0 or _chamber > 0
 
 
+func _latch_buffer() -> void:
+	_buffered = true
+	_buffer_s = BUFFER_S
+	_buffer_latched = true
+
+
 func _fire_press_round(weapon: String, floor_s: float, fan: bool, rate_mult: float) -> Dictionary:
 	var is_hot := _hot_rounds > 0
 	var pierce := is_hot and _hot_rounds == 1 and _hot_pierce
@@ -395,7 +402,7 @@ func _fire_press_round(weapon: String, floor_s: float, fan: bool, rate_mult: flo
 	if fan:
 		mult *= Weapons.RIVET_FAN_DAMAGE
 		spread = Weapons.RIVET_FAN_SPREAD_DEG
-		next_floor = Weapons.RIVET_FAN_FLOOR_S / maxf(rate_mult, 1.0)
+		next_floor = Weapons.RIVET_FAN_FLOOR_S / rate_mult
 		kind = SHOT_FAN
 	if _mag > 0 and _chamber <= 0:
 		_reloading = true
@@ -451,9 +458,8 @@ func _step_tap_charge(delta: float, weapon: String, pattern: Resource, pressed: 
 			fired_spark = true
 		else:
 			var wait_s := maxf(_cooldown, _recover_s)
-			if wait_s <= BUFFER_S:
-				_buffered = true
-				_buffer_s = BUFFER_S
+			if wait_s <= BUFFER_S + EPS:
+				_latch_buffer()
 	elif _buffered and _cooldown <= 0.0 and _recover_s <= 0.0:
 		shots.append({"kind": SHOT_SPARK, "weapon": weapon, "damage_mult": 1.0, "pierce": false, "spread_deg": 0.0})
 		_cooldown = floor_s

@@ -339,9 +339,9 @@ export const ROWS = {
     real: [
       {
         cfg: "weaponcadence-today.cfg",
-        minStates: 6388,
+        minStates: 6394,
         label:
-          "Rivet press, Sable tap_charge, Tally stamp refund, boundaries, interrupts and proc isolation (W46 E1-17)",
+          "Rivet press, Sable tap_charge, Tally stamp refund, boundaries, interrupts and proc isolation (W46 E1-17, WC-1 closed by W46-FIX1)",
       },
     ],
     plants: [
@@ -358,7 +358,6 @@ export const ROWS = {
     ],
     coverage: "references/weaponcadence-coverage.md",
     gaps: [
-      "WC-1 (open): combat.gd does not call weapon_driver.reset() on run_ended or flow_changed('title') after a boss win or victory lap close (AllowDirectTitleQuit=FALSE on weaponcadence-today; weaponcadence-broken-title-reset reproduces the break)",
       "seconds, DPS ceilings, Overdrive Sprint fan, speed-tier charge multipliers and phase E2 modes (lob_snap, beats, lock) are left to weapon_driver_test.gd, weapon_cadence_test.gd and weapon_envelope_test.gd",
     ],
   },
