@@ -3788,7 +3788,7 @@ func _nearest_pickup(boss, ball: Vector3) -> Vector3:
 		var d := _flat(ball, at)
 		if String(p.get("source", "")) == "shed" and d > SHED_CHASE and not _shed_ahead(ball, at):
 			continue
-		if rings.covers(at):
+		if rings.crosses(ball, at):
 			continue
 		if d < best_d:
 			best_d = d
@@ -3899,14 +3899,21 @@ class CuedRing:
 # it: its cue's preview band or its warning on screen for the bot's reaction time, and read by its
 # band. A ring known by its cue stays known when it commits, as a player who saw the preview knows the
 # warning that follows it. The fight asks whether the close vent ring is known, where the safe floor
-# is, and whether a point lies on a known ring. It reads the boss through reprise_preview() and
-# active_hazards() only; nothing here survives the bot that owns it.
+# is, whether a roll to a point runs over a known ring, and where to steer so that none does. It
+# reads the boss through reprise_preview() and active_hazards() only; nothing here survives the bot
+# that owns it.
 class BrindleRings:
 	extends RefCounted
 	const Rules := preload("res://src/boss/boss_rules.gd")
 	# A known ring is widened by this on each side when the bot picks where to stand or what scrap
 	# to fetch: the ball's radius and a little slack.
 	const EDGE := 2.0
+	# How finely crosses() samples a roll.
+	const PATH_STEP := 1.0
+	# How far round its band steer_within() leads the ball toward a steer it cannot roll straight to.
+	const GAP_TURN := 0.3
+	# How far ahead rolling_onto() looks along the ball's velocity, in seconds.
+	const BRAKE_LOOK := 0.4
 	# Known rings this tick: {"band": Vector2(r_in, r_out), "centre": Vector3, "state": "cued", "warned" or "live"}.
 	var known: Array[Dictionary] = []
 	var _tick := -1
@@ -3989,6 +3996,62 @@ class BrindleRings:
 			var r := Vector2(point.x - c.x, point.z - c.z).length()
 			var b: Vector2 = ring["band"]
 			if r >= b.x - EDGE and r <= b.y + EDGE:
+				return true
+		return false
+
+	# Whether the straight roll from one point to another runs over a known ring, EDGE included:
+	# scrap inside a ring, on its edge, or across it. Sampled every PATH_STEP m past the start, so a
+	# ball standing on a ring's edge may still roll away from it.
+	func crosses(from: Vector3, to: Vector3) -> bool:
+		if known.is_empty():
+			return false
+		var length := Vector2(to.x - from.x, to.z - from.z).length()
+		var steps := maxi(1, ceili(length / PATH_STEP))
+		for i in range(1, steps + 1):
+			if covers(from.lerp(to, float(i) / float(steps))):
+				return true
+		return false
+
+	# A steer the ball can roll to without crossing a known ring. A ball standing between known rings
+	# (or inside the innermost, in its margin included) keeps to that free band: a steer whose straight
+	# roll runs over a ring becomes a point along the band, at most GAP_TURN radians round toward the
+	# steer, at the steer's radius held EDGE inside the band. A ball on a ring, a band too narrow to
+	# stand in (the hull's own floor inside the close vent ring) or no ring known: the steer as asked.
+	func steer_within(ball: Vector3, steer: Vector3) -> Vector3:
+		if known.is_empty() or not crosses(ball, steer):
+			return steer
+		var c: Vector3 = known[0]["centre"]
+		var r_ball := Vector2(ball.x - c.x, ball.z - c.z).length()
+		var lo := 0.0
+		var hi := INF
+		for ring in known:
+			var b: Vector2 = ring["band"]
+			if r_ball >= b.x and r_ball <= b.y:
+				return steer
+			if b.y < r_ball:
+				lo = maxf(lo, b.y + EDGE)
+			else:
+				hi = minf(hi, b.x - EDGE)
+		if hi - lo < 2.0 * EDGE:
+			return steer
+		var a_ball := atan2(ball.z - c.z, ball.x - c.x)
+		var a_steer := atan2(steer.z - c.z, steer.x - c.x)
+		var a := a_ball + clampf(wrapf(a_steer - a_ball, -PI, PI), -GAP_TURN, GAP_TURN)
+		var r := clampf(Vector2(steer.x - c.x, steer.z - c.z).length(), lo + EDGE * 0.5, hi - EDGE * 0.5)
+		return Vector3(c.x + cos(a) * r, steer.y, c.z + sin(a) * r)
+
+	# Whether a ball off every known ring will roll onto one within BRAKE_LOOK seconds at this velocity.
+	func rolling_onto(ball: Vector3, velocity: Vector3) -> bool:
+		if known.is_empty() or _on_ring(ball):
+			return false
+		return _on_ring(ball + Vector3(velocity.x, 0.0, velocity.z) * BRAKE_LOOK)
+
+	func _on_ring(point: Vector3) -> bool:
+		for ring in known:
+			var c: Vector3 = ring["centre"]
+			var r := Vector2(point.x - c.x, point.z - c.z).length()
+			var b: Vector2 = ring["band"]
+			if r >= b.x and r <= b.y:
 				return true
 		return false
 
@@ -4291,6 +4354,16 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 		_plant_state = "idle"
 	_ultimate_hands(fight)
 	_line_hands()
+	# In a boss fight no move rolls across one of Brindle's known slag rings (BrindleRings.steer_within),
+	# and a ball kept off a ring brakes, on the ground, when its speed would carry it on anyway (not
+	# while it dodges a threat).
+	var boss = _boss() if game.flow.state_name() == "boss" else null
+	var brake := false
+	if boss != null:
+		var rings := _brindle_rings(boss)
+		var within := rings.steer_within(player.ball_position(), steer)
+		brake = within != steer and player.state.grounded and rings.rolling_onto(player.ball_position(), player.state.velocity)
+		steer = within
 	var threats := _threats() if evade else []
 	if not threats.is_empty():
 		for h in threats:
@@ -4314,6 +4387,8 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 				steer = planted
 	_specials(fight, false)
 	_drive(steer, aim, delta)
+	if brake:
+		source.hold["brake_held"] = true
 
 
 # Every committed telegraph the ball is in, or will be within PREDICT, among those seen

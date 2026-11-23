@@ -20,8 +20,11 @@ const T := preload("res://tests/support/t.gd")
 #    yet. After the bot's reaction time its threat list holds the ring, and its phase 2 move rolls out
 #    past the ring instead of the ram run-up (_fight). The ring stays known when it commits.
 # 3. Scrap inside, or on the edge of, a live slag ring is not chased; the scrap outside it is.
+# 4. With a slag ring live, a move that would roll the ball across it (the ram's run-up out from the
+#    hull, its charge back in) is held inside the ball's free band, and a ball whose speed would carry
+#    it onto the ring brakes. A ball already on the ring steers off it as asked.
 #
-# Evidence limit: 2 and 3 step the driver's own functions against a fake boss and a ball that does not
+# Evidence limit: 2 to 4 step the driver's own functions against a fake boss and a ball that does not
 # move; they show what the bot perceives and where it steers, not that it gets out in time. The fight
 # itself is bot_brindle_short_test.
 
@@ -36,9 +39,14 @@ class FakeState:
 	var velocity := Vector3.ZERO
 
 
+class FakeKit:
+	var mounted := false
+
+
 class FakePlayer:
 	var at := Vector3.ZERO
 	var state := FakeState.new()
+	var kit := FakeKit.new()
 
 	func ball_position() -> Vector3:
 		return at
@@ -137,6 +145,37 @@ class Probe extends BotDriver:
 		pass
 
 
+# _act with everything but the ring rule stubbed: the steer it hands the drive, and the brake.
+class DriveProbe extends BotDriver:
+	var driven := Vector3.INF
+
+	func _init(game_ref) -> void:
+		super(game_ref, "skipper", 1)
+		boss_note = {"hits": 0}
+
+	func _drive(steer: Vector3, _aim, _delta: float) -> void:
+		driven = steer
+		source.hold = {}
+
+	func _threats() -> Array:
+		return []
+
+	func _ultimate_hands(_fight_node) -> void:
+		pass
+
+	func _line_hands() -> void:
+		pass
+
+	func _specials(_fight_node, _pressed: bool) -> void:
+		pass
+
+	func _engineer() -> bool:
+		return false
+
+	func _count(_key: String, _by: float = 1.0) -> void:
+		pass
+
+
 var _t := T.new("bot_brindle_rings_test")
 var _game
 var _driver
@@ -150,6 +189,7 @@ var _seen_max := 0.0
 func _initialize() -> void:
 	_check_cued_ring()
 	_check_pickups()
+	_check_band()
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -329,6 +369,50 @@ func _check_pickups() -> void:
 	_t.eq("live inner ring: the scrap inside it is left", bot._nearest_pickup(boss, game.player.at), outside)
 	boss.pickups = [{"at": edge, "source": "kill"}, {"at": outside, "source": "kill"}]
 	_t.eq("live inner ring: the scrap on its edge is left", bot._nearest_pickup(boss, game.player.at), outside)
+
+	ring.free()
+	arena.free()
+	game.free()
+
+
+# --- 4. no roll across a live ring -------------------------------------------------------
+
+func _check_band() -> void:
+	var game := FakeGame.new()
+	var arena := FakeArena.new()
+	var boss := FakeBoss.new()
+	boss.arena = arena
+	game.ctx.boss = boss
+	var bot := DriveProbe.new(game)
+	game.player.at = Vector3(11.0, 0.0, 0.0)
+	game.player.state.velocity = Vector3(15.0, 0.0, 0.0)
+	var across := Vector3(30.0, 0.0, 0.0)
+
+	bot._act(across, null, DT)
+	_t.eq("no ring known: the steer as asked", bot.driven, across)
+
+	var ring := _ring("slag_ring_a", Vector2(16.0, 21.0), false)
+	ring.state = Hazard.LIVE
+	boss.hazards = [ring]
+	for i in ceili(0.25 * Engine.physics_ticks_per_second) + 2:
+		bot.ticks += 1
+		bot._act(across, null, DT)
+	var r_in: float = arena.radius_of(bot.driven)
+	_t.check("ring A live, ball inside it: the run-up out stays inside the ring", bot.driven.is_finite() and r_in < 16.0 - 1.0,
+		"steer radius %.1f" % r_in)
+	_t.check("ring A live, ball rolling onto it: brakes", bool(bot.source.hold.get("brake_held", false)), str(bot.source.hold))
+
+	game.player.at = Vector3(26.0, 0.0, 0.0)
+	game.player.state.velocity = Vector3.ZERO
+	bot.ticks += 1
+	bot._act(Vector3.ZERO, null, DT)
+	var r_out: float = arena.radius_of(bot.driven)
+	_t.check("ring A live, ball past it: the charge at the hull stays past the ring", r_out > 21.0 + 1.0, "steer radius %.1f" % r_out)
+
+	game.player.at = Vector3(18.0, 0.0, 0.0)
+	bot.ticks += 1
+	bot._act(across, null, DT)
+	_t.eq("ball on the ring: the steer as asked, off it", bot.driven, across)
 
 	ring.free()
 	arena.free()
