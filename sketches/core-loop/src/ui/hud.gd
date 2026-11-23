@@ -1610,6 +1610,11 @@ func _process(delta: float) -> void:
 	if interact != null:
 		reticle.gauge = maxf(reticle.gauge, interact.hold_fraction())
 	reticle.gauge_color = tint
+	# The weapon's timing instrument reads the one public cadence record (PILOT-CADENCE section 5.3).
+	var combat = game.get("combat")
+	var driver = combat.get("weapon_driver") if combat != null else null
+	reticle.cadence = driver.state_snapshot() if driver != null else {}
+	reticle.cadence_color = tint
 	_step_ultimate(tint)
 	nixie_rail.set_piece = ability_bar.set_piece
 	if _piece_sizes() != _laid_pieces:

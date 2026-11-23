@@ -4,6 +4,7 @@ const AimStyle := preload("res://src/movement/aim_style.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Palette := preload("res://src/core/palette.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
@@ -41,6 +42,21 @@ const BACK_OVER := 0.2
 const LINE_OVER := 0.6
 const PILOT_SHARE := 0.65
 const BAND := 20.0
+# The weapon's timing instrument (PILOT-CADENCE section 5.3, LEGIBILITY section 14.1) sits inside
+# the reticle's ring at INSTRUMENT_R, round the aim point and clear of it: no mark comes nearer the
+# centre than DOT_CLEAR px, so the centre dot is never covered. Rivet's chambers are discs, a hot
+# round a size larger; Sable's charge is an arc on a dark track. Each mark sits on a dark backing.
+const INSTRUMENT_R := 10.0
+const DOT_CLEAR := 4.0
+const CHAMBER_R := 1.6
+const HOT_R := 2.1
+const CHAMBER_BACK := 1.0
+const TRACK_WIDTH := 4.0
+const FILL_WIDTH := 3.0
+const SWEEP_WIDTH := 1.5
+const NOTCH_WIDTH := 4.0
+const NOTCH_EDGE := 3.0
+const FULL_TICK := 4.0
 
 # The reticle carries no words: its shape and colour are the aim state (AimStyle), and
 # a grapple target in reach adds the right-mouse key glyph beside it (key_glyphs.gd).
@@ -63,6 +79,10 @@ var meter_active := false
 var meter_color := Color.WHITE
 # The Q prompt draws the keycap in the gap this tick.
 var hide_q := false
+# The weapon's cadence this tick, as WeaponDriver.state_snapshot() publishes it, and the pilot's
+# class colour; the reticle reads nothing else of the weapon (cadence_marks).
+var cadence := {}
+var cadence_color := Color.WHITE
 var _shake_left := 0.0
 var _shake_clock := 0.0
 var _breath_clock := 0.0
@@ -95,6 +115,8 @@ var _d_glyph := ""
 var _d_snap_point := Vector3.INF
 var _d_cam_xform := Transform3D()
 var _d_cam_fov := 0.0
+var _d_cadence := []
+var _d_cadence_color := Color.WHITE
 var _was_animating := false
 
 
@@ -135,6 +157,7 @@ func _process(delta: float) -> void:
 	var cam_fov := camera.fov if has_snap and camera != null else 0.0
 	var glyph := q_glyph() if q_shown() else ""
 	var animating := _shake_left > 0.0 or meter_full
+	var cadence_now := cadence_key(cadence)
 	var dirty := not _has_drawn or animating or _was_animating \
 		or aim_state != _d_aim_state or _out_of_range_cached != _d_far \
 		or hooked != _d_hooked or grapple != _d_grapple \
@@ -142,6 +165,7 @@ func _process(delta: float) -> void:
 		or meter != _d_meter or meter_full != _d_meter_full or meter_active != _d_meter_active \
 		or meter_color != _d_meter_color or hide_q != _d_hide_q \
 		or _cover != _d_cover or view != _d_view or glyph != _d_glyph \
+		or cadence_now != _d_cadence or cadence_color != _d_cadence_color \
 		or (has_snap and (snap_point != _d_snap_point or cam_xform != _d_cam_xform or cam_fov != _d_cam_fov))
 	if dirty:
 		_has_drawn = true
@@ -163,6 +187,8 @@ func _process(delta: float) -> void:
 		_d_snap_point = snap_point
 		_d_cam_xform = cam_xform
 		_d_cam_fov = cam_fov
+		_d_cadence = cadence_now
+		_d_cadence_color = cadence_color
 		queue_redraw()
 	_drawn_centre = centre
 	_prepared_frame = Engine.get_process_frames()
@@ -364,6 +390,7 @@ func _draw() -> void:
 				at + Vector2(0.0, -DIAMOND), at + Vector2(DIAMOND, 0.0),
 				at + Vector2(0.0, DIAMOND), at + Vector2(-DIAMOND, 0.0), at + Vector2(0.0, -DIAMOND)])
 			draw_polyline(points, color, 2.5)
+	_draw_cadence(centre)
 
 
 func _thin(c: Color) -> Color:
@@ -393,3 +420,127 @@ func _draw_meter(centre: Vector2) -> void:
 		draw_arc(centre, r - width * 0.5 - 1.0, whole.x, whole.y, 48, rim, 1.5)
 	if q_shown():
 		Keycap.draw(self, centre + Vector2(0.0, r), q_glyph(), meter_rim(true), METER_Q_H)
+
+
+# What of a cadence snapshot the instrument draws, so the reticle redraws when a mark would change
+# and not for a timer it does not show. Empty for a trigger with no instrument here.
+static func cadence_key(snap: Dictionary) -> Array:
+	match String(snap.get("trigger", "")):
+		"press":
+			if int(snap.get("mag", 0)) <= 0:
+				return []
+			return ["press", int(snap["mag"]), int(snap.get("chamber", 0)), int(snap.get("hot", 0)),
+				bool(snap.get("reloading", false)), float(snap.get("reload", 0.0)), String(snap.get("window", "")),
+				snap.get("window_range", Vector2.ZERO), float(snap.get("reload_s", 0.0))]
+		"tap_charge":
+			return ["tap_charge", float(snap.get("charge", 0.0)), bool(snap.get("charging", false))]
+	return []
+
+
+# The instrument for a cadence snapshot, as marks round the aim point (offsets in px, screen
+# angles: 0 at three o'clock, growing clockwise). Each mark is a "disc", "ring", "arc" or
+# "line", names its `role`, and its `layer`: "back" for a dark backing (thinned by _back over the
+# pilot), "line" for a reading (thinned by _thin). Mint marks only the press-now moment; the
+# pilot's colour marks what the press makes; slate is a window spent; nothing is brass.
+static func cadence_marks(snap: Dictionary, class_color: Color) -> Array:
+	match String(snap.get("trigger", "")):
+		"press":
+			return _rivet_marks(snap) if int(snap.get("mag", 0)) > 0 else []
+		"tap_charge":
+			return _sable_marks(snap, class_color)
+	return []
+
+
+# Rivet: a cylinder of chambers clockwise from twelve in firing order. A spent chamber is a hollow
+# ring, a loaded one a bone disc, a hot round a larger copper disc. While the cylinder reloads the
+# chambers give way to a sweep round the same ring and the notch on it: brackets while it waits,
+# solid mint while a press would hit it, solid slate once it is spent.
+static func _rivet_marks(snap: Dictionary) -> Array:
+	var marks: Array = []
+	var bone := EventKinds.role_color("neutral")
+	var ink := Color(UiTokens.INK, BACKING_ALPHA)
+	var r := INSTRUMENT_R
+	if bool(snap.get("reloading", false)):
+		marks.append({"shape": "arc", "role": "track", "layer": "back", "r": r, "from": 0.0, "to": TAU, "width": TRACK_WIDTH, "color": ink})
+		var reload_s := float(snap.get("reload_s", 0.0))
+		var window: Vector2 = snap.get("window_range", Vector2.ZERO)
+		var state := String(snap.get("window", ""))
+		if reload_s > 0.0 and window.y > window.x and state != "idle":
+			var a := -PI * 0.5 + TAU * clampf(window.x / reload_s, 0.0, 1.0)
+			var b := -PI * 0.5 + TAU * clampf(window.y / reload_s, 0.0, 1.0)
+			match state:
+				"open":
+					marks.append({"shape": "arc", "role": "notch_open", "layer": "line", "r": r, "from": a, "to": b, "width": NOTCH_WIDTH, "color": EventKinds.role_color("live")})
+				"spent":
+					marks.append({"shape": "arc", "role": "notch_spent", "layer": "line", "r": r, "from": a, "to": b, "width": NOTCH_WIDTH, "color": EventKinds.role_color("slate")})
+				_:
+					var dim := Color(bone, 0.6)
+					marks.append({"shape": "arc", "role": "notch_waiting", "layer": "line", "r": r, "from": a, "to": b, "width": SWEEP_WIDTH, "color": dim})
+					for edge in [a, b]:
+						var d := Vector2.from_angle(edge)
+						marks.append({"shape": "line", "role": "notch_edge", "layer": "line", "from": d * (r - NOTCH_EDGE), "to": d * (r + NOTCH_EDGE), "width": SWEEP_WIDTH, "color": dim})
+		var at := -PI * 0.5 + TAU * clampf(float(snap.get("reload", 0.0)), 0.0, 1.0)
+		marks.append({"shape": "arc", "role": "sweep", "layer": "line", "r": r, "from": -PI * 0.5, "to": at, "width": SWEEP_WIDTH, "color": bone})
+		var head := Vector2.from_angle(at)
+		marks.append({"shape": "line", "role": "sweep_head", "layer": "line", "from": head * (r - NOTCH_EDGE), "to": head * (r + NOTCH_EDGE), "width": 2.0, "color": bone})
+		return marks
+	var mag := int(snap["mag"])
+	var loaded := clampi(int(snap.get("chamber", 0)), 0, mag)
+	var spent := mag - loaded
+	var hot := clampi(int(snap.get("hot", 0)), 0, loaded)
+	for i in mag:
+		var at := Vector2.from_angle(-PI * 0.5 + TAU * float(i) / float(mag)) * r
+		var is_hot := i >= spent and i < spent + hot
+		var size := HOT_R if is_hot else CHAMBER_R
+		marks.append({"shape": "disc", "role": "chamber_back", "layer": "back", "at": at, "r": size + CHAMBER_BACK, "color": ink})
+		if i < spent:
+			marks.append({"shape": "ring", "role": "chamber_spent", "layer": "line", "at": at, "r": size, "width": 1.0, "color": bone})
+		elif is_hot:
+			marks.append({"shape": "disc", "role": "chamber_hot", "layer": "line", "at": at, "r": size, "color": Palette.COPPER})
+		else:
+			marks.append({"shape": "disc", "role": "chamber_loaded", "layer": "line", "at": at, "r": size, "color": bone})
+	return marks
+
+
+# Sable: an empty arc on a dark track at rest, filling clockwise from twelve with the charge in her
+# colour (meter_fill_color keeps mint off the fill), and at full charge while held one mint tick
+# across twelve: let go now. The bolt leaving empties the charge, so the arc empties with it.
+static func _sable_marks(snap: Dictionary, class_color: Color) -> Array:
+	var r := INSTRUMENT_R
+	var marks: Array = [
+		{"shape": "arc", "role": "track", "layer": "back", "r": r, "from": 0.0, "to": TAU, "width": TRACK_WIDTH, "color": Color(UiTokens.INK, BACKING_ALPHA)},
+		{"shape": "arc", "role": "empty", "layer": "line", "r": r, "from": 0.0, "to": TAU, "width": 1.0, "color": Color(EventKinds.role_color("neutral"), 0.35)},
+	]
+	var charge := clampf(float(snap.get("charge", 0.0)), 0.0, 1.0)
+	if charge > 0.0:
+		marks.append({"shape": "arc", "role": "fill", "layer": "line", "r": r, "from": -PI * 0.5, "to": -PI * 0.5 + TAU * charge, "width": FILL_WIDTH, "color": meter_fill_color(class_color)})
+	if charge >= 1.0 and bool(snap.get("charging", false)):
+		marks.append({"shape": "line", "role": "full_tick", "layer": "line", "from": Vector2(0.0, -(r - FULL_TICK)), "to": Vector2(0.0, -(r + FULL_TICK)), "width": 3.0, "color": EventKinds.role_color("live")})
+	return marks
+
+
+# The nearest a mark comes to the aim point, in px.
+static func mark_reach(mark: Dictionary) -> float:
+	match String(mark["shape"]):
+		"disc", "ring":
+			return (mark["at"] as Vector2).length() - float(mark["r"]) - float(mark.get("width", 0.0)) * 0.5
+		"arc":
+			return float(mark["r"]) - float(mark["width"]) * 0.5
+		"line":
+			return minf((mark["from"] as Vector2).length(), (mark["to"] as Vector2).length()) - float(mark["width"]) * 0.5
+	return 0.0
+
+
+func _draw_cadence(centre: Vector2) -> void:
+	for mark in cadence_marks(cadence, cadence_color):
+		var c: Color = _back(mark["color"]) if mark["layer"] == "back" else _thin(mark["color"])
+		match String(mark["shape"]):
+			"disc":
+				draw_circle(centre + mark["at"], mark["r"], c)
+			"ring":
+				draw_arc(centre + mark["at"], mark["r"], 0.0, TAU, 16, c, mark["width"])
+			"arc":
+				if float(mark["to"]) > float(mark["from"]):
+					draw_arc(centre, mark["r"], mark["from"], mark["to"], 40, c, mark["width"])
+			"line":
+				draw_line(centre + mark["from"], centre + mark["to"], c, mark["width"])
