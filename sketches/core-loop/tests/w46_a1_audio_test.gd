@@ -355,6 +355,15 @@ func _test_brindle_phase_clash_and_anthem() -> void:
 	_pump(audio, audio.engine.bar_len() * 2)
 	_t.check("boss arena opens on Brindle ACE anthem", audio.ace_playing() and audio.engine.track == "brindle")
 
+	# Phase 1 published on the bus keeps section/phase plan with no second clash over arena entry.
+	audio.cue_log.clear()
+	events.boss_phase_changed.emit(1, "Requisition")
+	_pump(audio, audio.engine.beat_len() + 64)
+	var p1_clash: Array = audio.cue_log.filter(func(e: Array): return e[0] == "boss_phase_changed")
+	_t.check("Brindle ACE phase 1 bus signal keeps section 1 and phase plan with no second clash",
+		audio.engine.section == "1" and audio._phase_music_done == 1 and p1_clash.is_empty(),
+		"sec=%s done=%d clash=%s" % [audio.engine.section, audio._phase_music_done, str(p1_clash)])
+
 	audio.cue_log.clear()
 	audio._on_boss_phase_with(2)
 	var p2_music: Array = audio.cue_log.filter(func(e: Array): return e[0] == "boss_phase_music" and e[1] == "anthem-brindle-heavy")
@@ -385,6 +394,13 @@ func _test_brindle_phase_clash_and_anthem() -> void:
 	sevents.flow_changed.emit("boss")
 	sevents.boss_arena_entered.emit()
 	_pump(saudio, saudio.engine.bar_len() * 2)
+	saudio.cue_log.clear()
+	sevents.boss_phase_changed.emit(1, "Requisition")
+	_pump(saudio, saudio.engine.beat_len() + 64)
+	var sp1_clash: Array = saudio.cue_log.filter(func(e: Array): return e[0] == "boss_phase_changed")
+	_t.check("Brindle synth phase 1 bus signal keeps section 1 and phase plan with no second clash",
+		saudio.engine.section == "1" and saudio._phase_music_done == 1 and sp1_clash.is_empty(),
+		"sec=%s done=%d clash=%s" % [saudio.engine.section, saudio._phase_music_done, str(sp1_clash)])
 	saudio.cue_log.clear()
 	var want_beat: int = saudio.engine.next_beat()
 	saudio._on_boss_phase_with(2)
@@ -482,6 +498,55 @@ func _test_warden_form_synth_and_brindle() -> void:
 		_t.check("%s brindle form respects pinned radio" % mode,
 			baudio.cue_log.filter(func(e: Array): return e[0] == "warden_form").is_empty() and baudio.radio_hold == "roam-1-1")
 		_free_rig(brig, [brindle])
+
+	# 3) Synth form cancel_build("synth_form") never wipes external builds (brindle_hp, start_build, planned_drop).
+	var mrig := _make_rig("synth", "form")
+	var mevents: GameEvents = mrig["events"]
+	var mflow: FakeFlow = mrig["flow"]
+	var maudio: Audio = mrig["audio"]
+	var mboss := FakeGuard.new()
+	mboss.boss = true
+	root.add_child(mboss)
+	mflow.state = "boss"
+	mevents.flow_changed.emit("boss")
+	mevents.boss_arena_entered.emit()
+	_pump(maudio, maudio.engine.bar_len() * 2)
+
+	# Case A: brindle_hp starts the build first; synth form enters telegraph and cools back to closed.
+	maudio.engine.brindle_hp(0.8, true, 0.5)
+	_t.check("brindle_hp starts HP-driven build", maudio.engine.building())
+	mevents.posture_changed.emit(mboss, 80.0, false)
+	mevents.posture_changed.emit(mboss, 15.0, false)
+	_t.check("synth form closing after brindle_hp started build preserves brindle_hp build",
+		maudio.engine.building() and maudio._synth_form_state == "closed",
+		"building=%s owner=%s state=%s" % [str(maudio.engine.building()), maudio.engine._build_owner, maudio._synth_form_state])
+
+	# Case B: synth form starts the build, then brindle_hp claims it; synth form cooling preserves it.
+	maudio.engine.cancel_build()
+	mevents.posture_changed.emit(mboss, 80.0, false)
+	maudio.engine.brindle_hp(0.8, true, 0.6)
+	mevents.posture_changed.emit(mboss, 15.0, false)
+	_t.check("synth form closing after brindle_hp claims active build preserves brindle_hp build",
+		maudio.engine.building() and maudio.engine._build_owner == "brindle_hp",
+		"building=%s owner=%s" % [str(maudio.engine.building()), maudio.engine._build_owner])
+
+	# Case C: start_build (launch/ult) and planned_drop survive synth form reset.
+	maudio.engine.cancel_build()
+	mevents.posture_changed.emit(mboss, 80.0, false)
+	maudio.engine.start_build(3.0)
+	maudio._reset_synth_form()
+	_t.check("synth form reset preserves external start_build",
+		maudio.engine.building() and maudio.engine._build_owner == "open",
+		"building=%s owner=%s" % [str(maudio.engine.building()), maudio.engine._build_owner])
+
+	maudio.engine.cancel_build()
+	mevents.posture_changed.emit(mboss, 80.0, false)
+	maudio.engine.planned_drop(2, 4, 0.9)
+	maudio._reset_synth_form()
+	_t.check("synth form reset preserves external planned_drop",
+		maudio.engine.building() and not maudio.engine._pending_drop.is_empty() and maudio.engine._build_owner == "planned",
+		"building=%s pending=%s owner=%s" % [str(maudio.engine.building()), str(maudio.engine._pending_drop), maudio.engine._build_owner])
+	_free_rig(mrig, [mboss])
 
 
 func _test_reset_for_tests_cancels_bake() -> void:
