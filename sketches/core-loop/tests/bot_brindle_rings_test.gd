@@ -384,6 +384,8 @@ func _check_band() -> void:
 	boss.arena = arena
 	game.ctx.boss = boss
 	var bot := DriveProbe.new(game)
+	# The ship boss whose fight runs this tick, as _fight_boss marks it.
+	bot._ring_fight = boss
 	game.player.at = Vector3(11.0, 0.0, 0.0)
 	game.player.state.velocity = Vector3(15.0, 0.0, 0.0)
 	var across := Vector3(30.0, 0.0, 0.0)

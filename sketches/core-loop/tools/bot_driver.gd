@@ -622,8 +622,10 @@ var _sheet_live_s := -1.0
 var _punch_seen := 0.0
 # The tick before which punch_now() is a knockback, not a ram (KNOCK_S); set by a hit in a boss fight.
 var _knock_until := -1
-# Brindle's slag rings as this bot has read them.
+# Brindle's slag rings as this bot has read them, and the ship boss whose fight move runs this tick
+# (set by _fight_boss, cleared each tick): while it is set, _act keeps every roll off a known ring.
 var _rings := BrindleRings.new()
+var _ring_fight = null
 var _warden_hp_at := -1.0
 var _warden_kinds := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
@@ -920,6 +922,7 @@ func tick(delta: float) -> bool:
 	_harpoon_held = false
 	_harpoon_commit = false
 	_cruise_hold = false
+	_ring_fight = null
 	_contact_scan()
 	_fair.tick(delta)
 	if flow.in_stage():
@@ -3612,6 +3615,7 @@ func _fight_boss(delta: float) -> void:
 		_goal = "boss wait"
 		_act(game.player.ball_position() + game.player.planar_velocity(), null, delta)
 		return
+	_ring_fight = boss
 	var ball: Vector3 = game.player.ball_position()
 	var hull: Node3D = ship.hull
 	var punch: float = _punch_seen
@@ -4354,13 +4358,12 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 		_plant_state = "idle"
 	_ultimate_hands(fight)
 	_line_hands()
-	# In a boss fight no move rolls across one of Brindle's known slag rings (BrindleRings.steer_within),
-	# and a ball kept off a ring brakes, on the ground, when its speed would carry it on anyway (not
-	# while it dodges a threat).
-	var boss = _boss() if game.flow.state_name() == "boss" else null
+	# In Brindle's fight no move rolls across a known slag ring (BrindleRings.steer_within), and a ball
+	# kept off a ring brakes, on the ground, when its speed would carry it on anyway (not while it
+	# dodges a threat).
 	var brake := false
-	if boss != null:
-		var rings := _brindle_rings(boss)
+	if _ring_fight != null and is_instance_valid(_ring_fight):
+		var rings := _brindle_rings(_ring_fight)
 		var within := rings.steer_within(player.ball_position(), steer)
 		brake = within != steer and player.state.grounded and rings.rolling_onto(player.ball_position(), player.state.velocity)
 		steer = within
