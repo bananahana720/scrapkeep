@@ -20,7 +20,9 @@ const T := preload("res://tests/support/t.gd")
 # Keys are one per owner, mesh and shape: a second primitive under a key already pinned is not seen.
 # The test is bot tier, so sketch:fast sends it to the bot shards and the wave gate runs it.
 # Control: the child hangs a BoxMesh on the first park activity (--prim-plant=1); the census must
-# call it new, so the test can fail.
+# call it new, so the test can fail. A second control hangs a bare gate under the reward gates in the frame a
+# scan reads, where a gate the Warden's kill opens enters before its deferred dressing: the census holds a
+# surface that young for one frame and must still list it new, so the settle rule cannot hide a bare gate.
 #
 # Default ride scope: one seed, one pilot, one table. A surface the run never builds (a stage-2 secret
 # this bot skips, a drop it never sees) is not judged; the whole tree is scanned every 30 ticks, so
@@ -74,9 +76,14 @@ func _initialize() -> void:
 	var planted := census.filter(func(r): return String(r.shape).ends_with("/" + "PlantedStandIn"))
 	var plant := OS.get_environment("PRIM_PLANT")
 	var real: Array[Dictionary] = []
-	real.assign(census.filter(func(r): return plant == "dam_box" or not String(r.shape).ends_with("/PlantedStandIn")))
+	var bare_gate := census.filter(func(r): return String(r.shape).contains("/PlantedBareGate/"))
+	var is_control := func(r): return String(r.shape).contains("/PlantedBareGate/") or (plant != "dam_box" and String(r.shape).ends_with("/PlantedStandIn"))
+	real.assign(census.filter(func(r): return not is_control.call(r)))
 	_t.check("control: the BoxMesh planted on a park activity is new to the pin",
 		planted.size() == 1 and PrimCensus.pin_for(planted[0], pin).is_empty(), "%d planted rows" % planted.size())
+	_t.check("control: a bare gate hung in the frame a scan reads is listed, new to the pin",
+		bare_gate.size() == 1 and bare_gate[0].owner == "reward_gates.gd" and PrimCensus.pin_for(bare_gate[0], pin).is_empty(),
+		"%d bare gate rows" % bare_gate.size())
 	var verdict := PrimCensus.judge(real, pin)
 	_t.check("the census saw at least the pinned surfaces", real.size() >= MIN_SURFACES and real.size() > 50, "%d, pinned %d" % [real.size(), MIN_SURFACES])
 	_t.check("no primitive surface outside the pin", verdict.unlisted.is_empty(),
