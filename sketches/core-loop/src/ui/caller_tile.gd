@@ -5,6 +5,7 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # Who is on the line (Andrew, 9 November 2026: callers pop up in the HUD and talk, cute). A
 # small plate beside the speech bubble (moss_bubble.gd) with the caller's mark and a name tag
@@ -12,8 +13,8 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # so one glance says who is talking before a word is read. The plate's shape says whose hands
 # the caller is, the colour says which of them:
 #
-#   keeper  a rounded scrap plate: the site crews in their site's colour, a freed pilot in the
-#           pilot's own colour with the pilot's emblem
+#   keeper  a Keeper's cut plate (scrap_frame.gd): the site crews in their site's colour, never
+#           brass or mint, a freed pilot in the pilot's own colour with the pilot's emblem
 #   hatch   Moss, who is never seen (DESIGN-V2 sections 12 and 15): the slot of his hatch and
 #           his two mitts on its lip
 #   fleet   a requisition tag with clipped corners in the Fleet's hazard red
@@ -40,8 +41,8 @@ const INK_FLOOR := 0.4
 const CALLERS := {
 	"moss": {"hands": "hatch", "icon": "", "color": Palette.SANDSTONE},
 	"pump_crew": {"hands": "keeper", "icon": "obj_fabricator", "color": Palette.COPPER},
-	"flume_crew": {"hands": "keeper", "icon": "obj_event", "color": Palette.ARC},
-	"signal_crew": {"hands": "keeper", "icon": "obj_beacon", "color": Palette.BRASS},
+	"flume_crew": {"hands": "keeper", "icon": "obj_event", "color": Palette.STEEL},
+	"signal_crew": {"hands": "keeper", "icon": "obj_beacon", "color": Palette.LEDGER_CREAM},
 	"brindle": {"hands": "fleet", "icon": "fac_fleet", "color": Palette.BRASS},
 	"mind": {"hands": "works", "icon": "fac_mind", "color": Palette.ANCIENT},
 }
@@ -55,6 +56,9 @@ var speaker := ""
 var caller_name := ""
 var _look := {}
 var _voice := 0.0
+# The Keeper's two plates for the caller up now (_keeper_plates), and the frames the last draw put down.
+var _keeper: Array = []
+var _drawn: Array = []
 var _age := 0.0
 
 
@@ -86,6 +90,7 @@ func present(id: String, shown_name: String, voice_s := 0.0) -> bool:
 	_voice = maxf(0.0, voice_s)
 	_age = 0.0
 	visible = not _look.is_empty()
+	_keeper = _keeper_plates(_look["color"]) if hands() == "keeper" else []
 	set_process(visible)
 	queue_redraw()
 	return visible
@@ -94,6 +99,7 @@ func present(id: String, shown_name: String, voice_s := 0.0) -> bool:
 func clear() -> void:
 	speaker = ""
 	_look = {}
+	_keeper = []
 	visible = false
 	set_process(false)
 
@@ -118,6 +124,11 @@ func hands() -> String:
 	return String(_look.get("hands", ""))
 
 
+# The frames the last draw put down (ScrapFrame boxes, in order), for a check of the drawn colours.
+func drawn_frames() -> Array:
+	return _drawn.duplicate()
+
+
 func _process(delta: float) -> void:
 	_age += delta
 	if talking() or _age <= POP_IN + delta:
@@ -125,6 +136,7 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	_drawn = []
 	if _look.is_empty():
 		return
 	var color: Color = _look["color"]
@@ -136,8 +148,13 @@ func _draw() -> void:
 	pop = 1.0 + 0.18 * sin(pop * PI) if pop < 1.0 else 1.0
 	var centre := Vector2(SIDE, SIDE) * 0.5
 	draw_set_transform(centre + Vector2(0.0, hop), tilt, Vector2(pop, pop))
-	var plate := _plate(String(_look["hands"]))
-	draw_colored_polygon(plate, Color(Palette.CHARCOAL, 0.96))
+	var keeper: bool = _look["hands"] == "keeper"
+	var plate := PackedVector2Array() if keeper else _plate(String(_look["hands"]))
+	if keeper:
+		for box in _keeper:
+			_put_frame(box)
+	else:
+		draw_colored_polygon(plate, Color(Palette.CHARCOAL, 0.96))
 	if _look["hands"] == "hatch":
 		_draw_hatch(color, live, beat)
 	else:
@@ -154,11 +171,12 @@ func _draw() -> void:
 			if live:
 				var sweep := fposmod(_age * 1.4, 1.0) * 2.0 * half - half
 				draw_line(Vector2(-half + absf(sweep) * 0.55, sweep), Vector2(half - absf(sweep) * 0.55, sweep), Color(color, 0.6), 2.0)
-	var closed := plate.duplicate()
-	closed.append(closed[0])
-	# A charcoal keyline under the coloured edge: copper on the Spillway's sand is no edge at all.
-	draw_polyline(closed, Palette.CHARCOAL, EDGE + KEYLINE * 2.0)
-	draw_polyline(closed, color, EDGE)
+	if not keeper:
+		var closed := plate.duplicate()
+		closed.append(closed[0])
+		# A charcoal keyline under the coloured edge: copper on the Spillway's sand is no edge at all.
+		draw_polyline(closed, Palette.CHARCOAL, EDGE + KEYLINE * 2.0)
+		draw_polyline(closed, color, EDGE)
 	if _look["hands"] == "fleet":
 		# A requisition tag: its punch hole, low so the name tag does not cover it.
 		draw_circle(Vector2(-SIDE * 0.5 + 11.0, SIDE * 0.5 - 11.0), 3.5, color)
@@ -166,7 +184,29 @@ func _draw() -> void:
 	_draw_tag(color, live, beat)
 
 
-# The plate's outline about its centre, by whose hands.
+# A frame about the centre, drawn and noted in one step so the record is what was drawn.
+func _put_frame(box: StyleBox) -> void:
+	draw_style_box(box, Rect2(-Vector2(SIDE, SIDE) * 0.5, Vector2(SIDE, SIDE)))
+	_drawn.append(box)
+
+
+# A Keeper's plate, cut by the speaker's serial and built once per call: a charcoal plate with a
+# keyline (copper on the Spillway's sand is no edge at all), then its coloured edge, rivets and halftone.
+func _keeper_plates(color: Color) -> Array:
+	var serial := speaker.hash()
+	var under = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
+	under.border_color = Palette.CHARCOAL
+	under.border_width = EDGE + KEYLINE * 2.0
+	under.rivets = false
+	under.halftone = false
+	var edge = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
+	edge.border_color = color
+	edge.border_width = EDGE
+	edge.bg_color = Color(edge.bg_color, 0.0)
+	return [under, edge]
+
+
+# The plate's outline about its centre, by whose hands (a Keeper's is _keeper_plates).
 func _plate(whose: String) -> PackedVector2Array:
 	var h := SIDE * 0.5
 	var out := PackedVector2Array()

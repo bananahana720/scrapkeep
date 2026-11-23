@@ -5,6 +5,7 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # One stamped plate on Moss's counter. A tile is icons first: the part's family (cat_)
 # inside its rarity frame, its element (el_) and trigger (trg_) glyphs on the frame's
@@ -43,6 +44,9 @@ const DASH := 9.0
 var rec := {}
 var index := -1
 var _lift := 0.0
+# The tile's Keeper plate and the ring focus draws round it, cut by the record's serial (set_record).
+var _plate: StyleBox
+var _ring: StyleBox
 
 
 func _init(record := {}, tile_size := Vector2(112.0, 124.0)) -> void:
@@ -61,6 +65,12 @@ func _init(record := {}, tile_size := Vector2(112.0, 124.0)) -> void:
 func set_record(record: Dictionary) -> void:
 	rec = record
 	accessibility_name = String(rec.get("name", rec.get("id", "")))
+	var serial := String(rec.get("id", rec.get("kind", ""))).hash()
+	_plate = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
+	_ring = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
+	_ring.bg_color = Color(_ring.bg_color, 0.0)
+	_ring.rivets = false
+	_ring.halftone = false
 	queue_redraw()
 
 
@@ -94,14 +104,11 @@ func _draw() -> void:
 	if s == "sold" or s == "spent":
 		_dashed(rect.grow(-3.0), Color(Palette.SAND, 0.35))
 		return
-	UiDraw.panel(self, rect)
+	draw_style_box(_plate, rect)
 	if has_focus() or is_hovered():
-		var ring := StyleBoxFlat.new()
-		ring.draw_center = false
-		ring.border_color = UiTokens.TEXT if has_focus() else Palette.SAND
-		ring.set_border_width_all(3 if has_focus() else 2)
-		ring.set_corner_radius_all(UiTokens.RADIUS)
-		draw_style_box(ring, rect.grow(2.0))
+		_ring.border_color = UiTokens.TEXT if has_focus() else Palette.SAND
+		_ring.border_width = 3.0 if has_focus() else 2.0
+		draw_style_box(_ring, rect.grow(2.0))
 	var dim := 0.45 if s in ["poor", "capped", "welded"] else 1.0
 	var centre := Vector2(size.x * 0.5, 12.0 + ICON * 0.5 - 4.0 * _lift)
 	var icon_rect := Rect2(centre - Vector2(ICON, ICON) * 0.5, Vector2(ICON, ICON))
@@ -158,7 +165,7 @@ func _framed(icon_rect: Rect2, dim: float) -> void:
 	else:
 		draw_rect(outer, tint, false, frame["width"])
 	if frame["double"]:
-		draw_rect(outer.grow(-6.0), Color(Palette.ARC, dim) if frame["notches"] != "" else tint, false, frame["width"])
+		draw_rect(outer.grow(-6.0), tint, false, frame["width"])
 	match frame["notches"]:
 		"bolt":
 			# Corners and edge midpoints, so the bolts still read where the element and
@@ -189,7 +196,7 @@ func _price(at: Vector2, amount: int, poor: bool) -> void:
 	var w := COG + 5.0 + UiDraw.width(digits, PRICE_FONT, true)
 	var x := at.x - w * 0.5
 	var tint := Color(Palette.SAND, 0.45) if poor else Palette.SAND
-	draw_texture_rect(Icons.texture("res_scrap"), Rect2(Vector2(x, at.y - COG * 0.5), Vector2(COG, COG)), false, Icons.tint("res_scrap", Color(Palette.ARC, 0.45 if poor else 1.0)))
+	draw_texture_rect(Icons.texture("res_scrap"), Rect2(Vector2(x, at.y - COG * 0.5), Vector2(COG, COG)), false, Icons.tint("res_scrap", Color(Palette.STEEL, 0.45 if poor else 1.0)))
 	UiDraw.text(self, x + COG + 5.0, at.y, digits, PRICE_FONT, tint, true)
 	if poor:
 		draw_line(Vector2(x - 3.0, at.y + 1.0), Vector2(x + w + 3.0, at.y - 1.0), Palette.SAND, 2.0)
@@ -227,7 +234,7 @@ func _pips(at: Vector2, filled: int, cap: int, dim: float) -> void:
 		var x := at.x + (float(i) - (cap - 1) * 0.5) * 14.0
 		var diamond := PackedVector2Array([Vector2(x, at.y - 5.0), Vector2(x + 5.0, at.y), Vector2(x, at.y + 5.0), Vector2(x - 5.0, at.y)])
 		if i < filled:
-			draw_colored_polygon(diamond, Color(Palette.ARC, dim))
+			draw_colored_polygon(diamond, Color(UiTokens.hand(UiTokens.Hand.KEEPER).ink, dim))
 		else:
 			diamond.append(diamond[0])
 			draw_polyline(diamond, Color(Palette.SAND, 0.5 * dim), 1.5)

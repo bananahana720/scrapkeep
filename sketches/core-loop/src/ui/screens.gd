@@ -92,7 +92,7 @@ const STAT_WORD_FONT := UiTokens.CAPTION
 const COMIC_MAX_HEIGHT := 540.0
 const COMIC_BODY_LINES := 3
 const COMIC_MIN_HEIGHT := 240.0
-# RUN OVER's "next shift" note (core/death_tips.gd): an amber-edged plate taped up beside the comic page,
+# RUN OVER's "next shift" note (core/death_tips.gd): a Keeper's plate taped up beside the comic page,
 # where the column has room; under the body it pushed the actions off a 900 px screen. Its words wrap at
 # TIP_WIDTH.
 const TIP_FONT := UiTokens.BODY
@@ -1475,7 +1475,8 @@ func comic_page() -> Control:
 # The "next shift" note: its head in amber, the tip's words wrapped under it. It stands right of the
 # comic page once that arrives, and alone in the row until then.
 func _show_tip(tip: String) -> void:
-	var plate := ScrapFrame.plate(Color(Palette.AMBER, 0.7), TIP_SERIAL, Color(Palette.CHARCOAL, 0.94), 2.0, 0.5)
+	var plate = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, TIP_SERIAL)
+	plate.tape = 0.5
 	plate.content_margin_left = 16.0
 	plate.content_margin_right = 16.0
 	plate.content_margin_top = 16.0
