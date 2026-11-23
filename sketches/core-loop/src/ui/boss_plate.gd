@@ -370,10 +370,10 @@ func _draw() -> void:
 		draw_style_box(frame_box(), frame)
 	var mid := SIZE.y * 0.5
 	if which == UiTokens.Hand.ROGUE:
-		_hand_text(_stencil_face(), MARGIN, mid, crew(), STENCIL, UiTokens.HANDS[which].ink)
+		_hand_text(which, MARGIN, mid, crew())
 	elif which == UiTokens.Hand.FLEET:
 		if not name_held():
-			_hand_text(UiFonts.face(which), MARGIN, mid, plate_name(), FONT, UiTokens.HANDS[which].ink)
+			_hand_text(which, MARGIN, mid, plate_name())
 	elif not name_held():
 		UiDraw.text(self, MARGIN, mid, plate_name(), FONT, neutral)
 	var x := MARGIN + name_width()
@@ -405,8 +405,13 @@ func frame_box() -> StyleBox:
 	return ScrapFrame.hand_plate(which, SERIAL) if which != NO_HAND else null
 
 
-# Words or a number in a hand's own face, its left edge at x and its middle at y, with the HUD's outline.
-func _hand_text(font: Font, x: float, y: float, value: String, font_size: int, color: Color) -> void:
+# A hand's mark in its own ink, its left edge at x and its middle at y, with the HUD's outline: a Rogue's
+# stencilled number, or a name in the hand's words face.
+func _hand_text(which: int, x: float, y: float, value: String) -> void:
+	var stencil := which == UiTokens.Hand.ROGUE
+	var font := _stencil_face() if stencil else UiFonts.face(which)
+	var font_size := STENCIL if stencil else FONT
+	var color: Color = UiTokens.HANDS[which].ink
 	var at := Vector2(x, y + (font.get_ascent(font_size) - font.get_descent(font_size)) * 0.5)
 	draw_string_outline(font, at, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 6, UiDraw.OUTLINE)
 	draw_string(font, at, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
