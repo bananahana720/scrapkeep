@@ -11,11 +11,12 @@ const ClassPreview := preload("res://src/ui/class_preview.gd")
 const Push := preload("res://tests/workshop/push.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const Achievements := preload("res://src/core/achievements.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # The class cards that sell a pilot (v3 W12, playtest entry 8). On the real class
 # select, driven by pushed mouse and key events:
 #   - every card shows its class row's bar (1, 2, 3, Q) over its chips (RMB, Shift, Ctrl) with
-#     the rows' ability icons, plus its Space extra, and wears the row's colour;
+#     the rows' ability icons, plus its Space extra, and wears the row's screen colour (class_def.gd screen_color);
 #   - the whole screen reads in 75 words or fewer, as it opens (on the first card, PF-40) and with
 #     any one card open: the keycaps are the same on every card, so they read on the open card
 #     only (re-pinned 2026-10-10, unit B2);
@@ -224,7 +225,7 @@ func _check_rows(cards: Array) -> void:
 		var extras: Array = shown.slice(want_keys.size()).map(func(k): return k["key"])
 		var worn: Color = card.get_theme_stylebox("normal").border_color
 		_report("%s keys" % def.display_name, slots_ok and rows_ok and extras.all(func(k): return k == "key_space")
-				and card.def == def and Color(worn, 1.0).is_equal_approx(def.color),
+				and card.def == def and Color(worn, 1.0).is_equal_approx(ClassDef.screen_color(def.color)),
 			"shows %s; rows %s; extras %s; edge %s for row colour %s"
 				% [shown.map(func(k): return "%s %s \"%s\"" % [k["key"], k["icon"], k["words"]]), rows, extras, worn.to_html(false), def.color.to_html(false)])
 
