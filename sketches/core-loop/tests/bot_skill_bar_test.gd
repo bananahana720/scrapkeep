@@ -222,6 +222,7 @@ func _hand_cases() -> void:
 	abilities.snap_back("test")
 	_traversal_cases()
 	_cadence_fire_cases()
+	_chain_fire_cases()
 	_ultimate_cases()
 
 
@@ -288,6 +289,42 @@ func _cadence_fire_cases() -> void:
 			and not chain.source.hold.has("fire_held"), "press %s hold %s" % [chain.source.press, chain.source.hold])
 		chain._chain_phase = ""
 	drv.reset(_game.combat.pattern(_game.combat.active_weapon()))
+
+
+# E1-06b fix round 1: the chain move drops only its own fire. Every other hand's fire_pressed goes out
+# as before E1-06: the slot-3 click on a two-hook takeoff (_harpoon_hand casts, starts the chain,
+# then _act drives it on the same tick) and Tally's card press.
+func _chain_fire_cases() -> void:
+	var abilities = _game.player.abilities
+	var ahead: Vector3 = _game.player.ball_position() + Vector3.FORWARD * 20.0
+	abilities.refill()
+	abilities.snap_back("test")
+	var takeoff = _fresh("completionist")
+	takeoff.source.hold = {}
+	takeoff.source.press = {}
+	var queued: bool = takeoff._cast(3)
+	takeoff._chain_phase = "takeoff"
+	takeoff._act(ahead, null, DT)
+	_t.check("c4 a chain takeoff keeps the slot-3 cast's pick and click on one tick", queued
+		and takeoff.source.press.get("slot_pick", -1) == 2 and takeoff.source.press.get("fire_pressed", false),
+		"cast %s press %s hold %s" % [queued, takeoff.source.press, takeoff.source.hold])
+	takeoff._chain_phase = ""
+	takeoff._cast_phase = ""
+	abilities.snap_back("test")
+	var weapon: String = abilities.id_of(AbilityState.WEAPON)
+	abilities.swap(AbilityState.WEAPON, "ledger_reader")
+	var card = _fresh("completionist")
+	card._chain_phase = "takeoff"
+	card.source.hold = {}
+	card.source.press = {}
+	card._act(ahead, null, DT)
+	_t.check("c5 Tally's card press goes out on a chain-move tick, with the held button off",
+		card.source.press.get("fire_pressed", false) and not card.source.hold.has("fire_held"),
+		"press %s hold %s" % [card.source.press, card.source.hold])
+	card._chain_phase = ""
+	abilities.swap(AbilityState.WEAPON, weapon)
+	abilities.refill()
+	abilities.snap_back("test")
 
 
 func _ultimate_cases() -> void:
