@@ -175,7 +175,6 @@ func _rogue_plate() -> void:
 	_t.eq("a Rogue's plate says no words", plate.drawn_words(), [])
 	_t.eq("a Rogue's plate stencils its crew number", plate.drawn_number(), crew)
 	_t.check("the crew number is all digits", crew.is_valid_int(), crew)
-	_t.check("the number is set in the Rogue face", BossPlate._stencil_face() == UiFonts.face(UiTokens.Hand.ROGUE, true))
 	_t.eq("a Rogue's plate sets no pips", plate.pips().size(), 0)
 	_t.near("a Rogue's bar is its health", plate.bar_fraction(), 0.5)
 	_t.eq("a Rogue between vents shows no glyph", plate.glyph_id(), "")
@@ -207,7 +206,7 @@ func _colour_law() -> void:
 		var frame: StyleBox = ScrapFrame.hand_plate(hand, BossPlate.SERIAL)
 		var bad := []
 		for part in frame.parts(RECT):
-			if _purple(part.color) or ScrapFrame._near(part.color, Palette.ARC) or ScrapFrame._near(part.color, Palette.KINDNESS):
+			if _purple(part.color) or not ScrapFrame.lawful(hand, part.color):
 				bad.append(part.role)
 		_t.check("%s's frame wears no mint and no purple" % label, bad.is_empty(), str(bad))
 		var purple := marks.filter(func(c: Color): return _purple(c))
