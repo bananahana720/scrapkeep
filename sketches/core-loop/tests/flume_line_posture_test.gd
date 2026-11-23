@@ -95,8 +95,9 @@ func _run() -> void:
 	t.near("latched, Rivet: the reference bolt pays %.3f" % pay_base, _pay(w, "runner", reference, false, rivet), pay_base, 0.01)
 	t.near("latched, Rivet: the reference bolt pays %.3f while the relic charges" % pay_charging, _pay(w, "runner", reference, true, rivet), pay_charging, 0.02)
 	var rivet_rate := _fire_rate("rapid_laser")
-	var rivet_per_s := _pay(w, "runner", float(Weapons.BASE["rapid_laser"]["damage"]), false, rivet) * rivet_rate
-	var rivet_want := pay_base * float(Weapons.BASE["rapid_laser"]["damage"]) / reference * rivet_rate
+	var rivet_dmg := Weapons.base_damage("rapid_laser")
+	var rivet_per_s := _pay(w, "runner", rivet_dmg, false, rivet) * rivet_rate
+	var rivet_want := pay_base * rivet_dmg / reference * rivet_rate
 	t.near("latched, Rivet: the base kit fills %.3f posture per second, as under FL1" % rivet_per_s, rivet_per_s,
 		rivet_want, 0.01)
 
@@ -104,10 +105,10 @@ func _run() -> void:
 	# the bar at Rivet's posture per second.
 	var pays := []
 	for def in ClassDef.all():
-		var row: Dictionary = Weapons.BASE[def.weapon_id]
-		var pay := _pay(w, String(Weapons.STRIKE_KIND.get(def.weapon_id, "shot")), float(row["damage"]), false, def)
+		var dmg := Weapons.base_damage(def.weapon_id)
+		var pay := _pay(w, String(Weapons.STRIKE_KIND.get(def.weapon_id, "shot")), dmg, false, def)
 		var per_s := pay * _fire_rate(def.weapon_id)
-		pays.append("%s %s %.0f x %.2f/s -> %.3f a bolt, %.3f/s" % [def.id, def.weapon_id, float(row["damage"]), _fire_rate(def.weapon_id), pay, per_s])
+		pays.append("%s %s %.0f x %.2f/s -> %.3f a bolt, %.3f/s" % [def.id, def.weapon_id, dmg, _fire_rate(def.weapon_id), pay, per_s])
 		t.check("latched, %s: the base kit fills the bar within 1 percent of Rivet's posture per second" % def.id,
 			absf(per_s - rivet_per_s) <= 0.01 * rivet_per_s, "%.3f/s against %.3f/s" % [per_s, rivet_per_s])
 	print("[report] per-pilot pay at reference heft %.2f: %s" % [game.run.heft(), pays])
@@ -115,8 +116,7 @@ func _run() -> void:
 	# she fires one card per PRESSURE_ROLL_S at best (measured 0.50 a second on the park table, seed 1).
 	# Red at cac3f3de: her bolt was paid by the row's 2.5 a second and filled 1.41 a second.
 	var tally = _def("tally")
-	var tally_row: Dictionary = Weapons.BASE[tally.weapon_id]
-	var tally_per_s := _pay(w, String(Weapons.STRIKE_KIND.get(tally.weapon_id, "shot")), float(tally_row["damage"]), false, tally) \
+	var tally_per_s := _pay(w, String(Weapons.STRIKE_KIND.get(tally.weapon_id, "shot")), Weapons.base_damage(tally.weapon_id), false, tally) \
 		/ Weapons.PRESSURE_ROLL_S
 	t.near("latched, Tally: one card per %.1f s fills %.2f posture per second" % [Weapons.PRESSURE_ROLL_S, rivet_per_s],
 		tally_per_s, rivet_want, 0.01 * rivet_want)
@@ -180,14 +180,14 @@ func _run() -> void:
 func _pilot_damage() -> Dictionary:
 	var out := {}
 	for def in ClassDef.all():
-		out[def.weapon_id] = float(Weapons.BASE[def.weapon_id]["damage"])
+		out[def.weapon_id] = Weapons.base_damage(def.weapon_id)
 	return out
 
 
 static func _fire_rate(weapon: String) -> float:
 	if AbilityState.ABILITIES.get(weapon, {}).has("pressure"):
 		return 1.0 / Weapons.PRESSURE_ROLL_S
-	var dmg: float = float(Weapons.BASE[weapon]["damage"])
+	var dmg: float = Weapons.base_damage(weapon)
 	return WardenReactor.base_dps(weapon) / dmg if dmg > 0.0 else 0.0
 
 
