@@ -1,4 +1,0 @@
-main a04fdedb9510ec2d42b14dae1aca44628f6f5291
-candidate fd698d30b89564cea292affdeab9969aa4abea80
-merged-names:
-A	docs/tech/schemas/SC-08.md

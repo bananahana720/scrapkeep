@@ -1,7 +1,0 @@
-PROBE shallow_leaks=true
-PROBE deep_leaks=false
-PROBE replaced_leaks=false
-PROBE shallow_append_leaks=true source_size=16
-PROBE whole_assign_leaks=false
-PROBE shallow_id_shared_after_change=false
-exit=0

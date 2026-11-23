@@ -1,8 +1,0 @@
-$ npm run check:project
-
-> scrapkeep@1.0.0 check:project
-> node scripts/check-project.mjs
-
-Project checks passed: 87 Markdown files, 608 file links, package/lock metadata.
-Remote URLs, anchors, runtime behavior and full import analysis are outside this check.
-exit=0

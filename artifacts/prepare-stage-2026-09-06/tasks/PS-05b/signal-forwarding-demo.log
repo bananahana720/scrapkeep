@@ -1,6 +1,0 @@
-SIGTERM: wrapper exit=143 child_in_wrapper_pgid=True orphaned_children=[]
-child pid 290348 args: /home/andrew/Projects/scrapkeep-wt-PS-05b/tools/agent-player/run.py --probe
-child received TERM
-SIGINT: wrapper exit=130 child_in_wrapper_pgid=True orphaned_children=[]
-child pid 290425 args: /home/andrew/Projects/scrapkeep-wt-PS-05b/tools/agent-player/run.py --probe
-child received INT

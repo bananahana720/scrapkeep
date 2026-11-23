@@ -1,8 +1,0 @@
-dev-set.json g-slope-sign: jev first failing at 1
-dev-set.json g-mode-name: jev first failing at 1
-dev-set.json g-coyote-grows: jev first failing at 1
-dev-set.json g-tdd-tenth-test: jev first failing at 1
-dev-set.json n-jl11-crash-complete: jev first failing at 1
-dev-set.json n-wilson-z: jev first failing at 1
-dev-set.json [authored, sha256 7b92c6c3ba7755a4b50fa243b53ad6458051d824aedec626a599539c239cb65e]: mean rank of the first failing check jev 1, current 6, static 1; jev vs current {"better":6,"same":0,"worse":0}, jev vs static {"better":0,"same":6,"worse":0}; control pass (6); order gap max 0.06 mean 0.012; fallbacks 0; models jev-1.13.0; usage {"input_tokens":34236,"output_tokens":3122}
-calls 6; report artifacts/local/tasks/JL-23/live/dev/score.json

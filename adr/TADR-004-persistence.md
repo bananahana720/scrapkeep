@@ -53,7 +53,7 @@ Andrew resolved Q-P40 on 15 September 2026 (TRACKING EV-0202): `run.lifecycle.te
 
 ## Amendment 2026-10-02
 
-Andrew's owner interview of 2 October 2026 (question 2, [OWNER-INTERVIEW](../sketches/core-loop/design-v3/OWNER-INTERVIEW-2026-10-02.md)) replaced the run's single standard revival with one retry per world: the first lethal defeat in a world restarts its current zone from the save taken at that zone's entrance, and a second death in the same world ends the run. Read "standard revival" above as "the current world's retry". The spent flag is per world; every rule here about monotonic lifecycle facts, reload never restoring a spent retry and companion assistance never creating one applies unchanged. The [Bible](../BIBLE.md#runs-regions-exits-and-saves) was harmonized the same day. Recorded by the coordinator; no other text of this record changes.
+Andrew's owner interview of 2 October 2026 (question 2, OWNER-INTERVIEW (`../sketches/core-loop/design-v3/OWNER-INTERVIEW-2026-10-02.md`)) replaced the run's single standard revival with one retry per world: the first lethal defeat in a world restarts its current zone from the save taken at that zone's entrance, and a second death in the same world ends the run. Read "standard revival" above as "the current world's retry". The spent flag is per world; every rule here about monotonic lifecycle facts, reload never restoring a spent retry and companion assistance never creating one applies unchanged. The [Bible](../BIBLE.md#runs-regions-exits-and-saves) was harmonized the same day. Recorded by the coordinator; no other text of this record changes.
 
 ## Alpha amendment 2026-10-03
 

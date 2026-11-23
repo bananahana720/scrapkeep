@@ -1,9 +1,0 @@
- CONTRIBUTING.md                 |   2 +-
- docs/product/sections/README.md |   2 +-
- scripts/check-drift.mjs         | 175 ++++++++++++++++----
- tests/check-drift.test.js       | 350 ++++++++++++++++++++++++++++++++++++++++
- 4 files changed, 496 insertions(+), 33 deletions(-)
-254764f3f36ab68e6d2891408e3a37ec2e363fb6607982066adbe33ef6e69e70  scripts/check-drift.mjs
-5c3584883b04cb1daca43c2d6a3bcb799b95373d356471291d9a0c817d26e1aa  tests/check-drift.test.js
-coordinator rerun at 3d5a708a0d8498258ceb5dc67deb2e08be9d14dd (worktree with node_modules linked from the main checkout for the run only), 2026-09-18T01:10Z: check:scope --no-build tooling-no-build (4 paths); npm test 228 pass 0 fail; check:docs 0; check:project 0; check:drift exit 0 (technical 28 sections 228 hashes, product 3 sections 28 hashes, total 31/256).
-Integrated at 15eb87f50568aec5db2b27703e2ed30b3f079c37 (no-ff merge plus the PD-01 lines 20 and 183 out-of-lease wording corrections that named the old scan gap): npm test 228 pass 0 fail, check:drift exit 0 over both corpora, check:docs 0, check:project 0, check:scope --no-build tooling-no-build.

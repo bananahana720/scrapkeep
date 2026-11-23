@@ -1,2 +1,0 @@
-8b34733a6bc42ccb2076d0aa590d9331c1457667fda61b967fb2444c22e3096d  docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md
-coordinator rerun at 7b8bec0d8782d0dbe9fd3a96455e49c32681f1a3, 2026-09-16T10:55Z: +4 -2 in one file; the two old phrasings absent; check:scope --no-build exit 0; check:docs exit 0; check:project exit 0; check_attack.py exit 0.

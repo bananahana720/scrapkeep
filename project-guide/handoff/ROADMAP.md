@@ -31,7 +31,7 @@ Parked until after the sitting: dam perf remainders (the f4045 riser, the Warden
 
 - The world 1 and scaling backlog (Andrew, 12 Nov): every buildable row for world 1 now, the rows other threads own, and the groundwork for more stages, worlds and features, in [BACKLOG.md](../../BACKLOG.md#world-1-and-scaling-backlog-12-november-2026). World 1 rows rank first; a scaling row may not change what the sitting plays.
 - Deep-modules batch 2 from the queued list ([DEEP-SWEEP.md](DEEP-SWEEP.md)).
-- The systems audit add-on (Andrew, 11 Nov): six passes, world 1 first, defined as cards SA-A to SA-F in [BACKLOG.md](../../BACKLOG.md#systems-audit-add-on-11-november-2026), plan in [docs/systems-audit/PLAN.md](../../docs/systems-audit/PLAN.md). Passes A to D are done, E and F are open. The economy and break-it passes rerun at every sprint close.
+- The systems audit add-on (Andrew, 11 Nov): six passes, world 1 first, defined as cards SA-A to SA-F in [BACKLOG.md](../../BACKLOG.md#systems-audit-add-on-11-november-2026) (historical plan `docs/systems-audit/PLAN.md` in git history). Passes A to D are done, E and F are open. The economy and break-it passes rerun at every sprint close.
 - Watches on the live board, and the carried reds in [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) (ruling bq).
 - After the sitting, once the sound lane's pull requests have settled: type the four audio files that worker threads run (`synth.gd`, `harmony.gd`, `sfx_bank.gd`, `music_engine.gd`), make an untyped declaration in them an error, and add a cold two-thread stress test ([issue 593](https://github.com/bananahana720/scrapkeep/issues/593)). Parked on 10 November 2026: 300 cold boots (150 in the cloud, 150 on the PC) showed no crash.
 

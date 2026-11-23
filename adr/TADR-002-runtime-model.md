@@ -8,7 +8,7 @@ Date: 6 September 2026. Depends on [TADR-001](TADR-001-engine-language-platforms
 
 [A committed attack means what it shows](../BIBLE.md#a-committed-attack-means-what-it-shows) requires damage and presentation to consume authoritative geometry. Chaos outcomes resolve once. [The implementation handoff](../BIBLE.md#architecture-and-implementation-handoff) distinguishes encounter simulation, run state, permanent progression and rendering. [Equipment and transformations](../BIBLE.md#inventory-equipment-and-transformations) requires removing old effects when selections change.
 
-The current [simulation boundary](../docs/adr/0002-simulation-boundary.md) and [attack geometry ADR](../docs/adr/0003-authoritative-attack-geometry.md) already establish useful ownership. Source inspection found frame accumulation in both `main.js` and `simulation.js`; it did not demonstrate a runtime failure. Production must choose one timing owner instead of inheriting both layers.
+The current simulation boundary (`../docs/adr/0002-simulation-boundary.md`) and attack geometry ADR (`../docs/adr/0003-authoritative-attack-geometry.md`) already establish useful ownership. Source inspection found frame accumulation in both `main.js` and `simulation.js`; it did not demonstrate a runtime failure. Production must choose one timing owner instead of inheriting both layers.
 
 ## Options
 
@@ -31,7 +31,7 @@ Aim previews are provisional. At commitment, the encounter revalidates the curre
 
 Signals may report committed results through scoped connections. They cannot form hidden chains of gameplay mutations. The session permits equipment changes between fights and tree respec only at an authorized opportunity, then rebuilds effective effects from selections.
 
-Input release, prepared-action cancellation and solo pause are distinct operations. Focus loss or a modal transition clears held physical input and explicitly cancels uncommitted prepared actions through the simulation boundary. Resume cannot manufacture a cast. This preserves the [current input/dashboard contract](../docs/adr/0005-caster-input-and-dashboard.md).
+Input release, prepared-action cancellation and solo pause are distinct operations. Focus loss or a modal transition clears held physical input and explicitly cancels uncommitted prepared actions through the simulation boundary. Resume cannot manufacture a cast. This preserves the current input/dashboard contract (`../docs/adr/0005-caster-input-and-dashboard.md`).
 
 ## Consequences
 

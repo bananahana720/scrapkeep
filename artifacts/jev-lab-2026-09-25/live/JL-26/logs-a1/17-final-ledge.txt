@@ -1,5 +1,0 @@
-bench-one random kinematic: 1 visits, 1 arrived by air; peak speeds 37.6; intent held {"stomp_target":1}
-bench-one random rigid: 1 visits, 1 arrived by air; peak speeds 9.4; intent held {"evade_hazard":1}
-bench-one scripted kinematic: 12 visits, 12 arrived by air; peak speeds 44.3,43.7,44.0,41.5,44.2,44.3,43.9,43.9,41.6,40.9,44.6,44.3; intent held {"take_cache":7,"sweep_scrap":2,"hit_kicker":2,"ram_target":1}
-bench-one scripted rigid: 4 visits, 4 arrived by air; peak speeds 35.0,34.7,34.7,35.1; intent held {"take_cache":1,"hit_kicker":1,"ram_target":2}
-stage-run scripted kinematic: 17 visits, 17 arrived by air; peak speeds 41.9,42.1,42.8,42.1,40.8,42.8,44.6,41.7,43.7,42.7,43.8,42.5,43.3,42.8,41.1,42.8,41.0; intent held {"ram_target":3,"sweep_scrap":7,"hit_kicker":4,"take_cache":2,"evade_hazard":1}

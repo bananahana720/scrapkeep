@@ -1,8 +1,0 @@
-
-> scrapkeep@1.0.0 check:drift
-> node scripts/check-drift.mjs --sections artifacts/local/tasks/TL-01/control --resolve-from docs/tech/sections
-
-DRIFT artifacts/local/tasks/TL-01/control/TH-01-complete-loop.md:13 docs/tech/sections/HF-07b-commit-boundaries.md stated 1f83d7de5822ddca55b6aa3d418e9577e636cf0846d31b9b2475a15d6360e000 actual 1f83d7de5822ddca55b6aa3d418e9577e636cf0846d31b9b2475a15d6360e781
-check:drift fail: 1 sections, 6 stated hashes, 1 mismatches, 0 unbound. Scanned artifacts/local/tasks/TL-01/control, dependencies resolved from docs/tech/sections
-Hash agreement only. A match proves the dependency's bytes are the ones the citing section recorded; it proves nothing about whether the citation, the line numbers or the claim built on them is still correct, and a mismatch is a finding for a card and a reviewer, not a defect this check judges.
-CONTROL_EXIT=1

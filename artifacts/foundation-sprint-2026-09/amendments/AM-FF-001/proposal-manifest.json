@@ -1,9 +1,0 @@
-{
-  "base": "70c8c054fa1ee04bcfec1e3f3acae869c482668f",
-  "sha256": {
-    "BACKLOG.md": "7a0a99a8af6371b6a11c783d011709cc021d61421130da228c1bb93ca0097a74",
-    "artifacts/foundation-sprint-2026-09/amendments/AM-FF-001/request.md": "917dcf2c86747e90f29072cdec9e31d162c8acf338e1d689a2a8bd326b8abb6c",
-    "artifacts/foundation-sprint-2026-09/amendments/AM-FF-001/card-before.md": "21e4e3029b4b028c4190092fe01bfc8291521b3f3ad2ca36bd9e9988c9d7eb30",
-    "artifacts/foundation-sprint-2026-09/amendments/AM-FF-001/card-after.md": "9706c0fe882cbc2b51607ddabab05908f21593867542f9dcd1cd312c28620d3d"
-  }
-}

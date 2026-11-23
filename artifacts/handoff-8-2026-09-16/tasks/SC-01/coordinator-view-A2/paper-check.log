@@ -1,3 +1,0 @@
-paper-check fail: 330 passed, 2 failed, 14/14 negative controls failed as intended
-FAIL C02-hashes hash SC-03.md: 2a59d68d2c10e46c1ad09519e4bc8438f8a1fbc8f8362f9367eb7de6c809f8fe
-FAIL C02-hashes hash SC-08.md: 79e430c2fcf36a740e107ab81288e84dafa1f5c4598eae239ff03e4f303f03fd

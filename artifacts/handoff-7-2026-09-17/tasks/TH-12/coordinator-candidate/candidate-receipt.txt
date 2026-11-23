@@ -1,5 +1,0 @@
- .../sections/TH-12-hud-dashboard-and-settings.md   | 407 +++++++++++++++++++++
- 1 file changed, 407 insertions(+)
-51e0685d51c448420cb7558a2d1aa8d5198a0eb824117aedd32901854239a36f  docs/tech/sections/TH-12-hud-dashboard-and-settings.md
-coordinator rerun at 04a4167e899acda6927dde0d7d3de49e5cd2872d (main at 3be34e3), 2026-09-17T23:30Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (29 sections); check:project exit 0; check:drift exit 0 (29 sections, 245 hashes); paper_check.py (writer paper check, rerun from a coordinator copy) exit 0, 783 checks, 0 failed, 3/3 controls.
-coordinator corrections at 3175b3a85e4f98f8d77a33f71638c814b83b7109 (four review notes; section sha256 28d3d09e79f1501e53ae8872c1347558c4b2fec3808b949a7173b17e4c1068f9); paper check rerun exit 0. Integrated at 0bf678357e6c895562ec257865e15634dbfb92a7 (no-ff merge plus the README index line after TH-11): check:scope --no-build documentation-only, check:docs 0, check:project 0, check:drift 0 (29 sections, 245 hashes), paper check rerun exit 0.

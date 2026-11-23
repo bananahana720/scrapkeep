@@ -1,1 +1,0 @@
-check:scope --no-build exit 1

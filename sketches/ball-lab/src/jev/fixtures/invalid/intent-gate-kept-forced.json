@@ -1,8 +1,0 @@
-{
-  "protocol": "scrapkeep-jev/1",
-  "seq": 2,
-  "intent": "start_exit",
-  "arm": "scripted",
-  "source": "forced",
-  "meta": {}
-}

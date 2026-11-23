@@ -1,5 +1,0 @@
-TH-04 predecessor reconciliation at integrated commit b04b826b02ba239c1035be92f8e127e7b16be81f
-TH-04 revision 1 done (task index last event EV-0303), accepted integrated identity 441931d8917830622081985214b3ef22b828d930 (admission event EV-0293).
-git merge-base --is-ancestor 441931d8917830622081985214b3ef22b828d930 HEAD: exit 0
-docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md sha256 at this commit: bc25b46aa5d059f02ecfa9fe5d8de556eb5ef266cdc2050f0e0ce53e228ef6aa
-npm run check:drift and the schemas scan at this commit: exit 0 (closure/check-drift.log, closure/check-drift-schemas.log); retained checks rerun at this commit: closure/paper-reruns.log

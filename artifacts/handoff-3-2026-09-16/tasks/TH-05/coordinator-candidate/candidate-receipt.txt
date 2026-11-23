@@ -1,4 +1,0 @@
- ...ctromagnetic-collection-recycling-and-growth.md | 407 +++++++++++++++++++++
- 1 file changed, 407 insertions(+)
-801f09eb45a0b2e7dcc23b99a35f95f84d9bb61d1c2605f4d990ae027da4b96d  docs/tech/sections/TH-05-electromagnetic-collection-recycling-and-growth.md
-coordinator rerun at 6ea6b4689c0525eca5a42cf35f9d7c1688584335, 2026-09-16T15:40Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (18 sections); check:project exit 0; check:drift exit 0; check_collection.py (writer paper check, rerun from a coordinator copy) exit 0.

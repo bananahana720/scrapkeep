@@ -43,7 +43,6 @@
       "Bash(npm run check:docs)",
       "Bash(npm run check:project)",
       "Bash(npm run check:scope)",
-      "Bash(npm run check:drift)",
       "Bash(npm run check:skills)",
       "Bash(npm run sketch:lint)",
       "Bash(nvidia-smi *)",

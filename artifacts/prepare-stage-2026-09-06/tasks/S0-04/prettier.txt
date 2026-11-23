@@ -1,4 +1,0 @@
-$ npx prettier --check scripts/native-smoke.mjs
-Checking formatting...
-All matched files use Prettier code style!
-exit=0

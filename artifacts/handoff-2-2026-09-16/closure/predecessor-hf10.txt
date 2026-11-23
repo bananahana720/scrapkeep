@@ -1,4 +1,0 @@
-HF-10 predecessor reconciliation at integrated commit aaa90b1dcb8f22708e5e847ea2be26e987ad0fe9
-HF-10 revision 2 done at EV-0183, accepted integrated identity 47b4a271e15f5a796fbcddebd8e03ed286c30aef.
-artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md sha256 at this commit: ba7e4cf9e5d0c50fb8f4bb438f737e60d9fd6702baaabcaabaab86018826da30
-git merge-base --is-ancestor 47b4a271e15f5a796fbcddebd8e03ed286c30aef HEAD: exit 0

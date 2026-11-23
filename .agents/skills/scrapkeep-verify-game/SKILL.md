@@ -1,13 +1,13 @@
 ---
 name: scrapkeep-verify-game
-description: "Verify a Scrapkeep game feature by launching the Godot game from source and playing it with real keys and clicks, with pictures, step rows and the save files as proof. Use when a change touches something a player sees or presses (menus, pilot select, a run, pause, settings, saves) and you need to show it working in the running game; which checks qualify a diff stays in scrapkeep-verify, bot batches and pins in scrapkeep-lab, the packed Linux build in scrapkeep-verify-build, and the browser pages in scrapkeep-verify-web."
+description: "Verify a Scrapkeep game feature by launching the Godot game from source and playing it with real keys and clicks, with pictures, step rows and the save files as proof. Use when a change touches something a player sees or presses (menus, pilot select, a run, pause, settings, saves) and you need to show it working in the running game; which checks qualify a diff stays in scrapkeep-verify, the packed Linux build in scrapkeep-verify-build, and the browser pages in scrapkeep-verify-web."
 ---
 
 # Verify a game feature in the running game
 
-Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `docs/project/README.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
+Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `project-guide/handoff/START-HERE.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
 
-This skill owns one thing: a proof that a player-facing feature of `sketches/core-loop` works, made by driving the launched game the way a player does. It does not pick the checks a pull request needs (`scrapkeep-verify`), run bot batches or pins (`scrapkeep-lab`), or qualify the packed build (`scrapkeep-verify-build`). A drive is not a feel verdict and not a frame-time reading: Andrew's play and the 4080 own those.
+This skill owns one thing: a proof that a player-facing feature of `sketches/core-loop` works, made by driving the launched game the way a player does. It does not pick the checks a pull request needs (`scrapkeep-verify`) or qualify the packed build (`scrapkeep-verify-build`). A drive is not a feel verdict and not a frame-time reading: Andrew's play and the 4080 own those.
 
 All commands run from the repository root. `S=.agents/skills/scrapkeep-verify-game/scripts`.
 

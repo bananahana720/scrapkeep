@@ -1,8 +1,0 @@
-worktree /home/andrew/Projects/scrapkeep-wt-SC-03-A3
-head 553507b31ec51285f025448e4a4470ca71d87a29
-branch wt/SC-03-A3
-parent 234c1d73a8a057afb39358bc2e6883fb9beff4b5
-status-porcelain-lines 0
-diff-names:
-M	docs/tech/schemas/SC-03.md
-commits-since-base 1

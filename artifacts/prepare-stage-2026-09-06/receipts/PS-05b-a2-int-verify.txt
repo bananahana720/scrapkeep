@@ -1,7 +1,0 @@
-PASS project
-PASS tests
-PASS models
-PASS expedition
-PASS build
-PASS built-http
-verify exit=0

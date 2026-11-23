@@ -1,1 +1,0 @@
-771 checks, 0 failed, 3/3 controls detected, controls_detected=3, controls_total=3, dependency_hashes=5, edge_pair_checks=101, hf03a_modules=7, hf03b_edges=16, interface_rows=35, interface_token_checks=153, modules_named=8, named_end_states=2, parameter_questions=21, parameter_rows=31, resolved_readings=5, run_loop_states=10, scenario_rows=35, single_pair_strict_rows=47

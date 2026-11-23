@@ -1,8 +1,0 @@
-{
-  "output_hint": "Generated images are saved to /home/andrew/.codex/generated_images/01a076de-0eb6-7601-b223-a4023771a537 as /home/andrew/.codex/generated_images/01a076de-0eb6-7601-b223-a4023771a537/exec-028f97b7-45fa-4f9d-8dc8-0d48f41ed7c8.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
-  "image_url": "Data URL omitted; decoded image copied intact to ../images/A03.png",
-  "returned_keys": [
-    "image_url",
-    "output_hint"
-  ]
-}

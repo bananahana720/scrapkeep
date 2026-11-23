@@ -1,8 +1,0 @@
-flood-hatch random kinematic: stomp knocks 61, ram knocks 20, enemies knocked 58, scrap 127, anomalies 1; stomp_ram_split {"value":0.7530864197530864,"n":81,"ci":null}; unreachable {"value":1,"n":1,"ci":null}
-flood-hatch random rigid: stomp knocks 15, ram knocks 2, enemies knocked 15, scrap 78, anomalies 2; stomp_ram_split {"value":0.8823529411764706,"n":17,"ci":null}; unreachable {"value":1,"n":1,"ci":null}
-flood-hatch scripted kinematic: stomp knocks 102, ram knocks 33, enemies knocked 91, scrap 281, anomalies 1; stomp_ram_split {"value":0.7555555555555555,"n":135,"ci":null}; unreachable {"value":0,"n":1,"ci":null}
-flood-hatch scripted rigid: stomp knocks 20, ram knocks 16, enemies knocked 25, scrap 90, anomalies 2; stomp_ram_split {"value":0.5555555555555556,"n":36,"ci":null}; unreachable {"value":1,"n":1,"ci":null}
-mid-climb random kinematic: stomp knocks 54, ram knocks 39, enemies knocked 68, scrap 313, anomalies 0; stomp_ram_split {"value":0.5806451612903226,"n":93,"ci":null}; unreachable {"value":0,"n":1,"ci":null}
-mid-climb random rigid: stomp knocks 16, ram knocks 4, enemies knocked 17, scrap 143, anomalies 0; stomp_ram_split {"value":0.8,"n":20,"ci":null}; unreachable {"value":0,"n":1,"ci":null}
-mid-climb scripted kinematic: stomp knocks 71, ram knocks 29, enemies knocked 75, scrap 428, anomalies 0; stomp_ram_split {"value":0.71,"n":100,"ci":null}; unreachable {"value":0,"n":1,"ci":null}
-mid-climb scripted rigid: stomp knocks 24, ram knocks 10, enemies knocked 27, scrap 119, anomalies 0; stomp_ram_split {"value":0.7058823529411765,"n":34,"ci":null}; unreachable {"value":1,"n":1,"ci":null}

@@ -1,6 +1,0 @@
-=== probe_const_a
-PROBE_A id=proof.x
-exit=0
-=== probe_const_b
-PROBE_B id=proof.x
-exit=0

@@ -1,1 +1,0 @@
-old handler: returncode -2 stdout [] stderr tail ['KeyboardInterrupt']

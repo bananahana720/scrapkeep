@@ -21,4 +21,4 @@ Live coordination material for the alpha. The coordinator of the claude.ai proje
 | [shared/](shared/INDEX.md) | Reference files lanes rely on |
 | [sitting-kit/](sitting-kit/README.md) | The playtest sitting page and its server |
 
-The live board is the current wave's board issue; STATE.md's Wave facts table names it, and is the only page that does. [project-guide/coord/GRAPH.md](../coord/GRAPH.md) is the wave 18 board, kept as history.
+The live board is the current wave's board issue; STATE.md's Wave facts table names it, and is the only page that does. `project-guide/coord/GRAPH.md` (archived in git history) was the wave 18 board.

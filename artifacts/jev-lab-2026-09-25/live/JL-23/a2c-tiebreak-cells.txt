@@ -1,9 +1,0 @@
-g-hist-camera-snap j1 tiebreak 3.64 jev 3.64 same
-g-hist-camera-snap j2 tiebreak 4.13 jev 4.16 faster
-g-reset-velocity j1 tiebreak 23.37 jev 32.35 faster
-g-reset-velocity j2 tiebreak 15.13 jev 19.05 faster
-g-stage-tier-string j1 tiebreak 25.04 jev 25.16 faster
-g-stage-tier-string j2 tiebreak 13.06 jev 13.16 faster
-g-protocol-bump j1 tiebreak 2.50 jev 2.40 slower
-g-protocol-bump j2 tiebreak 2.53 jev 2.52 slower
-{"faster":5,"same":1,"slower":2}

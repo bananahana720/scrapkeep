@@ -5,7 +5,7 @@ description: Execute an authorized Scrapkeep task card with isolated work, indep
 
 # Execute an authorized Scrapkeep task
 
-Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `docs/project/README.md`. Shared pstack reads the Claude branch of the pstack runtime contract; `docs/project/AI-WORKFLOW.md` records its location. Use root-relative source paths below. The linked Claude skill resolves to this same body.
+Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `project-guide/handoff/START-HERE.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
 
 ORCHESTRATOR owns the assignment packet, concurrency, leases, review and acceptance; do not substitute an older pstack board or planning protocol. The coordinator is the sole canonical record writer. Each step below links the record that owns its rule instead of restating it.
 
@@ -28,7 +28,7 @@ The thread is the writer (ruling by; [ORCHESTRATOR.md#roles-and-concurrency](../
 
 ## Sprint handback
 
-When the selected sprint has no remaining active work, invoke [the sprint-close prompt](../../../docs/project/prompts/sprint-close.md) before reporting SPRINT COMPLETE. Task completion alone cannot close a sprint. Specification contradictions follow [the amendment rule](../../../ORCHESTRATOR.md#specification-contradictions); stop affected work and submit a request rather than deviating.
+When the selected sprint has no remaining active work, follow [ORCHESTRATOR.md#sprint-closure](../../../ORCHESTRATOR.md#sprint-closure) before reporting SPRINT COMPLETE. Task completion alone cannot close a sprint. Specification contradictions follow [the amendment rule](../../../ORCHESTRATOR.md#specification-contradictions); stop affected work and submit a request rather than deviating.
 
 ## Host adapter and base identity
 

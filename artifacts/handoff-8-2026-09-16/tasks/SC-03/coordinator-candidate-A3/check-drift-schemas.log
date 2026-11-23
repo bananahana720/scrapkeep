@@ -1,5 +1,0 @@
-DRIFT docs/tech/schemas/SC-01.md:20 docs/tech/schemas/SC-03.md stated 2a59d68d2c10e46c1ad09519e4bc8438f8a1fbc8f8362f9367eb7de6c809f8fe actual 50ad21e0480dc803e07ea28a85d4cb274d1835a16b443fdefe9ea0cba98ed8c4
-DRIFT docs/tech/schemas/SC-08.md:24 docs/tech/schemas/SC-03.md stated 2a59d68d2c10e46c1ad09519e4bc8438f8a1fbc8f8362f9367eb7de6c809f8fe actual 50ad21e0480dc803e07ea28a85d4cb274d1835a16b443fdefe9ea0cba98ed8c4
-check:drift technical fail: 8 sections, 127 stated hashes, 2 mismatches, 0 unbound. Scanned docs/tech/schemas, dependencies resolved from each citing file
-check:drift fail: 8 sections, 127 stated hashes, 2 mismatches, 0 unbound over 1 corpus: technical
-Hash agreement only. A match proves the dependency's bytes are the ones the citing section recorded; it proves nothing about whether the citation, the line numbers or the claim built on them is still correct, and a mismatch is a finding for a card and a reviewer, not a defect this check judges.

@@ -1,9 +1,0 @@
-pinned integrated commit 62c00fd58b9726ce4a696643945af7956f228978
-HF-04b check_patterns EXIT=0 Paper checks over admitted bytes: presence, hashes, pinned commits, cited lines, unparsed marker and
-HF-06a check_matrix EXIT=0 38 passed, 0 failed; receipts in /home/andrew/Projects/scrapkeep/artifacts/local/closure-paper/HF-06
-HF-06b check_projection EXIT=0 41 passed, 0 failed; receipts in /home/andrew/Projects/scrapkeep/artifacts/local/closure-paper/HF-06
-HF-07a check_envelope EXIT=0 PASS 950 of 950 checks passed
-HF-07b check_boundaries EXIT=0 receipts: /home/andrew/Projects/scrapkeep/artifacts/local/closure-paper/HF-07b/out
-HF-08 check_recovery EXIT=0 299 checks, 0 failed, 54 model cases, 25 matrix rows replayed, 4/4 controls detected
-HF-09 check_migration EXIT=1   FAIL cite.docs/tech/proofs/S0-07-save-owner.md:116: line 116 does not carry 'HF-09 defining a seco
-TH-01 check_loop EXIT=0 732 checks, 0 failed, 3/3 controls detected, controls_detected=3, controls_total

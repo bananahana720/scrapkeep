@@ -1,8 +1,0 @@
-worktree /home/andrew/Projects/scrapkeep-wt-PD-03
-head cceff383a6be4192092db66f6c792a0f448ba573
-branch wt/PD-03
-parent bb97c4111d1e7b2dd40cae575eccde17878b07c5
-status-porcelain-lines 0
-diff-names:
-A	docs/product/sections/PD-03-sound-feel-events.md
-commits-since-base 1

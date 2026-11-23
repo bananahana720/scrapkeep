@@ -1,5 +1,0 @@
-HF-07a predecessor reconciliation at integrated commit b04b826b02ba239c1035be92f8e127e7b16be81f
-HF-07a revision 1 done (task index last event EV-0345), accepted integrated identity b97e32774d01c1a6e8be676610697b97eff57b8e (admission event EV-0159).
-git merge-base --is-ancestor b97e32774d01c1a6e8be676610697b97eff57b8e HEAD: exit 0
-docs/tech/sections/HF-07a-save-envelope.md sha256 at this commit: 4c37b7b32197642e1a312758449b8ebede05d3a0788e92b74a6a9f95ed97c010
-npm run check:drift and the schemas scan at this commit: exit 0 (closure/check-drift.log, closure/check-drift-schemas.log); retained checks rerun at this commit: closure/paper-reruns.log

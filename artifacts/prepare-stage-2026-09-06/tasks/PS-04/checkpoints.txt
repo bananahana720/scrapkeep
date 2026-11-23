@@ -1,5 +1,0 @@
-8d88c0a Remove connector colons from the new card and manual prose
-66283b1 Section-scope the operating manual and desk for the prepare stage
-ba6bbf9 Import the S0 prepare-stage cards into the backlog
-4d7c73c Amend and split the HF foundation cards per the accepted audit
-99342a2 Move source dispositions and inventory to docs/project/SOURCE-DISPOSITIONS.md

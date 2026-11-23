@@ -1,4 +1,0 @@
- ...-09-themed-loot-attunement-and-fixed-secrets.md | 422 +++++++++++++++++++++
- 1 file changed, 422 insertions(+)
-2d8bc8a9d960192787275c7b1419efaf73ece368f6b9db1c6c980a86a07b0102  docs/tech/sections/TH-09-themed-loot-attunement-and-fixed-secrets.md
-coordinator rerun at be106aa83069d55fafb3dbd668f9e4844e332544 (main at 70df14a; TH-10 and TH-07 admitted after this base, TH-06 EE-15 corrected at TH-10 admission so TH-09's stated TH-06 hash will be re-pointed at integration), 2026-09-17T12:20Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (23 sections at the worktree); check:project exit 0; check:drift exit 0 at the worktree; check_loot.py (writer paper check, rerun from a coordinator copy) exit 0, 564 checks, 0 failures, 3/3 controls.

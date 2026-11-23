@@ -9,31 +9,18 @@ const required = [
   "CONTRIBUTING.md",
   "README.md",
   "artifacts/README.md",
-  "docs/project/README.md",
-  "docs/project/REQUIREMENTS.md",
-  "docs/project/BACKLOG.md",
-  "docs/project/ASSETS.md",
-  "docs/adr/README.md",
+  "adr/README.md",
+  "project-guide/handoff/START-HERE.md",
+  "project-guide/handoff/STATE.md",
+  "project-guide/handoff/DECISIONS.md",
   "docs/FIRST-BUILD-CONTRACT.md",
   "docs/FIRST-BUILD-VERIFICATION.md",
 ];
 for (const file of required) await access(path.join(root, file));
 const pkg = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
-const lock = JSON.parse(
-  await readFile(path.join(root, "package-lock.json"), "utf8"),
-);
-for (const field of [
-  "name",
-  "version",
-  "engines",
-  "dependencies",
-  "devDependencies",
-])
-  assert.deepEqual(
-    pkg[field],
-    lock.packages[""][field],
-    "Package/lock root mismatch: " + field,
-  );
+const lock = JSON.parse(await readFile(path.join(root, "package-lock.json"), "utf8"));
+for (const field of ["name", "version", "engines", "dependencies", "devDependencies"])
+  assert.deepEqual(pkg[field], lock.packages[""][field], "Package/lock root mismatch: " + field);
 assert.ok(pkg.engines?.node, "Declare the supported Node range");
 
 async function markdown(directory) {
@@ -57,10 +44,7 @@ const files = [
 const failures = [];
 let checkedLinks = 0;
 for (const file of files) {
-  const content = (await readFile(path.join(root, file), "utf8")).replace(
-    /```[\s\S]*?```/g,
-    "",
-  );
+  const content = (await readFile(path.join(root, file), "utf8")).replace(/```[\s\S]*?```/g, "");
   for (const match of content.matchAll(/!?\[[^\]]*\]\((<[^>]+>|[^)]+)\)/g)) {
     let target = match[1].replace(/^<|>$/g, "").trim();
     if (/^(?:[a-z][a-z0-9+.-]*:|#)/i.test(target)) continue;
@@ -68,19 +52,13 @@ for (const file of files) {
     if (!target) continue;
     checkedLinks++;
     try {
-      await access(
-        path.resolve(root, path.dirname(file), decodeURIComponent(target)),
-      );
+      await access(path.resolve(root, path.dirname(file), decodeURIComponent(target)));
     } catch {
       failures.push(file + " -> " + target);
     }
   }
 }
-assert.equal(
-  failures.length,
-  0,
-  "Broken local Markdown file links:\n" + failures.join("\n"),
-);
+assert.equal(failures.length, 0, "Broken local Markdown file links:\n" + failures.join("\n"));
 console.log(
   "Project checks passed: " +
     files.length +

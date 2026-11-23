@@ -1,5 +1,0 @@
-check-scope EXIT=0 :: npm run -s check:scope -- 234c1d73a8a057afb39358bc2e6883fb9beff4b5 3baba5a354df013cfe42be64beefdbd53191e287 --no-build
-check-docs EXIT=0 :: npm run -s check:docs
-check-project EXIT=0 :: npm run -s check:project
-check-drift EXIT=0 :: npm run -s check:drift
-paper-check EXIT=0 :: node /home/andrew/Projects/scrapkeep/artifacts/handoff-8-2026-09-16/tasks/PD-03/coordinator-candidate-A2c/paper-check.mjs --root /home/andrew/Projects/scrapkeep-wt-PD-03-A2 --out /home/andrew/Projects/scrapkeep/artifacts/handoff-8-2026-09-16/tasks/PD-03/coordinator-candidate-A2c/paper-check

@@ -1,5 +1,0 @@
-HF-05 predecessor reconciliation at integrated commit b04b826b02ba239c1035be92f8e127e7b16be81f
-HF-05 revision 2 done (task index last event EV-0097), accepted integrated identity 641f09f54a37af15da2ea35ced7f281f60959d13 (admission event EV-0097).
-git merge-base --is-ancestor 641f09f54a37af15da2ea35ced7f281f60959d13 HEAD: exit 0
-docs/tech/sections/HF-05-content-admission.md sha256 at this commit: 7ef95df2fb25f05b7b544cd7dbf2239cd1106c382aab0e8bc5e76288146259a6
-npm run check:drift and the schemas scan at this commit: exit 0 (closure/check-drift.log, closure/check-drift-schemas.log); retained checks rerun at this commit: closure/paper-reruns.log

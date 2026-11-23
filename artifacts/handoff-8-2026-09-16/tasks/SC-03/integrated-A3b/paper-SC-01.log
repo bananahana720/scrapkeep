@@ -1,2 +1,0 @@
-usage: check_contract.py [-h] --root ROOT --out OUT
-check_contract.py: error: the following arguments are required: --root
