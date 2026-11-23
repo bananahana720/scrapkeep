@@ -23,7 +23,7 @@ The covered files:
 | `InterruptMount` | combat.gd `mounted` / `dismounted` -> `weapon_driver.interrupt(INTERRUPT_MOUNT)` and weapon_driver.gd `_switch_weapon` (`mount_swap` between `arc_caster` and `pylon_turret`): drops charge and buffer with no bolt (`GuardInterruptDropsHold`) while preserving `_cooldown` and `_recover_s`. |
 | `SwapWeapon` | weapon_driver.gd `_switch_weapon` (non-mount swap) / `interrupt(INTERRUPT_SWAP)`: drops old trigger state and starts the new weapon at rest (`AtRest`). |
 | `BoundaryWired` | combat.gd `_on_stage_entered` (stage entry, stage retry), `_on_stage_content_cleared` (arena entry, arena retry, victory lap), `_on_player_died` (death), and `run_started` (new run, Continue): each calls `weapon_driver.reset()` (`GuardBoundaryReset`). |
-| `QuitToTitle` | flow.gd `show_title()`: after `death`, `_on_player_died` has already reset `weapon_driver`. From a boss win or victory lap close without death, see Finding WC-1 below. |
+| `QuitToTitle` | combat.gd `run_ended` and `flow_changed` (`"summary"`, `"title"`) call `weapon_driver.reset()` (`GuardTitleReset`, WC-1 closed by W46-FIX1 PR #1229). |
 
 ## Guards
 
@@ -31,7 +31,7 @@ The covered files:
 | --- | --- | --- | --- |
 | `GuardPlayGate` | combat.gd `_physics_process` `if not playing ... return` and Godot pause tree | `weaponcadence-broken-play-gate` | `NoShotOutsidePlay` |
 | `GuardBoundaryReset` | combat.gd `_start_attempt`, `_on_player_died`, and `run_started` call `weapon_driver.reset()` | `weaponcadence-broken-boundary-reset` | `RestAfterBoundary` |
-| `GuardTitleReset` | `QuitToTitle` from play/win resets `weapon_driver` (missing in combat.gd today; see WC-1) | `weaponcadence-broken-title-reset` (`AllowDirectTitleQuit = TRUE`) | `RestAfterBoundary` |
+| `GuardTitleReset` | combat.gd `run_ended` and `flow_changed` (`"summary"`, `"title"`) call `weapon_driver.reset()` (WC-1 closed by W46-FIX1) | `weaponcadence-broken-title-reset` (`AllowDirectTitleQuit = TRUE`) | `RestAfterBoundary` |
 | `GuardJamNoFreeze` | combat.gd `_physics_process` and ability_state.gd `SILENCED` leave weapon trigger unjammed | `weaponcadence-broken-jam-freeze` | `BoundedReadyAfterInterrupt` |
 | `GuardInterruptDropsHold` | weapon_driver.gd `interrupt(INTERRUPT_ULTIMATE)` and `interrupt(INTERRUPT_MOUNT)` clear `_charge_armed`, `_charging`, `_charge`, `_buffered` | `weaponcadence-broken-interrupt-hold` | `BoundedReadyAfterInterrupt` |
 | `GuardPressNoRepeat` | weapon_driver.gd `_step_press` fires once per press when not sprint-fanning | `weaponcadence-broken-hold-repeat` | `OneVolleyPerPress` |
@@ -40,13 +40,9 @@ The covered files:
 | `GuardWindowOnce` | weapon_driver.gd `_step_press` sets `_reloading = false` and `WINDOW_HIT` on notch hit | `weaponcadence-broken-double-notch` | `WindowPaysAtMostOnce` |
 | `GuardRefundBound` | PILOT-CADENCE.md section 3.5 stamp refund `<= cost` (pattern.gd `MAX_REFUND`) | `weaponcadence-broken-refund` | `RefundNeverExceedsSpend` |
 
-## Open finding: WC-1 (combat.gd does not reset `weapon_driver` on `run_ended` or `show_title()`)
+## Closed finding: WC-1 (closed by W46-FIX1, PR #1229)
 
-**Where.** `sketches/core-loop/src/combat/combat.gd` line 617 connects `ctx.events.run_ended` only to `_clear_devices()` and does not call `weapon_driver.reset()`. combat.gd does not connect `flow_changed` for `show_title()` (flow.gd line 392) or `_close_lap()` (flow.gd line 1297).
-
-**What happens.** After winning a boss fight without entering the victory lap (`BOSS` -> `VICTORY` -> `_end_run(true)` -> `SUMMARY` -> `open_camp_from_summary()` -> `show_title()`), or after firing or charging during the victory lap (`LAP`, where `flow.in_play()` is true) and letting `_close_lap()` end the lap into `SUMMARY` -> `show_title()`, `weapon_driver` is not reset to rest. Its `state_snapshot()` still carries the last run's non-zero cooldown, partial cylinder, active reload, hot rounds, open/spent window, buffer, or charge while on `SUMMARY` and `TITLE`.
-
-**Mitigation today.** Because combat.gd `_physics_process` gates on `ctx.flow.in_play()`, no shot can fire on `VICTORY`, `SUMMARY`, or `TITLE`, and starting a new run or Continue (`run_started` + `stage_entered`) calls `weapon_driver.reset()` before play resumes. However, PILOT-CADENCE.md section 2.3 requires quit to title to put the trigger at rest immediately, and any reticle or UI inspecting `weapon_driver.state_snapshot()` on `SUMMARY` or `TITLE` would read stale trigger state.
+**Original defect (E1-17).** Before W46-FIX1, `sketches/core-loop/src/combat/combat.gd` connected `ctx.events.run_ended` only to `_clear_devices()` and did not connect `flow_changed` for `show_title()` or `_close_lap()`. After winning a boss fight or firing/charging during the victory lap (`LAP`) and closing into `SUMMARY` -> `TITLE`, `weapon_driver` kept stale cooldown, cylinder, reload, window, buffer, or charge state.
 
 **Counterexample trace** (`models/weaponcadence-broken-title-reset.cfg`: `AllowDirectTitleQuit = TRUE, GuardTitleReset = FALSE`, 155 distinct states, violates `RestAfterBoundary`):
 
@@ -54,7 +50,7 @@ The covered files:
 2. **State 2 (`StepSable("press_tap")`)**: Sable fires a spark (`last_act = "spark"`, `cooldown = 2`, `flow = "play"`).
 3. **State 3 (`QuitToTitle`)**: `flow = "title"`, `just_crossed_boundary = TRUE`, `cooldown = 2` (`AtRest = FALSE`) -> **`RestAfterBoundary` violated** (the same break occurs for Rivet partial `chamber = 1` / `reloading = TRUE` / `hot_rounds > 0` or Sable `charging = TRUE`).
 
-**Fix (for a follow-up code unit, outside E1-17's fence).** Call `weapon_driver.reset()` in combat.gd's `run_ended` handler and on `flow_changed` when entering `"title"` or `"summary"`; then set `AllowDirectTitleQuit = TRUE` and `GuardTitleReset = TRUE` on `weaponcadence-today` and re-pin its state count.
+**Closure (`fcaa784b6`, W46-FIX1 PR #1229).** combat.gd now calls `weapon_driver.reset()` in its `run_ended` handler and in `_on_flow_changed` when entering `"summary"` or `"title"`. `weaponcadence-today.cfg` now runs with `AllowDirectTitleQuit = TRUE` and `GuardTitleReset = TRUE` (6,394 distinct states, 0 errors), and `weaponcadence-broken-title-reset.cfg` stays in the plant set as a regression guard.
 
 ## Bounds and scaling
 
@@ -71,10 +67,10 @@ Run plain TLC on each `weaponcadence-*.cfg` with `models/WeaponCadence.tla`.
 
 | Config | Stands for | Must report |
 | --- | --- | --- |
-| `weaponcadence-today` | every guard in place (wired boundaries + title after death; WC-1 left out until fixed) | no break, in at least the pinned 6,388 distinct states |
+| `weaponcadence-today` | every guard in place (including direct quit to title / summary; WC-1 closed) | no break, in at least the pinned 6,394 distinct states |
 | `weaponcadence-broken-play-gate` | `GuardPlayGate = FALSE` | `NoShotOutsidePlay` breaks |
 | `weaponcadence-broken-boundary-reset` | `GuardBoundaryReset = FALSE` | `RestAfterBoundary` breaks |
-| `weaponcadence-broken-title-reset` | `AllowDirectTitleQuit = TRUE, GuardTitleReset = FALSE` (live WC-1 finding) | `RestAfterBoundary` breaks |
+| `weaponcadence-broken-title-reset` | `AllowDirectTitleQuit = TRUE, GuardTitleReset = FALSE` (WC-1 regression plant) | `RestAfterBoundary` breaks |
 | `weaponcadence-broken-jam-freeze` | `GuardJamNoFreeze = FALSE` | `BoundedReadyAfterInterrupt` breaks |
 | `weaponcadence-broken-interrupt-hold` | `GuardInterruptDropsHold = FALSE` | `BoundedReadyAfterInterrupt` breaks |
 | `weaponcadence-broken-hold-repeat` | `GuardPressNoRepeat = FALSE` | `OneVolleyPerPress` breaks |
@@ -88,4 +84,4 @@ Run plain TLC on each `weaponcadence-*.cfg` with `models/WeaponCadence.tla`.
 
 Real-time seconds, float epsilon tolerances, DPS ceilings (checked by weapon_envelope_test.gd), Rivet Overdrive Sprint hold-fanning (checked by weapon_cadence_test.gd), Rivet's 6th hot round 50% pierce chip (weapon_cadence_test.gd), Sable's speed-tier charge multipliers and 3 s mounted plant boost (weapon_cadence_test.gd), mid-run `_sync_pattern` mag resizing (weapon_cadence_test.gd), `hold_auto` rollback parity (weapon_driver_test.gd), future phase E2 trigger modes (`lob_snap`, `beats`, `lock`) and Tally's fractional pressure implementation in combat.gd (Tally's `stamp` economics are modelled directly from PILOT-CADENCE.md section 3.5 and pattern.gd's `MAX_REFUND` bound), proc depth 1 across deferred queues (covered by `models/DeferredEffects.tla`), and anything drawn or heard.
 
-Sync commit: 4976cc02d (stage/alpha-w46, 23 November 2026, E1-17: initial WeaponCadence.tla model covering sketches/core-loop/src/combat/weapon_driver.gd and sketches/core-loop/src/combat/combat.gd)
+Sync commit: fcaa784b6 (stage/alpha-w46, 23 November 2026, W46-FIX1 PR #1229 merge: sketches/core-loop/src/combat/weapon_driver.gd fixes same-tick buffer aging and reload_rate_mult scaling; sketches/core-loop/src/combat/combat.gd closes WC-1 via weapon_driver.reset() on run_ended and flow_changed summary/title; AllowDirectTitleQuit=TRUE enabled on weaponcadence-today in 6,394 distinct states)
