@@ -56,6 +56,9 @@ var speaker := ""
 var caller_name := ""
 var _look := {}
 var _voice := 0.0
+# The Keeper's two plates for the caller up now (_keeper_plates), and the frames the last draw put down.
+var _keeper: Array = []
+var _drawn: Array = []
 var _age := 0.0
 
 
@@ -87,6 +90,7 @@ func present(id: String, shown_name: String, voice_s := 0.0) -> bool:
 	_voice = maxf(0.0, voice_s)
 	_age = 0.0
 	visible = not _look.is_empty()
+	_keeper = _keeper_plates(_look["color"]) if hands() == "keeper" else []
 	set_process(visible)
 	queue_redraw()
 	return visible
@@ -95,6 +99,7 @@ func present(id: String, shown_name: String, voice_s := 0.0) -> bool:
 func clear() -> void:
 	speaker = ""
 	_look = {}
+	_keeper = []
 	visible = false
 	set_process(false)
 
@@ -119,6 +124,11 @@ func hands() -> String:
 	return String(_look.get("hands", ""))
 
 
+# The frames the last draw put down (ScrapFrame boxes, in order), for a check of the drawn colours.
+func drawn_frames() -> Array:
+	return _drawn.duplicate()
+
+
 func _process(delta: float) -> void:
 	_age += delta
 	if talking() or _age <= POP_IN + delta:
@@ -126,6 +136,7 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	_drawn = []
 	if _look.is_empty():
 		return
 	var color: Color = _look["color"]
@@ -138,9 +149,10 @@ func _draw() -> void:
 	var centre := Vector2(SIDE, SIDE) * 0.5
 	draw_set_transform(centre + Vector2(0.0, hop), tilt, Vector2(pop, pop))
 	var keeper: bool = _look["hands"] == "keeper"
-	var plate := _plate(String(_look["hands"]))
+	var plate := PackedVector2Array() if keeper else _plate(String(_look["hands"]))
 	if keeper:
-		_draw_keeper_plate(color)
+		for box in _keeper:
+			_put_frame(box)
 	else:
 		draw_colored_polygon(plate, Color(Palette.CHARCOAL, 0.96))
 	if _look["hands"] == "hatch":
@@ -172,25 +184,29 @@ func _draw() -> void:
 	_draw_tag(color, live, beat)
 
 
-# A Keeper's plate about the centre, cut by the speaker's serial: a charcoal plate with a keyline
-# (copper on the Spillway's sand is no edge at all), then its coloured edge, rivets and halftone.
-func _draw_keeper_plate(color: Color) -> void:
-	var rect := Rect2(-Vector2(SIDE, SIDE) * 0.5, Vector2(SIDE, SIDE))
+# A frame about the centre, drawn and noted in one step so the record is what was drawn.
+func _put_frame(box: StyleBox) -> void:
+	draw_style_box(box, Rect2(-Vector2(SIDE, SIDE) * 0.5, Vector2(SIDE, SIDE)))
+	_drawn.append(box)
+
+
+# A Keeper's plate, cut by the speaker's serial and built once per call: a charcoal plate with a
+# keyline (copper on the Spillway's sand is no edge at all), then its coloured edge, rivets and halftone.
+func _keeper_plates(color: Color) -> Array:
 	var serial := speaker.hash()
 	var under = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
 	under.border_color = Palette.CHARCOAL
 	under.border_width = EDGE + KEYLINE * 2.0
 	under.rivets = false
 	under.halftone = false
-	draw_style_box(under, rect)
 	var edge = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
 	edge.border_color = color
 	edge.border_width = EDGE
 	edge.bg_color = Color(edge.bg_color, 0.0)
-	draw_style_box(edge, rect)
+	return [under, edge]
 
 
-# The plate's outline about its centre, by whose hands (a Keeper's is drawn by _draw_keeper_plate).
+# The plate's outline about its centre, by whose hands (a Keeper's is _keeper_plates).
 func _plate(whose: String) -> PackedVector2Array:
 	var h := SIDE * 0.5
 	var out := PackedVector2Array()

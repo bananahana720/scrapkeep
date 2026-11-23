@@ -484,7 +484,7 @@ func _draw() -> void:
 
 
 # A face's plate in the Keeper's hand: copper at rest, sand under the mouse, and focus a sand ring
-# over the plate.
+# over the plate, its edge alone.
 static func _face_plate(state: String, serial: int) -> StyleBox:
 	var box = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
 	# The margins a face's ChoiceButton plate had, so the verb's icon keeps its size.
@@ -497,6 +497,8 @@ static func _face_plate(state: String, serial: int) -> StyleBox:
 	if state == "focus":
 		box.border_width = 3.0
 		box.bg_color = Color(box.bg_color, 0.0)
+		box.rivets = false
+		box.halftone = false
 	return box
 
 

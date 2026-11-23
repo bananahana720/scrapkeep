@@ -686,7 +686,8 @@ func _frame(edge: Color, width: int, fill := true) -> StyleBox:
 
 
 # The Keeper's plate under a card (this one and the tree pick's): its serial's cuts and lean, the
-# given edge, a strip of tape along the top, and no fill for a focus ring drawn over the normal plate.
+# given edge and a strip of tape along the top. Without fill it is a focus ring drawn over the normal
+# plate: the edge alone, so the plate's rivets, dots and tape are not drawn twice.
 static func keeper_plate(edge: Color, serial: int, width: int, fill := true) -> StyleBox:
 	var box = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
 	box.border_color = edge
@@ -694,6 +695,9 @@ static func keeper_plate(edge: Color, serial: int, width: int, fill := true) -> 
 	box.tape = 0.5
 	if not fill:
 		box.bg_color = Color(box.bg_color, 0.0)
+		box.rivets = false
+		box.halftone = false
+		box.tape = -1.0
 	return box
 
 

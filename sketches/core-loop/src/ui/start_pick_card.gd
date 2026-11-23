@@ -80,6 +80,10 @@ var covered := Callable()
 var reroll_button: Button
 # The tiles' buttons, in tile order (interactive only).
 var _tile_buttons: Array[Button] = []
+# One Keeper plate per tile, cut by its place in the row.
+var _frames: Array = []
+# What the last draw put down: the tiles' frames and each gauge's colour, for a check of the drawn colours.
+var _drawn := {"frames": [], "gauges": []}
 
 
 
@@ -133,6 +137,7 @@ func show_picks(run, profile = null) -> void:
 	custom_minimum_size = extent()
 	size = extent()
 	_layout_tiles()
+	_frames = range(_tiles.size()).map(func(i): return ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, i + 1))
 	_controls()
 	queue_redraw()
 
@@ -470,13 +475,19 @@ func _input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
+# The frames and gauge colours the last draw put down: {"frames": [StyleBox], "gauges": [Color]}.
+func drawn_marks() -> Dictionary:
+	return _drawn.duplicate(true)
+
+
 func _draw() -> void:
+	_drawn = {"frames": [], "gauges": []}
 	var k := _k()
 	var h := (ICON + PAD * 2.0) * k
 	for index in _tiles.size():
 		var tile: Dictionary = _tiles[index]
 		var rect := _tile_rects[index]
-		draw_style_box(ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, index + 1), rect)
+		_put_frame(_frames[index], rect)
 		var mid := h * 0.5
 		var cx := rect.position.x + PAD * k
 		# A drawn cap, so the key's number shows (a key's own SVG imports as a blank cap, keycap.gd).
@@ -503,6 +514,12 @@ func _draw() -> void:
 			draw_circle(at, PIP * k, _color)
 		else:
 			draw_arc(at, PIP * k, 0.0, TAU, 16, Color(_color, 0.5), 1.5)
+
+
+# A tile's frame, drawn and noted in one step so the record is what was drawn.
+func _put_frame(box: StyleBox, rect: Rect2) -> void:
+	draw_style_box(box, rect)
+	_drawn.frames.append(box)
 
 
 # The ladder as drawn: the selected rung is a filled disc in the pilot's colour, an opened rung a
@@ -545,6 +562,7 @@ func _draw_ladder() -> void:
 		x += UiDraw.text(self, x, y, String(meter["name"]), METER_FONT, Palette.SAND) + GAP
 		var bar := Rect2(Vector2(x, y - METER_BAR.y * 0.5), METER_BAR)
 		var colour: Color = UiTokens.hand(UiTokens.Hand.KEEPER).ink if meter["yours"] else Palette.HAZARD
+		_drawn.gauges.append(colour)
 		var fill := clampf(float(meter["fill"]), 0.0, 1.0)
 		var mark := clampf(float(meter["base"]), 0.0, 1.0)
 		UiDraw.bar(self, bar, minf(fill, mark), Color(colour, 0.4))

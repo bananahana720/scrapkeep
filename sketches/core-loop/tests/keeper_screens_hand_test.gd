@@ -12,20 +12,27 @@ const Workshop := preload("res://src/ui/workshop.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
 const MossBubble := preload("res://src/ui/moss_bubble.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
+const StartPickCard := preload("res://src/ui/start_pick_card.gd")
+const StartPicks := preload("res://src/core/start_picks.gd")
+const TreePick := preload("res://src/ui/tree_pick.gd")
+const Game := preload("res://src/game.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The Keeper screens in the Keeper's hand (LEGIBILITY.md section 14.3, ruling ek, unit E2-12):
 #   - every frame the pilot cards, the tree pick's cards, Moss's counter and its tiles, and the talk bubble
-#     build is a ScrapFrame in the Keeper's hand, and draws;
-#   - colour law: no part of those frames is brass, purple or mint, save a pilot's own colour on that
-#     pilot's own card (the one "yours" accent, scrap_frame.gd); the Keeper crews' call-in colours are
-#     none of the three; planted brass, purple and mint are caught;
+#     build is a ScrapFrame in the Keeper's hand, and draws; a focus plate draws its edge alone;
+#   - what is drawn: a Keeper caller's plate and a start-pick card's tiles are read back from the frames
+#     the last draw put down (drawn_frames, drawn_marks), and the next-shift note from the plate the
+#     summary builds in a booted game;
+#   - colour law, on the colours those frames and gauges actually draw (hex or computed alike): no brass,
+#     purple or mint, save a pilot's own colour on that pilot's own card or plate (the one "yours"
+#     accent, scrap_frame.gd); planted brass, purple and mint are caught;
 #   - the Keeper screens' scripts name no purple, brass only for Brindle's Fleet call-in plate, mint only
 #     as the common reward rung's frame (a tier meaning, shop_tile.gd RARITY) and world 3's comic tint,
-#     and build no flat plate or generic panel; the summary's next-shift note (screens.gd _show_tip) is a
-#     Keeper plate;
-#   - with motion on, a Keeper card plate leans; with less motion nothing leans, and Moss's relent and
-#     restart come up whole and straight;
+#     and build no flat plate or generic panel;
+#   - with motion on, a Keeper card plate leans and the tree pick's taken card pops; with less motion
+#     nothing leans, the taken card holds its size, and Moss's relent and restart come up whole and
+#     straight;
 #   - every word on the built cards is at the 15 px caption floor or over, and the Keeper's words hold
 #     4.5:1 on its fill.
 
@@ -42,22 +49,66 @@ const MINT_ALLOWED := {"shop_tile.gd": 1, "comic_page.gd": 1}
 const BRASS_ALLOWED := {"caller_tile.gd": 1}
 
 var _t := T.new("keeper_screens_hand_test")
+# A booted game, for the surfaces that live in one: the summary's note and Moss's bubble.
+var _game
+
+
+# A run and a profile with the HARD ladder open, enough for a start-pick card to draw its tiles and gauges.
+class FakeRun extends RefCounted:
+	var class_def
+	var stage := 1
+	var start_pick := {"taken": "", "rerolls_left": 1}
+
+	func class_id() -> String:
+		return String(class_def.id)
+
+	func start_pick_options() -> Array:
+		return StartPicks.ids_for(String(class_def.id)).slice(0, StartPicks.OFFERED)
+
+	func run_tier_open() -> bool:
+		return true
+
+	func selected_run_tier() -> int:
+		return 0
+
+
+class FakeProfile extends RefCounted:
+	func earned(_id: String) -> bool:
+		return true
+
+	func stat(_id: String) -> int:
+		return 0
 
 
 func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
 	UiTokens.reduced_motion = false
 	MossBubble.reduced_motion = false
+	CallerTile.reduced_motion = false
 	_planted()
 	_pilot_cards()
 	_tree_cards()
 	_shop()
-	_callers()
+	await _callers()
+	await _start_picks()
+	await _tip()
 	_sources()
-	_motion()
+	await _motion()
 	_words()
+	_game.queue_free()
+	await _frames(2)
 	UiTokens.reduced_motion = false
 	MossBubble.reduced_motion = false
+	CallerTile.reduced_motion = false
 	quit(_t.verdict())
+
+
+func _frames(count: int) -> void:
+	for i in count:
+		await process_frame
 
 
 # Which ruled colour family a colour reads as: mint (press now), brass (the Fleet) or purple (the Kindness).
@@ -158,6 +209,9 @@ func _tree_cards() -> void:
 		for pair in _boxes(card, "%s tree card" % def.id):
 			faults.append_array(_faults(pair[0], pair[1], def.color))
 		faults.append_array(_faults(card._slot, "%s tree slot" % def.id, def.color))
+		var ring: StyleBox = card.get_theme_stylebox("focus")
+		_t.check("%s's tree focus plate is its edge alone" % def.display_name, ring.bg_color.a == 0.0 and not ring.rivets
+			and not ring.halftone and ring.tape < 0.0)
 		card.mark_taken()
 		faults.append_array(_faults(card.get_theme_stylebox("disabled"), "%s taken" % def.id, def.color))
 		_t.eq("%s's tree card is the Keeper's and lawful" % def.display_name, faults, [])
@@ -181,6 +235,8 @@ func _shop() -> void:
 	_t.check("Moss's counter is taped where it joins the hatch", counter._frame.tape >= 0.0)
 	for pair in _boxes(counter, "counter"):
 		faults.append_array(_faults(pair[0], pair[1]))
+		if pair[1].ends_with(" focus"):
+			_t.check("%s is its edge alone" % pair[1], pair[0].bg_color.a == 0.0 and not pair[0].rivets and not pair[0].halftone)
 	counter.free()
 	var talk = Workshop.TalkButton.new()
 	faults.append_array(_faults(talk._bubble, "talk bubble"))
@@ -188,14 +244,69 @@ func _shop() -> void:
 	_t.eq("Moss's counter, its tiles and the talk bubble are the Keeper's and lawful", faults, [])
 
 
+# Each caller comes up on a tile and draws; a Keeper's plate is read back from the frames that draw put down.
 func _callers() -> void:
-	var bad := []
-	for id in CallerTile.CALLERS:
-		var row: Dictionary = CallerTile.CALLERS[id]
-		if row["hands"] in ["keeper", "hatch"] and _family(row["color"]) != "":
-			bad.append("%s %s" % [id, _family(row["color"])])
-	_t.eq("no Keeper caller is brass, mint or purple", bad, [])
+	var pilots := ClassDef.all()
+	var ids: Array = CallerTile.CALLERS.keys()
+	for def in pilots:
+		ids.append(String(def.id))
+	for id in ids:
+		var tile := CallerTile.new()
+		tile.pilots = pilots
+		root.add_child(tile)
+		tile.present(id, "Probe", 1.0)
+		await _frames(2)
+		var drawn: Array = tile.drawn_frames()
+		if tile.hands() == "keeper":
+			var pilot: Color = tile.tint() if not CallerTile.CALLERS.has(id) else Color(0, 0, 0, 0)
+			var faults := []
+			for box in drawn:
+				faults.append_array(_faults(box, "%s plate" % id, pilot))
+			_t.check("%s's call-in plate is drawn in the Keeper's hand" % id, drawn.size() == 2, str(drawn.size()))
+			_t.eq("%s's call-in plate draws only lawful colours" % id, faults, [])
+		else:
+			_t.eq("%s's call-in plate is another hand's, not the Keeper's" % id, drawn, [])
+		tile.queue_free()
 	_t.eq("Brindle stays the Fleet's brass", CallerTile.CALLERS["brindle"]["color"], Palette.BRASS)
+
+
+# A start-pick card with the ladder open draws three tile plates and the tier gauges; each is read back.
+func _start_picks() -> void:
+	for def in ClassDef.all():
+		var run := FakeRun.new()
+		run.class_def = def
+		var card := StartPickCard.new()
+		card.set_interactive(true)
+		root.add_child(card)
+		card.show_picks(run, FakeProfile.new())
+		await _frames(2)
+		var marks: Dictionary = card.drawn_marks()
+		var faults := []
+		for box in marks.frames:
+			faults.append_array(_faults(box, "%s start tile" % def.id))
+		var yours: int = marks.gauges.filter(func(c): return c != Palette.HAZARD).size()
+		_t.check("%s's start card draws three Keeper tiles and the pilot's own gauges" % def.display_name, marks.frames.size() == StartPicks.OFFERED
+			and yours > 0, "%d tiles, %d gauges, %d the pilot's" % [marks.frames.size(), marks.gauges.size(), yours])
+		for colour in marks.gauges:
+			if _family(colour) != "":
+				faults.append("%s gauge is %s (%s)" % [def.id, _family(colour), colour.to_html(false)])
+		_t.eq("%s's start card draws only lawful colours" % def.display_name, faults, [])
+		card.queue_free()
+
+
+# The run summary's next-shift note, as a booted game's summary builds it.
+func _tip() -> void:
+	root.size = Vector2i(1600, 900)
+	var game := Game.new()
+	game.test_mode = true
+	root.add_child(game)
+	await _frames(3)
+	game.screens._show_tip("probe")
+	var note = game.screens._tip
+	var box: StyleBox = note.get_theme_stylebox("panel") if note != null else null
+	_t.eq("the summary's next-shift note is a lawful Keeper plate", _faults(box, "next-shift note"), [])
+	_t.check("the next-shift note is taped up", box != null and box.get_script() == ScrapFrame and box.tape >= 0.0)
+	_game = game
 
 
 func _sources() -> void:
@@ -213,12 +324,6 @@ func _sources() -> void:
 		if mint > int(MINT_ALLOWED.get(file, 0)):
 			bad.append("%s names mint %d times" % [file, mint])
 	_t.eq("the Keeper screens name no brass, purple, flat plate or bare frame, and mint only as a tier", bad, [])
-	_t.check("planted: a brass mark is found", "draw_rect(r, Palette.BRASS)".contains("Palette.BRASS"))
-	var screens := FileAccess.get_file_as_string("res://src/ui/screens.gd")
-	var tip := screens.substr(screens.find("func _show_tip("))
-	tip = tip.substr(0, tip.find("\nfunc ", 1))
-	_t.check("the summary's next-shift note is a Keeper plate", tip.contains("ScrapFrame.hand_plate(UiTokens.Hand.KEEPER")
-		and not tip.contains("ScrapFrame.plate("), tip.left(200))
 
 
 func _points(box: StyleBox) -> Array:
@@ -248,14 +353,44 @@ func _motion() -> void:
 	for still in [false, true]:
 		MossBubble.reduced_motion = still
 		for record in [{"text": "probe", "relent": true}, {"text": "probe", "restart": true}]:
-			var bubble := MossBubble.new()
-			root.add_child(bubble)
+			var bubble = _game.workshop().bubble
 			bubble.beat(record)
 			var whole: bool = is_equal_approx(bubble._pop, 1.0) and is_equal_approx(bubble._spin, 0.0)
 			_t.check("Moss's %s %s" % ["relent" if record.has("relent") else "restart",
 				"comes up whole with less motion" if still else "pops with motion on"], whole == still, "pop %.2f spin %.2f" % [bubble._pop, bubble._spin])
-			bubble.free()
+			bubble.hush()
 	MossBubble.reduced_motion = false
+	for still in [false, true]:
+		var peak: float = await _taken_pop(still)
+		_t.check("the tree pick's taken card %s" % ("holds its size with less motion" if still else "pops with motion on"),
+			(peak <= 1.0001) == still, "peak scale %.3f" % peak)
+	UiTokens.reduced_motion = false
+
+
+# The largest the taken card grows as the tree pick closes on it.
+func _taken_pop(still: bool) -> float:
+	var host := Node.new()
+	root.add_child(host)
+	var pick := TreePick.new()
+	host.add_child(pick)
+	var nodes := [{"id": "e2_12_a", "name": "Probe A", "effect": "a", "key": "weapon", "knob": {}},
+		{"id": "e2_12_b", "name": "Probe B", "effect": "b", "key": "weapon", "knob": {}}]
+	UiTokens.reduced_motion = false
+	pick.open("pylon_engineer", 1, nodes, [], Palette.COPPER)
+	await _frames(2)
+	var taken: Control = pick.cards()[0]
+	UiTokens.reduced_motion = still
+	pick.close(0)
+	# Half a second of the engine's own frame time: the pop and the fade both end inside it.
+	var peak := 0.0
+	var waited := 0.0
+	while waited < 0.5:
+		peak = maxf(peak, taken.scale.x)
+		await process_frame
+		waited += root.get_process_delta_time()
+	host.queue_free()
+	await process_frame
+	return peak
 
 
 func _labels(node: Node, out: Array) -> void:
