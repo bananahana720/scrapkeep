@@ -9,6 +9,10 @@ extends SceneTree
 # every other layer 1, checked per layer. Class V is the doubled coil alone (one copper surface,
 # no Replace_ node, the base mint tip stays); its three top panels moved into c4.
 # 2026-10-22: shell 16 after the SpoolKit split and rubber fold (baked-bracket card; docs/decisions.tsv 2026-10-22T18:42).
+# 2026-11-23 (E1-10, ruling ek, wave 46 blueprint 2.3): the twin coils at 11 and 1 became one twin-prong emitter
+# at twelve o'clock under the ring band, on E1-03's closed lattice. Emitter_L and Emitter_R sit on the prong
+# points, mirrored, inside the 1.35 m weapon reach; the ring is closed; the heft layers stay clear of it; draws
+# in play stay within 16 and shell triangles under 6,500.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -17,7 +21,7 @@ const SHELL := "res://assets/models/world_one/shell_sable.glb"
 const FELT := "res://assets/models/world_one/shell_sable_felt.glb"
 const LAYER := "res://assets/models/world_one/shell_sable_c%d.glb"
 const RIG := "res://assets/models/pilot_sable_anim.glb"
-const EXPECTED_CHECKS := 66
+const EXPECTED_CHECKS := 74
 const MAX_V := 15000
 const MAX_T := 16000
 # 2026-10-22: SpoolKit (the winch spool, copper and paint, its rubber folded into paint in charcoal) is its
@@ -35,6 +39,11 @@ const MAST_PAST := 0.20
 const MAST_HEAVY_PAST := 0.25
 const SPOOL_PAST := 0.12
 const TOL := 0.01
+# The weapon reach cap (wave 46 review 1.3): no weapon part past 1.35 m from the ball's centre.
+const EMITTER_REACH := 1.35
+# Emitter vertices hang below the ring collar's bottom (Godot Y -0.07); heft panels keep this far from them.
+const EMITTER_BELOW := -0.08
+const EMITTER_CLEAR := 0.05
 const CLIPS := {"drop_land": 2.1666667, "big_cheer": 2.8, "wince": 0.5, "slump": 1.5, "phew": 0.8, "brace": 0.6, "heave": 0.8}
 const RIG_BONES := [
 	"root", "pelvis", "spine_01", "spine_02", "neck", "head", "crest", "ear.L", "ear.R",
@@ -191,8 +200,9 @@ func _check_budget(shell: Node, rig: Node) -> void:
 	var a := counts(shell)
 	var b := counts(rig)
 	var body := counts(shell, ["Pilot"])
-	_report("sable shell tris", body.t <= SHELL_TRIS, "%d triangles without the placeholder pilot, band top %d" % [body.t, SHELL_TRIS])
+	_report("sable shell tris", body.t < SHELL_TRIS, "%d triangles without the placeholder pilot, under %d" % [body.t, SHELL_TRIS])
 	_report("sable shell draws", a.s == SHELL_DRAWS, "%d surfaces, registry exception %d" % [a.s, SHELL_DRAWS])
+	_report("sable draws in play", body.s <= SHELL_DRAWS, "%d surfaces without the placeholder pilot, cap %d" % [body.s, SHELL_DRAWS])
 	_report("sable pod V", a.v + b.v <= MAX_V, "%d + %d = %d vertices, ceiling %d" % [a.v, b.v, a.v + b.v, MAX_V])
 	_report("sable pod T", a.t + b.t <= MAX_T, "%d + %d = %d triangles, ceiling %d" % [a.t, b.t, a.t + b.t, MAX_T])
 	_report("sable pod draws", a.s + b.s <= MAX_DRAWS, "%d + %d = %d surfaces, ceiling %d" % [a.s, b.s, a.s + b.s, MAX_DRAWS])
@@ -220,14 +230,100 @@ func _check_tree(shell: Node) -> void:
 	var el := ring.get_node_or_null("Emitter_L") as Node3D if ring != null else null
 	var er := ring.get_node_or_null("Emitter_R") as Node3D if ring != null else null
 	_report("sable emitter mounts", el != null and er != null and el.position.z < -1.1 and er.position.z < -1.1
-		and el.position.x < 0.0 and er.position.x > 0.0 and absf(el.position.x + er.position.x) < 0.001,
-		"twin arc emitter muzzles on the ring's front arc, mirrored about the nose")
+		and el.position.x < 0.0 and er.position.x > 0.0 and el.position.x > -0.05 and absf(el.position.x + er.position.x) < 0.001
+		and absf(el.position.y - er.position.y) < 0.001 and absf(el.position.z - er.position.z) < 0.001,
+		"Emitter_L and Emitter_R at twelve o'clock on the ring's front, mirrored in x (%s, %s)"
+		% [el.position if el != null else null, er.position if er != null else null])
+	_check_emitter(ring as MeshInstance3D, el, er)
 	var slots := []
 	if ring is MeshInstance3D:
 		for i in (ring as MeshInstance3D).mesh.get_surface_count():
 			slots.append(HeroAssets.slot_of((ring as MeshInstance3D).mesh, i))
 	slots.sort()
-	_report("sable ring slots", slots == ["copper", "paint", "rubber"], "WeaponRing surfaces %s: bone band, dark collar, copper coils and studs" % [slots])
+	_report("sable ring slots", slots == ["copper", "paint", "rubber"], "WeaponRing surfaces %s: bone band and collars, dark collar and shoe, copper winding, prongs and studs" % [slots])
+
+
+# The markers sit on the prong points: a copper vertex of the ring at each, and no ring vertex further
+# forward. Every ring vertex and both markers stay inside EMITTER_REACH, and the ring is closed.
+func _check_emitter(ring: MeshInstance3D, el: Node3D, er: Node3D) -> void:
+	var tips := 0
+	var front := INF
+	var reach := 0.0
+	var pts := PackedVector3Array()
+	if ring != null:
+		pts = points(ring, ring.get_parent())
+		for i in ring.mesh.get_surface_count():
+			if HeroAssets.slot_of(ring.mesh, i) != "copper":
+				continue
+			for v in (ring.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
+				for m in [el, er]:
+					if m != null and v.distance_to(m.position) < 0.0005:
+						tips += 1
+	for p in pts:
+		front = minf(front, p.z)
+		reach = maxf(reach, p.length())
+	var marks := [el, er].filter(func(m): return m != null)
+	var mark_reach := 0.0
+	for m in marks:
+		mark_reach = maxf(mark_reach, (m as Node3D).position.length())
+	_report("sable emitter tips", marks.size() == 2 and tips >= 2 and front >= (el.position.z - 0.0005),
+		"%d copper vertices on the markers (a prong point each); nothing further forward (front Z %.4f, tips %.4f)"
+		% [tips, front, el.position.z if el != null else 0.0])
+	_report("sable emitter reach", not pts.is_empty() and reach <= EMITTER_REACH and mark_reach <= EMITTER_REACH,
+		"ring reaches %.4f m, prong points %.4f m, cap %.2f" % [reach, mark_reach, EMITTER_REACH])
+	var edges := open_edges(ring) if ring != null else Vector2i(-1, -1)
+	_report("sable ring closed", edges == Vector2i.ZERO, "WeaponRing welded: %d open, %d non-manifold edges" % [edges.x, edges.y])
+
+
+# Open (one triangle) and non-manifold (three or more) edges of a mesh's triangles over every surface,
+# welded by position (check_manifold.py's rule, POLISH.md "Watertight"). Godot's import compresses each
+# surface's positions on its own, so a seam between two surfaces lands a few hundredths of a millimetre
+# apart: vertices within WELD of an earlier one take its key.
+const WELD := 0.0002
+const WELD_CELL := 0.001
+
+
+static func open_edges(mi: MeshInstance3D) -> Vector2i:
+	var grid := {}
+	var canon: Array[Vector3] = []
+	var count := {}
+	for i in mi.mesh.get_surface_count():
+		var arrays := mi.mesh.surface_get_arrays(i)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var keys := PackedInt32Array()
+		for v in verts:
+			keys.append(_weld(v, grid, canon))
+		var index = arrays[Mesh.ARRAY_INDEX]
+		var idx: PackedInt32Array = index if index != null else PackedInt32Array(range(verts.size()))
+		for t in range(0, idx.size() - 2, 3):
+			var tri := [keys[idx[t]], keys[idx[t + 1]], keys[idx[t + 2]]]
+			if tri[0] == tri[1] or tri[1] == tri[2] or tri[0] == tri[2]:
+				continue
+			for k in 3:
+				var e := Vector2i(mini(tri[k], tri[(k + 1) % 3]), maxi(tri[k], tri[(k + 1) % 3]))
+				count[e] = int(count.get(e, 0)) + 1
+	var out := Vector2i.ZERO
+	for n in count.values():
+		if n == 1:
+			out.x += 1
+		elif n >= 3:
+			out.y += 1
+	return out
+
+
+static func _weld(v: Vector3, grid: Dictionary, canon: Array[Vector3]) -> int:
+	var c := Vector3i((v / WELD_CELL).floor())
+	for dx in [-1, 0, 1]:
+		for dy in [-1, 0, 1]:
+			for dz in [-1, 0, 1]:
+				for k in grid.get(c + Vector3i(dx, dy, dz), []):
+					if canon[k].distance_to(v) <= WELD:
+						return k
+	canon.append(v)
+	if not grid.has(c):
+		grid[c] = []
+	(grid[c] as Array).append(canon.size() - 1)
+	return canon.size() - 1
 
 
 func _check_machinery(shell: Node) -> void:
@@ -350,7 +446,14 @@ func _report_mask(label: String, root: Node) -> void:
 	_report("%s other paint alpha" % label, other_off == 0, "every other paint vertex has alpha 1 (%d off)" % other_off)
 
 
-func _check_layers() -> void:
+func _check_layers(shell: Node) -> void:
+	# The emitter: ring vertices below the collar.
+	var emitter := PackedVector3Array()
+	var ring := shell.find_child("WeaponRing", true, false) as MeshInstance3D
+	if ring != null:
+		for p in points(ring, shell):
+			if p.y < EMITTER_BELOW:
+				emitter.append(p)
 	for n in [2, 3, 4, 5]:
 		var layer := _load(LAYER % n)
 		var core := layer.find_child("Core", true, false)
@@ -384,6 +487,13 @@ func _check_layers() -> void:
 					and clock(coil_top) >= 10.5 and clock(coil_top) <= 11.5,
 					"the doubled coil is one copper surface (%s) reaching %.3f at %.2f o'clock, want %.3f at 11 (one mast, 0.25 m)"
 					% [pod_slots, out_r, clock(coil_top), LATTICE_OUT + MAST_HEAVY_PAST])
+		var gap := INF
+		for mi in meshes(layer):
+			for p in points(mi, layer):
+				for q in emitter:
+					gap = minf(gap, p.distance_to(q))
+		_report("sable c%d clears emitter" % n, not emitter.is_empty() and gap >= EMITTER_CLEAR,
+			"nearest layer vertex %.3f m from the emitter (%d emitter vertices), want %.2f" % [gap, emitter.size(), EMITTER_CLEAR])
 		if n == 3:
 			var caps := far(points(core as MeshInstance3D, layer)) if core is MeshInstance3D else INF
 			_report("sable c3 caps", caps <= CORE_LIMIT + 0.0001, "thicker tread caps reach %.4f, limit %.3f" % [caps, CORE_LIMIT])
@@ -416,7 +526,7 @@ func _initialize() -> void:
 	_check_tree(shell)
 	_check_machinery(shell)
 	_check_materials(shell)
-	_check_layers()
+	_check_layers(shell)
 	_check_felt(shell)
 	_check_rig(rig)
 	shell.free()
