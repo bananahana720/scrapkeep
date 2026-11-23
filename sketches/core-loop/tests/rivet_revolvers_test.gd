@@ -72,10 +72,10 @@ func _run() -> void:
 	_mirror(skel, mesh)
 	var tips := _barrel_tips(skel, mesh)
 	_muzzles(skel, tips)
-	scene.queue_free()
 	_mounted("")
 	_mounted(VARIANT)
 	_heft(mesh)
+	scene.queue_free()
 	_finish()
 
 
@@ -266,7 +266,7 @@ func _barrel_tips(skel: Skeleton3D, mesh: MeshInstance3D) -> Dictionary:
 	return tips
 
 
-func _muzzles(skel: Skeleton3D, tips: Dictionary) -> void:
+func _muzzles(_skel: Skeleton3D, tips: Dictionary) -> void:
 	var shell := _load(SHELL)
 	if shell == null:
 		_t.check("muzzles on the barrel tips", false, SHELL)
