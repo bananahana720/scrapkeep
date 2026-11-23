@@ -332,7 +332,7 @@ func _cannon_fold(Mecha) -> void:
 func _machinery(Mecha) -> void:
 	var facts := {"meter_fill": 0.0, "selected_slot": "weapon", "slot_ready": {"special": false}, "pressure": 0.0,
 		"gliding": false, "cloaked": false, "line_load": 0.0, "set_piece_phase": "idle", "heft_class": 1,
-		"aim": Vector3(0, 0, -1)}
+		"aim": Vector3(0, 0, -1), "reloading": false, "gauge_fill": 0.0, "idle_still": false}
 	var rows := [
 		{"node": "MeterBand", "fact": "meter_fill", "motion": "turn", "start": {"axis": "y", "deg": 90.0}},
 		{"node": "SlotLamp", "fact": "selected_slot", "motion": "slide", "start": {"slot": 2, "axis": "y", "m": 0.05}},
@@ -345,6 +345,9 @@ func _machinery(Mecha) -> void:
 		{"node": "HeftGauge", "fact": "heft_class", "motion": "slide", "start": {"axis": "z", "m": 0.08}},
 		{"node": "MuzzleFlap", "fact": "shot_fired", "motion": "throw", "start": {"axis": "x", "deg": 30.0}},
 		{"node": "AimVane", "fact": "aim", "motion": "aim", "start": {"rate": 1000.0}},
+		{"node": "Crane", "fact": "reloading", "motion": "turn", "start": {"axis": "y", "deg": 80.0}},
+		{"node": "ChargeLever", "fact": "gauge_fill", "motion": "turn", "start": {"axis": "x", "deg": 35.0}},
+		{"node": "IdleDrum", "fact": "idle_still", "motion": "spin", "start": {"axis": "y", "deg_s": 900.0, "for_s": 0.4}},
 		{"node": "Control.Nope", "fact": "meter_fill", "motion": "turn", "start": {"axis": "x", "deg": 10.0}},
 	]
 	var names: Array = []
@@ -363,7 +366,7 @@ func _machinery(Mecha) -> void:
 		before[node_name] = [node.transform, node.visible]
 	facts = {"meter_fill": 1.0, "selected_slot": "special", "slot_ready": {"special": true}, "pressure": 1.0,
 		"gliding": true, "cloaked": true, "line_load": 1.0, "set_piece_phase": "flight", "heft_class": 5,
-		"aim": Vector3(1, 0, 0)}
+		"aim": Vector3(1, 0, 0), "reloading": true, "gauge_fill": 1.0, "idle_still": true}
 	motion.pulse("shot_fired")
 	_run_for(motion, 0.05, facts)
 	var moved: Array = []
@@ -371,8 +374,8 @@ func _machinery(Mecha) -> void:
 		var node: Node3D = pod.get_node(node_name)
 		if node.transform != before[node_name][0] or node.visible != before[node_name][1]:
 			moved.append(node_name)
-	_t.eq("one machinery node moves per fact kind (11 kinds)", moved, names)
-	_t.eq("facts covered", Mecha.FACTS.size(), 11)
+	_t.eq("one machinery node moves per fact kind (14 kinds)", moved, names)
+	_t.eq("facts covered", Mecha.FACTS.size(), 14)
 	_run_for(motion, 1.0, facts)
 	# Fix round 2026-10-11: the label and the printed values no longer carry the SKIP token, which
 	# made the smoke count this test as skipped. Same check, same count.
