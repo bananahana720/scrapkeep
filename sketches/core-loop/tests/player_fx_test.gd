@@ -698,7 +698,207 @@ func _run() -> void:
 	dunk.tick(dunk.WINDOW + 0.1)
 	await _frames(1)
 	t.check("an expired charge clears the coil", not fx.dunk_glow_shown())
+	await _sable_halo(fx)
+	await _rivet_fire(fx)
 	quit(t.verdict())
+
+
+# Holds the weapon's public charge at `level` (the record the halo reads), or lets it go.
+func _hold_charge(level: float) -> void:
+	var driver = _game.combat.weapon_driver
+	driver._charge_armed = false
+	driver._charging = level > 0.0
+	driver._charge = level
+
+
+# Sable's charge halo (wave 46 3D blueprint section 3.2), through the real weapon record and events.
+func _sable_halo(fx) -> void:
+	var ChargeHalo := load("res://src/presentation/charge_halo.gd")
+	var Weapons := load("res://src/combat/weapons.gd")
+	var cadence: Dictionary = fx.weapon_cadence()
+	t.check("Sable's weapon is a tap-charge weapon, so she wears the halo", PlayerFx.halo_pilot(cadence), str(cadence.get("trigger")))
+	t.near("the tap floor is the casters' least charged bolt", ChargeHalo.TAP_FLOOR, float(Weapons.BASE[Weapons.ARC_CASTER]["charge_min"]))
+	t.check("frost is ice blue, never the old works' green", PlayerFx.ELEMENT_COLORS["frost"] == Palette.ICE and PlayerFx.ELEMENT_COLORS["frost"] != Palette.ANCIENT)
+	t.check("a frost part's mote is ice blue", PlayerFx.part_color("frost_vane") in [Palette.ICE, Palette.ICE.lerp(Color.WHITE, 0.25)], str(PlayerFx.part_color("frost_vane")))
+	fx.reduced_motion = false
+	_hold_charge(0.0)
+	await _settle(0.15)
+	t.check("no halo before a charge", fx.halo() == null or fx.halo().hoops_shown() == 0)
+	var shown := []
+	var radii := []
+	for level in [0.35, 0.7, 1.0]:
+		_hold_charge(level)
+		await _settle(0.12)
+		shown.append(fx.halo().hoops_shown())
+		radii.append(fx.halo().hoop_radius())
+	t.eq("the hoops track the charge: 2 at 0.35, 3 at 0.7, 4 at full", shown, [2, 3, 4])
+	t.check("the hoops pull in as the charge grows, 0.16 m to 0.105 m", radii[0] < ChargeHalo.RADIUS_START and radii[0] > radii[1] and radii[1] > radii[2]
+		and is_equal_approx(radii[2], ChargeHalo.RADIUS_FULL), str(radii))
+	var halo = fx.halo()
+	var marker: Node3D = _game.player.pod_mount().find_child("Emitter_L", true, false)
+	if marker != null:
+		t.check("the halo hangs on the shell's WeaponRing, beside the prong markers", halo.mounted_on() == marker.get_parent())
+	else:
+		t.check("without a shell the halo hangs under player_fx", halo.mounted_on() == halo and halo.is_inside_tree())
+	t.check("the sparks are capped at 12", halo.sparks_cap() == ChargeHalo.SPARKS and ChargeHalo.SPARKS == 12, str(halo.sparks_cap()))
+	t.check("the sparks emit at 24 a second at full: half the cap's rate", is_equal_approx(halo.spark_ratio(), 0.5), str(halo.spark_ratio()))
+	t.check("full charge closes the hoops into one halo and pulses once", halo.closed() > 0.0 and halo.spawned.get("pulse", 0) == 1)
+	# One swell, never a repeat: over a long hold at full the glow rises and falls once at most.
+	var turns := [0]
+	await _held_glow(halo, 1.2, turns)
+	t.check("a held full charge never flickers: it turns from rise to fall once at most, then holds", turns[0] <= 1 and halo.spawned.get("pulse", 0) == 1, str(turns))
+	var steady: float = halo.glow()
+
+	# A charged release: the halo ends and one ring leaves the prong tips.
+	var weapon := String(cadence.get("weapon", ""))
+	var taps: int = fx.spawned.get("sable_tap", 0)
+	_hold_charge(0.0)
+	_game.combat.weapon_driver._recover_s = 0.12
+	var tip: Vector3 = halo.tip()
+	_game.events.shot_fired.emit(weapon, tip, tip + Vector3(0, 0, -40))
+	t.check("a charged bolt fires the release ring and hides the halo", halo.rings_alive() == 1 and halo.spawned.get("release", 0) == 1
+		and not halo.halo_shown() and fx.spawned.get("sable_tap", 0) == taps)
+	await _settle(0.1)
+	var mid: float = halo.ring_radius(0)
+	t.check("the ring grows from 0.2 m toward 1.4 m", mid > ChargeHalo.RING_FROM and mid < ChargeHalo.RING_TO, "%.2f" % mid)
+	await _settle(0.15)
+	t.eq("the ring is gone after its life", halo.rings_alive(), 0)
+	_game.combat.weapon_driver._recover_s = 0.0
+
+	# A spark: the jagged arc in vfx's glyph pool, and no ring.
+	var vfx = _game.presentation.vfx
+	_game.events.shot_fired.emit(weapon, tip, tip + Vector3(0, 0, -40))
+	var arc_up := false
+	for g in vfx._glyphs:
+		arc_up = arc_up or (g["t"] < 1.0 and g["node"].mesh == vfx._meshes["arc"])
+	t.check("a spark draws the tap arc from vfx's glyph pool, not a ring", fx.spawned.get("sable_tap", 0) == taps + 1 and arc_up and halo.rings_alive() == 0)
+	t.eq("the arc keeps vfx's pool size", vfx._glyphs.size(), vfx.POOL)
+
+	# Pools stay capped: three quick releases keep two rings, and a new halo never takes a third draw.
+	_game.combat.weapon_driver._recover_s = 0.12
+	for i in 3:
+		_game.events.shot_fired.emit(weapon, tip, tip + Vector3(0, 0, -40))
+	t.eq("the release rings stay pooled at 2", halo.rings_alive(), ChargeHalo.RINGS)
+	_game.combat.weapon_driver._recover_s = 0.0
+	await _frames(1)
+	_hold_charge(0.5)
+	await _frames(2)
+	t.check("a halo with rings alive stays within 2 draws", halo.draws_alive() <= ChargeHalo.DRAWS and halo.halo_shown(), str(halo.draws_alive()))
+
+	# A charge that drops with no bolt, and a cancelled gauge: the hoops collapse, no ring.
+	await _settle(0.3)
+	var releases: int = halo.spawned.get("release", 0)
+	_hold_charge(0.0)
+	await _frames(2)
+	t.check("a dropped charge collapses the hoops", halo.state() == "collapsing" and halo.spawned.get("cancel", 0) == 1)
+	await _settle(0.15)
+	t.check("the collapse ends in 0.1 s with no ring", halo.state() == "idle" and halo.rings_alive() == 0 and halo.spawned.get("release", 0) == releases)
+	_hold_charge(0.6)
+	await _frames(2)
+	_game.events.gauge_cancelled.emit("test", "cancel")
+	t.check("gauge_cancelled collapses it too", halo.state() == "collapsing" and halo.spawned.get("cancel", 0) == 2)
+	_hold_charge(0.0)
+	await _settle(0.15)
+
+	# A gauge release: at or under the tap floor it is the arc, above it the ring.
+	_game.events.gauge_released.emit("test", 0.2)
+	t.check("a gauge released at the tap floor draws the arc", fx.spawned.get("sable_tap", 0) == taps + 2 and halo.rings_alive() == 0)
+	_game.events.gauge_released.emit("test", 0.8)
+	t.check("a gauge released above it fires the ring", halo.rings_alive() == 1)
+	await _settle(0.3)
+
+	# Reduce motion: the hoops hold still and throw no sparks; Reduce flashes cuts the full-charge swell.
+	fx.reduced_motion = true
+	_hold_charge(0.5)
+	await _frames(2)
+	var spin: float = halo._spin
+	await _settle(0.2)
+	t.check("reduced motion: the hoops do not spin and no sparks fly", is_equal_approx(halo._spin, spin) and halo.spark_ratio() == 0.0 and halo.hoops_shown() == 3)
+	fx.reduced_motion = false
+	_hold_charge(0.0)
+	await _settle(0.2)
+	var FlashGuard := load("res://src/presentation/flash_guard.gd")
+	FlashGuard.on = true
+	_hold_charge(1.0)
+	var peak := [0.0]
+	await _held_glow(halo, 0.5, [0], peak)
+	FlashGuard.on = false
+	t.check("Reduce flashes keeps the full-charge swell at a third of its rise", peak[0] <= steady * (1.0 + ChargeHalo.PULSE_GAIN * FlashGuard.SPIKE_SHARE) + 0.001
+		and peak[0] < steady * (1.0 + ChargeHalo.PULSE_GAIN) - 0.01, "%.3f of %.3f" % [peak[0], steady])
+	_hold_charge(0.0)
+	await _settle(0.2)
+	t.eq("the halo sorts under the threat marks", halo._mesh.material_override.render_priority, PlayerFx.RENDER_PRIORITY)
+
+
+# Samples the halo's glow every frame for `seconds`: counts the times it turns (rise to fall or back) in
+# turns[0] and keeps the highest in peak[0].
+func _held_glow(halo, seconds: float, turns: Array, peak := [0.0]) -> void:
+	var last: float = halo.glow()
+	var slope := 0.0
+	var left := seconds
+	while left > 0.0:
+		await process_frame
+		left -= _game.get_process_delta_time()
+		var g: float = halo.glow()
+		peak[0] = maxf(peak[0], g)
+		var d := g - last
+		if absf(d) > 1e-5:
+			if slope != 0.0 and signf(d) != signf(slope):
+				turns[0] += 1
+			slope = d
+		last = g
+
+
+# Rivet's muzzle flash and casings (section 3.3): through fake LaserMuzzle markers on a WeaponRing under
+# the pod mount, so the effects stand where the shell's markers stand.
+func _rivet_fire(fx) -> void:
+	var ring := Node3D.new()
+	ring.name = "WeaponRing"
+	var markers := []
+	for side in [["LaserMuzzle_L", -0.6], ["LaserMuzzle_R", 0.6]]:
+		var m := Node3D.new()
+		m.name = side[0]
+		m.position = Vector3(side[1], 0.17, -1.15)
+		ring.add_child(m)
+		markers.append(m)
+	_game.player.pod_mount().add_child(ring)
+	fx._marker_wait.clear()
+	fx._rivet_shots = 0
+	fx.reduced_motion = false
+	var from: Vector3 = _game.player.shown_position()
+	var dir := Vector3(0, 0, -1)
+	fx._rivet_shot(from, dir)
+	t.check("shot 0 flashes at the left muzzle", fx.flashes_alive() == 1 and fx.flash_at(0).is_equal_approx(markers[0].global_position),
+		"%s vs %s, %d alive" % [fx.flash_at(0), markers[0].global_position, fx.flashes_alive()])
+	fx._rivet_shot(from, dir)
+	t.check("shot 1 flashes at the right muzzle", fx.flashes_alive() == 2 and fx.flash_at(1).is_equal_approx(markers[1].global_position))
+	t.eq("the first shot on each side throws a casing", fx.casings_alive(), 2)
+	fx._rivet_shot(from, dir)
+	fx._rivet_shot(from, dir)
+	t.eq("the second shot on a side throws none", fx.casings_alive(), 2)
+	for i in 40:
+		fx._rivet_shot(from, dir)
+	t.check("pools stay capped: 2 flashes and 8 casings", fx.flashes_alive() <= PlayerFx.FLASHES and fx.casings_alive() == PlayerFx.CASINGS
+		and PlayerFx.FLASHES == 2 and PlayerFx.CASINGS == 8, "%d flashes, %d casings" % [fx.flashes_alive(), fx.casings_alive()])
+	t.eq("the flash and casing pools are one MultiMesh each", [fx._flashes.multimesh.instance_count, fx._casings.multimesh.instance_count], [PlayerFx.FLASHES, PlayerFx.CASINGS])
+	var views: Array = fx.root.find_children("*", "MultiMeshInstance3D", false, false).filter(func(n): return n.name in ["MuzzleFlashes", "SpentCasings"])
+	t.eq("rivet fire is RIVET_DRAWS draws", views.size(), PlayerFx.RIVET_DRAWS)
+	var metal: StandardMaterial3D = fx._casings.material_override
+	t.check("a casing is brass leaning 45% to steel, roughness 0.5, metallic 0.35", metal.albedo_color.is_equal_approx(Palette.BRASS.lerp(Palette.STEEL, 0.45))
+		and is_equal_approx(metal.roughness, 0.5) and is_equal_approx(metal.metallic, 0.35))
+	var gap: Vector3 = ring.global_transform.affine_inverse() * fx._casing_at[0]
+	t.check("a left casing leaves outboard of the left drum, behind the muzzle", gap.x < -0.6 and gap.z > -1.15 and gap.y < 0.17, str(gap))
+	await _settle(0.08)
+	t.eq("a flash lives 0.05 s", fx.flashes_alive(), 0)
+	await _settle(0.35)
+	t.eq("a casing lives 0.35 s", fx.casings_alive(), 0)
+	t.check("a casing falls under gravity", fx._casing_v[0].y < 0.0, str(fx._casing_v[0]))
+	fx.reduced_motion = true
+	fx._rivet_shot(from, dir)
+	t.check("reduced motion keeps the flash and throws no casing", fx.flashes_alive() == 1 and fx.casings_alive() == 0)
+	fx.reduced_motion = false
+	ring.free()
+	fx._marker_wait.clear()
 
 
 class FlatGround:

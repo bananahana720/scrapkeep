@@ -23,6 +23,7 @@ const PlayerFx := preload("res://src/presentation/player_fx.gd")
 #   worlds   "all"; "water" for the worlds with standing water (WorldFx.WAKE_WORLDS, the worlds whose
 #            water throws a wake); or a world_fx set id (Specs.WORLD_SETS values) for one world's own pools
 #   per      the ceiling is per placed thing (a thermal column), so worst_case lists it, not sums it
+#   more     {unit: const} for an effect that also costs in another unit, each a constant on `owner`
 const ROWS := {
 	"world_air": {"unit": "particles", "owner": "res://src/presentation/world_fx/world_fx_specs.gd",
 		"const": "AMBIENT_CEILING", "worlds": "all", "what": "a world's ambient air plus its worst overlay"},
@@ -56,6 +57,12 @@ const ROWS := {
 		"read": "still_quads", "worlds": "all", "what": "still quads a set carries (the dam spray's rainbow); counted in every world as an upper bound"},
 	"water_mist": {"unit": "draws", "owner": "res://src/presentation/spillway_scenery.gd",
 		"read": "one", "worlds": "water", "what": "the falls' mist cards, batched into one mesh per scenery build"},
+	"sable_charge": {"unit": "particles", "owner": "res://src/presentation/charge_halo.gd",
+		"const": "SPARKS", "more": {"draws": "DRAWS"}, "worlds": "all",
+		"what": "Sable's charge sparks; the halo and its release rings are DRAWS (owner player_fx)"},
+	"rivet_fire": {"unit": "draws", "owner": "res://src/presentation/player_fx.gd",
+		"const": "RIVET_DRAWS", "more": {"nodes": "CASINGS"}, "worlds": "all",
+		"what": "Rivet's muzzle flashes and spent casings, one MultiMesh each; CASINGS alive at most"},
 	"thermal_column": {"unit": "draws", "owner": "res://src/presentation/highdraft_fx.gd",
 		"read": "thermal_views", "worlds": "highdraft", "per": "thermal column", "what": "a thermal's motes and streaks multimeshes"},
 }
@@ -104,6 +111,16 @@ static func ceiling(id: String) -> int:
 	return 0
 
 
+# Every unit a row costs in: its own ceiling and each of its "more" constants, read from its owner.
+static func ceilings(id: String) -> Dictionary:
+	var row: Dictionary = ROWS[id]
+	var out := {String(row.unit): ceiling(id)}
+	var map: Dictionary = (load(row.owner) as GDScript).get_script_constant_map() if row.has("more") else {}
+	for unit in row.get("more", {}):
+		out[unit] = int(out.get(unit, 0)) + int(map[row.more[unit]])
+	return out
+
+
 static func in_world(id: String, world: int) -> bool:
 	var scope := String(ROWS[id].worlds)
 	match scope:
@@ -120,7 +137,9 @@ static func worst_case(world: int) -> Dictionary:
 	var out := {"particles": 0, "nodes": 0, "draws": 0}
 	for id in ROWS:
 		if in_world(id, world) and not ROWS[id].has("per"):
-			out[ROWS[id].unit] += ceiling(id)
+			var cost := ceilings(id)
+			for unit in cost:
+				out[unit] += int(cost[unit])
 	return out
 
 
