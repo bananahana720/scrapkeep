@@ -246,7 +246,8 @@ func _check_tree(shell: Node) -> void:
 # The markers sit on the prong points: a copper vertex of the ring at each, and no ring vertex further
 # forward. Every ring vertex and both markers stay inside EMITTER_REACH, and the ring is closed.
 func _check_emitter(ring: MeshInstance3D, el: Node3D, er: Node3D) -> void:
-	var tips := 0
+	var tips_l := 0
+	var tips_r := 0
 	var front := INF
 	var reach := 0.0
 	var pts := PackedVector3Array()
@@ -256,9 +257,10 @@ func _check_emitter(ring: MeshInstance3D, el: Node3D, er: Node3D) -> void:
 			if HeroAssets.slot_of(ring.mesh, i) != "copper":
 				continue
 			for v in (ring.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-				for m in [el, er]:
-					if m != null and v.distance_to(m.position) < 0.0005:
-						tips += 1
+				if el != null and v.distance_to(el.position) < 0.0005:
+					tips_l += 1
+				if er != null and v.distance_to(er.position) < 0.0005:
+					tips_r += 1
 	for p in pts:
 		front = minf(front, p.z)
 		reach = maxf(reach, p.length())
@@ -266,9 +268,9 @@ func _check_emitter(ring: MeshInstance3D, el: Node3D, er: Node3D) -> void:
 	var mark_reach := 0.0
 	for m in marks:
 		mark_reach = maxf(mark_reach, (m as Node3D).position.length())
-	_report("sable emitter tips", marks.size() == 2 and tips >= 2 and front >= (el.position.z - 0.0005),
-		"%d copper vertices on the markers (a prong point each); nothing further forward (front Z %.4f, tips %.4f)"
-		% [tips, front, el.position.z if el != null else 0.0])
+	_report("sable emitter tips", marks.size() == 2 and tips_l >= 1 and tips_r >= 1 and front >= (el.position.z - 0.0005),
+		"%d/%d copper vertices on L/R markers (a prong point each); nothing further forward (front Z %.4f, tips %.4f)"
+		% [tips_l, tips_r, front, el.position.z if el != null else 0.0])
 	_report("sable emitter reach", not pts.is_empty() and reach <= EMITTER_REACH and mark_reach <= EMITTER_REACH,
 		"ring reaches %.4f m, prong points %.4f m, cap %.2f" % [reach, mark_reach, EMITTER_REACH])
 	var edges := open_edges(ring) if ring != null else Vector2i(-1, -1)
