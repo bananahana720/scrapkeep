@@ -388,7 +388,8 @@ func _combat():
 func _events():
 	var fleet = spec.get("fleet")
 	var fleet_ctx = fleet.get("ctx") if fleet != null and is_instance_valid(fleet) else null
-	return fleet_ctx.events if fleet_ctx != null else null
+	var ev = fleet_ctx.get("events") if fleet_ctx != null else null
+	return ev if ev != null and is_instance_valid(ev) else null
 
 
 func _show_signal(level: float) -> void:

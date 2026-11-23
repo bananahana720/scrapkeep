@@ -956,27 +956,34 @@ func _dsp_state() -> Dictionary:
 var _drop_room := []
 
 
-func _make_drop_room(at: int) -> void:
+func _make_drop_room(at: int, band = null) -> void:
 	var tuning = ctx.get("tuning") if ctx != null else null
 	var name: String = tuning.option(Tuning.DROP_ROOM_KEY) if tuning != null else "off"
 	if not MixRows.DROP_ROOM.has(name):
 		_drop_room = []
 		return
-	var from := at - int(MixRows.DROP_ROOM_LEAD_S * AceSequencer.RATE)
-	_drop_room = [ace, from, at + MixRows.DROP_ROOM_BARS * ace.grid_bar, MixRows.DROP_ROOM[name]]
+	var owner = band if band != null else (ace if ace_playing() else engine)
+	if owner == null:
+		_drop_room = []
+		return
+	var bar: int = ace.grid_bar if owner == ace else engine.bar_len()
+	var from := at - int(MixRows.DROP_ROOM_LEAD_S * Harmony.RATE)
+	_drop_room = [owner, from, at + MixRows.DROP_ROOM_BARS * bar, MixRows.DROP_ROOM[name]]
 
 
 func _drop_room_now() -> Dictionary:
 	if _drop_room.is_empty():
 		return {}
-	if _drop_room[0] != ace or ace == null:
+	var owner = _drop_room[0]
+	var valid: bool = (owner == ace and ace_playing()) or (owner == engine and engine != null)
+	if owner == null or not valid:
 		_drop_room = []
 		return {}
 	# Timed on the sample the player hears, not the render head (as live_key reads the key).
 	var queued := 0
 	if live_output and _music_pb != null:
 		queued = _ring_capacity - _music_pb.get_frames_available()
-	var heard: int = ace.audible_sample(queued)
+	var heard: int = ace.audible_sample(queued) if owner == ace else maxi(engine.clock - queued, 0)
 	if heard >= int(_drop_room[2]):
 		_drop_room = []
 		return {}
@@ -4656,7 +4663,7 @@ func _follow_warden_form(posture: float, staggered: bool, landed: bool) -> void:
 		var synth_at := _follow_synth_form(posture, staggered, landed)
 		if synth_at >= 0 and ace_at < 0:
 			_log_cue(["warden_form", "drop", "beat", synth_at, 1.0, 0.0])
-			_make_drop_room(synth_at)
+			_make_drop_room(synth_at, engine)
 
 
 func _reset_synth_form() -> void:
@@ -4664,6 +4671,8 @@ func _reset_synth_form() -> void:
 		engine.hold_dominant(false)
 		if engine.track == "warden" and engine.section == "open":
 			engine.warden_section("build")
+	elif _synth_form_state == "telegraph":
+		engine.cancel_build()
 	_synth_form_state = "closed"
 
 
@@ -4686,6 +4695,8 @@ func _follow_synth_form(posture: float, staggered: bool, landed: bool) -> int:
 		engine.hold_dominant(false)
 		if engine.track == "warden":
 			engine.warden_section("build")
+	elif prev == "telegraph" and state == "closed":
+		engine.cancel_build()
 	if state == "telegraph":
 		var tight := clampf((posture - AceSequencer.GUARD_TIGHT) / (100.0 - AceSequencer.GUARD_TIGHT), 0.0, 1.0)
 		if engine.track == "warden":

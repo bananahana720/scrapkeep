@@ -395,8 +395,9 @@ func _test_brindle_phase_clash_and_anthem() -> void:
 
 
 func _test_warden_form_synth_and_brindle() -> void:
-	# 1) Synth Warden form: tight build -> stagger open + hold_dominant -> chunk shatter drop.
+	# 1) Synth Warden form: tight build -> drain cancels build -> stagger open + hold_dominant -> chunk shatter drop with --drop-room=duck.
 	var wrig := _make_rig("synth", "form")
+	wrig["tuning"].set_option(Tuning.DROP_ROOM_KEY, "duck")
 	var wevents: GameEvents = wrig["events"]
 	var wflow: FakeFlow = wrig["flow"]
 	var waudio: Audio = wrig["audio"]
@@ -411,6 +412,10 @@ func _test_warden_form_synth_and_brindle() -> void:
 	wevents.posture_changed.emit(warden, 75.0, false)
 	_t.check("synth warden tight build engages build", waudio.engine.building() and waudio._synth_form_state == "telegraph",
 		"building=%s state=%s" % [str(waudio.engine.building()), waudio._synth_form_state])
+	wevents.posture_changed.emit(warden, 20.0, false)
+	_t.check("synth warden guard drain cancels tight build", not waudio.engine.building() and waudio._synth_form_state == "closed",
+		"building=%s state=%s" % [str(waudio.engine.building()), waudio._synth_form_state])
+	wevents.posture_changed.emit(warden, 75.0, false)
 	wevents.posture_changed.emit(warden, 100.0, true)
 	_t.check("synth warden stagger holds breath (open + dominant)",
 		waudio.engine.section == "open" and waudio.engine._dominant_held and waudio._synth_form_state == "open",
@@ -420,17 +425,21 @@ func _test_warden_form_synth_and_brindle() -> void:
 	wevents.posture_changed.emit(warden, 10.0, false)
 	var wdrops: Array = waudio.cue_log.filter(func(e: Array): return e[0] == "warden_form")
 	_pump(waudio, waudio.engine.beat_len() + 64)
-	_t.check("synth warden chunk shatter lands drop and releases dominant hold",
-		wdrops.size() == 1 and waudio.engine.in_drop() and not waudio.engine._dominant_held,
-		"drops=%s in_drop=%s dom=%s" % [str(wdrops), str(waudio.engine.in_drop()), str(waudio.engine._dominant_held)])
+	_t.check("synth warden chunk shatter with drop_room=duck lands drop with no crash and holds drop room",
+		wdrops.size() == 1 and waudio.engine.in_drop() and not waudio.engine._dominant_held
+		and waudio.ace == null and waudio._drop_room_now() == MixRows.DROP_ROOM["duck"],
+		"drops=%s in_drop=%s dom=%s room=%s" % [str(wdrops), str(waudio.engine.in_drop()), str(waudio.engine._dominant_held), str(waudio._drop_room_now())])
 
-	# Loop mode disables synth warden form.
+	# Loop mode disables synth warden form and cancels an active tight build.
+	_pump(waudio, waudio.engine.bar_len() * 4)
+	wevents.posture_changed.emit(warden, 80.0, false)
 	wrig["tuning"].set_option(Tuning.WARDEN_FORM_KEY, "loop")
 	waudio.cue_log.clear()
 	warden._chunks = 2
 	wevents.posture_changed.emit(warden, 80.0, false)
-	_t.check("loop mode suppresses synth warden form drops",
-		waudio.cue_log.filter(func(e: Array): return e[0] == "warden_form").is_empty() and waudio._synth_form_state == "closed")
+	_t.check("loop mode suppresses synth warden form drops and cancels tight build",
+		waudio.cue_log.filter(func(e: Array): return e[0] == "warden_form").is_empty()
+		and not waudio.engine.building() and waudio._synth_form_state == "closed")
 	_free_rig(wrig, [warden])
 
 	# 2) Brindle form on synth AND ACE, respecting radio pin.

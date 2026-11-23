@@ -53,7 +53,7 @@ const DANGER_NOT_ACT_PINNED := 1
 const WORLD1_FILES := ["boss.gd", "stage_locks.gd", "overtime.gd", "called_shot.gd", "warden.gd", "stub_boss.gd", "miniboss.gd", "rogue.gd", "audio.gd", "juice.gd", "panel_fx.gd", "projectile.gd"]
 # Facts that can fire in world 1 and no rule finds: fact id -> why.
 const WORLD1_EXTRA := {
-	"WORLD_ROWS:kindness_offered": "stake_devices.gd:_offer emits KINDNESS_FACT constant",
+	"WORLD_ROWS:kindness_offered": "stake_devices.gd:_offer_made emits KINDNESS_FACT constant",
 }
 # Table facts with no firing site found by the emit scan (their signal is emitted some other way). They
 # sit outside the world 1 check; this number may only go down.
