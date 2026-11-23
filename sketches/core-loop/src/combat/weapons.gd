@@ -30,12 +30,18 @@ const ALL := [RAPID_LASER, ARC_CASTER, PYLON_TURRET, STICKY_CHARGE, CLAW_SWEEP, 
 # OVERDRIVE_KNOCK), and a ram pushes as hard (Augments.RAM_KNOCK). The numbers live in
 # EventKinds.IMPACT; these read them.
 const BASE := {
-	RAPID_LASER: {"damage": 7.0, "rate": 12.0, "range_m": 85.0, "speed": 190.0, "bolt_radius": 0.25,
-		"knock": EventKinds.IMPACT["runner"]["knock"]},
-	ARC_CASTER: {"damage": 12.0, "rate": 5.0, "range_m": 70.0, "speed": 110.0, "bolt_radius": 0.55,
-		"knock": EventKinds.IMPACT["arc"]["knock"], "chain_jumps": 1, "chain_range": 9.0, "chain_falloff": 0.7},
-	PYLON_TURRET: {"damage": 11.0, "rate": 9.0, "range_m": 95.0, "speed": 150.0, "bolt_radius": 0.5,
-		"knock": EventKinds.IMPACT["turret"]["knock"], "chain_jumps": 2, "chain_range": 16.0, "chain_falloff": 0.75},
+	RAPID_LASER: {"damage": 12.0, "rate": 12.0, "range_m": 85.0, "speed": 190.0, "bolt_radius": 0.25,
+		"knock": EventKinds.IMPACT["runner"]["knock"],
+		"trigger": Pattern.TRIGGER_PRESS, "floor_s": 0.20, "mag": 6, "reload_s": 0.95,
+		"window_s": Vector2(0.38, 0.54), "window_mult": 1.2},
+	ARC_CASTER: {"damage": 8.0, "rate": 5.0, "range_m": 70.0, "speed": 110.0, "bolt_radius": 0.55,
+		"knock": EventKinds.IMPACT["arc"]["knock"], "chain_jumps": 1, "chain_range": 9.0, "chain_falloff": 0.7,
+		"trigger": Pattern.TRIGGER_TAP_CHARGE, "floor_s": 0.30, "tap_threshold_s": 0.16,
+		"charge_s": 0.64, "charge_min": 0.25, "recover_s": 0.12},
+	PYLON_TURRET: {"damage": 9.0, "rate": 9.0, "range_m": 95.0, "speed": 150.0, "bolt_radius": 0.5,
+		"knock": EventKinds.IMPACT["turret"]["knock"], "chain_jumps": 2, "chain_range": 16.0, "chain_falloff": 0.75,
+		"trigger": Pattern.TRIGGER_TAP_CHARGE, "floor_s": 0.30, "tap_threshold_s": 0.16,
+		"charge_s": 0.64, "charge_min": 0.25, "recover_s": 0.12},
 	# Kest's sticky charge: damage is the charge's, bolt_radius its blast, range_m the
 	# longest throw; the throw cadence is the weapon slot's cooldown, not the rate.
 	STICKY_CHARGE: {"damage": 16.0, "rate": 1.0, "range_m": 30.0, "speed": 22.0, "bolt_radius": 3.0,
@@ -53,6 +59,27 @@ const BASE := {
 	CANNON_LANE: {"damage": LANE_DAMAGE, "rate": 1.0, "range_m": CANNON_LANE_REACH, "speed": 120.0, "bolt_radius": 0.6,
 		"knock": EventKinds.IMPACT["cannon"]["knock"]},
 }
+
+# PILOT-CADENCE.md section 4: the legacy hold_auto data rows, kept so any pilot baseline
+# can return to hold-to-fire by switching its data row alone with zero code changes.
+const HOLD_AUTO := {
+	RAPID_LASER: {"damage": 7.0, "rate": 12.0, "trigger": Pattern.TRIGGER_HOLD_AUTO},
+	ARC_CASTER: {"damage": 12.0, "rate": 5.0, "trigger": Pattern.TRIGGER_HOLD_AUTO},
+	PYLON_TURRET: {"damage": 11.0, "rate": 9.0, "trigger": Pattern.TRIGGER_HOLD_AUTO},
+}
+
+# PILOT-CADENCE.md sections 2.5, 3.1 and 3.2 cadence constants.
+const PIERCE_CHIP := 0.5
+const RIVET_FAN_FLOOR_S := 0.10
+const RIVET_FAN_DAMAGE := 0.5
+const RIVET_FAN_SPREAD_DEG := 5.0
+const CHARGE_BOLT_DAMAGE := {
+	ARC_CASTER: 34.0,
+	PYLON_TURRET: 36.0,
+}
+const CHARGE_MOUNT_BOOST_S := 3.0
+const CHARGE_FAST_RATE := 1.5
+const CHARGE_BLAZING_RATE := 2.0
 
 const STRIKE_KIND := {RAPID_LASER: "runner", ARC_CASTER: "arc", PYLON_TURRET: "turret", STICKY_CHARGE: "sticky",
 	CLAW_SWEEP: "claw", LEDGER_READER: "ledger", CANNON_LANE: "cannon"}
@@ -145,7 +172,7 @@ const BURST_RADIUS := 12.0
 const BURST_RADIUS_PER_SPEED := 0.45
 const BURST_MAX_RADIUS := 30.0
 const BURST_DAMAGE := 14.0
-const BURST_DAMAGE_PER_SPEED := 1.4
+const BURST_DAMAGE_PER_SPEED := 0.8
 const BURST_KNOCK := EventKinds.IMPACT["burst"]["knock"]
 # Kest's detonation line: a bomb's shove along the line, radial from each charge.
 const LINE_KNOCK := EventKinds.IMPACT["line"]["knock"]
@@ -243,6 +270,25 @@ const RECITAL_SECONDS := 6.0
 
 static func base(weapon_id: String, loadout := {}) -> Resource:
 	return Pattern.make(_attached(weapon_id, loadout, {}))
+
+
+# PILOT-CADENCE.md section 4: the legacy hold_auto Pattern for `weapon_id`, constructed
+# purely from data without code changes.
+static func hold_auto_base(weapon_id: String) -> Resource:
+	var row: Dictionary = BASE.get(weapon_id, BASE[RAPID_LASER]).duplicate()
+	var legacy: Dictionary = HOLD_AUTO.get(weapon_id, {})
+	for key in legacy:
+		row[key] = legacy[key]
+	row["trigger"] = Pattern.TRIGGER_HOLD_AUTO
+	return Pattern.make(row)
+
+
+# Multiplier from spark base damage to full charged-bolt damage for tap_charge weapons.
+static func charge_bolt_mult(weapon_id: String) -> float:
+	if not CHARGE_BOLT_DAMAGE.has(weapon_id) or not BASE.has(weapon_id):
+		return 1.0
+	var spark: float = float(BASE[weapon_id].get("damage", 0.0))
+	return (float(CHARGE_BOLT_DAMAGE[weapon_id]) / spark) if spark > 0.0 else 1.0
 
 
 # SQ11: the top tier's second fire mode over the attached primary; null below the top tier

@@ -199,7 +199,8 @@ func _run() -> void:
 	_tick({"slot_pick": 1, "fire_pressed": true, "fire_held": true}, 0.0)
 	_tick({"fire_held": true}, 1.0)
 	_tick({"fire_released": true}, 0.0)
-	_t.eq("slot 2 full discharge", [_combat.last_burst["targets"], _combat.last_burst["radius"], _combat.last_burst["damage"]], [8, 30.0, 70.0])
+	# Ruling ek (E1-06): Static Discharge speed term 1.4 -> 0.8 per m/s (14 + 40 * 0.8 = 46.0 at full gauge).
+	_t.eq("slot 2 full discharge", [_combat.last_burst["targets"], _combat.last_burst["radius"], _combat.last_burst["damage"]], [8, 30.0, 46.0])
 	_t.eq("gauge returns home", _player.abilities.selected, "weapon")
 	_fresh(30.0)
 	_t.near("live tap discharge", _combat._discharge_speed(0.0), 22.5)

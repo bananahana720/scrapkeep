@@ -90,11 +90,17 @@ func _physics_process(delta: float) -> bool:
 			if _boss.is_weak():
 				_report("charge_dodged", _hits.size() == 1,
 					"the charge ran its lane and missed the ball outside it: player_hit still %s" % [_hits])
-				_source.hold = {"fire_held": true}
+				_source.press = {"fire_pressed": true}
 				_next("kill")
 		"kill":
 			if is_instance_valid(_boss):
 				_aim_at(_boss.global_position + Vector3.UP * 0.6)
+			var snap: Dictionary = _game.ctx.spawner.weapon_driver.state_snapshot()
+			if bool(snap.get("reloading", false)):
+				if bool(snap.get("window_open", false)):
+					_source.press = {"fire_pressed": true}
+			elif bool(snap.get("ready", false)):
+				_source.press = {"fire_pressed": true}
 			if not _kills.is_empty():
 				_report("kill", _kills[0][0] == "miniboss" and _kills[0][1] == Miniboss.SCRAP,
 					"miniboss killed %.1f s into held fire, drop %s scrap, %d strikes landed in weak windows"

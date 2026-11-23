@@ -2,6 +2,10 @@ extends SceneTree
 
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const Pattern := preload("res://src/combat/pattern.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -150,4 +154,174 @@ func _initialize() -> void:
 			var r: float = row["bolt_radius"]
 			var radius := "%s m" % (str(int(r)) if r == floorf(r) else String.num(r))
 			t.check("%s envelope cell quotes the code's bolt radius %s" % [p, radius], cell.contains(radius), cell.substr(0, 80))
+
+	_check_cadence_envelopes(t)
 	quit(t.verdict())
+
+
+# PILOT-CADENCE.md §1 (Ruling ek, E1-06): numerical cadence simulation and DPS ceilings.
+const SIM_DT := 0.001
+const SIM_CYCLES := 20
+const CEILINGS := {
+	Weapons.RAPID_LASER: 75.0,
+	Weapons.ARC_CASTER: 80.0,
+	Weapons.PYLON_TURRET: 80.0,
+}
+
+
+static func ceiling_passes(weapon_id: String, dps: float) -> bool:
+	return is_finite(dps) and dps <= float(CEILINGS.get(weapon_id, 0.0))
+
+
+static func _simulate_rivet(pattern: Resource, skilled: bool, rate_mult := 1.0, sprinting := false) -> float:
+	var drv := WeaponDriver.new()
+	drv.reset(pattern)
+	var total_dmg := 0.0
+	var total_t := 0.0
+	var reloads := 0
+	var was_reloading := false
+	var mash_clock := 0.0
+	var mash_step := 0.05
+	var max_steps := 120000
+	var step_idx := 0
+	while reloads < SIM_CYCLES and step_idx < max_steps:
+		step_idx += 1
+		var snap: Dictionary = drv.state_snapshot()
+		var intent := Intent.new()
+		if sprinting:
+			intent.fire_held = true
+			if not bool(snap["held"]):
+				intent.fire_pressed = true
+			if bool(snap["reloading"]) and skilled and bool(snap["window_open"]):
+				intent.fire_pressed = true
+		elif skilled:
+			if bool(snap["reloading"]):
+				if bool(snap["window_open"]):
+					intent.fire_pressed = true
+			elif bool(snap["ready"]):
+				intent.fire_pressed = true
+		else:
+			if mash_clock <= 0.0:
+				intent.fire_pressed = true
+				mash_clock += mash_step
+			mash_clock -= SIM_DT
+		var shots: Array = drv.step(SIM_DT, intent, Weapons.RAPID_LASER, pattern, float(pattern.rate) * rate_mult,
+			{"rate_mult": rate_mult, "sprinting": sprinting})
+		if reloads >= 2:
+			total_t += SIM_DT
+			for s in shots:
+				total_dmg += float(pattern.damage) * float(s.get("damage_mult", 1.0))
+		var now_reloading := bool(drv.state_snapshot()["reloading"])
+		if not was_reloading and now_reloading:
+			reloads += 1
+		was_reloading = now_reloading
+	return total_dmg / maxf(total_t, 0.0001)
+
+
+static func _simulate_sable(weapon_id: String, pattern: Resource, mode: String, tier: int = SpeedTier.CRUISE) -> float:
+	var drv := WeaponDriver.new()
+	drv.reset(pattern)
+	var charge_rate := WeaponDriver.charge_rate_for_tier(tier)
+	var total_dmg := 0.0
+	var total_t := 0.0
+	var cycles := 0
+	var holding := false
+	var max_steps := 120000
+	var step_idx := 0
+	while cycles < SIM_CYCLES and step_idx < max_steps:
+		step_idx += 1
+		var snap: Dictionary = drv.state_snapshot()
+		var intent := Intent.new()
+		var cycle_end := false
+		if mode == "careless":
+			if bool(snap["ready"]):
+				intent.fire_pressed = true
+				cycle_end = true
+		else:
+			if holding:
+				if float(snap["charge"]) >= 0.9999:
+					intent.fire_released = true
+					holding = false
+					cycle_end = true
+				else:
+					intent.fire_held = true
+			elif bool(snap["ready"]):
+				intent.fire_pressed = true
+				intent.fire_held = true
+				holding = true
+		var shots: Array = drv.step(SIM_DT, intent, weapon_id, pattern, float(pattern.rate),
+			{"rate_mult": 1.0, "charge_rate": charge_rate})
+		if cycles >= 2:
+			total_t += SIM_DT
+			for s in shots:
+				total_dmg += float(pattern.damage) * float(s.get("damage_mult", 1.0))
+		if cycle_end:
+			cycles += 1
+	return total_dmg / maxf(total_t, 0.0001)
+
+
+func _check_cadence_envelopes(t) -> void:
+	var rivet_pat: Resource = Weapons.base(Weapons.RAPID_LASER)
+	var rivet_careless := _simulate_rivet(rivet_pat, false)
+	var rivet_skilled := _simulate_rivet(rivet_pat, true)
+	var rivet_fan := _simulate_rivet(rivet_pat, true, 1.0, true)
+	var rivet_base_dps := WeaponDriver.base_dps(rivet_pat)
+	print("CADENCE_ENVELOPE  rivet  careless=%.2f  skilled=%.2f  fan=%.2f  base_dps=%.2f  ceiling=%.0f" % [
+		rivet_careless, rivet_skilled, rivet_fan, rivet_base_dps, CEILINGS[Weapons.RAPID_LASER]])
+	t.near("Rivet careless simulated DPS matches PILOT-CADENCE 36.9", rivet_careless, 36.92, 0.6)
+	t.near("Rivet base_dps matches careless 36.9", rivet_base_dps, 72.0 / 1.95, 0.05)
+	t.near("Rivet skilled simulated DPS matches PILOT-CADENCE 62.6", rivet_skilled, 62.61, 0.6)
+	t.check("Rivet sprint fan stays under ceiling and never beats skilled", rivet_fan <= rivet_skilled and ceiling_passes(Weapons.RAPID_LASER, rivet_fan),
+		"fan=%.2f skilled=%.2f" % [rivet_fan, rivet_skilled])
+	t.check("Rivet careless and skilled sit within ceiling 75",
+		ceiling_passes(Weapons.RAPID_LASER, rivet_careless) and ceiling_passes(Weapons.RAPID_LASER, rivet_skilled),
+		"careless=%.2f skilled=%.2f" % [rivet_careless, rivet_skilled])
+
+	var sable_pat: Resource = Weapons.base(Weapons.ARC_CASTER)
+	var sable_careless := _simulate_sable(Weapons.ARC_CASTER, sable_pat, "careless", SpeedTier.CRUISE)
+	var sable_cruise := _simulate_sable(Weapons.ARC_CASTER, sable_pat, "skilled", SpeedTier.CRUISE)
+	var sable_fast := _simulate_sable(Weapons.ARC_CASTER, sable_pat, "skilled", SpeedTier.FAST)
+	var sable_blazing := _simulate_sable(Weapons.ARC_CASTER, sable_pat, "skilled", SpeedTier.BLAZING)
+	var sable_base_dps := WeaponDriver.base_dps(sable_pat)
+	print("CADENCE_ENVELOPE  sable  careless=%.2f  cruise=%.2f  fast=%.2f  blazing=%.2f  base_dps=%.2f  ceiling=%.0f" % [
+		sable_careless, sable_cruise, sable_fast, sable_blazing, sable_base_dps, CEILINGS[Weapons.ARC_CASTER]])
+	t.near("Sable unmounted careless simulated DPS matches PILOT-CADENCE 26.7", sable_careless, 26.67, 0.6)
+	t.near("Sable unmounted base_dps matches careless 26.7", sable_base_dps, 8.0 / 0.30, 0.05)
+	t.near("Sable unmounted skilled cruise matches PILOT-CADENCE 45.7", sable_cruise, 45.65, 0.7)
+	t.near("Sable unmounted skilled fast matches PILOT-CADENCE 59.4", sable_fast, 59.43, 0.8)
+	t.near("Sable unmounted skilled blazing matches PILOT-CADENCE 70.0", sable_blazing, 70.0, 0.8)
+	t.check("Sable unmounted sits within ceiling 80",
+		ceiling_passes(Weapons.ARC_CASTER, sable_careless) and ceiling_passes(Weapons.ARC_CASTER, sable_blazing),
+		"careless=%.2f blazing=%.2f" % [sable_careless, sable_blazing])
+
+	var turret_pat: Resource = Weapons.base(Weapons.PYLON_TURRET)
+	var turret_careless := _simulate_sable(Weapons.PYLON_TURRET, turret_pat, "careless", SpeedTier.WALK)
+	var turret_walk := _simulate_sable(Weapons.PYLON_TURRET, turret_pat, "skilled", SpeedTier.WALK)
+	var turret_blazing := _simulate_sable(Weapons.PYLON_TURRET, turret_pat, "skilled", SpeedTier.BLAZING)
+	var turret_base_dps := WeaponDriver.base_dps(turret_pat)
+	print("CADENCE_ENVELOPE  pylon_turret  careless=%.2f  after3s=%.2f  blazing3s=%.2f  base_dps=%.2f  ceiling=%.0f" % [
+		turret_careless, turret_walk, turret_blazing, turret_base_dps, CEILINGS[Weapons.PYLON_TURRET]])
+	t.near("Sable mounted careless simulated DPS matches PILOT-CADENCE 30.0", turret_careless, 30.0, 0.6)
+	t.near("Sable mounted base_dps matches careless 30.0", turret_base_dps, 9.0 / 0.30, 0.05)
+	t.near("Sable mounted skilled after 3 s matches PILOT-CADENCE 48.9", turret_walk, 48.91, 0.7)
+	t.near("Sable mounted skilled blazing 3 s matches PILOT-CADENCE 75.0", turret_blazing, 75.0, 0.8)
+	t.check("Sable mounted sits within ceiling 80",
+		ceiling_passes(Weapons.PYLON_TURRET, turret_careless) and ceiling_passes(Weapons.PYLON_TURRET, turret_blazing),
+		"careless=%.2f blazing=%.2f" % [turret_careless, turret_blazing])
+
+	# Planted over-ceiling failure test (PILOT-CADENCE.md §1): proves the ceiling gate bites.
+	var over_rivet_pat: Resource = rivet_pat.copy()
+	over_rivet_pat.damage = 16.0
+	var over_rivet_dps := _simulate_rivet(over_rivet_pat, true)
+	t.check("planted over-ceiling Rivet figure FAILS ceiling check",
+		over_rivet_dps > CEILINGS[Weapons.RAPID_LASER] and not ceiling_passes(Weapons.RAPID_LASER, over_rivet_dps),
+		"planted=%.2f ceiling=%.0f" % [over_rivet_dps, CEILINGS[Weapons.RAPID_LASER]])
+	var over_sable_pat: Resource = sable_pat.copy()
+	over_sable_pat.damage = 14.0
+	var over_sable_dps := _simulate_sable(Weapons.ARC_CASTER, over_sable_pat, "skilled", SpeedTier.BLAZING)
+	t.check("planted over-ceiling Sable figure FAILS ceiling check",
+		over_sable_dps > CEILINGS[Weapons.ARC_CASTER] and not ceiling_passes(Weapons.ARC_CASTER, over_sable_dps),
+		"planted=%.2f ceiling=%.0f" % [over_sable_dps, CEILINGS[Weapons.ARC_CASTER]])
+	t.check("synthetic scalar above ceiling FAILS ceiling check",
+		not ceiling_passes(Weapons.RAPID_LASER, 75.1) and not ceiling_passes(Weapons.ARC_CASTER, 80.1)
+		and not ceiling_passes(Weapons.PYLON_TURRET, 80.1), "")

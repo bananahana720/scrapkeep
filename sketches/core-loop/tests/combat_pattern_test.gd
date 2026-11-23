@@ -133,6 +133,7 @@ func _physics_process(delta: float) -> bool:
 				"part 'test_prism' -> %s: laser volley %d (needs 5), caster chain jumps %d (needs 2)"
 					% [combat.active_transformers(), laser.volley_size(), caster.chain_jumps])
 			_bolts_before = combat.bolts.fired
+			_source.press = {"fire_pressed": true}
 			_source.hold = {"fire_held": true}
 			_step = 2
 			_clock = 0.0

@@ -175,10 +175,11 @@ static func _measure_one(game, scenario: Dictionary, distance: float, neighbours
 	combat.bolts.retired = 0
 	combat.bolts.fired = 0
 	combat.volleys = 0
-	combat._cooldown = 0.0
+	var active_w: String = combat.active_weapon()
+	combat.weapon_driver.reset(combat._patterns.get(active_w))
 	combat._reset_ledger()
-	game.player.intent.fire_held = true
 	for _tick in roundi(WARMUP / DT):
+		_drive_cadence(game)
 		_tick_combat(game)
 	var before := _health(targets)
 	var target_hp_before: Array = targets.map(func(target): return target.hp)
@@ -186,6 +187,7 @@ static func _measure_one(game, scenario: Dictionary, distance: float, neighbours
 	var hits_before: int = combat.delivered_damage()["hits"]
 	var volleys_before: int = combat.volleys
 	for _tick in roundi(SECONDS / DT):
+		_drive_cadence(game)
 		_tick_combat(game)
 	var removed := before - _health(targets)
 	var ledger_damage: float = float(combat.delivered_damage()["total"]) - ledger_before
@@ -238,6 +240,31 @@ static func _health(targets: Array) -> float:
 	for target in targets:
 		hp += target.hp
 	return hp
+
+
+static func _drive_cadence(game) -> void:
+	var combat = game.ctx.spawner
+	var intent = game.player.intent
+	var weapon: String = combat.active_weapon()
+	var pat: Resource = combat._patterns.get(weapon)
+	var trig: String = String(pat.trigger) if pat != null else "hold_auto"
+	intent.fire_pressed = false
+	intent.fire_released = false
+	if trig == "press":
+		intent.fire_held = false
+		var snap: Dictionary = combat.weapon_driver.state_snapshot()
+		if bool(snap.get("reloading", false)):
+			if bool(snap.get("window_open", false)):
+				intent.fire_pressed = true
+		elif bool(snap.get("ready", false)):
+			intent.fire_pressed = true
+	elif trig == "tap_charge":
+		intent.fire_held = false
+		var snap: Dictionary = combat.weapon_driver.state_snapshot()
+		if bool(snap.get("ready", false)) or (float(snap.get("cooldown", 0.0)) <= DT + 0.0001 and float(snap.get("recover", 0.0)) <= DT + 0.0001):
+			intent.fire_pressed = true
+	else:
+		intent.fire_held = true
 
 
 static func _tick_combat(game) -> void:

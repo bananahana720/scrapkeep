@@ -54,9 +54,18 @@ func _check_pattern_defaults_and_clamps() -> void:
 	_t.near("default refund is 0", fresh.refund, 0.0)
 	_t.eq("default fan is false", fresh.fan, false)
 
+	var expected_triggers := {
+		Weapons.RAPID_LASER: Pattern.TRIGGER_PRESS,
+		Weapons.ARC_CASTER: Pattern.TRIGGER_TAP_CHARGE,
+		Weapons.PYLON_TURRET: Pattern.TRIGGER_TAP_CHARGE,
+		Weapons.STICKY_CHARGE: Pattern.TRIGGER_HOLD_AUTO,
+		Weapons.CLAW_SWEEP: Pattern.TRIGGER_HOLD_AUTO,
+		Weapons.LEDGER_READER: Pattern.TRIGGER_HOLD_AUTO,
+		Weapons.CANNON_LANE: Pattern.TRIGGER_HOLD_AUTO,
+	}
 	for wid in Weapons.ALL:
 		var base: Resource = Weapons.base(wid)
-		_t.eq("%s keeps hold_auto trigger" % wid, base.trigger, Pattern.TRIGGER_HOLD_AUTO)
+		_t.eq("%s keeps expected trigger" % wid, base.trigger, expected_triggers[wid])
 		_t.near("%s base damage unchanged" % wid, base.damage, float(Weapons.BASE[wid]["damage"]))
 		_t.near("%s base rate unchanged" % wid, base.rate, float(Weapons.BASE[wid]["rate"]))
 
@@ -120,7 +129,7 @@ func _check_pattern_defaults_and_clamps() -> void:
 
 func _check_hold_auto_equivalence() -> void:
 	for wid in [Weapons.RAPID_LASER, Weapons.ARC_CASTER, Weapons.CLAW_SWEEP, Weapons.CANNON_LANE]:
-		var p: Resource = Weapons.base(wid)
+		var p: Resource = Weapons.hold_auto_base(wid)
 		var rate: float = float(p.rate)
 		var drv := WeaponDriver.new()
 		var legacy_cd := 0.0
@@ -174,7 +183,7 @@ func _check_press_release_and_card_recovery() -> void:
 
 func _check_lifecycle_and_snapshot_isolation() -> void:
 	var drv := WeaponDriver.new()
-	var p: Resource = Weapons.base(Weapons.ARC_CASTER)
+	var p: Resource = Weapons.hold_auto_base(Weapons.ARC_CASTER)
 	var hold := Intent.new()
 	hold.fire_held = true
 	drv.step(DT, hold, Weapons.ARC_CASTER, p, p.rate)
@@ -204,7 +213,7 @@ func _check_lifecycle_and_snapshot_isolation() -> void:
 
 
 func _check_warm_batch_repeatability() -> void:
-	var p: Resource = Weapons.base(Weapons.RAPID_LASER)
+	var p: Resource = Weapons.hold_auto_base(Weapons.RAPID_LASER)
 	var a := WeaponDriver.new()
 	var b := WeaponDriver.new()
 	var hold := Intent.new()
@@ -246,6 +255,7 @@ func _physics_process(_delta: float) -> bool:
 			_game.flow.choose_class(1)
 			_game.camera.pitch = 0.2
 			_volleys_before = combat.volleys
+			_source.press = {"fire_pressed": true}
 			_source.hold = {"fire_held": true}
 			_step = 1
 			_ticks = 0
