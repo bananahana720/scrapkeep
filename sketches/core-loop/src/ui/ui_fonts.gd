@@ -1,19 +1,20 @@
 extends RefCounted
 
-# The HUD's two faces (VISUAL-LANGUAGE.md section 7): Noto Sans Bold for labels and
-# toasts, Noto Sans Mono Bold for numbers so digits do not jitter. Both are vendored in
-# assets/fonts/ with their OFL licence; if one is missing, Godot's default font stands in.
+# The game's faces, all vendored in assets/fonts/ under SIL OFL 1.1 (PROVENANCE.txt names each source).
+# Noto Sans Bold sets labels and toasts and Noto Sans Mono Bold sets numbers so digits do not jitter
+# (VISUAL-LANGUAGE.md section 7). Two display faces set the words of two makers' hands (LEGIBILITY.md
+# section 14.3, ruling ek): Archivo Black is the Keepers' poster face and IBM Plex Sans SemiBold the old
+# works' clean corporate face. If a file is missing, Godot's default font stands in.
 
 const BOLD_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
 const MONO_PATH := "res://assets/fonts/NotoSansMono-Bold.ttf"
-# Each hand's faces, in UiTokens.Hand order (LEGIBILITY.md section 14.3). Combat numbers keep the two
-# Noto faces in every hand, and a new display face changes what ships, so it waits on Andrew's go-ahead;
-# until then the hands differ by frame, edge, mark and motion, and a hand that gets its own face changes
-# its row here and nothing else.
+const KEEPER_PATH := "res://assets/fonts/ArchivoBlack-Regular.ttf"
+const OLD_WORKS_PATH := "res://assets/fonts/IBMPlexSans-SemiBold.ttf"
+# Each hand's faces, in UiTokens.Hand order. Combat numbers keep the mono face in every hand.
 const HAND_FACES := [
-	{"words": BOLD_PATH, "numbers": MONO_PATH}, # Keeper
+	{"words": KEEPER_PATH, "numbers": MONO_PATH}, # Keeper: the gig-poster face
 	{"words": BOLD_PATH, "numbers": MONO_PATH}, # the Fleet: ledger digits in the mono face
-	{"words": BOLD_PATH, "numbers": MONO_PATH}, # the old works
+	{"words": OLD_WORKS_PATH, "numbers": MONO_PATH}, # the old works: typeset, never written by hand
 	{"words": MONO_PATH, "numbers": MONO_PATH}, # Rogues: a stencilled number and no words
 ]
 
@@ -44,8 +45,12 @@ static func _face(path: String) -> Font:
 	return _faces[path]
 
 
+# True when every vendored face loaded from its file, not Godot's fallback.
 static func vendored() -> bool:
-	return bold() != ThemeDB.fallback_font and mono() != ThemeDB.fallback_font
+	for path in [BOLD_PATH, MONO_PATH, KEEPER_PATH, OLD_WORKS_PATH]:
+		if _face(path) == ThemeDB.fallback_font:
+			return false
+	return true
 
 
 static func _load(path: String) -> Font:
