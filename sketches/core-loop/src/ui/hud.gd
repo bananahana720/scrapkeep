@@ -265,6 +265,8 @@ var _speed: Control
 var _plate: Control
 var _plate_floor := Vector2.ZERO
 var boss_plate: Control
+# The rogue machine the boss plate shows (its instance id), 0 while it shows none.
+var _plate_rogue := 0
 # Whether the Warden is engaged, from warden_engaged, and the tally of a build that is
 # trying without getting anywhere (objectives.gd).
 var _engaged := false
@@ -793,13 +795,17 @@ func _begin_engagement(engaged: bool) -> void:
 
 
 # The boss plate is up while a Warden on the posture rule is engaged, or the arena's boss
-# is live (Brindle's hull, or a stub boss's Warden), bound to its posture body.
+# is live (Brindle's hull, or a stub boss's Warden), bound to its posture body. With neither,
+# a live rogue machine takes it (LEGIBILITY section 14.3).
 func _seat_boss_plate() -> void:
 	var warden = game.flow.warden if _engaged else _brindle_hull()
-	if is_instance_valid(warden) and warden.has_method("fight") and warden.fight() == "posture":
+	var posture: bool = is_instance_valid(warden) and warden.has_method("fight") and warden.fight() == "posture"
+	var body = warden if posture else _live_rogue()
+	_plate_rogue = 0 if posture or body == null else body.get_instance_id()
+	if body != null:
 		if boss_plate == null:
 			boss_plate = BossPlate.new()
-		boss_plate.bind(warden, null if _engaged else _arena_phases())
+		boss_plate.bind(body, _arena_phases() if posture and not _engaged else null)
 		mount_plate(boss_plate)
 	elif boss_plate != null:
 		if _plate == boss_plate:
@@ -807,6 +813,22 @@ func _seat_boss_plate() -> void:
 		boss_plate.unbind()
 		boss_plate.queue_free()
 		boss_plate = null
+
+
+# This attempt's rogue machine while it is awake and alive, else null.
+func _live_rogue():
+	var rogue = game.world.rogue if game.world != null else null
+	return rogue if is_instance_valid(rogue) and not rogue.is_dead() else null
+
+
+# A rogue wakes and dies without an event the HUD hears, so the plate follows it: it goes up when
+# one wakes with the slot free and comes down when it dies. A Warden or the arena's fight keeps it.
+func _follow_rogue() -> void:
+	if boss_plate != null and _plate_rogue == 0:
+		return
+	var rogue = _live_rogue()
+	if (rogue.get_instance_id() if rogue != null else 0) != _plate_rogue:
+		_seat_boss_plate()
 
 
 # The posture body of the arena fight that is live, else null: Brindle's hull, or the
@@ -1122,14 +1144,16 @@ func _piece_sizes() -> Array:
 # The slot's plate: a boss plate (about 420 by 44 at 1080p) that the coordinator mounts. Its
 # size is the larger of its minimum size and its size at mount, so any Control places. It
 # sits top-centre and the objective plate moves directly under it. unmount_plate gives
-# the layout back exactly as it was and leaves the plate for its owner to free.
+# the layout back exactly as it was and leaves the plate for its owner to free. Mounting the plate
+# already up keeps it in the tree (a boss plate unbinds when it leaves) and takes its new size.
 func mount_plate(plate: Control) -> void:
-	unmount_plate()
-	_plate = plate
+	if plate != _plate:
+		unmount_plate()
+		_plate = plate
+		if plate.get_parent() != null:
+			plate.get_parent().remove_child(plate)
+		add_child(plate)
 	_plate_floor = plate.size
-	if plate.get_parent() != null:
-		plate.get_parent().remove_child(plate)
-	add_child(plate)
 	layout(_screen_size())
 
 
@@ -1521,6 +1545,7 @@ func _process(delta: float) -> void:
 	pickup_lines.step(delta)
 	_step_ach(delta)
 	_step_lore(delta)
+	_follow_rogue()
 
 	var flow = game.flow
 	var playing: bool = flow.in_play()

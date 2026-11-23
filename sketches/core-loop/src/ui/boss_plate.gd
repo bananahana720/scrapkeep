@@ -320,7 +320,11 @@ func advance(delta: float) -> void:
 func name_width() -> float:
 	if rogue():
 		return _stencil_face().get_string_size(crew(), HORIZONTAL_ALIGNMENT_LEFT, -1, STENCIL).x + GAP
-	return maxf(NAME_WIDTH, UiDraw.width(_name(), FONT) + GAP) if is_instance_valid(_warden) else NAME_WIDTH
+	if not is_instance_valid(_warden):
+		return NAME_WIDTH
+	var words := UiFonts.face(UiTokens.Hand.FLEET).get_string_size(_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x if hand() == UiTokens.Hand.FLEET \
+		else UiDraw.width(_name(), FONT)
+	return maxf(NAME_WIDTH, words + GAP)
 
 
 static func _stencil_face() -> Font:
@@ -328,10 +332,15 @@ static func _stencil_face() -> Font:
 
 
 # The plate's size before any phase row: SIZE, wider by what this Warden's name needs, so the bar keeps its length.
-# A Rogue's plate is narrower by its number's room and the pips it does not set.
+# A Rogue's plate is narrower by its number's room and the pips it does not set; the Fleet's is wider by its stamp's.
 func rest_size() -> Vector2:
 	var pips_room := 0.0 if not rogue() else BossPosture.CHUNKS * (PIP + PIP_GAP) - PIP_GAP + GAP
-	return SIZE + Vector2(name_width() - NAME_WIDTH - pips_room, 0.0)
+	return SIZE + Vector2(name_width() - NAME_WIDTH - pips_room + stamp_room(), 0.0)
+
+
+# What the Fleet's rubber stamp takes at the plate's right end, before the glyph; 0 on every other plate.
+func stamp_room() -> float:
+	return maxf(0.0, ScrapFrame.stamp_reach() + GAP - MARGIN) if hand() == UiTokens.Hand.FLEET else 0.0
 
 
 # The plate grows by the diamonds' drop only while it sets them.
@@ -381,13 +390,14 @@ func _draw() -> void:
 	elif not name_held():
 		UiDraw.text(self, MARGIN, mid, plate_name(), FONT, neutral)
 	var x := MARGIN + name_width()
+	var right := size.x - MARGIN - stamp_room()
 	var drawn_pips := pips()
 	for pip in drawn_pips:
 		_draw_pip(Rect2(Vector2(x, mid - PIP * 0.5), Vector2(PIP, PIP)), pip, neutral)
 		x += PIP + PIP_GAP
 	if not drawn_pips.is_empty():
 		x += GAP - PIP_GAP
-	var bar := Rect2(Vector2(x, mid - BAR_HEIGHT * 0.5), Vector2(size.x - MARGIN - GLYPH - GAP - x, BAR_HEIGHT))
+	var bar := Rect2(Vector2(x, mid - BAR_HEIGHT * 0.5), Vector2(right - GLYPH - GAP - x, BAR_HEIGHT))
 	UiDraw.bar(self, bar, bar_fraction(), bar_color())
 	for tick in TICKS:
 		var tx: float = bar.position.x + bar.size.x * tick
@@ -400,7 +410,7 @@ func _draw() -> void:
 		draw_line(Vector2(cx, bar.position.y - BANK_POST), Vector2(cx, bar.end.y + BANK_POST), phase_color(), 2.0)
 	if glyph_id() != "":
 		var row := EventKinds.state_row(glyph_id())
-		var rect := Rect2(Vector2(size.x - MARGIN - GLYPH, mid - GLYPH * 0.5), Vector2(GLYPH, GLYPH))
+		var rect := Rect2(Vector2(right - GLYPH, mid - GLYPH * 0.5), Vector2(GLYPH, GLYPH))
 		draw_texture_rect(Icons.shape(String(row.get("shape", "none"))), rect, false, glyph_color())
 	_draw_phases()
 
