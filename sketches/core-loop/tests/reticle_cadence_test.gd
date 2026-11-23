@@ -117,6 +117,8 @@ func _rivet() -> void:
 	_t.eq("Rivet after two rounds: four loaded", _roles(marks, "chamber_loaded").size(), 4)
 	_t.check("Rivet: the spent chambers are the first fired, clockwise from twelve",
 		(spent[0]["at"] as Vector2).y < 0.0 and (spent[1]["at"] as Vector2).x > 0.0, "%s %s" % [spent[0]["at"], spent[1]["at"]])
+	_t.check("Rivet: a spent chamber is dimmer than a loaded one, so greyscale still splits them",
+		(spent[0]["color"] as Color).a < (_roles(marks, "chamber_loaded")[0]["color"] as Color).a)
 	_frame_rules("Rivet part spent", marks, [])
 
 	for i in 4:
@@ -222,6 +224,7 @@ func _sable() -> void:
 	var tick: Array = _roles(marks, "full_tick")
 	_t.check("Sable full: one mint tick", tick.size() == 1 and (tick[0]["color"] as Color).is_equal_approx(EventKinds.role_color("live")))
 	_t.check("Sable full: the tick crosses the arc at twelve", (tick[0]["from"] as Vector2).x == 0.0 and (tick[0]["to"] as Vector2).y < -AimReticle.INSTRUMENT_R)
+	_t.eq("Sable full: the tick cuts a dark gap through the fill, so it reads without colour", _roles(marks, "full_tick_back").size(), 1)
 	_frame_rules("Sable full", marks, ["full_tick"])
 
 	_step(drv, pat, Weapons.ARC_CASTER, _release())

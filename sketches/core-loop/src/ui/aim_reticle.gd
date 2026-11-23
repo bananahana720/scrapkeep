@@ -45,11 +45,13 @@ const BAND := 20.0
 # The weapon's timing instrument (PILOT-CADENCE section 5.3, LEGIBILITY section 14.1) sits inside
 # the reticle's ring at INSTRUMENT_R, round the aim point and clear of it: no mark comes nearer the
 # centre than DOT_CLEAR px, so the centre dot is never covered. Rivet's chambers are discs, a hot
-# round a size larger; Sable's charge is an arc on a dark track. Each mark sits on a dark backing.
+# round a size larger, a spent one a dim open ring; Sable's charge is an arc on a dark track, and
+# her full-charge tick cuts a dark gap through it so it reads apart from the fill without colour.
+# Each mark sits on a dark backing.
 const INSTRUMENT_R := 10.0
 const DOT_CLEAR := 4.0
-const CHAMBER_R := 1.6
-const HOT_R := 2.1
+const CHAMBER_R := 2.0
+const HOT_R := 2.6
 const CHAMBER_BACK := 1.0
 const TRACK_WIDTH := 4.0
 const FILL_WIDTH := 3.0
@@ -494,7 +496,7 @@ static func _rivet_marks(snap: Dictionary) -> Array:
 		var size := HOT_R if is_hot else CHAMBER_R
 		marks.append({"shape": "disc", "role": "chamber_back", "layer": "back", "at": at, "r": size + CHAMBER_BACK, "color": ink})
 		if i < spent:
-			marks.append({"shape": "ring", "role": "chamber_spent", "layer": "line", "at": at, "r": size, "width": 1.0, "color": bone})
+			marks.append({"shape": "ring", "role": "chamber_spent", "layer": "line", "at": at, "r": size, "width": 1.0, "color": Color(bone, 0.7)})
 		elif is_hot:
 			marks.append({"shape": "disc", "role": "chamber_hot", "layer": "line", "at": at, "r": size, "color": Palette.COPPER})
 		else:
@@ -515,11 +517,13 @@ static func _sable_marks(snap: Dictionary, class_color: Color) -> Array:
 	if charge > 0.0:
 		marks.append({"shape": "arc", "role": "fill", "layer": "line", "r": r, "from": -PI * 0.5, "to": -PI * 0.5 + TAU * charge, "width": FILL_WIDTH, "color": meter_fill_color(class_color)})
 	if charge >= 1.0 and bool(snap.get("charging", false)):
-		marks.append({"shape": "line", "role": "full_tick", "layer": "line", "from": Vector2(0.0, -(r - FULL_TICK)), "to": Vector2(0.0, -(r + FULL_TICK)), "width": 3.0, "color": EventKinds.role_color("live")})
+		marks.append({"shape": "line", "role": "full_tick_back", "layer": "back", "from": Vector2(0.0, -(r - FULL_TICK - 1.0)), "to": Vector2(0.0, -(r + FULL_TICK + 2.0)), "width": 5.0, "color": Color(UiTokens.INK, BACKING_ALPHA * 1.6)})
+		marks.append({"shape": "line", "role": "full_tick", "layer": "line", "from": Vector2(0.0, -(r - FULL_TICK)), "to": Vector2(0.0, -(r + FULL_TICK + 1.0)), "width": 2.5, "color": EventKinds.role_color("live")})
 	return marks
 
 
-# The nearest a mark comes to the aim point, in px.
+# The nearest a mark comes to the aim point, in px. Every line here is radial with flat ends, so
+# its nearest point is its inner end.
 static func mark_reach(mark: Dictionary) -> float:
 	match String(mark["shape"]):
 		"disc", "ring":
@@ -527,7 +531,7 @@ static func mark_reach(mark: Dictionary) -> float:
 		"arc":
 			return float(mark["r"]) - float(mark["width"]) * 0.5
 		"line":
-			return minf((mark["from"] as Vector2).length(), (mark["to"] as Vector2).length()) - float(mark["width"]) * 0.5
+			return minf((mark["from"] as Vector2).length(), (mark["to"] as Vector2).length())
 	return 0.0
 
 
