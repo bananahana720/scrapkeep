@@ -3,8 +3,8 @@
 // "run-always-ends" (RunFlow.tla) and "rewards-banked-once" (Rewards.tla), which scripts/world1-bands.mjs reads,
 // "flood-never-held" (ParkFlood.tla), "hazards-hit-everyone" (HazardCycle.tla, W44), "destructibles-safe"
 // (Destructibles.tla, W45), "yard-lock-safe" (YardLock.tla, W45 FV-2), "earned-save-safe" (EarnedSave.tla, W45 FV-3)
-// "deferred-effects-safe" (DeferredEffects.tla, W45 FV-3), "brindle-presses" (BrindleReel.tla, W46-05) and
-// "sound-arbiter-safe" (SoundArbiter.tla, Sound V4), which no band row reads yet.
+// "deferred-effects-safe" (DeferredEffects.tla, W45 FV-3), "brindle-presses" (BrindleReel.tla, W46-05),
+// "sound-arbiter-safe" (SoundArbiter.tla, Sound V4) and "weapon-cadence-safe" (WeaponCadence.tla, W46 E1-17), which no band row reads yet.
 //   { head, pass, measured, plant_caught }
 // For each row it runs TLC, the TLA+ model checker, on every config that stands for the code (the skill's today-*
 // configs) and on each planted fault (a broken-* config with one guard off). It passes only when every code config
@@ -332,6 +332,34 @@ export const ROWS = {
     gaps: [
       "sample-accurate timing, Music bus DSP filter cutoffs and StingerMusic reverb (music_dsp.gd) are left to tests/music_dsp_test.gd; SFX voice-class budgets (sfx_budget.gd) are left to tests/sound_arbiter_test.gd; festival deck synthesis and warning-lane spectrum (deck_fx.gd) are left to tests/deck_moves_test.gd",
       "jukebox title spins, launch-to-next-stage landings (covered by RunFlow.tla), and miniboss or moment tunes below champion priority are not modelled",
+    ],
+  },
+  "weapon-cadence-safe": {
+    spec: "WeaponCadence.tla",
+    real: [
+      {
+        cfg: "weaponcadence-today.cfg",
+        minStates: 6388,
+        label:
+          "Rivet press, Sable tap_charge, Tally stamp refund, boundaries, interrupts and proc isolation (W46 E1-17)",
+      },
+    ],
+    plants: [
+      { cfg: "weaponcadence-broken-play-gate.cfg", rule: "NoShotOutsidePlay" },
+      { cfg: "weaponcadence-broken-boundary-reset.cfg", rule: "RestAfterBoundary" },
+      { cfg: "weaponcadence-broken-title-reset.cfg", rule: "RestAfterBoundary" },
+      { cfg: "weaponcadence-broken-jam-freeze.cfg", rule: "BoundedReadyAfterInterrupt" },
+      { cfg: "weaponcadence-broken-interrupt-hold.cfg", rule: "BoundedReadyAfterInterrupt" },
+      { cfg: "weaponcadence-broken-hold-repeat.cfg", rule: "OneVolleyPerPress" },
+      { cfg: "weaponcadence-broken-proc-touch.cfg", rule: "OneVolleyPerPress" },
+      { cfg: "weaponcadence-broken-early-mash.cfg", rule: "WindowPaysAtMostOnce" },
+      { cfg: "weaponcadence-broken-double-notch.cfg", rule: "WindowPaysAtMostOnce" },
+      { cfg: "weaponcadence-broken-refund.cfg", rule: "RefundNeverExceedsSpend" },
+    ],
+    coverage: "references/weaponcadence-coverage.md",
+    gaps: [
+      "WC-1 (open): combat.gd does not call weapon_driver.reset() on run_ended or flow_changed('title') after a boss win or victory lap close (AllowDirectTitleQuit=FALSE on weaponcadence-today; weaponcadence-broken-title-reset reproduces the break)",
+      "seconds, DPS ceilings, Overdrive Sprint fan, speed-tier charge multipliers and phase E2 modes (lob_snap, beats, lock) are left to weapon_driver_test.gd, weapon_cadence_test.gd and weapon_envelope_test.gd",
     ],
   },
 };
