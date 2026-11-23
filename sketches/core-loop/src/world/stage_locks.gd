@@ -126,6 +126,17 @@ func packs_wanted() -> int:
 	return int(gate_row().get("packs", 0))
 
 
+# How many of this stage's gate pips are lit (0 to packs_wanted()): the packs broken so far while
+# the clamp holds, or all packs_wanted() once the clamp opens by any path (packs, enemy camp,
+# 75 s clock, or unseal), so command cables read one count and every cable dies with the clamp
+# (design-v3/WAYFINDING.md section 3). 0 when the stage has no gate.
+func pips_lit() -> int:
+	var total := packs_wanted()
+	if total <= 0:
+		return 0
+	return total if gate_open else mini(cleared, total)
+
+
 func lock_active() -> bool:
 	return lock_state == "locked"
 
