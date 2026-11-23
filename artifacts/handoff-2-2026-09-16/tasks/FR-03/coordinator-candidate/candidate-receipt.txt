@@ -1,6 +1,0 @@
- .../tasks/HF-09/attempt-1/check_migration.py       | 154 +++++++++++---------
- docs/tech/sections/HF-09-schema-migration.md       | 158 +++++++++++----------
- 2 files changed, 173 insertions(+), 139 deletions(-)
-eb49828edb3e005b4869272f5085db9b7e35614491716fbf3736b06319ca2d48  docs/tech/sections/HF-09-schema-migration.md
-6b29da1a955657291c3852b140b42671a37a0ddac0052f558bc3dcd89e3a67aa  artifacts/foundation-sprint-2026-09/tasks/HF-09/attempt-1/check_migration.py
-coordinator rerun at af43ab2c87dfb83ca629e45263c87c7585e6d3b7, 2026-09-16T06:40Z: check:scope --no-build exit 0 (documentation-only, 2 paths); check:docs exit 0; check:project exit 0; check_migration.py from a copy exit 0 (384 checks, 0 failed, 5/5 controls); scripts/check-drift.mjs over the candidate sections exit 0 (no DRIFT, HF-04b:9 UNBOUND only); retained-script diff removes one assertion line, the sixty-field count renamed and re-pinned to sixty-nine; run.checkpoint.interruption absent from HF-09; sixty-nine stated 7 times.

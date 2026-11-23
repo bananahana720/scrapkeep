@@ -1,4 +1,0 @@
- docs/product/sections/PD-02-interface-states.md | 397 ++++++++++++++++++++++++
- 1 file changed, 397 insertions(+)
-a9da6692b4a12c5d3e7d4978c4226884eb642583b4e674200f113c38f778b171  docs/product/sections/PD-02-interface-states.md
-coordinator corrections at 98af4e6f0a9a38935a8699192f508f3cdf7d6a89 (six review notes; section sha256 3bad72ef64c3e6e9899d9502d524a89042b42edb49c46d6f624efdcfba8225d3); paper check rerun exit 0. Integrated at 8eac49b6a7017bfccc7a4782b95d906a5e56a1d2 (no-ff merge plus the product README line): check:scope --no-build documentation-only, check:docs 0, check:project 0, paper check rerun exit 0.

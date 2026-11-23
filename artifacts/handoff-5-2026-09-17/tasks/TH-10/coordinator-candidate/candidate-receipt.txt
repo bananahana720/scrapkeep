@@ -1,5 +1,0 @@
- .../TH-10-devices-and-one-main-companion.md        | 472 +++++++++++++++++++++
- 1 file changed, 472 insertions(+)
-abc69db941441c124209eba88047f84b95285a54fd31a4fa7ec4a17242ceb5c1  docs/tech/sections/TH-10-devices-and-one-main-companion.md
-coordinator rerun at 20e3e9771d71b79b3433385b07084b539dbcac2b, 2026-09-17T10:05Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (23 sections); check:project exit 0; check:drift exit 0 (23 sections, 148 hashes); check_contract.py (writer paper check, rerun from a coordinator copy) exit 0 PASS, 3/3 controls.
-coordinator corrections at 0f4b6fd650a53a448e673069c4ededb6968f9c06 in the worktree (DC-10, DX-01) and in the integration commit (DX-01 rewording after the first corrected run tripped the check's answered-question pattern; retained); TH-06 EE-15 corrected out of lease at the same commit (N1). Integrated at 82fbb1f4360fb62fd9cd9a55167b434d0e2ba009: section sha256 1c4ca57fb12a0f83d1a5bbe63a211e0c58bb6b1c621b8d44b431376f03fd1169; check:scope --no-build documentation-only (3 paths), check:docs 0, check:project 0, check:drift 0 (23 sections, 148 hashes), TH-10 and TH-06 paper checks rerun exit 0.

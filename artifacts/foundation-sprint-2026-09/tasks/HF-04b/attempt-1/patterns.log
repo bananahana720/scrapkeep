@@ -1,2 +1,0 @@
-check_patterns pass: 163 checks, 0 failures. Report: /home/andrew/Projects/scrapkeep-wt-HF-04b/artifacts/local/tasks/HF-04b/patterns-report.json
-Paper checks over admitted bytes: presence, hashes, pinned commits, cited lines, unparsed marker and typed form by regex, owner naming. No proof, editor, engine or build was run; typed form is not a parse result.

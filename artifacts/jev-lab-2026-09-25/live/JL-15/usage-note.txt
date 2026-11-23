@@ -1,1 +1,0 @@
-Live run made at c078854 (head.txt). stdout.txt prints cache_read_input_tokens=0 and cache_creation_input_tokens=0 from that code; the per-run usage objects in the controls JSON carry only input_tokens and output_tokens, so the two cache fields were absent, not zero. 7f5f44f totals an unreported field as null.

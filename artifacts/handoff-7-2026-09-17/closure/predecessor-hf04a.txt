@@ -1,5 +1,0 @@
-HF-04a predecessor reconciliation at integrated commit 09d52a1d4790e948fde979a8d54a9fdc885ec314
-HF-04a revision 1 done at EV-0096, accepted integrated identity 43ec12b735f0a3d8f6e7d864d687d3d2b07a5d53.
-docs/tech/sections/HF-04a-runtime-lifecycle.md sha256 at this commit: e0058ee153804188424a753f1d4af8a3dc9fee4b45e7c82bc6625df7f80fe43d
-git merge-base --is-ancestor 43ec12b735f0a3d8f6e7d864d687d3d2b07a5d53 HEAD: exit 0
-npm run check:drift at this commit: exit 0 (closure/check-drift.log); retained checks rerun at this commit: closure/paper-reruns.log

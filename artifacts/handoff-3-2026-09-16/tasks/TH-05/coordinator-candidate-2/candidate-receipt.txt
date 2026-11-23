@@ -1,2 +1,0 @@
-7dca23120de29aa4f4c7e359767fad3bb05f553b3f93ede7c32a6d3cc940582c  docs/tech/sections/TH-05-electromagnetic-collection-recycling-and-growth.md
-coordinator rerun at e7e5a6061929981898891dd2187ecd332faab699, 2026-09-16T17:30Z: one file, 43 insertions 38 deletions; CI-13 withdrawn, CP-32 added, EV-0255 cited; check:scope --no-build exit 0; check:docs exit 0; check:project exit 0; check:drift exit 0; check_collection.py exit 0 result pass.

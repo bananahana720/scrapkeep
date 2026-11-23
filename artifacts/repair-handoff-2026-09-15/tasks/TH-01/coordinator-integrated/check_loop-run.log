@@ -1,3 +1,0 @@
-FAIL docs/tech/sections/HF-07b-commit-boundaries.md SHA256 a036ef78a99f99877035079ff225be559123f8bad9995e3e60190887a8c1147f is not stated in the section
-FAIL docs/tech/sections/HF-07a-save-envelope.md SHA256 a3539f6c5b784370f4a1873d18c551b4f36c3fd6d72cc1611769677d8dbd7863 is not stated in the section
-732 checks, 2 failed, 3/3 controls detected, controls_detected=3, controls_total=3, dependency_hashes=5, edge_pair_checks=97, hf03a_modules=7, hf03b_edges=16, interface_rows=34, interface_token_checks=145, modules_named=8, named_end_states=2, parameter_questions=21, parameter_rows=31, run_loop_states=10, scenario_rows=35, single_pair_strict_rows=47

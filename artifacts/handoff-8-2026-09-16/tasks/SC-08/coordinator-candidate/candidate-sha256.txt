@@ -1,1 +1,0 @@
-b6cce6f99db7a985c16a9fea60508701b77bb3e3669c4f1a83902e5cb32156db  docs/tech/schemas/SC-08.md

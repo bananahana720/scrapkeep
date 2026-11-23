@@ -1,4 +1,0 @@
-main 178c978b9cfd34f3cade7bb812304ce74aee2c8f
-candidate 4a265a6c854087cd1c94fdaf0c66ea1474692e96
-merged-names:
-A	docs/tech/schemas/SC-01.md

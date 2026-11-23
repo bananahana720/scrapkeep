@@ -1,4 +1,0 @@
- ...TH-03-a-committed-attack-means-what-it-shows.md | 377 +++++++++++++++++++++
- 1 file changed, 377 insertions(+)
-6a114fd5a94c7aea1cd4b34fa4fd96a3783b9b423ce6b6e5ee2d633dc6e22c81  docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md
-coordinator rerun at 96c5eea8b99c1b471a791d2a2a79115a820591c4, 2026-09-16T09:45Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (16 sections); check:project exit 0; check:drift exit 0; check_attack.py (writer paper check, rerun from a coordinator copy) exit 0.

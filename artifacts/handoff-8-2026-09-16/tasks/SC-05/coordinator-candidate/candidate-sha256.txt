@@ -1,1 +1,0 @@
-848f5288df67883629252c403c6fcec054483ee4fac90b0658b2d144fe119ede  docs/tech/schemas/SC-05.md

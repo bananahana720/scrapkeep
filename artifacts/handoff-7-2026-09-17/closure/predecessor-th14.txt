@@ -1,5 +1,0 @@
-TH-14 predecessor reconciliation at integrated commit 09d52a1d4790e948fde979a8d54a9fdc885ec314
-TH-14 revision 1 done at EV-0337, accepted integrated identity 2a60fa70dcf7c7bc1ff7313dea71b65bccb90329.
-docs/tech/sections/TH-14-randomness-generation.md sha256 at this commit: 802b31b3f0fff8bb6831eccbc0e48192afea75249b7404b9daf107d8e2966ec0
-git merge-base --is-ancestor 2a60fa70dcf7c7bc1ff7313dea71b65bccb90329 HEAD: exit 0
-npm run check:drift at this commit: exit 0 (closure/check-drift.log); retained checks rerun at this commit: closure/paper-reruns.log

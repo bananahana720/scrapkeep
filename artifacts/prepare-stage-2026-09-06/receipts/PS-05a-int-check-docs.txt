@@ -1,2 +1,0 @@
-check:docs pass: 103 Markdown files, 2892 local links, 59 cards, 26 events, 0 sections, 7 interim rows, 0 failures. Report: /tmp/claude-1000/-home-andrew-Projects-scrapkeep/d521c870-ec77-4759-a2d7-0da063b4cf9a/scratchpad/prepare-stage/int-PS-05a/artifacts/local/check-docs/report.json
-exit=0

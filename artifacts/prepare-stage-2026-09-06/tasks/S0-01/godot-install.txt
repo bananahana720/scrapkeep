@@ -1,9 +1,0 @@
-# Godot 4.7.2 toolchain install record. 2026-09-06T18:12:15Z. Host: Linux 7.1.9-arch1-2, Arch Linux.
-editor_url: https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
-editor_zip_bytes: 77860424
-editor_zip_sha512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65 (verified with sha512sum -c against the release SHA512-SUMS.txt)
-install_path: /home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
-binary_sha256: 8d106cbe6144c2dc7e881d61d2429c1a8a76e6b22ef48bd5e48dcf934953f71e
-version_string: 4.7.2.stable.official.ed1daf0bf
-export_templates: NOT installed (parked with S0-09). Official archive Godot_v4.7.2-stable_export_templates.tpz, 1281349702 bytes, sha512 ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079.
-smoke: a five-line SceneTree script printed the version and called quit(3); note: capture the exit code without a pipe, the first smoke read tail's exit.

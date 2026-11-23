@@ -2,9 +2,9 @@
   {
     "name": "sketch claims Godot files and Markdown under sketches/",
     "paths": [
-      "sketches/ball-lab/project.godot",
-      "sketches/ball-lab/player.gd",
-      "sketches/ball-lab/README.md"
+      "sketches/core-loop/project.godot",
+      "sketches/core-loop/src/game.gd",
+      "sketches/core-loop/README.md"
     ],
     "scope": "sketch",
     "commands": ["npm run sketch:smoke"],
@@ -13,7 +13,7 @@
   },
   {
     "name": "documentation-only",
-    "paths": ["docs/tech/sections/HF-01.md", "adr/TADR-009.md", "README.md"],
+    "paths": ["docs/design/loops.md", "adr/TADR-009.md", "README.md"],
     "scope": "documentation-only",
     "commands": ["npm run check:docs", "npm run check:project"],
     "noBuild": true,
@@ -44,7 +44,7 @@
   },
   {
     "name": "native",
-    "paths": ["native/project.godot", "native/main.tscn", "native/player.gd"],
+    "paths": ["game/project.godot", "game/main.tscn", "game/player.gd"],
     "scope": "native",
     "commands": ["npm run check:godot"],
     "noBuild": false,
@@ -60,37 +60,17 @@
   },
   {
     "name": "mixed refused under --no-build",
-    "paths": ["docs/tech/sections/HF-01.md", "src/orchard/scene.js"],
+    "paths": ["docs/design/loops.md", "src/orchard/scene.js"],
     "scope": "mixed",
     "commands": ["npm run check:docs", "npm run verify"],
     "noBuild": true,
     "status": 1
   },
   {
-    "name": "native-player",
-    "paths": [
-      "tools/agent-player/policy.py",
-      "tools/agent-player/README.md",
-      "scripts/agent-playtest.mjs"
-    ],
-    "scope": "native-player",
-    "commands": ["npm run test:agent"],
-    "noBuild": true,
-    "status": 0
-  },
-  {
     "name": "instruction files as configuration",
     "paths": ["AGENTS.md", "CLAUDE.md"],
     "scope": "configuration",
     "commands": ["npm run check:docs", "scenario review"],
-    "noBuild": true,
-    "status": 0
-  },
-  {
-    "name": "native Markdown as documentation-only",
-    "paths": ["native/README.md", "native/docs/notes.md"],
-    "scope": "documentation-only",
-    "commands": ["npm run check:docs", "npm run check:project"],
     "noBuild": true,
     "status": 0
   },

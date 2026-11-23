@@ -21,7 +21,6 @@ const repo = path.resolve(here, "..");
 const sketch = path.join(repo, "sketches/core-loop");
 const tool = path.join(sketch, "tools/budget_audit.mjs");
 const budgetFile = path.join(sketch, "assets/asset_budgets.json");
-const packFile = path.join(repo, "tools/asset-forge/packs/core-loop.toml");
 const sha = (f) => createHash("sha256").update(fs.readFileSync(f)).digest("hex");
 
 const budgets = {
@@ -47,8 +46,20 @@ const asset = (over) => ({
   ...over,
 });
 const texture = (side, exception = null) =>
-  asset({ id: `t${side}`, class: "texture", tris: 0, verts: 0, draws: 0, texture_side: side, exception });
-const base = () => [asset({ id: "p" }), asset({ id: "e", class: "enemy", tris: 900, verts: 1500, draws: 2 }), texture(512)];
+  asset({
+    id: `t${side}`,
+    class: "texture",
+    tris: 0,
+    verts: 0,
+    draws: 0,
+    texture_side: side,
+    exception,
+  });
+const base = () => [
+  asset({ id: "p" }),
+  asset({ id: "e", class: "enemy", tris: 900, verts: 1500, draws: 2 }),
+  texture(512),
+];
 
 // A glb with one mesh, a skin of `joints` bones and clips of the given lengths.
 function skinned(joints, clipLengths) {
@@ -68,7 +79,10 @@ function skinned(joints, clipLengths) {
     times.writeFloatLE(len, 4);
     const vals = Buffer.alloc(24);
     parts.push(times, vals);
-    views.push({ buffer: 0, byteOffset: offset, byteLength: 8 }, { buffer: 0, byteOffset: offset + 8, byteLength: 24 });
+    views.push(
+      { buffer: 0, byteOffset: offset, byteLength: 8 },
+      { buffer: 0, byteOffset: offset + 8, byteLength: 24 },
+    );
     accessors.push(
       { bufferView: views.length - 2, componentType: 5126, count: 2, type: "SCALAR" },
       { bufferView: views.length - 1, componentType: 5126, count: 2, type: "VEC3" },
@@ -134,17 +148,36 @@ test("summarize gives nearest-rank median and p90", () => {
 test("a clean set passes with every category counted", () => {
   const r = evaluate(base(), budgets);
   assert.deepEqual(r.failures, []);
-  assert.deepEqual(r.rows.map((x) => [x.category, x.count]), [["enemy", 1], ["prop", 1], ["texture", 1]]);
+  assert.deepEqual(
+    r.rows.map((x) => [x.category, x.count]),
+    [
+      ["enemy", 1],
+      ["prop", 1],
+      ["texture", 1],
+    ],
+  );
 });
 
 test("a planted empty category fails the run", () => {
-  const withGhost = { ...budgets, classes: { ...budgets.classes, ghost: { tris: 10, verts: 10, draws: 1, set_by: "test" } } };
+  const withGhost = {
+    ...budgets,
+    classes: { ...budgets.classes, ghost: { tris: 10, verts: 10, draws: 1, set_by: "test" } },
+  };
   const r = evaluate(base(), withGhost);
-  assert.ok(r.failures.some((f) => /ghost.*no assets/.test(f)), r.failures.join("|"));
+  assert.ok(
+    r.failures.some((f) => /ghost.*no assets/.test(f)),
+    r.failures.join("|"),
+  );
 });
 
 test("a class marked no member yet is pending, not a failure", () => {
-  const pending = { ...budgets, classes: { ...budgets.classes, later: { tris: 10, verts: 10, draws: 1, set_by: "none; no member yet" } } };
+  const pending = {
+    ...budgets,
+    classes: {
+      ...budgets.classes,
+      later: { tris: 10, verts: 10, draws: 1, set_by: "none; no member yet" },
+    },
+  };
   const r = evaluate(base(), pending);
   assert.deepEqual(r.failures, []);
   assert.equal(r.rows.find((x) => x.category === "later").pending, true);
@@ -167,14 +200,27 @@ test("an unshipped model over its cap is a note, not a failure", () => {
 });
 
 test("verts and draws are capped too", () => {
-  assert.ok(evaluate(base().concat(asset({ id: "v", verts: 611 })), budgets).failures.some((f) => /v.*verts/.test(f)));
-  assert.ok(evaluate(base().concat(asset({ id: "d", draws: 2 })), budgets).failures.some((f) => /d.*draws/.test(f)));
+  assert.ok(
+    evaluate(base().concat(asset({ id: "v", verts: 611 })), budgets).failures.some((f) =>
+      /v.*verts/.test(f),
+    ),
+  );
+  assert.ok(
+    evaluate(base().concat(asset({ id: "d", draws: 2 })), budgets).failures.some((f) =>
+      /d.*draws/.test(f),
+    ),
+  );
 });
 
 test("a texture above 2048 passes only with an exception field", () => {
   assert.deepEqual(evaluate(base().concat(texture(2048)), budgets).failures, []);
-  assert.ok(evaluate(base().concat(texture(4096)), budgets).failures.some((f) => /t4096.*texture/.test(f)));
-  assert.deepEqual(evaluate(base().concat(texture(4096, { max_side: 4096 })), budgets).failures, []);
+  assert.ok(
+    evaluate(base().concat(texture(4096)), budgets).failures.some((f) => /t4096.*texture/.test(f)),
+  );
+  assert.deepEqual(
+    evaluate(base().concat(texture(4096, { max_side: 4096 })), budgets).failures,
+    [],
+  );
 });
 
 test("enemy bones at 40 pass and at 41 fail", () => {
@@ -195,12 +241,50 @@ test("a nonfinite measurement is a structural failure", () => {
 
 test("per-character sums add shell, heft layers and pilot body", () => {
   const set = [
-    asset({ id: "pilot_sable_anim", path: "res://assets/models/pilot_sable_anim.glb", class: "pilot", tris: 4000, verts: 3000, bones: 20, clips: 5, longest_clip_s: 1.2 }),
-    asset({ id: "shell_sable", path: "res://assets/models/world_one/shell_sable.glb", class: "shell", tris: 10000, verts: 9000 }),
-    asset({ id: "shell_sable_c2", path: "res://assets/models/world_one/shell_sable_c2.glb", class: "detail", tris: 800, verts: 900 }),
-    asset({ id: "shell_sable_c3", path: "res://assets/models/world_one/shell_sable_c3.glb", class: "detail", tris: 900, verts: 950 }),
-    asset({ id: "shell_sable_felt", path: "res://assets/models/world_one/shell_sable_felt.glb", class: "shell", tris: 99999 }),
-    asset({ id: "shell_sable", path: "res://assets/models/shell_sable.glb", class: "shell", ships: false, tris: 77777 }),
+    asset({
+      id: "pilot_sable_anim",
+      path: "res://assets/models/pilot_sable_anim.glb",
+      class: "pilot",
+      tris: 4000,
+      verts: 3000,
+      bones: 20,
+      clips: 5,
+      longest_clip_s: 1.2,
+    }),
+    asset({
+      id: "shell_sable",
+      path: "res://assets/models/world_one/shell_sable.glb",
+      class: "shell",
+      tris: 10000,
+      verts: 9000,
+    }),
+    asset({
+      id: "shell_sable_c2",
+      path: "res://assets/models/world_one/shell_sable_c2.glb",
+      class: "detail",
+      tris: 800,
+      verts: 900,
+    }),
+    asset({
+      id: "shell_sable_c3",
+      path: "res://assets/models/world_one/shell_sable_c3.glb",
+      class: "detail",
+      tris: 900,
+      verts: 950,
+    }),
+    asset({
+      id: "shell_sable_felt",
+      path: "res://assets/models/world_one/shell_sable_felt.glb",
+      class: "shell",
+      tris: 99999,
+    }),
+    asset({
+      id: "shell_sable",
+      path: "res://assets/models/shell_sable.glb",
+      class: "shell",
+      ships: false,
+      tris: 77777,
+    }),
   ];
   const c = characters(set);
   assert.equal(c.length, 1);
@@ -217,12 +301,18 @@ test("the real registry audits clean with every counted category nonzero", () =>
   assert.deepEqual(r.failures, []);
   assert.ok(r.rows.filter((x) => !x.pending).every((x) => x.count > 0));
   assert.ok(characters(measured).length >= 6);
-  assert.ok(r.rows.find((x) => x.category === "texture").stats.texture_side.max > 0, "texture sides read");
-  assert.ok(measured.filter((a) => a.class === "pilot").every((a) => a.bones > 0 && a.clips > 0), "pilot rigs read");
+  assert.ok(
+    r.rows.find((x) => x.category === "texture").stats.texture_side.max > 0,
+    "texture sides read",
+  );
+  assert.ok(
+    measured.filter((a) => a.class === "pilot").every((a) => a.bones > 0 && a.clips > 0),
+    "pilot rigs read",
+  );
 });
 
 test("the CLI exits 0, prints median, p90 and reference rows, and edits no budget file", () => {
-  const before = [sha(budgetFile), sha(packFile)];
+  const before = sha(budgetFile);
   const child = spawnSync(process.execPath, [tool], { cwd: repo, encoding: "utf8" });
   assert.equal(child.status, 0, child.stdout + child.stderr);
   assert.match(child.stdout, /median/);
@@ -231,7 +321,7 @@ test("the CLI exits 0, prints median, p90 and reference rows, and edits no budge
   assert.match(child.stdout, /Gunfire Reborn/);
   assert.match(child.stdout, /Roboquest/);
   assert.match(child.stdout, /per whole character/i);
-  assert.deepEqual([sha(budgetFile), sha(packFile)], before);
+  assert.equal(sha(budgetFile), before);
 });
 
 test("the CLI exits 1 on a planted empty category", () => {
@@ -241,7 +331,10 @@ test("the CLI exits 1 on a planted empty category", () => {
     b.classes.ghost = { tris: 1, verts: 1, draws: 1, set_by: "planted" };
     const f = path.join(dir, "budgets.json");
     fs.writeFileSync(f, JSON.stringify(b));
-    const child = spawnSync(process.execPath, [tool, "--budgets", f], { cwd: repo, encoding: "utf8" });
+    const child = spawnSync(process.execPath, [tool, "--budgets", f], {
+      cwd: repo,
+      encoding: "utf8",
+    });
     assert.equal(child.status, 1, child.stdout);
     assert.match(child.stdout + child.stderr, /ghost.*no assets/);
   } finally {

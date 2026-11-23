@@ -1,5 +1,0 @@
-TH-10 predecessor reconciliation at integrated commit 09d52a1d4790e948fde979a8d54a9fdc885ec314
-TH-10 revision 1 done at EV-0311, accepted integrated identity 82fbb1f4360fb62fd9cd9a55167b434d0e2ba009.
-docs/tech/sections/TH-10-devices-and-one-main-companion.md sha256 at this commit: 80787f9e7f7bb021657291d48c52cbc0af1b04cd44878ed527668fc31c30f314
-git merge-base --is-ancestor 82fbb1f4360fb62fd9cd9a55167b434d0e2ba009 HEAD: exit 0
-npm run check:drift at this commit: exit 0 (closure/check-drift.log); retained checks rerun at this commit: closure/paper-reruns.log

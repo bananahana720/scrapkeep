@@ -1,5 +1,0 @@
-$ godot --headless --path native --script /home/andrew/Projects/scrapkeep-wt-S0-04/artifacts/local/tasks/S0-04/probes/probe2.gd
-Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
-
-PROBE2 self-preload works: original=7 copy=8
-exit=0

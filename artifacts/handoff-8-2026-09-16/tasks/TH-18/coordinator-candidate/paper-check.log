@@ -1,9 +1,0 @@
-{"assertions": 1095, "passed": 1095, "failed": 0, "counts": {"stated_hashes": 13, "physical_action_kinds": 12, "intents": 15, "interface_rows": 18, "traces": 3, "trace_steps": 52, "transitions": 14, "native_tests": 14, "hardware_rows": 8, "parameter_rows": 30, "coverage_rules": 8, "device_loss_rules": 8, "focus_rules": 8, "capture_rules": 5, "edge_cases": 10, "failure_modes": 7, "line_citations": 224}, "negative_controls_detected": 8}
-NEGATIVE detected NC-1 O2 moved after the view in CN
-NEGATIVE detected NC-2 a paused diagnostic step advances the tick
-NEGATIVE detected NC-3 a hardware row marked qualified
-NEGATIVE detected NC-4 O1 routed on an edge that does not carry it
-NEGATIVE detected NC-5 a menu intent with no controller coverage
-NEGATIVE detected NC-6 an intent citing a row TH-02 does not have
-NEGATIVE detected NC-7 a Q-P30 parameter given a value
-NEGATIVE detected NC-8 a transition with no native test

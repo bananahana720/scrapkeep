@@ -1,5 +1,0 @@
-TH-06 predecessor reconciliation at integrated commit 9229f83ed87687e53710cc47bbbcb9810aecf52c
-TH-06 revision 1 done at EV-0298, accepted integrated identity 0ad4b0ebc20a94d61e8763c7ff04522f2883de59.
-docs/tech/sections/TH-06-encounters-waves-and-enemies.md sha256 at this commit: 53ce49a45e43f6fce5ac64a28050c0060ffd8ef20232f54b49b20d1af4b571f1
-git merge-base --is-ancestor 0ad4b0ebc20a94d61e8763c7ff04522f2883de59 HEAD: exit 0
-npm run check:drift at this commit: exit 0 (closure/check-drift.log); retained checks rerun at this commit: closure/paper-reruns.log

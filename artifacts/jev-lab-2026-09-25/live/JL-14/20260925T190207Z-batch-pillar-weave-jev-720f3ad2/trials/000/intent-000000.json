@@ -1,1 +1,0 @@
-{"protocol":"scrapkeep-jev/1","seq":0,"intent":"evade_hazard","arm":"jev","source":"live","meta":{"questions_sha":"6c9cf2a68e3028e32f05b3541446438772bb96eace053e6ac46478356b0f94dc","verdict_key":"0959940300a353318d6f3c0dbcd93b127cac4bd75f90585b3d101dbe6b195029","model":"jev-1.13.0","confidence":0.57,"low_confidence":false,"raw_intent":"evade_hazard"}}

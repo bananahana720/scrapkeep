@@ -1,6 +1,6 @@
 # Lead capture reference
 
-> **Frozen legacy reference, 6 September 2026.** The lead-capture server is preserved evidence, not a live verification dependency. `npm run verify` and `npm test` no longer exercise it; run `npm run test:leads` and `npm run test:leads:browser` explicitly. See [ADR 0001, amendment 2026-09-06](adr/0001-two-playable-entries.md#amendment-2026-09-06).
+> **Frozen legacy reference, 6 September 2026.** The lead-capture server is preserved evidence, not a live verification dependency. `npm run verify` and `npm test` no longer exercise it; run `npm run test:leads` and `npm run test:leads:browser` explicitly. See ADR 0001, amendment 2026-09-06 (`docs/adr/0001-two-playable-entries.md`, archived in git history).
 
 The Node service stores email and SMS opt-ins on this machine. It sends no email, text message, webhook, or CRM request. `delivery: "stored"` means the server completed a durable local write. It does not mean a message was delivered or that the contact belongs to the person who submitted it.
 

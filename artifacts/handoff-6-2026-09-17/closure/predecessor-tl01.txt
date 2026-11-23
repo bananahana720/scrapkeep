@@ -1,5 +1,0 @@
-TL-01 predecessor reconciliation at integrated commit 9229f83ed87687e53710cc47bbbcb9810aecf52c
-TL-01 revision 1 done at EV-0223, accepted integrated identity 1bc96e258bd2295136f82731b4ac7848e860ae61.
-scripts/check-drift.mjs sha256 at this commit: d0050fc8380d5e2a950747ab56b3f93a7b8df97c777380bdc5c134ddda77db06
-git merge-base --is-ancestor 1bc96e258bd2295136f82731b4ac7848e860ae61 HEAD: exit 0
-npm run check:drift at this commit: exit 0 (closure/check-drift.log); retained checks rerun at this commit: closure/paper-reruns.log

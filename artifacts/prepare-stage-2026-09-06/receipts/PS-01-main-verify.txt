@@ -1,3 +1,0 @@
-PASS built-http
-Verification report: /home/andrew/Projects/scrapkeep/artifacts/local/verify/report.json
-verify exit=0

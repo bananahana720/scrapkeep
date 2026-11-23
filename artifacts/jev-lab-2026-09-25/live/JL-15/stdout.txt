@@ -1,7 +1,0 @@
-fail free-cache: given push_objective p=0.45, reversed push_objective p=0.48; P(take_cache) 0.45 < 0.6 in the given order; P(take_cache) 0.48 < 0.6 in the reversed order
-pass lethal-option: given push_objective p=0.1, reversed push_objective p=0.09; passed in both orders
-fail wording-swap: current/given take_cache, neutral/given push_objective, current/reversed take_cache, neutral/reversed push_objective; take_cache under the current wording, push_objective under the neutral one, in the given order; take_cache under the current wording, push_objective under the neutral one, in the reversed order
-8 calls; models jev-1.13.0
-tokens input_tokens=5804 output_tokens=634 cache_read_input_tokens=0 cache_creation_input_tokens=0
-result /home/andrew/Projects/scrapkeep-wt-JL-15/artifacts/local/tasks/JL-15/live/controls-2026-09-25T18-48-41.005Z.json
-epoch /home/andrew/Projects/scrapkeep-wt-JL-15/artifacts/local/tasks/JL-15/live/epochs/539c0758dce49e22aae60785f59127f66bff9ed5d4c660860701aa291f86bd2b.json

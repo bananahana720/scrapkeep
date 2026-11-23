@@ -1,3 +1,0 @@
-FAIL anchor[docs/tech/proofs/S0-07-save-owner.md:85]: rename_absolute
-FAIL anchor[docs/tech/proofs/S0-07-save-owner.md:107]: tighten
-269 checks, 2 failed, 54 model cases, 20 matrix rows replayed, 4/4 controls detected

@@ -1,5 +1,0 @@
- docs/tech/sections/TH-13-chaos-outcomes.md | 390 +++++++++++++++++++++++++++++
- 1 file changed, 390 insertions(+)
-597088d4bbb69f76d68d18548160dd5bf25b419d34417a3e6bae5d38720683cb  docs/tech/sections/TH-13-chaos-outcomes.md
-coordinator rerun at cf389ee8004d204965780c6e65164ecc8cdd127e (main at e4313af; TH-07 admitted after this base, not cited), 2026-09-17T12:40Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (24 sections at the worktree); check:project exit 0; check:drift exit 0 at the worktree; check_chaos.py (writer paper check, rerun from a coordinator copy) exit 0 pass, 3/3 controls.
-coordinator corrections at e4f13b5bd1aa419cc4cc47cca8b5fd27021a16ac (four review notes, six edits; section sha256 f4b15e74fbc925378e2437827aed1120da10d6d0453642082f271335ff335f67); paper check rerun exit 0. Integrated at 5c5c8e8bd9007289836835ed920af63f1593154d (no-ff merge plus the README index line after TH-11): check:scope --no-build documentation-only, check:docs 0, check:project 0, check:drift 0, paper check rerun exit 0.
