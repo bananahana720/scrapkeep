@@ -62,6 +62,8 @@ var _glance_left := 0.0
 var _phases
 var _seen_phase := 0
 var _turn_age := -1.0
+var _frame: StyleBox
+var _frame_hand := NO_HAND
 
 
 func _init() -> void:
@@ -94,6 +96,8 @@ func unbind() -> void:
 	_phases = null
 	_seen_phase = 0
 	_turn_age = -1.0
+	_frame = null
+	_frame_hand = NO_HAND
 	_fit()
 	queue_redraw()
 
@@ -377,10 +381,12 @@ func _draw() -> void:
 	elif not name_held():
 		UiDraw.text(self, MARGIN, mid, plate_name(), FONT, neutral)
 	var x := MARGIN + name_width()
-	for pip in pips():
+	var drawn_pips := pips()
+	for pip in drawn_pips:
 		_draw_pip(Rect2(Vector2(x, mid - PIP * 0.5), Vector2(PIP, PIP)), pip, neutral)
 		x += PIP + PIP_GAP
-	x += GAP - PIP_GAP
+	if not drawn_pips.is_empty():
+		x += GAP - PIP_GAP
 	var bar := Rect2(Vector2(x, mid - BAR_HEIGHT * 0.5), Vector2(size.x - MARGIN - GLYPH - GAP - x, BAR_HEIGHT))
 	UiDraw.bar(self, bar, bar_fraction(), bar_color())
 	for tick in TICKS:
@@ -402,7 +408,14 @@ func _draw() -> void:
 # The hand frame under the plate's marks, or null for a Warden's HUD panel.
 func frame_box() -> StyleBox:
 	var which := hand()
-	return ScrapFrame.hand_plate(which, SERIAL) if which != NO_HAND else null
+	if which == NO_HAND:
+		_frame = null
+		_frame_hand = NO_HAND
+		return null
+	if _frame == null or _frame_hand != which:
+		_frame = ScrapFrame.hand_plate(which, SERIAL)
+		_frame_hand = which
+	return _frame
 
 
 # A hand's mark in its own ink, its left edge at x and its middle at y, with the HUD's outline: a Rogue's

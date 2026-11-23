@@ -25,6 +25,7 @@ func _initialize() -> void:
 	_check_rivet_iron_sixes()
 	_check_rivet_top_up_and_sprint_fan()
 	_check_sable_tap_spark_hold_arc()
+	_check_buffer_boundaries()
 	_check_interruptions_and_sync_pattern()
 	_check_hold_auto_data_rollback()
 	_check_ultimate_and_swap()
@@ -252,6 +253,156 @@ func _check_sable_tap_spark_hold_arc() -> void:
 	_t.near("full mounted turret bolt deals 36 damage", turret.damage * float(mrel[0]["damage_mult"]), 36.0, 0.01)
 	_t.near("Static Discharge speed term is 0.8 per m/s", Weapons.BURST_DAMAGE_PER_SPEED, 0.8, 0.0001)
 	_t.near("Static Discharge at 40 m/s deals 46.0", float(Weapons.burst(40.0)["damage"]), 46.0, 0.01)
+
+
+func _check_buffer_boundaries() -> void:
+	var dt90 := 1.0 / 90.0
+	var rivet: Resource = Weapons.base(Weapons.RAPID_LASER)
+	var caster: Resource = Weapons.base(Weapons.ARC_CASTER)
+	var drv := WeaponDriver.new()
+
+	# 1. Rivet press floor at wait = BUFFER_S (0.10 s, 90 Hz) fires on the exact ready tick.
+	drv.reset(rivet)
+	drv.step(dt90, _press_intent(), Weapons.RAPID_LASER, rivet, rivet.rate)
+	for _i in 8: # 8/90 s elapsed
+		drv.step(dt90, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate)
+	var r90_press: Array = drv.step(dt90, _press_intent(), Weapons.RAPID_LASER, rivet, rivet.rate) # 9/90 = 0.10 s left
+	_t.check("Rivet 90 Hz press at wait=BUFFER_S latches without firing early",
+		r90_press.is_empty() and bool(drv.state_snapshot()["buffered"]), str(drv.state_snapshot()))
+	var r90_early := 0
+	for _i in 8: # ticks 10..17
+		r90_early += drv.step(dt90, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate).size()
+	var r90_ready: Array = drv.step(dt90, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate) # tick 18
+	_t.eq("Rivet 90 Hz wait=BUFFER_S fires on the exact ready tick", [r90_early, r90_ready.size()], [0, 1])
+
+	# 2. Rivet press floor at wait = 0.09 s (60 Hz) fires on the exact ready tick.
+	drv.reset(rivet)
+	drv.step(DT, _press_intent(), Weapons.RAPID_LASER, rivet, rivet.rate)
+	drv.set_cooldown_s(0.09 + DT)
+	var r60_press: Array = drv.step(DT, _press_intent(), Weapons.RAPID_LASER, rivet, rivet.rate)
+	_t.check("Rivet 60 Hz press at wait=0.09 s latches without firing early",
+		r60_press.is_empty() and bool(drv.state_snapshot()["buffered"]), str(drv.state_snapshot()))
+	var r60_early := 0
+	for _i in 5:
+		r60_early += drv.step(DT, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate).size()
+	var r60_ready: Array = drv.step(DT, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate)
+	_t.eq("Rivet 60 Hz wait=0.09 s fires on the exact ready tick", [r60_early, r60_ready.size()], [0, 1])
+
+	# 3. Buffered press expires after BUFFER_S if trigger does not become ready in time.
+	drv.reset(rivet)
+	drv.step(DT, _press_intent(), Weapons.RAPID_LASER, rivet, rivet.rate)
+	drv.set_cooldown_s(0.09 + DT)
+	drv.step(DT, _press_intent(), Weapons.RAPID_LASER, rivet, rivet.rate)
+	drv.set_cooldown_s(0.20) # pushed past BUFFER_S
+	for _i in 6: # 0.10 s elapsed -> buffer must expire
+		drv.step(DT, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate)
+	_t.eq("buffered press expires once BUFFER_S elapses without becoming ready", bool(drv.state_snapshot()["buffered"]), false)
+	var expired_shots := 0
+	for _i in 10:
+		expired_shots += drv.step(DT, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate).size()
+	_t.eq("expired buffer never fires later", expired_shots, 0)
+
+	# 4. Rivet reload-end buffering at ~0.09 s real remaining time under reload_rate_mult = 1.5 and 1.0.
+	# At 90 Hz and 1.5x, 0.95 s reload finishes at tick 57 (57 * 1.5 / 90 = 0.95); tick 49 has 8/90 = 0.0889 s real left.
+	drv.reset(rivet)
+	for shot_i in 6:
+		drv.step(dt90, _press_intent(), Weapons.RAPID_LASER, rivet, rivet.rate)
+		if shot_i < 5:
+			for _w in 18:
+				drv.step(dt90, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate)
+	for _i in 48:
+		drv.step(dt90, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate, {"reload_rate_mult": 1.5})
+	var rel15_press: Array = drv.step(dt90, _press_intent(), Weapons.RAPID_LASER, rivet, rivet.rate, {"reload_rate_mult": 1.5})
+	_t.check("Rivet reload-end at 1.5x (0.089 s real left) latches buffer",
+		rel15_press.is_empty() and bool(drv.state_snapshot()["buffered"]), str(drv.state_snapshot()))
+	var rel15_early := 0
+	for _i in 7: # ticks 50..56
+		rel15_early += drv.step(dt90, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate, {"reload_rate_mult": 1.5}).size()
+	var rel15_ready: Array = drv.step(dt90, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate, {"reload_rate_mult": 1.5}) # tick 57
+	_t.eq("Rivet reload-end at 1.5x fires on the reload-complete tick", [rel15_early, rel15_ready.size()], [0, 1])
+
+	# At 90 Hz and 1.0x, 0.95 s reload finishes at tick 86 (86/90 = 0.9556 s); tick 77 has 0.0944 s real left (9 ticks).
+	drv.reset(rivet)
+	for shot_i in 6:
+		drv.step(dt90, _press_intent(), Weapons.RAPID_LASER, rivet, rivet.rate)
+		if shot_i < 5:
+			for _w in 18:
+				drv.step(dt90, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate)
+	for _i in 76:
+		drv.step(dt90, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate, {"reload_rate_mult": 1.0})
+	var rel10_press: Array = drv.step(dt90, _press_intent(), Weapons.RAPID_LASER, rivet, rivet.rate, {"reload_rate_mult": 1.0})
+	_t.check("Rivet reload-end at 1.0x (0.094 s real left) latches buffer",
+		rel10_press.is_empty() and bool(drv.state_snapshot()["buffered"]), str(drv.state_snapshot()))
+	var rel10_early := 0
+	for _i in 8: # ticks 78..85
+		rel10_early += drv.step(dt90, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate, {"reload_rate_mult": 1.0}).size()
+	var rel10_ready: Array = drv.step(dt90, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate, {"reload_rate_mult": 1.0}) # tick 86
+	_t.eq("Rivet reload-end at 1.0x fires on the reload-complete tick", [rel10_early, rel10_ready.size()], [0, 1])
+
+	# 5. Rivet sprint fan respects rate_mult < 1.0 (no 1.0 floor clamp).
+	drv.reset(rivet)
+	drv.step(DT, _press_intent(true), Weapons.RAPID_LASER, rivet, rivet.rate, {"sprinting": true, "rate_mult": 0.5})
+	for _i in 24: # wait out 0.20 / 0.5 = 0.40 s first-shot floor
+		drv.step(DT, _hold_intent(), Weapons.RAPID_LASER, rivet, rivet.rate, {"sprinting": true, "rate_mult": 0.5})
+	_t.near("sprint fan scales floor by rate_mult < 1.0 (0.10 / 0.5 = 0.20 s)",
+		float(drv.state_snapshot()["cooldown"]), Weapons.RIVET_FAN_FLOOR_S / 0.5, 0.02)
+
+	# 6. Sable spark floor at 0.09 s (60 Hz) and 0.10 s (90 Hz) fires on the exact ready tick.
+	drv.reset(caster)
+	drv.step(DT, _press_intent(), Weapons.ARC_CASTER, caster, caster.rate)
+	drv.set_cooldown_s(0.09 + DT)
+	var s60_press: Array = drv.step(DT, _press_intent(), Weapons.ARC_CASTER, caster, caster.rate)
+	_t.check("Sable spark 60 Hz at wait=0.09 s latches buffer",
+		s60_press.is_empty() and bool(drv.state_snapshot()["buffered"]), str(drv.state_snapshot()))
+	var s60_early := 0
+	for _i in 5:
+		s60_early += drv.step(DT, Intent.new(), Weapons.ARC_CASTER, caster, caster.rate).size()
+	var s60_ready: Array = drv.step(DT, Intent.new(), Weapons.ARC_CASTER, caster, caster.rate)
+	_t.eq("Sable spark 60 Hz wait=0.09 s fires on the exact ready tick", [s60_early, s60_ready.size()], [0, 1])
+
+	drv.reset(caster)
+	drv.step(dt90, _press_intent(), Weapons.ARC_CASTER, caster, caster.rate)
+	for _i in 17: # 17/90 s elapsed on 0.30 s floor
+		drv.step(dt90, Intent.new(), Weapons.ARC_CASTER, caster, caster.rate)
+	var s90_press: Array = drv.step(dt90, _press_intent(), Weapons.ARC_CASTER, caster, caster.rate) # 0.10 s left
+	_t.check("Sable spark 90 Hz at wait=0.10 s latches buffer",
+		s90_press.is_empty() and bool(drv.state_snapshot()["buffered"]), str(drv.state_snapshot()))
+	var s90_early := 0
+	for _i in 8:
+		s90_early += drv.step(dt90, Intent.new(), Weapons.ARC_CASTER, caster, caster.rate).size()
+	var s90_ready: Array = drv.step(dt90, Intent.new(), Weapons.ARC_CASTER, caster, caster.rate)
+	_t.eq("Sable spark 90 Hz wait=0.10 s fires on the exact ready tick", [s90_early, s90_ready.size()], [0, 1])
+
+	# 7. Sable recover floor (0.12 s after bolt) at ~0.09 s (60 Hz) and ~0.10 s (90 Hz) fires on the ready tick.
+	drv.reset(caster)
+	drv.step(DT, _press_intent(true), Weapons.ARC_CASTER, caster, caster.rate, {"charge_rate": 2.0})
+	for _i in 30:
+		drv.step(DT, _hold_intent(), Weapons.ARC_CASTER, caster, caster.rate, {"charge_rate": 2.0})
+	drv.step(DT, _release_intent(), Weapons.ARC_CASTER, caster, caster.rate, {"charge_rate": 2.0}) # recover_s = 0.12
+	drv.step(DT, Intent.new(), Weapons.ARC_CASTER, caster, caster.rate) # tick 1: 0.1033 s left
+	var rec60_press: Array = drv.step(DT, _press_intent(), Weapons.ARC_CASTER, caster, caster.rate) # tick 2: 0.0867 s left
+	_t.check("Sable recover 60 Hz (~0.09 s left) latches buffer",
+		rec60_press.is_empty() and bool(drv.state_snapshot()["buffered"]), str(drv.state_snapshot()))
+	var rec60_early := 0
+	for _i in 5: # ticks 3..7
+		rec60_early += drv.step(DT, Intent.new(), Weapons.ARC_CASTER, caster, caster.rate).size()
+	var rec60_ready: Array = drv.step(DT, Intent.new(), Weapons.ARC_CASTER, caster, caster.rate) # tick 8
+	_t.eq("Sable recover 60 Hz fires on the exact ready tick", [rec60_early, rec60_ready.size()], [0, 1])
+
+	drv.reset(caster)
+	drv.step(dt90, _press_intent(true), Weapons.ARC_CASTER, caster, caster.rate, {"charge_rate": 2.0})
+	for _i in 45:
+		drv.step(dt90, _hold_intent(), Weapons.ARC_CASTER, caster, caster.rate, {"charge_rate": 2.0})
+	drv.step(dt90, _release_intent(), Weapons.ARC_CASTER, caster, caster.rate, {"charge_rate": 2.0}) # recover_s = 0.12
+	drv.step(dt90, Intent.new(), Weapons.ARC_CASTER, caster, caster.rate) # tick 1: 0.1089 s left
+	var rec90_press: Array = drv.step(dt90, _press_intent(), Weapons.ARC_CASTER, caster, caster.rate) # tick 2: 0.0978 s left
+	_t.check("Sable recover 90 Hz (~0.10 s left) latches buffer",
+		rec90_press.is_empty() and bool(drv.state_snapshot()["buffered"]), str(drv.state_snapshot()))
+	var rec90_early := 0
+	for _i in 8: # ticks 3..10
+		rec90_early += drv.step(dt90, Intent.new(), Weapons.ARC_CASTER, caster, caster.rate).size()
+	var rec90_ready: Array = drv.step(dt90, Intent.new(), Weapons.ARC_CASTER, caster, caster.rate) # tick 11
+	_t.eq("Sable recover 90 Hz fires on the exact ready tick", [rec90_early, rec90_ready.size()], [0, 1])
 
 
 func _check_interruptions_and_sync_pattern() -> void:
@@ -518,8 +669,72 @@ func _run_live() -> void:
 	var mctx_later: Dictionary = combat._weapon_step_context(Weapons.PYLON_TURRET, combat._patterns[Weapons.PYLON_TURRET], combat._rate(Weapons.PYLON_TURRET))
 	_t.near("mounted Sable drops to walk charge rate (1.0x) after 3 s", float(mctx_later["charge_rate"]), 1.0, 0.001)
 
+	# 6. WC-1 (RestAfterBoundary): run_ended and summary/title transitions return WeaponDriver to rest.
+	# 6a. Rivet mid-reload + buffered -> run_ended(true) returns to rest.
+	combat.weapon_driver.reset(rivet_pat)
+	combat.weapon_driver.step(DT, _press_intent(), Weapons.RAPID_LASER, rivet_pat, rivet_pat.rate)
+	for _shot in 5:
+		for _w in 12:
+			combat.weapon_driver.step(DT, Intent.new(), Weapons.RAPID_LASER, rivet_pat, rivet_pat.rate)
+		combat.weapon_driver.step(DT, _press_intent(), Weapons.RAPID_LASER, rivet_pat, rivet_pat.rate)
+	_t.check("WC-1 setup: Rivet reloading before run_ended", bool(combat.weapon_driver.state_snapshot()["reloading"]), "")
+	_game.events.run_ended.emit(true)
+	var after_end_rivet: Dictionary = combat.weapon_driver.state_snapshot()
+	_t.check("WC-1: run_ended returns reloading Rivet to rest", _is_at_rest(after_end_rivet, 6), str(after_end_rivet))
+
+	# 6b. Rivet partial hot cylinder + cooldown + buffer -> flow_changed("summary") (Victory Lap close) returns to rest.
+	combat.weapon_driver.reset(rivet_pat)
+	for _shot in 6:
+		combat.weapon_driver.step(DT, _press_intent(), Weapons.RAPID_LASER, rivet_pat, rivet_pat.rate)
+		if _shot < 5:
+			for _w in 12:
+				combat.weapon_driver.step(DT, Intent.new(), Weapons.RAPID_LASER, rivet_pat, rivet_pat.rate)
+	for _i in 25:
+		combat.weapon_driver.step(DT, Intent.new(), Weapons.RAPID_LASER, rivet_pat, rivet_pat.rate)
+	combat.weapon_driver.step(DT, _press_intent(), Weapons.RAPID_LASER, rivet_pat, rivet_pat.rate) # hot #1
+	combat.weapon_driver.set_cooldown_s(0.05 + DT)
+	combat.weapon_driver.step(DT, _press_intent(), Weapons.RAPID_LASER, rivet_pat, rivet_pat.rate) # buffered
+	var pre_summary: Dictionary = combat.weapon_driver.state_snapshot()
+	_t.check("WC-1 setup: Rivet has hot rounds, cooldown and buffer before summary",
+		int(pre_summary["hot"]) > 0 and float(pre_summary["cooldown"]) > 0.0 and bool(pre_summary["buffered"]),
+		str(pre_summary))
+	_game.events.flow_changed.emit("summary")
+	var after_summary: Dictionary = combat.weapon_driver.state_snapshot()
+	_t.check("WC-1: summary transition (Victory Lap close) returns Rivet to rest", _is_at_rest(after_summary, 6), str(after_summary))
+
+	# 6c. Sable mid-charge -> run_ended(false) returns to rest; mid-charge -> flow_changed("title") returns to rest.
+	combat.weapon_driver.reset(caster_pat)
+	combat.weapon_driver.step(DT, _press_intent(true), Weapons.ARC_CASTER, caster_pat, caster_pat.rate, {"charge_rate": 1.0})
+	for _i in 25:
+		combat.weapon_driver.step(DT, _hold_intent(), Weapons.ARC_CASTER, caster_pat, caster_pat.rate, {"charge_rate": 1.0})
+	_t.check("WC-1 setup: Sable charging before run_ended", bool(combat.weapon_driver.state_snapshot()["charging"]), "")
+	_game.events.run_ended.emit(false)
+	var after_end_sable: Dictionary = combat.weapon_driver.state_snapshot()
+	_t.check("WC-1: run_ended returns charging Sable to rest", _is_at_rest(after_end_sable, 0), str(after_end_sable))
+
+	combat.weapon_driver.step(DT, _press_intent(true), Weapons.ARC_CASTER, caster_pat, caster_pat.rate, {"charge_rate": 1.0})
+	for _i in 25:
+		combat.weapon_driver.step(DT, _hold_intent(), Weapons.ARC_CASTER, caster_pat, caster_pat.rate, {"charge_rate": 1.0})
+	_game.events.flow_changed.emit("title")
+	var after_title_sable: Dictionary = combat.weapon_driver.state_snapshot()
+	_t.check("WC-1: title transition returns charging Sable to rest", _is_at_rest(after_title_sable, 0), str(after_title_sable))
+
 	_game.free()
 	quit(_t.verdict())
+
+
+static func _is_at_rest(snap: Dictionary, expected_mag: int) -> bool:
+	return is_zero_approx(float(snap["cooldown"])) \
+		and is_zero_approx(float(snap["recover"])) \
+		and not bool(snap["reloading"]) \
+		and not bool(snap["charging"]) \
+		and not bool(snap["charge_armed"]) \
+		and is_zero_approx(float(snap["charge"])) \
+		and not bool(snap["buffered"]) \
+		and int(snap["hot"]) == 0 \
+		and String(snap["window"]) == WeaponDriver.WINDOW_IDLE \
+		and int(snap["chamber"]) == expected_mag \
+		and bool(snap["ready"])
 
 
 static func _find_buff(rows: Array, id: String) -> Dictionary:
