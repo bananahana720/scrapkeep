@@ -10,6 +10,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
 const LockRows := preload("res://src/world/lock_rows.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -96,6 +97,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_schema_existing_parks()
+	_fixture_park_wayfinding()
 	_schema_cable_rows()
 	_schema_district_rows()
 	_schema_approach()
@@ -120,6 +122,98 @@ func _schema_existing_parks() -> void:
 	for map_id in ["park_dam", "park_flume", "park_test"]:
 		var read := ParkSchema.load_park("%s%s.json" % [PARK_DIR, map_id])
 		_t.check("%s validates cleanly as-is" % map_id, read["errors"].is_empty(), ParkSchema.describe(read["errors"]))
+
+
+# WAYFINDING.md §6 line 122 (W46 E3-06): park_test.json carries all three wayfinding keys on disk,
+# loads cleanly through ParkSchema.load_park() and ParkMap, and exercises SiteMarkers visited state.
+func _fixture_park_wayfinding() -> void:
+	var path := PARK_DIR + "park_test.json"
+	var read := ParkSchema.load_park(path)
+	_t.check("park_test.json loads via ParkSchema.load_park with 0 errors", read["errors"].is_empty(), ParkSchema.describe(read["errors"]))
+	var park: Dictionary = read["data"]
+
+	# 1. cable_rows: explicitly present and empty (LockRows.row("park_test") asks for 0 gate packs).
+	_t.check("park_test.json carries cable_rows", park.has("cable_rows") and park["cable_rows"] is Array)
+	_t.eq("park_test.json cable_rows is empty for 0-pack fixture", park.get("cable_rows", null), [])
+
+	# 2. district_rows: 3 non-overlapping, uniquely named abutting districts covering play_rect.
+	_t.check("park_test.json carries district_rows", park.has("district_rows") and park["district_rows"] is Array)
+	var districts: Array = park.get("district_rows", [])
+	_t.eq("park_test.json has 3 district_rows", districts.size(), 3)
+	var pr: Array = park["play_rect"]
+	var play_box := Rect2(float(pr[0]), float(pr[1]), float(pr[2]), float(pr[3]))
+	var seen_ids := {}
+	var seen_names := {}
+	var boxes: Array = []
+	var covered_area := 0.0
+	var all_inside := true
+	var any_overlap := false
+	for row in districts:
+		var id := String(row.get("id", "")).strip_edges()
+		var dname := String(row.get("name", "")).strip_edges()
+		var grade := String(row.get("grade", "")).strip_edges()
+		_t.check("fixture district %s has non-empty id, name and grade" % id, id != "" and dname != "" and grade != "")
+		_t.check("fixture district %s name is in NAMES.md list" % id, ParkSchema.DISTRICT_NAMES.has(dname), dname)
+		_t.check("fixture district %s id and name are unique" % id, not seen_ids.has(id) and not seen_names.has(dname))
+		seen_ids[id] = true
+		seen_names[dname] = true
+		var r: Array = row["rect"]
+		var box := Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3]))
+		_t.check("fixture district %s has positive rect area" % id, box.size.x > 0.0 and box.size.y > 0.0, str(r))
+		if not play_box.encloses(box):
+			all_inside = false
+		for prior: Rect2 in boxes:
+			if box.intersects(prior, false):
+				any_overlap = true
+		boxes.append(box)
+		covered_area += box.get_area()
+	_t.check("fixture districts do not overlap", not any_overlap)
+	_t.check("fixture districts stay inside play_rect", all_inside, str(play_box))
+	_t.near("fixture districts cover play_rect cleanly", covered_area, play_box.get_area(), 0.01)
+
+	# 3. approach: valid to, smoke, and far_card standing strictly outside play_rect.
+	_t.check("park_test.json carries approach", park.has("approach") and park["approach"] is Dictionary)
+	var approach: Dictionary = park.get("approach", {})
+	_t.check("fixture approach has non-empty to", String(approach.get("to", "")).strip_edges() != "")
+	_t.check("fixture approach has [x, z] smoke", approach.get("smoke") is Array and (approach["smoke"] as Array).size() == 2)
+	_t.check("fixture approach carries far_card", approach.has("far_card") and approach["far_card"] is Dictionary)
+	var card: Dictionary = approach.get("far_card", {})
+	_t.check("fixture far_card has non-empty to", String(card.get("to", "")).strip_edges() != "")
+	var at: Array = card.get("at", [0.0, 0.0])
+	var px := float(at[0])
+	var pz := float(at[1])
+	var inside_play := px >= play_box.position.x and px <= play_box.end.x and pz >= play_box.position.y and pz <= play_box.end.y
+	_t.check("fixture far_card stands strictly outside play_rect", not inside_play, "%s vs %s" % [str(at), str(pr)])
+
+	# 4. ParkMap loads park_test.json cleanly with approach populated.
+	var map := ParkMap.new(path)
+	_t.check("ParkMap loads park_test.json cleanly", map.ok and map.errors.is_empty(), ParkSchema.describe(map.errors))
+	_t.eq("ParkMap carries fixture approach.to", map.approach.get("to", ""), String(approach["to"]))
+	_t.eq("ParkMap carries fixture approach.smoke", map.approach.get("smoke", Vector2.ZERO), Vector2(float(approach["smoke"][0]), float(approach["smoke"][1])))
+
+	# 5. SiteMarkers visited state flips and resets cleanly against park_test.json's own home_rows.
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var events := GameEvents.new()
+	holder.add_child(events)
+	var markers := SiteMarkers.new()
+	holder.add_child(markers)
+	markers.setup({"events": events})
+	var home_id := String(park["home_rows"][0]["id"])
+	var home_key := "crew:" + home_id
+	var world := FakeWorld.new()
+	var scrap := FakeScrap.new()
+	world.director.homes = [{"id": home_id, "at": Vector2(0.0, -100.0)}]
+	markers.sync(SiteMarkers.sites(world, scrap, null), true)
+	_t.check("fixture home standing plume is unvisited", not markers.is_visited(home_key))
+	world.director.homes = []
+	markers.sync(SiteMarkers.sites(world, scrap, null), true)
+	_t.check("fixture home flips to visited when cleared", markers.is_visited(home_key))
+	_t.eq("fixture cleared home gets chalk_x mark", markers.visited_state(home_key).get("mark"), "chalk_x")
+	events.stage_entered.emit(1, true)
+	_t.eq("retry resets fixture visited state", markers.visited_sites(), [])
+	markers.sync([], false)
+	holder.free()
 
 
 func _dam_cables(park: Dictionary) -> Array:
