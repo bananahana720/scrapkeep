@@ -2075,6 +2075,7 @@ func _mecha_event(what: String) -> void:
 			continue
 		match what:
 			"shot":
+				rec["still_s"] = 0.0
 				mecha.shot()
 			"kick":
 				mecha.kick()
@@ -2094,6 +2095,9 @@ func _step_mecha(rec: Dictionary, player, delta: float) -> void:
 	var mecha = rec.get("mecha")
 	if mecha == null:
 		return
+	# How long the ball has sat below the glance speed; moving or a shot starts it again.
+	var velocity: Vector3 = player.state.velocity if player.get("state") != null else Vector3.ZERO
+	rec["still_s"] = float(rec.get("still_s", 0.0)) + delta if velocity.length() < GLANCE_STILL_SPEED else 0.0
 	mecha.step(delta, _mecha_facts(rec, player) if mecha.needs_facts() else {})
 
 
@@ -2101,7 +2105,8 @@ func _step_mecha(rec: Dictionary, player, delta: float) -> void:
 func _mecha_facts(rec: Dictionary, player) -> Dictionary:
 	var velocity: Vector3 = player.state.velocity if player.get("state") != null else Vector3.ZERO
 	var facts := {"pressure": _pressure, "set_piece_phase": _set_piece_phase(rec), "heft_class": _run_heft_class(),
-		"aim": _aim_of(velocity)}
+		"aim": _aim_of(velocity), "idle_still": float(rec.get("still_s", 0.0)) >= MechaMotion.IDLE_STILL_S,
+		"reloading": false, "gauge_fill": 0.0}
 	var kit = player.get("kit")
 	if kit != null:
 		facts["gliding"] = kit.get("gliding") == true
@@ -2116,9 +2121,19 @@ func _mecha_facts(rec: Dictionary, player) -> Dictionary:
 		for slot in ["weapon", "special", "line"]:
 			ready[slot] = bool(abilities.ready(slot))
 		facts["slot_ready"] = ready
+		# The charging hold the reticle ring draws (ability_state.gd slots()'s gauge).
+		if abilities.has_method("slots"):
+			for record in abilities.slots():
+				facts["gauge_fill"] = maxf(facts["gauge_fill"], float(record.get("gauge", 0.0)))
 	var spawner = ctx.get("spawner") if ctx != null else null
 	if spawner != null and spawner.has_method("line_load"):
 		facts["line_load"] = 0.0 if (spawner.line_load() as Dictionary).is_empty() else 1.0
+	# The weapon's one public cadence record (PILOT-CADENCE section 5.3), as the HUD reads it.
+	var driver = spawner.get("weapon_driver") if spawner != null else null
+	if driver != null and driver.has_method("state_snapshot"):
+		var cadence: Dictionary = driver.state_snapshot()
+		facts["reloading"] = cadence.get("reloading", false) == true
+		facts["gauge_fill"] = maxf(facts["gauge_fill"], clampf(float(cadence.get("charge", 0.0)), 0.0, 1.0))
 	return facts
 
 

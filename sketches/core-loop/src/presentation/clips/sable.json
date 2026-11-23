@@ -493,5 +493,19 @@
         }
       ]
     }
-  }
+  },
+  "machinery": [
+    {
+      "node": "Control.GaugeLever",
+      "fact": "gauge_fill",
+      "motion": "turn",
+      "start": {
+        "axis": "x",
+        "deg": 35.0,
+        "rate": 12.0
+      },
+      "source": "scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md section 3.2 (E1-12)",
+      "note": "The gauge lever creeps forward with the charging hold, to the cast throw's 35 degrees at a full gauge, and eases home on release or cancel; the halo itself is player_fx's."
+    }
+  ]
 }
