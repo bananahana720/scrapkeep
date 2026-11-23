@@ -176,7 +176,7 @@ static func _measure_one(game, scenario: Dictionary, distance: float, neighbours
 	combat.bolts.fired = 0
 	combat.volleys = 0
 	var active_w: String = combat.active_weapon()
-	combat.weapon_driver.reset(combat._patterns.get(active_w))
+	combat.weapon_driver.reset(combat.pattern(active_w))
 	combat._reset_ledger()
 	for _tick in roundi(WARMUP / DT):
 		_drive_cadence(game)
@@ -245,14 +245,12 @@ static func _health(targets: Array) -> float:
 static func _drive_cadence(game) -> void:
 	var combat = game.ctx.spawner
 	var intent = game.player.intent
-	var weapon: String = combat.active_weapon()
-	var pat: Resource = combat._patterns.get(weapon)
-	var trig: String = String(pat.trigger) if pat != null else "hold_auto"
+	var snap: Dictionary = combat.weapon_driver.state_snapshot()
+	var trig: String = String(snap.get("trigger", "hold_auto"))
 	intent.fire_pressed = false
 	intent.fire_released = false
 	if trig == "press":
 		intent.fire_held = false
-		var snap: Dictionary = combat.weapon_driver.state_snapshot()
 		if bool(snap.get("reloading", false)):
 			if bool(snap.get("window_open", false)):
 				intent.fire_pressed = true
@@ -260,7 +258,6 @@ static func _drive_cadence(game) -> void:
 			intent.fire_pressed = true
 	elif trig == "tap_charge":
 		intent.fire_held = false
-		var snap: Dictionary = combat.weapon_driver.state_snapshot()
 		if bool(snap.get("ready", false)) or (float(snap.get("cooldown", 0.0)) <= DT + 0.0001 and float(snap.get("recover", 0.0)) <= DT + 0.0001):
 			intent.fire_pressed = true
 	else:
