@@ -16,6 +16,8 @@ const Intent := preload("res://src/movement/intent.gd")
 const PinHash := preload("res://tests/support/pin_hash.gd")
 
 # Stage -> [map, batch count], from the 7dbdebae builder; the hashes below are the old exact pins.
+# 2026-11-22 stage 1 re-recorded (E1-05, w46/e1-05-dam-ramp-shelf at 104d803c7 on stage/alpha-w46 49b4dbbb5): the intake
+# takeoff kicker joins the scatter keep-out and the takeoff and Pump Yard shelf stamps rebake the dam ground; stages 2 to 6 re-record byte-identical.
 # 2026-11-17 flume butte gap table re-pin (W1-102): tests/fixtures/pins/park_dressing_2.pin re-recorded with PIN_RECORD=1
 # on the Mac, because gap_table's plateau rebakes the flume ground and it and its kicker join the scatter keep-out; the
 # pin is rounded to hold on both machines (pin_hash.gd), stages 1 and 3 to 6 unchanged.
