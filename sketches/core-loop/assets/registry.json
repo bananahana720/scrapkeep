@@ -38247,6 +38247,17 @@
    "exception_why": "Rescue prop separates frame, gate, state latch and seat; limits asserted by rescue_cage_asset_test."
   },
   {
+   "path": "res://assets/models/world_one/rivet_revolvers.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd WEAPONS, mount_weapon (under the shell's WeaponRing)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/rivet_revolvers.py",
+    "helper": "tools/blender/polish.py (bevel, bake), tools/blender/shell_base.py RING_BAND",
+    "concept": "artifacts/local/w46-concept-art/01-rivet-twin-revolvers.png, corrected by the wave 46 3D blueprint section 2.2 (scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md)"
+   }
+  },
+  {
    "id": "scrap_pickups",
    "path": "res://assets/models/world_one/scrap_pickups.glb",
    "class": "chunk",
@@ -38432,11 +38443,11 @@
    "path": "res://assets/models/world_one/shell_rivet.glb",
    "class": "shell",
    "ships": true,
-   "loader": "src/presentation/hero_assets.gd:38-40",
+   "loader": "src/presentation/hero_assets.gd SHELLS",
    "exception": {
     "draws": 15
    },
-   "exception_why": "PD-RIVET Hoberman mecha: the 10-draw base plus the placeholder Pilot (hidden in play by fit_pilot_into), class_accent on Pod (exhaust mouths), copper on WeaponRing (laser pods) and the spinning Drill (copper, lens); 14 drawn in play. Within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10: PD-0 base 10 plus up to 6 for machinery and the Pilot placeholder)",
+   "exception_why": "PD-RIVET Hoberman mecha: the 10-draw base plus the placeholder Pilot (hidden in play by fit_pilot_into), class_accent on Pod (exhaust mouths), copper on WeaponRing (collar studs, drill hanger) and the spinning Drill (copper, lens); 14 drawn in play. hero_assets mounts rivet_revolvers.glb (2 draws) under WeaponRing, so Rivet's mecha draws 16 in play, exactly the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10: PD-0 base 10 plus up to 6 for machinery and the Pilot placeholder; E1-09, wave 46)",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_rivet.py",
     "helper": "tools/blender/shell_base.py hoberman()",
@@ -40810,6 +40821,7 @@
   "ramp_flipper_clips",
   "relay_mast",
   "relay_stake_post",
+  "res://assets/models/world_one/rivet_revolvers.glb",
   "res://assets/models/world_one/shell_rivet.glb",
   "rescue_cage",
   "return_ramp_skin",
