@@ -30,7 +30,7 @@ Preconditions: `GODOT_BIN` set; the project imported; a display or `xvfb-run`. T
 - Apart from the sitting run, these commands were not run when this skill was written (13 November 2026); the film tool and its flags are the red team's and are documented in `scripts/redteam/README.md`. Run `node scripts/redteam/eye.mjs` with no flags to see the personas if a flag is refused.
 - The sitting run of 13 November logged 3,276 `The axis ... must be normalized` errors from the enemies' gait and motion scripts and 1,124 `Too many instances using shader instance variables` errors. The second may belong to the cloud's renderer; the first does not. A won run with a noisy log is not a clean run: read the counts.
 - The game still knows a bot is driving in a film (unlike `drive.sh`), so the launch take and the start-pick card do not show; [Start a run](./start-a-run.md) covers those by hand.
-- The bot is not a player: a finished run says the path is open, never that it is fun or fair. Bands and difficulty belong to `scrapkeep-lab` and the gate.
+- The bot is not a player: a finished run says the path is open, never that it is fun or fair. Bands and difficulty belong to the challenge band checks (`npm run sketch:world1-bands`, `npm run challenge:bands`) and the gate.
 - A planted death (`--death-at`) is a test plant: it proves the death screen and the way out, not that the hit was fair.
 - The film draws only the frames it keeps, so it is never a frame-time reading.
 - Cloud boxes play the synth music; a PC with synced stems plays the recorded band. Say which.
