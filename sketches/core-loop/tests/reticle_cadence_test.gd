@@ -1,6 +1,7 @@
 extends SceneTree
 
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -98,7 +99,7 @@ func _rivet() -> void:
 	var pat: Resource = Weapons.base(Weapons.RAPID_LASER)
 	var drv := WeaponDriver.new()
 	drv.reset(pat)
-	var tint: Color = Palette.COPPER
+	var tint: Color = ClassDef.RIVET_COLOR
 	var marks := AimReticle.cadence_marks(drv.state_snapshot(), tint)
 	_t.eq("Rivet at rest: six loaded chambers", _roles(marks, "chamber_loaded").size(), 6)
 	_t.eq("Rivet at rest: no spent or hot chamber", _roles(marks, "chamber_spent").size() + _roles(marks, "chamber_hot").size(), 0)
@@ -160,7 +161,8 @@ func _rivet() -> void:
 	marks = AimReticle.cadence_marks(snap, tint)
 	var hot: Array = _roles(marks, "chamber_hot")
 	_t.eq("Rivet notch hit: five hot rounds left after the first leaves", hot.size(), 5)
-	_t.check("Rivet hot rounds are copper", hot.all(func(m): return (m["color"] as Color).is_equal_approx(Palette.COPPER)))
+	_t.check("Rivet hot rounds are copper, his colour", hot.all(func(m): return (m["color"] as Color).is_equal_approx(Palette.COPPER)))
+	_t.check("Rivet's class colour is copper, so his hot rounds are", ClassDef.RIVET_COLOR.is_equal_approx(Palette.COPPER))
 	_t.check("Rivet hot rounds are larger than plain ones, so the size carries it too", float(hot[0]["r"]) > AimReticle.CHAMBER_R)
 	_t.eq("Rivet notch hit: the first chamber is spent", _roles(marks, "chamber_spent").size(), 1)
 	_frame_rules("Rivet hot", marks, [])

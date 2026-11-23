@@ -4,7 +4,6 @@ const AimStyle := preload("res://src/movement/aim_style.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const Palette := preload("res://src/core/palette.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
@@ -45,7 +44,7 @@ const BAND := 20.0
 # The weapon's timing instrument (PILOT-CADENCE section 5.3, LEGIBILITY section 14.1) sits inside
 # the reticle's ring at INSTRUMENT_R, round the aim point and clear of it: no mark comes nearer the
 # centre than DOT_CLEAR px, so the centre dot is never covered. Rivet's chambers are discs, a hot
-# round a size larger, a spent one a dim open ring; Sable's charge is an arc on a dark track, and
+# round a size larger in the pilot's colour (Rivet's copper), a spent one a dim open ring; Sable's charge is an arc on a dark track, and
 # her full-charge tick cuts a dark gap through it so it reads apart from the fill without colour.
 # Each mark sits on a dark backing.
 const INSTRUMENT_R := 10.0
@@ -447,17 +446,18 @@ static func cadence_key(snap: Dictionary) -> Array:
 static func cadence_marks(snap: Dictionary, class_color: Color) -> Array:
 	match String(snap.get("trigger", "")):
 		"press":
-			return _rivet_marks(snap) if int(snap.get("mag", 0)) > 0 else []
+			return _rivet_marks(snap, class_color) if int(snap.get("mag", 0)) > 0 else []
 		"tap_charge":
 			return _sable_marks(snap, class_color)
 	return []
 
 
 # Rivet: a cylinder of chambers clockwise from twelve in firing order. A spent chamber is a hollow
-# ring, a loaded one a bone disc, a hot round a larger copper disc. While the cylinder reloads the
+# ring, a loaded one a bone disc, a hot round a larger disc in the pilot's colour (copper: a hot
+# round is what the notch press made, PILOT-CADENCE section 5.2). While the cylinder reloads the
 # chambers give way to a sweep round the same ring and the notch on it: brackets while it waits,
 # solid mint while a press would hit it, solid slate once it is spent.
-static func _rivet_marks(snap: Dictionary) -> Array:
+static func _rivet_marks(snap: Dictionary, class_color: Color) -> Array:
 	var marks: Array = []
 	var bone := EventKinds.role_color("neutral")
 	var ink := Color(UiTokens.INK, BACKING_ALPHA)
@@ -498,7 +498,7 @@ static func _rivet_marks(snap: Dictionary) -> Array:
 		if i < spent:
 			marks.append({"shape": "ring", "role": "chamber_spent", "layer": "line", "at": at, "r": size, "width": 1.0, "color": Color(bone, 0.7)})
 		elif is_hot:
-			marks.append({"shape": "disc", "role": "chamber_hot", "layer": "line", "at": at, "r": size, "color": Palette.COPPER})
+			marks.append({"shape": "disc", "role": "chamber_hot", "layer": "line", "at": at, "r": size, "color": meter_fill_color(class_color)})
 		else:
 			marks.append({"shape": "disc", "role": "chamber_loaded", "layer": "line", "at": at, "r": size, "color": bone})
 	return marks
