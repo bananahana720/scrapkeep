@@ -158,7 +158,7 @@ func _initial_draw_offset(bolt: Dictionary) -> Vector3:
 	if bolt.has("draw_offset"):
 		var off: Vector3 = bolt["draw_offset"]
 		return off if off.is_finite() else Vector3.ZERO
-	if String(bolt.get("weapon_id", "")) == "rapid_laser" and String(bolt.get("source", "")) != "item_proc":
+	if String(bolt.get("weapon_id", "")) == "rapid_laser" and String(bolt.get("source", "weapon")) == "weapon":
 		var side := -1.0 if (_rivet_muzzle_shot % 2) == 0 else 1.0
 		_rivet_muzzle_shot += 1
 		return (bolt["right"] as Vector3) * (side * RIVET_MUZZLE_SIDE_M)
