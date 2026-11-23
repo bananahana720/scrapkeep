@@ -15,12 +15,17 @@ extends SceneTree
 # drill steps and 0.20 m lens face, the drill inside the sweep band the panels keep out of, and
 # the lens on DrillTip with the fitted shell's ring yawed 30 degrees (hero_assets fit_shell_into).
 # The sweep band grows to the heavy drill.
+# 2026-11-23 (E1-09, wave 46, ruling ek): rebuilt on E1-03's closed-bar base. The laser pods leave
+# the ring for rivet_revolvers.glb (rivet_revolvers_test), which hero_assets mounts under WeaponRing;
+# LaserMuzzle_L/R stay here, on its barrel tips. New checks: no pods left on the ring, and every
+# mesh but the hidden placeholder pilot is closed (no open or non-manifold edge), base and variant.
 
 # What it checks (P-UNITS PD-RIVET acceptance; ROSTER-LOOK sections 0 to 8):
 #   budget     shell class tris and verts; draws equal the registry row's exception.
 #   contract   no glass or requisition_tag slot, light or material_override (cage_contract_test).
 #   tree       32 hubs and 30 gaps on Core; Pod > Gyro > GyroInner, WeaponRing, Dome > Pilot;
 #              Drill, DrillTip and the laser muzzles under WeaponRing; Exhaust_L/R under Pod;
+#              no laser pods on the ring (its copper is the collar studs and the drill hanger);
 #              the cockpit controls (Lever, WinchLever, the lap bar and two pedals).
 #   drill      DrillTip faces forward on the centre line the parallel laser muzzles fire along;
 #              the lens sits on DrillTip with the ring yawed 30 degrees; 0.12 m across; three steps.
@@ -31,7 +36,8 @@ extends SceneTree
 #              lattice in the front lower gaps on both sides, inside the 0.985 core limit.
 #   colour     charcoal lattice enamel, bone seat.
 #   pod        sight cone empty; nothing past radius 1.0 below Y -0.6.
-#   variant    shell_rivet_calibrated: budget, contract, machinery at the same points.
+#   closed     every mesh but the placeholder Pilot: no open or non-manifold edge (POLISH.md).
+#   variant    shell_rivet_calibrated: budget, contract, closed, machinery at the same points.
 #   layers     shell_rivet_c2 to _c4: Core and Pod parts, detail budget and draws, panels inside
 #              the lattice, out of the sight cone and clear of the drill's yaw sweep; II all
 #              below Y -0.35. c5: Pod > WeaponRing heavy drill, one draw, five steps, a lens face
@@ -42,6 +48,7 @@ extends SceneTree
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Cage := preload("res://tests/cage_contract_test.gd")
+const Revolvers := preload("res://tests/rivet_revolvers_test.gd")
 const T := preload("res://tests/support/t.gd")
 
 const SHELL := "res://assets/models/world_one/shell_rivet.glb"
@@ -50,7 +57,7 @@ const LAYER := "res://assets/models/world_one/shell_rivet_c%d.glb"
 const RIG := "res://assets/models/pilot_rivet_anim.glb"
 const BUDGETS := "res://assets/asset_budgets.json"
 const REGISTRY := "res://assets/registry.json"
-const EXPECTED_CHECKS := 58
+const EXPECTED_CHECKS := 61
 const CORE_LIMIT := 0.985
 const LATTICE_OUTER := 0.975
 const LATTICE_INNER := 0.94
@@ -107,6 +114,7 @@ func _run() -> void:
 	_outline(shell)
 	_colours(shell)
 	_pod(shell)
+	_closed("shell", shell)
 	_variant(shell)
 	_layers()
 	_check_rig()
@@ -210,7 +218,14 @@ func _tree(shell: Node3D) -> void:
 		and pod.get_node_or_null("WeaponRing") != null and dome != null and dome.get_node_or_null("Pilot") is MeshInstance3D)
 	var ring := pod.get_node_or_null("WeaponRing") if pod != null else null
 	var on_ring := ["Drill", "DrillTip", "LaserMuzzle_L", "LaserMuzzle_R"].filter(func(n): return ring == null or ring.get_node_or_null(n) == null)
-	_t.check("drill and lasers ride WeaponRing", on_ring.is_empty() and ring.get_node("Drill") is MeshInstance3D, "missing %s" % [on_ring])
+	_t.check("drill and laser muzzles ride WeaponRing", on_ring.is_empty() and ring.get_node("Drill") is MeshInstance3D, "missing %s" % [on_ring])
+	# The laser pods sat on the band at 11 and 1 o'clock; the ring's copper is now the collar studs
+	# (under the band) and the drill hanger (on the centre line).
+	var pods := 0
+	if ring is MeshInstance3D:
+		for v in points(ring as MeshInstance3D, shell, "copper"):
+			pods += 1 if v.y > -0.03 and absf(v.x) > 0.1 else 0
+	_t.eq("no laser pods left on the ring", pods, 0)
 	var on_pod := ["Exhaust_L", "Exhaust_R"].filter(func(n): return pod.get_node_or_null(n) == null)
 	_t.check("exhausts ride Pod", on_pod.is_empty(), "missing %s" % [on_pod])
 	var missing := CONTROLS.filter(func(n): return at(pod, n) == null)
@@ -335,19 +350,31 @@ func _pod(shell: Node3D) -> void:
 	_t.eq("pod low reach", low, 0)
 
 
+func _closed(label: String, scene: Node3D) -> void:
+	var open := {}
+	for mi: MeshInstance3D in meshes(scene):
+		if mi.name == &"Pilot":
+			continue
+		var edges: Vector2i = Revolvers.open_edges(mi.mesh)
+		if edges != Vector2i.ZERO:
+			open[String(mi.name)] = edges
+	_t.check(label + " closed: no open or non-manifold edge", open.is_empty(), "open, non-manifold per mesh %s" % [open])
+
+
 # --- the Calibrated variant ----------------------------------------------------------------------
 
 func _variant(shell: Node3D) -> void:
 	var variant := _load(VARIANT)
 	_t.check("variant loads", variant != null, VARIANT)
 	if variant == null:
-		for i in 4:
+		for i in 5:
 			_t.check("variant skipped", false)
 		return
 	root.add_child(variant)
 	_budget("variant", variant, "shell", _exception(VARIANT))
 	var problems := Cage.contract_problems(variant)
 	_t.check("variant contract", problems.is_empty(), str(problems))
+	_closed("variant", variant)
 	var moved := []
 	for n in MACHINERY + CONTROLS:
 		var a := at(shell, n)

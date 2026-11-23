@@ -124,6 +124,12 @@ const SHELLS := {
 	"tally": "res://assets/models/world_one/shell_tally.glb",
 	"remembered_cannon": "res://assets/models/world_one/shell_cannon.glb",
 }
+# A pilot's weapon model, mounted at identity under the shell's WeaponRing (its origin is the ball
+# centre), so it yaws to the aim and banks with the ring, and the bank hull reads its vertices with
+# the ring's. Rivet's twin rivet revolvers are their own skinned file (E1-09, wave 46 3D blueprint
+# section 2.2): the shell had no triangle room left, and their bones need a skeleton of their own.
+const WEAPONS := {"runner_gunner": "res://assets/models/world_one/rivet_revolvers.glb"}
+const WEAPON_NODE := "Weapon"
 const DEFAULT_CLASS := "pylon_engineer"
 const CHUNKS_PATH := "res://assets/models/chunks.glb"
 const GATE_PATH := "res://assets/models/reward_gate.glb"
@@ -1299,6 +1305,24 @@ static func _split(scene: Node) -> Dictionary:
 	return {"core": core, "pod": pod}
 
 
+# Mounts the pilot's WEAPONS model under the pod's WeaponRing at identity, once, as WEAPON_NODE.
+# Returns it, or null when the pilot has none, the shell has no ring or the file is missing.
+func mount_weapon(pod: Node3D, pilot: String) -> Node3D:
+	var ring := pod.get_node_or_null("WeaponRing") as Node3D
+	if ring == null or not WEAPONS.has(pilot):
+		return null
+	var held := ring.get_node_or_null(WEAPON_NODE) as Node3D
+	if held != null:
+		return held
+	var weapon := _addon(String(WEAPONS[pilot])) as Node3D
+	if weapon == null:
+		return null
+	weapon.name = WEAPON_NODE
+	weapon.transform = Transform3D.IDENTITY
+	ring.add_child(weapon)
+	return weapon
+
+
 # Builds the shell under ball: HeroCore and HeroPod plus one holder per layer, painted with
 # tints, layers shown up to heft_class. pod_parent receives HeroPod (the player's level pod mount);
 # null puts it under ball (previews). The game's _fit, the class card preview and the customize
@@ -1322,6 +1346,7 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	pod.name = "HeroPod"
 	BallLooks.replate(ball_look(), core)
 	BallLooks.furnish(ball_look(), pod)
+	mount_weapon(pod, pilot)
 	var rec := {"core": core, "pod": pod, "layers": {}, "pilot": pilot, "variant": variant, "heft": 1, "shown": {}, "tints": tints}
 	var ring_holders: Array = []
 	for i in HEFT_LAYERS.size():
