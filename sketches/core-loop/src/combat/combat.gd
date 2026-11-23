@@ -614,7 +614,12 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.escape_window.connect(func(_seconds: float): _escape_act())
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
-	ctx.events.run_ended.connect(func(_won: bool): _clear_devices())
+	ctx.events.run_ended.connect(func(_won: bool):
+		_clear_devices()
+		weapon_driver.reset())
+	ctx.events.flow_changed.connect(func(state_name: String):
+		if state_name in ["summary", "title"]:
+			weapon_driver.reset())
 	ctx.events.run_started.connect(func(_class_id: String):
 		churn.reset(true)
 		boils.reset(true)
