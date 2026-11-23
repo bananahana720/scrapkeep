@@ -15,8 +15,9 @@ const T := preload("res://tests/support/t.gd")
 
 # The Fleet's and the Rogues' hands on the boss plate (LEGIBILITY.md section 14.3, ruling ek):
 #   - Brindle's hull is drawn in the Fleet's hand: a brass bezel on iron oxide with one notched corner,
-#     his two-word name in the Fleet's words face, every frame colour lawful for the Fleet; on the real
-#     arena hull too, as the HUD seats it;
+#     a rubber stamp whole on the 44 px plate and clear of the state glyph, his two-word name in the
+#     Fleet's words face and measured in it, every frame colour lawful for the Fleet; on the real arena
+#     hull too, as the HUD seats it, and a rogue that wakes during the fight does not take his plate;
 #   - a stage Warden and a stub boss's Warden keep the HUD panel they have always worn (no hand frame),
 #     with the same name and pips;
 #   - a rogue machine is drawn in a Rogue's hand: stencil ticks on near black, its crew number in the
@@ -129,6 +130,21 @@ func _fleet_plate() -> void:
 	var parts: Array = box.parts(Rect2(Vector2.ZERO, plate.size))
 	_t.eq("Brindle's card has one notched corner (six corners)", parts[0].points.size(), 6)
 	_t.check("Brindle's card has an inner bezel", _roles(box).has("bezel"), str(_roles(box)))
+	var frame := Rect2(Vector2.ZERO, Vector2(plate.size.x, BossPlate.SIZE.y))
+	var inked := PackedVector2Array()
+	for part in box.parts(frame):
+		if part.role == "stamp":
+			inked.append_array(part.points)
+	var stamp := Rect2(inked[0], Vector2.ZERO) if not inked.is_empty() else Rect2()
+	for point in inked:
+		stamp = stamp.expand(point)
+	_t.check("Brindle's 44 px plate carries its rubber stamp", _roles(box, frame).has("stamp"), str(_roles(box, frame)))
+	_t.check("the stamp sits whole inside the plate", frame.encloses(stamp.grow(1.0)), "stamp %s in %s" % [stamp, frame])
+	var glyph_end: float = plate.size.x - BossPlate.MARGIN - plate.stamp_room()
+	_t.check("the state glyph stops short of the stamp", glyph_end <= stamp.position.x - 2.0, "glyph ends %.1f, stamp starts %.1f" % [glyph_end, stamp.position.x])
+	var fleet_face: Font = UiFonts.face(UiTokens.Hand.FLEET)
+	var drawn_w := fleet_face.get_string_size("Admiral Brindle", HORIZONTAL_ALIGNMENT_LEFT, -1, BossPlate.FONT).x
+	_t.near("the name's room is measured in the Fleet's words face", plate.name_width(), maxf(BossPlate.NAME_WIDTH, drawn_w + BossPlate.GAP))
 	var bad := []
 	for part in parts:
 		if not ScrapFrame.lawful(UiTokens.Hand.FLEET, part.color):
@@ -279,4 +295,12 @@ func _run() -> void:
 		plate.queue_redraw()
 		await process_frame
 		_t.check("the seated hull plate draws in the tree", plate.is_visible_in_tree())
+		# A rogue machine that wakes while Brindle fights does not take the plate from his hull.
+		var rogue: Node3D = _game.ctx.spawner.spawn_enemy("rogue_crane", Vector3(-30.0, 0.0, 0.0))
+		_game.world.rogue = rogue
+		await process_frame
+		await process_frame
+		_t.check("a rogue woken mid-fight is live", is_instance_valid(rogue) and not rogue.is_dead())
+		_t.check("Brindle's hull keeps the plate while a rogue is awake", _game.hud.boss_plate == plate and plate.hand() == UiTokens.Hand.FLEET,
+			"hand %s" % [plate.hand() if is_instance_valid(plate) else "freed"])
 	quit(_t.verdict())

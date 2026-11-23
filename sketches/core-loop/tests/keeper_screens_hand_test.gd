@@ -25,11 +25,12 @@ const T := preload("res://tests/support/t.gd")
 #     the last draw put down (drawn_frames, drawn_marks), and the next-shift note from the plate the
 #     summary builds in a booted game;
 #   - colour law, on the colours those frames and gauges actually draw (hex or computed alike): no brass,
-#     purple or mint, save a pilot's own colour on that pilot's own card or plate (the one "yours"
-#     accent, scrap_frame.gd); planted brass, purple and mint are caught;
+#     purple or mint on any of them, a pilot's own colour included (Sable's cards wear her screen colour,
+#     class_def.gd SABLE_SCREEN), and every shop tier's frame is lawful on the Keeper's hand; planted
+#     brass, purple and mint are caught;
+#   - Brindle's call-in plate is the Fleet's hand, stamped, and every caller's name tag holds 4.5:1;
 #   - the Keeper screens' scripts name no purple, brass only for Brindle's Fleet call-in plate, mint only
-#     as the common reward rung's frame (a tier meaning, shop_tile.gd RARITY) and world 3's comic tint,
-#     and build no flat plate or generic panel;
+#     as world 3's comic tint, and build no flat plate or generic panel;
 #   - with motion on, a Keeper card plate leans and the tree pick's taken card pops; with less motion
 #     nothing leans, the taken card holds its size, and Moss's relent and restart come up whole and
 #     straight;
@@ -42,9 +43,8 @@ const KEEPER := UiTokens.Hand.KEEPER
 # Foreman surfaces are the old works' hand).
 const KEEPER_FILES := ["class_card.gd", "class_kit.gd", "start_pick_card.gd", "workshop.gd", "tree_pick.gd", "tree_card.gd",
 	"shop_counter.gd", "shop_tile.gd", "moss_bubble.gd", "summary_rows.gd", "comic_page.gd", "caller_tile.gd"]
-# Mint a Keeper script may name, by file: the common reward rung's frame (a tier meaning) and world 3's
-# comic panel tint, slate with a fifth of mint in it.
-const MINT_ALLOWED := {"shop_tile.gd": 1, "comic_page.gd": 1}
+# Mint a Keeper script may name, by file: world 3's comic panel tint, slate with a fifth of mint in it.
+const MINT_ALLOWED := {"comic_page.gd": 1}
 # Brass a Keeper script may name: Brindle's own call-in plate, which is the Fleet's hand.
 const BRASS_ALLOWED := {"caller_tile.gd": 1}
 
@@ -134,24 +134,20 @@ func _near(a: Color, b: Color) -> bool:
 	return Vector3(a.r - b.r, a.g - b.g, a.b - b.b).length() < 0.08
 
 
-# A colour drawn from the pilot's own (the edge, and the rivets, shine and dots made from it).
-func _pilot_tone(c: Color, pilot: Color) -> bool:
-	return pilot.s > 0.05 and absf(angle_difference(c.h * TAU, pilot.h * TAU)) < 0.05 and absf(c.s - pilot.s) < 0.35
-
-
-# The faults in one frame: not a ScrapFrame, not the Keeper's, or a part in a forbidden colour.
-func _faults(box: StyleBox, where: String, pilot := Color(0, 0, 0, 0)) -> Array:
+# The faults in one frame: not a ScrapFrame, not in the hand it should be, or a part in a colour that
+# hand may not wear. No pilot's colour is let off.
+func _faults(box: StyleBox, where: String, which := KEEPER) -> Array:
 	if box is StyleBoxEmpty:
 		return []
 	if box == null or box.get_script() != ScrapFrame:
 		return ["%s is not a ScrapFrame" % where]
 	var out := []
-	if box.hand != KEEPER:
+	if box.hand != which:
 		out.append("%s is hand %d" % [where, box.hand])
 	for part in box.parts(RECT):
 		var family := _family(part.color)
-		if family != "" and not (pilot.a > 0.0 and _pilot_tone(part.color, pilot)):
-			out.append("%s %s is %s (%s)" % [where, part.role, family, part.color.to_html(false)])
+		if (family != "" and not (family == "brass" and which == UiTokens.Hand.FLEET)) or not ScrapFrame.lawful(which, part.color):
+			out.append("%s %s is %s (%s)" % [where, part.role, family if family != "" else "unlawful", part.color.to_html(false)])
 	return out
 
 
@@ -187,14 +183,14 @@ func _pilot_cards() -> void:
 		var faults := []
 		var found := _boxes(card, String(def.id))
 		for pair in found:
-			faults.append_array(_faults(pair[0], pair[1], def.color))
+			faults.append_array(_faults(pair[0], pair[1]))
 			pair[0].draw(canvas, RECT)
 		_t.check("%s's card wears its states and tags in the Keeper's hand" % def.display_name, found.size() >= 5, str(found.size()))
 		_t.eq("%s's card frames are the Keeper's and lawful" % def.display_name, faults, [])
 		card.set_locked(true, "")
 		var locked := []
 		for pair in _boxes(card, "%s locked" % def.id):
-			locked.append_array(_faults(pair[0], pair[1], def.color))
+			locked.append_array(_faults(pair[0], pair[1]))
 		_t.eq("%s's locked card stays in the Keeper's hand" % def.display_name, locked, [])
 		card.queue_free()
 	RenderingServer.free_rid(canvas)
@@ -207,13 +203,16 @@ func _tree_cards() -> void:
 		root.add_child(card)
 		var faults := []
 		for pair in _boxes(card, "%s tree card" % def.id):
-			faults.append_array(_faults(pair[0], pair[1], def.color))
-		faults.append_array(_faults(card._slot, "%s tree slot" % def.id, def.color))
+			faults.append_array(_faults(pair[0], pair[1]))
+		faults.append_array(_faults(card._slot, "%s tree slot" % def.id))
+		# The colour the lifted slot's edge, the glyph and the notches take.
+		if not ScrapFrame.lawful(KEEPER, card.color) or _family(card.color) != "":
+			faults.append("%s tree card's colour is %s" % [def.id, card.color.to_html(false)])
 		var ring: StyleBox = card.get_theme_stylebox("focus")
 		_t.check("%s's tree focus plate is its edge alone" % def.display_name, ring.bg_color.a == 0.0 and not ring.rivets
 			and not ring.halftone and ring.tape < 0.0)
 		card.mark_taken()
-		faults.append_array(_faults(card.get_theme_stylebox("disabled"), "%s taken" % def.id, def.color))
+		faults.append_array(_faults(card.get_theme_stylebox("disabled"), "%s taken" % def.id))
 		_t.eq("%s's tree card is the Keeper's and lawful" % def.display_name, faults, [])
 		card.queue_free()
 
@@ -230,6 +229,9 @@ func _shop() -> void:
 		faults.append_array(_faults(tile._ring, "tile ring %s" % rec))
 		_t.check("tile %d's focus ring draws no fill and no fastener" % i, tile._ring.bg_color.a == 0.0 and not tile._ring.rivets)
 		tile.free()
+	for rung in ShopTile.RARITY:
+		if not ScrapFrame.lawful(KEEPER, ShopTile.RARITY[rung]["color"]) or _family(ShopTile.RARITY[rung]["color"]) != "":
+			faults.append("the %s tier's frame is %s" % [rung, ShopTile.RARITY[rung]["color"].to_html(false)])
 	var counter := ShopCounter.new()
 	faults.append_array(_faults(counter._frame, "Moss's counter"))
 	_t.check("Moss's counter is taped where it joins the hatch", counter._frame.tape >= 0.0)
@@ -257,17 +259,24 @@ func _callers() -> void:
 		tile.present(id, "Probe", 1.0)
 		await _frames(2)
 		var drawn: Array = tile.drawn_frames()
-		if tile.hands() == "keeper":
-			var pilot: Color = tile.tint() if not CallerTile.CALLERS.has(id) else Color(0, 0, 0, 0)
+		if tile.hands() in ["keeper", "fleet"]:
+			var which := KEEPER if tile.hands() == "keeper" else UiTokens.Hand.FLEET
 			var faults := []
 			for box in drawn:
-				faults.append_array(_faults(box, "%s plate" % id, pilot))
-			_t.check("%s's call-in plate is drawn in the Keeper's hand" % id, drawn.size() == 2, str(drawn.size()))
+				faults.append_array(_faults(box, "%s plate" % id, which))
+			_t.check("%s's call-in plate is drawn in its maker's hand (%d)" % [id, which], drawn.size() == 2, str(drawn.size()))
 			_t.eq("%s's call-in plate draws only lawful colours" % id, faults, [])
 		else:
-			_t.eq("%s's call-in plate is another hand's, not the Keeper's" % id, drawn, [])
+			_t.eq("%s's call-in plate is the old works' or Moss's own, not a scrap frame" % id, drawn, [])
+		var ink: Color = CallerTile.tag_ink(tile.tint())
+		_t.check("%s's name tag holds 4.5:1" % id, UiTokens.contrast(ink, tile.tint()) >= 4.5, "%.2f" % UiTokens.contrast(ink, tile.tint()))
+		if id == "brindle":
+			var plate_rect := Rect2(Vector2.ZERO, Vector2(CallerTile.SIDE, CallerTile.SIDE))
+			var stamps: Array = drawn.filter(func(box): return box.parts(plate_rect).any(func(part): return part.role == "stamp"))
+			_t.eq("Brindle's call-in plate carries the Fleet's rubber stamp once", stamps.size(), 1)
 		tile.queue_free()
 	_t.eq("Brindle stays the Fleet's brass", CallerTile.CALLERS["brindle"]["color"], Palette.BRASS)
+	_t.check("the pump crew's tag was the short one: charcoal on copper is under 4.5:1", UiTokens.contrast(Palette.CHARCOAL, Palette.COPPER) < 4.5)
 
 
 # A start-pick card with the ladder open draws three tile plates and the tier gauges; each is read back.
@@ -323,7 +332,7 @@ func _sources() -> void:
 		var mint := text.count("Palette.ARC")
 		if mint > int(MINT_ALLOWED.get(file, 0)):
 			bad.append("%s names mint %d times" % [file, mint])
-	_t.eq("the Keeper screens name no brass, purple, flat plate or bare frame, and mint only as a tier", bad, [])
+	_t.eq("the Keeper screens name no brass, purple, flat plate or bare frame, and mint only as world 3's tint", bad, [])
 
 
 func _points(box: StyleBox) -> Array:
