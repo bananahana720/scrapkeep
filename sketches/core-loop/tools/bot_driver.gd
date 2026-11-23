@@ -3186,7 +3186,7 @@ func _explorer_chain(delta: float) -> void:
 			if not kit.hooked:
 				_clear_chain_hand()
 	_drive(player.ball_position(), _chain_first if _chain_phase == "takeoff" else _chain_second, delta)
-	source.hold.erase("fire_held")
+	_drop_fire()
 	source.hold.erase("shift_held")
 	source.press.erase("shift_pressed")
 
@@ -4083,7 +4083,7 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 	var player = game.player
 	if policy == "completionist" and _chain_phase != "":
 		_drive(player.ball_position(), _chain_first if _chain_phase == "takeoff" else _chain_second, delta)
-		source.hold.erase("fire_held")
+		_drop_fire()
 		source.hold.erase("shift_held")
 		source.press.erase("shift_pressed")
 		return
@@ -4667,11 +4667,20 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 	_cast_hands()
 
 
+# The chain move fires nothing: the held button and, for the cadence pilots, the press and the
+# release _cadence_fire_hand turns it into.
+func _drop_fire() -> void:
+	source.hold.erase("fire_held")
+	source.press.erase("fire_pressed")
+	source.press.erase("fire_released")
+
+
 # E1-06 fire hand for cadence baselines (PILOT-CADENCE.md §§3.1–3.2): plays Rivet's press /
 # active-reload notch and Sable's tap-spark / hold-arc release cleanly with perfect timing
 # for every band (E1-08 later turns window hit share into a per-band dial).
 func _cadence_fire_hand() -> void:
-	if _cast_phase != "":
+	# The traversal hand never fires (_traverse); its cast clicks go out after the press gate.
+	if _cast_phase != "" or policy == "traversal":
 		return
 	var combat = game.get("combat")
 	if combat == null or combat.get("weapon_driver") == null:

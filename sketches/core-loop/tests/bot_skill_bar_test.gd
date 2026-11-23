@@ -10,6 +10,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const T := preload("res://tests/support/t.gd")
+const Weapons := preload("res://src/combat/weapons.gd")
 
 # The bot's skill-bar adapter (SKILL-BAR.md section 8, unit B4 in section 10).
 #
@@ -220,6 +221,7 @@ func _hand_cases() -> void:
 	driver._cast_phase = ""
 	abilities.snap_back("test")
 	_traversal_cases()
+	_cadence_fire_cases()
 	_ultimate_cases()
 
 
@@ -252,6 +254,40 @@ func _traversal_cases() -> void:
 	driver._last_press_tick = -1000000
 	driver._gate_presses()
 	_t.check("11 slot_pick 0 (slot 1) passes the gate as a press", driver.source.press.get("slot_pick", -1) == 0, "press %s" % [driver.source.press])
+
+
+# E1-06b: Rivet's press and Sable's tap-charge turn the bot's held fire into presses. The traversal
+# pilot never fires (its cast clicks go out after the press gate) and the completionist's chain move
+# fires nothing; a skipper tick on the same trigger is the control that the hand is armed.
+func _cadence_fire_cases() -> void:
+	var drv = _game.combat.weapon_driver
+	var ball: Vector3 = _game.player.ball_position()
+	var ahead: Vector3 = ball + Vector3.FORWARD * 20.0
+	for wid in [Weapons.RAPID_LASER, Weapons.ARC_CASTER]:
+		drv.reset(Weapons.base(wid))
+		var skipper = _fresh("skipper")
+		skipper.source.hold = {"fire_held": true}
+		skipper.source.press = {}
+		skipper._cadence_fire_hand()
+		_t.check("c1 %s control: a skipper tick turns held fire into a press" % wid, skipper.source.press.get("fire_pressed", false),
+			"trigger %s press %s" % [drv.state_snapshot()["trigger"], skipper.source.press])
+		var traverse = _fresh("traversal")
+		traverse.source.hold = {}
+		traverse.source.press = {}
+		traverse._drive(ahead, null, DT)
+		_t.check("c2 %s: a traversal drive tick sends no fire_pressed or fire_released" % wid,
+			not traverse.source.press.has("fire_pressed") and not traverse.source.press.has("fire_released"),
+			"press %s hold %s" % [traverse.source.press, traverse.source.hold])
+		var chain = _fresh("completionist")
+		chain._chain_phase = "takeoff"
+		chain.source.hold = {}
+		chain.source.press = {}
+		chain._act(ahead, null, DT)
+		_t.check("c3 %s: the completionist's chain move sends no fire" % wid,
+			not chain.source.press.has("fire_pressed") and not chain.source.press.has("fire_released")
+			and not chain.source.hold.has("fire_held"), "press %s hold %s" % [chain.source.press, chain.source.hold])
+		chain._chain_phase = ""
+	drv.reset(_game.combat.pattern(_game.combat.active_weapon()))
 
 
 func _ultimate_cases() -> void:
