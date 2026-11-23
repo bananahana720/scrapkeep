@@ -897,6 +897,9 @@ func _quip_from(class_id: String) -> void:
 	_show_quip(speaker, words)
 	_face_ball(figure)
 	pilot_quipped.emit(speaker, String(row["id"]), words)
+	var audio = game.audio() if game != null and game.has_method("audio") else null
+	if audio != null:
+		audio.call_in("camp_quip", speaker, words)
 
 
 # The pilot turns the short way round until their face is to the ball, and cheers. A pilot model faces its local -Z

@@ -93,8 +93,51 @@ func _initialize() -> void:
 		for j in range(i + 1, FAMILIES.size()):
 			_t.check("%s and %s differ" % [FAMILIES[i], FAMILIES[j]], a != SfxBank.samples(FAMILIES[j]))
 	_motifs()
+	_w46_own(tables, blip)
 	_write()
 	quit(_t.verdict())
+
+
+# Wave 46 C2/C3/C4 own cues: Works sluice valve warning/open, Foreman's Kindness chime, Shift Boss quick-sync horn and shift-over sigh.
+const W46_OWN := {
+	"sluice_valve_warning": ["threat_whistle", "WORLD_ROWS:sluice_warning", 0.4, 1.2, true, true],
+	"sluice_valve_open": ["slam_boom", "WORLD_ROWS:sluice_open", 0.3, 0.85, false, false],
+	"kindness_chime": ["", "WORLD_ROWS:kindness_offered", 0.2, 0.9, false, true],
+	"quick_sync_horn": ["", "WORLD_ROWS:quick_sync", 0.2, 0.8, false, true],
+	"shift_over_sigh": ["", "WORLD_ROWS:shift_over", 0.3, 1.0, false, false],
+}
+
+
+func _w46_own(tables: Dictionary, blip: int) -> void:
+	var looped := 0
+	var bakes := {}
+	for id in W46_OWN:
+		looped += 1
+		var spec: Array = W46_OWN[id]
+		var standin := String(spec[0])
+		var fact := String(spec[1])
+		var buf := SfxBank.samples(id)
+		var seconds := float(buf.size()) / float(SfxBank.RATE)
+		_t.check("%s has a recipe and a level" % id, SfxBank.has_recipe(id) and SfxBank.plays_own(id) and SfxBank.TRIM_DB.has(id))
+		_t.check("%s bakes its own sound, not the blip" % id, buf.size() != blip)
+		if standin != "":
+			_t.check("%s sits no louder than %s" % [id, standin], SfxBank.trim_db(id) <= SfxBank.trim_db(standin), "%.1f vs %.1f" % [SfxBank.trim_db(id), SfxBank.trim_db(standin)])
+			_t.check("%s differs from %s" % [id, standin], buf != SfxBank.samples(standin))
+			_lists_check(id, standin)
+		_true_peak_check(id)
+		_t.check("%s lasts %.2f to %.2f s" % [id, spec[2], spec[3]], seconds >= float(spec[2]) and seconds <= float(spec[3]), "%.3f s" % seconds)
+		if id in SfxBank.LANDINGS:
+			_t.check("%s is no longer than slam_boom" % id, buf.size() <= SfxBank.samples("slam_boom").size(), "%.3f s" % seconds)
+		var row: Dictionary = tables[fact.get_slice(":", 0)][fact.get_slice(":", 1)]
+		_t.eq("%s is what %s hears now" % [id, fact], Rows.heard(row), id)
+		_t.eq("%s is %s danger sound" % [id, "a" if bool(spec[4]) else "not a"], id in SfxBank.DANGER_SOUNDS, bool(spec[4]))
+		_t.eq("%s %s the live key" % [id, "follows" if bool(spec[5]) else "ignores"], id in SfxBank.KEYED_SOUNDS, bool(spec[5]))
+		for other in bakes:
+			_t.check("%s and %s differ" % [id, other], buf != bakes[other])
+		bakes[id] = buf
+	_t.check("sluice cues differ from arena stand-ins", SfxBank.samples("sluice_valve_warning") != SfxBank.samples("arena_wave_whistle")
+		and SfxBank.samples("sluice_valve_open") != SfxBank.samples("arena_lock_slam"))
+	_t.check("the w46 loop ran over all 5", looped == W46_OWN.size() and looped == 5, str(looped))
 
 
 # Each class hears the three motif cues in its own motif: Rows resolves them through the class, the notes are the
