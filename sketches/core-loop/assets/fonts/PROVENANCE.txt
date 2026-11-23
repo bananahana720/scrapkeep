@@ -1,1 +1,7 @@
+Every face here is under the SIL Open Font License 1.1 and copied byte for byte from its source: no subsetting, renaming or other change, so each keeps its own name (OFL condition 3 reserves "Plex").
+
 NotoSans-Bold.ttf (2.015) and NotoSansMono-Bold.ttf (2.014) are copied unmodified from Arch noto-fonts 1:2026.09.01-1 (/usr/share/fonts/noto/) on 2026-09-27; SIL OFL 1.1, text in OFL.txt.
+
+ArchivoBlack-Regular.ttf (Archivo Black 1.006, 90988 bytes, sha256 dd9a89a019b4849f66ab75455fe7bdf931311042cbb0f0f97acc061539703180), the Keepers' poster face (LEGIBILITY.md section 14.3, ruling ek), from https://github.com/google/fonts/blob/94a7d81318e438525a5285e07ab72c050fdfeb44/ofl/archivoblack/ArchivoBlack-Regular.ttf on 2026-11-23 (Google Fonts builds it from https://github.com/Omnibus-Type/ArchivoBlack commit 95df3c54d818473a3e362f30ae3059bd85b80036). Copyright 2017 The Archivo Black Project Authors (https://github.com/Omnibus-Type/ArchivoBlack). SIL OFL 1.1, text in ArchivoBlack-OFL.txt, copied from the same google/fonts commit.
+
+IBMPlexSans-SemiBold.ttf (IBM Plex Sans SemiBold 3.006, 209768 bytes, sha256 c51119b25f4a296da2b66edf3201b9aa1735091ed7efc1fca0313346f3851a4d), the old works' corporate face (LEGIBILITY.md section 14.3, ruling ek), from https://github.com/IBM/plex/blob/bc6a7e4b37634eb79785d59781893db63ee3edcb/packages/plex-sans/fonts/complete/ttf/IBMPlexSans-SemiBold.ttf on 2026-11-23. Copyright 2017 IBM Corp. with Reserved Font Name "Plex". SIL OFL 1.1, text in IBMPlexSans-OFL.txt, copied from license.txt in the same folder at the same commit.
