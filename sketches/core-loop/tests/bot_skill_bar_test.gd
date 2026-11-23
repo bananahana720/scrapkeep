@@ -10,6 +10,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const T := preload("res://tests/support/t.gd")
+const Weapons := preload("res://src/combat/weapons.gd")
 
 # The bot's skill-bar adapter (SKILL-BAR.md section 8, unit B4 in section 10).
 #
@@ -220,6 +221,8 @@ func _hand_cases() -> void:
 	driver._cast_phase = ""
 	abilities.snap_back("test")
 	_traversal_cases()
+	_cadence_fire_cases()
+	_chain_fire_cases()
 	_ultimate_cases()
 
 
@@ -252,6 +255,76 @@ func _traversal_cases() -> void:
 	driver._last_press_tick = -1000000
 	driver._gate_presses()
 	_t.check("11 slot_pick 0 (slot 1) passes the gate as a press", driver.source.press.get("slot_pick", -1) == 0, "press %s" % [driver.source.press])
+
+
+# E1-06b: Rivet's press and Sable's tap-charge turn the bot's held fire into presses. The traversal
+# pilot never fires (its cast clicks go out after the press gate) and the completionist's chain move
+# fires nothing; a skipper tick on the same trigger is the control that the hand is armed.
+func _cadence_fire_cases() -> void:
+	var drv = _game.combat.weapon_driver
+	var ball: Vector3 = _game.player.ball_position()
+	var ahead: Vector3 = ball + Vector3.FORWARD * 20.0
+	for wid in [Weapons.RAPID_LASER, Weapons.ARC_CASTER]:
+		drv.reset(Weapons.base(wid))
+		var skipper = _fresh("skipper")
+		skipper.source.hold = {"fire_held": true}
+		skipper.source.press = {}
+		skipper._cadence_fire_hand()
+		_t.check("c1 %s control: a skipper tick turns held fire into a press" % wid, skipper.source.press.get("fire_pressed", false),
+			"trigger %s press %s" % [drv.state_snapshot()["trigger"], skipper.source.press])
+		var traverse = _fresh("traversal")
+		traverse.source.hold = {}
+		traverse.source.press = {}
+		traverse._drive(ahead, null, DT)
+		_t.check("c2 %s: a traversal drive tick sends no fire_pressed or fire_released" % wid,
+			not traverse.source.press.has("fire_pressed") and not traverse.source.press.has("fire_released"),
+			"press %s hold %s" % [traverse.source.press, traverse.source.hold])
+		var chain = _fresh("completionist")
+		chain._chain_phase = "takeoff"
+		chain.source.hold = {}
+		chain.source.press = {}
+		chain._act(ahead, null, DT)
+		_t.check("c3 %s: the completionist's chain move sends no fire" % wid,
+			not chain.source.press.has("fire_pressed") and not chain.source.press.has("fire_released")
+			and not chain.source.hold.has("fire_held"), "press %s hold %s" % [chain.source.press, chain.source.hold])
+		chain._chain_phase = ""
+	drv.reset(_game.combat.pattern(_game.combat.active_weapon()))
+
+
+# E1-06b fix round 1: the chain move drops only its own fire. Every other hand's fire_pressed goes out
+# as before E1-06: the slot-3 click on a two-hook takeoff (_harpoon_hand casts, starts the chain,
+# then _act drives it on the same tick) and Tally's card press.
+func _chain_fire_cases() -> void:
+	var abilities = _game.player.abilities
+	var ahead: Vector3 = _game.player.ball_position() + Vector3.FORWARD * 20.0
+	abilities.refill()
+	abilities.snap_back("test")
+	var takeoff = _fresh("completionist")
+	takeoff.source.hold = {}
+	takeoff.source.press = {}
+	var queued: bool = takeoff._cast(3)
+	takeoff._chain_phase = "takeoff"
+	takeoff._act(ahead, null, DT)
+	_t.check("c4 a chain takeoff keeps the slot-3 cast's pick and click on one tick", queued
+		and takeoff.source.press.get("slot_pick", -1) == 2 and takeoff.source.press.get("fire_pressed", false),
+		"cast %s press %s hold %s" % [queued, takeoff.source.press, takeoff.source.hold])
+	takeoff._chain_phase = ""
+	takeoff._cast_phase = ""
+	abilities.snap_back("test")
+	var weapon: String = abilities.id_of(AbilityState.WEAPON)
+	abilities.swap(AbilityState.WEAPON, "ledger_reader")
+	var card = _fresh("completionist")
+	card._chain_phase = "takeoff"
+	card.source.hold = {}
+	card.source.press = {}
+	card._act(ahead, null, DT)
+	_t.check("c5 Tally's card press goes out on a chain-move tick, with the held button off",
+		card.source.press.get("fire_pressed", false) and not card.source.hold.has("fire_held"),
+		"press %s hold %s" % [card.source.press, card.source.hold])
+	card._chain_phase = ""
+	abilities.swap(AbilityState.WEAPON, weapon)
+	abilities.refill()
+	abilities.snap_back("test")
 
 
 func _ultimate_cases() -> void:

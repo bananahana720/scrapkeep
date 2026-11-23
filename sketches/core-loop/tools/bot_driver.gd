@@ -644,6 +644,8 @@ var _chain_first: Node3D = null
 var _chain_second: Node3D = null
 var _chain_rose := false
 var _chain_launch_y := 0.0
+# True only inside _chain_drive's _drive call: the cadence hand stays out of the chain move.
+var _chain_driving := false
 # The latch arm (_anchor_fight): the anchor Warden's last height, its vertical speed as the
 # ball sees it, whether the ball was on its line last tick, how long a staggered line has hung
 # below the open point, the haul made in this stagger (and whether from over the open point)
@@ -3185,7 +3187,16 @@ func _explorer_chain(delta: float) -> void:
 			_harpoon_commit = kit.hooked
 			if not kit.hooked:
 				_clear_chain_hand()
-	_drive(player.ball_position(), _chain_first if _chain_phase == "takeoff" else _chain_second, delta)
+	_chain_drive(delta)
+
+
+# The chain move rides the line and fires nothing of its own: the held button comes off, and the
+# cadence hand sends no press or release while _drive runs. Any other hand's fire_pressed (a cast
+# click, Tally's card press) goes out as before E1-06.
+func _chain_drive(delta: float) -> void:
+	_chain_driving = true
+	_drive(game.player.ball_position(), _chain_first if _chain_phase == "takeoff" else _chain_second, delta)
+	_chain_driving = false
 	source.hold.erase("fire_held")
 	source.hold.erase("shift_held")
 	source.press.erase("shift_pressed")
@@ -4082,10 +4093,7 @@ func _gate_round_props(ball: Vector3, target: Vector3, delta: float) -> Vector3:
 func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true) -> void:
 	var player = game.player
 	if policy == "completionist" and _chain_phase != "":
-		_drive(player.ball_position(), _chain_first if _chain_phase == "takeoff" else _chain_second, delta)
-		source.hold.erase("fire_held")
-		source.hold.erase("shift_held")
-		source.press.erase("shift_pressed")
+		_chain_drive(delta)
 		return
 	if player.kit.mounted:
 		_turret(aim, delta)
@@ -4671,7 +4679,9 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 # active-reload notch and Sable's tap-spark / hold-arc release cleanly with perfect timing
 # for every band (E1-08 later turns window hit share into a per-band dial).
 func _cadence_fire_hand() -> void:
-	if _cast_phase != "":
+	# The traversal hand never fires (_traverse); its cast clicks go out after the press gate. The
+	# chain move fires nothing of its own (_chain_drive).
+	if _cast_phase != "" or policy == "traversal" or _chain_driving:
 		return
 	var combat = game.get("combat")
 	if combat == null or combat.get("weapon_driver") == null:
