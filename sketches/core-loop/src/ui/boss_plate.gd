@@ -6,6 +6,8 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # The posture Warden's fight as one plate (LEGIBILITY section 4): its name, four health
 # chunks, the guard bar and one state glyph. It draws itself and reads one posture body (a
@@ -17,6 +19,11 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 # cracked and dim, phases to come dark. At each turn the spent diamond cracks with a pop and
 # two shards over the transition beat, and the next one lights. A fight without phases shows
 # no diamonds, so a stage Warden's plate is unchanged.
+#
+# The plate is drawn in the hand of whoever made what it shows (LEGIBILITY section 14.3, ruling
+# ek): Brindle's hull in the Fleet's brass bezel on iron oxide, and a rogue machine in a Rogue's
+# stencil ticks on near black with its crew number stencilled in the Rogue face and no words: no
+# pips, its health on the bar, the open glyph while it is vented. A Warden keeps the HUD panel.
 
 const SIZE := Vector2(420.0, 44.0)
 const GLANCE_SECONDS := 0.6
@@ -39,6 +46,12 @@ const PHASE_DROP := PHASE * 0.5
 const CRACK_SECONDS := 0.9
 const CRACK_POP := 0.5
 const LIGHT_SECONDS := 0.4
+# A Warden's plate is in no maker's hand yet: it keeps the HUD panel it has always worn.
+const NO_HAND := -1
+# The serial that fixes a hand frame's quirks, so the plate looks the same on every redraw.
+const SERIAL := 46
+# A Rogue's crew number is stencilled one step up from the name.
+const STENCIL := UiTokens.LABEL
 # Reduced motion (Game.set_reduced_motion keeps it current): the crack shows at once, no pop or shards.
 static var reduced_motion := false
 
@@ -85,17 +98,48 @@ func unbind() -> void:
 	queue_redraw()
 
 
-# Whether the plate shows anything: a live Warden on the posture rule.
+# Whether the plate shows anything: a live Warden on the posture rule, or a live rogue machine.
 func active() -> bool:
 	if (_warden != null or _events != null) and not is_instance_valid(_warden):
 		unbind()
-	return is_instance_valid(_warden) and _warden.has_method("fight") and not _warden.is_dead() and _warden.fight() == "posture"
+	if not is_instance_valid(_warden):
+		return false
+	var fights: bool = rogue() or (_warden.has_method("fight") and _warden.fight() == "posture")
+	return fights and not _warden.is_dead()
 
 
-# The one thing the plate says in words: the name, two words or fewer. Nothing is drawn
-# as a number.
+# The hand the plate is drawn in: the Fleet's for Brindle's hull, a Rogue's for a rogue machine,
+# else NO_HAND.
+func hand() -> int:
+	if rogue():
+		return UiTokens.Hand.ROGUE
+	if is_instance_valid(_warden) and _fleet_body():
+		return UiTokens.Hand.FLEET
+	return NO_HAND
+
+
+# Whether the bound body is a rogue machine: one whose row carries a crew number.
+func rogue() -> bool:
+	return crew() != ""
+
+
+# The rogue machine's crew number (Rogue.ROWS "crew"), the one mark its plate stencils; "" for any
+# other body.
+func crew() -> String:
+	if not is_instance_valid(_warden):
+		return ""
+	var row = _warden.get("row")
+	return String(row.get("crew", "")) if row is Dictionary else ""
+
+
+# The one thing the plate says in words: the name, two words or fewer, and none on a Rogue's.
 func drawn_words() -> Array:
 	return Array(plate_name().split(" ", false))
+
+
+# The one number the plate draws: a Rogue's crew number; "" on every other plate.
+func drawn_number() -> String:
+	return crew() if active() else ""
 
 
 # Whether the plate keeps its name off while the arrival card says it (one voice at a time). The
@@ -117,22 +161,29 @@ func plate_name() -> String:
 
 # The bound body's name, whether or not its posture fight is live yet (the plate's width is set at bind).
 func _name() -> String:
-	# A stub boss names its Warden after the world's boss row ("plate_name" meta); a stage
-	# Warden names itself by family; any other posture body (Brindle's hull) is the boss
-	# arena's own row.
+	# A rogue machine has no name on its plate, only its number. A stub boss names its Warden
+	# after the world's boss row ("plate_name" meta); a stage Warden names itself by family; any
+	# other posture body (Brindle's hull) is the boss arena's own row.
+	if rogue():
+		return ""
 	if _warden.has_meta("plate_name"):
 		return String(_warden.get_meta("plate_name"))
-	if _warden.get("family") == null:
+	if _fleet_body():
 		return String(EventKinds.hud("boss_arena_entered"))
 	var variant = _warden.get("variant")
 	return Roster.warden_name(String(_warden.family), String(variant) if variant != null else "")
+
+
+# Brindle's hull: a posture body that is neither a stage Warden (no family) nor a stub boss's.
+func _fleet_body() -> bool:
+	return not rogue() and not _warden.has_meta("plate_name") and _warden.get("family") == null
 
 
 # Four pips, the first ones filled for each chunk left; the last filled one shows the
 # crack mark when the next opening shatters it on any contact.
 func pips() -> Array:
 	var list: Array = []
-	if not active():
+	if not active() or rogue():
 		return list
 	var left: int = _warden.chunks_left()
 	for i in BossPosture.CHUNKS:
@@ -140,10 +191,13 @@ func pips() -> Array:
 	return list
 
 
-# The bar's fill, 0 to 1: the guard, or the open core's time left while it is staggered.
+# The bar's fill, 0 to 1: the guard, or the open core's time left while it is staggered; a
+# rogue machine's health.
 func bar_fraction() -> float:
 	if not active():
 		return 0.0
+	if rogue():
+		return clampf(float(_warden.hp) / maxf(float(_warden.max_hp), 1.0), 0.0, 1.0)
 	if _warden.staggered():
 		return clampf(_warden.stagger_left() / BossPosture.STAGGER_SECONDS, 0.0, 1.0)
 	return clampf(_warden.posture() / BossPosture.FULL, 0.0, 1.0)
@@ -152,14 +206,19 @@ func bar_fraction() -> float:
 # The crack mark is live only while the core is open, when the verb works on it; a cracked
 # core that is closed takes no shatter, so its mark is neutral.
 func crack_color() -> Color:
-	return crack_color_for(active() and _warden.staggered())
+	return crack_color_for(active() and _open())
 
 
 # A banked fill belongs to the next phase, so it wears the phase diamonds' colour.
 func bar_color() -> Color:
 	if banking():
 		return phase_color()
-	return bar_color_for(active() and _warden.staggered())
+	return bar_color_for(active() and _open())
+
+
+# Whether the core is open to the verb: a Warden or hull staggered, a rogue machine vented.
+func _open() -> bool:
+	return _warden.is_weak() if rogue() else _warden.staggered()
 
 
 # Whether the bar shows hits banked toward the next phase: a hull boss's held phase.
@@ -194,17 +253,20 @@ static func crack_backing() -> Color:
 
 
 # The state row the glyph shows: open while staggered, glancing for GLANCE_SECONDS after a
-# glance on this Warden, else the posture step.
+# glance on this Warden, else the posture step. A rogue machine shows the open glyph while it is
+# vented and no glyph between.
 func glyph_id() -> String:
 	if not active():
 		return ""
-	if _warden.staggered():
+	if _open():
 		return "open"
+	if rogue():
+		return ""
 	return "glancing" if _glance_left > 0.0 else "posture_step"
 
 
 func glyph_color() -> Color:
-	return EventKinds.state_color(glyph_id()) if active() else EventKinds.role_color("neutral")
+	return EventKinds.state_color(glyph_id()) if glyph_id() != "" else EventKinds.role_color("neutral")
 
 
 # The phase count and the live phase; 1 and 0 for a fight without phases.
@@ -252,12 +314,20 @@ func advance(delta: float) -> void:
 # The width the name takes before the pips: NAME_WIDTH, or the name and a GAP when the name is longer
 # ("Meltdown Warden" ran under its pips at NAME_WIDTH, PF-34).
 func name_width() -> float:
+	if rogue():
+		return _stencil_face().get_string_size(crew(), HORIZONTAL_ALIGNMENT_LEFT, -1, STENCIL).x + GAP
 	return maxf(NAME_WIDTH, UiDraw.width(_name(), FONT) + GAP) if is_instance_valid(_warden) else NAME_WIDTH
 
 
+static func _stencil_face() -> Font:
+	return UiFonts.face(UiTokens.Hand.ROGUE, true)
+
+
 # The plate's size before any phase row: SIZE, wider by what this Warden's name needs, so the bar keeps its length.
+# A Rogue's plate is narrower by its number's room and the pips it does not set.
 func rest_size() -> Vector2:
-	return SIZE + Vector2(name_width() - NAME_WIDTH, 0.0)
+	var pips_room := 0.0 if not rogue() else BossPosture.CHUNKS * (PIP + PIP_GAP) - PIP_GAP + GAP
+	return SIZE + Vector2(name_width() - NAME_WIDTH - pips_room, 0.0)
 
 
 # The plate grows by the diamonds' drop only while it sets them.
@@ -292,9 +362,19 @@ func _draw() -> void:
 	if not active():
 		return
 	var neutral := EventKinds.role_color("neutral")
-	UiDraw.panel(self, Rect2(Vector2.ZERO, Vector2(size.x, SIZE.y)))
+	var which := hand()
+	var frame := Rect2(Vector2.ZERO, Vector2(size.x, SIZE.y))
+	if which == NO_HAND:
+		UiDraw.panel(self, frame)
+	else:
+		draw_style_box(frame_box(), frame)
 	var mid := SIZE.y * 0.5
-	if not name_held():
+	if which == UiTokens.Hand.ROGUE:
+		_hand_text(which, MARGIN, mid, crew())
+	elif which == UiTokens.Hand.FLEET:
+		if not name_held():
+			_hand_text(which, MARGIN, mid, plate_name())
+	elif not name_held():
 		UiDraw.text(self, MARGIN, mid, plate_name(), FONT, neutral)
 	var x := MARGIN + name_width()
 	for pip in pips():
@@ -312,10 +392,29 @@ func _draw() -> void:
 		var cx: float = bar.position.x + bar.size.x * cap
 		draw_line(Vector2(cx, bar.position.y - BANK_POST), Vector2(cx, bar.end.y + BANK_POST), crack_backing(), 5.0)
 		draw_line(Vector2(cx, bar.position.y - BANK_POST), Vector2(cx, bar.end.y + BANK_POST), phase_color(), 2.0)
-	var row := EventKinds.state_row(glyph_id())
-	var rect := Rect2(Vector2(size.x - MARGIN - GLYPH, mid - GLYPH * 0.5), Vector2(GLYPH, GLYPH))
-	draw_texture_rect(Icons.shape(String(row.get("shape", "none"))), rect, false, glyph_color())
+	if glyph_id() != "":
+		var row := EventKinds.state_row(glyph_id())
+		var rect := Rect2(Vector2(size.x - MARGIN - GLYPH, mid - GLYPH * 0.5), Vector2(GLYPH, GLYPH))
+		draw_texture_rect(Icons.shape(String(row.get("shape", "none"))), rect, false, glyph_color())
 	_draw_phases()
+
+
+# The hand frame under the plate's marks, or null for a Warden's HUD panel.
+func frame_box() -> StyleBox:
+	var which := hand()
+	return ScrapFrame.hand_plate(which, SERIAL) if which != NO_HAND else null
+
+
+# A hand's mark in its own ink, its left edge at x and its middle at y, with the HUD's outline: a Rogue's
+# stencilled number, or a name in the hand's words face.
+func _hand_text(which: int, x: float, y: float, value: String) -> void:
+	var stencil := which == UiTokens.Hand.ROGUE
+	var font := _stencil_face() if stencil else UiFonts.face(which)
+	var font_size := STENCIL if stencil else FONT
+	var color: Color = UiTokens.HANDS[which].ink
+	var at := Vector2(x, y + (font.get_ascent(font_size) - font.get_descent(font_size)) * 0.5)
+	draw_string_outline(font, at, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 6, UiDraw.OUTLINE)
+	draw_string(font, at, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 
 # The live phase's colour: the boss_phase_changed row's brass.
