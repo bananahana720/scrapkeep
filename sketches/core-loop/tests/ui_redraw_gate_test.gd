@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -80,6 +81,11 @@ func _process(_delta: float) -> bool:
 		# The first availability of a run shows a retired prompt once, so spend it too.
 		for verb in hud.key_glyphs.PROMPT_VERBS:
 			hud.key_glyphs._first[verb] = false
+		# E1-07 starts the starter active empty so it recharges through the opening seconds,
+		# legitimately redrawing the ability bar; top it up to measure the calm idle window.
+		var rack = _game.ctx.spawner.get("actives") if _game.ctx != null and _game.ctx.spawner != null else null
+		if rack != null:
+			rack.rack(ActiveDefs.STARTER, true)
 	if _frame == WARM:
 		_reset()
 		_runs = hud.layout_runs
