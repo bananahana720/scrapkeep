@@ -70,6 +70,42 @@ static func disabled(color: Color) -> Color:
 	return Color(color, DISABLED_ALPHA)
 
 
+# The four hands (LEGIBILITY.md section 14.3, ruling ek): every screen, card and plate is drawn in the
+# hand of whoever made the thing it shows, and ScrapFrame draws all four. A row is that hand's fill, edge,
+# words ("ink", and "quiet" for secondary words), its smallest word and its motion: "tilt" is the most a
+# plate leans, in radians, and "trans" the Tween transition its frames move on. The five colours above are
+# the Keeper's menus; a row's colours are the only others a frame wears. Every ink and quiet holds 4.5:1
+# on its fill (hand_frame_test).
+#   - Mint (Palette.ARC) is press now, so no row has it.
+#   - Brass is the Fleet's alone.
+#   - Purple is the Kindness's alone: "kindness_seam", on an old-works frame that asks for it.
+enum Hand { KEEPER, FLEET, OLD_WORKS, ROGUE }
+
+const HANDS := {
+	# Cut plates, rivets and tape, a little crooked: copper on charcoal, ledger cream words. Never brass.
+	Hand.KEEPER: {"fill": Palette.CHARCOAL, "edge": Palette.COPPER, "ink": Palette.LEDGER_CREAM, "quiet": Palette.SAND,
+		"caption": CAPTION, "tilt": 0.012, "trans": Tween.TRANS_BACK},
+	# Standard issue: a brass bezel on iron oxide (RUST taken dark enough for words), one notched corner.
+	Hand.FLEET: {"fill": Color("3e2219"), "edge": Palette.BRASS, "ink": Palette.SAND, "quiet": Palette.BRASS,
+		"caption": CAPTION, "tilt": 0.0, "trans": Tween.TRANS_QUAD},
+	# Cast in one piece: dark petrol enamel, a glass lip, a uranium-green seam, straight-line motion only.
+	Hand.OLD_WORKS: {"fill": Color("10262a"), "edge": Color("4d8088"), "ink": Color("e6eeea"), "quiet": Palette.STEEL,
+		"seam": Palette.ANCIENT, "kindness_seam": Palette.KINDNESS, "caption": CAPTION, "tilt": 0.0, "trans": Tween.TRANS_LINEAR},
+	# A bare casting with a stencilled number: sand corner ticks on near black, no words.
+	Hand.ROGUE: {"fill": Color("161918"), "edge": Palette.SAND, "ink": Palette.SAND, "quiet": Palette.STEEL,
+		"caption": CAPTION, "tilt": 0.0, "trans": Tween.TRANS_LINEAR},
+}
+
+
+# A hand's row. With less motion on, nothing leans and nothing overshoots.
+static func hand(which: int) -> Dictionary:
+	var row: Dictionary = HANDS[which].duplicate()
+	if reduced_motion:
+		row.tilt = 0.0
+		row.trans = Tween.TRANS_LINEAR
+	return row
+
+
 # The type step nearest a size, for a size that is computed rather than chosen.
 static func type_step(px: float) -> int:
 	var best: int = TYPE[0]

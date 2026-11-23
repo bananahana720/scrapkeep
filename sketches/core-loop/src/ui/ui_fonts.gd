@@ -6,21 +6,42 @@ extends RefCounted
 
 const BOLD_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
 const MONO_PATH := "res://assets/fonts/NotoSansMono-Bold.ttf"
+# Each hand's faces, in UiTokens.Hand order (LEGIBILITY.md section 14.3). Combat numbers keep the two
+# Noto faces in every hand, and a new display face changes what ships, so it waits on Andrew's go-ahead;
+# until then the hands differ by frame, edge, mark and motion, and a hand that gets its own face changes
+# its row here and nothing else.
+const HAND_FACES := [
+	{"words": BOLD_PATH, "numbers": MONO_PATH}, # Keeper
+	{"words": BOLD_PATH, "numbers": MONO_PATH}, # the Fleet: ledger digits in the mono face
+	{"words": BOLD_PATH, "numbers": MONO_PATH}, # the old works
+	{"words": MONO_PATH, "numbers": MONO_PATH}, # Rogues: a stencilled number and no words
+]
 
-static var _bold: Font
-static var _mono: Font
+# Loaded faces by path, so each file loads once per process (reset_for_tests empties it between batched tests).
+static var _faces := {}
 
 
 static func bold() -> Font:
-	if _bold == null:
-		_bold = _load(BOLD_PATH)
-	return _bold
+	return _face(BOLD_PATH)
 
 
 static func mono() -> Font:
-	if _mono == null:
-		_mono = _load(MONO_PATH)
-	return _mono
+	return _face(MONO_PATH)
+
+
+# The face a hand sets its words, or its numbers, in.
+static func face(hand: int, numbers := false) -> Font:
+	return _face(HAND_FACES[hand]["numbers" if numbers else "words"])
+
+
+static func reset_for_tests() -> void:
+	_faces.clear()
+
+
+static func _face(path: String) -> Font:
+	if not _faces.has(path):
+		_faces[path] = _load(path)
+	return _faces[path]
 
 
 static func vendored() -> bool:

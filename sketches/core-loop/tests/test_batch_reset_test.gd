@@ -25,6 +25,7 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Density := preload("res://src/presentation/density.gd")
 const PickQuiet := preload("res://src/ui/pick_quiet.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
 const WarningBound := preload("res://src/combat/warning_bound.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
@@ -138,6 +139,8 @@ func _run() -> void:
 	WorldFxGrain.run_seed = 4242
 	WorldFxSound.audio = root
 	Density.live().force(0.85)
+	UiFonts.face(UiTokens.Hand.ROGUE, true)
+	t.check("UiFonts holds a loaded face before reset", not UiFonts._faces.is_empty())
 	Density.publish_fill_scale(0.45)
 	var fake_hud := _FakeHud.new()
 	PickQuiet.hush(_FakeHost.new(fake_hud))
@@ -251,6 +254,7 @@ func _run() -> void:
 	t.check("WorldFxAnchor.live clears on reset", WorldFxAnchor.live.is_empty())
 	t.check("Density governor resets value and hold", is_zero_approx(Density.live().value) and not Density.live().hold)
 	t.near("Density.last_published resets to 1.0", Density.last_published, 1.0)
+	t.check("UiFonts empties its loaded faces", UiFonts._faces.is_empty())
 	t.check("GraphicsPreset clears tracked state and resets to high", GraphicsPreset.current == "high"
 		and not GraphicsPreset._target_server_active and GraphicsPreset._lighting.is_empty()
 		and GraphicsPreset._dressing_hosts.is_empty() and GraphicsPreset._worlds.is_empty())
