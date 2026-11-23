@@ -1,5 +1,6 @@
 extends SceneTree
 
+const ClassDef := preload("res://src/core/class_def.gd")
 const Meanings := preload("res://src/core/colour_meanings.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ShopTile := preload("res://src/ui/shop_tile.gd")
@@ -75,6 +76,15 @@ func _initialize() -> void:
 	var common_de: float = closest(ShopTile.RARITY["common"]["color"], Palette.ARC)["de"]
 	_t.check("the common frame on a screen is told from mint, which is press now, by every eye", common_de >= FLOOR, "%.1f" % common_de)
 	_t.check("no reward frame on a screen is mint", ShopTile.RARITY.values().all(func(row): return row["color"] != Palette.ARC))
+	var sable_worst := INF
+	var sable_nearest := ""
+	for cname in colours:
+		var hit: Dictionary = closest(ClassDef.SABLE_SCREEN, palette[cname])
+		if float(hit["de"]) < sable_worst:
+			sable_worst = float(hit["de"])
+			sable_nearest = "%s (%s)" % [cname, hit["sight"]]
+	_t.check("Sable's screen accent is told from every meaning colour by every eye", sable_worst >= FLOOR,
+		"%.1f vs %s" % [sable_worst, sable_nearest])
 	_t.eq("the relic reward's frame carries bolt heads", ShopTile.RARITY["relic"]["notches"], "bolt")
 	# The boss's rim ticks: a brass-owned hazard carries an owner mark and a danger-owned one does not.
 	var boss_hazard := _hazard(Palette.BRASS)
