@@ -264,11 +264,11 @@ func _physics_process(_delta: float) -> bool:
 			if _ticks < 12:
 				return false
 			var snap: Dictionary = combat.weapon_driver.state_snapshot()
-			_t.check("live hold_auto fires volleys through WeaponDriver", combat.volleys > _volleys_before,
+			_t.check("live press fires volleys through WeaponDriver", combat.volleys > _volleys_before,
 				"volleys %d -> %d" % [_volleys_before, combat.volleys])
 			_t.eq("live snapshot names active weapon and trigger",
 				[snap["weapon"], snap["trigger"], snap["held"]],
-				[Weapons.RAPID_LASER, Pattern.TRIGGER_HOLD_AUTO, true])
+				[Weapons.RAPID_LASER, Pattern.TRIGGER_PRESS, true])
 			# Release fire, hold a known cooldown, and prove a proc volley bypasses WeaponDriver.
 			_source.hold = {}
 			combat.weapon_driver.set_cooldown_s(0.42)

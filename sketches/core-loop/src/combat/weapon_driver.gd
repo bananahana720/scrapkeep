@@ -72,6 +72,7 @@ var _lane_painted := false
 # Returns an array of shot descriptors ({kind, weapon, damage_mult, pierce, spread_deg}) to
 # fire this tick. Optional `context` supplies live cadence modifiers:
 #   rate_mult (float, default 1.0): overdrive / weapon_rate floor divisor
+#   reload_rate_mult (float, default 1.0): reload pace (rate parts; never Overdrive)
 #   sprinting (bool, default false): Rivet Overdrive Sprint fan
 #   charge_rate (float, default 1.0): Sable speed-tier charge multiplier (1.0 / 1.5 / 2.0)
 func step(delta: float, intent, weapon: String, pattern: Resource, rate_hz: float, context: Dictionary = {}) -> Array:
@@ -85,25 +86,30 @@ func step(delta: float, intent, weapon: String, pattern: Resource, rate_hz: floa
 	var pressed: bool = bool(intent.fire_pressed) if intent != null else false
 	var released: bool = (bool(intent.fire_released) if intent != null else false) or (was_held and not held)
 	_press_held = held
+	var shots: Array
+	if _trigger == Pattern.TRIGGER_PRESS:
+		shots = _step_press(delta, weapon, pattern, pressed, held, context)
+	elif _trigger == Pattern.TRIGGER_TAP_CHARGE:
+		shots = _step_tap_charge(delta, weapon, pattern, pressed, held, released, context)
+	else:
+		if pressed:
+			_hold_s = 0.0
+		elif held:
+			_hold_s += delta
+		else:
+			_hold_s = 0.0
+		_cooldown -= delta
+		if _recover_s > 0.0:
+			_recover_s = maxf(0.0, _recover_s - delta)
+		shots = _step_hold_auto(weapon, pattern, rate_hz, pressed, held)
+	# The buffer ages after the trigger has had its chance to spend it, so a press kept
+	# BUFFER_S before ready still acts on the tick the trigger comes ready.
 	if _buffered:
 		_buffer_s -= delta
 		if _buffer_s <= 0.0:
 			_buffered = false
 			_buffer_s = 0.0
-	if _trigger == Pattern.TRIGGER_PRESS:
-		return _step_press(delta, weapon, pattern, pressed, held, context)
-	if _trigger == Pattern.TRIGGER_TAP_CHARGE:
-		return _step_tap_charge(delta, weapon, pattern, pressed, held, released, context)
-	if pressed:
-		_hold_s = 0.0
-	elif held:
-		_hold_s += delta
-	else:
-		_hold_s = 0.0
-	_cooldown -= delta
-	if _recover_s > 0.0:
-		_recover_s = maxf(0.0, _recover_s - delta)
-	return _step_hold_auto(weapon, pattern, rate_hz, pressed, held)
+	return shots
 
 
 # Refreshes cached magazine, reload, floor, charge and window limits after a mid-run
@@ -344,17 +350,17 @@ func _step_press(delta: float, weapon: String, pattern: Resource, pressed: bool,
 		return shots
 
 	if pressed:
-		if _cooldown <= 0.0 and _chamber > 0:
+		if _cooldown <= 0.0 and _loaded():
 			_window_state = WINDOW_IDLE
 			_buffered = false
 			_buffer_s = 0.0
 			shots.append(_fire_press_round(weapon, floor_s, sprinting and held and _hold_s > 0.0, rate_mult))
 			return shots
-		if _cooldown > 0.0 and _cooldown <= BUFFER_S and _chamber > 0:
+		if _cooldown > 0.0 and _cooldown <= BUFFER_S and _loaded():
 			_buffered = true
 			_buffer_s = BUFFER_S
 			return shots
-	elif _buffered and _cooldown <= 0.0 and _chamber > 0:
+	elif _buffered and _cooldown <= 0.0 and _loaded():
 		_window_state = WINDOW_IDLE
 		_buffered = false
 		_buffer_s = 0.0
@@ -362,10 +368,15 @@ func _step_press(delta: float, weapon: String, pattern: Resource, pressed: bool,
 		return shots
 
 	# Overdrive Sprint fan: holding fire while sprinting fans remaining rounds at 0.10 s / 0.5x / 5 deg.
-	if sprinting and held and not pressed and _cooldown <= 0.0 and _chamber > 0:
+	if sprinting and held and not pressed and _cooldown <= 0.0 and _loaded():
 		_window_state = WINDOW_IDLE
 		shots.append(_fire_press_round(weapon, floor_s, true, rate_mult))
 	return shots
+
+
+# A press weapon with no cylinder (mag 0) never runs dry.
+func _loaded() -> bool:
+	return _mag <= 0 or _chamber > 0
 
 
 func _fire_press_round(weapon: String, floor_s: float, fan: bool, rate_mult: float) -> Dictionary:

@@ -260,6 +260,95 @@ static func _simulate_sable(weapon_id: String, pattern: Resource, mode: String, 
 	return total_dmg / maxf(total_t, 0.0001)
 
 
+# Rivet with one reload press at `press_at` seconds into every reload and every other press at
+# the floor: the sweep over `press_at` is the arithmetic bound on any press timing (section 3.1).
+static func _simulate_rivet_press_at(pattern: Resource, press_at: float) -> float:
+	var drv := WeaponDriver.new()
+	drv.reset(pattern)
+	var total_dmg := 0.0
+	var total_t := 0.0
+	var reloads := 0
+	var was_reloading := false
+	var pressed_this_reload := false
+	var step_idx := 0
+	while reloads < 8 and step_idx < 60000:
+		step_idx += 1
+		var snap: Dictionary = drv.state_snapshot()
+		var intent := Intent.new()
+		if bool(snap["reloading"]):
+			if not pressed_this_reload and float(snap["reload_t"]) + SIM_DT * 0.5 >= press_at:
+				intent.fire_pressed = true
+				pressed_this_reload = true
+		elif bool(snap["ready"]):
+			intent.fire_pressed = true
+		var shots: Array = drv.step(SIM_DT, intent, Weapons.RAPID_LASER, pattern, float(pattern.rate), {"rate_mult": 1.0})
+		if reloads >= 2:
+			total_t += SIM_DT
+			for s in shots:
+				total_dmg += float(pattern.damage) * float(s.get("damage_mult", 1.0))
+		var now_reloading := bool(drv.state_snapshot()["reloading"])
+		if not was_reloading and now_reloading:
+			reloads += 1
+			pressed_this_reload = false
+		was_reloading = now_reloading
+	return total_dmg / maxf(total_t, 0.0001)
+
+
+# Sable pressing on ready and letting go at charge fraction `release_at` (1.0 holds to full;
+# below charge_min the release fires no bolt): the sweep is the bound over every release.
+static func _simulate_sable_release_at(weapon_id: String, pattern: Resource, release_at: float, tier: int) -> float:
+	var drv := WeaponDriver.new()
+	drv.reset(pattern)
+	var charge_rate := WeaponDriver.charge_rate_for_tier(tier)
+	var total_dmg := 0.0
+	var total_t := 0.0
+	var cycles := 0
+	var holding := false
+	var step_idx := 0
+	while cycles < 12 and step_idx < 60000:
+		step_idx += 1
+		var snap: Dictionary = drv.state_snapshot()
+		var intent := Intent.new()
+		var cycle_end := false
+		if holding:
+			var at := float(snap["charge"])
+			if at + 0.00001 >= release_at or (not bool(snap["charging"]) and float(snap["hold"]) > 2.0):
+				holding = false
+				cycle_end = true
+			else:
+				intent.fire_held = true
+		elif bool(snap["ready"]):
+			intent.fire_pressed = true
+			intent.fire_held = true
+			holding = true
+		var shots: Array = drv.step(SIM_DT, intent, weapon_id, pattern, float(pattern.rate),
+			{"rate_mult": 1.0, "charge_rate": charge_rate})
+		if cycles >= 2:
+			total_t += SIM_DT
+			for s in shots:
+				total_dmg += float(pattern.damage) * float(s.get("damage_mult", 1.0))
+		if cycle_end:
+			cycles += 1
+	return total_dmg / maxf(total_t, 0.0001)
+
+
+static func _rivet_max(pattern: Resource) -> float:
+	var best := 0.0
+	var at := 0.0
+	while at <= float(pattern.reload_s) + 0.001:
+		best = maxf(best, _simulate_rivet_press_at(pattern, at))
+		at += 0.02
+	return best
+
+
+static func _sable_max(weapon_id: String, pattern: Resource) -> float:
+	var best := 0.0
+	for tier in [SpeedTier.WALK, SpeedTier.CRUISE, SpeedTier.FAST, SpeedTier.BLAZING]:
+		for i in 16:
+			best = maxf(best, _simulate_sable_release_at(weapon_id, pattern, 0.25 + 0.05 * i, tier))
+	return best
+
+
 func _check_cadence_envelopes(t) -> void:
 	var rivet_pat: Resource = Weapons.base(Weapons.RAPID_LASER)
 	var rivet_careless := _simulate_rivet(rivet_pat, false)
@@ -308,6 +397,19 @@ func _check_cadence_envelopes(t) -> void:
 	t.check("Sable mounted sits within ceiling 80",
 		ceiling_passes(Weapons.PYLON_TURRET, turret_careless) and ceiling_passes(Weapons.PYLON_TURRET, turret_blazing),
 		"careless=%.2f blazing=%.2f" % [turret_careless, turret_blazing])
+
+	# Most by arithmetic (PILOT-CADENCE.md section 1): the best of every reload press time and every
+	# release fraction at every speed tier. Rivet 62.6; Sable 70.0; mounted Sable 75.0.
+	var rivet_max := _rivet_max(rivet_pat)
+	var sable_max := _sable_max(Weapons.ARC_CASTER, sable_pat)
+	var turret_max := _sable_max(Weapons.PYLON_TURRET, turret_pat)
+	print("CADENCE_ENVELOPE  most by arithmetic  rivet=%.2f  sable=%.2f  pylon_turret=%.2f" % [rivet_max, sable_max, turret_max])
+	t.near("Rivet most by arithmetic matches PILOT-CADENCE 62.6", rivet_max, 62.61, 0.8)
+	t.near("Sable most by arithmetic matches PILOT-CADENCE 70.0", sable_max, 70.0, 0.8)
+	t.near("Sable mounted most by arithmetic matches PILOT-CADENCE 75.0", turret_max, 75.0, 0.8)
+	t.check("Rivet most by arithmetic sits within ceiling 75", ceiling_passes(Weapons.RAPID_LASER, rivet_max), "%.2f" % rivet_max)
+	t.check("Sable most by arithmetic sits within ceiling 80", ceiling_passes(Weapons.ARC_CASTER, sable_max), "%.2f" % sable_max)
+	t.check("Sable mounted most by arithmetic sits within ceiling 80", ceiling_passes(Weapons.PYLON_TURRET, turret_max), "%.2f" % turret_max)
 
 	# Planted over-ceiling failure test (PILOT-CADENCE.md §1): proves the ceiling gate bites.
 	var over_rivet_pat: Resource = rivet_pat.copy()

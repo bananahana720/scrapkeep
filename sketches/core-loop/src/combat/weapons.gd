@@ -60,12 +60,13 @@ const BASE := {
 		"knock": EventKinds.IMPACT["cannon"]["knock"]},
 }
 
-# PILOT-CADENCE.md section 4: the legacy hold_auto data rows, kept so any pilot baseline
-# can return to hold-to-fire by switching its data row alone with zero code changes.
+# PILOT-CADENCE.md section 4: the hold_auto rows. Setting a BASE row's `trigger` to hold_auto
+# returns that weapon to hold-to-fire with no code change (resolve_row).
+# BASE keeps each row's hold_auto `rate`; this table holds only what else differs.
 const HOLD_AUTO := {
-	RAPID_LASER: {"damage": 7.0, "rate": 12.0, "trigger": Pattern.TRIGGER_HOLD_AUTO},
-	ARC_CASTER: {"damage": 12.0, "rate": 5.0, "trigger": Pattern.TRIGGER_HOLD_AUTO},
-	PYLON_TURRET: {"damage": 11.0, "rate": 9.0, "trigger": Pattern.TRIGGER_HOLD_AUTO},
+	RAPID_LASER: {"damage": 7.0},
+	ARC_CASTER: {"damage": 12.0},
+	PYLON_TURRET: {"damage": 11.0},
 }
 
 # PILOT-CADENCE.md sections 2.5, 3.1 and 3.2 cadence constants.
@@ -272,15 +273,29 @@ static func base(weapon_id: String, loadout := {}) -> Resource:
 	return Pattern.make(_attached(weapon_id, loadout, {}))
 
 
-# PILOT-CADENCE.md section 4: the legacy hold_auto Pattern for `weapon_id`, constructed
-# purely from data without code changes.
+# PILOT-CADENCE.md section 4: the legacy hold_auto Pattern for `weapon_id`, the BASE row with
+# its trigger field alone set to hold_auto.
 static func hold_auto_base(weapon_id: String) -> Resource:
 	var row: Dictionary = BASE.get(weapon_id, BASE[RAPID_LASER]).duplicate()
-	var legacy: Dictionary = HOLD_AUTO.get(weapon_id, {})
-	for key in legacy:
-		row[key] = legacy[key]
 	row["trigger"] = Pattern.TRIGGER_HOLD_AUTO
-	return Pattern.make(row)
+	return Pattern.make(resolve_row(weapon_id, row))
+
+
+# A BASE row as its trigger mode fires it. A row whose trigger is hold_auto takes its
+# HOLD_AUTO damage, so setting `trigger` alone turns a cadence weapon back into today's gun
+# (PILOT-CADENCE.md section 4).
+static func resolve_row(weapon_id: String, row: Dictionary) -> Dictionary:
+	if String(row.get("trigger", Pattern.TRIGGER_HOLD_AUTO)) != Pattern.TRIGGER_HOLD_AUTO or not HOLD_AUTO.has(weapon_id):
+		return row
+	var out := row.duplicate()
+	for key in HOLD_AUTO[weapon_id]:
+		out[key] = HOLD_AUTO[weapon_id][key]
+	return out
+
+
+# The damage `weapon_id`'s base pattern fires, after its trigger mode (resolve_row).
+static func base_damage(weapon_id: String) -> float:
+	return float(resolve_row(weapon_id, BASE.get(weapon_id, BASE[RAPID_LASER]))["damage"])
 
 
 # Multiplier from spark base damage to full charged-bolt damage for tap_charge weapons.
@@ -305,7 +320,7 @@ static func second_mode(weapon_id: String, loadout: Dictionary) -> Resource:
 # The BASE row with the loadout's attachment mods (attachments.gd), then `extra`, multiplied in.
 # A loadout for another weapon, or none, leaves the row untouched.
 static func _attached(weapon_id: String, loadout: Dictionary, extra: Dictionary) -> Dictionary:
-	var row: Dictionary = BASE.get(weapon_id, BASE[RAPID_LASER])
+	var row: Dictionary = resolve_row(weapon_id, BASE.get(weapon_id, BASE[RAPID_LASER]))
 	if String(loadout.get("weapon", "")) != weapon_id:
 		return row
 	var scales: Dictionary = Attachments.mods(loadout)

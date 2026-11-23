@@ -1726,7 +1726,7 @@ func active_weapon() -> String:
 # The discharge a given speed would fire right now, with the current parts.
 func discharge_preview(speed: float) -> Dictionary:
 	var p: Resource = _patterns[Weapons.PYLON_TURRET]
-	var scale: float = p.damage * _damage_mod(Weapons.PYLON_TURRET) / Weapons.BASE[Weapons.PYLON_TURRET]["damage"]
+	var scale: float = p.damage * _damage_mod(Weapons.PYLON_TURRET) / Weapons.base_damage(Weapons.PYLON_TURRET)
 	var burst := Weapons.burst(speed, p.burst_scale, scale)
 	# Splash Skirt panels widen the ring the telegraph draws and the hit reads alike.
 	burst["radius"] = float(burst["radius"]) + ctx.tuning.add("area_radius")
@@ -4579,7 +4579,7 @@ func _nearest_in_ring(centre: Vector3, radius: float, limit: int) -> Array:
 func _overdrive_blast(at: Vector3, scale := 1.0, shape := {}, radius_scale := 1.0, damage_scale := 1.0, boost := true) -> void:
 	var p: Resource = _patterns[Weapons.RAPID_LASER]
 	var damage: float = Weapons.OVERDRIVE_DAMAGE * scale * damage_scale * p.damage * _damage_mod(Weapons.RAPID_LASER) \
-		/ Weapons.BASE[Weapons.RAPID_LASER]["damage"]
+		/ Weapons.base_damage(Weapons.RAPID_LASER)
 	var radius := Weapons.OVERDRIVE_RADIUS * scale * radius_scale
 	var centre: Vector3 = shape.get("centre", at)
 	var pull: bool = _knob("blast_pull") and not _echoing

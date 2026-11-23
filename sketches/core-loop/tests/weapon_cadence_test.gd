@@ -27,6 +27,7 @@ func _initialize() -> void:
 	_check_sable_tap_spark_hold_arc()
 	_check_interruptions_and_sync_pattern()
 	_check_hold_auto_data_rollback()
+	_check_ultimate_and_swap()
 	_check_warden_reactor_base_dps()
 	_game = Game.new()
 	_game.test_mode = true
@@ -305,16 +306,78 @@ func _check_interruptions_and_sync_pattern() -> void:
 
 
 func _check_hold_auto_data_rollback() -> void:
-	for wid in [Weapons.RAPID_LASER, Weapons.ARC_CASTER, Weapons.PYLON_TURRET]:
-		var legacy: Resource = Weapons.hold_auto_base(wid)
+	# PILOT-CADENCE.md section 4: the BASE row with `trigger` alone set to hold_auto is today's gun.
+	var legacy_rows := {
+		Weapons.RAPID_LASER: [7.0, 12.0, 84.0],
+		Weapons.ARC_CASTER: [12.0, 5.0, 60.0],
+		Weapons.PYLON_TURRET: [11.0, 9.0, 99.0],
+	}
+	for wid in legacy_rows:
+		var flipped: Dictionary = Weapons.BASE[wid].duplicate()
+		flipped["trigger"] = Pattern.TRIGGER_HOLD_AUTO
+		var legacy: Resource = Pattern.make(Weapons.resolve_row(wid, flipped))
+		var want: Array = legacy_rows[wid]
+		_t.eq("%s with only trigger flipped reads the section 4 row" % wid,
+			[legacy.trigger, legacy.damage, legacy.rate], [Pattern.TRIGGER_HOLD_AUTO, want[0], want[1]])
+		_t.near("%s rolled back pays %.0f a second" % [wid, want[2]], WeaponDriver.base_dps(legacy), want[2], 0.001)
+		_t.eq("%s hold_auto_base is the same flipped row" % wid,
+			[Weapons.hold_auto_base(wid).damage, Weapons.hold_auto_base(wid).rate], [want[0], want[1]])
+		_t.eq("%s cadence row is left as written" % wid, Weapons.resolve_row(wid, Weapons.BASE[wid]), Weapons.BASE[wid])
 		var drv := WeaponDriver.new()
 		drv.reset(legacy)
 		var shots := 0
 		for _i in 60: # 1.0 s held
 			shots += drv.step(DT, _hold_intent(), wid, legacy, legacy.rate).size()
 		_t.check("%s hold_auto data row restores continuous hold fire" % wid,
-			legacy.trigger == Pattern.TRIGGER_HOLD_AUTO and shots >= int(legacy.rate) - 1,
+			shots >= int(legacy.rate) - 1 and shots <= int(legacy.rate) + 1,
 			"shots=%d rate=%.1f" % [shots, legacy.rate])
+
+
+func _check_ultimate_and_swap() -> void:
+	# The ultimate drops Sable's charge with no bolt (PILOT-CADENCE.md section 2.3).
+	var caster: Resource = Weapons.base(Weapons.ARC_CASTER)
+	var drv := WeaponDriver.new()
+	drv.reset(caster)
+	drv.step(DT, _press_intent(true), Weapons.ARC_CASTER, caster, caster.rate, {"charge_rate": 1.0})
+	for _i in 30:
+		drv.step(DT, _hold_intent(), Weapons.ARC_CASTER, caster, caster.rate, {"charge_rate": 1.0})
+	_t.check("charging before the ultimate", float(drv.state_snapshot()["charge"]) >= 0.25, str(drv.state_snapshot()["charge"]))
+	drv.interrupt(WeaponDriver.INTERRUPT_ULTIMATE)
+	_t.check("the ultimate drops the charge", not bool(drv.state_snapshot()["charging"])
+		and is_zero_approx(float(drv.state_snapshot()["charge"])), str(drv.state_snapshot()))
+	var after: Array = drv.step(DT, _release_intent(), Weapons.ARC_CASTER, caster, caster.rate, {"charge_rate": 1.0})
+	_t.eq("a release after the ultimate fires no bolt", after.size(), 0)
+	var ready_ticks := 0
+	while not bool(drv.state_snapshot()["ready"]) and ready_ticks < 60:
+		drv.step(DT, Intent.new(), Weapons.ARC_CASTER, caster, caster.rate)
+		ready_ticks += 1
+	_t.check("the trigger is ready again in bounded steps after the ultimate", ready_ticks < 60, "%d ticks" % ready_ticks)
+
+	# A weapon swap drops the old weapon's reload and starts the new one at rest.
+	var rivet: Resource = Weapons.base(Weapons.RAPID_LASER)
+	drv.reset(rivet)
+	for shot_i in 6:
+		drv.step(DT, _press_intent(), Weapons.RAPID_LASER, rivet, rivet.rate)
+		for _w in 12:
+			drv.step(DT, Intent.new(), Weapons.RAPID_LASER, rivet, rivet.rate)
+	_t.check("reloading before the swap", bool(drv.state_snapshot()["reloading"]), "")
+	var swapped: Array = drv.step(DT, Intent.new(), Weapons.ARC_CASTER, caster, caster.rate)
+	var snap: Dictionary = drv.state_snapshot()
+	_t.check("the swap drops the reload and the new weapon starts at rest",
+		swapped.is_empty() and not bool(snap["reloading"]) and String(snap["weapon"]) == Weapons.ARC_CASTER
+		and String(snap["trigger"]) == Pattern.TRIGGER_TAP_CHARGE and bool(snap["ready"])
+		and String(snap["window"]) == WeaponDriver.WINDOW_IDLE, str(snap))
+
+	# A press weapon with no cylinder (mag 0) never runs dry.
+	var bare: Resource = rivet.copy()
+	bare.mag = 0
+	drv.reset(bare)
+	var fired := 0
+	for _i in 20:
+		fired += drv.step(DT, _press_intent(), Weapons.RAPID_LASER, bare, bare.rate).size()
+		for _w in 12:
+			drv.step(DT, Intent.new(), Weapons.RAPID_LASER, bare, bare.rate)
+	_t.eq("a cylinder-less press weapon fires every press", fired, 20)
 
 
 func _check_warden_reactor_base_dps() -> void:
@@ -338,6 +401,32 @@ func _run_live() -> void:
 	var combat = _game.ctx.spawner
 	combat.set_physics_process(false)
 	_game.player.set_physics_process(false)
+
+	# 0. A press acts on the physics tick it arrives (well inside 100 ms), through combat's own tick.
+	var rivet_pat: Resource = combat._patterns[Weapons.RAPID_LASER]
+	combat.weapon_driver.reset(rivet_pat)
+	var press_volleys: int = combat.volleys
+	_game.player.intent.clear()
+	_game.player.intent.fire_pressed = true
+	_game.player.intent.fire_held = true
+	combat._physics_process(DT)
+	_t.eq("a live press fires on the tick it arrives", combat.volleys - press_volleys, 1)
+	_t.eq("the live press spent one chamber", int(combat.weapon_driver.state_snapshot()["chamber"]), 5)
+	_game.player.intent.clear()
+	combat._physics_process(DT)
+
+	# 0b. An attempt boundary takes a reload in flight back to rest.
+	combat.weapon_driver.reset(rivet_pat)
+	for _shot in 6:
+		combat.weapon_driver.step(DT, _press_intent(), Weapons.RAPID_LASER, rivet_pat, rivet_pat.rate)
+		for _w in 12:
+			combat.weapon_driver.step(DT, Intent.new(), Weapons.RAPID_LASER, rivet_pat, rivet_pat.rate)
+	_t.check("reload in flight before the attempt boundary", bool(combat.weapon_driver.state_snapshot()["reloading"]), "")
+	combat._start_attempt()
+	var rest: Dictionary = combat.weapon_driver.state_snapshot()
+	_t.check("the attempt boundary returns Rivet to rest: a full plain cylinder, no reload, no window",
+		not bool(rest["reloading"]) and int(rest["chamber"]) == 6 and int(rest["hot"]) == 0
+		and String(rest["window"]) == WeaponDriver.WINDOW_IDLE and bool(rest["ready"]), str(rest))
 
 	# 1. Proc isolation: item_proc never spends a chamber, never mutates WeaponDriver, fires plain damage.
 	combat.weapon_driver.reset(combat._patterns[Weapons.RAPID_LASER])
@@ -402,6 +491,24 @@ func _run_live() -> void:
 	# 5. Sable mounted 3 s blazing-plant boost -> walk rate after 3 s.
 	_game.flow.choose_class(0) # Sable
 	await physics_frame
+	combat.set_physics_process(false)
+	_game.player.set_physics_process(false)
+	var caster_pat: Resource = combat._patterns[Weapons.ARC_CASTER]
+	combat.weapon_driver.reset(caster_pat)
+	combat.weapon_driver.step(DT, _press_intent(true), Weapons.ARC_CASTER, caster_pat, caster_pat.rate, {"charge_rate": 1.0})
+	for _i in 30:
+		combat.weapon_driver.step(DT, _hold_intent(), Weapons.ARC_CASTER, caster_pat, caster_pat.rate, {"charge_rate": 1.0})
+	var mid_charge: Dictionary = combat.weapon_driver.state_snapshot()
+	var sable_volleys: int = combat.volleys
+	combat._fire(Weapons.ARC_CASTER, "item_proc")
+	_t.eq("a proc spark mid-charge leaves Sable's charge, floor and buffer untouched", combat.weapon_driver.state_snapshot(), mid_charge)
+	_t.eq("the proc still fired its plain spark", combat.volleys, sable_volleys + 1)
+	_t.eq("the proc fired a plain shot, never a bolt", String(combat.last_shot.get("kind", "")), WeaponDriver.SHOT_PLAIN)
+	combat._start_attempt()
+	var sable_rest: Dictionary = combat.weapon_driver.state_snapshot()
+	_t.check("the attempt boundary drops Sable's charge with no bolt",
+		not bool(sable_rest["charging"]) and not bool(sable_rest["charge_armed"]) and is_zero_approx(float(sable_rest["charge"])),
+		str(sable_rest))
 	_game.player.kit.mounted = true
 	_game.player.kit.mount_banked = 32.0 # blazing tier (>= 26.6)
 	_game.events.mounted.emit(_game.player.ball_position(), 32.0)
