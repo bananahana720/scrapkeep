@@ -148,13 +148,13 @@ class BoneJoint extends RefCounted:
 	var _rest: Transform3D
 
 	func _init(skel: Skeleton3D, index: int) -> void:
-		skeleton = skel
 		bone = index
 		_rest = skel.get_bone_rest(index)
 		var frame := _rest.basis.orthonormalized()
 		rotation_degrees = (frame.get_rotation_quaternion().inverse() * skel.get_bone_pose_rotation(index)).get_euler() * (180.0 / PI)
 		position = frame.inverse() * (skel.get_bone_pose_position(index) - _rest.origin)
 		scale = skel.get_bone_pose_scale(index) / _rest.basis.get_scale()
+		skeleton = skel
 
 	func valid() -> bool:
 		return is_instance_valid(skeleton)
@@ -297,7 +297,7 @@ func _release(node, channel: String, axis: int) -> void:
 
 func _pulse_value(p: Dictionary) -> float:
 	var t: float = p.t - p.delay
-	if t <= 0.0 and p.throw > 0.0:
+	if t < 0.0 or (t <= 0.0 and p.throw > 0.0):
 		return p.from
 	if p.throw > 0.0 and t < p.throw:
 		return lerpf(p.from, p.amount, _eased(t / p.throw, p.curve))
@@ -545,7 +545,7 @@ func _step_row(index: int, delta: float, facts: Dictionary) -> void:
 			if start.has("for_s"):
 				var state := _state(index)
 				if _row_hits(index, row, value) > 0:
-					state.left = float(start.for_s)
+					state.left = maxf(0.0, float(start.for_s))
 				var run := minf(delta, float(state.get("left", 0.0)))
 				state.left = float(state.get("left", 0.0)) - run
 				turned = float(start.get("deg_s", 0.0)) * run

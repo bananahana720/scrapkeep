@@ -105,6 +105,7 @@ func _run() -> void:
 
 
 func _finish(hook: Node, ball: Node) -> void:
+	Mecha.echo = true
 	ball.free()
 	hook.free()
 	_t.eq("check count", _t.checks + 1, EXPECTED_CHECKS)
