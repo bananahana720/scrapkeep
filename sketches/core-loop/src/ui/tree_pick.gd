@@ -389,7 +389,9 @@ func _play_out(chosen_index: int) -> void:
 		var card: Control = list[i]
 		_nudge(card, 0.0)
 		if i == chosen_index:
-			_tween.tween_property(card, "scale", Vector2.ONE * POP, FADE_OUT * 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			# The Keeper's pop, held still with less motion: the taken edge alone says which was picked.
+			var pop := 1.0 if UiTokens.reduced_motion else POP
+			_tween.tween_property(card, "scale", Vector2.ONE * pop, FADE_OUT * 0.45).set_trans(UiTokens.hand(UiTokens.Hand.KEEPER).trans).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(card, "modulate:a", 0.0, FADE_OUT).set_delay(FADE_OUT * 0.45).set_ease(Tween.EASE_IN)
 		else:
 			_tween.tween_property(card, "modulate:a", 0.0, FADE_OUT).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)

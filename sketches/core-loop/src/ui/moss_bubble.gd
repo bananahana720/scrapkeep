@@ -635,21 +635,24 @@ func _say(line: String, fact: String, mood_now: String, level: float, grumbles: 
 		_tween.kill()
 	_tween = create_tween().set_parallel(true)
 	_tween.tween_property(self, "modulate:a", 1.0, 0.12).set_ease(Tween.EASE_OUT)
+	# Moss is a Keeper: his bubble moves on the Keeper's row, and with less motion it comes up whole and
+	# straight, with no turn, squash or overshoot.
+	var still := reduced_motion
 	match mood_now:
 		"restart":
-			_spin = -0.35
-			_pop = 0.7
+			_spin = 0.0 if still else -0.35
+			_pop = 1.0 if still else 0.7
 			_tween.tween_property(self, "_spin", 0.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(self, "_pop", 1.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(self, "shown_exasperation", 0.0, 0.45)
 		"relent":
 			_spin = 0.0
-			_pop = 0.6
-			_tween.tween_property(self, "_pop", 1.0, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			_pop = 1.0 if still else 0.6
+			_tween.tween_property(self, "_pop", 1.0, 0.4).set_trans(UiTokens.hand(UiTokens.Hand.KEEPER).trans).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(self, "shown_exasperation", 0.0, 0.3)
 		_:
 			_spin = 0.0
-			_pop = 0.9 if grumbles else 0.96
+			_pop = 1.0 if still else (0.9 if grumbles else 0.96)
 			_tween.tween_property(self, "_pop", 1.0, 0.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(self, "shown_exasperation", exasperation, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 

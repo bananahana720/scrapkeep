@@ -320,9 +320,7 @@ func _build_overlay(width: float, color: Color) -> void:
 	_hint = _text("", UiTokens.CAPTION, Color(Palette.SAND, 0.9))
 	_hint.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	var plate := StyleBoxFlat.new()
-	plate.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
-	plate.set_corner_radius_all(UiTokens.RADIUS)
+	var plate := ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, _serial + 2)
 	plate.content_margin_left = HINT_INSET
 	plate.content_margin_right = HINT_INSET
 	plate.content_margin_top = 4.0
@@ -680,21 +678,22 @@ func _backdrop(tint: Color) -> void:
 	draw_rect(Rect2(rect.position + Vector2(0.0, mid), Vector2(rect.size.x, rect.size.y - mid)), warm)
 
 
-# Every state shares the card's serial, so the plate keeps its cuts, rivets and tape
-# when it lights up.
+# A Keeper plate (LEGIBILITY.md section 14.3): every state shares the card's serial, so the plate
+# keeps its cuts, rivets, tape and lean when it lights up. The edge is the pilot's colour, the one
+# "yours" accent.
 func _frame(edge: Color, width: int, fill := true) -> StyleBox:
-	return ScrapFrame.plate(edge, _serial, Color(Palette.CHARCOAL, 0.94 if fill else 0.0), width, 0.5)
+	return keeper_plate(edge, _serial, width, fill)
 
 
-# The tree pick's cards still draw this flat plate.
-static func _plate(edge: Color, width: int, fill := true) -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.draw_center = fill
-	box.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
+# The Keeper's plate under a card (this one and the tree pick's): its serial's cuts and lean, the
+# given edge, a strip of tape along the top, and no fill for a focus ring drawn over the normal plate.
+static func keeper_plate(edge: Color, serial: int, width: int, fill := true) -> StyleBox:
+	var box = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
 	box.border_color = edge
-	box.set_border_width_all(width)
-	box.set_corner_radius_all(UiTokens.RADIUS)
-	box.corner_detail = 3
+	box.border_width = width
+	box.tape = 0.5
+	if not fill:
+		box.bg_color = Color(box.bg_color, 0.0)
 	return box
 
 
@@ -702,7 +701,9 @@ static func _plate(edge: Color, width: int, fill := true) -> StyleBoxFlat:
 func _tagged(label: Label, color: Color, serial: int) -> Label:
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	label.add_theme_stylebox_override("normal", ScrapFrame.tag(Color(color, 0.55), serial))
+	var tag = ScrapFrame.hand_tag(UiTokens.Hand.KEEPER, serial)
+	tag.border_color = Color(color, 0.55)
+	label.add_theme_stylebox_override("normal", tag)
 	return label
 
 

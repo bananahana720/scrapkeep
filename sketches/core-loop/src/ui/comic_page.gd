@@ -19,6 +19,7 @@ const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScrapbookStore := preload("res://src/core/scrapbook_store.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const ASPECT := 0.75
 const MAX_PANELS := 6
 const INK_COLOR := Color("242a28")
@@ -199,6 +200,9 @@ func _draw() -> void:
 		_draw_panel(rects[j], list[kept[j]], kept[j], k)
 	if card != "" and not rects.is_empty() and card_fits(box, list, kept, card):
 		_card(rects[rects.size() - 1], card, k)
+	# Taped into the Keepers' scrapbook at its two top corners (LEGIBILITY.md section 14.3).
+	for corner in [[box.position, PI * 0.25], [Vector2(box.end.x, box.position.y), -PI * 0.25]]:
+		ScrapFrame.draw_tape(get_canvas_item(), corner[0], corner[1], ScrapFrame.TAPE * maxf(k, 0.5))
 
 
 # The indexes of the rows the page draws. A small page cannot hold six panels' captions at the
@@ -380,7 +384,7 @@ func _caption(r: Rect2, text: String, k: float) -> void:
 	var fs := caption_font(k)
 	var pad := 6.0 * k
 	var box := caption_rect(r, text, k)
-	draw_rect(box, Palette.BRASS.lerp(Palette.LEDGER, 0.55))
+	draw_rect(box, Palette.SAND)
 	draw_rect(box, INK_COLOR, false, 3.0 * k)
 	draw_multiline_string(UiFonts.bold(), box.position + Vector2(pad, pad + fs), text, HORIZONTAL_ALIGNMENT_LEFT, box.size.x - pad * 2.0, fs, -1, INK_COLOR)
 

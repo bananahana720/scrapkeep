@@ -12,6 +12,7 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Palette := preload("res://src/core/palette.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # The card draws the offer and emits choices. Flow owns the input routes and RunState
 # owns grants and the win check. The noninteractive default preserves SG9's draw-only use.
@@ -475,7 +476,7 @@ func _draw() -> void:
 	for index in _tiles.size():
 		var tile: Dictionary = _tiles[index]
 		var rect := _tile_rects[index]
-		UiDraw.panel(self, rect)
+		draw_style_box(ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, index + 1), rect)
 		var mid := h * 0.5
 		var cx := rect.position.x + PAD * k
 		# A drawn cap, so the key's number shows (a key's own SVG imports as a blank cap, keycap.gd).
@@ -506,7 +507,7 @@ func _draw() -> void:
 
 # The ladder as drawn: the selected rung is a filled disc in the pilot's colour, an opened rung a
 # sand ring and a locked rung a faint one. Under it the gauges of the rung looked at, or of the
-# selected rung: hazard for what the works gains, arc for what is the pilot's. A gauge is faint up to
+# selected rung: hazard for what the works gains, the Keeper's ink for what is the pilot's. A gauge is faint up to
 # the base tier's mark and bright past it; a gauge short of the mark (the top rungs' regen) leaves the
 # lost length as a hazard outline. Under the gauges, the looked-at rung's contract in words.
 func _draw_ladder() -> void:
@@ -543,7 +544,7 @@ func _draw_ladder() -> void:
 	for meter in meters:
 		x += UiDraw.text(self, x, y, String(meter["name"]), METER_FONT, Palette.SAND) + GAP
 		var bar := Rect2(Vector2(x, y - METER_BAR.y * 0.5), METER_BAR)
-		var colour := Palette.ARC if meter["yours"] else Palette.HAZARD
+		var colour: Color = UiTokens.hand(UiTokens.Hand.KEEPER).ink if meter["yours"] else Palette.HAZARD
 		var fill := clampf(float(meter["fill"]), 0.0, 1.0)
 		var mark := clampf(float(meter["base"]), 0.0, 1.0)
 		UiDraw.bar(self, bar, minf(fill, mark), Color(colour, 0.4))
