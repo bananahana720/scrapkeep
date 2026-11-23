@@ -78,12 +78,12 @@ func reset() -> void:
 	_clear_dropped()
 
 
-# Racks `id` full, replacing whatever was racked.
-func rack(id: String) -> bool:
+# Racks `id`, replacing whatever was racked. Arrives full unless `fill` is false (the opening starter).
+func rack(id: String, fill := true) -> bool:
 	if _row(id).is_empty():
 		return false
 	active_id = id
-	charges = int(_row(id)["max_charges"])
+	charges = int(_row(id)["max_charges"]) if fill else 0
 	progress = 0.0
 	return true
 
@@ -165,7 +165,7 @@ func _physics_process(delta: float) -> void:
 	if not _granted:
 		_granted = true
 		if active_id == "":
-			rack(ActiveDefs.STARTER)
+			rack(ActiveDefs.STARTER, false)
 	_locked = maxf(0.0, _locked - delta)
 	if active_id != "":
 		# Cell Bracket panels raise the recharge rate (the build's active_recharge mod).

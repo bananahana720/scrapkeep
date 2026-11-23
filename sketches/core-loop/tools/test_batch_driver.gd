@@ -1,11 +1,13 @@
 extends RefCounted
 
 const ChallengeDials := preload("res://src/core/challenge_dials.gd")
+const BuffLedger := preload("res://src/core/buff_ledger.gd")
 const Game := preload("res://src/game.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Density := preload("res://src/presentation/density.gd")
 const PickQuiet := preload("res://src/ui/pick_quiet.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
 const WarningBound := preload("res://src/combat/warning_bound.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
@@ -159,11 +161,13 @@ func _reset() -> void:
 	Engine.max_physics_steps_per_frame = max_steps
 	Engine.max_fps = max_fps
 	ChallengeDials.reset()
+	BuffLedger.reset_for_tests()
 	Game.set_motion_statics(false)
 	FlashGuard.on = false
 	GraphicsPreset.reset_for_tests()
 	Density.reset_for_tests()
 	PickQuiet.reset_for_tests()
+	UiFonts.reset_for_tests()
 	Parts.reset_for_tests()
 	WarningBound.reset_for_tests()
 	DigScenery.reset_for_tests()

@@ -3,6 +3,7 @@ extends RefCounted
 const Tuning := preload("res://src/movement/tuning.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Run := preload("res://src/core/run_state.gd")
+const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 
 # The reactor relic's driver (design-v3/wardens/reactor.md sections 3 and 4; unit KF2). warden.gd's
 # per-kind hook loads this file for every park Warden of the reactor family (spec "harpoon_anchor":
@@ -500,19 +501,19 @@ static func line_reference_damage() -> float:
 		var total := 0.0
 		var pilots: Array = ClassDef.all()
 		for def in pilots:
-			total += float(Weapons.BASE[def.weapon_id]["damage"])
+			total += Weapons.base_damage(def.weapon_id)
 		_line_reference = total / pilots.size()
 	return _line_reference
 
 
-# A weapon's base damage per second, from its Weapons.BASE row. A pressure weapon (Tally's reader)
-# fires at its refill rate, one charge per Weapons.PRESSURE_ROLL_S, not its row rate: time never
-# refills pressure, so latched she measured 0.5 shots a second against the row's 2.5 (ruling BL1).
+# A weapon's careless baseline damage per second (PILOT-CADENCE.md section 2.5). A pressure
+# weapon (Tally's reader) fires at its refill rate, one charge per Weapons.PRESSURE_ROLL_S,
+# not its row rate (ruling BL1); every other weapon reads WeaponDriver.base_dps().
 static func base_dps(weapon: String) -> float:
 	var row: Dictionary = Weapons.BASE[weapon]
 	if preload("res://src/core/ability_state.gd").ABILITIES.get(weapon, {}).has("pressure"):
 		return float(row["damage"]) / Weapons.PRESSURE_ROLL_S
-	return float(row["damage"]) * float(row["rate"])
+	return WeaponDriver.base_dps(Weapons.base(weapon))
 
 
 # The objective plate's reading of this mounting (ui/hud.gd, core/objectives.gd): which road

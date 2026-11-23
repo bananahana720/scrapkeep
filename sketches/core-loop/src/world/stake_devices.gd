@@ -66,9 +66,8 @@ const WARD_RADIUS_BONUS := 1.5
 # Each body is one cached mesh in one shared material (RecipeProps.piece), and its glow or its marks one more.
 const OWNERS := ["gamble", "kindness"]
 # The bus fact the kindness sends the first time it makes its offer (the ball reaches it and its price comes up):
-# world_fact(KINDNESS_FACT, reach point). The Foreman's voice hooks it (W46-A1). It has no WORLD_ROWS row, so the bus
-# plays nothing for it; the device sounds KINDNESS_CHIME itself only while that stays so, and a row that gives the fact a
-# sound replaces it.
+# world_fact(KINDNESS_FACT, reach point). The Foreman's voice hooks it, and since W46-A1 it has its own WORLD_ROWS row, so
+# the bus plays its sound; the device sounds KINDNESS_CHIME itself only while the fact has no row.
 const KINDNESS_FACT := "kindness_offered"
 # The offer's sound: the pilot's own motif played back one note wrong (sfx_bank.gd mind_wrong_<motif>; STORY-MAP, the
 # foreman's kindness row), and this device's glow swells with it to KINDNESS_PULSE and settles back over PULSE_S.

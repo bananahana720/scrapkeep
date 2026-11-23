@@ -284,13 +284,13 @@ const ENTRIES := [
 		"id": "armour_plated", "name": "Plated",
 		"hint": "Some crews shrug off a plain hit.",
 		"clue": "any hit on a plated crew",
-		"text": "Plated crews take 60% from rams, smashes and weapon fire. Arc and your abilities do 150%.",
+		"text": "Plated crews take 60% from rams, smashes and weapon fire. Arc and your abilities do 125%.",
 	},
 	{
 		"id": "armour_wet", "name": "Soaked",
 		"hint": "The Spillway crews work in the water. Water carries a spark.",
 		"clue": "an arc hit on a Spillway crew",
-		"text": "Spillway crews come out of the channel soaked. Arc does 150% to them and everything else lands as normal.",
+		"text": "Spillway crews come out of the channel soaked. Arc does 125% to them and everything else lands as normal.",
 	},
 	# --- P-C Sable entries ---
 	{"id": "bank_shot", "name": "Bank Shot", "hint": "The line can turn you as well as pull you.", "clue": "a standing line + pick 3", "text": "Pick 3 and click while a line stands. You whip round the anchor and leave toward your aim, faster than you came."},

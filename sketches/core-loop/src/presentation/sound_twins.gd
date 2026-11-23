@@ -51,8 +51,10 @@ const DANGER_NOT_ACT_PINNED := 1
 # Files whose scanned call sites are world 1's own (Brindle, the yard locks and overtime, the called shot,
 # the Wardens, the Spillway rogue and miniboss) or core audio and effects that play in every world.
 const WORLD1_FILES := ["boss.gd", "stage_locks.gd", "overtime.gd", "called_shot.gd", "warden.gd", "stub_boss.gd", "miniboss.gd", "rogue.gd", "audio.gd", "juice.gd", "panel_fx.gd", "projectile.gd"]
-# Facts that can fire in world 1 and no rule finds: fact id -> why (none today).
-const WORLD1_EXTRA := {}
+# Facts that can fire in world 1 and no rule finds: fact id -> why.
+const WORLD1_EXTRA := {
+	"WORLD_ROWS:kindness_offered": "stake_devices.gd:_offer_made emits KINDNESS_FACT constant",
+}
 # Table facts with no firing site found by the emit scan (their signal is emitted some other way). They
 # sit outside the world 1 check; this number may only go down.
 const UNSITED_PINNED := 130  # +2 (wave 43 sound part 4): guard_critical and the beacon_open state fire from audio.gd with no bus signal of their own
@@ -203,6 +205,8 @@ const ACT := [
 	{"facts": ["roster:hooker.hold", "roster:mag_trapper.hold", "roster:netcaster.hold", "roster:bola_thrower.hold", "roster:winch_drone.hold", "roster:gyro_jammer.hold", "roster:catch_trap.hold"], "traced": true, "what": "holds.gd draws the striped binding line from the holder to the ball and a bracket on the ball for as long as the hold lasts",
 		"script": "res://src/combat/holds.gd", "fn": "_process", "token": "_stripes(mesh, from, ball)",
 		"also": [{"what": "the bracket on the held ball", "script": "res://src/combat/holds.gd", "fn": "_process", "token": "_draw_bracket(ball)"}]},
+	{"facts": ["WORLD_ROWS:quick_sync"], "traced": true, "what": "the Foreman's brass sync ring pulses on the ground while its chasers snap into formation",
+		"script": "res://src/combat/foreman.gd", "fn": "_show_signal", "token": "_sync_ring.visible = level > 0.0 and not _dead"},
 ]
 
 const OPEN := [
@@ -248,7 +252,7 @@ const NOT_ACT := [
 	{"why": "a hit taken while the shell is hot: the same hit already sounds hurt and flashes, and this only adds the bite", "traced": true,
 		"facts": ["site:audio.gd:_tend_heat:heat_hot_hit"]},
 	{"why": "a reward, pickup, score or discovery: pays the player and asks nothing", "traced": false,
-		"facts": ["ROWS:achievement_earned", "ROWS:rescue_completed", "ROWS:quick_break", "ROWS:scrap_collected", "ROWS:cogs_collected", "ROWS:part_gained", "ROWS:panel_gained", "ROWS:heft_class_changed", "ROWS:heft_class_dropped", "ROWS:core_gained", "ROWS:synergy_discovered", "ROWS:interaction_found", "ROWS:reward_chosen", "ROWS:tree_offered", "ROWS:tree_picked", "ROWS:ambush_ended", "ROWS:bet_resolved", "ROWS:activity_done", "ROWS:drop_landed", "ROWS:missed_drop", "ROWS:evolution_fired", "site:audio.gd:wire_optional:evolution_fired", "STATE_ROWS:beacon_open", "ROWS:radio_take_found", "ROWS:relay_stake_paid", "ROWS:maker_set_completed", "ROWS:overflow_cashed", "ROWS:trade_taken", "LOOT_ROWS:item_proc", "LOOT_ROWS:par_split", "WORLD_ROWS:ledger_returned"]},
+		"facts": ["ROWS:achievement_earned", "ROWS:rescue_completed", "ROWS:quick_break", "ROWS:scrap_collected", "ROWS:cogs_collected", "ROWS:part_gained", "ROWS:panel_gained", "ROWS:heft_class_changed", "ROWS:heft_class_dropped", "ROWS:core_gained", "ROWS:synergy_discovered", "ROWS:interaction_found", "ROWS:reward_chosen", "ROWS:tree_offered", "ROWS:tree_picked", "ROWS:ambush_ended", "ROWS:bet_resolved", "ROWS:activity_done", "ROWS:drop_landed", "ROWS:missed_drop", "ROWS:evolution_fired", "site:audio.gd:wire_optional:evolution_fired", "STATE_ROWS:beacon_open", "ROWS:radio_take_found", "ROWS:relay_stake_paid", "ROWS:maker_set_completed", "ROWS:overflow_cashed", "ROWS:trade_taken", "LOOT_ROWS:item_proc", "LOOT_ROWS:par_split", "WORLD_ROWS:ledger_returned", "WORLD_ROWS:kindness_offered", "WORLD_ROWS:shift_over"]},
 	{"why": "echo of the player's own move, hit, press or ride; they see it as it happens", "traced": false,
 		"facts": ["UI_ROWS:guard_critical", "ROWS:escape_window", "ROWS:enemy_killed", "ROWS:jumped", "ROWS:boosted", "ROWS:dashed", "ROWS:landed", "ROWS:bumped", "ROWS:slammed", "ROWS:carved", "ROWS:grapple_fired", "ROWS:grapple_released", "ROWS:mounted", "ROWS:dismounted", "ROWS:enemy_struck", "ROWS:shot_fired", "ROWS:special_used", "ROWS:strike_deflected", "ROWS:element_resolved", "ROWS:boss_weak_point_hit", "ROWS:boss_reeled", "ROWS:enemy_rebounded", "ROWS:enemy_pinned", "ROWS:enemy_walled", "ROWS:enemy_ringed_out", "ROWS:vault_kicked", "ROWS:gauge_charging", "ROWS:gauge_released", "ROWS:gauge_cancelled", "ROWS:sprint_started", "ROWS:cc_ignored", "ROWS:cloak_started", "ROWS:cloak_broken", "ROWS:sticky_detonated", "ROWS:rocket_jumped", "ROWS:blink_used", "ROWS:arc_slammed", "ROWS:skid_smashed", "ROWS:demo_slammed", "ROWS:hold_broken", "ROWS:hold_ended", "ROWS:tenacity_gained", "ROWS:shield_vaulted", "ROWS:near_miss", "ROWS:interact_armed", "ROWS:interact_fired", "ROWS:verb_failed", "ROWS:prompt_shown", "ROWS:cause_armed", "ROWS:cause_fired", "ROWS:posture_changed", "ROWS:slot_selected", "ROWS:slot_cast", "ROWS:line_skill_fired", "ROWS:line_skill_expired", "ROWS:active_fired", "ROWS:active_heat", "ROWS:ultimate_started", "ROWS:ultimate_peak", "ROWS:ultimate_landed", "ROWS:ultimate_cancelled", "ROWS:special_broken", "UI_ROWS:posture_break", "UI_ROWS:ability_cooling", "UI_ROWS:ability_active", "UI_ROWS:ability_unavailable", "UI_ROWS:cooldown_refunded", "UI_ROWS:key_glyph", "WORLD_ROWS:drain_gurgle", "WORLD_ROWS:shell_air_shift", "WORLD_ROWS:lift_fired", "WORLD_ROWS:launcher_charging", "WORLD_ROWS:cannon_fired", "WORLD_ROWS:trebuchet_fired", "WORLD_ROWS:glaze_skim", "WORLD_ROWS:cinder_cooled", "WORLD_ROWS:geyser_fired", "WORLD_ROWS:valve_smashed", "WORLD_ROWS:route_opened", "WORLD_ROWS:wall_crumbled", "WORLD_ROWS:steam_lift_fired", "WORLD_ROWS:breach_opened"]},
 	{"why": "danger-listed enemy_arrive: the spawned body appears at the same call (combat.gd spawn_enemy adds it before the emit) and asks nothing until its windup, which is its own row", "traced": true,

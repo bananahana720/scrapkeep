@@ -6,11 +6,12 @@ const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
 # One side of an upgrade pick. The middle is the ability bar's own slot: the node's ab_
-# glyph on a rounded square with one notch per depth along its top edge, the same glyph the
+# glyph on a small cut plate with one notch per depth along its top edge, the same glyph the
 # bar wears, so the card reads as "this slot, changed". Under that, the node's name and its
 # effect line. The number key that takes it sits top left, as on the class cards, and is the
 # card's only keycap: a second keycap under the slot read as a second way to take the card,
@@ -35,6 +36,8 @@ var _set_piece: Label
 var _skip_prompt: Label
 var _taken := false
 var _lift := 0.0
+var _serial := 0
+var _slot: StyleBox
 
 
 func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1, world_one := false, shell := false, set_piece_table := WorldOneCards.SET_PIECE_LINES, pilot := "", offer_kind := UpgradeTree.OFFER_PAIR) -> void:
@@ -47,11 +50,15 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	accessibility_name = String(node.get("name", ""))
 	custom_minimum_size = Vector2(WIDTH, HEIGHT)
 	pivot_offset = custom_minimum_size * 0.5
-	add_theme_stylebox_override("normal", ClassCard._plate(Color(color, 0.7), 2))
-	add_theme_stylebox_override("hover", ClassCard._plate(color, 4))
-	add_theme_stylebox_override("pressed", ClassCard._plate(Palette.AMBER, 4))
-	add_theme_stylebox_override("focus", ClassCard._plate(UiTokens.TEXT, 3, false))
-	add_theme_stylebox_override("disabled", ClassCard._plate(Color(color, 0.3), 2))
+	_serial = hash(String(node.get("id", node.get("name", ""))))
+	add_theme_stylebox_override("normal", ClassCard.keeper_plate(Color(color, 0.7), _serial, 2))
+	add_theme_stylebox_override("hover", ClassCard.keeper_plate(color, _serial, 4))
+	add_theme_stylebox_override("pressed", ClassCard.keeper_plate(Palette.AMBER, _serial, 4))
+	add_theme_stylebox_override("focus", ClassCard.keeper_plate(UiTokens.TEXT, _serial, 3, false))
+	add_theme_stylebox_override("disabled", ClassCard.keeper_plate(Color(color, 0.3), _serial, 2))
+	# The slot under the glyph: a small Keeper plate of the card's own serial.
+	_slot = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, _serial + 1)
+	_slot.border_width = 3.0
 	var box := VBoxContainer.new()
 	box.set_anchors_preset(Control.PRESET_FULL_RECT)
 	box.offset_top = 24.0 + SLOT + 26.0
@@ -84,7 +91,7 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 # reads as made. The amber, the edge weight and the pop carry it; no word restates it.
 func mark_taken() -> void:
 	_taken = true
-	add_theme_stylebox_override("disabled", ClassCard._plate(Palette.AMBER, 4))
+	add_theme_stylebox_override("disabled", ClassCard.keeper_plate(Palette.AMBER, _serial, 4))
 
 
 func is_taken() -> bool:
@@ -171,12 +178,8 @@ func _draw() -> void:
 	Keycap.draw(self, Vector2(20.0 + Keycap.size_of(key, KEY_H).x * 0.5, 18.0 + KEY_H * 0.5), key, bright, KEY_H)
 	var centre := Vector2(size.x * 0.5, 24.0 + SLOT * 0.5 - 6.0 * _lift)
 	var rect := Rect2(centre - Vector2(SLOT, SLOT) * 0.5, Vector2(SLOT, SLOT))
-	var plate := StyleBoxFlat.new()
-	plate.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
-	plate.border_color = color if _lift > 0.5 else Palette.SAND
-	plate.set_border_width_all(3)
-	plate.set_corner_radius_all(UiTokens.RADIUS)
-	draw_style_box(plate, rect)
+	_slot.border_color = color if _lift > 0.5 else Palette.SAND
+	draw_style_box(_slot, rect)
 	var icon_id := String(node.get("icon", ""))
 	var inset := rect.grow(-12.0)
 	draw_texture_rect(Icons.texture(icon_id), inset, false, Icons.tint(icon_id, color))

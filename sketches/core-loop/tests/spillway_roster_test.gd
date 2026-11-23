@@ -16,7 +16,7 @@ const T := preload("res://tests/support/t.gd")
 # - tables: the dam names five packs and the flume six, both tables agree, both stages share
 #   the Spillway elite, and the three re-admitted kinds fight in world 1 only, each with a
 #   director card and a finite pack cost;
-# - soaked crews: the chaser, the hooker and the sluice flap read "wet" (arc 150%, nothing
+# - soaked crews: the chaser, the hooker and the sluice flap read "wet" (arc 125%, nothing
 #   resisted); the jolt layer is dry;
 # - wind-ups: each re-admitted kind's row names a sound SfxBank can play;
 # - live: a sluice flap launches a FAST ball along its line and flings a slow one; a hooker's
@@ -97,7 +97,7 @@ func _tables() -> void:
 func _soaked() -> void:
 	_t.eq("wet: arc weak, kinetic and frost plain, abilities plain",
 		[DamageFamilies.mult("wet", "arc", ""), DamageFamilies.mult("wet", "ram", ""), DamageFamilies.mult("wet", "frost", ""),
-			DamageFamilies.mult("wet", "ram", DamageFamilies.ABILITY)], [1.5, 1.0, 1.0, 1.0])
+			DamageFamilies.mult("wet", "ram", DamageFamilies.ABILITY)], [1.25, 1.0, 1.0, 1.0])
 	var kinds := {}
 	for kind in ["chaser", "hooker", "ramp_flipper", "boom_tender", "jolt_layer", "lobber"]:
 		kinds[kind] = String(DamageFamilies.ARMOUR_OF.get(kind, ""))

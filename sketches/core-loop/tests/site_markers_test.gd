@@ -224,6 +224,7 @@ func _which_sites() -> void:
 	markers._clock = SiteMarkers.READ_EVERY
 	markers._on_stage_entered(2, false)
 	t.check("entering a stage takes every plume down, fading ones too", markers.views.is_empty() and markers.leaving.is_empty())
+	t.check("entering a stage also clears visited state", markers.visited_sites().is_empty())
 	t.eq("and reads the new stage's sites on the next frame", markers._clock, 0.0)
 
 	# An eye that has not moved redraws nothing; one that has, does.
@@ -457,6 +458,7 @@ func _in_game() -> void:
 		for i in 30:
 			await physics_frame
 		t.eq("a freed cage's plume comes down", int(_plume_kinds(markers).get("cage", 0)), 0)
+		t.check("and Rivet's cage flips to visited", markers.is_visited("cage:rivet"))
 	t.eq("park_dam stands no furnace column", int(kinds.get("furnace", 0)), 0)
 	game.flow.enter_stage(2, Vector3.ZERO, false)
 	for i in 30:

@@ -58,6 +58,8 @@ func _physics_process(delta: float) -> bool:
 		_game.run.set_max_hp(99999.0)
 		for part in STACK:
 			_game.run.add_part(part, "test")
+		# Cap test saturates Bolts.MAX_LIVE via continuous hold_auto volley stress (PILOT-CADENCE §4).
+		combat._patterns[Weapons.RAPID_LASER].trigger = Pattern.TRIGGER_HOLD_AUTO
 		_source.hold = {"fire_held": true}
 		return false
 	# Look up into open sky so every bolt flies its full range.

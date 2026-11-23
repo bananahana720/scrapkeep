@@ -478,6 +478,7 @@ static var _opening_task := -1
 
 
 static func reset_for_tests() -> void:
+	SfxBank.bake_cancel = true
 	if _bake_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_bake_task)
 		_bake_task = -1
@@ -955,27 +956,34 @@ func _dsp_state() -> Dictionary:
 var _drop_room := []
 
 
-func _make_drop_room(at: int) -> void:
+func _make_drop_room(at: int, band = null) -> void:
 	var tuning = ctx.get("tuning") if ctx != null else null
 	var name: String = tuning.option(Tuning.DROP_ROOM_KEY) if tuning != null else "off"
 	if not MixRows.DROP_ROOM.has(name):
 		_drop_room = []
 		return
-	var from := at - int(MixRows.DROP_ROOM_LEAD_S * AceSequencer.RATE)
-	_drop_room = [ace, from, at + MixRows.DROP_ROOM_BARS * ace.grid_bar, MixRows.DROP_ROOM[name]]
+	var owner = band if band != null else (ace if ace_playing() else engine)
+	if owner == null:
+		_drop_room = []
+		return
+	var bar: int = ace.grid_bar if owner == ace else engine.bar_len()
+	var from := at - int(MixRows.DROP_ROOM_LEAD_S * Harmony.RATE)
+	_drop_room = [owner, from, at + MixRows.DROP_ROOM_BARS * bar, MixRows.DROP_ROOM[name]]
 
 
 func _drop_room_now() -> Dictionary:
 	if _drop_room.is_empty():
 		return {}
-	if _drop_room[0] != ace or ace == null:
+	var owner = _drop_room[0]
+	var valid: bool = (owner == ace and ace_playing()) or (owner == engine and engine != null)
+	if owner == null or not valid:
 		_drop_room = []
 		return {}
 	# Timed on the sample the player hears, not the render head (as live_key reads the key).
 	var queued := 0
 	if live_output and _music_pb != null:
 		queued = _ring_capacity - _music_pb.get_frames_available()
-	var heard: int = ace.audible_sample(queued)
+	var heard: int = ace.audible_sample(queued) if owner == ace else maxi(engine.clock - queued, 0)
 	if heard >= int(_drop_room[2]):
 		_drop_room = []
 		return {}
@@ -2270,7 +2278,7 @@ func _drop_babble() -> void:
 # how long the voice lasts from now, for the card's hold; 0.0 when it stays silent, as it
 # does while an earlier caller is still talking.
 func call_in(kind: String, speaker: String, text: String) -> float:
-	if text == "" or clock < float(_gates.get("call_in", -1000.0)) or not _admit(kind, "babble", 1.0):
+	if text == "" or clock < float(_gates.get("call_in", -1000.0)) or clock < _focus_until or not _admit(kind, "babble", 1.0):
 		return 0.0
 	var step := grid_unit(4)
 	var at := engine.clock + int(CALL_LEAD_S * Harmony.RATE)
@@ -2458,6 +2466,7 @@ func _connect_all(events) -> void:
 		_posture_seen.clear()
 		_guard_steps.clear()
 		_guard_warned.clear()
+		_synth_form_state = "closed"
 		_line_was = ""
 		_motif = motif_of(class_id)
 		engine.set_class_motif(_motif)
@@ -2593,7 +2602,9 @@ func wire_optional() -> void:
 		# A world row's own priority, not the bare world_fact kind's 0: the Overtime ring, the sluice and
 		# the Called Shot results were 6 dB under a pickup and never dipped the band (sound-gaps 12 Nov).
 		var row := EventKinds.world_row(kind)
-		if not row.is_empty():
+		if kind == "kindness_offered" and not row.is_empty():
+			_play_kindness_chime(row)
+		elif not row.is_empty():
 			play("world_fact", 0.0, 1.0, "SFX", Rows.heard(row, cue_context()), int(row.get("priority", 0)))
 		_set_world_fact(kind)
 		if kind == "bay_jukebox":
@@ -3544,6 +3555,7 @@ func _begin_boss(kind: String, music: String) -> void:
 	if kind == "boss_arena_entered":
 		radio_finale = false
 		_champion_hyped = false
+		_synth_form_state = "closed"
 	if music in MusicEngine.BOSS_TRACKS:
 		_boss_arena_track = music
 	if radio_hold != "":
@@ -3577,16 +3589,46 @@ func _begin_boss(kind: String, music: String) -> void:
 # boss_phase_changed(phase, name) in wave 4; with no phase argument, count up.
 func _on_boss_phase() -> void:
 	_boss_phase += 1
-	on_beat("boss_phase_changed")
-	engine.set_brindle_phase(_boss_phase)
-	phase_music(_boss_phase)
+	_trigger_boss_phase(_boss_phase)
 
 
 func _on_boss_phase_with(phase) -> void:
-	_boss_phase = int(phase)
-	on_beat("boss_phase_changed")
-	engine.set_brindle_phase(_boss_phase)
-	phase_music(_boss_phase)
+	var next := int(phase)
+	# Phase 1 arrives just after the arena entry's own stinger: keep the section and phase plan
+	# as before W46-A1, but play no second clash on top of the entry.
+	if next <= _boss_phase and next <= 1:
+		engine.set_brindle_phase(next)
+		phase_music(next)
+		return
+	_boss_phase = next
+	_trigger_boss_phase(_boss_phase)
+
+
+# Locks Brindle's +10/+20 BPM anthem drops onto the phase-turn clash beat: when an ACE phase
+# track is booked, the clash stinger lands on that exact drop sample; on the synth band alone,
+# both the synth phase drop and the clash land together on the next beat.
+func _trigger_boss_phase(phase: int) -> void:
+	engine.set_brindle_phase(phase)
+	var plan := phase_music(phase)
+	if plan.has("at"):
+		_clash_at("boss_phase_changed", int(plan["at"]))
+	else:
+		on_beat("boss_phase_changed")
+
+
+func _clash_at(kind: String, at: int) -> int:
+	var sound := Rows.sound(kind, cue_context())
+	if not sound_ready or sound == "":
+		_log_cue([kind, sound, "skip", -1, 1.0])
+		return -1
+	engine.schedule_stinger_at(sound, at, story_duck_db(kind))
+	var beats: int = SfxBank.STINGER_BEATS.get(sound, 1)
+	var hold := float(maxi(at - engine.clock, 0) + beats * Harmony.BEAT) / Harmony.RATE
+	_duck(0.6, hold)
+	if sound in DANGER_SOUNDS:
+		engine.duck_bass(0.3, hold)
+	_log_cue([kind, sound, "beat", at, 1.0])
+	return at
 
 
 # The ACE band follows the boss phase (INTEGRATION.md section 6): Brindle swaps to its phase
@@ -3621,7 +3663,7 @@ func phase_music(phase: int) -> Dictionary:
 		var plan := PhaseMusic.final_plan(boss, pack_available)
 		if plan["track"] == "":
 			return {}
-		var when := PhaseMusic.drop_plan(engine.clock, engine.next_bar(), engine.bar_len(), Harmony.RATE)
+		var when := PhaseMusic.drop_plan(engine.clock, _next_bar(), _bar_len(), Harmony.RATE)
 		if plan["hype"]:
 			engine.schedule_stinger_at("hype_drop", int(when["start"]))
 			_log_cue(["boss_phase_music", "hype_drop", "beat", int(when["start"]), 1.0])
@@ -3631,7 +3673,7 @@ func phase_music(phase: int) -> Dictionary:
 	var track := PhaseMusic.track_for_phase(boss, phase, pack_available)
 	if track == "" or not pack_available.call(track):
 		return {}
-	var at := engine.next_bar()
+	var at := _next_bar()
 	_ace_named(track, at, true)
 	_log_cue(["boss_phase_music", track, "bar", at, 1.0])
 	return {"track": track, "hype": false, "at": at}
@@ -3787,6 +3829,7 @@ func tune_found(discovery_id: String) -> void:
 func warden_took_band() -> void:
 	_warden_engaged = true
 	_warden_fighting = true
+	_synth_form_state = "closed"
 	_moments.clear()
 	if _champion_hyped:
 		_champion_hyped = false
@@ -3969,6 +4012,38 @@ func next_grid(per_beat: int) -> int:
 
 func _next_bar() -> int:
 	return ace.next_bar() if _on_ace_grid() else engine.next_bar()
+
+
+func _bar_len() -> int:
+	return ace.grid_bar if _on_ace_grid() else engine.bar_len()
+
+
+# The Foreman's Kindness trade offer: sterile, pure, on-the-grid quantization matching the
+# Foreman's voice. Never overlaps an active telegraph cue: if a telegraph holds focus while
+# the band plays, the chime waits for the first sixteenth after focus clears.
+func _play_kindness_chime(row: Dictionary) -> int:
+	var sound := Rows.heard(row, cue_context())
+	if sound == "":
+		_log_cue(["world_fact", sound, "skip", -1, 1.0])
+		return -1
+	var priority := int(row.get("priority", 1))
+	if engine != null and engine.mode == MusicEngine.PLAY:
+		if not _admit("world_fact", sound, 1.0):
+			return -1
+		var unit := grid_unit(4)
+		var at := next_grid(4)
+		if clock < _focus_until:
+			var earliest := engine.clock + ceili((_focus_until - clock) * Harmony.RATE)
+			while at < earliest:
+				at += unit
+		engine.schedule_stinger_at(sound, at, PRIORITY_DB[priority])
+		_log_cue(["world_fact", sound, "grid", at, 1.0])
+		return at
+	if clock < _focus_until:
+		_log_cue(["world_fact", sound, "skip", -1, 1.0])
+		return -1
+	play("world_fact", 0.0, 1.0, "SFX", sound, priority)
+	return engine.clock if engine != null else -1
 
 
 # One pitched note of kind's cue in the stinger lane at transport sample at, at the grid note's
@@ -4510,13 +4585,21 @@ func _on_posture_changed(enemy: Node3D, posture: float, staggered: bool) -> void
 	# The reading that breaks the Warden asks the band for nothing: the break answers it on the
 	# next frame, and a build opened here would be opened only to be thrown away (8 ms on the
 	# break's frame, measured on the PC).
-	if ctx.flow != null and ctx.flow.get("warden") == enemy and chunks > 0:
+	if _is_form_fight(enemy) and chunks > 0:
 		# A hit that fills the bar from low down opens a stagger and passes a quarter on the same
 		# reading: the stagger's held breath answers it, not a drop.
 		# A smash inside the dam's stagger takes a real chunk while the wiped bar reads no
 		# quarter gone: a real chunk shattered with some left lands the drop there too.
 		var fell := _guard_step_fell(enemy, bool(seen[0]) and not staggered)
 		_follow_warden_form(posture, staggered, (fell or (shattered and chunks > 0)) and not staggered)
+
+
+func _is_form_fight(enemy: Node3D) -> bool:
+	if not is_instance_valid(enemy):
+		return false
+	if ctx != null and ctx.flow != null and ctx.flow.get("warden") == enemy:
+		return true
+	return enemy.get("boss") != null and (engine.track in MusicEngine.BOSS_TRACKS or _active_boss_track() in MusicEngine.BOSS_TRACKS)
 
 
 # The guard bar reaching GUARD_CRITICAL while a posture body stands: one warning per climb, re-armed once
@@ -4548,28 +4631,83 @@ func _guard_step_fell(enemy: Node3D, stagger_ended: bool) -> bool:
 	return left < lowest and left > 0
 
 
-# The Warden's fight plays the recorded band like a set (AUDIO-V3 section 1.1, read for the
+# The Warden and Brindle fights play the band like a set (AUDIO-V3 section 1.1, read for the
 # posture fight): the pilot's hits tighten the build, the stagger is the held breath, and
-# the hit that shatters a chunk lands the drop on the next beat. The chunk that breaks the
-# Warden lands no drop: the break and the kill cadence answer it (ruling bt). With the
-# launch switch on "loop" the band is told a guard that never moves, so the build loops.
+# the hit that shatters a chunk lands the drop on the next beat. Both the ACE band and the
+# synth band follow the guard while WARDEN_FORM_KEY == "form" and no radio pin owns the air.
+# The chunk that breaks the Warden lands no drop: the break and the kill cadence answer it
+# (ruling bt). With the launch switch on "loop" the band is told a guard that never moves.
 func _follow_warden_form(posture: float, staggered: bool, landed: bool) -> void:
-	var tuning = ctx.get("tuning")
-	if not ace_playing() or tuning == null:
+	var tuning = ctx.get("tuning") if ctx != null else null
+	if tuning == null or radio_hold != "":
+		return
+	var on_ace := ace_playing()
+	var on_synth := sound_ready and engine != null and engine.mode == MusicEngine.PLAY and (engine.track == "warden" or engine.track in MusicEngine.BOSS_TRACKS)
+	if not on_ace and not on_synth:
 		return
 	if tuning.option(Tuning.WARDEN_FORM_KEY) != "form":
 		_warden_posture = 0.0
 		_warden_staggered = false
-		ace.follow_guard(0.0, false, false)
+		if on_ace:
+			ace.follow_guard(0.0, false, false)
+		if on_synth:
+			_reset_synth_form()
 		return
 	_warden_posture = posture
 	_warden_staggered = staggered
-	var at: int = ace.follow_guard(posture, staggered, landed)
-	if at >= 0:
-		_log_cue(["warden_form", "drop", "beat", at, 1.0, 0.0])
-		_make_drop_room(at)
-		_tend_deck()
-		deck_moves.on_drop(ace, at, deck_style())
+	var ace_at := -1
+	if on_ace:
+		ace_at = ace.follow_guard(posture, staggered, landed)
+		if ace_at >= 0:
+			_log_cue(["warden_form", "drop", "beat", ace_at, 1.0, 0.0])
+			_make_drop_room(ace_at)
+			_tend_deck()
+			deck_moves.on_drop(ace, ace_at, deck_style())
+	if on_synth:
+		var synth_at := _follow_synth_form(posture, staggered, landed)
+		if synth_at >= 0 and ace_at < 0:
+			_log_cue(["warden_form", "drop", "beat", synth_at, 1.0, 0.0])
+			_make_drop_room(synth_at, engine)
+
+
+func _reset_synth_form() -> void:
+	if _synth_form_state == "open":
+		engine.hold_dominant(false)
+		if engine.track == "warden" and engine.section == "open":
+			engine.warden_section("build")
+	elif _synth_form_state == "telegraph":
+		engine.cancel_build()
+	_synth_form_state = "closed"
+
+
+func _follow_synth_form(posture: float, staggered: bool, landed: bool) -> int:
+	var prev := _synth_form_state
+	var state := AceSequencer.guard_state(prev, posture, staggered)
+	_synth_form_state = state
+	if landed:
+		engine.hold_dominant(false)
+		if engine.track == "warden" or (engine.track in MusicEngine.BOSS_TRACKS and engine.section in ["1", "2", "3"]):
+			return engine.drop_now(4, 0.9)
+		return -1
+	if state == "open":
+		if prev != "open":
+			if engine.track == "warden":
+				engine.warden_section("open")
+			engine.hold_dominant(true)
+		return -1
+	if prev == "open":
+		engine.hold_dominant(false)
+		if engine.track == "warden":
+			engine.warden_section("build")
+	elif prev == "telegraph" and state == "closed":
+		engine.cancel_build()
+	if state == "telegraph":
+		var tight := clampf((posture - AceSequencer.GUARD_TIGHT) / (100.0 - AceSequencer.GUARD_TIGHT), 0.0, 1.0)
+		if engine.track == "warden":
+			engine.warden_charge(lerpf(MusicEngine.WARDEN_BUILD_FROM, 1.0, tight))
+		elif engine.track in MusicEngine.BOSS_TRACKS:
+			engine.brindle_hp(clampf(posture / 100.0, 0.0, 1.0), true, tight)
+	return -1
 
 
 func _stagger_chord() -> void:
@@ -5439,6 +5577,7 @@ var set_director := SetDirector.new()
 var deck_moves := DeckMoves.new()
 var _warden_posture := 0.0
 var _warden_staggered := false
+var _synth_form_state := "closed"
 var _set_bar_at := -1
 var _set_overtime := false
 var _set_incoming_at := -1.0

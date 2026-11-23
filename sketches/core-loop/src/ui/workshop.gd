@@ -5,6 +5,7 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const TreePick := preload("res://src/ui/tree_pick.gd")
 const PickQuiet := preload("res://src/ui/pick_quiet.gd")
 const ShopCounter := preload("res://src/ui/shop_counter.gd")
@@ -76,6 +77,9 @@ class TalkButton extends Button:
 	# button for the mouse while the counter holds it, and just a prompt otherwise.
 	const H := 30.0
 
+	# The bubble beside the cap: a small Keeper plate, edged in the cap's colour as it draws.
+	var _bubble: StyleBox = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, 7)
+
 	func _init() -> void:
 		focus_mode = Control.FOCUS_NONE
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -97,12 +101,8 @@ class TalkButton extends Button:
 		Keycap.draw(self, Vector2(cap.x * 0.5, size.y * 0.5), "key_t", tint, H)
 		var at := Vector2(cap.x + 8.0, size.y * 0.5 - 9.0)
 		var bubble_rect := Rect2(at, Vector2(24.0, 16.0))
-		var box := StyleBoxFlat.new()
-		box.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
-		box.border_color = tint
-		box.set_border_width_all(2)
-		box.set_corner_radius_all(UiTokens.RADIUS)
-		draw_style_box(box, bubble_rect)
+		_bubble.border_color = tint
+		draw_style_box(_bubble, bubble_rect)
 		draw_colored_polygon(PackedVector2Array([at + Vector2(4.0, 15.0), at + Vector2(-2.0, 22.0), at + Vector2(11.0, 15.0)]), tint)
 
 

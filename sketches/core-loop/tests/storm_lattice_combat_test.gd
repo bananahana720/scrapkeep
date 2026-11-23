@@ -96,10 +96,12 @@ func _check_mounted_turret() -> void:
 		and Measurement.valid_row(control, Weapons.PYLON_TURRET) \
 		and enabled["chain_jumps"] == 4 and control["chain_jumps"] == 3,
 		JSON.stringify(rows))
-	# Independent HP expectations: five fragments, 11 damage, 9 volleys/s,
-	# and the C7 Cross Split damage multiplier 0.6. Each
-	# existing turret jump keeps 0.75; only the fourth jump multiplies by 0.7.
-	var direct := 5.0 * 11.0 * 9.0 * CROSS_DAMAGE
+	# Independent HP expectations (E1-06 tap_charge spark cadence): five fragments, 9 damage,
+	# 1 / 0.30 s spark floor (exact 27 ticks at 90 Hz -> 100 volleys in 30 s), and C7 Cross
+	# Split damage multiplier 0.6. Each existing turret jump keeps 0.75; only the fourth jump
+	# multiplies by 0.7.
+	var direct := 5.0 * float(Weapons.BASE[Weapons.PYLON_TURRET]["damage"]) \
+		/ float(Weapons.BASE[Weapons.PYLON_TURRET]["floor_s"]) * CROSS_DAMAGE
 	for jump in range(4):
 		var expected := direct * pow(0.75, jump)
 		var actual: float = enabled["target_dps"][jump]

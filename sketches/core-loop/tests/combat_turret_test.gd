@@ -172,7 +172,8 @@ func _start_turret() -> void:
 	_turret_shots = 0
 	_aimed = 0
 	_aim_gap = 0.0
-	_source.hold = {"fire_held": true}
+	_source.hold = {}
+	_source.press = {"fire_pressed": true}
 
 
 func _aim_tick() -> void:
@@ -182,6 +183,9 @@ func _aim_tick() -> void:
 	var d: Vector3 = (_target.global_position + Vector3.UP * 0.4 - cam.aim_origin()).normalized()
 	cam.yaw = atan2(-d.x, -d.z)
 	cam.pitch = clampf(asin(d.y), -1.25, 0.55)
+	var snap: Dictionary = _game.ctx.spawner.weapon_driver.state_snapshot()
+	if bool(snap.get("ready", false)):
+		_source.press = {"fire_pressed": true}
 
 
 # Each turret shot is compared with an independent read of the shoulder camera's centre
@@ -224,10 +228,11 @@ func _finish() -> bool:
 	_report("shoulder", fast.get("shoulder_target", 0.0) == 1.0 and fast.get("shoulder_blend", 0.0) > 0.9,
 		"mounted: shoulder_target %.1f, shoulder_blend %.2f" % [fast.get("shoulder_target", 0.0), fast.get("shoulder_blend", 0.0)])
 	var turret: Dictionary = _bursts.get("turret", {})
-	var caster_rate: float = Weapons.BASE[Weapons.ARC_CASTER]["rate"]
-	_report("turret_rate", turret.get("mounted", false) and turret.get("shots", 0) >= int(Weapons.BASE[Weapons.PYLON_TURRET]["rate"] * FIRE_SECONDS) - 1
-		and turret.get("shots", 0) > int(caster_rate * FIRE_SECONDS),
-		"%d turret volleys in %.0f s while mounted (the caster fires %.0f/s)" % [turret.get("shots", 0), FIRE_SECONDS, caster_rate])
+	var turret_floor: float = float(Weapons.BASE[Weapons.PYLON_TURRET]["floor_s"])
+	var expected_sparks := int(FIRE_SECONDS / turret_floor)
+	_report("turret_rate", turret.get("mounted", false) and turret.get("shots", 0) >= expected_sparks
+		and float(Weapons.BASE[Weapons.PYLON_TURRET]["damage"]) > float(Weapons.BASE[Weapons.ARC_CASTER]["damage"]),
+		"%d mounted turret volleys in %.0f s at %.2f s spark floor (expected >= %d)" % [turret.get("shots", 0), FIRE_SECONDS, turret_floor, expected_sparks])
 	_report("shoulder_aim", turret.get("shots", 0) > 0 and turret.get("aimed", 0) == turret.get("shots", 0) and turret.get("target_hits", 0) >= 1,
 		"%d of %d turret shots on the shoulder reticle's ray (worst %.3f m off), %d strikes on the chaser under it"
 			% [turret.get("aimed", 0), turret.get("shots", 0), turret.get("gap", 0.0), turret.get("target_hits", 0)])

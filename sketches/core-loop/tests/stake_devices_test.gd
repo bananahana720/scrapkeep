@@ -420,8 +420,8 @@ func _check_bodies() -> void:
 	var audio = _game.audio()
 	_report("the game has audio to hear the chime", audio != null, "")
 	if audio != null:
-		var cues: Array = audio.cues_since(_cue_mark).filter(func(row: Array): return String(row[1]).begins_with(StakeDevices.KINDNESS_CHIME))
-		_report("its sound is the pilot's motif one note wrong, once", cues.size() == 1 and cues[0][1] == StakeDevices.KINDNESS_CHIME + "rivet",
+		var cues: Array = audio.cues_since(_cue_mark).filter(func(row: Array): return String(row[1]) == "kindness_chime")
+		_report("its sound is the sterile on-grid kindness chime, once", cues.size() == 1 and cues[0][1] == "kindness_chime",
 			str(cues))
 
 
