@@ -165,6 +165,8 @@ func _run() -> void:
 	_check(recovery_ok, "strike and recovery restore unswollen stacks and rest light")
 	var other: Node3D = _spawn(Vector3(10,30,0))
 	other.set_physics_process(false)
+	# Its deferred dress (the bake's look, then InkOutline's welded mesh) runs before the bodies compare.
+	await process_frame
 	var other_body := other.find_child("ReactorBody",true,false) as MeshInstance3D
 	var other_vents := other.find_child("ReactorStacks",true,false) as MultiMeshInstance3D
 	_check(body.mesh == other_body.mesh and vents.multimesh.mesh == other_vents.multimesh.mesh
