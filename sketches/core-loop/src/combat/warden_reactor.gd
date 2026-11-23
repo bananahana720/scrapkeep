@@ -501,7 +501,7 @@ static func line_reference_damage() -> float:
 		var total := 0.0
 		var pilots: Array = ClassDef.all()
 		for def in pilots:
-			total += float(Weapons.BASE[def.weapon_id]["damage"])
+			total += Weapons.base_damage(def.weapon_id)
 		_line_reference = total / pilots.size()
 	return _line_reference
 

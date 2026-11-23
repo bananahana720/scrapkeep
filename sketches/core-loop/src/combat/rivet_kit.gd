@@ -1461,7 +1461,6 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		ride.mode = RideRail.LINE
 		ride.velocity = ride.heading * ride.release_speed
 	ctx.player.abilities.grant(AbilityState.MOVEMENT, Weapons.BREACH_SPRINT)
-	combat.weapon_driver.top_up_cylinder()
 	if id == "juggernaut_drive":
 		ctx.player.grant_immunity(Ultimate.RECOVER_SECONDS + Weapons.DRIVE_IMMUNE)
 	if id in BEAM_PIECES and _cut.size() >= CUTTER_CARD_CUTS:
