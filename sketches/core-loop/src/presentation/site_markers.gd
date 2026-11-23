@@ -107,8 +107,6 @@ func setup(ctx_ref) -> void:
 		# A new stage reads its sites on the next frame; leaving one takes every plume down at once.
 		events.stage_entered.connect(_on_stage_entered)
 		events.stage_content_cleared.connect(_on_cleared)
-		if events.has_signal("activity_done"):
-			events.activity_done.connect(_on_activity_done)
 		if events.has_signal("rescue_completed"):
 			events.rescue_completed.connect(_on_rescue_completed)
 		if events.has_signal("enemy_killed"):
@@ -128,22 +126,20 @@ func _on_cleared(_reason: String) -> void:
 	_clock = READ_EVERY
 
 
-func _on_activity_done(id: String, at: Vector3) -> void:
-	if id == "cracked_cache":
-		mark_visited("cache:%d:%d" % [roundi(at.x * 10.0), roundi(at.z * 10.0)], "cache", at)
-	elif id == "enemy_camp":
-		mark_visited("crew:%d:%d" % [roundi(at.x * 10.0), roundi(at.z * 10.0)], "crew", at)
-
-
+# Crew and cache sites flip only by their plume keys, through sync's fade: a crew home when director.live_homes() drops
+# it, a rib cache when scrap_field.caches() does. An activity's activity_done is no plume site (an enemy_camp is no crew
+# home, a cracked_cache or field find keeps no sign), so it flips nothing here.
 func _on_rescue_completed(quest_id: String) -> void:
 	var key := "cage:" + quest_id
-	var at: Vector3 = views[key].get_meta("at") if views.has(key) else Vector3.ZERO
-	mark_visited(key, "cage", at)
+	# A cage whose plume already came down flipped then; one that never stood a plume has no site to mark.
+	if views.has(key):
+		mark_visited(key, "cage", views[key].get_meta("at"))
 
 
 func _on_enemy_killed(kind: String, at: Vector3, _scrap_value: int) -> void:
 	if not Rogue.ROWS.has(kind):
 		return
+	# A rogue killed before any sync stood its plume has no site key to flip, so it is keyed by its kind.
 	var key := _rogue_key if _rogue_key != "" else "rogue:" + kind
 	mark_visited(key, "rogue", at)
 

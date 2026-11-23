@@ -53,6 +53,34 @@ class FakePlayer extends RefCounted:
 		return Vector3.ZERO
 
 
+# The three plume sources SiteMarkers.sites() reads, so the test drives real plume keys, not hand-written ones.
+class FakeScrap extends RefCounted:
+	var rows := []
+
+	func caches() -> Array:
+		return rows
+
+
+class FakeDirector extends RefCounted:
+	var homes := []
+
+	func live_homes() -> Array:
+		return homes
+
+
+class FakeRescue extends RefCounted:
+	var cages := []
+
+	func waiting() -> Array:
+		return cages
+
+
+class FakeWorld extends RefCounted:
+	var rescue := FakeRescue.new()
+	var director := FakeDirector.new()
+	var rogue_plan := {}
+
+
 class FakeCtx extends RefCounted:
 	var calm := false
 	var stages = ParkDefs
@@ -375,13 +403,7 @@ func _site_markers_visited() -> void:
 	events.stage_content_cleared.emit("test")
 	_t.eq("stage_content_cleared resets visited state", markers.visited_sites(), [])
 
-	# Bus events flip cache, crew and cage sites once.
-	events.activity_done.emit("cracked_cache", Vector3(12.0, 3.0, -4.0))
-	_t.check("cracked_cache activity_done marks cache visited", markers.is_visited("cache:120:-40"))
-	events.activity_done.emit("enemy_camp", Vector3(-51.0, 2.0, -396.0))
-	_t.check("enemy_camp activity_done marks crew visited", markers.is_visited("crew:-510:-3960"))
-	events.rescue_completed.emit("rivet")
-	_t.check("rescue_completed marks cage visited", markers.is_visited("cage:rivet"))
+	_plume_keyed_flips(markers, events, holder)
 
 	# sync(..., true) flips disappeared sites even when player is within GONE_M (view.visible == false),
 	# while furnace leaving sync(..., true) does not flip, and sync(..., false) does not flip.
@@ -415,3 +437,60 @@ func _site_markers_visited() -> void:
 	_t.eq("retry clears rogue visited state and tracked key", markers.visited_sites(), [])
 
 	holder.free()
+
+
+# Crew and cache flip only by their plume keys (crew:<home id> from director.live_homes(), cache:<foot> from
+# scrap_field.caches()) through sync's fade; an activity's activity_done is no plume site and flips nothing.
+func _plume_keyed_flips(markers: SiteMarkers, events: GameEvents, holder: Node3D) -> void:
+	markers.reset_visited()
+	# Regression: the Dam's enemy_camp (domes_camp) and cracked caches (rim_cache, incline_cache) keep no visited row.
+	events.activity_done.emit("enemy_camp", Vector3(-51.0, 2.0, -396.0))
+	events.activity_done.emit("cracked_cache", Vector3(-210.0, 0.0, 400.0))
+	events.activity_done.emit("cracked_cache", Vector3(-44.0, 0.0, 255.0))
+	_t.eq("enemy_camp and cracked_cache activity_done add no visited row", markers.visited_sites(), [])
+
+	var dam := _load_json("park_dam")
+	var home_id := String(dam["home_rows"][0]["id"])
+	var home_at := Vector2(-120.0, 300.0)
+	var rib := Node3D.new()
+	holder.add_child(rib)
+	var foot := Vector3(33.4, 6.0, -71.2)
+	var world := FakeWorld.new()
+	var scrap := FakeScrap.new()
+	world.director.homes = [{"id": home_id, "at": home_at}]
+	world.rescue.cages = [{"quest": "rivet", "at": Vector3(8.0, 1.0, 9.0)}]
+	scrap.rows = [{"item": rib, "foot": foot}]
+	var list := SiteMarkers.sites(world, scrap, null)
+	var keys: Array = list.map(func(row): return String(row["key"]))
+	var crew_key := "crew:" + home_id
+	var cache_key := "cache:334:-712"
+	_t.check("the crew plume is keyed by its home id", keys.has(crew_key), str(keys))
+	_t.check("the cache plume is keyed by its foot", keys.has(cache_key), str(keys))
+	markers.sync(list, true)
+	_t.eq("standing plumes flip nothing", markers.visited_sites(), [])
+	# Activity events while the plumes stand still flip neither of them.
+	events.activity_done.emit("enemy_camp", Vector3(home_at.x, 0.0, home_at.y))
+	events.activity_done.emit("cracked_cache", foot)
+	_t.eq("activity_done beside standing plumes adds no visited row", markers.visited_sites(), [])
+
+	# A rescue whose cage never stood a plume has no site; one whose plume stands flips at the plume's foot.
+	events.rescue_completed.emit("ghost")
+	_t.check("a rescue with no cage plume adds no visited row", not markers.is_visited("cage:ghost") and markers.visited_sites().is_empty())
+	events.rescue_completed.emit("rivet")
+	_t.eq("rescue_completed flips the cage at its plume's foot", markers.visited_state("cage:rivet").get("at"), Vector3(8.0, 1.0, 9.0))
+
+	# The home breaks and the cache is taken: the next live sync drops both plumes and flips them by their plume keys.
+	world.director.homes = []
+	scrap.rows = []
+	markers.sync(SiteMarkers.sites(world, scrap, null), true)
+	_t.eq("a broken crew home flips by its plume key", markers.visited_state(crew_key).get("mark"), "chalk_x")
+	_t.eq("the crew mark stands at the home", markers.visited_state(crew_key).get("at"), Vector3(home_at.x, 0.0, home_at.y))
+	_t.eq("a taken rib cache flips by its plume key", markers.visited_state(cache_key).get("mark"), "flag")
+	_t.eq("the cache flag stands at its foot", markers.visited_state(cache_key).get("at"), foot)
+	var flipped: Array = markers.visited_sites().map(func(row): return String(row["key"]))
+	flipped.sort()
+	var want := [cache_key, "cage:rivet", crew_key]
+	want.sort()
+	_t.eq("only plume keys are visited", flipped, want)
+	markers.sync([], false)
+	rib.free()
