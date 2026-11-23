@@ -57,10 +57,12 @@ func _physics_process(delta: float) -> bool:
 	_clock += delta
 	if is_instance_valid(_target):
 		_aim_at(_target.global_position + Vector3.UP * 0.4)
+	_drive_fire()
 	var done: bool = _kills.size() >= 1 and (_phase == "runner" or _struck.get("buddy:arc", 0) >= 1)
 	if not done and _clock < TIMEOUT:
 		return false
 	_source.hold = {}
+	_source.press = {}
 	if _phase == "runner":
 		_check("runner", "runner")
 		# Die on purpose, then start a new run as the engineer.
@@ -99,7 +101,31 @@ func _start(phase: String) -> void:
 	if phase == "engineer":
 		var side: Vector3 = heading.cross(Vector3.UP).normalized() * BESIDE
 		_buddy = ctx.spawner.spawn_enemy("chaser", ctx.terrain.drop_point(ahead.x + side.x, ahead.z + side.z, 1.6))
-	_source.hold = {"fire_held": true}
+	_source.hold = {}
+	_source.press = {"fire_pressed": true}
+
+
+func _drive_fire() -> void:
+	var snap: Dictionary = _game.ctx.spawner.weapon_driver.state_snapshot()
+	if _phase == "runner":
+		_source.hold = {}
+		if bool(snap.get("reloading", false)):
+			if bool(snap.get("window_open", false)):
+				_source.press = {"fire_pressed": true}
+		elif bool(snap.get("ready", false)):
+			_source.press = {"fire_pressed": true}
+	else:
+		if bool(snap.get("charge_armed", false)):
+			if float(snap.get("charge", 0.0)) >= 0.9999:
+				_source.hold = {}
+				_source.press = {"fire_released": true}
+			else:
+				_source.hold = {"fire_held": true}
+		elif bool(snap.get("ready", false)):
+			_source.press = {"fire_pressed": true}
+			_source.hold = {"fire_held": true}
+		else:
+			_source.hold = {}
 
 
 func _check(label: String, kind: String) -> void:

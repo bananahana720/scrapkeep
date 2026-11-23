@@ -332,6 +332,7 @@ func on_body(target: Node3D, _fraction: float, mult: float) -> void:
 	last_cue = {"on": "body", "delay": 0.0}
 	if not _alive(target):
 		return
+	combat.weapon_driver.top_up_cylinder()
 	var delay: float = ctx.player.ball_position().distance_to(target.global_position) / Weapons.LINE_PULSE_SPEED
 	pulses.append({"target": target, "force": punch_force(), "mult": mult, "dir": punch_dir(target), "left": delay})
 	last_cue = {"on": "body", "delay": delay}
@@ -347,6 +348,7 @@ func on_world(anchor: Vector3, _fraction: float, _mult: float) -> void:
 	if d.length() < 0.05:
 		player.kit.drop_line("let_go")
 		return
+	combat.weapon_driver.top_up_cylinder()
 	var speed := maxf(player.state.velocity.length(), Weapons.LINE_HAUL_SPEED)
 	var ride = RideRail.new()
 	ride.kind = "rivet_haul"
@@ -1459,6 +1461,7 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		ride.mode = RideRail.LINE
 		ride.velocity = ride.heading * ride.release_speed
 	ctx.player.abilities.grant(AbilityState.MOVEMENT, Weapons.BREACH_SPRINT)
+	combat.weapon_driver.top_up_cylinder()
 	if id == "juggernaut_drive":
 		ctx.player.grant_immunity(Ultimate.RECOVER_SECONDS + Weapons.DRIVE_IMMUNE)
 	if id in BEAM_PIECES and _cut.size() >= CUTTER_CARD_CUTS:

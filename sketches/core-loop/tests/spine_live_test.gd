@@ -49,9 +49,11 @@ func _physics_process(delta: float) -> bool:
 		_game.ctx.spawner.spawn_enemy("chaser", _game.ctx.terrain.drop_point(ahead.x, ahead.z, 2.4))
 		_game.ctx.spawner.spawn_enemy("lobber", _game.ctx.terrain.drop_point(ahead.x + 30.0, ahead.z + 30.0, 2.4))
 		_game.ctx.spawner.spawn_enemy("miniboss", _game.ctx.terrain.drop_point(ahead.x - 30.0, ahead.z + 30.0, 2.4))
-		_source.hold = {"fire_held": true}
+		_source.press = {"fire_pressed": true}
 		return false
 	_clock += delta
+	if bool(_game.ctx.spawner.weapon_driver.state_snapshot().get("ready", false)):
+		_source.press = {"fire_pressed": true}
 	if _clock < SECONDS:
 		return false
 	var ok_spawn: bool = _counts.get("enemy_spawned", 0) >= 3

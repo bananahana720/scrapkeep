@@ -13,6 +13,7 @@ const Projectile := preload("res://src/combat/projectile.gd")
 const Hitscan := preload("res://src/combat/hitscan.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
 const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
+const BuffLedger := preload("res://src/core/buff_ledger.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Bolts := preload("res://src/combat/bolts.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
@@ -274,6 +275,7 @@ var _cooldown: float:
 	set(value):
 		weapon_driver.set_cooldown_s(value)
 var _overdrive := 0.0
+var _mounted_boost_left := 0.0
 var _since_slingshot := INF
 var _crushes: Array = []
 var _clock := 0.0
@@ -604,7 +606,9 @@ func setup(ctx_ref) -> void:
 	_reset_ledger()
 	ctx.events.demo_slammed.connect(_on_demo_slammed)
 	ctx.events.arc_slammed.connect(func(at: Vector3, _faces: int): effects.ring(at, 12.0, ClassDef.SABLE_COLOR))
-	ctx.events.skid_smashed.connect(func(at: Vector3, _hits: int): effects.ring(at, 4.0, ClassDef.RIVET_COLOR))
+	ctx.events.skid_smashed.connect(func(at: Vector3, _hits: int):
+		effects.ring(at, 4.0, ClassDef.RIVET_COLOR)
+		weapon_driver.top_up_cylinder())
 	ctx.events.blink_used.connect(_on_blink)
 	ctx.events.line_state_changed.connect(_on_chain_state)
 	ctx.events.stage_entered.connect(_on_stage_entered)
@@ -646,6 +650,11 @@ func setup(ctx_ref) -> void:
 		_sentry = {}
 		_pulse_left = 0.0
 		_boss_add_ids = {}
+		_mounted_boost_left = 0.0
+		_overdrive = 0.0
+		_spring_until = -1.0
+		cloak_left = 0.0
+		_clear_combat_buffs()
 		weapon_driver.reset()
 		_reset_ledger()
 		_rebuild_patterns())
@@ -660,11 +669,14 @@ func setup(ctx_ref) -> void:
 	# that too), so it is where the "boss" retirement belongs instead.
 	ctx.events.boss_defeated.connect(func(): _record_retirement("boss"))
 	ctx.events.dismounted.connect(func(v: Vector3):
+		_mounted_boost_left = 0.0
 		weapon_driver.interrupt(WeaponDriver.INTERRUPT_MOUNT)
 		if v.length() > 0.1:
 			_since_slingshot = 0.0)
 	ctx.events.part_gained.connect(func(_part: String, _source: String): _rebuild_patterns())
-	ctx.events.mounted.connect(func(_at: Vector3, _banked_speed: float): weapon_driver.interrupt(WeaponDriver.INTERRUPT_MOUNT))
+	ctx.events.mounted.connect(func(_at: Vector3, _banked_speed: float):
+		_mounted_boost_left = Weapons.CHARGE_MOUNT_BOOST_S
+		weapon_driver.interrupt(WeaponDriver.INTERRUPT_MOUNT))
 	ctx.events.mounted.connect(_on_mounted)
 	ctx.events.ultimate_started.connect(func(_id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float):
 		weapon_driver.interrupt(WeaponDriver.INTERRUPT_ULTIMATE))
@@ -811,7 +823,7 @@ func build_read() -> Dictionary:
 # out before the damage so a kill never publishes a freed node: enemy_struck always,
 # then strike_deflected when the punch fell short of the plating. `part` names a weak
 # point ("" for the body; a ball contact finds its own through contact_part()).
-func strike(enemy: Node3D, kind: String, force: float, part := "", source := "", impact := "") -> void:
+func strike(enemy: Node3D, kind: String, force: float, part := "", source := "", impact := "", chip := CHIP) -> void:
 	if not is_instance_valid(enemy) or not enemy.has_method("take_damage"):
 		return
 	if enemy.has_method("is_dead") and enemy.is_dead():
@@ -821,7 +833,7 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 	if ultimate != null and ultimate.active() and kind in CONTACT_KINDS and enemy.has_method("_apply_posture") \
 			and enemy.has_method("staggered") and not enemy.staggered():
 		ultimate.warden_posture(enemy, resolve(enemy, kind, force, part, 0.0,
-			panel_punch(kind, _classify_source(kind, source if source != "" else _forced_source))))
+			panel_punch(kind, _classify_source(kind, source if source != "" else _forced_source)), chip))
 		return
 	var dunk := _dunk_bonus(enemy, kind)
 	var reel: bool = ctx != null and ctx.player != null and ctx.player.get("kit") != null \
@@ -830,7 +842,7 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 	if ctx != null and ctx.player != null and ctx.player.get("kit") != null and (dunk > 0.0 or reel):
 		enemy.set_meta(REEL_MARK, _clock)
 	var hit := door.pass_hit({"enemy": enemy, "kind": kind, "force": force, "part": part, "source": source,
-		"impact": impact, "dunk": dunk}, _strike_stages)
+		"impact": impact, "dunk": dunk, "chip": chip}, _strike_stages)
 	if reel:
 		_note_reel(enemy, float(hit.get("result", {}).get("dealt", 0.0)))
 
@@ -840,10 +852,11 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 func _door_armour(hit: Dictionary) -> void:
 	hit["cls"] = _classify_source(hit["kind"], hit["source"] if hit["source"] != "" else _forced_source)
 	hit["bonus"] = panel_punch(hit["kind"], hit["cls"])
-	hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"], hit["dunk"], hit["bonus"])
+	var chip: float = float(hit.get("chip", CHIP))
+	hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"], hit["dunk"], hit["bonus"], chip)
 	if hit["dunk"] > 0.0 and bool(hit["result"].get("guarded", false)):
 		hit["dunk"] = 0.0
-		hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"], 0.0, hit["bonus"])
+		hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"], 0.0, hit["bonus"], chip)
 
 
 func _door_caps(hit: Dictionary) -> void:
@@ -1215,6 +1228,8 @@ func _companion_ram(enemy: Node3D, kind: String, result: Dictionary) -> void:
 			effects.ring(enemy.global_position, 2.5, Palette.VERDIGRIS)
 		"arm":
 			_spring_until = _clock + SPRING_WINDOW
+			_post_buff("spring", {"icon": "spring", "tone": Palette.AMBER, "kind": BuffLedger.KIND_TIMER,
+				"duration_s": SPRING_WINDOW, "left_s": SPRING_WINDOW})
 			effects.spark(ctx.player.ball_position(), Palette.VERDIGRIS)
 
 
@@ -1460,7 +1475,7 @@ func delivered_damage() -> Dictionary:
 # The one plating rule. Returns {punch, plating, full, dealt, part}. Asked from an
 # enemy_struck or strike_deflected handler with that strike's enemy, kind and force, it
 # answers with the strike's own part, so the handler sees the plating the hit meets.
-func resolve(enemy: Node3D, kind: String, force: float, part := "", dunk := 0.0, bonus := 0.0) -> Dictionary:
+func resolve(enemy: Node3D, kind: String, force: float, part := "", dunk := 0.0, bonus := 0.0, chip := CHIP) -> Dictionary:
 	if not _pending.is_empty() and _pending["id"] == enemy.get_instance_id() \
 			and _pending["kind"] == kind and _pending["force"] == force:
 		# Inside the strike's own announce the hit is settled: answer with its result after the
@@ -1498,7 +1513,7 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "", dunk := 0.0,
 	var plating := maxf(0.0, reported - shred_of(enemy))
 	var full := punch >= plating
 	var mult: float = enemy.hit_mult(kind, part) if full and enemy.has_method("hit_mult") else 1.0
-	var dealt := punch * mult if full else punch * CHIP
+	var dealt := punch * mult if full else punch * chip
 	return {"punch": punch, "plating": plating, "full": full, "dealt": dealt, "part": part}
 
 
@@ -1711,7 +1726,7 @@ func active_weapon() -> String:
 # The discharge a given speed would fire right now, with the current parts.
 func discharge_preview(speed: float) -> Dictionary:
 	var p: Resource = _patterns[Weapons.PYLON_TURRET]
-	var scale: float = p.damage * _damage_mod(Weapons.PYLON_TURRET) / Weapons.BASE[Weapons.PYLON_TURRET]["damage"]
+	var scale: float = p.damage * _damage_mod(Weapons.PYLON_TURRET) / Weapons.base_damage(Weapons.PYLON_TURRET)
 	var burst := Weapons.burst(speed, p.burst_scale, scale)
 	# Splash Skirt panels widen the ring the telegraph draws and the hit reads alike.
 	burst["radius"] = float(burst["radius"]) + ctx.tuning.add("area_radius")
@@ -1729,7 +1744,20 @@ func _physics_process(delta: float) -> void:
 		return
 	_clock += delta
 	_since_slingshot += delta
+	var had_overdrive := _overdrive > 0.0
 	_overdrive = maxf(0.0, _overdrive - delta)
+	if had_overdrive and _overdrive <= 0.0:
+		_clear_buff("overdrive")
+	if _mounted_boost_left > 0.0:
+		_mounted_boost_left = maxf(0.0, _mounted_boost_left - delta)
+	if _spring_until >= 0.0 and _clock >= _spring_until:
+		_spring_until = -1.0
+		_clear_buff("spring")
+	if _pike_count > 0:
+		var pike_row := _pike_row()
+		if pike_row.is_empty() or _clock - _pike_last >= float(pike_row.get("idle_s", 3.0)):
+			_pike_count = 0
+			_clear_buff("pike")
 	_rocket_left = maxf(0.0, _rocket_left - delta)
 	_tick_cloak(delta)
 	_tick_upgrades(delta)
@@ -1741,7 +1769,8 @@ func _physics_process(delta: float) -> void:
 	var is_lob: bool = not is_cards and not is_lane and ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 0) > 0
 	var p: Resource = _patterns.get(weapon)
 	var cadence_rate: float = _rate(weapon) if not is_cards and not is_lob and p != null else 0.0
-	var shots: Array = weapon_driver.step(delta, intent, weapon, p, cadence_rate)
+	var shots: Array = weapon_driver.step(delta, intent, weapon, p, cadence_rate,
+		_weapon_step_context(weapon, p, cadence_rate))
 	# Tally's reader runs cards, never bolts: this branch comes first so _fire never sees
 	# the ledger_reader row, which exists only for _patterns and _damage_mod.
 	if is_cards:
@@ -1752,8 +1781,8 @@ func _physics_process(delta: float) -> void:
 	elif is_lob:
 		_step_sticky_weapon(intent, delta)
 	else:
-		for _shot in shots:
-			_fire(weapon)
+		for shot in shots:
+			_fire(weapon, "weapon", shot)
 	_step_cast()
 	_step_special(intent, delta)
 	_step_line(intent, delta)
@@ -1855,22 +1884,60 @@ func _rate(weapon: String) -> float:
 	return rate
 
 
-func _fire(weapon: String, source := "weapon") -> void:
+func _weapon_step_context(weapon: String, p: Resource, cadence_rate: float) -> Dictionary:
+	var rate_mult := 1.0
+	if p != null and cadence_rate > 0.0 and Weapons.BASE.has(weapon):
+		var base_rate := float(Weapons.BASE[weapon].get("rate", 1.0))
+		if base_rate > 0.0:
+			rate_mult = cadence_rate / base_rate
+	# Overdrive shortens only the shot floor (0.20 -> 0.125 s, PILOT-CADENCE §3.1); build
+	# rate parts (gatling_heart, vent_louvre) scale reload pace in step with shot pace.
+	var reload_rate_mult := (rate_mult / Weapons.OVERDRIVE_RATE) if _overdrive > 0.0 else rate_mult
+	var charge_rate := 1.0
+	if weapon == Weapons.PYLON_TURRET:
+		if _mounted_boost_left > 0.0:
+			var banked: float = float(ctx.player.kit.mount_banked)
+			charge_rate = WeaponDriver.charge_rate_for_tier(SpeedTier.of(banked, ctx.player.tuning.tier_cruise()))
+	else:
+		charge_rate = WeaponDriver.charge_rate_for_tier(ctx.player.speed_tier())
+	return {
+		"rate_mult": rate_mult,
+		"reload_rate_mult": reload_rate_mult,
+		"charge_rate": charge_rate,
+		"sprinting": bool(ctx.player.kit.sprinting),
+	}
+
+
+func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 	var p: Resource = _patterns[weapon]
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var ball: Vector3 = ctx.player.ball_position()
 	var reach: float = p.range_m * ctx.tuning.mod("weapon_range")
 	var damage: float = p.damage * _damage_mod(weapon)
+	var pierce_chip := false
+	var extra_spread := 0.0
+	if source == "weapon" and not shot_desc.is_empty():
+		damage *= float(shot_desc.get("damage_mult", 1.0))
+		pierce_chip = bool(shot_desc.get("pierce", false))
+		extra_spread = float(shot_desc.get("spread_deg", 0.0))
 	var sprung := source == "weapon" and spring_armed()
 	if sprung:
 		damage *= SPRING_MULT
 		_spring_until = -1.0
+		_clear_buff("spring")
 	var aim := Hitscan.aim(space, ctx.aim_origin(), ctx.aim_forward(), ball, reach + AIM_SLACK)
 	var point: Vector3 = aim["point"]
 	var forward := point - ball
 	if forward.length() < MUZZLE * 1.5:
 		forward = ctx.aim_forward()
 	forward = forward.normalized()
+	if extra_spread > 0.0:
+		var up_hint := Vector3.UP if absf(forward.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
+		var right := forward.cross(up_hint).normalized()
+		var up := right.cross(forward).normalized()
+		var phase := float(volleys) * 2.3999632
+		var half_rad := deg_to_rad(extra_spread * 0.5)
+		forward = (forward + (right * cos(phase) + up * sin(phase)) * tan(half_rad)).normalized()
 	var muzzle := ball + forward * MUZZLE
 	if sprung:
 		effects.ring(muzzle, 1.5, Palette.VERDIGRIS)
@@ -1890,19 +1957,25 @@ func _fire(weapon: String, source := "weapon") -> void:
 				break
 		var fused := pike_bolt(_bolt_record(weapon, p, {"dir": forward, "centre": true, "phase": centre["phase"]}, muzzle, reach, damage, source, shot),
 			layout.size(), _pike_row())
+		if pierce_chip:
+			fused["pierce_chip"] = true
 		_evolve_record(fused, p)
 		bolts.fire(fused)
 		fired = 1
 		_pike_cue()
 	else:
 		for entry in layout:
-			bolts.fire(_bolt_record(weapon, p, entry, muzzle, reach, damage, source, shot))
+			var rec := _bolt_record(weapon, p, entry, muzzle, reach, damage, source, shot)
+			if pierce_chip:
+				rec["pierce_chip"] = true
+			bolts.fire(rec)
 	if rake_follows(source, ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")):
 		_rakes.append({"at": _clock + RAKE_DELAY, "weapon": weapon, "forward": forward,
 			"damage": p.damage * _damage_mod(weapon), "volley": volleys})
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": aim["to"], "point": point,
-		"blocked": aim["blocked"], "bolts": fired, "volley": volleys, "sprung": sprung, "fused": pike.get("fuse", false)}
+		"blocked": aim["blocked"], "bolts": fired, "volley": volleys, "sprung": sprung, "fused": pike.get("fuse", false),
+		"kind": String(shot_desc.get("kind", "plain")), "pierce_chip": pierce_chip}
 	ctx.events.shot_fired.emit(weapon, muzzle, aim["to"])
 
 
@@ -1923,10 +1996,16 @@ func _pike_press(source: String) -> Dictionary:
 	var row := _pike_row()
 	if row.is_empty():
 		_pike_count = 0
+		_clear_buff("pike")
 		return {}
 	var step := pike_advance(_pike_count, _pike_last, _clock, row)
 	_pike_count = int(step["count"])
 	_pike_last = _clock
+	if _pike_count > 0:
+		_post_buff("pike", {"icon": "pike", "tone": Palette.AMBER, "kind": BuffLedger.KIND_COUNT,
+			"stacks": _pike_count, "max_stacks": maxi(1, int(row.get("every", 6)) - 1)})
+	else:
+		_clear_buff("pike")
 	return step
 
 
@@ -2460,7 +2539,8 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 	# keeps only the stronger shove, so when a pull will land it replaces the weapon shove).
 	var pull_plan := _pull_plan(enemy, bolt) if Bolts.bit_ready(bolt, "pull") else {}
 	var hit_knock := 0.0 if not pull_plan.is_empty() else float(bolt["knock"])
-	_hit(enemy, bolt["kind"], damage, bolt["dir"], hit_knock, part, bolt.get("source", "weapon"))
+	var chip := Weapons.PIERCE_CHIP if bool(bolt.get("pierce_chip", false)) else CHIP
+	_hit(enemy, bolt["kind"], damage, bolt["dir"], hit_knock, part, bolt.get("source", "weapon"), "", chip)
 	if bool(bolt.get("hoar", false)) and String(bolt.get("source", "")) == "weapon":
 		_hoar_patch(bolt, from, point)
 	if not pull_plan.is_empty() and is_instance_valid(enemy) and not enemy.is_dead():
@@ -2570,14 +2650,14 @@ static func heat_hit(state: Dictionary, id: int, now: float) -> Dictionary:
 
 
 # One resolved weapon hit: the shove, the flash, then strike() for damage and the fact.
-func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, part := "", source := "", impact := "") -> void:
+func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, part := "", source := "", impact := "", chip := CHIP) -> void:
 	var push := Vector3(direction.x, 0.0, direction.z)
 	push = push.normalized() if push.length() > 0.01 else Vector3.FORWARD
 	enemy.knock(push + Vector3.UP * float(EventKinds.impact(impact if impact != "" else kind)["lift"]), knock)
 	if enemy.has_method("react"):
 		enemy.react(String(EventKinds.impact(impact if impact != "" else kind)["react"]), push, true)
 	enemy.flash()
-	strike(enemy, kind, damage, part, source, impact)
+	strike(enemy, kind, damage, part, source, impact, chip)
 	# Death Mark: a marked enemy that dies here bursts like a charge.
 	var id := enemy.get_instance_id()
 	if _marks.has(id) and enemy.is_dead():
@@ -4499,7 +4579,7 @@ func _nearest_in_ring(centre: Vector3, radius: float, limit: int) -> Array:
 func _overdrive_blast(at: Vector3, scale := 1.0, shape := {}, radius_scale := 1.0, damage_scale := 1.0, boost := true) -> void:
 	var p: Resource = _patterns[Weapons.RAPID_LASER]
 	var damage: float = Weapons.OVERDRIVE_DAMAGE * scale * damage_scale * p.damage * _damage_mod(Weapons.RAPID_LASER) \
-		/ Weapons.BASE[Weapons.RAPID_LASER]["damage"]
+		/ Weapons.base_damage(Weapons.RAPID_LASER)
 	var radius := Weapons.OVERDRIVE_RADIUS * scale * radius_scale
 	var centre: Vector3 = shape.get("centre", at)
 	var pull: bool = _knob("blast_pull") and not _echoing
@@ -4520,6 +4600,8 @@ func _overdrive_blast(at: Vector3, scale := 1.0, shape := {}, radius_scale := 1.
 # The fire-rate boost; Unstoppable makes crowd control slide off while it runs.
 func _boost(seconds: float) -> void:
 	_overdrive = minf(Weapons.OVERDRIVE_MAX, _overdrive + seconds) if _overdrive > 0.0 else seconds
+	_post_buff("overdrive", {"icon": "overdrive", "tone": Palette.COPPER, "kind": BuffLedger.KIND_TIMER,
+		"duration_s": maxf(Weapons.OVERDRIVE_SECONDS, _overdrive), "left_s": _overdrive})
 	if _knob("overdrive_immune"):
 		ctx.player.grant_immunity(_overdrive)
 
@@ -4731,6 +4813,8 @@ func _start_cloak() -> void:
 		return
 	var fresh := cloak_left <= 0.0
 	cloak_left = maxf(cloak_left, Weapons.CLOAK_SECONDS)
+	_post_buff("cloak", {"icon": "cloak", "tone": Palette.STEEL, "kind": BuffLedger.KIND_TIMER,
+		"duration_s": cloak_left, "left_s": cloak_left})
 	if fresh:
 		cloak_at = ctx.player.ball_position()
 		_cloak_held = 0.0
@@ -4761,6 +4845,7 @@ func _tick_cloak(delta: float) -> void:
 	if cloak_left <= 0.0:
 		cloak_left = 0.0
 		kit.cloaked = false
+		_clear_buff("cloak")
 		ctx.events.cloak_broken.emit("faded")
 
 
@@ -4772,6 +4857,7 @@ func _cloak_shot() -> float:
 	if not _knob("cloak_keep"):
 		cloak_left = 0.0
 		ctx.player.kit.cloaked = false
+		_clear_buff("cloak")
 		ctx.events.cloak_broken.emit("shot")
 	return Weapons.CLOAK_CRIT
 
@@ -5366,10 +5452,12 @@ func _start_attempt() -> void:
 	_clear_verb_items()
 	_spring_until = -1.0
 	_warden_slam_hits = 0
+	_mounted_boost_left = 0.0
 	weapon_driver.reset()
 	_overdrive = 0.0
 	_rocket_left = 0.0
 	cloak_left = 0.0
+	_clear_combat_buffs()
 	last_committed = {}
 	for id in ctx.player.abilities.cancel_gauges():
 		ctx.events.gauge_cancelled.emit(id, "reset")
@@ -5433,6 +5521,25 @@ func _rebuild_patterns() -> void:
 				p._apply(row)
 			p._clamp()
 		_patterns[weapon] = p
+	if ctx != null and ctx.run != null and ctx.run.class_def != null:
+		var active := active_weapon()
+		if _patterns.has(active):
+			weapon_driver.sync_pattern(active, _patterns[active])
+
+
+func _post_buff(id: String, spec: Dictionary) -> void:
+	if ctx != null and ctx.get("buffs") != null:
+		ctx.buffs.post(id, spec)
+
+
+func _clear_buff(id: String) -> void:
+	if ctx != null and ctx.get("buffs") != null:
+		ctx.buffs.clear_id(id)
+
+
+func _clear_combat_buffs() -> void:
+	for id in ["overdrive", "cloak", "spring", "pike"]:
+		_clear_buff(id)
 
 
 static func _signal_argc(obj: Object, kind: String) -> int:

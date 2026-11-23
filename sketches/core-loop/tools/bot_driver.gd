@@ -7,6 +7,7 @@ const Palette := preload("res://src/core/palette.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
+const Pattern := preload("res://src/combat/pattern.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Grip := preload("res://src/movement/grip.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -4275,6 +4276,7 @@ func _turret(aim, delta: float) -> void:
 	var look_at: Vector3 = _aim_point(aim) if _aim_valid(aim) else ball + game.camera.yaw_basis() * Vector3.FORWARD
 	_look(ball, look_at, _aim_valid(aim), delta)
 	source.hold = {"fire_held": true}
+	_cadence_fire_hand()
 	var threatened := false
 	for h in _threats():
 		threatened = true
@@ -4660,8 +4662,58 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		source.press.erase("movement_pressed")
 		hold.erase("shift_held")
 	source.hold = hold
+	_cadence_fire_hand()
 	_card_hands()
 	_cast_hands()
+
+
+# E1-06 fire hand for cadence baselines (PILOT-CADENCE.md §§3.1–3.2): plays Rivet's press /
+# active-reload notch and Sable's tap-spark / hold-arc release cleanly with perfect timing
+# for every band (E1-08 later turns window hit share into a per-band dial).
+func _cadence_fire_hand() -> void:
+	if _cast_phase != "":
+		return
+	var combat = game.get("combat")
+	if combat == null or combat.get("weapon_driver") == null:
+		return
+	var snap: Dictionary = combat.weapon_driver.state_snapshot()
+	var trig: String = String(snap.get("trigger", ""))
+	if trig != Pattern.TRIGGER_PRESS and trig != Pattern.TRIGGER_TAP_CHARGE:
+		var wid: String = combat.active_weapon() if combat.has_method("active_weapon") else ""
+		if wid != "":
+			var pat: Resource = combat.pattern(wid)
+			if pat != null:
+				trig = String(pat.trigger)
+	var want_fire: bool = bool(source.hold.get("fire_held", false))
+	if trig == Pattern.TRIGGER_PRESS:
+		# The held button stays (a held press gun fires nothing alone; sprinting it fans, and
+		# Run and Gun's drain reads it); the presses are the shots.
+		if not want_fire:
+			return
+		if bool(snap.get("reloading", false)):
+			if bool(snap.get("window_open", false)):
+				source.press["fire_pressed"] = true
+			return
+		if bool(snap.get("ready", false)):
+			source.press["fire_pressed"] = true
+		return
+	if trig == Pattern.TRIGGER_TAP_CHARGE:
+		if not want_fire:
+			if bool(snap.get("charge_armed", false)) and bool(snap.get("charging", false)) and float(snap.get("charge", 0.0)) >= 0.25:
+				source.press["fire_released"] = true
+			source.hold.erase("fire_held")
+			return
+		if bool(snap.get("charge_armed", false)):
+			if float(snap.get("charge", 0.0)) >= 0.9999:
+				source.hold.erase("fire_held")
+				source.press["fire_released"] = true
+			else:
+				source.hold["fire_held"] = true
+		elif bool(snap.get("ready", false)):
+			source.press["fire_pressed"] = true
+			source.hold["fire_held"] = true
+		else:
+			source.hold.erase("fire_held")
 
 
 # Tally's reader runs a card per press, not while held: the hands turn a held trigger into one
