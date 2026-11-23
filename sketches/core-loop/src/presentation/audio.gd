@@ -3594,7 +3594,11 @@ func _on_boss_phase() -> void:
 
 func _on_boss_phase_with(phase) -> void:
 	var next := int(phase)
+	# Phase 1 arrives just after the arena entry's own stinger: keep the section and phase plan
+	# as before W46-A1, but play no second clash on top of the entry.
 	if next <= _boss_phase and next <= 1:
+		engine.set_brindle_phase(next)
+		phase_music(next)
 		return
 	_boss_phase = next
 	_trigger_boss_phase(_boss_phase)
