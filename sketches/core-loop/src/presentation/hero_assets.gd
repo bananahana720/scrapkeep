@@ -73,6 +73,7 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 const BallLooks := preload("res://src/presentation/ball_looks.gd")
+const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const PilotGlance := preload("res://src/presentation/pilot_glance.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 # One pose table per pilot (PILOT-CLIPS section 4.2), by the PILOTS glb stem.
@@ -1398,8 +1399,10 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	# visibility_changed fires only inside the tree; a fit outside it syncs here.
 	for pair in ring_holders:
 		pair[1].visible = pair[0].visible
-	# Every caller's shell wears the look's own materials: the game, the pause read, the previews.
+	# Every caller's shell wears the look's own materials: the game, the pause read, the previews. Then the ink line.
 	BallLooks.dress(ball_look(), rec)
+	InkOutline.apply(core, "pilot")
+	InkOutline.apply(pod, "pilot")
 	if _ready_glow:
 		_glow_rec(rec, true)
 	return rec
