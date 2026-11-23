@@ -4686,7 +4686,8 @@ func _cadence_fire_hand() -> void:
 				trig = String(pat.trigger)
 	var want_fire: bool = bool(source.hold.get("fire_held", false))
 	if trig == Pattern.TRIGGER_PRESS:
-		source.hold.erase("fire_held")
+		# The held button stays (a held press gun fires nothing alone; sprinting it fans, and
+		# Run and Gun's drain reads it); the presses are the shots.
 		if not want_fire:
 			return
 		if bool(snap.get("reloading", false)):
