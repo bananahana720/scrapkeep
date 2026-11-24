@@ -84,6 +84,7 @@ func _check_harpoon_and_roam(driver) -> void:
 
 	# Planted fallback: if chain_hand_enabled is forced true, DuelDriver._roam() steps _explorer_chain()
 	# and clears _chain_phase on apex fall instead of wedging forever in "takeoff".
+	var saved_chain_hand: bool = driver.chain_hand_enabled
 	driver.chain_hand_enabled = true
 	driver.source.press.clear()
 	driver.source.hold.clear()
@@ -98,7 +99,7 @@ func _check_harpoon_and_roam(driver) -> void:
 	_t.eq("DuelDriver._roam() clears takeoff on apex fall (no wedge)", driver._chain_phase, "")
 
 	# Restore clean state for the live duel.
-	driver.chain_hand_enabled = false
+	driver.chain_hand_enabled = saved_chain_hand
 	driver._clear_chain_hand()
 	driver._off_line = 0.0
 	driver.source.press.clear()
