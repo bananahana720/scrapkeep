@@ -491,23 +491,30 @@ static func _make_sheet_material(alpha: float, is_live: bool) -> ShaderMaterial:
 		_sheet_shader.code = """shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_opaque;
 uniform vec3 deep_col : source_color = vec3(0.08, 0.28, 0.30);
-uniform vec3 crest_col : source_color = vec3(0.86, 0.90, 0.86);
+uniform vec3 mid_col : source_color = vec3(0.16, 0.44, 0.45);
+uniform vec3 crest_col : source_color = vec3(0.88, 0.92, 0.88);
 uniform vec3 tell_col : source_color = vec3(0.76, 0.68, 0.56);
 uniform vec3 ink_col : source_color = vec3(0.11, 0.10, 0.10);
 uniform float opacity = 0.72;
 uniform float live = 1.0;
 uniform float motion = 1.0;
+varying vec3 loc;
+void vertex() {
+	loc = VERTEX;
+}
 void fragment() {
-	float t = TIME * 3.4 * motion;
-	float ribbons = 0.5 + 0.5 * sin(UV.x * 22.0 + sin(UV.y * 8.0 - t) * 1.4);
-	float bands = 0.5 + 0.5 * sin(UV.y * 18.0 - t * 2.2 + ribbons * 1.8);
-	float foam = step(0.68, pow(ribbons, 2.0) * 0.55 + bands * 0.55);
-	float lip = smoothstep(0.82, 0.98, UV.y) + smoothstep(0.14, 0.0, UV.y);
+	float t = TIME * 5.2 * motion;
+	float streak = 0.5 + 0.5 * sin(loc.x * 2.1 + sin(loc.z * 0.45 - t * 0.6) * 1.6);
+	float wave = 0.5 + 0.5 * sin(loc.z * 1.15 - t + streak * 1.4);
+	float foam = step(0.72, pow(streak, 1.8) * 0.55 + wave * 0.55);
+	float mid_band = step(0.45, streak * 0.6 + wave * 0.4);
+	float lip = smoothstep(5.5, 7.9, loc.z) + smoothstep(-5.8, -7.9, loc.z);
 	float edge = step(0.92, abs(UV.x - 0.5) * 2.0);
-	vec3 water = mix(deep_col, crest_col, clamp(foam * 0.72 + lip * 0.45, 0.0, 1.0));
+	vec3 water = mix(deep_col, mid_col, mid_band);
+	water = mix(water, crest_col, clamp(foam * 0.85 + lip * 0.65, 0.0, 1.0));
 	vec3 base = mix(tell_col, water, live);
-	ALBEDO = mix(base, ink_col, edge * 0.75);
-	ALPHA = clamp(opacity + (foam * 0.18 + edge * 0.2) * live, 0.0, 0.95);
+	ALBEDO = mix(base, ink_col, edge * 0.78);
+	ALPHA = clamp(opacity + (foam * 0.2 + edge * 0.22) * live, 0.0, 0.95);
 }"""
 	var mat := ShaderMaterial.new()
 	mat.shader = _sheet_shader

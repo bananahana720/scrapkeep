@@ -550,16 +550,17 @@ func _setup_subject(cat: String, asset_id: String, holder: Node3D) -> Dictionary
 			var script := load(path) as GDScript
 			var enemy: Node3D = script.new()
 			enemy.kind = asset_id
-			enemy.world_root = holder
-			enemy.terrain = DummyTerrain.new()
-			enemy.target = DummyTarget.new()
 			holder.add_child(enemy)
-			enemy.global_position = Vector3(0.0, 0.0, 0.0)
-			enemy.setup(1.0)
+			enemy.global_position = Vector3(0.0, 1.1, 0.0)
+			enemy.setup(DummyTarget.new(), DummyTerrain.new(), holder, func() -> bool: return true, 1.0)
 			await physics_frame
 			await process_frame
-			var box := box_of(enemy)
-			return {"enemy": enemy, "box": box, "margin": 1.65}
+			var raw_box := box_of(enemy)
+			if absf(raw_box.position.y) > 0.02:
+				enemy.global_position.y -= raw_box.position.y
+				await process_frame
+				raw_box = box_of(enemy)
+			return {"enemy": enemy, "box": raw_box, "margin": 1.38}
 		"warden":
 			var w := DummyWarden.new()
 			w.world_root = holder
@@ -568,28 +569,31 @@ func _setup_subject(cat: String, asset_id: String, holder: Node3D) -> Dictionary
 			driver.sheet_dir = Vector3(0.0, 0.0, 1.0)
 			driver._show_sheet(w, WardenReactor.LANE_TELL_ALPHA)
 			await process_frame
-			var box := AABB(Vector3(-12.0, 0.0, 10.0), Vector3(24.0, 5.0, 22.0))
-			return {"warden": w, "driver": driver, "box": box, "margin": 1.35}
+			var box := AABB(Vector3(-12.0, 0.0, 10.0), Vector3(24.0, 4.0, 22.0))
+			return {"warden": w, "driver": driver, "box": box, "margin": 1.25}
 		"boss":
 			var scooter := Node3D.new()
 			scooter.name = "BrindleScooter"
 			holder.add_child(scooter)
 			var anim: AnimationPlayer = Requisition.dress_scooter(scooter)
 			await process_frame
+			var raw_box := box_of(scooter)
+			var base_y := -raw_box.position.y
+			scooter.position.y = base_y
+			await process_frame
 			var box := box_of(scooter)
-			box = box.grow(1.2)
-			return {"scooter": scooter, "anim": anim, "box": box, "margin": 1.55}
+			return {"scooter": scooter, "anim": anim, "base_y": base_y, "box": box.grow(0.8), "margin": 1.28}
 		"setpiece":
 			if asset_id == "camp_pet":
-				var pit := _place_glb(holder, "res://assets/models/camp/camp_fire_pit.glb", Vector3(-2.6, 0.0, -1.6))
-				var pet := _place_glb(holder, "res://assets/models/camp/camp_pet.glb", Vector3(0.8, 0.0, 0.4))
+				var pit := _place_glb(holder, "res://assets/models/camp/camp_fire_pit.glb", Vector3(-1.8, 0.0, -1.1))
+				var pet := _place_glb(holder, "res://assets/models/camp/camp_pet.glb", Vector3(0.7, 0.0, 0.3))
 				var fx := WorldFxAnchor.make("camp")
 				if fx != null:
-					fx.position = Vector3(-2.6, 0.65, -1.6)
+					fx.position = Vector3(-1.8, 0.65, -1.1)
 					holder.add_child(fx)
 				await process_frame
-				var box := AABB(Vector3(-3.8, 0.0, -2.8), Vector3(6.2, 3.0, 4.8))
-				return {"pet": pet, "pit": pit, "fx": fx, "box": box, "margin": 1.38}
+				var box := AABB(Vector3(-3.0, 0.0, -2.2), Vector3(4.8, 2.4, 3.6))
+				return {"pet": pet, "pit": pit, "fx": fx, "box": box, "margin": 1.22}
 			elif asset_id == "cracked_cache":
 				var ctx := DummyCacheCtx.new()
 				ctx.events = GameEvents.new()
@@ -598,12 +602,12 @@ func _setup_subject(cat: String, asset_id: String, holder: Node3D) -> Dictionary
 				cache.ctx = ctx
 				cache.system = DummySystem.new()
 				cache.id = "capture_cache"
-				cache.relic_guaranteed = false
+				cache.relic_guaranteed = true
 				holder.add_child(cache)
 				cache.build()
 				await process_frame
 				var box := box_of(cache)
-				return {"cache": cache, "box": box, "margin": 1.45}
+				return {"cache": cache, "box": box, "margin": 1.32}
 	return {"box": AABB(Vector3(-1.5, 0.0, -1.5), Vector3(3.0, 3.0, 3.0))}
 
 
@@ -611,10 +615,11 @@ func _place_glb(parent: Node3D, path: String, at: Vector3) -> Node3D:
 	var holder := Node3D.new()
 	holder.position = at
 	parent.add_child(holder)
+	var body := Recipes._body(holder)
 	var scenes := Recipes._load(path)
 	if not scenes.is_empty():
 		var s: Node = scenes[0]
-		Recipes._views(s, holder, null, Transform3D.IDENTITY)
+		Recipes._views(s, holder, body, Transform3D.IDENTITY)
 		s.free()
 	return holder
 
@@ -710,28 +715,29 @@ func _pose_subject(cat: String, asset_id: String, beat: String, ctx: Dictionary,
 		"boss":
 			var sc: Node3D = ctx["scooter"]
 			var anim: AnimationPlayer = ctx["anim"]
+			var by: float = float(ctx.get("base_y", 0.7))
 			match beat:
 				"idle":
-					sc.position = Vector3(0.0, 0.7, 0.0)
+					sc.position = Vector3(0.0, by, 0.0)
 					sc.rotation = Vector3.ZERO
 					if anim != null:
 						BossModel.play(anim, "chase")
 				"windup":
-					sc.position = Vector3(0.0, 1.6, -0.4)
+					sc.position = Vector3(0.0, by + 1.1, -0.3)
 					sc.rotation = Vector3(-0.22, 0.15, 0.0)
 					if anim != null:
 						BossModel.play(anim, "eject")
 				"attack":
-					sc.position = Vector3(0.0, 0.7, 0.4)
+					sc.position = Vector3(0.0, by, 0.35)
 					sc.rotation = Vector3(0.0, 0.0, 0.14)
 					if vfx_on:
-						FxLibrary.burst(holder, "slam_dust", Vector3(0.0, 0.2, 0.4), 14)
+						FxLibrary.burst(holder, "slam_dust", Vector3(0.0, 0.2, 0.35), 14)
 						FxLibrary.burst(holder, "steam_puff", Vector3(0.0, 0.8, -1.3), 8)
 				"death":
-					sc.position = Vector3(0.3, 0.7, 0.2)
+					sc.position = Vector3(0.25, by, 0.15)
 					sc.rotation = Vector3(0.05, 0.4, -0.22)
 					if vfx_on:
-						FxLibrary.burst(holder, "brass_spark", Vector3(0.3, 1.1, 0.2), 16)
+						FxLibrary.burst(holder, "brass_spark", Vector3(0.25, 1.1, 0.15), 16)
 						FxLibrary.burst(holder, "steam_puff", Vector3(-0.3, 0.9, -1.0), 10)
 			await process_frame
 			return {"death_ok": true}
@@ -740,26 +746,26 @@ func _pose_subject(cat: String, asset_id: String, beat: String, ctx: Dictionary,
 				var pet: Node3D = ctx["pet"]
 				match beat:
 					"idle":
-						pet.position = Vector3(0.8, 0.0, 0.4)
+						pet.position = Vector3(0.7, 0.0, 0.3)
 						pet.scale = Vector3.ONE
 						pet.rotation = Vector3.ZERO
 					"windup":
-						pet.position = Vector3(0.8, 0.0, 0.4)
+						pet.position = Vector3(0.7, 0.0, 0.3)
 						pet.scale = Vector3(1.18, 0.80, 1.18)
 						pet.rotation = Vector3(0.0, -0.45, 0.0)
 					"attack":
-						pet.position = Vector3(1.1, 0.72, 0.8)
+						pet.position = Vector3(1.0, 0.72, 0.7)
 						pet.scale = Vector3(0.86, 1.20, 0.86)
 						pet.rotation = Vector3(0.0, -0.55, 0.0)
 						if vfx_on:
 							FxLibrary.burst(holder, "brass_spark", pet.global_position + Vector3.UP * 0.7, 12, Palette.BRASS)
-							FxLibrary.burst(holder, "steam_puff", Vector3(0.8, 0.2, 0.4), 6)
+							FxLibrary.burst(holder, "steam_puff", Vector3(0.7, 0.2, 0.3), 6)
 					"death":
-						pet.position = Vector3(1.4, 0.0, 1.1)
+						pet.position = Vector3(1.25, 0.0, 0.95)
 						pet.scale = Vector3(1.16, 0.84, 1.16)
 						pet.rotation = Vector3(0.0, -0.55, 0.0)
 						if vfx_on:
-							FxLibrary.burst(holder, "steam_puff", Vector3(1.4, 0.2, 1.1), 8)
+							FxLibrary.burst(holder, "steam_puff", Vector3(1.25, 0.2, 0.95), 8)
 				await process_frame
 				return {"death_ok": true}
 			elif asset_id == "cracked_cache":
