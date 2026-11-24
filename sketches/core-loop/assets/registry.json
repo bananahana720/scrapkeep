@@ -39965,6 +39965,17 @@
    }
   },
   {
+   "id": "mend_ward_post",
+   "path": "res://assets/models/world_one/mend_ward_post.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/activities.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/mend_ward_post.py",
+    "note": "Procedural vertex-coloured mend ward post (W46-18, activities.gd _build_ward): a keeper's lamp post on a stepped slate plinth with an iron strap and copper rivets, iron column, verdigris mend collar, copper patch plate, hand wheel, hung spanner and a verdigris lamp head, 0.9 x 2.39 x 0.9 m. One mesh, one draw, watertight."
+   }
+  },
+  {
    "id": "pocket_kit",
    "path": "res://assets/models/world_one/pocket_kit.glb",
    "class": "prop",
@@ -42767,6 +42778,7 @@
   "liner_west_wash_detail2",
   "lobber_clips",
   "mag_trapper_clips",
+  "mend_ward_post",
   "mesa_lip_kicker",
   "mesa_lip_kicker_12x4x300",
   "mesa_lip_kicker_12x4x300_detail1",

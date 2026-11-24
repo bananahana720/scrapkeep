@@ -419,7 +419,7 @@ class Site extends Node3D:
 			yard_mast.queue_free()
 
 
-# A mend ward (W45 P3, secrets.gd WARDS): a slate post and a ground ring in a dead end off every line. The ball
+# A mend ward (W45 P3, secrets.gd WARDS): a keeper's lamp post and a ground ring in a dead end off every line. The ball
 # rolling into the ring wakes its guard; while the ball holds inside, the ring fills over CHARGE_S and drains at
 # DRAIN outside it; full, it mends HEAL_SHARE of the hull, once a stage entry. Ruling cu: the mend asks the ball to
 # stop while a pack presses it, so a ward whose guard never stood (calm, or ground that refused every spawn) never
@@ -2750,6 +2750,9 @@ func _far_pick(s: Site, pool: Array) -> String:
 # ---- Mend wards and lore plates (W45 P3) ----
 
 const WARD_POST := Vector3(0.9, 2.4, 0.9)
+# The post's model (tools/blender/world_one/mend_ward_post.py, W46-18): a keeper's lamp post on a slate plinth, built to
+# WARD_POST with its origin on the ground. A missing file keeps the slate box.
+const WARD_MODEL := "res://assets/models/world_one/mend_ward_post.glb"
 const WARD_RING_H := 0.08
 const PLATE_RADIUS := 1.1
 const PLATE_H := 0.1
@@ -2773,7 +2776,8 @@ func _build_ward(spec: Dictionary) -> MendWard:
 	add_child(w)
 	var at: Vector2 = spec["at"]
 	w.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
-	_mesh_box(w, WARD_POST, Vector3.UP * WARD_POST.y * 0.5, _solid(Palette.SLATE))
+	if ModelKit.whole(WARD_MODEL, w) == null:
+		_mesh_box(w, WARD_POST, Vector3.UP * WARD_POST.y * 0.5, _solid(Palette.SLATE))
 	_mesh_cylinder(w, MendWard.RING_M, WARD_RING_H, Vector3.UP * WARD_RING_H * 0.5, _solid(Palette.CHARCOAL))
 	w.fill = MeshInstance3D.new()
 	var disc := CylinderMesh.new()

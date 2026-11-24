@@ -30,6 +30,7 @@ var lines: Array[String] = []
 var _pivot: Node3D
 var _labels: Node3D
 var _list: VBoxContainer
+# The stand-in sphere, built only while no shell is worn (_stand_in), so a run whose pilot wears one never holds it.
 var _ball: MeshInstance3D
 var _frame: SubViewportContainer
 # The worn shell's record from HeroAssets.fit_worn_into, {} while the stand-in sphere shows.
@@ -66,14 +67,6 @@ func _init() -> void:
 	view.add_child(sun)
 	_pivot = Node3D.new()
 	view.add_child(_pivot)
-	# A stand-in for a game with no painter or no shell model; wear() hides it.
-	_ball = MeshInstance3D.new()
-	var sphere := SphereMesh.new()
-	sphere.radius = 1.0
-	sphere.height = 2.0
-	_ball.mesh = sphere
-	_ball.material_override = Palette.solid(Palette.CHARCOAL.lerp(Palette.SLATE, 0.4), 0.0)
-	_pivot.add_child(_ball)
 	shell = PanelShell.new()
 	_pivot.add_child(shell)
 	_labels = Node3D.new()
@@ -126,13 +119,31 @@ func refresh(run, overflow := 0, class_id := "", effective := {}) -> void:
 		_list.add_child(_line(line))
 
 
-# Fits the worn shell and its pilot. The sphere stays for a missing shell or painter.
+# Fits the worn shell and its pilot. A missing painter, pilot or shell model shows the stand-in sphere instead.
 func wear(painter, player) -> void:
-	if painter == null or player == null:
+	if painter != null and player != null:
+		_worn = painter.fit_worn_into(_pivot, shell, player, _worn)
+		_pivot.rotation.y = OPEN_ANGLE
+	_stand_in(_worn.is_empty())
+
+
+# Builds the stand-in sphere when it is wanted and frees it when the worn shell takes its place.
+func _stand_in(wanted: bool) -> void:
+	if not wanted:
+		if _ball != null:
+			_ball.queue_free()
+			_ball = null
 		return
-	_worn = painter.fit_worn_into(_pivot, shell, player, _worn)
-	_ball.visible = _worn.is_empty()
-	_pivot.rotation.y = OPEN_ANGLE
+	if _ball != null:
+		return
+	_ball = MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 1.0
+	sphere.height = 2.0
+	_ball.mesh = sphere
+	_ball.material_override = Palette.solid(Palette.CHARCOAL.lerp(Palette.SLATE, 0.4), 0.0)
+	_pivot.add_child(_ball)
+	_pivot.move_child(_ball, 0)
 
 
 # Seats the read in the screen's left gutter, centred on its height, clear of the pause

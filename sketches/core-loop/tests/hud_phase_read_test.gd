@@ -397,7 +397,7 @@ func _pause_checks() -> void:
 		menu._show_build()
 		var label := "all twelve panels" if held.size() > 0 else "no panels"
 		# W1-46: the pilot's own shell turns in the view, never the grey stand-in sphere.
-		_t.check("R2 %s: the view wears the pilot's shell" % label, not read._worn.is_empty() and read._worn.core.is_inside_tree() and not read._ball.visible, str(read._worn.keys()))
+		_t.check("R2 %s: the view wears the pilot's shell" % label, not read._worn.is_empty() and read._worn.core.is_inside_tree() and read._ball == null, str(read._worn.keys()))
 		var pilot: Node3D = read._worn.pod.get_node_or_null("AnimatedPilot")
 		_t.check("R2 %s: the pilot's model is in the shell" % label, pilot != null and pilot.scene_file_path.contains("pilot_"))
 		_t.check("R2 %s: the preview opens with the pilot facing the eye" % label, (-read._worn.pod.global_basis.z).dot(Vector3.BACK) > 0.9)
