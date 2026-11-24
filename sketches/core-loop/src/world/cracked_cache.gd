@@ -117,6 +117,7 @@ func build() -> void:
 	_build_pedestals(parts)
 	_build_rim_glow()
 	ctx.events.slammed.connect(_on_slammed)
+	ctx.events.world_fact.connect(_on_world_fact)
 
 
 # The lane spot is used only inside the play rect (less LANE_EDGE) and on ground that is level over
@@ -329,37 +330,6 @@ func take(index: int) -> void:
 		p["node"].visible = false
 	ctx.run.add_part(taken, "cache")
 	ctx.events.world_fact.emit("cache_spent", global_position)
-	# The flag stands on the roof's front corner, over the open wall, where it reads from every side.
-	flag = raise_flag(self, to_global(Vector3(-HALF_W + 1.2, HEIGHT + 1.0, HALF_D - 0.6)), UiTokens.reduced_motion)
-
-
-# The keeper flag under parent with its foot at `at` (world), sprung up from its coil unless still, its cloth swaying
-# unless still; null when the model is missing. One call for every finished cache: this device's own, and the park's
-# cracked pockets (site_markers.gd, on their activity_done). Freed with parent.
-static func raise_flag(parent: Node3D, at: Vector3, still := false) -> Node3D:
-	var packed: PackedScene = load(FLAG_MODEL) as PackedScene if ResourceLoader.exists(FLAG_MODEL) else null
-	var raised: Node3D = packed.instantiate() as Node3D if packed != null else null
-	if raised == null:
-		return null
-	raised.name = "KeeperFlag"
-	var pole := StandardMaterial3D.new()
-	pole.vertex_color_use_as_albedo = true
-	pole.roughness = 0.7
-	var cloth := ShaderMaterial.new()
-	cloth.shader = Shader.new()
-	cloth.shader.code = FLAG_SHADER
-	cloth.set_shader_parameter("sway", 0.0 if still else 1.0)
-	for view: MeshInstance3D in raised.find_children("*", "MeshInstance3D", true, false):
-		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		view.material_override = cloth if String(view.name) == FLAG_CLOTH else pole
-	parent.add_child(raised)
-	raised.global_position = at
-	raised.scale = Vector3.ONE * FLAG_SCALE
-	if not still:
-		raised.scale = Vector3(FLAG_SCALE, FLAG_SCALE * FLAG_SPRUNG_FROM, FLAG_SCALE)
-		raised.create_tween().tween_property(raised, "scale", Vector3.ONE * FLAG_SCALE, FLAG_SETTLE_S) \
-			.set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
-	return raised
 
 
 func _collision_box(size: Vector3, at: Vector3) -> StaticBody3D:
@@ -511,3 +481,40 @@ static func _attach(parts: Array, part_name: String, parent: Node3D) -> MeshInst
 			parent.add_child(view)
 			return view
 	return null
+
+
+# take() publishes cache_spent at this cache; hearing its own fact, the cache puts its keeper flag up on the roof's
+# front corner, over the open wall, where it reads from every side.
+func _on_world_fact(kind: String, at: Vector3) -> void:
+	if kind != "cache_spent" or at != global_position or flag != null:
+		return
+	flag = raise_flag(self, to_global(Vector3(-HALF_W + 1.2, HEIGHT + 1.0, HALF_D - 0.6)), UiTokens.reduced_motion)
+
+
+# The keeper flag under parent with its foot at `at` (world), sprung up from its coil unless still, its cloth swaying
+# unless still; null when the model is missing. One call for every finished cache: this device's own, and the park's
+# cracked pockets (site_markers.gd, on their activity_done). Freed with parent.
+static func raise_flag(parent: Node3D, at: Vector3, still := false) -> Node3D:
+	var packed: PackedScene = load(FLAG_MODEL) as PackedScene if ResourceLoader.exists(FLAG_MODEL) else null
+	var raised: Node3D = packed.instantiate() as Node3D if packed != null else null
+	if raised == null:
+		return null
+	raised.name = "KeeperFlag"
+	var pole := StandardMaterial3D.new()
+	pole.vertex_color_use_as_albedo = true
+	pole.roughness = 0.7
+	var cloth := ShaderMaterial.new()
+	cloth.shader = Shader.new()
+	cloth.shader.code = FLAG_SHADER
+	cloth.set_shader_parameter("sway", 0.0 if still else 1.0)
+	for view: MeshInstance3D in raised.find_children("*", "MeshInstance3D", true, false):
+		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		view.material_override = cloth if String(view.name) == FLAG_CLOTH else pole
+	parent.add_child(raised)
+	raised.global_position = at
+	raised.scale = Vector3.ONE * FLAG_SCALE
+	if not still:
+		raised.scale = Vector3(FLAG_SCALE, FLAG_SCALE * FLAG_SPRUNG_FROM, FLAG_SCALE)
+		raised.create_tween().tween_property(raised, "scale", Vector3.ONE * FLAG_SCALE, FLAG_SETTLE_S) \
+			.set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	return raised
