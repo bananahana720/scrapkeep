@@ -7,17 +7,19 @@ const StageLocks := preload("res://src/world/stage_locks.gd")
 const T := preload("res://tests/support/t.gd")
 
 # E1-05a (ruling ek, design-v3/WAYFINDING.md 2.2): the Dam's intake takeoff and the intake zip's catch. The takeoff
-# (park_dam.json intake_takeoff_ramp) is a launch slot cut 0.8 m into the crest top at x -154..-148, z 170..190, in
-# line with the zip: its floor dips in at the north end and sweeps back up over its last 5 m to the crest edge, which
-# is its lip. Nothing stands above the crest, so a ball climbing the dam face meets the same edge as before, and the
-# slot's floor steers a ball that rolls in toward the zip's line. The zip's hook (intake_zip.from, radius 4.0) hangs
-# over the face 8.5 m south of the lip.
+# is a launch slot cut into the crest top at x -154..-148, in line with the zip, made of two ramp stamps in
+# park_dam.json: intake_takeoff cuts a floor that falls from crest level at z 176 to 0.8 m under it at z 188, and
+# intake_takeoff_ramp fills its south end back in, so the floor is deepest (about 0.5 m) near z 184, runs almost level
+# to z 188 and rises 0.3 m over the last 2 m to the crest edge at z 190, which is its lip. The north half stays
+# shallow, so a slow ball that drifts in off the crest's north wall rolls across it instead of being turned back
+# (review r1 of PR #1225). Nothing stands above the crest, so a ball climbing the dam face meets the same edge as
+# before. The zip's hook (intake_zip.from, radius 5.0) hangs over the face 9.5 m south of the lip.
 #
 # Read on the real dam, yard locks off, the ball unsteered. A snag is half the flat speed lost within 0.2 s from
 # 0.5 x cruise or more (tools/qa/snag_probe.gd min_before); a turn-back is the ball's reach along its push falling
 # 1 m short of its best. A lane the zip takes ends there: the cable, not the map, carries it on. Each lane drops any
 # ride left over and holds the ball still past the cable's 1 s rest, so no lane starts on, or is spared by, the last.
-#  - catch: a ball pushed south from z 166 down the slot, at its west edge, middle and east edge, at 0.9 to 2.0 x
+#  - catch: a ball pushed south from z 166 down the slot, at its west edge, middle and east edge, at 0.6 to 2.0 x
 #    cruise, is taken by the zip;
 #  - back: a ball climbing the dam face north over the lip into the slot (at 0.9 x at its west edge, middle and east
 #    edge; at 1.25 x in the middle), straight and 30 degrees either way, neither snags nor turns back;
@@ -26,7 +28,9 @@ const T := preload("res://tests/support/t.gd")
 #  - crest: a ball crossing along the crest top beside the takeoff (z 186, 189) at 0.75 and 1.5 x is not taken
 #    by the zip and does not snag;
 #  - face: a ball crossing the dam face below the crest at 1.0 x does not snag; the zip may take it inside z 191..199
-#    (the band moved up from the base's z 198..210 and is narrower), never at z 190 or z 202.
+#    (the band moved up from the base's z 198..210 and is narrower), never at z 190 or z 202;
+#  - drift: the slow crest crossers from review r1 (0.75 x, diagonally across the crest from z 165, glancing off the
+#    north wall into the slot's north half) neither snag nor turn back.
 # Planted: a ball pushed north at x -151 into the 6 m wall at the crest's north end (z 161) must read as a snag, so
 # the detector is shown to catch one before its passes are trusted.
 
@@ -37,7 +41,7 @@ const RIDE_S := 8.0
 # The ramp's centre line and the start of the south pushes.
 const RAMP := Vector2(-151.0, 185.0)
 const CATCH_X := [-154.0, -151.0, -148.0]
-const CATCH_KS := [0.9, 1.0, 1.5, 2.0]
+const CATCH_KS := [0.6, 0.75, 0.9, 1.0, 1.5, 2.0]
 const BACK_X := [-153.0, -151.0, -149.0]
 
 var _t := T.new("dam_takeoff_test")
@@ -99,6 +103,12 @@ func _run() -> void:
 				var r: Dictionary = await _roll(Vector2(-151.0 - 12.0 * d, z), Vector2(d, 0.0), k, -151.0 * d + 12.0)
 				_t.check("crest: along the crest top at z %d heading %s, %.2f x: no snag, not taken by the zip" % [z, _heading(d), k],
 					r["snag"] == "" and not r["zip"], str(r))
+
+	# x, heading in degrees from south (225 is north-east, 135 north-west), as in review r1's sweep: 20 m along it.
+	for lane in [[-180.0, 225.0], [-176.0, 225.0], [-124.0, 135.0], [-120.0, 135.0]]:
+		var dir := Vector2(0.0, 1.0).rotated(deg_to_rad(lane[1]))
+		var at := Vector2(lane[0], 165.0)
+		_clean("drift: across the crest from (%d, 165) heading %d" % [lane[0], lane[1]], await _roll(at, dir, 0.75, at.dot(dir) + 20.0), 0.75)
 
 	for z in [190.0, 194.0, 198.0, 202.0]:
 		for d in [1.0, -1.0]:
