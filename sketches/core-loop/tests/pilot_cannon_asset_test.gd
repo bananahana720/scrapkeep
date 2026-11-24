@@ -13,6 +13,10 @@ extends SceneTree
 # allowed under the equator-barrel reading, so shell_cannon_choir.glb gets its own bound,
 # BARREL_REACH_CHOIR 1.60; the base keeps BARREL_REACH 1.50. SCRAPKEEP_PCN_TEST_CHOIR swaps in a
 # damaged choir GLB for the negative control, as SCRAPKEEP_PCN_TEST_RIG does for the rig.
+# 2026-11-23 (E2-06, Andrew's ruling of that day): the stepped barrel moves to the ball's left flank
+# on a bone side yoke, parallel to the aim, so BarrelPivot, LaneMuzzle and SectorPivot re-pin; the
+# weapon reach cap lifts from 1.48 m to 1.75 m, so BARREL_REACH and BARREL_REACH_CHOIR are both 1.75.
+# BreechCollar rides MainBarrel. The split ports keep their sockets.
 
 const PILOT := "res://assets/models/pilot_cannon_anim.glb"
 const SHELL := "res://assets/models/world_one/shell_cannon.glb"
@@ -31,9 +35,9 @@ const PARENTS := {
 	"tail.01": "pelvis", "tail.02": "tail.01", "tool.R": "hand.R",
 }
 const SOCKETS := {
-	"LaneMuzzle": Vector3(0, 0, -1.472), "BarrelPivot": Vector3(0, 0, -1.13),
+	"LaneMuzzle": Vector3(-1.22, .28, -1.037), "BarrelPivot": Vector3(-1.22, .28, .18),
 	"SplitExit.R": Vector3(.315156, -.353486, .940558), "SplitExit.L": Vector3(-.315156, -.353486, .940558),
-	"SectorPivot": Vector3(0, .18, -1.165), "RushContact": Vector3(0, -.90, 0),
+	"SectorPivot": Vector3(-1.22, .49, .15), "RushContact": Vector3(0, -.90, 0),
 	"Grip.R": Vector3(.32, .05, -.40), "Grip.L": Vector3(-.32, .05, -.40),
 }
 # Godot node names of the sockets (hoberman's controls carry the Control. prefix).
@@ -41,8 +45,8 @@ const SOCKET_NODES := {"Grip.R": "Control_Grip_R", "Grip.L": "Control_Grip_L"}
 const SHELL_SLOTS := ["paint", "ancient_enamel", "rubber", "class_accent", "copper"]
 const CORE_LIMIT := .985
 const MODULE_REACH := 1.25
-const BARREL_REACH := 1.50
-const BARREL_REACH_CHOIR := 1.60
+const BARREL_REACH := 1.75
+const BARREL_REACH_CHOIR := 1.75
 var failures := 0
 
 
@@ -274,6 +278,8 @@ func check_shell(shell: Node3D) -> void:
 	check("kit MainBarrel", barrel != null and barrel.get_parent() == ring and barrel is MeshInstance3D)
 	var shutter := shell.find_child("SectorShutter", true, false)
 	check("kit SectorShutter", shutter != null and shutter.get_parent() == barrel)
+	var collar := shell.find_child("BreechCollar", true, false)
+	check("kit BreechCollar", collar != null and collar.get_parent() == barrel and collar is MeshInstance3D)
 
 
 # The Choir Barrel variant swaps only the barrel; its ring and barrel reach get their own bound.
