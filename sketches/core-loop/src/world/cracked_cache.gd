@@ -5,6 +5,7 @@ const Relics := preload("res://src/build/relics.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const TierMark := preload("res://src/build/tier_mark.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 # A cracked wall and the buried cache behind it, the secrets family (LOOP-REDESIGN
 # section 9): a verdigris concrete pocket with a charcoal groove, its open side walled
@@ -46,6 +47,34 @@ const RIM_GLOW := {"sealed": 1.6, "fired": 2.4}
 
 enum { SEALED, OPEN, PICKING, TAKEN }
 
+# The keeper flag a spent cache puts up (W46 E1-15, design-v3/WAYFINDING.md section 4): its visited mark, so a player
+# circling back reads a finished cache from one still open. A six-turn copper spring pole and a square of sand cloth
+# tied on with copper rope (tools/blender/world_one/keeper_flag.py), never mint: mint means press now, and a spent cache
+# asks for nothing. The model is authored at real size (0.6 by 0.4 m cloth) and stands at FLAG_SCALE, the device's own
+# storybook scale (its chest is 2 m wide), so it reads from the chase camera. It springs up from its coil over
+# FLAG_SETTLE_S, then its cloth sways in a vertex wind; under reduced motion it stands still. No light, no collider.
+const FLAG_MODEL := "res://assets/models/world_one/keeper_flag.glb"
+const FLAG_SCALE := 3.0
+const FLAG_SETTLE_S := 0.8
+const FLAG_SPRUNG_FROM := 0.15
+const FLAG_CLOTH := "FlagCloth"
+const FLAG_SHADER := """
+shader_type spatial;
+render_mode cull_disabled;
+uniform float sway = 1.0;
+void vertex() {
+	// VERTEX.x runs along the fly from the hoist, which stays pinned to the pole.
+	float fly = clamp(VERTEX.x / 0.6, 0.0, 1.0);
+	float t = TIME * 2.2;
+	VERTEX.z += sin(t - fly * 4.0) * fly * 0.07 * sway;
+	VERTEX.y += (sin(t * 0.7 + fly * 2.0) * 0.02 - 0.03 * fly * fly) * sway;
+}
+void fragment() {
+	ALBEDO = COLOR.rgb;
+	ROUGHNESS = 0.95;
+}
+"""
+
 var state := SEALED
 var offers: Array = []
 var taken := ""
@@ -58,6 +87,8 @@ var _rim_glow: StandardMaterial3D
 var _roof: GeometryInstance3D
 var _pedestals: Array = []
 var _inside: Array = []
+# The keeper flag once the cache is spent (raise_flag), else null.
+var flag: Node3D
 const MODEL := "res://assets/models/world_one/cracked_cache.glb"
 const REQUIRED := ["CacheShell", "CacheRoof", "CacheWall", "CacheChest", "CacheLid", "CachePedestal"]
 static var _shared: Array = []
@@ -86,6 +117,7 @@ func build() -> void:
 	_build_pedestals(parts)
 	_build_rim_glow()
 	ctx.events.slammed.connect(_on_slammed)
+	ctx.events.world_fact.connect(_on_world_fact)
 
 
 # The lane spot is used only inside the play rect (less LANE_EDGE) and on ground that is level over
@@ -449,3 +481,40 @@ static func _attach(parts: Array, part_name: String, parent: Node3D) -> MeshInst
 			parent.add_child(view)
 			return view
 	return null
+
+
+# take() publishes cache_spent at this cache; hearing its own fact, the cache puts its keeper flag up on the roof's
+# front corner, over the open wall, where it reads from every side.
+func _on_world_fact(kind: String, at: Vector3) -> void:
+	if kind != "cache_spent" or at != global_position or flag != null:
+		return
+	flag = raise_flag(self, to_global(Vector3(-HALF_W + 1.2, HEIGHT + 1.0, HALF_D - 0.6)), UiTokens.reduced_motion)
+
+
+# The keeper flag under parent with its foot at `at` (world), sprung up from its coil unless still, its cloth swaying
+# unless still; null when the model is missing. One call for every finished cache: this device's own, and the park's
+# cracked pockets (site_markers.gd, on their activity_done). Freed with parent.
+static func raise_flag(parent: Node3D, at: Vector3, still := false) -> Node3D:
+	var packed: PackedScene = load(FLAG_MODEL) as PackedScene if ResourceLoader.exists(FLAG_MODEL) else null
+	var raised: Node3D = packed.instantiate() as Node3D if packed != null else null
+	if raised == null:
+		return null
+	raised.name = "KeeperFlag"
+	var pole := StandardMaterial3D.new()
+	pole.vertex_color_use_as_albedo = true
+	pole.roughness = 0.7
+	var cloth := ShaderMaterial.new()
+	cloth.shader = Shader.new()
+	cloth.shader.code = FLAG_SHADER
+	cloth.set_shader_parameter("sway", 0.0 if still else 1.0)
+	for view: MeshInstance3D in raised.find_children("*", "MeshInstance3D", true, false):
+		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		view.material_override = cloth if String(view.name) == FLAG_CLOTH else pole
+	parent.add_child(raised)
+	raised.global_position = at
+	raised.scale = Vector3.ONE * FLAG_SCALE
+	if not still:
+		raised.scale = Vector3(FLAG_SCALE, FLAG_SCALE * FLAG_SPRUNG_FROM, FLAG_SCALE)
+		raised.create_tween().tween_property(raised, "scale", Vector3.ONE * FLAG_SCALE, FLAG_SETTLE_S) \
+			.set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	return raised

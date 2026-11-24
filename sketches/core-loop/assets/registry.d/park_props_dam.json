@@ -3863,6 +3863,1014 @@
      2.38
     ]
    }
+  },
+  {
+   "id": "dprop_dam_intake_gantry_a",
+   "path": "res://assets/models/park/props/dam/intake_gantry_a.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "intake_gantry variant a LOD0 (9232 tris): An old-works intake gantry: a squared cast portal with one oversized cable socket on its lintel end. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -7.2728,
+     0,
+     -2
+    ],
+    "max": [
+     7.2728,
+     18.52,
+     2
+    ],
+    "size": [
+     14.5456,
+     18.52,
+     4
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_intake_gantry_a_lod1",
+   "path": "res://assets/models/park/props/dam/intake_gantry_a_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "intake_gantry variant a LOD1 (4616 tris): An old-works intake gantry: a squared cast portal with one oversized cable socket on its lintel end. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -7.2728,
+     0,
+     -2
+    ],
+    "max": [
+     7.2728,
+     18.5196,
+     2
+    ],
+    "size": [
+     14.5456,
+     18.5196,
+     4
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_intake_gantry_a_lod2",
+   "path": "res://assets/models/park/props/dam/intake_gantry_a_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "intake_gantry variant a LOD2 (1384 tris): An old-works intake gantry: a squared cast portal with one oversized cable socket on its lintel end. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -7.258,
+     0,
+     -1.9853
+    ],
+    "max": [
+     7.2688,
+     18.5032,
+     1.9988
+    ],
+    "size": [
+     14.5268,
+     18.5032,
+     3.9841
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_intake_gantry_b",
+   "path": "res://assets/models/park/props/dam/intake_gantry_b.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "intake_gantry variant b LOD0 (9448 tris): An old-works intake gantry: a squared cast portal with one oversized cable socket on its lintel end. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -7.2728,
+     0,
+     -2.1058
+    ],
+    "max": [
+     7.2728,
+     18.52,
+     2.1058
+    ],
+    "size": [
+     14.5456,
+     18.52,
+     4.2116
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_intake_gantry_b_lod1",
+   "path": "res://assets/models/park/props/dam/intake_gantry_b_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "intake_gantry variant b LOD1 (4724 tris): An old-works intake gantry: a squared cast portal with one oversized cable socket on its lintel end. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -7.2728,
+     0,
+     -2.1058
+    ],
+    "max": [
+     7.2728,
+     18.5196,
+     2.1083
+    ],
+    "size": [
+     14.5456,
+     18.5196,
+     4.2141
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_intake_gantry_b_lod2",
+   "path": "res://assets/models/park/props/dam/intake_gantry_b_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "intake_gantry variant b LOD2 (1416 tris): An old-works intake gantry: a squared cast portal with one oversized cable socket on its lintel end. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -7.2688,
+     0,
+     -2.091
+    ],
+    "max": [
+     7.258,
+     18.5033,
+     2.1125
+    ],
+    "size": [
+     14.5268,
+     18.5033,
+     4.2035
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_takeoff_deck_a",
+   "path": "res://assets/models/park/props/dam/takeoff_deck_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "takeoff_deck variant a LOD0 (1536 tris): The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -5.28,
+     0,
+     -6.69
+    ],
+    "max": [
+     5.28,
+     1.03,
+     6.69
+    ],
+    "size": [
+     10.56,
+     1.03,
+     13.38
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_takeoff_deck_a_lod1",
+   "path": "res://assets/models/park/props/dam/takeoff_deck_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "takeoff_deck variant a LOD1 (768 tris): The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.28,
+     0,
+     -6.6802
+    ],
+    "max": [
+     5.28,
+     1.0213,
+     6.69
+    ],
+    "size": [
+     10.56,
+     1.0213,
+     13.3702
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_takeoff_deck_a_lod2",
+   "path": "res://assets/models/park/props/dam/takeoff_deck_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "takeoff_deck variant a LOD2 (208 tris): The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.2894,
+     0,
+     -6.69
+    ],
+    "max": [
+     5.2894,
+     1.0089,
+     6.6994
+    ],
+    "size": [
+     10.5788,
+     1.0089,
+     13.3894
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_takeoff_deck_b",
+   "path": "res://assets/models/park/props/dam/takeoff_deck_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "takeoff_deck variant b LOD0 (1776 tris): The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -5.5828,
+     0,
+     -5.7872
+    ],
+    "max": [
+     5.5828,
+     1.1713,
+     5.7872
+    ],
+    "size": [
+     11.1656,
+     1.1713,
+     11.5744
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_takeoff_deck_b_lod1",
+   "path": "res://assets/models/park/props/dam/takeoff_deck_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "takeoff_deck variant b LOD1 (888 tris): The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.5864,
+     0,
+     -5.7916
+    ],
+    "max": [
+     5.5864,
+     1.1641,
+     5.7872
+    ],
+    "size": [
+     11.1728,
+     1.1641,
+     11.5788
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_takeoff_deck_b_lod2",
+   "path": "res://assets/models/park/props/dam/takeoff_deck_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "takeoff_deck variant b LOD2 (266 tris): The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.5962,
+     0,
+     -5.8009
+    ],
+    "max": [
+     5.5905,
+     1.1678,
+     5.7719
+    ],
+    "size": [
+     11.1867,
+     1.1678,
+     11.5728
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_pump_elbow_a",
+   "path": "res://assets/models/park/props/dam/pump_elbow_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "pump_elbow variant a LOD0 (1844 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.775,
+     0,
+     -1.1
+    ],
+    "max": [
+     1.775,
+     3.3969,
+     1.1
+    ],
+    "size": [
+     3.55,
+     3.3969,
+     2.2
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_pump_elbow_a_lod1",
+   "path": "res://assets/models/park/props/dam/pump_elbow_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "pump_elbow variant a LOD1 (922 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.7793,
+     0,
+     -1.099
+    ],
+    "max": [
+     1.775,
+     3.3866,
+     1.099
+    ],
+    "size": [
+     3.5543,
+     3.3866,
+     2.198
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_pump_elbow_a_lod2",
+   "path": "res://assets/models/park/props/dam/pump_elbow_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "pump_elbow variant a LOD2 (252 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.7652,
+     0,
+     -1.0846
+    ],
+    "max": [
+     1.7638,
+     3.4419,
+     1.0848
+    ],
+    "size": [
+     3.529,
+     3.4419,
+     2.1694
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_pump_elbow_b",
+   "path": "res://assets/models/park/props/dam/pump_elbow_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "pump_elbow variant b LOD0 (2664 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.0774,
+     0,
+     -1.5986
+    ],
+    "max": [
+     2.0774,
+     2.6061,
+     1.5986
+    ],
+    "size": [
+     4.1548,
+     2.6061,
+     3.1972
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_pump_elbow_b_lod1",
+   "path": "res://assets/models/park/props/dam/pump_elbow_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "pump_elbow variant b LOD1 (1332 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.0675,
+     0,
+     -1.5942
+    ],
+    "max": [
+     2.0682,
+     2.5955,
+     1.5986
+    ],
+    "size": [
+     4.1357,
+     2.5955,
+     3.1928
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_pump_elbow_b_lod2",
+   "path": "res://assets/models/park/props/dam/pump_elbow_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "pump_elbow variant b LOD2 (368 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.0626,
+     0,
+     -1.5966
+    ],
+    "max": [
+     2.1521,
+     2.648,
+     1.6406
+    ],
+    "size": [
+     4.2147,
+     2.648,
+     3.2372
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_pump_elbow_c",
+   "path": "res://assets/models/park/props/dam/pump_elbow_c.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "pump_elbow variant c LOD0 (1664 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.5115,
+     0,
+     -1.3529
+    ],
+    "max": [
+     2.5115,
+     2.24,
+     1.3529
+    ],
+    "size": [
+     5.023,
+     2.24,
+     2.7058
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_pump_elbow_c_lod1",
+   "path": "res://assets/models/park/props/dam/pump_elbow_c_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "pump_elbow variant c LOD1 (832 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.5115,
+     0,
+     -1.3529
+    ],
+    "max": [
+     2.5016,
+     2.209,
+     1.3529
+    ],
+    "size": [
+     5.0131,
+     2.209,
+     2.7058
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_pump_elbow_c_lod2",
+   "path": "res://assets/models/park/props/dam/pump_elbow_c_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "pump_elbow variant c LOD2 (238 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.5253,
+     0,
+     -1.26
+    ],
+    "max": [
+     2.602,
+     2.2667,
+     1.2708
+    ],
+    "size": [
+     5.1273,
+     2.2667,
+     2.5308
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_chalk_turn_a",
+   "path": "res://assets/models/park/props/dam/chalk_turn_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "chalk_turn variant a LOD0 (772 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.6825,
+     0,
+     -2.8354
+    ],
+    "max": [
+     1.6825,
+     0.3185,
+     2.8354
+    ],
+    "size": [
+     3.365,
+     0.3185,
+     5.6708
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_chalk_turn_a_lod1",
+   "path": "res://assets/models/park/props/dam/chalk_turn_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "chalk_turn variant a LOD1 (386 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.6829,
+     0,
+     -2.8354
+    ],
+    "max": [
+     1.6825,
+     0.3164,
+     2.8354
+    ],
+    "size": [
+     3.3654,
+     0.3164,
+     5.6708
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_chalk_turn_a_lod2",
+   "path": "res://assets/models/park/props/dam/chalk_turn_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "chalk_turn variant a LOD2 (352 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.6829,
+     0,
+     -2.8405
+    ],
+    "max": [
+     1.6825,
+     0.3164,
+     2.8354
+    ],
+    "size": [
+     3.3654,
+     0.3164,
+     5.6759
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_chalk_turn_b",
+   "path": "res://assets/models/park/props/dam/chalk_turn_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "chalk_turn variant b LOD0 (820 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.8521,
+     0,
+     -2.8351
+    ],
+    "max": [
+     1.8521,
+     0.3185,
+     2.8351
+    ],
+    "size": [
+     3.7042,
+     0.3185,
+     5.6702
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_chalk_turn_b_lod1",
+   "path": "res://assets/models/park/props/dam/chalk_turn_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "chalk_turn variant b LOD1 (410 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.8521,
+     0,
+     -2.8402
+    ],
+    "max": [
+     1.8521,
+     0.3164,
+     2.8351
+    ],
+    "size": [
+     3.7042,
+     0.3164,
+     5.6753
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_chalk_turn_b_lod2",
+   "path": "res://assets/models/park/props/dam/chalk_turn_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "chalk_turn variant b LOD2 (374 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.8521,
+     0,
+     -2.8402
+    ],
+    "max": [
+     1.8521,
+     0.3164,
+     2.8351
+    ],
+    "size": [
+     3.7042,
+     0.3164,
+     5.6753
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_chalk_turn_c",
+   "path": "res://assets/models/park/props/dam/chalk_turn_c.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "chalk_turn variant c LOD0 (1444 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.2245,
+     0,
+     -2.8363
+    ],
+    "max": [
+     1.2245,
+     1.13,
+     2.8363
+    ],
+    "size": [
+     2.449,
+     1.13,
+     5.6726
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_chalk_turn_c_lod1",
+   "path": "res://assets/models/park/props/dam/chalk_turn_c_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "chalk_turn variant c LOD1 (722 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.2234,
+     0,
+     -2.8363
+    ],
+    "max": [
+     1.2301,
+     1.1292,
+     2.8363
+    ],
+    "size": [
+     2.4535,
+     1.1292,
+     5.6726
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_chalk_turn_c_lod2",
+   "path": "res://assets/models/park/props/dam/chalk_turn_c_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "chalk_turn variant c LOD2 (216 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.2254,
+     0,
+     -2.8387
+    ],
+    "max": [
+     1.2271,
+     1.12,
+     2.8325
+    ],
+    "size": [
+     2.4525,
+     1.12,
+     5.6712
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_keeper_bunting_a",
+   "path": "res://assets/models/park/props/dam/keeper_bunting_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "keeper_bunting variant a LOD0 (1276 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.3388,
+     0,
+     -0.9093
+    ],
+    "max": [
+     0.3388,
+     3.0563,
+     0.9093
+    ],
+    "size": [
+     0.6776,
+     3.0563,
+     1.8186
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_keeper_bunting_a_lod1",
+   "path": "res://assets/models/park/props/dam/keeper_bunting_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "keeper_bunting variant a LOD1 (638 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.3388,
+     0,
+     -0.9093
+    ],
+    "max": [
+     0.3388,
+     3.0563,
+     0.9093
+    ],
+    "size": [
+     0.6776,
+     3.0563,
+     1.8186
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_keeper_bunting_a_lod2",
+   "path": "res://assets/models/park/props/dam/keeper_bunting_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "keeper_bunting variant a LOD2 (190 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.3427,
+     0,
+     -0.9093
+    ],
+    "max": [
+     0.3393,
+     3.0566,
+     0.9093
+    ],
+    "size": [
+     0.682,
+     3.0566,
+     1.8186
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_keeper_bunting_b",
+   "path": "res://assets/models/park/props/dam/keeper_bunting_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "keeper_bunting variant b LOD0 (2592 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.2388,
+     0,
+     -0.3409
+    ],
+    "max": [
+     2.2388,
+     2.7567,
+     0.3409
+    ],
+    "size": [
+     4.4776,
+     2.7567,
+     0.6818
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_keeper_bunting_b_lod1",
+   "path": "res://assets/models/park/props/dam/keeper_bunting_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "keeper_bunting variant b LOD1 (1296 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.2388,
+     0,
+     -0.3407
+    ],
+    "max": [
+     2.2388,
+     2.7568,
+     0.3407
+    ],
+    "size": [
+     4.4776,
+     2.7568,
+     0.6814
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_keeper_bunting_b_lod2",
+   "path": "res://assets/models/park/props/dam/keeper_bunting_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "keeper_bunting variant b LOD2 (950 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.2371,
+     0,
+     -0.3407
+    ],
+    "max": [
+     2.2371,
+     2.7567,
+     0.3407
+    ],
+    "size": [
+     4.4742,
+     2.7567,
+     0.6814
+    ]
+   }
   }
  ]
 }
