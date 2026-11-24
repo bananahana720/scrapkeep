@@ -8,6 +8,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
+const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Grip := preload("res://src/movement/grip.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -702,6 +703,7 @@ var _cadence_reload_pressed := false
 var _cadence_window_rolled := false
 var _cadence_window_hit := false
 var _cadence_window_pressed := false
+var _cadence_lock_late := false
 var _cadence_lob_reach_m := 0.0
 var _cadence_lob_flight_s := 0.0
 var _traverse_point := Vector3.INF
@@ -5022,10 +5024,11 @@ func _roll_cadence_window() -> bool:
 	return SkillBand.roll_window(seed_value, idx, float(SkillBand.BANDS["expert"]["window_last"]))
 
 
-# Band-driven fire hand for cadence baselines (PILOT-CADENCE.md §§3.1-3.4, §8): plays Rivet's
-# press / active-reload notch, Sable's tap-spark / hold-arc release, Kest's cook-and-snap, and
-# Tarn's three-beat cadence according to the band's window_share. Reads only public
-# weapon_driver.state_snapshot(). A missed window yields the plain result with no jam or lockout.
+# Band-driven fire hand for cadence baselines (PILOT-CADENCE.md §§3.1-3.6, §8): plays Rivet's
+# press / active-reload notch, Sable's tap-spark / hold-arc release, Kest's cook-and-snap,
+# Tarn's three-beat cadence, Tally's PAID stamp beat, and Cannon's hold-paint lock according to
+# the band's window_share. Reads only public weapon_driver.state_snapshot(). A missed window
+# yields the plain result with no jam or lockout.
 func _cadence_fire_hand() -> void:
 	# The traversal hand never fires (_traverse); its cast clicks go out after the press gate. The
 	# chain move fires nothing of its own (_chain_drive). Skip while a set piece, Dam sheet hold-fire,
@@ -5042,7 +5045,8 @@ func _cadence_fire_hand() -> void:
 	var snap: Dictionary = combat.weapon_driver.state_snapshot()
 	var trig: String = String(snap.get("trigger", ""))
 	if trig != Pattern.TRIGGER_PRESS and trig != Pattern.TRIGGER_TAP_CHARGE \
-			and trig != Pattern.TRIGGER_LOB_SNAP and trig != Pattern.TRIGGER_BEATS:
+			and trig != Pattern.TRIGGER_LOB_SNAP and trig != Pattern.TRIGGER_BEATS \
+			and trig != Pattern.TRIGGER_STAMP and trig != Pattern.TRIGGER_LOCK:
 		var wid: String = combat.active_weapon() if combat.has_method("active_weapon") else ""
 		if wid != "":
 			var pat: Resource = combat.pattern(wid)
@@ -5154,6 +5158,83 @@ func _cadence_fire_hand() -> void:
 			source.press["fire_pressed"] = true
 			_cadence_window_pressed = true
 			_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
+		return
+	if trig == Pattern.TRIGGER_STAMP:
+		source.hold.erase("fire_held")
+		var win: String = String(snap.get("window", "idle"))
+		if win == WeaponDriver.WINDOW_WAITING or win == WeaponDriver.WINDOW_OPEN:
+			if not want_fire:
+				return
+			# A committed PAID stamp returns immediately from WINDOW_OPEN to WINDOW_WAITING
+			# without passing through idle/spent; reset so each chained stamp rolls once.
+			if win == WeaponDriver.WINDOW_WAITING and _cadence_window_pressed and _cadence_window_hit:
+				_cadence_window_rolled = false
+				_cadence_window_hit = false
+				_cadence_window_pressed = false
+			if not _cadence_window_rolled:
+				_cadence_window_rolled = true
+				_cadence_window_pressed = false
+				_cadence_window_hit = _roll_cadence_window()
+				_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
+			if _cadence_window_hit:
+				if bool(snap.get("window_open", false)) and bool(snap.get("ready", false)):
+					source.press["fire_pressed"] = true
+					if not _cadence_window_pressed:
+						_cadence_window_pressed = true
+						_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
+			elif not _cadence_window_pressed and win == WeaponDriver.WINDOW_WAITING:
+				# Missed stamp roll: early press spends the window, then the next ready tick casts plain.
+				source.press["fire_pressed"] = true
+				_cadence_window_pressed = true
+			return
+		_cadence_window_rolled = false
+		_cadence_window_hit = false
+		_cadence_window_pressed = false
+		if want_fire and bool(snap.get("ready", false)):
+			source.press["fire_pressed"] = true
+		return
+	if trig == Pattern.TRIGGER_LOCK:
+		var painted: bool = bool(snap.get("painted", false))
+		if not painted:
+			_cadence_window_rolled = false
+			_cadence_window_hit = false
+			_cadence_window_pressed = false
+			if want_fire and bool(snap.get("ready", false)):
+				_cadence_window_rolled = true
+				_cadence_window_hit = _roll_cadence_window()
+				_cadence_lock_late = (_cadence_index % 2) == 0
+				_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
+				source.press["fire_pressed"] = true
+				source.hold["fire_held"] = true
+			else:
+				source.hold.erase("fire_held")
+			return
+		var win_open: bool = bool(snap.get("window_open", false))
+		var win_spent: bool = bool(snap.get("window_spent", false))
+		var win_range: Vector2 = snap.get("window_range", Vector2.ZERO)
+		if not want_fire:
+			source.hold.erase("fire_held")
+			source.press["fire_released"] = true
+			if win_open:
+				_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
+			return
+		if _cadence_window_hit:
+			if win_open or (win_range.y <= win_range.x and float(snap.get("hold", 0.0)) >= 0.30):
+				source.hold.erase("fire_held")
+				source.press["fire_released"] = true
+				if win_open:
+					_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
+			else:
+				source.hold["fire_held"] = true
+		elif _cadence_lock_late:
+			if win_spent or float(snap.get("hold", 0.0)) > maxf(win_range.y, 0.46) + 0.02:
+				source.hold.erase("fire_held")
+				source.press["fire_released"] = true
+			else:
+				source.hold["fire_held"] = true
+		else:
+			source.hold.erase("fire_held")
+			source.press["fire_released"] = true
 
 
 # Tally's reader runs a card per press, not while held: the hands turn a held trigger into one
@@ -5179,6 +5260,10 @@ func _card_hands() -> void:
 		_tally_gather_hands()
 	if _kit("ultimate"):
 		_tally_plate_hands()
+	var combat = game.get("combat")
+	if combat != null and combat.get("weapon_driver") != null:
+		if String(combat.weapon_driver.state_snapshot().get("trigger", "")) == Pattern.TRIGGER_STAMP:
+			return
 	if not source.hold.get("fire_held", false):
 		return
 	source.hold.erase("fire_held")

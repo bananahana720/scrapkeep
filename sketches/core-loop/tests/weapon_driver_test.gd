@@ -55,7 +55,18 @@ func _check_pattern_defaults_and_clamps() -> void:
 	_t.near("default beat_speed_mult is 0", fresh.beat_speed_mult, 0.0)
 	_t.near("default beat_knock_mult is 1", fresh.beat_knock_mult, 1.0)
 	_t.near("default beat_range_mult is 1", fresh.beat_range_mult, 1.0)
+	_t.near("default cast_cost is 1", fresh.cast_cost, 1.0)
 	_t.near("default refund is 0", fresh.refund, 0.0)
+	_t.near("default stamp_streak_bonus is 0", fresh.stamp_streak_bonus, 0.0)
+	_t.near("default stamp_streak_cap is 0", fresh.stamp_streak_cap, 0.0)
+	_t.near("default lock_rail_damage is 0", fresh.lock_rail_damage, 0.0)
+	_t.near("default lock_barrage_damage is 0", fresh.lock_barrage_damage, 0.0)
+	_t.near("default lock_pulse_reach is 0", fresh.lock_pulse_reach, 0.0)
+	_t.near("default lock_rail_reach is 0", fresh.lock_rail_reach, 0.0)
+	_t.near("default lock_pulse_width_mult is 1", fresh.lock_pulse_width_mult, 1.0)
+	_t.near("default lock_rail_width_mult is 1", fresh.lock_rail_width_mult, 1.0)
+	_t.near("default lock_barrage_width_mult is 1", fresh.lock_barrage_width_mult, 1.0)
+	_t.eq("default lock_rail_breaks_props is false", fresh.lock_rail_breaks_props, false)
 	_t.eq("default fan is false", fresh.fan, false)
 
 	var expected_triggers := {
@@ -64,8 +75,8 @@ func _check_pattern_defaults_and_clamps() -> void:
 		Weapons.PYLON_TURRET: Pattern.TRIGGER_TAP_CHARGE,
 		Weapons.STICKY_CHARGE: Pattern.TRIGGER_LOB_SNAP,
 		Weapons.CLAW_SWEEP: Pattern.TRIGGER_BEATS,
-		Weapons.LEDGER_READER: Pattern.TRIGGER_HOLD_AUTO,
-		Weapons.CANNON_LANE: Pattern.TRIGGER_HOLD_AUTO,
+		Weapons.LEDGER_READER: Pattern.TRIGGER_STAMP,
+		Weapons.CANNON_LANE: Pattern.TRIGGER_LOCK,
 	}
 	for wid in Weapons.ALL:
 		var base: Resource = Weapons.base(wid)
@@ -107,6 +118,13 @@ func _check_pattern_defaults_and_clamps() -> void:
 	_t.near("negative beat_window_s clamps to 0", clamped.beat_window_s, 0.0)
 	_t.near("high refund clamps at MAX_REFUND", clamped.refund, Pattern.MAX_REFUND)
 	_t.eq("fan preserves true", clamped.fan, true)
+
+	var over_refund: Resource = Pattern.make({"cast_cost": 0.5, "refund": 0.9,
+		"lock_pulse_width_mult": 0.05, "lock_barrage_width_mult": 9.0, "lock_rail_damage": 999.0}).transformed([])
+	_t.near("refund strictly clamps to <= cast_cost", over_refund.refund, 0.5)
+	_t.near("low lock_pulse_width_mult clamps to MIN_LOCK_WIDTH_MULT", over_refund.lock_pulse_width_mult, Pattern.MIN_LOCK_WIDTH_MULT)
+	_t.near("high lock_barrage_width_mult clamps to MAX_LOCK_WIDTH_MULT", over_refund.lock_barrage_width_mult, Pattern.MAX_LOCK_WIDTH_MULT)
+	_t.near("high lock_rail_damage clamps to MAX_LOCK_DAMAGE", over_refund.lock_rail_damage, Pattern.MAX_LOCK_DAMAGE)
 
 	var high_mult: Resource = Pattern.make({"window_mult": 99.0, "mag": -4, "window_s": [0.38, 0.54]}).transformed([])
 	_t.near("high window_mult clamps at MAX_WINDOW_MULT", high_mult.window_mult, Pattern.MAX_WINDOW_MULT)
@@ -167,7 +185,7 @@ func _check_hold_auto_equivalence() -> void:
 
 func _check_press_release_and_card_recovery() -> void:
 	var drv := WeaponDriver.new()
-	var p: Resource = Weapons.base(Weapons.LEDGER_READER)
+	var p: Resource = Weapons.hold_auto_base(Weapons.LEDGER_READER)
 	var held_no_press := Intent.new()
 	held_no_press.fire_held = true
 	_t.eq("card weapon does not fire on hold without press", drv.step(DT, held_no_press, Weapons.LEDGER_READER, p, 0.0).size(), 0)

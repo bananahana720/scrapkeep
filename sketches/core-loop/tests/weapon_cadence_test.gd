@@ -28,6 +28,8 @@ func _initialize() -> void:
 	_check_sable_tap_spark_hold_arc()
 	_check_kest_lob_snap()
 	_check_tarn_three_beats()
+	_check_tally_stamp()
+	_check_cannon_lock()
 	_check_buffer_boundaries()
 	_check_interruptions_and_sync_pattern()
 	_check_hold_auto_data_rollback()
@@ -439,6 +441,233 @@ func _check_tarn_three_beats() -> void:
 		and is_equal_approx(float(drv.state_snapshot()["recover"]), 0.80), str(guil_b3))
 
 
+func _check_tally_stamp() -> void:
+	var pat: Resource = Weapons.base(Weapons.LEDGER_READER)
+	var drv := WeaponDriver.new()
+	drv.reset(pat)
+
+	# 1. Press fires immediately (< 100 ms), sets 0.40 s floor and opens waiting [0.40, 0.60] window.
+	var first: Array = drv.step(DT, _press_intent(true), Weapons.LEDGER_READER, pat, 0.0)
+	_t.eq("Tally press fires immediately on next physics tick", first.size(), 1)
+	_t.check("Tally opener is plain, cost 1.0, refund 0.0, opens waiting window",
+		String(first[0]["kind"]) == WeaponDriver.SHOT_PLAIN and not bool(first[0]["paid"])
+		and is_equal_approx(float(first[0]["cast_cost"]), 1.0) and is_zero_approx(float(first[0]["refund"]))
+		and String(drv.state_snapshot()["window"]) == WeaponDriver.WINDOW_WAITING, str(first[0]))
+	_t.near("Tally cast sets 0.40 s floor", float(drv.state_snapshot()["cooldown"]), 0.40, 0.005)
+	var held_shots := 0
+	for _i in 30:
+		held_shots += drv.step(DT, _hold_intent(), Weapons.LEDGER_READER, pat, 0.0).size()
+	_t.eq("Tally held button never auto-repeats", held_shots, 0)
+
+	# 2. Press inside [0.40, 0.60] s stamps PAID (1.2x, 0.5 refund <= cast_cost) and opens next window.
+	drv.reset(pat)
+	drv.step(DT, _press_intent(), Weapons.LEDGER_READER, pat, 0.0)
+	for _i in 24: # 24/60 = 0.40 s -> window opens on this tick
+		drv.step(DT, Intent.new(), Weapons.LEDGER_READER, pat, 0.0)
+	_t.check("Tally PAID window is open at 0.40 s", bool(drv.state_snapshot()["window_open"]), str(drv.state_snapshot()))
+	var paid_shots: Array = drv.step(DT, _press_intent(), Weapons.LEDGER_READER, pat, 0.0)
+	_t.check("Tally press inside [0.40, 0.60] s emits PAID stamp (1.2x, 0.5 refund) and opens next waiting window",
+		paid_shots.size() == 1 and String(paid_shots[0]["kind"]) == WeaponDriver.SHOT_STAMP and bool(paid_shots[0]["paid"])
+		and is_equal_approx(float(paid_shots[0]["damage_mult"]), 1.2)
+		and is_equal_approx(float(paid_shots[0]["refund"]), 0.5)
+		and float(paid_shots[0]["refund"]) <= float(paid_shots[0]["cast_cost"])
+		and String(drv.state_snapshot()["window"]) == WeaponDriver.WINDOW_WAITING, str(paid_shots))
+
+	# 3. Early press (< 0.40 s) spends window; 0.10 s buffer before 0.40 s fires plain right at 0.40 s.
+	drv.reset(pat)
+	drv.step(DT, _press_intent(), Weapons.LEDGER_READER, pat, 0.0)
+	for _i in 12: # 0.20 s
+		drv.step(DT, Intent.new(), Weapons.LEDGER_READER, pat, 0.0)
+	var early: Array = drv.step(DT, _press_intent(), Weapons.LEDGER_READER, pat, 0.0)
+	_t.eq("Tally early press before 0.40 s fires nothing", early.size(), 0)
+	_t.eq("Tally early press spends the window", String(drv.state_snapshot()["window"]), WeaponDriver.WINDOW_SPENT)
+	for _i in 12: # reaches 0.40 s
+		drv.step(DT, Intent.new(), Weapons.LEDGER_READER, pat, 0.0)
+	var after_spent: Array = drv.step(DT, _press_intent(), Weapons.LEDGER_READER, pat, 0.0)
+	_t.check("Tally press after spent window fires plain with no refund",
+		after_spent.size() == 1 and String(after_spent[0]["kind"]) == WeaponDriver.SHOT_PLAIN
+		and not bool(after_spent[0]["paid"]) and is_zero_approx(float(after_spent[0]["refund"])), str(after_spent))
+
+	# Buffer inside 0.10 s before 0.40 s floor: spends window and fires plain automatically at 0.40 s.
+	drv.reset(pat)
+	drv.step(DT, _press_intent(), Weapons.LEDGER_READER, pat, 0.0)
+	for _i in 20: # 20/60 = 0.333 s (~0.067 s left <= 0.10 s buffer)
+		drv.step(DT, Intent.new(), Weapons.LEDGER_READER, pat, 0.0)
+	var buf_early: Array = drv.step(DT, _press_intent(), Weapons.LEDGER_READER, pat, 0.0)
+	_t.check("Tally press 0.05 s before floor spends window and latches buffer",
+		buf_early.is_empty() and String(drv.state_snapshot()["window"]) == WeaponDriver.WINDOW_SPENT
+		and bool(drv.state_snapshot()["buffered"]), str(drv.state_snapshot()))
+	var buf_shots: Array = []
+	for _i in 4:
+		buf_shots.append_array(drv.step(DT, Intent.new(), Weapons.LEDGER_READER, pat, 0.0))
+	_t.check("Tally buffered press fires plain cast right at 0.40 s floor",
+		buf_shots.size() == 1 and String(buf_shots[0]["kind"]) == WeaponDriver.SHOT_PLAIN and not bool(buf_shots[0]["paid"]),
+		str(buf_shots))
+
+	# 4. Runtime safety: refund NEVER exceeds cast_cost even on an unclamped Pattern mutation.
+	var naughty: Resource = pat.copy()
+	naughty.cast_cost = 0.5
+	naughty.refund = 1.5
+	drv.reset(naughty)
+	drv.step(DT, _press_intent(), Weapons.LEDGER_READER, naughty, 0.0)
+	for _i in 25:
+		drv.step(DT, Intent.new(), Weapons.LEDGER_READER, naughty, 0.0)
+	var clamped_paid: Array = drv.step(DT, _press_intent(), Weapons.LEDGER_READER, naughty, 0.0)
+	_t.check("Tally runtime clamps refund <= cast_cost even on raw mutated Pattern",
+		clamped_paid.size() == 1 and float(clamped_paid[0]["refund"]) <= float(clamped_paid[0]["cast_cost"])
+		and is_equal_approx(float(clamped_paid[0]["refund"]), 0.5), str(clamped_paid))
+
+	# 5. Data extensibility for future E2-09 keystones: tl_petty_cash & tl_compound_interest.
+	var petty: Resource = pat.copy()
+	petty.damage = 11.0
+	petty.cast_cost = 0.5
+	petty.floor_s = 0.25
+	petty.window_s = Vector2(0.25, 0.45)
+	petty.refund = 0.25
+	drv.reset(petty)
+	drv.step(DT, _press_intent(), Weapons.LEDGER_READER, petty, 0.0)
+	for _i in 15: # 15/60 = 0.25 s
+		drv.step(DT, Intent.new(), Weapons.LEDGER_READER, petty, 0.0)
+	var petty_paid: Array = drv.step(DT, _press_intent(), Weapons.LEDGER_READER, petty, 0.0)
+	_t.check("tl_petty_cash data pattern stamps at 0.25 s with cost 0.5 and refund 0.25",
+		petty_paid.size() == 1 and bool(petty_paid[0]["paid"])
+		and is_equal_approx(float(petty_paid[0]["cast_cost"]), 0.5)
+		and is_equal_approx(float(petty_paid[0]["refund"]), 0.25)
+		and is_equal_approx(petty.damage * float(petty_paid[0]["damage_mult"]), 13.2), str(petty_paid))
+
+	var compound: Resource = pat.copy()
+	compound.window_s = Vector2(0.55, 0.75)
+	compound.window_mult = 1.0
+	compound.stamp_streak_bonus = 8.0
+	compound.stamp_streak_cap = 38.0
+	compound.refund = 0.25
+	drv.reset(compound)
+	drv.step(DT, _press_intent(), Weapons.LEDGER_READER, compound, 0.0)
+	var seq: Array = []
+	for _k in 3:
+		for _i in 34: # 34/60 = 0.567 s inside [0.55, 0.75]
+			drv.step(DT, Intent.new(), Weapons.LEDGER_READER, compound, 0.0)
+		var out: Array = drv.step(DT, _press_intent(), Weapons.LEDGER_READER, compound, 0.0)
+		var raw: float = minf(compound.damage * float(out[0]["damage_mult"]) + float(out[0]["streak_bonus"]), float(out[0]["streak_cap"]))
+		seq.append(snappedf(raw, 0.1))
+	_t.eq("tl_compound_interest data pattern steps 30 -> 38 -> 38 purely by data", seq, [30.0, 38.0, 38.0])
+
+
+func _check_cannon_lock() -> void:
+	var pat: Resource = Weapons.base(Weapons.CANNON_LANE)
+	var drv := WeaponDriver.new()
+	drv.reset(pat)
+
+	# 1. Press paints immediately (< 100 ms); release < 0.30 s fires Pulse (16, 16 m, 1.5x width) + 0.70 s recover.
+	var paint_tick: Array = drv.step(DT, _press_intent(true), Weapons.CANNON_LANE, pat, pat.rate)
+	var snap: Dictionary = drv.state_snapshot()
+	_t.check("Cannon press paints lane immediately with no shot until release",
+		paint_tick.is_empty() and bool(snap["painted"]) and String(snap["lock_stage"]) == WeaponDriver.SHOT_PULSE, str(snap))
+	for _i in 9: # 0.15 s (< 0.30 s)
+		drv.step(DT, _hold_intent(), Weapons.CANNON_LANE, pat, pat.rate)
+	var pulse: Array = drv.step(DT, _release_intent(), Weapons.CANNON_LANE, pat, pat.rate)
+	_t.check("Cannon release < 0.30 s fires Pulse (16 dmg, 16 m, 1.5x width, no pierce) and starts 0.70 s recover",
+		pulse.size() == 1 and String(pulse[0]["kind"]) == WeaponDriver.SHOT_PULSE
+		and is_equal_approx(float(pulse[0]["damage"]), 16.0)
+		and is_equal_approx(float(pulse[0]["reach"]), 16.0)
+		and is_equal_approx(float(pulse[0]["width_mult"]), 1.5)
+		and not bool(pulse[0]["pierce"]) and not bool(drv.state_snapshot()["painted"])
+		and is_equal_approx(float(drv.state_snapshot()["recover"]), 0.70), str(pulse))
+
+	# 2. Release inside [0.30, 0.46] s fires Rail (42 dmg, 26 m, 1.0x width, pierces) with flush brackets.
+	drv.reset(pat)
+	drv.step(DT, _press_intent(true), Weapons.CANNON_LANE, pat, pat.rate)
+	for _i in 20: # 20/60 = 0.333 s inside [0.30, 0.46]
+		drv.step(DT, _hold_intent(), Weapons.CANNON_LANE, pat, pat.rate)
+	var lock_snap: Dictionary = drv.state_snapshot()
+	_t.check("Cannon brackets close flush (0.0) and lock window opens in [0.30, 0.46] s",
+		bool(lock_snap["painted"]) and bool(lock_snap["window_open"])
+		and String(lock_snap["lock_stage"]) == WeaponDriver.SHOT_RAIL
+		and is_zero_approx(float(lock_snap["lock_bracket"])), str(lock_snap))
+	var rail: Array = drv.step(DT, _release_intent(), Weapons.CANNON_LANE, pat, pat.rate)
+	_t.check("Cannon release in lock fires Rail (42 dmg, 26 m, 1.0x width, pierces)",
+		rail.size() == 1 and String(rail[0]["kind"]) == WeaponDriver.SHOT_RAIL
+		and is_equal_approx(float(rail[0]["damage"]), 42.0)
+		and is_equal_approx(float(rail[0]["reach"]), 26.0)
+		and is_equal_approx(float(rail[0]["width_mult"]), 1.0)
+		and bool(rail[0]["pierce"]), str(rail))
+
+	# 3. Release > 0.46 s fires Barrage (26 dmg, 26 m, 2.0x width, no pierce) with reopened brackets.
+	drv.reset(pat)
+	drv.step(DT, _press_intent(true), Weapons.CANNON_LANE, pat, pat.rate)
+	for _i in 32: # 32/60 = 0.533 s > 0.46 s
+		drv.step(DT, _hold_intent(), Weapons.CANNON_LANE, pat, pat.rate)
+	var over_snap: Dictionary = drv.state_snapshot()
+	_t.check("Cannon brackets reopen and window goes spent/slate past 0.46 s",
+		bool(over_snap["painted"]) and bool(over_snap["window_spent"])
+		and String(over_snap["lock_stage"]) == WeaponDriver.SHOT_BARRAGE
+		and float(over_snap["lock_bracket"]) > 0.0, str(over_snap))
+	var barrage: Array = drv.step(DT, _release_intent(), Weapons.CANNON_LANE, pat, pat.rate)
+	_t.check("Cannon release > 0.46 s fires Barrage (26 dmg, 26 m, 2.0x width, no pierce)",
+		barrage.size() == 1 and String(barrage[0]["kind"]) == WeaponDriver.SHOT_BARRAGE
+		and is_equal_approx(float(barrage[0]["damage"]), 26.0)
+		and is_equal_approx(float(barrage[0]["reach"]), 26.0)
+		and is_equal_approx(float(barrage[0]["width_mult"]), 2.0)
+		and not bool(barrage[0]["pierce"]), str(barrage))
+
+	# 4. 0.10 s buffer before 0.70 s recovery ends starts painting immediately when ready; mashing never locks out.
+	drv.reset(pat)
+	drv.step(DT, _press_intent(false), Weapons.CANNON_LANE, pat, pat.rate) # single-tick tap fires Pulse, recover = 0.70
+	for _i in 38: # 38/60 = 0.633 s -> 0.067 s remaining (<= 0.10 s buffer)
+		drv.step(DT, Intent.new(), Weapons.CANNON_LANE, pat, pat.rate)
+	drv.step(DT, _press_intent(true), Weapons.CANNON_LANE, pat, pat.rate)
+	_t.check("Cannon press within 0.10 s of recovery end latches buffer", bool(drv.state_snapshot()["buffered"]), "")
+	for _i in 5:
+		drv.step(DT, _hold_intent(), Weapons.CANNON_LANE, pat, pat.rate)
+	_t.check("Cannon buffered hold starts painting immediately on ready tick", bool(drv.state_snapshot()["painted"]), str(drv.state_snapshot()))
+
+	# 5. Interrupts (ultimate, attempt, swap) clear painted lane with zero shot fired and zero stuck hold.
+	drv.interrupt(WeaponDriver.INTERRUPT_ULTIMATE)
+	var after_ult: Dictionary = drv.state_snapshot()
+	var after_ult_rel: Array = drv.step(DT, _release_intent(), Weapons.CANNON_LANE, pat, pat.rate)
+	_t.check("Cannon ultimate interrupt clears painted lane and fires nothing on release",
+		not bool(after_ult["painted"]) and after_ult_rel.is_empty() and bool(drv.state_snapshot()["ready"]), str(after_ult))
+
+	# 6. Data extensibility for future E2-09 keystones: c_snap_battery & c_siege_rail.
+	var snap_bat: Resource = pat.copy()
+	snap_bat.window_s = Vector2(0.15, 0.31)
+	snap_bat.recover_s = 0.40
+	snap_bat.damage = 9.0
+	snap_bat.lock_rail_damage = 26.0
+	snap_bat.lock_barrage_damage = 16.0
+	drv.reset(snap_bat)
+	drv.step(DT, _press_intent(true), Weapons.CANNON_LANE, snap_bat, snap_bat.rate)
+	for _i in 12: # 0.20 s inside [0.15, 0.31]
+		drv.step(DT, _hold_intent(), Weapons.CANNON_LANE, snap_bat, snap_bat.rate)
+	var sb_rail: Array = drv.step(DT, _release_intent(), Weapons.CANNON_LANE, snap_bat, snap_bat.rate)
+	_t.check("c_snap_battery data pattern fires 26 Rail in [0.15, 0.31] with 0.40 s recover",
+		sb_rail.size() == 1 and String(sb_rail[0]["kind"]) == WeaponDriver.SHOT_RAIL
+		and is_equal_approx(float(sb_rail[0]["damage"]), 26.0)
+		and is_equal_approx(float(drv.state_snapshot()["recover"]), 0.40), str(sb_rail))
+
+	var siege: Resource = pat.copy()
+	siege.window_s = Vector2(0.60, 0.76)
+	siege.recover_s = 1.00
+	siege.damage = 16.0
+	siege.lock_rail_damage = 66.0
+	siege.lock_barrage_damage = 30.0
+	siege.lock_rail_width_mult = 0.5
+	siege.lock_rail_reach = 40.0
+	siege.lock_rail_breaks_props = true
+	drv.reset(siege)
+	drv.step(DT, _press_intent(true), Weapons.CANNON_LANE, siege, siege.rate)
+	for _i in 40: # 0.667 s inside [0.60, 0.76]
+		drv.step(DT, _hold_intent(), Weapons.CANNON_LANE, siege, siege.rate)
+	var sg_rail: Array = drv.step(DT, _release_intent(), Weapons.CANNON_LANE, siege, siege.rate)
+	_t.check("c_siege_rail data pattern fires 66 Rail (0.5x width, 40 m, breaks_props) with 1.00 s recover",
+		sg_rail.size() == 1 and String(sg_rail[0]["kind"]) == WeaponDriver.SHOT_RAIL
+		and is_equal_approx(float(sg_rail[0]["damage"]), 66.0)
+		and is_equal_approx(float(sg_rail[0]["reach"]), 40.0)
+		and is_equal_approx(float(sg_rail[0]["width_mult"]), 0.5)
+		and bool(sg_rail[0]["breaks_props"])
+		and is_equal_approx(float(drv.state_snapshot()["recover"]), 1.00), str(sg_rail))
+
+
 func _check_buffer_boundaries() -> void:
 	var dt90 := 1.0 / 90.0
 	var rivet: Resource = Weapons.base(Weapons.RAPID_LASER)
@@ -647,6 +876,7 @@ func _check_hold_auto_data_rollback() -> void:
 		Weapons.ARC_CASTER: [12.0, 5.0, 60.0],
 		Weapons.PYLON_TURRET: [11.0, 9.0, 99.0],
 		Weapons.CLAW_SWEEP: [32.0, 2.0, 64.0],
+		Weapons.CANNON_LANE: [30.0, 1.0, 30.0],
 	}
 	for wid in legacy_rows:
 		var flipped: Dictionary = Weapons.BASE[wid].duplicate()
@@ -678,6 +908,16 @@ func _check_hold_auto_data_rollback() -> void:
 	_t.eq("sticky_charge hold_auto_base matches flipped row",
 		[Weapons.hold_auto_base(Weapons.STICKY_CHARGE).damage, Weapons.hold_auto_base(Weapons.STICKY_CHARGE).window_s],
 		[16.0, Vector2.ZERO])
+
+	# Tally ledger_reader hold_auto rollback: 26.8 at cruise (13.4/s sustained), no window, refund 0.
+	var tl_flip: Dictionary = Weapons.BASE[Weapons.LEDGER_READER].duplicate()
+	tl_flip["trigger"] = Pattern.TRIGGER_HOLD_AUTO
+	var tl_legacy: Resource = Pattern.make(Weapons.resolve_row(Weapons.LEDGER_READER, tl_flip))
+	_t.eq("ledger_reader hold_auto rollback disables stamp window and refund",
+		[tl_legacy.trigger, tl_legacy.window_s, tl_legacy.refund],
+		[Pattern.TRIGGER_HOLD_AUTO, Vector2.ZERO, 0.0])
+	_t.near("ledger_reader hold_auto_base pays 13.4 sustained DPS",
+		WeaponDriver.base_dps(Weapons.hold_auto_base(Weapons.LEDGER_READER)), 13.4, 0.01)
 
 
 func _check_ultimate_and_swap() -> void:
@@ -773,6 +1013,10 @@ func _check_warden_reactor_base_dps() -> void:
 		WardenReactor.base_dps(Weapons.STICKY_CHARGE), 11.0 / 0.60, 0.01)
 	_t.near("WardenReactor.base_dps routes Tarn through careless WeaponDriver.base_dps (40.0)",
 		WardenReactor.base_dps(Weapons.CLAW_SWEEP), 40.0, 0.01)
+	_t.near("WardenReactor.base_dps routes Tally through careless sustained (11.0)",
+		WardenReactor.base_dps(Weapons.LEDGER_READER), 11.0, 0.01)
+	_t.near("WardenReactor.base_dps routes Cannon through careless Pulse (16.0 / 0.70)",
+		WardenReactor.base_dps(Weapons.CANNON_LANE), 16.0 / 0.70, 0.01)
 
 
 func _run_live() -> void:
@@ -1190,6 +1434,176 @@ func _run_live() -> void:
 	var after_end_tarn: Dictionary = combat.weapon_driver.state_snapshot()
 	_t.check("WC-1: run_ended returns Tarn to rest (beat 0)",
 		_is_at_rest(after_end_tarn, 0) and int(after_end_tarn["beat"]) == 0, str(after_end_tarn))
+
+	# 9. Live Tally: fractional pressure continuous 0.5/s cruise refill, PAID stamp (26.4 at cruise,
+	#    0.5 refund, Link Clips copy, ledger-cream cue never mint), proc isolation, WC-1 reset.
+	_game.flow._begin_run(ClassDef.by_id("tally"))
+	await physics_frame
+	combat.set_physics_process(false)
+	_game.player.set_physics_process(false)
+	combat._start_attempt()
+	var tally_ab = _game.player.abilities
+	tally_ab.refill()
+	var tally_origin: Vector3 = _game.player.ball_position()
+	_game.camera.snap(Vector3(0.0, 0.0, -1.0))
+	var tally_aim_dir: Vector3 = Vector3(0.0, 0.0, -1.0)
+	var flat_a := tally_origin + tally_aim_dir * 10.0
+	var flat_b := tally_origin + tally_aim_dir * 14.0
+	var t_dummy_a: Node3D = combat.spawn_enemy("chaser", Vector3(flat_a.x, _game.ctx.terrain.height(flat_a.x, flat_a.z) + 1.5, flat_a.z))
+	var t_dummy_b: Node3D = combat.spawn_enemy("chaser", Vector3(flat_b.x, _game.ctx.terrain.height(flat_b.x, flat_b.z) + 1.5, flat_b.z))
+	for td in [t_dummy_a, t_dummy_b]:
+		td.set_physics_process(false)
+		td.hp = 500.0
+		td.max_hp = 500.0
+	await physics_frame
+	var cam_o: Vector3 = _game.camera.global_position
+	var delta_a: Vector3 = t_dummy_a.global_position - cam_o
+	_game.camera.pitch = atan2(delta_a.y, Vector2(delta_a.x, delta_a.z).length())
+	await process_frame
+	await process_frame
+	# Continuous 0.5/s cruise refill on floor (and paused when slow).
+	tally_ab.slot(tally_ab.WEAPON).charges = 0
+	_game.player.state.grounded = true
+	_game.player.state.velocity = tally_aim_dir * 14.0
+	combat._step_roll_restore(1.0)
+	_t.near("live Tally continuous cruise refill restores 0.5 pressure in 1.0 s", tally_ab.pressure_of(tally_ab.WEAPON), 0.5, 0.01)
+	_game.player.state.velocity = Vector3.ZERO
+	combat._step_roll_restore(1.0)
+	_t.near("live Tally slow ball refills 0.0 pressure", tally_ab.pressure_of(tally_ab.WEAPON), 0.5, 0.01)
+
+	# Opener (plain 22.0 at cruise, spends 1.0 -> 2.0), then PAID stamp at 0.40 s (26.4, refunds 0.5 -> 1.5),
+	# copies to Link Clips as a direct hit, and draws ledger-cream cue (never mint).
+	tally_ab.refill()
+	_game.player.state.grounded = false # pause roll restore so pressure math is exact
+	_game.player.state.velocity = tally_aim_dir * 14.0
+	_game.player.body().linear_velocity = tally_aim_dir * 14.0
+	var hp_a0: float = t_dummy_a.hp
+	_game.player.intent.clear()
+	_game.player.intent.fire_pressed = true
+	combat._physics_process(DT)
+	_t.near("live Tally opener at cruise deals 22.0", hp_a0 - t_dummy_a.hp, 22.0, 0.2)
+	_t.near("live Tally opener spends 1.0 pressure (3.0 -> 2.0)", tally_ab.pressure_of(tally_ab.WEAPON), 2.0, 0.005)
+	combat.link_group = {"ids": [t_dummy_a.get_instance_id(), t_dummy_b.get_instance_id()],
+		"until": combat._clock + 4.0, "spent": false, "mult": 1.0, "jumped": false, "double": false}
+	_game.player.intent.clear()
+	for _i in 24: # 0.40 s -> window opens
+		combat._physics_process(DT)
+	var hp_a1: float = t_dummy_a.hp
+	var hp_b1: float = t_dummy_b.hp
+	_game.player.intent.fire_pressed = true
+	combat._physics_process(DT)
+	_t.near("live Tally PAID stamp at cruise deals 26.4", hp_a1 - t_dummy_a.hp, 26.4, 0.2)
+	_t.near("live Tally PAID stamp spends 1.0 and refunds 0.5 (2.0 -> 1.5)", tally_ab.pressure_of(tally_ab.WEAPON), 1.5, 0.005)
+	_t.check("live Tally PAID stamp copies to Link Clips as a direct hit",
+		bool(combat.link_group["spent"]) and t_dummy_b.hp < hp_b1, "b hp %.1f -> %.1f" % [hp_b1, t_dummy_b.hp])
+	var stamp_col: Color = combat.last_card.get("stamp_color", Color.BLACK)
+	_t.check("live Tally PAID stamp cue is ledger cream and never mint",
+		stamp_col.is_equal_approx(Palette.LEDGER_CREAM) and not stamp_col.is_equal_approx(Palette.ARC), str(stamp_col))
+	# Tally proc isolation: _proc_volley fires plain Balance Due without touching pressure or weapon_driver.
+	var tally_snap_pre: Dictionary = combat.weapon_driver.state_snapshot()
+	var tally_pres_pre: float = tally_ab.pressure_of(tally_ab.WEAPON)
+	var hp_a_proc: float = t_dummy_a.hp
+	combat._proc_volley(1.0)
+	_t.near("live Tally item_proc volley deals plain 22.0 at cruise", hp_a_proc - t_dummy_a.hp, 22.0, 0.2)
+	_t.check("live Tally item_proc never spends/refunds pressure or mutates weapon_driver",
+		is_equal_approx(tally_ab.pressure_of(tally_ab.WEAPON), tally_pres_pre)
+		and combat.weapon_driver.state_snapshot() == tally_snap_pre, str(tally_ab.pressure_of(tally_ab.WEAPON)))
+	_game.events.run_ended.emit(true)
+	_t.check("WC-1: run_ended returns Tally to rest", _is_at_rest(combat.weapon_driver.state_snapshot(), 0),
+		str(combat.weapon_driver.state_snapshot()))
+
+	# 10. Live Cannon: ground painted lane & closing brackets (Cannon -> mint -> slate), exact
+	#     geometry match between preview and committed Hazard, Rail pierce 50% chip with zero recoil,
+	#     proc isolation, ultimate & WC-1 interrupts clearing painted lane.
+	_game.flow._begin_run(ClassDef.by_id("remembered_cannon"))
+	await physics_frame
+	combat.set_physics_process(false)
+	_game.player.set_physics_process(false)
+	combat._start_attempt()
+	_game.camera.pitch = 0.0
+	await process_frame
+	_game.player.set_velocity_now(Vector3.ZERO)
+	_game.player.intent.clear()
+	_game.player.intent.fire_pressed = true
+	_game.player.intent.fire_held = true
+	combat._physics_process(DT)
+	var paint_pulse: Dictionary = combat.last_cannon_paint.duplicate()
+	_t.check("live Cannon press paints ground lane immediately in Cannon colour",
+		not paint_pulse.is_empty() and String(paint_pulse["stage"]) == WeaponDriver.SHOT_PULSE
+		and (paint_pulse["color"] as Color).is_equal_approx(ClassDef.CANNON_COLOR)
+		and _game.player.indicator.shapes.has("cannon_paint"), str(paint_pulse))
+	_game.player.intent.clear()
+	_game.player.intent.fire_held = true
+	for _i in 20: # 0.333 s -> lock window open
+		combat._physics_process(DT)
+	var paint_rail: Dictionary = combat.last_cannon_paint.duplicate()
+	_t.check("live Cannon brackets close flush (0.0) and turn mint inside lock window",
+		String(paint_rail["stage"]) == WeaponDriver.SHOT_RAIL
+		and (paint_rail["color"] as Color).is_equal_approx(Palette.ARC)
+		and is_zero_approx(float(paint_rail["bracket_gap"])), str(paint_rail))
+	var vel_before_rail: Vector3 = _game.player.state.velocity
+	_game.player.intent.clear()
+	_game.player.intent.fire_released = true
+	combat._physics_process(DT)
+	var rail_entry: Dictionary = combat._cannon.back()
+	var rail_h = rail_entry["hazards"][0]
+	_t.check("live Cannon Rail release matches painted geometry exactly, draws bone, clears paint, and adds zero recoil",
+		is_equal_approx(rail_h.length, float(paint_rail["ahead"]))
+		and is_equal_approx(rail_h.half_width, float(paint_rail["half"]))
+		and rail_h.color.is_equal_approx(Palette.SAND)
+		and bool(rail_entry["options"].get("pierce_chip", false))
+		and not _game.player.indicator.shapes.has("cannon_paint")
+		and _game.player.state.velocity == vel_before_rail, str(paint_rail))
+	# Rail pierce chip against plated_brute: 50% chip vs 20% normal, outer plate still holds (full == false).
+	var c_brute: Node3D = combat.spawn_enemy("plated_brute", _game.player.ball_position() + combat._flat_aim() * 8.0)
+	c_brute.set_physics_process(false)
+	c_brute.hp = 500.0
+	c_brute.max_hp = 500.0
+	var c_plain_res: Dictionary = combat.resolve(c_brute, "cannon", 42.0)
+	var c_rail_res: Dictionary = combat.resolve(c_brute, "cannon", 42.0, "", 0.0, 0.0, Weapons.PIERCE_CHIP)
+	_t.check("Cannon Rail chips plated brute at 50% vs 20% without ignoring plating",
+		not bool(c_plain_res["full"]) and not bool(c_rail_res["full"])
+		and is_equal_approx(float(c_plain_res["dealt"]), 42.0 * combat.CHIP)
+		and is_equal_approx(float(c_rail_res["dealt"]), 42.0 * Weapons.PIERCE_CHIP),
+		"plain=%.2f rail=%.2f" % [float(c_plain_res["dealt"]), float(c_rail_res["dealt"])])
+	# Barrage paint past 0.46 s turns slate and reopens brackets; ultimate interrupt clears paint cleanly.
+	combat._start_attempt()
+	_game.player.intent.clear()
+	_game.player.intent.fire_pressed = true
+	_game.player.intent.fire_held = true
+	combat._physics_process(DT)
+	_game.player.intent.clear()
+	_game.player.intent.fire_held = true
+	for _i in 32: # 0.533 s -> Barrage
+		combat._physics_process(DT)
+	var paint_barrage: Dictionary = combat.last_cannon_paint.duplicate()
+	_t.check("live Cannon paint past 0.46 s turns slate with reopened brackets",
+		String(paint_barrage["stage"]) == WeaponDriver.SHOT_BARRAGE
+		and (paint_barrage["color"] as Color).is_equal_approx(Palette.SLATE)
+		and float(paint_barrage["bracket_gap"]) > 0.0, str(paint_barrage))
+	# Proc mid-paint fires plain Pulse (16.0) without touching painted lane or weapon_driver.
+	var c_snap_pre: Dictionary = combat.weapon_driver.state_snapshot()
+	var c_count_pre: int = combat._cannon.size()
+	combat._proc_volley(1.0)
+	var proc_lane: Dictionary = combat._cannon.back()
+	_t.check("live Cannon item_proc fires plain Pulse (16.0) without touching painted lane or weapon_driver",
+		combat._cannon.size() == c_count_pre + 1 and is_equal_approx(float(proc_lane["damage"]), 16.0)
+		and not bool(proc_lane["options"].get("pierce_chip", false))
+		and combat.weapon_driver.state_snapshot() == c_snap_pre, str(proc_lane))
+	# Ultimate interrupt clears painted lane and indicator with zero shot fired.
+	var c_count_ult: int = combat._cannon.size()
+	_game.events.ultimate_started.emit("cannon_fire_mission", "arc", _game.player.ball_position(), _game.player.ball_position(), 1.0)
+	_game.player.intent.clear()
+	_game.player.intent.fire_released = true
+	combat._physics_process(DT)
+	_t.check("live Cannon ultimate interrupt clears painted lane & indicator with zero shot fired",
+		not bool(combat.weapon_driver.state_snapshot()["painted"])
+		and not _game.player.indicator.shapes.has("cannon_paint")
+		and combat._cannon.size() == c_count_ult, str(combat.weapon_driver.state_snapshot()))
+	_game.events.run_ended.emit(false)
+	_t.check("WC-1: run_ended returns Cannon to rest",
+		_is_at_rest(combat.weapon_driver.state_snapshot(), 0) and not bool(combat.weapon_driver.state_snapshot()["painted"]),
+		str(combat.weapon_driver.state_snapshot()))
 
 	_game.free()
 	quit(_t.verdict())

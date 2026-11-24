@@ -79,6 +79,9 @@ const IDLE_PRIORITY := -1
 const MIN_ATTACK_SPEED := 0.05
 # A run ends on the tick its seconds reach this close to zero, so float drift costs no tick.
 const RUN_EPSILON := 0.000001
+# Fractional pressure comparison tolerance (PILOT-CADENCE.md section 3.5): ensures the fifth
+# stamp at exactly 1.0 pressure succeeds cleanly despite float stepping.
+const PRESSURE_EPS := 0.0001
 # A skill shot draws exactly its committed geometry; the hit test forgives a hull this
 # share beyond the drawn edge, so what you see is never bigger than what can hit.
 const FORGIVENESS := 0.18
@@ -273,7 +276,21 @@ class Slot:
 	var priority := PRIORITY
 	var cancels_sprint := false
 	var max_charges := 1
-	var charges := 1
+	var _charges := 1
+	# Fractional pressure storage for pressure slots (0.0 .. float(max_charges)).
+	# Non-pressure slots keep integer charges; assigning `charges` syncs `pressure_val`
+	# so existing callers and tests stay exact.
+	var is_pressure := false
+	var pressure_val := 1.0
+	var charges: int:
+		get:
+			if is_pressure:
+				return clampi(int(floor(pressure_val + PRESSURE_EPS)), 0, max_charges)
+			return _charges
+		set(value):
+			_charges = value
+			if is_pressure:
+				pressure_val = clampf(float(value), 0.0, float(max_charges))
 	# Seconds into the charge now recharging.
 	var recharge := 0.0
 	var active := false
@@ -290,6 +307,11 @@ class Slot:
 	var cycle_refunded := 0.0
 	# Seconds from the press to the effect (the row's `cast`); 0 casts on the press.
 	var cast := 0.0
+
+	func clamp_to_max() -> void:
+		if is_pressure:
+			pressure_val = minf(pressure_val, float(max_charges))
+		_charges = mini(_charges, max_charges)
 
 
 # The key the movement chip shows: Shift for every pilot (player_ball sets it).
@@ -390,6 +412,7 @@ func swap(name: String, id: String) -> void:
 		var own: int = s.max_charges
 		s.max_charges = maxi(old.max_charges, int(row["pressure"]))
 		s.pressure_bonus = s.max_charges - own
+		s.is_pressure = true
 		s.charges = s.max_charges
 	_slots[name] = s
 
@@ -435,24 +458,57 @@ func pool_of(name: String) -> String:
 	return pool if pool != "" and pool != name and _slots.has(pool) else name
 
 
-func ready(name: String) -> bool:
+func pressure_of(name: String) -> float:
+	var payer: Slot = _slots[pool_of(name)]
+	return payer.pressure_val if payer.is_pressure else float(payer.charges)
+
+
+func ready(name: String, cost := 1.0) -> bool:
 	var s: Slot = _slots[name]
 	var payer: Slot = _slots[pool_of(name)]
+	if payer.is_pressure:
+		return s.available and payer.pressure_val + PRESSURE_EPS >= cost and not silenced(name)
 	return s.available and payer.charges > 0 and not silenced(name)
 
 
-func spend(name: String) -> bool:
-	if not ready(name):
+func spend(name: String, cost := 1.0) -> bool:
+	if not ready(name, cost):
 		return false
-	(_slots[pool_of(name)] as Slot).charges -= 1
+	var payer: Slot = _slots[pool_of(name)]
+	if payer.is_pressure:
+		payer.pressure_val = maxf(0.0, payer.pressure_val - maxf(cost, 0.0))
+		if payer.pressure_val <= PRESSURE_EPS:
+			payer.pressure_val = 0.0
+		return true
+	payer.charges -= 1
 	return true
 
 
 # The stomp and rebound refresh: one charge back, never past the cap.
 func grant(name: String, count := 1) -> void:
+	if count <= 0:
+		return
 	var s: Slot = _slots[name]
+	if s.is_pressure:
+		grant_amount(name, float(count))
+		return
 	s.charges = mini(s.max_charges, s.charges + count)
 	if s.charges == s.max_charges:
+		s.recharge = 0.0
+		s.cycle_refunded = 0.0
+
+
+# Fractional grant for pressure slots (continuous cruise refill and PAID stamp refunds).
+func grant_amount(name: String, amount: float) -> void:
+	if amount <= 0.0:
+		return
+	var s: Slot = _slots[name]
+	if not s.is_pressure:
+		grant(name, int(floor(amount)))
+		return
+	s.pressure_val = minf(float(s.max_charges), s.pressure_val + amount)
+	if s.pressure_val + PRESSURE_EPS >= float(s.max_charges):
+		s.pressure_val = float(s.max_charges)
 		s.recharge = 0.0
 		s.cycle_refunded = 0.0
 
@@ -533,7 +589,7 @@ func refill() -> void:
 func set_max_charges(name: String, count: int) -> void:
 	var s: Slot = _slots[name]
 	s.max_charges = maxi(1, count)
-	s.charges = mini(s.charges, s.max_charges)
+	s.clamp_to_max()
 
 
 func set_cooldown_scale(name: String, scale: float) -> void:
@@ -864,10 +920,17 @@ func slots() -> Array:
 		var frac := 0.0
 		if s.charges < s.max_charges and cd > 0.0:
 			frac = clampf(1.0 - s.recharge / cd, 0.0, 1.0)
-		out.append({"slot": name, "id": s.id, "icon": s.icon, "key": slot_key(name), "cooldown_frac": frac,
-			"charges": s.charges, "max_charges": s.max_charges, "state": state_of(name),
+		var full_charges := s.charges
+		var charge_frac := 0.0
+		if s.is_pressure and full_charges < s.max_charges:
+			charge_frac = clampf(s.pressure_val - float(full_charges), 0.0, 1.0)
+		var record := {"slot": name, "id": s.id, "icon": s.icon, "key": slot_key(name), "cooldown_frac": frac,
+			"charges": full_charges, "max_charges": s.max_charges, "state": state_of(name),
 			"gauge": s.gauge.fraction() if s.gauge != null else (cast_fraction() if name == casting else 0.0),
 			"number": int(NUMBER.get(name, 0)), "group": "bar" if name in BAR else "chip",
 			"selected": name == selected, "select_left": select_left() if name == selected else 0.0,
-			"pool": pool_of(name), "refill": "contact" if ABILITIES.get(id_of(pool_of(name)), {}).has("pressure") else "time"})
+			"pool": pool_of(name), "refill": "contact" if ABILITIES.get(id_of(pool_of(name)), {}).has("pressure") else "time"}
+		if s.is_pressure:
+			record["charge_frac"] = charge_frac
+		out.append(record)
 	return out

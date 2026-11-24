@@ -790,6 +790,7 @@ func _balance_rest() -> void:
 
 func _balance_fast() -> void:
 	_player.abilities.refill()
+	_combat.weapon_driver.reset()
 	_record["from"] = _struck.size()
 	_aim_at((_record["t"] as Node3D).global_position)
 
@@ -805,9 +806,11 @@ func _balance_fast_press() -> void:
 
 
 func _check_balance() -> void:
+	# Re-cut E2-02 (PILOT-CADENCE.md §3.5): Balance Due scales as min(22.0, 8.0 + planar_speed),
+	# reaching full 22.0 weight at 14 m/s cruise (gain 14.0 from standstill 8.0, capped at 22.0).
 	var a: float = _record["a"]
 	var b := _balance_force(_record["from"])
-	var want: float = Weapons.BALANCE_PER_SPEED * 30.0 * _combat._damage_mod(Weapons.LEDGER_READER)
+	var want: float = (Weapons.STAMP_MAX - Weapons.STAMP_BASE) * _combat._damage_mod(Weapons.LEDGER_READER)
 	_t.check("balance due grows with speed", a > 0.0 and b > a and absf((b - a) - want) <= want * 0.1,
 		"at rest %.2f, at %.1f m/s %.2f, gain %.2f, want %.2f" % [a, _record["speed"], b, b - a, want])
 

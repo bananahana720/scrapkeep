@@ -4,7 +4,7 @@ const Pattern := preload("res://src/combat/pattern.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 
-# Weapon trigger and cadence driver (PILOT-CADENCE.md sections 2, 3.1-3.4, 4 and 7).
+# Weapon trigger and cadence driver (PILOT-CADENCE.md sections 2, 3.1-3.6, 4 and 7).
 # Owned by Combat, one instance per Combat with no static state, so warm-batched tests need
 # no reset. Combat calls step() once per physics tick and lifecycle hooks on attempt
 # boundaries and interruptions; the reticle, sound twins and tests read state_snapshot().
@@ -40,6 +40,10 @@ const SHOT_SNAP := "snap"
 const SHOT_BEAT_1 := "beat_1"
 const SHOT_BEAT_2 := "beat_2"
 const SHOT_BEAT_3 := "beat_3"
+const SHOT_STAMP := "stamp"
+const SHOT_PULSE := "pulse"
+const SHOT_RAIL := "rail"
+const SHOT_BARRAGE := "barrage"
 
 var _weapon := ""
 var _trigger: String = Pattern.DEFAULT_TRIGGER
@@ -82,6 +86,19 @@ var _window_state := WINDOW_IDLE
 var _window_t := 0.0
 var _window_s := Vector2.ZERO
 var _lane_painted := false
+var _cast_cost := 1.0
+var _refund := 0.0
+var _stamp_streak := 0
+var _stamp_streak_bonus := 0.0
+var _stamp_streak_cap := 0.0
+var _lock_rail_damage := 0.0
+var _lock_barrage_damage := 0.0
+var _lock_pulse_reach := 0.0
+var _lock_rail_reach := 0.0
+var _lock_pulse_width_mult := 1.0
+var _lock_rail_width_mult := 1.0
+var _lock_barrage_width_mult := 1.0
+var _lock_rail_breaks_props := false
 
 
 # Advances trigger timers by `delta` and interprets `intent` for `weapon` under `pattern`.
@@ -116,6 +133,10 @@ func step(delta: float, intent, weapon: String, pattern: Resource, rate_hz: floa
 		shots = _step_lob_snap(delta, weapon, pattern, pressed, held, released, context)
 	elif _trigger == Pattern.TRIGGER_BEATS:
 		shots = _step_beats(delta, weapon, pattern, pressed, held, context)
+	elif _trigger == Pattern.TRIGGER_STAMP:
+		shots = _step_stamp(delta, weapon, pattern, pressed, held, context)
+	elif _trigger == Pattern.TRIGGER_LOCK:
+		shots = _step_lock(delta, weapon, pattern, pressed, held, released, context)
 	else:
 		if pressed:
 			_hold_s = 0.0
@@ -174,6 +195,17 @@ func top_up_cylinder() -> bool:
 # Charges a flat recovery floor after a tap/card weapon commits a cast.
 func commit_recovery(seconds: float) -> void:
 	_cooldown = maxf(_cooldown, 0.0) + maxf(seconds, 0.0)
+
+
+# Tally's stamp: commits a landed Balance Due cast, sets the cast floor and opens the PAID
+# stamp window. Updating streak here keeps sky-aim and dry presses from faking a beat.
+func commit_stamp(paid: bool, rate_mult := 1.0) -> void:
+	_cooldown = _floor_s / maxf(rate_mult, 0.1)
+	_window_t = 0.0
+	_window_state = WINDOW_WAITING if _window_s.y > _window_s.x else WINDOW_IDLE
+	_stamp_streak = (_stamp_streak + 1) if paid else 0
+	_buffered = false
+	_buffer_s = 0.0
 
 
 # Kest's lob_snap: opens the snap window for a newly committed throw and arms the throw floor.
@@ -248,6 +280,7 @@ func reset(pattern: Resource = null) -> void:
 	_window_state = WINDOW_IDLE
 	_window_t = 0.0
 	_lane_painted = false
+	_stamp_streak = 0
 	if pattern != null:
 		_sync_pattern(pattern, true)
 	else:
@@ -269,6 +302,7 @@ func interrupt(reason: String) -> void:
 			_beat_t = 0.0
 			_hold_s = 0.0
 			_lane_painted = false
+			_stamp_streak = 0
 			_buffered = false
 			_buffer_s = 0.0
 			if _window_state == WINDOW_WAITING or _window_state == WINDOW_OPEN:
@@ -286,7 +320,9 @@ func interrupt(reason: String) -> void:
 # dictionary never alters internal state.
 func state_snapshot() -> Dictionary:
 	var reload_frac := clampf(_reload_t / _reload_s, 0.0, 1.0) if _reloading and _reload_s > 0.0 else 0.0
-	var ready := _cooldown <= 0.0 and not _reloading and _recover_s <= 0.0 and (_slot_ready if _trigger == Pattern.TRIGGER_LOB_SNAP else true)
+	var slot_ok := _slot_ready if (_trigger == Pattern.TRIGGER_LOB_SNAP or _trigger == Pattern.TRIGGER_STAMP) else true
+	var ready := _cooldown <= 0.0 and not _reloading and _recover_s <= 0.0 and not _lane_painted and slot_ok
+	var safe_cost: float = maxf(_cast_cost, Pattern.MIN_CAST_COST)
 	return {
 		"weapon": _weapon,
 		"trigger": _trigger,
@@ -317,6 +353,11 @@ func state_snapshot() -> Dictionary:
 		"window_t": _window_t,
 		"window_range": _window_s,
 		"painted": _lane_painted,
+		"lock_stage": _lock_stage_for(_hold_s) if _lane_painted else "idle",
+		"lock_bracket": _lock_bracket_gap() if _lane_painted else 1.0,
+		"stamp_streak": _stamp_streak,
+		"cast_cost": safe_cost,
+		"refund": clampf(_refund, 0.0, safe_cost),
 	}
 
 
@@ -365,6 +406,12 @@ static func base_dps(pattern: Resource) -> float:
 			var m2: float = float(mults[1]) if mults.size() >= 2 else m1
 			var cycle: float = f1 + f2
 			return (dmg * (m1 + m2) / cycle) if cycle > 0.0 else dmg * float(pattern.rate)
+		Pattern.TRIGGER_STAMP:
+			var cost: float = maxf(float(pattern.cast_cost), Pattern.MIN_CAST_COST)
+			return (dmg / (Weapons.PRESSURE_ROLL_S * cost)) if Weapons.PRESSURE_ROLL_S > 0.0 else 0.0
+		Pattern.TRIGGER_LOCK:
+			var recover_s: float = float(pattern.recover_s)
+			return (dmg / recover_s) if recover_s > 0.0 else dmg * float(pattern.rate)
 		_:
 			return dmg * float(pattern.rate)
 
@@ -797,6 +844,194 @@ func _step_beats(delta: float, weapon: String, pattern: Resource, pressed: bool,
 	return shots
 
 
+func _step_stamp(delta: float, weapon: String, pattern: Resource, pressed: bool, held: bool, context: Dictionary) -> Array:
+	var shots: Array = []
+	if pressed:
+		_hold_s = 0.0
+	elif held:
+		_hold_s += delta
+	else:
+		_hold_s = 0.0
+	_cooldown = maxf(0.0, _cooldown - delta)
+	if _cooldown <= EPS:
+		_cooldown = 0.0
+	if pattern == null:
+		return shots
+	var rate_mult: float = maxf(float(context.get("rate_mult", 1.0)), 0.1)
+	var managed: bool = bool(context.get("managed_commit", false))
+	_slot_ready = bool(context.get("slot_ready", true)) if managed else true
+
+	if _window_state == WINDOW_WAITING or _window_state == WINDOW_OPEN:
+		_window_t += delta * rate_mult
+		if _window_s.y <= _window_s.x:
+			_window_state = WINDOW_IDLE
+		elif _window_t + EPS < _window_s.x:
+			_window_state = WINDOW_WAITING
+		elif _window_t <= _window_s.y + EPS:
+			_window_state = WINDOW_OPEN
+		else:
+			_window_state = WINDOW_SPENT
+			_stamp_streak = 0
+
+	if pressed:
+		if _window_state == WINDOW_WAITING:
+			_window_state = WINDOW_SPENT
+			_stamp_streak = 0
+			if _cooldown > 0.0:
+				if _cooldown <= BUFFER_S + EPS:
+					_latch_buffer()
+				return shots
+			shots.append(_make_stamp_shot(weapon, false, managed, rate_mult))
+			return shots
+		if _cooldown <= 0.0:
+			var is_paid := _window_state == WINDOW_OPEN
+			_buffered = false
+			_buffer_s = 0.0
+			shots.append(_make_stamp_shot(weapon, is_paid, managed, rate_mult))
+			return shots
+		if _cooldown <= BUFFER_S + EPS:
+			_latch_buffer()
+		return shots
+	if _buffered and _cooldown <= 0.0:
+		_buffered = false
+		_buffer_s = 0.0
+		shots.append(_make_stamp_shot(weapon, false, managed, rate_mult))
+	return shots
+
+
+func _make_stamp_shot(weapon: String, is_paid: bool, managed: bool, rate_mult: float) -> Dictionary:
+	var safe_cost: float = maxf(_cast_cost, Pattern.MIN_CAST_COST)
+	var safe_refund: float = clampf(_refund, 0.0, safe_cost) if is_paid else 0.0
+	var next_streak := (_stamp_streak + 1) if is_paid else 0
+	var dmg_mult := _window_mult if is_paid else 1.0
+	var bonus := (float(next_streak) * _stamp_streak_bonus) if (is_paid and _stamp_streak_bonus > 0.0) else 0.0
+	var cap := _stamp_streak_cap if (is_paid and _stamp_streak_bonus > 0.0) else 0.0
+	if not managed:
+		commit_stamp(is_paid, rate_mult)
+	return {
+		"kind": SHOT_STAMP if is_paid else SHOT_PLAIN,
+		"weapon": weapon,
+		"damage_mult": dmg_mult,
+		"paid": is_paid,
+		"cast_cost": safe_cost,
+		"refund": safe_refund,
+		"streak": next_streak,
+		"streak_bonus": bonus,
+		"streak_cap": cap,
+		"pierce": false,
+		"spread_deg": 0.0,
+	}
+
+
+func _lock_stage_for(hold_s: float) -> String:
+	if _window_s.y <= _window_s.x:
+		return SHOT_PULSE
+	if hold_s + EPS < _window_s.x:
+		return SHOT_PULSE
+	if hold_s <= _window_s.y + EPS:
+		return SHOT_RAIL
+	return SHOT_BARRAGE
+
+
+func _lock_bracket_gap() -> float:
+	if _window_s.y <= _window_s.x:
+		return 1.0
+	if _hold_s + EPS < _window_s.x:
+		return clampf(1.0 - _hold_s / maxf(_window_s.x, 0.001), 0.0, 1.0)
+	if _hold_s <= _window_s.y + EPS:
+		return 0.0
+	return clampf((_hold_s - _window_s.y) / 0.16, 0.25, 1.0)
+
+
+func _step_lock(delta: float, weapon: String, pattern: Resource, pressed: bool, held: bool, released: bool, context: Dictionary) -> Array:
+	var shots: Array = []
+	_cooldown = maxf(0.0, _cooldown - delta)
+	if _cooldown <= EPS:
+		_cooldown = 0.0
+	if _recover_s > 0.0:
+		_recover_s = maxf(0.0, _recover_s - delta)
+		if _recover_s <= EPS:
+			_recover_s = 0.0
+	if pattern == null:
+		return shots
+	var rate_mult: float = maxf(float(context.get("rate_mult", 1.0)), 0.1)
+	var recover_s: float = _recover_cfg_s / rate_mult
+
+	if not _lane_painted:
+		if _recover_s <= 0.0 and _window_state == WINDOW_HIT:
+			_window_state = WINDOW_IDLE
+		if (pressed or _buffered) and _recover_s <= 0.0:
+			_buffered = false
+			_buffer_s = 0.0
+			_lane_painted = true
+			_hold_s = 0.0
+			_window_t = 0.0
+			_window_state = WINDOW_WAITING if _window_s.y > _window_s.x else WINDOW_IDLE
+			if not held or released:
+				shots.append(_release_lock(weapon, pattern, recover_s))
+			return shots
+		if pressed and _recover_s > 0.0 and _recover_s <= BUFFER_S + EPS:
+			_latch_buffer()
+		return shots
+
+	if held and not released:
+		_hold_s += delta
+		_window_t = _hold_s
+		if _window_s.y <= _window_s.x:
+			_window_state = WINDOW_IDLE
+		elif _hold_s + EPS < _window_s.x:
+			_window_state = WINDOW_WAITING
+		elif _hold_s <= _window_s.y + EPS:
+			_window_state = WINDOW_OPEN
+		else:
+			_window_state = WINDOW_SPENT
+		return shots
+
+	shots.append(_release_lock(weapon, pattern, recover_s))
+	return shots
+
+
+func _release_lock(weapon: String, pattern: Resource, recover_s: float) -> Dictionary:
+	var stage := _lock_stage_for(_hold_s)
+	var pulse_dmg: float = maxf(float(pattern.damage), 0.001)
+	var rail_dmg: float = _lock_rail_damage if _lock_rail_damage > 0.0 else pulse_dmg
+	var barrage_dmg: float = _lock_barrage_damage if _lock_barrage_damage > 0.0 else pulse_dmg
+	var pulse_reach: float = _lock_pulse_reach if _lock_pulse_reach > 0.0 else float(pattern.range_m)
+	var rail_reach: float = _lock_rail_reach if _lock_rail_reach > 0.0 else float(pattern.range_m)
+	var barrage_reach: float = float(pattern.range_m)
+	var dmg := pulse_dmg
+	var reach := pulse_reach
+	var width_mult := _lock_pulse_width_mult
+	var pierce := false
+	var breaks_props := false
+	if stage == SHOT_RAIL:
+		dmg = rail_dmg
+		reach = rail_reach
+		width_mult = _lock_rail_width_mult
+		pierce = true
+		breaks_props = _lock_rail_breaks_props
+	elif stage == SHOT_BARRAGE:
+		dmg = barrage_dmg
+		reach = barrage_reach
+		width_mult = _lock_barrage_width_mult
+	_lane_painted = false
+	_hold_s = 0.0
+	_window_t = 0.0
+	_window_state = WINDOW_HIT if stage == SHOT_RAIL else WINDOW_IDLE
+	_recover_s = recover_s
+	return {
+		"kind": stage,
+		"weapon": weapon,
+		"damage": dmg,
+		"damage_mult": dmg / pulse_dmg,
+		"reach": reach,
+		"width_mult": width_mult,
+		"pierce": pierce,
+		"breaks_props": breaks_props,
+		"spread_deg": 0.0,
+	}
+
+
 func _switch_weapon(weapon: String, pattern: Resource, trigger: String) -> void:
 	var trigger_changed := _trigger != trigger
 	var stay_hold_auto := _trigger == Pattern.TRIGGER_HOLD_AUTO and trigger == Pattern.TRIGGER_HOLD_AUTO
@@ -832,6 +1067,18 @@ func _sync_pattern(pattern: Resource, reset_chamber := true) -> void:
 	_charge_min = float(pattern.charge_min)
 	_tap_threshold_s = float(pattern.tap_threshold_s)
 	_recover_cfg_s = float(pattern.recover_s)
+	_cast_cost = maxf(float(pattern.cast_cost), Pattern.MIN_CAST_COST)
+	_refund = clampf(float(pattern.refund), 0.0, minf(Pattern.MAX_REFUND, _cast_cost))
+	_stamp_streak_bonus = float(pattern.stamp_streak_bonus)
+	_stamp_streak_cap = float(pattern.stamp_streak_cap)
+	_lock_rail_damage = float(pattern.lock_rail_damage)
+	_lock_barrage_damage = float(pattern.lock_barrage_damage)
+	_lock_pulse_reach = float(pattern.lock_pulse_reach)
+	_lock_rail_reach = float(pattern.lock_rail_reach)
+	_lock_pulse_width_mult = float(pattern.lock_pulse_width_mult)
+	_lock_rail_width_mult = float(pattern.lock_rail_width_mult)
+	_lock_barrage_width_mult = float(pattern.lock_barrage_width_mult)
+	_lock_rail_breaks_props = bool(pattern.lock_rail_breaks_props)
 	if reset_chamber:
 		_chamber = _mag
 		_hot_rounds = 0
