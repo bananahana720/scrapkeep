@@ -21,6 +21,8 @@ const T := preload("res://tests/support/t.gd")
 # and collision exception clearance.
 
 const HIT_STOP_SCALE := 0.05
+const HIT_STOP_DELTA_MAX := 0.005
+const NORMAL_DELTA_MIN := 0.008
 const MAX_SPEED := 45.0
 const MAX_Y_REL := 20.0
 const MAX_R := Arena.BANK_R + 1.5
@@ -31,6 +33,12 @@ var _game
 var _boss
 var _hits: Array = []
 var _cc_ignored: Array = []
+# Armed by a test case before a hit so the player_hit signal callback flips Engine.time_scale
+# synchronously inside _charge_hit() / _slag_hit() (before the next tick's _integrate_forces).
+var _on_hit_source := ""
+var _on_hit_ts_next := -1.0
+var _on_hit_delta := -1.0
+var _on_hit_armed := false
 
 
 func _initialize() -> void:
@@ -44,10 +52,40 @@ func _reset_fight(phase: int) -> void:
 	Engine.time_scale = 1.0
 	_hits.clear()
 	_cc_ignored.clear()
+	_on_hit_source = ""
+	_on_hit_ts_next = -1.0
+	_on_hit_delta = -1.0
+	_on_hit_armed = false
 	_game.flow.retry_stage()
 	_game.run.heal(1000.0)
 	_game.ctx.calm = false
 	_boss.jump_to_phase(phase)
+
+
+func _arm_hit_flip(source: String, ts_next: float) -> void:
+	_on_hit_source = source
+	_on_hit_ts_next = ts_next
+	_on_hit_delta = -1.0
+	_on_hit_armed = true
+
+
+func _on_player_hit(amount: float, source: String) -> void:
+	_hits.append({"amount": amount, "source": source})
+	if _on_hit_armed and source == _on_hit_source:
+		_on_hit_armed = false
+		_on_hit_delta = float(_boss._delta)
+		if _on_hit_ts_next > 0.0:
+			Engine.time_scale = _on_hit_ts_next
+
+
+func _wait_for_scale(scale: float) -> float:
+	Engine.time_scale = scale
+	for _i in 30:
+		await process_frame
+		var d: float = float(_boss._delta)
+		if (scale < 0.5 and d < HIT_STOP_DELTA_MAX) or (scale >= 0.5 and d >= NORMAL_DELTA_MIN):
+			return d
+	return float(_boss._delta)
 
 
 # Advances past the phase transition and commits a Phase 3 charge aimed from `ship_pos` along `dir`.
@@ -101,6 +139,7 @@ func _run_charge_case(label: String, ship_r: float, ball_dist: float, ball_lat: 
 
 	var body: RigidBody3D = _game.player.body()
 	var hit_tick := -1
+	var hit_delta := -1.0
 	var exc_on_hit := false
 	var exc_cleared := false
 	var max_spd := 0.0
@@ -112,19 +151,23 @@ func _run_charge_case(label: String, ship_r: float, ball_dist: float, ball_lat: 
 	var away_dir: Vector3 = sd * (1.0 if ball_lat >= 0.0 else -1.0)
 	var lane_centre: Vector3 = lane.centre
 	var lane_half: float = lane.half_width
+	var scale_set := false
+	_arm_hit_flip("brindle_charge", ts_next)
 
-	for tick in 90 * 3:
-		if hit_tick < 0 and is_instance_valid(lane) and lane.is_live():
+	for tick in 90 * 6:
+		if hit_tick < 0 and not scale_set and is_instance_valid(lane) and lane.is_live():
 			var along: float = lane.lane_along(_game.player.ball_position())
-			if along <= lane.lane_front + 0.8:
+			# Arm ts_hit early enough that Main::iteration() reads it at least one frame before impact.
+			if along <= lane.lane_front + 2.5:
 				Engine.time_scale = ts_hit
-		await physics_frame
+				scale_set = true
+		await process_frame
 		if hit_tick < 0 and _hits.any(func(h): return h["source"] == "brindle_charge"):
 			hit_tick = tick
+			hit_delta = _on_hit_delta
 			exc_on_hit = ship.hull.get_collision_exceptions().has(body)
-			Engine.time_scale = ts_next
-		elif hit_tick >= 0 and tick == hit_tick + 2:
-			# After verifying the transition tick, resume normal scale so the flight plays out.
+		elif hit_tick >= 0 and tick == hit_tick + 3:
+			# After the transition tick has integrated, restore normal scale so the flight plays out.
 			Engine.time_scale = 1.0
 		if hit_tick >= 0:
 			var pos: Vector3 = _game.player.ball_position()
@@ -149,9 +192,12 @@ func _run_charge_case(label: String, ship_r: float, ball_dist: float, ball_lat: 
 	for h in _hits:
 		if h["source"] == "brindle_charge":
 			dmg += float(h["amount"])
+	var delta_ok := (hit_delta > 0.0 and hit_delta < HIT_STOP_DELTA_MAX) if ts_hit < 0.5 else (hit_delta >= NORMAL_DELTA_MIN)
 	return {
 		"ok": hit_tick >= 0,
 		"label": label,
+		"hit_delta": hit_delta,
+		"delta_ok": delta_ok,
 		"dmg": dmg,
 		"exc_on_hit": exc_on_hit,
 		"exc_cleared": exc_cleared,
@@ -224,19 +270,21 @@ func _check_slag_hitstop_end() -> void:
 	var mid := (Arena.RING_A.x + Arena.RING_A.y) * 0.5
 	var spot: Vector3 = arena.point_at(deg_to_rad(200.0), mid, Tuning.RADIUS + 0.02)
 	var hit_tick := -1
+	var hit_delta := -1.0
 	var max_spd := 0.0
 	var max_y_rel := 0.0
 	var escaped := false
-	for tick in 90 * 9:
+	_arm_hit_flip("brindle_slag", 1.0)
+	for tick in 90 * 12:
 		if hit_tick < 0:
 			Harness.put_ball(_game, spot)
 			for h in _boss.active_hazards():
-				if h.attack_id == "slag_ring_a" and h.age >= h.warn_seconds - 0.03:
+				if h.attack_id == "slag_ring_a" and h.age >= h.warn_seconds - 0.04:
 					Engine.time_scale = HIT_STOP_SCALE
-		await physics_frame
+		await process_frame
 		if hit_tick < 0 and _hits.any(func(h): return h["source"] == "brindle_slag"):
 			hit_tick = tick
-			Engine.time_scale = 1.0
+			hit_delta = _on_hit_delta
 		if hit_tick >= 0:
 			var pos: Vector3 = _game.player.ball_position()
 			var v: Vector3 = _game.player.state.velocity
@@ -249,10 +297,11 @@ func _check_slag_hitstop_end() -> void:
 	Engine.time_scale = 1.0
 	var r_end: float = arena.radius_of(_game.player.ball_position())
 	var cleared_ring: bool = r_end < Arena.RING_A.x or r_end > Arena.RING_A.y
+	var delta_ok := hit_delta > 0.0 and hit_delta < HIT_STOP_DELTA_MAX
 	_t.check("Furnace slag hit across hit-stop end stays bounded and still clears the ring",
-		hit_tick >= 0 and cleared_ring and not escaped and max_spd <= MAX_SPEED and max_y_rel <= MAX_Y_REL,
-		"hit=%s cleared_ring=%s (r=%.1f) escaped=%s max_spd=%.1f max_y=%.1f"
-			% [hit_tick >= 0, cleared_ring, r_end, escaped, max_spd, max_y_rel])
+		hit_tick >= 0 and delta_ok and cleared_ring and not escaped and max_spd <= MAX_SPEED and max_y_rel <= MAX_Y_REL,
+		"hit=%s hit_delta=%.5f (< %.3f) cleared_ring=%s (r=%.1f) escaped=%s max_spd=%.1f max_y=%.1f"
+			% [hit_tick >= 0, hit_delta, HIT_STOP_DELTA_MAX, cleared_ring, r_end, escaped, max_spd, max_y_rel])
 
 
 # Tests Phase 1 crane tug across a hit-stop end transition (0.05 -> 1.0): bounded external_accel, no launch.
@@ -261,21 +310,25 @@ func _check_tug_hitstop_end() -> void:
 	var arena = _boss.arena
 	var ball: Vector3 = arena.point_at(deg_to_rad(20.0), 20.0, Tuning.RADIUS + 0.02)
 	Harness.put_ball(_game, ball)
-	await physics_frame
-	Engine.time_scale = HIT_STOP_SCALE
-	await physics_frame
+	await process_frame
+	# Wait until Main::iteration() has actually stepped boss._delta under HIT_STOP_SCALE.
+	var tug_delta := await _wait_for_scale(HIT_STOP_SCALE)
+	# At process_frame we sit between the hit-stop tick and the next frame's Main::iteration():
+	# _tug() computes external_accel with _boss._delta == tug_delta, then Engine.time_scale = 1.0
+	# makes the very next physics step integrate external_accel over 1/90.
 	_boss._tug(ball, ball + Vector3(5.0, 3.0, 0.0))
 	Engine.time_scale = 1.0
 	var max_spd := 0.0
 	var max_y_rel := 0.0
 	for _i in 30:
-		await physics_frame
+		await process_frame
 		var pos: Vector3 = _game.player.ball_position()
 		max_spd = maxf(max_spd, _game.player.state.velocity.length())
 		max_y_rel = maxf(max_y_rel, pos.y - arena.global_position.y)
 	_t.check("Phase 1 crane tug across hit-stop end stays bounded and never launches",
-		max_spd <= 15.0 and max_y_rel <= 8.0,
-		"max_spd=%.1f (<= 15) max_y=%.1f (<= 8)" % [max_spd, max_y_rel])
+		tug_delta > 0.0 and tug_delta < HIT_STOP_DELTA_MAX and max_spd <= 15.0 and max_y_rel <= 8.0,
+		"tug_delta=%.5f (< %.3f) max_spd=%.1f (<= 15) max_y=%.1f (<= 8)"
+			% [tug_delta, HIT_STOP_DELTA_MAX, max_spd, max_y_rel])
 
 
 func _run() -> void:
@@ -285,8 +338,7 @@ func _run() -> void:
 	_game.ctx.spawner = _game.combat
 	_boss = _game.boss
 	_game.player.source = Intent.Scripted.new()
-	_game.events.player_hit.connect(func(amount: float, source: String):
-		_hits.append({"amount": amount, "source": source}))
+	_game.events.player_hit.connect(_on_player_hit)
 	_game.events.cc_ignored.connect(func(kind: String):
 		_cc_ignored.append(kind))
 	Harness.start_run(_game)
@@ -298,40 +350,43 @@ func _run() -> void:
 	#    pushes counter-clockwise into open floor (away from the 0 deg deck ramp).
 	var r_end := await _run_charge_case("hit-stop end (0.05 -> 1.0)", 16.0, 18.0, -1.5, 20.0, HIT_STOP_SCALE, 1.0)
 	_t.check("charge hit across hit-stop end (0.05 -> 1.0) stays bounded and inside the bowl",
-		r_end["ok"] and not r_end["escaped"] and r_end["max_spd"] <= MAX_SPEED and r_end["max_y_rel"] <= MAX_Y_REL
-			and r_end["max_r"] <= MAX_R,
-		"hit=%s max_spd=%.1f (<= %.0f) max_y=%.1f (<= %.0f) max_r=%.1f escaped=%s"
-			% [r_end["ok"], r_end["max_spd"], MAX_SPEED, r_end["max_y_rel"], MAX_Y_REL, r_end["max_r"], r_end["escaped"]])
+		r_end["ok"] and r_end["delta_ok"] and not r_end["escaped"] and r_end["max_spd"] <= MAX_SPEED
+			and r_end["max_y_rel"] <= MAX_Y_REL and r_end["max_r"] <= MAX_R,
+		"hit=%s hit_delta=%.5f max_spd=%.1f (<= %.0f) max_y=%.1f (<= %.0f) max_r=%.1f escaped=%s"
+			% [r_end["ok"], r_end["hit_delta"], r_end["max_spd"], MAX_SPEED, r_end["max_y_rel"], MAX_Y_REL, r_end["max_r"], r_end["escaped"]])
 	_t.check("charge hit across hit-stop end still deals full damage, shoves out of lane, and clears exception",
-		r_end["ok"] and r_end["dmg"] >= Rules.CHARGE_DAMAGE - 0.01 and r_end["post_lat_v"] >= Rules.CHARGE_SHOVE_SIDE * 0.75
+		r_end["ok"] and r_end["delta_ok"] and r_end["dmg"] >= Rules.CHARGE_DAMAGE - 0.01
+			and r_end["post_lat_v"] >= Rules.CHARGE_SHOVE_SIDE * 0.75
 			and r_end["post_up_v"] >= Rules.CHARGE_SHOVE_UP * 0.75 and r_end["end_lat"] > r_end["lane_half"]
 			and r_end["exc_on_hit"] and r_end["exc_cleared"],
-		"dmg=%.1f lat_v=%.1f up_v=%.1f end_lat=%.1f (> %.1f) exc=%s->cleared=%s"
-			% [r_end["dmg"], r_end["post_lat_v"], r_end["post_up_v"], r_end["end_lat"], r_end["lane_half"],
+		"hit_delta=%.5f dmg=%.1f lat_v=%.1f up_v=%.1f end_lat=%.1f (> %.1f) exc=%s->cleared=%s"
+			% [r_end["hit_delta"], r_end["dmg"], r_end["post_lat_v"], r_end["post_up_v"], r_end["end_lat"], r_end["lane_half"],
 				r_end["exc_on_hit"], r_end["exc_cleared"]])
 
 	# 2. Hit-stop sustained (0.05 -> 0.05) and hit-stop starting (1.0 -> 0.05): shove must stay full, not 0.05x.
 	var r_cont := await _run_charge_case("hit-stop sustained (0.05 -> 0.05)", 16.0, 14.0, 1.0, 0.0, HIT_STOP_SCALE, HIT_STOP_SCALE)
 	_t.check("charge hit during sustained hit-stop (0.05 -> 0.05) still delivers full crisp shove",
-		r_cont["ok"] and r_cont["post_lat_v"] >= Rules.CHARGE_SHOVE_SIDE * 0.75 and r_cont["post_up_v"] >= Rules.CHARGE_SHOVE_UP * 0.75
+		r_cont["ok"] and r_cont["delta_ok"] and r_cont["post_lat_v"] >= Rules.CHARGE_SHOVE_SIDE * 0.75
+			and r_cont["post_up_v"] >= Rules.CHARGE_SHOVE_UP * 0.75
 			and r_cont["max_spd"] <= MAX_SPEED and r_cont["max_y_rel"] <= MAX_Y_REL and r_cont["exc_cleared"],
-		"lat_v=%.1f up_v=%.1f max_spd=%.1f max_y=%.1f exc_cleared=%s"
-			% [r_cont["post_lat_v"], r_cont["post_up_v"], r_cont["max_spd"], r_cont["max_y_rel"], r_cont["exc_cleared"]])
+		"hit_delta=%.5f lat_v=%.1f up_v=%.1f max_spd=%.1f max_y=%.1f exc_cleared=%s"
+			% [r_cont["hit_delta"], r_cont["post_lat_v"], r_cont["post_up_v"], r_cont["max_spd"], r_cont["max_y_rel"], r_cont["exc_cleared"]])
 
 	var r_start := await _run_charge_case("hit-stop start (1.0 -> 0.05)", 16.0, 14.0, 1.0, 0.0, 1.0, HIT_STOP_SCALE)
 	_t.check("charge hit into hit-stop start (1.0 -> 0.05) still delivers full crisp shove",
-		r_start["ok"] and r_start["post_lat_v"] >= Rules.CHARGE_SHOVE_SIDE * 0.75 and r_start["post_up_v"] >= Rules.CHARGE_SHOVE_UP * 0.75
+		r_start["ok"] and r_start["delta_ok"] and r_start["post_lat_v"] >= Rules.CHARGE_SHOVE_SIDE * 0.75
+			and r_start["post_up_v"] >= Rules.CHARGE_SHOVE_UP * 0.75
 			and r_start["max_spd"] <= MAX_SPEED and r_start["max_y_rel"] <= MAX_Y_REL and r_start["exc_cleared"],
-		"lat_v=%.1f up_v=%.1f max_spd=%.1f max_y=%.1f exc_cleared=%s"
-			% [r_start["post_lat_v"], r_start["post_up_v"], r_start["max_spd"], r_start["max_y_rel"], r_start["exc_cleared"]])
+		"hit_delta=%.5f lat_v=%.1f up_v=%.1f max_spd=%.1f max_y=%.1f exc_cleared=%s"
+			% [r_start["hit_delta"], r_start["post_lat_v"], r_start["post_up_v"], r_start["max_spd"], r_start["max_y_rel"], r_start["exc_cleared"]])
 
 	# 3. Direct nose/side hit near the bank/rim (r = 55 m) under hit-stop end transition.
 	var r_rim := await _run_charge_case("near rim bank (r=55, 0.05 -> 1.0)", 38.0, 17.0, 0.5, 16.0, HIT_STOP_SCALE, 1.0)
 	_t.check("direct nose hit near the Slag Bowl bank/rim stays inside the bowl and never throws over the rim",
-		r_rim["ok"] and not r_rim["escaped"] and r_rim["max_spd"] <= MAX_SPEED and r_rim["max_y_rel"] <= MAX_Y_REL
-			and r_rim["max_r"] <= MAX_R and r_rim["exc_cleared"],
-		"hit=%s max_spd=%.1f max_y=%.1f max_r=%.1f escaped=%s exc_cleared=%s"
-			% [r_rim["ok"], r_rim["max_spd"], r_rim["max_y_rel"], r_rim["max_r"], r_rim["escaped"], r_rim["exc_cleared"]])
+		r_rim["ok"] and r_rim["delta_ok"] and not r_rim["escaped"] and r_rim["max_spd"] <= MAX_SPEED
+			and r_rim["max_y_rel"] <= MAX_Y_REL and r_rim["max_r"] <= MAX_R and r_rim["exc_cleared"],
+		"hit=%s hit_delta=%.5f max_spd=%.1f max_y=%.1f max_r=%.1f escaped=%s exc_cleared=%s"
+			% [r_rim["ok"], r_rim["hit_delta"], r_rim["max_spd"], r_rim["max_y_rel"], r_rim["max_r"], r_rim["escaped"], r_rim["exc_cleared"]])
 
 	# 4. CC-immune ball still honours crowd_control gate and ghosts past the hull.
 	var r_imm := await _run_charge_case("cc-immune charge hit", 16.0, 14.0, 0.5, 0.0, 1.0, 1.0, true)
