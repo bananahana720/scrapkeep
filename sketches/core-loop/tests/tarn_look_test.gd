@@ -12,6 +12,7 @@ const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
+const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Tarn's look (alpha wave 15): every layer reads "this is Tarn, the deliberate Redjaw
@@ -23,6 +24,25 @@ const SHELL := "res://assets/models/world_one/shell_tarn.glb"
 const PILOT := "res://assets/models/pilot_tarn_anim.glb"
 const SLOTS := ["weapon", "move", "special", "smash"]
 const CUES := ["tarn_latch_tear", "tarn_ready", "tarn_break", "mind_tarn"]
+# The rig (wave 46 E2-04): Tarn stays at 17 draws, the heaviest pilot, with every part inside
+# the 1.35 m weapon reach cap (OPUS-FULL-3D-VISUAL-REVIEW section 1.3).
+const SHELL_DRAWS := 17
+const REACH_CAP := 1.35
+const JAWS := ["ClawUpper_L", "ClawUpper_R", "ClawLower_L", "ClawLower_R"]
+const RIG_NODES := ["ClawUpper_L", "ClawUpper_R", "ClawLower_L", "ClawLower_R", "ClawPivot_L", "ClawPivot_R",
+	"ClawTip_L", "ClawTip_R", "WeaponRing", "WeaponRing/Blade_L", "WeaponRing/Blade_R"]
+# Each jaw's opening direction about its local X (the hinge pin): the right side opens its upper
+# jaw positive and its lower negative, the left mirrors. The three beats' peaks (clips/tarn.json).
+const OPENS := {"ClawUpper_L": -1.0, "ClawUpper_R": 1.0, "ClawLower_L": 1.0, "ClawLower_R": -1.0}
+const BEATS := [
+	{"ClawUpper_L": 55.0},
+	{"ClawUpper_R": 70.0, "ClawLower_R": 25.0},
+	{"ClawUpper_L": 80.0, "ClawUpper_R": 80.0, "ClawLower_L": 60.0, "ClawLower_R": 60.0},
+]
+# The upper jaws' rams are built for 0 to RAM_OPEN degrees open (shell_tarn.py): any further and
+# the rod would leave its sleeve, any closing and its tail would leave the sleeve's foot.
+const RAM_OPEN := 85.0
+const DT := 1.0 / 60.0
 
 var _t := T.new("tarn_look_test")
 
@@ -76,6 +96,7 @@ func _process(_delta: float) -> bool:
 	_check_motif()
 	_check_feel()
 	_check_ticks()
+	_check_rig()
 	quit(_t.verdict())
 	return true
 
@@ -223,3 +244,127 @@ func _check_ticks() -> void:
 		counts.append(ind._tris.get_faces().size())
 		ind.free()
 	_t.check("cross ticks draw", counts[0] > counts[1], "vertices with cross ticks %d, without %d" % counts)
+
+
+# The shell as the game loads it: draws, reach, the rig's nodes, each jaw hinged at its pivot,
+# then clips/tarn.json played frame by frame through MechaMotion on the real shell.
+func _check_rig() -> void:
+	var scene: Node3D = (load(SHELL) as PackedScene).instantiate()
+	root.add_child(scene)
+	var pod := scene.find_child("Pod", true, false) as Node3D
+	var core := scene.find_child("Core", true, false) as Node3D
+	var draws := 0
+	var reach := 0.0
+	for mi: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		draws += mi.mesh.get_surface_count()
+		var to_scene: Transform3D = scene.global_transform.affine_inverse() * mi.global_transform
+		for surface in mi.mesh.get_surface_count():
+			for v in mi.mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]:
+				reach = maxf(reach, (to_scene * v).length())
+	_t.check("rig draws", draws <= SHELL_DRAWS, "%d surfaces, cap %d (no new draw for the rams)" % [draws, SHELL_DRAWS])
+	_t.check("rig reach", reach > 1.0 and reach <= REACH_CAP, "furthest vertex %.3f m, cap %.2f" % [reach, REACH_CAP])
+	var missing := RIG_NODES.filter(func(n): return pod.get_node_or_null(n) == null)
+	_t.eq("rig nodes", missing, [])
+	if not missing.is_empty():
+		scene.free()
+		return
+	for jaw_name in JAWS:
+		var jaw := pod.get_node(jaw_name) as Node3D
+		var side: String = jaw_name.right(1)
+		var pivot := pod.get_node("ClawPivot_" + side) as Node3D
+		var arm := ((pod.get_node("ClawTip_" + side) as Node3D).position - pivot.position).normalized()
+		var pin := jaw.basis.x.normalized()
+		_t.check(jaw_name + " hinge", jaw.position.distance_to(pivot.position) < 1e-4 and absf(pin.y) < 1e-4 and absf(pin.dot(arm)) < 1e-4,
+			"origin %.5f m from ClawPivot; local X %s level and square to the arm %s" % [jaw.position.distance_to(pivot.position), pin, arm])
+	_check_beats(pod, core)
+	scene.free()
+
+
+func _check_beats(pod: Node3D, core: Node3D) -> void:
+	var table = JSON.parse_string(FileAccess.get_file_as_string("res://src/presentation/clips/tarn.json"))
+	var rows: Array = Array(table.get("machinery", [])) if table is Dictionary else []
+	var motion = MechaMotion.new(pod, core, "tarn", rows)
+	_t.check("rows load", rows.size() > 0 and motion._rows.size() == rows.size() and motion.skip_lines.is_empty(),
+		"%d rows, %d live, skips %s" % [rows.size(), motion._rows.size(), motion.skip_lines])
+	var jaws := {}
+	var rest := {}
+	for jaw_name in JAWS:
+		jaws[jaw_name] = pod.get_node(jaw_name)
+		rest[jaw_name] = (jaws[jaw_name] as Node3D).transform
+	var facts := {"idle_still": false}
+	var drift := 0.0
+	for beat in BEATS.size():
+		motion.shot()
+		var peak := {}
+		var low := {}
+		for jaw_name in JAWS:
+			peak[jaw_name] = 0.0
+			low[jaw_name] = 0.0
+		for frame in roundi(0.45 / DT):
+			motion.step(DT, facts)
+			for jaw_name in JAWS:
+				var jaw: Node3D = jaws[jaw_name]
+				var open := _open(jaw, jaw_name)
+				peak[jaw_name] = maxf(peak[jaw_name], open)
+				low[jaw_name] = minf(low[jaw_name], open)
+				var at: Transform3D = rest[jaw_name]
+				drift = maxf(drift, jaw.position.distance_to(at.origin))
+				drift = maxf(drift, absf(jaw.rotation.y - at.basis.get_euler().y) + absf(jaw.rotation.z - at.basis.get_euler().z))
+		var want: Dictionary = BEATS[beat]
+		var got := []
+		var good := true
+		for jaw_name in JAWS:
+			var target: float = want.get(jaw_name, 0.0)
+			var p: float = peak[jaw_name]
+			got.append("%s %.1f..%.1f" % [jaw_name, low[jaw_name], p])
+			good = good and low[jaw_name] >= -0.01 and p <= RAM_OPEN
+			good = good and (p >= 0.9 * target and p <= target + 0.01 if target > 0.0 else p < 0.01)
+		_t.check("beat %d" % (beat + 1), good, "opening range of each jaw, want peaks %s; got %s" % [want, ", ".join(got)])
+		var home := true
+		for jaw_name in JAWS:
+			home = home and (jaws[jaw_name] as Node3D).transform.is_equal_approx(rest[jaw_name])
+		_t.check("beat %d returns to rest" % (beat + 1), home, "every jaw back on its rest transform 0.45 s after the beat")
+	_t.check("hinge holds", drift < 1e-4, "jaws turn about their pins only: origin and yaw drift %.6f" % drift)
+	_t.check("rend widest", BEATS[2]["ClawUpper_L"] > BEATS[0]["ClawUpper_L"] and BEATS[2]["ClawUpper_R"] > BEATS[1]["ClawUpper_R"],
+		"beat three flares both upper jaws past beats one and two")
+	# Beat three lands while beat two's hook is still on its way home: it carries on from there.
+	motion.shot()
+	_run(motion, 0.45, facts)
+	motion.shot()
+	_run(motion, 0.12, facts)
+	var hook: Node3D = jaws["ClawUpper_R"]
+	var before: float = hook.rotation_degrees.x
+	motion.shot()
+	var rising := true
+	var last := before
+	for frame in 3:
+		motion.step(DT, facts)
+		rising = rising and hook.rotation_degrees.x >= last - 1e-4
+		last = hook.rotation_degrees.x
+	_t.check("re-trigger never snaps", before > 1.0 and rising and last > before,
+		"hook mid-return at %.1f deg, then %.1f after 3 frames of the next rend" % [before, last])
+	_run(motion, 0.5, facts)
+	# A still ball parts the jaws a little in their opening directions; a shot or a roll closes them.
+	_run(motion, 3.0, {"idle_still": true})
+	var tension := []
+	var parted := true
+	for jaw_name in JAWS:
+		var open := _open(jaws[jaw_name], jaw_name)
+		tension.append("%s %.1f" % [jaw_name, open])
+		parted = parted and open > 2.0 and open < 10.0
+	_t.check("idle tension", parted, ", ".join(tension))
+	_run(motion, 3.0, facts)
+	var shut := true
+	for jaw_name in JAWS:
+		shut = shut and absf((jaws[jaw_name] as Node3D).rotation_degrees.x) < 0.1
+	_t.check("idle releases", shut, "jaws back within 0.1 degrees of rest once the ball moves")
+
+
+# How far a jaw stands open from its rest, in its own opening direction (negative is closing).
+static func _open(jaw: Node3D, jaw_name: String) -> float:
+	return jaw.rotation_degrees.x * float(OPENS[jaw_name])
+
+
+func _run(motion, seconds: float, facts: Dictionary) -> void:
+	for i in roundi(seconds / DT):
+		motion.step(DT, facts)

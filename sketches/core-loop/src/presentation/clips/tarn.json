@@ -476,5 +476,167 @@
         }
       ]
     }
-  }
+  },
+  "machinery": [
+    {
+      "node": "ClawUpper.L",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "x",
+        "deg": -55.0,
+        "throw_s": 0.08,
+        "return_s": 0.25,
+        "curve": "out_quad",
+        "every": 3,
+        "phase": 0
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.4 and 5.3; OPUS-FULL-3D-VISUAL-REVIEW.md section 1.5 (scratch/w46-gate-handoff/art at f624aeaea) (E2-04)",
+      "note": "Beat one, the left rake: the left upper jaw opens 55 degrees in 0.08 s and eases home in 0.25 s; its ram rod rides out of the sleeve with it. Each jaw's local X is its hinge pin (shell_tarn.py jaw_frame): a turn about x swings it about the pin, positive opens the right jaws' upper and closes their lower, mirrored on the left."
+    },
+    {
+      "node": "ClawUpper.R",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "x",
+        "deg": 70.0,
+        "throw_s": 0.08,
+        "return_s": 0.25,
+        "curve": "out_quad",
+        "every": 3,
+        "phase": 1
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.4 and 5.3; OPUS-FULL-3D-VISUAL-REVIEW.md section 1.5 (scratch/w46-gate-handoff/art at f624aeaea) (E2-04)",
+      "note": "Beat two, the right hook: the right upper jaw opens 70 degrees; its ram rod draws back in as the jaw returns, in the window before beat three."
+    },
+    {
+      "node": "ClawLower.R",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "x",
+        "deg": -25.0,
+        "throw_s": 0.08,
+        "return_s": 0.25,
+        "curve": "out_quad",
+        "every": 3,
+        "phase": 1
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.4 and 5.3; OPUS-FULL-3D-VISUAL-REVIEW.md section 1.5 (scratch/w46-gate-handoff/art at f624aeaea) (E2-04)",
+      "note": "Beat two's lower assist: the right lower jaw drops 25 degrees under the hook."
+    },
+    {
+      "node": "ClawUpper.L",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "x",
+        "deg": -80.0,
+        "throw_s": 0.06,
+        "return_s": 0.25,
+        "curve": "out_quad",
+        "every": 3,
+        "phase": 2
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.4 and 5.3; OPUS-FULL-3D-VISUAL-REVIEW.md section 1.5 (scratch/w46-gate-handoff/art at f624aeaea) (E2-04)",
+      "note": "Beat three, the paired rend: both upper jaws flare to 80 degrees in 0.06 s, rams at full stretch (the rod keeps 23 percent of its length in the sleeve). A re-trigger starts from where the jaw is."
+    },
+    {
+      "node": "ClawUpper.R",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "x",
+        "deg": 80.0,
+        "throw_s": 0.06,
+        "return_s": 0.25,
+        "curve": "out_quad",
+        "every": 3,
+        "phase": 2
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.4 and 5.3; OPUS-FULL-3D-VISUAL-REVIEW.md section 1.5 (scratch/w46-gate-handoff/art at f624aeaea) (E2-04)",
+      "note": "Beat three, the paired rend: the right upper jaw flares to 80 degrees in 0.06 s, mirroring the left."
+    },
+    {
+      "node": "ClawLower.L",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "x",
+        "deg": 60.0,
+        "throw_s": 0.06,
+        "return_s": 0.25,
+        "curve": "out_quad",
+        "every": 3,
+        "phase": 2
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.4 and 5.3; OPUS-FULL-3D-VISUAL-REVIEW.md section 1.5 (scratch/w46-gate-handoff/art at f624aeaea) (E2-04)",
+      "note": "Beat three: the left lower jaw drops 60 degrees, so each claw opens wide; 60 keeps the lower tip outside the lattice face and above Z -0.6."
+    },
+    {
+      "node": "ClawLower.R",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "x",
+        "deg": -60.0,
+        "throw_s": 0.06,
+        "return_s": 0.25,
+        "curve": "out_quad",
+        "every": 3,
+        "phase": 2
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.4 and 5.3; OPUS-FULL-3D-VISUAL-REVIEW.md section 1.5 (scratch/w46-gate-handoff/art at f624aeaea) (E2-04)",
+      "note": "Beat three: the right lower jaw drops 60 degrees, mirroring the left."
+    },
+    {
+      "node": "ClawUpper.L",
+      "fact": "idle_still",
+      "motion": "turn",
+      "start": {
+        "axis": "x",
+        "deg": -6.0,
+        "rate": 3.0
+      },
+      "source": "OPUS-FULL-3D-VISUAL-REVIEW.md section 1.5 (scratch/w46-gate-handoff/art at f624aeaea) (E2-04)",
+      "note": "Idle tension: with the ball still, the left jaws part 6 and 4 degrees, slowly; any shot ends it and the beat throws take over the channel."
+    },
+    {
+      "node": "ClawUpper.R",
+      "fact": "idle_still",
+      "motion": "turn",
+      "start": {
+        "axis": "x",
+        "deg": 6.0,
+        "rate": 3.0
+      },
+      "source": "OPUS-FULL-3D-VISUAL-REVIEW.md section 1.5 (scratch/w46-gate-handoff/art at f624aeaea) (E2-04)",
+      "note": "Idle tension on the right upper jaw, mirroring the left."
+    },
+    {
+      "node": "ClawLower.L",
+      "fact": "idle_still",
+      "motion": "turn",
+      "start": {
+        "axis": "x",
+        "deg": 4.0,
+        "rate": 3.0
+      },
+      "source": "OPUS-FULL-3D-VISUAL-REVIEW.md section 1.5 (scratch/w46-gate-handoff/art at f624aeaea) (E2-04)",
+      "note": "Idle tension on the left lower jaw."
+    },
+    {
+      "node": "ClawLower.R",
+      "fact": "idle_still",
+      "motion": "turn",
+      "start": {
+        "axis": "x",
+        "deg": -4.0,
+        "rate": 3.0
+      },
+      "source": "OPUS-FULL-3D-VISUAL-REVIEW.md section 1.5 (scratch/w46-gate-handoff/art at f624aeaea) (E2-04)",
+      "note": "Idle tension on the right lower jaw."
+    }
+  ]
 }
