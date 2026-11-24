@@ -69,12 +69,12 @@ const SETTLE := 40
 # Silhouette staging: machines a pose, in pose order; the kinds go round in this order.
 const COUNTS := [3, 5, 2, 4, 3, 5]
 const KINDS := ["chaser", "lobber", "swatter", "hooker", "netcaster", "boom_tender"]
-const SPREAD_M := 7.0
+const SPREAD_M := 8.0
 const NEAR_STAND_M := 16.0
 const DEPTH_STEP_M := 7.0
 const STAND_LIFT := 1.0
 const STAGE_TICKS := 10
-const TRIES := 12
+const TRIES := 24
 const SCREEN_MARGIN := 24.0
 const SIGHT_SPAN := 0.7
 # A staging is kept only when every machine keeps this share of its silhouette in the drawn frame.
@@ -304,12 +304,14 @@ static func fight_poses(g, axis: Vector2) -> Array:
 	return out
 
 
-# Where each of n machines stands relative to the ball: Vector2(metres ahead, metres to the right). Alternate rows
-# stand DEPTH_STEP_M deeper, so neighbours do not hide one another.
+# Where each of n machines stands relative to the ball: Vector2(metres ahead, metres to the right). A machine stands
+# half its side offset deeper, so the outer ones stay in frame, and alternate slots DEPTH_STEP_M deeper again, so
+# neighbours do not hide one another.
 static func slot_offsets(n: int) -> Array:
 	var out: Array = []
 	for i in n:
-		out.append(Vector2(NEAR_STAND_M + float(i % 2) * DEPTH_STEP_M, (float(i) - float(n - 1) * 0.5) * SPREAD_M))
+		var side := (float(i) - float(n - 1) * 0.5) * SPREAD_M
+		out.append(Vector2(NEAR_STAND_M + absf(side) * 0.5 + float(i % 2) * DEPTH_STEP_M, side))
 	return out
 
 
