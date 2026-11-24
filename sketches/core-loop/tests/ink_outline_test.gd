@@ -13,6 +13,9 @@ extends SceneTree
 #   again     apply() twice changes nothing more; strip() and BakeLook.unbaked() give debris no line; the switch and
 #             reset_for_tests().
 #   mounted   Rivet's and Sable's fitted shells, a spawned chaser, a Warden-class miniboss and Brindle all draw it.
+#   cutaway   under the shipped cutaway look every pilot's shell and seated AnimatedPilot draw it, the shell through the
+#             variant that cuts the same window (hero_warden_assets_test checks live clamp and park Wardens).
+#   reset     a twin lives on the view, never the shared welded mesh, so a role after reset_for_tests() draws fresh.
 
 const T := preload("res://tests/support/t.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
@@ -21,6 +24,7 @@ const Palette := preload("res://src/core/palette.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const BakeWarm := preload("res://src/presentation/bake_warm.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
+const BallLooks := preload("res://src/presentation/ball_looks.gd")
 
 var _t := T.new("ink_outline_test")
 
@@ -38,7 +42,9 @@ func _run() -> void:
 	_lift()
 	_filter()
 	_again()
+	_reset_roles()
 	await _mounted()
+	await _cutaway()
 	InkOutline.reset_for_tests()
 	quit(_t.verdict())
 
@@ -223,7 +229,7 @@ func _filter() -> void:
 	var lined := InkOutline.apply(holder, "warden", [owned_paint])
 	_t.check("a shared standard material draws through an inked twin and is itself untouched", body.next_pass == null
 		and shared.material_override != body and shared.material_override.next_pass == InkOutline.ink("warden")
-		and shared.material_override.get_meta("ink_source") == body)
+		and shared.material_override.get_meta("ink_source") == body.get_instance_id() and body.get_meta("ink_twin_warden") == shared.material_override)
 	_t.check("an owned material takes the line in place, so the hit flash's changes still draw", shared.material_override != owned_paint
 		and owned.material_override == owned_paint and owned_paint.next_pass == InkOutline.ink("warden"))
 	_t.check("a shader material takes the line in place", shader_view.material_override == live and live.next_pass == InkOutline.ink("warden"))
@@ -258,6 +264,76 @@ func _again() -> void:
 	var lift := InkOutline.ink("pilot")
 	InkOutline.reset_for_tests()
 	_t.check("reset_for_tests() switches it back on and drops its passes", InkOutline.enabled and InkOutline.ink("pilot") != lift)
+
+
+class Look:
+	var look := "cutaway"
+
+	func option(_key: String):
+		return look
+
+
+func _reset_roles() -> void:
+	var source := _cube()
+	var paint := _body()
+	source.surface_set_material(0, paint)
+	var first := MeshInstance3D.new()
+	first.mesh = source
+	InkOutline.apply(first, "enemy")
+	var hull := InkOutline.hull(source)
+	InkOutline.reset_for_tests()
+	var second := MeshInstance3D.new()
+	second.mesh = source
+	InkOutline.apply(second, "warden")
+	var drawn := second.get_active_material(0)
+	_t.check("the shared welded mesh keeps its own material: twins sit on each view", hull.surface_get_material(0) == paint
+		and paint.next_pass == null and first.get_surface_override_material(0) != null)
+	_t.check("after reset_for_tests() a Warden on the same mesh draws the current Warden pass, not a stale enemy one",
+		second.mesh == hull and drawn != paint and drawn.next_pass == InkOutline.ink("warden"))
+	first.free()
+	second.free()
+
+
+func _cutaway() -> void:
+	var world := Node3D.new()
+	root.add_child(world)
+	var hook := HeroAssets.new()
+	var tuning := Look.new()
+	hook.ctx = {"tuning": tuning}
+	world.add_child(hook)
+	for pilot in HeroAssets.SHELLS.keys():
+		var ball := Node3D.new()
+		world.add_child(ball)
+		var rec: Dictionary = hook.fit_shell_into(ball, pilot, "", 1, {})
+		if not _t.check("%s fits a cutaway shell" % pilot, not rec.is_empty()):
+			continue
+		var seated: Dictionary = hook.fit_pilot_into(rec.pod, pilot, Color.WHITE) if HeroAssets.PILOTS.has(pilot) else {}
+		var cut_lined := 0
+		var window_ok := true
+		var shell_lined := 0
+		for part in [rec.core, rec.pod]:
+			for view: MeshInstance3D in (part as Node).find_children("*", "MeshInstance3D", true, false):
+				if view.mesh == null or view.name == "AnimatedPilot" or (seated.has("pilot") and (seated.pilot as Node).is_ancestor_of(view)):
+					continue
+				for i in view.mesh.get_surface_count():
+					var mat := view.get_active_material(i)
+					var line: Material = mat.next_pass if mat != null else null
+					if line == null or not line.has_meta("ink_role"):
+						continue
+					shell_lined += 1
+					if mat is ShaderMaterial and (mat as ShaderMaterial).shader.code == BallLooks.CUTAWAY_SHADER:
+						cut_lined += 1
+						var cut := line as ShaderMaterial
+						window_ok = window_ok and cut.shader.code.contains("keep_within") and cut.get_meta("ink_role") == "pilot"
+						for key in InkOutline.CUT_PARAMETERS:
+							var want = (mat as ShaderMaterial).get_shader_parameter(key)
+							window_ok = window_ok and (want == null or cut.get_shader_parameter(key) == want)
+		_t.check("%s's cutaway shell draws the pilot's line through the window-cutting variant" % pilot,
+			shell_lined >= 3 and cut_lined >= 3 and window_ok, "%d lined, %d cut" % [shell_lined, cut_lined])
+		if HeroAssets.PILOTS.has(pilot):
+			var census := _census(seated.get("pilot")) if seated.has("pilot") else {"lined": 0, "roles": {}}
+			_t.check("%s's seated pilot draws the pilot's line" % pilot, census.lined >= 1 and census.roles.keys() == ["pilot"], "%s" % census)
+	world.free()
 
 
 func _mounted() -> void:

@@ -449,10 +449,13 @@ func _run() -> void:
 
 	InkOutline.enabled = false
 	var held_ink := InkOutline.ink("warden")
-	InkOutline.strip(StandardMaterial3D.new())
+	var inked := StandardMaterial3D.new()
+	inked.next_pass = held_ink
+	InkOutline.strip(inked)
+	t.check("InkOutline holds a stripped copy before reset", not InkOutline._stripped.is_empty())
 	driver._reset()
-	t.check("InkOutline.reset_for_tests switches the line back on and drops its passes and twins",
-		InkOutline.enabled and InkOutline._inks.is_empty() and InkOutline._lifts.is_empty() and InkOutline._twins.is_empty()
+	t.check("InkOutline.reset_for_tests switches the line back on and drops its passes and stripped copies",
+		InkOutline.enabled and InkOutline._inks.is_empty() and InkOutline._lifts.is_empty()
 		and InkOutline._stripped.is_empty() and InkOutline.ink("warden") != held_ink)
 
 	quit(t.verdict())

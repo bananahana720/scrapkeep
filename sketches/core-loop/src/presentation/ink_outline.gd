@@ -3,6 +3,7 @@ extends RefCounted
 const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
+const BallLooks := preload("res://src/presentation/ball_looks.gd")
 
 # The comic ink line round the actors: pilots' shells, enemies and Wardens (W46-INK). Each drawn surface takes one more
 # pass, an inverted hull: its back faces pushed out along a normal and drawn flat in warm charcoal, so only the rim past
@@ -12,12 +13,14 @@ const BakeLook := preload("res://src/presentation/bake_look.gd")
 # weight at any distance, and capped in metres, so a far thin strut never drowns in it; past FADE_FROM it thins to none
 # at FADE_TO, where the silhouette carries itself. It casts no shadow.
 #
-# Glass, glows, telegraph stripes, see-through, cut-away and unshaded surfaces take no line (drawable()). A material the actor's
-# script holds and mutates (`owned`: the body paint the hit flash brightens) and a shader material (a live look whose
-# uniforms move) take the pass in place; any other standard material may be shared with scenery (hero_assets' slot
-# cache paints the world's scrap chunks too), so the surface draws an inked twin of it instead. A material already
-# carrying the Fleet edge layer (BakeLook.edge_lift) keeps it: the line chains after a copy of the layer, never the
-# shared layer itself.
+# Glass, glows, telegraph stripes, see-through, hole-cutting and unshaded surfaces take no line (drawable()). The one
+# hole-cutting look that does is the shipped cutaway ball (BallLooks.CUTAWAY_SHADER): its line is a variant that cuts the
+# same window with the same parameters, so the ball and its kit keep their rim and the window stays open. A material the
+# actor's script holds and mutates (`owned`: the body paint the hit flash, a Warden's enamel) and a shader material (a live
+# look whose uniforms move) take the pass in place; any other standard material may be shared with scenery (hero_assets'
+# slot cache paints the world's scrap chunks too), so the surface draws an inked twin of it instead, set on the surface
+# itself and never on the shared welded mesh. A material already carrying the Fleet edge layer (BakeLook.edge_lift) keeps
+# it: the line chains after a copy of the layer, never the shared layer itself.
 
 const INK := Color(0.08, 0.09, 0.11)
 const ROLES := ["pilot", "enemy", "warden"]
@@ -28,7 +31,8 @@ const FADE_FROM := 65.0
 const FADE_TO := 95.0
 # Slot or material names that never take a line: see-through, lit or glowing parts, and the identity-swapped accents
 # hero_assets lights by identity (the ready glow, Kest's fuse).
-const SKIP_NAMES := ["glass", "lens", "glow", "canopy", "window", "visor", "lamp", "screen", "flame", "class_accent", "kest_fuse"]
+const SKIP_NAMES := ["glass", "lens", "glow", "canopy", "window", "visor", "lamp", "screen", "flame", "class_accent", "kest_fuse",
+	"ancient_light"]
 # A node under one of these takes no line: the cockpit's controls sit inside the ball.
 const SKIP_NODES := ["Cockpit", "Control"]
 # A lit material whose glow is this bright is a light, not a body.
@@ -40,6 +44,8 @@ const _CUSTOM := Mesh.ARRAY_FORMAT_CUSTOM0 | Mesh.ARRAY_FORMAT_CUSTOM1 | Mesh.AR
 # CUSTOM0.xyz is the welded normal. w 0: in the mesh's space. w 1: a skinned surface's, in the frame of its own normal
 # and tangent, so the bones turn it with them (Godot skins NORMAL and TANGENT, never CUSTOM0). A vertex with no
 # welded normal (a mesh that never went through hull()) reads zero and its hull folds away off screen.
+# The cutaway variant (CUT_*) cuts the window BallLooks.CUTAWAY_SHADER cuts, read with its parameters: where the ball's
+# plating or kit opens for the pilot, its line opens too.
 const SHADER := """shader_type spatial;
 render_mode unshaded, cull_front, depth_draw_opaque, shadows_disabled, skip_vertex_transform;
 uniform vec4 ink : source_color = vec4(0.08, 0.09, 0.11, 1.0);
@@ -47,13 +53,17 @@ uniform float width_px = 1.8;
 uniform float width_cap = 0.06;
 uniform float fade_from = 65.0;
 uniform float fade_to = 95.0;
+%s
 void vertex() {
+	%s
 	vec3 welded = CUSTOM0.xyz;
 	float has = step(0.25, dot(welded, welded));
 	if (CUSTOM0.w > 0.5) {
-		vec3 t = TANGENT - NORMAL * dot(NORMAL, TANGENT);
-		t = dot(t, t) > 1e-8 ? normalize(t) : normalize(cross(NORMAL, abs(NORMAL.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
-		welded = t * welded.x + cross(NORMAL, t) * welded.y + NORMAL * welded.z;
+		// A bone may scale a frame unevenly: square it up before reading the welded normal back out of it.
+		vec3 n = normalize(NORMAL);
+		vec3 t = TANGENT - n * dot(n, TANGENT);
+		t = dot(t, t) > 1e-8 ? normalize(t) : normalize(cross(n, abs(n.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+		welded = t * welded.x + cross(n, t) * welded.y + n * welded.z;
 	}
 	vec3 at = (MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	vec3 out_dir = normalize(MODELVIEW_NORMAL_MATRIX * mix(vec3(0.0, 0.0, 1.0), welded, has));
@@ -70,18 +80,59 @@ void vertex() {
 	if (IN_SHADOW_PASS || w <= 0.0) {
 		POSITION = vec4(2.0, 2.0, 2.0, 1.0);
 	}
+	%s
 }
 void fragment() {
+	%s
 	ALBEDO = ink.rgb;
 }
 """
+const CUT_UNIFORMS := """uniform float window = 0.76;
+uniform bool held = false;
+uniform vec3 centre_at = vec3(0.0);
+uniform vec3 centre_local = vec3(0.0);
+uniform float keep_within = 0.0;
+uniform float tube = 0.0;
+uniform bool back_is_kit = false;
+uniform float seat_back_top = 9.0;
+uniform float back_above = -0.08;
+uniform float back_behind = 0.05;
+varying vec3 local_pos;
+varying float model_scale;
+varying vec3 from_centre;
+varying vec3 to_camera;"""
+const CUT_VERTEX_IN := """if (VERTEX.y > seat_back_top && VERTEX.y < -0.05 && abs(VERTEX.x) < 0.26 && VERTEX.z > 0.13 && VERTEX.z < 0.27) {
+		VERTEX.y = seat_back_top;
+	}
+	local_pos = VERTEX;"""
+const CUT_VERTEX_OUT := """model_scale = length(MODEL_MATRIX[0].xyz);
+	vec3 centre = held ? centre_at : (MODEL_MATRIX * vec4(centre_local, 1.0)).xyz;
+	from_centre = (INV_VIEW_MATRIX * vec4(at, 1.0)).xyz - centre;
+	to_camera = CAMERA_POSITION_WORLD - centre;"""
+const CUT_FRAGMENT := """float facing = dot(normalize(from_centre), normalize(to_camera));
+	if (tube > 0.0) {
+		vec3 axis = normalize(to_camera);
+		float along = dot(from_centre, axis) / model_scale;
+		float across = length(from_centre / model_scale - axis * along);
+		facing = along > 0.0 ? sqrt(max(0.0, 1.0 - (across / tube) * (across / tube))) : -1.0;
+	}
+	vec3 seat_pos = local_pos - centre_local;
+	bool cockpit = length(from_centre) < keep_within * model_scale;
+	if (cockpit && back_is_kit && seat_pos.y > back_above && seat_pos.z > back_behind) {
+		cockpit = false;
+	}
+	if (!cockpit && facing > window) {
+		discard;
+	}"""
+# The cutaway parameters the variant reads off the material it lines.
+const CUT_PARAMETERS := ["window", "held", "centre_at", "centre_local", "keep_within", "tube", "back_is_kit", "seat_back_top",
+	"back_above", "back_behind"]
 
 # Off, apply() draws no line on what it is given next (a lean preset's switch).
 static var enabled := true
-static var _shader: Shader
+static var _shaders := {}
 static var _inks := {}
 static var _lifts := {}
-static var _twins := {}
 static var _stripped := {}
 
 
@@ -112,7 +163,7 @@ static func apply(root: Node, role := "enemy", owned: Array = []) -> int:
 		if view.mesh != mesh:
 			view.mesh = mesh
 		for i: int in wanted:
-			if _line(view, mesh, i, role, owned):
+			if _line(view, i, role, owned):
 				lined += 1
 	return lined
 
@@ -122,7 +173,9 @@ static func strip(mat: Material) -> Material:
 	if mat == null:
 		return null
 	if mat.has_meta("ink_source"):
-		return mat.get_meta("ink_source")
+		var source := instance_from_id(mat.get_meta("ink_source")) as Material
+		if source != null:
+			return source
 	if mat.next_pass == null or not mat.next_pass.has_meta("ink_role"):
 		return mat
 	var key := mat.get_instance_id()
@@ -137,7 +190,6 @@ static func reset_for_tests() -> void:
 	enabled = true
 	_inks.clear()
 	_lifts.clear()
-	_twins.clear()
 	_stripped.clear()
 
 
@@ -146,11 +198,8 @@ static func ink(role: String) -> ShaderMaterial:
 	if not role in ROLES:
 		role = "enemy"
 	if not _inks.has(role):
-		if _shader == null:
-			_shader = Shader.new()
-			_shader.code = SHADER
 		var mat := ShaderMaterial.new()
-		mat.shader = _shader
+		mat.shader = _shader_for(false)
 		mat.resource_name = "ink_" + role
 		mat.set_shader_parameter("ink", INK)
 		mat.set_shader_parameter("width_px", WIDTH_PX[role])
@@ -190,7 +239,9 @@ static func drawable(mesh: Mesh, surface: int, mat: Material) -> bool:
 		if shader == null:
 			return false
 		var code := shader.code
-		# A shader that cuts holes (discard: the cutaway look's window) takes none: its hull would fill the hole.
+		if code == BallLooks.CUTAWAY_SHADER:
+			return true
+		# Any other shader that cuts holes (discard) takes none: its hull would fill the hole.
 		for mark in ["unshaded", "blend_add", "blend_sub", "blend_mul", "depth_draw_never", "ALPHA", "discard"]:
 			if code.contains(mark):
 				return false
@@ -287,49 +338,81 @@ static func _weld(mesh: Mesh) -> ArrayMesh:
 	return out
 
 
-# Lines surface `surface` of `view` (drawing `mesh`): in place for an owned or shader material, else through a twin
-# set where the material came from. False when the material's pass chain is one it does not know.
-static func _line(view: MeshInstance3D, mesh: Mesh, surface: int, role: String, owned: Array) -> bool:
+# Lines surface `surface` of `view`: in place for an owned or shader material, else through a twin set on the view (its
+# override, or the surface's), never on the welded mesh other actors share. False when the material's pass chain is one
+# it does not know.
+static func _line(view: MeshInstance3D, surface: int, role: String, owned: Array) -> bool:
 	var mat := view.get_active_material(surface)
 	if mat.has_meta("ink_source") or (mat.next_pass != null and mat.next_pass.has_meta("ink_role")):
 		return true
 	if mat in owned or mat is ShaderMaterial:
-		return _chain(mat, role)
+		return _chain(mat, role, _cut_ink(mat, role) if _cutaway(mat) else ink(role))
 	var twin := _twin(mat, role)
 	if twin == null:
 		return false
 	if view.material_override == mat:
 		view.material_override = twin
-	elif view.get_surface_override_material(surface) == mat:
-		view.set_surface_override_material(surface, twin)
 	else:
-		mesh.surface_set_material(surface, twin)
+		view.set_surface_override_material(surface, twin)
 	return true
 
 
+# `mat`'s inked twin for `role`, made once and held on `mat` itself, so it lives exactly as long as its source (a refit
+# preview leaves nothing behind). The twin names its source by id, not by reference, so the two never hold each other.
 static func _twin(mat: Material, role: String) -> Material:
-	var key := [mat.get_instance_id(), role]
-	if not _twins.has(key) or not is_instance_valid(_twins[key]):
-		var copy := mat.duplicate() as Material
-		if not _chain(copy, role):
+	var key := "ink_twin_" + role
+	var twin := mat.get_meta(key) as Material if mat.has_meta(key) else null
+	# One made before reset_for_tests() chains a pass no longer current.
+	if twin == null or not (twin.next_pass == ink(role) or twin.next_pass == _lift(role)):
+		twin = mat.duplicate() as Material
+		for meta in twin.get_meta_list():
+			if String(meta).begins_with("ink_twin_"):
+				twin.remove_meta(meta)
+		if not _chain(twin, role, ink(role)):
 			return null
-		copy.set_meta("ink_source", mat)
-		_twins[key] = copy
-	return _twins[key]
+		twin.set_meta("ink_source", mat.get_instance_id())
+		mat.set_meta(key, twin)
+	return twin
 
 
-# Puts the line after `mat`'s own passes: straight after it, or after a copy of the Fleet edge layer.
-static func _chain(mat: Material, role: String) -> bool:
+# Puts `line` after `mat`'s own passes: straight after it, or after a copy of the Fleet edge layer.
+static func _chain(mat: Material, role: String, line: ShaderMaterial) -> bool:
 	var after := mat.next_pass
 	if after == null:
-		mat.next_pass = ink(role)
+		mat.next_pass = line
 	elif after.has_meta("ink_role"):
 		return true
-	elif after == BakeLook.edge_lift():
+	elif after == BakeLook.edge_lift() and line == ink(role):
 		mat.next_pass = _lift(role)
 	else:
 		return false
 	return true
+
+
+static func _cutaway(mat: Material) -> bool:
+	return mat is ShaderMaterial and (mat as ShaderMaterial).shader != null \
+		and (mat as ShaderMaterial).shader.code == BallLooks.CUTAWAY_SHADER
+
+
+# The cutaway variant of `role`'s line for one cutaway material, its window read off that material. A shell's cutaway
+# materials keep their window once fitted, so the copy is made once and held on the material.
+static func _cut_ink(mat: ShaderMaterial, role: String) -> ShaderMaterial:
+	var line := ink(role).duplicate() as ShaderMaterial
+	line.shader = _shader_for(true)
+	line.set_meta("ink_role", role)
+	for key in CUT_PARAMETERS:
+		var value = mat.get_shader_parameter(key)
+		if value != null:
+			line.set_shader_parameter(key, value)
+	return line
+
+
+static func _shader_for(cut: bool) -> Shader:
+	if not _shaders.has(cut):
+		var shader := Shader.new()
+		shader.code = SHADER % ([CUT_UNIFORMS, CUT_VERTEX_IN, CUT_VERTEX_OUT, CUT_FRAGMENT] if cut else ["", "", "", ""])
+		_shaders[cut] = shader
+	return _shaders[cut]
 
 
 static func _lift(role: String) -> ShaderMaterial:

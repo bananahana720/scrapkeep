@@ -556,6 +556,9 @@ static func warm() -> bool:
 			var view: MeshInstance3D = views.pop_back()
 			BossModel.colour_view(view)
 			BakeLook.warm_view(view)
+			# The ink line's welded copy of what dress() will draw, made here a view a frame, not all at once at the end.
+			if view.mesh != null:
+				InkOutline.hull(BakeLook.tangent_safe(view.mesh))
 			return false
 		_ahead[path] = _finish(_dressing[path][0])
 		_dressing.erase(path)
