@@ -245,6 +245,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 		chain.reset()
 		redline.set_mode(tuning.option("heat"))
 		redline.reset_counts()
+		tree.world_one = tuning.world_one()
 		tree.open_checkpoint())
 	# The workshop visits after stages 1 to 3 each open one more pick: world's bay opens
 	# it on entry, or at the stage's clear when the bay was skipped (world.gd).

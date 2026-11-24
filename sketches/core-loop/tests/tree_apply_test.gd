@@ -56,6 +56,7 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	_done = true
 	_game.ctx.calm = true
+	_game.tuning.set_option("world_one_builds", "off")
 	_player = _game.player
 	_combat = _game.combat
 	_player.source = _source
