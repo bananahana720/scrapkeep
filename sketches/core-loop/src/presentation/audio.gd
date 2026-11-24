@@ -491,6 +491,7 @@ static func reset_for_tests() -> void:
 	_baked = false
 	_bake_done = false
 	SfxBank.bake_cancel = false
+	SfxBank.reset_voice_sidecar()
 
 
 func _init() -> void:
@@ -548,7 +549,9 @@ func setup(ctx_ref) -> void:
 	_sfx_player = _poly_player("SFX", "SfxVoices")
 	_ui_player = _poly_player("UI", "UiVoices")
 	_make_overlay()
+	_configure_voice_from_args()
 	_connect_all(ctx.events)
+	_wire_rail()
 	_start_bake()
 	# The worker preloads the take the first title plays (title A when it is on disk).
 	ace_manifest = MusicRows.resolve(title_now())["ace_manifest"]
@@ -723,11 +726,9 @@ static func _ace_loader(manifest: String, slot: Array) -> Callable:
 
 
 func _notification(what: int) -> void:
-	# A node freed outside the tree (the tests) still waits for its stems to finish loading.
+	# A node freed outside the tree (the tests) still settles its bake and stem workers.
 	if what == NOTIFICATION_PREDELETE:
-		if _ace_task >= 0:
-			WorkerThreadPool.wait_for_task_completion(_ace_task)
-			_ace_task = -1
+		_settle_workers()
 		for task in _ace_ahead.values():
 			WorkerThreadPool.wait_for_task_completion(task)
 		_ace_ahead.clear()
@@ -1102,6 +1103,8 @@ func _process(delta: float) -> void:
 	_warm_grid_key()
 	_play_due_notes()
 	_tend_tally()
+	_tend_cadence()
+	_tend_site_flips()
 	_tend_hum()
 	_tend_specials()
 	_tend_kettle()
@@ -2461,11 +2464,17 @@ func _connect_all(events) -> void:
 		_ready_for_run()
 		_set_overtime = false
 		_heft_class = 1
+		_boss_phase = 1
+		_phase_music_done = 0
 		_hull_seen = 0.0
 		_fired_this_run.clear()
 		_posture_seen.clear()
 		_guard_steps.clear()
 		_guard_warned.clear()
+		_cadence_prev.clear()
+		_visited_sites_seen.clear()
+		_cable_flips = 0
+		_sync_rail_ids()
 		_synth_form_state = "closed"
 		_line_was = ""
 		_motif = motif_of(class_id)
@@ -2474,7 +2483,9 @@ func _connect_all(events) -> void:
 		new_run_tunes()
 		_flow_queue.append(["run"]))
 	events.warden_engaged.connect(func(_stage: int): warden_took_band())
-	events.activity_done.connect(func(id: String, _at: Vector3): end_moment("event", id))
+	events.activity_done.connect(func(id: String, _at: Vector3):
+		end_moment("event", id)
+		_play_site_flip("activity:" + id))
 	events.synergy_discovered.connect(func(id: String, _category: String, _first: bool): tune_found(id))
 	events.flow_changed.connect(_on_flow_changed)
 	events.world_entered.connect(func(world: int): _flow_queue.append(["world", world]))
@@ -2482,6 +2493,12 @@ func _connect_all(events) -> void:
 	events.stage_cleared.connect(func(stage: int): _flow_queue.append(["clear", stage]))
 	events.run_ended.connect(func(won: bool):
 		engine.set_reactor_pedal(false)
+		_boss_phase = 1
+		_phase_music_done = 0
+		_cadence_prev.clear()
+		_visited_sites_seen.clear()
+		_cable_flips = 0
+		_sync_rail_ids()
 		_line_was = ""
 		_stop_hum()
 		_flow_queue.append(["end", won]))
@@ -2494,7 +2511,8 @@ func _connect_all(events) -> void:
 	events.rescue_completed.connect(func(quest: String):
 		if quest in STORY_QUESTS:
 			_story_until_ms = Time.get_ticks_msec() + STORY_HOLD_MS
-		play("rescue_completed"))
+		play("rescue_completed")
+		_play_site_flip("cage:" + quest))
 	events.part_gained.connect(func(_part: String, _source: String): play("part_gained"))
 	events.player_hit.connect(_on_player_hit)
 	events.player_died.connect(_on_died)
@@ -2554,6 +2572,7 @@ func _connect_all(events) -> void:
 func wire_optional() -> void:
 	var events = ctx.events
 	_wire_armor()
+	_wire_rail()
 	_listen_optional(events, "beacon_unsealed", func(_stage: int):
 		_warden_fighting = false
 		_flow_queue.append(["unseal"]))
@@ -2607,6 +2626,9 @@ func wire_optional() -> void:
 		elif not row.is_empty():
 			play("world_fact", 0.0, 1.0, "SFX", Rows.heard(row, cue_context()), int(row.get("priority", 0)))
 		_set_world_fact(kind)
+		if kind == "warden_gate_pip":
+			_cable_flips += 1
+			_play_site_flip("cable:%d" % _cable_flips)
 		if kind == "bay_jukebox":
 			jukebox_flipped()
 		elif kind == "fabricator_used":
@@ -2666,6 +2688,7 @@ func wire_optional() -> void:
 	_listen_optional(events, "boss_arena_entered", func():
 		_read_ahead_phases(_boss_track())
 		_boss_phase = 1
+		_phase_music_done = 0
 		_disarm_launch()
 		_begin_boss("boss_arena_entered", _boss_track()), true)
 	var phase_args := _argc(events, "boss_phase_changed")
@@ -2687,9 +2710,15 @@ func wire_optional() -> void:
 		_disarm_launch()
 		_event_id = ""
 		_chase_lead0 = -1.0
+		_cadence_prev.clear()
+		_visited_sites_seen.clear()
+		_cable_flips = 0
+		_sync_rail_ids()
 		# Arena entry and retry are the fight's stage entry: a flume Warden's break no longer
 		# strips the band, synth or ACE stems, and a Warden-break commit still queued is void.
 		if reason in ["arena", "arena_retry"]:
+			_boss_phase = 1
+			_phase_music_done = 1 if reason == "arena_retry" else 0
 			engine.parameters_arena_entered()
 			if ace != null:
 				ace.clear_release()
@@ -3284,6 +3313,12 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_drop_babble()
 	_stage_now = stage
 	_boss_arena_track = ""
+	_boss_phase = 1
+	_phase_music_done = 0
+	_cadence_prev.clear()
+	_visited_sites_seen.clear()
+	_cable_flips = 0
+	_sync_rail_ids()
 	_set_overtime = false
 	_set_incoming_at = -1.0
 	_champions.clear()
@@ -3595,10 +3630,12 @@ func _on_boss_phase() -> void:
 func _on_boss_phase_with(phase) -> void:
 	var next := int(phase)
 	# Phase 1 arrives just after the arena entry's own stinger: keep the section and phase plan
-	# as before W46-A1, but play no second clash on top of the entry.
-	if next <= _boss_phase and next <= 1:
-		engine.set_brindle_phase(next)
-		phase_music(next)
+	# as before W46-A1, reset _boss_phase cleanly so a leaked prior-attempt phase never sticks,
+	# and play no second clash on top of the entry.
+	if next <= 1:
+		_boss_phase = maxi(next, 1)
+		engine.set_brindle_phase(_boss_phase)
+		phase_music(_boss_phase)
 		return
 	_boss_phase = next
 	_trigger_boss_phase(_boss_phase)
@@ -3888,6 +3925,8 @@ func _on_boss_defeated() -> void:
 	_radio_drop("victory")
 	radio_finale = false
 	_boss_arena_track = ""
+	_boss_phase = 1
+	_phase_music_done = 0
 	on_beat("boss_defeated", 0.0, true)
 	engine.victory()
 
@@ -3928,6 +3967,9 @@ static func miniboss_tune(kind: String) -> String:
 
 
 func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
+	var killed_kind := _kind
+	if Rogue.ROWS.has(killed_kind):
+		_play_site_flip("rogue:" + killed_kind)
 	# A rogue and a surge miniboss can share a stage: while another one still fights, the
 	# track holds and the music follows the survivor (each moment ends with its own body).
 	if is_miniboss(_kind) and _miniboss_survivor() != null:
@@ -4178,6 +4220,8 @@ func _on_near_miss(_kind: String, _at: Vector3) -> void:
 
 func _on_died() -> void:
 	_line_was = ""
+	_cadence_prev.clear()
+	_sync_rail_ids()
 	_stop_hum()
 	play("player_died")
 	_flow_queue.append(["dead"])
@@ -4854,6 +4898,7 @@ func _on_active_heat(active_id: String, _at: Vector3, fraction: float) -> void:
 func _on_shot(weapon_id: String, _from: Vector3, _to: Vector3) -> void:
 	var cents := _pitch_rng.randf_range(-25.0, 25.0) / 100.0
 	play("shot_fired", 0.0, Harmony.ratio(WEAPON_PITCH.get(weapon_id, 0.0) + cents))
+	_tend_cadence()
 
 
 func _on_offered(_offers: Array) -> void:
@@ -5702,3 +5747,325 @@ func _set_world_fact(kind: String) -> void:
 		_set_overtime = true
 	elif kind == "overtime_paid":
 		_set_overtime = false
+
+
+# --- Wave 46 E3-04: Pilot weapon cadence cues, Nixie rail clacks, visited-site flip & opt-in --voice=tts ---
+
+const VOICE_SYNTH := "synth"
+const VOICE_TTS := "tts"
+const VOICE_DEFAULT_SUBPATHS := ["artifacts/local/w46-audio/voice", "artifacts/local/w46-audio", "res://assets/audio/voice"]
+
+var _cadence_prev := {}
+var _rail_ids := {}
+var _rail_wired_buffs: Object = null
+var _visited_sites_seen := {}
+var _cable_flips := 0
+var voice_mode := VOICE_SYNTH
+var voice_dir := ""
+var _voice_clips := {}
+var _voice_manifest_loaded := false
+
+
+func _weapon_cadence() -> Dictionary:
+	var combat = ctx.get("spawner") if ctx != null else null
+	var driver = combat.get("weapon_driver") if combat != null else null
+	if driver == null or not driver.has_method("state_snapshot"):
+		return {}
+	return driver.state_snapshot()
+
+
+func _play_cadence(kind: String) -> void:
+	play(kind, 0.0, 1.0, "SFX")
+
+
+# Polls weapon_driver.state_snapshot() public transitions and fires one plain player-class cue per fact.
+# Never ducks, pins or owns music, and never takes a threat voice.
+func _tend_cadence() -> void:
+	var snap := _weapon_cadence()
+	if snap.is_empty():
+		_cadence_prev.clear()
+		return
+	var trigger := String(snap.get("trigger", ""))
+	var weapon := String(snap.get("weapon", ""))
+	if trigger == "" or trigger == "hold_auto":
+		_cadence_prev = snap
+		return
+	if _cadence_prev.is_empty() or String(_cadence_prev.get("trigger", "")) != trigger or String(_cadence_prev.get("weapon", "")) != weapon:
+		_cadence_prev = snap
+		return
+	var prev_win := String(_cadence_prev.get("window", "idle"))
+	var win := String(snap.get("window", "idle"))
+	match trigger:
+		"press":
+			if bool(snap.get("reloading", false)) and win == "open" and prev_win != "open":
+				_play_cadence("cadence_rivet_notch_open")
+			elif win == "hit" and prev_win != "hit":
+				_play_cadence("cadence_rivet_notch_hit")
+			elif bool(snap.get("reloading", false)) and win == "spent" and prev_win != "spent":
+				_play_cadence("cadence_rivet_spent")
+		"tap_charge":
+			var was_charging := bool(_cadence_prev.get("charging", false))
+			var charging := bool(snap.get("charging", false))
+			var was_full := was_charging and float(_cadence_prev.get("charge", 0.0)) >= 0.999
+			var is_full := charging and float(snap.get("charge", 0.0)) >= 0.999
+			if is_full and not was_full:
+				_play_cadence("cadence_sable_full")
+			elif was_charging and not charging and float(snap.get("recover", 0.0)) > 0.0:
+				_play_cadence("cadence_sable_bolt")
+		"lob_snap":
+			if win == "open" and prev_win != "open":
+				_play_cadence("cadence_kest_window")
+			elif win == "hit" and prev_win != "hit":
+				_play_cadence("cadence_kest_snap")
+		"beats":
+			if win == "open" and prev_win != "open":
+				_play_cadence("cadence_tarn_window")
+			elif win == "hit" and prev_win != "hit":
+				_play_cadence("cadence_tarn_rend")
+		"stamp":
+			if win == "open" and prev_win != "open":
+				_play_cadence("cadence_tally_beat")
+			if int(snap.get("stamp_streak", 0)) > int(_cadence_prev.get("stamp_streak", 0)):
+				_play_cadence("cadence_tally_paid")
+		"lock":
+			var was_painted := bool(_cadence_prev.get("painted", false))
+			var painted := bool(snap.get("painted", false))
+			var prev_stage := String(_cadence_prev.get("lock_stage", "idle"))
+			var stage := String(snap.get("lock_stage", "idle"))
+			if painted and stage == "rail" and not (was_painted and prev_stage == "rail"):
+				_play_cadence("cadence_cannon_lock")
+			elif win == "hit" and prev_win != "hit":
+				_play_cadence("cadence_cannon_rail")
+			elif was_painted and not painted and prev_stage == "barrage" and float(snap.get("recover", 0.0)) > 0.0:
+				_play_cadence("cadence_cannon_barrage")
+	_cadence_prev = snap
+
+
+func _wire_rail() -> void:
+	var buffs = ctx.get("buffs") if ctx != null else null
+	if buffs == null or buffs == _rail_wired_buffs:
+		return
+	if _rail_wired_buffs != null and is_instance_valid(_rail_wired_buffs) and _rail_wired_buffs.has_signal("buff_changed"):
+		if _rail_wired_buffs.buff_changed.is_connected(_on_buff_changed):
+			_rail_wired_buffs.buff_changed.disconnect(_on_buff_changed)
+	_rail_wired_buffs = buffs
+	if buffs.has_signal("buff_changed") and not buffs.buff_changed.is_connected(_on_buff_changed):
+		buffs.buff_changed.connect(_on_buff_changed)
+	_sync_rail_ids()
+
+
+func _sync_rail_ids() -> void:
+	_rail_ids.clear()
+	var buffs = ctx.get("buffs") if ctx != null else null
+	if buffs == null or not buffs.has_method("active_rows"):
+		return
+	for row in buffs.active_rows():
+		var id := String(row.get("id", ""))
+		if id != "":
+			_rail_ids[id] = true
+
+
+func _in_play_for_rail() -> bool:
+	var flow = ctx.get("flow") if ctx != null else null
+	if flow == null or not flow.has_method("in_play"):
+		return true
+	return bool(flow.in_play())
+
+
+func _play_rail(kind: String) -> void:
+	play(kind, 0.0, 1.0, "UI")
+
+
+func _on_buff_changed() -> void:
+	var buffs = ctx.get("buffs") if ctx != null else null
+	if buffs == null or not buffs.has_method("active_rows"):
+		_rail_ids.clear()
+		return
+	var now_ids := {}
+	for row in buffs.active_rows():
+		var id := String(row.get("id", ""))
+		if id != "":
+			now_ids[id] = true
+	if not _in_play_for_rail():
+		_rail_ids = now_ids
+		return
+	var added := false
+	for id in now_ids:
+		if not _rail_ids.has(id):
+			added = true
+			break
+	var removed := false
+	for id in _rail_ids:
+		if not now_ids.has(id):
+			removed = true
+			break
+	_rail_ids = now_ids
+	if added:
+		_play_rail("rail_rise")
+	elif removed:
+		_play_rail("rail_sink")
+
+
+func _play_site_flip(site_key: String) -> void:
+	if site_key == "" or _visited_sites_seen.has(site_key):
+		return
+	_visited_sites_seen[site_key] = true
+	var flip_kind := "site_flip"
+	play(flip_kind, 0.0, 1.0, "UI")
+
+
+func _tend_site_flips() -> void:
+	var parent = get_parent()
+	var markers = parent.get("site_markers") if parent != null else null
+	if markers == null or not markers.has_method("visited_sites"):
+		return
+	for row in markers.visited_sites():
+		var key := String(row.get("key", ""))
+		var kind := String(row.get("kind", ""))
+		if key == "":
+			continue
+		if kind == "rogue":
+			var already := false
+			for seen in _visited_sites_seen:
+				if String(seen).begins_with("rogue:"):
+					already = true
+					break
+			if already:
+				_visited_sites_seen[key] = true
+				continue
+		_play_site_flip(key)
+
+
+static func parse_voice_args(args: PackedStringArray) -> Dictionary:
+	var mode := VOICE_SYNTH
+	for arg in args:
+		if arg.begins_with("--voice="):
+			var raw := arg.substr("--voice=".length()).strip_edges().to_lower()
+			mode = VOICE_TTS if raw == VOICE_TTS else VOICE_SYNTH
+	return {"mode": mode, "dir": OS.get_environment("SCRAPKEEP_VOICE_DIR").strip_edges()}
+
+
+func _configure_voice_from_args() -> void:
+	var all_args := PackedStringArray()
+	all_args.append_array(OS.get_cmdline_args())
+	all_args.append_array(OS.get_cmdline_user_args())
+	var parsed := parse_voice_args(all_args)
+	set_voice_mode(String(parsed["mode"]), String(parsed["dir"]))
+
+
+func set_voice_mode(mode: String, dir := "") -> void:
+	voice_mode = VOICE_TTS if mode.strip_edges().to_lower() == VOICE_TTS else VOICE_SYNTH
+	voice_dir = dir.strip_edges()
+	_voice_clips.clear()
+	_voice_manifest_loaded = false
+	if voice_mode != VOICE_TTS:
+		SfxBank.set_voice_sidecar(false, {})
+		return
+	_load_voice_manifest()
+	SfxBank.set_voice_sidecar(true, _voice_clips)
+
+
+func voice_manifest_loaded() -> bool:
+	return _voice_manifest_loaded
+
+
+func voice_clip_for(speaker: String, text: String) -> String:
+	if voice_mode != VOICE_TTS or speaker in SfxBank.SYNTH_ONLY_SPEAKERS:
+		return ""
+	return SfxBank.voice_clip_path(speaker, text)
+
+
+func _voice_candidate_dirs() -> Array[String]:
+	var out: Array[String] = []
+	if voice_dir != "":
+		out.append(voice_dir)
+		return out
+	var res_abs := ProjectSettings.globalize_path("res://").trim_suffix("/")
+	var repo_abs := res_abs.path_join("../..").simplify_path()
+	for sub in VOICE_DEFAULT_SUBPATHS:
+		if sub.begins_with("res://") or sub.begins_with("user://"):
+			out.append(sub)
+		else:
+			out.append(repo_abs.path_join(sub))
+	return out
+
+
+func _load_voice_manifest() -> void:
+	for base_dir in _voice_candidate_dirs():
+		if base_dir == "":
+			continue
+		var manifest_path := ""
+		var clip_root := base_dir
+		if base_dir.ends_with(".json") and FileAccess.file_exists(base_dir):
+			manifest_path = base_dir
+			clip_root = base_dir.get_base_dir()
+		elif FileAccess.file_exists(base_dir.path_join("manifest.json")):
+			manifest_path = base_dir.path_join("manifest.json")
+			clip_root = base_dir
+		elif FileAccess.file_exists(base_dir.get_base_dir().path_join("manifest.json")):
+			manifest_path = base_dir.get_base_dir().path_join("manifest.json")
+			clip_root = base_dir.get_base_dir()
+		if manifest_path == "":
+			continue
+		var raw := FileAccess.get_file_as_string(manifest_path)
+		if raw.strip_edges() == "":
+			continue
+		var parsed = JSON.parse_string(raw)
+		if not parsed is Dictionary:
+			continue
+		_ingest_voice_manifest(parsed, clip_root, base_dir)
+		_voice_manifest_loaded = true
+		return
+
+
+func _ingest_voice_manifest(data: Dictionary, clip_root: String, base_dir: String) -> void:
+	for list_key in ["clips", "entries", "lines"]:
+		var items = data.get(list_key)
+		if items is Array:
+			for entry in items:
+				if not entry is Dictionary:
+					continue
+				var speaker := String(entry.get("speaker", entry.get("caller", ""))).strip_edges().to_lower()
+				var text := String(entry.get("text", entry.get("line", "")))
+				var file := String(entry.get("file", entry.get("path", entry.get("wav", ""))))
+				_register_voice_clip(speaker, text, file, clip_root, base_dir)
+		elif items is Dictionary:
+			for k in items:
+				var key_s := String(k)
+				var val = items[k]
+				if val is String and key_s.begins_with(SfxBank.SAY):
+					var parts := SfxBank._said(key_s)
+					_register_voice_clip(String(parts[0]).to_lower(), String(parts[1]), val, clip_root, base_dir)
+				elif val is Dictionary:
+					for line_text in val:
+						_register_voice_clip(key_s.to_lower(), String(line_text), String(val[line_text]), clip_root, base_dir)
+	var speakers = data.get("speakers")
+	if speakers is Dictionary:
+		for speaker_key in speakers:
+			var sp := String(speaker_key).strip_edges().to_lower()
+			var lines = speakers[speaker_key]
+			if lines is Dictionary:
+				for line_text in lines:
+					_register_voice_clip(sp, String(line_text), String(lines[line_text]), clip_root, base_dir)
+
+
+func _register_voice_clip(speaker: String, text: String, file: String, clip_root: String, base_dir: String) -> void:
+	if speaker == "" or file == "" or speaker in SfxBank.SYNTH_ONLY_SPEAKERS:
+		return
+	var resolved := _resolve_voice_file(file, clip_root, base_dir)
+	if resolved == "":
+		return
+	var key_text := "*" if text == "" or text == "*" else text
+	_voice_clips["%s|%s" % [speaker, key_text]] = resolved
+	if key_text != "*":
+		_voice_clips["%s|%s" % [speaker, key_text.strip_edges().to_lower()]] = resolved
+
+
+static func _resolve_voice_file(file: String, clip_root: String, base_dir: String) -> String:
+	if file.is_absolute_path() or file.begins_with("res://") or file.begins_with("user://"):
+		return file if FileAccess.file_exists(file) else ""
+	for root_dir in [clip_root, base_dir, clip_root.path_join("voice")]:
+		var candidate := String(root_dir).path_join(file)
+		if FileAccess.file_exists(candidate):
+			return candidate
+	return ""
