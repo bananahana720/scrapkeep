@@ -830,6 +830,17 @@ func _test_voice_sidecar_loader() -> void:
 		audio.voice_clip_for("cannon", line) == ""
 		and SfxBank.voice_clip_path("cannon", line) == "")
 
+	# Pointing at the parent directory (arr_root, where manifest.json lives under voice/) also loads cleanly.
+	audio.set_voice_mode("tts", arr_root)
+	var parent_brindle_buf := SfxBank._say("brindle", brindle_line)
+	_t.check("parent dir containing voice/manifest.json resolves canonical WAV and skips audition_only",
+		audio.voice_manifest_loaded()
+		and audio.voice_clip_for("brindle", brindle_line) == canonical_wav
+		and parent_brindle_buf.size() == int(round(0.20 * Harmony.RATE))
+		and audio.voice_clip_for("brindle", audition_line) == ""
+		and audio.voice_clip_for("cannon", line) == "",
+		"loaded=%s clip=%s size=%d" % [str(audio.voice_manifest_loaded()), audio.voice_clip_for("brindle", brindle_line), parent_brindle_buf.size()])
+
 	# Switching back to synth or calling Audio.reset_for_tests() restores synth cleanly.
 	audio.set_voice_mode("synth")
 	_t.check("set_voice_mode('synth') restores procedural synth for Sable",

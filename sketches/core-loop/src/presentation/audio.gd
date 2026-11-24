@@ -6009,6 +6009,9 @@ func _load_voice_manifest() -> void:
 		elif FileAccess.file_exists(base_dir.path_join("manifest.json")):
 			manifest_path = base_dir.path_join("manifest.json")
 			clip_root = base_dir
+		elif FileAccess.file_exists(base_dir.path_join("voice").path_join("manifest.json")):
+			manifest_path = base_dir.path_join("voice").path_join("manifest.json")
+			clip_root = base_dir
 		elif FileAccess.file_exists(base_dir.get_base_dir().path_join("manifest.json")):
 			manifest_path = base_dir.get_base_dir().path_join("manifest.json")
 			clip_root = base_dir.get_base_dir()
