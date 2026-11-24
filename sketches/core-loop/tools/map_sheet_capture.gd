@@ -8,7 +8,8 @@ extends SceneTree
 #   beam        8 poses on the riding lines: the drop-in, five on the ride in, then about 150 m and about 50 m from the
 #               landmark's beam (the 50 m pose is the PF-28 near-fade read: light, not a wall). The camera faces the
 #               ride (the graph's shortest way to the landmark, LOOK_STEPS nodes ahead), turned in to MAX_BEARING_DEG
-#               of the beam at most, so the beam stands in frame but not at its centre. --control=1 hides the beam
+#               of the beam at most, so the beam stands in frame but not at its centre. Where the beam's foot would
+#               stand over the top of the frame (the near reads) the camera looks up just enough to show it. --control=1 hides the beam
 #               (AncientBeam.visible = false) and changes nothing else.
 #   silhouette  6 fight poses on the riding lines, spread from the drop-in to the landmark, each with 2 to 5 real world 1
 #               machines staged ahead of the ball. The ground, sky and scenery draw flat in SKY (a fog that swallows
@@ -25,11 +26,13 @@ extends SceneTree
 # Exit 0 done, 2 bad arguments or no display, 3 the output folder, 4 the game or a pose failed.
 #
 # Limits. The machines are staged: spawned through the game's own spawner where each pose puts them, given STAGE_TICKS
-# to settle, then stilled (process off), so none attacks and none is mid-move. A staged pose is kept only when every
-# machine is in frame, unblocked from the lens by ground, and apart from the others on screen; otherwise the next line
-# node near that point of the ride is tried. Calm is on, so no director pack joins; any other enemy is hidden and
-# counted in frames.json. Beam poses read the stage graph's LINE nodes with SIGHT_OK, none roofed; a NEAR_M pose no
-# line reaches stands on open sighted ground instead and records on_line false.
+# to settle, then stilled (process off), so none attacks and none is mid-move. A staging is kept only when every
+# machine is in frame, apart from the others on screen, reached by nine sight rays across its body, and keeps MIN_COVER
+# of its black pixels against the same frame with every other 3D node hidden (a prop with no collider can cut it);
+# otherwise the next line node near that point of the ride is tried. Calm is on, so no director pack joins; any other
+# enemy is hidden, and so is every drawing the flat-sky fog cannot swallow, each counted in frames.json for the pose
+# that hid it. Beam poses read the stage graph's LINE nodes with SIGHT_OK, none roofed; a NEAR_M pose no line reaches
+# stands on open sighted ground instead and records on_line false.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -55,18 +58,27 @@ const POSE_GAP_M := 40.0
 const NEAR_TOLERANCE_M := 20.0
 const LOOK_STEPS := 5
 const MAX_BEARING_DEG := 40.0
+# The chase camera's resting pitch (chase_camera.gd snap) and the most it looks up (its look clamp). A beam pose looks
+# up from rest only when the beam's foot would stand higher than FOOT_ABOVE_DEG over the frame's centre (the view is
+# 65 degrees tall, so its top edge stands 32.5 over), and then just enough to hold it there, as a player looks up at it.
+const REST_PITCH := -0.30
+const MAX_PITCH := 0.55
+const FOOT_ABOVE_DEG := 24.0
 const EYE_LIFT := 1.2
 const SETTLE := 40
 # Silhouette staging: machines a pose, in pose order; the kinds go round in this order.
 const COUNTS := [3, 5, 2, 4, 3, 5]
 const KINDS := ["chaser", "lobber", "swatter", "hooker", "netcaster", "boom_tender"]
 const SPREAD_M := 7.0
-const NEAR_STAND_M := 22.0
-const DEPTH_STEP_M := 9.0
+const NEAR_STAND_M := 16.0
+const DEPTH_STEP_M := 7.0
 const STAND_LIFT := 1.0
 const STAGE_TICKS := 10
-const TRIES := 8
+const TRIES := 12
 const SCREEN_MARGIN := 24.0
+const SIGHT_SPAN := 0.7
+# A staging is kept only when every machine keeps this share of its silhouette in the drawn frame.
+const MIN_COVER := 0.92
 const SKY := Color(0.78, 0.86, 0.93)
 const INK := Color(0.0, 0.0, 0.0)
 
@@ -77,6 +89,8 @@ var beam: Node3D
 var records: Array = []
 var failed := ""
 var _ink: StandardMaterial3D
+var _foreign := 0
+var _immune := 0
 
 
 func _initialize() -> void:
@@ -215,20 +229,31 @@ static func _pick(g, nodes: PackedInt32Array, axis: Vector2, target: float, take
 	return best
 
 
-static func _pose(id: String, kind: String, at: Vector3, heading: Vector3, axis: Vector2, node: int, on_line := true) -> Dictionary:
+static func _pose(id: String, kind: String, at: Vector3, heading: Vector3, axis: Vector2, node: int, on_line := true,
+		foot_y := -INF) -> Dictionary:
 	var h := clamp_toward(heading, at, axis, MAX_BEARING_DEG)
 	return {"id": id, "kind": kind, "node": node, "at": at, "heading": h, "ride_heading": flat(heading),
-		"distance_m": flat_distance(at, axis), "bearing_deg": bearing_deg(h, at, axis), "on_line": on_line}
+		"distance_m": flat_distance(at, axis), "bearing_deg": bearing_deg(h, at, axis), "on_line": on_line,
+		"pitch": look_pitch(at + Vector3.UP * EYE_LIFT, foot_y, axis)}
+
+
+# The chase camera's pitch for an eye: REST_PITCH, raised (to MAX_PITCH at most) until a beam foot at foot_y stands
+# FOOT_ABOVE_DEG over the centre of the view.
+static func look_pitch(eye: Vector3, foot_y: float, axis: Vector2) -> float:
+	if not is_finite(foot_y):
+		return REST_PITCH
+	var elevation := atan2(foot_y - eye.y, maxf(flat_distance(eye, axis), 0.01))
+	return clampf(elevation - deg_to_rad(FOOT_ABOVE_DEG), REST_PITCH, MAX_PITCH)
 
 
 # The 8 beam poses for a park: the drop-in, RIDE_POSES evenly spaced (by distance from the beam) between it and the
-# first NEAR_M, then one pose at each NEAR_M. axis is the beam's foot on the ground plane.
-static func beam_poses(g, park: Dictionary, axis: Vector2) -> Array:
+# first NEAR_M, then one pose at each NEAR_M. axis is the beam's foot on the ground plane and foot_y its height.
+static func beam_poses(g, park: Dictionary, axis: Vector2, foot_y := -INF) -> Array:
 	var poses: Array = []
 	var spawn := Vector2(park["spawn"]["at"][0], park["spawn"]["at"][1])
 	var drop_node: int = g.nearest(spawn)
 	var drop := Vector3(spawn.x, g.position(drop_node).y, spawn.y)
-	poses.append(_pose("pose_01", "drop_in", drop, ParkMap.facing(float(park["spawn"]["heading_deg"])), axis, drop_node))
+	poses.append(_pose("pose_01", "drop_in", drop, ParkMap.facing(float(park["spawn"]["heading_deg"])), axis, drop_node, true, foot_y))
 	var nodes := line_nodes(g, true, false)
 	var open := line_nodes(g, true, false, ParkGraph.OPEN)
 	var taken: Array = [drop]
@@ -248,7 +273,7 @@ static func beam_poses(g, park: Dictionary, axis: Vector2) -> Array:
 			return []
 		var p: Vector3 = g.position(n)
 		taken.append(p)
-		poses.append(_pose("pose_%02d" % (poses.size() + 1), t[0], p, ride_heading(g, n, axis), axis, n, on_line))
+		poses.append(_pose("pose_%02d" % (poses.size() + 1), t[0], p, ride_heading(g, n, axis), axis, n, on_line, foot_y))
 	return poses
 
 
@@ -380,12 +405,12 @@ func _run() -> void:
 
 
 func _beam_mode(park: Dictionary, axis: Vector2) -> void:
-	var poses := beam_poses(graph, park, axis)
+	var poses := beam_poses(graph, park, axis, beam.bottom.y)
 	if poses.size() != BEAM_POSES:
 		return _fail("only %d beam poses on %s" % [poses.size(), opts["map"]])
 	beam.visible = not opts["control"]
 	for pose: Dictionary in poses:
-		await _place(pose["at"], pose["heading"])
+		await _place(pose["at"], pose["heading"], pose["pitch"])
 		var cam: Camera3D = root.get_viewport().get_camera_3d()
 		var mid := Vector3(axis.x, beam.bottom.y + beam.height() * 0.25, axis.y)
 		var path := await _shot(pose["id"])
@@ -419,11 +444,22 @@ func _silhouette_mode(axis: Vector2) -> void:
 		var full: int = poses[i]["count"]
 		var staged: Array = []
 		var kept: Dictionary = {}
+		var cover: Array = []
+		_foreign = 0
+		_immune = 0
 		for pose: Dictionary in poses[i]["tries"]:
 			await _place(pose["at"], pose["heading"])
 			cam = root.get_viewport().get_camera_3d()
 			staged = await _stage(pose, i, full)
 			var why := _staging_fault(cam, staged)
+			if why == "":
+				_hide_foreign(staged)
+				for m in staged:
+					_ink_over(m)
+				cover = await _cover(cam, staged)
+				var worst: float = cover.min() if not cover.is_empty() else 0.0
+				if worst < MIN_COVER:
+					why = "%s keeps %d%% of its silhouette" % [staged[cover.find(worst)].get_meta("map_sheet_kind"), roundi(worst * 100.0)]
 			if why == "":
 				kept = pose
 				break
@@ -432,14 +468,8 @@ func _silhouette_mode(axis: Vector2) -> void:
 			staged = []
 		if kept.is_empty():
 			return _fail("pose %d: no staging kept every machine in frame, unblocked and apart" % (i + 1))
-		var foreign := 0
-		for node in get_nodes_in_group("enemy"):
-			if node is Node3D and not staged.has(node) and node.visible:
-				node.visible = false
-				foreign += 1
 		var hidden := hidden_slot(i, full) if opts["control"] else -1
 		for s in staged.size():
-			_ink_over(staged[s])
 			staged[s].visible = s != hidden
 		var path := await _shot(kept["id"])
 		if path == "":
@@ -448,12 +478,13 @@ func _silhouette_mode(axis: Vector2) -> void:
 		rec["full_count"] = full
 		rec["shown_count"] = shown_count(full, opts["control"])
 		rec["hidden_slot"] = hidden
-		rec["foreign_enemies_hidden"] = foreign
+		rec["foreign_enemies_hidden"] = _foreign
+		rec["fog_immune_hidden"] = _immune
 		rec["machines"] = []
 		for s in staged.size():
 			var m: Node3D = staged[s]
 			rec["machines"].append({"slot": s, "kind": m.get_meta("map_sheet_kind"), "shown": s != hidden,
-				"at": _v(m.global_position), "screen_rect": _rect_json(_screen_rect(cam, m))})
+				"at": _v(m.global_position), "screen_rect": _rect_json(_screen_rect(cam, m)), "cover": snappedf(cover[s], 0.001)})
 		rec["label"] = "%d  %d of %d shown" % [i + 1, rec["shown_count"], full]
 		rec["sha256"] = FileAccess.get_sha256(path)
 		records.append(rec)
@@ -523,16 +554,99 @@ func _staging_fault(cam: Camera3D, staged: Array) -> String:
 		var r := _screen_rect(cam, m)
 		if r.size == Vector2.ZERO or not screen.encloses(r):
 			return "%s out of frame" % m.get_meta("map_sheet_kind")
-		var q := PhysicsRayQueryParameters3D.create(cam.global_position, _centre(m))
-		q.exclude = [ball_rid]
-		var hit := space.intersect_ray(q)
-		if not hit.is_empty() and hit["collider"] != m:
-			return "%s hidden behind %s" % [m.get_meta("map_sheet_kind"), hit["collider"]]
+		for point in _sight_points(cam, m):
+			var q := PhysicsRayQueryParameters3D.create(cam.global_position, point)
+			q.exclude = [ball_rid]
+			var hit := space.intersect_ray(q)
+			if not hit.is_empty() and hit["collider"] != m:
+				return "%s hidden behind %s" % [m.get_meta("map_sheet_kind"), hit["collider"]]
 		for other: Rect2 in rects:
 			if not apart(r, other):
 				return "%s overlaps another machine on screen" % m.get_meta("map_sheet_kind")
 		rects.append(r)
 	return ""
+
+
+# Hides every enemy that is not staged and every drawing the flat sky cannot swallow; the counts go in frames.json.
+func _hide_foreign(staged: Array) -> void:
+	for node in get_nodes_in_group("enemy"):
+		if node is Node3D and not staged.has(node) and node.visible:
+			node.visible = false
+			_foreign += 1
+	_immune += _hide_fog_immune(staged)
+
+
+# Each machine's share of its own silhouette that the drawn frame keeps: black pixels in its screen box as the game
+# draws it, over the same with every other 3D node (terrain, rows, scatter, props) hidden. A prop with no collider
+# that the sight rays miss still cuts the share.
+func _cover(cam: Camera3D, staged: Array) -> Array:
+	var rects: Array = staged.map(func(m): return _screen_rect(cam, m))
+	var drawn := await _grab()
+	var off: Array = []
+	for node in game.get_children():
+		if node is Node3D and node.visible and not staged.has(node) and not node.is_ancestor_of(cam) and node != cam:
+			node.visible = false
+			off.append(node)
+	for node in root.find_children("*", "Terrain3D", true, false):
+		if node.visible:
+			node.visible = false
+			off.append(node)
+	var bare := await _grab()
+	for node in off:
+		node.visible = true
+	var out: Array = []
+	for r: Rect2 in rects:
+		var whole := _ink_count(bare, r)
+		out.append(float(_ink_count(drawn, r)) / float(whole) if whole > 0 else 0.0)
+	return out
+
+
+func _grab() -> Image:
+	await _frames(3)
+	await RenderingServer.frame_post_draw
+	return root.get_texture().get_image()
+
+
+static func _ink_count(img: Image, r: Rect2) -> int:
+	var box := Rect2i(r).intersection(Rect2i(Vector2i.ZERO, img.get_size()))
+	var n := 0
+	for y in range(box.position.y, box.end.y):
+		for x in range(box.position.x, box.end.x):
+			var c := img.get_pixel(x, y)
+			if c.r + c.g + c.b < 0.3:
+				n += 1
+	return n
+
+
+# Hides every drawing outside the staged machines that the flat-sky fog cannot swallow (particles, sprites and labels,
+# and materials with fog off or an additive blend, such as glows and markers), so nothing but the machines stands out
+# of the sky. Returns how many it hid.
+func _hide_fog_immune(staged: Array) -> int:
+	var hidden := 0
+	for node in game.find_children("*", "GeometryInstance3D", true, false):
+		if not node.is_visible_in_tree() or staged.any(func(m): return m == node or m.is_ancestor_of(node)):
+			continue
+		if node is GPUParticles3D or node is CPUParticles3D or _fog_off(node):
+			node.visible = false
+			hidden += 1
+	return hidden
+
+
+static func _fog_off(node: GeometryInstance3D) -> bool:
+	if node is SpriteBase3D or node is Label3D:
+		return true
+	var materials: Array = [node.material_override, node.material_overlay]
+	if node is MeshInstance3D and node.mesh != null:
+		for i in node.mesh.get_surface_count():
+			materials.append(node.get_active_material(i))
+	for m in materials:
+		while m != null:
+			if m is BaseMaterial3D and (m.disable_fog or m.blend_mode != BaseMaterial3D.BLEND_MODE_MIX):
+				return true
+			if m is ShaderMaterial and m.shader != null and (m.shader.code.contains("fog_disabled") or m.shader.code.contains("blend_add")):
+				return true
+			m = m.next_pass
+	return false
 
 
 func _ink_over(m: Node3D) -> void:
@@ -554,9 +668,22 @@ func _meshes(m: Node3D) -> Array:
 	return m.find_children("*", "MeshInstance3D", true, false).filter(func(v): return v.is_visible_in_tree() and v.mesh != null)
 
 
-func _centre(m: Node3D) -> Vector3:
+# A 3 by 3 grid across a machine's box as the lens sees it (SIGHT_SPAN of its half width out from its centre, and of
+# its half height up and 0.6 of that down, so a foot on rough ground does not count as hidden); every ray to them must
+# reach it, so no ground hump cuts its silhouette.
+func _sight_points(cam: Camera3D, m: Node3D) -> Array:
 	var box := _box(m)
-	return box.get_center() if box.size != Vector3.ZERO else m.global_position
+	if box.size == Vector3.ZERO:
+		return [m.global_position]
+	var c := box.get_center()
+	var across := cam.global_transform.basis.x
+	var half_w := maxf(box.size.x, box.size.z) * 0.5 * SIGHT_SPAN
+	var half_h := box.size.y * 0.5 * SIGHT_SPAN
+	var out: Array = []
+	for u in [-1.0, 0.0, 1.0]:
+		for v in [-0.6, 0.0, 1.0]:
+			out.append(c + across * u * half_w + Vector3.UP * v * half_h)
+	return out
 
 
 func _box(m: Node3D) -> AABB:
@@ -583,13 +710,13 @@ func _screen_rect(cam: Camera3D, m: Node3D) -> Rect2:
 	return r
 
 
-func _place(point: Vector3, heading: Vector3) -> void:
+func _place(point: Vector3, heading: Vector3, pitch := REST_PITCH) -> void:
 	var body = game.player.body()
 	body.freeze = false
 	game.player.reset_to(point + Vector3.UP * EYE_LIFT)
 	await _ticks(2)
 	body.freeze = true
-	game.camera.snap(heading)
+	game.camera.snap(heading, pitch)
 	await _frames(SETTLE)
 
 

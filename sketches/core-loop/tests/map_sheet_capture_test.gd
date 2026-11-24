@@ -41,7 +41,7 @@ func _run() -> void:
 		if not t.check("%s carries its beam" % map_id, beam != null):
 			continue
 		var axis := Vector2(beam.bottom.x, beam.bottom.z)
-		_beam_poses(map_id, graph, park, axis)
+		_beam_poses(map_id, graph, park, axis, beam.bottom.y)
 		_fight_poses(map_id, graph, axis)
 		node.free()
 	holder.free()
@@ -74,6 +74,9 @@ func _helpers() -> void:
 	t.check("a heading inside the limit is kept", Tool.clamp_toward(Vector3.FORWARD, Vector3.ZERO, Vector2(10, -100), 40.0).is_equal_approx(Vector3.FORWARD))
 	t.check("rects that touch are not apart", not Tool.apart(Rect2(0, 0, 10, 10), Rect2(12, 0, 10, 10)))
 	t.check("rects with a gap are apart", Tool.apart(Rect2(0, 0, 10, 10), Rect2(20, 0, 10, 10)))
+	t.near("a far beam keeps the resting pitch", Tool.look_pitch(Vector3.ZERO, 50.0, Vector2(0, -1000)), Tool.REST_PITCH, 1e-6)
+	t.near("a beam overhead looks up to the clamp", Tool.look_pitch(Vector3.ZERO, 500.0, Vector2(0, -10)), Tool.MAX_PITCH, 1e-6)
+	t.near("a beam with no height keeps rest", Tool.look_pitch(Vector3.ZERO, -INF, Vector2(0, -10)), Tool.REST_PITCH, 1e-6)
 	for n in range(2, 6):
 		var slots := Tool.slot_offsets(n)
 		var spread := true
@@ -94,8 +97,8 @@ func _helpers() -> void:
 	t.eq("every world 1 kind is staged", kinds.size(), Tool.KINDS.size())
 
 
-func _beam_poses(map_id: String, graph, park: Dictionary, axis: Vector2) -> void:
-	var poses := Tool.beam_poses(graph, park, axis)
+func _beam_poses(map_id: String, graph, park: Dictionary, axis: Vector2, foot_y: float) -> void:
+	var poses := Tool.beam_poses(graph, park, axis, foot_y)
 	if not t.eq("%s has 8 beam poses" % map_id, poses.size(), Tool.BEAM_POSES):
 		return
 	t.eq("%s first pose is the drop-in" % map_id, poses[0]["kind"], "drop_in")
@@ -118,7 +121,8 @@ func _beam_poses(map_id: String, graph, park: Dictionary, axis: Vector2) -> void
 		var at: Vector3 = p["at"]
 		var h: Vector3 = p["heading"]
 		finite = finite and at.is_finite() and h.is_finite() and is_equal_approx(h.length(), 1.0) and absf(h.y) < 1e-5
-		framed = framed and absf(float(p["bearing_deg"])) <= Tool.MAX_BEARING_DEG + 0.01
+		framed = framed and absf(float(p["bearing_deg"])) <= Tool.MAX_BEARING_DEG + 0.01 \
+			and float(p["pitch"]) >= Tool.REST_PITCH and float(p["pitch"]) <= Tool.MAX_PITCH
 		if i > 0 and p["on_line"]:
 			ride_ok = ride_ok and graph.flags(p["node"]) & ParkGraph.LINE != 0 and graph.flags(p["node"]) & ParkGraph.SIGHT_OK != 0
 		if i > 0 and i < 6:
@@ -129,8 +133,9 @@ func _beam_poses(map_id: String, graph, park: Dictionary, axis: Vector2) -> void
 	t.check("%s poses are finite with flat unit headings" % map_id, finite)
 	t.check("%s ride poses are sighted line nodes between the drop-in and 150 m" % map_id, ride_ok)
 	t.check("%s poses stand apart" % map_id, apart)
-	t.check("%s every pose has the beam within %d degrees" % [map_id, int(Tool.MAX_BEARING_DEG)], framed)
-	print("[poses] %s %s" % [map_id, ", ".join(poses.map(func(p): return "%s %.0f m %.0f deg" % [p["kind"], p["distance_m"], p["bearing_deg"]]))])
+	t.check("%s every pose has the beam within %d degrees and a pitch the chase camera allows" % [map_id, int(Tool.MAX_BEARING_DEG)], framed)
+	t.check("%s the 50 m read looks up at the beam" % map_id, float(poses[7]["pitch"]) > Tool.REST_PITCH, str(poses[7]["pitch"]))
+	print("[poses] %s %s" % [map_id, ", ".join(poses.map(func(p): return "%s %.0f m %.0f deg pitch %.2f" % [p["kind"], p["distance_m"], p["bearing_deg"], p["pitch"]]))])
 
 
 func _fight_poses(map_id: String, graph, axis: Vector2) -> void:
