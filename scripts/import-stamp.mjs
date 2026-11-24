@@ -68,7 +68,8 @@ export function stampPath(root, sketch = DEFAULT_SKETCH) {
 export function writeImportStamp(root, sketch = DEFAULT_SKETCH, nowOrOptions = new Date()) {
   const isDate = nowOrOptions instanceof Date;
   const now = isDate ? nowOrOptions : (nowOrOptions?.now ?? new Date());
-  const godot = isDate ? godotIdentity() : (nowOrOptions?.godot ?? godotIdentity());
+  const godot =
+    !isDate && nowOrOptions && "godot" in nowOrOptions ? nowOrOptions.godot : godotIdentity();
   const state = sketchState(root, sketch);
   const file = stampPath(root, sketch);
   mkdirSync(path.dirname(file), { recursive: true });
@@ -91,7 +92,8 @@ export function writeImportStamp(root, sketch = DEFAULT_SKETCH, nowOrOptions = n
 
 // { ok, reason }. Uncommitted sketch edits, at the import or now, are not in any tree a stamp can
 // name, so either one refuses.
-export function checkImportStamp(root, sketch = DEFAULT_SKETCH, { godot = godotIdentity() } = {}) {
+export function checkImportStamp(root, sketch = DEFAULT_SKETCH, options = {}) {
+  const godot = "godot" in options ? options.godot : godotIdentity();
   const file = stampPath(root, sketch);
   if (!existsSync(path.join(root, sketch, ".godot")))
     return { ok: false, reason: `${sketch} has no .godot folder; it was never imported` };
