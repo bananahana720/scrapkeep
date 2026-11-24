@@ -530,5 +530,133 @@
         }
       ]
     }
-  }
+  },
+  "machinery": [
+    {
+      "node": "BreechCollar",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "z",
+        "m": 0.09,
+        "throw_s": 0.05,
+        "return_s": 0.32,
+        "curve": "out_quad"
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.6 and 5.3 (E2-06)",
+      "note": "The breech collar kicks 0.09 m back along the bore (MainBarrel +Z) on each shot and eases home; a re-trigger starts from where the collar stands, never snapping home first."
+    },
+    {
+      "node": "SplitPorts",
+      "bone": "JawUpper.R",
+      "fact": "gauge_fill",
+      "motion": "slide",
+      "start": {
+        "axis": "y",
+        "m": -0.07,
+        "rate": 22.0
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.6 and 5.3 (E2-06)",
+      "note": "The rear jaw slides on its port's up axis (bone +Y) as the lane's brackets close; at a full gauge it meets its partner flush over the bores, the lock."
+    },
+    {
+      "node": "SplitPorts",
+      "bone": "JawUpper.R",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "y",
+        "m": 0.03,
+        "throw_s": 0.05,
+        "return_s": 0.25,
+        "curve": "out_quad"
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.6 and 5.3 (E2-06)",
+      "note": "On the shot the jaw snaps open past rest from wherever it stands, then settles back to the open rest; a re-trigger carries on from where it is."
+    },
+    {
+      "node": "SplitPorts",
+      "bone": "JawLower.R",
+      "fact": "gauge_fill",
+      "motion": "slide",
+      "start": {
+        "axis": "y",
+        "m": 0.07,
+        "rate": 22.0
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.6 and 5.3 (E2-06)",
+      "note": "The rear jaw slides on its port's up axis (bone +Y) as the lane's brackets close; at a full gauge it meets its partner flush over the bores, the lock."
+    },
+    {
+      "node": "SplitPorts",
+      "bone": "JawLower.R",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "y",
+        "m": -0.03,
+        "throw_s": 0.05,
+        "return_s": 0.25,
+        "curve": "out_quad"
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.6 and 5.3 (E2-06)",
+      "note": "On the shot the jaw snaps open past rest from wherever it stands, then settles back to the open rest; a re-trigger carries on from where it is."
+    },
+    {
+      "node": "SplitPorts",
+      "bone": "JawUpper.L",
+      "fact": "gauge_fill",
+      "motion": "slide",
+      "start": {
+        "axis": "y",
+        "m": -0.07,
+        "rate": 22.0
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.6 and 5.3 (E2-06)",
+      "note": "The rear jaw slides on its port's up axis (bone +Y) as the lane's brackets close; at a full gauge it meets its partner flush over the bores, the lock."
+    },
+    {
+      "node": "SplitPorts",
+      "bone": "JawUpper.L",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "y",
+        "m": 0.03,
+        "throw_s": 0.05,
+        "return_s": 0.25,
+        "curve": "out_quad"
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.6 and 5.3 (E2-06)",
+      "note": "On the shot the jaw snaps open past rest from wherever it stands, then settles back to the open rest; a re-trigger carries on from where it is."
+    },
+    {
+      "node": "SplitPorts",
+      "bone": "JawLower.L",
+      "fact": "gauge_fill",
+      "motion": "slide",
+      "start": {
+        "axis": "y",
+        "m": 0.07,
+        "rate": 22.0
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.6 and 5.3 (E2-06)",
+      "note": "The rear jaw slides on its port's up axis (bone +Y) as the lane's brackets close; at a full gauge it meets its partner flush over the bores, the lock."
+    },
+    {
+      "node": "SplitPorts",
+      "bone": "JawLower.L",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "y",
+        "m": -0.03,
+        "throw_s": 0.05,
+        "return_s": 0.25,
+        "curve": "out_quad"
+      },
+      "source": "design-v3/PILOT-CADENCE.md sections 3.6 and 5.3 (E2-06)",
+      "note": "On the shot the jaw snaps open past rest from wherever it stands, then settles back to the open rest; a re-trigger carries on from where it is."
+    }
+  ]
 }
