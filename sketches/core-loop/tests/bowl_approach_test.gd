@@ -133,21 +133,36 @@ func _run() -> void:
 	_game.run.run_seed = RUN_SEED
 	var approach = _game.world.bowl_approach
 	var terrain = _game.ctx.terrain
-	# Flag off: nothing on either stage. The stage whose map names an approach is found, not assumed.
+	# Find the flume stage (whose approach and tally fields this test measures) and the first stage whose map names none.
 	var named := 0
+	var other := 0
+	for stage in [1, 2, 3, 4, 5, 6]:
+		var stage_map = terrain.map_for(stage)
+		var has_approach: bool = "approach" in stage_map and not stage_map.approach.is_empty()
+		if has_approach and "park" in stage_map and stage_map.park.get("map", "") == "park_flume":
+			named = stage
+		elif not has_approach and other == 0:
+			other = stage
+	if named == 0:
+		for stage in [1, 2, 3, 4, 5, 6]:
+			var stage_map = terrain.map_for(stage)
+			if "approach" in stage_map and not stage_map.approach.is_empty():
+				named = stage
+	# Flag off: nothing stands on any stage.
+	var flag_off_stages: Array[int] = [1, 2]
+	if other > 0 and not flag_off_stages.has(other):
+		flag_off_stages.append(other)
 	var bare := true
-	for stage in [1, 2]:
+	for stage in flag_off_stages:
 		_game.flow.enter_stage(stage, Vector3.ZERO, false)
 		await _frames(4)
 		bare = bare and approach.get_child_count() == 0 and approach.racks.is_empty() and approach.bridge.is_empty()
-		if not terrain.map_for(stage).approach.is_empty():
-			named = stage
 	_t.check("with the flag off nothing stands on any stage", bare, "%d children" % approach.get_child_count())
-	if not _t.check("one stage's map names an approach", named > 0, "stage %d" % named):
+	if not _t.check("one stage's map names an approach", named > 0 and other > 0, "stage %d, bare stage %d" % [named, other]):
+		_game.free()
 		quit(_t.verdict())
 		return
 	_game.ctx.tuning.set_option("approach", "on")
-	var other := 3 - named
 	_game.flow.enter_stage(other, Vector3.ZERO, false)
 	await _frames(4)
 	_t.check("with the flag on a map that names none still gets nothing", approach.get_child_count() == 0, "stage %d" % other)
@@ -162,6 +177,7 @@ func _run() -> void:
 	print("bowl_approach_test measure %s: line %.0f m; bridge at %.0f m; racks at %s m (real ground)" % [map.park.map, total,
 		float(planned["bridge"].get("along", -1.0)), str(planned["racks"].map(func(r: Dictionary) -> int: return int(r["along"])))])
 	if not _t.check("the flume gets its bridge and at least two racks", not approach.bridge.is_empty() and approach.racks.size() >= 2, "%d racks" % approach.racks.size()):
+		_game.free()
 		quit(_t.verdict())
 		return
 	var clear_of: Array = Posts.keep_clear(map)
@@ -304,4 +320,5 @@ func _run() -> void:
 	await _frames(4)
 	_t.check("the next stage clears it", approach.racks.is_empty() and approach.bridge.is_empty() and approach.furnace == null, "%d racks" % approach.racks.size())
 	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
+	_game.free()
 	quit(_t.verdict())

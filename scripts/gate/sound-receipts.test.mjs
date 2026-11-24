@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -10,6 +10,8 @@ import {
   PLANT_RATE,
   buildReceipt as levelsReceipt,
   measure,
+  measureAsync,
+  parseArgs as parseLevelsArgs,
   runPlants,
   tone,
 } from "./sound-levels-receipt.mjs";
@@ -303,5 +305,53 @@ test(
     const loud = measure(project);
     assert.equal(loud.pass, false);
     assert.match(loud.measured, /loudness fixture\/main/);
+  },
+);
+
+test("levels: parseArgs accepts --out and --jobs in both forms", () => {
+  assert.deepEqual(parseLevelsArgs(["--out", "a.json", "--jobs=4"]), { out: "a.json", jobs: 4 });
+  assert.deepEqual(parseLevelsArgs(["--out=b.json", "--jobs", "2"]), { out: "b.json", jobs: 2 });
+  assert.throws(() => parseLevelsArgs(["--jobs=0"]));
+  assert.throws(() => parseLevelsArgs(["--nope"]));
+});
+
+test(
+  "levels: measureAsync matches measure bit-for-bit across multiple clips and workers",
+  { skip: !ffmpeg && "ffmpeg not installed" },
+  async () => {
+    const project = mkdtempSync(path.join(os.tmpdir(), "sound-levels-async-"));
+    try {
+      const pack = path.join(project, "assets/music_ace/fixture");
+      mkdirSync(pack, { recursive: true });
+      wav(path.join(pack, "a.wav"), tone(12, PLANT_RATE, 240, 0.25), PLANT_RATE);
+      wav(path.join(pack, "b.wav"), tone(11, PLANT_RATE, 240, 0.25), PLANT_RATE);
+      wav(path.join(pack, "c.wav"), tone(2, PLANT_RATE, 240, 0.25), PLANT_RATE);
+      const write = (level) =>
+        writeFileSync(
+          path.join(pack, "manifest.json"),
+          JSON.stringify({
+            theme: "fixture",
+            level_db: level,
+            clips: {
+              a: { rate: PLANT_RATE, files: { full: "a.wav" }, loop: true },
+              b: { rate: PLANT_RATE, files: { full: "b.wav" }, loop: true },
+              c: { rate: PLANT_RATE, files: { full: "c.wav" }, loop: false },
+            },
+          }),
+        );
+      write(-3.1);
+      const syncOk = measure(project);
+      const asyncOk = await measureAsync(project, { jobs: 3 });
+      assert.deepEqual(asyncOk, syncOk);
+      assert.equal(asyncOk.pass, true, asyncOk.measured);
+
+      write(-3.1 + 6);
+      const syncLoud = measure(project);
+      const asyncLoud = await measureAsync(project, { jobs: 3 });
+      assert.deepEqual(asyncLoud, syncLoud);
+      assert.equal(asyncLoud.pass, false);
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
   },
 );

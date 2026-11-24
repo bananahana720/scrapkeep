@@ -17,7 +17,7 @@
 // The packed Oggs are gitignored. When a clip's stems are not on this machine the receipt does not
 // pass, and when none are it says "no data" first (scripts/music/mx stems-sync copies them in).
 //
-//   node scripts/gate/sound-levels-receipt.mjs [--out <file>]
+//   node scripts/gate/sound-levels-receipt.mjs [--out <file>] [--jobs <n>]
 import { cleanHead } from "./sound-recipes-receipt.mjs";
 import { realpathSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
@@ -35,8 +35,10 @@ import {
   hashFindings,
   judge,
   measureGame,
+  measureGameAsync,
   meter,
   readManifests,
+  resolveJobs,
 } from "../audio-gate.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -187,9 +189,53 @@ export function measure(project) {
   });
 }
 
-function main(argv) {
+export async function measureAsync(project, { jobs } = {}) {
+  const ffmpeg = hasFfmpeg();
+  const manifests = readManifests(project);
+  const tracks = gameTracks(manifests);
+  const present = tracks.filter(
+    (t) => t.files.length > 0 && t.files.every((f) => existsSync(f)),
+  ).length;
+  const plant = ffmpeg ? runPlants() : null;
+  if (!ffmpeg || present === 0)
+    return buildReceipt({ clips: tracks.length, present, plant, ffmpeg });
+  const { rows, found } = await measureGameAsync(manifests, { jobs });
+  return buildReceipt({
+    clips: tracks.length,
+    present,
+    rows,
+    found: [...found, ...hashFindings(project, manifests)],
+    plant,
+    ffmpeg,
+  });
+}
+
+export function parseArgs(argv) {
   const args = {};
-  for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    const value = (flag) =>
+      arg === flag && i + 1 < argv.length
+        ? argv[++i]
+        : arg.startsWith(flag + "=")
+          ? arg.slice(flag.length + 1)
+          : null;
+    let v;
+    if ((v = value("--out")) !== null) args.out = v;
+    else if ((v = value("--jobs")) !== null) args.jobs = resolveJobs(v);
+    else throw new Error("unknown argument: " + arg);
+  }
+  return args;
+}
+
+async function main(argv) {
+  let args;
+  try {
+    args = parseArgs(argv);
+  } catch (e) {
+    console.error(String(e.message ?? e));
+    return 2;
+  }
   // Always this checkout's own game folder: the head below is this checkout's, so no other folder may be measured.
   args.project = path.join(root, "sketches/core-loop");
   // The head comes from the checkout, and only a clean one: an edited manifest or hash list judges no commit.
@@ -200,7 +246,10 @@ function main(argv) {
     console.error(String(e.message ?? e));
     return 2;
   }
-  const receipt = { ...measure(path.resolve(args.project)), head };
+  const receipt = {
+    ...(await measureAsync(path.resolve(args.project), { jobs: args.jobs })),
+    head,
+  };
   const ordered = {
     head: receipt.head,
     pass: receipt.pass,
@@ -214,4 +263,4 @@ function main(argv) {
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exit(main(process.argv.slice(2)));
+  process.exit(await main(process.argv.slice(2)));
