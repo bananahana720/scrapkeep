@@ -165,4 +165,6 @@ func _run() -> void:
 	t.check("KS-bat", live and near and drone.batted == 1,
 		"live %s, drone not inside the ball %s, batted %d" % [live, near, drone.batted])
 	drone.free()
-	quit(t.verdict())
+	var code := t.verdict()
+	game.free()
+	quit(code)
