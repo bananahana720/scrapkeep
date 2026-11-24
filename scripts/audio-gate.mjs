@@ -1,8 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
 
 // The alpha's audio check for sketches/core-loop, the "Sound and music" half of the placeholder gate.
 //   cue        a special-enemy or boss cue named in design-v3/sound/INTEGRATION.md that the game cannot
@@ -24,7 +26,7 @@ import { fileURLToPath } from "node:url";
 // Loudness skips clips and files under 10 s (stingers, fanfares, short beds): the target is EBU R 128
 // integrated programme loudness (ITU-R BS.1770 gating), a whole-programme measure that means little
 // over a few seconds. True peak (BS.1770 4x oversampled) and seams are checked on every clip.
-// Run: node scripts/audio-gate.mjs [--project <dir>] [--music <dir>]... [--loops <regex>] [--json] [--cues-only]
+// Run: node scripts/audio-gate.mjs [--project <dir>] [--music <dir>]... [--loops <regex>] [--jobs <n>] [--json] [--cues-only]
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -232,13 +234,14 @@ export function meter(samples, rate) {
 export function seamStep(samples, exit, loopAt) {
   const frames = samples.length / 2;
   const end = Math.min(exit, frames);
-  const steps = [];
+  const count = Math.max(0, Math.ceil(end) - (loopAt + 1)) * 2;
+  const steps = new Float64Array(count);
+  let k = 0;
   for (let f = loopAt + 1; f < end; f++)
-    for (let c = 0; c < 2; c++) steps.push(Math.abs(samples[f * 2 + c] - samples[(f - 1) * 2 + c]));
-  steps.sort((a, b) => a - b);
-  const p = steps.length
-    ? steps[Math.min(steps.length - 1, Math.floor(steps.length * SEAM_PERCENTILE))]
-    : 0;
+    for (let c = 0; c < 2; c++)
+      steps[k++] = Math.abs(samples[f * 2 + c] - samples[(f - 1) * 2 + c]);
+  steps.sort();
+  const p = count ? steps[Math.min(count - 1, Math.floor(count * SEAM_PERCENTILE))] : 0;
   let wrap = 0;
   for (let c = 0; c < 2; c++)
     wrap = Math.max(wrap, Math.abs(samples[loopAt * 2 + c] - samples[(end - 1) * 2 + c]));
@@ -390,6 +393,126 @@ export function writeStemHashes(hashFile, stemsDir, named) {
   return lines.length;
 }
 
+const WORKER_FLAG = "audioGateWorker";
+const SELF_URL = new URL(import.meta.url);
+
+export function defaultJobs() {
+  return Math.max(1, Math.min(os.availableParallelism(), 16));
+}
+
+export function resolveJobs(jobs) {
+  if (jobs === undefined || jobs === null) return defaultJobs();
+  const n = Number(jobs);
+  if (!Number.isInteger(n) || n < 1)
+    throw new Error(`--jobs must be a positive integer, got ${jobs}`);
+  return n;
+}
+
+function measureTrack(t) {
+  const stems = t.files.map((f) => decode(f, t.rate));
+  const mix = new Float32Array(Math.max(...stems.map((s) => s.length)));
+  for (const s of stems) for (let i = 0; i < s.length; i++) mix[i] += s[i];
+  const r = judge(t.name, gain(mix, t.level), t.rate, t);
+  return {
+    row: r.row,
+    found: [...r.found, ...staleAgainstManifest(t, mix.length / 2, r.row.lufs)],
+  };
+}
+
+function measureFile(f, loop) {
+  const rate = probeRate(f);
+  return judge(path.basename(f), decode(f, rate), rate, { loop });
+}
+
+function missingClipsFinding(missing) {
+  return {
+    kind: "unchecked",
+    where: MUSIC_DIR,
+    what: `${missing.length} clip(s) have no local stems (the Oggs are not committed): ${missing.slice(0, 4).join(", ")}${missing.length > 4 ? ", ..." : ""}`,
+  };
+}
+
+function runWorkerItem(item) {
+  if (item.kind === "track") return measureTrack(item.track);
+  if (item.kind === "file") return measureFile(item.file, item.loop);
+  throw new Error(`unknown audio-gate worker item kind: ${item.kind}`);
+}
+
+function send(port, msg) {
+  // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Node worker_threads MessagePort, not window.postMessage
+  port.postMessage(msg);
+}
+
+async function runInWorkerPool(items, jobs, syncRunner) {
+  const count = resolveJobs(jobs);
+  if (items.length === 0) return [];
+  const concurrency = Math.min(count, items.length);
+  if (concurrency <= 1) return items.map(syncRunner);
+
+  const results = new Array(items.length);
+  const workers = [];
+  let nextIndex = 0;
+  let completed = 0;
+  let settled = false;
+
+  try {
+    await new Promise((resolve, reject) => {
+      const fail = (err) => {
+        if (settled) return;
+        settled = true;
+        reject(err instanceof Error ? err : new Error(String(err)));
+      };
+
+      for (let i = 0; i < concurrency; i++) {
+        const worker = new Worker(SELF_URL, {
+          workerData: { [WORKER_FLAG]: true },
+          execArgv: [],
+        });
+        let idle = false;
+        workers.push(worker);
+
+        const dispatch = () => {
+          if (settled) return;
+          if (nextIndex >= items.length) {
+            idle = true;
+            send(worker, { done: true });
+            return;
+          }
+          const index = nextIndex++;
+          send(worker, { index, item: items[index] });
+        };
+
+        worker.on("message", (msg) => {
+          if (settled) return;
+          if (!msg.ok) {
+            fail(msg.error);
+            return;
+          }
+          results[msg.index] = msg.result;
+          completed += 1;
+          if (completed === items.length) {
+            settled = true;
+            resolve();
+            return;
+          }
+          dispatch();
+        });
+
+        worker.on("error", fail);
+        worker.on("exit", (code) => {
+          if (!settled && (!idle || code !== 0))
+            fail(new Error(`audio-gate worker exited with code ${code}`));
+        });
+
+        dispatch();
+      }
+    });
+    return results;
+  } finally {
+    await Promise.allSettled(workers.map((w) => w.terminate()));
+  }
+}
+
 export function measureGame(manifests) {
   const rows = [];
   const found = [];
@@ -399,19 +522,32 @@ export function measureGame(manifests) {
       missing.push(t.name);
       continue;
     }
-    const stems = t.files.map((f) => decode(f, t.rate));
-    const mix = new Float32Array(Math.max(...stems.map((s) => s.length)));
-    for (const s of stems) for (let i = 0; i < s.length; i++) mix[i] += s[i];
-    const r = judge(t.name, gain(mix, t.level), t.rate, t);
+    const r = measureTrack(t);
     rows.push(r.row);
-    found.push(...r.found, ...staleAgainstManifest(t, mix.length / 2, r.row.lufs));
+    found.push(...r.found);
   }
-  if (missing.length)
-    found.push({
-      kind: "unchecked",
-      where: MUSIC_DIR,
-      what: `${missing.length} clip(s) have no local stems (the Oggs are not committed): ${missing.slice(0, 4).join(", ")}${missing.length > 4 ? ", ..." : ""}`,
-    });
+  if (missing.length) found.push(missingClipsFinding(missing));
+  return { rows, found };
+}
+
+export async function measureGameAsync(manifests, { jobs } = {}) {
+  const present = [];
+  const missing = [];
+  for (const t of gameTracks(manifests)) {
+    if (t.files.length === 0 || !t.files.every((f) => existsSync(f))) {
+      missing.push(t.name);
+      continue;
+    }
+    present.push({ kind: "track", track: t });
+  }
+  const measured = await runInWorkerPool(present, jobs, runWorkerItem);
+  const rows = [];
+  const found = [];
+  for (const r of measured) {
+    rows.push(r.row);
+    found.push(...r.found);
+  }
+  if (missing.length) found.push(missingClipsFinding(missing));
   return { rows, found };
 }
 
@@ -421,10 +557,23 @@ export function measureFiles(files, loops) {
   const rows = [];
   const found = [];
   for (const f of files) {
-    const rate = probeRate(f);
-    const r = judge(path.basename(f), decode(f, rate), rate, {
-      loop: loops.test(path.basename(f)),
-    });
+    const r = measureFile(f, loops.test(path.basename(f)));
+    rows.push(r.row);
+    found.push(...r.found);
+  }
+  return { rows, found };
+}
+
+export async function measureFilesAsync(files, loops, { jobs } = {}) {
+  const items = files.map((file) => ({
+    kind: "file",
+    file,
+    loop: loops.test(path.basename(file)),
+  }));
+  const measured = await runInWorkerPool(items, jobs, runWorkerItem);
+  const rows = [];
+  const found = [];
+  for (const r of measured) {
     rows.push(r.row);
     found.push(...r.found);
   }
@@ -467,6 +616,7 @@ export function parseArgs(argv) {
     project: path.join(root, "sketches/core-loop"),
     music: [],
     loops: /loop/i,
+    jobs: defaultJobs(),
     json: false,
     cuesOnly: false,
     writeStemHashes: false,
@@ -486,6 +636,7 @@ export function parseArgs(argv) {
     else if ((v = value("--project")) !== null) args.project = path.resolve(v);
     else if ((v = value("--music")) !== null) args.music.push(path.resolve(v));
     else if ((v = value("--loops")) !== null) args.loops = new RegExp(v, "i");
+    else if ((v = value("--jobs")) !== null) args.jobs = resolveJobs(v);
     else throw new Error("unknown argument: " + arg);
   }
   return args;
@@ -607,7 +758,33 @@ export function run(args) {
   return { findings, rows };
 }
 
-function main() {
+export async function runAsync(args) {
+  const delivered = args.music.flatMap((d) => walk(d, AUDIO_EXT));
+  const manifests = readManifests(args.project);
+  const findings = [...missingInputs(args, manifests), ...cueFindings(args.project, delivered)];
+  const rows = [];
+  if (!args.cuesOnly) findings.push(...hashFindings(args.project, manifests));
+  if (!args.cuesOnly) findings.push(...pageFindings(args.project, manifests));
+  if (!args.cuesOnly) {
+    if (!hasFfmpeg())
+      findings.push({
+        kind: "unchecked",
+        where: "ffmpeg",
+        what: "ffmpeg not found; loudness, peaks and seams not measured",
+      });
+    else {
+      const gamePart = await measureGameAsync(manifests, { jobs: args.jobs });
+      const filesPart = await measureFilesAsync(delivered, args.loops, { jobs: args.jobs });
+      for (const part of [gamePart, filesPart]) {
+        rows.push(...part.rows);
+        findings.push(...part.found);
+      }
+    }
+  }
+  return { findings, rows };
+}
+
+async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.writeStemHashes) {
     const dir = path.join(args.project, MUSIC_DIR);
@@ -619,9 +796,33 @@ function main() {
     console.log(`wrote ${n} hashes to ${path.join(dir, STEM_HASHES)}`);
     return;
   }
-  const { findings, rows } = run(args);
+  const { findings, rows } = await runAsync(args);
   console.log(args.json ? JSON.stringify({ rows, findings }, null, 2) : report(findings, rows));
   process.exitCode = findings.length === 0 ? 0 : 1;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (!isMainThread && workerData?.[WORKER_FLAG] === true && parentPort) {
+  parentPort.on("message", (msg) => {
+    if (msg?.done) {
+      parentPort.close();
+      return;
+    }
+    try {
+      const result = runWorkerItem(msg.item);
+      send(parentPort, { ok: true, index: msg.index, result });
+    } catch (err) {
+      send(parentPort, {
+        ok: false,
+        index: msg.index,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  });
+}
+
+if (
+  isMainThread &&
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+)
+  await main();

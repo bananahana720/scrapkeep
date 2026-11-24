@@ -10,12 +10,20 @@ import {
   cueKey,
   cueList,
   decode,
+  defaultJobs,
   hasFfmpeg,
   judge,
+  measureFiles,
+  measureFilesAsync,
+  measureGame,
+  measureGameAsync,
   missingInputs,
   oggLongestPage,
   pageFindings,
+  readManifests,
+  resolveJobs,
   run,
+  runAsync,
   missingCues,
   parseArgs,
   parseEbur128,
@@ -168,11 +176,29 @@ test("seamStep passes a whole-cycle loop and catches a wrap that clicks", () => 
   assert.equal(seamStep(clean.s, 4800, 480).ok, true);
 });
 
-test("parseArgs takes repeated music folders and a loop pattern", () => {
-  const args = parseArgs(["--music", "a", "--music=b", "--loops", "seam", "--json", "--cues-only"]);
+test("parseArgs takes repeated music folders, a loop pattern and --jobs", () => {
+  const args = parseArgs([
+    "--music",
+    "a",
+    "--music=b",
+    "--loops",
+    "seam",
+    "--jobs=4",
+    "--json",
+    "--cues-only",
+  ]);
   assert.deepEqual(args.music, [path.resolve("a"), path.resolve("b")]);
   assert.ok(args.loops.test("x-seam.wav"));
+  assert.equal(args.jobs, 4);
   assert.equal(args.json && args.cuesOnly, true);
+  assert.equal(parseArgs(["--jobs", "2"]).jobs, 2);
+  assert.equal(parseArgs([]).jobs, defaultJobs());
+  assert.ok(defaultJobs() >= 1 && defaultJobs() <= 16);
+  assert.equal(resolveJobs(undefined), defaultJobs());
+  assert.throws(() => parseArgs(["--jobs", "0"]));
+  assert.throws(() => parseArgs(["--jobs=-2"]));
+  assert.throws(() => parseArgs(["--jobs=1.5"]));
+  assert.throws(() => parseArgs(["--jobs=abc"]));
   assert.throws(() => parseArgs(["--nope"]));
 });
 
@@ -393,3 +419,125 @@ test("a packed Ogg stored in one-second pages is named, a short-paged one passes
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test(
+  "measureGameAsync, measureFilesAsync and runAsync match sync metering bit-for-bit across workers",
+  { skip: !hasFfmpeg() && "no ffmpeg" },
+  async () => {
+    const dir = project({
+      "src/presentation/sfx_bank.gd": "",
+      // Varied durations and faults so workers complete out of order while output stays exact.
+      "assets/music_ace/alpha/long_clean.a.wav": sineWav(48000 * 13, 0.08, 1000, 48000),
+      "assets/music_ace/alpha/long_clean.b.wav": sineWav(48000 * 13, 0.078, 1000, 48000),
+      "assets/music_ace/alpha/short_hot.wav": sineWav(48000 * 2, 0.99, 440, 48000),
+      "assets/music_ace/alpha/loud_click.wav": sineWav(48000 * 12 + 12, 0.5, 1000, 48000),
+      "assets/music_ace/beta/clean_loop.wav": sineWav(48000 * 11, 0.158, 1000, 48000),
+      "assets/music_ace/beta/stale_len.wav": sineWav(48000 * 3, 0.158, 500, 48000),
+      "loose/one-loop.wav": sineWav(48000 * 11, 0.158, 1000, 48000),
+      "loose/two-click-loop.wav": sineWav(48000 * 2 + 12, 0.95, 1000, 48000),
+      "loose/three-stinger.wav": sineWav(48000 * 1, 0.1, 440, 48000),
+    });
+    try {
+      writeFileSync(
+        path.join(dir, "assets/music_ace/alpha/manifest.json"),
+        JSON.stringify({
+          theme: "alpha",
+          rate: 48000,
+          level_db: 0,
+          clips: {
+            long_clean: {
+              files: { a: "long_clean.a.wav", b: "long_clean.b.wav" },
+              loop: true,
+              sample_count: 48000 * 13,
+            },
+            short_hot: {
+              files: { full: "short_hot.wav" },
+              loop: false,
+            },
+            missing_one: {
+              files: { full: "does_not_exist.wav" },
+              loop: true,
+            },
+            loud_click: {
+              files: { full: "loud_click.wav" },
+              loop: true,
+            },
+          },
+        }),
+      );
+      writeFileSync(
+        path.join(dir, "assets/music_ace/beta/manifest.json"),
+        JSON.stringify({
+          theme: "beta",
+          rate: 48000,
+          level_db: 0,
+          clips: {
+            clean_loop: {
+              files: { full: "clean_loop.wav" },
+              loop: true,
+              sample_count: 48000 * 11,
+            },
+            stale_len: {
+              files: { full: "stale_len.wav" },
+              loop: false,
+              sample_count: 48000 * 3 + 7,
+            },
+            missing_two: {
+              files: { full: "also_missing.wav" },
+              loop: false,
+            },
+          },
+        }),
+      );
+
+      const manifests = readManifests(dir);
+      const syncGame = measureGame(manifests);
+      const asyncGame4 = await measureGameAsync(manifests, { jobs: 4 });
+      const asyncGame1 = await measureGameAsync(manifests, { jobs: 1 });
+      assert.deepEqual(asyncGame4, syncGame);
+      assert.deepEqual(asyncGame1, syncGame);
+      assert.deepEqual(
+        asyncGame4.rows.map((r) => r.name),
+        syncGame.rows.map((r) => r.name),
+      );
+      assert.ok(asyncGame4.found.some((f) => f.kind === "peak"));
+      assert.ok(asyncGame4.found.some((f) => f.kind === "loudness"));
+      assert.ok(asyncGame4.found.some((f) => f.kind === "seam"));
+      assert.ok(asyncGame4.found.some((f) => f.kind === "stale"));
+      assert.ok(asyncGame4.found.some((f) => f.kind === "unchecked"));
+
+      const looseFiles = [
+        path.join(dir, "loose/one-loop.wav"),
+        path.join(dir, "loose/two-click-loop.wav"),
+        path.join(dir, "loose/three-stinger.wav"),
+      ];
+      const syncFiles = measureFiles(looseFiles, /loop/i);
+      const asyncFiles = await measureFilesAsync(looseFiles, /loop/i, { jobs: 3 });
+      assert.deepEqual(asyncFiles, syncFiles);
+
+      const args = parseArgs(["--project", dir, "--music", path.join(dir, "loose"), "--jobs=4"]);
+      const syncRun = run(args);
+      const asyncRun = await runAsync(args);
+      assert.deepEqual(asyncRun, syncRun);
+
+      // CLI path uses runAsync with worker threads and must not recursively spawn main().
+      const cli = spawnSync(
+        process.execPath,
+        [
+          path.resolve("scripts/audio-gate.mjs"),
+          "--project",
+          dir,
+          "--music",
+          path.join(dir, "loose"),
+          "--jobs=4",
+          "--json",
+        ],
+        { encoding: "utf8" },
+      );
+      assert.equal(cli.status, 1, cli.stderr);
+      assert.deepEqual(JSON.parse(cli.stdout), { rows: syncRun.rows, findings: syncRun.findings });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  },
+);
