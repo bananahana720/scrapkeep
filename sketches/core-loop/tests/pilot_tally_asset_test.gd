@@ -11,6 +11,9 @@ extends SceneTree
 # 2026-10-11 (PD-TALLY fix round): the draw cap returns to the shell class's 10 (the gate
 # refused the 13-draw exception; now the registry's 11 for DrumBrackets). Both drums now share one mesh, Flywheel.R, spinning on their
 # common X axis (span 2 x 1.033 + 0.07 m); Flywheel.L is an empty at the left drum's centre.
+# 2026-11-23 (wave 46 unit E2-05): each drum's flanges are brass at alpha 0 with an index notch and
+# a charcoal index slot at alpha 0 (FLYWHEEL_MASKED), and DrumBrackets gains an index shoe per side
+# (BRACKET_VERTICES 136 to 232). Window alphas are unchanged; alpha 0 is the paint take mask.
 
 const PILOT := "res://assets/models/pilot_tally_anim.glb"
 const SHELL := "res://assets/models/world_one/shell_tally.glb"
@@ -57,7 +60,9 @@ const SOCKETS := {
 }
 # Window k of a drum face carries vertex alpha WINDOW_ALPHA[k] (shell_tally.py header).
 const WINDOW_ALPHA := [0.2, 0.4, 0.6, 0.8]
-const BRACKET_VERTICES := 136
+const BRACKET_VERTICES := 232
+# Flywheel.R's paint-proof vertices: both drums' brass flanges (352) and index slots (48).
+const FLYWHEEL_MASKED := 400
 const CORE_LIMIT := 0.985
 const REACH := 1.25
 
@@ -268,6 +273,7 @@ func _shell(shell: Node, document: Dictionary) -> void:
 	# Paint take mask (PAINT_SHADER step(0.05, alpha)): the brackets' charcoal paint vertices carry alpha 0 so
 	# paint never tints them; every other paint vertex is 1 or a window index, exactly as before.
 	var masked := 0
+	var wheel_masked := 0
 	var bracket_alpha_ok := brackets != null
 	var other_ok := true
 	var other_bad := 0
@@ -282,11 +288,15 @@ func _shell(shell: Node, document: Dictionary) -> void:
 					masked += 1
 					if c.a != 0.0:
 						bracket_alpha_ok = false
+				elif String(mi.name) == "Flywheel_R" and c.a == 0.0:
+					wheel_masked += 1
 				elif absf(c.a - 1.0) > 0.001 and not WINDOW_ALPHA.any(func(w): return absf(c.a - w) < 0.01):
 					other_ok = false
 					other_bad += 1
 	_check("DrumBrackets paint vertices have alpha 0", bracket_alpha_ok and masked == BRACKET_VERTICES,
 		"%d masked vertices, expected %d, all alpha exactly 0" % [masked, BRACKET_VERTICES])
+	_check("drum rims and index slots have alpha 0", wheel_masked == FLYWHEEL_MASKED,
+		"%d masked vertices, expected %d" % [wheel_masked, FLYWHEEL_MASKED])
 	_check("other Tally paint alpha is 1 or a window", other_ok, "%d stray vertices" % other_bad)
 	_check("shell draws unchanged", _counts(shell).draws == 11, "%d draws, expected 11" % _counts(shell).draws)
 	_check("shell has no skeleton", document.get("skins", []).is_empty())
@@ -341,7 +351,7 @@ func _shell(shell: Node, document: Dictionary) -> void:
 			var cols = wheel.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
 			if cols != null:
 				for c in cols:
-					if c.a < 0.95:
+					if c.a < 0.95 and c.a > 0.05:
 						found[snappedf(c.a, 0.05)] = true
 		var keys := found.keys()
 		keys.sort()
