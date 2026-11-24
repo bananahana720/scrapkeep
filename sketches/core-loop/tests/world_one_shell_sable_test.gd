@@ -13,15 +13,23 @@ extends SceneTree
 # at twelve o'clock under the ring band, on E1-03's closed lattice. Emitter_L and Emitter_R sit on the prong
 # points, mirrored, inside the 1.35 m weapon reach; the ring is closed; the heft layers stay clear of it; draws
 # in play stay within 16 and shell triangles under 6,500.
+# 2026-11-23 (E1-10b, ruling en): the cutaway hero pass. The emitter became a crown arc on the WeaponRing:
+# two yoke arms carry two emitter heads over the ball, Emitter_L and Emitter_R in their fork mouths, and the
+# ChargeHalo's volume between them stays clear; the ring reaches at most 1.70 m. Two ribbed coil masts stand
+# on the upper flanks at 11 and 1 o'clock as SpoolKit geometry (banked with the ring), the left one under the
+# CoilMast tip, and every crown vertex stays clear of them in (horizontal radius, height), so no aim clips
+# them; nothing outboard is baked into the level Pod mesh. Class V's doubled coil is a banked CoilMast node
+# wound round the left mast.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const ChargeHalo := preload("res://src/presentation/charge_halo.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 const SHELL := "res://assets/models/world_one/shell_sable.glb"
 const FELT := "res://assets/models/world_one/shell_sable_felt.glb"
 const LAYER := "res://assets/models/world_one/shell_sable_c%d.glb"
 const RIG := "res://assets/models/pilot_sable_anim.glb"
-const EXPECTED_CHECKS := 74
+const EXPECTED_CHECKS := 79
 const MAX_V := 15000
 const MAX_T := 16000
 # 2026-10-22: SpoolKit (the winch spool, copper and paint, its rubber folded into paint in charcoal) is its
@@ -29,21 +37,28 @@ const MAX_T := 16000
 # inside the 16-draw Hoberman pilot mecha cap (docs/decisions.tsv w13-PD).
 const MAX_DRAWS := 21
 const SHELL_DRAWS := 16
-# SpoolKit's charcoal paint vertices: 4 parts (rod, bracket beam, hatch box, fairlead beam) x 24 loops each.
-const SPOOL_DARK_LOOPS := 96
+# SpoolKit's charcoal paint vertices: the spool's 4 parts (rod, bracket beam, hatch box, fairlead beam) x 24
+# loops each, and each mast's boot (6 sides and its bottom cap) x 2 masts.
+const SPOOL_DARK_LOOPS := 96 + 2 * 30
 const SHELL_TRIS := 6500        # hero_assets_test's world-one shell band, pilot excluded
 const LAYER_TRIS := 1500
 const CORE_LIMIT := 0.985
 const LATTICE_OUT := 0.975
-const MAST_PAST := 0.20
-const MAST_HEAVY_PAST := 0.25
 const SPOOL_PAST := 0.12
 const TOL := 0.01
-# The weapon reach cap (wave 46 review 1.3): no weapon part past 1.35 m from the ball's centre.
-const EMITTER_REACH := 1.35
-# Emitter vertices hang below the ring collar's bottom (Godot Y -0.07); heft panels keep this far from them.
-const EMITTER_BELOW := -0.08
-const EMITTER_CLEAR := 0.05
+# The masts: vertical columns on X -/+MAST_X (Z 0) from inside the plating; the tips top out at MAST_TOP.
+const MAST_X := 0.48
+const MAST_TOP := 1.18
+const MAST_WIDE := 0.115
+# The visual reach cap (ruling en): no weapon part past 1.70 m from the ball's centre. The crown stays bold:
+# it reaches CROWN_BOLD or more, and its fork mouths sit CROWN_ABOVE or more over the centre.
+const CROWN_REACH := 1.70
+const CROWN_BOLD := 1.60
+const CROWN_ABOVE := 1.30
+# Crown vertices are the ring's above the band (Godot Y CROWN_FROM); they keep CROWN_CLEAR from the masts,
+# the heft layers and the halo, and stay outside the plating (CORE_LIMIT).
+const CROWN_FROM := 0.12
+const CROWN_CLEAR := 0.03
 const CLIPS := {"drop_land": 2.1666667, "big_cheer": 2.8, "wince": 0.5, "slump": 1.5, "phew": 0.8, "brace": 0.6, "heave": 0.8}
 const RIG_BONES := [
 	"root", "pelvis", "spine_01", "spine_02", "neck", "head", "crest", "ear.L", "ear.R",
@@ -229,12 +244,11 @@ func _check_tree(shell: Node) -> void:
 	var ring := pod.find_child("WeaponRing", true, false)
 	var el := ring.get_node_or_null("Emitter_L") as Node3D if ring != null else null
 	var er := ring.get_node_or_null("Emitter_R") as Node3D if ring != null else null
-	_report("sable emitter mounts", el != null and er != null and el.position.z < -1.1 and er.position.z < -1.1
-		and el.position.x < 0.0 and er.position.x > 0.0 and el.position.x > -0.05 and absf(el.position.x + er.position.x) < 0.001
-		and absf(el.position.y - er.position.y) < 0.001 and absf(el.position.z - er.position.z) < 0.001,
-		"Emitter_L and Emitter_R at twelve o'clock on the ring's front, mirrored in x (%s, %s)"
+	_report("sable emitter mounts", el != null and er != null and el.position.y >= CROWN_ABOVE and absf(el.position.y - er.position.y) < 0.001
+		and el.position.x < -0.15 and absf(el.position.x + er.position.x) < 0.001 and absf(el.position.z) < 0.001 and absf(er.position.z) < 0.001,
+		"Emitter_L and Emitter_R in the crown's fork mouths over the ball, mirrored in x (%s, %s)"
 		% [el.position if el != null else null, er.position if er != null else null])
-	_check_emitter(ring as MeshInstance3D, el, er)
+	_check_crown(shell, ring as MeshInstance3D, el, er)
 	var slots := []
 	if ring is MeshInstance3D:
 		for i in (ring as MeshInstance3D).mesh.get_surface_count():
@@ -243,36 +257,74 @@ func _check_tree(shell: Node) -> void:
 	_report("sable ring slots", slots == ["copper", "paint", "rubber"], "WeaponRing surfaces %s: bone band and collars, dark collar and shoe, copper winding, prongs and studs" % [slots])
 
 
-# The markers sit on the prong points: a copper vertex of the ring at each, and no ring vertex further
-# forward. Every ring vertex and both markers stay inside EMITTER_REACH, and the ring is closed.
-func _check_emitter(ring: MeshInstance3D, el: Node3D, er: Node3D) -> void:
-	var tips_l := 0
-	var tips_r := 0
-	var front := INF
-	var reach := 0.0
+# Points of every mesh under node (node included) above min_y, in root's frame.
+static func points_above(node: Node, root: Node, min_y: float) -> PackedVector3Array:
+	var out := PackedVector3Array()
+	for mi in meshes(node):
+		for p in points(mi, root):
+			if p.y > min_y:
+				out.append(p)
+	return out
+
+
+# Nearest pair of points in (horizontal radius, height): the ring yaws about Y against the banked masts and
+# layers, so two parts can meet only where both coordinates agree.
+static func yaw_gap(a: PackedVector3Array, b: PackedVector3Array) -> float:
+	var gap := INF
+	for p in a:
+		var pr := Vector2(p.x, p.z).length()
+		for q in b:
+			gap = minf(gap, Vector2(pr - Vector2(q.x, q.z).length(), p.y - q.y).length())
+	return gap
+
+
+# The crown: each fork has copper prong points above and below its marker; no ring vertex enters the
+# ChargeHalo's volume at the markers' midpoint (its widest hoop, the hoops' and sleeve's run along +Z);
+# the ring reaches between CROWN_BOLD and CROWN_REACH, stays off the plating above the band, clears the
+# masts in (horizontal radius, height), and is closed.
+func _check_crown(shell: Node, ring: MeshInstance3D, el: Node3D, er: Node3D) -> void:
+	var prongs := {"L": [0, 0], "R": [0, 0]}
 	var pts := PackedVector3Array()
 	if ring != null:
 		pts = points(ring, ring.get_parent())
-		for i in ring.mesh.get_surface_count():
-			if HeroAssets.slot_of(ring.mesh, i) != "copper":
-				continue
-			for v in (ring.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-				if el != null and v.distance_to(el.position) < 0.0005:
-					tips_l += 1
-				if er != null and v.distance_to(er.position) < 0.0005:
-					tips_r += 1
+		for v in points(ring, ring.get_parent(), "copper"):
+			for pair in [["L", el], ["R", er]]:
+				var m := pair[1] as Node3D
+				if m != null and absf(v.x - m.position.x) < 0.001 and absf(v.y - m.position.y) < 0.11 and absf(v.z) < 0.06:
+					prongs[pair[0]][0 if v.y > m.position.y else 1] += 1
+	_report("sable crown forks", prongs.L[0] >= 4 and prongs.L[1] >= 4 and prongs.R[0] >= 4 and prongs.R[1] >= 4,
+		"copper prong points above/below each fork mouth: L %s, R %s" % [prongs.L, prongs.R])
+	var mid := (el.position + er.position) * 0.5 if el != null and er != null else Vector3.ZERO
+	var wide := ChargeHalo.RADIUS_START + CROWN_CLEAR
+	var back := maxf(ChargeHalo.HOOP_PITCH * (ChargeHalo.HOOPS - 1), ChargeHalo.SLEEVE_TO) + CROWN_CLEAR
+	var inside := 0
+	var reach := 0.0
+	var plating := INF
 	for p in pts:
-		front = minf(front, p.z)
 		reach = maxf(reach, p.length())
-	var marks := [el, er].filter(func(m): return m != null)
-	var mark_reach := 0.0
-	for m in marks:
-		mark_reach = maxf(mark_reach, (m as Node3D).position.length())
-	_report("sable emitter tips", marks.size() == 2 and tips_l >= 1 and tips_r >= 1 and front >= (el.position.z - 0.0005),
-		"%d/%d copper vertices on L/R markers (a prong point each); nothing further forward (front Z %.4f, tips %.4f)"
-		% [tips_l, tips_r, front, el.position.z if el != null else 0.0])
-	_report("sable emitter reach", not pts.is_empty() and reach <= EMITTER_REACH and mark_reach <= EMITTER_REACH,
-		"ring reaches %.4f m, prong points %.4f m, cap %.2f" % [reach, mark_reach, EMITTER_REACH])
+		var d := p - mid
+		if Vector2(d.x, d.y).length() < wide and d.z > ChargeHalo.SLEEVE_FROM - CROWN_CLEAR and d.z < back:
+			inside += 1
+		if p.y > CROWN_FROM:
+			plating = minf(plating, p.length())
+	_report("sable crown gap clear", el != null and inside == 0,
+		"%d ring vertices inside the halo's %.2f m hoop and %.2f m run at %s" % [inside, wide, back, mid])
+	var mark_reach := maxf(el.position.length(), er.position.length()) if el != null and er != null else INF
+	_report("sable crown reach", not pts.is_empty() and reach >= CROWN_BOLD and reach <= CROWN_REACH and mark_reach <= CROWN_REACH,
+		"ring reaches %.4f m (bold %.2f, cap %.2f), fork mouths %.4f m" % [reach, CROWN_BOLD, CROWN_REACH, mark_reach])
+	_report("sable crown off the plating", plating >= CORE_LIMIT, "nearest crown vertex %.4f m from the centre, plating %.3f" % [plating, CORE_LIMIT])
+	var masts := PackedVector3Array()
+	for n in ["SpoolKit", "CoilMast"]:
+		var node := shell.find_child(n, true, false)
+		if node != null:
+			masts.append_array(points_above(node, shell, 0.5))
+	var crown := PackedVector3Array()
+	for p in pts:
+		if p.y > CROWN_FROM:
+			crown.append(p)
+	var gap := yaw_gap(crown, masts)
+	_report("sable crown clears the masts", not masts.is_empty() and gap >= CROWN_CLEAR,
+		"nearest crown-to-mast distance in (horizontal radius, height) %.4f m, want %.2f at any aim" % [gap, CROWN_CLEAR])
 	var edges := open_edges(ring) if ring != null else Vector2i(-1, -1)
 	_report("sable ring closed", edges == Vector2i.ZERO, "WeaponRing welded: %d open, %d non-manifold edges" % [edges.x, edges.y])
 
@@ -339,11 +391,14 @@ func _check_machinery(shell: Node) -> void:
 	var tip := points(mast, shell)
 	var top := Vector3.ZERO
 	for p in tip:
-		if p.length() > top.length():
+		if p.y > top.y:
 			top = p
-	_report("sable mast height", absf(top.length() - (LATTICE_OUT + MAST_PAST)) <= TOL,
-		"mast tip at radius %.3f, want %.3f (0.20 m past the lattice)" % [top.length(), LATTICE_OUT + MAST_PAST])
+	_report("sable mast height", absf(top.y - MAST_TOP) <= TOL and Vector2(top.x + MAST_X, top.z).length() <= 0.015,
+		"mint tip's point at %s, want X %.2f Y %.2f on the left mast" % [top, -MAST_X, MAST_TOP])
 	_report("sable mast clock", clock(top) >= 10.5 and clock(top) <= 11.5, "mast at %.2f o'clock from behind, want 11" % clock(top))
+	# Nothing outboard stands level: the Pod mesh stays inside the plating, everything past it banks.
+	var baked := far(points(pod, shell))
+	_report("sable pod inside", baked <= CORE_LIMIT, "the level Pod mesh reaches %.4f m, plating %.3f" % [baked, CORE_LIMIT])
 	# Accent surfaces: the mast tip and the rack, nothing else on the shell.
 	var accents := []
 	for mi in meshes(shell):
@@ -354,9 +409,10 @@ func _check_machinery(shell: Node) -> void:
 	_report("sable accent surfaces", accents == ["CoilMast", "WrenchRack"], "class_accent only on the mast tip and the rack: %s" % [accents])
 	_report("sable mast surface", mast.mesh.get_surface_count() == 1 and HeroAssets.slot_of(mast.mesh, 0) == "class_accent",
 		"the mint tip is the CoilMast node's one class_accent surface")
-	# Spool: the Pod's reach at 3 o'clock, and nothing at 1 o'clock.
+	# Spool: the Pod's reach at 3 o'clock; the masts mirrored at 11 and 1.
 	var spool_r := 0.0
 	var one_r := 0.0
+	var eleven_r := 0.0
 	var all_pod := points(pod, shell)
 	all_pod.append_array(tip)
 	# The spool is its own mesh under the Pod (SpoolKit, so the carrier bank tilts it), still part of the Pod's reach.
@@ -370,9 +426,24 @@ func _check_machinery(shell: Node) -> void:
 			spool_r = maxf(spool_r, p.length())
 		if c >= 0.5 and c <= 1.5:
 			one_r = maxf(one_r, p.length())
+		if c >= 10.5 and c <= 11.5:
+			eleven_r = maxf(eleven_r, p.length())
 	_report("sable spool bulge", absf(spool_r - (LATTICE_OUT + SPOOL_PAST)) <= TOL,
 		"Pod reaches %.3f at 3 o'clock, want %.3f (0.12 m past the lattice)" % [spool_r, LATTICE_OUT + SPOOL_PAST])
-	_report("sable nothing at one", one_r <= 1.0, "Pod reaches %.3f at 1 o'clock, inside the collider" % one_r)
+	_report("sable masts mirrored", one_r > 1.2 and absf(one_r - eleven_r) <= 0.001,
+		"Pod reaches %.3f at 1 o'clock and %.3f at 11: one mast each side" % [one_r, eleven_r])
+	var column := 0
+	var stray := 0
+	if spool != null:
+		for p in points(spool, shell):
+			if p.y < 0.75:
+				continue
+			if Vector2(absf(p.x) - MAST_X, p.z).length() <= MAST_WIDE:
+				column += 1
+			else:
+				stray += 1
+	_report("sable mast columns", column > 0 and stray == 0,
+		"%d SpoolKit vertices above Y 0.75 within %.3f m of the X -/+%.2f axes, %d outside" % [column, MAST_WIDE, MAST_X, stray])
 	# Rope: the fairlead carriage (MOTION-SPEC swing row) carries RopeExit round the collar at 1.06,
 	# outside the 1.0 collider, so the rope never leaves the centre. Fitted on a fresh load.
 	var fitted := _load(SHELL)
@@ -449,28 +520,26 @@ func _report_mask(label: String, root: Node) -> void:
 
 
 func _check_layers(shell: Node) -> void:
-	# The emitter: ring vertices below the collar.
-	var emitter := PackedVector3Array()
+	# The crown: ring vertices above the band.
+	var crown := PackedVector3Array()
 	var ring := shell.find_child("WeaponRing", true, false) as MeshInstance3D
 	if ring != null:
-		for p in points(ring, shell):
-			if p.y < EMITTER_BELOW:
-				emitter.append(p)
+		crown = points_above(ring, shell, CROWN_FROM)
 	for n in [2, 3, 4, 5]:
 		var layer := _load(LAYER % n)
 		var core := layer.find_child("Core", true, false)
-		var pod := layer.find_child("Pod", true, false) as MeshInstance3D
+		var pod := layer.find_child("Pod", true, false) as Node3D
 		var c := counts(layer)
 		_report("sable c%d split" % n, core != null and pod != null, "Core and Pod at the top, panels on the Pod")
 		_report("sable c%d budget" % n, c.t <= LAYER_TRIS and problems(layer).is_empty(),
 			"%d triangles within %d, clean slots and no overrides" % [c.t, LAYER_TRIS])
 		var cap := 2 if n == 3 else 1
 		_report("sable c%d draws" % n, c.s <= cap, "%d surfaces, layer cap %d (class III 2, others 1)" % [c.s, cap])
-		if pod != null:
+		if pod is MeshInstance3D:
 			var pod_slots := []
-			for i in pod.mesh.get_surface_count():
-				pod_slots.append(HeroAssets.slot_of(pod.mesh, i))
-			var pts := points(pod, layer)
+			for i in (pod as MeshInstance3D).mesh.get_surface_count():
+				pod_slots.append(HeroAssets.slot_of((pod as MeshInstance3D).mesh, i))
+			var pts := points(pod as MeshInstance3D, layer)
 			var top := -INF
 			var out_r := 0.0
 			for p in pts:
@@ -478,24 +547,29 @@ func _check_layers(shell: Node) -> void:
 				out_r = maxf(out_r, p.length())
 			if n == 2:
 				_report("sable c2 low", top < -0.35, "class II panels top out at Y %.3f, below -0.35" % top)
-			if n < 5:
-				_report("sable c%d panels" % n, pod_slots == ["paint"] and out_r <= 0.93, "one paint surface inside the lattice (%s, reach %.3f)" % [pod_slots, out_r])
-			else:
-				var coil_top := Vector3.ZERO
-				for p in pts:
-					if p.length() > coil_top.length():
-						coil_top = p
-				_report("sable c5 heavy coil", pod_slots == ["copper"] and absf(out_r - (LATTICE_OUT + MAST_HEAVY_PAST)) <= TOL
-					and clock(coil_top) >= 10.5 and clock(coil_top) <= 11.5,
-					"the doubled coil is one copper surface (%s) reaching %.3f at %.2f o'clock, want %.3f at 11 (one mast, 0.25 m)"
-					% [pod_slots, out_r, clock(coil_top), LATTICE_OUT + MAST_HEAVY_PAST])
-		var gap := INF
-		for mi in meshes(layer):
-			for p in points(mi, layer):
-				for q in emitter:
-					gap = minf(gap, p.distance_to(q))
-		_report("sable c%d clears emitter" % n, not emitter.is_empty() and gap >= EMITTER_CLEAR,
-			"nearest layer vertex %.3f m from the emitter (%d emitter vertices), want %.2f" % [gap, emitter.size(), EMITTER_CLEAR])
+			_report("sable c%d panels" % n, pod_slots == ["paint"] and out_r <= 0.93, "one paint surface inside the lattice (%s, reach %.3f)" % [pod_slots, out_r])
+		elif n == 5:
+			# The doubled coil is a banked bracket part (CoilMast) under the layer's empty Pod, wound round the left mast.
+			var coil := pod.get_node_or_null("CoilMast") as MeshInstance3D if pod != null else null
+			var coil_slots := []
+			var off_axis := Vector2(INF, 0.0)
+			var lo := INF
+			var hi := -INF
+			if coil != null:
+				for i in coil.mesh.get_surface_count():
+					coil_slots.append(HeroAssets.slot_of(coil.mesh, i))
+				for p in points(coil, layer):
+					var r := Vector2(p.x + MAST_X, p.z).length()
+					off_axis = Vector2(minf(off_axis.x, r), maxf(off_axis.y, r))
+					lo = minf(lo, p.y)
+					hi = maxf(hi, p.y)
+			_report("sable c5 heavy coil", coil_slots == ["copper"] and off_axis.x >= 0.1 and off_axis.y <= 0.16 and lo >= 0.9 and hi <= 1.09,
+				"the doubled coil is a banked CoilMast with one copper surface (%s) wound %.3f..%.3f m round the left mast from Y %.3f to %.3f"
+				% [coil_slots, off_axis.x, off_axis.y, lo, hi])
+		var gap := yaw_gap(crown, points_above(layer, layer, -INF))
+		_report("sable c%d clears the crown" % n, not crown.is_empty() and gap >= CROWN_CLEAR,
+			"nearest layer vertex %.3f m from the crown in (horizontal radius, height) (%d crown vertices), want %.2f at any aim"
+			% [gap, crown.size(), CROWN_CLEAR])
 		if n == 3:
 			var caps := far(points(core as MeshInstance3D, layer)) if core is MeshInstance3D else INF
 			_report("sable c3 caps", caps <= CORE_LIMIT + 0.0001, "thicker tread caps reach %.4f, limit %.3f" % [caps, CORE_LIMIT])
