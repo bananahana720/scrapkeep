@@ -20,10 +20,20 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_test_cli()
+	_test_stage()
 	_test_box_of()
 	_test_metrics_and_gates()
 	_test_stitch()
 	quit(_t.verdict())
+
+
+func _test_stage() -> void:
+	for w in [1, 2, 3]:
+		var stage := Capture.build_stage(w)
+		_t.check("world %d stage builds with floor and lights" % w,
+			stage != null and stage.get_node_or_null("StageFloor") != null
+			and stage.find_children("*", "DirectionalLight3D", true, false).size() == 2)
+		stage.free()
 
 
 func _test_cli() -> void:

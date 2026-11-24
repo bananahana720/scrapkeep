@@ -389,7 +389,7 @@ func _run() -> void:
 	EnemyMotion.motion_scale = 1.0
 	var out_dir := String(_opts["out"])
 	DirAccess.make_dir_recursive_absolute(out_dir)
-	var stage := _build_stage(int(_opts["world"]))
+	var stage := build_stage(int(_opts["world"]))
 	root.add_child(stage)
 	var vp := SubViewport.new()
 	vp.size = Vector2i(TILE_W, TILE_H)
@@ -427,32 +427,39 @@ func _run() -> void:
 	quit(0 if receipt["pass"] else 1)
 
 
-func _build_stage(world_id: int) -> Node3D:
+static func build_stage(world_id: int) -> Node3D:
 	var stage := Node3D.new()
 	stage.name = "KineticStage"
 	var row: Dictionary = WorldLook.ROWS.get(world_id, WorldLook.ROWS[1])
 	var env := Environment.new()
 	var sky := Sky.new()
 	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = row.get("sky", Color("6e9bc4"))
-	sky_mat.sky_horizon_color = row.get("horizon", Color("d8ccb6"))
+	sky_mat.sky_top_color = Color(row.get("fill_color", Color("a3c4e6"))).darkened(0.25)
+	sky_mat.sky_horizon_color = Color("d8ccb6")
 	sky_mat.ground_bottom_color = Palette.SANDSTONE.darkened(0.15)
-	sky_mat.ground_horizon_color = row.get("horizon", Color("d8ccb6"))
+	sky_mat.ground_horizon_color = Color("d8ccb6")
 	sky.sky_material = sky_mat
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = row.get("fill", Color("c8c0b4"))
-	env.ambient_light_energy = 0.65
+	env.ambient_light_color = row.get("ambient", Color("9db5cf"))
+	env.ambient_light_energy = maxf(0.45, float(row.get("energy", 0.28)) * 1.8)
+	env.tonemap_exposure = float(row.get("exposure", 1.1))
 	var we := WorldEnvironment.new()
 	we.environment = env
 	stage.add_child(we)
 	var sun := DirectionalLight3D.new()
-	sun.light_color = row.get("sun", Color("fff4df"))
-	sun.light_energy = 1.65
+	sun.light_color = row.get("sun_color", Color("ffd49a"))
+	sun.light_energy = float(row.get("sun_energy", 2.0))
 	sun.shadow_enabled = true
 	sun.rotation_degrees = Vector3(-42.0, 28.0, 0.0)
 	stage.add_child(sun)
+	var fill := DirectionalLight3D.new()
+	fill.light_color = row.get("fill_color", Color("a3c4e6"))
+	fill.light_energy = maxf(0.55, float(row.get("fill", 0.5)) * 1.2)
+	fill.shadow_enabled = false
+	fill.rotation_degrees = Vector3(float(row.get("fill_pitch", -50.0)), -140.0, 0.0)
+	stage.add_child(fill)
 	var floor_mi := MeshInstance3D.new()
 	floor_mi.name = "StageFloor"
 	var floor_box := BoxMesh.new()
