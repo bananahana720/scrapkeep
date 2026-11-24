@@ -96,3 +96,5 @@ Sync commit: 156b92797 (stage/alpha-w46, 24 November 2026, E2-01 PR #1254 merge:
 
 
 Sync commit: a4a17dcea (stage/alpha-w46, 24 November 2026, E2-02 PR #1255 merge: of the covered files only `sketches/core-loop/src/combat/combat.gd` and `sketches/core-loop/src/combat/weapons.gd` changed for Tally `stamp` and Cannon `lock` cadence; `BASE.range_m`, `enemy_struck.emit`, `_fire`, and every yard lock, unlock, wall drop, and overtime bell step are unchanged)
+
+Sync commit: 3f2081799 (stage/alpha-w46, 24 November 2026, E2-09 PR #1261 merge: of the covered files only `sketches/core-loop/src/combat/combat.gd` and `sketches/core-loop/src/movement/player_ball.gd` changed for the 12 Depth-1 keystones and `tree.world_one = tuning.world_one()` before `tree.open_checkpoint()`; yard locks, `BASE.range_m`, and Warden wake rules are unchanged; `yardlock-today` clean in 146,341 states, `yardlock-today-nostore` clean in 133,885 states, 11/11 plants caught)

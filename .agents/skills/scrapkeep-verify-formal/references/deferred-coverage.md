@@ -102,3 +102,5 @@ Sync commit: 156b92797 (stage/alpha-w46, 24 November 2026, E2-01 PR #1254 merge:
 
 
 Sync commit: a4a17dcea (stage/alpha-w46, 24 November 2026, E2-02 PR #1255 merge: of the covered files only `sketches/core-loop/src/combat/combat.gd` changed, adding Tally `stamp` fractional-pressure Balance Due and Cannon `lock` hold-paint lane branches; `_proc_volley` fires plain Tally Balance Due / plain Cannon Pulse without touching `weapon_driver`, pressure, paint, or starting secondary procs, so `in_play()`, all deferred queues, proc depth 1, and attempt-boundary clears are semantically unchanged)
+
+Sync commit: 3f2081799 (stage/alpha-w46, 24 November 2026, E2-09 PR #1261 merge: of the covered files only `sketches/core-loop/src/combat/combat.gd` changed for the 12 Depth-1 weapon keystones and `brass_drum`/`heavy_breech` pattern fields; all new `_fire` keystone fields stay gated on `source == "weapon"`, leaving `"item_proc"` plain and depth 1; `deferred-today` clean in 2,196,005 distinct states, 20/20 plants caught)

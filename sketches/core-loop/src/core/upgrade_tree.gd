@@ -553,6 +553,8 @@ func path() -> Array[String]:
 func gives_swap(slot: String, ability: String) -> bool:
 	for node_id in picks:
 		var n := node(class_id, node_id, world_one)
+		if n.is_empty() and not world_one:
+			n = node(class_id, node_id, true)
 		if n.get("swap", {}).get(slot, "") == ability:
 			return true
 	return false
@@ -599,6 +601,8 @@ func _resolve() -> void:
 	_tags = []
 	for id in picks:
 		var n := node(class_id, id, world_one)
+		if n.is_empty() and not world_one:
+			n = node(class_id, id, true)
 		for k in n.get("knob", {}):
 			var value = n["knob"][k]
 			if KNOBS[k].get("time", false) and float(value) > 0.0:
