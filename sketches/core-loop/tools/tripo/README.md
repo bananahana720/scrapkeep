@@ -109,7 +109,7 @@ brightness against the authored, near-black in brackets):
 
 | Enemy | View 0 | View 1 | Result |
 | --- | --- | --- | --- |
-| Chaser (finished, rods) | 1.22 (0.03, authored 0.11) | 0.97 (0.10, authored 0.08) | pass |
+| Chaser (finished, rods) | 1.24 (0.02, authored 0.11) | 0.97 (0.09, authored 0.08) | pass |
 | Boom tender (refitted `--fit fill`, finished) | 1.15 (0.08, authored 0.08) | 1.01 (0.01, authored 0.06) | pass |
 
 The swatter and the lobber are whole generated meshes without the set as well; they pass the check (0.84 and 0.93 in

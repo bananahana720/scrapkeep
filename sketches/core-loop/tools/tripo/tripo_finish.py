@@ -34,9 +34,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import polish  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:]
+if len(argv) % 2 != 0:
+    raise SystemExit("tripo_finish: expected --key value pairs, got %d args" % len(argv))
 opt = {"lift": "", "strut": "", "drop-under": ""}
 i = 0
 while i < len(argv):
+    if not argv[i].startswith("--") or len(argv[i]) <= 2:
+        raise SystemExit("tripo_finish: expected --flag, got %r" % argv[i])
     opt[argv[i][2:]] = argv[i + 1]; i += 2
 for need in ("in", "out"):
     if need not in opt:
@@ -44,7 +48,9 @@ for need in ("in", "out"):
 
 
 def read_glb(path):
-    raw = open(path, "rb").read(); n = struct.unpack("<I", raw[12:16])[0]
+    with open(path, "rb") as f:
+        raw = f.read()
+    n = struct.unpack("<I", raw[12:16])[0]
     return json.loads(raw[20:20 + n]), raw[20 + n:]
 
 
@@ -74,6 +80,8 @@ def add_strut(ob, a, b, radius, slot):
     names = [m.name.split(".")[0] if m else "" for m in me.materials]
     if slot not in names:
         raise SystemExit("tripo_finish: --strut slot %r is not a material of %s (%s)" % (slot, ob.name, names))
+    if radius <= 0.0:
+        raise SystemExit("tripo_finish: --strut radius must be positive, got %r" % radius)
     a, b = gl_to_blender(a), gl_to_blender(b)
     axis = b - a
     if axis.length < 1e-4:
@@ -92,8 +100,13 @@ def add_strut(ob, a, b, radius, slot):
         f.smooth = False
     bmesh.ops.recalc_face_normals(bm, faces=faces)
     made = bmesh.ops.triangulate(bm, faces=faces)["faces"]
-    layer = bm.loops.layers.color.active if bm.loops.layers.color else None
-    if layer is not None:  # a slots-styled node carries white vertex colour: the slot alone colours the rod
+    color_layers = [
+        layer for layer in (
+            bm.loops.layers.color.active if bm.loops.layers.color else None,
+            bm.loops.layers.float_color.active if bm.loops.layers.float_color else None,
+        ) if layer is not None
+    ]
+    for layer in color_layers:  # a slots-styled node carries white vertex colour: the slot alone colours the rod
         for f in made:
             for l in f.loops:
                 l[layer] = (1.0, 1.0, 1.0, 1.0)
@@ -194,7 +207,8 @@ for mesh in oj.get("meshes", []):
 oj["materials"] = [byname.get(n, {"name": n}) for n in unique]
 js = json.dumps(oj, separators=(",", ":")).encode(); js += b" " * ((4 - len(js) % 4) % 4)
 body = struct.pack("<I", len(js)) + b"JSON" + js + rest
-open(opt["out"], "wb").write(b"glTF" + struct.pack("<II", 2, 12 + len(body)) + body)
+with open(opt["out"], "wb") as f:
+    f.write(b"glTF" + struct.pack("<II", 2, 12 + len(body)) + body)
 tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in meshes)
 print("FINISH " + json.dumps({"out": opt["out"], "baked": baked, "kept": sorted(set(had) - set(baked)), "lifted": lifted,
                               "dropped": dropped, "struts": struts, "model_tris": tris}))
