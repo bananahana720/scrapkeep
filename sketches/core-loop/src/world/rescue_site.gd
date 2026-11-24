@@ -6,7 +6,12 @@ const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const Palette := preload("res://src/core/palette.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const MODEL := "res://assets/models/world_one/rescue_cage.glb"
+# The keeper's scarf (tools/blender/camp/keeper_marks.py) tied round a freed cage's front right post, its tails hanging
+# out past the corner the pilot walks out by. Dressing only: no collider, no group, shown once the cage is open.
+const SCARF := "res://assets/models/world_one/rescue_keeper_scarf.glb"
+const SCARF_AT := Vector3(1.4, 2.55, 1.4)
 const REQUIRED := ["CageFrame", "CageGate", "CageLatch", "CageSeat"]
 const PILOT_QUESTS := {"rivet": "runner_gunner", "dig": "demolitions_caster"}
 const UNLOCK_CLIP := "unlock"
@@ -16,6 +21,7 @@ const POSE_BLEND_FREED := "big_cheer"
 const POSE_BLEND := 0.15
 const FREE_MOVE := 0.45
 static var model_path := MODEL
+static var scarf_path := SCARF
 static var _shared := {}
 static var _warned := {}
 
@@ -57,6 +63,7 @@ class Cage extends "res://src/world/device.gd":
 	# big_cheer when its GLB has it, then idle_loop. tick() stays as pinned.
 	var _freed_now := false
 	var _free_tween: Tween
+	var _scarf: Node3D
 
 	func _init() -> void:
 		family = "ally"
@@ -69,6 +76,10 @@ class Cage extends "res://src/world/device.gd":
 			_build_greybox()
 		else:
 			_build_model(parts)
+		_scarf = RescueSite._scarf()
+		if _scarf != null:
+			_scarf.position = SCARF_AT
+			add_child(_scarf)
 		if owner_site != null and owner_site.is_done(quest):
 			_bars.visible = false
 			spent = true
@@ -170,6 +181,8 @@ class Cage extends "res://src/world/device.gd":
 
 	func _visual_state() -> void:
 		_bars.visible = not spent
+		if _scarf != null:
+			_scarf.visible = spent
 		if _model_gate != null:
 			_model_gate.visible = not spent
 		if _open_walls != null:
@@ -254,6 +267,37 @@ class Cage extends "res://src/world/device.gd":
 		_visual_state()
 		system.fired(self)
 		owner_site.complete(quest)
+
+
+# A fresh copy of the scarf's views under one holder, or null when its file is missing (the cage then stands without it).
+static func _scarf() -> Node3D:
+	var packed: PackedScene
+	if _shared.has(scarf_path):
+		packed = _shared[scarf_path]
+	elif ResourceLoader.exists(scarf_path):
+		packed = load(scarf_path) as PackedScene
+		_shared[scarf_path] = packed
+	if packed == null:
+		if not _warned.has(scarf_path):
+			_warned[scarf_path] = true
+			push_warning("rescue_site: %s missing; freed cages stand without the scarf" % scarf_path)
+		return null
+	var scene := packed.instantiate()
+	var holder := Node3D.new()
+	holder.name = "KeeperScarf"
+	for source: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		var view := MeshInstance3D.new()
+		view.name = source.name
+		view.mesh = source.mesh
+		view.transform = source.transform
+		for i in source.mesh.get_surface_count():
+			var original := source.mesh.surface_get_material(i)
+			var slot := String(original.resource_name) if original != null else ""
+			if RecipeProps.is_slot_role(slot):
+				view.set_surface_override_material(i, RecipeProps.slot_material(slot))
+		holder.add_child(view)
+	scene.free()
+	return holder
 
 
 static func _parts() -> Array:

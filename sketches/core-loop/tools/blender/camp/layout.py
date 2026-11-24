@@ -33,14 +33,15 @@ SHORTCUT_AT = (0.0, 0.0, -36.0)     # the shortcut ramp's centre: its foot sits 
 
 
 # Dressing on the ring walk's outer edge and round the plaza: (glb stem, bearing, radius, yaw offset in degrees from
-# facing the plaza). Lamps light every spoke mouth; the fire pit and benches make the plaza a place to sit; a fence run
-# closes the yard behind Moss's stall.
+# facing the plaza). Lamps light every spoke mouth; the fire pit and benches make the plaza a place to sit, with the
+# keepers' shift board leaning by them (keeper_marks.py); a fence run closes the yard behind Moss's stall.
 DRESSING = [
     *[("camp_lamp_post", b + 14.0, RING_R + 4.2, 0.0) for b in (0.0, 55.0, 120.0, 160.0, 205.0, 250.0, 305.0)],
     ("camp_signpost", 26.0, PLAZA_R + 2.5, 0.0),
     ("camp_fire_pit", 160.0, 15.0, 0.0),
     ("camp_bench", 145.0, 19.5, 0.0),
     ("camp_bench", 175.0, 19.5, 0.0),
+    ("camp_shift_board", 194.0, 21.0, 0.0),
     ("camp_tarp", 270.0, 20.0, 0.0),
     ("camp_tool_rack", 280.0, 56.0, 0.0),
     ("camp_crate_stack", 232.0, 57.0, 30.0),

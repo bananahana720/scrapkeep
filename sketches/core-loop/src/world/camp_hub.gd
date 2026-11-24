@@ -894,12 +894,12 @@ func _quip_from(class_id: String) -> void:
 	_quipped[class_id] = true
 	var words := LoreRows.camp_quip_text(row, walks)
 	var speaker := String(row["speaker"])
-	_show_quip(speaker, words)
+	# The voice goes first, so the plate's talking bars run for as long as the call-in really speaks.
+	var audio = game.audio() if game != null and game.has_method("audio") else null
+	var voice_s: float = audio.call_in("camp_quip", speaker, words) if audio != null else 0.0
+	_show_quip(speaker, words, voice_s)
 	_face_ball(figure)
 	pilot_quipped.emit(speaker, String(row["id"]), words)
-	var audio = game.audio() if game != null and game.has_method("audio") else null
-	if audio != null:
-		audio.call_in("camp_quip", speaker, words)
 
 
 # The pilot turns the short way round until their face is to the ball, and cheers. A pilot model faces its local -Z
@@ -960,11 +960,11 @@ func _build_quip() -> void:
 	_quip.add_child(_quip_tile)
 
 
-func _show_quip(speaker: String, words: String) -> void:
+func _show_quip(speaker: String, words: String, voice_s := 0.0) -> void:
 	if _quip == null:
 		return
 	_quip_tile.pilots = game.flow.classes if game.flow != null else []
-	if not _quip_tile.present(speaker, String(LoreRows.SPEAKERS.get(speaker, speaker))):
+	if not _quip_tile.present(speaker, String(LoreRows.SPEAKERS.get(speaker, speaker)), voice_s):
 		return
 	var panel := _quip.get_node("Line") as PanelContainer
 	var style := UiTokens.plate(_quip_tile.tint())

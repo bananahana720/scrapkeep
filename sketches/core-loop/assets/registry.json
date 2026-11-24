@@ -976,6 +976,17 @@
    }
   },
   {
+   "id": "camp_shift_board",
+   "path": "res://assets/models/camp/camp_shift_board.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/camp_hub.gd",
+   "provenance": {
+    "recipe": "tools/blender/camp/keeper_marks.py",
+    "note": "Keeper marks (wave 46 E3-02, concept sheet 03-arena-stands-camp): the camp's shift board, three splintered planks bolted across with a copper plate and struck with bone hash marks, leaning on two stakes by the fire pit benches (camp_layout.gd DRESSING). Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. One box collider. sha256 f9087d7b1b395ad6877460535c6734342d033a5b49120c510f0f8d9c8980b7a1"
+   }
+  },
+  {
    "id": "camp_shortcut",
    "path": "res://assets/models/camp/camp_shortcut.glb",
    "class": "detail",
@@ -38930,6 +38941,17 @@
    "exception_why": "Rescue prop separates frame, gate, state latch and seat; limits asserted by rescue_cage_asset_test."
   },
   {
+   "id": "rescue_keeper_scarf",
+   "path": "res://assets/models/world_one/rescue_keeper_scarf.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/rescue_site.gd",
+   "provenance": {
+    "recipe": "tools/blender/camp/keeper_marks.py",
+    "note": "Keeper marks (wave 46 E3-02, concept sheet 03-arena-stands-camp): a weathered orange-oxide knitted wool scarf tied round a freed rescue cage's front right post, shown once the cage is open. Authored procedurally in this repository from kit.Surface parts (tools/blender/camp/_camp.py); no imported mesh, texture or scan. No collision. sha256 b3b82c6d8f7d78ee042766a0e9af50280486065fcf09dec678be039c1e732c19"
+   }
+  },
+  {
    "path": "res://assets/models/world_one/rivet_revolvers.glb",
    "class": "detail",
    "ships": true,
@@ -39905,6 +39927,7 @@
   "camp_plaza",
   "camp_sandbox_yard",
   "camp_settings_console",
+  "camp_shift_board",
   "camp_shortcut",
   "camp_signpost",
   "camp_skee_lane",
@@ -41532,6 +41555,7 @@
   "res://assets/models/world_one/rivet_revolvers.glb",
   "res://assets/models/world_one/shell_rivet.glb",
   "rescue_cage",
+  "rescue_keeper_scarf",
   "return_ramp_skin",
   "return_ramp_skin_rusted-salvaged-plate.webp",
   "rim_road",

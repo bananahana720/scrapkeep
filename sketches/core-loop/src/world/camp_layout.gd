@@ -42,6 +42,7 @@ const DRESSING := [
 	["camp_fire_pit", 160.0, 15.0, 0.0],
 	["camp_bench", 145.0, 19.5, 0.0],
 	["camp_bench", 175.0, 19.5, 0.0],
+	["camp_shift_board", 194.0, 21.0, 0.0],
 	["camp_tarp", 270.0, 20.0, 0.0],
 	["camp_tool_rack", 280.0, 56.0, 0.0],
 	["camp_crate_stack", 232.0, 57.0, 30.0],
