@@ -7,13 +7,12 @@ const StageLocks := preload("res://src/world/stage_locks.gd")
 const T := preload("res://tests/support/t.gd")
 
 # E1-05a (ruling ek, design-v3/WAYFINDING.md 2.2): the Dam's intake takeoff and the intake zip's catch. The takeoff
-# is a launch slot cut into the crest top at x -154..-148, in line with the zip, made of two ramp stamps in
-# park_dam.json: intake_takeoff cuts a floor that falls from crest level at z 176 to 0.8 m under it at z 188, and
-# intake_takeoff_ramp fills its south end back in, so the floor is deepest (about 0.5 m) near z 184, runs almost level
-# to z 188 and rises 0.3 m over the last 2 m to the crest edge at z 190, which is its lip. The north half stays
-# shallow, so a slow ball that drifts in off the crest's north wall rolls across it instead of being turned back
-# (review r1 of PR #1225). Nothing stands above the crest, so a ball climbing the dam face meets the same edge as
-# before. The zip's hook (intake_zip.from, radius 5.0) hangs over the face 9.5 m south of the lip.
+# is a launch slot cut into the crest top between x -154 and -148, in line with the zip, made of two ramp stamps in
+# park_dam.json. intake_takeoff_ramp cuts the north half: its floor falls from crest level at z 176 to 0.4 m under it
+# at z 182, gently, so a slow ball that drifts in off the crest's north wall rolls across it instead of being turned
+# back (review r1 of PR #1225). intake_takeoff, the kicker, is deepest (about 0.55 m) at z 184 and rises evenly to
+# the crest edge at z 190, which is its lip. Nothing stands above the crest, so a ball climbing the dam face meets
+# the same edge as before. The zip's hook (intake_zip.from, radius 5.0) hangs over the face 9.5 m south of the lip.
 #
 # Read on the real dam, yard locks off, the ball unsteered. A snag is half the flat speed lost within 0.2 s from
 # 0.5 x cruise or more (tools/qa/snag_probe.gd min_before); a turn-back is the ball's reach along its push falling
