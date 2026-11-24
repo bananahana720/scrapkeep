@@ -69,6 +69,15 @@ const COL_SUFFIX := "-col"
 # The ball's body is on layer 2 and collides with layer 1 (rigid_ball.gd).
 const WORLD_LAYER := 1
 const BALL_LAYER := 2
+# Map standard point 5 cover tags placed on every park row node (tag_cover): "hard" carries a solid world-layer
+# collider at least COVER_HARD_M tall that stops lobber shells; "surface" is a low rideable deck or apron under
+# COVER_HARD_M on the world layer; "soft" carries no world-layer collider (dressing, sensors, stamp-replaced rows).
+const COVER_META := "cover_kind"
+const COVER_HARD := "hard"
+const COVER_SOFT := "soft"
+const COVER_SURFACE := "surface"
+const COVER_KINDS := [COVER_HARD, COVER_SOFT, COVER_SURFACE]
+const COVER_HARD_M := 2.0
 # How far above a piece's top the ride sensor reaches, so a ball rolling or landing on it counts.
 const SENSOR_ABOVE_M := 3.0
 const ONCE_FACT_PREFIX := "layer_mind_quote_"
@@ -657,6 +666,7 @@ static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish
 	if SENSOR_ONLY.has(recipe):
 		var dressed := _node(row, parent, ground)
 		_sensor(dressed, row, publish)
+		tag_cover(dressed, row)
 		return dressed
 	if ANCHOR_KITS.has(recipe):
 		return place_anchor_field(row, parent, ground)
@@ -746,6 +756,7 @@ static func place_landmark(park: Dictionary, parent: Node3D, ground := Callable(
 		node = _node(row, parent, ground)
 		LandmarkProxy.build(kind, node, node.transform, ground, anchor_y)
 		node.set_meta("landmark_proxy", true)
+		tag_cover(node, row)
 		root = LandmarkProxy.BEAM_ROOT.get(kind)
 	node.name = "Landmark_%s" % String(row.get("id", "landmark"))
 	node.set_meta("landmark_kind", kind)
@@ -884,7 +895,10 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	if baked and fits_seat(row) and DRAPED.has(String(row.get("recipe", ""))) and ground.is_valid():
 		drape(node, row, at_origin, ground)
+	if body.get_shape_owners().is_empty():
+		body.collision_layer = 0
 	_sensor(node, row, publish)
+	tag_cover(node, row)
 	return node
 
 
@@ -970,6 +984,7 @@ static func place_greybox(row: Dictionary, element: String, parent: Node3D, grou
 	node.add_child(view)
 	body.add_child(shape)
 	_sensor(node, row, publish)
+	tag_cover(node, row)
 	return node
 
 
@@ -1002,6 +1017,7 @@ static func place_over_greybox(row: Dictionary, p: Dictionary, budget: String, p
 		node.remove_child(body)
 		body.free()
 	node.set_meta("over_greybox", true)
+	tag_cover(node, row)
 	return node
 
 
@@ -1225,6 +1241,7 @@ static func place_layer(row: Dictionary, parent: Node3D, ground := Callable(), p
 	var layer := row.duplicate()
 	layer["ride_fact"] = ""
 	_sensor(node, layer, publish)
+	tag_cover(node, row)
 	return node
 
 
@@ -1516,6 +1533,86 @@ static func _chain(node: Node) -> Transform3D:
 	return out
 
 
+# Exact local-space AABB of a collision shape without allocating debug meshes on primitive/hull/trimesh shapes.
+static func shape_aabb(shape: Shape3D) -> AABB:
+	if shape is BoxShape3D:
+		var sz := (shape as BoxShape3D).size
+		return AABB(-sz * 0.5, sz)
+	if shape is ConvexPolygonShape3D:
+		var pts := (shape as ConvexPolygonShape3D).points
+		if pts.is_empty():
+			return AABB()
+		var box := AABB(pts[0], Vector3.ZERO)
+		for p in pts:
+			box = box.expand(p)
+		return box
+	if shape is ConcavePolygonShape3D:
+		var faces := (shape as ConcavePolygonShape3D).get_faces()
+		if faces.is_empty():
+			return AABB()
+		var box := AABB(faces[0], Vector3.ZERO)
+		for v in faces:
+			box = box.expand(v)
+		return box
+	return shape.get_debug_mesh().get_aabb()
+
+
+# The merged world-space Y extent of all enabled solid StaticBody3D shapes under node matching layer_mask, 0.0 with none.
+# When stop_at > 0.0, exits early as soon as the vertical span reaches stop_at (keeps multi-post anchor tagging cheap).
+static func cover_height(node: Node3D, layer_mask := 1 << (WORLD_LAYER - 1), stop_at := 0.0) -> float:
+	var lo := INF
+	var hi := -INF
+	var local_boxes := {}
+	for entry: Dictionary in collider_shapes(node):
+		if entry["disabled"] or entry["shape"] == null:
+			continue
+		var body: CollisionObject3D = entry["body"]
+		if not body is StaticBody3D or (body.collision_layer & layer_mask) == 0:
+			continue
+		var shape: Shape3D = entry["shape"]
+		var sid := shape.get_instance_id()
+		var local_box: AABB
+		if local_boxes.has(sid):
+			local_box = local_boxes[sid]
+		else:
+			local_box = shape_aabb(shape)
+			local_boxes[sid] = local_box
+		var world_box: AABB = (entry["global_transform"] as Transform3D) * local_box
+		lo = minf(lo, world_box.position.y)
+		hi = maxf(hi, world_box.end.y)
+		if stop_at > 0.0 and hi - lo >= stop_at:
+			return hi - lo
+	return maxf(hi - lo, 0.0) if hi >= lo else 0.0
+
+
+# Map standard point 5 cover classification for a placed park row node: honors an explicit row["cover"] when valid,
+# else reads the node's built solid world-layer colliders ("hard" >= COVER_HARD_M, "surface" > 0 and < COVER_HARD_M,
+# "soft" when no solid world-layer collider is present).
+static func cover_kind_of(node: Node3D, row: Dictionary = {}) -> String:
+	if row.get("cover") is String:
+		var explicit := String(row["cover"])
+		if COVER_KINDS.has(explicit):
+			return explicit
+	var h := cover_height(node, 1 << (WORLD_LAYER - 1), COVER_HARD_M)
+	if h >= COVER_HARD_M:
+		return COVER_HARD
+	if h > 0.0:
+		return COVER_SURFACE
+	return COVER_SOFT
+
+
+# Stamps explicit COVER_META ("hard", "soft", or "surface") onto a placed park row node and returns the tag.
+static func tag_cover(node: Node3D, row: Dictionary = {}) -> String:
+	var kind := cover_kind_of(node, row)
+	node.set_meta(COVER_META, kind)
+	return kind
+
+
+# Reads the explicit cover tag stamped on a placed park row node, "" when untagged.
+static func cover_kind(node: Node) -> String:
+	return String(node.get_meta(COVER_META, "")) if node != null else ""
+
+
 # Whether every variant GLB of an anchors kit recipe has landed.
 static func anchor_kit_ready(recipe: String) -> bool:
 	var p := anchor_paths(recipe)
@@ -1592,8 +1689,11 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 	view.multimesh = multi
 	view.set_meta(RecipeProps.META_FADE, true)
 	node.add_child(view)
+	if body.get_shape_owners().is_empty():
+		body.collision_layer = 0
 	node.set_meta("anchor_posts", posts.size())
 	node.set_meta("anchor_kit", kit)
+	tag_cover(node, row)
 	return node
 
 
@@ -1835,6 +1935,7 @@ static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), pub
 				node.remove_child(child)
 				child.free()
 		node.set_meta("stamp_replaces", true)
+		tag_cover(node, row)
 	return node
 
 

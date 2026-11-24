@@ -32,7 +32,7 @@ export const TESTS = {
   park_breath_test: 1,
   park_rhythm_test: 2,
   park_variety_test: 2,
-  park_cover_tags_test: 2,
+  park_cover_tags_test: 3,
   park_feature_census_test: 3,
   park_fight_bowl_test: 2,
   site_markers_test: 0,
@@ -45,7 +45,7 @@ export const POINTS = {
   2: ["line_quiet_share"],
   3: ["rhythm_switches", "longest_heavy_s"],
   4: ["layout_sets", "rogue_sites_drawn", "modifiers_drawn"],
-  5: ["shell_cover", "hard_rows_cover_share", "soft_cover_bodies"],
+  5: ["shell_cover", "hard_rows_cover_share", "hard_rows_shell_cast_share", "soft_cover_bodies"],
   6: ["feature_count_near_line"],
   7: ["height_bands_populated", "ride_climb_rows"],
   8: ["yard_rim_median_m"],
@@ -53,7 +53,7 @@ export const POINTS = {
   10: ["marker_sight", "furnace_sight", "scrap_on_lines"],
 };
 // Gating MAPCHECK lines for park_dam and park_flume on a full run; a lost or added check moves it.
-export const PINNED_LINES = 40;
+export const PINNED_LINES = 42;
 // Items ruled to wait. Each names the line that parks it.
 export const WAITING = [
   {
@@ -78,11 +78,6 @@ export const OPEN_HALVES = [
     half: "5 picture (safe ground and hostile marks read blind)",
     closes:
       "a blind 'where is safe' read of tools/danger_read_capture.gd stills, scored against its HAZARD-striped control",
-  },
-  {
-    point: 5,
-    half: "5 tagged cover (park_cover_tags_test reads layers only, so it passes by construction)",
-    closes: "hard and soft tags on park rows and a shell-path cast per tagged row (audit unit 6)",
   },
   {
     point: 8,

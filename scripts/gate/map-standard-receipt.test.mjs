@@ -190,3 +190,11 @@ test("map standard: an open half no ruling parks is a miss and measured names it
   const parked = judge(logs(), HEAD, { halves: [{ ...OPEN_HALVES[0], parked: "a ruling" }] });
   assert.equal(parked.pass, true, parked.measured);
 });
+
+test("map standard: point 5 tagged cover is closed and pinned with shell-cast coverage", () => {
+  assert.equal(PINNED_LINES, 42);
+  assert.equal(TESTS.park_cover_tags_test, 3);
+  assert.ok(POINTS[5].includes("hard_rows_shell_cast_share"));
+  assert.equal(OPEN_HALVES.length, 4);
+  assert.ok(!OPEN_HALVES.some((h) => h.half.includes("5 tagged cover")));
+});
