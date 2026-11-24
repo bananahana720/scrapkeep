@@ -19,6 +19,8 @@ extends SceneTree
 # the ring for rivet_revolvers.glb (rivet_revolvers_test), which hero_assets mounts under WeaponRing;
 # LaserMuzzle_L/R stay here, on its barrel tips. New checks: no pods left on the ring, and every
 # mesh but the hidden placeholder pilot is closed (no open or non-manifold edge), base and variant.
+# 2026-11-23 (E1-09b, wave 46, ruling en): the revolvers become side-sponson rotary cannons at 3 and
+# 9 o'clock; LaserMuzzle_L/R sit 1 cm past their hub crowns, 1.26 m outboard and 0.91 m forward.
 
 # What it checks (P-UNITS PD-RIVET acceptance; ROSTER-LOOK sections 0 to 8):
 #   budget     shell class tris and verts; draws equal the registry row's exception.
@@ -246,7 +248,7 @@ func _drill(shell: Node3D) -> void:
 	var rp := pos(shell, right)
 	var tp := pos(shell, tip)
 	_t.check("DrillTip lines up with the laser fire", lasers_fwd.all(func(f): return f.dot(tip_fwd) > 0.9999)
-		and absf(lp.x + rp.x) < 0.001 and lp.x < -0.3 and rp.x > 0.3 and tp.z < -1.1 and lp.z < -1.0,
+		and absf(lp.x + rp.x) < 0.001 and lp.x < -1.2 and rp.x > 1.2 and tp.z < -1.1 and lp.z < -0.85,
 		"muzzles %s %s, tip %s, all firing %s" % [lp, rp, tp, tip_fwd])
 	var lens := 0.0
 	for v in points(drill, shell, "class_accent"):

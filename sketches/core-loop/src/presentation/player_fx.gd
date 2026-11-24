@@ -2100,7 +2100,7 @@ const RIVET_DRAWS := 2
 # the bore to the drum, below the bore and just past the drum's side (rivet_revolvers.py).
 const DRUM_GAP := Vector3(0.065, -0.045, 0.18)
 # Without a shell: how far out a side muzzle sits from the centre shot, and the halo ahead.
-const SIDE_M := 0.6
+const SIDE_M := 1.26
 const HALO_AHEAD_M := 1.34
 const MARKER_SEEK_S := 0.5
 
