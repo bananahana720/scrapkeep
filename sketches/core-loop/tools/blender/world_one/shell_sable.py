@@ -120,7 +120,7 @@ HEAD_CAPS = (BONE, BONE)
 PRONG_X = (0.40, 0.19)
 PRONG_Z = (0.085, 0.075)
 PRONG_HALF = ((0.032, 0.060), (0.022, 0.045))
-# The yoke arm: a closed 6-sided copper tube through these (|X|, Z) points in the Y 0 plane, from
+# The yoke arm: a closed 8-sided copper tube through these (|X|, Z) points in the Y 0 plane, from
 # inside the band to inside the head's housing, with a bone insulator collar at ARM_COLLAR and a
 # rubber shoe clamped over the band. It stays ARM_R plus 0.03 m off the plating, and outside the
 # masts: at every height it passes them it is 0.12 m or more further out than their ribs.
