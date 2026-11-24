@@ -12,12 +12,10 @@ bay.gd	CylinderMesh	MossBay/Barge/MeshInstance3D	code	-	Moss's bay effects and m
 bay.gd	QuadMesh	MossBay/Barge/BakedLamplight	code	-	Moss's bay baked lamplight, a lighting card
 bay.gd	SphereMesh	MossBay/Barge/MeshInstance3D	code	-	the marble toy's marble, a ball by design
 bay.gd	TorusMesh	MossBay/Cradle/MeshInstance3D	code	-	the dock cradle's glowing amber ring, the mark that says roll here
-build_read.gd	SphereMesh	SubViewport/Node3D/MeshInstance3D	stand-in	W1-46	pause build preview: a grey sphere where the ball should be
 contraptions.gd	CylinderMesh	Contraptions/*_geyser/MeshInstance3D	code	-	geyser steam column (contraptions.gd _build_launcher): a translucent column that swells with the charge over the geyser_vent model
 rescue_site.gd	BoxMesh	*_cage/Node3D/MeshInstance3D	code	-	the cage's dashed ground ring (device.gd ground_ring), the interact mark every device draws; the cage itself is rescue_cage.glb
 stakes.gd	CylinderMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot body (ruling ci, project-guide/handoff/DECISIONS.md:117: the bodies land after the sitting)
 stakes.gd	TorusMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot body (ruling ci, project-guide/handoff/DECISIONS.md:117: the bodies land after the sitting)
-activities.gd	BoxMesh	Activities/Ward_*/MeshInstance3D	stand-in	W46-18	mend ward post (activities.gd _build_ward): a 0.9 by 2.4 m solid slate box waiting for a modelled ward post
 game.gd	BoxMesh	Node3D/ReactorSheet	code	-	the reactor warden's water sheet (warden_reactor.gd _show_sheet): a translucent 24 by 16 m footprint live for 3 s, an attack effect hung on the world root
 accretion.gd	BoxMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
 accretion.gd	CylinderMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
