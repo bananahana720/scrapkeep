@@ -27,12 +27,12 @@ extends SceneTree
 #
 # Limits. The machines are staged: spawned through the game's own spawner where each pose puts them, given STAGE_TICKS
 # to settle, then stilled (process off), so none attacks and none is mid-move. A staging is kept only when every
-# machine is in frame, apart from the others on screen, reached by nine sight rays across its body, and keeps MIN_COVER
-# of its black pixels against the same frame with every other 3D node hidden (a prop with no collider can cut it);
-# otherwise the next line node near that point of the ride is tried. Calm is on, so no director pack joins; any other
-# enemy is hidden, and so is every drawing the flat-sky fog cannot swallow, each counted in frames.json for the pose
-# that hid it. Beam poses read the stage graph's LINE nodes with SIGHT_OK, none roofed; a NEAR_M pose no line reaches
-# stands on open sighted ground instead and records on_line false.
+# machine is in frame, reached by nine sight rays across its body, keeps MIN_COVER of its black pixels against the
+# same frame with every other 3D node hidden (a prop with no collider can cut it), and stands TOUCH_PX clear of every
+# other machine's black pixels; otherwise the next line node near that point of the ride is tried. Calm is on, so no
+# director pack joins; any other enemy is hidden, and so is every drawing the flat-sky fog cannot swallow, each
+# counted in frames.json for the pose that hid it. Beam poses read the stage graph's LINE nodes with SIGHT_OK, none
+# roofed; a NEAR_M pose no line reaches stands on open sighted ground instead and records on_line false.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -79,6 +79,8 @@ const SCREEN_MARGIN := 24.0
 const SIGHT_SPAN := 0.7
 # A staging is kept only when every machine keeps this share of its silhouette in the drawn frame.
 const MIN_COVER := 0.92
+# Two machines whose black pixels come this close on screen read as one shape.
+const TOUCH_PX := 3
 const SKY := Color(0.78, 0.86, 0.93)
 const INK := Color(0.0, 0.0, 0.0)
 
@@ -462,6 +464,8 @@ func _silhouette_mode(axis: Vector2) -> void:
 				var worst: float = cover.min() if not cover.is_empty() else 0.0
 				if worst < MIN_COVER:
 					why = "%s keeps %d%% of its silhouette" % [staged[cover.find(worst)].get_meta("map_sheet_kind"), roundi(worst * 100.0)]
+				else:
+					why = await _touch_fault(cam, staged)
 			if why == "":
 				kept = pose
 				break
@@ -548,7 +552,6 @@ func _stage(pose: Dictionary, pose_index: int, n: int) -> Array:
 func _staging_fault(cam: Camera3D, staged: Array) -> String:
 	if staged.size() == 0:
 		return "nothing staged"
-	var rects: Array = []
 	var space := cam.get_world_3d().direct_space_state
 	var screen := Rect2(Vector2.ONE * SCREEN_MARGIN, Vector2(SIZE) - Vector2.ONE * SCREEN_MARGIN * 2.0)
 	var ball_rid: RID = game.player.body().get_rid()
@@ -562,10 +565,6 @@ func _staging_fault(cam: Camera3D, staged: Array) -> String:
 			var hit := space.intersect_ray(q)
 			if not hit.is_empty() and hit["collider"] != m:
 				return "%s hidden behind %s" % [m.get_meta("map_sheet_kind"), hit["collider"]]
-		for other: Rect2 in rects:
-			if not apart(r, other):
-				return "%s overlaps another machine on screen" % m.get_meta("map_sheet_kind")
-		rects.append(r)
 	return ""
 
 
@@ -603,6 +602,49 @@ func _cover(cam: Camera3D, staged: Array) -> Array:
 	return out
 
 
+# "" when no two machines' black pixels come within TOUCH_PX of each other on screen; else which two do. Only pairs whose
+# screen boxes meet are drawn, each machine alone.
+func _touch_fault(cam: Camera3D, staged: Array) -> String:
+	var rects: Array = staged.map(func(m): return _screen_rect(cam, m))
+	var solo := {}
+	for a in staged.size():
+		for b in range(a + 1, staged.size()):
+			if apart(rects[a], rects[b]):
+				continue
+			for k in [a, b]:
+				if not solo.has(k):
+					for j in staged.size():
+						staged[j].visible = j == k
+					solo[k] = await _grab()
+			for m in staged:
+				m.visible = true
+			var region := Rect2i((rects[a] as Rect2).grow(TOUCH_PX).intersection((rects[b] as Rect2).grow(TOUCH_PX)))
+			if _inks_meet(solo[a], solo[b], region):
+				return "%s and %s touch on screen" % [staged[a].get_meta("map_sheet_kind"), staged[b].get_meta("map_sheet_kind")]
+	for m in staged:
+		m.visible = true
+	return ""
+
+
+# Whether an ink pixel of a lies within TOUCH_PX of an ink pixel of b inside region.
+static func _inks_meet(a: Image, b: Image, region: Rect2i) -> bool:
+	var box := region.intersection(Rect2i(Vector2i.ZERO, a.get_size()))
+	for y in range(box.position.y, box.end.y):
+		for x in range(box.position.x, box.end.x):
+			if not _inked(a.get_pixel(x, y)):
+				continue
+			for dy in range(-TOUCH_PX, TOUCH_PX + 1):
+				for dx in range(-TOUCH_PX, TOUCH_PX + 1):
+					var q := Vector2i(x + dx, y + dy)
+					if q.x >= 0 and q.y >= 0 and q.x < b.get_width() and q.y < b.get_height() and _inked(b.get_pixelv(q)):
+						return true
+	return false
+
+
+static func _inked(c: Color) -> bool:
+	return c.r + c.g + c.b < 0.3
+
+
 func _grab() -> Image:
 	await _frames(3)
 	await RenderingServer.frame_post_draw
@@ -614,8 +656,7 @@ static func _ink_count(img: Image, r: Rect2) -> int:
 	var n := 0
 	for y in range(box.position.y, box.end.y):
 		for x in range(box.position.x, box.end.x):
-			var c := img.get_pixel(x, y)
-			if c.r + c.g + c.b < 0.3:
+			if _inked(img.get_pixel(x, y)):
 				n += 1
 	return n
 
