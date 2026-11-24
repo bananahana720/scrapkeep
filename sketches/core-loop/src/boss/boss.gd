@@ -673,7 +673,29 @@ func _tug(ball: Vector3, magnet_at: Vector3) -> void:
 		return
 	var pull := Vector3(magnet_at.x - ball.x, 0.0, magnet_at.z - ball.z)
 	pull = pull.normalized() if pull.length() > 0.1 else Vector3.ZERO
-	ctx.player.crowd_control("brindle_tug", (Vector3.UP * Rules.TUG_LIFT + pull * Rules.TUG_PULL) / _delta, false)
+	var step := maxf(_delta, 1.0 / float(Engine.physics_ticks_per_second))
+	ctx.player.crowd_control("brindle_tug", (Vector3.UP * Rules.TUG_LIFT + pull * Rules.TUG_PULL) / step, false)
+
+
+# Applies a one-shot velocity shove through the player's crowd-control gate. Writing the
+# resulting velocity directly onto the body instead of dividing dv by _delta keeps the
+# knockback exact across Engine.time_scale transitions (a hit-stop ending on the next physics
+# step otherwise multiplies dv by 1 / HIT_STOP_SCALE, and a hit-stop starting attenuates it).
+func _shove_ball(kind: String, dv: Vector3, interrupts := true) -> void:
+	if not dv.is_finite() or dv == Vector3.ZERO:
+		return
+	if not ctx.player.crowd_control(kind, Vector3.ZERO, interrupts):
+		return
+	var body = ctx.player.body() if ctx.player.has_method("body") else null
+	if body == null or (body is RigidBody3D and body.freeze):
+		return
+	var kit = ctx.player.get("kit")
+	if kit != null and (bool(kit.get("mounted")) or float(kit.get("plant_time")) > 0.0):
+		return
+	if body.has_method("set_velocity_now"):
+		body.set_velocity_now(ctx.player.state.velocity + dv)
+	elif body is RigidBody3D:
+		body.apply_central_impulse(dv * body.mass)
 
 
 func _drip(c: Dictionary) -> void:
@@ -1159,7 +1181,7 @@ func _slag_hit(h, ball: Vector3) -> void:
 			break
 	var v: Vector3 = ctx.player.state.velocity
 	var up := maxf(0.0, Rules.SLAG_BOUNCE_UP - v.y)
-	ctx.player.crowd_control("brindle_slag", (Vector3.UP * up + way * Rules.SLAG_BOUNCE_OUT) / _delta)
+	_shove_ball("brindle_slag", Vector3.UP * up + way * Rules.SLAG_BOUNCE_OUT)
 
 
 # Whether a ball launched from `from` at `launch` flies until it lands without meeting
@@ -1380,7 +1402,7 @@ func _charge_hit(h, ball: Vector3) -> void:
 	var v: Vector3 = ctx.player.state.velocity
 	var along: float = v.dot(h.heading)
 	var up := maxf(0.0, Rules.CHARGE_SHOVE_UP - v.y)
-	ctx.player.crowd_control("brindle_charge", (away * Rules.CHARGE_SHOVE_SIDE + Vector3.UP * up - h.heading * minf(0.0, along)) / _delta)
+	_shove_ball("brindle_charge", away * Rules.CHARGE_SHOVE_SIDE + Vector3.UP * up - h.heading * minf(0.0, along))
 	ship.hull.add_collision_exception_with(ctx.player.body())
 	ship.follow_shoved_rider(ctx.player.body())
 	_ghost_until = clock + Rules.CHARGE_GRACE
