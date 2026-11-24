@@ -582,7 +582,7 @@ func _setup_subject(cat: String, asset_id: String, holder: Node3D) -> Dictionary
 			scooter.position.y = base_y
 			await process_frame
 			var box := box_of(scooter)
-			return {"scooter": scooter, "anim": anim, "base_y": base_y, "box": box.grow(0.8), "margin": 1.28}
+			return {"scooter": scooter, "anim": anim, "base_y": base_y, "box": box, "margin": 1.65}
 		"setpiece":
 			if asset_id == "camp_pet":
 				var pit := _place_glb(holder, "res://assets/models/camp/camp_fire_pit.glb", Vector3(-1.8, 0.0, -1.1))
