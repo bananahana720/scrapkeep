@@ -543,9 +543,9 @@ static func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Co
 	fire(p, id, "", n, at, tint, toward)
 	var tree := parent.get_tree()
 	if tree != null:
-		var ref := weakref(p)
+		var ref: WeakRef = weakref(p)
 		tree.create_timer(p.lifetime + 0.15).timeout.connect(func() -> void:
-			var node = ref.get_ref()
+			var node: Object = ref.get_ref()
 			if node != null and (node as GPUParticles3D).speed_scale > 0.0:
 				(node as Node).queue_free()
 		)
