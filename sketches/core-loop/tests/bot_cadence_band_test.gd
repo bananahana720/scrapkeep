@@ -109,6 +109,8 @@ func _run_live() -> void:
 	_check_cannon_cadence_hand()
 	_check_depth1_keystones_cadence()
 	_check_world_one_tree_pair_picks()
+	_check_mixed_roster_depth1_coverage()
+	await _check_world_one_resume_preserves_saved_tree()
 	_check_no_phantom_windows()
 	_check_active_hand()
 	_check_active_hand_all_six_pilots()
@@ -725,8 +727,9 @@ func _check_world_one_tree_pair_picks() -> void:
 			_t.check("%s seed %d Depth-1 pick clears pending" % [pilot, sd],
 				not tree.pending() and drv.tree_picks.size() == 1 and tree.picks.size() == 1,
 				"pending=%s picks=%s" % [tree.pending(), drv.tree_picks])
-			var d1: String = drv.tree_picks[0]
-			seen_d1[d1] = true
+			if drv.tree_picks.size() >= 1:
+				var d1: String = drv.tree_picks[0]
+				seen_d1[d1] = true
 			tree.open_checkpoint()
 			drv._answer_pending_tree()
 			_t.check("%s seed %d Depth-2 moved perk clears pending and follows valid World-1 path" % [pilot, sd],
@@ -740,8 +743,158 @@ func _check_world_one_tree_pair_picks() -> void:
 			seen_d1.has(want[0]) and seen_d1.has(want[1]), "seen %s" % [seen_d1.keys()])
 		_t.check("%s navigates Depth-2 moved perks cleanly" % pilot,
 			seen_d2.size() >= 2, "seen depth-2 %s" % [seen_d2.keys()])
+	# Unrecognized non-empty tree_policy must not answer pending offers.
+	tree.world_one = true
+	tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS
+	tree.reset("runner_gunner")
+	tree.open_checkpoint()
+	var bad_drv = _make_driver("expert", 1, 1)
+	bad_drv.tree_policy = "bogus_policy"
+	bad_drv._answer_pending_tree()
+	_t.check("unrecognized tree_policy leaves pending offer untouched",
+		tree.pending() and bad_drv.tree_picks.is_empty(), "pending=%s picks=%s" % [tree.pending(), bad_drv.tree_picks])
 	tree.reset("pylon_engineer")
 	_game.combat._rebuild_patterns()
+
+
+func _check_mixed_roster_depth1_coverage() -> void:
+	# Default mixed-roster runs (class_index_for(sd) == sd % 6) across seeds 0..11 must hit
+	# all 12 World-1 Depth-1 opposite-feel keystones exactly once (no parity lock).
+	var roster: Array = ClassDef.all()
+	var counts := {}
+	var tree = _game.player.tree
+	for sd in range(12):
+		var cidx: int = BotDriver.class_index_for(sd)
+		var pilot := String(roster[cidx].id)
+		tree.world_one = true
+		tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS
+		tree.reset(pilot)
+		var drv = _make_driver("expert", 1, sd)
+		drv.tree_policy = "world_one"
+		tree.open_checkpoint()
+		drv._answer_pending_tree()
+		if drv.tree_picks.size() == 1:
+			var k := String(drv.tree_picks[0])
+			counts[k] = int(counts.get(k, 0)) + 1
+	var all_twelve := [
+		"r_fan_hammer", "r_big_iron", "s_static_flutter", "s_rail_lance",
+		"k_cluster", "k_keg", "t_saw_flurry", "t_guillotine",
+		"tl_petty_cash", "tl_compound_interest", "c_snap_battery", "c_siege_rail",
+	]
+	var all_once := counts.size() == 12
+	for k in all_twelve:
+		if int(counts.get(k, 0)) != 1:
+			all_once = false
+	_t.check("default mixed-roster seeds 0..11 exercise all 12 World-1 Depth-1 keystones once each",
+		all_once, "counts=%s" % [counts])
+	tree.reset("pylon_engineer")
+	_game.combat._rebuild_patterns()
+
+
+func _check_world_one_resume_preserves_saved_tree() -> void:
+	# Regression guard for review r1 blocker #1: start(true) must replay saved World-1 Stage 2
+	# entrance tree picks via flow._apply_tree_picks() before connecting tree_offered, preserving
+	# the exact saved build with zero resume_pick warnings across seeds 1..6.
+	var save_path := OS.get_user_data_dir().path_join("e3-05-resume-%d.json" % OS.get_process_id())
+	var want_picks: Array[String] = ["t_saw_flurry", "t_heavy_paw"]
+	# Build a genuine Stage 2 World-1 entrance document via Game/RunState/RunStore.
+	var writer = Game.new()
+	writer.test_mode = true
+	writer.run_store_path = save_path
+	root.add_child(writer)
+	while writer.flow == null:
+		await physics_frame
+	writer.ctx.calm = true
+	writer.tuning.set_option("world_one_builds", "on")
+	writer.flow.press_start()
+	writer.flow.choose_class(BotDriver.class_index_for(0, "tarn"))
+	for _i in 4:
+		await physics_frame
+	var wtree = writer.player.tree
+	wtree.world_one = true
+	wtree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS
+	wtree.reset("tarn")
+	wtree.open_checkpoint()
+	var ok1: bool = wtree.pick(want_picks[0])
+	wtree.open_checkpoint()
+	var ok2: bool = wtree.pick(want_picks[1])
+	_t.check("resume fixture built valid 2-pick World-1 tree", ok1 and ok2 and wtree.path() == want_picks)
+	writer.flow.enter_stage(2, Vector3.ZERO, false)
+	for _i in 2:
+		await physics_frame
+	var save_err: String = writer.flow.store.save(writer.run.to_entrance_doc(wtree))
+	_t.check("resume fixture wrote Stage 2 World-1 entrance doc", save_err == "", "err=%s" % save_err)
+	writer.free()
+
+	for sd in range(1, 7):
+		var rg = Game.new()
+		rg.test_mode = true
+		rg.run_store_path = save_path
+		root.add_child(rg)
+		while rg.flow == null:
+			await physics_frame
+		rg.ctx.calm = true
+		rg.tuning.set_option("world_one_builds", "on")
+		var drv := BotDriver.new(rg, "skipper", sd)
+		drv.start(true)
+		var tree = rg.player.tree
+		var no_warn: bool = not rg.flow._warned.has("resume_pick")
+		var kept: bool = tree.path() == want_picks and drv.tree_picks == want_picks and not tree.pending()
+		_t.check("seed %d start(true) preserves saved World-1 Stage 2 tree without warnings" % sd,
+			no_warn and kept and rg.run.stage == 2,
+			"stage=%d warned=%s tree=%s drv=%s pending=%s" % [rg.run.stage, rg.flow._warned.keys(), tree.path(), drv.tree_picks, tree.pending()])
+		rg.free()
+
+	# Also verify a resumed entrance with an unpaid owed Depth-2 checkpoint preserves Depth 1
+	# and cleanly fills the owed Depth-2 pick once wired.
+	var owed_save_path := OS.get_user_data_dir().path_join("e3-05-resume-owed-%d.json" % OS.get_process_id())
+	var owed_writer = Game.new()
+	owed_writer.test_mode = true
+	owed_writer.run_store_path = owed_save_path
+	root.add_child(owed_writer)
+	while owed_writer.flow == null:
+		await physics_frame
+	owed_writer.ctx.calm = true
+	owed_writer.tuning.set_option("world_one_builds", "on")
+	owed_writer.flow.press_start()
+	owed_writer.flow.choose_class(BotDriver.class_index_for(0, "tarn"))
+	for _i in 4:
+		await physics_frame
+	var owtree = owed_writer.player.tree
+	owtree.world_one = true
+	owtree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS
+	owtree.reset("tarn")
+	owtree.open_checkpoint()
+	owtree.pick("t_saw_flurry")
+	owtree.open_checkpoint() # owed Depth 2 left unpicked on save
+	owed_writer.flow.enter_stage(2, Vector3.ZERO, false)
+	for _i in 2:
+		await physics_frame
+	var owed_err: String = owed_writer.flow.store.save(owed_writer.run.to_entrance_doc(owtree))
+	_t.check("owed-checkpoint resume fixture wrote Stage 2 doc", owed_err == "", "err=%s" % owed_err)
+	owed_writer.free()
+
+	var org = Game.new()
+	org.test_mode = true
+	org.run_store_path = owed_save_path
+	root.add_child(org)
+	while org.flow == null:
+		await physics_frame
+	org.ctx.calm = true
+	org.tuning.set_option("world_one_builds", "on")
+	var odrv := BotDriver.new(org, "skipper", 3)
+	odrv.start(true)
+	var otree = org.player.tree
+	_t.check("start(true) with owed Depth-2 checkpoint preserves Depth 1 and answers Depth 2 cleanly",
+		not org.flow._warned.has("resume_pick") and not otree.pending()
+		and otree.path().size() == 2 and otree.path()[0] == "t_saw_flurry"
+		and odrv.tree_picks == otree.path()
+		and UpgradeTree.path_to("tarn", otree.path()[1], true) == otree.path(),
+		"warned=%s tree=%s drv=%s pending=%s" % [org.flow._warned.keys(), otree.path(), odrv.tree_picks, otree.pending()])
+	org.free()
+
+	for p in [save_path, save_path + ".prev", save_path + ".bak", owed_save_path, owed_save_path + ".prev", owed_save_path + ".bak"]:
+		DirAccess.remove_absolute(p)
 
 
 func _check_active_hand_all_six_pilots() -> void:

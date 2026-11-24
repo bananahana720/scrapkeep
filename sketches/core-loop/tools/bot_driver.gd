@@ -65,9 +65,11 @@ const BotLoops := preload("res://tools/bot_loops.gd")
 #     Warden gets slams beside it (a slam within 2.6 m of a cap meets plating 0) and its
 #     own pulse is taken for the height; a magnet Warden gets the gun on its magnet while
 #     it tugs. With punch at or above plating the bot rams, as a player would.
-#   - Upgrade-tree picks (tree_policy). "" leaves every offer untaken, so older runs
-#     keep the untouched kit; "random" takes one of the two offered on each tree_offered
-#     from its own seeded stream, so the rest of the bot's choices are unchanged.
+#   - Upgrade-tree picks (tree_policy). "world_one" (default, skipped for traversal) picks
+#     World-1 Depth-1 opposite-feel keystones (balanced across seeds) and Depth-2 perks when
+#     world_one_builds is on; "" leaves every offer untaken; "random" takes one of the two
+#     offered on every tree_offered from its own seeded stream, so the rest of the bot's
+#     choices are unchanged.
 #
 # A run ends on run_ended ("won" or "lost"), death ("died"), a missing boss module
 # ("boss"), a stall ("stalled", "boss_stalled"), or the runner's --until/--stages cap.
@@ -760,16 +762,21 @@ func _init(game_ref, policy_name: String, seed_number: int) -> void:
 # stage plan (events, scrap, spawns); the base seed alone would give every run of a
 # policy the same map draw.
 func start(resume := false) -> void:
-	wire()
+	wire(not resume)
 	if resume and game.flow.resume_run():
+		if game.player != null and game.player.tree != null:
+			tree_picks.assign(game.player.tree.path())
+		_wire_tree()
 		return
+	if resume:
+		_wire_tree()
 	game.flow.press_start()
 	game.flow.choose_class(class_index)
 
 
 # start()'s wiring alone, for a caller that begins the run itself (self-play pressing the menus' keys).
 # Call it once, in place of start(): both together connect every handler twice.
-func wire() -> void:
+func wire(connect_tree := true) -> void:
 	game.ctx.rng.seed = 20260926 + seed_value * 7919
 	game.player.source = source
 	var events = game.events
@@ -841,6 +848,11 @@ func wire() -> void:
 			_boss_set("stolen", int(boss_note.get("stolen", 0)) + amount))
 	if late_offer_policy != "":
 		game.player.tree.late_offer = true
+	if connect_tree:
+		_wire_tree()
+
+
+func _wire_tree() -> void:
 	if tree_policy == "random":
 		_connect_optional("tree_offered", _on_tree_offered)
 		_answer_pending_tree()
@@ -871,9 +883,11 @@ func _on_tree_offered(_class_id: String, depth: int, choices: Array) -> void:
 		return
 	var choice := ""
 	if tree.world_one and depth == 1 and choices.size() == 2:
-		# Deterministic balanced split across seeds so every pilot exercises both opposite-feel
-		# Depth-1 keystones (PILOT-CADENCE.md §6.1).
-		choice = String(choices[posmod(seed_value, 2)])
+		# Deterministic balanced split across seeds decoupled from class_index_for (seed % roster),
+		# so both explicit --pilot runs and default mixed-roster runs exercise both opposite-feel
+		# Depth-1 keystones equally (PILOT-CADENCE.md §6.1).
+		var roster_n := maxi(ClassDef.all().size(), 1)
+		choice = String(choices[posmod(seed_value + floori(float(seed_value) / float(roster_n)), choices.size())])
 	else:
 		choice = String(choices[_tree_rng.randi() % choices.size()])
 	if tree.pick(choice):
@@ -881,7 +895,7 @@ func _on_tree_offered(_class_id: String, depth: int, choices: Array) -> void:
 
 
 func _answer_pending_tree() -> void:
-	if tree_policy == "" or (tree_policy == "world_one" and policy == "traversal"):
+	if tree_policy not in ["random", "world_one"] or (tree_policy == "world_one" and policy == "traversal"):
 		return
 	var player = game.get("player") if game != null else null
 	var tree = player.get("tree") if player != null else null
@@ -964,7 +978,7 @@ func tick(delta: float) -> bool:
 	if not flow.in_play():
 		source.hold = {}
 		return false
-	if tree_policy != "" and game.player != null and game.player.tree != null and game.player.tree.pending():
+	if tree_policy in ["random", "world_one"] and game.player != null and game.player.tree != null and game.player.tree.pending():
 		_answer_pending_tree()
 	if policy == "completionist" and state not in ["stage", "beacon"]:
 		_clear_chain_hand()
