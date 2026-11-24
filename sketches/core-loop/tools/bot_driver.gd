@@ -699,6 +699,11 @@ var _cadence_index := 0
 var _cadence_reload_rolled := false
 var _cadence_reload_hit := false
 var _cadence_reload_pressed := false
+var _cadence_window_rolled := false
+var _cadence_window_hit := false
+var _cadence_window_pressed := false
+var _cadence_lob_reach_m := 0.0
+var _cadence_lob_flight_s := 0.0
 var _traverse_point := Vector3.INF
 # The traversal hands (HAND_NAMES) the runner named, and what they decided this tick.
 var hands: Array[String] = []
@@ -876,6 +881,20 @@ func _throw_hold(aim) -> bool:
 	if gauge == null or not gauge.charging or not _aim_valid(aim):
 		return true
 	var reach: float = _flat(game.player.ball_position(), _aim_point(aim))
+	var combat = game.get("combat")
+	var snap: Dictionary = combat.weapon_driver.state_snapshot() if combat != null and combat.get("weapon_driver") != null else {}
+	if String(snap.get("trigger", "")) == Pattern.TRIGGER_LOB_SNAP:
+		if reach <= 3.5:
+			_cadence_lob_reach_m = 0.0
+			_cadence_lob_flight_s = 0.0
+			return false
+		var tail_frac := Weapons.STICKY_TAIL_HOLD_S / Weapons.STICKY_CHARGE_MAX
+		var want_lob := clampf(reach / float(Weapons.BASE[Weapons.STICKY_CHARGE]["range_m"]), tail_frac + 0.02, 1.0)
+		var keep_holding: bool = gauge.fraction() < want_lob
+		if not keep_holding:
+			_cadence_lob_reach_m = reach
+			_cadence_lob_flight_s = clampf(reach / 22.0, 0.35, 1.1)
+		return keep_holding
 	var want := clampf((reach - Weapons.STICKY_THROW_MIN) / (Weapons.BASE[Weapons.STICKY_CHARGE]["range_m"] - Weapons.STICKY_THROW_MIN), 0.0, 1.0)
 	return gauge.fraction() < want
 
@@ -1081,6 +1100,11 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_cadence_reload_rolled = false
 	_cadence_reload_hit = false
 	_cadence_reload_pressed = false
+	_cadence_window_rolled = false
+	_cadence_window_hit = false
+	_cadence_window_pressed = false
+	_cadence_lob_reach_m = 0.0
+	_cadence_lob_flight_s = 0.0
 	_close_note()
 	_window_hits = []
 	_stage = stage
@@ -4998,9 +5022,10 @@ func _roll_cadence_window() -> bool:
 	return SkillBand.roll_window(seed_value, idx, float(SkillBand.BANDS["expert"]["window_last"]))
 
 
-# Band-driven fire hand for cadence baselines (PILOT-CADENCE.md §§3.1–3.2, §8): plays Rivet's
-# press / active-reload notch and Sable's tap-spark / hold-arc release according to the band's
-# window_share. A missed window yields the plain result with no jam or lockout.
+# Band-driven fire hand for cadence baselines (PILOT-CADENCE.md §§3.1-3.4, §8): plays Rivet's
+# press / active-reload notch, Sable's tap-spark / hold-arc release, Kest's cook-and-snap, and
+# Tarn's three-beat cadence according to the band's window_share. Reads only public
+# weapon_driver.state_snapshot(). A missed window yields the plain result with no jam or lockout.
 func _cadence_fire_hand() -> void:
 	# The traversal hand never fires (_traverse); its cast clicks go out after the press gate. The
 	# chain move fires nothing of its own (_chain_drive). Skip while a set piece, Dam sheet hold-fire,
@@ -5016,7 +5041,8 @@ func _cadence_fire_hand() -> void:
 		return
 	var snap: Dictionary = combat.weapon_driver.state_snapshot()
 	var trig: String = String(snap.get("trigger", ""))
-	if trig != Pattern.TRIGGER_PRESS and trig != Pattern.TRIGGER_TAP_CHARGE:
+	if trig != Pattern.TRIGGER_PRESS and trig != Pattern.TRIGGER_TAP_CHARGE \
+			and trig != Pattern.TRIGGER_LOB_SNAP and trig != Pattern.TRIGGER_BEATS:
 		var wid: String = combat.active_weapon() if combat.has_method("active_weapon") else ""
 		if wid != "":
 			var pat: Resource = combat.pattern(wid)
@@ -5070,6 +5096,64 @@ func _cadence_fire_hand() -> void:
 				source.hold.erase("fire_held")
 		else:
 			source.hold.erase("fire_held")
+		return
+	if trig == Pattern.TRIGGER_LOB_SNAP:
+		if bool(snap.get("lob_charging", false)):
+			_cadence_window_rolled = false
+			_cadence_window_hit = false
+			_cadence_window_pressed = false
+			return
+		var win: String = String(snap.get("window", "idle"))
+		if win == "waiting" or win == "open":
+			source.hold.erase("fire_held")
+			if not want_fire:
+				return
+			if not _cadence_window_rolled:
+				_cadence_window_rolled = true
+				_cadence_window_pressed = false
+				_cadence_window_hit = _roll_cadence_window()
+				_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
+			if _cadence_window_hit and not _cadence_window_pressed and bool(snap.get("window_open", false)) \
+					and _cadence_lob_reach_m <= 14.5:
+				var win_range: Vector2 = snap.get("window_range", Vector2.ZERO)
+				var snap_at: float = clampf(_cadence_lob_flight_s - 0.02, win_range.x, maxf(win_range.x, win_range.y - 0.03))
+				if float(snap.get("window_t", 0.0)) >= snap_at - 0.001:
+					source.press["fire_pressed"] = true
+					_cadence_window_pressed = true
+					_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
+			return
+		_cadence_window_rolled = false
+		_cadence_window_hit = false
+		_cadence_window_pressed = false
+		if bool(snap.get("snap_locked", false)):
+			source.hold.erase("fire_held")
+			return
+		if want_fire and bool(snap.get("ready", false)):
+			source.press["fire_pressed"] = true
+		else:
+			source.hold.erase("fire_held")
+		return
+	if trig == Pattern.TRIGGER_BEATS:
+		if int(snap.get("beat", 0)) != 2:
+			_cadence_window_rolled = false
+			_cadence_window_hit = false
+			_cadence_window_pressed = false
+			if want_fire and bool(snap.get("ready", false)):
+				source.press["fire_pressed"] = true
+			return
+		if not want_fire:
+			return
+		if not _cadence_window_rolled:
+			if bool(snap.get("window_spent", false)):
+				return
+			_cadence_window_rolled = true
+			_cadence_window_pressed = false
+			_cadence_window_hit = _roll_cadence_window()
+			_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
+		if _cadence_window_hit and not _cadence_window_pressed and bool(snap.get("window_open", false)):
+			source.press["fire_pressed"] = true
+			_cadence_window_pressed = true
+			_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
 
 
 # Tally's reader runs a card per press, not while held: the hands turn a held trigger into one

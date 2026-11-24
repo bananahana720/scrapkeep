@@ -42,14 +42,19 @@ const BASE := {
 		"knock": EventKinds.IMPACT["turret"]["knock"], "chain_jumps": 2, "chain_range": 16.0, "chain_falloff": 0.75,
 		"trigger": Pattern.TRIGGER_TAP_CHARGE, "floor_s": 0.30, "tap_threshold_s": 0.16,
 		"charge_s": 0.64, "charge_min": 0.25, "recover_s": 0.12},
-	# Kest's sticky charge: damage is the charge's, bolt_radius its blast, range_m the
-	# longest throw; the throw cadence is the weapon slot's cooldown, not the rate.
-	STICKY_CHARGE: {"damage": 16.0, "rate": 1.0, "range_m": 30.0, "speed": 22.0, "bolt_radius": 3.0,
-		"knock": EventKinds.IMPACT["sticky"]["knock"]},
-	# Tarn's claw sweep: short, heavy and slow, the highest per-hit weapon. Plating
-	# tuning for Tarn belongs to the Tarn verification unit.
-	CLAW_SWEEP: {"damage": 32.0, "rate": 2.0, "range_m": 5.0, "speed": 140.0, "bolt_radius": 1.1,
-		"knock": EventKinds.IMPACT["claw"]["knock"]},
+	# Kest's sticky charge (PILOT-CADENCE.md section 3.3): plain 11, snap 22 (2x) in [0.30, 0.55] s
+	# inside the 0.60 s throw floor; bolt_radius is its 3.0 m plain blast (4.05 m snapped).
+	STICKY_CHARGE: {"damage": 11.0, "rate": 1.0, "range_m": 30.0, "speed": 22.0, "bolt_radius": 3.0,
+		"knock": EventKinds.IMPACT["sticky"]["knock"],
+		"trigger": Pattern.TRIGGER_LOB_SNAP, "floor_s": 0.60,
+		"window_s": Vector2(0.30, 0.55), "window_mult": 2.0},
+	# Tarn's claw sweep (PILOT-CADENCE.md section 3.4): three beats (18 / 22 / 43 + 0.5 * speed to 30 m/s),
+	# one swing per press; beat 3 keeps the heaviest single baseline hit at every ball speed (43.0 > 42.0).
+	CLAW_SWEEP: {"damage": 18.0, "rate": 2.0, "range_m": 5.0, "speed": 140.0, "bolt_radius": 1.1,
+		"knock": EventKinds.IMPACT["claw"]["knock"],
+		"trigger": Pattern.TRIGGER_BEATS, "beat_floors_s": [0.45, 0.55], "beat_window_s": 0.75,
+		"window_s": Vector2(0.30, 0.54), "recover_s": 0.50,
+		"beat_mults": [1.0, 22.0 / 18.0, 43.0 / 18.0], "beat_speed_mult": 0.5 / 18.0, "beat_knock_mult": 2.0},
 	# Tally's ledger reader: the row gives _patterns, pattern() and _damage_mod a weapon to
 	# read. Combat runs her cards instead and never calls _fire for it.
 	LEDGER_READER: {"damage": 10.0, "rate": 2.5, "range_m": 30.0, "speed": 140.0, "bolt_radius": 0.5,
@@ -67,9 +72,11 @@ const HOLD_AUTO := {
 	RAPID_LASER: {"damage": 7.0},
 	ARC_CASTER: {"damage": 12.0},
 	PYLON_TURRET: {"damage": 11.0},
+	STICKY_CHARGE: {"damage": 16.0, "floor_s": 0.0, "window_s": Vector2.ZERO, "window_mult": 1.0},
+	CLAW_SWEEP: {"damage": 32.0},
 }
 
-# PILOT-CADENCE.md sections 2.5, 3.1 and 3.2 cadence constants.
+# PILOT-CADENCE.md sections 2.5, 3.1-3.4 cadence constants.
 const PIERCE_CHIP := 0.5
 const RIVET_FAN_FLOOR_S := 0.10
 const RIVET_FAN_DAMAGE := 0.5
@@ -81,6 +88,13 @@ const CHARGE_BOLT_DAMAGE := {
 const CHARGE_MOUNT_BOOST_S := 3.0
 const CHARGE_FAST_RATE := 1.5
 const CHARGE_BLAZING_RATE := 2.0
+const STICKY_TAIL_HOLD_S := 0.10
+const STICKY_TAIL_OFFSET := 1.2
+const STICKY_CHARGE_MAX := 0.60
+const STICKY_SNAP_MULT := 2.0
+const STICKY_SNAP_RADIUS_MULT := 1.35
+const STICKY_SNAP_KNOCK_MULT := 1.5
+const BEAT_SPEED_CAP := 30.0
 
 const STRIKE_KIND := {RAPID_LASER: "runner", ARC_CASTER: "arc", PYLON_TURRET: "turret", STICKY_CHARGE: "sticky",
 	CLAW_SWEEP: "claw", LEDGER_READER: "ledger", CANNON_LANE: "cannon"}
@@ -304,6 +318,26 @@ static func charge_bolt_mult(weapon_id: String) -> float:
 		return 1.0
 	var spark: float = float(BASE[weapon_id].get("damage", 0.0))
 	return (float(CHARGE_BOLT_DAMAGE[weapon_id]) / spark) if spark > 0.0 else 1.0
+
+
+# Heaviest single baseline hit for `weapon_id` at a standstill (PILOT-CADENCE.md section 1).
+# Tarn's beat 3 standstill (43.0) stays the heaviest of the six baselines at every speed.
+static func max_base_hit(weapon_id: String) -> float:
+	var row: Dictionary = resolve_row(weapon_id, BASE.get(weapon_id, BASE[RAPID_LASER]))
+	var dmg: float = float(row.get("damage", 0.0))
+	match String(row.get("trigger", Pattern.TRIGGER_HOLD_AUTO)):
+		Pattern.TRIGGER_PRESS, Pattern.TRIGGER_LOB_SNAP, Pattern.TRIGGER_STAMP:
+			return dmg * maxf(1.0, float(row.get("window_mult", 1.0)))
+		Pattern.TRIGGER_TAP_CHARGE:
+			return maxf(dmg, float(CHARGE_BOLT_DAMAGE.get(weapon_id, dmg)))
+		Pattern.TRIGGER_BEATS:
+			var mults: Array = row.get("beat_mults", [])
+			var top := 1.0
+			for m in mults:
+				top = maxf(top, float(m))
+			return dmg * top
+		_:
+			return dmg
 
 
 # SQ11: the top tier's second fire mode over the attached primary; null below the top tier

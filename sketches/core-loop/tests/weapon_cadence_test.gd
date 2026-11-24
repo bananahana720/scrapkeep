@@ -1,6 +1,7 @@
 extends SceneTree
 
 const BuffLedger := preload("res://src/core/buff_ledger.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -25,6 +26,8 @@ func _initialize() -> void:
 	_check_rivet_iron_sixes()
 	_check_rivet_top_up_and_sprint_fan()
 	_check_sable_tap_spark_hold_arc()
+	_check_kest_lob_snap()
+	_check_tarn_three_beats()
 	_check_buffer_boundaries()
 	_check_interruptions_and_sync_pattern()
 	_check_hold_auto_data_rollback()
@@ -255,6 +258,187 @@ func _check_sable_tap_spark_hold_arc() -> void:
 	_t.near("Static Discharge at 40 m/s deals 46.0", float(Weapons.burst(40.0)["damage"]), 46.0, 0.01)
 
 
+func _check_kest_lob_snap() -> void:
+	var pat: Resource = Weapons.base(Weapons.STICKY_CHARGE)
+	var drv := WeaponDriver.new()
+	drv.reset(pat)
+
+	# 1. Press opens lob gauge immediately (< 100 ms); release < 0.10 s is tail drop, >= 0.10 s is lob.
+	drv.step(DT, _press_intent(true), Weapons.STICKY_CHARGE, pat, pat.rate)
+	_t.check("Kest press opens lob gauge immediately", bool(drv.state_snapshot()["lob_charging"]), str(drv.state_snapshot()))
+	for _i in 3: # ~0.05 s (< 0.10 s)
+		drv.step(DT, _hold_intent(), Weapons.STICKY_CHARGE, pat, pat.rate)
+	var tail_shots: Array = drv.step(DT, _release_intent(), Weapons.STICKY_CHARGE, pat, pat.rate)
+	_t.eq("short release < 0.10 s emits 1 tail drop throw", tail_shots.size(), 1)
+	_t.check("short release marks tail_drop = true",
+		String(tail_shots[0]["kind"]) == WeaponDriver.SHOT_THROW and bool(tail_shots[0]["tail_drop"]), str(tail_shots[0]))
+	_t.eq("throw opens waiting snap window inside 0.60 s floor", String(drv.state_snapshot()["window"]), WeaponDriver.WINDOW_WAITING)
+	_t.near("throw sets 0.60 s floor cooldown", float(drv.state_snapshot()["cooldown"]), 0.60, 0.01)
+
+	# 2. Early press before 0.30 s spends the window -> second press inside [0.30, 0.55] cannot pay.
+	for _i in 10: # ~0.167 s (< 0.30 s)
+		drv.step(DT, Intent.new(), Weapons.STICKY_CHARGE, pat, pat.rate)
+	var early_snap: Array = drv.step(DT, _press_intent(), Weapons.STICKY_CHARGE, pat, pat.rate)
+	_t.eq("early snap press fires nothing", early_snap.size(), 0)
+	_t.eq("early snap press spends the window", String(drv.state_snapshot()["window"]), WeaponDriver.WINDOW_SPENT)
+	for _i in 12: # ~0.367 s (inside [0.30, 0.55])
+		drv.step(DT, Intent.new(), Weapons.STICKY_CHARGE, pat, pat.rate)
+	var second_try: Array = drv.step(DT, _press_intent(), Weapons.STICKY_CHARGE, pat, pat.rate)
+	_t.eq("second press after spent window cannot snap", second_try.size(), 0)
+
+	# 3. Lob (>= 0.10 s) + sweet-spot snap inside [0.30, 0.55] bursts 2x dmg, 1.35x radius, 1.5x knock,
+	#    and holding the snap press never opens the next lob gauge.
+	drv.reset(pat)
+	drv.step(DT, _press_intent(true), Weapons.STICKY_CHARGE, pat, pat.rate)
+	for _i in 12: # ~0.20 s (>= 0.10 s)
+		drv.step(DT, _hold_intent(), Weapons.STICKY_CHARGE, pat, pat.rate)
+	var lob_shots: Array = drv.step(DT, _release_intent(), Weapons.STICKY_CHARGE, pat, pat.rate)
+	_t.check("hold >= 0.10 s releases a lob (tail_drop = false)",
+		lob_shots.size() == 1 and not bool(lob_shots[0]["tail_drop"]) and float(lob_shots[0]["fraction"]) >= 0.25,
+		str(lob_shots))
+	for _i in 20: # ~0.333 s (inside [0.30, 0.55])
+		drv.step(DT, Intent.new(), Weapons.STICKY_CHARGE, pat, pat.rate)
+	_t.check("Kest snap window is open at ~0.33 s", bool(drv.state_snapshot()["window_open"]), str(drv.state_snapshot()))
+	var snap_shots: Array = drv.step(DT, _press_intent(true), Weapons.STICKY_CHARGE, pat, pat.rate)
+	_t.eq("snap press inside window emits 1 SHOT_SNAP", snap_shots.size(), 1)
+	_t.check("SHOT_SNAP carries 2.0x dmg, 1.35x radius, 1.5x knock",
+		String(snap_shots[0]["kind"]) == WeaponDriver.SHOT_SNAP
+		and is_equal_approx(float(snap_shots[0]["damage_mult"]), 2.0)
+		and is_equal_approx(float(snap_shots[0]["radius_mult"]), 1.35)
+		and is_equal_approx(float(snap_shots[0]["knock_mult"]), 1.5), str(snap_shots[0]))
+	for _i in 30: # hold well past the 0.60 s floor: snap press must NEVER open lob gauge while still held
+		var held_out: Array = drv.step(DT, _hold_intent(), Weapons.STICKY_CHARGE, pat, pat.rate)
+		_t.eq("holding snap press never throws", held_out.size(), 0)
+	_t.check("holding snap press never opens lob gauge even after floor clears",
+		not bool(drv.state_snapshot()["lob_charging"]) and bool(drv.state_snapshot()["snap_locked"]),
+		str(drv.state_snapshot()))
+	# Releasing unlocks the next press.
+	drv.step(DT, _release_intent(), Weapons.STICKY_CHARGE, pat, pat.rate)
+	_t.eq("releasing snap button clears snap_locked", bool(drv.state_snapshot()["snap_locked"]), false)
+	drv.step(DT, _press_intent(true), Weapons.STICKY_CHARGE, pat, pat.rate)
+	_t.eq("fresh press after release opens lob gauge cleanly", bool(drv.state_snapshot()["lob_charging"]), true)
+
+	# 4. Snap window expires at 0.55 s (inside 0.60 s floor) so starting next throw at 0.60 s never eats the window.
+	drv.reset(pat)
+	drv.step(DT, _press_intent(false), Weapons.STICKY_CHARGE, pat, pat.rate)
+	for _i in 34: # 0.567 s > 0.55 s
+		drv.step(DT, Intent.new(), Weapons.STICKY_CHARGE, pat, pat.rate)
+	_t.eq("snap window closes before 0.60 s floor", String(drv.state_snapshot()["window"]), WeaponDriver.WINDOW_SPENT)
+
+
+func _check_tarn_three_beats() -> void:
+	var pat: Resource = Weapons.base(Weapons.CLAW_SWEEP)
+	var drv := WeaponDriver.new()
+	drv.reset(pat)
+
+	# 1. Press swings immediately (< 100 ms); holding swings once and waits.
+	var b1: Array = drv.step(DT, _press_intent(true), Weapons.CLAW_SWEEP, pat, pat.rate, {"planar_speed": 14.0})
+	_t.eq("Tarn Beat 1 fires immediately on press", b1.size(), 1)
+	_t.check("Tarn Beat 1 is 18.0 dmg, 1.0x knock, beat 1",
+		String(b1[0]["kind"]) == WeaponDriver.SHOT_BEAT_1 and int(b1[0]["beat"]) == 1
+		and is_equal_approx(pat.damage * float(b1[0]["damage_mult"]), 18.0)
+		and is_equal_approx(float(b1[0]["knock_mult"]), 1.0), str(b1[0]))
+	var held_swings := 0
+	for _i in 60:
+		held_swings += drv.step(DT, _hold_intent(), Weapons.CLAW_SWEEP, pat, pat.rate, {"planar_speed": 14.0}).size()
+	_t.eq("Tarn held button swings once and waits", held_swings, 0)
+
+	# 2. Waiting > 0.75 s after Beat 1 resets to Beat 1 (not Beat 2).
+	var b1_again: Array = drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, pat, pat.rate, {"planar_speed": 14.0})
+	_t.eq("pressing > 0.75 s after Beat 1 resets to Beat 1", int(b1_again[0]["beat"]), 1)
+
+	# 3. Pressing within [0.45, 0.75] fires Beat 2 (22.0 dmg) and opens [0.30, 0.54] Beat 3 window.
+	for _i in 28: # ~0.467 s (past 0.45 s floor, inside 0.75 s beat window)
+		drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, pat, pat.rate, {"planar_speed": 14.0})
+	var b2: Array = drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, pat, pat.rate, {"planar_speed": 14.0})
+	_t.check("Tarn Beat 2 deals 22.0 dmg, beat 2, opens waiting window",
+		b2.size() == 1 and int(b2[0]["beat"]) == 2
+		and is_equal_approx(pat.damage * float(b2[0]["damage_mult"]), 22.0)
+		and String(drv.state_snapshot()["window"]) == WeaponDriver.WINDOW_WAITING, str(b2))
+
+	# 4. Pressing inside [0.30, 0.54] fires Beat 3 with speed bonus (43 still / 50 cruise / 58 cap) & 2.0x knock + 0.50 s recover.
+	for spd_case in [[0.0, 43.0], [14.0, 50.0], [30.0, 58.0], [50.0, 58.0]]:
+		var spd: float = float(spd_case[0])
+		var want_dmg: float = float(spd_case[1])
+		drv.reset(pat)
+		drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, pat, pat.rate, {"planar_speed": spd})
+		for _i in 28:
+			drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, pat, pat.rate, {"planar_speed": spd})
+		drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, pat, pat.rate, {"planar_speed": spd})
+		for _i in 20: # ~0.333 s (inside [0.30, 0.54])
+			drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, pat, pat.rate, {"planar_speed": spd})
+		_t.check("Beat 3 window open at ~0.33 s (speed=%.0f)" % spd, bool(drv.state_snapshot()["window_open"]), str(drv.state_snapshot()))
+		var b3: Array = drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, pat, pat.rate, {"planar_speed": spd})
+		_t.eq("Beat 3 fires 1 swing (speed=%.0f)" % spd, b3.size(), 1)
+		_t.near("Beat 3 damage at %.0f m/s equals %.1f" % [spd, want_dmg], pat.damage * float(b3[0]["damage_mult"]), want_dmg, 0.05)
+		_t.near("Beat 3 carries 2.0x knock (speed=%.0f)" % spd, float(b3[0]["knock_mult"]), 2.0, 0.001)
+		_t.near("Beat 3 applies 0.50 s recovery (speed=%.0f)" % spd, float(drv.state_snapshot()["recover"]), 0.50, 0.005)
+		_t.eq("Beat 3 resets beat to 0 (speed=%.0f)" % spd, int(drv.state_snapshot()["beat"]), 0)
+
+	# 5. Early press (< 0.30 s after Beat 2) spends the window with no lockout; 0.10 s buffer before 0.55 s fires Beat 1.
+	drv.reset(pat)
+	drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, pat, pat.rate)
+	for _i in 28:
+		drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, pat, pat.rate)
+	drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, pat, pat.rate) # Beat 2
+	for _i in 10: # ~0.167 s (< 0.30 s)
+		drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, pat, pat.rate)
+	var early_b3: Array = drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, pat, pat.rate)
+	_t.eq("early press after Beat 2 fires nothing", early_b3.size(), 0)
+	_t.eq("early press after Beat 2 spends Beat 3 window", String(drv.state_snapshot()["window"]), WeaponDriver.WINDOW_SPENT)
+	for _i in 19: # now ~0.483 s (~0.067 s left before 0.55 s floor -> within 0.10 s buffer)
+		drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, pat, pat.rate)
+	drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, pat, pat.rate)
+	_t.eq("press within 0.10 s of Beat 2 floor buffers Beat 1 (no lockout)", bool(drv.state_snapshot()["buffered"]), true)
+	var next_beats: Array = []
+	for _i in 6:
+		for s in drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, pat, pat.rate):
+			next_beats.append(int(s["beat"]))
+	_t.eq("spent Beat 3 window flows cleanly into Beat 1 at 0.55 s", next_beats, [1])
+
+	# 6. Missed Beat 3 window (no press in [0.30, 0.54]) resets to Beat 1 at 0.55 s.
+	drv.reset(pat)
+	drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, pat, pat.rate)
+	for _i in 28:
+		drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, pat, pat.rate)
+	drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, pat, pat.rate) # Beat 2
+	for _i in 35: # > 0.55 s
+		drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, pat, pat.rate)
+	var after_miss: Array = drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, pat, pat.rate)
+	_t.eq("missed Beat 3 window resets to Beat 1", int(after_miss[0]["beat"]), 1)
+
+	# 7. Data extensibility: future Depth-1 keystones t_saw_flurry & t_guillotine work purely by Pattern data.
+	var saw_pat: Resource = pat.copy()
+	saw_pat.beat_floors_s = [0.35, 0.35]
+	saw_pat.window_s = Vector2(0.0, 0.0)
+	saw_pat.beat_mults = [1.0, 1.0, 1.0]
+	drv.reset(saw_pat)
+	drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, saw_pat, saw_pat.rate)
+	for _i in 22: # ~0.367 s
+		drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, saw_pat, saw_pat.rate)
+	var saw_b2: Array = drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, saw_pat, saw_pat.rate)
+	_t.check("t_saw_flurry data pattern runs flat beats with no Beat 3 window",
+		saw_b2.size() == 1 and int(saw_b2[0]["beat"]) == 2
+		and String(drv.state_snapshot()["window"]) == WeaponDriver.WINDOW_IDLE, str(drv.state_snapshot()))
+
+	var guil_pat: Resource = pat.copy()
+	guil_pat.beat_mults = [1.0, 22.0 / 18.0, 72.0 / 18.0]
+	guil_pat.beat_range_mult = 1.4
+	guil_pat.recover_s = 0.80
+	drv.reset(guil_pat)
+	drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, guil_pat, guil_pat.rate)
+	for _i in 28:
+		drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, guil_pat, guil_pat.rate)
+	drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, guil_pat, guil_pat.rate)
+	for _i in 20:
+		drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, guil_pat, guil_pat.rate)
+	var guil_b3: Array = drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, guil_pat, guil_pat.rate, {"planar_speed": 0.0})
+	_t.check("t_guillotine data pattern amplifies Beat 3 damage, range_mult and recover_s without driver edits",
+		guil_b3.size() == 1 and is_equal_approx(guil_pat.damage * float(guil_b3[0]["damage_mult"]), 72.0)
+		and is_equal_approx(float(guil_b3[0]["range_mult"]), 1.4)
+		and is_equal_approx(float(drv.state_snapshot()["recover"]), 0.80), str(guil_b3))
+
+
 func _check_buffer_boundaries() -> void:
 	var dt90 := 1.0 / 90.0
 	var rivet: Resource = Weapons.base(Weapons.RAPID_LASER)
@@ -462,6 +646,7 @@ func _check_hold_auto_data_rollback() -> void:
 		Weapons.RAPID_LASER: [7.0, 12.0, 84.0],
 		Weapons.ARC_CASTER: [12.0, 5.0, 60.0],
 		Weapons.PYLON_TURRET: [11.0, 9.0, 99.0],
+		Weapons.CLAW_SWEEP: [32.0, 2.0, 64.0],
 	}
 	for wid in legacy_rows:
 		var flipped: Dictionary = Weapons.BASE[wid].duplicate()
@@ -482,6 +667,17 @@ func _check_hold_auto_data_rollback() -> void:
 		_t.check("%s hold_auto data row restores continuous hold fire" % wid,
 			shots >= int(legacy.rate) - 1 and shots <= int(legacy.rate) + 1,
 			"shots=%d rate=%.1f" % [shots, legacy.rate])
+
+	# Kest sticky_charge hold_auto rollback: 16.0 damage, no snap window (rate stays 0.0 slot-driven).
+	var k_flip: Dictionary = Weapons.BASE[Weapons.STICKY_CHARGE].duplicate()
+	k_flip["trigger"] = Pattern.TRIGGER_HOLD_AUTO
+	var k_legacy: Resource = Pattern.make(Weapons.resolve_row(Weapons.STICKY_CHARGE, k_flip))
+	_t.eq("sticky_charge hold_auto rollback restores 16.0 damage and disables snap window",
+		[k_legacy.trigger, k_legacy.damage, k_legacy.window_s, k_legacy.window_mult],
+		[Pattern.TRIGGER_HOLD_AUTO, 16.0, Vector2.ZERO, 1.0])
+	_t.eq("sticky_charge hold_auto_base matches flipped row",
+		[Weapons.hold_auto_base(Weapons.STICKY_CHARGE).damage, Weapons.hold_auto_base(Weapons.STICKY_CHARGE).window_s],
+		[16.0, Vector2.ZERO])
 
 
 func _check_ultimate_and_swap() -> void:
@@ -530,6 +726,41 @@ func _check_ultimate_and_swap() -> void:
 			drv.step(DT, Intent.new(), Weapons.RAPID_LASER, bare, bare.rate)
 	_t.eq("a cylinder-less press weapon fires every press", fired, 20)
 
+	# Kest ultimate interrupt drops lob charging, clears snap_locked and spends an open/waiting window.
+	var kest: Resource = Weapons.base(Weapons.STICKY_CHARGE)
+	drv.reset(kest)
+	drv.step(DT, _press_intent(true), Weapons.STICKY_CHARGE, kest, kest.rate)
+	for _i in 6:
+		drv.step(DT, _hold_intent(), Weapons.STICKY_CHARGE, kest, kest.rate)
+	_t.check("Kest lob charging before ultimate", bool(drv.state_snapshot()["lob_charging"]), "")
+	drv.interrupt(WeaponDriver.INTERRUPT_ULTIMATE)
+	_t.check("Kest ultimate drops lob gauge without throwing",
+		not bool(drv.state_snapshot()["lob_charging"]) and not bool(drv.state_snapshot()["snap_locked"]),
+		str(drv.state_snapshot()))
+	drv.reset(kest)
+	drv.step(DT, _press_intent(false), Weapons.STICKY_CHARGE, kest, kest.rate)
+	for _i in 20:
+		drv.step(DT, Intent.new(), Weapons.STICKY_CHARGE, kest, kest.rate)
+	_t.check("Kest snap window open before ultimate", bool(drv.state_snapshot()["window_open"]), "")
+	drv.interrupt(WeaponDriver.INTERRUPT_ULTIMATE)
+	_t.eq("Kest ultimate spends open snap window", String(drv.state_snapshot()["window"]), WeaponDriver.WINDOW_SPENT)
+
+	# Tarn ultimate interrupt resets beat to 0 and spends an open Beat 3 window.
+	var tarn: Resource = Weapons.base(Weapons.CLAW_SWEEP)
+	drv.reset(tarn)
+	drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, tarn, tarn.rate)
+	for _i in 28:
+		drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, tarn, tarn.rate)
+	drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, tarn, tarn.rate)
+	for _i in 20:
+		drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, tarn, tarn.rate)
+	_t.check("Tarn Beat 3 window open before ultimate", bool(drv.state_snapshot()["window_open"]), "")
+	drv.interrupt(WeaponDriver.INTERRUPT_ULTIMATE)
+	var after_tarn_ult: Dictionary = drv.state_snapshot()
+	_t.check("Tarn ultimate clears beat and spends Beat 3 window",
+		int(after_tarn_ult["beat"]) == 0 and String(after_tarn_ult["window"]) == WeaponDriver.WINDOW_SPENT,
+		str(after_tarn_ult))
+
 
 func _check_warden_reactor_base_dps() -> void:
 	_t.near("WardenReactor.base_dps routes Rivet through careless WeaponDriver.base_dps",
@@ -538,6 +769,10 @@ func _check_warden_reactor_base_dps() -> void:
 		WardenReactor.base_dps(Weapons.ARC_CASTER), 8.0 / 0.30, 0.01)
 	_t.near("WardenReactor.base_dps routes Pylon Turret through careless WeaponDriver.base_dps",
 		WardenReactor.base_dps(Weapons.PYLON_TURRET), 9.0 / 0.30, 0.01)
+	_t.near("WardenReactor.base_dps routes Kest through careless WeaponDriver.base_dps (18.33)",
+		WardenReactor.base_dps(Weapons.STICKY_CHARGE), 11.0 / 0.60, 0.01)
+	_t.near("WardenReactor.base_dps routes Tarn through careless WeaponDriver.base_dps (40.0)",
+		WardenReactor.base_dps(Weapons.CLAW_SWEEP), 40.0, 0.01)
 
 
 func _run_live() -> void:
@@ -718,6 +953,243 @@ func _run_live() -> void:
 	_game.events.flow_changed.emit("title")
 	var after_title_sable: Dictionary = combat.weapon_driver.state_snapshot()
 	_t.check("WC-1: title transition returns charging Sable to rest", _is_at_rest(after_title_sable, 0), str(after_title_sable))
+
+	# 7. Live Kest cook-and-snap: tail drop, world fuse ring cue, snap burst (2x dmg, 1.35x radius,
+	#    1.5x knock), rocket jump non-refresh, snap hold lock, Detonation Line snap, proc isolation,
+	#    ultimate interrupt and WC-1 boundary reset.
+	_game.flow._begin_run(ClassDef.by_id("demolitions_caster")) # Kest
+	await physics_frame
+	combat.set_physics_process(false)
+	_game.player.set_physics_process(false)
+	var kest_origin: Vector3 = _game.player.ball_position()
+
+	# 7a. Short press & release (< 0.10 s) -> tail drop at player's tail, waiting amber fuse ring.
+	combat._start_attempt()
+	var kest_dummy: Node3D = combat.spawn_enemy("chaser", kest_origin + Vector3(0.0, 0.0, -3.4))
+	kest_dummy.set_physics_process(false)
+	kest_dummy.hp = 200.0
+	kest_dummy.max_hp = 200.0
+	_game.player.intent.clear()
+	_game.player.intent.fire_pressed = true
+	_game.player.intent.fire_held = true
+	combat._physics_process(DT)
+	_t.check("live Kest press opens lob gauge immediately",
+		bool(combat.weapon_driver.state_snapshot()["lob_charging"]), str(combat.weapon_driver.state_snapshot()))
+	_game.player.intent.clear()
+	_game.player.intent.fire_released = true
+	combat._physics_process(DT)
+	_t.eq("live Kest short release drops 1 sticky charge", combat.sticky.live().size(), 1)
+	var c0: Dictionary = combat.sticky.live()[0]
+	_t.near("live Kest tail drop starts stuck (flight == 0)", float(c0["flight"]), 0.0, 0.001)
+	_t.check("live Kest waiting fuse ring is amber",
+		combat.sticky.fuse_ring_color(c0).is_equal_approx(Palette.AMBER), str(combat.sticky.fuse_ring_color(c0)))
+	# Position dummy right at 3.6 m from charge: inside 4.05 m snapped radius, outside 3.0 m plain radius.
+	var c0_pos: Vector3 = c0["pos"]
+	kest_dummy.global_position = c0_pos + Vector3(3.6, 0.0, 0.0)
+
+	# 7b. Advance into [0.30, 0.55] -> fuse ring turns mint; snap press bursts 22 dmg at 3.6 m (4.05 m radius),
+	#     does NOT refresh _rocket_left, and holding snap never opens lob gauge.
+	_game.player.intent.clear()
+	for _i in 21: # 0.35 s
+		combat._physics_process(DT)
+	_t.check("live Kest snap window opens at 0.35 s and fuse ring turns mint",
+		bool(combat.weapon_driver.state_snapshot()["window_open"])
+		and combat.sticky.fuse_ring_color(c0).is_equal_approx(Palette.ARC),
+		"open=%s col=%s" % [str(combat.weapon_driver.state_snapshot()["window_open"]), str(combat.sticky.fuse_ring_color(c0))])
+	combat._rocket_left = 1.0 # simulate rocket cooldown mid-flight
+	var hp_before_snap: float = kest_dummy.hp
+	_game.player.intent.clear()
+	_game.player.intent.fire_pressed = true
+	_game.player.intent.fire_held = true
+	combat._physics_process(DT)
+	_t.eq("live Kest snap consumes the sticky charge", combat.sticky.live().size(), 0)
+	_t.near("live Kest snap hits target at 3.6 m (4.05 m radius) for 22.0 damage", hp_before_snap - kest_dummy.hp, 22.0, 0.2)
+	_t.check("live Kest snap does NOT refresh rocket cooldown", combat._rocket_left > 0.5, "%.3f" % combat._rocket_left)
+	for _i in 45: # hold 0.75 s past 0.60 s floor
+		_game.player.abilities.tick(DT)
+		_game.player.intent.clear()
+		_game.player.intent.fire_held = true
+		combat._physics_process(DT)
+	_t.check("live Kest holding snap press never opens lob gauge",
+		not bool(combat.weapon_driver.state_snapshot()["lob_charging"]) and combat.sticky.live().is_empty(),
+		str(combat.weapon_driver.state_snapshot()))
+	_game.player.intent.clear()
+	_game.player.intent.fire_released = true
+	combat._physics_process(DT)
+
+	# 7c. Detonation Line snaps an open-window charge and consumes the window.
+	combat._start_attempt()
+	_game.player.abilities.tick(1.0)
+	var line_dummy: Node3D = combat.spawn_enemy("chaser", kest_origin + Vector3(0.0, 0.0, -2.5))
+	line_dummy.set_physics_process(false)
+	line_dummy.hp = 200.0
+	line_dummy.max_hp = 200.0
+	_game.player.intent.clear()
+	_game.player.intent.fire_pressed = true
+	_game.player.intent.fire_held = true
+	combat._physics_process(DT)
+	_game.player.intent.clear()
+	_game.player.intent.fire_released = true
+	combat._physics_process(DT)
+	_t.eq("7c setup drops 1 charge for Detonation Line", combat.sticky.live().size(), 1)
+	if not combat.sticky.live().is_empty():
+		var lc: Dictionary = combat.sticky.live()[0]
+		var lc_pos: Vector3 = lc["pos"]
+		var line_from: Vector3 = _game.player.ball_position()
+		var line_dir: Vector3 = (lc_pos - line_from)
+		line_dir.y = 0.0
+		line_dir = line_dir.normalized() if line_dir.length_squared() > 0.0001 else Vector3.FORWARD
+		var line_perp := Vector3(-line_dir.z, 0.0, line_dir.x).normalized()
+		line_dummy.global_position = lc_pos + line_perp * 3.5 # outside beam & 3.0 m plain blast, inside 4.05 m snapped blast
+		_game.player.intent.clear()
+		for _i in 21: # 0.35 s -> open window
+			combat._physics_process(DT)
+		var hp_before_line: float = line_dummy.hp
+		var line_shape := {"from": line_from, "to": line_from + line_dir * 12.0, "width": Weapons.LINE_WIDTH}
+		combat._fire_line(0.5, line_shape)
+		_t.eq("Detonation Line consumes open-window charge and marks window HIT",
+			[combat.sticky.live().size(), String(combat.weapon_driver.state_snapshot()["window"])],
+			[0, WeaponDriver.WINDOW_HIT])
+		_t.near("Detonation Line snap deals 22.0 damage at 3.5 m", hp_before_line - line_dummy.hp, 22.0, 0.2)
+
+	# 7d. Kest proc detonation stays plain (11.0 dmg, 3.0 m) and never touches weapon_driver.
+	var proc_before: Dictionary = combat.weapon_driver.state_snapshot()
+	var proc_dummy: Node3D = combat.spawn_enemy("chaser", combat._floor_at(_game.player.ball_position()) + Vector3(1.5, 0.0, 0.0))
+	proc_dummy.set_physics_process(false)
+	proc_dummy.hp = 200.0
+	proc_dummy.max_hp = 200.0
+	combat._proc_detonate(1.0)
+	_t.near("Kest proc detonation deals plain 11.0 damage", 200.0 - proc_dummy.hp, 11.0, 0.2)
+	_t.eq("Kest proc detonation never mutates weapon_driver", combat.weapon_driver.state_snapshot(), proc_before)
+
+	# 7e. Kest WC-1 boundary reset on run_ended.
+	_game.player.intent.clear()
+	_game.player.intent.fire_pressed = true
+	_game.player.intent.fire_held = true
+	combat._physics_process(DT)
+	_game.events.run_ended.emit(false)
+	var after_end_kest: Dictionary = combat.weapon_driver.state_snapshot()
+	_t.check("WC-1: run_ended returns Kest to rest",
+		_is_at_rest(after_end_kest, 0) and not bool(after_end_kest["lob_charging"]) and not bool(after_end_kest["snap_locked"]),
+		str(after_end_kest))
+
+	# 8. Live Tarn three-beat cadence: Beat 1 (18), Beat 2 (22), Beat 3 (43+speed, 2.0x knock),
+	#    Clamp 1.5x across all three beats, proc isolation, and WC-1 boundary reset.
+	_game.flow._begin_run(ClassDef.by_id("tarn")) # Tarn
+	await physics_frame
+	combat.set_physics_process(false)
+	_game.player.set_physics_process(false)
+	combat._start_attempt()
+	var tarn_origin: Vector3 = _game.player.ball_position()
+	var tarn_spot: Vector3 = tarn_origin + combat._flat_aim() * 3.0
+	var tarn_dummy: Node3D = combat.spawn_enemy("chaser", tarn_spot)
+	tarn_dummy.set_physics_process(false)
+	tarn_dummy.hp = 500.0
+	tarn_dummy.max_hp = 500.0
+	_game.player.set_velocity_now(Vector3.ZERO)
+	_game.player.intent.clear()
+	_game.player.intent.fire_pressed = true
+	_game.player.intent.fire_held = true
+	combat._physics_process(DT)
+	var d_b1: float = 500.0 - tarn_dummy.hp
+	var knock_b1: float = tarn_dummy._knocked_speed()
+	_t.near("live Tarn Beat 1 deals 18.0 damage", d_b1, 18.0, 0.2)
+	_t.check("live Tarn Beat 1 applies positive knock speed", knock_b1 > 1.0, "%.2f" % knock_b1)
+	_t.eq("live Tarn last_shot records beat 1", int(combat.last_shot.get("beat", 0)), 1)
+
+	# Wait 0.467 s -> Beat 2
+	tarn_dummy.velocity = Vector3.ZERO
+	tarn_dummy.global_position = tarn_spot
+	_game.player.intent.clear()
+	for _i in 28:
+		combat._physics_process(DT)
+	var hp_pre_b2: float = tarn_dummy.hp
+	_game.player.intent.fire_pressed = true
+	combat._physics_process(DT)
+	var d_b2: float = hp_pre_b2 - tarn_dummy.hp
+	_t.near("live Tarn Beat 2 deals 22.0 damage", d_b2, 22.0, 0.2)
+	_t.eq("live Tarn last_shot records beat 2", int(combat.last_shot.get("beat", 0)), 2)
+
+	# Proc mid-combo (while Beat 3 window is open) fires plain Beat 1 (18.0) without mutating weapon_driver!
+	tarn_dummy.velocity = Vector3.ZERO
+	tarn_dummy.global_position = tarn_spot
+	_game.player.intent.clear()
+	for _i in 20: # 0.333 s -> Beat 3 window open
+		combat._physics_process(DT)
+	var pre_tarn_proc: Dictionary = combat.weapon_driver.state_snapshot()
+	var hp_pre_proc: float = tarn_dummy.hp
+	combat._fire(Weapons.CLAW_SWEEP, "item_proc")
+	combat.bolts.step(DT, _game.get_world_3d().direct_space_state, [tarn_dummy]) # resolve proc bolt without ticking weapon_driver
+	_t.near("live Tarn item_proc deals plain 18.0 damage", hp_pre_proc - tarn_dummy.hp, 18.0, 0.2)
+	_t.eq("live Tarn item_proc leaves beat and open Beat 3 window untouched",
+		combat.weapon_driver.state_snapshot(), pre_tarn_proc)
+
+	# Beat 3 at standstill deals 43.0 damage and 2.0x knock impulse (enough to throw into a pin)!
+	tarn_dummy.velocity = Vector3.ZERO
+	tarn_dummy.global_position = tarn_spot
+	var pin_victim: Node3D = combat.spawn_enemy("chaser", tarn_spot + combat._flat_aim() * 1.4)
+	pin_victim.set_physics_process(false)
+	pin_victim.hp = 200.0
+	pin_victim.max_hp = 200.0
+	var pins_before: int = combat.pins
+	var hp_pre_b3: float = tarn_dummy.hp
+	_game.player.intent.clear()
+	_game.player.intent.fire_pressed = true
+	combat._physics_process(DT)
+	var d_b3: float = hp_pre_b3 - tarn_dummy.hp
+	var knock_b3: float = tarn_dummy._knocked_speed()
+	tarn_dummy._physics_process(DT)
+	_game.player.intent.clear()
+	combat._physics_process(DT) # allow _pin_step to resolve the Beat 3 knock throw into pin_victim
+	_t.near("live Tarn Beat 3 at standstill deals 43.0 damage", d_b3, 43.0, 0.2)
+	_t.near("live Tarn Beat 3 applies 2.0x knock impulse vs Beat 1", knock_b3, knock_b1 * 2.0, maxf(knock_b1 * 0.15, 0.5))
+	_t.check("live Tarn Beat 3 2.0x knock exceeds pin threshold and pins neighbor",
+		knock_b3 > Weapons.PIN_MIN_SPEED and combat.pins > pins_before,
+		"knock_b3=%.2f pins=%d->%d" % [knock_b3, pins_before, combat.pins])
+	_t.eq("live Tarn last_shot records beat 3 and 2.0x knock",
+		[int(combat.last_shot.get("beat", 0)), is_equal_approx(float(combat.last_shot.get("knock_mult", 0.0)), 2.0)],
+		[3, true])
+	pin_victim.queue_free()
+
+	# Clamp 1.5x applies cleanly across all three beats (27.0, 33.0, 64.5 at standstill).
+	combat._start_attempt()
+	var clamp_dummy: Node3D = combat.spawn_enemy("chaser", tarn_spot)
+	clamp_dummy.set_physics_process(false)
+	clamp_dummy.hp = 500.0
+	clamp_dummy.max_hp = 500.0
+	combat._clamped[clamp_dummy.get_instance_id()] = 10.0
+	_game.player.set_velocity_now(Vector3.ZERO)
+	_game.player.intent.clear()
+	_game.player.intent.fire_pressed = true
+	combat._physics_process(DT)
+	var c_b1: float = 500.0 - clamp_dummy.hp
+	clamp_dummy.velocity = Vector3.ZERO
+	clamp_dummy.global_position = tarn_spot
+	_game.player.intent.clear()
+	for _i in 28:
+		combat._physics_process(DT)
+	var c_pre2: float = clamp_dummy.hp
+	_game.player.intent.fire_pressed = true
+	combat._physics_process(DT)
+	var c_b2: float = c_pre2 - clamp_dummy.hp
+	clamp_dummy.velocity = Vector3.ZERO
+	clamp_dummy.global_position = tarn_spot
+	_game.player.intent.clear()
+	for _i in 20:
+		combat._physics_process(DT)
+	var c_pre3: float = clamp_dummy.hp
+	_game.player.intent.fire_pressed = true
+	combat._physics_process(DT)
+	var c_b3: float = c_pre3 - clamp_dummy.hp
+	_t.near("Clamp 1.5x multiplies Beat 1 (27.0)", c_b1, 27.0, 0.3)
+	_t.near("Clamp 1.5x multiplies Beat 2 (33.0)", c_b2, 33.0, 0.3)
+	_t.near("Clamp 1.5x multiplies Beat 3 standstill (64.5)", c_b3, 64.5, 0.4)
+
+	# Tarn WC-1 boundary reset on run_ended.
+	_game.events.run_ended.emit(true)
+	var after_end_tarn: Dictionary = combat.weapon_driver.state_snapshot()
+	_t.check("WC-1: run_ended returns Tarn to rest (beat 0)",
+		_is_at_rest(after_end_tarn, 0) and int(after_end_tarn["beat"]) == 0, str(after_end_tarn))
 
 	_game.free()
 	quit(_t.verdict())

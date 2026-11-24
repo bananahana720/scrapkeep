@@ -47,6 +47,11 @@ const MAX_CHARGE_S := 5.0
 const MAX_TAP_THRESHOLD_S := 1.0
 const MAX_RECOVER_S := 5.0
 const MAX_REFUND := 1.0
+const MIN_BEAT_MULT := 0.1
+const MAX_BEAT_MULT := 10.0
+const MAX_BEAT_SPEED_MULT := 2.0
+const MAX_BEAT_KNOCK_MULT := 5.0
+const MAX_BEAT_RANGE_MULT := 3.0
 
 @export var count := 1
 @export var spread_deg := 0.0
@@ -85,6 +90,10 @@ const MAX_REFUND := 1.0
 @export var tap_threshold_s := 0.0
 @export var recover_s := 0.0
 @export var beat_window_s := 0.0
+@export var beat_mults: Array = []
+@export var beat_speed_mult := 0.0
+@export var beat_knock_mult := 1.0
+@export var beat_range_mult := 1.0
 @export var refund := 0.0
 @export var fan := false
 
@@ -92,7 +101,8 @@ const FIELDS := ["count", "spread_deg", "arms", "arm_offset_deg", "rotation_deg"
 	"wave_amp", "wave_hz", "pierce", "damage", "rate", "range_m", "speed", "bolt_radius", "knock",
 	"chain_jumps", "chain_range", "chain_falloff", "lattice_chain_falloff", "burst_scale", "special_scale",
 	"trigger", "floor_s", "beat_floors_s", "mag", "reload_s", "window_s", "window_mult",
-	"charge_s", "charge_min", "tap_threshold_s", "recover_s", "beat_window_s", "refund", "fan"]
+	"charge_s", "charge_min", "tap_threshold_s", "recover_s", "beat_window_s",
+	"beat_mults", "beat_speed_mult", "beat_knock_mult", "beat_range_mult", "refund", "fan"]
 
 # The transformer catalogue. Each row is pure data: `add` then `mul` then `min` (a
 # floor), applied in that order, once per stack. Writer B's parts name these ids.
@@ -177,11 +187,11 @@ func transformed(ids: Array) -> Resource:
 static func _coerce(key: String, value):
 	if key == "window_s" and value is Array and value.size() >= 2:
 		return Vector2(float(value[0]), float(value[1]))
-	if key == "beat_floors_s" and value is Array:
-		var floors: Array = []
+	if (key == "beat_floors_s" or key == "beat_mults") and value is Array:
+		var vals: Array = []
 		for v in value:
-			floors.append(float(v))
-		return floors
+			vals.append(float(v))
+		return vals
 	return value
 
 
@@ -239,6 +249,14 @@ func _clamp() -> void:
 	tap_threshold_s = _clamp_f(tap_threshold_s, 0.0, MAX_TAP_THRESHOLD_S)
 	recover_s = _clamp_f(recover_s, 0.0, MAX_RECOVER_S)
 	beat_window_s = _clamp_f(beat_window_s, 0.0, MAX_WINDOW_S)
+	if not beat_mults.is_empty():
+		var clamped_mults: Array = []
+		for v in beat_mults:
+			clamped_mults.append(_clamp_f(float(v), MIN_BEAT_MULT, MAX_BEAT_MULT))
+		beat_mults = clamped_mults
+	beat_speed_mult = _clamp_f(beat_speed_mult, 0.0, MAX_BEAT_SPEED_MULT)
+	beat_knock_mult = _clamp_f(beat_knock_mult, 1.0, MAX_BEAT_KNOCK_MULT)
+	beat_range_mult = _clamp_f(beat_range_mult, 1.0, MAX_BEAT_RANGE_MULT)
 	refund = _clamp_f(refund, 0.0, MAX_REFUND)
 
 

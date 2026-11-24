@@ -51,6 +51,10 @@ func _check_pattern_defaults_and_clamps() -> void:
 	_t.near("default tap_threshold_s is 0", fresh.tap_threshold_s, 0.0)
 	_t.near("default recover_s is 0", fresh.recover_s, 0.0)
 	_t.near("default beat_window_s is 0", fresh.beat_window_s, 0.0)
+	_t.eq("default beat_mults is empty", fresh.beat_mults, [])
+	_t.near("default beat_speed_mult is 0", fresh.beat_speed_mult, 0.0)
+	_t.near("default beat_knock_mult is 1", fresh.beat_knock_mult, 1.0)
+	_t.near("default beat_range_mult is 1", fresh.beat_range_mult, 1.0)
 	_t.near("default refund is 0", fresh.refund, 0.0)
 	_t.eq("default fan is false", fresh.fan, false)
 
@@ -58,8 +62,8 @@ func _check_pattern_defaults_and_clamps() -> void:
 		Weapons.RAPID_LASER: Pattern.TRIGGER_PRESS,
 		Weapons.ARC_CASTER: Pattern.TRIGGER_TAP_CHARGE,
 		Weapons.PYLON_TURRET: Pattern.TRIGGER_TAP_CHARGE,
-		Weapons.STICKY_CHARGE: Pattern.TRIGGER_HOLD_AUTO,
-		Weapons.CLAW_SWEEP: Pattern.TRIGGER_HOLD_AUTO,
+		Weapons.STICKY_CHARGE: Pattern.TRIGGER_LOB_SNAP,
+		Weapons.CLAW_SWEEP: Pattern.TRIGGER_BEATS,
 		Weapons.LEDGER_READER: Pattern.TRIGGER_HOLD_AUTO,
 		Weapons.CANNON_LANE: Pattern.TRIGGER_HOLD_AUTO,
 	}
@@ -109,10 +113,15 @@ func _check_pattern_defaults_and_clamps() -> void:
 	_t.eq("negative mag clamps to 0", high_mult.mag, 0)
 	_t.eq("array window_s coerces to Vector2", high_mult.window_s, Vector2(0.38, 0.54))
 
-	var non_finite: Resource = Pattern.make({"floor_s": NAN, "reload_s": INF, "window_mult": NAN}).transformed([])
+	var non_finite: Resource = Pattern.make({"floor_s": NAN, "reload_s": INF, "window_mult": NAN,
+		"beat_mults": [-2.0, 99.0], "beat_speed_mult": 9.0, "beat_knock_mult": 12.0, "beat_range_mult": 9.0}).transformed([])
 	_t.near("NAN floor_s clamps to 0", non_finite.floor_s, 0.0)
 	_t.near("INF reload_s clamps to 0", non_finite.reload_s, 0.0)
 	_t.near("NAN window_mult clamps to MIN_WINDOW_MULT", non_finite.window_mult, Pattern.MIN_WINDOW_MULT)
+	_t.eq("beat_mults clamps each entry", non_finite.beat_mults, [Pattern.MIN_BEAT_MULT, Pattern.MAX_BEAT_MULT])
+	_t.near("beat_speed_mult clamps at MAX_BEAT_SPEED_MULT", non_finite.beat_speed_mult, Pattern.MAX_BEAT_SPEED_MULT)
+	_t.near("beat_knock_mult clamps at MAX_BEAT_KNOCK_MULT", non_finite.beat_knock_mult, Pattern.MAX_BEAT_KNOCK_MULT)
+	_t.near("beat_range_mult clamps at MAX_BEAT_RANGE_MULT", non_finite.beat_range_mult, Pattern.MAX_BEAT_RANGE_MULT)
 
 	var src: Resource = Pattern.make({"trigger": "beats", "beat_floors_s": [0.45, 0.55], "window_s": [0.30, 0.54]})
 	var dup: Resource = src.copy()
@@ -241,6 +250,8 @@ func _check_structural_boundaries() -> void:
 	_t.check("weapon_driver.gd has zero static vars", not driver_src.contains("static var "), "")
 	var combat_src := FileAccess.get_file_as_string("res://src/combat/combat.gd")
 	_t.check("combat.gd never reaches into weapon_driver private members", not combat_src.contains("weapon_driver._"), "")
+	var bot_src := FileAccess.get_file_as_string("res://tools/bot_driver.gd")
+	_t.check("bot_driver.gd never reaches into weapon_driver private members", not bot_src.contains("weapon_driver._"), "")
 
 
 func _physics_process(_delta: float) -> bool:

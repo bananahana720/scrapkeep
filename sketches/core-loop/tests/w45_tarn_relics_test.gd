@@ -245,11 +245,12 @@ func _check_rake_transformer() -> void:
 	_t.check("the crossed return is still one item_proc pass", back.all(func(b): return b["source"] == "item_proc") and _combat._rakes.is_empty(), "")
 
 
-# End to end: held fire through the real tick fires claw_sweep and every press returns once.
+# End to end: a press through the real tick fires claw_sweep and returns once.
 func _live_start() -> void:
 	_equip_rake()
 	_shots.clear()
 	_fired_before = _combat.bolts.fired
+	_source.press = {"fire_pressed": true}
 	_source.hold = {"fire_held": true}
 
 

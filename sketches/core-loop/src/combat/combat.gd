@@ -684,7 +684,11 @@ func setup(ctx_ref) -> void:
 		weapon_driver.interrupt(WeaponDriver.INTERRUPT_MOUNT))
 	ctx.events.mounted.connect(_on_mounted)
 	ctx.events.ultimate_started.connect(func(_id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float):
-		weapon_driver.interrupt(WeaponDriver.INTERRUPT_ULTIMATE))
+		weapon_driver.interrupt(WeaponDriver.INTERRUPT_ULTIMATE)
+		var wg = ctx.player.abilities.gauge(AbilityState.WEAPON)
+		if wg != null and wg.cancel():
+			ctx.player.indicator.clear("weapon")
+			ctx.player.indicator.clear("landing"))
 	_rebuild_patterns()
 	_declare_codex()
 
@@ -1784,10 +1788,15 @@ func _physics_process(delta: float) -> void:
 		for _shot in shots:
 			_fire_cannon_lane(weapon)
 	elif is_lob:
-		_step_sticky_weapon(intent, delta)
+		_step_sticky_weapon(intent, delta, shots)
 	else:
 		for shot in shots:
 			_fire(weapon, "weapon", shot)
+	if is_lob:
+		var wsnap: Dictionary = weapon_driver.state_snapshot()
+		var snap_tok: int = int(wsnap.get("snap_token", 0))
+		if snap_tok > 0:
+			sticky.sync_snap_state(snap_tok, String(wsnap.get("window", "")))
 	_step_cast()
 	_step_special(intent, delta)
 	_step_line(intent, delta)
@@ -1905,11 +1914,17 @@ func _weapon_step_context(weapon: String, p: Resource, cadence_rate: float) -> D
 			charge_rate = WeaponDriver.charge_rate_for_tier(SpeedTier.of(banked, ctx.player.tuning.tier_cruise()))
 	else:
 		charge_rate = WeaponDriver.charge_rate_for_tier(ctx.player.speed_tier())
+	var wg = ctx.player.abilities.gauge(AbilityState.WEAPON)
+	var is_lob: bool = ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 0) > 0
 	return {
 		"rate_mult": rate_mult,
 		"reload_rate_mult": reload_rate_mult,
 		"charge_rate": charge_rate,
 		"sprinting": bool(ctx.player.kit.sprinting),
+		"planar_speed": ctx.player.planar_velocity().length(),
+		"managed_gauge": is_lob,
+		"slot_ready": ctx.player.abilities.ready(AbilityState.WEAPON),
+		"lob_charging": wg != null and wg.charging,
 	}
 
 
@@ -1921,10 +1936,15 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 	var damage: float = p.damage * _damage_mod(weapon)
 	var pierce_chip := false
 	var extra_spread := 0.0
+	var knock_mult := 1.0
+	var range_mult := 1.0
 	if source == "weapon" and not shot_desc.is_empty():
 		damage *= float(shot_desc.get("damage_mult", 1.0))
 		pierce_chip = bool(shot_desc.get("pierce", false))
 		extra_spread = float(shot_desc.get("spread_deg", 0.0))
+		knock_mult = float(shot_desc.get("knock_mult", 1.0))
+		range_mult = float(shot_desc.get("range_mult", 1.0))
+	reach *= range_mult
 	var sprung := source == "weapon" and spring_armed()
 	if sprung:
 		damage *= SPRING_MULT
@@ -1962,6 +1982,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 				break
 		var fused := pike_bolt(_bolt_record(weapon, p, {"dir": forward, "centre": true, "phase": centre["phase"]}, muzzle, reach, damage, source, shot),
 			layout.size(), _pike_row())
+		fused["knock"] = float(fused["knock"]) * knock_mult
 		if pierce_chip:
 			fused["pierce_chip"] = true
 		_evolve_record(fused, p)
@@ -1971,6 +1992,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 	else:
 		for entry in layout:
 			var rec := _bolt_record(weapon, p, entry, muzzle, reach, damage, source, shot)
+			rec["knock"] = float(rec["knock"]) * knock_mult
 			if pierce_chip:
 				rec["pierce_chip"] = true
 			bolts.fire(rec)
@@ -1980,7 +2002,8 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": aim["to"], "point": point,
 		"blocked": aim["blocked"], "bolts": fired, "volley": volleys, "sprung": sprung, "fused": pike.get("fuse", false),
-		"kind": String(shot_desc.get("kind", "plain")), "pierce_chip": pierce_chip}
+		"kind": String(shot_desc.get("kind", "plain")), "pierce_chip": pierce_chip,
+		"beat": int(shot_desc.get("beat", 0)), "knock_mult": knock_mult}
 	ctx.events.shot_fired.emit(weapon, muzzle, aim["to"])
 
 
@@ -4495,8 +4518,16 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 	var bonus := 1.0 + Weapons.LINE_PER_CHARGE * mini(caught.size(), Weapons.LINE_MAX_CAUGHT)
 	var damage := AbilityState.Gauge.scaled(f, Weapons.LINE_DAMAGE_MIN, Weapons.LINE_DAMAGE_MAX) * bonus \
 		* _damage_mod(Weapons.STICKY_CHARGE) * _cloak_shot()
+	# PILOT-CADENCE.md §3.3: any caught live charge whose snap window is open at this instant
+	# takes the snap burst and consumes its one press.
+	var snapped_tokens := {}
 	for charge in caught:
-		_detonate(charge)
+		var tok: int = int(charge.get("snap_token", 0))
+		if tok > 0 and not snapped_tokens.has(tok) and weapon_driver.consume_snap_window(tok):
+			snapped_tokens[tok] = true
+	for charge in caught:
+		var tok: int = int(charge.get("snap_token", 0))
+		_detonate(charge, snapped_tokens.has(tok))
 	var hit := 0
 	var from: Vector3 = shape["from"]
 	var to: Vector3 = shape["to"]
@@ -4613,13 +4644,62 @@ func _boost(seconds: float) -> void:
 
 # --- Kest: sticky charges, the cloak, the rocket jump ---------------------------------
 
-# LMB is a hold-release throw: hold draws the lobbed arc and its landing ring, release
-# throws to exactly that point. Held, it auto-throws at full reach after the grace and
-# starts again when the next charge is in. Past the live cap, the oldest goes off.
-func _step_sticky_weapon(intent, delta: float) -> void:
+# LMB is a hold-release throw (PILOT-CADENCE.md §3.3): press opens the lob gauge, release
+# under 0.10 s drops at the ball's tail, longer hold lobs along the drawn arc up to 30 m.
+# A press inside the live charge's snap window [0.30, 0.55] s bursts it bigger and never
+# opens the lob gauge even if held. Under hold_auto rollback, legacy hold-lob behaviour holds.
+func _step_sticky_weapon(intent, delta: float, shots: Array = []) -> void:
 	var abilities = ctx.player.abilities
 	var gauge = abilities.gauge(AbilityState.WEAPON)
 	if gauge == null:
+		return
+	var p: Resource = _lob_pattern()
+	if p != null and p.trigger == Pattern.TRIGGER_LOB_SNAP:
+		for shot in shots:
+			if String(shot.get("kind", "")) == WeaponDriver.SHOT_SNAP:
+				if gauge.charging:
+					gauge.cancel()
+				ctx.player.indicator.clear("weapon")
+				ctx.player.indicator.clear("landing")
+				var tok: int = int(shot.get("token", 0))
+				var targets: Array = []
+				for c in sticky.live():
+					if tok <= 0 or int(c.get("snap_token", 0)) == tok:
+						targets.append(c)
+				for c in targets:
+					_detonate(sticky.take(c), true)
+				return
+		var snap: Dictionary = weapon_driver.state_snapshot()
+		var snap_locked: bool = bool(snap.get("snap_locked", false))
+		var can_open: bool = abilities.ready(AbilityState.WEAPON) and not snap_locked \
+			and (float(p.floor_s) <= 0.601 or float(snap.get("cooldown", 0.0)) <= 0.0)
+		var want_open: bool = intent.fire_pressed or (intent.fire_held and not snap_locked) or bool(snap.get("buffered", false))
+		if not gauge.charging and want_open and can_open:
+			weapon_driver.consume_buffer()
+			gauge.begin()
+		weapon_driver.set_lob_charging(gauge.charging)
+		if not gauge.charging:
+			ctx.player.indicator.clear("weapon")
+			ctx.player.indicator.clear("landing")
+			return
+		var held_before: float = gauge.held
+		if not gauge.step(delta, intent.fire_held):
+			weapon_driver.set_lob_charging(gauge.charging)
+			_draw_throw(_throw_landing(gauge.fraction(), gauge.held))
+			return
+		weapon_driver.set_lob_charging(false)
+		var landing := _throw_landing(gauge.fired_fraction, held_before)
+		_draw_throw(landing)
+		if landing["blocked"]:
+			ctx.player.indicator.collapse("weapon")
+			ctx.player.indicator.collapse("landing")
+			ctx.events.gauge_cancelled.emit(abilities.id_of(AbilityState.WEAPON), "blocked")
+			return
+		ctx.player.indicator.clear("weapon")
+		ctx.player.indicator.clear("landing")
+		abilities.spend(AbilityState.WEAPON)
+		var tok: int = weapon_driver.commit_lob_throw(1.0)
+		_throw_sticky(landing["point"], tok, bool(landing.get("tail_drop", false)))
 		return
 	if not gauge.charging and (intent.fire_pressed or intent.fire_held) and abilities.ready(AbilityState.WEAPON):
 		gauge.begin()
@@ -4653,17 +4733,32 @@ func _lob_pattern() -> Resource:
 
 
 # Where a throw at this fraction lands: along the flat aim, on the ground under it.
+# Under lob_snap, a release under STICKY_TAIL_HOLD_S (0.10 s) drops at the ball's tail;
+# longer holds lob along the drawn arc up to range_m (30 m at 0.6 s).
 # Over a void there is no ground to stick to, so the aim is blocked (RR-03): it draws
 # in bone with a cross and a release throws nothing and spends nothing.
-func _throw_landing(f: float) -> Dictionary:
+func _throw_landing(f: float, held_s := -1.0) -> Dictionary:
 	var p: Resource = _lob_pattern()
-	var reach := AbilityState.Gauge.scaled(f, Weapons.STICKY_THROW_MIN, p.range_m * ctx.tuning.mod("weapon_range"))
-	var flat: Vector3 = ctx.player.ball_position() + _flat_aim() * reach
+	var tail_drop := false
+	var flat: Vector3
+	if p != null and p.trigger == Pattern.TRIGGER_LOB_SNAP:
+		var hold_time := held_s if held_s >= 0.0 else f * Weapons.STICKY_CHARGE_MAX
+		if hold_time < Weapons.STICKY_TAIL_HOLD_S:
+			tail_drop = true
+			var pv: Vector3 = ctx.player.planar_velocity()
+			var tail_dir: Vector3 = -pv.normalized() if pv.length() > 0.5 else -_flat_aim()
+			flat = ctx.player.ball_position() + tail_dir * Weapons.STICKY_TAIL_OFFSET
+		else:
+			var reach := AbilityState.Gauge.scaled(f, 0.0, p.range_m * ctx.tuning.mod("weapon_range"))
+			flat = ctx.player.ball_position() + _flat_aim() * reach
+	else:
+		var reach := AbilityState.Gauge.scaled(f, Weapons.STICKY_THROW_MIN, p.range_m * ctx.tuning.mod("weapon_range"))
+		flat = ctx.player.ball_position() + _flat_aim() * reach
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(flat + Vector3.UP * 30.0, flat + Vector3.DOWN * 60.0, 1))
 	if hit.is_empty():
-		return {"point": flat + Vector3.DOWN * 0.9, "blocked": true}
-	return {"point": hit["position"], "blocked": false}
+		return {"point": flat + Vector3.DOWN * 0.9, "blocked": true, "tail_drop": tail_drop}
+	return {"point": hit["position"], "blocked": false, "tail_drop": tail_drop}
 
 
 func _draw_throw(landing: Dictionary) -> void:
@@ -4687,7 +4782,7 @@ func mass_radius_scale() -> float:
 
 # One throw. A lob row with more than one charge (Sticky Rain) scatters that many smaller
 # charges around the landing ring, splitting the damage.
-func _throw_sticky(landing: Vector3) -> void:
+func _throw_sticky(landing: Vector3, snap_token := 0, tail_drop := false) -> void:
 	var p: Resource = _lob_pattern()
 	var count: int = ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 1)
 	var origin := _throw_origin()
@@ -4707,22 +4802,33 @@ func _throw_sticky(landing: Vector3) -> void:
 		if count > 1:
 			var angle := TAU * float(i) / float(count)
 			spot = landing + Vector3(cos(angle), 0.0, sin(angle)) * ring
-		var thrown: Dictionary = sticky.throw(origin, spot, damage, radius, _knob("sticky_fuse"), crit, _knob("sticky_reach"), _clock, _knob("sticky_ride"))
+		var thrown: Dictionary = sticky.throw(origin, spot, damage, radius, _knob("sticky_fuse"), crit,
+			_knob("sticky_reach"), _clock, _knob("sticky_ride"), tail_drop)
 		thrown["_source"] = "weapon"
+		if snap_token > 0 and p != null and p.trigger == Pattern.TRIGGER_LOB_SNAP:
+			thrown["snap_mult"] = float(p.window_mult)
+			sticky.set_snap_cue(thrown, p.window_s, snap_token)
 	volleys += 1
 	last_shot = {"weapon_id": Weapons.STICKY_CHARGE, "from": origin, "to": landing, "point": landing,
-		"blocked": false, "bolts": count, "volley": volleys, "radius": radius}
+		"blocked": false, "bolts": count, "volley": volleys, "radius": radius, "tail_drop": tail_drop}
 	ctx.events.shot_fired.emit(Weapons.STICKY_CHARGE, origin, landing)
 
 
 # One charge going off: its blast (the drawn landing radius plus the forgiveness), a
 # rocket jump if Kest holds Space inside it, and the cloak. Time Bomb grows a charge by
 # how long it waited; Demolition and Marked hit plated and marked targets harder;
-# Daisy Chain sets off every charge within reach, each once.
-func _detonate(charge: Dictionary) -> void:
+# Daisy Chain sets off every charge within reach, each once. A snapped charge (PILOT-CADENCE §3.3)
+# bursts for window_mult damage (2x), 1.35x radius, 1.5x knock, a bone ring with amber edge,
+# and never refreshes the rocket jump cooldown.
+func _detonate(charge: Dictionary, snapped := false) -> void:
 	var at: Vector3 = charge["pos"]
 	var radius: float = charge["radius"]
 	var damage: float = charge["damage"]
+	var knock: float = Weapons.BASE[Weapons.STICKY_CHARGE]["knock"]
+	if snapped:
+		damage *= float(charge.get("snap_mult", Weapons.STICKY_SNAP_MULT))
+		radius *= Weapons.STICKY_SNAP_RADIUS_MULT
+		knock *= Weapons.STICKY_SNAP_KNOCK_MULT
 	if _knob("sticky_grow"):
 		damage *= 1.0 + Weapons.GROW_PER_SECOND * minf(Weapons.GROW_MAX_SECONDS, _clock - float(charge.get("born", _clock)))
 	for enemy in get_tree().get_nodes_in_group("enemy"):
@@ -4738,13 +4844,25 @@ func _detonate(charge: Dictionary) -> void:
 		if charge.has("_kest_cast"):
 			ultimate.blast_hit(charge, enemy, dealt, at)
 		else:
-			_hit(enemy, "sticky", dealt, enemy.global_position - at, Weapons.BASE[Weapons.STICKY_CHARGE]["knock"],
-				"", charge.get("_source", "weapon"))
-	effects.ring(at, radius, ClassDef.KEST_COLOR)
+			_hit(enemy, "sticky", dealt, enemy.global_position - at, knock, "", charge.get("_source", "weapon"))
+	if snapped:
+		effects.ring(at, radius * 0.88, Palette.SAND)
+		effects.ring(at, radius, Palette.AMBER)
+	else:
+		effects.ring(at, radius, ClassDef.KEST_COLOR)
 	ctx.break_props(at, radius, "sticky")
 	ctx.events.sticky_detonated.emit(at, charge["crit"])
 	_rocket_jump(at)
 	_start_cloak()
+	var tok: int = int(charge.get("snap_token", 0))
+	if tok > 0 and not snapped:
+		var still_live := false
+		for other in sticky.charges:
+			if int(other.get("snap_token", 0)) == tok:
+				still_live = true
+				break
+		if not still_live:
+			weapon_driver.notify_lob_charge_gone(tok)
 	if _knob("sticky_chain") > 0.0:
 		# A nested detonation can already have taken a charge from this snapshot (F001).
 		var live: Array = sticky.charges.duplicate()
