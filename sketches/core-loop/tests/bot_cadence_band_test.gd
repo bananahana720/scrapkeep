@@ -98,6 +98,8 @@ func _run_live() -> void:
 	_check_rivet_cadence_hand()
 	_check_sable_cadence_hand(Weapons.ARC_CASTER)
 	_check_sable_cadence_hand(Weapons.PYLON_TURRET)
+	_check_kest_cadence_hand()
+	_check_tarn_cadence_hand()
 	_check_no_phantom_windows()
 	_check_active_hand()
 
@@ -231,6 +233,111 @@ func _check_sable_cadence_hand(wid: String) -> void:
 	var r_lrn := float(lrn["hits"]) / maxf(float(lrn["windows"]), 1.0)
 	var r_exp := float(exp["hits"]) / maxf(float(exp["windows"]), 1.0)
 	_t.check("Sable %s cadence hits and share order Novice < Learner a5 < Expert" % wid,
+		nov["hits"] < lrn["hits"] and lrn["hits"] < exp["hits"]
+		and r_nov < r_lrn and r_lrn < r_exp,
+		"hits %d/%d (%.2f) < %d/%d (%.2f) < %d/%d (%.2f)" % [
+			nov["hits"], nov["windows"], r_nov,
+			lrn["hits"], lrn["windows"], r_lrn,
+			exp["hits"], exp["windows"], r_exp])
+
+
+func _run_kest_cycles(band_name: String, attempt: int, seed_val: int, ticks_to_run: int) -> Dictionary:
+	var pat: Resource = Weapons.base(Weapons.STICKY_CHARGE)
+	var wdrv = _game.combat.weapon_driver
+	wdrv.reset(pat)
+	var drv = _make_driver(band_name, attempt, seed_val)
+	var intent := Intent.new()
+	var throws := 0
+	var snaps := 0
+	for _tick in ticks_to_run:
+		var pre: Dictionary = wdrv.state_snapshot()
+		# Mimic _throw_hold releasing immediately when lob_charging is active (tail drop).
+		drv.source.hold = {} if bool(pre.get("lob_charging", false)) else {"fire_held": true}
+		drv.source.press = {}
+		drv._cadence_fire_hand()
+		drv.source.poll(intent)
+		var shots: Array = wdrv.step(DT, intent, Weapons.STICKY_CHARGE, pat, pat.rate)
+		for s in shots:
+			if String(s["kind"]) == WeaponDriver.SHOT_THROW:
+				throws += 1
+			elif String(s["kind"]) == WeaponDriver.SHOT_SNAP:
+				snaps += 1
+	return {
+		"windows": int(drv._totals["cadence_windows"]),
+		"hits": int(drv._totals["cadence_hits"]),
+		"throws": throws,
+		"snaps": snaps,
+	}
+
+
+func _check_kest_cadence_hand() -> void:
+	# 9000 ticks = 100 s -> ~150 throw windows per band.
+	var nov := _run_kest_cycles("novice", 1, 29, 9000)
+	var lrn := _run_kest_cycles("learner", 5, 29, 9000)
+	var exp := _run_kest_cycles("expert", 1, 29, 9000)
+	var pln := _run_kest_cycles("", 1, 29, 9000)
+	_t.check("Kest unbanded matches Expert cycle-for-cycle", pln == exp, "plain %s vs expert %s" % [pln, exp])
+	_t.check("Kest hit cycles snap charges and miss cycles leave plain throws",
+		nov["throws"] > 50 and exp["snaps"] > nov["snaps"] and exp["hits"] == exp["snaps"],
+		"nov %s exp %s" % [nov, exp])
+	var r_nov := float(nov["hits"]) / maxf(float(nov["windows"]), 1.0)
+	var r_lrn := float(lrn["hits"]) / maxf(float(lrn["windows"]), 1.0)
+	var r_exp := float(exp["hits"]) / maxf(float(exp["windows"]), 1.0)
+	_t.check("Kest cadence hits and share order Novice < Learner a5 < Expert",
+		nov["hits"] < lrn["hits"] and lrn["hits"] < exp["hits"]
+		and r_nov < r_lrn and r_lrn < r_exp,
+		"hits %d/%d (%.2f) < %d/%d (%.2f) < %d/%d (%.2f)" % [
+			nov["hits"], nov["windows"], r_nov,
+			lrn["hits"], lrn["windows"], r_lrn,
+			exp["hits"], exp["windows"], r_exp])
+
+
+func _run_tarn_cycles(band_name: String, attempt: int, seed_val: int, ticks_to_run: int) -> Dictionary:
+	var pat: Resource = Weapons.base(Weapons.CLAW_SWEEP)
+	var wdrv = _game.combat.weapon_driver
+	wdrv.reset(pat)
+	var drv = _make_driver(band_name, attempt, seed_val)
+	var intent := Intent.new()
+	var beat1 := 0
+	var beat2 := 0
+	var beat3 := 0
+	for _tick in ticks_to_run:
+		drv.source.hold = {"fire_held": true}
+		drv.source.press = {}
+		drv._cadence_fire_hand()
+		drv.source.poll(intent)
+		var shots: Array = wdrv.step(DT, intent, Weapons.CLAW_SWEEP, pat, pat.rate, {"planar_speed": 14.0})
+		for s in shots:
+			match int(s.get("beat", 0)):
+				1:
+					beat1 += 1
+				2:
+					beat2 += 1
+				3:
+					beat3 += 1
+	return {
+		"windows": int(drv._totals["cadence_windows"]),
+		"hits": int(drv._totals["cadence_hits"]),
+		"beat1": beat1,
+		"beat2": beat2,
+		"beat3": beat3,
+	}
+
+
+func _check_tarn_cadence_hand() -> void:
+	# 9000 ticks = 100 s -> ~75-95 three-beat cycles per band.
+	var nov := _run_tarn_cycles("novice", 1, 31, 9000)
+	var lrn := _run_tarn_cycles("learner", 5, 31, 9000)
+	var exp := _run_tarn_cycles("expert", 1, 31, 9000)
+	var pln := _run_tarn_cycles("", 1, 31, 9000)
+	_t.check("Tarn unbanded matches Expert cycle-for-cycle", pln == exp, "plain %s vs expert %s" % [pln, exp])
+	_t.check("Tarn hit cycles land Beat 3 and miss cycles return to Beat 1",
+		nov["beat1"] > 50 and nov["beat2"] > 50 and exp["beat3"] > nov["beat3"] and exp["hits"] == exp["beat3"],
+		"nov %s exp %s" % [nov, exp])
+	var r_nov := float(nov["hits"]) / maxf(float(nov["windows"]), 1.0)
+	var r_lrn := float(lrn["hits"]) / maxf(float(lrn["windows"]), 1.0)
+	var r_exp := float(exp["hits"]) / maxf(float(exp["windows"]), 1.0)
+	_t.check("Tarn cadence hits and share order Novice < Learner a5 < Expert",
 		nov["hits"] < lrn["hits"] and lrn["hits"] < exp["hits"]
 		and r_nov < r_lrn and r_lrn < r_exp,
 		"hits %d/%d (%.2f) < %d/%d (%.2f) < %d/%d (%.2f)" % [

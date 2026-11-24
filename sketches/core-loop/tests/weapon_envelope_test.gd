@@ -159,13 +159,15 @@ func _initialize() -> void:
 	quit(t.verdict())
 
 
-# PILOT-CADENCE.md §1 (Ruling ek, E1-06): numerical cadence simulation and DPS ceilings.
+# PILOT-CADENCE.md §1 (Ruling ek, E1-06 & E2-01): numerical cadence simulation and DPS ceilings.
 const SIM_DT := 0.001
 const SIM_CYCLES := 20
 const CEILINGS := {
 	Weapons.RAPID_LASER: 75.0,
 	Weapons.ARC_CASTER: 80.0,
 	Weapons.PYLON_TURRET: 80.0,
+	Weapons.STICKY_CHARGE: 44.0,
+	Weapons.CLAW_SWEEP: 80.0,
 }
 
 
@@ -349,6 +351,151 @@ static func _sable_max(weapon_id: String, pattern: Resource) -> float:
 	return best
 
 
+# Kest cook-and-snap simulation (PILOT-CADENCE §3.3): careless throws every floor (no snap),
+# skilled throws every floor and snaps on the window's first frame for 2x damage.
+static func _simulate_kest(pattern: Resource, skilled: bool, press_at := -1.0, hold_s := 0.0) -> float:
+	var drv := WeaponDriver.new()
+	drv.reset(pattern)
+	var total_dmg := 0.0
+	var total_t := 0.0
+	var throws := 0
+	var live_charges: Array = [] # [{token, dmg, snapped}]
+	var pressed_window := false
+	var holding := false
+	var hold_elapsed := 0.0
+	var step_idx := 0
+	var max_steps := 120000
+	while throws < SIM_CYCLES and step_idx < max_steps:
+		step_idx += 1
+		var snap: Dictionary = drv.state_snapshot()
+		var intent := Intent.new()
+		if holding:
+			hold_elapsed += SIM_DT
+			if hold_elapsed >= hold_s:
+				intent.fire_released = true
+				holding = false
+			else:
+				intent.fire_held = true
+		elif bool(snap["ready"]):
+			intent.fire_pressed = true
+			if hold_s > 0.0:
+				intent.fire_held = true
+				holding = true
+				hold_elapsed = 0.0
+			pressed_window = false
+		elif not pressed_window:
+			var win := String(snap["window"])
+			if press_at >= 0.0:
+				if (win == WeaponDriver.WINDOW_WAITING or win == WeaponDriver.WINDOW_OPEN) \
+						and float(snap["window_t"]) + SIM_DT * 0.5 >= press_at:
+					intent.fire_pressed = true
+					pressed_window = true
+			elif skilled and bool(snap["window_open"]):
+				intent.fire_pressed = true
+				pressed_window = true
+		var shots: Array = drv.step(SIM_DT, intent, Weapons.STICKY_CHARGE, pattern, float(pattern.rate))
+		if throws >= 2:
+			total_t += SIM_DT
+		for s in shots:
+			if String(s["kind"]) == WeaponDriver.SHOT_THROW:
+				throws += 1
+				if throws < SIM_CYCLES:
+					live_charges.append({"token": int(s["token"]), "dmg": float(pattern.damage), "counted": throws >= 2, "snapped": false})
+			elif String(s["kind"]) == WeaponDriver.SHOT_SNAP:
+				var tok := int(s["token"])
+				for c in live_charges:
+					if int(c["token"]) == tok and not bool(c["snapped"]):
+						c["snapped"] = true
+						if bool(c["counted"]):
+							total_dmg += float(c["dmg"]) * float(s["damage_mult"])
+		# Plain detonation for any unsnapped charge once its window closes (or next throw begins).
+		if throws >= 2:
+			var keep: Array = []
+			for c in live_charges:
+				if bool(c["snapped"]):
+					continue
+				if int(c["token"]) < int(drv.state_snapshot()["snap_token"]) \
+						or String(drv.state_snapshot()["window"]) == WeaponDriver.WINDOW_SPENT:
+					if bool(c["counted"]):
+						total_dmg += float(c["dmg"])
+				else:
+					keep.append(c)
+			live_charges = keep
+	for c in live_charges:
+		if not bool(c["snapped"]) and bool(c["counted"]):
+			total_dmg += float(c["dmg"])
+	return total_dmg / maxf(total_t, 0.0001)
+
+
+static func _kest_max(pattern: Resource) -> float:
+	var best := 0.0
+	for hold_s in [0.0, 0.15, 0.30]:
+		var at := 0.0
+		while at <= float(pattern.floor_s) + 0.001:
+			best = maxf(best, _simulate_kest(pattern, false, at, hold_s))
+			at += 0.05
+	return best
+
+
+# Tarn three-beat simulation (PILOT-CADENCE §3.4): careless mashes every 0.05 s (beats 1 & 2,
+# spending the beat-3 window); skilled presses beats 1, 2, then 3 on the window's first frame.
+static func _simulate_tarn(pattern: Resource, skilled: bool, speed_mps := 14.0, press_at := -1.0) -> float:
+	var drv := WeaponDriver.new()
+	drv.reset(pattern)
+	var total_dmg := 0.0
+	var total_t := 0.0
+	var cycles := 0
+	var mash_clock := 0.0
+	var mash_step := 0.05
+	var pressed_b2_win := false
+	var step_idx := 0
+	var max_steps := 120000
+	while cycles < SIM_CYCLES and step_idx < max_steps:
+		step_idx += 1
+		var snap: Dictionary = drv.state_snapshot()
+		var intent := Intent.new()
+		var beat := int(snap["beat"])
+		if press_at >= 0.0:
+			if beat == 2:
+				if not pressed_b2_win and float(snap["window_t"]) + SIM_DT * 0.5 >= press_at:
+					intent.fire_pressed = true
+					pressed_b2_win = true
+			elif bool(snap["ready"]):
+				intent.fire_pressed = true
+				pressed_b2_win = false
+		elif skilled:
+			if beat == 2:
+				if bool(snap["window_open"]):
+					intent.fire_pressed = true
+			elif bool(snap["ready"]):
+				intent.fire_pressed = true
+		else:
+			if mash_clock <= 0.0:
+				intent.fire_pressed = true
+				mash_clock += mash_step
+			mash_clock -= SIM_DT
+		var shots: Array = drv.step(SIM_DT, intent, Weapons.CLAW_SWEEP, pattern, float(pattern.rate),
+			{"rate_mult": 1.0, "planar_speed": speed_mps})
+		if cycles >= 2:
+			total_t += SIM_DT
+			for s in shots:
+				total_dmg += float(pattern.damage) * float(s.get("damage_mult", 1.0))
+		for s in shots:
+			if int(s.get("beat", 0)) == 1:
+				cycles += 1
+	return total_dmg / maxf(total_t, 0.0001)
+
+
+static func _tarn_max(pattern: Resource) -> float:
+	var best := 0.0
+	for spd in [0.0, 14.0, 30.0, 50.0]:
+		var at := 0.0
+		while at <= 0.65:
+			best = maxf(best, _simulate_tarn(pattern, false, spd, at))
+			at += 0.05
+	return best
+
+
 func _check_cadence_envelopes(t) -> void:
 	var rivet_pat: Resource = Weapons.base(Weapons.RAPID_LASER)
 	var rivet_careless := _simulate_rivet(rivet_pat, false)
@@ -398,18 +545,58 @@ func _check_cadence_envelopes(t) -> void:
 		ceiling_passes(Weapons.PYLON_TURRET, turret_careless) and ceiling_passes(Weapons.PYLON_TURRET, turret_blazing),
 		"careless=%.2f blazing=%.2f" % [turret_careless, turret_blazing])
 
-	# Most by arithmetic (PILOT-CADENCE.md section 1): the best of every reload press time and every
-	# release fraction at every speed tier. Rivet 62.6; Sable 70.0; mounted Sable 75.0.
+	var kest_pat: Resource = Weapons.base(Weapons.STICKY_CHARGE)
+	var kest_careless := _simulate_kest(kest_pat, false)
+	var kest_skilled := _simulate_kest(kest_pat, true)
+	var kest_base_dps := WeaponDriver.base_dps(kest_pat)
+	print("CADENCE_ENVELOPE  kest  careless=%.2f  skilled=%.2f  base_dps=%.2f  ceiling=%.0f" % [
+		kest_careless, kest_skilled, kest_base_dps, CEILINGS[Weapons.STICKY_CHARGE]])
+	t.near("Kest careless simulated DPS matches PILOT-CADENCE 18.3", kest_careless, 11.0 / 0.60, 0.7)
+	t.near("Kest base_dps matches careless 18.3", kest_base_dps, 11.0 / 0.60, 0.05)
+	t.near("Kest skilled simulated DPS matches PILOT-CADENCE 36.7", kest_skilled, 22.0 / 0.60, 0.9)
+	t.check("Kest sits within ceiling 44",
+		ceiling_passes(Weapons.STICKY_CHARGE, kest_careless) and ceiling_passes(Weapons.STICKY_CHARGE, kest_skilled),
+		"careless=%.2f skilled=%.2f" % [kest_careless, kest_skilled])
+
+	var tarn_pat: Resource = Weapons.base(Weapons.CLAW_SWEEP)
+	var tarn_careless := _simulate_tarn(tarn_pat, false, 14.0)
+	var tarn_still := _simulate_tarn(tarn_pat, true, 0.0)
+	var tarn_cruise := _simulate_tarn(tarn_pat, true, 14.0)
+	var tarn_cap30 := _simulate_tarn(tarn_pat, true, 30.0)
+	var tarn_cap50 := _simulate_tarn(tarn_pat, true, 50.0)
+	var tarn_base_dps := WeaponDriver.base_dps(tarn_pat)
+	print("CADENCE_ENVELOPE  tarn  careless=%.2f  still=%.2f  cruise=%.2f  cap30=%.2f  cap50=%.2f  base_dps=%.2f  ceiling=%.0f" % [
+		tarn_careless, tarn_still, tarn_cruise, tarn_cap30, tarn_cap50, tarn_base_dps, CEILINGS[Weapons.CLAW_SWEEP]])
+	t.near("Tarn careless simulated DPS matches PILOT-CADENCE 40.0", tarn_careless, 40.0, 0.8)
+	t.near("Tarn base_dps matches careless 40.0", tarn_base_dps, 40.0, 0.05)
+	t.near("Tarn skilled standstill matches PILOT-CADENCE 66.4", tarn_still, 66.4, 0.9)
+	t.near("Tarn skilled cruise matches PILOT-CADENCE 72.0", tarn_cruise, 72.0, 0.9)
+	t.near("Tarn skilled 30 m/s cap matches PILOT-CADENCE 78.4", tarn_cap30, 78.4, 0.9)
+	t.near("Tarn speed bonus caps at 30 m/s (50 m/s equals 30 m/s)", tarn_cap50, tarn_cap30, 0.05)
+	t.check("Tarn sits within ceiling 80",
+		ceiling_passes(Weapons.CLAW_SWEEP, tarn_careless) and ceiling_passes(Weapons.CLAW_SWEEP, tarn_cap30),
+		"careless=%.2f cap30=%.2f" % [tarn_careless, tarn_cap30])
+
+	# Most by arithmetic (PILOT-CADENCE.md section 1): the best of every reload/snap/beat press time
+	# and every release fraction at every speed tier. Rivet 62.6; Sable 70.0; mounted Sable 75.0;
+	# Kest 36.7; Tarn 78.4.
 	var rivet_max := _rivet_max(rivet_pat)
 	var sable_max := _sable_max(Weapons.ARC_CASTER, sable_pat)
 	var turret_max := _sable_max(Weapons.PYLON_TURRET, turret_pat)
-	print("CADENCE_ENVELOPE  most by arithmetic  rivet=%.2f  sable=%.2f  pylon_turret=%.2f" % [rivet_max, sable_max, turret_max])
+	var kest_max := _kest_max(kest_pat)
+	var tarn_max := _tarn_max(tarn_pat)
+	print("CADENCE_ENVELOPE  most by arithmetic  rivet=%.2f  sable=%.2f  pylon_turret=%.2f  kest=%.2f  tarn=%.2f" % [
+		rivet_max, sable_max, turret_max, kest_max, tarn_max])
 	t.near("Rivet most by arithmetic matches PILOT-CADENCE 62.6", rivet_max, 62.61, 0.8)
 	t.near("Sable most by arithmetic matches PILOT-CADENCE 70.0", sable_max, 70.0, 0.8)
 	t.near("Sable mounted most by arithmetic matches PILOT-CADENCE 75.0", turret_max, 75.0, 0.8)
+	t.near("Kest most by arithmetic matches PILOT-CADENCE 36.7", kest_max, 22.0 / 0.60, 0.9)
+	t.near("Tarn most by arithmetic matches PILOT-CADENCE 78.4", tarn_max, 78.4, 0.9)
 	t.check("Rivet most by arithmetic sits within ceiling 75", ceiling_passes(Weapons.RAPID_LASER, rivet_max), "%.2f" % rivet_max)
 	t.check("Sable most by arithmetic sits within ceiling 80", ceiling_passes(Weapons.ARC_CASTER, sable_max), "%.2f" % sable_max)
 	t.check("Sable mounted most by arithmetic sits within ceiling 80", ceiling_passes(Weapons.PYLON_TURRET, turret_max), "%.2f" % turret_max)
+	t.check("Kest most by arithmetic sits within ceiling 44", ceiling_passes(Weapons.STICKY_CHARGE, kest_max), "%.2f" % kest_max)
+	t.check("Tarn most by arithmetic sits within ceiling 80", ceiling_passes(Weapons.CLAW_SWEEP, tarn_max), "%.2f" % tarn_max)
 
 	# Planted over-ceiling failure test (PILOT-CADENCE.md §1): proves the ceiling gate bites.
 	var over_rivet_pat: Resource = rivet_pat.copy()
@@ -424,6 +611,20 @@ func _check_cadence_envelopes(t) -> void:
 	t.check("planted over-ceiling Sable figure FAILS ceiling check",
 		over_sable_dps > CEILINGS[Weapons.ARC_CASTER] and not ceiling_passes(Weapons.ARC_CASTER, over_sable_dps),
 		"planted=%.2f ceiling=%.0f" % [over_sable_dps, CEILINGS[Weapons.ARC_CASTER]])
+	var over_kest_pat: Resource = kest_pat.copy()
+	over_kest_pat.damage = 14.0
+	var over_kest_dps := _simulate_kest(over_kest_pat, true)
+	t.check("planted over-ceiling Kest figure FAILS ceiling check",
+		over_kest_dps > CEILINGS[Weapons.STICKY_CHARGE] and not ceiling_passes(Weapons.STICKY_CHARGE, over_kest_dps),
+		"planted=%.2f ceiling=%.0f" % [over_kest_dps, CEILINGS[Weapons.STICKY_CHARGE]])
+	var over_tarn_pat: Resource = tarn_pat.copy()
+	over_tarn_pat.damage = 20.0
+	var over_tarn_dps := _simulate_tarn(over_tarn_pat, true, 30.0)
+	t.check("planted over-ceiling Tarn figure FAILS ceiling check",
+		over_tarn_dps > CEILINGS[Weapons.CLAW_SWEEP] and not ceiling_passes(Weapons.CLAW_SWEEP, over_tarn_dps),
+		"planted=%.2f ceiling=%.0f" % [over_tarn_dps, CEILINGS[Weapons.CLAW_SWEEP]])
 	t.check("synthetic scalar above ceiling FAILS ceiling check",
 		not ceiling_passes(Weapons.RAPID_LASER, 75.1) and not ceiling_passes(Weapons.ARC_CASTER, 80.1)
-		and not ceiling_passes(Weapons.PYLON_TURRET, 80.1), "")
+		and not ceiling_passes(Weapons.PYLON_TURRET, 80.1)
+		and not ceiling_passes(Weapons.STICKY_CHARGE, 44.1)
+		and not ceiling_passes(Weapons.CLAW_SWEEP, 80.1), "")
