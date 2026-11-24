@@ -34,7 +34,8 @@ pin and its local X is the pin (the right arm's hinge axis, the left arm's rever
 sides mirror): a clip row's turn about axis x swings the jaw cleanly about the pin, and a
 negative angle opens the left upper jaw as a positive one opens the right (clips/tarn.json).
 Each upper jaw drives a brass ram curved about its own hinge pin: the rod rides the jaw (paint
-in brass, alpha 0 so no equipped paint tints it) and the sleeve hangs off the copper hinge boss
+in brass, which an equipped paint tints as it tints the jaw; paint_mask_scan_test keeps the
+alpha-0 take mask to two named parts) and the sleeve hangs off the copper hinge boss
 on the Pod (copper), so the rod slides along the sleeve at any jaw angle without code and keeps
 at least RAM_MIN_OVERLAP of its length inside from rest to RAM_OPEN degrees open. No new draw:
 the rod is on the jaw's paint surface and the sleeve on the Pod's copper. The tooth strip is its
@@ -218,10 +219,10 @@ def ram(jaw, pod_part, hinge, d, up, axis, side_sign):
     off = side_sign * RAM_OFFSET
     flat = _swing_matrix(hinge, d, up, axis, 0.0, off)
     _arc_bar(jaw, "paint", flat, RAM_RADIUS, RAM_ROD_SECTION, RAM_ATTACH - RAM_ROD, RAM_ATTACH, RAM_SEGS,
-             color="brass", alpha=0.0)
+             color="brass")
     lug = _swing_matrix(hinge, d, up, axis, RAM_ATTACH, 0.0)
     _block(jaw, "paint", lug, (RAM_RADIUS, 0.0, off / 2), (0.024, 0.014, abs(off) + RAM_ROD_SECTION / 2),
-           color="brass", alpha=0.0)
+           color="brass")
     bottom = RAM_ATTACH - RAM_GAP - RAM_SLEEVE
     _arc_bar(pod_part, "copper", flat, RAM_RADIUS, RAM_SLEEVE_SECTION, bottom, RAM_ATTACH - RAM_GAP, RAM_SEGS)
     spoke = _swing_matrix(hinge, d, up, axis, bottom + 4.0, off)
