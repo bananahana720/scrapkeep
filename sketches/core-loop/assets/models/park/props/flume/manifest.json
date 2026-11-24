@@ -858,6 +858,96 @@
      "height": 2.19
     }
    }
+  },
+  "chalk_turn": {
+   "class": "dress_prop",
+   "tags": [
+    "sign"
+   ],
+   "story": "A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/flume/chalk_turn_a.glb",
+      "res://assets/models/park/props/flume/chalk_turn_a_lod1.glb",
+      "res://assets/models/park/props/flume/chalk_turn_a_lod2.glb"
+     ],
+     "tris": [
+      772,
+      386,
+      352
+     ],
+     "radius": 2.954,
+     "height": 0.36
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/flume/chalk_turn_b.glb",
+      "res://assets/models/park/props/flume/chalk_turn_b_lod1.glb",
+      "res://assets/models/park/props/flume/chalk_turn_b_lod2.glb"
+     ],
+     "tris": [
+      820,
+      410,
+      374
+     ],
+     "radius": 2.888,
+     "height": 0.36
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/flume/chalk_turn_c.glb",
+      "res://assets/models/park/props/flume/chalk_turn_c_lod1.glb",
+      "res://assets/models/park/props/flume/chalk_turn_c_lod2.glb"
+     ],
+     "tris": [
+      1444,
+      722,
+      216
+     ],
+     "radius": 3.012,
+     "height": 1.096
+    }
+   }
+  },
+  "keeper_bunting": {
+   "class": "dress_prop",
+   "tags": [
+    "soft",
+    "sign",
+    "tall"
+   ],
+   "story": "Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/flume/keeper_bunting_a.glb",
+      "res://assets/models/park/props/flume/keeper_bunting_a_lod1.glb",
+      "res://assets/models/park/props/flume/keeper_bunting_a_lod2.glb"
+     ],
+     "tris": [
+      1276,
+      638,
+      190
+     ],
+     "radius": 0.94,
+     "height": 3.056
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/flume/keeper_bunting_b.glb",
+      "res://assets/models/park/props/flume/keeper_bunting_b_lod1.glb",
+      "res://assets/models/park/props/flume/keeper_bunting_b_lod2.glb"
+     ],
+     "tris": [
+      2592,
+      1296,
+      950
+     ],
+     "radius": 2.239,
+     "height": 2.757
+    }
+   }
   }
  }
 }

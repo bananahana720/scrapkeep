@@ -7,6 +7,7 @@ extends SceneTree
 #   including enemy_camp and 75 s clock clamp openings, and clean reset on stage entry / retry.
 # - SiteMarkers per-kind visited state: flips once, idempotent, resets on entry / retry / clear,
 #   furnace never flips, bone/copper colour law (never mint #8BF0D3), zero static var leaks.
+# - The Flume's own rows on disk (E3-01): its cable and district rows, and its cable drawn on its baked ground.
 
 const T := preload("res://tests/support/t.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
@@ -17,8 +18,16 @@ const Palette := preload("res://src/core/palette.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const StageLocks := preload("res://src/world/stage_locks.gd")
 const SiteMarkers := preload("res://src/presentation/site_markers.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
+const ConduitCable := preload("res://src/presentation/conduit_cable.gd")
+const ParkProps := preload("res://src/presentation/park_props.gd")
 
 const PARK_DIR := "res://src/world/park/"
+# The Flume's districts in ride order (NAMES.md "Places in world 1"), and how near its home a cable's crew end stands.
+const FLUME_DISTRICTS := ["Weir Bobsled", "Trestle Span", "Headhouse Overlook"]
+const CABLE_HOME_M := 30.0
+# As conduit_cable_test: a casting stands CASTING.y - CAST_BURY_M over the ground; nothing of a cable stands higher.
+const CABLE_FLOAT_MAX_M := 2.0
 
 var _t := T.new("wayfinding_rows_test")
 
@@ -91,6 +100,35 @@ class FakeCtx extends RefCounted:
 	var events: GameEvents
 
 
+# The Flume's own park file and baked ground under the cable drawing, and a gate whose pips the test lights.
+class GroundTerrain extends RefCounted:
+	var current
+	var ground: Callable
+
+	func map():
+		return current
+
+	func height(x: float, z: float) -> float:
+		return (ground.call(x, z, 0.0) as Vector3).y
+
+
+class PipGate extends RefCounted:
+	var lit := 0
+
+	func pips_lit() -> int:
+		return lit
+
+
+class CableFlow extends RefCounted:
+	var gate := PipGate.new()
+
+
+class CableCtx extends RefCounted:
+	var terrain := GroundTerrain.new()
+	var events
+	var flow := CableFlow.new()
+
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -98,6 +136,8 @@ func _initialize() -> void:
 func _run() -> void:
 	_schema_existing_parks()
 	_fixture_park_wayfinding()
+	_flume_rows_on_disk()
+	await _flume_cable_on_ground()
 	_schema_cable_rows()
 	_schema_district_rows()
 	_schema_approach()
@@ -214,6 +254,135 @@ func _fixture_park_wayfinding() -> void:
 	_t.eq("retry resets fixture visited state", markers.visited_sites(), [])
 	markers.sync([], false)
 	holder.free()
+
+
+# E3-01 (WAYFINDING.md sections 2.2, 3 and 6): park_flume.json carries its own cable and district rows on disk. One cable
+# per pack the Flume's gate asks for, in pip order, each to a home row and ending beside it, every point inside play_rect;
+# three districts named in ride order, each on a grade world_look.gd owns, that do not overlap and cover play_rect, so the
+# drop-in, the siphon camp and the Warden's beacon fall in the first, second and third.
+func _flume_rows_on_disk() -> void:
+	var path := PARK_DIR + "park_flume.json"
+	var read := ParkSchema.load_park(path)
+	_t.check("park_flume.json loads via ParkSchema.load_park with 0 errors", read["errors"].is_empty(), ParkSchema.describe(read["errors"]))
+	var park: Dictionary = read["data"]
+	var pr: Array = park["play_rect"]
+	var play_box := Rect2(float(pr[0]), float(pr[1]), float(pr[2]), float(pr[3]))
+
+	var sites := {}
+	for row in park["park_rows"]:
+		sites[String(row["id"])] = Vector2(float(row["at"][0]), float(row["at"][1]))
+	var homes := {}
+	for home in park["home_rows"]:
+		homes[String(home["id"])] = sites.get(String(home["site"]), Vector2.INF)
+	var cables: Array = park.get("cable_rows", [])
+	var want := int(LockRows.row("park_flume")["gate"]["packs"])
+	_t.eq("park_flume carries one cable per pack its gate asks for", cables.size(), want)
+	var pips: Array = cables.map(func(c): return int(c["pip"]))
+	pips.sort()
+	_t.eq("park_flume cable pips run 1 to N", pips, range(1, want + 1))
+	for cable in cables:
+		var id := String(cable["id"])
+		_t.check("flume %s runs to a home row" % id, homes.has(String(cable["to"])), String(cable["to"]))
+		var via: Array = cable["via"]
+		_t.check("flume %s lays at least one via point" % id, not via.is_empty())
+		if via.is_empty() or not homes.has(String(cable["to"])):
+			continue
+		var inside: bool = via.all(func(p): return play_box.has_point(Vector2(float(p[0]), float(p[1]))))
+		_t.check("flume %s stays inside play_rect" % id, inside)
+		var end := Vector2(float(via[-1][0]), float(via[-1][1]))
+		var home_at: Vector2 = homes[String(cable["to"])]
+		_t.check("flume %s ends beside its home (within %.0f m)" % [id, CABLE_HOME_M], end.distance_to(home_at) <= CABLE_HOME_M,
+			"%.1f m" % end.distance_to(home_at))
+
+	var districts: Array = park.get("district_rows", [])
+	_t.eq("park_flume names its three districts in ride order", districts.map(func(r): return String(r["name"])), FLUME_DISTRICTS)
+	var boxes: Array = []
+	var area := 0.0
+	var overlap := false
+	var outside := false
+	for row in districts:
+		var grade := String(row["grade"])
+		_t.check("flume district %s takes a grade world_look.gd owns" % row["id"], WorldLook.DISTRICT_GRADES.has(grade), grade)
+		var r: Array = row["rect"]
+		var box := Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3]))
+		for prior: Rect2 in boxes:
+			overlap = overlap or box.intersects(prior, false)
+		outside = outside or not play_box.encloses(box)
+		boxes.append(box)
+		area += box.get_area()
+	_t.check("flume districts do not overlap", not overlap)
+	_t.check("flume districts stay inside play_rect", not outside, str(play_box))
+	_t.near("flume districts cover play_rect", area, play_box.get_area(), 0.01)
+	var spawn: Array = park["spawn"]["at"]
+	var camp := Vector2.INF
+	for activity in park["activity_rows"]:
+		if String(activity["id"]) == "siphon_camp":
+			camp = Vector2(float(activity["at"][0]), float(activity["at"][1]))
+	var beacon: Array = park["landmark"]["beacon"]
+	var order := [
+		WorldLook.DistrictGrade.district_in(districts, Vector3(float(spawn[0]), 0.0, float(spawn[1]))),
+		WorldLook.DistrictGrade.district_in(districts, Vector3(camp.x, 0.0, camp.y)),
+		WorldLook.DistrictGrade.district_in(districts, Vector3(float(beacon[0]), 0.0, float(beacon[1]))),
+	]
+	_t.eq("the drop-in, the siphon camp and the beacon read the Flume's three grades in order", order,
+		["flume_weir", "flume_trestle", "flume_headhouse"])
+
+	var map := ParkMap.new(path)
+	_t.check("ParkMap loads park_flume.json cleanly", map.ok and map.errors.is_empty(), ParkSchema.describe(map.errors))
+	_t.eq("ParkMap carries the Flume's cable rows", map.park.get("cable_rows", []).size(), want)
+	_t.eq("ParkMap carries the Flume's district rows", map.park.get("district_rows", []).size(), 3)
+
+
+# The Flume's cable drawn by conduit_cable.gd on the Flume's own baked ground: built alive on entry, one draw with no
+# shadow and no collider, laid on the ground end to end (no point floats over it or sinks past its ends), dead and marked
+# visited once its pip lights, alive again on retry.
+func _flume_cable_on_ground() -> void:
+	var world := ParkProps.world_for("park_flume")
+	var ctx := CableCtx.new()
+	ctx.terrain.current = world["map"]
+	ctx.terrain.ground = world["ground"]
+	ctx.events = GameEvents.new()
+	root.add_child(ctx.events)
+	var markers := SiteMarkers.new()
+	var cable := ConduitCable.new()
+	root.add_child(cable)
+	cable.setup(ctx, markers)
+	ctx.events.stage_entered.emit(2, false)
+	await process_frame
+	var rows: Array = world["map"].park.get("cable_rows", [])
+	var list: Array = cable.cables()
+	_t.eq("the Flume builds one cable per cable row", list.size(), rows.size())
+	for c: Dictionary in list:
+		var view: MeshInstance3D = c["view"]
+		var id := String(c["id"])
+		_t.check("flume %s is alive on entry" % id, not bool(c["dead"]))
+		_t.eq("flume %s is one surface (one draw)" % id, view.mesh.get_surface_count(), 1)
+		_t.eq("flume %s casts no shadow" % id, view.cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+		_t.eq("flume %s has no collider" % id, view.find_children("*", "CollisionObject3D", true, false).size(), 0)
+		var worst_float := 0.0
+		var worst_sink := 0.0
+		var faces: PackedVector3Array = view.mesh.get_faces()
+		for k in range(0, faces.size(), 7):
+			var v := faces[k]
+			var over: float = v.y - ctx.terrain.height(v.x, v.z)
+			worst_float = maxf(worst_float, over)
+			worst_sink = minf(worst_sink, over)
+		_t.check("flume %s floats nowhere over the ground" % id, worst_float <= CABLE_FLOAT_MAX_M, "%.2f m" % worst_float)
+		_t.check("flume %s sinks nowhere past its ends" % id, worst_sink >= -(ConduitCable.SINK_M + ConduitCable.CAST_BURY_M + 2.0),
+			"%.2f m" % worst_sink)
+	ctx.flow.gate.lit = 1
+	cable.refresh()
+	var first: Dictionary = cable.cables()[0]
+	_t.check("the Flume's one pip lit: its cable is dead", bool(first["dead"]))
+	_t.eq("the dead Flume cable is marked severed", String(markers.visited_state("cable:" + String(first["id"])).get("mark", "")), "severed")
+	ctx.flow.gate.lit = 0
+	ctx.events.stage_entered.emit(2, true)
+	await process_frame
+	_t.check("retry: the Flume's cable is alive again", cable.cables().size() == rows.size() and not bool(cable.cables()[0]["dead"]))
+	cable.free()
+	markers.free()
+	ctx.events.queue_free()
+	await process_frame
 
 
 func _dam_cables(park: Dictionary) -> Array:

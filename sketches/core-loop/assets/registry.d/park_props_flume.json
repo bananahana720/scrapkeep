@@ -1744,7 +1744,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/flume.py",
-    "notes": "washline variant c LOD2 (192 tris): A tub, a washboard and a short line of shirts: laundry day, interrupted. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "washline variant c LOD2 (243 tris): A tub, a washboard and a short line of shirts: laundry day, interrupted. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -1755,12 +1755,12 @@
     "max": [
      2.1832,
      1.4656,
-     1.6401
+     1.6441
     ],
     "size": [
      4.3885,
      1.4656,
-     3.2987
+     3.3027
     ]
    }
   },
@@ -1912,7 +1912,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/flume.py",
-    "notes": "timber_ties variant b LOD2 (96 tris): A low stack of spare ties, bundled with rope where the crew left it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "timber_ties variant b LOD2 (120 tris): A low stack of spare ties, bundled with rope where the crew left it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -1921,14 +1921,14 @@
      -2.164
     ],
     "max": [
-     2.3139,
-     1.0565,
-     2.1535
+     2.2531,
+     1.0579,
+     2.0949
     ],
     "size": [
-     4.5764,
-     1.0565,
-     4.3175
+     4.5156,
+     1.0579,
+     4.2589
     ]
    }
   },
@@ -4113,6 +4113,426 @@
      5.1151,
      2.1585,
      2.38
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_chalk_turn_a",
+   "path": "res://assets/models/park/props/flume/chalk_turn_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "chalk_turn variant a LOD0 (772 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.6802,
+     0,
+     -2.8363
+    ],
+    "max": [
+     1.6802,
+     0.3596,
+     2.8363
+    ],
+    "size": [
+     3.3604,
+     0.3596,
+     5.6726
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_chalk_turn_a_lod1",
+   "path": "res://assets/models/park/props/flume/chalk_turn_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "chalk_turn variant a LOD1 (386 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.6791,
+     0,
+     -2.8363
+    ],
+    "max": [
+     1.6802,
+     0.3596,
+     2.8363
+    ],
+    "size": [
+     3.3593,
+     0.3596,
+     5.6726
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_chalk_turn_a_lod2",
+   "path": "res://assets/models/park/props/flume/chalk_turn_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "chalk_turn variant a LOD2 (352 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.6842,
+     0,
+     -2.8414
+    ],
+    "max": [
+     1.6802,
+     0.3596,
+     2.8363
+    ],
+    "size": [
+     3.3644,
+     0.3596,
+     5.6777
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_chalk_turn_b",
+   "path": "res://assets/models/park/props/flume/chalk_turn_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "chalk_turn variant b LOD0 (820 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.8628,
+     0,
+     -2.8366
+    ],
+    "max": [
+     1.8628,
+     0.3596,
+     2.8366
+    ],
+    "size": [
+     3.7256,
+     0.3596,
+     5.6732
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_chalk_turn_b_lod1",
+   "path": "res://assets/models/park/props/flume/chalk_turn_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "chalk_turn variant b LOD1 (410 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.8628,
+     0,
+     -2.8417
+    ],
+    "max": [
+     1.8628,
+     0.3596,
+     2.8366
+    ],
+    "size": [
+     3.7256,
+     0.3596,
+     5.6783
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_chalk_turn_b_lod2",
+   "path": "res://assets/models/park/props/flume/chalk_turn_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "chalk_turn variant b LOD2 (374 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.8628,
+     0,
+     -2.8417
+    ],
+    "max": [
+     1.8628,
+     0.3596,
+     2.8366
+    ],
+    "size": [
+     3.7256,
+     0.3596,
+     5.6783
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_chalk_turn_c",
+   "path": "res://assets/models/park/props/flume/chalk_turn_c.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "chalk_turn variant c LOD0 (1444 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.2245,
+     0,
+     -2.8358
+    ],
+    "max": [
+     1.2245,
+     1.0959,
+     2.8358
+    ],
+    "size": [
+     2.449,
+     1.0959,
+     5.6716
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_chalk_turn_c_lod1",
+   "path": "res://assets/models/park/props/flume/chalk_turn_c_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "chalk_turn variant c LOD1 (722 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.2234,
+     0,
+     -2.8358
+    ],
+    "max": [
+     1.2301,
+     1.0951,
+     2.8358
+    ],
+    "size": [
+     2.4535,
+     1.0951,
+     5.6716
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_chalk_turn_c_lod2",
+   "path": "res://assets/models/park/props/flume/chalk_turn_c_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "chalk_turn variant c LOD2 (216 tris): A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.2254,
+     0,
+     -2.8409
+    ],
+    "max": [
+     1.222,
+     1.0906,
+     2.8358
+    ],
+    "size": [
+     2.4474,
+     1.0906,
+     5.6767
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_keeper_bunting_a",
+   "path": "res://assets/models/park/props/flume/keeper_bunting_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "keeper_bunting variant a LOD0 (1276 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.3388,
+     0,
+     -0.9093
+    ],
+    "max": [
+     0.3388,
+     3.0563,
+     0.9093
+    ],
+    "size": [
+     0.6776,
+     3.0563,
+     1.8186
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_keeper_bunting_a_lod1",
+   "path": "res://assets/models/park/props/flume/keeper_bunting_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "keeper_bunting variant a LOD1 (638 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.3388,
+     0,
+     -0.9093
+    ],
+    "max": [
+     0.3388,
+     3.0563,
+     0.9093
+    ],
+    "size": [
+     0.6776,
+     3.0563,
+     1.8186
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_keeper_bunting_a_lod2",
+   "path": "res://assets/models/park/props/flume/keeper_bunting_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "keeper_bunting variant a LOD2 (190 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.3427,
+     0,
+     -0.9093
+    ],
+    "max": [
+     0.3393,
+     3.0566,
+     0.9093
+    ],
+    "size": [
+     0.682,
+     3.0566,
+     1.8186
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_keeper_bunting_b",
+   "path": "res://assets/models/park/props/flume/keeper_bunting_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "keeper_bunting variant b LOD0 (2592 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.2388,
+     0,
+     -0.3409
+    ],
+    "max": [
+     2.2388,
+     2.7567,
+     0.3409
+    ],
+    "size": [
+     4.4776,
+     2.7567,
+     0.6818
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_keeper_bunting_b_lod1",
+   "path": "res://assets/models/park/props/flume/keeper_bunting_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "keeper_bunting variant b LOD1 (1296 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.2388,
+     0,
+     -0.3407
+    ],
+    "max": [
+     2.2388,
+     2.7568,
+     0.3407
+    ],
+    "size": [
+     4.4776,
+     2.7568,
+     0.6814
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_keeper_bunting_b_lod2",
+   "path": "res://assets/models/park/props/flume/keeper_bunting_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "keeper_bunting variant b LOD2 (950 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.2371,
+     0,
+     -0.3407
+    ],
+    "max": [
+     2.2371,
+     2.7567,
+     0.3407
+    ],
+    "size": [
+     4.4742,
+     2.7567,
+     0.6814
     ]
    }
   }

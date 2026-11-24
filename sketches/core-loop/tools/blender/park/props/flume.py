@@ -729,5 +729,60 @@ K.kind("shift_table", tags=["machine"], variants="ab",
        story="A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell.")(kit.shift_table)
 
 
+# --------------------------------------------------------------------------------------
+# Wayfinding (W46 E3-01, design-v3/WAYFINDING.md section 2.3): the keepers' chalk and bunting at the mouths of side
+# routes, the same hand on both parks. dam.py owns the two builders; importing it registers the Dam's kinds on the Dam's
+# own kit, not this one. Sand, bone, chalk, oxide and copper rope; nothing mint; dressing with no collider.
+import colorsys
+
+import dam
+
+# The bunting's copper rope and oxide pennants (saturation 0.63) bake past the dress cap of 0.65 sRGB saturation after
+# Godot's 8-bit import (0.71 measured), so on the Flume every colour the builder draws keeps its hue and value with its
+# saturation held to CLOTH_SAT. The chalk sits under it already and is drawn as the Dam draws it.
+CLOTH_SAT = 0.52
+
+
+def _calm(colour):
+    """colour (a kit C name or 6-digit hex) with its HSV saturation held to CLOTH_SAT; anything else unchanged."""
+    if not isinstance(colour, str):
+        return colour
+    hexa = C.get(colour, colour)
+    if not isinstance(hexa, str) or len(hexa) != 6:
+        return colour
+    try:
+        r, g, b = (int(hexa[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+    except ValueError:
+        return colour
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+    if s <= CLOTH_SAT:
+        return colour
+    return "%02x%02x%02x" % tuple(round(x * 255) for x in colorsys.hsv_to_rgb(h, CLOTH_SAT, v))
+
+
+class _Calm:
+    """Passes every drawing call to the Prop p with each positional colour through _calm."""
+
+    def __init__(self, p):
+        self._p = p
+
+    def __getattr__(self, name):
+        attr = getattr(self._p, name)
+        if not callable(attr):
+            return attr
+        return lambda *args, **kw: attr(*(_calm(a) for a in args), **kw)
+
+
+def keeper_bunting(p, v, rng):
+    dam.keeper_bunting(_Calm(p), v, rng)
+
+
+K.closed_lods |= {"chalk_turn", "keeper_bunting"}
+K.kind("chalk_turn", hero=False, tags=["sign"], variants="abc",
+       story="A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place.")(dam.chalk_turn)
+K.kind("keeper_bunting", hero=False, tags=["soft", "sign"], variants="ab",
+       story="Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope.")(keeper_bunting)
+
+
 if __name__ == "__main__":
     K.main()
