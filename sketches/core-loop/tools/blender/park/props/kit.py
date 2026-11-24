@@ -620,6 +620,35 @@ def shift_table(p, v, rng):
     p.box((0.05, 0.03, 0.15), (hx, -0.135, 1.92), GAG_INK, style="flat")
 
 
+def drop_open_islands(mesh):
+    """Deletes every connected island of mesh that has an open edge or fewer than four faces (a part the collapse shrank
+    to loose triangles, or to a front-and-back pair with no volume, which the export does not keep closed)."""
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    seen, doomed = set(), []
+    for face in bm.faces:
+        if face.index in seen:
+            continue
+        island, stack, open_edge = [], [face], False
+        seen.add(face.index)
+        while stack:
+            f = stack.pop()
+            island.append(f)
+            for e in f.edges:
+                if len(e.link_faces) < 2:
+                    open_edge = True
+                for g in e.link_faces:
+                    if g.index not in seen:
+                        seen.add(g.index)
+                        stack.append(g)
+        if open_edge or len(island) < 4:
+            doomed.extend(island)
+    if doomed:
+        bmesh.ops.delete(bm, geom=doomed, context="FACES")
+    bm.to_mesh(mesh)
+    bm.free()
+
+
 class Kit:
     def __init__(self, park, polish_opts=None, board=None):
         self.park = park
@@ -627,6 +656,10 @@ class Kit:
         if not board:
             print("KIT note: %s declares no board palette; the board check is off" % park, flush=True)
         self.kinds = {}
+        # Kinds whose LODs must stay closed (check_manifold.py --strict): a collapse that shrinks a small closed part to
+        # a lone open triangle drops that part instead. Opt-in, so a kit's other kinds export as they always have.
+        self.closed_lods = set()
+        self._exporting = None
         self.polish_opts = dict(detail=2, bevel=0.04, bevel_min=0.08)
         self.polish_opts.update(polish_opts or {})
         assert self.polish_opts["detail"] >= 1, "polish detail %r: common _segs(n) returns 0 below 1 and every cylinder and sphere vanishes" % (self.polish_opts["detail"],)
@@ -709,6 +742,7 @@ class Kit:
     def export(self, kind, variant, out_dir):
         out_dir.mkdir(parents=True, exist_ok=True)
         root, obj = self.build(kind, variant)
+        self._exporting = kind
         base = "%s_%s" % (kind, variant)
         t0 = common.tris(obj)
         self.check_lod0(kind, variant, t0)
@@ -791,6 +825,8 @@ class Kit:
         common.place(obj, src["world_origin"], root)
         # Collapse can lift or sink the lowest vertex a few centimetres; re-seat the LOD on LOD0's floor so no recipe
         # needs a ground plinth to hold FLOOR_TOL. A shift past RESEAT_MAX means the silhouette broke, so it fails.
+        if self._exporting in self.closed_lods:
+            drop_open_islands(mesh)
         shift = min(v.co.z for v in src.data.vertices) - min(v.co.z for v in mesh.vertices)
         assert abs(shift) <= RESEAT_MAX, "LOD re-seat of %.3f m exceeds %.2f m" % (shift, RESEAT_MAX)
         for v in mesh.vertices:

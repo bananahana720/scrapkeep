@@ -222,7 +222,7 @@ def survey_tripod(p, v, rng):
 
 # --- shared bits ---------------------------------------------------------------------------
 V = kit.Vector if hasattr(kit, "Vector") else None
-from mathutils import Vector
+from mathutils import Euler, Matrix, Vector
 
 PETROL, OXIDE = "365754", "9b513a"   # board petrol (old-enamel machine bodies) and oxide (Sluice Wheelhouse hand wheel), spillway props board
 DUSK_BLUE = mix(PETROL, "bone", 0.35)   # crew shirts: petrol worn toward bone, the crews board's two cloth colours
@@ -960,6 +960,272 @@ K.kind("foreman_billboard", hero=True, tags=["sign", "tall"], variants="ab",
        story="A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk.")(kit.foreman_billboard)
 K.kind("shift_table", tags=["machine"], variants="ab",
        story="A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell.")(kit.shift_table)
+
+
+# --------------------------------------------------------------------------------------
+# Wayfinding pieces (W46 E1-15, design-v3/WAYFINDING.md sections 2 and 4, ruling en: bold and chunky). The gantry is the
+# old works' hand: squared cast panels, one pour, no bolt, no bracing, no lit rail. The deck, the pump kit, the chalk and
+# the bunting are the dam crew's and the keepers' hands: concrete, oxide paint, chalk, cloth and copper rope. Nothing
+# here is mint or uranium green (kit BANNED); every piece is dressing with no collider.
+CAST = mix(PETROL, "verdigris", 0.35)      # the gantry's cast body: petrol enamel gone to verdigris, light enough to
+                                            # read against the canyon from the crest
+CAST_FIELD = mix(PETROL, "verdigris", 0.55) # a cast panel's raised field, a shade lighter so the panels read
+CAST_EDGE = mix(PETROL, "verdigris", 0.8)   # weathered edges and drips
+CHALK = "e6e3d6"                            # the keepers' chalk (kit GAG_CHALK)
+ROPE = "b77843"                             # copper rope ties: never dominant, only ties
+PIPE = mix(OXIDE, "rust", 0.45)             # pump pipe body: oxide gone to rust
+PIPE_DARK = mix(PIPE, "charcoal", 0.35)
+# Every wayfinding piece exports closed at every LOD (E1-15 brief: check_manifold.py --strict on each GLB).
+K.closed_lods |= {"intake_gantry", "takeoff_deck", "pump_elbow", "chalk_turn", "keeper_bunting"}
+
+
+@K.kind("intake_gantry", hero=True, tags=["tall"], variants="ab",
+        story="An old-works intake gantry: a squared cast portal with one oversized cable socket on its lintel end.")
+def intake_gantry(p, v, rng):
+    # One portal, legs along X, its faces toward -Y and +Y. Variant a carries its socket on the +X end of the lintel and
+    # b on the -X end, so a pair stands either side of the intake slot with both sockets facing the sky gap between.
+    s = 1 if v == "a" else -1
+    LX, LW, TOP = 3.7, 2.4, 14.6     # leg centres at +-LX, leg width, top of the legs
+    for x in (-LX, LX):
+        # Stepped cast plinth, then the squared leg.
+        p.box((4.0, 4.0, 0.9), (x, 0, 0.45), CAST, style="hard_smooth")
+        p.box((3.3, 3.3, 0.7), (x, 0, 1.24), mix(CAST, "concrete_dark", 0.3), style="hard_smooth")
+        p.box((LW, LW, TOP - 1.55), (x, 0, 1.55 + (TOP - 1.55) / 2), CAST, style="hard_smooth")
+        # Three cast panels up each face: a raised frame and a lighter field, so the leg reads as panels, not a post.
+        for k, zc in enumerate((3.9, 7.9, 11.9)):
+            for fy in (-1, 1):
+                p.box((1.86, 0.2, 3.3), (x, fy * (LW / 2 + 0.06), zc), mix(CAST, "charcoal", 0.12), style="hard")
+                p.box((1.38, 0.16, 2.78), (x, fy * (LW / 2 + 0.17), zc), CAST_FIELD, style="hard_smooth")
+            p.box((0.2, 1.86, 3.3), (x + (x > 0 and 1 or -1) * (LW / 2 + 0.06), 0, zc), mix(CAST, "charcoal", 0.12), style="hard")
+            p.box((0.16, 1.38, 2.78), (x + (x > 0 and 1 or -1) * (LW / 2 + 0.17), 0, zc), CAST_FIELD, style="hard_smooth")
+        # A cast haunch inside the top of each leg: the opening's squared shoulder.
+        inner = -1 if x > 0 else 1
+        p.prism([(0.0, 0.0), (1.9, 0.0), (0.0, -1.9)], LW * 0.92, (x + inner * LW / 2, 0, TOP - 0.02), CAST,
+                rot=(math.pi / 2, 0, 0 if inner > 0 else math.pi), style="hard_smooth")
+    # The lintel: one heavy cast beam with three squared panels a face, a stepped cornice and a cap.
+    p.box((2 * LX + LW + 1.6, 2.9, 2.8), (0, 0, TOP + 1.4), CAST, style="hard_smooth")
+    for k in (-1, 0, 1):
+        for fy in (-1, 1):
+            p.box((2.5, 0.2, 1.8), (k * 3.0, fy * 1.56, TOP + 1.4), mix(CAST, "charcoal", 0.12), style="hard")
+            p.box((2.0, 0.16, 1.32), (k * 3.0, fy * 1.67, TOP + 1.4), CAST_FIELD, style="hard_smooth")
+    p.box((2 * LX + LW + 2.6, 3.7, 0.55), (0, 0, TOP + 3.08), mix(CAST, "charcoal", 0.1), style="hard_smooth")
+    p.box((2 * LX + LW + 0.9, 2.6, 0.6), (0, 0, TOP + 3.62), CAST, style="hard_smooth")
+    # The oversized cable socket on one lintel end: a squared cast boss, a heavy flange and the dark bore the line
+    # seats in. The bore is a disc laid proud of the flange (no boolean), so the piece stays closed.
+    end = s * (LX + LW / 2 + 0.8)
+    p.box((1.3, 2.4, 2.4), (end + s * 0.62, 0, TOP + 1.4), mix(CAST, "charcoal", 0.15), style="hard_smooth")
+    p.cyl(1.25, 0.5, (end + s * 1.5, 0, TOP + 1.4), CAST_EDGE, segs=20, rot=(0, math.pi / 2, 0), style="round")
+    p.cyl(0.95, 0.42, (end + s * 1.9, 0, TOP + 1.4), mix(CAST, "charcoal", 0.25), segs=20, rot=(0, math.pi / 2, 0), style="round")
+    p.cyl(0.62, 0.08, (end + s * 2.14, 0, TOP + 1.4), "charcoal", segs=20, rot=(0, math.pi / 2, 0), style="flat")
+    # A cast shackle hanging from the socket: the line's eye.
+    p.torus(0.62, 0.16, (end + s * 1.9, 0, TOP - 0.2), mix(CAST, "charcoal", 0.25), rot=(math.pi / 2, 0, 0), major=16, minor=6)
+    # Weather: verdigris drips down the panels under the socket, more on b, and one chipped cornice corner on b.
+    for k in range(3 if v == "a" else 5):
+        x = s * (LX + rng.uniform(-0.6, 0.6))
+        ln = rng.uniform(1.6, 3.4)
+        p.box((0.16, 0.05, ln), (x, -(LW / 2 + 0.27), TOP - 1.1 - ln / 2 - rng.uniform(0, 2.0)), CAST_EDGE, style="flat")
+    if v == "b":
+        p.box((1.4, 1.2, 0.5), (-s * (LX + 1.6), -1.4, TOP + 2.7), "concrete_stain", rot=(0.2, 0.15, 0.4), style="hard_smooth")
+
+
+@K.kind("takeoff_deck", hero=False, tags=["sign"], variants="ab",
+        story="The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip.")
+def takeoff_deck(p, v, rng):
+    # Front (the lip) toward -Y. Two low cheeks 9 m apart so a ball-wide slot runs between them, bone chevrons on their
+    # tops and inner faces, and a squat bollard at each lip end. Low (under 1.2 m), so a ball crossing reads it as a kerb.
+    # a: the full 12 m run-in; b: a short 8 m pour, its far end broken off and tipped.
+    length, marks = (12.0, 5) if v == "a" else (8.0, 3)
+    for sx in (-1, 1):
+        x = sx * 4.6
+        p.box((1.0, length, 0.55), (x, 0, 0.275), "concrete_light", style="hard_smooth")
+        p.box((1.16, length + 0.2, 0.12), (x, 0, 0.06), "concrete_dark", style="hard")
+        for k in range(marks):
+            y = length / 2 - 1.8 - k * 2.2
+            for arm in (-1, 1):
+                p.box((0.62, 0.2, 0.05), (x + arm * 0.2, y + 0.2, 0.565), "bone", rot=(0, 0, arm * 0.9), style="flat")
+            p.box((0.05, 0.9, 0.36), (x - sx * 0.515, y, 0.3), "bone" if k % 2 == 0 else "charcoal", style="flat")
+        lip = -length / 2 - 0.6
+        p.box((1.3, 1.3, 0.95), (x, lip, 0.475), "concrete", style="hard_smooth")
+        p.box((1.36, 1.36, 0.22), (x, lip, 0.7), "bone", style="hard")
+        p.box((1.2, 1.2, 0.08), (x, lip, 0.99), "concrete_light", style="hard")
+        if v == "b":
+            # The broken-off end of the pour, tipped against the cheek's back.
+            p.box((1.0, 1.8, 0.55), (x + sx * 0.3, length / 2 + 1.3, 0.4), "concrete_light", rot=(0.35, 0, sx * 0.25),
+                  style="hard_smooth")
+    # Chipped corners and a stain on one cheek, so the pour reads hand-made.
+    for k in range(4):
+        p.box((0.3, 0.3, 0.16), (rng.choice((-1, 1)) * (4.6 + rng.uniform(-0.4, 0.4)),
+                                 rng.uniform(-length / 2 + 0.5, length / 2 - 0.5), 0.6),
+              mix("concrete", "concrete_stain", 0.5), rot=(0, 0, rng.uniform(0, 1.5)), style="hard")
+
+
+def _bend(p, centre, radius, a0, a1, pipe_r, plane, color, segs=6):
+    """A segmented (lobster-back) pipe bend: segs closed cylinders round an arc of radius in a plane, each joint hidden
+    under a weld collar. plane maps (u, w) on the arc to (x, y, z)."""
+    pts = [plane(centre, radius * math.cos(a0 + (a1 - a0) * k / segs), radius * math.sin(a0 + (a1 - a0) * k / segs))
+           for k in range(segs + 1)]
+    for k, (a, b) in enumerate(zip(pts, pts[1:])):
+        # Each segment runs 2 cm past its inner joints, so two segments' caps never share an edge there.
+        d = (Vector(b) - Vector(a)).normalized() * 0.02
+        a2 = Vector(a) - d if k > 0 else Vector(a)
+        b2 = Vector(b) + d if k < segs - 1 else Vector(b)
+        p.rod(tuple(a2), tuple(b2), pipe_r, color, segs=12, style="hard")
+    for k in range(1, segs):
+        # A weld collar over each joint, laid along the arc's tangent there.
+        a, b = Vector(pts[k - 1]), Vector(pts[k + 1])
+        d = (b - a).normalized()
+        q = Vector(pts[k])
+        p.rod(tuple(q - d * 0.09), tuple(q + d * 0.09), pipe_r * 1.08, mix(color, "charcoal", 0.2), segs=12, style="flat")
+    return pts
+
+
+def _flange(p, at, axis_rot, r, color, studs=6):
+    p.cyl(r, 0.22, at, color, segs=14, rot=axis_rot, style="hard")
+    # Stud heads round the rim (the dam crew's riveted kit), set on the flange's face.
+    m = Matrix.LocRotScale(Vector(at), Euler(axis_rot).to_quaternion(), Vector((1, 1, 1)))
+    for k in range(studs):
+        a = math.tau * k / studs
+        q = m @ Vector((math.cos(a) * r * 0.8, math.sin(a) * r * 0.8, 0.13))
+        p.cyl(0.08, 0.08, tuple(q), "iron", segs=5, rot=axis_rot, style="flat")
+
+
+@K.kind("pump_elbow", hero=False, tags=["machine"], variants="abc",
+        story="Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust.")
+def pump_elbow(p, v, rng):
+    xz = lambda c, u, w: (c[0] + u, c[1], c[2] + w)     # a bend in the XZ plane
+    xy = lambda c, u, w: (c[0] + u, c[1] + w, c[2])     # a bend lying flat
+    R = 0.62
+    if v == "a":
+        # A standing elbow: up out of a flanged foot, round a 90 degree bend, out to a blind flange.
+        p.box((2.2, 2.2, 0.35), (0, 0, 0.175), "concrete", style="hard_smooth")
+        _flange(p, (0, 0, 0.47), (0, 0, 0), 0.95, PIPE_DARK)
+        # The straight runs reach 6 cm into the bend, so no rod's cap lands on the bend's own cap (one shared edge ring).
+        p.rod((0, 0, 0.5), (0, 0, 1.36), R, PIPE, segs=12, style="hard")
+        _bend(p, (1.2, 0, 1.3), 1.2, math.pi, math.pi / 2, R, xz, PIPE)
+        p.rod((1.14, 0, 2.5), (2.2, 0, 2.5), R, PIPE, segs=12, style="hard")
+        _flange(p, (2.28, 0, 2.5), (0, math.pi / 2, 0), 0.92, PIPE_DARK)
+        p.cyl(0.55, 0.06, (2.42, 0, 2.5), "charcoal", segs=12, rot=(0, math.pi / 2, 0), style="flat")
+        p.box((0.6, 0.3, 1.9), (1.7, 0.0, 0.95), "iron", style="hard")   # a cast prop under the overhang
+    elif v == "b":
+        # An S-bend pair lying on the ground with a valve hand wheel standing off it.
+        _bend(p, (0, 1.2, R), 1.2, -math.pi / 2, 0, R, xy, PIPE)
+        _bend(p, (2.4, 1.2, R), 1.2, math.pi, math.pi * 1.5, R, xy, PIPE)
+        _flange(p, (0, -0.08, R), (math.pi / 2, 0, 0), 0.9, PIPE_DARK)
+        _flange(p, (2.4, 2.48, R), (math.pi / 2, 0, 0), 0.9, PIPE_DARK)
+        p.rod((1.2, 1.2, R), (1.2, 1.2, 2.2), 0.12, "iron", segs=8, style="hard")
+        p.torus(0.6, 0.08, (1.2, 1.2, 2.25), "iron_light", major=14, minor=5, style="flat")
+        for k in range(4):
+            a = math.tau * k / 4 + 0.4
+            p.rod((1.2, 1.2, 2.25), (1.2 + 0.56 * math.cos(a), 1.2 + 0.56 * math.sin(a), 2.25), 0.05, "iron", segs=5, style="flat")
+        for x in (0.3, 2.1):
+            p.box((0.9, 0.6, 0.3), (x, 1.2, 0.15), "timber_dark", style="hard")
+    else:
+        # A big elbow lying half-sunk on its side, its far flange cracked off, sand drifted against it.
+        _bend(p, (0, 0, 0.55), 1.5, 0, math.pi / 2, 0.78, xy, PIPE, segs=7)
+        _flange(p, (1.5, -0.1, 0.55), (math.pi / 2, 0, 0), 1.12, PIPE_DARK)
+        p.rod((0, 1.5, 0.55), (-1.2, 1.5, 0.55), 0.78, PIPE, segs=12, style="hard")
+        p.box((0.9, 0.3, 0.9), (-1.35, 1.5, 0.55), PIPE_DARK, rot=(0, 0.4, 0.2), style="hard")
+        for k in range(3):
+            p.ico(0.7 + 0.15 * k, (0.6 - k * 0.8, 0.9 + k * 0.3, 0.05), "sandstone_pale", scale=(1.6, 1.1, 0.4), style="flat")
+        rock(p, 2.1, 1.2, 0.35, rng, "sandstone_dark")
+
+
+def _ground_stroke(p, a, b, width, rng, z=0.025):
+    """A chalk stroke laid on the ground from a to b (x, y), a little crooked."""
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    ln = math.hypot(dx, dy)
+    p.box((ln + width * 0.4, width, 0.05), ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, z), CHALK,
+          rot=(0, 0, math.atan2(dy, dx) + rng.uniform(-0.03, 0.03)), style="flat")
+
+
+def _arrow(p, tail, tip, width, rng, head=1.1):
+    """A chalked arrow: a shaft of three crooked strokes and two head strokes."""
+    pts = [tail] + [(tail[0] + (tip[0] - tail[0]) * t + rng.uniform(-0.08, 0.08),
+                     tail[1] + (tip[1] - tail[1]) * t + rng.uniform(-0.08, 0.08)) for t in (0.35, 0.7)] + [tip]
+    for a, b in zip(pts, pts[1:]):
+        _ground_stroke(p, a, b, width, rng)
+    ang = math.atan2(tip[1] - tail[1], tip[0] - tail[0])
+    for side in (-1, 1):
+        aa = ang + math.pi + side * 0.62
+        _ground_stroke(p, tip, (tip[0] + head * math.cos(aa), tip[1] + head * math.sin(aa)), width, rng)
+
+
+@K.kind("chalk_turn", hero=False, tags=["sign"], variants="abc",
+        story="A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place.")
+def chalk_turn(p, v, rng):
+    # Arrows point -Y (the way to go). Bold strokes, 0.36 m wide, so they read from the chase camera along the ground.
+    W = 0.36
+    if v == "a":
+        _arrow(p, (0.0, 2.2), (0.0, -2.2), W, rng, head=1.3)
+        for k in range(3):   # the keepers' tally: they came through three times
+            _ground_stroke(p, (1.0 + 0.3 * k, 1.9), (1.05 + 0.3 * k, 1.1), 0.12, rng)
+    elif v == "b":
+        # A fork: one stroke in, two arrows out, the chosen one doubled.
+        _ground_stroke(p, (0.0, 2.4), (0.0, 0.4), W, rng)
+        _arrow(p, (0.0, 0.4), (-1.6, -1.9), W, rng, head=1.1)
+        _arrow(p, (0.0, 0.4), (1.6, -1.9), W * 0.7, rng, head=0.9)
+        _ground_stroke(p, (-1.25, -1.2), (-1.85, -2.3), W * 0.6, rng)
+    else:
+        # A concrete slab leant on a stone, the arrow chalked on its face, so it stands up out of a low ground.
+        p.box((1.6, 0.28, 1.1), (0, 0, 0.55), "concrete", rot=(-0.28, 0, 0.05), style="hard_smooth")
+        face = -0.32
+        q = lambda x, z: (x, face + (z - 0.55) * 0.28, z)
+        for a, b in (((-0.55, 0.55), (0.45, 0.6)), ((0.45, 0.6), (0.15, 0.85)), ((0.45, 0.6), (0.12, 0.33))):
+            ax, az = a
+            bx, bz = b
+            ln = math.hypot(bx - ax, bz - az)
+            mid = q((ax + bx) / 2, (az + bz) / 2)
+            p.box((ln + 0.08, 0.04, 0.13), mid, CHALK, rot=(-0.28, -math.atan2(bz - az, bx - ax), 0.05), style="flat")
+        p.ico(0.42, (0.0, 0.55, 0.2), "sandstone_dark", scale=(1.3, 1.0, 0.6), style="soft")
+        _arrow(p, (0.0, -0.6), (0.0, -2.6), W * 0.8, rng, head=0.9)
+    # A worn stub of chalk dropped by the stone, and a scuffed hatch where the keeper tested the stick.
+    p.cyl(0.07, 0.3, (0.5 if v != "b" else -0.6, 2.6, 0.07), CHALK, segs=8, rot=(0, math.pi / 2, 0.6), style="hard")
+    for k in range(4):
+        _ground_stroke(p, (-0.7 + 0.22 * k, -2.9), (-0.45 + 0.22 * k, -2.55), 0.08, rng)
+    rock(p, -1.1 if v != "b" else 0.9, 2.3, 0.32, rng, "sandstone_dark")
+    p.ico(0.22, (-1.45 if v != "b" else 1.25, 2.0, 0.05), "sandstone", scale=(1.2, 1.0, 0.5), style="soft")
+
+
+def _pennant(p, top, w, h, color, rng):
+    """A triangular cloth pennant hanging from a point on a line, a hair thick."""
+    p.prism([(-w / 2, 0.0), (w / 2, 0.0), (rng.uniform(-0.05, 0.05), -h)], 0.03, top, color,
+            rot=(math.pi / 2, 0, rng.uniform(-0.25, 0.25)), style="flat")
+
+
+@K.kind("keeper_bunting", hero=False, tags=["soft", "sign"], variants="ab",
+        story="Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope.")
+def keeper_bunting(p, v, rng):
+    def pole(x, y, h, lean):
+        top = (x + lean[0], y + lean[1], h)
+        p.rod((x, y, -0.05), top, 0.09, "timber_grey", segs=8, r2=0.07, style="round")
+        p.ico(0.32, (x, y, 0.08), "sandstone_dark", scale=(1.4, 1.2, 0.5), style="soft")
+        for k in range(2):
+            p.torus(0.12, 0.035, (top[0] * 0.96, top[1] * 0.96, h - 0.25 - 0.12 * k), ROPE, major=10, minor=4)
+        return top
+    if v == "a":
+        # One tall pole with a long tied cloth strip and a square pennant: the mark you can see from the fork.
+        top = pole(0, 0, 3.0, (0.12, -0.05))
+        for k, (dz, col) in enumerate(((0.0, "bone"), (-0.7, "canvas"), (-1.35, "canvas_dark"))):
+            p.box((0.06, 0.62, 0.72), (top[0] + 0.05, top[1] - 0.36 - 0.05 * k, top[2] - 0.45 + dz), col,
+                  rot=(0.06 * k, 0.05, 0.08 * k), style="flat")
+        p.box((0.05, 0.9, 0.6), (top[0] - 0.02, top[1] + 0.52, top[2] - 0.4), "bone", rot=(0, 0, -0.1), style="flat")
+        p.box((0.04, 0.12, 0.12), (top[0] - 0.02, top[1] + 0.95, top[2] - 0.36), OXIDE, style="flat")
+    else:
+        # Two crooked poles with a sagging copper-tied line of pennants in sand, bone and oxide.
+        a = pole(-1.9, 0, 2.7, (0.1, 0.05))
+        b = pole(1.9, 0.1, 2.5, (-0.12, -0.04))
+        n = 7
+        cols = ("bone", "canvas", OXIDE, "bone", "canvas_dark", "bone", OXIDE)
+        prev = None
+        for k in range(n + 1):
+            t = k / n
+            pt = (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t - 0.5 * 4 * t * (1 - t) - 0.18)
+            if prev is not None:
+                p.rod(prev, pt, 0.03, ROPE, segs=5, style="flat")
+            prev = pt
+            if 0 < k < n + 1 and k < n:
+                q = (pt[0] + (b[0] - a[0]) / n * 0.5, pt[1], pt[2] - 0.05)
+                _pennant(p, q, 0.42, 0.55, cols[k % len(cols)], rng)
 
 
 if __name__ == "__main__":

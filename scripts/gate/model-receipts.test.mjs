@@ -545,3 +545,38 @@ test("the sound arbiter row's pin and plants match captured TLC output, and its 
   ])
     assert.ok(covered.includes(`sketches/core-loop/src/${f}`), f);
 });
+
+test("the weapon cadence row covers all six pilots, pins 10,122 states, and wires all 16 plants", () => {
+  const wc = ROWS["weapon-cadence-safe"];
+  assert.deepEqual(
+    wc.real.map((r) => [r.cfg, r.minStates]),
+    [["weaponcadence-today.cfg", 10122]],
+  );
+  assert.equal(wc.plants.length, 16);
+  assert.deepEqual([...new Set(wc.plants.map((p) => p.rule))].sort(), [
+    "BoundedReadyAfterInterrupt",
+    "NoShotOutsidePlay",
+    "OneVolleyPerPress",
+    "RefundNeverExceedsSpend",
+    "RestAfterBoundary",
+    "WindowPaysAtMostOnce",
+  ]);
+  for (const name of [
+    "weaponcadence-broken-double-snap.cfg",
+    "weaponcadence-broken-detline-double.cfg",
+    "weaponcadence-broken-snap-hold-lock.cfg",
+    "weaponcadence-broken-beats-hold-repeat.cfg",
+    "weaponcadence-broken-beats-skip.cfg",
+    "weaponcadence-broken-lock-stuck.cfg",
+  ])
+    assert.ok(
+      wc.plants.some((p) => p.cfg === name),
+      name,
+    );
+  assert.ok(wc.gaps.every((g) => !/phase E2 modes/.test(g)));
+  const covered = coveredFiles(readFileSync(new URL(wc.coverage, SKILL), "utf8"));
+  assert.deepEqual(covered, [
+    "sketches/core-loop/src/combat/combat.gd",
+    "sketches/core-loop/src/combat/weapon_driver.gd",
+  ]);
+});

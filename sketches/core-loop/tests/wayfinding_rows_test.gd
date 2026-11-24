@@ -533,15 +533,24 @@ func _site_markers_visited() -> void:
 	holder.free()
 
 
-# Crew and cache flip only by their plume keys (crew:<home id> from director.live_homes(), cache:<foot> from
-# scrap_field.caches()) through sync's fade; an activity's activity_done is no plume site and flips nothing.
+# Crew and cache plumes flip only by their plume keys (crew:<home id> from director.live_homes(), cache:<foot> from
+# scrap_field.caches()) through sync's fade. An activity's activity_done is no plume site and flips no plume; the one
+# activity with a visited mark of its own is a spent cracked cache's pocket (E1-15: its keeper flag, keyed
+# cracked_cache:<x>,<z> at the pedestal), which never flips a plume either.
 func _plume_keyed_flips(markers: SiteMarkers, events: GameEvents, holder: Node3D) -> void:
 	markers.reset_visited()
-	# Regression: the Dam's enemy_camp (domes_camp) and cracked caches (rim_cache, incline_cache) keep no visited row.
+	# The Dam's enemy_camp (domes_camp) keeps no visited row; its cracked caches (rim_cache, incline_cache) raise flags.
 	events.activity_done.emit("enemy_camp", Vector3(-51.0, 2.0, -396.0))
 	events.activity_done.emit("cracked_cache", Vector3(-210.0, 0.0, 400.0))
 	events.activity_done.emit("cracked_cache", Vector3(-44.0, 0.0, 255.0))
-	_t.eq("enemy_camp and cracked_cache activity_done add no visited row", markers.visited_sites(), [])
+	var pocket_keys: Array = markers.visited_sites().map(func(row): return String(row["key"]))
+	pocket_keys.sort()
+	_t.eq("enemy_camp adds no visited row; each spent cracked pocket adds its own", pocket_keys,
+		["cracked_cache:-210,400", "cracked_cache:-44,255"])
+	_t.eq("a spent cracked pocket's mark is the flag", markers.visited_state("cracked_cache:-44,255").get("mark"), "flag")
+	_t.eq("each spent cracked pocket raises one keeper flag", markers.flags.size(), 2)
+	events.stage_content_cleared.emit("test")
+	_t.eq("leaving the stage drops the pockets' flags", markers.flags.size(), 0)
 
 	var dam := _load_json("park_dam")
 	var home_id := String(dam["home_rows"][0]["id"])
@@ -562,14 +571,15 @@ func _plume_keyed_flips(markers: SiteMarkers, events: GameEvents, holder: Node3D
 	_t.check("the cache plume is keyed by its foot", keys.has(cache_key), str(keys))
 	markers.sync(list, true)
 	_t.eq("standing plumes flip nothing", markers.visited_sites(), [])
-	# Activity events while the plumes stand still flip neither of them.
+	# Activity events while the plumes stand still flip neither of them (a cracked pocket marks only its own key).
 	events.activity_done.emit("enemy_camp", Vector3(home_at.x, 0.0, home_at.y))
 	events.activity_done.emit("cracked_cache", foot)
-	_t.eq("activity_done beside standing plumes adds no visited row", markers.visited_sites(), [])
+	var beside: Array = markers.visited_sites().map(func(row): return String(row["key"]))
+	_t.eq("activity_done beside standing plumes flips no plume", beside, ["cracked_cache:33,-71"])
 
 	# A rescue whose cage never stood a plume has no site; one whose plume stands flips at the plume's foot.
 	events.rescue_completed.emit("ghost")
-	_t.check("a rescue with no cage plume adds no visited row", not markers.is_visited("cage:ghost") and markers.visited_sites().is_empty())
+	_t.check("a rescue with no cage plume adds no visited row", not markers.is_visited("cage:ghost") and markers.visited_sites().size() == 1)
 	events.rescue_completed.emit("rivet")
 	_t.eq("rescue_completed flips the cage at its plume's foot", markers.visited_state("cage:rivet").get("at"), Vector3(8.0, 1.0, 9.0))
 
@@ -583,8 +593,8 @@ func _plume_keyed_flips(markers: SiteMarkers, events: GameEvents, holder: Node3D
 	_t.eq("the cache flag stands at its foot", markers.visited_state(cache_key).get("at"), foot)
 	var flipped: Array = markers.visited_sites().map(func(row): return String(row["key"]))
 	flipped.sort()
-	var want := [cache_key, "cage:rivet", crew_key]
+	var want := [cache_key, "cage:rivet", crew_key, "cracked_cache:33,-71"]
 	want.sort()
-	_t.eq("only plume keys are visited", flipped, want)
+	_t.eq("only plume keys (and the spent pocket's own) are visited", flipped, want)
 	markers.sync([], false)
 	rib.free()

@@ -32,8 +32,15 @@ const Arena := preload("res://src/boss/arena.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Rogue := preload("res://src/combat/rogue.gd")
 const Yard := preload("res://src/presentation/arena_bowl_yard.gd")
+const CrackedCache := preload("res://src/world/cracked_cache.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 const CREW_SMOKE := Color("ece6d8")
+# A spent cracked pocket's flag: this far out from its pedestal, this far aside, found on a ring of FLAG_RING probes.
+const FLAG_OUT_M := 9.0
+const FLAG_ASIDE_M := 4.0
+const FLAG_RING := 16
+const FLAG_LEVEL_M := 0.6
 const WORKS_SMOKE := Color("262826")
 # The furnace's light on the foot of its column: the bowl's own melt at its working heat (arena_bowl_yard.gd MELT), on
 # the gold side of MELT_MIN_HUE as the melt is, so it never reads as the live slag's or HAZARD's red-orange.
@@ -95,6 +102,8 @@ var _furnace: Array = [0, null]
 var _visited := {}
 # The sleeping rogue plume's key for this stage attempt, kept across wake so enemy_killed flips it at death.
 var _rogue_key := ""
+# The keeper flags standing over this stage attempt's spent cracked caches (CrackedCache.raise_flag); freed on leaving.
+var flags: Array[Node3D] = []
 static var _materials := {}
 static var _meshes := {}
 
@@ -111,11 +120,14 @@ func setup(ctx_ref) -> void:
 			events.rescue_completed.connect(_on_rescue_completed)
 		if events.has_signal("enemy_killed"):
 			events.enemy_killed.connect(_on_enemy_killed)
+		if events.has_signal("activity_done"):
+			events.activity_done.connect(_on_activity_done)
 
 
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	sync([])
 	reset_visited()
+	_drop_flags()
 	_furnace = [0, null]
 	_clock = 0.0
 
@@ -123,17 +135,66 @@ func _on_stage_entered(_stage: int, _retry: bool) -> void:
 func _on_cleared(_reason: String) -> void:
 	sync([])
 	reset_visited()
+	_drop_flags()
 	_clock = READ_EVERY
 
 
 # Crew and cache sites flip only by their plume keys, through sync's fade: a crew home when director.live_homes() drops
 # it, a rib cache when scrap_field.caches() does. An activity's activity_done is no plume site (an enemy_camp is no crew
-# home, a cracked_cache or field find keeps no sign), so it flips nothing here.
+# home, a field find keeps no sign), with one exception: a cracked cache's pocket, whose done puts up its keeper flag.
 func _on_rescue_completed(quest_id: String) -> void:
 	var key := "cage:" + quest_id
 	# A cage whose plume already came down flipped then; one that never stood a plume has no site to mark.
 	if views.has(key):
 		mark_visited(key, "cage", views[key].get_meta("at"))
+
+
+# A cracked cache's pocket is spent: the same keeper flag the cache device raises when its part is taken (W46 E1-15)
+# goes up on the open ground before the pocket's mouth, beside it, so it stands clear of the cliff the pocket is cut
+# into and out of the line to the pedestal (`at`, the pocket floor).
+func _on_activity_done(id: String, at: Vector3) -> void:
+	if id != "cracked_cache":
+		return
+	var key := "cracked_cache:%d,%d" % [roundi(at.x), roundi(at.z)]
+	if not mark_visited(key, "cache", at):
+		return
+	var terrain = ctx.get("terrain") if ctx != null else null
+	var raised := CrackedCache.raise_flag(self, pocket_flag_foot(at, terrain), UiTokens.reduced_motion)
+	if raised != null:
+		flags.append(raised)
+
+
+# Where a spent pocket's flag stands: on the ground FLAG_OUT_M from the pedestal (`at`, the pocket floor), the way out of
+# a ring of FLAG_RING whose ground is nearest the floor's own height (the mouth opens on the floor; the cliff the pocket
+# is cut into does not), the way's ground across it breaking ties; then FLAG_ASIDE_M to that way's left when the ground
+# there is level with the floor too, so it stands beside the mouth's line, not on it.
+static func pocket_flag_foot(at: Vector3, terrain) -> Vector3:
+	if terrain == null or not terrain.has_method("height"):
+		return at
+	var best := Vector3.FORWARD
+	var low := INF
+	for k in FLAG_RING:
+		var way := Vector3.FORWARD.rotated(Vector3.UP, TAU * k / FLAG_RING)
+		var probe := at + way * FLAG_OUT_M
+		var across := way.cross(Vector3.UP) * FLAG_OUT_M * 0.7
+		var off: float = absf(terrain.height(probe.x, probe.z) - at.y) + 0.05 * (
+			absf(terrain.height(probe.x + across.x, probe.z + across.z) - at.y)
+			+ absf(terrain.height(probe.x - across.x, probe.z - across.z) - at.y))
+		if off < low - 0.01:
+			low = off
+			best = way
+	var foot := at + best * FLAG_OUT_M
+	var aside := foot + best.cross(Vector3.UP) * -FLAG_ASIDE_M
+	if absf(terrain.height(aside.x, aside.z) - at.y) <= FLAG_LEVEL_M:
+		foot = aside
+	return Vector3(foot.x, terrain.height(foot.x, foot.z), foot.z)
+
+
+func _drop_flags() -> void:
+	for raised in flags:
+		if is_instance_valid(raised):
+			raised.queue_free()
+	flags.clear()
 
 
 func _on_enemy_killed(kind: String, at: Vector3, _scrap_value: int) -> void:
