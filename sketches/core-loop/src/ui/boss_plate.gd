@@ -23,7 +23,8 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 # The plate is drawn in the hand of whoever made what it shows (LEGIBILITY section 14.3, ruling
 # ek): Brindle's hull in the Fleet's brass bezel on iron oxide, and a rogue machine in a Rogue's
 # stencil ticks on near black with its crew number stencilled in the Rogue face and no words: no
-# pips, its health on the bar, the open glyph while it is vented. A Warden keeps the HUD panel.
+# pips, its health on the bar, the open glyph while it is vented. A Warden is the old works': cast
+# glass with no fastener and no lean, the uranium-green seam along its foot, its name in the works' face.
 
 const SIZE := Vector2(420.0, 44.0)
 const GLANCE_SECONDS := 0.6
@@ -46,7 +47,7 @@ const PHASE_DROP := PHASE * 0.5
 const CRACK_SECONDS := 0.9
 const CRACK_POP := 0.5
 const LIGHT_SECONDS := 0.4
-# A Warden's plate is in no maker's hand yet: it keeps the HUD panel it has always worn.
+# The hand of an unbound plate, which draws nothing.
 const NO_HAND := -1
 # The serial that fixes a hand frame's quirks, so the plate looks the same on every redraw.
 const SERIAL := 46
@@ -113,13 +114,13 @@ func active() -> bool:
 
 
 # The hand the plate is drawn in: the Fleet's for Brindle's hull, a Rogue's for a rogue machine,
-# else NO_HAND.
+# the old works' for a Warden (a stage Warden or a stub boss's), and NO_HAND while nothing is bound.
 func hand() -> int:
+	if not is_instance_valid(_warden):
+		return NO_HAND
 	if rogue():
 		return UiTokens.Hand.ROGUE
-	if is_instance_valid(_warden) and _fleet_body():
-		return UiTokens.Hand.FLEET
-	return NO_HAND
+	return UiTokens.Hand.FLEET if _fleet_body() else UiTokens.Hand.OLD_WORKS
 
 
 # Whether the bound body is a rogue machine: one whose row carries a crew number.
@@ -322,9 +323,7 @@ func name_width() -> float:
 		return _stencil_face().get_string_size(crew(), HORIZONTAL_ALIGNMENT_LEFT, -1, STENCIL).x + GAP
 	if not is_instance_valid(_warden):
 		return NAME_WIDTH
-	var words := UiFonts.face(UiTokens.Hand.FLEET).get_string_size(_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x if hand() == UiTokens.Hand.FLEET \
-		else UiDraw.width(_name(), FONT)
-	return maxf(NAME_WIDTH, words + GAP)
+	return maxf(NAME_WIDTH, UiFonts.face(hand()).get_string_size(_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x + GAP)
 
 
 static func _stencil_face() -> Font:
@@ -376,19 +375,12 @@ func _draw() -> void:
 		return
 	var neutral := EventKinds.role_color("neutral")
 	var which := hand()
-	var frame := Rect2(Vector2.ZERO, Vector2(size.x, SIZE.y))
-	if which == NO_HAND:
-		UiDraw.panel(self, frame)
-	else:
-		draw_style_box(frame_box(), frame)
+	draw_style_box(frame_box(), Rect2(Vector2.ZERO, Vector2(size.x, SIZE.y)))
 	var mid := SIZE.y * 0.5
 	if which == UiTokens.Hand.ROGUE:
 		_hand_text(which, MARGIN, mid, crew())
-	elif which == UiTokens.Hand.FLEET:
-		if not name_held():
-			_hand_text(which, MARGIN, mid, plate_name())
 	elif not name_held():
-		UiDraw.text(self, MARGIN, mid, plate_name(), FONT, neutral)
+		_hand_text(which, MARGIN, mid, plate_name())
 	var x := MARGIN + name_width()
 	var right := size.x - MARGIN - stamp_room()
 	var drawn_pips := pips()
@@ -415,7 +407,7 @@ func _draw() -> void:
 	_draw_phases()
 
 
-# The hand frame under the plate's marks, or null for a Warden's HUD panel.
+# The hand frame under the plate's marks, built once per hand; null while nothing is bound.
 func frame_box() -> StyleBox:
 	var which := hand()
 	if which == NO_HAND:

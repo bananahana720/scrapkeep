@@ -18,8 +18,7 @@ const T := preload("res://tests/support/t.gd")
 #     a rubber stamp whole on the 44 px plate and clear of the state glyph, his two-word name in the
 #     Fleet's words face and measured in it, every frame colour lawful for the Fleet; on the real arena
 #     hull too, as the HUD seats it, and a rogue that wakes during the fight does not take his plate;
-#   - a stage Warden and a stub boss's Warden keep the HUD panel they have always worn (no hand frame),
-#     with the same name and pips;
+#   - a stage Warden and a stub boss's Warden are the old works' (E2-14), with the same name and pips;
 #   - a rogue machine is drawn in a Rogue's hand: stencil ticks on near black, its crew number in the
 #     Rogue face and no words, no pips, its health on the bar, the open glyph only while it is vented;
 #     every rogue row has a crew number;
@@ -161,8 +160,8 @@ func _warden_plates() -> void:
 	var warden := FakeWarden.new()
 	warden.family = Roster.REACTOR
 	var plate = _plate(warden)
-	_t.eq("a stage Warden's plate is in no hand", plate.hand(), BossPlate.NO_HAND)
-	_t.check("a stage Warden's plate wears the HUD panel, no hand frame", plate.frame_box() == null)
+	_t.eq("a stage Warden's plate is the old works' hand", plate.hand(), UiTokens.Hand.OLD_WORKS)
+	_t.check("a stage Warden's plate wears the old works' frame", plate.frame_box() != null and plate.frame_box().hand == UiTokens.Hand.OLD_WORKS)
 	_t.eq("a stage Warden's plate keeps its family name", plate.plate_name(), Roster.warden_name(Roster.REACTOR, ""))
 	_t.eq("a stage Warden's plate keeps four pips", plate.pips().size(), 4)
 	_t.eq("a stage Warden's glyph is the posture step", plate.glyph_id(), "posture_step")
@@ -171,7 +170,7 @@ func _warden_plates() -> void:
 	stub.family = Roster.REACTOR
 	stub.set_meta("plate_name", "Stub Boss")
 	plate = _plate(stub)
-	_t.eq("a stub boss's Warden is in no hand", plate.hand(), BossPlate.NO_HAND)
+	_t.eq("a stub boss's Warden is the old works' hand", plate.hand(), UiTokens.Hand.OLD_WORKS)
 	_t.eq("a stub boss's Warden keeps its row's name", plate.plate_name(), "Stub Boss")
 	_drop(plate, stub)
 
