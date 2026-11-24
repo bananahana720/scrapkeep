@@ -2112,13 +2112,13 @@
       "motion": "throw",
       "start": {
         "axis": "y",
-        "m": -0.012,
+        "m": -0.04,
         "throw_s": 0.05,
         "return_s": 0.2,
         "curve": "out_quad"
       },
       "source": "design-v3/PILOT-CADENCE.md section 5.3; design-v3/pilots/tally.md:248",
-      "note": "The stamp (E2-05): each shot drops both drums 12 mm in 0.05 s and springs them back by 0.25 s, a ledger stamp's thunk under the turn. Position only, so it never touches the beat row's turn. Replaces ReaderExit's inactive shot marker (an empty; it kept its aim and meter rows)."
+      "note": "The stamp (E2-05): each shot drops both drums 40 mm in 0.05 s and springs them back by 0.25 s, a ledger stamp's thunk under the turn, sized to read at chase distance and kept above the -0.55 m ground line. Position only, so it never touches the beat row's turn. Replaces ReaderExit's inactive shot marker (an empty; it kept its aim and meter rows)."
     },
     {
       "node": "ReturnExit",

@@ -38,25 +38,33 @@ const CUES := ["tally_balance_due", "tally_ready", "tally_break", "mind_tally"]
 const Palette := preload("res://src/core/palette.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 # E2-05's shell budget: draws in play (registry exception 11; never past 13), triangles under the
-# Hoberman shell band's top (hero_six_pilot_budget_test SHELL_CAP), and PILOT-CADENCE section 5.1's
-# 1.35 m reach for any weapon part.
+# Hoberman shell band's top (hero_six_pilot_budget_test SHELL_CAP), and the weapon reach Andrew
+# lifted from PILOT-CADENCE section 5.1's 1.35 m to 1.70 m (23 Nov 2026, cutaway-first heroes).
 const MAX_DRAWS := 13
 const MAX_TRIS := 6500
-const MAX_REACH := 1.35
+const MAX_REACH := 1.70
 # The drum (tools/blender/shell_tally.py): its rim radius, the index notch's centre angle measured
-# from forward (-Z) toward up (+Y) about the drum axis, and the notch's half-width.
-const DRUM_R := 0.17
-const NOTCH_AT := 168.75
+# from forward (-Z) toward up (+Y) about the drum axis, and the notch's half-width; the charcoal
+# timing bands across the tape at quarter turns from the notch, and the ground line no drum
+# vertex may pass, the stamp included.
+const DRUM_R := 0.505
+const DRUM_Z := 0.28
+const DRUM_DEPTH := 0.24
+const NOTCH_AT := 123.75
 const NOTCH_HALF := 10.0
-# The beat row: one whole turn forward (negative about X) in 0.40 s; the stamp drops 12 mm.
+const TIMING_AT := [213.75, 303.75, 33.75]
+const TIMING_HALF := 6.0
+const GROUND := -0.55
+# The beat row: one whole turn forward (negative about X) in 0.40 s; the stamp drops 40 mm in 0.05 s.
 const BEAT_DEG := -360.0
 const BEAT_S := 0.40
-const STAMP_M := -0.012
+const STAMP_M := -0.04
+const STAMP_S := 0.05
 const FRAME := 1.0 / 60.0
-# A frame's turn may not pass the out_quad kick's first frame (29.4 degrees at 60 Hz) by more than
-# this, and the drop not jump more than STAMP_JUMP: anything bigger is a snap.
+# No frame may pass the out_quad kick's first frame (29.4 degrees and 22.2 mm at 60 Hz) by more
+# than a hair: anything bigger is a snap.
 const TURN_JUMP := 31.0
-const STAMP_JUMP := 0.008
+const STAMP_JUMP := 0.0225
 
 var _t := T.new("tally_look_test")
 
@@ -344,6 +352,9 @@ func _check_shell() -> void:
 	var brass := 0
 	var brass_out := 0
 	var notch_slot: Array = []
+	var bands := [0, 0, 0]
+	var stray: Array = []
+	var low := INF
 	for i in (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size():
 		var v: Vector3 = arrays[Mesh.ARRAY_VERTEX][i]
 		var c: Color = arrays[Mesh.ARRAY_COLOR][i]
@@ -353,8 +364,18 @@ func _check_shell() -> void:
 			brass += 1
 			if r > DRUM_R - 0.001:
 				brass_out += 1
-		elif c.a == 0.0 and _near_colour(c, Palette.CHARCOAL.srgb_to_linear()) and v.x > -1.0:
-			notch_slot.append(_angle(v))
+		elif c.a == 0.0 and _near_colour(c, Palette.CHARCOAL.srgb_to_linear()) and v.x > -1.0 \
+				and v.x < DRUM_DEPTH / 2 - 0.02:
+			# On the tape (the face bar stands on the outer face): the index slot or a timing band.
+			var a := _angle(v)
+			var band := TIMING_AT.find_custom(func(t): return absf(angle_difference(deg_to_rad(a), deg_to_rad(t))) <= deg_to_rad(TIMING_HALF))
+			if absf(a - NOTCH_AT) <= NOTCH_HALF:
+				notch_slot.append(a)
+			elif band >= 0:
+				bands[band] += 1
+			else:
+				stray.append(a)
+		low = minf(low, wheel.position.y + v.y)
 	_t.check("brass rims", wheel.mesh.get_surface_count() == 1 and HeroAssets.slot_of(wheel.mesh, 0) == "paint"
 		and brass > 0 and brass_out > 0, "%d brass vertices at alpha 0, %d on the rim, one paint surface" % [brass, brass_out])
 	var hero := HeroAssets.new()
@@ -364,19 +385,25 @@ func _check_shell() -> void:
 		"paint roughness %.2f >= %.2f, metallic %.2f <= %.2f" % [paint.roughness if paint else -1.0,
 		Palette.BRASS_FINISH.roughness, paint.metallic if paint else -1.0, Palette.BRASS_FINISH.metallic])
 	hero.free()
-	# The index notch: the charcoal slot in it sits at NOTCH_AT on the right drum.
-	var slot_ok := not notch_slot.is_empty() and notch_slot.all(func(a): return absf(a - NOTCH_AT) <= NOTCH_HALF)
-	_t.check("index notch", slot_ok, "%d slot vertices at %.1f..%.1f degrees" % [notch_slot.size(),
-		notch_slot.min() if slot_ok else -1.0, notch_slot.max() if slot_ok else -1.0])
-	# The index shoe: the bracket parts beside the right drum (its axial span, less the arm's inboard
-	# run to the gimbal) past the rim, all at the notch angle and clear of the drum.
+	# The index notch: the charcoal slot in it sits at NOTCH_AT on the right drum; the only other
+	# charcoal on the tape is the three timing bands, a quarter turn apart.
+	var slot_ok := not notch_slot.is_empty() and stray.is_empty()
+	_t.check("index notch", slot_ok, "%d slot vertices at %.1f..%.1f degrees, %d stray at %s" % [notch_slot.size(),
+		notch_slot.min() if not notch_slot.is_empty() else -1.0, notch_slot.max() if not notch_slot.is_empty() else -1.0,
+		stray.size(), stray.slice(0, 4)])
+	_t.check("timing bands", bands.all(func(n): return n > 0), "vertices per band at %s: %s" % [TIMING_AT, bands])
+	# The ground line: the drum's lowest point stays above it at the stamp's full drop.
+	_t.check("drums clear the ground line under the stamp", low + STAMP_M > GROUND,
+		"lowest %.4f m, %.4f m at the stamp, line %.2f m" % [low, low + STAMP_M, GROUND])
+	# The index shoe: the bracket parts beside the right drum (its axial span and a hand inboard of
+	# it, short of the beam's run to the gimbal) past the rim, all at the notch angle and clear of it.
 	var shoe: Array = []
 	var shoe_min := INF
 	var drum_at := wheel.position
 	for v in brackets.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]:
 		var local: Vector3 = v - drum_at
 		var r := Vector2(local.y, local.z).length()
-		if absf(local.x) <= 0.06 and r > DRUM_R:
+		if local.x >= -(DRUM_DEPTH / 2 + 0.05) and local.x <= DRUM_DEPTH / 2 and r > DRUM_R:
 			shoe.append(_angle(local))
 			shoe_min = minf(shoe_min, r)
 	var shoe_ok := not shoe.is_empty() and shoe.all(func(a): return absf(a - NOTCH_AT) <= NOTCH_HALF)
@@ -462,7 +489,7 @@ func _check_beat() -> void:
 func _play(mecha, wheel: Node3D, facts: Dictionary, seconds: float) -> Dictionary:
 	var out := {"turn": 0.0, "backward": 0, "jump": 0.0, "settled_at": 0.0, "last_step": 0.0,
 		"drop": 0.0, "drop_at": 0.0, "dy_jump": 0.0, "back_at": 0.0}
-	var rest_y := 0.23
+	var rest_y := DRUM_Z
 	var angle := wheel.rotation_degrees.x
 	var y := wheel.position.y
 	var t := 0.0
