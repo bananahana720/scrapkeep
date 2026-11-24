@@ -423,6 +423,12 @@ static func _surface_material(view: MeshInstance3D, surface: int, mat: Material)
 	view.set_meta("hero_surface_materials", held)
 
 
+# A live swap on a fitted shell (Kest's bands and fuse, the ready glow): a surface the ball look
+# has dressed keeps its window and ink line (BallLooks.keep_window).
+static func _swap_material(view: MeshInstance3D, surface: int, mat: Material) -> void:
+	_surface_material(view, surface, BallLooks.keep_window(view, surface, mat))
+
+
 # Paints every surface under root from SLOTS. tints: {"class": Color, "rarity": Color}.
 func paint(root: Node, tints: Dictionary) -> void:
 	var stack: Array[Node] = [root]
@@ -741,7 +747,7 @@ func apply_kest_state(pod: Node3D, state: Dictionary, paint_tint := Color.WHITE)
 	if ring != null:
 		for i in ring.mesh.get_surface_count():
 			if slot_of(ring.mesh, i) == "paint":
-				_surface_material(ring, i, kest_band_material(paint_tint))
+				_swap_material(ring, i, kest_band_material(paint_tint))
 		ring.set_instance_shader_parameter("lit_count", int(state["lit_count"]))
 		ring.set_instance_shader_parameter("heft_class", int(state["heft_class"]))
 	var mortar := pod.get_node_or_null("WeaponRing/Mortar") as MeshInstance3D
@@ -752,7 +758,7 @@ func apply_kest_state(pod: Node3D, state: Dictionary, paint_tint := Color.WHITE)
 		mortar.rotation.x = -float(state["mortar_pitch"])
 		for i in mortar.mesh.get_surface_count():
 			if slot_of(mortar.mesh, i) == "class_accent":
-				_surface_material(mortar, i, kest_fuse_material(bool(state["fuse_boost"])))
+				_swap_material(mortar, i, kest_fuse_material(bool(state["fuse_boost"])))
 		mortar.set_instance_shader_parameter("fuse_glow", float(state["fuse_glow"]))
 		mortar.set_instance_shader_parameter("fuse_loaded", bool(state["fuse_blink"]))
 
@@ -1502,7 +1508,8 @@ func _on_heft_class(heft_class: int, _heft: float) -> void:
 
 
 # The ready glow (SKILL-BAR asks the cage's machinery to glow when the ultimate is ready):
-# every class_accent surface swaps between two cached materials per class colour. No light.
+# every class_accent surface swaps between two cached materials per class colour, read through
+# the ball look's window (BallLooks.unwindowed). No light.
 func ready_material(tint: Color) -> Material:
 	var key := "class_accent_ready:%s" % tint.to_html()
 	if _materials.has(key):
@@ -1529,17 +1536,17 @@ func _glow_rec(rec: Dictionary, on: bool) -> int:
 			if not (mi is MeshInstance3D) or mi.mesh == null:
 				continue
 			for i in mi.mesh.get_surface_count():
-				var current: Material = mi.get_surface_override_material(i)
+				var current: Material = BallLooks.unwindowed(mi.get_surface_override_material(i))
 				if on and current == calm:
-					_surface_material(mi, i, lit)
+					_swap_material(mi, i, lit)
 					swapped += 1
 				elif not on and current == lit:
-					_surface_material(mi, i, calm)
+					_swap_material(mi, i, calm)
 					swapped += 1
 				elif current != null and current.resource_name in ["kest_fuse", "kest_fuse_ready"]:
 					var fuse := kest_fuse_material(on)
 					if current != fuse:
-						_surface_material(mi, i, fuse)
+						_swap_material(mi, i, fuse)
 						swapped += 1
 	return swapped
 
