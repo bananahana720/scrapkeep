@@ -1679,3 +1679,172 @@ test("a long import leaves the event loop free, so a held slot keeps its heartbe
   });
   assert.equal(slow.signal, "SIGTERM", "the time limit still stops a child");
 });
+
+test("jobCount and smokeWidth scale cleanly on wide machines and never clamp explicit SMOKE_JOBS", () => {
+  assert.equal(smoke.jobCount({}, 32, 1), 15);
+  assert.equal(smoke.jobCount({}, 36, 0), 16);
+  assert.equal(smoke.jobCount({}, 4, 0), 2);
+  assert.equal(smoke.jobCount({ SMOKE_JOBS: "12" }, 4, 3), 12);
+  assert.equal(
+    smoke.smokeWidth({ bots: true, named: true, testCount: 60, env: { SMOKE_JOBS: "12" } }),
+    1,
+  );
+  assert.equal(smoke.smokeWidth({ named: true, testCount: 2, env: {}, jobs: 16 }), 2);
+  assert.equal(smoke.smokeWidth({ named: true, testCount: 60, env: {}, jobs: 16 }), 16);
+  assert.equal(
+    smoke.smokeWidth({ named: true, testCount: 1, env: { SMOKE_JOBS: "6" }, jobs: 6 }),
+    6,
+  );
+});
+
+test("splitBatch captures outside lines and batchHasOutsideError catches exit leaks", () => {
+  const out = [
+    "Godot Engine v4.7.2",
+    "BATCH START tests/a_test.gd",
+    "a_test: PASS",
+    "BATCH END tests/a_test.gd exit=0 ms=40",
+    "BATCH DONE 1 tests",
+    "ERROR: 1 RID allocations of type 'P12GodotShape3D' were leaked at exit.",
+  ].join("\n");
+  const split = smoke.splitBatch(out, ["tests/a_test.gd"]);
+  assert.equal(split.done.length, 1);
+  assert.match(split.outside, /GodotShape3D/);
+  assert.equal(smoke.batchHasOutsideError(split.outside, "linux"), true);
+  assert.equal(smoke.batchHasOutsideError(split.outside, "darwin"), true);
+  const macNoise =
+    "ERROR: 2 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.\n";
+  assert.equal(smoke.batchHasOutsideError(macNoise, "darwin"), false);
+  assert.equal(smoke.batchHasOutsideError(macNoise, "linux"), true);
+});
+
+test("warm batching in sketch-smoke emits per-test logs and reruns failures or exit leaks solo", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "smoke-warm-batch-"));
+  try {
+    mkdirSync(path.join(dir, "scripts"));
+    for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs"])
+      writeFileSync(
+        path.join(dir, "scripts", module),
+        readFileSync(new URL(`./${module}`, import.meta.url)),
+      );
+    writeFileSync(
+      path.join(dir, "scripts/sketch-fast.timings.json"),
+      JSON.stringify({
+        tests: {
+          "tests/alpha_test.gd": 1000,
+          "tests/beta_test.gd": 1000,
+          "tests/gamma_test.gd": 1000,
+          "tests/leak_a_test.gd": 1000,
+          "tests/leak_b_test.gd": 1000,
+        },
+      }),
+    );
+    const sketch = path.join(dir, "sketches/core-loop");
+    mkdirSync(path.join(sketch, "tests"), { recursive: true });
+    mkdirSync(path.join(sketch, "tools"), { recursive: true });
+    writeFileSync(path.join(sketch, "project.godot"), "config_version=5\n");
+    writeFileSync(path.join(sketch, "tools/test_batch.gd"), "extends SceneTree\n");
+    for (const name of ["alpha_test", "beta_test", "gamma_test", "leak_a_test", "leak_b_test"])
+      writeFileSync(path.join(sketch, "tests", `${name}.gd`), "extends SceneTree\n");
+
+    // Fake Godot: in batch mode, beta_test fails in-batch (must rerun solo and pass),
+    // and leak_* batch prints an outside exit-leak ERROR (must rerun all tests in that batch solo).
+    const fake = path.join(dir, "godot");
+    writeFileSync(
+      fake,
+      `#!${process.execPath}
+import { appendFileSync } from "node:fs";
+const args = process.argv.slice(2);
+if (args.includes("--version")) { console.log("fake"); process.exit(0); }
+if (args.includes("--import")) { process.exit(0); }
+const script = args[args.indexOf("--script") + 1];
+if (script === "res://tools/test_batch.gd") {
+  const list = process.env.SCRAPKEEP_TEST_BATCH.split(",");
+  appendFileSync(process.env.FIXTURE_LOG, "batch " + list.join(",") + "\\n");
+  for (const rel of list) {
+    const stem = rel.split("/").pop().replace(/\\.gd$/, "");
+    console.log("BATCH START " + rel);
+    if (stem === "beta_test") {
+      console.log("[check] fail in batch -> FAIL");
+      console.log(stem + ": FAIL (1 checks)");
+      console.log("BATCH END " + rel + " exit=1 ms=25");
+    } else {
+      console.log("[check] ok -> PASS");
+      console.log(stem + ": PASS (1 checks)");
+      console.log("BATCH END " + rel + " exit=0 ms=20");
+    }
+  }
+  console.log("BATCH DONE " + list.length + " tests");
+  if (list.some((r) => r.includes("leak_"))) {
+    console.log("ERROR: 1 RID allocations of type 'P12GodotShape3D' were leaked at exit.");
+  }
+  process.exit(0);
+}
+const stem = script.split("/").pop().replace(/\\.gd$/, "");
+appendFileSync(process.env.FIXTURE_LOG, "solo " + stem + "\\n");
+console.log("[check] solo ok -> PASS");
+console.log(stem + ": PASS (1 checks)");
+`,
+      { mode: 0o755 },
+    );
+
+    const runFixture = (tests, logDirName) => {
+      const logFile = path.join(dir, `${logDirName}.events`);
+      const outLogs = path.join(dir, logDirName);
+      const ran = spawnSync(
+        process.execPath,
+        [
+          path.join(dir, "scripts/sketch-smoke.mjs"),
+          "--sketch",
+          "core-loop",
+          ...tests.flatMap((t) => ["--test", t]),
+        ],
+        {
+          encoding: "utf8",
+          timeout: 20_000,
+          env: {
+            ...process.env,
+            GODOT_BIN: fake,
+            SMOKE_JOBS: "1",
+            SMOKE_SLOTS: "6",
+            SCRAPKEEP_LOCK_DIR: dir,
+            SMOKE_LOG_DIR: outLogs,
+            SMOKE_FLAGS: "",
+            FIXTURE_LOG: logFile,
+          },
+        },
+      );
+      return { ran, events: readFileSync(logFile, "utf8").trim().split("\n"), outLogs };
+    };
+
+    // Case 1: alpha + beta + gamma batch together; beta fails in batch -> reruns solo and passes.
+    const r1 = runFixture(["alpha_test", "beta_test", "gamma_test"], "logs1");
+    assert.equal(r1.ran.status, 0, r1.ran.stdout + r1.ran.stderr);
+    assert.deepEqual(r1.events, [
+      "batch tests/alpha_test.gd,tests/beta_test.gd,tests/gamma_test.gd",
+      "solo beta_test",
+    ]);
+    for (const name of ["alpha_test", "beta_test", "gamma_test"]) {
+      assert.match(
+        r1.ran.stdout,
+        new RegExp(`^PASS sketches/core-loop res://tests/${name}\\.gd exit=0`, "m"),
+      );
+      assert.equal(existsSync(path.join(r1.outLogs, `${name}.log`)), true);
+      assert.match(readFileSync(path.join(r1.outLogs, `${name}.log`), "utf8"), /PASS/);
+    }
+    assert.match(readFileSync(path.join(r1.outLogs, "beta_test.log"), "utf8"), /solo ok/);
+
+    // Case 2: outside exit leak forces solo rerun of EVERY test in the batch.
+    const r2 = runFixture(["leak_a_test", "leak_b_test"], "logs2");
+    assert.equal(r2.ran.status, 0, r2.ran.stdout + r2.ran.stderr);
+    assert.deepEqual(r2.events, [
+      "batch tests/leak_a_test.gd,tests/leak_b_test.gd",
+      "solo leak_a_test",
+      "solo leak_b_test",
+    ]);
+    for (const name of ["leak_a_test", "leak_b_test"]) {
+      assert.match(readFileSync(path.join(r2.outLogs, `${name}.log`), "utf8"), /solo ok/);
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

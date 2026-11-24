@@ -17,10 +17,11 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { writeImportStamp } from "./import-stamp.mjs";
+import { checkImportStamp, writeImportStamp } from "./import-stamp.mjs";
 import { scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const TIMINGS_FILE = path.join(root, "scripts", "sketch-fast.timings.json");
 const recordedBinary = "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
 function defaultGodotBinary() {
   if (process.env.GODOT_BIN) return process.env.GODOT_BIN;
@@ -137,11 +138,117 @@ export function isSoloScript(directory, script) {
 
 // Each headless Godot is one mostly single-threaded process, so tests run side by side.
 // The pool sizes itself to the idle cores (other agents share this machine), keeps at
-// least 2 and at most 8, and SMOKE_JOBS overrides it.
-export function jobCount() {
-  if (process.env.SMOKE_JOBS) return Math.max(1, Number(process.env.SMOKE_JOBS) || 1);
-  const idle = os.cpus().length - os.loadavg()[0];
-  return Math.min(8, Math.max(2, Math.floor(idle / 3)));
+// least 2 and at most 16, and SMOKE_JOBS overrides it.
+export function jobCount(env = process.env, cpus = os.cpus().length, load = os.loadavg()[0]) {
+  if (env.SMOKE_JOBS) return Math.max(1, Number(env.SMOKE_JOBS) || 1);
+  const idle = cpus - load;
+  return Math.min(16, Math.max(2, Math.floor(idle / 2)));
+}
+
+// Concurrency width for a smoke run: bots stay at 1; explicit SMOKE_JOBS is never clamped;
+// only small ad-hoc named runs (<= NAMED_WIDTH tests) stay narrow when SMOKE_JOBS is unset.
+export function smokeWidth({
+  bots = false,
+  named = false,
+  testCount = 0,
+  env = process.env,
+  jobs = jobCount(env),
+} = {}) {
+  if (bots) return 1;
+  if (env.SMOKE_JOBS) return jobs;
+  if (named && testCount <= NAMED_WIDTH) return Math.min(NAMED_WIDTH, jobs);
+  return jobs;
+}
+
+// Warm batching (tools/test_batch.gd): runs plain SceneTree tests in one Godot process so
+// game scripts compile once per batch instead of once per test. Shared with sketch-fast.mjs.
+const BATCH_SOLO =
+  /get_ticks_|OS\.set_environment|ProjectSettings\.set|OS\.(execute|create_process|kill)|\b(warm|hitch|cold)\b|change_scene/;
+export const BATCH_MAX_TESTS = 8;
+export const BATCH_MAX_MS = 60_000;
+export const BATCH_TEST_MAX_MS = 15_000;
+
+export function batchable(source) {
+  return (
+    /^extends SceneTree\r?$/m.test(source.split("\n", 1)[0]) &&
+    !isSolo(source) &&
+    !BATCH_SOLO.test(source)
+  );
+}
+
+// Takes consecutive batchable rows from the front of the queue, up to maxTests and maxMs.
+export function takeBatch(queue, canBatch, maxTests = BATCH_MAX_TESTS, maxMs = BATCH_MAX_MS) {
+  const batch = [];
+  let ms = 0;
+  while (
+    queue.length > 0 &&
+    batch.length < maxTests &&
+    canBatch(queue[0]) &&
+    (batch.length === 0 || ms + (queue[0].ms ?? 0) <= maxMs)
+  ) {
+    ms += queue[0].ms ?? 0;
+    batch.push(queue.shift());
+  }
+  return batch;
+}
+
+// Packs non-adjacent batchable rows while preserving their relative order in `queue`.
+// If the front row is not batchable, returns [] so the caller runs it alone without starving it.
+export function takeBatchPacked(queue, canBatch, maxTests = BATCH_MAX_TESTS, maxMs = BATCH_MAX_MS) {
+  if (queue.length === 0 || !canBatch(queue[0])) return [];
+  const batch = [queue.shift()];
+  let ms = batch[0].ms ?? 0;
+  let index = 0;
+  while (index < queue.length && batch.length < maxTests) {
+    const row = queue[index];
+    const rowMs = row.ms ?? 0;
+    if (canBatch(row) && ms + rowMs <= maxMs) {
+      batch.push(row);
+      ms += rowMs;
+      queue.splice(index, 1);
+    } else {
+      index++;
+    }
+  }
+  return batch;
+}
+
+// Splits a batch's output into each test's own output by its BATCH START and BATCH END lines,
+// plus `outside`: lines printed outside any test slice (such as process-level exit leaks).
+export function splitBatch(output, tests) {
+  const done = [];
+  const outsideLines = [];
+  let open = null;
+  let lines = [];
+  for (const line of output.split("\n")) {
+    const start = /^BATCH START (\S+)/.exec(line);
+    const end = /^BATCH END (\S+) exit=(-?\d+) ms=(\d+)/.exec(line);
+    if (start) {
+      open = start[1];
+      lines = [];
+    } else if (end && open === end[1]) {
+      done.push({ test: open, exit: Number(end[2]), ms: Number(end[3]), output: lines.join("\n") });
+      open = null;
+    } else if (open) {
+      lines.push(line);
+    } else if (!/^BATCH DONE\b/.test(line)) {
+      outsideLines.push(line);
+    }
+  }
+  const ended = new Set(done.map((row) => row.test));
+  return {
+    done,
+    cut: open,
+    rest: tests.filter((test) => !ended.has(test) && test !== open),
+    outside: outsideLines.join("\n"),
+  };
+}
+
+// True when a warm batch printed an engine error or exit leak outside individual test slices
+// (after stripping macOS dummy-renderer shutdown noise). Forces solo reruns so batching never masks leaks.
+export function batchHasOutsideError(outside, platform = process.platform) {
+  const clean = withoutTeardownNoise(outside ?? "", platform);
+  return errorLine.test(clean) || /still in use|leaked at exit|previously freed/i.test(clean);
 }
 
 // Solo tests run one at a time unless SMOKE_SOLO_JOBS widens the phase. A machine with cores to
@@ -215,6 +322,7 @@ export function parseArgs(argv, env = {}) {
     receipt: null,
     strict: false,
     bots: false,
+    batch: env.SMOKE_BATCH !== "0",
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -224,6 +332,7 @@ export function parseArgs(argv, env = {}) {
     else if (arg === "--receipt" && argv[i + 1]) options.receipt = argv[++i];
     else if (arg === "--strict-verdict") options.strict = true;
     else if (arg === "--bots") options.bots = true;
+    else if (arg === "--no-batch") options.batch = false;
   }
   options.flags = splitFlags(options.flags ?? env.SMOKE_FLAGS);
   options.named = options.tests.length > 0;
@@ -991,12 +1100,91 @@ function runAsync(job) {
   });
 }
 
+function readSmokeTimings(file = TIMINGS_FILE) {
+  try {
+    return JSON.parse(readFileSync(file, "utf8")).tests ?? {};
+  } catch {
+    return {};
+  }
+}
+
+// Run a warm batch of eligible non-solo tests in one Godot process via tools/test_batch.gd.
+// Any test that fails inside the batch, is cut off, or shares a batch with an outside engine
+// error / exit leak / unexpected non-zero batch exit is rerun alone in a fresh Godot process
+// so warm batching can never add a false red or mask an exit leak.
+async function runBatchJobs(batchJobs) {
+  const directory = batchJobs[0].directory;
+  const rels = batchJobs.map((job) => job.rel);
+  const timeoutMs = batchJobs.reduce((sum, job) => sum + (job.timeoutMs || TIMEOUT_MS), 0);
+  const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-smoke-"));
+  const result = await new Promise((resolve) => {
+    const child = spawn(
+      binary,
+      ["--headless", "--path", directory, "--script", "res://tools/test_batch.gd"],
+      {
+        env: {
+          ...process.env,
+          ...userDataEnv(dataHome),
+          SCRAPKEEP_TEST_BATCH: rels.join(","),
+        },
+      },
+    );
+    let output = "";
+    child.stdout.on("data", (chunk) => (output += chunk));
+    child.stderr.on("data", (chunk) => (output += chunk));
+    const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
+    child.on("close", (code, signal) => {
+      clearTimeout(timer);
+      rmSync(dataHome, { recursive: true, force: true });
+      resolve({ code, signal, output });
+    });
+  });
+  const { done, cut, rest, outside } = splitBatch(result.output, rels);
+  const outsideLeak = batchHasOutsideError(outside);
+  const unexpectedExit =
+    result.signal !== null ||
+    result.code === null ||
+    (result.code !== 0 && done.every((row) => row.exit === 0));
+  if (outsideLeak || unexpectedExit) {
+    const soloResults = [];
+    for (const job of batchJobs) soloResults.push(await runAsync(job));
+    return soloResults;
+  }
+  const byRel = new Map(batchJobs.map((job) => [job.rel, job]));
+  const out = [];
+  const reruns = [];
+  for (const row of done) {
+    const job = byRel.get(row.test);
+    if (!job) continue;
+    const verdict = judge({ test: job.test, status: row.exit, output: row.output });
+    if (verdict.ok) out.push(report(job, row.exit, row.output, row.ms, null));
+    else reruns.push(job);
+  }
+  for (const rel of [...(cut ? [cut] : []), ...rest]) {
+    const job = byRel.get(rel);
+    if (job) reruns.push(job);
+  }
+  for (const job of reruns) out.push(await runAsync(job));
+  return out;
+}
+
 async function pool(jobs, width) {
   const results = [];
-  let next = 0;
+  const queue = [...jobs];
   async function worker() {
-    while (next < jobs.length) {
-      const job = jobs[next++];
+    while (queue.length > 0) {
+      const first = queue[0];
+      const batch = first?.canBatch
+        ? takeBatchPacked(
+            queue,
+            (row) => Boolean(row.canBatch) && row.directory === first.directory,
+          )
+        : [];
+      if (batch.length > 1) {
+        results.push(...(await runBatchJobs(batch)));
+        continue;
+      }
+      const job = batch[0] ?? queue.shift();
       results.push(await runAsync(job));
     }
   }
@@ -1079,7 +1267,13 @@ async function main() {
   if (scale !== 1) console.log(`sketch:smoke: time limits scaled by ${scale} (SMOKE_TIME_SCALE)`);
   const waited = await acquireMachine();
   if (waited > 0) console.log(`sketch:smoke waited ${(waited / 1000).toFixed(0)}s for the machine`);
-  const width = options.bots ? 1 : named ? Math.min(NAMED_WIDTH, jobCount()) : jobCount();
+  const totalTests = plans.reduce((sum, plan) => sum + plan.scripts.length, 0);
+  const width = smokeWidth({
+    bots: options.bots,
+    named,
+    testCount: totalTests,
+    env: process.env,
+  });
   const startedAt = new Date().toISOString();
   const started = Date.now();
   const results = [];
@@ -1087,33 +1281,67 @@ async function main() {
   const jobs = [];
   const solo = [];
   const userArgs = options.flags.length > 0 ? ["--", ...options.flags] : [];
+  const timings = readSmokeTimings();
   for (const { directory, scripts } of plans) {
     const name = path.relative(root, directory);
     const base = ["--headless", "--path", directory];
     const quarantineRows = readQuarantineEntries(directory);
     const quarantine = new Set(quarantineRows.map((row) => row.test));
     expired.push(...expiredQuarantine(quarantineRows));
-    const imported = await importWithRetry(name, base);
-    results.push(...imported.results);
-    if (!imported.ok) {
-      console.error(
-        `${name} import failed ${IMPORT_TRIES} times (${imported.tries.map((row) => row.outcome).join(", ")}); tests not run`,
-      );
-      process.exit(1);
+    const stampOk = process.env.SMOKE_FORCE_IMPORT !== "1" && checkImportStamp(root, name).ok;
+    if (stampOk) {
+      const cached = {
+        label: `${name} import`,
+        ok: true,
+        exit: 0,
+        ms: 0,
+        solo: false,
+        passes: 0,
+        fails: 0,
+        verdict_line: null,
+        skips: [],
+        test: false,
+        quarantined: false,
+        signal: null,
+      };
+      console.log(`PASS ${cached.label} exit=0 0.0s (cached)`);
+      results.push(cached);
+    } else {
+      const imported = await importWithRetry(name, base);
+      results.push(...imported.results);
+      if (!imported.ok) {
+        console.error(
+          `${name} import failed ${IMPORT_TRIES} times (${imported.tries.map((row) => row.outcome).join(", ")}); tests not run`,
+        );
+        process.exit(1);
+      }
+      writeImportStamp(root, name);
     }
-    writeImportStamp(root, name);
+    const hasBatchDriver = existsSync(path.join(directory, "tools", "test_batch.gd"));
     if (!named && !options.bots)
       jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
     for (const script of scripts) {
-      const isSoloJob = isSoloScript(directory, script);
-      const timeoutMs = testTimeoutMs(
-        readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"),
-        scale,
-      );
+      const rel = script.replace(/^res:\/\//, "");
+      const source = readFileSync(path.join(directory, rel), "utf8");
+      const isSoloJob = isSolo(source);
+      const timeoutMs = testTimeoutMs(source, scale);
+      const timedMs = timings[rel];
+      const canBatch =
+        options.batch &&
+        userArgs.length === 0 &&
+        hasBatchDriver &&
+        !isSoloJob &&
+        Number.isFinite(timedMs) &&
+        timedMs <= BATCH_TEST_MAX_MS &&
+        batchable(source);
       const job = {
         label: `${name} ${script}`,
         args: [...base, "--script", script, ...userArgs],
         test: script,
+        rel,
+        directory,
+        ms: Number.isFinite(timedMs) ? timedMs : BATCH_TEST_MAX_MS + 1,
+        canBatch,
         solo: isSoloJob,
         timeoutMs,
         quarantined: quarantine.has(path.posix.basename(script, ".gd")),
@@ -1122,6 +1350,14 @@ async function main() {
       (isSoloJob ? solo : jobs).push(job);
     }
   }
+  // Run longest-estimated parallel tests first (LPT) so slow/unbatched tests start at t=0
+  // instead of tailing at the end of a chunk; boot stays first and solo keeps its order.
+  jobs.sort((a, b) => {
+    const aBoot = a.test ? 1 : 0;
+    const bBoot = b.test ? 1 : 0;
+    if (aBoot !== bBoot) return aBoot - bBoot;
+    return (b.ms ?? 0) - (a.ms ?? 0);
+  });
   results.push(...(await pool(jobs, width)));
   const soloStarted = Date.now();
   results.push(...(await pool(solo, soloWidth())));

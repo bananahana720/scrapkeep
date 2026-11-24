@@ -15,9 +15,11 @@ import {
   classifyFailure,
   errorCounts,
   gateLists,
+  godotBinary,
   importOutcome,
   nearLimit,
   numbered,
+  orderChunksByDuration,
   parseSmokeLog,
   parseWeekly,
   parseWindow,
@@ -1227,4 +1229,38 @@ test("the tally command itself refuses CLEAN beside a red node row", () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("orderChunksByDuration packs slowest-first across chunks without changing the test set", () => {
+  const names = ["a_test", "b_test", "c_test", "d_test", "e_test", "f_test"];
+  const timings = {
+    "tests/a_test.gd": 1000,
+    "tests/b_test.gd": 50000,
+    "tests/c_test.gd": 2000,
+    "tests/d_test.gd": 40000,
+    "tests/e_test.gd": 30000,
+    "tests/f_test.gd": 10000,
+  };
+  const packed = orderChunksByDuration(names, 3, timings);
+  assert.equal(packed.length, 2);
+  assert.deepEqual(packed.flat().sort(), names);
+  assert.equal(packed[0][0], "b_test", "slowest test starts first");
+  assert.equal(packed[1][0], "d_test", "second slowest starts second chunk");
+  assert.ok(packed.every((chunk) => chunk.length <= 3));
+  const single = orderChunksByDuration(names, 60, timings);
+  assert.equal(single.length, 1);
+  assert.deepEqual(single[0], ["b_test", "d_test", "e_test", "f_test", "c_test", "a_test"]);
+  assert.deepEqual(orderChunksByDuration([], 60, timings), []);
+});
+
+test("godotBinary falls back to the sketch-smoke default binary when GODOT_BIN is unset", () => {
+  assert.equal(
+    godotBinary({ GODOT_BIN: "/custom/godot" }, (p) => p === "/custom/godot"),
+    "/custom/godot",
+  );
+  assert.equal(
+    godotBinary({}, (p) => p === "/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64"),
+    "/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64",
+  );
+  assert.throws(() => godotBinary({}, () => false), /Godot not found/);
 });

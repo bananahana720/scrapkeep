@@ -1160,6 +1160,12 @@ export function maxJobs(cpus = os.cpus().length, memBytes = os.totalmem()) {
   return Math.max(6, Math.min(cpus, Math.floor(memBytes / 2 ** 31)));
 }
 
+// Default parallelism for challenge sweeps: scales with host cores (up to 16 on 32-thread boxes,
+// 4 on 2-4 core cloud boxes) while staying within maxJobs().
+export function defaultChallengeJobs(cpus = os.cpus().length, memBytes = os.totalmem()) {
+  return Math.min(maxJobs(cpus, memBytes), Math.max(4, Math.min(16, Math.floor(cpus / 2))));
+}
+
 export function estimate(jobs, parallel = 4, perKind = SECONDS_PER_JOB) {
   const total = jobs.reduce((s, j) => s + (perKind[j.kind] ?? 120), 0);
   return {

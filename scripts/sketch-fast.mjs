@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -15,6 +16,10 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  BATCH_MAX_MS,
+  BATCH_MAX_TESTS,
+  BATCH_TEST_MAX_MS,
+  batchable,
   countChecks,
   acquireMachine,
   binary,
@@ -30,12 +35,25 @@ import {
   quarantineNote,
   quarantineRecord,
   readQuarantineEntries,
+  splitBatch,
+  takeBatch,
+  takeBatchPacked,
   testTimeoutMs,
 } from "./sketch-smoke.mjs";
 import { readLedger } from "./known-failing.mjs";
-import { writeImportStamp } from "./import-stamp.mjs";
+import { checkImportStamp, writeImportStamp } from "./import-stamp.mjs";
 import { scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
 import { shuffleFiles } from "./ci/node-tests.mjs";
+
+export {
+  BATCH_MAX_MS,
+  BATCH_MAX_TESTS,
+  BATCH_TEST_MAX_MS,
+  batchable,
+  splitBatch,
+  takeBatch,
+  takeBatchPacked,
+};
 
 // npm run sketch:fast: the fast PR lane of the tiered gate (ORCHESTRATOR, "Tiered gate").
 // It judges one PR head in about 15 minutes, cheapest and most-often-failing checks first, and
@@ -604,11 +622,40 @@ export function timingsFromReceipt(receipt) {
   return tests;
 }
 
-function placeholderRows(sketchDir) {
-  const result = spawnSync(
+function spawnText(command, args, { cwd = root, timeoutMs = 120_000 } = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => (stdout += chunk));
+    child.stderr.on("data", (chunk) => (stderr += chunk));
+    let kill = null;
+    const timer = timeoutMs
+      ? setTimeout(() => {
+          child.kill("SIGTERM");
+          kill = setTimeout(() => child.kill("SIGKILL"), 5_000);
+        }, timeoutMs)
+      : null;
+    child.on("error", (error) => {
+      if (timer) clearTimeout(timer);
+      if (kill) clearTimeout(kill);
+      resolve({ status: null, stdout, stderr: stderr + String(error.message) });
+    });
+    child.on("close", (status) => {
+      if (timer) clearTimeout(timer);
+      if (kill) clearTimeout(kill);
+      resolve({ status, stdout, stderr });
+    });
+  });
+}
+
+async function placeholderRowsAsync(sketchDir) {
+  const result = await spawnText(
     process.execPath,
     [path.join(root, "scripts", "placeholder-gate.mjs"), "--project", sketchDir, "--json"],
-    { encoding: "utf8", maxBuffer: 64 << 20 },
+    { timeoutMs: 120_000 },
   );
   try {
     return JSON.parse(result.stdout);
@@ -616,6 +663,29 @@ function placeholderRows(sketchDir) {
     throw new Error(
       `placeholder-gate gave no JSON for ${sketchDir}: ${(result.stderr || "").slice(0, 400)}`,
     );
+  }
+}
+
+// Seed the base worktree's .godot from head's .godot without scrapkeep-import.json so Godot does
+// a fast incremental reimport of only diffed assets instead of a full cold import. Falls back cleanly.
+export function seedBaseGodot(headSketchDir, baseSketchDir, platform = process.platform) {
+  const src = path.join(headSketchDir, ".godot");
+  const dst = path.join(baseSketchDir, ".godot");
+  if (!existsSync(src) || existsSync(dst)) return false;
+  try {
+    let copied = false;
+    if (platform === "linux") {
+      copied =
+        spawnSync("cp", ["-a", "--reflink=auto", src, dst], { stdio: "ignore" }).status === 0;
+    } else if (platform === "darwin") {
+      copied = spawnSync("cp", ["-Rc", src, dst], { stdio: "ignore" }).status === 0;
+    }
+    if (!copied) cpSync(src, dst, { recursive: true });
+    rmSync(path.join(dst, "scrapkeep-import.json"), { force: true });
+    return true;
+  } catch {
+    rmSync(dst, { recursive: true, force: true });
+    return false;
   }
 }
 
@@ -789,67 +859,8 @@ export function defaultWidth(cpus = os.cpus().length, load = os.loadavg()[0]) {
 // Every Godot process the lane starts holds one of `width` lanes, so a confirm's head rerun and
 // base run never push one machine slot past its width (GRAPH caps a 4 vCPU box at 6 lanes).
 // A task holds one lane at a time and never waits for a second, so lanes cannot deadlock.
-// A warm batch runs several game tests one after another in one Godot (tools/test_batch.gd), so
-// the game's scripts compile once per batch instead of once per test (about 7 s each). A test
-// joins a batch only when it is a plain SceneTree script that no marker sends to its own process:
-// it times itself, warms or measures a first load, starts processes or sets the environment.
-const BATCH_SOLO =
-  /get_ticks_|OS\.set_environment|ProjectSettings\.set|OS\.(execute|create_process|kill)|\b(warm|hitch|cold)\b|change_scene/;
-// Only short tests batch: compiling is about 7 s of a test, so a test past BATCH_TEST_MAX_MS gains
-// little, and a long batch holds its lane while the others sit idle at the end (a first try that
-// batched long tests took 222 and 231 s against 174 s one Godot each). The game also counts
-// frames for the whole process, so a long test that times cards by frame can read differently
-// after others; alone, it reads as it always has.
-export const BATCH_MAX_TESTS = 8;
-export const BATCH_MAX_MS = 60_000;
-export const BATCH_TEST_MAX_MS = 15_000;
-
-export function batchable(source) {
-  return (
-    /^extends SceneTree\r?$/m.test(source.split("\n", 1)[0]) &&
-    !isSolo(source) &&
-    !BATCH_SOLO.test(source)
-  );
-}
-
-// Takes the batch for one lane from the front of the queue: consecutive batchable rows, at most
-// BATCH_MAX_TESTS and about BATCH_MAX_MS of measured time. A row that cannot batch goes alone.
-export function takeBatch(queue, canBatch, maxTests = BATCH_MAX_TESTS, maxMs = BATCH_MAX_MS) {
-  const batch = [];
-  let ms = 0;
-  while (
-    queue.length > 0 &&
-    batch.length < maxTests &&
-    canBatch(queue[0]) &&
-    (batch.length === 0 || ms + queue[0].ms <= maxMs)
-  ) {
-    ms += queue[0].ms;
-    batch.push(queue.shift());
-  }
-  return batch;
-}
-
-// Splits a batch's output into each test's own output by its BATCH START and BATCH END lines.
-// A test that started and never ended was cut off (a crash or the time limit); the tests after
-// it never started.
-export function splitBatch(output, tests) {
-  const done = [];
-  let open = null;
-  let lines = [];
-  for (const line of output.split("\n")) {
-    const start = /^BATCH START (\S+)/.exec(line);
-    const end = /^BATCH END (\S+) exit=(-?\d+) ms=(\d+)/.exec(line);
-    if (start) {
-      open = start[1];
-      lines = [];
-    } else if (end && open === end[1]) {
-      done.push({ test: open, exit: Number(end[2]), ms: Number(end[3]), output: lines.join("\n") });
-      open = null;
-    } else if (open) lines.push(line);
-  }
-  const ended = new Set(done.map((row) => row.test));
-  return { done, cut: open, rest: tests.filter((test) => !ended.has(test) && test !== open) };
-}
+// Warm-batching helpers (batchable, takeBatch, takeBatchPacked, splitBatch) are imported from
+// scripts/sketch-smoke.mjs and re-exported above.
 
 export function lanePool(width) {
   let free = width;
@@ -1062,27 +1073,12 @@ async function main() {
     log(`  checks removed from ${row.test}: ${row.labels.map((label) => `"${label}"`).join(", ")}`);
   if (receipt.checks_removed.length > 0)
     log("  name each removed check in the pull request and say what now covers it");
-  // Also a report, not a stage: the deep sweep's leads on this branch's own lines (DEEP-SWEEP.md), so a reach
-  // into another module's private members is seen at the pull request and not only after promotion.
-  const swept = spawnSync(
+  // Also a report, not a stage: start the deep sweep asynchronously so it overlaps Stage 0/1 work.
+  const deepSweepPromise = spawnText(
     process.execPath,
     [path.join(root, "scripts", "deep-sweep.mjs"), "--base", mergeBase, "--head", "HEAD"],
-    { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, timeout: 60_000 },
+    { timeoutMs: 60_000 },
   );
-  receipt.deep_sweep =
-    swept.status === 0
-      ? Object.fromEntries(
-          [...swept.stdout.matchAll(/^## (D\d) .*\((\d+)\)$/gm)].map((m) => [m[1], Number(m[2])]),
-        )
-      : null;
-  if (receipt.deep_sweep === null) log("  deep sweep did not run");
-  else if (Object.values(receipt.deep_sweep).some((n) => n > 0))
-    log(
-      `  deep sweep leads on this branch: ${Object.entries(receipt.deep_sweep)
-        .filter(([, n]) => n > 0)
-        .map(([rule, n]) => `${rule} ${n}`)
-        .join(", ")} (node scripts/deep-sweep.mjs --base ${mergeBase.slice(0, 10)} lists them)`,
-    );
   const merges = git(["rev-list", "--first-parent", "--merges", "--parents", `${mergeBase}..HEAD`])
     .split("\n")
     .filter(Boolean)
@@ -1098,6 +1094,23 @@ async function main() {
       carried,
       subject: git(["log", "-1", "--format=%s", merge]),
     }));
+  const recordDeepSweep = async () => {
+    const swept = await deepSweepPromise;
+    receipt.deep_sweep =
+      swept.status === 0
+        ? Object.fromEntries(
+            [...swept.stdout.matchAll(/^## (D\d) .*\((\d+)\)$/gm)].map((m) => [m[1], Number(m[2])]),
+          )
+        : null;
+    if (receipt.deep_sweep === null) log("  deep sweep did not run");
+    else if (Object.values(receipt.deep_sweep).some((n) => n > 0))
+      log(
+        `  deep sweep leads on this branch: ${Object.entries(receipt.deep_sweep)
+          .filter(([, n]) => n > 0)
+          .map(([rule, n]) => `${rule} ${n}`)
+          .join(", ")} (node scripts/deep-sweep.mjs --base ${mergeBase.slice(0, 10)} lists them)`,
+      );
+  };
   if (merges.length > 0) {
     const heads = { prHeads: new Map(), branchHeads: new Map() };
     const remote = spawnSync(
@@ -1141,10 +1154,12 @@ async function main() {
       }) &&
       !options.dryRun
     ) {
+      await recordDeepSweep();
       log("  merge each stale branch's current head into the PR (or drop the carry), then rerun");
       finish();
     }
   }
+  await recordDeepSweep();
 
   // Godot selection first: the dry run and the receipt both need it.
   const index = buildIndex(sketchDir);
@@ -1193,23 +1208,48 @@ async function main() {
     process.exit(0);
   }
 
-  // Stage 1: static checks, sub-second to a minute, the commonest PR reds.
-  const lint = spawnSync(
-    process.execPath,
-    [path.join(root, "scripts", "sketch-lint.mjs"), "--sketch", "core-loop"],
-    { encoding: "utf8" },
-  );
+  // Stage 1: static checks, run concurrently while emitting verdicts and early-stopping in deterministic order.
+  const pathNodeTests = nodeTestsForPaths(changed.godot);
+  let nodeTests = [];
+  if (changed.node.length > 0 || pathNodeTests.length > 0) {
+    const all = git(["ls-files", "*.test.mjs", "*.test.js"])
+      .split("\n")
+      .filter((file) => file && !file.startsWith(SKETCH) && !file.includes("node_modules"));
+    nodeTests = [
+      ...new Set([
+        ...nodeTestsFor(changed.node, all, (file) => readFileSync(path.join(root, file), "utf8")),
+        ...pathNodeTests,
+      ]),
+    ].sort();
+  }
+  const baseSketchForPlaceholders = changed.godot.length > 0 ? path.join(baseDir(), SKETCH) : null;
+  const [lint, placeholderPair, docs, node] = await Promise.all([
+    spawnText(process.execPath, [
+      path.join(root, "scripts", "sketch-lint.mjs"),
+      "--sketch",
+      "core-loop",
+    ]),
+    baseSketchForPlaceholders
+      ? Promise.all([
+          placeholderRowsAsync(baseSketchForPlaceholders),
+          placeholderRowsAsync(sketchDir),
+        ])
+      : Promise.resolve(null),
+    changed.docs.length > 0
+      ? spawnText(process.execPath, [path.join(root, "scripts", "check-docs.mjs")])
+      : Promise.resolve(null),
+    nodeTests.length > 0
+      ? spawnText(process.execPath, ["--test", ...nodeTests], { cwd: root, timeoutMs: 300_000 })
+      : Promise.resolve(null),
+  ]);
   if (
     !stage("sketch-lint", lint.status === 0, { note: (lint.stdout || "").trim().split("\n").pop() })
   ) {
     log(lint.stdout + lint.stderr);
     finish();
   }
-  if (changed.godot.length > 0) {
-    const grew = placeholderIncrease(
-      placeholderRows(path.join(baseDir(), SKETCH)),
-      placeholderRows(sketchDir),
-    );
+  if (placeholderPair) {
+    const grew = placeholderIncrease(placeholderPair[0], placeholderPair[1]);
     if (
       !stage("placeholders no higher than base", grew.length === 0, {
         note: grew.length ? grew.slice(0, 5).join("; ") : "no group grew",
@@ -1218,10 +1258,7 @@ async function main() {
     )
       finish();
   }
-  if (changed.docs.length > 0) {
-    const docs = spawnSync(process.execPath, [path.join(root, "scripts", "check-docs.mjs")], {
-      encoding: "utf8",
-    });
+  if (docs) {
     if (
       !stage("check:docs", docs.status === 0, { note: (docs.stdout || "").trim().split("\n")[0] })
     ) {
@@ -1229,35 +1266,16 @@ async function main() {
       finish();
     }
   }
-  const pathNodeTests = nodeTestsForPaths(changed.godot);
-  if (changed.node.length > 0 || pathNodeTests.length > 0) {
-    const all = git(["ls-files", "*.test.mjs", "*.test.js"])
-      .split("\n")
-      .filter((file) => file && !file.startsWith(SKETCH) && !file.includes("node_modules"));
-    const nodeTests = [
-      ...new Set([
-        ...nodeTestsFor(changed.node, all, (file) => readFileSync(path.join(root, file), "utf8")),
-        ...pathNodeTests,
-      ]),
-    ].sort();
-    if (nodeTests.length > 0) {
-      const node = spawnSync(process.execPath, ["--test", ...nodeTests], {
-        cwd: root,
-        encoding: "utf8",
-        maxBuffer: 64 << 20,
-      });
-      if (
-        !stage("node tests", node.status === 0, { note: nodeTests.join(" "), tests: nodeTests })
-      ) {
-        log(
-          (node.stdout || "")
-            .split("\n")
-            .filter((line) => /^not ok|error:|location:/.test(line.trim()))
-            .slice(0, 40)
-            .join("\n"),
-        );
-        finish();
-      }
+  if (node) {
+    if (!stage("node tests", node.status === 0, { note: nodeTests.join(" "), tests: nodeTests })) {
+      log(
+        (node.stdout || "")
+          .split("\n")
+          .filter((line) => /^not ok|error:|location:/.test(line.trim()))
+          .slice(0, 40)
+          .join("\n"),
+      );
+      finish();
     }
   }
   if (lanePlan.parallel.length + lanePlan.solo.length === 0 && changed.godot.length === 0) {
@@ -1285,36 +1303,43 @@ async function main() {
   }
   await acquireMachine();
   const base = ["--headless", "--path", sketchDir];
-  const imported = await importWithRetry(
-    SKETCH,
-    base,
-    async (job) => {
-      const t = Date.now();
-      const result = await spawnCollect(binary, job.args, {
-        timeoutMs: 180_000,
-        env: {
-          ...process.env,
-          ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))),
-        },
-      });
-      return {
-        label: job.label,
-        exit: result.status,
-        signal: result.signal ?? null,
-        scriptErrors: scriptErrorCount(result.output),
-        ok: result.status === 0,
-        ms: Date.now() - t,
-      };
-    },
-    log,
-  );
-  if (
-    !stage("import", imported.ok, {
-      note: imported.tries.map((row) => `${row.outcome} exit=${row.exit ?? row.signal}`).join(", "),
-    })
-  )
-    finish();
-  writeImportStamp(root, SKETCH);
+  const stampOk = process.env.SMOKE_FORCE_IMPORT !== "1" && checkImportStamp(root, SKETCH).ok;
+  if (stampOk) {
+    stage("import", true, { note: "cached (stamp matches HEAD)" });
+  } else {
+    const imported = await importWithRetry(
+      SKETCH,
+      base,
+      async (job) => {
+        const t = Date.now();
+        const result = await spawnCollect(binary, job.args, {
+          timeoutMs: 180_000,
+          env: {
+            ...process.env,
+            ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))),
+          },
+        });
+        return {
+          label: job.label,
+          exit: result.status,
+          signal: result.signal ?? null,
+          scriptErrors: scriptErrorCount(result.output),
+          ok: result.status === 0,
+          ms: Date.now() - t,
+        };
+      },
+      log,
+    );
+    if (
+      !stage("import", imported.ok, {
+        note: imported.tries
+          .map((row) => `${row.outcome} exit=${row.exit ?? row.signal}`)
+          .join(", "),
+      })
+    )
+      finish();
+    writeImportStamp(root, SKETCH);
+  }
   const boot = await spawnCollect(binary, [...base, "--quit-after", "300"], {
     timeoutMs: 180_000,
     env: { ...process.env, ...userDataEnv(mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) },
@@ -1430,6 +1455,7 @@ async function main() {
     if (cancel.cancelled || prRed) return null;
     baseImport ??= inLane(async () => {
       if (prRed) return false;
+      seedBaseGodot(sketchDir, baseSketch);
       const args = ["--headless", "--path", baseSketch];
       // The base tree is a fresh checkout, where the engine's first import can crash (IMPORT_TRIES).
       for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
@@ -1614,7 +1640,7 @@ async function main() {
   }
   async function worker() {
     while (queue.length > 0 && !prRed) {
-      const rows = takeBatch(queue, canBatch);
+      const rows = takeBatchPacked(queue, canBatch);
       if (rows.length > 1) {
         await runBatched(rows);
         continue;
