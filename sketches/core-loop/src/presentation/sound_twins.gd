@@ -69,7 +69,7 @@ const WORLD1_EXTRA := {
 	"UI_ROWS:cadence_cannon_rail": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() lane rail crack",
 	"UI_ROWS:cadence_cannon_barrage": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() lane barrage thump",
 	"UI_ROWS:rail_rise": "audio.gd:_on_buff_changed tracks ctx.buffs active_rows() rise",
-	"UI_ROWS:rail_sink": "audio.gd:_on_buff_changed tracks ctx.buffs active_rows() sink",
+	"UI_ROWS:rail_sink": "audio.gd:_on_buff_expired tracks ctx.buffs visible expiry",
 	"WORLD_ROWS:site_flip": "audio.gd:_play_site_flip tracks site completion and site_markers.visited_sites()",
 }
 # Table facts with no firing site found by the emit scan (their signal is emitted some other way). They
@@ -241,8 +241,8 @@ const ACT := [
 		"also": [{"what": "the closing fuse ring repainted on snap state changes", "script": "res://src/combat/sticky.gd", "fn": "sync_snap_state", "token": "_draw_fuse_rings()"}]},
 	{"facts": ["UI_ROWS:cadence_kest_snap"], "traced": true, "what": "Kest's snapped charge bursts with a bone ring and amber edge",
 		"script": "res://src/combat/combat.gd", "fn": "_detonate", "token": "effects.ring(at, radius * 0.88, Palette.SAND)"},
-	{"facts": ["UI_ROWS:cadence_tarn_window"], "traced": true, "what": "Tarn's cadence instrument reads the live weapon snapshot on the aim reticle",
-		"script": "res://src/ui/aim_reticle.gd", "fn": "_draw_cadence", "token": "for mark in cadence_marks(cadence, cadence_color):"},
+	{"facts": ["UI_ROWS:cadence_tarn_window"], "traced": true, "what": "Tarn's beat-3 pip turns live mint on the aim reticle",
+		"script": "res://src/ui/aim_reticle.gd", "fn": "_tarn_marks", "token": "\"role\": \"pip_open\", \"layer\": \"line\""},
 	{"facts": ["UI_ROWS:cadence_tarn_rend"], "traced": true, "what": "Tarn's beat-3 heavy rend fires a widened, high-knock sweep bolt",
 		"script": "res://src/combat/combat.gd", "fn": "_fire", "token": "rec[\"knock\"] = float(rec[\"knock\"]) * knock_mult"},
 	{"facts": ["UI_ROWS:cadence_tally_beat"], "traced": true, "what": "Tally's Balance Due ground ring marks the cast rhythm",

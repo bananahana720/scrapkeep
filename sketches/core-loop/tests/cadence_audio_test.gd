@@ -13,6 +13,8 @@ const BuffLedger := preload("res://src/core/buff_ledger.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
+const Rogue := preload("res://src/combat/rogue.gd")
+const SiteMarkers := preload("res://src/presentation/site_markers.gd")
 const SoundEdges := preload("res://tests/sound_edges_test.gd")
 const AceStub := preload("res://tests/support/ace_stub.gd")
 const T := preload("res://tests/support/t.gd")
@@ -111,7 +113,7 @@ class FakeSiteMarkers extends RefCounted:
 
 
 class FakePresentation extends Node:
-	var site_markers: FakeSiteMarkers = null
+	var site_markers: Object = null
 
 
 class FakeIntent extends RefCounted:
@@ -444,26 +446,134 @@ func _test_nixie_rail_clacks() -> void:
 
 	_free_rig(rig)
 
+	# Regression (Context wiring order): buffs.bind_events(events) BEFORE audio.setup(ctx).
+	# Attempt/stage/death/run clears must NEVER emit a spurious rail_sink clack; only real expiry does.
+	var events := GameEvents.new()
+	var flow := FakeFlow.new()
+	var run := FakeRun.new()
+	var tuning := Tuning.new()
+	tuning.set_option(Tuning.MUSIC_KEY, "synth")
+	var bound_buffs := BuffLedger.new()
+	bound_buffs.bind_events(events)
+	var combat := FakeCombat.new()
+	var ctx := FakeCtx.new()
+	ctx.events = events
+	ctx.flow = flow
+	ctx.run = run
+	ctx.tuning = tuning
+	ctx.buffs = bound_buffs
+	ctx.spawner = combat
+	var pres := FakePresentation.new()
+	var bound_audio := Audio.new()
+	pres.add_child(bound_audio)
+	root.add_child(pres)
+	bound_audio.setup(ctx)
+	bound_audio.bake_now()
+	events.run_started.emit("rivet")
+	bound_audio._remixes = {}
+	events.stage_entered.emit(1, false)
+	bound_audio._flush_flow()
+	_pump(bound_audio, bound_audio.engine.bar_len() * 2)
+
+	var boundary_sinks := []
+	for boundary in ["stage_content_cleared", "stage_entered", "player_died", "run_started", "run_ended"]:
+		bound_buffs.post("overdrive_%s" % boundary, {"duration_s": 5.0})
+		bound_audio.cue_log.clear()
+		match boundary:
+			"stage_content_cleared":
+				events.stage_content_cleared.emit("retry")
+			"stage_entered":
+				events.stage_entered.emit(2, false)
+			"player_died":
+				events.player_died.emit()
+			"run_started":
+				events.run_started.emit("rivet")
+			"run_ended":
+				events.run_ended.emit(false)
+		if "rail_sink" in _heard_kinds(bound_audio):
+			boundary_sinks.append(boundary)
+	_t.eq("bound BuffLedger emits 0 rail_sink clacks on retry/stage/death/run boundaries", boundary_sinks, [])
+
+	# Real timer expiry still fires rail_sink once.
+	bound_buffs.post("overdrive_expire", {"duration_s": 5.0})
+	bound_audio.cue_log.clear()
+	bound_buffs.step(6.0)
+	_t.eq("bound BuffLedger real timer expiry plays rail_sink once", _heard_kinds(bound_audio), ["rail_sink"])
+
+	pres.free()
+	events.free()
+
 
 func _test_site_flip_chime() -> void:
+	# 1. Real SiteMarkers wired onto pres.site_markers: zero double-fires and cache_spent chimes.
 	var rig := _make_rig()
 	var audio: Audio = rig["audio"]
 	var events: GameEvents = rig["events"]
-	var markers: FakeSiteMarkers = rig["markers"]
+	var pres: FakePresentation = rig["pres"]
+	var real_markers := SiteMarkers.new()
+	pres.add_child(real_markers)
+	real_markers.setup(rig["ctx"])
+	pres.site_markers = real_markers
+	audio._visited_sites_seen.clear()
 	audio.cue_log.clear()
 
-	events.activity_done.emit("pump_house", Vector3.ZERO)
-	events.activity_done.emit("pump_house", Vector3.ZERO)
+	# Cracked cache pocket activity: SiteMarkers._on_activity_done + Audio share exact key -> 1 flip.
+	var pocket_at := Vector3(12.2, 0.0, -8.7)
+	events.activity_done.emit("cracked_cache", pocket_at)
+	audio._tend_site_flips()
+	audio._tend_site_flips()
+	var pocket_flips: Array = _heard_kinds(audio).filter(func(k: String): return k == "site_flip")
+	_t.eq("cracked_cache pocket chimes once with real SiteMarkers", pocket_flips.size(), 1)
+	# Repeat emit at same pocket is idempotent.
+	audio.cue_log.clear()
+	events.activity_done.emit("cracked_cache", pocket_at)
+	audio._tend_site_flips()
+	_t.eq("repeat cracked_cache emit at same position does not double-chime",
+		_heard_kinds(audio).filter(func(k: String): return k == "site_flip").size(), 0)
+
+	# Conduit cable / warden_gate_pip: SiteMarkers owns cable:<id> -> 1 flip total.
+	audio.cue_log.clear()
+	events.world_fact.emit("warden_gate_pip", Vector3(20.0, 0.0, 4.0))
+	real_markers.mark_visited("cable:west", "cable", Vector3(20.0, 0.0, 4.0))
+	audio._tend_site_flips()
+	audio._tend_site_flips()
+	_t.eq("warden_gate_pip + ConduitCable mark_visited chimes once with real SiteMarkers",
+		_heard_kinds(audio).filter(func(k: String): return k == "site_flip").size(), 1)
+
+	# Rogue kill: SiteMarkers._on_enemy_killed owns rogue key -> 1 flip total.
+	audio.cue_log.clear()
+	var rogue_kind := String(Rogue.ROWS.keys()[0])
+	events.enemy_killed.emit(rogue_kind, Vector3(-15.0, 0.0, 6.0), 10)
+	audio._tend_site_flips()
+	audio._tend_site_flips()
+	_t.eq("rogue kill chimes once with real SiteMarkers",
+		_heard_kinds(audio).filter(func(k: String): return k == "site_flip").size(), 1)
+
+	# CrackedCache device world_fact("cache_spent", at): chimes once per distinct position.
+	audio.cue_log.clear()
+	events.world_fact.emit("cache_spent", Vector3(5.0, 0.0, 5.0))
+	events.world_fact.emit("cache_spent", Vector3(5.0, 0.0, 5.0))
+	events.world_fact.emit("cache_spent", Vector3(30.0, 0.0, 12.0))
+	audio._tend_site_flips()
+	_t.eq("CrackedCache device cache_spent chimes once per distinct position",
+		_heard_kinds(audio).filter(func(k: String): return k == "site_flip").size(), 2)
+
+	# Non-cracked_cache activities with same id at distinct positions chime once per position.
+	audio.cue_log.clear()
+	events.activity_done.emit("pump_house", Vector3(10.0, 0.0, 0.0))
+	events.activity_done.emit("pump_house", Vector3(10.0, 0.0, 0.0))
+	events.activity_done.emit("pump_house", Vector3(40.0, 0.0, 0.0))
+	audio._tend_site_flips()
+	_t.eq("two same-id non-cracked_cache activities at distinct positions chime twice",
+		_heard_kinds(audio).filter(func(k: String): return k == "site_flip").size(), 2)
+
+	# Rescue completed + SiteMarkers mark_visited on same cage key -> 1 flip total.
+	audio.cue_log.clear()
 	events.rescue_completed.emit("kest")
-	events.world_fact.emit("warden_gate_pip", Vector3.ZERO)
-	markers.rows = [
-		{"key": "activity:pump_house", "kind": "activity", "name": "Pump House"},
-		{"key": "camp:north_yard", "kind": "camp", "name": "North Yard"},
-	]
+	real_markers.mark_visited("cage:kest", "cage", Vector3(0.0, 0.0, 18.0))
 	audio._tend_site_flips()
-	audio._tend_site_flips()
-	var flips: Array = _heard_kinds(audio).filter(func(k: String): return k == "site_flip")
-	_t.eq("site_flip chimes once per distinct site key across events and SiteMarkers", flips.size(), 4)
+	_t.eq("rescue_completed + cage SiteMarker chimes once",
+		_heard_kinds(audio).filter(func(k: String): return k == "site_flip").size(), 1)
 
 	_free_rig(rig)
 
@@ -678,10 +788,53 @@ func _test_voice_sidecar_loader() -> void:
 		and SfxBank.voice_clip_path("cannon", line) == ""
 		and cannon_after == cannon_synth_before)
 
+	# Top-level JSON Array manifest (matching w46-audio/voice/manifest.json layout):
+	# parent-relative "voice/<speaker>/<clip>.wav" paths, skipping audition_only: true rows.
+	var arr_root := ProjectSettings.globalize_path("user://e304_voice_arr_%d" % OS.get_process_id())
+	var arr_voice := arr_root.path_join("voice")
+	var brindle_dir := arr_voice.path_join("brindle")
+	var cannon_dir := arr_voice.path_join("cannon")
+	DirAccess.make_dir_recursive_absolute(brindle_dir)
+	DirAccess.make_dir_recursive_absolute(cannon_dir)
+	var canonical_wav := brindle_dir.path_join("intro_dam.wav")
+	var audition_wav := brindle_dir.path_join("intro_dam_alt.wav")
+	var audition_only_wav := brindle_dir.path_join("audition_only.wav")
+	var arr_cannon_wav := cannon_dir.path_join("cannon_line.wav")
+	_write_mono_wav(canonical_wav, 300.0, 0.20)
+	_write_mono_wav(audition_wav, 500.0, 0.40)
+	_write_mono_wav(audition_only_wav, 600.0, 0.35)
+	_write_mono_wav(arr_cannon_wav, 330.0, 0.30)
+	var brindle_line := "Your repair reserve is now Fleet inventory. Thank you."
+	var audition_line := "Audition take only."
+	var arr_manifest := [
+		{"speaker": "brindle", "text": brindle_line, "file": "voice/brindle/intro_dam.wav"},
+		{"speaker": "brindle", "text": brindle_line, "file": "voice/brindle/intro_dam_alt.wav", "audition_only": true},
+		{"speaker": "brindle", "text": audition_line, "file": "voice/brindle/audition_only.wav", "audition_only": true},
+		{"speaker": "cannon", "text": line, "file": "voice/cannon/cannon_line.wav"},
+	]
+	var amf := FileAccess.open(arr_voice.path_join("manifest.json"), FileAccess.WRITE)
+	amf.store_string(JSON.stringify(arr_manifest))
+	amf.close()
+
+	audio.set_voice_mode("tts", arr_voice)
+	var brindle_buf := SfxBank._say("brindle", brindle_line)
+	_t.check("top-level JSON Array manifest resolves parent-relative voice/... canonical WAV",
+		audio.voice_manifest_loaded()
+		and audio.voice_clip_for("brindle", brindle_line) == canonical_wav
+		and brindle_buf.size() == int(round(0.20 * Harmony.RATE)),
+		"loaded=%s clip=%s size=%d" % [str(audio.voice_manifest_loaded()), audio.voice_clip_for("brindle", brindle_line), brindle_buf.size()])
+	_t.check("audition_only: true entries are skipped and never overwrite canonical clips",
+		audio.voice_clip_for("brindle", audition_line) == ""
+		and audio.voice_clip_for("brindle", brindle_line) == canonical_wav)
+	_t.check("Cannon remains synth-only in top-level JSON Array manifest",
+		audio.voice_clip_for("cannon", line) == ""
+		and SfxBank.voice_clip_path("cannon", line) == "")
+
 	# Switching back to synth or calling Audio.reset_for_tests() restores synth cleanly.
 	audio.set_voice_mode("synth")
 	_t.check("set_voice_mode('synth') restores procedural synth for Sable",
 		audio.voice_clip_for("sable", line) == "" and SfxBank._say("sable", line) == synth_buf)
 
+	_remove_dir_recursive(arr_root)
 	_remove_dir_recursive(tmp_dir)
 	_free_rig(rig)

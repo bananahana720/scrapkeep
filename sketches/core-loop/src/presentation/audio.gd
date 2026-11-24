@@ -2483,9 +2483,12 @@ func _connect_all(events) -> void:
 		new_run_tunes()
 		_flow_queue.append(["run"]))
 	events.warden_engaged.connect(func(_stage: int): warden_took_band())
-	events.activity_done.connect(func(id: String, _at: Vector3):
+	events.activity_done.connect(func(id: String, at: Vector3):
 		end_moment("event", id)
-		_play_site_flip("activity:" + id))
+		if id == "cracked_cache":
+			_play_site_flip("cracked_cache:%d,%d" % [roundi(at.x), roundi(at.z)])
+		else:
+			_play_site_flip("activity:%s:%d,%d" % [id, roundi(at.x), roundi(at.z)]))
 	events.synergy_discovered.connect(func(id: String, _category: String, _first: bool): tune_found(id))
 	events.flow_changed.connect(_on_flow_changed)
 	events.world_entered.connect(func(world: int): _flow_queue.append(["world", world]))
@@ -2617,7 +2620,7 @@ func wire_optional() -> void:
 	# v2 W6 world: one row per world_fact kind (event_kinds.gd WORLD_ROWS); a kind with
 	# no row plays nothing here (an empty override would fall back to the bare world_fact row's tick):
 	# its sound is its sender's (a shattered piece's family, the fabricator's tune).
-	_listen_optional(events, "world_fact", func(kind: String, _at: Vector3):
+	_listen_optional(events, "world_fact", func(kind: String, at: Vector3):
 		# A world row's own priority, not the bare world_fact kind's 0: the Overtime ring, the sluice and
 		# the Called Shot results were 6 dB under a pickup and never dipped the band (sound-gaps 12 Nov).
 		var row := EventKinds.world_row(kind)
@@ -2626,7 +2629,9 @@ func wire_optional() -> void:
 		elif not row.is_empty():
 			play("world_fact", 0.0, 1.0, "SFX", Rows.heard(row, cue_context()), int(row.get("priority", 0)))
 		_set_world_fact(kind)
-		if kind == "warden_gate_pip":
+		if kind == "cache_spent":
+			_play_site_flip("cache_spent:%d,%d" % [roundi(at.x), roundi(at.z)])
+		elif kind == "warden_gate_pip" and _site_markers() == null:
 			_cable_flips += 1
 			_play_site_flip("cable:%d" % _cable_flips)
 		if kind == "bay_jukebox":
@@ -3968,7 +3973,7 @@ static func miniboss_tune(kind: String) -> String:
 
 func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 	var killed_kind := _kind
-	if Rogue.ROWS.has(killed_kind):
+	if Rogue.ROWS.has(killed_kind) and _site_markers() == null:
 		_play_site_flip("rogue:" + killed_kind)
 	# A rogue and a surge miniboss can share a stage: while another one still fights, the
 	# track holds and the music follows the survivor (each moment ends with its own body).
@@ -5845,12 +5850,16 @@ func _wire_rail() -> void:
 	var buffs = ctx.get("buffs") if ctx != null else null
 	if buffs == null or buffs == _rail_wired_buffs:
 		return
-	if _rail_wired_buffs != null and is_instance_valid(_rail_wired_buffs) and _rail_wired_buffs.has_signal("buff_changed"):
-		if _rail_wired_buffs.buff_changed.is_connected(_on_buff_changed):
+	if _rail_wired_buffs != null and is_instance_valid(_rail_wired_buffs):
+		if _rail_wired_buffs.has_signal("buff_changed") and _rail_wired_buffs.buff_changed.is_connected(_on_buff_changed):
 			_rail_wired_buffs.buff_changed.disconnect(_on_buff_changed)
+		if _rail_wired_buffs.has_signal("buff_expired") and _rail_wired_buffs.buff_expired.is_connected(_on_buff_expired):
+			_rail_wired_buffs.buff_expired.disconnect(_on_buff_expired)
 	_rail_wired_buffs = buffs
 	if buffs.has_signal("buff_changed") and not buffs.buff_changed.is_connected(_on_buff_changed):
 		buffs.buff_changed.connect(_on_buff_changed)
+	if buffs.has_signal("buff_expired") and not buffs.buff_expired.is_connected(_on_buff_expired):
+		buffs.buff_expired.connect(_on_buff_expired)
 	_sync_rail_ids()
 
 
@@ -5894,16 +5903,26 @@ func _on_buff_changed() -> void:
 		if not _rail_ids.has(id):
 			added = true
 			break
-	var removed := false
-	for id in _rail_ids:
-		if not now_ids.has(id):
-			removed = true
-			break
 	_rail_ids = now_ids
 	if added:
 		_play_rail("rail_rise")
-	elif removed:
+
+
+# BuffLedger emits buff_expired(id) only on real timer expiry, never on attempt-boundary clear().
+func _on_buff_expired(id: String) -> void:
+	if id == "" or not _rail_ids.has(id):
+		return
+	_rail_ids.erase(id)
+	if _in_play_for_rail():
 		_play_rail("rail_sink")
+
+
+func _site_markers() -> Object:
+	var parent = get_parent()
+	var markers = parent.get("site_markers") if parent != null else null
+	if markers != null and markers.has_method("visited_sites"):
+		return markers
+	return null
 
 
 func _play_site_flip(site_key: String) -> void:
@@ -5915,25 +5934,13 @@ func _play_site_flip(site_key: String) -> void:
 
 
 func _tend_site_flips() -> void:
-	var parent = get_parent()
-	var markers = parent.get("site_markers") if parent != null else null
-	if markers == null or not markers.has_method("visited_sites"):
+	var markers := _site_markers()
+	if markers == null:
 		return
 	for row in markers.visited_sites():
 		var key := String(row.get("key", ""))
-		var kind := String(row.get("kind", ""))
-		if key == "":
-			continue
-		if kind == "rogue":
-			var already := false
-			for seen in _visited_sites_seen:
-				if String(seen).begins_with("rogue:"):
-					already = true
-					break
-			if already:
-				_visited_sites_seen[key] = true
-				continue
-		_play_site_flip(key)
+		if key != "":
+			_play_site_flip(key)
 
 
 static func parse_voice_args(args: PackedStringArray) -> Dictionary:
@@ -6011,24 +6018,33 @@ func _load_voice_manifest() -> void:
 		if raw.strip_edges() == "":
 			continue
 		var parsed = JSON.parse_string(raw)
-		if not parsed is Dictionary:
+		if parsed is Array:
+			_ingest_voice_entries(parsed, clip_root, base_dir)
+			_voice_manifest_loaded = true
+			return
+		if parsed is Dictionary:
+			_ingest_voice_manifest(parsed, clip_root, base_dir)
+			_voice_manifest_loaded = true
+			return
+
+
+func _ingest_voice_entries(items: Array, clip_root: String, base_dir: String) -> void:
+	for entry in items:
+		if not entry is Dictionary:
 			continue
-		_ingest_voice_manifest(parsed, clip_root, base_dir)
-		_voice_manifest_loaded = true
-		return
+		if bool(entry.get("audition_only", false)):
+			continue
+		var speaker := String(entry.get("speaker", entry.get("caller", ""))).strip_edges().to_lower()
+		var text := String(entry.get("text", entry.get("line", "")))
+		var file := String(entry.get("file", entry.get("path", entry.get("wav", ""))))
+		_register_voice_clip(speaker, text, file, clip_root, base_dir)
 
 
 func _ingest_voice_manifest(data: Dictionary, clip_root: String, base_dir: String) -> void:
 	for list_key in ["clips", "entries", "lines"]:
 		var items = data.get(list_key)
 		if items is Array:
-			for entry in items:
-				if not entry is Dictionary:
-					continue
-				var speaker := String(entry.get("speaker", entry.get("caller", ""))).strip_edges().to_lower()
-				var text := String(entry.get("text", entry.get("line", "")))
-				var file := String(entry.get("file", entry.get("path", entry.get("wav", ""))))
-				_register_voice_clip(speaker, text, file, clip_root, base_dir)
+			_ingest_voice_entries(items, clip_root, base_dir)
 		elif items is Dictionary:
 			for k in items:
 				var key_s := String(k)
@@ -6064,8 +6080,11 @@ func _register_voice_clip(speaker: String, text: String, file: String, clip_root
 static func _resolve_voice_file(file: String, clip_root: String, base_dir: String) -> String:
 	if file.is_absolute_path() or file.begins_with("res://") or file.begins_with("user://"):
 		return file if FileAccess.file_exists(file) else ""
-	for root_dir in [clip_root, base_dir, clip_root.path_join("voice")]:
-		var candidate := String(root_dir).path_join(file)
+	for root_dir in [clip_root, clip_root.get_base_dir(), base_dir, base_dir.get_base_dir(), clip_root.path_join("voice")]:
+		var root_s := String(root_dir)
+		if root_s == "":
+			continue
+		var candidate := root_s.path_join(file)
 		if FileAccess.file_exists(candidate):
 			return candidate
 	return ""
