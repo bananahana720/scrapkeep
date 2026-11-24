@@ -65,8 +65,10 @@ export function gradeBudgetLog(
   const cleaned = withoutTeardownNoise(String(logText ?? ""), platform);
   const lines = cleaned.split("\n");
   const failedLines = lines.filter((l) => l.trimEnd().endsWith("-> FAIL"));
-  const errorLines = lines.filter((l) => /^(?:SCRIPT ERROR|ERROR)\b/.test(l));
-  const verdictPass = new RegExp(`^${test}: PASS\\b`, "m").test(cleaned);
+  const errorLines = lines.filter((l) => /^(?:\s*SCRIPT ERROR|ERROR)\b/.test(l));
+  const verdictLine = lines.find((l) => new RegExp(`^${test}: PASS\\b`).test(l)) ?? null;
+  const verdictPass = Boolean(verdictLine);
+  const verdictSkipped = verdictLine ? /\bskipped\b/i.test(verdictLine) : false;
   const budgetLine = lines.find(
     (l) => l.startsWith("[word budget]") && l.trimEnd().endsWith("-> PASS"),
   );
@@ -75,14 +77,16 @@ export function gradeBudgetLog(
   const ok =
     Boolean(runnerOk) &&
     verdictPass &&
+    !verdictSkipped &&
     Boolean(budgetLine) &&
     failedLines.length === 0 &&
     errorLines.length === 0;
   let reason = null;
   if (!ok) {
-    if (errorLines.length) reason = `${test}: ${errorLines[0].slice(0, 120)}`;
+    if (errorLines.length) reason = `${test}: ${errorLines[0].trim().slice(0, 120)}`;
     else if (failedLines.length) reason = `${test}: ${failedLines[0].slice(0, 120)}`;
     else if (!verdictPass) reason = `${test}: no PASS verdict line`;
+    else if (verdictSkipped) reason = `${test}: verdict reports skipped checks`;
     else if (!budgetLine) reason = `${test}: no [word budget] PASS line`;
     else reason = `${test}: runner reported failure`;
   }

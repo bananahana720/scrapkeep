@@ -48,7 +48,7 @@ export function mismatchedCommit(head) {
 export function parseBuildTxt(text) {
   if (typeof text !== "string") return { commitRaw: null, dirtyRaw: null };
   const commitMatch = /^commit:\s*(.+)$/m.exec(text);
-  const dirtyMatch = /^dirty:\s*(.+)$/m.exec(text);
+  const dirtyMatch = /^dirty:\s*(.*)$/m.exec(text);
   return {
     commitRaw: commitMatch ? commitMatch[1].trim() : null,
     dirtyRaw: dirtyMatch ? dirtyMatch[1].trim() : null,
@@ -114,7 +114,10 @@ export function extractBuildTxt(appImagePath, { run = spawnSync } = {}) {
       };
     }
     if (res.status !== 0) {
-      const detail = `${res.stderr ?? ""}${res.stdout ?? ""}`.trim().slice(0, 160);
+      const detail = `${res.stderr ?? ""}${res.stdout ?? ""}`
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 160);
       return {
         ok: false,
         text: null,

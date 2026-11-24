@@ -66,7 +66,7 @@ export function gradeWorld1Log(logText, { platform = process.platform } = {}) {
   const cleaned = withoutTeardownNoise(String(logText ?? ""), platform);
   const lines = cleaned.split("\n");
   const failedLines = lines.filter((l) => l.trimEnd().endsWith("-> FAIL"));
-  const errorLines = lines.filter((l) => /^(?:SCRIPT ERROR|ERROR)\b/.test(l));
+  const errorLines = lines.filter((l) => /^(?:\s*SCRIPT ERROR|ERROR)\b/.test(l));
   const verdictMatch = /^world1_run_test: PASS \((\d+) checks(?:, (\d+) skipped)?\)/m.exec(cleaned);
   const verdictPass = Boolean(verdictMatch);
   const checks = verdictMatch ? Number(verdictMatch[1]) : 0;

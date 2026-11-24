@@ -51,13 +51,11 @@ export function gradeMapReport(data, expectedMap) {
       `${expectedMap}: complete is ${String(data.complete)} (killed or unfinished run)`,
     );
   }
-  if (
-    isFiniteNum(data.pieces_total) &&
-    data.pieces_total > 0 &&
-    (!isFiniteNum(data.pieces_in_shard) || data.pieces_in_shard < data.pieces_total)
-  ) {
+  if (!isFiniteNum(data.pieces_total) || data.pieces_total <= 0) {
+    problems.push(`${expectedMap}: missing or zero pieces_total (${String(data.pieces_total)})`);
+  } else if (!isFiniteNum(data.pieces_in_shard) || data.pieces_in_shard !== data.pieces_total) {
     problems.push(
-      `${expectedMap}: only ${data.pieces_in_shard ?? 0} of ${data.pieces_total} pieces swept (unmerged shard)`,
+      `${expectedMap}: swept ${data.pieces_in_shard ?? 0} of ${data.pieces_total} pieces (unmerged or duplicate shard)`,
     );
   }
   const lanesRun = isFiniteNum(data.lanes_run) && data.lanes_run >= 0 ? data.lanes_run : null;
@@ -139,7 +137,7 @@ export function gradeControlLog(logText, { platform = process.platform } = {}) {
   const lines = cleaned.split("\n");
   const problems = [];
   const failedLines = lines.filter((l) => l.trimEnd().endsWith("-> FAIL"));
-  const errorLines = lines.filter((l) => /^(?:SCRIPT ERROR|ERROR)\b/.test(l));
+  const errorLines = lines.filter((l) => /^(?:\s*SCRIPT ERROR|ERROR)\b/.test(l));
   const verdict = /^snag_sweep_test: PASS \((\d+) checks(?:, (\d+) skipped)?\)/m.exec(cleaned);
   if (!verdict) problems.push("snag_sweep_test did not print PASS");
   else if (verdict[2] && Number(verdict[2]) > 0) {
