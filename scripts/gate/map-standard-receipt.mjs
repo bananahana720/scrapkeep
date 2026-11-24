@@ -145,11 +145,15 @@ function checkSnagReceipt(snagReceipt, head) {
       note: null,
     };
   }
-  if (
-    typeof head === "string" &&
-    COMMIT.test(head) &&
-    !(head.startsWith(snagReceipt.head) || snagReceipt.head.startsWith(head))
-  ) {
+  if (typeof head !== "string" || !COMMIT.test(head)) {
+    return {
+      ok: false,
+      plantOk: true,
+      problem: "8c snag-sweep receipt has no valid checkout head to match",
+      note: null,
+    };
+  }
+  if (!(head.startsWith(snagReceipt.head) || snagReceipt.head.startsWith(head))) {
     return {
       ok: false,
       plantOk: true,
@@ -214,7 +218,7 @@ const plantLines = (text) =>
 export function buildReceipt(
   logs,
   head,
-  { halves = OPEN_HALVES, waiting: waitingList = WAITING, snagReceipt = null } = {},
+  { halves = OPEN_HALVES, waiting: waitingList = WAITING, snagReceipt = undefined } = {},
 ) {
   const problems = [];
   let plantCaught = true;
@@ -239,7 +243,7 @@ export function buildReceipt(
     lines.push(...mapLines(text).filter((l) => MAPS.includes(l.map)));
   }
   let snagNote = null;
-  if (snagReceipt !== null) {
+  if (snagReceipt !== undefined) {
     const snag = checkSnagReceipt(snagReceipt, head);
     if (!snag.plantOk) {
       plantCaught = false;
@@ -321,7 +325,7 @@ export function runTests(cwd) {
 }
 
 // The receipt for the checkout at cwd. run is injectable so the refusal can be tested without Godot.
-export function produce({ cwd = root, run = runTests, snagReceipt = null } = {}) {
+export function produce({ cwd = root, run = runTests, snagReceipt = undefined } = {}) {
   const head = cleanHead(cwd);
   return buildReceipt(run(cwd), head, { snagReceipt });
 }
@@ -335,14 +339,19 @@ export function parseArgs(argv) {
     }
     return val;
   };
+  const takeEq = (a, flag) => {
+    const val = a.slice(flag.length + 1);
+    if (val === "") throw new Error(`${flag} requires a value`);
+    return val;
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === "--out") args.out = take(i++, a);
-    else if (a.startsWith("--out=")) args.out = a.slice("--out=".length);
+    else if (a.startsWith("--out=")) args.out = takeEq(a, "--out");
     else if (a === "--logs") args.logs = take(i++, a);
-    else if (a.startsWith("--logs=")) args.logs = a.slice("--logs=".length);
+    else if (a.startsWith("--logs=")) args.logs = takeEq(a, "--logs");
     else if (a === "--snag-receipt") args.snagReceipt = take(i++, a);
-    else if (a.startsWith("--snag-receipt=")) args.snagReceipt = a.slice("--snag-receipt=".length);
+    else if (a.startsWith("--snag-receipt=")) args.snagReceipt = takeEq(a, "--snag-receipt");
     else throw new Error(`unknown argument: ${a}`);
   }
   return args;
@@ -359,7 +368,7 @@ function readSnagReceipt(file) {
 
 function main(argv) {
   let args;
-  let snagReceipt = null;
+  let snagReceipt = undefined;
   try {
     args = parseArgs(argv);
     if (args.snagReceipt) snagReceipt = readSnagReceipt(args.snagReceipt);

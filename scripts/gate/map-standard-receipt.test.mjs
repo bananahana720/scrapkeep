@@ -276,6 +276,36 @@ test("map standard: optional snagReceipt verifies 8c live when supplied and reje
   const malformed = buildReceipt(logs(), HEAD, { snagReceipt: [] });
   assert.equal(malformed.pass, false);
   assert.match(malformed.measured, /not a JSON object/);
+
+  const nullReceipt = buildReceipt(logs(), HEAD, { snagReceipt: null });
+  assert.equal(nullReceipt.pass, false);
+  assert.match(nullReceipt.measured, /not a JSON object/);
+
+  for (const shortHead of ["3", HEAD.slice(0, 6)]) {
+    const shortRes = buildReceipt(logs(), HEAD, { snagReceipt: { ...good, head: shortHead } });
+    assert.equal(shortRes.pass, false, shortHead);
+    assert.match(shortRes.measured, /names no valid commit head/);
+  }
+
+  const missingHead = buildReceipt(logs(), HEAD, {
+    snagReceipt: { pass: true, plant_caught: true },
+  });
+  assert.equal(missingHead.pass, false);
+  assert.match(missingHead.measured, /names no valid commit head/);
+
+  const missingPlant = buildReceipt(logs(), HEAD, { snagReceipt: { head: HEAD, pass: true } });
+  assert.equal(missingPlant.pass, false);
+  assert.equal(missingPlant.plant_caught, false);
+
+  const missingPass = buildReceipt(logs(), HEAD, {
+    snagReceipt: { head: HEAD, plant_caught: true },
+  });
+  assert.equal(missingPass.pass, false);
+  assert.match(missingPass.measured, /8c snag-sweep receipt failed/);
+
+  const badCheckoutHead = buildReceipt(logs(), "bad", { snagReceipt: good });
+  assert.equal(badCheckoutHead.pass, false);
+  assert.match(badCheckoutHead.measured, /no valid checkout head to match/);
 });
 
 test("map standard: parseArgs accepts --out, --logs, and --snag-receipt in split or = form and rejects unknown flags", () => {
@@ -291,4 +321,8 @@ test("map standard: parseArgs accepts --out, --logs, and --snag-receipt in split
   });
   assert.throws(() => parseArgs(["--bogus", "1"]), /unknown argument: --bogus/);
   assert.throws(() => parseArgs(["--out"]), /--out requires a value/);
+  assert.throws(() => parseArgs(["--snag-receipt"]), /--snag-receipt requires a value/);
+  assert.throws(() => parseArgs(["--snag-receipt="]), /--snag-receipt requires a value/);
+  assert.throws(() => parseArgs(["--out="]), /--out requires a value/);
+  assert.throws(() => parseArgs(["--logs="]), /--logs requires a value/);
 });
