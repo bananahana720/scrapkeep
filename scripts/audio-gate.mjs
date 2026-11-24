@@ -234,7 +234,7 @@ export function meter(samples, rate) {
 export function seamStep(samples, exit, loopAt) {
   const frames = samples.length / 2;
   const end = Math.min(exit, frames);
-  const count = Math.max(0, Math.ceil(end) - (loopAt + 1)) * 2;
+  const count = Math.max(0, Math.ceil(end - (loopAt + 1))) * 2;
   const steps = new Float64Array(count);
   let k = 0;
   for (let f = loopAt + 1; f < end; f++)

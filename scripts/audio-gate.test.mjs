@@ -524,7 +524,7 @@ test(
       const cli = spawnSync(
         process.execPath,
         [
-          path.resolve("scripts/audio-gate.mjs"),
+          path.join(import.meta.dirname, "audio-gate.mjs"),
           "--project",
           dir,
           "--music",

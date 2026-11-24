@@ -190,6 +190,7 @@ export function measure(project) {
 }
 
 export async function measureAsync(project, { jobs } = {}) {
+  const workers = resolveJobs(jobs);
   const ffmpeg = hasFfmpeg();
   const manifests = readManifests(project);
   const tracks = gameTracks(manifests);
@@ -199,7 +200,7 @@ export async function measureAsync(project, { jobs } = {}) {
   const plant = ffmpeg ? runPlants() : null;
   if (!ffmpeg || present === 0)
     return buildReceipt({ clips: tracks.length, present, plant, ffmpeg });
-  const { rows, found } = await measureGameAsync(manifests, { jobs });
+  const { rows, found } = await measureGameAsync(manifests, { jobs: workers });
   return buildReceipt({
     clips: tracks.length,
     present,
@@ -221,8 +222,10 @@ export function parseArgs(argv) {
           ? arg.slice(flag.length + 1)
           : null;
     let v;
-    if ((v = value("--out")) !== null) args.out = v;
-    else if ((v = value("--jobs")) !== null) args.jobs = resolveJobs(v);
+    if ((v = value("--out")) !== null) {
+      if (!v) throw new Error("--out requires a path");
+      args.out = v;
+    } else if ((v = value("--jobs")) !== null) args.jobs = resolveJobs(v);
     else throw new Error("unknown argument: " + arg);
   }
   return args;
