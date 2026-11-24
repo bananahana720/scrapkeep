@@ -28,17 +28,29 @@ func _initialize() -> void:
 	root.add_child(_game)
 
 
-func _process(_delta: float) -> bool:
-	if _game == null or _game.flow == null:
-		return false
-	var now := Time.get_ticks_msec()
-	# Measure how long the spine really holds the freeze, in real time.
+# Sample the real-time freeze on both physics ticks and render frames: a loaded frame can run
+# several physics ticks before the next _process(), so sampling only in _process() can miss the
+# entire 5-tick dip and read 0 ms (w32 gate).
+func _sample_freeze() -> void:
 	if Engine.time_scale < 1.0:
 		if _stop_started < 0:
 			_stop_started = Time.get_ticks_usec()
 	elif _stop_started >= 0:
 		_stop_seen_ms = maxf(_stop_seen_ms, (Time.get_ticks_usec() - _stop_started) / 1000.0)
 		_stop_started = -1
+
+
+func _physics_process(_delta: float) -> bool:
+	_sample_freeze()
+	return false
+
+
+func _process(_delta: float) -> bool:
+	if _game == null or _game.flow == null:
+		return false
+	var now := Time.get_ticks_msec()
+	# Measure how long the spine really holds the freeze, in real time.
+	_sample_freeze()
 	if now < _wait_until:
 		return false
 	match _step:

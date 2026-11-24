@@ -29,6 +29,8 @@ var _shake_events := 0
 
 
 func _initialize() -> void:
+	# One physics tick a frame so a loaded box does not pack ticks during settle or stress.
+	Engine.max_physics_steps_per_frame = 1
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -46,6 +48,10 @@ func _process(_delta: float) -> bool:
 		_game.ctx.calm = true
 		_game.flow.press_start()
 		_game.flow.choose_class(0)
+		# Place the ball gently on the deck instead of letting Flow.ENTRY_LIFT (14 m) land mid-stress
+		# under load and push chase_camera's landing-impact shake (~0.886) past Juice.SHAKE_CAP.
+		var spawn: Vector3 = _game.ctx.terrain.spawn_point(1)
+		_game.player.reset_to(_game.ctx.terrain.drop_point(spawn.x, spawn.z, 1.05))
 		_enemy = Node3D.new()
 		_game.add_child(_enemy)
 		_enemy.global_position = _game.player.ball_position() + Vector3(0.0, 0.0, -4.0)
@@ -58,6 +64,7 @@ func _process(_delta: float) -> bool:
 		# Let the spawn settle, then start from a still camera.
 		return false
 	if _frame == 30:
+		_game.player.state.impact = 0.0
 		camera._shake = 0.0
 		return false
 	if not _stress_done:

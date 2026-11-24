@@ -1,3 +1,4 @@
+# smoke: solo (verdict reads wall time: hit-stop spacing and per-second budget)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -14,7 +15,7 @@ const Juice := preload("res://src/presentation/juice.gd")
 var _game
 var _juice
 var _failures := 0
-var _t0 := 0
+var _phase_t0 := 0
 var _plan: Array = []
 var _target: Node3D
 var _marks := {}
@@ -28,6 +29,9 @@ var _full := true
 
 
 func _initialize() -> void:
+	# One physics tick a frame so a slow frame cannot run all slowed ticks of the real hit-stop
+	# before _process() sees Engine.time_scale < 1.0.
+	Engine.max_physics_steps_per_frame = 1
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -46,27 +50,31 @@ func _process(_delta: float) -> bool:
 		_game.flow.choose_class(0)
 		_target = Node3D.new()
 		_game.add_child(_target)
-		_t0 = Time.get_ticks_msec()
+		_phase_t0 = Time.get_ticks_msec()
 		_check_bands()
-		_plan.append([100, func():
+		# Step types: "phase" waits ms from _phase_t0 and re-anchors _phase_t0 after running so
+		# stalls in one section cannot collide into the next; "at" waits ms from the current
+		# _phase_t0 without drifting across a timed burst; "clear" also waits until any prior
+		# hit-stop has ended. Only one step runs per _process frame.
+		_plan.append(["phase", 100, func():
 			_juice.reset_stops()
 			_dealt = 10.0
 			events.enemy_struck.emit(_target, "sticky", 1.0)
 			_juice.flush()
 			_marks["low"] = _last_sent()])
-		_plan.append([300, func():
+		_plan.append(["phase", 200, func():
 			_juice.reset_stops()
 			_dealt = 80.0
 			events.enemy_struck.emit(_target, "sticky", 1.0)
 			_juice.flush()
 			_marks["high"] = _last_sent()])
-		_plan.append([500, func():
+		_plan.append(["phase", 200, func():
 			_juice.reset_stops()
 			_dealt = 80.0
 			events.enemy_struck.emit(_target, "ram", 1.0)
 			_juice.flush()
 			_marks["ram"] = _last_sent()])
-		_plan.append([700, func():
+		_plan.append(["phase", 200, func():
 			_juice.reset_stops()
 			_full = false
 			var before: int = _sent().size()
@@ -74,7 +82,7 @@ func _process(_delta: float) -> bool:
 			_juice.flush()
 			_marks["deflect"] = _sent().size() - before
 			_full = true])
-		_plan.append([900, func():
+		_plan.append(["phase", 200, func():
 			_juice.reset_stops()
 			_dealt = 20.0
 			var before: int = _sent().size()
@@ -83,25 +91,25 @@ func _process(_delta: float) -> bool:
 			_juice.flush()
 			_marks["frame"] = [_sent().size() - before, _last_sent()]])
 		# Stacking: a crit ram, a dodge and a multi-kill beat 100 ms apart share one budget.
-		_plan.append([950, func():
+		_plan.append(["phase", 50, func():
 			_juice.reset_stops()
 			_marks["stack_from"] = _juice.hit_stop_log.size()
 			_juice.request_hit_stop(0.06, "enemy_struck")])
-		_plan.append([1000, func(): _juice.request_hit_stop(0.045, "near_miss")])
-		_plan.append([1050, func(): _juice.request_hit_stop(0.03, "multi_kill")])
-		_plan.append([1090, func(): _marks["stack"] = _juice.hit_stop_log.slice(_marks["stack_from"]).filter(func(e: Array): return e[1] > 0.0)])
+		_plan.append(["at", 50, func(): _juice.request_hit_stop(0.045, "near_miss")])
+		_plan.append(["at", 100, func(): _juice.request_hit_stop(0.03, "multi_kill")])
+		_plan.append(["phase", 140, func(): _marks["stack"] = _juice.hit_stop_log.slice(_marks["stack_from"]).filter(func(e: Array): return e[1] > 0.0)])
 		# Rapid fire: a hit every 33 ms for a second.
-		_plan.append([1100, func():
+		_plan.append(["phase", 10, func():
 			_juice.reset_stops()
 			_marks["rapid_from"] = _juice.hit_stop_log.size()])
 		for i in 30:
-			_plan.append([1110 + i * 33, func():
+			_plan.append(["at", 10 + i * 33, func():
 				_dealt = 30.0
 				events.enemy_struck.emit(_target, "sticky", 1.0)
 				_juice.flush()])
-		_plan.append([2150, func(): _marks["rapid"] = _juice.hit_stop_log.slice(_marks["rapid_from"]).filter(func(e: Array): return e[1] > 0.0)])
+		_plan.append(["phase", 1050, func(): _marks["rapid"] = _juice.hit_stop_log.slice(_marks["rapid_from"]).filter(func(e: Array): return e[1] > 0.0)])
 		# Guns never stop time: a burst of gun-kind hits sends nothing.
-		_plan.append([2200, func():
+		_plan.append(["phase", 50, func():
 			_juice.reset_stops()
 			_dealt = 80.0
 			var before: int = _sent().size()
@@ -111,7 +119,7 @@ func _process(_delta: float) -> bool:
 					_juice.flush()
 			_marks["guns"] = _sent().size() - before])
 		# The harpoon's bite to a body is one stop of 40 ms; a world latch sends none.
-		_plan.append([2250, func():
+		_plan.append(["phase", 50, func():
 			_juice.reset_stops()
 			var before: int = _sent().size()
 			events.harpoon_bit.emit(_target, Vector3.ZERO)
@@ -120,10 +128,10 @@ func _process(_delta: float) -> bool:
 			events.grapple_fired.emit(Vector3.ZERO)
 			_marks["world_latch"] = _sent().size() - before])
 		# A real stop on the rolling ball.
-		_plan.append([2400, func():
+		_plan.append(["clear", 150, func():
 			_juice.reset_stops()
-			_game.player._rigid.set_velocity_now(Vector3(0.0, 0.0, -18.0))])
-		_plan.append([2450, func():
+			_game.player.reset_to(_game.ctx.terrain.spawn_point(1) + Vector3.UP * 10.0, Vector3(0.0, 0.0, -18.0))])
+		_plan.append(["clear", 50, func():
 			_velocity_before = _game.player._rigid.linear_velocity
 			_juice.request_hit_stop(0.06, "test")])
 		return false
@@ -133,10 +141,17 @@ func _process(_delta: float) -> bool:
 		elif _stop_seen:
 			_velocity_after = _game.player._rigid.linear_velocity
 			_speed_checked = true
-	var elapsed := Time.get_ticks_msec() - _t0
-	while not _plan.is_empty() and elapsed >= _plan[0][0]:
-		var item: Array = _plan.pop_front()
-		(item[1] as Callable).call()
+	var now := Time.get_ticks_msec()
+	if not _plan.is_empty():
+		var item: Array = _plan[0]
+		var ready: bool = now - _phase_t0 >= int(item[1])
+		if ready and item[0] == "clear":
+			ready = not _game._hit_stopped and Engine.time_scale == 1.0
+		if ready:
+			_plan.pop_front()
+			(item[2] as Callable).call()
+			if item[0] != "at":
+				_phase_t0 = Time.get_ticks_msec()
 	if not _plan.is_empty() or _done or not _speed_checked:
 		return false
 	_done = true
