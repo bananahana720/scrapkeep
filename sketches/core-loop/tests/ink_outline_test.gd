@@ -256,6 +256,15 @@ func _again() -> void:
 		and InkOutline.strip(owned) == stripped and owned.next_pass == InkOutline.ink("enemy"))
 	_t.check("death debris borrowing a baked, inked material draws no line", BakeLook.unbaked(twin).next_pass == null)
 	view.free()
+	# BallLooks.light_pilot lights a duplicate of a material that was inked once already.
+	var lit := paint.duplicate() as StandardMaterial3D
+	lit.backlight_enabled = true
+	var seated := _view(_cube(), lit)
+	InkOutline.apply(seated, "enemy")
+	var lit_twin := seated.material_override as StandardMaterial3D
+	_t.check("a copy of an inked material gets its own twin, not the original's", lit_twin != twin and lit_twin.backlight_enabled
+		and lit_twin.get_meta("ink_source") == lit.get_instance_id() and InkOutline.strip(lit_twin) == lit)
+	seated.free()
 	InkOutline.enabled = false
 	var off := _view(_cube(), _body())
 	var off_mesh := off.mesh

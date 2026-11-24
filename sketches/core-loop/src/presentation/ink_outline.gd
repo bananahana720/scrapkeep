@@ -362,8 +362,10 @@ static func _line(view: MeshInstance3D, surface: int, role: String, owned: Array
 static func _twin(mat: Material, role: String) -> Material:
 	var key := "ink_twin_" + role
 	var twin := mat.get_meta(key) as Material if mat.has_meta(key) else null
-	# One made before reset_for_tests() chains a pass no longer current.
-	if twin == null or not (twin.next_pass == ink(role) or twin.next_pass == _lift(role)):
+	# One made before reset_for_tests() chains a pass no longer current, and a copy of `mat` made
+	# elsewhere (BallLooks.light_pilot's backlit duplicate) carries the original's twin in its metas.
+	if twin == null or twin.get_meta("ink_source", 0) != mat.get_instance_id() \
+			or not (twin.next_pass == ink(role) or twin.next_pass == _lift(role)):
 		twin = mat.duplicate() as Material
 		for meta in twin.get_meta_list():
 			if String(meta).begins_with("ink_twin_"):
