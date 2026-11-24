@@ -31,8 +31,10 @@ extends SceneTree
 # same frame with every other 3D node hidden (a prop with no collider can cut it), and stands TOUCH_PX clear of every
 # other machine's black pixels; otherwise the next line node near that point of the ride is tried. Calm is on, so no
 # director pack joins; any other enemy is hidden, and so is every drawing the flat-sky fog cannot swallow, each
-# counted in frames.json for the pose that hid it. Beam poses read the stage graph's LINE nodes with SIGHT_OK, none
-# roofed; a NEAR_M pose no line reaches stands on open sighted ground instead and records on_line false.
+# counted in frames.json for the pose that hid it. The saved frame keeps ink only where a shown machine draws ink in a
+# machines-only frame; every other pixel is SKY, and the dark pixels that cleared are counted as strays. Beam poses
+# read the stage graph's LINE nodes with SIGHT_OK, none roofed; a NEAR_M pose no line reaches stands on open sighted
+# ground instead and records on_line false.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -81,6 +83,8 @@ const SIGHT_SPAN := 0.7
 const MIN_COVER := 0.92
 # Two machines whose black pixels come this close on screen read as one shape.
 const TOUCH_PX := 3
+# More dark pixels than this outside the machines means the flat sky failed, not a speck; the pose fails.
+const MAX_STRAYS := 4000
 const SKY := Color(0.78, 0.86, 0.93)
 const INK := Color(0.0, 0.0, 0.0)
 
@@ -425,6 +429,7 @@ func _beam_mode(park: Dictionary, axis: Vector2) -> void:
 		rec["beam_core_alpha"] = LandmarkBeam.near_alpha(LandmarkBeam.CORE_ALPHA, flat_distance(cam.global_position, axis))
 		rec["beam_on_screen"] = not cam.is_position_behind(mid) and Rect2(Vector2.ZERO, Vector2(SIZE)).has_point(cam.unproject_position(mid))
 		rec["beam_screen"] = _screen(cam, mid)
+		rec["beam_foot_screen"] = _screen(cam, Vector3(axis.x, beam.bottom.y, axis.y))
 		rec["label"] = "%d  %s  %d m" % [records.size() + 1, String(pose["kind"]).replace("_", " "), roundi(float(pose["distance_m"]))]
 		rec["sha256"] = FileAccess.get_sha256(path)
 		records.append(rec)
@@ -477,7 +482,12 @@ func _silhouette_mode(axis: Vector2) -> void:
 		var hidden := hidden_slot(i, full) if opts["control"] else -1
 		for s in staged.size():
 			staged[s].visible = s != hidden
-		var path := await _shot(kept["id"])
+		var shown: Array = staged.filter(func(m): return m.visible)
+		var drawn := await _grab()
+		var made := silhouette(drawn, await _bare(cam, shown))
+		if made["strays"] > MAX_STRAYS:
+			return _fail("%s: %d dark pixels outside the machines" % [kept["id"], made["strays"]])
+		var path := _save(kept["id"], made["image"])
 		if path == "":
 			return
 		var rec := _pose_record(kept, cam)
@@ -486,6 +496,7 @@ func _silhouette_mode(axis: Vector2) -> void:
 		rec["hidden_slot"] = hidden
 		rec["foreign_enemies_hidden"] = _foreign
 		rec["fog_immune_hidden"] = _immune
+		rec["stray_pixels_cleared"] = made["strays"]
 		rec["machines"] = []
 		for s in staged.size():
 			var m: Node3D = staged[s]
@@ -583,6 +594,16 @@ func _hide_foreign(staged: Array) -> void:
 func _cover(cam: Camera3D, staged: Array) -> Array:
 	var rects: Array = staged.map(func(m): return _screen_rect(cam, m))
 	var drawn := await _grab()
+	var bare := await _bare(cam, staged)
+	var out: Array = []
+	for r: Rect2 in rects:
+		var whole := _ink_count(bare, r)
+		out.append(float(_ink_count(drawn, r)) / float(whole) if whole > 0 else 0.0)
+	return out
+
+
+# The frame with every 3D node hidden but the staged machines (and the camera): terrain, rows, scatter, props.
+func _bare(cam: Camera3D, staged: Array) -> Image:
 	var off: Array = []
 	for node in game.get_children():
 		if node is Node3D and node.visible and not staged.has(node) and not node.is_ancestor_of(cam) and node != cam:
@@ -595,11 +616,25 @@ func _cover(cam: Camera3D, staged: Array) -> Array:
 	var bare := await _grab()
 	for node in off:
 		node.visible = true
-	var out: Array = []
-	for r: Rect2 in rects:
-		var whole := _ink_count(bare, r)
-		out.append(float(_ink_count(drawn, r)) / float(whole) if whole > 0 else 0.0)
-	return out
+	return bare
+
+
+# The saved silhouette: INK where the drawn frame and the machines-only frame are both ink, SKY everywhere else. Ground
+# that hides part of a machine stays sky, and anything else the drawn frame left dark (a machine's companion drawing
+# where a control machine was hidden, a fog-proof speck) is cleared and counted as strays.
+static func silhouette(drawn: Image, machines: Image) -> Dictionary:
+	var out := Image.create(drawn.get_width(), drawn.get_height(), false, Image.FORMAT_RGB8)
+	out.fill(SKY)
+	var strays := 0
+	for y in drawn.get_height():
+		for x in drawn.get_width():
+			if not _inked(drawn.get_pixel(x, y)):
+				continue
+			if _inked(machines.get_pixel(x, y)):
+				out.set_pixel(x, y, INK)
+			else:
+				strays += 1
+	return {"image": out, "strays": strays}
 
 
 # "" when no two machines' black pixels come within TOUCH_PX of each other on screen; else which two do. Only pairs whose
@@ -764,10 +799,11 @@ func _place(point: Vector3, heading: Vector3, pitch := REST_PITCH) -> void:
 
 
 func _shot(id: String) -> String:
-	await _frames(3)
-	await RenderingServer.frame_post_draw
+	return _save(id, await _grab())
+
+
+func _save(id: String, img: Image) -> String:
 	var path := String(opts["out"]).path_join("%s.png" % id)
-	var img := root.get_texture().get_image()
 	if _blank(img):
 		_fail("%s rendered blank" % id)
 		return ""
@@ -841,7 +877,7 @@ func _sheets() -> void:
 func _limits() -> String:
 	if opts["mode"] == "beam":
 		return "The real game and its chase camera, HUD hidden, ball frozen at each pose and the camera snapped to it. Poses are riding-line graph nodes; the camera faces the ride turned in to %d degrees of the beam at most. The control hides the beam node alone." % int(MAX_BEARING_DEG)
-	return "Machines are staged through the game's spawner, settled %d ticks and stilled, not fighting. Ground and scenery draw flat sky through a dense fog; machines draw unshaded black. The control hides one machine a pose." % STAGE_TICKS
+	return "Machines are staged through the game's spawner, settled %d ticks and stilled, not fighting. Ground and scenery draw flat sky through a dense fog; machines draw unshaded black. The saved frame keeps ink only where a shown machine draws ink with every other 3D node hidden, so ground still hides what it hides and strays clear. The control hides one machine a pose." % STAGE_TICKS
 
 
 func _fail(why: String) -> void:

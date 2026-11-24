@@ -6,7 +6,8 @@ extends SceneTree
 # and 50 m from the real beam's foot (the landmark placed through park_recipes), every one apart and with the beam
 # inside MAX_BEARING_DEG of the camera. The dam's lines reach both near reads; the flume's end at its beacon 99 m out,
 # so its 50 m read stands on open sighted ground off the lines and says so (on_line false). The silhouette mode gives
-# one pose a COUNTS row with 2 to 5 machines on ground line nodes, and a control run shows exactly one fewer. Argument parsing, the sheet grid and the bearing helpers are pure.
+# one pose a COUNTS row with 2 to 5 machines on ground line nodes, and a control run shows exactly one fewer. Argument
+# parsing, the sheet grid, the bearing helpers and the silhouette compositing are pure.
 # A headless child run of the tool exits 2 before it builds a game.
 
 const T := preload("res://tests/support/t.gd")
@@ -90,11 +91,29 @@ func _helpers() -> void:
 		t.check("pose %d hides a slot it stages" % (i + 1), hidden >= 0 and hidden < full)
 		t.eq("pose %d control shows one fewer" % (i + 1), Tool.shown_count(full, true), full - 1)
 		t.eq("pose %d full run shows all" % (i + 1), Tool.shown_count(full, false), full)
+	var drawn := Image.create(8, 4, false, Image.FORMAT_RGB8)
+	drawn.fill(Tool.SKY)
+	var machines := drawn.duplicate()
+	for x in 3:
+		drawn.set_pixel(x, 1, Color.BLACK)
+		machines.set_pixel(x, 1, Color.BLACK)
+	machines.set_pixel(3, 1, Color.BLACK)
+	drawn.set_pixel(6, 2, Color(0.05, 0.05, 0.05))
+	var made: Dictionary = Tool.silhouette(drawn, machines)
+	var img: Image = made["image"]
+	t.check("silhouette keeps ink where the machine is drawn", _same(img.get_pixel(0, 1), Tool.INK) and _same(img.get_pixel(2, 1), Tool.INK))
+	t.check("ground that hides a machine stays sky", _same(img.get_pixel(3, 1), Tool.SKY))
+	t.eq("a dark speck off the machines is cleared and counted", [_same(img.get_pixel(6, 2), Tool.SKY), made["strays"]], [true, 1])
 	var kinds := {}
 	for i in Tool.COUNTS.size():
 		for s in Tool.COUNTS[i]:
 			kinds[Tool.kind_for(i, s)] = true
 	t.eq("every world 1 kind is staged", kinds.size(), Tool.KINDS.size())
+
+
+# Two colours within one 8-bit step a channel.
+static func _same(a: Color, b: Color) -> bool:
+	return absf(a.r - b.r) <= 1.5 / 255.0 and absf(a.g - b.g) <= 1.5 / 255.0 and absf(a.b - b.b) <= 1.5 / 255.0
 
 
 func _beam_poses(map_id: String, graph, park: Dictionary, axis: Vector2, foot_y: float) -> void:
