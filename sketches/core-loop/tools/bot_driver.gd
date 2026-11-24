@@ -451,8 +451,10 @@ var rng := RandomNumberGenerator.new()
 var source := Intent.Scripted.new()
 # Set by the runner's --trace: prints the bot's goal and the ball every two seconds.
 var trace := false
-# "" or "random"; set before start(). tree_picks lists the node ids taken, in order.
-var tree_policy := ""
+# "", "world_one" (default: picks World 1 Depth-1 opposite-feel keystones and Depth-2 perks
+# when world_one_builds is on, skipped for traversal), or "random" (every offer); set before start().
+# tree_picks lists the node ids taken, in order.
+var tree_policy := "world_one"
 var tree_picks: Array[String] = []
 # SG8's lab switch (bot_run --late-offer): "" leaves the tree's late_offer off and the bot as it
 # was; "take" or "skip" turns late_offer on and answers only the take_or_skip offer that way.
@@ -841,6 +843,15 @@ func wire() -> void:
 		game.player.tree.late_offer = true
 	if tree_policy == "random":
 		_connect_optional("tree_offered", _on_tree_offered)
+		_answer_pending_tree()
+	elif tree_policy == "world_one" and policy != "traversal":
+		_connect_optional("tree_offered", _on_world_one_tree_offered)
+		_answer_pending_tree()
+
+
+func _on_world_one_tree_offered(for_class: String, depth: int, choices: Array) -> void:
+	if game.player != null and game.player.tree != null and game.player.tree.world_one:
+		_on_tree_offered(for_class, depth, choices)
 
 
 func _on_tree_offered(_class_id: String, depth: int, choices: Array) -> void:
@@ -858,9 +869,38 @@ func _on_tree_offered(_class_id: String, depth: int, choices: Array) -> void:
 			tree_picks.append(String(choices[0]))
 			late_offer_counts["taken"] += 1
 		return
-	var choice: String = choices[_tree_rng.randi() % choices.size()]
-	if game.player.tree.pick(choice):
+	var choice := ""
+	if tree.world_one and depth == 1 and choices.size() == 2:
+		# Deterministic balanced split across seeds so every pilot exercises both opposite-feel
+		# Depth-1 keystones (PILOT-CADENCE.md §6.1).
+		choice = String(choices[posmod(seed_value, 2)])
+	else:
+		choice = String(choices[_tree_rng.randi() % choices.size()])
+	if tree.pick(choice):
 		tree_picks.append(choice)
+
+
+func _answer_pending_tree() -> void:
+	if tree_policy == "" or (tree_policy == "world_one" and policy == "traversal"):
+		return
+	var player = game.get("player") if game != null else null
+	var tree = player.get("tree") if player != null else null
+	if tree == null or not tree.pending():
+		return
+	if tree_policy == "world_one" and not tree.world_one:
+		return
+	var guard := 0
+	while tree.pending() and guard < 8:
+		guard += 1
+		var depth: int = tree.picks.size() + 1
+		var offered: Array = tree.offered(tree.class_id, depth)
+		if offered.is_empty():
+			break
+		var ids: Array = offered.map(func(n): return String(n["id"]))
+		var before: int = tree.picks.size()
+		_on_tree_offered(tree.class_id, depth, ids)
+		if tree.picks.size() == before:
+			break
 
 
 func _connect_optional(signal_name: String, handler: Callable) -> void:
@@ -892,11 +932,9 @@ func _throw_hold(aim) -> bool:
 			return false
 		var tail_frac := Weapons.STICKY_TAIL_HOLD_S / Weapons.STICKY_CHARGE_MAX
 		var want_lob := clampf(reach / float(Weapons.BASE[Weapons.STICKY_CHARGE]["range_m"]), tail_frac + 0.02, 1.0)
-		var keep_holding: bool = gauge.fraction() < want_lob
-		if not keep_holding:
-			_cadence_lob_reach_m = reach
-			_cadence_lob_flight_s = clampf(reach / 22.0, 0.35, 1.1)
-		return keep_holding
+		_cadence_lob_reach_m = reach
+		_cadence_lob_flight_s = clampf(reach / 22.0, 0.35, 1.1)
+		return gauge.fraction() < want_lob
 	var want := clampf((reach - Weapons.STICKY_THROW_MIN) / (Weapons.BASE[Weapons.STICKY_CHARGE]["range_m"] - Weapons.STICKY_THROW_MIN), 0.0, 1.0)
 	return gauge.fraction() < want
 
@@ -926,6 +964,8 @@ func tick(delta: float) -> bool:
 	if not flow.in_play():
 		source.hold = {}
 		return false
+	if tree_policy != "" and game.player != null and game.player.tree != null and game.player.tree.pending():
+		_answer_pending_tree()
 	if policy == "completionist" and state not in ["stage", "beacon"]:
 		_clear_chain_hand()
 	# Every stage state, the gates included: a gate the bot cannot reach (seed 5 random put
@@ -1105,6 +1145,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_cadence_window_rolled = false
 	_cadence_window_hit = false
 	_cadence_window_pressed = false
+	_cadence_lock_late = false
 	_cadence_lob_reach_m = 0.0
 	_cadence_lob_flight_s = 0.0
 	_close_note()
@@ -5043,24 +5084,27 @@ func _cadence_fire_hand() -> void:
 	if combat == null or combat.get("weapon_driver") == null:
 		return
 	var snap: Dictionary = combat.weapon_driver.state_snapshot()
+	var wid: String = String(snap.get("weapon", ""))
+	if wid == "" and combat.has_method("active_weapon"):
+		wid = combat.active_weapon()
+	var pat: Resource = combat.pattern(wid) if wid != "" and combat.has_method("pattern") else null
 	var trig: String = String(snap.get("trigger", ""))
 	if trig != Pattern.TRIGGER_PRESS and trig != Pattern.TRIGGER_TAP_CHARGE \
 			and trig != Pattern.TRIGGER_LOB_SNAP and trig != Pattern.TRIGGER_BEATS \
 			and trig != Pattern.TRIGGER_STAMP and trig != Pattern.TRIGGER_LOCK:
-		var wid: String = combat.active_weapon() if combat.has_method("active_weapon") else ""
-		if wid != "":
-			var pat: Resource = combat.pattern(wid)
-			if pat != null:
-				trig = String(pat.trigger)
+		if pat != null:
+			trig = String(pat.trigger)
 	var want_fire: bool = bool(source.hold.get("fire_held", false))
 	if trig == Pattern.TRIGGER_PRESS:
-		# The held button stays (a held press gun fires nothing alone; sprinting it fans, and
-		# Run and Gun's drain reads it); the presses are the shots.
+		# The held button stays (a held press gun fires nothing alone; Fan the Hammer and
+		# sprinting fan while held, and Run and Gun's drain reads it); presses fire plain rounds
+		# and hit the active-reload notch.
+		var fan_hold: bool = pat != null and bool(pat.fan)
 		if not bool(snap.get("reloading", false)):
 			_cadence_reload_rolled = false
 			_cadence_reload_hit = false
 			_cadence_reload_pressed = false
-			if want_fire and bool(snap.get("ready", false)):
+			if want_fire and not fan_hold and bool(snap.get("ready", false)):
 				source.press["fire_pressed"] = true
 			return
 		if not want_fire:
@@ -5107,18 +5151,17 @@ func _cadence_fire_hand() -> void:
 			_cadence_window_hit = false
 			_cadence_window_pressed = false
 			return
-		var win: String = String(snap.get("window", "idle"))
-		if win == "waiting" or win == "open":
+		var win: String = String(snap.get("window", WeaponDriver.WINDOW_IDLE))
+		if win == WeaponDriver.WINDOW_WAITING or win == WeaponDriver.WINDOW_OPEN:
 			source.hold.erase("fire_held")
-			if not want_fire:
+			if not want_fire or _cadence_lob_reach_m > 14.5:
 				return
 			if not _cadence_window_rolled:
 				_cadence_window_rolled = true
 				_cadence_window_pressed = false
 				_cadence_window_hit = _roll_cadence_window()
 				_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
-			if _cadence_window_hit and not _cadence_window_pressed and bool(snap.get("window_open", false)) \
-					and _cadence_lob_reach_m <= 14.5:
+			if _cadence_window_hit and not _cadence_window_pressed and win == WeaponDriver.WINDOW_OPEN:
 				var win_range: Vector2 = snap.get("window_range", Vector2.ZERO)
 				var snap_at: float = clampf(_cadence_lob_flight_s - 0.02, win_range.x, maxf(win_range.x, win_range.y - 0.03))
 				if float(snap.get("window_t", 0.0)) >= snap_at - 0.001:
@@ -5138,26 +5181,32 @@ func _cadence_fire_hand() -> void:
 			source.hold.erase("fire_held")
 		return
 	if trig == Pattern.TRIGGER_BEATS:
-		if int(snap.get("beat", 0)) != 2:
-			_cadence_window_rolled = false
-			_cadence_window_hit = false
-			_cadence_window_pressed = false
-			if want_fire and bool(snap.get("ready", false)):
-				source.press["fire_pressed"] = true
-			return
-		if not want_fire:
-			return
-		if not _cadence_window_rolled:
-			if bool(snap.get("window_spent", false)):
+		# WeaponDriver enters waiting/open only for the third strike, so reading public
+		# "window" tracks the combo window without touching any audio or beat symbol.
+		var win: String = String(snap.get("window", WeaponDriver.WINDOW_IDLE))
+		if win == WeaponDriver.WINDOW_WAITING or win == WeaponDriver.WINDOW_OPEN:
+			if not want_fire:
 				return
-			_cadence_window_rolled = true
-			_cadence_window_pressed = false
-			_cadence_window_hit = _roll_cadence_window()
-			_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
-		if _cadence_window_hit and not _cadence_window_pressed and bool(snap.get("window_open", false)):
+			if not _cadence_window_rolled:
+				_cadence_window_rolled = true
+				_cadence_window_pressed = false
+				_cadence_window_hit = _roll_cadence_window()
+				_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
+			if _cadence_window_hit:
+				if not _cadence_window_pressed and win == WeaponDriver.WINDOW_OPEN:
+					source.press["fire_pressed"] = true
+					_cadence_window_pressed = true
+					_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
+			elif not _cadence_window_pressed and win == WeaponDriver.WINDOW_WAITING:
+				# Missed roll: early press spends the window so the next plain cycle starts on the floor.
+				source.press["fire_pressed"] = true
+				_cadence_window_pressed = true
+			return
+		_cadence_window_rolled = false
+		_cadence_window_hit = false
+		_cadence_window_pressed = false
+		if want_fire and bool(snap.get("ready", false)):
 			source.press["fire_pressed"] = true
-			_cadence_window_pressed = true
-			_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
 		return
 	if trig == Pattern.TRIGGER_STAMP:
 		source.hold.erase("fire_held")
@@ -5219,7 +5268,7 @@ func _cadence_fire_hand() -> void:
 				_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
 			return
 		if _cadence_window_hit:
-			if win_open or (win_range.y <= win_range.x and float(snap.get("hold", 0.0)) >= 0.30):
+			if win_open or win_spent or (win_range.y <= win_range.x and float(snap.get("hold", 0.0)) >= 0.30):
 				source.hold.erase("fire_held")
 				source.press["fire_released"] = true
 				if win_open:
@@ -5497,6 +5546,7 @@ func record(wall_seconds: float) -> Dictionary:
 		"shots": _totals["shots"], "kills": game.run.kills, "ultimates": _totals["ultimates"], "ult_presses": _totals["ult_presses"],
 		"cadence_windows": _totals["cadence_windows"], "cadence_hits": _totals["cadence_hits"],
 		"active_presses": _totals["active_presses"],
+		"tree_picks": tree_picks.duplicate(),
 		"ult_fill_s": _fills, "play_s": snappedf(_play_clock, 0.01),
 		# The meter's points by source: over the run, and at the first full meter. A record for
 		# reading why a fill band is red; no hand reads either.

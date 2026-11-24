@@ -2,15 +2,19 @@ extends SceneTree
 
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const T := preload("res://tests/support/t.gd")
 
-# E1-08: SkillBand.window_share dial, band-driven Rivet/Sable cadence hands, and
-# Expert-only F active hand (PILOT-CADENCE.md §§2, 3.1, 3.2, 8).
+# E1-08 / E3-05: SkillBand.window_share dial, band-driven six-pilot cadence hands across
+# baselines and all 12 Depth-1 opposite-feel keystones, Tarn deaf-bot Beat-3 window without
+# audio/beat reads, Expert-only F active hand across all 6 pilots, and World-1 Depth-1/Depth-2
+# tree pair selection (PILOT-CADENCE.md §§2, 3.1-3.6, 6.1-6.2, 8).
 
 const DT := 1.0 / 90.0
 const TRIALS := 2000
@@ -95,6 +99,7 @@ func _run_live() -> void:
 	_game.combat.ultimate.set_physics_process(false)
 
 	_check_unbanded_equals_expert_rolls()
+	_check_tarn_deaf_bot_source()
 	_check_rivet_cadence_hand()
 	_check_sable_cadence_hand(Weapons.ARC_CASTER)
 	_check_sable_cadence_hand(Weapons.PYLON_TURRET)
@@ -102,8 +107,11 @@ func _run_live() -> void:
 	_check_tarn_cadence_hand()
 	_check_tally_cadence_hand()
 	_check_cannon_cadence_hand()
+	_check_depth1_keystones_cadence()
+	_check_world_one_tree_pair_picks()
 	_check_no_phantom_windows()
 	_check_active_hand()
+	_check_active_hand_all_six_pilots()
 
 	_game.free()
 	_game = null
@@ -552,5 +560,213 @@ func _check_active_hand() -> void:
 	guarded._active_hands(foe)
 	_t.check("active hand skips during chain_driving", not guarded.source.press.has("active_pressed"))
 
+	foe.free()
+	rack.reset()
+
+
+func _check_tarn_deaf_bot_source() -> void:
+	# Mirrors scripts/challenge/gates-lib.mjs AUDIO_READS \bbeat\b rule over non-comment code.
+	var src: String = FileAccess.get_file_as_string("res://tools/bot_driver.gd")
+	var re := RegEx.new()
+	re.compile("(?i)\\bbeat\\b")
+	var hits: Array[String] = []
+	var lines := src.split("\n")
+	for idx in lines.size():
+		var code := _strip_gd_comment(lines[idx])
+		if re.search(code) != null:
+			hits.append("L%d: %s" % [idx + 1, code.strip_edges()])
+	_t.check("tools/bot_driver.gd has zero non-comment beat reads (deaf-bot instrument)",
+		hits.is_empty(), "found %s" % [hits])
+
+
+static func _strip_gd_comment(line: String) -> String:
+	var quote := ""
+	var i := 0
+	while i < line.length():
+		var ch := line[i]
+		if quote != "":
+			if ch == "\\":
+				i += 1
+			elif ch == quote:
+				quote = ""
+		elif ch == "\"" or ch == "'":
+			quote = ch
+		elif ch == "#":
+			return line.substr(0, i)
+		i += 1
+	return line
+
+
+func _apply_keystone_pattern(pilot: String, keystone_id: String, wid: String) -> Resource:
+	var tree = _game.player.tree
+	tree.world_one = true
+	tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS
+	tree.reset(pilot)
+	tree.open_checkpoint()
+	var ok: bool = tree.pick(keystone_id)
+	_t.check("keystone %s applies cleanly for %s" % [keystone_id, pilot], ok)
+	_game.combat._rebuild_patterns()
+	return _game.combat.pattern(wid)
+
+
+func _run_keystone_cycles(pilot: String, wid: String, keystone_id: String, band_name: String, attempt: int, seed_val: int, ticks_to_run: int) -> Dictionary:
+	var pat: Resource = _apply_keystone_pattern(pilot, keystone_id, wid)
+	var wdrv = _game.combat.weapon_driver
+	wdrv.reset(pat)
+	var drv = _make_driver(band_name, attempt, seed_val)
+	var intent := Intent.new()
+	var kinds := {}
+	var paid := 0
+	var hot := 0
+	var beat3 := 0
+	for _tick in ticks_to_run:
+		var pre: Dictionary = wdrv.state_snapshot()
+		if wid == Weapons.STICKY_CHARGE:
+			drv.source.hold = {} if bool(pre.get("lob_charging", false)) else {"fire_held": true}
+		else:
+			drv.source.hold = {"fire_held": true}
+		drv.source.press = {}
+		drv._cadence_fire_hand()
+		drv.source.poll(intent)
+		var ctx := {"planar_speed": 14.0} if wid == Weapons.CLAW_SWEEP else {}
+		var rate: float = 0.0 if wid == Weapons.LEDGER_READER else pat.rate
+		var shots: Array = wdrv.step(DT, intent, wid, pat, rate, ctx)
+		for s in shots:
+			var k := String(s.get("kind", ""))
+			kinds[k] = int(kinds.get(k, 0)) + 1
+			if bool(s.get("paid", false)):
+				paid += 1
+			if bool(s.get("hot", false)):
+				hot += 1
+			if int(s.get("beat", 0)) == 3:
+				beat3 += 1
+	return {
+		"windows": int(drv._totals["cadence_windows"]),
+		"hits": int(drv._totals["cadence_hits"]),
+		"kinds": kinds,
+		"paid": paid,
+		"hot": hot,
+		"beat3": beat3,
+	}
+
+
+func _check_depth1_keystones_cadence() -> void:
+	var specs := [
+		["runner_gunner", Weapons.RAPID_LASER, "r_fan_hammer", 51, WeaponDriver.SHOT_FAN],
+		["runner_gunner", Weapons.RAPID_LASER, "r_big_iron", 53, WeaponDriver.SHOT_HOT],
+		["pylon_engineer", Weapons.ARC_CASTER, "s_static_flutter", 59, WeaponDriver.SHOT_CHARGED],
+		["pylon_engineer", Weapons.ARC_CASTER, "s_rail_lance", 61, WeaponDriver.SHOT_CHARGED],
+		["demolitions_caster", Weapons.STICKY_CHARGE, "k_cluster", 67, WeaponDriver.SHOT_SNAP],
+		["demolitions_caster", Weapons.STICKY_CHARGE, "k_keg", 71, WeaponDriver.SHOT_SNAP],
+		["tarn", Weapons.CLAW_SWEEP, "t_saw_flurry", 73, WeaponDriver.SHOT_BEAT_3],
+		["tarn", Weapons.CLAW_SWEEP, "t_guillotine", 79, WeaponDriver.SHOT_BEAT_3],
+		["tally", Weapons.LEDGER_READER, "tl_petty_cash", 83, WeaponDriver.SHOT_STAMP],
+		["tally", Weapons.LEDGER_READER, "tl_compound_interest", 89, WeaponDriver.SHOT_STAMP],
+		["remembered_cannon", Weapons.CANNON_LANE, "c_snap_battery", 97, WeaponDriver.SHOT_RAIL],
+		["remembered_cannon", Weapons.CANNON_LANE, "c_siege_rail", 101, WeaponDriver.SHOT_RAIL],
+	]
+	for spec in specs:
+		var pilot := String(spec[0])
+		var wid := String(spec[1])
+		var kid := String(spec[2])
+		var sd := int(spec[3])
+		var want_kind := String(spec[4])
+		var nov := _run_keystone_cycles(pilot, wid, kid, "novice", 1, sd, 9000)
+		var lrn := _run_keystone_cycles(pilot, wid, kid, "learner", 5, sd, 9000)
+		var exp := _run_keystone_cycles(pilot, wid, kid, "expert", 1, sd, 9000)
+		var r_nov := float(nov["hits"]) / maxf(float(nov["windows"]), 1.0)
+		var r_lrn := float(lrn["hits"]) / maxf(float(lrn["windows"]), 1.0)
+		var r_exp := float(exp["hits"]) / maxf(float(exp["windows"]), 1.0)
+		_t.check("keystone %s window share orders Novice < Learner a5 < Expert" % kid,
+			nov["windows"] >= 15 and lrn["windows"] >= 15 and exp["windows"] >= 15
+			and nov["hits"] < lrn["hits"] and lrn["hits"] < exp["hits"]
+			and r_nov < r_lrn and r_lrn < r_exp,
+			"nov %d/%d (%.2f) lrn %d/%d (%.2f) exp %d/%d (%.2f)" % [
+				nov["hits"], nov["windows"], r_nov,
+				lrn["hits"], lrn["windows"], r_lrn,
+				exp["hits"], exp["windows"], r_exp])
+		_t.check("keystone %s expert fires %s shots" % [kid, want_kind],
+			int((exp["kinds"] as Dictionary).get(want_kind, 0)) > 0, "kinds %s" % [exp["kinds"]])
+		if kid == "r_fan_hammer":
+			_t.check("r_fan_hammer expert fires both hot rounds and hold-fanned SHOT_FAN",
+				int(exp["hot"]) > int(nov["hot"]) and int((exp["kinds"] as Dictionary).get(WeaponDriver.SHOT_FAN, 0)) > 100,
+				"exp %s nov %s" % [exp, nov])
+		if kid == "c_snap_battery" or kid == "c_siege_rail":
+			var nov_k: Dictionary = nov["kinds"]
+			_t.check("keystone %s novice misses produce both Pulse and Barrage" % kid,
+				int(nov_k.get(WeaponDriver.SHOT_PULSE, 0)) > 5 and int(nov_k.get(WeaponDriver.SHOT_BARRAGE, 0)) > 5,
+				"nov kinds %s" % [nov_k])
+	# Restore clean tree & patterns.
+	_game.player.tree.reset("pylon_engineer")
+	_game.combat._rebuild_patterns()
+
+
+func _check_world_one_tree_pair_picks() -> void:
+	var expected_pairs := {
+		"runner_gunner": ["r_fan_hammer", "r_big_iron"],
+		"pylon_engineer": ["s_static_flutter", "s_rail_lance"],
+		"demolitions_caster": ["k_cluster", "k_keg"],
+		"tarn": ["t_saw_flurry", "t_guillotine"],
+		"tally": ["tl_petty_cash", "tl_compound_interest"],
+		"remembered_cannon": ["c_snap_battery", "c_siege_rail"],
+	}
+	var tree = _game.player.tree
+	for pilot in expected_pairs:
+		var seen_d1 := {}
+		var seen_d2 := {}
+		for sd in [1, 2, 3, 4]:
+			tree.world_one = true
+			tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS
+			tree.reset(pilot)
+			var drv = _make_driver("expert", 1, sd)
+			drv.tree_policy = "world_one"
+			tree.open_checkpoint()
+			drv._answer_pending_tree()
+			_t.check("%s seed %d Depth-1 pick clears pending" % [pilot, sd],
+				not tree.pending() and drv.tree_picks.size() == 1 and tree.picks.size() == 1,
+				"pending=%s picks=%s" % [tree.pending(), drv.tree_picks])
+			var d1: String = drv.tree_picks[0]
+			seen_d1[d1] = true
+			tree.open_checkpoint()
+			drv._answer_pending_tree()
+			_t.check("%s seed %d Depth-2 moved perk clears pending and follows valid World-1 path" % [pilot, sd],
+				not tree.pending() and drv.tree_picks.size() == 2
+				and UpgradeTree.path_to(pilot, drv.tree_picks[1], true) == drv.tree_picks,
+				"picks=%s path=%s" % [drv.tree_picks, UpgradeTree.path_to(pilot, drv.tree_picks[1], true) if drv.tree_picks.size() >= 2 else []])
+			if drv.tree_picks.size() >= 2:
+				seen_d2[drv.tree_picks[1]] = true
+		var want: Array = expected_pairs[pilot]
+		_t.check("%s exercises both opposite-feel Depth-1 keystones %s" % [pilot, want],
+			seen_d1.has(want[0]) and seen_d1.has(want[1]), "seen %s" % [seen_d1.keys()])
+		_t.check("%s navigates Depth-2 moved perks cleanly" % pilot,
+			seen_d2.size() >= 2, "seen depth-2 %s" % [seen_d2.keys()])
+	tree.reset("pylon_engineer")
+	_game.combat._rebuild_patterns()
+
+
+func _check_active_hand_all_six_pilots() -> void:
+	var rack = _game.combat.actives
+	rack.reset()
+	_game.ctx.tuning.set_option("actives", "on")
+	for node in get_nodes_in_group("enemy"):
+		node.remove_from_group("enemy")
+	var ball: Vector3 = _game.player.ball_position()
+	var foe: Node3D = _game.combat.spawn_enemy("chaser", ball + Vector3(12.0, 0.0, 0.0))
+	foe.live = func() -> bool: return false
+	foe.hp = 5000.0
+	foe.max_hp = 5000.0
+	for def in ClassDef.all():
+		var pid: String = String(def.id)
+		var cidx: int = BotDriver.class_index_for(0, pid)
+		for entry in [["novice", 1, 0], ["learner", 5, 0], ["expert", 1, 1], ["", 1, 1]]:
+			rack.reset()
+			rack.rack(ActiveDefs.SCRAP_ROCKET, true)
+			var drv = _make_driver(String(entry[0]), int(entry[1]), 11)
+			drv.class_index = cidx
+			drv.source.press = {}
+			drv._active_hands(foe)
+			var want: int = int(entry[2])
+			var label: String = String(entry[0]) if String(entry[0]) != "" else "unbanded"
+			_t.eq("%s %s F active press count" % [pid, label], int(drv._totals["active_presses"]), want)
 	foe.free()
 	rack.reset()
