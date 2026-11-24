@@ -48,7 +48,11 @@ shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
 void vertex() {
 	POSITION = PROJECTION_MATRIX * MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
+#if CURRENT_RENDERER == RENDERER_COMPATIBILITY
+	POSITION.z = POSITION.w * 0.999999;
+#else
 	POSITION.z = 0.0;
+#endif
 }
 void fragment() {
 	ALBEDO = COLOR.rgb;
@@ -67,7 +71,11 @@ render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabl
 uniform float drift_s = 30.0;
 void vertex() {
 	POSITION = PROJECTION_MATRIX * MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
+#if CURRENT_RENDERER == RENDERER_COMPATIBILITY
+	POSITION.z = POSITION.w * 0.999999;
+#else
 	POSITION.z = 0.0;
+#endif
 }
 void fragment() {
 	float edge = 1.0 - abs(UV.x * 2.0 - 1.0);

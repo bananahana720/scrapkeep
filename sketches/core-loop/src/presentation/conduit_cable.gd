@@ -100,9 +100,12 @@ func cables() -> Array:
 	return out
 
 
+var _gen := 0
+
+
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	_drop()
-	_build.call_deferred()
+	_build.call_deferred(_gen)
 
 
 func _on_cleared(_reason: String) -> void:
@@ -110,6 +113,7 @@ func _on_cleared(_reason: String) -> void:
 
 
 func _drop() -> void:
+	_gen += 1
 	for c: Dictionary in _cables:
 		var view: MeshInstance3D = c["view"]
 		if is_instance_valid(view):
@@ -118,7 +122,9 @@ func _drop() -> void:
 
 
 # Builds the stage's cables from its park file (its cable_rows, the landmark's beacon and the ground), all alive.
-func _build() -> void:
+func _build(gen: int = -1) -> void:
+	if gen >= 0 and gen != _gen:
+		return
 	_drop()
 	var terrain = ctx.get("terrain") if ctx != null else null
 	var map = terrain.map() if terrain != null and terrain.has_method("map") else null
