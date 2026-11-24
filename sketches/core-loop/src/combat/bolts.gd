@@ -28,11 +28,11 @@ const ALPHA_CROWDED := 0.4
 const CROWD_START := 16
 const WAVE_RAMP := 6.0
 const MULTI_BIT_WIDTH := 1.15
-# Visual-only muzzle merge: a bolt drawn from a side muzzle (e.g. Rivet's twin revolvers at
-# +/- 0.60 m on WeaponRing) eases onto its true flight line within DRAW_MERGE_M metres without
-# moving hit detection, bounces, splits or rays.
+# Visual-only muzzle merge: a bolt drawn from a side muzzle (e.g. Rivet's twin side-sponson rotary
+# cannons at +/- 1.26 m on WeaponRing, rivet_revolvers.py SIDE_X) eases onto its true flight line
+# within DRAW_MERGE_M metres without moving hit detection, bounces, splits or rays.
 const DRAW_MERGE_M := 4.0
-const RIVET_MUZZLE_SIDE_M := 0.60
+const RIVET_MUZZLE_SIDE_M := 1.26
 # The split bit (start values): two children at +/- SPLIT_ANGLE_DEG off the parent's line,
 # each SPLIT_DAMAGE of its damage, flying the parent's remaining range up to SPLIT_REACH: a
 # burst into the pack around the struck machine, not two more full-range shots that fill
@@ -150,7 +150,7 @@ func fire(bolt: Dictionary) -> void:
 
 
 # Initial visual-only muzzle offset for a newly fired bolt: explicit draw_origin/draw_offset
-# wins, else Rivet's weapon shots alternate left (-0.60 m, phase 0) and right (+0.60 m, phase 1).
+# wins, else Rivet's weapon shots alternate left (-RIVET_MUZZLE_SIDE_M, phase 0) and right (+, phase 1).
 func _initial_draw_offset(bolt: Dictionary) -> Vector3:
 	if bolt.has("draw_origin"):
 		var off: Vector3 = (bolt["draw_origin"] as Vector3) - (bolt["origin"] as Vector3)

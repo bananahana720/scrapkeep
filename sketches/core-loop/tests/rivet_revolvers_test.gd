@@ -1,19 +1,21 @@
 extends SceneTree
 # E1-09 (wave 46, ruling ek): Rivet's twin rivet revolvers, rivet_revolvers.glb, mounted by
 # hero_assets.gd under the shell's WeaponRing in place of the laser pods (wave 46 3D blueprint
-# sections 2.1, 2.2 and 3.1; 3D review sections 1.3 to 1.5).
+# sections 2.1, 2.2 and 3.1; 3D review sections 1.3 to 1.5). E1-09b (ruling en): the same file and
+# rig carry side-sponson rotary cannons at 3 and 9 o'clock, reach up to 1.75 m.
 #
 # What it checks:
 #   tree       RivetRevolvers > RevolverRig > Skeleton3D (Godot's import of the armature) > Revolvers,
 #              one skinned mesh.
 #   bones      mount > tool.L/R > slide.L/R and crane.L/R > drum.L/R, nine bones, every vertex
-#              weighted whole to one bone, and each piece on its bone (barrel on slide, drum on drum).
+#              weighted whole to one bone, and each piece on its bone (the copper breech block on
+#              slide; the rotary cluster, forward of the yoke round the cluster axis, on drum).
 #   budget     2 draws (paint, copper), triangles in TRIS and the detail class cap.
 #   paint      every paint vertex carries alpha 0, so an equipped paint never recolours the tools.
 #   reach      no vertex past REACH from the ball centre (3D review section 1.3).
 #   closed     every edge of the welded mesh is shared by exactly two triangles.
 #   mirror     the two tools mirror across the centre line, bones and vertices.
-#   muzzles    shell_rivet.glb's LaserMuzzle_L/R sit on the barrel tips, bores forward, mirrored.
+#   muzzles    shell_rivet.glb's LaserMuzzle_L/R sit on the hub crowns, bores forward, mirrored.
 #   mount      fit_shell_into mounts the file under WeaponRing; Rivet draws 16 in play with it
 #              (base and Calibrated); the muzzles stay on the tips with the ring yawed 30 degrees;
 #              the carrier bank's ring hull holds the revolvers' furthest point.
@@ -30,11 +32,16 @@ const VARIANT := "shell_rivet_calibrated"
 const LAYER := "res://assets/models/world_one/shell_rivet_c%d.glb"
 const BUDGETS := "res://assets/asset_budgets.json"
 const EXPECTED_CHECKS := 20
-const TRIS := Vector2i(1200, 2200)
+const TRIS := Vector2i(2400, 3900)
 const SLOTS := ["copper", "paint"]
-const REACH := 1.35
+const REACH := 1.75
 const DRAW_CAP := 16
 const MIRROR := 0.001
+# The rotary cluster (rivet_revolvers.py): forward of the yoke (DRUM_Y[0], Godot -Z) and within
+# the drum band's radius of the cluster axis; the breech block stands over the receiver's straps.
+const CLUSTER_FROM := 0.353
+const CLUSTER_R := 0.23
+const BREECH_OVER := 0.20
 # Bone -> parent, as Godot imports them (bone names keep their dots; node names do not).
 const BONES := {
 	"mount": "", "tool.L": "mount", "slide.L": "tool.L", "crane.L": "tool.L", "drum.L": "crane.L",
@@ -184,10 +191,13 @@ func _weights(skel: Skeleton3D, mesh: MeshInstance3D) -> void:
 	var blended := per_vertex.filter(func(b): return b < 0).size()
 	_t.check("every vertex weighted whole to one bone", not per_vertex.is_empty() and blended == 0,
 		"%d of %d vertices blend or carry no bone" % [blended, per_vertex.size()])
-	# Each piece rides its bone: copper forward of the drum is barrel (slide), charcoal at the drum's
-	# axis height between the frame blocks is drum.
+	# Each piece rides its bone: everything round the cluster axis forward of the yoke (the fluted
+	# drum, barrels, collars and hub) is drum; copper on the receiver's back over its straps, beside
+	# the breech bone, is the breech block (slide).
 	var top := skel.get_parent() as Node3D
 	var wrong := []
+	var drums := 0
+	var breeches := 0
 	var k := 0
 	for s in mesh.mesh.get_surface_count():
 		var slot := slot_of(mesh.mesh, s)
@@ -195,15 +205,18 @@ func _weights(skel: Skeleton3D, mesh: MeshInstance3D) -> void:
 			var b: int = per_vertex[k]
 			k += 1
 			var side := "L" if v.x < 0.0 else "R"
-			var bore := bone_at(skel, top, "slide." + side)
+			var breech := bone_at(skel, top, "slide." + side)
 			var drum := bone_at(skel, top, "drum." + side)
-			if slot == "copper" and v.z < bore.z - 0.01 and Vector2(v.x - bore.x, v.y - bore.y).length() < 0.04:
-				if b != skel.find_bone("slide." + side):
-					wrong.append("barrel %s" % v)
-			elif slot == "paint" and absf(v.z - drum.z) < 0.03 and Vector2(v.x - drum.x, v.y - drum.y).length() < 0.045:
+			if v.z < -CLUSTER_FROM and Vector2(v.x - drum.x, v.y - drum.y).length() < CLUSTER_R:
+				drums += 1
 				if b != skel.find_bone("drum." + side):
-					wrong.append("drum %s" % v)
-	_t.check("barrel on slide, drum on drum", wrong.is_empty(), "%d misplaced: %s" % [wrong.size(), wrong.slice(0, 3)])
+					wrong.append("cluster %s" % v)
+			elif slot == "copper" and v.y > BREECH_OVER and absf(v.x - breech.x) < 0.07:
+				breeches += 1
+				if b != skel.find_bone("slide." + side):
+					wrong.append("breech %s" % v)
+	_t.check("breech on slide, rotary cluster on drum", wrong.is_empty() and drums > 400 and breeches >= 16,
+		"%d misplaced: %s; %d cluster, %d breech vertices" % [wrong.size(), wrong.slice(0, 3), drums, breeches])
 
 
 func _budget(mesh: MeshInstance3D) -> void:
@@ -230,7 +243,7 @@ func _reach_and_closed(mesh: MeshInstance3D) -> void:
 	var far := 0.0
 	for v in points(mesh, mesh.get_parent().get_parent() as Node3D):
 		far = maxf(far, v.length())
-	_t.check("reach within 1.35 m of the ball centre", far > 1.2 and far <= REACH, "%.4f m" % far)
+	_t.check("reach within 1.75 m of the ball centre (ruling en)", far > 1.6 and far <= REACH, "%.4f m" % far)
 	var edges := open_edges(mesh.mesh)
 	_t.check("closed: no open or non-manifold edge", edges == Vector2i.ZERO, "%d open, %d non-manifold" % [edges.x, edges.y])
 
@@ -252,12 +265,13 @@ func _mirror(skel: Skeleton3D, mesh: MeshInstance3D) -> void:
 		"bone offset %.5f m, %d unmatched of %d / %d vertex positions" % [off, unmatched, left.size(), right.size()])
 
 
-# Each barrel's crown centre (the furthest-forward copper on the bore) in the model's frame.
+# Each cluster hub's crown centre (the furthest-forward copper on the cluster axis) in the model's
+# frame.
 func _barrel_tips(skel: Skeleton3D, mesh: MeshInstance3D) -> Dictionary:
 	var top := skel.get_parent() as Node3D
 	var tips := {}
 	for side in ["L", "R"]:
-		var bore := bone_at(skel, top, "slide." + side)
+		var bore := bone_at(skel, top, "drum." + side)
 		var front := INF
 		for v in points(mesh, top, "copper"):
 			if (v.x < 0.0) == (side == "L") and Vector2(v.x - bore.x, v.y - bore.y).length() < 0.05:
@@ -285,8 +299,8 @@ func _muzzles(_skel: Skeleton3D, tips: Dictionary) -> void:
 		at[side] = p
 		far = maxf(far, p.distance_to(tips[side] + Vector3(0, 0, -0.01)))
 		fire.append(-(m.global_basis.z).normalized())
-	_t.check("muzzles on the barrel tips, 1 cm past the crown", far < 0.002, "%.4f m from the tips %s" % [far, tips])
-	_t.check("muzzles mirrored and forward", at.size() == 2 and absf(at.L.x + at.R.x) < 0.001 and at.L.x < -0.3
+	_t.check("muzzles on the hub crowns, 1 cm past the crown", far < 0.002, "%.4f m from the tips %s" % [far, tips])
+	_t.check("muzzles mirrored, outboard and forward", at.size() == 2 and absf(at.L.x + at.R.x) < 0.001 and at.L.x < -1.2
 		and fire.size() == 2 and fire.all(func(f): return f.dot(Vector3(0, 0, -1)) > 0.9999), "%s, firing %s" % [at, fire])
 	shell.queue_free()
 
@@ -333,7 +347,7 @@ func _mounted(variant: String) -> void:
 		var gun_reach := 0.0
 		for v in points(guns, ring):
 			gun_reach = maxf(gun_reach, v.length())
-		_t.check("the carrier bank's ring hull holds the revolvers", absf(reach - gun_reach) < 0.001 and gun_reach > 1.2,
+		_t.check("the carrier bank's ring hull holds the revolvers", absf(reach - gun_reach) < 0.001 and gun_reach > 1.6,
 			"hull reach %.4f, revolvers %.4f" % [reach, gun_reach])
 	ball.free()
 	hook.free()

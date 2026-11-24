@@ -1,8 +1,9 @@
 # PD-RIVET: Rivet's Hoberman mecha (ROSTER-LOOK section 0; pilots/rivet.md section 5), on the
 # shared base shell_base.hoberman(). Charcoal steel lattice, bone seat; a stepped drill nose hung
-# under the weapon ring's front arc whose lens is DrillTip; the twin rivet revolvers on the ring
-# band at 11 and 1 o'clock, muzzles forward (rivet_revolvers.glb, mounted by hero_assets.gd; this
-# file keeps only their LaserMuzzle.L/R markers); twin exhaust stacks on gap brackets at 11:30 and
+# under the weapon ring's front arc whose lens is DrillTip; the twin side-sponson rotary rivet
+# cannons clamped on the ring band at 3 and 9 o'clock, muzzles forward (rivet_revolvers.glb, mounted
+# by hero_assets.gd under WeaponRing; this file keeps only their LaserMuzzle.L/R markers, and bakes
+# nothing outboard into Pod); twin exhaust stacks on gap brackets at 11:30 and
 # 12:30, standing 0.18 m past the lattice; copper fins folded flat on the lattice in the front
 # lower gaps, raked into a forward V. Lens and exhaust mouths are the only class_accent.
 # Concept: artifacts/local/alpha/push/w13/concepts/codex/rivet/hero.png, chase.png and sheet.png,
@@ -31,6 +32,9 @@
 # the ring for rivet_revolvers.glb and LaserMuzzle.L/R move to its barrel tips (MUZZLES). Rivet's
 # own flush marks (the lens, the stack mouths, the Calibrated ticks) close to a buried point
 # (plug), so every piece of the shell outside the hidden placeholder pilot is a closed island.
+# 2026-11-23 (E1-09b, wave 46, ruling en): the revolvers become side-sponson rotary cannons at
+# 3 and 9 o'clock (rivet_revolvers.SIDE_X 1.26 m); LaserMuzzle.L/R follow MUZZLES to the cluster
+# hubs' crowns on the ring's level, so the flash and the drawn bolt leave the outboard barrels.
 
 import math
 import os
@@ -341,7 +345,7 @@ def build(variant=False):
     ring, pod = shell["ring"], shell["pod"]
     shell["drill"] = drill(variant).to_object((0, DRILL_Y0, DRILL_Z), ring)
     common.empty("DrillTip", (0, DRILL_STEPS[-1][1] + 0.0015, DRILL_Z), ring)
-    # The weapon is still rapid_laser: the flash and the bolt leave from the revolvers' barrel tips.
+    # The weapon is still rapid_laser: the flash and the bolt leave from the rotary cannons' hub crowns.
     for tag, point in revolvers.MUZZLES.items():
         common.empty("LaserMuzzle." + tag, point, ring)
     for side, tag in ((-1, "L"), (1, "R")):
