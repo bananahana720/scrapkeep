@@ -197,6 +197,11 @@ static func _report(meta: Dictionary, snags: Array, controls: Array) -> Dictiona
 	var places: Array = Probe.dedupe(snags)
 	out["places"] = places
 	out["classes_places"] = _by_class(places)
+	var ride_snags := snags.filter(func(r): return String(r.get("lane", "")) == "ride")
+	out["classes_ride_raw"] = _by_class(ride_snags)
+	var ride_places: Array = Probe.dedupe(ride_snags)
+	out["ride_places"] = ride_places
+	out["classes_ride_places"] = _by_class(ride_places)
 	out["seams"] = Probe.dedupe(controls)
 	return out
 
@@ -224,6 +229,7 @@ func _verdict(meta: Dictionary, snags: Array, controls: Array) -> int:
 	var total := int(meta["lanes_run"]) + int(meta["lanes_skipped"])
 	print("snag_sweep: %d pieces (%d off the map left out), %d lanes, %d skipped" % [meta["pieces_in_shard"], meta["pieces_off_map"], total, meta["lanes_skipped"]])
 	print("snag_sweep: snags %s -> %d places %s" % [rep["classes_raw"], rep["places"].size(), rep["classes_places"]])
+	print("snag_sweep: ride snags %s -> %d places %s" % [rep["classes_ride_raw"], rep["ride_places"].size(), rep["classes_ride_places"]])
 	print("snag_sweep: control lanes %d run, %d snags, %d seam places" % [meta["controls_run"], controls.size(), rep["seams"].size()])
 	if total > 0 and float(meta["lanes_skipped"]) / float(total) > MAX_SKIP:
 		printerr("snag_sweep: FAIL, %d of %d lanes skipped (limit %d%%): %s" % [meta["lanes_skipped"], total, int(MAX_SKIP * 100), meta["skipped_reasons"]])
@@ -248,7 +254,7 @@ func _merge(files: PackedStringArray, out_path: String) -> int:
 			return 2
 		if meta.is_empty():
 			meta = d.duplicate(true)
-			for k in ["snags", "controls", "classes_raw", "places", "classes_places", "seams"]:
+			for k in ["snags", "controls", "classes_raw", "places", "classes_places", "ride_places", "classes_ride_places", "classes_ride_raw", "seams"]:
 				meta.erase(k)
 			for k in ["pieces_in_shard", "lanes_run", "lanes_skipped", "controls_run"]:
 				meta[k] = 0

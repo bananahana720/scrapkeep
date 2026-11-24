@@ -107,6 +107,14 @@ func _check_classes_and_places() -> void:
 			chain = p
 	t.check("places: snags 1.5 m and 1.9 m apart chain into one row with count, worst loss and drawn", not chain.is_empty() and chain.worst_loss == 0.85 and chain.drawn, str(places))
 	t.check("places: the worst place is listed first", places[0].worst_loss >= places[places.size() - 1].worst_loss)
+	# Rideable slope filter for open-ground control lanes: a 0.3 m seam step over 2 m (8.5 deg) stays in,
+	# while a 60 deg canyon cliff is skipped.
+	var seam_step := func(x: float, _z: float) -> float: return 0.3 if x >= 20.0 else 0.0
+	var steep_cliff := func(x: float, _z: float) -> float: return maxf(0.0, (x - 20.0) * 1.732)
+	var seam_deg := Probe.max_ground_slope_deg(seam_step, Vector2.ZERO, Vector2(1, 0), Probe.CONTROL_LEN)
+	var cliff_deg := Probe.max_ground_slope_deg(steep_cliff, Vector2.ZERO, Vector2(1, 0), Probe.CONTROL_LEN)
+	t.check("control slope filter: a 0.3 m terrain step stays rideable", seam_deg <= Probe.CONTROL_MAX_SLOPE_DEG, "%.1f deg" % seam_deg)
+	t.check("control slope filter: a 60 deg cliff is skipped", cliff_deg > Probe.CONTROL_MAX_SLOPE_DEG, "%.1f deg" % cliff_deg)
 
 
 func _run() -> void:
@@ -121,6 +129,11 @@ func _run() -> void:
 	game.player.source = source
 	game.flow.press_start()
 	game.flow.choose_class(0)
+	var terrain = game.ctx.terrain
+	var waited := 0
+	while waited < 1200 and not (terrain.rows_ready(1) and terrain.is_ready(1) and game.flow.state_name() == "stage"):
+		await process_frame
+		waited += 1
 	await physics_frame
 	for i in 30:
 		await physics_frame
@@ -208,7 +221,7 @@ func _run() -> void:
 	actor.queue_free()
 
 	# A low piece held up over the floor (a crossbar on a mast) gets no ride lanes: they would roll under it.
-	_box(fixture, "Crossbar", LIP_SIZE, FLOOR_AT + Vector3(0, 10.0, -30.0))
+	var crossbar := _box(fixture, "Crossbar", LIP_SIZE, FLOOR_AT + Vector3(0, 10.0, -30.0))
 	await physics_frame
 	var bar := {}
 	for p in probe.pieces(fixture):
@@ -216,13 +229,108 @@ func _run() -> void:
 			bar = p
 	t.check("a low piece 10 m over the floor is a piece with no lanes", not bar.is_empty() and probe.lanes(bar).is_empty(), str(bar))
 	# One hung lower than the ball is tall still gets its lanes: the ball can wedge under it.
-	_box(fixture, "LowBar", LIP_SIZE, FLOOR_AT + Vector3(0, 1.8 + LIP_SIZE.y * 0.5, 30.0))
+	var lowbar := _box(fixture, "LowBar", LIP_SIZE, FLOOR_AT + Vector3(0, 1.8 + LIP_SIZE.y * 0.5, 30.0))
 	await physics_frame
 	var low := {}
 	for p in probe.pieces(fixture):
 		if String(p.path).get_file() == "LowBar":
 			low = p
 	t.check("a low piece 1.8 m over the floor (under the ball's height) keeps its ride lanes", not low.is_empty() and probe.lanes(low).size() == 4 * Probe.LANES, str(low))
+	crossbar.free()
+	lowbar.free()
+	fixture.get_node("Wall").free()
+
+	# Ride-lane run-out: catches an exit-edge lip and a 2 m exit blocker, but does not blame a slab
+	# for a tall building standing 9 m clear across open ground.
+	var slab_body := _box(fixture, "RideSlab", Vector3(20.0, 0.06, 20.0), FLOOR_AT + Vector3(0, 0.03, 0))
+	await physics_frame
+	await physics_frame
+	var slab := {}
+	for p in probe.pieces(fixture):
+		if String(p.path).get_file() == "RideSlab":
+			slab = p
+	var exit_lane := {}
+	for l in probe.lanes(slab):
+		if l.dir.y > 0.99 and absf(l.from.x) < 0.1:
+			exit_lane = l
+			break
+	t.check("ride slab has a centre +z ride lane", not exit_lane.is_empty(), str(slab))
+	var slab_clean: Dictionary = await probe.roll(slab, exit_lane)
+	t.check("clean ride slab: no snag", not slab_clean.has("piece") and not slab_clean.has("skipped"), str(slab_clean))
+	var exit_lip := _box(fixture, "ExitLip", LIP_SIZE, FLOOR_AT + Vector3(0, 0.06 + LIP_SIZE.y * 0.5, 10.0))
+	await physics_frame
+	await physics_frame
+	var slab_exit_lip: Dictionary = await probe.roll(slab, exit_lane)
+	t.check("ride run-out catches a planted 0.3 m exit-edge lip", slab_exit_lip.has("piece") and slab_exit_lip.lane == "ride", str(slab_exit_lip))
+	exit_lip.free()
+	var close_wall := _box(fixture, "CloseWall", Vector3(12.0, 10.0, 12.0), FLOOR_AT + Vector3(0, 5.0, 18.0))
+	await physics_frame
+	await physics_frame
+	var slab_close_wall: Dictionary = await probe.roll(slab, exit_lane)
+	t.check("ride run-out catches a wall 2 m past the exit edge", slab_close_wall.has("piece") and slab_close_wall.lane == "ride", str(slab_close_wall))
+	close_wall.free()
+	var clear_wall := _box(fixture, "ClearWall", Vector3(12.0, 10.0, 12.0), FLOOR_AT + Vector3(0, 5.0, 25.0))
+	await physics_frame
+	await physics_frame
+	var slab_clear_wall: Dictionary = await probe.roll(slab, exit_lane)
+	t.check("ride run-out does not blame a slab for a building 9 m clear past exit", not slab_clear_wall.has("piece") and not slab_clear_wall.has("skipped"), str(slab_clear_wall))
+	clear_wall.free()
+	slab_body.free()
+	fixture.free()
+	await physics_frame
+	await physics_frame
+
+	# Real park_dam open-ground control lanes: gentle tile-seam lanes are kept (and catch a planted
+	# 0.3 m seam lip), while canyon fins and spires are not misclassified as flat tile seams.
+	var gb: AABB = probe.ground_bounds(game)
+	var dam_all := []
+	for p in probe.pieces(game):
+		if Probe.inside(p, gb):
+			dam_all.append(p)
+	var ctl_lanes: Array = probe.control_lanes(dam_all, gb)
+	var has_cliff_fin := false
+	var has_spire := false
+	var seam_lane := {}
+	var seam_best_slope := INF
+	for l in ctl_lanes:
+		var a: Vector2 = l.from
+		var d: Vector2 = l.dir
+		var b: Vector2 = a + d * float(l.length_m)
+		if a.distance_to(Vector2(50.0, 450.0)) < 1.0 and d.x > 0.5:
+			has_cliff_fin = true
+		if a.distance_to(Vector2(-50.0, -550.0)) < 1.0 and d.y > 0.5:
+			has_spire = true
+		if floori((a.x + 800.0) / 160.0) != floori((b.x + 800.0) / 160.0) or floori((a.y + 800.0) / 160.0) != floori((b.y + 800.0) / 160.0):
+			var slope := Probe.max_ground_slope_deg(Callable(terrain, "height"), a, d, float(l.length_m))
+			if slope < seam_best_slope:
+				seam_best_slope = slope
+				seam_lane = l
+	t.check("park_dam control lanes keep rideable tile-seam lanes and exclude cliffs/spires",
+		not ctl_lanes.is_empty() and not seam_lane.is_empty() and not has_cliff_fin and not has_spire,
+		"kept=%d seam=%s cliff_fin=%s spire=%s" % [ctl_lanes.size(), str(seam_lane), has_cliff_fin, has_spire])
+	if not seam_lane.is_empty():
+		var ctl_piece := {"path": "control", "aabb": AABB(Vector3(seam_lane.from.x, gb.end.y - 1.0, seam_lane.from.y), Vector3(0, 1, 0)), "yaw": 0.0}
+		var ctl_clean: Dictionary = await probe.roll(ctl_piece, seam_lane)
+		t.check("gentle open-ground control lane across tile seam: no snag",
+			not ctl_clean.has("piece") and not ctl_clean.has("skipped"), str(ctl_clean))
+		var mid: Vector2 = seam_lane.from + seam_lane.dir * 25.0
+		var entry: Vector2 = mid - seam_lane.dir * 0.6
+		var base_y: float = maxf(float(terrain.height(mid.x, mid.y)), float(terrain.height(entry.x, entry.y)))
+		var seam_size := Vector3(1.2, 0.5, 12.0) if seam_lane.dir.x > 0.5 else Vector3(12.0, 0.5, 1.2)
+		# Embed 0.2 m below ground so the exposed step at the entry face is a full 0.3 m lip.
+		var planted_seam := _box(game, "PlantedControlSeam", seam_size, Vector3(mid.x, base_y + 0.05, mid.y))
+		await physics_frame
+		await physics_frame
+		var ctl_planted: Dictionary = await probe.roll(ctl_piece, seam_lane)
+		t.check("control lane with planted seam lip: snag caught",
+			ctl_planted.has("piece") and ctl_planted.lane == "control", str(ctl_planted))
+		planted_seam.free()
+		await physics_frame
+		await physics_frame
+		var ctl_after: Dictionary = await probe.roll(ctl_piece, seam_lane)
+		t.check("control lane with planted seam lip removed: no snag",
+			not ctl_after.has("piece") and not ctl_after.has("skipped"), str(ctl_after))
+
 	game.queue_free()
 	await process_frame
 	quit(t.verdict())

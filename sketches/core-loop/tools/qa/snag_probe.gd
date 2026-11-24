@@ -24,6 +24,10 @@ const LARGE_M := 6.0
 const RIDE_H := 1.5
 const LANES := 3
 const RUN_M := 10.0
+# Run-out past a rideable piece's far exit rim: covers the ball's radius (1 m) plus the 0.2 s
+# deceleration window at cruise (~2.7 m) with margin, matching park_weir_deck_roll_test's 4 m
+# exit window without driving 9+ m across open ground into a separate tall building.
+const RIDE_RUNOUT_M := 5.0
 const GRAZE_DEG := 15.0
 const COVER_PAD := 0.6
 const CELL := 16.0
@@ -178,7 +182,7 @@ func lanes(piece: Dictionary) -> Array:
 					var lateral := (float(k) - float(LANES - 1) * 0.5) * half_perp * 0.6
 					var dir: Vector2 = a * sgn
 					out.append({"kind": "ride", "from": c + perp * lateral - dir * (half_along + RUN_M),
-						"dir": dir, "length_m": half_along * 2.0 + RUN_M * 2.0})
+						"dir": dir, "length_m": half_along * 2.0 + RUN_M + RIDE_RUNOUT_M})
 	else:
 		var s := sin(deg_to_rad(GRAZE_DEG))
 		var co := cos(deg_to_rad(GRAZE_DEG))
@@ -352,6 +356,11 @@ const CONTROL_STEP := 100.0
 const CONTROL_LEN := 60.0
 const CONTROL_PAD := 8.0
 const CONTROL_MAX := 48
+const CONTROL_SAMPLE_M := 2.0
+# Steepest authored heightfield grade for an open-ground tile-seam control lane. Skips canyon
+# cliffs, rock spires and escarpments (52 to 87 deg) while keeping gentle ground, ramps and tile
+# seams (a 0.3 m step across a 2 m cell is 8.5 deg, and collider-only seams read 0 deg).
+const CONTROL_MAX_SLOPE_DEG := 30.0
 
 
 # What a snag hit, against the piece the lane was aimed at: "piece" (that piece's own collider, or one
@@ -473,9 +482,10 @@ static func inside(piece: Dictionary, bounds: AABB) -> bool:
 		and c.y >= bounds.position.y - 40.0 and c.y <= bounds.end.y + 120.0
 
 
-# Control lanes over open ground: a grid of straight runs along x and z, kept when no piece stands
-# within CONTROL_PAD of the run and the ground tiles lie under both ends. They cross tile seams at
-# cruise the way a piece lane's approach does. Same lane shape as a piece's, kind "control".
+# Control lanes over rideable open ground: a grid of straight runs along x and z, kept when no
+# piece stands within CONTROL_PAD of the run, ground tiles lie under both ends, and the authored
+# heightfield stays within CONTROL_MAX_SLOPE_DEG (skipping cliffs, spires and rock fins). They
+# cross tile seams at cruise the way a piece lane's approach does. Same lane shape, kind "control".
 func control_lanes(all: Array, bounds: AABB) -> Array:
 	var out := []
 	if bounds.size.x <= 0.0:
@@ -484,10 +494,10 @@ func control_lanes(all: Array, bounds: AABB) -> Array:
 	while x < bounds.end.x:
 		var z := bounds.position.z + CONTROL_STEP * 0.5
 		while z < bounds.end.z:
-			for d in [Vector2(1, 0), Vector2(0, 1)]:
+			for d: Vector2 in [Vector2(1, 0), Vector2(0, 1)]:
 				var a := Vector2(x, z)
 				var b: Vector2 = a + d * CONTROL_LEN
-				if _clear(all, a, b) and _on_tiles(a) and _on_tiles(b):
+				if _clear(all, a, b) and _on_tiles(a) and _on_tiles(b) and _rideable_ground(a, d, CONTROL_LEN):
 					out.append({"kind": "control", "from": a, "dir": d, "length_m": CONTROL_LEN})
 			z += CONTROL_STEP
 		x += CONTROL_STEP
@@ -497,6 +507,34 @@ func control_lanes(all: Array, bounds: AABB) -> Array:
 			keep.append(out[i * out.size() / CONTROL_MAX])
 		out = keep
 	return out
+
+
+func _rideable_ground(a: Vector2, d: Vector2, length_m: float) -> bool:
+	var terrain = _game.ctx.terrain
+	if terrain == null:
+		return true
+	return max_ground_slope_deg(Callable(terrain, "height"), a, d, length_m) <= CONTROL_MAX_SLOPE_DEG
+
+
+# Steepest terrain grade (degrees) along and across a control lane's 2 m corridor.
+static func max_ground_slope_deg(height_fn: Callable, a: Vector2, d: Vector2, length_m: float) -> float:
+	var perp := Vector2(-d.y, d.x)
+	var max_slope := 0.0
+	for lat: float in [-CONTROL_SAMPLE_M, 0.0, CONTROL_SAMPLE_M]:
+		var origin: Vector2 = a + perp * lat
+		var prev_y := 0.0
+		var s := 0.0
+		while s <= length_m + 0.01:
+			var pt: Vector2 = origin + d * s
+			var y: float = float(height_fn.call(pt.x, pt.y))
+			if s > 0.0:
+				max_slope = maxf(max_slope, absf(y - prev_y) / CONTROL_SAMPLE_M)
+			var y_left: float = float(height_fn.call(pt.x - perp.x * CONTROL_SAMPLE_M, pt.y - perp.y * CONTROL_SAMPLE_M))
+			var y_right: float = float(height_fn.call(pt.x + perp.x * CONTROL_SAMPLE_M, pt.y + perp.y * CONTROL_SAMPLE_M))
+			max_slope = maxf(max_slope, maxf(absf(y - y_left), absf(y - y_right)) / CONTROL_SAMPLE_M)
+			prev_y = y
+			s += CONTROL_SAMPLE_M
+	return rad_to_deg(atan(max_slope))
 
 
 func _clear(all: Array, a: Vector2, b: Vector2) -> bool:
