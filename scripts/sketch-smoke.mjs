@@ -17,7 +17,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkImportStamp, writeImportStamp } from "./import-stamp.mjs";
+import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
 import { scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -1290,7 +1290,9 @@ async function main() {
     const quarantineRows = readQuarantineEntries(directory);
     const quarantine = new Set(quarantineRows.map((row) => row.test));
     expired.push(...expiredQuarantine(quarantineRows));
-    const stampOk = process.env.SMOKE_FORCE_IMPORT !== "1" && checkImportStamp(root, name).ok;
+    const stampOk =
+      process.env.SMOKE_FORCE_IMPORT !== "1" &&
+      checkImportStamp(root, name, { godot: godotIdentity(binary) }).ok;
     if (stampOk) {
       const cached = {
         label: `${name} import`,
@@ -1317,7 +1319,7 @@ async function main() {
         );
         process.exit(1);
       }
-      writeImportStamp(root, name);
+      writeImportStamp(root, name, { godot: godotIdentity(binary) });
     }
     const hasBatchDriver = existsSync(path.join(directory, "tools", "test_batch.gd"));
     if (!named && !options.bots)

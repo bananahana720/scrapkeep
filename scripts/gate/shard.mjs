@@ -58,7 +58,7 @@ import {
   timeScale,
   withoutTeardownNoise,
 } from "../sketch-smoke.mjs";
-import { checkImportStamp, writeImportStamp } from "../import-stamp.mjs";
+import { checkImportStamp, godotIdentity, writeImportStamp } from "../import-stamp.mjs";
 import { scratchHomeEnv } from "../godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -942,7 +942,9 @@ async function run(options) {
   // when the second was not clean. A crashed import is the engine's, so it is tried again; the shard
   // stops only when the last try was not clean, before any test can print a misleading red.
   const cachedImport =
-    process.env.SMOKE_FORCE_IMPORT !== "1" ? checkImportStamp(root, SKETCH) : { ok: false };
+    process.env.SMOKE_FORCE_IMPORT !== "1"
+      ? checkImportStamp(root, SKETCH, { godot: godotIdentity(godot) })
+      : { ok: false };
   if (cachedImport.ok) {
     await step("import-1", async () => {
       writeFileSync(
@@ -976,7 +978,7 @@ async function run(options) {
       throw new Error(
         `the last import was not clean (${imported}); no test ran. Read ${options.out}/import-*.log, then start again in a new folder`,
       );
-    writeImportStamp(root, SKETCH);
+    writeImportStamp(root, SKETCH, { godot: godotIdentity(godot) });
   }
 
   const groups = options.bots

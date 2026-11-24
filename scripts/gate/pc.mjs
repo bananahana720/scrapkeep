@@ -961,6 +961,7 @@ const kinds = {
   async node(step, ctx) {
     const dir = ctx.receipt(step);
     const wtNm = path.join(ctx.wt, "node_modules");
+    if (!existsSync(wtNm)) rmSync(wtNm, { force: true });
     if (!existsSync(wtNm) && canLinkNodeModules(ctx.wt, root)) {
       symlinkSync(path.join(root, "node_modules"), wtNm, "dir");
       writeFileSync(

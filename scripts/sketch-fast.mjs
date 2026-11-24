@@ -41,7 +41,7 @@ import {
   testTimeoutMs,
 } from "./sketch-smoke.mjs";
 import { readLedger } from "./known-failing.mjs";
-import { checkImportStamp, writeImportStamp } from "./import-stamp.mjs";
+import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
 import { scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
 import { shuffleFiles } from "./ci/node-tests.mjs";
 
@@ -1303,7 +1303,9 @@ async function main() {
   }
   await acquireMachine();
   const base = ["--headless", "--path", sketchDir];
-  const stampOk = process.env.SMOKE_FORCE_IMPORT !== "1" && checkImportStamp(root, SKETCH).ok;
+  const stampOk =
+    process.env.SMOKE_FORCE_IMPORT !== "1" &&
+    checkImportStamp(root, SKETCH, { godot: godotIdentity(binary) }).ok;
   if (stampOk) {
     stage("import", true, { note: "cached (stamp matches HEAD)" });
   } else {
@@ -1338,7 +1340,7 @@ async function main() {
       })
     )
       finish();
-    writeImportStamp(root, SKETCH);
+    writeImportStamp(root, SKETCH, { godot: godotIdentity(binary) });
   }
   const boot = await spawnCollect(binary, [...base, "--quit-after", "300"], {
     timeoutMs: 180_000,
