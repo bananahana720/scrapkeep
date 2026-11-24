@@ -876,6 +876,20 @@
      ],
      "radius": 8.498,
      "height": 1.03
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/takeoff_deck_b.glb",
+      "res://assets/models/park/props/dam/takeoff_deck_b_lod1.glb",
+      "res://assets/models/park/props/dam/takeoff_deck_b_lod2.glb"
+     ],
+     "tris": [
+      1776,
+      888,
+      266
+     ],
+     "radius": 7.807,
+     "height": 1.171
     }
    }
   },

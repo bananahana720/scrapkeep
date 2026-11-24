@@ -4117,6 +4117,90 @@
    }
   },
   {
+   "id": "dprop_dam_takeoff_deck_b",
+   "path": "res://assets/models/park/props/dam/takeoff_deck_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "takeoff_deck variant b LOD0 (1776 tris): The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -5.5828,
+     0,
+     -5.7872
+    ],
+    "max": [
+     5.5828,
+     1.1713,
+     5.7872
+    ],
+    "size": [
+     11.1656,
+     1.1713,
+     11.5744
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_takeoff_deck_b_lod1",
+   "path": "res://assets/models/park/props/dam/takeoff_deck_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "takeoff_deck variant b LOD1 (888 tris): The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.5864,
+     0,
+     -5.7916
+    ],
+    "max": [
+     5.5864,
+     1.1641,
+     5.7872
+    ],
+    "size": [
+     11.1728,
+     1.1641,
+     11.5788
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_takeoff_deck_b_lod2",
+   "path": "res://assets/models/park/props/dam/takeoff_deck_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "takeoff_deck variant b LOD2 (266 tris): The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.5962,
+     0,
+     -5.8009
+    ],
+    "max": [
+     5.5905,
+     1.1678,
+     5.7719
+    ],
+    "size": [
+     11.1867,
+     1.1678,
+     11.5728
+    ]
+   }
+  },
+  {
    "id": "dprop_dam_pump_elbow_a",
    "path": "res://assets/models/park/props/dam/pump_elbow_a.glb",
    "class": "dress_prop",

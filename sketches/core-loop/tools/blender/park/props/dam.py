@@ -1028,26 +1028,34 @@ def intake_gantry(p, v, rng):
         p.box((1.4, 1.2, 0.5), (-s * (LX + 1.6), -1.4, TOP + 2.7), "concrete_stain", rot=(0.2, 0.15, 0.4), style="hard_smooth")
 
 
-@K.kind("takeoff_deck", hero=False, tags=["sign"], variants="a",
+@K.kind("takeoff_deck", hero=False, tags=["sign"], variants="ab",
         story="The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip.")
 def takeoff_deck(p, v, rng):
     # Front (the lip) toward -Y. Two low cheeks 9 m apart so a ball-wide slot runs between them, bone chevrons on their
     # tops and inner faces, and a squat bollard at each lip end. Low (under 1.2 m), so a ball crossing reads it as a kerb.
+    # a: the full 12 m run-in; b: a short 8 m pour, its far end broken off and tipped.
+    length, marks = (12.0, 5) if v == "a" else (8.0, 3)
     for sx in (-1, 1):
         x = sx * 4.6
-        p.box((1.0, 12.0, 0.55), (x, 0, 0.275), "concrete_light", style="hard_smooth")
-        p.box((1.16, 12.2, 0.12), (x, 0, 0.06), "concrete_dark", style="hard")
-        for k in range(5):
-            y = 4.2 - k * 2.2
+        p.box((1.0, length, 0.55), (x, 0, 0.275), "concrete_light", style="hard_smooth")
+        p.box((1.16, length + 0.2, 0.12), (x, 0, 0.06), "concrete_dark", style="hard")
+        for k in range(marks):
+            y = length / 2 - 1.8 - k * 2.2
             for arm in (-1, 1):
                 p.box((0.62, 0.2, 0.05), (x + arm * 0.2, y + 0.2, 0.565), "bone", rot=(0, 0, arm * 0.9), style="flat")
             p.box((0.05, 0.9, 0.36), (x - sx * 0.515, y, 0.3), "bone" if k % 2 == 0 else "charcoal", style="flat")
-        p.box((1.3, 1.3, 0.95), (x, -6.6, 0.475), "concrete", style="hard_smooth")
-        p.box((1.36, 1.36, 0.22), (x, -6.6, 0.7), "bone", style="hard")
-        p.box((1.2, 1.2, 0.08), (x, -6.6, 0.99), "concrete_light", style="hard")
+        lip = -length / 2 - 0.6
+        p.box((1.3, 1.3, 0.95), (x, lip, 0.475), "concrete", style="hard_smooth")
+        p.box((1.36, 1.36, 0.22), (x, lip, 0.7), "bone", style="hard")
+        p.box((1.2, 1.2, 0.08), (x, lip, 0.99), "concrete_light", style="hard")
+        if v == "b":
+            # The broken-off end of the pour, tipped against the cheek's back.
+            p.box((1.0, 1.8, 0.55), (x + sx * 0.3, length / 2 + 1.3, 0.4), "concrete_light", rot=(0.35, 0, sx * 0.25),
+                  style="hard_smooth")
     # Chipped corners and a stain on one cheek, so the pour reads hand-made.
     for k in range(4):
-        p.box((0.3, 0.3, 0.16), (rng.choice((-1, 1)) * (4.6 + rng.uniform(-0.4, 0.4)), rng.uniform(-5.5, 5.5), 0.6),
+        p.box((0.3, 0.3, 0.16), (rng.choice((-1, 1)) * (4.6 + rng.uniform(-0.4, 0.4)),
+                                 rng.uniform(-length / 2 + 0.5, length / 2 - 0.5), 0.6),
               mix("concrete", "concrete_stain", 0.5), rot=(0, 0, rng.uniform(0, 1.5)), style="hard")
 
 
