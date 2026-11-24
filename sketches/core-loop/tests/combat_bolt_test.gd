@@ -245,7 +245,7 @@ func _check_muzzle_origin() -> void:
 	_report("muzzle_explicit_merge", start_ok and mono_ok and merge_ok,
 		"start=%s mono=%s merge=%s head_dists=%s xf_dists=%s" % [start_ok, mono_ok, merge_ok, head_dists, xf_dists])
 
-	# 2. Rivet (rapid_laser) shots alternate left (-0.60 m) and right (+0.60 m); clear() resets to left.
+	# 2. Rivet (rapid_laser) shots alternate left (-RIVET_MUZZLE_SIDE_M, -1.26 m) and right (+1.26 m); clear() resets to left.
 	bolts.clear()
 	var rivet_xs: Array[float] = []
 	for i in 4:

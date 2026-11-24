@@ -2097,8 +2097,8 @@ const CASING_EVERY := 2
 # One draw for the flashes and one for the casings (fx_budget.gd "rivet_fire").
 const RIVET_DRAWS := 2
 # The drum gap from a LaserMuzzle marker, in the WeaponRing's frame with x outboard: back along
-# the bore to the drum, below the bore and just past the drum's side (rivet_revolvers.py).
-const DRUM_GAP := Vector3(0.065, -0.045, 0.18)
+# the bore to the rotary drum, slightly below the bore and just past the drum band (rivet_revolvers.py).
+const DRUM_GAP := Vector3(0.24, -0.04, 0.47)
 # Without a shell: how far out a side muzzle sits from the centre shot, and the halo ahead.
 const SIDE_M := 1.26
 const HALO_AHEAD_M := 1.34
