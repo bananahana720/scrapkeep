@@ -250,6 +250,7 @@ func fire() -> bool:
 	var lid_target := _lid.position + Vector3(0.0, 0.6, -0.4)
 	var animate := EnemyMotion.motion_scale > 0.0 and is_inside_tree()
 	if animate:
+		_lid.rotation.x = -0.06
 		var tw := _lid.create_tween()
 		tw.set_parallel(true)
 		tw.tween_property(_lid, "position", lid_target, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
