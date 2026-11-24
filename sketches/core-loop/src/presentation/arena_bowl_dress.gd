@@ -19,8 +19,10 @@ const SURFACE_STANDOFF_M := 0.02
 const YARD_PARTS := ["YardDeck", "FleetStands", "CupolaFurnaces", "LadleCars", "LedgerBoard", "IngotStock", "CrewYard"]
 const GLOW_PARTS := ["LadleMelt", "FurnaceGlow"]
 const CREW_PARTS := ["CrewFan", "CrewPennant"]
-# Mirrors the recipe's STANDS and tiers: sector centre and half width in degrees, then tier radius and plank top.
-const STANDS := [Vector2(95.0, 18.0), Vector2(225.0, 12.0), Vector2(300.0, 18.0)]
+# Mirrors the recipe's STANDS and tiers: sector centre and half width in degrees, the first tier the crew sit on and
+# how many, then tier radius and plank top. One stand a quarter: the north foundry bleachers, the east crane-watch box
+# (its two benches), the south scrap-yard scaffolding and the west ladle-rail gallery (its one deck).
+const STANDS := [[300.0, 18.0, 0, 5], [4.0, 5.0, 3, 2], [95.0, 18.0, 0, 5], [163.0, 7.0, 4, 1]]
 const TIERS := 5
 const TIER_R0 := 69.0
 const TIER_DR := 2.4
@@ -204,10 +206,10 @@ func _yard(dressing: Node3D, parts: Dictionary) -> void:
 	var tints := {"CrewFan": [], "CrewPennant": []}
 	var rng := RandomNumberGenerator.new()
 	rng.seed = CROWD_SEED
-	for stand: Vector2 in STANDS:
-		var lo := deg_to_rad(stand.x - stand.y)
-		var span := deg_to_rad(stand.y * 2.0)
-		for k in TIERS:
+	for stand: Array in STANDS:
+		var lo := deg_to_rad(stand[0] - stand[1])
+		var span := deg_to_rad(stand[1] * 2.0)
+		for k in range(stand[2], stand[2] + stand[3]):
 			var r := TIER_R0 + TIER_DR * k
 			var count := floori(span * r / SEAT_PITCH)
 			for j in count:
