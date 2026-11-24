@@ -5,8 +5,11 @@
 //   node scripts/stems-sync.mjs [--to <music_ace dir>] [--from <dir> ...]
 //
 // The target defaults to this checkout's sketches/core-loop/assets/music_ace; the sources default to the
-// main checkout's copy, ~/scratch/w33/music_ace-full (every stem re-paged into 20 ms Ogg pages), ~/scratch/w19/music_ace-full (wave 19 repacks, such as the s4404 Brindle phase 2 cover), ~/scratch/w18/music_ace-full (the wave 18 set, with the boss anthems) and
-// ~/scratch/w17/music_ace-full. Every file listed in the target's STEMS.sha256 is
+// main checkout's copy, ~/scratch/w46/music_ace-full (short-paged 20 ms Oggs with the 6 short older-pack
+// clips trimmed -0.8 dB under -1 dBTP), ~/scratch/w33/music_ace-full (every stem re-paged into 20 ms Ogg
+// pages), ~/scratch/w19/music_ace-full (wave 19 repacks, such as the s4404 Brindle phase 2 cover),
+// ~/scratch/w18/music_ace-full (the wave 18 set, with the boss anthems), ~/scratch/w17/music_ace-full and
+// ~/scratch/repage/music_ace (the repaged archive fallback). Every file listed in the target's STEMS.sha256 is
 // either present with the listed hash (left alone), absent and copied from the first source whose copy has
 // the listed hash, or reported. A file whose hash differs, in the target or in every source, is never
 // overwritten: it is named as mismatched, and so is a listed file no source holds. The exit is 1 when any
@@ -34,14 +37,21 @@ export function parseHashes(text) {
 
 export function sync(to, sources) {
   const hashFile = path.join(to, HASHES);
-  if (!existsSync(hashFile)) throw new Error(`${hashFile}: no hash list in the target (run scripts/music/mx stem-hashes in a checkout that holds the Oggs)`);
+  if (!existsSync(hashFile))
+    throw new Error(
+      `${hashFile}: no hash list in the target (run scripts/music/mx stem-hashes in a checkout that holds the Oggs)`,
+    );
   const listed = parseHashes(readFileSync(hashFile, "utf8"));
   const result = { copied: [], present: [], mismatched: [], missing: [] };
   for (const [rel, hash] of listed) {
     const dest = path.join(to, rel);
     if (existsSync(dest)) {
       if (sha256(dest) === hash) result.present.push(rel);
-      else result.mismatched.push({ file: rel, why: "the file here has a different sha256 and was left alone" });
+      else
+        result.mismatched.push({
+          file: rel,
+          why: "the file here has a different sha256 and was left alone",
+        });
       continue;
     }
     let found = null;
@@ -49,25 +59,43 @@ export function sync(to, sources) {
     for (const dir of sources) {
       const src = path.join(dir, rel);
       if (!existsSync(src)) continue;
-      if (sha256(src) === hash) { found = src; break; }
+      if (sha256(src) === hash) {
+        found = src;
+        break;
+      }
       differs = src;
     }
     if (found) {
       mkdirSync(path.dirname(dest), { recursive: true });
       copyFileSync(found, dest);
-      if (sha256(dest) !== hash) result.mismatched.push({ file: rel, why: `copy from ${found} does not hash as listed` });
+      if (sha256(dest) !== hash)
+        result.mismatched.push({ file: rel, why: `copy from ${found} does not hash as listed` });
       else result.copied.push(rel);
-    } else if (differs) result.mismatched.push({ file: rel, why: `${differs} has a different sha256 than listed; not copied` });
+    } else if (differs)
+      result.mismatched.push({
+        file: rel,
+        why: `${differs} has a different sha256 than listed; not copied`,
+      });
     else result.missing.push(rel);
   }
   return result;
 }
 
-function defaultSources(repo) {
-  const common = execFileSync("git", ["-C", repo, "rev-parse", "--git-common-dir"], { encoding: "utf8" }).trim();
+export function defaultSources(repo, home = os.homedir()) {
+  const common = execFileSync("git", ["-C", repo, "rev-parse", "--git-common-dir"], {
+    encoding: "utf8",
+  }).trim();
   const main = path.resolve(repo, common, "..");
-  const scratch = path.join(os.homedir(), "scratch");
-  return [path.join(main, MUSIC), path.join(scratch, "w33", "music_ace-full"), path.join(scratch, "w19", "music_ace-full"), path.join(scratch, "w18", "music_ace-full"), path.join(scratch, "w17", "music_ace-full")];
+  const scratch = path.join(home, "scratch");
+  return [
+    path.join(main, MUSIC),
+    path.join(scratch, "w46", "music_ace-full"),
+    path.join(scratch, "w33", "music_ace-full"),
+    path.join(scratch, "w19", "music_ace-full"),
+    path.join(scratch, "w18", "music_ace-full"),
+    path.join(scratch, "w17", "music_ace-full"),
+    path.join(scratch, "repage", "music_ace"),
+  ];
 }
 
 function main(argv) {
@@ -75,12 +103,17 @@ function main(argv) {
   const take = (name) => argv.flatMap((a, i) => (a === name ? [argv[i + 1]] : []));
   const to = take("--to")[0] ?? path.join(repo, MUSIC);
   const from = take("--from");
-  const sources = (from.length ? from : defaultSources(repo)).filter((d) => path.resolve(d) !== path.resolve(to));
+  const sources = (from.length ? from : defaultSources(repo)).filter(
+    (d) => path.resolve(d) !== path.resolve(to),
+  );
   const r = sync(to, sources);
   for (const m of r.mismatched) console.log(`mismatched  ${m.file}: ${m.why}`);
   for (const f of r.missing) console.log(`missing     ${f}: no source holds it`);
-  console.log(`stems-sync: ${r.copied.length} copied, ${r.present.length} present, ${r.mismatched.length} mismatched, ${r.missing.length} missing (target ${to})`);
+  console.log(
+    `stems-sync: ${r.copied.length} copied, ${r.present.length} present, ${r.mismatched.length} mismatched, ${r.missing.length} missing (target ${to})`,
+  );
   return r.mismatched.length || r.missing.length ? 1 : 0;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) process.exit(main(process.argv.slice(2)));
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+  process.exit(main(process.argv.slice(2)));
