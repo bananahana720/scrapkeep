@@ -339,9 +339,9 @@ export const ROWS = {
     real: [
       {
         cfg: "weaponcadence-today.cfg",
-        minStates: 6394,
+        minStates: 10122,
         label:
-          "Rivet press, Sable tap_charge, Tally stamp refund, boundaries, interrupts and proc isolation (W46 E1-17, WC-1 closed by W46-FIX1)",
+          "all six pilots (Rivet press, Sable tap_charge, Kest lob_snap, Tarn beats, Tally stamp, Cannon lock), boundaries, interrupts and proc isolation (W46 E1-17, E2-08, WC-1 closed by W46-FIX1)",
       },
     ],
     plants: [
@@ -350,15 +350,21 @@ export const ROWS = {
       { cfg: "weaponcadence-broken-title-reset.cfg", rule: "RestAfterBoundary" },
       { cfg: "weaponcadence-broken-jam-freeze.cfg", rule: "BoundedReadyAfterInterrupt" },
       { cfg: "weaponcadence-broken-interrupt-hold.cfg", rule: "BoundedReadyAfterInterrupt" },
+      { cfg: "weaponcadence-broken-lock-stuck.cfg", rule: "BoundedReadyAfterInterrupt" },
       { cfg: "weaponcadence-broken-hold-repeat.cfg", rule: "OneVolleyPerPress" },
+      { cfg: "weaponcadence-broken-beats-hold-repeat.cfg", rule: "OneVolleyPerPress" },
+      { cfg: "weaponcadence-broken-snap-hold-lock.cfg", rule: "OneVolleyPerPress" },
       { cfg: "weaponcadence-broken-proc-touch.cfg", rule: "OneVolleyPerPress" },
       { cfg: "weaponcadence-broken-early-mash.cfg", rule: "WindowPaysAtMostOnce" },
       { cfg: "weaponcadence-broken-double-notch.cfg", rule: "WindowPaysAtMostOnce" },
+      { cfg: "weaponcadence-broken-double-snap.cfg", rule: "WindowPaysAtMostOnce" },
+      { cfg: "weaponcadence-broken-detline-double.cfg", rule: "WindowPaysAtMostOnce" },
+      { cfg: "weaponcadence-broken-beats-skip.cfg", rule: "WindowPaysAtMostOnce" },
       { cfg: "weaponcadence-broken-refund.cfg", rule: "RefundNeverExceedsSpend" },
     ],
     coverage: "references/weaponcadence-coverage.md",
     gaps: [
-      "seconds, DPS ceilings, Overdrive Sprint fan, speed-tier charge multipliers and phase E2 modes (lob_snap, beats, lock) are left to weapon_driver_test.gd, weapon_cadence_test.gd and weapon_envelope_test.gd",
+      "seconds, DPS ceilings, Overdrive Sprint fan, speed-tier charge multipliers, multi-charge Cluster scatter, Beat 3 speed scaling, Compound Interest streak cap and lane geometry are left to weapon_driver_test.gd, weapon_cadence_test.gd and weapon_envelope_test.gd",
     ],
   },
 };
