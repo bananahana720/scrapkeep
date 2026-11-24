@@ -10,6 +10,7 @@ const ClassKit := preload("res://src/ui/class_kit.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const Bindings := preload("res://src/core/bindings.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # The controls as a picture: the left half of a keyboard and a mouse, every key the
 # game uses drawn in place with its cap, and the rest left blank so the shape reads as
@@ -89,10 +90,10 @@ static func entries(class_def) -> Dictionary:
 		if record["slot"] == "extra" and out.has(key):
 			out[key]["extra"] = record["words"]
 			out[key]["extra_icon"] = record["icon"]
-			out[key]["tone"] = class_def.color
+			out[key]["tone"] = ClassDef.screen_color(class_def.color)
 			out[key]["lit"] = true
 			continue
-		out[key] = {"label": record["words"], "icon": record["icon"], "tone": class_def.color, "lit": true,
+		out[key] = {"label": record["words"], "icon": record["icon"], "tone": ClassDef.screen_color(class_def.color), "lit": true,
 			"extra": "", "extra_icon": ""}
 	return out
 
