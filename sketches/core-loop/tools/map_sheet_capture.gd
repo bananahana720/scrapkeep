@@ -617,7 +617,8 @@ func _bare(cam: Camera3D, staged: Array) -> Image:
 			off.append(node)
 	var bare := await _grab()
 	for node in off:
-		node.visible = true
+		if is_instance_valid(node):
+			node.visible = true
 	return bare
 
 
@@ -808,7 +809,7 @@ static func _multimesh_box(v: MultiMeshInstance3D) -> AABB:
 	var mm := v.multimesh
 	if mm == null or mm.mesh == null or mm.transform_format != MultiMesh.TRANSFORM_3D:
 		return AABB()
-	var count := mm.visible_instance_count if mm.visible_instance_count >= 0 else mm.instance_count
+	var count := mini(mm.visible_instance_count, mm.instance_count) if mm.visible_instance_count >= 0 else mm.instance_count
 	var placed: Array = []
 	for i in count:
 		placed.append(mm.get_instance_transform(i))
@@ -818,9 +819,13 @@ static func _multimesh_box(v: MultiMeshInstance3D) -> AABB:
 # The world box of a mesh box local drawn at each of placed (instance transforms) under the node transform at.
 static func instances_box(at: Transform3D, placed: Array, local: AABB) -> AABB:
 	var box := AABB()
+	var first := true
 	for i in placed.size():
 		var b: AABB = at * (placed[i] as Transform3D) * local
-		box = b if i == 0 else box.merge(b)
+		if b.size == Vector3.ZERO:
+			continue
+		box = b if first else box.merge(b)
+		first = false
 	return box
 
 

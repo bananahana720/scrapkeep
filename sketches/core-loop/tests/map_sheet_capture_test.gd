@@ -208,6 +208,7 @@ func _scene_helpers() -> void:
 	hull.mesh = BoxMesh.new()
 	machine.add_child(hull)
 	var boom := MultiMeshInstance3D.new()
+	boom.position = Vector3(5, 0, 0)
 	boom.multimesh = MultiMesh.new()
 	boom.multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	boom.multimesh.mesh = BoxMesh.new()
@@ -219,11 +220,12 @@ func _scene_helpers() -> void:
 	var spread: AABB = Tool.instances_box(Transform3D(Basis.IDENTITY, Vector3(0, 0, 2)), placed, AABB(Vector3(-0.5, -0.5, -0.5), Vector3.ONE))
 	t.check("instances_box spans every instance under the node transform", spread.position.is_equal_approx(Vector3(3.5, -0.5, 1.5))
 		and spread.end.is_equal_approx(Vector3(8.5, 0.5, 2.5)), str(spread))
-	# The headless renderer keeps no multimesh transforms, so the node-level read runs only where they read back.
+	var visible_box: AABB = Tool.box_of(machine)
+	t.check("box_of includes a visible multimesh node", visible_box.end.x >= 5.5 - 1e-4, str(visible_box))
+	t.near("box_of keeps the hull", visible_box.position.x, -0.5, 1e-4)
+	# The headless renderer keeps no multimesh transforms, so the instance-offset read runs only where they read back.
 	if boom.multimesh.get_instance_transform(1).origin.is_equal_approx(Vector3(8, 0, 0)):
-		var box: AABB = Tool.box_of(machine)
-		t.near("box_of reaches the multimesh's far instance", box.end.x, 8.5, 1e-4)
-		t.near("box_of keeps the hull", box.position.x, -0.5, 1e-4)
+		t.near("box_of reaches the multimesh's far instance", visible_box.end.x, 13.5, 1e-4)
 	else:
 		t.skip("box_of reaches the multimesh's far instance", "the headless renderer keeps no multimesh instance transforms")
 	boom.visible = false
