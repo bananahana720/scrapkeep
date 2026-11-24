@@ -197,12 +197,12 @@ const ROWS := {
 	"tarn_sign_on": {"priority": 3, "on": "sign_on", "boss": "brindle", "earned": "brindle_routed",
 		"full": [
 			{"kind": "card", "at": 0.0, "for": 2.0, "slot": "left_top",
-				"card": ["TARN", "New pilot · Tiger · claw bruiser", "Temperament", "gentle", "Machine", "is not", "Claws issued", "none"]},
+				"card": ["TARN", "New pilot, claw bruiser", "Temperament", "gentle", "Machine", "is not", "Claws issued", "none"]},
 			{"kind": "stamp", "at": 0.0, "for": 2.0, "text": "HIRED", "colour": "AMBER"},
 			{"kind": "caption", "at": 0.3, "for": 1.7, "slot": "left_low", "text": ["Start date: today. Claw: own.", "Paperwork: one claw, unissued.", "Shift starts now. Gloves optional."]},
 		],
 		"short": [
-			{"kind": "card", "at": 0.0, "for": 1.6, "slot": "left_top", "card": ["TARN", "New pilot · signed on"]},
+			{"kind": "card", "at": 0.0, "for": 1.6, "slot": "left_top", "card": ["TARN", "New pilot"]},
 			{"kind": "stamp", "at": 0.0, "for": 1.6, "text": "HIRED", "colour": "AMBER"},
 		]},
 }
