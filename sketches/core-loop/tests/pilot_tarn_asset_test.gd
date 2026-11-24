@@ -20,6 +20,9 @@ extends SceneTree
 # hinge outboard of the cutaway plating at radius 1.16, 25 degrees above 3 and 9 o'clock with no
 # lean, so jaws and rams frame the ball from the chase camera; ClawPivot and ClawTip move there
 # and the envelope cap becomes the weapon reach cap, 1.75.
+# 2026-11-24 (W46 E2-04b): the claw mounts leave the Pod for one banked copper ClawHooks mesh,
+# so they tilt with the jaws against a wall (baked_bracket_reach_test); the blades join the
+# WeaponRing as its bare_metal surface, which keeps Tarn at 17 draws.
 
 const T := preload("res://tests/support/t.gd")
 const PILOT := "res://assets/models/pilot_tarn_anim.glb"
@@ -239,8 +242,18 @@ func _shell(scene: Node) -> void:
 					slots.append(jaw.mesh.surface_get_material(s).resource_name)
 				slots.sort()
 			_t.check("claw " + kind + side, slots == ["class_accent", "paint"], "independent jaw: paint body, class_accent tooth strip; got %s" % [slots])
-		var blade := pod.get_node_or_null("WeaponRing/Blade_" + side) as MeshInstance3D
-		_t.check("blade " + side, blade != null and blade.mesh.get_surface_count() == 1, "single-material blade under WeaponRing")
+	var ring := pod.get_node_or_null("WeaponRing") as MeshInstance3D
+	var ring_slots := []
+	if ring != null:
+		for s in ring.mesh.get_surface_count():
+			ring_slots.append(ring.mesh.surface_get_material(s).resource_name)
+		ring_slots.sort()
+	_t.check("blades on the ring", ring_slots == ["bare_metal", "paint"],
+		"the two blades ride the WeaponRing mesh as its bare_metal surface (E2-04b); got %s" % [ring_slots])
+	var mounts := pod.get_node_or_null("ClawHooks") as MeshInstance3D
+	_t.check("claw mounts bank", mounts != null and mounts.mesh.get_surface_count() == 1
+		and mounts.mesh.surface_get_material(0).resource_name == "copper",
+		"arms, shoulders, bosses and ram sleeves are one copper ClawHooks mesh, a bracket part the carrier bank tilts (E2-04b)")
 	var pod_slots := []
 	if pod is MeshInstance3D:
 		for s in (pod as MeshInstance3D).mesh.get_surface_count():

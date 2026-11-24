@@ -20,12 +20,14 @@ Draws: 17, a documented exception to the 16-draw cap for Hoberman pilot mechas (
 docs/decisions.tsv 2026-10-10 w13-PD; exception: docs/decisions.tsv 2026-10-11 w13-PD, Tarn
 17). The four claw jaws are each their own mesh so code can hinge them, each a bone paint body
 plus a toothed class_accent strip along its biting edge (the tooth edges are the working
-device, the only class_accent): 8. The two blades swing, one bare_metal mesh each: 2. Gyro and
+device, the only class_accent): 8. ClawHooks, the claw mounts in copper (arms, shoulders,
+hinge bosses, ram sleeves), its own mesh so the carrier bank tilts it with the jaws: 1. Gyro and
 GyroInner: 2. Core 2 (paint, copper; the rubber tread caps fold into paint in charcoal vertex
 colour). Pod 2 (paint, copper): the copper lap bar is the ultimate control on every pilot, so
 its copper keeps its own slot and never takes a paint tint (ROSTER-LOOK section 6; fix round 3
-restores the slot that round 2 folded); its rubber folds into paint in charcoal. WeaponRing 1
-(its rubber folds into paint in charcoal, as shell_tally.py does). The pull drum and its wraps
+restores the slot that round 2 folded); its rubber folds into paint in charcoal. WeaponRing 2
+(paint, and bare_metal for the two blades joined into it, since no clip swings them; its
+rubber folds into paint in charcoal, as shell_tally.py does). The pull drum and its wraps
 are rotationally symmetric and untextured, so they ride the Pod mesh and PullDrum is an empty
 at the axle. check() prints COPPER and fails the build if copper slips under paint.
 
@@ -90,6 +92,7 @@ JAW_HEIGHT = 3.0
 JAW_THICK = 0.10
 BRACKET_R = 0.05          # a stout dark-steel arm, 0.10 m across
 BRACKET_SIDE = 0.12       # the arm's end off the jaw plane along the pin: half a jaw and the arm
+ARM_ROOT = 0.80           # where the arm starts inside the ball, outside the cutaway window's cone
 SHOULDER = (0.30, 0.34, 0.12)   # the armoured shoulder where the arm leaves the ball: radial, up, along the pin
 BOSS = (0.085, 0.18)      # the hinge boss: radius and half length along the pin
 TOOTH_BITE = 1.6          # how far the teeth stand proud of the jaw, over the 2026-10 outline
@@ -226,7 +229,7 @@ def _block(part, slot, frame, centre, size, color=None, alpha=1.0):
 
 def ram(jaw, pod_part, hinge, d, up, axis, side_sign):
     """The upper jaw's ram: the brass rod and its tie lug on the jaw, the copper sleeve and its
-    dark spoke to the hinge boss on the Pod. Both arcs are concentric with the hinge pin, so
+    spoke to the hinge boss on the claw mounts. Both arcs are concentric with the hinge pin, so
     the rod slides along the sleeve as the jaw opens and never leaves it."""
     off = side_sign * RAM_OFFSET
     flat = _swing_matrix(hinge, d, up, axis, 0.0, off)
@@ -240,7 +243,7 @@ def ram(jaw, pod_part, hinge, d, up, axis, side_sign):
     spoke = _swing_matrix(hinge, d, up, axis, bottom + 4.0, off)
     inner = BOSS[0] - 0.01
     outer = RAM_RADIUS - RAM_SLEEVE_SECTION / 2 + 0.008
-    _block(pod_part, "rubber", spoke, ((inner + outer) / 2, 0.0, 0.0), (outer - inner, 0.06, 0.06))
+    _block(pod_part, "copper", spoke, ((inner + outer) / 2, 0.0, 0.0), (outer - inner, 0.06, 0.06))
 
 
 def _plane_prism(part, slot, outline, depth, origin, eu, ev, color=None):
@@ -255,20 +258,24 @@ def _plane_prism(part, slot, outline, depth, origin, eu, ev, color=None):
 
 
 def claws(pod):
-    """Brackets and hinge bosses on the Pod mesh; four single-material jaws hinged at the
-    bracket ends; ClawPivot and ClawTip sockets. Returns the sockets' rest points."""
-    extra = Part("TarnPodClaws")
+    """The claw mounts (arms, shoulders, hinge bosses and ram sleeves) as one copper mesh,
+    ClawHooks, under the Pod; four two-surface jaws hinged at the arm ends; ClawPivot and ClawTip
+    sockets. ClawHooks is a bracket part (hero_assets.gd BRACKET_PARTS), so the carrier bank tilts
+    it with the jaws against a wall; baked into the Pod it stayed level and stood past the ball
+    (E2-04b). Returns the mounts and the sockets' rest points."""
+    extra = Part("ClawHooks")
     points = {}
     for side, sign in (("R", 1), ("L", -1)):
         d, axis, up, hinge, tip = claw_points(sign, CLAW_REACH[0])
-        root = Vector((sign * 0.24, -0.02, -0.44))
         # The arm leaves the ball through a shoulder block and meets the boss beside the jaw
         # plane on the far side from the camera, so the jaws' heels swing past it at any open
         # angle (they rotate about the boss).
         side_off = -sign * BRACKET_SIDE
         shoulder = d * 1.0 + axis * side_off
-        extra.rod("rubber", root, shoulder, BRACKET_R, 6)
-        extra.rod("rubber", shoulder, hinge - d * 0.03 + axis * side_off, BRACKET_R, 6)
+        # The arm starts just inside the plating, out of the cutaway window's sight, so a banked
+        # mount never swings through the cockpit.
+        root = d * ARM_ROOT + axis * side_off
+        extra.rod("copper", root, hinge - d * 0.03 + axis * side_off, BRACKET_R, 6)
         _block(extra, "copper", _swing_matrix(hinge, d, up, axis, 0.0, side_off),
                (1.0 - HINGE_RADIUS, 0.0, 0.0), SHOULDER)
         extra.rod("copper", hinge - axis * BOSS[1], hinge + axis * BOSS[1], BOSS[0], 8)
@@ -327,19 +334,17 @@ def blade_outline():
 
 
 def blades(ring):
-    """Two curved claw blades, each its own bare_metal mesh with its origin at its root on the
-    band so a swing turns it about the root, and their petrol housings on the ring's paint."""
+    """Two curved claw blades in bare_metal and their petrol housings on the ring's paint, all
+    joined into the WeaponRing mesh: no clip swings them, so one bare_metal surface on the ring
+    spends the draw the banked claw mounts need (E2-04b)."""
     housing = Part("TarnRingHousing")
     for side, sign in (("R", 1), ("L", -1)):
         x = sign * BLADE_X
         y0 = math.sqrt(sb.RING_BAND[1] ** 2 - x * x) - 0.012
         housing.box("paint", (0.10, 0.06, 0.10), loc=(x, y0 + 0.01, sb.RING_BAND[3]), color="petrol")
-        blade = Part("Blade." + side)
         root = Vector((x, y0 + 0.035, sb.RING_BAND[3]))
-        _plane_prism(blade, "bare_metal", blade_outline(), BLADE_THICK, root,
+        _plane_prism(housing, "bare_metal", blade_outline(), BLADE_THICK, root,
                      Vector((0, 1, 0)), Vector((0, 0, 1)))
-        sb._sharpen(blade)
-        blade.to_object(tuple(root), ring)
     sb._sharpen(housing)
     return housing
 
@@ -501,12 +506,12 @@ def build_shell(variant=""):
         print("TEETH caps toothed on %d hubs" % toothed_caps(core))
     print("STUDS shaded smooth: %d" % smooth_studs(core))
     drop_neutral_seat(ring)
-    claw_extra, points = claws(pod)
-    join_into(pod, claw_extra.to_object((0, 0, 0), pod))
+    mounts, points = claws(pod)
+    mounts.to_object((0, 0, 0), pod)
     drum_extra, exit_point = drum_parts(pod)
     join_into(pod, drum_extra.to_object((0, 0, 0), pod))
     join_into(ring, blades(ring).to_object((0, 0, 0), ring))
-    # Rubber folds into paint in charcoal on the static meshes, so the seven moving parts keep
+    # Rubber folds into paint in charcoal on the static meshes, so the moving and banked parts keep
     # their own meshes inside 17 draws (docs/decisions.tsv 2026-10-11 w13-PD, Tarn 17). Copper
     # never folds: paint must not tint the lap bar (ROSTER-LOOK section 6).
     folds = {
@@ -560,7 +565,7 @@ def check(shell, points):
     print("REACH max radius %.3f cap %.2f %s" % (far, REACH_CAP, "ok" if far <= REACH_CAP else "OUT"))
     ok &= far <= REACH_CAP
     for o in common.tree(shell["pod"]):
-        if o.name.startswith("Claw") and o.type == "MESH":
+        if o.name.startswith(("ClawUpper", "ClawLower")) and o.type == "MESH":
             names = sorted(m.name for m in o.data.materials)
             used = {o.data.materials[p.material_index].name for p in o.data.polygons}
             ok &= names == ["class_accent", "paint"] and used == {"class_accent", "paint"}

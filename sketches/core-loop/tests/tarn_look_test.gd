@@ -30,7 +30,7 @@ const SHELL_DRAWS := 17
 const REACH_CAP := 1.75
 const JAWS := ["ClawUpper_L", "ClawUpper_R", "ClawLower_L", "ClawLower_R"]
 const RIG_NODES := ["ClawUpper_L", "ClawUpper_R", "ClawLower_L", "ClawLower_R", "ClawPivot_L", "ClawPivot_R",
-	"ClawTip_L", "ClawTip_R", "WeaponRing", "WeaponRing/Blade_L", "WeaponRing/Blade_R"]
+	"ClawTip_L", "ClawTip_R", "ClawHooks", "WeaponRing"]
 # Each jaw's opening direction about its local X (the hinge pin): the right side opens its upper
 # jaw positive and its lower negative, the left mirrors. The three beats' peaks (clips/tarn.json).
 const OPENS := {"ClawUpper_L": -1.0, "ClawUpper_R": 1.0, "ClawLower_L": 1.0, "ClawLower_R": -1.0}
