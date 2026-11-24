@@ -157,6 +157,11 @@ const LIFT_DRUM_BELOW := 2.5
 const LIFT_BAND := 0.35
 const LIFT_BAND_EVERY := 2.5
 const SKIN_BARGE_SIDE := 14.0
+# Code-built contraption parts and local valve/dial fittings fade out past these ranges, matching the skinned
+# contraption budgets (detail base_end 250 m for gauges, 420 m for lifts, valves, rings and walls).
+const PART_VIEW_END_M := 420.0
+const DIAL_VIEW_END_M := 250.0
+const PART_VIEW_MARGIN_M := 30.0
 
 var map
 var ground: Callable
@@ -798,6 +803,23 @@ static func _aim_basis(aim: Vector3) -> Basis:
 	return Basis(Vector3.UP, atan2(aim.x, aim.z))
 
 
+static func _range_part(view: GeometryInstance3D, end_m := PART_VIEW_END_M) -> void:
+	if view == null or view.visibility_range_end > 0.0:
+		return
+	view.visibility_range_end = end_m
+	view.visibility_range_end_margin = PART_VIEW_MARGIN_M
+	view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+
+
+static func _range_tree(root: Node, end_m := PART_VIEW_END_M) -> void:
+	if root == null:
+		return
+	if root is GeometryInstance3D:
+		_range_part(root as GeometryInstance3D, end_m)
+	for child in root.get_children():
+		_range_tree(child, end_m)
+
+
 # ---- Barges ----
 
 func _build_barge(spec: Dictionary) -> Dictionary:
@@ -970,6 +992,7 @@ func _drum_view(r: float, top: float, length: float) -> Node3D:
 		mi.name = part[0]
 		mi.mesh = (part[1] as SurfaceTool).commit()
 		mi.material_override = part[2]
+		_range_part(mi)
 		view.add_child(mi)
 	return view
 
@@ -1120,6 +1143,7 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 			column.position = mouth + Vector3.UP * 4.0
 			root.add_child(column)
 			arm = column
+	_range_tree(root)
 	var needle := _dial(mouth + aim.cross(Vector3.UP) * (float(spec["radius"]) + 2.0) + Vector3.DOWN * 1.0, spec)
 	return {"spec": spec, "root": root, "mouth": mouth, "aim": aim, "needle": needle, "arm": arm, "cycle": null}
 
@@ -1161,6 +1185,7 @@ func _build_cable(spec: Dictionary) -> Dictionary:
 	hook.material_override = _hook_mat
 	hook.position = from
 	hook.basis = Basis.looking_at(Vector3(to.x - from.x, 0.0, to.z - from.z).normalized(), Vector3.UP) * Basis(Vector3.RIGHT, PI * 0.5)
+	_range_part(hook)
 	add_child(hook)
 	return {"spec": spec, "from": from, "to": to, "rest": 0.0}
 
@@ -1178,9 +1203,11 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 	wheel.position = foot + Vector3.UP * 1.6
 	wheel.rotation.x = PI * 0.5
 	add_child(wheel)
-	RecipeProps.base("valve_wheel", wheel, Transform3D.IDENTITY)
+	for v in RecipeProps.base("valve_wheel", wheel, Transform3D.IDENTITY):
+		_range_part(v)
 	RecipeProps.shells("valve_wheel", wheel, Transform3D.IDENTITY)
-	RecipeProps.base("valve_wheel_mount", self, Transform3D(Basis.IDENTITY, foot))
+	for v in RecipeProps.base("valve_wheel_mount", self, Transform3D(Basis.IDENTITY, foot)):
+		_range_part(v)
 	RecipeProps.shells("valve_wheel_mount", self, Transform3D(Basis.IDENTITY, foot))
 	var d: Dictionary = spec["door"]
 	var dat: Vector2 = d["at"]
@@ -1205,6 +1232,7 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 		door.add_child(mesh)
 	door.position = door_foot + Vector3.UP * (size.y * 0.5 - 0.5)
 	door.rotation.y = d["turn"]
+	_range_tree(door)
 	add_child(door)
 	var plume: MeshInstance3D = null
 	var vent = spec.get("vent")
@@ -1333,6 +1361,7 @@ func _build_sluice_valve(spec: Dictionary) -> Dictionary:
 		pay_device.position = foot
 		holder.add_child(pay_device)
 		pay_device.setup(_resolve_ctx(), _resolve_interact(), {"id": id})
+	_range_tree(holder)
 	if not is_in_group("world_telegraphs"):
 		add_to_group("world_telegraphs")
 	return {
@@ -1695,6 +1724,7 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 			face[0].transform = Transform3D(turn * Basis.from_scale(fit), turn * (-aabb.get_center() * fit + Vector3(0.0, 0.0, size.z * 0.25)))
 		body.position = foot + Vector3.UP * (size.y * 0.5 - 0.6)
 		body.rotation.y = spec["turn"]
+		_range_tree(body)
 		add_child(body)
 		return {"spec": spec, "body": body, "home": body.position, "broken": false}
 	var mesh := MeshInstance3D.new()
@@ -1714,6 +1744,7 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 		body.add_child(crack)
 	body.position = foot + Vector3.UP * (size.y * 0.5 - 0.6)
 	body.rotation.y = spec["turn"]
+	_range_tree(body)
 	add_child(body)
 	return {"spec": spec, "body": body, "home": body.position, "broken": false}
 
@@ -1792,6 +1823,7 @@ func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
 		needle.mesh = nm
 		needle.material_override = _needle_mat
 		needle.position = at + Vector3.UP * 3.4 + Vector3(0.0, 0.0, 0.12)
+		_range_part(needle, DIAL_VIEW_END_M)
 		add_child(needle)
 		return needle
 	var post := MeshInstance3D.new()
@@ -1802,6 +1834,7 @@ func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
 	post.mesh = pm
 	post.material_override = _copper_mat
 	post.position = at + Vector3.UP * 1.5
+	_range_part(post, DIAL_VIEW_END_M)
 	add_child(post)
 	var face := MeshInstance3D.new()
 	var fm := CylinderMesh.new()
@@ -1812,6 +1845,7 @@ func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
 	face.material_override = _gauge_mat
 	face.position = at + Vector3.UP * 3.4
 	face.rotation.x = PI * 0.5
+	_range_part(face, DIAL_VIEW_END_M)
 	add_child(face)
 	var redline := MeshInstance3D.new()
 	var rm := BoxMesh.new()
@@ -1820,6 +1854,7 @@ func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
 	redline.material_override = _rust_mat
 	redline.position = face.position + Vector3(0.75, 0.55, 0.1)
 	redline.rotation.z = -0.8
+	_range_part(redline, DIAL_VIEW_END_M)
 	add_child(redline)
 	var needle := MeshInstance3D.new()
 	var nm := BoxMesh.new()
@@ -1827,6 +1862,7 @@ func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
 	needle.mesh = nm
 	needle.material_override = _needle_mat
 	needle.position = face.position + Vector3(0.0, 0.0, 0.12)
+	_range_part(needle, DIAL_VIEW_END_M)
 	add_child(needle)
 	return needle
 
@@ -1858,4 +1894,5 @@ func _dashed_ring(at: Vector3, radius: float) -> void:
 		dash.material_override = _gauge_mat
 		dash.position = at + Vector3(cos(a), 0.0, sin(a)) * radius
 		dash.rotation.y = -a
+		_range_part(dash)
 		add_child(dash)

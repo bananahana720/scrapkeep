@@ -98,12 +98,14 @@ authored brightness on the 4080 while the authored ones gained the edge. `tripo_
 over the fitted model and writes that set on every mesh that lacks it; vertex colours and a part that already has the
 set (an authored part a swap kept) are left alone:
 
-`blender -b --factory-startup -P tools/tripo/tripo_finish.py -- --in <fitted.glb> --out <out.glb> [--lift "Node=1.2"] [--strut "Node:x0,y0,z0:x1,y1,z1:radius:slot;..."]`
+`blender -b --factory-startup -P tools/tripo/tripo_finish.py -- --in <fitted.glb> --out <out.glb> [--lift "Node=1.2"] [--drop-under "Node=12"] [--strut "Node:x0,y0,z0:x1,y1,z1:radius:slot;..."]`
 
 `--strut` adds a closed eight-sided rod to a node between two points (metres, glTF axes, Y up), in that node's named
-slot; the chaser's two rods keep its claws joined to its rearing body. `--lift` multiplies a node's vertex colours (in
-sRGB) for a body snapped darker than the authored paint. The output rebuilds byte for byte. Shot again on the 4080 with
-all six kinds (gamescope, 24 November 2026; view brightness against the authored, near-black in brackets):
+slot; the chaser's two rods keep its claws joined to its rearing body without poking through the side walls at rest.
+`--drop-under` drops disconnected islands under that unique-vertex count (removing a stray 10-vertex split sliver on
+the chaser's claws). `--lift` multiplies a node's vertex colours (in sRGB) for a body snapped darker than the authored
+paint. The output rebuilds byte for byte. Shot again on the 4080 with all six kinds (gamescope, 24 November 2026; view
+brightness against the authored, near-black in brackets):
 
 | Enemy | View 0 | View 1 | Result |
 | --- | --- | --- | --- |
@@ -140,7 +142,7 @@ outputs with the account holder. Outputs made on a free account are public domai
 | sibling | Tripo task | prompt | credits | tris (authored) | draws (authored) | fit |
 | --- | --- | --- | --- | --- | --- | --- |
 | camp/camp_pet_tripo.glb | 4bbd2038-8fe8-48d9-8fda-afda32599557 | prompts/camp_pet.txt | 30 | 2,000 (1,100) | 1 (1) | yaw -90, height, 8 sockets |
-| world_one/enemy_chaser_tripo.glb | Studio workspace 2f2966ab-1a15-41d1-bc51-94a44505dede (replaces API task 6013f673, which failed the render check, and Studio workspace 2635ebdc, a squat wedge never shipped) | prompts/enemy_chaser_slab.txt | 240 Studio (two generations of four candidates, two textures) plus 30 API for the first | 3,232 (3,176) | 5 (5) | yaw 180, `--yaw 180 --fit fill --radius 0.97 --max-tris 3176 --slots "fleet_paint;-1,-1,-1.6,1,1.1,-1.02=rubber;-1,-1,1.0,1,1.1,1.6=rubber;-0.43,0.59,0.1,0.47,0.86,0.8=rubber;-0.37,0.45,0.12,0.42,0.745,0.78=requisition_tag" --split "ChaserClaws=zmax:0.22:rubber,ChaserFin=zmin:0.8:rubber"` (body fleet_paint, top and bottom rubber, visor frame rubber, visor panel requisition_tag; claws below 22 %, fin above 80 %), then tripo_finish.py `--strut "ChaserClaws:-0.2,-1.2,-0.45:-0.2,0.0,-0.15:0.09:rubber;ChaserClaws:0.52,-1.2,-0.45:0.52,0.0,-0.15:0.09:rubber"` (24 November 2026; 3,232 triangles with the rods). The Studio export it starts from is not in the repo (the PC keeps it as `~/Downloads/hunter robot 3d model.glb`); these two commands rebuild the shipped file byte for byte from it |
+| world_one/enemy_chaser_tripo.glb | Studio workspace 2f2966ab-1a15-41d1-bc51-94a44505dede (replaces API task 6013f673, which failed the render check, and Studio workspace 2635ebdc, a squat wedge never shipped) | prompts/enemy_chaser_slab.txt | 240 Studio (two generations of four candidates, two textures) plus 30 API for the first | 3,222 (3,176) | 5 (5) | yaw 180, `--yaw 180 --fit fill --radius 0.97 --max-tris 3176 --slots "fleet_paint;-1,-1,-1.6,1,1.1,-1.02=rubber;-1,-1,1.0,1,1.1,1.6=rubber;-0.43,0.59,0.1,0.47,0.86,0.8=rubber;-0.37,0.45,0.12,0.42,0.745,0.78=requisition_tag" --split "ChaserClaws=zmax:0.22:rubber,ChaserFin=zmin:0.8:rubber"` (body fleet_paint, top and bottom rubber, visor frame rubber, visor panel requisition_tag; claws below 22 %, fin above 80 %), then tripo_finish.py `--drop-under "ChaserClaws=12" --strut "ChaserClaws:-0.20,-1.25,-0.38:-0.22,-0.15,0.05:0.07:rubber;ChaserClaws:0.44,-1.25,-0.38:0.22,-0.15,0.05:0.07:rubber"` (24 November 2026; 3,222 triangles with the rods and stray 10-vertex sliver removed). The Studio export it starts from is not in the repo (the PC keeps it as `~/Downloads/hunter robot 3d model.glb`); these two commands rebuild the shipped file byte for byte from it |
 | world_one/enemy_lobber_tripo.glb | 904d0a41-6627-44d7-a982-ce68527c27f0 | prompts/enemy_lobber_whole.txt | 120 (four candidates over two prompts) | 6,699 (6,720) | 5 (5) | tripo_fit.py, yaw 90, `--name LobberBody --max-tris 6700`, then lobber_parts.py |
 | world_one/enemy_swatter_tripo.glb (SwatterBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the second candidate; the row named the first candidate's id until 14 November 2026) | prompts/enemy_swatter_body.txt | 60 | 2,753 (2,760) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 2650 --bright match` |
 | world_one/enemy_hooker_tripo.glb (the barrel and head of HookerBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the swatter body, used a second time; the first barrel, task 27fecf60-4f86-4d56-92cd-e06c64efbf31, 60 credits, was replaced on 14 November 2026) | prompts/enemy_swatter_body.txt | 0 (a candidate already paid for) | 6,381 (6,414) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 6100 --bright match --region "-0.8,-0.8,-1.15,0.72,0.8,1.65" --crop "0.2,1"` (the crop drops the generated feet, after the PC look of PR 1029 noted them) |

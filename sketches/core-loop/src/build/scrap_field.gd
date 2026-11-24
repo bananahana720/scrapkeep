@@ -56,6 +56,9 @@ const ARC_LIFT := 0.3
 # over, so a long fight leaves the phrases ahead whole) and nothing here draws rng.
 const MAX_PIECES := 400
 const MAX_GEARS := 200
+# Distant 0.65 m pickups drop out past this range so a park-wide landmark camera does not draw scrap a kilometre away.
+const PICKUP_VIEW_END_M := 300.0
+const PICKUP_VIEW_MARGIN_M := 20.0
 # The live caps; a test's planted control raises them to prove the cap is what holds the count.
 var max_pieces := MAX_PIECES
 var max_gears := MAX_GEARS
@@ -694,6 +697,11 @@ func _add(at: Vector3, mesh: Mesh = null, material: Material = null) -> MeshInst
 	item.mesh = mesh if mesh != null else _mesh
 	item.material_override = material if material != null else _material
 	item.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Rare kit panels stay unranged so their cache columns remain visible across the park; small scrap and cogs fade at PICKUP_VIEW_END_M.
+	if material != _panel_material:
+		item.visibility_range_end = PICKUP_VIEW_END_M
+		item.visibility_range_end_margin = PICKUP_VIEW_MARGIN_M
+		item.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	if not _pickup_mesh_cache.is_empty() and (mesh == null or mesh == _cluster_mesh):
 		# Position is already seeded by the field; visual selection never draws RNG.
 		var seed_key := "%d:%d:%d" % [roundi(at.x * 1000.0), roundi(at.y * 1000.0), roundi(at.z * 1000.0)]

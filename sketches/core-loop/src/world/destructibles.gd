@@ -88,6 +88,11 @@ const GUARDED_SOCIETIES := ["hohokam", "ancestral_puebloan"]
 
 const FAMILY_BY_TIER := Kit.FAMILY_BY_TIER
 const SHARD_SIZE := 0.35
+# Crate and barricade meshes under BIG_EXTENT_M fade past VIEW_END_M so far landmark views skip distant scatter;
+# giant breakable walls (e.g. a 64 m pond wall) stay unranged.
+const VIEW_END_M := 320.0
+const VIEW_MARGIN_M := 30.0
+const BIG_EXTENT_M := 20.0
 
 # The loot meter's ceilings for this stage; ctx keys scrap_cap and cog_cap plant others for a test.
 var scrap_cap := SCRAP_CAP
@@ -698,6 +703,10 @@ func _make_mesh(p: Piece) -> void:
 		node.mesh = _piece_meshes[key]
 		node.material_override = _material
 		node.transform = Transform3D(p.basis, p.centre)
+		if maxf(size.x, maxf(size.y, size.z)) < BIG_EXTENT_M:
+			node.visibility_range_end = VIEW_END_M
+			node.visibility_range_end_margin = VIEW_MARGIN_M
+			node.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		add_child(node)
 		p.mesh = node
 

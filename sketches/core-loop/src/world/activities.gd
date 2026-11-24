@@ -62,6 +62,11 @@ const PAY_SCRAP := 180
 const POCKET_KIT := "res://assets/models/world_one/pocket_kit.glb"
 const POCKET_PARTS := ["PocketBlock", "PocketPost"]
 const POCKET_BLOCK := Vector3(4.0, 3.0, 4.0)
+# Site architecture and small ground props fade out past these distances so a park-wide landmark view does not
+# draw pockets, caches, wards and lore plates a kilometre away. Wayfinding beacon columns (ActivityView) stay unranged.
+const SITE_VIEW_END_M := 420.0
+const PROP_VIEW_END_M := 360.0
+const VIEW_MARGIN_M := 30.0
 const RULES := {
 	"trade_risk": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "trade_risk", "where": "device"}, "cue": {"view": "cracked_cache"}},
 	"trade_safe": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "trade_safe", "where": "device"}, "cue": {"view": "cracked_cache"}},
@@ -1101,7 +1106,21 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 		_build_interior(s)
 	if s.rule.finishes == "trade":
 		_build_trade(s)
+	_range_tree(s, SITE_VIEW_END_M, s.view)
 	return s
+
+
+static func _range_tree(root: Node, end_m: float, skip: Node = null) -> void:
+	if root == null or root == skip:
+		return
+	if root is GeometryInstance3D:
+		var view := root as GeometryInstance3D
+		if view.visibility_range_end <= 0.0:
+			view.visibility_range_end = end_m
+			view.visibility_range_end_margin = VIEW_MARGIN_M
+			view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	for child in root.get_children():
+		_range_tree(child, end_m, skip)
 
 
 func _build_trade(s: Site) -> void:
@@ -1289,6 +1308,7 @@ func _dress_find(s: Site, find_id: String) -> void:
 		_radio_tell(s)
 	else:
 		_seep_tell(s)
+	_range_tree(s, SITE_VIEW_END_M, s.view)
 
 
 # The crack's tell: a dark wet streak down the cracked face under a slow glint, and a drip heard
@@ -1335,6 +1355,7 @@ func _dress_door(s: Site) -> void:
 	minute.rotation.z = deg_to_rad(30.0)
 	clock.add_child(minute)
 	_mesh_box(minute, Vector3(0.07, DOOR_CLOCK_M * 0.42, 0.04), Vector3(0.0, DOOR_CLOCK_M * 0.21, 0.0), ink)
+	_range_tree(s, SITE_VIEW_END_M, s.view)
 
 
 # The radio's tell: a short whip aerial over the roof line and the tune through the wall, heard from
@@ -1372,6 +1393,7 @@ func _hang_room_log(s: Site, room_id: String) -> void:
 	s.set_meta("room", room_id)
 	_chalk_tally(s.wall)
 	_hang_glove(s)
+	_range_tree(s, SITE_VIEW_END_M, s.view)
 
 
 func _hang_board(s: Site, site_name: String, title: String, text: String) -> void:
@@ -2789,6 +2811,7 @@ func _build_ward(spec: Dictionary) -> MendWard:
 	w.fill.position = Vector3.UP * WARD_RING_H * 1.5
 	w.fill.scale = Vector3(0.001, 1.0, 0.001)
 	w.add_child(w.fill)
+	_range_tree(w, PROP_VIEW_END_M)
 	return w
 
 
@@ -2820,6 +2843,7 @@ func _build_plate(spec: Dictionary) -> LorePlate:
 	p.read = ctx.get("codex") != null and ctx.codex.known(p.note)
 	_show_plate(p)
 	_seat_plate(p)
+	_range_tree(p, PROP_VIEW_END_M)
 	return p
 
 

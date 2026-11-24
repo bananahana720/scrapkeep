@@ -1,7 +1,7 @@
 """Finish a fitted Tripo model: the polish bake in its second UV set, and optionally lifted colours and leg struts.
 
 blender -b --factory-startup -P tools/tripo/tripo_finish.py -- --in fitted.glb --out out.glb \
-    [--lift "Node=1.2,..."] [--strut "Node:x0,y0,z0:x1,y1,z1:radius:slot;..."]
+    [--lift "Node=1.2,..."] [--strut "Node:x0,y0,z0:x1,y1,z1:radius:slot;..."] [--drop-under "Node=20,..."]
 
 The bake. An authored enemy carries the polish bake in UV2 (x: the share of the corner out of shadow, y: edge
 wear, 0.5 neutral; tools/blender/POLISH.md), and the game reads it on every swapped-in material (src/presentation/
@@ -34,7 +34,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import polish  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-opt = {"lift": "", "strut": ""}
+opt = {"lift": "", "strut": "", "drop-under": ""}
 i = 0
 while i < len(argv):
     opt[argv[i][2:]] = argv[i + 1]; i += 2
@@ -101,6 +101,43 @@ def add_strut(ob, a, b, radius, slot):
     me.update()
 
 
+def drop_small_islands(ob, min_verts):
+    """Remove disconnected mesh islands (grouped by welded position so hard edges stay joined) with fewer than min_verts unique vertices."""
+    me = ob.data
+    bm = bmesh.new(); bm.from_mesh(me)
+    bm.verts.ensure_lookup_table()
+    by_pos = {}
+    for v in bm.verts:
+        k = (round(v.co.x, 4), round(v.co.y, 4), round(v.co.z, 4))
+        by_pos.setdefault(k, []).append(v)
+    adj = {k: set() for k in by_pos}
+    for f in bm.faces:
+        ks = [(round(v.co.x, 4), round(v.co.y, 4), round(v.co.z, 4)) for v in f.verts]
+        for a in ks:
+            for b in ks:
+                if a != b:
+                    adj[a].add(b)
+    seen = set()
+    kill = []
+    for k in by_pos:
+        if k in seen:
+            continue
+        comp = []; stack = [k]; seen.add(k)
+        while stack:
+            u = stack.pop(); comp.append(u)
+            for w in adj[u]:
+                if w not in seen:
+                    seen.add(w); stack.append(w)
+        if len(comp) < min_verts:
+            for u in comp:
+                kill.extend(by_pos[u])
+    if kill:
+        bmesh.ops.delete(bm, geom=kill, context="VERTS")
+        bm.to_mesh(me); me.update()
+    bm.free()
+    return len(kill)
+
+
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=opt["in"])
 meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
@@ -118,6 +155,12 @@ for item in [x for x in opt["lift"].split(",") if x]:
         rgb = linear(srgb(c[:3]) * f)
         d.color = (float(rgb[0]), float(rgb[1]), float(rgb[2]), c[3])
     lifted[name] = f
+dropped = {}
+for item in [x for x in opt["drop-under"].split(",") if x]:
+    name, _, limit = item.partition("=")
+    n = drop_small_islands(mesh_node(name, "drop-under"), int(limit))
+    if n:
+        dropped[name] = n
 struts = []
 for item in [x for x in opt["strut"].split(";") if x]:
     parts = item.split(":")
@@ -154,4 +197,4 @@ body = struct.pack("<I", len(js)) + b"JSON" + js + rest
 open(opt["out"], "wb").write(b"glTF" + struct.pack("<II", 2, 12 + len(body)) + body)
 tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in meshes)
 print("FINISH " + json.dumps({"out": opt["out"], "baked": baked, "kept": sorted(set(had) - set(baked)), "lifted": lifted,
-                              "struts": struts, "model_tris": tris}))
+                              "dropped": dropped, "struts": struts, "model_tris": tris}))
