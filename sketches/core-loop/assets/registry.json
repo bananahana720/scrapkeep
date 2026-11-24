@@ -17839,6 +17839,174 @@
    }
   },
   {
+   "id": "dprop_dam_foreman_billboard_a",
+   "path": "res://assets/models/park/props/dam/foreman_billboard_a.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "foreman_billboard variant a LOD0 (6176 tris): A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -5.25,
+     0,
+     -1.1074
+    ],
+    "max": [
+     5.25,
+     9.3848,
+     1.1074
+    ],
+    "size": [
+     10.5,
+     9.3848,
+     2.2148
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_foreman_billboard_a_lod1",
+   "path": "res://assets/models/park/props/dam/foreman_billboard_a_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "foreman_billboard variant a LOD1 (3088 tris): A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.2497,
+     0,
+     -1.1074
+    ],
+    "max": [
+     5.2497,
+     9.3847,
+     1.1048
+    ],
+    "size": [
+     10.4994,
+     9.3847,
+     2.2122
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_foreman_billboard_a_lod2",
+   "path": "res://assets/models/park/props/dam/foreman_billboard_a_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "foreman_billboard variant a LOD2 (916 tris): A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.2488,
+     0,
+     -1.092
+    ],
+    "max": [
+     5.2349,
+     9.3851,
+     1.1194
+    ],
+    "size": [
+     10.4837,
+     9.3851,
+     2.2114
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_foreman_billboard_b",
+   "path": "res://assets/models/park/props/dam/foreman_billboard_b.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "foreman_billboard variant b LOD0 (6152 tris): A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -5.25,
+     0,
+     -1.1074
+    ],
+    "max": [
+     5.25,
+     9.3848,
+     1.1074
+    ],
+    "size": [
+     10.5,
+     9.3848,
+     2.2148
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_foreman_billboard_b_lod1",
+   "path": "res://assets/models/park/props/dam/foreman_billboard_b_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "foreman_billboard variant b LOD1 (3076 tris): A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.2497,
+     0,
+     -1.1074
+    ],
+    "max": [
+     5.2497,
+     9.3847,
+     1.1048
+    ],
+    "size": [
+     10.4994,
+     9.3847,
+     2.2122
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_foreman_billboard_b_lod2",
+   "path": "res://assets/models/park/props/dam/foreman_billboard_b_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "foreman_billboard variant b LOD2 (915 tris): A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.2488,
+     0,
+     -1.092
+    ],
+    "max": [
+     5.235,
+     9.3851,
+     1.1194
+    ],
+    "size": [
+     10.4838,
+     9.3851,
+     2.2114
+    ]
+   }
+  },
+  {
    "id": "dprop_dam_gate_wheelhouse_a",
    "path": "res://assets/models/park/props/dam/gate_wheelhouse_a.glb",
    "class": "dress_hero",
@@ -19591,6 +19759,174 @@
    }
   },
   {
+   "id": "dprop_dam_shift_table_a",
+   "path": "res://assets/models/park/props/dam/shift_table_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "shift_table variant a LOD0 (2388 tris): A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.57,
+     0,
+     -1.19
+    ],
+    "max": [
+     2.57,
+     2.19,
+     1.19
+    ],
+    "size": [
+     5.14,
+     2.19,
+     2.38
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_shift_table_a_lod1",
+   "path": "res://assets/models/park/props/dam/shift_table_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "shift_table variant a LOD1 (1194 tris): A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.57,
+     0,
+     -1.19
+    ],
+    "max": [
+     2.57,
+     2.19,
+     1.19
+    ],
+    "size": [
+     5.14,
+     2.19,
+     2.38
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_shift_table_a_lod2",
+   "path": "res://assets/models/park/props/dam/shift_table_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "shift_table variant a LOD2 (446 tris): A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.5585,
+     0,
+     -1.19
+    ],
+    "max": [
+     2.5566,
+     2.1585,
+     1.19
+    ],
+    "size": [
+     5.1151,
+     2.1585,
+     2.38
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_shift_table_b",
+   "path": "res://assets/models/park/props/dam/shift_table_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "shift_table variant b LOD0 (2044 tris): A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.57,
+     0,
+     -1.19
+    ],
+    "max": [
+     2.57,
+     2.19,
+     1.19
+    ],
+    "size": [
+     5.14,
+     2.19,
+     2.38
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_shift_table_b_lod1",
+   "path": "res://assets/models/park/props/dam/shift_table_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "shift_table variant b LOD1 (1022 tris): A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.57,
+     0,
+     -1.1818
+    ],
+    "max": [
+     2.57,
+     2.19,
+     1.1818
+    ],
+    "size": [
+     5.14,
+     2.19,
+     2.3636
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_shift_table_b_lod2",
+   "path": "res://assets/models/park/props/dam/shift_table_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "shift_table variant b LOD2 (376 tris): A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.5585,
+     0,
+     -1.19
+    ],
+    "max": [
+     2.5566,
+     2.1585,
+     1.19
+    ],
+    "size": [
+     5.1151,
+     2.1585,
+     2.38
+    ]
+   }
+  },
+  {
    "id": "dprop_dam_stencil_post_a",
    "path": "res://assets/models/park/props/dam/stencil_post_a.glb",
    "class": "dress_prop",
@@ -21259,6 +21595,174 @@
    }
   },
   {
+   "id": "dprop_flume_foreman_billboard_a",
+   "path": "res://assets/models/park/props/flume/foreman_billboard_a.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "foreman_billboard variant a LOD0 (6176 tris): A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -5.25,
+     0,
+     -1.1074
+    ],
+    "max": [
+     5.25,
+     9.3848,
+     1.1074
+    ],
+    "size": [
+     10.5,
+     9.3848,
+     2.2148
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_foreman_billboard_a_lod1",
+   "path": "res://assets/models/park/props/flume/foreman_billboard_a_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "foreman_billboard variant a LOD1 (3088 tris): A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.2497,
+     0,
+     -1.1074
+    ],
+    "max": [
+     5.2497,
+     9.3847,
+     1.1048
+    ],
+    "size": [
+     10.4994,
+     9.3847,
+     2.2122
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_foreman_billboard_a_lod2",
+   "path": "res://assets/models/park/props/flume/foreman_billboard_a_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "foreman_billboard variant a LOD2 (916 tris): A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.2488,
+     0,
+     -1.092
+    ],
+    "max": [
+     5.2349,
+     9.3851,
+     1.1194
+    ],
+    "size": [
+     10.4837,
+     9.3851,
+     2.2114
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_foreman_billboard_b",
+   "path": "res://assets/models/park/props/flume/foreman_billboard_b.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "foreman_billboard variant b LOD0 (6152 tris): A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -5.25,
+     0,
+     -1.1074
+    ],
+    "max": [
+     5.25,
+     9.3848,
+     1.1074
+    ],
+    "size": [
+     10.5,
+     9.3848,
+     2.2148
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_foreman_billboard_b_lod1",
+   "path": "res://assets/models/park/props/flume/foreman_billboard_b_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "foreman_billboard variant b LOD1 (3076 tris): A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.2497,
+     0,
+     -1.1074
+    ],
+    "max": [
+     5.2497,
+     9.3847,
+     1.1048
+    ],
+    "size": [
+     10.4994,
+     9.3847,
+     2.2122
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_foreman_billboard_b_lod2",
+   "path": "res://assets/models/park/props/flume/foreman_billboard_b_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "foreman_billboard variant b LOD2 (915 tris): A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -5.2488,
+     0,
+     -1.092
+    ],
+    "max": [
+     5.2349,
+     9.3851,
+     1.1194
+    ],
+    "size": [
+     10.4837,
+     9.3851,
+     2.2114
+    ]
+   }
+  },
+  {
    "id": "dprop_flume_gauge_dial_shed_a",
    "path": "res://assets/models/park/props/flume/gauge_dial_shed_a.glb",
    "class": "dress_prop",
@@ -22515,6 +23019,174 @@
      2.7879,
      0.817,
      1.8924
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_shift_table_a",
+   "path": "res://assets/models/park/props/flume/shift_table_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "shift_table variant a LOD0 (2388 tris): A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.57,
+     0,
+     -1.19
+    ],
+    "max": [
+     2.57,
+     2.19,
+     1.19
+    ],
+    "size": [
+     5.14,
+     2.19,
+     2.38
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_shift_table_a_lod1",
+   "path": "res://assets/models/park/props/flume/shift_table_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "shift_table variant a LOD1 (1194 tris): A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.57,
+     0,
+     -1.19
+    ],
+    "max": [
+     2.57,
+     2.19,
+     1.19
+    ],
+    "size": [
+     5.14,
+     2.19,
+     2.38
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_shift_table_a_lod2",
+   "path": "res://assets/models/park/props/flume/shift_table_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "shift_table variant a LOD2 (446 tris): A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.5585,
+     0,
+     -1.19
+    ],
+    "max": [
+     2.5566,
+     2.1585,
+     1.19
+    ],
+    "size": [
+     5.1151,
+     2.1585,
+     2.38
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_shift_table_b",
+   "path": "res://assets/models/park/props/flume/shift_table_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "shift_table variant b LOD0 (2044 tris): A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.57,
+     0,
+     -1.19
+    ],
+    "max": [
+     2.57,
+     2.19,
+     1.19
+    ],
+    "size": [
+     5.14,
+     2.19,
+     2.38
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_shift_table_b_lod1",
+   "path": "res://assets/models/park/props/flume/shift_table_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "shift_table variant b LOD1 (1022 tris): A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.57,
+     0,
+     -1.1818
+    ],
+    "max": [
+     2.57,
+     2.19,
+     1.1818
+    ],
+    "size": [
+     5.14,
+     2.19,
+     2.3636
+    ]
+   }
+  },
+  {
+   "id": "dprop_flume_shift_table_b_lod2",
+   "path": "res://assets/models/park/props/flume/shift_table_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/flume.py",
+    "notes": "shift_table variant b LOD2 (376 tris): A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.5585,
+     0,
+     -1.19
+    ],
+    "max": [
+     2.5566,
+     2.1585,
+     1.19
+    ],
+    "size": [
+     5.1151,
+     2.1585,
+     2.38
     ]
    }
   },
@@ -38704,7 +39376,7 @@
    "exception": {
     "draws": 17
    },
-   "exception_why": "PD-TARN: a documented 17-draw exception to the 16-draw cap for Hoberman pilot mechas (cap: docs/decisions.tsv 2026-10-10 w13-PD, base 10 plus up to 6 for machinery and the Pilot placeholder; exception: docs/decisions.tsv 2026-10-11 w13-PD, Tarn 17). Reason: four articulated claw jaws at two surfaces each are the character, each its own hinged mesh with a bone paint body and a class_accent tooth strip (8), and the Pod keeps its copper surface beside paint because the copper lap bar is the ultimate control on every pilot and paint must never tint it (ROSTER-LOOK section 6). 17 draws: jaws 8, two swinging blades 2, Gyro and GyroInner 2, Core paint and copper 2, Pod paint and copper 2, WeaponRing 1; rubber on Core, Pod and WeaponRing folds into paint in charcoal vertex colour; the pull drum rides the Pod mesh; ball at class V 17 + pilot 3 + layers 5",
+   "exception_why": "PD-TARN: a documented 17-draw exception to the 16-draw cap for Hoberman pilot mechas (cap: docs/decisions.tsv 2026-10-10 w13-PD, base 10 plus up to 6 for machinery and the Pilot placeholder; exception: docs/decisions.tsv 2026-10-11 w13-PD, Tarn 17). Reason: four articulated claw jaws at two surfaces each are the character, each its own hinged mesh with a bone paint body and a class_accent tooth strip (8), and the Pod keeps its copper surface beside paint because the copper lap bar is the ultimate control on every pilot and paint must never tint it (ROSTER-LOOK section 6). 17 draws: jaws 8, ClawHooks 1 (the claw mounts in copper, its own mesh so the carrier bank tilts it with the jaws; E2-04b), Gyro and GyroInner 2, Core paint and copper 2, Pod paint and copper 2, WeaponRing 2 (paint, and bare_metal for the two blades joined into it; no clip swings them); rubber on Core, Pod and WeaponRing folds into paint in charcoal vertex colour; the pull drum rides the Pod mesh; the upper jaws' brass rams ride the jaws' paint, their sleeves the ClawHooks copper (E2-04); ball at class V 17 + pilot 3 + layers 8 (c2 1, c3 3, c4 2, c5 2) = 28 (hero_six_pilot_budget_test CLASS_V)",
    "provenance": {
     "recipe": "tools/blender/shell_tarn.py",
     "helper": "tools/blender/shell_base.py hoberman()",
@@ -39668,6 +40340,12 @@
   "dprop_dam_flood_staff_c",
   "dprop_dam_flood_staff_c_lod1",
   "dprop_dam_flood_staff_c_lod2",
+  "dprop_dam_foreman_billboard_a",
+  "dprop_dam_foreman_billboard_a_lod1",
+  "dprop_dam_foreman_billboard_a_lod2",
+  "dprop_dam_foreman_billboard_b",
+  "dprop_dam_foreman_billboard_b_lod1",
+  "dprop_dam_foreman_billboard_b_lod2",
   "dprop_dam_gate_wheelhouse_a",
   "dprop_dam_gate_wheelhouse_a_lod1",
   "dprop_dam_gate_wheelhouse_a_lod2",
@@ -39728,6 +40406,12 @@
   "dprop_dam_sandbags_c",
   "dprop_dam_sandbags_c_lod1",
   "dprop_dam_sandbags_c_lod2",
+  "dprop_dam_shift_table_a",
+  "dprop_dam_shift_table_a_lod1",
+  "dprop_dam_shift_table_a_lod2",
+  "dprop_dam_shift_table_b",
+  "dprop_dam_shift_table_b_lod1",
+  "dprop_dam_shift_table_b_lod2",
   "dprop_dam_stencil_post_a",
   "dprop_dam_stencil_post_a_lod1",
   "dprop_dam_stencil_post_a_lod2",
@@ -39785,6 +40469,12 @@
   "dprop_flume_fish_rack_c",
   "dprop_flume_fish_rack_c_lod1",
   "dprop_flume_fish_rack_c_lod2",
+  "dprop_flume_foreman_billboard_a",
+  "dprop_flume_foreman_billboard_a_lod1",
+  "dprop_flume_foreman_billboard_a_lod2",
+  "dprop_flume_foreman_billboard_b",
+  "dprop_flume_foreman_billboard_b_lod1",
+  "dprop_flume_foreman_billboard_b_lod2",
   "dprop_flume_gauge_dial_shed_a",
   "dprop_flume_gauge_dial_shed_a_lod1",
   "dprop_flume_gauge_dial_shed_a_lod2",
@@ -39830,6 +40520,12 @@
   "dprop_flume_saltbush_c",
   "dprop_flume_saltbush_c_lod1",
   "dprop_flume_saltbush_c_lod2",
+  "dprop_flume_shift_table_a",
+  "dprop_flume_shift_table_a_lod1",
+  "dprop_flume_shift_table_a_lod2",
+  "dprop_flume_shift_table_b",
+  "dprop_flume_shift_table_b_lod1",
+  "dprop_flume_shift_table_b_lod2",
   "dprop_flume_skiff_on_blocks_a",
   "dprop_flume_skiff_on_blocks_a_lod1",
   "dprop_flume_skiff_on_blocks_a_lod2",
