@@ -273,8 +273,8 @@ func _stage(terrain, stage: int, map_id: String) -> void:
 	var r := read_rows(rows_node, scatter)
 	t.check("%s every placed park row carries a valid cover_kind tag" % map_id, r["untagged"].is_empty(), str(r["untagged"]))
 	t.check("%s ground scatter built" % map_id, r["soft_views"] > 0, "%d scatter views" % r["soft_views"])
-	t.check("%s has tagged hard and soft rows" % map_id, not r["hard"].is_empty() and not r["soft_rows"].is_empty(),
-		"hard=%d soft=%d surface=%d" % [r["hard"].size(), r["soft_rows"].size(), r["surface"].size()])
+	t.check("%s has hard rows" % map_id, not r["hard"].is_empty(), "%d" % r["hard"].size())
+	t.check("%s has soft rows" % map_id, not r["soft_rows"].is_empty(), "%d" % r["soft_rows"].size())
 	var bad_surface: Array = r["surface"].filter(func(s): return not s["valid"]).map(func(s): return "%s(%.2f)" % [s["id"], s["height"]])
 	t.check("%s surface rows are low solid decks under %.1f m" % [map_id, HARD_M], bad_surface.is_empty(), str(bad_surface))
 	var dial := ChallengeDials.by_stage_or("hazard.shell_cover_by_stage", stage, 0.0) > 0.5

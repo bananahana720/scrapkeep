@@ -896,8 +896,7 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 	if baked and fits_seat(row) and DRAPED.has(String(row.get("recipe", ""))) and ground.is_valid():
 		drape(node, row, at_origin, ground)
 	if body.get_shape_owners().is_empty():
-		node.remove_child(body)
-		body.free()
+		body.collision_layer = 0
 	_sensor(node, row, publish)
 	tag_cover(node, row)
 	return node
@@ -1691,8 +1690,7 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 	view.set_meta(RecipeProps.META_FADE, true)
 	node.add_child(view)
 	if body.get_shape_owners().is_empty():
-		node.remove_child(body)
-		body.free()
+		body.collision_layer = 0
 	node.set_meta("anchor_posts", posts.size())
 	node.set_meta("anchor_kit", kit)
 	tag_cover(node, row)
