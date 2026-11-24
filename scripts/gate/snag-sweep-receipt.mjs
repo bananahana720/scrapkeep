@@ -97,6 +97,12 @@ export function gradeMapReport(data, expectedMap) {
   if (!Array.isArray(data.seams)) {
     problems.push(`${expectedMap}: missing seams array`);
   }
+  if (!Array.isArray(data.controls)) {
+    problems.push(`${expectedMap}: missing controls array`);
+  }
+  if (!isFiniteNum(data.controls_run) || data.controls_run <= 0) {
+    problems.push(`${expectedMap}: missing or zero controls_run (${String(data.controls_run)})`);
+  }
   if (data.ride_places !== undefined && !Array.isArray(data.ride_places)) {
     problems.push(`${expectedMap}: invalid ride_places field`);
   }
@@ -107,6 +113,16 @@ export function gradeMapReport(data, expectedMap) {
   }
 
   const snags = Array.isArray(data.snags) ? data.snags : [];
+  const rawStaticAll = snags.filter((s) => s?.class !== "moving").length;
+  const placeStaticAll = Array.isArray(data.places)
+    ? data.places.filter((p) => p?.class !== "moving").length
+    : 0;
+  const classStaticAll = hasClasses ? STATIC_CLASSES.reduce((sum, k) => sum + classes[k], 0) : 0;
+  if (Math.max(placeStaticAll, classStaticAll) > rawStaticAll) {
+    problems.push(
+      `${expectedMap}: inconsistent report (${Math.max(placeStaticAll, classStaticAll)} static place(s) but only ${rawStaticAll} raw static snag row(s))`,
+    );
+  }
   const invalidLaneRows = snags.filter((s) => s?.lane !== "ride" && s?.lane !== "graze");
   if (invalidLaneRows.length > 0) {
     problems.push(
@@ -138,13 +154,20 @@ export function gradeMapReport(data, expectedMap) {
   const snagCount = rideSnags + seamSnags;
 
   if (rideSnags > 0) {
-    const counts = hasRideClasses
-      ? data.classes_ride_places
-      : {
-          piece: rawRideStaticRows.filter((s) => s?.class === "piece").length,
-          ground: rawRideStaticRows.filter((s) => s?.class === "ground").length,
-          other: rawRideStaticRows.filter((s) => s?.class === "other").length,
-        };
+    const fallbackRows =
+      rawRideStaticRows.length > 0
+        ? rawRideStaticRows
+        : Array.isArray(data.ride_places)
+          ? data.ride_places
+          : [];
+    const counts =
+      hasRideClasses && rideClassStatic > 0
+        ? data.classes_ride_places
+        : {
+            piece: fallbackRows.filter((s) => s?.class === "piece").length,
+            ground: fallbackRows.filter((s) => s?.class === "ground").length,
+            other: fallbackRows.filter((s) => s?.class === "other").length,
+          };
     problems.push(
       `${expectedMap}: ${rideSnags} static ride snag(s) (piece=${counts.piece ?? "?"}, ground=${counts.ground ?? "?"}, other=${counts.other ?? "?"})`,
     );
@@ -204,6 +227,7 @@ export function injectPlantedSnag(damData) {
           pieces_in_shard: 1,
           lanes_run: 10,
           lanes_skipped: 0,
+          controls_run: 1,
           snags: [],
           controls: [],
           classes_raw: { piece: 0, ground: 0, other: 0, moving: 0 },
