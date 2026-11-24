@@ -20,9 +20,10 @@ const Palette := preload("res://src/core/palette.gd")
 var t := T.new("cracked_cache_test")
 
 
+# Flat at 2 m with a cliff (20 m) everywhere north of z 395: a pocket at z 400 cut into its face opens south.
 class FakeTerrain extends RefCounted:
-	func height(_x: float, _z: float) -> float:
-		return 2.0
+	func height(_x: float, z: float) -> float:
+		return 2.0 if z > 395.0 else 20.0
 
 
 class FakeCtx extends RefCounted:
@@ -116,7 +117,11 @@ func _markers() -> void:
 	t.check("the pocket is marked visited", markers.is_visited(key))
 	t.eq("as a cache, its mark the flag", String(markers.visited_state(key).get("mark", "")), "flag")
 	if markers.flags.size() == 1:
-		t.near("the flag stands on the pocket's roof line", markers.flags[0].global_position.y, at.y + CrackedCache.HEIGHT)
+		var foot: Vector3 = markers.flags[0].global_position
+		t.near("the flag stands on the ground", foot.y, 2.0)
+		t.check("the flag stands before the pocket's mouth, not in the cliff", foot.z > at.z + 4.0, "z %.1f" % foot.z)
+		t.near("the flag stands FLAG_OUT_M out and FLAG_ASIDE_M aside", Vector2(foot.x - at.x, foot.z - at.z).length(),
+			Vector2(SiteMarkers.FLAG_OUT_M, SiteMarkers.FLAG_ASIDE_M).length(), 0.01)
 	ctx.events.activity_done.emit("cracked_cache", at)
 	t.eq("a repeat raises none", markers.flags.size(), 1)
 	ctx.events.activity_done.emit("enemy_camp", Vector3(10.0, 0.0, 10.0))

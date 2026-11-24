@@ -54,7 +54,7 @@ enum { SEALED, OPEN, PICKING, TAKEN }
 # storybook scale (its chest is 2 m wide), so it reads from the chase camera. It springs up from its coil over
 # FLAG_SETTLE_S, then its cloth sways in a vertex wind; under reduced motion it stands still. No light, no collider.
 const FLAG_MODEL := "res://assets/models/world_one/keeper_flag.glb"
-const FLAG_SCALE := 2.5
+const FLAG_SCALE := 3.0
 const FLAG_SETTLE_S := 0.8
 const FLAG_SPRUNG_FROM := 0.15
 const FLAG_CLOTH := "FlagCloth"

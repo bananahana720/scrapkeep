@@ -55,7 +55,8 @@ void fragment() {
 	float dot_round = 1.0 - smoothstep(0.1, 0.2, abs(UV.y - 0.25));
 	float on = step(0.0, UV.y) * dot_along * dot_round;
 	ALBEDO = mix(pow(COLOR.rgb, vec3(2.2)), bead, on * 0.6);
-	ROUGHNESS = 0.72;
+	ROUGHNESS = 0.9;
+	SPECULAR = 0.2;
 	EMISSION = bead * on * glow;
 }
 """
