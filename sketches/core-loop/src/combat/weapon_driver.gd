@@ -99,6 +99,18 @@ var _lock_pulse_width_mult := 1.0
 var _lock_rail_width_mult := 1.0
 var _lock_barrage_width_mult := 1.0
 var _lock_rail_breaks_props := false
+var _fan := false
+var _spark_count := 1
+var _charge_bolt_mult := 0.0
+var _charge_pulses := 1
+var _charge_pulse_span_s := 0.0
+var _charge_pierce := 0
+var _charge_no_chain := false
+var _pierce_every := 0
+var _breaks_props := false
+var _beat_breaks_props := false
+var _hit_seq := 0
+var _pending_pulses: Array = []
 
 
 # Advances trigger timers by `delta` and interprets `intent` for `weapon` under `pattern`.
@@ -281,6 +293,8 @@ func reset(pattern: Resource = null) -> void:
 	_window_t = 0.0
 	_lane_painted = false
 	_stamp_streak = 0
+	_hit_seq = 0
+	_pending_pulses.clear()
 	if pattern != null:
 		_sync_pattern(pattern, true)
 	else:
@@ -296,6 +310,7 @@ func interrupt(reason: String) -> void:
 			_charge = 0.0
 			_charging = false
 			_charge_armed = false
+			_pending_pulses.clear()
 			_lob_charging = false
 			_snap_hold_lock = false
 			_beat = 0
@@ -311,6 +326,7 @@ func interrupt(reason: String) -> void:
 			_charge = 0.0
 			_charging = false
 			_charge_armed = false
+			_pending_pulses.clear()
 			_hold_s = 0.0
 			_buffered = false
 			_buffer_s = 0.0
@@ -358,6 +374,8 @@ func state_snapshot() -> Dictionary:
 		"stamp_streak": _stamp_streak,
 		"cast_cost": safe_cost,
 		"refund": clampf(_refund, 0.0, safe_cost),
+		"pending_pulses": _pending_pulses.size(),
+		"hit_seq": _hit_seq,
 	}
 
 
@@ -394,9 +412,14 @@ static func base_dps(pattern: Resource) -> float:
 				var cycle: float = float(maxi(mag - 1, 0)) * floor_s + maxf(reload_s, 0.0)
 				return (float(mag) * dmg / cycle) if cycle > 0.0 else 0.0
 			return (dmg / floor_s) if floor_s > 0.0 else dmg * float(pattern.rate)
-		Pattern.TRIGGER_TAP_CHARGE, Pattern.TRIGGER_LOB_SNAP:
+		Pattern.TRIGGER_TAP_CHARGE:
 			var floor_s: float = float(pattern.floor_s)
-			return (dmg / floor_s) if floor_s > 0.0 else dmg * float(pattern.rate)
+			var sparks: float = float(maxi(int(pattern.spark_count), 1))
+			return (dmg * sparks / floor_s) if floor_s > 0.0 else dmg * sparks * float(pattern.rate)
+		Pattern.TRIGGER_LOB_SNAP:
+			var floor_s: float = float(pattern.floor_s)
+			var charges: float = float(maxi(int(pattern.count), 1))
+			return (dmg * charges / floor_s) if floor_s > 0.0 else dmg * charges * float(pattern.rate)
 		Pattern.TRIGGER_BEATS:
 			var floors: Array = pattern.beat_floors_s
 			var mults: Array = pattern.beat_mults
@@ -504,8 +527,9 @@ func _step_press(delta: float, weapon: String, pattern: Resource, pressed: bool,
 		shots.append(_fire_press_round(weapon, floor_s, false, rate_mult))
 		return shots
 
-	# Overdrive Sprint fan: holding fire while sprinting fans remaining rounds at 0.10 s / 0.5x / 5 deg.
-	if sprinting and held and not pressed and _cooldown <= 0.0 and _loaded():
+	# Fan fire: pattern.fan (Fan the Hammer) holds to fan at pattern floor/damage in a 5 deg cone;
+	# baseline Overdrive Sprint fans remaining rounds at 0.10 s / 0.5x / 5 deg.
+	if (_fan or sprinting) and held and not pressed and _cooldown <= 0.0 and _loaded():
 		_window_state = WINDOW_IDLE
 		shots.append(_fire_press_round(weapon, floor_s, true, rate_mult))
 	return shots
@@ -536,10 +560,11 @@ func _fire_press_round(weapon: String, floor_s: float, fan: bool, rate_mult: flo
 	var next_floor := floor_s
 	var kind := SHOT_HOT if is_hot else SHOT_PLAIN
 	if fan:
-		mult *= Weapons.RIVET_FAN_DAMAGE
 		spread = Weapons.RIVET_FAN_SPREAD_DEG
-		next_floor = Weapons.RIVET_FAN_FLOOR_S / rate_mult
 		kind = SHOT_FAN
+		if not _fan:
+			mult *= Weapons.RIVET_FAN_DAMAGE
+			next_floor = Weapons.RIVET_FAN_FLOOR_S / rate_mult
 	if _mag > 0 and _chamber <= 0:
 		_reloading = true
 		_reload_t = 0.0
@@ -548,7 +573,8 @@ func _fire_press_round(weapon: String, floor_s: float, fan: bool, rate_mult: flo
 		_cooldown = 0.0
 	else:
 		_cooldown = next_floor
-	return {"kind": kind, "weapon": weapon, "damage_mult": mult, "pierce": pierce, "spread_deg": spread, "hot": is_hot, "fan": fan}
+	return {"kind": kind, "weapon": weapon, "damage_mult": mult, "pierce": pierce, "spread_deg": spread,
+		"hot": is_hot, "fan": fan, "breaks_props": _breaks_props}
 
 
 func _update_reload_window() -> void:
@@ -567,6 +593,18 @@ func _update_reload_window() -> void:
 
 func _step_tap_charge(delta: float, weapon: String, pattern: Resource, pressed: bool, held: bool, released: bool, context: Dictionary) -> Array:
 	var shots: Array = []
+	if not _pending_pulses.is_empty():
+		var remaining: Array = []
+		for entry in _pending_pulses:
+			var left: float = float(entry["delay"]) - delta
+			if left <= EPS:
+				var out: Dictionary = entry["shot"]
+				out["weapon"] = weapon
+				shots.append(out)
+			else:
+				entry["delay"] = left
+				remaining.append(entry)
+		_pending_pulses = remaining
 	_cooldown = maxf(0.0, _cooldown - delta)
 	if _cooldown <= EPS:
 		_cooldown = 0.0
@@ -583,7 +621,8 @@ func _step_tap_charge(delta: float, weapon: String, pattern: Resource, pressed: 
 
 	if pressed:
 		if _cooldown <= 0.0 and _recover_s <= 0.0:
-			shots.append({"kind": SHOT_SPARK, "weapon": weapon, "damage_mult": 1.0, "pierce": false, "spread_deg": 0.0})
+			shots.append({"kind": SHOT_SPARK, "weapon": weapon, "damage_mult": 1.0,
+				"spark_count": _spark_count, "pierce": false, "spread_deg": 0.0, "breaks_props": _breaks_props})
 			_cooldown = floor_s
 			_buffered = false
 			_buffer_s = 0.0
@@ -597,7 +636,8 @@ func _step_tap_charge(delta: float, weapon: String, pattern: Resource, pressed: 
 			if wait_s <= BUFFER_S + EPS:
 				_latch_buffer()
 	elif _buffered and _cooldown <= 0.0 and _recover_s <= 0.0:
-		shots.append({"kind": SHOT_SPARK, "weapon": weapon, "damage_mult": 1.0, "pierce": false, "spread_deg": 0.0})
+		shots.append({"kind": SHOT_SPARK, "weapon": weapon, "damage_mult": 1.0,
+			"spark_count": _spark_count, "pierce": false, "spread_deg": 0.0, "breaks_props": _breaks_props})
 		_cooldown = floor_s
 		_buffered = false
 		_buffer_s = 0.0
@@ -620,9 +660,24 @@ func _step_tap_charge(delta: float, weapon: String, pattern: Resource, pressed: 
 						_charge = 1.0
 		else:
 			if _charging and _charge >= _charge_min:
-				var bolt_mult: float = Weapons.charge_bolt_mult(weapon) * _charge
-				shots.append({"kind": SHOT_CHARGED, "weapon": weapon, "damage_mult": bolt_mult,
-					"pierce": false, "spread_deg": 0.0, "charge": _charge})
+				var base_mult: float = _charge_bolt_mult if _charge_bolt_mult > 0.0 else Weapons.charge_bolt_mult(weapon)
+				var pulses: int = maxi(_charge_pulses, 1)
+				var pulse_mult: float = (base_mult * _charge) / float(pulses)
+				var charged_shot := {
+					"kind": SHOT_CHARGED, "weapon": weapon, "damage_mult": pulse_mult,
+					"pierce": _charge_pierce > 0, "pierce_pass": _charge_pierce,
+					"no_chain": _charge_no_chain, "breaks_props": _breaks_props,
+					"spread_deg": 0.0, "charge": _charge,
+				}
+				shots.append(charged_shot)
+				if pulses > 1:
+					var span: float = maxf(_charge_pulse_span_s, 0.0)
+					var step_s: float = span / float(pulses - 1)
+					var cap: int = Pattern.MAX_CHARGE_PULSES * 2
+					for k in range(1, pulses):
+						if _pending_pulses.size() >= cap:
+							break
+						_pending_pulses.append({"delay": step_s * float(k), "shot": charged_shot.duplicate()})
 				_recover_s = _recover_cfg_s
 			_charge_armed = false
 			_charging = false
@@ -728,6 +783,16 @@ func _beat_floor(idx: int, rate_mult: float) -> float:
 	return raw / maxf(rate_mult, 0.1)
 
 
+func _next_hit_pierces() -> bool:
+	if _pierce_every <= 0:
+		return false
+	_hit_seq += 1
+	if _hit_seq >= _pierce_every:
+		_hit_seq = 0
+		return true
+	return false
+
+
 func _step_beats(delta: float, weapon: String, pattern: Resource, pressed: bool, held: bool, context: Dictionary) -> Array:
 	var shots: Array = []
 	if pressed:
@@ -771,6 +836,7 @@ func _step_beats(delta: float, weapon: String, pattern: Resource, pressed: bool,
 		if pressed:
 			if _window_state == WINDOW_OPEN:
 				var mult := _beat_mult(2) + _beat_speed_mult * planar_speed
+				var p3 := _next_hit_pierces()
 				_beat = 0
 				_beat_t = 0.0
 				_cooldown = 0.0
@@ -782,19 +848,22 @@ func _step_beats(delta: float, weapon: String, pattern: Resource, pressed: bool,
 				shots.append({
 					"kind": SHOT_BEAT_3, "weapon": weapon, "beat": 3,
 					"damage_mult": mult, "knock_mult": _beat_knock_mult, "range_mult": _beat_range_mult,
-					"pierce": false, "spread_deg": 0.0,
+					"pierce": p3, "pierce_pass": 1 if p3 else 0,
+					"breaks_props": _breaks_props or _beat_breaks_props, "spread_deg": 0.0,
 				})
 				return shots
 			if _window_state == WINDOW_WAITING:
 				_window_state = WINDOW_SPENT
 			elif _cooldown > 0.0 and _cooldown <= BUFFER_S + EPS:
 				_latch_buffer()
-		if _cooldown <= 0.0:
+		var window_active := _window_state == WINDOW_WAITING or _window_state == WINDOW_OPEN
+		if _cooldown <= 0.0 and not window_active:
 			_beat = 0
 			_beat_t = 0.0
 			_window_t = 0.0
 			_window_state = WINDOW_IDLE
 			if pressed or _buffered:
+				var p1 := _next_hit_pierces()
 				_buffered = false
 				_buffer_s = 0.0
 				_beat = 1
@@ -803,7 +872,8 @@ func _step_beats(delta: float, weapon: String, pattern: Resource, pressed: bool,
 				shots.append({
 					"kind": SHOT_BEAT_1, "weapon": weapon, "beat": 1,
 					"damage_mult": _beat_mult(0), "knock_mult": 1.0, "range_mult": 1.0,
-					"pierce": false, "spread_deg": 0.0,
+					"pierce": p1, "pierce_pass": 1 if p1 else 0,
+					"breaks_props": _breaks_props, "spread_deg": 0.0,
 				})
 		return shots
 
@@ -815,6 +885,7 @@ func _step_beats(delta: float, weapon: String, pattern: Resource, pressed: bool,
 		_buffered = false
 		_buffer_s = 0.0
 		if _beat == 1:
+			var p2 := _next_hit_pierces()
 			_beat = 2
 			_beat_t = 0.0
 			_cooldown = floor2
@@ -823,9 +894,11 @@ func _step_beats(delta: float, weapon: String, pattern: Resource, pressed: bool,
 			shots.append({
 				"kind": SHOT_BEAT_2, "weapon": weapon, "beat": 2,
 				"damage_mult": _beat_mult(1), "knock_mult": 1.0, "range_mult": 1.0,
-				"pierce": false, "spread_deg": 0.0,
+				"pierce": p2, "pierce_pass": 1 if p2 else 0,
+				"breaks_props": _breaks_props, "spread_deg": 0.0,
 			})
 		else:
+			var p1 := _next_hit_pierces()
 			_beat = 1
 			_beat_t = 0.0
 			_cooldown = floor1
@@ -834,7 +907,8 @@ func _step_beats(delta: float, weapon: String, pattern: Resource, pressed: bool,
 			shots.append({
 				"kind": SHOT_BEAT_1, "weapon": weapon, "beat": 1,
 				"damage_mult": _beat_mult(0), "knock_mult": 1.0, "range_mult": 1.0,
-				"pierce": false, "spread_deg": 0.0,
+				"pierce": p1, "pierce_pass": 1 if p1 else 0,
+				"breaks_props": _breaks_props, "spread_deg": 0.0,
 			})
 		return shots
 	if pressed and not ready_now:
@@ -1079,6 +1153,16 @@ func _sync_pattern(pattern: Resource, reset_chamber := true) -> void:
 	_lock_rail_width_mult = float(pattern.lock_rail_width_mult)
 	_lock_barrage_width_mult = float(pattern.lock_barrage_width_mult)
 	_lock_rail_breaks_props = bool(pattern.lock_rail_breaks_props)
+	_fan = bool(pattern.fan)
+	_spark_count = clampi(int(pattern.spark_count), 1, Pattern.MAX_VOLLEY)
+	_charge_bolt_mult = float(pattern.charge_bolt_mult)
+	_charge_pulses = clampi(int(pattern.charge_pulses), 1, Pattern.MAX_CHARGE_PULSES)
+	_charge_pulse_span_s = float(pattern.charge_pulse_span_s)
+	_charge_pierce = clampi(int(pattern.charge_pierce), 0, Pattern.MAX_PIERCE)
+	_charge_no_chain = bool(pattern.charge_no_chain)
+	_pierce_every = clampi(int(pattern.pierce_every), 0, Pattern.MAX_PIERCE_EVERY)
+	_breaks_props = bool(pattern.breaks_props)
+	_beat_breaks_props = bool(pattern.beat_breaks_props)
 	if reset_chamber:
 		_chamber = _mag
 		_hot_rounds = 0

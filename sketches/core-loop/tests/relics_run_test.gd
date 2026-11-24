@@ -171,7 +171,7 @@ func _tree_pick_survives_undo(run, abilities) -> void:
 	run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
 	var smash_before: String = abilities.id_of(AbilityState.SMASH)
 	run.add_part(Relics.part_of("crater_heart"), "cache")
-	var path := UpgradeTree.path_to(run.class_id(), "s_crater")
+	var path := UpgradeTree.path_to(run.class_id(), "s_crater", tree.world_one)
 	var picked_all := not path.is_empty()
 	for depth in range(1, path.size() + 1):
 		while tree.picks.size() < depth and not tree.pending():

@@ -289,7 +289,7 @@ func _tarn_rows() -> void:
 	var own := ids.all(func(i): return i.begins_with("t_"))
 	var profile := UpgradeTree.nodes("tarn", true)
 	var shared := UpgradeTree.nodes("runner_gunner").filter(func(n): return n["id"] in ids)
-	_report("Tarn's own tree", own and profile.size() == 30 and profile[0]["id"] == "t_long_claw" and shared.is_empty(),
+	_report("Tarn's own tree", own and profile.size() == 30 and profile[0]["id"] == "t_saw_flurry" and shared.is_empty(),
 		"%d world-one nodes, first %s, %d shared with Rivet" % [profile.size(), profile[0]["id"] if not profile.is_empty() else "-", shared.size()])
 	var bad := []
 	var allowed := func(n: Dictionary, world_one: bool, earlier: Array) -> bool:
@@ -311,7 +311,7 @@ func _tarn_rows() -> void:
 	var planted: Dictionary = profile[0].duplicate(true)
 	planted["knob"] = {"ult_beats": 3.0}
 	_report("Tarn planted world-one knob rejected", not allowed.call(planted, true, []), "world-one knob must remain banned")
-	var first_six := ids.slice(0, UpgradeTree.WORLD_ONE_SIZE)
+	var first_six := profile.slice(0, UpgradeTree.WORLD_ONE_SIZE).map(func(n): return String(n["id"]))
 	var cards_ok: bool = first_six.size() == 6 and first_six.all(func(i): return WorldOneCards.has_row(i) and not WorldOneCards.UNFITTED_ROWS.has(i))
 	_report("Tarn world-one cards", cards_ok, "%s" % [first_six])
 
@@ -325,17 +325,18 @@ func _tally_rows() -> void:
 	for other in UpgradeTree.TREES:
 		if other != "tally":
 			shared.append_array(UpgradeTree.TREES[other].filter(func(n): return n["id"] in ids).map(func(n): return n["id"]))
-	_report("Tally's own tree", own and profile.size() == 30 and profile[0]["id"] == "tl_audit_stamp" and shared.is_empty(),
+	_report("Tally's own tree", own and profile.size() == 30 and profile[0]["id"] == "tl_petty_cash" and shared.is_empty(),
 		"%d world-one nodes, first %s, shared with other pilots %s" % [profile.size(), profile[0]["id"] if not profile.is_empty() else "-", shared])
 	# 2026-10-11 (PC-TALLY, design-v3/pilots/tally.md section 3): as Tarn's ruling, world one alone
 	# bans knobs and swaps. Depth 3 may swap Q to Audit Trail or Flywheel Throw and depth 4 may turn
-	# one ult_ knob, each a safe pick; no pattern anywhere. Measured: the 8 depth-3 and 16 depth-4
-	# nodes carry those ops and pass; a planted world-one swap is rejected.
+	# one ult_ knob, each a safe pick; 2026-11-24 (W46 E2-09, PILOT-CADENCE §6.1): the two world-one
+	# depth-1 keystones (tl_petty_cash, tl_compound_interest) tune ledger_reader cadence via pattern.
 	var actions := ["blast", "air", "grant_move", "grant_special", "refund_move", "refund_special"]
 	var variants := ["plate_audit", "plate_flywheel"]
 	var knobs := ["ult_encore", "ult_beats", "ult_radius", "ult_volley", "ult_settle"]
 	var allowed := func(n: Dictionary, world_one: bool, earlier: Array) -> bool:
-		var ok: bool = not n.has("pattern")
+		var is_wo_keystone: bool = world_one and String(n["id"]) in ["tl_petty_cash", "tl_compound_interest"]
+		var ok: bool = (not n.has("pattern")) or (is_wo_keystone and n["pattern"].keys() == ["ledger_reader"])
 		ok = ok and (not world_one or (not n.has("knob") and not n.has("swap")))
 		for slot in n.get("swap", {}):
 			ok = ok and slot == AbilityState.ULTIMATE and String(n["swap"][slot]) in variants
@@ -361,14 +362,15 @@ func _tally_rows() -> void:
 	var planted: Dictionary = profile[0].duplicate(true)
 	planted["swap"] = {AbilityState.ULTIMATE: "plate_audit"}
 	_report("Tally planted world-one swap rejected", not allowed.call(planted, true, []), "world-one swap must remain banned")
-	var first_six := ids.slice(0, UpgradeTree.WORLD_ONE_SIZE)
+	var first_six := profile.slice(0, UpgradeTree.WORLD_ONE_SIZE).map(func(n): return String(n["id"]))
 	var cards_ok: bool = first_six.size() == 6 and first_six.all(func(i): return WorldOneCards.has_row(i) and not WorldOneCards.UNFITTED_ROWS.has(i))
 	_report("Tally world-one cards", cards_ok, "%s" % [first_six])
 
 
 func _cannon_rows() -> void:
 	# 2026-10-12 (PC-CANNON): world-one bans knobs/swaps; later picks use the shared safety rule.
-	# Expected: 60 checks, including the planted Cannon world-one knob.
+	# 2026-11-24 (W46 E2-09, PILOT-CADENCE §6.1): world-one depth-1 keystones (c_snap_battery,
+	# c_siege_rail) tune cannon_lane lock cadence fields directly read by the lane driver.
 	var cannon := UpgradeTree.nodes("remembered_cannon")
 	var ids := cannon.map(func(n): return String(n["id"]))
 	var own := ids.all(func(i): return i.begins_with("c_"))
@@ -377,11 +379,12 @@ func _cannon_rows() -> void:
 	for other in UpgradeTree.TREES:
 		if other != "remembered_cannon":
 			shared.append_array(UpgradeTree.TREES[other].filter(func(n): return n["id"] in ids).map(func(n): return n["id"]))
-	_report("Cannon's own tree", own and profile.size() == 30 and profile[0]["id"] == "c_quick_lane" and shared.is_empty(),
+	_report("Cannon's own tree", own and profile.size() == 30 and profile[0]["id"] == "c_snap_battery" and shared.is_empty(),
 		"%d world-one nodes, first %s, shared with other pilots %s" % [profile.size(), profile[0]["id"] if not profile.is_empty() else "-", shared])
 	var weapon := String(ClassDef.by_id("remembered_cannon").weapon_id)
 	var bad := []
 	var allowed := func(n: Dictionary, world_one: bool, earlier: Array) -> bool:
+		var is_wo_keystone: bool = world_one and String(n["id"]) in ["c_snap_battery", "c_siege_rail"]
 		var ok: bool = not world_one or (not n.has("knob") and not n.has("swap"))
 		if not world_one and (n.has("knob") or n.has("swap")):
 			ok = ok and UpgradeTree.safe_pick_problems("remembered_cannon", n, earlier).is_empty()
@@ -391,10 +394,11 @@ func _cannon_rows() -> void:
 			ok = ok and String(key) == weapon
 			var t: Dictionary = pattern[key]
 			ok = ok and float(t.get("mul", {}).get("damage", 1.0)) <= 1.0
-			for part in ["add", "mul", "min"]:
+			for part in ["set", "add", "mul", "min"]:
 				ok = ok and not t.get(part, {}).has("range_m")
 				for k in t.get(part, {}):
-					shapes_bolts = shapes_bolts or String(k) != "rate"
+					if not is_wo_keystone:
+						shapes_bolts = shapes_bolts or String(k) != "rate"
 		if shapes_bolts:
 			# Lane honesty (D3): the lane reads only rate, so a row that shapes bolts needs a volley above it.
 			var above := UpgradeTree.path_to("remembered_cannon", n["id"])
@@ -417,6 +421,6 @@ func _cannon_rows() -> void:
 	var planted: Dictionary = profile[0].duplicate(true)
 	planted["knob"] = {"ult_beats": 3.0}
 	_report("Cannon planted world-one knob rejected", not allowed.call(planted, true, []), "world-one knob must remain banned")
-	var first_six := ids.slice(0, UpgradeTree.WORLD_ONE_SIZE)
+	var first_six := profile.slice(0, UpgradeTree.WORLD_ONE_SIZE).map(func(n): return String(n["id"]))
 	var cards_ok: bool = first_six.size() == 6 and first_six.all(func(i): return WorldOneCards.has_row(i) and not WorldOneCards.UNFITTED_ROWS.has(i))
 	_report("Cannon world-one cards", cards_ok, "%s" % [first_six])

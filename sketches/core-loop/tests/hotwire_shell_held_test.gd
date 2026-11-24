@@ -128,7 +128,7 @@ func _run() -> void:
 	tree.reset(CLASS_ID)
 	tree.max_depth = 2
 	tree.world_one = true
-	for id in ["s_cannonball", "s_face_runner"]:
+	for id in ["s_static_flutter", "s_face_runner"]:
 		tree.open_checkpoint()
 		tree.pick(id)
 	build.recompute()

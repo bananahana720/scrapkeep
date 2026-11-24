@@ -5,6 +5,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const T := preload("res://tests/support/t.gd")
@@ -260,7 +261,7 @@ static func _simulate_sable(weapon_id: String, pattern: Resource, mode: String, 
 		if cycles >= 2:
 			total_t += SIM_DT
 			for s in shots:
-				total_dmg += float(pattern.damage) * float(s.get("damage_mult", 1.0))
+				total_dmg += float(pattern.damage) * float(s.get("damage_mult", 1.0)) * float(s.get("spark_count", 1))
 		if cycle_end:
 			cycles += 1
 	return total_dmg / maxf(total_t, 0.0001)
@@ -332,7 +333,7 @@ static func _simulate_sable_release_at(weapon_id: String, pattern: Resource, rel
 		if cycles >= 2:
 			total_t += SIM_DT
 			for s in shots:
-				total_dmg += float(pattern.damage) * float(s.get("damage_mult", 1.0))
+				total_dmg += float(pattern.damage) * float(s.get("damage_mult", 1.0)) * float(s.get("spark_count", 1))
 		if cycle_end:
 			cycles += 1
 	return total_dmg / maxf(total_t, 0.0001)
@@ -404,7 +405,8 @@ static func _simulate_kest(pattern: Resource, skilled: bool, press_at := -1.0, h
 			if String(s["kind"]) == WeaponDriver.SHOT_THROW:
 				throws += 1
 				if throws < SIM_CYCLES:
-					live_charges.append({"token": int(s["token"]), "dmg": float(pattern.damage), "counted": throws >= 2, "snapped": false})
+					var throw_dmg := float(pattern.damage) * float(maxi(int(pattern.count), 1))
+					live_charges.append({"token": int(s["token"]), "dmg": throw_dmg, "counted": throws >= 2, "snapped": false})
 			elif String(s["kind"]) == WeaponDriver.SHOT_SNAP:
 				var tok := int(s["token"])
 				for c in live_charges:
@@ -483,7 +485,7 @@ static func _simulate_tarn(pattern: Resource, skilled: bool, speed_mps := 14.0, 
 		if cycles >= 2:
 			total_t += SIM_DT
 			for s in shots:
-				total_dmg += float(pattern.damage) * float(s.get("damage_mult", 1.0))
+				total_dmg += float(pattern.damage) * float(s.get("damage_mult", 1.0)) * float(s.get("spark_count", 1))
 		for s in shots:
 			if int(s.get("beat", 0)) == 1:
 				cycles += 1
@@ -494,7 +496,7 @@ static func _tarn_max(pattern: Resource) -> float:
 	var best := 0.0
 	for spd in [0.0, 14.0, 30.0, 50.0]:
 		var at := 0.0
-		while at <= 0.65:
+		while at <= 0.75:
 			best = maxf(best, _simulate_tarn(pattern, false, spd, at))
 			at += 0.05
 	return best
@@ -535,7 +537,7 @@ static func _simulate_tally(pattern: Resource, mode: String, press_at := -1.0, s
 			if not waiting_refill:
 				if win == WeaponDriver.WINDOW_WAITING or win == WeaponDriver.WINDOW_OPEN:
 					var target_t: float = float(pattern.window_s.x) if mode == "chain_open" else float(pattern.window_s.y) - SIM_DT
-					if float(snap["window_t"]) + SIM_DT * 0.5 >= target_t:
+					if float(snap["window_t"]) + SIM_DT * 1.1 >= target_t:
 						if pressure + AbilityState.PRESSURE_EPS >= cost:
 							intent.fire_pressed = true
 						else:
@@ -853,3 +855,220 @@ func _check_cadence_envelopes(t) -> void:
 		and not ceiling_passes(Weapons.LEDGER_READER, 30.1)
 		and not ceiling_passes(TALLY_BURST_KEY, 80.1)
 		and not ceiling_passes(Weapons.CANNON_LANE, 50.1), "")
+
+	_check_depth1_keystone_envelopes(t)
+
+
+static func _keystone_pattern(t, class_id: String, node_id: String, weapon_id: String) -> Resource:
+	var tree := UpgradeTree.new()
+	tree.world_one = true
+	tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS
+	tree.reset(class_id)
+	tree.open_checkpoint()
+	var picked := tree.pick(node_id)
+	t.check("Depth-1 keystone %s is pickable on %s" % [node_id, class_id], picked, "offered %s" % [tree.offered(class_id, 1).map(func(n): return n["id"])])
+	var pat: Resource = Weapons.base(weapon_id).copy()
+	for op in tree.pattern_ops(weapon_id):
+		pat._apply(op)
+	pat._clamp()
+	return pat
+
+
+# PILOT-CADENCE.md §6.1 (E2-09): all 12 Depth-1 keystones (14 rows including mounted Sable) stay
+# strictly under their pilot ceilings and match the documented careless / skilled / max targets.
+func _check_depth1_keystone_envelopes(t) -> void:
+	# 1-2. Rivet: Fan the Hammer & Big Iron (ceiling 75).
+	var fan_pat := _keystone_pattern(t, "runner_gunner", "r_fan_hammer", Weapons.RAPID_LASER)
+	var fan_careless := _simulate_rivet(fan_pat, false)
+	var fan_skilled := _simulate_rivet(fan_pat, true)
+	var fan_max := _rivet_max(fan_pat)
+	print("KEYSTONE_ENVELOPE  r_fan_hammer  careless=%.2f  skilled=%.2f  max=%.2f  ceiling=%.0f" % [
+		fan_careless, fan_skilled, fan_max, CEILINGS[Weapons.RAPID_LASER]])
+	t.near("r_fan_hammer careless matches 35.1", fan_careless, 35.12, 0.8)
+	t.near("r_fan_hammer skilled matches 58.4", fan_skilled, 58.38, 0.9)
+	t.check("r_fan_hammer sits within Rivet ceiling 75",
+		ceiling_passes(Weapons.RAPID_LASER, fan_careless) and ceiling_passes(Weapons.RAPID_LASER, fan_max),
+		"careless=%.2f max=%.2f" % [fan_careless, fan_max])
+
+	var iron_pat := _keystone_pattern(t, "runner_gunner", "r_big_iron", Weapons.RAPID_LASER)
+	var iron_careless := _simulate_rivet(iron_pat, false)
+	var iron_skilled := _simulate_rivet(iron_pat, true)
+	var iron_max := _rivet_max(iron_pat)
+	print("KEYSTONE_ENVELOPE  r_big_iron  careless=%.2f  skilled=%.2f  max=%.2f  ceiling=%.0f" % [
+		iron_careless, iron_skilled, iron_max, CEILINGS[Weapons.RAPID_LASER]])
+	t.near("r_big_iron careless matches 37.2", iron_careless, 37.16, 0.8)
+	t.near("r_big_iron skilled matches 70.5", iron_skilled, 70.53, 1.0)
+	t.check("r_big_iron sits within Rivet ceiling 75",
+		ceiling_passes(Weapons.RAPID_LASER, iron_careless) and ceiling_passes(Weapons.RAPID_LASER, iron_max),
+		"careless=%.2f max=%.2f" % [iron_careless, iron_max])
+
+	# 3-4. Sable: Static Flutter & Rail Lance (ball + mounted, ceiling 80).
+	var flt_pat := _keystone_pattern(t, "pylon_engineer", "s_static_flutter", Weapons.ARC_CASTER)
+	var flt_careless := _simulate_sable(Weapons.ARC_CASTER, flt_pat, "careless", SpeedTier.CRUISE)
+	var flt_blazing := _simulate_sable(Weapons.ARC_CASTER, flt_pat, "skilled", SpeedTier.BLAZING)
+	var flt_max := _sable_max(Weapons.ARC_CASTER, flt_pat)
+	print("KEYSTONE_ENVELOPE  s_static_flutter  careless=%.2f  blazing=%.2f  max=%.2f  ceiling=%.0f" % [
+		flt_careless, flt_blazing, flt_max, CEILINGS[Weapons.ARC_CASTER]])
+	t.near("s_static_flutter careless matches 30.0", flt_careless, 30.0, 0.8)
+	t.near("s_static_flutter blazing matches 68.8", flt_blazing, 68.75, 1.2)
+	t.check("s_static_flutter sits within Sable ceiling 80",
+		ceiling_passes(Weapons.ARC_CASTER, flt_careless) and ceiling_passes(Weapons.ARC_CASTER, flt_max),
+		"careless=%.2f max=%.2f" % [flt_careless, flt_max])
+
+	var flt_m_pat := _keystone_pattern(t, "pylon_engineer", "s_static_flutter", Weapons.PYLON_TURRET)
+	var flt_m_careless := _simulate_sable(Weapons.PYLON_TURRET, flt_m_pat, "careless", SpeedTier.WALK)
+	var flt_m_blazing := _simulate_sable(Weapons.PYLON_TURRET, flt_m_pat, "skilled", SpeedTier.BLAZING)
+	var flt_m_walk := _simulate_sable(Weapons.PYLON_TURRET, flt_m_pat, "skilled", SpeedTier.WALK)
+	var flt_m_max := _sable_max(Weapons.PYLON_TURRET, flt_m_pat)
+	print("KEYSTONE_ENVELOPE  s_static_flutter_mounted  careless=%.2f  blazing=%.2f  after3s=%.2f  max=%.2f  ceiling=%.0f" % [
+		flt_m_careless, flt_m_blazing, flt_m_walk, flt_m_max, CEILINGS[Weapons.PYLON_TURRET]])
+	t.near("s_static_flutter mounted blazing matches 75.0", flt_m_blazing, 75.0, 1.4)
+	t.near("s_static_flutter mounted after 3s matches 52.9", flt_m_walk, 52.94, 1.2)
+	t.check("s_static_flutter mounted sits within Sable ceiling 80",
+		ceiling_passes(Weapons.PYLON_TURRET, flt_m_careless) and ceiling_passes(Weapons.PYLON_TURRET, flt_m_max),
+		"careless=%.2f max=%.2f" % [flt_m_careless, flt_m_max])
+
+	var lance_pat := _keystone_pattern(t, "pylon_engineer", "s_rail_lance", Weapons.ARC_CASTER)
+	var lance_careless := _simulate_sable(Weapons.ARC_CASTER, lance_pat, "careless", SpeedTier.CRUISE)
+	var lance_blazing := _simulate_sable(Weapons.ARC_CASTER, lance_pat, "skilled", SpeedTier.BLAZING)
+	var lance_max := _sable_max(Weapons.ARC_CASTER, lance_pat)
+	print("KEYSTONE_ENVELOPE  s_rail_lance  careless=%.2f  blazing=%.2f  max=%.2f  ceiling=%.0f" % [
+		lance_careless, lance_blazing, lance_max, CEILINGS[Weapons.ARC_CASTER]])
+	t.near("s_rail_lance careless matches 26.7", lance_careless, 26.67, 0.8)
+	t.near("s_rail_lance blazing matches 64.1", lance_blazing, 64.10, 1.0)
+	t.check("s_rail_lance sits within Sable ceiling 80",
+		ceiling_passes(Weapons.ARC_CASTER, lance_careless) and ceiling_passes(Weapons.ARC_CASTER, lance_max),
+		"careless=%.2f max=%.2f" % [lance_careless, lance_max])
+
+	var lance_m_pat := _keystone_pattern(t, "pylon_engineer", "s_rail_lance", Weapons.PYLON_TURRET)
+	var lance_m_careless := _simulate_sable(Weapons.PYLON_TURRET, lance_m_pat, "careless", SpeedTier.WALK)
+	var lance_m_blazing := _simulate_sable(Weapons.PYLON_TURRET, lance_m_pat, "skilled", SpeedTier.BLAZING)
+	var lance_m_walk := _simulate_sable(Weapons.PYLON_TURRET, lance_m_pat, "skilled", SpeedTier.WALK)
+	var lance_m_max := _sable_max(Weapons.PYLON_TURRET, lance_m_pat)
+	print("KEYSTONE_ENVELOPE  s_rail_lance_mounted  careless=%.2f  blazing=%.2f  after3s=%.2f  max=%.2f  ceiling=%.0f" % [
+		lance_m_careless, lance_m_blazing, lance_m_walk, lance_m_max, CEILINGS[Weapons.PYLON_TURRET]])
+	t.near("s_rail_lance mounted blazing matches 69.2", lance_m_blazing, 69.23, 1.0)
+	t.near("s_rail_lance mounted after 3s matches 42.2", lance_m_walk, 42.19, 1.0)
+	t.check("s_rail_lance mounted sits within Sable ceiling 80",
+		ceiling_passes(Weapons.PYLON_TURRET, lance_m_careless) and ceiling_passes(Weapons.PYLON_TURRET, lance_m_max),
+		"careless=%.2f max=%.2f" % [lance_m_careless, lance_m_max])
+
+	# 5-6. Kest: Cluster & Keg (ceiling 44).
+	var clus_pat := _keystone_pattern(t, "demolitions_caster", "k_cluster", Weapons.STICKY_CHARGE)
+	var clus_careless := _simulate_kest(clus_pat, false)
+	var clus_skilled := _simulate_kest(clus_pat, true)
+	var clus_max := _kest_max(clus_pat)
+	print("KEYSTONE_ENVELOPE  k_cluster  careless=%.2f  skilled=%.2f  max=%.2f  ceiling=%.0f" % [
+		clus_careless, clus_skilled, clus_max, CEILINGS[Weapons.STICKY_CHARGE]])
+	t.near("k_cluster careless matches 19.3", clus_careless, 19.25, 0.8)
+	t.near("k_cluster skilled matches 38.5", clus_skilled, 38.50, 1.0)
+	t.check("k_cluster sits within Kest ceiling 44",
+		ceiling_passes(Weapons.STICKY_CHARGE, clus_careless) and ceiling_passes(Weapons.STICKY_CHARGE, clus_max),
+		"careless=%.2f max=%.2f" % [clus_careless, clus_max])
+
+	var keg_pat := _keystone_pattern(t, "demolitions_caster", "k_keg", Weapons.STICKY_CHARGE)
+	var keg_careless := _simulate_kest(keg_pat, false)
+	var keg_skilled := _simulate_kest(keg_pat, true)
+	var keg_max := _kest_max(keg_pat)
+	print("KEYSTONE_ENVELOPE  k_keg  careless=%.2f  skilled=%.2f  max=%.2f  ceiling=%.0f" % [
+		keg_careless, keg_skilled, keg_max, CEILINGS[Weapons.STICKY_CHARGE]])
+	t.near("k_keg careless matches 17.1", keg_careless, 17.14, 0.8)
+	t.near("k_keg skilled matches 34.3", keg_skilled, 34.29, 1.0)
+	t.check("k_keg sits within Kest ceiling 44",
+		ceiling_passes(Weapons.STICKY_CHARGE, keg_careless) and ceiling_passes(Weapons.STICKY_CHARGE, keg_max),
+		"careless=%.2f max=%.2f" % [keg_careless, keg_max])
+
+	# 7-8. Tarn: Saw Flurry & Guillotine (ceiling 80).
+	var saw_pat := _keystone_pattern(t, "tarn", "t_saw_flurry", Weapons.CLAW_SWEEP)
+	var saw_careless := _simulate_tarn(saw_pat, false, 14.0)
+	var saw_cruise := _simulate_tarn(saw_pat, true, 14.0)
+	var saw_cap30 := _simulate_tarn(saw_pat, true, 30.0)
+	var saw_max := _tarn_max(saw_pat)
+	print("KEYSTONE_ENVELOPE  t_saw_flurry  careless=%.2f  cruise=%.2f  cap30=%.2f  max=%.2f  ceiling=%.0f" % [
+		saw_careless, saw_cruise, saw_cap30, saw_max, CEILINGS[Weapons.CLAW_SWEEP]])
+	t.near("t_saw_flurry careless matches 40.0", saw_careless, 40.0, 1.0)
+	t.near("t_saw_flurry skilled cruise matches 66.7", saw_cruise, 66.67, 1.2)
+	t.near("t_saw_flurry skilled 30 m/s matches 72.6", saw_cap30, 72.59, 1.2)
+	t.check("t_saw_flurry sits within Tarn ceiling 80",
+		ceiling_passes(Weapons.CLAW_SWEEP, saw_careless) and ceiling_passes(Weapons.CLAW_SWEEP, saw_max),
+		"careless=%.2f max=%.2f" % [saw_careless, saw_max])
+
+	var guil_pat := _keystone_pattern(t, "tarn", "t_guillotine", Weapons.CLAW_SWEEP)
+	var guil_careless := _simulate_tarn(guil_pat, false, 14.0)
+	var guil_cruise := _simulate_tarn(guil_pat, true, 14.0)
+	var guil_cap30 := _simulate_tarn(guil_pat, true, 30.0)
+	var guil_max := _tarn_max(guil_pat)
+	print("KEYSTONE_ENVELOPE  t_guillotine  careless=%.2f  cruise=%.2f  cap30=%.2f  max=%.2f  ceiling=%.0f" % [
+		guil_careless, guil_cruise, guil_cap30, guil_max, CEILINGS[Weapons.CLAW_SWEEP]])
+	t.near("t_guillotine careless matches 30.8", guil_careless, 30.77, 1.0)
+	t.near("t_guillotine skilled cruise matches 69.5", guil_cruise, 69.50, 1.2)
+	t.near("t_guillotine skilled 30 m/s matches 77.5", guil_cap30, 77.50, 1.2)
+	t.check("t_guillotine sits within Tarn ceiling 80",
+		ceiling_passes(Weapons.CLAW_SWEEP, guil_careless) and ceiling_passes(Weapons.CLAW_SWEEP, guil_max),
+		"careless=%.2f max=%.2f" % [guil_careless, guil_max])
+
+	# 9-10. Tally: Petty Cash & Compound Interest (ceilings 30 sustained / 80 1s burst).
+	var petty_pat := _keystone_pattern(t, "tally", "tl_petty_cash", Weapons.LEDGER_READER)
+	var petty_careless := _simulate_tally(petty_pat, "careless")
+	var petty_open := _simulate_tally(petty_pat, "chain_open")
+	var petty_close := _simulate_tally(petty_pat, "chain_close")
+	var petty_net: float = maxf(float(petty_pat.cast_cost) - minf(float(petty_pat.refund), float(petty_pat.cast_cost)), 0.0001)
+	var petty_max_sust: float = (float(petty_pat.damage) * float(petty_pat.window_mult)) * (1.0 / Weapons.PRESSURE_ROLL_S) / petty_net
+	var petty_burst: float = float(petty_open["burst_1s"])
+	print("KEYSTONE_ENVELOPE  tl_petty_cash  careless=%.2f  open=%.2f  close=%.2f  max_sust=%.2f  burst_1s=%.1f  ceilings=%.0f/%.0f" % [
+		float(petty_careless["sustained"]), float(petty_open["sustained"]), float(petty_close["sustained"]),
+		petty_max_sust, petty_burst, CEILINGS[Weapons.LEDGER_READER], CEILINGS[TALLY_BURST_KEY]])
+	t.near("tl_petty_cash careless sustained matches 11.0", float(petty_careless["sustained"]), 11.0, 0.9)
+	t.near("tl_petty_cash max sustained matches 26.4", petty_max_sust, 26.4, 0.1)
+	t.near("tl_petty_cash 1s burst matches 66.0", petty_burst, 66.0, 0.3)
+	t.check("tl_petty_cash sits within Tally ceilings 30 / 80",
+		ceiling_passes(Weapons.LEDGER_READER, float(petty_careless["sustained"]))
+		and ceiling_passes(Weapons.LEDGER_READER, float(petty_open["sustained"]))
+		and ceiling_passes(Weapons.LEDGER_READER, petty_max_sust)
+		and ceiling_passes(TALLY_BURST_KEY, petty_burst),
+		"sust=%.2f burst=%.1f" % [petty_max_sust, petty_burst])
+
+	var comp_pat := _keystone_pattern(t, "tally", "tl_compound_interest", Weapons.LEDGER_READER)
+	var comp_careless := _simulate_tally(comp_pat, "careless")
+	var comp_open := _simulate_tally(comp_pat, "chain_open")
+	var comp_close := _simulate_tally(comp_pat, "chain_close")
+	var comp_net: float = maxf(float(comp_pat.cast_cost) - minf(float(comp_pat.refund), float(comp_pat.cast_cost)), 0.0001)
+	var comp_max_sust: float = float(comp_pat.stamp_streak_cap) * (1.0 / Weapons.PRESSURE_ROLL_S) / comp_net
+	var comp_burst: float = float(comp_open["burst_1s"])
+	print("KEYSTONE_ENVELOPE  tl_compound_interest  careless=%.2f  open=%.2f  close=%.2f  max_sust=%.2f  burst_1s=%.1f  ceilings=%.0f/%.0f" % [
+		float(comp_careless["sustained"]), float(comp_open["sustained"]), float(comp_close["sustained"]),
+		comp_max_sust, comp_burst, CEILINGS[Weapons.LEDGER_READER], CEILINGS[TALLY_BURST_KEY]])
+	t.near("tl_compound_interest careless sustained matches 11.0", float(comp_careless["sustained"]), 11.0, 0.9)
+	t.near("tl_compound_interest max sustained matches 25.3", comp_max_sust, 25.33, 0.1)
+	t.near("tl_compound_interest 1s burst matches 76.0", comp_burst, 76.0, 0.3)
+	t.check("tl_compound_interest sits within Tally ceilings 30 / 80",
+		ceiling_passes(Weapons.LEDGER_READER, float(comp_careless["sustained"]))
+		and ceiling_passes(Weapons.LEDGER_READER, float(comp_open["sustained"]))
+		and ceiling_passes(Weapons.LEDGER_READER, comp_max_sust)
+		and ceiling_passes(TALLY_BURST_KEY, comp_burst),
+		"sust=%.2f burst=%.1f" % [comp_max_sust, comp_burst])
+
+	# 11-12. Cannon: Snap Battery & Siege Rail (ceiling 50).
+	var snap_pat := _keystone_pattern(t, "remembered_cannon", "c_snap_battery", Weapons.CANNON_LANE)
+	var snap_careless := _simulate_cannon(snap_pat, 0.0)
+	var snap_skilled := _simulate_cannon(snap_pat, 0.15)
+	var snap_max := _cannon_max(snap_pat)
+	print("KEYSTONE_ENVELOPE  c_snap_battery  careless=%.2f  skilled=%.2f  max=%.2f  ceiling=%.0f" % [
+		snap_careless, snap_skilled, snap_max, CEILINGS[Weapons.CANNON_LANE]])
+	t.near("c_snap_battery careless matches 22.5", snap_careless, 22.5, 0.8)
+	t.near("c_snap_battery skilled matches 47.3", snap_skilled, 47.27, 1.0)
+	t.check("c_snap_battery sits within Cannon ceiling 50",
+		ceiling_passes(Weapons.CANNON_LANE, snap_careless) and ceiling_passes(Weapons.CANNON_LANE, snap_max),
+		"careless=%.2f max=%.2f" % [snap_careless, snap_max])
+
+	var siege_pat := _keystone_pattern(t, "remembered_cannon", "c_siege_rail", Weapons.CANNON_LANE)
+	var siege_careless := _simulate_cannon(siege_pat, 0.0)
+	var siege_skilled := _simulate_cannon(siege_pat, 0.60)
+	var siege_max := _cannon_max(siege_pat)
+	print("KEYSTONE_ENVELOPE  c_siege_rail  careless=%.2f  skilled=%.2f  max=%.2f  ceiling=%.0f" % [
+		siege_careless, siege_skilled, siege_max, CEILINGS[Weapons.CANNON_LANE]])
+	t.near("c_siege_rail careless matches 16.0", siege_careless, 16.0, 0.8)
+	t.near("c_siege_rail skilled matches 41.3", siege_skilled, 41.25, 1.0)
+	t.check("c_siege_rail sits within Cannon ceiling 50",
+		ceiling_passes(Weapons.CANNON_LANE, siege_careless) and ceiling_passes(Weapons.CANNON_LANE, siege_max),
+		"careless=%.2f max=%.2f" % [siege_careless, siege_max])

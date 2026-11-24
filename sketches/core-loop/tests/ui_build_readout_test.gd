@@ -63,6 +63,8 @@ const EXPECTED_LAYERS := {
 	# 2026-11-21 W45-B2 U7: the five verb items are effect rows that read no weapon stat (global).
 	"backwash": "global", "barbed_reel": "global", "faultline_cap": "global", "second_bell": "global",
 	"long_leash": "global",
+	# 2026-11-24 W46 E2-09: Brass Drum and Heavy Breech are pure-data pattern items (local).
+	"brass_drum": "local", "heavy_breech": "local",
 }
 const FIXED_CHECKS := 29
 const FITTED_PARTS := ["hot_rivets", "hot_rivets", "slag_rounds", "rivet_plating", "quick_spool",
