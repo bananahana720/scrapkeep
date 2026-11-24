@@ -7,7 +7,7 @@
 //   node scripts/import-stamp.mjs check  [--sketch sketches/core-loop]
 //   node scripts/import-stamp.mjs import [--sketch sketches/core-loop]   imports twice, then stamps
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,20 +15,49 @@ import { scratchHomeEnv } from "./godot-home.mjs";
 
 export const DEFAULT_SKETCH = "sketches/core-loop";
 const STAMP = "scrapkeep-import.json";
+const GODOT_ASSET_FILE =
+  /(?:^|\/)project\.godot$|\.(?:gd|tscn|tres|glb|png|ogg|wav|ttf|otf|gdshader|json|bin|import)$/i;
 
-function git(root, args) {
+function git(root, args, { trim = true } = {}) {
   const ran = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-  return ran.status === 0 ? ran.stdout.trim() : null;
+  if (ran.status !== 0) return null;
+  return trim ? ran.stdout.trim() : ran.stdout.replace(/\r?\n$/, "");
+}
+
+export function godotIdentity(godotBin = process.env.GODOT_BIN) {
+  if (!godotBin || !existsSync(godotBin)) return null;
+  try {
+    return `${path.basename(godotBin)}:${statSync(godotBin).size}`;
+  } catch {
+    return null;
+  }
+}
+
+export function isUntrackedGodotAsset(porcelainLine) {
+  if (!porcelainLine.startsWith("?? ")) return false;
+  let file = porcelainLine.slice(3).trim();
+  if (file.startsWith('"') && file.endsWith('"')) file = file.slice(1, -1);
+  return GODOT_ASSET_FILE.test(file);
 }
 
 // The git tree of the sketch folder at HEAD, so commits that leave the sketch alone keep the stamp.
-// Uncommitted edits to tracked sketch files are named apart (untracked files, such as a run's own
-// output, are not): they are not in the tree a stamp records.
+// Uncommitted edits to tracked sketch files and untracked Godot project/asset files are named apart
+// (untracked non-asset temp/output files such as run logs are ignored): they are not in the tree a stamp records.
 export function sketchState(root, sketch = DEFAULT_SKETCH) {
+  const status = git(root, ["status", "--porcelain", "--untracked-files=all", "--", sketch], {
+    trim: false,
+  });
+  const dirty = Boolean(
+    status &&
+    status
+      .split("\n")
+      .filter(Boolean)
+      .some((line) => !line.startsWith("?? ") || isUntrackedGodotAsset(line)),
+  );
   return {
     tree: git(root, ["rev-parse", `HEAD:${sketch}`]),
     head: git(root, ["rev-parse", "HEAD"]),
-    dirty: Boolean(git(root, ["status", "--porcelain", "--untracked-files=no", "--", sketch])),
+    dirty,
   };
 }
 
@@ -36,20 +65,43 @@ export function stampPath(root, sketch = DEFAULT_SKETCH) {
   return path.join(root, sketch, ".godot", STAMP);
 }
 
-export function writeImportStamp(root, sketch = DEFAULT_SKETCH, now = new Date()) {
+export function writeImportStamp(root, sketch = DEFAULT_SKETCH, nowOrOptions = new Date()) {
+  const isDate = nowOrOptions instanceof Date;
+  const now = isDate ? nowOrOptions : (nowOrOptions?.now ?? new Date());
+  const godot =
+    !isDate && nowOrOptions && "godot" in nowOrOptions ? nowOrOptions.godot : godotIdentity();
   const state = sketchState(root, sketch);
   const file = stampPath(root, sketch);
   mkdirSync(path.dirname(file), { recursive: true });
-  writeFileSync(file, JSON.stringify({ tree: state.tree, head: state.head, dirty: state.dirty, at: now.toISOString() }, null, 2) + "\n");
+  writeFileSync(
+    file,
+    JSON.stringify(
+      {
+        tree: state.tree,
+        head: state.head,
+        dirty: state.dirty,
+        ...(godot ? { godot } : {}),
+        at: now.toISOString(),
+      },
+      null,
+      2,
+    ) + "\n",
+  );
   return state;
 }
 
 // { ok, reason }. Uncommitted sketch edits, at the import or now, are not in any tree a stamp can
 // name, so either one refuses.
-export function checkImportStamp(root, sketch = DEFAULT_SKETCH) {
+export function checkImportStamp(root, sketch = DEFAULT_SKETCH, options = {}) {
+  const godot = "godot" in options ? options.godot : godotIdentity();
   const file = stampPath(root, sketch);
-  if (!existsSync(path.join(root, sketch, ".godot"))) return { ok: false, reason: `${sketch} has no .godot folder; it was never imported` };
-  if (!existsSync(file)) return { ok: false, reason: `${sketch}/.godot has no import stamp, so the tree it was imported at is unknown` };
+  if (!existsSync(path.join(root, sketch, ".godot")))
+    return { ok: false, reason: `${sketch} has no .godot folder; it was never imported` };
+  if (!existsSync(file))
+    return {
+      ok: false,
+      reason: `${sketch}/.godot has no import stamp, so the tree it was imported at is unknown`,
+    };
   let stamp;
   try {
     stamp = JSON.parse(readFileSync(file, "utf8"));
@@ -58,21 +110,46 @@ export function checkImportStamp(root, sketch = DEFAULT_SKETCH) {
   }
   const now = sketchState(root, sketch);
   if (!now.tree) return { ok: false, reason: `git cannot name the tree of ${sketch} at HEAD` };
-  if (stamp.dirty) return { ok: false, reason: `${sketch}/.godot was imported with uncommitted sketch edits` };
-  if (now.dirty) return { ok: false, reason: `${sketch} has uncommitted edits that no import stamp covers` };
-  if (stamp.tree !== now.tree) return { ok: false, reason: `${sketch}/.godot was imported at commit ${String(stamp.head).slice(0, 9)}, whose sketch differs from HEAD ${String(now.head).slice(0, 9)}` };
+  if (stamp.dirty)
+    return { ok: false, reason: `${sketch}/.godot was imported with uncommitted sketch edits` };
+  if (now.dirty)
+    return { ok: false, reason: `${sketch} has uncommitted edits that no import stamp covers` };
+  if (stamp.tree !== now.tree)
+    return {
+      ok: false,
+      reason: `${sketch}/.godot was imported at commit ${String(stamp.head).slice(0, 9)}, whose sketch differs from HEAD ${String(now.head).slice(0, 9)}`,
+    };
+  if (stamp.godot && godot && stamp.godot !== godot)
+    return {
+      ok: false,
+      reason: `${sketch}/.godot was imported with Godot ${stamp.godot}, which differs from ${godot}`,
+    };
   return { ok: true, reason: "" };
 }
 
-export const REIMPORT_HINT = "run `node scripts/import-stamp.mjs import` (imports twice and stamps), or pass --stale-import-ok to run anyway";
+export const REIMPORT_HINT =
+  "run `node scripts/import-stamp.mjs import` (imports twice and stamps), or pass --stale-import-ok to run anyway";
 
 function importTwice(root, sketch) {
   const godot = process.env.GODOT_BIN;
   if (!godot || !existsSync(godot)) throw new Error("set GODOT_BIN to the Godot 4.7.2 editor");
   for (let pass = 1; pass <= 2; pass++) {
-    const ran = spawnSync(godot, ["--headless", "--path", path.join(root, sketch), "--editor", "--import"], { encoding: "utf8", maxBuffer: 1 << 28, env: { ...process.env, ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "import-stamp-"))) } });
+    const ran = spawnSync(
+      godot,
+      ["--headless", "--path", path.join(root, sketch), "--editor", "--import"],
+      {
+        encoding: "utf8",
+        maxBuffer: 1 << 28,
+        env: {
+          ...process.env,
+          ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "import-stamp-"))),
+        },
+      },
+    );
     if (pass === 2 && (ran.status !== 0 || /SCRIPT ERROR/.test(`${ran.stdout}${ran.stderr}`))) {
-      throw new Error(`the second import was not clean (exit ${ran.status ?? ran.signal}); no stamp written`);
+      throw new Error(
+        `the second import was not clean (exit ${ran.status ?? ran.signal}); no stamp written`,
+      );
     }
   }
 }
@@ -84,13 +161,17 @@ function main(argv) {
   const verb = argv[0];
   if (verb === "check") {
     const result = checkImportStamp(root, sketch);
-    console.log(result.ok ? `import stamp matches HEAD for ${sketch}` : `stale import: ${result.reason}`);
+    console.log(
+      result.ok ? `import stamp matches HEAD for ${sketch}` : `stale import: ${result.reason}`,
+    );
     return result.ok ? 0 : 1;
   }
   if (verb === "import") {
     importTwice(root, sketch);
     const state = writeImportStamp(root, sketch);
-    console.log(`imported ${sketch} twice and stamped tree ${state.tree?.slice(0, 9)} (HEAD ${state.head?.slice(0, 9)})`);
+    console.log(
+      `imported ${sketch} twice and stamped tree ${state.tree?.slice(0, 9)} (HEAD ${state.head?.slice(0, 9)})`,
+    );
     return 0;
   }
   console.error("usage: node scripts/import-stamp.mjs check|import [--sketch <dir>]");

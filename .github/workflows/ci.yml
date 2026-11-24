@@ -228,11 +228,11 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 3
     steps:
-      - name: Checkout (blobless)
+      - name: Checkout (shallow, blobless)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           filter: blob:none
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
 
       - name: Setup Node
@@ -307,6 +307,14 @@ jobs:
           rm -f "$GODOT_DIR/editor.zip"
           printf '%s  %s\n' "$GODOT_BIN_SHA256" "$godot_bin" | sha256sum --check --quiet
 
+      - name: Restore Godot import cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: sketches/core-loop/.godot
+          key: ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ hashFiles('sketches/core-loop/project.godot', 'sketches/core-loop/assets/**', 'sketches/core-loop/**/*.import') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-
+
       - name: Run affected Godot tests (or seed cache on push)
         shell: bash
         env:
@@ -321,11 +329,12 @@ jobs:
             node scripts/ci/check-budget.mjs --label godot-affected --budget 240 -- \
               node scripts/sketch-fast.mjs --base "$PR_BASE_SHA" --no-base-check --budget 120
           else
+            node scripts/import-stamp.mjs check || node scripts/import-stamp.mjs import
             echo "Cache seeded for Godot ${GODOT_VERSION} on ${REF_NAME}"
           fi
 
   godot-full:
-    name: Godot full suite (${{ matrix.shard }}/4, duration-balanced)
+    name: Godot full suite (${{ matrix.shard }}/6, duration-balanced)
     needs: changes
     if: github.event_name == 'merge_group' || (github.event_name == 'workflow_dispatch' && inputs.full_suite == true)
     runs-on: ${{ vars.CI_RUNNER_LARGE || vars.CI_RUNNER || 'ubuntu-latest' }}
@@ -333,13 +342,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
-      - name: Checkout (blobless)
+      - name: Checkout (shallow, blobless)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           filter: blob:none
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
 
       - name: Setup Node
@@ -372,13 +381,21 @@ jobs:
           rm -f "$GODOT_DIR/editor.zip"
           printf '%s  %s\n' "$GODOT_BIN_SHA256" "$godot_bin" | sha256sum --check --quiet
 
-      - name: Run duration-balanced Godot shard ${{ matrix.shard }}/4
+      - name: Restore Godot import cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: sketches/core-loop/.godot
+          key: ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ hashFiles('sketches/core-loop/project.godot', 'sketches/core-loop/assets/**', 'sketches/core-loop/**/*.import') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-
+
+      - name: Run duration-balanced Godot shard ${{ matrix.shard }}/6
         shell: bash
         env:
           GODOT_BIN: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
         run: |
           set -euo pipefail
-          tests="$(node scripts/ci/shard-plan.mjs --shard "${{ matrix.shard }}/4")"
+          tests="$(node scripts/ci/shard-plan.mjs --shard "${{ matrix.shard }}/6")"
           node scripts/gate/shard.mjs run --tests "$tests" --out "${{ runner.temp }}/godot-shard-${{ matrix.shard }}"
 
       - name: Publish Godot shard receipt

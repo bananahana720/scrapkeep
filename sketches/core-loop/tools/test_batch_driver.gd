@@ -127,13 +127,18 @@ func next() -> void:
 		tree.quit(worst)
 		return
 	current = paths[index]
-	var source := FileAccess.get_file_as_string("res://" + current)
+	var rel := current.trim_prefix("res://")
+	print("BATCH START %s" % current)
+	started = Time.get_ticks_msec()
+	if not FileAccess.file_exists("res://" + rel):
+		print("ERROR: missing batch test: %s" % current)
+		finish(70)
+		return
+	var source := FileAccess.get_file_as_string("res://" + rel)
 	var script := GDScript.new()
 	var text := source.replace("extends SceneTree", SHIM_EXTENDS)  # the first line, checked by sketch-fast
 	text = frame_func.sub(quit_call.sub(text, "_batch_quit(", true), "func _batch_$1process(", true)
 	script.source_code = text
-	print("BATCH START %s" % current)
-	started = Time.get_ticks_msec()
 	if script.reload() != OK:
 		finish(70)
 		return

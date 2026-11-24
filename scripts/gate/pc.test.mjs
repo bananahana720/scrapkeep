@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { test } from "node:test";
 import os from "node:os";
 import path from "node:path";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 
 import { checkNodeRow, checkTally, expectedShards, tallyRows, planHead } from "./tally.mjs";
+import { checkImportStamp, sketchState, writeImportStamp } from "../import-stamp.mjs";
 import {
   SCOPED_ALWAYS,
+  canLinkNodeModules,
   defaultBudget,
   challengeArgs,
   receiptBotShards,
@@ -19,6 +22,8 @@ import {
   nodeSummary,
   planFileText,
   runPlan,
+  seedGodotCache,
+  shardSmokeJobs,
   sortedLines,
   spareWhileWaiting,
   stepEnv,
@@ -830,4 +835,86 @@ test("the scoped names can come from a sketch:fast receipt's bot shards", () => 
     ["bot_a_test", "world1_run_test"],
   );
   assert.throws(() => receiptBotShards({ selection: {} }), /no selection.bot_shards/);
+});
+
+test("seedGodotCache copies verified exact-tree stamps and strips stamps on nearby-tree seeds", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "pc-seed-"));
+  const git = (cwd, ...args) =>
+    execFileSync("git", ["-C", cwd, "-c", "user.name=t", "-c", "user.email=t@t", ...args], {
+      stdio: "ignore",
+    });
+  try {
+    const repo = path.join(tmp, "repo");
+    const wtSame = path.join(tmp, "wt-same");
+    const wtSeed = path.join(tmp, "wt-seed");
+    mkdirSync(path.join(repo, "sketches/core-loop"), { recursive: true });
+    writeFileSync(path.join(repo, ".gitignore"), ".godot/\n");
+    writeFileSync(path.join(repo, "sketches/core-loop/a.gd"), "1\n");
+    git(repo, "init", "-q");
+    git(repo, "add", ".");
+    git(repo, "commit", "-qm", "v1");
+    const v1Head = execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], {
+      encoding: "utf8",
+    }).trim();
+    const v1Tree = sketchState(repo, "sketches/core-loop").tree;
+    writeFileSync(path.join(repo, "sketches/core-loop/a.gd"), "2\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-qm", "v2");
+    const v2Head = execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], {
+      encoding: "utf8",
+    }).trim();
+    const v2Tree = sketchState(repo, "sketches/core-loop").tree;
+    git(repo, "worktree", "add", "--detach", wtSame, v2Head);
+    git(repo, "worktree", "add", "--detach", wtSeed, v1Head);
+    // Stamp repo at v2 with a dummy imported file inside .godot.
+    mkdirSync(path.join(repo, "sketches/core-loop/.godot"), { recursive: true });
+    writeFileSync(path.join(repo, "sketches/core-loop/.godot/cache.bin"), "ok");
+    writeImportStamp(repo, "sketches/core-loop");
+    // Exact-tree match copies .godot AND keeps stamp verified.
+    const exact = seedGodotCache({
+      targetWt: wtSame,
+      stampedSources: [repo],
+      seedSources: [repo],
+      headSketchTree: v2Tree,
+    });
+    assert.equal(exact.mode, "stamped");
+    assert.equal(checkImportStamp(wtSame, "sketches/core-loop").ok, true);
+    assert.equal(existsSync(path.join(wtSame, "sketches/core-loop/.godot/cache.bin")), true);
+    // Nearby-tree match (repo at v2, wtSeed at v1) copies .godot WITHOUT stamp so Godot reimports cleanly.
+    const nearby = seedGodotCache({
+      targetWt: wtSeed,
+      stampedSources: [repo],
+      seedSources: [repo],
+      headSketchTree: v1Tree,
+    });
+    assert.equal(nearby.mode, "seed");
+    assert.equal(checkImportStamp(wtSeed, "sketches/core-loop").ok, false);
+    assert.equal(existsSync(path.join(wtSeed, "sketches/core-loop/.godot/cache.bin")), true);
+    // Re-seeding an already populated worktree is a no-op.
+    assert.equal(
+      seedGodotCache({ targetWt: wtSame, stampedSources: [repo], headSketchTree: v2Tree }).mode,
+      "existing",
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("canLinkNodeModules requires matching package-lock.json and shardSmokeJobs sizes test shards safely", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "pc-nm-"));
+  try {
+    const repo = path.join(tmp, "repo");
+    const wt = path.join(tmp, "wt");
+    mkdirSync(path.join(repo, "node_modules"), { recursive: true });
+    mkdirSync(wt, { recursive: true });
+    writeFileSync(path.join(repo, "package-lock.json"), '{"lockfileVersion":3}\n');
+    writeFileSync(path.join(wt, "package-lock.json"), '{"lockfileVersion":3}\n');
+    assert.equal(canLinkNodeModules(wt, repo), true);
+    writeFileSync(path.join(wt, "package-lock.json"), '{"lockfileVersion":3,"diff":1}\n');
+    assert.equal(canLinkNodeModules(wt, repo), false);
+    assert.equal(shardSmokeJobs({ kind: "shard", weightKey: "tests", weight: 6 }, 32), 4);
+    assert.equal(shardSmokeJobs({ kind: "shard", weightKey: "bots", weight: 8 }, 32), null);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 });
