@@ -88,3 +88,6 @@ Sync commit: fcaa784b6 (stage/alpha-w46, 23 November 2026, W46-FIX1 PR #1229 mer
 
 
 Sync commit: 156b92797 (stage/alpha-w46, 24 November 2026, E2-01 PR #1254 merge: `sketches/core-loop/src/combat/weapon_driver.gd` and `sketches/core-loop/src/combat/combat.gd` add Kest `lob_snap` and Tarn `beats` trigger paths (listed under Not modelled until E2-08 extends `WeaponCadence.tla` to all six pilots); Rivet, Sable, Tally, attempt-boundary, interrupt, and proc-isolation steps are semantically unchanged; independent Neon review r1 verified `weaponcadence-today` in 6,394 distinct states and 10/10 plants caught)
+
+
+Sync commit: a4a17dcea (stage/alpha-w46, 24 November 2026, E2-02 PR #1255 merge: `sketches/core-loop/src/combat/weapon_driver.gd` and `sketches/core-loop/src/combat/combat.gd` implement Tally `stamp` (matching modelled `StepTally`/`TallyRollRefill` and `refund <= cast_cost`) and Cannon `lock` (listed under Not modelled until E2-08 extends `WeaponCadence.tla` to all six pilots); all modelled Rivet, Sable, Tally, attempt-boundary, interrupt, and proc-isolation invariants remain unchanged)

@@ -99,3 +99,6 @@ Sync commit: 8bf28d182 (stage/alpha-w46, 23 November 2026, E1-09b PR #1244 merge
 
 
 Sync commit: 156b92797 (stage/alpha-w46, 24 November 2026, E2-01 PR #1254 merge: of the covered files only `sketches/core-loop/src/combat/combat.gd` changed, adding Kest `lob_snap` gauge/tail-drop/snap/Detonation-Line wiring and Tarn `beats` strike/knock/range wiring; `in_play()`, all deferred queues, `_fire()`, `_proc_volley()`, proc depth 1, and attempt-boundary clears are semantically unchanged, with line spans shifted (`spawn_enemy` 702, `_door_caps` 871, `_physics_process` 1747, `_fire` 1931, `_proc_volley` 5047, `_on_player_died` 5525, `_on_stage_content_cleared` 5540, `_start_attempt` 5548); independent Neon review r1 verified `deferred-today` in 2,196,005 distinct states and 20/20 plants caught)
+
+
+Sync commit: a4a17dcea (stage/alpha-w46, 24 November 2026, E2-02 PR #1255 merge: of the covered files only `sketches/core-loop/src/combat/combat.gd` changed, adding Tally `stamp` fractional-pressure Balance Due and Cannon `lock` hold-paint lane branches; `_proc_volley` fires plain Tally Balance Due / plain Cannon Pulse without touching `weapon_driver`, pressure, paint, or starting secondary procs, so `in_play()`, all deferred queues, proc depth 1, and attempt-boundary clears are semantically unchanged)

@@ -93,3 +93,6 @@ Sync commit: fcaa784b6 (stage/alpha-w46, 23 November 2026, W46-FIX1 PR #1229 mer
 
 
 Sync commit: 156b92797 (stage/alpha-w46, 24 November 2026, E2-01 PR #1254 merge: of the covered files only `sketches/core-loop/src/combat/combat.gd` (`enemy_struck.emit` 972, `_fire` 1931) and `sketches/core-loop/src/combat/weapons.gd` (`BASE.range_m` unchanged across all weapons) changed for Kest `lob_snap` and Tarn `beats` cadence; every yard lock, unlock, wall drop, and overtime bell step is unchanged; independent Neon review r1 verified `yardlock-today` in 146,341 / 133,885 distinct states and 11/11 plants caught)
+
+
+Sync commit: a4a17dcea (stage/alpha-w46, 24 November 2026, E2-02 PR #1255 merge: of the covered files only `sketches/core-loop/src/combat/combat.gd` and `sketches/core-loop/src/combat/weapons.gd` changed for Tally `stamp` and Cannon `lock` cadence; `BASE.range_m`, `enemy_struck.emit`, `_fire`, and every yard lock, unlock, wall drop, and overtime bell step are unchanged)
