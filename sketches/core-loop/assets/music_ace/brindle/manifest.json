@@ -373,6 +373,11 @@
     "drums": "drop.drums.ogg",
     "bass": "drop.bass.ogg",
     "other": "drop.other.ogg"
+   },
+   "gain_db": -0.8,
+   "measured": {
+    "true_peak": -1.7,
+    "note": "summed stems after -0.8 dB uniform trim and Ogg re-encode"
    }
   },
   "cadence": {
