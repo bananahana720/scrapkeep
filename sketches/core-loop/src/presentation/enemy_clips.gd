@@ -236,8 +236,9 @@ func die(direction: Vector3, land := Callable()) -> bool:
 	_land = land
 	var pivot := get_parent() as Node3D
 	var world := enemy.get_parent() if enemy != null else null
-	if _dying or not lib.anims.has("death") or pivot == null or world == null or _tool_away():
+	if _dying or not lib.anims.has("death") or pivot == null or world == null:
 		return false
+	_detach_away_tools()
 	_holder = Node3D.new()
 	_holder.name = "DeathClip"
 	world.add_child(_holder)
@@ -253,14 +254,13 @@ func die(direction: Vector3, land := Callable()) -> bool:
 	return true
 
 
-# A part the kind has let go of (a bola in flight, a thrown cup) does not ride the clip: a crew
-# whose tool is away breaks up at once, the way it did before it had a death clip.
-func _tool_away() -> bool:
+# A part the kind has let go of (a deployed ramp plate, a bola in flight, a thrown cup) does not
+# ride the dying hull back onto the body; hide it so the hull still plays its baked death clip.
+func _detach_away_tools() -> void:
 	for row in _joints:
 		for part in (row.joint as Node3D).get_children():
 			if part is Node3D and (part as Node3D).top_level:
-				return true
-	return false
+				(part as Node3D).visible = false
 
 
 func _physics_process(delta: float) -> void:

@@ -528,3 +528,23 @@ static func fire(p: GPUParticles3D, id: String, kind: String, count: int, at: Ve
 	set_heat(p, look(id))
 	p.restart()
 	p.emitting = true
+
+
+# Standalone one-shot burst attached to `parent` (world or capture stage) that frees itself once
+# finished while leaving frozen capture bursts (speed_scale == 0) intact.
+static func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Color.TRANSPARENT, toward := Vector3.ZERO) -> GPUParticles3D:
+	if parent == null or not parent.is_inside_tree():
+		return null
+	var p := build(id)
+	p.one_shot = true
+	p.explosiveness = float(spec(id).get("explosive", 1.0))
+	parent.add_child(p)
+	var n := count if count > 0 else int(spec(id)["max"])
+	fire(p, id, "", n, at, tint, toward)
+	var tree := parent.get_tree()
+	if tree != null:
+		tree.create_timer(p.lifetime + 0.15).timeout.connect(func() -> void:
+			if is_instance_valid(p) and p.speed_scale > 0.0:
+				p.queue_free()
+		)
+	return p

@@ -333,6 +333,7 @@ func reset() -> void:
 	for v in valves:
 		v["open"] = false
 		v["sink"] = 0.0
+		v["spin"] = 0.0
 		v["door"].position = v["door_home"]
 		v["wheel"].rotation.z = 0.0
 		if v["plume"] != null:
@@ -348,6 +349,13 @@ func reset() -> void:
 		_seal_cache(d)
 	_slams.clear()
 	_pending_facts.clear()
+	for p in _puffs:
+		if is_instance_valid(p.get("node")):
+			(p["node"] as Node).free()
+	_puffs.clear()
+	for child in get_children():
+		if child is GPUParticles3D:
+			child.free()
 	_thermal_quiet = 0.0
 	_glaze_quiet = 0.0
 	# Cache side walls are rebuilt by reset; finish them along with this zone's devices.
@@ -685,10 +693,11 @@ func _on_cinder(c: Dictionary, ball: Vector3) -> bool:
 func _process(delta: float) -> void:
 	for p in _puffs.duplicate():
 		p["left"] -= delta
-		var f: float = 1.0 - p["left"] / PUFF_SECONDS
+		var f: float = clampf(1.0 - p["left"] / PUFF_SECONDS, 0.0, 1.0)
 		var node: MeshInstance3D = p["node"]
-		node.scale = Vector3.ONE * lerpf(0.4, 1.0, f) * p["size"]
+		node.scale = Vector3.ONE * lerpf(0.4, 1.15, f) * p["size"]
 		node.position.y += delta * 3.0
+		node.transparency = clampf(f * f, 0.0, 1.0)
 		if p["left"] <= 0.0:
 			node.queue_free()
 			_puffs.erase(p)
@@ -1086,6 +1095,7 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 			barrel.position = mouth - aim * 5.0 + Vector3.UP * 2.0
 			barrel.basis = Basis.looking_at(aim + Vector3.UP * 0.9, Vector3.UP) * Basis(Vector3.RIGHT, PI * 0.5)
 			root.add_child(barrel)
+			arm = barrel
 			var band := MeshInstance3D.new()
 			var km := TorusMesh.new()
 			km.inner_radius = 2.2
@@ -1160,6 +1170,8 @@ func _launcher_pose(l: Dictionary) -> void:
 			arm.basis = Basis.looking_at(aim.rotated(aim.cross(Vector3.UP).normalized(), lerpf(-0.9, 0.7, g)), Vector3.UP)
 		"geyser", "steam_lift":
 			arm.scale = Vector3(1.0, lerpf(0.2, 1.3, g), 1.0)
+		"cannon":
+			arm.scale = Vector3(1.0 + 0.08 * g, 1.0 - 0.14 * g, 1.0 + 0.08 * g)
 
 
 # ---- The grapple line ----
@@ -1251,11 +1263,15 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 		add_child(plume)
 		_dashed_ring(vfoot + Vector3.UP * 0.1, vent["radius"])
 	return {"spec": spec, "wheel": wheel, "door": door, "door_home": door.position, "plume": plume, "open": false,
-		"sink": 0.0, "at": wheel.position}
+		"sink": 0.0, "spin": 0.0, "at": wheel.position}
 
 
 func _step_valve(v: Dictionary, delta: float, ball: Vector3, planar: float, facts: Array) -> void:
 	if v["open"]:
+		if float(v["spin"]) < 1.0:
+			v["spin"] = minf(1.0, float(v["spin"]) + delta / 0.45)
+			var u := 1.0 - pow(1.0 - float(v["spin"]), 3.0)
+			v["wheel"].rotation.z = TAU * u
 		if v["sink"] < 1.0:
 			v["sink"] = minf(1.0, v["sink"] + delta / DOOR_SECONDS)
 			v["door"].position = (v["door_home"] as Vector3) + Vector3.DOWN * DOOR_SINK * v["sink"]
@@ -1270,7 +1286,8 @@ func _step_valve(v: Dictionary, delta: float, ball: Vector3, planar: float, fact
 	if not smashed:
 		return
 	v["open"] = true
-	v["wheel"].rotation.z = 0.8
+	v["spin"] = 0.08
+	v["wheel"].rotation.z = 0.5
 	facts.append({"kind": "fact", "fact": "valve_smashed", "at": at})
 	facts.append({"kind": "fact", "fact": "route_opened", "at": v["door_home"]})
 	_open_cache(v, at, facts)
@@ -1509,8 +1526,16 @@ func _step_sluice_valve(s: Dictionary, delta: float, motion: Dictionary, facts: 
 			s["state"] = "surging"
 			s["charges_fired"] = int(s["charges_fired"]) + 1
 			facts.append({"kind": "fact", "fact": "sluice_open", "at": s["lane_from"]})
-			_puff(s["lane_from"] + Vector3.UP * 1.2, 5.0)
-			_puff((s["lane_from"] as Vector3) + (s["dir"] as Vector3) * (float(s["length"]) * 0.5) + Vector3.UP * 1.2, 4.0)
+			var lane_from: Vector3 = s["lane_from"]
+			var lane_dir: Vector3 = s["dir"]
+			var lane_len: float = float(s["length"])
+			_puff(lane_from + Vector3.UP * 1.2, 5.0)
+			_puff(lane_from + lane_dir * (lane_len * 0.5) + Vector3.UP * 1.2, 4.0)
+			if is_inside_tree():
+				for frac in [0.1, 0.38, 0.68, 0.94]:
+					var spot := lane_from + lane_dir * (lane_len * float(frac)) + Vector3.UP * 0.9
+					_FxLib.burst(self, "steam_puff", spot, 8, Color("e8efe9"))
+					_FxLib.burst(self, "slam_dust", spot, 6)
 			_apply_surge(s, h, motion)
 			if h.is_done():
 				_enter_sluice_charge(s)
@@ -1872,6 +1897,9 @@ static func _needle(needle: MeshInstance3D, g: float) -> void:
 	needle.rotation.z = -lerpf(-2.1, 2.1, clampf(g, 0.0, 1.0))
 
 
+const _FxLib := preload("res://src/presentation/fx_library.gd")
+
+
 func _puff(at: Vector3, size: float) -> void:
 	var node := MeshInstance3D.new()
 	var s := SphereMesh.new()
@@ -1879,9 +1907,12 @@ func _puff(at: Vector3, size: float) -> void:
 	s.height = 2.0
 	node.mesh = s
 	node.material_override = _steam_mat
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	node.position = to_local(at) if is_inside_tree() else at
 	add_child(node)
 	_puffs.append({"node": node, "left": PUFF_SECONDS, "size": size})
+	if is_inside_tree():
+		_FxLib.burst(self, "steam_puff", at, 8)
 
 
 func _dashed_ring(at: Vector3, radius: float) -> void:
