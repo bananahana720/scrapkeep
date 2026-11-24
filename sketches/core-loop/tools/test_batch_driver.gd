@@ -223,6 +223,7 @@ func _reset() -> void:
 	Synth.score_transpose = 0
 	Footings.plant_ignore_lines = false
 	RescueSite.model_path = RescueSite.MODEL
+	RescueSite.scarf_path = RescueSite.SCARF
 	MusicRows.stem_dir = ""
 	HighdraftFx.shader_dir = HighdraftFx.SHADER_DIR
 	QuietGun.housing_path = QuietGun.HOUSING
