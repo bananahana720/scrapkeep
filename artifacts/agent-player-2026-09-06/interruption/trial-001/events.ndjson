@@ -1,7 +1,0 @@
-{"at": 1788688182.9543993, "kind": "observation", "state": "unknown", "milliseconds": 755.3818750020582, "truncated": false, "bus_calls": 345}
-{"at": 1788688185.4702675, "kind": "observation", "state": "welcome", "milliseconds": 2315.770532004535, "truncated": false, "bus_calls": 1125}
-{"at": 1788688185.4703026, "kind": "progress", "state": "welcome", "active_seconds": 0.0}
-{"at": 1788688185.926681, "kind": "action", "state": "welcome", "name": "Enter the orchard \u2197", "control_id": "a8fffe9ba6186688c7eba4d08a48b91d", "action_name": "press"}
-{"at": 1788688190.328517, "kind": "observation", "state": "playing", "milliseconds": 3201.70972897904, "truncated": false, "bus_calls": 1567}
-{"at": 1788688190.3285604, "kind": "progress", "state": "playing", "active_seconds": 0.0}
-{"at": 1788688190.4297588, "kind": "combat_segment", "reason": "KeyboardInterrupt: ", "wall_seconds": 0.10113917299895547, "active_seconds": 0.04015690300730057, "actions": [{"elapsed": 0.07920442600152455, "active_seconds": 0.02009282700601034, "keys": [], "buttons": ["left"], "look": [-220, -150]}], "frames": [{"frame_id": 0, "active_seconds": 0.0, "frame_age_ms": 79.0842860005796, "capture_ms": 27.59278897428885, "observe_ms": 65.13261099462397, "targets": 1, "width": 1280, "height": 900, "lower_sky_fraction": 0.0, "recovering_sky": false}], "tick_gaps_ms": [17.284425994148478, 21.73145700362511, 20.095715997740626, 20.09282700601034, 20.064076001290232], "observer_phase": "waiting", "capture_phase": "completed", "capture_error": null}

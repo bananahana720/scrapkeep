@@ -1,4 +1,0 @@
- docs/product/sections/PD-01-art-acceptance.md | 191 ++++++++++++++++++++++++++
- 1 file changed, 191 insertions(+)
-458233645e895a4b55c5f1a172d44ca49e0ab0a446764d6314d3d4f557d61f5b  docs/product/sections/PD-01-art-acceptance.md
-coordinator corrections at fcd710be090b7a70ecda345bc68c8dac5620350c (six review notes; section sha256 1c0e7a8ce2b1a00b71fd46aded125df305d75428d628cadf533689e3b0578efc); paper check rerun exit 0. Integrated at 9e51bd8e99440934e19dc0860c96a8fce79526b4 (no-ff merge plus the new coordinator-owned docs/product/sections/README.md): check:scope --no-build documentation-only, check:docs 0, check:project 0, check:drift 0 (product sections outside its scan), paper check rerun exit 0.

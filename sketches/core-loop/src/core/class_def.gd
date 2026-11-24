@@ -16,6 +16,10 @@ const KEST_COLOR := Palette.AMBER
 const TARN_COLOR := Palette.RUST
 const TALLY_COLOR := Palette.LEDGER
 const CANNON_COLOR := Palette.ANCIENT
+# Sable's colour on a screen. Mint is press now on a screen (LEGIBILITY.md section 14.3), so her
+# cards, tags and plates wear this pale blue, which stays 20 or more CIE76 from every colour that
+# carries a meaning under every sight colour_cvd_test reads; the world keeps SABLE_COLOR.
+const SABLE_SCREEN := Color("a8c8f0")
 
 @export var id := ""
 @export var display_name := ""
@@ -162,3 +166,8 @@ static func by_id(wanted: String) -> Resource:
 		if def.id == wanted:
 			return def
 	return null
+
+
+# A pilot's colour as a screen draws it: their own, save Sable's mint, which is SABLE_SCREEN.
+static func screen_color(pilot_color: Color) -> Color:
+	return Color(SABLE_SCREEN, pilot_color.a) if Color(pilot_color, 1.0).is_equal_approx(SABLE_COLOR) else pilot_color

@@ -39,9 +39,8 @@ test("godot sketch change triggers godot and node tests without web build", () =
   assert.equal(res.docs, false);
 });
 
-test("native scaffold and verdicts log trigger node tests; weekly.mjs triggers docs", () => {
-  assert.equal(classifyAffected(["native/project.godot"]).node, true);
-  assert.equal(classifyAffected(["docs/playtests/verdicts.ndjson"]).node, true);
+test("sitting-kit and weekly.mjs trigger node and docs surfaces", () => {
+  assert.equal(classifyAffected(["project-guide/handoff/sitting-kit/serve.mjs"]).node, true);
   assert.equal(classifyAffected(["scripts/gate/weekly.mjs"]).docs, true);
 });
 

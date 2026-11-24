@@ -1,9 +1,0 @@
-HF-03b check_graph.py EXIT=0 checks 406 failures 0 order Session > Encounter > Persistence > Presentation > CollisionQueries > In
-HF-04b check_patterns.py EXIT=0 Paper checks over admitted bytes: presence, hashes, pinned commits, cited lines, unparsed marker and (root-only script, rerun without --out; report written to the ignored artifacts/local/tasks/HF-04b/)
-HF-06a check_matrix.py EXIT=0 38 passed, 0 failed; receipts in /home/andrew/Projects/scrapkeep/artifacts/local/closure-full/HF-06a
-HF-06b check_projection.py EXIT=0 41 passed, 0 failed; receipts in /home/andrew/Projects/scrapkeep/artifacts/local/closure-full/HF-06b
-HF-07a check_envelope.py EXIT=0 PASS 841 of 841 checks passed
-HF-07b check_boundaries.py EXIT=0 receipts: /home/andrew/Projects/scrapkeep/artifacts/local/closure-full/HF-07b
-HF-08 check_recovery.py EXIT=0 269 checks, 0 failed, 54 model cases, 20 matrix rows replayed, 4/4 controls detected
-HF-09 check_migration.py EXIT=0 HF-09 paper check: 371 checks, 0 failed, 125 predicate combinations, 26 model runs, 5 controls detec
-HF-10 check_review.py EXIT=0 28 checks, 0 failed; receipts in /home/andrew/Projects/scrapkeep/artifacts/local/closure-full/HF-10

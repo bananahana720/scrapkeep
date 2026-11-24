@@ -5,6 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
 const MossBubble := preload("res://src/ui/moss_bubble.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # The speech bubble with a caller on the line (moss_bubble.gd, caller_tile.gd): the caller's
 # plate stands at the bubble's left with the name on its tag, and the bubble holds the words.
@@ -12,7 +13,7 @@ const MossBubble := preload("res://src/ui/moss_bubble.gd")
 #       the whole line, name and all.
 #   B2  the words start clear of the plate and under the name tag, and the card is on the screen.
 #   B3  the bubble's edge takes the caller's colour.
-#   B4  a pilot's call wears the pilot's colour, by the name the row uses.
+#   B4  a pilot's call wears the pilot's screen colour (Sable's is not mint), by the name the row uses.
 #   B5  a speaker nobody drew keeps the plain "Name: words" bubble.
 #   B6  a site crew's hello line and a boss's intro line get their plate too.
 #   B7  Moss's counter talk after a call is his own bubble again: no plate, the tail to the edge.
@@ -66,7 +67,7 @@ func _run() -> void:
 			sable = def
 	_bubble._present("sable", "Three at once. Show-off.", 1.0)
 	_t.check("B4 a pilot's call wears the pilot's colour", sable != null and _bubble.caller() == "sable" and tile.hands() == "keeper"
-			and tile.tint() == sable.color and label.text == "Three at once. Show-off.", "caller '%s', label '%s'" % [_bubble.caller(), label.text])
+			and tile.tint() == ClassDef.screen_color(sable.color) and tile.tint() != sable.color and label.text == "Three at once. Show-off.", "caller '%s', label '%s'" % [_bubble.caller(), label.text])
 
 	_bubble._present("nobody_drew_this", "Hello.", 0.0)
 	_t.check("B5 a speaker nobody drew keeps the plain bubble", _bubble.caller() == "" and not tile.visible and label.text == "nobody_drew_this: Hello."

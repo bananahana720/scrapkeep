@@ -1,8 +1,0 @@
-worktree /home/andrew/Projects/scrapkeep-wt-TH-18
-head 7f42500061a4761690f32e3ab26ec22d1895ce53
-branch wt/TH-18
-parent bb97c4111d1e7b2dd40cae575eccde17878b07c5
-status-porcelain-lines 0
-diff-names:
-A	docs/tech/sections/TH-18-input-integration.md
-commits-since-base 1

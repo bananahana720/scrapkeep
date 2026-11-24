@@ -11,8 +11,10 @@
 #     by the material code, never a material_override. COLOR.r carries each piece's index in
 #     linear units: 0.0 the rail, 0.25, 0.5, 0.75 and 1.0 the wrenches left to right from behind,
 #     so a shader lights wrench k when lit_count >= k;
-#   - the twin arc emitter, copper coils at about 11 and 1 o'clock on the weapon ring's front
-#     arc, parallel and pointing forward (+Y), on the ring's copper surface with the collar studs.
+#   - the twin-prong emitter (E1-10, wave 46 blueprint 2.3), one coil at twelve o'clock hung under
+#     the weapon ring's band at Z -0.12, axis along +Y: a rubber shoe, a copper strap to the band,
+#     bone collars either side of a five-turn copper winding, and two copper prongs whose tips are
+#     Emitter.L and Emitter.R. It spends the ring's copper, paint and rubber surfaces, so no draw.
 # Seat bone, lattice petrol (ROSTER-LOOK 0.2, 6). Controls per PILOT-CLIPS 5: twin yokes
 # (Control.Grip.L/R, Control.Trigger), GaugeLever (slot 2) and SpoolBrake (slot 3) in the bank,
 # the copper lap bar, two pedals.
@@ -73,9 +75,26 @@ ROPE_EXIT = SPOOL_C + Vector((-0.03, SPOOL_HALF + 0.06, 0.0))
 RACK_Y = -0.258
 RACK_TOP = -0.062
 RACK_X = (-0.0825, -0.0275, 0.0275, 0.0825)
-# Twin arc emitter: angle from +Y on the ring, coil radius, length.
-EMITTER_ANGLE = math.radians(24)
-EMITTER = (0.044, 0.17)
+# Twin-prong emitter at twelve o'clock, on the axis X 0, Z EMITTER_Z, from Y 1.03 (the band's inner
+# face, 45 mm clear of the lattice) forward. One closed 8-sided lathe, (Y, radius) per ring: a rubber
+# shoe chamfered at the back, a bone collar, five copper turns (ridges 0.064 over a 0.056 core), the
+# front bone collar. hero_six_pilot_budget_test holds Sable's class V at its 22 Nov count, so the whole
+# emitter is 300 triangles, not the blueprint's 450: five turns, not eight (at chase distance the
+# emitter is 15 to 25 pixels tall, blueprint 2.3, so the turn count does not read).
+EMITTER_Z = -0.12
+EMITTER_SIDES = 8
+SHOE = [(1.030, 0.058), (1.045, 0.075), (1.080, 0.075)]
+REAR_COLLAR = [(1.105, 0.072), (1.105, 0.056)]
+TURNS = (5, 1.105, 1.215, 0.064)          # count, from, to, ridge radius (the core is 0.056)
+FRONT_COLLAR = [(1.215, 0.056), (1.215, 0.072), (1.240, 0.072)]
+# Copper strap from the band's front face down into the rear collar (it takes the twelve o'clock
+# band clamp's place): X width, Y from and to, Z from and to.
+STRAP = (0.06, 1.08, 1.105, -0.07, 0.03)
+# Prongs: 6-sided copper cones from inside the front collar to a point; Emitter.L and .R sit on the
+# points. 0.024 m between the 0.012 m bases; the points reach 1.346 m, inside the 1.35 m weapon cap.
+PRONG_X = 0.024
+PRONG_R = 0.012
+PRONG_Y = (1.23, 1.34)
 
 
 def linear_to_srgb(v):
@@ -154,13 +173,62 @@ def wrench_rack():
     return r
 
 
+def emitter_profile():
+    """The lathe rings (Y, radius) rear to front and each band's (slot, colour)."""
+    count, y0, y1, ridge = TURNS
+    core = REAR_COLLAR[-1][1]
+    pitch = (y1 - y0) / count
+    winding = []
+    for k in range(count):
+        winding += [(y0 + pitch * (k + 0.5), ridge), (y0 + pitch * (k + 1), core)]
+    rings = SHOE + REAR_COLLAR + winding + FRONT_COLLAR[1:]
+    bands = ([("rubber", None)] * (len(SHOE) - 1) + [("paint", "bone")] * len(REAR_COLLAR)
+             + [("copper", None)] * len(winding) + [("paint", "bone")] * (len(FRONT_COLLAR) - 1))
+    return rings, bands
+
+
+def emitter_body(r):
+    """One closed lathe on the emitter axis: rear cap rubber, front cap bone."""
+    rings, bands = emitter_profile()
+    bm = r.bm
+    n = EMITTER_SIDES
+    rows = []
+    for y, rad in rings:
+        rows.append([bm.verts.new((rad * math.cos((j + 0.5) * math.tau / n), y,
+                                   EMITTER_Z + rad * math.sin((j + 0.5) * math.tau / n))) for j in range(n)])
+    rear = bm.faces.new(list(reversed(rows[0])))
+    front = bm.faces.new(rows[-1])
+    sides = []
+    for a, b in zip(rows, rows[1:]):
+        sides.append([bm.faces.new((a[j], a[(j + 1) % n], b[(j + 1) % n], b[j])) for j in range(n)])
+    bmesh.ops.recalc_face_normals(bm, faces=[rear, front] + [f for band in sides for f in band])
+    r.paint([rear], "rubber")
+    r.paint([front], "paint", "bone")
+    for (slot, color), band in zip(bands, sides):
+        r.paint(band, slot, color)
+
+
+def prong(r, x):
+    """A closed 6-sided copper cone along +Y, its base buried in the front collar, its point the tip."""
+    bm = r.bm
+    base = [bm.verts.new((x + PRONG_R * math.cos(j * math.tau / 6), PRONG_Y[0],
+                          EMITTER_Z + PRONG_R * math.sin(j * math.tau / 6))) for j in range(6)]
+    tip = bm.verts.new((x, PRONG_Y[1], EMITTER_Z))
+    faces = [bm.faces.new(list(reversed(base)))] + [bm.faces.new((base[j], base[(j + 1) % 6], tip)) for j in range(6)]
+    bmesh.ops.recalc_face_normals(bm, faces=faces)
+    r.paint(faces, "copper")
+
+
 def sable_ring():
-    """PD-0's ring (bone band, charcoal clamps, dark collar) with the neutral mount block
-    replaced by the twin arc emitter; collar studs and emitter coils share the copper surface."""
+    """PD-0's ring (bone band, charcoal clamps, dark collar with closed copper studs) with the
+    neutral mount block replaced by the twin-prong emitter at twelve o'clock; its strap takes the
+    twelve o'clock clamp's place. Emitter, strap and studs share the ring's three surfaces."""
     r = Part("WeaponRing")
     b_in, b_out, b_h, b_z = sb.RING_BAND
     r.ring("paint", b_in, b_out, b_h, sb.RING_SEGMENTS, loc=(0, 0, b_z), color="bone")
     for k in range(10):
+        if k == 2:      # (k + 0.5) * 36 degrees = 90, +Y: the strap clamps the band here
+            continue
         a = (k + 0.5) * math.tau / 10
         r.box("rubber", (0.06, b_out - b_in + 0.012, b_h + 0.012), loc=((b_in + b_out) / 2 * math.cos(a),
               (b_in + b_out) / 2 * math.sin(a), b_z), rot=(0, 0, a + math.pi / 2))
@@ -169,26 +237,18 @@ def sable_ring():
     for k in range(12):
         a = k * math.tau / 12 + 0.13
         n = Vector((math.cos(a), math.sin(a), 0))
-        sb._disc(r, n * (c_out + 0.002) + Vector((0, 0, c_z)), n, 0.012, 6, "copper")
-    rad, length = EMITTER
+        sb._stud(r, n * (c_out + 0.002) + Vector((0, 0, c_z)), n, 0.012, 0.006, "copper")
+    w, y0, y1, z0, z1 = STRAP
+    r.box("copper", (w, y1 - y0, z1 - z0), loc=(0, (y0 + y1) / 2, (z0 + z1) / 2))
+    emitter_body(r)
     for side in (-1, 1):
-        a = side * EMITTER_ANGLE
-        base = Vector((math.sin(a), math.cos(a), 0)) * (b_out + rad + 0.004)
-        r.box("rubber", (0.07, 0.06, 0.05), loc=base - Vector((math.sin(a), math.cos(a), 0)) * 0.03)
-        r.rod("copper", base - Vector((0, 0.04, 0)), base + Vector((0, length - 0.04, 0)), rad, 6)
-        r.rod("rubber", base + Vector((0, length - 0.04, 0)), base + Vector((0, length, 0)), rad * 0.7, 6)
+        prong(r, side * PRONG_X)
     sb._sharpen(r)
     return r
 
 
 def emitter_tips():
-    out = []
-    rad, length = EMITTER
-    for side, tag in ((-1, "L"), (1, "R")):
-        a = side * EMITTER_ANGLE
-        base = Vector((math.sin(a), math.cos(a), 0)) * (sb.RING_BAND[1] + rad + 0.004)
-        out.append(("Emitter." + tag, base + Vector((0, length, 0))))
-    return out
+    return [("Emitter." + tag, Vector((side * PRONG_X, PRONG_Y[1], EMITTER_Z))) for side, tag in ((-1, "L"), (1, "R"))]
 
 
 def pilot():
@@ -208,16 +268,17 @@ def pilot():
 
 
 def felt_pads(core):
-    """Felt Rig: the copper pivot pins (small discs just past the lattice face) become rubber
-    felt pads. Hub bodies stay copper."""
+    """Felt Rig: the copper pivot pins (shell_base._stud heads just past the lattice face, closed to
+    a point PIN_DEPTH under it) become rubber felt pads, head and buried sides alike, so each pin
+    stays one closed island. Hub bodies (larger faces, or reaching in to the drum's inner end) stay copper."""
     names = [m.name for m in core.data.materials]
     copper, rubber = names.index("copper"), names.index("rubber")
     moved = 0
     for poly in core.data.polygons:
-        if poly.material_index != copper or poly.area > 0.0012:
+        if poly.material_index != copper or poly.area > 0.002:
             continue
         radii = [core.data.vertices[i].co.length for i in poly.vertices]
-        if min(radii) >= sb.LATTICE_OUTER and max(radii) <= sb.LATTICE_OUTER + 0.007:
+        if min(radii) >= sb.LATTICE_OUTER - sb.PIN_DEPTH - 0.002 and max(radii) <= sb.LATTICE_OUTER + 0.007:
             poly.material_index = rubber
             moved += 1
     return moved

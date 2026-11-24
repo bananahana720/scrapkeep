@@ -1,5 +1,0 @@
- docs/tech/sections/TH-15-physics-query-contract.md | 413 +++++++++++++++++++++
- 1 file changed, 413 insertions(+)
-c7883c000751e218eb1436f34c9cfa1d014f2e975a6f9c0a1435757b5bc01ade  docs/tech/sections/TH-15-physics-query-contract.md
-coordinator rerun at caaf0f36774ca1ad328e1238406ef160031fbb1b (main at 0aa689c), 2026-09-17T17:30Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (27 sections at the worktree); check:project exit 0; check:drift exit 0 (27 sections, 214 hashes at the worktree); check_physics.py (writer paper check, rerun from a coordinator copy) exit 0 pass, 3/3 controls.
-coordinator corrections at c804a0972bf541f8b86e3857c066a4d85239bc63 (eight review notes; section sha256 d9ace62f0a73c76055e2c9cce0fdc855cf1ba311face23ec5cd0f26e102a6090); paper check rerun exit 0. Integrated at 2162ed1d77e0a09714586b15142ddefae12af61f (no-ff merge plus the README index line after TH-13): check:scope --no-build documentation-only, check:docs 0, check:project 0, check:drift 0, paper check rerun exit 0.

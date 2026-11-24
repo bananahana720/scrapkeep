@@ -1,6 +1,0 @@
-20260925T224444Z-batch-flood-hatch-random-dfe602b2 trial 2: first anomaly out_of_bounds at tick 4088, dead_tick 3035, after death true
-20260925T224444Z-batch-flood-hatch-random-ce21c970 trial 16: first anomaly out_of_bounds at tick 3174, dead_tick 2088, after death true
-20260925T224444Z-batch-flood-hatch-random-dfe602b2 trial 14: first anomaly out_of_bounds at tick 3796, dead_tick 3052, after death true
-20260925T224444Z-batch-flood-hatch-random-dfe602b2 trial 15: first anomaly out_of_bounds at tick 3011, dead_tick 2278, after death true
-20260925T224444Z-batch-flood-hatch-random-dfe602b2 trial 17: first anomaly out_of_bounds at tick 4385, dead_tick 3392, after death true
-20260925T224444Z-batch-flood-hatch-scripted-5a70690e trial 12: first anomaly out_of_bounds at tick 6004, dead_tick 2224, after death true

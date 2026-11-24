@@ -1,3 +1,0 @@
-check:docs fail: 104 Markdown files, 2896 local links, 59 cards, 25 events, 0 sections, 6 interim rows, 15 failures. Report: /home/andrew/Projects/scrapkeep/artifacts/local/check-docs/report.json
-Structural documentation checks only. No build, runtime, browser or remote check is implied; link targets are checked for existence and anchors, not for content correctness.
-check:docs exit=1

@@ -91,7 +91,7 @@ func _physics_process(_delta: float) -> bool:
 			_boss.chase = ""
 			run.damage(1.0e9, "test")
 			_boss.plating = 0.0
-			_s["said"] = String(_game.screens._body.text)
+			_s["said"] = String(_game.screens.said_body())
 			_s["cause"] = String(flow.death_cause)
 			_s["tip"] = String(flow.death_tip)
 			_s["memo"] = DeathCause.memo(run.run_seed, run.stage)

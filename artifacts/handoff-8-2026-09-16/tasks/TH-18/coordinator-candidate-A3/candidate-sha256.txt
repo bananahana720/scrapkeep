@@ -1,1 +1,0 @@
-49ac213b113d68fd4a27e29b7cec1132f78ff7dd88639a88066e9e848253aa8f  docs/tech/sections/TH-18-input-integration.md

@@ -1,9 +1,0 @@
-check:scope bb97c4111d1e7b2dd40cae575eccde17878b07c5..cceff383a6be4192092db66f6c792a0f448ba573
-scope: documentation-only (1 changed paths)
-class documentation-only [evidence: structural documentation checks; no build or runtime evidence]
-  docs/product/sections/PD-03-sound-feel-events.md
-required commands:
-  npm run check:docs
-  npm run check:project
-  npm run check:drift
-This selector classifies paths and names commands. It runs none of them and proves nothing about their outcome.

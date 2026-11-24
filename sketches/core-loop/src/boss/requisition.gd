@@ -7,6 +7,7 @@ const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
+const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 # The Requisition: a rolling furnace-fortress several times the ball's height, with
@@ -555,6 +556,9 @@ static func warm() -> bool:
 			var view: MeshInstance3D = views.pop_back()
 			BossModel.colour_view(view)
 			BakeLook.warm_view(view)
+			# The ink line's welded copy of what dress() will draw, made here a view a frame, not all at once at the end.
+			if view.mesh != null:
+				InkOutline.hull(BakeLook.tangent_safe(view.mesh))
 			return false
 		_ahead[path] = _finish(_dressing[path][0])
 		_dressing.erase(path)
@@ -592,10 +596,11 @@ static func _instance(path: String) -> Node3D:
 	return _finish(scene)
 
 
-# A coloured scene dressed by the bake's look, with its own clips.
+# A coloured scene dressed by the bake's look and a Warden's ink line, with its own clips.
 static func _finish(scene: Node3D) -> Node3D:
 	if scene != null:
 		BakeLook.dress(scene)
+		InkOutline.apply(scene, "warden")
 		var player := BossModel.player_of(scene)
 		if player != null:
 			BossModel.own_clips(player)

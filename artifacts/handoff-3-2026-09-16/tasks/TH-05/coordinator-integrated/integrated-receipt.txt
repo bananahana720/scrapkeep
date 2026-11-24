@@ -1,1 +1,0 @@
-integrated 5f6bf79203ed993a8be483713eaaaaa7becac33d (no-ff merge of e7e5a6061929981898891dd2187ecd332faab699 into main at 199bf46, then one admission commit adding the README index line and the reviewer one-token fix to the Q-P22 bullet). check:docs, check:project, check:drift exit 0; TH-05 paper check exit 0; check:scope documentation-only.

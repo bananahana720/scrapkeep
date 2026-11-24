@@ -5,7 +5,7 @@ description: "Build Scrapkeep blockout pieces and landmark heroes as mojulo reci
 
 # Build blockout with mojulo
 
-Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `docs/project/README.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
+Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `project-guide/handoff/START-HERE.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
 
 Mojulo (npm `mojulo@3.0.0`) compiles small deterministic recipes into geometry. Andrew ruled on 2026-10-22 that it is the go-forward base for map and gameplay blockout, so the team can build movement, traversal, combat and event systems on top quickly (BLK-01). This skill owns the method: recipe, export, ball proof and stills. The `mojulo:mojulo` plugin skill owns the tool's vocabulary and manuals. `scrapkeep-verify` owns which checks qualify a change, and `scrapkeep-task` owns admission. Nothing goes onto a stage branch before the coordinator turns a proposal into a card.
 

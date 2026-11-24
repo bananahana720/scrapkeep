@@ -1,9 +1,0 @@
-check:scope bb97c4111d1e7b2dd40cae575eccde17878b07c5..d5c158a25025d3d44b0f8516a5ad532fa22c4b47
-scope: documentation-only (1 changed paths)
-class documentation-only [evidence: structural documentation checks; no build or runtime evidence]
-  docs/tech/sections/TH-19-asset-import-export.md
-required commands:
-  npm run check:docs
-  npm run check:project
-  npm run check:drift
-This selector classifies paths and names commands. It runs none of them and proves nothing about their outcome.

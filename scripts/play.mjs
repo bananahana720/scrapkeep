@@ -22,10 +22,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { binary, judge, sketchDirectories, testScripts } from "./sketch-smoke.mjs";
-import { createRun } from "./lab/record.mjs";
-import { METRICS } from "./lab/metrics/index.mjs";
-import { EXIT } from "./lab/metrics/status.mjs";
-import { wilson } from "./lab/stats.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const tty = process.stdout.isTTY === true;
@@ -45,11 +41,9 @@ const red = (text) => paint("31", text);
 const cyan = (text) => paint("36", text);
 
 export function worktrees(repoRoot) {
-  const git = spawnSync(
-    "git",
-    ["-C", repoRoot, "worktree", "list", "--porcelain"],
-    { encoding: "utf8" },
-  );
+  const git = spawnSync("git", ["-C", repoRoot, "worktree", "list", "--porcelain"], {
+    encoding: "utf8",
+  });
   if (git.status !== 0) {
     return [{ path: repoRoot, branch: null, head: null }];
   } else {
@@ -69,11 +63,9 @@ export function worktrees(repoRoot) {
   }
 }
 
-// A worktree's primary sketch is the one named after it (spillway-drop holds
-// spillway-drop), else the longest sketch name the tree's name contains
-// (mobility-kit-v2 holds mobility-kit, scrapkeep-lab-cable-bench holds
-// cable-bench), else its core-loop sketch, else its only sketch. Copies of ball-lab carried along for
-// reference stay addressable but never win a bare name match.
+// A worktree's primary sketch is the one named after it, else the longest
+// sketch name the tree's name contains, else its core-loop sketch, else its
+// only sketch, else the first entry.
 export function pickPrimary(directories, treeName) {
   const named = directories.find((dir) => path.basename(dir) === treeName);
   const contained = directories
@@ -88,14 +80,7 @@ export function pickPrimary(directories, treeName) {
   } else if (directories.length === 1) {
     return directories[0];
   } else {
-    const notBallLab = directories.filter(
-      (dir) => path.basename(dir) !== "ball-lab",
-    );
-    if (notBallLab.length === 1) {
-      return notBallLab[0];
-    } else {
-      return directories[0];
-    }
+    return directories[0];
   }
 }
 
@@ -180,10 +165,12 @@ export function currentTree(repoRoot, cwd) {
 export function resolve(entries, name, cwdTree = null) {
   const term = name.toLowerCase();
   const exact = entries.filter(
-    (entry) => entry.id.toLowerCase() === term || `${entry.tree}/${entry.sketch}`.toLowerCase() === term,
+    (entry) =>
+      entry.id.toLowerCase() === term || `${entry.tree}/${entry.sketch}`.toLowerCase() === term,
   );
   const local = entries.filter(
-    (entry) => entry.sketch.toLowerCase() === term && cwdTree !== null && entry.treePath === cwdTree,
+    (entry) =>
+      entry.sketch.toLowerCase() === term && cwdTree !== null && entry.treePath === cwdTree,
   );
   if (exact.length === 1 && !(exact[0].sketch.toLowerCase() === term && local.length === 1)) {
     return { entry: exact[0] };
@@ -223,13 +210,8 @@ export function resolve(entries, name, cwdTree = null) {
   return { ambiguous: [] };
 }
 
-// Each check is a separate Godot boot, most of it startup rather than the
-// check itself, so wall clock is set by how many run at once rather than by
-// the work; a retained `--jobs=1` run of sketches/ball-lab measured about
-// 3.5 s per check (CONTRIBUTING's `play` / `scrapkeep` row has the run id
-// and command). The checks share no state, so they fan out freely.
 function runHeadless(label, args) {
-  return new Promise((resolve) => {
+  return new Promise((resolveRun) => {
     const child = spawn(binary, args);
     let output = "";
     let timedOut = false;
@@ -242,13 +224,11 @@ function runHeadless(label, args) {
     child.on("close", (status, signal) => {
       clearTimeout(timer);
       const verdict = judge({ test: args.includes("--script"), status, output });
-      resolve({
+      resolveRun({
         label,
         ok: verdict.ok,
         reason: verdict.reason,
         status,
-        // Killed by a signal that was not our own timeout: the engine went
-        // down rather than the check simply failing its assertions.
         crashed: signal !== null && !timedOut,
         output,
       });
@@ -277,16 +257,15 @@ async function inPool(jobs, limit, onDone) {
   return results;
 }
 
-// A failure under concurrency can be intermittent, and an intermittent failure
-// whose output scrolled away is not diagnosable. Every failing check keeps its
-// full output on disk so the next flake can be read rather than guessed at.
 const failureLog = path.join(root, "artifacts", "local", "sketch-tests");
 
 function reportCheck(result) {
   if (result.ok) {
     console.log(`${green("PASS")} ${result.label}`);
   } else {
-    console.log(`${red("FAIL")} ${result.label} exit=${result.status}${result.reason ? ` (${result.reason})` : ""}`);
+    console.log(
+      `${red("FAIL")} ${result.label} exit=${result.status}${result.reason ? ` (${result.reason})` : ""}`,
+    );
     console.log(result.output.split("\n").slice(-40).join("\n"));
     try {
       mkdirSync(failureLog, { recursive: true });
@@ -302,20 +281,10 @@ function reportCheck(result) {
   return result.ok;
 }
 
-// Import must land before anything else opens the project, so it runs alone.
-// The result list always carries every check that actually ran, so a caller
-// building a run record never has to guess which ones were skipped.
-// `order`, when given, resolves to a proposed run order for the checks after
-// import; anything but a permutation of them leaves the current order.
-// `stream` is watch's: each check is reported the moment it finishes and the
-// first failure prints one RED line timed from `started`, while the rest keep
-// running. Without it (`scrapkeep test`) every check is reported in list order
-// once the pool is done, as before.
 export async function testEntry(
   entry,
   limit,
   {
-    order,
     stream = false,
     started = Date.now(),
     run = runHeadless,
@@ -334,17 +303,9 @@ export async function testEntry(
   ]);
   for (const script of testScripts(entry.directory)) {
     const name = script.replace("res://tests/", "");
-    byName.set(name, () =>
-      run(`${entry.id} ${name}`, [...base, "--script", script]),
-    );
+    byName.set(name, () => run(`${entry.id} ${name}`, [...base, "--script", script]));
   }
-  let names = [...byName.keys()];
-  let used;
-  if (order !== undefined) {
-    used = await order;
-    names = applyOrder(names, used.order);
-  }
-  const jobs = names.map((name) => byName.get(name));
+  const jobs = [...byName.values()];
   let ok = true;
   let firstFail;
   const onDone = stream
@@ -366,7 +327,7 @@ export async function testEntry(
     }
     results.push(result);
   }
-  return { ok, results, first_fail_s: firstFail, order: used };
+  return { ok, results, first_fail_s: firstFail };
 }
 
 async function runSuite(targets, limit) {
@@ -385,8 +346,6 @@ export function jobLimit(words) {
   if (flag !== undefined) {
     return Math.max(1, Number.parseInt(flag.slice(7), 10) || 1);
   } else {
-    // Each Godot boot is mostly single-threaded startup, so the useful width is
-    // near the core count; leave two cores for the editor and the compositor.
     return Math.max(2, Math.min(8, cpus().length - 2));
   }
 }
@@ -399,8 +358,6 @@ export function repeatCount(words) {
   return Math.max(1, Number.parseInt(flag.slice(9), 10) || 1);
 }
 
-// A slug fit for record.mjs's type/label fields: lowercase, alphanumeric
-// runs joined by a single dash, never empty.
 export function slugLabel(text) {
   const slug = String(text)
     .toLowerCase()
@@ -409,9 +366,6 @@ export function slugLabel(text) {
   return slug === "" ? "run" : slug;
 }
 
-// One row per check label across every repeat it ran on. A check the import
-// failure skipped on some repeat contributes no outcome for that repeat
-// rather than a fabricated one, so its row is simply shorter.
 export function aggregateOutcomes(repeatResults) {
   const byLabel = new Map();
   for (const results of repeatResults) {
@@ -425,74 +379,12 @@ export function aggregateOutcomes(repeatResults) {
   return byLabel;
 }
 
-// The fraction of checks whose outcome disagreed across the repeats it ran
-// on; a rerun never turns a failure into a pass (metrics/core.mjs), so any
-// disagreement at all counts as flake, not just fail-then-pass in that order.
-// n stays the number of distinct checks, not the number of repeats, so a
-// Wilson interval on it is a real proportion estimate (N1).
-export function flakeRate(byLabel) {
-  let disagreeing = 0;
-  for (const outcomes of byLabel.values()) {
-    if (new Set(outcomes).size > 1) {
-      disagreeing += 1;
-    }
-  }
-  const n = byLabel.size;
-  if (n === 0) {
-    return { value: null, n: 0, ci: null };
-  }
-  const { lower, upper } = wilson(disagreeing, n);
-  return { value: disagreeing / n, n, ci: [lower, upper] };
-}
-
-// Pure aggregation from N repeats of runSuite's results into the measures a
-// `scrapkeep-run/1` record needs: no filesystem or Godot access, so this is
-// unit-testable with synthetic results.
-export function buildTestMeasures({ repeatResults, repeatSeconds, repeatOks }) {
-  const repeats = repeatResults.length;
-  const totalSeconds = repeatSeconds.reduce((sum, s) => sum + s, 0);
-  const flat = repeatResults.flat();
-  const crashCount = flat.filter((r) => r.crashed).length;
-  const measures = {
-    suite_wall_s: { value: totalSeconds / repeats, n: repeats, ci: null },
-    suite_pass: {
-      value: repeatOks.filter((ok) => !ok).length,
-      n: repeats,
-      ci: null,
-    },
-    engine_crash: { value: crashCount, n: flat.length, ci: null },
-  };
-  const checks = [...aggregateOutcomes(repeatResults)].map(
-    ([label, outcomes]) => ({ label, outcomes }),
-  );
-  const flake =
-    repeats > 1 ? flakeRate(aggregateOutcomes(repeatResults)) : null;
-  return { measures, checks, flake, totalSeconds };
-}
-
-// createRun() runs before the repeat loop, not after: a run's provenance
-// (started_at, id, head/dirty, the start source digest) has to be sampled
-// before the suite work, or JL-01's mid-run source-change guard can never
-// fire, because "start" would already include whatever the suite changed.
-// An orphaned run directory from a crash between createRun() and finish() is
-// harmless; buildIndex already skips a directory with no run.json.
 export async function runTestSuite({
   targets,
   limit,
   repeats,
-  label,
   runOnce = () => runSuite(targets, limit),
-  createRunOptions = {},
 }) {
-  const { config: initialConfig, ...restOptions } = createRunOptions;
-  const config = { ...(initialConfig ?? {}) };
-  const run = await createRun({
-    type: "suite",
-    label,
-    registry: METRICS,
-    config,
-    ...restOptions,
-  });
   const repeatResults = [];
   const repeatSeconds = [];
   const repeatOks = [];
@@ -504,26 +396,14 @@ export async function runTestSuite({
     repeatOks.push(ok);
   }
   const overallOk = repeatOks.every(Boolean);
-  const { measures, checks, flake, totalSeconds } = buildTestMeasures({
-    repeatResults,
-    repeatSeconds,
-    repeatOks,
-  });
-  // A median needs the individual repeat times, not just their mean (N2).
-  config.checks = checks;
-  config.repeat_seconds = repeatSeconds;
-  run.kpi("suite_wall_s", measures.suite_wall_s);
-  run.kri("suite_pass", measures.suite_pass);
-  run.kri("engine_crash", measures.engine_crash);
-  if (flake !== null) {
-    run.kri("flake_rate", flake);
-  }
-  const record = await run.finish({ result: overallOk ? "pass" : "fail" });
-  return { record, overallOk, totalSeconds };
+  const totalSeconds = repeatSeconds.reduce((sum, s) => sum + s, 0);
+  const checks = [...aggregateOutcomes(repeatResults)].map(([label, outcomes]) => ({
+    label,
+    outcomes,
+  }));
+  return { overallOk, totalSeconds, checks, repeatSeconds };
 }
 
-// Resolves an executable by name against PATH without shelling out, so it is
-// deterministic under test with an injected env.
 export function findOnPath(name, env = process.env) {
   const dirs = (env.PATH || "").split(path.delimiter).filter(Boolean);
   for (const dir of dirs) {
@@ -542,12 +422,7 @@ export function findOnPath(name, env = process.env) {
 // A relative name is joined there; an absolute path is honoured so an
 // explicit destination still works. The refusal checks the resolved path, so
 // `..` segments and `//tmp` cannot bring /tmp or os.tmpdir() back in (NB3).
-export function shotOutputPath(
-  repoRoot,
-  entry,
-  requested,
-  { tmpRoots = ["/tmp", tmpdir()] } = {},
-) {
+export function shotOutputPath(repoRoot, entry, requested, { tmpRoots = ["/tmp", tmpdir()] } = {}) {
   const shotsDir = path.join(repoRoot, "artifacts", "local", "shots");
   const name = requested || `${entry.sketch}-spawn.png`;
   const out = path.resolve(shotsDir, name);
@@ -561,8 +436,6 @@ export function shotOutputPath(
   return { shotsDir, out };
 }
 
-// Only the file wait below had a limit, and it starts after the launch
-// returns, so a hung headless Godot hung the command (NB1).
 export const SHOT_TIMEOUT_MS = 60_000;
 
 export function shotSpawnOptions({ timeoutMs = SHOT_TIMEOUT_MS } = {}) {
@@ -590,18 +463,13 @@ export function shotLaunchFailure(result, timeoutMs = SHOT_TIMEOUT_MS) {
   return null;
 }
 
-// claude-open (audit-fixed shot routing) only dispatches the launch through
-// hyprctl and returns before the spawned Godot process writes anything, so a
-// zero exit there proves the dispatch succeeded, not that the shot landed.
-// Polling for the output file itself is the only way to know it's done; the
-// headless fallback gets the same wait for the same reason (B2).
 export async function waitUntil(
   check,
   {
     timeoutMs = 30_000,
     intervalMs = 250,
     now = Date.now,
-    sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    sleep = (ms) => new Promise((resolveSleep) => setTimeout(resolveSleep, ms)),
   } = {},
 ) {
   const deadline = now() + timeoutMs;
@@ -621,153 +489,35 @@ export async function waitForShot(out, options = {}) {
   return waitUntil(() => exists(out), rest);
 }
 
-// A sketch's own sources and tests are the only inputs to its checks, so a
-// change under its directory is the whole trigger. Godot rewrites .uid and
-// .import files during an import pass; watching those would retrigger forever.
 const ignored = /(\.uid|\.import|\.godot\/|~$)/;
 
-// The only order watch will run is a permutation of its checks, so no answer
-// can drop, add or repeat one.
-export function applyOrder(names, proposed) {
-  if (!Array.isArray(proposed) || proposed.length !== names.length) {
-    return names;
-  }
-  const offered = new Set(proposed);
-  if (
-    offered.size !== names.length ||
-    !names.every((name) => offered.has(name))
-  ) {
-    return names;
-  }
-  return proposed;
-}
-
-function runChild(args, timeoutMs) {
-  return new Promise((resolve) => {
-    const child = spawn(process.execPath, args, {
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    let stdout = "";
-    const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
-    child.stdout.on("data", (chunk) => (stdout += chunk));
-    child.on("error", () => {
-      clearTimeout(timer);
-      resolve({ status: null, stdout });
-    });
-    child.on("close", (status) => {
-      clearTimeout(timer);
-      resolve({ status, stdout });
-    });
-  });
-}
-
-// JL-23: Jev's run order comes from scripts/lab/test-order.mjs in a child
-// process, not an import, so no module on the gate path loads it. It runs
-// alongside the import pass, and any failure means the current order.
-const testOrderScript = path.join(root, "scripts", "lab", "test-order.mjs");
-
-// Stated where the user sees it, once per session (JL-23 review B1).
-export function orderingNote(checks, jobs) {
-  if (checks <= jobs) {
-    return `ordering: ${checks} checks, ${jobs} at a time; every check starts at once, so the order changes nothing here (it matters only when checks outnumber jobs)`;
-  }
-  return `ordering: ${checks} checks, ${jobs} at a time; the order decides which checks run first`;
-}
-
-export async function requestOrder(
-  entry,
-  names,
-  saved,
-  { run = runChild, timeoutMs = 12_000 } = {},
-) {
-  const args = [testOrderScript, "order", "--dir", entry.directory];
-  for (const name of names) {
-    args.push("--check", name);
-  }
-  if (saved !== undefined) {
-    args.push("--changed", saved);
-  }
-  try {
-    const { status, stdout } = await run(args, timeoutMs);
-    if (status !== 0) {
-      return { order: names, source: "current", reason: `exit ${status}` };
-    }
-    const reply = JSON.parse(stdout.trim().split("\n").at(-1));
-    const order = applyOrder(names, reply.order);
-    if (order === names || reply.source !== "jev") {
-      return {
-        order: names,
-        source: "current",
-        reason: reply.reason ?? "not a permutation",
-      };
-    }
-    return { order, source: "jev", gap: reply.order_gap?.max };
-  } catch (error) {
-    return { order: names, source: "current", reason: error.name };
-  }
-}
-
-// Asking Jev costs a call and can change nothing when every check starts at
-// once, so the order is requested only for a save whose checks outnumber jobs.
-export function orderFor(entry, names, saved, limit, { request = requestOrder } = {}) {
-  if (saved === undefined || names.length <= limit) {
-    return undefined;
-  }
-  return request(entry, names, saved);
-}
-
 async function watch(targets, limit) {
-  const roots = targets.map((entry) => entry.directory);
   console.log(bold("\n  watching " + targets.map((e) => e.id).join(", ")));
-  console.log(dim("  saves rerun that sketch's checks. Ctrl-C to stop."));
-  for (const entry of targets) {
-    const checks = 1 + testScripts(entry.directory).length;
-    console.log(dim(`  ${entry.id} ${orderingNote(checks, limit)}`));
-  }
-  console.log("");
+  console.log(dim("  saves rerun that sketch's checks. Ctrl-C to stop.\n"));
 
   let running = false;
   let queued = null;
 
-  async function fire(entry, reason, saved) {
+  async function fire(entry, reason) {
     if (running) {
-      queued = { entry, saved };
+      queued = entry;
       return;
     }
     running = true;
     const started = Date.now();
     console.log(`\n${cyan("→")} ${bold(entry.id)} ${dim(reason)}`);
-    // The first run has no save to judge, so it keeps the current order.
-    const names = [
-      "boot",
-      ...testScripts(entry.directory).map((s) => s.replace("res://tests/", "")),
-    ];
-    const order = orderFor(entry, names, saved, limit);
-    const result = await testEntry(entry, limit, {
-      order,
-      stream: true,
-      started,
-    });
+    const result = await testEntry(entry, limit, { stream: true, started });
     const seconds = ((Date.now() - started) / 1000).toFixed(1);
     if (result.ok) {
       console.log(`${green("  GREEN")} ${entry.id} ${dim(seconds + "s")}`);
     } else {
       console.log(`${red("  RED")} ${entry.id} ${dim(seconds + "s")}`);
     }
-    // A failed import never waited for the order, and neither does this.
-    const used = result.order;
-    if (used !== undefined) {
-      const note =
-        used.source === "jev"
-          ? `jev, forward/reverse gap ${used.gap?.toFixed(2)}`
-          : `current (${used.reason})`;
-      console.log(dim(`  order: ${note}`));
-    }
     running = false;
     if (queued !== null) {
       const next = queued;
       queued = null;
-      await fire(next.entry, "queued while running", next.saved);
+      await fire(next, "queued while running");
     }
   }
 
@@ -778,10 +528,9 @@ async function watch(targets, limit) {
         return;
       }
       clearTimeout(debounce);
-      debounce = setTimeout(() => fire(entry, "changed " + file, file), 180);
+      debounce = setTimeout(() => fire(entry, "changed " + file), 180);
     });
   }
-  // Nothing has changed yet, so show the current colour before waiting.
   for (const entry of targets) {
     await fire(entry, "first run");
   }
@@ -789,8 +538,6 @@ async function watch(targets, limit) {
 }
 
 function showList(entries, all) {
-  // Reference copies of ball-lab ride along in every stage worktree. They are
-  // addressable but they are not the thing to play, so the bare list hides them.
   let shown = entries;
   if (!all) {
     shown = entries.filter((entry) => entry.primary);
@@ -802,10 +549,7 @@ function showList(entries, all) {
   console.log(bold("\n  Scrapkeep sketches\n"));
   const width = Math.max(...shown.map((entry) => entry.id.length));
   for (const entry of shown) {
-    const where =
-      entry.branch === null
-        ? dim("detached")
-        : dim(`${entry.branch}@${entry.head}`);
+    const where = entry.branch === null ? dim("detached") : dim(`${entry.branch}@${entry.head}`);
     console.log(`  ${bold(entry.id.padEnd(width))}  ${where}`);
     if (entry.question !== "") {
       let line = entry.question;
@@ -817,37 +561,25 @@ function showList(entries, all) {
   }
   const hidden = entries.length - shown.length;
   if (hidden > 0) {
-    console.log(
-      dim(`\n  ${hidden} reference copy(s) hidden; list --all shows them.`),
-    );
+    console.log(dim(`\n  ${hidden} secondary copy(s) hidden; list --all shows them.`));
   }
-  console.log(
-    dim("\n  play <name> | test [name] | shot <name> [out.png] | list"),
-  );
-  console.log(
-    dim(
-      "  stats [--layer <layer>] | gate <run> --against <pin> | lab run | lab watch <scenario>",
-    ),
-  );
-  console.log(dim("  Names match on any unambiguous prefix: play mobility"));
-  console.log(
-    dim("\n  Headless checks prove the systems run. Feel needs your play.\n"),
-  );
+  console.log(dim("\n  play <name> | test [name] | watch [name] | shot <name> [out.png] | list"));
+  console.log(dim("  Names match on any unambiguous prefix: play core-loop"));
+  console.log(dim("\n  Headless checks prove the systems run. Feel needs your play.\n"));
 }
 
 function reportAmbiguity(name, hits, entries = []) {
   if (hits.length === 0) {
     const known = entries.filter((entry) => entry.primary).slice(0, 6);
-    console.error(
-      `No sketch matches "${name}". Run with no arguments to list them.`,
-    );
+    console.error(`No sketch matches "${name}". Run with no arguments to list them.`);
     for (const entry of known) {
       console.error(`  ${entry.id}`);
     }
   } else {
     const term = name.toLowerCase();
     const here = currentTree(root, process.cwd());
-    const isExact = (entry) => entry.id.toLowerCase() === term || entry.sketch.toLowerCase() === term;
+    const isExact = (entry) =>
+      entry.id.toLowerCase() === term || entry.sketch.toLowerCase() === term;
     const nearness = (entry) => {
       if (here !== null && entry.treePath === here) {
         return 0;
@@ -887,75 +619,7 @@ function requireEntry(entries, name) {
   }
 }
 
-const labScripts = path.join(root, "scripts", "lab");
-const LAB_VERBS = {
-  stats: "stats-cli.mjs",
-  gate: "gate.mjs",
-  dash: "dash.mjs",
-};
-const LAB_SUBVERBS = {
-  run: "harness.mjs",
-  program: "program.mjs",
-  verdicts: "verdicts.mjs",
-  watch: "watch.mjs",
-};
-
-// The lab verbs need no Godot and no sketch catalogue, so they are routed
-// before either is looked up. Arguments after the verb pass through as-is.
-export function labRoute(words, { exists = existsSync } = {}) {
-  const [verb, ...rest] = words;
-  let file;
-  let args = rest;
-  if (Object.hasOwn(LAB_VERBS, verb)) {
-    file = LAB_VERBS[verb];
-  } else if (verb === "lab") {
-    const [sub, ...subArgs] = rest;
-    if (!Object.hasOwn(LAB_SUBVERBS, sub)) {
-      return {
-        exit: EXIT.usage,
-        error: `Usage: scrapkeep lab run|program|verdicts|watch [args]${sub === undefined ? "" : ` (not "${sub}")`}`,
-      };
-    }
-    file = LAB_SUBVERBS[sub];
-    args = subArgs;
-  } else {
-    return null;
-  }
-  const script = path.join(labScripts, file);
-  if (!exists(script)) {
-    return {
-      exit: EXIT.usage,
-      error: `scripts/lab/${file} is not built yet on this checkout.`,
-    };
-  }
-  return { script, args };
-}
-
-function runLab(route) {
-  if (route.error !== undefined) {
-    console.error(route.error);
-    process.exit(route.exit);
-  }
-  const result = spawnSync(process.execPath, [route.script, ...route.args], {
-    stdio: "inherit",
-  });
-  if (result.status === null) {
-    // A lab script that could not finish measured nothing; exit 1 would read
-    // as a red KRI, so this reports an invalid instrument as gate.mjs does.
-    console.error(
-      `${path.basename(route.script)} did not finish: ${result.error?.message ?? result.signal}`,
-    );
-    process.exit(EXIT.invalid);
-  }
-  process.exit(result.status);
-}
-
 async function main(argv) {
-  const routed = labRoute(argv);
-  if (routed !== null) {
-    runLab(routed);
-    return;
-  }
   const passthrough = argv.indexOf("--");
   const afterDashes = passthrough === -1 ? [] : argv.slice(passthrough + 1);
   const words = passthrough === -1 ? argv : argv.slice(0, passthrough);
@@ -964,7 +628,6 @@ async function main(argv) {
   let command = words[0];
   let name = words[1];
   let launchWords = words.slice(2);
-  // A bare name is the common case: `scrapkeep mobility` should just play it.
   const verbs = ["play", "test", "watch", "shot", "list", "help"];
   if (command !== undefined && command.startsWith("--")) {
     command = "list";
@@ -988,11 +651,7 @@ async function main(argv) {
   } else if (command === "play") {
     const entry = requireEntry(entries, name);
     console.log(`${cyan("▶")} ${bold(entry.id)} ${dim(entry.directory)}`);
-    // Each sketch owns its own keys (core-loop's Esc opens a pause menu), so
-    // the launcher states only what holds for every sketch.
     console.log(dim("  Controls are in the game; closing its window quits.\n"));
-    // `scrapkeep core-loop --table=slice` is the documented form, so words
-    // after the name reach Godot just as those after `--` do.
     const extra = [...launchWords, ...afterDashes];
     const result = spawnSync(binary, ["--path", entry.directory, ...extra], {
       stdio: "inherit",
@@ -1000,34 +659,16 @@ async function main(argv) {
     process.exit(result.status === null ? 1 : result.status);
   } else if (command === "test" || command === "watch") {
     let targets = entries;
-    // A leading `--jobs=`/`--repeat=` flag with no sketch name leaves `name`
-    // holding that flag string, so only a non-flag `name` names a target.
-    let targetName;
     if (name !== undefined && !name.startsWith("--")) {
       targets = [requireEntry(entries, name)];
-      targetName = name;
     }
     const limit = jobLimit(words);
     if (command === "test") {
       const repeats = repeatCount(words);
-      const sketches = targets.map((entry) => ({
-        id: entry.id,
-        tree: entry.tree,
-        head: entry.head,
-      }));
-      const { record, overallOk, totalSeconds } = await runTestSuite({
+      const { overallOk, totalSeconds } = await runTestSuite({
         targets,
         limit,
         repeats,
-        label: slugLabel(targetName ?? "all"),
-        createRunOptions: {
-          config: {
-            target: targetName ?? "all",
-            jobs: limit,
-            repeat: repeats,
-            sketches,
-          },
-        },
       });
       const verdict = overallOk ? green("pass") : red("fail");
       const repeatNote = repeats > 1 ? `, ${repeats} repeats` : "";
@@ -1035,8 +676,6 @@ async function main(argv) {
         `\nsketch tests ${verdict} in ${totalSeconds.toFixed(1)}s across ${targets.length} sketch(es), ${limit} at a time${repeatNote}.`,
       );
       console.log(dim("Headless boot and tests only; feel needs your play."));
-      console.log(dim(`  run record: ${record.id}`));
-
       process.exit(overallOk ? 0 : 1);
     } else {
       await watch(targets, limit);
@@ -1059,8 +698,6 @@ async function main(argv) {
       }
       const { shotsDir, out } = paths;
       mkdirSync(shotsDir, { recursive: true });
-      // A leftover file from a previous attempt would make a failed shot
-      // look saved, since the wait below only checks that the path exists.
       rmSync(out, { force: true });
       const scriptArgs = [
         "--path",
@@ -1074,21 +711,11 @@ async function main(argv) {
       const opener = findOnPath("claude-open");
       let result;
       if (opener !== null) {
-        console.log(
-          dim(
-            "shot.gd needs a real window; opened via claude-open on workspace 10.\n",
-          ),
-        );
+        console.log(dim("shot.gd needs a real window; opened via claude-open on workspace 10.\n"));
         result = spawnSync(opener, [binary, ...scriptArgs], shotSpawnOptions());
       } else {
-        console.log(
-          dim("claude-open not found on PATH; running headless instead.\n"),
-        );
-        result = spawnSync(
-          binary,
-          ["--headless", ...scriptArgs],
-          shotSpawnOptions(),
-        );
+        console.log(dim("claude-open not found on PATH; running headless instead.\n"));
+        result = spawnSync(binary, ["--headless", ...scriptArgs], shotSpawnOptions());
       }
       const failure = shotLaunchFailure(result);
       if (failure !== null) {
@@ -1096,8 +723,6 @@ async function main(argv) {
         process.exit(failure.code);
         return;
       }
-      // claude-open dispatches and returns before Godot writes the file, so
-      // the exit code above only proves the launch was dispatched (B2).
       const saved = await waitForShot(out);
       if (saved) {
         console.log(`${green("saved")} ${out}`);

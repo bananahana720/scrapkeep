@@ -1,2 +1,0 @@
-artifacts/ai-first-audit-2026-09-06/worker-results/A1-structure-context.md:37:- docs/bible/production/section-06..09.md link to </home/andrew/Projects/test-game-2/...> absolute paths; check-project.mjs:70-73 resolves absolute targets as-is, so the check passes only because that old directory exists on this machine (inference; needs shell receipt).
-git grep exit=0

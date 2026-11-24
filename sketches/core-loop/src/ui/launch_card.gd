@@ -4,10 +4,17 @@ const Icons := preload("res://src/ui/icons.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 
 # The stage card: the stage's icon and name, faded in over the launch and out after the
 # drop, with the stage's modifier (SI3) on a second line when it has one. It only draws: it takes no input and never pauses anything, so the ball keeps
 # every bit of the speed it launched with (principle 1).
+#
+# The second line is the Foreman's memo (StageModifier.memo), so it sits on an old-works plate (LEGIBILITY
+# section 14.3): cast glass, no fastener, no lean, the uranium-green seam along its foot, the works' face.
+# A cursed run's line is the crew's (a keeper's gamble come due), so it stays in the card's own words above
+# the plate, a mark laid on the works' card. The card fades in a straight line.
 
 const ICON := 44.0
 const FONT := UiTokens.HEADING
@@ -25,18 +32,57 @@ const BONE := Color("f3ecdc")
 const LIGHTEN := 0.5
 const TEXT_OUTLINE := 10
 const MIN_CONTRAST := 7.0
+# The memo plate: its words in the old works' face, padded clear of the edge and the seam, and how the
+# card's line joins its parts (StageModifier.card_line).
+const MEMO_PAD := Vector2(UiTokens.GAP_L, UiTokens.GAP_S)
+const SEAM_ROOM := float(UiTokens.GAP_S)
+const SEPARATOR := "  /  "
+const SERIAL := 47
 
 var icon_id := ""
 var title := ""
 var line := ""
 var color := Color.WHITE
 var _tween: Tween
+var _memo_box: StyleBox = ScrapFrame.hand_plate(UiTokens.Hand.OLD_WORKS, SERIAL)
 
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
 	modulate.a = 0.0
+
+
+# The card's second line in its two voices: "crew", the cursed run's line, and "memo", the Foreman's rest.
+static func voices(card_line: String) -> Dictionary:
+	var crew := PackedStringArray()
+	var memo := PackedStringArray()
+	for part in card_line.split(SEPARATOR, false):
+		var cursed: bool = part == StageModifier.CURSE.line or part.begins_with(String(StageModifier.CURSE.word) + ":")
+		if cursed:
+			crew.append(part)
+		else:
+			memo.append(part)
+	return {"crew": SEPARATOR.join(crew), "memo": SEPARATOR.join(memo)}
+
+
+func memo_text() -> String:
+	return String(voices(line)["memo"])
+
+
+# The memo plate's style box: the old works' hand, never the Kindness's seam.
+func memo_box() -> StyleBox:
+	return _memo_box
+
+
+# The memo plate's size: its words in the works' face, the pad round them and the seam's room under them.
+func memo_size() -> Vector2:
+	var memo := memo_text()
+	if memo.is_empty():
+		return Vector2.ZERO
+	var font := UiFonts.face(UiTokens.Hand.OLD_WORKS)
+	return Vector2(font.get_string_size(memo, HORIZONTAL_ALIGNMENT_LEFT, -1, LINE_FONT).x, font.get_height(LINE_FONT)) \
+		+ MEMO_PAD * 2.0 + Vector2(0.0, SEAM_ROOM)
 
 
 # The colour the card's words are drawn in: the stage's tint lightened toward bone.
@@ -65,7 +111,16 @@ func extent() -> Vector2:
 	var w := ICON + GAP + UiDraw.width(title, FONT)
 	if line.is_empty():
 		return Vector2(w, ICON + 8.0)
-	return Vector2(maxf(w, UiDraw.width(line, LINE_FONT)), ICON + 8.0 + LINE_GAP + LINE_FONT)
+	var crew := String(voices(line)["crew"])
+	var h := ICON + 8.0
+	if not crew.is_empty():
+		w = maxf(w, UiDraw.width(crew, LINE_FONT))
+		h += LINE_GAP + LINE_FONT
+	var memo := memo_size()
+	if memo != Vector2.ZERO:
+		w = maxf(w, memo.x)
+		h += LINE_GAP + memo.y
+	return Vector2(w, h)
 
 
 func showing() -> bool:
@@ -81,7 +136,7 @@ func show_card(icon: String, text: String, tint: Color, subline := "") -> void:
 	visible = true
 	if _tween != null:
 		_tween.kill()
-	_tween = create_tween()
+	_tween = create_tween().set_trans(UiTokens.hand(UiTokens.Hand.OLD_WORKS).trans)
 	_tween.tween_property(self, "modulate:a", 1.0, FADE_IN * (1.0 - modulate.a))
 	_tween.tween_interval(HOLD)
 	_tween.tween_property(self, "modulate:a", 0.0, FADE_OUT)
@@ -109,8 +164,21 @@ func _draw() -> void:
 	_words(x + ICON + GAP, mid, title, FONT)
 	var rule_y := ICON + 7.0 if not line.is_empty() else size.y - 1.0
 	draw_line(Vector2(x, rule_y), Vector2(x + w, rule_y), Color(color, 0.6), 2.0)
-	if not line.is_empty():
-		_words((size.x - UiDraw.width(line, LINE_FONT)) * 0.5, ICON + 8.0 + LINE_GAP + LINE_FONT * 0.5, line, LINE_FONT)
+	if line.is_empty():
+		return
+	var y := ICON + 8.0 + LINE_GAP
+	var crew := String(voices(line)["crew"])
+	if not crew.is_empty():
+		_words((size.x - UiDraw.width(crew, LINE_FONT)) * 0.5, y + LINE_FONT * 0.5, crew, LINE_FONT)
+		y += LINE_FONT + LINE_GAP
+	var memo := memo_size()
+	if memo == Vector2.ZERO:
+		return
+	var plate := Rect2(Vector2((size.x - memo.x) * 0.5, y), memo)
+	draw_style_box(_memo_box, plate)
+	var font := UiFonts.face(UiTokens.Hand.OLD_WORKS)
+	draw_string(font, plate.position + Vector2(MEMO_PAD.x, MEMO_PAD.y + font.get_ascent(LINE_FONT)), memo_text(),
+		HORIZONTAL_ALIGNMENT_LEFT, -1, LINE_FONT, UiTokens.HANDS[UiTokens.Hand.OLD_WORKS].ink)
 
 
 # One line of the card's words: left edge x, middle y.

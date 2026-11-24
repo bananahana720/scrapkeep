@@ -1,5 +1,0 @@
-TH-05 predecessor reconciliation at integrated commit 9229f83ed87687e53710cc47bbbcb9810aecf52c
-TH-05 revision 1 done at EV-0263, accepted integrated identity e7e5a6061929981898891dd2187ecd332faab699.
-docs/tech/sections/TH-05-electromagnetic-collection-recycling-and-growth.md sha256 at this commit: 23af82641b445bd8352db67dfb49b7f3ab249bae85aa8ef4348747d48bd34bda
-git merge-base --is-ancestor e7e5a6061929981898891dd2187ecd332faab699 HEAD: exit 0
-npm run check:drift at this commit: exit 0 (closure/check-drift.log); retained checks rerun at this commit: closure/paper-reruns.log

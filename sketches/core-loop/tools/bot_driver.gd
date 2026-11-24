@@ -294,6 +294,13 @@ const PULSE_HP_SHARE := 0.45
 # Punch the bot knows it can bring: the best punch_now() it has seen, fading this fast,
 # so "short of plating" is judged on a full-speed ram, not on the ball at rest.
 const PUNCH_FADE := 4.0
+# A hit's knockback is not a ram the bot made: a Scuttle charge threw the ball at a planar speed
+# that read as punch 589 against Brindle's clash punch of 150, and the bot then clashed head-on with
+# a bare ball (bot_brindle_short_test, phase 3). In a boss fight the reading skips this long after a hit.
+const KNOCK_S := 1.5
+# Brindle's Furnace (BrindleRings below): out of the close vent ring, the ball aims this far past
+# the safe radius, so it crosses the ring at speed instead of easing onto its edge.
+const RING_OUT_PAST := 6.0
 # Engineer plants.
 const PLANT_SEARCH := 22.0
 const PLANT_RANGE := 45.0
@@ -613,6 +620,12 @@ const FIRST_45_S := 45.0
 # Seconds the dam's spillway sheet has been open in this cycle, for a band that launches by sight; -1 shut.
 var _sheet_live_s := -1.0
 var _punch_seen := 0.0
+# The tick before which punch_now() is a knockback, not a ram (KNOCK_S); set by a hit in a boss fight.
+var _knock_until := -1
+# Brindle's slag rings as this bot has read them, and the ship boss whose fight move runs this tick
+# (set by _fight_boss, cleared each tick): while it is set, _act keeps every roll off a known ring.
+var _rings := BrindleRings.new()
+var _ring_fight = null
 var _warden_hp_at := -1.0
 var _warden_kinds := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
@@ -909,12 +922,14 @@ func tick(delta: float) -> bool:
 	_harpoon_held = false
 	_harpoon_commit = false
 	_cruise_hold = false
+	_ring_fight = null
 	_contact_scan()
 	_fair.tick(delta)
 	if flow.in_stage():
 		_content_scan()
 	_plant_cool -= delta
-	_punch_seen = maxf(float(flow.punch_now()), _punch_seen - PUNCH_FADE * delta)
+	var punch_now: float = float(flow.punch_now()) if ticks >= _knock_until else 0.0
+	_punch_seen = maxf(punch_now, _punch_seen - PUNCH_FADE * delta)
 	if trace and ticks % (Engine.physics_ticks_per_second * 2) == 0:
 		var b: Vector3 = game.player.ball_position()
 		print("  trace t=%.0f stage %d %s goal=%s ball=(%.0f, %.0f, %.0f) speed=%.1f hp=%.0f heft=%.2f punch=%.0f" % [game.run.stage_time,
@@ -1204,6 +1219,8 @@ func _on_player_hit(amount: float, source_id: String) -> void:
 	if source_id == "brindle_charge":
 		_count("charge_hits")
 	var in_boss := _in_boss()
+	if in_boss:
+		_knock_until = ticks + ceili(KNOCK_S * Engine.physics_ticks_per_second)
 	var into: Dictionary = boss_note if in_boss else _note
 	if not into.is_empty():
 		if not into.has("hit_sources"):
@@ -3598,6 +3615,7 @@ func _fight_boss(delta: float) -> void:
 		_goal = "boss wait"
 		_act(game.player.ball_position() + game.player.planar_velocity(), null, delta)
 		return
+	_ring_fight = boss
 	var ball: Vector3 = game.player.ball_position()
 	var hull: Node3D = ship.hull
 	var punch: float = _punch_seen
@@ -3606,6 +3624,13 @@ func _fight_boss(delta: float) -> void:
 	if scooter != null and is_instance_valid(scooter):
 		_goal = "boss scooter"
 		_ram_laps(scooter, scooter, delta)
+		return
+	var hold := _ring_hold(boss, arena, ball)
+	if hold != Vector3.INF:
+		_goal = "boss ring out"
+		# Inside the safe radius the roll out is the dodge: the generic escape's nearest clear
+		# point from the hull's floor is under the hull, where the ring still reaches the ball.
+		_act(hold, hull, delta, hull, arena.radius_of(ball) >= _rings.safe_radius())
 		return
 	var pickup := _nearest_pickup(boss, ball)
 	# Posture opens through repeated hits even below plating. Orbiting the magnets
@@ -3761,10 +3786,13 @@ func _nearest_pickup(boss, ball: Vector3) -> Vector3:
 		return Vector3.INF
 	var best := Vector3.INF
 	var best_d := PICKUP_CHASE
+	var rings := _brindle_rings(boss)
 	for p in boss.pickups_left():
 		var at: Vector3 = p["at"]
 		var d := _flat(ball, at)
 		if String(p.get("source", "")) == "shed" and d > SHED_CHASE and not _shed_ahead(ball, at):
+			continue
+		if rings.crosses(ball, at):
 			continue
 		if d < best_d:
 			best_d = d
@@ -3818,6 +3846,234 @@ func _ramp_to_cap(boss, arena, ship, delta: float) -> void:
 		return
 	_goal = "boss ramp foot"
 	_act(arena.point_at(ramp, RAMP_BOTTOM), hull, delta, hull)
+
+
+# This bot's read of the boss's slag rings, brought up to this tick.
+func _brindle_rings(boss) -> BrindleRings:
+	_rings.read(boss, ticks, _reaction(), Engine.physics_ticks_per_second, band)
+	return _rings
+
+
+# While the Furnace's close vent ring is known (its cue heard, its warning drawn or its slag
+# burning), the hull's floor is no place for a run-up: the ball rolls straight out to the nearest
+# radius no known ring covers, then circles there until the ring is gone. Vector3.INF when no close
+# ring is known.
+func _ring_hold(boss, arena, ball: Vector3) -> Vector3:
+	var rings := _brindle_rings(boss)
+	if not rings.close_known():
+		return Vector3.INF
+	var r: float = arena.radius_of(ball)
+	var safe := rings.safe_radius()
+	if r < safe:
+		return arena.point_at(arena.angle_of(ball), safe + RING_OUT_PAST)
+	return arena.point_at(arena.angle_of(ball) + 0.5, safe if rings.covers_radius(r) else r)
+
+
+# --- Brindle's slag rings, as a player reads them -----------------------------------------
+
+# The cued Furnace reprise's preview band held as a threat. The game draws the preview as a harmless
+# bone mark with no reach; the ring it announces fills with the slag's reach, so this record tests
+# the preview's band at that reach. It reads the preview's public geometry and never writes to it.
+class CuedRing:
+	extends RefCounted
+	var preview: Node3D
+	var reach: float
+
+	func _init(of: Node3D, height: float) -> void:
+		preview = of
+		reach = height
+
+	func band() -> Vector2:
+		return Vector2(preview.r_in, preview.r_out)
+
+	func centre() -> Vector3:
+		return preview.centre
+
+	func contains(point: Vector3) -> bool:
+		if not is_instance_valid(preview):
+			return false
+		var above: float = point.y - preview.ground_at(point)
+		if above > reach or above < -2.0:
+			return false
+		var r := Vector2(point.x - preview.centre.x, point.z - preview.centre.z).length()
+		return r >= preview.r_in and r <= preview.r_out
+
+
+# Brindle's Furnace slag rings as this bot knows them. A ring is known once a player could have read
+# it: its cue's preview band or its warning on screen for the bot's reaction time, and read by its
+# band. A ring known by its cue stays known when it commits, as a player who saw the preview knows the
+# warning that follows it. The fight asks whether the close vent ring is known, where the safe floor
+# is, whether a roll to a point runs over a known ring, and where to steer so that none does. It
+# reads the boss through reprise_preview() and active_hazards() only; nothing here survives the bot
+# that owns it.
+class BrindleRings:
+	extends RefCounted
+	const Rules := preload("res://src/boss/boss_rules.gd")
+	# A known ring is widened by this on each side when the bot picks where to stand or what scrap
+	# to fetch: the ball's radius and a little slack.
+	const EDGE := 2.0
+	# How finely crosses() samples a roll.
+	const PATH_STEP := 1.0
+	# How far round its band steer_within() leads the ball toward a steer it cannot roll straight to.
+	const GAP_TURN := 0.3
+	# How far ahead rolling_onto() looks along the ball's velocity, in seconds.
+	const BRAKE_LOOK := 0.4
+	# Known rings this tick: {"band": Vector2(r_in, r_out), "centre": Vector3, "state": "cued", "warned" or "live"}.
+	var known: Array[Dictionary] = []
+	var _tick := -1
+	# Source instance id -> tick first seen, for the reaction time.
+	var _first := {}
+	# The CuedRing standing for the current preview, and the preview it stands for.
+	var _cue: CuedRing = null
+	# Band keys whose cue was known, kept while a preview or a ring of that band is up.
+	var _cue_known := {}
+
+	# The cued reprise's threat record, or null when no reprise is cued. The same record for as long
+	# as the same preview is up, so the reaction time runs on one id.
+	func cue_of(boss) -> CuedRing:
+		var preview = boss.reprise_preview() if boss != null and boss.has_method("reprise_preview") else null
+		if preview == null or not is_instance_valid(preview):
+			_cue = null
+			return null
+		if _cue == null or _cue.preview != preview:
+			_cue = CuedRing.new(preview, Rules.SLAG_REACH)
+		return _cue
+
+	func read(boss, now: int, reaction_s: float, tps: int, band) -> void:
+		if now == _tick:
+			return
+		_tick = now
+		known.clear()
+		var up := {}
+		var bands := {}
+		var cue := cue_of(boss)
+		if cue != null:
+			var id := cue.get_instance_id()
+			up[id] = true
+			bands[_key(cue.band())] = true
+			if _seen_for(id, now, reaction_s, tps) and (band == null or band.reads(id)):
+				_cue_known[_key(cue.band())] = true
+				known.append({"band": cue.band(), "centre": cue.centre(), "state": "cued"})
+		var hazards: Array = boss.active_hazards() if boss != null and boss.has_method("active_hazards") else []
+		for h in hazards:
+			if not is_instance_valid(h) or not String(h.attack_id).begins_with("slag_ring"):
+				continue
+			var id: int = h.get_instance_id()
+			var b := Vector2(h.r_in, h.r_out)
+			up[id] = true
+			bands[_key(b)] = true
+			var seen: bool = _seen_for(id, now, reaction_s, tps) and (band == null or band.reads(id))
+			if seen or _cue_known.has(_key(b)):
+				known.append({"band": b, "centre": h.centre, "state": "live" if h.is_live() else "warned"})
+		for id in _first.keys():
+			if not up.has(id):
+				_first.erase(id)
+		for k in _cue_known.keys():
+			if not bands.has(k):
+				_cue_known.erase(k)
+
+	# Whether a known ring covers the hull's close floor, where the bot rams from.
+	func close_known() -> bool:
+		for ring in known:
+			if (ring["band"] as Vector2).y <= Rules.FURNACE_CLOSE_BAND.y + 0.5:
+				return true
+		return false
+
+	# The smallest radius past the close vent ring that no known ring covers, EDGE included.
+	func safe_radius() -> float:
+		var r := Rules.FURNACE_CLOSE_BAND.y + EDGE + 0.5
+		for _pass in known.size() + 1:
+			var moved := false
+			for ring in known:
+				var b: Vector2 = ring["band"]
+				if r >= b.x - EDGE and r <= b.y + EDGE:
+					r = b.y + EDGE + 0.5
+					moved = true
+			if not moved:
+				break
+		return r
+
+	# Whether a known ring, widened by EDGE, covers a point.
+	func covers(point: Vector3) -> bool:
+		for ring in known:
+			var c: Vector3 = ring["centre"]
+			var r := Vector2(point.x - c.x, point.z - c.z).length()
+			var b: Vector2 = ring["band"]
+			if r >= b.x - EDGE and r <= b.y + EDGE:
+				return true
+		return false
+
+	# Whether the straight roll from one point to another runs over a known ring, EDGE included:
+	# scrap inside a ring, on its edge, or across it. Sampled every PATH_STEP m past the start, so a
+	# ball standing on a ring's edge may still roll away from it.
+	func crosses(from: Vector3, to: Vector3) -> bool:
+		if known.is_empty():
+			return false
+		var length := Vector2(to.x - from.x, to.z - from.z).length()
+		var steps := maxi(1, ceili(length / PATH_STEP))
+		for i in range(1, steps + 1):
+			if covers(from.lerp(to, float(i) / float(steps))):
+				return true
+		return false
+
+	# A steer the ball can roll to without crossing a known ring. A ball standing between known rings
+	# (or inside the innermost, in its margin included) keeps to that free band: a steer whose straight
+	# roll runs over a ring becomes a point along the band, at most GAP_TURN radians round toward the
+	# steer, at the steer's radius held EDGE inside the band. A ball on a ring, a band too narrow to
+	# stand in (the hull's own floor inside the close vent ring) or no ring known: the steer as asked.
+	func steer_within(ball: Vector3, steer: Vector3) -> Vector3:
+		if known.is_empty() or not crosses(ball, steer):
+			return steer
+		var c: Vector3 = known[0]["centre"]
+		var r_ball := Vector2(ball.x - c.x, ball.z - c.z).length()
+		var lo := 0.0
+		var hi := INF
+		for ring in known:
+			var b: Vector2 = ring["band"]
+			if r_ball >= b.x and r_ball <= b.y:
+				return steer
+			if b.y < r_ball:
+				lo = maxf(lo, b.y + EDGE)
+			else:
+				hi = minf(hi, b.x - EDGE)
+		if hi - lo < 2.0 * EDGE:
+			return steer
+		var a_ball := atan2(ball.z - c.z, ball.x - c.x)
+		var a_steer := atan2(steer.z - c.z, steer.x - c.x)
+		var a := a_ball + clampf(wrapf(a_steer - a_ball, -PI, PI), -GAP_TURN, GAP_TURN)
+		var r := clampf(Vector2(steer.x - c.x, steer.z - c.z).length(), lo + EDGE * 0.5, hi - EDGE * 0.5)
+		return Vector3(c.x + cos(a) * r, steer.y, c.z + sin(a) * r)
+
+	# Whether a ball off every known ring will roll onto one within BRAKE_LOOK seconds at this velocity.
+	func rolling_onto(ball: Vector3, velocity: Vector3) -> bool:
+		if known.is_empty() or _on_ring(ball):
+			return false
+		return _on_ring(ball + Vector3(velocity.x, 0.0, velocity.z) * BRAKE_LOOK)
+
+	func _on_ring(point: Vector3) -> bool:
+		for ring in known:
+			var c: Vector3 = ring["centre"]
+			var r := Vector2(point.x - c.x, point.z - c.z).length()
+			var b: Vector2 = ring["band"]
+			if r >= b.x and r <= b.y:
+				return true
+		return false
+
+	# Whether a known ring, widened by EDGE, covers this radius from the arena's centre.
+	func covers_radius(r: float) -> bool:
+		for ring in known:
+			var b: Vector2 = ring["band"]
+			if r >= b.x - EDGE and r <= b.y + EDGE:
+				return true
+		return false
+
+	func _seen_for(id: int, now: int, reaction_s: float, tps: int) -> bool:
+		if not _first.has(id):
+			_first[id] = now
+		return float(now - int(_first[id])) / float(tps) >= reaction_s
+
+	static func _key(b: Vector2) -> String:
+		return "%.1f:%.1f" % [b.x, b.y]
 
 
 # --- the gates -------------------------------------------------------------------------
@@ -4102,6 +4358,15 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 		_plant_state = "idle"
 	_ultimate_hands(fight)
 	_line_hands()
+	# In Brindle's fight no move rolls across a known slag ring (BrindleRings.steer_within), and a ball
+	# kept off a ring brakes, on the ground, when its speed would carry it on anyway (not while it
+	# dodges a threat).
+	var brake := false
+	if _ring_fight != null and is_instance_valid(_ring_fight):
+		var rings := _brindle_rings(_ring_fight)
+		var within := rings.steer_within(player.ball_position(), steer)
+		brake = within != steer and player.state.grounded and rings.rolling_onto(player.ball_position(), player.state.velocity)
+		steer = within
 	var threats := _threats() if evade else []
 	if not threats.is_empty():
 		for h in threats:
@@ -4125,6 +4390,8 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 				steer = planted
 	_specials(fight, false)
 	_drive(steer, aim, delta)
+	if brake:
+		source.hold["brake_held"] = true
 
 
 # Every committed telegraph the ball is in, or will be within PREDICT, among those seen
@@ -4196,6 +4463,9 @@ func _hazards() -> Array:
 		for h in boss.active_hazards():
 			if is_instance_valid(h) and h.has_method("contains"):
 				out.append(h)
+		var cued = _rings.cue_of(boss)
+		if cued != null:
+			out.append(cued)
 	return out
 
 

@@ -6,6 +6,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # Who is on the line (Andrew, 9 November 2026: callers pop up in the HUD and talk, cute). A
 # small plate beside the speech bubble (moss_bubble.gd) with the caller's mark and a name tag
@@ -14,10 +15,11 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 # the caller is, the colour says which of them:
 #
 #   keeper  a Keeper's cut plate (scrap_frame.gd): the site crews in their site's colour, never
-#           brass or mint, a freed pilot in the pilot's own colour with the pilot's emblem
+#           brass or mint, a freed pilot in the pilot's own screen colour with the pilot's emblem
 #   hatch   Moss, who is never seen (DESIGN-V2 sections 12 and 15): the slot of his hatch and
 #           his two mitts on its lip
-#   fleet   a requisition tag with clipped corners in the Fleet's hazard red
+#   fleet   Brindle in the Fleet's hand (scrap_frame.gd): a brass bezel on iron oxide, one
+#           notched corner and a rubber stamp
 #   works   the old works: a hard-cornered lozenge in the ancients' green, scanned
 #
 # While the caller's voice lasts the plate babbles: it hops and tilts on the syllables and the
@@ -34,8 +36,11 @@ const HOP := 4.0
 const TILT := 0.07
 const BARS := 3
 const POP_IN := 0.16
-# A tag colour darker than this takes light words.
-const INK_FLOOR := 0.4
+# The name tag's words: whichever of these holds more contrast on the caller's colour, 4.5:1 or more
+# on every caller's (deep charcoal on Rivet's copper, ledger cream on Tarn's rust).
+const TAG_INKS := [Color("121514"), Palette.LEDGER_CREAM]
+# How far the name tag leans, none with reduced motion.
+const TAG_TILT := -0.035
 
 # Callers who are not pilots: whose hands, the mark and the colour. A pilot is found by class id.
 const CALLERS := {
@@ -56,8 +61,8 @@ var speaker := ""
 var caller_name := ""
 var _look := {}
 var _voice := 0.0
-# The Keeper's two plates for the caller up now (_keeper_plates), and the frames the last draw put down.
-var _keeper: Array = []
+# The hand frames for the caller up now (_hand_plates), and the frames the last draw put down.
+var _framed: Array = []
 var _drawn: Array = []
 var _age := 0.0
 
@@ -77,7 +82,7 @@ func look_of(id: String) -> Dictionary:
 	for def in pilots:
 		# A pilot is named by class id or by the name they answer to ("sable").
 		if def != null and (String(def.id) == id or String(def.display_name).to_lower() == id):
-			return {"hands": "keeper", "icon": Icons.class_icon_id(String(def.id)), "color": def.color}
+			return {"hands": "keeper", "icon": Icons.class_icon_id(String(def.id)), "color": ClassDef.screen_color(def.color)}
 	return {}
 
 
@@ -90,7 +95,7 @@ func present(id: String, shown_name: String, voice_s := 0.0) -> bool:
 	_voice = maxf(0.0, voice_s)
 	_age = 0.0
 	visible = not _look.is_empty()
-	_keeper = _keeper_plates(_look["color"]) if hands() == "keeper" else []
+	_framed = _hand_plates(_look["color"]) if _frame_hand() >= 0 else []
 	set_process(visible)
 	queue_redraw()
 	return visible
@@ -99,7 +104,7 @@ func present(id: String, shown_name: String, voice_s := 0.0) -> bool:
 func clear() -> void:
 	speaker = ""
 	_look = {}
-	_keeper = []
+	_framed = []
 	visible = false
 	set_process(false)
 
@@ -148,10 +153,10 @@ func _draw() -> void:
 	pop = 1.0 + 0.18 * sin(pop * PI) if pop < 1.0 else 1.0
 	var centre := Vector2(SIDE, SIDE) * 0.5
 	draw_set_transform(centre + Vector2(0.0, hop), tilt, Vector2(pop, pop))
-	var keeper: bool = _look["hands"] == "keeper"
-	var plate := PackedVector2Array() if keeper else _plate(String(_look["hands"]))
-	if keeper:
-		for box in _keeper:
+	var framed := not _framed.is_empty()
+	var plate := PackedVector2Array() if framed else _plate(String(_look["hands"]))
+	if framed:
+		for box in _framed:
 			_put_frame(box)
 	else:
 		draw_colored_polygon(plate, Color(Palette.CHARCOAL, 0.96))
@@ -171,15 +176,12 @@ func _draw() -> void:
 			if live:
 				var sweep := fposmod(_age * 1.4, 1.0) * 2.0 * half - half
 				draw_line(Vector2(-half + absf(sweep) * 0.55, sweep), Vector2(half - absf(sweep) * 0.55, sweep), Color(color, 0.6), 2.0)
-	if not keeper:
+	if not framed:
 		var closed := plate.duplicate()
 		closed.append(closed[0])
 		# A charcoal keyline under the coloured edge: copper on the Spillway's sand is no edge at all.
 		draw_polyline(closed, Palette.CHARCOAL, EDGE + KEYLINE * 2.0)
 		draw_polyline(closed, color, EDGE)
-	if _look["hands"] == "fleet":
-		# A requisition tag: its punch hole, low so the name tag does not cover it.
-		draw_circle(Vector2(-SIDE * 0.5 + 11.0, SIDE * 0.5 - 11.0), 3.5, color)
 	draw_set_transform(Vector2.ZERO)
 	_draw_tag(color, live, beat)
 
@@ -190,30 +192,41 @@ func _put_frame(box: StyleBox) -> void:
 	_drawn.append(box)
 
 
-# A Keeper's plate, cut by the speaker's serial and built once per call: a charcoal plate with a
-# keyline (copper on the Spillway's sand is no edge at all), then its coloured edge, rivets and halftone.
-func _keeper_plates(color: Color) -> Array:
+# The scrap_frame hand the caller's plate is drawn in: the Keeper's or the Fleet's; -1 for the
+# hatch and the old works, which draw their own outline (_plate).
+func _frame_hand() -> int:
+	match hands():
+		"keeper":
+			return UiTokens.Hand.KEEPER
+		"fleet":
+			return UiTokens.Hand.FLEET
+	return -1
+
+
+# The caller's plate in its hand, cut by the speaker's serial and built once per call: a plate with a
+# charcoal keyline (copper on the Spillway's sand is no edge at all), then its coloured edge and the
+# hand's marks (a Keeper's rivets and halftone, the Fleet's bezel and stamp).
+func _hand_plates(color: Color) -> Array:
+	var which := _frame_hand()
 	var serial := speaker.hash()
-	var under = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
+	var under = ScrapFrame.hand_plate(which, serial)
 	under.border_color = Palette.CHARCOAL
 	under.border_width = EDGE + KEYLINE * 2.0
 	under.rivets = false
 	under.halftone = false
-	var edge = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
+	under.stamped = false
+	var edge = ScrapFrame.hand_plate(which, serial)
 	edge.border_color = color
 	edge.border_width = EDGE
 	edge.bg_color = Color(edge.bg_color, 0.0)
 	return [under, edge]
 
 
-# The plate's outline about its centre, by whose hands (a Keeper's is _keeper_plates).
+# The plate's outline about its centre, for a caller with no hand frame (_hand_plates).
 func _plate(whose: String) -> PackedVector2Array:
 	var h := SIDE * 0.5
 	var out := PackedVector2Array()
 	match whose:
-		"fleet":
-			var cut := 14.0
-			out = PackedVector2Array([Vector2(-h + cut, -h), Vector2(h, -h), Vector2(h, h - cut), Vector2(h - cut, h), Vector2(-h, h), Vector2(-h, -h + cut)])
 		"works":
 			var nose := h * 0.55
 			out = PackedVector2Array([Vector2(-h + nose, -h), Vector2(h - nose, -h), Vector2(h, 0.0), Vector2(h - nose, h), Vector2(-h + nose, h), Vector2(-h, 0.0)])
@@ -252,7 +265,7 @@ func _draw_hatch(color: Color, live: bool, beat: float) -> void:
 
 
 # The name tag across the plate's head, in the caller's colour, and the voice bars after it.
-# Its words are charcoal, or ledger white on a colour too dark to carry charcoal (Tarn's rust).
+# Its words are the TAG_INKS ink that reads best on that colour.
 func _draw_tag(color: Color, live: bool, beat: float) -> void:
 	if caller_name == "":
 		return
@@ -262,8 +275,8 @@ func _draw_tag(color: Color, live: bool, beat: float) -> void:
 	var bars_w := BARS * 5.0 + 4.0
 	var w := text_w + bars_w + 16.0
 	var at := Vector2(-4.0, -TAG_H * 0.55)
-	var ink: Color = Palette.CHARCOAL if color.get_luminance() > INK_FLOOR else Palette.LEDGER
-	draw_set_transform(at, -0.035, Vector2.ONE)
+	var ink := tag_ink(color)
+	draw_set_transform(at, 0.0 if reduced_motion else TAG_TILT, Vector2.ONE)
 	draw_rect(Rect2(Vector2(2.0, 2.0), Vector2(w, TAG_H)), Color(Palette.CHARCOAL, 0.9))
 	draw_rect(Rect2(Vector2.ZERO, Vector2(w, TAG_H)).grow(KEYLINE), Palette.CHARCOAL)
 	draw_rect(Rect2(Vector2.ZERO, Vector2(w, TAG_H)), color)
@@ -273,3 +286,12 @@ func _draw_tag(color: Color, live: bool, beat: float) -> void:
 		var bar_h := (TAG_H - 8.0) * level
 		draw_rect(Rect2(Vector2(text_w + 12.0 + i * 5.0, TAG_H - 4.0 - bar_h), Vector2(3.0, bar_h)), ink)
 	draw_set_transform(Vector2.ZERO)
+
+
+# The words' colour on a name tag of `color`: the TAG_INKS ink with the most contrast on it.
+static func tag_ink(color: Color) -> Color:
+	var best: Color = TAG_INKS[0]
+	for ink in TAG_INKS:
+		if UiTokens.contrast(ink, color) > UiTokens.contrast(best, color):
+			best = ink
+	return best

@@ -1,5 +1,6 @@
 extends SceneTree
 
+const ClassDef := preload("res://src/core/class_def.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
@@ -104,9 +105,11 @@ func _check_pages(notes) -> void:
 	own.sort()
 	var got: Array = lit.keys()
 	got.sort()
-	var colours_ok: bool = lit.values().all(func(c): return c == def.color)
+	# A screen draws the pilot's screen colour: Sable's is off mint (LEGIBILITY 14.3, E2-14).
+	var tone := ClassDef.screen_color(def.color)
+	var colours_ok: bool = lit.values().all(func(c): return c == tone)
 	_report("%s lights its keys" % def.display_name, got == own and colours_ok and not lit.has("key_w") and not lit.has("key_tab"),
-		"lit %s in %s; the class row's keys are %s" % [got, def.color.to_html(false), own])
+		"lit %s in %s; the class row's keys are %s" % [got, tone.to_html(false), own])
 
 
 func _check_turns(notes) -> void:

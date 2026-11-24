@@ -11,6 +11,17 @@ extends SceneTree
 # 2026-10-11 (PD-TALLY fix round): the draw cap returns to the shell class's 10 (the gate
 # refused the 13-draw exception; now the registry's 11 for DrumBrackets). Both drums now share one mesh, Flywheel.R, spinning on their
 # common X axis (span 2 x 1.033 + 0.07 m); Flywheel.L is an empty at the left drum's centre.
+# 2026-11-23 (wave 46 unit E2-05): each drum's flanges are brass at alpha 0 with an index notch and
+# a charcoal index slot at alpha 0 (FLYWHEEL_MASKED), and DrumBrackets gains an index shoe per side
+# (BRACKET_VERTICES 136 to 232). Window alphas are unchanged; alpha 0 is the paint take mask.
+# 2026-11-23 (E2-05 pass 2; Andrew: the cutaway is the hero look, weapon reach lifted to 1.65 m,
+# bold and exaggerated): the drums grow to 0.68 x 0.16 m at X 1.18, Z 0.44 (DRUM below), the
+# brackets become one square beam each (BRACKET_VERTICES 232 to 208), and REACH is the lifted 1.65 m.
+# 2026-11-23 (E2-05 pass 2, held to the concept sheet 04-tally-heroic-cutaway-v2; reach 1.70 m): the
+# drums grow to 1.01 x 0.24 m at X 1.384, Z 0.28 (the largest carrier_bank_test's slope and wall
+# laws allow at that depth); three charcoal
+# timing bands on each tape and a bar across each face join the masked set (FLYWHEEL_MASKED 400 to
+# 592); each bracket is a riser and an arm, and the shoe a clamp over the rim (BRACKET_VERTICES 256).
 
 const PILOT := "res://assets/models/pilot_tally_anim.glb"
 const SHELL := "res://assets/models/world_one/shell_tally.glb"
@@ -40,8 +51,8 @@ const SOCKETS := {
 	"CardBay.0": Vector3(0.52, -0.262, -0.42),
 	"CardBay.1": Vector3(0.52, -0.262, -0.30),
 	"CardBay.2": Vector3(0.52, -0.262, -0.18),
-	"FlywheelAxis.R": Vector3(1.033, 0.23, 0),
-	"FlywheelAxis.L": Vector3(-1.033, 0.23, 0),
+	"FlywheelAxis.R": Vector3(1.384, 0.28, 0),
+	"FlywheelAxis.L": Vector3(-1.384, 0.28, 0),
 	"ReturnExit": Vector3(0, -0.47, 0.27),
 	"StampContact": Vector3(0, -0.985, 0),
 	"LedgerMount": Vector3(-0.255, -0.20, -0.045),
@@ -57,9 +68,14 @@ const SOCKETS := {
 }
 # Window k of a drum face carries vertex alpha WINDOW_ALPHA[k] (shell_tally.py header).
 const WINDOW_ALPHA := [0.2, 0.4, 0.6, 0.8]
-const BRACKET_VERTICES := 136
+const BRACKET_VERTICES := 256
+# Flywheel.R's paint-proof vertices: both drums' brass flanges (352), index slots (48), timing
+# bands (144) and face bars (48).
+const FLYWHEEL_MASKED := 592
 const CORE_LIMIT := 0.985
-const REACH := 1.25
+const REACH := 1.70
+# One drum: diameter and depth; both share Flywheel.R, outer faces 2 x 1.384 + 0.24 m apart.
+const DRUM := {"diameter": 1.01, "span": 3.008}
 
 var _failures := 0
 var _checks := 0
@@ -268,6 +284,7 @@ func _shell(shell: Node, document: Dictionary) -> void:
 	# Paint take mask (PAINT_SHADER step(0.05, alpha)): the brackets' charcoal paint vertices carry alpha 0 so
 	# paint never tints them; every other paint vertex is 1 or a window index, exactly as before.
 	var masked := 0
+	var wheel_masked := 0
 	var bracket_alpha_ok := brackets != null
 	var other_ok := true
 	var other_bad := 0
@@ -282,11 +299,15 @@ func _shell(shell: Node, document: Dictionary) -> void:
 					masked += 1
 					if c.a != 0.0:
 						bracket_alpha_ok = false
+				elif String(mi.name) == "Flywheel_R" and c.a == 0.0:
+					wheel_masked += 1
 				elif absf(c.a - 1.0) > 0.001 and not WINDOW_ALPHA.any(func(w): return absf(c.a - w) < 0.01):
 					other_ok = false
 					other_bad += 1
 	_check("DrumBrackets paint vertices have alpha 0", bracket_alpha_ok and masked == BRACKET_VERTICES,
 		"%d masked vertices, expected %d, all alpha exactly 0" % [masked, BRACKET_VERTICES])
+	_check("drum rims and index slots have alpha 0", wheel_masked == FLYWHEEL_MASKED,
+		"%d masked vertices, expected %d" % [wheel_masked, FLYWHEEL_MASKED])
 	_check("other Tally paint alpha is 1 or a window", other_ok, "%d stray vertices" % other_bad)
 	_check("shell draws unchanged", _counts(shell).draws == 11, "%d draws, expected 11" % _counts(shell).draws)
 	_check("shell has no skeleton", document.get("skins", []).is_empty())
@@ -314,7 +335,7 @@ func _shell(shell: Node, document: Dictionary) -> void:
 				max_radius = maxf(max_radius, radius)
 				if String(mi.name) == "Core":
 					core_radius = maxf(core_radius, radius)
-	_check("machinery reach", max_radius <= REACH, "%.4f m, rule 6 cap %.2f" % [max_radius, REACH])
+	_check("machinery reach", max_radius <= REACH, "%.4f m, the lifted weapon reach %.2f" % [max_radius, REACH])
 	_check("lattice radius", core_radius >= 0.95 and core_radius <= CORE_LIMIT + 0.0001, "Core reaches %.4f m (0.95 to %.3f)" % [core_radius, CORE_LIMIT])
 	_check("reader slot is the only accent", accents == ["WeaponRing"], "class_accent surfaces on %s" % [accents])
 	for name in SOCKETS:
@@ -331,17 +352,16 @@ func _shell(shell: Node, document: Dictionary) -> void:
 	_check("one drum mesh", wheel != null)
 	if wheel != null:
 		var bounds := wheel.mesh.get_aabb()
-		# Both drums: 0.34 m across, 0.07 m deep each, outer faces 2 x 1.033 + 0.07 m apart.
-		_check("flywheel diameter", absf(bounds.size.y - 0.34) < 0.001
-			and absf(bounds.size.z - 0.34) < 0.001 and absf(bounds.size.x - 2.136) < 0.0001,
-			"%s; wheel diameter 0.34 m; span 2.136 m" % bounds.size)
+		_check("flywheel diameter", absf(bounds.size.y - DRUM.diameter) < 0.001
+			and absf(bounds.size.z - DRUM.diameter) < 0.001 and absf(bounds.size.x - DRUM.span) < 0.0001,
+			"%s; wheel diameter %.2f m; span %.3f m" % [bounds.size, DRUM.diameter, DRUM.span])
 		# Pressure windows: one surface, four window indices in vertex alpha.
 		var found := {}
 		if wheel.mesh.get_surface_count() == 1:
 			var cols = wheel.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
 			if cols != null:
 				for c in cols:
-					if c.a < 0.95:
+					if c.a < 0.95 and c.a > 0.05:
 						found[snappedf(c.a, 0.05)] = true
 		var keys := found.keys()
 		keys.sort()

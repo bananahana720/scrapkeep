@@ -5,7 +5,7 @@ description: "Verify Scrapkeep's browser pages by serving them locally and drivi
 
 # Verify a browser page in a real browser
 
-Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `docs/project/README.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
+Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `project-guide/handoff/START-HERE.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
 
 This skill owns a browser proof of three pages. The Sitting Kit is live: Andrew records his verdicts on it. The yard and the orchard are preserved proofs, not the current direction, and their checks never qualify the Godot game (`AGENTS.md`). `npm run verify` and the QA replays in `CONTRIBUTING.md` stay the required checks for browser-proof code (`scrapkeep-verify` picks them); this skill adds the look at the page a user gets.
 

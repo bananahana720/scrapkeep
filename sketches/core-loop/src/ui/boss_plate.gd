@@ -23,7 +23,8 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 # The plate is drawn in the hand of whoever made what it shows (LEGIBILITY section 14.3, ruling
 # ek): Brindle's hull in the Fleet's brass bezel on iron oxide, and a rogue machine in a Rogue's
 # stencil ticks on near black with its crew number stencilled in the Rogue face and no words: no
-# pips, its health on the bar, the open glyph while it is vented. A Warden keeps the HUD panel.
+# pips, its health on the bar, the open glyph while it is vented. A Warden is the old works': cast
+# glass with no fastener and no lean, the uranium-green seam along its foot, its name in the works' face.
 
 const SIZE := Vector2(420.0, 44.0)
 const GLANCE_SECONDS := 0.6
@@ -46,7 +47,7 @@ const PHASE_DROP := PHASE * 0.5
 const CRACK_SECONDS := 0.9
 const CRACK_POP := 0.5
 const LIGHT_SECONDS := 0.4
-# A Warden's plate is in no maker's hand yet: it keeps the HUD panel it has always worn.
+# The hand of an unbound plate, which draws nothing.
 const NO_HAND := -1
 # The serial that fixes a hand frame's quirks, so the plate looks the same on every redraw.
 const SERIAL := 46
@@ -62,6 +63,8 @@ var _glance_left := 0.0
 var _phases
 var _seen_phase := 0
 var _turn_age := -1.0
+var _frame: StyleBox
+var _frame_hand := NO_HAND
 
 
 func _init() -> void:
@@ -94,6 +97,8 @@ func unbind() -> void:
 	_phases = null
 	_seen_phase = 0
 	_turn_age = -1.0
+	_frame = null
+	_frame_hand = NO_HAND
 	_fit()
 	queue_redraw()
 
@@ -109,13 +114,13 @@ func active() -> bool:
 
 
 # The hand the plate is drawn in: the Fleet's for Brindle's hull, a Rogue's for a rogue machine,
-# else NO_HAND.
+# the old works' for a Warden (a stage Warden or a stub boss's), and NO_HAND while nothing is bound.
 func hand() -> int:
+	if not is_instance_valid(_warden):
+		return NO_HAND
 	if rogue():
 		return UiTokens.Hand.ROGUE
-	if is_instance_valid(_warden) and _fleet_body():
-		return UiTokens.Hand.FLEET
-	return NO_HAND
+	return UiTokens.Hand.FLEET if _fleet_body() else UiTokens.Hand.OLD_WORKS
 
 
 # Whether the bound body is a rogue machine: one whose row carries a crew number.
@@ -316,7 +321,9 @@ func advance(delta: float) -> void:
 func name_width() -> float:
 	if rogue():
 		return _stencil_face().get_string_size(crew(), HORIZONTAL_ALIGNMENT_LEFT, -1, STENCIL).x + GAP
-	return maxf(NAME_WIDTH, UiDraw.width(_name(), FONT) + GAP) if is_instance_valid(_warden) else NAME_WIDTH
+	if not is_instance_valid(_warden):
+		return NAME_WIDTH
+	return maxf(NAME_WIDTH, UiFonts.face(hand()).get_string_size(_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x + GAP)
 
 
 static func _stencil_face() -> Font:
@@ -324,10 +331,15 @@ static func _stencil_face() -> Font:
 
 
 # The plate's size before any phase row: SIZE, wider by what this Warden's name needs, so the bar keeps its length.
-# A Rogue's plate is narrower by its number's room and the pips it does not set.
+# A Rogue's plate is narrower by its number's room and the pips it does not set; the Fleet's is wider by its stamp's.
 func rest_size() -> Vector2:
 	var pips_room := 0.0 if not rogue() else BossPosture.CHUNKS * (PIP + PIP_GAP) - PIP_GAP + GAP
-	return SIZE + Vector2(name_width() - NAME_WIDTH - pips_room, 0.0)
+	return SIZE + Vector2(name_width() - NAME_WIDTH - pips_room + stamp_room(), 0.0)
+
+
+# What the Fleet's rubber stamp takes at the plate's right end, before the glyph; 0 on every other plate.
+func stamp_room() -> float:
+	return maxf(0.0, ScrapFrame.stamp_reach() + GAP - MARGIN) if hand() == UiTokens.Hand.FLEET else 0.0
 
 
 # The plate grows by the diamonds' drop only while it sets them.
@@ -363,25 +375,21 @@ func _draw() -> void:
 		return
 	var neutral := EventKinds.role_color("neutral")
 	var which := hand()
-	var frame := Rect2(Vector2.ZERO, Vector2(size.x, SIZE.y))
-	if which == NO_HAND:
-		UiDraw.panel(self, frame)
-	else:
-		draw_style_box(frame_box(), frame)
+	draw_style_box(frame_box(), Rect2(Vector2.ZERO, Vector2(size.x, SIZE.y)))
 	var mid := SIZE.y * 0.5
 	if which == UiTokens.Hand.ROGUE:
 		_hand_text(which, MARGIN, mid, crew())
-	elif which == UiTokens.Hand.FLEET:
-		if not name_held():
-			_hand_text(which, MARGIN, mid, plate_name())
 	elif not name_held():
-		UiDraw.text(self, MARGIN, mid, plate_name(), FONT, neutral)
+		_hand_text(which, MARGIN, mid, plate_name())
 	var x := MARGIN + name_width()
-	for pip in pips():
+	var right := size.x - MARGIN - stamp_room()
+	var drawn_pips := pips()
+	for pip in drawn_pips:
 		_draw_pip(Rect2(Vector2(x, mid - PIP * 0.5), Vector2(PIP, PIP)), pip, neutral)
 		x += PIP + PIP_GAP
-	x += GAP - PIP_GAP
-	var bar := Rect2(Vector2(x, mid - BAR_HEIGHT * 0.5), Vector2(size.x - MARGIN - GLYPH - GAP - x, BAR_HEIGHT))
+	if not drawn_pips.is_empty():
+		x += GAP - PIP_GAP
+	var bar := Rect2(Vector2(x, mid - BAR_HEIGHT * 0.5), Vector2(right - GLYPH - GAP - x, BAR_HEIGHT))
 	UiDraw.bar(self, bar, bar_fraction(), bar_color())
 	for tick in TICKS:
 		var tx: float = bar.position.x + bar.size.x * tick
@@ -394,15 +402,22 @@ func _draw() -> void:
 		draw_line(Vector2(cx, bar.position.y - BANK_POST), Vector2(cx, bar.end.y + BANK_POST), phase_color(), 2.0)
 	if glyph_id() != "":
 		var row := EventKinds.state_row(glyph_id())
-		var rect := Rect2(Vector2(size.x - MARGIN - GLYPH, mid - GLYPH * 0.5), Vector2(GLYPH, GLYPH))
+		var rect := Rect2(Vector2(right - GLYPH, mid - GLYPH * 0.5), Vector2(GLYPH, GLYPH))
 		draw_texture_rect(Icons.shape(String(row.get("shape", "none"))), rect, false, glyph_color())
 	_draw_phases()
 
 
-# The hand frame under the plate's marks, or null for a Warden's HUD panel.
+# The hand frame under the plate's marks, built once per hand; null while nothing is bound.
 func frame_box() -> StyleBox:
 	var which := hand()
-	return ScrapFrame.hand_plate(which, SERIAL) if which != NO_HAND else null
+	if which == NO_HAND:
+		_frame = null
+		_frame_hand = NO_HAND
+		return null
+	if _frame == null or _frame_hand != which:
+		_frame = ScrapFrame.hand_plate(which, SERIAL)
+		_frame_hand = which
+	return _frame
 
 
 # A hand's mark in its own ink, its left edge at x and its middle at y, with the HUD's outline: a Rogue's

@@ -1,6 +1,0 @@
-PASS positive-boot exit 0: typed SceneTree script booted headless, printed the marker and exited 0
-PASS negative-untyped exit 1: untyped declaration refused under native/project.godot warning settings
-PASS networking-grep exit n/a: no networking class named in 3 scanned files
-PASS offline-boot exit 0: positive boot repeated inside a user namespace with no network interfaces
-native:smoke pass. Report: /home/andrew/Projects/scrapkeep/artifacts/local/native-smoke/report.json
-native:smoke exit=0

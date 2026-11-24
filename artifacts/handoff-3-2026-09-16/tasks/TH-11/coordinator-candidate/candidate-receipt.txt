@@ -1,4 +1,0 @@
- .../sections/TH-11-runs-regions-exits-and-saves.md | 410 +++++++++++++++++++++
- 1 file changed, 410 insertions(+)
-5923c95a259c043126e756b0032b0e22b4ad32d2ac14f12e4746c5048b9ac1ea  docs/tech/sections/TH-11-runs-regions-exits-and-saves.md
-coordinator rerun at de140acc82e530262b2ef9675d28118194ef6bd7, 2026-09-16T22:10Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (19 sections); check:project exit 0; check:drift exit 0 (corpus at zero); check_routing.py (writer paper check, rerun from a coordinator copy) exit 0 result pass.

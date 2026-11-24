@@ -1,5 +1,0 @@
-TH-03 predecessor reconciliation at integrated commit 9229f83ed87687e53710cc47bbbcb9810aecf52c
-TH-03 revision 1 done at EV-0241, accepted integrated identity 30acc6576921205b549ed04ab7cdebc30827062d.
-docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md sha256 at this commit: 995a06e58bc73a2865abb01cd0a9775c36627ceff9f431fed6de1a6bb0a0a75b
-git merge-base --is-ancestor 30acc6576921205b549ed04ab7cdebc30827062d HEAD: exit 0
-npm run check:drift at this commit: exit 0 (closure/check-drift.log); retained checks rerun at this commit: closure/paper-reruns.log

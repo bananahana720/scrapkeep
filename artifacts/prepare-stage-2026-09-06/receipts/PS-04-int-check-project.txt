@@ -1,3 +1,0 @@
-Project checks passed: 86 Markdown files, 1766 file links, package/lock metadata.
-Remote URLs, anchors, runtime behavior and full import analysis are outside this check.
-check:project exit=0

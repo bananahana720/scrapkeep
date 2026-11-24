@@ -1,7 +1,8 @@
 # PD-RIVET: Rivet's Hoberman mecha (ROSTER-LOOK section 0; pilots/rivet.md section 5), on the
 # shared base shell_base.hoberman(). Charcoal steel lattice, bone seat; a stepped drill nose hung
-# under the weapon ring's front arc whose lens is DrillTip; twin rapid-laser pods in copper on
-# the ring at 11 and 1 o'clock, muzzles forward; twin exhaust stacks on gap brackets at 11:30 and
+# under the weapon ring's front arc whose lens is DrillTip; the twin rivet revolvers on the ring
+# band at 11 and 1 o'clock, muzzles forward (rivet_revolvers.glb, mounted by hero_assets.gd; this
+# file keeps only their LaserMuzzle.L/R markers); twin exhaust stacks on gap brackets at 11:30 and
 # 12:30, standing 0.18 m past the lattice; copper fins folded flat on the lattice in the front
 # lower gaps, raked into a forward V. Lens and exhaust mouths are the only class_accent.
 # Concept: artifacts/local/alpha/push/w13/concepts/codex/rivet/hero.png, chase.png and sheet.png,
@@ -18,26 +19,31 @@
 # The recipe extends three shell_base builders (lattice, cockpit, weapon_ring) by wrapping them
 # for the one hoberman() call, so the shared base stays PD-0's and Rivet's parts land on the
 # base meshes' existing slots. Draws: Core paint, copper, rubber; Pod paint, rubber, copper,
-# class_accent (exhaust mouths); Gyro; GyroInner; WeaponRing paint, rubber, copper (laser pods,
-# collar studs, drill hanger); Drill copper, class_accent (lens); the placeholder Pilot, which
-# fit_pilot_into hides in play (hero_assets.gd:1113-1115). 15 in the file, 14 drawn; the
-# registry row carries the draw exception under the 16-draw Hoberman pilot mecha cap
-# (docs/decisions.tsv w13-PD, 2026-10-10).
+# class_accent (exhaust mouths); Gyro; GyroInner; WeaponRing paint, rubber, copper (collar studs,
+# drill hanger); Drill copper, class_accent (lens); the placeholder Pilot, which fit_pilot_into
+# hides in play. 15 in the file, 14 drawn; the revolvers' two make 16 in play, the 16-draw
+# Hoberman pilot mecha cap (docs/decisions.tsv w13-PD, 2026-10-10), which the registry row carries.
 #
 # 2026-10-10 (PD-RIVET fix round 2): rebuilt on PD-0b's shell_base (struts 0.06 m, caps 0.10 m,
 # ROSTER-LOOK section 3 rule 7 as amended); the lattice wrapper forwards strut_width and
 # cap_width, and the Calibrated ticks shrink to sit on the narrower bar.
+# 2026-11-23 (E1-09, wave 46, ruling ek): rebuilt on E1-03's closed-bar base; the laser pods leave
+# the ring for rivet_revolvers.glb and LaserMuzzle.L/R move to its barrel tips (MUZZLES). Rivet's
+# own flush marks (the lens, the stack mouths, the Calibrated ticks) close to a buried point
+# (plug), so every piece of the shell outside the hidden placeholder pilot is a closed island.
 
 import math
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import bmesh  # noqa: E402
 from mathutils import Vector  # noqa: E402
 
 import common  # noqa: E402
+import rivet_revolvers as revolvers  # noqa: E402
 import shell_base as sb  # noqa: E402
 from common import Part  # noqa: E402
 
@@ -56,11 +62,10 @@ DRILL_Y0 = 0.88
 DRILL_STEPS = ((0.88, 1.00, 0.17, 0.155), (1.00, 1.10, 0.13, 0.11), (1.10, 1.18, 0.09, 0.07))
 LENS_R = 0.06                       # 0.12 m across at class I; class V's is in the c5 layer
 DRILL_SIDES = 10
-# Laser pods ride the ring band at 11 and 1 o'clock, parallel, muzzles forward (+Y).
-LASER_ANGLE = math.radians(30)
-LASER_RADIUS = 1.085
-LASER_R = 0.06
-LASER_LEN = 0.20
+# A flush mark's buried point: the lens, the stack mouths and the Calibrated ticks close to it.
+LENS_DEPTH = 0.006
+MOUTH_DEPTH = 0.01
+TICK_DEPTH = 0.008
 # Exhaust stacks: straight up at 11:30 and 12:30 from behind, 0.18 m past the lattice outline.
 STACK_X = 0.25
 STACK_Y = -0.20
@@ -91,6 +96,18 @@ def flag(name, default=None):
 def direction(az_deg, el_deg):
     az, el = math.radians(az_deg), math.radians(el_deg)
     return Vector((math.cos(el) * math.sin(az), math.cos(el) * math.cos(az), math.sin(el)))
+
+
+def plug(part, centre, normal, radius, sides, depth, slot, color=None, roll=0.0):
+    """A closed flush mark: the flat polygon _disc draws, its rim closed to a point depth behind
+    it, buried in the part under it (sides more triangles than the open disc)."""
+    c, n = Vector(centre), Vector(normal).normalized()
+    e1, e2 = sb._frame(n)
+    rim = [part.bm.verts.new(c + radius * (math.cos(roll + k * math.tau / sides) * e1
+                                           + math.sin(roll + k * math.tau / sides) * e2)) for k in range(sides)]
+    tip = part.bm.verts.new(c - n * depth)
+    faces = [part.bm.faces.new(rim)] + [part.bm.faces.new((rim[(k + 1) % sides], rim[k], tip)) for k in range(sides)]
+    return part.paint(faces, slot, color)
 
 
 # --- lattice extras (Core) ------------------------------------------------------------------
@@ -125,7 +142,9 @@ def fin(part, centre_dir):
 
 def scale_ticks(part, pairs):
     """Calibrated: a bone scale tick on the first outer strut bar of every link, a quarter of the
-    way along from the five-way hub (one per link keeps the shell inside 11,600 verts)."""
+    way along from the five-way hub (one per link keeps the shell inside 11,600 verts). Returns
+    the ticks' faces."""
+    ticks = []
     hubs, links, _ = sb.lattice_layout()
     r_bar = sb.LATTICE_OUTER - sb.STRUT_PAIR / 4
     for i, j in links:
@@ -140,7 +159,8 @@ def scale_ticks(part, pairs):
             p1 = sb._slerp(a, b, t1) * r_bar + s * sb.CHAIN_WIDTH / 2
             n = ((p0 + p1) / 2).normalized()
             p = p0.lerp(p1, 0.28) + n * (sb.STRUT_PAIR / 4 + 0.0015)
-            sb._disc(part, p, n, TICK_R, 4, "paint", "bone", roll=0.785)
+            ticks += plug(part, p, n, TICK_R, 4, TICK_DEPTH, "paint", "bone", roll=0.785)
+    return ticks
 
 
 def make_lattice(variant):
@@ -151,14 +171,18 @@ def make_lattice(variant):
         out = base(part, enamel, pairs, hub_sides, cap_sides, rng, strut_width, cap_width)
         for az, el in FIN_AT:
             fin(part, direction(az, el))
-        if variant:
-            scale_ticks(part, pairs)
+        ticks = scale_ticks(part, pairs) if variant else []
         # 6-sided hub drums turn 60 degrees a side, past the base's 0.9 rad split, so they would
         # export faceted; 1.1 rad keeps them round and saves their split vertices. _sharpen only
         # marks edges sharp, so the base's marks are cleared first.
         for e in part.bm.edges:
             e.smooth = True
         sb._sharpen(part, angle=1.1)
+        # A tick is 2.5 cm across and its sides are buried in the bar, so it shades smooth: its five
+        # corners export once each instead of once per face (660 vertices on the Calibrated shell).
+        for f in ticks:
+            for e in f.edges:
+                e.smooth = True
         return out
     return lattice
 
@@ -173,7 +197,7 @@ def stacks(p, variant):
         x = side * STACK_X
         p.cyl("copper", STACK_R, STACK_R, height, 8, loc=(x, STACK_Y, STACK_BASE + height / 2))
         p.cyl("rubber", STACK_R + 0.007, STACK_R + 0.007, 0.03, 8, loc=(x, STACK_Y, STACK_TOP - 0.012))
-        sb._disc(p, (x, STACK_Y, STACK_TOP + 0.0045), (0, 0, 1), STACK_R - 0.012, 6, "class_accent")
+        plug(p, (x, STACK_Y, STACK_TOP + 0.0045), (0, 0, 1), STACK_R - 0.012, 6, MOUTH_DEPTH, "class_accent")
         if variant:
             for z in (STACK_BASE + 0.13, STACK_BASE + 0.19):
                 p.cyl("paint", STACK_R + 0.004, STACK_R + 0.004, 0.016, 8, loc=(x, STACK_Y, z), color="bone")
@@ -215,19 +239,16 @@ def drop_neutral_seat(r):
 
 
 def studs_to_copper(r):
-    """The collar's bearing studs show copper (ROSTER-LOOK 0.7); the ring now has a copper slot."""
+    """The collar's bearing studs show copper (ROSTER-LOOK 0.7); the ring now has a copper slot.
+    A stud is E1-03's closed pin head (shell_base._stud): four triangles round the collar's outer
+    face, the only triangles there (the collar, band and clamp blocks are quads). Returns the count."""
     c_in, c_out, _, c_z = sb.RING_COLLAR
-    studs = [f for f in r.bm.faces if len(f.verts) == 6
-             and all(abs(v.co.z - c_z) < 0.015 and c_out - 0.005 < Vector((v.co.x, v.co.y, 0)).length < c_out + 0.02
+    faces = [f for f in r.bm.faces if len(f.verts) == 3
+             and all(abs(v.co.z - c_z) < 0.016 and c_out - 0.005 < Vector((v.co.x, v.co.y, 0)).length < c_out + 0.02
                      for v in f.verts)]
     r.bm.faces.index_update()
-    r.paint(sorted(studs, key=lambda f: f.index), "copper")
-    return len(studs)
-
-
-def laser_points():
-    return [(side, Vector((side * math.sin(LASER_ANGLE) * LASER_RADIUS, math.cos(LASER_ANGLE) * LASER_RADIUS,
-                           sb.RING_BAND[3]))) for side in (-1, 1)]
+    r.paint(sorted(faces, key=lambda f: f.index), "copper")
+    return len(faces) // 4 if len(faces) % 4 == 0 else -1
 
 
 def make_ring():
@@ -239,9 +260,6 @@ def make_ring():
         studs = studs_to_copper(r)
         if studs != 12:
             raise SystemExit("expected 12 collar studs, found %d" % studs)
-        for _, c in laser_points():
-            r.cyl("copper", LASER_R, LASER_R, LASER_LEN, 8, loc=c, rot=(-math.pi / 2, 0, 0))
-            r.cyl("rubber", 0.032, 0.032, 0.05, 6, loc=c + Vector((0, LASER_LEN / 2 + 0.02, 0)), rot=(-math.pi / 2, 0, 0))
         # The drill hanger: a copper strap from the collar down to the drill's second step.
         r.box("copper", (0.07, 0.04, 0.035), loc=(0, (sb.RING_COLLAR[0] + sb.RING_COLLAR[1]) / 2, -0.0875))
         sb._sharpen(r)
@@ -261,7 +279,7 @@ def drill(variant):
                 p = Vector((math.cos(a) * (r0 - 0.004), y0 + 0.012, DRILL_Z + math.sin(a) * (r0 - 0.004)))
                 d.box("copper", (0.018, 0.02, 0.018), loc=p)
     tip = DRILL_STEPS[-1][1]
-    sb._disc(d, (0, tip + 0.0015, DRILL_Z), (0, 1, 0), LENS_R, 10, "class_accent")
+    plug(d, (0, tip + 0.0015, DRILL_Z), (0, 1, 0), LENS_R, 10, LENS_DEPTH, "class_accent")
     sb._sharpen(d)
     return d
 
@@ -271,37 +289,39 @@ def drill(variant):
 
 def pilot():
     """The seated mole the shell carries as its placeholder (hidden in play; the animated pilot
-    from pilot_rivet_anim.glb takes its place). Same shapes as the VD-01 seat, fewer segments."""
+    from pilot_rivet_anim.glb takes its place). Same shapes as the VD-01 seat, fewer segments, all
+    smooth: E1-09 cut it to keep the Calibrated shell inside the 11,600-vertex shell cap once
+    E1-03's closed bars split more lattice vertices."""
     f = Part("Pilot")
     fur = common.mix("charcoal", "bone", 0.32)
     pink = common.mix("oxide", "bone", 0.55)
-    f.uv("pilot", 0.23, 12, 8, loc=(0, 0, 1.1), scale=(1.12, 0.96, 0.93), color=fur)
-    f.uv("pilot", 0.1, 8, 5, loc=(0, 0.21, 1.045), scale=(1.05, 1.15, 0.72), color=pink)
-    f.uv("pilot", 0.055, 6, 4, loc=(0, 0.31, 1.052), scale=(1, 0.58, 0.68), color=pink)
-    f.ring("pilot", 0.224, 0.247, 0.035, 10, loc=(0, 0, 1.16), color="charcoal", arc=(math.pi - 0.2, 2 * math.pi + 0.2))
+    f.uv("pilot", 0.23, 8, 6, loc=(0, 0, 1.1), scale=(1.12, 0.96, 0.93), color=fur)
+    f.uv("pilot", 0.1, 6, 3, loc=(0, 0.21, 1.045), scale=(1.05, 1.15, 0.72), color=pink)
+    f.uv("pilot", 0.055, 6, 3, loc=(0, 0.31, 1.052), scale=(1, 0.58, 0.68), color=pink)
+    f.ring("pilot", 0.224, 0.247, 0.035, 6, loc=(0, 0, 1.16), color="charcoal", arc=(math.pi - 0.2, 2 * math.pi + 0.2))
     for side in (-1, 1):
-        f.uv("pilot", 0.06, 6, 4, loc=(side * 0.225, 0.0, 1.135), scale=(0.7, 0.75, 1), color=fur)
-        f.ring("pilot", 0.052, 0.076, 0.04, 8, loc=(side * 0.092, 0.195, 1.165), rot=(math.pi / 2, 0, 0), color="copper")
+        f.uv("pilot", 0.06, 6, 3, loc=(side * 0.225, 0.0, 1.135), scale=(0.7, 0.75, 1), color=fur)
+        f.ring("pilot", 0.052, 0.076, 0.04, 6, loc=(side * 0.092, 0.195, 1.165), rot=(math.pi / 2, 0, 0), color="copper")
         # The goggle lens, as shell_base.eye() draws it, at 8 by 5.
         ex, ey, ez = side * 0.092, 0.218, 1.165
-        f.uv("pilot", 0.047, 8, 5, loc=(ex, ey, ez), scale=(1, 0.6, 1.1), color="charcoal")
+        f.uv("pilot", 0.047, 6, 3, loc=(ex, ey, ez), scale=(1, 0.6, 1.1), color="charcoal")
         f.box("pilot", (0.0235, 0.0141, 0.0235), loc=(ex + 0.0141, ey + 0.04, ez + 0.0165), color="bone")
-    f.rod("pilot", (-0.024, 0.212, 1.17), (0.024, 0.212, 1.17), 0.011, 6, color="copper")
+    f.rod("pilot", (-0.024, 0.212, 1.17), (0.024, 0.212, 1.17), 0.011, 4, color="copper")
     for v in f.bm.verts:
         v.co = (v.co - Vector((0, 0, 1.1))) * 1.2325 + Vector((0, 0.015, 0.17))
     jacket = "bone"
-    f.uv("pilot", 0.26, 10, 6, loc=(0, -0.005, -0.17), scale=(1.07, 0.78, 1.0), color=jacket)
-    f.uv("pilot", 0.13, 6, 4, loc=(0, 0.035, 0.005), scale=(1.2, 0.75, 0.6), color="bone")
+    f.uv("pilot", 0.26, 8, 4, loc=(0, -0.005, -0.17), scale=(1.07, 0.78, 1.0), color=jacket)
+    f.uv("pilot", 0.13, 6, 3, loc=(0, 0.035, 0.005), scale=(1.2, 0.75, 0.6), color="bone")
     for side in (-1, 1):
-        f.uv("pilot", 0.12, 6, 4, loc=(side * 0.18, 0.18, -0.3), scale=(1, 1.5, 0.85), color="oxide")
-        f.rod("pilot", (side * 0.18, 0.2, -0.3), (side * 0.2, 0.38, -0.46), 0.09, 6, color="petrol")
-        f.uv("pilot", 0.1, 6, 4, loc=(side * 0.2, 0.45, -0.48), scale=(1, 1.4, 0.6), color="charcoal")
-        f.uv("pilot", 0.12, 6, 4, loc=(side * 0.22, 0.005, -0.09), scale=(1.0, 0.85, 1.12), color=jacket)
-        f.rod("pilot", (side * 0.24, 0.015, -0.09), (side * 0.36, 0.24, -0.12), 0.09, 6, color=jacket)
-        f.rod("pilot", (side * 0.36, 0.24, -0.12), (side * 0.32, 0.4, 0.04), 0.07, 6, color="charcoal")
-        f.uv("pilot", 0.075, 6, 4, loc=(side * 0.32, 0.4, 0.05), color="sandstone")
+        f.uv("pilot", 0.12, 6, 3, loc=(side * 0.18, 0.18, -0.3), scale=(1, 1.5, 0.85), color="oxide")
+        f.rod("pilot", (side * 0.18, 0.2, -0.3), (side * 0.2, 0.38, -0.46), 0.09, 4, color="petrol")
+        f.uv("pilot", 0.1, 6, 3, loc=(side * 0.2, 0.45, -0.48), scale=(1, 1.4, 0.6), color="charcoal")
+        f.uv("pilot", 0.12, 6, 3, loc=(side * 0.22, 0.005, -0.09), scale=(1.0, 0.85, 1.12), color=jacket)
+        f.rod("pilot", (side * 0.24, 0.015, -0.09), (side * 0.36, 0.24, -0.12), 0.09, 4, color=jacket)
+        f.rod("pilot", (side * 0.36, 0.24, -0.12), (side * 0.32, 0.4, 0.04), 0.07, 4, color="charcoal")
+        f.uv("pilot", 0.075, 6, 3, loc=(side * 0.32, 0.4, 0.05), color="sandstone")
         f.beam("pilot", (side * 0.16, 0.22, -0.25), (side * 0.14, 0.19, 0.06), 0.035, 0.02, color="copper")
-    sb._sharpen(f, angle=1.2)
+    sb._sharpen(f, angle=math.pi)
     return f
 
 
@@ -321,8 +341,9 @@ def build(variant=False):
     ring, pod = shell["ring"], shell["pod"]
     shell["drill"] = drill(variant).to_object((0, DRILL_Y0, DRILL_Z), ring)
     common.empty("DrillTip", (0, DRILL_STEPS[-1][1] + 0.0015, DRILL_Z), ring)
-    for side, c in laser_points():
-        common.empty("LaserMuzzle." + ("L" if side < 0 else "R"), c + Vector((0, LASER_LEN / 2 + 0.045, 0)), ring)
+    # The weapon is still rapid_laser: the flash and the bolt leave from the revolvers' barrel tips.
+    for tag, point in revolvers.MUZZLES.items():
+        common.empty("LaserMuzzle." + tag, point, ring)
     for side, tag in ((-1, "L"), (1, "R")):
         common.empty("Exhaust." + tag, (side * STACK_X, STACK_Y, STACK_TOP + 0.0045), pod)
     return shell

@@ -30,7 +30,7 @@ Use [TADR-002](TADR-002-runtime-model.md) for runtime ownership and [TADR-003](T
 
 ## Consequences
 
-This is a deliberate rewrite with reuse of product rules, test scenarios, geometry fixtures and visual direction. Browser controls, Three.js models/rendering and WebAudio integration need replacements. The two existing entries and their data remain governed by [the prototype entry ADR](../docs/adr/0001-two-playable-entries.md) until Andrew explicitly approves consolidation. ADR approval authorizes engineering-document continuation, not the rewrite itself.
+This is a deliberate rewrite with reuse of product rules, test scenarios, geometry fixtures and visual direction. Browser controls, Three.js models/rendering and WebAudio integration need replacements. The two existing entries and their data remain governed by the prototype entry ADR (`../docs/adr/0001-two-playable-entries.md`) until Andrew explicitly approves consolidation. ADR approval authorizes engineering-document continuation, not the rewrite itself.
 
 Workers gain one editor/runtime workflow and inherit engine dependence. Godot scenes, Resource schemas, scripts, materials, animation and UI would be costly to move to another engine. Headless rule checks still require Godot; they do not establish controller feel or correct physical-world behavior. The C# alternative remains worth reopening if independent rule execution becomes an actual product or engineering requirement.
 

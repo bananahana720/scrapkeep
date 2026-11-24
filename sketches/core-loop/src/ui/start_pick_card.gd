@@ -13,6 +13,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # The card draws the offer and emits choices. Flow owns the input routes and RunState
 # owns grants and the win check. The noninteractive default preserves SG9's draw-only use.
@@ -132,7 +133,7 @@ func show_picks(run, profile = null) -> void:
 			_tiles.append({"key": KEYS[i], "icon": row["icon"], "name": row["name"], "id": row["id"], "effect": String(row.get("effect", ""))})
 	_rerolls = int(run.start_pick.get("rerolls_left", 0))
 	if run.class_def != null:
-		_color = run.class_def.color
+		_color = ClassDef.screen_color(run.class_def.color)
 	visible = _tiles.size() == StartPicks.OFFERED
 	custom_minimum_size = extent()
 	size = extent()

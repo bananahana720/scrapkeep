@@ -1,4 +1,0 @@
-{"tick":0,"kind":"trace","pos":[0,0.5,0],"vel":[0.2,0,0],"tier":"walk","grounded":true}
-{"tick":9,"kind":"trace","pos":[0.04,0.5,-1.62],"vel":[0.2,0,-1.8],"tier":"walk","grounded":true}
-{"tick":18,"kind":"trace","pos":[0.07,0.5,-3.24],"vel":[0.2,0,-3.6],"tier":"walk","grounded":true}
-{"tick":20,"kind":"tier","from":"walk","to":"cruise"}

@@ -1,9 +1,0 @@
-{
-  "timestamp_utc": "2026-09-06T15:45:00+00:00",
-  "scope": "Three preparation artifacts before final review/checkpoint recording",
-  "sha256": {
-    "BACKLOG.md": "701e51373b9f9f82842840017785ca5fc75278622e03655639d7ce76690fa8f7",
-    "ORCHESTRATOR.md": "1a2994e66388e51587ddf1f8ec4a1f5d6bbfa55cac2910c523e7ebe8273b5102",
-    "TRACKING.md": "db044c740098a0866d1aff253600321265d405650679ca9d1d3a0c2645a0e752"
-  }
-}

@@ -29,6 +29,9 @@ enum Kind { PLATE, TAG }
 
 const Hand := UiTokens.Hand
 const TAPE := Vector2(40.0, 13.0)
+# The Fleet's rubber stamp: its radius, and its gap to the bezel. It sits in the foot's right corner.
+const STAMP := 11.0
+const STAMP_GAP := 6.0
 
 var kind := Kind.PLATE
 var hand: int = Hand.KEEPER
@@ -122,6 +125,11 @@ static func lawful(which: int, color: Color, kindness := false) -> bool:
 
 static func _near(a: Color, b: Color) -> bool:
 	return Vector3(a.r - b.r, a.g - b.g, a.b - b.b).length() < 0.08
+
+
+# How far in from a Fleet plate's right edge its stamp reaches, so the plate's own marks stop short of it.
+static func stamp_reach(width := 2.0) -> float:
+	return width + 3.0 + STAMP_GAP + 2.0 * STAMP
 
 
 # Words stamped on a tag, for controls that draw their own text. `at` is the tag's
@@ -301,9 +309,11 @@ func _fleet(rect: Rect2) -> Array:
 	for at in dividers:
 		var y := lerpf(p.y + inset, e.y - inset, clampf(at, 0.0, 1.0))
 		out.append(_segment("divider", Vector2(p.x + inset + 4.0, y), Vector2(e.x - inset - 4.0, y), Color(border_color, 0.5), 1.0))
-	if stamped and minf(rect.size.x, rect.size.y) >= 48.0:
-		var radius := 11.0
-		var at := e - Vector2(inset + radius + 6.0, inset + radius + 6.0)
+	# The stamp goes down whole or not at all: a 44 px boss plate takes it, a tag does not.
+	var stamp_side := 2.0 * (inset + STAMP + STAMP_GAP)
+	if stamped and rect.size.x >= stamp_side and rect.size.y >= stamp_side:
+		var radius := STAMP
+		var at := e - Vector2(inset + radius + STAMP_GAP, inset + radius + STAMP_GAP)
 		var ring := PackedVector2Array()
 		for i in 25:
 			ring.append(at + Vector2.from_angle(TAU * i / 24.0) * radius)

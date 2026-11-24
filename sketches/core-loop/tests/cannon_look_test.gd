@@ -1,11 +1,17 @@
 extends SceneTree
 # 2026-10-11 (PC-CANNON): add line/ultimate icons and the family-note map; shell pins stay PD-owned.
+# 2026-11-23 (E2-06): the rebuilt shell's budget, reach and moving parts, and the machinery rows of
+# clips/cannon.json played frame by frame on the real shell_cannon.glb: the split ports' rear jaws
+# close as gauge_fill rises and meet flush at the lock, snap open on the shot and settle at rest,
+# and the breech collar kicks back along the bore and eases home, carrying on (never snapping
+# home) when a second shot lands mid-return.
 
 const ClassDef := preload("res://src/core/class_def.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const Roster := preload("res://src/combat/roster.gd")
@@ -23,6 +29,22 @@ const SHELL := "res://assets/models/world_one/shell_cannon.glb"
 const PILOT := "res://assets/models/pilot_cannon_anim.glb"
 const SLOTS := ["weapon", "move", "special", "smash"]
 const CUES := ["cannon_recall", "cannon_ready", "cannon_break", "mind_cannon"]
+const CLIPS := "res://src/presentation/clips/cannon.json"
+# Shell budget: draws within the registry exception (and never past 14), triangles held at
+# hero_six_pilot_budget_test's OVER_CAP row, vertices within the shell class.
+const DRAW_CAP := 14
+const TRI_HOLD := 7738
+const VERT_CAP := 11600
+# Andrew's ruling of 23 Nov 2026: weapon reach up to 1.75 m, nothing outside the ball below -0.55 m.
+const REACH_CAP := 1.75
+const LATTICE := 0.985
+const GROUND_Y := -0.55
+const JAWS := ["JawUpper.R", "JawLower.R", "JawUpper.L", "JawLower.L"]
+# shell_cannon.py: each jaw is 0.075 m tall and travels 0.07 m, so the pair stand 0.14 m apart open.
+const JAW_H := 0.075
+const JAW_OPEN := 0.14
+const COLLAR_KICK := 0.09
+const DT := 1.0 / 60.0
 
 var _t := T.new("cannon_look_test")
 
@@ -82,6 +104,8 @@ func _process(_delta: float) -> bool:
 	_check_feel()
 	_check_ticks()
 	_check_preview()
+	_check_shell_build()
+	_check_motion()
 	quit(_t.verdict())
 	return true
 
@@ -253,3 +277,156 @@ func _check_preview() -> void:
 		preview._pose(phase[0])
 		_t.check("preview visible " + phase[1], preview._props[phase[1]].visible, "visible at %.2f" % phase[0])
 	preview.free()
+
+
+func _load_shell() -> Node3D:
+	var scene := (load(SHELL) as PackedScene).instantiate() as Node3D
+	root.add_child(scene)
+	return scene
+
+
+# Draws, triangles and vertices of every mesh; the reach of the ring and gun; the lowest vertex
+# outside the ball; and the moving parts' nodes.
+func _check_shell_build() -> void:
+	var shell := _load_shell()
+	var draws := 0
+	var tris := 0
+	var verts := 0
+	var reach := 0.0
+	var lowest := INF
+	var ring := shell.find_child("WeaponRing", true, false) as Node3D
+	for mi: MeshInstance3D in shell.find_children("*", "MeshInstance3D", true, false):
+		var to_shell := shell.global_transform.affine_inverse() * mi.global_transform
+		for i in mi.mesh.get_surface_count():
+			var arrays := mi.mesh.surface_get_arrays(i)
+			var vs: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var idx = arrays[Mesh.ARRAY_INDEX]
+			draws += 1
+			verts += vs.size()
+			tris += (idx.size() if idx != null and idx.size() > 0 else vs.size()) / 3
+			for v in vs:
+				var p := to_shell * v
+				if ring != null and (mi == ring or ring.is_ancestor_of(mi)):
+					reach = maxf(reach, p.length())
+				if p.length() > LATTICE:
+					lowest = minf(lowest, p.y)
+	var exception := 0
+	var registry: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/registry.json"))
+	for entry in registry.get("assets", []):
+		if entry is Dictionary and entry.get("id", "") == "shell_cannon":
+			exception = int(entry.get("exception", {}).get("draws", 0))
+	_t.check("shell draws", draws <= exception and draws <= DRAW_CAP, "%d draws within the registry's %d and %d" % [draws, exception, DRAW_CAP])
+	_t.check("shell tris held", tris <= TRI_HOLD, "%d tris within %d" % [tris, TRI_HOLD])
+	_t.check("shell verts", verts <= VERT_CAP, "%d vertices within %d" % [verts, VERT_CAP])
+	_t.check("gun reach", reach > 1.48 and reach <= REACH_CAP, "WeaponRing, MainBarrel and BreechCollar reach %.3f m, cap %.2f" % [reach, REACH_CAP])
+	_t.check("ground clearance", lowest > GROUND_Y, "lowest vertex outside the ball at y %.3f, floor %.2f" % [lowest, GROUND_Y])
+	var barrel := shell.find_child("MainBarrel", true, false)
+	var collar := shell.find_child("BreechCollar", true, false)
+	_t.check("breech collar", collar is MeshInstance3D and collar.get_parent() == barrel and barrel.get_parent() == ring,
+		"WeaponRing > MainBarrel > BreechCollar")
+	var ports := shell.find_child("SplitPorts", true, false)
+	var skel := _skeleton(ports)
+	var mesh := ports.find_child("SplitPortsMesh", true, false) as MeshInstance3D if ports != null else null
+	_t.check("split port jaws", ports != null and ports.get_parent().name == "Pod" and skel != null and mesh != null
+		and mesh.skin != null and JAWS.all(func(b): return skel.find_bone(b) >= 0),
+		"Pod > SplitPorts > Skeleton3D with %s, and the skinned SplitPortsMesh" % [JAWS])
+	shell.free()
+
+
+# Plays the machinery rows of clips/cannon.json on the real shell at 60 Hz.
+func _check_motion() -> void:
+	var shell := _load_shell()
+	var pod := shell.find_child("Pod", true, false) as Node3D
+	var core := shell.find_child("Core", true, false) as Node3D
+	var table: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CLIPS))
+	var rows: Array = table.get("machinery", [])
+	MechaMotion.echo = false
+	var motion = MechaMotion.new(pod, core, "remembered_cannon", rows)
+	_t.eq("machinery rows all bind", motion.skip_lines, [])
+	_t.check("machinery rows read facts", motion.needs_facts() and rows.size() == 9, "%d rows" % rows.size())
+	var skel := _skeleton(pod.find_child("SplitPorts", true, false))
+	var collar := shell.find_child("BreechCollar", true, false) as Node3D
+	var collar_rest := collar.position
+	# Close: the gauge rises 0 to 1 over 0.40 s and holds 0.25 s.
+	var gaps: Array = []
+	for f in 39:
+		var g := clampf(f * DT / 0.40, 0.0, 1.0)
+		motion.step(DT, {"gauge_fill": g})
+		gaps.append(_gaps(skel))
+	_t.check("jaws open at rest", absf(_gaps_at_rest(skel)[0] - JAW_OPEN) < 0.001, "rest gap %.4f m" % _gaps_at_rest(skel)[0])
+	var shrinking := true
+	var biggest := 0.0
+	for i in range(1, gaps.size()):
+		for side in 2:
+			shrinking = shrinking and gaps[i][side] <= gaps[i - 1][side] + 1e-6
+			biggest = maxf(biggest, gaps[i - 1][side] - gaps[i][side])
+	_t.check("jaws close smoothly as the gauge rises", shrinking and biggest < 0.02, "never reopen; largest frame step %.4f m" % biggest)
+	_t.check("jaws still closing mid-lock", gaps[12][0] > 0.02 and gaps[12][0] < JAW_OPEN - 0.01, "gap %.4f m at gauge 0.5" % gaps[12][0])
+	var closed: Array = gaps[gaps.size() - 1]
+	_t.check("jaws flush at the lock", absf(closed[0]) < 0.002 and absf(closed[1]) < 0.002, "gaps R %.4f, L %.4f m at a full gauge" % closed)
+	# The shot: the gauge drops with it; the jaws snap open past rest and settle at rest.
+	motion.shot()
+	var widest := 0.0
+	var settle: Array = []
+	var collar_track: Array = []
+	for f in 30:
+		motion.step(DT, {"gauge_fill": 0.0})
+		var now: Array = _gaps(skel)
+		widest = maxf(widest, now[0])
+		settle.append(now[0])
+		collar_track.append(collar.position.z - collar_rest.z)
+	_t.check("jaws snap open on the shot", settle[3] > JAW_OPEN, "gap %.4f m 4 frames after the shot (rest %.2f)" % [settle[3], JAW_OPEN])
+	_t.check("jaws settle open", absf(settle[settle.size() - 1] - JAW_OPEN) < 0.001 and widest < JAW_OPEN + 0.07,
+		"gap %.4f m after 0.5 s, widest %.4f" % [settle[settle.size() - 1], widest])
+	var peak := 0.0
+	for v in collar_track:
+		peak = maxf(peak, v)
+	_t.check("collar kicks back along the bore", absf(peak - COLLAR_KICK) < 0.001 and collar_track[3] > 0.08,
+		"peak %.4f m on MainBarrel +Z by frame 4" % peak)
+	_t.check("collar returns home", absf(collar_track[collar_track.size() - 1]) < 1e-4 and collar.position.is_equal_approx(collar_rest),
+		"offset %.5f m after 0.5 s" % collar_track[collar_track.size() - 1])
+	var falling := true
+	for i in range(5, collar_track.size()):
+		falling = falling and collar_track[i] <= collar_track[i - 1] + 1e-6 and collar_track[i - 1] - collar_track[i] < 0.012
+	_t.check("collar return is smooth", falling, "out_quad return, every frame step under 0.012 m")
+	# Re-trigger mid-return: the collar carries on from where it stands.
+	motion.shot()
+	for f in 10:
+		motion.step(DT, {"gauge_fill": 0.0})
+	var before := collar.position.z - collar_rest.z
+	motion.shot()
+	motion.step(DT, {"gauge_fill": 0.0})
+	var after := collar.position.z - collar_rest.z
+	_t.check("re-trigger never snaps home", before > 0.01 and after >= before - 1e-6 and after <= COLLAR_KICK + 1e-6,
+		"offset %.4f m before the second shot, %.4f m one frame after" % [before, after])
+	var hits := 0
+	for n in shell.find_children("*", "", true, false):
+		if n is Light3D or (n is GeometryInstance3D and (n as GeometryInstance3D).material_override != null):
+			hits += 1
+	_t.eq("no light or material_override from the rows", hits, 0)
+	MechaMotion.reset_for_tests()
+	shell.free()
+
+
+static func _skeleton(ports: Node) -> Skeleton3D:
+	var found := ports.find_children("*", "Skeleton3D", true, false) if ports != null else []
+	return found[0] as Skeleton3D if not found.is_empty() else null
+
+
+# Each port's gap between its jaws' facing edges (R, L), from the posed bones.
+static func _gaps(skel: Skeleton3D) -> Array:
+	var out: Array = []
+	for side in ["R", "L"]:
+		var up := skel.get_bone_global_pose(skel.find_bone("JawUpper." + side)).origin
+		var low := skel.get_bone_global_pose(skel.find_bone("JawLower." + side)).origin
+		out.append(up.distance_to(low) - JAW_H)
+	return out
+
+
+static func _gaps_at_rest(skel: Skeleton3D) -> Array:
+	var out: Array = []
+	for side in ["R", "L"]:
+		var up := skel.get_bone_global_rest(skel.find_bone("JawUpper." + side)).origin
+		var low := skel.get_bone_global_rest(skel.find_bone("JawLower." + side)).origin
+		out.append(up.distance_to(low) - JAW_H)
+	return out

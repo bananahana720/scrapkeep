@@ -15,12 +15,21 @@ const T := preload("res://tests/support/t.gd")
 #     the 15 px caption floor;
 #   - plate() and tag() still draw the Keeper's frame exactly as before;
 #   - with less motion nothing leans and nothing overshoots;
-#   - each hand's faces are the two vendored Noto faces, and UiFonts.reset_for_tests() empties the cache
-#     and the next load gives the same faces.
+#   - the Keeper and the old works set their words in their own vendored display faces (Archivo Black and
+#     IBM Plex Sans SemiBold), each distinct from Noto and from each other, with every printable ASCII
+#     glyph and the typographic marks the cards use, a caption line at least the 15 px floor tall and at
+#     most 15% wider than Noto Bold's; the Fleet keeps Noto Sans Bold, the Rogues Noto Sans Mono Bold, and every hand's
+#     numbers the mono face;
+#   - vendored() fails when any one face falls back (planted), and UiFonts.reset_for_tests() empties the
+#     cache and the next load gives the same faces.
 
 const RECT := Rect2(Vector2(40.0, 30.0), Vector2(360.0, 220.0))
 const HANDS := [UiTokens.Hand.KEEPER, UiTokens.Hand.FLEET, UiTokens.Hand.OLD_WORKS, UiTokens.Hand.ROGUE]
 const NAMES := ["keeper", "fleet", "old works", "rogue"]
+# A Keeper card's caption (ART-DIRECTION-PACK2 sheet 09), and how much wider than Noto Bold a display face may set
+# it, so a card measured for Noto overruns by no more than this when its words move to the hand's face.
+const CAPTION_LINE := "Charges trigger from two metres away"
+const WIDER := 1.15
 
 var _t := T.new("hand_frame_test")
 
@@ -239,21 +248,54 @@ func _reduced_motion() -> void:
 func _fonts() -> void:
 	_t.eq("one face row per hand", UiFonts.HAND_FACES.size(), UiTokens.Hand.size())
 	for row in UiFonts.HAND_FACES:
-		_t.check("every hand's faces are the two vendored Noto faces", row.words in [UiFonts.BOLD_PATH, UiFonts.MONO_PATH]
-			and row.numbers in [UiFonts.BOLD_PATH, UiFonts.MONO_PATH])
 		_t.eq("every hand's numbers are in the mono face", row.numbers, UiFonts.MONO_PATH)
+	var words := [UiFonts.KEEPER_PATH, UiFonts.BOLD_PATH, UiFonts.OLD_WORKS_PATH, UiFonts.MONO_PATH]
+	for hand in HANDS:
+		_t.eq("%s sets its words in its own face" % NAMES[hand], UiFonts.HAND_FACES[hand].words, words[hand])
 	var first := []
 	for hand in HANDS:
 		first.append(UiFonts.face(hand).resource_path + "|" + UiFonts.face(hand, true).resource_path)
 	_t.check("faces are cached", not UiFonts._faces.is_empty())
-	_t.check("a hand's numbers are the mono face", UiFonts.face(UiTokens.Hand.FLEET, true) == UiFonts.mono())
+	if not UiFonts.vendored():
+		_t.skip("the display faces are vendored and distinct", "vendored fonts are missing in this checkout")
+		return
+	var keeper := UiFonts.face(UiTokens.Hand.KEEPER)
+	var old_works := UiFonts.face(UiTokens.Hand.OLD_WORKS)
+	for pair in [["keeper", keeper], ["old works", old_works]]:
+		var font: Font = pair[1]
+		_t.check("the %s face is no fallback" % pair[0], font != ThemeDB.fallback_font)
+		_t.check("the %s face is neither Noto face" % pair[0], font != UiFonts.bold() and font != UiFonts.mono())
+		_t.eq("the %s face sets every glyph the cards use" % pair[0], _missing_glyphs(font), "")
+		var line: Vector2 = font.get_string_size(CAPTION_LINE, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION)
+		var noto: float = UiFonts.bold().get_string_size(CAPTION_LINE, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION).x
+		_t.check("the %s face's caption line stands at least the 15 px floor" % pair[0], line.y >= UiTokens.CAPTION, "%.1f" % line.y)
+		_t.check("the %s face's caption runs at most %d%% wider than Noto Bold's" % [pair[0], roundi(WIDER * 100.0 - 100.0)],
+			line.x <= noto * WIDER, "%.1f against %.1f" % [line.x, noto])
+	_t.check("the Keeper and the old works have different faces", keeper != old_works)
+	_t.check("the Fleet's words stay Noto Sans Bold", UiFonts.face(UiTokens.Hand.FLEET) == UiFonts.bold())
+	_t.check("the Rogues' stencil stays Noto Sans Mono Bold", UiFonts.face(UiTokens.Hand.ROGUE) == UiFonts.mono())
+	for hand in HANDS:
+		_t.check("%s's numbers are the mono face" % NAMES[hand], UiFonts.face(hand, true) == UiFonts.mono())
+	UiFonts._faces[UiFonts.OLD_WORKS_PATH] = ThemeDB.fallback_font
+	_t.check("planted: one face falling back fails vendored()", not UiFonts.vendored())
 	UiFonts.reset_for_tests()
 	_t.check("reset_for_tests empties the cache", UiFonts._faces.is_empty())
 	var again := []
 	for hand in HANDS:
 		again.append(UiFonts.face(hand).resource_path + "|" + UiFonts.face(hand, true).resource_path)
 	_t.eq("after a reset each hand loads the same faces", again, first)
-	if UiFonts.vendored():
-		_t.eq("the Keeper's words are Noto Sans Bold", UiFonts.face(UiTokens.Hand.KEEPER).resource_path, UiFonts.BOLD_PATH)
-	else:
-		_t.skip("the Keeper's words are Noto Sans Bold", "vendored fonts are missing in this checkout")
+	_t.check("after a reset every face loads from its file again", UiFonts.vendored())
+
+
+# The glyphs a display face lacks among printable ASCII and the marks card copy uses (curly quotes,
+# en and em dash, ellipsis, times, middle dot, degree), as one string; empty when it has them all.
+func _missing_glyphs(font: Font) -> String:
+	var wanted := []
+	for code in range(0x20, 0x7f):
+		wanted.append(code)
+	wanted.append_array([0x2018, 0x2019, 0x201c, 0x201d, 0x2013, 0x2014, 0x2026, 0xd7, 0xb7, 0xb0])
+	var missing := ""
+	for code in wanted:
+		if not font.has_char(code):
+			missing += char(code)
+	return missing

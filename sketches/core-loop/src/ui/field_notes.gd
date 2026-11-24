@@ -11,6 +11,7 @@ const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
 const ThreatSheet := preload("res://src/ui/threat_sheet.gd")
 const GrowthSheet := preload("res://src/ui/growth_sheet.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 
@@ -293,7 +294,7 @@ func _tab_color(page: String) -> Color:
 		return Palette.AMBER
 	if page == "keys":
 		var def = game.run.class_def if game != null and game.run != null else null
-		return def.color if def != null else Palette.SAND
+		return ClassDef.screen_color(def.color) if def != null else Palette.SAND
 	if page in ["found", "notes"]:
 		return Palette.SAND
 	return EventKinds.category(page)["color"]

@@ -73,8 +73,6 @@ const DOMAINS := {
 const KNOWN := [
 	{"path": "res://src/presentation/damage_numbers.gd", "colour": "ANCIENT", "kind": "overload",
 		"why": "frost damage numbers are ancient green; frost is ICE"},
-	{"path": "res://src/presentation/player_fx.gd", "colour": "ANCIENT", "kind": "overload",
-		"why": "frost motes and part fountains are ancient green"},
 	{"path": "res://src/combat/ultimate.gd", "colour": "ANCIENT", "kind": "overload",
 		"why": "the Cannon's ultimate landing ring is ancient green"},
 	{"path": "res://src/build/maker_bonuses.gd", "colour": "ANCIENT", "kind": "overload",

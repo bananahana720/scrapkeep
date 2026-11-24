@@ -1,5 +1,0 @@
-TH-11 predecessor reconciliation at integrated commit b04b826b02ba239c1035be92f8e127e7b16be81f
-TH-11 revision 2 done (task index last event EV-0365), accepted integrated identity 8f141c01b04c0b8c8b8249d83bbdf328de0b17c6 (admission event EV-0280).
-git merge-base --is-ancestor 8f141c01b04c0b8c8b8249d83bbdf328de0b17c6 HEAD: exit 0
-docs/tech/sections/TH-11-runs-regions-exits-and-saves.md sha256 at this commit: c194db4c7658a83a1dbad14df53dd559c2450f5a81ea6a3e561c0e4e74a7c268
-npm run check:drift and the schemas scan at this commit: exit 0 (closure/check-drift.log, closure/check-drift-schemas.log); retained checks rerun at this commit: closure/paper-reruns.log

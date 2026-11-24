@@ -1,5 +1,6 @@
 extends SceneTree
 
+const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const Game := preload("res://src/game.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Warden := preload("res://src/combat/warden.gd")
@@ -123,8 +124,11 @@ func check_family() -> void:
 		check("world weak point " + str(angle), rec.weak.global_position.distance_to(warden.family_point_at()) < 0.0001)
 	check_geometry(rec.base, rec.base)
 	check_stroke_surfaces(rec)
+	check_ink(rec, "clamp " + warden.family)
 	var authored: Node3D = hook._warden_scene(hook.WARDEN_BASE)
-	check("jaw meshes and hinges unchanged", authored.get_node("JawL").mesh == rec.base.get_node("JawL").mesh and authored.get_node("JawR").transform == rec.base.get_node("JawR").transform)
+	# The dressed jaw draws the ink line's welded copy of the authored mesh, one copy every Warden shares.
+	check("jaw meshes and hinges unchanged", InkOutline.hull(authored.get_node("JawL").mesh) == rec.base.get_node("JawL").mesh
+		and authored.get_node("JawR").transform == rec.base.get_node("JawR").transform)
 	var tower: MeshInstance3D = rec.base.get_node("Tower")
 	var low_unchanged := true
 	var joint_distance := INF
@@ -445,6 +449,47 @@ func check_park_shell() -> void:
 		check("park %s wears the model" % family, not rec.is_empty() and rec.base.name == "HeroWarden")
 		if not rec.is_empty():
 			check_shell(park, rec.base, "park " + family)
+			check_ink(rec, "park " + family)
+
+
+# W46-INK: a dressed Warden body draws the Warden's ink line on every surface that takes one, and its own enamel and
+# lights stay the very materials its updates brighten (the enamel lined in place, the lights unlined).
+func check_ink(rec: Dictionary, label: String) -> void:
+	var lined := 0
+	var missed := 0
+	var other_role := 0
+	var own_ok := true
+	var own: Array = []
+	for key in rec.materials:
+		if key == "ancient_enamel" or String(key).begins_with("ancient_light"):
+			own.append(rec.materials[key])
+	for view: MeshInstance3D in rec.base.find_children("*", "MeshInstance3D", true, false):
+		# The cool rim draws its own additive shell over a part's mesh.
+		if view.mesh == null or view.name == "CoolFill":
+			continue
+		for i in view.mesh.get_surface_count():
+			var mat := view.get_active_material(i)
+			var line: Material = mat.next_pass if mat != null else null
+			var inked := line != null and line.has_meta("ink_role")
+			if inked:
+				lined += 1
+				if line.get_meta("ink_role") != "warden":
+					other_role += 1
+			elif InkOutline.drawable(view.mesh, i, InkOutline.strip(mat)):
+				missed += 1
+			var slot := hook_slot(view.mesh, i)
+			# A jaw's inner face wears fixed paint of its own (_paint_warden_inner), never the Warden's enamel.
+			if slot == "ancient_enamel" and rec.materials.has("ancient_enamel") and not String(view.name).begins_with("Inner"):
+				own_ok = own_ok and mat == rec.materials.ancient_enamel and inked
+			elif slot.begins_with("ancient_light"):
+				own_ok = own_ok and own.has(mat) and not inked
+	check("%s: every body surface draws the Warden's ink line (%d lined, %d missed)" % [label, lined, missed],
+		lined >= 3 and missed == 0 and other_role == 0)
+	check("%s: its enamel and lights stay its own, the enamel lined in place, the lights unlined" % label, own_ok)
+
+
+func hook_slot(mesh: Mesh, surface: int) -> String:
+	return game.presentation.hero_assets.slot_of(mesh, surface)
 
 
 func _drum_of(warden) -> CylinderShape3D:

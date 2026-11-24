@@ -2,6 +2,7 @@ extends CharacterBody3D
 
 const Palette := preload("res://src/core/palette.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
+const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -1079,10 +1080,12 @@ func _notification(what: int) -> void:
 
 # The polish bake reaches every swapped-in material (BakeLook): the body paint the flash
 # brightens, tints and state materials all keep the model's baked occlusion and wear.
-# Scripts that swap materials onto a baked surface later call it again.
+# Scripts that swap materials onto a baked surface later call it again. Then the ink line (InkOutline), heavier on a Warden.
 func _dress_bake() -> void:
 	if is_inside_tree():
-		BakeLook.dress(self, owned_materials())
+		var owned := owned_materials()
+		BakeLook.dress(self, owned)
+		InkOutline.apply(self, "warden" if kind in ["warden", "miniboss"] else "enemy", owned)
 
 
 # The materials this enemy's script holds in its own variables: the ones it mutates.

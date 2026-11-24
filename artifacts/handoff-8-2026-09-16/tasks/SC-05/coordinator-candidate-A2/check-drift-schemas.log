@@ -1,4 +1,0 @@
-UNBOUND docs/tech/schemas/SC-05.md:24 stated 2bb8c5696a7e4f211e0cc00a4522473b1934d68c192b6f32bdcb8b1685eb2c7b has no preceding repository-path link on its bullet
-check:drift technical pass: 2 sections, 17 stated hashes, 0 mismatches, 1 unbound. Scanned docs/tech/schemas, dependencies resolved from each citing file
-check:drift pass: 2 sections, 17 stated hashes, 0 mismatches, 1 unbound over 1 corpus: technical
-Hash agreement only. A match proves the dependency's bytes are the ones the citing section recorded; it proves nothing about whether the citation, the line numbers or the claim built on them is still correct, and a mismatch is a finding for a card and a reviewer, not a defect this check judges.

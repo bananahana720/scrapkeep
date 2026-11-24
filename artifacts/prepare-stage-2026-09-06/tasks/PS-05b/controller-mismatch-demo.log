@@ -1,2 +1,0 @@
-Controller drift: seat.py under /home/andrew/.local/share/codex-native-input/agent-desktop does not match /tmp/claude-1000/-home-andrew-Projects-scrapkeep/0029906e-ac5d-48d2-8761-6b0484aa9fc3/scratchpad/altered-manifest.json. Regenerate the manifest with --write-controller-manifest after reviewing the controller, or pass --allow-controller-drift to run against it anyway.
-mismatch exit=1
