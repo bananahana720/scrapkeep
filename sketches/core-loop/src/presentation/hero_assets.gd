@@ -73,6 +73,7 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 const BallLooks := preload("res://src/presentation/ball_looks.gd")
+const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const PilotGlance := preload("res://src/presentation/pilot_glance.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 # One pose table per pilot (PILOT-CLIPS section 4.2), by the PILOTS glb stem.
@@ -1398,8 +1399,10 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	# visibility_changed fires only inside the tree; a fit outside it syncs here.
 	for pair in ring_holders:
 		pair[1].visible = pair[0].visible
-	# Every caller's shell wears the look's own materials: the game, the pause read, the previews.
+	# Every caller's shell wears the look's own materials: the game, the pause read, the previews. Then the ink line.
 	BallLooks.dress(ball_look(), rec)
+	InkOutline.apply(core, "pilot")
+	InkOutline.apply(pod, "pilot")
 	if _ready_glow:
 		_glow_rec(rec, true)
 	return rec
@@ -1776,6 +1779,7 @@ func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictio
 	pod.add_child(pilot)
 	paint(pilot, {"class": class_color})
 	BallLooks.light_pilot(ball_look(), pilot)
+	InkOutline.apply(pilot, "pilot")
 	var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	return {"pilot": pilot, "animator": animator}
 
@@ -2349,6 +2353,7 @@ void fragment() {
 	_hide_warden_tree(warden._look._jaws, rec)
 	_hide_warden_tree(warden._kit, rec)
 	_add_warden_strokes(base, warden._look, warden, rec)
+	InkOutline.apply(base, "warden", _warden_owned(rec))
 	_wardens[warden.get_instance_id()] = rec
 	warden.fit_camera_shell()
 	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
@@ -2425,6 +2430,7 @@ func _dress_warden_body(warden) -> void:
 	_hide_warden_tree(warden._look._jaws, rec)
 	_hide_warden_tree(warden._kit, rec)
 	warden.add_child(body)
+	InkOutline.apply(body, "warden", _warden_owned(rec))
 	var id: int = warden.get_instance_id()
 	for p in rec.players:
 		(p as AnimationPlayer).mixer_applied.connect(_hold_body.bind(id))
@@ -2443,6 +2449,16 @@ func _dress_warden_body(warden) -> void:
 			bus.posture_changed.connect(_warden_posture_changed)
 		if not bus.stage_entered.is_connected(_warden_stage_entered):
 			bus.stage_entered.connect(_warden_stage_entered)
+
+
+# The Warden's own materials, which its updates brighten and recolour (enamel, lights, the mantle's tool): the ink line
+# takes them in place. The rest come from the shared slot cache and take an inked twin.
+func _warden_owned(rec: Dictionary) -> Array:
+	var shared := _materials.values()
+	var out: Array = rec.materials.values().filter(func(mat): return not shared.has(mat))
+	if rec.get("mantle_tool") != null:
+		out.append(rec.mantle_tool)
+	return out
 
 
 func _driver_count(warden, key: String) -> int:

@@ -71,6 +71,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const ModelVariants := preload("res://src/presentation/model_variants.gd")
 const Audio := preload("res://src/presentation/audio.gd")
+const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W46-T1: tools/test_batch_driver.gd _reset() clears reduced-motion and other process-wide
@@ -445,6 +446,17 @@ func _run() -> void:
 	driver._reset()
 	t.check("Audio.reset_for_tests clears _baked, _bake_done, and bake tasks",
 		not Audio._baked and not Audio._bake_done and Audio._bake_task == -1 and Audio._rest_task == -1 and Audio._opening_task == -1)
+
+	InkOutline.enabled = false
+	var held_ink := InkOutline.ink("warden")
+	var inked := StandardMaterial3D.new()
+	inked.next_pass = held_ink
+	InkOutline.strip(inked)
+	t.check("InkOutline holds a stripped copy before reset", not InkOutline._stripped.is_empty())
+	driver._reset()
+	t.check("InkOutline.reset_for_tests switches the line back on and drops its passes and stripped copies",
+		InkOutline.enabled and InkOutline._inks.is_empty() and InkOutline._lifts.is_empty()
+		and InkOutline._stripped.is_empty() and InkOutline.ink("warden") != held_ink)
 
 	quit(t.verdict())
 
