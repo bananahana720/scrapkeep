@@ -9,6 +9,8 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Redline := preload("res://src/combat/redline.gd")
+const ChargeHalo := preload("res://src/presentation/charge_halo.gd")
+const Pattern := preload("res://src/combat/pattern.gd")
 
 # The player-side effects vfx.gd does not draw (PLAYER-FX.md). Everything here answers a
 # committed fact or the ball's own motion and never decides an outcome (TADR-008).
@@ -31,6 +33,8 @@ const Redline := preload("res://src/combat/redline.gd")
 #   frame      a 3-frame ink focus-line impact frame on the biggest hits; edge band only,
 #              so the centre stays clear, and it skips every wedge and wash piece that
 #              would cross a hostile warning's screen rect (enemy warnings draw on top)
+#   weapon     Sable's charge halo, tap arc and release ring (charge_halo.gd), and Rivet's muzzle
+#              flash and spent casings, read from the weapon's public cadence record and its shots
 # Colour carries the meaning: the pilot's colour is "you did this", brass is growth,
 # the heat ramp is overdrive, element colours are the build.
 
@@ -44,7 +48,8 @@ const HEAT_FALL_S := 0.4
 const CARVE_NORMAL_Y := 0.82
 const MOTES := 12
 const MOTE_RADIUS := 1.65
-const ELEMENT_COLORS := {"frost": Palette.ANCIENT, "arc": Palette.ARC, "kinetic": Palette.SAND}
+# Frost is ice blue (WAYFINDING.md section 5): uranium green means an old-works mechanism alone.
+const ELEMENT_COLORS := {"frost": Palette.ICE, "arc": Palette.ARC, "kinetic": Palette.SAND}
 const HEAT_COLOR := Color(1.0, 0.5, 0.12)
 # How much of a colour the heat takes at full heat_k: saturated orange, never white, so the
 # heat reads as colour and not as brightness.
@@ -248,6 +253,7 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 	_build_aura()
 	_build_dunk_glow()
 	_build_rim()
+	_build_rivet_fire()
 	_flecks = _emitter(_flecks_material(), _box(Vector3(0.12, 0.12, 0.55)), FLECKS, 0.35, "add", false)
 	_flecks.name = "OverdriveFlecks"
 	_embers = _emitter(_embers_material(), _ball(0.16), EMBERS, 0.9, "add", false)
@@ -538,6 +544,7 @@ func _wire() -> void:
 	events.enemy_killed.connect(_on_killed)
 	SignalWire.listen(events, "enemy_pinned", _on_pinned)
 	events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
+	_wire_weapon()
 	_wire_redline()
 	# Called Shot (build/called_shot.gd): a met break holds the frame (its pad thump is juice.gd's).
 	events.world_fact.connect(func(kind: String, at: Vector3):
@@ -686,6 +693,17 @@ func clear() -> void:
 	_pin_times.clear()
 	if _frame != null:
 		_frame.hide_now()
+	if _halo != null:
+		_halo.stop()
+	_halo_spent = false
+	for i in FLASHES:
+		_end_flash(i)
+	if _flashes != null and is_instance_valid(_flashes):
+		_flashes.visible = false
+	for i in CASINGS:
+		_end_casing(i)
+	if _casings != null and is_instance_valid(_casings):
+		_casings.visible = false
 
 
 # --- Sound words -------------------------------------------------------------------------
@@ -2052,6 +2070,386 @@ static func ceiling() -> int:
 	return FLECKS + EMBERS + CARVE + COLUMN * COLUMN_POOL + BOON * BOON_POOL
 
 
+# --- Weapon effects ----------------------------------------------------------------------
+# Wave 46 3D blueprint sections 3.2 and 3.3. Every effect here answers a committed fact: the
+# weapon's one public cadence record (WeaponDriver.state_snapshot(), as the HUD and hero_assets
+# read it), the ability gauges' public slots(), shot_fired and the gauge_* events. The shell's
+# markers (Emitter_L/R on Sable's WeaponRing, LaserMuzzle_L/R on Rivet's) place them; without a
+# shell they fall back to the ball and the shot.
+#
+# Sable (a tap-charge weapon): the halo charges with the charge, a charged bolt fires the release
+# ring, a spark or a tap-floor gauge release draws the jagged arc in vfx's glyph pool, and a charge
+# that drops with no release collapses. A charged bolt is the one shot that starts the driver's
+# recovery (weapon_driver.gd _step_tap_charge), so a shot that finds "recover" above 0 is charged.
+# Rivet: each shot flashes at the side that fired (even shots left, odd right, as mecha_motion's
+# every-2 rows count them) and every second shot on a side throws a casing from its drum gap.
+const RIVET := "runner_gunner"
+const FLASHES := 2
+const FLASH_SIZE := 0.22
+const FLASH_LIFE := 0.05
+const FLASH_CORE := Color(1.0, 0.97, 0.9)
+const CASINGS := 8
+const CASING_LIFE := 0.35
+const CASING_SPEED := 2.5
+const CASING_TURNS := 20.0
+const CASING_GRAVITY := 9.8
+const CASING_EVERY := 2
+# One draw for the flashes and one for the casings (fx_budget.gd "rivet_fire").
+const RIVET_DRAWS := 2
+# The drum gap from a LaserMuzzle marker, in the WeaponRing's frame with x outboard: back along
+# the bore to the drum, below the bore and just past the drum's side (rivet_revolvers.py).
+const DRUM_GAP := Vector3(0.065, -0.045, 0.18)
+# Without a shell: how far out a side muzzle sits from the centre shot, and the halo ahead.
+const SIDE_M := 0.6
+const HALO_AHEAD_M := 1.34
+const MARKER_SEEK_S := 0.5
+
+const _FLASH_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
+uniform vec4 core : source_color = vec4(1.0);
+uniform vec4 rim : source_color = vec4(1.0);
+varying float v_glow;
+void vertex() {
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+	MODELVIEW_MATRIX = MODELVIEW_MATRIX * mat4(vec4(length(MODEL_MATRIX[0].xyz), 0.0, 0.0, 0.0),
+		vec4(0.0, length(MODEL_MATRIX[1].xyz), 0.0, 0.0), vec4(0.0, 0.0, length(MODEL_MATRIX[2].xyz), 0.0), vec4(0.0, 0.0, 0.0, 1.0));
+	MODELVIEW_NORMAL_MATRIX = mat3(MODELVIEW_MATRIX);
+	v_glow = INSTANCE_CUSTOM.r;
+}
+void fragment() {
+	vec2 p = (UV - 0.5) * 2.0;
+	// A four-point star, |x|^0.5 + |y|^0.5 = 1, negative inside; over its screen gradient it is pixels.
+	float f = sqrt(abs(p.x)) + sqrt(abs(p.y)) - 1.0;
+	float px = f / max(fwidth(f), 0.00001);
+	if (px > 0.0) {
+		discard;
+	}
+	float edge = smoothstep(-2.0, -1.0, px);
+	ALBEDO = mix(core.rgb * (1.4 - 0.6 * length(p)), rim.rgb, edge) * v_glow;
+}
+"""
+
+var _halo: Node3D
+# After a release, a gauge that still reads full for a frame does not start a new halo.
+var _halo_spent := false
+var _markers := {}
+var _marker_wait := {}
+var _rivet_shots := 0
+var _flashes: MultiMeshInstance3D
+var _flash_age: Array[float] = []
+var _flash_pos: Array[Vector3] = []
+var _casings: MultiMeshInstance3D
+var _casing_age: Array[float] = []
+var _casing_next := 0
+var _casing_at: Array[Vector3] = []
+var _casing_v: Array[Vector3] = []
+var _casing_axis: Array[Vector3] = []
+var _casing_basis: Array[Basis] = []
+
+
+# Sable's halo, built on first charge; null for a pilot who never charged.
+func halo() -> Node3D:
+	return _halo
+
+
+# The weapon's public cadence record, or {} without combat.
+func weapon_cadence() -> Dictionary:
+	var combat = ctx.get("spawner") if ctx != null else null
+	var driver = combat.get("weapon_driver") if combat != null else null
+	if driver == null or not driver.has_method("state_snapshot"):
+		return {}
+	return driver.state_snapshot()
+
+
+static func halo_pilot(cadence: Dictionary) -> bool:
+	return String(cadence.get("trigger", "")) == Pattern.TRIGGER_TAP_CHARGE
+
+
+# The charge the halo shows: the weapon's while it charges, else the fullest charging gauge.
+func charge_level(cadence: Dictionary) -> float:
+	var level := clampf(float(cadence.get("charge", 0.0)), 0.0, 1.0) if cadence.get("charging", false) == true else 0.0
+	var abilities = player.get("abilities")
+	if abilities != null and abilities.has_method("slots"):
+		for record in abilities.slots():
+			level = maxf(level, clampf(float(record.get("gauge", 0.0)), 0.0, 1.0))
+	return level
+
+
+func _wire_weapon() -> void:
+	var events = ctx.events
+	SignalWire.listen(events, "shot_fired", _on_weapon_shot)
+	SignalWire.listen(events, "gauge_charging", func(_id: String): _halo_spent = false)
+	SignalWire.listen(events, "gauge_released", _on_gauge_released)
+	# A cancel ends the halo until the charge it read lets go.
+	SignalWire.listen(events, "gauge_cancelled", func(_id: String, _reason: String):
+		if _halo != null and _halo.charging():
+			_halo_spent = true
+			_halo.cancel())
+	SignalWire.listen(events, "run_started", func(_class_id: String): _rivet_shots = 0)
+
+
+func _on_weapon_shot(weapon: String, from: Vector3, to: Vector3) -> void:
+	var cadence := weapon_cadence()
+	if weapon != String(cadence.get("weapon", "")):
+		return
+	var dir := to - from
+	if halo_pilot(cadence):
+		_ensure_halo()
+		_halo_spent = true
+		if float(cadence.get("recover", 0.0)) > 0.0:
+			_halo.release(dir)
+		else:
+			_halo.tap()
+			_tap_arc(dir)
+	elif _pilot_id() == RIVET:
+		_rivet_shot(from, dir)
+
+
+func _on_gauge_released(_id: String, fraction: float) -> void:
+	if _halo == null or not halo_pilot(weapon_cadence()):
+		return
+	_halo_spent = true
+	if fraction <= ChargeHalo.TAP_FLOOR:
+		_halo.tap()
+		_tap_arc(_halo.forward())
+	else:
+		_halo.release(_halo.forward())
+
+
+func _tap_arc(dir: Vector3) -> void:
+	spawned["sable_tap"] = spawned.get("sable_tap", 0) + 1
+	if vfx != null:
+		vfx.glyph("shot_fired", _halo.tip(), ChargeHalo.ARC_LENGTH, ChargeHalo.ARC_LENGTH, ChargeHalo.ARC_LIFE, dir, "arc", Palette.ARC)
+
+
+func _ensure_halo() -> void:
+	if _halo == null:
+		_halo = ChargeHalo.new()
+		root.add_child(_halo)
+	var left := _marker("Emitter_L")
+	var right := _marker("Emitter_R")
+	var ring: Node3D = left.get_parent() as Node3D if left != null and right != null else null
+	if ring != null:
+		if _halo.mounted_on() != ring:
+			_halo.mount(ring, Transform3D(Basis.IDENTITY, (left.position + right.position) * 0.5))
+		return
+	if _halo.mounted_on() != _halo:
+		_halo.mount(null, Transform3D.IDENTITY)
+	var ahead := _ahead()
+	_halo.place(Transform3D(Basis.looking_at(ahead, Vector3.UP), player.shown_position() + ahead * HALO_AHEAD_M))
+
+
+# Level ahead: the camera's view, else the ball's heading, else -Z.
+func _ahead() -> Vector3:
+	var ahead := Vector3.ZERO
+	if camera != null and camera.cam != null:
+		ahead = -camera.cam.global_basis.z
+	if Vector2(ahead.x, ahead.z).length_squared() < 0.0001:
+		ahead = _velocity()
+	ahead.y = 0.0
+	return ahead.normalized() if ahead.length_squared() > 0.0001 else Vector3.FORWARD
+
+
+# A shell marker under the player's pod mount, cached; a missing one is sought again at most every
+# MARKER_SEEK_S, so a pilot without it walks no tree each frame.
+func _marker(id: String) -> Node3D:
+	var node = _markers.get(id)
+	if node != null and is_instance_valid(node) and node.is_inside_tree():
+		return node
+	_markers.erase(id)
+	if _clock < float(_marker_wait.get(id, -1.0)):
+		return null
+	_marker_wait[id] = _clock + MARKER_SEEK_S
+	var mount: Node = player.pod_mount() if player.has_method("pod_mount") else null
+	var found: Node3D = mount.find_child(id, true, false) as Node3D if mount != null else null
+	if found != null:
+		_markers[id] = found
+		_marker_wait.erase(id)
+	return found
+
+
+func _draw_weapon_fx(delta: float) -> void:
+	var cadence := weapon_cadence()
+	if halo_pilot(cadence):
+		var level := charge_level(cadence)
+		if level <= 0.0:
+			_halo_spent = false
+		var live := level > 0.0 and not _halo_spent
+		if live or _halo != null:
+			_ensure_halo()
+		if live:
+			_halo.charge(level)
+		elif _halo != null and _halo.charging():
+			_halo.cancel()
+	elif _halo != null and _halo.charging():
+		_halo.cancel()
+	if _halo != null:
+		_halo.reduced_motion = reduced_motion
+		_halo.step(delta)
+	_step_flashes(delta)
+	_step_casings(delta)
+
+
+func _rivet_shot(from: Vector3, dir: Vector3) -> void:
+	var side := _rivet_shots % 2
+	var on_side := floori(_rivet_shots / 2.0)
+	_rivet_shots += 1
+	var marker := _marker("LaserMuzzle_L" if side == 0 else "LaserMuzzle_R")
+	var outboard := -1.0 if side == 0 else 1.0
+	var at: Vector3
+	var frame: Basis
+	if marker != null and marker.get_parent() is Node3D:
+		at = marker.global_position
+		frame = (marker.get_parent() as Node3D).global_basis.orthonormalized()
+	else:
+		var ahead := dir.normalized() if dir.length_squared() > 0.0001 else _ahead()
+		frame = Basis.looking_at(ahead, Vector3.UP if absf(ahead.y) < 0.95 else Vector3.RIGHT)
+		at = from + frame.x * outboard * SIDE_M
+	_flash(side, at)
+	if on_side % CASING_EVERY == 0 and not reduced_motion:
+		_eject(at + frame * Vector3(DRUM_GAP.x * outboard, DRUM_GAP.y, DRUM_GAP.z), frame, outboard)
+
+
+func _flash(slot: int, at: Vector3) -> void:
+	_flash_age[slot] = 0.0
+	_flash_pos[slot] = at
+	_flashes.multimesh.set_instance_transform(slot, Transform3D(Basis.from_scale(Vector3.ONE * FLASH_SIZE), at))
+	_flashes.multimesh.set_instance_custom_data(slot, Color(FlashGuard.alpha(1.0), 0, 0, 0))
+	_flashes.visible = true
+	spawned["rivet_flash"] = spawned.get("rivet_flash", 0) + 1
+
+
+func _end_flash(slot: int) -> void:
+	if _flashes == null:
+		return
+	_flash_age[slot] = -1.0
+	_flashes.multimesh.set_instance_transform(slot, Transform3D(Basis.from_scale(Vector3.ZERO), Vector3.ZERO))
+	_flashes.multimesh.set_instance_custom_data(slot, Color(0, 0, 0, 0))
+
+
+func _step_flashes(delta: float) -> void:
+	var alive := false
+	for i in FLASHES:
+		if _flash_age[i] < 0.0:
+			continue
+		_flash_age[i] += delta
+		if _flash_age[i] >= FLASH_LIFE:
+			_end_flash(i)
+			continue
+		alive = true
+		_flashes.multimesh.set_instance_custom_data(i, Color(FlashGuard.alpha(1.0 - 0.5 * _flash_age[i] / FLASH_LIFE), 0, 0, 0))
+	_flashes.visible = alive
+
+
+func _eject(at: Vector3, frame: Basis, outboard: float) -> void:
+	var i := _casing_next
+	_casing_next = (_casing_next + 1) % CASINGS
+	_casing_age[i] = 0.0
+	_casing_at[i] = at
+	_casing_v[i] = frame * (Vector3(outboard, 1.0, 0.0).normalized() * CASING_SPEED) + _velocity()
+	_casing_axis[i] = (frame * Vector3(0.3 * outboard, 0.2, 1.0)).normalized()
+	# The casing lies along the bore (a CylinderMesh stands on its Y).
+	_casing_basis[i] = frame * Basis(Vector3.RIGHT, PI * 0.5)
+	_draw_casing(i)
+	_casings.visible = true
+	spawned["rivet_casing"] = spawned.get("rivet_casing", 0) + 1
+
+
+func _end_casing(i: int) -> void:
+	if _casings == null:
+		return
+	_casing_age[i] = -1.0
+	_casings.multimesh.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3.ZERO), Vector3.ZERO))
+
+
+func _draw_casing(i: int) -> void:
+	var turn := Basis(_casing_axis[i], TAU * CASING_TURNS * _casing_age[i])
+	_casings.multimesh.set_instance_transform(i, Transform3D(turn * _casing_basis[i], _casing_at[i]))
+
+
+func _step_casings(delta: float) -> void:
+	var alive := false
+	for i in CASINGS:
+		if _casing_age[i] < 0.0:
+			continue
+		_casing_age[i] += delta
+		if _casing_age[i] >= CASING_LIFE:
+			_end_casing(i)
+			continue
+		alive = true
+		_casing_v[i] += Vector3.DOWN * CASING_GRAVITY * delta
+		_casing_at[i] += _casing_v[i] * delta
+		_draw_casing(i)
+	_casings.visible = alive
+
+
+func flashes_alive() -> int:
+	return _flash_age.filter(func(a: float) -> bool: return a >= 0.0).size()
+
+
+func casings_alive() -> int:
+	return _casing_age.filter(func(a: float) -> bool: return a >= 0.0).size()
+
+
+# Where flash `slot` (0 left, 1 right) last stood, for the tests (a headless renderer keeps no
+# MultiMesh transforms to read back).
+func flash_at(slot: int) -> Vector3:
+	return _flash_pos[slot]
+
+
+func _build_rivet_fire() -> void:
+	var card := QuadMesh.new()
+	card.size = Vector2.ONE
+	# The shader turns the card to the camera, so its box is a cube.
+	card.custom_aabb = AABB(Vector3.ONE * -0.75, Vector3.ONE * 1.5)
+	var shader := Shader.new()
+	shader.code = _FLASH_SHADER
+	var flash_mat := ShaderMaterial.new()
+	flash_mat.shader = shader
+	flash_mat.set_shader_parameter("core", FLASH_CORE)
+	flash_mat.set_shader_parameter("rim", Palette.COPPER)
+	flash_mat.render_priority = RENDER_PRIORITY
+	_flashes = _pool_view("MuzzleFlashes", card, flash_mat, FLASHES, true)
+	_flash_age.resize(FLASHES)
+	_flash_pos.resize(FLASHES)
+	for i in FLASHES:
+		_end_flash(i)
+	var casing := CylinderMesh.new()
+	casing.top_radius = 0.006
+	casing.bottom_radius = 0.006
+	casing.height = 0.03
+	casing.radial_segments = 8
+	casing.rings = 0
+	var metal := StandardMaterial3D.new()
+	metal.albedo_color = Palette.BRASS.lerp(Palette.STEEL, 0.45)
+	metal.roughness = 0.5
+	metal.metallic = 0.35
+	metal.render_priority = RENDER_PRIORITY
+	_casings = _pool_view("SpentCasings", casing, metal, CASINGS, false)
+	for list in [_casing_age, _casing_at, _casing_v, _casing_axis, _casing_basis]:
+		list.resize(CASINGS)
+	for i in CASINGS:
+		_end_casing(i)
+
+
+func _pool_view(id: String, mesh: Mesh, mat: Material, count: int, custom: bool) -> MultiMeshInstance3D:
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_custom_data = custom
+	mm.mesh = mesh
+	mm.instance_count = count
+	var view := MultiMeshInstance3D.new()
+	view.name = id
+	view.multimesh = mm
+	view.material_override = mat
+	view.top_level = true
+	view.visible = false
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(view)
+	return view
+
+
 # --- Frame -------------------------------------------------------------------------------
 
 func _process(delta: float) -> void:
@@ -2074,6 +2472,7 @@ func _process(delta: float) -> void:
 	_draw_dunk_glow()
 	_draw_overdrive(delta)
 	_draw_carve()
+	_draw_weapon_fx(delta)
 
 
 # Hides the word layer while the tree is paused, as flourish_player hides its own: a word stamped

@@ -486,6 +486,23 @@ func _build_meshes() -> void:
 	bolt.size = Vector3(0.14, 0.9, 0.14)
 	_meshes["bolt"] = bolt
 	_meshes["none"] = dot
+	_meshes["arc"] = _arc_mesh()
+
+
+# Sable's tap arc (wave 46 3D blueprint section 3.2): three jagged segments from the origin to 1 m
+# along -Z, the way a facing glyph points, as two crossed ribbons so it reads from any side.
+static func _arc_mesh() -> ArrayMesh:
+	const WIDTH := 0.06
+	var points := [Vector3.ZERO, Vector3(0.12, 0.05, -0.33), Vector3(-0.1, -0.04, -0.66), Vector3(0.0, 0.0, -1.0)]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for across in [Vector3.RIGHT * WIDTH * 0.5, Vector3.UP * WIDTH * 0.5]:
+		for i in 3:
+			var a: Vector3 = points[i]
+			var b: Vector3 = points[i + 1]
+			for v in [a - across, b - across, b + across, a - across, b + across, a + across]:
+				st.add_vertex(v)
+	return st.commit()
 
 
 # Thin spokes radiating from the centre in the XY plane.

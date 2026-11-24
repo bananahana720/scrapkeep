@@ -6,6 +6,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -43,7 +44,7 @@ var _slot: StyleBox
 func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1, world_one := false, shell := false, set_piece_table := WorldOneCards.SET_PIECE_LINES, pilot := "", offer_kind := UpgradeTree.OFFER_PAIR) -> void:
 	node = node_row
 	key = key_id
-	color = class_color
+	color = ClassDef.screen_color(class_color)
 	depth = node_depth
 	focus_mode = Control.FOCUS_ALL
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
