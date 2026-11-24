@@ -2,11 +2,11 @@
 
 **Approved product reference · 6 September 2026**
 
-Read this before writing, drawing, modeling or changing the game. SCRAPKEEP's shared identity is greasy electromagnetic salvage, expressive rolling mechs, visible internal fabrication and expansive Southwest landscapes. Andrew approved this Art & Game Bible as the source of truth for what the game is. Explicit creative selections and implementation details marked open below remain open; this approval does not select an A/B/C direction or authorize build work. Throwaway Godot sketches under `sketches/` run separately in the [light play lane](ORCHESTRATOR.md#light-play-lane) that Andrew authorized on 22 September 2026 ([TRACKING](TRACKING.md) line 12, EV-0479, EV-0480); promoting a sketch into this Bible remains a heavy-lane decision. On 26 September 2026 this edition was harmonized in place (card DF-04, TRACKING EV-0579) with Andrew's verdicts in the [playtest log](docs/playtests/PLAYTEST-LOG.md), entries 1 to 5, and with the [accepted engineering ADRs](adr/README.md) TADR-006 to TADR-010: the run's level unit is now the open stage, and orchard-era material is marked superseded prototype evidence where it stands. On 2 October 2026 the run rules were harmonized in place with Andrew's rulings of 1 and 2 October 2026 ([alpha plan](sketches/core-loop/design-v3/ALPHA-PLAN.md), [owner interview](sketches/core-loop/design-v3/OWNER-INTERVIEW-2026-10-02.md)): a run crosses three worlds in a fixed order, a winning run targets 30 to 45 minutes, and each world allowed one retry. On 22 October 2026 the run rules were harmonized with Andrew's ruling ([decisions](project-guide/handoff/DECISIONS.md)): there is no free retry. Every run starts with zero saves, and a death sends the player back to world 1 with a fast restart (same pilot, or pick another). A rare earned item can save one death (details to come, DECISIONS 22 Oct).
+Read this before writing, drawing, modeling or changing the game. SCRAPKEEP's shared identity is greasy electromagnetic salvage, expressive rolling mechs, visible internal fabrication and expansive Southwest landscapes. Andrew approved this Art & Game Bible as the source of truth for what the game is. Explicit creative selections and implementation details marked open below remain open; this approval does not select an A/B/C direction or authorize build work. Throwaway Godot sketches under `sketches/` run separately in the [light play lane](ORCHESTRATOR.md#light-play-lane) that Andrew authorized on 22 September 2026 ([TRACKING](TRACKING.md) line 12, EV-0479, EV-0480); promoting a sketch into this Bible remains a heavy-lane decision. On 26 September 2026 this edition was harmonized in place (card DF-04, TRACKING EV-0579) with Andrew's verdicts in the playtest log (`docs/playtests/PLAYTEST-LOG.md`), entries 1 to 5, and with the [accepted engineering ADRs](adr/README.md) TADR-006 to TADR-010: the run's level unit is now the open stage, and orchard-era material is marked superseded prototype evidence where it stands. On 2 October 2026 the run rules were harmonized in place with Andrew's rulings of 1 and 2 October 2026 ([alpha plan](sketches/core-loop/design-v3/ALPHA-PLAN.md), owner interview (`sketches/core-loop/design-v3/OWNER-INTERVIEW-2026-10-02.md`)): a run crosses three worlds in a fixed order, a winning run targets 30 to 45 minutes, and each world allowed one retry. On 22 October 2026 the run rules were harmonized with Andrew's ruling ([decisions](project-guide/handoff/DECISIONS.md)): there is no free retry. Every run starts with zero saves, and a death sends the player back to world 1 with a fast restart (same pilot, or pick another). A rare earned item can save one death (details to come, DECISIONS 22 Oct).
 
 **The game in one line (Andrew, 9 November 2026, ruling cj in [the register](project-guide/handoff/DECISIONS.md)):** A crew of loose cannons, bulls in the Foreman's china shop, take their world back from a machine that believes life can be run perfectly. The moral under it: life is dynamic and cannot be fully optimised; give and take, and people and systems working together, beat any single point of view. For the Godot alpha, the [Story map](sketches/core-loop/design-v3/STORY-MAP.md) carries the story facts and what each place, system, enemy and item means; where it and an older section of this bible differ on story, the Story map and the register are the newer word.
 
-Start with the three pillars, then read the section relevant to your work. Use the same names, material language and system rules across disciplines. The [cohesion report](COHESION_REPORT.md) records image and text review; the [decisions list](BIBLE_DECISIONS.md) collects the choices still belonging to Andrew.
+Start with the three pillars, then read the section relevant to your work. Use the same names, material language and system rules across disciplines. The cohesion report (`COHESION_REPORT.md`) records image and text review; the decisions list (`BIBLE_DECISIONS.md`) collects the choices still belonging to Andrew.
 
 ## How to read this edition
 
@@ -86,11 +86,11 @@ Use these decision tests:
 
 You are the pilot who sees a future machine in everyone else's discarded parts. You bank a lopsided ball of salvage around a cutting arm, rebound clear, and feel loose metal tug toward the cockpit's coils. Inside, something clatters into place. The next shot behaves differently because of what you found and how you chose to build it. Your companion buys you a moment; you turn that moment into an absurd chain reaction. Then the noise drops away, and the road opens toward a green river settlement beneath an enormous sandstone wall. Your mech is heavier, uglier and unmistakably yours. There is another way through the world ahead, and you want to find out what it will let you make.
 
-![An improvised rolling mech collects scrap beside a river settlement in a large sandstone canyon.](docs/bible/images/P01-v1.png)
+An improvised rolling mech collects scrap beside a river settlement in a large sandstone canyon. (`docs/bible/images/P01-v1.png`)
 
 *P01. Fantasy key image, creative proposal. Magnetic collection, an enclosed pilot and a worked-in canyon settlement express the intended relationship between machine and world. The anonymous fox-like pilot does not select a character direction. The front three-quarter viewpoint serves this key image. Collection is the focus; the fabrication sequence is developed in the equipment and audio sheets.*
 
-Source basis: [Publisher discovery](docs/DISCOVERY.md), [approved art direction](docs/bible/ART-DIRECTION-LOCK.md), and [shared production brief](docs/bible/production/SECTION-BRIEF.md).
+Source basis: Publisher discovery (`docs/DISCOVERY.md`), approved art direction (`docs/bible/ART-DIRECTION-LOCK.md`), and shared production brief (`docs/bible/production/SECTION-BRIEF.md`).
 
 ## 2. World & Lore
 
@@ -100,7 +100,7 @@ SCRAPKEEP's world has learned to live with machinery too useful to throw away an
 
 The history, customs and relationships developed in this section are creative proposals for this review edition. They follow the approved visual direction; they do not establish final canon, a launch roster or a mandatory route. Here, a world means a run-region. The wider universe's astronomy remains unspecified.
 
-![A small rolling mech beneath cool mountains and metalworking terraces](docs/bible/images/W01-v1.png)
+A small rolling mech beneath cool mountains and metalworking terraces (`docs/bible/images/W01-v1.png`)
 
 *W01 · Regional establishing shot, proposal. Foundry Crown places worked metal beneath forested slopes and immense mountain walls. The anonymous pilot is a scale reference, not a selected character direction.*
 
@@ -122,7 +122,7 @@ These places exchange skills and components without becoming interchangeable. A 
 
 The accepted run visits three worlds in a fixed order: Spillway Works, then the Dig underground, then the Highdraft's floating flotilla. A winning run targets 30 to 45 minutes, to be measured in play. The other comparison pages stay candidates for later worlds. Every world must introduce its local conflict clearly on its own.
 
-![An inhabited scrapyard settlement in cactus foothills](docs/bible/images/W02-v1.png)
+An inhabited scrapyard settlement in cactus foothills (`docs/bible/images/W02-v1.png`)
 
 *W02 · Settlement establishing shot, proposal. Yard Commons has homes, shared shade and an open repair court. A visible magnetic handler makes salvage part of ordinary work.*
 
@@ -140,7 +140,7 @@ An itinerant apprentice such as Fuse gives those relationships motion. Fuse coll
 
 Shared work should reveal affection without a speech. One mechanic braces a housing before the other asks. Someone adds a muffler to a borrowed tool and returns the old part in a labeled pouch. Moss, as a supporting workshop keeper, remembers which pilot never packs spare insulation. These moments give the player reasons to recognize a place on a later run.
 
-![Mechanics servicing a pump beside a mech's internal recycling equipment](docs/bible/images/W03-v1.png)
+Mechanics servicing a pump beside a mech's internal recycling equipment (`docs/bible/images/W03-v1.png`)
 
 *W03 · Workplace establishing shot, proposal. At Spillway Works, pump maintenance and the mech's internal fabrication sit in one working room. The service bay does not establish a required crafting station.*
 
@@ -158,11 +158,11 @@ The three shared pillars shape how this fiction reaches play. **Joyful physical 
 
 Humor comes from skilled people and temperamental machinery. A triumphant prototype catches its maker's spare wrench. A repaired door works perfectly after its owner has learned to climb through the window. Damage can be loud and absurd, while the next quiet shot still shows somebody tending a plant in a reused tin.
 
-![A mechanic fitting fresh hardware beside a chipped mug and a small plant](docs/bible/images/W04-v1.png)
+A mechanic fitting fresh hardware beside a chipped mug and a small plant (`docs/bible/images/W04-v1.png`)
 
 *W04 · Intimate mechanism and life detail, proposal. A new brace, used tools and a small comfort show what continuing to repair this world feels like. Fabrication imagery defines neither upgrade costs nor a new progression schedule.*
 
-Source context: [Publisher discovery](docs/DISCOVERY.md), [character development](docs/CHARACTER-BIBLE.md), [environment candidates](docs/WORLD-ENVIRONMENTS.md) and the [approved art direction](docs/bible/ART-DIRECTION-LOCK.md). Their older fixed-route, roster and finish proposals are superseded where this review's shared brief says so.
+Source context: Publisher discovery (`docs/DISCOVERY.md`), character development (`docs/CHARACTER-BIBLE.md`), environment candidates (`docs/WORLD-ENVIRONMENTS.md`) and the approved art direction (`docs/bible/ART-DIRECTION-LOCK.md`). Their older fixed-route, roster and finish proposals are superseded where this review's shared brief says so.
 
 ## 3. Maps & Areas
 
@@ -172,7 +172,7 @@ These five area pages compare possible worlds for SCRAPKEEP. They are a creative
 
 The overview is a conceptual catalogue map, explicitly **not a fixed route or geographic survey**. Its separated landform samples express differences in terrain, work and atmosphere. Their positions carry no travel distance, adjacency or astronomical meaning. Read the individual key art for natural scale and the prose for proposed play.
 
-![Five separate landform samples compare the named area candidates without connecting routes.](docs/bible/images/M00-v1.png)
+Five separate landform samples compare the named area candidates without connecting routes. (`docs/bible/images/M00-v1.png`)
 
 *M00. Conceptual catalogue diagram. Yard Commons, Spillway Works, The Iron Orchard, Foundry Crown and Pale Basin receive equal status. No fixed route. The Pale Basin sample overstates hard white cliffs; its intended identity is the sculpted dune field developed in M05.*
 
@@ -182,7 +182,7 @@ Each selected world must accommodate the build arriving there. It introduces its
 
 *Creative proposal adapting an existing area candidate. Sonoran desert foothills, repair settlement and rocky washes; no starting-world assignment.*
 
-![A Sonoran repair settlement sits beside a rocky wash, with an enclosed salvage pilot and magnetic crane in the foreground.](docs/bible/images/M01-v1.png)
+A Sonoran repair settlement sits beside a rocky wash, with an enclosed salvage pilot and magnetic crane in the foreground. (`docs/bible/images/M01-v1.png`)
 
 *M01. Yard Commons key-art proposal. Saguaros, sparse branching trees, raised repair benches and an open wash establish the setting. The protected scrap body and attached tread forms are a silhouette study; this still image does not resolve rolling articulation.*
 
@@ -198,7 +198,7 @@ Discoveries draw on insulated collector parts, rugged couplings and compact serv
 
 *Creative proposal adapting an existing area candidate. Sandstone canyon, green river corridor and reclaimed water infrastructure.*
 
-![A green river flows through large sandstone walls beside pump houses, suspended service paths and a broad foreground shelf.](docs/bible/images/M02-v1.png)
+A green river flows through large sandstone walls beside pump houses, suspended service paths and a broad foreground shelf. (`docs/bible/images/M02-v1.png`)
 
 *M02. Spillway Works key-art proposal. The river, leafy corridor and canyon walls carry the scale; patched machinery follows their edges. The concept suggests a dry bypass but does not verify continuous traversal clearance.*
 
@@ -216,7 +216,7 @@ The reward vocabulary comes from sealed housings, flow-control vanes and magneti
 
 *Creative proposal for a full region adapted from the existing bounded orchard encounter. Upland cultivated valley, irrigation and maintained machinery.*
 
-![A cared-for orchard valley has tree rows, a patched greenhouse, irrigation pipes and a large supported pruning arm beside a wide apron.](docs/bible/images/M03-v1.png)
+A cared-for orchard valley has tree rows, a patched greenhouse, irrigation pipes and a large supported pruning arm beside a wide apron. (`docs/bible/images/M03-v1.png`)
 
 *M03. The Iron Orchard key-art proposal. Cultivation, generous turning space and an oversized working tool express the region. This scene is not a screenshot or a design proof for a complete Grand Pruner boss.*
 
@@ -234,7 +234,7 @@ Reward vocabulary includes cutting linkages, bracing shoes and compact tending m
 
 *Creative proposal adapting an existing foundry candidate. Forested mountain slopes, metalworking terraces and high rocky ridges.*
 
-![Cableways and small foundry terraces climb a forested gray mountain slope toward an exposed ridge.](docs/bible/images/M04-v2.png)
+Cableways and small foundry terraces climb a forested gray mountain slope toward an exposed ridge. (`docs/bible/images/M04-v2.png`)
 
 *M04. Foundry Crown key-art proposal. Forest, ridge and supported workshops define the setting. The corrected scene encloses the pilot in a framed glass cockpit integrated with the rolling scrap body.*
 
@@ -252,7 +252,7 @@ Discoveries draw on cable drums, heat-shield panels, alignment fixtures and reus
 
 *New creative area proposal. Fictional white gypsum-like dunes, buried machinery and wind-driven maintenance; no finale assignment.*
 
-![White sculpted dunes surround partly buried machinery, a wind-driven maintenance rig and a hard-packed service strip.](docs/bible/images/M05-v1.png)
+White sculpted dunes surround partly buried machinery, a wind-driven maintenance rig and a hard-packed service strip. (`docs/bible/images/M05-v1.png`)
 
 *M05. Pale Basin key-art proposal. White mineral dunes, sparse margin plants and dark exposed machinery establish the contrast. The pale ground is dry mineral sand. The foreground body's tread-heavy contact forms remain a concept study of an irregular rolling mech, with locomotion articulation unresolved by the still image.*
 
@@ -266,7 +266,7 @@ An encounter might begin as a salvage inspection, then reveal the working portio
 
 Reward vocabulary comes from abrasion guards, intake screens, wind-driven linkages and exposed collector parts. Their proposed build roles involve shaping collection or adapting a device's behavior; none are required counters for entering the region. **Joyful physical mastery** tests the visibility beyond a crest. **Scrap becomes your build** gives excavated hardware a working purpose. **A world worth crossing** asks whether vast pale land and stubborn maintenance hold interest between fights.
 
-Source basis: [Publisher discovery](docs/DISCOVERY.md), [world environment candidates](docs/WORLD-ENVIRONMENTS.md), [level-design study](docs/LEVEL-DESIGN.md), [decision register](docs/project/DECISION-REGISTER.md), and the [approved art direction](docs/bible/ART-DIRECTION-LOCK.md). Earlier kit measurements, fixed route roles and old palettes are not specifications for these revised region proposals.
+Source basis: Publisher discovery (`docs/DISCOVERY.md`), world environment candidates (`docs/WORLD-ENVIRONMENTS.md`), level-design study (`docs/LEVEL-DESIGN.md`), decision register (`docs/project/DECISION-REGISTER.md`), and the approved art direction (`docs/bible/ART-DIRECTION-LOCK.md`). Earlier kit measurements, fixed route roles and old palettes are not specifications for these revised region proposals.
 
 ## 4. Characters
 
@@ -278,7 +278,7 @@ Every candidate retains an irregular rolling salvage body, electromagnetic colle
 
 ### 4.1 Sable, fox from the Switchback Enclaves
 
-![Sable character comparison](docs/bible/images/C01-v1.png)
+Sable character comparison (`docs/bible/images/C01-v1.png`)
 
 *C01, proposal. A at left uses paired compact winches; B in the middle uses an offset crane arch; C at right uses a crescent collector collar and folding anchors. The fox remains the same individual across all three.*
 
@@ -299,7 +299,7 @@ A emphasizes a low center of mass and tightly packed quiet machinery. B exposes 
 
 ### 4.2 Kest, bird from the Highdraft Roosts
 
-![Kest character comparison](docs/bible/images/C02-v1.png)
+Kest character comparison (`docs/bible/images/C02-v1.png`)
 
 *C02, proposal. A at left carries two guarded lift fans; B in the middle suspends a rotor inside a tall hoop; C at right distributes lift through bell-shaped ducts. All retain a rolling scrap core and enclosed cockpit.*
 
@@ -320,7 +320,7 @@ A puts lateral lift hardware beside a compact mortar and reads broad and nimble.
 
 ### 4.3 Tarn, tiger from the Redjaw Workshops
 
-![Tarn character comparison](docs/bible/images/C03-v2.png)
+Tarn character comparison (`docs/bible/images/C03-v2.png`)
 
 *C03, proposal. A at left has paired piston claws; B is the middle panel with one large braced claw; C at right has slender linked talons. The corrected sheet labels all three directions explicitly; none is selected.*
 
@@ -341,7 +341,7 @@ A concentrates strength into short paired wrists. B makes leverage and counterwe
 
 ### 4.4 Fuse, squirrel itinerant apprentice
 
-![Fuse character comparison](docs/bible/images/C04-v1.png)
+Fuse character comparison (`docs/bible/images/C04-v1.png`)
 
 *C04, proposal. A at left stacks pressure canisters beside an aiming barrel; B in the middle uses a low switchboard collar and transformer blocks; C at right suspends discharge heads on a cable hoop.*
 
@@ -362,7 +362,7 @@ A wears its precarious equipment stack openly. B packs the same ambition into a 
 
 ### 4.5 Rivet, mole machinist
 
-![Rivet character comparison](docs/bible/images/C05-v1.png)
+Rivet character comparison (`docs/bible/images/C05-v1.png`)
 
 *C05, proposal. A at left carries a long optical bench; B in the middle surrounds a large collimator with a split yoke; C at right folds an articulated mirror tower above the rolling body.*
 
@@ -389,7 +389,7 @@ Admiral Brindle is the proposed leader of the Furnace Fleet, retaining the earli
 
 The pilots' differences create scene material without a fixed party. Sable disguises effort; Kest wants effort performed correctly. Tarn offers a steady hand; Fuse mistakes that patience for permission. Rivet can recognize the sound of Fuse's good idea before anyone sees its bad wiring. Use these relationships in optional exchanges and aftermaths so a solo run works with whichever character and route the player chooses.
 
-Source basis: [publisher discovery](docs/DISCOVERY.md), [earlier character reference](docs/CHARACTER-BIBLE.md), [approved art direction](docs/bible/ART-DIRECTION-LOCK.md), and [this edition's production brief](docs/bible/production/SECTION-BRIEF.md). Character fiction, the kit sketches and all five comparison sheets remain proposals.
+Source basis: publisher discovery (`docs/DISCOVERY.md`), earlier character reference (`docs/CHARACTER-BIBLE.md`), approved art direction (`docs/bible/ART-DIRECTION-LOCK.md`), and this edition's production brief (`docs/bible/production/SECTION-BRIEF.md`). Character fiction, the kit sketches and all five comparison sheets remain proposals.
 
 ## 5. Weapons & Items
 
@@ -403,7 +403,7 @@ Every pilot enters with a useful weapon and special mobility. Ordinary rolling a
 
 Active aim distinguishes the weapon. Low-cooldown abilities and quick autonomous deployments keep the pilot moving. A deployed device is an expression of the kit, not a fifth progression slot. Class-earned ultimates build toward a deliberate moment of power. Their exact earning formulas remain open.
 
-![Five weapons and their related devices on a workshop comparison sheet.](docs/bible/images/E01-v1.png)
+Five weapons and their related devices on a workshop comparison sheet. (`docs/bible/images/E01-v1.png`)
 
 *E01, equipment proposal. Upper row, left to right: hook-driver, mortar, claw, emitter and cutting laser. Lower row: winch anchor, mortar nest, clamping device, discharge post and prism device. Both rows share the D reference for starter-mech diameter. The tools are shown larger than D, providing a conceptual relative-size and material comparison. Mounted dimensions and route clearance remain future design work.*
 
@@ -423,7 +423,7 @@ Scrap first answers the physical fantasy. Pole pieces draw loose metal toward a 
 
 The art can show steel cut into a brace, copper wound onto a conductor and rubber reused as insulation. Grease stays in bearings; an old painted casing can surround a freshly machined contact. That contrast makes the repair visible.
 
-![An internal recycler cutaway, four hardware changes and five recovered regional modules.](docs/bible/images/E02-v1.png)
+An internal recycler cutaway, four hardware changes and five recovered regional modules. (`docs/bible/images/E02-v1.png`)
 
 *E02, fabrication and loot proposal. The cutaway shows collect, recycle and fabricate; paired studies show changes to weapon, main hero skill, mobility and ultimate. The lower row compares coupling, regulator, linkage, heat exchanger and vane bearing. The cutaway is enlarged independently; the lower lineup uses one common D reference and baseline. The upper upgrade samples compare mechanisms rather than final mounted dimensions. The pronounced tread supports do not resolve how the irregular core rolls; this is an explanatory construction study.*
 
@@ -466,7 +466,7 @@ The future build can include transformative items that replace movement or attac
 
 A saved ongoing run preserves its acquired equipment and selected paths at the next level entrance. Loading does not duplicate rewards, refill a spent death save or add another copy of a recipe effect. Reconfiguring items changes the current build; it does not quietly respec a tree. These distinctions let the player enjoy an outrageous combination now and still have a new machine to build next time.
 
-Source basis: [publisher discovery](docs/DISCOVERY.md), [runtime blueprint](docs/RUNTIME-BLUEPRINT.md), [lightning contract](docs/project/INCREMENT-01-lightning-playtest.md), [prototype play guide](docs/LIGHTNING-PLAYGUIDE.md), and [approved art direction](docs/bible/ART-DIRECTION-LOCK.md).
+Source basis: publisher discovery (`docs/DISCOVERY.md`), runtime blueprint (`docs/RUNTIME-BLUEPRINT.md`), lightning contract (`docs/project/INCREMENT-01-lightning-playtest.md`), prototype play guide (`docs/LIGHTNING-PLAYGUIDE.md`), and approved art direction (`docs/bible/ART-DIRECTION-LOCK.md`).
 
 ## 6. Core Systems
 
@@ -591,13 +591,13 @@ Permanent discoveries, learned recipes, options and challenges survive defeat. T
 
 The combat HUD answers immediate questions: health, any earned death save, current objective, aim, available actions, cooldowns and ultimate charge. Threat cues should be selective and visible around the action. Collection feedback can acknowledge an intake without turning the center of the screen into a reward ticker.
 
-![Chase-view combat HUD with health, objective and four action slots.](docs/bible/images/U01-v2.png)
+Chase-view combat HUD with health, objective and four action slots. (`docs/bible/images/U01-v2.png`)
 
 *U01. Combat HUD mockup, creative proposal. The four labeled cells are Weapon, Hero Skill, Mobility and Ultimate. The historical corrected mockup uses one AVAILABLE revival indicator; alpha displays any earned death save instead, alongside an assembled mechanical companion and a strongly irregular rolling scrap core. Layout and anonymous hardware remain proposals.*
 
 The dashboard gives more space to the character, equipment, companion, map and settings. Its states must distinguish locked slot, unavailable upgrade, permitted equipment swap and special tree respec. The comparison below proposes those distinctions. Its map expresses a four-world journey and two destination options without selecting a canonical route. Between the HUD and the dashboard sits a proposed third state, a hold-to-view overlay: while the player holds a control it shows the current objective, what collected scrap does for the build and, during playtests, notes, and it can grow into the dashboard. A pause lets the player get their bearings (playtest entry 5). The overlay follows the AD-08 interface rules; its control, layout and contents remain open (Q-P30).
 
-![Three dashboard states separate equipment swaps, special tree respec and next-world selection.](docs/bible/images/U02-v3.png)
+Three dashboard states separate equipment swaps, special tree respec and next-world selection. (`docs/bible/images/U02-v3.png`)
 
 *U02. Dashboard mockups, creative proposal. Equipment is reconfigured between fights; tree respec requires a special opportunity; Map shows a separate destination choice. The historical revision shows the former eight-endpoint tree; the alpha uses four picks and sixteen endpoints, with one connected route selected. Exact node effects and milestone allocation remain open. Comparison bars and anonymous hardware are layout studies.*
 
@@ -611,7 +611,7 @@ Content definitions describe pilots, trees, items, encounters and recipes. Encou
 
 The approved alpha plan supplies the world order, four-pick tree, six-pilot target, companion assembly default, death-save rule and unfinished-zone replay policy. Implementation still needs authored content and measured tuning, with scenario tests for saves, unlocks, compatibility and one-time rewards. The current authorization remains the light play lane; production migration and the untouched historical engineering sections are separate work.
 
-Source basis: [Publisher discovery](docs/DISCOVERY.md), [runtime blueprint](docs/RUNTIME-BLUEPRINT.md), [requirements](docs/project/REQUIREMENTS.md), [current lightning contract](docs/project/INCREMENT-01-lightning-playtest.md), and [approved art direction](docs/bible/ART-DIRECTION-LOCK.md).
+Source basis: Publisher discovery (`docs/DISCOVERY.md`), runtime blueprint (`docs/RUNTIME-BLUEPRINT.md`), requirements (`docs/project/REQUIREMENTS.md`), current lightning contract (`docs/project/INCREMENT-01-lightning-playtest.md`), and approved art direction (`docs/bible/ART-DIRECTION-LOCK.md`).
 
 <!-- ART_DIRECTION_VERBATIM_START -->
 
@@ -702,7 +702,7 @@ Begin a material pass by asking what touches the part. A hinge pumps grease out 
 
 Keep painted steel, rubber, copper, glass and oily joints distinct at gameplay distance. Broad rough paint establishes the body. Smaller exposed edges and contact faces catch sharper light. Reserve the darkest grease for useful pockets between readable forms. A fresh welded patch can interrupt old damage and make the owner present in the object. Tiny scratches belong late in the process, after the intake, cockpit and working tool already read.
 
-![A01 material placement comparison](docs/bible/images/A01-v1.png)
+A01 material placement comparison (`docs/bible/images/A01-v1.png`)
 
 *A01. Teaching proposal, AD-04. DO places wear by material and use. DON'T coats the same mech with uniform dirty shading. The mistake is indiscriminate grime, not dirt itself; the approved world should look substantially worked.*
 
@@ -712,7 +712,7 @@ Choose the weather, time of day and open-sky color before adding device lights. 
 
 Vegetation is part of regional structure. Draw its broad bands and relationship to rock before placing individual plants. Industrial terraces need believable ground or supports. Roads respond to slope, water and clearance. These decisions make a region recognizable when its machinery is removed. The same rocky crest should remain recognizable when settlement detail is added.
 
-![A02 mountain regional identity comparison](docs/bible/images/A02-v1.png)
+A02 mountain regional identity comparison (`docs/bible/images/A02-v1.png`)
 
 *A02. Teaching proposal, AD-06, using the Foundry Crown candidate. DO keeps cool forested slopes and an exposed rocky summit coherent. DON'T inserts desert cactus across the same mountain. The buildings, light and landform stay comparable so misplaced vegetation is the visible lesson.*
 
@@ -732,7 +732,7 @@ Compare the same weapon or skill assembly before and after construction. Show th
 
 In a chase view, the player needs to see the attacking tool, its dangerous ground, and somewhere to move. Build that composition before adding steam and sparks. Effects can intensify at the source, trail behind movement and spill into unused screen space. Their brightness should not erase the shape that tells the player what happens next.
 
-![A03 combat readability comparison](docs/bible/images/A03-v1.png)
+A03 combat readability comparison (`docs/bible/images/A03-v1.png`)
 
 *A03. Diagrammatic combat mockup, AD-08. DO exposes the raised cutter, danger footprint, right-side escape and instrument panels. DON'T blankets the matching attack with effects. The illustrated footprint communicates intended geometry; it does not verify a hitbox or lock the future HUD.*
 
@@ -802,11 +802,11 @@ Propose separate music and effects controls, reduced camera motion and a restrai
 
 ### Audio and motion concept sheet
 
-![Four phases of a rolling salvage mech's action, with mechanical sound-source studies beneath.](docs/bible/images/F01-v1.png)
+Four phases of a rolling salvage mech's action, with mechanical sound-source studies beneath. (`docs/bible/images/F01-v1.png`)
 
 *F01. Annotated audio-and-motion concept proposal. ATTRACT pairs coil hum with metal chatter; BUILD pairs ratchet, press and latch; STRIKE pairs contact crack with body thump; SETTLE pairs spring return with vent sigh. The bottom strip shows an electromagnet and washers, a ratchet assembly, a steel plate and rubber mallet, and a pressure-release valve. The staged cutaway proposes construction; it is not engineering proof, a recording or tested feel.*
 
-Source basis: [Publisher discovery](docs/DISCOVERY.md), [runtime audio direction](docs/RUNTIME-BLUEPRINT.md#8-audio-and-character-expression), [asset provenance](docs/project/ASSETS.md), and [approved art direction](docs/bible/ART-DIRECTION-LOCK.md).
+Source basis: Publisher discovery (`docs/DISCOVERY.md`), runtime audio direction (`docs/RUNTIME-BLUEPRINT.md`), asset provenance (`docs/project/ASSETS.md`), and approved art direction (`docs/bible/ART-DIRECTION-LOCK.md`).
 
 ## 9. Glossary
 
@@ -814,7 +814,7 @@ Use these spellings across writing, art and content definitions. Each named iden
 
 ### Illustrated identity key
 
-![Five candidate pilot portraits above five distinct regional landscape vignettes.](docs/bible/images/G01-v1.png)
+Five candidate pilot portraits above five distinct regional landscape vignettes. (`docs/bible/images/G01-v1.png`)
 
 *G01. Illustrated reference proposal. Portrait keys: 01 Sable, 02 Kest, 03 Tarn, 04 Fuse, 05 Rivet. Landscape keys: 06 Yard Commons, 07 Spillway Works, 08 The Iron Orchard, 09 Foundry Crown, 10 Pale Basin. The rows are independent lists. Their columns assign neither home regions nor route order. Cropped cockpit portraits establish identity without selecting any A/B/C mech direction. The sheet's detailed fur and close cockpit treatment remain illustrative, not final character models.*
 
@@ -901,7 +901,7 @@ These definitions record how this Bible uses a reference. They grant no permissi
 | World | Run-region containing open stages and a boss. Three worlds in a fixed order form a successful run; the other catalogue candidates stay out of it. A stage is one bounded 3D space on momentum terrain, entered, roamed and left through an exit; it replaces the earlier compact encounter level. |
 | Death save | A rare earned item that saves one death (details to come, DECISIONS 22 Oct). Without it, a death ends the run and restarts at world 1; companion rescue does not silently grant one. |
 
-Definitions follow the corresponding sections above. Prototype aliases are reconciled against the [lightning play guide](docs/LIGHTNING-PLAYGUIDE.md) and [character planning](docs/CHARACTER-BIBLE.md); external reference boundaries follow the approved Art Direction and Appendix B.
+Definitions follow the corresponding sections above. Prototype aliases are reconciled against the lightning play guide (`docs/LIGHTNING-PLAYGUIDE.md`) and character planning (`docs/CHARACTER-BIBLE.md`); external reference boundaries follow the approved Art Direction and Appendix B.
 
 ## Appendix A: Image prompts and provenance
 
@@ -909,38 +909,38 @@ Every submitted prompt below contains the approved Art Direction verbatim. Conce
 
 | Image / attempt | Section | Image file | Full prompt |
 | --- | --- | --- | --- |
-| P01 / 1 | 1 | [Open image](docs/bible/images/P01-v1.png) | [Prompt file](docs/bible/prompts/P01-v1.txt) |
-| W01 / 1 | 2 | [Open image](docs/bible/images/W01-v1.png) | [Prompt file](docs/bible/prompts/W01-v1.txt) |
-| W02 / 1 | 2 | [Open image](docs/bible/images/W02-v1.png) | [Prompt file](docs/bible/prompts/W02-v1.txt) |
-| W03 / 1 | 2 | [Open image](docs/bible/images/W03-v1.png) | [Prompt file](docs/bible/prompts/W03-v1.txt) |
-| W04 / 1 | 2 | [Open image](docs/bible/images/W04-v1.png) | [Prompt file](docs/bible/prompts/W04-v1.txt) |
-| M00 / 1 | 3 | [Open image](docs/bible/images/M00-v1.png) | [Prompt file](docs/bible/prompts/M00-v1.txt) |
-| M01 / 1 | 3 | [Open image](docs/bible/images/M01-v1.png) | [Prompt file](docs/bible/prompts/M01-v1.txt) |
-| M02 / 1 | 3 | [Open image](docs/bible/images/M02-v1.png) | [Prompt file](docs/bible/prompts/M02-v1.txt) |
-| M03 / 1 | 3 | [Open image](docs/bible/images/M03-v1.png) | [Prompt file](docs/bible/prompts/M03-v1.txt) |
-| M04 / 1 | 3 | [Open image](docs/bible/images/M04-v1.png) | [Prompt file](docs/bible/prompts/M04-v1.txt) |
-| M04 / 2 | 3 | [Open image](docs/bible/images/M04-v2.png) | [Prompt file](docs/bible/prompts/M04-v2.txt) |
-| M05 / 1 | 3 | [Open image](docs/bible/images/M05-v1.png) | [Prompt file](docs/bible/prompts/M05-v1.txt) |
-| C01 / 1 | 4 | [Open image](docs/bible/images/C01-v1.png) | [Prompt file](docs/bible/prompts/C01-v1.txt) |
-| C02 / 1 | 4 | [Open image](docs/bible/images/C02-v1.png) | [Prompt file](docs/bible/prompts/C02-v1.txt) |
-| C03 / 1 | 4 | [Open image](docs/bible/images/C03-v1.png) | [Prompt file](docs/bible/prompts/C03-v1.txt) |
-| C03 / 2 | 4 | [Open image](docs/bible/images/C03-v2.png) | [Prompt file](docs/bible/prompts/C03-v2.txt) |
-| C04 / 1 | 4 | [Open image](docs/bible/images/C04-v1.png) | [Prompt file](docs/bible/prompts/C04-v1.txt) |
-| C05 / 1 | 4 | [Open image](docs/bible/images/C05-v1.png) | [Prompt file](docs/bible/prompts/C05-v1.txt) |
-| E01 / 1 | 5 | [Open image](docs/bible/images/E01-v1.png) | [Prompt file](docs/bible/prompts/E01-v1.txt) |
-| E02 / 1 | 5 | [Open image](docs/bible/images/E02-v1.png) | [Prompt file](docs/bible/prompts/E02-v1.txt) |
-| U01 / 1 | 6 | [Open image](docs/bible/images/U01-v1.png) | [Prompt file](docs/bible/prompts/U01-v1.txt) |
-| U01 / 2 | 6 | [Open image](docs/bible/images/U01-v2.png) | [Prompt file](docs/bible/prompts/U01-v2.txt) |
-| U02 / 1 | 6 | [Open image](docs/bible/images/U02-v1.png) | [Prompt file](docs/bible/prompts/U02-v1.txt) |
-| U02 / 2 | 6 | [Open image](docs/bible/images/U02-v2.png) | [Prompt file](docs/bible/prompts/U02-v2.txt) |
-| U02 / 3 | 6 | [Open image](docs/bible/images/U02-v3.png) | [Prompt file](docs/bible/prompts/U02-v3.txt) |
-| A01 / 1 | 7 | [Open image](docs/bible/images/A01-v1.png) | [Prompt file](docs/bible/prompts/A01-v1.txt) |
-| A02 / 1 | 7 | [Open image](docs/bible/images/A02-v1.png) | [Prompt file](docs/bible/prompts/A02-v1.txt) |
-| A03 / 1 | 7 | [Open image](docs/bible/images/A03-v1.png) | [Prompt file](docs/bible/prompts/A03-v1.txt) |
-| F01 / 1 | 8 | [Open image](docs/bible/images/F01-v1.png) | [Prompt file](docs/bible/prompts/F01-v1.txt) |
-| G01 / 1 | 9 | [Open image](docs/bible/images/G01-v1.png) | [Prompt file](docs/bible/prompts/G01-v1.txt) |
+| P01 / 1 | 1 | Open image (`docs/bible/images/P01-v1.png`) | Prompt file (`docs/bible/prompts/P01-v1.txt`) |
+| W01 / 1 | 2 | Open image (`docs/bible/images/W01-v1.png`) | Prompt file (`docs/bible/prompts/W01-v1.txt`) |
+| W02 / 1 | 2 | Open image (`docs/bible/images/W02-v1.png`) | Prompt file (`docs/bible/prompts/W02-v1.txt`) |
+| W03 / 1 | 2 | Open image (`docs/bible/images/W03-v1.png`) | Prompt file (`docs/bible/prompts/W03-v1.txt`) |
+| W04 / 1 | 2 | Open image (`docs/bible/images/W04-v1.png`) | Prompt file (`docs/bible/prompts/W04-v1.txt`) |
+| M00 / 1 | 3 | Open image (`docs/bible/images/M00-v1.png`) | Prompt file (`docs/bible/prompts/M00-v1.txt`) |
+| M01 / 1 | 3 | Open image (`docs/bible/images/M01-v1.png`) | Prompt file (`docs/bible/prompts/M01-v1.txt`) |
+| M02 / 1 | 3 | Open image (`docs/bible/images/M02-v1.png`) | Prompt file (`docs/bible/prompts/M02-v1.txt`) |
+| M03 / 1 | 3 | Open image (`docs/bible/images/M03-v1.png`) | Prompt file (`docs/bible/prompts/M03-v1.txt`) |
+| M04 / 1 | 3 | Open image (`docs/bible/images/M04-v1.png`) | Prompt file (`docs/bible/prompts/M04-v1.txt`) |
+| M04 / 2 | 3 | Open image (`docs/bible/images/M04-v2.png`) | Prompt file (`docs/bible/prompts/M04-v2.txt`) |
+| M05 / 1 | 3 | Open image (`docs/bible/images/M05-v1.png`) | Prompt file (`docs/bible/prompts/M05-v1.txt`) |
+| C01 / 1 | 4 | Open image (`docs/bible/images/C01-v1.png`) | Prompt file (`docs/bible/prompts/C01-v1.txt`) |
+| C02 / 1 | 4 | Open image (`docs/bible/images/C02-v1.png`) | Prompt file (`docs/bible/prompts/C02-v1.txt`) |
+| C03 / 1 | 4 | Open image (`docs/bible/images/C03-v1.png`) | Prompt file (`docs/bible/prompts/C03-v1.txt`) |
+| C03 / 2 | 4 | Open image (`docs/bible/images/C03-v2.png`) | Prompt file (`docs/bible/prompts/C03-v2.txt`) |
+| C04 / 1 | 4 | Open image (`docs/bible/images/C04-v1.png`) | Prompt file (`docs/bible/prompts/C04-v1.txt`) |
+| C05 / 1 | 4 | Open image (`docs/bible/images/C05-v1.png`) | Prompt file (`docs/bible/prompts/C05-v1.txt`) |
+| E01 / 1 | 5 | Open image (`docs/bible/images/E01-v1.png`) | Prompt file (`docs/bible/prompts/E01-v1.txt`) |
+| E02 / 1 | 5 | Open image (`docs/bible/images/E02-v1.png`) | Prompt file (`docs/bible/prompts/E02-v1.txt`) |
+| U01 / 1 | 6 | Open image (`docs/bible/images/U01-v1.png`) | Prompt file (`docs/bible/prompts/U01-v1.txt`) |
+| U01 / 2 | 6 | Open image (`docs/bible/images/U01-v2.png`) | Prompt file (`docs/bible/prompts/U01-v2.txt`) |
+| U02 / 1 | 6 | Open image (`docs/bible/images/U02-v1.png`) | Prompt file (`docs/bible/prompts/U02-v1.txt`) |
+| U02 / 2 | 6 | Open image (`docs/bible/images/U02-v2.png`) | Prompt file (`docs/bible/prompts/U02-v2.txt`) |
+| U02 / 3 | 6 | Open image (`docs/bible/images/U02-v3.png`) | Prompt file (`docs/bible/prompts/U02-v3.txt`) |
+| A01 / 1 | 7 | Open image (`docs/bible/images/A01-v1.png`) | Prompt file (`docs/bible/prompts/A01-v1.txt`) |
+| A02 / 1 | 7 | Open image (`docs/bible/images/A02-v1.png`) | Prompt file (`docs/bible/prompts/A02-v1.txt`) |
+| A03 / 1 | 7 | Open image (`docs/bible/images/A03-v1.png`) | Prompt file (`docs/bible/prompts/A03-v1.txt`) |
+| F01 / 1 | 8 | Open image (`docs/bible/images/F01-v1.png`) | Prompt file (`docs/bible/prompts/F01-v1.txt`) |
+| G01 / 1 | 9 | Open image (`docs/bible/images/G01-v1.png`) | Prompt file (`docs/bible/prompts/G01-v1.txt`) |
 
-The complete submitted prompt texts live in [docs/bible/prompts/](docs/bible/prompts/) and are no longer inlined in this document.
+The complete submitted prompt texts live in `docs/bible/prompts/` and are no longer inlined in this document.
 
 ## Appendix B: Sources and approval record
 
@@ -948,26 +948,26 @@ The complete submitted prompt texts live in [docs/bible/prompts/](docs/bible/pro
 
 Andrew requested the nine-section Art & Game Bible, a cohesion audit and a decisions list, with no build work. He then corrected the initial art draft toward junkyard and greasemonkey steam-cyberpunk, electromagnetic scrap attraction, internal recycling into weapon and three-skill upgrades, civilizations with distinct engineering traditions, and Southwest mountains, valleys, deserts and national parks. He approved the revised gate with "proceed, looks great now" on 6 September 2026.
 
-The Art Direction between the marked boundaries in Section 7 is that approved text, preserved byte for byte. The phrase "proposed revision for this gate" inside it is historical wording in the approved block, not an outstanding palette approval. Its SHA-256 is `0f694b904454716669d844e833973852c51a6ec48c719918797b06a7841322c7`. Every submitted image prompt includes the same block. The [lock file](docs/bible/ART-DIRECTION-LOCK.md) is the generation copy; Section 7 remains the reader's reference.
+The Art Direction between the marked boundaries in Section 7 is that approved text, preserved byte for byte. The phrase "proposed revision for this gate" inside it is historical wording in the approved block, not an outstanding palette approval. Its SHA-256 is `0f694b904454716669d844e833973852c51a6ec48c719918797b06a7841322c7`. Every submitted image prompt includes the same block. The lock file (`docs/bible/ART-DIRECTION-LOCK.md`) is the generation copy; Section 7 remains the reader's reference.
 
 The latest publisher direction and approved block take precedence over older clean-ivory art assumptions, matte-only restrictions and earlier species-to-class assignments. The remaining established run and slot-tree decisions continue to apply. New names, civilization details and adapted region fiction in this edition are labeled creative proposals.
 
 ### Planning sources
 
-During the image review, Andrew explicitly requested nodes that fork into two upgrades, with each node forking into two again. Combined with the established eight endpoints, the accepted shape is one root → two → four → eight, with one connected lineage selected. U02 attempt 3 records this owner-directed revision after its automatic audit correction. The [revision record](docs/bible/production/owner-revisions.json) preserves the instruction and aligned documents. The frozen Art Direction did not change.
+During the image review, Andrew explicitly requested nodes that fork into two upgrades, with each node forking into two again. Combined with the established eight endpoints, the accepted shape is one root → two → four → eight, with one connected lineage selected. U02 attempt 3 records this owner-directed revision after its automatic audit correction. The revision record (`docs/bible/production/owner-revisions.json`) preserves the instruction and aligned documents. The frozen Art Direction did not change.
 
 | Source | Contribution and limits |
 | --- | --- |
-| [Publisher discovery](docs/DISCOVERY.md) | Accepted rolling and caster identity, four slot trees, progression, loot, revival and reference boundaries. The latest art and animal-cast correction is recorded above. Its original four-world, 60–75 minute run is now three worlds and 30 to 45 minutes (2 Oct ruling). |
-| [Decision register](docs/project/DECISION-REGISTER.md) | Accepted notebook rulings and unresolved lifecycle/content details. Old palette questions are superseded for this Bible by the approved revision. |
-| [Character planning](docs/CHARACTER-BIBLE.md) | Earlier candidate characters, the chaos novice, supporting relationships and Furnace Fleet fiction. This is a proposal source, not a final roster. |
-| [World and environment kits](docs/WORLD-ENVIRONMENTS.md) | Occupational machinery and candidate regions adapted into the Southwest setting. The former fixed campaign ladder is not adopted. |
-| [Level design](docs/LEVEL-DESIGN.md) | Route readability and terrain ideas. Its compact encounter structure is superseded by open stages (TADR-010). Historical dimensions and worked stages remain examples. |
-| [Runtime blueprint](docs/RUNTIME-BLUEPRINT.md) | Content, encounter, run and permanent-profile responsibilities; system invariants and unresolved implementation details. |
-| [Requirements](docs/project/REQUIREMENTS.md) | Distinguishes accepted future direction from the implemented proofs. |
-| [Selected orchard study](docs/CONCEPT-STUDY-03.md) | Shared enemy-family mechanisms and the separation between promising concept art and resolved motion/geometry. |
-| [Current lightning contract](docs/project/INCREMENT-01-lightning-playtest.md) | Prototype controls, geometry ownership and bounded equipment examples. Its exact kit and caps are not universal class rules. |
-| [Project desk](docs/project/README.md) and [CONTRIBUTING](CONTRIBUTING.md) | Existing project ownership, source conventions and verification boundaries. |
+| Publisher discovery (`docs/DISCOVERY.md`) | Accepted rolling and caster identity, four slot trees, progression, loot, revival and reference boundaries. The latest art and animal-cast correction is recorded above. Its original four-world, 60–75 minute run is now three worlds and 30 to 45 minutes (2 Oct ruling). |
+| Decision register (`docs/project/DECISION-REGISTER.md`) | Accepted notebook rulings and unresolved lifecycle/content details. Old palette questions are superseded for this Bible by the approved revision. |
+| Character planning (`docs/CHARACTER-BIBLE.md`) | Earlier candidate characters, the chaos novice, supporting relationships and Furnace Fleet fiction. This is a proposal source, not a final roster. |
+| World and environment kits (`docs/WORLD-ENVIRONMENTS.md`) | Occupational machinery and candidate regions adapted into the Southwest setting. The former fixed campaign ladder is not adopted. |
+| Level design (`docs/LEVEL-DESIGN.md`) | Route readability and terrain ideas. Its compact encounter structure is superseded by open stages (TADR-010). Historical dimensions and worked stages remain examples. |
+| Runtime blueprint (`docs/RUNTIME-BLUEPRINT.md`) | Content, encounter, run and permanent-profile responsibilities; system invariants and unresolved implementation details. |
+| Requirements (`docs/project/REQUIREMENTS.md`) | Distinguishes accepted future direction from the implemented proofs. |
+| Selected orchard study (`docs/CONCEPT-STUDY-03.md`) | Shared enemy-family mechanisms and the separation between promising concept art and resolved motion/geometry. |
+| Current lightning contract (`docs/project/INCREMENT-01-lightning-playtest.md`) | Prototype controls, geometry ownership and bounded equipment examples. Its exact kit and caps are not universal class rules. |
+| Project desk (`docs/project/README.md`) and [CONTRIBUTING](CONTRIBUTING.md) | Existing project ownership, source conventions and verification boundaries. |
 
 ### Landscape references
 
@@ -982,6 +982,6 @@ These references do not assign real park names to the fictional map or establish
 
 ### Production and evidence
 
-Nine section workers use separate detached local worktrees, all on `gpt-6-astra` with high reasoning effort. The coordinator owns the shared content inventory, serial admission, exact prompt preservation and final document. The [production brief](docs/bible/production/SECTION-BRIEF.md) records that shared inventory; the [source snapshot](docs/bible/production/source-snapshot.json) records the planning files used.
+Nine section workers use separate detached local worktrees, all on `gpt-6-astra` with high reasoning effort. The coordinator owns the shared content inventory, serial admission, exact prompt preservation and final document. The production brief (`docs/bible/production/SECTION-BRIEF.md`) records that shared inventory; the source snapshot (`docs/bible/production/source-snapshot.json`) records the planning files used.
 
-All new concept art uses the built-in image generator. Appendix A preserves the full submitted prompts and project-local images. Concept art does not supply production meshes, rigs, hitboxes, audio recordings or game-feel evidence. The cohesion report records the method, individual findings, the four automatic corrections, Andrew's separate U02 revision and remaining concept limitations. The decisions list records unresolved design choices rather than silently resolving them through an image. The [final source snapshot](docs/bible/production/source-snapshot-final.json) records files after reference-pointer and binary-tree alignment; the original snapshot remains preserved.
+All new concept art uses the built-in image generator. Appendix A preserves the full submitted prompts and project-local images. Concept art does not supply production meshes, rigs, hitboxes, audio recordings or game-feel evidence. The cohesion report records the method, individual findings, the four automatic corrections, Andrew's separate U02 revision and remaining concept limitations. The decisions list records unresolved design choices rather than silently resolving them through an image. The final source snapshot (`docs/bible/production/source-snapshot-final.json`) records files after reference-pointer and binary-tree alignment; the original snapshot remains preserved.

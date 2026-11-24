@@ -1,6 +1,0 @@
-== npm run verify after npm ci ==
-
-Checking built-http
-PASS built-http
-Verification report: /tmp/claude-1000/-home-andrew-Projects-scrapkeep/d521c870-ec77-4759-a2d7-0da063b4cf9a/scratchpad/prepare-stage/int-PS-01/artifacts/local/verify/report.json
-exit=0

@@ -1,8 +1,0 @@
- CONTRIBUTING.md                            |  2 +-
- docs/LEAD-CAPTURE.md                       |  2 +-
- docs/adr/0006-agent-playtest-workspaces.md |  4 ++
- scripts/agent-playtest.mjs                 |  6 ++-
- tools/agent-player/README.md               |  2 +
- tools/agent-player/run.py                  | 23 +++++++---
- tools/agent-player/tests/test_interrupt.py | 67 ++++++++++++++++++++++++++++++
- 7 files changed, 97 insertions(+), 9 deletions(-)

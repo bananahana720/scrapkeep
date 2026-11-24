@@ -1,9 +1,0 @@
-# Section 9 decisions and reconciliation
-
-- No new roster, culture, item, region or companion name was introduced. G01 depicts pilot identities in cropped cockpits, so it does not choose a full A/B/C mech. Its two bands are independent; the caption explicitly prevents home-region assignments.
-- Nomenclature clash resolved in glossary: Brace Shoe is the older catalogue name; the current lightning guide uses Brace/Braces/Brace parts. This is a prototype family reference, not a final item-name selection. Shear, Shear parts and plural Shear Linkages share the singular Shear Linkage entry. Shear Buddy includes priming companion/Shear companion aliases.
-- Grand Pruner remains the proposed complete boss. Pruner arm has a separate implemented-mechanism entry. Echo is the named prototype item; lowercase acoustic/action recurrence is not automatically that item.
-- Short forms Brindle, Fleet, Enclaves, Spillway and Iron Orchard are recorded in their canonical entries. Scrapkeep is a casing variant of SCRAPKEEP. No Pip or Vane entry was added because neither name occurs in this edition's main prose.
-- G01 is visually coherent enough for review: all ten readable keys, distinct faces and five distinct biomes. Its fur and cockpit texture lean more naturalistic than the chunky rendering direction. Glass is subtle in the cropped portraits, so later model enclosure still requires its own check. No regeneration used; cohesion reviewer owns any permitted change.
-- Read final Section 05 and Section 08 drafts before completion; their nouns are covered, including WebAudio. Full frozen lock also checked for franchise names. Source appendix checked for all park names and Tularosa Basin.
-- Actual image copied byte for byte from built-in generated output. Prompt contains literal approved lock. PNG header confirms 1536 by 1024. No code, live workspace, implementation, paid service or persistent memory changes.

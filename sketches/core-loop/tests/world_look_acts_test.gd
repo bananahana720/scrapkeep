@@ -16,8 +16,15 @@ extends SceneTree
 #   - Dam Night Shift (W46-13): its row is picked only by its look id, sits ACT_MIN_DE or more from each of the three acts,
 #     keeps clear of HAZARD and of the Kindness purple; every floodlight mast passes the park prop placement rules as a
 #     tall prop; the night's dressing carries no collider, and its lights stay in the tree, dark, when the day returns.
+#   - World 1's districts (E3-03; WAYFINDING.md section 2.2): the Dam's three and the Flume's three grades exist, each
+#     pair of a park's districts sits DISTRICT_MIN_DE or more apart, each stays within ACT_MIN_DE of its own act and keeps
+#     its act's shade, and none uses HAZARD, the live mint or the Kindness purple. district_at reads a park's district
+#     rows; district_look leaves the stage look alone with no district, never changes it, and under the Night Shift moves
+#     only the exposure and saturation. The district node enters the ball's grade, blends to the next, holds under an
+#     arena's row and makes no light.
 # Planted, each must fail its own judge: an act copied from another, a glow set to HAZARD, the old cross-fade ranges,
-# two levels whole over one band, a night copied from the dawn, a mast stood on a ride line, a mark with the switch off.
+# two levels whole over one band, a night copied from the dawn, a mast stood on a ride line, a mark with the switch off,
+# a district copied from another, a district glow set to HAZARD, a district ambient set to the live mint.
 # Evidence limit: headless values. The look is judged from the Mac stills and the sheet on the W46-03 pull request.
 
 const T := preload("res://tests/support/t.gd")
@@ -40,7 +47,24 @@ const ACT_MIN_DE := 12.0
 const HAZARD_MIN_DE := 25.0
 const ACT_KEYS := ["sun_color", "ambient", "fog_tint"]
 const GRADE_KEYS := ["top", "horizon", "glow"]
-const EXPECTED_CHECKS := 51
+# Mean CIE76 over the district keys between two districts of one park: a step a player sees across a border without
+# reading it as another act (under ACT_MIN_DE; ours, inferred). The live mint keeps colour_cvd_test's 20 floor.
+const DISTRICT_MIN_DE := 8.0
+const LIVE_MIN_DE := 20.0
+const DISTRICT_KEYS := ["ambient", "fog_tint"]
+const DISTRICTS := {"dam": ["dam_intake", "dam_apron", "dam_pump"], "flume": ["flume_weir", "flume_trestle", "flume_headhouse"]}
+# wayfinding_rows_test.gd's district rows for the two parks: abutting rects [x, z, w, h].
+const DAM_ROWS := [
+	{"id": "intake", "name": "Intake Catwalks", "rect": [-760, -780, 1520, 580], "grade": "dam_intake"},
+	{"id": "apron", "name": "Spillway Apron", "rect": [-760, -200, 1520, 400], "grade": "dam_apron"},
+	{"id": "pump_yard", "name": "Sunken Pump Yard", "rect": [-760, 200, 1520, 560], "grade": "dam_pump"},
+]
+const FLUME_ROWS := [
+	{"id": "weir", "name": "Weir Bobsled", "rect": [-780, -780, 1300, 500], "grade": "flume_weir"},
+	{"id": "trestle", "name": "Trestle Span", "rect": [-780, -280, 1300, 500], "grade": "flume_trestle"},
+	{"id": "headhouse", "name": "Headhouse Overlook", "rect": [-780, 220, 1300, 560], "grade": "flume_headhouse"},
+]
+const EXPECTED_CHECKS := 83
 # sha256 of var_to_str(WorldLook.stage_look(stage, world, map)) at 1266fec1, the wave's base, for every world 2 and 3
 # stage bare, with its stage map and with the park of its time. Re-pin only with a ruling that unparks the world.
 const PARKED_PINS := {
@@ -75,6 +99,9 @@ func _run() -> void:
 	_night()
 	_night_masts()
 	await _night_dress()
+	_districts()
+	_district_api()
+	await _district_node()
 	_t.eq("every check ran", _t.checks, EXPECTED_CHECKS)
 	quit(_t.verdict())
 
@@ -423,3 +450,214 @@ func _night_dress() -> void:
 	_t.check("the day takes the dressing away but keeps every night light, dark", holder.get_node_or_null(WorldLook.NightShift.DRESS) == null
 		and kept.size() == ids.size() and kept.all(func(id): return not (instance_from_id(id) as Light3D).visible))
 	host.free()
+
+
+static func district_colours(look: Dictionary) -> Array:
+	var out := []
+	for key in DISTRICT_KEYS:
+		out.append(look[key])
+	for key in GRADE_KEYS:
+		out.append(look.grade[key])
+	return out
+
+
+static func district_distance(a: Dictionary, b: Dictionary) -> float:
+	var ca := district_colours(a)
+	var cb := district_colours(b)
+	var sum := 0.0
+	for i in ca.size():
+		sum += Bars.cie76(ca[i], cb[i])
+	return sum / ca.size()
+
+
+# Every colour of a look that breaks the colour law: within HAZARD_MIN_DE of HAZARD, within LIVE_MIN_DE of the live mint,
+# or the Kindness purple (hue 300 to 330, or within 20 of KINDNESS).
+static func law_faults(look: Dictionary) -> Array:
+	var out := []
+	for c: Color in colours_in(look, []):
+		var solid := Color(c, 1.0)
+		if Bars.cie76(solid, Palette.HAZARD) < HAZARD_MIN_DE:
+			out.append("%s near HAZARD" % c.to_html(false))
+		if Bars.cie76(solid, Palette.live()) < LIVE_MIN_DE:
+			out.append("%s near the live mint" % c.to_html(false))
+		if Bars.cie76(solid, Palette.KINDNESS) < 20.0 or (c.s > 0.2 and c.h * 360.0 >= 300.0 and c.h * 360.0 <= 330.0):
+			out.append("%s is the Kindness purple" % c.to_html(false))
+	return out
+
+
+static func district_looks() -> Dictionary:
+	var looks := acts()
+	var out := {}
+	for park in DISTRICTS:
+		for id: String in DISTRICTS[park]:
+			out[id] = WorldLook.district_look(looks[park], id)
+	return out
+
+
+func _districts() -> void:
+	var looks := acts()
+	var graded := district_looks()
+	var all_ids: Array = DISTRICTS.dam + DISTRICTS.flume
+	var times := all_ids.map(func(id: String) -> String: return String(WorldLook.DISTRICT_GRADES.get(id, {}).get("time", "")))
+	_t.check("the six World 1 district grades exist: the Dam's three at dawn, the Flume's three at morning",
+		WorldLook.DISTRICT_GRADES.size() == 6 and times == ["dawn", "dawn", "dawn", "morning", "morning", "morning"]
+		and all_ids.all(func(id: String) -> bool: return graded[id].get("district") == id), str(times))
+	for park in DISTRICTS:
+		var ids: Array = DISTRICTS[park]
+		for i in ids.size():
+			for j in range(i + 1, ids.size()):
+				var d := district_distance(graded[ids[i]], graded[ids[j]])
+				print("district distance %s-%s: %.1f" % [ids[i], ids[j], d])
+				_t.check("%s and %s differ by %.0f or more (mean CIE76)" % [ids[i], ids[j], DISTRICT_MIN_DE], d >= DISTRICT_MIN_DE, "%.1f" % d)
+	for park in DISTRICTS:
+		var other := "flume" if park == "dam" else "dam"
+		for id: String in DISTRICTS[park]:
+			var own := act_distance(graded[id], looks[park])
+			var away := act_distance(graded[id], looks[other])
+			print("district %s: %.1f from its act, %.1f from the %s" % [id, own, away, other])
+			_t.check("%s stays its act's: within %.0f of the %s, nearer it than the %s, the same sun" % [id, ACT_MIN_DE, park, other],
+				own < ACT_MIN_DE and own < away and graded[id].sun_color == looks[park].sun_color
+				and graded[id].sun_rotation == looks[park].sun_rotation and graded[id].sun_energy == looks[park].sun_energy,
+				"%.1f own, %.1f away" % [own, away])
+	_t.check("every Dam district keeps the dawn shade violet-indigo: its ambient leans blue over red and green",
+		DISTRICTS.dam.all(func(id: String) -> bool:
+			var a: Color = graded[id].ambient
+			return a.b > a.r and a.r >= a.g))
+	_t.check("every Flume district keeps the ambient turquoise: green and blue over red",
+		DISTRICTS.flume.all(func(id: String) -> bool:
+			var a: Color = graded[id].ambient
+			return a.g > a.r and a.b > a.r))
+	var faults := {}
+	for id in all_ids:
+		var found := law_faults(graded[id])
+		if not found.is_empty():
+			faults[id] = found
+	_t.check("no district uses a colour within %.0f of HAZARD, within %.0f of the live mint, or the Kindness purple" % [HAZARD_MIN_DE, LIVE_MIN_DE],
+		faults.is_empty(), str(faults))
+	var copied := WorldLook.district_look(looks.dam, "dam_apron")
+	_t.check("planted: a district given another's grade fails the separation", district_distance(copied, graded.dam_apron) < DISTRICT_MIN_DE)
+	var hot: Dictionary = graded.flume_trestle.duplicate(true)
+	hot.grade.glow = Palette.HAZARD
+	_t.check("planted: a district glow set to HAZARD fails the colour law", law_faults(hot).any(func(line: String) -> bool: return line.ends_with("near HAZARD")))
+	var minted: Dictionary = graded.flume_weir.duplicate(true)
+	minted.ambient = Palette.live()
+	_t.check("planted: a district ambient set to the live mint fails the colour law",
+		law_faults(minted).any(func(line: String) -> bool: return line.ends_with("near the live mint")))
+
+
+func _district_api() -> void:
+	var looks := acts()
+	var dam: Dictionary = looks.dam
+	var before := var_to_str(dam)
+	var none := WorldLook.district_look(dam, "")
+	var unknown := WorldLook.district_look(dam, "no_such_district")
+	var foreign := WorldLook.district_look(dam, "flume_weir")
+	_t.check("no district, an unknown one or another act's leaves the stage look itself, with no district key",
+		is_same(none, dam) and is_same(unknown, dam) and is_same(foreign, dam) and not dam.has("district"))
+	var graded := WorldLook.district_look(dam, "dam_pump")
+	var spec: Dictionary = WorldLook.DISTRICT_GRADES.dam_pump
+	_t.check("a district lays its grade over the stage look and changes nothing of the look it was given",
+		var_to_str(dam) == before and graded.ambient == spec.ambient and graded.grade.top == spec.grade.top
+		and graded.grade.recolor == dam.grade.recolor and is_equal_approx(graded.exposure, dam.exposure + spec.exposure_add)
+		and dam.grade.top != spec.grade.top)
+	var stage := StageDefs.first_of(1)
+	var night := WorldLook.stage_look(stage, 1, String(StageDefs.of(stage).get("map", "")), {}, ShiftVariants.NIGHT_LOOK_ID)
+	var night_pump := WorldLook.district_look(night, "dam_pump")
+	var kept: bool = colours_in(night, []) == colours_in(night_pump, []) and night_pump.grade == night.grade
+	_t.check("under the Night Shift a district keeps every night colour and steps only the exposure and saturation",
+		kept and is_equal_approx(night_pump.exposure, night.exposure + spec.exposure_add)
+		and is_equal_approx(night_pump.saturation, night.saturation + spec.saturation_add) and night_pump.floods == night.floods)
+	var resolved := []
+	for rows: Array in [DAM_ROWS, FLUME_ROWS]:
+		for row: Dictionary in rows:
+			var r: Array = row.rect
+			var centre := Vector3(r[0] + r[2] * 0.5, 40.0, r[1] + r[3] * 0.5)
+			resolved.append(WorldLook.district_at({"district_rows": rows}, centre) == row.grade)
+	_t.check("district_at finds each of the six districts from a point inside it", resolved.size() == 6 and resolved.all(func(ok: bool) -> bool: return ok),
+		str(resolved))
+	var dam_park := {"district_rows": DAM_ROWS}
+	_t.check("a point on a shared border belongs to one district: the one it opens", WorldLook.district_at(dam_park, Vector3(0.0, 0.0, -200.0)) == "dam_apron"
+		and WorldLook.district_at(dam_park, Vector3(0.0, 0.0, -200.001)) == "dam_intake")
+	_t.check("outside every district, and in a park with none, district_at is empty", WorldLook.district_at(dam_park, Vector3(900.0, 0.0, 0.0)) == ""
+		and WorldLook.district_at(dam_park, Vector3(0.0, 0.0, 800.0)) == "" and WorldLook.district_at({}, Vector3.ZERO) == ""
+		and WorldLook.district_at(park_file("park_pit"), Vector3.ZERO) == "")
+
+
+# A park file as World ships it (read-only).
+static func park_file(map: String) -> Dictionary:
+	var file := FileAccess.open(WorldLook.PARK_DIR + map + ".json", FileAccess.READ)
+	var data = JSON.parse_string(file.get_as_text()) if file != null else null
+	return data if data is Dictionary else {}
+
+
+class MovingBall:
+	var at := Vector3.ZERO
+	func shown_position() -> Vector3:
+		return at
+
+
+class FakeCtx:
+	var terrain
+	var player
+	var root = null
+
+
+func _district_node() -> void:
+	const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+	var host := Node3D.new()
+	var stage := Node3D.new()
+	host.add_child(stage)
+	root.add_child(host)
+	var terrain := FlatTerrain.new()
+	var env: Environment = terrain.environment
+	var ball := MovingBall.new()
+	var ctx := FakeCtx.new()
+	ctx.terrain = terrain
+	ctx.player = ball
+	var base: Dictionary = acts().dam
+	GraphicsPreset.enter_world(stage, env, base)
+	var holder := stage.get_node(WorldLook.NODE)
+	WorldLook.DistrictGrade.attach(stage, {}, base, ctx)
+	_t.check("a park with no districts gets no district node", holder.get_node_or_null(WorldLook.DistrictGrade.NAME) == null)
+	WorldLook.DistrictGrade.attach(stage, {"district_rows": DAM_ROWS}, base, ctx)
+	var grade := holder.get_node_or_null(WorldLook.DistrictGrade.NAME) as WorldLook.DistrictGrade
+	ball.at = Vector3(0.0, 0.0, -500.0)
+	if grade != null:
+		grade.step()
+	var intake: Dictionary = WorldLook.DISTRICT_GRADES.dam_intake
+	var pump: Dictionary = WorldLook.DISTRICT_GRADES.dam_pump
+	_t.check("the first read enters the ball's district at once", grade != null and grade.grade_id() == "dam_intake"
+		and env.ambient_light_color == intake.ambient)
+	ball.at = Vector3(0.0, 0.0, 500.0)
+	var steps := int(ceil(WorldLook.DISTRICT_BLEND_S / WorldLook.DISTRICT_EVERY_S))
+	var midway := false
+	for i in steps:
+		grade.step()
+		if i == 0:
+			midway = env.ambient_light_color != intake.ambient and env.ambient_light_color != pump.ambient
+	_t.check("a new district blends in over the blend time and lands on its own grade", midway and grade.grade_id() == "dam_pump"
+		and env.ambient_light_color == pump.ambient and is_equal_approx(env.tonemap_exposure, base.exposure + pump.exposure_add))
+	var arena := Node3D.new()
+	host.add_child(arena)
+	GraphicsPreset.enter_world(arena, env, WorldLook.arena_look("brindle"), "arena")
+	var bowl: Color = env.ambient_light_color
+	ball.at = Vector3(0.0, 0.0, 0.0)
+	for i in steps:
+		grade.step()
+	_t.check("under an arena's row the district holds: the arena's light stays on", env.ambient_light_color == bowl and bowl != pump.ambient)
+	arena.free()
+	for i in steps + 1:
+		grade.step()
+	var apron: Dictionary = WorldLook.DISTRICT_GRADES.dam_apron
+	_t.check("when the arena leaves, the district follows the ball again", grade.grade_id() == "dam_apron" and env.ambient_light_color == apron.ambient)
+	var night := WorldLook.stage_look(1, 1, "park_dam", {}, ShiftVariants.NIGHT_LOOK_ID)
+	GraphicsPreset.enter_world(stage, env, night)
+	WorldLook.DistrictGrade.attach(stage, {"district_rows": DAM_ROWS}, night, ctx)
+	grade.step()
+	_t.check("under the Night Shift the district keeps the night's ambient", env.ambient_light_color == night.ambient
+		and is_equal_approx(env.tonemap_exposure, night.exposure + apron.exposure_add))
+	var lights := host.find_children("*", "Light3D", true, false)
+	_t.check("the district grade makes no light", lights.is_empty(), str(lights))
+	GraphicsPreset.clear_lighting(env, "world")
+	host.free()
+	await process_frame

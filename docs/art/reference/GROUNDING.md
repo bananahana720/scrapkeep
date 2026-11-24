@@ -2,7 +2,7 @@
 
 Every gameplay idea on the approved boards, traced to the game (22 Oct 2026, wave 18). Andrew's rule: what the boards suggest for UI, mechanics, mobs, areas, landforms, map flow, cycles and AI must be grounded in something that exists or is on the roadmap. Ten Sonnet auditors read each set's notes and images and checked the repo at stage `b0e64a40`, and a second agent per set re-checked every citation.
 
-**How to use it:** before building from a board, find its rows here. *In the game* and *Planned* rows say where the idea already lives. *Conflict* rows say what not to copy and why. *Not grounded* rows are either a roadmap card (see [ROADMAP](../../../project-guide/coord/ROADMAP.md)) or a cut. *Look only* rows carry no gameplay claim.
+**How to use it:** before building from a board, find its rows here. *In the game* and *Planned* rows say where the idea already lives. *Conflict* rows say what not to copy and why. *Not grounded* rows are either a roadmap card (see [ROADMAP](../../../project-guide/handoff/ROADMAP.md)) or a cut. *Look only* rows carry no gameplay claim.
 
 Note: the stage checked did not yet hold the 22 Oct lore and era rulings in DECISIONS section 10, so conflicts citing their absence are resolved by those rulings (now on the stage at `cf217e11`).
 
@@ -439,7 +439,7 @@ Re-audited 22 Oct on the nine redrawn pilot boards, at main 51f2a21b. Correction
 
 ## boss_weak_points
 
-Made on 22 Oct from Challenge's approved U4 design (board #241 comment 6330969251, ruling 6331005392), so every gameplay idea on it is planned by U4. Build from it, plus its [SET-BRIEF](boss_weak_points/SET-BRIEF.md), which names the members, the shut, open and broken states and which lane owns each.
+Made on 22 Oct from Challenge's approved U4 design (board #241 comment 6330969251, ruling 6331005392), so every gameplay idea on it is planned by U4. Build from it, plus its historical `boss_weak_points/SET-BRIEF.md` (in git history), which names the members, the shut, open and broken states and which lane owns each.
 
 | Board | Idea | Area | Status | Evidence | What grounds it |
 |---|---|---|---|---|---|

@@ -1,2 +1,0 @@
-integrated 725dba13208d628999ef379f89a96d5a94a4ce7a (no-ff merge of 73fd7bccbd028340be10d2045ef2b76b870dc745 into main at 1975966)
-native:smoke exit 0, 12 PASS lines; check:docs exit 0; check:project exit 0; check:scope exit 0

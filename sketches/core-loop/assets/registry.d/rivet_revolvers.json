@@ -1,0 +1,15 @@
+{
+ "assets": [
+  {
+   "path": "res://assets/models/world_one/rivet_revolvers.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd WEAPONS, mount_weapon (under the shell's WeaponRing)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/rivet_revolvers.py",
+    "helper": "tools/blender/polish.py (bevel, bake), tools/blender/shell_base.py RING_BAND",
+    "concept": "artifacts/local/w46-concept-art/01-rivet-twin-revolvers.png, corrected by the wave 46 3D blueprint section 2.2 (scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md)"
+   }
+  }
+ ]
+}

@@ -1,8 +1,0 @@
-worktree /home/andrew/Projects/scrapkeep-wt-TH-19
-head d5c158a25025d3d44b0f8516a5ad532fa22c4b47
-branch wt/TH-19
-parent bb97c4111d1e7b2dd40cae575eccde17878b07c5
-status-porcelain-lines 0
-diff-names:
-A	docs/tech/sections/TH-19-asset-import-export.md
-commits-since-base 1

@@ -1,2 +1,0 @@
-appendix links checked 77 failures 0
-link check exit=0

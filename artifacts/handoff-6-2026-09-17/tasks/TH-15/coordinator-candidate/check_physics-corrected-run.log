@@ -1,4 +1,0 @@
-check_physics pass: {"required_headings": 7, "modules_named": 7, "commands_checked": 17, "edge_uses_checked": 24, "d02_rows": 4, "query_rows": 16, "class_rows": 22, "parameter_rows": 25, "durable_fields_scanned": 70, "fixtures": 13, "fixture_tick_order_checks": 9, "walk_steps": 20, "traced_case_outcomes": 4, "stated_hashes": 15}
-  control 'unlisted command': noticed
-  control 'edge endpoints that do not match': noticed
-  control 'attack query before movement resolution in a fixture': noticed

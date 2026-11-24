@@ -1,5 +1,0 @@
-check-scope EXIT=0
-check-docs EXIT=0
-check-project EXIT=0
-check-drift EXIT=0
-paper-check EXIT=0

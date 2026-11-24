@@ -205,6 +205,44 @@ const LOOK_ROWS := {
 				"color": Palette.SODIUM, "energy": 4.0, "range": 260.0, "angle": 24.0}},
 		"seams": {"energy": 6.0}},
 }
+# World 1's districts (design-v3/WAYFINDING.md section 2.2, E3-03): each park's three districts take their own row of the
+# picture's grade, so the three differ at a glance without a sign. A row leans its act's ambient, fog lean and sky
+# zenith, horizon and glow, and steps the exposure and saturation; it keeps the act's sun, so shadows never swing at a
+# border. A row applies only over its own act (`time`), so the Dam's stay dawn and the Flume's stay morning. Under a
+# shift variant's look (LOOK_ROWS) only the steps apply, so the Night Shift keeps its own colours. Every colour stays
+# 25 or more (CIE76) from HAZARD and 20 or more from the live mint, and none is in the Kindness purple's hue 300 to 330
+# (ruling ci); tests/world_look_acts_test.gd holds each pair of a park's districts 8 or more apart and each within 12
+# of its act. The district a ball is in is a park's `district_rows` (park_schema.gd), read by DistrictGrade below.
+const DISTRICT_GRADES := {
+	# High steel catwalks over the intake: the coolest, bluest shade and the palest sky.
+	"dam_intake": {"time": "dawn", "ambient": Color("a8a6e6"), "fog_tint": Color("d8c8dc"),
+		"grade": {"top": Color("7088d8"), "horizon": Color("ffcaa8"), "glow": Color("a8704a")},
+		"exposure_add": 0.03, "saturation_add": 0.0},
+	# The open apron under the spill: the low sun's apricot leans furthest in.
+	"dam_apron": {"time": "dawn", "ambient": Color("b2a6d6"), "fog_tint": Color("f2c2b4"),
+		"grade": {"top": Color("908ac0"), "horizon": Color("ffb284"), "glow": Color("c87238")},
+		"exposure_add": 0.05, "saturation_add": 0.05},
+	# The sunken pump yard: deep canyon shade, a duller sky, a little darker.
+	"dam_pump": {"time": "dawn", "ambient": Color("9292c8"), "fog_tint": Color("c6b8ca"),
+		"grade": {"top": Color("6872aa"), "horizon": Color("f2ae92"), "glow": Color("925a3a")},
+		"exposure_add": -0.05, "saturation_add": -0.05},
+	# The weir's chute: spray-blue water light, leaning away from the mint.
+	"flume_weir": {"time": "morning", "ambient": Color("92c6da"), "fog_tint": Color("bedcea"),
+		"grade": {"top": Color("c6eef6"), "horizon": Color("e6d0cc"), "glow": Color("261c18")},
+		"exposure_add": 0.0, "saturation_add": 0.05},
+	# The trestle's timber over open air: the sunlit terracotta's warm bounce.
+	"flume_trestle": {"time": "morning", "ambient": Color("b4d4cc"), "fog_tint": Color("e2ecdc"),
+		"grade": {"top": Color("dcf2ea"), "horizon": Color("f8ccb4"), "glow": Color("48280e")},
+		"exposure_add": 0.02, "saturation_add": 0.0},
+	# The headhouse crest: the clearest, deepest blue sky and a gold horizon.
+	"flume_headhouse": {"time": "morning", "ambient": Color("aad6e2"), "fog_tint": Color("e4f2ee"),
+		"grade": {"top": Color("a8d8f0"), "horizon": Color("fae0c0"), "glow": Color("3c2a10")},
+		"exposure_add": 0.05, "saturation_add": 0.08},
+}
+# The ball's district is read this often, and a new district's grade blends in over DISTRICT_BLEND_S, one step a read
+# (about 2 CIE76 a step), so a border never pops the whole frame.
+const DISTRICT_EVERY_S := 0.25
+const DISTRICT_BLEND_S := 1.5
 # The Mind's consumed purple under the day's light (card: "Should the Mind's purple stay purple at
 # sunset?", not yet asked; this is the recommended default). True: a consumed surface holds hue 300
 # to 330 under every look, golden hour and dusk included, because it carries its own purple glow and
@@ -303,6 +341,39 @@ static func stage_look(stage: int, world: int, map := "", park_file := {}, look_
 		look["fog"] = {"density": float(look.fog.get("density", 0.0)), "color": variant.fog_color}
 		look["look_id"] = look_id
 	return look
+
+
+# A stage look with a district's grade (DISTRICT_GRADES) laid over it. base_look is never changed; "" or an unknown id,
+# or a district of another act, returns base_look itself. Under a shift variant's look only the exposure and saturation
+# steps apply.
+static func district_look(base_look: Dictionary, grade_id: String) -> Dictionary:
+	var spec: Dictionary = DISTRICT_GRADES.get(grade_id, {})
+	if spec.is_empty() or base_look.get("time", "") != spec.time:
+		return base_look
+	var look := base_look.duplicate()
+	look["exposure"] = float(base_look.get("exposure", 1.0)) + float(spec.exposure_add)
+	look["saturation"] = float(base_look.get("saturation", 1.0)) + float(spec.saturation_add)
+	look["district"] = grade_id
+	if look.has("look_id"):
+		return look
+	look["ambient"] = spec.ambient
+	look["fog_tint"] = spec.fog_tint
+	var sky: Dictionary = base_look.get("grade", {}).duplicate()
+	sky.merge(spec.grade, true)
+	look["grade"] = sky
+	return look
+
+
+# The grade of the park district (its `district_rows`, rect [x, z, w, h]) that holds pos, or "" outside them all.
+static func district_at(park_file: Dictionary, pos: Vector3) -> String:
+	return DistrictGrade.district_in(park_file.get("district_rows", []), pos)
+
+
+# The squall haze starts from the fog the row left on the environment, so it is recorded again whenever a row is entered.
+static func _record_fog(ctx) -> void:
+	var game = ctx.root if ctx != null else null
+	if game != null and game.get("world") != null and game.world.view != null:
+		game.world.view.record_fog()
 
 
 # The volumetric keys of a row: off unless the preset has air and the row has some.
@@ -420,12 +491,12 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	var GraphicsPreset := load("res://src/presentation/graphics_preset.gd")
 	var loaded = terrain.map_for(stage)
 	var look_id: String = ctx.flow.stage_look_id() if ctx.get("flow") != null else ""
-	var look := stage_look(stage, world, String(ctx.stages.of(stage).get("map", "")), loaded.park if loaded != null and "park" in loaded else {}, look_id)
+	var park: Dictionary = loaded.park if loaded != null and "park" in loaded else {}
+	var look := stage_look(stage, world, String(ctx.stages.of(stage).get("map", "")), park, look_id)
 	GraphicsPreset.enter_world(root, terrain.environment, look)
 	NightShift.enter(root, terrain, look, ctx.player)
-	var game = ctx.root
-	if game != null and game.get("world") != null and game.world.view != null:
-		game.world.view.record_fog()
+	_record_fog(ctx)
+	DistrictGrade.attach(root, park, look, ctx)
 	if look.has("lamps") and ctx.player != null:
 		var pool := LampPool.find(root)
 		if pool == null:
@@ -488,6 +559,129 @@ class LampPool extends Node3D:
 			_lights[i].visible = i < order.size()
 			if i < order.size():
 				_lights[i].global_position = order[i] + Vector3.DOWN * 1.5
+
+
+# The district grade of a park with `district_rows`: the stage's look with the ball's district laid over it (district_look),
+# entered on the stage's own "world" row, so it leaves with the stage and an arena or the camp still covers it. Only a park
+# with districts gets one. It reads the ball every DISTRICT_EVERY_S, blends a new district in a step a read, and holds
+# while another row covers the stage's (its ambient or exposure is no longer the one it entered), so it never lifts the
+# stage row over an arena's or the camp's. It makes no light and allocates nothing while the district stays the same.
+class DistrictGrade extends Node3D:
+	const NAME := "DistrictGrade"
+	const LOOK := "res://src/presentation/world_look.gd"
+
+	var _rows: Array = []
+	var _base: Dictionary = {}
+	var _ctx
+	var _look: GDScript
+	var _grade := ""
+	var _started := false
+	var _from: Dictionary = {}
+	var _to: Dictionary = {}
+	var _shown: Dictionary = {}
+	var _blend := 1.0
+	var _wait := 0.0
+
+	# Every stage entry (retry included): a park with districts gets its node, restarted on the stage's look; one
+	# without has none.
+	static func attach(stage_root: Node3D, park: Dictionary, look: Dictionary, ctx) -> void:
+		var holder := stage_root.get_node_or_null(NODE)
+		var grade := holder.get_node_or_null(NAME) as DistrictGrade if holder != null else null
+		var rows: Array = park.get("district_rows", [])
+		if rows.is_empty() or holder == null or ctx == null or ctx.player == null:
+			if grade != null:
+				holder.remove_child(grade)
+				grade.queue_free()
+			return
+		if grade == null:
+			grade = DistrictGrade.new()
+			grade.name = NAME
+			holder.add_child(grade)
+		grade.start(rows, look, ctx)
+
+	# The stage's look is the one entered: the first read snaps to the ball's district without a blend.
+	func start(rows: Array, look: Dictionary, ctx) -> void:
+		_rows = rows
+		_base = look
+		_ctx = ctx
+		_look = load(LOOK)
+		_shown = look
+		_from = look
+		_to = look
+		_grade = ""
+		_started = false
+		_blend = 1.0
+		_wait = 0.0
+		set_process(true)
+
+	# The grade the frame is showing or heading to; "" outside every district or before the first read.
+	func grade_id() -> String:
+		return _grade
+
+	func _process(delta: float) -> void:
+		_wait -= delta
+		if _wait > 0.0:
+			return
+		_wait = DISTRICT_EVERY_S
+		step()
+
+	# One read: follow the ball's district and take one blend step. Public so a headless test can drive it.
+	func step() -> void:
+		if not is_visible_in_tree() or _ctx == null or not is_instance_valid(_ctx.player):
+			return
+		var environment: Environment = _ctx.terrain.environment if _ctx.terrain != null else null
+		if environment == null or not _on_top(environment):
+			return
+		var grade := district_in(_rows, _ctx.player.shown_position())
+		if not _started:
+			_started = true
+			_grade = grade
+			_to = _look.district_look(_base, grade)
+			_blend = 1.0
+			_show(environment, _to)
+			return
+		if grade != _grade:
+			_grade = grade
+			_from = _shown
+			_to = _look.district_look(_base, grade)
+			_blend = 0.0
+		if _blend >= 1.0:
+			return
+		_blend = minf(1.0, _blend + DISTRICT_EVERY_S / DISTRICT_BLEND_S)
+		_show(environment, _to if _blend >= 1.0 else mix(_from, _to, _blend))
+
+	# The grade of the district row (rect [x, z, w, h]) that holds pos, or "". Allocates nothing.
+	static func district_in(rows: Array, pos: Vector3) -> String:
+		var at := Vector2(pos.x, pos.z)
+		for row in rows:
+			var r = row.get("rect") if row is Dictionary else null
+			if r is Array and r.size() == 4 and Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3])).has_point(at):
+				return String(row.get("grade", ""))
+		return ""
+
+	func _on_top(environment: Environment) -> bool:
+		return environment.ambient_light_color == _shown.ambient and is_equal_approx(environment.tonemap_exposure, float(_shown.exposure))
+
+	func _show(environment: Environment, look: Dictionary) -> void:
+		load("res://src/presentation/graphics_preset.gd").enter_world(get_parent().get_parent(), environment, look)
+		_shown = look
+		_look._record_fog(_ctx)
+
+	# b with its district keys (ambient, fog lean, sky zenith, horizon and glow, exposure, saturation) t of the way from a.
+	static func mix(a: Dictionary, b: Dictionary, t: float) -> Dictionary:
+		var look := b.duplicate()
+		look["ambient"] = (a.ambient as Color).lerp(b.ambient, t)
+		look["exposure"] = lerpf(float(a.exposure), float(b.exposure), t)
+		look["saturation"] = lerpf(float(a.saturation), float(b.saturation), t)
+		if a.has("fog_tint") and b.has("fog_tint"):
+			look["fog_tint"] = (a.fog_tint as Color).lerp(b.fog_tint, t)
+		var from_sky: Dictionary = a.get("grade", {})
+		var sky: Dictionary = b.get("grade", {}).duplicate()
+		for key in ["top", "horizon", "glow"]:
+			if from_sky.has(key) and sky.has(key):
+				sky[key] = (from_sky[key] as Color).lerp(sky[key], t)
+		look["grade"] = sky
+		return look
 
 
 # A shift variant's lit dressing (LOOK_ROWS floods and seams). The masts and their glow cards are meshes on the stage

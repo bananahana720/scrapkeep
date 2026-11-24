@@ -1,3 +1,0 @@
-# Concept and runtime stills stay out of git (about 80 MB). The originals live in the
-# Codex visual-development clone: artifacts/local/visual-development/workspace, same path.
-*.png

@@ -1,1 +1,0 @@
-{"accepted_in_phase":0,"assertions":12,"casts_committed":1,"ceiling_hit":"","engine":"4.7.2.stable.official.ed1daf0bf","exit_code":0,"failures":0,"focus_trigger":"notification","inject_fault":false,"intruder_process_calls":34,"intruder_timer_fired":1,"marker":"S0-04","menu_process_calls":151,"physics_calls":41,"placeholder_tick_rate":60,"rejected_out_of_phase":35,"tick":41}

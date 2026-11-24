@@ -1,6 +1,6 @@
 # Ambition map: every facet, waves 16 to 21
 
-Written 17 Oct 2026 against origin/main cf63e622 and trimmed 22 Oct. Owner: local coordinator. [AMBITION-BRIEF.md](../../../coord/AMBITION-BRIEF.md) builds on it. A reference for lanes, not instructions.
+Written 17 Oct 2026 against origin/main cf63e622 and trimmed 22 Oct. Owner: local coordinator (`project-guide/coord/AMBITION-BRIEF.md`, archived in git history, built on it). A reference for lanes, not instructions.
 
 Each facet has one hard target and the tool check plus independent reviewer that proves it.
 

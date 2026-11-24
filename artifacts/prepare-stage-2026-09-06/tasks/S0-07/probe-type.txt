@@ -1,5 +1,0 @@
-Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
-
-PROBE temp /home/andrew/Projects/scrapkeep-wt-S0-07/artifacts/local/tasks/S0-07/probe/run2/save.json.tmp-txn-0001 validate OK commit OK
-PROBE recover { "status": "committed", "aggregate": { "schema_version": 1, "content_revision": "c", "generation": 1, "transaction_id": "txn-0001", "profile": { "placeholder": true }, "run": { "checkpoint": { "next_entrance": "e" }, "lifecycle": { "revival_spent": false, "terminal": false } } }, "stale": [], "playable": true }
-exit=0

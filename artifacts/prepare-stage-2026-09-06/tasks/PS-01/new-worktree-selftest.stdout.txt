@@ -1,5 +1,0 @@
-Preparing worktree (new branch 'wt/ps01-selftest')
-worktree: /home/andrew/Projects/scrapkeep-wt-ps01-selftest
-branch: wt/ps01-selftest
-head: 1cfc2aee4d425fc75f619a57cf28069817b83640
-new-worktree: path already exists, refusing to touch it: /home/andrew/Projects/scrapkeep-wt-ps01-selftest

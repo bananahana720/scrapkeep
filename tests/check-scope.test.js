@@ -8,10 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cases = JSON.parse(
-  await readFile(
-    path.join(root, "tests/fixtures/check-scope/cases.json"),
-    "utf8",
-  ),
+  await readFile(path.join(root, "tests/fixtures/check-scope/cases.json"), "utf8"),
 );
 
 const basePackage = {
@@ -42,17 +39,12 @@ const contentCases = [
       "package.json": packageJson({
         scripts: {
           test: "node --test tests/*.test.js",
-          "check:drift": "node scripts/check-drift.mjs",
+          "check:docs": "node scripts/check-docs.mjs",
         },
       }),
     },
     scope: "tooling-no-build",
-    commands: [
-      "npm test",
-      "npm run check:docs",
-      "npm run check:project",
-      "npm run check:drift",
-    ],
+    commands: ["npm test", "npm run check:docs", "npm run check:project"],
     noBuild: true,
     status: 0,
   },
@@ -78,26 +70,17 @@ const contentCases = [
   },
   {
     name: "game and server sources beside tooling paths as build-requiring",
-    paths: [
-      "src/orchard/scene.js",
-      "server/index.js",
-      "vite.config.js",
-      "scripts/check-scope.mjs",
-    ],
+    paths: ["src/orchard/scene.js", "server/index.js", "vite.config.js", "scripts/check-scope.mjs"],
     scope: "mixed",
     commands: ["npm run verify"],
     noBuild: true,
     status: 1,
   },
   {
-    name: "documentation-only including the drift check",
-    paths: ["docs/tech/sections/HF-01.md", "README.md"],
+    name: "documentation-only",
+    paths: ["docs/design/loops.md", "README.md"],
     scope: "documentation-only",
-    commands: [
-      "npm run check:docs",
-      "npm run check:project",
-      "npm run check:drift",
-    ],
+    commands: ["npm run check:docs", "npm run check:project"],
     noBuild: true,
     status: 0,
   },
@@ -121,16 +104,7 @@ function git(cwd, ...args) {
 
 function commit(cwd, message) {
   git(cwd, "add", "-A");
-  git(
-    cwd,
-    "-c",
-    "commit.gpgsign=false",
-    "commit",
-    "-q",
-    "--allow-empty",
-    "-m",
-    message,
-  );
+  git(cwd, "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", message);
   return git(cwd, "rev-parse", "HEAD");
 }
 
@@ -164,20 +138,15 @@ for (const scenario of [...cases, ...contentCases])
       );
       assert.equal(child.error, undefined);
       assert.equal(child.status, scenario.status, child.stdout + child.stderr);
-      assert.match(
-        child.stdout,
-        new RegExp("^scope: " + scenario.scope + " ", "m"),
-      );
+      assert.match(child.stdout, new RegExp("^scope: " + scenario.scope + " ", "m"));
       for (const command of scenario.commands)
         assert.ok(
           child.stdout.includes(command),
           "expected command " + command + "\n" + child.stdout,
         );
       for (const file of scenario.paths) assert.ok(child.stdout.includes(file));
-      if (scenario.status === 1)
-        assert.match(child.stdout, /refused: --no-build was given/);
-      if (scenario.paths.length === 0)
-        assert.match(child.stdout, /none \(no changed paths\)/);
+      if (scenario.status === 1) assert.match(child.stdout, /refused: --no-build was given/);
+      if (scenario.paths.length === 0) assert.match(child.stdout, /none \(no changed paths\)/);
     } finally {
       await rm(temporary, { recursive: true, force: true });
     }

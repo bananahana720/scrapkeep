@@ -1,5 +1,6 @@
 extends SceneTree
 
+const ClassDef := preload("res://src/core/class_def.gd")
 const Meanings := preload("res://src/core/colour_meanings.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ShopTile := preload("res://src/ui/shop_tile.gd")
@@ -43,7 +44,7 @@ const CLOSE := {
 
 # One palette colour named for two facts: the same question with a difference of zero.
 const SHARED := {
-	"ARC": {"carrier": "the common reward is the one single-line frame on a tile (shop_tile.gd:35 RARITY, checked below) and a flat slab gate topper (reward_gates.gd:432, checked below); live is drawn on an enemy part, the rogue's weak point and the miniboss's core (rogue.gd:670, miniboss.gd:500), or a key, never in a frame or on a gate", "finding": ""},
+	"ARC": {"carrier": "the common reward is a flat slab gate topper (reward_gates.gd:432, checked below), and on a screen its frame is the one single-line frame on a tile and steel, not mint (shop_tile.gd RARITY, checked below); live is drawn on an enemy part, the rogue's weak point and the miniboss's core (rogue.gd:670, miniboss.gd:500), or a key, never in a frame or on a gate", "finding": ""},
 }
 
 var _t := T.new("colour_cvd_test")
@@ -72,6 +73,18 @@ func _initialize() -> void:
 	# other by shape, the common rung is the only single line, and the relic rung has bolt heads.
 	_t.eq("every reward rung has a frame", frame_faults(Meanings.REWARD_RUNGS.keys(), ShopTile.RARITY), [])
 	_t.check("the common reward is the one single-line frame", _single_lines(ShopTile.RARITY) == ["common"], str(_single_lines(ShopTile.RARITY)))
+	var common_de: float = closest(ShopTile.RARITY["common"]["color"], Palette.ARC)["de"]
+	_t.check("the common frame on a screen is told from mint, which is press now, by every eye", common_de >= FLOOR, "%.1f" % common_de)
+	_t.check("no reward frame on a screen is mint", ShopTile.RARITY.values().all(func(row): return row["color"] != Palette.ARC))
+	var sable_worst := INF
+	var sable_nearest := ""
+	for cname in colours:
+		var hit: Dictionary = closest(ClassDef.SABLE_SCREEN, palette[cname])
+		if float(hit["de"]) < sable_worst:
+			sable_worst = float(hit["de"])
+			sable_nearest = "%s (%s)" % [cname, hit["sight"]]
+	_t.check("Sable's screen accent is told from every meaning colour by every eye", sable_worst >= FLOOR,
+		"%.1f vs %s" % [sable_worst, sable_nearest])
 	_t.eq("the relic reward's frame carries bolt heads", ShopTile.RARITY["relic"]["notches"], "bolt")
 	# The boss's rim ticks: a brass-owned hazard carries an owner mark and a danger-owned one does not.
 	var boss_hazard := _hazard(Palette.BRASS)

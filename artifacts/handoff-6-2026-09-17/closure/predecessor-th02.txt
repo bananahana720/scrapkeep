@@ -1,5 +1,0 @@
-TH-02 predecessor reconciliation at integrated commit 9229f83ed87687e53710cc47bbbcb9810aecf52c
-TH-02 revision 1 done at EV-0233, accepted integrated identity ea11a9ea35561490c26a12a39e79aff59eac5b55.
-docs/tech/sections/TH-02-movement-camera-and-active-aim.md sha256 at this commit: f688e706ef86b4dd645ca20c425a7eba2e354a875cb794448faeb1ac335db711
-git merge-base --is-ancestor ea11a9ea35561490c26a12a39e79aff59eac5b55 HEAD: exit 0
-npm run check:drift at this commit: exit 0 (closure/check-drift.log); retained checks rerun at this commit: closure/paper-reruns.log

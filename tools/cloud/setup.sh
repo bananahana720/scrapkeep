@@ -3,7 +3,7 @@
 # Blender 5.2.2 LTS (the PyPI bpy wheel). Idempotent: a second run only checks hashes.
 # Two callers: paste this file into the cloud environment's Setup script field so the
 # environment cache keeps the toolchain, and .claude/hooks/session-start.sh, which runs it
-# every session as a backstop. Godot URLs and hashes match .github/workflows/native-smoke.yml.
+# every session as a backstop. Godot URLs and hashes match the pinned Godot 4.7.2 release.
 # The setup-script field fails the session on a non-zero exit, so a failure here only warns
 # unless SCRAPKEEP_SETUP_STRICT=1 (the hook sets it and reports the error).
 set -euo pipefail

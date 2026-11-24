@@ -1,9 +1,0 @@
-FAIL walk-no-durable-step-before-rl3:WG durable step 6 with no RL3 or objective-completion step
-FAIL dependency-hash:TH-06-encounters-waves-and-enemies.md TH-06-encounters-waves-and-enemies.md
-FAIL dependency-hash:HF-10-foundation-review.md HF-10-foundation-review.md
-FAIL dependency-hash:DISCOVERY.md DISCOVERY.md
-FAIL dependency-hash:simulation.js simulation.js
-FAIL dependency-hash:INCREMENT-01-lightning-playtest.md INCREMENT-01-lightning-playtest.md
-FAIL dependency-hash:LIGHTNING-VERIFICATION.md LIGHTNING-VERIFICATION.md
-FAIL negative:mid-level-settlement-caught 
-check_loot: 570 checks, 8 failures; 3 fact kinds, 28 interface rows, 7 modules, 40 commands, 16 edges, 31 parameter rows (16 sourced, 15 unset), 16 durable fields, 27 TH-08 rules, 5 walks with 47 steps, 18 stated hashes, 4 negative controls.

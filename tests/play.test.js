@@ -8,13 +8,8 @@ import { fileURLToPath } from "node:url";
 
 import {
   aggregateOutcomes,
-  buildTestMeasures,
   findOnPath,
-  flakeRate,
   jobLimit,
-  labRoute,
-  orderFor,
-  orderingNote,
   pickPrimary,
   testEntry,
   repeatCount,
@@ -28,7 +23,6 @@ import {
   waitForShot,
   waitUntil,
 } from "../scripts/play.mjs";
-import { wilson } from "../scripts/lab/stats.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -47,13 +41,10 @@ test("repeatCount reads --repeat= and defaults to a single run", () => {
   assert.equal(repeatCount(["test", "--repeat=nope"]), 1);
 });
 
-test("slugLabel makes a record.mjs-safe slug from arbitrary text", () => {
-  assert.equal(slugLabel("ball-lab"), "ball-lab");
-  assert.equal(slugLabel("Cable Bench!!"), "cable-bench");
-  assert.equal(
-    slugLabel("spillway-drop/spillway-drop"),
-    "spillway-drop-spillway-drop",
-  );
+test("slugLabel makes a safe slug from arbitrary text", () => {
+  assert.equal(slugLabel("core-loop"), "core-loop");
+  assert.equal(slugLabel("Core Loop!!"), "core-loop");
+  assert.equal(slugLabel("alpha/core-loop"), "alpha-core-loop");
   assert.equal(slugLabel(""), "run");
   assert.equal(slugLabel("---"), "run");
 });
@@ -75,83 +66,6 @@ test("aggregateOutcomes rows one check by label, tolerating a shorter repeat", (
   assert.deepEqual(byLabel.get("a boot"), ["pass", "fail"]);
 });
 
-test("flakeRate counts a check disagreeing with itself, not just fail-then-pass order", () => {
-  const agree = new Map([
-    ["a", ["pass", "pass", "pass"]],
-    ["b", ["fail", "fail"]],
-  ]);
-  const agreeCi = wilson(0, 2);
-  assert.deepEqual(flakeRate(agree), {
-    value: 0,
-    n: 2,
-    ci: [agreeCi.lower, agreeCi.upper],
-  });
-
-  const disagree = new Map([
-    ["a", ["pass", "pass"]],
-    ["b", ["pass", "fail"]],
-    ["c", ["fail", "pass", "pass"]],
-  ]);
-  const disagreeCi = wilson(2, 3);
-  assert.deepEqual(flakeRate(disagree), {
-    value: 2 / 3,
-    n: 3,
-    ci: [disagreeCi.lower, disagreeCi.upper],
-  });
-
-  assert.deepEqual(flakeRate(new Map()), { value: null, n: 0, ci: null });
-});
-
-test("buildTestMeasures reports suite_wall_s, suite_pass, engine_crash and skips flake_rate for a single run", () => {
-  const repeatResults = [
-    [
-      { label: "a import", ok: true, crashed: false },
-      { label: "a boot", ok: true, crashed: false },
-    ],
-  ];
-  const { measures, checks, flake, totalSeconds } = buildTestMeasures({
-    repeatResults,
-    repeatSeconds: [12.5],
-    repeatOks: [true],
-  });
-  assert.equal(totalSeconds, 12.5);
-  assert.deepEqual(measures.suite_wall_s, { value: 12.5, n: 1, ci: null });
-  assert.deepEqual(measures.suite_pass, { value: 0, n: 1, ci: null });
-  assert.deepEqual(measures.engine_crash, { value: 0, n: 2, ci: null });
-  assert.equal(flake, null);
-  assert.deepEqual(checks, [
-    { label: "a import", outcomes: ["pass"] },
-    { label: "a boot", outcomes: ["pass"] },
-  ]);
-});
-
-test("buildTestMeasures reports flake_rate and counts crashes across repeats", () => {
-  const repeatResults = [
-    [
-      { label: "a import", ok: true, crashed: false },
-      { label: "a boot", ok: true, crashed: true },
-    ],
-    [
-      { label: "a import", ok: true, crashed: false },
-      { label: "a boot", ok: false, crashed: false },
-    ],
-  ];
-  const { measures, flake } = buildTestMeasures({
-    repeatResults,
-    repeatSeconds: [10, 14],
-    repeatOks: [true, false],
-  });
-  const flakeCi = wilson(1, 2);
-  assert.deepEqual(measures.suite_wall_s, { value: 12, n: 2, ci: null });
-  assert.deepEqual(measures.suite_pass, { value: 1, n: 2, ci: null });
-  assert.deepEqual(measures.engine_crash, { value: 1, n: 4, ci: null });
-  assert.deepEqual(flake, {
-    value: 0.5,
-    n: 2,
-    ci: [flakeCi.lower, flakeCi.upper],
-  });
-});
-
 test("findOnPath resolves an executable from an injected PATH and returns null when absent", async (t) => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-path-"));
   t.after(() => rm(temporary, { recursive: true, force: true }));
@@ -163,7 +77,6 @@ test("findOnPath resolves an executable from an injected PATH and returns null w
   assert.equal(findOnPath("claude-open", { PATH: "/does/not/exist" }), null);
   assert.equal(findOnPath("claude-open", {}), null);
 
-  // A later PATH entry still resolves after an earlier one comes up empty.
   const empty = path.join(temporary, "empty-dir");
   await mkdir(empty);
   assert.equal(
@@ -173,45 +86,34 @@ test("findOnPath resolves an executable from an injected PATH and returns null w
     executable,
   );
 
-  // A file that exists but is not executable does not count as found.
   const inert = path.join(temporary, "not-executable");
   await writeFile(inert, "not a script\n");
   assert.equal(findOnPath("not-executable", { PATH: temporary }), null);
 });
 
 test("shotOutputPath defaults under artifacts/local/shots/, never /tmp (audit A8)", () => {
-  const entry = { sketch: "ball-lab" };
+  const entry = { sketch: "core-loop" };
   const noArg = shotOutputPath(root, entry, undefined);
   assert.equal(noArg.shotsDir, path.join(root, "artifacts", "local", "shots"));
-  assert.equal(noArg.out, path.join(noArg.shotsDir, "ball-lab-spawn.png"));
+  assert.equal(noArg.out, path.join(noArg.shotsDir, "core-loop-spawn.png"));
   assert.ok(!noArg.out.startsWith("/tmp"));
 
   const named = shotOutputPath(root, entry, "custom.png");
   assert.equal(named.out, path.join(named.shotsDir, "custom.png"));
 
-  const absolute = shotOutputPath(
-    root,
-    entry,
-    "/home/andrew/shots/explicit.png",
-  );
+  const absolute = shotOutputPath(root, entry, "/home/andrew/shots/explicit.png");
   assert.equal(absolute.out, "/home/andrew/shots/explicit.png");
 });
 
 test("shotOutputPath refuses an explicit output path under /tmp (N6)", () => {
-  const entry = { sketch: "ball-lab" };
-  assert.throws(
-    () => shotOutputPath(root, entry, "/tmp/explicit.png"),
-    /\/tmp/,
-  );
+  const entry = { sketch: "core-loop" };
+  assert.throws(() => shotOutputPath(root, entry, "/tmp/explicit.png"), /\/tmp/);
   assert.throws(() => shotOutputPath(root, entry, "/tmp"), /\/tmp/);
-  assert.throws(
-    () => shotOutputPath(root, entry, "/tmp/nested/dir/explicit.png"),
-    /\/tmp/,
-  );
+  assert.throws(() => shotOutputPath(root, entry, "/tmp/nested/dir/explicit.png"), /\/tmp/);
 });
 
 test("shotOutputPath resolves the path before refusing /tmp, so .. and //tmp cannot slip in (NB3)", () => {
-  const entry = { sketch: "ball-lab" };
+  const entry = { sketch: "core-loop" };
   const climbs = "../".repeat(root.split("/").length + 4);
   for (const hostile of [
     `${climbs}tmp/x.png`,
@@ -219,11 +121,7 @@ test("shotOutputPath resolves the path before refusing /tmp, so .. and //tmp can
     "/tmp/../tmp/x.png",
     "/home/../tmp/x.png",
   ]) {
-    assert.throws(
-      () => shotOutputPath(root, entry, hostile),
-      /may not be under/,
-      hostile,
-    );
+    assert.throws(() => shotOutputPath(root, entry, hostile), /may not be under/, hostile);
   }
   assert.throws(
     () =>
@@ -243,7 +141,7 @@ test("shotOutputPath resolves the path before refusing /tmp, so .. and //tmp can
 });
 
 test("shotOutputPath refuses os.tmpdir() by default", () => {
-  const entry = { sketch: "ball-lab" };
+  const entry = { sketch: "core-loop" };
   assert.throws(
     () => shotOutputPath(root, entry, path.join(os.tmpdir(), "shot.png")),
     /may not be under/,
@@ -258,11 +156,10 @@ test("the shot spawn carries a process timeout, and a hung child is killed (NB1)
   assert.equal(options.stdio, "inherit");
 
   const started = Date.now();
-  const hung = spawnSync(
-    process.execPath,
-    ["-e", "setTimeout(() => {}, 30000)"],
-    { ...shotSpawnOptions({ timeoutMs: 300 }), stdio: "ignore" },
-  );
+  const hung = spawnSync(process.execPath, ["-e", "setTimeout(() => {}, 30000)"], {
+    ...shotSpawnOptions({ timeoutMs: 300 }),
+    stdio: "ignore",
+  });
   assert.ok(Date.now() - started < 10_000, "killed well before it would exit");
   const failure = shotLaunchFailure(hung, 300);
   assert.equal(failure.code, 1);
@@ -282,110 +179,27 @@ test("the shot spawn carries a process timeout, and a hung child is killed (NB1)
   assert.match(missing.message, /could not start: spawn nope ENOENT/);
 });
 
-test("labRoute sends stats, gate and lab sub-verbs to their scripts", () => {
-  const lab = path.join(root, "scripts", "lab");
-  const exists = () => true;
-  assert.deepEqual(labRoute(["stats", "--layer", "program"], { exists }), {
-    script: path.join(lab, "stats-cli.mjs"),
-    args: ["--layer", "program"],
-  });
-  assert.deepEqual(labRoute(["gate", "r1", "--against", "base"], { exists }), {
-    script: path.join(lab, "gate.mjs"),
-    args: ["r1", "--against", "base"],
-  });
-  assert.deepEqual(
-    labRoute(["lab", "run", "downhill-run", "--arm", "scripted", "-n", "20"], {
-      exists,
-    }),
-    {
-      script: path.join(lab, "harness.mjs"),
-      args: ["downhill-run", "--arm", "scripted", "-n", "20"],
-    },
-  );
-  assert.deepEqual(labRoute(["lab", "program", "--since", "x"], { exists }), {
-    script: path.join(lab, "program.mjs"),
-    args: ["--since", "x"],
-  });
-  assert.equal(
-    labRoute(["lab", "verdicts"], { exists }).script,
-    path.join(lab, "verdicts.mjs"),
-  );
-  for (const words of [["lab"], ["lab", "bogus"]]) {
-    const routed = labRoute(words, { exists });
-    assert.equal(routed.exit, 2, words.join(" "));
-    assert.match(routed.error, /lab run\|program\|verdicts/);
-  }
-  const unbuilt = labRoute(["lab", "run", "x"], {
-    exists: (file) => !file.endsWith("harness.mjs"),
-  });
-  assert.equal(unbuilt.exit, 2);
-  assert.match(unbuilt.error, /harness\.mjs is not built yet/);
-  for (const words of [[], ["play", "x"], ["test"], ["mobility"], ["--all"]])
-    assert.equal(labRoute(words, { exists }), null, words.join(" "));
-});
-
-test("play.mjs routes lab verbs before it looks for Godot", async (t) => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-route-"));
-  t.after(() => rm(temporary, { recursive: true, force: true }));
-  const env = { ...process.env, GODOT_BIN: path.join(temporary, "no-godot") };
-  const run = (...args) =>
-    spawnSync(
-      process.execPath,
-      [path.join(root, "scripts/play.mjs"), ...args],
-      {
-        encoding: "utf8",
-        env,
-      },
-    );
-  const stats = run(
-    "stats",
-    "--layer",
-    "human",
-    "--runs",
-    path.join(temporary, "runs"),
-    "--artifacts",
-    path.join(temporary, "artifacts"),
-  );
-  assert.equal(stats.status, 0, stats.stdout + stats.stderr);
-  assert.match(stats.stdout, / agent_agreement /);
-  assert.match(stats.stdout, / unplayed_green /);
-  const gate = run("gate");
-  assert.equal(gate.status, 2, gate.stdout + gate.stderr);
-  assert.match(gate.stderr, /scripts\/lab\/gate\.mjs --pin/);
-  const lab = run("lab");
-  assert.equal(lab.status, 2);
-  assert.doesNotMatch(lab.stderr, /Godot binary not found/);
-  const sketch = run("list");
-  assert.equal(sketch.status, 2, "a sketch verb still needs Godot");
-  assert.match(sketch.stderr, /Godot binary not found/);
-});
-
-test("a worktree's primary sketch is the one its name contains, longest first, before any alphabetical fallback", () => {
-  const sketches = ["ball-lab", "cable-bench", "mobility-kit", "spillway-drop"].map((name) =>
+test("a worktree's primary sketch is the one its name contains, longest first, else core-loop", () => {
+  const sketches = ["arena", "core-loop", "sandbox-v2"].map((name) =>
     path.join("/wt", "sketches", name),
   );
-  // Andrew's `scrapkeep mobility-kit-v2` opened ball-lab: no sketch is named
-  // exactly after the tree, and the fallback took the first directory.
-  assert.equal(path.basename(pickPrimary(sketches, "mobility-kit-v2")), "mobility-kit");
-  assert.equal(path.basename(pickPrimary(sketches, "scrapkeep-lab-cable-bench")), "cable-bench");
-  assert.equal(path.basename(pickPrimary(sketches, "spillway-drop")), "spillway-drop");
+  assert.equal(path.basename(pickPrimary(sketches, "sandbox-v2-exp")), "sandbox-v2");
+  assert.equal(path.basename(pickPrimary(sketches, "arena")), "arena");
+  assert.equal(path.basename(pickPrimary(sketches, "other-branch")), "core-loop");
   assert.equal(
-    path.basename(pickPrimary([...sketches, path.join("/wt", "sketches", "cable")], "cable-bench-v2")),
-    "cable-bench",
+    path.basename(pickPrimary([path.join("/wt", "sketches", "arena")], "other-branch")),
+    "arena",
   );
-  // A tree that names no sketch keeps the old rule.
-  assert.equal(path.basename(pickPrimary(sketches, "playtesting-todos-curation")), "ball-lab");
-  assert.equal(path.basename(pickPrimary([sketches[0], sketches[3]], "proto-x")), "spillway-drop");
 });
 
 test("resolve still prefers an exact id, then a primary among prefix or substring hits", () => {
   const entries = [
-    { id: "ball-lab", sketch: "ball-lab", primary: true },
-    { id: "mobility-kit/ball-lab", sketch: "ball-lab", primary: false },
-    { id: "spillway-drop", sketch: "spillway-drop", primary: true },
+    { id: "core-loop", sketch: "core-loop", primary: true },
+    { id: "wt/core-loop", sketch: "core-loop", primary: false },
+    { id: "arena", sketch: "arena", primary: true },
   ];
-  assert.equal(resolve(entries, "ball-lab").entry.id, "ball-lab");
-  assert.equal(resolve(entries, "spill").entry.id, "spillway-drop");
+  assert.equal(resolve(entries, "core-loop").entry.id, "core-loop");
+  assert.equal(resolve(entries, "aren").entry.id, "arena");
   assert.deepEqual(resolve(entries, "nope"), { ambiguous: [] });
 });
 
@@ -444,7 +258,7 @@ test("waitForShot polls an injected exists() check rather than trusting an exit 
   assert.equal(checks, 2);
 });
 
-test("waitForShot times out when the file never appears, e.g. claude-open dispatched and returned early", async () => {
+test("waitForShot times out when the file never appears", async () => {
   let clock = 0;
   const ok = await waitForShot("/fake/out.png", {
     exists: () => false,
@@ -456,90 +270,7 @@ test("waitForShot times out when the file never appears, e.g. claude-open dispat
   assert.equal(ok, false);
 });
 
-// B1: createRun() has to run before the suite loop, or its start-of-run
-// source digest already includes whatever the suite changed, and JL-01's
-// mid-run source-change guard can never fire. A fake runOnce() that edits a
-// tracked file on its first call stands in for the suite without Godot.
-function git(repository, ...args) {
-  const result = spawnSync(
-    "git",
-    [
-      "-c",
-      "user.name=Lab Test",
-      "-c",
-      "user.email=lab@example.invalid",
-      "-c",
-      "commit.gpgsign=false",
-      ...args,
-    ],
-    { cwd: repository, encoding: "utf8" },
-  );
-  assert.equal(result.status, 0, result.stderr);
-  return result.stdout.trim();
-}
-
-async function repoFixture(t) {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-play-"));
-  t.after(() => rm(temporary, { recursive: true, force: true }));
-  const repository = path.join(temporary, "repository");
-  const runsRoot = path.join(temporary, "runs");
-  await mkdir(path.join(repository, "src"), { recursive: true });
-  git(repository, "init", "-q", "-b", "lab");
-  await writeFile(path.join(repository, "src/a.txt"), "before\n");
-  git(repository, "add", ".");
-  git(repository, "commit", "-q", "-m", "fixture");
-  return { repository, runsRoot };
-}
-
-test("runTestSuite calls createRun before the loop, so a source edit during the run is caught (B1)", async (t) => {
-  const { repository, runsRoot } = await repoFixture(t);
-  const before = Date.now();
-
-  let calls = 0;
-  let editedAt = null;
-  const runOnce = async () => {
-    calls += 1;
-    if (calls === 1) {
-      // The "suite work": if createRun() ran after this instead of before,
-      // its start digest would already include this edit and the mismatch
-      // could never be detected.
-      await writeFile(path.join(repository, "src/a.txt"), "during\n");
-      editedAt = Date.now();
-    }
-    return {
-      ok: true,
-      results: [{ label: "check", ok: true, crashed: false }],
-    };
-  };
-
-  const { record, overallOk, totalSeconds } = await runTestSuite({
-    targets: [],
-    limit: 1,
-    repeats: 1,
-    label: "fixture",
-    runOnce,
-    createRunOptions: {
-      repository,
-      root: runsRoot,
-      sources: ["src"],
-    },
-  });
-  const after = Date.now();
-
-  assert.equal(overallOk, true);
-  assert.equal(typeof totalSeconds, "number");
-  // started_at falls inside the call window and, decisively, no later than
-  // the edit the "suite work" made after createRun() had already run.
-  assert.ok(Date.parse(record.started_at) >= before);
-  assert.ok(Date.parse(record.started_at) <= after);
-  assert.ok(Date.parse(record.started_at) <= editedAt);
-  assert.equal(record.result, "inconclusive");
-  assert.equal(record.provenance.sources.matched, false);
-  assert.deepEqual(record.provenance.sources.changed, ["src/a.txt"]);
-});
-
-test("runTestSuite writes suite_wall_s/suite_pass/engine_crash and per-check outcomes in config (DoD 1)", async (t) => {
-  const { repository, runsRoot } = await repoFixture(t);
+test("runTestSuite aggregates per-check outcomes across repeats", async () => {
   const runOnce = async () => ({
     ok: true,
     results: [
@@ -548,42 +279,27 @@ test("runTestSuite writes suite_wall_s/suite_pass/engine_crash and per-check out
     ],
   });
 
-  const { record } = await runTestSuite({
+  const { overallOk, checks, repeatSeconds } = await runTestSuite({
     targets: [],
     limit: 1,
     repeats: 2,
-    label: "fixture",
     runOnce,
-    createRunOptions: {
-      repository,
-      root: runsRoot,
-      sources: ["src"],
-      config: { target: "fixture", jobs: 1, repeat: 2 },
-    },
   });
 
-  assert.equal(record.result, "pass");
-  assert.equal(record.kris.suite_pass.value, 0);
-  assert.equal(record.kris.suite_pass.n, 2);
-  assert.equal(record.kris.engine_crash.value, 0);
-  assert.equal(record.kris.engine_crash.n, 4);
-  assert.equal(record.kpis.suite_wall_s.n, 2);
-  assert.equal(record.kris.flake_rate.value, 0);
-  assert.deepEqual(record.config.repeat_seconds.length, 2);
-  assert.deepEqual(record.config.checks.map((c) => c.label).sort(), [
-    "fixture boot",
-    "fixture import",
-  ]);
+  assert.equal(overallOk, true);
+  assert.equal(repeatSeconds.length, 2);
+  assert.deepEqual(checks.map((c) => c.label).sort(), ["fixture boot", "fixture import"]);
 });
 
-// JL-23-A2: a sketch directory with two test scripts, and a fake Godot run
-// whose finish times are scripted per label.
 async function fakeSketch() {
   const dir = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-play-stream-"));
   await mkdir(path.join(dir, "tests"), { recursive: true });
   await writeFile(path.join(dir, "tests", "a_test.gd"), "extends SceneTree\n");
   await writeFile(path.join(dir, "tests", "b_test.gd"), "extends SceneTree\n");
-  return { entry: { id: "fake", directory: dir }, done: () => rm(dir, { recursive: true, force: true }) };
+  return {
+    entry: { id: "fake", directory: dir },
+    done: () => rm(dir, { recursive: true, force: true }),
+  };
 }
 
 function scriptedRun(plan, events) {
@@ -598,168 +314,104 @@ function scriptedRun(plan, events) {
     });
 }
 
-test("the test verb still reports every check in list order after the pool (unchanged output)", async () => {
+test("the test verb still reports every check in list order after the pool", async () => {
   const sketch = await fakeSketch();
-  const events = [];
-  const plan = {
-    import: { ms: 1, ok: true },
-    boot: { ms: 60, ok: true },
-    "a_test.gd": { ms: 5, ok: false },
-    "b_test.gd": { ms: 20, ok: true },
-  };
-  const reported = [];
-  const logged = [];
-  const result = await testEntry(sketch.entry, 3, {
-    run: scriptedRun(plan, events),
-    report: (r) => {
-      reported.push(`${r.label} ${events.includes("end fake boot")}`);
-      return r.ok;
-    },
-    log: (line) => logged.push(line),
-  });
-  assert.deepEqual(reported, ["fake import false", "fake boot true", "fake a_test.gd true", "fake b_test.gd true"]);
-  assert.deepEqual(logged, []);
-  assert.equal(result.ok, false);
-  assert.equal(result.first_fail_s, undefined);
-  const source = await import("node:fs/promises").then((fs) => fs.readFile(path.join(root, "scripts/play.mjs"), "utf8"));
-  assert.match(source, /const entryResult = await testEntry\(entry, limit\);/, "runSuite passes no stream option");
-  await sketch.done();
+  try {
+    const events = [];
+    const plan = {
+      import: { ms: 1, ok: true },
+      boot: { ms: 60, ok: true },
+      "a_test.gd": { ms: 5, ok: false },
+      "b_test.gd": { ms: 20, ok: true },
+    };
+    const reported = [];
+    const logged = [];
+    const result = await testEntry(sketch.entry, 3, {
+      run: scriptedRun(plan, events),
+      report: (r) => {
+        reported.push(`${r.label} ${events.includes("end fake boot")}`);
+        return r.ok;
+      },
+      log: (line) => logged.push(line),
+    });
+    assert.deepEqual(reported, [
+      "fake import false",
+      "fake boot true",
+      "fake a_test.gd true",
+      "fake b_test.gd true",
+    ]);
+    assert.deepEqual(logged, []);
+    assert.equal(result.ok, false);
+    assert.equal(result.first_fail_s, undefined);
+  } finally {
+    await sketch.done();
+  }
 });
 
 test("watch streams each check as it finishes and prints one RED line at the first failure", async () => {
   const sketch = await fakeSketch();
-  const events = [];
-  const plan = {
-    import: { ms: 1, ok: true },
-    boot: { ms: 80, ok: true },
-    "a_test.gd": { ms: 10, ok: false },
-    "b_test.gd": { ms: 30, ok: false },
-  };
-  const reported = [];
-  const logged = [];
-  const started = Date.now();
-  const result = await testEntry(sketch.entry, 3, {
-    stream: true,
-    started,
-    run: scriptedRun(plan, events),
-    report: (r) => {
-      reported.push(`${r.label} ${events.includes("end fake boot")}`);
-      return r.ok;
-    },
-    log: (line) => logged.push({ line, bootDone: events.includes("end fake boot") }),
-  });
-  assert.deepEqual(reported, ["fake import false", "fake a_test.gd false", "fake b_test.gd false", "fake boot true"]);
-  assert.equal(logged.length, 1, "one RED line, at the first failure only");
-  assert.match(logged[0].line, /RED.* fake a_test\.gd after \d+\.\d s/);
-  assert.equal(logged[0].bootDone, false, "printed while other checks still run");
-  assert.ok(events.includes("end fake boot"), "no check is killed early");
-  assert.equal(result.results.length, 4);
-  assert.ok(result.first_fail_s >= 0 && result.first_fail_s < 1);
-  await sketch.done();
-});
-
-test("a failed import returns at once, without waiting for the order (N9)", async () => {
-  const sketch = await fakeSketch();
-  const plan = { import: { ms: 1, ok: false } };
-  const t0 = Date.now();
-  const result = await testEntry(sketch.entry, 2, {
-    stream: true,
-    order: new Promise(() => {}),
-    run: scriptedRun(plan, []),
-    report: (r) => r.ok,
-    log: () => {},
-  });
-  assert.equal(result.ok, false);
-  assert.equal(result.order, undefined);
-  assert.ok(Date.now() - t0 < 500);
-  await sketch.done();
-});
-
-test("an applied order is returned so watch can say which order ran", async () => {
-  const sketch = await fakeSketch();
-  const events = [];
-  const plan = {
-    import: { ms: 1, ok: true },
-    boot: { ms: 1, ok: true },
-    "a_test.gd": { ms: 1, ok: true },
-    "b_test.gd": { ms: 1, ok: true },
-  };
-  const used = { order: ["b_test.gd", "boot", "a_test.gd"], source: "jev" };
-  const result = await testEntry(sketch.entry, 1, {
-    stream: true,
-    order: Promise.resolve(used),
-    run: scriptedRun(plan, events),
-    report: (r) => r.ok,
-    log: () => {},
-  });
-  assert.deepEqual(events.filter((e) => e.startsWith("start")), [
-    "start fake import",
-    "start fake b_test.gd",
-    "start fake boot",
-    "start fake a_test.gd",
-  ]);
-  assert.equal(result.order, used);
-  await sketch.done();
-});
-
-test("the ordering note says when order can change nothing", () => {
-  assert.equal(
-    orderingNote(8, 8),
-    "ordering: 8 checks, 8 at a time; every check starts at once, so the order changes nothing here (it matters only when checks outnumber jobs)",
-  );
-  assert.equal(
-    orderingNote(8, 2),
-    "ordering: 8 checks, 2 at a time; the order decides which checks run first",
-  );
-});
-
-test("watch asks for no order when every check starts at once", async () => {
-  let asked = 0;
-  const request = async () => {
-    asked += 1;
-    return { order: [], source: "jev" };
-  };
-  const names = ["boot", "a.gd", "b.gd", "c.gd"];
-  assert.equal(orderFor({ directory: "/x" }, names, "src/a.gd", 8, { request }), undefined);
-  assert.equal(orderFor({ directory: "/x" }, names, "src/a.gd", 4, { request }), undefined);
-  assert.equal(asked, 0, "no child, no call, no cache write");
-});
-
-test("watch asks for an order when checks outnumber jobs, and never on the first run", async () => {
-  const seen = [];
-  const request = async (entry, names, saved) => {
-    seen.push({ names, saved });
-    return { order: names, source: "current", reason: "stub" };
-  };
-  const names = ["boot", "a.gd", "b.gd", "c.gd"];
-  const order = orderFor({ directory: "/x" }, names, "src/a.gd", 2, { request });
-  assert.deepEqual((await order).order, names);
-  assert.deepEqual(seen, [{ names, saved: "src/a.gd" }]);
-  assert.equal(orderFor({ directory: "/x" }, names, undefined, 2, { request }), undefined);
-  assert.equal(seen.length, 1);
+  try {
+    const events = [];
+    const plan = {
+      import: { ms: 1, ok: true },
+      boot: { ms: 80, ok: true },
+      "a_test.gd": { ms: 10, ok: false },
+      "b_test.gd": { ms: 30, ok: false },
+    };
+    const reported = [];
+    const logged = [];
+    const started = Date.now();
+    const result = await testEntry(sketch.entry, 3, {
+      stream: true,
+      started,
+      run: scriptedRun(plan, events),
+      report: (r) => {
+        reported.push(`${r.label} ${events.includes("end fake boot")}`);
+        return r.ok;
+      },
+      log: (line) => logged.push({ line, bootDone: events.includes("end fake boot") }),
+    });
+    assert.deepEqual(reported, [
+      "fake import false",
+      "fake a_test.gd false",
+      "fake b_test.gd false",
+      "fake boot true",
+    ]);
+    assert.equal(logged.length, 1, "one RED line, at the first failure only");
+    assert.match(logged[0].line, /RED.* fake a_test\.gd after \d+\.\d s/);
+    assert.equal(logged[0].bootDone, false, "printed while other checks still run");
+    assert.ok(events.includes("end fake boot"), "no check is killed early");
+    assert.equal(result.results.length, 4);
+    assert.ok(result.first_fail_s >= 0 && result.first_fail_s < 1);
+  } finally {
+    await sketch.done();
+  }
 });
 
 test("a throwing reporter cannot stop the pool; every check still runs and returns", async () => {
   const sketch = await fakeSketch();
-  const events = [];
-  const plan = {
-    import: { ms: 1, ok: true },
-    boot: { ms: 30, ok: true },
-    "a_test.gd": { ms: 5, ok: false },
-    "b_test.gd": { ms: 10, ok: true },
-  };
-  const result = await testEntry(sketch.entry, 3, {
-    stream: true,
-    run: scriptedRun(plan, events),
-    report: (r) => {
-      if (r.label !== "fake import") throw new Error("reporter broke");
-      return r.ok;
-    },
-    log: () => {
-      throw new Error("log broke");
-    },
-  });
-  assert.equal(result.results.length, 4);
-  assert.deepEqual(events.filter((e) => e.startsWith("end")).length, 4, "no child left running");
-  await sketch.done();
+  try {
+    const events = [];
+    const plan = {
+      import: { ms: 1, ok: true },
+      boot: { ms: 30, ok: true },
+      "a_test.gd": { ms: 5, ok: false },
+      "b_test.gd": { ms: 10, ok: true },
+    };
+    const result = await testEntry(sketch.entry, 3, {
+      stream: true,
+      run: scriptedRun(plan, events),
+      report: (r) => {
+        if (r.label !== "fake import") throw new Error("reporter broke");
+        return r.ok;
+      },
+      log: () => {
+        throw new Error("log broke");
+      },
+    });
+    assert.equal(result.results.length, 4);
+    assert.deepEqual(events.filter((e) => e.startsWith("end")).length, 4, "no child left running");
+  } finally {
+    await sketch.done();
+  }
 });
