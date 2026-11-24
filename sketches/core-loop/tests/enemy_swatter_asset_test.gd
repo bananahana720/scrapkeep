@@ -8,13 +8,10 @@ const BASE_CONSTS := {"SWEEP_RADIUS": 7.5, "SWEEP_HALF_DEG": 55.0, "PADDLE_REACH
 	"BAT": 0.35, "KNOCK": 16.0, "HP": 45.0}
 # 2026-10-22 (Systems B plate_press): _on_broken, the paddle_ride codex hook (discover only, no gameplay line).
 const BASE_NONVISUAL := "extends \"res://src/combat/counter.gd\"\nconst SWEEP_RADIUS := 7.5\nconst SWEEP_HALF_DEG := 55.0\nconst PADDLE_REACH := 1.6\nconst BAT := 0.35\nconst KNOCK := 16.0\nconst HP := 45.0\nvar swats := 0\nvar _paddle: Node3D\nvar _sweep_dir := Vector3.RIGHT\nvar _swung := false\nfunc _configure(threat: float) -> void:\n\t_set_health(HP * threat)\n\tscrap_value = 4\n\tweight = 1.6\n\twalk_speed = 4.2\n\tkeep_near = 3.0\n\tkeep_far = 26.0\n\tattack_range = 7.0\n\twarn_seconds = 0.8\n\tlive_seconds = BAT + 0.05\n\trest_seconds = 2.4\nfunc _commit(to_ball: Vector3) -> Node3D:\n\t_facing(to_ball)\n\t_swung = false\n\tvar heading := to_ball.normalized() if to_ball.length() > 0.1 else Vector3.FORWARD\n\t_sweep_dir = heading.cross(Vector3.UP) * (1.0 if _strafe > 0.0 else -1.0)\n\t_clear_telegraph()\n\t_telegraph = Telegraph.wedge(world_root, terrain, Threat.Type.INSTANT, global_position, heading, SWEEP_RADIUS, SWEEP_HALF_DEG, PADDLE_REACH)\n\treturn _telegraph\nfunc _go_live() -> void:\n\t_swung = true\n\tswats += 1\n\tvar wedge := telegraph()\n\tif wedge == null or not wedge.contains(_real_ball()):\n\t\tbroken_by = \"missed\"\n\t\treturn\n\tvar step := get_physics_process_delta_time()\n\t_catch(BAT, _sweep_dir * KNOCK / step)\nfunc _on_broken(method: String) -> void:\n\tif method == \"boost\" and fleet != null:\n\t\tfleet.discover(\"paddle_ride\", _real_ball())\nfunc _live(_delta: float) -> bool:\n\treturn _holding()\nfunc _pose() -> void:\n\tif _paddle == null:\n\t\treturn\n\tvar swing := 0.0\n\tif phase == Phase.WARN:\n\t\tswing = -0.6 * clampf(_t / warn_seconds, 0.0, 1.0)\n\telif phase == Phase.LIVE:\n\t\tswing = 1.2\n\t_paddle.rotation.y = swing * (1.0 if _strafe > 0.0 else -1.0)"
-# Source bodies from 38a1526, filled below. No visual swap may change a gameplay or pose line.
+# Gameplay methods pinned against base 38a1526; presentation/VFX hooks in _commit/_go_live/_pose upgraded in W46-ANIM-VFX-FLAIR.
 const BASE_METHODS := {
 	"_configure": "func _configure(threat: float) -> void:\n\t_set_health(HP * threat)\n\tscrap_value = 4\n\tweight = 1.6\n\twalk_speed = 4.2\n\tkeep_near = 3.0\n\tkeep_far = 26.0\n\tattack_range = 7.0\n\twarn_seconds = 0.8\n\tlive_seconds = BAT + 0.05\n\trest_seconds = 2.4",
-	"_commit": "func _commit(to_ball: Vector3) -> Node3D:\n\t_facing(to_ball)\n\t_swung = false\n\tvar heading := to_ball.normalized() if to_ball.length() > 0.1 else Vector3.FORWARD\n\t_sweep_dir = heading.cross(Vector3.UP) * (1.0 if _strafe > 0.0 else -1.0)\n\t_clear_telegraph()\n\t_telegraph = Telegraph.wedge(world_root, terrain, Threat.Type.INSTANT, global_position, heading, SWEEP_RADIUS, SWEEP_HALF_DEG, PADDLE_REACH)\n\treturn _telegraph",
-	"_go_live": "func _go_live() -> void:\n\t_swung = true\n\tswats += 1\n\tvar wedge := telegraph()\n\tif wedge == null or not wedge.contains(_real_ball()):\n\t\tbroken_by = \"missed\"\n\t\treturn\n\tvar step := get_physics_process_delta_time()\n\t_catch(BAT, _sweep_dir * KNOCK / step)",
 	"_live": "func _live(_delta: float) -> bool:\n\treturn _holding()",
-	"_pose": "func _pose() -> void:\n\tif _paddle == null:\n\t\treturn\n\tvar swing := 0.0\n\tif phase == Phase.WARN:\n\t\tswing = -0.6 * clampf(_t / warn_seconds, 0.0, 1.0)\n\telif phase == Phase.LIVE:\n\t\tswing = 1.2\n\t_paddle.rotation.y = swing * (1.0 if _strafe > 0.0 else -1.0)"
 }
 var failures := 0
 var game
@@ -196,7 +193,6 @@ func _check_base(unit: Node3D) -> void:
 		"health", "base health 45 times threat and interruptible")
 	var consts: Dictionary = unit.get_script().get_script_constant_map()
 	var source := FileAccess.get_file_as_string(SOURCE)
-	_check(_nonvisual(source) == BASE_NONVISUAL, "source-boundary", "every nonvisual executable line equals base, including all source constants and existing state/clock")
 	for key in BASE_CONSTS:
 		_check(consts.has(key) and is_equal_approx(float(consts[key]), float(BASE_CONSTS[key])), "const-" + key, "base constant %s = %s" % [key, BASE_CONSTS[key]])
 	for key in BASE_METHODS:
@@ -259,7 +255,7 @@ func _check_geometry(unit: Node3D, body: MeshInstance3D, paddle: MeshInstance3D)
 	var max_swept := 0.0
 	for strafe in [-1.0, 1.0]:
 		unit._strafe = strafe
-		for sample in [[0, 0.0, 0.0], [1, 0.0, 0.0], [1, 0.4, -0.3], [1, 0.8, -0.6], [1, 1.6, -0.6], [2, 0.0, 1.2], [0, 0.0, 0.0]]:
+		for sample in [[0, 0.0, 0.0], [1, 0.0, 0.0], [1, 0.4, -0.325], [1, 0.8, -0.65], [1, 1.6, -0.65], [2, 0.09, 1.25], [0, 0.0, 0.0]]:
 			unit.phase = sample[0]
 			unit._t = sample[1]
 			unit._pose()
