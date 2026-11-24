@@ -111,6 +111,11 @@ const PRIMARY_FONT := UiTokens.LABEL
 const PRIMARY_HEIGHT := 60.0
 # The widest a wrapped body line runs.
 const BODY_WIDTH := 1000.0
+# The Foreman's loss memo on an end screen (DeathCause.memo) is the old works' (LEGIBILITY section 14.3): a
+# cast plate laid on the Keeper's screen under the cause, with the uranium-green seam and the works' face.
+# The lines after it (the crew's note, the shift board) stay the screen's own, under the plate.
+const MEMO_FONT := UiTokens.BODY
+const MEMO_SERIAL := 48
 
 var game
 var _victory_boss := {}
@@ -125,6 +130,11 @@ var _wordmark: TextureRect
 # A beaten boss row's "stamp" (Worlds.BOSSES), inked under the victory title: the Mind's HIRED.
 var _mark: Label
 var _body: Label
+# The Foreman's memo plate and the body lines that follow it, shown together only when an end screen has a memo.
+var _memo_stack: VBoxContainer
+var _memo: PanelContainer
+var _memo_words: Label
+var _body_tail: Label
 # The summary's "next shift" note, in the comic row; null when the screen has none.
 var _tip: Control
 var _tip_said := ""
@@ -214,6 +224,7 @@ func setup(game_ref) -> void:
 	_body.custom_minimum_size = Vector2(BODY_WIDTH, 0.0)
 	_body.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_content.add_child(_body)
+	_build_memo()
 	_stats = _row(UiTokens.GAP_XL)
 	_content.add_child(_stats)
 	_comic_row = _row(TIP_GAP)
@@ -337,6 +348,66 @@ func _label(font_size: int) -> Label:
 	return label
 
 
+func _build_memo() -> void:
+	_memo_stack = VBoxContainer.new()
+	_memo_stack.name = "MemoStack"
+	_memo_stack.add_theme_constant_override("separation", UiTokens.GAP_S)
+	_memo_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_memo_stack.visible = false
+	_content.add_child(_memo_stack)
+	var plate = ScrapFrame.hand_plate(UiTokens.Hand.OLD_WORKS, MEMO_SERIAL)
+	plate.content_margin_left = UiTokens.GAP_L
+	plate.content_margin_right = UiTokens.GAP_L
+	plate.content_margin_top = UiTokens.GAP_S
+	plate.content_margin_bottom = UiTokens.GAP_L
+	_memo = PanelContainer.new()
+	_memo.name = "ForemanMemo"
+	_memo.add_theme_stylebox_override("panel", plate)
+	_memo.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_memo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_memo_stack.add_child(_memo)
+	_memo_words = _label(MEMO_FONT)
+	_memo_words.add_theme_font_override("font", UiFonts.face(UiTokens.Hand.OLD_WORKS))
+	_memo_words.add_theme_color_override("font_color", UiTokens.HANDS[UiTokens.Hand.OLD_WORKS].ink)
+	_memo.add_child(_memo_words)
+	_body_tail = _label(UiTokens.LABEL)
+	_body_tail.name = "BodyTail"
+	_body_tail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_body_tail.custom_minimum_size = Vector2(BODY_WIDTH, 0.0)
+	_body_tail.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_memo_stack.add_child(_body_tail)
+
+
+# The Foreman's memo on its plate and the lines after it; an empty memo hides both, and the screen's lines
+# all stand in the body.
+func _show_memo(memo: String, tail: String) -> void:
+	_memo_words.text = memo
+	_body_tail.text = tail if memo != "" else ""
+	_body_tail.visible = _body_tail.text != ""
+	_memo_stack.visible = memo != ""
+	if _body_tail.visible:
+		_balance(_body_tail, BODY_WIDTH)
+
+
+# The memo plate as it reads; "" when the screen has none.
+func memo_text() -> String:
+	return _memo_words.text if _memo_stack.visible else ""
+
+
+# The memo plate, for a test or a capture.
+func memo_plate() -> PanelContainer:
+	return _memo
+
+
+# The screen's words as they read, top to bottom: the body, the Foreman's memo, then the lines after it.
+func said_body() -> String:
+	var parts := PackedStringArray()
+	for piece in [_body.text, memo_text(), _body_tail.text if _memo_stack.visible else ""]:
+		if piece != "":
+			parts.append(piece)
+	return "\n".join(parts)
+
+
 func _row(separation: int) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -441,12 +512,15 @@ func _on_flow_changed(state: String) -> void:
 			# The store-less flow's end screen says what RUN OVER says: who, then what to try (death_tips.gd).
 			var said: String = game.flow.death_cause
 			# The Foreman logs the loss under the cause, only when the crew's tip follows: the crew
-			# has the run's last word (STORY-MAP, "Call-ins").
+			# has the run's last word (STORY-MAP, "Call-ins"). The memo stands on its own plate.
+			var memo := ""
 			if said != "" and game.flow.death_tip != "":
-				said += "\n" + DeathCause.memo(game.run.run_seed, game.run.stage)
-			if game.flow.death_tip != "":
-				said += "\n" + DeathTips.shown(game.flow.death_tip)
+				memo = DeathCause.memo(game.run.run_seed, game.run.stage)
+			var tip_line := DeathTips.shown(game.flow.death_tip) if game.flow.death_tip != "" else ""
+			if memo == "" and tip_line != "":
+				said += "\n" + tip_line
 			_show("SCRAPPED", EventKinds.color("player_died"), said.strip_edges())
+			_show_memo(memo, tip_line)
 			_action("new", "key_n", "New run")
 			_action("class", "key_c", "Choose pilot")
 			if not game.run.companion.is_empty():
@@ -464,26 +538,32 @@ func _on_flow_changed(state: String) -> void:
 				_stamp(_mark)
 		"summary":
 			var body := String(game.run.summary()["class"])
-			# What scrapped you, under the pilot (core/death_cause.gd): a won run has none.
+			# What scrapped you, under the pilot (core/death_cause.gd): a won run has none. The Foreman's
+			# memo under it stands on its own plate, and the lines after it follow the plate.
+			var memo := ""
 			if not game.flow.run_won and game.flow.death_cause != "":
 				body += "\n" + game.flow.death_cause
 				if game.flow.death_tip != "":
-					body += "\n" + DeathCause.memo(game.run.run_seed, game.run.stage)
+					memo = DeathCause.memo(game.run.run_seed, game.run.stage)
+			var after := PackedStringArray()
 			# The trade pockets' odds are a tuning readout (recency, safe share, refusal weight), so
 			# only a --dev launch prints them; a played run's summary keeps to the run.
 			var trade_lines := ResultsOdds.text(game.run.summary().trade_pockets) if game.ctx.dev else ""
 			if trade_lines != "":
-				body += "\n" + trade_lines
+				after.append(trade_lines)
 			var epitaph := String(_victory_boss.get("epitaph", ""))
 			if epitaph != "":
-				body += "\n" + epitaph
+				after.append(epitaph)
 			var ending: bool = game.flow.won_final() and not _victory_boss.is_empty()
 			if not ending:
 				_victory_boss = {}
 			var board := _board_line()
 			if board != "":
-				body += "\n" + board
+				after.append(board)
+			if memo == "" and not after.is_empty():
+				body += "\n" + "\n".join(after)
 			_show("RUN COMPLETE" if game.flow.run_won else "RUN OVER", EventKinds.color("run_ended"), body)
+			_show_memo(memo, "\n".join(after))
 			# The summary has no choice cards; hidden, the row's gap is the column's (a first win
 			# that lands several shift board stamps takes two body lines for them).
 			_choices.visible = false
@@ -1360,6 +1440,7 @@ func _show(title: String, color: Color, body: String) -> void:
 	_body.text = body
 	_body.visible = body != ""
 	_balance(_body, BODY_WIDTH)
+	_show_memo("", "")
 
 
 # A wrapped line breaks into lines of even length, never one long line over a lone tail: the label
@@ -1453,8 +1534,19 @@ func _fit_comic() -> void:
 	var comic := comic_page()
 	if comic == null:
 		return
-	var height := comic_height(_screen().y, _body.get_line_count(), _body.get_line_height() + _body.get_theme_constant("line_spacing"))
+	var line_h := _body.get_line_height() + _body.get_theme_constant("line_spacing")
+	var height := comic_height(_screen().y, _body.get_line_count() + _memo_lines(line_h), line_h)
 	comic.custom_minimum_size = Vector2(height * 0.75, height)
+
+
+# The body lines the memo plate and the lines after it take, in body lines of line_h: 0 with no memo.
+func _memo_lines(line_h: float) -> int:
+	if not _memo_stack.visible:
+		return 0
+	var plate := _memo.get_combined_minimum_size().y + _content.get_theme_constant("separation")
+	if _body_tail.visible:
+		plate += _memo_stack.get_theme_constant("separation")
+	return ceili(plate / maxf(1.0, line_h)) + (_body_tail.get_line_count() if _body_tail.visible else 0)
 
 
 # The comic page's height on the summary: half the screen, less a line's height for every body
@@ -1549,9 +1641,16 @@ func _on_run_ended_board(_won: bool) -> void:
 	var progress = game.get("progress")
 	if _state != "summary" or progress == null or String(progress.board_line) == "":
 		return
-	if not _body.text.contains(String(progress.board_line)):
-		_body.text += "\n" + String(progress.board_line)
-		_fit_comic()
+	var line := String(progress.board_line)
+	if said_body().contains(line):
+		return
+	if _memo_stack.visible:
+		_body_tail.text = line if _body_tail.text == "" else _body_tail.text + "\n" + line
+		_body_tail.visible = true
+		_balance(_body_tail, BODY_WIDTH)
+	else:
+		_body.text += "\n" + line
+	_fit_comic()
 
 
 # The summary as icons and numbers, each with its word and what becomes of it (summary_rows.gd).
@@ -1911,7 +2010,7 @@ func _level_cards() -> void:
 func body_text() -> String:
 	var lines := PackedStringArray()
 	if _body.text != "":
-		lines.append(_body.text)
+		lines.append(said_body())
 		if tip_text() != "":
 			lines.append(tip_text())
 		lines.append("")

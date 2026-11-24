@@ -1,13 +1,14 @@
 extends SceneTree
 
 const BossPlate := preload("res://src/ui/boss_plate.gd")
-const UiDraw := preload("res://src/ui/ui_draw.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The boss plate reads one Warden (LEGIBILITY section 4), on the slice table with the
@@ -208,16 +209,17 @@ func _words_and_pips() -> void:
 	_t.eq("it reports exactly the name's words", _plate.drawn_words(), Array(name.split(" ")))
 	_t.check("the name is two words or fewer", _plate.drawn_words().size() <= 2)
 	# PF-34: every Warden's name ends before the pips start, and a long name widens the plate, not shortens the bar.
+	# The name is set in the old works' face (LEGIBILITY section 14.3), so it is measured in that face.
 	var widest := ""
 	for family in Roster.WARDEN_NAMES:
 		for variant in Roster.WARDEN_NAMES[family]:
 			var each := String(Roster.WARDEN_NAMES[family][variant])
-			if UiDraw.width(each, BossPlate.FONT) > UiDraw.width(widest, BossPlate.FONT):
+			if _works_width(each) > _works_width(widest):
 				widest = each
 	_t.check("planted: the widest Warden name (%s) is wider than the old fixed name column" % widest,
-		UiDraw.width(widest, BossPlate.FONT) > BossPlate.NAME_WIDTH, "%.0f px" % UiDraw.width(widest, BossPlate.FONT))
-	_t.check("this Warden's name ends a gap before its first pip", UiDraw.width(name, BossPlate.FONT) + BossPlate.GAP <= _plate.name_width(),
-		"%.0f + %.0f vs %.0f" % [UiDraw.width(name, BossPlate.FONT), BossPlate.GAP, _plate.name_width()])
+		_works_width(widest) > BossPlate.NAME_WIDTH, "%.0f px" % _works_width(widest))
+	_t.check("this Warden's name ends a gap before its first pip", _works_width(name) + BossPlate.GAP <= _plate.name_width(),
+		"%.0f + %.0f vs %.0f" % [_works_width(name), BossPlate.GAP, _plate.name_width()])
 	_t.check("and the plate is wider by what the name needs, so the bar keeps its length",
 		is_equal_approx(_plate.size.x, BossPlate.SIZE.x + _plate.name_width() - BossPlate.NAME_WIDTH) and _plate.size == _plate.rest_size(), "%.0f" % _plate.size.x)
 	_t.eq("four pips", _plate.pips().size(), BossPosture.CHUNKS)
@@ -285,3 +287,7 @@ func _stagger_bar() -> void:
 	_t.eq("open outranks a glance", _plate.glyph_id(), "open")
 	await _seconds(BossPosture.STAGGER_SECONDS)
 	_t.check("after the stagger the bar is the guard in the neutral colour", not _warden.staggered() and _plate.bar_color() == EventKinds.role_color("neutral"))
+
+
+func _works_width(words: String) -> float:
+	return UiFonts.face(UiTokens.Hand.OLD_WORKS).get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, BossPlate.FONT).x

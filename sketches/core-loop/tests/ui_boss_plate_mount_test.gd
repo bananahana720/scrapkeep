@@ -123,10 +123,10 @@ func _rogue() -> void:
 	up = _plates()
 	_t.eq("striking the Warden leaves one plate up", up.size(), 1)
 	if up.size() == 1:
-		_t.eq("the engaged Warden takes the plate from the rogue", up[0].hand(), BossPlate.NO_HAND)
+		_t.eq("the engaged Warden takes the plate from the rogue", up[0].hand(), UiTokens.Hand.OLD_WORKS)
 		_t.check("the plate shows the Warden's name", up[0].drawn_words().size() > 0, str(up[0].drawn_words()))
 	await _frames(4)
-	_t.check("the rogue does not take it back while the Warden is engaged", _plates().size() == 1 and _plates()[0].hand() == BossPlate.NO_HAND)
+	_t.check("the rogue does not take it back while the Warden is engaged", _plates().size() == 1 and _plates()[0].hand() == UiTokens.Hand.OLD_WORKS)
 	_game.flow.retry_stage()
 	await _frames(4)
 	_t.eq("a retry takes the plate down", _plates().size(), 0)

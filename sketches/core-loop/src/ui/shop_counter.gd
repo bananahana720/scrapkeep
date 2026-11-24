@@ -14,6 +14,7 @@ const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const ShopTile := preload("res://src/ui/shop_tile.gd")
 const CompanionPanel := preload("res://src/ui/companion_panel.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # Moss's counter: the shop's verbs as stamped plates on one charcoal panel. It reads
 # the shop's records (CONTRACTS, Moss's shop) and calls its verbs; every answer goes out
@@ -322,7 +323,7 @@ func _part_rec(kind: String, part_id: String, price: int, state: String) -> Dict
 
 
 func _class_color() -> Color:
-	return game.run.class_def.color if game.run.class_def != null else Palette.SAND
+	return ClassDef.screen_color(game.run.class_def.color) if game.run.class_def != null else Palette.SAND
 
 
 func _row() -> HBoxContainer:
