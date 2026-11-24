@@ -57,8 +57,9 @@ var hull
 var magnets: Array = []
 var caps: Array = []
 var heading := Vector3.FORWARD
-# Brindle's name plate: a screen prompt the HUD keeps in the prompts band (CONTRACTS,
-# UI regions), anchored to the ship and, in the chase, to the scooter.
+# Brindle's internal readout prompt: kept updated for tests and telemetry, never placed by
+# hud.place_prompts() in the bottom prompts band (where TITLE_WORDS=3 truncated it into
+# "BRINDLE · plating/bow/on" over the player ball, PF-54; BossPlate owns Brindle's HUD readout).
 var plate: WorldPrompt
 
 var _cables: Array = []
@@ -135,6 +136,8 @@ func build(boss) -> void:
 	_dress()
 	plate = WorldPrompt.new()
 	plate.name = "BrindlePlate"
+	plate.owner_placed = true
+	plate.visible = false
 	plate.attach(self, Vector3.UP * PLATE_LIFT, PLATE_REACH)
 	add_child(plate)
 	_build_camera_bodies()

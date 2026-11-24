@@ -147,6 +147,12 @@ func _first_run() -> void:
 	player.advance(Rows.length("brindle_rout", false) + 0.01)
 	_t.check("25 the card shows when the rout ends", screens.visible, "")
 	_t.check("26 Tarn signs on over it", player.playing and player.id == "tarn_sign_on", player.id)
+	var tarn_short: Array = Rows.ROWS["tarn_sign_on"]["short"]
+	_t.check("26b HIRED stamp and pilot context show from frame 0 of Tarn sign-on (full and short)", player.live_kinds().has("stamp")
+		and String(Rows.ROWS["tarn_sign_on"]["full"][0]["card"][1]).to_lower().contains("pilot")
+		and String(tarn_short[0]["card"][1]).to_lower().contains("pilot")
+		and is_equal_approx(float(tarn_short[1]["at"]), 0.0) and String(tarn_short[1]["text"]) == "HIRED",
+		"%s short=%s" % [player.live_kinds(), tarn_short])
 	player.advance(Rows.length("tarn_sign_on", false) + 0.01)
 	var log: Array = _game.run.get_meta("flourishes", [])
 	var paid := 0.0

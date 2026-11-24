@@ -192,17 +192,18 @@ const ROWS := {
 			{"kind": "stamp", "at": 0.3, "for": 0.9, "text": "ROUTED", "colour": "AMBER", "slot": "centre"},
 		]},
 	# Tarn signs on the day Brindle falls (achievement brindle_routed pays Tarn). Plays once, over
-	# the victory card; the card is the walk-in, the stamp is the contract.
+	# the victory card; the card names Tarn as a new pilot and HIRED stamps at 0.0 s so no victory
+	# still lacks context (PF-19).
 	"tarn_sign_on": {"priority": 3, "on": "sign_on", "boss": "brindle", "earned": "brindle_routed",
 		"full": [
 			{"kind": "card", "at": 0.0, "for": 2.0, "slot": "left_top",
-				"card": ["TARN", "Tiger · claw bruiser", "Temperament", "gentle", "Machine", "is not", "Claws issued", "none"]},
-			{"kind": "stamp", "at": 0.7, "for": 1.3, "text": "HIRED", "colour": "AMBER"},
-			{"kind": "caption", "at": 0.9, "for": 1.1, "slot": "left_low", "text": ["Start date: today. Claw: own.", "Paperwork: one claw, unissued.", "Shift starts now. Gloves optional."]},
+				"card": ["TARN", "New pilot, claw bruiser", "Temperament", "gentle", "Machine", "is not", "Claws issued", "none"]},
+			{"kind": "stamp", "at": 0.0, "for": 2.0, "text": "HIRED", "colour": "AMBER"},
+			{"kind": "caption", "at": 0.3, "for": 1.7, "slot": "left_low", "text": ["Start date: today. Claw: own.", "Paperwork: one claw, unissued.", "Shift starts now. Gloves optional."]},
 		],
 		"short": [
-			{"kind": "card", "at": 0.0, "for": 1.6, "slot": "left_top", "card": ["TARN", "Signed on"]},
-			{"kind": "stamp", "at": 0.3, "for": 1.3, "text": "HIRED", "colour": "AMBER"},
+			{"kind": "card", "at": 0.0, "for": 1.6, "slot": "left_top", "card": ["TARN", "New pilot"]},
+			{"kind": "stamp", "at": 0.0, "for": 1.6, "text": "HIRED", "colour": "AMBER"},
 		]},
 }
 
