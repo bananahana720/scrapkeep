@@ -604,6 +604,9 @@ function makeSnagReport(map, overrides = {}) {
     classes_raw: { piece: 0, ground: 0, other: 0, moving: 0 },
     places: [],
     classes_places: { piece: 0, ground: 0, other: 0, moving: 0 },
+    ride_places: [],
+    classes_ride_places: { piece: 0, ground: 0, other: 0, moving: 0 },
+    classes_ride_raw: { piece: 0, ground: 0, other: 0, moving: 0 },
     seams: [],
     ...overrides,
   };
@@ -621,18 +624,60 @@ function makeControlLog({ missingCheck = null, fail = false, error = false } = {
   return lines.join("\n") + "\n";
 }
 
-test("snag-sweep: passes clean dam+flume (ignoring moving snags), verifies control log & planted dam snag, prints MAPCHECK", () => {
+test("snag-sweep: passes clean dam+flume (allowing moving ride snags and reporting graze wall/cluster hits), verifies control log & planted dam ride snag", () => {
   const dam = makeSnagReport("park_dam", {
-    // Moving bodies (lifts) are judged by their phase tests and do not fail static snag count.
-    classes_places: { piece: 0, ground: 0, other: 0, moving: 2 },
-    places: [{ at: [1, 2, 3], hit: "/root/Lift", class: "moving", count: 2, worst_loss: 0.7 }],
+    // Moving bodies (lifts) on ride lanes are judged by their phase tests; graze hits on wall/cactus clusters are reported for visibility.
+    snags: [
+      { at: [1, 2, 3], hit: "/root/Lift", piece: "/root/Lift", class: "moving", lane: "ride" },
+      {
+        at: [50, 100, 50],
+        hit: "/root/Park_saguaro_4/Collider#1",
+        piece: "/root/Park_saguaro_4/Collider",
+        class: "piece",
+        lane: "graze",
+      },
+      {
+        at: [60, 100, 60],
+        hit: "/root/Park_hoodoo_5/Collider#2",
+        piece: "/root/Park_saguaro_4/Collider",
+        class: "other",
+        lane: "graze",
+      },
+    ],
+    classes_raw: { piece: 1, ground: 0, other: 1, moving: 1 },
+    classes_places: { piece: 1, ground: 0, other: 1, moving: 1 },
+    places: [
+      { at: [1, 2, 3], hit: "/root/Lift", class: "moving", count: 1, worst_loss: 0.7 },
+      { at: [50, 100, 50], hit: "/root/Park_saguaro_4/Collider#1", class: "piece", count: 1 },
+      { at: [60, 100, 60], hit: "/root/Park_hoodoo_5/Collider#2", class: "other", count: 1 },
+    ],
+    ride_places: [{ at: [1, 2, 3], hit: "/root/Lift", class: "moving", count: 1, worst_loss: 0.7 }],
+    classes_ride_places: { piece: 0, ground: 0, other: 0, moving: 1 },
+    classes_ride_raw: { piece: 0, ground: 0, other: 0, moving: 1 },
   });
-  const flume = makeSnagReport("park_flume");
+  const flume = makeSnagReport("park_flume", {
+    snags: [
+      {
+        at: [10, 20, 30],
+        hit: "/root/Stage2/Ground/Tiles/Tile5_4",
+        piece: "/root/Stage2/ParkRows/Pier/Collider",
+        class: "ground",
+        lane: "graze",
+      },
+    ],
+    classes_raw: { piece: 0, ground: 1, other: 0, moving: 0 },
+    classes_places: { piece: 0, ground: 1, other: 0, moving: 0 },
+    places: [
+      { at: [10, 20, 30], hit: "/root/Stage2/Ground/Tiles/Tile5_4", class: "ground", count: 1 },
+    ],
+  });
   const controlLog = makeControlLog();
 
   const res = snagSweepEvaluate({ dam, flume, controlLog, head: HEAD });
   assert.equal(res.receipt.pass, true, res.receipt.measured);
   assert.equal(res.receipt.plant_caught, true);
+  assert.match(res.receipt.measured, /park_dam ride 0, seams 0.*graze 2 wall\/cluster hits/);
+  assert.match(res.receipt.measured, /park_flume ride 0, seams 0.*graze 1 wall\/cluster hits/);
   assert.deepEqual(res.mapcheckLines, [
     "MAPCHECK park_dam snags 0 pass<=0 PASS",
     "MAPCHECK park_flume snags 0 pass<=0 PASS",
@@ -642,13 +687,14 @@ test("snag-sweep: passes clean dam+flume (ignoring moving snags), verifies contr
     pass: true,
   });
 
-  // Verify injectPlantedSnag causes the exact same map grader to fail.
+  // Verify injectPlantedSnag injects a ride-lane snag and causes the exact same map grader to fail.
   const planted = gradeMapReport(injectPlantedSnag(dam), "park_dam");
   assert.equal(planted.ok, false);
+  assert.equal(planted.rideSnags, 1);
   assert.equal(planted.snagCount, 1);
 });
 
-test("snag-sweep: rejects incomplete run, wrong map, unmerged shard, >20% skip, static snag, seam, or bad control log", () => {
+test("snag-sweep: rejects incomplete run, wrong map, unmerged shard, >20% skip, any ride snag (piece/ground/other), seam, or bad control log", () => {
   const dam = makeSnagReport("park_dam");
   const flume = makeSnagReport("park_flume");
   const ctl = makeControlLog();
@@ -685,22 +731,52 @@ test("snag-sweep: rejects incomplete run, wrong map, unmerged shard, >20% skip, 
     }).pass,
     false,
   );
-  assert.equal(
-    snagSweepReceipt({
+  // Single ride snag of each static class (piece, ground, other) MUST fail.
+  for (const cls of ["piece", "ground", "other"]) {
+    const rideRow = {
+      at: [0, 0, 0],
+      hit: `/root/Hit_${cls}`,
+      piece: "/root/Deck",
+      class: cls,
+      lane: "ride",
+    };
+    const r = snagSweepReceipt({
       dam,
       flume: makeSnagReport("park_flume", {
-        classes_places: { piece: 0, ground: 1, other: 0, moving: 0 },
-        places: [{ at: [0, 0, 0], hit: "/root/Tiles/T1", class: "ground", count: 1 }],
+        snags: [rideRow],
+        classes_raw: { piece: 0, ground: 0, other: 0, moving: 0, [cls]: 1 },
+        classes_places: { piece: 0, ground: 0, other: 0, moving: 0, [cls]: 1 },
+        places: [{ at: [0, 0, 0], hit: rideRow.hit, class: cls, count: 1 }],
+        ride_places: [{ at: [0, 0, 0], hit: rideRow.hit, class: cls, count: 1 }],
+        classes_ride_places: { piece: 0, ground: 0, other: 0, moving: 0, [cls]: 1 },
+        classes_ride_raw: { piece: 0, ground: 0, other: 0, moving: 0, [cls]: 1 },
       }),
       controlLog: ctl,
       head: HEAD,
-    }).pass,
+    });
+    assert.equal(r.pass, false, `ride snag of class ${cls} must fail`);
+    assert.equal(r.plant_caught, true);
+  }
+  // A ride snag in raw snags without ride_places (older report shape) still fails.
+  assert.equal(
+    gradeMapReport(
+      makeSnagReport("park_flume", {
+        snags: [
+          { at: [0, 0, 0], hit: "/root/Wall", piece: "/root/Deck", class: "other", lane: "ride" },
+        ],
+        ride_places: undefined,
+        classes_ride_places: undefined,
+      }),
+      "park_flume",
+    ).ok,
     false,
   );
+  // Open-ground control seam snag MUST fail.
   assert.equal(
     snagSweepReceipt({
       dam: makeSnagReport("park_dam", {
         seams: [{ at: [0, 0, 0], hit: "/root/Tiles/T0", class: "ground" }],
+        controls: [{ at: [0, 0, 0], hit: "/root/Tiles/T0", class: "ground", lane: "control" }],
       }),
       flume,
       controlLog: ctl,
@@ -767,16 +843,27 @@ test("snag-sweep: CLI writes receipt + prints MAPCHECK with --out, handles --map
     assert.equal(jsonCli.status, 0);
     assert.equal(JSON.parse(jsonCli.stdout).pass, true);
 
-    // With snag injected in flume: exit 1 and MAPCHECK FAIL.
+    // With ride snags injected in flume: exit 1 and MAPCHECK FAIL.
     writeFileSync(
       flumePath,
       JSON.stringify(
         makeSnagReport("park_flume", {
+          snags: [
+            { at: [1, 0, 0], hit: "/a", piece: "/a", class: "piece", lane: "ride" },
+            { at: [9, 0, 0], hit: "/b", piece: "/b", class: "piece", lane: "ride" },
+          ],
+          classes_raw: { piece: 2, ground: 0, other: 0, moving: 0 },
           classes_places: { piece: 2, ground: 0, other: 0, moving: 0 },
           places: [
             { at: [1, 0, 0], hit: "/a", class: "piece" },
             { at: [9, 0, 0], hit: "/b", class: "piece" },
           ],
+          ride_places: [
+            { at: [1, 0, 0], hit: "/a", class: "piece" },
+            { at: [9, 0, 0], hit: "/b", class: "piece" },
+          ],
+          classes_ride_places: { piece: 2, ground: 0, other: 0, moving: 0 },
+          classes_ride_raw: { piece: 2, ground: 0, other: 0, moving: 0 },
         }),
       ),
     );

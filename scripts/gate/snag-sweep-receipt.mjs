@@ -4,9 +4,11 @@
 // Grades the merged JSON reports produced by sketches/core-loop/tools/qa/snag_sweep.gd for
 // park_dam and park_flume, plus the control log from sketches/core-loop/tests/snag_sweep_test.gd.
 // Passes only when both maps are complete with matching map names, skipped share <= 0.20, 0 static
-// snags (piece/ground/other in classes_places/places/snags; moving bodies are judged by their own
-// phase tests), 0 tile seams, the control log caught its planted 0.3 m lip snag, AND a planted copy
-// of the dam JSON with 1 snag injected fails the exact same map grader (plant_caught).
+// ride-lane snags (lane === "ride" and class !== "moving"; moving bodies are judged by their own
+// phase tests), 0 open-ground tile seams, the control log caught its planted 0.3 m ride lip and
+// open-ground control seam, AND a planted copy of the dam JSON with 1 ride snag injected fails the
+// exact same map grader (plant_caught). Graze wall/cluster hits are reported for visibility without
+// conflating 15-degree AABB wall grazes into cactus groves or boulder clusters with riding lines.
 //
 //   node scripts/gate/snag-sweep-receipt.mjs --dam <park_dam.json> --flume <park_flume.json> \
 //     --control-log <snag_sweep_test.log> --head <sha> [--out <file>] [--mapcheck]
@@ -23,9 +25,15 @@ export const CONTROL_CHECKS = [
   "planted lip: at least one snag",
   "the snag is at the lip, on the lip's collider, and is drawn",
   "same lanes, lip removed: no snag",
+  "control lane with planted seam lip: snag caught",
 ];
 
 const isFiniteNum = (v) => typeof v === "number" && Number.isFinite(v);
+const hasValidClassCounts = (obj) =>
+  Boolean(obj) &&
+  typeof obj === "object" &&
+  !Array.isArray(obj) &&
+  STATIC_CLASSES.every((k) => isFiniteNum(obj[k]) && obj[k] >= 0);
 
 export function gradeMapReport(data, expectedMap) {
   const problems = [];
@@ -34,8 +42,10 @@ export function gradeMapReport(data, expectedMap) {
       ok: false,
       map: expectedMap,
       snagCount: null,
+      rideSnags: null,
       staticSnags: null,
       seamSnags: null,
+      grazeSnags: 0,
       movingSnags: 0,
       skipShare: null,
       lanesRun: 0,
@@ -74,12 +84,12 @@ export function gradeMapReport(data, expectedMap) {
   }
 
   const classes = data.classes_places;
-  const hasClasses =
-    Boolean(classes) &&
-    typeof classes === "object" &&
-    STATIC_CLASSES.every((k) => isFiniteNum(classes[k]) && classes[k] >= 0);
+  const hasClasses = hasValidClassCounts(classes);
   if (!hasClasses) {
     problems.push(`${expectedMap}: missing or invalid classes_places counts`);
+  }
+  if (!Array.isArray(data.snags)) {
+    problems.push(`${expectedMap}: missing snags array`);
   }
   if (!Array.isArray(data.places)) {
     problems.push(`${expectedMap}: missing places array`);
@@ -87,32 +97,56 @@ export function gradeMapReport(data, expectedMap) {
   if (!Array.isArray(data.seams)) {
     problems.push(`${expectedMap}: missing seams array`);
   }
+  if (data.ride_places !== undefined && !Array.isArray(data.ride_places)) {
+    problems.push(`${expectedMap}: invalid ride_places field`);
+  }
+  const hasRideClasses =
+    data.classes_ride_places !== undefined && hasValidClassCounts(data.classes_ride_places);
+  if (data.classes_ride_places !== undefined && !hasRideClasses) {
+    problems.push(`${expectedMap}: invalid classes_ride_places counts`);
+  }
 
-  const classStatic = hasClasses ? STATIC_CLASSES.reduce((sum, k) => sum + classes[k], 0) : 0;
-  const placeStatic = Array.isArray(data.places)
-    ? data.places.filter((p) => p?.class !== "moving").length
+  const snags = Array.isArray(data.snags) ? data.snags : [];
+  const invalidLaneRows = snags.filter((s) => s?.lane !== "ride" && s?.lane !== "graze");
+  if (invalidLaneRows.length > 0) {
+    problems.push(
+      `${expectedMap}: ${invalidLaneRows.length} snag row(s) missing valid lane ("ride" or "graze")`,
+    );
+  }
+  const rawRideStaticRows = snags.filter((s) => s?.lane !== "graze" && s?.class !== "moving");
+  const rawRideStatic = rawRideStaticRows.length;
+  const rideClassStatic = hasRideClasses
+    ? STATIC_CLASSES.reduce((sum, k) => sum + data.classes_ride_places[k], 0)
     : 0;
-  const rawStatic = Array.isArray(data.snags)
-    ? data.snags.filter((s) => s?.class !== "moving").length
+  const ridePlaceStatic = Array.isArray(data.ride_places)
+    ? data.ride_places.filter((p) => p?.class !== "moving").length
     : 0;
-  const staticSnags = Math.max(
-    classStatic,
-    placeStatic,
-    rawStatic > 0 && Math.max(classStatic, placeStatic) === 0 ? rawStatic : 0,
+  const rideSnags = Math.max(
+    rideClassStatic,
+    ridePlaceStatic,
+    rawRideStatic > 0 && Math.max(rideClassStatic, ridePlaceStatic) === 0 ? rawRideStatic : 0,
   );
+  const grazeSnags = snags.filter((s) => s?.lane === "graze" && s?.class !== "moving").length;
+
   const seamPlaces = Array.isArray(data.seams) ? data.seams.length : 0;
   const rawControls = Array.isArray(data.controls) ? data.controls.length : 0;
   const seamSnags = Math.max(seamPlaces, rawControls > 0 && seamPlaces === 0 ? rawControls : 0);
   const movingSnags =
-    hasClasses && isFiniteNum(classes.moving)
-      ? classes.moving
-      : Array.isArray(data.places)
-        ? data.places.filter((p) => p?.class === "moving").length
-        : 0;
-  const snagCount = staticSnags + seamSnags;
-  if (staticSnags > 0) {
+    hasRideClasses && isFiniteNum(data.classes_ride_places.moving)
+      ? data.classes_ride_places.moving
+      : snags.filter((s) => s?.lane === "ride" && s?.class === "moving").length;
+  const snagCount = rideSnags + seamSnags;
+
+  if (rideSnags > 0) {
+    const counts = hasRideClasses
+      ? data.classes_ride_places
+      : {
+          piece: rawRideStaticRows.filter((s) => s?.class === "piece").length,
+          ground: rawRideStaticRows.filter((s) => s?.class === "ground").length,
+          other: rawRideStaticRows.filter((s) => s?.class === "other").length,
+        };
     problems.push(
-      `${expectedMap}: ${staticSnags} static snag(s) (piece=${classes?.piece ?? "?"}, ground=${classes?.ground ?? "?"}, other=${classes?.other ?? "?"})`,
+      `${expectedMap}: ${rideSnags} static ride snag(s) (piece=${counts.piece ?? "?"}, ground=${counts.ground ?? "?"}, other=${counts.other ?? "?"})`,
     );
   }
   if (seamSnags > 0) {
@@ -122,8 +156,10 @@ export function gradeMapReport(data, expectedMap) {
     ok: problems.length === 0 && snagCount === 0,
     map: expectedMap,
     snagCount,
-    staticSnags,
+    rideSnags,
+    staticSnags: rideSnags,
     seamSnags,
+    grazeSnags,
     movingSnags,
     skipShare,
     lanesRun: lanesRun ?? 0,
@@ -156,7 +192,7 @@ export function gradeControlLog(logText, { platform = process.platform } = {}) {
   return { ok: problems.length === 0, problems };
 }
 
-// Clones a dam report and injects one static piece snag so the exact same map grader must reject it.
+// Clones a dam report and injects one static ride-lane piece snag so the exact same map grader must reject it.
 export function injectPlantedSnag(damData) {
   const base =
     damData && typeof damData === "object" && !Array.isArray(damData)
@@ -173,6 +209,9 @@ export function injectPlantedSnag(damData) {
           classes_raw: { piece: 0, ground: 0, other: 0, moving: 0 },
           places: [],
           classes_places: { piece: 0, ground: 0, other: 0, moving: 0 },
+          ride_places: [],
+          classes_ride_places: { piece: 0, ground: 0, other: 0, moving: 0 },
+          classes_ride_raw: { piece: 0, ground: 0, other: 0, moving: 0 },
           seams: [],
         };
   const plantedPlace = {
@@ -198,21 +237,26 @@ export function injectPlantedSnag(damData) {
   };
   base.places = Array.isArray(base.places) ? [...base.places, plantedPlace] : [plantedPlace];
   base.snags = Array.isArray(base.snags) ? [...base.snags, plantedRaw] : [plantedRaw];
-  const cp =
-    base.classes_places && typeof base.classes_places === "object" ? base.classes_places : {};
-  base.classes_places = {
-    piece: (isFiniteNum(cp.piece) ? cp.piece : 0) + 1,
-    ground: isFiniteNum(cp.ground) ? cp.ground : 0,
-    other: isFiniteNum(cp.other) ? cp.other : 0,
-    moving: isFiniteNum(cp.moving) ? cp.moving : 0,
+  if (Array.isArray(base.ride_places)) {
+    base.ride_places = [...base.ride_places, plantedPlace];
+  }
+  const bumpPiece = (counts) => {
+    const c = counts && typeof counts === "object" ? counts : {};
+    return {
+      piece: (isFiniteNum(c.piece) ? c.piece : 0) + 1,
+      ground: isFiniteNum(c.ground) ? c.ground : 0,
+      other: isFiniteNum(c.other) ? c.other : 0,
+      moving: isFiniteNum(c.moving) ? c.moving : 0,
+    };
   };
-  const cr = base.classes_raw && typeof base.classes_raw === "object" ? base.classes_raw : {};
-  base.classes_raw = {
-    piece: (isFiniteNum(cr.piece) ? cr.piece : 0) + 1,
-    ground: isFiniteNum(cr.ground) ? cr.ground : 0,
-    other: isFiniteNum(cr.other) ? cr.other : 0,
-    moving: isFiniteNum(cr.moving) ? cr.moving : 0,
-  };
+  base.classes_places = bumpPiece(base.classes_places);
+  base.classes_raw = bumpPiece(base.classes_raw);
+  if (base.classes_ride_places !== undefined) {
+    base.classes_ride_places = bumpPiece(base.classes_ride_places);
+  }
+  if (base.classes_ride_raw !== undefined) {
+    base.classes_ride_raw = bumpPiece(base.classes_ride_raw);
+  }
   return base;
 }
 
@@ -227,20 +271,23 @@ export function evaluate({ dam, flume, controlLog, head, platform = process.plat
   const flumeGrade = gradeMapReport(flume, "park_flume");
   const controlGrade = gradeControlLog(controlLog, { platform });
   const plantedDamGrade = gradeMapReport(injectPlantedSnag(dam), "park_dam");
-  const plantedDamCaught = !plantedDamGrade.ok && (plantedDamGrade.snagCount ?? 0) >= 1;
+  const plantedDamCaught =
+    !plantedDamGrade.ok && (plantedDamGrade.rideSnags ?? 0) > (damGrade.rideSnags ?? 0);
   const plantCaught = controlGrade.ok && plantedDamCaught;
   const pass = damGrade.ok && flumeGrade.ok && plantCaught;
   const mapcheckLines = formatMapcheckLines(damGrade, flumeGrade);
 
   const problems = [...damGrade.problems, ...flumeGrade.problems, ...controlGrade.problems];
   const plantNote = plantCaught
-    ? "plant: snag_sweep_test caught 0.3 m lip and grader caught injected dam snag"
+    ? "plant: snag_sweep_test caught 0.3 m ride lip + control seam and grader caught injected dam ride snag"
     : !controlGrade.ok
       ? `plant: control log failed (${controlGrade.problems[0]})`
-      : "plant: injected dam snag was not caught by map grader";
+      : "plant: injected dam ride snag was not caught by map grader";
+  const formatMap = (g) =>
+    `${g.map} ride ${g.rideSnags}, seams ${g.seamSnags} (${g.lanesRun} lanes, ${(g.skipShare * 100).toFixed(1)}% skipped; graze ${g.grazeSnags} wall/cluster hits)`;
   const measured =
     problems.length === 0 && plantCaught
-      ? `park_dam 0 snags (${damGrade.lanesRun} lanes, ${(damGrade.skipShare * 100).toFixed(1)}% skipped), park_flume 0 snags (${flumeGrade.lanesRun} lanes, ${(flumeGrade.skipShare * 100).toFixed(1)}% skipped); ${plantNote}`
+      ? `${formatMap(damGrade)}, ${formatMap(flumeGrade)}; ${plantNote}`
       : `${problems.join("; ")}; ${plantNote}`;
   return {
     receipt: { head, pass, measured, plant_caught: plantCaught },
