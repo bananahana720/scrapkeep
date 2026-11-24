@@ -80,11 +80,13 @@ def column(p):
     # The iron column, eight flats with one facing the front, tapering a little to its head.
     p.cyl(SLOT, COL_R, COL_R * 0.9, COL_Y1 - COL_Y0, segs=8, loc=g(0, (COL_Y0 + COL_Y1) / 2, 0),
           rot=(0, 0, math.pi / 8), color=c("iron_hi"))
-    # Its foot flange, bolted down with eight copper heads.
-    p.cyl(SLOT, 0.29, 0.23, 0.1, segs=8, loc=g(0, 0.63, 0), rot=(0, 0, math.pi / 8), color=c("iron"))
+    # Its foot flange: a flat octagonal shelf (flat apothem 0.268 m) and a fillet up to the column, eight copper
+    # heads sunk into the shelf's top face between the two, one on each flat.
+    p.cyl(SLOT, 0.29, 0.29, 0.08, segs=8, loc=g(0, 0.62, 0), rot=(0, 0, math.pi / 8), color=c("iron"))
+    p.cyl(SLOT, 0.2, 0.185, 0.07, segs=8, loc=g(0, 0.69, 0), rot=(0, 0, math.pi / 8), color=c("iron"))
     for k in range(8):
         a = TAU * k / 8
-        at = (0.25 * math.sin(a), 0.69, 0.25 * math.cos(a))
+        at = (0.235 * math.sin(a), 0.66, 0.235 * math.cos(a))
         bolt(p, at, (0, 1, 0), r=0.024, h=0.025)
     # A rust bleed band where water sat on the flange.
     p.cyl(SLOT, COL_R + 0.008, COL_R * 0.99, 0.12, segs=8, loc=g(0, 0.76, 0), rot=(0, 0, math.pi / 8), color=c("iron_rust"))
@@ -106,13 +108,14 @@ def mend_collar(p):
 
 def patch(p):
     # A mismatched copper plate bolted over a crack on the front, skewed, four iron bolts.
-    at = Vector((0.03, 0.95, 0.178))
+    # Its tilted top stays 5 cm under the collar's lower lip (1.085 m).
+    at = Vector((0.03, 0.9, 0.185))
     tilt = 0.12
-    # A turn about Godot +Z is a turn about Blender -Y.
-    box(p, (0.2, 0.26, 0.03), tuple(at), "copper", rot=(0, -tilt, 0))
+    # A turn about Godot +Z is a turn about Blender -Y: local (x, y) lands at (x cos - y sin, x sin + y cos).
+    box(p, (0.2, 0.24, 0.03), tuple(at), "copper", rot=(0, -tilt, 0))
     for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
-        x = sx * 0.07 * math.cos(tilt) - sy * 0.1 * math.sin(tilt)
-        y = sx * 0.07 * math.sin(tilt) + sy * 0.1 * math.cos(tilt)
+        x = sx * 0.07 * math.cos(tilt) - sy * 0.09 * math.sin(tilt)
+        y = sx * 0.07 * math.sin(tilt) + sy * 0.09 * math.cos(tilt)
         bolt(p, (at.x + x, at.y + y, at.z + 0.015), (0, 0, 1), r=0.02, h=0.02, color="iron")
 
 
@@ -129,12 +132,15 @@ def wheel(p):
 
 
 def spanner(p):
-    # A spanner hung on a hook on the right side: the mend's tool, left where the next keeper will want it.
-    x = COL_R * 0.95
-    p.rod(SLOT, g(x - 0.03, 1.52, 0), g(x + 0.09, 1.52, 0), 0.016, segs=5, color=c("iron"))
-    p.beam(SLOT, g(x + 0.08, 1.48, 0), g(x + 0.08, 1.06, 0), 0.055, 0.02, color=c("iron_hi"))
+    # A spanner hung on a hook on the right side: the mend's tool, left where the next keeper will want it. It hangs at
+    # x = 0.36, clear of the collar lips (0.285 m) below the hook, and its shank runs up over the hook's rod.
+    x = 0.36
+    p.rod(SLOT, g(0.14, 1.52, 0), g(0.4, 1.52, 0), 0.016, segs=5, color=c("iron"))
+    p.cyl(SLOT, 0.026, 0.026, 0.03, segs=6, loc=g(0.41, 1.52, 0), rot=(0, math.pi / 2, 0), color=c("iron"))
+    # Thin across x (2 cm), broad along the side (5.5 cm), so it hangs flat against the column's side.
+    p.beam(SLOT, g(x, 1.54, 0), g(x, 1.06, 0), 0.02, 0.055, color=c("iron_hi"))
     # The open jaw at its foot, in the side's plane, its gap facing the ground (angle 0 points down after the turn).
-    p.ring(SLOT, 0.035, 0.075, 0.025, segs=10, loc=g(x + 0.08, 1.02, 0), rot=(0, math.pi / 2, 0),
+    p.ring(SLOT, 0.035, 0.075, 0.025, segs=10, loc=g(x, 1.02, 0), rot=(0, math.pi / 2, 0),
            arc=(math.radians(40), math.radians(320)), color=c("iron_hi"))
 
 
@@ -185,8 +191,8 @@ def check(root):
 
 
 def preview(outdir):
-    """Cycles stills with the game's ring, a half-full charge fill and a ball for scale: close 3/4, front, and the
-    chase camera's distance (13 m back, 5.5 m up)."""
+    """Cycles stills with the game's ring, a half-full charge fill and a ball for scale: close 3/4, front, the
+    right side (the spanner), and the chase camera's distance (13 m back, 5.5 m up)."""
     import cycles_device
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
@@ -220,6 +226,7 @@ def preview(outdir):
     os.makedirs(outdir, exist_ok=True)
     views = [("close_three_quarter", (2.4, 1.9, 3.1), (0, 1.25, 0), 40.0),
              ("close_front", (0.0, 1.5, 4.2), (0, 1.2, 0), 40.0),
+             ("close_side", (4.2, 1.5, 0.0), (0, 1.2, 0), 40.0),
              ("chase_distance", (3.0, 5.5, 13.0), (0, 1.2, 0), 50.0)]
     for label, eye, target, fov in views:
         cam.location = Vector(g(*eye))
