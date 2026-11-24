@@ -31,19 +31,26 @@ func _initialize() -> void:
 
 
 func _unit(t) -> void:
-	var learner_attempts := {1: [0.45, 0.65], 3: [0.375, 0.785], 5: [0.30, 0.92], 9: [0.30, 0.92]}
+	var learner_attempts := {1: [0.45, 0.65, 0.25], 3: [0.375, 0.785, 0.35], 5: [0.30, 0.92, 0.45], 9: [0.30, 0.92, 0.45]}
 	for attempt in learner_attempts:
 		var band = SkillBand.make("learner", attempt, 7)
 		t.near("learner attempt %d reaction" % attempt, band.reaction_s, learner_attempts[attempt][0])
 		t.near("learner attempt %d read chance" % attempt, band.read_chance, learner_attempts[attempt][1])
+		t.near("learner attempt %d window share" % attempt, band.window_share, learner_attempts[attempt][2])
+		t.near("learner attempt %d describe window_share" % attempt, float(band.describe().get("window_share", -1.0)), learner_attempts[attempt][2])
 	var expert = SkillBand.make("expert", 4, 7)
+	t.near("expert window share", expert.window_share, 0.85)
+	t.near("expert describe window_share", float(expert.describe().get("window_share", -1.0)), 0.85)
 	var before: int = expert._rng.state
 	var all_read := true
 	for key in 500:
 		all_read = all_read and expert.reads(key)
-	t.check("expert reads every tell without touching its stream", all_read and expert._rng.state == before,
+		expert.hits_window(key)
+	t.check("expert reads every tell and rolls windows without touching its stream", all_read and expert._rng.state == before,
 		"state %d -> %d" % [before, expert._rng.state])
 	var novice = SkillBand.make("novice", 1, 7)
+	t.near("novice window share", novice.window_share, 0.15)
+	t.near("novice describe window_share", float(novice.describe().get("window_share", -1.0)), 0.15)
 	var gave := []
 	for verb in ["special", "line_cast", "plant", "harpoon", "weak_points", "ultimate", "active", "chain"]:
 		if novice.allows(verb):
@@ -111,21 +118,25 @@ func _runs(t) -> void:
 	print("[report] tally seed 1 shots: plain %d, novice %d" % [int(rows["tally-1-plain"].get("shots", 0)), tally_shots])
 	t.check("tally novice still throws cards", rows["tally-1-novice"].get("class") == "tally" and tally_shots > 0,
 		"class %s, shots %d" % [rows["tally-1-novice"].get("class"), tally_shots])
-	# The Novice has no slot casts, no ultimate presses and no harpoon or latch bites.
+	# The Novice has no slot casts, no ultimate presses, no active presses and no harpoon or latch bites.
 	for label in ["skipper-1-novice", "tally-1-novice"]:
 		var row: Dictionary = rows[label]
 		var casts: Dictionary = row.get("slot_casts", {})
 		var bites := _counted(row, ["harpoon_bites", "latch_bites", "latch_presses"])
 		t.check("%s uses no kit hands" % label, int(casts.get("special", -1)) == 0 and int(casts.get("line", -1)) == 0
-				and int(row.get("ult_presses", -1)) == 0 and bites == 0,
-			"casts %s, ult presses %s, bites %d" % [casts, row.get("ult_presses"), bites])
+				and int(row.get("ult_presses", -1)) == 0 and int(row.get("active_presses", -1)) == 0 and bites == 0,
+			"casts %s, ult presses %s, active presses %s, bites %d" % [casts, row.get("ult_presses"), row.get("active_presses"), bites])
 		t.eq("%s records its band" % label, [row["band"]["name"], int(row["band"]["attempt"])], ["novice", 1])
 	t.eq("learner records its band", [rows["skipper-1-learner"]["band"]["name"], int(rows["skipper-1-learner"]["band"]["attempt"])], ["learner", 1])
+	t.eq("learner attempt 1 sends no active presses", int(rows["skipper-1-learner"].get("active_presses", -1)), 0)
 	t.check("the row's reaction_s is the band's", absf(float(rows["skipper-1-learner"].get("reaction_s", 0.0)) - 0.45) < 0.001,
 		"reaction_s %s" % [rows["skipper-1-learner"].get("reaction_s")])
 	var fifth: Dictionary = rows["skipper-1-learner5"].get("band", {})
-	t.check("learner --attempt=5 reaches its last values", int(fifth.get("attempt", 0)) == 5 and absf(float(fifth.get("reaction_s", 0.0)) - 0.30) < 0.001,
+	t.check("learner --attempt=5 reaches its last values", int(fifth.get("attempt", 0)) == 5
+			and absf(float(fifth.get("reaction_s", 0.0)) - 0.30) < 0.001
+			and absf(float(fifth.get("window_share", 0.0)) - 0.45) < 0.001,
 		"band %s" % [fifth])
+	t.eq("learner attempt 5 sends no active presses", int(rows["skipper-1-learner5"].get("active_presses", -1)), 0)
 	var banded: Dictionary = rows["skipper-1-expert"]
 	t.check("a banded row records its band", (banded.get("band") as Dictionary).get("name", "") == "expert"
 			and rows["skipper-1-plain"].get("band") == null, "band %s" % [banded.get("band")])

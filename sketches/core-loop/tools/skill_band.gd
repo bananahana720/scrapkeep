@@ -11,16 +11,15 @@ extends RefCounted
 #   Expert:  fast reads and the full kit.
 #
 # What the bands mean, and do not:
-#   - Expert is the unbanded driver. "Full kit" is every hand the driver has. It has no active hand
-#     (the F-key item actives, Intent active_pressed: nothing presses one at any band), no separate
-#     carve hand and no wall-grip hand, so the Expert lacks those. Adding one would move Expert
-#     results, which is a separate decision. The "active" verb is kept, Expert-only, with no call site.
+#   - Expert is the unbanded driver. "Full kit" is every hand the driver has, including the F-key
+#     item active hand (`active` verb, Intent `active_pressed`). It still has no separate carve hand
+#     and no wall-grip hand, so the Expert lacks those. Novice and Learner do not have `active`.
 #   - Harpoon is in the Learner's base kit because the grapple is a core verb on every pilot
 #     (DECISIONS direction row: enemies "build on the core verbs (roll, ram, grapple, carve)") and
 #     every park Warden is a harpoon anchor. The Expert-only harpoon play is the chain hand.
-#   - The Learner model: attempt is a command-line index (--attempt=N). Reaction and read chance move
-#     linearly with it, the kit is fixed, every attempt plays the same game seed, and nothing is
-#     learned inside a run.
+#   - The Learner model: attempt is a command-line index (--attempt=N). Reaction, read chance and
+#     cadence window share move linearly with it, the kit is fixed, every attempt plays the same
+#     game seed, and nothing is learned inside a run.
 #   - A Novice never runs the latch arm, so its non-wins at Wardens are mostly stalls. It still runs
 #     the dam's spillway sheet hand, which is a ram, but below the full kit the hand plays by sight:
 #     it launches only at an open sheet it has seen for its reaction time and read this cycle, keeps
@@ -32,15 +31,17 @@ extends RefCounted
 # practised player, a choice response 0.35-0.5 s, and an untrained player under load
 # 0.6-0.8 s. The numbers are calibration starting points the harness checks, not final.
 # read_* is the chance a given tell is read at all; an unread tell is never dodged.
+# window_* is the share of weapon cadence windows hit (PILOT-CADENCE.md section 8): a missed
+# window produces the weapon's plain result with no jam or lockout.
 # learn_attempts is the attempt at which the *_last values are reached: the values move
 # linearly from attempt 1 to that attempt and hold after.
 const BANDS := {
 	"expert": {"reaction_first": 0.25, "reaction_last": 0.25, "read_first": 1.0, "read_last": 1.0,
-		"learn_attempts": 1, "kit": "full"},
+		"window_first": 0.85, "window_last": 0.85, "learn_attempts": 1, "kit": "full"},
 	"learner": {"reaction_first": 0.45, "reaction_last": 0.30, "read_first": 0.65, "read_last": 0.92,
-		"learn_attempts": 5, "kit": "base"},
+		"window_first": 0.25, "window_last": 0.45, "learn_attempts": 5, "kit": "base"},
 	"novice": {"reaction_first": 0.70, "reaction_last": 0.70, "read_first": 0.35, "read_last": 0.35,
-		"learn_attempts": 1, "kit": "basic"},
+		"window_first": 0.15, "window_last": 0.15, "learn_attempts": 1, "kit": "basic"},
 }
 
 # What each kit level lets the driver's hands do. The Novice only fires its gun, rams,
@@ -52,8 +53,10 @@ var name := "expert"
 var attempt := 1
 var reaction_s := 0.25
 var read_chance := 1.0
+var window_share := 0.85
 var kit := "full"
 
+var _seed := 1
 var _rng := RandomNumberGenerator.new()
 var _read := {}
 
@@ -79,9 +82,26 @@ static func make(band_name: String, attempt_number: int, seed_value: int):
 	var t := clampf(float(band.attempt - 1) / float(span), 0.0, 1.0)
 	band.reaction_s = lerpf(float(row["reaction_first"]), float(row["reaction_last"]), t)
 	band.read_chance = lerpf(float(row["read_first"]), float(row["read_last"]), t)
+	band.window_share = lerpf(float(row["window_first"]), float(row["window_last"]), t)
 	band.kit = String(row["kit"])
+	band._seed = seed_value
 	band._rng.seed = hash(["band", key, band.attempt, seed_value])
 	return band
+
+
+# Deterministic per-window roll independent of tell-read order and band._rng.
+static func roll_window(seed_value: int, index: int, share: float) -> bool:
+	if share <= 0.0:
+		return false
+	if share >= 1.0:
+		return true
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(["window", seed_value, index])
+	return rng.randf() < share
+
+
+func hits_window(index: int) -> bool:
+	return roll_window(_seed, index, window_share)
 
 
 # Whether this band sees the tell with this key (a hazard's instance id). The roll is made
@@ -124,4 +144,4 @@ func timed_sheet() -> bool:
 
 func describe() -> Dictionary:
 	return {"name": name, "attempt": attempt, "reaction_s": snappedf(reaction_s, 0.001),
-		"read_chance": snappedf(read_chance, 0.001), "kit": kit}
+		"read_chance": snappedf(read_chance, 0.001), "window_share": snappedf(window_share, 0.001), "kit": kit}
