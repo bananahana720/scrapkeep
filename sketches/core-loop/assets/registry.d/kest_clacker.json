@@ -1,0 +1,15 @@
+{
+ "assets": [
+  {
+   "path": "res://assets/models/world_one/kest_clacker.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd WEAPONS, COCKPIT_WEAPONS, mount_weapon (on the shell's Pod, beside Kest's right yoke)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/kest_clacker.py",
+    "helper": "tools/blender/polish.py (bevel, bake)",
+    "concept": "artifacts/local/w46-concept-art/heroic-cutaway/05-kest-heroic-cutaway.png and ruling en (bold exaggerated cutaway kit, E2-03)"
+   }
+  }
+ ]
+}

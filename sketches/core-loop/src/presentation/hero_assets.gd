@@ -129,7 +129,13 @@ const SHELLS := {
 # centre), so it yaws to the aim and banks with the ring, and the bank hull reads its vertices with
 # the ring's. Rivet's twin rivet revolvers are their own skinned file (E1-09, wave 46 3D blueprint
 # section 2.2): the shell had no triangle room left, and their bones need a skeleton of their own.
-const WEAPONS := {"runner_gunner": "res://assets/models/world_one/rivet_revolvers.glb"}
+# Kest's clacker (E2-03, ruling en) is the detonator her throw snaps, clamped at her right yoke: it
+# rides the Pod (COCKPIT_WEAPONS), so it stays at her hands while the ring and its mortar pods aim.
+const WEAPONS := {
+	"runner_gunner": "res://assets/models/world_one/rivet_revolvers.glb",
+	"demolitions_caster": "res://assets/models/world_one/kest_clacker.glb",
+}
+const COCKPIT_WEAPONS := ["demolitions_caster"]
 const WEAPON_NODE := "Weapon"
 const DEFAULT_CLASS := "pylon_engineer"
 const CHUNKS_PATH := "res://assets/models/chunks.glb"
@@ -1306,13 +1312,14 @@ static func _split(scene: Node) -> Dictionary:
 	return {"core": core, "pod": pod}
 
 
-# Mounts the pilot's WEAPONS model under the pod's WeaponRing at identity, once, as WEAPON_NODE.
-# Returns it, or null when the pilot has none, the shell has no ring or the file is missing.
+# Mounts the pilot's WEAPONS model at identity, once, as WEAPON_NODE: under the pod's WeaponRing,
+# or on the pod itself for COCKPIT_WEAPONS. Returns it, or null when the pilot has none, the shell
+# has no ring for it or the file is missing.
 func mount_weapon(pod: Node3D, pilot: String) -> Node3D:
-	var ring := pod.get_node_or_null("WeaponRing") as Node3D
-	if ring == null or not WEAPONS.has(pilot):
+	var seat := pod if pilot in COCKPIT_WEAPONS else pod.get_node_or_null("WeaponRing") as Node3D
+	if seat == null or not WEAPONS.has(pilot):
 		return null
-	var held := ring.get_node_or_null(WEAPON_NODE) as Node3D
+	var held := seat.get_node_or_null(WEAPON_NODE) as Node3D
 	if held != null:
 		return held
 	var weapon := _addon(String(WEAPONS[pilot])) as Node3D
@@ -1320,7 +1327,7 @@ func mount_weapon(pod: Node3D, pilot: String) -> Node3D:
 		return null
 	weapon.name = WEAPON_NODE
 	weapon.transform = Transform3D.IDENTITY
-	ring.add_child(weapon)
+	seat.add_child(weapon)
 	return weapon
 
 
