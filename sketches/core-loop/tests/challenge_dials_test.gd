@@ -65,23 +65,22 @@ func _rules() -> void:
 			_t.check("default " + key, false)
 	_t.eq("default damage_by_phase", ChallengeDials.value("waking.damage_by_phase"), [1.0, 1.0, 1.0, 1.0])
 	_t.near("default damage is the base", ChallengeDials.damage("mind", 10.0, 2), 10.0, 0.0)
-	# Brindle ships tuned (Spillway PR): the per-phase lists carry the band-swept values, every other key is identity.
+	# Brindle ships tuned (Spillway PR, W46-S1): the per-phase lists carry the band-swept values, every other key is identity.
 	_t.eq("brindle tuned period_by_phase", ChallengeDials.value("brindle.period_by_phase"), [0.6, 0.35, 0.5, 1.0])
-	_t.eq("brindle tuned damage_by_phase", ChallengeDials.value("brindle.damage_by_phase"), [1.0, 3.0, 2.0, 1.0])
+	_t.eq("brindle tuned damage_by_phase", ChallengeDials.value("brindle.damage_by_phase"), [2.0, 3.5, 3.0, 1.0])
 	_t.near("tuned Requisition period", ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1), Rules.CRANE_PERIOD * 0.6, 1e-6)
 	_t.near("tuned Furnace period", ChallengeDials.period("brindle", 2.0, 2), 0.7, 1e-6)
 	_t.near("tuned Scuttle period", ChallengeDials.period("brindle", 2.0, 3), 1.0, 1e-6)
 	_t.near("the chase period is the base", ChallengeDials.period("brindle", 2.0, 4), 2.0, 0.0)
-	_t.near("tuned Furnace damage", ChallengeDials.damage("brindle", 10.0, 2), 30.0, 1e-6)
+	_t.near("tuned Furnace damage", ChallengeDials.damage("brindle", 10.0, 2), 35.0, 1e-6)
 	_t.near("chase damage is the base", ChallengeDials.damage("brindle", 10.0, 4), 10.0, 0.0)
 	_t.eq("a --tune/override REPLACES the tuned list: 1/1/1/1 is the raw identity", _raw_identity(), 3.4)
 	_t.eq("and the tuned default returns after reset", ChallengeDials.value("brindle.period_by_phase"), [0.6, 0.35, 0.5, 1.0])
 	for key in ChallengeDials.DEFAULTS:
 		# The tuned lists, and the fight-phase follow-up counts (a count, not a multiplier; Andrew's
 		# 23 Oct phase ruling sets them, fight_phases.gd).
-		# The silt boils ship on world 1 (pack pressure E, 24 Oct); the dam's mob hits ship at x2 (w19 bands x1.5, wave 37 x2).
-		# Crews lead the roll by half on world 1 (wave 37 unit D1).
-		if key in ["brindle.period_by_phase", "brindle.damage_by_phase", "brindle.follow_ups_by_phase", "hazard.boil_by_stage", "mobs.damage_by_stage", "pack.lead_by_stage", "pack.lead_cruise_by_stage"]:
+		# The silt boils ship on world 1 (pack pressure E, 24 Oct); W46-S1 raises world 1 mob, lead and Warden slag/counter defaults.
+		if key in ["brindle.period_by_phase", "brindle.damage_by_phase", "brindle.follow_ups_by_phase", "hazard.boil_by_stage", "mobs.damage_by_stage", "pack.lead_by_stage", "pack.lead_cruise_by_stage", "warden.slag_damage_by_stage"]:
 			continue
 		# World 1's hazards hit enemies too (W44, PR 1123), an on/off flag pinned below.
 		if key == "hazard.hits_enemies_by_stage":
@@ -102,11 +101,13 @@ func _rules() -> void:
 	_t.eq("wave 37 D4: terrain stops shells across all stages", ChallengeDials.value("hazard.shell_cover_by_stage"), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("wave 37 D4: lobbers lead 0.75 across all stages", ChallengeDials.value("mobs.lobber_lead_by_stage"), [0.75, 0.75, 0.75, 0.75, 0.75, 0.75])
 	_t.eq("wave 37 D4: the lobber share step ships at the old 0.07 on every stage", ChallengeDials.value("mobs.lobber_share_step_by_stage"), [0.07, 0.07, 0.07, 0.07, 0.07, 0.07])
-	_t.eq("the dam's mob hits ship at x2 (wave 37, D5's payment), every other stage at identity", ChallengeDials.value("mobs.damage_by_stage"), [2.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+	_t.eq("W46-S1: world 1 mob hits ship at x3.5 / x2.5, every other stage at identity", ChallengeDials.value("mobs.damage_by_stage"), [3.5, 2.5, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("and that lead is gone at cruise across all stages", ChallengeDials.value("pack.lead_cruise_by_stage"), [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-	_t.eq("crews lead the roll by half across all stages", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
+	_t.eq("W46-S1: crews lead 0.7 on stage 1 and 0.5 on stages 2 to 6", ChallengeDials.value("pack.lead_by_stage"), [0.7, 0.5, 0.5, 0.5, 0.5, 0.5])
 	_t.eq("chasers run at 9 m/s across all stages", ChallengeDials.value("mobs.chaser_speed_by_stage"), [9.0, 9.0, 9.0, 9.0, 9.0, 9.0])
-	_t.eq("world 1 Wardens pulse x1.3, later ones at identity", ChallengeDials.value("warden.pulse_damage_by_stage"), [1.3, 1.3, 1.0, 1.0, 1.0, 1.0])
+	_t.eq("W46-S1: world 1 Wardens pulse x3.0 / x2.5, later ones at identity", ChallengeDials.value("warden.pulse_damage_by_stage"), [3.0, 2.5, 1.0, 1.0, 1.0, 1.0])
+	_t.eq("W46-S1: the flume Warden meltdown slag ships at x3.0, the rest at identity", ChallengeDials.value("warden.slag_damage_by_stage"), [1.0, 3.0, 1.0, 1.0, 1.0, 1.0])
+	_t.eq("W46-S1: the flume Warden counter-pulse ships at 30, the rest off", ChallengeDials.value("warden.counter_damage_by_stage"), [0.0, 30.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("the flume's Warden pulses on a x0.85 cycle, the rest at identity", ChallengeDials.value("warden.pulse_cycle_by_stage"), [1.0, 0.85, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("W1-67: the flume Warden's cycle tightens x0.9 per chunk lost, the rest stay flat", ChallengeDials.value("warden.pulse_ratchet_by_stage"), [1.0, 0.9, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("the clock climbs three tiers on world 1, two after it", ChallengeDials.value("mobs.clock_tiers_by_stage"), [3.0, 3.0, 2.0, 2.0, 2.0, 2.0])

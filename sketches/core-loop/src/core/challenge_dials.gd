@@ -35,7 +35,8 @@ const ZEROS6 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # 6 s gap (wave 39): at 5.1 s a ball rolling at cruise lost hull faster per second than one stopped (bot_fairness
 # F2 stop tax 1.05 pooled over six seeds, line 2.0; 3.71 at 6 s), so speed stopped being safety on the first
 # stage. A ladder rung multiplies on top of these.
-const PULSE_DAMAGE_W1 := [1.3, 1.3, 1.0, 1.0, 1.0, 1.0]
+const PULSE_DAMAGE_W1 := [3.0, 2.5, 1.0, 1.0, 1.0, 1.0]
+const SLAG_DAMAGE_W1 := [1.0, 3.0, 1.0, 1.0, 1.0, 1.0]
 const PULSE_CYCLE_W1 := [1.0, 0.85, 1.0, 1.0, 1.0, 1.0]
 # The Wardens escalate (W1-67, gameplay critique finding 5): each chunk the Warden has lost multiplies its
 # pulse cycle by this, so the fight tightens as it goes (5.1 s, 4.59, 4.13, 3.72 on the flume). The tell is
@@ -50,7 +51,7 @@ const SILT_W1 := [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]
 # ball that slows or holds a line it can be met on gets lunged, and a ball at cruise across it still slips.
 # The lane is committed at the wind-up as before and the wind-up is no shorter. Stages 3 to 6 inherit the
 # stage 2 ruling-cu baseline so later worlds never drop back to an easier default.
-const LEAD_W1 := [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+const LEAD_W1 := [0.7, 0.5, 0.5, 0.5, 0.5, 0.5]
 # The share of that lead a crew keeps on a ball at cruise: none (wave 37, the stop-tax line F2). The
 # lead is whole below 85% of cruise and gone at cruise (PackPressure.lead_now), so pressure lands on the ball
 # that slows and a ball that keeps its speed is aimed at where it is, as before wave 37. 1 keeps it whole.
@@ -63,7 +64,7 @@ const LEAD_CRUISE_W1 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # (8 wins of 12 against the base's 4); at x2 with all seven units it reads 3 of 12, 7 deaths, 1.72 hits a
 # second before armour against the base's 1.47 and the same hull lost a run (178). Hit size again, for the
 # reason above. A stalled ball's boil now hits 40 (10 x strength 2 x 2).
-const MOBS_DAMAGE_W1 := [2.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+const MOBS_DAMAGE_W1 := [3.5, 2.5, 1.0, 1.0, 1.0, 1.0]
 # Chasers run at 9 m/s, up from 4.8 (wave 37 unit D2, ruling cu call 4: faster than walking pace,
 # slower than cruise). A ball that stops or dawdles is run down; a ball at cruise (14 m/s) is never caught by
 # running. The lunge, its lane and its wind-up are as they were. Stages 3 to 6 inherit the stage 2 baseline.
@@ -85,7 +86,7 @@ const DEFAULTS := {
 	# 30% of a 120 hull, and the fight asks for more dodges, not one-shot luck. Eight random-policy runs a side
 	# (seeds 2860 to 2867, PR 787): the worst minute at Brindle took a median 40% of max hull before and 71% after,
 	# against 76% to 79% at the dam Warden. Every run that reached Brindle cleared it.
-	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [1.0, 3.0, 2.0, 1.0],
+	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [2.0, 3.5, 3.0, 1.0],
 	"brindle.period_mult": 1.0, "brindle.period_by_phase": [0.6, 0.35, 0.5, 1.0],
 	"brindle.tell_mult": 1.0, "brindle.punish_mult": 1.0, "brindle.combo": 0.0,
 	# Fight phases (fight_phases.gd, Andrew 23 Oct 19:02Z): cued follow-ups after each lead attack, per
@@ -120,12 +121,12 @@ const DEFAULTS := {
 	"mobs.lobber_share_step_by_stage": [0.07, 0.07, 0.07, 0.07, 0.07, 0.07],
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
-	"warden.pulse_damage_by_stage": PULSE_DAMAGE_W1, "warden.pulse_cycle_by_stage": PULSE_CYCLE_W1, "warden.slag_damage_by_stage": ONES6,
+	"warden.pulse_damage_by_stage": PULSE_DAMAGE_W1, "warden.pulse_cycle_by_stage": PULSE_CYCLE_W1, "warden.slag_damage_by_stage": SLAG_DAMAGE_W1,
 	"warden.pulse_ratchet_by_stage": PULSE_RATCHET_W1,
 	# The Warden's counter-pulse (warden.gd): a second core ring committed inside a stagger. Damage is an
 	# absolute value per stage (0 = off, the default: nothing is built or rolled); the telegraph is floored at
 	# TELL_FLOOR; the delay is seconds into the stagger before it starts charging.
-	"warden.counter_damage_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+	"warden.counter_damage_by_stage": [0.0, 30.0, 0.0, 0.0, 0.0, 0.0],
 	"warden.counter_telegraph_by_stage": [0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
 	"warden.counter_delay_by_stage": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
 	# The difficulty clock's last tier per stage (director.gd clock_tiers, build/run_clock.gd tiers): the clock

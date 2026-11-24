@@ -43,8 +43,15 @@ const REEL_STEAL_SHARE := 0.45
 const REEL_STEAL_MAX := 700
 # While reeling, molten slag and desperate Scuttle charges sear away this share of loose scrap
 # armour (capped) before the hit lands, so overfed late-World-1 builds cannot shrug off 6+ hits.
+# Outside a reel, slow (< cruise) slag and charge hits still sear a smaller share so stopped balls
+# cannot face-tank with spilled scrap recovery (W46-S1, ruling cu).
 const REEL_SEAR_SHARE := 0.45
 const REEL_SEAR_MAX := 650
+const SLOW_SEAR_SHARE := 0.25
+const SLOW_SEAR_MAX := 300
+# Cruising balls (>= cruise) skim molten slag for a light finite graze instead of full melt+sear,
+# keeping World 1's speed-is-safety grammar while keeping stop_tax finite across every band pool.
+const SKIM_SLAG_MULT := 0.20
 # No attack lands before this, so the entry and the hull readout are free to read.
 const INTRO_SECONDS := 3.0
 
@@ -82,6 +89,9 @@ const CRANE_REACH := 5.0
 const STEAL_SHARE := 0.2
 const STEAL_MIN := 10
 const STEAL_MAX := 60
+# Slow (< cruise) non-reel crane catch impact damage (W46-S1, ruling cu): presses stopped balls
+# in Phase 1 while cruising balls slip the magnet cleanly.
+const CRANE_DAMAGE := 15.0
 const TUG_LIFT := 7.0
 const TUG_PULL := 1.2
 # The magnet holds what it stole and drips it as a trail, one pickup per DRIP seconds.
@@ -110,7 +120,7 @@ const SLAG_DAMAGE := 12.0
 const SLAG_REACH := 1.8
 const SLAG_BOUNCE_UP := 14.0
 const SLAG_BOUNCE_OUT := 10.0
-const SLAG_GRACE := 0.8
+const SLAG_GRACE := 1.2
 const QUENCH_SECONDS := 8.0
 const VENT_COOLDOWN := 10.0
 const VENT_REACH := 2.8
