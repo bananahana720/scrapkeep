@@ -5036,6 +5036,8 @@ func _cadence_fire_hand() -> void:
 		if not want_fire:
 			return
 		if not _cadence_reload_rolled:
+			if bool(snap.get("window_spent", false)):
+				return
 			_cadence_reload_rolled = true
 			_cadence_reload_pressed = false
 			_cadence_reload_hit = _roll_cadence_window()
