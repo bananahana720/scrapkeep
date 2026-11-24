@@ -25,6 +25,10 @@ const APPROACH := 16.0
 const APPROACH_SPEED := 20.0
 const DUNK_EVERY := 45
 const DUNK_TICKS := 12
+# E1-06 tap-spark / hold-arc cadence (PILOT-CADENCE.md section 3.2): pulse press, hold past
+# the charge threshold, and release periodically across the 450-tick arena window.
+const FIRE_CYCLE := 45
+const FIRE_HOLD := 33
 # Item effects that push the ball themselves (item_effects.gd _surge and the dash). The run takes
 # a gate offer without one, so the no-push check reads the stages and not the player's own build:
 # since the cobalt floor (#536) the first offer can be Slipstream, whose surge on a speed tier up
@@ -283,7 +287,8 @@ func _open_window(which: String) -> void:
 	_probe.worst = 0.0
 	_probe.ticks = 0
 	_probe.armed = true
-	_source.hold = {"fire_held": true}
+	_source.hold = {}
+	_source.press = {}
 	# The stage's flood clock, forced back to full height: if the world still ran it,
 	# the dunks below would be pushed.
 	if _cycle != null:
@@ -303,6 +308,13 @@ func _step_window() -> void:
 	if _wait == 5 or _wait == WINDOW - 5:
 		_check_maps(w)
 	if _wait < WINDOW:
+		var pulse: int = (_wait - 1) % FIRE_CYCLE
+		if pulse == 0:
+			_source.hold = {"fire_held": true}
+			_source.press = {"fire_pressed": true}
+		elif pulse == FIRE_HOLD:
+			_source.hold = {}
+			_source.press = {"fire_released": true}
 		return
 	_probe.armed = false
 	var which: String = w["which"]
@@ -337,8 +349,9 @@ func _step_window() -> void:
 	_report("%s world idle" % which, not world.launch.flying() and not world.flood.visible and world.vault == null,
 		"launch rail flying %s, flood plane shown %s, vault %s" % [world.launch.flying(), world.flood.visible, world.vault])
 	_report("%s weapons fire" % which, _shots - w["shots"] >= 10 and _game.flow.state_name() == "boss" and _boss.entries == w["entries"],
-		"%d shot_fired over 5 s with fire held, flow in %s" % [_shots - w["shots"], _game.flow.state_name()])
+		"%d shot_fired over 5 s with fire pulsed, flow in %s" % [_shots - w["shots"], _game.flow.state_name()])
 	_source.hold = {}
+	_source.press = {}
 	if which == "entry":
 		_phase = "retry"
 	else:
