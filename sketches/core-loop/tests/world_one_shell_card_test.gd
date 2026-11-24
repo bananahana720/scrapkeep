@@ -10,9 +10,9 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # the shell unfitted a card must describe what the pick does alone and say nothing of fins.
 
 const CASES := [
-	["pylon_engineer", "s_cannonball", "s_face_runner", "Kick off a wall to jump again.", "Kick off a wall to jump again. Steer sharper after each kick."],
-	["demolitions_caster", "k_ghost", "k_smoke_trail", "Glide cloaked.", "Glide cloaked. Steer sharper while you glide."],
-	["runner_gunner", "r_juggernaut", "r_second_wind", "Bank two sprints.", "Bank two sprints. Sprinting, you steer freely midair."],
+	["pylon_engineer", "s_static_flutter", "s_cannonball", "s_face_runner", "Kick off a wall to jump again.", "Kick off a wall to jump again. Steer sharper after each kick."],
+	["demolitions_caster", "k_keg", "k_ghost", "k_smoke_trail", "Glide cloaked.", "Glide cloaked. Steer sharper while you glide."],
+	["runner_gunner", "r_big_iron", "r_juggernaut", "r_second_wind", "Bank two sprints.", "Bank two sprints. Sprinting, you steer freely midair."],
 ]
 
 var _game
@@ -47,7 +47,7 @@ func _physics_process(_delta: float) -> bool:
 		_ws = _game.get_node("Workshop")
 		return false
 	for row in CASES:
-		_card(row[0], row[1], row[2], row[3], row[4])
+		_card(row[0], row[1], row[2], row[3], row[4], row[5])
 	print("world_one_shell_card_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
@@ -76,10 +76,10 @@ func _line(class_id: String, parent: String, node_id: String, world_one: bool, s
 	return text
 
 
-func _card(class_id: String, parent: String, node_id: String, alone: String, with_shell: String) -> void:
-	var off := _line(class_id, parent, node_id, true, false)
+func _card(class_id: String, wo_parent: String, base_parent: String, node_id: String, alone: String, with_shell: String) -> void:
+	var off := _line(class_id, wo_parent, node_id, true, false)
 	_check("%s, shell off: no fins promise" % node_id, off == alone and not off.to_lower().contains("fins"), "'%s'" % off)
-	var on := _line(class_id, parent, node_id, true, true)
+	var on := _line(class_id, wo_parent, node_id, true, true)
 	_check("%s, shell on: inversion line" % node_id, on == with_shell, "'%s'" % on)
-	var base := _line(class_id, parent, node_id, false, true)
+	var base := _line(class_id, base_parent, node_id, false, true)
 	_check("%s, world-one off, shell on: no fins promise" % node_id, not base.to_lower().contains("fins"), "'%s'" % base)

@@ -40,11 +40,11 @@ const BASE_EFFECT := {
 	"r_second_wind": "Bank two sprint charges",
 }
 const CODEX := {
+	"r_fan_hammer": "Twelve light rounds. Hold to fan fire.",
+	"r_big_iron": "Two piercing shells. Heavy knock, breaks props.",
 	"r_gunline": "Your laser fires twin bolts.",
 	"r_juggernaut": "Starting a sprint blasts machines back.",
-	"r_tracer": "Running fire jumps to a neighbour.",
 	"r_run_gun": "Sustain fire. Worn scrap sparks behind you.",
-	"r_ram_fins": "Sprint through bodies instead of bouncing.",
 	"r_second_wind": "Bank two sprints. Sprinting, you steer freely midair.",
 }
 const CLASS := "runner_gunner"
@@ -130,10 +130,12 @@ func _take(picks: Array) -> bool:
 	var tree = _player.tree
 	tree.reset(CLASS)
 	tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS
+	tree.world_one = _game.ctx.tuning.option("world_one_builds") == "on"
 	var ok := true
 	for id in picks:
 		tree.open_checkpoint()
 		ok = tree.pick(id) and ok
+	_combat._rebuild_patterns()
 	return ok
 
 
@@ -142,6 +144,7 @@ func _take_deep(picks: Array) -> void:
 	var tree = _player.tree
 	tree.reset(CLASS)
 	tree.max_depth = picks.size()
+	tree.world_one = _game.ctx.tuning.option("world_one_builds") == "on"
 	for id in picks:
 		tree.open_checkpoint()
 		tree.pick(id)
@@ -162,7 +165,7 @@ func _card_lines(picks: Array) -> Array:
 
 func _cards() -> void:
 	_flag(true)
-	var pairs := {"": ["r_gunline", "r_juggernaut"], "r_gunline": ["r_tracer", "r_run_gun"], "r_juggernaut": ["r_ram_fins", "r_second_wind"]}
+	var pairs := {"": ["r_fan_hammer", "r_big_iron"], "r_fan_hammer": ["r_gunline", "r_run_gun"], "r_big_iron": ["r_juggernaut", "r_second_wind"]}
 	var seen := 0
 	for parent in pairs:
 		var lines := _card_lines([] if parent == "" else [parent])
@@ -186,37 +189,39 @@ func _retained() -> void:
 	_take([])
 	var base := _pattern()
 	var base_charges: int = _player.abilities.slot(AbilityState.MOVEMENT).max_charges
-	# R1: two bolts at 0.6 damage, at least 3 degrees spread.
-	_take(["r_gunline"])
+	# Depth 1 left (r_fan_hammer): 12 light rounds, 0.10 s floor, fan = true.
+	_take(["r_fan_hammer"])
 	var p := _pattern()
-	_check("R1 twin bolts", p.count == base.count + 1 and p.count == 2 and is_equal_approx(p.damage, base.damage * 0.6) and p.spread_deg >= 3.0,
-		"count %d (base %d), damage %.2f (base %.2f), spread %.1f" % [p.count, base.count, p.damage, base.damage, p.spread_deg])
-	# R2: the half-scale start blast, 1 s gap.
-	_take(["r_juggernaut"])
-	var blast := _procs_of("blast")
-	_check("R2 start blast", blast.size() == 1 and blast[0]["on"] == "sprint_started" and is_equal_approx(blast[0]["scale"], 0.5) and is_equal_approx(blast[0]["gap"], 1.0),
-		"%s" % [blast])
-	# R3: one 6 m chain at 0.9 (over R1's 0.6).
-	_take(["r_gunline", "r_tracer"])
+	_check("Fan the Hammer pattern", p.mag == base.mag * 2 and p.fan and is_equal_approx(p.damage, base.damage * 0.5) and is_equal_approx(p.floor_s, base.floor_s * 0.5),
+		"mag %d (base %d), fan %s, damage %.2f, floor %.2f" % [p.mag, base.mag, p.fan, p.damage, p.floor_s])
+	# Depth 1 right (r_big_iron): 2 piercing shells, 3x knock, breaks props.
+	_take(["r_big_iron"])
 	p = _pattern()
-	_check("R3 one 6 m chain at 0.9", p.chain_jumps == base.chain_jumps + 1 and p.chain_range >= 6.0 and is_equal_approx(p.damage, base.damage * 0.6 * 0.9),
-		"jumps %d (base %d), range %.1f, damage %.3f" % [p.chain_jumps, base.chain_jumps, p.chain_range, p.damage])
-	# R4: half drain knob.
-	_take(["r_gunline", "r_run_gun"])
+	_check("Big Iron pattern", p.mag == 2 and p.pierce == base.pierce + 1 and p.breaks_props and is_equal_approx(p.damage, base.damage * 2.4) and is_equal_approx(p.floor_s, base.floor_s * 3.0),
+		"mag %d, pierce %d, breaks_props %s, damage %.2f, floor %.2f" % [p.mag, p.pierce, p.breaks_props, p.damage, p.floor_s])
+	# Moved Depth 2 under Fan the Hammer: R1 twin bolts at 0.6 of Fan's damage, at least 3 degrees spread.
+	_take(["r_fan_hammer", "r_gunline"])
+	p = _pattern()
+	_check("R1 moved under Fan the Hammer: twin bolts", p.count == base.count + 1 and p.count == 2 and is_equal_approx(p.damage, base.damage * 0.5 * 0.6) and p.spread_deg >= 3.0,
+		"count %d (base %d), damage %.2f (base %.2f), spread %.1f" % [p.count, base.count, p.damage, base.damage, p.spread_deg])
+	# Moved Depth 2 under Big Iron: R2 half-scale start blast, 1 s gap.
+	_take(["r_big_iron", "r_juggernaut"])
+	var blast := _procs_of("blast")
+	_check("R2 moved under Big Iron: start blast", blast.size() == 1 and blast[0]["on"] == "sprint_started" and is_equal_approx(blast[0]["scale"], 0.5) and is_equal_approx(blast[0]["gap"], 1.0),
+		"%s" % [blast])
+	# R4 under Fan the Hammer: half drain knob.
+	_take(["r_fan_hammer", "r_run_gun"])
 	_check("R4 half drain knob", is_equal_approx(_player.tree.knob("sprint_fire_drain"), 0.5), "knob %s" % _player.tree.knob("sprint_fire_drain"))
-	# R5: punch 1.5, no enemy rebound knob.
-	_take(["r_juggernaut", "r_ram_fins"])
-	_check("R5 knobs", is_equal_approx(_player.tree.knob("sprint_punch"), 1.5) and _player.tree.knob("sprint_no_rebound") == true, "punch %s, no rebound %s" % [_player.tree.knob("sprint_punch"), _player.tree.knob("sprint_no_rebound")])
-	# R6: one extra sprint charge, and it is R6's own effect.
-	_take(["r_juggernaut", "r_second_wind"])
+	# R6 under Big Iron: one extra sprint charge.
+	_take(["r_big_iron", "r_second_wind"])
 	var charges: int = _player.abilities.slot(AbilityState.MOVEMENT).max_charges
 	_check("R6 one extra sprint charge", charges == base_charges + 1, "%d charges, base %d" % [charges, base_charges])
-	# R3 and R4, R5 and R6 are exclusive.
-	_take(["r_gunline", "r_tracer"])
+	# Gunline/Run and Gun and Juggernaut/Second Wind are exclusive.
+	_take(["r_fan_hammer", "r_gunline"])
 	var third: bool = _player.tree.pick("r_run_gun")
-	_take(["r_juggernaut", "r_ram_fins"])
+	_take(["r_big_iron", "r_juggernaut"])
 	var fourth: bool = _player.tree.pick("r_second_wind")
-	_check("R3/R4 and R5/R6 exclusive", not third and not fourth, "second pick accepted %s, %s" % [third, fourth])
+	_check("Gunline/R4 and Juggernaut/R6 exclusive", not third and not fourth, "second pick accepted %s, %s" % [third, fourth])
 
 
 func _procs_of(action: String) -> Array:
@@ -245,17 +250,17 @@ func _drain() -> void:
 	_flag(true)
 	_take([])
 	var base_fire := _drain_of(true)
-	_take(["r_gunline", "r_run_gun"])
+	_take(["r_fan_hammer", "r_run_gun"])
 	var fire := _drain_of(true)
 	var still := _drain_of(false)
 	_check("R4 half drain while firing", is_equal_approx(fire, base_fire * 0.5) and is_equal_approx(still, base_fire) and base_fire > 0.0,
 		"firing %.3f (base %.3f), not firing %.3f" % [fire, base_fire, still])
 
 
-# R5 through the real rebound test: a heavy enemy rebounds a sprinting ball at base and not
-# with Ram Fins; walls are not read by the knob (one reader, the enemy test).
+# R5 through the real rebound test (base tree, flag off): a heavy enemy rebounds a sprinting ball
+# at base and not with Ram Fins; walls are not read by the knob (one reader, the enemy test).
 func _ram() -> void:
-	_flag(true)
+	_flag(false)
 	var enemy: Node3D = _combat.spawn_enemy("chaser", _player.ball_position() + Vector3(4.0, 0.0, 4.0))
 	enemy.weight = 1000.0
 	_player.kit.sprinting = true
@@ -265,7 +270,7 @@ func _ram() -> void:
 	var ram_rebounds: bool = _player._rebounds_off(enemy)
 	_player.kit.sprinting = false
 	var walking: bool = _player._rebounds_off(enemy)
-	_check("R5 no enemy rebound while sprinting", base_rebounds and not ram_rebounds and walking, "base %s, ram fins %s, not sprinting %s" % [base_rebounds, ram_rebounds, walking])
+	_check("R5 no enemy rebound while sprinting (base tree)", base_rebounds and not ram_rebounds and walking, "base %s, ram fins %s, not sprinting %s" % [base_rebounds, ram_rebounds, walking])
 	var src := FileAccess.get_file_as_string("res://src/movement/player_ball.gd")
 	_check("R5 walls untouched", src.count("sprint_no_rebound") == 1, "the knob has %d reader in player_ball.gd, the enemy rebound test" % src.count("sprint_no_rebound"))
 	enemy.remove_from_group("enemy")
@@ -307,7 +312,7 @@ func _drop(e: Node3D) -> void:
 
 
 func _trail_checks() -> void:
-	var r4 := ["r_gunline", "r_run_gun"]
+	var r4 := ["r_fan_hammer", "r_run_gun"]
 	# One patch per whole unit of wear, on the ball's own ground.
 	_armed(r4, true)
 	var heard := []
@@ -463,7 +468,7 @@ func _trail_checks() -> void:
 	_wear(3)
 	_check("wear off, no patches", _trail.patches.is_empty() and _game.run.metrics["wear_loss"] == worn, "%d patches, wear %s" % [_trail.patches.size(), _game.run.metrics["wear_loss"] - worn])
 	# A build without R4 makes none.
-	_armed(["r_gunline", "r_tracer"], true)
+	_armed(["r_fan_hammer", "r_gunline"], true)
 	_wear(3)
 	_check("no R4, no patches", _trail.patches.is_empty() and _game.run.metrics["wear_loss"] >= 3.0, "%d patches, wear %s" % [_trail.patches.size(), _game.run.metrics["wear_loss"]])
 	_drop(near)
@@ -496,32 +501,35 @@ func _flag_off() -> void:
 				ok = false
 				bad = "%s: %s" % [l[0], l[1]]
 	_check("flag off cards match base", ok and count == 6, "%d cards %s" % [count, bad])
-	var tree_ok := true
-	for i in UpgradeTree.nodes(CLASS).size():
-		tree_ok = tree_ok and UpgradeTree.nodes(CLASS, false)[i] == UpgradeTree.nodes(CLASS, true)[i]
-	# TR1 (2026-10-04): every pilot now declares NODES_WORLD_ONE, so Rivet has a table; the
-	# flag-off tree must still equal the base table.
-	_check("flag off tree is the base table", tree_ok and UpgradeTree.WORLD_ONE_TABLES.has(CLASS), "Rivet has a world-one table and the flag-off tree is unchanged")
+	var wo_tail_ok := UpgradeTree.nodes(CLASS, true).slice(6) == UpgradeTree.nodes(CLASS, false).slice(6)
+	_check("flag off tree is the base table, world-one puts keystones at depth 1",
+		wo_tail_ok and UpgradeTree.nodes(CLASS, false)[0]["id"] == "r_gunline"
+		and UpgradeTree.nodes(CLASS, true)[0]["id"] == "r_fan_hammer"
+		and UpgradeTree.WORLD_ONE_TABLES.has(CLASS), "Rivet world-one has Depth-1 keystones while flag-off tree is unchanged")
 
 
 func _identities() -> void:
 	_armed([], true)
 	var base_charges: int = _player.abilities.slot(AbilityState.MOVEMENT).max_charges
-	# Running gunner, Tracer Rounds: twin bolts that chain.
-	_armed(["r_gunline", "r_tracer"], true)
+	# Fan the Hammer + Gunline: 12-round fan firing twin bolts.
+	_armed(["r_fan_hammer", "r_gunline"], true)
 	var p := _pattern()
-	_check("identity running gunner, Tracer", p.count == 2 and p.chain_jumps >= 1 and _player.tree.path() == ["r_gunline", "r_tracer"], "count %d, chain %d" % [p.count, p.chain_jumps])
-	# Running gunner, Run and Gun: twin bolts, half drain, and a trail that appears with wear.
-	_armed(["r_gunline", "r_run_gun"], true)
+	_check("identity fan gunline", p.fan and p.mag == 12 and p.count == 2 and _player.tree.path() == ["r_fan_hammer", "r_gunline"],
+		"fan %s, mag %d, count %d" % [p.fan, p.mag, p.count])
+	# Fan the Hammer + Run and Gun: 12-round fan, half drain, and a trail that appears with wear.
+	_armed(["r_fan_hammer", "r_run_gun"], true)
 	p = _pattern()
 	_wear(2)
-	_check("identity running gunner, Run and Gun", p.count == 2 and is_equal_approx(_drain_of(true), 0.25) and _trail.patches.size() == 2,
-		"count %d, %d patches" % [p.count, _trail.patches.size()])
-	# Bowling bruiser: blast on sprint start, ram through bodies.
-	_armed(["r_juggernaut", "r_ram_fins"], true)
-	_check("identity bowling bruiser", _procs_of("blast").size() == 1 and _player.tree.knob("sprint_no_rebound") == true and is_equal_approx(_player.tree.knob("sprint_punch"), 1.5),
-		"blast procs %d, ram %s" % [_procs_of("blast").size(), _player.tree.knob("sprint_no_rebound")])
-	# Hit-and-run bruiser: blast on entry, a second charge for the escape.
-	_armed(["r_juggernaut", "r_second_wind"], true)
+	_check("identity fan run and gun", p.fan and p.mag == 12 and is_equal_approx(_drain_of(true), 0.25) and _trail.patches.size() == 2,
+		"fan %s, mag %d, %d patches" % [p.fan, p.mag, _trail.patches.size()])
+	# Big Iron + Juggernaut: 2 piercing prop-breaking shells, blast on sprint start.
+	_armed(["r_big_iron", "r_juggernaut"], true)
+	p = _pattern()
+	_check("identity big iron juggernaut", p.mag == 2 and p.breaks_props and _procs_of("blast").size() == 1 and _player.tree.path() == ["r_big_iron", "r_juggernaut"],
+		"mag %d, breaks_props %s, blast procs %d" % [p.mag, p.breaks_props, _procs_of("blast").size()])
+	# Big Iron + Second Wind: 2 piercing prop-breaking shells, a second sprint charge.
+	_armed(["r_big_iron", "r_second_wind"], true)
+	p = _pattern()
 	var charges: int = _player.abilities.slot(AbilityState.MOVEMENT).max_charges
-	_check("identity hit-and-run bruiser", _procs_of("blast").size() == 1 and charges == base_charges + 1, "blast procs %d, charges %d (base %d)" % [_procs_of("blast").size(), charges, base_charges])
+	_check("identity big iron second wind", p.mag == 2 and p.breaks_props and charges == base_charges + 1,
+		"mag %d, charges %d (base %d)" % [p.mag, charges, base_charges])

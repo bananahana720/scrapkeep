@@ -99,5 +99,17 @@ const NODES := [
 ]
 
 
-# Tarn's world-one profile retains every node in the full tree's heap order.
-const NODES_WORLD_ONE := NODES
+# World-one Depth-1 opposite-feel keystones (PILOT-CADENCE.md §§6.1-6.2, E2-09).
+# Left root: Saw Flurry (t_long_claw moves to slot 2 in place of t_twin_talons; t_heavy_paw stays at slot 3).
+# Right root: Guillotine (t_anchor_line moves to slot 4 in place of t_spare_claw; t_vice_grip stays at slot 5).
+const SAW_FLURRY := {"id": "t_saw_flurry", "name": "Saw Flurry", "effect": "Fast light sweeps. Every fifth hit pierces.", "key": "weapon",
+	"icon": "ab_tarn_weapon", "tags": ["close", "sustain"],
+	"pattern": {"claw_sweep": {"set": {"window_s": [0.20, 0.44], "pierce_every": 5},
+		"mul": {"damage": 0.5, "beat_floors_s": 0.5, "recover_s": 0.5}}}}
+const GUILLOTINE := {"id": "t_guillotine", "name": "Guillotine", "effect": "Slow windup. Third beat cleaves, breaks props.", "key": "weapon",
+	"icon": "ab_tarn_weapon", "tags": ["close", "burst"],
+	"pattern": {"claw_sweep": {"set": {"beat_floors_s": [0.60, 0.70], "beat_window_s": 0.90,
+		"window_s": [0.40, 0.64], "recover_s": 0.60, "beat_mults": [1.0, 22.0 / 18.0, 60.0 / 18.0],
+		"beat_speed_mult": 0.8 / 18.0, "beat_knock_mult": 3.0, "beat_range_mult": 1.4, "beat_breaks_props": true}}}}
+# A static var, not a const: GDScript cannot fold Array.slice into a constant.
+static var NODES_WORLD_ONE: Array = [SAW_FLURRY, GUILLOTINE, NODES[0], NODES[3], NODES[1], NODES[5]] + NODES.slice(6)

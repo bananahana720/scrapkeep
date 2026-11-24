@@ -252,6 +252,8 @@ func _sable_reach() -> void:
 		tree.world_one = true
 		if doubled:
 			tree.open_checkpoint()
+			tree.pick("s_rail_lance")
+			tree.open_checkpoint()
 			tree.pick("s_beachhead")
 		player.kit.mounted = false
 		player.kit.mount_block = 0.0

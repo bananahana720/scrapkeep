@@ -99,5 +99,16 @@ const NODES := [
 ]
 
 
-# Tally's world-one profile retains every node in the full tree's heap order.
-const NODES_WORLD_ONE := NODES
+# World-one Depth-1 opposite-feel keystones (PILOT-CADENCE.md §§6.1-6.2, E2-09).
+# Left root: Petty Cash (tl_through_feed stays at slot 2; tl_audit_stamp moves to slot 3 in place of tl_line_feed).
+# Right root: Compound Interest (tl_steam_bank moves to slot 4 in place of tl_spring_vent; tl_corner_plate stays at slot 5).
+const PETTY_CASH := {"id": "tl_petty_cash", "name": "Petty Cash", "effect": "Half cost, half hit, faster beat stamps.", "key": "weapon",
+	"icon": "ab_tally_weapon", "tags": ["close", "sustain"],
+	"pattern": {"ledger_reader": {"set": {"cast_cost": 0.5, "floor_s": 0.25, "window_s": [0.25, 0.45], "refund": 0.25},
+		"mul": {"damage": 0.5}}}}
+const COMPOUND_INTEREST := {"id": "tl_compound_interest", "name": "Compound Interest", "effect": "Slower beat. Chained stamps climb to 38.", "key": "weapon",
+	"icon": "ab_tally_weapon", "tags": ["burst", "sustain"],
+	"pattern": {"ledger_reader": {"set": {"window_s": [0.55, 0.75], "window_mult": 1.0,
+		"stamp_streak_bonus": 8.0, "stamp_streak_cap": 38.0, "refund": 0.25}}}}
+# A static var, not a const: GDScript cannot fold Array.slice into a constant.
+static var NODES_WORLD_ONE: Array = [PETTY_CASH, COMPOUND_INTEREST, NODES[2], NODES[0], NODES[1], NODES[5]] + NODES.slice(6)

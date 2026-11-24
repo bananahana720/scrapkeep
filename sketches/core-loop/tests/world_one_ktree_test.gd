@@ -32,12 +32,12 @@ const BASE_EFFECT := {
 	"k_ambush": "Throwing no longer breaks your cloak",
 }
 const CODEX := {
+	"k_cluster": "Throws scatter three small charges sharing snap.",
+	"k_keg": "One wide slow keg breaks tough props.",
 	"k_trapper": "Charges wait longer. Five can wait at once.",
 	"k_ghost": "Cloaked, machines spot you only up close.",
 	"k_tripwire": "Charges spring when machines approach.",
-	"k_demo_expert": "Smash scatters five payloads.",
 	"k_smoke_trail": "Glide cloaked. Steer sharper while you glide.",
-	"k_ambush": "Throw payloads without breaking cloak.",
 }
 const LANDING := Vector3(6.0, 0.0, 6.0)
 
@@ -109,6 +109,7 @@ func _take(picks: Array) -> void:
 	var tree = _player.tree
 	tree.reset("demolitions_caster")
 	tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS
+	tree.world_one = _game.ctx.tuning.option("world_one_builds") == "on"
 	for id in picks:
 		tree.open_checkpoint()
 		tree.pick(id)
@@ -122,6 +123,7 @@ func _card_lines(class_id: String, picks: Array) -> Array:
 	var tree = _player.tree
 	tree.reset(class_id)
 	tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS
+	tree.world_one = _game.ctx.tuning.option("world_one_builds") == "on"
 	for id in picks:
 		tree.open_checkpoint()
 		tree.pick(id)
@@ -136,7 +138,7 @@ func _card_lines(class_id: String, picks: Array) -> Array:
 
 func _cards() -> void:
 	_flag(true)
-	var pairs := {"": ["k_trapper", "k_ghost"], "k_trapper": ["k_tripwire", "k_demo_expert"], "k_ghost": ["k_smoke_trail", "k_ambush"]}
+	var pairs := {"": ["k_cluster", "k_keg"], "k_cluster": ["k_tripwire", "k_trapper"], "k_keg": ["k_smoke_trail", "k_ghost"]}
 	var seen := 0
 	for parent in pairs:
 		var lines := _card_lines("demolitions_caster", [] if parent == "" else [parent])
@@ -151,17 +153,18 @@ func _cards() -> void:
 		_check("codex lines (flag on, after %s)" % (parent if parent != "" else "start"), same, "%s" % [lines])
 		seen += lines.size()
 	_check("all six Kest cards seen", seen == 6, "%d cards" % seen)
-	# A class with no rows keeps its own copy under the flag.
+	# A node with no row keeps its own copy under the flag.
 	var other_ok := true
 	var other := ""
 	for class_id in ["runner_gunner"]:
-		for parent in [[], [UpgradeTree.nodes(class_id)[0]["id"]], [UpgradeTree.nodes(class_id)[1]["id"]]]:
+		var wo: Array = UpgradeTree.nodes(class_id, true)
+		for parent in [[], [wo[0]["id"]], [wo[1]["id"]]]:
 			for l in _card_lines(class_id, parent):
-				var own := String(UpgradeTree.node(class_id, l[0])["effect"])
+				var own := String(UpgradeTree.node(class_id, l[0], true)["effect"])
 				if not WorldOneCards.has_row(l[0]) and l[1] != own:
 					other_ok = false
 					other = "%s: %s vs %s" % [l[0], l[1], own]
-	_check("no row, own effect (flag on, Rivet)", other_ok and not WorldOneCards.has_row("s_none"), other if other != "" else "every Rivet card reads its node effect")
+	_check("no row, own effect (flag on, Rivet)", other_ok and not WorldOneCards.has_row("s_none"), other if other != "" else "every Rivet card reads its row or node effect")
 	# Flag off: every card of every class is the node's own effect; Kest's equal the base strings.
 	_flag(false)
 	var off_ok := true
@@ -214,44 +217,59 @@ func _retained() -> void:
 	var base_fuse: float = _combat._knob("sticky_fuse")
 	var base_live: int = int(_combat._knob("sticky_max_live"))
 	var base_sight: float = _combat.cloak_sight()
-	var base_minis := _slam_count()
-	# K1: fuse 2.5, five live.
-	_take(["k_trapper"])
+	# Depth 1 left (k_cluster): scatters 3 charges per throw, 0.60 s floor, 0.7x radius.
+	_take(["k_cluster"])
+	_combat._throw_sticky(LANDING)
+	var cluster_p: Resource = _combat.pattern(Weapons.STICKY_CHARGE)
+	_check("k_cluster scatters 3 charges", _combat.sticky.live().size() == 3 and cluster_p.count == 3 and is_equal_approx(cluster_p.floor_s, 0.60),
+		"live %d, count %d, floor %.2f" % [_combat.sticky.live().size(), cluster_p.count, cluster_p.floor_s])
+	# Depth 1 right (k_keg): 1 live charge at a time, 1.40 s floor, 2x radius, breaks props.
+	_take(["k_keg"])
+	var keg_p: Resource = _combat.pattern(Weapons.STICKY_CHARGE)
+	_throw()
+	_throw()
+	_check("k_keg holds 1 live charge and breaks props", _combat.sticky.live().size() == 1 and keg_p.max_live == 1 and keg_p.breaks_props and is_equal_approx(keg_p.floor_s, 1.40),
+		"live %d, max_live %d, breaks_props %s, floor %.2f" % [_combat.sticky.live().size(), keg_p.max_live, keg_p.breaks_props, keg_p.floor_s])
+	# Moved Depth 2 under Cluster (k_trapper): fuse 2.5, five live throws (15 sub-charges at count=3).
+	_take(["k_cluster", "k_trapper"])
 	var first := _throw()
-	for i in 7:
+	for i in 6:
 		_throw()
 	var live: int = _combat.sticky.live().size()
-	_check("K1 fuse", is_equal_approx(float(first["fuse"]), 2.5) and not is_equal_approx(base_fuse, 2.5), "fuse %.2f, base %.2f" % [float(first["fuse"]), base_fuse])
-	_check("K1 five live", live == 5 and base_live != 5, "%d live after eight throws, base cap %d" % [live, base_live])
-	# K2: sight share 0.3.
-	_take(["k_ghost"])
-	_check("K2 cloak sight", is_equal_approx(_combat.cloak_sight(), 0.3) and not is_equal_approx(base_sight, 0.3), "sight %.2f, base %.2f" % [_combat.cloak_sight(), base_sight])
-	# K3: reach knob carried by the charge; 1.9 m springs, 2.1 m does not; base reach does neither.
-	_take(["k_trapper", "k_tripwire"])
+	_check("K1 moved under Cluster: fuse", is_equal_approx(float(first["fuse"]), 2.5) and not is_equal_approx(base_fuse, 2.5), "fuse %.2f, base %.2f" % [float(first["fuse"]), base_fuse])
+	_check("K1 moved under Cluster: five live volleys (15 sub-charges)", live == 15 and base_live != 5, "%d live after throws, base cap %d" % [live, base_live])
+	# Moved Depth 2 under Keg (k_ghost): sight share 0.3.
+	_take(["k_keg", "k_ghost"])
+	_check("K2 moved under Keg: cloak sight", is_equal_approx(_combat.cloak_sight(), 0.3) and not is_equal_approx(base_sight, 0.3), "sight %.2f, base %.2f" % [_combat.cloak_sight(), base_sight])
+	# K3 under Cluster: reach knob carried by the charge; 1.9 m springs, 2.1 m does not; base reach does neither.
+	_take(["k_cluster", "k_tripwire"])
 	var wired := _throw()
 	_check("K3 combat passes the knob as reach", is_equal_approx(float(wired["reach"]), 2.0) and is_equal_approx(base_reach, Sticky.CONTACT_REACH), "charge reach %.2f, knob %.2f, base %.2f" % [float(wired["reach"]), _combat._knob("sticky_reach"), base_reach])
 	var at_19 := _springs(wired, 1.9)
 	_combat.sticky.clear()
 	var at_21 := _springs(_throw(), 2.1)
 	_check("K3 springs within 2 m, not at 2.1 m", at_19 and not at_21, "gap 1.9 m fired %s, gap 2.1 m fired %s" % [at_19, at_21])
-	_take(["k_trapper"])
+	_take(["k_cluster", "k_trapper"])
 	var plain_19 := _springs(_throw(), 1.9)
-	_check("K3 control: without it 1.9 m does not spring", not plain_19, "K1 only, gap 1.9 m fired %s" % plain_19)
-	# K4: a slam scatters five.
+	_check("K3 control: without it 1.9 m does not spring", not plain_19, "Cluster+Trapper only, gap 1.9 m fired %s" % plain_19)
+	# K5 under Keg: gliding keeps the cloak.
+	_take(["k_keg", "k_smoke_trail"])
+	var glide := _glide_cloak()
+	_take(["k_keg", "k_ghost"])
+	var glide_without := _glide_cloak()
+	_check("K5 glide keeps the cloak", glide and not glide_without, "K5 gliding cloaked %s, Ghost path gliding cloaked %s" % [glide, glide_without])
+	# Flag off: base K4 and K6 still work untouched.
+	_flag(false)
+	_take([])
+	var base_minis := _slam_count()
 	_take(["k_trapper", "k_demo_expert"])
 	var minis := _slam_count()
-	_check("K4 slam scatters five", minis == 5 and base_minis != 5, "%d charges, base %d" % [minis, base_minis])
-	# K5: gliding keeps the cloak.
-	_take(["k_ghost", "k_smoke_trail"])
-	var glide := _glide_cloak()
+	_check("base K4 slam scatters five (flag off)", minis == 5 and base_minis != 5, "%d charges, base %d" % [minis, base_minis])
 	_take(["k_ghost", "k_ambush"])
-	var glide_without := _glide_cloak()
-	_check("K5 glide keeps the cloak", glide and not glide_without, "K5 gliding cloaked %s, K6 path gliding cloaked %s" % [glide, glide_without])
-	# K6: a throw keeps the cloak.
 	var kept := _shot_keeps_cloak()
 	_take(["k_ghost", "k_smoke_trail"])
 	var broken := not _shot_keeps_cloak()
-	_check("K6 throw keeps the cloak", kept and broken, "K6 kept %s, K5 path broke %s" % [kept, broken])
+	_check("base K6 throw keeps the cloak (flag off)", kept and broken, "K6 kept %s, K5 path broke %s" % [kept, broken])
 
 
 func _slam_count() -> int:
@@ -281,45 +299,40 @@ func _shot_keeps_cloak() -> bool:
 
 func _identities() -> void:
 	_flag(true)
-	# Route trapper K1 to K3: five waiting charges that spring from 2 m.
-	_take(["k_trapper", "k_tripwire"])
-	for i in 6:
-		_throw()
+	# Cluster + Tripwire: scattered charges that spring from 2 m.
+	_take(["k_cluster", "k_tripwire"])
+	_throw()
 	var trap_live: Array = _combat.sticky.live()
 	var trap_fires := _springs(trap_live.back(), 1.9)
-	_check("identity route trapper", trap_live.size() == 5 and trap_fires and _player.tree.path() == ["k_trapper", "k_tripwire"],
+	_check("identity cluster tripwire", trap_live.size() == 3 and trap_fires and _player.tree.path() == ["k_cluster", "k_tripwire"],
 		"path %s, %d live, fires at 1.9 m %s" % [_player.tree.path(), trap_live.size(), trap_fires])
-	# Dive bomber K1 to K4: five waiting charges, and the slam scatters five.
-	_take(["k_trapper", "k_demo_expert"])
+	# Cluster + Trapper: scattered charges with 5-volley live cap (15 sub-charges) and 2.5 s fuse.
+	_take(["k_cluster", "k_trapper"])
 	for i in 6:
 		_throw()
 	var dive_live: int = _combat.sticky.live().size()
-	var dive_minis := _slam_count()
-	_check("identity dive bomber", dive_live == 5 and dive_minis == 5 and _player.tree.path() == ["k_trapper", "k_demo_expert"],
-		"path %s, %d live, slam %d" % [_player.tree.path(), dive_live, dive_minis])
-	# Gliding infiltrator K2 to K5: seen only close, and gliding keeps the cloak.
-	_take(["k_ghost", "k_smoke_trail"])
+	_check("identity cluster trapper", dive_live == 15 and _player.tree.path() == ["k_cluster", "k_trapper"],
+		"path %s, %d live" % [_player.tree.path(), dive_live])
+	# Keg + Smoke Trail: prop-breaking keg, gliding keeps the cloak.
+	_take(["k_keg", "k_smoke_trail"])
 	var inf := _glide_cloak()
-	_check("identity gliding infiltrator", inf and is_equal_approx(_combat.cloak_sight(), 0.3) and _player.tree.path() == ["k_ghost", "k_smoke_trail"],
-		"path %s, glide cloaked %s, sight %.2f" % [_player.tree.path(), inf, _combat.cloak_sight()])
-	# Ambusher K2 to K6: seen only close, and a throw keeps the cloak (and crits inside it).
-	_take(["k_ghost", "k_ambush"])
-	_combat.cloak_left = 1.5
-	var crit: float = _combat._cloak_shot()
-	var still: bool = _combat.cloak_left > 0.0
-	_check("identity ambusher", still and is_equal_approx(crit, Weapons.CLOAK_CRIT) and is_equal_approx(_combat.cloak_sight(), 0.3) and _player.tree.path() == ["k_ghost", "k_ambush"],
-		"path %s, cloak kept %s, shot x%.1f, sight %.2f" % [_player.tree.path(), still, crit, _combat.cloak_sight()])
-	_combat.cloak_left = 0.0
+	_check("identity keg smoke trail", inf and _combat.pattern(Weapons.STICKY_CHARGE).breaks_props and _player.tree.path() == ["k_keg", "k_smoke_trail"],
+		"path %s, glide cloaked %s, breaks_props %s" % [_player.tree.path(), inf, _combat.pattern(Weapons.STICKY_CHARGE).breaks_props])
+	# Keg + Ghost: prop-breaking keg, seen only close while cloaked.
+	_take(["k_keg", "k_ghost"])
+	_check("identity keg ghost", is_equal_approx(_combat.cloak_sight(), 0.3) and _combat.pattern(Weapons.STICKY_CHARGE).breaks_props and _player.tree.path() == ["k_keg", "k_ghost"],
+		"path %s, sight %.2f, breaks_props %s" % [_player.tree.path(), _combat.cloak_sight(), _combat.pattern(Weapons.STICKY_CHARGE).breaks_props])
 
 
 func _exclusive() -> void:
-	_take(["k_ghost", "k_smoke_trail"])
-	var second: bool = _player.tree.pick("k_ambush")
-	_check("K5 and K6 exclusive (taken K5)", not second and _player.tree.path() == ["k_ghost", "k_smoke_trail"] and not _combat._knob("cloak_keep"),
-		"second pick accepted %s, path %s, cloak_keep %s" % [second, _player.tree.path(), _combat._knob("cloak_keep")])
-	_take(["k_ghost", "k_ambush"])
+	_flag(true)
+	_take(["k_keg", "k_smoke_trail"])
+	var second: bool = _player.tree.pick("k_ghost")
+	_check("Smoke Trail and Ghost exclusive (taken Smoke Trail)", not second and _player.tree.path() == ["k_keg", "k_smoke_trail"] and not is_equal_approx(_combat.cloak_sight(), 0.3),
+		"second pick accepted %s, path %s, sight %.2f" % [second, _player.tree.path(), _combat.cloak_sight()])
+	_take(["k_keg", "k_ghost"])
 	var other: bool = _player.tree.pick("k_smoke_trail")
-	_check("K5 and K6 exclusive (taken K6)", not other and not _combat._knob("glide_cloak"), "second pick accepted %s, glide_cloak %s" % [other, _combat._knob("glide_cloak")])
-	_take(["k_trapper"])
+	_check("Smoke Trail and Ghost exclusive (taken Ghost)", not other and not _combat._knob("glide_cloak"), "second pick accepted %s, glide_cloak %s" % [other, _combat._knob("glide_cloak")])
+	_take(["k_cluster"])
 	var offered: Array = _player.tree.offered("demolitions_caster", 2).map(func(n): return n["id"])
-	_check("K1 never offers K5 or K6", not offered.has("k_smoke_trail") and not offered.has("k_ambush"), "offered %s" % [offered])
+	_check("Cluster never offers Smoke Trail or Ghost", not offered.has("k_smoke_trail") and not offered.has("k_ghost"), "offered %s" % [offered])

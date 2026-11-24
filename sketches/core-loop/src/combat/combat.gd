@@ -276,6 +276,9 @@ var _cooldown: float:
 		weapon_driver.set_cooldown_s(value)
 var _overdrive := 0.0
 var _mounted_boost_left := 0.0
+var _last_flight_breaks_props := false
+var _last_flight_break_radius := 2.2
+var _last_flight_weapon := ""
 var _since_slingshot := INF
 var _crushes: Array = []
 var _clock := 0.0
@@ -491,7 +494,11 @@ func setup(ctx_ref) -> void:
 	bolts.setup()
 	bolts.on_hit = _on_bolt_hit
 	bolts.on_shell = func(_bolt: Dictionary, shell: Node3D) -> bool: return _bat(shell)
-	bolts.on_stop = func(at: Vector3, color: Color): effects.spark(at, color)
+	bolts.on_stop = func(at: Vector3, color: Color):
+		effects.spark(at, color)
+		if _last_flight_breaks_props:
+			_last_flight_breaks_props = false
+			ctx.break_props(at, _last_flight_break_radius, _last_flight_weapon)
 	bolts.on_bounce = _on_bolt_bounce
 	bolts.on_flight = _on_bolt_flight
 	sticky = Sticky.new()
@@ -1942,15 +1949,26 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 	var reach: float = p.range_m * ctx.tuning.mod("weapon_range")
 	var damage: float = p.damage * _damage_mod(weapon)
 	var pierce_chip := false
+	var extra_pierce := 0
+	var no_chain := false
+	var breaks_props := false
+	var spark_count := 1
 	var extra_spread := 0.0
 	var knock_mult := 1.0
 	var range_mult := 1.0
 	if source == "weapon" and not shot_desc.is_empty():
 		damage *= float(shot_desc.get("damage_mult", 1.0))
-		pierce_chip = bool(shot_desc.get("pierce", false))
+		extra_pierce = int(shot_desc.get("pierce_pass", 0))
+		pierce_chip = bool(shot_desc.get("pierce", false)) or extra_pierce > 0 or int(p.pierce) > 0
+		no_chain = bool(shot_desc.get("no_chain", false))
+		breaks_props = bool(shot_desc.get("breaks_props", false)) or bool(p.breaks_props)
+		spark_count = maxi(1, int(shot_desc.get("spark_count", 1)))
 		extra_spread = float(shot_desc.get("spread_deg", 0.0))
 		knock_mult = float(shot_desc.get("knock_mult", 1.0))
 		range_mult = float(shot_desc.get("range_mult", 1.0))
+	elif source == "weapon":
+		pierce_chip = int(p.pierce) > 0
+		breaks_props = bool(p.breaks_props)
 	reach *= range_mult
 	var sprung := source == "weapon" and spring_armed()
 	if sprung:
@@ -1973,7 +1991,12 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 	var muzzle := ball + forward * MUZZLE
 	if sprung:
 		effects.ring(muzzle, 1.5, Palette.VERDIGRIS)
-	var layout: Array = p.layout(forward, volleys)
+	var layout_pat: Resource = p
+	if source == "weapon" and spark_count > 1:
+		layout_pat = p.copy()
+		layout_pat.count = clampi(int(layout_pat.count) + spark_count - 1, 1, Pattern.MAX_VOLLEY)
+		layout_pat.spread_deg = maxf(float(layout_pat.spread_deg), 6.0)
+	var layout: Array = layout_pat.layout(forward, volleys)
 	# Only the player's own press carries the build's shot bits; a proc volley carries none,
 	# so proc depth stays 1 (ABILITY-MUTATIONS.md B1).
 	var shot: int = _shot_bits() if source == "weapon" else 0
@@ -1990,8 +2013,15 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 		var fused := pike_bolt(_bolt_record(weapon, p, {"dir": forward, "centre": true, "phase": centre["phase"]}, muzzle, reach, damage, source, shot),
 			layout.size(), _pike_row())
 		fused["knock"] = float(fused["knock"]) * knock_mult
+		if extra_pierce > 0:
+			fused["pierce"] = int(fused["pierce"]) + extra_pierce
+		if no_chain:
+			fused["chain_jumps"] = 0
 		if pierce_chip:
 			fused["pierce_chip"] = true
+		if breaks_props:
+			fused["breaks_props"] = true
+			fused["prop_break_radius"] = 2.2
 		_evolve_record(fused, p)
 		bolts.fire(fused)
 		fired = 1
@@ -2000,9 +2030,18 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 		for entry in layout:
 			var rec := _bolt_record(weapon, p, entry, muzzle, reach, damage, source, shot)
 			rec["knock"] = float(rec["knock"]) * knock_mult
+			if extra_pierce > 0:
+				rec["pierce"] = int(rec["pierce"]) + extra_pierce
+			if no_chain:
+				rec["chain_jumps"] = 0
 			if pierce_chip:
 				rec["pierce_chip"] = true
+			if breaks_props:
+				rec["breaks_props"] = true
+				rec["prop_break_radius"] = 2.2
 			bolts.fire(rec)
+	if source == "weapon" and breaks_props and weapon == Weapons.CLAW_SWEEP:
+		ctx.break_props(muzzle + forward * (reach * 0.5), reach * 0.5, weapon)
 	if rake_follows(source, ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")):
 		_rakes.append({"at": _clock + RAKE_DELAY, "weapon": weapon, "forward": forward,
 			"damage": p.damage * _damage_mod(weapon), "volley": volleys})
@@ -2010,7 +2049,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": aim["to"], "point": point,
 		"blocked": aim["blocked"], "bolts": fired, "volley": volleys, "sprung": sprung, "fused": pike.get("fuse", false),
 		"kind": String(shot_desc.get("kind", "plain")), "pierce_chip": pierce_chip,
-		"beat": int(shot_desc.get("beat", 0)), "knock_mult": knock_mult}
+		"beat": int(shot_desc.get("beat", 0)), "knock_mult": knock_mult, "breaks_props": breaks_props}
 	ctx.events.shot_fired.emit(weapon, muzzle, aim["to"])
 
 
@@ -2411,6 +2450,9 @@ func _field():
 # Hoar Barrel: a marked shot bursts every slab it flew over into a forward shard cone, except the
 # one the ball stands on and the ones its own frost made. True when one burst.
 func _on_bolt_flight(bolt: Dictionary, from: Vector3, to: Vector3) -> bool:
+	_last_flight_breaks_props = bool(bolt.get("breaks_props", false)) and String(bolt.get("source", "")) == "weapon"
+	_last_flight_break_radius = float(bolt.get("prop_break_radius", 2.2))
+	_last_flight_weapon = String(bolt.get("weapon_id", "weapon"))
 	if not bool(bolt.get("hoar", false)) or String(bolt.get("source", "")) != "weapon":
 		return false
 	var field = _field()
@@ -2576,6 +2618,8 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 	var hit_knock := 0.0 if not pull_plan.is_empty() else float(bolt["knock"])
 	var chip := Weapons.PIERCE_CHIP if bool(bolt.get("pierce_chip", false)) else CHIP
 	_hit(enemy, bolt["kind"], damage, bolt["dir"], hit_knock, part, bolt.get("source", "weapon"), "", chip)
+	if bool(bolt.get("breaks_props", false)) and String(bolt.get("source", "")) == "weapon":
+		ctx.break_props(point, float(bolt.get("prop_break_radius", 2.2)), String(bolt.get("weapon_id", "weapon")))
 	if bool(bolt.get("hoar", false)) and String(bolt.get("source", "")) == "weapon":
 		_hoar_patch(bolt, from, point)
 	if not pull_plan.is_empty() and is_instance_valid(enemy) and not enemy.is_dead():
@@ -4951,16 +4995,20 @@ func mass_radius_scale() -> float:
 # charges around the landing ring, splitting the damage.
 func _throw_sticky(landing: Vector3, snap_token := 0, tail_drop := false) -> void:
 	var p: Resource = _lob_pattern()
-	var count: int = ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 1)
+	var ability_lob: int = ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 1)
+	var pattern_lob: int = int(p.count) if p != null else 1
+	var count: int = maxi(ability_lob, pattern_lob)
 	var origin := _throw_origin()
 	var crit := cloak_left > 0.0
 	var damage: float = p.damage * _damage_mod(Weapons.STICKY_CHARGE) * _cloak_shot()
 	var ring: float = p.bolt_radius * mass_radius_scale()
 	var radius: float = ring
-	if count > 1:
-		damage *= Weapons.RAIN_DAMAGE / float(count)
+	if ability_lob > 1:
+		damage *= Weapons.RAIN_DAMAGE / float(ability_lob)
 		radius *= Weapons.RAIN_RADIUS
-	devices.set_cap(Devices.STICKY, int(_knob("sticky_max_live")) * count)
+	var live_cap: int = int(p.max_live) if (p != null and int(p.max_live) > 0) else int(_knob("sticky_max_live"))
+	devices.set_cap(Devices.STICKY, live_cap * count)
+	var scatter_r: float = ring if ability_lob > 1 else minf(ring * 0.55, 1.4)
 	for i in count:
 		var live: Array = sticky.live()
 		if live.size() >= devices.cap(Devices.STICKY):
@@ -4968,7 +5016,7 @@ func _throw_sticky(landing: Vector3, snap_token := 0, tail_drop := false) -> voi
 		var spot := landing
 		if count > 1:
 			var angle := TAU * float(i) / float(count)
-			spot = landing + Vector3(cos(angle), 0.0, sin(angle)) * ring
+			spot = landing + Vector3(cos(angle), 0.0, sin(angle)) * scatter_r
 		var thrown: Dictionary = sticky.throw(origin, spot, damage, radius, _knob("sticky_fuse"), crit,
 			_knob("sticky_reach"), _clock, _knob("sticky_ride"), tail_drop)
 		thrown["_source"] = "weapon"

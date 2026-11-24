@@ -356,7 +356,7 @@ static func problems(for_class: String, world_one := false) -> Array[String]:
 			var base: Resource = Weapons.base(weapon)
 			for part in n["pattern"][weapon]:
 				for key in n["pattern"][weapon][part]:
-					if not part in ["add", "mul", "min"] or base.get(key) == null:
+					if not part in ["set", "add", "mul", "min"] or base.get(key) == null:
 						out.append("%s: pattern %s.%s" % [id, part, key])
 		for p in n.get("proc", []):
 			if not ACTIONS.has(p.get("do", "")) or not bus.has_script_signal(p.get("on", "")):

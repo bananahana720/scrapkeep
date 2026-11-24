@@ -80,7 +80,7 @@ func _run() -> void:
 	_game.tuning.set_option("scrap_mode", "armor")
 	await _sim(0.5)
 	var build = _game.build
-	var s4 := ["s_cannonball", "s_face_runner"]
+	var s4 := ["s_static_flutter", "s_face_runner"]
 
 	# S4 taken, shell fitted: x0.75, then x1.25 for 2 s after a vault, then x0.75.
 	_setup(s4, true, true)
@@ -121,7 +121,7 @@ func _run() -> void:
 	_check("close with a part fitted", is_equal_approx(_ratio(), part_mod * 0.75), "ratio %.4f, expected %.4f" % [_ratio(), part_mod * 0.75])
 
 	# Without S4 (another node taken) the factor stays x0.75 through a vault.
-	_setup(["s_cannonball"], true, true)
+	_setup(["s_static_flutter"], true, true)
 	_vault()
 	_check("no S4: unchanged through a vault", is_equal_approx(_ratio(), 0.75) and is_equal_approx(build.shell_air_factor(), 0.75),
 		"ratio %.3f, factor %.2f" % [_ratio(), build.shell_air_factor()])

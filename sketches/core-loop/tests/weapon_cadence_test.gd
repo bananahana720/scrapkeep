@@ -4,9 +4,12 @@ const BuffLedger := preload("res://src/core/buff_ledger.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const Items := preload("res://src/build/items.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Parts := preload("res://src/build/parts.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const WardenReactor := preload("res://src/combat/warden_reactor.gd")
 const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
@@ -35,6 +38,7 @@ func _initialize() -> void:
 	_check_hold_auto_data_rollback()
 	_check_ultimate_and_swap()
 	_check_warden_reactor_base_dps()
+	_check_depth1_keystones_and_items()
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -1639,3 +1643,137 @@ static func _lawful_tone(tone: Color) -> bool:
 	if tone.s > 0.2 and h_deg >= 300.0 and h_deg <= 330.0:
 		return false
 	return true
+
+
+func _wo_keystone_pattern(class_id: String, node_id: String, weapon_id: String) -> Resource:
+	var tree := UpgradeTree.new()
+	tree.world_one = true
+	tree.max_depth = UpgradeTree.WORLD_ONE_DEPTHS
+	tree.reset(class_id)
+	tree.open_checkpoint()
+	tree.pick(node_id)
+	var pat: Resource = Weapons.base(weapon_id).copy()
+	for op in tree.pattern_ops(weapon_id):
+		pat._apply(op)
+	pat._clamp()
+	return pat
+
+
+func _check_depth1_keystones_and_items() -> void:
+	# 1. Rivet Fan the Hammer: 12 rounds of 6, hold fans at 0.10 s in 5 deg cone without halving damage again.
+	var fan_pat := _wo_keystone_pattern("runner_gunner", "r_fan_hammer", Weapons.RAPID_LASER)
+	var drv := WeaponDriver.new()
+	drv.reset(fan_pat)
+	var fan_out: Array = drv.step(DT, _press_intent(true), Weapons.RAPID_LASER, fan_pat, fan_pat.rate)
+	for _i in 80:
+		fan_out.append_array(drv.step(DT, _hold_intent(), Weapons.RAPID_LASER, fan_pat, fan_pat.rate))
+	_t.check("r_fan_hammer fans all 12 rounds while held at 1.0x pattern damage (6.0) and 5 deg spread",
+		fan_out.size() == 12 and is_equal_approx(fan_pat.damage * float(fan_out[1]["damage_mult"]), 6.0)
+		and is_equal_approx(float(fan_out[1]["spread_deg"]), 5.0) and bool(drv.state_snapshot()["reloading"]),
+		"shots=%d dmg=%.2f spread=%.1f" % [fan_out.size(), fan_pat.damage * float(fan_out[1]["damage_mult"]), float(fan_out[1]["spread_deg"])])
+
+	# 2. Rivet Big Iron: 2 piercing shells of 28.8, 0.60 s floor, 3x knock, breaks props.
+	var iron_pat := _wo_keystone_pattern("runner_gunner", "r_big_iron", Weapons.RAPID_LASER)
+	drv.reset(iron_pat)
+	var iron_1: Array = drv.step(DT, _press_intent(), Weapons.RAPID_LASER, iron_pat, iron_pat.rate)
+	for _i in 36:
+		drv.step(DT, Intent.new(), Weapons.RAPID_LASER, iron_pat, iron_pat.rate)
+	var iron_2: Array = drv.step(DT, _press_intent(), Weapons.RAPID_LASER, iron_pat, iron_pat.rate)
+	_t.check("r_big_iron fires 2 prop-breaking piercing shells then reloads",
+		iron_1.size() == 1 and iron_2.size() == 1 and bool(iron_1[0]["breaks_props"])
+		and iron_pat.pierce == 1 and is_equal_approx(iron_pat.damage, 28.8) and bool(drv.state_snapshot()["reloading"]),
+		"mag=%d pierce=%d breaks=%s dmg=%.2f" % [iron_pat.mag, iron_pat.pierce, iron_pat.breaks_props, iron_pat.damage])
+
+	# 3. Sable Static Flutter: 3 sparks on press, 6 pulses over 0.5 s on full release, ready at 0.12 s, interrupt clears pulses.
+	var flt_pat := _wo_keystone_pattern("pylon_engineer", "s_static_flutter", Weapons.ARC_CASTER)
+	drv.reset(flt_pat)
+	var flt_tap: Array = drv.step(DT, _press_intent(true), Weapons.ARC_CASTER, flt_pat, flt_pat.rate, {"charge_rate": 2.0})
+	_t.check("s_static_flutter press emits 3 sparks of 3.0",
+		flt_tap.size() == 1 and int(flt_tap[0]["spark_count"]) == 3 and is_equal_approx(flt_pat.damage, 3.0), str(flt_tap))
+	for _i in 24:
+		drv.step(DT, _hold_intent(), Weapons.ARC_CASTER, flt_pat, flt_pat.rate, {"charge_rate": 2.0})
+	var flt_pulses: Array = drv.step(DT, _release_intent(), Weapons.ARC_CASTER, flt_pat, flt_pat.rate, {"charge_rate": 2.0})
+	for _i in 35:
+		flt_pulses.append_array(drv.step(DT, Intent.new(), Weapons.ARC_CASTER, flt_pat, flt_pat.rate, {"charge_rate": 2.0}))
+	var pulse_total := 0.0
+	for s in flt_pulses:
+		pulse_total += flt_pat.damage * float(s["damage_mult"])
+	_t.check("s_static_flutter release emits 6 pulses totaling 24.0 over 0.5 s",
+		flt_pulses.size() == 6 and is_equal_approx(pulse_total, 24.0), "pulses=%d total=%.2f" % [flt_pulses.size(), pulse_total])
+	# Interrupt mid-flutter clears pending pulses immediately.
+	drv.reset(flt_pat)
+	drv.step(DT, _press_intent(true), Weapons.ARC_CASTER, flt_pat, flt_pat.rate, {"charge_rate": 2.0})
+	for _i in 24:
+		drv.step(DT, _hold_intent(), Weapons.ARC_CASTER, flt_pat, flt_pat.rate, {"charge_rate": 2.0})
+	drv.step(DT, _release_intent(), Weapons.ARC_CASTER, flt_pat, flt_pat.rate, {"charge_rate": 2.0})
+	drv.interrupt(WeaponDriver.INTERRUPT_ATTEMPT)
+	var after_int := 0
+	for _i in 35:
+		after_int += drv.step(DT, Intent.new(), Weapons.ARC_CASTER, flt_pat, flt_pat.rate, {"charge_rate": 2.0}).size()
+	_t.eq("s_static_flutter interrupt clears remaining pending pulses", [int(drv.state_snapshot()["pending_pulses"]), after_int], [0, 0])
+
+	# 4. Sable Rail Lance: 1.00 s charge, 42 unmounted / 45 mounted, 2 pierce, no chain.
+	var lance_pat := _wo_keystone_pattern("pylon_engineer", "s_rail_lance", Weapons.ARC_CASTER)
+	drv.reset(lance_pat)
+	drv.step(DT, _press_intent(true), Weapons.ARC_CASTER, lance_pat, lance_pat.rate, {"charge_rate": 2.0})
+	for _i in 41:
+		drv.step(DT, _hold_intent(), Weapons.ARC_CASTER, lance_pat, lance_pat.rate, {"charge_rate": 2.0})
+	var lance_out: Array = drv.step(DT, _release_intent(), Weapons.ARC_CASTER, lance_pat, lance_pat.rate, {"charge_rate": 2.0})
+	_t.check("s_rail_lance fires 42 dmg lance with 2 pierce and no_chain",
+		lance_out.size() == 1 and is_equal_approx(lance_pat.damage * float(lance_out[0]["damage_mult"]), 42.0)
+		and int(lance_out[0]["pierce_pass"]) == 2 and bool(lance_out[0]["no_chain"]), str(lance_out))
+
+	# 5. Tarn Saw Flurry: Beat 3 window [0.20, 0.44] stays open past 0.275 s floor2; every 5th hit pierces.
+	var saw_pat := _wo_keystone_pattern("tarn", "t_saw_flurry", Weapons.CLAW_SWEEP)
+	drv.reset(saw_pat)
+	var saw_pierces: Array = []
+	for _cyc in 2:
+		var s1: Array = drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, saw_pat, saw_pat.rate, {"planar_speed": 14.0})
+		saw_pierces.append(bool(s1[0]["pierce"]))
+		for _w in 14: # 0.233 s > 0.225 s floor1
+			drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, saw_pat, saw_pat.rate, {"planar_speed": 14.0})
+		var s2: Array = drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, saw_pat, saw_pat.rate, {"planar_speed": 14.0})
+		saw_pierces.append(bool(s2[0]["pierce"]))
+		for _w in 20: # 0.333 s: past 0.275 s floor2, STILL inside [0.20, 0.44] Beat 3 window!
+			drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, saw_pat, saw_pat.rate, {"planar_speed": 14.0})
+		var s3: Array = drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, saw_pat, saw_pat.rate, {"planar_speed": 14.0})
+		saw_pierces.append(bool(s3[0]["pierce"]) if not s3.is_empty() else false)
+		for _w in 16: # past 0.25 s recover
+			drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, saw_pat, saw_pat.rate, {"planar_speed": 14.0})
+	_t.eq("t_saw_flurry Beat 3 fires inside [0.20, 0.44] past 0.275 s floor2 and every 5th hit pierces",
+		saw_pierces, [false, false, false, false, true, false])
+
+	# 6. Tarn Guillotine: Beat 3 deals 60 + 0.8*speed in 7 m cone (1.4x), 3x knock, breaks props.
+	var guil_pat := _wo_keystone_pattern("tarn", "t_guillotine", Weapons.CLAW_SWEEP)
+	drv.reset(guil_pat)
+	drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, guil_pat, guil_pat.rate, {"planar_speed": 30.0})
+	for _w in 37: # 0.617 s > 0.60 s
+		drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, guil_pat, guil_pat.rate, {"planar_speed": 30.0})
+	drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, guil_pat, guil_pat.rate, {"planar_speed": 30.0})
+	for _w in 26: # 0.433 s inside [0.40, 0.64]
+		drv.step(DT, Intent.new(), Weapons.CLAW_SWEEP, guil_pat, guil_pat.rate, {"planar_speed": 30.0})
+	var guil_b3: Array = drv.step(DT, _press_intent(), Weapons.CLAW_SWEEP, guil_pat, guil_pat.rate, {"planar_speed": 30.0})
+	_t.check("t_guillotine Beat 3 deals 84 at 30 m/s, 1.4x range (7 m), 3x knock, breaks props",
+		guil_b3.size() == 1 and is_equal_approx(guil_pat.damage * float(guil_b3[0]["damage_mult"]), 84.0)
+		and is_equal_approx(float(guil_b3[0]["range_mult"]), 1.4)
+		and is_equal_approx(float(guil_b3[0]["knock_mult"]), 3.0) and bool(guil_b3[0]["breaks_props"]), str(guil_b3))
+
+	# 7. Pure-data items: brass_drum & heavy_breech exist in Parts/Items and transform Patterns cleanly.
+	_t.check("brass_drum and heavy_breech are registered pure-data pattern items",
+		Items.TABLE.has("brass_drum") and Items.TABLE.has("heavy_breech")
+		and Parts.has("brass_drum") and Parts.has("heavy_breech")
+		and Pattern.has_transformer("brass_drum") and Pattern.has_transformer("heavy_breech"), "")
+	var rivet_drum: Resource = Weapons.base(Weapons.RAPID_LASER).transformed(["brass_drum"])
+	_t.check("brass_drum adds 4 rounds, +35% rate, 0.72x damage purely by data",
+		rivet_drum.mag == 10 and is_equal_approx(rivet_drum.rate, Weapons.base(Weapons.RAPID_LASER).rate * 1.35)
+		and is_equal_approx(rivet_drum.damage, Weapons.base(Weapons.RAPID_LASER).damage * 0.72),
+		"mag=%d rate=%.2f dmg=%.2f" % [rivet_drum.mag, rivet_drum.rate, rivet_drum.damage])
+	var rivet_breech: Resource = Weapons.base(Weapons.RAPID_LASER).transformed(["heavy_breech"])
+	var iron_breech: Resource = iron_pat.transformed(["heavy_breech"])
+	var cannon_breech: Resource = Weapons.base(Weapons.CANNON_LANE).transformed(["heavy_breech"])
+	_t.check("heavy_breech halves mag (clamped >= 1), 0.55x rate, 1.8x dmg, 2x knock, breaks props",
+		rivet_breech.mag == 3 and iron_breech.mag == 1 and rivet_breech.breaks_props
+		and is_equal_approx(rivet_breech.damage, Weapons.base(Weapons.RAPID_LASER).damage * 1.8)
+		and is_equal_approx(rivet_breech.knock, Weapons.base(Weapons.RAPID_LASER).knock * 2.0)
+		and cannon_breech.lock_rail_breaks_props and is_equal_approx(cannon_breech.lock_rail_damage, 42.0 * 1.8),
+		"rivet_mag=%d iron_mag=%d breaks=%s cannon_rail=%.1f" % [rivet_breech.mag, iron_breech.mag, rivet_breech.breaks_props, cannon_breech.lock_rail_damage])

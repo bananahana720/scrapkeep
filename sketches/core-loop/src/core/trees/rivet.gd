@@ -100,5 +100,15 @@ const NODES := [
 ]
 
 
-# Rivet's world-one profile retains every node in the full tree's heap order.
-const NODES_WORLD_ONE := NODES
+# World-one Depth-1 opposite-feel keystones (PILOT-CADENCE.md §§6.1-6.2, E2-09).
+# Left root: Fan the Hammer (r_gunline moves to slot 2 in place of r_tracer; r_run_gun stays at slot 3).
+# Right root: Big Iron (r_juggernaut moves to slot 4 in place of r_ram_fins; r_second_wind stays at slot 5).
+const FAN_HAMMER := {"id": "r_fan_hammer", "name": "Fan the Hammer", "effect": "Twelve light rounds. Hold to fan fire.", "key": "weapon",
+	"icon": "ab_rivet_weapon", "tags": ["ranged"],
+	"pattern": {"rapid_laser": {"set": {"fan": true}, "mul": {"mag": 2.0, "damage": 0.5, "floor_s": 0.5}}}}
+const BIG_IRON := {"id": "r_big_iron", "name": "Big Iron", "effect": "Two piercing shells. Heavy knock, breaks props.", "key": "weapon",
+	"icon": "ab_rivet_weapon", "tags": ["ranged", "burst"],
+	"pattern": {"rapid_laser": {"set": {"breaks_props": true}, "add": {"pierce": 1},
+		"mul": {"mag": 1.0 / 3.0, "damage": 2.4, "floor_s": 3.0, "knock": 3.0}}}}
+# A static var, not a const: GDScript cannot fold Array.slice into a constant.
+static var NODES_WORLD_ONE: Array = [FAN_HAMMER, BIG_IRON, NODES[0], NODES[3], NODES[1], NODES[5]] + NODES.slice(6)

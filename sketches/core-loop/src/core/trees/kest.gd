@@ -100,5 +100,15 @@ const NODES := [
 ]
 
 
-# Kest's world-one profile retains every node in the full tree's heap order.
-const NODES_WORLD_ONE := NODES
+# World-one Depth-1 opposite-feel keystones (PILOT-CADENCE.md §§6.1-6.2, E2-09).
+# Left root: Cluster (k_tripwire stays at slot 2; k_trapper moves to slot 3 in place of k_demo_expert).
+# Right root: Keg (k_smoke_trail stays at slot 4; k_ghost moves to slot 5 in place of k_ambush).
+const CLUSTER := {"id": "k_cluster", "name": "Cluster", "effect": "Throws scatter three small charges sharing snap.", "key": "weapon",
+	"icon": "ab_kest_weapon", "tags": ["traps", "burst"],
+	"pattern": {"sticky_charge": {"add": {"count": 2}, "mul": {"damage": 0.35, "bolt_radius": 0.7}}}}
+const KEG := {"id": "k_keg", "name": "Keg", "effect": "One wide slow keg breaks tough props.", "key": "weapon",
+	"icon": "ab_kest_weapon", "tags": ["burst"],
+	"pattern": {"sticky_charge": {"set": {"max_live": 1, "breaks_props": true},
+		"mul": {"floor_s": 1.40 / 0.60, "damage": 24.0 / 11.0, "bolt_radius": 2.0}}}}
+# A static var, not a const: GDScript cannot fold Array.slice into a constant.
+static var NODES_WORLD_ONE: Array = [CLUSTER, KEG, NODES[2], NODES[0], NODES[4], NODES[1]] + NODES.slice(6)
