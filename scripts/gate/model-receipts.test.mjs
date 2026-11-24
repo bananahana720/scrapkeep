@@ -569,7 +569,10 @@ test("the weapon cadence row covers all six pilots, pins 10,122 states, and wire
     "weaponcadence-broken-beats-skip.cfg",
     "weaponcadence-broken-lock-stuck.cfg",
   ])
-    assert.ok(wc.plants.some((p) => p.cfg === name), name);
+    assert.ok(
+      wc.plants.some((p) => p.cfg === name),
+      name,
+    );
   assert.ok(wc.gaps.every((g) => !/phase E2 modes/.test(g)));
   const covered = coveredFiles(readFileSync(new URL(wc.coverage, SKILL), "utf8"));
   assert.deepEqual(covered, [
