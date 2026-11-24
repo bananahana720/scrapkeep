@@ -1,5 +1,5 @@
 """Tarn's Hoberman mecha (PD-TARN): the shared base from shell_base.hoberman() in one iron
-oxide lattice enamel, a bone seat, two hooked claw arms on gap brackets at 4 and 8 o'clock,
+oxide lattice enamel, a bone seat, two hooked claw arms out to the sides just below 3 and 9 o'clock,
 two curved claw blades on the WeaponRing's front arc at 11 and 1 o'clock, and a rope pull
 drum low at the rear. Heft layers come from shell_tarn_plates.py.
 Concept: artifacts/local/alpha/push/w13/concepts/codex/tarn/hero.png, chase.png and sheet.png
@@ -64,7 +64,7 @@ import shell_base as sb  # noqa: E402
 SHELL_BAND = (3000, 11000)
 TARGET_TRIS = 6600
 VERT_CAP = 11600
-REACH_CAP = 1.25
+REACH_CAP = 1.35        # the weapon reach cap (PILOT-CADENCE section 5.1; review section 1.3)
 
 # The slot 2 and slot 3 controls in the bank beside the right yoke (PILOT-CLIPS section 5).
 BANK = (("ClampLever", "lever"), ("DrumLever", "lever"))
@@ -73,24 +73,30 @@ BANK = (("ClampLever", "lever"), ("DrumLever", "lever"))
 CONTROLS = dict(sb.CONTROLS)
 CONTROLS.update({name: point for (name, _), point in zip(BANK, sb.BANK)})
 
-# Claw arms (pilots/tarn.md section 5): tips past the lattice's outer face by class I to V.
-CLAW_REACH = (0.15, 0.15, 0.18, 0.21, 0.25)
-# Clock angle below 3 o'clock seen from the chase camera (26 degrees reads as 4 o'clock and
-# keeps the class V hook above Z -0.6), and the forward lean of the arm.
-CLAW_CLOCK = math.radians(26)
-CLAW_LEAN = math.radians(25)
-HINGE_RADIUS = 0.88       # outside the gimbal sweep (0.862), inside the lattice inner face
+# Claw arms (pilots/tarn.md section 5): tips past the lattice's outer face by class I to V, the
+# class V hook at 1.34 m, inside the 1.35 m reach cap (E2-04: the jaws clear the ball's disc from
+# the chase camera, 7.5 m back and 17 degrees down).
+CLAW_REACH = (0.325, 0.325, 0.34, 0.355, 0.365)
+# Clock angle below 3 o'clock seen from the chase camera, low enough to pass under the weapon
+# ring at full flare and high enough that a flared lower jaw stays above Z -0.6; no lean, so
+# each arm points straight out to the side and its jaws swing in the plane facing the camera.
+CLAW_CLOCK = math.radians(18)
+CLAW_LEAN = math.radians(0)
+HINGE_RADIUS = 1.04       # just outside the lattice's outer face (0.975), so the jaws swing clear of it
+# The jaw plate's height over the 2026-10 outline, so the jaws read at the chase camera.
+JAW_HEIGHT = 1.32
 JAW_THICK = 0.04
 BRACKET_R = 0.022         # a slim dark-steel arm, 0.044 m across (ROSTER-LOOK section 2)
+BRACKET_SIDE = 0.046      # the arm's end off the jaw plane along the pin: half a jaw and the arm
 # The ram on each upper jaw, in the jaw's swing plane: angles about the hinge axis from the arm
 # direction toward the jaw's up, the rod's end tied to the jaw at RAM_ATTACH, the sleeve's mouth
 # RAM_GAP short of it, offset RAM_OFFSET along the hinge pin to the camera side so it clears the
 # coplanar jaws. Rod length RAM_ROD >= (RAM_GAP + RAM_OPEN) / (1 - RAM_MIN_OVERLAP).
-RAM_RADIUS = 0.085
-RAM_OFFSET = 0.04
-RAM_ROD_SECTION = 0.012
-RAM_SLEEVE_SECTION = 0.024
-RAM_ATTACH = 25.0
+RAM_RADIUS = 0.14
+RAM_OFFSET = 0.05
+RAM_ROD_SECTION = 0.028
+RAM_SLEEVE_SECTION = 0.04
+RAM_ATTACH = 15.0
 RAM_GAP = 8.0
 RAM_ROD = 115.0
 RAM_SLEEVE = 110.0
@@ -143,6 +149,7 @@ def jaw_outlines(length, sign_v):
     teeth.append((0.12 * length, 0.004))
     out = []
     for pts in (body, teeth):
+        pts = [(u, v * JAW_HEIGHT) for u, v in pts]
         out.append([(u, -v) for u, v in pts] if sign_v < 0 else list(reversed(pts)))
     return out
 
@@ -221,14 +228,14 @@ def ram(jaw, pod_part, hinge, d, up, axis, side_sign):
     _arc_bar(jaw, "paint", flat, RAM_RADIUS, RAM_ROD_SECTION, RAM_ATTACH - RAM_ROD, RAM_ATTACH, RAM_SEGS,
              color="brass")
     lug = _swing_matrix(hinge, d, up, axis, RAM_ATTACH, 0.0)
-    _block(jaw, "paint", lug, (RAM_RADIUS, 0.0, off / 2), (0.024, 0.014, abs(off) + RAM_ROD_SECTION / 2),
+    _block(jaw, "paint", lug, (RAM_RADIUS, 0.0, off / 2), (0.032, 0.022, abs(off) + RAM_ROD_SECTION / 2),
            color="brass")
     bottom = RAM_ATTACH - RAM_GAP - RAM_SLEEVE
     _arc_bar(pod_part, "copper", flat, RAM_RADIUS, RAM_SLEEVE_SECTION, bottom, RAM_ATTACH - RAM_GAP, RAM_SEGS)
     spoke = _swing_matrix(hinge, d, up, axis, bottom + 4.0, off)
     inner = 0.026
     outer = RAM_RADIUS - RAM_SLEEVE_SECTION / 2 + 0.004
-    _block(pod_part, "rubber", spoke, ((inner + outer) / 2, 0.0, 0.0), (outer - inner, 0.016, 0.016))
+    _block(pod_part, "rubber", spoke, ((inner + outer) / 2, 0.0, 0.0), (outer - inner, 0.024, 0.024))
 
 
 def _plane_prism(part, slot, outline, depth, origin, eu, ev, color=None):
@@ -252,7 +259,9 @@ def claws(pod):
         root = Vector((sign * 0.24, -0.02, -0.44))
         elbow = d * 0.62 + Vector((0, -0.06, -0.02))
         extra.rod("rubber", root, elbow, BRACKET_R, 6)
-        extra.rod("rubber", elbow, hinge - d * 0.03, BRACKET_R, 6)
+        # The arm meets the boss beside the jaw plane on the far side from the camera, so the
+        # jaws' heels swing past its end at any open angle (they rotate about the boss).
+        extra.rod("rubber", elbow, hinge - d * 0.03 - axis * (sign * BRACKET_SIDE), BRACKET_R, 6)
         extra.uv("copper", 0.034, 6, 4, loc=tuple(elbow))
         extra.rod("copper", hinge - axis * 0.055, hinge + axis * 0.055, 0.032, 8)
         length = (tip - hinge).length
