@@ -472,7 +472,11 @@ void fragment() {
 
 static func _gated(line: Material) -> Material:
 	var source := line as ShaderMaterial
-	if source == null or source.shader == null or source.shader.code.count(GATE_AT) != 1:
+	if source == null or source.shader == null:
+		return null
+	if source.shader.code.contains("heft_class"):
+		return source
+	if source.shader.code.count(GATE_AT) != 1:
 		return null
 	var gated := source.duplicate() as ShaderMaterial
 	gated.shader = _shader("gated:%d" % source.shader.code.hash(), source.shader.code.replace(GATE_AT, GATE))
