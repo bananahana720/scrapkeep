@@ -244,11 +244,13 @@ export function splitBatch(output, tests) {
   };
 }
 
-// True when a warm batch printed an engine error or exit leak outside individual test slices
-// (after stripping macOS dummy-renderer shutdown noise). Forces solo reruns so batching never masks leaks.
+// True when a warm batch printed an engine error or exit-leak ERROR outside individual test slices
+// (after stripping macOS dummy-renderer shutdown noise), matching judge()'s errorLine contract.
+// Benign Godot exit WARNINGs (e.g. ObjectDB instances leaked) do not fail judge() and do not force
+// solo reruns; any ERROR:/SCRIPT ERROR:/FAIL outside a test slice forces solo reruns of the batch.
 export function batchHasOutsideError(outside, platform = process.platform) {
   const clean = withoutTeardownNoise(outside ?? "", platform);
-  return errorLine.test(clean) || /still in use|leaked at exit|previously freed/i.test(clean);
+  return errorLine.test(clean);
 }
 
 // Solo tests run one at a time unless SMOKE_SOLO_JOBS widens the phase. A machine with cores to

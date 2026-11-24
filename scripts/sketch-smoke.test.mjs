@@ -1715,6 +1715,10 @@ test("splitBatch captures outside lines and batchHasOutsideError catches exit le
     "ERROR: 2 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.\n";
   assert.equal(smoke.batchHasOutsideError(macNoise, "darwin"), false);
   assert.equal(smoke.batchHasOutsideError(macNoise, "linux"), true);
+  const exitWarning =
+    "WARNING: 150 ObjectDB instances were leaked at exit (run with `--verbose` for details).\n";
+  assert.equal(smoke.batchHasOutsideError(exitWarning, "linux"), false);
+  assert.equal(smoke.batchHasOutsideError(exitWarning, "darwin"), false);
 });
 
 test("warm batching in sketch-smoke emits per-test logs and reruns failures or exit leaks solo", () => {
