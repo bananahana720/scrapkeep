@@ -55,14 +55,24 @@ const BASE := {
 		"trigger": Pattern.TRIGGER_BEATS, "beat_floors_s": [0.45, 0.55], "beat_window_s": 0.75,
 		"window_s": Vector2(0.30, 0.54), "recover_s": 0.50,
 		"beat_mults": [1.0, 22.0 / 18.0, 43.0 / 18.0], "beat_speed_mult": 0.5 / 18.0, "beat_knock_mult": 2.0},
-	# Tally's ledger reader: the row gives _patterns, pattern() and _damage_mod a weapon to
-	# read. Combat runs her cards instead and never calls _fire for it.
-	LEDGER_READER: {"damage": 10.0, "rate": 2.5, "range_m": 30.0, "speed": 140.0, "bolt_radius": 0.5,
-		"knock": EventKinds.IMPACT["ledger"]["knock"]},
-	# The remembered cannon's lane: the row gives _rate, pattern ops and a volley proc a
-	# pattern to read. Combat commits a Mind lane for it instead of firing bolts.
-	CANNON_LANE: {"damage": LANE_DAMAGE, "rate": 1.0, "range_m": CANNON_LANE_REACH, "speed": 120.0, "bolt_radius": 0.6,
-		"knock": EventKinds.IMPACT["cannon"]["knock"]},
+	# Tally's ledger reader (PILOT-CADENCE.md section 3.5): Balance Due stamps on the beat.
+	# Damage is min(22, 8 + planar_speed) (full weight at 14 m/s cruise); window [0.40, 0.60] s
+	# stamps PAID for 1.2x (26.4) and refunds 0.5 pressure (strictly <= cast_cost 1.0).
+	LEDGER_READER: {"damage": STAMP_MAX, "rate": 2.5, "range_m": 30.0, "speed": 140.0, "bolt_radius": 0.5,
+		"knock": EventKinds.IMPACT["ledger"]["knock"],
+		"trigger": Pattern.TRIGGER_STAMP, "floor_s": 0.40,
+		"window_s": Vector2(0.40, 0.60), "window_mult": 1.2,
+		"cast_cost": 1.0, "refund": 0.5},
+	# The remembered cannon's lane (PILOT-CADENCE.md section 3.6): hold to paint closing brackets;
+	# release < 0.30 s fires Pulse (16, 16 m, 1.5x width), [0.30, 0.46] s fires Rail (42, 26 m,
+	# 1.0x width, pierces at 50% chip), > 0.46 s fires Barrage (26, 26 m, 2.0x width); 0.70 s recover.
+	CANNON_LANE: {"damage": CANNON_PULSE_DAMAGE, "rate": 1.0, "range_m": CANNON_LANE_REACH, "speed": 120.0, "bolt_radius": 0.6,
+		"knock": EventKinds.IMPACT["cannon"]["knock"],
+		"trigger": Pattern.TRIGGER_LOCK, "window_s": Vector2(0.30, 0.46), "recover_s": 0.70,
+		"lock_rail_damage": CANNON_RAIL_DAMAGE, "lock_barrage_damage": CANNON_BARRAGE_DAMAGE,
+		"lock_pulse_reach": CANNON_PULSE_REACH, "lock_rail_reach": CANNON_LANE_REACH,
+		"lock_pulse_width_mult": CANNON_PULSE_WIDTH_MULT, "lock_rail_width_mult": 1.0,
+		"lock_barrage_width_mult": CANNON_BARRAGE_WIDTH_MULT},
 }
 
 # PILOT-CADENCE.md section 4: the hold_auto rows. Setting a BASE row's `trigger` to hold_auto
@@ -74,9 +84,15 @@ const HOLD_AUTO := {
 	PYLON_TURRET: {"damage": 11.0},
 	STICKY_CHARGE: {"damage": 16.0, "floor_s": 0.0, "window_s": Vector2.ZERO, "window_mult": 1.0},
 	CLAW_SWEEP: {"damage": 32.0},
+	LEDGER_READER: {"damage": 26.8, "rate": 0.5, "floor_s": 0.0, "window_s": Vector2.ZERO, "window_mult": 1.0,
+		"cast_cost": 1.0, "refund": 0.0},
+	CANNON_LANE: {"damage": LANE_DAMAGE, "window_s": Vector2.ZERO, "recover_s": 0.0,
+		"lock_rail_damage": 0.0, "lock_barrage_damage": 0.0,
+		"lock_pulse_reach": 0.0, "lock_rail_reach": 0.0,
+		"lock_pulse_width_mult": 1.0, "lock_rail_width_mult": 1.0, "lock_barrage_width_mult": 1.0},
 }
 
-# PILOT-CADENCE.md sections 2.5, 3.1-3.4 cadence constants.
+# PILOT-CADENCE.md sections 2.5, 3.1-3.6 cadence constants.
 const PIERCE_CHIP := 0.5
 const RIVET_FAN_FLOOR_S := 0.10
 const RIVET_FAN_DAMAGE := 0.5
@@ -95,6 +111,15 @@ const STICKY_SNAP_MULT := 2.0
 const STICKY_SNAP_RADIUS_MULT := 1.35
 const STICKY_SNAP_KNOCK_MULT := 1.5
 const BEAT_SPEED_CAP := 30.0
+const STAMP_BASE := 8.0
+const STAMP_PER_SPEED := 1.0
+const STAMP_MAX := 22.0
+const CANNON_PULSE_DAMAGE := 16.0
+const CANNON_RAIL_DAMAGE := 42.0
+const CANNON_BARRAGE_DAMAGE := 26.0
+const CANNON_PULSE_REACH := 16.0
+const CANNON_PULSE_WIDTH_MULT := 1.5
+const CANNON_BARRAGE_WIDTH_MULT := 2.0
 
 const STRIKE_KIND := {RAPID_LASER: "runner", ARC_CASTER: "arc", PYLON_TURRET: "turret", STICKY_CHARGE: "sticky",
 	CLAW_SWEEP: "claw", LEDGER_READER: "ledger", CANNON_LANE: "cannon"}
@@ -336,6 +361,8 @@ static func max_base_hit(weapon_id: String) -> float:
 			for m in mults:
 				top = maxf(top, float(m))
 			return dmg * top
+		Pattern.TRIGGER_LOCK:
+			return maxf(dmg, maxf(float(row.get("lock_rail_damage", dmg)), float(row.get("lock_barrage_damage", dmg))))
 		_:
 			return dmg
 

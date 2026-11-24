@@ -84,7 +84,8 @@ func _boot() -> void:
 	_steps = [
 		[_noop, 1, _check_row],
 		[_noop, 1, _check_kit],
-		[_lane_start, 2, _check_lane_shape],
+		[_lane_start, int(0.35 * tps), _lane_release],
+		[_noop, 2, _check_lane_shape],
 		[_noop, int(1.0 * tps), _check_lane_warn],
 		[_noop, int(1.4 * tps), _check_lane_landed],
 		[_recoil_start, 1, _recoil_press],
@@ -123,6 +124,7 @@ func _as_class(id: String) -> void:
 	_combat._free_cannon()
 	_game.camera.snap(Vector3(0.0, 0.0, -1.0))
 	_game.camera.pitch = 0.0
+	_game.camera._process(0.0)
 
 
 func _clear_enemies() -> void:
@@ -237,6 +239,8 @@ func _check_kit() -> void:
 # --- c, d. the lane ----------------------------------------------------------------------
 
 func _lane_start() -> void:
+	# Re-cut E2-02 (PILOT-CADENCE.md §3.6): Cannon paints on press and commits a Rail on release
+	# inside [0.30, 0.46] s (26 m reach, 1.0x MindAttacks.LANE_HALF width, bone shot).
 	_as_class("remembered_cannon")
 	var aim := _aim_flat()
 	var side := aim.cross(Vector3.UP).normalized()
@@ -244,12 +248,18 @@ func _lane_start() -> void:
 	var b := _target(_ball_flat() + aim * 10.0 + side * 4.0)
 	_record = {"a": a, "a_id": a.get_instance_id(), "a_hp": a.hp, "b": b, "b_id": b.get_instance_id(), "b_hp": b.hp,
 		"from": _struck.size(), "shots": _shots.size(), "aim": aim}
-	_source.press = {"fire_held": true}
+	_source.press = {"fire_pressed": true}
+	_source.hold = {"fire_held": true}
+
+
+func _lane_release() -> void:
+	_source.hold = {}
+	_source.press = {"fire_released": true}
 
 
 func _check_lane_shape() -> void:
 	var lanes := _hazards("lane")
-	_t.eq("one held-fire tick commits one lane", lanes.size(), 1)
+	_t.eq("one lock release commits one lane", lanes.size(), 1)
 	if lanes.size() != 1:
 		return
 	var h = lanes[0]
@@ -260,7 +270,7 @@ func _check_lane_shape() -> void:
 	_t.check("lane length is reach - LANE_HALF", is_equal_approx(h.length, reach - MindAttacks.LANE_HALF), "length %.3f reach %.3f" % [h.length, reach])
 	_t.check("lane warn is the Mind's at phase 1", is_equal_approx(h.warn_seconds, MindAttacks.LANE_WARN), "warn %.3f" % h.warn_seconds)
 	_t.check("lane heads down the aim", h.heading.dot(_record["aim"]) > 0.99, "dot %.3f" % h.heading.dot(_record["aim"]))
-	_t.eq("lane draws in the cannon's colour", h.color, ClassDef.CANNON_COLOR)
+	_t.eq("rail lane draws in bone (Palette.SAND)", h.color, Palette.SAND)
 	_t.check("lane is not a threat", not h.is_in_group(Threat.GROUP), "in Threat.GROUP")
 	_t.check("lane id is the cannon's", h.attack_id.begins_with("cannon_lane"), h.attack_id)
 	var d: Dictionary = MindAttacks.lane(entry["seed"], entry["target"], entry["centre"], entry["phase"], entry["radius"])[0]
@@ -441,7 +451,7 @@ func _check_shift_burst() -> void:
 
 func _reset_start() -> void:
 	_as_class("remembered_cannon")
-	_source.press = {"fire_held": true}
+	_source.press = {"fire_pressed": true}
 
 
 func _check_reset() -> void:
@@ -462,7 +472,7 @@ func _phase_start() -> void:
 		stage += 1
 	_record = {"stage": _game.run.stage, "world_three": stage}
 	_game.run.stage = stage
-	_source.press = {"fire_held": true}
+	_source.press = {"fire_pressed": true}
 
 
 func _check_phase() -> void:

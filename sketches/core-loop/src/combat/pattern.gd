@@ -46,7 +46,15 @@ const MAX_WINDOW_MULT := 4.0
 const MAX_CHARGE_S := 5.0
 const MAX_TAP_THRESHOLD_S := 1.0
 const MAX_RECOVER_S := 5.0
+const MIN_CAST_COST := 0.1
+const MAX_CAST_COST := 3.0
 const MAX_REFUND := 1.0
+const MAX_STAMP_STREAK_BONUS := 40.0
+const MAX_STAMP_STREAK_CAP := 100.0
+const MAX_LOCK_DAMAGE := 200.0
+const MAX_LOCK_REACH := 80.0
+const MIN_LOCK_WIDTH_MULT := 0.25
+const MAX_LOCK_WIDTH_MULT := 4.0
 const MIN_BEAT_MULT := 0.1
 const MAX_BEAT_MULT := 10.0
 const MAX_BEAT_SPEED_MULT := 2.0
@@ -94,7 +102,18 @@ const MAX_BEAT_RANGE_MULT := 3.0
 @export var beat_speed_mult := 0.0
 @export var beat_knock_mult := 1.0
 @export var beat_range_mult := 1.0
+@export var cast_cost := 1.0
 @export var refund := 0.0
+@export var stamp_streak_bonus := 0.0
+@export var stamp_streak_cap := 0.0
+@export var lock_rail_damage := 0.0
+@export var lock_barrage_damage := 0.0
+@export var lock_pulse_reach := 0.0
+@export var lock_rail_reach := 0.0
+@export var lock_pulse_width_mult := 1.0
+@export var lock_rail_width_mult := 1.0
+@export var lock_barrage_width_mult := 1.0
+@export var lock_rail_breaks_props := false
 @export var fan := false
 
 const FIELDS := ["count", "spread_deg", "arms", "arm_offset_deg", "rotation_deg", "spin_deg",
@@ -102,7 +121,10 @@ const FIELDS := ["count", "spread_deg", "arms", "arm_offset_deg", "rotation_deg"
 	"chain_jumps", "chain_range", "chain_falloff", "lattice_chain_falloff", "burst_scale", "special_scale",
 	"trigger", "floor_s", "beat_floors_s", "mag", "reload_s", "window_s", "window_mult",
 	"charge_s", "charge_min", "tap_threshold_s", "recover_s", "beat_window_s",
-	"beat_mults", "beat_speed_mult", "beat_knock_mult", "beat_range_mult", "refund", "fan"]
+	"beat_mults", "beat_speed_mult", "beat_knock_mult", "beat_range_mult",
+	"cast_cost", "refund", "stamp_streak_bonus", "stamp_streak_cap",
+	"lock_rail_damage", "lock_barrage_damage", "lock_pulse_reach", "lock_rail_reach",
+	"lock_pulse_width_mult", "lock_rail_width_mult", "lock_barrage_width_mult", "lock_rail_breaks_props", "fan"]
 
 # The transformer catalogue. Each row is pure data: `add` then `mul` then `min` (a
 # floor), applied in that order, once per stack. Writer B's parts name these ids.
@@ -257,7 +279,17 @@ func _clamp() -> void:
 	beat_speed_mult = _clamp_f(beat_speed_mult, 0.0, MAX_BEAT_SPEED_MULT)
 	beat_knock_mult = _clamp_f(beat_knock_mult, 1.0, MAX_BEAT_KNOCK_MULT)
 	beat_range_mult = _clamp_f(beat_range_mult, 1.0, MAX_BEAT_RANGE_MULT)
-	refund = _clamp_f(refund, 0.0, MAX_REFUND)
+	cast_cost = _clamp_f(cast_cost, MIN_CAST_COST, MAX_CAST_COST)
+	refund = _clamp_f(refund, 0.0, minf(MAX_REFUND, cast_cost))
+	stamp_streak_bonus = _clamp_f(stamp_streak_bonus, 0.0, MAX_STAMP_STREAK_BONUS)
+	stamp_streak_cap = _clamp_f(stamp_streak_cap, 0.0, MAX_STAMP_STREAK_CAP)
+	lock_rail_damage = _clamp_f(lock_rail_damage, 0.0, MAX_LOCK_DAMAGE)
+	lock_barrage_damage = _clamp_f(lock_barrage_damage, 0.0, MAX_LOCK_DAMAGE)
+	lock_pulse_reach = _clamp_f(lock_pulse_reach, 0.0, MAX_LOCK_REACH)
+	lock_rail_reach = _clamp_f(lock_rail_reach, 0.0, MAX_LOCK_REACH)
+	lock_pulse_width_mult = _clamp_f(lock_pulse_width_mult, MIN_LOCK_WIDTH_MULT, MAX_LOCK_WIDTH_MULT)
+	lock_rail_width_mult = _clamp_f(lock_rail_width_mult, MIN_LOCK_WIDTH_MULT, MAX_LOCK_WIDTH_MULT)
+	lock_barrage_width_mult = _clamp_f(lock_barrage_width_mult, MIN_LOCK_WIDTH_MULT, MAX_LOCK_WIDTH_MULT)
 
 
 func volley_size() -> int:

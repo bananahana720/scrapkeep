@@ -66,6 +66,8 @@ static func normalized(record: Dictionary, def) -> Dictionary:
 	if not (key.begins_with("key_") or key.begins_with("pad_")):
 		out["key"] = "key_" + key.to_lower()
 	out["gauge"] = float(out.get("gauge", 0.0))
+	if out.has("charge_frac"):
+		out["charge_frac"] = clampf(float(out["charge_frac"]), 0.0, 1.0)
 	return out
 
 
@@ -127,7 +129,11 @@ static func valid_slot(entry) -> bool:
 		if not (entry as Dictionary).has(field):
 			return false
 	var frac = entry["cooldown_frac"]
+	var charge_frac_ok := true
+	if entry.has("charge_frac"):
+		var cf = entry["charge_frac"]
+		charge_frac_ok = (cf is float or cf is int) and cf >= 0.0 and cf <= 1.0
 	return entry["id"] is String and entry["id"] != "" and entry["icon"] is String and entry["key"] is String \
-		and (frac is float or frac is int) and frac >= 0.0 and frac <= 1.0 \
+		and (frac is float or frac is int) and frac >= 0.0 and frac <= 1.0 and charge_frac_ok \
 		and entry["charges"] is int and entry["max_charges"] is int and entry["max_charges"] >= 1 \
 		and entry["charges"] >= 0 and entry["charges"] <= entry["max_charges"] and entry["state"] in STATES

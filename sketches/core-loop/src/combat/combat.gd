@@ -390,6 +390,7 @@ var _cannon_count := 0
 var _walk := {}
 var _wake := {}
 var _exposed := {}
+var last_cannon_paint := {}
 # Tally's program cards. bay is the selected card (0, 1 or 2); plate is Gather's plate ({}
 # or {"at", "until"}); link_group the live clips ({} or {"ids", "until", "spent"}); last_card
 # the last run ({"card", "at", "hits", "spent"}). All read only outside this file.
@@ -616,9 +617,11 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.run_ended.connect(func(_won: bool):
 		_clear_devices()
+		_clear_cannon_paint()
 		weapon_driver.reset())
 	ctx.events.flow_changed.connect(func(state_name: String):
 		if state_name in ["summary", "title"]:
+			_clear_cannon_paint()
 			weapon_driver.reset())
 	ctx.events.run_started.connect(func(_class_id: String):
 		churn.reset(true)
@@ -685,6 +688,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.mounted.connect(_on_mounted)
 	ctx.events.ultimate_started.connect(func(_id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float):
 		weapon_driver.interrupt(WeaponDriver.INTERRUPT_ULTIMATE)
+		_clear_cannon_paint()
 		var wg = ctx.player.abilities.gauge(AbilityState.WEAPON)
 		if wg != null and wg.cancel():
 			ctx.player.indicator.clear("weapon")
@@ -1783,10 +1787,10 @@ func _physics_process(delta: float) -> void:
 	# Tally's reader runs cards, never bolts: this branch comes first so _fire never sees
 	# the ledger_reader row, which exists only for _patterns and _damage_mod.
 	if is_cards:
-		_step_cards(delta, not shots.is_empty())
+		_step_cards(delta, shots)
 	elif is_lane:
-		for _shot in shots:
-			_fire_cannon_lane(weapon)
+		for shot in shots:
+			_fire_cannon_lane(weapon, shot)
 	elif is_lob:
 		_step_sticky_weapon(intent, delta, shots)
 	else:
@@ -1915,7 +1919,9 @@ func _weapon_step_context(weapon: String, p: Resource, cadence_rate: float) -> D
 	else:
 		charge_rate = WeaponDriver.charge_rate_for_tier(ctx.player.speed_tier())
 	var wg = ctx.player.abilities.gauge(AbilityState.WEAPON)
-	var is_lob: bool = ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 0) > 0
+	var is_cards: bool = ctx.player.abilities.cap(AbilityState.WEAPON, "cards", null) != null
+	var is_lob: bool = not is_cards and ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 0) > 0
+	var cast_cost: float = float(p.cast_cost) if is_cards and p != null else 1.0
 	return {
 		"rate_mult": rate_mult,
 		"reload_rate_mult": reload_rate_mult,
@@ -1923,7 +1929,8 @@ func _weapon_step_context(weapon: String, p: Resource, cadence_rate: float) -> D
 		"sprinting": bool(ctx.player.kit.sprinting),
 		"planar_speed": ctx.player.planar_velocity().length(),
 		"managed_gauge": is_lob,
-		"slot_ready": ctx.player.abilities.ready(AbilityState.WEAPON),
+		"managed_commit": is_cards,
+		"slot_ready": ctx.player.abilities.ready(AbilityState.WEAPON, cast_cost),
 		"lob_charging": wg != null and wg.charging,
 	}
 
@@ -3071,7 +3078,7 @@ func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: fl
 		"verb": "", "window": 0.0, "seed": seed, "target": target, "centre": centre, "radius": radius, "phase": phase, "options": overrides, "noted": false, "born": _clock}
 	for d in descriptors:
 		d["id"] = "cannon_%s_%d" % [String(d["id"]).trim_prefix("mind_"), _cannon_count]
-		for key in ["warn", "live", "from", "dir", "ahead", "band"]:
+		for key in ["warn", "live", "from", "dir", "ahead", "half", "band"]:
 			if overrides.has(key):
 				d[key] = overrides[key]
 		var h = MindAttacks.build(d)
@@ -3079,7 +3086,7 @@ func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: fl
 		# use the committed warn, including zero for the last landing-beat call.
 		if overrides.has("warn"):
 			h.warn_seconds = maxf(0.0, float(overrides["warn"]))
-		h.color = ClassDef.CANNON_COLOR
+		h.color = overrides["color"] if overrides.has("color") else ClassDef.CANNON_COLOR
 		h.ground = _cannon_ground
 		ctx.root.add_child(h)
 		entry["hazards"].append(h)
@@ -3093,6 +3100,7 @@ func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: fl
 func _step_cannon(delta: float) -> void:
 	_step_cannon_exposure()
 	_track_wake()
+	_step_cannon_paint()
 	if ctx.player.abilities.selected == AbilityState.LINE and ctx.player.abilities.id_of(AbilityState.LINE) == "cannon_lane_charge" and ctx.player.kit.hooked:
 		ctx.player.indicator.set_shape(AbilityState.LINE, _cannon_line_geometry(1.0))
 	elif ctx.player.abilities.id_of(AbilityState.LINE) == "cannon_lane_charge":
@@ -3147,7 +3155,8 @@ func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
 			record["volley_hits"] = int(record.get("volley_hits", 0)) + 1
 			record["damage"] = float(record.get("damage", 0.0)) + dealt
 		else:
-			_hit(enemy, "cannon", float(entry["damage"]) * _damage_mod(Weapons.CANNON_LANE), push, Weapons.CANNON_KNOCK, "", entry["source"])
+			var chip := Weapons.PIERCE_CHIP if bool(options.get("pierce_chip", false)) else CHIP
+			_hit(enemy, "cannon", float(entry["damage"]) * _damage_mod(Weapons.CANNON_LANE), push, Weapons.CANNON_KNOCK, "", entry["source"], "", chip)
 		if not entry.get("recital_checked", false):
 			entry["recital_checked"] = true
 			if entry["source"] != "item_proc":
@@ -3172,13 +3181,23 @@ func _free_cannon() -> void:
 	_cannon = []
 	_walk = {}
 	_wake = {}
+	_clear_cannon_paint()
 
 
-# The weapon: one Mind lane from the ground under the ball down the aim, per cooldown.
-func _fire_cannon_lane(weapon: String) -> void:
+func _clear_cannon_paint() -> void:
+	last_cannon_paint = {}
+	if ctx != null and ctx.player != null and ctx.player.get("indicator") != null:
+		ctx.player.indicator.clear("cannon_paint")
+		ctx.player.indicator.clear("cannon_bracket_l")
+		ctx.player.indicator.clear("cannon_bracket_r")
+
+
+# Computes the committed ground lane geometry shared by the hold-paint preview and the release
+# Hazard (PILOT-CADENCE.md §3.6: what is drawn while held is what will hit).
+func _cannon_lane_plan(reach_base: float, width_mult: float, allow_walk := true) -> Dictionary:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var ball: Vector3 = ctx.player.ball_position()
-	var reach: float = Weapons.CANNON_LANE_REACH * ctx.tuning.mod("weapon_range")
+	var reach: float = reach_base * ctx.tuning.mod("weapon_range")
 	var aim := Hitscan.aim(space, ctx.aim_origin(), ctx.aim_forward(), ball, reach + AIM_SLACK)
 	var point: Vector3 = aim["point"]
 	var centre := _ground_under(ball)
@@ -3186,16 +3205,91 @@ func _fire_cannon_lane(weapon: String) -> void:
 	if Vector2(point.x - centre.x, point.z - centre.z).length() < 1.5:
 		target = centre + _flat_aim() * 10.0
 	var mutation: String = ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")
-	var walked := walk_extends(mutation, _walk, _clock)
+	var walked := allow_walk and walk_extends(mutation, _walk, _clock)
+	var half: float = MindAttacks.LANE_HALF * maxf(width_mult, Pattern.MIN_LOCK_WIDTH_MULT)
 	var radius := reach
+	var ahead: float = maxf(1.0, reach - half)
 	if walked:
 		var flat := Vector3(target.x - centre.x, 0.0, target.z - centre.z)
-		var dir := flat.normalized() if flat.length_squared() > 0.0001 else _flat_aim()
+		var dir_w := flat.normalized() if flat.length_squared() > 0.0001 else _flat_aim()
 		var end_at: Vector3 = _walk["end"]
 		centre = _floor_at(end_at + Vector3.UP)
-		target = centre + dir * 10.0
-		radius = WALK_REACH + MindAttacks.LANE_HALF
-	var entry := _commit_cannon("lane", target, centre, radius, Weapons.LANE_DAMAGE, "weapon")
+		target = centre + dir_w * 10.0
+		radius = WALK_REACH + half
+		ahead = WALK_REACH
+	var flat_dir := Vector3(target.x - centre.x, 0.0, target.z - centre.z)
+	var heading := flat_dir.normalized() if flat_dir.length_squared() > 0.0001 else _flat_aim()
+	return {
+		"aim": aim, "point": point, "centre": centre, "target": target, "heading": heading,
+		"radius": radius, "ahead": ahead, "half": half, "to": centre + heading * ahead,
+		"walked": walked, "mutation": mutation, "ball": ball,
+	}
+
+
+# Draws the Cannon's live painted lane and closing brackets while held (PILOT-CADENCE.md §3.6, §5.3):
+# closing in Cannon's colour before lock, flush in mint inside [0.30, 0.46] s, reopening & slate past 0.46 s.
+func _step_cannon_paint() -> void:
+	var is_lane: bool = ctx.player.abilities.cap(AbilityState.WEAPON, "family", "") == "lane"
+	var snap: Dictionary = weapon_driver.state_snapshot()
+	if not is_lane or not bool(snap.get("painted", false)):
+		if not last_cannon_paint.is_empty():
+			_clear_cannon_paint()
+		return
+	var weapon := active_weapon()
+	var p: Resource = _patterns.get(weapon)
+	if p == null:
+		_clear_cannon_paint()
+		return
+	var stage: String = String(snap.get("lock_stage", WeaponDriver.SHOT_PULSE))
+	var reach_base: float = float(p.lock_pulse_reach) if float(p.lock_pulse_reach) > 0.0 else float(p.range_m)
+	var width_mult: float = float(p.lock_pulse_width_mult)
+	var color: Color = ClassDef.CANNON_COLOR
+	if stage == WeaponDriver.SHOT_RAIL:
+		reach_base = float(p.lock_rail_reach) if float(p.lock_rail_reach) > 0.0 else float(p.range_m)
+		width_mult = float(p.lock_rail_width_mult)
+		color = Palette.ARC
+	elif stage == WeaponDriver.SHOT_BARRAGE:
+		reach_base = float(p.range_m)
+		width_mult = float(p.lock_barrage_width_mult)
+		color = Palette.SLATE
+	var plan := _cannon_lane_plan(reach_base, width_mult, true)
+	var from: Vector3 = plan["centre"]
+	var to: Vector3 = plan["to"]
+	var half: float = float(plan["half"])
+	var heading: Vector3 = plan["heading"]
+	var side := Vector3.UP.cross(heading).normalized()
+	var bracket_norm: float = float(snap.get("lock_bracket", 0.0))
+	var bracket_gap: float = bracket_norm * 1.6
+	var lane_shape := {"kind": "line", "from": from, "to": to, "full_to": to, "width": half * 2.0,
+		"color": color, "ticks": "lane", "fill": 1.0 if stage == WeaponDriver.SHOT_RAIL else 0.5}
+	var offset := side * (half + bracket_gap)
+	var left_bracket := {"kind": "line", "from": from + offset, "to": to + offset, "width": 0.24, "color": color, "fill": 1.0}
+	var right_bracket := {"kind": "line", "from": from - offset, "to": to - offset, "width": 0.24, "color": color, "fill": 1.0}
+	ctx.player.indicator.set_shape("cannon_paint", lane_shape)
+	ctx.player.indicator.set_shape("cannon_bracket_l", left_bracket)
+	ctx.player.indicator.set_shape("cannon_bracket_r", right_bracket)
+	last_cannon_paint = {"stage": stage, "from": from, "to": to, "ahead": float(plan["ahead"]),
+		"half": half, "width": half * 2.0, "color": color, "bracket_gap": bracket_gap}
+
+
+# The weapon: one Mind lane from the ground under the ball down the aim, per lock release or hold_auto tick.
+func _fire_cannon_lane(weapon: String, shot_desc := {}, source := "weapon") -> void:
+	var p: Resource = _patterns.get(weapon)
+	var shot_kind := String(shot_desc.get("kind", "plain"))
+	var has_lock_desc := shot_desc.has("damage")
+	var damage: float = float(shot_desc["damage"]) if has_lock_desc else (float(p.damage) if (p != null and String(p.trigger) == Pattern.TRIGGER_HOLD_AUTO) else Weapons.LANE_DAMAGE)
+	var reach_base: float = float(shot_desc.get("reach", Weapons.CANNON_LANE_REACH)) if has_lock_desc else Weapons.CANNON_LANE_REACH
+	var width_mult: float = float(shot_desc.get("width_mult", 1.0)) if has_lock_desc else 1.0
+	var pierce: bool = source == "weapon" and bool(shot_desc.get("pierce", false))
+	var breaks_props: bool = source == "weapon" and bool(shot_desc.get("breaks_props", false))
+	var plan := _cannon_lane_plan(reach_base, width_mult, source == "weapon")
+	var aim: Dictionary = plan["aim"]
+	var point: Vector3 = plan["point"]
+	var ball: Vector3 = plan["ball"]
+	var overrides := {"ahead": plan["ahead"], "half": plan["half"], "pierce_chip": pierce}
+	if shot_kind == WeaponDriver.SHOT_RAIL:
+		overrides["color"] = Palette.SAND
+	var entry := _commit_cannon("lane", plan["target"], plan["centre"], plan["radius"], damage, source, false, overrides)
 	var h = entry["hazards"][0]
 	# The body the ball's line holds is struck when the lane's footprint covers it, however high it
 	# hangs: the lane reaches 3 m over the ground, and the stage-2 flume relic hangs 12 m over the
@@ -3206,14 +3300,25 @@ func _fire_cannon_lane(weapon: String) -> void:
 		var held: Vector3 = kit.anchor_body.global_position
 		# A body already inside the lane at its real position takes the normal strike, not the forced one.
 		if h.contains(Vector3(held.x, h.ground_at(held) + 1.0, held.z)) and not h.contains(held):
-			entry["options"] = {"forced": kit.anchor_body}
-	var end: Vector3 = h.centre + h.heading * h.length
-	if mutation == "cannon_lane_walk":
-		_walk = {} if walked else {"end": end, "at": _clock}
+			(entry["options"] as Dictionary)["forced"] = kit.anchor_body
+	var end: Vector3 = (h.centre as Vector3) + (h.heading as Vector3) * float(h.length)
+	if shot_kind == WeaponDriver.SHOT_RAIL:
+		# PILOT-CADENCE.md §5.3: bone shot with a thin uranium-green edge, no recoil kick (§9.12).
+		var side: Vector3 = Vector3.UP.cross(h.heading as Vector3).normalized() * float(h.half_width)
+		effects.beam((h.centre as Vector3) + side, end + side, ClassDef.CANNON_COLOR, Effects.RING_LIFE)
+		effects.beam((h.centre as Vector3) - side, end - side, ClassDef.CANNON_COLOR, Effects.RING_LIFE)
+	if breaks_props:
+		for blast in _shape_blasts({"kind": "line", "from": h.centre, "to": end, "width": h.half_width * 2.0}):
+			ctx.break_props(blast[0], float(blast[1]), "cannon_rail")
+	if source == "weapon" and String(plan["mutation"]) == "cannon_lane_walk":
+		_walk = {} if bool(plan["walked"]) else {"end": end, "at": _clock}
+	if source == "weapon":
+		_clear_cannon_paint()
 	var muzzle: Vector3 = ball + h.heading * MUZZLE
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": end, "point": point, "blocked": aim["blocked"], "bolts": 0,
-		"volley": volleys, "sprung": false}
+		"volley": volleys, "sprung": false, "kind": shot_kind, "pierce_chip": pierce,
+		"damage": damage, "width_mult": width_mult, "reach": reach_base, "breaks_props": breaks_props}
 	ctx.events.shot_fired.emit(weapon, muzzle, end)
 
 
@@ -3815,7 +3920,7 @@ func _wire_tally() -> void:
 # Since the skill bar (SKILL-BAR section 1, "Tally's deck, re-cut") the reader holds one card,
 # balance due, on slot 1, so `bay` stays 0. The same tick runs her plates, the clip post, the
 # clip preview and her codex queue.
-func _step_cards(delta: float, can_fire: bool) -> void:
+func _step_cards(delta: float, shots: Array) -> void:
 	var abilities = ctx.player.abilities
 	var cards: Array = abilities.cap(AbilityState.WEAPON, "cards", [])
 	bay = clampi(bay, 0, cards.size() - 1)
@@ -3829,15 +3934,29 @@ func _step_cards(delta: float, can_fire: bool) -> void:
 	_step_tally_piece(delta)
 	_step_tally_cards()
 	_step_ink()
-	if not can_fire:
+	if shots.is_empty():
 		return
 	var card: String = cards[bay]
 	if not _cards.has(card):
 		return
 	var aim := _card_aim()
-	if not _cards[card].call(aim["point"], aim["valid"]):
+	var shot: Dictionary = shots[0]
+	var ok: bool = _run_balance(aim["point"], aim["valid"], shot, "weapon") if card == "balance_due" \
+		else bool(_cards[card].call(aim["point"], aim["valid"]))
+	if not ok:
 		return
-	weapon_driver.commit_recovery(Weapons.CARD_RECOVERY)
+	var p: Resource = _patterns.get(Weapons.LEDGER_READER)
+	if p != null and String(p.trigger) == Pattern.TRIGGER_STAMP:
+		var paid: bool = bool(shot.get("paid", false))
+		weapon_driver.commit_stamp(paid, 1.0)
+		if paid:
+			var safe_cost: float = maxf(float(shot.get("cast_cost", p.cast_cost)), Pattern.MIN_CAST_COST)
+			var safe_refund: float = clampf(float(shot.get("refund", 0.0)), 0.0, safe_cost)
+			if safe_refund > 0.0:
+				_grant_pressure_amount(safe_refund)
+				last_card["refund"] = safe_refund
+	else:
+		weapon_driver.commit_recovery(Weapons.CARD_RECOVERY)
 	ctx.events.shot_fired.emit(card, ctx.player.ball_position(), aim["point"])
 
 
@@ -3897,6 +4016,17 @@ func _gather_pull(at: Vector3, radius: float, enemies = null) -> void:
 func _step_roll_restore(delta: float) -> void:
 	var abilities = ctx.player.abilities
 	var s = abilities.slot(AbilityState.WEAPON)
+	var p: Resource = _patterns.get(Weapons.LEDGER_READER)
+	var fractional: bool = p != null and String(p.trigger) == Pattern.TRIGGER_STAMP
+	if fractional:
+		if abilities.pressure_of(AbilityState.WEAPON) + AbilityState.PRESSURE_EPS >= float(s.max_charges):
+			_roll_clock = 0.0
+			return
+		var planar: float = ctx.player.planar_velocity().length()
+		if not ctx.player.state.on_floor() or SpeedTier.of(planar, ctx.player.tuning.f("cruise")) < SpeedTier.CRUISE:
+			return
+		_grant_pressure_amount(delta / Weapons.PRESSURE_ROLL_S)
+		return
 	if s.charges >= s.max_charges:
 		_roll_clock = 0.0
 		return
@@ -3915,10 +4045,16 @@ func _grant_pressure(count: int) -> void:
 		abilities.grant(AbilityState.WEAPON, count)
 
 
-func _spend_card(card: String, at: Vector3) -> bool:
-	if not ctx.player.abilities.spend(AbilityState.WEAPON):
+func _grant_pressure_amount(amount: float) -> void:
+	var abilities = ctx.player.abilities
+	if amount > 0.0 and abilities.cap(AbilityState.WEAPON, "pressure", null) != null:
+		abilities.grant_amount(AbilityState.WEAPON, amount)
+
+
+func _spend_card(card: String, at: Vector3, cost := 1.0) -> bool:
+	if not ctx.player.abilities.spend(AbilityState.WEAPON, cost):
 		return false
-	last_card = {"card": card, "at": at, "hits": 0, "spent": true}
+	last_card = {"card": card, "at": at, "hits": 0, "spent": true, "cost": cost, "paid": false, "refund": 0.0}
 	return true
 
 
@@ -3935,24 +4071,55 @@ func _run_gather(point: Vector3, valid: bool) -> bool:
 
 
 # A dry press answers verb_failed("fire", "cooling") and spends nothing.
-func _run_balance(point: Vector3, valid: bool) -> bool:
+func _run_balance(point: Vector3, valid: bool, shot_desc := {}, source := "weapon") -> bool:
 	if not valid:
 		return false
+	var p: Resource = _patterns.get(Weapons.LEDGER_READER)
+	var is_stamp_mode: bool = p != null and String(p.trigger) == Pattern.TRIGGER_STAMP
+	var is_proc: bool = source != "weapon"
+	var cost: float = maxf(float(shot_desc.get("cast_cost", p.cast_cost if p != null else 1.0)), Pattern.MIN_CAST_COST)
+	if not is_proc:
+		if not _spend_card("balance_due", point, cost):
+			_refuse_cast(AbilityState.WEAPON, "cooling")
+			return false
 	var speed: float = ctx.player.planar_velocity().length()
-	if not _spend_card("balance_due", point):
-		_refuse_cast(AbilityState.WEAPON, "cooling")
-		return false
-	var damage := minf(Weapons.BALANCE_MAX, Weapons.BALANCE_BASE + Weapons.BALANCE_PER_SPEED * speed) * _damage_mod(Weapons.LEDGER_READER)
+	var paid: bool = is_stamp_mode and not is_proc and bool(shot_desc.get("paid", false))
+	var damage: float
+	if is_stamp_mode:
+		var weight := clampf((Weapons.STAMP_BASE + Weapons.STAMP_PER_SPEED * speed) / Weapons.STAMP_MAX, 0.0, 1.0)
+		var raw: float = float(p.damage) * weight
+		if paid:
+			raw *= float(shot_desc.get("damage_mult", 1.0))
+			var bonus: float = float(shot_desc.get("streak_bonus", 0.0))
+			if bonus > 0.0:
+				raw += bonus * weight
+				var cap: float = float(shot_desc.get("streak_cap", 0.0))
+				if cap > 0.0:
+					raw = minf(raw, cap * weight)
+		damage = raw * _damage_mod(Weapons.LEDGER_READER)
+	else:
+		damage = minf(Weapons.BALANCE_MAX, Weapons.BALANCE_BASE + Weapons.BALANCE_PER_SPEED * speed) * _damage_mod(Weapons.LEDGER_READER)
 	var hits := 0
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.is_dead() or not in_ring(point, Weapons.BALANCE_RADIUS, enemy):
 			continue
-		_ledger_hit(enemy, damage, point, Weapons.LEDGER_KNOCK, "weapon")
+		_ledger_hit(enemy, damage, point, Weapons.LEDGER_KNOCK, source)
 		hits += 1
-		_settle_ink(enemy)
-	effects.ring(point, Weapons.BALANCE_RADIUS, ClassDef.TALLY_COLOR)
-	last_card["hits"] = hits
-	last_card["damage"] = damage
+		if paid:
+			# PILOT-CADENCE.md §5.3: PAID stamp on the machine in ledger cream (never mint).
+			effects.ring(enemy.global_position, 1.35, Palette.LEDGER_CREAM)
+			effects.spark(enemy.global_position + Vector3.UP * 1.1, Palette.LEDGER_CREAM)
+		if not is_proc:
+			_settle_ink(enemy)
+	var cue_color: Color = Palette.LEDGER_CREAM if paid else ClassDef.TALLY_COLOR
+	effects.ring(point, Weapons.BALANCE_RADIUS, cue_color)
+	if paid:
+		effects.shockwave(point, Weapons.BALANCE_RADIUS, Palette.LEDGER_CREAM)
+	if not is_proc:
+		last_card["hits"] = hits
+		last_card["damage"] = damage
+		last_card["paid"] = paid
+		last_card["stamp_color"] = cue_color
 	return true
 
 
@@ -5048,8 +5215,21 @@ func _proc_volley(scale: float) -> void:
 	var weapon := active_weapon()
 	if not _patterns.has(weapon) or ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 0) > 0:
 		return
+	var is_cards: bool = ctx.player.abilities.cap(AbilityState.WEAPON, "cards", null) != null
+	var is_lane: bool = not is_cards and ctx.player.abilities.cap(AbilityState.WEAPON, "family", "") == "lane"
+	var p: Resource = _patterns[weapon]
 	for i in int(scale):
-		_fire(weapon, "item_proc")
+		if is_cards:
+			var aim := _card_aim()
+			_run_balance(aim["point"], aim["valid"], {}, "item_proc")
+		elif is_lane:
+			var pulse_reach: float = float(p.lock_pulse_reach) if float(p.lock_pulse_reach) > 0.0 else float(p.range_m)
+			_fire_cannon_lane(weapon, {
+				"kind": WeaponDriver.SHOT_PULSE, "damage": float(p.damage), "reach": pulse_reach,
+				"width_mult": float(p.lock_pulse_width_mult), "pierce": false, "breaks_props": false,
+			}, "item_proc")
+		else:
+			_fire(weapon, "item_proc")
 
 
 # The upgrade-tree proc actions (M0: item_proc, never the player's own gauge release).
@@ -5529,6 +5709,7 @@ func _on_player_died() -> void:
 	_clear_verb_items()
 	_clear_aftershocks()
 	_rakes.clear()
+	_clear_cannon_paint()
 	weapon_driver.reset()
 
 

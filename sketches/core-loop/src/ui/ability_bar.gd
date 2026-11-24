@@ -176,6 +176,30 @@ func pool_pips(entry: Dictionary) -> int:
 	return int(entry["max_charges"])
 
 
+# Per-pip fill share (0.0 to 1.0) for a slot: whole charges fill full pips, and optional
+# `charge_frac` (Tally's fractional pressure, PILOT-CADENCE.md §3.5) partially fills the next pip.
+func pip_fills(entry: Dictionary) -> Array[float]:
+	var reason := slot_reason(entry)
+	var max_charges: int = pool_pips(entry) if reason == "empty" else int(entry["max_charges"])
+	var full: int = 0 if reason == "empty" else int(entry["charges"])
+	var partial: float = clampf(float(entry.get("charge_frac", 0.0)), 0.0, 1.0)
+	if reason == "empty" and partial <= 0.0:
+		var pool := String(entry.get("pool", slot_name(entry)))
+		for other in slots:
+			if slot_name(other) == pool:
+				partial = clampf(float(other.get("charge_frac", 0.0)), 0.0, 1.0)
+				break
+	var fills: Array[float] = []
+	for c in max_charges:
+		if c < full:
+			fills.append(1.0)
+		elif c == full and partial > 0.001:
+			fills.append(partial)
+		else:
+			fills.append(0.0)
+	return fills
+
+
 # The bar's size for `count` published slots: up to NUMBERED numbered slots, the rest chips.
 static func bar_size(count := NUMBERED + 2) -> Vector2:
 	var n := clampi(count, 1, NUMBERED)
@@ -522,18 +546,27 @@ func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:
 		draw_texture_rect(Icons.texture(Icons.REEL), badge, false, Icons.tint(Icons.REEL, tint))
 	if not key_hidden(entry):
 		_draw_cap(key_centre + Vector2(shake.x, 0.0), entry["key"], look, KEY_H * scale)
-	var max_charges: int = entry["max_charges"]
-	var full: int = entry["charges"]
-	if reason == "empty":
-		max_charges = pool_pips(entry)
-		full = 0
+	var fills := pip_fills(entry)
+	var max_charges := fills.size()
 	if max_charges > 1 or reason == "empty":
 		var step_x := PIP * 3.0
 		var y := SLOT + KEY_GAP + KEY_H + PIP_GAP + PIP
+		var tex: Texture2D = Icons.shape(motif)
+		var ts: Vector2 = tex.get_size() if tex != null else Vector2.ZERO
 		for c in max_charges:
 			var at := Vector2(key_centre.x + (c - (max_charges - 1) * 0.5) * step_x, y)
 			var pip := Rect2(at - Vector2(PIP, PIP) * 1.3, Vector2(PIP, PIP) * 2.6)
-			draw_texture_rect(Icons.shape(motif), pip, false, tint if c < full else Color(tint, 0.25))
+			var fill := fills[c]
+			if fill >= 0.999:
+				draw_texture_rect(tex, pip, false, tint)
+			else:
+				draw_texture_rect(tex, pip, false, Color(tint, 0.25))
+				if fill > 0.01 and ts.x > 0.0 and ts.y > 0.0:
+					var fill_h := pip.size.y * fill
+					var dst := Rect2(Vector2(pip.position.x, pip.end.y - fill_h), Vector2(pip.size.x, fill_h))
+					var src_h := ts.y * fill
+					var src := Rect2(Vector2(0.0, ts.y - src_h), Vector2(ts.x, src_h))
+					draw_texture_rect_region(tex, dst, src, tint)
 
 
 # A slot's keycap: the shared drawn key, or on the selected slot the inverted cap (sand fill,

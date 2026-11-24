@@ -100,6 +100,8 @@ func _run_live() -> void:
 	_check_sable_cadence_hand(Weapons.PYLON_TURRET)
 	_check_kest_cadence_hand()
 	_check_tarn_cadence_hand()
+	_check_tally_cadence_hand()
+	_check_cannon_cadence_hand()
 	_check_no_phantom_windows()
 	_check_active_hand()
 
@@ -338,6 +340,109 @@ func _check_tarn_cadence_hand() -> void:
 	var r_lrn := float(lrn["hits"]) / maxf(float(lrn["windows"]), 1.0)
 	var r_exp := float(exp["hits"]) / maxf(float(exp["windows"]), 1.0)
 	_t.check("Tarn cadence hits and share order Novice < Learner a5 < Expert",
+		nov["hits"] < lrn["hits"] and lrn["hits"] < exp["hits"]
+		and r_nov < r_lrn and r_lrn < r_exp,
+		"hits %d/%d (%.2f) < %d/%d (%.2f) < %d/%d (%.2f)" % [
+			nov["hits"], nov["windows"], r_nov,
+			lrn["hits"], lrn["windows"], r_lrn,
+			exp["hits"], exp["windows"], r_exp])
+
+
+func _run_tally_cycles(band_name: String, attempt: int, seed_val: int, ticks_to_run: int) -> Dictionary:
+	var pat: Resource = Weapons.base(Weapons.LEDGER_READER)
+	var wdrv = _game.combat.weapon_driver
+	wdrv.reset(pat)
+	var drv = _make_driver(band_name, attempt, seed_val)
+	var intent := Intent.new()
+	var plain := 0
+	var paid := 0
+	for _tick in ticks_to_run:
+		drv.source.hold = {"fire_held": true}
+		drv.source.press = {}
+		drv._cadence_fire_hand()
+		drv.source.poll(intent)
+		var shots: Array = wdrv.step(DT, intent, Weapons.LEDGER_READER, pat, 0.0)
+		for s in shots:
+			if bool(s.get("paid", false)):
+				paid += 1
+			else:
+				plain += 1
+	return {
+		"windows": int(drv._totals["cadence_windows"]),
+		"hits": int(drv._totals["cadence_hits"]),
+		"plain": plain,
+		"paid": paid,
+	}
+
+
+func _check_tally_cadence_hand() -> void:
+	# 9000 ticks = 100 s -> ~240 stamp windows per band.
+	var nov := _run_tally_cycles("novice", 1, 37, 9000)
+	var lrn := _run_tally_cycles("learner", 5, 37, 9000)
+	var exp := _run_tally_cycles("expert", 1, 37, 9000)
+	var pln := _run_tally_cycles("", 1, 37, 9000)
+	_t.check("Tally unbanded matches Expert cycle-for-cycle", pln == exp, "plain %s vs expert %s" % [pln, exp])
+	_t.check("Tally hit cycles stamp PAID and miss cycles cast plain",
+		nov["plain"] > 50 and exp["paid"] > nov["paid"] and exp["hits"] == exp["paid"],
+		"nov %s exp %s" % [nov, exp])
+	var r_nov := float(nov["hits"]) / maxf(float(nov["windows"]), 1.0)
+	var r_lrn := float(lrn["hits"]) / maxf(float(lrn["windows"]), 1.0)
+	var r_exp := float(exp["hits"]) / maxf(float(exp["windows"]), 1.0)
+	_t.check("Tally cadence hits and share order Novice < Learner a5 < Expert",
+		nov["hits"] < lrn["hits"] and lrn["hits"] < exp["hits"]
+		and r_nov < r_lrn and r_lrn < r_exp,
+		"hits %d/%d (%.2f) < %d/%d (%.2f) < %d/%d (%.2f)" % [
+			nov["hits"], nov["windows"], r_nov,
+			lrn["hits"], lrn["windows"], r_lrn,
+			exp["hits"], exp["windows"], r_exp])
+
+
+func _run_cannon_cycles(band_name: String, attempt: int, seed_val: int, ticks_to_run: int) -> Dictionary:
+	var pat: Resource = Weapons.base(Weapons.CANNON_LANE)
+	var wdrv = _game.combat.weapon_driver
+	wdrv.reset(pat)
+	var drv = _make_driver(band_name, attempt, seed_val)
+	var intent := Intent.new()
+	var pulses := 0
+	var rails := 0
+	var barrages := 0
+	for _tick in ticks_to_run:
+		drv.source.hold = {"fire_held": true}
+		drv.source.press = {}
+		drv._cadence_fire_hand()
+		drv.source.poll(intent)
+		var shots: Array = wdrv.step(DT, intent, Weapons.CANNON_LANE, pat, pat.rate)
+		for s in shots:
+			match String(s.get("kind", "")):
+				WeaponDriver.SHOT_PULSE:
+					pulses += 1
+				WeaponDriver.SHOT_RAIL:
+					rails += 1
+				WeaponDriver.SHOT_BARRAGE:
+					barrages += 1
+	return {
+		"windows": int(drv._totals["cadence_windows"]),
+		"hits": int(drv._totals["cadence_hits"]),
+		"pulses": pulses,
+		"rails": rails,
+		"barrages": barrages,
+	}
+
+
+func _check_cannon_cadence_hand() -> void:
+	# 9000 ticks = 100 s -> ~90-100 lock cycles per band.
+	var nov := _run_cannon_cycles("novice", 1, 41, 9000)
+	var lrn := _run_cannon_cycles("learner", 5, 41, 9000)
+	var exp := _run_cannon_cycles("expert", 1, 41, 9000)
+	var pln := _run_cannon_cycles("", 1, 41, 9000)
+	_t.check("Cannon unbanded matches Expert cycle-for-cycle", pln == exp, "plain %s vs expert %s" % [pln, exp])
+	_t.check("Cannon hit cycles fire Rail and miss cycles fire both Pulse and Barrage",
+		nov["pulses"] > 10 and nov["barrages"] > 10 and exp["rails"] > nov["rails"] and exp["hits"] == exp["rails"],
+		"nov %s exp %s" % [nov, exp])
+	var r_nov := float(nov["hits"]) / maxf(float(nov["windows"]), 1.0)
+	var r_lrn := float(lrn["hits"]) / maxf(float(lrn["windows"]), 1.0)
+	var r_exp := float(exp["hits"]) / maxf(float(exp["windows"]), 1.0)
+	_t.check("Cannon cadence hits and share order Novice < Learner a5 < Expert",
 		nov["hits"] < lrn["hits"] and lrn["hits"] < exp["hits"]
 		and r_nov < r_lrn and r_lrn < r_exp,
 		"hits %d/%d (%.2f) < %d/%d (%.2f) < %d/%d (%.2f)" % [

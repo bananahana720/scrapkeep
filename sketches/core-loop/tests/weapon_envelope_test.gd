@@ -159,15 +159,19 @@ func _initialize() -> void:
 	quit(t.verdict())
 
 
-# PILOT-CADENCE.md §1 (Ruling ek, E1-06 & E2-01): numerical cadence simulation and DPS ceilings.
+# PILOT-CADENCE.md §1 (Ruling ek, E1-06, E2-01, E2-02): numerical cadence simulation and DPS ceilings.
 const SIM_DT := 0.001
 const SIM_CYCLES := 20
+const TALLY_BURST_KEY := "ledger_reader_burst_1s"
 const CEILINGS := {
 	Weapons.RAPID_LASER: 75.0,
 	Weapons.ARC_CASTER: 80.0,
 	Weapons.PYLON_TURRET: 80.0,
 	Weapons.STICKY_CHARGE: 44.0,
 	Weapons.CLAW_SWEEP: 80.0,
+	Weapons.LEDGER_READER: 30.0,
+	TALLY_BURST_KEY: 80.0,
+	Weapons.CANNON_LANE: 50.0,
 }
 
 
@@ -496,6 +500,152 @@ static func _tarn_max(pattern: Resource) -> float:
 	return best
 
 
+# Tally stamp simulation (PILOT-CADENCE.md §3.5): fractional pressure (cap 3.0, continuous 0.5/s
+# refill, 1e-4 spend tolerance). Returns {sustained, burst_1s} where burst_1s counts both ends
+# of any 1.0 s closed span [t, t + 1.0].
+static func _simulate_tally(pattern: Resource, mode: String, press_at := -1.0, start_pressure := 3.0) -> Dictionary:
+	var drv := WeaponDriver.new()
+	drv.reset(pattern)
+	var pressure := start_pressure
+	var max_p := 3.0
+	var refill_per_s := 1.0 / Weapons.PRESSURE_ROLL_S
+	var cost: float = maxf(float(pattern.cast_cost), Pattern.MIN_CAST_COST)
+	var hits: Array = [] # [[time_s, dmg]]
+	var t_now := 0.0
+	var sim_s := 35.0
+	var mash_clock := 0.0
+	var mash_step := 0.05
+	var pressed_win := false
+	var waiting_refill := false
+	var step_count := int(round(sim_s / SIM_DT))
+	for _step in step_count:
+		pressure = minf(max_p, pressure + refill_per_s * SIM_DT)
+		var snap: Dictionary = drv.state_snapshot()
+		var win := String(snap["window"])
+		var intent := Intent.new()
+		if mode == "careless":
+			if mash_clock <= 0.0 and pressure + AbilityState.PRESSURE_EPS >= cost:
+				intent.fire_pressed = true
+				mash_clock += mash_step
+			mash_clock -= SIM_DT
+		elif mode == "chain_open" or mode == "chain_close":
+			if waiting_refill:
+				if pressure + AbilityState.PRESSURE_EPS >= max_p:
+					waiting_refill = false
+			if not waiting_refill:
+				if win == WeaponDriver.WINDOW_WAITING or win == WeaponDriver.WINDOW_OPEN:
+					var target_t: float = float(pattern.window_s.x) if mode == "chain_open" else float(pattern.window_s.y) - SIM_DT
+					if float(snap["window_t"]) + SIM_DT * 0.5 >= target_t:
+						if pressure + AbilityState.PRESSURE_EPS >= cost:
+							intent.fire_pressed = true
+						else:
+							waiting_refill = true
+				elif bool(snap["ready"]) and pressure + AbilityState.PRESSURE_EPS >= cost:
+					intent.fire_pressed = true
+		elif mode == "max_burst":
+			if win == WeaponDriver.WINDOW_OPEN:
+				if pressure + AbilityState.PRESSURE_EPS >= cost:
+					intent.fire_pressed = true
+			elif win == WeaponDriver.WINDOW_IDLE and bool(snap["ready"]) and pressure + AbilityState.PRESSURE_EPS >= cost:
+				intent.fire_pressed = true
+		elif press_at >= 0.0:
+			if win == WeaponDriver.WINDOW_WAITING or win == WeaponDriver.WINDOW_OPEN:
+				if not pressed_win and float(snap["window_t"]) + SIM_DT * 0.5 >= press_at \
+						and pressure + AbilityState.PRESSURE_EPS >= cost:
+					intent.fire_pressed = true
+					pressed_win = true
+			elif bool(snap["ready"]) and pressure + AbilityState.PRESSURE_EPS >= cost:
+				intent.fire_pressed = true
+				pressed_win = false
+		var shots: Array = drv.step(SIM_DT, intent, Weapons.LEDGER_READER, pattern, 0.0,
+			{"managed_commit": true, "slot_ready": pressure + AbilityState.PRESSURE_EPS >= cost})
+		for s in shots:
+			var scost: float = maxf(float(s["cast_cost"]), Pattern.MIN_CAST_COST)
+			if pressure + AbilityState.PRESSURE_EPS < scost:
+				continue
+			pressure = maxf(0.0, pressure - scost)
+			var is_paid: bool = bool(s["paid"])
+			drv.commit_stamp(is_paid, 1.0)
+			if is_paid:
+				var ref: float = clampf(float(s["refund"]), 0.0, scost)
+				pressure = minf(max_p, pressure + ref)
+			var dmg: float = float(pattern.damage) * float(s["damage_mult"])
+			if float(s.get("streak_bonus", 0.0)) > 0.0:
+				dmg += float(s["streak_bonus"])
+				if float(s.get("streak_cap", 0.0)) > 0.0:
+					dmg = minf(dmg, float(s["streak_cap"]))
+			hits.append([t_now, dmg])
+			pressed_win = false
+		t_now += SIM_DT
+	# Sustained DPS over steady-state tail (skip first 7.0 s so initial full bar does not bias upward).
+	var tail_start := 7.0
+	var tail_dmg := 0.0
+	for h in hits:
+		if float(h[0]) >= tail_start:
+			tail_dmg += float(h[1])
+	var sustained := tail_dmg / maxf(sim_s - tail_start, 0.001)
+	# Most damage in any closed 1.0 s span [t_i, t_i + 1.0] (both endpoints included, §3.5).
+	var best_1s := 0.0
+	for i in hits.size():
+		var t0: float = float(hits[i][0])
+		var span_dmg := 0.0
+		for j in range(i, hits.size()):
+			if float(hits[j][0]) <= t0 + 1.0 + 0.0005:
+				span_dmg += float(hits[j][1])
+			else:
+				break
+		best_1s = maxf(best_1s, span_dmg)
+	return {"sustained": sustained, "burst_1s": best_1s}
+
+
+# Cannon lock simulation (PILOT-CADENCE.md §3.6): release at `release_at` seconds of hold.
+static func _simulate_cannon(pattern: Resource, release_at: float) -> float:
+	var drv := WeaponDriver.new()
+	drv.reset(pattern)
+	var total_dmg := 0.0
+	var total_t := 0.0
+	var cycles := 0
+	var holding := false
+	var max_steps := 120000
+	var step_idx := 0
+	while cycles < SIM_CYCLES and step_idx < max_steps:
+		step_idx += 1
+		var snap: Dictionary = drv.state_snapshot()
+		var intent := Intent.new()
+		var ended := false
+		if holding:
+			if float(snap["hold"]) + SIM_DT * 0.5 >= release_at:
+				intent.fire_released = true
+				holding = false
+				ended = true
+			else:
+				intent.fire_held = true
+		elif bool(snap["ready"]):
+			intent.fire_pressed = true
+			if release_at <= SIM_DT * 0.5:
+				ended = true
+			else:
+				intent.fire_held = true
+				holding = true
+		var shots: Array = drv.step(SIM_DT, intent, Weapons.CANNON_LANE, pattern, float(pattern.rate))
+		if cycles >= 2:
+			total_t += SIM_DT
+			for s in shots:
+				total_dmg += float(s["damage"])
+		if ended:
+			cycles += 1
+	return total_dmg / maxf(total_t, 0.0001)
+
+
+static func _cannon_max(pattern: Resource) -> float:
+	var best := 0.0
+	var at := 0.0
+	while at <= 0.80:
+		best = maxf(best, _simulate_cannon(pattern, at))
+		at += 0.02
+	return best
+
+
 func _check_cadence_envelopes(t) -> void:
 	var rivet_pat: Resource = Weapons.base(Weapons.RAPID_LASER)
 	var rivet_careless := _simulate_rivet(rivet_pat, false)
@@ -577,26 +727,83 @@ func _check_cadence_envelopes(t) -> void:
 		ceiling_passes(Weapons.CLAW_SWEEP, tarn_careless) and ceiling_passes(Weapons.CLAW_SWEEP, tarn_cap30),
 		"careless=%.2f cap30=%.2f" % [tarn_careless, tarn_cap30])
 
-	# Most by arithmetic (PILOT-CADENCE.md section 1): the best of every reload/snap/beat press time
+	var tally_pat: Resource = Weapons.base(Weapons.LEDGER_READER)
+	var tally_careless := _simulate_tally(tally_pat, "careless")
+	var tally_open := _simulate_tally(tally_pat, "chain_open")
+	var tally_close := _simulate_tally(tally_pat, "chain_close")
+	var tally_base_dps := WeaponDriver.base_dps(tally_pat)
+	var tally_net_cost: float = maxf(float(tally_pat.cast_cost) - minf(float(tally_pat.refund), float(tally_pat.cast_cost)), 0.0001)
+	var tally_max_sustained: float = (float(tally_pat.damage) * float(tally_pat.window_mult)) * (1.0 / Weapons.PRESSURE_ROLL_S) / tally_net_cost
+	var tally_max_burst: float = float(tally_open["burst_1s"])
+	print("CADENCE_ENVELOPE  tally  careless=%.2f (1s=%.1f)  skilled_open=%.2f  skilled_close=%.2f  max_sust=%.2f  max_1s=%.1f  base_dps=%.2f  ceilings=%.0f/%.0f" % [
+		float(tally_careless["sustained"]), float(tally_careless["burst_1s"]),
+		float(tally_open["sustained"]), float(tally_close["sustained"]),
+		tally_max_sustained, tally_max_burst, tally_base_dps,
+		CEILINGS[Weapons.LEDGER_READER], CEILINGS[TALLY_BURST_KEY]])
+	t.near("Tally careless sustained DPS matches PILOT-CADENCE 11.0", float(tally_careless["sustained"]), 11.0, 0.8)
+	t.near("Tally base_dps matches careless sustained 11.0", tally_base_dps, 11.0, 0.05)
+	t.near("Tally careless 1s burst matches PILOT-CADENCE 66.0", float(tally_careless["burst_1s"]), 66.0, 0.2)
+	t.near("Tally skilled chain (window open) sits near PILOT-CADENCE 22.0", float(tally_open["sustained"]), 22.0, 1.4)
+	t.near("Tally skilled chain (window close) sits near PILOT-CADENCE 23.0", float(tally_close["sustained"]), 23.0, 1.4)
+	t.near("Tally most by arithmetic sustained matches PILOT-CADENCE 26.4", tally_max_sustained, 26.4, 0.05)
+	t.near("Tally most in any 1s (both endpoints) matches PILOT-CADENCE 79.2", tally_max_burst, 79.2, 0.2)
+	t.check("Tally sustained and 1s burst sit within ceilings 30 and 80",
+		ceiling_passes(Weapons.LEDGER_READER, float(tally_careless["sustained"]))
+		and ceiling_passes(Weapons.LEDGER_READER, float(tally_open["sustained"]))
+		and ceiling_passes(Weapons.LEDGER_READER, tally_max_sustained)
+		and ceiling_passes(TALLY_BURST_KEY, float(tally_careless["burst_1s"]))
+		and ceiling_passes(TALLY_BURST_KEY, tally_max_burst),
+		"sust=%.2f burst=%.1f" % [tally_max_sustained, tally_max_burst])
+	# Direct invariant test: Tally refund can NEVER exceed spend (Pattern clamp + runtime).
+	var bad_refund_pat: Resource = tally_pat.copy()
+	bad_refund_pat.cast_cost = 0.5
+	bad_refund_pat.refund = 1.5
+	bad_refund_pat._clamp()
+	t.check("Tally refund <= cast_cost holds on Pattern clamp and base row",
+		float(tally_pat.refund) <= float(tally_pat.cast_cost)
+		and float(bad_refund_pat.refund) <= float(bad_refund_pat.cast_cost),
+		"base=%.2f/%.2f clamped=%.2f/%.2f" % [tally_pat.refund, tally_pat.cast_cost, bad_refund_pat.refund, bad_refund_pat.cast_cost])
+
+	var cannon_pat: Resource = Weapons.base(Weapons.CANNON_LANE)
+	var cannon_careless := _simulate_cannon(cannon_pat, 0.0)
+	var cannon_late := _simulate_cannon(cannon_pat, 0.60)
+	var cannon_skilled := _simulate_cannon(cannon_pat, 0.30)
+	var cannon_last_frame := _simulate_cannon(cannon_pat, 0.46)
+	var cannon_base_dps := WeaponDriver.base_dps(cannon_pat)
+	print("CADENCE_ENVELOPE  cannon  careless=%.2f  late=%.2f  skilled=%.2f  last_frame=%.2f  base_dps=%.2f  ceiling=%.0f" % [
+		cannon_careless, cannon_late, cannon_skilled, cannon_last_frame, cannon_base_dps, CEILINGS[Weapons.CANNON_LANE]])
+	t.near("Cannon careless Pulse tapping matches PILOT-CADENCE 22.9", cannon_careless, 16.0 / 0.70, 0.6)
+	t.near("Cannon careless late Barrage matches PILOT-CADENCE 20.0", cannon_late, 26.0 / 1.30, 0.6)
+	t.near("Cannon base_dps matches careless 22.86", cannon_base_dps, 16.0 / 0.70, 0.05)
+	t.near("Cannon skilled Rail matches PILOT-CADENCE 42.0", cannon_skilled, 42.0, 0.7)
+	t.near("Cannon last-frame Rail matches PILOT-CADENCE 36.2", cannon_last_frame, 42.0 / 1.16, 0.7)
+	t.check("Cannon sits within ceiling 50",
+		ceiling_passes(Weapons.CANNON_LANE, cannon_careless) and ceiling_passes(Weapons.CANNON_LANE, cannon_skilled),
+		"careless=%.2f skilled=%.2f" % [cannon_careless, cannon_skilled])
+
+	# Most by arithmetic (PILOT-CADENCE.md section 1): the best of every reload/snap/beat/lock timing
 	# and every release fraction at every speed tier. Rivet 62.6; Sable 70.0; mounted Sable 75.0;
-	# Kest 36.7; Tarn 78.4.
+	# Kest 36.7; Tarn 78.4; Tally 26.4 sustained / 79.2 in 1s; Cannon 42.0.
 	var rivet_max := _rivet_max(rivet_pat)
 	var sable_max := _sable_max(Weapons.ARC_CASTER, sable_pat)
 	var turret_max := _sable_max(Weapons.PYLON_TURRET, turret_pat)
 	var kest_max := _kest_max(kest_pat)
 	var tarn_max := _tarn_max(tarn_pat)
-	print("CADENCE_ENVELOPE  most by arithmetic  rivet=%.2f  sable=%.2f  pylon_turret=%.2f  kest=%.2f  tarn=%.2f" % [
-		rivet_max, sable_max, turret_max, kest_max, tarn_max])
+	var cannon_max := _cannon_max(cannon_pat)
+	print("CADENCE_ENVELOPE  most by arithmetic  rivet=%.2f  sable=%.2f  pylon_turret=%.2f  kest=%.2f  tarn=%.2f  tally=%.2f/%.1f  cannon=%.2f" % [
+		rivet_max, sable_max, turret_max, kest_max, tarn_max, tally_max_sustained, tally_max_burst, cannon_max])
 	t.near("Rivet most by arithmetic matches PILOT-CADENCE 62.6", rivet_max, 62.61, 0.8)
 	t.near("Sable most by arithmetic matches PILOT-CADENCE 70.0", sable_max, 70.0, 0.8)
 	t.near("Sable mounted most by arithmetic matches PILOT-CADENCE 75.0", turret_max, 75.0, 0.8)
 	t.near("Kest most by arithmetic matches PILOT-CADENCE 36.7", kest_max, 22.0 / 0.60, 0.9)
 	t.near("Tarn most by arithmetic matches PILOT-CADENCE 78.4", tarn_max, 78.4, 0.9)
+	t.near("Cannon most by arithmetic matches PILOT-CADENCE 42.0", cannon_max, 42.0, 0.7)
 	t.check("Rivet most by arithmetic sits within ceiling 75", ceiling_passes(Weapons.RAPID_LASER, rivet_max), "%.2f" % rivet_max)
 	t.check("Sable most by arithmetic sits within ceiling 80", ceiling_passes(Weapons.ARC_CASTER, sable_max), "%.2f" % sable_max)
 	t.check("Sable mounted most by arithmetic sits within ceiling 80", ceiling_passes(Weapons.PYLON_TURRET, turret_max), "%.2f" % turret_max)
 	t.check("Kest most by arithmetic sits within ceiling 44", ceiling_passes(Weapons.STICKY_CHARGE, kest_max), "%.2f" % kest_max)
 	t.check("Tarn most by arithmetic sits within ceiling 80", ceiling_passes(Weapons.CLAW_SWEEP, tarn_max), "%.2f" % tarn_max)
+	t.check("Cannon most by arithmetic sits within ceiling 50", ceiling_passes(Weapons.CANNON_LANE, cannon_max), "%.2f" % cannon_max)
 
 	# Planted over-ceiling failure test (PILOT-CADENCE.md §1): proves the ceiling gate bites.
 	var over_rivet_pat: Resource = rivet_pat.copy()
@@ -623,8 +830,26 @@ func _check_cadence_envelopes(t) -> void:
 	t.check("planted over-ceiling Tarn figure FAILS ceiling check",
 		over_tarn_dps > CEILINGS[Weapons.CLAW_SWEEP] and not ceiling_passes(Weapons.CLAW_SWEEP, over_tarn_dps),
 		"planted=%.2f ceiling=%.0f" % [over_tarn_dps, CEILINGS[Weapons.CLAW_SWEEP]])
+	var over_tally_pat: Resource = tally_pat.copy()
+	over_tally_pat.damage = 32.0
+	var over_tally_sim := _simulate_tally(over_tally_pat, "chain_open")
+	t.check("planted over-ceiling Tally sustained & 1s burst BOTH FAIL ceiling checks",
+		float(over_tally_sim["sustained"]) > CEILINGS[Weapons.LEDGER_READER]
+		and not ceiling_passes(Weapons.LEDGER_READER, float(over_tally_sim["sustained"]))
+		and float(over_tally_sim["burst_1s"]) > CEILINGS[TALLY_BURST_KEY]
+		and not ceiling_passes(TALLY_BURST_KEY, float(over_tally_sim["burst_1s"])),
+		"planted sust=%.2f burst=%.1f" % [float(over_tally_sim["sustained"]), float(over_tally_sim["burst_1s"])])
+	var over_cannon_pat: Resource = cannon_pat.copy()
+	over_cannon_pat.lock_rail_damage = 56.0
+	var over_cannon_dps := _simulate_cannon(over_cannon_pat, 0.30)
+	t.check("planted over-ceiling Cannon figure FAILS ceiling check",
+		over_cannon_dps > CEILINGS[Weapons.CANNON_LANE] and not ceiling_passes(Weapons.CANNON_LANE, over_cannon_dps),
+		"planted=%.2f ceiling=%.0f" % [over_cannon_dps, CEILINGS[Weapons.CANNON_LANE]])
 	t.check("synthetic scalar above ceiling FAILS ceiling check",
 		not ceiling_passes(Weapons.RAPID_LASER, 75.1) and not ceiling_passes(Weapons.ARC_CASTER, 80.1)
 		and not ceiling_passes(Weapons.PYLON_TURRET, 80.1)
 		and not ceiling_passes(Weapons.STICKY_CHARGE, 44.1)
-		and not ceiling_passes(Weapons.CLAW_SWEEP, 80.1), "")
+		and not ceiling_passes(Weapons.CLAW_SWEEP, 80.1)
+		and not ceiling_passes(Weapons.LEDGER_READER, 30.1)
+		and not ceiling_passes(TALLY_BURST_KEY, 80.1)
+		and not ceiling_passes(Weapons.CANNON_LANE, 50.1), "")

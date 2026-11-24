@@ -81,13 +81,14 @@ func _lane_at(latched: bool) -> Dictionary:
 	var before: float = target.hp
 	var from := _struck.size()
 	_game.combat._cooldown = 0.0
+	_game.combat.weapon_driver.reset()
 	_game.combat._free_cannon()
 	player.abilities.refill()
 	var ticks := ceili(WAIT_S * Engine.physics_ticks_per_second)
 	for i in ticks:
 		if latched:
 			_latch(target)
-		_source.press = {"fire_held": true} if i == 0 else {}
+		_source.press = {"fire_pressed": true} if i == 0 else {}
 		_source.hold = {}
 		await physics_frame
 	_unlatch()
@@ -128,13 +129,14 @@ func _forced_at(hang_m: float) -> Dictionary:
 	target.hp = 100000.0
 	target.process_mode = Node.PROCESS_MODE_DISABLED
 	_game.combat._cooldown = 0.0
+	_game.combat.weapon_driver.reset()
 	_game.combat._free_cannon()
 	player.abilities.refill()
 	var forced := false
 	var entries := 0
 	for i in 3:
 		_latch(target)
-		_source.press = {"fire_held": true} if i == 0 else {}
+		_source.press = {"fire_pressed": true} if i == 0 else {}
 		_source.hold = {}
 		await physics_frame
 		for entry in _game.combat._cannon:
