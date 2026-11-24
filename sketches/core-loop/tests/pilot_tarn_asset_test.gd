@@ -16,10 +16,10 @@ extends SceneTree
 # inside 1.25 and nothing past 1.0 below Y -0.6; the base's Pilot placeholder is an empty;
 # the blades ride WeaponRing. The pilot gains one mesh node, Cap, rigid on head, so the skin
 # check expects the Pilot and Cap meshes.
-# 2026-11-23 (W46 E2-04): the claws hinge outboard at radius 1.04, 18 degrees below 3 and 9
-# o'clock with no lean, so jaws and rams read beside the ball from the chase camera; ClawPivot
-# and ClawTip move there and the envelope cap becomes the weapon reach cap, 1.35 (PILOT-CADENCE
-# section 5.1).
+# 2026-11-23 (W46 E2-04): heroic claws (Andrew: reach cap lifted to 1.75, bold and exaggerated)
+# hinge outboard of the cutaway plating at radius 1.16, 25 degrees above 3 and 9 o'clock with no
+# lean, so jaws and rams frame the ball from the chase camera; ClawPivot and ClawTip move there
+# and the envelope cap becomes the weapon reach cap, 1.75.
 
 const T := preload("res://tests/support/t.gd")
 const PILOT := "res://assets/models/pilot_tarn_anim.glb"
@@ -33,13 +33,13 @@ const PARENTS := {
 	"curl.R": "hand.R", "curl.L": "hand.L", "tail.01": "pelvis", "tail.02": "tail.01", "tool.R": "hand.R",
 }
 const SOCKETS := {"Control.Grip.R": Vector3(.32, .05, -.4), "Control.Grip.L": Vector3(-.32, .05, -.4),
-	"ClawPivot.R": Vector3(.98910, -.32138, 0), "ClawPivot.L": Vector3(-.98910, -.32138, 0),
-	"ClawTip.R": Vector3(1.23637, -.40172, 0), "ClawTip.L": Vector3(-1.23637, -.40172, 0),
+	"ClawPivot.R": Vector3(1.051317, .490237, 0), "ClawPivot.L": Vector3(-1.051317, .490237, 0),
+	"ClawTip.R": Vector3(1.495408, .697320, 0), "ClawTip.L": Vector3(-1.495408, .697320, 0),
 	"PullExit": Vector3(0, -.54, .552), "RendContact": Vector3(0, -.79, -.23)}
 const SHELL_ID := "shell_tarn"
 const SHELL_DRAWS := 17
 const CORE_LIMIT := .985
-const REACH := 1.35
+const REACH := 1.75
 
 var _t := T.new("pilot_tarn_asset_test")
 var _done := false

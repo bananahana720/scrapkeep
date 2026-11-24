@@ -25,9 +25,9 @@ const PILOT := "res://assets/models/pilot_tarn_anim.glb"
 const SLOTS := ["weapon", "move", "special", "smash"]
 const CUES := ["tarn_latch_tear", "tarn_ready", "tarn_break", "mind_tarn"]
 # The rig (wave 46 E2-04): Tarn stays at 17 draws, the heaviest pilot, with every part inside
-# the 1.35 m weapon reach cap (OPUS-FULL-3D-VISUAL-REVIEW section 1.3).
+# the 1.75 m weapon reach cap (lifted from 1.35 for heroic weapons, Andrew 23 Nov 2026).
 const SHELL_DRAWS := 17
-const REACH_CAP := 1.35
+const REACH_CAP := 1.75
 const JAWS := ["ClawUpper_L", "ClawUpper_R", "ClawLower_L", "ClawLower_R"]
 const RIG_NODES := ["ClawUpper_L", "ClawUpper_R", "ClawLower_L", "ClawLower_R", "ClawPivot_L", "ClawPivot_R",
 	"ClawTip_L", "ClawTip_R", "WeaponRing", "WeaponRing/Blade_L", "WeaponRing/Blade_R"]
