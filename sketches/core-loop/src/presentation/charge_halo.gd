@@ -191,7 +191,7 @@ func release(aim: Vector3) -> void:
 	var dir := aim
 	dir.y = 0.0
 	if dir.length_squared() < 0.0001:
-		dir = -_halo.global_basis.z if _halo != null and _halo.is_inside_tree() else Vector3.FORWARD
+		dir = forward()
 	var i := _ring_next
 	_ring_next = (_ring_next + 1) % RINGS
 	_ring_age[i] = 0.0

@@ -695,10 +695,15 @@ func clear() -> void:
 		_frame.hide_now()
 	if _halo != null:
 		_halo.stop()
+	_halo_spent = false
 	for i in FLASHES:
 		_end_flash(i)
+	if _flashes != null and is_instance_valid(_flashes):
+		_flashes.visible = false
 	for i in CASINGS:
 		_end_casing(i)
+	if _casings != null and is_instance_valid(_casings):
+		_casings.visible = false
 
 
 # --- Sound words -------------------------------------------------------------------------
