@@ -135,10 +135,14 @@ static func cover_share(hard: Array) -> float:
 # collider geometry, matching projectile.gd _burst_on_cover (hit owned by this row, > BLAST_RADIUS planar short of
 # target, and > COVER_SEAT_BAND above target seat).
 static func cast_row_cover(space: PhysicsDirectSpaceState3D, row_node: Node3D) -> Dictionary:
-	var solid := ParkRecipes.collider_shapes(row_node).filter(func(s):
-		return s["body"] is StaticBody3D and not s["disabled"] and s["shape"] != null)
+	var all_shapes := ParkRecipes.collider_shapes(row_node).filter(func(s):
+		return s["body"] is StaticBody3D and s["shape"] != null)
+	# Prefer enabled shapes; fall back to disabled shapes so a disabled-collider plant still builds and casts real rays.
+	var solid := all_shapes.filter(func(s): return not s["disabled"])
 	if solid.is_empty():
-		return {"hit": false, "reason": "no_shapes"}
+		solid = all_shapes
+	if solid.is_empty():
+		return {"hit": false, "reason": "no_shapes", "rays": 0}
 	var candidates := []
 	var pick_indices: Array[int] = [0]
 	if solid.size() > 1:
@@ -194,6 +198,7 @@ static func cast_row_cover(space: PhysicsDirectSpaceState3D, row_node: Node3D) -
 			candidates.append([c, Vector3.LEFT, rx + RAY_LEAD_M, rx + RAY_TRAIL_M, drop])
 			candidates.append([c, Vector3.BACK, rz + RAY_LEAD_M, rz + RAY_TRAIL_M, drop])
 			candidates.append([c, Vector3.FORWARD, rz + RAY_LEAD_M, rz + RAY_TRAIL_M, drop])
+	var rays_cast := 0
 	for cand in candidates:
 		var pt: Vector3 = cand[0]
 		var hdir: Vector3 = cand[1]
@@ -203,6 +208,7 @@ static func cast_row_cover(space: PhysicsDirectSpaceState3D, row_node: Node3D) -
 		var from := pt + hdir * lead + Vector3.UP * drop
 		var to := pt - hdir * trail - Vector3.UP * drop
 		var q := PhysicsRayQueryParameters3D.create(from, to, Projectile.COVER_MASK)
+		rays_cast += 1
 		var hit := space.intersect_ray(q)
 		if hit.is_empty() or not _owns_collider(row_node, hit["collider"]):
 			continue
@@ -210,21 +216,24 @@ static func cast_row_cover(space: PhysicsDirectSpaceState3D, row_node: Node3D) -
 		var planar_short := Vector2(at.x - to.x, at.z - to.z).length()
 		var seat_clear := at.y - to.y
 		if planar_short > Projectile.BLAST_RADIUS and seat_clear > Projectile.COVER_SEAT_BAND:
-			return {"hit": true, "at": at, "short_m": planar_short, "seat_m": seat_clear}
-	return {"hit": false, "reason": "no_own_hit"}
+			return {"hit": true, "at": at, "short_m": planar_short, "seat_m": seat_clear, "rays": rays_cast}
+	return {"hit": false, "reason": "no_own_hit", "rays": rays_cast}
 
 
 static func cast_hard_rows(space: PhysicsDirectSpaceState3D, hard: Array) -> Dictionary:
 	var hits := 0
 	var missed := []
+	var details := {}
 	for entry in hard:
+		var id := String(entry["id"])
 		var res := cast_row_cover(space, entry["node"] as Node3D)
+		details[id] = res
 		if res["hit"]:
 			hits += 1
 		else:
-			missed.append(String(entry["id"]))
+			missed.append(id)
 	var share := float(hits) / hard.size() if not hard.is_empty() else 0.0
-	return {"hits": hits, "total": hard.size(), "share": share, "missed": missed}
+	return {"hits": hits, "total": hard.size(), "share": share, "missed": missed, "details": details}
 
 
 func _check_json_cover_override() -> void:
@@ -333,10 +342,13 @@ func _planted(rows_node: Node3D, scatter: Node, space: PhysicsDirectSpaceState3D
 	for pair in disabled_owners:
 		(pair[0] as StaticBody3D).shape_owner_set_disabled(int(pair[1]), false)
 	await physics_frame
+	var victim_res: Dictionary = missed_cast["details"].get(String(victim.name), {})
 	var cast_share := float(missed_cast["share"])
 	print("PLANTED hard_row_shell_miss hard_rows_shell_cast_share %.2f pass>=1.00 %s" % [cast_share, "PASS" if cast_share >= 1.0 else "FAIL"])
-	t.check("planted: disabling a hard row's collider fails the physics shell cast", not disabled_owners.is_empty() and cast_share < 1.0 and missed_cast["missed"].has(String(victim.name)),
-		"%.2f, missed=%s" % [cast_share, str(missed_cast["missed"])])
+	t.check("planted: disabling a hard row's collider fails the physics shell cast",
+		not disabled_owners.is_empty() and cast_share < 1.0 and missed_cast["missed"].has(String(victim.name))
+		and String(victim_res.get("reason", "")) == "no_own_hit" and int(victim_res.get("rays", 0)) > 0,
+		"%.2f, missed=%s, reason=%s, rays=%d" % [cast_share, str(missed_cast["missed"]), String(victim_res.get("reason", "")), int(victim_res.get("rays", 0))])
 
 	# Plant 3: a scatter body on the cover layer counts and fails soft_cover_bodies.
 	var planted_soft := 0

@@ -1589,7 +1589,7 @@ static func cover_height(node: Node3D, layer_mask := 1 << (WORLD_LAYER - 1), sto
 # else reads the node's built solid world-layer colliders ("hard" >= COVER_HARD_M, "surface" > 0 and < COVER_HARD_M,
 # "soft" when no solid world-layer collider is present).
 static func cover_kind_of(node: Node3D, row: Dictionary = {}) -> String:
-	if row.has("cover"):
+	if row.get("cover") is String:
 		var explicit := String(row["cover"])
 		if COVER_KINDS.has(explicit):
 			return explicit
