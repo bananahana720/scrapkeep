@@ -131,6 +131,7 @@ func wear(painter, player) -> void:
 func _stand_in(wanted: bool) -> void:
 	if not wanted:
 		if _ball != null:
+			_pivot.remove_child(_ball)
 			_ball.queue_free()
 			_ball = null
 		return
