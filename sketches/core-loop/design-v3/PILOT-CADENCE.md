@@ -253,7 +253,7 @@ The default ball is the plated ball with a window facing the camera (ruling dm).
 2. **A part that shows beside the ball from behind**: on the sides, the low sides or the crown.
 3. **The thing in the world** the eye is already on, where the weapon has one.
 
-No weapon part reaches further than 1.35 m from the ball's centre. The Cannon's barrel, 1.48 m today, is the one recorded exception and must never grow.
+Visual weapon parts may reach up to 1.65 to 1.75 m from the ball's centre while keeping ground clearance clear (above Y -0.55 m) and leaving the physics sphere collider unchanged (ruling en, replacing the earlier 1.35 m / 1.48 m caps). Every 3D weapon rig is proportioned and verified against the shipped solid cutaway ball with the seated pilot visible inside.
 
 ### 5.2 One colour for "press now"
 
