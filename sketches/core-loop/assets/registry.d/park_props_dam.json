@@ -4096,7 +4096,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "takeoff_deck variant a LOD2 (219 tris): The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "takeoff_deck variant a LOD2 (208 tris): The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -4124,7 +4124,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "pump_elbow variant a LOD0 (1884 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; polished and baked."
+    "notes": "pump_elbow variant a LOD0 (1844 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -4152,7 +4152,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "pump_elbow variant a LOD1 (942 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "pump_elbow variant a LOD1 (922 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -4180,7 +4180,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "pump_elbow variant a LOD2 (270 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "pump_elbow variant a LOD2 (252 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -4208,7 +4208,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "pump_elbow variant b LOD0 (2652 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; polished and baked."
+    "notes": "pump_elbow variant b LOD0 (2664 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -4236,7 +4236,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "pump_elbow variant b LOD1 (1326 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "pump_elbow variant b LOD1 (1332 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -4264,7 +4264,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "pump_elbow variant b LOD2 (382 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "pump_elbow variant b LOD2 (368 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -4273,14 +4273,14 @@
      -1.5966
     ],
     "max": [
-     2.1412,
+     2.1521,
      2.648,
-     1.6105
+     1.6406
     ],
     "size": [
-     4.2038,
+     4.2147,
      2.648,
-     3.2071
+     3.2372
     ]
    }
   },
@@ -4292,7 +4292,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "pump_elbow variant c LOD0 (1648 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; polished and baked."
+    "notes": "pump_elbow variant c LOD0 (1664 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -4320,7 +4320,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "pump_elbow variant c LOD1 (824 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "pump_elbow variant c LOD1 (832 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -4348,7 +4348,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "pump_elbow variant c LOD2 (240 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "pump_elbow variant c LOD2 (238 tris): Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -4359,12 +4359,12 @@
     "max": [
      2.602,
      2.2667,
-     1.3129
+     1.2708
     ],
     "size": [
      5.1273,
      2.2667,
-     2.5729
+     2.5308
     ]
    }
   },
@@ -4768,23 +4768,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "keeper_bunting variant b LOD2 (382 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "keeper_bunting variant b LOD2 (950 tris): Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -2.2393,
+     -2.2371,
      0,
-     -0.339
+     -0.3407
     ],
     "max": [
-     2.2393,
-     2.7565,
-     0.339
+     2.2371,
+     2.7567,
+     0.3407
     ],
     "size": [
-     4.4786,
-     2.7565,
-     0.678
+     4.4742,
+     2.7567,
+     0.6814
     ]
    }
   }

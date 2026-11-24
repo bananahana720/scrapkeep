@@ -872,7 +872,7 @@
      "tris": [
       1536,
       768,
-      219
+      208
      ],
      "radius": 8.498,
      "height": 1.03
@@ -894,9 +894,9 @@
       "res://assets/models/park/props/dam/pump_elbow_a_lod2.glb"
      ],
      "tris": [
-      1884,
-      942,
-      270
+      1844,
+      922,
+      252
      ],
      "radius": 2.061,
      "height": 3.397
@@ -908,9 +908,9 @@
       "res://assets/models/park/props/dam/pump_elbow_b_lod2.glb"
      ],
      "tris": [
-      2652,
-      1326,
-      382
+      2664,
+      1332,
+      368
      ],
      "radius": 2.597,
      "height": 2.606
@@ -922,9 +922,9 @@
       "res://assets/models/park/props/dam/pump_elbow_c_lod2.glb"
      ],
      "tris": [
-      1648,
-      824,
-      240
+      1664,
+      832,
+      238
      ],
      "radius": 2.807,
      "height": 2.24
@@ -1014,7 +1014,7 @@
      "tris": [
       2592,
       1296,
-      382
+      950
      ],
      "radius": 2.239,
      "height": 2.757

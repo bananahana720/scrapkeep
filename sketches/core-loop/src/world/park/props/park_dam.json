@@ -1724,7 +1724,7 @@
       0
      ],
      "yaw_deg": 0,
-     "scale": 1.0,
+     "scale": 1.5,
      "tilt_deg": 0
     }
    ]
@@ -1740,7 +1740,7 @@
       0
      ],
      "yaw_deg": 0,
-     "scale": 1.0,
+     "scale": 1.5,
      "tilt_deg": 0
     }
    ]
@@ -1757,44 +1757,6 @@
      ],
      "yaw_deg": 0,
      "scale": 1.0,
-     "tilt_deg": 0
-    }
-   ]
-  },
-  "pump_elbow_spill": {
-   "story": "Pump-kit elbows dropped at the yard's edge, one stood up, one half buried in its own silt.",
-   "props": [
-    {
-     "kind": "pump_elbow",
-     "v": "a",
-     "at": [
-      0,
-      0
-     ],
-     "yaw_deg": 15,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "pump_elbow",
-     "v": "c",
-     "at": [
-      4.5,
-      2.5
-     ],
-     "yaw_deg": 100,
-     "scale": 1.0,
-     "tilt_deg": 0
-    },
-    {
-     "kind": "pump_elbow",
-     "v": "b",
-     "at": [
-      -4,
-      3
-     ],
-     "yaw_deg": -40,
-     "scale": 0.9,
      "tilt_deg": 0
     }
    ]
@@ -1870,6 +1832,65 @@
      ],
      "yaw_deg": 0,
      "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "pump_elbow_haul": {
+   "story": "Pump-kit elbows the crew hauled up out of the sunken yard and left on the rim lip, one stood up, one half buried in silt.",
+   "props": [
+    {
+     "kind": "pump_elbow",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pump_elbow",
+     "v": "c",
+     "at": [
+      1.5,
+      7
+     ],
+     "yaw_deg": 100,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "pump_elbow_valve": {
+   "story": "An S-bend pair with its valve wheel, dropped on the rim over the yard.",
+   "props": [
+    {
+     "kind": "pump_elbow",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "pump_elbow_yard": {
+   "story": "One pump elbow still standing on the sunken yard's floor where the crew left it.",
+   "props": [
+    {
+     "kind": "pump_elbow",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 0.85,
      "tilt_deg": 0
     }
    ]
@@ -3250,8 +3271,8 @@
    "id": "intake_gantry_west",
    "template": "intake_gantry_west",
    "at": [
-    -223,
-    290
+    -217,
+    266
    ],
    "yaw_deg": 4,
    "near": "west rim over the dam face: the intake line's west gantry"
@@ -3260,7 +3281,7 @@
    "id": "intake_gantry_east",
    "template": "intake_gantry_east",
    "at": [
-    -80,
+    -81,
     250
    ],
    "yaw_deg": -7,
@@ -3275,26 +3296,6 @@
    ],
    "yaw_deg": -88,
    "near": "intake crest: the run-in pointing at the intake takeoff"
-  },
-  {
-   "id": "pump_elbow_spill_east",
-   "template": "pump_elbow_spill",
-   "at": [
-    232,
-    515
-   ],
-   "yaw_deg": 64,
-   "near": "sunken pump yard, east edge: pump-kit elbows"
-  },
-  {
-   "id": "pump_elbow_spill_south",
-   "template": "pump_elbow_spill",
-   "at": [
-    215,
-    580
-   ],
-   "yaw_deg": -118,
-   "near": "sunken pump yard, south-east corner: pump-kit elbows"
   },
   {
    "id": "chalk_fork_eye",
@@ -3365,6 +3366,36 @@
    ],
    "yaw_deg": 31,
    "near": "shelf lip fork: a keeper pennant at the east side route"
+  },
+  {
+   "id": "pump_elbow_haul",
+   "template": "pump_elbow_haul",
+   "at": [
+    213,
+    556
+   ],
+   "yaw_deg": 9,
+   "near": "sunken pump yard, east rim lip: hauled-out pump elbows"
+  },
+  {
+   "id": "pump_elbow_valve",
+   "template": "pump_elbow_valve",
+   "at": [
+    212,
+    578
+   ],
+   "yaw_deg": 23,
+   "near": "sunken pump yard, east rim lip: an S-bend and valve wheel"
+  },
+  {
+   "id": "pump_elbow_yard",
+   "template": "pump_elbow_yard",
+   "at": [
+    192,
+    550
+   ],
+   "yaw_deg": -141,
+   "near": "sunken pump yard floor: one standing elbow"
   }
  ],
  "litter": {
@@ -3393,5 +3424,5 @@
   ],
   "seed": 11
  },
- "pin": 2806178531
+ "pin": 1794975650
 }

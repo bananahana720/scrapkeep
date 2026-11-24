@@ -49,12 +49,12 @@ uniform float spacing = 5.0;
 uniform float glow = 2.6;
 void fragment() {
 	// UV.x: metres from the crew end, growing toward the clamp; UV.y: the way round the tube, 0.25 on top; a casting
-	// carries UV.y below 0 and never beads.
+	// carries UV.y below 0 and never beads. Vertex colours are sRGB (Palette's), so they are made linear here.
 	float phase = fract((UV.x - TIME * speed) / spacing);
 	float dot_along = 1.0 - smoothstep(0.16, 0.3, abs(phase - 0.5) * spacing);
 	float dot_round = 1.0 - smoothstep(0.1, 0.2, abs(UV.y - 0.25));
 	float on = step(0.0, UV.y) * dot_along * dot_round;
-	ALBEDO = mix(COLOR.rgb, bead, on * 0.6);
+	ALBEDO = mix(pow(COLOR.rgb, vec3(2.2)), bead, on * 0.6);
 	ROUGHNESS = 0.72;
 	EMISSION = bead * on * glow;
 }
@@ -81,6 +81,7 @@ func setup(ctx_ref, markers = null) -> void:
 	_live.set_shader_parameter("glow", BEAD_GLOW)
 	_dead = StandardMaterial3D.new()
 	_dead.vertex_color_use_as_albedo = true
+	_dead.vertex_color_is_srgb = true
 	_dead.roughness = 0.85
 	_still = not UiTokens.reduced_motion
 	_hold_still(UiTokens.reduced_motion)

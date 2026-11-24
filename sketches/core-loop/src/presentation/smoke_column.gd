@@ -165,14 +165,14 @@ static func far_card_mesh(size: Vector2) -> ArrayMesh:
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var w := size.x
 	var h := size.y
-	var ridge := TERRACOTTA.lightened(0.18).lerp(CARD_HAZE, 0.55)
-	var wall := TERRACOTTA.lerp(CARD_HAZE, 0.2)
-	var shade := TERRACOTTA.darkened(0.3).lerp(CARD_HAZE, 0.15)
+	var ridge := TERRACOTTA.lightened(0.18).lerp(CARD_HAZE, 0.72)
+	var wall := TERRACOTTA.lerp(CARD_HAZE, 0.42)
+	var shade := TERRACOTTA.darkened(0.3).lerp(CARD_HAZE, 0.38)
 	_profile(st, w, h, func(t: float) -> float: return h * (0.86 + 0.08 * sin(t * 7.0 + 1.3) + 0.04 * sin(t * 19.0)), ridge, ridge, -2.0)
 	_profile(st, w, h, func(t: float) -> float: return h * (0.62 + 0.1 * _step(sin(t * 5.0 + 0.4)) + 0.05 * _step(sin(t * 13.0))), shade, wall, 0.0)
-	var water := FLUME_WATER.lerp(CARD_HAZE, 0.12)
-	var lip := Palette.TURQUOISE.lightened(0.15)
-	var chute := [Vector2(-0.46, 0.6), Vector2(-0.2, 0.52), Vector2(0.06, 0.47), Vector2(0.26, 0.36), Vector2(0.4, 0.2), Vector2(0.5, 0.12)]
+	var water := FLUME_WATER.lerp(CARD_HAZE, 0.3)
+	var lip := Palette.TURQUOISE.lightened(0.15).lerp(CARD_HAZE, 0.3)
+	var chute := [Vector2(-0.3, 0.6), Vector2(-0.14, 0.53), Vector2(0.03, 0.48), Vector2(0.17, 0.38), Vector2(0.27, 0.24), Vector2(0.33, 0.14)]
 	for i in range(chute.size() - 1):
 		var a: Vector2 = chute[i] * Vector2(w, h)
 		var b: Vector2 = chute[i + 1] * Vector2(w, h)
@@ -196,11 +196,18 @@ static func _profile(st: SurfaceTool, w: float, h: float, top: Callable, low: Co
 		var t1 := float(k + 1) / CARD_COLS
 		var x0 := (t0 - 0.5) * w
 		var x1 := (t1 - 0.5) * w
-		var y0: float = top.call(t0)
-		var y1: float = top.call(t1)
+		# Both ends taper down under the horizon, so the card reads as a range, not a board's square edge.
+		var e0 := _taper(t0)
+		var e1 := _taper(t1)
+		var y0: float = float(top.call(t0)) * e0
+		var y1: float = float(top.call(t1)) * e1
 		var mid := high.lerp(low, 0.35)
-		_quad(st, Vector3(x0, 0.0, z), Vector3(x1, 0.0, z), Vector3(x1, h * 0.3, z), Vector3(x0, h * 0.3, z), low)
-		_quad(st, Vector3(x0, h * 0.3, z), Vector3(x1, h * 0.3, z), Vector3(x1, y1, z), Vector3(x0, y0, z), mid if k % 2 == 0 else high)
+		_quad(st, Vector3(x0, 0.0, z), Vector3(x1, 0.0, z), Vector3(x1, h * 0.3 * e1, z), Vector3(x0, h * 0.3 * e0, z), low)
+		_quad(st, Vector3(x0, h * 0.3 * e0, z), Vector3(x1, h * 0.3 * e1, z), Vector3(x1, y1, z), Vector3(x0, y0, z), mid if k % 2 == 0 else high)
+
+
+static func _taper(t: float) -> float:
+	return smoothstep(0.0, 1.0, clampf(minf(t, 1.0 - t) * 4.0, 0.0, 1.0))
 
 
 static func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, color: Color) -> void:

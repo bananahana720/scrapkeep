@@ -967,13 +967,16 @@ K.kind("shift_table", tags=["machine"], variants="ab",
 # old works' hand: squared cast panels, one pour, no bolt, no bracing, no lit rail. The deck, the pump kit, the chalk and
 # the bunting are the dam crew's and the keepers' hands: concrete, oxide paint, chalk, cloth and copper rope. Nothing
 # here is mint or uranium green (kit BANNED); every piece is dressing with no collider.
-CAST = mix(PETROL, "charcoal", 0.18)       # the gantry's cast body: dark petrol enamel
-CAST_FIELD = mix(PETROL, "bone", 0.10)      # a cast panel's raised field, a shade lighter so the panels read
-CAST_EDGE = mix(PETROL, "verdigris", 0.45)  # weathered edges and drips
+CAST = mix(PETROL, "verdigris", 0.35)      # the gantry's cast body: petrol enamel gone to verdigris, light enough to
+                                            # read against the canyon from the crest
+CAST_FIELD = mix(PETROL, "verdigris", 0.55) # a cast panel's raised field, a shade lighter so the panels read
+CAST_EDGE = mix(PETROL, "verdigris", 0.8)   # weathered edges and drips
 CHALK = "e6e3d6"                            # the keepers' chalk (kit GAG_CHALK)
 ROPE = "b77843"                             # copper rope ties: never dominant, only ties
 PIPE = mix(OXIDE, "rust", 0.45)             # pump pipe body: oxide gone to rust
 PIPE_DARK = mix(PIPE, "charcoal", 0.35)
+# Every wayfinding piece exports closed at every LOD (E1-15 brief: check_manifold.py --strict on each GLB).
+K.closed_lods |= {"intake_gantry", "takeoff_deck", "pump_elbow", "chalk_turn", "keeper_bunting"}
 
 
 @K.kind("intake_gantry", hero=True, tags=["tall"], variants="ab",
@@ -1053,8 +1056,12 @@ def _bend(p, centre, radius, a0, a1, pipe_r, plane, color, segs=6):
     under a weld collar. plane maps (u, w) on the arc to (x, y, z)."""
     pts = [plane(centre, radius * math.cos(a0 + (a1 - a0) * k / segs), radius * math.sin(a0 + (a1 - a0) * k / segs))
            for k in range(segs + 1)]
-    for a, b in zip(pts, pts[1:]):
-        p.rod(a, b, pipe_r, color, segs=12, style="hard")
+    for k, (a, b) in enumerate(zip(pts, pts[1:])):
+        # Each segment runs 2 cm past its inner joints, so two segments' caps never share an edge there.
+        d = (Vector(b) - Vector(a)).normalized() * 0.02
+        a2 = Vector(a) - d if k > 0 else Vector(a)
+        b2 = Vector(b) + d if k < segs - 1 else Vector(b)
+        p.rod(tuple(a2), tuple(b2), pipe_r, color, segs=12, style="hard")
     for k in range(1, segs):
         # A weld collar over each joint, laid along the arc's tangent there.
         a, b = Vector(pts[k - 1]), Vector(pts[k + 1])
@@ -1084,9 +1091,10 @@ def pump_elbow(p, v, rng):
         # A standing elbow: up out of a flanged foot, round a 90 degree bend, out to a blind flange.
         p.box((2.2, 2.2, 0.35), (0, 0, 0.175), "concrete", style="hard_smooth")
         _flange(p, (0, 0, 0.47), (0, 0, 0), 0.95, PIPE_DARK)
-        p.rod((0, 0, 0.5), (0, 0, 1.3), R, PIPE, segs=12, style="hard")
+        # The straight runs reach 6 cm into the bend, so no rod's cap lands on the bend's own cap (one shared edge ring).
+        p.rod((0, 0, 0.5), (0, 0, 1.36), R, PIPE, segs=12, style="hard")
         _bend(p, (1.2, 0, 1.3), 1.2, math.pi, math.pi / 2, R, xz, PIPE)
-        p.rod((1.2, 0, 2.5), (2.2, 0, 2.5), R, PIPE, segs=12, style="hard")
+        p.rod((1.14, 0, 2.5), (2.2, 0, 2.5), R, PIPE, segs=12, style="hard")
         _flange(p, (2.28, 0, 2.5), (0, math.pi / 2, 0), 0.92, PIPE_DARK)
         p.cyl(0.55, 0.06, (2.42, 0, 2.5), "charcoal", segs=12, rot=(0, math.pi / 2, 0), style="flat")
         p.box((0.6, 0.3, 1.9), (1.7, 0.0, 0.95), "iron", style="hard")   # a cast prop under the overhang
