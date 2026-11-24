@@ -7,9 +7,11 @@
 #   c2  six panels in the lower gaps, every vertex below Z -0.35
 #   c3  the side gaps, plus thicker rubber tread caps on Core (never past radius 0.985): 2 draws
 #   c4  every remaining gap; the sight gaps stay open
-#   c5  the coil mast's heavy form, the doubled coil: one open copper winding round the same mast,
-#       rising to 0.25 m past the lattice. It replaces nothing, so the base CoilMast's mint tip
-#       (class_accent, the working device) shows between the turns; one mast, never a second spike.
+#   c5  the coil mast's heavy form, the doubled coil: one open copper winding round the left coil
+#       mast (E1-10b), from its bone drum to its top insulator. It replaces nothing, so the base
+#       CoilMast's mint tip (class_accent, the working device) shows above it; never a second spike.
+#       The winding is its own mesh, `CoilMast`, under the layer's empty Pod: a bracket part, so
+#       hero_assets banks it with the masts it wraps (nothing outboard is baked into a level Pod).
 # Draws (docs/decisions.tsv 2026-10-10, shell cap 16): class III may spend 2, every other layer 1.
 # A copper winding and a paint panel are two surfaces, so fix round 2 moved class V's three top
 # panels (gaps 1, 2, 4) into c4 and left c5 the winding alone, one copper surface.
@@ -49,16 +51,14 @@ MODULE_HUBS = (ss.MAST_HUB, ss.SPOOL_HUB)
 # Thicker tread caps (class III): 6 sides, radius 0.09, wider than the base caps (0.07); the
 # face sits at 0.9806 so the corners stay inside CORE_LIMIT and the base tread shows through.
 THICK_CAP = (0.09, 0.950, 0.9806)
-# The heavy coil: an open helix round the mast axis from the bracket to 0.25 m past the lattice.
-# Coil radius tapers with the base mast steps (0.062 to the 0.028 tip) plus a clear gap; the wire
-# is 0.036 m across with about 0.024 m between turns, so the mint tip reads through the coil.
-COIL_FROM = 0.985
-COIL_TOP = ss.LATTICE_OUT + 0.25
-COIL_END = COIL_TOP - 0.018   # helix centreline end; the wire and its last turn's offset reach COIL_TOP
-COIL_RADIUS = (0.088, 0.044)
+# The heavy coil: an open helix round the left mast's vertical axis (X -ss.MAST_X, Y 0) from its
+# bone drum's top (Z 0.950, radius 0.112) to under its top insulator (Z 1.086), clear of the drum
+# and the copper ribs (radius 0.100) by 0.007 m or more; the wire is 0.036 m across, the pitch 0.036.
+COIL_Z = (0.952, 1.060)
+COIL_RADIUS = (0.137, 0.125)
 COIL_WIRE = 0.018
-COIL_TURNS = 4
-COIL_SEGS = 10           # per turn
+COIL_TURNS = 3
+COIL_SEGS = 9            # per turn
 
 
 def diamonds():
@@ -158,18 +158,14 @@ def plan():
 
 
 def heavy_coil(p):
-    """The doubled coil on the Pod: one copper helix round MAST_DIR, open between turns."""
-    axis = ss.MAST_DIR
-    u = axis.cross(Vector((0.0, 1.0, 0.0))).normalized()
-    v = axis.cross(u).normalized()
+    """The doubled coil: one copper helix round the left mast, open between turns."""
     steps = COIL_TURNS * COIL_SEGS
     pts = []
     for k in range(steps + 1):
         t = k / steps
         a = t * COIL_TURNS * math.tau
         rad = COIL_RADIUS[0] + (COIL_RADIUS[1] - COIL_RADIUS[0]) * t
-        along = COIL_FROM + (COIL_END - COIL_FROM) * t
-        pts.append(axis * along + (u * math.cos(a) + v * math.sin(a)) * rad)
+        pts.append(Vector((-ss.MAST_X + rad * math.cos(a), rad * math.sin(a), COIL_Z[0] + (COIL_Z[1] - COIL_Z[0]) * t)))
     for a, b in zip(pts, pts[1:]):
         p.rod("copper", a, b, COIL_WIRE, 4)
 
@@ -187,26 +183,31 @@ def build_layer(n, panels, outdir):
     common.reset()
     root = common.empty("ShellSableC%d" % n)
     core_obj = thick_caps(sb.rng_for("sable-c3")).to_object((0, 0, 0), root) if n == 3 else common.empty("Core", (0, 0, 0), root)
-    p = Part("Pod")
-    for _, d, ring in panels:
-        panel(p, d, ring)
     if n == 5:
-        heavy_coil(p)
-    sb._sharpen(p)
-    pod_obj = p.to_object((0, 0, 0), root)
-    reach = max((pod_obj.matrix_world @ v.co).length for v in pod_obj.data.vertices)
+        pod_obj = common.empty("Pod", (0, 0, 0), root)
+        coil = Part("CoilMast")
+        heavy_coil(coil)
+        sb._sharpen(coil)
+        mesh_obj = coil.to_object((0, 0, 0), pod_obj)
+    else:
+        p = Part("Pod")
+        for _, d, ring in panels:
+            panel(p, d, ring)
+        sb._sharpen(p)
+        pod_obj = mesh_obj = p.to_object((0, 0, 0), root)
+    reach = max((mesh_obj.matrix_world @ v.co).length for v in mesh_obj.data.vertices)
     tris = common.tri_total(root)
     low = sb.low_reach(pod_obj)
     cone = sb.sight_cone_hits(pod_obj)
     core_r = common.max_radius(core_obj) if core_obj.type == "MESH" else 0.0
-    top = max((pod_obj.matrix_world @ v.co).z for v in pod_obj.data.vertices)
+    top = max((mesh_obj.matrix_world @ v.co).z for v in mesh_obj.data.vertices)
     draws = sum(len(o.data.materials) for o in common.tree(root) if o.type == "MESH")
     ok = tris <= LAYER_TRIS and low == 0 and cone == 0 and core_r <= sb.CORE_LIMIT + 1e-4
     ok = ok and draws <= (2 if n == 3 else 1)
     if n == 2:
         ok = ok and top < LOW_Z
     if n == 5:
-        ok = ok and not panels and abs(reach - COIL_TOP) <= 0.01
+        ok = ok and not panels and top <= COIL_Z[1] + COIL_WIRE + 1e-4
     print("LAYER c%d panels=%d gaps=%s tris=%d draws=%d core_radius=%.4f pod_top_z=%.3f pod_reach=%.3f low=%d cone=%d %s"
           % (n, len(panels), [g for g, _, _ in panels], tris, draws, core_r, top, reach, low, cone, "ok" if ok else "OUT"))
     common.export(root, os.path.join(outdir, "shell_sable_c%d.glb" % n))
