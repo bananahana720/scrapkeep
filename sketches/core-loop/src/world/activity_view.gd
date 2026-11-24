@@ -21,6 +21,9 @@ const COLUMN_ALPHA := 0.55
 const COLUMN_FADE := Vector2(3.0, 14.0)
 const BEAM_ALPHA := 0.5
 const RING_DASHES := 20
+# Ground ring dashes stay invisible from across the park while the 70 m beacon column and glyph remain unranged.
+const RING_VIEW_END_M := 420.0
+const RING_VIEW_MARGIN_M := 30.0
 const WORD_REACH := 30.0
 const WORD_HEIGHT := 5.0
 # The word flies from the column like a pennant from its pole: it starts this many of its own
@@ -229,6 +232,9 @@ static func _ring(radius: float, color: Color) -> Node3D:
 		dash.material_override = mat
 		dash.position = Vector3(cos(a), 0.06, sin(a)) * radius
 		dash.rotation.y = -a
+		dash.visibility_range_end = RING_VIEW_END_M
+		dash.visibility_range_end_margin = RING_VIEW_MARGIN_M
+		dash.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		out.add_child(dash)
 	return out
 
