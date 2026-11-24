@@ -7,7 +7,8 @@ extends SceneTree
 # inside MAX_BEARING_DEG of the camera. The dam's lines reach both near reads; the flume's end at its beacon 99 m out,
 # so its 50 m read stands on open sighted ground off the lines and says so (on_line false). The silhouette mode gives
 # one pose a COUNTS row with 2 to 5 machines on ground line nodes, and a control run shows exactly one fewer. Argument
-# parsing, the sheet grid, the bearing helpers and the silhouette compositing are pure.
+# parsing, the sheet grid, the bearing helpers and the silhouette compositing are pure; hiding the scene, a machine's
+# drawn box and the fog-proof check run on small built nodes.
 # A headless child run of the tool exits 2 before it builds a game.
 
 const T := preload("res://tests/support/t.gd")
@@ -29,6 +30,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_args()
 	_helpers()
+	_scene_helpers()
 	var holder := Node3D.new()
 	root.add_child(holder)
 	for map_id: String in MAPS:
@@ -177,11 +179,82 @@ func _fight_poses(map_id: String, graph, axis: Vector2) -> void:
 	t.check("%s fight poses run along the ride" % map_id, ordered, str(d))
 
 
-# The tool on a headless display refuses before it builds anything.
+# hide_all_but walks through plain Node containers, keeps the kept nodes and their ancestors drawn, and hands back what
+# it hid; box_of counts a multimesh's instances; _fog_off reads a multimesh's own mesh materials (the crew lamp field).
+func _scene_helpers() -> void:
+	var top := Node3D.new()
+	root.add_child(top)
+	var module := Node.new()
+	top.add_child(module)
+	var prop := Node3D.new()
+	module.add_child(prop)
+	var holder := Node3D.new()
+	top.add_child(holder)
+	var kept := Node3D.new()
+	holder.add_child(kept)
+	var sibling := Node3D.new()
+	holder.add_child(sibling)
+	var off: Array = Tool.hide_all_but(top, [kept])
+	t.check("a 3D prop under a plain Node is hidden", not prop.visible and off.has(prop))
+	t.check("the kept node and its ancestor stay drawn", kept.visible and holder.visible and not off.has(holder))
+	t.check("the kept node's sibling is hidden", not sibling.visible and off.has(sibling))
+	for node in off:
+		node.visible = true
+	t.check("the hidden nodes show again", prop.visible and sibling.visible)
+
+	var machine := Node3D.new()
+	top.add_child(machine)
+	var hull := MeshInstance3D.new()
+	hull.mesh = BoxMesh.new()
+	machine.add_child(hull)
+	var boom := MultiMeshInstance3D.new()
+	boom.multimesh = MultiMesh.new()
+	boom.multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	boom.multimesh.mesh = BoxMesh.new()
+	boom.multimesh.instance_count = 2
+	boom.multimesh.set_instance_transform(0, Transform3D(Basis.IDENTITY, Vector3(4, 0, 0)))
+	boom.multimesh.set_instance_transform(1, Transform3D(Basis.IDENTITY, Vector3(8, 0, 0)))
+	machine.add_child(boom)
+	var placed := [Transform3D(Basis.IDENTITY, Vector3(4, 0, 0)), Transform3D(Basis.IDENTITY, Vector3(8, 0, 0))]
+	var spread: AABB = Tool.instances_box(Transform3D(Basis.IDENTITY, Vector3(0, 0, 2)), placed, AABB(Vector3(-0.5, -0.5, -0.5), Vector3.ONE))
+	t.check("instances_box spans every instance under the node transform", spread.position.is_equal_approx(Vector3(3.5, -0.5, 1.5))
+		and spread.end.is_equal_approx(Vector3(8.5, 0.5, 2.5)), str(spread))
+	# The headless renderer keeps no multimesh transforms, so the node-level read runs only where they read back.
+	if boom.multimesh.get_instance_transform(1).origin.is_equal_approx(Vector3(8, 0, 0)):
+		var box: AABB = Tool.box_of(machine)
+		t.near("box_of reaches the multimesh's far instance", box.end.x, 8.5, 1e-4)
+		t.near("box_of keeps the hull", box.position.x, -0.5, 1e-4)
+	else:
+		t.skip("box_of reaches the multimesh's far instance", "the headless renderer keeps no multimesh instance transforms")
+	boom.visible = false
+	t.near("a hidden multimesh is left out", Tool.box_of(machine).end.x, 0.5, 1e-4)
+
+	var lamps := MultiMeshInstance3D.new()
+	lamps.multimesh = MultiMesh.new()
+	lamps.multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	var lens := SphereMesh.new()
+	var glow := ShaderMaterial.new()
+	glow.shader = Shader.new()
+	glow.shader.code = "shader_type spatial;\nrender_mode unshaded, fog_disabled;\nvoid fragment() { ALBEDO = vec3(1.0); }\n"
+	lens.material = glow
+	lamps.multimesh.mesh = lens
+	t.check("_fog_off reads a multimesh mesh's fog_disabled material", Tool._fog_off(lamps))
+	var plain := MultiMeshInstance3D.new()
+	plain.multimesh = MultiMesh.new()
+	plain.multimesh.mesh = BoxMesh.new()
+	t.check("_fog_off passes a plain multimesh", not Tool._fog_off(plain))
+	lamps.free()
+	plain.free()
+	top.free()
+
+
+# The tool on a headless display refuses before it builds anything. The folder it is pointed at sits under the batch
+# driver's per-process test folder, so it is cleaned if it is ever made.
 func _headless_refusal() -> void:
 	var out := []
+	var scratch := ProjectSettings.globalize_path("user://test-%d/map-sheet-refused" % OS.get_process_id())
 	var args := ["--headless", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/map_sheet_capture.gd", "--",
-		"--map=park_dam", "--mode=beam", "--out=" + OS.get_user_data_dir().path_join("map-sheet-refused")]
+		"--map=park_dam", "--mode=beam", "--out=" + scratch]
 	var code := OS.execute(OS.get_executable_path(), args, out, true)
 	t.eq("a headless run exits 2", code, 2)
-	t.check("a headless run writes nothing", not DirAccess.dir_exists_absolute(OS.get_user_data_dir().path_join("map-sheet-refused")))
+	t.check("a headless run writes nothing", not DirAccess.dir_exists_absolute(scratch))

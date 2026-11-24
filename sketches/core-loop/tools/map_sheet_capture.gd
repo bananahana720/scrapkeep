@@ -374,16 +374,22 @@ func _run() -> void:
 	var stage: int = MAPS[opts["map"]]
 	if stage != 1:
 		game.flow.enter_stage(stage, Vector3.ZERO, false)
+	var ready := false
 	for i in 900:
 		await process_frame
-		if game.ctx.terrain.is_ready(1) and game.flow.in_play() and i > 120:
+		ready = game.ctx.terrain.is_ready(stage) and game.ctx.terrain.rows_ready(stage) and game.flow.in_play()
+		if ready and i > 120:
 			break
+	if not ready:
+		return _fail("stage %d (%s) never finished building" % [stage, opts["map"]])
 	var map = game.ctx.terrain.map()
 	var title := String(map.title) if map != null and "title" in map else ""
 	if title != opts["map"]:
 		return _fail("the game plays %s, not %s" % [title, opts["map"]])
+	# The stage's own geometry root, so an earlier stage's landmark still being freed is never the one read.
+	var stage_root: Node3D = game.ctx.terrain.geometry_root(stage)
 	for i in 600:
-		beam = root.find_child("AncientBeam", true, false)
+		beam = stage_root.find_child("AncientBeam", true, false) if is_instance_valid(stage_root) else null
 		if beam != null:
 			break
 		await process_frame
@@ -444,8 +450,7 @@ func _silhouette_mode(axis: Vector2) -> void:
 	_ink.disable_receive_shadows = true
 	var cam: Camera3D = root.get_viewport().get_camera_3d()
 	cam.environment = _flat_sky()
-	for node in game.player.find_children("*", "GeometryInstance3D", true, false):
-		node.visible = false
+	game.player.visible = false
 	var poses := fight_poses(graph, axis)
 	if poses.size() != COUNTS.size():
 		return _fail("only %d fight poses on %s" % [poses.size(), opts["map"]])
@@ -460,7 +465,7 @@ func _silhouette_mode(axis: Vector2) -> void:
 			await _place(pose["at"], pose["heading"])
 			cam = root.get_viewport().get_camera_3d()
 			staged = await _stage(pose, i, full)
-			var why := _staging_fault(cam, staged)
+			var why := _staging_fault(cam, staged, full)
 			if why == "":
 				_hide_foreign(staged)
 				for m in staged:
@@ -479,6 +484,7 @@ func _silhouette_mode(axis: Vector2) -> void:
 			staged = []
 		if kept.is_empty():
 			return _fail("pose %d: no staging kept every machine in frame, unblocked and apart" % (i + 1))
+		var rects: Array = staged.map(func(m): return _screen_rect(cam, m))
 		var hidden := hidden_slot(i, full) if opts["control"] else -1
 		for s in staged.size():
 			staged[s].visible = s != hidden
@@ -501,7 +507,7 @@ func _silhouette_mode(axis: Vector2) -> void:
 		for s in staged.size():
 			var m: Node3D = staged[s]
 			rec["machines"].append({"slot": s, "kind": m.get_meta("map_sheet_kind"), "shown": s != hidden,
-				"at": _v(m.global_position), "screen_rect": _rect_json(_screen_rect(cam, m)), "cover": snappedf(cover[s], 0.001)})
+				"at": _v(m.global_position), "screen_rect": _rect_json(rects[s]), "cover": snappedf(cover[s], 0.001)})
 		rec["label"] = "%d  %d of %d shown" % [i + 1, rec["shown_count"], full]
 		rec["sha256"] = FileAccess.get_sha256(path)
 		records.append(rec)
@@ -560,9 +566,9 @@ func _stage(pose: Dictionary, pose_index: int, n: int) -> Array:
 
 
 # "" when every machine is in frame, clear of the ground from the lens and apart on screen; else why not.
-func _staging_fault(cam: Camera3D, staged: Array) -> String:
-	if staged.size() == 0:
-		return "nothing staged"
+func _staging_fault(cam: Camera3D, staged: Array, full: int) -> String:
+	if staged.size() != full:
+		return "%d of %d machines staged" % [staged.size(), full]
 	var space := cam.get_world_3d().direct_space_state
 	var screen := Rect2(Vector2.ONE * SCREEN_MARGIN, Vector2(SIZE) - Vector2.ONE * SCREEN_MARGIN * 2.0)
 	var ball_rid: RID = game.player.body().get_rid()
@@ -604,11 +610,7 @@ func _cover(cam: Camera3D, staged: Array) -> Array:
 
 # The frame with every 3D node hidden but the staged machines (and the camera): terrain, rows, scatter, props.
 func _bare(cam: Camera3D, staged: Array) -> Image:
-	var off: Array = []
-	for node in game.get_children():
-		if node is Node3D and node.visible and not staged.has(node) and not node.is_ancestor_of(cam) and node != cam:
-			node.visible = false
-			off.append(node)
+	var off := hide_all_but(game, staged + [cam])
 	for node in root.find_children("*", "Terrain3D", true, false):
 		if node.visible:
 			node.visible = false
@@ -617,6 +619,25 @@ func _bare(cam: Camera3D, staged: Array) -> Image:
 	for node in off:
 		node.visible = true
 	return bare
+
+
+# Hides every visible Node3D under top except the kept nodes, their ancestors' other children included, and walks
+# through plain Node containers (the game's presentation, world, combat and boss modules hold 3D props under a Node).
+# Returns the nodes it hid, for the caller to show again.
+static func hide_all_but(top: Node, keep: Array) -> Array:
+	var off: Array = []
+	for child in top.get_children():
+		if child is Node3D:
+			if keep.has(child):
+				continue
+			if keep.any(func(k): return is_instance_valid(k) and child.is_ancestor_of(k)):
+				off.append_array(hide_all_but(child, keep))
+			elif child.visible:
+				child.visible = false
+				off.append(child)
+		else:
+			off.append_array(hide_all_but(child, keep))
+	return off
 
 
 # The saved silhouette: INK where the drawn frame and the machines-only frame are both ink, SKY everywhere else. Ground
@@ -717,6 +738,9 @@ static func _fog_off(node: GeometryInstance3D) -> bool:
 	if node is MeshInstance3D and node.mesh != null:
 		for i in node.mesh.get_surface_count():
 			materials.append(node.get_active_material(i))
+	if node is MultiMeshInstance3D and node.multimesh != null and node.multimesh.mesh != null:
+		for i in node.multimesh.mesh.get_surface_count():
+			materials.append(node.multimesh.mesh.surface_get_material(i))
 	for m in materials:
 		while m != null:
 			if m is BaseMaterial3D and (m.disable_fog or m.blend_mode != BaseMaterial3D.BLEND_MODE_MIX):
@@ -742,15 +766,11 @@ func _unstage(staged: Array) -> void:
 			m.queue_free()
 
 
-func _meshes(m: Node3D) -> Array:
-	return m.find_children("*", "MeshInstance3D", true, false).filter(func(v): return v.is_visible_in_tree() and v.mesh != null)
-
-
 # A 3 by 3 grid across a machine's box as the lens sees it (SIGHT_SPAN of its half width out from its centre, and of
 # its half height up and 0.6 of that down, so a foot on rough ground does not count as hidden); every ray to them must
 # reach it, so no ground hump cuts its silhouette.
 func _sight_points(cam: Camera3D, m: Node3D) -> Array:
-	var box := _box(m)
+	var box := box_of(m)
 	if box.size == Vector3.ZERO:
 		return [m.global_position]
 	var c := box.get_center()
@@ -764,18 +784,48 @@ func _sight_points(cam: Camera3D, m: Node3D) -> Array:
 	return out
 
 
-func _box(m: Node3D) -> AABB:
+# A machine's drawn box in world space: every visible mesh under it, and every visible multimesh instance (the
+# boom_tender's boom floats and lamps are a multimesh reaching about 8 m from its hull).
+static func box_of(m: Node3D) -> AABB:
 	var box := AABB()
 	var first := true
-	for v: MeshInstance3D in _meshes(m):
-		var b: AABB = v.global_transform * v.get_aabb()
+	for v in m.find_children("*", "GeometryInstance3D", true, false):
+		if not v.is_visible_in_tree():
+			continue
+		var b := AABB()
+		if v is MeshInstance3D and v.mesh != null:
+			b = v.global_transform * v.get_aabb()
+		elif v is MultiMeshInstance3D:
+			b = _multimesh_box(v)
+		if b.size == Vector3.ZERO:
+			continue
 		box = b if first else box.merge(b)
 		first = false
 	return box
 
 
+static func _multimesh_box(v: MultiMeshInstance3D) -> AABB:
+	var mm := v.multimesh
+	if mm == null or mm.mesh == null or mm.transform_format != MultiMesh.TRANSFORM_3D:
+		return AABB()
+	var count := mm.visible_instance_count if mm.visible_instance_count >= 0 else mm.instance_count
+	var placed: Array = []
+	for i in count:
+		placed.append(mm.get_instance_transform(i))
+	return instances_box(v.global_transform, placed, mm.mesh.get_aabb())
+
+
+# The world box of a mesh box local drawn at each of placed (instance transforms) under the node transform at.
+static func instances_box(at: Transform3D, placed: Array, local: AABB) -> AABB:
+	var box := AABB()
+	for i in placed.size():
+		var b: AABB = at * (placed[i] as Transform3D) * local
+		box = b if i == 0 else box.merge(b)
+	return box
+
+
 func _screen_rect(cam: Camera3D, m: Node3D) -> Rect2:
-	var box := _box(m)
+	var box := box_of(m)
 	if box.size == Vector3.ZERO:
 		return Rect2()
 	var r := Rect2()
