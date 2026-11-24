@@ -1,6 +1,8 @@
 extends SceneTree
 
 const BossPlate := preload("res://src/ui/boss_plate.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const Rogue := preload("res://src/combat/rogue.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
@@ -10,6 +12,9 @@ const T := preload("res://tests/support/t.gd")
 #   bound to that Warden, with the objective plate under it;
 # - a retry takes it down, and engaging again puts it back;
 # - breaking the Warden takes it down;
+# - a rogue machine that wakes (world.gd _watch_rogue) with the slot free puts the plate up in the
+#   Rogue's hand, stencilled with its crew number; an engaged Warden takes the plate from it and the
+#   rogue does not take it back; the rogue's death takes its plate down.
 
 var _t := T.new("ui_boss_plate_mount_test")
 # F6 2026-10-04: the local plating row is gone; every Warden gets a plate.
@@ -91,6 +96,56 @@ func _slice() -> void:
 	await _frames(2)
 
 
+# The world wakes this attempt's rogue as it does in play: a plan whose site is under the ball.
+func _wake_rogue() -> Node3D:
+	var ball: Vector3 = _game.player.global_position
+	_game.ctx.calm = false
+	_game.world.rogue_plan = {"kind": "rogue_crane", "site": "test", "at": Vector2(ball.x, ball.z), "radius_m": 12.0, "trigger_m": 20.0}
+	_game.world._watch_rogue(ball)
+	_game.ctx.calm = true
+	await _frames(3)
+	return _game.world.rogue
+
+
+func _rogue() -> void:
+	var warden: Node3D = await _start("slice")
+	_t.eq("before the rogue wakes no plate is up", _plates().size(), 0)
+	var rogue: Node3D = await _wake_rogue()
+	_t.check("the rogue machine woke", is_instance_valid(rogue) and not rogue.is_dead())
+	var up := _plates()
+	_t.eq("a woken rogue puts one plate up", up.size(), 1)
+	if up.size() == 1:
+		var plate: Control = up[0]
+		_t.check("the HUD mounts it top-centre", _game.hud.boss_plate == plate and _game.hud._plate == plate)
+		_t.eq("the rogue's plate is in the Rogue's hand", plate.hand(), UiTokens.Hand.ROGUE)
+		_t.eq("it stencils the rogue's crew number", plate.drawn_number(), String(Rogue.ROWS["rogue_crane"]["crew"]))
+	await _strike(warden)
+	up = _plates()
+	_t.eq("striking the Warden leaves one plate up", up.size(), 1)
+	if up.size() == 1:
+		_t.eq("the engaged Warden takes the plate from the rogue", up[0].hand(), BossPlate.NO_HAND)
+		_t.check("the plate shows the Warden's name", up[0].drawn_words().size() > 0, str(up[0].drawn_words()))
+	await _frames(4)
+	_t.check("the rogue does not take it back while the Warden is engaged", _plates().size() == 1 and _plates()[0].hand() == BossPlate.NO_HAND)
+	_game.flow.retry_stage()
+	await _frames(4)
+	_t.eq("a retry takes the plate down", _plates().size(), 0)
+	rogue = await _wake_rogue()
+	_t.check("the next attempt's rogue wakes with its plate up", is_instance_valid(rogue) and _plates().size() == 1 and _plates()[0].hand() == UiTokens.Hand.ROGUE)
+	var guard := 0
+	while is_instance_valid(rogue) and not rogue.is_dead() and guard < 120:
+		rogue.take_damage(rogue.max_hp)
+		await _frames(2)
+		guard += 1
+	_t.check("the rogue died", not is_instance_valid(rogue) or rogue.is_dead(), "%d hits" % guard)
+	await _frames(2)
+	_t.eq("the rogue's death takes its plate down", _plates().size(), 0)
+	_t.check("the HUD lets the plate go", _game.hud.boss_plate == null and _game.hud._plate == null)
+	_game.free()
+	await _frames(2)
+
+
 func _run() -> void:
 	await _slice()
+	await _rogue()
 	quit(_t.verdict())

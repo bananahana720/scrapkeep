@@ -140,7 +140,7 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	custom_minimum_size = Vector2(width, HEIGHT)
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	accessibility_name = String(def.display_name) if def != null else ""
-	var color: Color = def.color if def != null else Palette.SAND
+	var color: Color = ClassDef.screen_color(def.color) if def != null else Palette.SAND
 	_serial = hash(def.id) if def != null else 0
 	add_theme_stylebox_override("normal", _frame(Color(color, 0.6), 2))
 	add_theme_stylebox_override("hover", _frame(color, 3))
@@ -373,7 +373,7 @@ func set_locked(is_locked: bool, hint := "") -> void:
 	hint_text = hint
 	if def == null:
 		return
-	var color: Color = def.color
+	var color: Color = ClassDef.screen_color(def.color)
 	var edge := Palette.SLATE if locked else color
 	if _styles.is_empty():
 		for state in ["normal", "hover", "pressed", "focus"]:
@@ -761,7 +761,7 @@ func _rival_open() -> bool:
 
 
 func _draw() -> void:
-	var tint: Color = def.color if def != null else Palette.SAND
+	var tint: Color = ClassDef.screen_color(def.color) if def != null else Palette.SAND
 	Keycap.draw(self, Vector2(PAD + Keycap.size_of(key, KEY_H).x * 0.5, PAD + KEY_H * 0.5), key,
 		Color.WHITE if is_open() else Palette.SAND, KEY_H)
 	if def == null:

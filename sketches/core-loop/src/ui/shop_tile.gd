@@ -31,9 +31,10 @@ const PRICE_FONT := UiTokens.BODY
 const COG := 16.0
 # The rarity frames (VISUAL-LANGUAGE section 5): each rung differs by shape, not colour alone.
 # Common one line, rare two, relic two with round bolt heads round the bezel, evolved two with
-# its outer line cut into the ancients' dashed seam and diamond points at the corners.
+# its outer line cut into the ancients' dashed seam and diamond points at the corners. Common is
+# steel, not the field mint it wears in the world: mint on a screen is press now (LEGIBILITY 14.3).
 const RARITY := {
-	"common": {"color": Palette.ARC, "width": 2.0, "double": false, "notches": "", "dashed": false},
+	"common": {"color": Palette.STEEL, "width": 2.0, "double": false, "notches": "", "dashed": false},
 	"rare": {"color": Palette.COBALT, "width": 3.0, "double": true, "notches": "", "dashed": false},
 	"relic": {"color": Palette.AMBER, "width": 3.0, "double": true, "notches": "bolt", "dashed": false},
 	"evolved": {"color": Palette.ANCIENT, "width": 3.0, "double": true, "notches": "diamond", "dashed": true},
