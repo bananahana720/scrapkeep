@@ -1873,22 +1873,6 @@
       "note": "At full meter, light both fuse tips and pitch the launcher tubes upward 20 degrees. P-D aggregation required for full-only 20-degree tilt and fuse lighting; kept off the ultimate rotation channel."
     },
     {
-      "node": "Mortar",
-      "fact": "set_piece_phase",
-      "motion": "turn",
-      "start": {
-        "axis": "x",
-        "deg": 45,
-        "rate": 25,
-        "phases": [
-          "windup",
-          "flight"
-        ]
-      },
-      "source": "design-v3/pilots/kest.md:337,342-344",
-      "note": "Windup flares both tips and pitches the tubes upward; flight holds them lit and recoils the tubes backward along local Y on each beat; landing dims the tips and stows the tubes level. 45-degree wind-up/flight tilt; rate 25 approaches 95 percent in 0.12 s. Beat recoil has no beat fact in this vocabulary and is deferred."
-    },
-    {
       "node": "WeaponRing",
       "fact": "aim",
       "motion": "aim",
@@ -2011,6 +1995,63 @@
       },
       "source": "design-v3/pilots/kest.md:358",
       "note": "At class V, show the wide vent geometry while keeping the hinge and the V silhouette clear; this is a heft-variant change. P-D heft variant owns wide-vent geometry at class V; no clip changes geometry."
+    },
+    {
+      "node": "Mortar",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "z",
+        "m": 0.09,
+        "throw_s": 0.03,
+        "return_s": 0.14,
+        "curve": "out_quad"
+      },
+      "source": "scratch/w46-gate-handoff/art heroic-cutaway concept 05 (Kest), ruling en (E2-03)",
+      "note": "Each throw kicks both mortar pods 9 cm back along the trunnion line (the node's +Z is back) and eases them home. kest_cage_state writes the stance pitch (0, 20 or 45 degrees) and its ride-beat recoil to the same node every frame before this step, so the kick rides any stance; a pitch kick would not (the stance is absolute, so a throw at a full meter would snap 20 degrees home)."
+    },
+    {
+      "node": "VaneL.Blade",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "z",
+        "deg": 22,
+        "throw_s": 0.04,
+        "return_s": 0.16,
+        "curve": "out_quad"
+      },
+      "source": "scratch/w46-gate-handoff/art heroic-cutaway concept 05 (Kest), ruling en (E2-03)",
+      "note": "The left vent's slats flick 22 degrees toward open on each throw, venting the charge's smoke. The blade turns on its own hinge under VaneL, which hero_assets steers open for a glide, so the flick rides on top of whatever the vent is doing."
+    },
+    {
+      "node": "VaneR.Blade",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "z",
+        "deg": -22,
+        "throw_s": 0.04,
+        "return_s": 0.16,
+        "curve": "out_quad"
+      },
+      "source": "scratch/w46-gate-handoff/art heroic-cutaway concept 05 (Kest), ruling en (E2-03)",
+      "note": "The right vent's slats flick 22 degrees toward open on each throw, mirroring the left."
+    },
+    {
+      "node": "Pod/Weapon",
+      "bone": "lever",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "x",
+        "deg": -24,
+        "throw_s": 0.04,
+        "return_s": 0.22,
+        "curve": "out_quad"
+      },
+      "source": "scratch/w46-gate-handoff/art heroic-cutaway concept 05 (Kest), ruling en (E2-03)",
+      "note": "The clacker at Kest's right yoke snaps shut in 0.04 s on each throw (the handle lays flat on the body about its hinge bone's X) and springs back up."
     }
   ]
 }

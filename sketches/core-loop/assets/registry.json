@@ -37832,6 +37832,17 @@
    "exception_why": "A kit of four independently placed parts, one draw each; a field find draws at most three of them. Limits asserted by the recipe and activities_test."
   },
   {
+   "path": "res://assets/models/world_one/kest_clacker.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd WEAPONS, COCKPIT_WEAPONS, mount_weapon (on the shell's Pod, beside Kest's right yoke)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/kest_clacker.py",
+    "helper": "tools/blender/polish.py (bevel, bake)",
+    "concept": "artifacts/local/w46-concept-art/heroic-cutaway/05-kest-heroic-cutaway.png and ruling en (bold exaggerated cutaway kit, E2-03)"
+   }
+  },
+  {
    "id": "pocket_kit",
    "path": "res://assets/models/world_one/pocket_kit.glb",
    "class": "prop",
@@ -38352,11 +38363,11 @@
    "path": "res://assets/models/world_one/shell_kest.glb",
    "class": "shell",
    "ships": true,
-   "loader": "src/presentation/hero_assets.gd:38-40",
+   "loader": "src/presentation/hero_assets.gd SHELLS",
    "exception": {
     "draws": 15
    },
-   "exception_why": "PD-KEST 2026-10-10: within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD call of 2026-10-10T21:29, base 10 plus up to 6 for machinery and the Pilot placeholder); the shell class cap stays 10 because the Hoberman base alone spends it (Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2); Kest adds the Mortar mesh that pitches and recoils in its cradles (tubes and the fuse-tip glow, 2), two hinged vents (VaneL, VaneR) and the static Pilot placeholder hero_assets_test reads, 15 surfaces",
+   "exception_why": "PD-KEST Hoberman mecha: the 10-draw base (Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2) plus the Mortar under WeaponRing (two flanking mortar pods with flared bells, brass canisters and hazard stripes in paint, the fuse caps and bell throats in class_accent, 2), two hinged vents (VaneL, VaneR) and the placeholder Pilot (hidden in play by fit_pilot_into), 15 surfaces, 14 drawn in play. hero_assets mounts kest_clacker.glb (2 draws) on Pod beside the cockpit, so Kest's mecha draws 16 in play, exactly the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10: PD-0 base 10 plus up to 6 for machinery and the Pilot placeholder; E2-03, wave 46, ruling en)",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_kest.py",
     "helper": "tools/blender/shell_base.py hoberman()",
@@ -40821,6 +40832,7 @@
   "ramp_flipper_clips",
   "relay_mast",
   "relay_stake_post",
+  "res://assets/models/world_one/kest_clacker.glb",
   "res://assets/models/world_one/rivet_revolvers.glb",
   "res://assets/models/world_one/shell_rivet.glb",
   "rescue_cage",
