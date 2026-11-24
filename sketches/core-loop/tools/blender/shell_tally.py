@@ -39,8 +39,15 @@ Calls made here (P-UNITS PD common rule C6 reading, listed in the PD-TALLY repor
   no equipped paint tints them) with one square index notch at NOTCH_AT, a charcoal index slot
   across the tape in it, and a charcoal index shoe on DrumBrackets just inboard of each drum whose
   tip stands past the rim at the same angle. clips/tally.json turns Flywheel.R one whole turn per
-  shot, so the notch always comes back under the shoe. The tape is a capped (closed) cylinder.
-  The heavy drums (shell_tally_plates.py) call drum() without index and are unchanged.
+  shot, so the notch always comes back under the shoe. Every drum's tape is a capped (closed)
+  cylinder. The heavy drums (shell_tally_plates.py) call drum() without index: petrol flanges.
+- Heroic, cutaway-first proportions (E2-05 pass 2; Andrew, 23 Nov 2026): the drums, brackets,
+  notch and shoe are sized to read at full chase distance beside the solid cutaway ball, inside
+  the 1.70 m weapon reach (the drums reach 1.696 m), after the E2-05 concept sheet
+  (04-tally-heroic-cutaway-v2): drums over half the ball's width flanking it (as low as the
+  carrier bank's slope law allows), bold
+  charcoal timing bands across the brass-rimmed tape and a bar across each face, and the shoe a
+  clamp over the rim. Each bracket is a riser and an arm of stout square beam.
 - Pressure windows: four per drum face, on the drum mesh's one paint surface. Vertex colour
   alpha carries the window index (0.2, 0.4, 0.6, 0.8 for windows 0 to 3; 1.0 elsewhere), so a
   cached shader with a per-instance lit count can light windows 0..n-1 cream on the drum mesh
@@ -70,32 +77,51 @@ TARGET_TRIS = 6600
 # Mulberry lattice enamel (ROSTER-LOOK 0.2; hero_assets_test MULBERRY, sampled from tally/hero.png).
 MULBERRY = "8a3d46"
 CREAM = "f7f1e3"
-# Ledger drums (pilots/tally.md section 5): 0.34 m across, 0.07 m deep, axis along X, centred
-# 0.23 m up so they clear the weapon band (top at Z 0.04). The inner face sits outside the
-# tread-cap sphere (0.985) so the tumbling lattice never passes through a drum; the outer face
-# stands 0.12 m past the lattice at that height, and the top rim breaks the outline by 0.165 m.
-DRUM_R = 0.17
-DRUM_DEPTH = 0.07
-DRUM_Z = 0.23
-DRUM_X = 1.033
+# Ledger drums (pilots/tally.md section 5), heroic and cutaway-first (Andrew, 23 Nov 2026: the
+# solid cutaway ball is the hero look, weapon parts may reach 1.70 m, and every 3D part leans
+# bold and exaggerated; the E2-05 concept sheet 04-tally-heroic-cutaway-v2): 1.01 m across,
+# 0.24 m deep (deep enough to read as solid drums from the chase camera behind), axis along X,
+# flanking the ball. The inner face stands at DRUM_INNER, past the card
+# magazine's sweep (1.25 m when the ring aims sideways), the weapon ring's band (1.08 m) and the
+# cutaway plating (0.983 m). The size is the largest the carrier bank's laws allow
+# (carrier_bank_test, MOTION-SPEC row 208): with the 40 mm stamp down, a 30 degree slope still
+# banks 0 at any heading (0.98 m of the 0.99 m support), a vertical wall banks under 60 degrees
+# (49), and the outer top rim reaches 1.697 m. So the centre sits DRUM_Z up, not on the equator
+# as the concept sheet draws it: lower and the drums dig into side slopes.
+DRUM_R = 0.505
+DRUM_DEPTH = 0.24
+DRUM_Z = 0.28
+# The tape fills the drum to TAPE x DRUM_R, so the brass rims stand as a lip and the drum reads solid.
+TAPE = 0.95
+DRUM_INNER = 1.264
+DRUM_X = DRUM_INNER + DRUM_DEPTH / 2
+# Drum details are drawn at REF_R and scale with a drum's radius (light, heavy).
+REF_R = 0.17
 WINDOW_R = 0.032
 WINDOW_AT = 0.095
 # Window index rides vertex colour alpha (see the header).
 WINDOW_ALPHA = (0.2, 0.4, 0.6, 0.8)
 # The index notch (E2-05): its centre angle in the drum's Y-Z plane (0 is +Y, the aim; 90 is up;
-# 180 is the back, toward the chase camera), 11.25 degrees above the back so it faces the camera
-# 17 degrees down and sits between two of the flange's 16 corners (the drum keeps its 0.34 m
-# bounds). NOTCH_HALF is its half-width in degrees and NOTCH_R its floor, below the tape face.
-NOTCH_AT = 168.75
+# 180 is the back, toward the chase camera), on the upper rear rim, where the chase camera behind
+# and above sees the notch and the shoe break the drum's outline, between two of the flange's 16
+# corners (the drum keeps its 2 x DRUM_R bounds). NOTCH_HALF is its half-width in degrees and
+# NOTCH_R its floor, well below the tape face (TAPE x DRUM_R): a 0.08 m bite out of the rim,
+# 0.15 m wide.
+NOTCH_AT = 123.75
 NOTCH_HALF = 10.0
-NOTCH_R = 0.148
-# The index shoe: a charcoal tooth on DrumBrackets just inboard of the drum, its tip SHOE_R out
-# (past the 0.17 m rim), at NOTCH_AT; its inner face clears the rim by SHOE_GAP.
-SHOE_R = 0.198
-SHOE_GAP = 0.006
-# One punch mark gives way to the index slot (it sat 23 degrees from the notch and read as one).
+NOTCH_R = DRUM_R * 0.84
+# The index shoe: a chunky charcoal clamp on DrumBrackets, an arm up the drum's inner face and a
+# tooth over the rim at NOTCH_AT, SHOE_GAP clear of it, out to SHOE_R and SHOE_OVER over the drum.
+SHOE_R = DRUM_R + 0.10
+SHOE_GAP = 0.016
+SHOE_WIDTH = 0.14
+SHOE_OVER = 0.04
 PUNCH_AT = (0.3, 1.4, 2.2, 3.5, 4.1, 5.3)
-INDEX_PUNCH_AT = (0.3, 1.4, 2.2, 3.5, 4.1)
+# The light drum's tape carries bold charcoal timing bands in place of punch marks: three at
+# quarter turns from the index slot, so the slot and the bands read as four dark beats round the
+# rim and only the notch tells the index one.
+TIMING_AT = (NOTCH_AT + 90.0, NOTCH_AT + 180.0, NOTCH_AT + 270.0)
+TIMING_WIDTH = 0.07
 # Reader carriage: the three card bays in a row beside the right yoke, front to back, on the
 # bank line (shell_base.BANK); bay 0 is slot 1, bay 1 slot 2, bay 2 slot 3.
 BAY_X = sb.BANK[0][0]
@@ -191,43 +217,50 @@ def drum(name, side, centre, radius=DRUM_R, depth=DRUM_DEPTH, reel=False, part=N
     on the outer face. reel adds the class V second tape reel ring on the face. Every vertex
     stays inside x in [-depth/2, depth/2] and radius in the drum's local frame. part appends
     the drum to an existing Part (both drums share one mesh) instead of a new one. index builds
-    the light drum's beat read (E2-05, see the header): a capped tape, closed brass flanges
-    with the index notch, and the charcoal index slot in place of one punch mark."""
+    the light drum's beat read (E2-05, see the header): closed brass flanges with the index
+    notch, and the charcoal index slot in place of one punch mark. The tape is capped (closed)."""
     p = part if part is not None else Part(name)
     c = Vector(centre)
+    k = radius / REF_R
     half = depth / 2
-    flange = 0.008
-    face = half - 0.003          # outer flange face; windows and boss stand to half
+    flange = 0.008 * k
+    face = half - 0.003 * k      # outer flange face; windows and boss stand to half
     rot = (0, math.pi / 2, 0)
 
     def at(x):
         return (c.x + side * x, c.y, c.z)
 
     tape = face - flange + half - flange
-    p.cyl("paint", radius * 0.91, radius * 0.91, tape, 16,
-          loc=at((face - flange - half + flange) / 2), rot=rot, color=CREAM, caps=index)
+    p.cyl("paint", radius * TAPE, radius * TAPE, tape, 16,
+          loc=at((face - flange - half + flange) / 2), rot=rot, color=CREAM)
     if index:
         for x in (face - flange / 2, -half + flange / 2):
             tint_alpha(p, notched_flange(p, at(x), radius, flange), 0.0)
-        tint_alpha(p, index_slot(p, at((face - flange - half + flange) / 2), radius * 0.91, tape), 0.0)
+        tint_alpha(p, index_slot(p, at((face - flange - half + flange) / 2), radius * TAPE, tape, k), 0.0)
     else:
         p.cyl("paint", radius, radius, flange, 16, loc=at(face - flange / 2), rot=rot, color="petrol")
         p.cyl("paint", radius, radius, flange, 16, loc=at(-half + flange / 2), rot=rot, color="petrol")
+    if index:
+        for deg in TIMING_AT:
+            tint_alpha(p, timing_band(p, at((face - flange - half + flange) / 2), radius * TAPE, tape, k, deg), 0.0)
+        # A charcoal bar across the outer face through the hub, level at rest, short of the notch.
+        tint_alpha(p, p.box("paint", (half - face, 1.6 * radius, 0.016 * k), loc=at((half + face) / 2),
+                            color="charcoal"), 0.0)
     # Punch marks on the tape: a few charcoal slots, unevenly spaced (rule 8).
-    for k, a in enumerate(INDEX_PUNCH_AT if index else PUNCH_AT):
-        r = radius * 0.91 + 0.002
-        x, y, z = at(-0.01 + 0.012 * (k % 2))
+    for n, a in enumerate(() if index else PUNCH_AT):
+        r = radius * TAPE + 0.002 * k
+        x, y, z = at((-0.01 + 0.012 * (n % 2)) * k)
         # Local Z of the box turns to the radial direction (0, sin a, cos a).
-        p.box("paint", (0.018, 0.026, 0.010), loc=(x, y + r * math.sin(a), z + r * math.cos(a)),
+        p.box("paint", (0.018 * k, 0.026 * k, 0.010 * k), loc=(x, y + r * math.sin(a), z + r * math.cos(a)),
               rot=(-a, 0, 0), color="charcoal")
-    p.cyl("paint", 0.04, 0.04, half - face, 8, loc=at((half + face) / 2), rot=rot, color="charcoal")
-    for k in range(4):
-        a = math.pi / 4 + k * math.pi / 2
-        y, z = WINDOW_AT * math.cos(a), WINDOW_AT * math.sin(a)
-        colour = CREAM if k < 3 else "charcoal"
-        faces = p.cyl("paint", WINDOW_R, WINDOW_R, half - face, 6, loc=(at((half + face) / 2)[0], c.y + y, c.z + z),
-                      rot=rot, color=colour)
-        tint_alpha(p, faces, WINDOW_ALPHA[k])
+    p.cyl("paint", 0.04 * k, 0.04 * k, half - face, 8, loc=at((half + face) / 2), rot=rot, color="charcoal")
+    for n in range(4):
+        a = math.pi / 4 + n * math.pi / 2
+        y, z = WINDOW_AT * k * math.cos(a), WINDOW_AT * k * math.sin(a)
+        colour = CREAM if n < 3 else "charcoal"
+        faces = p.cyl("paint", WINDOW_R * k, WINDOW_R * k, half - face, 6,
+                      loc=(at((half + face) / 2)[0], c.y + y, c.z + z), rot=rot, color=colour)
+        tint_alpha(p, faces, WINDOW_ALPHA[n])
     if reel:
         p.ring("paint", radius * 0.62, radius * 0.72, half - face, 16, loc=at((half + face) / 2), rot=rot, color=CREAM)
     sb._sharpen(p)
@@ -264,34 +297,47 @@ def notched_flange(p, loc, radius, thick):
     return p.prism("paint", outline, thick, matrix=m, color="brass")
 
 
-def index_slot(p, loc, tape_r, length):
+def index_slot(p, loc, tape_r, length, k):
     """The charcoal index slot across the tape in the notch: it stands just proud of the tape
     and inside the notch, so from behind the notch reads as one dark gap across the rim."""
-    y, z = _yz(NOTCH_AT, (NOTCH_R + tape_r + 0.004) / 2)
-    width = 2 * NOTCH_R * math.sin(math.radians(NOTCH_HALF)) - 0.003
-    return p.box("paint", (length - 0.001, width, tape_r + 0.004 - NOTCH_R),
+    proud = 0.004 * k
+    y, z = _yz(NOTCH_AT, (NOTCH_R + tape_r + proud) / 2)
+    width = 2 * NOTCH_R * math.sin(math.radians(NOTCH_HALF)) - 0.003 * k
+    return p.box("paint", (length - 0.001, width, tape_r + proud - NOTCH_R),
                  loc=(loc[0], loc[1] + y, loc[2] + z), rot=_radial(NOTCH_AT), color="charcoal")
+
+
+def timing_band(p, loc, tape_r, length, k, deg):
+    """One charcoal timing band across the tape at deg, standing as proud as the index slot."""
+    proud = 0.004 * k
+    y, z = _yz(deg, tape_r + proud / 2 - 0.002 * k)
+    return p.box("paint", (length - 0.001, TIMING_WIDTH, proud + 0.004 * k),
+                 loc=(loc[0], loc[1] + y, loc[2] + z), rot=_radial(deg), color="charcoal")
 
 
 def index_shoe(p, side):
     """The fixed index shoe beside one drum: a charcoal arm up the drum's inner face from the
-    bracket disc and the shoe at its tip, past the rim at NOTCH_AT, inboard of the inner flange.
-    Alpha 0, as the brackets: no paint tints it."""
+    bracket disc and a tooth at its tip clamped over the rim at NOTCH_AT, SHOE_GAP clear of the
+    turning drum. Alpha 0, as the brackets: no paint tints it."""
     inner = DRUM_X - DRUM_DEPTH / 2
-    for x0, x1, r0, r1, w in ((inner - 0.013, inner - 0.005, 0.02, DRUM_R + SHOE_GAP + 0.004, 0.018),
-                              (inner - 0.014, inner - 0.002, DRUM_R + SHOE_GAP, SHOE_R, 0.032)):
+    for x0, x1, r0, r1, w in ((inner - 0.030, inner - 0.008, 0.06, DRUM_R + SHOE_GAP + 0.01, 0.07),
+                              (inner - 0.036, inner + SHOE_OVER, DRUM_R + SHOE_GAP, SHOE_R, SHOE_WIDTH)):
         y, z = _yz(NOTCH_AT, (r0 + r1) / 2)
         tint_alpha(p, p.box("paint", (x1 - x0, w, r1 - r0), loc=(side * (x0 + x1) / 2, y, DRUM_Z + z),
                             rot=_radial(NOTCH_AT), color="charcoal"), 0.0)
 
 
 def bracket(p, side):
-    """The gap bracket: a dark-steel arm from the outer gimbal axle boss (on the ring axis, so the
-    gimbal's sweep never reaches it) out through the side gap to the drum's inner face."""
+    """The gap bracket: two stout square dark-steel beams, a riser from the outer gimbal axle boss
+    (on the ring axis, so the gimbal's sweep never reaches it) up through the side gap (it crosses
+    the lattice 10 degrees up, where the heft plates leave the bracket line clear) inside the
+    weapon band, and an arm level over the band to a broad hub disc on the drum's inner face."""
     inner = DRUM_X - DRUM_DEPTH / 2
-    p.rod("paint", (side * 0.885, 0, 0), (side * (inner + 0.004), 0, DRUM_Z), 0.018, 6, color="charcoal", alpha=0.0)
+    elbow = (side * 1.0, 0, DRUM_Z)
     # Alpha 0 is the paint take mask (PAINT_SHADER): the brackets keep their charcoal under any paint.
-    tint_alpha(p, p.cyl("paint", 0.035, 0.035, 0.012, 8, loc=(side * (inner - 0.002), 0, DRUM_Z),
+    p.beam("paint", (side * 0.885, 0, 0), elbow, 0.07, color="charcoal", alpha=0.0)
+    p.beam("paint", elbow, (side * (inner - 0.004), 0, DRUM_Z), 0.07, color="charcoal", alpha=0.0)
+    tint_alpha(p, p.cyl("paint", 0.12, 0.12, 0.02, 8, loc=(side * (inner - 0.012), 0, DRUM_Z),
                         rot=(0, math.pi / 2, 0), color="charcoal"), 0.0)
     index_shoe(p, side)
 
@@ -392,7 +438,7 @@ def build(variant=""):
     sb._sharpen(cab)
     merge(pod, cab)
     shell["folded"] = fold_rubber(pod) + fold_rubber(ring)
-    # The two drum brackets end in discs 1.016 m out, past the ball on a wall, so they are their own
+    # The two drum brackets end in discs 1.25 m out, past the ball on a wall, so they are their own
     # mesh, DrumBrackets, under Pod for hero_assets to bank with the carrier. They paint on the paint
     # slot in charcoal vertex colour, as the Pod's folded rubber did, so the pair costs one draw.
     brackets = Part("DrumBrackets")

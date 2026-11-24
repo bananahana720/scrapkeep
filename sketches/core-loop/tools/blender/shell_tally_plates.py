@@ -49,15 +49,19 @@ BRACKET_DIRS = (Vector((1, 0, 0.12)).normalized(), Vector((-1, 0, 0.12)).normali
 # A plate's corner reaches 13.3 degrees off its gap centre; the nearest side gaps sit 19 degrees
 # from the bracket line, so 15 keeps every plate clear of the arm (0.018 m radius) by 0.09 m.
 BRACKET_CLEAR = math.radians(15)
-# Class V heavy drums: diameter +30 percent, a second tape reel, outline break 0.20 m. Centre
-# raised so the rim clears the weapon band; inner face outside the tread-cap sphere.
-HEAVY_R = st.DRUM_R * 1.3
-HEAVY_DEPTH = 0.075
-HEAVY_Z = 0.04 + 0.019 + HEAVY_R
-HEAVY_X = 0.989 + HEAVY_DEPTH / 2
-# Class IV hoods: over the top half of the light drum, ending inside the heavy drum's outer face
-# so a class V ball hides them.
-HOOD = (st.DRUM_R + 0.01, st.DRUM_R + 0.025, 0.063)
+# Class V heavy drums (they replace the light drums): petrol flanges and a second tape reel, on
+# the light drum's axis and inner face. E2-05 grew the light drums to the 1.70 m weapon reach
+# and the carrier bank's slope law, so the heavy drum gains only what still fits (0.01 m of
+# radius) and reads heavier by its reel and petrol flanges; its rim stays inside the light
+# drum's index shoe.
+HEAVY_R = st.DRUM_R + 0.01
+HEAVY_DEPTH = st.DRUM_DEPTH - 0.01
+HEAVY_Z = st.DRUM_Z
+HEAVY_X = st.DRUM_INNER + HEAVY_DEPTH / 2
+# Class IV hoods: over the top half of the light drum, outboard of its index shoe's tooth and
+# ending inside the heavy drum's outer face so a class V ball hides them.
+HOOD = (st.DRUM_R + 0.016, st.DRUM_R + 0.03, st.DRUM_DEPTH * 0.6)
+HOOD_FROM = st.DRUM_INNER + st.SHOE_OVER + 0.004
 
 
 def in_cone(points, eyes):
@@ -159,7 +163,7 @@ def caps(p, rng):
 def hoods(p):
     r_in, r_out, depth = HOOD
     for side in (1, -1):
-        x = side * (st.DRUM_X - st.DRUM_DEPTH / 2 + 0.005 + depth / 2 - 0.008)
+        x = side * (HOOD_FROM + depth / 2)
         p.ring("paint", r_in, r_out, depth, 6, loc=(x, 0, st.DRUM_Z), rot=(0, math.pi / 2, 0),
                color=st.CREAM, arc=(math.pi / 2, 3 * math.pi / 2))
 
