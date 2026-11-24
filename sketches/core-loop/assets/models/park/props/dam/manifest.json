@@ -808,6 +808,218 @@
      "height": 2.19
     }
    }
+  },
+  "intake_gantry": {
+   "class": "dress_hero",
+   "tags": [
+    "tall"
+   ],
+   "story": "An old-works intake gantry: a squared cast portal with one oversized cable socket on its lintel end.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/intake_gantry_a.glb",
+      "res://assets/models/park/props/dam/intake_gantry_a_lod1.glb",
+      "res://assets/models/park/props/dam/intake_gantry_a_lod2.glb"
+     ],
+     "tris": [
+      9232,
+      4616,
+      1384
+     ],
+     "radius": 7.48,
+     "height": 18.52,
+     "perch": [
+      -1.073,
+      18.511,
+      0.0
+     ]
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/intake_gantry_b.glb",
+      "res://assets/models/park/props/dam/intake_gantry_b_lod1.glb",
+      "res://assets/models/park/props/dam/intake_gantry_b_lod2.glb"
+     ],
+     "tris": [
+      9448,
+      4724,
+      1416
+     ],
+     "radius": 7.507,
+     "height": 18.52,
+     "perch": [
+      1.073,
+      18.511,
+      -0.106
+     ]
+    }
+   }
+  },
+  "takeoff_deck": {
+   "class": "dress_prop",
+   "tags": [
+    "sign"
+   ],
+   "story": "The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/takeoff_deck_a.glb",
+      "res://assets/models/park/props/dam/takeoff_deck_a_lod1.glb",
+      "res://assets/models/park/props/dam/takeoff_deck_a_lod2.glb"
+     ],
+     "tris": [
+      1536,
+      768,
+      219
+     ],
+     "radius": 8.498,
+     "height": 1.03
+    }
+   }
+  },
+  "pump_elbow": {
+   "class": "dress_prop",
+   "tags": [
+    "machine",
+    "tall"
+   ],
+   "story": "Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/pump_elbow_a.glb",
+      "res://assets/models/park/props/dam/pump_elbow_a_lod1.glb",
+      "res://assets/models/park/props/dam/pump_elbow_a_lod2.glb"
+     ],
+     "tris": [
+      1884,
+      942,
+      270
+     ],
+     "radius": 2.061,
+     "height": 3.397
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/pump_elbow_b.glb",
+      "res://assets/models/park/props/dam/pump_elbow_b_lod1.glb",
+      "res://assets/models/park/props/dam/pump_elbow_b_lod2.glb"
+     ],
+     "tris": [
+      2652,
+      1326,
+      382
+     ],
+     "radius": 2.597,
+     "height": 2.606
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/pump_elbow_c.glb",
+      "res://assets/models/park/props/dam/pump_elbow_c_lod1.glb",
+      "res://assets/models/park/props/dam/pump_elbow_c_lod2.glb"
+     ],
+     "tris": [
+      1648,
+      824,
+      240
+     ],
+     "radius": 2.807,
+     "height": 2.24
+    }
+   }
+  },
+  "chalk_turn": {
+   "class": "dress_prop",
+   "tags": [
+    "sign"
+   ],
+   "story": "A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/chalk_turn_a.glb",
+      "res://assets/models/park/props/dam/chalk_turn_a_lod1.glb",
+      "res://assets/models/park/props/dam/chalk_turn_a_lod2.glb"
+     ],
+     "tris": [
+      772,
+      386,
+      352
+     ],
+     "radius": 2.921,
+     "height": 0.319
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/chalk_turn_b.glb",
+      "res://assets/models/park/props/dam/chalk_turn_b_lod1.glb",
+      "res://assets/models/park/props/dam/chalk_turn_b_lod2.glb"
+     ],
+     "tris": [
+      820,
+      410,
+      374
+     ],
+     "radius": 2.891,
+     "height": 0.319
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/dam/chalk_turn_c.glb",
+      "res://assets/models/park/props/dam/chalk_turn_c_lod1.glb",
+      "res://assets/models/park/props/dam/chalk_turn_c_lod2.glb"
+     ],
+     "tris": [
+      1444,
+      722,
+      216
+     ],
+     "radius": 3.013,
+     "height": 1.13
+    }
+   }
+  },
+  "keeper_bunting": {
+   "class": "dress_prop",
+   "tags": [
+    "soft",
+    "sign",
+    "tall"
+   ],
+   "story": "Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/dam/keeper_bunting_a.glb",
+      "res://assets/models/park/props/dam/keeper_bunting_a_lod1.glb",
+      "res://assets/models/park/props/dam/keeper_bunting_a_lod2.glb"
+     ],
+     "tris": [
+      1276,
+      638,
+      190
+     ],
+     "radius": 0.94,
+     "height": 3.056
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/dam/keeper_bunting_b.glb",
+      "res://assets/models/park/props/dam/keeper_bunting_b_lod1.glb",
+      "res://assets/models/park/props/dam/keeper_bunting_b_lod2.glb"
+     ],
+     "tris": [
+      2592,
+      1296,
+      382
+     ],
+     "radius": 2.239,
+     "height": 2.757
+    }
+   }
   }
  }
 }

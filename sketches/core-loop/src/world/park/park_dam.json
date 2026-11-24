@@ -8,6 +8,19 @@
  "exit": {"kind": "launch", "speed_cruise": 1.0, "opens": "warden_broken"},
  "arrives": {"kind": "land", "speed_cruise": 0.8, "from": "camp gate"},
  "play_rect": [-760, -780, 1520, 1540],
+ "approach": {"to": "slag_bowl", "smoke": [1100, 2000], "far_card": {"at": [-360, 1450], "to": "park_flume", "size": [760, 300], "yaw_deg": 180}},
+ "district_rows": [
+  {"id": "intake", "name": "Intake Catwalks", "rect": [-760, -780, 1520, 1000], "grade": "dam_intake"},
+  {"id": "apron", "name": "Spillway Apron", "rect": [-760, 220, 860, 540], "grade": "dam_apron"},
+  {"id": "pump_yard", "name": "Sunken Pump Yard", "rect": [100, 220, 660, 540], "grade": "dam_pump"}
+ ],
+ "cable_rows": [
+  {"id": "culvert_cable", "pip": 1, "to": "culvert_chasers", "via": [[-12, 566], [-46, 534], [-90, 486], [-99, 448], [-108, 412], [-134, 389], [-127, 322], [-100, 311], [-64, 281], [-16, 246], [-5, 200], [0, 150], [-10, 128], [-31, 60], [-54, -20], [-70, -44], [-90, -68]]},
+  {"id": "outlet_cable", "pip": 2, "to": "outlet_brutes", "via": [[-10, 569], [-44, 536], [-88, 488], [-97, 450], [-106, 414], [-132, 391], [-146, 396]]},
+  {"id": "ledge_cable", "pip": 3, "to": "ledge_lobbers", "via": [[-8, 572], [-42, 538], [-86, 490], [-95, 452], [-128, 458], [-163, 462]]},
+  {"id": "bench_cable", "pip": 4, "to": "dropship_winches", "via": [[10, 569], [48, 552], [100, 549], [150, 553], [172, 520], [184, 498]]},
+  {"id": "powerhouse_cable", "pip": 5, "to": "powerhouse_trappers", "via": [[12, 566], [46, 548], [76, 540]]}
+ ],
  "landmark": {"id": "spillway_dam", "kind": "dam", "at": [0, 620], "size": [120, 120, 320], "yaw_deg": 180, "recipe": "landmark_dam", "budget": "hero_landmark", "sight_top": [0, 141, 640], "sight_share": 0.85, "beacon": [0, 575], "reach_m": 30, "warden": {"family": "reactor", "mounting": "dam_face", "anchor": [0, 22, 590], "path": [], "hardpoints": 3, "hardpoint_offsets": [[0, 1.6, 0], [-10, 0, 0], [10, 0, 0]], "harpoon_anchor": true}, "bay_dock": {"at": [0, 467], "facing_deg": 0}, "gate_slots": [{"at": [-16, 528], "facing_deg": 0}, {"at": [0, 528], "facing_deg": 0}, {"at": [16, 528], "facing_deg": 0}], "light": "ancient_beam", "music": "landmark_hum", "fragment": "dam_dedication_plaque"},
  "waymarks": ["drop_in", "domes_camp", "the_eye", "landmark"],
  "routes": [

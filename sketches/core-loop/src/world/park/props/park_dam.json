@@ -1712,6 +1712,167 @@
      "tilt_deg": 0
     }
    ]
+  },
+  "intake_gantry_west": {
+   "story": "The west cast-iron gantry that held the intake cable's head, its socket turned to the line.",
+   "props": [
+    {
+     "kind": "intake_gantry",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "intake_gantry_east": {
+   "story": "The east cast-iron gantry, its twin across the sky gap the intake line flies through.",
+   "props": [
+    {
+     "kind": "intake_gantry",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "takeoff_apron": {
+   "story": "The crew's concrete run-in: chevrons and bollards pointing the crest at the intake takeoff.",
+   "props": [
+    {
+     "kind": "takeoff_deck",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "pump_elbow_spill": {
+   "story": "Pump-kit elbows dropped at the yard's edge, one stood up, one half buried in its own silt.",
+   "props": [
+    {
+     "kind": "pump_elbow",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pump_elbow",
+     "v": "c",
+     "at": [
+      4.5,
+      2.5
+     ],
+     "yaw_deg": 100,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "pump_elbow",
+     "v": "b",
+     "at": [
+      -4,
+      3
+     ],
+     "yaw_deg": -40,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "chalk_fork": {
+   "story": "Keeper chalk at a branch: an arrow and a tally saying which way the crew went.",
+   "props": [
+    {
+     "kind": "chalk_turn",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "chalk_turn",
+     "v": "c",
+     "at": [
+      3,
+      2
+     ],
+     "yaw_deg": 30,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "chalk_arrow": {
+   "story": "One keeper's arrow chalked where the side route leaves the line.",
+   "props": [
+    {
+     "kind": "chalk_turn",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "keeper_bunting": {
+   "story": "Keeper bunting strung between two poles over a side route, sand and bone cloth on copper rope.",
+   "props": [
+    {
+     "kind": "keeper_bunting",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "keeper_pennant": {
+   "story": "One keeper pole with its cloth strips, planted where a side route starts.",
+   "props": [
+    {
+     "kind": "keeper_bunting",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
   }
  },
  "spots": [
@@ -3084,6 +3245,126 @@
    ],
    "yaw_deg": -90,
    "near": "spillway apron, yard east rim: the apron's water-level staff"
+  },
+  {
+   "id": "intake_gantry_west",
+   "template": "intake_gantry_west",
+   "at": [
+    -223,
+    290
+   ],
+   "yaw_deg": 4,
+   "near": "west rim over the dam face: the intake line's west gantry"
+  },
+  {
+   "id": "intake_gantry_east",
+   "template": "intake_gantry_east",
+   "at": [
+    -80,
+    250
+   ],
+   "yaw_deg": -7,
+   "near": "dam face east of the intake line: its east gantry"
+  },
+  {
+   "id": "takeoff_apron",
+   "template": "takeoff_apron",
+   "at": [
+    -128,
+    180
+   ],
+   "yaw_deg": -88,
+   "near": "intake crest: the run-in pointing at the intake takeoff"
+  },
+  {
+   "id": "pump_elbow_spill_east",
+   "template": "pump_elbow_spill",
+   "at": [
+    232,
+    515
+   ],
+   "yaw_deg": 64,
+   "near": "sunken pump yard, east edge: pump-kit elbows"
+  },
+  {
+   "id": "pump_elbow_spill_south",
+   "template": "pump_elbow_spill",
+   "at": [
+    215,
+    580
+   ],
+   "yaw_deg": -118,
+   "near": "sunken pump yard, south-east corner: pump-kit elbows"
+  },
+  {
+   "id": "chalk_fork_eye",
+   "template": "chalk_fork",
+   "at": [
+    -32,
+    175
+   ],
+   "yaw_deg": 77,
+   "near": "the eye fork: keeper chalk toward the intake"
+  },
+  {
+   "id": "chalk_arrow_eye",
+   "template": "chalk_arrow",
+   "at": [
+    20,
+    130
+   ],
+   "yaw_deg": 161,
+   "near": "the eye fork: keeper arrow toward the east lane"
+  },
+  {
+   "id": "chalk_fork_shelf",
+   "template": "chalk_fork",
+   "at": [
+    -60,
+    -340
+   ],
+   "yaw_deg": -47,
+   "near": "shelf lip fork: keeper chalk"
+  },
+  {
+   "id": "chalk_arrow_shelf",
+   "template": "chalk_arrow",
+   "at": [
+    -40,
+    -280
+   ],
+   "yaw_deg": 203,
+   "near": "shelf lip fork: keeper arrow"
+  },
+  {
+   "id": "keeper_bunting_eye",
+   "template": "keeper_bunting",
+   "at": [
+    50,
+    175
+   ],
+   "yaw_deg": 118,
+   "near": "the eye fork: keeper bunting over the east side route"
+  },
+  {
+   "id": "keeper_bunting_shelf",
+   "template": "keeper_bunting",
+   "at": [
+    -140,
+    -330
+   ],
+   "yaw_deg": -73,
+   "near": "shelf lip fork: keeper bunting over the west side route"
+  },
+  {
+   "id": "keeper_pennant_shelf",
+   "template": "keeper_pennant",
+   "at": [
+    -20,
+    -360
+   ],
+   "yaw_deg": 31,
+   "near": "shelf lip fork: a keeper pennant at the east side route"
   }
  ],
  "litter": {
@@ -3112,5 +3393,5 @@
   ],
   "seed": 11
  },
- "pin": 618595952
+ "pin": 2806178531
 }

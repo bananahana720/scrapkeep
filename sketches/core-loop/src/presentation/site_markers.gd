@@ -32,6 +32,8 @@ const Arena := preload("res://src/boss/arena.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Rogue := preload("res://src/combat/rogue.gd")
 const Yard := preload("res://src/presentation/arena_bowl_yard.gd")
+const CrackedCache := preload("res://src/world/cracked_cache.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 const CREW_SMOKE := Color("ece6d8")
 const WORKS_SMOKE := Color("262826")
@@ -95,6 +97,8 @@ var _furnace: Array = [0, null]
 var _visited := {}
 # The sleeping rogue plume's key for this stage attempt, kept across wake so enemy_killed flips it at death.
 var _rogue_key := ""
+# The keeper flags standing over this stage attempt's spent cracked caches (CrackedCache.raise_flag); freed on leaving.
+var flags: Array[Node3D] = []
 static var _materials := {}
 static var _meshes := {}
 
@@ -111,11 +115,14 @@ func setup(ctx_ref) -> void:
 			events.rescue_completed.connect(_on_rescue_completed)
 		if events.has_signal("enemy_killed"):
 			events.enemy_killed.connect(_on_enemy_killed)
+		if events.has_signal("activity_done"):
+			events.activity_done.connect(_on_activity_done)
 
 
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	sync([])
 	reset_visited()
+	_drop_flags()
 	_furnace = [0, null]
 	_clock = 0.0
 
@@ -123,17 +130,41 @@ func _on_stage_entered(_stage: int, _retry: bool) -> void:
 func _on_cleared(_reason: String) -> void:
 	sync([])
 	reset_visited()
+	_drop_flags()
 	_clock = READ_EVERY
 
 
 # Crew and cache sites flip only by their plume keys, through sync's fade: a crew home when director.live_homes() drops
 # it, a rib cache when scrap_field.caches() does. An activity's activity_done is no plume site (an enemy_camp is no crew
-# home, a cracked_cache or field find keeps no sign), so it flips nothing here.
+# home, a field find keeps no sign), with one exception: a cracked cache's pocket, whose done puts up its keeper flag.
 func _on_rescue_completed(quest_id: String) -> void:
 	var key := "cage:" + quest_id
 	# A cage whose plume already came down flipped then; one that never stood a plume has no site to mark.
 	if views.has(key):
 		mark_visited(key, "cage", views[key].get_meta("at"))
+
+
+# A cracked cache's pocket is spent: its keeper flag goes up on the pocket's roof line over the pedestal (`at`, the
+# pocket floor), the same flag the cache device raises when its part is taken (W46 E1-15).
+func _on_activity_done(id: String, at: Vector3) -> void:
+	if id != "cracked_cache":
+		return
+	var key := "cracked_cache:%d,%d" % [roundi(at.x), roundi(at.z)]
+	if not mark_visited(key, "cache", at):
+		return
+	var foot := at + Vector3.UP * CrackedCache.HEIGHT
+	if ctx != null and ctx.get("terrain") != null and ctx.terrain.has_method("height"):
+		foot.y = maxf(foot.y, ctx.terrain.height(at.x, at.z))
+	var raised := CrackedCache.raise_flag(self, foot, UiTokens.reduced_motion)
+	if raised != null:
+		flags.append(raised)
+
+
+func _drop_flags() -> void:
+	for raised in flags:
+		if is_instance_valid(raised):
+			raised.queue_free()
+	flags.clear()
 
 
 func _on_enemy_killed(kind: String, at: Vector3, _scrap_value: int) -> void:

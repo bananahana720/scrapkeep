@@ -1,0 +1,15 @@
+{
+ "assets": [
+  {
+   "id": "keeper_flag",
+   "path": "res://assets/models/world_one/keeper_flag.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/cracked_cache.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/keeper_flag.py",
+    "note": "Procedural vertex-coloured keeper flag a spent cracked cache puts up (W46 E1-15, WAYFINDING.md section 4): FlagPole (clamp foot, six-turn copper coil, iron staff, copper rope) and FlagCloth (0.6 x 0.4 m sand cloth, 3 mm, hinged at its hoist for the wind shader). Two parts, two draws."
+   }
+  }
+ ]
+}
