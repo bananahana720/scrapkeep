@@ -43,10 +43,12 @@ const PILOT_SHARE := 0.65
 const BAND := 20.0
 # The weapon's timing instrument (PILOT-CADENCE section 5.3, LEGIBILITY section 14.1) sits inside
 # the reticle's ring at INSTRUMENT_R, round the aim point and clear of it: no mark comes nearer the
-# centre than DOT_CLEAR px, so the centre dot is never covered. Rivet's chambers are discs, a hot
-# round a size larger in the pilot's colour (Rivet's copper), a spent one a dim open ring; Sable's charge is an arc on a dark track, and
-# her full-charge tick cuts a dark gap through it so it reads apart from the fill without colour.
-# Each mark sits on a dark backing.
+# centre than DOT_CLEAR px, so the centre dot is never covered. Each pilot's instrument has its own
+# silhouette, so the six part in greyscale: Rivet six discs round the ring (a hot round a size
+# larger in his copper, a spent one a dim open ring); Sable an arc on a dark track, her full-charge
+# tick cutting a dark gap through it; Kest one chevron at twelve pointing in; Tarn three bars on a
+# cross's arms (nine, three, then twelve); Tally one square at twelve; the Cannon two brackets
+# either side of the aim point. Each mark sits on a dark backing.
 const INSTRUMENT_R := 10.0
 const DOT_CLEAR := 4.0
 const CHAMBER_R := 2.0
@@ -58,6 +60,29 @@ const SWEEP_WIDTH := 1.5
 const NOTCH_WIDTH := 4.0
 const NOTCH_EDGE := 3.0
 const FULL_TICK := 4.0
+# A hit the driver does not hold for a set time (Kest's snap, Tally's PAID) shows for HIT_FLASH s,
+# timed here from the moment the reticle first sees it (cadence_hit). The flash is a still frame,
+# so reduced motion keeps it.
+const HIT_FLASH := 0.25
+# Kest's chevron: apex KEST_APEX px above the aim point, arms out KEST_HALF to KEST_TOP.
+const KEST_APEX := 7.0
+const KEST_TOP := 13.0
+const KEST_HALF := 4.5
+# Tarn's pips: bars on the cross, PIP_LONG along the arm and PIP_WIDE across it, centred
+# on INSTRUMENT_R; the beat-three hit pip is PIP_HIT times larger.
+const PIP_LONG := 6.0
+const PIP_WIDE := 3.5
+const PIP_HIT := 1.35
+# Tally's square: SQUARE_HALF px either side of a centre on the ring at twelve.
+const SQUARE_HALF := 3.0
+# The Cannon's brackets: the inner face sits BRACKET_FLUSH px from the aim point when the lock is
+# flush and BRACKET_OPEN when open, BRACKET_H px either side of the horizon, serifs BRACKET_SERIF in.
+const BRACKET_FLUSH := 6.5
+const BRACKET_OPEN := 12.0
+const BRACKET_H := 4.5
+const BRACKET_SERIF := 2.0
+const BRACKET_HIT := 1.4
+const MARK_BACK := 2.0
 
 # The reticle carries no words: its shape and colour are the aim state (AimStyle), and
 # a grapple target in reach adds the right-mouse key glyph beside it (key_glyphs.gd).
@@ -84,6 +109,9 @@ var hide_q := false
 # class colour; the reticle reads nothing else of the weapon (cadence_marks).
 var cadence := {}
 var cadence_color := Color.WHITE
+# The latest hit the reticle has seen (cadence_hit) and how long ago it landed.
+var _hit_seen := []
+var _hit_age := INF
 var _shake_left := 0.0
 var _shake_clock := 0.0
 var _breath_clock := 0.0
@@ -158,7 +186,7 @@ func _process(delta: float) -> void:
 	var cam_fov := camera.fov if has_snap and camera != null else 0.0
 	var glyph := q_glyph() if q_shown() else ""
 	var animating := _shake_left > 0.0 or meter_full
-	var cadence_now := cadence_key(cadence)
+	var cadence_now := cadence_key(cadence, _hit_age)
 	var dirty := not _has_drawn or animating or _was_animating \
 		or aim_state != _d_aim_state or _out_of_range_cached != _d_far \
 		or hooked != _d_hooked or grapple != _d_grapple \
@@ -220,6 +248,15 @@ func step(delta: float) -> void:
 	_shake_clock += delta
 	_breath_clock = _breath_clock + delta if meter_full else 0.0
 	harpoon_fill = harpoon_readiness()
+	var hit := cadence_hit(cadence)
+	if hit.is_empty():
+		_hit_seen = []
+		_hit_age = INF
+	elif hit != _hit_seen:
+		_hit_seen = hit
+		_hit_age = 0.0
+	else:
+		_hit_age += delta
 
 
 static func meter_radius() -> float:
@@ -424,8 +461,9 @@ func _draw_meter(centre: Vector2) -> void:
 
 
 # What of a cadence snapshot the instrument draws, so the reticle redraws when a mark would change
-# and not for a timer it does not show. Empty for a trigger with no instrument here.
-static func cadence_key(snap: Dictionary) -> Array:
+# and not for a timer it does not show. Empty for a trigger with no instrument here. `hit_age` is
+# the seconds since the latest hit cadence_hit names landed.
+static func cadence_key(snap: Dictionary, hit_age := 0.0) -> Array:
 	match String(snap.get("trigger", "")):
 		"press":
 			if int(snap.get("mag", 0)) <= 0:
@@ -435,20 +473,51 @@ static func cadence_key(snap: Dictionary) -> Array:
 				snap.get("window_range", Vector2.ZERO), float(snap.get("reload_s", 0.0))]
 		"tap_charge":
 			return ["tap_charge", float(snap.get("charge", 0.0)), bool(snap.get("charging", false))]
+		"lob_snap":
+			return ["lob_snap", _kest_reading(snap, hit_age)]
+		"beats":
+			return ["beats"] + _tarn_reading(snap)
+		"stamp":
+			return ["stamp", _tally_reading(snap, hit_age)]
+		"lock":
+			return ["lock"] + _cannon_reading(snap)
+	return []
+
+
+# A hit the driver does not hold for a set time, named so the reticle can time its flash: Kest's
+# snap (the throw's token while its window reads hit) and Tally's PAID (the streak, which each PAID
+# raises). Empty when there is none.
+static func cadence_hit(snap: Dictionary) -> Array:
+	match String(snap.get("trigger", "")):
+		"lob_snap":
+			if String(snap.get("window", "")) == "hit":
+				return ["lob_snap", int(snap.get("snap_token", 0))]
+		"stamp":
+			if int(snap.get("stamp_streak", 0)) > 0:
+				return ["stamp", int(snap["stamp_streak"])]
 	return []
 
 
 # The instrument for a cadence snapshot, as marks round the aim point (offsets in px, screen
-# angles: 0 at three o'clock, growing clockwise). Each mark is a "disc", "ring", "arc" or
-# "line", names its `role`, and its `layer`: "back" for a dark backing (thinned by _back over the
-# pilot), "line" for a reading (thinned by _thin). Mint marks only the press-now moment; the
-# pilot's colour marks what the press makes; slate is a window spent; nothing is brass.
-static func cadence_marks(snap: Dictionary, class_color: Color) -> Array:
+# angles: 0 at three o'clock, growing clockwise). Each mark is a "disc", "ring", "arc", "line",
+# "poly" (a polyline, `closed` or not) or "fill" (a solid polygon), names its `role`, and its
+# `layer`: "back" for a dark backing (thinned by _back over the pilot), "line" for a reading
+# (thinned by _thin). Mint marks only the press-now moment; the pilot's colour marks what the press
+# makes; slate is a window spent; nothing is brass.
+static func cadence_marks(snap: Dictionary, class_color: Color, hit_age := 0.0) -> Array:
 	match String(snap.get("trigger", "")):
 		"press":
 			return _rivet_marks(snap, class_color) if int(snap.get("mag", 0)) > 0 else []
 		"tap_charge":
 			return _sable_marks(snap, class_color)
+		"lob_snap":
+			return _kest_marks(_kest_reading(snap, hit_age), class_color)
+		"beats":
+			return _tarn_marks(_tarn_reading(snap), class_color)
+		"stamp":
+			return _tally_marks(_tally_reading(snap, hit_age), class_color)
+		"lock":
+			return _cannon_marks(_cannon_reading(snap), class_color)
 	return []
 
 
@@ -522,8 +591,177 @@ static func _sable_marks(snap: Dictionary, class_color: Color) -> Array:
 	return marks
 
 
+# Kest: nothing at rest or while the window waits, so the aim stays clear. While the live charge's
+# snap window is open one mint chevron at twelve points in (the cue holds when the charge is off
+# screen); a snap lands as a solid bone chevron edged in her amber for HIT_FLASH s; a window spent
+# leaves a thin slate chevron until the charge goes.
+static func _kest_reading(snap: Dictionary, hit_age: float) -> String:
+	match String(snap.get("window", "")):
+		"open":
+			return "open"
+		"spent":
+			return "spent"
+		"hit":
+			return "hit" if hit_age < HIT_FLASH else ""
+	return ""
+
+
+static func _kest_marks(reading: String, class_color: Color) -> Array:
+	if reading == "":
+		return []
+	var ink := Color(UiTokens.INK, BACKING_ALPHA)
+	var v := PackedVector2Array([Vector2(-KEST_HALF, -KEST_TOP), Vector2(0.0, -KEST_APEX), Vector2(KEST_HALF, -KEST_TOP)])
+	if reading == "hit":
+		var mid := Vector2(0.0, -(KEST_APEX + KEST_TOP * 2.0) / 3.0)
+		var back := PackedVector2Array()
+		for p in v:
+			back.append(mid + (p - mid) * 1.4)
+		return [
+			{"shape": "fill", "role": "snap_back", "layer": "back", "points": back, "color": ink},
+			{"shape": "fill", "role": "snap_hit", "layer": "line", "points": v, "color": EventKinds.role_color("neutral")},
+			{"shape": "poly", "role": "snap_edge", "layer": "line", "points": v, "closed": true, "width": 1.0, "color": meter_fill_color(class_color)},
+		]
+	var open := reading == "open"
+	return [
+		{"shape": "poly", "role": "snap_back", "layer": "back", "points": v, "closed": false, "width": 4.5, "color": ink},
+		{"shape": "poly", "role": "snap_open" if open else "snap_spent", "layer": "line", "points": v, "closed": false,
+			"width": 2.5 if open else 1.5, "color": EventKinds.role_color("live" if open else "slate")},
+	]
+
+
+# Tarn: three bars on a cross's arms, beat one at nine, beat two at three, beat three at twelve.
+# Hollow at rest; a beat landed fills its bar bone; while beat three's window is open its bar is
+# mint; the hit fills it larger in his colour, edged bone so a dark colour still reads, with the
+# first two still full, and all three clear when he recovers; a window spent turns bar three slate
+# and clears the count.
+static func _tarn_reading(snap: Dictionary) -> Array:
+	match String(snap.get("window", "")):
+		"open":
+			return [2, "open"]
+		"hit":
+			return [2, "hit"]
+		"spent":
+			return [0, "spent"]
+	return [clampi(int(snap.get("beat", 0)), 0, 2), "hollow"]
+
+
+static func _tarn_marks(reading: Array, class_color: Color) -> Array:
+	var ink := Color(UiTokens.INK, BACKING_ALPHA)
+	var bone := EventKinds.role_color("neutral")
+	var filled := int(reading[0])
+	var marks: Array = []
+	for i in 3:
+		var state: String = ("filled" if i < filled else "hollow") if i < 2 else String(reading[1])
+		var angle: float = [PI, 0.0, -PI * 0.5][i]
+		var grow := PIP_HIT if state == "hit" else 1.0
+		marks.append({"shape": "fill", "role": "pip_back", "layer": "back",
+			"points": _bar(angle, PIP_LONG * grow + MARK_BACK, PIP_WIDE * grow + MARK_BACK), "color": ink})
+		var bar := _bar(angle, PIP_LONG * grow, PIP_WIDE * grow)
+		match state:
+			"hollow":
+				marks.append({"shape": "poly", "role": "pip_hollow", "layer": "line", "points": bar, "closed": true, "width": 1.0, "color": Color(bone, 0.7)})
+			"filled":
+				marks.append({"shape": "fill", "role": "pip_filled", "layer": "line", "points": bar, "color": bone})
+			"open":
+				marks.append({"shape": "fill", "role": "pip_open", "layer": "line", "points": bar, "color": EventKinds.role_color("live")})
+			"hit":
+				marks.append({"shape": "fill", "role": "pip_hit", "layer": "line", "points": bar, "color": meter_fill_color(class_color)})
+				marks.append({"shape": "poly", "role": "pip_edge", "layer": "line", "points": bar, "closed": true, "width": 1.0, "color": bone})
+			"spent":
+				marks.append({"shape": "fill", "role": "pip_spent", "layer": "line", "points": bar, "color": EventKinds.role_color("slate")})
+	return marks
+
+
+# A bar `long` px along the ray at `angle` and `wide` px across it, centred on INSTRUMENT_R.
+static func _bar(angle: float, long: float, wide: float) -> PackedVector2Array:
+	var along := Vector2.from_angle(angle)
+	var across := along.orthogonal() * wide * 0.5
+	var near := along * (INSTRUMENT_R - long * 0.5)
+	var far := along * (INSTRUMENT_R + long * 0.5)
+	return PackedVector2Array([near - across, far - across, far + across, near + across])
+
+
+# Tally: one hollow square at twelve at rest; while the PAID window is open it is a heavier mint
+# square; PAID fills it in her colour, ledger cream, for HIT_FLASH s; a window spent fills it slate.
+static func _tally_reading(snap: Dictionary, hit_age: float) -> String:
+	match String(snap.get("window", "")):
+		"open":
+			return "open"
+		"spent":
+			return "spent"
+	if int(snap.get("stamp_streak", 0)) > 0 and hit_age < HIT_FLASH:
+		return "hit"
+	return "rest"
+
+
+static func _tally_marks(reading: String, class_color: Color) -> Array:
+	var square := _square(SQUARE_HALF)
+	var marks: Array = [{"shape": "fill", "role": "square_back", "layer": "back", "points": _square(SQUARE_HALF + MARK_BACK * 0.6), "color": Color(UiTokens.INK, BACKING_ALPHA)}]
+	match reading:
+		"open":
+			marks.append({"shape": "poly", "role": "square_open", "layer": "line", "points": square, "closed": true, "width": 2.0, "color": EventKinds.role_color("live")})
+		"hit":
+			marks.append({"shape": "fill", "role": "square_paid", "layer": "line", "points": square, "color": meter_fill_color(class_color)})
+		"spent":
+			marks.append({"shape": "fill", "role": "square_spent", "layer": "line", "points": square, "color": EventKinds.role_color("slate")})
+		_:
+			marks.append({"shape": "poly", "role": "square_rest", "layer": "line", "points": square, "closed": true, "width": 1.0, "color": Color(EventKinds.role_color("neutral"), 0.7)})
+	return marks
+
+
+# A square `half` px either side of the ring's twelve o'clock.
+static func _square(half: float) -> PackedVector2Array:
+	var c := Vector2(0.0, -INSTRUMENT_R)
+	return PackedVector2Array([c + Vector2(-half, -half), c + Vector2(half, -half), c + Vector2(half, half), c + Vector2(-half, half)])
+
+
+# The Cannon: two brackets either side of the aim point mirror the ones on the ground lane. Open
+# and dim at rest; closing in bone while the lane is painted; flush and mint while a release would
+# fire the Rail; after the Rail, flush bone and BRACKET_HIT times taller with a thin edge in his
+# uranium green while he recovers; held past the lock, slate and opening again for the Barrage.
+static func _cannon_reading(snap: Dictionary) -> Array:
+	if bool(snap.get("painted", false)):
+		match String(snap.get("lock_stage", "")):
+			"rail":
+				return ["flush", 0.0]
+			"barrage":
+				return ["spent", clampf(float(snap.get("lock_bracket", 1.0)), 0.0, 1.0)]
+		return ["closing", clampf(float(snap.get("lock_bracket", 1.0)), 0.0, 1.0)]
+	if String(snap.get("window", "")) == "hit":
+		return ["hit", 0.0]
+	return ["rest", 1.0]
+
+
+static func _cannon_marks(reading: Array, class_color: Color) -> Array:
+	var state := String(reading[0])
+	var d := lerpf(BRACKET_FLUSH, BRACKET_OPEN, float(reading[1]))
+	var bone := EventKinds.role_color("neutral")
+	var color: Color = bone
+	var width := 2.0
+	match state:
+		"rest":
+			color = Color(bone, 0.6)
+			width = 1.5
+		"flush":
+			color = EventKinds.role_color("live")
+			width = 2.5
+		"spent":
+			color = EventKinds.role_color("slate")
+	var h := BRACKET_H * (BRACKET_HIT if state == "hit" else 1.0)
+	var marks: Array = []
+	for side in [-1.0, 1.0]:
+		var x: float = side * d
+		var bracket := PackedVector2Array([Vector2(x - side * BRACKET_SERIF, -h), Vector2(x, -h),
+			Vector2(x, h), Vector2(x - side * BRACKET_SERIF, h)])
+		marks.append({"shape": "poly", "role": "bracket_back", "layer": "back", "points": bracket, "closed": false, "width": width + MARK_BACK, "color": Color(UiTokens.INK, BACKING_ALPHA)})
+		if state == "hit":
+			marks.append({"shape": "poly", "role": "bracket_edge", "layer": "line", "points": bracket, "closed": false, "width": width + 1.5, "color": meter_fill_color(class_color)})
+		marks.append({"shape": "poly", "role": "bracket_" + state, "layer": "line", "points": bracket, "closed": false, "width": width, "color": color})
+	return marks
+
+
 # The nearest a mark comes to the aim point, in px. Every line here is radial with flat ends, so
-# its nearest point is its inner end.
+# its nearest point is its inner end; a polyline or polygon is measured to its nearest edge.
 static func mark_reach(mark: Dictionary) -> float:
 	match String(mark["shape"]):
 		"disc", "ring":
@@ -532,11 +770,20 @@ static func mark_reach(mark: Dictionary) -> float:
 			return float(mark["r"]) - float(mark["width"]) * 0.5
 		"line":
 			return minf((mark["from"] as Vector2).length(), (mark["to"] as Vector2).length())
+		"poly", "fill":
+			var pts: PackedVector2Array = mark["points"]
+			var closed: bool = mark["shape"] == "fill" or bool(mark.get("closed", false))
+			if mark["shape"] == "fill" and Geometry2D.is_point_in_polygon(Vector2.ZERO, pts):
+				return 0.0
+			var near := INF
+			for i in (pts.size() if closed else pts.size() - 1):
+				near = minf(near, Geometry2D.get_closest_point_to_segment(Vector2.ZERO, pts[i], pts[(i + 1) % pts.size()]).length())
+			return near - float(mark.get("width", 0.0)) * 0.5
 	return 0.0
 
 
 func _draw_cadence(centre: Vector2) -> void:
-	for mark in cadence_marks(cadence, cadence_color):
+	for mark in cadence_marks(cadence, cadence_color, _hit_age):
 		var c: Color = _back(mark["color"]) if mark["layer"] == "back" else _thin(mark["color"])
 		match String(mark["shape"]):
 			"disc":
@@ -548,3 +795,17 @@ func _draw_cadence(centre: Vector2) -> void:
 					draw_arc(centre, mark["r"], mark["from"], mark["to"], 40, c, mark["width"])
 			"line":
 				draw_line(centre + mark["from"], centre + mark["to"], c, mark["width"])
+			"poly":
+				var pts := _at(mark["points"], centre)
+				if bool(mark.get("closed", false)):
+					pts.append(pts[0])
+				draw_polyline(pts, c, mark["width"])
+			"fill":
+				draw_colored_polygon(_at(mark["points"], centre), c)
+
+
+static func _at(points: PackedVector2Array, centre: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for p in points:
+		out.append(centre + p)
+	return out
