@@ -729,5 +729,18 @@ K.kind("shift_table", tags=["machine"], variants="ab",
        story="A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell.")(kit.shift_table)
 
 
+# --------------------------------------------------------------------------------------
+# Wayfinding (W46 E3-01, design-v3/WAYFINDING.md section 2.3): the keepers' chalk and bunting at the mouths of side
+# routes, the same hand on both parks. dam.py owns the two builders; importing it registers the Dam's kinds on the Dam's
+# own kit, not this one. Sand, bone, chalk, oxide and copper rope; nothing mint; dressing with no collider.
+import dam
+
+K.closed_lods |= {"chalk_turn", "keeper_bunting"}
+K.kind("chalk_turn", hero=False, tags=["sign"], variants="abc",
+       story="A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place.")(dam.chalk_turn)
+K.kind("keeper_bunting", hero=False, tags=["soft", "sign"], variants="ab",
+       story="Keeper bunting at a side route's mouth: crooked poles, sand and bone cloth, tied on with copper rope.")(dam.keeper_bunting)
+
+
 if __name__ == "__main__":
     K.main()

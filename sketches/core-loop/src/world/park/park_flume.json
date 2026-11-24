@@ -9,6 +9,14 @@
  "approach": {"to": "slag_bowl", "smoke": [900, 480]},
  "arrives": {"kind": "land", "speed_cruise": 1.0, "from": "dam gate"},
  "play_rect": [-780, -780, 1300, 1560],
+ "district_rows": [
+  {"id": "weir", "name": "Weir Bobsled", "rect": [-780, -780, 1300, 540], "grade": "flume_weir"},
+  {"id": "trestle", "name": "Trestle Span", "rect": [-780, -240, 1300, 440], "grade": "flume_trestle"},
+  {"id": "headhouse", "name": "Headhouse Overlook", "rect": [-780, 200, 1300, 580], "grade": "flume_headhouse"}
+ ],
+ "cable_rows": [
+  {"id": "weir_cable", "pip": 1, "to": "weir_lobbers", "via": [[208, 444], [176, 436], [60, 436], [8, 436], [-68, 432], [-92, 420], [-92, 324], [-76, 308], [-68, 280], [-24, 232], [-20, 168], [-48, 160], [-64, 144], [-108, 148], [-140, 118], [-180, 118], [-208, 100], [-232, 76], [-320, -84], [-320, -112], [-300, -140], [-296, -180], [-276, -232], [-340, -236], [-356, -262], [-356, -300], [-362, -326]]}
+ ],
  "landmark": {"id": "penstock_tower", "kind": "penstock_tower", "at": [270, 510], "size": [140, 90, 120], "yaw_deg": 31, "recipe": "landmark_penstock_tower", "budget": "hero_landmark", "sight_top": [300, 90.0, 560], "sight_share": 0.85, "beacon": [230, 480], "reach_m": 30, "warden": {"family": "reactor", "mounting": "flume", "anchor": [230, -2.0, 470], "path": [], "hardpoints": 3, "hardpoint_offsets": [[0, 1.6, 0], [-3.1, 4, 3.9], [3.1, 4, -3.9]], "harpoon_anchor": true}, "bay_dock": {"at": [239, 480], "facing_deg": 90}, "gate_slots": [{"at": [300, 466], "facing_deg": 90}, {"at": [300, 480], "facing_deg": 90}, {"at": [300, 494], "facing_deg": 90}], "light": "ancient_beam", "music": "landmark_hum", "fragment": "headhouse_relic_plate"},
  "waymarks": ["drop_in", "butte_gap", "siphon_camp", "landmark"],
  "routes": [
