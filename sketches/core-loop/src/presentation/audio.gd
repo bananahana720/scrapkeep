@@ -4725,7 +4725,7 @@ func _reset_synth_form() -> void:
 		if engine.track == "warden" and engine.section == "open":
 			engine.warden_section("build")
 	elif _synth_form_state == "telegraph":
-		engine.cancel_build()
+		engine.cancel_build("synth_form")
 	_synth_form_state = "closed"
 
 
@@ -4749,13 +4749,13 @@ func _follow_synth_form(posture: float, staggered: bool, landed: bool) -> int:
 		if engine.track == "warden":
 			engine.warden_section("build")
 	elif prev == "telegraph" and state == "closed":
-		engine.cancel_build()
+		engine.cancel_build("synth_form")
 	if state == "telegraph":
 		var tight := clampf((posture - AceSequencer.GUARD_TIGHT) / (100.0 - AceSequencer.GUARD_TIGHT), 0.0, 1.0)
 		if engine.track == "warden":
-			engine.warden_charge(lerpf(MusicEngine.WARDEN_BUILD_FROM, 1.0, tight))
+			engine.warden_charge(lerpf(MusicEngine.WARDEN_BUILD_FROM, 1.0, tight), "synth_form")
 		elif engine.track in MusicEngine.BOSS_TRACKS:
-			engine.brindle_hp(clampf(posture / 100.0, 0.0, 1.0), true, tight)
+			engine.brindle_hp(clampf(posture / 100.0, 0.0, 1.0), true, tight, "synth_form")
 	return -1
 
 

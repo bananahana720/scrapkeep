@@ -315,6 +315,7 @@ var _build_from := -1
 var _build_len := 1
 var _build_level := -1.0
 var _build_tune := false
+var _build_owner := ""
 var _build_riser: Voice
 var _pending_drop := {}
 var _gap := false
@@ -956,10 +957,10 @@ func restart_boss(kind: String) -> int:
 
 # How broken the Warden is (0..1). The last quarter is the build: the snare roll
 # tightens, the riser climbs and the high-pass opens with every hit.
-func warden_charge(fraction: float) -> void:
+func warden_charge(fraction: float, owner := "warden_charge") -> void:
 	if track != "warden" or section == "drop":
 		return
-	escalate(fraction)
+	escalate(fraction, true, owner)
 
 
 # A lap's window changes the arrangement without restarting the clock or B arc.
@@ -1051,7 +1052,7 @@ func _rotation_state() -> Dictionary:
 # through a pickup bar on the new key's dominant; three quarters starts the break
 # (sinister half time where the track has one) and a build that tightens with the
 # fraction; the payoff (the drop) is the caller's, on the gameplay moment.
-func escalate(fraction: float, sinister := true) -> void:
+func escalate(fraction: float, sinister := true, owner := "") -> void:
 	if not _drop.is_empty() or _cadence_bar >= 0 or mode != PLAY:
 		return
 	if fraction >= WARDEN_LIFT_AT and not _warden_lifted:
@@ -1079,10 +1080,13 @@ func escalate(fraction: float, sinister := true) -> void:
 				brk["esc"] = "break"
 			_queue(brk, {"chord": Harmony.TRITONE, "key": break_key})
 		events_log.append(["break_queued", clock, fraction])
+	var was_building := building()
 	if _build_level < 0.0:
 		_start_riser()
 		events_log.append(["build", clock, track])
 	_build_level = clampf((fraction - WARDEN_BUILD_FROM) / (1.0 - WARDEN_BUILD_FROM), 0.0, 1.0)
+	if not was_building or (owner != "synth_form" and _build_from < 0):
+		_build_owner = owner
 
 
 # An event's end. A win drops home into the level on the next beat; a pass or a loss
@@ -1310,13 +1314,13 @@ func set_boss_state(state: String) -> int:
 # Brindle's HP inside the current phase, as a fraction of the way from the phase's top
 # to its floor, and whether the floor is held for the set piece (with its clock, 0..1).
 # Half way lifts; the held floor is the sinister break tightening with the set piece.
-func brindle_hp(in_phase: float, floor_held := false, piece := 0.0) -> void:
+func brindle_hp(in_phase: float, floor_held := false, piece := 0.0, owner := "brindle_hp") -> void:
 	if not track in BOSS_TRACKS or not section in ["1", "2", "3"]:
 		return
 	if floor_held:
-		escalate(WARDEN_BUILD_FROM + (1.0 - WARDEN_BUILD_FROM) * clampf(piece, 0.0, 1.0))
+		escalate(WARDEN_BUILD_FROM + (1.0 - WARDEN_BUILD_FROM) * clampf(piece, 0.0, 1.0), true, owner)
 	else:
-		escalate(minf(in_phase, 0.74))
+		escalate(minf(in_phase, 0.74), true, owner)
 
 
 # The chase: the heartbeat climbs as the scooter's lead shrinks (closed 0..1). No
@@ -1345,6 +1349,7 @@ func planned_drop(build_bars: int, drop_bars: int, weight: float, change := {}, 
 	_build_len = maxi(1, first + build_bars * bar_len() - clock)
 	_build_level = -1.0
 	_build_tune = false
+	_build_owner = "planned"
 	_start_riser()
 	if not ramp.is_empty():
 		_ramp = ramp.duplicate()
@@ -1359,14 +1364,18 @@ func start_build(expected_seconds: float, tune := false) -> void:
 	_build_len = maxi(1, int(expected_seconds * Harmony.RATE))
 	_build_level = -1.0
 	_build_tune = tune
+	_build_owner = "open"
 	_start_riser()
 	events_log.append(["build", clock, "open"])
 
 
-func cancel_build() -> void:
+func cancel_build(owner := "") -> void:
+	if owner != "" and _build_owner != owner:
+		return
 	_build_from = -1
 	_build_level = -1.0
 	_build_tune = false
+	_build_owner = ""
 	_pending_drop = {}
 	_ramp = {}
 	_gap = false
@@ -1997,6 +2006,7 @@ func _run(action: Dictionary) -> void:
 			_build_from = -1
 			_build_level = -1.0
 			_build_tune = false
+			_build_owner = ""
 			_pending_drop = {}
 			_bar_queue.clear()
 			_transition = {}
