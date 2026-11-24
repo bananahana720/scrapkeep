@@ -184,11 +184,12 @@ def thick_caps(p):
         p.paint(faces, "paint", "charcoal")
 
 
-def guards(p):
-    """Class IV: a petrol guard round each claw hinge and a bone slab skirt under the drum."""
+def guards(p, hooks):
+    """Class IV: a petrol guard round each claw hinge, on the banked ClawHooks mesh so it stays
+    on the banked hinge against a wall (E2-04b), and a bone slab skirt under the drum on the Pod."""
     for sign in (1, -1):
         _, axis, up, hinge, _ = st.claw_points(sign, st.CLAW_REACH[0])
-        p.rod("paint", hinge - axis * (st.BOSS[1] + 0.02), hinge + axis * (st.BOSS[1] + 0.02), st.BOSS[0] + 0.025, 6, color="petrol")
+        hooks.rod("paint", hinge - axis * (st.BOSS[1] + 0.02), hinge + axis * (st.BOSS[1] + 0.02), st.BOSS[0] + 0.025, 6, color="petrol")
     c = st.DRUM_CENTRE
     # Half shell below and behind the drum, inside the gimbal sweep (0.829).
     p.ring("paint", st.DRUM_RADIUS + 0.018, st.DRUM_RADIUS + 0.03, 2 * st.DRUM_HALF + 0.04, 6,
@@ -208,7 +209,7 @@ def layer(n, gaps):
         for sign in (1, -1):
             tips.append(hook(hooks, sign, reach, teeth=(n == 5)))
     if n == 4:
-        guards(pod)
+        guards(pod, hooks)
     sb._sharpen(pod)
     if n == 3:
         core = Part("Core")
