@@ -1981,16 +1981,21 @@
     {
       "node": "Flywheel.R",
       "fact": "set_piece_phase",
-      "motion": "spin",
+      "motion": "step",
       "start": {
         "axis": "x",
-        "deg_s": 1375.0987083139757,
+        "deg": -360.0,
+        "ease_s": 0.4,
+        "curve": "out_quad",
         "phases": [
           "flight"
+        ],
+        "or": [
+          "shot_fired"
         ]
       },
-      "source": "design-v3/pilots/tally.md:246",
-      "note": "Spin the combined drum mesh once at 24 rad/s in flight; stop integrating rotation outside flight. No ease-to-rest driver exists."
+      "source": "design-v3/PILOT-CADENCE.md section 5.3; design-v3/pilots/tally.md:246",
+      "note": "The beat (E2-05): each shot, and the set piece's flight, turns both drums one whole turn forward in 0.40 s, kicking fast and landing eased, so the index notch leaves the fixed index shoe and lands back under it as the stamp window opens. One row owns the drum's X turn and every turn is whole, so the notch always parks under the shoe (a free spin would leave it anywhere). A shot inside the flight adds no turn."
     },
     {
       "node": "ReaderCarriage",
@@ -2102,17 +2107,18 @@
       "note": "Meter parameter on the exit marker. No ready-threshold or 1 Hz breathe expression exists in MOTIONS; P-D owns that visible shader read."
     },
     {
-      "node": "ReaderExit",
+      "node": "Flywheel.R",
       "fact": "shot_fired",
       "motion": "throw",
       "start": {
-        "axis": "z",
-        "m": 0.0,
-        "throw_s": 0.08,
-        "return_s": 0.25
+        "axis": "y",
+        "m": -0.012,
+        "throw_s": 0.05,
+        "return_s": 0.2,
+        "curve": "out_quad"
       },
-      "source": "design-v3/pilots/tally.md:248",
-      "note": "Inactive exit marker pulse on the existing shot fact; MOTIONS cannot spawn volley cards and this unit adds no effects or facts."
+      "source": "design-v3/PILOT-CADENCE.md section 5.3; design-v3/pilots/tally.md:248",
+      "note": "The stamp (E2-05): each shot drops both drums 12 mm in 0.05 s and springs them back by 0.25 s, a ledger stamp's thunk under the turn. Position only, so it never touches the beat row's turn. Replaces ReaderExit's inactive shot marker (an empty; it kept its aim and meter rows)."
     },
     {
       "node": "ReturnExit",
