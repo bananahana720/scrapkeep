@@ -166,6 +166,8 @@ const PARK_FIELDS := {
 # ground at its own ends (park_recipes.gd tile_fit); "drape" stands a ground-conforming GLB on the seat of its stamp
 # (park_recipes.gd fits_drape, seat), with no `y`, so the graph reads no deck.
 const FITS := ["seat", "tile", "drape"]
+# Optional on a park row: explicit map standard point 5 cover tag (park_recipes.gd COVER_KINDS).
+const COVERS := ["hard", "soft", "surface"]
 # Optional on a park row: "clear_view" keeps trees out of the strip behind the row's rear edge, so a ball
 # arriving over the row sees what lies past it (spillway_scenery.gd, park_sites.gd in_clear_view). depth_m is how
 # far back from the rear edge, half_width_m how far either side of the row's centre line.
@@ -582,6 +584,8 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 			_add(out, id, "enum", "fit %s is not in its list" % str(row["fit"]))
 		elif String(row["recipe"]) == "" or String(row["recipe"]).begins_with("greybox:"):
 			_add(out, id, "fit", "fit %s needs a GLB recipe, not %s" % [row["fit"], str(row["recipe"])])
+	if row.has("cover") and not COVERS.has(row["cover"]):
+		_add(out, id, "enum", "cover %s is not in its list" % str(row["cover"]))
 	# Optional: "off_spine": true keeps the row's graph zone an off-spine dead end for the rib pay rate
 	# (director.off_spine), whatever the graph reads (ruling bd).
 	if row.has("off_spine") and not row["off_spine"] is bool:
