@@ -436,6 +436,8 @@ const ULT_CROWD_RADIUS := 20.0
 const ULT_TRAVERSE_NEAR := 25.0
 const ULT_TRAVERSE_FAR := 70.0
 const ULT_RETRY := 1.0
+const ACTIVE_RANGE := 32.0
+const ACTIVE_RETRY := 0.5
 
 var game
 var policy := "skipper"
@@ -691,6 +693,12 @@ var _cast_hold := 0.0
 var _cast_phase := ""
 var _cast_click_tick := -1
 var _ult_wait := 0.0
+var _active_wait := 0.0
+var _sheet_hold_fire := false
+var _cadence_index := 0
+var _cadence_reload_rolled := false
+var _cadence_reload_hit := false
+var _cadence_reload_pressed := false
 var _traverse_point := Vector3.INF
 # The traversal hands (HAND_NAMES) the runner named, and what they decided this tick.
 var hands: Array[String] = []
@@ -707,7 +715,8 @@ var _play_clock := 0.0
 var _fill_from := 0.0
 var _fills: Array[float] = []
 var _fill_open := true
-var _totals := {"slot_casts_special": 0, "slot_casts_line": 0, "ultimates": 0, "ult_presses": 0, "shots": 0}
+var _totals := {"slot_casts_special": 0, "slot_casts_line": 0, "ultimates": 0, "ult_presses": 0, "shots": 0,
+	"cadence_windows": 0, "cadence_hits": 0, "active_presses": 0}
 # The meter's points by source at the first full meter, for the record only.
 var _first_fill_sources := {}
 
@@ -919,6 +928,7 @@ func tick(delta: float) -> bool:
 	_play_clock += delta
 	_min_hp = minf(_min_hp, float(game.run.hp))
 	_ult_wait -= delta
+	_active_wait -= delta
 	_harpoon_held = false
 	_harpoon_commit = false
 	_cruise_hold = false
@@ -1066,6 +1076,11 @@ func _end(why: String) -> void:
 func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_plate_hand = {}
 	_clear_chain_hand()
+	_active_wait = 0.0
+	_sheet_hold_fire = false
+	_cadence_reload_rolled = false
+	_cadence_reload_hit = false
+	_cadence_reload_pressed = false
 	_close_note()
 	_window_hits = []
 	_stage = stage
@@ -2781,15 +2796,19 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		_ignore_walls = launching
 		_slow_time = 0.0
 		_detour_time = 0.0
+		var hold_fire: bool = timed and (staggered or float(target.posture()) >= SHEET_HOLD_FIRE)
+		_sheet_hold_fire = hold_fire
 		_act(steer, target, delta, target, not timed)
+		_sheet_hold_fire = false
 		_ignore_walls = ignore_walls
 		_boost_clock = boost_clock
-		if timed and (staggered or float(target.posture()) >= SHEET_HOLD_FIRE):
+		if hold_fire:
 			# Near a full bar, and in a stagger, any hit but the sheet ram only opens or spends a
 			# stagger that resets the bar (Tarn's claw, seed 3): the weapon, casts and ultimate wait.
 			source.hold.erase("fire_held")
 			source.press.erase("fire_pressed")
 			source.press.erase("ultimate_pressed")
+			source.press.erase("active_pressed")
 		var offset := Vector3(steer.x - ball.x, 0.0, steer.z - ball.z)
 		var planar: Vector3 = game.player.planar_velocity()
 		var desired := offset.normalized() * minf(game.player.tuning.f("cruise"), offset.length() * RUNUP_DROP)
@@ -4357,6 +4376,7 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 	if _plant_state == "mounted":
 		_plant_state = "idle"
 	_ultimate_hands(fight)
+	_active_hands(fight)
 	_line_hands()
 	# In Brindle's fight no move rolls across a known slag ring (BrindleRings.steer_within), and a ball
 	# kept off a ring brakes, on the ground, when its speed would carry it on anyway (not while it
@@ -4756,6 +4776,30 @@ func _ultimate_hands(fight: Node3D) -> void:
 	_totals["ult_presses"] = int(_totals["ult_presses"]) + 1
 
 
+# F-key item active hand (Expert and unbanded only): fires a racked, charged, unlocked active
+# when a live combat target stands within ACTIVE_RANGE or a Warden/boss core is open.
+func _active_hands(fight: Node3D) -> void:
+	if not _kit("active"):
+		return
+	if policy == "traversal" or _active_wait > 0.0 or _set_piece_up() or _cast_phase != "" or _chain_driving or _sheet_hold_fire:
+		return
+	var combat = game.get("combat")
+	if combat == null:
+		return
+	var rack = combat.get("actives")
+	if rack == null or not rack.enabled() or rack.active_id == "" or rack.charges < 1 or rack.winding > 0.0 or rack.locked():
+		return
+	var ball: Vector3 = game.player.ball_position()
+	var near_fight: bool = fight != null and is_instance_valid(fight) \
+		and not (fight.has_method("is_dead") and fight.is_dead()) \
+		and ball.distance_to(fight.global_position) <= ACTIVE_RANGE
+	if not near_fight and _enemies_within(ball, ACTIVE_RANGE) < 1 and not _core_open(fight, ball):
+		return
+	source.press["active_pressed"] = true
+	_active_wait = ACTIVE_RETRY
+	_totals["active_presses"] = int(_totals["active_presses"]) + 1
+
+
 # A staggered Warden or boss hull is an open core: the fight lock, the stage Warden or the boss's.
 func _core_open(fight: Node3D, ball: Vector3) -> bool:
 	var cores: Array = [fight]
@@ -4945,13 +4989,27 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 	_cast_hands()
 
 
-# E1-06 fire hand for cadence baselines (PILOT-CADENCE.md §§3.1–3.2): plays Rivet's press /
-# active-reload notch and Sable's tap-spark / hold-arc release cleanly with perfect timing
-# for every band (E1-08 later turns window hit share into a per-band dial).
+# Deterministic per-window roll shared by unbanded and Expert (same seed and monotonic index).
+func _roll_cadence_window() -> bool:
+	var idx := _cadence_index
+	_cadence_index += 1
+	if band != null:
+		return band.hits_window(idx)
+	return SkillBand.roll_window(seed_value, idx, float(SkillBand.BANDS["expert"]["window_last"]))
+
+
+# Band-driven fire hand for cadence baselines (PILOT-CADENCE.md §§3.1–3.2, §8): plays Rivet's
+# press / active-reload notch and Sable's tap-spark / hold-arc release according to the band's
+# window_share. A missed window yields the plain result with no jam or lockout.
 func _cadence_fire_hand() -> void:
 	# The traversal hand never fires (_traverse); its cast clicks go out after the press gate. The
-	# chain move fires nothing of its own (_chain_drive).
-	if _cast_phase != "" or policy == "traversal" or _chain_driving:
+	# chain move fires nothing of its own (_chain_drive). Skip while a set piece, Dam sheet hold-fire,
+	# or a non-weapon bar selection would swallow fire so no phantom cadence windows are rolled.
+	if _cast_phase != "" or policy == "traversal" or _chain_driving or _set_piece_up() or _sheet_hold_fire:
+		return
+	var player = game.get("player")
+	var abilities = player.get("abilities") if player != null else null
+	if abilities != null and abilities.selected != AbilityState.WEAPON:
 		return
 	var combat = game.get("combat")
 	if combat == null or combat.get("weapon_driver") == null:
@@ -4968,14 +5026,24 @@ func _cadence_fire_hand() -> void:
 	if trig == Pattern.TRIGGER_PRESS:
 		# The held button stays (a held press gun fires nothing alone; sprinting it fans, and
 		# Run and Gun's drain reads it); the presses are the shots.
-		if not want_fire:
-			return
-		if bool(snap.get("reloading", false)):
-			if bool(snap.get("window_open", false)):
+		if not bool(snap.get("reloading", false)):
+			_cadence_reload_rolled = false
+			_cadence_reload_hit = false
+			_cadence_reload_pressed = false
+			if want_fire and bool(snap.get("ready", false)):
 				source.press["fire_pressed"] = true
 			return
-		if bool(snap.get("ready", false)):
+		if not want_fire:
+			return
+		if not _cadence_reload_rolled:
+			_cadence_reload_rolled = true
+			_cadence_reload_pressed = false
+			_cadence_reload_hit = _roll_cadence_window()
+			_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
+		if _cadence_reload_hit and not _cadence_reload_pressed and bool(snap.get("window_open", false)):
 			source.press["fire_pressed"] = true
+			_cadence_reload_pressed = true
+			_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
 		return
 	if trig == Pattern.TRIGGER_TAP_CHARGE:
 		if not want_fire:
@@ -4987,11 +5055,17 @@ func _cadence_fire_hand() -> void:
 			if float(snap.get("charge", 0.0)) >= 0.9999:
 				source.hold.erase("fire_held")
 				source.press["fire_released"] = true
+				_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
 			else:
 				source.hold["fire_held"] = true
 		elif bool(snap.get("ready", false)):
+			var hit := _roll_cadence_window()
+			_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
 			source.press["fire_pressed"] = true
-			source.hold["fire_held"] = true
+			if hit:
+				source.hold["fire_held"] = true
+			else:
+				source.hold.erase("fire_held")
 		else:
 			source.hold.erase("fire_held")
 
@@ -5249,7 +5323,9 @@ func record(wall_seconds: float) -> Dictionary:
 		# the in-play seconds each fill took (run start or the last set piece to a full meter), and
 		# the in-play seconds played, which bounds a meter that never filled.
 		"slot_casts": {"special": _totals["slot_casts_special"], "line": _totals["slot_casts_line"]},
-		"shots": _totals["shots"], "ultimates": _totals["ultimates"], "ult_presses": _totals["ult_presses"],
+		"shots": _totals["shots"], "kills": game.run.kills, "ultimates": _totals["ultimates"], "ult_presses": _totals["ult_presses"],
+		"cadence_windows": _totals["cadence_windows"], "cadence_hits": _totals["cadence_hits"],
+		"active_presses": _totals["active_presses"],
 		"ult_fill_s": _fills, "play_s": snappedf(_play_clock, 0.01),
 		# The meter's points by source: over the run, and at the first full meter. A record for
 		# reading why a fill band is red; no hand reads either.
