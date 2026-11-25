@@ -296,7 +296,7 @@ func show_call_in() -> void:
 	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(line)
 	for stat in card["stats"] + [card["likes"]]:
-		box.add_child(_label("%s  %s" % [stat[0], stat[1]], words, 15, Palette.SLATE_INK))
+		box.add_child(_label("%s: %s" % [stat[0], stat[1]], words, 15, Palette.SLATE_INK))
 	_call_in_left = float(card["duration_s"])
 
 

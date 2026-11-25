@@ -980,7 +980,8 @@ const HIRED_CEREMONY := {
 	"stamp": "HIRED",
 	"memo": "I am humbled to announce that I have accepted a position on the crew.",
 	"skippable": true,
-	"duration_s": 2.6,
+	# Inside flow.gd VICTORY_SECONDS (2.5 s), so the stamp finishes before the arena hands over to the ending.
+	"duration_s": 2.4,
 }
 
 

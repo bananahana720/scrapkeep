@@ -21,7 +21,7 @@ const SKY_RING := 460.0
 # telegraph drawing (hazard.gd DRAW_LIFT 0.08) and darker than any live HAZARD mark, so static trim never reads as a
 # telegraph; iron stanchions stand round the open edge just outside the fight's collider.
 const INLAY_LIFT := 0.035
-const INLAY_WIDTH := 0.36
+const INLAY_WIDTH := 0.7
 const INLAY_RINGS := [9.0, 18.0, 27.0, 33.5]
 const INLAY_SPOKES := 12
 const INLAY_IRON := Color("3a403f")
@@ -287,6 +287,7 @@ func _inlays(radius: float) -> void:
 	material.resource_name = "inlay"
 	material.vertex_color_use_as_albedo = true
 	material.vertex_color_is_srgb = true
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	material.roughness = 0.45
 	material.metallic = 0.4
 	mesh.surface_set_material(0, material)
