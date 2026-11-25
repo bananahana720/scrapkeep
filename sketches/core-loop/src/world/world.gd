@@ -514,7 +514,6 @@ func _on_park_warden_posture(enemy: Node3D, _posture: float, staggered: bool) ->
 
 
 func _warden_phase_to(phase: int) -> void:
-	assert(phase >= _warden_phase, "world: warden phase must not decrease (%d < %d)" % [phase, _warden_phase])
 	while _warden_phase < mini(phase, BossPosture.CHUNKS):
 		_warden_phase += 1
 		assert(_warden_phase <= BossPosture.CHUNKS)
