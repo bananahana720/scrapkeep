@@ -433,6 +433,62 @@ func _check_shift_variants_w2w3() -> void:
 	_t.eq("eclipse card_rows on stage 6", ShiftVariants.card_rows(run, 6).map(func(r): return r["id"]), [ShiftVariants.HIGHDRAFT_ECLIPSE])
 	ShiftVariants.clear_force()
 
+	# Verify all 4 W2/W3 variant caches sit on reachable DOOR_OK level ground matching their site
+	# park row, clear of fight sites, authored activities, and PocketDraw anchors.
+	var variant_caches := {}
+	for map_id in ShiftVariants.MONSOON_CACHES:
+		variant_caches[map_id] = ShiftVariants.MONSOON_CACHES[map_id]
+	for map_id in ShiftVariants.ECLIPSE_CACHES:
+		variant_caches[map_id] = ShiftVariants.ECLIPSE_CACHES[map_id]
+	for map_id in variant_caches:
+		var cache: Dictionary = variant_caches[map_id]
+		var map := ParkMap.new("res://src/world/park/%s.json" % map_id)
+		var g = ParkGraph.read("res://assets/park/%s/graph.bin" % map_id)
+		var res := _variant_cache_placement_check(g, map, map_id, cache)
+		_t.check("%s %s valid reachable level placement" % [map_id, cache["row"]], res["ok"], str(res))
+
+	# Planted negative control: cliff-hanging / unreachable coordinate on park_crown fails check.
+	var crown_map := ParkMap.new("res://src/world/park/park_crown.json")
+	var crown_g = ParkGraph.read("res://assets/park/park_crown/graph.bin")
+	var planted_cliff := {"row": "planted_cliff_cache", "site": "crown_apron", "at": Vector2(180.0, 220.0)}
+	_t.check("planted: cliff-hanging unreachable variant cache fails placement check",
+		not _variant_cache_placement_check(crown_g, crown_map, "park_crown", planted_cliff)["ok"])
+
+
+static func _variant_cache_placement_check(g, map, map_id: String, cache: Dictionary) -> Dictionary:
+	var at: Vector2 = cache["at"]
+	var site := String(cache["site"])
+	var limit: float = PocketDraw.tidy_level_m(map_id, true)
+	var in_rect: bool = map.play_rect.grow(-20.0).has_point(at)
+	var row_exists: bool = map.park["park_rows"].any(func(r): return String(r["id"]) == site)
+	var node: int = g.nearest(at)
+	var reachable: bool = is_finite(g.d_spawn_node(node))
+	var door_ok: bool = (g.flags(node) & ParkGraph.DOOR_OK) != 0
+	var zone_row: String = String(g.zones()[g.zone_of(node)]["row"])
+	var box_nodes: PackedInt32Array = g.box_nodes(at - Vector2(12.0, 12.0), at + Vector2(12.0, 12.0))
+	var all_reach: bool = not box_nodes.is_empty()
+	var low := INF
+	var high := -INF
+	for k in box_nodes:
+		if not is_finite(g.d_spawn_node(k)):
+			all_reach = false
+		low = minf(low, g.py[k])
+		high = maxf(high, g.py[k])
+	var rise: float = high - low if is_finite(low) and is_finite(high) else INF
+	var fight_dist: float = FightReach.nearest(map.fight_sites(), at)
+	var pd_base := PocketDraw.prepare(g, map)
+	var pd_tidy := PocketDraw.prepare_world(g, map)
+	var min_pd := INF
+	for a in pd_base.anchors:
+		min_pd = minf(min_pd, at.distance_to(a.at))
+	for a in pd_tidy.anchors:
+		min_pd = minf(min_pd, at.distance_to(a.at))
+	var ok: bool = in_rect and row_exists and reachable and door_ok and zone_row == site \
+		and all_reach and rise <= limit and fight_dist >= 60.0 and min_pd > ParkPlacement.RING_M
+	return {"ok": ok, "in_rect": in_rect, "row_exists": row_exists, "reachable": reachable,
+		"door_ok": door_ok, "zone_row": zone_row, "want_site": site, "box_nodes": box_nodes.size(),
+		"all_reach": all_reach, "rise": rise, "limit": limit, "fight_dist": fight_dist, "min_pd": min_pd}
+
 
 func _check_stage_modifiers_new() -> void:
 	_t.eq("StageModifier.ROWS expanded to 8", StageModifier.ROWS.size(), 8)
