@@ -18,9 +18,19 @@ const ParkDefs := preload("res://src/core/park_defs.gd")
 const OVERTIME := "overtime"
 const DAM_NIGHT_SHIFT := "dam_night_shift"
 const CREW_SHORT := "crew_short"
+const MALPAIS_MONSOON := "malpais_monsoon"
+const HIGHDRAFT_ECLIPSE := "highdraft_eclipse"
 
-# Built variants in board rung order (first_warden, brindle_routed, mark_sable).
-const BUILT := [OVERTIME, DAM_NIGHT_SHIFT, CREW_SHORT]
+# Built variants: World 1 in board rung order (first_warden, brindle_routed, mark_sable), followed by
+# World 2 & World 3 shift variants (W50).
+const BUILT := [OVERTIME, DAM_NIGHT_SHIFT, CREW_SHORT, MALPAIS_MONSOON, HIGHDRAFT_ECLIPSE]
+
+# Achievement gates for World 2 & 3 variants (not on the W1 ShiftBoard.SEEDS table, so W1 board
+# entries and W1-only open_for() counts stay unchanged).
+const WORLD_VARIANT_GATES := {
+	MALPAIS_MONSOON: "waking_stilled",
+	HIGHDRAFT_ECLIPSE: "highdraft_reached",
+}
 
 # Keys inside RunState.extra (omitted when unused so unstamped runs keep byte-identical docs).
 const RUN_KEY := "shift_variants"
@@ -67,11 +77,63 @@ const CREW_SHORT_CACHE := {
 	"pay": {"rarities": ["rare"]},
 }
 
+# Malpais Monsoon (W50, World 2 stages 3-4): storm-driven Dig cadence (pack_scale up, interval_scale
+# down; zero threat or enemy HP scaling per ruling al) and one extra cracked cache per Dig park.
+const MONSOON_LOOK_ID := "malpais_monsoon"
+const MONSOON_PACK_SCALE := 1.2
+const MONSOON_INTERVAL_SCALE := 0.88
+const MONSOON_CACHES := {
+	"park_pit": {
+		"id": "cracked_cache",
+		"row": "monsoon_pit_cache",
+		"site": "leach_pads",
+		"at": Vector2(240.0, -760.0),
+		"face": Vector2(-1.0, 0.0),
+		"pay": {"rarities": ["rare"]},
+	},
+	"park_sinkhole": {
+		"id": "cracked_cache",
+		"row": "monsoon_sinkhole_cache",
+		"site": "west_trench",
+		"at": Vector2(-568.0, 104.0),
+		"face": Vector2(1.0, 0.0),
+		"pay": {"rarities": ["rare"]},
+	},
+}
+
+# Highdraft Eclipse (W50, World 3 stages 5-6): dimmed skies with sharper patrol tempo (pack_scale up,
+# interval_scale down, elite_rate up; zero threat or enemy HP scaling per ruling al) and one extra
+# cracked cache per Highdraft park.
+const ECLIPSE_LOOK_ID := "highdraft_eclipse"
+const ECLIPSE_PACK_SCALE := 1.22
+const ECLIPSE_INTERVAL_SCALE := 0.85
+const ECLIPSE_ELITE_SCALE := 1.15
+const ECLIPSE_CACHES := {
+	"park_islands": {
+		"id": "cracked_cache",
+		"row": "eclipse_islands_cache",
+		"site": "isle_apron",
+		"at": Vector2(520.0, 728.0),
+		"face": Vector2(-1.0, 0.0),
+		"pay": {"rarities": ["rare"]},
+	},
+	"park_crown": {
+		"id": "cracked_cache",
+		"row": "eclipse_crown_cache",
+		"site": "bajada_head",
+		"at": Vector2(-576.0, -752.0),
+		"face": Vector2(1.0, 0.0),
+		"pay": {"rarities": ["rare"]},
+	},
+}
+
 # Stage-card lines shown beside the Foreman's memo when a variant applies to the stage.
 const CARD_ROWS := {
 	DAM_NIGHT_SHIFT: {"id": DAM_NIGHT_SHIFT, "word": "Night Shift", "line": "Floodlights on, fuller crew, one more cage."},
 	OVERTIME: {"id": OVERTIME, "word": "Overtime", "line": "Wardens wake early and pay a panel."},
 	CREW_SHORT: {"id": CREW_SHORT, "word": "Short Crew", "line": "No dam shop. Cache on the apron."},
+	MALPAIS_MONSOON: {"id": MALPAIS_MONSOON, "word": "Malpais Monsoon", "line": "Storm benches, brisk crew, extra cache."},
+	HIGHDRAFT_ECLIPSE: {"id": HIGHDRAFT_ECLIPSE, "word": "Highdraft Eclipse", "line": "Dim thermals, sharp patrols, rim cache."},
 }
 
 # Test and still-capture force seam: null means normal profile/run resolution; an Array forces
@@ -116,7 +178,7 @@ static func _sanitize(ids: Array) -> Array:
 	return out
 
 
-# Built variant ids opened on `profile` by stamping their ShiftBoard rung.
+# Built variant ids opened on `profile` by stamping their ShiftBoard rung or earning their W2/W3 gate.
 static func open_for(profile) -> Array:
 	if profile == null:
 		return []
@@ -124,6 +186,8 @@ static func open_for(profile) -> Array:
 	var out: Array = []
 	for id in BUILT:
 		if id in open_all:
+			out.append(id)
+		elif WORLD_VARIANT_GATES.has(id) and profile.earned(String(WORLD_VARIANT_GATES[id])):
 			out.append(id)
 	return out
 
@@ -205,22 +269,46 @@ static func has(run, id: String) -> bool:
 	return id in active(run)
 
 
-# Stage look id for W46-13's visual pass; "" when the stage uses its default look.
+# Stage look id for visual pass; "" when the stage uses its default look.
 static func look_id(run, stage: int) -> String:
 	if stage == 1 and has(run, DAM_NIGHT_SHIFT):
 		return NIGHT_LOOK_ID
+	var world := ParkDefs.world_of(stage)
+	if world == 2 and has(run, MALPAIS_MONSOON):
+		return MONSOON_LOOK_ID
+	if world == 3 and has(run, HIGHDRAFT_ECLIPSE):
+		return ECLIPSE_LOOK_ID
 	return ""
 
 
-# Returns `def` unchanged unless Night Shift is active on stage 1, in which case only the stage's
-# pressure cadence scales (more enemies per pack, shorter interval; never threat or health).
+# Returns `def` unchanged unless a stage-pressure variant applies, in which case only the stage's
+# pressure cadence scales (more enemies per pack, shorter interval, elite rate; never threat,
+# warden_hp, warden_plating or enemy health per ruling al).
 static func stage_def(def: Dictionary, run, stage: int) -> Dictionary:
-	if stage != 1 or not has(run, DAM_NIGHT_SHIFT) or def.is_empty():
+	if def.is_empty():
+		return def
+	var world := ParkDefs.world_of(stage)
+	var pack_mult := 1.0
+	var interval_mult := 1.0
+	var elite_mult := 1.0
+	if stage == 1 and has(run, DAM_NIGHT_SHIFT):
+		pack_mult *= NIGHT_PACK_SCALE
+		interval_mult *= NIGHT_INTERVAL_SCALE
+	if world == 2 and has(run, MALPAIS_MONSOON):
+		pack_mult *= MONSOON_PACK_SCALE
+		interval_mult *= MONSOON_INTERVAL_SCALE
+	if world == 3 and has(run, HIGHDRAFT_ECLIPSE):
+		pack_mult *= ECLIPSE_PACK_SCALE
+		interval_mult *= ECLIPSE_INTERVAL_SCALE
+		elite_mult *= ECLIPSE_ELITE_SCALE
+	if pack_mult == 1.0 and interval_mult == 1.0 and elite_mult == 1.0:
 		return def
 	var out := def.duplicate(true)
 	var pressure: Dictionary = out.get("pressure", {}).duplicate(true)
-	pressure["pack_scale"] = float(pressure.get("pack_scale", 1.0)) * NIGHT_PACK_SCALE
-	pressure["interval_scale"] = float(pressure.get("interval_scale", 1.0)) * NIGHT_INTERVAL_SCALE
+	pressure["pack_scale"] = float(pressure.get("pack_scale", 1.0)) * pack_mult
+	pressure["interval_scale"] = float(pressure.get("interval_scale", 1.0)) * interval_mult
+	if elite_mult != 1.0:
+		pressure["elite_rate"] = float(pressure.get("elite_rate", 1.0)) * elite_mult
 	out["pressure"] = pressure
 	return out
 
@@ -272,9 +360,14 @@ static func _is_dam_stage(map_id: String, run) -> bool:
 
 # Extra standing activity sites added by active variants on `map_id` for `run`.
 static func extra_sites(map_id: String, run) -> Array:
-	if not _is_dam_stage(map_id, run) or not has(run, CREW_SHORT):
-		return []
-	return [CREW_SHORT_CACHE.duplicate(true)]
+	var out: Array = []
+	if _is_dam_stage(map_id, run) and has(run, CREW_SHORT):
+		out.append(CREW_SHORT_CACHE.duplicate(true))
+	if run != null and ParkDefs.world_of(int(run.stage)) == 2 and has(run, MALPAIS_MONSOON) and MONSOON_CACHES.has(map_id):
+		out.append(MONSOON_CACHES[map_id].duplicate(true))
+	if run != null and ParkDefs.world_of(int(run.stage)) == 3 and has(run, HIGHDRAFT_ECLIPSE) and ECLIPSE_CACHES.has(map_id):
+		out.append(ECLIPSE_CACHES[map_id].duplicate(true))
+	return out
 
 
 # Extra rescue cages built by active variants on `map_id` for `run`.
@@ -292,10 +385,14 @@ static func cage_salvage_scrap(quest: String) -> int:
 # Stage-card caption rows for active variants that apply to `stage`.
 static func card_rows(run, stage: int) -> Array:
 	var out: Array = []
+	var world := ParkDefs.world_of(stage)
 	for id in active(run):
-		if id == OVERTIME or stage == 1:
-			if CARD_ROWS.has(id):
-				out.append(CARD_ROWS[id])
+		var applies: bool = id == OVERTIME \
+			or (stage == 1 and (id == DAM_NIGHT_SHIFT or id == CREW_SHORT)) \
+			or (world == 2 and id == MALPAIS_MONSOON) \
+			or (world == 3 and id == HIGHDRAFT_ECLIPSE)
+		if applies and CARD_ROWS.has(id):
+			out.append(CARD_ROWS[id])
 	return out
 
 

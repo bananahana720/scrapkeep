@@ -1,0 +1,71 @@
+{
+  "id": "dig_seam_vault",
+  "kind": "secret",
+  "activity": "cracked_cache",
+  "footprint": "large",
+  "ring": 6,
+  "entrances": [
+    {
+      "at": [
+        0,
+        22.0
+      ],
+      "width": 6,
+      "marked": true
+    }
+  ],
+  "entry_spot": [
+    0,
+    6
+  ],
+  "entry_radius": 40,
+  "difficulty": 5,
+  "weight": 1,
+  "density": {
+    "terrain": 65,
+    "enemies": 25,
+    "pickups": 10,
+    "start": true
+  },
+  "tell": {
+    "word": "Seam vault",
+    "record": "cracked_cache"
+  },
+  "pack": [],
+  "terrain": [
+    {
+      "at": [
+        -19.0,
+        -4
+      ],
+      "size": [
+        3,
+        3,
+        4
+      ]
+    },
+    {
+      "at": [
+        19.0,
+        -3
+      ],
+      "size": [
+        4,
+        3,
+        4
+      ]
+    }
+  ],
+  "hazards": [],
+  "safe_path": {
+    "from": [
+      0,
+      22.0
+    ],
+    "to": [
+      0,
+      0
+    ],
+    "width": 4
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "id": "draft_anchor_deck",
+  "kind": "arena",
+  "activity": "elite_arena",
+  "footprint": "medium",
+  "ring": 9,
+  "entrances": [
+    {
+      "at": [
+        0,
+        16.0
+      ],
+      "width": 6,
+      "marked": true
+    }
+  ],
+  "entry_spot": [
+    0,
+    9
+  ],
+  "entry_radius": 40,
+  "difficulty": 5,
+  "weight": 1,
+  "density": {
+    "terrain": 65,
+    "enemies": 25,
+    "pickups": 10,
+    "start": true
+  },
+  "tell": {
+    "word": "Anchor deck",
+    "record": "hauler_bounty"
+  },
+  "pack": [
+    "line_cutter",
+    "kite_drone",
+    "gap_net",
+    "line_cutter",
+    "kite_drone",
+    "miniboss"
+  ],
+  "terrain": [
+    {
+      "at": [
+        -13.0,
+        -4
+      ],
+      "size": [
+        3,
+        3,
+        4
+      ]
+    },
+    {
+      "at": [
+        13.0,
+        -3
+      ],
+      "size": [
+        4,
+        3,
+        4
+      ]
+    }
+  ],
+  "hazards": [
+    {
+      "at": [
+        -9.5,
+        0
+      ],
+      "size": [
+        13.0,
+        8,
+        32
+      ]
+    },
+    {
+      "at": [
+        9.5,
+        0
+      ],
+      "size": [
+        13.0,
+        8,
+        32
+      ]
+    }
+  ],
+  "safe_path": {
+    "from": [
+      0,
+      16.0
+    ],
+    "to": [
+      0,
+      0
+    ],
+    "width": 4
+  }
+}

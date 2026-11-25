@@ -20,18 +20,50 @@ const TIDY := ["park_dam", "park_flume"]
 # the flume's 435 stood across more than 5 m of rise (the flume's worst 111 m, down a canyon wall),
 # while every spot on a floor or bench rose 4.5 m or less.
 const LEVEL_M := 5.0
+# W50 W2/W3 level-ground safety tolerances, tuned per park so steep pit walls and floating island
+# cliffs are rejected without starving valid anchors:
+#   park_pit:      1648 / 1946 anchors <= 5.0 m (85%)
+#   park_sinkhole: 1446 / 1770 anchors <= 5.0 m (82%)
+#   park_islands:  >= 613 / 847 anchors <= 8.5 m (72%, vs 147 at 5.0 m)
+#   park_crown:    468 / 672 anchors <= 8.0 m (70%)
+# Kept beside TIDY (accessed via prepare_world / prepare(..., true)) so existing W1-W3 no-modifier
+# golden hashes stay intact until w50-final-sync re-pins them.
+const TIDY_W2W3 := {
+	"park_pit": 5.0,
+	"park_sinkhole": 5.0,
+	"park_islands": 8.5,
+	"park_crown": 8.0,
+}
+
+
+static func tidy_level_m(map_id: String, include_w2w3 := false) -> float:
+	if map_id in TIDY:
+		return LEVEL_M
+	if include_w2w3 and TIDY_W2W3.has(map_id):
+		return float(TIDY_W2W3[map_id])
+	return -1.0
+
 
 static func cost(entry: Dictionary) -> int:
 	var side: float = Library.FOOTPRINTS[entry.footprint]
 	return ceili(side * side / Library.FOOTPRINTS.small)
 
-static func entries(map) -> Array:
+static func entries(map, world := 0) -> Array:
 	var assigned := {}
 	for spec in map.activity_sites:
 		var entry := Library.for_site(map.park.map, spec.row)
 		if not entry.is_empty():
 			assigned[entry.id] = true
-	return Library.rows().filter(func(entry): return entry.kind != "trade" and not assigned.has(entry.id))
+	var source: Array = Library.rows_for_world(world) if world > 0 else Library.rows()
+	return source.filter(func(entry): return entry.kind != "trade" and not assigned.has(entry.id))
+
+
+static func entries_for_world(map, world: int) -> Array:
+	return entries(map, world)
+
+
+static func prepare_world(graph, map) -> Dictionary:
+	return prepare(graph, map, true)
 
 static func _path(graph, sources: PackedInt32Array, targets: PackedInt32Array) -> PackedInt32Array:
 	var prev := PackedInt32Array()
@@ -60,7 +92,7 @@ static func _path(graph, sources: PackedInt32Array, targets: PackedInt32Array) -
 				queue.append(to)
 	return PackedInt32Array()
 
-static func prepare(graph, map) -> Dictionary:
+static func prepare(graph, map, include_w2w3 := false) -> Dictionary:
 	var out := {"anchors": [], "fits": {}, "routes": PackedByteArray(), "from_line": PackedFloat32Array()}
 	if graph == null or map == null or map.park.is_empty():
 		return out
@@ -96,7 +128,8 @@ static func prepare(graph, map) -> Dictionary:
 	var hazard_out: PackedFloat32Array = graph.search(hazards, false, Placement.RING_M)
 	var hazard_in: PackedFloat32Array = graph.search(hazards, true, Placement.RING_M)
 	var doors := Trade.doors(map)
-	var tidy: bool = String(map.park.map) in TIDY
+	var level_limit: float = tidy_level_m(String(map.park.map), include_w2w3)
+	var tidy: bool = level_limit >= 0.0
 	# Clear of a rescue cage and of every secret's spot by the door ring, and outside every rogue site's
 	# disc: without these the dam's spot at (72, -584) stood 16 m from Rivet's cage, (144, 64) reached
 	# into the mid rogue site and a pocket at (-248, 192) covered the west rim bench's cracked face.
@@ -144,7 +177,7 @@ static func prepare(graph, map) -> Dictionary:
 						low = minf(low, graph.py[k])
 						high = maxf(high, graph.py[k])
 					if tidy:
-						fits = fits and high - low <= LEVEL_M and not keep_out.any(func(k): return _box_distance(box, k.at) <= k.radius)
+						fits = fits and high - low <= level_limit and not keep_out.any(func(k): return _box_distance(box, k.at) <= k.radius)
 					footprint_ok[size] = fits
 				if footprint_ok[size]:
 					sizes.get_or_add(size, []).append(turn)
@@ -155,14 +188,14 @@ static func prepare(graph, map) -> Dictionary:
 	return out
 
 # Every spot a secret can stand on in this park, whether or not this run or profile opens it: the
-# field finds' spots, the first-win room and the timed door.
+# field finds' spots, the first-win and stage rooms, and the timed door.
 static func secret_spots(map_id: String) -> Array:
 	var out := []
 	for find in Secrets.FINDS.values():
 		if find.map == map_id:
 			for spot in find.spots:
 				out.append(Vector2(spot.at[0], spot.at[1]))
-	for row in Secrets.ROOMS.values() + [Secrets.DOOR]:
+	for row in Secrets.all_rooms().values() + [Secrets.DOOR]:
 		if row.map == map_id:
 			out.append(Vector2(row.at[0], row.at[1]))
 	return out
@@ -203,14 +236,14 @@ static func _common_pay(entry: Dictionary) -> bool:
 	return not Placement._within(Placement._pay(pay).rarities, Placement.PAY_FAR)
 
 # modifier is the stage's SI3 row (stage_modifier.gd), {} for none; {} draws exactly as before.
-static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerator, trade := {}, anchors: Array = [], modifier := {}) -> Dictionary:
+static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerator, trade := {}, anchors: Array = [], modifier := {}, world := 0) -> Dictionary:
 	var result := {"sites": [], "metrics": {"initial_credits": CREDITS, "remaining_credits": CREDITS, "failed_placements": 0, "refunded_credits": 0, "chance_opportunities": 0, "chance_hits": 0, "anchors": prepared.anchors.size()}}
 	if stage < 1 or stage > Park.COUNT or map.park.map != Park.of(stage).map:
 		return result
 	var slots := Modifier.slots(modifier, stage, Modifier.authored(map))
 	if slots == 0:
 		return result
-	var pool := entries(map)
+	var pool := entries(map, world)
 	var picked := []
 	var available := CREDITS
 	while picked.size() < slots:
@@ -298,6 +331,10 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 	result.sites.sort_custom(func(a, b): return cost(a.interior) > cost(b.interior) or (cost(a.interior) == cost(b.interior) and a.interior.id < b.interior.id))
 	return result
 
+static func draw_for_world(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerator, trade := {}, anchors: Array = [], modifier := {}) -> Dictionary:
+	return draw(prepared, map, stage, rng, trade, anchors, modifier, Park.world_of(stage))
+
+
 static func stage_sites(graph, map, run, layout_seed: int, trade := {}, prepared := {}, modifier := {}) -> Array:
 	if graph == null or map == null or map.park.is_empty() or run.stage < 1 or run.stage > Park.COUNT or map.park.map != Park.of(run.stage).map:
 		return []
@@ -325,7 +362,7 @@ static func to_doc(cache: Dictionary) -> Dictionary:
 static func from_doc(doc: Dictionary) -> Dictionary:
 	var cache := {}
 	var library := {}
-	for entry in Library.rows():
+	for entry in Library.all_rows():
 		library[entry.id] = entry
 	for key in doc:
 		# A save from before the dam drew (2026-11-09, ruling bu) holds an empty stage 1 draw. It is dropped,
@@ -346,7 +383,7 @@ static func validate_doc(doc, entrance: int) -> String:
 	if not doc is Dictionary:
 		return "invalid pocket draw cache"
 	var library := {}
-	for entry in Library.rows():
+	for entry in Library.all_rows():
 		if entry.kind != "trade":
 			library[entry.id] = entry
 	for key in doc:
