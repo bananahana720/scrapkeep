@@ -48,6 +48,12 @@ const CALLERS := {
 	"pump_crew": {"hands": "keeper", "icon": "obj_fabricator", "color": Palette.COPPER},
 	"flume_crew": {"hands": "keeper", "icon": "obj_event", "color": Palette.STEEL},
 	"signal_crew": {"hands": "keeper", "icon": "obj_beacon", "color": Palette.LEDGER_CREAM},
+	"dig_crew": {"hands": "keeper", "icon": "obj_vault", "color": Palette.COPPER},
+	"caisson_crew": {"hands": "keeper", "icon": "res_heft", "color": Palette.STEEL},
+	"roost_crew": {"hands": "keeper", "icon": "obj_gate", "color": Palette.SANDSTONE},
+	"crown_watch": {"hands": "keeper", "icon": "res_difficulty", "color": Palette.LEDGER_CREAM},
+	"unsigned": {"hands": "keeper", "icon": "cls_patch", "color": Palette.STEEL},
+	"patch": {"hands": "keeper", "icon": "cls_patch", "color": Palette.TURQUOISE},
 	"brindle": {"hands": "fleet", "icon": "fac_fleet", "color": Palette.BRASS},
 	"mind": {"hands": "works", "icon": "fac_mind", "color": Palette.ANCIENT},
 }

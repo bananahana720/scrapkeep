@@ -131,7 +131,7 @@ func _run() -> void:
 	# Re-pinned 2026-10-10 (wave 13 unit B2, design-v3/SKILL-BAR.md section 6): the special's row
 	# retired; the pick's three keys and the ultimate each have a row.
 	_t.eq("S3-2 the page rows", page.rows.keys().filter(func(id): return not id.begins_with("pad_") and not id in ["stick_sensitivity", "invert_y", "stick_deadzone", "mouse_sensitivity", "aim_assist"]),
-		["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing", "wide_picture", "jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "interact", "reset", "roll", "look", "music", "effects", "shake", "hitstop", "ceremony", "back"])
+		["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing", "wide_picture", "jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "active", "interact", "reset", "roll", "look", "music", "effects", "shake", "hitstop", "ceremony", "back"])
 	_t.check("S3-2 roll and look are fixed", page.row("roll").disabled and page.row("look").disabled, "fixed")
 	_t.check("S3-2 the page holds the pause", paused and _game.pause_toggled(), "paused %s" % paused)
 	Push.key(root, KEY_S)

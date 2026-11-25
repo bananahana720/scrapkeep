@@ -37,11 +37,12 @@ signal back_requested
 
 # The rows a player can rebind, in the order they read: one per verb, and the pick's three keys
 # a row each (select_1 to select_3, design-v3/SKILL-BAR.md section 6). The F special retired.
-const VERBS := ["jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "interact"]
+const VERBS := ["jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "active", "interact"]
 const SELECT_ROW := "select_"
 const FIXED := ["roll", "look"]
 # The in-run keys with no row here, by the name the player meets them under.
-const EXTRA_WORDS := {"cl_retry": "New run", "cl_pause": "Pause", "cl_radio_next": "Next track",
+const EXTRA_WORDS := {"cl_retry": "New run", "cl_pause": "Pause", "cl_consumable": "Cartridge",
+	"cl_radio_next": "Next track",
 	"cl_radio_prev": "Last track", "cl_radio_skip": "Skip track", "cl_radio_pin": "Keep track"}
 const PAGES := ["display", "controls", "look", "feel"]
 const PAGE_WORDS := {"display": "Display", "controls": "Controls", "look": "Look", "feel": "Feel"}

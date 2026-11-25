@@ -13,6 +13,7 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const MetaOptions := preload("res://src/core/meta_options.gd")
 
 # A class choice that sells its pilot. At rest: the hero shell turning on a plinth in
 # the class colour, the class emblem and name, the fantasy line, a
@@ -127,7 +128,10 @@ var _hint: Label
 var _paint_row: HBoxContainer
 var _swatch
 var _paint_label: Label
+var _alt_row: HBoxContainer
+var _alt_button: Button
 var _profile
+var _sitting := false
 var _shake := 0.0
 var _styles := {}
 
@@ -286,6 +290,8 @@ func shrink_preview(by: float) -> void:
 	var top := PAD + KEY_H + 8.0 + _preview_h - 40.0
 	_seat_hint()
 	_paint_row.position.y = top
+	if _alt_row != null:
+		_alt_row.position.y = top - 34.0
 	_fade_rect.position.y = PAD + KEY_H + 8.0 + _preview_h - UiTokens.EDGE
 	queue_redraw()
 
@@ -352,6 +358,35 @@ func _build_overlay(width: float, color: Color) -> void:
 	_paint_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_paint_row.add_child(_paint_label)
 	_details.append(_paint_row)
+	_alt_row = HBoxContainer.new()
+	_alt_row.name = "AltLoadoutRow"
+	_alt_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_alt_row.add_theme_constant_override("separation", UiTokens.GAP_XS)
+	_alt_row.position = Vector2(PAD, top - 34.0)
+	_alt_row.size = Vector2(width - 2.0 * PAD, 30.0)
+	_alt_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_alt_row.visible = false
+	add_child(_alt_row)
+	var alt_cap := KeycapView.new("key_l", Palette.SAND, 20.0)
+	alt_cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_alt_row.add_child(alt_cap)
+	_alt_button = Button.new()
+	_alt_button.name = "AltLoadoutButton"
+	_alt_button.focus_mode = Control.FOCUS_ALL
+	_alt_button.expand_icon = true
+	_alt_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_alt_button.add_theme_font_override("font", UiFonts.bold())
+	_alt_button.add_theme_font_size_override("font_size", UiTokens.CAPTION)
+	_alt_button.add_theme_color_override("font_color", Palette.LEDGER_CREAM)
+	_alt_button.add_theme_color_override("font_hover_color", UiTokens.TEXT)
+	_alt_button.add_theme_color_override("font_focus_color", UiTokens.TEXT)
+	for st in ["normal", "hover", "pressed", "focus", "disabled"]:
+		var tag = ScrapFrame.hand_tag(UiTokens.Hand.KEEPER, _serial + 5)
+		tag.border_color = Palette.AMBER if st in ["hover", "pressed", "focus"] else Color(color, 0.75)
+		_alt_button.add_theme_stylebox_override(st, tag)
+	_alt_button.pressed.connect(func(): if openness > 0.5: cycle_alt_loadout())
+	_alt_row.add_child(_alt_button)
+	_details.append(_alt_row)
 
 
 # The hint's plate ends HINT_GAP above the preview's foot; the plate's height is the wrapped
@@ -400,16 +435,94 @@ func set_locked(is_locked: bool, hint := "") -> void:
 	else:
 		preview.material = null
 	_paint_row.visible = not locked and owns_paint()
+	if _alt_row != null:
+		_alt_row.visible = not locked and owns_alt()
 	_apply()
 
 
-# The profile whose owned paints this card may offer. The preview wears the equipped one.
-func bind_profile(profile) -> void:
+# The profile whose owned paints and alt loadouts this card may offer. The preview wears the equipped paint.
+func bind_profile(profile, sitting := false) -> void:
 	_profile = profile
+	_sitting = sitting
 	if def == null:
 		return
 	_paint_row.visible = not locked and owns_paint()
 	_show_paint()
+	_show_alt()
+
+
+func alt_options() -> Array:
+	var out: Array = [""]
+	if _profile == null or def == null:
+		return out
+	for id in MetaOptions.alt_loadouts_for(String(def.id)):
+		if MetaOptions.alt_loadout_open(id, _profile, _sitting):
+			out.append(id)
+	return out
+
+
+func owns_alt() -> bool:
+	return alt_options().size() > 1
+
+
+func alt_shown() -> String:
+	if _profile == null or def == null:
+		return ""
+	var eq := MetaOptions.equipped_alt_loadouts(_profile, String(def.id), false, _sitting)
+	for slot in eq:
+		return String(eq[slot])
+	return ""
+
+
+func cycle_alt_loadout() -> String:
+	if locked or not owns_alt() or _profile == null or def == null:
+		return ""
+	var opts := alt_options()
+	var current := alt_shown()
+	var next: String = opts[(opts.find(current) + 1) % opts.size()]
+	var eq := MetaOptions.equipped_alt_loadouts(_profile, String(def.id), false, _sitting)
+	for slot in eq.keys():
+		MetaOptions.clear_alt_loadout(_profile, String(def.id), String(slot))
+	if next != "":
+		MetaOptions.equip_alt_loadout(_profile, next, _sitting)
+	if _profile.can_save:
+		_profile.save()
+	_show_alt()
+	return next
+
+
+func _show_alt() -> void:
+	if _alt_row == null or _alt_button == null:
+		return
+	var has := not locked and owns_alt()
+	_alt_row.visible = has
+	var current := alt_shown()
+	var icon_id := "rel_alt_loadout" if current == "" else ("rel_" + current)
+	_alt_button.icon = Icons.texture(icon_id)
+	if current == "":
+		_alt_button.text = "Stock kit"
+	else:
+		_alt_button.text = String(MetaOptions.alt_loadout(current).get("name", current))
+	_refresh_alt_cells()
+
+
+func _refresh_alt_cells() -> void:
+	if def == null or _cells.is_empty():
+		return
+	var recs := ClassKit.card_keys_for(def, _profile, _sitting)
+	for i in mini(recs.size(), _cells.size()):
+		var rec: Dictionary = recs[i]
+		var cell: Dictionary = _cells[i]
+		cell["icon"] = String(rec["icon"])
+		if cell.has("icon_node") and is_instance_valid(cell["icon_node"]):
+			var icon_node: TextureRect = cell["icon_node"]
+			icon_node.texture = Icons.texture(cell["icon"])
+			icon_node.modulate = Icons.tint(cell["icon"], cell.get("color", Palette.SAND))
+		if cell.has("label_node") and is_instance_valid(cell["label_node"]):
+			var words := String(rec["words"])
+			cell["words"] = words
+			var gap := words.find(" ")
+			(cell["label_node"] as Label).text = words if gap < 0 else words.left(gap) + "\n" + words.substr(gap + 1)
 
 
 # Paint ids this profile may wear on this pilot, none first: a starter row or a saved one.
@@ -500,8 +613,16 @@ func _gui_input(event: InputEvent) -> void:
 		cycle_paint()
 		accept_event()
 		return
+	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_Y and is_open() and not locked and owns_alt():
+		cycle_alt_loadout()
+		accept_event()
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_P and is_open() and not locked:
 		cycle_paint()
+		accept_event()
+		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_L and is_open() and not locked and owns_alt():
+		cycle_alt_loadout()
 		accept_event()
 
 
@@ -606,7 +727,7 @@ func _chip(record: Dictionary, color: Color, _cap_scale: float) -> VBoxContainer
 	cap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	cell.add_child(cap)
 	_details.append(cap)
-	_cells.append({"key": record["key"], "icon": record["icon"], "words": ""})
+	_cells.append({"key": record["key"], "icon": record["icon"], "words": "", "icon_node": icon, "color": color})
 	return cell
 
 
@@ -639,7 +760,7 @@ func _cell(record: Dictionary, color: Color, width: float, cap_scale := 1.0) -> 
 	label.max_lines_visible = 2
 	cell.add_child(label)
 	_details.append(label)
-	_cells.append({"key": record["key"], "icon": record["icon"], "words": words})
+	_cells.append({"key": record["key"], "icon": record["icon"], "words": words, "icon_node": icon, "label_node": label, "color": color})
 	return cell
 
 
@@ -734,6 +855,8 @@ func _process(delta: float) -> void:
 	openness = move_toward(openness, 1.0 if is_open() else 0.0, delta * RATE * (0.35 + openness))
 	if _swatch != null:
 		_swatch.mouse_filter = Control.MOUSE_FILTER_STOP if openness > 0.5 else Control.MOUSE_FILTER_IGNORE
+	if _alt_button != null:
+		_alt_button.mouse_filter = Control.MOUSE_FILTER_STOP if openness > 0.5 else Control.MOUSE_FILTER_IGNORE
 	_apply()
 	queue_redraw()
 

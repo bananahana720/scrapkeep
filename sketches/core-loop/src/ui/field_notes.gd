@@ -439,7 +439,9 @@ func _card(entry: Dictionary, style: Dictionary) -> Control:
 	text.add_theme_font_size_override("font_size", UiTokens.CAPTION)
 	var glyph: String = SHAPE_GLYPHS.get(style["shape"], "")
 	if entry["known"]:
-		text.text = "%s %s\n%s" % [glyph, entry["name"], entry["text"]]
+		var codex = _codex()
+		var body_words: String = codex.entry_detail(String(entry["id"])) if codex != null and codex.has_method("entry_detail") else String(entry["text"])
+		text.text = "%s %s\n%s" % [glyph, entry["name"], body_words]
 		text.add_theme_color_override("font_color", style["color"])
 	else:
 		text.text = hint_card_text(glyph, entry["hint"], entry["clue"])

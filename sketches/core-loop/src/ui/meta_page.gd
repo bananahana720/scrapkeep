@@ -7,6 +7,7 @@ const MetaOptions := preload("res://src/core/meta_options.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # The between-run head starts (SG12), in table order (MetaOptions.ROWS): the level line on
 # top, then one row per node. An opened node shows an amber star, its name and what it gives;
@@ -19,9 +20,13 @@ const ROW_WIDTH := 640.0
 
 var back: Button
 var rows := {}
+var override_rows := {}
 
+var _profile
+var _sitting := false
 var _level: Label
 var _list: VBoxContainer
+var _overrides_box: VBoxContainer
 
 
 func _init() -> void:
@@ -39,22 +44,74 @@ func _init() -> void:
 	_list.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_list)
+	_overrides_box = VBoxContainer.new()
+	_overrides_box.name = "Overrides"
+	_overrides_box.add_theme_constant_override("separation", 8)
+	_overrides_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_overrides_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_overrides_box)
 	back = ChoiceButton.new("back", "key_esc", "Back")
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	add_child(back)
 
 
 # Rebuilds the page from the saved profile.
-func refresh(profile) -> void:
+func refresh(profile, sitting := false) -> void:
+	_profile = profile
+	_sitting = sitting
 	for child in _list.get_children():
 		_list.remove_child(child)
 		child.queue_free()
 	rows.clear()
+	for child in _overrides_box.get_children():
+		_overrides_box.remove_child(child)
+		child.queue_free()
+	override_rows.clear()
 	_level.text = level_text_for(profile)
 	for id in MetaOptions.ids():
 		var row := _row(id, profile)
 		_list.add_child(row)
 		rows[id] = row
+	var active := MetaOptions.active_overrides(profile, false, sitting)
+	for cid in MetaOptions.override_ids():
+		var btn := _override_row(cid, profile, cid in active, sitting)
+		_overrides_box.add_child(btn)
+		override_rows[cid] = btn
+
+
+func toggle_override(code_id: String) -> bool:
+	if _profile == null or not MetaOptions.OVERRIDE_CODES.has(code_id):
+		return false
+	var ok := MetaOptions.toggle_override(_profile, code_id, _sitting)
+	if ok and _profile.can_save:
+		_profile.save()
+	refresh(_profile, _sitting)
+	if override_rows.has(code_id) and is_instance_valid(override_rows[code_id]):
+		(override_rows[code_id] as Control).grab_focus()
+	return ok
+
+
+func _override_row(cid: String, profile, armed: bool, sitting: bool) -> Button:
+	var row := MetaOptions.override_row(cid)
+	var open := MetaOptions.override_open(cid, profile, sitting)
+	var btn := Button.new()
+	btn.name = cid
+	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	btn.disabled = not open
+	btn.custom_minimum_size = Vector2(ROW_WIDTH, 48.0)
+	var state := "Armed" if armed else ("Ready" if open else "Locked")
+	btn.text = "%s   %s\n%s  Downside %s" % [String(row.get("name", cid)), state, String(row.get("text", "")), String(row.get("downside_text", ""))]
+	btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	btn.add_theme_font_override("font", UiFonts.face(UiTokens.Hand.OLD_WORKS))
+	btn.add_theme_font_size_override("font_size", UiTokens.CAPTION)
+	var works: Dictionary = UiTokens.HANDS[UiTokens.Hand.OLD_WORKS]
+	btn.add_theme_color_override("font_color", Palette.AMBER if armed else (works.ink if open else works.quiet))
+	var plate = ScrapFrame.hand_plate(UiTokens.Hand.OLD_WORKS, 73 + cid.hash())
+	plate.border_color = Palette.AMBER if armed else works.edge
+	plate.set_content_margin_all(UiTokens.GAP_S)
+	btn.add_theme_stylebox_override("normal", plate)
+	btn.pressed.connect(func(): toggle_override(cid))
+	return btn
 
 
 func level_text() -> String:

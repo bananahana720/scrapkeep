@@ -14,6 +14,7 @@ const Keycap := preload("res://src/ui/keycap.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const MetaOptions := preload("res://src/core/meta_options.gd")
 
 # The card draws the offer and emits choices. Flow owns the input routes and RunState
 # owns grants and the win check. The noninteractive default preserves SG9's draw-only use.
@@ -198,9 +199,25 @@ func extent() -> Vector2:
 	w += TILE_GAP * _k() * maxf(0.0, _tiles.size() - 1)
 	if not _interactive:
 		return Vector2(w, _controls_top())
+	var extra_h := 28.0 if not _active_override_names().is_empty() else 0.0
 	if ladder_shown():
-		return Vector2(maxf(w, LADDER_W), _controls_top() + LADDER_H)
-	return Vector2(maxf(w, CONTROLS_W), _controls_top() + CONTROLS_H)
+		return Vector2(maxf(w, LADDER_W), _controls_top() + LADDER_H + extra_h)
+	return Vector2(maxf(w, CONTROLS_W), _controls_top() + CONTROLS_H + extra_h)
+
+
+func _run_world() -> int:
+	if _run != null and "world" in _run:
+		return maxi(1, int(_run.world))
+	return 1
+
+
+func _active_override_names() -> PackedStringArray:
+	var out := PackedStringArray()
+	if _profile == null or not _profile.has_method("camp"):
+		return out
+	for cid in MetaOptions.active_overrides(_profile):
+		out.append(String(MetaOptions.override_row(cid).get("name", cid)))
+	return out
 
 
 # Where the words and buttons under the tiles and their pips begin.
@@ -222,10 +239,12 @@ func drawn_words() -> PackedStringArray:
 		elif _interactive:
 			out.append(TIER_WORD)
 			out.append_array(_numerals())
-			for meter in RunTier.meters(_shown_tier()):
+			for meter in RunTier.meters(_shown_tier(), _run_world()):
 				out.append(String(meter["name"]))
 			if _looked_tier() >= 0:
 				out.append_array(RunTier.contract_lines(_looked_tier()))
+		if _interactive:
+			out.append_array(_active_override_names())
 	return out
 
 
@@ -508,6 +527,11 @@ func _draw() -> void:
 		Keycap.draw(self, cap, REROLL_KEY, Color(Palette.SAND, 0.4 if reroll_button.disabled else 1.0), KEY)
 	if ladder_shown():
 		_draw_ladder()
+	var overrides := _active_override_names()
+	if _interactive and not overrides.is_empty():
+		var ov_line := "   ".join(overrides)
+		var ov_y := size.y - 14.0
+		UiDraw.text(self, (size.x - UiDraw.width(ov_line, CONTRACT_FONT)) * 0.5, ov_y, ov_line, CONTRACT_FONT, Palette.AMBER)
 	# One pip per reroll left, centred under the tiles: a spent reroll leaves an outline.
 	for i in StartPicks.REROLLS:
 		var at := Vector2(size.x * 0.5 + (i - (StartPicks.REROLLS - 1) * 0.5) * PIP * k * 3.0, h + PIP * k * 1.5)
@@ -553,7 +577,7 @@ func _draw_ladder() -> void:
 		var font := UiFonts.bold()
 		var base := Vector2(at.x - UiDraw.width(numeral, RUNG_FONT) * 0.5, at.y + (font.get_ascent(RUNG_FONT) - font.get_descent(RUNG_FONT)) * 0.5)
 		draw_string(font, base, numeral, HORIZONTAL_ALIGNMENT_LEFT, -1, RUNG_FONT, ink)
-	var meters := RunTier.meters(_shown_tier())
+	var meters := RunTier.meters(_shown_tier(), _run_world())
 	var total := METER_GAP * (meters.size() - 1)
 	for meter in meters:
 		total += UiDraw.width(String(meter["name"]), METER_FONT) + GAP + METER_BAR.x

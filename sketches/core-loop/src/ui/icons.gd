@@ -71,7 +71,20 @@ const EXTRA := {"ab_sable_reel": "reel", "res_mass": "heap", "ab_tarn_weapon": "
 	# --- companion pieces: kept out of IDS because four tests pin its 70 canonical ids ---
 	"cmp_primer_coil": "bolt", "cmp_primer_mesh": "rings", "cmp_ram_prow": "double_chevron",
 	"cmp_ram_spring": "disc_ring", "cmp_escape_vent": "launch", "cmp_escape_rail": "arrow",
+	"cmp_cog_scoop": "cog", "cmp_cartridge_caddy": "hoop",
 	# --- end companion pieces ---
+	# W50 additive fallbacks (SVGs in assets/icons/ override automatically when present).
+	"el_heat": "burst_ring",
+	"cons_scrap_dice": "diamond", "cons_duplicator_spool": "rings", "cons_overload_fuse": "bolt",
+	"cons_pocket_belt": "pips_2",
+	"act_slag_mortar": "burst", "act_magnet_sling": "hook",
+	"obj_scrapper": "cog", "obj_press": "weight", "obj_part_press": "weight",
+	"obj_tri_terminal": "pips_3", "res_scrap_ingot": "weight",
+	"part_orbital_flywheel": "rings", "rel_alt_loadout": "tag",
+	"lic_spillway_works": "tag", "lic_fleet_surplus": "tag", "lic_redjaw": "tag",
+	"lic_highdraft_roosts": "tag", "lic_waking": "tag", "lic_mind_glass": "tag", "lic_moss": "tag",
+	"cls_patch": "wave", "ab_patch_weapon": "wave", "ab_patch_move": "hook",
+	"ab_patch_special": "rings", "ab_patch_smash": "smash", "ab_patch_line": "lane", "ab_patch_ult": "burst_ring",
 	# The radio take's knob: the radio chip's dial, a ring with its needle (radio_dial.gd).
 	"radio_take": "knob",
 }
@@ -140,7 +153,7 @@ static func from_file(id: String) -> bool:
 
 static func class_icon_id(class_id: String) -> String:
 	return "cls_" + {"pylon_engineer": "sable", "runner_gunner": "rivet", "demolitions_caster": "kest",
-		"remembered_cannon": "cannon"}.get(class_id, class_id)
+		"remembered_cannon": "cannon", "line_splicer": "patch"}.get(class_id, class_id)
 
 
 static func _load_svg(id: String) -> Texture2D:

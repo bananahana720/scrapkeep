@@ -40,9 +40,15 @@ const HIRED := "HIRED"
 const TIMECARD := Vector2(76.0, 34.0)
 const PUNCH := 3.0
 
+signal work_orders_requested
+signal logbook_requested
+
 var back: Button
+var orders_button: Button
+var logbook_button: Button
 var rows := {}
 var variant_cards := {}
+var world_act_cards := {}
 
 var _grid: GridContainer
 var _plate: PanelContainer
@@ -103,9 +109,23 @@ func _init() -> void:
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_scroll.add_child(_grid)
+	var footer := HBoxContainer.new()
+	footer.name = "FooterActions"
+	footer.alignment = BoxContainer.ALIGNMENT_CENTER
+	footer.add_theme_constant_override("separation", UiTokens.GAP_M)
+	footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(footer)
+	orders_button = ChoiceButton.new("work_orders", "key_o", "Work orders")
+	orders_button.focus_mode = Control.FOCUS_ALL
+	orders_button.pressed.connect(func(): work_orders_requested.emit())
+	footer.add_child(orders_button)
+	logbook_button = ChoiceButton.new("logbook", "key_l", "Logbook")
+	logbook_button.focus_mode = Control.FOCUS_ALL
+	logbook_button.pressed.connect(func(): logbook_requested.emit())
+	footer.add_child(logbook_button)
 	back = ChoiceButton.new("back", "key_esc", "Back")
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	add_child(back)
+	footer.add_child(back)
 	var bottom := Control.new()
 	bottom.custom_minimum_size.y = 16.0
 	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -156,6 +176,7 @@ func _fill_board(profile, sitting: bool) -> void:
 		_board.remove_child(child)
 		child.queue_free()
 	variant_cards.clear()
+	world_act_cards.clear()
 	var lines := board_lines(profile, sitting)
 	var flaps: Array[Label] = []
 	for i in lines.size():
@@ -168,6 +189,7 @@ func _fill_board(profile, sitting: bool) -> void:
 		label.name = ["Count", "Next", "Card"][i]
 		_board.add_child(label)
 	_settle(flaps)
+	_fill_world_acts(profile, sitting)
 	var variants := variant_entries(profile, sitting)
 	if variants.is_empty():
 		return
@@ -181,6 +203,43 @@ func _fill_board(profile, sitting: bool) -> void:
 		var card := _variant_card(entry)
 		strip.add_child(card)
 		variant_cards[String(entry["id"])] = card
+	_board.add_child(strip)
+
+
+func _fill_world_acts(profile, sitting: bool) -> void:
+	var acts_shown: Array = []
+	for act in [2, 3]:
+		var rungs := ShiftBoard.act_rungs(act, profile, sitting)
+		if not rungs.is_empty():
+			acts_shown.append([act, rungs])
+	if acts_shown.is_empty():
+		return
+	var strip := HBoxContainer.new()
+	strip.name = "WorldActs"
+	strip.alignment = BoxContainer.ALIGNMENT_CENTER
+	strip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	strip.add_theme_constant_override("separation", UiTokens.GAP_M)
+	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for entry in acts_shown:
+		var act: int = entry[0]
+		var rungs: Array = entry[1]
+		var stamped := 0
+		var next_name := ""
+		for raw_id in rungs:
+			var rid := String(raw_id)
+			if ShiftBoard.world_rung_stamped(rid, profile):
+				stamped += 1
+			elif next_name == "":
+				var row: Dictionary = ShiftBoard.WORLD_RUNGS.get(rid, {})
+				next_name = String(row.get("name", rid))
+		var title := "Act II The Dig" if act == 2 else "Act III Highdraft"
+		var summary := "%s   %d of %d stamped" % [title, stamped, rungs.size()]
+		if next_name != "":
+			summary += "   Next %s" % next_name
+		var lbl := chalk(summary, UiTokens.CAPTION)
+		lbl.name = "Act_%d" % act
+		strip.add_child(lbl)
+		world_act_cards[act] = lbl
 	_board.add_child(strip)
 
 
@@ -329,22 +388,52 @@ func _move(direction: int) -> void:
 func _input(event: InputEvent) -> void:
 	if not is_visible_in_tree():
 		return
+	var footer_buttons: Array = [orders_button, logbook_button, back]
+	var held := get_viewport().gui_get_focus_owner()
+	var foot_idx := footer_buttons.find(held)
 	var direction := 0
+	var horiz := 0
 	if event is InputEventKey and event.pressed:
 		var code: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
-		if code in [KEY_DOWN, KEY_S, KEY_RIGHT]:
+		if not event.echo and code == KEY_O:
+			work_orders_requested.emit()
+			get_viewport().set_input_as_handled()
+			return
+		if not event.echo and code == KEY_L:
+			logbook_requested.emit()
+			get_viewport().set_input_as_handled()
+			return
+		if code in [KEY_DOWN, KEY_S]:
 			direction = 1
-		elif code in [KEY_UP, KEY_W, KEY_LEFT]:
+		elif code in [KEY_UP, KEY_W]:
 			direction = -1
-	elif event.is_action_pressed("ui_down", true) or event.is_action_pressed("ui_right", true):
+		elif code == KEY_RIGHT:
+			horiz = 1
+		elif code == KEY_LEFT:
+			horiz = -1
+	elif event.is_action_pressed("ui_down", true):
 		direction = 1
-	elif event.is_action_pressed("ui_up", true) or event.is_action_pressed("ui_left", true):
+	elif event.is_action_pressed("ui_up", true):
 		direction = -1
-	if direction != 0:
-		_move(direction)
+	elif event.is_action_pressed("ui_right", true):
+		horiz = 1
+	elif event.is_action_pressed("ui_left", true):
+		horiz = -1
+	if horiz != 0:
+		if foot_idx >= 0:
+			footer_buttons[posmod(foot_idx + horiz, footer_buttons.size())].grab_focus()
+		else:
+			_move(horiz)
 		get_viewport().set_input_as_handled()
-	elif back.has_focus() and event.is_action_pressed("ui_accept"):
-		back.pressed.emit()
+	elif direction != 0:
+		if foot_idx >= 0:
+			var controls: Array = rows.values() + [back]
+			controls[0 if direction > 0 else controls.size() - 2].grab_focus()
+		else:
+			_move(direction)
+		get_viewport().set_input_as_handled()
+	elif foot_idx >= 0 and event.is_action_pressed("ui_accept"):
+		footer_buttons[foot_idx].pressed.emit()
 		get_viewport().set_input_as_handled()
 
 

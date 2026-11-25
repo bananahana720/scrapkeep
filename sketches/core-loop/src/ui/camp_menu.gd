@@ -57,6 +57,8 @@ func _init() -> void:
 	add_child(_buttons)
 	_buttons.add_child(ChoiceButton.new("launch", "key_space", "Launch"))
 	_companion = ChoiceButton.new("companion", "key_m", "Companion")
+	_buttons.add_child(ChoiceButton.new("work_orders", "key_o", "Work orders"))
+	_buttons.add_child(ChoiceButton.new("logbook", "key_l", "Logbook"))
 	_buttons.add_child(ChoiceButton.new("achievements", "key_a", "Achievements"))
 	_buttons.add_child(ChoiceButton.new("settings", "key_s", "Settings"))
 	_buttons.add_child(ChoiceButton.new("jukebox", "key_j", "Jukebox"))

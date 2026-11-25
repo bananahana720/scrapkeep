@@ -9,7 +9,7 @@ const Push := preload("res://tests/workshop/push.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Every station the hub prompts with a key (the pet pen has a zone but no key).
-const KEYED := ["achieve", "camp_ring", "camp_skee", "camp_trial", "gate", "jukebox", "lockers", "moss", "radio", "sandbox_call_box",
+const KEYED := ["achieve", "camp_ring", "camp_skee", "camp_trial", "dispatch", "gate", "jukebox", "lockers", "logbook", "moss", "radio", "sandbox_call_box",
 	"scrapbook", "settings"]
 
 # Rule: from the real title, the main menu's Camp button enters the walk, and every station the hub reports opens its

@@ -35,6 +35,9 @@ const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const NixieRail := preload("res://src/ui/nixie_rail.gd")
 const Consumables := preload("res://src/build/consumables.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
+const WorkOrders := preload("res://src/core/work_orders.gd")
+const PilotStory := preload("res://src/core/pilot_story.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const PickupLines := preload("res://src/ui/pickup_lines.gd")
@@ -295,12 +298,17 @@ class ConsumableSlot:
 	extends Control
 
 	const SLOT_SIZE := Vector2(56.0, 68.0)
+	const DUAL_SIZE := Vector2(94.0, 68.0)
+	const NEXT_W := 34.0
+	const NEXT_GAP := 4.0
 	const BORDER := 2.0
-	const ICON_SIZE := 34.0
-	const PIP_RADIUS := 4.0
-	const PIP_GAP := 14.0
+	const ICON_SIZE := 32.0
+	const NEXT_ICON := 22.0
+	const PIP_RADIUS := 3.5
+	const PIP_GAP := 12.0
 	const PIP_Y := 56.0
 	const STRIPE_H := 5.0
+	const CAP_H := 16.0
 
 	var set_piece := false:
 		set(value):
@@ -311,6 +319,9 @@ class ConsumableSlot:
 	var _held: Array[String] = []
 	var _capacity := 1
 	var _icon: Texture2D = null
+	var _next_icon: Texture2D = null
+	var _duplicator_left := 0.0
+	var _overload_armed := false
 
 	func _init() -> void:
 		custom_minimum_size = SLOT_SIZE
@@ -330,20 +341,42 @@ class ConsumableSlot:
 		_held = next_held
 		_capacity = next_cap
 		_icon = Icons.texture(Consumables.icon_of(_held[0])) if not _held.is_empty() else null
-		visible = not _held.is_empty()
+		_next_icon = Icons.texture(Consumables.icon_of(_held[1])) if _held.size() >= 2 else null
+		_sync_size()
+
+	func set_armed(duplicator_left: float, overload_armed: bool) -> void:
+		var clamped := maxf(0.0, duplicator_left)
+		if is_equal_approx(clamped, _duplicator_left) and overload_armed == _overload_armed:
+			return
+		_duplicator_left = clamped
+		_overload_armed = overload_armed
+		_sync_size()
+
+	func _sync_size() -> void:
+		var want := DUAL_SIZE if _held.size() >= 2 else SLOT_SIZE
+		if size != want:
+			custom_minimum_size = want
+			size = want
+		visible = showing()
 		queue_redraw()
 
 	func clear() -> void:
+		_duplicator_left = 0.0
+		_overload_armed = false
 		set_belt([], 1)
+		_sync_size()
 
 	func showing() -> bool:
-		return not _held.is_empty()
+		return not _held.is_empty() or _duplicator_left > 0.0 or _overload_armed
 
 	func held_ids() -> Array[String]:
 		return _held.duplicate()
 
 	func slot_capacity() -> int:
 		return _capacity
+
+	func armed_state() -> Dictionary:
+		return {"duplicator_left": _duplicator_left, "overload_armed": _overload_armed}
 
 	func piece_rect() -> Rect2:
 		return Rect2(position, size) if showing() else Rect2()
@@ -352,25 +385,40 @@ class ConsumableSlot:
 		position = Vector2(right_bottom.x - size.x, right_bottom.y - size.y)
 
 	func _draw() -> void:
-		if _held.is_empty():
+		if not showing():
 			return
-		var active_id: String = _held[0]
-		var accent: Color = Consumables.color_of(active_id)
-		var housing := Rect2(Vector2.ZERO, size)
 		var steel := Palette.SLATE.darkened(0.45)
 		var copper := Palette.COPPER
 		var bone := NixieRail.BONE
-		draw_rect(housing, Color(steel.r, steel.g, steel.b, 0.94), true)
-		draw_rect(Rect2(BORDER, BORDER, size.x - BORDER * 2.0, STRIPE_H), accent, true)
-		draw_rect(housing, copper, false, BORDER)
-		if _icon != null:
-			var icon_pos := Vector2((size.x - ICON_SIZE) * 0.5, STRIPE_H + 6.0)
-			draw_texture_rect(_icon, Rect2(icon_pos, Vector2(ICON_SIZE, ICON_SIZE)), false, Color.WHITE)
-		else:
-			draw_circle(Vector2(size.x * 0.5, STRIPE_H + 22.0), 12.0, accent)
+		var main_w := SLOT_SIZE.x
+		var main_rect := Rect2(Vector2.ZERO, Vector2(main_w, size.y))
+		var accent: Color = Consumables.color_of(_held[0]) if not _held.is_empty() else (Palette.AMBER if _duplicator_left > 0.0 else Palette.COPPER)
+		draw_rect(main_rect, Color(steel.r, steel.g, steel.b, 0.94), true)
+		draw_rect(Rect2(BORDER, BORDER, main_w - BORDER * 2.0, STRIPE_H), accent, true)
+		draw_rect(main_rect, Palette.AMBER if (_duplicator_left > 0.0 or _overload_armed) else copper, false, BORDER)
+		if not _held.is_empty():
+			if _icon != null:
+				var icon_pos := Vector2((main_w - ICON_SIZE) * 0.5, STRIPE_H + 5.0)
+				draw_texture_rect(_icon, Rect2(icon_pos, Vector2(ICON_SIZE, ICON_SIZE)), false, Color.WHITE)
+			else:
+				draw_circle(Vector2(main_w * 0.5, STRIPE_H + 21.0), 11.0, accent)
+		elif _duplicator_left > 0.0 or _overload_armed:
+			var armed_icon := Icons.texture("cons_duplicator_spool" if _duplicator_left > 0.0 else "cons_overload_fuse")
+			var icon_pos := Vector2((main_w - ICON_SIZE) * 0.5, STRIPE_H + 5.0)
+			draw_texture_rect(armed_icon, Rect2(icon_pos, Vector2(ICON_SIZE, ICON_SIZE)), false, accent)
+		# Drawn keycap in the upper-left corner so players learn the cartridge key without Label nodes.
+		var cap_id := Glyphs.of_action("cl_consumable", "key_c")
+		var cap_sz := Keycap.size_of(cap_id, CAP_H)
+		Keycap.draw(self, Vector2(BORDER + cap_sz.x * 0.5 + 2.0, STRIPE_H + CAP_H * 0.5 + 3.0), cap_id, bone, CAP_H)
+		# W50 armed countdown / echo indicator bar along the housing foot.
+		if _duplicator_left > 0.0:
+			var share := clampf(_duplicator_left / Consumables.DUPLICATOR_WINDOW_S, 0.0, 1.0)
+			draw_rect(Rect2(BORDER + 2.0, size.y - 6.0, (main_w - BORDER * 2.0 - 4.0) * share, 3.0), Palette.AMBER, true)
+		elif _overload_armed:
+			draw_rect(Rect2(BORDER + 2.0, size.y - 6.0, main_w - BORDER * 2.0 - 4.0, 3.0), Palette.COPPER, true)
 		var pips := maxi(_capacity, _held.size())
 		var span := float(pips - 1) * PIP_GAP
-		var start_x := (size.x - span) * 0.5
+		var start_x := (main_w - span) * 0.5
 		for i in pips:
 			var center := Vector2(start_x + float(i) * PIP_GAP, PIP_Y)
 			if i < _held.size():
@@ -379,6 +427,19 @@ class ConsumableSlot:
 			else:
 				draw_circle(center, PIP_RADIUS, steel.darkened(0.35))
 				draw_arc(center, PIP_RADIUS, 0.0, TAU, 16, copper, 1.5)
+		# Secondary carousel bay when holding a 2nd cartridge.
+		if _held.size() >= 2:
+			var nx := main_w + NEXT_GAP
+			var next_rect := Rect2(Vector2(nx, 10.0), Vector2(NEXT_W, size.y - 10.0))
+			var next_accent: Color = Consumables.color_of(_held[1])
+			draw_rect(next_rect, Color(steel.r, steel.g, steel.b, 0.84), true)
+			draw_rect(Rect2(nx + BORDER, 10.0 + BORDER, NEXT_W - BORDER * 2.0, STRIPE_H - 1.0), Color(next_accent, 0.85), true)
+			draw_rect(next_rect, Color(copper, 0.75), false, BORDER)
+			if _next_icon != null:
+				var nip := Vector2(nx + (NEXT_W - NEXT_ICON) * 0.5, 10.0 + STRIPE_H + 8.0)
+				draw_texture_rect(_next_icon, Rect2(nip, Vector2(NEXT_ICON, NEXT_ICON)), false, Color(1.0, 1.0, 1.0, 0.82))
+			else:
+				draw_circle(Vector2(nx + NEXT_W * 0.5, 10.0 + STRIPE_H + 19.0), 8.0, Color(next_accent, 0.82))
 
 
 var _armor: Control
@@ -521,6 +582,12 @@ func setup(game_ref) -> void:
 	_busy = game.ctx.screen_busy
 	game.codex.lore_found.connect(func(_id: String): _show_lore())
 	game.events.achievement_earned.connect(func(id: String): _raise_card(Achievements.toast_text(id), false))
+	var progress = game.get("progress")
+	if progress != null:
+		if progress.has_signal("work_order_changed"):
+			progress.work_order_changed.connect(_on_work_order_changed)
+		if progress.has_signal("story_chapter_punched"):
+			progress.story_chapter_punched.connect(_on_story_chapter_punched)
 	game.events.run_ended.connect(func(_won: bool): clear_achievement_toasts())
 	game.opening.turned.connect(_on_turned)
 	_connect_toasts(game.events)
@@ -715,6 +782,29 @@ func ach_toasts() -> Array[String]:
 
 func ach_waiting() -> Array[String]:
 	return _waiting_texts(false)
+
+
+func _on_work_order_changed(order_id: String, phase: String, summary: Dictionary) -> void:
+	if phase != "completed":
+		return
+	var row: Dictionary = WorkOrders.order(order_id)
+	var title := String(row.get("name", order_id))
+	var sub := "Order stamped"
+	var new_tiers = summary.get("new_license_tiers", [])
+	if new_tiers is Array and not (new_tiers as Array).is_empty():
+		sub = WorkOrders.license_tier_name(int((new_tiers as Array)[-1]))
+	_raise_card("%s\n%s" % [title, sub], false)
+
+
+func _on_story_chapter_punched(cast_id: String, num: int, ch_id: String) -> void:
+	var title := ""
+	for row in PilotStory.CHAPTERS:
+		if String(row.get("id", "")) == ch_id:
+			title = String(row.get("title", ""))
+			break
+	if title == "":
+		title = "%s chapter %d" % [cast_id.capitalize(), num]
+	_raise_card("%s\nChapter %d punched" % [title, num], false)
 
 
 # A record found for Moss's jukebox: its name, then where to play it.
@@ -1237,7 +1327,7 @@ func layout(size: Vector2) -> void:
 # extent() call shapes text.
 func _piece_sizes() -> Array:
 	return [_objective.custom_minimum_size, _health.size, _armor.size, maxi(ability_bar.slots.size(), AbilityBar.NUMBERED + 2), _plate_size(),
-		_cogs.size, _armor.visible, _companion.visible, consumable_slot.showing(), nixie_rail.showing(), nixie_rail.piece_rect().size.x]
+		_cogs.size, _armor.visible, _companion.visible, consumable_slot.showing(), consumable_slot.piece_rect().size.x, nixie_rail.showing(), nixie_rail.piece_rect().size.x]
 
 
 # The slot's plate: a boss plate (about 420 by 44 at 1080p) that the coordinator mounts. Its
@@ -1676,6 +1766,7 @@ func _process(delta: float) -> void:
 	chain_counter.step(delta, game.player.chain.combo)
 	nixie_rail.set_rows(buff_rows())
 	consumable_slot.set_belt(game.run.consumables, game.run.consumable_capacity())
+	consumable_slot.set_armed(Consumables.duplicator_left(game.run), Consumables.overload_armed(game.run))
 
 	var run = game.run
 	var goal := objective_reading()
