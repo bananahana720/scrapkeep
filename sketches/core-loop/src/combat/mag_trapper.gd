@@ -8,6 +8,8 @@ extends "res://src/combat/counter.gd"
 # rating rolls straight through, so growing is the counter. A jump or a smash shatters
 # the disc.
 
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
+
 const PIT_RADIUS := 4.5
 const PIT_REACH := 1.4
 const LEAD := 0.7
@@ -16,14 +18,47 @@ const RATING_BASE := 1.6
 const RATING_PER_THREAT := 0.4
 const HP := 50.0
 
+const BASE_LIVE_SECONDS := 3.0
+const REPULSE_WARN := 0.75
+const REPULSE_RADIUS := 6.0
+const REPULSE_REACH := 2.4
+const REPULSE_DAMAGE := 12.0
+const REPULSE_SHOVE := 14.0
+const PUNT_SPEED := 36.0
+const PUNT_SEARCH_RANGE := 40.0
+const PUNT_HIT_RADIUS := 2.4
+const PUNT_BLAST_RADIUS := 7.0
+const PUNT_DAMAGE := 55.0
+const PUNT_KNOCK := 22.0
+const PUNT_LIFE := 1.6
+
+signal disc_punted(at: Vector3, hits: int)
+
 var rating := RATING_BASE
 var windup_pose_enabled := true # Test seam: presentation only.
+var polarity_flips := 0
+var repulse_blasts := 0
+var disc_punts := 0
+var last_punt_hits := 0
 var _stack: Node3D
 var _body: MeshInstance3D
 var _top_disc: MeshInstance3D
 var _top_rest := Vector3.ZERO
 var _disc_material: StandardMaterial3D
 var _top_link: MeshInstance3D
+var _polarity_flip := false
+var _flip_t := 0.0
+var _flip_center := Vector3.ZERO
+var _deployed_disc: MeshInstance3D
+var _deployed_base := Transform3D.IDENTITY
+var _slam_bus: Node
+
+
+func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
+	super(target_ref, terrain_ref, root_ref, live_ref, threat, spec_ref)
+	_slam_bus = world_root.get_node_or_null("GameEvents") if world_root != null else null
+	if _slam_bus != null and not _slam_bus.slammed.is_connected(_on_player_slammed):
+		_slam_bus.slammed.connect(_on_player_slammed)
 
 
 func _configure(threat: float) -> void:
@@ -31,7 +66,7 @@ func _configure(threat: float) -> void:
 	scrap_value = 4
 	weight = 1.2
 	warn_seconds = 1.1
-	live_seconds = 3.0
+	live_seconds = BASE_LIVE_SECONDS
 	rest_seconds = 3.5
 	attack_range = 26.0
 	rating = RATING_BASE + RATING_PER_THREAT * (threat - 1.0)
@@ -161,6 +196,7 @@ func _commit(_to_ball: Vector3) -> Node3D:
 
 
 func _go_live() -> void:
+	_deployed_disc = null
 	var pit := telegraph()
 	if pit == null or not windup_pose_enabled:
 		return
@@ -178,19 +214,223 @@ func _go_live() -> void:
 	var normal := Vector3(-rise_x, 2.0 * DISC_RADIUS, -rise_z).normalized()
 	var basis := Basis(Quaternion(Vector3.UP, normal)).scaled_local(Vector3(1.0, DEPLOYED_PROFILE, 1.0))
 	disc.global_transform = Transform3D(basis, at + basis.y * CASING_HALF_HEIGHT)
+	_deployed_disc = disc
+	_deployed_base = disc.global_transform
 
 
-func _live(_delta: float) -> bool:
+func _gap_ready() -> bool:
+	if not is_inside_tree():
+		return true
+	if world_root != null and is_instance_valid(world_root) and world_root.has_meta(AttackBudget.OFF_META):
+		return true
+	var tree := get_tree()
+	if not tree.root.has_meta(AttackBudget.LAST_META):
+		return true
+	return Engine.get_physics_frames() - int(tree.root.get_meta(AttackBudget.LAST_META)) >= AttackBudget.gap_frames()
+
+
+func _start_polarity_flip(pit: Node3D) -> void:
+	var center: Vector3 = pit.center
+	if is_inside_tree():
+		var tree := get_tree()
+		tree.root.set_meta(AttackBudget.LAST_META, Engine.get_physics_frames())
+		tree.root.set_meta(AttackBudget.VOLLEY_META, AttackBudget.volley_of(self))
+	var saved_disc: MeshInstance3D = _deployed_disc if is_instance_valid(_deployed_disc) else null
+	if saved_disc != null and saved_disc.get_parent() == pit:
+		pit.remove_child(saved_disc)
+	_clear_telegraph()
+	_telegraph = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, center, REPULSE_RADIUS, REPULSE_REACH, Palette.HAZARD)
+	_telegraph.warn_seconds = REPULSE_WARN
+	_voice(_telegraph)
+	if saved_disc != null:
+		_telegraph.add_child(saved_disc)
+		saved_disc.global_transform = _deployed_base
+	_polarity_flip = true
+	_flip_t = 0.0
+	_flip_center = center
+	polarity_flips += 1
+	live_seconds = maxf(live_seconds, _t + REPULSE_WARN + 0.15)
+	if world_root != null and is_inside_tree():
+		FxLibrary.burst(world_root, "brass_spark", center + Vector3.UP * 0.4, 12)
+
+
+class PuntedDisc extends Node3D:
+	var owner_ref: WeakRef
+	var target_enemy: Node3D
+	var heading := Vector3.FORWARD
+	var terrain_ref
+	var combat_ref
+	var root_ref: Node3D
+	var speed := 36.0
+	var blast_radius := 7.0
+	var hit_radius := 2.4
+	var damage := 55.0
+	var knock_force := 22.0
+	var life := 1.6
+	var _age := 0.0
+	var _visual: MeshInstance3D
+
+	func setup_visual(disc_mesh: Mesh) -> void:
+		if disc_mesh == null:
+			return
+		_visual = MeshInstance3D.new()
+		_visual.name = "PuntedDiscMesh"
+		_visual.mesh = disc_mesh
+		_visual.material_override = Palette.solid(Palette.AMBER, 1.4)
+		_visual.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_visual)
+
+	func _physics_process(delta: float) -> void:
+		_age += delta
+		var goal_valid: bool = is_instance_valid(target_enemy) and (not target_enemy.has_method("is_dead") or not bool(target_enemy.is_dead()))
+		if goal_valid:
+			var to_goal := target_enemy.global_position - global_position
+			to_goal.y = 0.0
+			if to_goal.length() > 0.1:
+				heading = to_goal.normalized()
+		global_position += heading * speed * delta
+		if terrain_ref != null and terrain_ref.has_method("height"):
+			global_position.y = float(terrain_ref.height(global_position.x, global_position.z)) + 0.35
+		if _visual != null:
+			_visual.rotate_y(TAU * 4.0 * delta)
+		if goal_valid:
+			var flat := Vector2(target_enemy.global_position.x - global_position.x, target_enemy.global_position.z - global_position.z).length()
+			if flat <= hit_radius:
+				_detonate()
+				return
+		if _age >= life:
+			_detonate()
+
+	func _detonate() -> void:
+		var hits := 0
+		if is_inside_tree():
+			for enemy in get_tree().get_nodes_in_group("enemy"):
+				if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+					continue
+				var flat := Vector2(enemy.global_position.x - global_position.x, enemy.global_position.z - global_position.z).length()
+				if flat > blast_radius:
+					continue
+				hits += 1
+				var out: Vector3 = enemy.global_position - global_position
+				out.y = 0.0
+				var dir := out.normalized() if out.length() > 0.1 else heading
+				if combat_ref != null and is_instance_valid(combat_ref) and combat_ref.has_method("strike"):
+					combat_ref.strike(enemy, "ram", damage, "", "disc_punt")
+				elif enemy.has_method("take_damage"):
+					enemy.take_damage(damage)
+				if enemy.has_method("knock"):
+					enemy.knock(dir + Vector3.UP * 0.25, knock_force)
+		if root_ref != null and is_instance_valid(root_ref):
+			FxLibrary.burst(root_ref, "brass_spark", global_position + Vector3.UP * 0.3, 18)
+			FxLibrary.burst(root_ref, "slam_dust", global_position, 14)
+		var trapper = owner_ref.get_ref() if owner_ref != null else null
+		if trapper != null and is_instance_valid(trapper):
+			trapper.last_punt_hits = hits
+			trapper.disc_punted.emit(global_position, hits)
+		queue_free()
+
+
+func _nearest_pack_target(from: Vector3) -> Node3D:
+	if not is_inside_tree():
+		return null
+	var best: Node3D = null
+	var best_d := PUNT_SEARCH_RANGE
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy == self or not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
+		var d := Vector2(enemy.global_position.x - from.x, enemy.global_position.z - from.z).length()
+		if d < best_d:
+			best_d = d
+			best = enemy as Node3D
+	if best == null and not _dead:
+		var self_d := Vector2(global_position.x - from.x, global_position.z - from.z).length()
+		if self_d <= PUNT_SEARCH_RANGE:
+			best = self
+	return best
+
+
+func _punt_disc() -> void:
+	if not _polarity_flip:
+		return
+	_polarity_flip = false
+	disc_punts += 1
+	broken_by = "smash"
+	if world_root != null and is_inside_tree():
+		var puck := PuntedDisc.new()
+		puck.name = "PuntedMagDisc"
+		puck.owner_ref = weakref(self)
+		puck.terrain_ref = terrain
+		puck.combat_ref = fleet.combat if fleet != null and is_instance_valid(fleet) else null
+		puck.root_ref = world_root
+		puck.speed = PUNT_SPEED
+		puck.blast_radius = PUNT_BLAST_RADIUS
+		puck.hit_radius = PUNT_HIT_RADIUS
+		puck.damage = PUNT_DAMAGE
+		puck.knock_force = PUNT_KNOCK
+		puck.life = PUNT_LIFE
+		var pack_target := _nearest_pack_target(_flip_center)
+		puck.target_enemy = pack_target
+		if pack_target != null:
+			var to_pack := pack_target.global_position - _flip_center
+			to_pack.y = 0.0
+			puck.heading = to_pack.normalized() if to_pack.length() > 0.1 else Vector3.FORWARD
+		else:
+			var player = _player()
+			var pvel: Vector3 = player.planar_velocity() if player != null else Vector3.FORWARD
+			puck.heading = pvel.normalized() if pvel.length() > 0.5 else Vector3.FORWARD
+		world_root.add_child(puck)
+		puck.global_position = _flip_center + Vector3.UP * 0.35
+		puck.setup_visual(_top_disc.mesh if _top_disc != null else null)
+		FxLibrary.burst(world_root, "brass_spark", _flip_center + Vector3.UP * 0.4, 14)
+	if fleet != null:
+		fleet.discover("heavy_roll", _real_ball())
+
+
+func _on_player_slammed(at: Vector3, _strength: float, _flatness: float) -> void:
+	if not _polarity_flip or _dead or phase != Phase.LIVE:
+		return
+	var flat := Vector2(at.x - _flip_center.x, at.z - _flip_center.z).length()
+	if flat <= REPULSE_RADIUS + 1.5:
+		_punt_disc()
+
+
+func _live(delta: float) -> bool:
 	var pit := telegraph()
 	if pit == null:
 		return false
 	var player = _player()
 	var ball := _real_ball()
+	if _polarity_flip:
+		if player != null and player.kit.slamming and player.state.on_floor():
+			var flat := Vector2(ball.x - _flip_center.x, ball.z - _flip_center.z).length()
+			if flat <= REPULSE_RADIUS + 1.5:
+				_punt_disc()
+				return false
+		_flip_t += delta
+		var u := clampf(_flip_t / REPULSE_WARN, 0.0, 1.0)
+		pit.set_progress(u)
+		if is_instance_valid(_deployed_disc):
+			var flip_basis := _deployed_base.basis.rotated(Vector3.RIGHT, PI * u).rotated(Vector3.UP, TAU * 2.0 * u)
+			_deployed_disc.global_transform = Transform3D(flip_basis, _deployed_base.origin + Vector3.UP * (0.75 * sin(u * PI)))
+		if _flip_t >= REPULSE_WARN:
+			repulse_blasts += 1
+			if pit.contains(ball):
+				var out: Vector3 = ball - pit.center
+				out.y = 0.0
+				var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
+				hit_player.emit(REPULSE_DAMAGE, dir * REPULSE_SHOVE + Vector3.UP * 4.0)
+			if world_root != null and is_inside_tree():
+				FxLibrary.burst(world_root, "brass_spark", pit.center + Vector3.UP * 0.4, 16)
+				FxLibrary.burst(world_root, "slam_dust", pit.center, 12)
+			return false
+		return true
 	if not pit.contains(ball) or player.heft() >= rating:
 		if _holding():
 			_release("left")
 		if pit.contains(ball) and fleet != null:
 			fleet.discover("heavy_roll", ball)
+		if pit.contains(ball) and player.heft() >= rating and _gap_ready():
+			_start_polarity_flip(pit)
 		return true
 	if not _holding() and not _catch():
 		return true
@@ -198,6 +438,19 @@ func _live(_delta: float) -> bool:
 	to_centre.y = 0.0
 	_pull(to_centre * CENTRE_PULL)
 	return true
+
+
+func _on_end() -> void:
+	_polarity_flip = false
+	_flip_t = 0.0
+	_deployed_disc = null
+	live_seconds = BASE_LIVE_SECONDS
+
+
+func _exit_tree() -> void:
+	if is_instance_valid(_slam_bus) and _slam_bus.slammed.is_connected(_on_player_slammed):
+		_slam_bus.slammed.disconnect(_on_player_slammed)
+	super._exit_tree()
 
 
 func _on_broken(_method: String) -> void:

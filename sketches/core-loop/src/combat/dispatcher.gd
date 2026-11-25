@@ -21,11 +21,15 @@ extends "res://src/combat/counter.gd"
 #   (CONTRACTS.md "Special cues"); `dispatched` reports each chaser it lands.
 
 const Projectile := preload("res://src/combat/projectile.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 # Loaded, not preloaded, until the special cues branch lands; then this becomes a preload.
 const SPECIAL_CUES := "res://src/combat/special_cues.gd"
 
 signal special_tell(moment: String)
 signal dispatched(enemy: Node3D)
+signal cargo_flushed(pod: Node3D)
+signal cargo_returned(dispatcher: Node3D)
 
 const SpecialRig := preload("res://src/presentation/special_rig.gd")
 const MODEL := "res://assets/models/world_one/enemy_dispatcher.glb"
@@ -55,6 +59,19 @@ const DROP_RADIUS := 4.0
 const DROP_DAMAGE := 10.0
 const DROP_SHOVE := 6.0
 const ADD_CAP := 4
+# Express Cargo Flush (W47-E3): 0.95 s pressure siren when perch ignored > 14 s; drops a heavy
+# scrap-pod + chaser. Ramming the falling cargo pod fires it back up the chute, one-shotting the perch.
+const FLUSH_IGNORE_S := 14.0
+const FLUSH_SIREN := 0.95
+const FLUSH_FLIGHT := 0.90
+const FLUSH_WARN := FLUSH_SIREN + FLUSH_FLIGHT
+const FLUSH_RADIUS := 5.0
+const FLUSH_DAMAGE := 18.0
+const FLUSH_SHOVE := 10.0
+const CARGO_RAM_REACH := 3.2
+const CARGO_RAM_HEIGHT := 3.5
+const CARGO_RAM_SPEED := 8.0
+const CARGO_RETURN_FLIGHT := 0.35
 # Escalate (Andrew's card, 17 Oct): each drop landed with no hit on the Dispatcher since the
 # last one climbs a step, so a Dispatcher left alone snowballs; each hit on it steps back
 # down one. A step names the add the next pod opens into, the drop-to-drop interval and the
@@ -71,6 +88,9 @@ var drops := 0
 var escalation := 0
 var _hit_since_drop := false
 var landed_hits := 0
+var cargo_flushes := 0
+var cargo_returns := 0
+var ignored_seconds := 0.0
 var adds: Array = []
 var perch_top := Vector3.ZERO
 var mast: StaticBody3D
@@ -81,6 +101,10 @@ var _signal_material: StandardMaterial3D
 var _pod: MeshInstance3D
 var _pod_from := Vector3.ZERO
 var _pod_launch := Vector3.ZERO
+var _flush_active := false
+var _pod_returned := false
+var _siren_fx_t := 0.0
+var _return_pod: Node3D
 static var _shared: Array = []
 static var _sockets: Dictionary = {}
 static var _asset_warned := false
@@ -255,10 +279,21 @@ func perch_height() -> float:
 func knock(direction: Vector3, force: float) -> void:
 	if _dead or direction.length_squared() < 0.0001:
 		return
+	if force > 0.0:
+		ignored_seconds = 0.0
 	knocks += 1
 	var push := Vector3(direction.x, 0.0, direction.z).normalized() * force / weight
 	if push.length() > _knocked_speed():
 		_knock = push
+
+
+func _physics_process(delta: float) -> void:
+	if not _dead and _in_play() and target != null and not is_instance_valid(_return_pod):
+		if _flat_to_ball().length() <= attack_range:
+			ignored_seconds += delta
+	super(delta)
+	if not _dead and _flush_active and phase == Phase.WARN and _t >= FLUSH_SIREN and not _pod_returned and is_instance_valid(_pod):
+		_check_cargo_ram()
 
 
 # It never leaves its perch.
@@ -280,23 +315,37 @@ func standing_adds() -> int:
 	return adds.size()
 
 
+func _flush_ready() -> bool:
+	return ignored_seconds >= FLUSH_IGNORE_S
+
+
 func _wants_attack(to_ball: Vector3) -> bool:
-	return to_ball.length() <= attack_range and standing_adds() < ADD_CAP and fleet != null and fleet.combat != null
+	if is_instance_valid(_return_pod):
+		return false
+	return to_ball.length() <= attack_range and (standing_adds() < ADD_CAP or _flush_ready()) and fleet != null and fleet.combat != null
 
 
 func _commit(to_ball: Vector3) -> Node3D:
 	_face(to_ball)
+	_flush_active = _flush_ready()
+	_pod_returned = false
+	_siren_fx_t = 0.0
+	warn_seconds = FLUSH_WARN if _flush_active else WARN
 	var aim := _ball()
 	var landing: Vector3 = terrain.drop_point(aim.x, aim.z, 0.0) if terrain != null else aim
-	var ring := _commit_ring(Threat.Type.PROJECTILE, landing, DROP_RADIUS, 3.5)
+	var ring_radius := FLUSH_RADIUS if _flush_active else DROP_RADIUS
+	var flight_s := FLUSH_FLIGHT if _flush_active else FLIGHT
+	var ring := _commit_ring(Threat.Type.PROJECTILE, landing, ring_radius, 3.5)
 	_pod_from = to_global(_mouth)
-	ring.set_flight(_pod_from, Threat.lob_bump(GRAVITY, FLIGHT))
+	ring.set_flight(_pod_from, Threat.lob_bump(GRAVITY, flight_s))
+	if _flush_active and world_root != null and is_inside_tree():
+		FxLibrary.burst(world_root, "steam_puff", _pod_from, 10)
 	return ring
 
 
 func _voice(tele: Node3D) -> void:
 	super(tele)
-	tele.warn_seconds = WARN
+	tele.warn_seconds = FLUSH_WARN if _flush_active else WARN
 	if ResourceLoader.exists(SPECIAL_CUES):
 		load(SPECIAL_CUES).tell(self)
 	else:
@@ -308,6 +357,92 @@ func _face(to_ball: Vector3) -> void:
 		rotation.y = atan2(-to_ball.x, -to_ball.z)
 
 
+class ReturningCargoPod extends Node3D:
+	var dispatcher_ref: WeakRef
+	var pod_node: MeshInstance3D
+	var from_pos := Vector3.ZERO
+	var to_pos := Vector3.ZERO
+	var flight := 0.35
+	var _age := 0.0
+
+	func _physics_process(delta: float) -> void:
+		var rig = dispatcher_ref.get_ref() if dispatcher_ref != null else null
+		if rig == null or not is_instance_valid(rig) or rig.is_dead():
+			queue_free()
+			return
+		_age = minf(_age + delta, flight)
+		var u := clampf(_age / maxf(flight, 0.001), 0.0, 1.0)
+		var eased := u * u
+		var pos := from_pos.lerp(to_pos, eased)
+		global_position = pos
+		if is_instance_valid(pod_node):
+			pod_node.rotate_x(TAU * 3.0 * delta)
+		if _age >= flight:
+			rig._on_cargo_pod_impact()
+			queue_free()
+
+
+func _check_cargo_ram() -> void:
+	var player = _player()
+	if player == null:
+		return
+	var ball := _real_ball()
+	var pod_pos := _pod.global_position
+	var flat_dist := Vector2(ball.x - pod_pos.x, ball.z - pod_pos.z).length()
+	var dy := absf(ball.y - pod_pos.y)
+	if flat_dist > CARGO_RAM_REACH or dy > CARGO_RAM_HEIGHT:
+		return
+	var speed: float = player.planar_velocity().length() if player.has_method("planar_velocity") else 0.0
+	var fast_enough: bool = (player.has_method("speed_tier") and int(player.speed_tier()) >= SpeedTier.CRUISE) \
+		or speed >= CARGO_RAM_SPEED or bool(player.kit.slamming) or bool(player.kit.hooked)
+	if not fast_enough:
+		return
+	_return_cargo_pod()
+
+
+func _return_cargo_pod() -> void:
+	if _pod_returned or not is_instance_valid(_pod):
+		return
+	_pod_returned = true
+	cargo_returns += 1
+	var pod_pos := _pod.global_position
+	var ret := ReturningCargoPod.new()
+	ret.name = "ReturningCargoPod"
+	ret.dispatcher_ref = weakref(self)
+	ret.from_pos = pod_pos
+	ret.to_pos = to_global(_mouth)
+	ret.flight = CARGO_RETURN_FLIGHT
+	world_root.add_child(ret)
+	ret.global_position = pod_pos
+	var moved_pod := _pod
+	_pod = null
+	if moved_pod.get_parent() != null:
+		moved_pod.get_parent().remove_child(moved_pod)
+	moved_pod.position = Vector3.ZERO
+	moved_pod.material_override = Palette.solid(Palette.AMBER, 1.6)
+	ret.add_child(moved_pod)
+	ret.pod_node = moved_pod
+	_return_pod = ret
+	if world_root != null and is_inside_tree():
+		FxLibrary.burst(world_root, "brass_spark", pod_pos, 16)
+		FxLibrary.burst(world_root, "steam_puff", pod_pos, 8)
+	cargo_returned.emit(self)
+	_end()
+
+
+func _on_cargo_pod_impact() -> void:
+	_return_pod = null
+	if _dead:
+		return
+	if fleet != null:
+		fleet.discover("stream_cut", global_position)
+	if world_root != null and is_inside_tree():
+		FxLibrary.burst(world_root, "plate_chunks", global_position, 14)
+		FxLibrary.burst(world_root, "brass_spark", global_position, 16)
+		FxLibrary.burst(world_root, "steam_puff", global_position, 10)
+	take_damage(maxf(hp, max_hp) + 100.0)
+
+
 func _go_live() -> void:
 	drops += 1
 	_free_pod()
@@ -315,6 +450,28 @@ func _go_live() -> void:
 	if ring == null:
 		return
 	var landing: Vector3 = ring.center
+	if _flush_active:
+		cargo_flushes += 1
+		ignored_seconds = 0.0
+		if ring.contains(_real_ball()):
+			landed_hits += 1
+			var out: Vector3 = _real_ball() - landing
+			out.y = 0.0
+			var dir := out.normalized() if out.length() > 0.1 else -global_basis.z
+			hit_player.emit(FLUSH_DAMAGE, dir * FLUSH_SHOVE + Vector3.UP * 4.0)
+		if world_root != null and is_inside_tree():
+			FxLibrary.burst(world_root, "slam_dust", landing, 14)
+			FxLibrary.burst(world_root, "brass_spark", landing + Vector3.UP * 0.4, 12)
+		if standing_adds() < ADD_CAP:
+			var add: Node3D = fleet.combat.spawn_enemy("chaser", landing + Vector3.UP * 1.2)
+			if add != null:
+				if "_rest" in add:
+					add._rest = 0.0
+				add.scrap_value = 0
+				add.set_meta("dispatched_by", get_instance_id())
+				adds.append(add)
+				dispatched.emit(add)
+		return
 	if ring.contains(_real_ball()):
 		landed_hits += 1
 		var out: Vector3 = _real_ball() - landing
@@ -340,6 +497,7 @@ func _go_live() -> void:
 # Each hit answers it one step, and a drop after any hit does not climb.
 func take_damage(amount: float) -> float:
 	if amount > 0.0 and not _dead:
+		ignored_seconds = 0.0
 		_hit_since_drop = true
 		_escalate(maxi(escalation - 1, 0))
 	return super(amount)
@@ -355,12 +513,15 @@ func _escalate(step: int) -> void:
 
 
 func _on_end() -> void:
+	_flush_active = false
+	_pod_returned = false
+	warn_seconds = WARN
 	_free_pod()
 
 
 # Killed with its stream running: the trick fires and the chute goes quiet.
 func _die() -> void:
-	if drops > 0 and fleet != null:
+	if (drops > 0 or cargo_returns > 0) and fleet != null:
 		fleet.discover("stream_cut", global_position)
 	super()
 
@@ -377,12 +538,25 @@ func _pose() -> void:
 	if _radar != null:
 		_radar.rotate_y(RADAR_TURN * get_physics_process_delta_time())
 	var warn := phase == Phase.WARN
+	var suck_s := FLUSH_SIREN if _flush_active else SUCK
+	var flight_s := FLUSH_FLIGHT if _flush_active else FLIGHT
 	if _signal_material != null:
-		# Between drops the lamp holds a glow per escalation step, so a climbing Dispatcher reads.
-		_signal_material.emission_enabled = warn or escalation > 0
-		_signal_material.emission = Palette.AMBER
-		_signal_material.emission_energy_multiplier = FlashGuard.spike(0.6 * escalation, 2.5 * clampf(_t / SUCK, 0.0, 1.0)) if warn else 0.6 * escalation
-	if not warn or _t < SUCK:
+		if warn and _flush_active:
+			_signal_material.emission_enabled = true
+			_signal_material.emission = Palette.HAZARD
+			var pulse := 0.5 + 0.5 * sin(_t * TAU * 4.0)
+			_signal_material.emission_energy_multiplier = FlashGuard.spike(0.8, 3.2 * pulse)
+		else:
+			# Between drops the lamp holds a glow per escalation step, so a climbing Dispatcher reads.
+			_signal_material.emission_enabled = warn or escalation > 0
+			_signal_material.emission = Palette.AMBER
+			_signal_material.emission_energy_multiplier = FlashGuard.spike(0.6 * escalation, 2.5 * clampf(_t / SUCK, 0.0, 1.0)) if warn else 0.6 * escalation
+	if warn and _flush_active and _t < suck_s:
+		_siren_fx_t += get_physics_process_delta_time()
+		if _siren_fx_t >= 0.35 and world_root != null and is_inside_tree():
+			_siren_fx_t = 0.0
+			FxLibrary.burst(world_root, "steam_puff", to_global(_mouth), 6)
+	if not warn or _t < suck_s or _pod_returned:
 		return
 	var ring := telegraph()
 	if ring == null:
@@ -394,14 +568,23 @@ func _pose() -> void:
 		capsule.radius = POD_RADIUS
 		capsule.height = POD_RADIUS * 3.0
 		_pod.mesh = capsule
-		_pod.material_override = Palette.solid(Palette.BRASS, 0.6)
+		if _flush_active:
+			_pod.scale = Vector3.ONE * 1.4
+			_pod.material_override = Palette.solid(Palette.HAZARD, 1.0)
+		else:
+			_pod.material_override = Palette.solid(Palette.BRASS, 0.6)
 		world_root.add_child(_pod)
-		_pod_launch = Projectile.lob_velocity(_pod_from, ring.center, FLIGHT)
-	var s := clampf(_t - SUCK, 0.0, FLIGHT)
+		_pod_launch = Projectile.lob_velocity(_pod_from, ring.center, flight_s)
+		if _flush_active:
+			cargo_flushed.emit(_pod)
+	var s := clampf(_t - suck_s, 0.0, flight_s)
 	_pod.global_position = _pod_from + _pod_launch * s + Vector3.DOWN * 0.5 * GRAVITY * s * s
 
 
 func _exit_tree() -> void:
 	_free_pod()
+	if is_instance_valid(_return_pod):
+		_return_pod.queue_free()
+	_return_pod = null
 	super._exit_tree()
 

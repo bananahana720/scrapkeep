@@ -18,10 +18,14 @@ extends "res://src/combat/enemy.gd"
 # Loaded, not preloaded, until the special cues branch lands; then this becomes a preload.
 const SPECIAL_CUES := "res://src/combat/special_cues.gd"
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 signal special_tell(moment: String)
 signal wiped(crew: Array)
 signal synced(members: Array)
+signal overtime_started(ally: Node3D)
+signal overtime_interrupted(shattered: Array)
+signal overtime_primed(ally: Node3D)
 
 const SpecialRig := preload("res://src/presentation/special_rig.gd")
 const MODEL := "res://assets/models/world_one/enemy_foreman.glb"
@@ -34,6 +38,18 @@ const BEAT := 60.0 / 129.0
 const HORN_LEAD := BEAT
 const CLOCK_OUT := 1.5
 const CLAIM_RADIUS := 30.0
+# Overtime Sync Whistle (W47-E3): 0.90 s twin steam blasts when a tethered ally drops < 50% HP.
+# Interrupting during the whistle shatters plating across the entire tethered squad; completing it
+# primes the injured ally for an immediate strike. Obeys AttackBudget and 0.2 s inter-warning gap.
+const OVERTIME_HP_SHARE := 0.5
+const OVERTIME_WARN := 0.90
+const OVERTIME_COOLDOWN := 6.0
+const OVERTIME_RING_RADIUS := 4.5
+const OVERTIME_RING_REACH := 3.0
+const OVERTIME_BLAST_DAMAGE := 8.0
+const OVERTIME_BLAST_SHOVE := 10.0
+const OVERTIME_INTERRUPT_KNOCK := 6.0
+const OVERTIME_INTERRUPT_DAMAGE := 15.0
 # Quick sync (STORY-MAP.md, WORLD1-DEMO-CATALYST.md): the horn snaps nearby chasers into a tight
 # ball-facing arc ahead of the Shift Boss in one beat, then releases them to press together.
 const FORMATION_RADIUS := 6.5
@@ -50,10 +66,20 @@ var crew: Array = []
 var wipes := 0
 var horns := 0
 var syncs := 0
+var overtime_whistles := 0
+var overtime_interrupts := 0
+var overtime_completes := 0
+var overtime_shattered := 0
 
 var _claimed := false
 var _clock := 0.0
 var _horned := false
+var _overtime_active := false
+var _overtime_t := 0.0
+var _overtime_cd := 0.0
+var _overtime_ally: Node3D
+var _overtime_damage := 0.0
+var _overtime_second_blast := false
 var _signal_material: StandardMaterial3D
 var _hand: Node3D
 var _tether_mesh: ImmediateMesh
@@ -251,7 +277,10 @@ func _physics_process(delta: float) -> void:
 		_draw_tethers()
 		return
 	_face(_flat_to_ball())
+	_overtime_cd = maxf(0.0, _overtime_cd - delta)
 	if standing_crew().is_empty():
+		if _overtime_active:
+			_cancel_overtime()
 		# A pack-less Foreman keeps looking for hands until it has some.
 		if not _in_pack() and Engine.get_physics_frames() % Engine.physics_ticks_per_second == 0:
 			_claim()
@@ -260,6 +289,32 @@ func _physics_process(delta: float) -> void:
 		_show_signal(0.0)
 		_draw_tethers()
 		return
+	if _overtime_active:
+		if _knocked_speed() >= OVERTIME_INTERRUPT_KNOCK or _overtime_damage >= OVERTIME_INTERRUPT_DAMAGE:
+			_interrupt_overtime()
+		else:
+			_overtime_t += delta
+			var u := clampf(_overtime_t / OVERTIME_WARN, 0.0, 1.0)
+			var tele := telegraph()
+			if tele != null:
+				tele.set_progress(u)
+			if not _overtime_second_blast and _overtime_t >= OVERTIME_WARN * 0.5:
+				_overtime_second_blast = true
+				_steam_blast_fx()
+			_show_overtime_signal(u)
+			if _overtime_t >= OVERTIME_WARN:
+				_complete_overtime()
+		_draw_tethers()
+		return
+	if _overtime_cd <= 0.0 and not _horned:
+		var injured := _injured_ally()
+		if injured != null:
+			if AttackBudget.ask(self):
+				_start_overtime(injured)
+				_draw_tethers()
+				return
+		else:
+			AttackBudget.withdraw(self)
 	_clock += delta
 	if not _horned and _clock >= WIPE_EVERY - HORN_LEAD:
 		_horned = true
@@ -270,6 +325,158 @@ func _physics_process(delta: float) -> void:
 		_horned = false
 		_wipe()
 	_draw_tethers()
+
+
+func _injured_ally() -> Node3D:
+	var best: Node3D = null
+	var best_share := OVERTIME_HP_SHARE
+	for member in standing_crew():
+		var m_max := float(member.get("max_hp"))
+		var m_hp := float(member.get("hp"))
+		if m_max <= 0.0:
+			continue
+		var share := m_hp / m_max
+		if share < best_share:
+			best_share = share
+			best = member as Node3D
+	return best
+
+
+func _steam_blast_fx() -> void:
+	if world_root == null or not is_inside_tree():
+		return
+	var valve: Vector3 = to_global(_sockets.get("SteamValve", Vector3(0.0, 3.6, 0.0)))
+	var mouth: Vector3 = to_global(_sockets.get("HornMouth", Vector3(0.0, 5.2, -0.4)))
+	FxLibrary.burst(world_root, "steam_puff", valve, 10)
+	FxLibrary.burst(world_root, "brass_spark", mouth, 8)
+
+
+func _start_overtime(ally: Node3D) -> void:
+	_overtime_active = true
+	_overtime_t = 0.0
+	_overtime_ally = ally
+	_overtime_damage = 0.0
+	_overtime_second_blast = false
+	overtime_whistles += 1
+	var tele := _commit_ring(Threat.Type.INSTANT, global_position, OVERTIME_RING_RADIUS, OVERTIME_RING_REACH, Palette.HAZARD)
+	tele.warn_seconds = OVERTIME_WARN
+	_steam_blast_fx()
+	if ResourceLoader.exists(SPECIAL_CUES):
+		load(SPECIAL_CUES).tell(self)
+	else:
+		special_tell.emit("tell")
+	overtime_started.emit(ally)
+
+
+func _complete_overtime() -> void:
+	var tele := telegraph()
+	var ally := _overtime_ally
+	_overtime_active = false
+	_overtime_cd = OVERTIME_COOLDOWN
+	_overtime_ally = null
+	_overtime_damage = 0.0
+	overtime_completes += 1
+	if tele != null and target != null and tele.contains(_ball()):
+		var out := _ball() - global_position
+		out.y = 0.0
+		var dir := out.normalized() if out.length() > 0.1 else -global_basis.z
+		hit_player.emit(OVERTIME_BLAST_DAMAGE, dir * OVERTIME_BLAST_SHOVE + Vector3.UP * 3.0)
+	_clear_telegraph()
+	AttackBudget.release(self)
+	_show_signal(0.0)
+	if not is_instance_valid(ally) or ally.is_dead():
+		ally = _injured_ally()
+	if ally != null and is_instance_valid(ally) and not ally.is_dead():
+		if ally.has_meta(AttackBudget.CLOCKED_OUT_META):
+			ally.remove_meta(AttackBudget.CLOCKED_OUT_META)
+		if "_rest" in ally:
+			ally._rest = 0.0
+		if "recover_left" in ally:
+			ally.recover_left = 0.0
+		if "stun_left" in ally:
+			ally.stun_left = 0.0
+		ally.set_meta("overtime_boosted", true)
+		if world_root != null and is_inside_tree():
+			FxLibrary.burst(world_root, "brass_spark", ally.global_position + Vector3.UP * 0.8, 12)
+		overtime_primed.emit(ally)
+
+
+func _interrupt_overtime() -> void:
+	if not _overtime_active:
+		return
+	_overtime_active = false
+	_overtime_cd = OVERTIME_COOLDOWN
+	_overtime_ally = null
+	_overtime_damage = 0.0
+	_clock = 0.0
+	_horned = false
+	overtime_interrupts += 1
+	_clear_telegraph()
+	AttackBudget.release(self)
+	_show_signal(0.0)
+	var combat = _combat()
+	var shattered: Array = []
+	for member in standing_crew():
+		var had_plate := false
+		if member.get("plates") != null and int(member.get("plates")) > 0:
+			had_plate = true
+			var count := int(member.get("plates"))
+			member.set("plates", 0)
+			if member.get("plates_popped") != null:
+				member.set("plates_popped", int(member.get("plates_popped")) + count)
+			if member.has_method("_fling_plate"):
+				member._fling_plate()
+			var plate_mesh = member.get("_plate")
+			if plate_mesh is Node3D:
+				(plate_mesh as Node3D).visible = false
+		if float(member.get("plating")) > 0.0:
+			had_plate = true
+			member.set("plating", 0.0)
+			if combat != null:
+				combat.wipe_shred(member)
+		if member.has_method("set_tint"):
+			member.set_tint("")
+		if member.has_method("flash"):
+			member.flash()
+		if world_root != null and is_inside_tree():
+			FxLibrary.burst(world_root, "plate_chunks", member.global_position + Vector3.UP * 0.8, 10)
+			FxLibrary.burst(world_root, "brass_spark", member.global_position + Vector3.UP * 0.8, 8)
+		shattered.append(member)
+		if had_plate:
+			overtime_shattered += 1
+	overtime_interrupted.emit(shattered)
+
+
+func _cancel_overtime() -> void:
+	_overtime_active = false
+	_overtime_ally = null
+	_overtime_damage = 0.0
+	_clear_telegraph()
+	AttackBudget.release(self)
+	AttackBudget.withdraw(self)
+
+
+func _show_overtime_signal(progress: float) -> void:
+	var beat := absf(sin(progress * TAU))
+	if _signal_material != null:
+		_signal_material.emission_enabled = true
+		_signal_material.emission = Palette.HAZARD
+		_signal_material.emission_energy_multiplier = FlashGuard.spike(0.8, 3.2 * (0.4 + 0.6 * beat))
+	if _tether_material != null:
+		_tether_material.albedo_color = Palette.HAZARD
+	if _sync_ring != null:
+		_sync_ring.visible = not _dead
+		if _sync_ring.visible:
+			var pulse := 1.0 + 0.09 * beat
+			_sync_ring.scale = Vector3(pulse, 1.0, pulse)
+
+
+func take_damage(amount: float) -> float:
+	if _overtime_active and amount > 0.0 and not _dead:
+		_overtime_damage += amount
+		if hp - amount <= 0.0 or _overtime_damage >= OVERTIME_INTERRUPT_DAMAGE:
+			_interrupt_overtime()
+	return super(amount)
 
 
 # The crew: the Foreman's director pack, or with no pack every unclaimed enemy within reach.
@@ -436,6 +643,10 @@ func _draw_tethers() -> void:
 
 # Killed with its crew standing: the trick fires and the crew clocks out.
 func _die() -> void:
+	if _overtime_active:
+		_interrupt_overtime()
+	AttackBudget.release(self)
+	AttackBudget.withdraw(self)
 	var members := standing_crew()
 	if not members.is_empty():
 		var fleet = spec.get("fleet")
@@ -461,6 +672,11 @@ func _die() -> void:
 
 # Freed without dying (a stage teardown): its crew are nobody's hands any more.
 func _exit_tree() -> void:
+	if _overtime_active:
+		_cancel_overtime()
+	else:
+		AttackBudget.release(self)
+		AttackBudget.withdraw(self)
 	for member in crew:
 		if is_instance_valid(member) and int(member.get_meta("foreman", 0)) == get_instance_id():
 			member.cancel_rally()
