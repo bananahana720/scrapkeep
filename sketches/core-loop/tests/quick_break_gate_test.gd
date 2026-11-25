@@ -59,10 +59,23 @@ func _clock_rules() -> void:
 	clock.stage_seconds = RunClock.QUICK_BREAK_SECONDS[1] + 0.5
 	clock.warden_broken()
 	_t.check("a break over the limit is not quick", not clock.quick_break(), str(clock.fight_seconds()))
-	clock.enter_stage(3)
+	for stage_idx in range(3, RunClock.QUICK_BREAK_SECONDS.size() + 1):
+		var limit: float = RunClock.QUICK_BREAK_SECONDS[stage_idx - 1]
+		clock.enter_stage(stage_idx)
+		clock.warden_engaged()
+		clock.stage_seconds = limit - 0.5
+		clock.warden_broken()
+		_t.check("stage %d pays within its %.0f s limit" % [stage_idx, limit], clock.quick_break(), str(clock.fight_seconds()))
+		clock.enter_stage(stage_idx)
+		clock.warden_engaged()
+		clock.stage_seconds = limit + 0.5
+		clock.warden_broken()
+		_t.check("stage %d refuses over its %.0f s limit" % [stage_idx, limit], not clock.quick_break(), str(clock.fight_seconds()))
+	var beyond := RunClock.QUICK_BREAK_SECONDS.size() + 1
+	clock.enter_stage(beyond)
 	clock.warden_engaged()
 	clock.warden_broken()
-	_t.check("a stage with no limit never pays", not clock.quick_break(), "stage 3 limit %s" % RunClock.QUICK_BREAK_SECONDS[2])
+	_t.check("a stage with no limit never pays", not clock.quick_break(), "stage %d has no quick-break limit" % beyond)
 	clock.enter_stage(1)
 	clock.warden_broken()
 	_t.check("a break with no engagement is not quick", not clock.quick_break(), str(clock.fight_seconds()))

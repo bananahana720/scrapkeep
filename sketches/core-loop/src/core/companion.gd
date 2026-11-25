@@ -13,8 +13,19 @@ const SOCKETS := 2
 const CONDUCTIVE_PRIMER := "conductive_primer"
 const RAM_BRACE := "ram_brace"
 const ESCAPE_CORRIDOR := "escape_corridor"
-const FAMILIES := [CONDUCTIVE_PRIMER, RAM_BRACE, ESCAPE_CORRIDOR]
+const SALVAGE_MAGNET := "salvage_magnet"
+const FAMILIES := [CONDUCTIVE_PRIMER, RAM_BRACE, ESCAPE_CORRIDOR, SALVAGE_MAGNET]
 const MAX_NAME_WORDS := 3
+# Salvage Magnet (W50-ISAAC-ECONOMY): 4th SPIL-9 family.
+# cog_scoop widens scrap/cog vacuum and drips extra cogs on kill streaks (bounded per stage);
+# cartridge_caddy prints a random Pocket Consumable every 2 cleared yards/activities (bounded cap).
+const COG_SCOOP_VACUUM_MULT := 1.65
+const COG_SCOOP_STREAK_STEP := 5
+const COG_SCOOP_STREAK_COGS := 2
+const COG_SCOOP_STAGE_CAP := 24
+const CADDY_EVERY_CLEARS := 2
+const CADDY_STAGE_CAP := 3
+const SALVAGE_META := "w50_companion_salvage"
 # Conductive primer (combat.gd): a weapon hit primes a foe for PRIMER_SECONDS; the next ball
 # contact or special on it consumes the prime. Coil scales that hit, Mesh shares it out.
 const PRIMER_SECONDS := 3.0
@@ -52,6 +63,10 @@ const PIECES := [
 	{"id": "escape_rail", "family": ESCAPE_CORRIDOR, "name": "Corridor Rail",
 		"effect": "After a hit that leaves you at a quarter health or less, lays a short slick lane once for you to ride out on.",
 		"escape": {"style": "lane", "seconds": ESCAPE_SECONDS}},
+	{"id": "cog_scoop", "family": SALVAGE_MAGNET, "name": "Cog Scoop",
+		"effect": "Widens scrap and cog vacuum pull and drips extra cogs on kill streaks."},
+	{"id": "cartridge_caddy", "family": SALVAGE_MAGNET, "name": "Cartridge Caddy",
+		"effect": "Prints a random Pocket Consumable every two cleared yards or activities."},
 ]
 # Module drivers (SR7; comps/ror2/companions.md "Skill-driver list as the behavior model"):
 # each family is an ordered list of rows and pick() runs the first row the state meets, so
@@ -74,6 +89,12 @@ const DRIVERS := {
 			"act": "shove", "cue": "escape_acted"},
 		{"id": "escape_lane", "piece": "escape_rail", "on": ["escape_window"], "needs": {"alive": true},
 			"act": "lane", "cue": "escape_acted"},
+	],
+	SALVAGE_MAGNET: [
+		{"id": "scoop_drip", "piece": "cog_scoop", "on": ["kill", "pickup"], "needs": {"streak_ready": true},
+			"act": "drip_cogs", "cue": "salvage_drip"},
+		{"id": "caddy_print", "piece": "cartridge_caddy", "on": ["yard_cleared"], "needs": {"print_ready": true},
+			"act": "print_cartridge", "cue": "salvage_print"},
 	],
 }
 # One row per thing the companion shows: the clip the body plays and the UI row its chirp
@@ -99,6 +120,12 @@ const CUES := {
 	"assist_anvil": {"clip": "assist_rise", "chirp": "companion_ready"},
 	"assist_static": {"clip": "assist_rise", "chirp": "companion_ready"},
 	"assist_bulldozer": {"clip": "assist_rise", "chirp": "companion_ready"},
+	"salvage_drip": {"clip": "spring_arm", "chirp": ""},
+	"salvage_print": {"clip": "spring_arm", "chirp": "companion_ready"},
+	"assist_magnet": {"clip": "assist_rise", "chirp": "companion_ready"},
+	"assist_flux": {"clip": "assist_rise", "chirp": "companion_ready"},
+	"assist_scrap_plow": {"clip": "assist_rise", "chirp": "companion_ready"},
+	"assist_skim_scoop": {"clip": "assist_rise", "chirp": "companion_ready"},
 }
 
 # COMPANION-GROWS (Andrew's taps 16:36Z and 16:44Z, 17 Oct 2026; storyboard
@@ -144,6 +171,10 @@ const ASSISTS := {
 	CONDUCTIVE_PRIMER + "+" + RAM_BRACE: {"id": "anvil", "name": "Thunder Anvil", "word": "KRA-KOOM!", "shape": "ring", "prime": true, "shove": true, "slick": false},
 	CONDUCTIVE_PRIMER + "+" + ESCAPE_CORRIDOR: {"id": "static", "name": "Static Slipstream", "word": "ZZZWAP!", "shape": "ring", "prime": true, "shove": true, "slick": true},
 	RAM_BRACE + "+" + ESCAPE_CORRIDOR: {"id": "bulldozer", "name": "Bulldozer Bow", "word": "WHUMP!", "shape": "lane", "prime": false, "shove": true, "slick": true},
+	SALVAGE_MAGNET: {"id": "magnet", "name": "Scrap Magnet", "word": "SCHLUNK!", "shape": "ring", "prime": false, "shove": true, "slick": false},
+	CONDUCTIVE_PRIMER + "+" + SALVAGE_MAGNET: {"id": "flux", "name": "Flux Scoop", "word": "ZAP-POP!", "shape": "ring", "prime": true, "shove": false, "slick": false},
+	RAM_BRACE + "+" + SALVAGE_MAGNET: {"id": "scrap_plow", "name": "Scrap Plow", "word": "CRUNCH!", "shape": "ring", "prime": false, "shove": true, "slick": false},
+	ESCAPE_CORRIDOR + "+" + SALVAGE_MAGNET: {"id": "skim_scoop", "name": "Skim Scoop", "word": "SWOOSH!", "shape": "ring", "prime": false, "shove": true, "slick": true},
 }
 # The leash (comps/ror2/companions.md:157, "use a Scrapkeep value tuned in the lab"): start
 # values. With no leader the companion stalls after STALL_AFTER s (must stay under 1 s) and
@@ -154,7 +185,7 @@ const LEASH_RANGE := 14.0
 const LEASH_SECONDS := 2.0
 
 # The order run-found pieces arrive: the first two make a legal pair, and escape comes first.
-const DROP_ORDER := ["escape_vent", "ram_prow", "primer_coil", "escape_rail", "ram_spring", "primer_mesh"]
+const DROP_ORDER := ["escape_vent", "ram_prow", "primer_coil", "escape_rail", "ram_spring", "primer_mesh", "cog_scoop", "cartridge_caddy"]
 
 var owned: Array[String] = []
 var sockets: Array[String] = []
@@ -550,3 +581,82 @@ func from_dict(d: Dictionary) -> bool:
 	sockets = s
 	_escape_spent = spent
 	return true
+
+
+# ---- W50-ISAAC-ECONOMY: Salvage Magnet runtime helpers (cog_scoop & cartridge_caddy) ---
+
+static func vacuum_scale(doc: Dictionary) -> float:
+	return COG_SCOOP_VACUUM_MULT if seated(doc, SALVAGE_MAGNET) == "cog_scoop" else 1.0
+
+
+static func _salvage_state(run) -> Dictionary:
+	if run == null:
+		return {"stage": 0, "streak": 0, "cogs_dripped": 0, "yards": 0, "prints": 0}
+	var cur := int(run.stage)
+	var raw = run.get_meta(SALVAGE_META) if run.has_meta(SALVAGE_META) else null
+	if not (raw is Dictionary) or int(raw.get("stage", -1)) != cur:
+		raw = {"stage": cur, "streak": 0, "cogs_dripped": 0, "yards": 0, "prints": 0}
+		run.set_meta(SALVAGE_META, raw)
+	return raw
+
+
+static func reset_salvage_stage(run) -> void:
+	if run == null:
+		return
+	run.set_meta(SALVAGE_META, {"stage": int(run.stage), "streak": 0, "cogs_dripped": 0, "yards": 0, "prints": 0})
+
+
+static func on_salvage_kill(run, table: Dictionary = DRIVERS) -> Dictionary:
+	if run == null or not run.alive():
+		return {"dripped": 0}
+	var piece := seated(run.companion, SALVAGE_MAGNET)
+	if piece != "cog_scoop":
+		return {"dripped": 0}
+	var st := _salvage_state(run)
+	st["streak"] = int(st.get("streak", 0)) + 1
+	var ready := int(st["streak"]) >= COG_SCOOP_STREAK_STEP and int(st.get("cogs_dripped", 0)) < COG_SCOOP_STAGE_CAP
+	var row := pick({"piece": piece, "on": "kill", "streak_ready": ready}, table)
+	if row.is_empty():
+		return {"dripped": 0, "streak": int(st["streak"]), "stage_total": int(st.get("cogs_dripped", 0))}
+	st["streak"] = 0
+	var room := COG_SCOOP_STAGE_CAP - int(st.get("cogs_dripped", 0))
+	var drip := mini(COG_SCOOP_STREAK_COGS, room)
+	if drip > 0:
+		st["cogs_dripped"] = int(st.get("cogs_dripped", 0)) + drip
+		run.add_cogs(drip)
+	return {"dripped": drip, "stage_total": int(st["cogs_dripped"]), "cap": COG_SCOOP_STAGE_CAP, "cue": String(row["cue"])}
+
+
+static func on_yard_cleared(run, combat = null, at := Vector3.ZERO, rng: RandomNumberGenerator = null, table: Dictionary = DRIVERS) -> Dictionary:
+	if run == null or not run.alive():
+		return {"printed": false, "consumable_id": ""}
+	var piece := seated(run.companion, SALVAGE_MAGNET)
+	if piece != "cartridge_caddy":
+		return {"printed": false, "consumable_id": ""}
+	var st := _salvage_state(run)
+	st["yards"] = int(st.get("yards", 0)) + 1
+	var ready := (int(st["yards"]) % CADDY_EVERY_CLEARS == 0) and int(st.get("prints", 0)) < CADDY_STAGE_CAP
+	var row := pick({"piece": piece, "on": "yard_cleared", "print_ready": ready}, table)
+	if row.is_empty():
+		return {"printed": false, "consumable_id": "", "yards": int(st["yards"]), "stage_prints": int(st.get("prints", 0)), "cap": CADDY_STAGE_CAP}
+	var ConsScript = load("res://src/build/consumables.gd")
+	var roll_rng := rng
+	if roll_rng == null:
+		roll_rng = RandomNumberGenerator.new()
+		roll_rng.seed = hash([run.run_seed, run.stage, "cartridge_caddy", int(st["yards"])])
+	var cid := String(ConsScript.roll_id(roll_rng))
+	st["prints"] = int(st.get("prints", 0)) + 1
+	var stored_in_belt := false
+	if run.has_method("add_consumable") and run.add_consumable(cid):
+		stored_in_belt = true
+	elif combat != null and combat.has_method("drop_consumable"):
+		combat.drop_consumable(cid, at + Vector3(2.8, 0.0, 0.0))
+	return {
+		"printed": true,
+		"consumable_id": cid,
+		"stored_in_belt": stored_in_belt,
+		"yards": int(st["yards"]),
+		"stage_prints": int(st["prints"]),
+		"cap": CADDY_STAGE_CAP,
+		"cue": String(row["cue"]),
+	}

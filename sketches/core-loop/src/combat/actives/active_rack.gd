@@ -2,6 +2,7 @@ extends Node
 
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
+const Consumables := preload("res://src/build/consumables.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
@@ -29,6 +30,7 @@ var progress := 0.0
 # Overflow pieces banked for the next fire.
 var bonus := 0
 var fires := 0
+var echo_fires := 0
 var _locked := 0.0
 # A big active's wind-up: seconds left, 0 when none is winding.
 var winding := 0.0
@@ -70,6 +72,7 @@ func reset() -> void:
 	progress = 0.0
 	bonus = 0
 	fires = 0
+	echo_fires = 0
 	_locked = 0.0
 	winding = 0.0
 	_granted = false
@@ -82,6 +85,7 @@ func reset() -> void:
 func rack(id: String, fill := true) -> bool:
 	if _row(id).is_empty():
 		return false
+	_cancel_windup()
 	active_id = id
 	charges = int(_row(id)["max_charges"]) if fill else 0
 	progress = 0.0
@@ -214,6 +218,13 @@ func _release() -> void:
 	# Open Frame (the Highdraft Roosts set, maker_sets.gd): an active fired in the air fires twice.
 	if ctx.build != null and ctx.build.has_method("maker_fires_twice") and ctx.build.maker_fires_twice():
 		count += int(_kinds[active_id].fire(self, row, bonus))
+	# Breaker Fuse (`overload_fuse`, W50-ISAAC-ECONOMY): next Active echoes strictly once at 0.75x (item_proc).
+	if ctx.run != null and Consumables.consume_overload_fuse(ctx.run):
+		echo_fires += 1
+		if _kinds[active_id].has_method("fire_echo"):
+			count += int(_kinds[active_id].fire_echo(self, row, bonus, Consumables.OVERLOAD_ECHO_MULT))
+		else:
+			count += Consumables.echo_active_fallback(ctx, combat, active_id, Consumables.OVERLOAD_ECHO_MULT)
 	if bonus > 0: ctx.events.overflow_cashed.emit(active_id, bonus)
 	bonus = 0
 	fires += 1

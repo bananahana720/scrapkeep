@@ -24,6 +24,7 @@ const Consumables := preload("res://src/build/consumables.gd")
 
 const SHELF_SIZE := 3
 const CONSUMABLE_STOCK_SIZE := 2
+const TRI_TERMINAL_SIZE := 3
 const SHELF_RARITIES := ["common", "rare"]
 const TOP_RARITIES := ["relic"]
 const FLOOR_RARITIES := ["rare"]
@@ -48,6 +49,8 @@ const WELDED := "welded"
 const NOT_HELD := "not_held"
 const CLOSED := "closed"
 const TOO_LIGHT := "too_light"
+const NO_FUEL := "no_fuel"
+const TRI_CLOSED := "tri_closed"
 
 # Moss's last call (W1-73, gameplay critique finding 11): the bay after a world's last Warden
 # launches the ball into that world's boss arena, so it is the last till of the world and cogs
@@ -127,6 +130,8 @@ var visit := 0
 var inside := false
 var shelf: Array = []
 var consumable_stock: Array = []
+var tri_terminal: Array = []
+var tri_terminal_closed := false
 var top := {}
 var rerolls_left := 0
 var bought_this_visit := 0
@@ -146,6 +151,8 @@ var _stage_stocks := {}
 
 var _rng := RandomNumberGenerator.new()
 var _cons_rng := RandomNumberGenerator.new()
+var _tri_rng := RandomNumberGenerator.new()
+var _press_rng := RandomNumberGenerator.new()
 var _left_empty := false
 var _cheapest_left := 0
 
@@ -160,6 +167,8 @@ func reset_run() -> void:
 	inside = false
 	shelf = []
 	consumable_stock = []
+	tri_terminal = []
+	tri_terminal_closed = false
 	top = {}
 	stocked_for = []
 	stocks = 0
@@ -167,6 +176,8 @@ func reset_run() -> void:
 	neglected = false
 	_left_empty = false
 	talks = {"beat": -1, "used": {}, "loops": 0, "relented": false}
+	if ctx != null and ctx.run != null:
+		Fabricators.reset_ingots(ctx.run)
 
 
 static func line(line_id: String) -> Dictionary:
@@ -218,7 +229,19 @@ func _stock_stage(here: Array) -> void:
 		top = carried
 	_cons_rng.seed = hash([SEED, ctx.flow.run_key() if ctx.flow != null else ctx.run.run_seed, ctx.run.world, ctx.run.stage, "consumables"])
 	consumable_stock = _stock_consumables()
-	_stage_stocks[str(here)] = {"shelf": shelf.duplicate(true), "consumables": consumable_stock.duplicate(true), "top": top.duplicate(true), "rng": _rng.state}
+	_tri_rng.seed = hash([SEED, ctx.flow.run_key() if ctx.flow != null else ctx.run.run_seed, ctx.run.world, ctx.run.stage, "tri_terminal"])
+	_press_rng.seed = hash([SEED, ctx.flow.run_key() if ctx.flow != null else ctx.run.run_seed, ctx.run.world, ctx.run.stage, "part_press"])
+	tri_terminal = _stock_tri_terminal()
+	tri_terminal_closed = false
+	_stage_stocks[str(here)] = {
+		"shelf": shelf.duplicate(true),
+		"consumables": consumable_stock.duplicate(true),
+		"tri_terminal": tri_terminal.duplicate(true),
+		"tri_terminal_closed": tri_terminal_closed,
+		"ingots": Fabricators.ingots_to_doc(ctx.run),
+		"top": top.duplicate(true),
+		"rng": _rng.state,
+	}
 
 
 # The last stage's hook, unsold and still above the ball's class, with the class it asked for;
@@ -254,6 +277,10 @@ func rewind_stage() -> void:
 	rerolls_left = REROLLS_PER_VISIT
 	shelf = kept["shelf"].duplicate(true)
 	consumable_stock = (kept.get("consumables", []) as Array).duplicate(true)
+	tri_terminal = (kept.get("tri_terminal", []) as Array).duplicate(true)
+	tri_terminal_closed = bool(kept.get("tri_terminal_closed", false))
+	if kept.has("ingots"):
+		Fabricators.ingots_from_doc(ctx.run, kept["ingots"])
 	top = kept["top"].duplicate(true)
 	# The draws after the stock come back too, so a retry's reroll is the first attempt's reroll.
 	_rng.state = kept["rng"]
@@ -883,3 +910,119 @@ func _refund(amount: int) -> void:
 	if amount <= 0:
 		return
 	ctx.run.add_cogs(amount)
+
+
+# ---- W50-ISAAC-ECONOMY: Scrapper, Part Press, Tri-Terminal & Audit Die ----------------
+
+func ingot_counts() -> Dictionary:
+	return Fabricators.scrap_ingots(ctx.run if ctx != null else null)
+
+
+func scrap_to_ingot(part_id: String) -> Dictionary:
+	if not inside:
+		return _result(false, CLOSED, "", part_id)
+	var res := Fabricators.scrap_part(ctx.run, part_id, build)
+	if not bool(res.get("ok", false)):
+		var reason := String(res.get("reason", NOT_HELD))
+		return _result(false, NOT_HELD if reason in ["empty", "not_held"] else WELDED, "", part_id)
+	var out := _result(true, OK, "moss.bark.sell", part_id, 0)
+	out["tier"] = int(res["tier"])
+	out["rarity"] = String(res["rarity"])
+	out["ingots"] = int(res["ingots"])
+	return out
+
+
+func press_duplicate(target_part_id: String) -> Dictionary:
+	if not inside:
+		return _result(false, CLOSED, "", target_part_id)
+	var res := Fabricators.press_part(ctx.run, target_part_id, _press_rng, build)
+	if not bool(res.get("ok", false)):
+		var reason := String(res.get("reason", NO_FUEL))
+		return _result(false, CAPPED if reason == "capped" else NO_FUEL, "", target_part_id)
+	bought_this_visit += 1
+	var out := _result(true, OK, "moss.bark.buy", target_part_id, 0)
+	out["tier"] = int(res["tier"])
+	out["paid_kind"] = String(res["paid_kind"])
+	out["sacrificed"] = String(res["sacrificed"])
+	out["ingots_left"] = int(res["ingots_left"])
+	return out
+
+
+func _stock_tri_terminal() -> Array:
+	var picks: Array = Parts.roll(_tri_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, TRI_TERMINAL_SIZE)
+	var out: Array = []
+	for i in picks.size():
+		out.append({"part_id": String(picks[i]), "sold": false, "chosen": false, "revealed": i == 0})
+	return out
+
+
+func tri_terminal_offers() -> Array:
+	var out: Array = []
+	for i in tri_terminal.size():
+		var entry: Dictionary = tri_terminal[i]
+		var offer := _offer(String(entry["part_id"]), bool(entry["sold"]) or tri_terminal_closed, i)
+		offer["chosen"] = bool(entry.get("chosen", false))
+		offer["closed"] = tri_terminal_closed
+		offer["revealed"] = bool(entry.get("revealed", i == 0))
+		out.append(offer)
+	return out
+
+
+func buy_tri_terminal(index: int) -> Dictionary:
+	if not inside:
+		return _result(false, CLOSED)
+	if tri_terminal_closed:
+		return _result(false, TRI_CLOSED)
+	if index < 0 or index >= tri_terminal.size() or bool(tri_terminal[index]["sold"]):
+		return _result(false, SOLD_OUT)
+	var part_id := String(tri_terminal[index]["part_id"])
+	var cost: int = price(part_id)
+	if not ctx.run.spend_cogs(cost):
+		return _result(false, CANT_AFFORD, "moss.bark.cant_afford", part_id, cost)
+	tri_terminal_closed = true
+	for i in tri_terminal.size():
+		tri_terminal[i]["sold"] = true
+		tri_terminal[i]["chosen"] = (i == index)
+	bought_this_visit += 1
+	ctx.run.add_part(part_id, "tri_terminal")
+	return _result(true, OK, "moss.bark.buy", part_id, cost)
+
+
+# Foreman's Audit Die (`scrap_dice`): rerolls unsold shelf slots to same-or-higher tier
+# without charging cogs or spending Moss's paid reroll.
+func audit_reroll(rng: RandomNumberGenerator = null) -> Dictionary:
+	if shelf.is_empty():
+		return {"rerolled": 0, "before_tiers": [], "after_tiers": []}
+	var roll_rng := rng if rng != null else _tri_rng
+	var before_tiers: Array[int] = []
+	var after_tiers: Array[int] = []
+	var used: Array = []
+	for entry in shelf:
+		used.append(String(entry["part_id"]))
+	var rerolled := 0
+	for i in shelf.size():
+		if bool(shelf[i].get("sold", false)):
+			continue
+		var old_id := String(shelf[i]["part_id"])
+		if ActiveOffers.is_offer(old_id):
+			continue
+		var old_tier := Fabricators.tier_of(old_id)
+		before_tiers.append(old_tier)
+		var rarities: Array = ["rare", "relic"] if old_tier >= 2 else ["common", "rare"]
+		var candidates: Array = Parts.offer_pool(ctx.run.class_id(), rarities).filter(func(pid):
+			var d: Resource = Parts.def(pid)
+			return d != null and int(d.tier) >= old_tier and not (pid in used) and not Parts.stacked_out(pid, ctx.run.parts) and not Parts.maxed(pid, ctx.run.parts))
+		if candidates.is_empty():
+			candidates = Parts.offer_pool(ctx.run.class_id(), rarities).filter(func(pid):
+				var d: Resource = Parts.def(pid)
+				return d != null and int(d.tier) >= old_tier and pid != old_id)
+		if not candidates.is_empty():
+			candidates.sort()
+			var picked := String(candidates[roll_rng.randi_range(0, candidates.size() - 1)])
+			shelf[i]["part_id"] = picked
+			used.append(picked)
+			after_tiers.append(Fabricators.tier_of(picked))
+			rerolled += 1
+		else:
+			after_tiers.append(old_tier)
+	return {"rerolled": rerolled, "before_tiers": before_tiers, "after_tiers": after_tiers}
