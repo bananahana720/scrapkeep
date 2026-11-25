@@ -223,11 +223,22 @@ func _test_live_game_wiring() -> void:
 	var cap_res: Dictionary = game.combat.use_consumable(Consumables.CAP_CHARGE)
 	_check(int(cap_res.get("hits", 0)) >= 1, "Blasting Cap hits Warden cleanly without type error")
 
+	var pre_status := TradePockets.contract_status(game.run)
+	_check(not game.run.has_meta(TradePockets.CONTRACT_META) and not bool(pre_status["overtime_signed"]) and not bool(pre_status["auction_spent"]),
+		"TradePockets.contract_status() is read-only and does not mutate run meta")
 	var sign_res := TradePockets.sign_overtime_contract(game.run)
-	_check(bool(sign_res.get("ok", false)), "Overtime Contract signs")
+	_check(bool(sign_res.get("ok", false)) and bool(TradePockets.contract_status(game.run)["overtime_signed"]),
+		"Overtime Contract signs and reflects in contract_status()")
 	var cogs_pre_settle: int = int(game.run.cogs)
 	game.events.stage_cleared.emit(game.run.stage)
-	_check(int(game.run.cogs) > cogs_pre_settle, "stage_cleared auto-settles signed Overtime Contract")
+	_check(int(game.run.cogs) > cogs_pre_settle and bool(TradePockets.contract_status(game.run)["overtime_settled"]),
+		"stage_cleared auto-settles signed Overtime Contract")
+	game.run.add_cogs(200)
+	var auc1 := TradePockets.bid_salvage_auction(game.run, 40)
+	var auc2 := TradePockets.bid_salvage_auction(game.run, 40)
+	_check(bool(auc1.get("ok", false)) and bool(TradePockets.contract_status(game.run)["auction_spent"])
+		and not bool(auc2.get("ok", false)) and String(auc2.get("reason", "")) == "already_spent",
+		"Scrap Auction pays once per stage and refuses repeat bids with already_spent")
 
 	game.combat.orbitals.storm_charges = 5
 	game.events.player_died.emit()
