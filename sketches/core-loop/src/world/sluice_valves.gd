@@ -41,8 +41,6 @@ const WHEEL_PATH := "res://assets/models/grapple/sluice_valve_wheel.glb"
 const BITE_GROUP := "sluice_valve_bite"
 const WASH_SOURCE := "grapple_sluice"
 
-const SPILLWAY_MAPS := ["park_dam", "park_flume"]
-
 const BITE_RADIUS := 1.15
 const BITE_HEIGHT := 1.6
 const YANK_MIN_SWING_SPEED := 4.0
@@ -102,12 +100,7 @@ func sync_stage(ctx_ref) -> void:
 	if terrain == null or not terrain.has_method("map"):
 		return
 	var m = terrain.map()
-	if m == null:
-		return
-	var map_id := String(m.park.get("map", "")) if "park" in m and m.park is Dictionary else ""
-	if map_id != "" and not (map_id in SPILLWAY_MAPS):
-		return
-	if not ("contraptions" in m):
+	if m == null or not ("contraptions" in m):
 		return
 	var specs: Array = []
 	for spec in m.contraptions:
