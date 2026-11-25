@@ -3,6 +3,7 @@ extends "res://src/combat/enemy.gd"
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 # The chaser runs you down and lunges. The lunge is committed: at wind-up it lays a
 # lane on the ground from where it stands toward where you are, and only that lane
@@ -40,6 +41,28 @@ const ACCENT := Color("ffb070")
 # Head-on a small pitch hides in the silhouette, so the rear-up is large enough to show from 10 m.
 const REAR_SHIFT := Vector3(0.0, 0.3, 0.7)
 const REAR_PITCH := 42.0
+# Secondary attack (W47-E1): Spring-Vault Leap. Triggered when the player is airborne > 1.5 m
+# or > 10 m up a bank. 0.70 s crouch-coil + arcing HAZARD landing ring commits a parabolic
+# leap; ramming or grapple-bumping the chaser mid-arc triggers Air-Parry Homing Bounce
+# (1-hit shatter + 8 m/s forward kick + air-jump refresh).
+const VAULT_WINDUP := 0.70
+const VAULT_FLIGHT := 0.42
+const VAULT_AIR_MIN := 1.5
+const VAULT_BALL_RADIUS := 1.05
+const VAULT_BANK_DIST := 10.0
+const VAULT_BANK_RISE := 4.5
+const VAULT_RANGE := 20.0
+const VAULT_COOLDOWN := 4.5
+const VAULT_RADIUS := 3.2
+const VAULT_REACH := 3.5
+const VAULT_DAMAGE := 12.0
+const VAULT_SHOVE := 7.0
+const VAULT_SLOW_LEAD_S := 0.35
+const VAULT_SLOW_CAP := 12.0
+const AIR_PARRY_KICK := 8.0
+const AIR_PARRY_REACH := 2.6
+const VAULT_COIL_SHIFT := Vector3(0.0, -0.32, 0.28)
+const VAULT_COIL_PITCH := -18.0
 
 enum State { CHASE, WINDUP, LUNGE, RECOVER, CALL }
 
@@ -58,13 +81,22 @@ const FLANK_CALL_S := 1.1
 
 var state := State.CHASE
 var lunges := 0
+var vaults := 0
+var air_parries := 0
+var landed_attack := ""
 # This chaser's run speed (m/s): SPEED unless its spawn handed it the stage's (spec "run_speed", stage_speed()).
 var run_speed := SPEED
 var _age := 0.0
 
 var _clock := 0.0
 var _rest := 0.0
+var _vault_cd := 0.0
 var _landed := false
+var _vaulting := false
+var _vault_from := Vector3.ZERO
+var _vault_to := Vector3.ZERO
+var _vault_launch := Vector3.ZERO
+var _vault_parried := false
 var _mesh: Node3D
 # Test seam: only the attack pose is disabled; facing and physics keep running.
 var windup_pose_enabled := true
@@ -158,6 +190,7 @@ func state_name() -> String:
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
 	if not _in_play() or target == null:
+		AttackBudget.withdraw(self)
 		_cue_step(delta)
 		_move(delta, Vector3.ZERO)
 		return
@@ -165,6 +198,7 @@ func _physics_process(delta: float) -> void:
 	_clock += delta
 	_age += delta
 	_rest = maxf(0.0, _rest - delta)
+	_vault_cd = maxf(0.0, _vault_cd - delta)
 	var to_ball := _flat_to_ball()
 	match state:
 		State.CHASE:
@@ -180,7 +214,10 @@ func _physics_process(delta: float) -> void:
 				if ball_sq > reach * reach:
 					desired = to_ball.normalized() * _pace()
 				_move(delta, desired)
-				if _rest <= 0.0 and ball_sq < LUNGE_RANGE * LUNGE_RANGE and is_on_floor() and _knocked_speed() < 1.0:
+				if _rest <= 0.0 and _wants_vault(to_ball):
+					if AttackBudget.ask(self):
+						_begin_vault()
+				elif _rest <= 0.0 and ball_sq < LUNGE_RANGE * LUNGE_RANGE and is_on_floor() and _knocked_speed() < 1.0:
 					if AttackBudget.ask(self):
 						_begin_windup(to_ball)
 				else:
@@ -197,28 +234,36 @@ func _physics_process(delta: float) -> void:
 					_end_attack(State.RECOVER)
 		State.WINDUP:
 			_move(delta, Vector3.ZERO)
-			var lane := telegraph()
-			if lane != null:
-				lane.set_progress(_clock / WINDUP)
-			if _knocked_speed() >= INTERRUPT or lane == null:
-				if _knocked_speed() >= INTERRUPT and lane != null:
+			var tele := telegraph()
+			var dur := VAULT_WINDUP if _vaulting else WINDUP
+			if tele != null:
+				tele.set_progress(_clock / dur)
+			if _knocked_speed() >= INTERRUPT or tele == null:
+				if _knocked_speed() >= INTERRUPT and tele != null:
 					_show_interrupted()
 				_end_attack(State.RECOVER)
-			elif _clock >= WINDUP:
+			elif _clock >= dur:
 				state = State.LUNGE
 				_clock = 0.0
+				if _vaulting:
+					velocity = _vault_launch
+					if world_root != null and is_inside_tree():
+						FxLibrary.burst(world_root, "steam_puff", global_position, 5)
 		State.LUNGE:
-			var lane := telegraph()
-			if lane == null:
+			var tele := telegraph()
+			if tele == null:
 				_end_attack(State.RECOVER)
 				_paint_cue()
 				return
-			_move(delta, lane.dir * LUNGE_LENGTH / LUNGE_TIME)
-			var along: float = (global_position - lane.center).dot(lane.dir)
-			lane.run_body(along, hit_reach())
-			_check_hit(lane)
-			if _clock >= LUNGE_TIME or along >= lane.length:
-				_end_attack(State.RECOVER)
+			if _vaulting:
+				_step_vault(delta, tele)
+			else:
+				_move(delta, tele.dir * LUNGE_LENGTH / LUNGE_TIME)
+				var along: float = (global_position - tele.center).dot(tele.dir)
+				tele.run_body(along, hit_reach())
+				_check_hit(tele)
+				if _clock >= LUNGE_TIME or along >= tele.length:
+					_end_attack(State.RECOVER)
 		State.RECOVER:
 			_move(delta, Vector3.ZERO)
 			if _clock >= RECOVER:
@@ -232,6 +277,10 @@ func _physics_process(delta: float) -> void:
 # and wind up when the lane's led end is in range. The lane is still committed at wind-up and only it hurts.
 func _lead_chase(delta: float, to_ball: Vector3, lead: float) -> void:
 	_move(delta, _toward(_intercept(lead)))
+	if _rest <= 0.0 and _wants_vault(to_ball):
+		if AttackBudget.ask(self):
+			_begin_vault()
+		return
 	var aim := _led_aim(lead)
 	if _rest <= 0.0 and aim.length() < LUNGE_RANGE and is_on_floor() and _knocked_speed() < 1.0:
 		if AttackBudget.ask(self):
@@ -298,11 +347,150 @@ func _toward(offset: Vector3) -> Vector3:
 	return offset.normalized() * _pace() if offset.length() > radius + 1.4 else Vector3.ZERO
 
 
+func is_vaulting() -> bool:
+	return _vaulting and (state == State.WINDUP or state == State.LUNGE)
+
+
+func _wants_vault(to_ball: Vector3) -> bool:
+	if target == null or _vault_cd > 0.0 or not is_on_floor() or _knocked_speed() >= 1.0:
+		return false
+	if target.has_method("sees") and not target.sees():
+		return false
+	var dist := to_ball.length()
+	if dist > VAULT_RANGE or dist < 0.5:
+		return false
+	var ball := _ball()
+	var ground_y: float = Telegraph.ground_under(terrain, ball) if terrain != null else 0.0
+	var player = _real_player()
+	var grounded: bool = player != null and player.get("state") != null and bool(player.state.grounded)
+	var clearance := (ball.y - ground_y) - VAULT_BALL_RADIUS
+	var airborne := (not grounded or clearance > VAULT_AIR_MIN + 1.0) and clearance > VAULT_AIR_MIN
+	var rise := ball.y - global_position.y
+	var up_bank := (dist > VAULT_BANK_DIST and rise >= VAULT_BANK_RISE) or rise > VAULT_BANK_DIST
+	return airborne or up_bank
+
+
 func _begin_windup(to_ball: Vector3) -> void:
 	state = State.WINDUP
+	_vaulting = false
+	_vault_parried = false
 	_clock = 0.0
 	_landed = false
 	_commit_lane(Threat.Type.LANE, global_position, to_ball, LUNGE_LENGTH, LUNGE_WIDTH).run_body(0.0, hit_reach())
+
+
+func _begin_vault() -> void:
+	state = State.WINDUP
+	_vaulting = true
+	_vault_parried = false
+	_clock = 0.0
+	_landed = false
+	var ball := _ball()
+	var pv: Vector3 = target.planar_velocity() if target != null and target.has_method("planar_velocity") else Vector3.ZERO
+	var aim := ball
+	if Vector2(pv.x, pv.z).length() < VAULT_SLOW_CAP:
+		var offset := _flat((ball + pv * VAULT_SLOW_LEAD_S) - global_position)
+		if offset.length() > VAULT_RANGE:
+			offset = offset.normalized() * VAULT_RANGE
+		aim = Vector3(global_position.x + offset.x, ball.y, global_position.z + offset.z)
+	var land_y: float = Telegraph.ground_under(terrain, aim) if terrain != null else aim.y
+	_vault_from = global_position
+	_vault_to = Vector3(aim.x, land_y + half_height, aim.z)
+	var landing := Vector3(aim.x, land_y, aim.z)
+	_vault_launch = (_vault_to - _vault_from) / VAULT_FLIGHT
+	_vault_launch.y += 0.5 * GRAVITY * VAULT_FLIGHT
+	_clear_telegraph()
+	_telegraph = Telegraph.secondary_ring(world_root, terrain, Threat.Type.PROJECTILE, landing, VAULT_RADIUS, VAULT_WINDUP, VAULT_REACH)
+	_telegraph.owner_voice = "clank"
+	_telegraph.mechanic_tag = "vault_rise"
+	_telegraph.set_flight(_vault_from + Vector3.UP * 0.5, Threat.lob_bump(GRAVITY, VAULT_FLIGHT))
+	_facts_begin(_telegraph)
+
+
+func _step_vault(_delta: float, ring: Node3D) -> void:
+	velocity.x = _vault_launch.x
+	velocity.z = _vault_launch.z
+	velocity.y = _vault_launch.y - GRAVITY * _clock
+	move_and_slide()
+	if _check_air_parry():
+		return
+	if _clock >= VAULT_FLIGHT:
+		var real_ball := _real_ball()
+		if not _landed and ring.contains(real_ball):
+			_landed = true
+			landed_attack = "spring_vault"
+			var away := _flat(real_ball - ring.center)
+			var dir := away.normalized() if away.length() > 0.1 else Vector3.FORWARD
+			hit_player.emit(VAULT_DAMAGE, dir * VAULT_SHOVE + Vector3.UP * 2.5)
+		_end_attack(State.RECOVER)
+
+
+func _real_player():
+	if target == null:
+		return null
+	return target.get("player") if "player" in target else target
+
+
+func _real_ball() -> Vector3:
+	var player = _real_player()
+	if player != null and player.has_method("ball_position"):
+		return player.ball_position()
+	return _ball()
+
+
+func _check_air_parry() -> bool:
+	if _vault_parried or _dead:
+		return false
+	var player = _real_player()
+	if player == null or not player.has_method("ball_position"):
+		return false
+	var ball: Vector3 = player.ball_position()
+	if ball.distance_to(global_position) > AIR_PARRY_REACH:
+		return false
+	var kit = player.get("kit")
+	var grapple_bump: bool = (kit != null and kit.hooked and kit.anchor_body == self) or _line_lean_goal != 0.0
+	var pv: Vector3 = player.planar_velocity() if player.has_method("planar_velocity") else Vector3.ZERO
+	var fast_ram: bool = Vector2(pv.x, pv.z).length() >= 12.0
+	if not (grapple_bump or fast_ram):
+		return false
+	_air_parry(true)
+	return true
+
+
+func on_struck(hit_kind: String, _part: String, result: Dictionary) -> void:
+	if state == State.LUNGE and _vaulting and not _vault_parried and hit_kind in ["ram", "stomp", "slam"]:
+		result["dealt"] = maxf(float(result.get("dealt", 0.0)), hp + 1.0)
+		_air_parry(false)
+
+
+# Air-Parry Homing Bounce: ramming or grapple-bumping a leaping Chaser mid-arc 1-hit shatters
+# it, kicks the ball forward +8 m/s, and refreshes the player's air jump + movement charge.
+func _air_parry(kill_now: bool) -> void:
+	if _vault_parried or _dead:
+		return
+	_vault_parried = true
+	air_parries += 1
+	_vaulting = false
+	_clear_telegraph()
+	AttackBudget.release(self)
+	var player = _real_player()
+	if player != null and is_instance_valid(player):
+		var v: Vector3 = player.planar_velocity() if player.has_method("planar_velocity") else Vector3.ZERO
+		var fwd := Vector3(v.x, 0.0, v.z)
+		if fwd.length() < 0.5 and player.has_method("ball_position"):
+			fwd = _flat(player.ball_position() - global_position)
+		if fwd.length() < 0.1:
+			fwd = Vector3.FORWARD
+		var step := maxf(get_physics_process_delta_time(), 1.0 / 90.0)
+		if player.has_method("add_external_accel"):
+			player.add_external_accel((fwd.normalized() * AIR_PARRY_KICK + Vector3.UP * 3.0) / step)
+		if player.has_method("refresh_air"):
+			player.refresh_air()
+	if world_root != null and is_inside_tree():
+		FxLibrary.burst(world_root, "brass_spark", global_position, 14)
+		FxLibrary.burst(world_root, "spark_core", global_position, 10, Palette.SAND)
+	if kill_now:
+		take_damage(hp + 1.0)
 
 
 # How close the body must come to the ball to hit it; the lane's running-body mark reads the same.
@@ -315,17 +503,25 @@ func hit_reach() -> float:
 func _check_hit(lane: Node3D) -> void:
 	if _landed:
 		return
-	var ball := _ball()
+	var ball := _real_ball()
 	var flat := Vector3(ball.x - global_position.x, 0.0, ball.z - global_position.z)
 	if flat.length() > hit_reach() or not lane.contains(ball):
 		return
 	_landed = true
+	landed_attack = "lunge"
 	hit_player.emit(DAMAGE, lane.dir * SHOVE + Vector3.UP * 2.0)
 
 
 func _end_attack(next: int) -> void:
+	if _vaulting:
+		_vault_cd = VAULT_COOLDOWN
 	if state == State.LUNGE:
-		lunges += 1
+		if _vaulting:
+			vaults += 1
+		else:
+			lunges += 1
+	_vaulting = false
+	_vault_parried = false
 	state = next
 	_clock = 0.0
 	_rest = REST * float(pressure.get("rest", 1.0))
@@ -334,6 +530,7 @@ func _end_attack(next: int) -> void:
 
 
 # e01_brace_back: the wedge loads back over planted claws and flares its hinged fin.
+# During Spring-Vault Leap wind-up, the body crouch-coils low over the claws before springing.
 # The state transition resets _clock before _pose(), so LUNGE at clock zero is the
 # release sample (full brace). The same clock then drives the 0.08 s forward snap.
 # Absolute rest-relative transforms prevent a cancelled wind-up retaining any pose.
@@ -341,15 +538,26 @@ func _pose() -> void:
 	if _mesh == null:
 		return
 	var dt := get_physics_process_delta_time()
-	var lane := telegraph() if state == State.WINDUP or state == State.LUNGE else null
-	var face: Vector3 = lane.dir if lane != null else _flat_to_ball()
+	var tele := telegraph() if state == State.WINDUP or state == State.LUNGE else null
+	var face: Vector3 = _flat(_vault_to - global_position) if _vaulting and tele != null else (tele.dir if tele != null else _flat_to_ball())
 	if face.length_squared() > 0.0001:
 		_mesh.rotation.y = lerp_angle(_mesh.rotation.y, atan2(-face.x, -face.z), 1.0 - exp(-14.0 * dt))
 	var shift := Vector3.ZERO
 	var pitch := 0.0
 	var flare := 0.0
-	if windup_pose_enabled and lane != null and not _dead and not is_queued_for_deletion():
-		if state == State.WINDUP:
+	if windup_pose_enabled and tele != null and not _dead and not is_queued_for_deletion():
+		if _vaulting:
+			if state == State.WINDUP:
+				var t := smoothstep(0.0, 1.0, clampf(_clock / VAULT_WINDUP, 0.0, 1.0))
+				shift = VAULT_COIL_SHIFT * t
+				pitch = deg_to_rad(VAULT_COIL_PITCH) * t
+				flare = deg_to_rad(40.0) * t
+			elif state == State.LUNGE:
+				var arc_t := clampf(_clock / VAULT_FLIGHT, 0.0, 1.0)
+				shift = Vector3(0.0, 0.12 * sin(PI * arc_t), 0.0)
+				pitch = lerpf(deg_to_rad(24.0), deg_to_rad(-28.0), arc_t)
+				flare = deg_to_rad(20.0) * (1.0 - arc_t)
+		elif state == State.WINDUP:
 			var t := smoothstep(0.0, 1.0, clampf(_clock / WINDUP, 0.0, 1.0))
 			shift = REAR_SHIFT * t
 			pitch = deg_to_rad(REAR_PITCH) * t

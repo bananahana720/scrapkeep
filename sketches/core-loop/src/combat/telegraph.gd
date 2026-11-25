@@ -24,6 +24,9 @@ const WarningBound := preload("res://src/combat/warning_bound.gd")
 
 const PRIORITY := Threat.PRIORITY
 const LIFT := 0.2
+# W47 hard tell floor for every lethal secondary attack (SOUTHWEST-SONIC-MECHA-NORTHSTAR §1.2):
+# every secondary telegraph uses Palette.HAZARD (#FF5A3C) and warns for at least 0.60 s.
+const SECONDARY_TELL_FLOOR := 0.60
 
 # When the warning runs out (progress reaches 1, by step() or the owner): the lane's tear plays here.
 signal went_live
@@ -173,6 +176,29 @@ static func wedge(parent: Node, terrain_ref, threat_type: int, apex: Vector3, he
 	node.center = Vector3(apex.x, ground_under(terrain_ref, apex), apex.z)
 	parent.add_child(node)
 	node._build()
+	return node
+
+
+# Secondary-attack telegraphs (W47): explicit required `threat_type`, strictly Palette.HAZARD,
+# and enforced >= SECONDARY_TELL_FLOOR (0.60 s) warn duration.
+static func secondary_ring(parent: Node, terrain_ref, threat_type: int, at: Vector3, ring_radius: float,
+		warn: float, reach := 3.5) -> Node3D:
+	var node := ring(parent, terrain_ref, threat_type, at, ring_radius, reach, Palette.HAZARD)
+	node.warn_seconds = maxf(warn, SECONDARY_TELL_FLOOR)
+	return node
+
+
+static func secondary_lane(parent: Node, terrain_ref, threat_type: int, from: Vector3, heading: Vector3,
+		lane_length: float, lane_width: float, warn: float, reach := 3.5) -> Node3D:
+	var node := lane(parent, terrain_ref, threat_type, from, heading, lane_length, lane_width, reach)
+	node.warn_seconds = maxf(warn, SECONDARY_TELL_FLOOR)
+	return node
+
+
+static func secondary_wedge(parent: Node, terrain_ref, threat_type: int, apex: Vector3, heading: Vector3,
+		wedge_radius: float, half_angle_deg: float, warn: float, reach := 3.5) -> Node3D:
+	var node := wedge(parent, terrain_ref, threat_type, apex, heading, wedge_radius, half_angle_deg, reach)
+	node.warn_seconds = maxf(warn, SECONDARY_TELL_FLOOR)
 	return node
 
 
