@@ -326,14 +326,14 @@ const ENTRIES := [
 		"clue": "three hostile holds + Redjaw Rend + one run", "text": "Break three hostile holds with Redjaw Rend in one run to earn the Steady Cap."},
 	# --- end Tarn ---
 	# --- P-C Tally entries ---
-	{"id": "tally_skim", "name": "Skim", "hint": "The line takes its cut on the way in.",
-		"clue": "a harpoon hook + the ledger clip on three machines", "text": "Cast the ledger clip on a standing line, or load it before the hook. It clips the target and two neighbours, a point of pressure each. Hit one clip and the rest take it too."},
-	{"id": "tally_books_balanced", "name": "Books Balanced", "hint": "Every clip is a debt. Land and collect.",
-		"clue": "six clips + one Plate Return landing", "text": "Clip machines on the ride in, then land. The landing settles every clip you made, wherever it ran, and your reader refills."},
-	{"id": "tally_punch_tape", "name": "Punch Tape", "hint": "Keep the tape running.",
-		"clue": "the ledger clip + ten casts + one stage", "text": "Fire the ledger clip ten times in one stage to earn Punch Tape."},
-	{"id": "tally_eyeshade", "name": "Eyeshade", "hint": "Twenty debts, one ride at a time.",
-		"clue": "twenty settled clips + Plate Return + one run", "text": "Settle twenty clips with Plate Return in one run to earn the Eyeshade."},
+	{"id": "tally_skim", "name": "Live Tap", "hint": "One splice wires three machines onto a live circuit.",
+		"clue": "a harpoon hook + Jumper Splice on three machines", "text": "Cast Jumper Splice on a standing line, or load it before the hook. Clips three machines for one pressure each. Hit one and the circuit arcs to the rest."},
+	{"id": "tally_books_balanced", "name": "Circuit Settled", "hint": "Every clip stays wired. Land and discharge the circuit.",
+		"clue": "six clips + one Hostile Audit landing", "text": "Clip machines on the ride in, then land Hostile Audit. The landing settles every clip you wired, wherever it ran, and refills your pressure to full."},
+	{"id": "tally_punch_tape", "name": "Punch Tape", "hint": "Keep the tape reels turning.",
+		"clue": "Jumper Splice + ten casts + one stage", "text": "Fire Jumper Splice ten times in one stage to earn Punch Tape."},
+	{"id": "tally_eyeshade", "name": "Eyeshade", "hint": "Twenty wired clips, one hostile audit at a time.",
+		"clue": "twenty settled clips + Hostile Audit + one run", "text": "Settle twenty clips with Hostile Audit in one run to earn the Eyeshade."},
 	# --- end Tally ---
 	# --- P-C Cannon entries ---
 	{"id": "cannon_lane_charge", "name": "Lane Charge", "hint": "The cable already shows where it goes.", "clue": "a standing line + pick 3", "text": "Pick 3 while the harpoon holds something. The cable becomes a lane that fires through the machine and twelve metres on, or out of a wall. Chains make it hit harder."},

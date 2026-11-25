@@ -40,7 +40,7 @@ const MOVES := {
 		"clips": [[0.0, "heave", 1.0], [0.16, "phew", 0.35], [0.74, "smash", 0.0], [0.9, "drop_land", 1.0]]},
 	"tarn": {"word": "grrr", "line": "Sits on top. The machine growls for both of them.",
 		"clips": [[0.0, "drop_land", 1.0], [0.2, "slump", 0.6], [0.58, "big_cheer", 0.5, 0.5], [0.86, "drop_land", 1.0, 0.52]]},
-	"tally": {"word": "PAID!", "line": "Stamps the ball. Itemises it.",
+	"tally": {"word": "ZAP!", "line": "Taps the ball. Rewires the relay.",
 		"clips": [[0.0, "drop_land", 1.0], [0.2, "cast_line", 0.0], [0.42, "cast_line", 0.0, 0.0], [0.64, "cast_line", 0.0, 0.0], [0.88, "drop_land", 1.0]]},
 	"remembered_cannon": {"word": "...hello.", "line": "Rises out very slowly. Waves once.",
 		"out": 0.5, "clips": [[0.0, "heave", 0.0], [0.78, "big_cheer", 0.6, 0.0]]},
