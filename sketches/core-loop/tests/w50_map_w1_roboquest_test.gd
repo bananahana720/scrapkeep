@@ -57,6 +57,13 @@ const FLUME_DISTRICTS := ["Weir Bobsled", "Trestle Span", "Headhouse Overlook"]
 
 const SIGHT_MIN := 0.85
 const SCRAP_MIN := 0.30
+const DAM_QUIET_MIN := 0.30
+const DAM_GROUND_MIN_Y := -10.0
+const SLIT_DEPTH_M := 12.0
+const BALL_GROUND_Y := 1.0
+const W50_DAM_LAUNCHERS := ["apron_overlook_geyser", "east_basin_cannon", "west_basin_cannon"]
+const W50_FLUME_CABLES := ["weir_trestle_zip", "trestle_headhouse_zip", "forecourt_headhouse_zip"]
+const W50_FLUME_LAUNCHERS := ["trestle_skyway_geyser", "siphon_overlook_cannon"]
 
 var t := T.new("w50_map_w1_roboquest_test")
 
@@ -162,6 +169,44 @@ static func _flume_bars_ok(quiet_share: float, census: Dictionary, cables: Array
 		and survival_rows.size() >= FLUME_SURVIVAL_MIN
 
 
+# Counts 2 m baked heightfield vertices that plunge > depth_m below BOTH opposite neighbours
+# along X or Z (1-cell razor slits caused by inclusive negative-stamp overlap).
+static func _slit_count(ground: PackedFloat32Array, side: int = GraphTool.BAKE_SIDE, depth_m: float = SLIT_DEPTH_M) -> int:
+	var slits := 0
+	for j in range(1, side - 1):
+		var row := j * side
+		for i in range(1, side - 1):
+			var idx := row + i
+			var y := ground[idx]
+			var x_slit := (ground[idx - 1] - y > depth_m) and (ground[idx + 1] - y > depth_m)
+			var z_slit := (ground[idx - side] - y > depth_m) and (ground[idx + side] - y > depth_m)
+			if x_slit or z_slit:
+				slits += 1
+	return slits
+
+
+static func _min_height(ground: PackedFloat32Array) -> float:
+	var lo := INF
+	for y in ground:
+		if y < lo:
+			lo = y
+	return lo
+
+
+# True when a grounded ball (at ground + BALL_GROUND_Y) sits within the cable's 3D grab radius.
+static func _cable_from_reachable(c: Dictionary, ground: Callable) -> bool:
+	var f: Array = c["from"]
+	var gy := float(ground.call(float(f[0]), float(f[2])))
+	return absf(float(f[1]) - (gy + BALL_GROUND_Y)) <= float(c["radius"])
+
+
+static func _find_contraption(park: Dictionary, id: String) -> Dictionary:
+	for c in park.get("contraption_rows", []):
+		if String(c.get("id", "")) == id:
+			return c
+	return {}
+
+
 func _check_dam() -> void:
 	var b := _load_bundle("park_dam")
 	var map: ParkMap = b["map"]
@@ -198,6 +243,14 @@ func _check_dam() -> void:
 	var scrap := _scrap_share("park_dam", g)
 	t.check("park_dam scrap on skill lines >= %.2f" % SCRAP_MIN, scrap >= SCRAP_MIN, "%.3f" % scrap)
 
+	var quiet := Breath.quiet_share(map.fight_sites(), Breath.line_points(g))
+	t.check("park_dam line_quiet_share >= %.2f" % DAM_QUIET_MIN, quiet >= DAM_QUIET_MIN, "%.4f" % quiet)
+
+	var dam_slits := _slit_count(bake["ground"])
+	t.eq("park_dam baked ground has zero 2 m razor slits", dam_slits, 0)
+	var dam_min_y := _min_height(bake["ground"])
+	t.check("park_dam baked ground min height >= %.1f m" % DAM_GROUND_MIN_Y, dam_min_y >= DAM_GROUND_MIN_Y, "%.2f m" % dam_min_y)
+
 	var act_ids := []
 	for a in park["activity_rows"]:
 		act_ids.append(String(a["id"]))
@@ -215,10 +268,20 @@ func _check_dam() -> void:
 		var end := Vector3(float(c["to"][0]), float(c["to"][1]), float(c["to"][2]))
 		t.check("park_dam cable %s clears ground >= %.2f m" % [c["id"], CableEnds.MIN_OVER_M],
 			CableEnds.end_clear(end, ground), "%.2f m" % (end.y - float(ground.call(end.x, end.z))))
+		var f: Array = c["from"]
+		var from_over := float(f[1]) - float(ground.call(float(f[0]), float(f[2])))
+		t.check("park_dam cable %s from reachable from ground" % c["id"],
+			_cable_from_reachable(c, ground), "over=%.2f m r=%.1f" % [from_over, float(c["radius"])])
 
-	print("W50_DAM low_band=%.4f climbs=%d switches=%d heavy_s=%.1f sight=%.4f scrap=%.3f" % [
+	for lid in W50_DAM_LAUNCHERS:
+		var lc := _find_contraption(park, lid)
+		var tgt: Array = lc.get("target", [0.0, -999.0, 0.0])
+		var over := float(tgt[1]) - float(ground.call(float(tgt[0]), float(tgt[2])))
+		t.check("park_dam launcher %s target clears ground >= 1.5 m" % lid, not lc.is_empty() and over >= 1.5, "%.2f m" % over)
+
+	print("W50_DAM low_band=%.4f climbs=%d switches=%d heavy_s=%.1f quiet=%.4f sight=%.4f scrap=%.3f min_y=%.2f slits=%d" % [
 		low_share, int(census["ride_climb_rows"]), int(rhythm_r["switches"]),
-		float(rhythm_r["longest_heavy_s"]), float(sight_r["share"]), scrap])
+		float(rhythm_r["longest_heavy_s"]), quiet, float(sight_r["share"]), scrap, dam_min_y, dam_slits])
 
 
 func _check_flume() -> void:
@@ -239,6 +302,20 @@ func _check_flume() -> void:
 		var end := Vector3(float(c["to"][0]), float(c["to"][1]), float(c["to"][2]))
 		t.check("park_flume cable %s clears ground >= %.2f m" % [c["id"], CableEnds.MIN_OVER_M],
 			CableEnds.end_clear(end, ground), "%.2f m" % (end.y - float(ground.call(end.x, end.z))))
+		if W50_FLUME_CABLES.has(String(c["id"])) or String(c["id"]) == "mesa_zip":
+			var f: Array = c["from"]
+			var from_over := float(f[1]) - float(ground.call(float(f[0]), float(f[2])))
+			t.check("park_flume cable %s from reachable from ground" % c["id"],
+				_cable_from_reachable(c, ground), "over=%.2f m r=%.1f" % [from_over, float(c["radius"])])
+
+	for lid in W50_FLUME_LAUNCHERS:
+		var lc := _find_contraption(park, lid)
+		var tgt: Array = lc.get("target", [0.0, -999.0, 0.0])
+		var over := float(tgt[1]) - float(ground.call(float(tgt[0]), float(tgt[2])))
+		t.check("park_flume launcher %s target clears ground >= 1.5 m" % lid, not lc.is_empty() and over >= 1.5, "%.2f m" % over)
+
+	var flume_slits := _slit_count(bake["ground"])
+	t.eq("park_flume baked ground has zero 2 m razor slits", flume_slits, 0)
 
 	var touched := _districts_touched_by_cables(park, cables)
 	for district in FLUME_DISTRICTS:
@@ -322,3 +399,15 @@ func _planted_controls() -> void:
 	var bad_park: Dictionary = ParkSchema.read_file("%s/park_dam.json" % PARK_DIR)["data"].duplicate(true)
 	bad_park["park_rows"][0]["recipe"] = "unregistered_w50_placeholder"
 	t.check("planted: unregistered recipe fails ParkSchema.validate", not ParkSchema.validate(bad_park).is_empty())
+
+	# Plant 8: a 2 m heightfield grid with a single 64 m razor slit fails the slit guard.
+	var grid := PackedFloat32Array()
+	grid.resize(25)
+	grid.fill(36.0)
+	grid[12] = -28.0
+	t.check("planted: 64 m 2 m razor crevasse fails slit guard", _slit_count(grid, 5) > 0)
+
+	# Plant 9: a cable with from floating 9.45 m over ground (r=5.0) fails grab-reach guard.
+	var high_from_cable := {"id": "floating", "from": [0.0, 29.45, 0.0], "radius": 5.0}
+	t.check("planted: cable from floating 9.45 m over ground fails grab-reach guard",
+		not _cable_from_reachable(high_from_cable, flat_ground))
