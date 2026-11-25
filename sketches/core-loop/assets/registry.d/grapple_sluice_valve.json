@@ -1,0 +1,26 @@
+{
+ "assets": [
+  {
+   "id": "sluice_valve_body",
+   "path": "res://assets/models/grapple/sluice_valve_body.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE Spillway grapple-yank sluice valve binder (recipe_props enamel slot)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_sluice_valve.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g12-w1-setpieces-contraptions-destructibles.png"
+   }
+  },
+  {
+   "id": "sluice_valve_wheel",
+   "path": "res://assets/models/grapple/sluice_valve_wheel.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE Spillway grapple-yank sluice valve binder (recipe_props steel slot; rotates on yank via socket_bite)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_sluice_valve.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g12-w1-setpieces-contraptions-destructibles.png"
+   }
+  }
+ ]
+}

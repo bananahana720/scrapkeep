@@ -704,6 +704,39 @@ func grapple_range() -> float:
 	return tuning.f("rope_range")
 
 
+# The pilot's active slot-3 line skill id (bank_shot, line_drive, cable_charge, claw_drag,
+# link_clips, cannon_lane_charge). Hardware rig binding reads this single door (G1).
+func active_line_id() -> String:
+	if abilities != null:
+		var slot_id := String(abilities.id_of(AbilityState.LINE))
+		if slot_id != "":
+			return slot_id
+	if class_def != null and String(class_def.line_id) != "":
+		return String(class_def.line_id)
+	return "line_reel"
+
+
+# Read-only snapshot of the pilot's ONE standing harpoon line and ONE ChainState for hardware rig
+# presentation and tests (Rules G0, G1, TADR-008). Never widens write access to kit or chain.
+func grapple_rig_state() -> Dictionary:
+	return {
+		"class_id": String(class_def.id) if class_def != null else "",
+		"line_id": active_line_id(),
+		"hooked": kit.hooked,
+		"on_body": kit.on_body,
+		"winching": kit.winching,
+		"rope": kit.rope,
+		"anchor": kit.anchor,
+		"anchor_body": kit.anchor_body,
+		"anchor_normal": kit.anchor_normal,
+		"aim": kit.aim,
+		"line_state": kit.line_state,
+		"shown_position": shown_position(),
+		"velocity": state.velocity,
+		"chain": chain.snapshot(),
+	}
+
+
 func _physics_process(delta: float) -> void:
 	exceptions.step(delta)
 	_step_drags(delta)
