@@ -1,4 +1,4 @@
-# smoke: solo timeout=360s (20 seeded crowd encounters run twice, 6 s uncapped and 14 s capped, then 5 at the early cap; about 200 s wall, 179.3 s in a w23 gate chunk)
+# smoke: solo timeout=360s fixed-fps=90 (20 seeded crowd encounters run twice, 6 s uncapped and 14 s capped, then 5 at the early cap; about 200 s wall, 179.3 s in a w23 gate chunk)
 extends SceneTree
 
 # SQ2 attacker budget (W13-INTEGRATION-3.md SQ2). 20 seeded encounters at the park table's

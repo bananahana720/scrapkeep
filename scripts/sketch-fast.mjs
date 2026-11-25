@@ -38,6 +38,7 @@ import {
   splitBatch,
   takeBatch,
   takeBatchPacked,
+  testFixedFps,
   testTimeoutMs,
 } from "./sketch-smoke.mjs";
 import { readLedger } from "./known-failing.mjs";
@@ -750,13 +751,27 @@ export function signalReason(signal) {
 
 const running = new Set();
 
-function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
+function fixedFpsFor(sketchDir, test) {
+  try {
+    return testFixedFps(sourceOf(sketchDir, test));
+  } catch {
+    return null;
+  }
+}
+
+function runGodot(sketchDir, test, timeoutMs, onChild = () => {}, fixedFps = null) {
   return new Promise((resolve) => {
     const started = Date.now();
     const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"));
-    const child = spawn(binary, ["--headless", "--path", sketchDir, "--script", "res://" + test], {
-      env: { ...process.env, ...userDataEnv(dataHome) },
-    });
+    const fps = fixedFps ?? fixedFpsFor(sketchDir, test);
+    const fpsArgs = fps ? ["--fixed-fps", String(fps)] : [];
+    const child = spawn(
+      binary,
+      ["--headless", ...fpsArgs, "--path", sketchDir, "--script", "res://" + test],
+      {
+        env: { ...process.env, ...userDataEnv(dataHome) },
+      },
+    );
     running.add(child);
     onChild(child);
     let output = "";
@@ -794,12 +809,13 @@ function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
   });
 }
 
-function runBatch(sketchDir, tests, timeoutMs, onChild = () => {}) {
+function runBatch(sketchDir, tests, timeoutMs, onChild = () => {}, fixedFps = null) {
   return new Promise((resolve) => {
     const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"));
+    const fpsArgs = fixedFps ? ["--fixed-fps", String(fixedFps)] : [];
     const child = spawn(
       binary,
-      ["--headless", "--path", sketchDir, "--script", "res://tools/test_batch.gd"],
+      ["--headless", ...fpsArgs, "--path", sketchDir, "--script", "res://tools/test_batch.gd"],
       { env: { ...process.env, ...userDataEnv(dataHome), SCRAPKEEP_TEST_BATCH: tests.join(",") } },
     );
     running.add(child);
@@ -1613,14 +1629,16 @@ async function main() {
     !row.alone &&
     row.ms <= BATCH_TEST_MAX_MS &&
     batchable(sourceOf(sketchDir, row.test));
-  async function runBatched(rows) {
+  async function runBatched(rows, fixedFps = null) {
     const tests = rows.map((row) => row.test);
     const timeoutMs = rows.reduce(
       (sum, row) => sum + testTimeoutMs(sourceOf(sketchDir, row.test)),
       0,
     );
     const batch = await inLane(() =>
-      prRed ? { runs: [], unfinished: [], killed: true } : runBatch(sketchDir, tests, timeoutMs),
+      prRed
+        ? { runs: [], unfinished: [], killed: true }
+        : runBatch(sketchDir, tests, timeoutMs, () => {}, fixedFps),
     );
     receipt.batch.batches++;
     receipt.batch.tests += batch.runs.length;
@@ -1642,9 +1660,13 @@ async function main() {
   }
   async function worker() {
     while (queue.length > 0 && !prRed) {
-      const rows = takeBatchPacked(queue, canBatch);
+      const firstFps = fixedFpsFor(sketchDir, queue[0].test);
+      const rows = takeBatchPacked(
+        queue,
+        (row) => canBatch(row) && fixedFpsFor(sketchDir, row.test) === firstFps,
+      );
       if (rows.length > 1) {
-        await runBatched(rows);
+        await runBatched(rows, firstFps);
         continue;
       }
       const row = rows[0] ?? queue.shift();

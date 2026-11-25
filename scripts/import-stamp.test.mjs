@@ -4,7 +4,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { checkImportStamp, writeImportStamp } from "./import-stamp.mjs";
+import {
+  checkImportStamp,
+  hasValidUidCache,
+  importSketch,
+  isCleanImportPass,
+  writeImportStamp,
+} from "./import-stamp.mjs";
 
 function repo() {
   const dir = mkdtempSync(path.join(os.tmpdir(), "import-stamp-"));
@@ -115,6 +121,85 @@ test("Godot binary identity mismatch invalidates the stamp while legacy stamps s
     // Legacy stamp with no godot field still validates cleanly.
     writeImportStamp(dir, "sk", { godot: null });
     assert.equal(checkImportStamp(dir, "sk", { godot: "Godot_v4.7.2:100" }).ok, true);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("importSketch skips pass 2 when pass 1 is clean with a valid uid_cache.bin", () => {
+  const { dir } = repo();
+  try {
+    mkdirSync(path.join(dir, "sk", ".godot"), { recursive: true });
+    writeFileSync(path.join(dir, "sk", ".godot", "uid_cache.bin"), "uid-data");
+    assert.equal(hasValidUidCache(dir, "sk"), true);
+    const calls = [];
+    const result = importSketch(dir, "sk", {
+      runPass: (_root, _sketch, pass) => {
+        calls.push(pass);
+        return { status: 0, signal: null, stdout: "Godot Engine v4.7.2\n", stderr: "" };
+      },
+    });
+    assert.deepEqual(calls, [1]);
+    assert.deepEqual(result, { passes: 1, skippedSecond: true });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("importSketch runs pass 2 when --double is requested or pass 1 has errors, warnings, or missing uid cache", () => {
+  const { dir } = repo();
+  try {
+    mkdirSync(path.join(dir, "sk", ".godot"), { recursive: true });
+    // Missing uid_cache.bin triggers pass 2; pass 2 writes it.
+    const uidCalls = [];
+    const rMissing = importSketch(dir, "sk", {
+      runPass: (_root, _sketch, pass) => {
+        uidCalls.push(pass);
+        if (pass === 2) writeFileSync(path.join(dir, "sk", ".godot", "uid_cache.bin"), "ok");
+        return { status: 0, signal: null, stdout: "", stderr: "" };
+      },
+    });
+    assert.deepEqual(uidCalls, [1, 2]);
+    assert.deepEqual(rMissing, { passes: 2, skippedSecond: false });
+
+    // --double always runs both passes even when pass 1 is clean.
+    const doubleCalls = [];
+    const rDouble = importSketch(dir, "sk", {
+      doublePass: true,
+      runPass: (_root, _sketch, pass) => {
+        doubleCalls.push(pass);
+        return { status: 0, signal: null, stdout: "", stderr: "" };
+      },
+    });
+    assert.deepEqual(doubleCalls, [1, 2]);
+    assert.deepEqual(rDouble, { passes: 2, skippedSecond: false });
+
+    // Pass 1 SCRIPT ERROR or reimport warning falls back to pass 2.
+    for (const bad of [
+      { status: 0, stdout: "SCRIPT ERROR: could not preload\n", stderr: "" },
+      { status: 0, stdout: "", stderr: "WARNING: Failed to import font.ttf\n" },
+      { status: null, signal: "SIGSEGV", stdout: "", stderr: "" },
+    ]) {
+      const fallbackCalls = [];
+      const res = importSketch(dir, "sk", {
+        runPass: (_root, _sketch, pass) => {
+          fallbackCalls.push(pass);
+          return pass === 1 ? bad : { status: 0, signal: null, stdout: "", stderr: "" };
+        },
+      });
+      assert.deepEqual(fallbackCalls, [1, 2]);
+      assert.equal(res.passes, 2);
+    }
+
+    // Pass 2 failure throws and refuses to stamp.
+    assert.throws(
+      () =>
+        importSketch(dir, "sk", {
+          runPass: () => ({ status: 0, signal: null, stdout: "SCRIPT ERROR: bad\n", stderr: "" }),
+        }),
+      /second import was not clean/,
+    );
+    assert.equal(isCleanImportPass({ status: 0, output: "ok", uidCacheValid: false }), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

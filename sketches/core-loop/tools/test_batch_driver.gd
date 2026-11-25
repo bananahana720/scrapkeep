@@ -74,6 +74,7 @@ var worst := 0
 var current := ""
 var quit_call := RegEx.create_from_string("(?<![\\w.])quit\\(")
 var frame_func := RegEx.create_from_string("(?m)^func _(physics_)?process\\(")
+var extends_line := RegEx.create_from_string("(?m)^extends\\s+SceneTree\\r?$")
 
 
 var physics_ticks := Engine.physics_ticks_per_second
@@ -136,7 +137,7 @@ func next() -> void:
 		return
 	var source := FileAccess.get_file_as_string("res://" + rel)
 	var script := GDScript.new()
-	var text := source.replace("extends SceneTree", SHIM_EXTENDS)  # the first line, checked by sketch-fast
+	var text := extends_line.sub(source, SHIM_EXTENDS, false)  # first extends SceneTree line, checked by batchable()
 	text = frame_func.sub(quit_call.sub(text, "_batch_quit(", true), "func _batch_$1process(", true)
 	script.source_code = text
 	if script.reload() != OK:

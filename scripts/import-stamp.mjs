@@ -5,9 +5,17 @@
 // writes the stamp; a runner that does not import refuses a .godot whose stamp is not this tree.
 //
 //   node scripts/import-stamp.mjs check  [--sketch sketches/core-loop]
-//   node scripts/import-stamp.mjs import [--sketch sketches/core-loop]   imports twice, then stamps
+//   node scripts/import-stamp.mjs import [--sketch sketches/core-loop] [--double]
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -128,13 +136,35 @@ export function checkImportStamp(root, sketch = DEFAULT_SKETCH, options = {}) {
 }
 
 export const REIMPORT_HINT =
-  "run `node scripts/import-stamp.mjs import` (imports twice and stamps), or pass --stale-import-ok to run anyway";
+  "run `node scripts/import-stamp.mjs import` (imports and stamps; add --double to force two passes), or pass --stale-import-ok to run anyway";
 
-function importTwice(root, sketch) {
+const IMPORT_SCRIPT_ERROR = /^\s*SCRIPT ERROR\b/m;
+const IMPORT_REIMPORT_WARNING =
+  /^\s*(?:WARNING|ERROR):.*(?:reimport|import|uid_cache|could not (?:load|open|preload|import)|failed to (?:load|import))/im;
+
+export function hasValidUidCache(root, sketch = DEFAULT_SKETCH) {
+  const uidCache = path.join(root, sketch, ".godot", "uid_cache.bin");
+  try {
+    return statSync(uidCache).size > 0;
+  } catch {
+    return false;
+  }
+}
+
+export function isCleanImportPass({ status, signal = null, output = "", uidCacheValid = false }) {
+  if (status !== 0 || signal) return false;
+  if (!uidCacheValid) return false;
+  if (IMPORT_SCRIPT_ERROR.test(output)) return false;
+  if (IMPORT_REIMPORT_WARNING.test(output)) return false;
+  return true;
+}
+
+function runGodotImportPass(root, sketch) {
   const godot = process.env.GODOT_BIN;
   if (!godot || !existsSync(godot)) throw new Error("set GODOT_BIN to the Godot 4.7.2 editor");
-  for (let pass = 1; pass <= 2; pass++) {
-    const ran = spawnSync(
+  const scratchDir = mkdtempSync(path.join(os.tmpdir(), "import-stamp-"));
+  try {
+    return spawnSync(
       godot,
       ["--headless", "--path", path.join(root, sketch), "--editor", "--import"],
       {
@@ -142,22 +172,52 @@ function importTwice(root, sketch) {
         maxBuffer: 1 << 28,
         env: {
           ...process.env,
-          ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "import-stamp-"))),
+          ...scratchHomeEnv(() => scratchDir),
         },
       },
     );
-    if (pass === 2 && (ran.status !== 0 || /SCRIPT ERROR/.test(`${ran.stdout}${ran.stderr}`))) {
-      throw new Error(
-        `the second import was not clean (exit ${ran.status ?? ran.signal}); no stamp written`,
-      );
-    }
+  } finally {
+    rmSync(scratchDir, { recursive: true, force: true });
   }
+}
+
+export function importSketch(root, sketch = DEFAULT_SKETCH, options = {}) {
+  const doublePass = Boolean(options.doublePass);
+  const runPass = options.runPass ?? runGodotImportPass;
+  const checkUid = options.hasUidCache ?? (() => hasValidUidCache(root, sketch));
+
+  const first = runPass(root, sketch, 1);
+  const firstOutput = `${first.stdout ?? ""}${first.stderr ?? ""}`;
+  const firstClean = isCleanImportPass({
+    status: first.status,
+    signal: first.signal ?? null,
+    output: firstOutput,
+    uidCacheValid: checkUid(),
+  });
+  if (!doublePass && firstClean) {
+    return { passes: 1, skippedSecond: true };
+  }
+
+  const second = runPass(root, sketch, 2);
+  const secondOutput = `${second.stdout ?? ""}${second.stderr ?? ""}`;
+  if (
+    second.status !== 0 ||
+    second.signal ||
+    IMPORT_SCRIPT_ERROR.test(secondOutput) ||
+    !checkUid()
+  ) {
+    throw new Error(
+      `the second import was not clean (exit ${second.status ?? second.signal}); no stamp written`,
+    );
+  }
+  return { passes: 2, skippedSecond: false };
 }
 
 function main(argv) {
   const root = git(process.cwd(), ["rev-parse", "--show-toplevel"]) ?? process.cwd();
   const at = argv.indexOf("--sketch");
   const sketch = at >= 0 ? argv[at + 1] : DEFAULT_SKETCH;
+  const doublePass = argv.includes("--double");
   const verb = argv[0];
   if (verb === "check") {
     const result = checkImportStamp(root, sketch);
@@ -167,14 +227,14 @@ function main(argv) {
     return result.ok ? 0 : 1;
   }
   if (verb === "import") {
-    importTwice(root, sketch);
+    const { passes } = importSketch(root, sketch, { doublePass });
     const state = writeImportStamp(root, sketch);
     console.log(
-      `imported ${sketch} twice and stamped tree ${state.tree?.slice(0, 9)} (HEAD ${state.head?.slice(0, 9)})`,
+      `imported ${sketch} in ${passes} pass${passes === 1 ? "" : "es"} and stamped tree ${state.tree?.slice(0, 9)} (HEAD ${state.head?.slice(0, 9)})`,
     );
     return 0;
   }
-  console.error("usage: node scripts/import-stamp.mjs check|import [--sketch <dir>]");
+  console.error("usage: node scripts/import-stamp.mjs check|import [--sketch <dir>] [--double]");
   return 2;
 }
 
