@@ -6,11 +6,11 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 | Fact | Value |
 | --- | --- |
-| Last promotion | wave 45, main 16963bef, #1185 |
-| Open stage | stage/alpha-w46 |
-| Live board | #1186 |
-| Red team | speedrunner |
-| Compare against | artifacts/local/gate/w45-dc88e552/ on the Mac Studio (published on branch scratch/gate-receipts-w45-dc88e552) |
+| Last promotion | wave 46, main 866dc4b0, #1279 |
+| Open stage | stage/alpha-w47 |
+| Live board | #1280 |
+| Red team | first-timer |
+| Compare against | w46-ruling-eo-fast-close (48-seed baseline w46-s1-ba46f103 on ahana; prior full gate w45-dc88e552) |
 
 The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
