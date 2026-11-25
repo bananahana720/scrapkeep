@@ -8,7 +8,9 @@ const GLB := "res://assets/models/world_one/enemy_ramp_flipper.glb"
 # codex discovery, design-v3/SPILLWAY-ROSTER.md; was f81182dc.
 # 2026-11-24 W46-ANIM-VFX-FLAIR: eased deploy/kick/fold plate pose (DEPLOY_S, KICK_S, FOLD_S, _fold_t)
 # and presentation VFX bursts in _commit/_go_live; gameplay mechanics unchanged; was 494ee927.
-const BASE_MECHANIC_SHA := "7a672f2fd645f8f78e43fceff6d79f681985f9a69a2ee1a9d0f69ce57a312c1a"
+# 2026-11-24 W47-E3: Catapult Double-Snap secondary (0.65 s double-ratchet steeper kicker when
+# approaching >= FAST; Jump on double-snap = +12 m/s forward boost + instant Blazing tier); was 7a672f2f.
+const BASE_MECHANIC_SHA := "138ac8f62b137150f841b5da31375be56a076b1fa72f18843b4d2118aa47e78b"
 const BASE_CONSTS := {"PLATE_RADIUS": 3.6, "LEAD": .9, "TILT": .35, "FLING_UP": 30.0,
 	"FLING_SIDE": 22.0, "RIDE_UP": 9.0, "HP": 45.0}
 const BASE_VALUES := {"radius": .8, "half_height": 1.1, "weight": 1.2, "scrap_value": 4,

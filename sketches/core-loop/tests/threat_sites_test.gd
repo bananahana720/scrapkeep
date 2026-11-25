@@ -30,7 +30,8 @@ const AUDIT := {
 	# 2026-11-12 (FX-03): the phase beat's harmless previews come first in source order, a bone slag ring and a bone charge lane.
 	"res://src/boss/boss.gd": ["INSTANT", "LANE", "WAVE", "INSTANT", "INSTANT", "LANE", "INSTANT"],
 	# v2 W7 counter units and ancients: one telegraph each, in its threat type.
-	"res://src/combat/mag_trapper.gd": ["INSTANT"],
+	# 2026-11-24 W47-E3: mag_trapper adds Polarity Repulse Ring (INSTANT) alongside its primary pit ring.
+	"res://src/combat/mag_trapper.gd": ["INSTANT", "INSTANT"],
 	"res://src/combat/netcaster.gd": ["INSTANT"],
 	"res://src/combat/plated_brute.gd": ["INSTANT", "LANE", "INSTANT", "INSTANT"],  # 2026-10-15 (w13 close): SG6's stamp, rail and rear-blast sites, then the slam.
 	"res://src/combat/gyro_jammer.gd": ["INSTANT"],
@@ -59,6 +60,8 @@ const AUDIT := {
 	"res://src/combat/silt_boil.gd": ["INSTANT"],
 	# 2026-10-17 (stage/alpha-w16): the Dispatcher's tube drop (#59) and the jolt layer's mat (#65).
 	"res://src/combat/dispatcher.gd": ["PROJECTILE"],
+	# 2026-11-24 W47-E3: Foreman's Overtime Sync Whistle commits an INSTANT HAZARD ring.
+	"res://src/combat/foreman.gd": ["INSTANT"],
 	"res://src/combat/jolt_layer.gd": ["INSTANT"],
 	# 2026-10-17 Highdraft roster: the ballast heavy and the gap net, one telegraph each.
 	"res://src/combat/ballast_heavy.gd": ["INSTANT"],
