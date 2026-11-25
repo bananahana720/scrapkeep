@@ -6,9 +6,9 @@ A run is the stages of a world, each closed by its Warden, then reward gates, a 
 
 - `WR-1` Stage 1 plays to its Warden; breaking it opens the reward gates.
 - `WR-2` A gate launches the ball into the next stage at speed.
-- `WR-3` The last stage launches into Admiral Brindle's arena; the boss has phases.
-- `WR-4` A death shows RUN OVER; N starts a new run as the same pilot.
-- `WR-6` The sitting launch (`--profile=sitting`: Heat, Overtime, Called Shot, marked hull, Moss's scale, carry a core) plays from the title to a won run at Brindle, where the sitting's run ends.
+- `WR-3` World 1–3 progression is unparked (`Worlds.FULL_ALPHA := true`, `Tuning.FULL_ALPHA_UNLOCKED := true`): a default launch runs all three worlds (`stages=6`: Spillway Works -> Admiral Brindle, The Dig -> The Waking, The Highdraft -> The Mind); passing `--final-world=1` (or `--profile=sitting`) ends the run after world 1's boss, Admiral Brindle (`stages=2`).
+- `WR-4` A death shows SCRAPPED / RUN OVER; N starts a new run as the same pilot.
+- `WR-6` The sitting launch (`--profile=sitting`: Heat, Overtime, Called Shot, marked hull, Moss's scale, carry a core, `--final-world=1`) plays from the title to a won run at Brindle, where the sitting's run ends.
 - `WR-5` The summary shows time, stages, scrap, parts and kills, and `runs.ndjson` gains a row.
 
 ## How to get to it (user POV)

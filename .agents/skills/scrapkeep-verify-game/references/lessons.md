@@ -22,9 +22,14 @@
   A step list can pass while the picture is wrong: a drive that pressed Continue early passed every step with the boot card frozen over the screen. Open the pictures before calling a proof.
   Evidence: the thread's proof run, 13 November 2026.
   Overturned by: —
+- **VGM-06** · status: provisional · since: 2026-11-25 · origin: Mac Studio offscreen verification pass
+  On macOS Godot 4.7.2 ignores `XDG_DATA_HOME` and writes `user://` under `$HOME/Library/Application Support/Godot/app_userdata/core-loop`, and `--embedded` without `--debug` segfaults inside `DisplayServerMacOSEmbedded`. Launch macOS offscreen drives with `--embedded --rendering-driver metal --debug --skip-breakpoints --ignore-error-breaks` and `HOME` set to a scratch folder under `artifacts/local/` so no Cocoa window opens and real saves are never touched.
+  Evidence: `scripts/gate/display-run.mjs`; `scripts/godot-home.mjs`; `project-guide/handoff/DEVICES.md`; maintenance pass at 46576920, 25 November 2026.
+  Overturned by: —
 
 ## Changelog
 
 | Date | Change |
 | --- | --- |
 | 2026-11-13 | VGM-01 to VGM-05 added with the skill. |
+| 2026-11-25 | VGM-06 added for macOS `--embedded --rendering-driver metal --debug` offscreen drives and `HOME` isolation. |

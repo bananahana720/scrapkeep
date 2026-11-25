@@ -6,7 +6,7 @@ Settings has four pages, Display, Controls, Look and Feel. Each row is a toggle 
 
 - `ST-1` Settings opens from the title (S or a click) and from the pause menu.
 - `ST-2` Display lists Fullscreen, Quality, Less motion, Fewer flashes, Frame smoothing, Wide picture.
-- `ST-3` The page tabs Display, Controls, Look, Feel each open their page.
+- `ST-3` The page tabs Display, Controls, Look, Feel each open their page (and `Q`/`E` step tabs). Controls lists the 11 rebindable verbs (`Jump`, `Fire`, `Harpoon`, `Haul`, `Boost`, `Pick 1`–`Pick 3`, `Ultimate`, `Active`, `Interact`), Reset keys, and fixed `Roll`/`Look` (`cl_consumable` / `Cartridge` on `C` is named in conflict notices). Look lists Stick speed, Invert Y, Dead zone, Mouse speed, Aim assist. Feel lists Music, Effects, Screen shake, Hit-stop, and Find cards (`full`/`short`).
 - `ST-4` A changed row is written to `settings.json` in the save folder.
 - `ST-5` Esc or Back returns to where Settings was opened from.
 

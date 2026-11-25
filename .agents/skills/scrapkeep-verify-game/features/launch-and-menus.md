@@ -6,15 +6,15 @@ The game opens on a dark boot card with the name and a Play button while the gam
 
 - `LM-1` Boot card shows within seconds and carries the build stamp ("Dev build <sha7>").
 - `LM-2` Title opening plays once for a new profile and any key skips it.
-- `LM-3` Title menu shows six choices; with a saved run it also shows Continue and Play reads "New run".
+- `LM-3` Title menu shows six choices; with a saved run it also shows Continue and Play reads "New run" (and Companion `M` when pieces are owned). Hotkeys `O` (Work orders) and `L` (Logbook) also open directly from the title; see [Work orders and logbook](./work-orders-and-logbook.md).
 - `LM-4` Help page (H) opens and Esc closes it.
-- `LM-5` Achievements page (A) opens and Esc closes it.
+- `LM-5` Achievements page (A) opens with the Shift Board, World Acts strip (once unlocked), achievement rows, and footer links to Work orders (`O`) and Logbook (`L`); Esc closes it.
 - `LM-6` Esc on the title moves the focus to Quit; pressing Quit ends the game.
 
 ## How to get to it (user POV)
 
 - Launch the game: `scrapkeep core-loop` on the PC, the "Scrapkeep" menu entry for an installed build.
-- On the title: click a choice, or press its key (Space, K, S, H, A, Esc).
+- On the title: click a choice, or press its key (Space, K, S, H, A, O, L, Esc).
 
 ## Driving it with drive.sh
 

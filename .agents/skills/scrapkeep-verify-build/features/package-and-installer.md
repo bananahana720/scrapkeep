@@ -1,13 +1,13 @@
 # Package and installer
 
-On the PC, `npm run sketch:export` cuts `scrapkeep-core-loop-<sha7>.tar.gz` (the game, the recorded band in `music_ace/`, `HOW-TO-RUN.txt` and `BUILD.txt`), and `npm run sketch:appimage` wraps it as `Scrapkeep-<sha>-x86_64.AppImage` and installs it for the current user with an icon and an app menu entry that has a "Scrapkeep sitting" action.
+On the PC, `npm run sketch:export` cuts `scrapkeep-core-loop-<sha7>.tar.gz` (the game, the recorded band in `music_ace/`, `HOW-TO-RUN.txt` and `BUILD.txt`), and `npm run sketch:appimage` wraps it as `Scrapkeep-<sha>-x86_64.AppImage` and installs it for the current user with an icon and an app menu entry that has two sitting actions: `"Scrapkeep sitting (fresh profile, unlocks earned)"` (`--profile=sitting-earned`) and `"Scrapkeep sitting (all pilots, save untouched)"` (`--profile=sitting`).
 
 ## Sub-features
 
 - `PK-1` The tarball unpacks to a folder whose game runs from any directory, with `music_ace/` beside it.
 - `PK-2` `HOW-TO-RUN.txt` names the build; `BUILD.txt` records the win proof lines.
 - `PK-3` The AppImage installs with `--install` and leaves with `--uninstall`; saves survive an uninstall.
-- `PK-4` The app menu shows "Scrapkeep" with the "Scrapkeep sitting" action.
+- `PK-4` The app menu shows "Scrapkeep" with the two sitting actions (`--profile=sitting-earned` and `--profile=sitting`).
 
 ## How to get to it (user POV)
 
@@ -23,5 +23,6 @@ Preconditions: Andrew's PC (the stems are gitignored and live there, the boss sm
 ## Gotchas
 
 - None of this file's rows was driven when the skill was written (13 November 2026): the prerequisite is the PC. Report them as not reached, never as covered by a cloud drive.
+- `sketches/core-loop/export_presets.cfg` also carries a `[preset.2]` `macOS` preset (`npm run sketch:export-mac` -> `Scrapkeep.app`, gated on Andrew's go-ahead per `project-guide/handoff/DEVICES.md`); on macOS the Linux x86_64 package is `verified-unreachable`.
 - A cloud test build has no tarball and no stems; `$B doctor` says so.
 - On the PC the game must run with a scratch save folder (the drive does that); the PC safety check and the idle-card rule for timing still apply.

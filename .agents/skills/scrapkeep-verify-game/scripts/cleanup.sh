@@ -33,10 +33,10 @@ for folder in "$evidence_root"/*/; do
   [ -d "$folder/home" ] && rm -rf "${folder:?}/home" && echo "cleanup: removed scratch save folder $folder/home"
 done
 for folder in ${shared[@]+"${shared[@]}"}; do
-  case "$(readlink -f "$folder")" in
+  case "$(canonical_path "$folder")" in
     "$evidence_root"/?*) rm -rf "${folder:?}" && echo "cleanup: removed shared save folder $folder" ;;
     *) echo "cleanup: left $folder alone (not under $evidence_root)" ;;
   esac
 done
-kept="$(find "$evidence_root" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)"
+kept="$(find "$evidence_root" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')"
 echo "cleanup: $kept evidence folder(s) kept under $evidence_root"

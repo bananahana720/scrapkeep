@@ -1,0 +1,43 @@
+# Work Orders (O: 3 tabs) and Logbook (L: 5 tabs), plus cross-navigation from Achievements.
+# Launch with: -- --no-intro
+until clickable "Settings" 120
+until read get_node_or_null("/root/Boot") == null 30
+click "Achievements"
+until clickable "Work orders" 10
+shot achievements-footer
+click "Work orders"
+until text "crew orders stamped" 10
+shot work-orders-orders
+ui
+click "Licenses"
+until text "stamps earned" 10
+shot work-orders-licenses
+click "Overrides"
+until text "override codes armed" 10
+shot work-orders-overrides
+ui
+key ESCAPE
+until clickable "Settings" 10
+key O
+until text "override codes armed" 10
+key ESCAPE
+until clickable "Settings" 10
+key L
+until text "field entries logged" 10
+shot logbook-entries
+click "Crew arcs"
+until text "chapters punched" 10
+shot logbook-arcs
+click "Chemistry"
+until text "pilot pairings completed" 10
+shot logbook-pairs
+click "Wire trail"
+until text "nodes logged" 10
+shot logbook-trail
+click "Foreman"
+until text "Foreman habit audit" 10
+shot logbook-foreman
+ui
+key ESCAPE
+until clickable "Settings" 10
+quit

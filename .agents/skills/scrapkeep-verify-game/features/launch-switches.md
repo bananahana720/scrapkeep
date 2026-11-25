@@ -4,8 +4,8 @@ The game takes switches after `--` on its command line that change what a run lo
 
 ## Sub-features
 
-- `LS-1` `--ball-look=gyro|bell|cutaway`: every pilot's ball wears that look's shell; without it the look is `today`.
-- `LS-2` `--models=tripo`: a model with a `_tripo` sibling file loads the sibling; without it, or with no sibling, the authored file.
+- `LS-1` `--ball-look=today|gyro|bell|cutaway`: every pilot's ball wears that look's shell; the default look is now `cutaway` (`tuning.gd`), so proving the switch on vs off compares `--ball-look=cutaway` (or `gyro`/`bell`) against `--ball-look=today`.
+- `LS-2` `--models=tripo` (and `--models=tripo-all`): a model with an accepted `_tripo` sibling file loads the sibling; without it, or with no sibling, the authored file.
 - `LS-3` `--stocktake=on`: the stage holds a Stocktake yard (a survival count) at one of the map's yard sites; without it there is none.
 
 ## How to get to it (user POV)
@@ -16,19 +16,19 @@ The game takes switches after `--` on its command line that change what a run lo
 
 Preconditions: `$S/doctor.sh` passes; the assets are imported since the stage last added models. `S=.agents/skills/scrapkeep-verify-game/scripts`.
 
-- **All three, on:** `$S/drive.sh .agents/skills/scrapkeep-verify-game/features/steps/launch-switches.steps switches-on -- --no-intro --ball-look=cutaway --models=tripo --stocktake=on`. Expect exit 0 and 25 passed steps.
-- **The control, off:** the same with only `-- --no-intro`, evidence name `switches-off`.
-- **What the pair must show** (`steps.ndjson`, rows 16 to 23):
+- **All three, on:** `$S/drive.sh .agents/skills/scrapkeep-verify-game/features/steps/launch-switches.steps switches-on -- --no-intro --ball-look=cutaway --models=tripo --stocktake=on`. Expect exit 0 and 24 passed steps.
+- **The control, off:** `$S/drive.sh .agents/skills/scrapkeep-verify-game/features/steps/launch-switches.steps switches-off -- --no-intro --ball-look=today` (because `cutaway` is now the default ball look; `stocktake` defaults to `off` and Tripo models default to off).
+- **What the pair must show** (`steps.ndjson`, rows 15 to 22):
 
-| Row | On | Off |
+| Row | On | Off (`--ball-look=today`) |
 | --- | --- | --- |
 | `read tuning.option("ball_look")` | `cutaway` | `today` |
-| `meshes "ball_look"` | 1, `ball_look_cutaway.glb` at the ball | 0 |
+| `meshes "ball_look"` | 1, `ball_look_cutaway_cockpit.glb` at the ball | 0 |
 | `read tuning.option("stocktake")` | `on` | `off` |
 | `read world.activities.site("stocktake_yard") != null` | `true` | `false` |
-| `meshes "_tripo"` (25 s into the stage) | 27 on the dam, the row names the first six files and where they stand | 0 |
+| `meshes "_tripo"` (25 s into the stage) | 48 on the dam, the row names the first six files and where they stand | 0 |
 
-- **The picture:** `15-in-play.png` of each drive, side by side. The ball is in the middle of the frame: plated with a window on the pilot under `cutaway`, today's shell without.
+- **The picture:** `14-in-play.png` of each drive, side by side. The ball is in the middle of the frame: plated with a window on the pilot under `cutaway`, today's shell without.
 - **One switch alone, or another look:** pass only that switch; the rows for the others read as the control's.
 
 ## Gotchas

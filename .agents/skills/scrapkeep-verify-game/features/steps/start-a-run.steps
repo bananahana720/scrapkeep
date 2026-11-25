@@ -1,4 +1,5 @@
 # A new player's first run: title, prologue, pilot select, the kit pick, then rolling in stage 1.
+# On a fresh profile (before first win), StartPickCard is deferred until the stage 1 yard lock (flow.gd).
 # Launch with: -- --no-intro
 until clickable "Settings" 120
 until read get_node_or_null("/root/Boot") == null 30
@@ -11,11 +12,9 @@ wait 1
 shot pilot-select
 key 1
 until text "Rig your kit" 60
+until read launch_take == null or not launch_take.busy() 30
 expect read get_tree().paused
 shot kit-pick
-key 1
-until text "Take one" 30
-shot start-pick
 key 1
 until read not get_tree().paused 30
 until play 30
@@ -23,6 +22,7 @@ wait 2
 shot dropped-in
 ui
 read player.ball_position()
+read flow.start_pick_waits()
 down W
 until read player.state.velocity.length() > 3.0 15
 wait 5

@@ -17,7 +17,7 @@ A run is saved as it goes. Quit from the pause menu, launch again, and the title
 
 Preconditions: baseline; game flag `--no-intro`; one shared save folder for both drives, under the evidence root so cleanup may remove it: `H=artifacts/local/verify-game/save-home`.
 
-- **SC-1, SC-2:** `VERIFY_GAME_HOME=$H $S/drive.sh .agents/skills/scrapkeep-verify-game/features/steps/save-quit.steps save-quit -- --no-intro`. Expect exit 0, 26 passed rows and a last line "drive: awaiting the game's own quit" (the last step is `quits click "Quit"`: the game ended itself on the second Quit click). `save-quit/files-written.txt` lists `self-play-verify/run.json`.
+- **SC-1, SC-2:** `VERIFY_GAME_HOME=$H $S/drive.sh .agents/skills/scrapkeep-verify-game/features/steps/save-quit.steps save-quit -- --no-intro`. Expect exit 0, 25 passed rows and a last line "drive: awaiting the game's own quit" (the last step is `quits click "Quit"`: the game ended itself on the second Quit click). `save-quit/files-written.txt` lists `self-play-verify/run.json`.
 - **SC-3, SC-4:** `VERIFY_GAME_HOME=$H $S/drive.sh .agents/skills/scrapkeep-verify-game/features/steps/save-continue.steps save-continue -- --no-intro`. Expect exit 0 and 13 passed steps. `title-continue` shows Continue and New run; `continued` shows the saved stage; the `read run.stage` row holds the stage number.
 - **Afterwards:** `$S/cleanup.sh $H`.
 

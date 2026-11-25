@@ -19,7 +19,7 @@ The packed game starts with no editor and no project folder: the boot card with 
 Preconditions: baseline.
 
 - **Whole feature:** `$B drive .agents/skills/scrapkeep-verify-game/features/steps/launch-and-menus.steps cold-launch`. Expect exit 0, 25 passed rows and a last line "drive: awaiting the game's own quit".
-- **CL-1:** the evidence's game log holds `SCRAPKEEP_BUILD commit=<this checkout's commit>` with `source=export`, and `SCRAPKEEP_MENU_READY ... profile=default pilots=1/6`.
+- **CL-1:** the evidence's game log holds `SCRAPKEEP_BUILD commit=<this checkout's commit>` with `source=export`, and `SCRAPKEEP_MENU_READY ... profile=default pilots=1/6 stages=6`.
 - **CL-2:** the `boot-card` picture shows "Build <sha7>" bottom right (a game run from source says "Dev build").
 - **CL-3 to CL-5:** as in the game skill's [Launch and menus](../../scrapkeep-verify-game/features/launch-and-menus.md): the pictures `title-intro`, `title-menu`, `help`, `achievements`.
 
