@@ -36,8 +36,8 @@ case "${1:-}" in
   doctor)
     bad=0
     say() { printf '%-5s %s\n' "$1" "$2"; [ "$1" = FAIL ] && bad=1; return 0; }
-    if [ "$(uname -s)" != "Linux" ]; then
-      say FAIL "packed Linux x86_64 binary cannot execute on $(uname -s) (verified-unreachable on macOS)"
+    if [ "$(uname -s)" != "Linux" ] || [ "$(uname -m)" != "x86_64" ]; then
+      say FAIL "packed Linux x86_64 binary cannot execute on $(uname -s)/$(uname -m) (verified-unreachable)"
       exit 1
     fi
     exe="${2:-$(latest)}"
@@ -62,6 +62,10 @@ case "${1:-}" in
     ;;
   drive)
     shift
+    if [ "$(uname -s)" != "Linux" ] || [ "$(uname -m)" != "x86_64" ]; then
+      echo "build: packed Linux x86_64 binary cannot execute on $(uname -s)/$(uname -m) (verified-unreachable)" >&2
+      exit 2
+    fi
     exe="$(latest)"; [ -n "$exe" ] && [ -x "$exe" ] || { echo "build: no packed game; run build.sh export" >&2; exit 2; }
     VERIFY_GAME_EXE="$exe" exec "$game_scripts/drive.sh" "$@"
     ;;

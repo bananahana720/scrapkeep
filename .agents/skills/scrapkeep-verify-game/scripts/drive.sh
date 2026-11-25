@@ -60,9 +60,13 @@ size="${VERIFY_GAME_SIZE:-1280x720}"
 save=("--self-play-save=verify")
 for flag in "$@"; do case "$flag" in --self-play-save=*) save=() ;; esac; done
 if [ -n "$exe" ]; then launch=("$exe"); cd "$(dirname "$exe")"; else launch=("$godot" --path "$sketch"); fi
-if is_macos && [ "${VERIFY_GAME_DISPLAY:-}" != 1 ]; then
-  export SCRAPKEEP_OFFSCREEN=1
-  game=("${launch[@]}" --embedded --rendering-driver metal --debug --skip-breakpoints --ignore-error-breaks --audio-driver Dummy --resolution "$size" --fixed-fps 30 --
+if is_macos; then
+  flags=(--rendering-driver metal)
+  if [ "${VERIFY_GAME_DISPLAY:-}" != 1 ] || [ "$offscreen" = 1 ]; then
+    export SCRAPKEEP_OFFSCREEN=1
+    flags+=(--embedded)
+  fi
+  game=("${launch[@]}" "${flags[@]}" --debug --skip-breakpoints --ignore-error-breaks --audio-driver Dummy --resolution "$size" --fixed-fps 30 --
     --self-play "--self-play-script=$skill_dir/scripts/drive.gd" "${save[@]}" "--drive-steps=$out/steps.txt" "--drive-out=$out" "$@")
   run=("${game[@]}")
 else
