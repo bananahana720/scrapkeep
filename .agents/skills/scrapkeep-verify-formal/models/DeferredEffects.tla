@@ -25,6 +25,8 @@ CONSTANTS
   AttemptClearsGuards, \* _start_attempt: _guards.clear() (P7)
   AttemptClearsPike,   \* _start_attempt: _pike_count = 0, _pike_last = -INF
   AttemptClearsBolts,  \* _start_attempt -> _clear_fight -> bolts.clear()
+  AttemptClearsDefProc,\* _start_attempt: _deferred_procs.clear() (452f5c0ac)
+  AttemptClearsDetCord,\* _start_attempt -> _reset_grapple_muts_state: _det_cord_queue.clear()
   RakeNeedsWeapon,     \* rake_follows: only source "weapon" queues a Rake Heart return
   PikeNeedsWeapon,     \* _pike_press: only source "weapon" advances the Slag Pike count
   ProcCarriesNoBits,   \* _fire: `shot = _shot_bits() if source == "weapon" else 0`
@@ -33,6 +35,8 @@ CONSTANTS
   TollBare,            \* _toll never reaches _ring_bell
   ShockBare,           \* _aftershock strikes as item_proc and publishes no slam fact
   ReelBare,            \* _on_reel_chain's jump never emits harpoon_smashed
+  DrainStopsNestProc,  \* deal_proc_hit: `if _draining_procs: return` inside door.in_pass() (f47d3e6f1)
+  DetCordBare,         \* _step_det_cord strikes as item_proc and never re-enqueues _det_cord_queue
   ChildSpendsSplit,    \* bolts.gd split_spent: a child has split (and pull) spent
   ChildSpendsPull,     \* the same call: pull spent, so only the first hit pulls
   ChildDropsHoar,      \* split_children: kid.erase("hoar"), kid.erase("hoar_spared")
@@ -40,9 +44,9 @@ CONSTANTS
   ContactDropsMark,    \* _door_caps: an expired row read by a contact hit goes through _drop_exposed (P7)
   DeathDropsMark       \* spawn_enemy's died handler: _drop_exposed(id) and the arc key (P7)
 
-Queues == {"rake", "shock", "bell", "strip", "echo", "cast", "bite"}
+Queues == {"rake", "shock", "bell", "strip", "echo", "cast", "bite", "defproc", "detcord"}
 \* _on_player_died clears these; echo, the pike count, the guards, heat, exposure and the bolts stay.
-DeathClears == {"rake", "shock", "bell", "strip", "cast", "bite"}
+DeathClears == {"rake", "shock", "bell", "strip", "cast", "bite", "defproc", "detcord"}
 BitNames == {"pierce", "bounce", "split", "pull", "heat"}
 Order == <<"pierce", "bounce", "split", "pull", "heat">>   \* shot_bits.gd NAMES
 Idx(n) == CHOOSE i \in 1..5 : Order[i] = n
@@ -101,6 +105,8 @@ Keep(clears, v) == IF clears THEN "none" ELSE Age(v)
 StartAttempt ==
   /\ q' = [k \in Queues |-> CASE k = "echo" -> Keep(AttemptClearsEcho, q[k])
                               [] k \in {"cast", "bite"} -> Keep(AttemptClearsCast, q[k])
+                              [] k = "defproc" -> Keep(AttemptClearsDefProc, q[k])
+                              [] k = "detcord" -> Keep(AttemptClearsDetCord, q[k])
                               [] OTHER -> "none"]
   /\ pike' = Keep(AttemptClearsPike, pike)
   /\ guards' = Keep(AttemptClearsGuards, guards)
@@ -221,6 +227,18 @@ ReelChain ==
   /\ deep' = (deep \/ ~ReelBare)
   /\ Step("ReelChain") /\ UNCHANGED <<flow, att, q, pike, guards, heat, foe, expo, expoOld, mark, b, stale>>
 
+\* A DamageDoor hook during door.in_pass() calls deal_proc_hit: appends to _deferred_procs (depth 1).
+QueueDefProc ==
+  /\ flow = "play" /\ q["defproc"] = "none"
+  /\ q' = [q EXCEPT !["defproc"] = "fresh"]
+  /\ Step("QueueDefProc") /\ UNCHANGED <<flow, att, pike, guards, heat, foe, expo, expoOld, mark, b, deep, stale>>
+
+\* Grapple release with det_cord mutation: _on_grapple_released_muts -> _enqueue_det_cord (in_play gated).
+DetCordQueues ==
+  /\ flow = "play" /\ q["detcord"] = "none"
+  /\ q' = [q EXCEPT !["detcord"] = "fresh"]
+  /\ Step("DetCordQueues") /\ UNCHANGED <<flow, att, pike, guards, heat, foe, expo, expoOld, mark, b, deep, stale>>
+
 \* A guard link made or broken (_guards, the line's guard partner).
 GuardLink ==
   /\ flow = "play" /\ guards # "fresh"
@@ -288,6 +306,22 @@ BiteFires ==
   /\ Fires(q["bite"])
   /\ q' = [q EXCEPT !["bite"] = "none"]
   /\ Step("BiteFires") /\ UNCHANGED <<flow, att, pike, guards, heat, foe, expo, expoOld, mark, b, deep>>
+
+\* _step_deferred_procs: drains _deferred_procs under _draining_procs = true (1-deep: nested deal_proc_hit dropped).
+DefProcFires ==
+  /\ Ticking /\ q["defproc"] # "none"
+  /\ Fires(q["defproc"])
+  /\ q' = [q EXCEPT !["defproc"] = IF DrainStopsNestProc THEN "none" ELSE "fresh"]
+  /\ deep' = (deep \/ ~DrainStopsNestProc)
+  /\ Step("DefProcFires") /\ UNCHANGED <<flow, att, pike, guards, heat, foe, expo, expoOld, mark, b>>
+
+\* _step_det_cord: drains _det_cord_queue as item_proc without re-enqueueing _det_cord_queue.
+DetCordFires ==
+  /\ Ticking /\ q["detcord"] # "none"
+  /\ Fires(q["detcord"])
+  /\ q' = [q EXCEPT !["detcord"] = IF DetCordBare THEN "none" ELSE "fresh"]
+  /\ deep' = (deep \/ ~DetCordBare)
+  /\ Step("DetCordFires") /\ UNCHANGED <<flow, att, pike, guards, heat, foe, expo, expoOld, mark, b>>
 
 \* The pike count read by a press in another attempt (pike_advance reads _pike_count and _pike_last).
 PikeRead ==
@@ -386,8 +420,8 @@ Done == UNCHANGED vars
 Next ==
   \/ Done
   \/ EnterStage \/ ContentCleared \/ NewRun \/ Death \/ ToTitle
-  \/ Press \/ ProcVolley \/ Slam \/ Special \/ Dash \/ CastBegins \/ BiteLoads \/ ReelChain \/ GuardLink \/ GuardUnlink
-  \/ RakeFires \/ ShockLands \/ BellTolls \/ EchoFires \/ StripStrikes \/ CastLands \/ BiteFires \/ PikeRead
+  \/ Press \/ ProcVolley \/ Slam \/ Special \/ Dash \/ CastBegins \/ BiteLoads \/ ReelChain \/ QueueDefProc \/ DetCordQueues \/ GuardLink \/ GuardUnlink
+  \/ RakeFires \/ ShockLands \/ BellTolls \/ EchoFires \/ StripStrikes \/ CastLands \/ BiteFires \/ DefProcFires \/ DetCordFires \/ PikeRead
   \/ BoltHits \/ BoltWall \/ BoltSpent
   \/ Spawn \/ Expose \/ Lapses \/ DropExpired \/ ContactRead \/ FoeDies \/ CorpseFreed
 
@@ -463,4 +497,8 @@ ProbeContactRead == last # "ContactRead"
 ProbeFoeDies == last # "FoeDies"
 ProbeCorpseFreed == last # "CorpseFreed"
 ProbeKeptOverDeath == ~(flow = "dead" /\ q["echo"] = "old" /\ pike = "old" /\ b.live)
+ProbeQueueDefProc == last # "QueueDefProc"
+ProbeDefProcFires == last # "DefProcFires"
+ProbeDetCordQueues == last # "DetCordQueues"
+ProbeDetCordFires == last # "DetCordFires"
 =============================================================================

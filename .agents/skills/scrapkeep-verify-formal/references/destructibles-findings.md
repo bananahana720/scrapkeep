@@ -4,7 +4,7 @@ Each finding is a break the model found that replayed on the real game. A closed
 
 ## None open
 
-`destructibles-today` reports no break at the sync commit (1c94e96b5, 27,096 distinct states, checked with TLC 2.19 from tla2tools 1.7.4, 8 workers, on the Mac Studio on 21 November 2026). No candidate needed a replay.
+`destructibles-today` reports no break at the sync commit (`465769205`, 83,322 distinct states including `OnCapCharge` and `ConsCap`, checked with TLC 2.19 from tla2tools 1.7.4, 8 workers, on the Mac Studio on 25 November 2026; up from 27,096 at `1c94e96b5`). No candidate needed a replay.
 
 ## What the first runs showed about the code
 
