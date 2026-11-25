@@ -5,7 +5,7 @@ description: Plan the next Scrapkeep scope or discuss its unresolved decisions. 
 
 # Plan a Scrapkeep session
 
-Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `project-guide/handoff/START-HERE.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
+Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md`, `GEMINI.md`, and `project-guide/handoff/START-HERE.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
 
 ## Procedure
 
@@ -19,6 +19,7 @@ Planning does not dispatch writers or start a sprint. Record decisions in the ex
 
 ## Host adapter
 
-- Claude Code: use `AskUserQuestion` when available for bounded choices. Read `/home/andrew/.config/astack/models/claude.md` through the A stack runtime for any separately authorized delegation.
-- Codex: use the actual structured input tool supplied by the host, respecting its mode restrictions. Do not invent `AskUserQuestion` or `Agent` tools. Read `/home/andrew/.config/astack/models/codex.md` for separately authorized delegation.
+- Antigravity: `/plan-session`. Use `ask_question` for bounded choices, `research` for broad read-only exploration, and `GEMINI.md` / `AGENTS.md` Rule 11 for worker routing.
+- Claude Code: use `AskUserQuestion` when available for bounded choices and `.claude/agents/` as Rule 11's fallback for any separately authorized delegation.
+- Codex (GPT 6.2 Astra/Sol, rulings `ec`/`ee`/`ej`): limited to world 1 promise cards, QA passes, concept art, model drafts, and non-admitting second opinions; use the host's structured input tool when available.
 - If no structured question tool exists, ask one concise question in chat.

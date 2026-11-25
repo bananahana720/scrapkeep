@@ -68,7 +68,13 @@
   },
   {
     "name": "instruction files as configuration",
-    "paths": ["AGENTS.md", "CLAUDE.md"],
+    "paths": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      "GEMINI.md",
+      ".agents/hooks.json",
+      ".agents/rules/godot-core-loop.md"
+    ],
     "scope": "configuration",
     "commands": ["npm run check:docs", "scenario review"],
     "noBuild": true,

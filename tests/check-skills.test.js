@@ -330,10 +330,44 @@ test("B3: a malformed lesson header fails with a named finding", async () => {
   assert.ok(failures(findings, "lessons").some((f) => f.message.includes("malformed")));
 });
 
-test("B3: the verify skills' lesson prefixes (VGM, VBD, VWB) are lesson ids, not malformed headers", async () => {
+test("B3: the verify and Antigravity skill lesson prefixes (VGM, VBD, VWB, AGW, SVR) are recognised", async () => {
   const { status, findings, stdout } = await runFixture("verify-prefixes");
   assert.equal(status, 0, stdout);
   assert.equal(failures(findings, "lessons").length, 0, stdout);
+});
+
+test("B3: AGW and SVR lesson headers and citations pass check-skills", async () => {
+  const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-skills-"));
+  try {
+    const skillMd = goodSkillMd({
+      description: "Run Antigravity workflows.",
+      body: "2. Route Gemini tiers cleanly. (AGW-01)\n3. Inspect visuals directly. (SVR-01)\n",
+    })
+      .replace("name: reactive-model-loop", "name: scrapkeep-gemini-workflows")
+      .replace("(RML-01)", "(AGW-01)");
+    const lessonsMd = GOOD_LESSONS.replace("RML-01", "AGW-01")
+      .replace("| RML-01 |", "| AGW-01 |")
+      .replace(
+        "## Changelog",
+        "- **SVR-01** · status: provisional · since: 2026-11-25 · origin: visual review\n  Open rendered images directly.\n  Evidence: fixture.\n  Overturned by: —\n\n## Changelog",
+      );
+    const repoRoot = await buildMinimalRepo(temporary, {
+      skillName: "scrapkeep-gemini-workflows",
+      skillMd,
+      lessonsMd,
+    });
+    const linkDir = path.join(repoRoot, ".claude/skills");
+    await mkdir(linkDir, { recursive: true });
+    await symlink(
+      "../../.agents/skills/scrapkeep-gemini-workflows",
+      path.join(linkDir, "scrapkeep-gemini-workflows"),
+    );
+    const { status, findings } = await runAgainst(repoRoot);
+    assert.equal(status, 0, JSON.stringify(findings, null, 2));
+    assert.equal(failures(findings, "lessons").length, 0);
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
 });
 
 test("B3: an RML- id inside the lab skill's ledger fails (prefix scope)", async () => {

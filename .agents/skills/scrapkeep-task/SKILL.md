@@ -5,9 +5,9 @@ description: Execute an authorized Scrapkeep task card with isolated work, indep
 
 # Execute an authorized Scrapkeep task
 
-Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `project-guide/handoff/START-HERE.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
+Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md`, `GEMINI.md`, and `project-guide/handoff/START-HERE.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
 
-ORCHESTRATOR owns the assignment packet, concurrency, leases, review and acceptance; do not substitute an older pstack board or planning protocol. The coordinator is the sole canonical record writer. Each step below links the record that owns its rule instead of restating it.
+ORCHESTRATOR owns the assignment packet, concurrency, leases, review and acceptance; do not substitute an external planning board. The coordinator is the sole canonical record writer. Each step below links the record that owns its rule instead of restating it.
 
 ## In a claude.ai project thread
 
@@ -32,8 +32,9 @@ When the selected sprint has no remaining active work, follow [ORCHESTRATOR.md#s
 
 ## Host adapter and base identity
 
-- Claude Code: in any session, write the change yourself and use sub-agents only for wide search (`scrapkeep-explorer`), research, a noisy run and the independent review (`scrapkeep-reviewer-medium`, or `scrapkeep-reviewer` for a consequential seam) (ruling by). `scrapkeep-writer` and `scrapkeep-writer-low` are for a coordinator that has already split work into parallel units with their own worktrees. Each definition pins its model and effort, and a prompt cannot change it. Avoid built-in Explore/Plan or advisor defaults unless actual model and effort are verified to match policy.
-- Codex: create distinct worktrees explicitly at the accepted revision and use the available collaboration tool with the configured Astra model and effort. A task name alone provides no filesystem isolation.
-- For either app, compare the requested model/effort with the host map and actual runtime metadata. In Claude Code the `CLAUDE_EFFORT` environment variable is the runtime evidence; ask each agent to report it. A review or gate verdict that ran below its pinned tier does not count; rerun it at the pin. Name any other substitution in the receipt. Verify the actual worktree base and write scope before admission. Follow the existing prose-staging exception when applicable. The coordinator runs executable checks and supplies the exact artifact and evidence to review.
+- Antigravity: use `invoke_subagent` with `.agents/agents/scrapkeep-*.md` (or `scrapkeep-gemini-workflows` with `run_workflow` for card batches), isolate writers with `workspace: "share"` or `scripts/new-worktree.sh`, follow `AGENTS.md` Rule 11 (Gemini 4 Neon at high for admission reviews), and report active Gemini model/tier from runtime metadata.
+- Claude Code: in any session, write the change yourself and use sub-agents only for wide search (`scrapkeep-explorer`), research, a noisy run and the independent review (`scrapkeep-reviewer-medium`, or `scrapkeep-reviewer` for a consequential seam) (ruling by). `scrapkeep-writer` and `scrapkeep-writer-low` are for a coordinator that has already split work into parallel units with their own worktrees. `.claude/agents/` holds the fallback tier pins to `AGENTS.md` Rule 11 (ruling `ej`).
+- Codex (GPT 6.2 Astra/Sol, rulings `ec`/`ee`/`ej`): create distinct worktrees explicitly at the accepted revision for ruled assistive work (world 1 promise cards, QA, concept art, model drafts, second review opinions); Codex verdicts are evidence and never admit a unit.
+- On any host, verify the requested model/tier against `AGENTS.md` Rule 11 and actual runtime metadata; a review or gate verdict on a non-compliant model does not count. Verify the actual worktree base and write scope before admission. The coordinator runs executable checks and supplies the exact artifact and evidence to review.
 
 Use `scrapkeep-verify` for the candidate and integrated result. Resume from TRACKING and artifacts, not a remembered PID or a chat summary. Report actual runtime identities and evidence limits.

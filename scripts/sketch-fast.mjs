@@ -499,9 +499,9 @@ export function checksRemoved(nameStatusLines, show, baseRef, headRef) {
 
 // Added files must not be symlinks, root files or new top-level folders (#104 committed a
 // node_modules symlink, which broke every merge into a tree that has node_modules).
-// .mcp.json is the one root file a tool requires there: Claude Code reads project MCP servers
-// only from the repo root (the Godot MCP, Andrew 12 Nov 2026).
-export const ROOT_FILES_ALLOWED = new Set([".mcp.json"]);
+// .mcp.json and GEMINI.md are the root files a tool requires there: Claude Code reads project MCP
+// servers from .mcp.json (Andrew 12 Nov 2026), and Antigravity discovers GEMINI.md at the repo root.
+export const ROOT_FILES_ALLOWED = new Set([".mcp.json", "GEMINI.md"]);
 // A project skill's link is the one symlink a check requires: `npm run check:skills` fails a
 // skill under .agents/skills/ that has no .claude/skills/<name> link (.agents/skills/README.md),
 // and check:skills is what proves the link points at that skill.

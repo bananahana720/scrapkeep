@@ -255,6 +255,47 @@ async function checkSkillsStage(docs) {
   return findings.length;
 }
 
+async function checkAgentsStage(docs) {
+  const script = path.join(scriptRoot, "scripts/check-agents.mjs");
+  if (!(await exists(script))) return 0;
+  if (!(await exists(path.join(docs.root, ".agents")))) return 0;
+  const timeoutMs = 30_000;
+  const result = spawnSync(process.execPath, [script, "--root", docs.root, "--json"], {
+    encoding: "utf8",
+    timeout: timeoutMs,
+  });
+  if (result.status === null) {
+    docs.fail(
+      "agents",
+      "scripts/check-agents.mjs",
+      0,
+      "did not finish: " + (result.error?.message ?? result.signal),
+    );
+    return 0;
+  }
+  let findings;
+  try {
+    findings = JSON.parse(result.stdout);
+  } catch {
+    docs.fail(
+      "agents",
+      "scripts/check-agents.mjs",
+      0,
+      "did not print a JSON findings array (exit " +
+        result.status +
+        "): " +
+        (result.stderr || result.stdout).slice(0, 200),
+    );
+    return 0;
+  }
+  for (const finding of findings) {
+    const message = "[" + finding.check + "] " + finding.message;
+    if (finding.level === "failure") docs.fail("agents", finding.file, finding.line, message);
+    else docs.info("agents", finding.file, finding.line, message);
+  }
+  return findings.length;
+}
+
 // The wave facts in STATE.md are checked against git history, so a promotion
 // that nobody recorded fails the next docs check instead of misleading a
 // fresh thread. scripts/wave-state.mjs owns the rules and the repair command.
@@ -325,6 +366,7 @@ async function main() {
   let links = 0;
   for (const file of files) links += await checkLinks(docs, file);
   const skillFindings = await checkSkillsStage(docs);
+  const agentFindings = await checkAgentsStage(docs);
   const waveFindings = await checkWaveStateStage(docs);
   const ledgerFindings = await checkLedgerStage(docs);
   await checkRulingLetters(docs);
@@ -338,6 +380,7 @@ async function main() {
       files: files.length,
       links,
       skillFindings,
+      agentFindings,
       waveFindings,
       ledgerFindings,
     },
@@ -370,6 +413,8 @@ async function main() {
       " local links, " +
       skillFindings +
       " skill findings, " +
+      agentFindings +
+      " agent findings, " +
       waveFindings +
       " wave-state findings, " +
       ledgerFindings +
