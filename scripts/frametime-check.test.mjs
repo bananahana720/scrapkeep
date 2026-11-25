@@ -35,14 +35,10 @@ import {
   worstFrameNear,
 } from "./frametime-check.mjs";
 
-const SYSTEM =
-  "os,cpu,gpu,ram,kernel,driver,cpuscheduler\nArch,Ryzen,RTX 4080,64,6.18,580,\n";
+const SYSTEM = "os,cpu,gpu,ram,kernel,driver,cpuscheduler\nArch,Ryzen,RTX 4080,64,6.18,580,\n";
 const HEADER = "fps,frametime,cpu_load,gpu_load,cpu_temp,gpu_temp,elapsed\n";
 const csv = (frames) =>
-  SYSTEM +
-  HEADER +
-  frames.map((ms) => `${1000 / ms},${ms},10,20,50,60,0`).join("\n") +
-  "\n";
+  SYSTEM + HEADER + frames.map((ms) => `${1000 / ms},${ms},10,20,50,60,0`).join("\n") + "\n";
 
 test("parseArgs keeps the alpha budget by default and passes arguments after -- to the game", () => {
   const args = parseArgs([]);
@@ -50,12 +46,7 @@ test("parseArgs keeps the alpha budget by default and passes arguments after -- 
   assert.equal(args.hitch, BUDGET.hitchMs);
   assert.equal(args.seconds, 300);
   assert.equal(args.warmup, 10);
-  const custom = parseArgs([
-    "--seconds=60",
-    "--hud",
-    "--",
-    "--profile=sitting",
-  ]);
+  const custom = parseArgs(["--seconds=60", "--hud", "--", "--profile=sitting"]);
   assert.equal(custom.seconds, 60);
   assert.equal(custom.hud, true);
   assert.deepEqual(custom.gameArgs, ["--profile=sitting"]);
@@ -79,10 +70,7 @@ test("findOnPath finds only executable files", () => {
 test("resolveTarget prefers --exe, then the installed AppImage, then the newest export", () => {
   const dataHome = mkdtempSync(path.join(os.tmpdir(), "ft-data-"));
   const exports = mkdtempSync(path.join(os.tmpdir(), "ft-export-"));
-  assert.throws(
-    () => resolveTarget({ exe: null, dataHome, exports }),
-    /npm run sketch:export/,
-  );
+  assert.throws(() => resolveTarget({ exe: null, dataHome, exports }), /npm run sketch:export/);
   mkdirSync(path.join(exports, "abc1234"));
   writeFileSync(path.join(exports, "abc1234", "core-loop.x86_64"), "");
   assert.equal(
@@ -95,10 +83,7 @@ test("resolveTarget prefers --exe, then the installed AppImage, then the newest 
     resolveTarget({ exe: null, dataHome, exports }),
     path.join(dataHome, "scrapkeep", "Scrapkeep.AppImage"),
   );
-  assert.throws(
-    () => resolveTarget({ exe: "/no/such/build", dataHome, exports }),
-    /no build at/,
-  );
+  assert.throws(() => resolveTarget({ exe: "/no/such/build", dataHome, exports }), /no build at/);
 });
 
 test("mangohudConfig logs every frame after the warm-up, vsync off and no overlay by default", () => {
@@ -123,10 +108,7 @@ test("mangohudConfig logs every frame after the warm-up, vsync off and no overla
     }).includes("vsync"),
     false,
   );
-  assert.throws(
-    () => mangohudConfig({ outDir: "/a,b", seconds: 1, warmup: 0 }),
-    /comma/,
-  );
+  assert.throws(() => mangohudConfig({ outDir: "/a,b", seconds: 1, warmup: 0 }), /comma/);
 });
 
 test("parseLog reads the frametime column below the system block, converting microseconds", () => {
@@ -209,9 +191,7 @@ test("main --log grades an existing log without launching anything", () => {
   }
   assert.match(lines.join("\n"), /OVER BUDGET/);
   const [stampDir] = readdirSync(out);
-  const summary = JSON.parse(
-    readFileSync(path.join(out, stampDir, "summary.json"), "utf8"),
-  );
+  const summary = JSON.parse(readFileSync(path.join(out, stampDir, "summary.json"), "utf8"));
   assert.equal(summary.over_hitch, 1);
 });
 
@@ -220,10 +200,22 @@ test("--self-play passes the flag and its options to the game; the default launc
   assert.equal(plain.selfPlay, false);
   assert.deepEqual(gameArgv(plain), ["--profile=sitting"]);
   assert.deepEqual(gameArgv(parseArgs([])), []);
-  const self = parseArgs(["--self-play", "--self-play-from=6", "--self-play-seed=2506", "--seconds=60"]);
+  const self = parseArgs([
+    "--self-play",
+    "--self-play-from=6",
+    "--self-play-seed=2506",
+    "--seconds=60",
+  ]);
   assert.equal(self.selfPlay, true);
   assert.equal(self.seconds, 60);
-  assert.deepEqual(gameArgv(self), ["--audio-driver", "Dummy", "--", "--self-play", "--self-play-from=6", "--self-play-seed=2506"]);
+  assert.deepEqual(gameArgv(self), [
+    "--audio-driver",
+    "Dummy",
+    "--",
+    "--self-play",
+    "--self-play-from=6",
+    "--self-play-seed=2506",
+  ]);
   assert.equal(gameArgv(parseArgs(["--self-play", "--sound"]))[0], "--");
   assert.throws(() => parseArgs(["--self-play-from=6"]), /need --self-play/);
   assert.throws(() => parseArgs(["--self-play", "--self-play-script=res://x.gd"]), /not forwarded/);
@@ -241,7 +233,11 @@ test("parseSelfPlay reads stage entries on the launch and log clocks, and the st
   assert.equal(parsed.lines.length, 4);
   assert.deepEqual(
     parsed.stages.map((s) => [s.stage, s.retry, s.launch_s, s.log_s]),
-    [[1, false, 12.5, 2.5], [2, false, 140.25, 130.25], [2, true, 150, 140]],
+    [
+      [1, false, 12.5, 2.5],
+      [2, false, 140.25, 130.25],
+      [2, true, 150, 140],
+    ],
   );
   assert.deepEqual(parsed.stalled, { stage: 6, what: "exit", launch_s: 400, pos: "1.0,2.0,-3.5" });
   assert.equal(parseSelfPlay("nothing", 10).stalled, null);
@@ -284,7 +280,13 @@ function selfPlayRun(exitCode, stdoutLines) {
   const held = [];
   try {
     code = main(
-      [`--exe=${game}`, "--seconds=1", "--self-play", "--self-play-from=6", "--self-play-stall=100"],
+      [
+        `--exe=${game}`,
+        "--seconds=1",
+        "--self-play",
+        "--self-play-from=6",
+        "--self-play-stall=100",
+      ],
       { PATH: [bin, "/usr/bin", "/bin"].join(path.delimiter), XDG_DATA_HOME: base },
       out,
       "linux",
@@ -301,24 +303,31 @@ function selfPlayRun(exitCode, stdoutLines) {
   const dir = path.join(out, stampDir);
   // The MangoHud launch takes the quiet hold once and gives it back.
   assert.deepEqual(held, ["taken", "released"]);
-  return { code, lines, dir, summary: JSON.parse(readFileSync(path.join(dir, "summary.json"), "utf8")) };
+  return {
+    code,
+    lines,
+    dir,
+    summary: JSON.parse(readFileSync(path.join(dir, "summary.json"), "utf8")),
+  };
 }
 
 test("main --self-play launches the game with the flag and records the self-play lines", () => {
-  const run = selfPlayRun(0, ["self-play: stage 6 entered at 10.50 s", "self-play: done at 40.00 s"]);
-  assert.equal(run.code, 0);
-  assert.deepEqual(readFileSync(path.join(run.dir, "args.txt"), "utf8").trim().split("\n").slice(1), [
-    "--audio-driver",
-    "Dummy",
-    "--",
-    "--self-play",
-    "--self-play-from=6",
-    "--self-play-stall=100",
+  const run = selfPlayRun(0, [
+    "self-play: stage 6 entered at 10.50 s",
+    "self-play: done at 40.00 s",
   ]);
+  assert.equal(run.code, 0);
+  assert.deepEqual(
+    readFileSync(path.join(run.dir, "args.txt"), "utf8").trim().split("\n").slice(1),
+    ["--audio-driver", "Dummy", "--", "--self-play", "--self-play-from=6", "--self-play-stall=100"],
+  );
   const [data, config] = readFileSync(path.join(run.dir, "xdg.txt"), "utf8").trim().split("\n");
   assert.equal(data, path.join(run.dir, "xdg-data"));
   assert.equal(config, path.join(run.dir, "xdg-config"));
-  assert.equal(readFileSync(path.join(run.dir, "self-play.log"), "utf8").trim().split("\n").length, 2);
+  assert.equal(
+    readFileSync(path.join(run.dir, "self-play.log"), "utf8").trim().split("\n").length,
+    2,
+  );
   assert.equal(run.summary.self_play.exit, 0);
   assert.equal(run.summary.self_play.stages[0].stage, 6);
   assert.equal(run.summary.self_play.stages[0].log_s, 0.5);
@@ -329,7 +338,12 @@ test("main --self-play launches the game with the flag and records the self-play
 test("main --self-play fails the check when the game stalls (3) or lacks tools/ (2)", () => {
   const stalled = selfPlayRun(3, ["self-play: stalled at stage 6 exit at 90.00 s pos 1.0,2.0,3.0"]);
   assert.equal(stalled.code, 1);
-  assert.deepEqual(stalled.summary.self_play.stalled, { stage: 6, what: "exit", launch_s: 90, pos: "1.0,2.0,3.0" });
+  assert.deepEqual(stalled.summary.self_play.stalled, {
+    stage: 6,
+    what: "exit",
+    launch_s: 90,
+    pos: "1.0,2.0,3.0",
+  });
   assert.match(stalled.lines.join("\n"), /STALLED at stage 6 exit/);
   assert.equal(selfPlayRun(2, []).code, 2);
 });
@@ -357,20 +371,46 @@ test("--capture picks engine or mangohud; without it MangoHud wins where install
 
 test("engineLaunch runs the editor on the project windowed, vsync off, with the frame log on the same warmup and seconds", () => {
   const outDir = "/runs/x";
-  const self = engineLaunch(parseArgs(["--self-play", "--self-play-min=50", "--warmup=10", "--seconds=30"]), { outDir, godotBin: "/G/Godot", project: "/p" });
+  const self = engineLaunch(
+    parseArgs(["--self-play", "--self-play-min=50", "--warmup=10", "--seconds=30"]),
+    { outDir, godotBin: "/G/Godot", project: "/p" },
+  );
   assert.equal(self.command, "/G/Godot");
   assert.equal(self.csv, path.join(outDir, ENGINE_LOG));
   assert.deepEqual(self.argv, [
-    "--path", "/p", "--windowed", "--disable-vsync", "--audio-driver", "Dummy", "--",
-    `--frame-log=${self.csv}`, "--frame-log-warmup=10", "--frame-log-seconds=30",
-    "--self-play", "--self-play-min=50",
+    "--path",
+    "/p",
+    "--windowed",
+    "--disable-vsync",
+    "--audio-driver",
+    "Dummy",
+    "--",
+    `--frame-log=${self.csv}`,
+    "--frame-log-warmup=10",
+    "--frame-log-seconds=30",
+    "--self-play",
+    "--self-play-min=50",
   ]);
-  const plain = engineLaunch(parseArgs(["--keep-vsync", "--", "--profile=sitting"]), { outDir, godotBin: "/G/Godot", project: "/p" });
+  const plain = engineLaunch(parseArgs(["--keep-vsync", "--", "--profile=sitting"]), {
+    outDir,
+    godotBin: "/G/Godot",
+    project: "/p",
+  });
   assert.deepEqual(plain.argv, [
-    "--path", "/p", "--windowed", "--profile=sitting", "--",
-    `--frame-log=${plain.csv}`, "--frame-log-warmup=10", "--frame-log-seconds=300",
+    "--path",
+    "/p",
+    "--windowed",
+    "--profile=sitting",
+    "--",
+    `--frame-log=${plain.csv}`,
+    "--frame-log-warmup=10",
+    "--frame-log-seconds=300",
   ]);
-  const packed = engineLaunch(parseArgs(["--exe=/b/Scrapkeep"]), { outDir, godotBin: "/G/Godot", project: "/p" });
+  const packed = engineLaunch(parseArgs(["--exe=/b/Scrapkeep"]), {
+    outDir,
+    godotBin: "/G/Godot",
+    project: "/p",
+  });
   assert.equal(packed.command, "/b/Scrapkeep");
   assert.equal(packed.argv.includes("--path"), false);
 });
@@ -383,7 +423,7 @@ test("the engine frame log reads through the MangoHud parser, and its label says
   assert.match(report(summarize([8]), "x.csv", logLabel(text)), /^Engine frame log: x.csv/);
 });
 
-test("all direct Mac captures refuse before any executable runs or the machine is reserved", t => {
+test("all direct Mac captures refuse before any executable runs or the machine is reserved", (t) => {
   const base = mkdtempSync(path.join(os.tmpdir(), "frame-mac-refusal-"));
   t.after(() => rmSync(base, { recursive: true, force: true }));
   const sentinel = path.join(base, "spawned");
@@ -395,10 +435,20 @@ test("all direct Mac captures refuse before any executable runs or the machine i
   const out = path.join(base, "out");
   const warnings = t.mock.method(console, "error", () => {});
   const env = { PATH: base, GODOT_BIN: bin, SENTINEL: sentinel };
-  for (const args of [[], ["--capture=engine"], ["--capture=mangohud"], ["--exe=" + bin, "--self-play"]]) {
-    assert.equal(main(args, env, out, "darwin", () => assert.fail("a refused draw took the quiet hold")), 2);
+  for (const args of [
+    [],
+    ["--capture=engine"],
+    ["--capture=mangohud"],
+    ["--exe=" + bin, "--self-play"],
+  ]) {
+    assert.equal(
+      main(args, env, out, "darwin", () => assert.fail("a refused draw took the quiet hold")),
+      2,
+    );
   }
-  assert.ok(warnings.mock.calls.every(call => call.arguments[0].includes("display-run.mjs --offscreen")));
+  assert.ok(
+    warnings.mock.calls.every((call) => call.arguments[0].includes("display-run.mjs --offscreen")),
+  );
   assert.equal(existsSync(sentinel), false);
   assert.equal(existsSync(out), false);
 });
@@ -439,16 +489,39 @@ test("main on Linux launches the engine capture with scratch XDG data and grades
       held.push("taken");
       return { release: () => held.push("released") };
     };
-    code = main(["--capture=engine", "--self-play", "--seconds=1"], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, out, "linux", quiet);
-    missing = main(["--capture=engine"], { PATH: "/usr/bin:/bin" }, path.join(base, "out2"), "linux", () => assert.fail("no launch, no hold"));
+    code = main(
+      ["--capture=engine", "--self-play", "--seconds=1"],
+      { PATH: "/usr/bin:/bin", GODOT_BIN: fake },
+      out,
+      "linux",
+      quiet,
+    );
+    missing = main(
+      ["--capture=engine"],
+      { PATH: "/usr/bin:/bin" },
+      path.join(base, "out2"),
+      "linux",
+      () => assert.fail("no launch, no hold"),
+    );
     assert.throws(
       () =>
-        main(["--capture=engine", "--self-play", "--seconds=1"], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, path.join(base, "out4"), "linux", () => {
-          throw new Error("no frame reading taken");
-        }),
+        main(
+          ["--capture=engine", "--self-play", "--seconds=1"],
+          { PATH: "/usr/bin:/bin", GODOT_BIN: fake },
+          path.join(base, "out4"),
+          "linux",
+          () => {
+            throw new Error("no frame reading taken");
+          },
+        ),
       (thrown) => thrown instanceof FrametimeError && /no frame reading taken/.test(thrown.message),
     );
-    reused = main(["--capture=engine", "--self-play", "--seconds=1", "--home=" + keptHome], { PATH: "/usr/bin:/bin", GODOT_BIN: fake }, outReused, "linux");
+    reused = main(
+      ["--capture=engine", "--self-play", "--seconds=1", "--home=" + keptHome],
+      { PATH: "/usr/bin:/bin", GODOT_BIN: fake },
+      outReused,
+      "linux",
+    );
   } finally {
     console.log = log;
     console.error = error;
@@ -461,7 +534,12 @@ test("main on Linux launches the engine capture with scratch XDG data and grades
   const [stampDir] = readdirSync(out);
   const dir = path.join(out, stampDir);
   const args = readFileSync(path.join(dir, "args.txt"), "utf8").trim().split("\n");
-  assert.deepEqual(args.slice(0, 4), ["--path", path.resolve(import.meta.dirname, "../sketches/core-loop"), "--windowed", "--disable-vsync"]);
+  assert.deepEqual(args.slice(0, 4), [
+    "--path",
+    path.resolve(import.meta.dirname, "../sketches/core-loop"),
+    "--windowed",
+    "--disable-vsync",
+  ]);
   assert.ok(args.includes("--self-play"));
   assert.equal(readFileSync(path.join(dir, "home.txt"), "utf8").trim(), path.join(dir, "home"));
   assert.match(lines.join("\n"), /Engine frame log: .*frames\.csv/);
@@ -471,15 +549,27 @@ test("main on Linux launches the engine capture with scratch XDG data and grades
   assert.equal(reused, 0);
   const reusedDir = path.join(outReused, readdirSync(outReused)[0]);
   assert.equal(readFileSync(path.join(reusedDir, "home.txt"), "utf8").trim(), keptHome);
-  assert.equal(JSON.parse(readFileSync(path.join(reusedDir, "summary.json"), "utf8")).cache, "shared");
+  assert.equal(
+    JSON.parse(readFileSync(path.join(reusedDir, "summary.json"), "utf8")).cache,
+    "shared",
+  );
   rmSync(keptHome, { recursive: true });
 });
 
 test("an engine reading says whether it measured a packed build and on what caches", async () => {
   const { engineContext } = await import("./frametime-check.mjs");
-  assert.deepEqual(engineContext({ exe: null }, "darwin"), { target: "debug-editor", cache: "cold" });
-  assert.deepEqual(engineContext({ exe: "/b/game" }, "linux"), { target: "packed", cache: "shared" });
-  assert.deepEqual(engineContext({ exe: "/b/game", home: "/h" }, "darwin"), { target: "packed", cache: "reused (--home)" });
+  assert.deepEqual(engineContext({ exe: null }, "darwin"), {
+    target: "debug-editor",
+    cache: "cold",
+  });
+  assert.deepEqual(engineContext({ exe: "/b/game" }, "linux"), {
+    target: "packed",
+    cache: "shared",
+  });
+  assert.deepEqual(engineContext({ exe: "/b/game", home: "/h" }, "darwin"), {
+    target: "packed",
+    cache: "reused (--home)",
+  });
 });
 
 test("--home reuses an existing scratch HOME under artifacts/local and refuses any other folder", async () => {
@@ -496,10 +586,16 @@ test("--home reuses an existing scratch HOME under artifacts/local and refuses a
   assert.equal(engineHome({ home: kept }, "/out", local), kept);
   for (const bad of [outside, local, path.join(local, "../outside")])
     assert.throws(() => engineHome({ home: bad }, "/out", local), /under artifacts\/local/);
-  assert.throws(() => engineHome({ home: path.join(local, "missing") }, "/out", local), /no folder/);
+  assert.throws(
+    () => engineHome({ home: path.join(local, "missing") }, "/out", local),
+    /no folder/,
+  );
   // A link inside artifacts/local that points out of it is refused; one that stays inside is not.
   symlinkSync(outside, path.join(local, "escape"));
-  assert.throws(() => engineHome({ home: path.join(local, "escape") }, "/out", local), /under artifacts\/local/);
+  assert.throws(
+    () => engineHome({ home: path.join(local, "escape") }, "/out", local),
+    /under artifacts\/local/,
+  );
   symlinkSync(kept, path.join(local, "inside"));
   assert.equal(engineHome({ home: path.join(local, "inside") }, "/out", local), kept);
   rmSync(base, { recursive: true });

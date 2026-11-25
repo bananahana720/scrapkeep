@@ -46,7 +46,16 @@ func setup() -> void:
 	_mast.name = "KlaxonMast"
 	_mast.scale = Vector3.ONE * (16.0 / 6.0)
 	add_child(_mast)
-	ModelKit.whole(SIREN_MAST.resource_path, _mast)
+	if ModelKit.whole(SIREN_MAST.resource_path, _mast) == null:
+		var fallback := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = 0.5 / (16.0 / 6.0)
+		cyl.bottom_radius = 0.7 / (16.0 / 6.0)
+		cyl.height = 6.0
+		fallback.mesh = cyl
+		fallback.material_override = Palette.solid(Palette.RUST)
+		fallback.position = Vector3.UP * 3.0
+		_mast.add_child(fallback)
 
 	_lamp_material = Palette.solid(Palette.AMBER, 1.0)
 	_lamp_mesh = MeshInstance3D.new()

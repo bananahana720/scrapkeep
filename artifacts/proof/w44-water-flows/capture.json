@@ -1,0 +1,46 @@
+{
+  "branch": "swarm/p1-stragglers",
+  "base": "566ca46687026abbc59e8dec73b74e59f0d4231b",
+  "script": "res://tools/water_flow_stills.gd",
+  "hashes": {
+    "tools/water_flow_stills.gd": "ff44fb28395b723f5b76599d55326bba172b55a52c9498ab316bf33d06ce121c",
+    "tools/offscreen_window.gd": "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d"
+  },
+  "renderer": "Metal 4.0 - Forward+ - Using Device #0: Apple - Apple M5 Max (Apple9)",
+  "offscreen_marker": "OFFSCREEN_WINDOW 85094 embedded",
+  "watch": {
+    "samples": 372,
+    "firstMs": 1795637317617,
+    "lastMs": 1795637336176,
+    "periodMs": 50,
+    "maxGapMs": 59,
+    "missed": 0,
+    "onScreen": 0,
+    "targetOnScreen": 0,
+    "frontmostChanges": 0
+  },
+  "stats": {
+    "scale": 1.0,
+    "plant": "",
+    "step_s": 0.25,
+    "views": {
+      "sheet": {
+        "water_px": 542405,
+        "moved_in": 0.755,
+        "moved_out": 0.0,
+        "shift_px": 29.12,
+        "elapsed_s": 0.296,
+        "speed_m_s": 2.293
+      },
+      "tailrace": {
+        "water_px": 1770254,
+        "moved_in": 0.151,
+        "moved_out": 0.0001,
+        "shift_px": 4.5,
+        "elapsed_s": 0.294,
+        "speed_m_s": 0.387
+      }
+    }
+  },
+  "verdict": "PASS"
+}

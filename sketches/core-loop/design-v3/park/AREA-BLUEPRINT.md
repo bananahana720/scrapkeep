@@ -20,7 +20,7 @@ Most of the blueprint is already written down or built. This page links to it an
 
 ## What is missing
 
-Three things, found by a search of the repository on 19 November 2026 (the inventory is on branch `scratch/area-blueprint-research`, folder `research/`).
+Three things, found by a search of the repository on 19 November 2026 (recorded in the 19 November idea and concept-art inventories).
 
 1. **Nothing joins the rows of one place.** A home, a pocket, a device and an event that stand in the same area each name a site row or a position. No one record says "these belong to this area", so nobody can read an area whole or check it whole.
 2. **No rule for edges.** Where two region polygons overlap, the lookup returns the first one. Nothing says which area owns an event, a home or a payout that sits on a boundary, or a ride that crosses one.

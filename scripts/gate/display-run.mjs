@@ -230,6 +230,7 @@ const watchedTools = new Map([
   [
     "res://tools/water_flow_stills.gd",
     {
+      // swarm/p1-stragglers (w44/water-flows), artifacts/proof/w44-water-flows/capture.json
       "tools/water_flow_stills.gd":
         "ff44fb28395b723f5b76599d55326bba172b55a52c9498ab316bf33d06ce121c",
       "tools/offscreen_window.gd":
