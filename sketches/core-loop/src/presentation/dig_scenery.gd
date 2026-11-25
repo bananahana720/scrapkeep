@@ -5,6 +5,7 @@ const DigFx := preload("res://src/presentation/dig_fx.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ParkSites := preload("res://src/presentation/park_sites.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # The Dig's scenery (alpha dress push, unit WDG): both zones' landmarks, cut faces, rubble,
 # struts, carts, shells and lamp lines along the rim, the drum look on every breach cover, the
@@ -184,6 +185,7 @@ static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) ->
 # run in the same order either way, so the seeded draws and the result are the same.
 var _scenery: Node3D
 var _sites: ParkSites
+var _landmark_kind := ""
 var _rng: RandomNumberGenerator
 var _batches := {}
 var _rim_rows: Array = []
@@ -201,9 +203,11 @@ func _begin_park(stage_root: Node3D, map, ground: Callable, stage: int) -> Node3
 	stage_root.add_child(_scenery)
 	_fx = DigFx.new()
 	_fx.name = "DigFx"
+	_fx.card_colours = {"bg": Palette.CHARCOAL, "border": Palette.VERDIGRIS, "title": Palette.AMBER, "line": Palette.SAND}
 	_scenery.add_child(_fx)
 	_fx.prepare(stage_root, map)
 	_sites = ParkSites.new(map, ground, stage)
+	_landmark_kind = String(map.park.get("landmark", {}).get("kind", ""))
 	_rng = RandomNumberGenerator.new()
 	_rng.seed = ("dig_scenery_" + String(map.park["map"])).hash()
 	_rim_rows = _park_rim_rows(_sites, _rng)
@@ -221,6 +225,7 @@ func _park_step() -> bool:
 				_park_rim_row(_batches, _sites, _rng, _rim_rows.pop_front())
 		1:
 			_park_carts(_batches, _sites, _rng)
+			_park_valley_canon(_batches, _sites, _landmark_kind)
 			_phase = 2
 		2:
 			_flush(_scenery, _batches)
@@ -404,6 +409,16 @@ func _ground_beds(scenery: Node3D, stage_root: Node3D) -> void:
 
 
 func _slot_material(slot: String) -> Material:
+	if slot in ["moab_stone", "copper_stone", "basalt_stone", "timber_strut"]:
+		if _dir_cache.has(slot):
+			return _dir_cache[slot]
+		var vc := StandardMaterial3D.new()
+		vc.resource_name = slot
+		vc.vertex_color_use_as_albedo = true
+		vc.roughness = 0.84 if slot == "timber_strut" else 0.88
+		vc.metallic = 0.14 if slot == "timber_strut" else 0.0
+		_dir_cache[slot] = vc
+		return vc
 	if not SLOTS.has(slot):
 		_warn_once("slot_" + slot, "material slot missing or unknown, that piece keeps the fallback")
 		return null
@@ -459,6 +474,8 @@ func _parts(path: String) -> Array:
 				var source := view.mesh.surface_get_material(0)
 				if source != null:
 					slot = String(source.resource_name)
+				if path.ends_with("timber_rock_strut.glb"):
+					slot = "timber_strut"
 				parts.append({"name": String(view.name), "mesh": view.mesh,
 					"local": _relative(view, scene), "slot": slot, "material": _slot_material(slot)})
 			scene.free()
@@ -780,3 +797,252 @@ func _warn_once(key: String, message: String) -> void:
 	if not _warnings.has(key):
 		_warnings[key] = true
 		push_warning("dig_scenery: " + message)
+
+
+# World 2 curated canyon & lava-tube landmark dressing (W48-MAPS, dispatched by park landmark kind;
+# legacy dig / dig_deep build() never calls this). Zero colliders; Guard 1 petrol #365754 +
+# uranium-green #9DFF3C wayfinding cables only (zero brass, zero hazard stripes).
+func _park_valley_canon(batches: Dictionary, sites: ParkSites, landmark_kind: String) -> void:
+	if landmark_kind == "headframe":
+		_place_moab_arches(batches, sites)
+		_place_copper_benches(batches, sites)
+		_place_moab_struts(batches, sites)
+		_build_command_cables(_scenery, sites, [
+			[Vector2(-235.0, -320.0), Vector2(-180.0, -240.0), Vector2(-130.0, -140.0), Vector2(-95.0, -30.0),
+				Vector2(-75.0, 90.0), Vector2(-42.0, 195.0), Vector2(-12.0, 248.0)],
+			[Vector2(175.0, -162.0), Vector2(155.0, -85.0), Vector2(128.0, 15.0), Vector2(96.0, 120.0),
+				Vector2(56.0, 205.0), Vector2(18.0, 250.0)],
+		])
+	elif landmark_kind == "sinkhole":
+		_place_malpais_basalt(batches, sites)
+		_build_skylight_shafts(_scenery, sites)
+		_build_command_cables(_scenery, sites, [
+			[Vector2(16.0, -345.0), Vector2(68.0, -295.0), Vector2(78.0, -215.0), Vector2(12.0, -168.0),
+				Vector2(-32.0, -92.0), Vector2(-6.0, -28.0)],
+			[Vector2(-10.0, 18.0), Vector2(-58.0, 95.0), Vector2(-12.0, 148.0), Vector2(62.0, 196.0),
+				Vector2(44.0, 272.0), Vector2(12.0, 310.0)],
+		])
+
+
+# Utah Moab natural red-rock sandstone arches framing sightlines toward the 120 m Headframe.
+func _place_moab_arches(batches: Dictionary, sites: ParkSites) -> void:
+	var arch_path := _stone("moab_arch.glb")
+	var specs := [
+		{"at": Vector2(-440.0, -525.0), "yaw": deg_to_rad(78.0), "scale": 1.85},
+		{"at": Vector2(-315.0, -455.0), "yaw": deg_to_rad(45.0), "scale": 2.15},
+		{"at": Vector2(-165.0, -295.0), "yaw": deg_to_rad(15.0), "scale": 2.25},
+		{"at": Vector2(115.0, -250.0), "yaw": deg_to_rad(-22.0), "scale": 2.25},
+		{"at": Vector2(265.0, -245.0), "yaw": deg_to_rad(-42.0), "scale": 1.95},
+		{"at": Vector2(-385.0, 185.0), "yaw": deg_to_rad(108.0), "scale": 2.10},
+	]
+	for spec in specs:
+		var at: Vector2 = spec["at"]
+		var yaw: float = spec["yaw"]
+		var s: float = spec["scale"]
+		# Sample both arch abutment feet (+/- 12 m local X) and bury below the lower foot so no leg floats.
+		var right := Vector2(cos(yaw), -sin(yaw))
+		var foot_l: float = sites.height(at - right * 12.0 * s)
+		var foot_r: float = sites.height(at + right * 12.0 * s)
+		var y: float = minf(sites.height(at), minf(foot_l, foot_r)) - 2.2 * s
+		var xf := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * s), Vector3(at.x, y, at.y))
+		_put(batches, arch_path, xf)
+
+
+# 5-bench oxidized turquoise-patina copper vein faces ringing the open-pit steps (w2-dig-pit-sinkhole.png).
+func _place_copper_benches(batches: Dictionary, sites: ParkSites) -> void:
+	var face_path := _stone("copper_vein_face.glb")
+	var benches := [
+		{"center": Vector2(0.0, 175.0), "r": 438.0, "angles": [-145.0, -110.0, -65.0, -20.0, 35.0, 145.0], "scale": 2.1},
+		{"center": Vector2(0.0, 185.0), "r": 366.0, "angles": [-155.0, -120.0, -75.0, -30.0, 20.0, 130.0], "scale": 2.0},
+		{"center": Vector2(0.0, 195.0), "r": 292.0, "angles": [-140.0, -95.0, -45.0, 5.0, 55.0, 150.0], "scale": 1.95},
+		{"center": Vector2(0.0, 205.0), "r": 218.0, "angles": [-130.0, -80.0, -25.0, 35.0, 125.0], "scale": 1.85},
+		{"center": Vector2(0.0, 215.0), "r": 146.0, "angles": [-145.0, -90.0, -35.0, 30.0, 115.0], "scale": 1.75},
+	]
+	for b in benches:
+		var c: Vector2 = b["center"]
+		var r: float = b["r"]
+		var s: float = b["scale"]
+		for deg in b["angles"]:
+			var rad := deg_to_rad(float(deg))
+			var dir := Vector2(cos(rad), sin(rad))
+			var at := c + dir * r
+			var inward := -dir
+			var yaw := ParkSites.yaw_toward(inward)
+			var y: float = sites.height(at) - 0.6 * s
+			var xf := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * s), Vector3(at.x, y, at.y))
+			_put(batches, face_path, xf)
+
+
+# Unstable Utah Moab timber/rock support struts along canyon flanks (g14 row 1 canon).
+func _place_moab_struts(batches: Dictionary, sites: ParkSites) -> void:
+	var strut_path := _mech("timber_rock_strut.glb")
+	var specs := [
+		{"at": Vector2(-120.0, -255.0), "yaw": deg_to_rad(12.0), "scale": 1.25},
+		{"at": Vector2(155.0, -165.0), "yaw": deg_to_rad(-28.0), "scale": 1.25},
+		{"at": Vector2(215.0, -65.0), "yaw": deg_to_rad(-54.0), "scale": 1.2},
+		{"at": Vector2(-195.0, 55.0), "yaw": deg_to_rad(68.0), "scale": 1.25},
+		{"at": Vector2(-120.0, 125.0), "yaw": deg_to_rad(42.0), "scale": 1.2},
+		{"at": Vector2(125.0, 115.0), "yaw": deg_to_rad(-44.0), "scale": 1.2},
+		{"at": Vector2(75.0, 220.0), "yaw": deg_to_rad(-18.0), "scale": 1.15},
+		{"at": Vector2(-50.0, 265.0), "yaw": deg_to_rad(25.0), "scale": 1.15},
+	]
+	for spec in specs:
+		var at: Vector2 = spec["at"]
+		var s: float = spec["scale"]
+		var y: float = sites.height(at) - 0.15 * s
+		var xf := Transform3D(Basis(Vector3.UP, float(spec["yaw"])).scaled(Vector3.ONE * s), Vector3(at.x, y, at.y))
+		_put(batches, strut_path, xf)
+
+
+# NM El Malpais hexagonal black volcanic basalt column clusters framing lava tubes & karst sinkhole.
+func _place_malpais_basalt(batches: Dictionary, sites: ParkSites) -> void:
+	var rib_path := _stone("basalt_column_rib.glb")
+	var specs := [
+		# Cinder cone rim & lava channel jaws
+		{"at": Vector2(-605.0, -645.0), "yaw": 0.6, "scale": 2.4},
+		{"at": Vector2(-470.0, -525.0), "yaw": 1.2, "scale": 2.2},
+		{"at": Vector2(-245.0, -545.0), "yaw": -0.4, "scale": 2.3},
+		{"at": Vector2(-135.0, -390.0), "yaw": 0.9, "scale": 2.2},
+		# Tube mouth basalt portal buttresses
+		{"at": Vector2(-38.0, -358.0), "yaw": 0.35, "scale": 2.5},
+		{"at": Vector2(42.0, -366.0), "yaw": -0.45, "scale": 2.5},
+		# Skylight & drift flank columns (strictly outside tube interiors and PF-41 junction)
+		{"at": Vector2(118.0, -328.0), "yaw": 0.8, "scale": 2.0},
+		{"at": Vector2(198.0, -210.0), "yaw": 1.5, "scale": 2.1},
+		{"at": Vector2(146.0, -104.0), "yaw": -0.9, "scale": 2.0},
+		{"at": Vector2(-156.0, -245.0), "yaw": 1.1, "scale": 2.1},
+		# Great Room perimeter buttresses
+		{"at": Vector2(54.0, -48.0), "yaw": -0.7, "scale": 2.4},
+		{"at": Vector2(-58.0, -46.0), "yaw": 0.7, "scale": 2.4},
+		{"at": Vector2(62.0, 26.0), "yaw": -2.2, "scale": 2.3},
+		{"at": Vector2(192.0, 48.0), "yaw": 1.4, "scale": 2.2},
+		{"at": Vector2(-242.0, -14.0), "yaw": -1.5, "scale": 2.2},
+		# Karst Sinkhole rim colonnade (r = 72..82 around (0, 350), completely clear of gallery_ring & PF-43 ramps)
+		{"at": Vector2(-74.0, 326.0), "yaw": 1.2, "scale": 2.8},
+		{"at": Vector2(74.0, 326.0), "yaw": -1.2, "scale": 2.8},
+		{"at": Vector2(-78.0, 368.0), "yaw": 1.9, "scale": 2.9},
+		{"at": Vector2(78.0, 368.0), "yaw": -1.9, "scale": 2.9},
+		{"at": Vector2(-54.0, 416.0), "yaw": 2.5, "scale": 3.0},
+		{"at": Vector2(54.0, 416.0), "yaw": -2.5, "scale": 3.0},
+		{"at": Vector2(0.0, 430.0), "yaw": 3.14, "scale": 3.2},
+	]
+	for spec in specs:
+		var at: Vector2 = spec["at"]
+		var s: float = spec["scale"]
+		var y: float = sites.height(at) - 0.8 * s
+		var xf := Transform3D(Basis(Vector3.UP, float(spec["yaw"])).scaled(Vector3.ONE * s), Vector3(at.x, y, at.y))
+		_put(batches, rib_path, xf)
+
+
+# NM El Malpais sunlit skylight flash shafts & karst sinkhole oculus sunbeam (Guard 4 wayfinding).
+func _build_skylight_shafts(scenery: Node3D, sites: ParkSites) -> void:
+	var holder := Node3D.new()
+	holder.name = "SkylightShafts"
+	scenery.add_child(holder)
+	var shaft_shader := Shader.new()
+	shaft_shader.code = """
+shader_type spatial;
+render_mode unshaded, cull_disabled, blend_add, depth_draw_never;
+uniform vec4 beam_color : source_color;
+uniform float alpha_scale = 0.20;
+void fragment() {
+	float v_fade = smoothstep(0.0, 0.28, UV.y) * smoothstep(1.0, 0.18, UV.y);
+	float edge = pow(abs(dot(normalize(NORMAL), normalize(VIEW))), 1.45);
+	ALBEDO = beam_color.rgb;
+	ALPHA = v_fade * edge * alpha_scale;
+}
+"""
+	var specs := [
+		{"at": Vector2(148.3, -286.3), "top_r": 4.2, "bot_r": 10.5, "h": 42.0, "alpha": 0.24, "phase": 0.0},
+		{"at": Vector2(175.3, -202.0), "top_r": 4.8, "bot_r": 11.5, "h": 44.0, "alpha": 0.24, "phase": 1.1},
+		{"at": Vector2(127.5, -126.0), "top_r": 4.5, "bot_r": 11.0, "h": 42.0, "alpha": 0.22, "phase": 2.2},
+		{"at": Vector2(0.0, -355.0), "top_r": 6.0, "bot_r": 14.0, "h": 46.0, "alpha": 0.20, "phase": 0.7},
+		{"at": Vector2(0.0, -15.0), "top_r": 8.0, "bot_r": 19.0, "h": 54.0, "alpha": 0.18, "phase": 1.7},
+		# Hero sunlit karst sinkhole oculus descending onto the Sinkhole Brood Warden
+		{"at": Vector2(0.0, 368.0), "top_r": 24.0, "bot_r": 48.0, "h": 145.0, "alpha": 0.22, "phase": 2.8},
+	]
+	for i in specs.size():
+		var spec: Dictionary = specs[i]
+		var at: Vector2 = spec["at"]
+		var h: float = spec["h"]
+		var floor_y: float = sites.height(at)
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = float(spec["top_r"])
+		cyl.bottom_radius = float(spec["bot_r"])
+		cyl.height = h
+		cyl.radial_segments = 20
+		cyl.rings = 1
+		cyl.cap_top = false
+		cyl.cap_bottom = false
+		var mat := ShaderMaterial.new()
+		mat.shader = shaft_shader
+		mat.set_shader_parameter("beam_color", Color(0.98, 0.91, 0.72, 1.0))
+		mat.set_shader_parameter("alpha_scale", float(spec["alpha"]))
+		var shaft := MeshInstance3D.new()
+		shaft.name = "SkylightShaft_%d" % i
+		shaft.mesh = cyl
+		shaft.material_override = mat
+		shaft.position = Vector3(at.x, floor_y + h * 0.48, at.y)
+		shaft.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		holder.add_child(shaft)
+		_fx.skylight_shafts.append({"node": shaft, "phase": float(spec["phase"]), "base_alpha": float(spec["alpha"])})
+
+
+# Guard 1 + Guard 4 no-minimap wayfinding: petrol (#365754) Old Works command conduits + pulsing
+# uranium-green (#9DFF3C) direction beads running toward the Warden landmark. Zero colliders, zero brass.
+func _build_command_cables(scenery: Node3D, sites: ParkSites, paths: Array) -> void:
+	var holder := Node3D.new()
+	holder.name = "OldWorksCommandCables"
+	scenery.add_child(holder)
+	var conduit_mat := StandardMaterial3D.new()
+	conduit_mat.albedo_color = Palette.VERDIGRIS
+	conduit_mat.roughness = 0.62
+	conduit_mat.metallic = 0.16
+	var pulse_mat := Palette.solid(Palette.ANCIENT, 2.8, false)
+	var bead_mesh := SphereMesh.new()
+	bead_mesh.radius = 0.48
+	bead_mesh.height = 0.96
+	bead_mesh.radial_segments = 8
+	bead_mesh.rings = 4
+
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var seg_mesh := BoxMesh.new()
+	seg_mesh.size = Vector3(0.42, 0.24, 1.0)
+	var bead_idx := 0
+	for route_i in paths.size():
+		var pts: Array = paths[route_i]
+		for k in range(pts.size() - 1):
+			var a2: Vector2 = pts[k]
+			var b2: Vector2 = pts[k + 1]
+			var steps := maxi(2, int(ceil(a2.distance_to(b2) / 22.0)))
+			for s in steps:
+				var t0 := float(s) / float(steps)
+				var t1 := float(s + 1) / float(steps)
+				var p0_2 := a2.lerp(b2, t0)
+				var p1_2 := a2.lerp(b2, t1)
+				var p0 := Vector3(p0_2.x, sites.height(p0_2) + 0.22, p0_2.y)
+				var p1 := Vector3(p1_2.x, sites.height(p1_2) + 0.22, p1_2.y)
+				var seg := p1 - p0
+				var length := seg.length()
+				if length < 0.25:
+					continue
+				var mid := (p0 + p1) * 0.5
+				var basis := Basis.looking_at(seg.normalized(), Vector3.UP).scaled(Vector3(1.0, 1.0, length))
+				st.append_from(seg_mesh, 0, Transform3D(basis, mid))
+				if s % 2 == 0:
+					var bead := MeshInstance3D.new()
+					bead.name = "CablePulse_%d_%d" % [route_i, bead_idx]
+					bead.mesh = bead_mesh
+					bead.material_override = pulse_mat
+					bead.position = mid + Vector3(0.0, 0.26, 0.0)
+					bead.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+					holder.add_child(bead)
+					_fx.cable_pulses.append({"node": bead, "phase": float(bead_idx) * 0.65, "base_scale": 1.0})
+					bead_idx += 1
+	var conduit := MeshInstance3D.new()
+	conduit.name = "CommandConduitMesh"
+	conduit.mesh = st.commit()
+	conduit.material_override = conduit_mat
+	conduit.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	holder.add_child(conduit)

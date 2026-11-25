@@ -1,0 +1,81 @@
+{
+ "assets": [
+  {
+   "id": "dig_moab_arch",
+   "path": "res://assets/models/dig_stone/moab_arch.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored Utah Moab natural red-rock sandstone arch rib (W48-MAPS)"
+   }
+  },
+  {
+   "id": "dig_copper_vein_face",
+   "path": "res://assets/models/dig_stone/copper_vein_face.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored oxidized turquoise-patina copper bench face (W48-MAPS)"
+   }
+  },
+  {
+   "id": "dig_basalt_column_rib",
+   "path": "res://assets/models/dig_stone/basalt_column_rib.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored NM El Malpais hexagonal volcanic basalt column cluster (W48-MAPS)"
+   }
+  },
+  {
+   "id": "dig_timber_rock_strut",
+   "path": "res://assets/models/dig_mechanical/timber_rock_strut.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored Moab unstable timber-framed rock support strut per g14 (W48-MAPS)"
+   }
+  },
+  {
+   "id": "boss_waking_drill_crown",
+   "path": "res://assets/models/bosses/waking_drill_crown.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/boss/waking_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored cast petrol-enamel excavator drill crown with uranium-green seams (W48-MAPS)"
+   }
+  },
+  {
+   "id": "boss_waking_hatch_frame",
+   "path": "res://assets/models/bosses/waking_hatch_frame.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/arena_waking_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored Old Works petrol-enamel service hatch frame with uranium-green seams (W48-MAPS)"
+   }
+  },
+  {
+   "id": "boss_waking_rim_coping",
+   "path": "res://assets/models/bosses/waking_rim_coping.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/arena_waking_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored static shaft rim coping in AMBER/bone/charcoal with zero 45-deg HAZARD stripes (W48-MAPS)"
+   }
+  }
+ ]
+}

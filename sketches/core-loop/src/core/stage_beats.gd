@@ -228,3 +228,60 @@ class Recorder:
 		if not _row.is_empty() and int(_row["total"]) == 0:
 			rows.pop_back()
 			_row = {}
+
+
+# World 2 curated story beats (Guard 4, W48-MAPS): non-blocking, skippable cards and banter.
+# Keyed by park landmark kind & zone (data-driven) and kept apart from the six tick-classified stage beats.
+const WORLD_TWO_BEATS := [
+	{
+		"id": "dig_cold_open",
+		"landmark": "headframe",
+		"zone": "2-1",
+		"trigger": "stage_entered",
+		"owner": "res://src/presentation/dig_fx.gd",
+		"lore_id": "lore.dig.cold_open",
+		"skippable": true,
+		"blocking": false,
+	},
+	{
+		"id": "kest_rescue_banter",
+		"landmark": "headframe",
+		"zone": "2-1",
+		"trigger": "rescue_completed",
+		"owner": "res://src/presentation/dig_fx.gd",
+		"lore_id": "lore.dig.kest_rescue.1",
+		"skippable": true,
+		"blocking": false,
+	},
+	{
+		"id": "sinkhole_cold_open",
+		"landmark": "sinkhole",
+		"zone": "2-2",
+		"trigger": "stage_entered",
+		"owner": "res://src/presentation/dig_fx.gd",
+		"lore_id": "lore.sinkhole.cold_open",
+		"skippable": true,
+		"blocking": false,
+	},
+	{
+		"id": "waking_freeze_intro",
+		"landmark": "sinkhole",
+		"zone": "2-2",
+		"trigger": "boss_intro",
+		"owner": "res://src/boss/waking_dress.gd",
+		"lore_id": "lore.dig_depths.waking_card",
+		"skippable": true,
+		"blocking": false,
+	},
+]
+
+
+static func world_two_beat(id: String) -> Dictionary:
+	for beat in WORLD_TWO_BEATS:
+		if beat["id"] == id:
+			return beat
+	return {}
+
+
+static func world_two_beats_for_landmark(landmark_kind: String) -> Array:
+	return WORLD_TWO_BEATS.filter(func(beat): return beat["landmark"] == landmark_kind)

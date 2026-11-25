@@ -628,6 +628,9 @@ def build_drone(m, i, frame):
 
     tri_prism([(0, 0.48), (-0.42, -0.24), (0.42, -0.24)], -0.05, 0.05, "ancient_enamel", ENAMEL, IRON)
     tri_prism([(0, 0.3), (-0.2, -0.16), (0.2, -0.16)], 0.05, 0.12, "ancient_enamel", PLATE, IRON)
+    # Flanking uranium-glass green (#9DFF3C) seam ribs along the cast drone chassis (g08 canon).
+    for sign in (-1.0, 1.0):
+        tri_prism([(sign * 0.08, 0.24), (sign * 0.28, -0.12), (sign * 0.20, -0.16)], 0.052, 0.072, "ancient_light", None, None)
     tip = at(0, 0.3, 0.13)
     a, b, d = m.v(tip + f * 0.06), m.v(tip - f * 0.04 + x * 0.06), m.v(tip - f * 0.04 - x * 0.06)
     apex = m.v(tip + n * 0.05)

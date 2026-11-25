@@ -182,7 +182,8 @@
   {"id": "tailings_conveyor", "kind": "cable", "site": "tailings_bench_east", "recipe": "", "from": [337, -38.5, -40], "to": [337, -37.5, 110], "radius": 6.0, "floor": 22.0},
   {"id": "bench2_haul_cable", "kind": "cable", "site": "pit", "recipe": "", "from": [60, -38.5, -150], "to": [-90, -37.5, -150], "radius": 6.0, "floor": 22.0},
   {"id": "skip_cable", "kind": "cable", "site": "pit", "recipe": "", "from": [175, -38.5, -125], "to": [120, -77.5, 25], "radius": 6.0, "floor": 22.0},
-  {"id": "west_winze_cable", "kind": "cable", "site": "pit", "recipe": "", "from": [-150, -58.5, -25], "to": [-100, -97.5, 170], "radius": 6.0, "floor": 22.0}
+  {"id": "west_winze_cable", "kind": "cable", "site": "pit", "recipe": "", "from": [-150, -58.5, -25], "to": [-100, -97.5, 170], "radius": 6.0, "floor": 22.0},
+  {"id": "moab_arch_high_line", "kind": "cable", "site": "pit", "recipe": "", "from": [-155, 2.0, -285], "to": [108, -18.0, -245], "radius": 6.0, "floor": 22.0}
  ],
  "weather_rows": [
   {"id": "noon_shimmer", "kind": "heat_shimmer", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0015, "color": "#e8d7b0"}, "sky": "clear", "sound": "heat_tick", "music_layer": "shimmer_pad", "event_odds": {}, "handling": "none"},
@@ -195,5 +196,20 @@
  ],
  "rescue_rows": [
   {"id": "kest_cage", "site": "floor_sump", "at": [-144, 110], "face": [1, 0], "quest": "dig", "pilot": "demolitions_caster", "prompt": "free the digger"}
+ ],
+ "wear_rows": [
+  {"id": "rim_arroyo_ruts", "points": [[-550, -730], [-495, -590], [-435, -525], [-356, -501], [-285, -420], [-240, -330]], "width_m": 6.5},
+  {"id": "west_bench_ruts", "points": [[-240, -330], [-360, -160], [-338, 60], [-262, 210], [-145, 220], [-40, 240]], "width_m": 6.0},
+  {"id": "east_switchback_ruts", "points": [[180, -160], [220, -60], [260, 80], [160, 175], [60, 250]], "width_m": 5.5}
+ ],
+ "destructible_rows": [
+  {"id": "moab_rim_strut_w", "tier": 2, "at": [-120.0, -20.0, -255.0], "size": [3.4, 2.8, 1.4], "yaw_deg": 12},
+  {"id": "moab_switchback_strut", "tier": 2, "at": [155.0, -40.0, -165.0], "size": [3.4, 2.8, 1.4], "yaw_deg": -28},
+  {"id": "moab_east_crib", "tier": 1, "at": [215.0, -60.0, -65.0], "size": [2.2, 1.6, 1.8], "yaw_deg": -54},
+  {"id": "moab_west_b3_strut", "tier": 3, "at": [-195.0, -80.0, 55.0], "size": [4.0, 3.2, 1.6], "yaw_deg": 68},
+  {"id": "moab_sump_strut", "tier": 2, "at": [-120.0, -100.0, 125.0], "size": [3.4, 2.8, 1.4], "yaw_deg": 42},
+  {"id": "moab_east_floor_strut", "tier": 2, "at": [125.0, -100.0, 115.0], "size": [3.4, 2.8, 1.4], "yaw_deg": -44},
+  {"id": "moab_collar_crates", "tier": 1, "at": [75.0, -100.0, 220.0], "size": [2.0, 1.4, 2.0], "yaw_deg": -18},
+  {"id": "moab_collar_strut_w", "tier": 3, "at": [-50.0, -100.0, 265.0], "size": [3.8, 3.0, 1.5], "yaw_deg": 25}
  ]
 }

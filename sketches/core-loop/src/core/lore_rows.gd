@@ -874,3 +874,70 @@ const ROWS := [
 		"text": "Mind: You were my gun. Now you play my song backwards.",
 	},
 ]
+
+# World 2 narrative cards & rescue banter (Guard 4, W48-MAPS): kept outside ROWS/CALLS so
+# World 1's golden ROWS hash and 7-signal CALLS table stay untouched. Keyed by park landmark kind.
+const WORLD_TWO_COLD_OPEN := {
+	"headframe": {
+		"id": "lore.dig.cold_open",
+		"zone": "2-1",
+		"title": "THE DIG — RED RIM",
+		"speaker": "Moss",
+		"line": "Five copper benches down to the headframe. Keep your speed on the red rock.",
+		"skippable": true,
+		"duration_s": 3.4,
+	},
+	"sinkhole": {
+		"id": "lore.sinkhole.cold_open",
+		"zone": "2-2",
+		"title": "THE SINKHOLE — MALPAIS",
+		"speaker": "Moss",
+		"line": "Black basalt tubes all the way to the skylight. Follow the green wire.",
+		"skippable": true,
+		"duration_s": 3.4,
+	},
+}
+
+const KEST_RESCUE_BANTER := [
+	{
+		"id": "lore.dig.kest_rescue.1",
+		"zone": "2-1",
+		"speaker": "Kest",
+		"line": "Bolt jammed three shifts ago. Good thing you roll heavier than the Fleet.",
+		"skippable": true,
+		"duration_s": 2.8,
+	},
+	{
+		"id": "lore.dig.kest_rescue.2",
+		"zone": "2-1",
+		"speaker": "Moss",
+		"line": "Kest is clear of the sump. Watch the headframe cables — Swarm's awake.",
+		"skippable": true,
+		"duration_s": 2.8,
+	},
+]
+
+const WAKING_INTRO_CARD := {
+	"id": "lore.dig_depths.waking_card",
+	"zone": "2-2",
+	"title": "THE WAKING",
+	"subtitle": "COLLAPSING SHAFT EXCAVATOR",
+	"fallback_line": "Three floors down. Stay on the rim.",
+	"skippable": true,
+	"duration_s": 2.4,
+}
+
+
+static func world_two_cold_open(landmark_kind: String) -> Dictionary:
+	return WORLD_TWO_COLD_OPEN.get(landmark_kind, {})
+
+
+static func kest_rescue_banter() -> Array:
+	return KEST_RESCUE_BANTER
+
+
+static func waking_intro_line(pilot_id: String) -> String:
+	for row in ROWS:
+		if row.get("kind") == "intro" and row.get("zone") == "2-2" and row.get("pilot", "") == pilot_id:
+			return String(row["text"])
+	return String(WAKING_INTRO_CARD["fallback_line"])

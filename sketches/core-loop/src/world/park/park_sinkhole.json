@@ -627,5 +627,18 @@
   {"id": "great_room_camp", "activity": "enemy_camp", "site": "great_room", "at": [0, -20], "pack": ["burrower", "drill_crew", "lamp_swarm"], "pay": {"named": "pylon_capacitor", "rarities": ["common"]}},
   {"id": "east_chamber_bounty", "activity": "hauler_bounty", "site": "east_chamber", "at": [172, 40], "pack": [], "pay": {"rarities": ["common", "rare"]}},
   {"id": "west_chamber_cache", "activity": "cracked_cache", "site": "west_chamber", "at": [-226, -18], "pack": [], "pay": {"rarities": ["rare"]}}
+ ],
+ "wear_rows": [
+  {"id": "cinder_flow_ruts", "points": [[-660, -730], [-560, -625], [-430, -565], [-260, -605], [-185, -490], [-60, -420], [0, -355]], "width_m": 6.5},
+  {"id": "great_room_lead_ruts", "points": [[0, -355], [75, -260], [10, -175], [-35, -100], [0, -20]], "width_m": 6.0},
+  {"id": "sinkhole_approach_ruts", "points": [[0, 10], [-65, 95], [10, 155], [70, 220], [18, 290]], "width_m": 6.0}
+ ],
+ "destructible_rows": [
+  {"id": "malpais_cone_crib", "tier": 1, "at": [-565.0, -27.35, -715.0], "size": [2.0, 1.5, 2.0], "yaw_deg": 45},
+  {"id": "great_room_crib_e", "tier": 1, "at": [22.0, -91.22, -22.0], "size": [2.2, 1.6, 1.8], "yaw_deg": -30},
+  {"id": "great_room_strut_w", "tier": 2, "at": [-26.0, -91.33, -18.0], "size": [3.4, 2.6, 1.4], "yaw_deg": 28},
+  {"id": "east_chamber_strut", "tier": 2, "at": [162.0, -92.69, 32.0], "size": [3.6, 2.8, 1.4], "yaw_deg": -45},
+  {"id": "west_chamber_strut", "tier": 3, "at": [-218.0, -91.22, -22.0], "size": [4.0, 3.0, 1.5], "yaw_deg": 52},
+  {"id": "sinkhole_gallery_crib", "tier": 2, "at": [0.0, -100.0, 398.0], "size": [3.2, 2.4, 1.4], "yaw_deg": 0}
  ]
 }
