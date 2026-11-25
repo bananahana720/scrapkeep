@@ -320,7 +320,7 @@ static func gem_color(rarity: String) -> Color:
 # for an empty slot.
 func _relic_offer() -> String:
 	var tree = ctx.player.tree if ctx.player != null else null
-	var pool := Relics.eligible(ctx.run.class_id(), Relics.held(ctx.run.parts), tree, ctx.stages.world_of(ctx.run.stage))
+	var pool := Relics.eligible(ctx.run.class_id(), Relics.held(ctx.run.parts), tree, ctx.stages.world_of(ctx.run.stage), true)
 	if pool.is_empty():
 		return ""
 	var rng: RandomNumberGenerator = system.luck(id + ":relic")

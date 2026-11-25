@@ -1727,8 +1727,8 @@ func _on_cobalt_pick_chosen(part_id: String) -> void:
 	ctx.run.extra["brindle_cobalt_picked"] = part_id
 	if ctx.build == null or not ctx.build.has_method("scrapless") or not ctx.build.scrapless():
 		ctx.run.add_part(part_id, "boss_cobalt")
-	if ctx.flow != null and ctx.flow.has_method("_save_boss_won"):
-		ctx.flow._save_boss_won()
+	if ctx.flow != null and ctx.flow.has_method("save_boss_won"):
+		ctx.flow.save_boss_won()
 
 
 func _close_cobalt_gates() -> void:

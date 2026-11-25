@@ -74,10 +74,14 @@ const EXTRA_ACTIONS := {
 	"cl_radio_skip": {"keys": [KEY_SLASH]},
 	"cl_radio_pin": {"keys": [KEY_SEMICOLON]},
 }
-# Pocket Consumable Belt quick-tap (W47-C1): keyboard C via InputMap + gamepad D-pad Up
-# quick-tap read without colliding with cl_bay_2's InputMap pad uniqueness check.
+# Pocket Consumable Belt quick-tap (W47-C1): keyboard C via InputMap + gamepad L3 (Left Stick click)
+# across all connected controllers whenever no other InputMap action claims L3 — never collides
+# with cl_bay_2 (D-pad Up) and keeps L3 free for Settings pad rebinding.
 const CONSUMABLE_ACTION := "cl_consumable"
-const CONSUMABLE_PAD := JOY_BUTTON_DPAD_UP
+const CONSUMABLE_PAD := JOY_BUTTON_LEFT_STICK
+const SITTING_CHORD_PAD := JOY_BUTTON_RIGHT_STICK
+static var _consumable_pad_down := false
+static var _consumable_pad_chord_used := false
 # The bar slot each select action picks, by its index in Intent.slot_pick.
 const SELECT_ACTIONS := ["cl_bay_1", "cl_bay_2", "cl_bay_3"]
 # The engine's ui_* actions have no pad button, so a pad moves menu focus but cannot press or go
@@ -122,8 +126,49 @@ static func actions() -> Dictionary:
 	return out
 
 
+static func _pad_claimed_elsewhere(button: int) -> bool:
+	for action in actions().keys():
+		if action == CONSUMABLE_ACTION or not InputMap.has_action(action):
+			continue
+		for ev in InputMap.action_get_events(action):
+			if ev is InputEventJoypadButton and ev.button_index == button:
+				return true
+	return false
+
+
+# Fires on clean L3 release only when R3 was never pressed during the hold, so Andrew's
+# L3+R3 sitting-notes mark chord (sitting_notes.gd MARK_PAD) never burns a consumable.
+static func step_consumable_pad_state(l3_down: bool, r3_down: bool) -> bool:
+	if l3_down:
+		if not _consumable_pad_down:
+			_consumable_pad_chord_used = r3_down
+		elif r3_down:
+			_consumable_pad_chord_used = true
+		_consumable_pad_down = true
+		return false
+	var fired := _consumable_pad_down and not _consumable_pad_chord_used and not r3_down
+	_consumable_pad_down = false
+	_consumable_pad_chord_used = false
+	return fired
+
+
 static func consumable_just_pressed() -> bool:
-	return InputMap.has_action(CONSUMABLE_ACTION) and Input.is_action_just_pressed(CONSUMABLE_ACTION)
+	if InputMap.has_action(CONSUMABLE_ACTION) and Input.is_action_just_pressed(CONSUMABLE_ACTION):
+		return true
+	var l3_down := false
+	var r3_down := false
+	if not _pad_claimed_elsewhere(CONSUMABLE_PAD):
+		var pads := Input.get_connected_joypads()
+		if pads.is_empty():
+			l3_down = Input.is_joy_button_pressed(0, CONSUMABLE_PAD)
+			r3_down = Input.is_joy_button_pressed(0, SITTING_CHORD_PAD)
+		else:
+			for pad_id in pads:
+				if Input.is_joy_button_pressed(pad_id, CONSUMABLE_PAD):
+					l3_down = true
+				if Input.is_joy_button_pressed(pad_id, SITTING_CHORD_PAD):
+					r3_down = true
+	return step_consumable_pad_state(l3_down, r3_down)
 
 
 # The verb that registers `action`, or "" for an action the table does not hold.
@@ -186,6 +231,12 @@ static func verbs_on(state: String, key: int, button: int) -> Array[String]:
 # Mouse motion and the sticks cannot be bound.
 static var _warned_tokens := {}
 const TRIGGER_AXES := [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]
+
+
+static func reset_for_tests() -> void:
+	_warned_tokens.clear()
+	_consumable_pad_down = false
+	_consumable_pad_chord_used = false
 
 
 # "desk" for a key or mouse button, "pad" for a pad button, "axis" for a trigger.

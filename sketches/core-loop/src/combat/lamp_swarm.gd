@@ -201,10 +201,10 @@ func _pay_warden_posture() -> float:
 			continue
 		if enemy.has_method("is_dead") and enemy.is_dead():
 			continue
-		if enemy.has_method("judge_hit") and enemy.has_method("_apply_posture"):
+		if enemy.has_method("judge_hit") and enemy.has_method("apply_posture_hit"):
 			var before: float = float(enemy.posture()) if enemy.has_method("posture") else 0.0
 			var was_staggered: bool = bool(enemy.staggered()) if enemy.has_method("staggered") else false
-			enemy._apply_posture(enemy.judge_hit("guard_rack", 0.0, false, 0))
+			enemy.apply_posture_hit(enemy.judge_hit("guard_rack", 0.0, false, 0))
 			if not was_staggered:
 				var after: float = float(enemy.posture()) if enemy.has_method("posture") else before
 				paid = APEX_WARDEN_POSTURE if (enemy.has_method("staggered") and enemy.staggered()) or after > before else 0.0

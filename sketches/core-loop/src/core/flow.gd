@@ -466,6 +466,10 @@ func start_pick_waits() -> bool:
 	return start_pick_at_yard() and gate.yard_ahead()
 
 
+func start_pick_open() -> bool:
+	return start_card != null and start_card.visible
+
+
 # Stage 1's start pick comes at the yard's clear rather than at the drop: the briefing's
 # run-opening line is left off then (workshop.gd). A profile with a harder rung open keeps the card
 # at the drop: the run tier rides on it, and a rung chosen after the yard would credit a dam whose
@@ -641,6 +645,8 @@ func resume_run() -> bool:
 	# The run document's settled ids and the profile's become one set again.
 	if ctx.progress != null:
 		ctx.progress.reconcile_settled()
+	if ctx.build != null and ctx.build.has_method("sync_relics"):
+		ctx.build.sync_relics()
 	_apply_tree_picks()
 	var p: Array = doc["entry_velocity"]
 	# A cleared stage (SA-F1) lands its flight: the stage's clear and its owed pick, then the next
@@ -1228,6 +1234,11 @@ func _prewarm_next_stage_events() -> void:
 func _resume_after_boss(velocity: Vector3) -> void:
 	ctx.run.extra.erase(BOSS_WON_KEY)
 	_advance_from(ctx.run.stage, velocity)
+
+
+# Public door for boss modules (Rule 7): persists the arena win checkpoint.
+func save_boss_won() -> void:
+	_save_boss_won()
 
 
 # The fall moves the saved run past the arena: the cleared doc as the run stands now, marked won. Rewards the win

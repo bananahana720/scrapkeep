@@ -62,8 +62,10 @@ static func odds(mem: Dictionary, stage: int) -> Dictionary:
 		"safe_share": 0.0 if mem.risk_taken else 1.0 / (1.0 + risk_weight),
 		"refusal_weight": risk_weight, "skip_time": 0.0}
 
-static func draw(mem: Dictionary, stage: int, rng: RandomNumberGenerator, full_health: bool) -> Dictionary:
+static func draw(mem: Dictionary, stage: int, rng: RandomNumberGenerator, full_health: bool, kindness_sealed := false) -> Dictionary:
 	var modifiers := odds(mem, stage)
+	if kindness_sealed:
+		modifiers["safe_share"] = 0.0
 	if rng.randf() >= float(modifiers.chance):
 		return {}
 	var family := "safe" if rng.randf() < float(modifiers.safe_share) else "risk"
@@ -189,7 +191,8 @@ static func stage_site(graph, map, run, layout_seed: int, pool: PackedInt32Array
 	var rng := RandomNumberGenerator.new()
 	# A named layout stream does not advance ctx.rng or any existing draw.
 	rng.seed = hash([layout_seed, run.run_seed, run.stage, "trade_layout"])
-	var offer := draw(run.trade_memory, run.stage, rng, run.hp >= run.max_hp)
+	var sealed_kindness: bool = run != null and run.has_method("override_on") and run.override_on("kindness_sealed")
+	var offer := draw(run.trade_memory, run.stage, rng, run.hp >= run.max_hp, sealed_kindness)
 	var spec := {}
 	if not offer.is_empty():
 		var spot := place(graph, map, rng, pool)
@@ -302,13 +305,30 @@ static func door_words_for_contract(id: String) -> String:
 
 static func _contract_state(run) -> Dictionary:
 	if run == null:
-		return {"stage": 0, "overtime_signed": false, "overtime_settled": false, "auctions_won": 0}
+		return {"stage": 0, "overtime_signed": false, "overtime_settled": false, "auction_spent": false, "auctions_won": 0}
 	var cur := int(run.stage)
 	var raw = run.get_meta(CONTRACT_META) if run.has_meta(CONTRACT_META) else null
 	if not (raw is Dictionary) or int(raw.get("stage", -1)) != cur:
-		raw = {"stage": cur, "overtime_signed": false, "overtime_settled": false, "auctions_won": 0}
+		raw = {"stage": cur, "overtime_signed": false, "overtime_settled": false, "auction_spent": false, "auctions_won": 0}
 		run.set_meta(CONTRACT_META, raw)
 	return raw
+
+
+# Public read-only query helper (Rule 7): returns a fresh snapshot without mutating run meta.
+static func contract_status(run) -> Dictionary:
+	if run == null:
+		return {"stage": 0, "overtime_signed": false, "overtime_settled": false, "auction_spent": false, "auctions_won": 0}
+	var cur := int(run.stage)
+	var raw = run.get_meta(CONTRACT_META) if run.has_meta(CONTRACT_META) else null
+	if not (raw is Dictionary) or int(raw.get("stage", -1)) != cur:
+		return {"stage": cur, "overtime_signed": false, "overtime_settled": false, "auction_spent": false, "auctions_won": 0}
+	return {
+		"stage": cur,
+		"overtime_signed": bool(raw.get("overtime_signed", false)),
+		"overtime_settled": bool(raw.get("overtime_settled", false)),
+		"auction_spent": bool(raw.get("auction_spent", false)),
+		"auctions_won": int(raw.get("auctions_won", 0)),
+	}
 
 
 static func sign_overtime_contract(run) -> Dictionary:
@@ -349,6 +369,9 @@ static func settle_overtime_contract(run, clear_seconds: float, at := Vector3.ZE
 static func bid_salvage_auction(run, bid_cogs: int, rng: RandomNumberGenerator = null) -> Dictionary:
 	if run == null or not run.alive():
 		return {"ok": false, "reason": "dead"}
+	var st := _contract_state(run)
+	if bool(st.get("auction_spent", false)):
+		return {"ok": false, "reason": "already_spent"}
 	var row: Dictionary = CONTRACTS[SALVAGE_AUCTION]
 	if bid_cogs < int(row["min_bid"]):
 		return {"ok": false, "reason": "bid_too_low", "min_bid": int(row["min_bid"])}
@@ -359,7 +382,7 @@ static func bid_salvage_auction(run, bid_cogs: int, rng: RandomNumberGenerator =
 	var roll_rng := rng
 	if roll_rng == null:
 		roll_rng = RandomNumberGenerator.new()
-		roll_rng.seed = hash([run.run_seed, run.stage, "salvage_auction", bid_cogs, int(_contract_state(run).get("auctions_won", 0))])
+		roll_rng.seed = hash([run.run_seed, run.stage, "salvage_auction", bid_cogs, int(st.get("auctions_won", 0))])
 	var picks: Array = PartsScript.roll(roll_rng, rarities, run.class_id(), run.parts, 1)
 	if picks.is_empty():
 		picks = PartsScript.roll(roll_rng, ["common", "rare"], run.class_id(), run.parts, 1)
@@ -369,6 +392,6 @@ static func bid_salvage_auction(run, bid_cogs: int, rng: RandomNumberGenerator =
 		return {"ok": false, "reason": "cant_afford"}
 	var part_id := String(picks[0])
 	run.add_part(part_id, "salvage_auction")
-	var st := _contract_state(run)
+	st["auction_spent"] = true
 	st["auctions_won"] = int(st.get("auctions_won", 0)) + 1
 	return {"ok": true, "contract": SALVAGE_AUCTION, "bid": bid_cogs, "part_id": part_id, "rarities": rarities}

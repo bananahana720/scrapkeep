@@ -47,6 +47,7 @@ const OFFER_PREFIX := "consumable:"
 const BELT_OFFER_ID := "belt:pocket_belt"
 
 const MODEL_DIR := "res://assets/models/consumables/"
+const ICON_DIR := "res://assets/icons/"
 const CRADLE_MODEL := MODEL_DIR + "cons_drop_cradle.glb"
 const BALLOON_MODEL := MODEL_DIR + "cons_anchor_balloon.glb"
 const DROP_GROUP := "consumable_drop"
@@ -94,7 +95,7 @@ const ROWS := {
 		"max_tier": 5,
 		"blast_damage": 38.0,
 		"warden_posture": 45.0,
-		"headline": "Shatters up to Tier 5 walls and strips outer plate.",
+		"headline": "Shatters heavy walls and strips outer plate.",
 	},
 	NITRO_SIPHON: {
 		"id": NITRO_SIPHON,
@@ -120,7 +121,7 @@ const ROWS := {
 		"duration_s": 15.0,
 		"height_m": 18.0,
 		"bite_radius_m": 2.8,
-		"headline": "Launches a 15 s sky-grapple balloon 18 m overhead.",
+		"headline": "Launches a 15 s overhead hook balloon 18 m up.",
 	},
 	OVERCLOCK_CARD: {
 		"id": OVERCLOCK_CARD,
@@ -132,7 +133,7 @@ const ROWS := {
 		"price": 70,
 		"duration_s": 8.0,
 		"skilled_damage_mult": 1.5,
-		"headline": "8 s zero Movement/Special CD and auto Skilled shots.",
+		"headline": "8 s zero ability cooldowns and auto Skilled shots.",
 	},
 	FOREMAN_MEMO: {
 		"id": FOREMAN_MEMO,
@@ -179,7 +180,9 @@ const ROWS_W50 := {
 		"color": Palette.BRASS,
 		"price": 75,
 		"duration_s": 0.0,
-		"headline": "Rerolls nearby offers and shop stock to same or higher tier.",
+		"hull_cost_share": 0.05,
+		"core_cost": 1,
+		"headline": "Rerolls offers to same or higher tier; costs 1 core or 5% hull.",
 	},
 	DUPLICATOR_SPOOL: {
 		"id": DUPLICATOR_SPOOL,
@@ -215,6 +218,10 @@ static func _reset() -> void:
 	_packed_cache.clear()
 
 
+static func reset_for_tests() -> void:
+	_reset()
+
+
 static func all_order() -> Array[String]:
 	var out: Array[String] = []
 	out.append_array(ORDER)
@@ -240,8 +247,23 @@ static func price_of(consumable_id: String) -> int:
 	return int(row_of(consumable_id).get("price", 60))
 
 
+static func _preferred_icon(preferred: String, fallback: String) -> String:
+	if preferred != "" and ResourceLoader.exists(ICON_DIR + preferred + ".svg"):
+		return preferred
+	return fallback
+
+
+static func _preferred_model(preferred_path: String, fallback_path: String) -> String:
+	if preferred_path != "" and ResourceLoader.exists(preferred_path):
+		return preferred_path
+	return fallback_path
+
+
 static func icon_of(consumable_id: String) -> String:
-	return String(row_of(consumable_id).get("icon", ""))
+	var fallback := String(row_of(consumable_id).get("icon", ""))
+	if ROWS_W50.has(consumable_id):
+		return _preferred_icon("cons_" + consumable_id, fallback)
+	return fallback
 
 
 static func color_of(consumable_id: String) -> Color:
@@ -249,7 +271,10 @@ static func color_of(consumable_id: String) -> Color:
 
 
 static func model_path_of(consumable_id: String) -> String:
-	return String(row_of(consumable_id).get("model", ""))
+	var fallback := String(row_of(consumable_id).get("model", ""))
+	if ROWS_W50.has(consumable_id):
+		return _preferred_model(MODEL_DIR + "cons_" + consumable_id + ".glb", fallback)
+	return fallback
 
 
 static func is_secondary_counter(kind: String) -> bool:
@@ -282,7 +307,7 @@ static func gate_record(offer_id: String) -> Dictionary:
 			"synergy": "",
 			"mark": "",
 			"family": "utility",
-			"icon": "cons_cap_charge",
+			"icon": _preferred_icon("cons_pocket_belt", "cons_cap_charge"),
 			"trigger_icon": "",
 			"element_icon": "",
 		}
@@ -301,7 +326,7 @@ static func gate_record(offer_id: String) -> Dictionary:
 		"synergy": "",
 		"mark": "",
 		"family": "utility",
-		"icon": String(row.get("icon", "")),
+		"icon": icon_of(cid),
 		"trigger_icon": "",
 		"element_icon": "",
 	}
@@ -382,6 +407,19 @@ static func fire_w50(cid: String, ctx, combat, at: Vector3) -> Dictionary:
 			if ctx != null and ctx.build != null and ctx.build.get("shop") != null and ctx.build.shop.has_method("audit_reroll"):
 				shop_res = ctx.build.shop.audit_reroll()
 			var gate_rerolls := _audit_reroll_gates(ctx)
+			# Foreman efficiency fee (STORY-MAP §5): only charge if >=1 offer actually rerolled.
+			var paid_cost := "none"
+			if int(shop_res.get("rerolled", 0)) + gate_rerolls > 0 and ctx != null and ctx.run != null:
+				if int(ctx.run.bonus_cores) >= int(row.get("core_cost", 1)):
+					ctx.run.bonus_cores -= int(row.get("core_cost", 1))
+					paid_cost = "core"
+				elif float(ctx.run.max_hp) > 0.0:
+					var floor_hp := ceilf(float(ctx.run.max_hp) * 0.10)
+					var loss := roundf(float(ctx.run.max_hp) * float(row.get("hull_cost_share", 0.05)))
+					if float(ctx.run.hp) > floor_hp:
+						ctx.run.hp = maxf(floor_hp, float(ctx.run.hp) - loss)
+						ctx.run.since_damage = 0.0
+					paid_cost = "hull"
 			if combat != null and combat.get("effects") != null:
 				combat.effects.ring(at, 4.5, row.get("color", Palette.BRASS))
 			return {
@@ -389,12 +427,13 @@ static func fire_w50(cid: String, ctx, combat, at: Vector3) -> Dictionary:
 				"before_tiers": shop_res.get("before_tiers", []),
 				"after_tiers": shop_res.get("after_tiers", []),
 				"rerolled_gates": gate_rerolls,
+				"cost": paid_cost,
 			}
 		DUPLICATOR_SPOOL:
 			st["duplicator_armed"] = true
 			st["duplicator_left"] = DUPLICATOR_WINDOW_S
-			if combat != null and combat.has_method("_post_consumable_buff"):
-				combat._post_consumable_buff("consumable_duplicator_spool", String(row["icon"]), row["color"], DUPLICATOR_WINDOW_S)
+			if combat != null and combat.has_method("post_consumable_buff"):
+				combat.post_consumable_buff("consumable_duplicator_spool", icon_of(cid), row["color"], DUPLICATOR_WINDOW_S)
 			if combat != null and combat.get("effects") != null:
 				combat.effects.ring(at, 4.0, row.get("color", Palette.AMBER))
 			return {"duration_s": DUPLICATOR_WINDOW_S, "armed": true}
@@ -413,9 +452,19 @@ static func _audit_reroll_gates(ctx) -> int:
 	var offers: Array = gates.get("offers") if gates.get("offers") is Array else []
 	if offers.is_empty():
 		return 0
-	var PartsScript = load("res://src/build/parts.gd")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([ctx.run.run_seed, ctx.run.stage, "scrap_dice_gates", offers.size()])
+	if gates.has_method("reroll_offers"):
+		var changed: int = gates.reroll_offers(rng, ctx.run.class_id(), ctx.run.parts)
+		if changed > 0:
+			if ctx.build.has_method("note_offered"):
+				for o in gates.offers:
+					if o is Dictionary and o.has("part_id"):
+						ctx.build.note_offered(String(o["part_id"]))
+			if ctx.events != null and ctx.events.has_signal("reward_offered"):
+				ctx.events.reward_offered.emit(gates.offers)
+		return changed
+	var PartsScript = load("res://src/build/parts.gd")
 	var changed := 0
 	var used: Array = []
 	for o in offers:
@@ -467,8 +516,8 @@ static func try_clone_pickup(ctx, combat, kind: String, payload, at := Vector3.Z
 	st["duplicator_armed"] = false
 	st["duplicator_left"] = 0.0
 	st["duplicator_clones"] = int(st.get("duplicator_clones", 0)) + 1
-	if combat != null and combat.has_method("_clear_buff"):
-		combat._clear_buff("consumable_duplicator_spool")
+	if combat != null and combat.has_method("clear_buff"):
+		combat.clear_buff("consumable_duplicator_spool")
 	match kind:
 		"consumable":
 			var cid := String(payload)
@@ -495,7 +544,7 @@ static func echo_ultimate(ctx, combat, base_damage: float, at: Vector3, radius :
 	var hits := 0
 	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
 		if is_instance_valid(enemy) and not enemy.is_dead() and enemy.global_position.distance_to(at) <= radius:
-			combat._hit(enemy, "ultimate_echo", dmg, enemy.global_position - at, 6.0, "", "item_proc", "cannon")
+			combat.deal_proc_hit(enemy, "ultimate_echo", dmg, enemy.global_position - at, 6.0, "", "item_proc", "cannon")
 			hits += 1
 	if combat.get("effects") != null:
 		combat.effects.ring(at, radius, Palette.ARC)
@@ -509,9 +558,9 @@ static func echo_active_fallback(ctx, combat, _active_id: String, mult := OVERLO
 	var at: Vector3 = ctx.player.ball_position()
 	var dmg := 20.0 * mult * (float(ctx.tuning.mod("weapon_damage")) if ctx.tuning != null else 1.0)
 	var hits := 0
-	for enemy in combat._nearest_list(at, 16.0, 4):
+	for enemy in combat.nearest_enemies(at, 16.0, 4):
 		if is_instance_valid(enemy) and not enemy.is_dead():
-			combat._hit(enemy, "active_echo", dmg, enemy.global_position - at, 6.0, "", "item_proc", "cannon")
+			combat.deal_proc_hit(enemy, "active_echo", dmg, enemy.global_position - at, 6.0, "", "item_proc", "cannon")
 			hits += 1
 	if combat.get("effects") != null:
 		combat.effects.ring(at, 5.5, Palette.ARC)
@@ -580,7 +629,7 @@ static func apply_vertex_color_materials(root: Node) -> int:
 	return patched
 
 
-static func instantiate_model(path: String, fallback_color := Palette.SAND) -> Node3D:
+static func _instantiate_with_count(path: String, fallback_color := Palette.SAND) -> Dictionary:
 	var packed: PackedScene = _packed_cache.get(path)
 	if packed == null and ResourceLoader.exists(path):
 		packed = load(path) as PackedScene
@@ -589,8 +638,8 @@ static func instantiate_model(path: String, fallback_color := Palette.SAND) -> N
 	if packed != null:
 		var inst := packed.instantiate()
 		if inst is Node3D:
-			apply_vertex_color_materials(inst)
-			return inst as Node3D
+			var count := apply_vertex_color_materials(inst)
+			return {"node": inst as Node3D, "patched": count}
 		if inst != null:
 			inst.free()
 	var fallback := Node3D.new()
@@ -602,7 +651,11 @@ static func instantiate_model(path: String, fallback_color := Palette.SAND) -> N
 	mat.vertex_color_use_as_albedo = true
 	view.material_override = mat
 	fallback.add_child(view)
-	return fallback
+	return {"node": fallback, "patched": 0}
+
+
+static func instantiate_model(path: String, fallback_color := Palette.SAND) -> Node3D:
+	return _instantiate_with_count(path, fallback_color)["node"]
 
 
 static func _find_socket(root: Node, socket_name: String) -> Node3D:
@@ -614,19 +667,22 @@ static func _find_socket(root: Node, socket_name: String) -> Node3D:
 
 static func spawn_cradle(cid: String, at: Vector3) -> Cradle:
 	var cradle := Cradle.new()
-	var cradle_node := instantiate_model(CRADLE_MODEL, Palette.SLATE)
-	var patched := apply_vertex_color_materials(cradle_node)
+	var cradle_res := _instantiate_with_count(CRADLE_MODEL, Palette.SLATE)
+	var cradle_node: Node3D = cradle_res["node"]
+	var patched := int(cradle_res["patched"])
 	var socket := _find_socket(cradle_node, "SocketCartridge")
-	var cart_node := instantiate_model(model_path_of(cid), color_of(cid))
-	patched += apply_vertex_color_materials(cart_node)
+	var cart_res := _instantiate_with_count(model_path_of(cid), color_of(cid))
+	var cart_node: Node3D = cart_res["node"]
+	patched += int(cart_res["patched"])
 	cradle.setup_nodes(cid, at, cradle_node, cart_node, socket, patched)
 	return cradle
 
 
 static func spawn_balloon(at: Vector3, duration_s := 15.0, radius := 2.8) -> AnchorBalloon:
 	var balloon := AnchorBalloon.new()
-	var visual := instantiate_model(BALLOON_MODEL, Palette.ARC)
-	var patched := apply_vertex_color_materials(visual)
+	var visual_res := _instantiate_with_count(BALLOON_MODEL, Palette.ARC)
+	var visual: Node3D = visual_res["node"]
+	var patched := int(visual_res["patched"])
 	var bite_socket := _find_socket(visual, "SocketBite")
 	balloon.setup_nodes(at, duration_s, radius, visual, bite_socket, patched)
 	return balloon

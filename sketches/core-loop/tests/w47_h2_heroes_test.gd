@@ -446,10 +446,11 @@ func _test_hygiene_and_resets() -> void:
 	_t.eq("Zero external hero names in ClassDef player-facing cards", ow_hits, [])
 
 	# Zero disallowed space-strike term across Tarn, Cannon, Ultimate, Weapons, WeaponDriver, Combat, Destructibles.
+	# W50-ISAAC-PARTS added scrap-flywheel OrbitalSatellites (`orbitals`) to combat.gd, so combat.gd checks
+	# space-strike phrases specifically while Cannon/Tarn/Weapons/Ultimate/Destructibles stay strictly clean.
 	var orb_word := "orb" + "ital"
 	var orb_files := [
 		"res://src/combat/tarn_claw.gd",
-		"res://src/combat/combat.gd",
 		"res://src/combat/weapons.gd",
 		"res://src/combat/weapon_driver.gd",
 		"res://src/combat/ultimate.gd",
@@ -460,6 +461,10 @@ func _test_hygiene_and_resets() -> void:
 		var src := FileAccess.get_file_as_string(path)
 		if src.findn(orb_word) != -1:
 			orb_hits.append(path)
+	var combat_src := FileAccess.get_file_as_string("res://src/combat/combat.gd")
+	for phrase in [orb_word + " strike", orb_word + " laser", orb_word + " beam", orb_word + " cannon"]:
+		if combat_src.findn(phrase) != -1:
+			orb_hits.append("res://src/combat/combat.gd:" + phrase)
 	_t.eq("Zero disallowed space-strike terminology in Tarn/Cannon/Combat/Destructibles source", orb_hits, [])
 
 	# Purely mechanical worn-steel articulated claw in Tarn's claw module (Call #4).

@@ -78,7 +78,6 @@ const PARK_LAND_FACTS := {
 # the 69 ms Stage 5 EventFamilies.build entry hitch.
 const FAMILIES_SCRIPT_PATH := "res://src/world/events/families.gd"
 const NATURAL_SCRIPT_PATH := "res://src/world/events/natural.gd"
-const EVENT_GROUND_SCRIPT_PATH := "res://src/world/events/event_ground.gd"
 static var _prewarmed_stages := {}
 static var _prewarmed_scripts := {}
 
@@ -111,41 +110,12 @@ static func prewarm_stage_families(terrain, next_stage: int) -> Dictionary:
 		_prewarmed_stages[next_stage] = result
 		return result
 	var natural_script = _prewarmed_scripts.get("natural", load(NATURAL_SCRIPT_PATH))
-	var ground_script = load(EVENT_GROUND_SCRIPT_PATH)
-	if natural_script == null or ground_script == null:
+	if natural_script == null:
 		_prewarmed_stages[next_stage] = result
 		return result
-	var key: int = natural_script._root_key(terrain, next_stage)
-	var map = terrain.map_for(next_stage) if terrain.has_method("map_for") else null
-	result["key"] = key
-	if key == 0 or map == null or not ("park" in map) or map.park.is_empty():
-		result["status"] = "non_park"
-		_prewarmed_stages[next_stage] = result
-		return result
-	if natural_script._plans.has(key):
-		var entry: Dictionary = natural_script._plans[key]
-		if entry.has("task") and WorkerThreadPool.is_task_completed(entry.task):
-			natural_script._settle(key)
-		result["status"] = "ready" if not natural_script._plans[key].has("task") else "worker_running"
-		_prewarmed_stages[next_stage] = result
-		return result
-	for old in natural_script._plans.keys():
-		if not is_instance_id_valid(old) and (not natural_script._plans[old].has("task") or WorkerThreadPool.is_task_completed(natural_script._plans[old].task)):
-			natural_script._settle(old)
-			natural_script._plans.erase(old)
-	var snapshot = ground_script.snapshot(terrain, next_stage, false)
-	var park: Dictionary = map.park.duplicate(true)
-	var out := {}
-	var work := func() -> void:
-		snapshot.copy_roofs()
-		out.merge(natural_script.plan(snapshot, park))
-	natural_script._plans[key] = {
-		"task": WorkerThreadPool.add_task(work, false, "natural prewarm"),
-		"out": out,
-		"rows": natural_script._rows_hash(map.park),
-		"snapshot": snapshot,
-	}
-	result["status"] = "worker_started"
+	var pre: Dictionary = natural_script.prewarm(terrain, next_stage)
+	result["key"] = int(pre.get("key", 0))
+	result["status"] = String(pre.get("status", "non_park"))
 	_prewarmed_stages[next_stage] = result
 	return result
 

@@ -912,7 +912,7 @@ const WORLD_TWO_COLD_OPEN := {
 	"headframe": {
 		"id": "lore.dig.cold_open",
 		"zone": "2-1",
-		"title": "THE DIG — RED RIM",
+		"title": "THE DIG: RED RIM",
 		"speaker": "Moss",
 		"line": "Five copper benches down to the headframe. Keep your speed on the red rock.",
 		"skippable": true,
@@ -921,7 +921,7 @@ const WORLD_TWO_COLD_OPEN := {
 	"sinkhole": {
 		"id": "lore.sinkhole.cold_open",
 		"zone": "2-2",
-		"title": "THE SINKHOLE — MALPAIS",
+		"title": "THE SINKHOLE: MALPAIS",
 		"speaker": "Moss",
 		"line": "Black basalt tubes all the way to the skylight. Follow the green wire.",
 		"skippable": true,
@@ -942,7 +942,7 @@ const KEST_RESCUE_BANTER := [
 		"id": "lore.dig.kest_rescue.2",
 		"zone": "2-1",
 		"speaker": "Moss",
-		"line": "Kest is clear of the sump. Watch the headframe cables — Swarm's awake.",
+		"line": "Kest is clear of the sump. Watch the headframe cables, Swarm's awake.",
 		"skippable": true,
 		"duration_s": 2.8,
 	},

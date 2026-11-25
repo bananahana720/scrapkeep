@@ -173,6 +173,10 @@ func _connect_events() -> void:
 		ev.stage_entered.connect(func(_s: int, _r: bool): reset_attempt())
 	if ev.has_signal("stage_content_cleared"):
 		ev.stage_content_cleared.connect(func(_r: String): reset_attempt())
+	if ev.has_signal("player_died"):
+		ev.player_died.connect(reset_attempt)
+	if ev.has_signal("run_ended"):
+		ev.run_ended.connect(func(_won: bool): reset_attempt())
 	if ev.has_signal("cogs_collected"):
 		ev.cogs_collected.connect(_on_cogs_collected)
 	if ev.has_signal("scrap_collected"):
@@ -309,7 +313,7 @@ func _burden_count() -> int:
 
 
 func w50_synergy_context(extra := {}) -> Dictionary:
-	var c: Dictionary = combat._synergy_context(extra) if combat != null and combat.has_method("_synergy_context") else extra.duplicate()
+	var c: Dictionary = combat.synergy_context(extra) if combat != null and combat.has_method("synergy_context") else extra.duplicate()
 	if not c.has("has_husk"):
 		var husks = combat.get("ally_husks") if combat != null else null
 		c["has_husk"] = husks != null and husks.has_method("active_count") and int(husks.active_count()) > 0
@@ -369,7 +373,7 @@ func _deal_proc(enemy: Node3D, damage: float, dir: Vector3, knock: float) -> voi
 	if enemy.has_method("is_dead") and enemy.is_dead():
 		return
 	var push := dir if dir.length_squared() > 0.0001 else Vector3.FORWARD
-	combat._hit(enemy, combat.SYNERGY, maxf(1.0, damage), push.normalized(), knock, "", "item_proc", "proc")
+	combat.deal_proc_hit(enemy, combat.SYNERGY, maxf(1.0, damage), push.normalized(), knock, "", "item_proc", "proc")
 
 
 func _live_enemies(override: Array = []) -> Array:
@@ -477,8 +481,8 @@ func _step_orbitals(delta: float, enemies: Array) -> void:
 			_deal_proc(e, dmg, tangent, ORBIT_KNOCK)
 			_note_proc("orbital_flywheel", {"tier": tier, "count": count, "radius": radius, "damage": dmg})
 			if furnace:
-				if combat.has_method("_heat"):
-					combat._heat(e, pos)
+				if combat.has_method("apply_heat"):
+					combat.apply_heat(e, pos)
 				_fx_ring(pos, 1.8, Palette.COPPER)
 				_note_proc("orbital_furnace", {"damage": dmg, "tier": tier})
 			if gyro:
@@ -543,8 +547,8 @@ func _step_slag_zones(delta: float, enemies: Array) -> void:
 				flat.y = 0.0
 				if flat.length() <= radius:
 					_deal_proc(e, tick_dmg, flat, 1.5)
-					if combat != null and combat.has_method("_heat"):
-						combat._heat(e, e.global_position)
+					if combat != null and combat.has_method("apply_heat"):
+						combat.apply_heat(e, e.global_position)
 		kept.append(zone)
 	slag_zones = kept
 	_redraw_slag_zones()

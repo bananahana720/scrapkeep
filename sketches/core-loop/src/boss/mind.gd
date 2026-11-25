@@ -508,8 +508,8 @@ func on_takeover_interrupted(_husk) -> void:
 	takeovers_interrupted += 1
 	_end_combo()
 	_attack_clock = maxf(_attack_clock, 1.5)
-	if is_instance_valid(warden) and warden.has_method("_apply_posture"):
-		warden._apply_posture({"gain": TAKEOVER_POSTURE_BONUS, "full": true, "crack": false, "shatter": false, "dealt": 0.0})
+	if is_instance_valid(warden) and warden.has_method("apply_posture_hit"):
+		warden.apply_posture_hit({"gain": TAKEOVER_POSTURE_BONUS, "full": true, "crack": false, "shatter": false, "dealt": 0.0})
 
 
 func on_takeover_completed(_husk) -> void:

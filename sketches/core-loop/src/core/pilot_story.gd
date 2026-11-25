@@ -115,9 +115,9 @@ const CHAPTERS := [
 	{
 		"id": "pylon_engineer.ch5", "cast": "pylon_engineer", "num": 5, "world": 3,
 		"title": "Off the Clock",
-		"accepts": ["crown_mark_sable", "mind_quieted+pilot:pylon_engineer"],
+		"accepts": ["crown_mark_sable"],
 		"work_order": "", "alt_loadout": "", "hidden": false,
-		"note": "Sable crossed the Crown at full speed and handed the Foreman a blank time card. She was halfway back to the dam before the stamp dried.",
+		"note": "Sable crossed the Crown at full speed and filled in her own return time on the card. She was halfway back to the dam before the ink dried.",
 		"unlocks_calls": [], "unlocks_exchanges": [],
 	},
 	# Rivet (runner_gunner)
@@ -181,7 +181,7 @@ const CHAPTERS := [
 	{
 		"id": "demolitions_caster.ch3", "cast": "demolitions_caster", "num": 3, "world": 2,
 		"title": "Bench Clearance",
-		"accepts": ["dig_mark_kest", "order:wo_kest_1"],
+		"accepts": ["dig_mark_kest", "order:wo_kest_2"],
 		"work_order": "wo_kest_2", "alt_loadout": "", "hidden": false,
 		"note": "The Waking knocked back beneath the benches. Kest stopped counting twice, planted one clean line across the seam, and committed on the beat.",
 		"unlocks_calls": [], "unlocks_exchanges": [],
@@ -312,7 +312,7 @@ const CHAPTERS := [
 	{
 		"id": "remembered_cannon.ch4", "cast": "remembered_cannon", "num": 4, "world": 3,
 		"title": "Four Families",
-		"accepts": ["ach_cannon_recital", "order:wo_cannon_1"],
+		"accepts": ["ach_cannon_recital", "order:wo_cannon_3"],
 		"work_order": "wo_cannon_3", "alt_loadout": "", "hidden": false,
 		"note": "Lane, split, rush, and plate landed in order without a metronome in sight. The gun stopped correcting its own pitch after bar four.",
 		"unlocks_calls": [], "unlocks_exchanges": ["ex.cannon_ch4_recital"],
@@ -339,7 +339,7 @@ const CHAPTERS := [
 		"title": "Last Call",
 		"accepts": ["brindle_routed"],
 		"work_order": "", "alt_loadout": "", "hidden": false,
-		"note": "When the Spillway cleared, Moss dusted off the closing-time B-side on the bay deck. She still refuses to say who pressed the vinyl.",
+		"note": "When the Spillway cleared, Moss dusted off the closing-time B-side on the bay deck. Moss still refuses to say who pressed the vinyl.",
 		"unlocks_calls": [], "unlocks_exchanges": [],
 	},
 	{
@@ -363,10 +363,10 @@ const CHAPTERS := [
 		"title": "Supper Is After",
 		"accepts": ["mind_quieted", "order:wo_moss_3"],
 		"work_order": "wo_moss_3", "alt_loadout": "", "hidden": false,
-		"note": "The Mind returned stamped HIRED and accepted a bowl without filing a schedule. Moss wrote the time in ink herself.",
+		"note": "The Mind returned stamped HIRED and accepted a bowl without filing a schedule. Moss filled in the time in ink by hand.",
 		"unlocks_calls": [], "unlocks_exchanges": ["ex.crew_ch5_supper"],
 	},
-	# Patch (patch — Wall-Runner NPC, hidden until Ch. 1 punches, never playable)
+	# Patch (patch — Hidden 7th pilot trail, hidden until Ch. 1 punches)
 	{
 		"id": "patch.ch1", "cast": "patch", "num": 1, "world": 1,
 		"title": "Cut Line",
@@ -378,7 +378,7 @@ const CHAPTERS := [
 	{
 		"id": "patch.ch2", "cast": "patch", "num": 2, "world": 1,
 		"title": "Warm Kettle",
-		"accepts": ["patch.wire.w1", "order:wo_patch_1"],
+		"accepts": ["patch.wire.w1", "codex:patch.wire.w1"],
 		"work_order": "wo_patch_2", "alt_loadout": "", "hidden": false,
 		"note": "Behind the Spillway brick wall sat a warm kettle, a netbook under stickers, and a possum pretending very hard to be asleep.",
 		"unlocks_calls": [], "unlocks_exchanges": [],
@@ -404,7 +404,7 @@ const CHAPTERS := [
 		"title": "Signed in Chalk",
 		"accepts": ["ach_patch_trail+mind_quieted"],
 		"work_order": "", "alt_loadout": "", "hidden": false,
-		"note": "No seventh time card ever went on the rack. Only a chalk paw beside Moss's kettle and a note reading Not dead, checked.",
+		"note": "A seventh time card appeared on the rack overnight in chalk paw-prints beside Moss's kettle. Margin reads Not dead, checked.",
 		"unlocks_calls": [], "unlocks_exchanges": [],
 	},
 ]
@@ -890,7 +890,7 @@ const FOREMAN_AXES := {
 		],
 		"loss_memos": [
 			"Our kindness kiosks appreciate your repeat business. Next shift scheduled.",
-			"Thank you for outsourcing judgement. Replacement hull queued on time.",
+			"Regular kindness account logged. Replacement hull queued on schedule.",
 		],
 		"crown_lines": [
 			"A valued subscriber at the Crown. We prepared your seat.",
@@ -902,8 +902,8 @@ const FOREMAN_AXES := {
 			"Cursed terms detected. Audit flags raised.",
 		],
 		"loss_memos": [
-			"You accepted unfavourable terms without consulting management. Result logged.",
-			"Liability accepted voluntarily. We have archived your optimism with gratitude.",
+			"Non-standard contract terms recorded on file. Next shift scheduled.",
+			"Liability entry archived for quarterly review. Replacement hull ready.",
 		],
 		"crown_lines": [
 			"Carrying curses to the summit is bold. Slightly unaligned.",
@@ -916,7 +916,7 @@ const FOREMAN_AXES := {
 		],
 		"loss_memos": [
 			"Unapproved velocity ended ahead of schedule. Thank you for hurrying.",
-			"Moving fast broke your hull efficiently. We admire the commitment.",
+			"High-speed shift closed ahead of forecast. Replacement hull queued.",
 		],
 		"crown_lines": [
 			"Early arrival noted. Please wait while the storm catches up.",

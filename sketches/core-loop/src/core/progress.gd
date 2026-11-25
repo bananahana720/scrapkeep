@@ -13,6 +13,7 @@ extends Node
 
 const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const PilotStory := preload("res://src/core/pilot_story.gd")
 const Secrets := preload("res://src/core/secrets.gd")
 const ShiftBoard := preload("res://src/core/shift_board.gd")
 const WorkOrders := preload("res://src/core/work_orders.gd")
@@ -265,6 +266,15 @@ func reconcile_settled() -> void:
 			added = true
 	if added and _profile.can_save:
 		_profile.save()
+	# On Continue (flow.resume_run), run_started fires before from_entrance_doc() restores
+	# run.extra; re-sync the live WorkOrders tracker from the restored entrance doc (preserving
+	# mid-run progress and took_kindness) or re-attach the fresh tracker into run.extra.
+	if not _is_bot_driven() and "extra" in _run and _run.extra is Dictionary:
+		var saved_wo = _run.extra.get(WorkOrders.RUN_KEY)
+		if saved_wo is Dictionary and not (saved_wo as Dictionary).is_empty():
+			_wo_tracker = saved_wo
+		elif not _wo_tracker.is_empty():
+			_run.extra[WorkOrders.RUN_KEY] = _wo_tracker
 
 
 # A profile-level one-time grant: kind is pilot, cosmetic or world. True when this call
@@ -384,9 +394,18 @@ func _run_tier_now() -> int:
 
 
 func _is_bot_driven() -> bool:
-	if _run != null and _run.get("bot_driven") is bool:
-		return _run.get("bot_driven")
+	if _run != null and _run.get("bot_driven") is bool and bool(_run.get("bot_driven")):
+		return true
+	var parent := get_parent()
+	if parent != null and parent.get("bot_driven") is bool:
+		return bool(parent.get("bot_driven"))
 	return false
+
+
+func _is_sitting() -> bool:
+	var parent := get_parent()
+	var t = parent.get("tuning") if parent != null else null
+	return t != null and t.has_method("sitting") and bool(t.sitting())
 
 
 func _fact(signal_name: String, names: Array, values: Array) -> void:
@@ -403,11 +422,18 @@ func _fact(signal_name: String, names: Array, values: Array) -> void:
 		if _run != null:
 			for sid in WorkOrders.SHIFT_ORDERS:
 				_run.settled.erase(WorkOrders.SETTLE_ORDER_PREFIX + String(sid))
-		_wo_tracker = WorkOrders.begin_run(_run, _profile, _is_bot_driven())
+		_wo_tracker = WorkOrders.begin_run(_run, _profile, _is_bot_driven(), _is_sitting())
 	elif signal_name == "run_ended":
 		_won = bool(fact.get("won", false))
 	elif signal_name == "boss_defeated" and _world_now() >= 1 and _world_now() <= LEDGER_WORLDS:
 		settle(LEDGER_FOUND % _world_now())
+	elif signal_name == "enemy_killed" and not _is_bot_driven():
+		var rogue_id := PilotStory.patch_rogue_for_kind(String(fact.get("kind", "")))
+		if rogue_id != "":
+			if _codex != null and _codex.has_method("mark_known"):
+				_codex.mark_known(rogue_id)
+			if _events != null and _events.has_signal("world_fact"):
+				_events.world_fact.emit("rogue_downed", fact.get("at", Vector3.ZERO))
 	elif signal_name == "trade_taken" and _profile != null and not _is_bot_driven():
 		var tkind := String(fact.get("kind", ""))
 		if tkind == "trade_risk":
@@ -423,7 +449,7 @@ func _fact(signal_name: String, names: Array, values: Array) -> void:
 			_complete_work_order(order_id)
 	if signal_name == "run_ended":
 		_record_run_habits()
-		WorkOrders.close_run(_run, _profile, _wo_tracker, _is_bot_driven())
+		WorkOrders.close_run(_run, _profile, _wo_tracker, _is_bot_driven(), _is_sitting())
 		_close_shift()
 	if SAVE_POINTS.has(signal_name) and _profile.can_save:
 		_profile.save()
@@ -434,10 +460,15 @@ func _fact(signal_name: String, names: Array, values: Array) -> void:
 func _record_run_habits() -> void:
 	if _profile == null or _is_bot_driven():
 		return
+	_profile.add_stat("habit.runs_total", 1.0)
 	if _run != null:
 		var pilot_id := String(_run.class_id())
 		if pilot_id != "":
 			_profile.add_stat("habit.pilot_runs." + pilot_id, 1.0)
+			if _won and _run_tier_now() >= 1:
+				PilotStory.record_overtime(pilot_id, _run_tier_now(), _profile)
+		if _run.has_method("heft_class") and int(_run.call("heft_class")) >= 4:
+			_profile.add_stat("habit.runs_heft_high", 1.0)
 		var is_cursed := false
 		if _run.has_method("cursed"):
 			is_cursed = bool(_run.call("cursed"))

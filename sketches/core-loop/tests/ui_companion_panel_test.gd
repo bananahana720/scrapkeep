@@ -90,7 +90,7 @@ func _run() -> void:
 	_t.check("title row buttons never overlap", apart, "%s" % [rects])
 	Push.key(root, KEY_M)
 	await _frames(2)
-	_t.check("M on the title opens the profile's six", panel.is_open() and panel.model.owned.size() == 6, "")
+	_t.check("M on the title opens the profile's owned pieces", panel.is_open() and panel.model.owned.size() == Companion.PIECES.size(), "")
 	var words: int = WordBudget.count(panel)["hud"]
 	_t.check("calm budget on the title", words <= BUDGET, "%d words, budget %d" % [words, BUDGET])
 	Push.key(root, KEY_1)
@@ -201,9 +201,9 @@ func _run() -> void:
 	# A family twice, on a run that owns all six.
 	panel.close()
 	_game.run.companion = _doc(all, [])
-	_t.check("reopens with six", _ws.open_companion() and panel.model.owned.size() == 6, "")
+	_t.check("reopens with all owned pieces", _ws.open_companion() and panel.model.owned.size() == Companion.PIECES.size(), "")
 	await _frames(2)
-	_t.check("every row leaves its icon 24 px, the longest name too", panel.icon_room().size() == 6 and panel.icon_room().min() >= 24.0, str(panel.icon_room()))
+	_t.check("every row leaves its icon 24 px, the longest name too", panel.icon_room().size() == mini(Companion.PIECES.size(), panel.MAX_ROWS) and panel.icon_room().min() >= 24.0, str(panel.icon_room()))
 	_t.check("the screen behind does not read through the panel", panel._veil.color.a >= 0.95, str(panel._veil.color.a))
 	Push.key(root, KEY_1)
 	Push.key(root, KEY_2)

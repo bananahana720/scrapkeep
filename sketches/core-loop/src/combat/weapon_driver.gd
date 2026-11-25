@@ -206,6 +206,19 @@ func top_up_cylinder() -> bool:
 	return false
 
 
+# Rail Vault hot-reload (Rule 7): ensures the weapon/pattern is bound, tops up the
+# cylinder, and loads hot piercing rounds inside the driver rather than from outside.
+func hot_reload_cylinder(weapon: String, pattern: Resource) -> int:
+	if pattern != null and (_weapon != weapon or _mag <= 0):
+		step(0.0, null, weapon, pattern, 0.0)
+	top_up_cylinder()
+	if _mag > 0:
+		_chamber = _mag
+		_hot_rounds = _mag
+		_hot_pierce = true
+	return _hot_rounds
+
+
 # Charges a flat recovery floor after a tap/card weapon commits a cast.
 func commit_recovery(seconds: float) -> void:
 	_cooldown = maxf(_cooldown, 0.0) + maxf(seconds, 0.0)

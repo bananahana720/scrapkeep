@@ -484,7 +484,7 @@ func _raise_wreck(w: Dictionary) -> HuskUnit:
 	unit.shift_left = SHIFT_SECONDS
 	unit.world_root = ctx.root
 	if combat != null and combat.has_method("ghost_shift_inherits_bits") and combat.ghost_shift_inherits_bits():
-		unit.shot_bits = int(combat._shot_bits())
+		unit.shot_bits = int(combat.shot_bits())
 
 	var at: Vector3 = _ground_point(w["at"])
 	unit.position = at
@@ -604,7 +604,7 @@ func _resolve_husk_strike(h: HuskUnit, enemies: Array) -> void:
 	var origin: Vector3 = h.zone.center
 	var bits := h.shot_bits
 	if bits == 0 and combat.has_method("ghost_shift_inherits_bits") and combat.ghost_shift_inherits_bits():
-		bits = int(combat._shot_bits())
+		bits = int(combat.shot_bits())
 	for enemy in enemies:
 		if not is_instance_valid(enemy) or DamageDoor.dead(enemy):
 			continue
@@ -623,7 +623,7 @@ func _severance_blast(h: HuskUnit, enemies: Array, cause: String) -> void:
 	var dmg := SEVERANCE_DAMAGE * float(combat.heft())
 	var bits := h.shot_bits
 	if bits == 0 and combat.has_method("ghost_shift_inherits_bits") and combat.ghost_shift_inherits_bits():
-		bits = int(combat._shot_bits())
+		bits = int(combat.shot_bits())
 	var hits := 0
 	for enemy in enemies:
 		if not is_instance_valid(enemy) or DamageDoor.dead(enemy):
@@ -668,8 +668,8 @@ func _face_dir(h: HuskUnit, dir: Vector3, delta: float) -> void:
 
 
 func _ground_point(at: Vector3) -> Vector3:
-	if combat != null and combat.has_method("_floor_at"):
-		return combat._floor_at(at + Vector3.UP * 2.0)
+	if combat != null and combat.has_method("floor_at"):
+		return combat.floor_at(at + Vector3.UP * 2.0)
 	if combat != null and combat.ground != null:
 		if combat.ground.has_method("height_at"):
 			return Vector3(at.x, float(combat.ground.height_at(at)), at.z)
@@ -877,6 +877,10 @@ func _on_shot_fired(_weapon_id: String, from: Vector3, to: Vector3) -> void:
 		if closest.distance_to(h.takeover_node_pos) <= TAKEOVER_NODE_RADIUS + 0.6:
 			interrupt_takeover(h, "shot")
 			return
+
+
+func reset() -> void:
+	_reset()
 
 
 func _reset() -> void:

@@ -180,6 +180,90 @@ func step(ball: Vector3, heading: Vector3) -> bool:
 	return false
 
 
+func _build_offer_record(part_id: String, at: Vector3, facing: Vector3) -> Dictionary:
+	if ActiveOffers.is_offer(part_id):
+		var row: Dictionary = active_row.call(ActiveOffers.active_of(part_id)) if active_row.is_valid() else {}
+		return ActiveOffers.gate_record(part_id, row).merged({"at": at, "facing": facing, "width": WIDTH})
+	if Consumables.is_offer(part_id):
+		return Consumables.gate_record(part_id).merged({"at": at, "facing": facing, "width": WIDTH})
+	var d: Resource = Parts.offer_def(part_id, _held)
+	var completes := Parts.completed_by(part_id, _held)
+	return {
+		"part_id": part_id, "at": at, "facing": facing, "width": WIDTH,
+		"name": Parts.display_name(part_id),
+		"headline": Parts.offer_headline(part_id, _held),
+		"verb": d.verb if d != null else "",
+		"punch": d.punch if d != null else 0.0,
+		"text": d.text if d != null else "",
+		"rarity": d.rarity if d != null else "common",
+		"hotwired": not Parts.hotwired(part_id).is_empty(),
+		"tier": d.tier if d != null else 1,
+		"synergy": Synergies.ROWS[completes]["name"] if completes != "" else "",
+		"mark": mark_for.call(part_id) if mark_for.is_valid() else "",
+		"family": d.family if d != null else "stat",
+		"icon": "cat_" + d.icon_category if d != null and d.icon_category != "" else "",
+		"trigger_icon": "trg_" + d.trigger if d != null and d.trigger != "" else "",
+		"element_icon": "el_" + d.element if d != null and d.element != "" else "",
+	}
+
+
+# Rerolls standing part gates in place to same-or-higher tier (Foreman's Audit Die) and
+# rebuilds _ids, offer records, 3D arches, and prompts cleanly in sync.
+func reroll_offers(rng: RandomNumberGenerator, class_id: String, held: Array) -> int:
+	if offers.is_empty():
+		return 0
+	_held = held.duplicate()
+	var used: Array = []
+	for o in offers:
+		if o is Dictionary and o.has("part_id"):
+			used.append(String(o["part_id"]))
+	var changed := 0
+	var next_ids: Array = []
+	var spots: Array = []
+	var facings: Array = []
+	for i in offers.size():
+		var o: Dictionary = offers[i]
+		var pid := String(o.get("part_id", ""))
+		spots.append(o.get("at", Vector3.ZERO))
+		facings.append(o.get("facing", Vector3.FORWARD))
+		if ActiveOffers.is_offer(pid) or Consumables.is_offer(pid):
+			next_ids.append(pid)
+			continue
+		var d: Resource = Parts.def(pid)
+		if d == null:
+			next_ids.append(pid)
+			continue
+		var min_tier := int(d.tier)
+		var rarities: Array = ["rare"] if min_tier >= 2 else ["common", "rare"]
+		var pool: Array = Parts.offer_pool(class_id, rarities).filter(func(id):
+			var pd: Resource = Parts.def(id)
+			return pd != null and int(pd.tier) >= min_tier and not (id in used) and not Parts.maxed(id, held))
+		if not pool.is_empty():
+			pool.sort()
+			var picked := String(pool[rng.randi_range(0, pool.size() - 1)])
+			next_ids.append(picked)
+			used.append(picked)
+			changed += 1
+		else:
+			next_ids.append(pid)
+	if changed <= 0:
+		return 0
+	_ids = next_ids
+	for gate in _gates:
+		gate.queue_free()
+	_gates.clear()
+	offers = []
+	_shown.clear()
+	_detail.clear()
+	_rows.clear()
+	_above.clear()
+	for i in _ids.size():
+		var rec := _build_offer_record(String(_ids[i]), spots[i], facings[i])
+		offers.append(rec)
+		_gates.append(_build_gate(spots[i], facings[i], rec))
+	return changed
+
+
 func _place(ball: Vector3, heading: Vector3) -> void:
 	for gate in _gates:
 		gate.queue_free()
@@ -195,36 +279,9 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 	var facing: Vector3 = plan["facing"]
 	for i in _ids.size():
 		var at: Vector3 = plan["spots"][i]
-		var part_id: String = _ids[i]
-		if ActiveOffers.is_offer(part_id):
-			var row: Dictionary = active_row.call(ActiveOffers.active_of(part_id)) if active_row.is_valid() else {}
-			offers.append(ActiveOffers.gate_record(part_id, row).merged({"at": at, "facing": facing, "width": WIDTH}))
-			_gates.append(_build_gate(at, facing, offers[-1]))
-			continue
-		if Consumables.is_offer(part_id):
-			offers.append(Consumables.gate_record(part_id).merged({"at": at, "facing": facing, "width": WIDTH}))
-			_gates.append(_build_gate(at, facing, offers[-1]))
-			continue
-		var d: Resource = Parts.offer_def(part_id, _held)
-		var completes := Parts.completed_by(part_id, _held)
-		offers.append({
-			"part_id": part_id, "at": at, "facing": facing, "width": WIDTH,
-			"name": Parts.display_name(part_id),
-			"headline": Parts.offer_headline(part_id, _held),
-			"verb": d.verb if d != null else "",
-			"punch": d.punch if d != null else 0.0,
-			"text": d.text if d != null else "",
-			"rarity": d.rarity if d != null else "common",
-			"hotwired": not Parts.hotwired(part_id).is_empty(),
-			"tier": d.tier if d != null else 1,
-			"synergy": Synergies.ROWS[completes]["name"] if completes != "" else "",
-			"mark": mark_for.call(part_id) if mark_for.is_valid() else "",
-			"family": d.family if d != null else "stat",
-			"icon": "cat_" + d.icon_category if d != null and d.icon_category != "" else "",
-			"trigger_icon": "trg_" + d.trigger if d != null and d.trigger != "" else "",
-			"element_icon": "el_" + d.element if d != null and d.element != "" else "",
-		})
-		_gates.append(_build_gate(at, facing, offers[-1]))
+		var rec := _build_offer_record(String(_ids[i]), at, facing)
+		offers.append(rec)
+		_gates.append(_build_gate(at, facing, rec))
 
 
 # The gate spots for count gates: {facing, spots, climb}. Climb is the most any gate
@@ -549,6 +606,9 @@ static func taken_look(part_id: String) -> Dictionary:
 	if ActiveOffers.is_offer(part_id):
 		var row := ActiveDefs.row(ActiveOffers.active_of(part_id))
 		return {"name": String(row.get("name", "")), "icon": ActiveOffers.ICON, "color": rarity_color(ActiveOffers.rarity_of(row))}
+	if Consumables.is_offer(part_id):
+		var rec := Consumables.gate_record(part_id)
+		return {"name": String(rec.get("name", "")), "icon": String(rec.get("icon", "")), "color": rarity_color(String(rec.get("rarity", "common")))}
 	var d: Resource = Parts.def(part_id)
 	if d == null and Parts.token(part_id).is_empty():
 		return {}

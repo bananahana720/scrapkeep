@@ -62,7 +62,7 @@ func snap_damage(scale := 1.0) -> float:
 
 func _anchor_spot() -> Vector3:
 	var ball: Vector3 = ctx.player.ball_position()
-	var near: Array = combat._nearest_list(ball, LOCK_REACH, 1)
+	var near: Array = combat.nearest_enemies(ball, LOCK_REACH, 1)
 	if not near.is_empty() and is_instance_valid(near[0]):
 		return (near[0] as Node3D).global_position
 	var forward: Vector3 = ctx.aim_forward()
@@ -146,4 +146,4 @@ func _snap(b: Dictionary) -> void:
 		if is_instance_valid(enemy) and not enemy.is_dead() and ring.contains((enemy as Node3D).global_position):
 			var inward: Vector3 = at - (enemy as Node3D).global_position
 			inward.y = 0.0
-			combat._hit(enemy, KIND, dmg, inward, KNOCK, "", SOURCE, IMPACT)
+			combat.deal_proc_hit(enemy, KIND, dmg, inward, KNOCK, "", SOURCE, IMPACT)

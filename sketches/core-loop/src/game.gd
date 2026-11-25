@@ -101,7 +101,11 @@ var test_mode := false:
 # No human answers a prompt: a bot (tools/bot_driver.gd sets it) or a headless test (test_mode
 # sets it; a test that plays the human clears it after). The hot-wire screen never opens or
 # pauses while it is set.
-var bot_driven := false
+var bot_driven := false:
+	set(value):
+		bot_driven = value
+		if run != null:
+			run.bot_driven = value
 # The stage table's id (a key of TABLES), set before the game enters the tree; empty reads
 # --table= from the launch args, and no argument is LAUNCH_TABLE (the default table in test_mode).
 var table := ""
@@ -175,6 +179,7 @@ var _restart_latched := false
 # held input must not skip the summary or start a run. A fresh press after the release takes it,
 # with no time lock (wave 19).
 var summary_latched := false
+var _dead_c_latched := false
 var _hit_stopped := false
 # A headless test's stop counts physics ticks, not wall time; -1 is a wall-time stop.
 var _stop_ticks_left := -1
@@ -209,8 +214,13 @@ func _ready() -> void:
 	add_child(events)
 	events.flow_changed.connect(func(state: String):
 		if state == "summary":
-			arm_summary_latch())
+			arm_summary_latch()
+		elif state == "dead":
+			_dead_c_latched = Input.is_physical_key_pressed(KEY_C)
+		else:
+			_dead_c_latched = false)
 	run = RunState.new(events, _session_seed)
+	run.bot_driven = bot_driven
 	tuning = Tuning.new()
 	# Full-alpha progression unlocked (W49-COMBAT, ruling du dropped): a plain played launch
 	# continues past Brindle into The Dig and The Highdraft unless --final-world=1 or a sitting
@@ -606,6 +616,9 @@ func _apply_player_run_options(class_id: String) -> void:
 	var overrides: Array = MetaOptions.active_overrides(ctx.profile, bot_driven, sitting)
 	if not overrides.is_empty():
 		run.extra["overrides"] = overrides
+		if run.override_on("hull_half"):
+			run.set_max_hp(run.base_max_hp())
+			run.hp = run.max_hp
 	var equipped: Dictionary = MetaOptions.equipped_alt_loadouts(ctx.profile, class_id, bot_driven, sitting)
 	if not equipped.is_empty():
 		for slot in equipped:
@@ -615,7 +628,7 @@ func _apply_player_run_options(class_id: String) -> void:
 				relic_id = alt_id
 			var part_id := Relics.part_of(relic_id)
 			if part_id != "" and not part_id in run.parts:
-				run.parts.append(part_id)
+				run.add_part(part_id, "alt_loadout")
 		if build != null and build.has_method("sync_relics"):
 			build.sync_relics()
 
@@ -661,6 +674,8 @@ func _physics_process(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	step_summary_latch()
+	if _dead_c_latched and not Input.is_physical_key_pressed(KEY_C):
+		_dead_c_latched = false
 	if test_mode:
 		return
 	_step_menu_modules_later()
@@ -1496,6 +1511,8 @@ func _screen_key(key: int) -> bool:
 				flow.new_run()
 				return true
 			if key == KEY_C:
+				if _dead_c_latched:
+					return true
 				flow.open_class_select()
 				return true
 			if key == KEY_T and flow.can_replay_final_stage():

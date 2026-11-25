@@ -978,6 +978,8 @@ func _door_caps(hit: Dictionary) -> void:
 	# so an arc mark or a weak armour read alone is not a crit (damage_numbers.gd is_crit).
 	result["base_dealt"] = float(result["dealt"])
 	result["dealt"] = float(result["dealt"]) * _strike_mult(enemy, hit["kind"], hit["cls"])
+	if ctx != null and ctx.run != null and ctx.run.has_method("override_on") and ctx.run.override_on("impact_force_2x"):
+		result["dealt"] = float(result["dealt"]) * 2.0
 	_read_armour(enemy, hit, result)
 	if enemy.has_method("absorbs_hit") and enemy.absorbs_hit(result):
 		result["absorbed"] = true
@@ -2898,6 +2900,39 @@ static func heat_hit(state: Dictionary, id: int, now: float) -> Dictionary:
 	return {"mult": HEAT_BONUS if bonus else 1.0, "lit": not glowing, "bonus": bonus}
 
 
+# Public deep-module doors (Rule 7) for actives, consumables, orbitals, and ally husks.
+func deal_proc_hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, part := "", source := "item_proc", impact := "", chip := CHIP) -> void:
+	_hit(enemy, kind, damage, direction, knock, part, source, impact, chip)
+
+
+func nearest_enemies(at: Vector3, reach: float, limit: int) -> Array:
+	return _nearest_list(at, reach, limit)
+
+
+func apply_heat(enemy: Node3D, point: Vector3) -> Dictionary:
+	return _heat(enemy, point)
+
+
+func post_consumable_buff(buff_id: String, icon: String, tone: Color, duration_s: float) -> void:
+	_post_consumable_buff(buff_id, icon, tone, duration_s)
+
+
+func clear_buff(id: String) -> void:
+	_clear_buff(id)
+
+
+func synergy_context(extra := {}) -> Dictionary:
+	return _synergy_context(extra)
+
+
+func shot_bits() -> int:
+	return _shot_bits()
+
+
+func floor_at(at: Vector3) -> Vector3:
+	return _floor_at(at)
+
+
 # One resolved weapon hit: the shove, the flash, then strike() for damage and the fact.
 func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, part := "", source := "", impact := "", chip := CHIP) -> void:
 	var push := Vector3(direction.x, 0.0, direction.z)
@@ -4158,7 +4193,7 @@ func _reset_cards() -> void:
 	tally_last_settle = {}
 	_tally_cards = {}
 	if ally_husks != null:
-		ally_husks._reset()
+		ally_husks.reset()
 
 
 func _wire_tally() -> void:
@@ -6022,7 +6057,7 @@ func _on_player_died() -> void:
 	_reset_w47_h2_state()
 	_clear_consumables_runtime()
 	if ally_husks != null:
-		ally_husks._reset()
+		ally_husks.reset()
 	if orbitals != null: # --- W50-ISAAC-PARTS ---
 		orbitals.reset_attempt()
 	if relic_swaps != null: relic_swaps.reset()  # --- W50-ISAAC-RELICS ---
@@ -6079,7 +6114,7 @@ func _start_attempt() -> void:
 	_reset_w47_h2_state()
 	_clear_consumables_runtime()
 	if ally_husks != null:
-		ally_husks._reset()
+		ally_husks.reset()
 	if orbitals != null: # --- W50-ISAAC-PARTS ---
 		orbitals.reset_attempt()
 	if relic_swaps != null: relic_swaps.reset()  # --- W50-ISAAC-RELICS ---
@@ -6692,7 +6727,7 @@ func on_consumable_used(consumable_id: String, at := Vector3.INF) -> Dictionary:
 	var gain := float(row.get("active_charge_gain", 0.40))
 	var radius := float(row.get("burst_radius_m", 8.0))
 	var pos: Vector3 = at if at.is_finite() else ctx.player.ball_position()
-	actives._recharge(gain)
+	actives.recharge(gain)
 	var active_row: Dictionary = actives.row_of(actives.active_id)
 	var ring_color: Color = active_row.get("color", row.get("color", Palette.SAND))
 	effects.ring(pos, radius, ring_color)
@@ -7309,7 +7344,6 @@ var _memo_left := 0.0
 var _memo_frozen := {}
 var _balloons: Array = []
 var _consumable_drops: Array = []
-var _pad_consumable_down := false
 var _consumable_rng := RandomNumberGenerator.new()
 var consumable_uses := 0
 var overclock_skilled_shots := 0
@@ -7353,11 +7387,7 @@ func drop_consumable(consumable_id: String, at: Vector3) -> Node3D:
 
 
 func _consumable_tap_pressed() -> bool:
-	var pressed := Bindings.consumable_just_pressed()
-	var pad_now := Input.is_joy_button_pressed(0, Bindings.CONSUMABLE_PAD)
-	var pad_edge := pad_now and not _pad_consumable_down
-	_pad_consumable_down = pad_now
-	return pressed or pad_edge
+	return Bindings.consumable_just_pressed()
 
 
 func _step_consumables(delta: float, enemies: Array) -> void:
@@ -7473,8 +7503,8 @@ func _fire_cap_charge(at: Vector3) -> Dictionary:
 		if kind == "plated_brute" and enemy.has_method("strip_plate") and enemy.strip_plate():
 			stripped += 1
 		elif kind == "warden":
-			if enemy.has_method("_apply_posture"):
-				enemy._apply_posture(warden_posture)
+			if enemy.has_method("apply_posture_hit"):
+				enemy.apply_posture_hit({"gain": warden_posture, "full": true, "crack": false, "shatter": false, "dealt": 0.0})
 			elif enemy.has_method("take_damage"):
 				strike(enemy, "blast", dmg, enemy.family_point() if enemy.has_method("family_point") else "", "consumable")
 			stripped += 1
@@ -7739,7 +7769,6 @@ func _clear_consumables_runtime() -> void:
 	_nitro_left = 0.0
 	_overclock_left = 0.0
 	_memo_left = 0.0
-	_pad_consumable_down = false
 	_release_memo_formation()
 	for b in _balloons:
 		if is_instance_valid(b):

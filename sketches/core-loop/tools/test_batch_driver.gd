@@ -66,6 +66,11 @@ const Audio := preload("res://src/presentation/audio.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
+const Consumables := preload("res://src/build/consumables.gd")
+const RosterDig := preload("res://src/combat/roster_dig.gd")
+const Bindings := preload("res://src/core/bindings.gd")
+const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
+const W50_ASSET_HOOKS_PATH := "res://src/presentation/w50_asset_hooks.gd"
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -219,6 +224,17 @@ func _reset() -> void:
 	InkOutline.reset_for_tests()
 	AttackBudget.reset_ally(tree)
 	EventDirector.reset_prewarm()
+	Consumables.reset_for_tests()
+	RosterDig.reset_drain()
+	Bindings.reset_for_tests()
+	PocketLibrary.reset_for_tests()
+	if ResourceLoader.exists(W50_ASSET_HOOKS_PATH):
+		var hooks := load(W50_ASSET_HOOKS_PATH)
+		if hooks != null:
+			if hooks.has_method("reset_for_tests"):
+				hooks.reset_for_tests()
+			elif hooks.has_method("_reset"):
+				hooks._reset()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"

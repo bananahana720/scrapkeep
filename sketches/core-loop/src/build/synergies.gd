@@ -434,7 +434,7 @@ const CROSS_SYSTEM_W50 := {
 		"name": "Heavy Dividend",
 		"systems": ["burden", "mass"],
 		"tags": ["mass", "kinetic"],
-		"color": Palette.BRASS,
+		"color": Palette.COPPER,
 		"text": "Held burdens and high heft add +12% hit payout per burden, up to +60%.",
 		"per_burden": 0.12,
 		"cap_bonus": 0.60,
