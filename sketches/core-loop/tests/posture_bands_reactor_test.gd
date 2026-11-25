@@ -89,10 +89,13 @@ const DRIVER_PATH := "res://src/combat/warden_reactor.gd"
 # [31.34, 28.76, 15.78, 15.16, 19.36, 14.47, 23.11, 35.16, 19.39] median 19.39, ratio 2.83, campers 120. Grown sits 5.6 s
 # under the 25 s floor, as the 24-seed read of 24 Oct said: the three-seed pass was luck. The band check stays red and is
 # carried on KNOWN-FAILING.tsv beside posture_bands_test's grown floor (the stage 1 Warden plating sweep). Linux pins stay.
-const EXPECT_SMALL_S := 73.09
-const EXPECT_SMALL_S_MAC := 54.96
+# 2026-11-25 (W46-S1, b4381b48a, stage 1 warden_plating 90 -> 105 + slow-only Dam vent):
+# Linux (ahana): small 92.1 s (8/9 broke), grown 28.9 s (in 25-45 s, within 10% of 31.34 pin), ratio 3.19, camper 0.
+# Mac Studio: small 80.4 s (6/9 broke), grown 28.9 s (in 25-45 s, up from 19.39), ratio 2.79, camper 0.
+const EXPECT_SMALL_S := 92.08
+const EXPECT_SMALL_S_MAC := 80.40
 const EXPECT_GROWN_S := 31.34
-const EXPECT_GROWN_S_MAC := 19.39
+const EXPECT_GROWN_S_MAC := 28.86
 const TOLERANCE := 0.10
 const WALL_S := 330.0
 
