@@ -589,7 +589,7 @@ static func has_grapple_mutation(held: Array, mut_id: String, maker_muts: Array 
 
 static func grapple_mutation_problems() -> Array:
 	var found: Array = []
-	var allowed := [Palette.AMBER, Palette.COPPER, Palette.STEEL, Palette.SAND, Palette.VERDIGRIS, Palette.BONE]
+	var allowed := [Palette.AMBER, Palette.COPPER, Palette.STEEL, Palette.SAND, Palette.VERDIGRIS]
 	for mid in GRAPPLE_MUTATIONS:
 		var row: Dictionary = GRAPPLE_MUTATIONS[mid]
 		if String(row.get("id", "")) != mid:
