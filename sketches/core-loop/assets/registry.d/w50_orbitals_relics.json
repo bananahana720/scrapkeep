@@ -1,0 +1,59 @@
+{
+ "assets": [
+  {
+   "id": "orbital_flywheel_sat",
+   "path": "res://assets/models/vfx/orbital_flywheel_sat.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/combat/orbital_satellites.gd (replaces MultiMesh BoxMesh)",
+   "provenance": {
+    "recipe": "tools/blender/w50_orbitals_relics.py",
+    "note": "1-draw brass/copper toothed flywheel satellite disc with radial counterweight lugs for MultiMeshInstance3D orbital_satellites.gd. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "relic_halo_orb",
+   "path": "res://assets/models/vfx/relic_halo_orb.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (W50 Halo Coil orbiting lightning perimeter orbs)",
+   "provenance": {
+    "recipe": "tools/blender/w50_orbitals_relics.py",
+    "note": "Sable W3 Halo Coil orbiting discharge orb: copper equatorial ring, four radial dipole pins and glowing MINT #8bf0d3 core. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "relic_drill_auger",
+   "path": "res://assets/models/vfx/relic_drill_auger.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (W50 Drill Auger crater breach drillhead)",
+   "provenance": {
+    "recipe": "tools/blender/w50_orbitals_relics.py",
+    "note": "Rivet W1 Drill Auger breaching crater drillhead: heavy tapered steel cone, spiral copper cutter teeth and glowing AMBER friction tip. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "relic_voltaic_halo",
+   "path": "res://assets/models/vfx/relic_voltaic_halo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (W50 Voltaic Ring conductive shot halo)",
+   "provenance": {
+    "recipe": "tools/blender/w50_orbitals_relics.py",
+    "note": "Sable W1 Voltaic Ring: outer brass conductor torus, six copper discharge lugs and inner glowing MINT #8bf0d3 arc rim. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "relic_snare_beacon",
+   "path": "res://assets/models/vfx/relic_snare_beacon.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (W50 Updraft Snare apex trap beacon)",
+   "provenance": {
+    "recipe": "tools/blender/w50_orbitals_relics.py",
+    "note": "Kest W3 Updraft Snare apex cage beacon: twin copper collar rings, four vertical anchor struts, wind vanes and floating glowing AMBER snare core. Closed watertight procedural bmesh."
+   }
+  }
+ ]
+}

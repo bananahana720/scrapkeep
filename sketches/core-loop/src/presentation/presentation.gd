@@ -32,6 +32,7 @@ const Parts := preload("res://src/build/parts.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const PanelFx := preload("res://src/presentation/panel_fx.gd")
+const W50AssetHooks := preload("res://src/presentation/w50_asset_hooks.gd")
 
 # Writer C's module: how every committed fact looks, feels and sounds. It reads the
 # GameEvents bus, the event_kinds table and the spine's camera and ball hooks, and
@@ -85,6 +86,7 @@ var work_machines: Node3D
 var site_markers: Node3D
 # The Warden's command cables, one per gate pip, drawn on the park's ground (design-v3/WAYFINDING.md section 3).
 var conduit_cable: Node3D
+var w50_assets: Node3D
 var title_stage: Node
 var ui_hidden := false
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
@@ -173,6 +175,9 @@ func setup(ctx_ref) -> void:
 	conduit_cable = ConduitCable.new()
 	add_child(conduit_cable)
 	conduit_cable.setup(ctx, site_markers)
+	w50_assets = W50AssetHooks.new()
+	add_child(w50_assets)
+	w50_assets.setup(ctx)
 	wire_optional()
 	GraphicsPreset.register_dressing_host(self)
 	if not get_tree().node_added.is_connected(_on_node_added):

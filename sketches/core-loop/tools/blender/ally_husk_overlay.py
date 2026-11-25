@@ -522,6 +522,49 @@ def build_lead(out_dir):
     return validate_and_export(root, os.path.join(out_dir, "ally_husk_lead.glb"))
 
 
+# ---------------------------------------------------------------------------
+# 5. Slumped Salvage Wreck Chassis Marker (ally_husk_wreck.glb)
+# ---------------------------------------------------------------------------
+
+def build_wreck(out_dir):
+    """Replaces raw BoxMesh + SphereMesh in ally_husk_look.build_wreck_marker():
+    slumped canted oxide Fleet housing with popped access hatch, copper jumper terminal stubs,
+    and glowing warm AMBER #E5A044 salvage spark bead (strictly B6 compliant, zero HAZARD)."""
+    common.reset()
+    setup_slots()
+    root = common.empty("AllyHuskWreck")
+    p = Part("WreckMesh")
+
+    # Grounded charcoal chassis skid frame sitting cleanly at z=0.0.
+    p.box("hydraulic", (1.06, 1.18, 0.10), loc=(0.0, 0.0, 0.05), color=CHARCOAL)
+    for sx in (-0.48, 0.48):
+        p.box("hydraulic", (0.14, 1.24, 0.12), loc=(sx, 0.0, 0.06), color=STEEL)
+
+    # Slumped, canted Fleet oxide boiler-box hull tilted 14 deg so it reads dead/downed.
+    hull_rot = (math.radians(12.0), math.radians(-14.0), math.radians(18.0))
+    p.box("hydraulic", (0.94, 1.06, 0.48), loc=(0.0, 0.0, 0.34), rot=hull_rot, color=OXBLOOD)
+    p.box("hydraulic", (0.78, 0.90, 0.12), loc=(0.02, 0.0, 0.56), rot=hull_rot, color=CHARCOAL)
+
+    # Popped-ajar top service hatch plate tilted open on copper hinges.
+    p.box("hydraulic", (0.56, 0.52, 0.07), loc=(-0.14, 0.04, 0.68),
+          rot=(math.radians(10.0), math.radians(-38.0), math.radians(18.0)), color=STEEL)
+    # Twin exposed copper jumper-clip terminal posts rising out of the popped bay.
+    for sx in (-0.12, 0.14):
+        p.cyl("hydraulic", 0.055, 0.048, 0.24, segs=8, loc=(sx, -0.02, 0.66), color=COPPER)
+        p.cyl("hydraulic", 0.032, 0.032, 0.08, segs=6, loc=(sx, -0.02, 0.80), color=BONE)
+
+    # Crackling warm AMBER #E5A044 salvage ready beacon & jumper spark bridge across the terminals.
+    add_spark_bolt(p, [
+        (-0.12, -0.02, 0.80), (-0.03, 0.04, 0.88), (0.05, -0.04, 0.84), (0.14, -0.02, 0.80)
+    ], radius=0.018)
+    add_spark_diamond(p, (0.01, 0.0, 0.92), sx=0.075, sy=0.075, sz=0.14)
+
+    sharpen(p)
+    p.to_object(parent=root)
+    common.empty("socket_spark", (0.01, 0.0, 0.92), root)
+    return validate_and_export(root, os.path.join(out_dir, "ally_husk_wreck.glb"))
+
+
 def parse_args():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser(description="Build W47-TALLY-B-3D Ghost Shift ally-husk overlay GLBs")
@@ -537,6 +580,7 @@ def main():
         build_tag(opts.out_dir),
         build_mast(opts.out_dir),
         build_lead(opts.out_dir),
+        build_wreck(opts.out_dir),
     ]
     total_tris = sum(b["tris"] for b in built)
     print(f"ALLY_HUSK_OVERLAY PASS: {len(built)} GLBs built, combined tris={total_tris}")

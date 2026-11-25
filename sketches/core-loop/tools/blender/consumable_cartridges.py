@@ -462,7 +462,154 @@ def build_anchor_balloon(p, root):
     common.empty("SocketBite", loc=(0.0, 0.0, 0.80), parent=root)
 
 
-# Registry of all 8 assets: name -> (builder, polish_kwargs)
+# ---------------------------------------------------------------------------
+# 9. scrap_dice — Foreman's Audit Die (W50-ISAAC-ECONOMY)
+# ---------------------------------------------------------------------------
+def build_scrap_dice(p, root):
+    """Cast brass-and-petrol executive audit die with indented charcoal pips and corner collars.
+    Zero HAZARD #ff5a3c; zero KINDNESS purple (pure brass/petrol/ledger Old Works ledger hardware)."""
+    # Heavy chamfered petrol plinth pedestal so the die stands tilted proudly at 3/4 view.
+    p.prism(METAL, _chamfer_rect(0.42, 0.42, 0.075), 0.052,
+            matrix=common.mtx((0.0, 0.0, 0.026)), color=VERDIGRIS)
+    p.ring(METAL, 0.145, 0.185, 0.032, segs=12, loc=(0.0, 0.0, 0.068), color=COPPER)
+
+    # Chunky tilted brass-bound cube die balanced on a beveled collar.
+    tilt = (
+        Matrix.Translation((0.0, 0.0, 0.275))
+        @ Matrix.Rotation(math.radians(24.0), 4, "X")
+        @ Matrix.Rotation(math.radians(18.0), 4, "Y")
+    )
+    half = 0.145
+    # Core chamfered octagonal-profile die body in satin brass.
+    die_outline = _chamfer_rect(half * 2.0, half * 2.0, 0.036)
+    p.prism(METAL, die_outline, half * 2.0, matrix=tilt, color=BRASS)
+
+    # Recessed petrol-enamel face plates proud on all 6 faces + crisp ledger/amber pip studs.
+    face_rots = [
+        (Matrix.Identity(4), 6),                                  # +Z top (6 pips — high roll!)
+        (Matrix.Rotation(math.pi, 4, "X"), 1),                    # -Z bottom (1 pip)
+        (Matrix.Rotation(math.pi / 2.0, 4, "X"), 5),              # -Y front (5 pips)
+        (Matrix.Rotation(-math.pi / 2.0, 4, "X"), 2),             # +Y back (2 pips)
+        (Matrix.Rotation(-math.pi / 2.0, 4, "Y"), 4),             # -X left (4 pips)
+        (Matrix.Rotation(math.pi / 2.0, 4, "Y"), 3),              # +X right (3 pips)
+    ]
+    pip_layouts = {
+        1: [(0.0, 0.0)],
+        2: [(-0.055, -0.055), (0.055, 0.055)],
+        3: [(-0.060, -0.060), (0.0, 0.0), (0.060, 0.060)],
+        4: [(-0.055, -0.055), (0.055, -0.055), (-0.055, 0.055), (0.055, 0.055)],
+        5: [(-0.058, -0.058), (0.058, -0.058), (0.0, 0.0), (-0.058, 0.058), (0.058, 0.058)],
+        6: [(-0.058, -0.064), (0.058, -0.064), (-0.058, 0.0), (0.058, 0.0), (-0.058, 0.064), (0.058, 0.064)],
+    }
+    for rot_m, count in face_rots:
+        fm = tilt @ rot_m
+        # Petrol recessed face plate sitting proud of brass chamfer frame.
+        p.prism(PAINT, _chamfer_rect(0.215, 0.215, 0.022), 0.018,
+                matrix=fm @ Matrix.Translation((0.0, 0.0, half + 0.006)), color=VERDIGRIS)
+        # Raised pip studs (warm AMBER on 6 & 5 faces, LEDGER cream on others).
+        pip_col = AMBER if count >= 5 else LEDGER
+        for px, py in pip_layouts[count]:
+            pm = fm @ Matrix.Translation((px, py, half + 0.019))
+            r_pip = bmesh.ops.create_cone(
+                p.bm, cap_ends=True, cap_tris=False, segments=8,
+                radius1=0.022, radius2=0.018, depth=0.016, matrix=pm,
+            )
+            p.paint(p._faces(r_pip["verts"]), PAINT, pip_col)
+
+    # Four bolted charcoal corner bumper lugs along the die waist for bold silhouette pop.
+    for sx in (-1.0, 1.0):
+        for sy in (-1.0, 1.0):
+            bm = tilt @ Matrix.Translation((sx * 0.135, sy * 0.135, 0.0))
+            rb = bmesh.ops.create_cube(p.bm, size=1.0, matrix=bm @ Matrix.Diagonal((0.044, 0.044, 0.072, 1.0)))
+            p.paint(p._faces(rb["verts"]), METAL, CHARCOAL)
+
+    common.empty("SocketFX", loc=(0.0, 0.0, 0.50), parent=root)
+
+
+# ---------------------------------------------------------------------------
+# 10. duplicator_spool — Carbon Tape (W50-ISAAC-ECONOMY, Moss / Keeper)
+# ---------------------------------------------------------------------------
+def build_duplicator_spool(p, root):
+    """Keeper twin-reel carbon duplicator tape cartridge with copper reels and AMBER index tab."""
+    # Stable charcoal Keeper base skid foot.
+    p.box(METAL, (0.50, 0.14, 0.048), loc=(0.0, 0.0, 0.024), color=CHARCOAL)
+
+    # Upright angled twin-reel cassette housing (bone/verdigris mismatched Keeper casing).
+    tilt = Matrix.Translation((0.0, 0.0, 0.215)) @ Matrix.Rotation(math.radians(78.0), 4, "X")
+    p.prism(METAL, _chamfer_rect(0.54, 0.34, 0.038), 0.072, matrix=tilt, color=VERDIGRIS)
+    # Bolted bone face plate on front & back with corner hex rivets.
+    p.prism(METAL, _chamfer_rect(0.47, 0.26, 0.024), 0.084, matrix=tilt, color=BONE)
+    for sx in (-1.0, 1.0):
+        for sy in (-1.0, 1.0):
+            rm = tilt @ Matrix.Translation((sx * 0.20, sy * 0.098, 0.0))
+            rb = bmesh.ops.create_cone(p.bm, cap_ends=True, cap_tris=False, segments=6,
+                                       radius1=0.018, radius2=0.018, depth=0.098, matrix=rm)
+            p.paint(p._faces(rb["verts"]), METAL, CHARCOAL)
+
+    # Twin prominent protruding copper/steel carbon-tape reels left & right (unmistakable twin-spool silhouette!).
+    for sx in (-0.135, 0.135):
+        rm = tilt @ Matrix.Translation((sx, 0.015, 0.0))
+        # Dark carbon tape pack cylinder.
+        rt = bmesh.ops.create_cone(p.bm, cap_ends=True, cap_tris=False, segments=12,
+                                   radius1=0.092, radius2=0.092, depth=0.104, matrix=rm)
+        p.paint(p._faces(rt["verts"]), METAL, CHARCOAL)
+        # Front & back copper reel flanges.
+        for sz in (-0.056, 0.056):
+            fm = tilt @ Matrix.Translation((sx, 0.015, sz))
+            rf = bmesh.ops.create_cone(p.bm, cap_ends=True, cap_tris=False, segments=12,
+                                       radius1=0.106, radius2=0.106, depth=0.018, matrix=fm)
+            p.paint(p._faces(rf["verts"]), METAL, COPPER)
+        # Steel hub spindle cap.
+        rh = bmesh.ops.create_cone(p.bm, cap_ends=True, cap_tris=False, segments=8,
+                                   radius1=0.038, radius2=0.032, depth=0.145, matrix=rm)
+        p.paint(p._faces(rh["verts"]), METAL, STEEL)
+
+    # Exposed twin carbon ribbon bridge bar across bottom mouth + warm AMBER copy-window tab on top.
+    b_m = tilt @ Matrix.Translation((0.0, -0.145, 0.0))
+    rb_bar = bmesh.ops.create_cube(p.bm, size=1.0, matrix=b_m @ Matrix.Diagonal((0.30, 0.055, 0.088, 1.0)))
+    p.paint(p._faces(rb_bar["verts"]), METAL, CHARCOAL)
+    # Prominent glowing AMBER duplicator tab crowning the top of the cassette.
+    t_m = tilt @ Matrix.Translation((0.0, 0.185, 0.0))
+    rt_tab = bmesh.ops.create_cube(p.bm, size=1.0, matrix=t_m @ Matrix.Diagonal((0.20, 0.056, 0.068, 1.0)))
+    p.paint(p._faces(rt_tab["verts"]), AMBER_RIM)
+
+    common.empty("SocketFX", loc=(0.0, 0.0, 0.44), parent=root)
+
+
+# ---------------------------------------------------------------------------
+# 11. overload_fuse — Breaker Fuse (W50-ISAAC-ECONOMY, Redjaw / Foundry)
+# ---------------------------------------------------------------------------
+def build_overload_fuse(p, root):
+    """Heavy industrial ceramic-and-copper cartridge fuse with MINT #8bf0d3 arc filament window
+    and brass knife-blade contact tabs. Zero HAZARD #ff5a3c."""
+    zc = 0.155
+    # Chunky bone ribbed ceramic insulator core lying along X.
+    p.cyl(METAL, 0.108, 0.108, 0.28, segs=12, loc=(0.0, 0.0, zc), rot=ALONG_X, color=BONE)
+    # Three ceramic insulator cooling ribs.
+    for rx in (-0.085, 0.0, 0.085):
+        p.ring(METAL, 0.104, 0.132, 0.028, segs=12, loc=(rx, 0.0, zc), rot=ALONG_X, color=BONE)
+
+    # Twin glowing MINT #8bf0d3 arc-filament sight bars + collar bands wrapping the ceramic waist.
+    p.ring(MINT_RING, 0.108, 0.138, 0.044, segs=14, loc=(-0.042, 0.0, zc), rot=ALONG_X)
+    p.ring(MINT_RING, 0.108, 0.138, 0.044, segs=14, loc=(0.042, 0.0, zc), rot=ALONG_X)
+    p.box(MINT_RING, (0.14, 0.042, 0.042), loc=(0.0, 0.0, zc + 0.125))
+
+    # Heavy copper end-cap ferrules with charcoal locking collars at both ends.
+    for sx in (-1.0, 1.0):
+        p.cyl(METAL, 0.132, 0.132, 0.095, segs=12, loc=(sx * 0.185, 0.0, zc), rot=ALONG_X, color=COPPER)
+        p.cyl(METAL, 0.140, 0.140, 0.026, segs=12, loc=(sx * 0.142, 0.0, zc), rot=ALONG_X, color=CHARCOAL)
+        # Heavy flat brass breaker knife-blade contact protruding outward along X!
+        p.box(METAL, (0.115, 0.032, 0.118), loc=(sx * 0.285, 0.0, zc), color=BRASS)
+        # Copper clamp rivets on ferrule top & bottom.
+        p.cyl(METAL, 0.024, 0.024, 0.285, segs=6, loc=(sx * 0.185, 0.0, zc), color=STEEL)
+
+    # Compact charcoal saddle cradle underneath so the fuse rests stably at Z = 0.
+    p.box(METAL, (0.36, 0.14, 0.038), loc=(0.0, 0.0, 0.019), color=CHARCOAL)
+
+    common.empty("SocketFX", loc=(0.0, 0.0, zc + 0.16), parent=root)
+
+
+# Registry of all 11 assets: name -> (builder, polish_kwargs)
 CONSUMABLES = {
     "cons_cap_charge": (
         build_cap_charge,
@@ -495,6 +642,18 @@ CONSUMABLES = {
     "cons_moss_patch": (
         build_moss_patch,
         {"detail": 1, "bevel": 0.007, "bevel_min": 0.04, "ao_strength": 0.36, "ao_reach": 0.25, "edge": 0.14},
+    ),
+    "cons_scrap_dice": (
+        build_scrap_dice,
+        {"detail": 1, "bevel": 0.006, "bevel_min": 0.04, "ao_strength": 0.30, "ao_reach": 0.24, "edge": 0.10},
+    ),
+    "cons_duplicator_spool": (
+        build_duplicator_spool,
+        {"detail": 1, "bevel": 0.006, "bevel_min": 0.04, "ao_strength": 0.34, "ao_reach": 0.25, "edge": 0.12},
+    ),
+    "cons_overload_fuse": (
+        build_overload_fuse,
+        {"detail": 1, "bevel": 0.006, "bevel_min": 0.04, "ao_strength": 0.34, "ao_reach": 0.25, "edge": 0.12},
     ),
     "cons_drop_cradle": (
         build_drop_cradle,
