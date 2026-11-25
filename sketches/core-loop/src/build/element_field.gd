@@ -21,19 +21,24 @@ signal resolved(result: Dictionary)
 # SG2: a pair of statuses fused on an enemy, at the frame it commits its area (the result
 # carries behaviour, kind, at, radius, seconds, damage and the drawn preview node).
 signal fused(result: Dictionary)
+# W50-ISAAC-ECONOMY: extended 4-element fusion signal (keeps build.gd's Elements.FUSIONS[] safe).
+signal extended_fused(result: Dictionary)
 # Hoar Barrel: a crossed slab burst into a forward shard cone, the one record that was drawn (its
 # node) and struck (its machines): {at, dir, length, half_angle, damage, struck, node}.
 signal shard_cone(cone: Dictionary)
 
 const ICE := Color("c8f0ff")
 const FROST := Color("e9f8ff")
-# What each element draws in: the arc ring, frost puffs and the slam's copper.
-const ELEMENT_COLOURS := {"arc": Palette.ARC, "frost": FROST, "kinetic": Palette.COPPER}
+const HEAT := Color("ff7a29")
+const STEAM := Color("e8edf2")
+# What each element draws in: the arc ring, frost puffs, the slam's copper and heat's forge glow.
+const ELEMENT_COLOURS := {"arc": Palette.ARC, "frost": FROST, "kinetic": Palette.COPPER, "heat": HEAT}
 # An element reaches a surface this far below the point it was applied at, so a dash
 # a few metres over the flood still freezes it.
 const REACH := 4.5
 const MAX_SLABS := 64
 const MAX_ZONES := 6
+const MAX_STEAM_CLOUDS := 6
 const MAX_PUFFS := 40
 const MAX_SHARDS := 64
 const BALL_CLEARANCE := 0.06
@@ -65,6 +70,7 @@ var shatter_scale := 1.0
 var _providers := {}
 var _slabs: Array[Dictionary] = []
 var _zones: Array[Dictionary] = []
+var _steam_clouds: Array[Dictionary] = []
 var _shards: Array[Dictionary] = []
 var _puffs: Array[Dictionary] = []
 var _zaps: Array[Dictionary] = []
@@ -124,6 +130,10 @@ func clear() -> void:
 		if is_instance_valid(zone["node"]):
 			zone["node"].queue_free()
 	_zones.clear()
+	for cloud in _steam_clouds:
+		if is_instance_valid(cloud["node"]):
+			cloud["node"].queue_free()
+	_steam_clouds.clear()
 	for list in [_shards, _puffs, _zaps]:
 		for fx in list:
 			if is_instance_valid(fx["node"]):
@@ -144,6 +154,14 @@ func slab_count() -> int:
 
 func zone_count() -> int:
 	return _zones.size()
+
+
+func steam_cloud_count() -> int:
+	return _steam_clouds.size()
+
+
+func steam_clouds() -> Array[Dictionary]:
+	return _steam_clouds
 
 
 func slabs() -> Array[Dictionary]:
@@ -174,7 +192,7 @@ func material_at(point: Vector3, reach := REACH) -> Dictionary:
 # The one entry point: apply an element at a point, resolve the table once, leave the
 # result in the world and return it ({} when nothing happens).
 func apply(element_id: String, at: Vector3, source := "") -> Dictionary:
-	if element_id in Elements.TOUCH_ELEMENTS:
+	if element_id in Elements.TOUCH_ELEMENTS_W50:
 		_touch_near(element_id, at, Elements.TOUCH_RADIUS)
 	return _resolve(element_id, at, source)
 
@@ -202,6 +220,10 @@ func _resolve(element_id: String, at: Vector3, source: String) -> Dictionary:
 			_electrify(row, result)
 		"shatter":
 			_shatter(row, result)
+		"steam_cloud":
+			_steam_cloud(row, result)
+		"flash_melt":
+			_flash_melt(row, result)
 	resolved.emit(result)
 	return result
 
@@ -307,6 +329,74 @@ func _shatter(row: Dictionary, result: Dictionary) -> void:
 					break
 	result["shattered"] = shattered.size()
 	result["struck"] = struck
+
+
+# W50-ISAAC-ECONOMY: heat:water -> Steam Cloud (committed thermal updraft lift + scald burst).
+func _steam_cloud(row: Dictionary, result: Dictionary) -> void:
+	var at: Vector3 = result["at"]
+	var radius: float = float(row["radius"])
+	var seconds: float = float(row["seconds"])
+	var updraft: float = float(row["updraft"])
+	var damage: float = float(row["damage"])
+	while _steam_clouds.size() >= MAX_STEAM_CLOUDS:
+		var old: Dictionary = _steam_clouds.pop_front()
+		if is_instance_valid(old["node"]):
+			old["node"].queue_free()
+	var node := MeshInstance3D.new()
+	node.name = "SteamCloud"
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = radius
+	cyl.bottom_radius = radius
+	cyl.height = 0.25
+	cyl.radial_segments = 16
+	node.mesh = cyl
+	node.material_override = _unshaded_material(Color(STEAM.r, STEAM.g, STEAM.b, 0.45))
+	add_child(node)
+	node.global_position = at + Vector3.UP * 0.2
+	flash_ring(at + Vector3.UP * 0.12, radius, HEAT.lerp(STEAM, 0.5))
+	var struck := 0
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		var p: Vector3 = (enemy as Node3D).global_position
+		if Vector2(p.x - at.x, p.z - at.z).length() <= radius and absf(p.y - at.y) <= REACH + 1.5:
+			if _evolution_strike(enemy, damage, "item_proc"):
+				struck += 1
+	var cloud := {
+		"at": at, "radius": radius, "left": seconds, "updraft": updraft,
+		"node": node, "lifts": 0,
+	}
+	_steam_clouds.append(cloud)
+	result["cloud"] = cloud
+	result["radius"] = radius
+	result["updraft"] = updraft
+	result["struck"] = struck
+	result["source"] = "item_proc"
+
+
+# W50-ISAAC-ECONOMY: heat:ice -> Flash Melt (explosive steam-shatter nova, committed geometry, item_proc).
+func _flash_melt(row: Dictionary, result: Dictionary) -> void:
+	var at: Vector3 = result["at"]
+	var radius: float = float(row["radius"])
+	var damage: float = float(row["damage"]) * shatter_scale
+	var melted: Array[Vector3] = []
+	var i := _slabs.size() - 1
+	while i >= 0:
+		var slab_at: Vector3 = _slabs[i]["at"]
+		if Vector2(slab_at.x - at.x, slab_at.z - at.z).length() <= radius:
+			melted.append(slab_at)
+			_remove_slab(i, true)
+		i -= 1
+	flash_ring(at + Vector3.UP * 0.12, radius, HEAT.lerp(ICE, 0.5))
+	var struck := 0
+	if not melted.is_empty():
+		for enemy in get_tree().get_nodes_in_group("enemy"):
+			var p: Vector3 = (enemy as Node3D).global_position
+			if Vector2(p.x - at.x, p.z - at.z).length() <= radius and absf(p.y - at.y) <= REACH + 1.5:
+				if _evolution_strike(enemy, damage, "item_proc"):
+					struck += 1
+	result["melted"] = melted.size()
+	result["radius"] = radius
+	result["struck"] = struck
+	result["source"] = "item_proc"
 
 
 func _remove_slab(index: int, burst: bool) -> void:
@@ -666,7 +756,12 @@ func _commit_fusion(row: Dictionary, key: String, enemy: Node3D) -> Dictionary:
 		"preview": preview, "colour": colour, "landed": false, "left": 0.0, "beat": 0.0,
 	}
 	_fusions.append(result)
-	fused.emit(result)
+	if Elements.FUSIONS.has(key):
+		fused.emit(result)
+	else:
+		extended_fused.emit(result)
+		if ctx != null and ctx.codex != null and ctx.codex.has_method("mark_found"):
+			ctx.codex.mark_found(Elements.card_text(row), "synergy", ["player"])
 	return result
 
 
@@ -801,6 +896,23 @@ func step(delta: float) -> void:
 			if is_instance_valid(zone["node"]):
 				zone["node"].queue_free()
 			_zones.remove_at(i)
+		i -= 1
+	i = _steam_clouds.size() - 1
+	while i >= 0:
+		var cloud: Dictionary = _steam_clouds[i]
+		cloud["left"] -= delta
+		if ctx != null and ctx.player != null:
+			var ball: Vector3 = ctx.player.ball_position()
+			var at: Vector3 = cloud["at"]
+			if Vector2(ball.x - at.x, ball.z - at.z).length() <= float(cloud["radius"]) \
+					and ball.y >= at.y - 1.0 and ball.y <= at.y + 8.0:
+				if ctx.player.has_method("add_external_accel"):
+					ctx.player.add_external_accel(Vector3.UP * float(cloud["updraft"]))
+				cloud["lifts"] = int(cloud.get("lifts", 0)) + 1
+		if cloud["left"] <= 0.0:
+			if is_instance_valid(cloud["node"]):
+				cloud["node"].queue_free()
+			_steam_clouds.remove_at(i)
 		i -= 1
 
 

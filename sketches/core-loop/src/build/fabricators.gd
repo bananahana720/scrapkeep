@@ -1,6 +1,7 @@
 extends Node3D
 
 const Parts := preload("res://src/build/parts.gd")
+const Relics := preload("res://src/build/relics.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
@@ -41,10 +42,20 @@ const SPACING := 40.0
 const ALONG_LINE := 0.55
 const PROMPT_REACH := 45.0
 
+# RoR2 Scrapper & Part Press (W50-ISAAC-ECONOMY): scrap an ordinary held part into a
+# rarity-matched Scrap Ingot, then feed a matching-tier ingot (first) or another random
+# held ordinary part of the same tier into a World Part Press for a guaranteed duplicate.
+const INGOT_TIERS := [1, 2, 3]
+const INGOT_RARITY := {1: "common", 2: "rare", 3: "relic"}
+const INGOT_NAMES := {1: "Common Scrap Ingot", 2: "Rare Scrap Ingot", 3: "Relic Scrap Ingot"}
+const INGOT_META := "w50_scrap_ingots"
+
 var _rng: RandomNumberGenerator
 var _class_id := ""
 var _stage := 1
 var _fabs: Array[Dictionary] = []
+var _scrappers: Array[Dictionary] = []
+var _presses: Array[Dictionary] = []
 # Build's offer_mark(part_id) -> String; the star line under an offer, or "".
 var mark_for: Callable
 
@@ -108,6 +119,195 @@ func clear() -> void:
 	for fab in _fabs:
 		fab["node"].queue_free()
 	_fabs.clear()
+	for station in _scrappers:
+		if is_instance_valid(station.get("node")):
+			(station["node"] as Node).queue_free()
+	_scrappers.clear()
+	for station in _presses:
+		if is_instance_valid(station.get("node")):
+			(station["node"] as Node).queue_free()
+	_presses.clear()
+
+
+# ---- RoR2 Scrapper + Part Press (3D Printer) ------------------------------------------
+
+static func tier_of(part_id: String) -> int:
+	return clampi(_tier(part_id), INGOT_TIERS[0], INGOT_TIERS[-1])
+
+
+# True only for held ordinary parts (never relics, never welded pattern parts).
+static func can_scrap(part_id: String, run) -> bool:
+	if run == null or part_id == "" or not (part_id in run.parts):
+		return false
+	var d: Resource = Parts.def(part_id)
+	return d != null and d.patterns.is_empty() and not Relics.is_relic(part_id) and String(d.rarity) != "relic"
+
+
+static func _ingot_store(run) -> Dictionary:
+	if run == null:
+		return {1: 0, 2: 0, 3: 0}
+	var raw = run.get_meta(INGOT_META) if run.has_meta(INGOT_META) else null
+	if not (raw is Dictionary):
+		raw = {1: 0, 2: 0, 3: 0}
+		run.set_meta(INGOT_META, raw)
+	for t in INGOT_TIERS:
+		if not raw.has(t):
+			raw[t] = 0
+	return raw
+
+
+static func scrap_ingots(run) -> Dictionary:
+	var store := _ingot_store(run)
+	return {1: int(store.get(1, 0)), 2: int(store.get(2, 0)), 3: int(store.get(3, 0))}
+
+
+static func ingot_count(run, tier: int) -> int:
+	if not tier in INGOT_TIERS:
+		return 0
+	return int(_ingot_store(run).get(tier, 0))
+
+
+static func reset_ingots(run) -> void:
+	if run == null:
+		return
+	run.set_meta(INGOT_META, {1: 0, 2: 0, 3: 0})
+
+
+static func ingots_to_doc(run) -> Dictionary:
+	var counts := scrap_ingots(run)
+	return {"1": int(counts[1]), "2": int(counts[2]), "3": int(counts[3])}
+
+
+static func ingots_from_doc(run, doc) -> bool:
+	if run == null or not (doc is Dictionary):
+		return false
+	var next := {}
+	for t in INGOT_TIERS:
+		var raw = doc.get(str(t), doc.get(t, 0))
+		if not (typeof(raw) == TYPE_INT or typeof(raw) == TYPE_FLOAT) or not is_finite(float(raw)) \
+				or float(raw) < 0.0 or float(raw) != floorf(float(raw)):
+			return false
+		next[t] = int(raw)
+	run.set_meta(INGOT_META, next)
+	return true
+
+
+# Scraps one held ordinary part into a rarity-matched Scrap Ingot. Removes the part before
+# minting the ingot so a failed removal can never dupe an ingot.
+static func scrap_part(run, part_id: String, build = null) -> Dictionary:
+	if run == null or part_id == "" or run.parts.is_empty():
+		return {"ok": false, "reason": "empty", "part_id": part_id}
+	if not (part_id in run.parts):
+		return {"ok": false, "reason": "not_held", "part_id": part_id}
+	if not can_scrap(part_id, run):
+		return {"ok": false, "reason": "welded", "part_id": part_id}
+	var tier := tier_of(part_id)
+	if not run.remove_part(part_id):
+		return {"ok": false, "reason": "not_held", "part_id": part_id}
+	var store := _ingot_store(run)
+	store[tier] = int(store.get(tier, 0)) + 1
+	if build != null and build.has_method("recompute"):
+		build.recompute()
+	return {
+		"ok": true,
+		"reason": "ok",
+		"part_id": part_id,
+		"tier": tier,
+		"rarity": String(INGOT_RARITY.get(tier, "common")),
+		"ingot_name": String(INGOT_NAMES.get(tier, "Scrap Ingot")),
+		"ingots": int(store[tier]),
+	}
+
+
+# Presses a guaranteed duplicate of `target_part_id`, spending a matching-tier Scrap Ingot
+# first, else sacrificing one random held removable ordinary part of the same tier (never
+# the target itself, preventing free self-swaps/dupes). Deducts fuel before granting.
+static func press_part(run, target_part_id: String, rng: RandomNumberGenerator = null, build = null) -> Dictionary:
+	if run == null or target_part_id == "":
+		return {"ok": false, "reason": "empty", "part_id": target_part_id}
+	var d: Resource = Parts.def(target_part_id)
+	if d == null or Relics.is_relic(target_part_id):
+		return {"ok": false, "reason": "invalid_target", "part_id": target_part_id}
+	if Parts.stacked_out(target_part_id, run.parts) or Parts.maxed(target_part_id, run.parts):
+		return {"ok": false, "reason": "capped", "part_id": target_part_id}
+	var tier := tier_of(target_part_id)
+	var store := _ingot_store(run)
+	if int(store.get(tier, 0)) > 0:
+		store[tier] = int(store[tier]) - 1
+		run.add_part(target_part_id, "part_press")
+		if build != null and build.has_method("recompute"):
+			build.recompute()
+		return {
+			"ok": true,
+			"reason": "ok",
+			"part_id": target_part_id,
+			"tier": tier,
+			"paid_kind": "ingot",
+			"sacrificed": "",
+			"ingots_left": int(store[tier]),
+		}
+	var fuel: Array[String] = []
+	for held_id in run.parts:
+		var sid := String(held_id)
+		if sid != target_part_id and tier_of(sid) == tier and can_scrap(sid, run):
+			fuel.append(sid)
+	if fuel.is_empty():
+		return {"ok": false, "reason": "no_fuel", "part_id": target_part_id, "tier": tier}
+	var pick_idx := rng.randi_range(0, fuel.size() - 1) if rng != null else 0
+	var sacrificed := fuel[pick_idx]
+	if not run.remove_part(sacrificed):
+		return {"ok": false, "reason": "no_fuel", "part_id": target_part_id, "tier": tier}
+	run.add_part(target_part_id, "part_press")
+	if build != null and build.has_method("recompute"):
+		build.recompute()
+	return {
+		"ok": true,
+		"reason": "ok",
+		"part_id": target_part_id,
+		"tier": tier,
+		"paid_kind": "part",
+		"sacrificed": sacrificed,
+		"ingots_left": int(store.get(tier, 0)),
+	}
+
+
+func add_scrapper_at(at: Vector3, facing := Vector3.FORWARD) -> Dictionary:
+	var node := Node3D.new()
+	node.name = "WorldScrapper"
+	add_child(node)
+	node.global_position = at
+	if facing.length_squared() > 0.001:
+		node.global_basis = Basis.looking_at(facing.normalized(), Vector3.UP)
+	var rec := {"kind": "scrapper", "at": at, "facing": facing, "node": node, "uses": 0}
+	_scrappers.append(rec)
+	return rec
+
+
+func add_press_at(at: Vector3, facing: Vector3, part_id: String) -> Dictionary:
+	var node := Node3D.new()
+	node.name = "WorldPartPress"
+	add_child(node)
+	node.global_position = at
+	if facing.length_squared() > 0.001:
+		node.global_basis = Basis.looking_at(facing.normalized(), Vector3.UP)
+	var rec := {"kind": "part_press", "part_id": part_id, "tier": tier_of(part_id), "at": at, "facing": facing, "node": node, "uses": 0}
+	_presses.append(rec)
+	return rec
+
+
+func scrappers() -> Array[Dictionary]:
+	return _scrappers
+
+
+func presses() -> Array[Dictionary]:
+	return _presses
+
+
+func use_press(press: Dictionary, run, rng: RandomNumberGenerator = null, build = null) -> Dictionary:
+	var res := press_part(run, String(press.get("part_id", "")), rng, build)
+	if bool(res.get("ok", false)):
+		press["uses"] = int(press.get("uses", 0)) + 1
+	return res
 
 
 func records() -> Array[Dictionary]:

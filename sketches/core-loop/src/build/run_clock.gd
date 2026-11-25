@@ -25,8 +25,8 @@ const CURSE := "curse"
 # only time. One entry per run stage; 0 means the stage has no quick break. World 1's dam takes
 # four rams at a 6 s pulse from an ordinary ball and three from a grown one; on the flume a
 # five-seed read of the harder stack (PR 845) had grown balls at a 19 s median and small ones at
-# 30 s. Worlds 2 and 3 are parked, so their stages pay nothing until they are fitted.
-const QUICK_BREAK_SECONDS := [30.0, 20.0, 0.0, 0.0, 0.0, 0.0]
+# 30 s. W50-ISAAC-ECONOMY fills Worlds 2 & 3 (stages 3-6) alongside World 1.
+const QUICK_BREAK_SECONDS := [30.0, 20.0, 28.0, 24.0, 26.0, 22.0]
 
 var run_seconds := 0.0
 var stage_seconds := 0.0

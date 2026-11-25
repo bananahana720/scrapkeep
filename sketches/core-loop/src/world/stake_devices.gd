@@ -76,6 +76,18 @@ const KINDNESS_GLOW := 1.0
 const KINDNESS_PULSE := 2.6
 const PULSE_S := 0.6
 
+# RoR2 Challenge Stake Stacking (W50-ISAAC-ECONOMY, Shrine of the Mountain pattern):
+# Stackable per-stage challenge stakes with a bounded cap and +1 extra Warden gate roll per
+# stack. Per rulings al/cu, stacks raise aggression and pack pressure ONLY — zero enemy HP
+# inflation (CHALLENGE_HP_MULT is strictly 1.0).
+const CHALLENGE_DEVICE := "challenge_stake"
+const CHALLENGE_STAKE_CAP := 3
+const CHALLENGE_GATE_ROLLS_PER_STACK := 1
+const CHALLENGE_AGGRESSION_PER_STACK := 0.15
+const CHALLENGE_PACK_EXTRA_PER_STACK := 1
+const CHALLENGE_HP_MULT := 1.0
+const CHALLENGE_META := "w50_challenge_stakes"
+
 var kind := "trade_chest"
 var offer := {}
 var last := {}
@@ -90,6 +102,60 @@ static func pays(device_kind: String) -> Array:
 
 static func floor_hp(run) -> float:
 	return ceilf(run.max_hp * FLOOR_SHARE)
+
+
+# ---- RoR2 Challenge Stake Stacking (bounded cap, zero enemy HP inflation) -------------
+
+static func challenge_state(run) -> Dictionary:
+	if run == null:
+		return {"stage": 0, "stacks": 0, "cap": CHALLENGE_STAKE_CAP}
+	var cur_stage := int(run.stage)
+	var raw = run.get_meta(CHALLENGE_META) if run.has_meta(CHALLENGE_META) else null
+	if not (raw is Dictionary) or int(raw.get("stage", -1)) != cur_stage:
+		raw = {"stage": cur_stage, "stacks": 0, "cap": CHALLENGE_STAKE_CAP}
+		run.set_meta(CHALLENGE_META, raw)
+	return raw
+
+
+static func challenge_stacks(run) -> int:
+	return int(challenge_state(run).get("stacks", 0))
+
+
+static func can_stack_challenge(run) -> bool:
+	return run != null and run.alive() and challenge_stacks(run) < CHALLENGE_STAKE_CAP
+
+
+static func challenge_modifiers(run) -> Dictionary:
+	var stacks := challenge_stacks(run)
+	return {
+		"stacks": stacks,
+		"cap": CHALLENGE_STAKE_CAP,
+		"gate_rolls_bonus": stacks * CHALLENGE_GATE_ROLLS_PER_STACK,
+		"aggression_mult": 1.0 + float(stacks) * CHALLENGE_AGGRESSION_PER_STACK,
+		"pack_pressure_bonus": stacks * CHALLENGE_PACK_EXTRA_PER_STACK,
+		"hp_mult": CHALLENGE_HP_MULT,
+	}
+
+
+static func warden_gate_bonus_rolls(run) -> int:
+	return challenge_stacks(run) * CHALLENGE_GATE_ROLLS_PER_STACK
+
+
+static func stack_challenge(run, at := Vector3.ZERO) -> Dictionary:
+	if run == null or not run.alive():
+		return {"ok": false, "reason": "dead", "stacks": challenge_stacks(run), "cap": CHALLENGE_STAKE_CAP, "hp_mult": CHALLENGE_HP_MULT}
+	var st := challenge_state(run)
+	var cur := int(st.get("stacks", 0))
+	if cur >= CHALLENGE_STAKE_CAP:
+		return challenge_modifiers(run).merged({"ok": false, "reason": "capped", "at": at}, true)
+	st["stacks"] = cur + 1
+	return challenge_modifiers(run).merged({"ok": true, "reason": "ok", "at": at}, true)
+
+
+static func reset_challenge_stakes(run) -> void:
+	if run == null:
+		return
+	run.set_meta(CHALLENGE_META, {"stage": int(run.stage), "stacks": 0, "cap": CHALLENGE_STAKE_CAP})
 
 
 # The one trade a device of this kind and tier makes, before commitment. `rng` is the
@@ -220,6 +286,11 @@ func _init() -> void:
 
 func setup(ctx_ref, system_ref, spec_ref: Dictionary) -> void:
 	kind = String(spec_ref.get("device", kind))
+	if kind == CHALLENGE_DEVICE:
+		spot_owner = ""
+		offer = {"kind": CHALLENGE_DEVICE, "verb": "Raise", "cost_kind": "stake", "cost": 1, "win_kind": "warden_roll", "win": 1}
+		super.setup(ctx_ref, system_ref, spec_ref)
+		return
 	if not KINDS.has(kind):
 		kind = "trade_chest"
 	spot_owner = String(spec_ref.get("owner", ""))
@@ -261,6 +332,8 @@ func reach_point() -> Vector3:
 
 
 func ready_now() -> bool:
+	if kind == CHALLENGE_DEVICE:
+		return not spent and can_stack_challenge(ctx.run)
 	return not spent and can_take(offer, ctx.run)
 
 
@@ -273,10 +346,16 @@ func gauge() -> float:
 
 
 func words() -> String:
+	if kind == CHALLENGE_DEVICE:
+		return "Raise stake: +1 Warden roll"
 	return offer_words(offer)
 
 
 func fire() -> bool:
+	if kind == CHALLENGE_DEVICE:
+		last = stack_challenge(ctx.run, reach_point())
+		spent = bool(last.get("ok", false)) or spent
+		return true
 	last = take(offer, ctx.run, reach_point())
 	spent = bool(last.get("ok", false)) or spent
 	return true

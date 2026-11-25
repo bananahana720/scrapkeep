@@ -20,6 +20,35 @@ const DOOR_WORDS := {
 	"safe": {"name": "Foreman's kindness", "line": "A small efficiency fee. You're welcome."},
 }
 
+# W50-ISAAC-ECONOMY: Two deeper analog Trade Counter contracts (additive, leaving the 8 physical
+# pocket interiors in `pockets/w1/` and `trade_pockets_test.gd` untouched).
+const OVERTIME_CONTRACT := "overtime_contract"
+const SALVAGE_AUCTION := "salvage_auction"
+const CONTRACT_META := "w50_trade_contracts"
+const CONTRACTS := {
+	OVERTIME_CONTRACT: {
+		"id": OVERTIME_CONTRACT,
+		"name": "Overtime Contract",
+		"family": "risk",
+		"interior_base": "scrap_counter",
+		"time_limit_s": 45.0,
+		"payout_cogs": 140,
+		"penalty_hp_share": 0.15,
+		"floor_share": 0.10,
+		"line": "Beat the whistle for double shift pay.",
+	},
+	SALVAGE_AUCTION: {
+		"id": SALVAGE_AUCTION,
+		"name": "Scrap Auction",
+		"family": "safe",
+		"interior_base": "rivet_counter",
+		"min_bid": 40,
+		"rare_threshold": 90,
+		"relic_threshold": 160,
+		"line": "Name your cogs. Highest bid takes the crate.",
+	},
+}
+
 static func memory() -> Dictionary:
 	return {"risk_taken": false, "last_appeared": -100, "last_seen": -100, "last_refused": -100, "seen": [], "offers": {}, "decisions": {}}
 
@@ -252,3 +281,94 @@ static func validate_doc(doc, entrance: int) -> String:
 			if not (typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT) or not is_finite(value):
 				return "invalid trade position"
 	return ""
+
+
+# ---- W50-ISAAC-ECONOMY: Overtime Contract & Salvage Auction ---------------------------
+
+static func contract_ids() -> Array[String]:
+	return [OVERTIME_CONTRACT, SALVAGE_AUCTION]
+
+
+static func contract_of(id: String) -> Dictionary:
+	return CONTRACTS.get(id, {})
+
+
+static func door_words_for_contract(id: String) -> String:
+	var row: Dictionary = CONTRACTS.get(id, {})
+	if row.is_empty():
+		return ""
+	return door_words({"family": String(row["family"])}, String(row["name"]))
+
+
+static func _contract_state(run) -> Dictionary:
+	if run == null:
+		return {"stage": 0, "overtime_signed": false, "overtime_settled": false, "auctions_won": 0}
+	var cur := int(run.stage)
+	var raw = run.get_meta(CONTRACT_META) if run.has_meta(CONTRACT_META) else null
+	if not (raw is Dictionary) or int(raw.get("stage", -1)) != cur:
+		raw = {"stage": cur, "overtime_signed": false, "overtime_settled": false, "auctions_won": 0}
+		run.set_meta(CONTRACT_META, raw)
+	return raw
+
+
+static func sign_overtime_contract(run) -> Dictionary:
+	if run == null or not run.alive():
+		return {"ok": false, "reason": "dead"}
+	var st := _contract_state(run)
+	if bool(st.get("overtime_signed", false)):
+		return {"ok": false, "reason": "already_signed"}
+	st["overtime_signed"] = true
+	st["overtime_settled"] = false
+	var row: Dictionary = CONTRACTS[OVERTIME_CONTRACT]
+	return {"ok": true, "contract": OVERTIME_CONTRACT, "time_limit_s": float(row["time_limit_s"]), "payout_cogs": int(row["payout_cogs"])}
+
+
+static func settle_overtime_contract(run, clear_seconds: float, at := Vector3.ZERO) -> Dictionary:
+	if run == null or not run.alive():
+		return {"ok": false, "reason": "dead"}
+	var st := _contract_state(run)
+	if not bool(st.get("overtime_signed", false)):
+		return {"ok": false, "reason": "not_signed"}
+	if bool(st.get("overtime_settled", false)):
+		return {"ok": false, "reason": "already_settled"}
+	st["overtime_settled"] = true
+	var row: Dictionary = CONTRACTS[OVERTIME_CONTRACT]
+	if clear_seconds >= 0.0 and clear_seconds <= float(row["time_limit_s"]):
+		var payout := int(row["payout_cogs"])
+		run.add_cogs(payout)
+		run.add_core("overtime_contract", at)
+		return {"ok": true, "won": true, "cogs_paid": payout, "hp_lost": 0.0}
+	var floor_hp: float = ceilf(float(run.max_hp) * float(row["floor_share"]))
+	var want_loss: float = round(float(run.max_hp) * float(row["penalty_hp_share"]))
+	var actual_loss: float = maxf(0.0, minf(want_loss, float(run.hp) - floor_hp))
+	run.hp = maxf(floor_hp, float(run.hp) - actual_loss)
+	run.since_damage = 0.0
+	return {"ok": true, "won": false, "cogs_paid": 0, "hp_lost": actual_loss, "floor_hp": floor_hp}
+
+
+static func bid_salvage_auction(run, bid_cogs: int, rng: RandomNumberGenerator = null) -> Dictionary:
+	if run == null or not run.alive():
+		return {"ok": false, "reason": "dead"}
+	var row: Dictionary = CONTRACTS[SALVAGE_AUCTION]
+	if bid_cogs < int(row["min_bid"]):
+		return {"ok": false, "reason": "bid_too_low", "min_bid": int(row["min_bid"])}
+	if int(run.cogs) < bid_cogs:
+		return {"ok": false, "reason": "cant_afford", "cogs": int(run.cogs)}
+	var PartsScript = load("res://src/build/parts.gd")
+	var rarities: Array = ["rare", "relic"] if bid_cogs >= int(row["relic_threshold"]) else (["rare"] if bid_cogs >= int(row["rare_threshold"]) else ["common"])
+	var roll_rng := rng
+	if roll_rng == null:
+		roll_rng = RandomNumberGenerator.new()
+		roll_rng.seed = hash([run.run_seed, run.stage, "salvage_auction", bid_cogs, int(_contract_state(run).get("auctions_won", 0))])
+	var picks: Array = PartsScript.roll(roll_rng, rarities, run.class_id(), run.parts, 1)
+	if picks.is_empty():
+		picks = PartsScript.roll(roll_rng, ["common", "rare"], run.class_id(), run.parts, 1)
+	if picks.is_empty():
+		return {"ok": false, "reason": "empty_pool"}
+	if not run.spend_cogs(bid_cogs):
+		return {"ok": false, "reason": "cant_afford"}
+	var part_id := String(picks[0])
+	run.add_part(part_id, "salvage_auction")
+	var st := _contract_state(run)
+	st["auctions_won"] = int(st.get("auctions_won", 0)) + 1
+	return {"ok": true, "contract": SALVAGE_AUCTION, "bid": bid_cogs, "part_id": part_id, "rarities": rarities}

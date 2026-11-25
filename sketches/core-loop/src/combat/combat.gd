@@ -7340,11 +7340,17 @@ func _step_consumables(delta: float, enemies: Array) -> void:
 		if not is_instance_valid(d):
 			continue
 		if d.step(delta, ball_pos, ctx.run):
+			# --- W50-ISAAC-ECONOMY ---
+			Consumables.try_clone_pickup(ctx, self, "consumable", d.consumable_id, ball_pos)
+			# --- end W50-ISAAC-ECONOMY ---
 			d.remove_from_group(Consumables.DROP_GROUP)
 			d.queue_free()
 			continue
 		kept_drops.append(d)
 	_consumable_drops = kept_drops
+	# --- W50-ISAAC-ECONOMY ---
+	Consumables.step_w50(ctx, delta)
+	# --- end W50-ISAAC-ECONOMY ---
 
 	if ctx.run.has_consumable() and _consumable_tap_pressed():
 		use_consumable()
@@ -7409,6 +7415,10 @@ func use_consumable(override_id := "") -> Dictionary:
 			result.merge(_fire_foreman_memo(at), true)
 		Consumables.MOSS_PATCH:
 			result.merge(_fire_moss_patch(at), true)
+		# --- W50-ISAAC-ECONOMY ---
+		Consumables.SCRAP_DICE, Consumables.DUPLICATOR_SPOOL, Consumables.OVERLOAD_FUSE:
+			result.merge(Consumables.fire_w50(cid, ctx, self, at), true)
+		# --- end W50-ISAAC-ECONOMY ---
 	consumable_uses += 1
 	last_consumable = result
 	if ctx.events != null and ctx.events.has_signal("consumable_used"):
@@ -7716,8 +7726,11 @@ func _clear_consumables_runtime() -> void:
 			d.remove_from_group(Consumables.DROP_GROUP)
 			d.queue_free()
 	_consumable_drops.clear()
-	for id in ["consumable_nitro_siphon", "consumable_anchor_flare", "consumable_overclock_card", "consumable_foreman_memo"]:
+	for id in ["consumable_nitro_siphon", "consumable_anchor_flare", "consumable_overclock_card", "consumable_foreman_memo", "consumable_duplicator_spool"]:
 		_clear_buff(id)
+	# --- W50-ISAAC-ECONOMY ---
+	Consumables.clear_w50(ctx.run if ctx != null else null)
+	# --- end W50-ISAAC-ECONOMY ---
 
 
 # --- W47-TALLY-B-CODE Ghost Shift Tree Queries & Ally-Husk Strikes -------------------------

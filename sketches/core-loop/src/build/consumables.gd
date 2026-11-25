@@ -16,6 +16,11 @@ const ANCHOR_FLARE := "anchor_flare"
 const OVERCLOCK_CARD := "overclock_card"
 const FOREMAN_MEMO := "foreman_memo"
 const MOSS_PATCH := "moss_patch"
+# W50-ISAAC-ECONOMY: 3 new Isaac-pattern cartridges (additive ORDER_W50/ROWS_W50 so
+# base 6-cartridge asset/count pins stay intact while all runtime/roll APIs serve all 9).
+const SCRAP_DICE := "scrap_dice"
+const DUPLICATOR_SPOOL := "duplicator_spool"
+const OVERLOAD_FUSE := "overload_fuse"
 
 const ORDER: Array[String] = [
 	CAP_CHARGE,
@@ -25,6 +30,16 @@ const ORDER: Array[String] = [
 	FOREMAN_MEMO,
 	MOSS_PATCH,
 ]
+
+const ORDER_W50: Array[String] = [
+	SCRAP_DICE,
+	DUPLICATOR_SPOOL,
+	OVERLOAD_FUSE,
+]
+
+const DUPLICATOR_WINDOW_S := 12.0
+const OVERLOAD_ECHO_MULT := 0.75
+const W50_STATE_META := "w50_consumable_state"
 
 const BELT_PART_ID := "pocket_belt"
 const BELT_PRICE := 90
@@ -153,6 +168,46 @@ const ROWS := {
 	},
 }
 
+# Additive W50 cartridges (6 -> 9 total), reusing existing cartridge belt HUD, icons & GLBs.
+const ROWS_W50 := {
+	SCRAP_DICE: {
+		"id": SCRAP_DICE,
+		"name": "Foreman's Audit Die",
+		"maker": "foreman",
+		"icon": "cons_overclock_card",
+		"model": MODEL_DIR + "cons_overclock_card.glb",
+		"color": Palette.BRASS,
+		"price": 75,
+		"duration_s": 0.0,
+		"headline": "Rerolls nearby offers and shop stock to same or higher tier.",
+	},
+	DUPLICATOR_SPOOL: {
+		"id": DUPLICATOR_SPOOL,
+		"name": "Carbon Tape",
+		"maker": "moss",
+		"icon": "cons_moss_patch",
+		"model": MODEL_DIR + "cons_moss_patch.glb",
+		"color": Palette.AMBER,
+		"price": 80,
+		"duration_s": DUPLICATOR_WINDOW_S,
+		"max_clones": 1,
+		"headline": "12 s clones next pickup, core or cartridge strictly once.",
+	},
+	OVERLOAD_FUSE: {
+		"id": OVERLOAD_FUSE,
+		"name": "Breaker Fuse",
+		"maker": "foundry",
+		"icon": "cons_cap_charge",
+		"model": MODEL_DIR + "cons_cap_charge.glb",
+		"color": Palette.ARC,
+		"price": 75,
+		"duration_s": 0.0,
+		"echo_mult": OVERLOAD_ECHO_MULT,
+		"max_echoes": 1,
+		"headline": "Next Active or Ultimate echoes once at 0.75x.",
+	},
+}
+
 static var _packed_cache := {}
 
 
@@ -160,28 +215,41 @@ static func _reset() -> void:
 	_packed_cache.clear()
 
 
+static func all_order() -> Array[String]:
+	var out: Array[String] = []
+	out.append_array(ORDER)
+	out.append_array(ORDER_W50)
+	return out
+
+
+static func all_rows() -> Dictionary:
+	return ROWS.merged(ROWS_W50, true)
+
+
 static func is_valid(consumable_id: String) -> bool:
-	return ROWS.has(consumable_id)
+	return ROWS.has(consumable_id) or ROWS_W50.has(consumable_id)
 
 
 static func row_of(consumable_id: String) -> Dictionary:
-	return ROWS.get(consumable_id, {})
+	if ROWS.has(consumable_id):
+		return ROWS[consumable_id]
+	return ROWS_W50.get(consumable_id, {})
 
 
 static func price_of(consumable_id: String) -> int:
-	return int(ROWS.get(consumable_id, {}).get("price", 60))
+	return int(row_of(consumable_id).get("price", 60))
 
 
 static func icon_of(consumable_id: String) -> String:
-	return String(ROWS.get(consumable_id, {}).get("icon", ""))
+	return String(row_of(consumable_id).get("icon", ""))
 
 
 static func color_of(consumable_id: String) -> Color:
-	return ROWS.get(consumable_id, {}).get("color", Palette.SAND)
+	return row_of(consumable_id).get("color", Palette.SAND)
 
 
 static func model_path_of(consumable_id: String) -> String:
-	return String(ROWS.get(consumable_id, {}).get("model", ""))
+	return String(row_of(consumable_id).get("model", ""))
 
 
 static func is_secondary_counter(kind: String) -> bool:
@@ -240,15 +308,210 @@ static func gate_record(offer_id: String) -> Dictionary:
 
 
 static func roll_id(rng: RandomNumberGenerator, exclude: Array = []) -> String:
+	var full := all_order()
 	var pool: Array[String] = []
-	for cid in ORDER:
+	for cid in full:
 		if not cid in exclude:
 			pool.append(cid)
 	if pool.is_empty():
-		pool = ORDER.duplicate()
+		pool = full
 	if rng == null:
 		return pool[0]
 	return pool[rng.randi_range(0, pool.size() - 1)]
+
+
+# ---- W50-ISAAC-ECONOMY: Audit Die, Carbon Tape (1x clone), Breaker Fuse (1x 0.75x echo) --
+
+static func _w50_state(run) -> Dictionary:
+	if run == null:
+		return {"duplicator_left": 0.0, "duplicator_armed": false, "duplicator_clones": 0, "overload_armed": false, "overload_echoes": 0}
+	var raw = run.get_meta(W50_STATE_META) if run.has_meta(W50_STATE_META) else null
+	if not (raw is Dictionary):
+		raw = {"duplicator_left": 0.0, "duplicator_armed": false, "duplicator_clones": 0, "overload_armed": false, "overload_echoes": 0}
+		run.set_meta(W50_STATE_META, raw)
+	return raw
+
+
+static func clear_w50(run) -> void:
+	if run == null:
+		return
+	run.set_meta(W50_STATE_META, {"duplicator_left": 0.0, "duplicator_armed": false, "duplicator_clones": 0, "overload_armed": false, "overload_echoes": 0})
+
+
+static func duplicator_left(run) -> float:
+	var st := _w50_state(run)
+	return float(st.get("duplicator_left", 0.0)) if bool(st.get("duplicator_armed", false)) else 0.0
+
+
+static func duplicator_armed(run) -> bool:
+	var st := _w50_state(run)
+	return bool(st.get("duplicator_armed", false)) and float(st.get("duplicator_left", 0.0)) > 0.0
+
+
+static func overload_armed(run) -> bool:
+	return bool(_w50_state(run).get("overload_armed", false))
+
+
+static func step_w50(ctx, delta: float) -> void:
+	if ctx == null or ctx.run == null:
+		return
+	var st := _w50_state(ctx.run)
+	if bool(st.get("duplicator_armed", false)):
+		st["duplicator_left"] = maxf(0.0, float(st.get("duplicator_left", 0.0)) - delta)
+		if float(st["duplicator_left"]) <= 0.0:
+			st["duplicator_armed"] = false
+
+
+static func consume_overload_fuse(run) -> bool:
+	if run == null:
+		return false
+	var st := _w50_state(run)
+	if not bool(st.get("overload_armed", false)):
+		return false
+	st["overload_armed"] = false
+	st["overload_echoes"] = int(st.get("overload_echoes", 0)) + 1
+	return true
+
+
+static func fire_w50(cid: String, ctx, combat, at: Vector3) -> Dictionary:
+	var row := row_of(cid)
+	var st := _w50_state(ctx.run if ctx != null else null)
+	match cid:
+		SCRAP_DICE:
+			var shop_res := {"rerolled": 0, "before_tiers": [], "after_tiers": []}
+			if ctx != null and ctx.build != null and ctx.build.get("shop") != null and ctx.build.shop.has_method("audit_reroll"):
+				shop_res = ctx.build.shop.audit_reroll()
+			var gate_rerolls := _audit_reroll_gates(ctx)
+			if combat != null and combat.get("effects") != null:
+				combat.effects.ring(at, 4.5, row.get("color", Palette.BRASS))
+			return {
+				"rerolled_shop": int(shop_res.get("rerolled", 0)),
+				"before_tiers": shop_res.get("before_tiers", []),
+				"after_tiers": shop_res.get("after_tiers", []),
+				"rerolled_gates": gate_rerolls,
+			}
+		DUPLICATOR_SPOOL:
+			st["duplicator_armed"] = true
+			st["duplicator_left"] = DUPLICATOR_WINDOW_S
+			if combat != null and combat.has_method("_post_consumable_buff"):
+				combat._post_consumable_buff("consumable_duplicator_spool", String(row["icon"]), row["color"], DUPLICATOR_WINDOW_S)
+			if combat != null and combat.get("effects") != null:
+				combat.effects.ring(at, 4.0, row.get("color", Palette.AMBER))
+			return {"duration_s": DUPLICATOR_WINDOW_S, "armed": true}
+		OVERLOAD_FUSE:
+			st["overload_armed"] = true
+			if combat != null and combat.get("effects") != null:
+				combat.effects.ring(at, 4.2, row.get("color", Palette.ARC))
+			return {"armed": true, "echo_mult": OVERLOAD_ECHO_MULT}
+	return {}
+
+
+static func _audit_reroll_gates(ctx) -> int:
+	if ctx == null or ctx.build == null or ctx.build.get("gates") == null or ctx.run == null:
+		return 0
+	var gates = ctx.build.gates
+	var offers: Array = gates.get("offers") if gates.get("offers") is Array else []
+	if offers.is_empty():
+		return 0
+	var PartsScript = load("res://src/build/parts.gd")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([ctx.run.run_seed, ctx.run.stage, "scrap_dice_gates", offers.size()])
+	var changed := 0
+	var used: Array = []
+	for o in offers:
+		if o is Dictionary and o.has("part_id"):
+			used.append(String(o["part_id"]))
+	for o in offers:
+		if not (o is Dictionary) or not o.has("part_id"):
+			continue
+		var pid := String(o["part_id"])
+		var d: Resource = PartsScript.def(pid)
+		if d == null:
+			continue
+		var min_tier := int(d.tier)
+		var rarities: Array = ["rare", "relic"] if min_tier >= 2 else ["common", "rare"]
+		var pool: Array = PartsScript.offer_pool(ctx.run.class_id(), rarities).filter(func(id):
+			var pd: Resource = PartsScript.def(id)
+			return pd != null and int(pd.tier) >= min_tier and not (id in used) and not PartsScript.maxed(id, ctx.run.parts))
+		if not pool.is_empty():
+			pool.sort()
+			var picked := String(pool[rng.randi_range(0, pool.size() - 1)])
+			o["part_id"] = picked
+			o["name"] = PartsScript.display_name(picked)
+			o["tier"] = int(PartsScript.def(picked).tier)
+			used.append(picked)
+			changed += 1
+	return changed
+
+
+# Clones the next pickup/core/consumable collected inside the 12 s Carbon Tape window,
+# strictly ONCE per pop (disarms atomically before granting to prevent any clone chain).
+static func try_clone_pickup(ctx, combat, kind: String, payload, at := Vector3.ZERO) -> Dictionary:
+	if ctx == null or ctx.run == null:
+		return {"cloned": false}
+	var st := _w50_state(ctx.run)
+	if not bool(st.get("duplicator_armed", false)) or float(st.get("duplicator_left", 0.0)) <= 0.0:
+		return {"cloned": false}
+	st["duplicator_armed"] = false
+	st["duplicator_left"] = 0.0
+	st["duplicator_clones"] = int(st.get("duplicator_clones", 0)) + 1
+	match kind:
+		"consumable":
+			var cid := String(payload)
+			if not is_valid(cid):
+				return {"cloned": false}
+			if not ctx.run.add_consumable(cid) and combat != null and combat.has_method("drop_consumable"):
+				combat.drop_consumable(cid, at + Vector3(3.2, 0.0, 0.0))
+		"core":
+			ctx.run.add_core("duplicator_spool", at)
+		"part":
+			var pid := String(payload)
+			if pid != "":
+				ctx.run.add_part(pid, "duplicator_spool")
+		"cogs":
+			var amt := int(payload)
+			if amt > 0:
+				ctx.run.add_cogs(amt)
+		"scrap":
+			var samt := int(payload)
+			if samt > 0:
+				ctx.run.add_scrap(samt, at)
+		_:
+			return {"cloned": false}
+	return {"cloned": true, "kind": kind, "payload": payload, "clones_total": int(st["duplicator_clones"])}
+
+
+# Echoes an Ultimate strike once at 0.75x (item_proc) if Breaker Fuse is armed.
+static func echo_ultimate(ctx, combat, base_damage: float, at: Vector3, radius := 8.0) -> Dictionary:
+	if ctx == null or ctx.run == null or combat == null:
+		return {"echoed": false, "hits": 0}
+	if not consume_overload_fuse(ctx.run):
+		return {"echoed": false, "hits": 0}
+	var dmg := maxf(1.0, base_damage * OVERLOAD_ECHO_MULT)
+	var hits := 0
+	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+		if is_instance_valid(enemy) and not enemy.is_dead() and enemy.global_position.distance_to(at) <= radius:
+			combat._hit(enemy, "ultimate_echo", dmg, enemy.global_position - at, 6.0, "", "item_proc", "cannon")
+			hits += 1
+	if combat.get("effects") != null:
+		combat.effects.ring(at, radius, Palette.ARC)
+	return {"echoed": true, "mult": OVERLOAD_ECHO_MULT, "damage": dmg, "hits": hits, "source": "item_proc"}
+
+
+# Fallback 0.75x item_proc echo for actives without a custom fire_echo() method.
+static func echo_active_fallback(ctx, combat, _active_id: String, mult := OVERLOAD_ECHO_MULT) -> int:
+	if ctx == null or combat == null or ctx.player == null:
+		return 0
+	var at: Vector3 = ctx.player.ball_position()
+	var dmg := 20.0 * mult * (float(ctx.tuning.mod("weapon_damage")) if ctx.tuning != null else 1.0)
+	var hits := 0
+	for enemy in combat._nearest_list(at, 16.0, 4):
+		if is_instance_valid(enemy) and not enemy.is_dead():
+			combat._hit(enemy, "active_echo", dmg, enemy.global_position - at, 6.0, "", "item_proc", "cannon")
+			hits += 1
+	if combat.get("effects") != null:
+		combat.effects.ring(at, 5.5, Palette.ARC)
+	return maxi(1, hits)
 
 
 static func roll_for_destructible(seed_val: int, run_id: String, stage: int, piece_id: String, tier: int) -> String:

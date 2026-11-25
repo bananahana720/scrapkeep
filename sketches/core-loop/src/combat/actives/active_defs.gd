@@ -70,6 +70,22 @@ const ROWS := {
 		"kind": preload("res://src/combat/actives/glass_lance.gd"),
 	},
 	# --- end Glass Lance ---
+	# --- Slag Mortar (Redjaw Workshops) ---
+	"slag_mortar": {
+		"name": "Slag Mortar", "maker": "redjaw", "rarity": "rare",
+		"verb": "Lob a molten slag shell", "text": "Drops a burning slag zone that breaks soft walls",
+		"max_charges": 2, "recharge": 10.0, "kill_charge": 0.14, "bonus_cap": 4, "windup": 0.35,
+		"kind": preload("res://src/combat/actives/slag_mortar.gd"),
+	},
+	# --- end Slag Mortar ---
+	# --- Magnet Sling (Fleet Surplus) ---
+	"magnet_sling": {
+		"name": "Magnet Sling", "maker": "fleet_surplus", "rarity": "relic",
+		"verb": "Toss a cluster anchor buoy", "text": "Pulls nearby machines together, then snaps inward",
+		"max_charges": 1, "recharge": 12.0, "kill_charge": 0.12, "bonus_cap": 4, "windup": 0.0,
+		"kind": preload("res://src/combat/actives/magnet_sling.gd"),
+	},
+	# --- end Magnet Sling ---
 }
 
 # The active every run opens with while --actives=on and no offer has racked one yet.
