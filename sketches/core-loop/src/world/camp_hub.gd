@@ -40,6 +40,9 @@ const RadioTakes := preload("res://src/core/radio_takes.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 # Features that plug into the hub. Each is a script with `static func attach(hub)`.
 const FEATURES: Array = [
@@ -353,11 +356,21 @@ func _title_stage():
 	return presentation.get("title_stage") if presentation != null else null
 
 
+var _pet_idle := 0.0
+
+
 func _process(delta: float) -> void:
 	if _quip_hold > 0.0:
 		_quip_hold -= delta
 		if _quip_hold <= 0.0:
 			_end_quip(false)
+	if walking and is_instance_valid(_pet) and (_pet_tween == null or not _pet_tween.is_valid()):
+		if EnemyMotion.motion_scale > 0.0:
+			_pet_idle += delta
+			var breath := sin(_pet_idle * 3.1) * 0.045 * EnemyMotion.motion_scale
+			_pet.scale = Vector3(1.0 - breath * 0.5, 1.0 + breath, 1.0 - breath * 0.5)
+		else:
+			_pet.scale = Vector3.ONE
 
 
 func _physics_process(_delta: float) -> void:
@@ -521,6 +534,14 @@ func _place_layout() -> void:
 	for row: Array in Layout.DRESSING:
 		var p: Vector3 = Layout.at(row[1], row[2])
 		_place(row[0], Layout.place(p, Layout.yaw_to_centre(p.x, p.z) + deg_to_rad(row[3])))
+	var camp_fx := WorldFxAnchor.make("camp")
+	if camp_fx != null:
+		camp_fx.name = "CampFireFx"
+		root.add_child(camp_fx)
+		if has_socket("camp_fire_pit", "light_0"):
+			camp_fx.position = to_local_point(socket("camp_fire_pit", "light_0").origin)
+		elif _pieces.has("camp_fire_pit"):
+			camp_fx.position = (_pieces["camp_fire_pit"] as Node3D).position + Vector3(0.0, 0.5, 0.0)
 
 
 # Stands a loose piece's lowest drawn point on the plaza's collider below it (the plaza's top, not y 0: a fixed 0.3 m left
@@ -785,13 +806,28 @@ func _pet_react() -> void:
 	if _pet_tween != null and _pet_tween.is_valid():
 		_pet_tween.kill()
 	_pet.position = Vector3(_pet.position.x, 0.0, _pet.position.z)
+	_pet.scale = Vector3.ONE
 	_pet_tween = _pet.create_tween()
 	_pet_tween.set_parallel(false)
-	_pet_tween.tween_property(_pet, "rotation:y", heading, 0.18)
+	var squashed := Vector3(1.16, 0.82, 1.16)
+	var stretched := Vector3(0.88, 1.18, 0.88)
+	var motion_on := EnemyMotion.motion_scale > 0.0
+	_pet_tween.tween_property(_pet, "rotation:y", heading, 0.16)
+	if motion_on:
+		_pet_tween.parallel().tween_property(_pet, "scale", squashed, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	for hop in 2:
 		var land := start + step * float(hop + 1) * 0.5
-		_pet_tween.tween_property(_pet, "position", Vector3(land.x, 0.55, land.z), 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		_pet_tween.tween_property(_pet, "position", Vector3(land.x, 0.0, land.z), 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		_pet_tween.tween_property(_pet, "position", Vector3(land.x, 0.58, land.z), 0.13).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		if motion_on:
+			_pet_tween.parallel().tween_property(_pet, "scale", stretched, 0.13).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		_pet_tween.tween_property(_pet, "position", Vector3(land.x, 0.0, land.z), 0.13).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		if motion_on:
+			_pet_tween.parallel().tween_property(_pet, "scale", squashed, 0.13).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	if motion_on:
+		_pet_tween.tween_property(_pet, "scale", Vector3.ONE, 0.1).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	if is_instance_valid(root):
+		FxLibrary.burst(root, "brass_spark", _pet.global_position + Vector3.UP * 0.8, 8, Palette.BRASS)
+		FxLibrary.burst(root, "steam_puff", _pet.global_position + Vector3.UP * 0.2, 4)
 	var audio = game.audio()
 	if audio != null:
 		audio.chirp("primer_set")

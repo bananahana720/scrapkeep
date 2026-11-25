@@ -9,6 +9,9 @@ const EventGround := preload("res://src/world/events/event_ground.gd")
 const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const Palette := preload("res://src/core/palette.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 # Cones use [length, width]. The ring uses an [x, z] footprint with a safe eye.
 const FALLOUT_EYE_FRACTION := 0.4
@@ -112,7 +115,47 @@ func _land(row: Dictionary, ctx: Dictionary) -> void:
 		_swap(row, state, swap)
 	hazard.painter().paint(Threat.marks(hazard.descriptor(), false), Threat.STATIC_LAYERS)
 	hazard.step(0.0)
+	_spawn_plume(row, state)
 	_strike(row, state, ctx)
+
+
+func _spawn_plume(row: Dictionary, state: Dictionary) -> void:
+	if not is_inside_tree():
+		return
+	var kind := String(row.effect.get("hazard", ""))
+	var site: Dictionary = state.site
+	var at: Vector3 = state.at
+	var size: Array = row.effect.hazard_m
+	var spawned: Array = []
+	var count_scale := 0.5 if EnemyMotion.motion_scale <= 0.0 else 1.0
+	if SHAPES.get(kind, {}).get("form", "") == "cone":
+		var axis := -deg_to_rad(float(site.yaw_deg))
+		var dir := Vector3(cos(axis), 0.0, sin(axis)).normalized()
+		var length := float(size[0])
+		for frac in [0.18, 0.5, 0.82]:
+			var pt := at + dir * (length * float(frac)) + Vector3.UP * 0.9
+			var tint := Palette.AMBER if kind == "burner_flare" else Color.TRANSPARENT
+			var p := FxLibrary.burst(self, "steam_puff", pt, maxi(3, int(round(10.0 * count_scale))), tint)
+			if p != null:
+				spawned.append(p)
+			if kind == "arc_steam_cone" or kind == "burner_flare":
+				var sp := FxLibrary.burst(self, "arc_fizz" if kind == "arc_steam_cone" else "brass_spark",
+					pt, maxi(4, int(round(12.0 * count_scale))), tint)
+				if sp != null:
+					spawned.append(sp)
+	else:
+		var outer := minf(float(size[0]), float(size[1])) * 0.5
+		var mid_r := outer * (0.5 + FALLOUT_EYE_FRACTION * 0.5)
+		for k in 6:
+			var a := TAU * float(k) / 6.0
+			var pt := at + Vector3(cos(a) * mid_r, 0.8, sin(a) * mid_r)
+			var p := FxLibrary.burst(self, "steam_puff", pt, maxi(3, int(round(8.0 * count_scale))))
+			if p != null:
+				spawned.append(p)
+			var d := FxLibrary.burst(self, "crack_debris", pt, maxi(4, int(round(8.0 * count_scale))))
+			if d != null:
+				spawned.append(d)
+	state["vfx"] = spawned
 
 
 func _step(row: Dictionary, ctx: Dictionary) -> void:
@@ -129,6 +172,9 @@ func _end(row: Dictionary) -> void:
 	var state: Dictionary = active[row.id]
 	if state.swap != "":
 		EventGround.set_overlay(world, row, state.overlay_record, false)
+	for p in state.get("vfx", []):
+		if is_instance_valid(p):
+			(p as Node).free()
 	state.hazard.finish()
 	state.hazard.free()
 	active.erase(row.id)

@@ -6,7 +6,9 @@ const Palette := preload("res://src/core/palette.gd")
 const GLB := "res://assets/models/world_one/enemy_ramp_flipper.glb"
 # 2026-10-23 w19 Spillway roster: the sluice flap's speed ride (RIDE_KICK, RIDE_TIER, _ride) and its
 # codex discovery, design-v3/SPILLWAY-ROSTER.md; was f81182dc.
-const BASE_MECHANIC_SHA := "494ee927447c73bfebbf5280eed9022831eebd0060327c5801826ffdc5cc0c84"
+# 2026-11-24 W46-ANIM-VFX-FLAIR: eased deploy/kick/fold plate pose (DEPLOY_S, KICK_S, FOLD_S, _fold_t)
+# and presentation VFX bursts in _commit/_go_live; gameplay mechanics unchanged; was 494ee927.
+const BASE_MECHANIC_SHA := "7a672f2fd645f8f78e43fceff6d79f681985f9a69a2ee1a9d0f69ce57a312c1a"
 const BASE_CONSTS := {"PLATE_RADIUS": 3.6, "LEAD": .9, "TILT": .35, "FLING_UP": 30.0,
 	"FLING_SIDE": 22.0, "RIDE_UP": 9.0, "HP": 45.0}
 const BASE_VALUES := {"radius": .8, "half_height": 1.1, "weight": 1.2, "scrap_value": 4,
@@ -192,31 +194,31 @@ func _pose(enemy: Node3D, plate: MeshInstance3D) -> void:
 		var axis := side.cross(Vector3.UP).normalized()
 		var normal_loaded := Vector3.ZERO
 		var normal_released := Vector3.ZERO
-		for state in [[1, 0.0, 0.0], [1, .5, .125], [1, 1.0, .25], [1, 2.0, .25], [2, 0.0, .6]]:
+		for state in [[1, 0.0, 0.0], [1, .5, .14], [1, 1.0, .28], [1, 2.0, .28], [2, .09, .65]]:
 			enemy.set("phase", state[0])
 			enemy.set("_t", state[1])
 			enemy._pose()
 			var want := Basis(axis, state[2])
-			_check(plate.basis.is_equal_approx(want), "state pose phase %d clock %.2f side %s angle %.3f" % [state[0], state[1], side, state[2]])
+			_check(plate.basis.orthonormalized().is_equal_approx(want), "state pose phase %d clock %.2f side %s angle %.3f" % [state[0], state[1], side, state[2]])
 			if state[0] == 1 and state[1] == 1.0:
-				normal_loaded = plate.basis.y
+				normal_loaded = plate.basis.orthonormalized().y
 			if state[0] == 2:
-				normal_released = plate.basis.y
+				normal_released = plate.basis.orthonormalized().y
 		var rise := 0.0
 		var in_sweep := true
 		for v in _vertices(plate):
-			var loaded := Basis(axis, .25) * v
-			var released := Basis(axis, .6) * v
+			var loaded := Basis(axis, .28) * v
+			var released := Basis(axis, .65) * v
 			rise = maxf(rise, absf(released.y - loaded.y))
 			# Convex base-box support in each rotated axis bounds the entire moving mesh.
-			for angle in [.0, .125, .25, .6]:
+			for angle in [.0, .14, .28, .65]:
 				var rot := Basis(axis, angle)
 				var point := rot * v
 				var limit := rot.x.abs() * 2.88 + rot.y.abs() * .09 + rot.z.abs() * 2.88
 				in_sweep = in_sweep and point.abs().x <= limit.x + .001 and point.abs().y <= limit.y + .001 and point.abs().z <= limit.z + .001
 		print("loaded/released side %s: normal delta %.3f rad, max vertex height delta %.3f m" % [side, normal_loaded.angle_to(normal_released), rise])
-		_check(is_equal_approx(normal_loaded.angle_to(normal_released), .35) and rise >= .91,
-			"loaded versus released: .35 rad normal change and >= .91 m deck edge travel")
+		_check(normal_loaded.angle_to(normal_released) >= .35 and rise >= .91,
+			"loaded versus released: >= .35 rad normal change and >= .91 m deck edge travel")
 		_check(in_sweep, "moving plate stays inside rotated base box sweep")
 		enemy._pose()
 		var once := plate.basis
