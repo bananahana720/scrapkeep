@@ -19,7 +19,9 @@ const PanelShell := preload("res://src/build/panel_shell.gd")
 # lay_out, magnet, collection, value, timing and every near spin unchanged.
 # Re-pinned 2026-11-21 (W45 perf unit 4): step() skips length() sqrt on uncaught pickups past max(reach, SPIN_RANGE, COLLECT);
 # lay_out, magnet, collection, recovery expiry, value, timing and near spins unchanged.
-const LOGIC_SHA := "f6c021fc040f80aeca0eed3acae2bf3086567a285d802f6457d40de774d4e83d"
+# Re-pinned 2026-11-25 (W50-sync 01ada29a0): pull_along_segment() Rule 7 helper added;
+# lay_out, magnet, collection, recovery expiry, value, timing, spin and seeded gameplay source unchanged.
+const LOGIC_SHA := "d33bb77bf0dcf39a092cd72a61e22f6b90a6080aabbd5e6cb2fcdfad0d21f4f7"
 
 var failures: Array[String] = []
 var game

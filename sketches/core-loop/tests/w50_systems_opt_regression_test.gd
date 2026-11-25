@@ -45,10 +45,20 @@ func _run() -> void:
 
 func _test_bindings_and_story_and_lore() -> void:
 	var actions := Bindings.actions()
-	_check(int(actions["cl_consumable"].get("pad", -1)) == JOY_BUTTON_LEFT_STICK,
-		"cl_consumable maps to JOY_BUTTON_LEFT_STICK")
-	_check(int(actions["cl_bay_2"].get("pad", -1)) != int(actions["cl_consumable"].get("pad", -1)),
-		"cl_consumable and cl_bay_2 do not collide on pad")
+	_check(Bindings.CONSUMABLE_PAD == JOY_BUTTON_LEFT_STICK,
+		"Bindings.CONSUMABLE_PAD defaults to JOY_BUTTON_LEFT_STICK")
+	_check(int(actions["cl_bay_2"].get("pad", -1)) != Bindings.CONSUMABLE_PAD,
+		"cl_consumable pad and cl_bay_2 do not collide")
+	_check(not actions["cl_consumable"].has("pad"),
+		"cl_consumable keeps L3 unbound in InputMap so Settings pad rebind stays free")
+	for cid in Consumables.ORDER_W50:
+		_check(ResourceLoader.exists(Consumables.model_path_of(cid)),
+			"W50 consumable %s resolves existing GLB" % cid)
+		_check(ResourceLoader.exists(Consumables.ICON_DIR + Consumables.icon_of(cid) + ".svg"),
+			"W50 consumable %s resolves existing SVG icon" % cid)
+	var belt_icon := String(Consumables.gate_record(Consumables.BELT_OFFER_ID).get("icon", ""))
+	_check(ResourceLoader.exists(Consumables.ICON_DIR + belt_icon + ".svg"),
+		"pocket_belt gate record resolves existing SVG icon")
 
 	var kest_ch3 := _chapter("demolitions_caster.ch3")
 	_check("order:wo_kest_2" in kest_ch3.get("accepts", []), "kest ch3 accepts order:wo_kest_2")

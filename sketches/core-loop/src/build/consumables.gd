@@ -47,6 +47,7 @@ const OFFER_PREFIX := "consumable:"
 const BELT_OFFER_ID := "belt:pocket_belt"
 
 const MODEL_DIR := "res://assets/models/consumables/"
+const ICON_DIR := "res://assets/icons/"
 const CRADLE_MODEL := MODEL_DIR + "cons_drop_cradle.glb"
 const BALLOON_MODEL := MODEL_DIR + "cons_anchor_balloon.glb"
 const DROP_GROUP := "consumable_drop"
@@ -242,8 +243,23 @@ static func price_of(consumable_id: String) -> int:
 	return int(row_of(consumable_id).get("price", 60))
 
 
+static func _preferred_icon(preferred: String, fallback: String) -> String:
+	if preferred != "" and ResourceLoader.exists(ICON_DIR + preferred + ".svg"):
+		return preferred
+	return fallback
+
+
+static func _preferred_model(preferred_path: String, fallback_path: String) -> String:
+	if preferred_path != "" and ResourceLoader.exists(preferred_path):
+		return preferred_path
+	return fallback_path
+
+
 static func icon_of(consumable_id: String) -> String:
-	return String(row_of(consumable_id).get("icon", ""))
+	var fallback := String(row_of(consumable_id).get("icon", ""))
+	if ROWS_W50.has(consumable_id):
+		return _preferred_icon("cons_" + consumable_id, fallback)
+	return fallback
 
 
 static func color_of(consumable_id: String) -> Color:
@@ -251,7 +267,10 @@ static func color_of(consumable_id: String) -> Color:
 
 
 static func model_path_of(consumable_id: String) -> String:
-	return String(row_of(consumable_id).get("model", ""))
+	var fallback := String(row_of(consumable_id).get("model", ""))
+	if ROWS_W50.has(consumable_id):
+		return _preferred_model(MODEL_DIR + "cons_" + consumable_id + ".glb", fallback)
+	return fallback
 
 
 static func is_secondary_counter(kind: String) -> bool:
@@ -284,7 +303,7 @@ static func gate_record(offer_id: String) -> Dictionary:
 			"synergy": "",
 			"mark": "",
 			"family": "utility",
-			"icon": "cons_cap_charge",
+			"icon": _preferred_icon("cons_pocket_belt", "cons_cap_charge"),
 			"trigger_icon": "",
 			"element_icon": "",
 		}
@@ -303,7 +322,7 @@ static func gate_record(offer_id: String) -> Dictionary:
 		"synergy": "",
 		"mark": "",
 		"family": "utility",
-		"icon": String(row.get("icon", "")),
+		"icon": icon_of(cid),
 		"trigger_icon": "",
 		"element_icon": "",
 	}
@@ -410,7 +429,7 @@ static func fire_w50(cid: String, ctx, combat, at: Vector3) -> Dictionary:
 			st["duplicator_armed"] = true
 			st["duplicator_left"] = DUPLICATOR_WINDOW_S
 			if combat != null and combat.has_method("post_consumable_buff"):
-				combat.post_consumable_buff("consumable_duplicator_spool", String(row["icon"]), row["color"], DUPLICATOR_WINDOW_S)
+				combat.post_consumable_buff("consumable_duplicator_spool", icon_of(cid), row["color"], DUPLICATOR_WINDOW_S)
 			if combat != null and combat.get("effects") != null:
 				combat.effects.ring(at, 4.0, row.get("color", Palette.AMBER))
 			return {"duration_s": DUPLICATOR_WINDOW_S, "armed": true}

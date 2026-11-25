@@ -68,16 +68,18 @@ const VERBS := {
 const EXTRA_ACTIONS := {
 	"cl_retry": {"keys": [KEY_R], "pad": JOY_BUTTON_RIGHT_SHOULDER},
 	"cl_pause": {"keys": [KEY_P, KEY_ESCAPE], "pad": JOY_BUTTON_START},
-	"cl_consumable": {"keys": [KEY_C], "pad": JOY_BUTTON_LEFT_STICK},
+	"cl_consumable": {"keys": [KEY_C]},
 	"cl_radio_next": {"keys": [KEY_PERIOD]},
 	"cl_radio_prev": {"keys": [KEY_COMMA]},
 	"cl_radio_skip": {"keys": [KEY_SLASH]},
 	"cl_radio_pin": {"keys": [KEY_SEMICOLON]},
 }
-# Pocket Consumable Belt quick-tap (W47-C1): keyboard C + gamepad L3 (Left Stick click)
-# via InputMap so it never collides with cl_bay_2 (D-pad Up), supports all controllers, and is remappable.
+# Pocket Consumable Belt quick-tap (W47-C1): keyboard C via InputMap + gamepad L3 (Left Stick click)
+# across all connected controllers whenever no other InputMap action claims L3 — never collides
+# with cl_bay_2 (D-pad Up) and keeps L3 free for Settings pad rebinding.
 const CONSUMABLE_ACTION := "cl_consumable"
 const CONSUMABLE_PAD := JOY_BUTTON_LEFT_STICK
+static var _consumable_pad_down := false
 # The bar slot each select action picks, by its index in Intent.slot_pick.
 const SELECT_ACTIONS := ["cl_bay_1", "cl_bay_2", "cl_bay_3"]
 # The engine's ui_* actions have no pad button, so a pad moves menu focus but cannot press or go
@@ -122,8 +124,32 @@ static func actions() -> Dictionary:
 	return out
 
 
+static func _pad_claimed_elsewhere(button: int) -> bool:
+	for action in actions().keys():
+		if action == CONSUMABLE_ACTION or not InputMap.has_action(action):
+			continue
+		for ev in InputMap.action_get_events(action):
+			if ev is InputEventJoypadButton and ev.button_index == button:
+				return true
+	return false
+
+
 static func consumable_just_pressed() -> bool:
-	return InputMap.has_action(CONSUMABLE_ACTION) and Input.is_action_just_pressed(CONSUMABLE_ACTION)
+	if InputMap.has_action(CONSUMABLE_ACTION) and Input.is_action_just_pressed(CONSUMABLE_ACTION):
+		return true
+	var pad_down := false
+	if not _pad_claimed_elsewhere(CONSUMABLE_PAD):
+		var pads := Input.get_connected_joypads()
+		if pads.is_empty():
+			pad_down = Input.is_joy_button_pressed(0, CONSUMABLE_PAD)
+		else:
+			for pad_id in pads:
+				if Input.is_joy_button_pressed(pad_id, CONSUMABLE_PAD):
+					pad_down = true
+					break
+	var edge := pad_down and not _consumable_pad_down
+	_consumable_pad_down = pad_down
+	return edge
 
 
 # The verb that registers `action`, or "" for an action the table does not hold.
@@ -190,6 +216,7 @@ const TRIGGER_AXES := [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]
 
 static func reset_for_tests() -> void:
 	_warned_tokens.clear()
+	_consumable_pad_down = false
 
 
 # "desk" for a key or mouse button, "pad" for a pad button, "axis" for a trigger.
