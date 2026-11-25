@@ -22,7 +22,11 @@ var t = T.new("park_reactor_repeat_test")
 # used to share the grown one's allowance (47.7 s), which a small ball can only meet on 7 cycles.
 # The allowance only stops a fight that never ends; the fight's length is held by the "twice
 # grown" check here and by the pins there, so the cycle counts are printed and not pinned (a
-# tuning change that moves a fight by one cycle is not this test's to fail).
+# tuning change that moves a fight by one cycle is not this test's to fail). seed(1) and
+# run_seed_override = 1 pin single-seed determinism; MOUNTED_POSTURE needs 3 sheet rams for
+# grown (heft 2.2) and ceil(3 * 2.2) = 7 for small (heft 1.0), and W46-S1's DAM_VENT adds one
+# evade cycle to grown (4 cycles vs 7-8 for small, ~1.70x-1.94x). posture_bands_reactor_test
+# holds the 9-seed >= 2.0x median band (3.19x Linux / 2.79x Mac).
 const CHILD_ENV := "SCRAPKEEP_REACTOR_REPEAT_CHILD"
 
 class Hands extends BotDriver:
@@ -49,7 +53,11 @@ func _initialize() -> void:
 func _run() -> void:
 	var grown: Dictionary = await _fight(Run.HEFT_CLASS_AT[2], "grown", 1.5 * Arena.EXPECT_GROWN_S)
 	var small: Dictionary = await _fight(Run.HEFT_CLASS_AT[0], "small", 1.5 * Arena.EXPECT_SMALL_S)
-	t.check("small repeated sheet fight takes at least twice grown", grown.broken and small.broken and small.seconds >= 2.0 * grown.seconds, "grown %s, small %s" % [grown, small])
+	t.check(
+		"small repeated sheet fight takes more cycles and at least 1.5x grown",
+		grown.broken and small.broken and small.cycles > grown.cycles and small.seconds >= 1.5 * grown.seconds,
+		"grown %s, small %s" % [grown, small]
+	)
 	quit(t.verdict())
 
 func _fight(heft: float, label: String, allowance_s: float) -> Dictionary:
@@ -59,6 +67,8 @@ func _fight(heft: float, label: String, allowance_s: float) -> Dictionary:
 	root.add_child(game)
 	game.ctx.calm = true
 	game.flow.force_warden = true
+	seed(1)
+	game.run.run_seed_override = 1
 	var bot = Hands.new(game, "skipper", 1)
 	bot.start()
 	game.run.grant_start_mass((heft - Run.HEFT_CLASS_AT[0]) / Run.HEFT_PER_MASS)
@@ -75,6 +85,8 @@ func _fight(heft: float, label: String, allowance_s: float) -> Dictionary:
 	var started: float = game.run.stage_time
 	for i in ceili(allowance_s * Engine.physics_ticks_per_second):
 		if result.broken: break
+		# Keep the unarmed Hands sheet-repeat geometry probe alive under W46-S1's 4.0x Dam Warden pulse.
+		game.run.hp = game.run.max_hp
 		bot.tick(1.0 / Engine.physics_ticks_per_second)
 		await physics_frame
 	result.seconds = game.run.stage_time - started
