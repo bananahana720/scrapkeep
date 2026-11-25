@@ -8,12 +8,24 @@ extends RefCounted
 # clear of the fights, and has a radius inside RADIUS.
 const RADIUS := Vector2(20.0, 120.0)
 # The flume has none (W1-31, gameplay critique section 6): its landing was a breath after the dam launch, and the curve
-# after the dam must not rest on its opening.
+# after the dam must not rest on its opening. The crown has none (stage 6 climax, director_breather_test pin).
 const ROWS := {
 	"park_dam": [
 		# Below the shelf, where no crew home is in the window ahead (so the director's own packs land here) and the
 		# riding lines run 92 m clear of every fight site. 23 of the 29 such line nodes on the dam are inside it.
 		{"id": "shelf_foot_breather", "at": Vector2(8.0, -104.0), "radius_m": 60.0},
+	],
+	"park_pit": [
+		# Upper west haul bench: 60 m circle on open riding lines with no crew home in the window, > 280 m clear of every fight site.
+		{"id": "upper_haul_breather", "at": Vector2(-184.0, -432.0), "radius_m": 60.0},
+	],
+	"park_sinkhole": [
+		# North cenote rim: 60 m circle on free riding lines, 94 m clear of every fight site.
+		{"id": "cenote_rim_breather", "at": Vector2(-8.0, -184.0), "radius_m": 60.0},
+	],
+	"park_islands": [
+		# Mid-span lee bench: 60 m circle on free riding lines, 37 m clear of every fight site and lock ring.
+		{"id": "lee_span_breather", "at": Vector2(-16.0, 208.0), "radius_m": 60.0},
 	],
 }
 

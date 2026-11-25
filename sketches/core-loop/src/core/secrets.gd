@@ -38,6 +38,27 @@ const ROOMS := {
 	},
 }
 
+# Companion stage rooms (W50): fill the other three stages so every park stage across Worlds 1-3 has
+# one dead-end secret room (6 rooms total). Kept beside ROOMS so first_win_secrets_test's 1-per-world
+# ROOMS contract and activities.gd's ROOMS lookup stay green until w50-final-sync wires all_rooms().
+const STAGE_ROOMS := {
+	"spillway_dam_vault": {
+		"world": 1, "map": "park_dam", "site": "east_abutment", "at": [152, 608], "skill": "momentum",
+		"name": "East Abutment Vault",
+		"log": "Maintenance tally: east abutment locker bolted shut after the high-water shift. Wrenches still hung by size. Nobody logged the last check-in.",
+	},
+	"dig_cenote_alcove": {
+		"world": 2, "map": "park_sinkhole", "site": "west_cenote", "at": [-296, -232], "skill": "abilities",
+		"name": "Cenote Core Alcove",
+		"log": "Bore log, deep shift: cut an alcove into the west cenote wall to cool the lamps. Left two chalk marks and a spare lamp wick.",
+	},
+	"highdraft_storm_bunker": {
+		"world": 3, "map": "park_crown", "site": "crown_apron", "at": [-144, 712], "skill": "grapple",
+		"name": "Crown Storm Bunker",
+		"log": "Wind watch: storm shelter bolted under the crown apron when the anemometer snapped. Door latch still holds. Somebody left the thermos capped.",
+	},
+}
+
 # Moss's closing-time record: the B-side his bay jukebox only plays once a shift has been won.
 const TUNE := "secret-after-hours"
 
@@ -182,7 +203,21 @@ const PLATE_NUDGES := {
 # secret caches (the contraption rows that carry a codex id).
 const WORLD_CODEX := {1: ["spillway_turbine_seep", "spillway_shift_radio", "spillway_flume_seep", "spillway_crew_radio",
 	"spillway_gallery_cache", "flume_weir_cache", "flume_grade_cache", "spillway_clock_door"]}
-const WORLD_NAMES := {1: "Spillway"}
+const WORLD_NAMES := {1: "Spillway", 2: "The Dig", 3: "The Highdraft"}
+
+
+# All 6 secret rooms across Worlds 1-3 (1 per stage): ROOMS + STAGE_ROOMS.
+static func all_rooms() -> Dictionary:
+	var out: Dictionary = ROOMS.duplicate(true)
+	for id in STAGE_ROOMS:
+		out[id] = STAGE_ROOMS[id].duplicate(true)
+	return out
+
+
+static func room_by_id(id: String) -> Dictionary:
+	if ROOMS.has(id):
+		return ROOMS[id]
+	return STAGE_ROOMS.get(id, {})
 
 
 # A secret paint the profile does not own, or a secret row it has not earned: the customize page,
@@ -211,6 +246,20 @@ static func room_sites(map_id: String, profile, sitting := false) -> Array:
 		return out
 	for id in ROOMS:
 		var r: Dictionary = ROOMS[id]
+		if r["map"] == map_id:
+			out.append({"id": "cracked_cache", "row": id, "site": r["site"], "secret": id,
+				"at": Vector2(float(r["at"][0]), float(r["at"][1])), "pay": ROOM_PAY.duplicate(true)})
+	return out
+
+
+# All secret rooms for a park map across all 6 stages (ROOMS + STAGE_ROOMS) when open.
+static func stage_room_sites(map_id: String, profile, sitting := false) -> Array:
+	var out := []
+	if not open(profile, sitting):
+		return out
+	var combined := all_rooms()
+	for id in combined:
+		var r: Dictionary = combined[id]
 		if r["map"] == map_id:
 			out.append({"id": "cracked_cache", "row": id, "site": r["site"], "secret": id,
 				"at": Vector2(float(r["at"][0]), float(r["at"][1])), "pay": ROOM_PAY.duplicate(true)})

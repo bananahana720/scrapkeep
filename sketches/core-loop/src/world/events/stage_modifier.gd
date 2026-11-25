@@ -36,6 +36,9 @@ const ROWS := [
 	{"id": "floodlit", "word": "Floodlit", "line": "Transparency is a value. Beacons read far.", "sight_scale": 1.75},
 	{"id": "blackout", "word": "Blackout", "line": "Lighting, right-sized. Beacons read near.", "fx": "hidden", "sight_scale": 0.5},
 	{"id": "far_haul", "word": "Far Haul", "line": "Value was relocated to the edges.", "far": true},
+	{"id": "overstock", "word": "Overstock", "line": "Inventory spilled to the rims. More pockets.", "fx": "plenty", "count_scale": 1.5, "far": true},
+	{"id": "audit_flare", "word": "Audit Flare", "line": "Full visibility mandated. Beacons read far.", "fx": "plenty", "sight_scale": 2.25, "far": true},
+	{"id": "brownout", "word": "Brownout", "line": "Margins trimmed in the dark. Fewer pockets.", "fx": "hidden", "count_scale": 0.5, "sight_scale": 0.7},
 ]
 # A stage with no modifier still gets the Foreman's memo, so it shows up on every card (W1-75):
 # the same voice with nothing to announce, which is its own small joke. No word goes before it,
