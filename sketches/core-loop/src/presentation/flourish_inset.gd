@@ -1,29 +1,14 @@
 extends PanelContainer
 
-# A comic panel with a live picture in it (flourish_player.gd, piece kind "inset"): a second
-# camera on the play world, standing low and close to its subject and turning to keep it in
-# the frame. Brindle's arrival uses it for the Requisition coming over the rim (ruling cf).
-# It draws the same world the player is in, so nothing is staged: what the panel shows is
-# what is happening, from where the player is not.
-#
-# The camera stands on the ground between where the subject comes to rest and `toward` (the
-# arena's middle), STAND metres off, and looks up at it. It does not move; it turns, so a
-# subject coming in grows in the frame. Focus lines are inked over the picture's rim and boil
-# on the wall clock, so they keep their pace when the world is slowed. The panel costs a
-# second view of the world while it is up, at the panel's own small size, and nothing when it
-# is not.
-
 const INK := Color("17141a")
 const STAND := 10.5
 const EYE := 0.9
 const LIFT := 2.5
 const LENS := 64.0
-# How far the panel's camera draws when there is no play camera to copy (chase_camera's far).
 const REACH := 700.0
 const FOCUS_LINES := 30
 const FOCUS_BOIL_MS := 90
 
-# Set by the player: no boil.
 var still := false
 
 var _subject: Node3D
@@ -31,8 +16,6 @@ var _camera: Camera3D
 var _focus: Control
 
 
-# Builds the panel's view. home: where the subject comes to rest (the camera stands off it);
-# toward: the point the camera stands toward, from home. extent: the panel's size in pixels.
 func frame(subject: Node3D, home: Vector3, toward: Vector3, extent: Vector2, border: int) -> void:
 	_subject = subject
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -65,7 +48,6 @@ func frame(subject: Node3D, home: Vector3, toward: Vector3, extent: Vector2, bor
 	_camera.fov = LENS
 	var play := screen.get_camera_3d()
 	_camera.far = play.far if play != null else REACH
-	# The play camera moves per frame off the ball's shown position; this one stands still.
 	_camera.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	view.add_child(_camera)
 	var out := Vector3(toward.x - home.x, 0.0, toward.z - home.z)
@@ -103,7 +85,6 @@ func _aim() -> void:
 		_camera.look_at(at, Vector3.UP)
 
 
-# Inked wedges from the panel's rim toward its middle, which stays clear for the subject.
 class Focus extends Control:
 	var beat := 0
 

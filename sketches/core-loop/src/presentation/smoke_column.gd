@@ -4,36 +4,17 @@ const Palette := preload("res://src/core/palette.gd")
 const Impostor := preload("res://src/presentation/landmark_impostor.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
-# Brindle's furnace smoke on the flume's east horizon (transitions-audit T6, rulings cv and ct): the world plays as one
-# ride, so the next stage's sign stands in view before the launch, where the launch rail aims (the park file's
-# approach.smoke). It is a stand-in, not a simulation: three crossed ribbons, one ArrayMesh, one unshaded material,
-# amber at the foot where the furnace glows and charcoal smoke leaning away above it. It is about 1.4 km from the
-# drop-in and past the chase camera's 700 m far plane from almost all of the flume, so each drawn frame it is scaled
-# about the eye (landmark_impostor.gd's about_eye): it covers the same pixels and stays inside the far plane. Nothing
-# collides, nothing is marked, and bowl_approach.gd's furnace (behind --approach=on) is a separate thing.
-#
-# The far card (W46 E1-15, design-v3/WAYFINDING.md section 2.1): where the park's approach row also names a far_card, the
-# next stage stands on the horizon as one flat painted card outside the play rect: terracotta walls and one turquoise
-# ribbon of flume water on its trestle, so the ride's next place is in view before the Warden falls. It is drawn the way
-# the column is (scaled about the eye, unshaded, fog off, one draw), its foot sunk under the map's edge so the rim hides
-# its base. Dressing only: no collider, and never reachable.
 
 const RIBBONS := 3
 const ROWS := 14
 const RISE_M := 330.0
 const FOOT_W := 34.0
 const TOP_W := 120.0
-# The smoke leans east and a little north as it climbs, away from the flume.
 const LEAN := Vector3(110.0, 0.0, -30.0)
-# How much of the column is the furnace's glow, from the foot.
 const GLOW_SHARE := 0.16
-# The point a sight ray aims at: the column's middle, the part that reads as smoke over the horizon.
 const SIGHT_M := 150.0
-# The foot stands level with the map's ground nearest it: the furnace stands off the 1.6 km square.
 const EDGE_IN_M := 10.0
 const DRIFT_S := 30.0
-# The far card: its default size, how much of it sinks under the map's edge ground, its columns of wall profile, and
-# the haze its colours lean to (the dawn district fog), more on the far ridge than the near wall.
 const CARD_SIZE := Vector2(420.0, 120.0)
 const CARD_SINK := 0.12
 const CARD_COLS := 24
@@ -41,8 +22,6 @@ const CARD_HAZE := Color("d8c8dc")
 const TERRACOTTA := Color("b8664a")
 const FLUME_WATER := Color("4fa9a6")
 const TRESTLE := Color("4a3a30")
-# The far card is drawn as the column is: at the far plane's depth, first of the see-through pass (it is opaque in
-# fact), so everything drawn stands in front of it and it covers only sky. Vertex colours are linear.
 const CARD_SHADER := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
@@ -62,9 +41,6 @@ void fragment() {
 const CARD_PRIORITY := -2
 const COLUMN_PRIORITY := -1
 
-# No fog: drawn at a fraction of its distance, the depth fog would wash it to the sky's colour (bowl_approach.gd's
-# soot does the same). Its depth is the far plane's: it stands past everything the camera draws, so anything drawn,
-# however near its scaled stand-in comes, stands in front of it (the Dam's own wall between the crest and the plume).
 const SHADER := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
@@ -85,19 +61,14 @@ void fragment() {
 }
 """
 
-# The column's foot on the ground (the stand-in is drawn about the eye from here).
 var home := Vector3.ZERO
-# The farthest vertex from the foot, for the far-plane reach.
 var radius := 0.0
 var view: MeshInstance3D
-# The far card (null when the approach names none), its own place on the horizon and its reach.
 var card: MeshInstance3D
 var card_home := Transform3D.IDENTITY
 var card_radius := 0.0
 
 
-# The column under parent for map (a ParkMap), or null when the map names no approach. height is the map's ground at
-# (x, z) as a Vector2 (park_sites.gd height). Visual only.
 static func place(parent: Node3D, map, height: Callable) -> Node3D:
 	if not "approach" in map or map.approach.is_empty() or not map.approach.has("smoke"):
 		return null
@@ -112,7 +83,6 @@ static func place(parent: Node3D, map, height: Callable) -> Node3D:
 	return column
 
 
-# Where a sight ray aims: the column's middle above its foot.
 func sight_point() -> Vector3:
 	return home + Vector3.UP * SIGHT_M + LEAN * pow(SIGHT_M / RISE_M, 2.0)
 
@@ -135,7 +105,6 @@ func _build() -> void:
 	view.transform = Transform3D(Basis.IDENTITY, home)
 
 
-# The far card for map's approach.far_card ({at, to, size?, yaw_deg?}), or nothing when it names none.
 func _build_card(map, height: Callable, edge: float) -> void:
 	var park = map.get("park") if map is Object else null
 	var approach = park.get("approach", {}) if park is Dictionary else {}
@@ -165,9 +134,6 @@ func _build_card(map, height: Callable, edge: float) -> void:
 	card.transform = card_home
 
 
-# The far card's painting in its own plane (x across, y up from its foot at 0, facing +z): a hazed far ridge, the
-# terracotta wall with its stepped mesa tops and shaded foot, and the flume, a turquoise ribbon with a pale lip running
-# down the wall on dark trestle legs. Vertex colours only.
 static func far_card_mesh(size: Vector2) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -192,19 +158,16 @@ static func far_card_mesh(size: Vector2) -> ArrayMesh:
 	return st.commit()
 
 
-# A squared mesa step: sharpens a sine to flat tops with short ledges.
 static func _step(x: float) -> float:
 	return clampf(x * 3.0, -1.0, 1.0)
 
 
-# A band from y 0 up to top(t) across the card (t 0..1 left to right), coloured low at its foot and high at its top.
 static func _profile(st: SurfaceTool, w: float, h: float, top: Callable, low: Color, high: Color, z: float) -> void:
 	for k in CARD_COLS:
 		var t0 := float(k) / CARD_COLS
 		var t1 := float(k + 1) / CARD_COLS
 		var x0 := (t0 - 0.5) * w
 		var x1 := (t1 - 0.5) * w
-		# Both ends taper down under the horizon, so the card reads as a range, not a board's square edge.
 		var e0 := _taper(t0)
 		var e1 := _taper(t1)
 		var y0: float = float(top.call(t0)) * e0
@@ -219,13 +182,11 @@ static func _taper(t: float) -> float:
 
 
 static func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, color: Color) -> void:
-	# The shader reads COLOR as linear; the palette is sRGB.
 	st.set_color(Color(color.srgb_to_linear(), 1.0))
 	for v in [a, b, c, a, c, d]:
 		st.add_vertex(v)
 
 
-# The ribbons about the foot: each a strip of ROWS quads that widens and leans as it climbs, amber at the foot.
 static func column_mesh() -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -242,7 +203,6 @@ static func column_mesh() -> ArrayMesh:
 				var centre := Vector3.UP * RISE_M * t + LEAN * t * t
 				var colour: Color = glow.lerp(smoke, smoothstep(GLOW_SHARE * 0.5, GLOW_SHARE * 1.6, t))
 				colour.a = lerpf(0.95, 0.8, t) * (1.0 - smoothstep(0.7, 1.0, t))
-				# The shader reads COLOR as linear; the palette is sRGB.
 				colour = Color(colour.srgb_to_linear(), colour.a)
 				quad.append([centre + across * width * (corner.x - 0.5), Vector2(corner.x, t), colour])
 			for tri: Array in [[quad[0], quad[1], quad[2]], [quad[0], quad[2], quad[3]]]:
@@ -254,7 +214,6 @@ static func column_mesh() -> ArrayMesh:
 
 
 func _process(_delta: float) -> void:
-	# A parked stage hides its root; nothing to place until the flume shows again.
 	if not is_visible_in_tree():
 		return
 	var viewport := get_viewport()
@@ -263,8 +222,6 @@ func _process(_delta: float) -> void:
 		show_for(camera.global_position, camera.far)
 
 
-# Puts the drawn column (and the far card, where there is one) about this eye for a far plane far; returns the
-# column's world transform.
 func show_for(eye: Vector3, far: float) -> Transform3D:
 	var at := Impostor.about_eye(Transform3D(Basis.IDENTITY, home), radius, eye, far)
 	view.global_transform = at

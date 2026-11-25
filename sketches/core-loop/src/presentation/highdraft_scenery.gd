@@ -1,12 +1,5 @@
 extends RefCounted
 
-# The Highdraft's dress: the islands, ridge bridges, return ramps and barges skinned with the
-# modelled kit, the thermal vent and air, the net deck, the harpoon anchors, a prop scatter, the
-# cloud deck and distant silhouettes, and the open sky. Visual only: no collision
-# shape, body or tuning is touched. Every piece falls back to the greybox the map and contraptions
-# already built when its GLB is missing (the original meshes stay visible until a skin lands).
-# Hooked from game.gd through hook(ctx), which builds the zone on the entry that builds its ground.
-
 const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
@@ -19,13 +12,10 @@ const ParkSites := preload("res://src/presentation/park_sites.gd")
 
 const DIR := "res://assets/models/highdraft/"
 const NODE_NAME := "HighdraftScenery"
-# Skins sit a hair above the collider so they never z-fight the ground mesh; bridges and ramps
-# sit above the island skin so the mouth joins read without a step.
 const ISLAND_LIFT := 0.03
 const STRIP_LIFT := 0.05
 const WALL_OUT := 0.12
 const WALL_SEARCH := 5.0
-# The slab's 1.2 m wall is stretched down the skirt so the stone reads as a course, not a lip.
 const WALL_STRETCH := 2.0
 const NET_TILE := 4.0
 const NET_MARGIN := 36.0
@@ -34,14 +24,11 @@ const CHUNK := 32.0
 const EYE_HEIGHT := 16.6
 const ANCHOR_REACH := 1.8
 const SKY_RING := 460.0
-# The cloud deck plane lies well under the catch plane and the banks; it never collides.
 const CLOUD_DECK_Y := -32.0
 const CLOUD_DECK_SIZE := 1600.0
-# A park's cloud deck lies this far under its lowest ground.
 const PARK_DECK_DROP := 40.0
 const LOOK := Finishes.LOOK
 
-# Tests point this at a missing folder to prove the fallback; the game never changes it.
 static var dir := DIR
 static var _sky: PanoramaSkyMaterial
 static var _cloud: StandardMaterial3D
@@ -63,8 +50,6 @@ static func reset_for_tests() -> void:
 	_coloured.clear()
 
 
-# ---- Hook and environment ----
-
 static func is_highdraft(map) -> bool:
 	if map == null or map.get_script() == null:
 		return false
@@ -72,18 +57,11 @@ static func is_highdraft(map) -> bool:
 	return path == "res://src/world/map_highdraft.gd" or path == "res://src/world/map_highdraft_crown.gd"
 
 
-# Build the zone's dress on the entry that builds its ground, and swap the light for it; any
-# other stage restores the shared environment. The stage's world look (world_look.gd, hooked after
-# this in game.gd) is applied later, so its time of day owns the key, ambient and fog colour here. Connected after the world module's own handler,
-# so the stage's contraptions already exist.
 static func hook(ctx) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
 	_start_cloud()
 
 
-# A Highdraft park stage (park_islands, park_crown) takes the park pass (build_park): its islands, nets
-# and anchors are park rows, and world_look.gd's time of day owns its light, so the zone's own
-# environment swap stays on the old maps.
 static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	var terrain = ctx.terrain
 	var map = terrain.map_for(stage)
@@ -115,14 +93,12 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 		apply_environment(terrain, root)
 
 
-# The park's landmark kind ("sky_island" for the Hanging Isle, "spire" for the Crown Works), or "".
 static func landmark_kind(map) -> String:
 	if map == null or not ("park" in map):
 		return ""
 	return String((map.park as Dictionary).get("landmark", {}).get("kind", ""))
 
 
-# How far the music the player hears is from its nearest beat, in seconds (audio.gd beat_offset_s); INF with no band.
 static func _beat_offset(ctx) -> float:
 	var game = ctx.root if ctx != null else null
 	var sound = game.audio() if game != null and game.has_method("audio") else null
@@ -178,8 +154,6 @@ static func _sun(root: Node3D) -> DirectionalLight3D:
 	return null
 
 
-# One cached 512 x 256 panorama: cool sky `#a9b6c0` over the `#798c9e` haze, a cream `#ece7da`
-# cloud deck below the horizon and a few broad cream banks above it. No storm, no glow.
 static func _sky_material() -> PanoramaSkyMaterial:
 	var image := Image.create_empty(512, 256, false, Image.FORMAT_RGB8)
 	var noise := FastNoiseLite.new()
@@ -207,10 +181,6 @@ static func _sky_material() -> PanoramaSkyMaterial:
 	return material
 
 
-# ---- Build ----
-
-# `ground` is the terrain's grid callable (x, z, clearance) -> Vector3; without it the map's own
-# height function stands in. `contraptions` is the stage's Contraptions node, if it exists yet.
 static func build(stage_root: Node3D, map, contraptions = null, ground := Callable(), player = null) -> Node3D:
 	var scenery := Node3D.new()
 	scenery.name = NODE_NAME
@@ -233,11 +203,6 @@ static func build(stage_root: Node3D, map, contraptions = null, ground := Callab
 	return scenery
 
 
-# The park pass: the barge rigs and the thermal vents and air on the park's own contraptions, and the
-# cloud deck and far silhouettes dropped under the park's lowest ground. The chase camera sees 700 m
-# and a park is 1.6 km across, so the sky rides with the ball (Updater) and stays at the old maps'
-# distances, a backdrop that never comes nearer. The wind effects follow the vents and the clouds; a
-# park has no catch plane, so no net sags.
 static func build_park(stage_root: Node3D, map, contraptions = null, ground := Callable(), player = null) -> Node3D:
 	var scenery := Node3D.new()
 	scenery.name = NODE_NAME
@@ -284,8 +249,6 @@ static func _scene(file: String) -> Node:
 	return scene
 
 
-# The kit's GLBs keep their colour in vertex colours and import with white materials that
-# ignore them, so every piece would draw flat white. One shared copy per source material.
 static func _vertex_coloured(source: Material) -> Material:
 	if not (source is BaseMaterial3D):
 		return source
@@ -315,7 +278,6 @@ static func _loop(scene: Node, choices: Array[String]) -> void:
 				return
 
 
-# The first MeshInstance3D's mesh in a GLB (named when the file holds several), or null.
 static func _mesh(file: String, node_name := "*") -> Mesh:
 	var scene := _scene(file)
 	if scene == null:
@@ -361,13 +323,6 @@ static func _multi(parent: Node3D, label: String, mesh: Mesh, transforms: Array[
 	return node
 
 
-# ---- Islands ----
-
-# The island GLB's top slab, fitted to the sampled ground: its top lies ISLAND_LIFT over the
-# flat top and its wall is walked down the terrain's own skirt, so the stone hugs the real
-# collider. A wall vertex that finds the ground still high (a bridge or ramp mouth) is pushed
-# out and buried, so no lip stands in a mouth. The keel and the underside stay out: they would
-# sit inside the pillar.
 static func _islands(parent: Node3D, map, ground: Callable) -> void:
 	var isles: Dictionary = map._islands()
 	for id in isles:
@@ -458,7 +413,6 @@ static func _island_mesh(file: String, isle: Dictionary, map, ground: Callable) 
 	return mesh
 
 
-# Pale stone top, darker fascia down the wall: the island's edge reads in greyscale.
 static func _stone(authored: Color, local_y: float) -> Color:
 	var band: Color = LOOK["stone"] if local_y > -0.02 else LOOK["fascia"]
 	return authored.lerp(band.srgb_to_linear(), 0.55 if local_y > -0.02 else 0.7)
@@ -474,7 +428,6 @@ static func _reject_island(file: String) -> ArrayMesh:
 static func _fit(v: Vector3, centre: Vector2, radius: float, top: float, scale: float, map, ground: Callable) -> Vector3:
 	var flat := Vector2(v.x, v.z) * scale
 	if v.y > -0.02:
-		# The collider is a 2 m grid, so its rim droops inside the analytic radius: follow it.
 		var spot := centre + flat
 		return Vector3(spot.x, minf(top, _height(ground, map, spot.x, spot.y)) + ISLAND_LIFT, spot.y)
 	var dir := flat.normalized() if flat.length() > 0.001 else Vector2.RIGHT
@@ -488,8 +441,6 @@ static func _fit(v: Vector3, centre: Vector2, radius: float, top: float, scale: 
 	var place := centre + dir * (reach + WALL_OUT)
 	return Vector3(place.x, minf(target, _height(ground, map, place.x, place.y) + ISLAND_LIFT), place.y)
 
-
-# ---- Bridges, return ramps, barges ----
 
 static func _bridges_and_ramps(parent: Node3D, map) -> void:
 	var isles: Dictionary = map._islands()
@@ -509,7 +460,6 @@ static func _bridges_and_ramps(parent: Node3D, map) -> void:
 	_multi(parent, "ReturnRampSkins", _mesh("return_ramp_skin.glb", "HardwareSkin"), slopes)
 
 
-# 8 m wide bays, 4 m long before scaling, laid end to end along a line that rises linearly.
 static func _strip(into: Array[Transform3D], from: Vector2, to: Vector2, from_y: float, to_y: float) -> void:
 	var length := from.distance_to(to)
 	if length < 0.5:
@@ -528,14 +478,11 @@ static func _strip(into: Array[Transform3D], from: Vector2, to: Vector2, from_y:
 		into.append(Transform3D(basis, Vector3(at.x, lerpf(from_y, to_y, t), at.y) + y_axis * STRIP_LIFT))
 
 
-# The barge's own tilted deck node carries its recipe views (contraptions.gd _build_barge), so the
-# rig leans with the scripted settle: the sail and pennant ride the deck too.
 static func _barges(contraptions: Node) -> void:
 	for barge in contraptions.barges:
 		var deck: MeshInstance3D = barge["deck"]
 		if deck.get_node_or_null("HighdraftWeatherSail") != null:
 			continue
-		# Reuse the kit's rig for a full weather sail and a small corner pennant.
 		for marker in [
 			{"name": "HighdraftWeatherSail", "at": Vector3(5.5, 1.0, -5.5), "scale": 1.0},
 			{"name": "HighdraftPennant", "at": Vector3(-5.5, 1.0, 5.5), "scale": 0.5},
@@ -548,8 +495,6 @@ static func _barges(contraptions: Node) -> void:
 				deck.add_child(sail)
 				_loop(sail, ["wind", "wind_loop"])
 
-
-# ---- Thermals ----
 
 static func _thermals(parent: Node3D, state: Node, map, contraptions: Node) -> void:
 	for thermal in contraptions.thermals:
@@ -577,7 +522,6 @@ static func _thermals(parent: Node3D, state: Node, map, contraptions: Node) -> v
 			"player": vent_player[0] if not vent_player.is_empty() else null, "state": ""})
 
 
-# The column and grate _build_thermal added: unnamed cylinders at the base and mid-height.
 static func _hide_thermal_greybox(contraptions: Node, base: Vector3, height: float) -> void:
 	for child in contraptions.get_children():
 		if child is MeshInstance3D and child.mesh is CylinderMesh:
@@ -587,12 +531,6 @@ static func _hide_thermal_greybox(contraptions: Node, base: Vector3, height: flo
 				child.visible = false
 
 
-# ---- Net deck ----
-
-# The terrain's own ground mesh drew the catch plane out to the 400 m grid edge as a flat grid.
-# It is hidden here and redrawn without the open floor outside the play rect, so past the edge
-# the eye falls to the cloud deck; the collider is untouched and the floor the ball can reach
-# still draws as the net. Pillars take the darker stone.
 static func _relief(scenery: Node3D, stage_root: Node3D, map) -> void:
 	var body := stage_root.get_node_or_null("Ground")
 	if body == null:
@@ -604,7 +542,6 @@ static func _relief(scenery: Node3D, stage_root: Node3D, map) -> void:
 	var arrays := grid.mesh.surface_get_arrays(0)
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	if arrays[Mesh.ARRAY_INDEX] == null:
-		# A grid with no index buffer cannot be trimmed, but it still wears the catch floor.
 		GraphicsPreset.set_ground_material(grid, _catch_material())
 		return
 	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
@@ -647,7 +584,6 @@ static func _catch_material() -> ShaderMaterial:
 	return material
 
 
-# The padded perimeter in the catch amber the sheet keeps for offered lift and catch edges.
 static func net_edge_material() -> StandardMaterial3D:
 	return Palette.nosing_material()
 
@@ -692,7 +628,6 @@ static func _net_deck(parent: Node3D, map) -> void:
 	parent.add_child(deck)
 	for key in chunks:
 		_multi(deck, "Tiles_%d_%d" % [key.x, key.y], tile, chunks[key])
-	# Padded edge around the tiled bay, and a shoe at each corner.
 	var edge := _mesh("net_edge.glb", "Hardware")
 	var edges: Array[Transform3D] = []
 	var span := Rect2(Vector2(x0, z0), Vector2(ceilf((rect.end.x - x0) / NET_TILE) * NET_TILE, ceilf((rect.end.y - z0) / NET_TILE) * NET_TILE))
@@ -719,11 +654,6 @@ static func _net_deck(parent: Node3D, map) -> void:
 	_multi(deck, "NetShoes", _mesh("net_shoe.glb", "Hardware"), shoes)
 
 
-# ---- Harpoon anchors ----
-
-# The mast and eye replace the post's drawn cylinder and cap; the post's collider stays. The
-# eye turns to face the camera and reads the harpoon's own state: slate idle, mint when this
-# post is what a press would bite, steady mint while the line holds it.
 static func _anchors(parent: Node3D, state: Node, stage_root: Node3D, map, ground: Callable) -> void:
 	var posts: Array = map._posts()
 	for post in posts:
@@ -754,8 +684,6 @@ static func _anchors(parent: Node3D, state: Node, stage_root: Node3D, map, groun
 					collar.free()
 				continue
 			collar.position = anchor_point.position
-			# The collar block sits on its local (+1, +1) diagonal and closes toward the origin, so
-			# turn that diagonal onto the socket's corner direction.
 			collar.rotation.z = atan2(anchor_point.position.y, anchor_point.position.x) - PI * 0.25
 			eye.add_child(collar)
 			var players := collar.find_children("*", "AnimationPlayer", true, false)
@@ -778,8 +706,6 @@ static func _hide_post_greybox(stage_root: Node3D, foot: Vector3, height: float)
 			child.visible = false
 
 
-# ---- Props ----
-
 const PROPS := [
 	{"file": "prop_spool.glb", "node": "Surface", "weight": 2, "size": 1.8},
 	{"file": "prop_bearing.glb", "node": "Surface", "weight": 2, "size": 1.2},
@@ -792,10 +718,6 @@ const PROPS := [
 ]
 
 
-# Props stand in a ring near each island's rim, 2.5 to 6 m in from the edge, off every route:
-# the spawn, beacon bowl, vault, gate slots, sites and relic, the bridge and ramp mouths, the
-# harpoon posts, thermals, barge lanes and the cable. A weather sail (animated) rides each
-# island too. Seeded per island, so a run always sees the same yard.
 static func _props(parent: Node3D, map) -> void:
 	var rows := _keepouts(map)
 	var isles: Dictionary = map._islands()
@@ -832,7 +754,6 @@ static func _props(parent: Node3D, map) -> void:
 				var list: Array[Transform3D] = []
 				lists[pick] = list
 			(lists[pick] as Array[Transform3D]).append(Transform3D(Basis(Vector3.UP, turn), Vector3(at.x, top, at.y)))
-		# One weather sail per island, an animated scene so its wind loop runs.
 		var sail_at := Vector2.ZERO
 		var found := false
 		for k in 40:
@@ -868,8 +789,6 @@ static func _props(parent: Node3D, map) -> void:
 			_multi(yard, "prop_lamp_glass", _mesh("prop_lamp_glass.glb", "Surface"), lists[pick])
 
 
-# One spinning yard fan (animated) on each medium or large island. Its own seed, so the yard
-# props and sails keep their places.
 static func _fan(parent: Node3D, rows, taken: Array[Vector2], id, centre: Vector2, radius: float, top: float) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(String(id) + ":fan") ^ int(radius * 100.0)
@@ -893,11 +812,9 @@ static func _fan(parent: Node3D, rows, taken: Array[Vector2], id, centre: Vector
 		return
 
 
-# A capture viewpoint 6 m off the first sail's face, aimed at its 2 m face, so stills can frame one.
 static func _sail_capture(parent: Node3D, sail: Node3D) -> void:
 	if parent.has_node("SailCapture"):
 		return
-	# The triangle spans local +X and faces local Z, so the view stands off that face.
 	var face := sail.transform * Vector3(0.9, 1.2, 0.0)
 	var view := Marker3D.new()
 	view.name = "SailCapture"
@@ -954,31 +871,18 @@ static func _keepouts(map) -> Array:
 	return rows
 
 
-# ---- World 3 valley dress (W49-MAPS) ----
-
-# The New Mexico pieces (worlds-2-3-storyboard.md section 2, master bible section 3.3), keyed by the park's landmark kind
-# so no map id is written here. Every piece is drawn only: no collider, and every one stands outside the play rect or
-# on a butte top no line reaches, so no ball rolls through a ghost. Rows are [x, z, yaw degrees, scale] in park metres.
 const VALLEY := {
 	"sky_island": {
-		# Shiprock's twin volcanic dikes, black basalt walls framing the Isle east and west past the play rect.
 		"dikes": [[-668.0, -210.0, 90.0, 1.6], [-700.0, 170.0, 96.0, 1.1], [672.0, 40.0, 86.0, 1.7], [700.0, 420.0, 80.0, 1.0]],
-		# The aerial ore tramways: a tower behind each mining cable end that stands clear of every line ([cable id,
-		# 0 for its from end or 1 for its to end]), and the haul line itself, a bucket tramway down the terraces past the
-		# east edge of the play rect ([x, z] tower feet, from the mesa to the bowl).
 		"tram_ends": [["lookout_line", 0], ["lookout_line", 1], ["bench_line", 0], ["ore_line", 1]],
 		"haul_line": [[625.0, -720.0], [625.0, -480.0], [625.0, -240.0], [625.0, 0.0], [625.0, 240.0], [625.0, 470.0]],
-		# The white gypsum cloud sea that rises under the Isle's edges.
 		"gypsum": {"reach": 840.0, "count": 44, "y": 18.0, "rise": 4.0},
 	},
 	"spire": {
-		# Chaco bajada balanced hoodoos past the play rect's flanks.
 		"hoodoos": [[-648.0, -430.0, 20.0, 1.3], [-690.0, -270.0, 70.0, 1.6], [-642.0, -100.0, 140.0, 1.1],
 			[-700.0, 60.0, 200.0, 1.4], [652.0, -470.0, 250.0, 1.5], [694.0, -310.0, 300.0, 1.2], [660.0, -40.0, 330.0, 1.7]],
-		# Grounding rods on butte tops no line reaches, each with its grounding line run down to a stake.
 		"rods": [[-470.0, 285.0, 0.0, 1.0, -530.0, 330.0], [-432.0, 330.0, 40.0, 0.9, -470.0, 400.0],
 			[402.0, 176.0, 15.0, 1.0, 470.0, 210.0]],
-		# The Lightning Field: a grid of rods past the east flank of the bajada.
 		"field": {"x": [625.0, 660.0, 695.0, 730.0], "z": [-380.0, -300.0, -220.0, -140.0, -60.0], "scale": 0.8},
 	},
 }
@@ -1009,7 +913,6 @@ static func _valley(parent: Node3D, state: Node, map, ground: Callable) -> void:
 		_gypsum(root, state, dress["gypsum"])
 
 
-# Pieces stood on the sampled ground (the lowest of the centre and four points round it, so a base never hangs).
 static func _seated(root: Node3D, label: String, mesh: Mesh, rows: Array, map, ground: Callable) -> MultiMeshInstance3D:
 	if mesh == null or rows.is_empty():
 		return null
@@ -1024,9 +927,6 @@ static func _seated(root: Node3D, label: String, mesh: Mesh, rows: Array, map, g
 	return _multi(root, label, mesh, placed)
 
 
-# Tram towers behind the listed mining cable ends, their sheaves at the cable's height (the grapple cable stays the
-# contraption's), and the haul line: towers down the terraces with a sagging haul rope and ore buckets the fx runs
-# along it.
 static func _tramways(root: Node3D, state: Node, map, ground: Callable, dress: Dictionary) -> void:
 	var ends: Array = dress.get("tram_ends", [])
 	var haul: Array = dress.get("haul_line", [])
@@ -1086,8 +986,6 @@ static func _tramways(root: Node3D, state: Node, map, ground: Callable, dress: D
 	state.buckets[0]["view"] = view
 
 
-# The grounding rods: butte-top rods with grounding lines sagging to their stakes, and the Lightning Field grid. The fx
-# strikes their tips (state.rods) when the storm's lightning lands and on the band's bars.
 static func _rods(root: Node3D, state: Node, map, ground: Callable, dress: Dictionary) -> void:
 	var mesh := _mesh("w3_lightning_rod.glb", "LightningRod")
 	if mesh == null:
@@ -1117,7 +1015,6 @@ static func _rods(root: Node3D, state: Node, map, ground: Callable, dress: Dicti
 		root.add_child(_line_view("GroundingLines", lines, 0.22, GROUNDING_COLOUR, 0.4))
 
 
-# A rope's polyline from a to b with a parabolic sag of 4% of its span.
 static func _sag(a: Vector3, b: Vector3, segments: int) -> Array[Vector3]:
 	var out: Array[Vector3] = []
 	var span := Vector2(b.x - a.x, b.z - a.z).length()
@@ -1127,7 +1024,6 @@ static func _sag(a: Vector3, b: Vector3, segments: int) -> Array[Vector3]:
 	return out
 
 
-# One vertex-coloured surface of flat crossed ribbons along every polyline, so a rope reads from any heading.
 static func _line_view(label: String, lines: Array, width: float, colour: Color, metal: float) -> MeshInstance3D:
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
@@ -1169,8 +1065,6 @@ static func _line_view(label: String, lines: Array, width: float, colour: Color,
 	return view
 
 
-# Kite-tether rings stacked up every thermal column, wider than the column so a ball riding the thermal climbs through
-# their middles; the fx turns them with the updraft.
 static func _kite_rings(root: Node3D, state: Node) -> void:
 	if state.thermals.is_empty():
 		return
@@ -1196,8 +1090,6 @@ static func _kite_rings(root: Node3D, state: Node) -> void:
 		ring["view"] = view
 
 
-# The gypsum cloud sea: white banks hung round the square past the Isle's edges, under its lowest net, that the fx
-# swells and settles. Drawn with the cloud deck's own bank mesh.
 static func _gypsum(root: Node3D, state: Node, spec: Dictionary) -> void:
 	var mesh := _mesh("sky_cloud.glb", "CloudHull")
 	if mesh == null:
@@ -1226,8 +1118,6 @@ static func _gypsum(root: Node3D, state: Node, spec: Dictionary) -> void:
 		state.gypsum.set_meta("rise", float(spec["rise"]))
 
 
-# ---- Sky: cloud deck and distant silhouettes ----
-
 static func _sky_pieces(parent: Node3D, drop := 0.0) -> void:
 	var sky := Node3D.new()
 	sky.name = "Sky"
@@ -1235,7 +1125,6 @@ static func _sky_pieces(parent: Node3D, drop := 0.0) -> void:
 	sky.position.y = drop
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7_310_006
-	# Cloud deck: broad banks under the catch plane, top face at Y -20, never over the playfield.
 	var clouds: Array[Transform3D] = []
 	for k in 36:
 		var angle := TAU * k / 36.0 + rng.randf_range(-0.05, 0.05)
@@ -1253,7 +1142,6 @@ static func _sky_pieces(parent: Node3D, drop := 0.0) -> void:
 	deck.material_override = _cloud_material()
 	deck.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	sky.add_child(deck)
-	# Mesas stand well past the playable bounds; fog and scale keep them distant.
 	var mesas: Array[Transform3D] = []
 	for k in 7:
 		var angle := TAU * k / 7.0 + rng.randf_range(-0.2, 0.2)
@@ -1262,18 +1150,12 @@ static func _sky_pieces(parent: Node3D, drop := 0.0) -> void:
 		var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(scale, scale, scale))
 		mesas.append(Transform3D(basis, Vector3(cos(angle) * reach, -50.0, sin(angle) * reach)))
 	_multi(sky, "DistantMesas", _mesh("sky_mesa.glb", "MesaHull"), mesas)
-	# Landmarks frame the quiet centre: the loom to one side, the split blades to the other,
-	# a pair of far cradles between. None of them has an eye or a hard point.
 	_landmark(sky, "sky_loom.glb", "LoomHull", "Loom", 205.0, SKY_RING + 20.0, -40.0, 2.4)
 	_landmark(sky, "sky_blades.glb", "BladeHull", "Blades", 335.0, SKY_RING + 40.0, -50.0, 2.0)
 	_landmark(sky, "sky_cradle.glb", "CradleHull", "CradleA", 95.0, SKY_RING, 30.0, 2.2)
 	_landmark(sky, "sky_cradle.glb", "CradleHull", "CradleB", 265.0, SKY_RING + 60.0, 55.0, 2.6)
 
 
-# One cached cream deck with soft seamless noise, tiled; fog carries it into the haze. The
-# per-pixel pass cost 23 to 37 ms inside the stage 5 entry frame on the cloud, so hook() bakes
-# the image on a worker at boot and the entry only waits if that bake has not finished (0.5 to
-# 1.1 ms left on the cloud once it has).
 static func _cloud_material() -> StandardMaterial3D:
 	if _cloud != null:
 		return _cloud
@@ -1294,7 +1176,6 @@ static func _start_cloud() -> void:
 		_cloud_task = WorkerThreadPool.add_task(_bake_cloud, false, "Highdraft cloud deck")
 
 
-# Image and noise only, so it is safe off the main thread; the texture is made on the main thread.
 static func _bake_cloud() -> void:
 	var noise := FastNoiseLite.new()
 	noise.seed = 7_310_032
@@ -1325,22 +1206,15 @@ static func _landmark(parent: Node3D, file: String, hull: String, label: String,
 	GraphicsPreset.register_scenery(view)
 
 
-# ---- Live reads ----
-
-# Per-frame presentation only: the anchor eyes face the camera and show the harpoon's state,
-# the vents show whether the ball stands in their column. Nothing here writes game state.
 class Updater extends Node3D:
 	var player = null
 	var anchors: Array[Dictionary] = []
 	var thermals: Array[Dictionary] = []
-	# W49 valley dress the fx animates: kite rings over thermals, tram buckets on their haul ropes, grounding rods
-	# lightning finds, and the gypsum cloud banks that rise under the Isle.
 	var rings: Array[Dictionary] = []
 	var buckets: Array[Dictionary] = []
 	var rods: Array[Dictionary] = []
 	var gypsum: MultiMeshInstance3D
 	var fx: Node3D
-	# A park's sky, kept centred on the ball (build_park); null on the old maps.
 	var sky: Node3D
 
 	func _process(delta: float) -> void:

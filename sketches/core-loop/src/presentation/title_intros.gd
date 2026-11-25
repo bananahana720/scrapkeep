@@ -1,21 +1,5 @@
 extends RefCounted
 
-# The rotating title openings (design-v3/TITLE-INTROS.md): one short anime-style opening per
-# launch, each introducing one pilot, world or boss. This file is the table and the pick;
-# title_intro_player.gd plays a row on the title stage. Nothing here touches a node.
-#
-# The pick reads profile facts only (facts_from):
-#   first launch           -> sable
-#   any unseen available   -> the unseen row furthest along the reel (the newest unlock)
-#   all seen               -> the next available row after the last one shown, in reel order
-# A pilot row needs its pilot flyable; a world row, the world reached; a boss row, the boss met
-# (its arena entered, or beaten); the cannon, the ending. Seen and met ids live in the profile's
-# seen list under SEEN_PREFIX and MET_PREFIX. LAST_STAT only ever grows (profile stats merge by
-# max on save), and its remainder by the reel length is the last shown row's index.
-#
-# theme: "A" is the sax-lead title theme (keepers and worlds), "B" the machine lead with the sax
-# answering (bosses and the cannon). The audio wiring reads `theme`; see the port notes.
-
 const BPM := 129.0
 const BAR := 240.0 / BPM
 const SEEN_PREFIX := "title_intro:"
@@ -23,19 +7,10 @@ const MET_PREFIX := "title_met:"
 const LAST_STAT := "title_intro.last"
 const FIRST := "sable"
 
-# Achievement ids that prove a world was reached or a boss beaten (achievements.gd).
 const WORLD_PROOF := {2: ["ach_d7_mushroom"], 3: ["highdraft_reached", "ach_d7_moth"]}
 const BOSS_PROOF := {"brindle": "brindle_routed", "waking": "waking_stilled", "mind": "mind_quieted"}
 const ENDING_PROOF := "mind_quieted"
 
-# Reel order is rough progression order, so "furthest along" reads as "newest". The saved
-# round-robin pointer is a reel index: add rows at the end rather than reordering.
-# postcard (optional): a set built for the postcard shot, in the set's own frame and placed at `at` on the stage.
-# set is the model; dressing lists more models as {model, at, scale, yaw_deg}; water is a plane {at, size}; subject
-# is where the row's subject stands and how much it is scaled; camera is {at, look, drift, fov}, drifting by `drift`
-# over the shot; sky names a WorldLook.TIME_ROWS grade.
-# card: who, what, then three stats (one true, one deadpan, one at the subject's expense).
-# lines: postcard caption, the crash caption, the wink caption.
 const ROWS := [
 	{"id": "sable", "kind": "pilot", "pilot": "pylon_engineer", "world": 1, "theme": "A",
 		"card": ["SABLE", "Fox · pylon engineer", "Top speed", "yes", "Brakes", "rumoured", "Leaves", "faster than she arrived"],
@@ -49,7 +24,6 @@ const ROWS := [
 				{"model": "res://assets/models/park/anchor_hoodoo_b.glb", "at": Vector3(254, 4, -58), "scale": Vector3(27.0, 12.5, 22.0), "yaw_deg": 145.0},
 			],
 			"water": {"at": Vector3(0.0, 5.0, 380.0), "size": Vector2(1600.0, 1000.0)},
-			# Deck at y 121, just inside the apron-side parapet at x 61 (park/landmarks.py).
 			"subject": {"at": Vector3(61.0, 121.0, -71.0), "scale": 3.2},
 			"camera": {"at": Vector3(-53.0, 9.0, 364.0), "look": Vector3(-11.0, 77.0, -43.0), "drift": Vector3(0.0, 0.0, -20.0), "fov": 40.0},
 			"sky": "dawn",
@@ -115,8 +89,6 @@ static func index_of(id: String) -> int:
 	return -1
 
 
-# The facts the pick reads, from a profile (profile.gd) and a flyable test for a pilot id.
-# A null profile reads as a first launch.
 static func facts_from(profile, flyable: Callable) -> Dictionary:
 	var facts := {"seen": [], "pilots": [], "worlds": [1], "met": [], "ending": false, "last": -1}
 	if profile == null:
@@ -170,7 +142,6 @@ static func pick(facts: Dictionary) -> String:
 	return open[0]
 
 
-# Records a shown row: seen, and the round-robin pointer. Memory only; the caller saves.
 static func mark_shown(profile, id: String) -> void:
 	if profile == null or index_of(id) < 0:
 		return
@@ -182,16 +153,12 @@ static func mark_shown(profile, id: String) -> void:
 	profile.set_stat(LAST_STAT, float(next))
 
 
-# Records that the player met a boss (entered its arena). True the first time.
 static func mark_met(profile, boss: String) -> bool:
 	if profile == null or not BOSS_PROOF.has(boss):
 		return false
 	return profile.mark_seen(MET_PREFIX + boss)
 
 
-# What a row's postcard says about its tiny subject, under an arrow. A whole sentence: the one
-# word "her." read as a line that had lost its other words (design-v3/TITLE-INTROS.md). A
-# world's postcard shows the player's own ball.
 static func pointer_line(id: String) -> String:
 	var r := row(id)
 	if r.is_empty():
@@ -204,10 +171,6 @@ static func pointer_line(id: String) -> String:
 	return "this is %s." % (("the " + who.trim_prefix("The ")) if who.begins_with("The ") else who)
 
 
-# The shot list a row plays, in bars. Sable's opening is the storyboarded one plus her hop-out
-# (12 shots, 24 bars); every other row uses the same swing in 8 shots and 17 bars, and a
-# pilot row adds the hop-out after its card (9 shots, 19 bars). kind names what the
-# player frames; see title_intro_player.gd.
 static func shots(id: String) -> Array:
 	var r := row(id)
 	if r.is_empty():

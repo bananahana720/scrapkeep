@@ -1,23 +1,14 @@
 extends Node
 
-# A kill-first special's body acting, driven by the same special_tell(moment) signal that
-# fires its sound and machine_fx's burst (design-v3/MACHINE-VFX.md, "The four specials").
-# Each clip in tools/blender/world_one/kill_first_motion.py has age 0 on the frame its
-# sound starts, so playing it from 0 on that signal keeps picture and sound on one frame.
-# A tell returns to the body's loop when it ends; a break holds its last pose for the death.
-# Presentation only: nothing here moves a collider or the committed telegraph.
-
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const CLIPS := {
 	"foreman": {"loop": "idle", "tell": "tell", "break": "break"},
 	"dispatcher": {"loop": "idle", "tell": "tell", "break": "break"},
 	"splitter": {"loop": "crawl", "tell": "tell", "break_split": "break_split", "break_clean": "break_clean"},
-	# The Linker holds its dish braced (a loop) once the brace lands, until slack or cut.
 	"linker": {"loop": "idle", "tell": "brace", "after_tell": "braced", "slack": "slack", "break": "cut"},
 	"splitter_piece": {"loop": "scurry", "spawn": "pop_in"},
 }
 const BREAKS := ["break", "break_split", "break_clean"]
-# Seconds a clip fades in over the pose before it: tells and returns ease, hits do not.
 const BLEND_TELL := 0.1
 const BLEND_LOOP := 0.15
 const EASE_REST := 0.15
@@ -34,8 +25,6 @@ var _ease_left := 0.0
 var _ease_from: Array = []
 
 
-# Seats the driver under `enemy`, reading the clips from `model` (the special's GLB scene).
-# Returns null when the model carries no rig or the kind has no clip table.
 static func attach(enemy: Node, model: Node, special: String) -> Node:
 	var anim := model.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	var rig := model.find_child("Skeleton3D", true, false) as Skeleton3D
@@ -54,10 +43,6 @@ static func attach(enemy: Node, model: Node, special: String) -> Node:
 	return node
 
 
-# The special's whole glb scene under `pivot`, its skeleton skinning every mesh and this driver
-# playing its clips, so the authored loop, tell and break reach the screen. The caller dresses
-# the meshes it finds by name. Null when there is nothing to show (a headless run draws no
-# idle, as enemy_motion.gd), no asset or no rig: the caller keeps copying meshes then.
 static func seat(enemy: Node, pivot: Node3D, path: String, special: String) -> Node3D:
 	if not EnemyMotion.active() or not ResourceLoader.exists(path):
 		return null
@@ -74,8 +59,6 @@ func _ready() -> void:
 	set_process(_ease_left > 0.0)
 
 
-# One moment from the body's special_tell signal. Unknown moments are ignored, and nothing
-# plays over a break: a dying body keeps its fall.
 func moment(name: String) -> void:
 	var row: Dictionary = CLIPS.get(kind, {})
 	if _held or not row.has(name):
@@ -92,7 +75,6 @@ func _play(clip: String, loop: bool) -> void:
 		_loop = clip
 		player.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
 		if EnemyMotion.motion_scale <= 0.0:
-			# Reduced motion: no idle, as enemy_motion.gd. Tells and breaks still play; they are reads.
 			_ease_to_rest()
 			return
 	_ease_left = 0.0
@@ -103,7 +85,6 @@ func _play(clip: String, loop: bool) -> void:
 	player.seek(0.0, true)
 
 
-# A break or a spawn pop is a hit read: it starts on its frame, never faded in.
 func _is_hit(clip: String) -> bool:
 	var row: Dictionary = CLIPS.get(kind, {})
 	for name in row:
@@ -112,10 +93,6 @@ func _is_hit(clip: String) -> bool:
 	return false
 
 
-# The importer drops constant tracks, so a clip that never keys a bone would leave it at the
-# last clip's pose, and a cross-fade would have nothing to fade to. Gives every bone channel
-# any clip of the player keys a rest key in the clips that lack it, once per Animation.
-# Channels no clip keys stay untouched (the Linker's DishAim is aimed by code).
 static func fill_rest(player: AnimationPlayer, skeleton: Skeleton3D) -> void:
 	var names := player.get_animation_list()
 	if names.is_empty() or player.get_animation(names[0]).has_meta(FILLED):
@@ -150,7 +127,6 @@ static func fill_rest(player: AnimationPlayer, skeleton: Skeleton3D) -> void:
 					anim.scale_track_insert_key(track, 0.0, rest.basis.get_scale())
 
 
-# Reduced motion stills the loop; a pose left by the clip before eases home rather than snapping.
 func _ease_to_rest() -> void:
 	_ease_from.clear()
 	for i in skeleton.get_bone_count():

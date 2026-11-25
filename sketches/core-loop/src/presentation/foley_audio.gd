@@ -1,17 +1,5 @@
 extends RefCounted
 
-# The Dig and Highdraft events' own sounds (PR #12, music thread), rendered files under
-# assets/audio/foley/<id>.wav: the Dig's in E, the Highdraft's in G. Each is loaded only if
-# present, so the events run on their row sounds alone until the files land, as the jolt
-# layer's voice does (jolt_layer_audio.gd).
-# - lift_cage_arrive 1.4 s, its clank at 0: on the cage's arrival frame.
-# - zipline_whine 2.0 s, ending on the landing: WHINE_LEAD before zipline_landed.
-# - zipline_snap 0.5 s: on the cut or the landing frame.
-# - cave_in_rumble 1.2 s: with the cave-in's warning. cave_in_debris 1.0 s: on impact.
-# - prop_crew_presence: a seamless 2.0 s loop on the crew while it lives.
-# - prop_crew_strain 1.0 s: with the roof's warning. prop_crew_collapse 1.5 s, its slab
-#   landing at COLLAPSE_LAND: started that long before the roof lands.
-
 const DIR := "res://assets/audio/foley/"
 const WHINE_LEAD := 2.0
 const COLLAPSE_LAND := 0.12
@@ -28,7 +16,6 @@ static func path(id: String) -> String:
 	return DIR + id + ".wav"
 
 
-# The id's stream, or null with no file (wav below).
 static func stream(id: String) -> AudioStreamWAV:
 	if _streams.has(id):
 		return _streams[id]
@@ -42,9 +29,7 @@ static func stream(id: String) -> AudioStreamWAV:
 	return out
 
 
-# The WAV at p: the imported resource when there is one, else the raw 16-bit RIFF (a headless run
-# with no import cache), else null. raw reads the file's own PCM even when imported (the mix tools
-# decode it). The world's sounds load through it too (world_fx_sound.gd).
+# Headless Godot runs without an import cache, falling back to raw 16-bit RIFF.
 static func wav(p: String, raw := false) -> AudioStreamWAV:
 	if not raw and ResourceLoader.exists(p):
 		return load(p) as AudioStreamWAV
@@ -70,7 +55,6 @@ static func _from_riff(bytes: PackedByteArray) -> AudioStreamWAV:
 	return null
 
 
-# A spatial player for one id on `host`, or null with no file. A loop id loops.
 static func player(id: String, host: Node3D) -> AudioStreamPlayer3D:
 	var s := stream(id)
 	if s == null or host == null:
@@ -86,8 +70,6 @@ static func player(id: String, host: Node3D) -> AudioStreamPlayer3D:
 	return p
 
 
-# A one-shot that outlives its source, parented to `parent` at `at` and freed when it
-# finishes. False with no file or no parent in the tree.
 static func one_shot(id: String, parent: Node, at: Vector3) -> bool:
 	if parent == null or not parent.is_inside_tree() or stream(id) == null:
 		return false

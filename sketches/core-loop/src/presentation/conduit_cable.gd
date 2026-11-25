@@ -3,38 +3,18 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
-# Command cables (design-v3/WAYFINDING.md section 3, ruling ek, unit E1-15): the Warden's gate pips drawn large on the
-# ground. A park's `cable_rows` (park_schema.gd) each run from a socket at the clamp, along the row's `via` points, to a
-# casting beside a crew home. One cable per pack the gate asks for, in pip order: while pip k is dark, cable k is a closed
-# charcoal tube with uranium-green beads (Palette.ANCIENT, an old-works mechanism; never the live mint) running along it
-# toward the clamp, so riding with the beads finds the Warden and against them finds a crew. When pip k lights, cable k
-# goes quiet: severed near the clamp into two capped ends, charcoal, no bead, no motion, no light, and it is marked
-# visited on the site markers. The count is read from one public call, StageLocks.pips_lit(), each frame; this node keeps
-# no count of its own, so pip and cable never disagree (the camp or the 75 s clock lights every pip, and every cable dies).
-#
-# Shape: a tube of RADIUS and SIDES sides laid along the ground every STEP_M, both ends diving SINK_M into their casting so
-# no end floats; a crew-end casting and a clamp socket in the old works' cast iron. One mesh and one material per cable:
-# one draw a cable, no shadow. The beads are a shader on the tube's arc length (UV.x, metres from the crew end) and stand
-# still under reduced motion. Nothing collides. Built on stage entry (retry included), dropped when the stage's content
-# is cleared; no static state.
 
 const RADIUS := 0.12
 const SIDES := 8
 const STEP_M := 2.0
-# The tube rests on the ground, its centre this far over it.
 const LIFT_M := RADIUS + 0.04
-# Each end dives this far under the ground, inside its casting.
 const SINK_M := 0.45
-# The crew-end casting and the clamp socket (width, height, depth), set this far into the ground.
 const CASTING := Vector3(1.5, 1.1, 1.5)
 const SOCKET := Vector3(1.1, 0.8, 1.1)
 const CAST_BURY_M := 0.3
-# Clamp sockets stand in a row across the beacon, this far apart, in pip order.
 const FAN_M := 2.6
-# A dead cable's break: this far along from the clamp, this long.
 const BREAK_FROM_CLAMP_M := 14.0
 const BREAK_M := 1.8
-# The beads: one every BEAD_SPACING_M, running BEAD_SPEED m/s toward the clamp.
 const BEAD_SPACING_M := 5.0
 const BEAD_SPEED := 3.5
 const BEAD_GLOW := 2.6
@@ -63,7 +43,6 @@ void fragment() {
 
 var ctx
 var _markers
-# [{id, pip, view, points, dead}] in pip order, for the stage on show.
 var _cables: Array = []
 var _live: ShaderMaterial
 var _dead: StandardMaterial3D
@@ -92,7 +71,6 @@ func setup(ctx_ref, markers = null) -> void:
 		events.stage_content_cleared.connect(_on_cleared)
 
 
-# The stage's cables, read-only: [{id, pip, dead, view}] in pip order.
 func cables() -> Array:
 	var out := []
 	for c: Dictionary in _cables:
@@ -121,7 +99,6 @@ func _drop() -> void:
 	_cables.clear()
 
 
-# Builds the stage's cables from its park file (its cable_rows, the landmark's beacon and the ground), all alive.
 func _build(gen: int = -1) -> void:
 	if gen >= 0 and gen != _gen:
 		return
@@ -150,8 +127,6 @@ func _build(gen: int = -1) -> void:
 	refresh()
 
 
-# The cable's ground line, clamp end first: the clamp socket for its pip across beacon, its via points, nothing else.
-# Each point is [x, z]; heights are the ground's (cable_mesh lays the tube on it).
 static func route(row: Dictionary, beacon: Vector2, count: int, _ground: Callable) -> PackedVector2Array:
 	var out := PackedVector2Array()
 	out.append(clamp_socket(int(row["pip"]), count, beacon))
@@ -160,13 +135,10 @@ static func route(row: Dictionary, beacon: Vector2, count: int, _ground: Callabl
 	return out
 
 
-# Where pip's socket stands: a row across the beacon, FAN_M apart, pip 1 on the left.
 static func clamp_socket(pip: int, count: int, beacon: Vector2) -> Vector2:
 	return beacon + Vector2((float(pip) - (count + 1) * 0.5) * FAN_M, 0.0)
 
 
-# Swaps each cable to its state for the pips lit now: cable k (pip order) is dead once pip k is lit. Public so a
-# headless test can drive it; runs each frame while cables stand.
 func refresh() -> void:
 	var lit := _pips_lit()
 	var terrain = ctx.get("terrain") if ctx != null else null
@@ -209,9 +181,6 @@ func _process(_delta: float) -> void:
 		refresh()
 
 
-# The cable's mesh along line (clamp end first, [x, z] points), laid on ground (x, z) -> height. break_at < 0 draws it
-# whole and alive; otherwise it is severed break_at metres along from the clamp, BREAK_M long, both cut ends capped, and
-# coloured dead. Either way both far ends dive into their casting and the clamp socket and the casting are drawn.
 static func cable_mesh(line: PackedVector2Array, ground: Callable, break_at := -1.0) -> ArrayMesh:
 	var path := lay(line, ground)
 	var total := 0.0
@@ -235,8 +204,6 @@ static func cable_mesh(line: PackedVector2Array, ground: Callable, break_at := -
 	return st.commit()
 
 
-# The tube's centre line: line resampled every STEP_M and set LIFT_M over the ground, each end extended down SINK_M
-# under the ground at its anchor.
 static func lay(line: PackedVector2Array, ground: Callable) -> PackedVector3Array:
 	var flat := PackedVector2Array()
 	for i in range(line.size()):
@@ -258,7 +225,6 @@ static func lay(line: PackedVector2Array, ground: Callable) -> PackedVector3Arra
 	return out
 
 
-# The part of path from from_m to to_m metres along it (clamp end first).
 static func _slice(path: PackedVector3Array, from_m: float, to_m: float) -> PackedVector3Array:
 	var out := PackedVector3Array()
 	var run := 0.0
@@ -282,17 +248,12 @@ static func _slice(path: PackedVector3Array, from_m: float, to_m: float) -> Pack
 	return out
 
 
-# A closed tube along path: SIDES-sided rings framed by parallel transport (no twist on a cliff), capped at both ends.
-# UV.x is metres from the crew end (total - arc length from the clamp, from_m being where path starts); UV.y the way
-# round, 0.25 on top. Caps carry UV.y -1 (no bead).
 static func _tube(st: SurfaceTool, path: PackedVector3Array, total: float, from_m: float, color: Color) -> void:
 	if path.size() < 2:
 		return
 	var rings := []
 	var run := from_m
 	var tangent := (path[1] - path[0]).normalized()
-	# The first frame's normal is level and square to the first level run, so its binormal is up wherever the tube
-	# first runs level, even when it starts on the dive out of its socket.
 	var level := Vector3.ZERO
 	for i in range(1, path.size()):
 		var d := path[i] - path[i - 1]
@@ -316,7 +277,6 @@ static func _tube(st: SurfaceTool, path: PackedVector3Array, total: float, from_
 		var ring := []
 		for k in SIDES + 1:
 			var a := TAU * float(k) / SIDES
-			# The first frame's binormal is up, so side SIDES/4 (UV.y 0.25) is the top while the tube runs level.
 			var out_dir := normal * cos(a) + binormal * sin(a)
 			ring.append([path[i] + out_dir * RADIUS, Vector2(total - run, float(k) / SIDES)])
 		rings.append(ring)
@@ -341,7 +301,6 @@ static func _tube(st: SurfaceTool, path: PackedVector3Array, total: float, from_
 				st.add_vertex(v)
 
 
-# The flat way a cable leaves its anchor, for turning the casting square to it.
 static func _toward(line: PackedVector2Array, clamp_end: bool) -> Vector2:
 	var a := line[0] if clamp_end else line[line.size() - 1]
 	var b := line[mini(1, line.size() - 1)] if clamp_end else line[maxi(line.size() - 2, 0)]
@@ -349,8 +308,6 @@ static func _toward(line: PackedVector2Array, clamp_end: bool) -> Vector2:
 	return d.normalized() if d.length() > 0.01 else Vector2(0.0, 1.0)
 
 
-# A squared old-works casting at foot (on the ground), size (w, h, d), its face turned along dir: a body set CAST_BURY_M
-# into the ground, a stepped cap, all closed boxes. UV.y -1: no bead.
 static func _casting(st: SurfaceTool, foot: Vector3, size: Vector3, dir: Vector2) -> void:
 	var yaw := atan2(dir.x, dir.y)
 	var basis := Basis(Vector3.UP, yaw)

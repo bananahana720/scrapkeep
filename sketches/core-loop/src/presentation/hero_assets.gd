@@ -9,33 +9,20 @@ const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const WARDEN_BASE := "res://assets/models/warden_clamp_base.glb"
 const WARDEN_KITS := {"reactor": "reactor", "swarm": "hive", "mind": "mind"}
-# Presentation-only mantles by stage, never by warden_variant: stage 5 (the Mind's hand) has no
-# variant, so only the stage tells the hand from the choir. Each row names the family it fits; a
-# mismatch mounts nothing. KF0 2026-10-10: one Warden kind per world moved the reactor meltdown
-# to stage 2; stages 1 and 3 (the bare reactor and the bare swarm) stay bare.
 const WARDEN_MANTLES := {
 	2: {"family": "reactor", "path": "res://assets/models/warden_mantle_meltdown.glb"},
 	4: {"family": "swarm", "path": "res://assets/models/warden_mantle_brood.glb"},
-	# Rows 5 and 6 stay until KF8b makes the stage 5 and 6 Wardens park anchors: today they take the
-	# clamp path, and the body path skips mantles (coordinator ruling at the KF8a merge, 2026-10-11).
 	5: {"family": "mind", "path": "res://assets/models/warden_mantle_hand.glb"},
 	6: {"family": "mind", "path": "res://assets/models/warden_mantle_choir.glb"},
 }
-# KF8a: a park Warden (spec "harpoon_anchor": true) of a kind with a recipe body wears that body
-# in place of the clamp base, kit and mantle; the authored boss arenas' Wardens keep the clamp.
-# Rows from artifacts/local/alpha/push/w13/wardens/<kind>/hero_assets_rows.txt (KF5 to KF7). The
-# mind body retired WARDEN_MANTLES 5 and 6 (wardens/mind.md section 8). Each body sits like the
-# clamp, origin at the collider's floor (position.y = -HALF_HEIGHT); "kits" ride under it.
 const WARDEN_BODIES := {
 	"reactor": {"body": "res://assets/models/warden_reactor.glb", "kits": [], "point": "WeakPoint",
-		# Mounting-only parts: the other mounting's are hidden.
 		"mount_parts": {"dam_face": ["GateL", "GateR"], "flume": ["PourLip"]}},
 	"swarm": {"body": "res://assets/models/warden_swarm.glb", "kits": ["res://assets/models/warden_swarm_kit_drones.glb"],
 		"point": "WeakPoint", "hang": "Suspension", "grips": ["Grip0", "Grip1", "Grip2"],
 		"shed_rings": ["Ring5", "Ring4", "Ring3", "Ring2"]},
 	"mind": {"body": "res://assets/models/warden_mind.glb", "kits": [], "point": "WeakPoint"},
 }
-# design-v3/wardens/<kind>.md section 5: the blend (s) each clip starts with.
 const WARDEN_BODY_BLENDS := {
 	"reactor": {"idle": 1.0, "pulse_warn": 0.5, "pulse": 0.1, "active": 0.5, "chunk_lost": 0.8, "chunk_lost_1": 0.8,
 		"chunk_lost_2": 0.8, "chunk_lost_3": 0.8, "shrug": 0.2, "gates_open": 0.3, "pour": 0.3, "final_quiet": 2.0},
@@ -45,23 +32,17 @@ const WARDEN_BODY_BLENDS := {
 		"chunk_lost_middle": 0.8, "chunk_lost_index": 0.8, "shrug": 0.2, "grip_falter": 0.5, "takeoff": 0.3,
 		"glide": 0.3, "land": 0.2, "knocked_down": 0.2, "final_quiet": 2.0},
 }
-# The clip each kind plays on the charge, the pulse's tail and the break. The swarm has no
-# pulse_warn: its pulse clip is the charge (2.0 s) then the slam (0.4 s), section 5.
 const WARDEN_BODY_CHARGE := {"reactor": "pulse_warn", "swarm": "pulse", "mind": "pulse_warn"}
 const WARDEN_BODY_FINAL := {"reactor": "final_quiet", "swarm": "break", "mind": "final_quiet"}
 const WARDEN_REACTOR_PULSE_EXTRA := {"dam_face": "gates_open", "flume": "pour"}
-# Chunk order (mind rows section 4): the chunk_lost clip by the finger it curls, and that finger's seam.
 const MIND_CHUNK_FINGERS := [
-	{"clip": "chunk_lost", "seam": "ancient_light_seam3"},        # little, first
+	{"clip": "chunk_lost", "seam": "ancient_light_seam3"},
 	{"clip": "chunk_lost_ring", "seam": "ancient_light_seam2"},
 	{"clip": "chunk_lost_middle", "seam": "ancient_light_seam1"},
-	{"clip": "chunk_lost_index", "seam": "ancient_light_seam0"},  # fourth; final_quiet puts out the thumb
+	{"clip": "chunk_lost_index", "seam": "ancient_light_seam0"},
 ]
-# The lens bones: under the held perch only these take idle, pulse_warn, pulse and active.
 const MIND_LENS_BONES := ["Lens", "LensIris", "SmallLens0", "SmallLens1", "SmallLens2", "SmallLens3", "SmallLens4"]
-# Clips that move the whole hand: the perch hold lets them through.
 const MIND_FLIGHT_CLIPS := ["takeoff", "glide", "land", "knocked_down"]
-# Mount group name -> node path under HeroKit that receives the group's meshes.
 const MANTLE_MOUNTS := {
 	"MountBody": "Body", "MountVent0": "Vent0", "MountVent1": "Vent1", "MountVent2": "Vent2",
 	"MountArmL": "ArmL", "MountArmR": "ArmR",
@@ -76,17 +57,11 @@ const BallLooks := preload("res://src/presentation/ball_looks.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const PilotGlance := preload("res://src/presentation/pilot_glance.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
-# One pose table per pilot (PILOT-CLIPS section 4.2), by the PILOTS glb stem.
-# Pilot return-to-rest clip built at runtime for GLBs with no idle loop, and the blend an impact
-# gets when it interrupts another one-shot.
-# The rest clip lives in each animator's own library: the GLB's default library is shared by
-# every instance and by the bot track switch (bot_options.gd), so it never gains a runtime clip.
 const REST_LIBRARY := "runtime"
 const REST_CLIP := "runtime/rest_pose"
 const REST_LENGTH := 0.5
 const INTERRUPT_BLEND := 0.05
 const PILOT_TABLES := "res://src/presentation/clips/%s.json"
-# The movement chip's signals kick both pedals (PILOT-CLIPS section 5), by argument count.
 const MECHA_PEDAL_EVENTS := {"dashed": 1, "boosted": 1, "blink_used": 2, "sprint_started": 1, "rocket_jumped": 2}
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
@@ -99,28 +74,10 @@ const PILOTS := {
 	"tally": "res://assets/models/pilot_tally_anim.glb",
 	"remembered_cannon": "res://assets/models/pilot_cannon_anim.glb",
 }
-# Hidden 7th pilot (Patch, Ruling dl): kept separate from PILOTS/SHELLS so six-pilot roster tests
-# stay pinned while runtime shell/pilot lookup resolves line_splicer seamlessly.
 const HIDDEN_PILOTS := {
 	"line_splicer": "res://assets/models/pilot_patch_anim.glb",
 }
 
-# VD-01 clear sphere slice. Dresses the greybox in the procedural
-# models from tools/blender/ as nodes enter the tree, without editing the gameplay
-# scripts that own them: the player's class shell, accretion chunks and the reward
-# gate arches. Each placeholder mesh is hidden (render layers cleared, shadow off),
-# never deleted, so the gameplay code that builds it stays as it is.
-#
-# Every glb surface is named for its material slot, and SLOTS below is the one table
-# from slot to palette role. `class` and `rarity` resolve per instance: the class row's
-# colour and reward_gates.gd rarity_color(). paint, pilot and ancient_enamel carry
-# palette colours baked as vertex colours (the test pins paint to the paint roles).
-#
-# The shell splits the way it moves. Core rolls with the ball under its rolling mesh;
-# Pod (the kit and seated pilot) rides the juice node, stays upright and yaws to
-# the heading, so the cockpit is always findable (AD-01, AC-01) and Rivet's fins and
-# Kest's satchel bands keep their direction. Chunks tuck below the cockpit as they
-# roll through it instead of clipping the glass.
 
 const SHELLS := {
 	"pylon_engineer": "res://assets/models/world_one/shell_sable.glb",
@@ -133,12 +90,6 @@ const SHELLS := {
 const HIDDEN_SHELLS := {
 	"line_splicer": "res://assets/models/world_one/shell_patch.glb",
 }
-# A pilot's weapon model, mounted at identity under the shell's WeaponRing (its origin is the ball
-# centre), so it yaws to the aim and banks with the ring, and the bank hull reads its vertices with
-# the ring's. Rivet's twin rivet revolvers are their own skinned file (E1-09, wave 46 3D blueprint
-# section 2.2): the shell had no triangle room left, and their bones need a skeleton of their own.
-# Kest's clacker (E2-03, ruling en) is the detonator her throw snaps, clamped at her right yoke: it
-# rides the Pod (COCKPIT_WEAPONS), so it stays at her hands while the ring and its mortar pods aim.
 const WEAPONS := {
 	"runner_gunner": "res://assets/models/world_one/rivet_revolvers.glb",
 	"demolitions_caster": "res://assets/models/world_one/kest_clacker.glb",
@@ -148,32 +99,19 @@ const WEAPON_NODE := "Weapon"
 const DEFAULT_CLASS := "pylon_engineer"
 const CHUNKS_PATH := "res://assets/models/chunks.glb"
 const GATE_PATH := "res://assets/models/reward_gate.glb"
-# Accretion slot index bands: a young build carries small scrap, a heavy one large.
 const CHUNK_BANDS := [[12, "small"], [24, "medium"], [Accretion.MAX_CHUNKS, "large"]]
-# Cosine from straight up where a chunk starts tucking under the pod, and where it is gone.
 const TUCK_FROM := -0.15
 const TUCK_GONE := 0.30
 const POD_TURN_RATE := 10.0
-# Below this speed the ball counts as still for the pilot's glance back at the camera.
 const GLANCE_STILL_SPEED := 0.6
 const POD_TURN_SPEED := 1.5
 const VANE_RATE := 8.0
-# Hoberman weapon ring yaw toward the aim (PILOT-CLIPS section 5, start value).
 const WEAPON_RING_RATE := 14.0
-# Carrier bank (MOTION-SPEC row 208, start values): the contact normal is smoothed at this rate
-# (63 percent in 0.125 s), so the bank never pops on a take or a peel.
 const BANK_RATE := 8.0
-# Gap-bracket modules that ride the banked carrier (ROSTER-LOOK section 4 'bracket'). Geometry baked into
-# the Pod mesh (a seat arm, Cannon's rush ring) stays level with the pod. Cannon's split ports and class V
-# hoods are their own meshes (SplitPorts, PortHoods) so they bank, as are Sable's SpoolKit, Tally's
-# DrumBrackets, DrumHoods and HeavyDrums, and Tarn's heft-layer claw hooks (ClawHooks).
 const BRACKET_PARTS := ["CoilMast", "Exhaust_L", "Exhaust_R", "VaneL", "VaneR", "ClawPivot_L", "ClawPivot_R",
 	"ClawTip_L", "ClawTip_R", "ClawLower_L", "ClawLower_R", "ClawUpper_L", "ClawUpper_R", "Flywheel_L",
 	"Flywheel_R", "FlywheelAxis_L", "FlywheelAxis_R", "SplitExit_L", "SplitExit_R", "RushContact",
 	"SplitPorts", "PortHoods", "SpoolKit", "DrumBrackets", "DrumHoods", "HeavyDrums", "ClawHooks"]
-# The shell's air-factor cue: a flat ring on the pod, in the row's colour and shape, that swells
-# out on the rise and draws in on the return (a different motion from juice.gd's shell pulse,
-# which means heft). No overlay: it is a mesh under the pod.
 const AIR_CUE_ROW := "shell_air_shift"
 const AIR_CUE_SECONDS := 0.45
 const AIR_CUE_RISE := [0.9, 1.9]
@@ -181,11 +119,7 @@ const AIR_CUE_RETURN := [1.9, 0.9]
 const AIR_CUE_RADIUS := 0.62
 const AIR_CUE_NAME := "AirCue"
 
-# An equipped paint lerps the paint surfaces' baked vertex colour this far toward its tint,
-# so a dark lattice takes the hue instead of only darkening (PAINT-TRACE card A2, start value).
 const PAINT_TAKE := 0.6
-# Vertex alpha 0 keeps a part's baked colour under any paint; alpha at or above 0.05 takes full paint, so Tally's window-index alphas (0.2 to 0.8) are unchanged.
-# Plate maps average darker than the old neutral value noise; the paint slot lifts once.
 const PAINT_LIFT := 1.2
 const PAINT_SHADER := """shader_type spatial;
 render_mode cull_back, diffuse_burley, specular_schlick_ggx;
@@ -222,7 +156,6 @@ const SLOTS := {
 	"requisition_tag": {"color": Palette.BRASS, "metal": 0.5, "rough": 0.4},
 	"ancient_enamel": {"color": Color.WHITE, "vertex": true, "rough": 0.72},
 	"ancient_light": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
-	# The mind body's own seam surfaces (KF7): one finger goes out per chunk lost, the thumb last.
 	"ancient_light_seam0": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
 	"ancient_light_seam1": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
 	"ancient_light_seam2": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
@@ -230,20 +163,14 @@ const SLOTS := {
 	"ancient_light_thumb": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
 	"ancient_light_knuckle": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
 	"ancient_light_lens": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
-	# Hoberman hubs, pivot pins, studs and the lap bar: its own slot so an equipped paint never
-	# tints copper (ROSTER-LOOK section 6).
 	"copper": {"color": Palette.COPPER, "metal": 0.6, "rough": 0.4},
-	# KF7d round 4: hydraulic rams keep their vertex colours without paint or wear.
 	"hydraulic": {"color": Color.WHITE, "vertex": true, "metal": 0.4, "rough": 0.35},
-	# Warden mantle working throat: hazard, lit by the Warden's charge_fraction (see _update_mantle).
 	"mantle_tool": {"color": Palette.HAZARD, "emit": 0.0, "rough": 0.5},
 	"rarity": {"from": "rarity", "emit": 1.4, "rough": 0.5},
 }
 
 var ctx
-# Frames left before the Warden stroke prewarm, once the boot card is gone; -1 when it is done or not owed.
 var _prewarm_wait := -1
-# The profile whose equipped paint colours the player's shell; null means no paint anywhere.
 var profile = null
 var _materials := {}
 var _scenes := {}
@@ -257,7 +184,6 @@ var _warned := {}
 var _reaction_clock := 0.0
 var _reaction_connections: Array = []
 var _pilot_tables := {}
-# The last pressure_changed value, for the machinery rows that read pressure.
 var _pressure := 0.0
 
 
@@ -317,8 +243,6 @@ func _on_node_added(node: Node) -> void:
 		_dress_gate.call_deferred(node)
 
 
-# --- materials ---------------------------------------------------------------------
-
 func material(slot: String, tint := Color.WHITE) -> Material:
 	var key := "%s:%s" % [slot, tint.to_html()]
 	if _materials.has(key):
@@ -363,14 +287,11 @@ void fragment() {
 	mat.roughness = spec.get("rough", 0.8)
 	mat.metallic = spec.get("metal", 0.0)
 	if slot == "ancient_enamel":
-		# Section 11: cast, seamless petrol with dust in the vertex colours; no plate map.
 		mat.albedo_texture = Palette.painted_texture(128)
 		mat.uv1_triplanar = true
 		mat.uv1_scale = Vector3.ONE * 2.0
 		Palette.enamel_wear(mat)
 	if slot in ["paint", "pilot", "bare_metal", "fleet_paint"]:
-		# Look pass 3: broad painted material groups. Plate for hulls and Warden armor,
-		# the worn variant for old fleet repairs, riveted gyro metal for bare metal.
 		var map := ""
 		var metres := 1.5
 		match slot:
@@ -386,15 +307,12 @@ void fragment() {
 			mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 			mat.uv1_triplanar = true
 			mat.uv1_scale = Vector3.ONE / metres
-			# Plate maps average darker than the old neutral value noise; lift them once here
-			# instead of tinting twice.
 			if slot == "paint":
 				mat.albedo_color = Color(PAINT_LIFT, PAINT_LIFT, PAINT_LIFT, mat.albedo_color.a)
 		else:
 			mat.albedo_texture = Palette.painted_texture(128)
 			mat.uv1_triplanar = true
 			mat.uv1_scale = Vector3.ONE * 2.0
-	# The plate maps carry their own wear; the old detail-mask oxide would double it.
 	if spec.has("alpha"):
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mat.metallic_specular = 0.65
@@ -404,10 +322,6 @@ void fragment() {
 		mat.emission = color
 		mat.emission_energy_multiplier = spec["emit"]
 	_materials[key] = mat
-	# A Warden body paints its own copies of these slots, and only the copies ever draw. BaseMaterial3D frees a shader
-	# with its last material, so the stage swap that freed the dam Warden's copies took the shader too, and the flume
-	# Warden's first copy built it again on its first surface: 12-15 ms of the flume entry frame on the 4080 (scrapkeep#512).
-	# The shared slot holds the shader for the run, and the enamel's lit twin holds the hit flash's (emission on).
 	if slot.begins_with("ancient_light") or slot == "ancient_enamel":
 		mat.get_rid()
 	if slot == "ancient_enamel" and not mat.emission_enabled:
@@ -423,7 +337,6 @@ static func slot_of(mesh: Mesh, surface: int) -> String:
 	return mat.resource_name if mat != null else ""
 
 
-# Metadata keeps surface materials alive until after the rendering instance is freed.
 static func _surface_material(view: MeshInstance3D, surface: int, mat: Material) -> void:
 	view.set_surface_override_material(surface, mat)
 	var held: Dictionary = view.get_meta("hero_surface_materials", {})
@@ -431,13 +344,10 @@ static func _surface_material(view: MeshInstance3D, surface: int, mat: Material)
 	view.set_meta("hero_surface_materials", held)
 
 
-# A live swap on a fitted shell (Kest's bands and fuse, the ready glow): a surface the ball look
-# has dressed keeps its window and ink line (BallLooks.keep_window).
 static func _swap_material(view: MeshInstance3D, surface: int, mat: Material) -> void:
 	_surface_material(view, surface, BallLooks.keep_window(view, surface, mat))
 
 
-# Paints every surface under root from SLOTS. tints: {"class": Color, "rarity": Color}.
 func paint(root: Node, tints: Dictionary) -> void:
 	var stack: Array[Node] = [root]
 	while not stack.is_empty():
@@ -463,8 +373,6 @@ static func hide_placeholder(mi: GeometryInstance3D) -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
-# A scene held for the presentation's life: nothing else keeps a GLB's PackedScene, so a bare load() reads it from disk
-# again every time (a Warden body, 8-25 ms, on every stage entry and retry).
 func _packed(path: String) -> PackedScene:
 	if not _scenes.has(path):
 		_scenes[path] = load(path) as PackedScene if ResourceLoader.exists(path) else null
@@ -479,7 +387,6 @@ func _scene(path: String) -> Node:
 	return packed.instantiate()
 
 
-# The mesh of the named node in a glb, loaded once.
 func mesh_named(path: String, node_name: String) -> Mesh:
 	var key := path + "#" + node_name
 	if not _meshes.has(key):
@@ -498,8 +405,6 @@ func _warn_once(key: String, text: String) -> void:
 		push_warning(text)
 
 
-# --- the player's shell ------------------------------------------------------------
-
 func attach_player(player: Node3D) -> void:
 	var rolling := player.roll_node().get_parent() as MeshInstance3D
 	_players[player.get_instance_id()] = {"player": player, "class": "", "core": null, "pod": null,
@@ -517,9 +422,6 @@ static func class_id(player: Node) -> String:
 	return def.id if def != null and (SHELLS.has(def.id) or HIDDEN_SHELLS.has(def.id)) else DEFAULT_CLASS
 
 
-# The tint an equipped paint gives a pilot's shell, or null for none. A paint applies only
-# when its row is a paint for this pilot (or any) with a tint, and the profile owns it or the
-# row is a starter. Anything else warns once per id and leaves the shell as it is.
 func paint_tint(pilot: String, paint_id: String):
 	var row: Dictionary = Cosmetics.row(paint_id)
 	var why := ""
@@ -545,7 +447,6 @@ func _equipped_paint(id: String) -> String:
 	return CosmeticWear.worn(profile, id, "paint")
 
 
-# The equipped shell variant's asset id for a pilot, or "" for the default cage.
 func _equipped_variant(id: String) -> String:
 	var worn := CosmeticWear.worn(profile, id, "shell")
 	return String(Cosmetics.row(worn).get("asset", "")) if worn != "" else ""
@@ -558,9 +459,6 @@ func _worn_tints(player: Node, tint) -> Dictionary:
 	return tints
 
 
-# The shell and pilot the player wears right now, seated for the pause preview. Reuse the
-# previous fit and update its heft and panel window when the worn cosmetics have not changed.
-# Returns {} when even the default shell is unavailable.
 func fit_worn_into(ball: Node3D, panels: Node3D, player: Node, rec: Dictionary) -> Dictionary:
 	var id := class_id(player)
 	var paint_id := _equipped_paint(id)
@@ -588,7 +486,6 @@ func fit_worn_into(ball: Node3D, panels: Node3D, player: Node, rec: Dictionary) 
 		if outfit != "":
 			fit_outfit(fitted.pilot, outfit, tints)
 		var animator: AnimationPlayer = fitted.animator
-		# Held on its first idle frame: the preview is a still of the worn pilot.
 		if PilotReactions.seat_idle(animator, fitted.pilot) != "":
 			animator.pause()
 	BallLooks.ride(ball_look(), panels)
@@ -662,8 +559,6 @@ func _process(delta: float) -> void:
 			_update_warden(rec)
 
 
-# The ring for one change of the resolved air factor, on the player's pod (every attached
-# player). The row decides colour and shape; `rose` decides only the direction of the swell.
 func air_cue(_factor: float, rose: bool) -> Node3D:
 	var row: Dictionary = EventKinds.ROWS.get(AIR_CUE_ROW, EventKinds.WORLD_ROWS.get(AIR_CUE_ROW, {}))
 	var made: Node3D = null
@@ -716,7 +611,6 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 	if gyro != null and gyro.has_node("GyroInner") and core != null and is_instance_valid(core):
 		counter_tilt(pod, gyro, core)
 	elif gyro != null and v.length() > 0.01:
-		# Motion comes from the real velocity; the pilot remains on the upright Pod.
 		gyro.rotate_object_local(Vector3.RIGHT, v.length() * delta / 0.98)
 	sync_lattice(core, player.roll_node())
 	BallLooks.ride(ball_look(), player.roll_node())
@@ -741,11 +635,9 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 	if kit.get("hooked") == true:
 		steer_fairlead(pod, kit.anchor, delta)
 	else:
-		# A cable ride: the carriage turns to the trolley clamp the hanger leaves for.
 		var view = get_parent().get("line_view") if get_parent() != null else null
 		if view != null and view.hanger.visible:
 			steer_fairlead(pod, view.hanger_to, INF if view.hanger_fresh else delta)
-	# Draw only: the face under the ball, or world up in the air.
 	var face: Vector3 = player.state.get("contact_normal") if player.state.get("grounded") == true else Vector3.UP
 	player.set_meta("carrier_bank", update_carrier_bank(pod, face, delta))
 
@@ -776,7 +668,6 @@ func kest_band_material(tint: Color) -> ShaderMaterial:
 	if _materials.has(key):
 		return _materials[key]
 	var mat := ShaderMaterial.new()
-	# PD-KEST stores band index in UV2.x and the fourth satchel's class gate in UV2.y.
 	mat.shader = _paint_shader("kest_bands", PAINT_SHADER + """uniform vec4 class_color : source_color = vec4(1.0);
 instance uniform int lit_count = 0;
 instance uniform int heft_class = 1;
@@ -798,7 +689,6 @@ void fragment() {
 	return mat
 
 
-# One shader per paint use, shared by every tint, so a new paint adds a material, not a shader.
 func _paint_shader(use: String, code: String) -> Shader:
 	var key := "shader:" + use
 	if not _materials.has(key):
@@ -808,7 +698,6 @@ func _paint_shader(use: String, code: String) -> Shader:
 	return _materials[key]
 
 
-# White is no paint: the plain lift over the vertex colour, as the StandardMaterial3D draws it.
 static func _paint_parameters(mat: ShaderMaterial, tint: Color) -> void:
 	var lift := Color(PAINT_LIFT, PAINT_LIFT, PAINT_LIFT)
 	mat.set_shader_parameter("paint_tint", Color(PAINT_LIFT * tint.r, PAINT_LIFT * tint.g, PAINT_LIFT * tint.b))
@@ -845,9 +734,6 @@ void fragment() {
 	return mat
 
 
-# Hoberman gimbal (ROSTER-LOOK section 2): the rings show the lattice's turn against the upright
-# pod. The outer ring (Gyro) pivots on the pod's left-right axis by the lattice's pitch, the inner
-# ring (Gyro > GyroInner) on its top-bottom bosses by the next turn, so both follow the tumble.
 static func counter_tilt(pod: Node3D, gyro: Node3D, core: Node3D) -> void:
 	if not pod.is_inside_tree() or not gyro.is_inside_tree() or not core.is_inside_tree():
 		return
@@ -856,8 +742,6 @@ static func counter_tilt(pod: Node3D, gyro: Node3D, core: Node3D) -> void:
 	(gyro.get_node("GyroInner") as Node3D).rotation = Vector3(0.0, rel.y, 0.0)
 
 
-# Chunks clamp onto the lattice only while the ball wears a Hoberman shell (its Core carries the
-# Hub.00 empty); every Accretion under the roll node follows the shell the player wears now.
 static func sync_lattice(core, roll: Node) -> void:
 	var on: bool = core != null and is_instance_valid(core) and core.has_node("Hub_00")
 	for child in roll.get_children():
@@ -865,17 +749,12 @@ static func sync_lattice(core, roll: Node) -> void:
 			child.set_lattice(on)
 
 
-# Where the weapon ring points: the shot's aim (context.aim_forward, the lens rest), or the
-# travel direction when no camera aims (stub players, tools).
 func _aim_of(velocity: Vector3) -> Vector3:
 	if ctx != null and ctx.get("camera") != null:
 		return ctx.aim_forward()
 	return velocity
 
 
-# Hoberman shells (PILOT-CLIPS section 5): Pod > WeaponRing stays level under the upright pod
-# and yaws to the aim at WEAPON_RING_RATE, independent of the pod's turn to the heading, so the
-# weapon points where the shot goes. A shell without the ring is left alone.
 func steer_weapon_ring(pod: Node3D, aim: Vector3, delta: float) -> void:
 	var ring := pod.get_node_or_null("WeaponRing") as Node3D
 	if ring == null or not ring.is_inside_tree():
@@ -887,9 +766,6 @@ func steer_weapon_ring(pod: Node3D, aim: Vector3, delta: float) -> void:
 	ring.basis = _bank_local(pod) * turn
 
 
-# The Fairlead carriage (MOTION-SPEC swing row): a level carrier node on the collar that turns
-# to the anchor's planar direction and holds its last yaw when the anchor is overhead. RopeExit
-# rides it at LineView.FAIRLEAD_RADIUS, so the drawn rope and the model agree. Physics is untouched.
 static func add_fairlead(pod: Node3D) -> Node3D:
 	var carriage := pod.get_node_or_null("Fairlead") as Node3D
 	if carriage != null:
@@ -918,28 +794,14 @@ func steer_fairlead(pod: Node3D, anchor: Vector3, delta: float) -> void:
 	carriage.basis = _bank_local(pod) * turn
 
 
-# --- carrier bank (MOTION-SPEC row 208) ------------------------------------------------------
-#
-# The WeaponRing, the Fairlead carriage and the bracket modules (BRACKET_PARTS, under the
-# CarrierBank holder) share one bank: Basis(UP x normal, angle) about the pod's centre, the smallest
-# angle that keeps their furthest reach along the smoothed contact normal at CarrierBank.LIMIT.
-# Order: the aim yaw (or the fairlead's) is applied first, and the bank tilts the yawed carrier,
-# so child = bank x yaw. The ring still turns to the aim on its bearing; the bank only leans it.
-# The pod, the pilot and the gimbal rings stay level (Animation drives the gimbal from
-# carrier_bank, row 207). Nothing here touches physics.
-
-# The bank last drawn, in the pod's frame; the identity until update_carrier_bank runs.
 static func _bank_local(pod: Node3D) -> Basis:
 	return pod.get_meta("bank_local", Basis.IDENTITY)
 
 
-# A carrier's basis with the drawn bank taken out: its pod-frame yaw alone.
 static func _level(pod: Node3D, carrier: Node3D) -> Basis:
 	return (_bank_local(pod).inverse() * carrier.basis).orthonormalized()
 
 
-# The carrier bank in world space: a rotation about a horizontal axis that tilts the carrier's
-# up toward the face. Identity on a floor and in the air. Read it for anything that rides the carrier.
 static func carrier_bank(pod: Node3D) -> Basis:
 	var local := _bank_local(pod)
 	if not pod.is_inside_tree():
@@ -948,8 +810,6 @@ static func carrier_bank(pod: Node3D) -> Basis:
 	return p * local * p.inverse()
 
 
-# Every CarrierBank holder under the pod: the base shell's and each heft layer's (HeftC<n> > Pod >
-# CarrierBank). With `visible_only`, a hidden layer's is left out.
 static func _holders(pod: Node3D, visible_only := true) -> Array[Node3D]:
 	var out: Array[Node3D] = []
 	var base := pod.get_node_or_null("CarrierBank") as Node3D
@@ -965,7 +825,6 @@ static func _holders(pod: Node3D, visible_only := true) -> Array[Node3D]:
 	return out
 
 
-# The pod-frame transform of a node's parent chain below the pod (what a holder's points ride).
 static func _frame_in(pod: Node3D, node: Node3D) -> Transform3D:
 	var frame := Transform3D.IDENTITY
 	var at := node.get_parent() as Node3D
@@ -975,8 +834,6 @@ static func _frame_in(pod: Node3D, node: Node3D) -> Transform3D:
 	return frame
 
 
-# A node's transform with its `heft_rest` position in place of where a slam or fling has it now. The
-# layer's own Pod mesh slams too (rest 0, so it moves up), and it is the parent of the layer's holder.
 static func _rest_transform(node: Node3D) -> Transform3D:
 	var local := node.transform
 	if node.has_meta("heft_rest"):
@@ -984,7 +841,6 @@ static func _rest_transform(node: Node3D) -> Transform3D:
 	return local
 
 
-# Which heft layers show now: the hull below is only valid for one such state.
 static func _bank_key(pod: Node3D) -> String:
 	var key := ""
 	var ring := pod.get_node_or_null("WeaponRing")
@@ -997,9 +853,6 @@ static func _bank_key(pod: Node3D) -> String:
 	return key
 
 
-# Hull points of the ring (in the ring's frame, at yaw 0) and of the bracket modules (in the pod's
-# frame), of the parts that show now: the convex hull holds every furthest point. Rebuilt when a
-# heft layer appears or goes, so a hidden layer never banks the carrier.
 static func _bank_hull(pod: Node3D, visible_only := true) -> Dictionary:
 	var key := _bank_key(pod) if visible_only else "all"
 	if visible_only and pod.has_meta("bank_hull") and pod.get_meta("bank_hull")["key"] == key:
@@ -1018,10 +871,6 @@ static func _bank_hull(pod: Node3D, visible_only := true) -> Dictionary:
 	return hull
 
 
-# Mesh vertices (and node origins when `origins`) under `node`, in `top`'s frame; a hidden
-# child's subtree is left out when `visible_only`.
-# A heft layer's mesh is read at its `heft_rest` position, not where a slam or fling has it now, so
-# a hull built mid-tween (and cached until the next visibility change) still holds the settled shape.
 static func _points_under(node: Node3D, top: Node3D, origins: bool, visible_only := true, to := Transform3D.IDENTITY) -> PackedVector3Array:
 	var out := PackedVector3Array()
 	var here := to if node == top else to * _rest_transform(node)
@@ -1038,8 +887,6 @@ static func _points_under(node: Node3D, top: Node3D, origins: bool, visible_only
 	return out
 
 
-# The holder that carries the bracket modules, so one transform banks them all and their own
-# rotations (vanes, claws) stay theirs. A part a shell lacks is skipped.
 static func add_bracket_carrier(pod: Node3D) -> Node3D:
 	var holder := pod.get_node_or_null("CarrierBank") as Node3D
 	if holder != null:
@@ -1054,9 +901,6 @@ static func add_bracket_carrier(pod: Node3D) -> Node3D:
 	return holder
 
 
-# One frame: smooth the face normal, find the bank, and pose the ring, the fairlead carriage and
-# the bracket holder under it. `normal` is the contact normal on the ground and world up in the air.
-# Returns the world bank (carrier_bank).
 static func update_carrier_bank(pod: Node3D, normal: Vector3, delta: float) -> Basis:
 	if not pod.is_inside_tree():
 		return Basis.IDENTITY
@@ -1096,40 +940,27 @@ static func update_carrier_bank(pod: Node3D, normal: Vector3, delta: float) -> B
 	return p * bank * p.inverse()
 
 
-# One step of the ring's world yaw toward aim; a vertical or empty aim holds it.
 static func weapon_ring_yaw(yaw: float, aim: Vector3, delta: float) -> float:
 	if Vector2(aim.x, aim.z).length_squared() < 0.0001:
 		return yaw
 	return lerp_angle(yaw, atan2(-aim.x, -aim.z), 1.0 - exp(-WEAPON_RING_RATE * delta))
 
 
-# The shell the player wears, for tests and tools: {class, core, pod} or {}.
 func shell_of(player: Node) -> Dictionary:
 	return _players.get(player.get_instance_id(), {})
 
-
-# --- shell variants and heft layers (design-v3/CUSTOMIZE.md section 6) ----------------
-#
-# One loader path for a pilot's shell: the base (class 1) and its four detail layers
-# (classes 2 to 5), by variant. The pilot body is a Hoberman mecha; heft fills the lattice
-# gaps with panels, so a layer is a detail shell shown up to the heft class. Layers load once
-# at fit and only toggle visibility during a run; _fit's swap frees them with their pair.
 
 const HEFT_LAYERS := [2, 3, 4, 5]
 const HEFT_SLAM_FROM := 0.10
 const HEFT_SLAM_SECONDS := 0.18
 const HEFT_STAGGER := 0.06
 const HEFT_FLING_SECONDS := Accretion.FLING_SECONDS
-# A node named Replace_<name> (the importer turns "Replace.<name>" into this) hides <name>.
 const REPLACE_PREFIXES := ["Replace_", "Replace."]
 const READY_EMIT := 1.6
 const DECOR_SPOT := Vector3(-12.6, 1.2, 1.8)
 
-# Asset id -> path for variants and add-ons; a key equal to a pilot id overrides that pilot's
-# default base (tests). Read lazily so a painter that never fits a variant never reads the registry.
 var shell_assets := {}
 var _shell_assets_read := false
-# Every warning this painter printed, once each, for tests and tools.
 var warning_log: Array[String] = []
 var _ready_glow := false
 
@@ -1142,15 +973,11 @@ func _assets() -> Dictionary:
 	return shell_assets
 
 
-# The ball look the launch asked for (--ball-look, ball_looks.gd); "today" without a tuning. A
-# preview that should show the ball a run will gives its painter a tuning (previewing()).
 func ball_look() -> String:
 	var tuning = ctx.get("tuning") if ctx != null else null
 	return tuning.option(Tuning.BALL_LOOK_KEY) if tuning != null else BallLooks.TODAY
 
 
-# A painter for a preview outside a run (the class card, the customize page): it draws the
-# default ball look, so the preview shows the ball the run will.
 static func previewing() -> Node:
 	var painter: Node = (load("res://src/presentation/hero_assets.gd") as GDScript).new()
 	painter.ctx = {"tuning": Tuning.new()}
@@ -1161,10 +988,6 @@ static func _layer_path(base: String, heft_class: int) -> String:
 	return "%s_c%d.%s" % [base.get_basename(), heft_class, base.get_extension()]
 
 
-# The one lookup: the GLB for a pilot's shell, by variant and heft class. Class 1 is the base;
-# classes 2 to 5 are its detail layers, named <base>_c<N>.glb. variant "" is the pilot's
-# default (SHELLS); otherwise it is a shell row's asset id, resolved through paths
-# (Cosmetics.asset_paths(), or a test's own map). "" for an unknown pilot, variant or class.
 static func shell_path(pilot: String, variant: String, heft_class: int, paths: Dictionary) -> String:
 	if (not SHELLS.has(pilot) and not HIDDEN_SHELLS.has(pilot)) or heft_class < 1 or heft_class > 5:
 		return ""
@@ -1198,10 +1021,6 @@ func _warn_logged(key: String, text: String) -> void:
 	_warn_once(key, text)
 
 
-# The five paths a fit loads, index 0 the base, after the fallback rules: a missing variant
-# base shows the default base and layers; a missing variant layer borrows the default layer
-# for that class (the armour read never vanishes for a cosmetic); a missing default layer
-# shows nothing for that class; a missing default base leaves index 0 "".
 func shell_layers(pilot: String, variant: String, paths: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var use := variant
@@ -1211,7 +1030,6 @@ func shell_layers(pilot: String, variant: String, paths: Dictionary) -> Array[St
 	var base := shell_path(pilot, use, 1, paths)
 	out.append(base if _loadable(base) else "")
 	for n in HEFT_LAYERS:
-		# A ball look is one shell with no heft layers yet; nothing is missing, so nothing warns.
 		if BallLooks.is_look(base):
 			out.append("")
 			continue
@@ -1226,8 +1044,6 @@ func shell_layers(pilot: String, variant: String, paths: Dictionary) -> Array[St
 	return out
 
 
-# Removes and frees every Light3D under a scene that is still outside the tree, so the
-# renderer never pairs a light with a node a slot will free (CUSTOMIZE.md section 2, rule 3).
 func _strip_lights(root: Node, source: String) -> int:
 	var lights: Array[Node] = []
 	if root is Light3D:
@@ -1243,7 +1059,6 @@ func _strip_lights(root: Node, source: String) -> int:
 	return lights.size()
 
 
-# An add-on scene, instanced outside the tree with its lights stripped, or null.
 func _addon(path: String) -> Node:
 	if path == "":
 		return null
@@ -1260,9 +1075,6 @@ static func _replace_target(node_name: String) -> String:
 	return ""
 
 
-# Shows or hides the base nodes the Replace_ nodes under source name, searching scope. A hidden
-# node keeps living (kit code reads it); its layers mask is saved and restored. Counted, so two
-# sources replacing one node restore it only when both hide.
 static func apply_replacements(scope: Node, source: Node, on: bool) -> int:
 	var changed := 0
 	var stack: Array[Node] = [source]
@@ -1312,7 +1124,6 @@ static func _find_outside(scope: Node, node_name: String, exclude: Node) -> Node
 	return null
 
 
-# Moves a scene's Core and Pod parts out of it; {} when either is missing. Frees the rest.
 static func _split(scene: Node) -> Dictionary:
 	var core := scene.find_child("Core", true, false) as Node3D
 	var pod := scene.find_child("Pod", true, false) as Node3D
@@ -1327,9 +1138,6 @@ static func _split(scene: Node) -> Dictionary:
 	return {"core": core, "pod": pod}
 
 
-# Mounts the pilot's WEAPONS model at identity, once, as WEAPON_NODE: under the pod's WeaponRing,
-# or on the pod itself for COCKPIT_WEAPONS. Returns it, or null when the pilot has none, the shell
-# has no ring for it or the file is missing.
 func mount_weapon(pod: Node3D, pilot: String) -> Node3D:
 	var seat := pod if pilot in COCKPIT_WEAPONS else pod.get_node_or_null("WeaponRing") as Node3D
 	if seat == null or not WEAPONS.has(pilot):
@@ -1346,11 +1154,6 @@ func mount_weapon(pod: Node3D, pilot: String) -> Node3D:
 	return weapon
 
 
-# Builds the shell under ball: HeroCore and HeroPod plus one holder per layer, painted with
-# tints, layers shown up to heft_class. pod_parent receives HeroPod (the player's level pod mount);
-# null puts it under ball (previews). The game's _fit, the class card preview and the customize
-# preview all call it. Returns {core, pod, layers: {2: {core, pod}, ...}, variant, heft} or {}
-# when even the default base is unavailable.
 func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: int, tints: Dictionary, pod_parent: Node3D = null) -> Dictionary:
 	var paths := _assets()
 	var layers := shell_layers(pilot, variant, paths)
@@ -1392,8 +1195,6 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 					else:
 						BallLooks.strip(ball_look(), part)
 					(core_holder if key == "core" else pod_holder).add_child(part)
-				# A layer's WeaponRing rides the base ring, so a heft module turns with the aim;
-				# its holder shows and hides with the layer's Pod holder.
 				var layer_ring := (layer_parts.pod as Node3D).get_node_or_null("WeaponRing") as Node3D
 				var base_ring := pod.get_node_or_null("WeaponRing") as Node3D
 				if layer_ring != null and base_ring != null:
@@ -1418,10 +1219,8 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	ball.add_child(core)
 	(pod_parent if pod_parent != null else ball).add_child(pod)
 	set_heft_class(rec, heft_class, false)
-	# visibility_changed fires only inside the tree; a fit outside it syncs here.
 	for pair in ring_holders:
 		pair[1].visible = pair[0].visible
-	# Every caller's shell wears the look's own materials: the game, the pause read, the previews. Then the ink line.
 	BallLooks.dress(ball_look(), rec)
 	InkOutline.apply(core, "pilot")
 	InkOutline.apply(pod, "pilot")
@@ -1430,7 +1229,6 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	return rec
 
 
-# Repaints an already-fitted shell record and reapplies its ball look (cutaway window) and ink outline.
 func repaint_shell(rec: Dictionary, tints: Dictionary) -> void:
 	if rec.is_empty():
 		return
@@ -1442,9 +1240,6 @@ func repaint_shell(rec: Dictionary, tints: Dictionary) -> void:
 	InkOutline.apply(rec.pod, "pilot")
 
 
-# Shows layers up to heft_class; animates the change when animate is true. Class up: each new
-# holder shows and its meshes slam in from HEFT_SLAM_FROM outward. Class down: each lost
-# holder's meshes fling outward, then the holder hides and the meshes return to rest.
 func set_heft_class(rec: Dictionary, heft_class: int, animate := true) -> void:
 	if rec.is_empty():
 		return
@@ -1491,12 +1286,10 @@ static func _outward(mi: Node3D) -> Vector3:
 	return dir
 
 
-# Tweens run on the holder, so a refit that frees the holder ends them. Position only: a fade
-# would need a per-instance material.
 func _slam(holder: Node3D, delay: float) -> void:
 	var meshes := holder.find_children("*", "MeshInstance3D", true, false)
 	if meshes.is_empty():
-		return  # No layer art yet: an empty tween would log "started with no Tweeners".
+		return
 	var tween := holder.create_tween().set_parallel(true)
 	for mi in meshes:
 		var rest: Vector3 = mi.get_meta("heft_rest", (mi as Node3D).position)
@@ -1528,9 +1321,6 @@ func _on_heft_class(heft_class: int, _heft: float) -> void:
 			set_heft_class(shell, heft_class, true)
 
 
-# The ready glow (SKILL-BAR asks the cage's machinery to glow when the ultimate is ready):
-# every class_accent surface swaps between two cached materials per class colour, read through
-# the ball look's window (BallLooks.unwindowed). No light.
 func ready_material(tint: Color) -> Material:
 	var key := "class_accent_ready:%s" % tint.to_html()
 	if _materials.has(key):
@@ -1580,7 +1370,6 @@ func set_ready_glow(on: bool) -> void:
 			_glow_rec(shell, on)
 
 
-# Connects a callback to a bus signal only when it is declared, whatever its argument count.
 func _connect_optional(bus: Object, signal_name: String, callback: Callable) -> void:
 	if bus == null or not bus.has_signal(signal_name):
 		return
@@ -1602,13 +1391,10 @@ func _connect_shell_events() -> void:
 	if bus.has_signal("heft_class_dropped") and not bus.is_connected("heft_class_dropped", _on_heft_class):
 		bus.connect("heft_class_dropped", _on_heft_class)
 		_reaction_connections.append({"bus": bus, "event": "heft_class_dropped", "callback": _on_heft_class})
-	# The skill bar unit lands these later; connect only when declared (CUSTOMIZE.md section 9).
 	_connect_optional(bus, "ultimate_ready", set_ready_glow.bind(true))
 	_connect_optional(bus, "ultimate_started", set_ready_glow.bind(false))
 	_connect_optional(bus, "ultimate_cancelled", set_ready_glow.bind(false))
 
-
-# --- add-ons: outfits and bay decoration (CUSTOMIZE.md section 6) ----------------------
 
 func _addon_path(id: String, slot: String) -> String:
 	var row := Cosmetics.row(id)
@@ -1621,14 +1407,10 @@ func _addon_path(id: String, slot: String) -> String:
 	return path
 
 
-# Mounts an outfit on the pilot's Skeleton3D: one BoneAttachment3D per top-level outfit node,
-# named for its bone. Lights stripped, painted from the cache, Replace_ applied on the pilot.
-# Removes any outfit already worn. Returns the attachments (empty for "" or missing art).
 func fit_outfit(pilot_node: Node3D, id: String, tints := {}) -> Array:
 	return fit_outfit_scene(pilot_node, _addon_path(id, "outfit") if id != "" else "", tints)
 
 
-# The same mount from a scene path (tools and tests with fixture outfits).
 func fit_outfit_scene(pilot_node: Node3D, path: String, tints := {}) -> Array:
 	remove_outfit(pilot_node)
 	var outfit := _addon(path)
@@ -1650,7 +1432,6 @@ func _mount_on_bones(scope: Node3D, scene: Node, tints: Dictionary, kind: String
 		scene.free()
 		return mounts
 	paint(scene, tints)
-	# glTF import renames a node "upper_arm.L" to "upper_arm_L"; match parts by that name.
 	var bone_of := {}
 	for i in skeleton.get_bone_count():
 		bone_of[skeleton.get_bone_name(i).validate_node_name()] = skeleton.get_bone_name(i)
@@ -1670,8 +1451,6 @@ func _mount_on_bones(scope: Node3D, scene: Node, tints: Dictionary, kind: String
 		mounts.append(attach)
 	for mount in mounts:
 		apply_replacements(scope, mount, true)
-	# An optional AnimationPlayer rides the skeleton; its clips address parts as
-	# "<Kind>_<bone>/<part>" and share the pilot's clip names, so react() plays both.
 	var player := scene.find_child("AnimationPlayer", false, false) as AnimationPlayer
 	if player != null and not mounts.is_empty():
 		_retarget_clips(player, mounts)
@@ -1685,10 +1464,6 @@ func _mount_on_bones(scope: Node3D, scene: Node, tints: Dictionary, kind: String
 	return mounts
 
 
-# A body whose head (or other bone) is a different size than the authored one carries a node named
-# MountFit_<bone> under that bone: its size and its place, in the bone's frame, re-seat every part
-# mounted there (tools/tripo/README.md, Pilots). No node, no change. A part that its own clip moves
-# keeps the clip's transform.
 func _mount_fit(skeleton: Skeleton3D, bone: String) -> Transform3D:
 	var fit := skeleton.find_child("MountFit_" + bone.validate_node_name(), true, false) as Node3D
 	if fit == null:
@@ -1696,8 +1471,6 @@ func _mount_fit(skeleton: Skeleton3D, bone: String) -> Transform3D:
 	return Transform3D(Basis.from_scale(Vector3.ONE * fit.transform.basis.get_scale().y), fit.transform.origin)
 
 
-# Imported clips address parts from the GLB root ("head/HoodShell"). After the mount each part
-# sits under its attachment, so its tracks gain the attachment's name. Copies, never the cache.
 func _retarget_clips(player: AnimationPlayer, mounts: Array) -> void:
 	var under := {}
 	for mount in mounts:
@@ -1729,8 +1502,6 @@ func _remove_bone_mounts(scope: Node3D, kind: String) -> void:
 				child.queue_free()
 
 
-# Mounts the equipped bay decoration in Moss's workshop at its DecorSpot, else DECOR_SPOT.
-# One item at a time; adds no light. Returns the mounted node or null.
 func fit_bay_decor(workshop: Node3D, id: String) -> Node3D:
 	if workshop == null:
 		return null
@@ -1751,7 +1522,6 @@ func fit_bay_decor(workshop: Node3D, id: String) -> Node3D:
 	return decor
 
 
-# Mounts a companion skin on SPIL-9: top-level parts named Hull or Deck ride those bones.
 func fit_companion_skin(model: Node3D, id: String) -> Array:
 	_remove_bone_mounts(model, "companion_skin")
 	var path := _addon_path(id, "companion_skin") if id != "" else ""
@@ -1761,14 +1531,6 @@ func fit_companion_skin(model: Node3D, id: String) -> Array:
 	return _mount_on_bones(model, skin, {"class": Palette.AMBER}, "companion_skin")
 
 
-# --- cosmetic pilot reactions ------------------------------------------------------
-#
-# design-v3/PILOT-CLIPS.md sections 1.1 and 3. A row's clip cuts in over a strictly lower
-# priority; when a clip ends the pilot goes back to a base loop (idle_loop, or ult_ride_loop
-# while the set piece holds the ride) instead of a bone reset. A GLB without idle_loop keeps
-# the old stop and reset and warns once per pilot. Code moves the mecha (mecha_motion.gd).
-
-# Whether the pilot is free to glance back: the ball sits still and no reaction clip plays.
 func _at_rest(rec: Dictionary, speed: float) -> bool:
 	return speed < GLANCE_STILL_SPEED and rec.get("reaction", "") == ""
 
@@ -1782,7 +1544,6 @@ func _fit_pilot(rec: Dictionary) -> void:
 	var animator = fitted.get("animator")
 	rec["animator"] = animator
 	rec["pilot"] = pilot
-	# The window shows the pilot's back, so under a plated look the pilot glances back at rest.
 	rec["glance"] = PilotGlance.seat(pilot) if BallLooks.PLATED.has(ball_look()) else null
 	rec["reaction"] = ""
 	rec["priority"] = -1
@@ -1790,17 +1551,11 @@ func _fit_pilot(rec: Dictionary) -> void:
 	rec["queued"] = {}
 	rec["base"] = ""
 	rec["blend"] = 0.0
-	# Trap 1: a pilot GLB without an AnimationPlayer has nothing to seat.
 	if animator is AnimationPlayer:
 		animator.animation_finished.connect(_pilot_finished.bind(rec.player.get_instance_id(), animator))
 		_to_base(rec)
 
 
-# Seats the class's animated pilot in a pod: hides the shell's embedded placeholder pilot,
-# adds the pilot glb as "AnimatedPilot" and paints it in the class colour. The game's
-# _fit_pilot and the class card's preview both call it. Returns {pilot, animator}, or {}
-# when the class has no pilot or its scene is unavailable; animator is null when the GLB
-# carries no AnimationPlayer.
 func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictionary:
 	var pilot_path := String(PILOTS.get(class_id, HIDDEN_PILOTS.get(class_id, "")))
 	if pilot_path == "":
@@ -1820,8 +1575,6 @@ func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictio
 	return {"pilot": pilot, "animator": animator}
 
 
-# The pilot's pose table (src/presentation/clips/<pilot>.json, PILOT-CLIPS section 4.3), or {}
-# while the pilot has none. The stem comes from the PILOTS glb name.
 func _pilot_table(class_id: String) -> Dictionary:
 	if _pilot_tables.has(class_id):
 		return _pilot_tables[class_id]
@@ -1841,7 +1594,6 @@ func _pilot_table(class_id: String) -> Dictionary:
 func _connect_pilot_events() -> void:
 	if ctx == null or ctx.events == null or not _reaction_connections.is_empty():
 		return
-	# Trap 2: ultimate_started carries five arguments.
 	var handlers := [_pilot_event_0, _pilot_event_1, _pilot_event_2, _pilot_event_3, _pilot_event_4, _pilot_event_5]
 	for info in ctx.events.get_signal_list():
 		var event := String(info.name)
@@ -1897,8 +1649,6 @@ func _on_pilot_event(event: String, args: Array) -> void:
 			react(rec.player, event, args)
 
 
-# Returns acceptance for tests and capture tools. Never writes to the player. `event` is a bus
-# signal: the first of its rows whose argument filter passes decides.
 func react(player: Node, event: String, args: Array = []) -> bool:
 	var ids := PilotReactions.rows_for(event)
 	if ids.is_empty() and PilotReactions.ROWS.has(event):
@@ -1930,9 +1680,6 @@ func _react_row(player: Node, row: Dictionary) -> bool:
 	return true
 
 
-# Section 3 rule 3: a queue row that lost on priority waits in the one slot when the playing
-# clip has at most its row's seconds left and the set piece is idle. A later queued row of at
-# least the held priority replaces it.
 func _offer_queue(rec: Dictionary, row: Dictionary, clip: String) -> void:
 	if not row.has("queue") or rec.reaction == "" or _riding(rec):
 		return
@@ -1946,8 +1693,6 @@ func _offer_queue(rec: Dictionary, row: Dictionary, clip: String) -> void:
 		"cooldown": float(row.cooldown)}
 
 
-# Impact clips cut in with no blend so the authored recoil shows in its first frames; status
-# clips ease in by their row's blend.
 func _start_reaction(rec: Dictionary, clip: String, priority: int, blend: float, apply := true) -> void:
 	rec.reaction = clip
 	rec.priority = priority
@@ -1958,7 +1703,6 @@ func _start_reaction(rec: Dictionary, clip: String, priority: int, blend: float,
 		var contact := _contact_of(rec, clip)
 		if not contact.is_empty():
 			mecha.cast(clip, contact.control, contact.seconds)
-	# A worn outfit's clip with the same name plays on the same trigger (Rivet's hood snaps down).
 	var pilot_node = rec.get("pilot")
 	if pilot_node != null and is_instance_valid(pilot_node):
 		for outfit_player in pilot_node.find_children("OutfitAnimator", "AnimationPlayer", true, false):
@@ -1968,8 +1712,6 @@ func _start_reaction(rec: Dictionary, clip: String, priority: int, blend: float,
 
 func _play(rec: Dictionary, clip: String, blend: float, apply := true) -> void:
 	var animator: AnimationPlayer = rec.animator
-	# An impact that interrupts another one-shot (wince over big_cheer's raised arms) gets a
-	# short blend so the whole arm range does not jump in one frame; over a base loop it still cuts.
 	if blend <= 0.0 and animator.is_playing() and animator.current_animation != clip \
 			and animator.current_animation not in [PilotReactions.BASES.idle.clip, PilotReactions.BASES.flight.clip, REST_CLIP]:
 		blend = INTERRUPT_BLEND
@@ -1980,8 +1722,6 @@ func _play(rec: Dictionary, clip: String, blend: float, apply := true) -> void:
 	_note_clip(clip)
 
 
-# The cast's control and its contact time: the pose table's contact (frame E at 30 fps), else
-# the class's bank control at 40 percent of the clip (PILOT-CLIPS section 10), warned once.
 func _contact_of(rec: Dictionary, clip: String) -> Dictionary:
 	var table := _pilot_table(rec["class"])
 	var contact: Dictionary = table.get("clips", {}).get(clip, {}).get("contact", {})
@@ -2004,7 +1744,6 @@ func _pilot_finished(clip: StringName, player_id: int, animator: AnimationPlayer
 	if String(clip) == REST_CLIP:
 		return
 	var riding := _riding(rec)
-	# Section 3 rule 2: a ride pose never snaps to rest.
 	if String(clip) in PilotReactions.ENDS_ON_RIDE and not riding and animator.has_animation(PilotReactions.RECOVER.clip):
 		rec.queued = {}
 		_start_reaction(rec, PilotReactions.RECOVER.clip, int(PilotReactions.RECOVER.priority), 0.0, false)
@@ -2019,9 +1758,6 @@ func _pilot_finished(clip: StringName, player_id: int, animator: AnimationPlayer
 	_to_base(rec, true)
 
 
-# Section 3 rule 1: the base loop from frame 0 with a 0.1 s blend, ult_ride_loop while the set
-# piece holds the ride, else idle_loop. Without the loop (today's GLBs): stop, reset every bone
-# to rest, and warn once per pilot.
 func _to_base(rec: Dictionary, after_clip := false) -> void:
 	rec.reaction = ""
 	rec.queued = {}
@@ -2048,8 +1784,6 @@ func _to_base(rec: Dictionary, after_clip := false) -> void:
 		skeleton.reset_bone_poses()
 
 
-# A pilot GLB with no idle loop eases to its rest pose over BASE_BLEND instead of snapping: a
-# runtime clip keys every bone at rest. It is not a pilot clip, so the run log never counts it.
 func _play_rest(rec: Dictionary) -> bool:
 	var animator: AnimationPlayer = rec.animator
 	if not animator.has_animation(REST_CLIP):
@@ -2074,7 +1808,6 @@ func _play_rest(rec: Dictionary) -> bool:
 	return true
 
 
-# The set piece phase from the router's injected callable (SKILL-BAR section 7), else idle.
 func _set_piece_phase(rec: Dictionary) -> String:
 	var player = rec.get("player")
 	if not is_instance_valid(player):
@@ -2089,7 +1822,6 @@ func _riding(rec: Dictionary) -> bool:
 	return _set_piece_phase(rec) in PilotReactions.RIDE_PHASES
 
 
-# The run's pilot_clips row (run_log.gd): plays by clip and refusals for a clip the GLB lacks.
 func _note_clip(clip: String, missing := false) -> void:
 	var run = ctx.get("run") if ctx != null else null
 	if run == null:
@@ -2105,8 +1837,6 @@ func _note_clip(clip: String, missing := false) -> void:
 		played[clip] = int(played.get(clip, 0)) + 1
 		row["played"] = played
 
-
-# --- mecha motion (mecha_motion.gd) ------------------------------------------------------
 
 func _mecha_event(what: String) -> void:
 	for rec in _players.values():
@@ -2135,13 +1865,11 @@ func _step_mecha(rec: Dictionary, player, delta: float) -> void:
 	var mecha = rec.get("mecha")
 	if mecha == null:
 		return
-	# How long the ball has sat below the glance speed; moving or a shot starts it again.
 	var velocity: Vector3 = player.state.velocity if player.get("state") != null else Vector3.ZERO
 	rec["still_s"] = float(rec.get("still_s", 0.0)) + delta if velocity.length() < GLANCE_STILL_SPEED else 0.0
 	mecha.step(delta, _mecha_facts(rec, player) if mecha.needs_facts() else {})
 
 
-# The facts the machinery rows read (mecha_motion.gd FACTS), only for a pilot that has rows.
 func _mecha_facts(rec: Dictionary, player) -> Dictionary:
 	var velocity: Vector3 = player.state.velocity if player.get("state") != null else Vector3.ZERO
 	var facts := {"pressure": _pressure, "set_piece_phase": _set_piece_phase(rec), "heft_class": _run_heft_class(),
@@ -2161,14 +1889,12 @@ func _mecha_facts(rec: Dictionary, player) -> Dictionary:
 		for slot in ["weapon", "special", "line"]:
 			ready[slot] = bool(abilities.ready(slot))
 		facts["slot_ready"] = ready
-		# The charging hold the reticle ring draws (ability_state.gd slots()'s gauge).
 		if abilities.has_method("slots"):
 			for record in abilities.slots():
 				facts["gauge_fill"] = maxf(facts["gauge_fill"], float(record.get("gauge", 0.0)))
 	var spawner = ctx.get("spawner") if ctx != null else null
 	if spawner != null and spawner.has_method("line_load"):
 		facts["line_load"] = 0.0 if (spawner.line_load() as Dictionary).is_empty() else 1.0
-	# The weapon's one public cadence record (PILOT-CADENCE section 5.3), as the HUD reads it.
 	var driver = spawner.get("weapon_driver") if spawner != null else null
 	if driver != null and driver.has_method("state_snapshot"):
 		var cadence: Dictionary = driver.state_snapshot()
@@ -2177,9 +1903,6 @@ func _mecha_facts(rec: Dictionary, player) -> Dictionary:
 	return facts
 
 
-# --- accretion chunks --------------------------------------------------------------
-
-# The chunk's slot index, recovered from where accretion.gd _slot() put it.
 static func chunk_index(chunk: Node3D) -> int:
 	var y := clampf(chunk.position.y / 1.02, -1.0, 1.0)
 	return clampi(roundi((1.0 - y) * Accretion.MAX_CHUNKS / 2.0 - 0.5), 0, Accretion.MAX_CHUNKS - 1)
@@ -2224,8 +1947,6 @@ func _tuck_chunks() -> void:
 			hero.scale = Vector3.ONE
 		i -= 1
 
-
-# --- reward gates ------------------------------------------------------------------
 
 func _dress_gate(gate: Node3D) -> void:
 	if not is_instance_valid(gate) or not gate.is_inside_tree() or gate.has_node("HeroArch"):
@@ -2274,8 +1995,6 @@ func _dress_gate(gate: Node3D) -> void:
 			paint(plate, tints)
 
 
-# --- Warden clamp and family kit ----------------------------------------------------
-
 func warden_of(warden: Node) -> Dictionary:
 	return _wardens.get(warden.get_instance_id(), {})
 
@@ -2320,7 +2039,6 @@ func _dress_warden(warden) -> void:
 		return
 	base.name = "HeroWarden"
 	base.position.y = -warden.HALF_HEIGHT
-	# Authored seam corners reach 2.826 m; keep the housing inside the 2.8 m collider.
 	base.get_node("Housing").scale = Vector3(0.99, 1.0, 0.99)
 	kit.name = "HeroKit"
 	var target: Vector3 = warden._kit.point_offset() + Vector3.UP * warden.HALF_HEIGHT
@@ -2355,9 +2073,6 @@ func _dress_warden(warden) -> void:
 		rec.lens = lens
 	_mount_mantle(warden, kit, rec)
 	warden.add_child(base)
-	# Cool fill (LIGHTING-TARGETS, Warden) as an additive cool rim, so the barrel and armour separate from
-	# the shared warm key. No light: a Warden is freed on every beacon placement, and a light freed with
-	# it is the stage-freed light crash class (the cracked_cache.gd RIM_GLOW recipe: glow on its own mesh, no light).
 	if not _materials.has("warden_cool_fill"):
 		var shader := Shader.new()
 		shader.code = """shader_type spatial;
@@ -2372,8 +2087,7 @@ void fragment() {
 		var cool := ShaderMaterial.new()
 		cool.shader = shader
 		_materials["warden_cool_fill"] = cool
-	# The rim draws as its own shell over the part (the cache glow's own-mesh recipe); a material
-	# overlay freed with a Warden logs a null material on the headless server.
+	# Separate MeshInstance3D: a material overlay freed with a Warden logs a null material on headless Godot.
 	for part in ["Tower", "Housing"]:
 		var view := base.get_node_or_null(part) as MeshInstance3D
 		if view != null and view.mesh != null:
@@ -2403,16 +2117,7 @@ void fragment() {
 	_dress_mast.call_deferred(warden)
 
 
-# --- Warden bodies (KF8a) -----------------------------------------------------------------
-# A park Warden's recipe body replaces the clamp, the kit and the mantle. It is visual only: the
-# Warden's collider, weak point (warden_kit.gd point_offset) and hardpoints are the fight's.
-# The clips follow what the fight already publishes, read once a frame: the charge (state_name),
-# the pulse (pulses), the stagger, the chunks, the swarm driver's rides and the mind driver's
-# took_off and landed signals. Each GLB clip keys every channel (Godot adds rest tracks), so what
-# must outlast a clip is held after the mixer (mixer_applied): a lost reactor jacket stays
-# hidden, a shed swarm ring stays at zero scale, a lost mind finger keeps its clip's end pose,
-# the mind's perch grip stays under idle, pulse_warn, pulse and active, and the Lens bone looks
-# at the ball last.
+# Godot glTF importer keys rest tracks on every channel; persistent poses apply after mixer_applied.
 
 func _wears_body(warden) -> bool:
 	return WARDEN_BODIES.has(warden.family) and bool(warden.get("harpoon_anchor"))
@@ -2487,8 +2192,6 @@ func _dress_warden_body(warden) -> void:
 			bus.stage_entered.connect(_warden_stage_entered)
 
 
-# The Warden's own materials, which its updates brighten and recolour (enamel, lights, the mantle's tool): the ink line
-# takes them in place. The rest come from the shared slot cache and take an inked twin.
 func _warden_owned(rec: Dictionary) -> Array:
 	var shared := _materials.values()
 	var out: Array = rec.materials.values().filter(func(mat): return not shared.has(mat))
@@ -2504,8 +2207,6 @@ func _driver_count(warden, key: String) -> int:
 	return int(driver.get(key))
 
 
-# Every surface by its slot, as the clamp is painted; the light and enamel slots are this
-# Warden's own copies, so seams go out per body.
 func _paint_body(root: Node, rec: Dictionary) -> void:
 	for node in root.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D
@@ -2522,7 +2223,6 @@ func _paint_body(root: Node, rec: Dictionary) -> void:
 				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
-# Gives this player its own copy of one clip, so a track filter on it touches no other body.
 func _own_clip(player: AnimationPlayer, clip: String) -> void:
 	var shared := player.get_animation_library(&"")
 	if shared == null or not shared.has_animation(clip):
@@ -2535,15 +2235,11 @@ func _own_clip(player: AnimationPlayer, clip: String) -> void:
 	player.add_animation_library(&"", own)
 
 
-# The perch (spires): Pose takes PosePerch's transform once, and the perch clip's end pose is
-# the base every non-lens bone holds outside the flight clips (mind rows section 5).
 func _rig_mind_body(warden, rec: Dictionary) -> void:
 	var body: Node3D = rec.body
 	var skel: Skeleton3D = rec.skeleton
 	rec.pose = body.find_child("Pose", true, false) as Node3D
 	rec.lens = skel.find_bone("Lens") if skel != null else -1
-	# The GLB's WeakPoint sits 1.32 m out along the lens face; the fight's point (a 1.3 m sphere,
-	# warden.gd FAMILY_POINT_RADIUS) is the lens itself, so the marker rides the Lens bone's origin.
 	if rec.weak.get_parent() is BoneAttachment3D:
 		rec.weak.position = Vector3.ZERO
 	if warden.mounting == "spires":
@@ -2558,8 +2254,6 @@ func _rig_mind_body(warden, rec: Dictionary) -> void:
 			push_error("hero_assets: mind body has no clip 'perch'")
 
 
-# The pose a clip leaves at its last frame: {bone index: {position, rotation, scale}} for the
-# bones it keys, either only `names` or (except) every bone but them.
 func _clip_end_pose(anim: Animation, skel: Skeleton3D, names: Array, exclude := false) -> Dictionary:
 	var out := {}
 	for t in anim.get_track_count():
@@ -2593,8 +2287,6 @@ func _set_bone_pose(skel: Skeleton3D, bone: int, entry: Dictionary) -> void:
 		skel.set_bone_pose_scale(bone, entry.scale)
 
 
-# Plays `clips` in order on every player of the body (the swarm's hive and drone kit share the
-# names); the first starts now with its section 5 blend. A clip a player lacks is an error.
 func _play_body(rec: Dictionary, clips: Array, backwards := false) -> void:
 	rec.queue = clips.slice(1)
 	_start_body_clip(rec, String(clips[0]), backwards)
@@ -2620,7 +2312,6 @@ func _body_clip_finished(clip: StringName, id: int) -> void:
 	if not rec.queue.is_empty():
 		_start_body_clip(rec, String(rec.queue.pop_front()))
 		return
-	# The break holds its last frame, and so does the falter while the stagger lasts.
 	if rec.final or (String(clip) == "grip_falter" and rec.warden.staggered() and rec.players[0].get_playing_speed() > 0.0):
 		return
 	_start_body_clip(rec, "idle")
@@ -2633,11 +2324,8 @@ func _update_warden_body(rec: Dictionary) -> void:
 		"reactor":
 			body.rotation.y = warden._look._jaws.rotation.y
 		"swarm":
-			# The swarm's ball side is its +Z.
 			body.rotation.y = warden._look._jaws.rotation.y + PI * 0.5
 		"mind":
-			# The driver drops the whole Warden by lens_drop in the falter while grip_falter drops
-			# the lens in the body: the body rises by the same amount so the lens stays on the point.
 			var driver = warden.mount_driver
 			var drop: float = float(driver.get("lens_drop")) if driver != null and "lens_drop" in driver else 0.0
 			body.position.y = -warden.HALF_HEIGHT + drop
@@ -2652,7 +2340,6 @@ func _update_warden_body(rec: Dictionary) -> void:
 	_hold_body(warden.get_instance_id())
 
 
-# Reads the fight's facts once a frame and starts the clips they name.
 func _drive_body(rec: Dictionary) -> void:
 	var warden = rec.warden
 	var seen: Dictionary = rec.seen
@@ -2684,7 +2371,6 @@ func _body_pulse(rec: Dictionary) -> void:
 	var warden = rec.warden
 	match rec.body_kind:
 		"swarm":
-			# The pulse clip's last 0.4 s is the slam; active follows it.
 			var player: AnimationPlayer = rec.players[0]
 			if player.current_animation == "pulse":
 				rec.queue = ["active"]
@@ -2704,7 +2390,6 @@ func _body_stagger(rec: Dictionary, open: bool) -> void:
 	var warden = rec.warden
 	match rec.body_kind:
 		"reactor":
-			# The open seam is the light slot at SEAM_OPEN (_update_warden_body); active splits the cage.
 			if open:
 				_play_body(rec, ["active"])
 		"swarm":
@@ -2755,7 +2440,6 @@ func _body_chunk(rec: Dictionary, n: int) -> void:
 	_play_body(rec, clips)
 
 
-# chunk_shed keys the same fall on all four shed rings: only `ring` keeps its tracks.
 func _filter_shed(player: AnimationPlayer, ring: String) -> void:
 	if not player.has_animation("chunk_shed"):
 		return
@@ -2767,8 +2451,6 @@ func _filter_shed(player: AnimationPlayer, ring: String) -> void:
 			anim.track_set_enabled(t, bone == ring)
 
 
-# After the mixer: lost chunks stay lost, the perch grip holds, the Pose faces the ball and the
-# Lens bone looks at it. The newest lost chunk is left to its own clip while that clip plays.
 func _hold_body(id: int) -> void:
 	var rec: Dictionary = _wardens.get(id, {})
 	if rec.is_empty() or not is_instance_valid(rec.warden) or not is_instance_valid(rec.body):
@@ -2810,15 +2492,11 @@ func _hold_mind(rec: Dictionary, current: String, falling: int) -> void:
 				_set_bone_pose(skel, bone, held[bone])
 	var to_ball: Vector3 = warden.flat_to_ball()
 	if rec.pose != null and to_ball.length() > 0.1:
-		# The hand's front is the model's -Z.
 		var yaw: float = atan2(-to_ball.x, -to_ball.z) - rec.body.global_rotation.y
 		rec.pose.transform = Transform3D(Basis(Vector3.UP, yaw), Vector3.ZERO) * rec.pose_base
 	_track_lens(rec)
 
 
-# mind rows section 5: turn the Lens bone (the cluster faces the model's -Z at rest) so it looks
-# at the ball, after the AnimationPlayer: pose = parent_global^-1 * looking_at(dir) * lens_rest,
-# lens_rest the bone's global rest, so the rest facing turns onto dir; dir in skeleton space.
 func _track_lens(rec: Dictionary) -> void:
 	var skel: Skeleton3D = rec.skeleton
 	var lens: int = rec.lens
@@ -2837,11 +2515,6 @@ func _track_lens(rec: Dictionary) -> void:
 	skel.set_bone_pose_rotation(lens, turned.get_rotation_quaternion())
 
 
-# Mounts the stage's mantle (D5 contract) after the kit is painted and the lens is split off:
-# each Mount* group is detached and added to its kit node with identity transform. Enamel and
-# rubber reuse the Warden's own painted materials; the seam and tool materials are the mantle's
-# own and stay out of rec.materials, so the open-core mint and light records never touch them.
-# A missing file or node warns once and leaves the bare kit.
 func _mount_mantle(warden, kit: Node3D, rec: Dictionary) -> void:
 	var row: Dictionary = WARDEN_MANTLES.get(int(warden.stage), {})
 	if row.is_empty() or row.family != warden.family:
@@ -2904,8 +2577,6 @@ func _paint_mantle(root: Node, rec: Dictionary, seam: Material, tool: Material) 
 		_paint_mantle(child, rec, seam, tool)
 
 
-# The tool throats take the Warden's own charge: lit as the pulse charges, dark at rest and
-# while staggered. No clock of its own.
 func _update_mantle(rec: Dictionary) -> void:
 	var tool := rec.mantle_tool as StandardMaterial3D
 	if tool == null:
@@ -2921,8 +2592,6 @@ func _update_mantle(rec: Dictionary) -> void:
 		tool.albedo_color = Palette.HAZARD.lerp(Palette.CHARCOAL, 1.0 - lit)
 
 
-# A posture Warden's jaws lean out from their outer bottom edge while its core is open.
-# Each entry keeps the rest transform, the edge to turn about and which way is out.
 func _rig_warden_jaws(base: Node3D, rec: Dictionary) -> void:
 	for side in [-1.0, 1.0]:
 		var jaw := base.get_node("JawL" if side < 0 else "JawR") as MeshInstance3D
@@ -2956,9 +2625,6 @@ func _split_queen_hatch(weak: MeshInstance3D, rec: Dictionary) -> void:
 	rec.queen_hatch = hinge
 
 
-# A played game prewarms behind the title, a frame after the boot card is gone (_process): in setup it
-# held the menu for 80 to 85 ms (MENU-READY, cloud exported build). Tests, bots and a scene without a
-# game root prewarm here, as before. The first Warden is stages away from the title either way.
 func _prewarm_strokes_in_time() -> void:
 	var root = ctx.get("root") if ctx != null else null
 	if root == null or root.get("test_mode") != false:
@@ -2980,7 +2646,6 @@ func _prewarm_warden_strokes() -> void:
 	if base == null or not base.has_node("JawL") or not base.has_node("JawR"):
 		if base != null: base.free()
 		return
-	# Detached presentation builders only: no enemy setup, tree entry, events or physics.
 	var cue_owner := preload("res://src/combat/enemy.gd").new()
 	var look := WardenLook.new()
 	cue_owner.add_child(look)
@@ -3014,15 +2679,12 @@ func _add_warden_strokes(base: Node3D, look: Node3D, cue_owner: Node3D, rec: Dic
 				panel.add_child(seam)
 				_fit_warden_stroke(seam, jaw, faces)
 				rec.seams.append({"node": seam, "source": old})
-		# Existing enemy helper owns the class-colour open-crack grammar and tint list.
 		var crack: Node3D = cue_owner._add_crack(panel, Vector3(0, 0, 0.08), 0.8)
 		for stroke in crack.get_children():
 			_fit_warden_stroke(stroke, jaw, faces)
 		rec.cracks.append(crack)
 
 
-# Keep each stroke's readable length, but wrap a narrow ribbon around the cast jaw.
-# Projection runs once during attachment; animation still reads the original cue.
 func _fit_warden_stroke(stroke: MeshInstance3D, jaw: MeshInstance3D, faces: PackedVector3Array) -> void:
 	var box := stroke.mesh as BoxMesh
 	var vertices := PackedVector3Array()
@@ -3165,14 +2827,12 @@ func _update_warden(rec: Dictionary) -> void:
 	_update_mantle(rec)
 
 
-# The jaws spring out and the core takes the live colour while a posture Warden is open.
 func _update_warden_open(rec: Dictionary) -> void:
 	var warden = rec.warden
 	var lean: float = deg_to_rad(warden._look.JAW_OPEN_DEGREES) * warden._look.jaw_open()
 	for entry in rec.jaws:
 		var turn := Transform3D(Basis(Vector3.RIGHT, entry.out * lean), entry.pivot)
 		entry.node.transform = turn * Transform3D(Basis.IDENTITY, -entry.pivot) * entry.rest
-	# The body material carries combat's amber hit flash; a posture Warden never wears amber.
 	(rec.materials.ancient_enamel as StandardMaterial3D).emission = EventKinds.role_color("neutral")
 	var open: bool = warden.staggered()
 	rec.core.visible = open
@@ -3216,7 +2876,6 @@ func _rig_warden_chunks(base: Node3D, rec: Dictionary) -> void:
 		if posture:
 			_paint_warden_inner(inner)
 	if posture:
-		# The caged heart replaces the kit's visible weak point; both use ancient_light.
 		rec.weak.visible = false
 
 
@@ -3281,14 +2940,12 @@ func _update_warden_chunks(rec: Dictionary) -> void:
 
 func _throw_warden_segment(rec: Dictionary, index: int) -> void:
 	var segment: MeshInstance3D = rec.segments[index]
-	# A stub boss's Warden can die while its body is out of the tree: there is nothing to throw from.
 	if not is_inside_tree() or not is_instance_valid(segment) or not segment.is_inside_tree():
 		return
 	var fragment := MeshInstance3D.new()
 	fragment.name = "WardenFragment%d" % index
 	fragment.mesh = segment.mesh
 	for surface in segment.mesh.get_surface_count():
-		# Keep fragment materials alive with the hook, including after a copy is freed.
 		var slot := slot_of(segment.mesh, surface)
 		var key := "warden_fragment:" + slot
 		if not _materials.has(key):
@@ -3307,8 +2964,6 @@ func _throw_warden_segment(rec: Dictionary, index: int) -> void:
 	fragment.set_meta("warden_flight", flight)
 	fragment.tree_exiting.connect(_clear_warden_fragment.bind(fragment), CONNECT_ONE_SHOT)
 	_warden_fragments.append(fragment)
-	# One stepper for every copy in flight: a signal holds one connection per method,
-	# whatever is bound to it, so a second copy cannot connect its own.
 	if not get_tree().physics_frame.is_connected(_step_warden_fragments):
 		get_tree().physics_frame.connect(_step_warden_fragments)
 
@@ -3348,7 +3003,6 @@ func _move_warden_fragment(seconds: float, flight: Dictionary) -> void:
 	pose.origin += offset - turn * offset
 	pose.basis = turn * pose.basis
 	flight.node.global_transform = pose
-	# Hidden after 0.18 s so the copy cannot block the core.
 	flight.node.visible = seconds < 0.18
 
 
@@ -3432,9 +3086,6 @@ func _dress_mast(warden) -> void:
 		return
 
 
-# The lantern beacon is one authored mesh, and its recipe keeps every family's weak point clear of it around
-# the clamp seat (tools/blender/lantern_beacon.py socket_clamp), so the Warden sitting on the seat owns the
-# clamp and nothing is cut or added.
 func _clamp_lantern(warden, seat: Node3D) -> void:
 	if warden.global_position.distance_to(seat.global_position) > 0.01:
 		return
@@ -3467,9 +3118,6 @@ func _restore_mast() -> void:
 	_mast.clear()
 
 
-## Carried sandstone shell beside HeroWorkshop: visual only, no collision, shares the barge's
-## transforms. One mesh, one material: the dry cliff rock calculation (sandstone.gdshader,
-## cliff_only) with its pattern anchored in Barge-local metres so it rides the stone.
 func _dress_shelter(barge: Node) -> void:
 	if barge.has_node("HeroShelter"):
 		return
@@ -3488,15 +3136,9 @@ func _dress_shelter(barge: Node) -> void:
 	barge.add_child(shelter)
 
 
-# moss_workshop.glb carries its own domed jukebox cabinet in the CabinDress mesh at the teal pad (Barge space
-# x -6.99..-4.85, y 0..3.22, z 7.91..9.29), and it enclosed the recipe jukebox bay.gd places there. Andrew chose the
-# recipe jukebox (2026-10-09, task #7), so the dressing draws without every triangle wholly inside this box; the
-# apron's corners (x -7.25/-4.75, z 5.75/8.25) lie outside it, so the pad stays.
 const WORKSHOP_JUKEBOX := AABB(Vector3(-7.2, -0.05, 7.85), Vector3(2.4, 3.4, 1.5))
 
 
-# A copy of mesh without the triangles wholly inside WORKSHOP_JUKEBOX (xform places mesh in Barge space); same
-# surfaces, materials and names. Built once per source mesh.
 func _without_jukebox(mesh: Mesh, xform: Transform3D) -> Mesh:
 	var key := "workshop_no_jukebox#%d" % mesh.get_instance_id()
 	if _meshes.has(key):
@@ -3544,7 +3186,6 @@ func _dress_bay() -> void:
 	for child in cabin.get_children():
 		if child is MeshInstance3D:
 			hide_placeholder(child)
-	# The old shutter and shelf occupy the same cabin front; keep their gameplay owner.
 	for child in barge.get_children():
 		if child is MeshInstance3D and child.mesh is BoxMesh and child.position.x < -13.0 and child.position.y < 6.0:
 			hide_placeholder(child)
@@ -3572,7 +3213,6 @@ void fragment() {
 		_materials["bay_lamplight"] = glow
 	pool.material_override = _materials["bay_lamplight"]
 	barge.add_child(pool)
-	# One tightly bounded shadowless amber light under the roof (LIGHTING-TARGETS, Moss).
 	var lamp := OmniLight3D.new()
 	lamp.name = "WorkshopWarmFill"
 	lamp.light_color = Color("ffc982")
@@ -3582,7 +3222,6 @@ void fragment() {
 	lamp.shadow_enabled = false
 	lamp.position = Vector3(-12.4, 3.0, 0.0)
 	barge.add_child(lamp)
-	# A second amber source up under the roof and shutter, so the upper interior reads warm.
 	var upper := OmniLight3D.new()
 	upper.name = "WorkshopWarmFillUpper"
 	upper.light_color = Color("ffbb70")

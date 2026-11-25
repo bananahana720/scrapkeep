@@ -2,29 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 
-# World and event effects (WORLD-FX.md): the one table. A spec is one emitter; a set is the specs
-# one place or moment plays; a hook is a game moment and the effects it fires.
-#   attach   camera   follows the chase camera, ambient air around the view (always "ambient")
-#            ball     follows the ball at ground height, ambient air at the player's feet
-#            anchor   placed by dressing (WorldFxAnchor) and emits until stopped
-#            burst    one-shot, fired by a hook at a point
-#   shape    dot (soft puff), streak (velocity-stretched line), paper (tumbling card),
-#            ring (flat ground ring), glint (four-point star); see world_fx_kit.gd
-#   max/life/speed/spread/dir/gravity/damping/radial/orbit/turb  the particle motion
-#   size     [min, max] quad edge in metres
-#   emit     {"box": half extents} | {"sphere": r} | {"ring": r, "inner": share, "height": h} | {} (point)
-#   offset   emission centre from the emitter (camera sets put the box ahead of the lens)
-#   colour   a palette or kit colour name, or a list: a ramp over life ("pick": "random" picks one per particle)
-#   alpha    peak opacity; glow lifts an additive tint so it reads on bright ground
-#   ambient  joins the clear zone: fades within WorldFxKit.CLEAR_RADIUS of the ball
-#   near_m   fades as it reaches the camera (big cloud quads need a wide fade)
-#   lod_m    an anchor stops emitting past this camera distance and shows its impostor, if any
-#   low      share of particles kept on the low preset; 0 drops the spec there
-#   grow     fade | grow | puff | const, the size over life
-#   ink      comic rim (ceremony and comic effects only; the world itself stays soft)
-#   motion   false: reduced motion drops it (strobes, fast streaks); default keeps it at half count
 
-# Kit colours, outside the Bible palette only where the Bible has no water or paper white.
 const KIT := {
 	"FOAM": Color("e8efe9"),
 	"SPRAY": Color("cfe2df"),
@@ -41,12 +19,9 @@ const KIT := {
 	"RAIN": Color("aab8c4"),
 }
 
-# Colours that mean something in play: a threat, "your verb works", the ancients' light. No ambient
-# spec may wear them, so air can never be mistaken for a telegraph or a live target.
 const RESERVED := ["HAZARD", "ARC", "ANCIENT"]
 
 const SPECS := {
-	# --- Spillway: water and spray ------------------------------------------------------------
 	"spill_mist": {"attach": "camera", "shape": "dot", "blend": "mix", "ambient": true,
 		"max": 70, "life": 7.0, "speed": [0.2, 0.6], "dir": Vector3(1, 0.1, 0.3), "spread": 30.0, "gravity": 0.03,
 		"size": [2.2, 4.4], "emit": {"box": Vector3(26, 3, 26)}, "offset": Vector3(0, -3, -14), "colour": "MIST",
@@ -74,16 +49,12 @@ const SPECS := {
 	"spill_splash_ring": {"attach": "burst", "shape": "ring", "blend": "mix",
 		"max": 2, "life": 0.8, "speed": [0.0, 0.0], "spread": 0.0, "explosive": 0.6,
 		"size": [6.3, 7.2], "colour": "FOAM", "alpha": 0.7, "grow": "grow"},
-	# The ball's wake: a rooster tail of spray thrown back off the ball and foam rings left on the
-	# water while it rolls through standing water (WorldFx steers it; "wake" is the ball's own feedback,
-	# not air, so it skips the clear zone, sits at the waterline and stays translucent).
 	"spill_wake_spray": {"attach": "wake", "shape": "streak", "blend": "mix", "width": 0.14,
 		"max": 40, "life": 0.55, "speed": [3.5, 7.0], "dir": Vector3(0, 0.8, 1), "spread": 22.0, "gravity": -11.0,
 		"size": [0.45, 0.9], "emit": {"sphere": 0.5}, "colour": "FOAM", "alpha": 0.7, "low": 0.5},
 	"spill_wake_foam": {"attach": "wake", "shape": "ring", "blend": "mix",
 		"max": 10, "life": 1.4, "speed": [0.0, 0.2], "spread": 180.0,
 		"size": [1.4, 2.4], "emit": {"sphere": 0.4}, "colour": "FOAM", "alpha": 0.45, "grow": "grow", "low": 0.5},
-	# The powerhouse and the weir gatehouse breathe: a pulsed steam plume off the roof and thin soot.
 	"spill_powerhouse_steam": {"attach": "anchor", "shape": "dot", "blend": "mix", "pulse": [3.4, 1.6],
 		"max": 22, "life": 3.2, "speed": [2.5, 4.0], "dir": Vector3(0.2, 1, 0), "spread": 12.0, "gravity": 0.5,
 		"damping": [0.6, 1.0], "turb": [0.8, 0.5], "size": [1.6, 4.8], "emit": {"sphere": 0.5}, "colour": ["STEAM", "SMOKE"],
@@ -93,8 +64,6 @@ const SPECS := {
 		"max": 10, "life": 5.0, "speed": [0.8, 1.4], "dir": Vector3(0.3, 1, 0.1), "spread": 15.0, "gravity": 0.25,
 		"turb": [0.5, 0.4], "size": [0.9, 2.6], "emit": {"sphere": 0.4}, "colour": ["SOOT", "SMOKE"],
 		"alpha": 0.3, "grow": "grow", "lod_m": 160.0, "low": 0.0},
-	# Flood foam: churned rings and flecks on a rising flood, thickest while it climbs (level-driven).
-	# "fit" stretches the emission box over the water's footprint (WorldFxAnchor.fit).
 	"spill_flood_foam": {"attach": "anchor", "shape": "ring", "blend": "mix", "level": true, "fit": true,
 		"max": 24, "life": 2.6, "speed": [0.0, 0.4], "spread": 180.0,
 		"size": [1.6, 3.2], "emit": {"box": Vector3(4, 0.05, 4)}, "colour": "FOAM", "alpha": 0.55, "grow": "grow",
@@ -104,7 +73,6 @@ const SPECS := {
 		"size": [0.25, 0.6], "emit": {"box": Vector3(4, 0.05, 4)}, "colour": ["FOAM", "SPRAY"], "pick": "random",
 		"alpha": 0.8, "lod_m": 120.0, "low": 0.5, "aabb": AABB(Vector3(-80, -6, -80), Vector3(160, 12, 160))},
 
-	# --- The Dig: dust and drill grit ---------------------------------------------------------
 	"dig_haze": {"attach": "camera", "shape": "dot", "blend": "mix", "ambient": true,
 		"max": 60, "life": 8.0, "speed": [0.1, 0.35], "spread": 180.0, "turb": [0.6, 0.3],
 		"size": [1.8, 3.6], "emit": {"box": Vector3(22, 6, 22)}, "offset": Vector3(0, -2, -12), "colour": "SANDSTONE",
@@ -134,7 +102,6 @@ const SPECS := {
 		"max": 5, "life": 6.0, "speed": [0.3, 0.6], "spread": 180.0, "orbit": [0.25, 0.45], "turb": [2.0, 2.0],
 		"size": [0.126, 0.18], "emit": {"sphere": 0.8}, "colour": "LEDGER", "alpha": 1.0, "lod_m": 40.0, "low": 0.0},
 
-	# --- The Highdraft: wind, cloud and cable sway --------------------------------------------
 	"hd_wind_streaks": {"attach": "camera", "shape": "streak", "blend": "mix", "ambient": true, "width": 0.125,
 		"max": 60, "life": 1.4, "speed": [16.0, 24.0], "dir": Vector3(1, 0.05, 0.25), "spread": 6.0,
 		"size": [3.0, 6.0], "emit": {"box": Vector3(30, 10, 30)}, "offset": Vector3(-12, 0, -16), "colour": "CLOUD",
@@ -152,7 +119,6 @@ const SPECS := {
 		"max": 6, "life": 3.0, "speed": [2.0, 4.0], "dir": Vector3(1, 0.2, 0.2), "spread": 15.0, "gravity": -0.6, "turb": [1.5, 1.0],
 		"size": [0.216, 0.36], "colour": ["LEDGER", "COPPER"], "pick": "random", "alpha": 1.0, "lod_m": 60.0, "low": 0.0},
 
-	# --- Landmarks: one signature each, readable from range -----------------------------------
 	"lm_dam_curtain": {"attach": "anchor", "shape": "streak", "blend": "mix", "width": 0.25,
 		"max": 140, "life": 2.8, "speed": [1.5, 2.5], "dir": Vector3(0, -0.4, 1), "spread": 6.0, "gravity": -9.8,
 		"size": [5.4, 10.8], "emit": {"box": Vector3(30, 0.3, 0.4)}, "colour": "FOAM", "alpha": 0.6, "lod_m": 420.0, "low": 0.5},
@@ -199,7 +165,6 @@ const SPECS := {
 		"size": [4.5, 9.0], "emit": {"ring": 17.0, "inner": 0.85, "height": 6.0}, "colour": "CLOUD", "alpha": 0.4,
 		"lod_m": 480.0, "low": 0.5, "aabb": AABB(Vector3(-40, -10, -40), Vector3(80, 60, 80))},
 
-	# --- Hold the Relay: charge, stakes, full ---------------------------------------------------
 	"relay_charge_motes": {"attach": "anchor", "shape": "dot", "blend": "add", "level": true,
 		"max": 80, "life": 1.6, "speed": [0.0, 0.0], "radial": [-14.0, -12.0], "gravity": 2.0, "orbit": [0.12, 0.18],
 		"size": [0.45, 0.81], "emit": {"ring": 22.0, "inner": 0.95, "height": 0.5}, "colour": "AMBER", "alpha": 1.0, "glow": 2.0,
@@ -227,7 +192,6 @@ const SPECS := {
 		"size": [40.0, 52.0], "colour": "AMBER", "alpha": 0.8, "glow": 1.4, "grow": "grow",
 		"aabb": AABB(Vector3(-30, -5, -30), Vector3(60, 10, 60))},
 
-	# --- Stage modifiers and weather: overlays laid on a world's air ----------------------------
 	"mod_plenty_glints": {"attach": "camera", "shape": "glint", "blend": "add", "ambient": true,
 		"max": 30, "life": 3.0, "speed": [0.3, 0.8], "spread": 180.0, "gravity": 0.2,
 		"size": [0.225, 0.45], "emit": {"box": Vector3(20, 4, 20)}, "offset": Vector3(0, 0, -12), "colour": "BRASS",
@@ -255,7 +219,6 @@ const SPECS := {
 		"size": [1.2, 1.95], "emit": {"box": Vector3(18, 2, 18)}, "offset": Vector3(0, 12, -8), "colour": "RAIN",
 		"alpha": 0.45, "near_m": 3.0, "low": 0.4},
 
-	# --- Secret areas: a glint that pulls the eye, a find that pays it off ---------------------
 	"secret_glint": {"attach": "anchor", "shape": "glint", "blend": "add",
 		"max": 6, "life": 2.2, "speed": [0.1, 0.3], "dir": Vector3.UP, "spread": 40.0,
 		"size": [0.63, 1.26], "emit": {"sphere": 1.2}, "colour": ["LEDGER", "AMBER"], "alpha": 0.9, "glow": 1.4,
@@ -267,7 +230,6 @@ const SPECS := {
 		"max": 16, "life": 1.0, "speed": [2.0, 5.0], "spread": 180.0, "damping": [3.0, 4.0],
 		"size": [0.5, 1.0], "colour": "LEDGER", "alpha": 1.0, "glow": 1.5, "grow": "puff"},
 
-	# --- The camp hub ---------------------------------------------------------------------------
 	"camp_fire_embers": {"attach": "anchor", "shape": "dot", "blend": "add",
 		"max": 40, "life": 2.4, "speed": [1.0, 2.2], "spread": 18.0, "gravity": 0.8, "turb": [1.2, 0.8],
 		"size": [0.05, 0.11], "emit": {"sphere": 0.5}, "colour": ["EMBER", "AMBER", "RUST"], "alpha": 1.0, "glow": 1.6,
@@ -284,7 +246,6 @@ const SPECS := {
 		"max": 10, "life": 1.8, "speed": [0.8, 1.4], "dir": Vector3(0.3, 1, 0), "spread": 10.0, "gravity": 0.2, "turb": [0.5, 0.5],
 		"size": [0.15, 0.5], "colour": "STEAM", "alpha": 0.6, "grow": "grow", "near_m": 1.0, "lod_m": 50.0, "low": 0.5},
 
-	# --- The title screen -------------------------------------------------------------------------
 	"title_shaft_dust": {"attach": "anchor", "shape": "dot", "blend": "add",
 		"max": 80, "life": 9.0, "speed": [0.05, 0.15], "spread": 180.0, "turb": [0.3, 0.3],
 		"size": [0.03, 0.07], "emit": {"box": Vector3(1.6, 4.0, 1.6)}, "colour": "LEDGER", "alpha": 0.7, "glow": 1.2,
@@ -296,7 +257,6 @@ const SPECS := {
 		"max": 14, "life": 0.7, "speed": [3.0, 6.0], "spread": 180.0, "damping": [6.0, 8.0],
 		"size": [0.5, 1.0], "emit": {"ring": 1.2, "inner": 0.8}, "colour": "LEDGER", "alpha": 1.0, "grow": "puff", "near_m": 0.6},
 
-	# --- Run summaries: the win throws a party, the loss gets its own little rain cloud ----------
 	"summary_win_confetti": {"attach": "anchor", "shape": "paper", "blend": "mix", "ink": 1.0, "spin": 420.0,
 		"max": 90, "life": 4.0, "speed": [0.5, 1.5], "dir": Vector3.DOWN, "spread": 25.0, "gravity": -1.4, "turb": [1.0, 0.8],
 		"size": [0.08, 0.16], "emit": {"box": Vector3(4, 0.2, 2)}, "offset": Vector3(0, 3.5, 0),
@@ -323,8 +283,6 @@ const SPECS := {
 		"alpha": 0.85, "near_m": 0.6, "low": 1.0},
 }
 
-# What each place or moment plays. A world's ambient set installs with the world; anchor sets are
-# dropped in by dressing (WorldFxAnchor.make); burst sets fire through hooks.
 const SETS := {
 	"spillway": ["spill_mist", "spill_midges"],
 	"dig": ["dig_haze", "dig_lamp_specks"],
@@ -355,22 +313,12 @@ const SETS := {
 	"mod_far": ["mod_far_flare"],
 }
 
-# Still quads a set carries besides its emitters: the rainbow standing in the dam's spray.
 const EXTRAS := {
 	"landmark_dam": [{"shape": "arc", "size": Vector2(70, 70), "colour": "MIST", "alpha": 0.3, "at": Vector3(0, -26, 22)}],
 }
 
-# The world each ambient set belongs to, by the game's world number (park_defs.gd, world_look.gd ROWS).
 const WORLD_SETS := {1: "spillway", 2: "dig", 3: "highdraft"}
 
-# World dressing effects that are not kit emitters: a world's own shaders and multimeshes (dig_fx.gd,
-# highdraft_fx.gd). Their behaviour stays in their files; what each draws in and how it answers the
-# graphics preset and reduced motion is a row here, read through WorldFxKit (dressing_share,
-# dressing_shown, dressing_colour), so a new world's dressing adds rows, not a quality hookup.
-#   low      share kept on the low preset (0 stops it; a count is floored, a rate is scaled)
-#   reduced  share kept under reduced motion (default 1: unchanged)
-#   preset   a GraphicsPreset row flag that hides it on presets that turn it off
-#   colour   a palette or kit colour name (WorldFxSpecs.colour); alpha its opacity
 const DRESSING := {
 	"dig_lamp_motion": {"low": 0.0},
 	"dig_cut_grit": {"low": 0.0},
@@ -385,7 +333,6 @@ const DRESSING := {
 	"hd_net_dust": {"reduced": 0.0},
 }
 
-# Overlays: a stage modifier's kind or a weather sky id adds air to the world's own.
 const OVERLAYS := {
 	"plenty": ["mod_plenty_glints"],
 	"scarce": ["mod_scarce_ash"],
@@ -394,8 +341,6 @@ const OVERLAYS := {
 	"storm_build": ["weather_storm_rain"],
 }
 
-# Game moments. effects: bursts fired at the point; word: the comic sound word drawn there
-# (world_fx_word.gd), "" for none. Callers fire hooks with WorldFx.play(hook, at).
 const HOOKS := {
 	"ball_splash": {"effects": ["spill_splash_crown", "spill_splash_ring"], "word": "SPLOSH"},
 	"relay_quarter": {"effects": ["relay_ring_tick"], "word": ""},
@@ -407,17 +352,6 @@ const HOOKS := {
 	"summary_win": {"effects": ["summary_win_popper", "summary_win_sparks"], "word": "PAID"},
 }
 
-# Run grain (world_fx_grain.gd, principle 21): each run rolls every spec's dials once from the run seed,
-# so the same seed always looks the same and the next run looks a little different. A dial is a
-# [min, max] range rolled uniformly; a spec with no row takes GRAIN_DEFAULT, and ceremony and comic
-# effects (ink) take none, so the comic book never changes between runs.
-#   amount   share of the spec's particles that emit (never over 1: the budgets above still hold)
-#   size     particle size multiplier
-#   speed    initial speed multiplier (gravity, damping and life are left alone, so arcs stay readable)
-#   wind_deg yaw turn of the emitter's direction and directional gravity, in degrees either way
-#   tint     [palette or kit colour, max share]: the emitter's tint leans that far toward the colour
-#   pulse    multiplier on a pulsed spec's period (the powerhouse breathes at its own pace each run)
-# Grain never touches glow or alpha, so FlashGuard and the readability rules see the authored spec.
 const GRAIN_DEFAULT := {"amount": [0.85, 1.0], "size": [0.92, 1.08], "speed": [0.92, 1.08]}
 const GRAIN := {
 	"spill_mist": {"amount": [0.55, 1.0], "size": [0.8, 1.25], "speed": [0.6, 1.5], "wind_deg": 40.0, "tint": ["SPRAY", 0.5]},
@@ -436,17 +370,6 @@ const GRAIN := {
 	"spill_flood_flecks": {"amount": [0.6, 1.0], "size": [0.85, 1.2], "speed": [0.8, 1.3], "tint": ["SANDSTONE", 0.3]},
 }
 
-# What the world's effects sound like (FX-09; world_fx_sound.gd plays them, tools/ace/world_sfx.py makes
-# the files under assets/audio/world/). Keyed by an anchor set, a hook, or the wake set. Every one rides
-# the Ambient bus, so a fight, a Warden or a boss pulls it down and a warning's focus clears it away
-# (mix_rows.gd STATES and FOCUS); only the nearest anchor of a set takes a voice (WorldFx ranks them).
-#   file     the WAV's name without .wav
-#   play     loop     sounds while the anchor emits (a level-driven set follows its level)
-#            pulse    once each time the named pulsed spec starts a puff (pulse_of)
-#            once     once per hook, louder with the hook's size
-#   db       trim in dB; unit_m and reach_m the 3D distances (full level inside unit_m, silent past reach_m)
-#   at       where the voice sits in the anchor's frame (the dam's roar at its foot, not its lip)
-#   quiet_db a level-driven loop's trim at level 0 (calm water), easing to db at level 1
 const SOUNDS := {
 	"ball_splash": {"file": "spill_splash", "play": "once", "db": -2.0, "unit_m": 10.0, "reach_m": 70.0},
 	"spill_wake": {"file": "spill_wake", "play": "loop", "db": -4.0, "unit_m": 10.0, "reach_m": 60.0},
@@ -459,10 +382,6 @@ const SOUNDS := {
 	"spill_flood": {"file": "flood_foam", "play": "loop", "db": 0.0, "quiet_db": -10.0, "unit_m": 14.0, "reach_m": 100.0},
 }
 
-# Where the Spillway parks drop their anchor sets (spillway_fx.gd). A row names park rows by id (the
-# set stands on the row's top, lifted lift metres), or a landmark kind (the set stands in the landmark
-# node's own frame: at the mean of the named GLB nodes when they exist, else at `local`, then
-# `offset`). A park without the named row simply places nothing for it.
 const SPILL_PLACES := [
 	{"set": "spill_powerhouse", "rows": ["powerhouse", "weir_gatehouse"], "lift": 0.5},
 	{"set": "spill_falls", "rows": ["weir_deck"], "lift": 0.0, "foot": true},
@@ -470,10 +389,6 @@ const SPILL_PLACES := [
 	{"set": "landmark_penstock_tower", "landmark": "penstock_tower", "nodes": [], "local": Vector3(0, 74, 58), "offset": Vector3.ZERO},
 ]
 
-# Live-particle ceilings at the high preset: a world's ambient air plus its worst overlay, and the
-# anchors WorldFx keeps emitting at once near the camera (world_fx_test pins both). The anchor
-# ceiling is the six costliest sets standing together, which no park does: landmarks stand a
-# kilometre apart, so a real view holds one landmark plus small dressing anchors.
 const AMBIENT_CEILING := 330
 const ANCHOR_SLOTS := 6
 const ANCHOR_CEILING := 760

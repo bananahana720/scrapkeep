@@ -11,29 +11,8 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
-# What the machines throw off: how a pack arrives, how a body winds up, takes a hit,
-# staggers and dies, how the four specials tell you what they are about to do, and how
-# Brindle, the Waking and the Mind change phase and fall. Fleet crews are steam and brass
-# (they leak, hiss and spark); ancients are their seam light (it crawls, fizzes and
-# gutters out) and cast shell. Comic words (KLANG, SHIFT OVER) stamp on the big moments.
-#
-# Readability (FEEL-READABILITY 1.1): nothing here is committed geometry. The telegraph
-# owns the read and draws above all of this; these effects sit on or over the body, never
-# across the footprint. Body effects are P5 and steam and motes P7, so the density
-# governor thins them. A special's tell is the exception: it is a read, so it is never
-# thinned; its word is stamped unless no spot is free of the HUD, the reticle and the ball
-# (player_fx's room), when it stays silent and the telegraph, the tell's sound and its sparks
-# carry the fact. One pack's arrival effects start on the frame its
-# arrival rings do, so they share the rings' timing and the 0.2 s gap rule between packs.
-#
-# Timing contract with audio: a special fires its tell through SpecialCues.tell(), which
-# emits the body's special_tell(moment) once; audio.gd (the sound) and special_rig.gd (the
-# clip) answer the same emit, so the picture and the sound come off one frame. SpecialCues
-# names the sound ids.
 
 const FAMILY := {Roster.FLEET: "fleet", Roster.REACTOR: "ancient", Roster.SWARM: "ancient", Roster.MIND: "ancient"}
-# Spec id -> particle count, per family and moment. "windup" and "stagger" are persistent
-# emitters that follow the body; the rest fire once.
 const MOMENTS := {
 	"fleet": {
 		"arrive": {"steam_puff": 6, "brass_spark": 8},
@@ -59,15 +38,10 @@ const MOMENTS := {
 	},
 }
 const WORDS := {"fleet_heavy": "KLANG", "ancient_heavy": "KRZZT", "stagger": "KRNK", "elite": "CLOCKED OUT"}
-# Every glyph the uppercase words draw (WORDS, SPECIALS, BOSSES, the fall words and the panel pops).
 const WARM_GLYPHS := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?.,'+-%"
-# The steam sigh under an elite's clock-out card.
 const ELITE_SIGH := {"steam_puff": 8}
 const WORD_TINT := {"fleet": Palette.BRASS, "ancient": Palette.ANCIENT}
 
-# The four kill-first specials (ENEMY-PRIORITY.md 4, 4a; SOUND-BIBLE specials). Each
-# moment lists its effects, an optional tint for "row" specs and an optional word; the
-# sound each moment plays is SpecialCues.sound(special, moment).
 const SPECIALS := {
 	"foreman": {"family": "fleet", "presence": {"steam_jet": 3},
 		"spawn": {"steam_puff": 8, "brass_spark": 8},
@@ -88,8 +62,6 @@ const SPECIALS := {
 		"break": {"brass_spark": 16, "plate_chunks": 6}, "break_word": "CLANG"},
 }
 
-# The bosses: a phase change and the fall. The fall is played straight first (a run of
-# blasts across the body, then one ring), and the wink word lands one beat after it.
 const BOSSES := {
 	"brindle": {"family": "fleet", "tint": Palette.BRASS, "reach": 8.0,
 		"phase": {"phase_ring": 64, "steam_puff": 10, "brass_spark": 16, "plate_chunks": 12}, "phase_word": "",
@@ -103,7 +75,6 @@ const BOSSES := {
 }
 const FALL_BLASTS := 5
 const FALL_GAP := 0.22
-# One beat at the 129 BPM fight tempo: the wink waits this long after the last blast.
 const WINK_DELAY := 60.0 / 129.0
 
 const WORD_POOL := 4
@@ -111,27 +82,17 @@ const WORD_LIFE := 0.9
 const WORD_SLAM := 0.06
 const WORD_GAP := 0.4
 const WORD_HEIGHT := 3.2
-# No word holds wider on screen than this share of the view's HEIGHT (its slam, the first
-# WORD_SLAM seconds, may pass it, up to 1.6 times). Words are sized in metres, so one stamped
-# beside the camera (a panel pickup's pop sits at the ball) was a wall of letters over the HUD.
-# The room is a share of the height, as the player's own words are sized (player_fx.gd
-# WORD_SCREEN), so letters stand as tall on an ultrawide screen as on 16:9: 0.9 of the height is
-# 0.51 of a 16:9 view's width and 0.38 of a 21:9 view's. Every machine word shares this room
-# (hits, tells, a boss's phase and fall words), not only the pickup's pop.
 const WORD_FIT := 0.9
 const HIT_GAP := 0.12
 const HITS_PER_TENTH := 8
 const DAZE_SPIN := 4.0
 const SAMPLE_SECONDS := 0.1
-# Where a word looks for room, in its own widths and heights from the asked spot (x right, y down).
 const SPOT_STEPS := [Vector2(0, 0), Vector2(0, -1), Vector2(0, 1), Vector2(0, -2), Vector2(0, 2), Vector2(-1, 0), Vector2(1, 0),
 		Vector2(0, -3), Vector2(0, 3), Vector2(-2, 0), Vector2(2, 0), Vector2(-3, 0), Vector2(3, 0), Vector2(0, -4), Vector2(0, 4)]
 
 var ctx
 var root: Node3D
-# spec id or moment -> count fired, for the tests and the notes.
 var spawned := {}
-# [clock, moment, who, at]: the last LOG_KEEP moments, for tests and captures.
 var moments: Array = []
 const LOG_KEEP := 64
 var reduced_motion := false
@@ -139,7 +100,6 @@ var reduced_motion := false
 var _fx := {}
 var _fx_next := {}
 var _busy := {}
-# Follows: {emitter, node, lift, until (or INF), spin}
 var _follows: Array = []
 var _windups := {}
 var _dazes := {}
@@ -161,13 +121,9 @@ var _clock := 0.0
 var _sample := 0.0
 var _boss_at := Vector3.ZERO
 var director_ref = null
-# Vfx's kill mark (kill_mark.gd): a downed elite gets its clock-out card stamp and a steam sigh.
-# Null (a MachineFx without Presentation, in a tool or test) stamps the word instead.
 var kill_mark = null
 
 
-# Whether `enemy` is in its stagger window, which draws the stagger word over it; player_fx keeps its
-# words off the marks over a foe only while one is shown.
 func marked(enemy: Node3D) -> bool:
 	return _dazes.has(enemy.get_instance_id())
 
@@ -207,8 +163,6 @@ func setup(ctx_ref) -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.vertex_color_use_as_albedo = true
-	# The colours written into the mesh are the palette's sRGB values: the switch makes the PC's renderer read them so,
-	# not as linear light, which washed the cable arcs out (tools/vertex_colour_probe.gd --marks=1, W46-13).
 	mat.vertex_color_is_srgb = true
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
@@ -232,8 +186,6 @@ static func family_of_kind(kind: String) -> String:
 	return family_of(String(Roster.row(kind).get("faction", Roster.FLEET)))
 
 
-# The special a body is ("" for none) and the sound a special's moment plays: one row,
-# SpecialCues, keys audio and these effects.
 static func special_of(enemy: Node) -> String:
 	return SpecialCues.special_of(enemy)
 
@@ -262,10 +214,6 @@ func clear() -> void:
 		_cable_mesh.clear_surfaces()
 
 
-# --- Firing ----------------------------------------------------------------------------
-
-# Fires a set of one-shot specs ({id: count}) at one place; a "row" spec takes `tint`. `cls` is the priority class:
-# "P1" is never thinned (a special's tell), "P5" and "P7" follow the governor.
 func fire(effects: Dictionary, at: Vector3, tint := Color.TRANSPARENT, cls := "P5") -> int:
 	if root == null or not root.is_inside_tree():
 		return 0
@@ -277,15 +225,12 @@ func fire(effects: Dictionary, at: Vector3, tint := Color.TRANSPARENT, cls := "P
 		var pool: Array = _fx[id]
 		var p: GPUParticles3D = pool[_fx_next[id]]
 		_fx_next[id] = (_fx_next[id] + 1) % pool.size()
-		# A moment's tint colours only its "row" specs (rings); steam stays steam.
 		FxLibrary.fire(p, id, "enemy_struck", count, at, tint if FxLibrary.SPECS[id]["colour"] == "row" else Color.TRANSPARENT)
 		spawned[id] = spawned.get(id, 0) + 1
 		fired += 1
 	return fired
 
 
-# Steam and motes are ambient (P7) inside any moment; sparks, shards and rings keep the
-# moment's class.
 static func _class_of(id: String, cls: String) -> String:
 	if cls == "P1":
 		return cls
@@ -302,8 +247,6 @@ func _thin(count: int, cls: String) -> int:
 	return int(round(count * keep))
 
 
-# A persistent emitter that follows `node` (lifted `lift` metres) until stop_follow or
-# `seconds` run out; null when the pool is busy (the effect is candy, so it just skips).
 func follow(id: String, node: Node3D, count: int, lift: float, seconds := INF, tint := Color.TRANSPARENT, spin := 0.0) -> GPUParticles3D:
 	if not _fx.has(id) or not is_instance_valid(node) or count <= 0:
 		return null
@@ -337,8 +280,6 @@ func _note(moment: String, who: String, at: Vector3) -> void:
 	spawned[moment] = spawned.get(moment, 0) + 1
 
 
-# --- Words -----------------------------------------------------------------------------
-
 func _make_word() -> Dictionary:
 	var label := word_label()
 	label.visible = false
@@ -362,18 +303,12 @@ static func word_label() -> Label3D:
 	return label
 
 
-# A word label showing `glyphs`, for BakeWarm, which shows every glyph a word can draw: the first word of a run (KLANG
-# on a heavy hit) otherwise rasterizes its glyphs at this size and outline in the frame's deferred
-# Label3D update (stage 1 f3822, 44 ms of a 106-121 ms frame on the cloud box).
 static func warm_views(glyphs: String) -> Array[Node3D]:
 	var label := word_label()
 	label.text = glyphs
 	return [label]
 
 
-# Stamps a drawn sound word over `at`: three frames of overshoot, a hold, then it slides
-# off on a diagonal (TONE-BIBLE UI motion). `force` words are reads or set pieces and
-# ignore the gap and the density skip; the rest are candy.
 func word(text: String, at: Vector3, tint: Color, force := false, life := WORD_LIFE, size := 1.0) -> bool:
 	if root == null or not root.is_inside_tree() or text == "":
 		return false
@@ -384,9 +319,6 @@ func word(text: String, at: Vector3, tint: Color, force := false, life := WORD_L
 	if probe.font != null:
 		font = probe.font
 	var width_px := font.get_string_size(text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, probe.font_size).x + probe.outline_size
-	# One owner of what a word keeps off (player_fx): a candy word needs a free place in the shared
-	# budget, and every word, read or candy, takes the first free spot of its own short list or is not
-	# drawn (PF-26).
 	if not is_instance_valid(_room):
 		_room = get_tree().get_first_node_in_group(PlayerFx.ROOM_GROUP)
 	var room = _room
@@ -415,7 +347,6 @@ func word(text: String, at: Vector3, tint: Color, force := false, life := WORD_L
 	return true
 
 
-# The candy words showing, for player_fx's shared budget (candy_room).
 func candy_alive() -> int:
 	var n := 0
 	for slot in _words:
@@ -424,8 +355,6 @@ func candy_alive() -> int:
 	return n
 
 
-# The first of `at` and the spots round it (up, down, then a word's width left and right, in steps of
-# the word's own size) where the word stands clear of what player_fx keeps words off; null when none is.
 func _free_spot(room, width_px: float, at: Vector3, size: float):
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 	if cam == null or cam.is_position_behind(at):
@@ -467,14 +396,10 @@ func _draw_word(slot: Dictionary) -> void:
 			at += (side + Vector3.UP) * leave * 1.2
 	label.global_position = at
 	label.scale = Vector3.ONE * size
-	# Reduce flashes dims the coloured face, never the ink outline, so the word still reads.
 	label.modulate.a = FlashGuard.info(1.0 - leave)
 	label.outline_modulate.a = 1.0 - leave
 
 
-# `at`, lowered along the view's up so the word's top stays under the HUD's top band. A tall body's
-# break word (SHIFT OVER on the foreman, OUT OF ORDER on the dispatcher) stood over the objective
-# plate with its letters cut off by the screen's top edge (the death reel, 10 Nov 2026).
 func _below_top(slot: Dictionary, at: Vector3, size: float) -> Vector3:
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 	if cam == null or cam.is_position_behind(at):
@@ -490,7 +415,6 @@ func _below_top(slot: Dictionary, at: Vector3, size: float) -> Vector3:
 	return at - cam.global_basis.y * (over / px_per_m)
 
 
-# `size`, held down so the word at `at` is no wider on screen than WORD_FIT of the view's height.
 func _fit(slot: Dictionary, at: Vector3, size: float) -> float:
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 	var width_m: float = float(slot.get("width_px", 0.0)) * (slot["node"] as Label3D).pixel_size * size
@@ -500,8 +424,6 @@ func _fit(slot: Dictionary, at: Vector3, size: float) -> float:
 	var room := get_viewport().get_visible_rect().size.y * WORD_FIT
 	return size if width_m * px_per_m <= room else size * room / (width_m * px_per_m)
 
-
-# --- Bodies: arrival, wind-up, hits, stagger, death -----------------------------------
 
 func _on_spawned(enemy: Node3D, kind: String) -> void:
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
@@ -543,8 +465,6 @@ static func _lift(enemy: Node3D) -> float:
 	return float(h) if h != null else 1.2
 
 
-# A wind-up hisses (Fleet: a steam jet off the body that builds) or crawls (ancients:
-# seam light orbiting the body) until it strikes, when it lets go in one puff.
 func _on_phase(facts: Dictionary, enemy: Node3D, family: String) -> void:
 	if not is_instance_valid(enemy):
 		return
@@ -609,8 +529,6 @@ func _on_died(at: Vector3, _scrap: int, enemy: Node3D, kind: String, family: Str
 			word(WORDS["elite"], at + Vector3.UP * WORD_HEIGHT, WORD_TINT[family], true)
 
 
-# A posture body (a Warden or a boss's): the stagger vents for its whole window under a
-# daze halo; each chunk it loses bursts off it; a boss's chunk is its phase change.
 func _on_posture(enemy: Node3D, _posture: float, staggered: bool) -> void:
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
 		return
@@ -618,7 +536,6 @@ func _on_posture(enemy: Node3D, _posture: float, staggered: bool) -> void:
 	var source = enemy.get("family") if enemy.get("family") != null else enemy.get("faction")
 	var family := family_of(String(source)) if source != null else "ancient"
 	var at := enemy.global_position + Vector3.UP * _lift(enemy)
-	# Brindle's pieces change phase through boss_phase_changed; their chunks add nothing.
 	var brindle := String(enemy.get("kind")).begins_with("brindle")
 	if _boss_of(enemy) != "":
 		_boss_at = enemy.global_position
@@ -648,8 +565,6 @@ func _on_posture(enemy: Node3D, _posture: float, staggered: bool) -> void:
 		_dazes.erase(id)
 
 
-# A pack unit's stagger (counter.gd stun_left): a daze halo while it lasts. Sampled at
-# 10 Hz from the enemy group, since the counter publishes no fact for it.
 func _sample_stuns() -> void:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		var stun = enemy.get("stun_left")
@@ -664,11 +579,6 @@ func _sample_stuns() -> void:
 			_note("daze", String(enemy.get("kind")), enemy.global_position)
 
 
-# --- Pack arrivals ---------------------------------------------------------------------
-
-# The director's arrival list (world.gd draws a ring for each): each new arrival vents
-# from the ground (Fleet) or wells up in seam light (ancients) for its whole second, so a
-# pack's arrivals all start together, on the frame their rings do.
 func _sample_arrivals() -> void:
 	var director = _director()
 	if director == null or ctx.get("calm"):
@@ -716,17 +626,12 @@ static func _kind_name(kind) -> String:
 	return String(names[kind]) if int(kind) >= 0 and int(kind) < names.size() else "chaser"
 
 
-# --- Specials --------------------------------------------------------------------------
-
 func _on_special_tell(moment: String, enemy: Node3D) -> void:
 	var special := special_of(enemy)
 	if special != "":
 		special_moment(special, moment, enemy)
 
 
-# One special's moment: "spawn", "tell", "break", "break_split" or "break_clean". A tell
-# is a read (P1): never thinned, worded unless no spot is free (then the telegraph, the sound and
-# the sparks carry it). Returns the sound id the moment plays.
 func special_moment(special: String, moment: String, enemy: Node3D, at := Vector3.INF) -> String:
 	var row: Dictionary = SPECIALS.get(special, {})
 	if row.is_empty() or not row.has(moment):
@@ -779,9 +684,6 @@ func _draw_cables(delta: float) -> void:
 	_cable_mesh.surface_end()
 
 
-# --- Bosses ----------------------------------------------------------------------------
-
-# Which boss owns a posture body: its fleet is a boss script ("" for a park Warden).
 static func _boss_of(enemy: Node) -> String:
 	var holder = enemy.get("fleet")
 	if holder == null or not holder is Object or holder.get_script() == null:
@@ -832,8 +734,6 @@ func _on_boss_phase(phase: int, phase_name := "") -> void:
 	boss_phase("brindle", at)
 
 
-# A boss changes phase: a ring out to its reach, its family's chunk of armour or shell,
-# and the phase word, big, for a boss that has one.
 func boss_phase(boss: String, at: Vector3) -> void:
 	var row: Dictionary = BOSSES.get(boss, {})
 	if row.is_empty():
@@ -841,7 +741,6 @@ func boss_phase(boss: String, at: Vector3) -> void:
 	_boss_at = at
 	var lift: Vector3 = Vector3.UP * (float(row["reach"]) * 0.4)
 	fire(row["phase"], at + lift, row["tint"], "P1")
-	# Brindle's turn is read from his plates and the glance, not a word over him (flourish_rows.gd brindle_phase_2).
 	if String(row["phase_word"]) != "":
 		word(String(row["phase_word"]), at + lift + Vector3.UP * (WORD_HEIGHT + 2.0), row["tint"], true, 1.1, 1.6)
 	_note("boss_phase", boss, at)
@@ -859,8 +758,6 @@ func _on_boss_defeated() -> void:
 	boss_fall(boss, at)
 
 
-# The fall, played straight then winked: FALL_BLASTS blasts walk across the body
-# FALL_GAP apart, a last ring goes out, and one beat later the fall word stamps.
 func boss_fall(boss: String, at: Vector3) -> void:
 	var row: Dictionary = BOSSES.get(boss, {})
 	if row.is_empty():
@@ -873,7 +770,6 @@ func boss_fall(boss: String, at: Vector3) -> void:
 		_queue.append({"at": _clock + FALL_GAP * i, "effects": MOMENTS[family]["chunk"], "where": spot, "tint": row["tint"]})
 	var finale := FALL_GAP * FALL_BLASTS
 	_queue.append({"at": _clock + finale, "effects": row["phase"], "where": at + Vector3.UP * reach * 0.4, "tint": row["tint"]})
-	# Brindle's rout says its one word through flourish_rows.gd; his fall stays a sight and a sound.
 	if row.has("fall_word"):
 		_queue.append({"at": _clock + finale + WINK_DELAY, "word": String(row["fall_word"]), "where": at + Vector3.UP * (reach + WORD_HEIGHT), "tint": row["tint"]})
 	_note("boss_fall", boss, at)
@@ -893,8 +789,6 @@ func _run_queue() -> void:
 			word(item["word"], item["where"], item["tint"], true, 1.6, 1.8)
 	_queue = later
 
-
-# --- Frame -----------------------------------------------------------------------------
 
 func _process(delta: float) -> void:
 	if root == null:
@@ -941,6 +835,5 @@ func _process(delta: float) -> void:
 	_draw_cables(delta)
 
 
-# Live emitters, for the bench and the notes: [one-shot pools restarted, follows alive].
 func alive_follows() -> int:
 	return _follows.size()

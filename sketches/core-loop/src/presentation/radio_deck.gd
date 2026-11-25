@@ -5,12 +5,6 @@ const RadioTakes := preload("res://src/core/radio_takes.gd")
 const RadioDial := preload("res://src/ui/radio_dial.gd")
 const RadioCache := preload("res://src/world/radio_cache.gd")
 
-# The pilot radio in a run (design-v3/sound/RADIO.md): the dial's keys, the takes a run finds,
-# and the plan Radio.decide makes, carried out on the band (audio.gd radio_play, radio_release,
-# set_radio_silenced). It plans only in play; the title, the camp and the jukebox keep their
-# own music, and a death or a run's end takes the air back on audio's side. A fresh find is
-# filed in the profile's tunes list, announced on the HUD's record plate and premiered on its
-# station. The dial on the HUD (radio_dial.gd) draws what this holds.
 
 const PLAN_EVERY := 0.25
 const SILENT_STATES := ["stage", "beacon", "gates", "launch", "boss", "dead"]
@@ -62,7 +56,6 @@ static func _signal_args(events: Object) -> Dictionary:
 	return out
 
 
-# One listener per signal a take's rule names, whatever its argument count.
 func _listen(events: Object, on: String, names: Array) -> void:
 	var handler := func(a = null, b = null, c = null, d = null, e = null, f = null):
 		var values := [a, b, c, d, e, f]
@@ -72,8 +65,6 @@ func _listen(events: Object, on: String, names: Array) -> void:
 		bus_signal(on, args)
 	events.connect(on, handler)
 
-
-# --- Finding takes ----------------------------------------------------------------------
 
 func bus_signal(on: String, args: Dictionary) -> void:
 	var stage := _stage()
@@ -94,9 +85,6 @@ func _on_tune_heard(tune: String) -> void:
 			find(String(t["id"]))
 
 
-# A Signal cache in a park (radio_cache.gd) was reached. True when its take is on file, so the
-# cache has done its work. A find is the player's own, made in play: a ball that rolls into one
-# under the summary or after a death finds nothing (false), and the cache stands for the next run.
 func cache_found(id: String) -> bool:
 	var t := RadioTakes.take(id)
 	if t.is_empty() or t["found"].get("on") != "cache" or not _live():
@@ -105,7 +93,6 @@ func cache_found(id: String) -> bool:
 	return game.ctx.profile.has_tune(id)
 
 
-# Files a take, announces it and premieres it. False when the profile already holds it.
 func find(id: String) -> bool:
 	var profile = game.ctx.profile
 	if RadioTakes.take(id).is_empty() or not profile.hear_tune(id):
@@ -116,7 +103,6 @@ func find(id: String) -> bool:
 	if _audio != null:
 		_audio.play("bay_jukebox", 0.0, 1.0, "UI")
 	var before := radio.station
-	# A station the game moved pulses the chip once, a mark and not a word; the chip shows the station.
 	if radio.premiere(id, context()) and radio.station != before and dial != null:
 		dial.swell()
 	game.events.radio_take_found.emit(id, String(t["tier"]), String(t["found"].get("on", "")))
@@ -125,7 +111,6 @@ func find(id: String) -> bool:
 	return true
 
 
-# The stage's unfound Signal caches go up at their spots; the last stage's come down.
 func _place_caches() -> void:
 	for old in get_tree().get_nodes_in_group(RadioCache.GROUP):
 		old.queue_free()
@@ -139,8 +124,6 @@ func _place_caches() -> void:
 func _found(id: String) -> bool:
 	return game.ctx.profile.has_tune(id)
 
-
-# --- The dial ---------------------------------------------------------------------------
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _live() or event.is_echo():
@@ -204,8 +187,6 @@ func _blip(step: int) -> void:
 	if _audio != null:
 		_audio.play("flow_changed", -4.0, pow(2.0, [0, 2, 4, 5, 7, 9, 11][posmod(step, 7)] / 12.0), "UI")
 
-
-# --- Planning ---------------------------------------------------------------------------
 
 func _live() -> bool:
 	return game != null and game.flow != null and game.flow.in_play()
@@ -288,7 +269,6 @@ func _save() -> void:
 		push_warning("radio: not saved: %s" % profile.last_error)
 
 
-# Where the station's first unfound take lives, as its blank sleeve says it.
 func _hint(station: String) -> String:
 	for id in RadioTakes.on_station(station):
 		if RadioTakes.is_take(id) and not _found(id):
@@ -296,7 +276,6 @@ func _hint(station: String) -> String:
 	return ""
 
 
-# What the dial shows: the station, the track on air (or why none), the pin.
 func reading() -> Dictionary:
 	var station := radio.station
 	var st := RadioTakes.station(station)
@@ -309,8 +288,6 @@ func reading() -> Dictionary:
 		"live", "":
 			line = "Live from the run"
 		"new_signal":
-			# The score is playing a tune for the first time: the dial names it, as a radio would.
-			# Once it has been heard it is no longer news, and it holds the air under its own name.
 			var fresh := String(RadioTakes.track(_cut_in).get("name", ""))
 			if fresh == "":
 				line = "New signal. Listen in."

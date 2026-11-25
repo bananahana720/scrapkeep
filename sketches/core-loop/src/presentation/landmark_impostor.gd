@@ -1,24 +1,12 @@
 extends Node3D
 
-# The long-range stand-in for a park's hero landmark (LANDMARK-CARDS.md port note P7). The chase camera's far plane is
-# 700 m (chase_camera.gd) and every drop-in is 1.17 to 1.43 km from its landmark, so the landmark's own views are clipped
-# from the drop-in whatever their visibility ranges. Once any part of the landmark would stand past FAR_SHARE of the far
-# plane, its far view (<recipe>_far.glb) draws in its place, scaled about the eye by k = far x FAR_SHARE / (distance +
-# radius): every vertex stays on the ray it had, so it covers the same pixels, and its farthest point stays inside the
-# far plane. The landmark's own views hide while it shows. The same method as landmark_beam.gd's impostor; it is a child
-# of the landmark node, so it follows the landmark's transform.
-
 const FAR_SHARE := 0.8
 
-# The farthest far-view vertex from the landmark's origin, in metres.
 var radius := 0.0
-# The scaled copy of the far view (top_level, so the impostor moves it alone) and the landmark's own views.
 var stand_in: Node3D
 var own_views: Array = []
 
 
-# A stand-in under landmark built from far_scene (an instantiated <recipe>_far.glb, kept by the caller); views are the
-# landmark's own drawn nodes, hidden while the stand-in shows.
 static func make(landmark: Node3D, far_scene: Node, views: Array = []) -> Node3D:
 	var impostor := new()
 	impostor.name = "LandmarkImpostor"
@@ -65,32 +53,25 @@ func _process(_delta: float) -> void:
 		show_for(camera.global_position, camera.far)
 
 
-# The scale the stand-in takes for an eye with far plane far: 1 while the whole landmark stands inside FAR_SHARE of it.
 func scale_for(eye: Vector3, far: float) -> float:
 	return reach_scale(global_position, radius, eye, far)
 
 
-# The stand-in's world transform for that eye: the landmark's own, scaled about the eye by scale_for.
 func impostor(eye: Vector3, far: float) -> Transform3D:
 	return about_eye(global_transform, radius, eye, far)
 
 
-# The method for any far stand-in (the landmark's, the smoke column's): the scale for a thing at origin reaching radius
-# from it, 1 while all of it stands inside FAR_SHARE of the far plane.
 static func reach_scale(origin: Vector3, reach_radius: float, eye: Vector3, far: float) -> float:
 	var reach := far * FAR_SHARE
 	var span := origin.distance_to(eye) + reach_radius
 	return 1.0 if span <= reach else reach / span
 
 
-# own scaled about the eye by reach_scale: every vertex stays on its ray from the eye, so the thing covers the same
-# pixels, and its farthest point stays inside the far plane.
 static func about_eye(own: Transform3D, reach_radius: float, eye: Vector3, far: float) -> Transform3D:
 	var k := reach_scale(own.origin, reach_radius, eye, far)
 	return Transform3D(own.basis.scaled(Vector3.ONE * k), eye + (own.origin - eye) * k)
 
 
-# Shows the stand-in (and hides the landmark's views) when the landmark reaches past FAR_SHARE; returns whether it shows.
 func show_for(eye: Vector3, far: float) -> bool:
 	var on := scale_for(eye, far) < 1.0
 	stand_in.visible = on

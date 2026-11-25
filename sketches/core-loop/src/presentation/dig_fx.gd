@@ -8,7 +8,6 @@ const RUPTURE_SECONDS := 0.45
 const BURST_SECONDS := 0.85
 const GRIT_REACH := 22.0
 const GRIT_INTERVAL := 0.2
-# Mutable only to exercise the missing-resource fallback without moving an asset.
 const LAMP_SHADER_PATH := "res://assets/materials/dig_mechanical/lamp_motion.gdshader"
 static var lamp_shader_path := LAMP_SHADER_PATH
 
@@ -88,9 +87,6 @@ func bind_context(ctx, stage: int) -> void:
 	_on_stage_entered(stage, false)
 
 
-# A freed park stage leaves a few nodes a frame (terrain's Reaper), so the lamp views and grit can
-# be gone frames before this node is. It lets go of the run's signals the moment its stage is freed;
-# a later entry builds a new DigFx on the rebuilt stage root.
 func _on_stage_freed(stage: int) -> void:
 	if stage != _stage:
 		return
@@ -152,7 +148,6 @@ func _sync_dressing() -> void:
 	for p in grit:
 		p.emitting = false
 		p.visible = _grit_on
-	# Existing one-shots also shrink if the player selects low during a rupture.
 	for burst in bursts:
 		for p: GPUParticles3D in burst["node"].get_children():
 			p.amount_ratio = _burst_count(String(p.get_meta("kind"))) / float(p.amount)
@@ -181,7 +176,6 @@ func _on_world_fact(kind: String, at: Vector3) -> void:
 		if at.x >= rect.position.x and at.x <= rect.end.x and at.z >= rect.position.y and at.z <= rect.end.y:
 			var id: String = plate["id"]
 			var cover := _stage_root.get_node_or_null("BreachPlate_" + id) as Node3D
-			# The world fact follows apply_swap. Read the committed cover state, never infer a break from a slam.
 			if cover != null and not cover.visible and not _played.has(id):
 				_rupture(id, cover, at)
 
@@ -189,7 +183,7 @@ func _on_world_fact(kind: String, at: Vector3) -> void:
 func _rupture(id: String, cover: Node3D, at: Vector3) -> void:
 	var skin := cover.get_node_or_null("BreachSkin") as Node3D
 	if skin == null:
-		return # The skin loader already warned and retained the old box.
+		return
 	var wedges := skin.get_children().filter(func(n): return n is MeshInstance3D and n.get_meta("wedge", false))
 	if wedges.size() != 3 or wedges.any(func(n): return n.mesh == null or n.material_override == null):
 		_warn_once("breach skin missing or malformed; breach covers keep the instant swap")
@@ -214,7 +208,6 @@ func _rupture(id: String, cover: Node3D, at: Vector3) -> void:
 	var burst := Node3D.new()
 	burst.name = "DigBurst_" + id
 	add_child(burst)
-	# The fact's contact can be at any edge of the plate. Emit at that contact on its top surface.
 	burst.global_position = Vector3(at.x, ghost.global_position.y, at.z)
 	for kind: String in ["debris", "dust"]:
 		var fx_id: String = "dig_" + kind
@@ -303,7 +296,6 @@ func _spawn_strut_dust(at: Vector3) -> void:
 	bursts.append({"node": burst, "age": 0.0})
 
 
-# Guard 4: non-blocking, skippable World 2 cold-open card & Kest rescue banter strip.
 func _enqueue_card(title: String, line: String, duration_s: float) -> void:
 	_card_queue.append({"title": title, "line": line, "duration_s": duration_s})
 	if _card_left <= 0.0:
@@ -442,8 +434,6 @@ func _nearby_grit() -> void:
 		p.emitting = emit
 
 
-# Coordinator's deterministic mid-rupture pose. Call after 0.18 s of particle simulation
-# to freeze the live dust too; it never moves a cover or pauses gameplay.
 func freeze_rupture(seconds: float = 0.18) -> void:
 	_frozen = true
 	for rupture in ruptures:

@@ -1,9 +1,5 @@
 extends RefCounted
 
-# Per-class SFX voice budgets (SOUND-STORY.md:189).
-# Player (12) + reward (8) = 20 of 32 SFX polyphony slots, leaving 12 slots for threats and hum.
-# Nothing steals a threat voice: threat class never evicts existing playing threat voices.
-
 const BUDGET := {
 	"threat": 8,
 	"player": 12,

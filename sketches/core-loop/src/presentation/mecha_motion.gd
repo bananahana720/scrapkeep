@@ -1,21 +1,5 @@
 extends RefCounted
 
-# Code moves the mecha; clips move only pilot bones (design-v3/PILOT-CLIPS.md section 5).
-# One instance per fitted shell, owned by hero_assets.gd. It drives:
-#   - the cockpit controls: a cast throws its slot 2 or 3 control at the clip's contact time,
-#     a shot squeezes the yoke trigger, a movement verb kicks both pedals, and the ultimate
-#     hauls the lap bar back from ultimate_started to its landing or cancel;
-#   - the Cannon's lattice fold for Fire Mission (Core scale);
-#   - each pilot's machinery rows from its pose table (src/presentation/clips/<pilot>.json,
-#     key "machinery"): one row per node, {node, fact, motion, start}, where fact is one of
-#     FACTS and motion one of MOTIONS (the vocabulary below). A row with "bone" moves that bone
-#     of the node's Skeleton3D (the node itself or the first one under it) instead: its turn,
-#     slide and grow are offsets in the bone's own rest frame, written as the bone's pose.
-# All motion is time-stepped here (step), never tweens, so a test can sample it frame by frame.
-# It never creates a node, a light or a material_override (ROSTER-LOOK.md section 8). A node
-# the shell lacks prints "SKIP control <name>" once and the rest goes on.
-
-# Control throws (section 5 table, starting values).
 const LEVER_DEG := 35.0
 const CRANK_DEG := 180.0
 const PLUNGER_M := 0.06
@@ -26,21 +10,15 @@ const TRIGGER_S := 0.06
 const TRIGGER_INTERVAL := 0.12
 const PEDAL_DEG := 20.0
 const PEDAL_S := 0.06
-# Back is a negative pitch about the pod's left-right axis.
 const LAP_DEG := -25.0
-# The Cannon's Fire Mission fold (pilots/cannon.md section 5): in on ultimate_started, sprung
-# back in 0.12 s on the landing or cancel. A base row, not an extra.
 const CANNON_CLASS := "remembered_cannon"
 const CANNON_FOLD := 0.85
 const CANNON_FOLD_S := 0.08
 const CANNON_SPRING_S := 0.12
-# ROSTER-LOOK section 0.5's shared landing fold is an extra on the veto list: off.
 const LANDING_FOLD := false
 const LANDING_FOLD_SCALE := 0.92
 const LANDING_FOLD_S := 0.25
 const CAST_CLIPS := ["cast_special", "cast_line"]
-# The slot 2 and 3 controls per class (section 5's table; the shells' BANK names), used when
-# the pose table names no contact control.
 const CAST_CONTROLS := {
 	"pylon_engineer": {"cast_special": "GaugeLever", "cast_line": "SpoolBrake"},
 	"runner_gunner": {"cast_special": "Lever", "cast_line": "WinchLever"},
@@ -49,59 +27,21 @@ const CAST_CONTROLS := {
 	"tally": {"cast_special": "CardTab.1", "cast_line": "CardTab.2"},
 	"remembered_cannon": {"cast_special": "PlateCrank", "cast_line": "CableClamp"},
 }
-# How a bank control moves (tools/blender/shell_base.py BANK_KINDS): a crank turns half a turn,
-# a plunger, key, tab or button presses down, anything else is a lever.
 const CONTROL_KINDS := {"PlateCrank": "crank", "Crank": "crank", "FusePlunger": "plunger", "Plunger": "plunger",
 	"ChargeKey": "key", "CardTab.0": "tab", "CardTab.1": "tab", "CardTab.2": "tab"}
 const PRESS_KINDS := ["plunger", "key", "tab", "button"]
 
-# The machinery vocabulary (P-UNITS.md "PE common rules"; section 0.4 item 12).
-# fact -> what hero_assets passes in step()'s facts:
-#   meter_fill       0..1, the ultimate meter
-#   selected_slot    the selected slot name; start.slot (2, 3 or a name) picks the match
-#   slot_ready       {slot: bool}; start.slot picks
-#   pressure         the last pressure_changed value; start.max scales it (default 1)
-#   gliding, cloaked bool, the kit's
-#   line_load        0..1, 1 while a line skill load waits
-#   set_piece_phase  the set piece phase; 1 inside start.phases (default windup and flight)
-#   heft_class       1..5, read as 0..1
-#   shot_fired       a pulse per shot (pulse()); start.every and start.phase answer every nth
-#                    pulse from the phase-th (every 2: phase 0 the odd shots, phase 1 the even)
-#   aim              a world direction; only motion "aim" reads it
-#   reloading        bool, the weapon is reloading (WeaponDriver.state_snapshot().reloading)
-#   gauge_fill       0..1, the fuller of the weapon's charge and any charging slot's gauge
-#   idle_still       bool, the ball has sat below hero_assets' GLANCE_STILL_SPEED for
-#                    IDLE_STILL_S without a shot
-# start.or names more facts the row also answers: it reads the largest of their values.
 const FACTS := ["meter_fill", "selected_slot", "slot_ready", "pressure", "gliding", "cloaked", "line_load",
 	"set_piece_phase", "heft_class", "shot_fired", "aim", "reloading", "gauge_fill", "idle_still"]
 const PULSE_FACTS := ["shot_fired"]
 const IDLE_STILL_S := 1.5
-# motion -> what the fact's 0..1 value does to the node, from its rest transform (start keys):
-#   turn   rotate start.deg about start.axis (x, y or z; default x), eased at start.rate (12)
-#   slide  move start.m along start.axis (default y), eased
-#   grow   scale toward start.scale, eased
-#   show   visible above 0.5
-#   spin   turn at start.deg_s times the value about start.axis; with start.for_s, turn at the
-#          full start.deg_s for exactly start.for_s seconds after each rising edge instead
-#   throw  on a rising edge (or each pulse): from where the node is now to start.deg (or
-#          start.m) in start.throw_s (0.08), back to rest in start.return_s (0.25); start.curve
-#          "out_quad" kicks fast and lands eased
-#   step   each pulse (or rising edge) adds start.deg about start.axis to the node's target
-#          angle, reached in start.ease_s (0.05, start.curve as throw); always forward, wrapped
-#   aim    yaw toward the aim direction at start.rate
-#   param  set_instance_shader_parameter(start.param, value * start.scale): no override
 const MOTIONS := ["turn", "slide", "grow", "show", "spin", "throw", "step", "aim", "param"]
-# What a bone row can do: the pose moves, never a visibility, aim or shader parameter.
 const BONE_MOTIONS := ["turn", "slide", "grow", "spin", "throw", "step"]
 const STEP_EASE_S := 0.05
 const SLOT_NAMES := {1: "weapon", 2: "special", 3: "line"}
 const AXIS_INDEX := {"x": 0, "y": 1, "z": 2}
 const EASE_RATE := 12.0
 
-# Whether a SKIP line is also printed. The smoke harness counts any output line holding the
-# SKIP token as a skipped test, so a test that plants a missing node turns this off and reads
-# skip_lines instead. Static, because rows are read (and lines made) in _init.
 static var echo := true
 
 
@@ -115,11 +55,9 @@ var _core: Node3D
 var _rows: Array = []
 var _nodes := {}
 var _rest := {}
-# Active pulses by channel key "<node id>:<rot|pos|scale>:<axis>".
 var _pulses := {}
 var _clock := 0.0
 var _last_shot := -INF
-# Pulses since the last step, and pulses before them, by fact.
 var _edges := {}
 var _pulse_count := {}
 var _row_last := {}
@@ -127,9 +65,6 @@ var _row_state := {}
 var _joints := {}
 
 
-# One bone a machinery row names. rotation_degrees, position and scale are offsets from the
-# bone's rest pose in its own rest frame (rest is zero, zero, one), so the row code moves a
-# bone exactly as it moves a node; every write sets the bone's pose.
 class BoneJoint extends RefCounted:
 	var skeleton: Skeleton3D
 	var bone := -1
@@ -181,7 +116,6 @@ func needs_facts() -> bool:
 	return not _rows.is_empty()
 
 
-# The cast clip's control throw: starts after `contact_seconds` (the pose table's contact frame).
 func cast(_clip: String, control: String, contact_seconds: float) -> void:
 	var node := _node("Control." + control)
 	if node == null:
@@ -199,8 +133,6 @@ static func cast_control(pilot_class: String, clip: String) -> String:
 	return String(CAST_CONTROLS.get(pilot_class, {}).get(clip, ""))
 
 
-# A shot: every one pulses shot_fired (so alternating rows see each shot at any fire rate),
-# and the yoke trigger squeezes at most once per TRIGGER_INTERVAL. Returns whether it squeezed.
 func shot() -> bool:
 	pulse("shot_fired")
 	if _clock - _last_shot < TRIGGER_INTERVAL - 1e-6:
@@ -212,7 +144,6 @@ func shot() -> bool:
 	return true
 
 
-# The movement verb on the pedals.
 func kick() -> void:
 	for pedal in ["Control.Pedal.L", "Control.Pedal.R"]:
 		var node := _node(pedal)
@@ -236,13 +167,11 @@ func ultimate_ended() -> void:
 		_release(_core, "scale", -1)
 
 
-# The shared landing fold (an extra, LANDING_FOLD off).
 func landed() -> void:
 	if LANDING_FOLD and _core_valid() and class_id != CANNON_CLASS:
 		_start(_core, "scale", -1, LANDING_FOLD_SCALE - 1.0, 0.0, LANDING_FOLD_S, 0.0)
 
 
-# A fact that arrives as an event (shot_fired): the next step answers each pulse once.
 func pulse(fact: String) -> void:
 	_edges[fact] = int(_edges.get(fact, 0)) + 1
 
@@ -268,10 +197,6 @@ func step(delta: float, facts: Dictionary = {}) -> void:
 			_pulses.erase(key)
 
 
-# --- controls --------------------------------------------------------------------------
-
-# A throw starts from where the channel is now (a re-trigger mid-return carries on from there,
-# never snapping home first), reaches amount in throw_s and returns to rest in return_s.
 func _start(node, channel: String, axis: int, amount: float, throw_s: float, return_s: float,
 		delay: float, held := false, curve := "") -> void:
 	_remember(node)
@@ -315,7 +240,6 @@ static func _eased(u: float, curve: String) -> float:
 	return 1.0 - (1.0 - u) * (1.0 - u) if curve == "out_quad" else u
 
 
-# How far a channel sits from its rest now: degrees, metres or a scale fraction.
 func _offset(node, channel: String, axis: int) -> float:
 	var rest: Dictionary = _rest[node.get_instance_id()]
 	match channel:
@@ -343,7 +267,6 @@ func _apply(node, channel: String, axis: int, value: float) -> void:
 			node.scale = rest.scale * (1.0 + value)
 
 
-# A node's rest is where it stood when first moved; a bone's is its skeleton rest (offset zero).
 func _remember(node) -> void:
 	var id: int = node.get_instance_id()
 	if _rest.has(id):
@@ -358,13 +281,10 @@ func _core_valid() -> bool:
 	return _core != null and is_instance_valid(_core)
 
 
-# A row's or pulse's target is a Node3D or a BoneJoint; a joint lives while its skeleton does.
 static func _alive(target) -> bool:
 	return is_instance_valid(target) and (not target is BoneJoint or target.valid())
 
 
-# The bone of the Skeleton3D at (or first under) node_name, one joint per bone, or null after
-# one SKIP line when the node, its skeleton or the bone is missing.
 func _joint(node_name: String, bone_name: String) -> BoneJoint:
 	var node := _node(node_name)
 	if node == null:
@@ -383,8 +303,6 @@ func _joint(node_name: String, bone_name: String) -> BoneJoint:
 	return _joints[key]
 
 
-# Shell paths win over name search. The loader splits and renames Core/Pod, so their
-# declared names also resolve through the references passed at construction.
 func _node(node_name: String) -> Node3D:
 	if _nodes.has(node_name):
 		var cached = _nodes[node_name]
@@ -440,8 +358,6 @@ func _skip(line: String) -> void:
 		print(line)
 
 
-# --- machinery rows ---------------------------------------------------------------------
-
 func _add_row(row: Dictionary) -> void:
 	var fact := String(row.get("fact", ""))
 	var motion := String(row.get("motion", ""))
@@ -470,7 +386,6 @@ func _slot_name(slot) -> String:
 	return String(slot)
 
 
-# The row's value: its fact's, or the largest of its fact's and start.or's.
 func _row_value(row: Dictionary, facts: Dictionary) -> float:
 	var value := _fact_value(row.fact, row.start, facts)
 	for other in row.start.get("or", []):
@@ -478,8 +393,6 @@ func _row_value(row: Dictionary, facts: Dictionary) -> float:
 	return value
 
 
-# How many of this step's pulses the row answers (start.every and start.phase), 0 or 1 for a
-# fact that is not a pulse (its rising edge).
 func _row_hits(index: int, row: Dictionary, value: float) -> int:
 	if not row.fact in PULSE_FACTS:
 		return 1 if value >= 0.5 and float(_row_last.get(index, 0.0)) < 0.5 else 0
@@ -584,9 +497,6 @@ func _state(index: int) -> Dictionary:
 	return _row_state[index]
 
 
-# The step motion: each hit adds start.deg to the target; the angle eases from where it is to
-# the target in start.ease_s, only ever forward, and is written wrapped. Between hits the row
-# lets go, so a spin row on the same axis turns the node freely.
 func _step_index(index: int, row: Dictionary, value: float, delta: float, axis: int) -> void:
 	var node = row.node
 	var start: Dictionary = row.start

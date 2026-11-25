@@ -1,12 +1,5 @@
 extends Node3D
 
-# Ambient life's thin view (AMBIENT-LIFE.md). Everything it decides lives in ambient_homes.gd (where),
-# ambient_pool.gd (what each one does) and ambient_kinds.gd (the one record per kind); this node only
-# builds a park's homes on stage entry, ticks the pool at 10 Hz, draws the live members from a small
-# pool of reused GLB instances and plays their calls. A kind whose GLB is not built yet is skipped,
-# so with no models the node holds nothing and does no work. It is candy: no physics body, no event,
-# no damage, no shadow, and it hides for every boss and Warden beat.
-
 const AmbientKinds := preload("res://src/core/ambient_kinds.gd")
 const AmbientHomes := preload("res://src/presentation/ambient_homes.gd")
 const AmbientPool := preload("res://src/presentation/ambient_pool.gd")
@@ -18,7 +11,6 @@ const ROOF_REACH_M := 14.0
 const ROOF_MIN_M := 1.5
 const FALLBACK_ROOF_M := 2.5
 const WORLD_MASK := 1
-# A home steeper than this (from the ground callable) or with a structure over it is vetoed at build.
 const MAX_SLOPE_DEG := 30.0
 const SLOPE_STEP_M := 1.0
 const COVER_REACH_M := 40.0
@@ -29,12 +21,10 @@ var ctx
 var map_id := ""
 var pool: AmbientPool
 var voices: Array[AudioStreamPlayer3D] = []
-# Reused instances: kind -> free Array[Node3D]; member id -> the instance it wears now.
 var _free := {}
 var _worn := {}
 var _alive := 0
 var _scenes := {}
-# Test seam: kind -> PackedScene standing in for a GLB that is not built yet.
 var models := {}
 var _streams := {}
 var _active := true
@@ -74,8 +64,6 @@ func setup(context) -> void:
 func _stage_entered(stage: int, _retry: bool) -> void:
 	_active = true
 	_latched = false
-	# A retry keeps its homes. A new stage's structures join the physics space on the next physics
-	# steps, so the plan waits for them and the cover veto (unfit) sees a gatehouse built this frame.
 	_entries += 1
 	_cancel_plan()
 	if stage == _built_for and pool != null:
@@ -83,8 +71,6 @@ func _stage_entered(stage: int, _retry: bool) -> void:
 		return
 	_release_all()
 	pool = null
-	# Planned via _physics_process instead of awaiting tree.physics_frame so freeing this node
-	# mid-stage-entry never resumes a dangling coroutine on a freed instance.
 	_plan_stage = stage
 	_plan_wait = PLAN_AFTER_STEPS
 
@@ -96,8 +82,6 @@ func _physics_process(_delta: float) -> void:
 		_plan_wait -= 1
 		if _plan_wait > 0:
 			return
-		# The plan a kind a physics step (AmbientHomes.Planner): planned whole it was 28 ms of one frame
-		# just after the flume's entry on the cloud (scrapkeep#494). A newer entry drops this one.
 		_planner = _begin_plan(_plan_stage)
 		if _planner == null:
 			_plan_stage = -1
@@ -139,7 +123,6 @@ func _build_stage(stage: int) -> void:
 	_finish_plan(planner.homes)
 
 
-# The stage's home planner, or null for a stage with no ambient life (no park, no kind with a model).
 func _begin_plan(stage: int) -> AmbientHomes.Planner:
 	_release_all()
 	pool = null
@@ -170,10 +153,7 @@ func _finish_plan(homes: Array) -> void:
 	_prev.clear()
 
 
-# A spot the park file cannot judge: ground steeper than MAX_SLOPE_DEG, a structure standing over the ground (such
-# as a gatehouse the heightfield does not know), or, for a ceiling perch, no real roof to hang from.
 static func unfit(ground: Callable, space: PhysicsDirectSpaceState3D, at: Vector2, perch: String) -> bool:
-	# A roost hangs from its roof, so the floor under it may slope.
 	if perch == "ceiling":
 		return space == null or not _has_roof(ground, space, at)
 	var e := SLOPE_STEP_M
@@ -189,7 +169,6 @@ static func unfit(ground: Callable, space: PhysicsDirectSpaceState3D, at: Vector
 	return not hit.is_empty() and float(hit["position"].y) - floor_y > COVER_DY_M
 
 
-# A bat hangs only under real cover: something solid between ROOF_MIN_M and ROOF_REACH_M above the ground.
 static func _has_roof(ground: Callable, space: PhysicsDirectSpaceState3D, at: Vector2) -> bool:
 	var floor_y: float = ground.call(at.x, at.y, 0.0).y
 	var query := PhysicsRayQueryParameters3D.create(Vector3(at.x, floor_y + 0.5, at.y), Vector3(at.x, floor_y + ROOF_REACH_M, at.y), WORLD_MASK)
@@ -197,7 +176,6 @@ static func _has_roof(ground: Callable, space: PhysicsDirectSpaceState3D, at: Ve
 	return not hit.is_empty() and float(hit["position"].y) - floor_y >= ROOF_MIN_M
 
 
-# One upward ray at build for a bat's ceiling: height above the ground there, else a low fallback.
 func _roof_above(at: Vector2) -> float:
 	var floor_y: float = _ground.call(at.x, at.y, 0.0).y
 	var space := get_world_3d().direct_space_state
@@ -210,8 +188,6 @@ func _roof_above(at: Vector2) -> float:
 
 
 func _process(delta: float) -> void:
-	# A Warden or boss beat hides members through the pool's own fade (boss in _gather), so they
-	# leave over 0.25 s instead of popping; the node goes dark once the last one has faded.
 	var hiding: bool = _latched or ctx.flow.boss_active
 	visible = _active and ctx.flow.in_play() and not (hiding and (pool == null or pool.drawn().is_empty()))
 	if pool == null:
@@ -253,8 +229,6 @@ func _gather() -> Dictionary:
 		"ground": func(x: float, z: float) -> float: return (ground.call(x, z, 0.0) as Vector3).y,
 	}
 
-
-# --- Instances: one pooled scene copy per drawn member, never more than CAP alive. ---
 
 func _draw(alpha: float) -> void:
 	var drawn := {}
@@ -304,7 +278,6 @@ func _shed(id: int) -> void:
 	_free[kind].append(node)
 
 
-# At the cap with only another kind's spare: free that spare so this kind can have its instance.
 func _evict_other(kind: String) -> bool:
 	for other in _free:
 		if other != kind and not (_free[other] as Array).is_empty():
@@ -340,7 +313,6 @@ func _make(kind: String) -> Node3D:
 		return null
 	node.set_meta("kind", kind)
 	prepare(node)
-	# Looked up once here, not per frame in _pose.
 	node.set_meta("views", node.find_children("*", "GeometryInstance3D", true, false))
 	node.set_meta("players", node.find_children("*", "AnimationPlayer", true, false))
 	add_child(node)
@@ -348,7 +320,6 @@ func _make(kind: String) -> Node3D:
 	return node
 
 
-# The candy rules on one instance: no shadow, a view range, no physics body, loops that repeat.
 static func prepare(node: Node) -> void:
 	for body in node.find_children("*", "CollisionObject3D", true, false):
 		push_warning("ambient_life: %s carries a %s; removed (ambient life has no body)" % [node.get_meta("kind", node.name), body.get_class()])
@@ -357,7 +328,7 @@ static func prepare(node: Node) -> void:
 	for view in node.find_children("*", "GeometryInstance3D", true, false):
 		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		view.visibility_range_end = VIEW_END_M
-		# The recipes paint in vertex colours; the glTF import leaves them off the albedo.
+		# Godot glTF import leaves vertex_color_use_as_albedo off.
 		if view is MeshInstance3D and view.mesh != null:
 			for i in view.mesh.get_surface_count():
 				var mat := view.get_active_material(i) as BaseMaterial3D
@@ -367,13 +338,10 @@ static func prepare(node: Node) -> void:
 		for library in player.get_animation_library_list():
 			var lib: AnimationLibrary = player.get_animation_library(library)
 			for clip in lib.get_animation_list():
-				# react plays once into its pose, then _pose loops its hold; idle and move repeat.
 				lib.get_animation(clip).loop_mode = Animation.LOOP_NONE if String(clip).ends_with("react") else Animation.LOOP_LINEAR
 
 
-# One vertex-painted copy per imported material, shared by every instance and kept for the session. A copy per
-# instance died with its node, and freeing a posed, skinned creature then queried the freed material ("Parameter
-# 'material' is null" on both renderers, first seen when a keeper stood by the ambient_view_test ball, 13 Nov).
+# Shared session-wide: freeing a posed skinned creature with per-instance copies logs null-material errors in Godot.
 static var _painted := {}
 
 
@@ -412,8 +380,6 @@ static func _clip(player: AnimationPlayer, want: String) -> String:
 			return String(name_)
 	return ""
 
-
-# --- Sound: MAX_VOICES players, quiet past FALLOFF_M; a missing wav is silence. ---
 
 func _voice(m: AmbientPool.Member, which: String) -> void:
 	var path: String = m.row["sound"][which]

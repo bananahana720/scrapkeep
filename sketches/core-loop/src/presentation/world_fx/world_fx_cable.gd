@@ -2,12 +2,6 @@ extends MeshInstance3D
 
 const Palette := preload("res://src/core/palette.gd")
 
-# A swaying cable (WORLD-FX.md, the Highdraft's cable sway): a thin tube on a catenary between two
-# points, swayed in the vertex shader so a hundred cables cost no script time. Sway is zero at both
-# ends and largest mid-span, leans downwind and gusts on a slow beat; every cable has its own phase
-# from its position, so a run of them never swings in step. Drawn by dressing:
-#   add_child(WorldFxCable.make(a, b, 4.0))
-# The cable is decoration: no collision, and the harpoon never reads it as a latch.
 const SIDES := 6
 const SEGMENTS := 24
 
@@ -53,7 +47,6 @@ static func make(a: Vector3, b: Vector3, sag_m := 3.0, radius_m := 0.06, colour 
 	var mat := ShaderMaterial.new()
 	mat.shader = _shader
 	mat.set_shader_parameter("albedo", colour)
-	# Longer spans swing wider: about 2 % of the span, capped so a long tether never whips.
 	mat.set_shader_parameter("sway_m", sway_m if sway_m >= 0.0 else clampf(a.distance_to(b) * 0.02, 0.15, 1.6))
 	mat.set_shader_parameter("phase", fmod(absf(a.x * 0.37 + a.z * 0.61 + b.y * 0.13), 6.283))
 	c.material_override = mat
@@ -65,7 +58,6 @@ func set_motion(enabled: bool) -> void:
 	(material_override as ShaderMaterial).set_shader_parameter("motion_enabled", enabled)
 
 
-# The catenary as a parabola (close enough for decoration), UV.x running 0..1 along the span.
 static func tube(a: Vector3, b: Vector3, sag_m: float, radius_m: float) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)

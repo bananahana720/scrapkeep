@@ -23,9 +23,7 @@ var _threats: Array[Vector3] = []
 var _skin := {}
 var _bay := {}
 var _bay_clock := 0.0
-# True between a set piece's start and its landing or cancel.
 var set_piece := false
-# Decal materials by placement, asset and tint: two refits reuse one instance.
 var _decal_materials := {}
 var _decal_shaders := {}
 
@@ -39,7 +37,6 @@ func setup(context, hook) -> void:
 	trail.name = "BallTrail"
 	trail.top_level = true
 	add_child(trail)
-	# The skill bar unit lands these later; connect only when declared (CUSTOMIZE.md section 9).
 	if events != null:
 		_connect_optional(events, "ultimate_started", _on_set_piece.bind(true))
 		_connect_optional(events, "ultimate_landed", _on_set_piece.bind(false))
@@ -55,12 +52,10 @@ func _connect_optional(bus: Object, signal_name: String, callback: Callable) -> 
 			return
 
 
-# While a set piece flies, the trail keeps drawing in the air, at the ball's height.
 func _on_set_piece(flying: bool) -> void:
 	set_piece = flying
 
 
-# The one ownership rule (CosmeticWear.worn) decides the id; a pending-art row shows the default.
 func effective(pilot: String, slot: String) -> Dictionary:
 	var profile = hero.profile
 	if profile == null:
@@ -98,7 +93,6 @@ func _apply_companion_skin(row: Dictionary) -> void:
 		fit_companion_skin(model, _id_of(row))
 
 
-# Mounts SPIL-9's skin through the hero painter's add-on path (lights stripped, cached paint).
 func fit_companion_skin(model: Node3D, id: String) -> Array:
 	return hero.fit_companion_skin(model, id)
 
@@ -147,10 +141,6 @@ void fragment() {
 """
 
 
-# The seat-back DecalPlate on the Pod (ROSTER-LOOK section 7) takes the decal when the shell
-# has one; else the decal projects onto gap-panel and ring-band paint, never the Core lattice.
-# Both placements use one
-# cached material per placement, tile and tint, so refits never build a new one.
 func _apply_decal(rec: Dictionary, row: Dictionary) -> void:
 	var core = rec.get("core")
 	var pod = rec.get("pod")
@@ -189,7 +179,6 @@ func _apply_decal(rec: Dictionary, row: Dictionary) -> void:
 		resolver._warn(key)
 
 
-# The cached decal material for a placement ("plate" or "core") and a resolved decal row.
 func decal_material(placement: String, row: Dictionary) -> ShaderMaterial:
 	var key: String = row.get("asset", "")
 	var tint: Color = row.get("tint", Color.WHITE)
@@ -244,8 +233,6 @@ func _meshes(node: Node) -> Array[MeshInstance3D]:
 	return out
 
 
-# The assembled companion is one skinned mesh. Alpha in a private vertex-colour copy
-# masks Hull/Deck enamel; the other painted pieces, witness and collars retain their RGB.
 func _apply_companion(row: Dictionary) -> void:
 	var body = hero.get_parent().get_node_or_null("CompanionBody")
 	var model = body.get("_model") if body != null else null
@@ -334,7 +321,6 @@ func _clear_cards() -> void:
 	_trail_clock = 0.0
 
 
-# A spent card waits hidden for the next sample; the trail never instances per frame.
 func _retire(card: Dictionary) -> void:
 	(card["node"] as Node3D).visible = false
 	_spare.append(card)
@@ -385,7 +371,6 @@ func _step_trail(delta: float, row: Dictionary) -> void:
 	var node: Node3D = card["node"]
 	node.visible = true
 	node.global_position = ball - velocity.normalized() * 0.12
-	# Along a set piece's flight the card rides at the ball's height, not the ground's.
 	node.global_position.y = ball.y if flying else ball.y - Tuning.RADIUS + 0.04
 	node.rotation.y = atan2(-velocity.x, -velocity.z)
 	for pair in card["clips"]:
@@ -396,7 +381,6 @@ func _step_trail(delta: float, row: Dictionary) -> void:
 	_cards.append(card)
 
 
-# A pooled card, or a new one while the pool is still filling (at most TRAIL_LIMIT exist).
 func _take_card(row: Dictionary, key: String) -> Dictionary:
 	if not _spare.is_empty():
 		var card: Dictionary = _spare.pop_back()
@@ -425,8 +409,6 @@ func _take_card(row: Dictionary, key: String) -> Dictionary:
 	return {"node": node, "meshes": meshes, "clips": clips, "age": 0.0, "life": 0.0}
 
 
-# The enemy group read where the trail needs it, instead of a deferred call for every Node3D the tree adds and a
-# callback for every node it removes (21k removals on a stage entry).
 func _threat_points() -> Array[Vector3]:
 	_threats.clear()
 	for enemy in get_tree().get_nodes_in_group("enemy"):

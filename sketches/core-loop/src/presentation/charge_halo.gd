@@ -1,21 +1,5 @@
 extends Node3D
 
-# Sable's charge halo (wave 46 3D blueprint section 3.2). player_fx owns one and feeds it
-# committed facts only: the charge it read (charge), a release (release, with its aim), a
-# cancel (cancel) and the frame's step. It decides no outcome.
-#
-#   Halo      one MeshInstance3D, one ArrayMesh, one draw: four hoops (16-segment rings with a
-#             6 mm square section) round the bore and a 10-sided sleeve, drawn by one unshaded
-#             additive shader built once. Hoop k shows once the charge reaches k/4 and fades in
-#             over HOOP_FADE_S; the hoops shrink from RADIUS_START to RADIUS_FULL and counter-spin.
-#             A dark core line runs round each hoop, so the shape reads in greyscale too.
-#   Sparks    GPUParticles3D in the halo's own frame, at most SPARKS alive.
-#   Rings     the release ring: a MultiMesh of RINGS instances in world space, one draw.
-#
-# The halo rides the shell's WeaponRing when player_fx mounts it there (mount), so it follows the
-# aim and the bank; the shell can free it with itself, so player_fx asks halo_ready() each frame
-# and the halo rebuilds under this node. The rings stay here, outside the shell.
-
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
@@ -27,7 +11,6 @@ const CORE_LINE := 0.0015
 const RADIUS_START := 0.16
 const RADIUS_FULL := 0.105
 const HOOP_FADE_S := 0.06
-# Hoops sit this far apart along the bore, behind the prong tips; at full they close into one.
 const HOOP_PITCH := 0.045
 const SPIN_DEG_S := 90.0
 const GLOW_LOW := 0.6
@@ -37,7 +20,6 @@ const SLEEVE_SIDES := 10
 const SLEEVE_FROM := -0.01
 const SLEEVE_TO := 0.15
 const SLEEVE_ALPHA := 0.35
-# Full charge: one swell, never a repeat, so nothing strobes (flash_guard.gd).
 const PULSE_S := 0.3
 const PULSE_GAIN := 0.6
 const COLLAPSE_S := 0.1
@@ -49,14 +31,10 @@ const RING_LIFE := 0.22
 const RING_FROM := 0.2
 const RING_TO := 1.4
 const RING_TRAVEL := 3.0
-# A release at or under this share of the gauge is a tap: the jagged arc, not the ring. It is
-# the casters' charge_min (weapons.gd), the least a charged bolt carries.
 const TAP_FLOOR := 0.25
 const ARC_LENGTH := 0.6
 const ARC_LIFE := 0.08
-# The most this module draws at once: the halo and the ring MultiMesh.
 const DRAWS := 2
-# Under every threat mark (player_fx.RENDER_PRIORITY).
 const RENDER_PRIORITY := -4
 
 const HALO_SHADER := """
@@ -155,7 +133,6 @@ var _ring_from: Array[Vector3] = []
 var _ring_aim: Array[Vector3] = []
 var _ring_next := 0
 var _mount_xf := Transform3D.IDENTITY
-# Facts drawn, for the tests: "release", "cancel", "pulse".
 var spawned := {}
 
 
@@ -166,10 +143,6 @@ func _init() -> void:
 	_build_halo()
 
 
-# --- Facts in -------------------------------------------------------------------------------
-
-# The charge this frame, 0 to 1. Above 0 the halo shows; player_fx calls cancel() when a charge
-# drops to 0 with no release.
 func charge(value: float) -> void:
 	fill = clampf(value, 0.0, 1.0)
 	if fill <= 0.0:
@@ -180,12 +153,10 @@ func charge(value: float) -> void:
 		_pulse_t = -1.0
 		_pulsed = false
 		_close = 0.0
-		# A new halo never takes a third draw: the older ring yields.
 		if rings_alive() >= RINGS:
 			_end_ring(_oldest_ring())
 
 
-# A charged release: the halo ends and a ring leaves the prong tips along `aim` (world).
 func release(aim: Vector3) -> void:
 	_end_halo()
 	var dir := aim
@@ -201,13 +172,11 @@ func release(aim: Vector3) -> void:
 	spawned["release"] = spawned.get("release", 0) + 1
 
 
-# A tap: the halo ends with no ring (player_fx draws the arc in vfx's glyph pool).
 func tap() -> void:
 	_end_halo()
 	spawned["tap"] = spawned.get("tap", 0) + 1
 
 
-# A cancel or an interrupt: the hoops pull in over COLLAPSE_S, and no ring.
 func cancel() -> void:
 	if _state != "charging":
 		return
@@ -216,7 +185,6 @@ func cancel() -> void:
 	spawned["cancel"] = spawned.get("cancel", 0) + 1
 
 
-# A stage change: everything ends at once, counted as nothing.
 func stop() -> void:
 	_end_halo()
 	for i in RINGS:
@@ -232,10 +200,6 @@ func state() -> String:
 	return _state
 
 
-# --- Mount ----------------------------------------------------------------------------------
-
-# Hangs the halo under `ring` (the shell's WeaponRing) at `at`, or under this node when ring is
-# null, where player_fx places it with place().
 func mount(ring: Node3D, at: Transform3D) -> void:
 	if not halo_ready():
 		_build_halo()
@@ -248,13 +212,11 @@ func mount(ring: Node3D, at: Transform3D) -> void:
 	_halo.transform = at
 
 
-# The fallback place, in world space, when no shell is mounted.
 func place(at: Transform3D) -> void:
 	if halo_ready() and _halo.get_parent() == self and _halo.is_inside_tree():
 		_halo.global_transform = at
 
 
-# False once the shell freed the halo with itself; mount() builds it again.
 func halo_ready() -> bool:
 	return _halo != null and is_instance_valid(_halo)
 
@@ -263,21 +225,17 @@ func mounted_on() -> Node:
 	return _halo.get_parent() if halo_ready() else null
 
 
-# Where the halo sits (the prong tips' midpoint), in world space.
 func tip() -> Vector3:
 	if halo_ready() and _halo.is_inside_tree():
 		return _halo.global_position
 	return global_position if is_inside_tree() else Vector3.ZERO
 
 
-# The bore's forward, in world space.
 func forward() -> Vector3:
 	if halo_ready() and _halo.is_inside_tree():
 		return -_halo.global_basis.z
 	return Vector3.FORWARD
 
-
-# --- Readouts -------------------------------------------------------------------------------
 
 func hoops_shown() -> int:
 	var n := 0
@@ -327,12 +285,9 @@ func spark_ratio() -> float:
 	return _sparks.amount_ratio if halo_ready() and _sparks.emitting else 0.0
 
 
-# Meshes drawing now: the halo and the ring MultiMesh (one draw however many rings live).
 func draws_alive() -> int:
 	return (1 if halo_shown() else 0) + (1 if rings_alive() > 0 else 0)
 
-
-# --- Frame ----------------------------------------------------------------------------------
 
 func step(delta: float) -> void:
 	_step_halo(delta)
@@ -434,8 +389,6 @@ func _oldest_ring() -> int:
 	return oldest
 
 
-# --- Build ----------------------------------------------------------------------------------
-
 func _build_halo() -> void:
 	_halo = Node3D.new()
 	_halo.name = "ChargeHalo"
@@ -444,7 +397,6 @@ func _build_halo() -> void:
 	_mesh.mesh = halo_mesh()
 	_mesh.material_override = _material(HALO_SHADER)
 	_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# The shader places every vertex, so the box is the one it can reach.
 	_mesh.custom_aabb = AABB(Vector3(-0.2, -0.2, -0.05), Vector3(0.4, 0.4, 0.4))
 	_mesh.visible = false
 	_halo.add_child(_mesh)
@@ -464,8 +416,6 @@ func _material(code: String) -> ShaderMaterial:
 	return mat
 
 
-# The four hoops and the sleeve as one surface: VERTEX holds (radial offset, bore offset,
-# across the section) and UV (angle, hoop index, -1 for the sleeve); HALO_SHADER places them.
 static func halo_mesh() -> ArrayMesh:
 	var verts := PackedVector3Array()
 	var uvs := PackedVector2Array()
@@ -474,7 +424,6 @@ static func halo_mesh() -> ArrayMesh:
 		for s in HOOP_SEGMENTS:
 			var a0 := TAU * float(s) / HOOP_SEGMENTS
 			var a1 := TAU * float(s + 1) / HOOP_SEGMENTS
-			# Outer and inner faces run across the bore offset; front and back across the radius.
 			for face in [[h, -1], [-h, -1], [-h, 1], [h, 1]]:
 				var fixed: float = face[0]
 				var radial: bool = face[1] < 0
@@ -537,7 +486,6 @@ func _build_sparks() -> GPUParticles3D:
 	return p
 
 
-# A flat annulus in XY (radius 1, facing +Z), RINGS instances in world space.
 func _build_rings() -> MultiMeshInstance3D:
 	const SEGMENTS := 40
 	const INNER := 0.9

@@ -4,20 +4,8 @@ const BossPlate := preload("res://src/ui/boss_plate.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const WardenBody := preload("res://src/combat/warden.gd")
 
-# The posture fight's health (a Warden's, or Brindle's hull's) as a ring on the ground round its foot (LEGIBILITY section 4):
-# four arcs, one per chunk, lit for each chunk left and lost in a fixed order from the start
-# angle, so the lit ones stay a run like the plate's pips from the left. Every colour is a
-# boss_plate.gd reader, so the ring and the plate cannot disagree. It is a floor marking:
-# unshaded, depth-tested and under every telegraph, so it never draws over anything standing
-# on it, and it is a solid ring, never the hazard role. It is a child of the Warden it reads,
-# so it is freed with it; it reads fight(), chunks_left(), chunk_cracked() and staggered().
 
 const ARCS := BossPosture.CHUNKS
-# The ring's inner edge sits CLEARANCE beyond the Warden's own core telegraph radius, read from
-# warden.gd, so the ring and the pulse's hazard ring never overlap. Gaps are centred on the
-# camera's front, back, left and right axes, so from any side the nearest seam faces the
-# camera; each arc sits on a dark backing a little wider than its band, so a lit arc reads on
-# sand and a seam reads as a dark cut.
 const GAP_DEGREES := 20.0
 const START_DEGREES := 0.0
 const CLEARANCE := 0.6
@@ -32,9 +20,6 @@ const CRACK_MARK := 0.2
 const OUTLINE := 0.2
 const CRACK_AT := [0.08, 0.5, 0.92]
 const PRIORITY := -3
-# A moving Warden's ring is rebuilt on the ground at most every REBUILD_FRAMES frames, or at once past
-# REBUILD_M (a slide that far off a slope stays within a lift or two): the Mind moves all fight, and a build reads the ground at about 670 points (3.5 ms a
-# frame of crown play on the cloud, scrapkeep#241).
 const REBUILD_FRAMES := 6
 const REBUILD_M := 0.5
 const FIRST_FIT_FRAMES := 2
@@ -94,19 +79,14 @@ func bind(warden: Node3D) -> void:
 	add_child(_crack_mark)
 	for mark: MeshInstance3D in find_children("*", "MeshInstance3D", false, false):
 		mark.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# The first ground fit waits FIRST_FIT_FRAMES frames: a Warden spawns on its stage's entry tick, and
-	# the ring's first _process runs in that same frame, where reading the ground at its ~740 points cost
-	# 14 ms of the flume's entry on the cloud (scrapkeep#494). Until then the ring is hidden.
 	_fit_wait = FIRST_FIT_FRAMES
 	visible = false
 
 
-# The fight this ring reads is on the posture rule and still alive.
 func active() -> bool:
 	return is_instance_valid(_warden) and _warden.has_method("fight") and _warden.fight() == "posture" and not _warden.is_dead()
 
 
-# Whether arc i is lit: the first chunks_left arcs from the start angle.
 func lit(i: int) -> bool:
 	return active() and i < _warden.chunks_left()
 
@@ -119,7 +99,6 @@ func lit_count() -> int:
 	return count
 
 
-# The arc the crack sits on: the next one to go, while the chunk is cracked.
 func cracked_arc() -> int:
 	if active() and _warden.chunk_cracked() and _warden.chunks_left() > 0:
 		return _warden.chunks_left() - 1
@@ -130,8 +109,6 @@ func open_now() -> bool:
 	return active() and _warden.staggered()
 
 
-# The colour arc i shows: the plate's open colour while a lit arc is staggered, else the
-# plate's pip colour for lit or lost.
 func arc_color(i: int) -> Color:
 	if lit(i):
 		return BossPlate.bar_color_for(open_now()) if open_now() else BossPlate.pip_color(true)
@@ -146,7 +123,6 @@ func crack_backing() -> Color:
 	return BossPlate.crack_backing()
 
 
-# What the materials actually hold, for a test to compare with the plate's readers.
 func shown_arc_color(i: int) -> Color:
 	return _arc_materials[i].albedo_color
 
@@ -190,7 +166,6 @@ func _sync() -> void:
 	if _built_at.distance_to(foot) > REBUILD_M or (_since_build >= REBUILD_FRAMES and _built_at.distance_to(foot) > 0.05):
 		_build(foot)
 	elif global_position != foot:
-		# Between builds a moving ring slides with its Warden; its ground fit is at most one build old.
 		global_position = foot
 	_backing_material.albedo_color = crack_backing()
 	for i in ARCS:
@@ -207,8 +182,6 @@ func _sync() -> void:
 	_mark_material.albedo_color = crack_color()
 
 
-# The ring's centre on the ground. Brindle's hull is a piece of the ship the player sees, so
-# its ring centres on that ship, never on the hull body's own position.
 func _centre() -> Vector3:
 	var at: Vector3 = _warden.global_position
 	if _warden.get("boss") != null and _warden.get_parent() is Node3D:
@@ -220,8 +193,6 @@ func _radius() -> float:
 	return _reach() + CLEARANCE + BACKING * 0.5 + BAND * 0.5
 
 
-# What the ring must clear. A Warden's ring clears its core pulse. Brindle's hull has no
-# core, so its ring clears the hull box's half diagonal and no heading hides an arc.
 func _reach() -> float:
 	if _warden.get("boss") == null:
 		return float(WardenBody.CORE_RADIUS)
@@ -244,7 +215,6 @@ func _ground(x: float, z: float) -> float:
 	return terrain.height(x, z)
 
 
-# Neighbouring quads share their corners, so each build reads the ground once per corner.
 func _point(foot: Vector3, angle: float, radius: float) -> Vector3:
 	var key := Vector2(angle, radius)
 	if _points.has(key):
@@ -256,7 +226,6 @@ func _point(foot: Vector3, angle: float, radius: float) -> Vector3:
 	return point
 
 
-# Arc i's angular span: a quarter of the circle less a gap, from the start angle.
 func _span(i: int) -> Vector2:
 	var quarter := TAU / ARCS
 	var gap := deg_to_rad(GAP_DEGREES) * 0.5
@@ -289,8 +258,6 @@ func _build(foot: Vector3) -> void:
 	_crack_index = -2
 
 
-# The dark plate under an arc: a little wider than the band all round, square ended, so the
-# arc's ends read as a dark cut between two lit pieces.
 func _backing(foot: Vector3, span: Vector2, mid: float) -> ArrayMesh:
 	var tool := SurfaceTool.new()
 	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -310,7 +277,6 @@ func _backing(foot: Vector3, span: Vector2, mid: float) -> ArrayMesh:
 	return tool.commit()
 
 
-# A lost arc: only its outline, the plate's empty-pip look.
 func _edge(foot: Vector3, span: Vector2, mid: float) -> ArrayMesh:
 	var tool := SurfaceTool.new()
 	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -333,8 +299,6 @@ func _edge(foot: Vector3, span: Vector2, mid: float) -> ArrayMesh:
 	return tool.commit()
 
 
-# A zigzag across the band at the middle of the cracked arc, a thin line in the plate's crack
-# colour on a wider dark strip, as the plate's crack mark. No white.
 func _build_crack() -> void:
 	if _crack_index < 0:
 		return

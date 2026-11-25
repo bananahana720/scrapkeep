@@ -1,23 +1,5 @@
 extends Node3D
 
-# Park prop dressing (Dressing lane, design-v3/park/DRESSING-KITS.md). Each park has a kit of GLB props
-# (assets/models/park/props/<park>/manifest.json) and a vignette file (src/world/park/props/park_<park>.json):
-# templates of props, spots that place a template on the ground, and a sparse litter layer walked along the
-# authored lines. expand() turns the file into seated instances, validate() judges them against the contract's
-# placement rules, and build_nodes() batches them into MultiMesh views with visibility ranges. Both are static
-# and pure, so a test or tool runs them without a game. Nothing here collides or moves a run.
-#
-# Vignette file (scrapkeep-park-props/1):
-#   {"schema", "map": "park_dam", "kit": "res://.../manifest.json",
-#    "templates": {"<tid>": {"story", "props": [{"kind", "v": "a" or "*", "at": [dx, dz], "yaw_deg", "scale", "tilt_deg"}]}},
-#    "spots": [{"id", "template", "at": [x, z], "yaw_deg", "near"}],
-#    "litter": {"kinds": [{"kind", "weight"}], "spacing_m", "band_m": [near, far], "seed"},
-#    "ground_rows": ["<park row id>", ...],   (optional: the explicit surfaces, see check_one's ground_row rule)
-#    "low_ground_rows": ["<park row id>", ...]}   (optional: area rows that admit instances up to LOW_GROUND_MAX_M tall, see low_ground)
-# Kit manifest (scrapkeep-park-props-kit/1): kinds -> {class, tags, story, line_clear_m (optional), variants -> {lod [3 GLBs], tris [3], radius, height}}.
-# Placement rules (validate): line_clear (height tier or the kind's line_clear_m, whichever is larger), route_lane, scatter_row, keepout,
-# low_ground, telegraph (the event's own zone, a lightning strike circle or the site box, grown by hold_clear_m), home_clear, play_rect, ground_row, slope, seat.
-
 const AppShell := preload("res://src/core/app_shell.gd")
 const ParkSites := preload("res://src/presentation/park_sites.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
@@ -34,31 +16,20 @@ const FILE_SCHEMA := "scrapkeep-park-props/1"
 const KIT_SCHEMA := "scrapkeep-park-props-kit/1"
 const FILE_DIR := "res://src/world/park/props/"
 const LINES_PATH := "res://assets/park/%s/lines.json"
-# Stage numbers of the park table (park_dressing_pin_test's order), for the stage's device keepouts.
 const PARKS := ["park_dam", "park_flume", "park_pit", "park_sinkhole", "park_islands", "park_crown"]
 const HERO := "dress_hero"
 const PROP := "dress_prop"
 const GROUP := "park_props"
 const LOW_PRESET := "low"
 
-# Placement minimums (the contract's "Placement" rules), in metres and degrees.
-# Line clearance from the footprint edge to the nearest lines.json leg, by height tier: LOW (up to LOW_HEIGHT_M), MID (up
-# to TALL_HEIGHT_M), TALL (a tall tag, a hero, or taller than TALL_HEIGHT_M). Route lanes bind TALL only.
 const LINE_CLEAR_LOW_M := 6.0
 const LINE_CLEAR_MID_M := 10.0
 const LINE_CLEAR_TALL_M := 20.0
-# A kind's own line_clear_m (kit manifest, optional) may raise the need above its tier, never past this: the line index
-# sees LINE_REACH_M (64 m) from a leg, so a footprint whose need plus radius passes 64 m has an unknown distance, and
-# check_one fails it closed (line_clear, "rule beyond the line reach").
 const LINE_CLEAR_KIND_MAX_M := 60.0
-# Kinds the dressing brief (design-v3/park/dressing/KITS.md) reads as a ride line; coordinator ruling #241 comment 6329056497
-# makes the 30 m tier checked: kit_errors fails a kit that defines one without line_clear_m at or above this.
 const BRIEF_LINE_KINDS := {"laundry_line": 30.0, "washline": 30.0, "windsock": 30.0, "kite_pennant": 30.0}
 const LOW_HEIGHT_M := 1.2
-# The density audit's view range (tools/park_props_audit.gd NEAR_M) that no_cell probes out to.
 const NEAR_RANGE_M := 60.0
 const TALL_HEIGHT_M := 3.0
-# Row footprints keep props out when the row is a ride feature; ground, banks, terraces and anchor fields do not.
 const RIDE_ELEMENTS := ["kicker", "drop", "rail", "grind_line", "half_pipe", "bowl", "elevated_line", "ledge", "tunnel", "flow_line", "sky_island"]
 const OPEN_ELEMENTS := ["ground", "bank", "terrace", "anchor_field"]
 const HOME_CLEAR_M := 25.0
@@ -67,43 +38,23 @@ const SEAT_FLOAT_MAX_M := 0.15
 const SMALL_RADIUS_M := 0.6
 const ALIGN_MAX_DEG := 12.0
 const LINE_REACH_M := 64.0
-# A kicker's lip can be 1,600 m wide (a mesa rim), so set_dressing.gd's circle of radius width/2 + 3 covers the play rect.
-# Props use a capsule along the lip instead, and a second one for the launch run-out ahead of it.
 const KICK_MARGIN_M := 8.0
 const KICK_RUNOUT_M := 40.0
 const LITTER_CHUNK_M := 160.0
-# The range a litter item's scale is drawn from (_litter), and the extremes the no_cell probe samples.
 const LITTER_SCALE_MIN := 0.9
 const LITTER_SCALE_MAX := 1.15
 const LITTER_GAP_RATIO := 0.5
-# The cell a litter item's search for a vignette prop's footprint is bucketed by (_feet).
 const LITTER_FOOT_CELL_M := 4.0
 const CAMP_ACTIVITIES := ["enemy_camp"]
-# Explicit surfaces: with a file "ground_rows" list, every instance stands inside a listed row's footprint, inset at least this far
-# (beyond its own radius) from the edge, so nothing sits on a drop lip or a bowl edge. Listed rows stop being footprint keepouts.
 const GROUND_ROW_INSET_M := 8.0
-# ParkSites leaves every stamped row longer than ParkSites.STAMP_KEEP_M out of its footprint cells (it treats it as the landform).
-# context() re-adds the ones that are ridden built features to Context.stamped: a long stamp 60 m (STAMP_NARROW_M) or narrower (a wash,
-# slot, fin, rail, lip or step face) keeps props out, because the pilot rides it. A wider long stamp (a pit bowl, a rim drop, a
-# fan band) is the landform itself and stays open, guarded by slope, seat, the line tiers and route lanes, as ParkSites intends.
-# A sky_island is always re-added whatever its width; ground_rows and low_ground_rows open stamped rows like any other row.
-# Low ground in area rows (opt-in): a file "low_ground_rows" list names big area rows that admit instances no taller than
-# LOW_GROUND_MAX_M (litter included); anything taller there still fails as low_ground. Eligible: a flow_line, bowl, drop or
-# sky_island footprint at least LOW_GROUND_MIN_M on both axes, or a home site longer than LOW_GROUND_HOME_MIN_M on either axis.
-# Narrow features are never eligible.
 const LOW_GROUND_MAX_M := 1.0
 const LOW_GROUND_MIN_M := 60.0
 const STAMP_NARROW_M := LOW_GROUND_MIN_M
 const LOW_GROUND_HOME_MIN_M := 200.0
 const LOW_GROUND_ELEMENTS := ["flow_line", "bowl", "drop", "sky_island"]
-# A litter band must sit inside the tier bands: LOW's 6 m line clearance, and the line reach past which distance is unknown.
 const LITTER_BAND_MIN_M := 6.0
 const LITTER_BAND_MAX_M := 64.0
 
-# Visibility ranges by class, LOD0 to LOD2: [begin, end] metres (the contract's "Frame cost": hand-overs at 70 and 180 m
-# for a hero, 35 and 90 m for a prop). A level fades itself out over its end +- margin (Godot's FADE_SELF). The next level
-# comes in whole (no begin margin) one margin before the hand-over, so it stands opaque behind the fading one: a cross-fade
-# of two half-drawn levels read as a see-through ghost at the hand-over (PF-47, the flume sluice shed at 70 m).
 const HERO_RANGES := [[0.0, 70.0], [62.0, 180.0], [172.0, 450.0]]
 const PROP_RANGES := [[0.0, 35.0], [32.0, 90.0], [87.0, 200.0]]
 const LITTER_RANGE := [0.0, 70.0]
@@ -111,19 +62,14 @@ const HERO_MARGIN_M := 8.0
 const PROP_MARGIN_M := 3.0
 const LOW_RANGE_SCALE := 0.5
 const BUILD_SLICE_USEC := 3000
-# The left stage's holders leave a few nodes a frame, hidden and stopped meanwhile: freeing them whole cost about 12 ms
-# of the entry frame (bot run, Spillway stage 2).
 const FREE_SLICE_USEC := 1500
-# Far props copied into a vignette's merged LOD2 mesh per build step (_merge_far).
 const MERGE_CHUNK := 4
 
 static var file_overrides := {}
-# Main thread only (_mesh): a GLB loaded or instantiated on a worker races the headless renderer's mesh RIDs.
+# Main thread only: Godot headless Dummy rasterizer mesh RIDs are not thread-safe.
 static var _meshes := {}
 static var _cache_owner := ""
-# GLBs asked of the loader thread (real renderers only), by path, until _mesh takes them.
 static var _requested := {}
-# _far_source's reads, by path, and how many it has made (a test reads it).
 static var _far_sources := {}
 static var far_reads := 0
 static var _material: StandardMaterial3D
@@ -141,46 +87,32 @@ static func reset_for_tests() -> void:
 var ctx
 const PropKicks := preload("res://src/presentation/prop_kicks.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
-# The ball's kicks of this stage's props (prop_kicks.gd); presentation answers each with sound and dust.
 signal prop_kicked(at: Vector3, mode: String, speed: float, tags: Array)
 var kicks := PropKicks.new()
 var _ground := Callable()
 var map_id := ""
 var instances: Array = []
 var views: Array[GeometryInstance3D] = []
-# The main-thread time of the last stage entry's build call (the worker's expansion and the node slices are not in it).
-# stage_entry_budget_test reads it for the entry frame, and last_process_usec for the frames after.
 var last_entry_usec := 0
-# The main-thread time of _process in the frame it last ran (Engine.get_process_frames), for stage_entry_budget_test.
 var last_process_usec := 0
 var last_process_frame := -1
-# The steps that frame ran, each "kind ms" (job_steps' kinds, or "mesh" for _read_meshes), so the test can name what a slow
-# frame built.
 var last_steps := PackedStringArray()
 var _built_for := []
 var _pending := false
 var _task := -1
 var _out := {}
 var _jobs: Array = []
-# The meshes the stage's jobs read, not yet cached: read on the main thread before the first job builds.
 var _reads: Array = []
-# The job _slice is building: its holder and the steps left.
 var _holder: Node3D
 var _dying: Array[Node] = []
 var _steps: Array = []
 var _kit := {}
 var _low := false
-# The next stage's plan, started on a worker once that stage's ground is ready (as natural.gd and set_dressing.gd start theirs),
-# with the meshes and far sources its build will read. A far read blocks until the GPU has drawn every frame in flight, and in
-# the frames after a stage entry that is the entry frame's 200 ms or so: one read step cost the 4080 18 to 44 ms there
-# (scrapkeep#235, row 26c). So the reads go one a frame while the stage before still plays, and the entry finds them cached.
 var _next := {}
 var _next_meshes: Array = []
 var _next_reads: Array = []
 
 
-# What the placement rules read of a park, built once: the lines' legs, the route lanes, the keepouts
-# (ParkSites), the homes and camps.
 class Context:
 	extends RefCounted
 	var map
@@ -189,23 +121,15 @@ class Context:
 	var rect := Rect2()
 	var sites
 	var lanes: Array = []
-	# name -> PackedVector2Array of a line's points, floor last.
 	var lines := {}
 	var homes: Array = []
 	var camps: Array[Vector2] = []
 	var spawn := Vector2.ZERO
-	# Row id -> row of the file's explicit surfaces (empty: no restriction), and the long stamped rows ParkSites leaves unbucketed.
 	var ground_rows := {}
 	var low_rows := {}
 	var stamped: Array = []
-	# Rows the park scatter dresses (recipe ParkRecipes.SCATTER_DRESSED), which riders ride: tall and hero props stay out of them.
 	var scatter_rows: Array = []
-	# Home sites and line waypoints that resolve to no place: file_errors-style rows, surfaced by --check and the test.
 	var unresolved: Array = []
-	# Park event_rows as the telegraph rule's zones, in the event's own geometry (natural.gd plan, event_director.gd _park_clear):
-	# {id, site (NaturalFootprint.resolve of the row and its park row), half (Vector2 box half extents), box (the director holds
-	# the box: any non-lightning event, or a ground event per EventDirector._park_ground), strike (strike_m for a lightning
-	# event's circle, -1 for none), hazard (hazard_m[0], -1 for none), hold (hold_clear_m, at least 0)}.
 	var events: Array = []
 	var _cells := {}
 
@@ -217,7 +141,6 @@ class Context:
 			best = minf(best, p.distance_to(Geometry2D.get_closest_point_to_segment(p, a, b)))
 		return best
 
-	# A row's footprint keeps props out when it is a ride feature or a home; the landmark (no element) always does.
 	static func blocks_props(row: Dictionary) -> bool:
 		var element := String(row.get("element", ""))
 		var home = row.get("home")
@@ -226,9 +149,6 @@ class Context:
 			return true
 		return element in RIDE_ELEMENTS or (fact != null and not (fact is String and (fact as String).is_empty()) and not (fact is bool and not fact) and not element in OPEN_ELEMENTS)
 
-	# What keeps a prop out at p: a keepout row (spawn, beacon, gates, sites, cages, kicker capsules) or a built footprint
-	# of a ride-feature row ("" when clear). Ground, bank, terrace and anchor-field rows without a home are open. With low_ok
-	# (the prop is at most LOW_GROUND_MAX_M tall) the file's low_ground_rows stop being footprint keepouts too.
 	func keepout_at(p: Vector2, margin: float, low_ok := false) -> String:
 		var what: String = SetDressing.blocked(sites._keepouts, p, margin)
 		if what != "":
@@ -241,7 +161,6 @@ class Context:
 				return "built row " + String(row.get("id", "?"))
 		return ""
 
-	# Takes the explicit surfaces from a file's "ground_rows" (ids of park rows); unknown ids are file_errors' to report.
 	func use_ground_rows(ids) -> void:
 		ground_rows = {}
 		if not ids is Array:
@@ -250,7 +169,6 @@ class Context:
 			if (ids as Array).has(row.get("id")):
 				ground_rows[row["id"]] = row
 
-	# Takes the opt-in low ground from a file's "low_ground_rows"; unknown ids and ineligible rows are file_errors' to report.
 	func use_low_ground_rows(ids) -> void:
 		low_rows = {}
 		if not ids is Array:
@@ -273,15 +191,10 @@ class Context:
 		return Vector2i(floori(p.x / LINE_REACH_M), floori(p.y / LINE_REACH_M))
 
 
-# --- Worlds, contexts and files -----------------------------------------------------------------
-
-# The stage number of a park map id (1 to 6), 0 when it is not on the park table.
 static func stage_of(id: String) -> int:
 	return PARKS.find(id) + 1
 
 
-# A park without a running game: {"map", "ground", "stage"} from its park file and committed bake.
-# The ground is terrain.gd's park ground over the bake (ground.bin, holes.bin, under.bin), as the game reads it.
 static func world_for(id: String) -> Dictionary:
 	var map := ParkMap.new("res://src/world/park/%s.json" % id)
 	var dir := ParkTerrain.bake_dir(id)
@@ -392,8 +305,6 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 	return c
 
 
-# keepouts with each "kicker ramp" circle replaced by a capsule along the lip (the ramp body behind it included, its
-# half length plus KICK_MARGIN_M wide) and a second capsule for the run-out KICK_RUNOUT_M ahead of the lip.
 static func kicker_keepouts(keepouts: Array, kickers: Array, park_rows: Array) -> Array:
 	var out := keepouts.filter(func(row: Dictionary) -> bool: return row["what"] != "kicker ramp")
 	for kicker: Dictionary in kickers:
@@ -416,7 +327,6 @@ static func _kicker_length(kicker: Dictionary, park_rows: Array) -> float:
 	return length
 
 
-# The launch run-out capsule {points, radius} of a kicker (the one kicker_keepouts adds as "kicker run-out").
 static func kicker_runout(kicker: Dictionary, park_rows: Array) -> Dictionary:
 	var dir: Vector2 = kicker["dir"]
 	var side := Vector2(-dir.y, dir.x) * float(kicker["width"]) * 0.5
@@ -425,8 +335,6 @@ static func kicker_runout(kicker: Dictionary, park_rows: Array) -> Dictionary:
 	return {"points": PackedVector2Array([run - side, run + side]), "radius": maxf(radius, KICK_RUNOUT_M * 0.5)}
 
 
-# "" when `at` lies within `within` m of the named kicker's run-out capsule (the audit's runout:<kicker> --open reason),
-# otherwise the reason it does not.
 static func runout_near(c: Context, kicker_id: String, at: Vector2, within := 40.0) -> String:
 	for kicker: Dictionary in c.map.kickers:
 		if String(kicker.get("id", "")) != kicker_id:
@@ -440,9 +348,6 @@ static func runout_near(c: Context, kicker_id: String, at: Vector2, within := 40
 	return "no kicker %s in the park" % kicker_id
 
 
-# The scales a vignette file places instances at, sorted and distinct: 1.0, every template prop's own scale, and the litter's
-# LITTER_SCALE_MIN and LITTER_SCALE_MAX when the file has litter (expand draws litter scales in that range). Slope and seat
-# sample the footprint, so a probe fits or not by scale; scales between the litter min and max are not sampled.
 static func probe_scales(file: Dictionary) -> PackedFloat32Array:
 	var found := [1.0]
 	for template: Dictionary in (file.get("templates", {}) as Dictionary).values():
@@ -459,10 +364,6 @@ static func probe_scales(file: Dictionary) -> PackedFloat32Array:
 	return out
 
 
-# The probe set for no_cell: every variant of every kind, as {kind, v}. The tier comes from each instance's own height, so a
-# lower variant of a kind can be low tier and fit beside a line where its smallest-radius variant (mid tier) does not. Mid and
-# tall kinds and kinds with a line_clear_m are probed too, each judged by check_one under its own tier and line_clear_m, so a
-# cell is legal when any variant the file could place passes there.
 static func probe_variants_of(kit: Dictionary) -> Array:
 	var out := []
 	var names: Array = (kit.get("kinds", {}) as Dictionary).keys()
@@ -475,7 +376,6 @@ static func probe_variants_of(kit: Dictionary) -> Array:
 	return out
 
 
-# The "kind/variant@scale" of the first (scale, probe) that passes every placement rule standing at `at`, "" if none.
 static func probe_at(c: Context, kit: Dictionary, probes: Array, scales: Array, at: Vector2) -> String:
 	for scale: float in scales:
 		for probe: Dictionary in probes:
@@ -485,13 +385,10 @@ static func probe_at(c: Context, kit: Dictionary, probes: Array, scales: Array, 
 	return ""
 
 
-# True when any (variant, scale) probe passes every placement rule standing at `at`.
 static func probe_legal_at(c: Context, kit: Dictionary, probes: Array, scales: Array, at: Vector2) -> bool:
 	return probe_at(c, kit, probes, scales, at) != ""
 
 
-# The audit's chase camera for a pose {x, z, yaw}: the anchor 1 + cam.up above the ground at the pose, the basis
-# Basis(UP, yaw) * Basis(RIGHT, cam.pitch), and the camera cam.arm behind along its z (tools/park_props_audit.gd _place).
 static func camera_for(pose: Dictionary, cam: Dictionary, ground: Callable) -> Transform3D:
 	var x := float(pose["x"])
 	var z := float(pose["z"])
@@ -500,8 +397,6 @@ static func camera_for(pose: Dictionary, cam: Dictionary, ground: Callable) -> T
 	return Transform3D(basis, anchor + basis * Vector3(0.0, 0.0, float(cam["arm"])))
 
 
-# Whether a world point is inside the camera's real frustum, without a Camera3D: in front, and inside both tan half-angles
-# of the vertical fov (cam.fov_deg, Godot keeps the height) and the aspect (cam.aspect), within range_m horizontally.
 static func cell_visible(view: Transform3D, cam: Dictionary, point: Vector3, range_m: float) -> bool:
 	if Vector2(point.x - view.origin.x, point.z - view.origin.z).length() > range_m:
 		return false
@@ -513,10 +408,6 @@ static func cell_visible(view: Transform3D, cam: Dictionary, point: Vector3, ran
 	return absf(local.y) <= depth * tan_v and absf(local.x) <= depth * tan_v * float(cam["aspect"])
 
 
-# Up to `limit` cell centres (cell_m grid, scanned in x then z) inside the real view frustum of the poses, within range_m of
-# the camera, where any probe (every variant of every kind at each placement scale, probe_variants_of and probe_scales) passes every placement rule; [] when none does (the audit's no_cell --open
-# reason). Tolerance: the grid is cell_m (2.5 m), so a legal pocket narrower than about 2.5 m can be missed, which lets a
-# no_cell claim pass; the horizontal range errs safe. A pose is {x, z, yaw}; cam is {arm, pitch, up, fov_deg, aspect}.
 static func cone_legal_cells(c: Context, kit: Dictionary, probes: Array, scales: Array, poses: Array, cam: Dictionary, range_m: float, cell_m := 2.5, limit := 1) -> Array:
 	var out := []
 	if probes.is_empty():
@@ -539,9 +430,6 @@ static func cone_legal_cells(c: Context, kit: Dictionary, probes: Array, scales:
 	return out
 
 
-# "--open=" argument text (x:z:r:<reason>,...) to {spaces: [[Vector2 centre, radius, reason]]} or {error}. The reason is
-# everything after the third colon: no_cell, runout:<kicker> with a non-empty kicker, or filled:<cx>:<cz> (two numbers, the
-# centre of the one legal cell the window's placed props already cover; open_reason checks it).
 static func parse_open(arg: String) -> Dictionary:
 	var spaces := []
 	for part in arg.split(",", false):
@@ -553,7 +441,6 @@ static func parse_open(arg: String) -> Dictionary:
 	return {"spaces": spaces}
 
 
-# The cell named by a "filled:<cx>:<cz>" reason, or Vector2.INF when the text is not that form.
 static func _filled_cell(reason: String) -> Vector2:
 	var f := reason.split(":")
 	if f.size() != 3 or f[0] != "filled" or not String(f[1]).is_valid_float() or not String(f[2]).is_valid_float():
@@ -561,11 +448,6 @@ static func _filled_cell(reason: String) -> Vector2:
 	return Vector2(float(f[1]), float(f[2]))
 
 
-# The audit's decision for one --open window: {ok, why, cell}. ok is true when the reason holds. `file` is the park's
-# vignette file ({} when it has none): its ground_rows and low_ground_rows apply to the probe as expand applies them, and
-# its smallest scale sizes the probes. `at` is the window midpoint and `poses` every sample pose in the window. `placed` is the
-# file's expanded instances: filled:<cx>:<cz> holds when every legal cell in the frustum lies within an instance's radius (plus half
-# a cell) of its centre, and the named cell is within one cell of such a cell.
 static func open_reason(c: Context, kit: Dictionary, file: Dictionary, reason: String, at: Vector2, poses: Array, cam: Dictionary, placed: Array = []) -> Dictionary:
 	if reason.begins_with("runout:"):
 		var why := runout_near(c, reason.trim_prefix("runout:"), at)
@@ -573,7 +455,6 @@ static func open_reason(c: Context, kit: Dictionary, file: Dictionary, reason: S
 	var filled := _filled_cell(reason)
 	if reason != "no_cell" and filled == Vector2.INF:
 		return {"ok": false, "why": "unknown reason %s" % reason, "cell": null}
-	# The file's rows apply for this probe only: the caller's lists come back untouched.
 	var saved_ground := c.ground_rows
 	var saved_low := c.low_rows
 	c.use_ground_rows(file.get("ground_rows"))
@@ -599,10 +480,6 @@ const FILLED_CELL_M := 2.5
 const FILLED_CELL_LIMIT := 4096
 
 
-# The filled:<cx>:<cz> decision over the frustum's legal `cells`: {ok, why, cell}. A cell is taken when its centre lies within an
-# instance's radius plus half a cell of the instance (xz distance). The cone lists a cell once per pose that sees it, so cells are
-# deduplicated; a list that reached FILLED_CELL_LIMIT may have stopped before a free cell, so it never holds. Litter fills
-# nothing: validate() skips it, so a vignette prop must stand there.
 static func _filled_verdict(cells: Array, named: Vector2, placed: Array) -> Dictionary:
 	if cells.is_empty():
 		return {"ok": false, "why": "no legal cell: use no_cell", "cell": null}
@@ -639,7 +516,6 @@ static func _pair(value) -> Vector2:
 	return Vector2.INF
 
 
-# traversal_line.gd place_of: drop_in is the spawn, landmark its beacon, other ids a park row's or activity's at.
 static func _place(park: Dictionary, id: String) -> Vector2:
 	if id == "drop_in":
 		return _pair(park.get("spawn", {}).get("at"))
@@ -652,10 +528,6 @@ static func _place(park: Dictionary, id: String) -> Vector2:
 	return Vector2.INF
 
 
-# --- Schema ---------------------------------------------------------------------------------------
-
-# Rows of text for a vignette file that breaks its schema or names a kind or variant the kit lacks.
-# park_map, when given, lets ground_rows be checked against the park's rows.
 static func file_errors(file: Dictionary, kit: Dictionary, park_map = null) -> Array:
 	var errors := []
 	if file.get("schema") != FILE_SCHEMA:
@@ -736,16 +608,6 @@ static func file_errors(file: Dictionary, kit: Dictionary, park_map = null) -> A
 	return errors
 
 
-# Pattern rows {rule, spots: [ids], detail} for a vignette file's spots (reads id, at, yaw_deg only). A spot layout that reads as
-# a mechanical row or as one stamped heading fails the dressing check.
-#   row  3 or more spots lie within ROW_BAND_M of one line through two spots, and 3 consecutive ones along it have gaps with a
-#        coefficient of variation (population sd / mean) under ROW_CV. Gaps count between ROW_GAP_MIN_M and ROW_GAP_MAX_M. The
-#        two spots that define the line may be up to two gaps apart (2 x ROW_GAP_MAX_M): for 3 spots at 33 m gaps, only the
-#        outer pair's line can hold the middle one inside the band.
-#   yaw  3 or more spots linked into one group, a link being two spots at most YAW_LINK_M apart whose yaws differ by at most 1 degree.
-# Numbers: 3 spots, 1.5 m and CV 0.1 are Dressing card 1 (#241); the 40 m gap cap is the lane scan's (scan_strict.py, the #241 LANE
-# DONE table); 24 m is two tall-tier vignette radii (park_props_plan.gd TIERS tall radius 12 m), so the discs touch.
-# Output is sorted by rule, then by first id.
 const ROW_BAND_M := 1.5
 const ROW_CV := 0.1
 const ROW_GAP_MIN_M := 0.5
@@ -764,7 +626,6 @@ static func spot_pattern_errors(file: Dictionary) -> Array:
 			yaws.append(float(spot.get("yaw_deg", 0.0)))
 	var n := ids.size()
 	var out := []
-	# Rows: hits are sets of spot indices; hits that share a spot merge.
 	var parent := []
 	for i in n:
 		parent.append(i)
@@ -816,7 +677,6 @@ static func spot_pattern_errors(file: Dictionary) -> Array:
 		for k in members:
 			best = minf(best, float(cvs[k]))
 		out.append({"rule": "row", "spots": names, "detail": "%d spots lie within %.1f m of a line with gap CV %.3f (under %.1f)" % [names.size(), ROW_BAND_M, best, ROW_CV]})
-	# Yaw groups.
 	var yparent := []
 	for i in n:
 		yparent.append(i)
@@ -852,8 +712,6 @@ static func _find(parent: Array, i: int) -> int:
 	return i
 
 
-# Lint rows {rule: "label", spot, detail} for spots whose `near` has stray whitespace, or ends with the first characters of the
-# template's story cut in the middle of a word (a label generator that caps its length). Lint does not fail a file.
 static func label_lint(file: Dictionary) -> Array:
 	var out := []
 	var templates: Dictionary = file.get("templates", {}) if file.get("templates") is Dictionary else {}
@@ -874,7 +732,6 @@ static func label_lint(file: Dictionary) -> Array:
 	return out
 
 
-# The length of a tail of `near` (after ": " or ", ") that is a strict prefix of `story` ending in the middle of a word, else 0.
 static func _story_cut(near: String, story: String) -> int:
 	var lower_story := story.to_lower()
 	for sep in [": ", ", "]:
@@ -896,8 +753,6 @@ static func _is_word_char(ch: String) -> bool:
 	return ch.to_lower() != ch.to_upper() or (ch >= "0" and ch <= "9")
 
 
-# "" when the file's pin equals the expansion's fingerprint; else the text for the mismatch, or "no pin: pin <fingerprint>" when the
-# file has none (the plan check fails that for a map's file and only notes it for a --file fixture).
 static func pin_error(file: Dictionary, fingerprint_value: int) -> String:
 	if not file.has("pin"):
 		return "no pin: pin %d" % fingerprint_value
@@ -906,8 +761,6 @@ static func pin_error(file: Dictionary, fingerprint_value: int) -> String:
 	return ""
 
 
-# Rows of text for a low_ground_rows list: every entry a park row that is eligible (see LOW_GROUND_ELEMENTS). Without a park_map
-# only the list's shape can be judged.
 static func _low_ground_row_errors(ids, park_map) -> Array:
 	if not ids is Array or (ids as Array).is_empty():
 		return ["low_ground_rows is not a non-empty list of park row ids"]
@@ -977,7 +830,6 @@ static func _kind_errors(label: String, kinds: Dictionary, kind, v) -> Array:
 	return []
 
 
-# Rows of text for a kit manifest that breaks its schema: class, tags, three existing LODs, tris, radius, height.
 static func kit_errors(kit: Dictionary, min_kinds := 0, min_variants := 1) -> Array:
 	var errors := []
 	if kit.get("schema") != KIT_SCHEMA:
@@ -1019,13 +871,6 @@ static func kit_errors(kit: Dictionary, min_kinds := 0, min_variants := 1) -> Ar
 	return errors
 
 
-# --- Expand ---------------------------------------------------------------------------------------
-
-# The instances of a vignette file on a park: every spot's template props, then the litter. Each is
-# {vignette, kind, v, class, tags, pos (the foot on the ground), basis (rotation), scale, radius, height (both scaled),
-# litter, float_m (how far the lowest rim sample stands above the ground), slope_deg}. Pure and deterministic:
-# a spot's variant picks are seeded from its id, the litter from litter.seed. Vignette props are kept as authored;
-# litter is dropped when it fails validate().
 static func expand(file: Dictionary, kit: Dictionary, park_map, ground: Callable, c: Context = null) -> Array:
 	if c == null:
 		c = context(park_map, ground)
@@ -1107,11 +952,6 @@ static func _normal(ground: Callable, at: Vector2, span: float) -> Vector3:
 	return Vector3(-dx, 2.0 * span, -dz).normalized()
 
 
-# Litter: walk every line (pilots in name order, then the floor line); every spacing_m place one item at a seeded
-# lateral offset inside band_m on a seeded side, a weighted kind. Every draw is made before the item is judged, so a
-# drop never moves the next item. An item that fails validate() is dropped, as is one within spacing_m * 0.5 of a
-# litter item already placed (seven lines share most of their way), and one whose footprint meets a vignette prop's
-# (props, the spots' instances: a litter pail was drawn through a vignette's pail; clip audit, 30 Oct).
 static func _litter(litter: Dictionary, id: String, kit: Dictionary, c: Context, ground: Callable, props: Array = []) -> Array:
 	var out := []
 	var rng := RandomNumberGenerator.new()
@@ -1167,7 +1007,6 @@ static func _litter(litter: Dictionary, id: String, kit: Dictionary, c: Context,
 	return out
 
 
-# The props' footprints {pos, radius} by LITTER_FOOT_CELL_M cell, and the largest radius, for _meets.
 static func _feet(props: Array) -> Dictionary:
 	var cells := {}
 	var widest := 0.0
@@ -1179,7 +1018,6 @@ static func _feet(props: Array) -> Dictionary:
 	return {"cells": cells, "widest": widest}
 
 
-# Whether a footprint of radius at at meets one of feet's.
 static func _meets(feet: Dictionary, at: Vector2, radius: float) -> bool:
 	var cells: Dictionary = feet["cells"]
 	if cells.is_empty():
@@ -1194,11 +1032,6 @@ static func _meets(feet: Dictionary, at: Vector2, radius: float) -> bool:
 	return false
 
 
-# --- Validate -------------------------------------------------------------------------------------
-
-# Violations {vignette, kind, pos, rule, detail} of the placement rules: line_clear (the larger of the height tier and the kind's
-# line_clear_m), route_lane, keepout, low_ground, telegraph (inside an event's own zone grown by hold_clear_m: natural.gd plan, event_director.gd _park_clear), home_clear,
-# play_rect, ground_row (only with a file ground_rows list), slope, seat. Empty means every instance is placeable.
 static func validate(list: Array, park_map, ground: Callable, stage := -1, c: Context = null) -> Array:
 	if c == null:
 		c = context(park_map, ground, stage)
@@ -1235,8 +1068,6 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 		var site_at := _pair(ev["site"]["at"])
 		if ev["box"]:
 			hit = ParkMap.footprint_contains(ev["site"], p, grown, Vector2.INF, ev["half"])
-		# A lightning strike is a strike_m circle at the site point (natural.gd plan); an industrial hazard reaches at most
-		# hazard_m[0] from it, a superset of the cone or annulus industrial.gd commit_sector commits.
 		if float(ev["strike"]) >= 0.0 and site_at.distance_to(p) < float(ev["strike"]) + grown:
 			hit = true
 		if float(ev["hazard"]) >= 0.0 and site_at.distance_to(p) < float(ev["hazard"]) + grown:
@@ -1246,7 +1077,6 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 	if tall and ParkRecipes.in_clear(c.lanes, p, r):
 		fail.call("route_lane", "tall, inside a route lane")
 	if tall:
-		# World's scatter keep-out card (wave 18 board #241): tall pieces stay out of the ridden rows the scatter dresses.
 		for row: Dictionary in c.scatter_rows:
 			if ParkMap.footprint_contains(row, p, r):
 				fail.call("scatter_row", "tall or hero inside scatter-dressed row %s" % row.get("id", "?"))
@@ -1256,12 +1086,10 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 	else:
 		var margin := clampf(r + ParkSites.MARGIN, ParkSites.MARGIN, ParkSites.MARGIN_MAX)
 		var low := height <= LOW_GROUND_MAX_M + 0.0001
-		# A listed row never counts as a keepout here; a prop over LOW_GROUND_MAX_M that only a listed row blocks fails low_ground.
 		var what := c.keepout_at(p, margin, true)
 		if what != "":
 			fail.call("keepout", "within %.1f m of %s" % [margin, what])
 		elif not low:
-			# A listed row caps what stands in it whether or not the row blocks (a wide long stamp is open).
 			for row: Dictionary in c.low_rows.values():
 				if ParkMap.footprint_contains(row, p, margin):
 					fail.call("low_ground", "%.2f m tall inside low_ground_rows row %s, want at most %.1f" % [height, row.get("id", "?"), LOW_GROUND_MAX_M])
@@ -1282,7 +1110,6 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 			fail.call("home_clear", "within %.0f m of an enemy camp" % HOME_CLEAR_M)
 	if not c.ground_rows.is_empty():
 		var inside := false
-		# A low instance (LOW_GROUND_MAX_M or less) may also stand inside a listed low_ground_rows row, with the same inset.
 		var surfaces: Array = c.ground_rows.values()
 		if height <= LOW_GROUND_MAX_M + 0.0001:
 			surfaces = surfaces + c.low_rows.values()
@@ -1302,13 +1129,10 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 	return out
 
 
-# A hash of the instances' kinds, variants and exact placements, for same-machine determinism checks.
 static func fingerprint(list: Array) -> int:
 	return hash(var_to_bytes(fingerprint_parts(list)))
 
 
-# What a fingerprint covers, per instance. The park pins hash these through tests/support/pin_hash.gd, which rounds the
-# floats so the pin holds on every platform's sin and cos.
 static func fingerprint_parts(list: Array) -> Array:
 	var parts := []
 	for inst: Dictionary in list:
@@ -1316,11 +1140,6 @@ static func fingerprint_parts(list: Array) -> Array:
 	return parts
 
 
-# --- Build ----------------------------------------------------------------------------------------
-
-# The finished nodes for a list of instances: a Node3D per vignette, a MultiMeshInstance3D per (mesh, LOD) for props, a
-# MeshInstance3D per LOD for each hero, litter batched per LITTER_CHUNK_M chunk on LOD1. low is the lowest preset: no
-# litter and the props' LOD0 and LOD1 ends halved.
 static func build_nodes(list: Array, kit: Dictionary, low := false) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Content"
@@ -1329,7 +1148,6 @@ static func build_nodes(list: Array, kit: Dictionary, low := false) -> Node3D:
 	return root
 
 
-# The build in pieces a node can spread over frames: one job per vignette, then one for the litter (none on low).
 static func jobs(list: Array, low := false) -> Array:
 	var by_vignette := {}
 	var out := []
@@ -1347,7 +1165,6 @@ static func jobs(list: Array, low := false) -> Array:
 	return out
 
 
-# Builds one job's holder under parent and returns it.
 static func build_job(parent: Node3D, job: Dictionary, kit: Dictionary, low: bool) -> Node3D:
 	var holder := new_holder(parent, job)
 	for step: Array in job_steps(job, kit, low):
@@ -1362,13 +1179,10 @@ static func new_holder(parent: Node3D, job: Dictionary) -> Node3D:
 	return holder
 
 
-# One job's build as [kind, step] pairs, each step taking the holder: a hero, a batch, a litter chunk, one LOD2 mesh's
-# first read, or the far merge. A node checks its frame budget between steps, so a frame never holds more than one step past it.
 static func job_steps(job: Dictionary, kit: Dictionary, low: bool) -> Array:
 	var steps := []
 	var groups := {}
 	var keys := []
-	# The far LOD of a vignette's props is one merged mesh, not one batch per (mesh, LOD): see _merged_far.
 	var far_members := []
 	for inst: Dictionary in job["members"]:
 		if inst["class"] == HERO:
@@ -1406,8 +1220,6 @@ static func job_steps(job: Dictionary, kit: Dictionary, low: bool) -> Array:
 	return steps
 
 
-# Every mesh path a list's jobs read, each once, in first-use order. Pure, so the worker draws it; the main thread
-# reads the meshes (_read_meshes).
 static func mesh_paths(list: Array, kit: Dictionary, low: bool) -> Array:
 	var paths := []
 	var seen := {}
@@ -1421,8 +1233,6 @@ static func mesh_paths(list: Array, kit: Dictionary, low: bool) -> Array:
 	return paths
 
 
-# Everything a stage needs before it can build nodes, pure so a worker can draw it: the file, its kit, the schema
-# errors (empty when usable) and the instances. {} when the park has no file.
 static func prepare(id: String, park_map, ground: Callable, stage: int, low: bool) -> Dictionary:
 	var file := load_json(file_path(id))
 	if file.is_empty():
@@ -1435,8 +1245,6 @@ static func prepare(id: String, park_map, ground: Callable, stage: int, low: boo
 	return {"kit": kit, "list": list, "paths": mesh_paths(list, kit, low), "errors": []}
 
 
-# The lowest preset halves LOD0 and LOD1's ends; each level after the first still comes in one margin before the halved
-# hand-over, so no gap and no ghost opens.
 static func _range(base: Array, low: bool, lod: int) -> Array:
 	if not low:
 		return base
@@ -1445,7 +1253,6 @@ static func _range(base: Array, low: bool, lod: int) -> Array:
 	return [begin, end]
 
 
-# A prop's (or a hero's) detail levels as built: [begin, end, begin margin, end margin] per LOD, for the preset.
 static func levels(hero: bool, low := false) -> Array:
 	var out := []
 	for lod in 3:
@@ -1459,12 +1266,6 @@ static func _lod_paths(kit: Dictionary, inst: Dictionary) -> Array:
 	return _stand_in(variants, String(inst["v"])) if ModelVariants.enabled() else variants[inst["v"]]["lod"]
 
 
-# With the generated-model switch on (model_variants.gd), a variant that has no generated sibling of its own draws a
-# sister variant's when that sister has one for every detail level, is no wider than STAND_IN_RADIUS times this
-# variant and is within STAND_IN_HEIGHT of its height, so the placement rules that passed for this variant still hold.
-# A narrower sister is allowed: it leaves room, it does not overlap. A kind's variants are placed at random, so without
-# this only one shed in three would change with the switch. The paths stay the authored ones; _mesh swaps each for its
-# sibling. The answer is kept per variant, because every placed prop asks; a worker asks too (prepare), hence the lock.
 const STAND_IN_RADIUS := 1.1
 const STAND_IN_HEIGHT := 0.15
 static var _stand_ins := {}
@@ -1502,7 +1303,6 @@ static func _find_stand_in(variants: Dictionary, v: String) -> Array:
 	return own["lod"]
 
 
-# Every detail level has an accepted generated sibling: a stand-in is never a mix of the two sets.
 static func _all_generated(lods: Array) -> bool:
 	for lod in lods:
 		if ModelVariants.path(String(lod)) == String(lod):
@@ -1540,8 +1340,6 @@ static func _batch(holder: Node3D, label: String, mesh: Mesh, members: Array, fi
 	var view := MultiMeshInstance3D.new()
 	view.name = label
 	view.multimesh = multi
-	# A visibility range is measured to the batch's bounds centre (set_dressing.gd, _batch): a chunk's end reaches past
-	# its farthest member so none vanishes while the camera stands beside it.
 	var spread := 0.0
 	if litter:
 		for member: Dictionary in members:
@@ -1549,17 +1347,11 @@ static func _batch(holder: Node3D, label: String, mesh: Mesh, members: Array, fi
 	_ranges(view, [begin_end[0], float(begin_end[1]) + spread], margin)
 	_tag(view, first, lod, false)
 	view.set_meta("dress_count", members.size())
-	# Instance i of this batch is members[i] (prop_kicks.gd moves it): a headless renderer keeps no transforms to read back.
+	# Godot headless Dummy renderer keeps no MultiMesh transforms for readback.
 	view.set_meta("dress_members", members)
 	holder.add_child(view)
 
 
-# A vignette's props at LOD2 as ONE mesh (one draw): the LOD2 meshes are 40 to 450 triangles, so the vignette's few dozen of them
-# bake into a single surface of a few thousand, where a batch per (mesh, LOD) cost a draw each (a dozen per vignette, 100 at the
-# dam's peak pose). The range is the props' LOD2 range, measured to the merged bounds centre like every other batch here. The
-# merged view keeps its members' positions and kinds in meta, so the audit still counts each prop in view. The copy is made
-# MERGE_CHUNK members a step (_merge_far; the whole vignette in one step cost 5 to 7 ms of a frame in the cloud, scrapkeep#235
-# row 26b), and this last step only uploads it.
 static func _merged_far(holder: Node3D, merge: FarMerge, first: Dictionary, begin_end: Array) -> void:
 	if merge.vertices.is_empty():
 		return
@@ -1584,7 +1376,6 @@ static func _merged_far(holder: Node3D, merge: FarMerge, first: Dictionary, begi
 	holder.add_child(view)
 
 
-# One vignette's LOD2 copies, gathered a chunk of members at a time, in member order, around the members' centre.
 class FarMerge extends RefCounted:
 	var centre := Vector3.ZERO
 	var vertices := PackedVector3Array()
@@ -1609,8 +1400,6 @@ static func _merge_far(merge: FarMerge, members: Array, kit: Dictionary) -> void
 		var src_c = source[Mesh.ARRAY_COLOR]
 		var src_i = source[Mesh.ARRAY_INDEX]
 		var base := merge.vertices.size()
-		# Whole-array transforms with the per-vertex values of tr * v - centre and basis * n (a -0 normal component
-		# comes out +0); stage_entry_budget_test pins the uploaded mesh to the per-vertex merge.
 		merge.vertices.append_array(Transform3D(Basis.IDENTITY, -merge.centre) * (_transform(inst) * src_v))
 		var normals: PackedVector3Array
 		if src_n != null:
@@ -1636,9 +1425,6 @@ static func _merge_far(merge: FarMerge, members: Array, kit: Dictionary) -> void
 		merge.kinds.append(String(inst["kind"]))
 
 
-# A LOD2 mesh's surface arrays, read once per path ([] when it has no usable surface). Reading a mesh's arrays back from the
-# renderer stalls the GPU until every frame in flight is done; a read per prop cost the 4080 25 to 89 ms frames (scrapkeep#235,
-# row 26), where the headless renderer copies them for free. Main thread only, like the merge.
 static func _far_source(path: String) -> Array:
 	if _far_sources.has(path):
 		return _far_sources[path]
@@ -1656,7 +1442,6 @@ static func _far_source(path: String) -> Array:
 static func _ranges(view: GeometryInstance3D, begin_end: Array, margin: float) -> void:
 	view.visibility_range_begin = begin_end[0]
 	view.visibility_range_end = begin_end[1]
-	# No begin fade: a level comes in whole behind the fading one (PF-47, HERO_RANGES).
 	view.visibility_range_begin_margin = 0.0
 	view.visibility_range_end_margin = margin
 	view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
@@ -1672,7 +1457,6 @@ static func _tag(view: GeometryInstance3D, inst: Dictionary, lod: int, shadow: b
 	view.set_meta("dress_tier", tier_of(inst))
 
 
-# The height tier of an instance, as the line-clearance rule reads it: "tall", "mid" or "low".
 static func tier_of(inst: Dictionary) -> String:
 	var height := float(inst["height"])
 	if inst["class"] == HERO or height > TALL_HEIGHT_M or "tall" in inst["tags"]:
@@ -1684,7 +1468,6 @@ static func _transform(inst: Dictionary) -> Transform3D:
 	return PropKicks.place_of(inst)
 
 
-# A GLB's one mesh, read once per path on the main thread; a path asked of the loader thread is taken from it.
 static func _mesh(path: String) -> Mesh:
 	if not ThreadGuard.main_only("park_props mesh " + path):
 		return null
@@ -1706,16 +1489,11 @@ static func _mesh(path: String) -> Mesh:
 	return mesh
 
 
-# The kit GLBs carry linear COLOR_0 and no texture, but Godot imports them with an albedo-white material that ignores it, so every
-# prop would render flat white. Every view gets one shared vertex-colour material as its material_override: vertex_color_use_as_albedo
-# on, linear data, roughness 0.8, metallic 0, no emission. The imported mesh stays as it is (copying a mesh reads its surfaces back,
-# which waits on the renderer).
+# Godot imports glTF COLOR_0 with an albedo-white material that ignores vertex color; copying meshes stalls on renderer readback.
 static func style_view(view: GeometryInstance3D) -> void:
 	view.material_override = _vertex_material()
 
 
-# Rows of text for a view whose surfaces would not show their vertex colours: no ARRAY_COLOR on a surface, or neither an override
-# nor a surface material that uses vertex colour as albedo.
 static func colour_errors(mesh: Mesh, label := "mesh", view: GeometryInstance3D = null) -> Array:
 	var errors := []
 	if mesh == null or mesh.get_surface_count() == 0:
@@ -1740,7 +1518,6 @@ static func _vertex_material() -> StandardMaterial3D:
 	return _material
 
 
-# Teardown: the cached meshes go with the park, and with the Game (activities.gd _exit_tree calls this).
 static func release_shared() -> void:
 	for path: String in _requested:
 		ResourceLoader.load_threaded_get(_requested[path])
@@ -1750,12 +1527,6 @@ static func release_shared() -> void:
 	_material = null
 	_cache_owner = ""
 
-
-# --- Node lifecycle ---------------------------------------------------------------------------------
-
-# A stage's file, kit and instances are drawn on a worker (prepare), then its meshes are read and its nodes built a step at
-# a time (job_steps) on the main thread, each within BUILD_SLICE_USEC a frame, so entering a park hitches on none of them.
-# finish() does it all at once, for tests.
 
 func setup(context_in) -> void:
 	ctx = context_in
@@ -1768,8 +1539,6 @@ func setup(context_in) -> void:
 		_pending = true
 
 
-# Once the stage is built its small props are indexed, and every frame the ball moves the ones it
-# runs into (prop_kicks.gd). Presentation only: nothing here touches the run.
 func _kick(delta: float) -> void:
 	if not visible or instances.is_empty() or not is_built() or ctx.player == null or ctx.player.frozen():
 		return
@@ -1801,7 +1570,6 @@ func _process(_delta: float) -> void:
 	last_process_frame = Engine.get_process_frames()
 
 
-# Frees the left stages' nodes deepest first until the budget runs out, each holder last.
 func _reap(budget_usec: int) -> void:
 	var deadline := Time.get_ticks_usec() + budget_usec
 	while not _dying.is_empty() and Time.get_ticks_usec() < deadline:
@@ -1813,12 +1581,10 @@ func _reap(budget_usec: int) -> void:
 		node.free()
 
 
-# True once the stage's nodes are all built (or it has none).
 func is_built() -> bool:
 	return _task < 0 and _reads.is_empty() and _jobs.is_empty() and not _pending
 
 
-# Waits for the worker and builds every remaining job.
 func finish() -> void:
 	if _pending and ctx.terrain.is_ready(ctx.terrain.stage):
 		_build_stage()
@@ -1901,7 +1667,6 @@ func _build_stage() -> void:
 	_task = WorkerThreadPool.add_task(func(): out.merge(prepare(id, map, ground, stage, low)), false, "park props plan")
 
 
-# The worker's result: keep the instances and queue the nodes.
 func _take() -> void:
 	WorkerThreadPool.wait_for_task_completion(_task)
 	_task = -1
@@ -1912,7 +1677,6 @@ func _take() -> void:
 		return
 	instances = out["list"]
 	_kit = out["kit"]
-	# A next-stage plan already read (this stage rebuilt under a new key) keeps its meshes and reads too.
 	var next_out: Dictionary = _next.out if not _next.is_empty() and _next.listed else {}
 	_keep_cached(instances, _kit, next_out)
 	_cache_owner = map_id
@@ -1920,9 +1684,7 @@ func _take() -> void:
 	_reads = _uncached(out["paths"])
 
 
-# The paths not in the mesh cache yet. The headless renderer's mesh RIDs are not thread-safe, so there _mesh loads them
-# on the main thread (park_recipes.gd's placer and ending_sequence.gd's crater keep the same gate); a real renderer
-# loads them on the loader thread first.
+# Godot headless Dummy rasterizer mesh RIDs are not thread-safe; load on main thread when headless.
 static func _uncached(paths: Array) -> Array:
 	var out := paths.filter(func(path: String): return not _meshes.has(path))
 	if not AppShell.headless():
@@ -1933,8 +1695,6 @@ static func _uncached(paths: Array) -> Array:
 	return out
 
 
-# The stage's meshes, read within budget_usec a frame (at least one) and in order, ahead of the first job. A read
-# the loader thread has not finished waits for a later frame.
 func _read_meshes(budget_usec: int) -> void:
 	var started := Time.get_ticks_usec()
 	while not _reads.is_empty():
@@ -1949,13 +1709,10 @@ func _read_meshes(budget_usec: int) -> void:
 			return
 
 
-# A pure function of the park, its ground and the preset: the same key keeps what is built (retries), and a plan made
-# for the next stage is taken when its key still holds at the entry.
 func _key(stage: int) -> Array:
 	return [stage, String(ctx.terrain.map_for(stage).park["map"]), Preset.current == LOW_PRESET, ctx.terrain.geometry_root(stage).get_instance_id()]
 
 
-# The next park stage's key once its ground is ready, else [].
 func _next_key() -> Array:
 	var terrain = ctx.terrain
 	if not "maps" in terrain:
@@ -1969,9 +1726,6 @@ func _next_key() -> Array:
 	return _key(next)
 
 
-# Idle frames only (no build running): plans the next stage on a worker, then reads its meshes and far sources one a frame
-# (a mesh the loader thread has not finished waits). A plan no stage can take any more (a new run, a preset change) is
-# dropped once its worker is done.
 func _prepare_next() -> void:
 	var key := _next_key()
 	if _next.is_empty() or _next.key != key:
@@ -2014,12 +1768,10 @@ func _prepare_next() -> void:
 		"task": WorkerThreadPool.add_task(func(): out.merge(prepare(id, map, ground, stage, low)), false, "park props next plan")}
 
 
-# True once the next stage (stage) is planned and its far sources are read: what the stage's entry would otherwise read.
 func next_read(stage: int) -> bool:
 	return not _next.is_empty() and int(_next.key[0]) == stage and _next.listed and _next_meshes.is_empty() and _next_reads.is_empty()
 
 
-# The LOD2 paths a list's far merges read (job_steps' read steps), each once.
 static func far_paths(list: Array, kit: Dictionary) -> Array:
 	var seen := {}
 	for inst: Dictionary in list:
@@ -2028,8 +1780,6 @@ static func far_paths(list: Array, kit: Dictionary) -> Array:
 	return seen.keys()
 
 
-# The cache keeps what this list builds from and lets the last park's meshes and far sources go. The next stage's plan
-# reads its own meshes and far sources into the same cache before the exit, so nothing is cleared at an entry.
 static func _keep_cached(list: Array, kit: Dictionary, next_out: Dictionary) -> void:
 	var keep := {}
 	for inst: Dictionary in list:

@@ -1,12 +1,5 @@
 extends RefCounted
 
-# The jolt layer's voice (design-v3/FIELDS-AND-CASTS.md section 2.3), five rendered files in D
-# beside the specials' cues: <name>.wav under assets/audio/specials/. Each is loaded only if
-# present, so the enemy runs silent (its cues count as placeholders) until they land.
-# - presence: a seamless 2.0 s loop on the body while it lives.
-# - tell: 1.0 s whose arc lands on its last 60 ms; it starts TELL_LEAD before each pulse.
-# - jam: a pulse landed on the ball. fizzle: a jolt recalled Q. break: the death.
-
 const DIR := "res://assets/audio/specials/jolt_layer_"
 const TELL_LEAD := 1.0
 const TRIM_DB := {"presence": -14.0, "tell": -4.0, "jam": -4.0, "fizzle": -4.0, "break": -3.0}
@@ -20,8 +13,7 @@ static func path(part: String) -> String:
 	return DIR + part + ".wav"
 
 
-# The part's stream, or null with no file. The imported resource when there is one, else the
-# raw 16-bit RIFF (a headless run with no import cache).
+# Headless Godot runs without an import cache, falling back to raw 16-bit RIFF.
 static func stream(part: String) -> AudioStreamWAV:
 	if _streams.has(part):
 		return _streams[part]
@@ -57,7 +49,6 @@ static func _from_riff(bytes: PackedByteArray) -> AudioStreamWAV:
 	return null
 
 
-# A spatial player for one part on `host`, or null with no file. The presence one loops.
 static func player(part: String, host: Node3D) -> AudioStreamPlayer3D:
 	var s := stream(part)
 	if s == null or host == null:
@@ -73,8 +64,6 @@ static func player(part: String, host: Node3D) -> AudioStreamPlayer3D:
 	return p
 
 
-# A one-shot that outlives its source (the death sound plays after the body is freed): parented
-# to `parent` at `at`, freed when it finishes. False with no file.
 static func one_shot(part: String, parent: Node, at: Vector3) -> bool:
 	if parent == null or stream(part) == null:
 		return false

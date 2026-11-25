@@ -1,12 +1,5 @@
 extends RefCounted
 
-# A hero landmark's stand-in until its GLB lands (LANDMARK-CARDS.md cards 1 to 6): the card's silhouette in a few
-# primitives, in the landmark's own space (origin at its y datum, +Z toward the arriving player, park_map.gd size
-# [length, height, width]). Visual only: no collider and no sensor, so every route, line and posture band measured
-# without a landmark solid holds until the GLB's -col mesh brings the card's "collides" parts. The headframe's legs
-# reach down to the ground under each foot. The placeholder check counts the landmark while its GLB is missing
-# (scripts/placeholder-gate.mjs), so a proxy never passes for the model.
-
 const Palette := preload("res://src/core/palette.gd")
 
 const CONCRETE := Color("bdb6a6")
@@ -15,7 +8,6 @@ const BASALT := Color("3b3532")
 const PINE := Color("4a5a3a")
 const CAPROCK := Color("4a3a33")
 
-# Where each kind's beam rises from, local (the card's beam_root), and the headframe's sheave top (no beam there).
 const BEAM_ROOT := {
 	"dam": Vector3(0, 22, 30),
 	"penstock_tower": Vector3(0, 90, 58.3),
@@ -27,9 +19,6 @@ const BEAM_ROOT := {
 static var _materials := {}
 
 
-# The proxy's parts under node (the landmark node at its datum). ground(x, z) is the world floor; to_world is node's
-# transform, so a leg foot can find the ground; anchor_y is the Warden's anchor (the isle's tether). Returns the number
-# of parts added.
 static func build(kind: String, node: Node3D, to_world: Transform3D, ground := Callable(), anchor_y := INF) -> int:
 	var before := node.get_child_count()
 	match kind:
@@ -48,7 +37,6 @@ static func build(kind: String, node: Node3D, to_world: Transform3D, ground := C
 	return node.get_child_count() - before
 
 
-# Card 1: a 320 m arch bowed 25 m upstream (-Z), y 30 to the crest at 121, two gate towers to 141 and their gantry.
 static func _dam(node: Node3D) -> void:
 	var segments := 12
 	for i in segments:
@@ -62,7 +50,6 @@ static func _dam(node: Node3D) -> void:
 	_box(node, "Gantry", Vector3(48, 3, 4), Vector3(0, 139.5, -20), IRON)
 
 
-# Card 2: a 90 m surge tower tapering 18 to 14 m with a bell top and its gallery ring at 84 m.
 static func _tower(node: Node3D) -> void:
 	var at := Vector3(0, 0, 58.3)
 	_cylinder(node, "SurgeTower", 9.0, 7.0, 82.0, at + Vector3(0, 41, 0), CONCRETE)
@@ -70,8 +57,6 @@ static func _tower(node: Node3D) -> void:
 	_cylinder(node, "Gallery", 11.0, 11.0, 1.0, at + Vector3(0, 84, 0), IRON)
 
 
-# Card 3: a black A-frame over the shaft, 114 m to the apex, sheave deck at 110 and two 14 m wheels, back legs raking
-# to the hoist house. The hive well (12 m square, y 0 to 38 on the axis) stays clear.
 static func _headframe(node: Node3D, to_world: Transform3D, ground: Callable) -> void:
 	for sx in [-1.0, 1.0]:
 		for sz in [-1.0, 1.0]:
@@ -84,7 +69,6 @@ static func _headframe(node: Node3D, to_world: Transform3D, ground: Callable) ->
 		wheel.rotation.x = PI * 0.5
 
 
-# Card 4: the broken basalt lip on the 250 m opening, the 40 m caisson lip round the pool and the nest's socket.
 static func _sinkhole(node: Node3D) -> void:
 	_ring(node, "RimCoping", 125.0, 3.0, 0.6, Vector3(0, 0.3, 0), BASALT)
 	_ring(node, "CaissonLip", 40.0, 1.0, 1.0, Vector3(0, -100, 0), IRON)
@@ -93,8 +77,6 @@ static func _sinkhole(node: Node3D) -> void:
 		_box(node, "NestCell%d" % i, Vector3(5, 6, 3), Vector3(sin(a) * 9.0, -99 + 6.0 * cos(a * 2.0), 38 + 9.0 + absf(a) * 2.0), BASALT)
 
 
-# Card 5: the Hanging Isle, an upside-down mountain 180 m across at the deck (y 200) tapering to the tip (y -118), the
-# hand's tether hanging from the tip to its anchor (world anchor_y).
 static func _isle(node: Node3D, anchor_y: float) -> void:
 	_cylinder(node, "Taper", 90.0, 3.0, 318.0, Vector3(0, 41, 0), Palette.SANDSTONE)
 	_cylinder(node, "Deck", 90.0, 90.0, 4.0, Vector3(0, 202, 0), PINE)
@@ -103,7 +85,6 @@ static func _isle(node: Node3D, anchor_y: float) -> void:
 		_cylinder(node, "Tether", 0.4, 0.4, tether, Vector3(0, -118.0 - tether * 0.5, 0), IRON)
 
 
-# Card 6: the Crown Spire, a 30 m waist to y 60 (storyboard ruling), 50 m by 120, 20 m at 330, the dark cap to 342.
 static func _spire(node: Node3D) -> void:
 	_cylinder(node, "LowerShaft", 15.0, 15.0, 60.0, Vector3(0, 30, 0), Palette.SANDSTONE)
 	_cylinder(node, "Shoulder", 25.0, 15.0, 60.0, Vector3(0, 90, 0), Palette.SANDSTONE)
@@ -111,7 +92,6 @@ static func _spire(node: Node3D) -> void:
 	_cylinder(node, "Caprock", 8.0, 10.0, 12.0, Vector3(0, 336, 0), CAPROCK)
 
 
-# A 2 m square leg from foot to head (local); the foot drops to the ground under it when ground is given.
 static func _leg(node: Node3D, name: String, foot: Vector3, head: Vector3, to_world: Transform3D, ground: Callable) -> void:
 	if ground.is_valid():
 		var world := to_world * foot

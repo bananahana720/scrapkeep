@@ -1,17 +1,5 @@
 extends RefCounted
 
-# The ambient life pool: pure logic, no nodes (ambient_life.gd is the view). It holds one member per
-# planned home slot (ambient_homes.gd) and steps them with the record's numbers (ambient_kinds.gd).
-# Only the members of the homes nearest the player are live, at most CAP (half under reduced
-# motion), so the park never draws more than that. Each live member runs one small machine:
-#   idle / perch / sleep / wander   calm life, leashed to its home
-#   flee    the ball inside flee_m: move directly away (+-30 degrees), never toward it
-#   react   combat within COMBAT_M: hide (run away, sink), scatter (climb away, circle) or duck (stay, hide)
-#   hidden  out of sight; after a calm of RETURN_S it comes back
-#   return  home again, faded or flown back in
-# A boss locks every member hidden until the boss is gone and reset() runs (stage re-entry).
-# The pool emits nothing and reads no game state: step() takes one plain input dictionary.
-
 const AmbientKinds := preload("res://src/core/ambient_kinds.gd")
 
 const ADMIT_M := 160.0
@@ -26,9 +14,7 @@ const LEASH_MULT := 2.5
 const LEASH_MIN_M := 3.0
 const JITTER_RAD := 0.5236
 const HIDE_RUN_S := 1.5
-# A hide run whose direction from the threat points at the ball (dot below this) is turned away from it.
 const AWAY_MIN := 0.0
-# Nearly opposed (dot below -BOXED_IN), it runs sideways with a BOXED_AWAY share away from the ball instead.
 const BOXED_IN := 0.7
 const BOXED_AWAY := 0.6
 const HIDE_SINK_S := 0.5
@@ -96,7 +82,6 @@ var _last_react_sound := {}
 var _wanted := {}
 
 
-# homes: ambient_homes.gd plan(); a home may carry `roof` (height of a ceiling above the ground there, bats).
 func setup(homes: Array, seed_number: int) -> void:
 	_rng.seed = seed_number
 	members.clear()
@@ -123,7 +108,6 @@ func setup(homes: Array, seed_number: int) -> void:
 			members.append(m)
 
 
-# Stage re-entry: every member back to its home, the boss lock lifted.
 func reset() -> void:
 	boss_lock = false
 	_admit_t = 0.0
@@ -139,7 +123,6 @@ func live_count() -> int:
 	return n
 
 
-# Members the view draws: live and not fully faded out.
 func drawn() -> Array[Member]:
 	var out: Array[Member] = []
 	for m in members:
@@ -152,8 +135,6 @@ func cap() -> int:
 	return REDUCED_CAP if reduced else AmbientKinds.CAP
 
 
-# input: {player: Vector3, threats: Array[Vector3] (live enemies + telegraphs), telegraphs: Array[Vector3],
-# boss: bool, reduced: bool, ground: Callable(x, z) -> float}
 func step(dt: float, input: Dictionary) -> void:
 	clock += dt
 	reduced = bool(input.get("reduced", false))
@@ -178,8 +159,6 @@ static func _flat(v: Vector3) -> Vector2:
 	return Vector2(v.x, v.z)
 
 
-# The nearest homes' members up to the cap are wanted; a live member no longer wanted fades out
-# and frees its slot only once gone, so live never exceeds the cap.
 func _admit(player: Vector3) -> void:
 	var order: Array[Member] = members.duplicate()
 	var here := _flat(player)
@@ -247,14 +226,12 @@ func _tick(m: Member, dt: float, input: Dictionary) -> void:
 	var d_ball := flat.distance_to(player)
 	var nearest := _nearest_threat(flat, input.get("threats", []))
 	var combat: bool = nearest.x <= AmbientKinds.COMBAT_M
-	# Transitions.
 	if combat and m.state != "react" and m.state != "hidden":
 		_react(m, flat, player, Vector2(nearest.y, nearest.z))
 	elif not combat and d_ball < float(m.row["flee_m"]) and float(m.row["flee_speed"]) > 0.0 \
 			and (m.state == "idle" or m.state == "perch" or m.state == "wander" or m.state == "sleep"):
 		m.state = "flee"
 		m.jitter_t = 0.0
-	# Calm clock: counts while hidden or circling and neither combat nor the ball is close.
 	if m.state == "hidden" or (m.state == "react" and m.react_kind == "scatter"):
 		if combat or d_ball <= float(m.row["flee_m"]) * FLEE_CLEAR:
 			m.calm_t = 0.0
@@ -324,7 +301,6 @@ func _tick(m: Member, dt: float, input: Dictionary) -> void:
 				m.vel = Vector3.ZERO
 				if m.fade >= 0.99:
 					_idle(m)
-	# Calls only while calm, visible and awake; the clock holds while a telegraph hushes the park.
 	if not hushed and m.fade >= 0.9 and (m.state == "idle" or m.state == "perch" or m.state == "wander"):
 		m.call_t -= dt
 		if m.call_t <= 0.0:
@@ -341,7 +317,6 @@ func _tick(m: Member, dt: float, input: Dictionary) -> void:
 	_finish(m, dt, flat, ground, before)
 
 
-# Writes the flat position back with its ground and lift, and the velocity the view and tests read.
 func _finish(m: Member, dt: float, flat: Vector2, ground: Callable, before: Vector3) -> void:
 	var goal := _rest_lift(m)
 	if m.state == "wander" and m.row["motion"] == "fly":
@@ -381,7 +356,6 @@ func _idle(m: Member) -> void:
 	m.t = _rng.randf_range(2.0, 5.0)
 
 
-# After a calm beat: sleep for its share of the time, wander if it moves, else stay.
 func _pick(m: Member, speed: float) -> void:
 	if _rng.randf() < float(m.row["sleep"]):
 		m.state = "sleep"
@@ -414,8 +388,6 @@ func _react(m: Member, flat: Vector2, player: Vector2, threat: Vector2) -> void:
 	m.react_kind = "fade" if reduced else String(m.row["react"])
 	m.alt_goal = _rng.randf_range(SCATTER_CLIMB.x, SCATTER_CLIMB.y)
 	m.orbit = Vector3.ZERO
-	# Scatter lifts away from the ball; hide runs from the nearest threat, but never toward the ball:
-	# with the threat beyond the member, the run keeps its sideways part and turns away from the ball.
 	m.dir = flat - (player if m.react_kind == "scatter" else threat)
 	if m.dir.length() < 0.001:
 		m.dir = Vector2.from_angle(_rng.randf_range(0.0, TAU))
@@ -425,7 +397,6 @@ func _react(m: Member, flat: Vector2, player: Vector2, threat: Vector2) -> void:
 		away = away.normalized()
 		var along := m.dir.dot(away)
 		if along < -BOXED_IN:
-			# Ball on one side, threat on the other: break out sideways, edging away from the ball.
 			m.dir = (away.orthogonal() * (1.0 if _rng.randf() < 0.5 else -1.0) + away * BOXED_AWAY).normalized()
 		elif along < AWAY_MIN:
 			m.dir = (m.dir - away * along + away).normalized()
@@ -472,14 +443,11 @@ func _react_flat(m: Member, flat: Vector2, dt: float) -> Vector2:
 		m.vel = Vector3(m.dir.x, 0.0, m.dir.y) * speed
 		m.facing = lerp_angle(m.facing, atan2(m.dir.x, m.dir.y), minf(1.0, dt * 10.0))
 		return flat
-	# scatter: climb away from the ball, then circle.
 	if m.alt < m.alt_goal and m.orbit == Vector3.ZERO:
 		m.alt = minf(m.alt + SCATTER_CLIMB_RATE * dt, m.alt_goal)
 		flat += m.dir * speed * dt
 		return flat
 	if m.orbit == Vector3.ZERO:
-		# Each flier keeps its own radius, turn and pace, so a row never wheels in unison (identical
-		# flocking is the swarm remnants' read, VISUAL-LANGUAGE.md section 11).
 		m.orbit_r = SCATTER_ORBIT_M * _rng.randf_range(SCATTER_ORBIT_SPREAD.x, SCATTER_ORBIT_SPREAD.y)
 		m.orbit_rate = (1.0 if _rng.randf() < 0.5 else -1.0) * _rng.randf_range(SCATTER_ORBIT_SPREAD.x, SCATTER_ORBIT_SPREAD.y)
 		var theta := m.dir.angle() - PI / 2.0 * signf(m.orbit_rate)
@@ -495,7 +463,6 @@ func _hide(m: Member) -> void:
 	m.return_after = _rng.randf_range(AmbientKinds.RETURN_S.x, AmbientKinds.RETURN_S.y)
 
 
-# A circling flier flies home; a hidden member reappears at home, faded in.
 func _come_back(m: Member) -> void:
 	m.calm_t = 0.0
 	m.state = "return"

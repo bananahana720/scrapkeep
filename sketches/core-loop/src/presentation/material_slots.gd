@@ -1,21 +1,5 @@
 extends RefCounted
 
-# One registry of world surface materials, keyed by role. Palette builds a role's material from its
-# row (`Palette.slot_material`), `Palette.target_surface_material` looks the role up here, and the
-# registry test walks every row, so the shader, the textures, the ancient pattern cue and the
-# worlds that read a role cannot drift apart. This file is data only: it names palette colours and
-# look textures, and Palette resolves them (Palette preloads this file, so it must not load Palette).
-#
-# Row fields:
-#   kind              "shader" (a ShaderMaterial on `shader`), "standard" (a StandardMaterial3D
-#                     built from `params`) or "resource" (a prebuilt .tres at `path`)
-#   shader / path     the Shader or the .tres the role resolves to
-#   params            shader parameters, or StandardMaterial3D fields for "standard"; a String value
-#                     that names a Palette colour constant resolves to that Color
-#   triplanar_scale   metres per tile of the world triplanar sample, 0 when the role has none
-#   textures          shader parameter name -> assets/textures id (Palette.look_texture)
-#   ancient / pattern ancient rows carry a pattern cue readable without colour
-#   worlds            world ids (worlds.gd) whose surfaces read the role, for the report
 const SLOTS := {
 	"ground": {"kind": "shader", "shader": "res://src/presentation/sandstone.gdshader", "params": {"cliff_only": false},
 		"triplanar_scale": 6.0, "textures": {"strata_map": "sandstone-strata", "floor_map": "packed-sand-floor"}, "worlds": [1]},
@@ -51,8 +35,6 @@ const SLOTS := {
 		"triplanar_scale": 0.0, "textures": {}, "worlds": [1], "ancient": true, "pattern": "chevron_ribs"},
 }
 
-# Roles whose slot Palette.target_surface_material hands out as the shipped look; the rest wrap
-# the original surface (the dam keeps its imported map and vertex colours).
 const SHIPPED_AS_SLOT := ["ground", "rock"]
 
 

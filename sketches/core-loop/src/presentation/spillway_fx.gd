@@ -4,13 +4,7 @@ const Specs := preload("res://src/presentation/world_fx/world_fx_specs.gd")
 const Anchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const ParkSites := preload("res://src/presentation/park_sites.gd")
 
-# The Spillway parks' anchored effects (WORLD-FX.md, Specs.SPILL_PLACES): the powerhouse's steam, the
-# weir's falls, the dam's spray curtain and the penstock tower's vent. Row sets stand at once; landmark
-# sets wait for the park's rows to finish building (the landmark is placed last, over several frames),
-# then stand in the landmark node's frame, so they move with it. Visual only; WorldFx ranks them into
-# its anchor slots like any other anchor, so the live-particle ceiling holds.
 const SEEK_EVERY := 0.25
-# park_recipes.gd Placer.Phase.READY.
 const PLACER_READY := 3
 
 var stage_root: Node3D
@@ -20,7 +14,6 @@ var _rows: Node
 var _wait := 0.0
 
 
-# Hangs the park's effects under parent (the park's SpillwayScenery). sites reads the park's rows and ground.
 static func place(parent: Node3D, stage_root_ref: Node3D, map, sites: ParkSites) -> Node3D:
 	var fx: Node3D = load("res://src/presentation/spillway_fx.gd").new()
 	fx.name = "SpillwayFx"
@@ -47,7 +40,6 @@ func _stand(spot: Dictionary, row: Dictionary, sites: ParkSites) -> void:
 	var top := base + (0.0 if spot.get("foot", false) else float(row["size"][1]))
 	var a := Anchor.make(String(spot["set"]))
 	a.name = "WorldFx_%s_%s" % [spot["set"], row["id"]]
-	# The sets' directions point down +Z: turn +Z along the row's run.
 	a.transform = Transform3D(Basis(Vector3.UP, ParkSites.yaw_toward(-f["run"])), Vector3(at.x, top + float(spot.get("lift", 0.0)), at.y))
 	add_child(a)
 	placed.append(a)
@@ -66,7 +58,6 @@ func _process(delta: float) -> void:
 		return
 	_wait = SEEK_EVERY
 	if not is_instance_valid(_rows):
-		# The park's Placer hangs directly under the stage root (terrain.gd reads it the same way).
 		_rows = stage_root.get_node_or_null("ParkRows") if is_instance_valid(stage_root) else null
 		if _rows == null:
 			return
@@ -75,12 +66,9 @@ func _process(delta: float) -> void:
 		set_process(false)
 		stand_on_landmark(landmark)
 	elif int(_rows.get("phase")) == PLACER_READY:
-		# Built with no landmark (a proxy-free stand-in failed): nothing to stand on.
 		set_process(false)
 
 
-# Stands the park's landmark set in the landmark node's frame: at the mean of the named GLB nodes when
-# all exist (the dam's gate leaves), else at the row's `local` point; then `offset`.
 func stand_on_landmark(landmark: Node3D) -> Node3D:
 	var spot := _landmark_place()
 	if spot.is_empty():

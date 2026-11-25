@@ -1,21 +1,5 @@
 extends Node
 
-# The launch take (world 1 unit 17): the cut from pilot select or the camp's launch gate into the dam happens under one
-# comic swipe, so the lead-in reads as a single take with no hard cut and no black frame. A play runs four phases:
-#   wind    the world it leaves moves first (the title camera lifts, or the gate fires the ball), WIND_S
-#   cover   a sand panel with amber speed lines sweeps in from the bottom left, COVER_S, a whoosh on its way
-#   hold    on the first fully covered frame on_cover runs (the run starts, the ball is placed over the dam); the panel
-#           stays, speed lines turning and FWOOSH! stamped, until ready_check() says the dam is drawn, HOLD_MIN_S to HOLD_MAX_S
-#   reveal  the panel sweeps on out through the top right, REVEAL_S, over the ball already dropping in
-# Reduced motion keeps the panel still (no lines turning, no camera move) and shortens the wind to nothing.
-# A stage launch (flow.gd, dam to flume and flume to the Slag Bowl) rides the same take with play_over_flight: the cannon
-# shot is the wind, so the player watches it go, the panel closes over the flight's last COVER_S, and on_cover waits for
-# cover_gate (the flight's end). The launch has stamped its own word, so this take stamps none, except the part a reward
-# gate just gave: its name and family glyph in its rarity colour, so the gate that vanished on the take is confirmed (PF-22).
-#
-# Only a played game runs it: bots, tests and every headless run call on_cover at once (live is false), so run timing
-# and every run-start test stay as they were. A test sets live (and steps it with advance()) to drive the phases.
-
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -32,14 +16,12 @@ const HOLD_MAX_S := 1.5
 const REVEAL_S := 0.34
 const SPIN_RATE := 0.9
 const WORD := "FWOOSH!"
-# Above the screens (5) and the HUD's achievement layer, under the boot card (128).
 const LAYER := 120
 
 signal covered
 signal finished
 
 var live := false
-# A test drives the take in a headless game: game._take_live() reads this.
 var force_live := false
 var reduced_motion := false
 var phase := IDLE
@@ -106,15 +88,10 @@ func busy() -> bool:
 	return phase != IDLE
 
 
-# Runs wind (once, at the start), then the swipe, calling on_cover under full cover. ready_check() is polled through the hold.
-# Not live, on_cover runs now and nothing shows. Returns true when the take plays.
 func play(on_cover: Callable, wind := Callable(), ready_check := Callable()) -> bool:
 	return _begin(on_cover, wind, ready_check, Callable(), 0.0 if HighdraftFx.preferred else WIND_S, false)
 
 
-# The take over a cannon shot of flight_s: the shot is the wind, so the panel waits and closes over the flight's last
-# COVER_S, and on_cover waits at full cover until cover_gate() says the flight is over. Then the same hold and reveal as
-# play. No word: the launch stamped its own. With a taken part's id, the stamp is that part's name and glyph; "" keeps it wordless.
 func play_over_flight(on_cover: Callable, cover_gate: Callable, ready_check := Callable(), flight_s := 0.0, taken_part := "") -> bool:
 	return _begin(on_cover, Callable(), ready_check, cover_gate, maxf(0.0, flight_s - COVER_S), true, taken_part)
 
@@ -144,15 +121,12 @@ func _begin(on_cover: Callable, wind: Callable, ready_check: Callable, cover_gat
 	return true
 
 
-# The part a gate gave, told after the take began (the launch can start before the gate's event reaches its owner).
 func stamp_taken(part_id: String) -> void:
 	if phase == IDLE:
 		return
 	_wordless = not _dress_word(part_id)
 
 
-# The stamp's look: FWOOSH! as ever, or the taken part's name and family glyph in its rarity colour.
-# True when it stamps a part.
 func _dress_word(taken_part: String) -> bool:
 	var look := RewardGates.taken_look(taken_part) if taken_part != "" else {}
 	_word.text = String(look["name"]) if not look.is_empty() else WORD
@@ -175,7 +149,6 @@ func _process(delta: float) -> void:
 	advance(minf(delta, 1.0 / 30.0))
 
 
-# One step of the take. A hitch counts for at most 1/30 s, so a slow frame never skips the cover.
 func advance(delta: float) -> void:
 	if phase == IDLE:
 		return
@@ -229,7 +202,6 @@ func _end() -> void:
 	finished.emit()
 
 
-# The word stamps in at full cover and is gone before the panel starts to leave.
 func _set_progress(value: float) -> void:
 	_material.set_shader_parameter("progress", value)
 	var stamp := clampf((value - 0.7) / 0.3, 0.0, 1.0) * clampf((1.25 - value) / 0.15, 0.0, 1.0)

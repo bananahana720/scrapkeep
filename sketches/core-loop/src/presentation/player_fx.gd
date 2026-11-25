@@ -12,57 +12,23 @@ const Redline := preload("res://src/combat/redline.gd")
 const ChargeHalo := preload("res://src/presentation/charge_halo.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
 
-# The player-side effects vfx.gd does not draw (PLAYER-FX.md). Everything here answers a
-# committed fact or the ball's own motion and never decides an outcome (TADR-008).
-#
-#   might      0 to 1 from heft class, parts, synergies and fusions: how grown the build
-#              is. Every layer below reads it, so a grown pilot looks mightier than a
-#              small one (Andrew, 17 Oct: action-RPG growth, Hades boon stacking).
-#   aura       one mote per part orbits the ball in its element's colour; motes flare on
-#              each hit and stretch into streamers once the build is grown
-#   boon       a hit throws a second spark burst in the build's dominant element colour
-#   words      comic sound words (KLANG, WHUMP) stamped beside big moments, never ahead of
-#              the ball (TONE-BIBLE pillar 2), never on a hostile warning or the foe they
-#              name, nor any foe in view, the marks stacked over it or the rising damage
-#              numbers (beside the ball, else its other side, else above the foe's marks,
-#              else unsaid); an ordinary hit says only BWAP when it lands on the beat (PF-26)
-#   overdrive  past SOFT_CAP_MPS the ball burns: white-hot rim, flame flecks and a
-#              hanging ember trail, so "my contact hurts now" reads at a glance
-#   carve      grinding sparks while the ball rides banked ground at speed
-#   column     a rising brass column for a heft class up or a fusion
-#   frame      a 3-frame ink focus-line impact frame on the biggest hits; edge band only,
-#              so the centre stays clear, and it skips every wedge and wash piece that
-#              would cross a hostile warning's screen rect (enemy warnings draw on top)
-#   weapon     Sable's charge halo, tap arc and release ring (charge_halo.gd), and Rivet's muzzle
-#              flash and spent casings, read from the weapon's public cadence record and its shots
-# Colour carries the meaning: the pilot's colour is "you did this", brass is growth,
-# the heat ramp is overdrive, element colours are the build.
 
-# Andrew's ruling (17 Oct 07:17Z): speed past 60 m/s becomes hit damage and a blazing
-# trail. The gameplay is wave 17 machine work; this layer reads the ball's speed itself.
 const SOFT_CAP_MPS := 60.0
 const SOFT_CAP_OFF_MPS := 54.0
 const HEAT_RISE_S := 0.15
 const HEAT_FALL_S := 0.4
-# Banked ground: the contact normal's up share below this is a carve.
 const CARVE_NORMAL_Y := 0.82
 const MOTES := 12
 const MOTE_RADIUS := 1.65
-# Frost is ice blue (WAYFINDING.md section 5): uranium green means an old-works mechanism alone.
 const ELEMENT_COLORS := {"frost": Palette.ICE, "arc": Palette.ARC, "kinetic": Palette.SAND}
 const HEAT_COLOR := Color(1.0, 0.5, 0.12)
-# How much of a colour the heat takes at full heat_k: saturated orange, never white, so the
-# heat reads as colour and not as brightness.
 const HEAT_SHARE := 0.85
 const INK := Color(0.07, 0.07, 0.08)
 
-# Below every threat mark (threat_grammar PRIORITY 40, under-lines 39): enemy warnings
-# always draw on top of player effects (Andrew, 17 Oct 16:36Z).
 const RENDER_PRIORITY := -4
 
 const MIGHT_TIERS := ["small", "rising", "grown", "mighty"]
 
-# Sound words. size is metres of cap height at might 0; a word grows to 1.5x at might 1.
 const WORDS := {
 	"smash": {"text": "KLANG", "size": 0.9},
 	"slam": {"text": "WHUMP", "size": 0.9},
@@ -80,32 +46,19 @@ const WORDS := {
 	"beat": {"text": "BWAP", "size": 0.64},
 	"redline": {"text": "KA-BLAM", "size": 1.2},
 }
-# An on-beat hit's word is this much bigger (Andrew, Q10 "Sound only"): the hit's own word
-# when it has one, else BWAP over the on-beat clap.
 const ONBEAT_GROW := 1.4
-# A read word's size (read_word: DENT, ZZAP!), on the same screen-share scale; it is the foe's,
-# so the build's might never grows it.
 const READ_SIZE := 0.8
-# Where a foe's marks stack over its feet (stack_rect): the interrupted star at 2.4 m, the class
-# icon at 3.1 m and machine_fx's stagger word at 3.2 m, with room for that word's height (about
-# 1.1 m) and half its width.
 const STACK_LOW := 1.8
 const STACK_TOP := 3.8
 const STACK_HALF := 1.8
 const WORD_FONT_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
-# Word size is screen height share: "size" 1.0 is WORD_SCREEN of the screen's height,
-# whatever the distance, so a word near the camera never swallows the ball.
 const WORD_SCREEN := 0.075
-# Words stay inside this share of the screen from its centre (the HUD lives outside it).
 const WORD_SAFE := Vector2(0.78, 0.7)
-# Ram launches and bowling racks, lined up with the Knockback thread (17 Oct): a ram at
-# blazing speed throws 23 to 34 m/s; a killed body bowling on fires enemy_pinned per pin.
 const LAUNCH_KINDS := ["ram", "slam"]
 const CONTACT_KINDS := ["ram", "slam", "stomp"]
 const STRIKE_PINS := 3
 const STRIKE_WINDOW_S := 0.6
 
-# Each pilot's own voice on the shared moments (TONE-BIBLE, the cast).
 const PILOT_WORDS := {
 	"pylon_engineer": {"launch": "ZWOOSH"},
 	"runner_gunner": {"smash": "PING"},
@@ -118,34 +71,15 @@ const WORD_POOL := 4
 const WORDS_ALIVE := 2
 const WORD_GAP_S := 0.35
 const WORD_REPEAT_S := 1.2
-# BWAP rides an ordinary hit that lands on the beat, the commonest hit in a fight, so it
-# repeats far less often than a big moment's word (PF-26: the w37 film's readers said the
-# hit words cover the fight).
 const BEAT_REPEAT_S := 4.0
-# A word keeps this far, in px, off any hostile warning, any foe in view with its marks, and any
-# rising damage number.
-# 24 covers the word's ink outline and its tilt at the ends, which _word_rect leaves out.
 const WORD_WARNING_GAP := 24.0
-# A foe's origin is at most this far (m) from any part of its drawn body (Brindle's hull is 14 m long and
-# his cranes stand 7.5 m up), so a foe whose origin is farther than this behind the camera plane or off
-# the screen's edge has none of its body in view and its meshes are not walked.
 const FOE_REACH_M := 25.0
-# A foe whose column is under this many px on its longer side is not avoided: it is no larger than the
-# gap a word already keeps (WORD_WARNING_GAP), so it cannot hide a word, and a far crowd stays cheap.
 const FOE_MIN_PX := 24.0
-# The owners of a foe's marks (status_marks.gd, machine_fx.gd) join this group and answer marked(foe).
-# Beside-the-ball spots, as shares of the view's half-height at the ball: out to either side, and then
-# down, so the search stays near the ball and low in the view, away from a foe's marks above it.
 const SPOT_BESIDE := 0.32
 const SPOT_DROP := 0.22
 const MARKS_GROUP := "foe_marks"
-# Whatever draws something a word must not cover joins KEEP_GROUP and answers keep_clear_rects()
-# (viewport pixels): the HUD, the flourish player, the screens, a reward gate. player_fx reads the
-# group and never names a member. Every stamper of candy words asks this node (ROOM_GROUP) through
-# spot_free() and candy_room(), so one module owns what a word keeps off.
 const KEEP_GROUP := "word_keep_clear"
 const ROOM_GROUP := "word_room"
-# Rect-versus-rect tests made by word placement (a count for the notes and the cost check).
 static var rect_tests := 0
 
 
@@ -154,17 +88,12 @@ static func reset_for_tests() -> void:
 const WORD_LIFE := 0.6
 const WORD_STAMP_S := 0.1
 const WORD_EXIT_S := 0.2
-# Smash speed that earns KLANG and the impact frame: lower as the build grows.
 const SMASH_WORD_MPS := [22.0, 12.0]
 const SMASH_FRAME_MPS := [32.0, 18.0]
-# An impact frame holds for rendered frames, not seconds: 3 frames is 50 ms at 60 fps.
 const FRAME_FRAMES := 3
 const FRAME_GAP_S := 0.6
-# A warning's box is clipped this far (m) past the camera's near plane, so every crossing
-# point is in front of the lens and projects.
 const NEAR_EPSILON := 0.01
 
-# GPU particle ceilings: pool x max, pinned by player_fx_test.
 const FLECKS := 96
 const EMBERS := 64
 const CARVE := 64
@@ -178,15 +107,11 @@ var player
 var camera
 var vfx
 var root: Node3D
-# The words' own parent: only they hide while the tree is paused, not the aura, coil or sparks.
 var _word_root: Node3D
 var reduced_motion := false
-# Facts drawn, by layer, for the tests and the notes.
 var spawned := {}
 
 var might := 0.0
-# Staged captures only (tools/player_fx_capture.gd): "velocity", "normal" and "grounded"
-# stand in for the ball's state, so a frozen ball can be posed blazing or carving.
 var pose := {}
 var overdrive := false
 var heat := 0.0
@@ -220,8 +145,6 @@ var _last_boon := -1.0e9
 var _frame: Control
 var _last_frame := -1.0e9
 var _kill_times: Array = []
-# Might is recounted this often too, so a growth path with no fact of its own (a tree pick,
-# start mass, a restored snapshot) still shows.
 const MIGHT_REFRESH_S := 0.25
 var _might_wait := 0.0
 var _pin_times: Array = []
@@ -279,31 +202,15 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 	_wire()
 
 
-# --- Dunk charge --------------------------------------------------------------------------
-# While the ball holds a dunk charge (dunk.gd), a coil glows on the collar's rear arc in the
-# pilot's class colour from the charge record, never mint for all (DECISIONS pilot call d;
-# ROADMAP Effects row: a coil collar glow with a ring or pip shape, no chevron). The arc rides
-# level at the fairlead's radius, behind the line of travel so the chase camera sees it, and
-# holds its last bearing when the ball is near rest. DUNK_PIPS studs on top of it burn in the
-# class colour and go dark one by one as the window runs down, and the coil pulses faster near
-# the end. The sound reads the same record (audio.gd), and the coil clears on spend and on expiry
-# because both clear the record.
-# Sized for play distance (3060 still, #521: the ball is about 60 px tall there, so a 0.07 m
-# tube was 2 px and pips 3 and 1 looked the same): the tube is about 5 px, a dark ink rim
-# (an inverted hull) parts it from the cage, and it is emissive in the full class colour, so it
-# blooms under Forward+ glow instead of washing toward white.
 const DUNK_RADIUS := 1.06
 const DUNK_ARC := deg_to_rad(140.0)
 const DUNK_TUBE := 0.16
 const DUNK_INK := 0.045
 const DUNK_PIPS := 3
 const DUNK_PIP_RADIUS := 0.21
-# Emission past about 1.5 clips every channel and burns the class colour to white; a dark
-# base keeps the hue at the top of the pulse.
 const DUNK_EMISSION := 1.1
 const DUNK_PIP_EMISSION := 1.5
 const DUNK_BASE := 0.35
-# Below this planar speed the arc keeps its bearing, so it never spins at rest.
 const DUNK_HOLD_SPEED := 1.5
 
 var _dunk_coil: StandardMaterial3D
@@ -344,7 +251,6 @@ func _build_dunk_glow() -> void:
 		var mat := _dunk_emissive()
 		pip.material_override = mat
 		pip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		# Studs riding on top of the coil, so they stand clear of the cage behind them.
 		pip.position = _dunk_arc_point(_dunk_pip_angle(i), DUNK_RADIUS + DUNK_TUBE * 0.5) + Vector3.UP * (DUNK_TUBE + DUNK_PIP_RADIUS * 0.4)
 		var ink := MeshInstance3D.new()
 		ink.name = "Ink"
@@ -364,7 +270,6 @@ func _dunk_emissive() -> StandardMaterial3D:
 	return mat
 
 
-# The ink rim: the back faces of a slightly fatter shell, so only its outline shows.
 func _dunk_ink() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -374,17 +279,14 @@ func _dunk_ink() -> StandardMaterial3D:
 	return mat
 
 
-# The pips sit evenly inside the arc.
 static func _dunk_pip_angle(i: int) -> float:
 	return DUNK_ARC * ((float(i) + 0.5) / float(DUNK_PIPS) - 0.5)
 
 
-# A point on the level arc at `angle` from its middle, which faces +Z (the rear).
 static func _dunk_arc_point(angle: float, radius: float) -> Vector3:
 	return Vector3(sin(angle) * radius, 0.0, cos(angle) * radius)
 
 
-# A tube of radius `tube` swept along the rear arc (outward normals), built once.
 static func _dunk_arc_mesh(material: Material, tube: float) -> ArrayMesh:
 	const SEGMENTS := 24
 	const SIDES := 8
@@ -412,7 +314,6 @@ func dunk_glow_shown() -> bool:
 	return _dunk_glow != null and _dunk_glow.visible
 
 
-# How many of the pips burn: all of them at the store, none at the window's end.
 func dunk_pips_lit() -> int:
 	return _dunk_pip_lit.count(true) if dunk_glow_shown() else 0
 
@@ -437,7 +338,6 @@ func _draw_dunk_glow() -> void:
 	_dunk_coil.albedo_color = colour * Color(DUNK_BASE, DUNK_BASE, DUNK_BASE)
 	_dunk_coil.emission = colour
 	_dunk_coil.emission_energy_multiplier = FlashGuard.spike(DUNK_EMISSION, DUNK_EMISSION * (1.0 + 0.6 * pulse))
-	# A spent pip goes to ink, so 3 against 1 is a count of lit studs, not of shapes.
 	var lit := ceili(share * DUNK_PIPS)
 	for i in _dunk_pips.size():
 		var burning := i < lit
@@ -451,8 +351,6 @@ func _draw_dunk_glow() -> void:
 	_dunk_glow.global_transform = Transform3D(Basis(Vector3.UP, _dunk_yaw), player.shown_position())
 	_dunk_glow.visible = true
 
-
-# --- Might -------------------------------------------------------------------------------
 
 static func might_from(heft_class: int, parts: int, synergies: int, evolutions: int, picks := 0) -> float:
 	return clampf(0.3 * clampf((heft_class - 1) / 4.0, 0.0, 1.0) + 0.3 * minf(parts, 8) / 8.0
@@ -491,9 +389,6 @@ static func part_color(part_id: String) -> Color:
 	return color
 
 
-# Colour heat (Andrew, "Presence, centre clear", 17 Oct 17:28Z): a grown build's colours
-# run hotter, toward the heat ramp, instead of its bursts growing past their size. Heat
-# starts at might 0.1 and is full from 0.7, so a "grown" build already runs mostly hot.
 static func heat_k(value: float) -> float:
 	return clampf((value - 0.1) / 0.6, 0.0, 1.0)
 
@@ -502,7 +397,6 @@ func heat_tint(color: Color) -> Color:
 	return color.lerp(HEAT_COLOR, HEAT_SHARE * heat_k(might))
 
 
-# The colour most of the build's parts share: the colour a boon spark takes.
 func dominant_color() -> Color:
 	var counts := {}
 	var best := Palette.SAND
@@ -546,7 +440,6 @@ func _wire() -> void:
 	events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
 	_wire_weapon()
 	_wire_redline()
-	# Called Shot (build/called_shot.gd): a met break holds the frame (its pad thump is juice.gd's).
 	events.world_fact.connect(func(kind: String, at: Vector3):
 		if kind == "call_met":
 			impact_frame(at, 1.0))
@@ -577,7 +470,6 @@ func _on_struck(enemy: Node3D, kind: String, _force: float) -> void:
 		word("wham", enemy.global_position + Vector3.UP * 1.8, Color.TRANSPARENT, enemy)
 		impact_frame(enemy.global_position, clampf(0.6 + 0.4 * might, 0.0, 1.0))
 	elif kind in CONTACT_KINDS and might_tier(might) >= 2 and is_instance_valid(enemy) and enemy.is_inside_tree():
-		# Grown builds earn the edge ink on every contact hit, not only the biggest.
 		impact_frame(enemy.global_position, 0.4 + 0.4 * might)
 	if _mote_colors.is_empty() or might < 0.25 or _clock - _last_boon < 0.06:
 		return
@@ -593,15 +485,10 @@ func _boon(at: Vector3) -> void:
 	var p: GPUParticles3D = _boons[_boon_next]
 	_boon_next = (_boon_next + 1) % _boons.size()
 	var pm := p.process_material as ParticleProcessMaterial
-	# A hotter build burns a brighter core: same size, more light.
 	FxLibrary.fire(p, "", "", boon_count(might), at, _glow(heat_tint(dominant_color()), 1.1 + 0.7 * heat_k(might)))
 	spawned["boon"] = spawned.get("boon", 0) + 1
 
 
-# A slam: WHUMP when it is a real one; a grown build also throws hot sparks out of the
-# crater and, from "grown", earns the impact frame. No column here: the centre stays clear
-# (Andrew, "Presence, centre clear"). The ring of the slam's real reach stays vfx.gd's,
-# true to who it hit.
 func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	if strength < 0.5:
 		return
@@ -612,8 +499,6 @@ func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 		impact_frame(at, clampf(0.5 + 0.5 * might, 0.0, 1.0))
 
 
-# Andrew's "Clearly mightier" (17 Oct 16:36Z), read as "Presence, centre clear": the boon
-# burst grows in count and heat, never in size or reach, on top of vfx.gd's fixed sparks.
 static func boon_count(value: float) -> int:
 	return int(round(BOON * clampf(value, 0.0, 1.0)))
 
@@ -625,7 +510,6 @@ func _on_smashed(enemy: Node3D, at: Vector3, speed: float) -> void:
 		impact_frame(at, clampf(0.6 + might * 0.4, 0.0, 1.0))
 
 
-# A body bowled into a rack: the third pin inside the window stamps STRIKE.
 func _on_pinned(victim: Node3D, _damage: float) -> void:
 	_pin_times.append(_clock)
 	while not _pin_times.is_empty() and _clock - float(_pin_times[0]) > STRIKE_WINDOW_S:
@@ -635,20 +519,15 @@ func _on_pinned(victim: Node3D, _damage: float) -> void:
 		impact_frame(victim.global_position, 0.8)
 
 
-# audio.gd's hit_on_beat. Deferred, so a word the same hit earns (WHAM, KLANG) stamps first
-# and grows instead of being refused by the gap.
 func on_beat_hit(enemy: Node3D, kind: String) -> void:
 	_on_beat_word.call_deferred(enemy, kind, _clock)
 
 
-# `enemy` is untyped on purpose: the foe can be freed before this deferred call runs, and Godot
-# refuses a freed instance for a typed parameter ("Cannot convert argument 1 from Object to
-# Object") before the validity check below can run.
+# Untyped: Godot rejects a freed instance for a typed parameter before is_instance_valid() runs.
 func _on_beat_word(enemy, _kind: String, at_clock: float) -> void:
 	spawned["on_beat"] = spawned.get("on_beat", 0) + 1
 	for w in _words:
 		if w["t"] < 1.0 and float(w.get("born", -1.0)) >= at_clock and w["id"] != "read":
-			# The hit's own word grows (a read word is the foe's, never the beat's), unless the bigger word would reach the fight.
 			var grown: Array[Rect2] = []
 			if camera != null and camera.cam != null:
 				grown.append(_word_rect(camera.cam, w["at"], float(w["away"]) > 0.0, float(w["width_px"]),
@@ -660,7 +539,6 @@ func _on_beat_word(enemy, _kind: String, at_clock: float) -> void:
 			return
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
 		return
-	# Beside the ball, not over the foe: an ordinary hit's word never covers what is being hit.
 	if word("beat", _beside_ball(), Color.TRANSPARENT, enemy):
 		_words_by_id("beat")["size"] *= ONBEAT_GROW
 
@@ -672,7 +550,6 @@ func _words_by_id(id: String) -> Dictionary:
 	return {}
 
 
-# Tally shorts the line when two or more go down together.
 func _on_killed(_kind: String, at: Vector3, _scrap: int) -> void:
 	if _pilot_id() != "tally":
 		return
@@ -706,8 +583,6 @@ func clear() -> void:
 		_casings.visible = false
 
 
-# --- Sound words -------------------------------------------------------------------------
-
 func _make_word() -> Dictionary:
 	var label := word_label(_font)
 	label.visible = false
@@ -715,7 +590,6 @@ func _make_word() -> Dictionary:
 	return {"node": label, "t": 1.0, "id": "", "tilt": 0.0, "size": 1.0, "at": Vector3.ZERO}
 
 
-# A pooled word's label, as every word wears it (BakeWarm stands one per read word at stage entry).
 static func word_label(font: Font = null) -> Label3D:
 	var label := Label3D.new()
 	label.name = "SoundWord"
@@ -728,8 +602,6 @@ static func word_label(font: Font = null) -> Label3D:
 	label.outline_modulate = INK
 	label.pixel_size = 0.01
 	label.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# Words sit beside the ball, never in its lane, so a hill may not swallow them; the
-	# threat marks still draw after them.
 	label.no_depth_test = true
 	label.render_priority = RENDER_PRIORITY
 	label.outline_render_priority = RENDER_PRIORITY - 1
@@ -747,7 +619,6 @@ func word_text(id: String) -> String:
 	return String(own.get(id, WORDS[id]["text"]))
 
 
-# The sound words showing; a read word (read_word) stands outside their budget.
 func words_alive() -> int:
 	var n := 0
 	for w in _words:
@@ -756,9 +627,6 @@ func words_alive() -> int:
 	return n
 
 
-# Whether another candy sound word may show: the budget WORDS_ALIVE counts this module's words and
-# the ones machine_fx has up (its candy_alive()), so the two stampers share it. Reads and tells
-# stand outside it.
 func candy_room() -> bool:
 	var n := words_alive()
 	if not is_instance_valid(_machine) and is_inside_tree():
@@ -771,9 +639,6 @@ func candy_room() -> bool:
 	return n < WORDS_ALIVE
 
 
-# Whether a word covering `r` (viewport pixels) would stand clear of everything that joined KEEP_GROUP.
-# The one test the other stampers ask; it holds no foe or warning, which a machine word is stamped on
-# by design.
 func spot_free(r: Rect2) -> bool:
 	for k in _keep_rects():
 		rect_tests += 1
@@ -786,13 +651,11 @@ var _machine = null
 var _keep_frame := -1
 
 
-# A member's rects changed (a card, caption, stamp or inset started or ended): read the list again.
 func keep_clear_changed() -> void:
 	_keep_frame = -1
 var _keep_cache: Array[Rect2] = []
 
 
-# KEEP_GROUP's rects, grown by WORD_WARNING_GAP, read once a frame.
 func _keep_rects() -> Array[Rect2]:
 	var frame := Engine.get_process_frames()
 	if frame == _keep_frame:
@@ -810,10 +673,7 @@ func _keep_rects() -> Array[Rect2]:
 	return _keep_cache
 
 
-# Stamps a sound word at `at`, pushed off the line ahead of the ball. Refused inside the
-# gap since the last word, inside a word's own repeat window, with two alive, or in the
-# densest band, where only the reads may speak.
-# `foe` is untyped: a freed foe cannot pass a typed parameter (see _on_beat_word).
+# Untyped: Godot rejects a freed instance for a typed parameter before validity checks run.
 func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bool:
 	if not WORDS.has(id) or root == null or not root.is_inside_tree():
 		return false
@@ -827,10 +687,6 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 	var text := word_text(id)
 	var width_px := _text_px(label, text)
 	var size := float(WORDS[id]["size"]) * (1.0 + 0.8 * might)
-	# The word grows away from the ball, so a long one never covers it, and never lands on a
-	# hostile warning, on any foe in view, on the marks stacked over a foe or on a rising damage
-	# number: it takes the ball's other side, or the space just above the foe's marks, or stays
-	# unsaid (PF-26).
 	var placed := clear_of_lane(at)
 	var right_of_ball := true
 	if camera != null and camera.cam != null:
@@ -847,8 +703,6 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 			kinds.append("keep")
 		var bodies := foe_rects(foe, cam)
 		if not bodies.is_empty():
-			# The named foe's own body and, while it shows a mark, the marks over it. A foe outside the
-			# "enemy" group (a plant, a test box) is covered here too.
 			var whole := bodies[0]
 			for r in bodies:
 				avoid.append(r.grow(WORD_WARNING_GAP))
@@ -862,13 +716,7 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 			var tall := size * grow * WORD_SCREEN * cam.get_viewport().get_visible_rect().size.y
 			var p := cam.unproject_position(placed)
 			var depth := -(cam.global_transform.affine_inverse() * placed).z
-			# A pixel past the gap: placed flush on the grown body's edge, float rounding put it on the foe one run in four.
 			spots.append([cam.project_position(Vector2(p.x, whole.position.y - WORD_WARNING_GAP - tall * 0.6 - 1.0), maxf(depth, cam.near + 0.1)), right_of_ball])
-		# Then a short fixed search beside the ball, so a fight that covers the asked spot still leaves
-		# somewhere to stand: at the ball's height on its two sides, then below it, then above it, then two
-		# drops below and above (a caption or a close-up panel beside the ball covers the near ones). The side the
-		# word was asked on goes first. Each spot is pushed out of the lane ahead of the ball like the
-		# asked one, and the word runs away from the ball (TONE-BIBLE pillar 2).
 		var ball: Vector3 = player.shown_position()
 		var half := _half_height(cam, ball)
 		var first_side := 1.0 if right_of_ball else -1.0
@@ -890,12 +738,6 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 	return true
 
 
-# A read word (DENT, ZZAP!): an armour class answering its first hit (armour_marks.gd). A read
-# teaches, so it speaks past the sound words' budget (the gap, the repeat window, the densest
-# band; it takes only a free slot and leaves the gap alone), but it keeps their placement: screen-share size, the safe area, the warning
-# gap, render priority, and the foe's body kept clear. It stands beside the foe it names at
-# mid-body, either side, else above the column of marks stacked on it; false when every spot is
-# covered, every slot is showing or the foe is out of view, so the caller asks again next hit.
 func read_word(text: String, foe: Node3D, color: Color) -> bool:
 	if text == "" or root == null or not root.is_inside_tree() or camera == null or camera.cam == null:
 		return false
@@ -910,7 +752,6 @@ func read_word(text: String, foe: Node3D, color: Color) -> bool:
 	var width_px := _text_px(label, text)
 	var tall := READ_SIZE * WORD_SCREEN * cam.get_viewport().get_visible_rect().size.y
 	var wide := width_px * label.pixel_size * tall / 0.7
-	# A pixel past the gap, as word() does: flush on the grown body's edge, rounding can touch it.
 	var gap := WORD_WARNING_GAP + 1.0
 	var depth := maxf(-(cam.global_transform.affine_inverse() * foe.global_position).z, cam.near + 0.1)
 	var stack := stack_rect(foe, cam)
@@ -932,9 +773,6 @@ func read_word(text: String, foe: Node3D, color: Color) -> bool:
 	return true
 
 
-# The screen rect of the marks that stack over a foe and are not part of its body: the
-# interrupted star, the class icon and the stagger word, STACK_LOW to STACK_TOP over its feet and
-# STACK_HALF either side (the stagger word is the widest). Empty when it is behind the camera.
 static func stack_rect(foe: Node3D, cam: Camera3D) -> Rect2:
 	var low := foe.global_position + Vector3.UP * STACK_LOW
 	var high := foe.global_position + Vector3.UP * STACK_TOP
@@ -947,9 +785,6 @@ static func stack_rect(foe: Node3D, cam: Camera3D) -> Rect2:
 	return span
 
 
-# Whether `foe` is showing a mark now (the interrupted star, the stagger word), asked of the owners
-# of those marks: each joins MARKS_GROUP and answers marked(foe). The class icon is a mesh under
-# the foe, so its body rect already holds it.
 func _marked(foe) -> bool:
 	if foe == null or not is_instance_valid(foe) or get_tree() == null:
 		return false
@@ -959,7 +794,6 @@ func _marked(foe) -> bool:
 	return false
 
 
-# A pooled word that is not showing, else the first of the pool.
 func _free_slot() -> Dictionary:
 	for w in _words:
 		if w["t"] >= 1.0:
@@ -972,9 +806,6 @@ static func _text_px(label: Label3D, text: String) -> float:
 	return font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x
 
 
-# Which of `spots` ([at, runs right]) a word takes: the first whose rect stands inside the safe
-# area and covers none of `avoid`, else -1. Inside the safe area already, so the draw's pull never
-# drags it back onto what it avoided.
 static func _pick_spot(cam: Camera3D, spots: Array, width_px: float, size: float, pixel_size: float, avoid: Array[Rect2]) -> int:
 	var view := cam.get_viewport().get_visible_rect().size
 	var safe := Rect2(view * 0.5 * (Vector2.ONE - WORD_SAFE), view * WORD_SAFE)
@@ -1002,8 +833,6 @@ func _stamp_word(slot: Dictionary, id: String, text: String, at: Vector3, right:
 	spawned["word_" + id] = spawned.get("word_" + id, 0) + 1
 
 
-# The hostile warnings' screen rects, grown by WORD_WARNING_GAP, read once a frame: a ram
-# through a pack asks for a word per foe.
 func _warnings() -> Array[Rect2]:
 	var frame := Engine.get_process_frames()
 	if frame != _warn_frame:
@@ -1012,21 +841,6 @@ func _warnings() -> Array[Rect2]:
 	return _warn_rects
 
 
-# Everything a word keeps off, each rect grown by WORD_WARNING_GAP and tagged with a kind (_fight_kind,
-# so a held word can say why): the hostile warnings ("warning"), each foe on screen ("foe"), the
-# marks over a foe while it shows one ("marks", asked of the owners through MARKS_GROUP), and the
-# paths of the damage numbers rising now ("number"). A damage number stays where the hit landed
-# while its foe moves, so the numbers are read from the HUD layer, not guessed from the foe. A foe
-# answers for its own silhouette when it has screen_bound_boxes() (Brindle's hull piece: the ship's
-# oriented boxes); else its meshes are walked. Every foe rect is cut to the viewport (_view_rect), so
-# a box that passes beside or behind the camera adds nothing instead of a screen-sized rect.
-# Which foes count: a cheap origin test rejects a foe more than FOE_REACH_M behind the camera plane
-# or farther off the screen's edge than that reach projects to, the box clip decides what is on
-# screen, and a foe whose body is under FOE_MIN_PX on its longer side (with no mark) is skipped, as
-# it is a dot no word can hide behind.
-# Cost: read once per drawn frame, and only when a word asks (a stamped word, a held word, an
-# on-beat grow). A refresh does one mesh walk or one box projection per part per foe that passes the
-# origin test. spawned["fight_refresh"] counts refreshes.
 func _fight_rects() -> Array[Rect2]:
 	var frame := Engine.get_process_frames()
 	if frame == _fight_frame:
@@ -1077,8 +891,6 @@ func _add_avoid(r: Rect2, kind: String) -> void:
 	_fight_kind.append(kind)
 
 
-# Why the asked spot (the first) of a held word was refused: "safe" when it stands outside the safe
-# area, else the kind of the first avoided rect it touches ("warning", "foe", "marks", "number").
 static func _held_by(cam: Camera3D, spot: Array, width_px: float, size: float, pixel_size: float, avoid: Array[Rect2], kinds: Array) -> String:
 	var view := cam.get_viewport().get_visible_rect().size
 	var safe := Rect2(view * 0.5 * (Vector2.ONE - WORD_SAFE), view * WORD_SAFE)
@@ -1091,8 +903,6 @@ static func _held_by(cam: Camera3D, spot: Array, width_px: float, size: float, p
 	return "other"
 
 
-# Which spot a word takes: the first of `spots` (its own, the ball's other side, above the
-# foe) that covers none of `avoid`, or -1 when every one does.
 static func word_spot(spots: Array[Rect2], avoid: Array[Rect2]) -> int:
 	for i in spots.size():
 		if not spots[i].has_area():
@@ -1108,9 +918,6 @@ static func word_spot(spots: Array[Rect2], avoid: Array[Rect2]) -> int:
 	return -1
 
 
-# The screen rects of `foe`'s drawn body, each cut to the viewport: one per box when the foe reports
-# its own screen_bound_boxes() (Brindle's ship: oriented boxes in its own frame, [Transform3D, AABB]
-# pairs), else one for its visible meshes. Empty without any of it on screen.
 static func foe_rects(foe, cam: Camera3D) -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	if foe == null or not is_instance_valid(foe) or not foe.is_inside_tree() or cam == null:
@@ -1131,7 +938,6 @@ static func foe_rects(foe, cam: Camera3D) -> Array[Rect2]:
 	return out
 
 
-# The one rect that holds every rect of foe_rects (the named foe's body, a test's reading).
 static func foe_rect(foe, cam: Camera3D) -> Rect2:
 	var rects := foe_rects(foe, cam)
 	if rects.is_empty():
@@ -1142,9 +948,6 @@ static func foe_rect(foe, cam: Camera3D) -> Rect2:
 	return out
 
 
-# The screen rect a word of `width_px` at `size` covers when its near end sits at `at` and it
-# runs away from the ball (_draw_word's sizing, before the safe-area pull and the stamp's
-# overshoot).
 static func _word_rect(cam: Camera3D, at: Vector3, right: bool, width_px: float, size: float, pixel_size: float) -> Rect2:
 	if cam.is_position_behind(at):
 		return Rect2()
@@ -1174,13 +977,11 @@ func _beside_ball() -> Vector3:
 	return ball + cam.global_basis.y * half * 0.3 + cam.global_basis.x * half * 0.22 * _side
 
 
-# Half the view's height in metres at `at`'s depth.
 static func _half_height(cam: Camera3D, at: Vector3) -> float:
 	var depth := maxf(0.5, -(cam.global_transform.affine_inverse() * at).z)
 	return depth * tan(deg_to_rad(cam.fov) * 0.5)
 
 
-# Pulls a point inside the safe share of the screen, at the same depth.
 static func _in_safe_area(cam: Camera3D, at: Vector3, margin := Vector2.ZERO) -> Vector3:
 	if cam.is_position_behind(at):
 		return at
@@ -1195,8 +996,6 @@ static func _in_safe_area(cam: Camera3D, at: Vector3, margin := Vector2.ZERO) ->
 	return cam.project_position(clamped, depth)
 
 
-# A word never sits in the lane ahead of the ball: anything within LANE_M of the line the
-# ball travels, in front of it, is pushed sideways out of the lane.
 const LANE_M := 2.5
 const LANE_AHEAD_M := 30.0
 
@@ -1230,7 +1029,6 @@ func _draw_word(slot: Dictionary) -> void:
 	var slide := 0.0
 	var alpha := 1.0
 	if not reduced_motion:
-		# Ink-stamp in with overshoot, hold, then slide off on a diagonal (TONE-BIBLE UI motion).
 		if t < WORD_STAMP_S * 0.5:
 			scale = lerpf(1.7, 0.9, t / (WORD_STAMP_S * 0.5))
 		elif t < WORD_STAMP_S:
@@ -1248,22 +1046,16 @@ func _draw_word(slot: Dictionary) -> void:
 		basis = cam.global_basis
 		var half := _half_height(cam, at)
 		metres = size * WORD_SCREEN * half * 2.0
-		# The word's near end sits at the anchor and the word runs away from the ball; the
-		# whole word, not its anchor, stays inside the safe area.
 		var width_m: float = float(slot.get("width_px", 0.0)) * label.pixel_size * metres / 0.7
 		at += basis.x * float(slot.get("away", 1.0)) * width_m * 0.5
 		var px_per_m := cam.get_viewport().get_visible_rect().size.y / (2.0 * half)
 		at = _in_safe_area(cam, at, Vector2(width_m * 0.5, metres * 0.6) * px_per_m)
 		at += (basis.x + basis.y) * slide * half * 0.25
 	basis = basis * Basis(Vector3.BACK, slot["tilt"])
-	# The label's font is 96 px at 0.01 m a pixel, so ~0.7 m of cap height at scale 1.
 	label.global_transform = Transform3D(basis.scaled(Vector3.ONE * metres * scale / 0.7), at)
-	# Reduce flashes dims the coloured face, never the ink outline, so the word still reads.
 	label.modulate.a = FlashGuard.info(alpha)
 	label.outline_modulate = Color(INK.r, INK.g, INK.b, alpha)
 
-
-# --- Impact frame ------------------------------------------------------------------------
 
 func impact_frame(at: Vector3, strength: float) -> bool:
 	if reduced_motion or _frame == null or _clock - _last_frame < FRAME_GAP_S:
@@ -1276,20 +1068,6 @@ func impact_frame(at: Vector3, strength: float) -> bool:
 	return true
 
 
-# The screen rect of every hostile warning, grown by `margin` px: the warning's world box,
-# clipped at the camera's near plane and projected through `cam` (see _project_box); a warning
-# with every corner behind is skipped. The box is the node's own screen_bound_box() when it
-# has one and it is not empty: Telegraph and Hazard cut one at commit from their committed
-# geometry (WarningBound), conservative over everything their painter draws at any progress,
-# so a refresh projects 8 corners per warning and a telegraph walks no meshes; a hostile hazard
-# stepped since its last read walks its own painter's meshes once on the read (lighting L7,
-# #297). A node
-# without one, or whose box is empty (a mark carried off its commit, a finished hazard), falls
-# back to the mesh walk: its visual meshes' world boxes merged into one (see _merge_meshes).
-# `use_bounds` false forces the walk, for the bench and the tests. Reusable by any 2D layer
-# that must not cover warnings. The nodes come from Threat.GROUP, which every hostile mark
-# joins (Telegraph._build for combat telegraphs, Hazard._ready for boss and world-event
-# hazards) and no neutral or owned mark does (a Silo amber ring, a Warden lift).
 static func warning_rects(tree: SceneTree, cam: Camera3D, margin: float, use_bounds := true) -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	if tree == null or cam == null:
@@ -1313,10 +1091,6 @@ static func warning_rects(tree: SceneTree, cam: Camera3D, margin: float, use_bou
 	return out
 
 
-# Grows `merged` ([box, any]) by the world box of every visible mesh under `node`. One box
-# per warning means 8 projections instead of 8 per mesh. The merged box holds every mesh's
-# box, so its screen rect is conservative: with the near-plane clip in _project_box it covers
-# the whole on-screen footprint of every mesh, and a warning stays protected.
 static func _merge_meshes(node: Node, merged: Array) -> void:
 	for child in node.get_children():
 		if child is Node3D and not child.visible:
@@ -1330,19 +1104,11 @@ static func _merge_meshes(node: Node, merged: Array) -> void:
 		_merge_meshes(child, merged)
 
 
-# Grows span (low, high) by the screen footprint of `box`: the 8 corners in front of the
-# camera, and where each of the 12 edges crosses a plane just beyond the near plane. A box
-# that crosses the near plane reaches the screen edge nearest the camera (the bottom, where
-# the frame's band draws), and the crossing points are what put that part in the rect. A
-# box with every corner behind adds nothing.
 static func _project_box(box: AABB, cam: Camera3D, span: Array) -> void:
 	for p in _box_points(Transform3D.IDENTITY, box, cam):
 		_grow_span(span, p)
 
 
-# The screen points a box stands for: its 8 corners (put through `xf` first, so a box in a body's own
-# frame stays tight when the body turns) in front of the camera, and where each of its 12 edges
-# crosses the near plane. Empty when no corner is in front.
 static func _box_points(xf: Transform3D, box: AABB, cam: Camera3D) -> PackedVector2Array:
 	var points := PackedVector2Array()
 	var forward := -cam.global_transform.basis.z
@@ -1358,11 +1124,8 @@ static func _box_points(xf: Transform3D, box: AABB, cam: Camera3D) -> PackedVect
 		if depths[c] > plane:
 			in_front += 1
 			points.append(cam.unproject_position(corner))
-	# Edges only cross the plane when some corners are in front and some are not; a box wholly
-	# in front (the common case) or wholly behind has no crossing to add.
 	if in_front == 0 or in_front == 8:
 		return points
-	# The edges join corners that differ in one bit.
 	for c in 8:
 		for bit in [1, 2, 4]:
 			var other: int = c | bit
@@ -1373,11 +1136,6 @@ static func _box_points(xf: Transform3D, box: AABB, cam: Camera3D) -> PackedVect
 	return points
 
 
-# The part of the viewport a set of screen points covers: their convex hull (the box's true
-# footprint, as the box is convex) cut to the viewport, then its bounding rect. A box that passes
-# beside or behind the camera has crossing points far off screen, so its bounding rect alone would
-# cover the whole screen with nothing of the box on it; the hull cut leaves nothing, or only the
-# part that is there. Empty when none of it is on screen.
 static func _view_rect(points: PackedVector2Array, cam: Camera3D) -> Rect2:
 	if points.is_empty():
 		return Rect2()
@@ -1403,33 +1161,16 @@ static func _grow_span(span: Array, at: Vector2) -> void:
 	span[1] = span[1].max(at)
 
 
-# Manga focus lines: ink wedges pointing at the hit from the screen edge, only in the outer
-# BAND of the screen, so the hit, the ball and every telegraph inside stay readable. The
-# frame also yields at the edge: a pixel inside a live telegraph's screen rect, grown by
-# YIELD_MARGIN_PX, is discarded by the frame's shader, because enemy warnings always draw on
-# top of player effects (Andrew, 17 Oct 16:36Z; RENDER_PRIORITY above). The frame is a 2D
-# layer that no 3D render priority can sort under, so it steps out of the way on the GPU:
-# the CPU draws every wedge and wash quad and uploads only the rects.
 class ImpactFrame:
 	extends Control
 
 	const LINES := 56
-	# Lines live only in this share of the screen's short side, measured in from the edge.
 	const BAND := 0.2
-	# A wedge's half-width in px runs 5 to 16 at full strength (before the strength scale).
 	const WEDGE_WIDTH_MIN := 5.0
 	const WEDGE_WIDTH_MAX := 16.0
-	# The room left around a warning is the widest wedge half-width, so no wedge edge sits
-	# closer to a warning than the wedge is wide.
 	const YIELD_MARGIN_PX := WEDGE_WIDTH_MAX
-	# The shader's rect array. More live warnings than this and the frame cannot promise to
-	# stay off all of them, so it draws nothing for that refresh (overflow_hides).
 	const MAX_RECTS := 64
-	# The rects arrive in the Control's local px: the Control is full-rect at the origin of a
-	# CanvasLayer with an identity transform, and Camera3D.unproject_position answers in the
-	# viewport's own px, the same space get_viewport_rect() sizes the Control in, so the
-	# canvas_items content scale applies to both alike. The varying carries the local VERTEX,
-	# not FRAGCOORD, so the window's y origin and scale do not matter.
+	# Godot FRAGCOORD varies with window origin/scale under canvas_items; varying VERTEX stays in Control px.
 	const YIELD_SHADER := """
 shader_type canvas_item;
 uniform vec4 rects[64];
@@ -1455,30 +1196,19 @@ void fragment() {
 	var _heat := 0.0
 	var _left := 0
 	var _seed := 0
-	# Answers with the live warning rects, ungrown (PlayerFx.warning_rects on the game camera
-	# with margin 0; the shader grows them); set by the owner: a bare warning_rects() call
-	# from in here is a parse error ("not found in base self"), so the outer class hands the
-	# function in.
 	var rect_source := Callable()
 	var _rects: Array[Rect2] = []
 	var _uniform_rects := PackedVector4Array()
 	var _material: ShaderMaterial
-	# Pieces drawn by the last draw, for tests; a refresh past MAX_RECTS draws none.
 	var drawn := 0
 	var overflow_hides := 0
 	var _overflowed := false
-	# What a live frame costs, for the stress capture and the tests, in microseconds summed and
-	# worst. A rect call is one refresh (the source and the uniform upload), made on every
-	# live frame; a shape call is one build and draw of the pieces, made once per fire. A
-	# frame that is not alive never refreshes or draws, so these stay put
-	# (impact_frame_cost_test).
 	var rect_calls := 0
 	var rect_usec := 0
 	var rect_usec_max := 0
 	var shape_calls := 0
 	var shape_usec := 0
 	var shape_usec_max := 0
-	# The viewport size the pieces were drawn for.
 	var _drawn_size := Vector2.ZERO
 
 	func _ready() -> void:
@@ -1487,7 +1217,6 @@ void fragment() {
 		visible = false
 		_ensure_material()
 
-	# Built once per frame, here or on the first rects, so a frame never in a tree can be fed.
 	func _ensure_material() -> void:
 		if _material != null:
 			return
@@ -1527,9 +1256,6 @@ void fragment() {
 		if _left <= 0:
 			visible = false
 		else:
-			# Warnings and the camera move while the frame lives, so the rects are sent again.
-			# The pieces depend only on what fire() set and the viewport size, so the canvas
-			# keeps its draw commands; a resized viewport redraws (checked per frame).
 			_refresh_rects()
 			if get_viewport_rect().size != _drawn_size:
 				size = get_viewport_rect().size
@@ -1543,9 +1269,6 @@ void fragment() {
 		rect_usec += cost
 		rect_usec_max = maxi(rect_usec_max, cost)
 
-	# Takes the warning rects: keeps them and writes them to the shader. More than MAX_RECTS
-	# cannot be written whole, so the frame hides itself while they overflow, and draws
-	# again (a redraw, since an overflowed fire drew nothing) once they fit.
 	func apply_rects(found: Array) -> void:
 		_ensure_material()
 		var was_overflowed := _overflowed
@@ -1567,8 +1290,6 @@ void fragment() {
 		_material.set_shader_parameter("rects", _uniform_rects)
 		_material.set_shader_parameter("rect_count", found.size())
 
-	# The shader's test in GDScript, for the tests: whether a local px point is discarded by
-	# the first `count` rects grown by `margin`. A point exactly on the grown edge stays.
 	static func _yields(point: Vector2, rects: Array, count: int, margin: float) -> bool:
 		for k in mini(count, rects.size()):
 			var r: Rect2 = rects[k]
@@ -1593,8 +1314,6 @@ void fragment() {
 		shape_usec += cost
 		shape_usec_max = maxi(shape_usec_max, cost)
 
-	# Every piece the frame is made of, in draw order: {poly, colors} for the wash and
-	# {poly, color} for a wedge.
 	func _shapes(rect: Vector2) -> Array:
 		var out := []
 		var band := minf(rect.x, rect.y) * BAND
@@ -1606,7 +1325,6 @@ void fragment() {
 		for i in int(LINES * _strength):
 			var angle := TAU * (float(i) + rng.randf() * 0.8) / float(LINES * _strength)
 			var dir := Vector2(cos(angle), sin(angle))
-			# Where the ray from the focus leaves the screen.
 			var exit := INF
 			if dir.x > 0.001:
 				exit = minf(exit, (rect.x - focus.x) / dir.x)
@@ -1623,7 +1341,6 @@ void fragment() {
 			var side := Vector2(-dir.y, dir.x) * width
 			var tip := focus + dir * inner
 			var outer := focus + dir * (exit + width * 2.0)
-			# Every third line of a hot build burns heat orange; a cold build keeps a few white.
 			var accent := i % (3 if _heat > 0.0 else 7) == 0
 			var ink := INK
 			ink.a = 0.75 + 0.2 * _heat
@@ -1633,9 +1350,6 @@ void fragment() {
 			out.append({"poly": PackedVector2Array([tip, outer + side, outer - side]), "color": ink})
 		return out
 
-	# A hot build's edge wash: the screen edge dips dark, glows heat orange halfway in and
-	# fades to nothing before the middle, so the build's heat and weight read on every grown
-	# hit and the centre stays clear.
 	func _wash_shapes(out: Array, rect: Vector2, band: float) -> void:
 		var dark := Color(INK.r, INK.g, INK.b, 0.8 * _heat)
 		var hot := Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, FlashGuard.alpha(0.4 * _heat))
@@ -1643,8 +1357,6 @@ void fragment() {
 		_ring_shapes(out, rect, 0.0, band * 0.6, dark, hot)
 		_ring_shapes(out, rect, band * 0.6, band, hot, clear)
 
-	# A screen-edge ring from `outer` to `inner` pixels in, shaded from one colour to the other.
-	# Each side is one trapezoid keeping the side's four vertex colours.
 	func _ring_shapes(out: Array, rect: Vector2, outer: float, inner: float, from: Color, to: Color) -> void:
 		var o := [Vector2(outer, outer), Vector2(rect.x - outer, outer), rect - Vector2(outer, outer), Vector2(outer, rect.y - outer)]
 		var i := [Vector2(inner, inner), Vector2(rect.x - inner, inner), rect - Vector2(inner, inner), Vector2(inner, rect.y - inner)]
@@ -1653,8 +1365,6 @@ void fragment() {
 			var n := (k + 1) % 4
 			out.append({"poly": PackedVector2Array([o[k], o[n], i[n], i[k]]), "colors": colors})
 
-
-# --- Aura --------------------------------------------------------------------------------
 
 func _build_aura() -> void:
 	var mesh := SphereMesh.new()
@@ -1665,8 +1375,6 @@ func _build_aura() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.vertex_color_use_as_albedo = true
-	# The colours written into the mesh are the palette's sRGB values: the switch makes the PC's renderer read them so,
-	# not as linear light, which washed the motes out (tools/vertex_colour_probe.gd --marks=1, W46-13).
 	mat.vertex_color_is_srgb = true
 	mesh.material = mat
 	var mm := MultiMesh.new()
@@ -1698,7 +1406,6 @@ func _draw_aura(delta: float) -> void:
 	_aura.global_transform = Transform3D.IDENTITY
 	var v: Vector3 = _velocity()
 	var speed := v.length()
-	# Grown builds trail their motes as streamers along the ball's motion.
 	var stretch := 1.0 + (clampf(speed / 30.0, 0.0, 1.0) * 3.0 if might_tier(might) >= 2 else 0.0)
 	var along := v / speed if speed > 0.5 else Vector3.FORWARD
 	var tilt := Basis(Vector3.RIGHT, 0.45)
@@ -1709,7 +1416,6 @@ func _draw_aura(delta: float) -> void:
 			_mote_arrive[i] = arrive
 		var angle := _clock * (1.6 + 0.8 * might) + TAU * float(i) / float(n)
 		var ring := tilt * Vector3(cos(angle), 0.0, sin(angle)) * MOTE_RADIUS * (1.0 + 0.15 * might)
-		# A new part drops in from above and settles into the ring.
 		var at := centre + ring + Vector3.UP * (1.0 - ease(arrive, 0.4)) * 4.0
 		var size := (0.8 + 0.5 * might) * (1.0 + 0.9 * _mote_flare)
 		var basis := Basis.looking_at(along, Vector3.UP if absf(along.y) < 0.95 else Vector3.RIGHT)
@@ -1718,8 +1424,6 @@ func _draw_aura(delta: float) -> void:
 		var c: Color = heat_tint(_mote_colors[i])
 		mm.set_instance_color(i, c.lerp(Color.WHITE, FlashGuard.whiten(0.6 * _mote_flare)))
 
-
-# --- Overdrive ---------------------------------------------------------------------------
 
 const _RIM_SHADER := """
 shader_type spatial;
@@ -1756,8 +1460,6 @@ func _build_rim() -> void:
 	root.add_child(_rim)
 
 
-# One step of the overdrive switch: on at SOFT_CAP_MPS, off under SOFT_CAP_OFF_MPS, so a
-# speed on the line never flickers it. Returns true on the frame it ignites.
 func overdrive_step(speed: float, delta: float) -> bool:
 	var ignited := false
 	if not overdrive and speed >= SOFT_CAP_MPS:
@@ -1782,21 +1484,15 @@ func _draw_overdrive(delta: float) -> void:
 		if vfx != null:
 			vfx.glyph("overdrive", back, 0.8, 4.0, 0.3, v, "ring", HEAT_COLOR)
 	var on := heat > 0.01
-	# Heat on the shell (redline.gd) lights the same rim before overdrive does: mint at a quarter,
-	# amber when hot, white at redline. Overdrive's own heat wins when it is the brighter.
 	var shell := shell_heat() if _shell_band > 0 else 0.0
 	var lit := maxf(heat, shell)
 	_rim.visible = lit > 0.01
 	var ball: Vector3 = player.shown_position()
 	if lit > 0.01:
 		_rim.global_position = ball
-		# A hot shell keeps its own colour over overdrive's: the risk reads first.
 		var red = player.get("redline")
 		var shell_wins: bool = shell > 0.0 and (heat < shell or red.hot())
 		var rim: Color = shell_color(red) if shell_wins else OVERDRIVE_RIM
-		# The kettle's twin: over the last Redline.KETTLE_S of the fuse the rim beats to full heat
-		# in the hazard colour, in step with the whistle (redline.gd kettle_pulse).
-		# The beat runs 4 to 10 Hz, so Reduce flashes holds it steady, as FlashGuard.blink does.
 		var kettle := 0.0
 		if red != null:
 			kettle = (1.0 if red.kettle_live() else 0.0) if FlashGuard.on else red.kettle_pulse()
@@ -1817,19 +1513,13 @@ func _draw_overdrive(delta: float) -> void:
 		_embers.emitting = on
 
 
-# --- Heat on the shell ------------------------------------------------------------------
-# The shell's heat (redline.gd) carries itself in colour, motion, sound and the pad, never a bar
-# (ruling cx): the rim warms mint, amber, white; a blast stamps its word and draws its true ring;
-# the pad (juice.gd heat_* rumble rows) buzzes while the shell waits at redline and thumps on the blast.
 const OVERDRIVE_RIM := Color(1.0, 0.62, 0.24)
 const SHELL_COLORS := [Color(0.45, 1.0, 0.75), Color(1.0, 0.72, 0.25), Color(1.0, 0.98, 0.92)]
-# The rim's brightness at full heat, under overdrive's 1.0 so the soft cap still reads above it.
 const SHELL_RIM := 0.7
 const BLAST_RING := Color(1.0, 0.97, 0.9)
 var _shell_band := 0
 
 
-# 0 to SHELL_RIM, how bright the rim burns for the shell's heat; 0 when the flag is not on.
 func shell_heat() -> float:
 	var redline = player.get("redline")
 	return SHELL_RIM * redline.warmth() if redline != null else 0.0
@@ -1858,8 +1548,6 @@ func _on_redline_blast(at: Vector3, _force: float) -> void:
 		vfx.glyph("redline_blast", at + Vector3.UP * 0.3, 1.0, Redline.BLAST_RADIUS, 0.35, Vector3.UP, "ring", BLAST_RING)
 
 
-# --- Carve sparks ------------------------------------------------------------------------
-
 func _velocity() -> Vector3:
 	return pose.get("velocity", player.state.velocity)
 
@@ -1880,7 +1568,6 @@ func carving() -> bool:
 func _draw_carve() -> void:
 	var v: Vector3 = _velocity()
 	var speed := v.length()
-	# A carve needs a heading: a ball at rest on a steep face (the pose's speed tier can lag a stop) has none.
 	var on := carving() and speed > 0.01
 	if on:
 		var back: Vector3 = -v / speed
@@ -1899,8 +1586,6 @@ func _draw_carve() -> void:
 			spawned["carve"] = spawned.get("carve", 0) + 1
 
 
-# --- Column ------------------------------------------------------------------------------
-
 func column(tint: Color, at := Vector3.INF) -> void:
 	var p: GPUParticles3D = _columns[_column_next]
 	_column_next = (_column_next + 1) % _columns.size()
@@ -1914,10 +1599,6 @@ func column(tint: Color, at := Vector3.INF) -> void:
 	spawned["column"] = spawned.get("column", 0) + 1
 
 
-# --- Emitters ----------------------------------------------------------------------------
-
-# The shape gives the look (FxLibrary._LOOKS): a long box is a streak along its motion, a ball
-# or a cube a soft glow.
 func _emitter(pm: ParticleProcessMaterial, shape: PrimitiveMesh, amount: int, life: float, blend: String, one_shot: bool) -> GPUParticles3D:
 	var size = shape.size if shape is BoxMesh else shape.height
 	var look := "streak" if size is Vector3 and maxf(size.y, size.z) > size.x * 2.0 else "glow"
@@ -2065,24 +1746,10 @@ static func _boon_material() -> ParticleProcessMaterial:
 	return pm
 
 
-# The most particles this layer can hold alive at once, for the notes.
 static func ceiling() -> int:
 	return FLECKS + EMBERS + CARVE + COLUMN * COLUMN_POOL + BOON * BOON_POOL
 
 
-# --- Weapon effects ----------------------------------------------------------------------
-# Wave 46 3D blueprint sections 3.2 and 3.3. Every effect here answers a committed fact: the
-# weapon's one public cadence record (WeaponDriver.state_snapshot(), as the HUD and hero_assets
-# read it), the ability gauges' public slots(), shot_fired and the gauge_* events. The shell's
-# markers (Emitter_L/R on Sable's WeaponRing, LaserMuzzle_L/R on Rivet's) place them; without a
-# shell they fall back to the ball and the shot.
-#
-# Sable (a tap-charge weapon): the halo charges with the charge, a charged bolt fires the release
-# ring, a spark or a tap-floor gauge release draws the jagged arc in vfx's glyph pool, and a charge
-# that drops with no release collapses. A charged bolt is the one shot that starts the driver's
-# recovery (weapon_driver.gd _step_tap_charge), so a shot that finds "recover" above 0 is charged.
-# Rivet: each shot flashes at the side that fired (even shots left, odd right, as mecha_motion's
-# every-2 rows count them) and every second shot on a side throws a casing from its drum gap.
 const RIVET := "runner_gunner"
 const FLASHES := 2
 const FLASH_SIZE := 0.22
@@ -2094,12 +1761,8 @@ const CASING_SPEED := 2.5
 const CASING_TURNS := 20.0
 const CASING_GRAVITY := 9.8
 const CASING_EVERY := 2
-# One draw for the flashes and one for the casings (fx_budget.gd "rivet_fire").
 const RIVET_DRAWS := 2
-# The drum gap from a LaserMuzzle marker, in the WeaponRing's frame with x outboard: back along
-# the bore to the rotary drum, slightly below the bore and just past the drum band (rivet_revolvers.py).
 const DRUM_GAP := Vector3(0.24, -0.04, 0.47)
-# Without a shell: how far out a side muzzle sits from the centre shot, and the halo ahead.
 const SIDE_M := 1.26
 const HALO_AHEAD_M := 1.34
 const MARKER_SEEK_S := 0.5
@@ -2131,7 +1794,6 @@ void fragment() {
 """
 
 var _halo: Node3D
-# After a release, a gauge that still reads full for a frame does not start a new halo.
 var _halo_spent := false
 var _markers := {}
 var _marker_wait := {}
@@ -2148,12 +1810,10 @@ var _casing_axis: Array[Vector3] = []
 var _casing_basis: Array[Basis] = []
 
 
-# Sable's halo, built on first charge; null for a pilot who never charged.
 func halo() -> Node3D:
 	return _halo
 
 
-# The weapon's public cadence record, or {} without combat.
 func weapon_cadence() -> Dictionary:
 	var combat = ctx.get("spawner") if ctx != null else null
 	var driver = combat.get("weapon_driver") if combat != null else null
@@ -2166,7 +1826,6 @@ static func halo_pilot(cadence: Dictionary) -> bool:
 	return String(cadence.get("trigger", "")) == Pattern.TRIGGER_TAP_CHARGE
 
 
-# The charge the halo shows: the weapon's while it charges, else the fullest charging gauge.
 func charge_level(cadence: Dictionary) -> float:
 	var level := clampf(float(cadence.get("charge", 0.0)), 0.0, 1.0) if cadence.get("charging", false) == true else 0.0
 	var abilities = player.get("abilities")
@@ -2181,7 +1840,6 @@ func _wire_weapon() -> void:
 	SignalWire.listen(events, "shot_fired", _on_weapon_shot)
 	SignalWire.listen(events, "gauge_charging", func(_id: String): _halo_spent = false)
 	SignalWire.listen(events, "gauge_released", _on_gauge_released)
-	# A cancel ends the halo until the charge it read lets go.
 	SignalWire.listen(events, "gauge_cancelled", func(_id: String, _reason: String):
 		if _halo != null and _halo.charging():
 			_halo_spent = true
@@ -2240,7 +1898,6 @@ func _ensure_halo() -> void:
 	_halo.place(Transform3D(Basis.looking_at(ahead, Vector3.UP), player.shown_position() + ahead * HALO_AHEAD_M))
 
 
-# Level ahead: the camera's view, else the ball's heading, else -Z.
 func _ahead() -> Vector3:
 	var ahead := Vector3.ZERO
 	if camera != null and camera.cam != null:
@@ -2251,8 +1908,6 @@ func _ahead() -> Vector3:
 	return ahead.normalized() if ahead.length_squared() > 0.0001 else Vector3.FORWARD
 
 
-# A shell marker under the player's pod mount, cached; a missing one is sought again at most every
-# MARKER_SEEK_S, so a pilot without it walks no tree each frame.
 func _marker(id: String) -> Node3D:
 	var node = _markers.get(id)
 	if node != null and is_instance_valid(node) and node.is_inside_tree():
@@ -2349,7 +2004,6 @@ func _eject(at: Vector3, frame: Basis, outboard: float) -> void:
 	_casing_at[i] = at
 	_casing_v[i] = frame * (Vector3(outboard, 1.0, 0.0).normalized() * CASING_SPEED) + _velocity()
 	_casing_axis[i] = (frame * Vector3(0.3 * outboard, 0.2, 1.0)).normalized()
-	# The casing lies along the bore (a CylinderMesh stands on its Y).
 	_casing_basis[i] = frame * Basis(Vector3.RIGHT, PI * 0.5)
 	_draw_casing(i)
 	_casings.visible = true
@@ -2392,8 +2046,7 @@ func casings_alive() -> int:
 	return _casing_age.filter(func(a: float) -> bool: return a >= 0.0).size()
 
 
-# Where flash `slot` (0 left, 1 right) last stood, for the tests (a headless renderer keeps no
-# MultiMesh transforms to read back).
+# Godot headless Dummy renderer keeps no readback.
 func flash_at(slot: int) -> Vector3:
 	return _flash_pos[slot]
 
@@ -2401,7 +2054,6 @@ func flash_at(slot: int) -> Vector3:
 func _build_rivet_fire() -> void:
 	var card := QuadMesh.new()
 	card.size = Vector2.ONE
-	# The shader turns the card to the camera, so its box is a cube.
 	card.custom_aabb = AABB(Vector3.ONE * -0.75, Vector3.ONE * 1.5)
 	var shader := Shader.new()
 	shader.code = _FLASH_SHADER
@@ -2450,8 +2102,6 @@ func _pool_view(id: String, mesh: Mesh, mat: Material, count: int, custom: bool)
 	return view
 
 
-# --- Frame -------------------------------------------------------------------------------
-
 func _process(delta: float) -> void:
 	if player == null or root == null:
 		return
@@ -2475,8 +2125,6 @@ func _process(delta: float) -> void:
 	_draw_weapon_fx(delta)
 
 
-# Hides the word layer while the tree is paused, as flourish_player hides its own: a word stamped
-# before a pause would otherwise stay frozen over the menu.
 class PauseGuard extends Node:
 	var root: Node3D
 

@@ -1,14 +1,5 @@
 extends RefCounted
 
-# Whole-body wind-up poses for the roster's attacks, keyed by ATTACK_ROWS.pose. A body
-# leans into its peak pose as its telegraph fills, shivers through the last quarter (the
-# read moment), and on the strike snaps through a release pose and settles. Rotation and
-# squash only, on the visual pivot: nothing moves a collider, an origin or the committed
-# telegraph, so damage and the warning still share one geometry.
-# Values: back (degrees, nose up +), roll (degrees), yaw (degrees), height (scale; width
-# keeps the volume). Rows whose pose is still open (E19 to E24) and bodies with their own
-# rigs (Wardens, Brindle, pilots, the swarm remnant's dip in windup_rows.gd) are absent.
-
 const POSES := {
 	"e01_brace_back": {"wind": [16.0, 0.0, 0.0, 0.86], "release": [-14.0, 0.0, 0.0, 1.10]},
 	"e02_tube_raise": {"wind": [22.0, 0.0, 0.0, 1.04], "release": [30.0, 0.0, 0.0, 0.90]},
@@ -48,7 +39,6 @@ static func _basis(v: Array, amount: float) -> Basis:
 	return turn * Basis.from_scale(Vector3(w, h, w))
 
 
-# The pose while the telegraph fills: progress 0..1, age in seconds since it opened.
 static func windup(pose: String, progress: float, age: float, motion := 1.0) -> Basis:
 	if not POSES.has(pose) or motion <= 0.0:
 		return Basis.IDENTITY
@@ -61,8 +51,6 @@ static func windup(pose: String, progress: float, age: float, motion := 1.0) -> 
 	return out
 
 
-# The strike: snaps from the wind-up peak to the release pose, then settles to rest.
-# Identity once `age` passes RELEASE_SECONDS.
 static func release(pose: String, age: float, motion := 1.0) -> Basis:
 	if not POSES.has(pose) or motion <= 0.0 or age < 0.0 or age >= RELEASE_SECONDS:
 		return Basis.IDENTITY

@@ -5,8 +5,6 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 
-# Notes are home-key MIDI. Rise cells divide the full director lead evenly.
-# trim_sound names an existing bank level; priority comes from the triggering fact.
 const CUES := {
 	"riser_natural": {"family": "natural", "rise": true, "voice": "stage", "notes": [62, 65, 69, 72, 74, 77, 81, 86], "trim_sound": "build_riser"},
 	"drop_flood": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [50, 62, 57], "accent": "kick", "trim_sound": "slam_boom"},
@@ -17,19 +15,12 @@ const CUES := {
 	"riser_industrial": {"family": "industrial", "rise": true, "voice": "steam_whistle", "notes": [62, 65, 67, 69, 74, 77, 81, 86], "trim_sound": "threat_whistle"},
 	"drop_industrial": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [50], "sound": "smash_crack", "trim_sound": "smash_crack"},
 	"drop_flash_flood": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [57, 50, 43], "accent": "crash", "trim_sound": "slam_boom"},
-	# The Highdraft's own four (G home, Lydian lift; D-home notes, so G#/68 is the sharp eleven).
-	# The mooring crew's anvil answers twice and the Fleet brass lifts onto the eleven.
 	"drop_fleet_anvil": {"danger": true, "family": "fleet", "rise": false, "voice": "brass", "notes": [50, 57, 68], "accent": "anvil", "sound": "fleet_anvil", "trim_sound": "fleet_anvil"},
-	# Always the Mind: the player's hook played back inverted, a brushed gust under each note.
 	"riser_mind_quote": {"family": "ancient", "ancient": "mind", "rise": true, "voice": "sub", "notes": [44, 56], "accent": "brush", "trim_sound": "reactor_erupt"},
-	# The quote's flattened last note held alone while the floor slides a tritone under it.
 	"drop_mind_wrong": {"danger": true, "family": "ancient", "ancient": "mind", "drop_sound": "mind_wrong_", "rise": false, "voice": "sub", "notes": [44], "sound": "reactor_erupt", "trim_sound": "reactor_erupt"},
-	# A pressure vessel giving: hiss swell, valve pop, a tritone steam shriek.
 	"drop_boiler": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [50, 56], "sound": "boiler_burst", "trim_sound": "boiler_burst"},
 	"stinger_lightning": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [74, 62, 50], "accent": "crash", "trim_sound": "slam_boom"},
 	"drop_collapse": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [57, 50, 45], "accent": "crash", "trim_sound": "smash_crack"},
-	# The Spillway's own (D Dorian, tools/ace/spillway_stingers.py; world 1 unit 18). The dam siren
-	# is still the natural family's telegraph; the shared family risers stay as they are.
 	"riser_dam_siren": {"family": "natural", "rise": true, "voice": "stage", "notes": [62, 64, 65, 67, 69, 71, 74, 76], "trim_sound": "build_riser"},
 	"drop_flood_horn": {"danger": true, "family": "natural", "rise": false, "voice": "brass", "notes": [38, 45], "accent": "kick", "trim_sound": "slam_boom"},
 	"drop_spill_dropship": {"danger": true, "family": "fleet", "rise": false, "voice": "brass", "notes": [50, 57, 62], "accent": "anvil", "sound": "fleet_motif", "trim_sound": "fleet_motif"},
@@ -59,10 +50,6 @@ static func danger(id: String) -> bool:
 	return bool(row.get("danger", false))
 
 
-# context.stage is the zone id ("3-1"). A stage with its own cut of this cue
-# (assets/audio/stingers/<zone>/<cue>.wav, tools/ace/cut_stingers.py) plays that file; any cue
-# without one keeps the synth row, so nothing goes silent. The override is keyed by the id the
-# park names, before aliases resolve, so drop_flash_flood and drop_flood are separate files.
 static func cue(id: String, context: Dictionary = {}) -> Dictionary:
 	var row := synth_cue(id, context)
 	var zone := str(context.get("stage", ""))
@@ -113,7 +100,6 @@ const ROWS := {
 	"brindle": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/brindle/manifest.json"},
 	"waking": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/waking/manifest.json"},
 	"mind": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/mind/manifest.json"},
-	# Phase, final-phase, champion and Eurodance packs (phase_music.gd). Missing packs are silent.
 	"brindle-p1-requisition": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/brindle_p1_requisition/manifest.json"},
 	"brindle-p2-furnace": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/brindle_p2_furnace/manifest.json"},
 	"brindle-p3-scuttle": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/brindle_p3_scuttle/manifest.json"},
@@ -138,7 +124,6 @@ const ROWS := {
 	"anthem-mind": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/anthem_mind/manifest.json"},
 	"anthem-mind-heavy": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/anthem_mind_heavy/manifest.json"},
 	"anthem-mind-heavier": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/anthem_mind_heavier/manifest.json"},
-	# Place-and-moment tunes (tune_moments.gd, design-v3/sound/tunes.json ids). Missing packs are silent.
 	"landmark-spillway-dam": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/landmark_spillway_dam/manifest.json"},
 	"landmark-penstock": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/landmark_penstock/manifest.json"},
 	"landmark-headframe": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/landmark_headframe/manifest.json"},
@@ -166,16 +151,11 @@ const ROWS := {
 	"secret-chip-keepers": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/secret_chip_keepers/manifest.json"},
 	"secret-highdraft-rain": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/secret_highdraft_rain/manifest.json"},
 	"secret-dig-dub": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/secret_dig_dub/manifest.json"},
-	# The sound bible's picks (SOUND-INT, tools/ace/package_picked_takes.py): each boss fight's
-	# opening take (phase_music.gd PICKED) and the camp page. The roaming picks are cut into the
-	# zone packs' own shelves (RENDERS.md, core packs). A pick not on disk falls back to the older pack.
 	"boss-brindle": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/boss_brindle/manifest.json"},
 	"boss-waking": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/boss_waking/manifest.json"},
 	"boss-mind": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/boss_mind/manifest.json"},
 	"camp": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/camp/manifest.json"},
 	"title": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title/manifest.json"},
-	# The opening's theme picks the title take (title_intros.gd: "A" sax lead, "B" machine lead);
-	# C is the show-opening take.
 	"title-a": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title_a/manifest.json"},
 	"title-b": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title_b/manifest.json"},
 	"title-c": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title_c/manifest.json"},
@@ -183,7 +163,6 @@ const ROWS := {
 }
 
 
-# A zone/boss id or a stage row. Existing {theme, ace} stage music overrides the pack.
 static func resolve(stage = "default", sidecar_dir := "", stages = StageDefs) -> Dictionary:
 	if stage is int:
 		stage = stages.of(stage)
@@ -196,8 +175,6 @@ static func resolve(stage = "default", sidecar_dir := "", stages = StageDefs) ->
 			override = stage["music"]
 	var pack: Dictionary = ROWS.get(id, ROWS["default"]).duplicate()
 	pack["synth_theme"] = int(override.get("theme", pack["synth_theme"]))
-	# The canonical alpha rows predate the new packs. Their empty ACE fields inherit
-	# ROWS; caller-authored overrides still explicitly select synth with an empty field.
 	var inherited: bool = (stage is Dictionary and stage.has("stage")
 		and stages in [StageDefs, StageDefs.AlphaDefs]
 		and stage == stages.of(int(stage["stage"]))
@@ -223,9 +200,6 @@ static func resolve_pack(row: Dictionary, sidecar_dir := "") -> Dictionary:
 	}
 
 
-# A radio take's own pack (design-v3/sound/radio_takes.py, packaged whole by pack --whole):
-# its row when ROWS names one, else assets/music_ace/<take id>/ with dashes or underscores,
-# whichever is on disk. "" until the take is rendered and packaged.
 static func take_manifest(id: String) -> String:
 	var named := str(ROWS.get(id, {}).get("ace_manifest", ""))
 	if named != "":
@@ -239,7 +213,6 @@ static func take_manifest(id: String) -> String:
 	return ""
 
 
-# Source first, then the export's music_ace sidecar. Missing packs are silent synth fallback.
 static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String:
 	if manifest_path == "":
 		return ""
@@ -255,9 +228,6 @@ static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String
 	return ""
 
 
-# Where a pack's stems are read: next to its manifest, unless stem_dir is set. Tests point
-# stem_dir at a stub stem tree (tests/support/ace_stub.gd: <stem_dir>/<pack>/<file>), because
-# the Oggs are gitignored and a cloud checkout has none.
 static var stem_dir := ""
 
 
@@ -267,8 +237,6 @@ static func stem_file(manifest_file: String, file: String) -> String:
 	return manifest_file.get_base_dir().path_join(file)
 
 
-# A pack is playable only when its manifest resolves and every stem file it names is on disk:
-# the Oggs are gitignored, so a checkout can hold manifests with no audio.
 static func pack_on_disk(manifest_path: String, sidecar_dir := "") -> bool:
 	var path := resolve_manifest(manifest_path, sidecar_dir)
 	if path == "":

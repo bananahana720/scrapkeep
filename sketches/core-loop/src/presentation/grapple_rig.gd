@@ -6,24 +6,6 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Parts := preload("res://src/build/parts.gd")
 
-# W47-GRAPPLE-CODE: 4-part hardware grapple rig presenter (Rules G0, G1, TADR-008).
-#
-# Binds strictly ONE hardware rig onto the player's ONE standing harpoon line and ChainState
-# (Rule G0: zero second standing line, universal HOOK-CHAIN unchanged for all 6 pilots).
-# Each pilot's live line_id maps to its 4-part hardware assembly:
-#   Mount  hub socket on Pod (sable, kest, cannon, tally) or Pod/WeaponRing (rivet, tarn)
-#   Drive  spool / capstan / drum / winch at socket_drive, rotating about local +X on payout (+)
-#          and rewind/winch/haul (-)
-#   Line   1 m tile from socket_line aimed at Head and scaled along local -Z
-#   Head   bite hardware docked at socket_head at rest, seated on anchor when hooked
-#
-# Five pilots bind their Blender GLBs from assets/models/grapple/grapple_<stem>_{mount,drive,line,head}.glb.
-# Tally binds her copper alligator-clamp head, sheathed copper patch-lead line, and spring lead spool
-# cleanly alongside shell_tally.glb using Palette.COPPER and Palette.AMBER (zero HAZARD/KINDNESS/ANCIENT).
-#
-# TADR-008: CommittedAim draws the committed aim ray and target ring BEFORE hit from player.kit.aim,
-# and the committed tether lock ring from player.kit.anchor while hooked. Presentation never decides
-# gameplay outcomes.
 
 const MODEL_DIR := "res://assets/models/grapple/"
 
@@ -108,9 +90,6 @@ const AIM_RING_RADIUS := 0.72
 const AIM_LINE_HALF := 0.045
 const LOCK_RING_RADIUS := 0.85
 
-# Radial tangent angles matching tools/blender/grapple_rigs.py (Kest.flukes / Tarn.talons).
-# In every grapple_*.glb armature the root bone carries -90 deg about X, so child bone-local
-# space is Blender space (+X right, +Y forward along Godot -Z, +Z up = Godot +Y).
 const KEST_FLUKE_PHIS := [PI * 0.5, PI * 0.5 + TAU / 3.0, PI * 0.5 + 2.0 * TAU / 3.0]
 const TARN_TALON_PHIS := [deg_to_rad(48.0), deg_to_rad(132.0), deg_to_rad(270.0)]
 
@@ -136,17 +115,14 @@ var mount_skeleton: Skeleton3D
 var drive_skeleton: Skeleton3D
 var head_skeleton: Skeleton3D
 
-# W47-GRAPPLE-MUTS-CODE: active single-part-swap mutation ids per slot ("head"|"line"|"drive").
 var active_mutations := {}
 var _mutation_override := {}
 
-# Drive kinematics telemetry (local +X axle spin: + payout, - rewind/winch/haul).
 var drive_angle := 0.0
 var drive_omega := 0.0
 var last_drive_delta := 0.0
 var drive_direction := 0
 
-# TADR-008 committed aim / tether geometry mesh.
 var committed_mesh_node: MeshInstance3D
 var _committed_material: StandardMaterial3D
 var _committed_state := {
@@ -599,9 +575,6 @@ static func _find_skeleton(root: Node, preferred: String) -> Skeleton3D:
 	return skels[0] as Skeleton3D if not skels.is_empty() else null
 
 
-# Tally's copper alligator-clamp and sheathed copper patch-lead hardware riding cleanly alongside
-# shell_tally.glb: warm COPPER + AMBER + CHARCOAL sheath only (zero HAZARD, KINDNESS or ANCIENT).
-# Single-part-swap grapple mutations swap ONLY their target slot (drive, line, or head) cleanly.
 func _build_tally_hardware(muts := {}) -> void:
 	var copper_mat := _hardware_material("tally_copper", Palette.COPPER, 0.65, 0.35, 0.0)
 	var amber_mat := _hardware_material("tally_amber", Palette.AMBER, 0.25, 0.45, 0.35)
@@ -732,9 +705,6 @@ func _instantiate_glb(path: String, label: String) -> Node3D:
 	return root
 
 
-# Duplicates mesh and builds per-instance slot materials so shared PackedScene resources are
-# never mutated. Wires `amber_glow` alongside `hydraulic`/`paint`, preserving baked vertex colors
-# and emissive AMBER #E5A044 (lightened 0.20, energy 1.65) on Hot-Wire and Live-Bus.
 func _paint_tree(root: Node) -> void:
 	for node in root.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D
@@ -1053,8 +1023,6 @@ func _step_actuators(state: Dictionary, _line_active: bool) -> void:
 	_last_actuator = summary
 
 
-# Drives the 4 skinned single-part-swap mutation actuator bones strictly in bone-local Blender
-# space (+X right = Vector3.RIGHT, +Y forward along Godot -Z = Vector3.UP, +Z up = Vector3.BACK).
 func _step_mutation_actuators(state: Dictionary, hooked: bool, line_active: bool, summary: Dictionary) -> void:
 	if active_mutations.is_empty():
 		return
@@ -1102,8 +1070,6 @@ static func _pose_bone_slide(skeleton: Skeleton3D, rest_map: Dictionary, bone_na
 	skeleton.set_bone_pose_position(int(row["idx"]), rest_pos + offset)
 
 
-# TADR-008: draws committed grapple target geometry strictly from kit.aim (before hit) or
-# kit.anchor (while hooked), so what the player sees is the exact geometry the grapple uses.
 func _draw_committed_geometry(state: Dictionary, fairlead: Vector3) -> void:
 	if committed_mesh_node == null or not is_instance_valid(committed_mesh_node):
 		return

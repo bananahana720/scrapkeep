@@ -1,20 +1,10 @@
 extends RefCounted
 
-# Synthesized deck one-shots (design-v3/SOUND-BIBLE.md, "The moves"):
-# snare-roll and noise-riser builds, blog-house warehouse-kick builds and impacts,
-# breath downlifter, pre-drop swell, and drop impact.
-# Every buffer is deterministic (fixed seed), 44100 Hz stereo, cached by kind and tempo,
-# bandstop-filtered across 1.8 to 4.4 kHz so the 2 to 4 kHz warning lane stays clear,
-# and edge-faded after filtering so both endpoints are exact zero.
-# No pitched voices: the only tone is the impact's short sub sweep (125 to 40 Hz, 0.34 s)
-# and the unpitched warehouse kick pitch drop (170 to 48 Hz, 0.18 s).
-
 const RATE := 44100
 const RATE_F := 44100.0
 const PEAK_CAP := 0.58
 const SWELL_BASE_FRAMES := RATE
 
-# Relative levels ported from the audition prototype (dj_proto.reference.py fight_arc).
 const ROLL_GAIN := 0.28
 const RISER_GAIN := 0.08
 const DOWNLIFTER_GAIN := 0.02
@@ -25,13 +15,10 @@ const VIKING_KICK_BUILD_GAIN := 0.24
 const VIKING_KICK_IMPACT_GAIN := 0.34
 const VIKING_CLICK_HP_HZ := 4800.0
 
-# Warning-lane notch: 4th-order Butterworth bandstop across 1800 to 4400 Hz.
 const NOTCH_LO_HZ := 1800.0
 const NOTCH_HI_HZ := 4400.0
 const NOTCH_ORDER := 4
 
-# Build tier table: [progress_start, progress_end, riser_f0_hz, riser_f1_hz, steps]
-# where steps are [beats, division] (1 quarter, 2 eighth, 4 sixteenth, 8 thirty-second).
 const BUILD_TIERS := [
 	{"p0": 0.0, "p1": 0.33, "f0": 350.0, "f1": 1050.0, "steps": [[4, 1]]},
 	{"p0": 0.33, "p1": 0.67, "f0": 1050.0, "f1": 3100.0, "steps": [[4, 2]]},
@@ -124,8 +111,6 @@ static func downlifter(bar_frames: int) -> PackedVector2Array:
 	return out
 
 
-# Slices and shapes a single cached HPF+notched stereo noise base so variable drop-wait lengths
-# never grow _cache unboundedly.
 static func swell(frames: int) -> PackedVector2Array:
 	if frames <= 0:
 		return PackedVector2Array()
@@ -187,7 +172,6 @@ static func impact() -> PackedVector2Array:
 		if i < 32:
 			env *= float(i) / 31.0
 		out[i] *= env
-	# Short sub sweep: 125 Hz down to 40 Hz over 0.34 s (<= 0.35 s, SOUND-BIBLE rule 2).
 	_add_impact_boom(out, IMPACT_BOOM_GAIN)
 	_apply_sos_stereo(out, _get_notch_sos())
 	_edge_fade(out, 16, 256)
@@ -239,9 +223,6 @@ static func _add_impact_boom(out: PackedVector2Array, gain: float) -> void:
 		if i >= fade_start:
 			b *= float(n - 1 - i) / 255.0
 		out[i] += Vector2(b, b)
-
-
-# --- Synthesis helpers ----------------------------------------------------------------
 
 
 static func _snare_hit(pitch: float, vel: float, rng: RandomNumberGenerator) -> PackedFloat32Array:
@@ -431,9 +412,6 @@ static func _cap_peak(buf: PackedVector2Array) -> void:
 			buf[i] *= scale
 
 
-# --- Butterworth biquad cascades ------------------------------------------------------
-
-
 static func _get_notch_sos() -> Array:
 	if _notch_sos.is_empty():
 		_notch_sos = _butter_band_sos(NOTCH_ORDER, NOTCH_LO_HZ, NOTCH_HI_HZ, true)
@@ -469,7 +447,6 @@ static func _bandpass1_biquad(lo_hz: float, hi_hz: float) -> PackedFloat64Array:
 	return PackedFloat64Array([bw / a0, 0.0, -bw / a0, 2.0 * (w02 - 1.0) / a0, (1.0 - bw + w02) / a0])
 
 
-# Exact bilinear-transform even-order Butterworth bandpass or bandstop cascade.
 static func _butter_band_sos(order: int, lo_hz: float, hi_hz: float, bandstop: bool) -> Array:
 	var wa1 := tan(PI * lo_hz / RATE_F)
 	var wa2 := tan(PI * hi_hz / RATE_F)

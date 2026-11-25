@@ -3,14 +3,6 @@ extends MultiMeshInstance3D
 const Palette := preload("res://src/core/palette.gd")
 const CrewLamp := preload("res://src/presentation/crew_lamp.gd")
 
-# Every crew lamp in a world drawn as one MultiMesh (CrewLamp): one draw for all the lamps. Each
-# frame an instance takes its lamp's place and its glow (custom data: energy, lit share, danger
-# share). A lamp joins when its crew is fitted and leaves when its node leaves the tree; the last
-# instance moves into the freed slot, and a full field doubles. It runs while the tree is paused,
-# so a still taken on a paused frame shows each lamp on its head. The lens and its material are
-# built once a session and shared, so no field compiles a shader in a fight. The lens is unshaded,
-# like the telegraphs: lit glass reads as Palette.HAZARD itself at the strike, where an emissive
-# lens went through the tonemapper and the sun and came out coral (PC stills, 13 Nov 2026).
 
 const SHADER := """
 shader_type spatial;
@@ -69,7 +61,6 @@ func join(lamp: Node3D) -> void:
 	if _lamps.has(lamp):
 		return
 	if _lamps.size() >= multimesh.instance_count:
-		# Every instance is rewritten each frame, so a resize loses nothing.
 		multimesh.instance_count *= 2
 	_lamps.append(lamp)
 	multimesh.visible_instance_count = _lamps.size()
@@ -88,7 +79,6 @@ func lamps() -> int:
 	return _lamps.size()
 
 
-# The hemisphere's dome is +Y; a lamp faces +Z.
 const FACE := Basis(Vector3.RIGHT, PI / 2.0)
 
 
@@ -100,7 +90,6 @@ func _process(_delta: float) -> void:
 		multimesh.set_instance_custom_data(i, Color(lamp.energy(), lamp.tint(), lamp.danger(), 0.0))
 
 
-# A lamp's instance in the field's frame.
 func place(lamp: Node3D) -> Transform3D:
 	return _placed(global_transform.affine_inverse(), lamp)
 
