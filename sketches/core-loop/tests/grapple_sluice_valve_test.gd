@@ -280,10 +280,12 @@ func _check_clear_valves_frees_sheets_and_hazards() -> void:
 		sv.step(DT, Vector3(0.0, 1.0, 14.0), Vector3.ZERO, null, false)
 		if String(sv.valve_of("leak_a")["state"]) == "surging":
 			break
-	t.check("mid-surge has holder, sheet and hazard children", sv.get_child_count() >= 4, "children=%d" % sv.get_child_count())
+	t.check("mid-surge has holder, sheet and hazard under StageValves container",
+		sv.get_child_count() == 1 and sv.get_child(0).get_child_count() >= 5,
+		"roots=%d inner=%d" % [sv.get_child_count(), sv.get_child(0).get_child_count() if sv.get_child_count() > 0 else 0])
 	sv.clear_valves()
 	await process_frame
-	t.eq("clear_valves frees every holder, FloodWashSheet, and Hazard (zero leaked children)", sv.get_child_count(), 0)
+	t.eq("clear_valves frees every holder, FloodWashSheet, Hazard, and Threat.flash child (zero leaked children)", sv.get_child_count(), 0)
 	sv.free()
 
 

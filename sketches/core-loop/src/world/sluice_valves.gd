@@ -75,6 +75,7 @@ var _ground := Callable()
 var _scene_cache := {}
 var _water_mat: StandardMaterial3D
 var _events_wired = null
+var _stage_root: Node3D = null
 
 
 func _ready() -> void:
@@ -122,6 +123,9 @@ func build_from_specs(specs: Array, ground_fn: Callable, cruise_speed := 14.0, c
 	_connect_events()
 	if not is_in_group("world_telegraphs"):
 		add_to_group("world_telegraphs")
+	_stage_root = Node3D.new()
+	_stage_root.name = "StageValves"
+	add_child(_stage_root)
 	for spec in specs:
 		if spec is Dictionary:
 			valves.append(_build_valve(spec))
@@ -130,13 +134,10 @@ func build_from_specs(specs: Array, ground_fn: Callable, cruise_speed := 14.0, c
 func clear_valves() -> void:
 	for v in valves:
 		_drop_hazard(v)
-		var sheet := v.get("sheet") as Node
-		if sheet != null and is_instance_valid(sheet):
-			sheet.queue_free()
-		var holder := v.get("holder") as Node
-		if holder != null and is_instance_valid(holder):
-			holder.queue_free()
 	valves.clear()
+	if _stage_root != null and is_instance_valid(_stage_root):
+		_stage_root.queue_free()
+	_stage_root = null
 
 
 func reset() -> void:
@@ -246,7 +247,7 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 	holder.name = "GrappleSluice_" + id
 	holder.position = foot
 	holder.rotation.y = atan2(dir.x, dir.z)
-	add_child(holder)
+	_stage_parent().add_child(holder)
 
 	var body_node := _instantiate_glb(BODY_PATH, "SluiceValveBody", "enamel", Palette.COPPER)
 	holder.add_child(body_node)
@@ -283,7 +284,7 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 	bite_socket.add_child(bite_body)
 
 	var sheet := _build_water_sheet(lane_from, dir, length, half_width)
-	add_child(sheet)
+	_stage_parent().add_child(sheet)
 
 	return {
 		"id": id,
@@ -427,7 +428,7 @@ func _arm_valve(v: Dictionary) -> bool:
 	h.commit_lane(WASH_SOURCE + "_" + String(v["id"]), Threat.Type.LANE,
 		v["lane_from"], v["dir"], 0.0, float(v["length"]), float(v["half_width"]),
 		float(v["reach"]), warn, SURGE_LIVE_S)
-	add_child(h)
+	_stage_parent().add_child(h)
 	v["hazard"] = h
 	v["state"] = "warning"
 	v["warn_elapsed"] = 0.0
@@ -650,6 +651,14 @@ func _publish_world_fact(fact: String, at: Vector3) -> void:
 	var ev = ctx.get("events") if ctx != null else null
 	if ev != null and ev.has_signal("world_fact"):
 		ev.world_fact.emit(fact, at)
+
+
+func _stage_parent() -> Node3D:
+	if _stage_root == null or not is_instance_valid(_stage_root):
+		_stage_root = Node3D.new()
+		_stage_root.name = "StageValves"
+		add_child(_stage_root)
+	return _stage_root
 
 
 func _ground_point(x: float, z: float) -> Vector3:
