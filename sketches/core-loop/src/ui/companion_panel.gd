@@ -18,7 +18,7 @@ const LINE_FULL := "Both sockets are full."
 const LINE_FAMILY := "One of each kind."
 const PIECE_ICONS := {"primer_coil": "cmp_primer_coil", "primer_mesh": "cmp_primer_mesh",
 	"ram_prow": "cmp_ram_prow", "ram_spring": "cmp_ram_spring", "escape_vent": "cmp_escape_vent",
-	"escape_rail": "cmp_escape_rail"}
+	"escape_rail": "cmp_escape_rail", "cog_scoop": "cmp_cog_scoop", "cartridge_caddy": "cmp_cartridge_caddy"}
 const LINE_NONE := "No companion in this run."
 
 var game

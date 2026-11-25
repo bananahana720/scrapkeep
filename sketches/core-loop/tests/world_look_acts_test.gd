@@ -580,7 +580,8 @@ func _district_api() -> void:
 		and WorldLook.district_at(dam_park, Vector3(0.0, 0.0, -200.001)) == "dam_intake")
 	_t.check("outside every district, and in a park with none, district_at is empty", WorldLook.district_at(dam_park, Vector3(900.0, 0.0, 0.0)) == ""
 		and WorldLook.district_at(dam_park, Vector3(0.0, 0.0, 800.0)) == "" and WorldLook.district_at({}, Vector3.ZERO) == ""
-		and WorldLook.district_at(park_file("park_pit"), Vector3.ZERO) == "")
+		and WorldLook.district_at({"district_rows": []}, Vector3.ZERO) == ""
+		and WorldLook.district_at(park_file("park_pit"), Vector3(900.0, 0.0, 0.0)) == "")
 
 
 # A park file as World ships it (read-only).

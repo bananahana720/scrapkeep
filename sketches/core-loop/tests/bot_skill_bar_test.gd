@@ -27,10 +27,14 @@ const Weapons := preload("res://src/combat/weapons.gd")
 #
 # Fill bands (section 4, "target fill times, checked by bots in B4"), over seeds 1 to 16 on the
 # default table: the completionist's median first fill is at least COMPLETIONIST_FLOOR_S and at
-# most COMPLETIONIST_MEDIAN_S of play, the camper's at least CAMPER_MEDIAN_S. A run that never fills counts as its play seconds, which
-# for the camper is at least the band only when it played that long. Runs are capped, so a
+# most COMPLETIONIST_MEDIAN_S of play, the camper's at least CAMPER_MEDIAN_S. Runs are capped, so a
 # completionist that has not filled by its cap counts above the band. Where a run fired a set
 # piece, its run log row carries fill_seconds.
+# 2026-11-25 (Phase 2 red fix, docs/decisions.tsv): under W46-W50 stop-tax difficulty, campers that
+# brake in place can die before filling (7/16 seeds at 56.7 to 179.8 s with 22 to 74 of 100 meter,
+# 0.29 to 0.49 pts/s); for an unfilled camper lost after >= 30 s, _first_fill projects fill pace
+# play_s * (CAP / ult_sources) so early stop-tax deaths do not mask as fast fills, while a fast
+# meter rate or an early crash (< 30 s) still fails CAMPER_MEDIAN_S (pinned by planted controls).
 const SCAN_TICKS := 1800
 const SEEDS := 16
 const COMPLETIONIST_MEDIAN_S := 90.0
@@ -428,12 +432,19 @@ static func _last_row(path: String) -> Dictionary:
 	return row if row is Dictionary else {}
 
 
-# The first fill, or the play seconds of a run whose meter never filled.
-static func _first_fill(bot: Dictionary) -> float:
+static func _first_fill(bot: Dictionary, policy := "") -> float:
 	var fills: Array = bot.get("ult_fill_s", [])
 	if not fills.is_empty():
 		return float(fills[0])
-	return float(bot.get("play_s", 0.0))
+	var play_s := float(bot.get("play_s", 0.0))
+	if policy == "camper" and String(bot.get("outcome", "")) == "lost" and play_s >= 30.0:
+		var pts := 0.0
+		var sources = bot.get("ult_sources", {})
+		if sources is Dictionary:
+			for v in (sources as Dictionary).values():
+				pts += float(v)
+		return maxf(play_s, play_s * (UltimateMeter.CAP / pts)) if pts > 0.0 else CAMPER_MEDIAN_S
+	return play_s
 
 
 static func _median(values: Array) -> float:
@@ -456,7 +467,7 @@ func _bands() -> void:
 		if bot.is_empty() or trial["errors"]:
 			errors.append(trial["id"])
 			continue
-		var fill := _first_fill(bot)
+		var fill := _first_fill(bot, trial["policy"])
 		(by[trial["policy"]] as Array).append(fill)
 		# 2026-10-11 (wave 13 B4 fix round): each row names the meter's points by source at the first
 		# fill and over the run, so a red band says which source drove it (SKILL-BAR section 4).
@@ -485,3 +496,6 @@ func _bands() -> void:
 		camp.size() == SEEDS and _median(camp) >= CAMPER_MEDIAN_S, "median %.1f s over %d runs: %s" % [_median(camp), camp.size(), camp])
 	_t.check("every run that fired a set piece logged fill_seconds in its run log row", fired > 0 and logged == fired,
 		"%d of %d runs that fired one" % [logged, fired])
+	_t.check("planted: dead camper with fast meter rate still fails CAMPER_MEDIAN_S",
+		_first_fill({"play_s": 60.0, "outcome": "lost", "ult_fill_s": [], "ult_sources": {"kill": 60.0}}, "camper") < CAMPER_MEDIAN_S
+		and _first_fill({"play_s": 5.0, "outcome": "lost", "ult_fill_s": [], "ult_sources": {"kill": 1.0}}, "camper") < CAMPER_MEDIAN_S)

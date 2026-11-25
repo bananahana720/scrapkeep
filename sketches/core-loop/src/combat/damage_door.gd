@@ -8,6 +8,11 @@ var trace_on := false
 var traces: Array = []
 
 var _hooks := {"hit": [], "deflect": [], "kill": []}
+var _depth := 0
+
+
+func in_pass() -> bool:
+	return _depth > 0
 
 
 func hook(event: String, name: String, fn: Callable) -> bool:
@@ -38,6 +43,7 @@ func hooks(event: String) -> Array:
 
 
 func pass_hit(hit: Dictionary, stages: Dictionary) -> Dictionary:
+	_depth += 1
 	var trace := []
 	for stage in ORDER:
 		var fn: Callable = stages.get(stage, Callable())
@@ -58,6 +64,7 @@ func pass_hit(hit: Dictionary, stages: Dictionary) -> Dictionary:
 			(row[1] as Callable).call(hit)
 	if trace_on:
 		traces.append(trace)
+	_depth -= 1
 	return hit
 
 
