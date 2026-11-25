@@ -44,6 +44,11 @@ const SPLIT_DAMAGE := 0.5
 const SPLIT_REACH := 12.0
 # A bounced bolt leaves the wall this far out along the normal, so it never meets it again.
 const BOUNCE_LIFT := 0.05
+# W47-C2 Ricochet Canyon: hard ceiling on extra canyon-wall bounces (beyond the base bounce bit)
+# and homing curve parameters when a bounced bolt/shard curves toward the nearest live machine.
+const MAX_EXTRA_BOUNCES := 2
+const RICOCHET_HOME_REACH := 26.0
+const RICOCHET_HOME_TURN := 0.75
 
 # Called as on_hit.call(bolt: Dictionary, enemy: Node3D, point: Vector3, part: String);
 # part is a weak point id from enemy.weak_points(), or "" for the body.
@@ -170,7 +175,7 @@ func _initial_draw_offset(bolt: Dictionary) -> Vector3:
 # bits it has spent, so a child can neither gain a bit nor use one twice (SI4).
 static func child(parent: Dictionary, overrides: Dictionary) -> Dictionary:
 	var out := parent.duplicate()
-	for key in ["travelled", "age", "shown", "right", "up", "exclude", "draw_origin", "draw_offset"]:
+	for key in ["travelled", "age", "shown", "right", "up", "exclude", "draw_origin", "draw_offset", "bounces", "ricochet_curved"]:
 		out.erase(key)
 	for key in overrides:
 		out[key] = overrides[key]
@@ -178,6 +183,8 @@ static func child(parent: Dictionary, overrides: Dictionary) -> Dictionary:
 		out["draw_offset"] = Vector3.ZERO
 	out["bits"] = ShotBits.union(0, int(parent.get("bits", 0)))
 	out["spent"] = ShotBits.union(0, int(parent.get("spent", 0)))
+	if out.has("extra_bounces"):
+		out["extra_bounces"] = clampi(int(out["extra_bounces"]), 0, MAX_EXTRA_BOUNCES)
 	return out
 
 
@@ -318,7 +325,7 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 		if stopped:
 			continue
 		if blocked:
-			if _glance(bolt, end, normal, before + from.distance_to(end)):
+			if _glance(bolt, end, normal, before + from.distance_to(end), snapshot):
 				survivors.append(bolt)
 				continue
 			if on_stop.is_valid():
@@ -334,14 +341,31 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 
 
 # The bounce bit: the first wall reflects the bolt about its normal with the range it has
-# left, and spends bounce, so a second wall stops it. Whether the bolt glanced.
-func _glance(bolt: Dictionary, at: Vector3, normal: Vector3, used: float) -> bool:
+# left, and spends bounce, so a second wall stops it. With Ricochet Canyon (W47-C2, wall-carve
+# weapon shot only), up to MAX_EXTRA_BOUNCES extra glances are allowed (strictly bounded) and
+# each glance curves toward the nearest live non-excluded machine.
+func _glance(bolt: Dictionary, at: Vector3, normal: Vector3, used: float, snapshot: Array = []) -> bool:
 	var left := float(bolt["max_dist"]) - used
-	if not bit_ready(bolt, "bounce") or normal.length_squared() < 0.0001 or left <= 0.0:
+	var bounce_ready := bit_ready(bolt, "bounce")
+	var extra := clampi(int(bolt.get("extra_bounces", 0)), 0, MAX_EXTRA_BOUNCES)
+	if (not bounce_ready and extra <= 0) or normal.length_squared() < 0.0001 or left <= 0.0:
 		return false
-	var dir: Vector3 = (bolt["dir"] as Vector3).bounce(normal.normalized()).normalized()
-	bolt["spent"] = ShotBits.union(int(bolt["spent"]), ShotBits.bit("bounce"))
-	bolt["origin"] = at + normal.normalized() * BOUNCE_LIFT
+	var n := normal.normalized()
+	var dir: Vector3 = (bolt["dir"] as Vector3).bounce(n).normalized()
+	if bounce_ready:
+		bolt["spent"] = ShotBits.union(int(bolt["spent"]), ShotBits.bit("bounce"))
+	else:
+		bolt["extra_bounces"] = extra - 1
+	var lift_origin := at + n * BOUNCE_LIFT
+	if bool(bolt.get("ricochet_home", false)) and not snapshot.is_empty():
+		var curved := _ricochet_curve(dir, lift_origin, snapshot, bolt.get("exclude", []),
+			float(bolt.get("ricochet_home_reach", RICOCHET_HOME_REACH)),
+			float(bolt.get("ricochet_home_turn", RICOCHET_HOME_TURN)))
+		if not curved.is_equal_approx(dir):
+			dir = curved
+			bolt["ricochet_curved"] = true
+	bolt["bounces"] = int(bolt.get("bounces", 0)) + 1
+	bolt["origin"] = lift_origin
 	bolt["dir"] = dir
 	bolt["max_dist"] = left
 	bolt["travelled"] = 0.0
@@ -354,6 +378,30 @@ func _glance(bolt: Dictionary, at: Vector3, normal: Vector3, used: float) -> boo
 	if on_bounce.is_valid():
 		on_bounce.call(bolt, at)
 	return true
+
+
+# Ricochet Canyon: curves a bounced direction toward the nearest live, non-excluded machine within reach.
+static func _ricochet_curve(reflected: Vector3, origin: Vector3, snapshot: Array, exclude: Array,
+		reach: float, turn: float) -> Vector3:
+	var best_dir := Vector3.ZERO
+	var best_d2 := reach * reach
+	for entry in snapshot:
+		if entry["dead"]:
+			continue
+		var enemy = entry["enemy"]
+		if not is_instance_valid(enemy) or enemy.is_dead():
+			continue
+		if not exclude.is_empty() and int(entry["id"]) in exclude:
+			continue
+		var to: Vector3 = (entry["centre"] as Vector3) - origin
+		var d2 := to.length_squared()
+		if d2 > 0.0001 and d2 < best_d2:
+			best_d2 = d2
+			best_dir = to.normalized()
+	if best_dir == Vector3.ZERO:
+		return reflected
+	var mixed := reflected.lerp(best_dir, clampf(turn, 0.0, 1.0))
+	return mixed.normalized() if mixed.length_squared() > 0.0001 else best_dir
 
 
 # Where the bolt is now: along its line, plus the corkscrew for a waving bolt. The

@@ -3,6 +3,7 @@ extends RefCounted
 const Triggers := preload("res://src/build/triggers.gd")
 const Parts := preload("res://src/build/parts.gd")
 const PartDef := preload("res://src/build/part_def.gd")
+const Synergies := preload("res://src/build/synergies.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ElementField := preload("res://src/build/element_field.gd")
 const BuffLedger := preload("res://src/core/buff_ledger.gd")
@@ -64,6 +65,10 @@ var pike := {}
 # The held verb items: effect id -> its row's numbers (item_effects.gd VERB_EFFECTS). Combat reads
 # one through verb_row() at the moment its verb fires and owns every live strip, arc and bell.
 var verbs := {}
+# W47-C2: active Tier-1 common-part micro-mutations (part_id -> row) and held parts snapshot for
+# cross-system synergy queries. Refreshed in refresh() and cleared in reset_run().
+var micro_mutations := {}
+var _held_parts: Array = []
 # Numbers the fuzzer and the tests read.
 var procs := {}
 
@@ -132,8 +137,12 @@ func refresh(held: Array) -> void:
 	vault_charges = 0
 	pike = {}
 	verbs = {}
+	micro_mutations = {}
+	_held_parts = held.duplicate()
 	var index := 0
 	for part_id in order:
+		if Parts.MICRO_MUTATIONS.has(part_id):
+			micro_mutations[part_id] = Parts.micro_mutation(part_id)
 		var d: Resource = Parts.def(part_id)
 		if d == null:
 			continue
@@ -187,6 +196,38 @@ func pike_fuse() -> Dictionary:
 # line_leash), {} while the build does not hold it: the one call combat makes, a copy.
 func verb_row(effect_id: String) -> Dictionary:
 	return (verbs.get(effect_id, {}) as Dictionary).duplicate(true)
+
+
+# W47-C2: deep query interface for the 6 common-part micro-mutations and 6 cross-system synergies.
+func has_micro_mutation(part_id: String) -> bool:
+	return micro_mutations.has(part_id)
+
+
+func micro_mutation(part_id: String) -> Dictionary:
+	return (micro_mutations.get(part_id, {}) as Dictionary).duplicate(true)
+
+
+func active_micro_mutations() -> Array:
+	return Parts.active_micro_mutations(_held_parts)
+
+
+static func part_synergy_info(part_id: String) -> Dictionary:
+	var d: Resource = Parts.def(part_id)
+	if d == null:
+		return {}
+	return {"tags": d.tags, "bits": d.bits}
+
+
+func cross_synergies(context := {}) -> Array:
+	return Synergies.cross_system_active(_held_parts, Callable(self, "part_synergy_info"), context)
+
+
+func has_cross_synergy(id: String, context := {}) -> bool:
+	return Synergies.cross_system_awake(id, _held_parts, Callable(self, "part_synergy_info"), context)
+
+
+func cross_synergy_row(id: String) -> Dictionary:
+	return Synergies.cross_system_row(id)
 
 
 # All payout copies share one asymptote; the count includes repeated burden parts.
@@ -260,6 +301,8 @@ func reset_run() -> void:
 	reset_stage()
 	_last_word_used = false
 	procs = {}
+	micro_mutations = {}
+	_held_parts = []
 
 
 func magnet_boost() -> float:

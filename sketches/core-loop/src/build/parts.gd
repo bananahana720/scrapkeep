@@ -268,6 +268,101 @@ const ANSWERS := {
 # Off only for a measurement that needs the draw without the answer lean (answer_weights_test).
 static var answer_nudge_on := true
 
+# W47-C2: six common-part micro-mutations (SOUTHWEST-SONIC-MECHA-NORTHSTAR §4.3, REBASELINE §7).
+# Stored alongside ANSWERS so CATALOGUE / Parts.rows() keeps its pinned digest, Tier-1 budget and
+# local/global readout layers intact, while uncapped flat stats remain inside panels.gd.
+const MICRO_MUTATIONS := {
+	"tread_plating": {
+		"id": "wall_carve_move_refill",
+		"part_id": "tread_plating",
+		"name": "Wall-Carve Refill",
+		"text": "Wall-carving refills movement 25% faster.",
+		"rate_bonus": 0.25,
+	},
+	"long_spool": {
+		"id": "grapple_air_steer_surge",
+		"part_id": "long_spool",
+		"name": "Release Air Surge",
+		"text": "Harpoon release grants 0.4 s air-steer surge.",
+		"duration_s": 0.4,
+		"steer_mult": 1.65,
+	},
+	"dash_vane": {
+		"id": "air_dash_shell_bat",
+		"part_id": "dash_vane",
+		"name": "Shell-Bat Dash",
+		"text": "Air-dashing through a shell bats it back.",
+		"window_s": 0.28,
+		"reach_bonus": 0.6,
+	},
+	"loose_trigger": {
+		"id": "cadence_window_extend",
+		"part_id": "loose_trigger",
+		"name": "Cadence Carry",
+		"text": "Landing a skilled window extends the next +25%.",
+		"window_extend": 0.25,
+	},
+	"long_barrel": {
+		"id": "long_range_stagger",
+		"part_id": "long_barrel",
+		"name": "Long-Range Stagger",
+		"text": "Hits past 20 m add +15% knockback stagger.",
+		"min_range_m": 20.0,
+		"knock_bonus": 0.15,
+	},
+	"boost_coil": {
+		"id": "heft_break_cd_refresh",
+		"part_id": "boost_coil",
+		"name": "Smash Cooldown Cut",
+		"text": "Boosting through heft props cuts cooldown 50%.",
+		"window_s": 0.5,
+		"cd_refresh": 0.5,
+	},
+}
+
+
+# The micro-mutation row for a Tier-1 common part, or {} when it carries none.
+static func micro_mutation(part_id: String) -> Dictionary:
+	return (MICRO_MUTATIONS.get(part_id, {}) as Dictionary).duplicate(true)
+
+
+static func micro_mutation_ids() -> Array:
+	return MICRO_MUTATIONS.keys()
+
+
+# True when the held part list carries this part's micro-mutation.
+static func has_micro_mutation(held: Array, part_id: String) -> bool:
+	return MICRO_MUTATIONS.has(part_id) and part_id in held
+
+
+# Every active micro-mutation row for the held part list, in table order (deduped across stacks).
+static func active_micro_mutations(held: Array) -> Array:
+	var out: Array = []
+	for part_id in MICRO_MUTATIONS:
+		if part_id in held:
+			out.append((MICRO_MUTATIONS[part_id] as Dictionary).duplicate(true))
+	return out
+
+
+# Admission check for MICRO_MUTATIONS: every key must be a Tier-1 common part in CATALOGUE with a
+# valid id, name and text. Returns [] when clean.
+static func micro_mutation_problems() -> Array:
+	var found: Array = []
+	for part_id in MICRO_MUTATIONS:
+		if not CATALOGUE.has(part_id):
+			found.append("%s is not in CATALOGUE" % part_id)
+			continue
+		var cat: Dictionary = CATALOGUE[part_id]
+		if String(cat.get("rarity", "")) != "common" or int(cat.get("tier", 0)) != 1:
+			found.append("%s must stay a Tier-1 common part" % part_id)
+		var row: Dictionary = MICRO_MUTATIONS[part_id]
+		for key in ["id", "part_id", "name", "text"]:
+			if String(row.get(key, "")).strip_edges().is_empty():
+				found.append("%s micro-mutation missing %s" % [part_id, key])
+		if String(row.get("part_id", "")) != part_id:
+			found.append("%s micro-mutation part_id mismatch" % part_id)
+	return found
+
 # The pattern guarantee (balance loop, B4): a run that reaches stage 2's gates holding no
 # pattern transformer is offered one of these in that pair. Bots without a pattern took
 # 117 to 204 s on Warden III against 19 to 81 s with one, a split HP tuning cannot close.
