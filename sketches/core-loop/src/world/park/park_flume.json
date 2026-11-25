@@ -270,6 +270,8 @@
   {"id": "spill_butte", "element": "ledge", "landform": "butte", "society": "none", "at": [-342, -700], "y": null, "size": [36, 28, 36], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "", "stamp": "butte", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "gap_table_kicker", "element": "kicker", "landform": "butte", "society": "dam_era", "at": [-301.0, -354.0], "y": null, "size": [28, 14, 34], "yaw_deg": 0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "plate_kicker_28x14x34", "stamp": "", "hole": false, "budget": "detail", "routes": ["rim_table"], "fragment": ""},
   {"id": "gap_table", "element": "ledge", "landform": "butte", "society": "none", "at": [-301.0, -328.0], "y": null, "size": [24, 14, 34], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "detail", "routes": ["rim_table"], "fragment": ""},
+  {"id": "siphon_cover_bastion", "element": "grind_line", "landform": "flume", "society": "dam_era", "at": [46, 132], "y": null, "size": [20, 28, 6], "yaw_deg": 35, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "crib_pier_20x28x6", "cover": "hard", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "forecourt_cover_bastion", "element": "grind_line", "landform": "slickrock", "society": "dam_era", "at": [-14, 345], "y": null, "size": [24, 18, 6], "yaw_deg": 35, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "crib_pier_24x18x6", "cover": "hard", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "canyon_wall_north", "element": "ground", "landform": "mesa_rim", "society": "none", "at": [0, -800], "y": null, "size": [30, 32, 1680], "yaw_deg": 180, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:ground", "stamp": "mesa", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "canyon_wall_east", "element": "ground", "landform": "mesa_rim", "society": "none", "at": [800, 0], "y": null, "size": [550, 32, 1680], "yaw_deg": 90, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:ground", "stamp": "mesa", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "canyon_wall_south", "element": "ground", "landform": "mesa_rim", "society": "none", "at": [0, 800], "y": null, "size": [30, 32, 1680], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:ground", "stamp": "mesa", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
@@ -302,7 +304,12 @@
   {"id": "grade_wall", "kind": "cracked_wall", "site": "canal_country_grade", "recipe": "", "at": [-267.76, 187.76], "size": [12, 6, 1.0], "turn": 2.35619, "break_at_cruise": true, "cache": {"at": [-272, 192], "face": [1, -1]}, "codex": {"id": "flume_grade_cache", "title": "Overtime Locker", "category": "world", "name": "Overtime Locker", "hint": "A cracked wall on the canal grade, looking at the hollow.", "clue": "Ram the cracked wall on the canal grade, west of the trestle hollow", "text": "The flume crew bricked up their overtime locker so the timesheets would match. The timesheets still do not match."}},
   {"id": "siphon_glaze", "kind": "glaze", "site": "the_siphon", "recipe": "", "strips": [[-21.7, 186.3, 31.0, 36.0, 11.0, 18.5]], "push": 6.0, "cap": 30.0, "sheen": true},
   {"id": "wasteway_sluice", "kind": "sluice_valve", "site": "wasteway_chute", "recipe": "", "at": [61.7, 274.9], "lane": {"from": [49.8, 289.0], "to": [80.1, 328.6], "half_width": 5.0, "reach": 4.0}, "charge": 14.0, "price": 20},
-  {"id": "forecourt_sluice", "kind": "sluice_valve", "site": "drum_forecourt", "recipe": "", "at": [182, 456], "lane": {"from": [180, 441], "to": [112, 441], "half_width": 6.0, "reach": 5.0}, "charge": 16.0, "price": 20}
+  {"id": "forecourt_sluice", "kind": "sluice_valve", "site": "drum_forecourt", "recipe": "", "at": [182, 456], "lane": {"from": [180, 441], "to": [112, 441], "half_width": 6.0, "reach": 5.0}, "charge": 16.0, "price": 20},
+  {"id": "weir_trestle_zip", "kind": "cable", "site": "butte_gap", "recipe": "", "from": [-264, 56.0, -216], "to": [-36, 40.0, 152], "radius": 5.0, "floor": 22.0},
+  {"id": "trestle_headhouse_zip", "kind": "cable", "site": "bend_overlook", "recipe": "", "from": [124, 38.0, -28], "to": [162, 18.0, 232], "radius": 5.0, "floor": 22.0},
+  {"id": "forecourt_headhouse_zip", "kind": "cable", "site": "wasteway_chute", "recipe": "", "from": [120, 4.0, 328], "to": [216, 4.0, 464], "radius": 5.0, "floor": 22.0},
+  {"id": "trestle_skyway_geyser", "kind": "launcher", "site": "trestle_hollow", "recipe": "geyser_vent", "style": "geyser", "at": [-172, -16], "radius": 3.5, "target": [-115, 42.0, 5.5], "floor": 22.0, "min_flight": 2.0, "charge": 3.0},
+  {"id": "siphon_overlook_cannon", "kind": "launcher", "site": "the_siphon", "recipe": "cannon", "style": "cannon", "at": [-58, 128], "radius": 4.0, "target": [10, 42.0, 206], "floor": 30.0, "min_flight": 2.4, "charge": 2.5}
  ],
  "weather_rows": [
   {"id": "morning_clear", "kind": "clear", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0006, "color": "#b4c6d2"}, "sky": "clear", "sound": "bench_morning_bed", "music_layer": "", "event_odds": {}, "handling": "none"},
@@ -321,7 +328,8 @@
   {"id": "hollow_receiving_bank", "points": [[-168.0, -129.0], [-167.8, -120.0], [-168.4, -111.0], [-169.6, -102.0], [-171.5, -93.0], [-174.1, -84.0], [-177.4, -75.0], [-181.3, -66.0], [-186.0, -57.0]], "width_m": 5.6}
  ],
  "survival_rows": [
-  {"id": "fields_muster", "form": "muster", "at": [-242, 65]}
+  {"id": "fields_muster", "form": "muster", "at": [-242, 65]},
+  {"id": "bench_yard", "form": "yard", "at": [-230, 440]}
  ],
  "destructible_rows": [
   {"id": "flume_bend_crates", "tier": 1, "at": [184.0, 26.67, -60.0], "size": [1.4, 1.0, 1.4], "yaw_deg": -90},
@@ -337,6 +345,7 @@
   {"id": "flume_landing_wall", "tier": 3, "at": [-314.0, 1.3, 522.0], "size": [3.6, 2.6, 1.1], "yaw_deg": 165},
   {"id": "flume_rim_jersey", "tier": 3, "at": [-322.0, 70.3, -397.0], "size": [3.6, 2.6, 1.1], "yaw_deg": -40},
   {"id": "flume_forecourt_housing", "tier": 4, "at": [149.0, 1.5, 499.0], "size": [3.0, 3.0, 3.0], "yaw_deg": 105},
+  {"id": "flume_bench_yard_crates", "tier": 1, "at": [-180.0, 0.5, 465.0], "size": [1.4, 1.0, 1.4], "yaw_deg": 45},
   {"id": "flume_pond_wall", "tier": 3, "at": [-540.0, 110.3, -668.0], "size": [64.0, 2.6, 1.1], "yaw_deg": 90, "shortcut": true}
  ]
 }
