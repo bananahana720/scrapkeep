@@ -335,6 +335,50 @@
    }
   },
   {
+   "id": "ally_husk_clip",
+   "path": "res://assets/models/ally_husk/ally_husk_clip.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-TALLY-B-CODE src/presentation/ally_husk_look.gd (Ghost Shift ownership overlay: amber-sparking copper alligator jumper clip attached x2 per raised Fleet husk; sockets socket_bite, socket_spark, socket_lead)",
+   "provenance": {
+    "recipe": "tools/blender/ally_husk_overlay.py",
+    "spec": "SCRAPKEEP-REBASELINE-MASTER-BIBLE.md §2.3, §2.5, §6.1, §9 Wave 47D; SCRAPKEEP-REBASELINE-OPUS-CRITIQUE.md Blocker 5 & N9; OPUS-TASTE-AND-MECHANICS-RUBRIC.md §2 Tally Ghost Shift & B6"
+   }
+  },
+  {
+   "id": "ally_husk_lead",
+   "path": "res://assets/models/ally_husk/ally_husk_lead.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-TALLY-B-CODE src/presentation/ally_husk_look.gd (Ghost Shift ownership overlay: 1.0 m arched insulated copper jumper lead bridge connecting bitten clips to mast; sockets socket_start, socket_end)",
+   "provenance": {
+    "recipe": "tools/blender/ally_husk_overlay.py",
+    "spec": "SCRAPKEEP-REBASELINE-MASTER-BIBLE.md §2.3, §2.5, §6.1, §9 Wave 47D; SCRAPKEEP-REBASELINE-OPUS-CRITIQUE.md Blocker 5 & N9; OPUS-TASTE-AND-MECHANICS-RUBRIC.md §2 Tally Ghost Shift & B6"
+   }
+  },
+  {
+   "id": "ally_husk_mast",
+   "path": "res://assets/models/ally_husk/ally_husk_mast.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-TALLY-B-CODE src/presentation/ally_husk_look.gd (Ghost Shift B6 silhouette breaker: raised amber-sparking copper Jacob's-ladder clip mast & frayed 3-strand trailing copper lead; sockets socket_base, socket_arc_left/right, socket_lead_tip, socket_clip_feed_l/r)",
+   "provenance": {
+    "recipe": "tools/blender/ally_husk_overlay.py",
+    "spec": "SCRAPKEEP-REBASELINE-MASTER-BIBLE.md §2.3, §2.5, §6.1, §9 Wave 47D; SCRAPKEEP-REBASELINE-OPUS-CRITIQUE.md Blocker 5 & N9; OPUS-TASTE-AND-MECHANICS-RUBRIC.md §2 Tally Ghost Shift & B6"
+   }
+  },
+  {
+   "id": "ally_husk_tag",
+   "path": "res://assets/models/ally_husk/ally_husk_tag.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-TALLY-B-CODE src/presentation/ally_husk_look.gd (Ghost Shift ownership overlay: forged oxblood/amber Hollerith punched work-order card tag wedged in work-order slot; sockets socket_slot, socket_tick_0..2)",
+   "provenance": {
+    "recipe": "tools/blender/ally_husk_overlay.py",
+    "spec": "SCRAPKEEP-REBASELINE-MASTER-BIBLE.md §2.3, §2.5, §6.1, §9 Wave 47D; SCRAPKEEP-REBASELINE-OPUS-CRITIQUE.md Blocker 5 & N9; OPUS-TASTE-AND-MECHANICS-RUBRIC.md §2 Tally Ghost Shift & B6"
+   }
+  },
+  {
    "id": "ambient_bighorn_lamb",
    "path": "res://assets/models/ambient/bighorn_lamb.glb",
    "class": "ambient",
@@ -41261,6 +41305,10 @@
   "adit_mouth",
   "adit_mouth_detail1",
   "adit_mouth_detail2",
+  "ally_husk_clip",
+  "ally_husk_lead",
+  "ally_husk_mast",
+  "ally_husk_tag",
   "ambient_bighorn_lamb",
   "ambient_canyon_wren",
   "ambient_dam_swift",
