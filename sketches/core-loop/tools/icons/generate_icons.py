@@ -1281,6 +1281,21 @@ register(
 )
 
 
+def g_el_heat():
+    return [
+        path("M32 13 C42 24 46 33 44 41 C42 48 37 51 32 51 C27 51 22 48 20 41 C18 33 22 24 32 13 Z",
+             stroke=AMBER, width=DETAIL, fill=COPPER),
+        path("M32 27 C37 33 38 38 37 43 C36 46 34 48 32 48 C30 48 28 46 27 43 C26 38 27 33 32 27 Z",
+             stroke=BONE, width=3, fill=AMBER),
+    ]
+
+
+register(
+    "el_heat", "Heat (amber)",
+    "A heavy foundry flame with a bright inner core", plate_circle, g_el_heat,
+)
+
+
 def g_trg_on_hit():
     return [
         path("M12 18 V10 H20 M44 10 H52 V18 M52 42 V50 H44 M20 50 H12 V42", stroke=BONE, width=DETAIL),

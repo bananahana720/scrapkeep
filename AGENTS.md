@@ -1,11 +1,11 @@
 # Scrapkeep project instructions
 
-Scrapkeep is a Godot roguelite at `sketches/core-loop` with three worlds. The goal is a finished-feeling Linux alpha. World 1 (the Spillway) comes first; worlds 2 and 3 are parked. Andrew plays a world 1 sitting, then one full-alpha sitting, and no wave asks him to play. One local session on the Mac Studio coordinates the work and is the Gate (rulings ds and eb): it talks to Andrew in its own chat, plans the work, and builds each unit itself or through a worker in a separate worktree. Rule 11 names the workers. The rules below say "thread" from the claude.ai project period (ruling dh, 12 to 14 Nov); they bind the local session and its writer agents the same way.
+Scrapkeep is a Godot roguelite at `sketches/core-loop` with three worlds. The goal is a finished-feeling Linux alpha. Under ruling ep, Worlds 1–3 are unparked in the unified pre-alpha baseline on `main`; Andrew plays a world 1 sitting, then one full-alpha sitting, and no wave asks him to play. One local session on the Mac Studio coordinates the work and is the Gate (rulings ds and eb): it talks to Andrew in its own chat, plans the work, and builds each unit itself or through a worker in a separate worktree. Rule 11 names the workers. The rules below say "thread" from the claude.ai project period (ruling dh, 12 to 14 Nov); they bind the local session and its writer agents the same way.
 
 ## Read first, in this order
 
 1. [START-HERE.md](project-guide/handoff/START-HERE.md): who owns what, and where to go for each kind of work.
-2. [STATE.md](project-guide/handoff/STATE.md): the open stage and the live board. Alpha work stacks on `stage/alpha-w<N>`.
+2. [STATE.md](project-guide/handoff/STATE.md): the open stage and the live board. Under ruling ep, work runs flat on `main` (`Open stage: main`, `Live board: none`), retiring legacy per-wave `stage/alpha-w<N>` stacking.
 3. Your brief, the exact sources it names, and the rows of [DECISIONS.md](project-guide/handoff/DECISIONS.md) it cites. The newest ruling wins. Do not ask Andrew a question that is already ruled.
 
 Read the rest only when the task needs it: [ROADMAP.md](project-guide/handoff/ROADMAP.md) for the order of what is left, [CONTRIBUTING.md](CONTRIBUTING.md) for commands, [ORCHESTRATOR.md](ORCHESTRATOR.md) for the gate, and the one section of [LESSONS.md](project-guide/handoff/LESSONS.md) that covers your work.

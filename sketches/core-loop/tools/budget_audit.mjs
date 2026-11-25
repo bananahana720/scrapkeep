@@ -146,7 +146,7 @@ export function measureRegistry(root) {
     try {
       const bytes = fs.readFileSync(file);
       if (path.extname(file).toLowerCase() === ".glb") {
-        const inv = inspectGlb(bytes, { textureLenient: true }).inventory;
+        const inv = inspectGlb(bytes, { textureLenient: true, allowClipOnly: true }).inventory;
         Object.assign(out, {
           tris: inv.triangles,
           verts: inv.welded_vertices,

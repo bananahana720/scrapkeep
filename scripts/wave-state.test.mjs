@@ -40,9 +40,7 @@ const promotion32 = {
 
 test("a promotion subject yields its wave, stage head and PR", () => {
   assert.deepEqual(
-    parsePromotionSubject(
-      "Promote alpha wave 32 (stage/alpha-w32 8f12596a) to main (#632)",
-    ),
+    parsePromotionSubject("Promote alpha wave 32 (stage/alpha-w32 8f12596a) to main (#632)"),
     { wave: 32, stageSha: "8f12596a", pr: 632 },
   );
   assert.equal(parsePromotionSubject("Merge pull request #614 from x/y"), null);
@@ -176,7 +174,10 @@ test("the check passes on a checkout whose table matches its history", async () 
     writeFileSync(path.join(root, STATE_FILE), state(renderWaveFacts({ ...facts, mainSha: sha })));
     commit("First commit on the new stage");
     const findings = await checkWaveState(root);
-    assert.deepEqual(findings.filter((finding) => finding.level === "failure"), []);
+    assert.deepEqual(
+      findings.filter((finding) => finding.level === "failure"),
+      [],
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -187,7 +188,10 @@ test("the check fails once a newer promotion lands, then --write repairs it", as
   try {
     writeFileSync(path.join(root, STATE_FILE), state());
     const sha32 = commit("Promote alpha wave 32 (stage/alpha-w32 8f12596a) to main (#632)");
-    writeFileSync(path.join(root, STATE_FILE), state(renderWaveFacts({ ...facts, mainSha: sha32 })));
+    writeFileSync(
+      path.join(root, STATE_FILE),
+      state(renderWaveFacts({ ...facts, mainSha: sha32 })),
+    );
     commit("A stacked pull request");
     const sha33 = commit("Promote alpha wave 33 (stage/alpha-w33 0a0a0a0a) to main (#640)");
     assert.deepEqual(
@@ -200,7 +204,9 @@ test("the check fails once a newer promotion lands, then --write repairs it", as
     assert.equal(stale.length, 1);
     assert.match(stale[0].message, /history holds the wave 33 promotion/);
 
-    const refused = spawnSync(process.execPath, [script, "--write", "--root", root], { encoding: "utf8" });
+    const refused = spawnSync(process.execPath, [script, "--write", "--root", root], {
+      encoding: "utf8",
+    });
     assert.equal(refused.status, 2);
     assert.match(refused.stderr, /needs --board/);
     const wrote = spawnSync(
@@ -245,6 +251,61 @@ test("a root with no handoff folder has nothing to check", async () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "wave-state-"));
   try {
     assert.deepEqual(await checkWaveState(root), []);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("flat main mode parses, renders, and validates direct promotions with no live board", async () => {
+  const flatFacts = {
+    wave: 50,
+    mainSha: "fc9680f8",
+    direct: true,
+    flatMain: true,
+    redTeam: "cautious",
+    compare: "w50-pre-alpha-fc9680f8",
+  };
+  const rendered = renderWaveFacts(flatFacts);
+  assert.match(rendered, /\| Last promotion \| wave 50, main fc9680f8, direct \|/);
+  assert.match(rendered, /\| Open stage \| main \|/);
+  assert.match(rendered, /\| Live board \| none \|/);
+
+  const parsed = parseWaveFacts(state(rendered));
+  assert.equal(parsed.found, true);
+  assert.deepEqual(parsed.problems, []);
+  assert.deepEqual(parsed.facts, flatFacts);
+  assert.equal(parsed.facts.pr, undefined);
+  assert.equal(parsed.facts.board, undefined);
+
+  assert.deepEqual(compareWithGit(flatFacts, promotion32, { isAncestor: () => true }), []);
+  assert.equal(compareWithGit(flatFacts, promotion32, { isAncestor: () => false }).length, 1);
+  assert.deepEqual(
+    compareWithGit({ ...flatFacts, wave: 32 }, promotion32, { isAncestor: () => true }),
+    [],
+  );
+
+  const { root, commit } = repo();
+  try {
+    writeFileSync(path.join(root, STATE_FILE), state());
+    commit("Promote alpha wave 46 (stage/alpha-w46 8f12596a) to main (#1279)");
+    const directSha = commit("Flatten waves 47-50 onto main");
+    writeFileSync(
+      path.join(root, STATE_FILE),
+      state(renderWaveFacts({ ...flatFacts, mainSha: directSha.slice(0, 8) })),
+    );
+    commit("Record flat main baseline");
+    const findings = await checkWaveState(root);
+    assert.deepEqual(
+      findings.filter((finding) => finding.level === "failure"),
+      [],
+    );
+
+    writeFileSync(path.join(root, "AGENTS.md"), "Queued on board #1280.\n");
+    const boardHits = (await checkWaveState(root)).filter((finding) => finding.level === "failure");
+    assert.deepEqual(
+      boardHits.map((finding) => finding.file),
+      ["AGENTS.md"],
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

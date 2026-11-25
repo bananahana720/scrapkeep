@@ -49,7 +49,7 @@ const EXTRA := {"ab_sable_reel": "reel", "res_mass": "heap", "ab_tarn_weapon": "
 	"cons_scrap_dice": "diamond", "cons_duplicator_spool": "rings", "cons_overload_fuse": "bolt",
 	"cons_pocket_belt": "pips_2",
 	"act_slag_mortar": "burst", "act_magnet_sling": "hook",
-	"obj_scrapper": "cog", "obj_press": "weight", "obj_part_press": "weight",
+	"obj_scrapper": "cog", "obj_part_press": "weight",
 	"obj_tri_terminal": "pips_3", "res_scrap_ingot": "weight",
 	"part_orbital_flywheel": "rings", "rel_alt_loadout": "tag",
 	"lic_spillway_works": "tag", "lic_fleet_surplus": "tag", "lic_redjaw": "tag",

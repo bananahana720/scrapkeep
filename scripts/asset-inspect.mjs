@@ -465,7 +465,10 @@ export function inspectGlb(bytes, selection = {}) {
     for (const child of n.children ?? []) collect(child);
   }
   roots.forEach(collect);
-  check(instances > 0, "Selected assembly contains no mesh instances");
+  check(
+    instances > 0 || (selection.allowClipOnly && animations.length > 0),
+    "Selected assembly contains no mesh instances",
+  );
   return {
     inventory: {
       meshes: meshes.length,
