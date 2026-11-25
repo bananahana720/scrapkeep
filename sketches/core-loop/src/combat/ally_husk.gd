@@ -48,6 +48,15 @@ const SEVERANCE_RAM_MIN_SPEED := 12.0
 const SEVERANCE_RAM_GRACE := 0.35
 const LINK_HUSK_RADIUS := 5.5
 const ATTACK_SEARCH_RADIUS := 34.0
+# W49-COMBAT Mind / Mind's Hand husk re-possession counter-hack (strictly B6 Palette.HAZARD #FF5A3C,
+# NEVER purple beam/grid!). Shooting or tapping the takeover node within 1.0 s interrupts The Mind
+# and overcharges the husk.
+const TAKEOVER_WARN_SECONDS := 1.0
+const TAKEOVER_NODE_RADIUS := 1.6
+const TAKEOVER_OVERCHARGE_SECONDS := 5.0
+const TAKEOVER_OVERCHARGE_DAMAGE_MULT := 1.6
+const TAKEOVER_STUN_SECONDS := 2.0
+const TAKEOVER_COLOR := Palette.HAZARD
 
 const PROFILES := {
 	"chaser": {
@@ -97,6 +106,28 @@ const PROFILES := {
 		"zone_shape": "ring", "zone_radius": 3.2, "at_target": true,
 		"radius": 1.1, "half_height": 0.9,
 	},
+	# World 3 Highdraft ordinary Fleet husks (W49-COMBAT): strictly B6 AMBER #E5A044 AllyZones,
+	# zero HAZARD telegraphs or hostile klaxons.
+	"line_cutter": {
+		"base_damage": 10.0, "speed": 6.2, "range": 16.0, "warn": 0.70, "live": 0.25, "rest": 1.30,
+		"zone_shape": "lane", "zone_length": 14.0, "zone_width": 2.8, "at_target": false,
+		"radius": 0.8, "half_height": 1.1,
+	},
+	"kite_drone": {
+		"base_damage": 10.0, "speed": 6.8, "range": 16.0, "warn": 0.75, "live": 0.25, "rest": 1.35,
+		"zone_shape": "ring", "zone_radius": 3.2, "at_target": true,
+		"radius": 0.8, "half_height": 1.1,
+	},
+	"ballast_heavy": {
+		"base_damage": 13.0, "speed": 4.4, "range": 7.0, "warn": 0.80, "live": 0.25, "rest": 1.45,
+		"zone_shape": "ring", "zone_radius": 5.0, "at_target": false,
+		"radius": 1.2, "half_height": 1.3,
+	},
+	"gap_net": {
+		"base_damage": 10.0, "speed": 4.0, "range": 15.0, "warn": 0.75, "live": 0.30, "rest": 1.40,
+		"zone_shape": "lane", "zone_length": 12.0, "zone_width": 3.0, "at_target": false,
+		"radius": 0.9, "half_height": 1.2,
+	},
 }
 
 const DEFAULT_PROFILE := {
@@ -111,9 +142,13 @@ var combat
 var wrecks: Array = []
 var husks: Array = []
 var last_severance := {}
+var last_counter_hack := {}
 var raises_total := 0
 var severance_total := 0
 var strikes_total := 0
+var takeovers_started := 0
+var takeovers_interrupted := 0
+var takeovers_completed := 0
 
 var _surge_window := 0.0
 
@@ -140,9 +175,19 @@ class HuskUnit extends Node3D:
 	var shift_left := 12.0
 	var age := 0.0
 	var overclock_left := 0.0
+	var overcharged := false
+	var overcharge_left := 0.0
 	var charge_left := 0.0
 	var charge_target := Vector3.ZERO
 	var shot_bits := 0
+
+	var takeover_active := false
+	var takeover_source: Node = null
+	var takeover_elapsed := 0.0
+	var takeover_duration := 1.0
+	var takeover_node_pos := Vector3.ZERO
+	var takeover_color := Palette.HAZARD
+	var takeover_visual: Node3D = null
 
 	var state := "chase"
 	var phase_t := 0.0
@@ -156,12 +201,20 @@ class HuskUnit extends Node3D:
 
 
 	func is_overclocked() -> bool:
-		return overclock_left > 0.0
+		return overclock_left > 0.0 or overcharge_left > 0.0
+
+
+	func is_overcharged() -> bool:
+		return overcharge_left > 0.0
+
+
+	func effective_damage() -> float:
+		return damage * (TAKEOVER_OVERCHARGE_DAMAGE_MULT if overcharge_left > 0.0 else 1.0)
 
 
 	func speed_mult() -> float:
 		var m := 1.0
-		if overclock_left > 0.0:
+		if is_overclocked():
 			m *= OVERCLOCK_SPEED_MULT
 		if charge_left > 0.0:
 			m *= CHARGE_SPEED_MULT
@@ -169,7 +222,7 @@ class HuskUnit extends Node3D:
 
 
 	func rate_mult() -> float:
-		return OVERCLOCK_RATE_MULT if overclock_left > 0.0 else 1.0
+		return OVERCLOCK_RATE_MULT if is_overclocked() else 1.0
 
 
 	func clear_zone() -> void:
@@ -180,10 +233,24 @@ class HuskUnit extends Node3D:
 		zone = null
 
 
+	func clear_takeover() -> void:
+		takeover_active = false
+		takeover_source = null
+		takeover_elapsed = 0.0
+		if takeover_visual != null and is_instance_valid(takeover_visual):
+			if takeover_visual.get_parent() != null:
+				takeover_visual.get_parent().remove_child(takeover_visual)
+			takeover_visual.queue_free()
+		takeover_visual = null
+
+
 func setup(ctx_ref, combat_ref) -> void:
 	ctx = ctx_ref
 	combat = combat_ref
 	name = "AllyHusks"
+	if ctx != null and ctx.events != null and ctx.events.has_signal("shot_fired"):
+		if not ctx.events.shot_fired.is_connected(_on_shot_fired):
+			ctx.events.shot_fired.connect(_on_shot_fired)
 
 
 static func can_leave_husk(enemy_kind: String, ringed_out := false, is_spectator := false) -> bool:
@@ -350,7 +417,16 @@ func step(delta: float, enemies: Array) -> void:
 		h.age += delta
 		h.shift_left -= delta
 		h.overclock_left = maxf(0.0, h.overclock_left - delta)
+		h.overcharge_left = maxf(0.0, h.overcharge_left - delta)
+		if h.overcharge_left <= 0.0:
+			h.overcharged = false
 		h.charge_left = maxf(0.0, h.charge_left - delta)
+
+		# Step active Mind / Mind's Hand re-possession takeover telegraph (1.0 s Palette.HAZARD #FF5A3C).
+		if h.takeover_active:
+			if _step_takeover(h, delta, ball_pos):
+				_free_husk(h)
+				continue
 
 		# Depth-3 Severance Blast on shift expiry.
 		if h.shift_left <= 0.0:
@@ -534,7 +610,7 @@ func _resolve_husk_strike(h: HuskUnit, enemies: Array) -> void:
 			continue
 		if not h.zone.contains(enemy.global_position):
 			continue
-		combat.ally_husk_hit(h, enemy, h.damage, origin, bits)
+		combat.ally_husk_hit(h, enemy, h.effective_damage(), origin, bits)
 		strikes_total += 1
 	if combat.effects != null:
 		combat.effects.ring(origin, h.zone_radius if h.zone_shape == "ring" else h.zone_width, Palette.AMBER)
@@ -614,6 +690,7 @@ func _free_marker(w: Dictionary) -> void:
 func _free_husk(h: HuskUnit) -> void:
 	if h == null or not is_instance_valid(h):
 		return
+	h.clear_takeover()
 	h.clear_zone()
 	AttackBudget.withdraw_ally(h)
 	AttackBudget.release_ally(h)
@@ -622,6 +699,184 @@ func _free_husk(h: HuskUnit) -> void:
 	if h.get_parent() != null:
 		h.get_parent().remove_child(h)
 	h.queue_free()
+
+
+# --- Mind / Mind's Hand Husk Re-Possession Counter-Hack (W49-COMBAT, B6 compliant) ----------
+# Strictly Palette.HAZARD (#FF5A3C) 1.0 s takeover telegraph + floating takeover node (NEVER purple).
+# Shooting or tapping the takeover node interrupts The Mind / Mind's Hand and overcharges the husk.
+
+func first_takeover_target(origin: Vector3, max_range := 26.0) -> HuskUnit:
+	var best: HuskUnit = null
+	var best_d := max_range
+	for h in husks:
+		if not is_instance_valid(h) or h.takeover_active:
+			continue
+		var d := Vector2(h.global_position.x - origin.x, h.global_position.z - origin.z).length()
+		if d <= best_d:
+			best_d = d
+			best = h
+	return best
+
+
+func active_takeovers() -> Array:
+	var out: Array = []
+	for h in husks:
+		if is_instance_valid(h) and h.takeover_active:
+			out.append(h)
+	return out
+
+
+func begin_takeover(h: HuskUnit, source: Node, duration := TAKEOVER_WARN_SECONDS) -> bool:
+	if h == null or not is_instance_valid(h) or h.takeover_active or not husks.has(h):
+		return false
+	if source == null or not is_instance_valid(source):
+		return false
+	h.clear_takeover()
+	h.takeover_active = true
+	h.takeover_source = source
+	h.takeover_elapsed = 0.0
+	h.takeover_duration = maxf(TAKEOVER_WARN_SECONDS, duration)
+	h.takeover_color = TAKEOVER_COLOR
+	h.takeover_node_pos = _takeover_node_at(h)
+	h.takeover_visual = _build_takeover_visual(h, source)
+	takeovers_started += 1
+	return true
+
+
+func interrupt_takeover(h: HuskUnit, by := "tap") -> bool:
+	if h == null or not is_instance_valid(h) or not h.takeover_active:
+		return false
+	var source := h.takeover_source
+	var node_pos := h.takeover_node_pos
+	h.clear_takeover()
+	takeovers_interrupted += 1
+	# Overcharge the husk: boosted damage, speed, attack rate, and refreshed 12.0 s shift.
+	h.overcharged = true
+	h.overcharge_left = maxf(h.overcharge_left, TAKEOVER_OVERCHARGE_SECONDS)
+	h.overclock_left = maxf(h.overclock_left, TAKEOVER_OVERCHARGE_SECONDS)
+	h.shift_left = SHIFT_SECONDS
+	last_counter_hack = {
+		"husk": h.kind,
+		"source": source.name if is_instance_valid(source) else "",
+		"by": by,
+		"at": node_pos,
+		"color": TAKEOVER_COLOR,
+		"overcharge_s": TAKEOVER_OVERCHARGE_SECONDS,
+		"frame": Engine.get_physics_frames(),
+	}
+	if is_instance_valid(source) and source.has_method("on_takeover_interrupted"):
+		source.on_takeover_interrupted(h)
+	if combat != null and combat.effects != null:
+		combat.effects.ring(h.global_position, maxf(2.4, h.body_radius * 2.2), Palette.AMBER)
+		combat.effects.spark(node_pos, Palette.AMBER)
+	return true
+
+
+func _takeover_node_at(h: HuskUnit) -> Vector3:
+	return h.global_position + Vector3.UP * (h.half_height + 1.4)
+
+
+func _build_takeover_visual(h: HuskUnit, source: Node) -> Node3D:
+	var root_vis := Node3D.new()
+	root_vis.name = "MindTakeoverTelegraph"
+	root_vis.set_meta("color", TAKEOVER_COLOR)
+	root_vis.set_meta("warn_seconds", h.takeover_duration)
+	# Strictly Palette.HAZARD #FF5A3C — NEVER purple beam or grid (B6).
+	var ring := MeshInstance3D.new()
+	ring.name = "TakeoverRing"
+	var torus := TorusMesh.new()
+	torus.inner_radius = maxf(1.2, h.body_radius * 1.4)
+	torus.outer_radius = torus.inner_radius + 0.22
+	ring.mesh = torus
+	ring.material_override = Palette.unshaded(TAKEOVER_COLOR)
+	ring.position = Vector3(0.0, 0.2, 0.0)
+	root_vis.add_child(ring)
+
+	var node_orb := MeshInstance3D.new()
+	node_orb.name = "TakeoverNode"
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.55
+	sphere.height = 1.1
+	node_orb.mesh = sphere
+	node_orb.material_override = Palette.solid(TAKEOVER_COLOR, 2.2)
+	node_orb.position = Vector3(0.0, h.half_height + 1.4, 0.0)
+	root_vis.add_child(node_orb)
+
+	var tether := MeshInstance3D.new()
+	tether.name = "TakeoverTether"
+	var beam := BoxMesh.new()
+	beam.size = Vector3(0.14, 0.14, 1.0)
+	tether.mesh = beam
+	tether.material_override = Palette.unshaded(TAKEOVER_COLOR)
+	tether.top_level = true
+	root_vis.add_child(tether)
+
+	h.add_child(root_vis)
+	_sync_takeover_tether(h, root_vis, source, 0.0)
+	return root_vis
+
+
+func _sync_takeover_tether(h: HuskUnit, root_vis: Node3D, source: Node, progress: float) -> void:
+	if root_vis == null or not is_instance_valid(root_vis):
+		return
+	var ring := root_vis.get_node_or_null("TakeoverRing") as MeshInstance3D
+	if ring != null:
+		var s := lerpf(1.45, 0.72, clampf(progress, 0.0, 1.0))
+		ring.scale = Vector3(s, 1.0, s)
+	var orb := root_vis.get_node_or_null("TakeoverNode") as MeshInstance3D
+	if orb != null:
+		var pulse := 1.0 + 0.25 * clampf(progress, 0.0, 1.0)
+		orb.scale = Vector3.ONE * pulse
+	var tether := root_vis.get_node_or_null("TakeoverTether") as MeshInstance3D
+	if tether != null and is_instance_valid(source):
+		var from_pt: Vector3 = source.lens_point() if source.has_method("lens_point") else (
+			(source.warden.global_position + Vector3.UP * 3.0) if (source.get("warden") != null and is_instance_valid(source.warden)) else (
+				(source as Node3D).global_position + Vector3.UP * 2.5 if source is Node3D else h.takeover_node_pos))
+		var to_pt := h.takeover_node_pos
+		var span := to_pt - from_pt
+		var len_m := maxf(0.1, span.length())
+		tether.global_position = (from_pt + to_pt) * 0.5
+		if span.length() > 0.05:
+			var up_v := Vector3.UP if absf(span.normalized().y) < 0.98 else Vector3.RIGHT
+			tether.global_basis = Basis.looking_at(span.normalized(), up_v)
+		tether.scale = Vector3(1.0, 1.0, len_m)
+
+
+func _step_takeover(h: HuskUnit, delta: float, ball_pos: Vector3) -> bool:
+	if not is_instance_valid(h.takeover_source) or (h.takeover_source.has_method("is_dead") and h.takeover_source.is_dead()):
+		h.clear_takeover()
+		return false
+	h.takeover_node_pos = _takeover_node_at(h)
+	# Ball tap / ram through the takeover node interrupts The Mind and overcharges the husk.
+	if ball_pos.is_finite():
+		var dist3 := ball_pos.distance_to(h.takeover_node_pos)
+		var flat_d := Vector2(ball_pos.x - h.takeover_node_pos.x, ball_pos.z - h.takeover_node_pos.z).length()
+		if dist3 <= TAKEOVER_NODE_RADIUS + 1.1 or (flat_d <= TAKEOVER_NODE_RADIUS + 1.0 and absf(ball_pos.y - h.global_position.y) <= 4.0):
+			interrupt_takeover(h, "tap")
+			return false
+	h.takeover_elapsed += delta
+	var progress := clampf(h.takeover_elapsed / maxf(0.1, h.takeover_duration), 0.0, 1.0)
+	_sync_takeover_tether(h, h.takeover_visual, h.takeover_source, progress)
+	if h.takeover_elapsed >= h.takeover_duration:
+		var source := h.takeover_source
+		h.clear_takeover()
+		takeovers_completed += 1
+		if is_instance_valid(source) and source.has_method("on_takeover_completed"):
+			source.on_takeover_completed(h)
+		if combat != null and combat.effects != null:
+			combat.effects.ring(h.global_position, maxf(2.4, h.body_radius * 2.0), TAKEOVER_COLOR)
+		return true
+	return false
+
+
+func _on_shot_fired(_weapon_id: String, from: Vector3, to: Vector3) -> void:
+	for h in husks:
+		if not is_instance_valid(h) or not h.takeover_active:
+			continue
+		var closest := Geometry3D.get_closest_point_to_segment(h.takeover_node_pos, from, to)
+		if closest.distance_to(h.takeover_node_pos) <= TAKEOVER_NODE_RADIUS + 0.6:
+			interrupt_takeover(h, "shot")
+			return
 
 
 func _reset() -> void:
@@ -633,5 +888,6 @@ func _reset() -> void:
 	husks.clear()
 	_surge_window = 0.0
 	last_severance = {}
+	last_counter_hack = {}
 	if is_inside_tree():
 		AttackBudget.reset_ally(get_tree())

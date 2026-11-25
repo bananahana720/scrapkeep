@@ -3725,7 +3725,10 @@ func phase_music(phase: int) -> Dictionary:
 			_log_cue(["boss_phase_music", "hype_drop", "beat", int(when["start"]), 1.0])
 		_ace_named(plan["track"], int(when["drop"]), true)
 		_log_cue(["boss_phase_music", plan["track"], "bar", int(when["drop"]), 1.0])
-		return {"track": plan["track"], "hype": plan["hype"], "at": when["drop"]}
+		var lift := Worlds.boss_finale_lift(boss)
+		if lift > 0:
+			_log_cue(["boss_phase_music", "mind_finale_lift", "bar", int(when["drop"]), Harmony.ratio(float(lift))])
+		return {"track": plan["track"], "hype": plan["hype"], "at": when["drop"], "lift_semitones": lift}
 	var track := PhaseMusic.track_for_phase(boss, phase, pack_available)
 	if track == "" or not pack_available.call(track):
 		return {}

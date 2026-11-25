@@ -2,6 +2,7 @@ extends "res://src/combat/counter.gd"
 
 const IslandEdge := preload("res://src/combat/island_edge.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 # The gap net (roster_highdraft.gd): the Spillway netcaster re-homed to the Highdraft (Andrew,
 # "Re-home a few", 2026-10-17 20:03:01Z). On its first tick the crew finds the nearest rim and
@@ -13,6 +14,10 @@ const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 # than TEAR_SPEED is slung back the way it came (the normal part of its velocity reflected at
 # SLING_KEEP, the line cut); one crossing at TEAR_SPEED or faster rips it. A grounded ball, or one
 # under the band, passes. The crew is the near post: kill it and the net is gone.
+#
+# Secondary attack (W49-COMBAT): Dual-Layer Shock Net. Commits a >= 0.75 s Palette.HAZARD lane
+# and energises a dual-layer shock curtain across the gap. Ripping it at Blazing grants a 3.0 s
+# electric aura carried onto the next island that zaps nearby machines and adds a forward kick.
 #
 # The post stands on a rim, so a knock that carries it POST_FALL below where it was strung drops
 # the whole net, as a kill (a ring-out, like the heavies').
@@ -39,6 +44,15 @@ const DEEP_GAP := 16.0
 const STACK_GAP := 6.0
 const POST_HEIGHT := 4.0
 const POST_FALL := 3.0
+const PRIMARY_WARN := 1.0
+const PRIMARY_LIVE := 3.5
+const SHOCK_WARN := 0.85
+const SHOCK_LIVE := 3.5
+const SHOCK_DAMAGE := 6.0
+const ELECTRIC_AURA_SECONDS := 3.0
+const ELECTRIC_AURA_RADIUS := 5.5
+const ELECTRIC_AURA_DAMAGE := 18.0
+const ELECTRIC_AURA_KICK := 4.0
 # E33's wind-up (event_kinds.gd, e33_net_crackle; coordinator call 2026-10-18, "no silent
 # wind-ups"): through the charge the slack net crackles, flashing to its live tint in bursts that
 # come faster and longer as the charge fills, and shivers CRACKLE_SHAKE along its normal. It goes
@@ -47,9 +61,81 @@ const CRACKLE_RATE := 5.0
 const CRACKLE_RATE_GAIN := 15.0
 const CRACKLE_SHAKE := 0.08
 
+
+class ElectricAura extends Node3D:
+	var player
+	var left := 3.0
+	var radius := 5.5
+	var damage := 18.0
+	var zaps := 0
+	var _struck := {}
+	var _ring: MeshInstance3D
+
+	func setup(player_ref, duration: float, aura_radius: float, aura_damage: float) -> void:
+		name = "ShockNetElectricAura"
+		player = player_ref
+		left = duration
+		radius = aura_radius
+		damage = aura_damage
+		var torus := TorusMesh.new()
+		torus.inner_radius = 1.4
+		torus.outer_radius = 1.65
+		_ring = MeshInstance3D.new()
+		_ring.mesh = torus
+		_ring.material_override = Palette.solid(Palette.ICE, 2.2)
+		add_child(_ring)
+		if player != null and is_instance_valid(player):
+			player.set_meta("electric_aura_active", true)
+			player.set_meta("electric_aura_left", left)
+			global_position = player.ball_position()
+
+	func _physics_process(delta: float) -> void:
+		if player == null or not is_instance_valid(player):
+			queue_free()
+			return
+		left -= delta
+		var ball: Vector3 = player.ball_position()
+		global_position = ball
+		if _ring != null:
+			_ring.rotate_y(delta * 5.0)
+		if left <= 0.0:
+			player.set_meta("electric_aura_active", false)
+			player.set_meta("electric_aura_left", 0.0)
+			queue_free()
+			return
+		player.set_meta("electric_aura_active", true)
+		player.set_meta("electric_aura_left", left)
+		if not is_inside_tree():
+			return
+		for enemy in get_tree().get_nodes_in_group("enemy"):
+			if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+				continue
+			var id := enemy.get_instance_id()
+			if _struck.has(id):
+				continue
+			if enemy.global_position.distance_to(ball) <= radius:
+				_struck[id] = true
+				zaps += 1
+				if enemy.has_method("take_damage"):
+					enemy.take_damage(damage)
+				if enemy.has_method("knock"):
+					var away: Vector3 = enemy.global_position - ball
+					away.y = 0.0
+					enemy.knock((away.normalized() if away.length() > 0.1 else Vector3.FORWARD) + Vector3.UP * 0.25, 10.0)
+
+	func _exit_tree() -> void:
+		if player != null and is_instance_valid(player):
+			player.set_meta("electric_aura_active", false)
+			player.set_meta("electric_aura_left", 0.0)
+
 var slung := 0
 var torn := 0
 var crossings := 0
+var shock_nets := 0
+var shock_rips := 0
+var shock_layer_active := false
+var next_attack := ""
+var last_shock_rip := {}
 # Each net: {center, normal, side, low, high, live (not torn), last (signed side last tick), mesh}.
 var nets: Array = []
 var post_b := Vector3.INF
@@ -60,6 +146,8 @@ var _post_y := INF
 var _mat_live: StandardMaterial3D
 var _mat_slack: StandardMaterial3D
 var _crackling := false
+var _shock_attack := false
+var _shock_extra: Dictionary = {}
 static var _shared: Array = []
 
 
@@ -68,8 +156,8 @@ func _configure(threat: float) -> void:
 	scrap_value = 5
 	weight = 1.6
 	walk_speed = 0.0
-	warn_seconds = 1.0
-	live_seconds = 3.5
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
 	rest_seconds = 2.0
 	first_rest = 0.8
 	attack_range = 34.0
@@ -194,12 +282,52 @@ func _wants_attack(to_ball: Vector3) -> bool:
 	return _live_nets() > 0 and _nearest_net_distance() <= attack_range
 
 
+func _use_shock_net() -> bool:
+	if next_attack == "shock_net":
+		return true
+	if next_attack == "single":
+		return false
+	return warned % 2 == 1
+
+
 func _commit(_to_ball: Vector3) -> Node3D:
 	var net := _nearest_net()
 	if net.is_empty():
 		return null
+	var is_shock := _use_shock_net()
+	_shock_attack = is_shock
+	next_attack = ""
+	if is_shock:
+		warn_seconds = SHOCK_WARN
+		live_seconds = SHOCK_LIVE
+		shock_layer_active = true
+		shock_nets += 1
+		_deploy_shock_layer(net)
+	else:
+		warn_seconds = PRIMARY_WARN
+		live_seconds = PRIMARY_LIVE
+		shock_layer_active = false
 	var from: Vector3 = net["center"] - (net["side"] as Vector3) * NET_WIDTH * 0.5
 	return _commit_lane(Threat.Type.LANE, from, net["side"], NET_WIDTH, 1.2)
+
+
+func _deploy_shock_layer(base_net: Dictionary) -> void:
+	_clear_shock_layer()
+	if nets.size() >= 2:
+		return
+	var offset: Vector3 = (base_net["normal"] as Vector3) * (STACK_GAP * 0.5)
+	_hang((base_net["center"] as Vector3) + offset, base_net["normal"], float(base_net["low"]), float(base_net["high"]))
+	_shock_extra = nets[-1]
+	_shock_extra["shock_temp"] = true
+
+
+func _clear_shock_layer() -> void:
+	if _shock_extra.is_empty():
+		return
+	if is_instance_valid(_shock_extra.get("mesh")):
+		(_shock_extra["mesh"] as Node).queue_free()
+	nets.erase(_shock_extra)
+	_shock_extra = {}
 
 
 func _go_live() -> void:
@@ -222,7 +350,12 @@ func _live(_delta: float) -> bool:
 			continue
 		crossings += 1
 		var v: Vector3 = player.state.velocity
-		if v.length() >= TEAR_SPEED:
+		var blazing: bool = player.speed_tier() >= SpeedTier.BLAZING or v.length() >= TEAR_SPEED
+		if blazing:
+			if _shock_attack and player.speed_tier() >= SpeedTier.BLAZING:
+				_grant_electric_aura(player, net)
+				_tear_all_shock()
+				return false
 			_tear(net)
 			continue
 		var n: Vector3 = net["normal"]
@@ -231,12 +364,47 @@ func _live(_delta: float) -> bool:
 		player.set_velocity_now(out, "netted")
 		net["last"] = _side_of(net, ball - n * signf(s) * 0.6)
 		slung += 1
+		if _shock_attack and player.speed_tier() < SpeedTier.CRUISE:
+			hit_player.emit(SHOCK_DAMAGE, Vector3.ZERO)
 		if fleet != null:
 			fleet.discover("gap_sling", ball)
 	return _live_nets() > 0
 
 
+func _grant_electric_aura(player, net: Dictionary) -> void:
+	shock_rips += 1
+	var heading: Vector3 = player.planar_velocity()
+	heading = heading.normalized() if heading.length() > 0.1 else (net["normal"] as Vector3)
+	if player.has_method("set_velocity_now"):
+		player.set_velocity_now(player.state.velocity + heading * ELECTRIC_AURA_KICK, "shock_rip")
+	var aura := ElectricAura.new()
+	if world_root != null:
+		world_root.add_child(aura)
+	else:
+		player.add_child(aura)
+	aura.setup(player, ELECTRIC_AURA_SECONDS, ELECTRIC_AURA_RADIUS, ELECTRIC_AURA_DAMAGE)
+	last_shock_rip = {"at": player.ball_position(), "duration": ELECTRIC_AURA_SECONDS, "aura": aura, "frame": Engine.get_physics_frames()}
+	if fleet != null:
+		fleet.discover("gap_sling", player.ball_position())
+
+
+func _tear_all_shock() -> void:
+	for net in nets:
+		if net["live"]:
+			net["live"] = false
+			torn += 1
+			if is_instance_valid(net["mesh"]):
+				net["mesh"].visible = false
+	last_damage_source = "tear"
+	_die()
+
+
 func _on_end() -> void:
+	_shock_attack = false
+	shock_layer_active = false
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
+	_clear_shock_layer()
 	_paint(false)
 
 

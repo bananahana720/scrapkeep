@@ -61,8 +61,13 @@ const DRIVER_PATH := "res://src/combat/warden_mind.gd"
 # seeds 0-2 small [76.97, 133.16, 103.75], grown [47.52, 67.28, 33.57]. The pre-change stage measured 144.5 / 52.7 on
 # the same seeds. Over 24 seeds (child runs, two or three at a time) small 109.2 s, grown 45.7 s, ratio 2.39. Grown sits
 # 0.7 s over the 25 to 45 s band on 24 seeds and 2.5 s over on these three; that band check stays red for the coordinator.
-const EXPECT_SMALL_S := 103.8
-const EXPECT_GROWN_S := 47.5
+# 2026-11-25 (W49-COMBAT, world 3 unparked on w49/combat-highdraft-mind with Highdraft 2-attack roster
+# and Stage 5 EventFamilies prewarm): measured seeds 0-2 small [106.77, 94.53, 137.03] median 106.8 s,
+# grown [63.48, 27.16, 19.29] median 27.2 s (inside 25..45 s band; matches base 6d64bb411bff grown
+# median 27.16 s), ratio 3.93x (>= 2.0x), camper 0/3 breaks. Re-pinned both medians per KNOWN-FAILING.tsv
+# with all design bands and 10% tolerance unchanged.
+const EXPECT_SMALL_S := 106.8
+const EXPECT_GROWN_S := 27.2
 const TOLERANCE := 0.10
 
 var _settings := {}

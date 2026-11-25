@@ -2,6 +2,7 @@ extends "res://src/combat/counter.gd"
 
 const IslandEdge := preload("res://src/combat/island_edge.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 # The ballast heavy (roster_highdraft.gd, design-v3/WORLD-ROSTERS.md): a slab crew that posts up
 # on an island rim. Damage barely touches it (DAMAGE_TAKEN of every hit, on a deep pool), but a
@@ -14,6 +15,10 @@ const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 #   stagger a hard knock leaves it in, it weighs BRACE_WEIGHT, so any ram at cruise lands in
 #   full and throws it about 10 m (blazing, about 20 m).
 # - The slam is a ring round it that shoves the ball outward, toward the edge it guards.
+# - Secondary attack (W49-COMBAT): Anchor-Stake Counter-Tug. Commits a >= 0.75 s Palette.HAZARD
+#   lane while driving a tensioned anchor stake behind it toward the island. Slow stalling balls
+#   inside the lane feel a tug; moving/carving balls are never stopped (ruling cu). Rolling over
+#   the stake during the tug snaps the line and catapults the Heavy straight off its cliff!
 # - It never walks off a rim on its own, and walks to the nearest rim within SEEK to post up.
 #   With no rim in reach (the net deck, a flat stage) it is beached: it drops its ballast and
 #   takes damage in full on BEACHED_HP, so no stage ever holds one nobody can finish.
@@ -40,13 +45,26 @@ const SLAM_DAMAGE := 12.0
 const SLAM_SHOVE := 16.0
 const SLAM_LIFT := 5.0
 const STAKE_BACK := 4.0
-const STAKE_REACH := 1.8
+const STAKE_REACH := 2.2
 const SLAB_SIZE := Vector3(2.2, 0.5, 1.2)
 const BRAKE_DROP := 0.3
+const PRIMARY_WARN := 1.1
+const PRIMARY_LIVE := 0.2
+const TUG_WARN := 0.90
+const TUG_LIVE := 1.60
+const TUG_LENGTH := 16.0
+const TUG_WIDTH := 3.4
+const TUG_PULL_ACCEL := 14.0
+const CATAPULT_KNOCK := 36.0
 
 var ring_outs := 0
 var reeled := 0
 var slams := 0
+var tugs := 0
+var catapults := 0
+var tug_active := false
+var next_attack := ""
+var last_catapult := {}
 var beached := false
 var posted := false
 # The rim this heavy guards: {at, dir, dist} from IslandEdge, or {} while none is known.
@@ -61,6 +79,9 @@ var _scan := 0.0
 var _slab: MeshInstance3D
 var _brakes: MeshInstance3D
 var _brakes_y := 0.0
+var _counter_tug := false
+var _tug_dir := Vector3.FORWARD
+var _tug_stake_temp := false
 static var _shared: Array = []
 
 
@@ -69,8 +90,8 @@ func _configure(threat: float) -> void:
 	scrap_value = 8
 	weight = PLANT_WEIGHT
 	walk_speed = WALK
-	warn_seconds = 1.1
-	live_seconds = 0.2
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
 	rest_seconds = 3.2
 	first_rest = 2.0
 	attack_range = SLAM_RADIUS + 2.5
@@ -200,15 +221,47 @@ func _move(delta: float, desired: Vector3) -> void:
 
 
 func _wants_attack(to_ball: Vector3) -> bool:
-	return to_ball.length() <= attack_range and is_on_floor()
+	if not is_on_floor():
+		return false
+	if next_attack == "counter_tug" and not beached:
+		return to_ball.length() <= TUG_LENGTH
+	return to_ball.length() <= (TUG_LENGTH if slams > tugs and not beached else attack_range)
+
+
+func _use_counter_tug() -> bool:
+	if beached:
+		return false
+	if next_attack == "counter_tug":
+		return true
+	if next_attack == "slam":
+		return false
+	return slams > tugs
 
 
 func _commit(to_ball: Vector3) -> Node3D:
+	var is_tug := _use_counter_tug()
+	_counter_tug = is_tug
+	next_attack = ""
+	if is_tug:
+		warn_seconds = TUG_WARN
+		live_seconds = TUG_LIVE
+		tug_active = true
+		var flat := Vector3(to_ball.x, 0.0, to_ball.z)
+		_tug_dir = flat.normalized() if flat.length() > 0.1 else Vector3.FORWARD
+		_facing(_tug_dir)
+		_ensure_tug_stake()
+		return _commit_lane(Threat.Type.LANE, global_position, _tug_dir, TUG_LENGTH, TUG_WIDTH, 3.0)
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
+	tug_active = false
 	_facing(to_ball)
 	return _commit_ring(Threat.Type.INSTANT, global_position, SLAM_RADIUS, SLAM_REACH)
 
 
 func _go_live() -> void:
+	if _counter_tug:
+		tugs += 1
+		return
 	slams += 1
 	var ring := telegraph()
 	var ball := _real_ball()
@@ -221,7 +274,31 @@ func _go_live() -> void:
 
 
 func _live(_delta: float) -> bool:
+	if _counter_tug:
+		if not tug_active:
+			return false
+		var lane := telegraph()
+		var player = _player()
+		var ball := _real_ball()
+		if lane != null and player != null and lane.contains(ball):
+			# Ruling cu: only press slow/stalling balls; never stop a moving/cruise or carving ball.
+			if player.state.grounded and not player.state.carving and player.speed_tier() < SpeedTier.CRUISE:
+				var pull := global_position - ball
+				pull.y = 0.0
+				if pull.length() > 0.5:
+					player.add_external_accel(pull.normalized() * TUG_PULL_ACCEL)
+		return _t < live_seconds
 	return _t < live_seconds
+
+
+func _on_end() -> void:
+	_counter_tug = false
+	tug_active = false
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
+	if _tug_stake_temp:
+		_tug_stake_temp = false
+		_snap_stake()
 
 
 func _pose() -> void:
@@ -235,18 +312,33 @@ func _pose() -> void:
 	_slab.rotation.x = -0.3 * lift
 
 
-# --- Grown remix: the stake cable ------------------------------------------------------------
+# --- Grown remix & Anchor-Stake Counter-Tug stake cable -------------------------------------
 
 func _plant_stake() -> void:
 	if staked or rim.is_empty() or not RosterHighdraft.grown(self):
 		return
 	staked = true
-	var back := global_position - (rim["dir"] as Vector3) * STAKE_BACK
+	_tug_stake_temp = false
+	_spawn_stake_node()
+
+
+func _ensure_tug_stake() -> void:
+	if is_instance_valid(stake):
+		return
+	_tug_stake_temp = true
+	_spawn_stake_node()
+
+
+func _spawn_stake_node() -> void:
+	if world_root == null:
+		return
+	var back_dir: Vector3 = (rim["dir"] as Vector3) if not rim.is_empty() else -_tug_dir
+	var back := global_position - back_dir * STAKE_BACK
 	stake = Node3D.new()
 	stake.name = "BallastStake"
 	world_root.add_child(stake)
 	stake.global_position = Vector3(back.x, terrain.height(back.x, back.z) if terrain != null else back.y, back.z)
-	_cylinder(0.12, 1.4, Palette.BRASS, Vector3(0.0, 0.7, 0.0), 0.6, stake)
+	_cylinder(0.14, 1.5, Palette.BRASS, Vector3(0.0, 0.75, 0.0), 0.9, stake)
 
 
 func _watch_stake() -> void:
@@ -255,7 +347,26 @@ func _watch_stake() -> void:
 	var ball := _real_ball()
 	if Vector2(ball.x - stake.global_position.x, ball.z - stake.global_position.z).length() <= STAKE_REACH \
 			and absf(ball.y - stake.global_position.y) < 2.5:
+		var during_tug := tug_active
+		_tug_stake_temp = false
 		_snap_stake()
+		if during_tug:
+			_catapult_off_cliff()
+
+
+func _catapult_off_cliff() -> void:
+	tug_active = false
+	_counter_tug = false
+	catapults += 1
+	broken_by = "stake_catapult"
+	last_catapult = {"at": global_position, "frame": Engine.get_physics_frames()}
+	weight = BRACE_WEIGHT
+	var out_dir: Vector3 = (rim["dir"] as Vector3) if not rim.is_empty() else -_tug_dir
+	out_dir.y = 0.0
+	out_dir = out_dir.normalized() if out_dir.length() > 0.1 else Vector3.FORWARD
+	knock(out_dir + Vector3.UP * 0.45, CATAPULT_KNOCK)
+	if fleet != null:
+		fleet.discover("ring_out", global_position)
 
 
 func _snap_stake() -> void:

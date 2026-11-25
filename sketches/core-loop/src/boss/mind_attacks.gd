@@ -24,6 +24,10 @@ const Tuning := preload("res://src/movement/tuning.gd")
 #   plate also carries the brace: verb, hit_mult_floor, weak_window
 
 const FAMILIES := ["lane", "split_lane", "rush", "plate"]
+# 3-phase boss anthem pacing (W49-COMBAT): Base / +10 BPM / +20 BPM + anime whole-step finale lift.
+const ANTHEM_BPM_DELTA := [0, 10, 20]
+const ANTHEM_PHASE_NAMES := ["Read", "Adapt", "Finale"]
+const FINALE_WHOLE_STEP_SEMITONES := 2
 # Floors the brief fixes for the Mind: no warn under the Warden's adapt warn, and a
 # braced verb never meets more than BRACE_MULT times plating.
 const WARN_FLOOR := 1.2
@@ -59,6 +63,23 @@ const SEARCH_BEARINGS := 72
 # One phase per posture chunk; phase k exposes families 1..k.
 static func phase_cap() -> int:
 	return FAMILIES.size()
+
+
+# Maps the Mind's 4 fight phases onto the 3-phase boss anthem (1=Base, 2=+10 BPM, 3..4=+20 BPM finale).
+static func anthem_phase(fight_phase: int) -> int:
+	return clampi(fight_phase, 1, ANTHEM_BPM_DELTA.size())
+
+
+static func anthem_bpm_delta(fight_phase: int) -> int:
+	return ANTHEM_BPM_DELTA[anthem_phase(fight_phase) - 1]
+
+
+static func anthem_phase_name(fight_phase: int) -> String:
+	return ANTHEM_PHASE_NAMES[anthem_phase(fight_phase) - 1]
+
+
+static func finale_lift_semitones(fight_phase: int) -> int:
+	return FINALE_WHOLE_STEP_SEMITONES if anthem_phase(fight_phase) >= ANTHEM_BPM_DELTA.size() else 0
 
 
 # removed: families a broken weak point took away (weak_points.gd); never all of them.

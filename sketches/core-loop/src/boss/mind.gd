@@ -6,6 +6,7 @@ const Rules := preload("res://src/boss/boss_rules.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const MindDress := preload("res://src/boss/mind_dress.gd")
 const ArenaMindDress := preload("res://src/presentation/arena_mind_dress.gd")
+const AllyHusk := preload("res://src/combat/ally_husk.gd")
 
 # The Mind's fight on the stub's flat pad. Its Warden is a MIND choir Warden with the
 # fleet, so the Warden publishes its own posture and opens its lens on a stagger, bracing
@@ -36,6 +37,9 @@ const HAND_EDGE := 4.0
 # sits CHOIR_RADIUS off the axis: a ball touching the body beside the seat (centre about 3.8 out) is inside it for
 # about 55 degrees either side of the seat, and a ball on the far side of the body is not.
 const SEAT_REACH := Warden.FAMILY_REACH
+const TAKEOVER_COOLDOWN := 9.0
+const TAKEOVER_RANGE := 42.0
+const TAKEOVER_POSTURE_BONUS := 18.0
 
 # Committed attacks: [{hazards, family, landed, aimed}], oldest first; aimed is whether the
 # ball stood inside the attack when it committed.
@@ -44,7 +48,13 @@ var attacks: Array = []
 var landings: Array = []
 var hands: Array = []
 var phase := 1
+var _music_phase_emitted := 1
 var attack_count := 0
+var takeovers_started := 0
+var takeovers_interrupted := 0
+var takeovers_completed := 0
+var _takeover_husk: AllyHusk.HuskUnit = null
+var _takeover_cd := 3.0
 var _attack_clock := 0.0
 # Challenge dial mind.combo: follow-up attacks still owed after the lead; -1 when none is open.
 var _combo_left := -1
@@ -117,6 +127,7 @@ static func warm_arena() -> bool:
 func enter_arena(entry_velocity: Vector3) -> void:
 	super(entry_velocity)
 	phase = 1
+	_music_phase_emitted = 1
 	_attack_clock = 0.0
 	_combo_left = -1
 	_family = ""
@@ -124,6 +135,8 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_plate_desc = {}
 	_brace_due = false
 	_plate_until = -INF
+	_takeover_husk = null
+	_takeover_cd = 3.0
 	_arena_dress = ArenaMindDress.attach(self)
 	_dress = MindDress.attach(self)
 
@@ -139,6 +152,10 @@ func exit_arena() -> void:
 		remove_child(_dress)
 		_dress.queue_free()
 	_dress = null
+	_music_phase_emitted = 1
+	if is_instance_valid(_takeover_husk):
+		_takeover_husk.clear_takeover()
+	_takeover_husk = null
 	_clear_attacks()
 	_free_hands()
 	super()
@@ -153,6 +170,10 @@ func _physics_process(delta: float) -> void:
 		_brace_due = true
 		_attack_clock = minf(_attack_clock, 0.0)
 	phase = next
+	var next_music_phase := MindAttacks.anthem_phase(phase)
+	if next_music_phase > _music_phase_emitted:
+		_music_phase_emitted = next_music_phase
+		ctx.events.emit_signal("boss_phase_changed", next_music_phase, MindAttacks.anthem_phase_name(phase))
 	for hand in hands:
 		if is_instance_valid(hand):
 			hand.boss_phase = phase
@@ -161,6 +182,7 @@ func _physics_process(delta: float) -> void:
 	_step_attacks(delta)
 	if clock < Rules.INTRO_SECONDS:
 		return
+	_step_husk_takeover(delta)
 	_attack_clock -= delta
 	if _attack_clock > 0.0:
 		return
@@ -452,11 +474,57 @@ func _send_hand() -> void:
 			_assign_slot(hand)
 
 
+func _step_husk_takeover(delta: float) -> void:
+	_takeover_cd = maxf(0.0, _takeover_cd - delta)
+	if is_instance_valid(_takeover_husk):
+		if not _takeover_husk.takeover_active:
+			_takeover_husk = null
+		return
+	if _takeover_cd > 0.0 or ctx == null or ctx.spawner == null:
+		return
+	var mgr = ctx.spawner.get("ally_husks")
+	if mgr == null or not mgr.has_method("first_takeover_target"):
+		return
+	var origin: Vector3 = warden.global_position if is_instance_valid(warden) else Vector3.ZERO
+	var husk: AllyHusk.HuskUnit = mgr.first_takeover_target(origin, TAKEOVER_RANGE)
+	if husk != null:
+		attempt_husk_takeover(husk)
+
+
+func attempt_husk_takeover(husk: AllyHusk.HuskUnit) -> bool:
+	if ctx == null or ctx.spawner == null or husk == null or not is_instance_valid(husk):
+		return false
+	var mgr = ctx.spawner.get("ally_husks")
+	if mgr == null or not mgr.begin_takeover(husk, self, AllyHusk.TAKEOVER_WARN_SECONDS):
+		return false
+	_takeover_husk = husk
+	takeovers_started += 1
+	return true
+
+
+func on_takeover_interrupted(_husk) -> void:
+	_takeover_husk = null
+	_takeover_cd = TAKEOVER_COOLDOWN
+	takeovers_interrupted += 1
+	_end_combo()
+	_attack_clock = maxf(_attack_clock, 1.5)
+	if is_instance_valid(warden) and warden.has_method("_apply_posture"):
+		warden._apply_posture({"gain": TAKEOVER_POSTURE_BONUS, "full": true, "crack": false, "shatter": false, "dealt": 0.0})
+
+
+func on_takeover_completed(_husk) -> void:
+	_takeover_husk = null
+	_takeover_cd = TAKEOVER_COOLDOWN
+	takeovers_completed += 1
+
+
 func music_state() -> Dictionary:
 	var state := super()
 	if not state.is_empty():
 		state["id"] = String(_row().get("music", BOSS_ID))
-		state["phase"] = phase
+		state["phase"] = MindAttacks.anthem_phase(phase)
+		state["anthem_bpm_delta"] = MindAttacks.anthem_bpm_delta(phase)
+		state["finale_lift_semitones"] = MindAttacks.finale_lift_semitones(phase)
 		if hold_active():
 			state["held"] = true
 			state["in_phase"] = 1.0

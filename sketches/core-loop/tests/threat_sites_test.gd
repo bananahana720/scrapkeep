@@ -49,9 +49,9 @@ const AUDIT := {
 	"res://src/combat/anchor_crew.gd": ["LANE"],
 	"res://src/combat/burrower.gd": ["LANE", "INSTANT"],
 	"res://src/combat/drill_crew.gd": ["LANE", "INSTANT"],
-	"res://src/combat/kite_drone.gd": ["INSTANT"],
+	"res://src/combat/kite_drone.gd": ["LANE", "INSTANT"],
 	"res://src/combat/lamp_swarm.gd": ["LANE", "WAVE"],
-	"res://src/combat/line_cutter.gd": ["PROJECTILE"],
+	"res://src/combat/line_cutter.gd": ["LANE", "PROJECTILE"],
 	"res://src/combat/pit_jaw.gd": ["PROJECTILE", "INSTANT"],
 	"res://src/combat/prop_crew.gd": ["INSTANT"],
 	"res://src/combat/boom_tender.gd": ["LANE"],
@@ -62,8 +62,9 @@ const AUDIT := {
 	# 2026-10-17 (stage/alpha-w16): the Dispatcher's tube drop (#59) and the jolt layer's mat (#65).
 	"res://src/combat/dispatcher.gd": ["PROJECTILE"],
 	"res://src/combat/jolt_layer.gd": ["INSTANT"],
-	# 2026-10-17 Highdraft roster: the ballast heavy and the gap net, one telegraph each.
-	"res://src/combat/ballast_heavy.gd": ["INSTANT"],
+	# 2026-10-17 Highdraft roster: the ballast heavy and the gap net.
+	# 2026-11-25 (W49-COMBAT): Highdraft 2-attack kits add secondary LANE sites.
+	"res://src/combat/ballast_heavy.gd": ["LANE", "INSTANT"],
 	"res://src/combat/gap_net.gd": ["LANE"],
 	# 2026-10-23 rogue fleet mini-bosses (#385): sweep, haul and harpoon lanes; drop and dump rings; the whip ring.
 	# 2026-11-17 MG-11: the sweep's lane leads a held line, so it commits apart from haul and harpoon.

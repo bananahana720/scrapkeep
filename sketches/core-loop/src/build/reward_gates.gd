@@ -372,6 +372,17 @@ static func rarity_color(rarity: String) -> Color:
 	return ItemGen.RARITY[id]["color"] if id != "" else ItemGen.RARITY["common"]["color"]
 
 
+# Brindle's cobalt pick (ruling ap, restored in W49-COMBAT): rolls guaranteed rare/cobalt offers
+# when continuing from World 1 into World 2, preferring behaviour-changing rares first.
+static func roll_cobalt_boss_picks(rng: RandomNumberGenerator, class_id: String, held: Array, count := 2) -> Array:
+	var plain: Array = Parts.offer_pool(class_id, ["rare"]).filter(func(key): return not Parts.changes_behaviour(key))
+	var picks: Array = Parts.roll(rng, ["rare"], class_id, held, count, plain)
+	if picks.size() < count:
+		var more: Array = Parts.roll(rng, ["rare"], class_id, held, count - picks.size(), picks)
+		picks.append_array(more)
+	return picks
+
+
 # The glyphs a gate wears, left to right: family, trigger, element.
 static func glyph_ids(offer: Dictionary) -> Array:
 	return [offer.get("icon", ""), offer.get("trigger_icon", ""), offer.get("element_icon", "")] \

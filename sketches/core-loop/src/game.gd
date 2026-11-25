@@ -209,9 +209,10 @@ func _ready() -> void:
 			arm_summary_latch())
 	run = RunState.new(events, _session_seed)
 	tuning = Tuning.new()
-	var launch_flags: Dictionary = tuning.apply_cmdline("launch")
-	if not test_mode and not AppShell.headless() and not _launch_flag("--self-play"):
-		tuning.end_players_run_at_world_one(launch_flags)
+	# Full-alpha progression unlocked (W49-COMBAT, ruling du dropped): a plain played launch
+	# continues past Brindle into The Dig and The Highdraft unless --final-world=1 or a sitting
+	# profile explicitly caps the run at World 1.
+	tuning.apply_cmdline("launch")
 
 	player = PlayerBall.new()
 	player.name = "Player"

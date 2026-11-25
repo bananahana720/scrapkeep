@@ -8,6 +8,11 @@ extends RefCounted
 # World one's display name is the Bible's region name (BIBLE.md, "Spillway Works"); the
 # Spillway and the Cable Reach are its two stages today. The Dig and the Highdraft are
 # the plan's names (ALPHA-PLAN M2 and M3).
+# Full-alpha progression unlocked (W49-COMBAT): Worlds 1->2->3 play end-to-end and Brindle's
+# cobalt pick (ruling ap) returns when continuing into World 2.
+const FULL_ALPHA := true
+const BRINDLE_COBALT_PICK := true
+
 const ROWS := [
 	{"id": 1, "name": "Spillway Works", "boss": "brindle"},
 	{"id": 2, "name": "The Dig", "boss": "waking"},
@@ -27,9 +32,13 @@ const BOSSES := {
 	"waking": {"name": "The Waking", "title": "THE WAKING STILLED", "script": "res://src/boss/waking.gd", "kind": "waking", "music": "waking",
 		"built": true, "victory": "The Waking is stilled.", "epitaph": "The Waking, stilled in the Dig. Fallen floors await pit inspection."},
 	"mind": {"name": "The Mind", "title": "THE MIND QUIETED", "script": "res://src/boss/mind.gd", "kind": "mind", "music": "mind",
-		"built": true, "victory": "The Mind is quiet.", "stamp": "HIRED",
+		"built": true, "victory": "The Mind is quiet.", "stamp": "HIRED", "finale_lift_semitones": 2,
 		"epitaph": "The Mind, quieted in the Highdraft. Glove set by the empty place."},
 }
+
+
+static func boss_finale_lift(boss_id: String) -> int:
+	return int(BOSSES.get(boss_id, {}).get("finale_lift_semitones", 0))
 
 
 # The page shown once when the summary opens after a win over the final world's boss, before

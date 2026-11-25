@@ -52,10 +52,32 @@ const GAP_OUT := 6.0
 const RIM_DROP := 4.0
 const DROP_KICK := 8.0
 const FLING := 4.0
+const PRIMARY_WARN := 0.8
+const PRIMARY_LIVE := DIVE + 0.3
+# Secondary attack (W49-COMBAT): Updraft Slipstream Swoop. Commits a >= 0.75 s Palette.HAZARD
+# lane, swoops across the corridor leaving a 3.0 s updraft slipstream wake that carries an
+# airborne or gliding ball +20 m across chasms. Never stops moving/carving balls (ruling cu).
+const SWOOP_WARN := 0.85
+const SWOOP_LIVE := 1.0
+const SWOOP_LENGTH := 26.0
+const SWOOP_WIDTH := 4.2
+const SWOOP_DAMAGE := 7.0
+const SLIPSTREAM_DURATION := 3.0
+const SLIPSTREAM_LIFT := 14.0
+const SLIPSTREAM_PUSH := 28.0
+const SLIPSTREAM_KICK := 12.0
 
 var dives := 0
 var batted := 0
 var air_rams := 0
+var swoops := 0
+var slipstream_rides := 0
+var slipstream_active := false
+var slipstream_left := 0.0
+var slipstream_origin := Vector3.ZERO
+var slipstream_dir := Vector3.FORWARD
+var slipstream_carry_m := 0.0
+var next_attack := ""
 # Where it circles and at what height while riding, or ride_y INF when it hovers by the ball.
 var ride_at := Vector3.ZERO
 var ride_y := INF
@@ -64,6 +86,13 @@ var _retarget := 0.0
 var _orbit := 0.0
 var _dive_from := Vector3.ZERO
 var _landed := false
+var _swoop := false
+var _swoop_from := Vector3.ZERO
+var _swoop_to := Vector3.ZERO
+var _swoop_dir := Vector3.FORWARD
+var _swoop_hit := false
+var _swoop_ridden := false
+var _wake_mesh: Node3D = null
 static var _warned_asset := false
 static var _shared: Dictionary = {}
 var _windup_rig: Skeleton3D
@@ -80,8 +109,8 @@ func _configure(threat: float) -> void:
 	keep_near = 6.0
 	keep_far = 16.0
 	attack_range = 30.0
-	warn_seconds = 0.8
-	live_seconds = DIVE + 0.3
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
 	rest_seconds = 3.0
 	interruptible = false
 
@@ -196,7 +225,36 @@ func _wants_attack(to_ball: Vector3) -> bool:
 	return to_ball.length() <= attack_range
 
 
+func _use_swoop(_to_ball: Vector3) -> bool:
+	if next_attack == "slipstream":
+		return true
+	if next_attack == "dive":
+		return false
+	var player = _player()
+	if player == null or player.kit.hooked:
+		return false
+	var ball := _real_ball()
+	var crossing_gap: bool = player.kit.gliding \
+		or (terrain != null and not player.state.grounded and ball.y - Telegraph.ground_under(terrain, ball) >= 6.0)
+	return dives > swoops and crossing_gap
+
+
 func _commit(to_ball: Vector3) -> Node3D:
+	var is_swoop := _use_swoop(to_ball)
+	_swoop = is_swoop
+	next_attack = ""
+	if is_swoop:
+		warn_seconds = SWOOP_WARN
+		live_seconds = SWOOP_LIVE
+		var flat := Vector3(to_ball.x, 0.0, to_ball.z)
+		_swoop_dir = flat.normalized() if flat.length() > 0.1 else Vector3.FORWARD
+		_facing(_swoop_dir)
+		_swoop_from = global_position
+		_swoop_to = _swoop_from + _swoop_dir * SWOOP_LENGTH
+		_swoop_hit = false
+		return _commit_lane(Threat.Type.LANE, global_position, _swoop_dir, SWOOP_LENGTH, SWOOP_WIDTH, 4.0)
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
 	var landing: Vector3 = _ball() + target.planar_velocity() * (DIVE + warn_seconds)
 	_facing(to_ball)
 	_dive_from = global_position
@@ -214,6 +272,13 @@ func _commit(to_ball: Vector3) -> Node3D:
 
 
 func _go_live() -> void:
+	if _swoop:
+		swoops += 1
+		_swoop_from = global_position
+		_swoop_to = _swoop_from + _swoop_dir * SWOOP_LENGTH
+		_swoop_hit = false
+		_start_slipstream(_swoop_from, _swoop_dir)
+		return
 	dives += 1
 	_landed = false
 
@@ -222,6 +287,19 @@ func _live(_delta: float) -> bool:
 	var ring := telegraph()
 	if ring == null:
 		return false
+	if _swoop:
+		var frac := clampf(_t / maxf(SWOOP_LIVE, 0.05), 0.0, 1.0)
+		var pos := _swoop_from.lerp(_swoop_to, frac)
+		pos.y -= sin(frac * PI) * 2.5
+		global_position = _short_of_ball(global_position, pos)
+		var player = _player()
+		var ball := _real_ball()
+		if not _swoop_hit and player != null and player.state.grounded \
+				and player.speed_tier() < SpeedTier.CRUISE and ring.contains(ball) \
+				and ball.distance_to(global_position) <= 3.0:
+			_swoop_hit = true
+			hit_player.emit(SWOOP_DAMAGE, _swoop_dir * 4.0 + Vector3.UP * 5.0)
+		return _t < SWOOP_LIVE
 	if _t < DIVE:
 		global_position = _short_of_ball(global_position, _dive_from.lerp(_dive_goal(ring), _t / DIVE))
 		return true
@@ -237,6 +315,83 @@ func _live(_delta: float) -> bool:
 		elif fleet != null:
 			fleet.discover("thermal_dive", ball)
 	return false
+
+
+func _on_end() -> void:
+	_swoop = false
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
+
+
+func _start_slipstream(origin: Vector3, dir: Vector3) -> void:
+	_clear_wake()
+	slipstream_active = true
+	slipstream_left = SLIPSTREAM_DURATION
+	slipstream_origin = origin
+	slipstream_dir = dir
+	slipstream_carry_m = 0.0
+	_swoop_ridden = false
+	if world_root != null:
+		var ribbon := Node3D.new()
+		ribbon.name = "SlipstreamWake"
+		var mesh := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(SWOOP_WIDTH * 0.8, 0.14, SWOOP_LENGTH)
+		mesh.mesh = box
+		mesh.material_override = Palette.unshaded(Color(Palette.ICE, 0.28))
+		ribbon.add_child(mesh)
+		world_root.add_child(ribbon)
+		ribbon.global_position = origin + dir * (SWOOP_LENGTH * 0.5)
+		ribbon.global_basis = Basis.looking_at(dir, Vector3.UP)
+		_wake_mesh = ribbon
+
+
+func _step_slipstream(delta: float) -> void:
+	if not slipstream_active:
+		return
+	slipstream_left -= delta
+	if slipstream_left <= 0.0:
+		_clear_wake()
+		return
+	var player = _player()
+	if player == null:
+		return
+	var ball := _real_ball()
+	var rel := ball - slipstream_origin
+	var along := Vector3(rel.x, 0.0, rel.z).dot(slipstream_dir)
+	var side := slipstream_dir.cross(Vector3.UP).normalized()
+	var lateral := absf(Vector3(rel.x, 0.0, rel.z).dot(side))
+	var dy := ball.y - slipstream_origin.y
+	if along < -2.0 or along > SWOOP_LENGTH + 2.0 or lateral > SWOOP_WIDTH * 0.85 or dy < -6.0 or dy > 10.0:
+		return
+	# Only boost unhooked airborne / gliding riders moving with the wake across a chasm; never
+	# launch a grounded or harpoon-latched ball fighting on an island off its line (ruling cu).
+	if player.state.grounded or player.kit.hooked or player.planar_velocity().dot(slipstream_dir) < 2.0:
+		return
+	if not _swoop_ridden:
+		_swoop_ridden = true
+		slipstream_rides += 1
+		var v: Vector3 = player.state.velocity
+		var boosted: Vector3 = v + slipstream_dir * SLIPSTREAM_KICK + Vector3.UP * 4.5
+		if player.has_method("set_velocity_now"):
+			player.set_velocity_now(boosted, "slipstream")
+		if fleet != null:
+			fleet.discover("thermal_dive", ball)
+	player.add_external_accel(slipstream_dir * SLIPSTREAM_PUSH + Vector3.UP * SLIPSTREAM_LIFT)
+	slipstream_carry_m += maxf(0.0, player.planar_velocity().dot(slipstream_dir)) * delta
+
+
+func _clear_wake() -> void:
+	slipstream_active = false
+	slipstream_left = 0.0
+	if is_instance_valid(_wake_mesh):
+		_wake_mesh.queue_free()
+	_wake_mesh = null
+
+
+func _exit_tree() -> void:
+	_clear_wake()
+	super._exit_tree()
 
 
 # The dive moves the body by setting its position, so a step that ended inside the ball's collider
@@ -287,6 +442,7 @@ func _diving() -> bool:
 
 func _physics_process(delta: float) -> void:
 	super(delta)
+	_step_slipstream(delta)
 	if _dead or not _in_play() or target == null:
 		return
 	_retarget -= delta
