@@ -78,12 +78,21 @@ func _park(map_id: String, spawn: Vector2) -> void:
 				old[Vector2(p.x, p.z)] = true
 		_t.check("park_flume control: the graph's own door floor draws only %d spots" % COUNT, old.size() == COUNT, "%d spots" % old.size())
 		_t.check("park_flume: no spot by the drum lip notch", not near_notch)
-		# Control: without the grind rows the flume's draws do take the siphon span's trough.
-		var control := false
+		# Control: W50-MAP-W1-ROBOQUEST connected siphon_span via weir_trestle_zip and
+		# siphon_overlook_cannon so no off-route flume anchor sits on a grind_line anymore; plant
+		# drawn flume rows as grind rows to verify Director.rib_spots excludes grind-deck nodes.
+		var planted_grind := {"crew_ledges": true, "spill_leap_kicker": true}
+		var drawn_without := false
+		var avoided_with := true
 		for seed in DRAWS:
 			for p in Director.rib_spots(graph, spawn, COUNT, seed, {}, min_doors):
-				control = control or _on_deck(graph, p, grind)
-		_t.check("park_flume control: the siphon trough is drawn without the grind rule", control)
+				if _on_deck(graph, p, planted_grind):
+					drawn_without = true
+			for p in Director.rib_spots(graph, spawn, COUNT, seed, planted_grind, min_doors):
+				if _on_deck(graph, p, planted_grind):
+					avoided_with = false
+		_t.check("park_flume control: planted grind rows are drawn without the grind rule and avoided with it",
+			drawn_without and avoided_with, "without=%s with_avoided=%s" % [drawn_without, avoided_with])
 
 
 # Every later world's park still gets its full set of caches from the same rule.

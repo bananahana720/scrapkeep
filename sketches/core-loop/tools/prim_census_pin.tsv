@@ -14,8 +14,6 @@ bay.gd	SphereMesh	MossBay/Barge/MeshInstance3D	code	-	the marble toy's marble, a
 bay.gd	TorusMesh	MossBay/Cradle/MeshInstance3D	code	-	the dock cradle's glowing amber ring, the mark that says roll here
 contraptions.gd	CylinderMesh	Contraptions/*_geyser/MeshInstance3D	code	-	geyser steam column (contraptions.gd _build_launcher): a translucent column that swells with the charge over the geyser_vent model
 rescue_site.gd	BoxMesh	*_cage/Node3D/MeshInstance3D	code	-	the cage's dashed ground ring (device.gd ground_ring), the interact mark every device draws; the cage itself is rescue_cage.glb
-stakes.gd	CylinderMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot body (ruling ci, project-guide/handoff/DECISIONS.md:117: the bodies land after the sitting)
-stakes.gd	TorusMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot body (ruling ci, project-guide/handoff/DECISIONS.md:117: the bodies land after the sitting)
 game.gd	BoxMesh	Node3D/ReactorSheet	code	-	the reactor warden's water sheet (warden_reactor.gd _show_sheet): a translucent 24 by 16 m footprint live for 3 s, an attack effect hung on the world root
 accretion.gd	BoxMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
 accretion.gd	CylinderMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
@@ -88,6 +86,7 @@ world_fx_anchor.gd	QuadMesh	*/WorldFx_*/Impostor_*	code	-	mist and steam cards
 kill_mark.gd	QuadMesh	PresentationFx/KillMark/MeshInstance3D	code	-	the kill mark, a camera-facing comic burst card (FX-01)
 scrap_field.gd	CylinderMesh	Scrap/MeshInstance3D/MeshInstance3D	code	-	a scrap cache's 14 m marker column (CACHE_COLUMN), a mark
 contraptions.gd	TorusMesh	Contraptions/*_geyser/MeshInstance3D	code	-	geyser mouth ring (contraptions.gd _build_launcher), the launch mark every geyser draws; the vent is geyser_vent.glb
+contraptions.gd	TorusMesh	Contraptions/*_cannon/MeshInstance3D	code	-	cannon launch ring (contraptions.gd _build_launcher), the amber launch mark every cannon draws; the barrel is cannon.glb
 element_field.gd	CylinderMesh	ElementField/Ice/MeshInstance3D	code	-	an ice element's frozen floor disc (element_field.gd _create_surface), a timed surface effect
 dispatcher.gd	BoxMesh	CharacterBody3D/DispatchMast/MeshInstance3D	code	-	the dispatcher's perch mast legs and rungs (dispatcher.gd _build_mast), a ladder frame matching its box collision; visual audit may reclassify
 warden_look.gd	*	CharacterBody3D/WardenLook/MeshInstance3D	code	-	the Warden's procedural clamp (warden_look.gd header): collar, deck and integrity band; visual audit may reclassify

@@ -54,6 +54,12 @@ func _physics_process(_delta: float) -> bool:
 		_game.run.set_max_hp(99999.0)
 		return false
 	if _step == 3:
+		# Park the ball at rest on the drop-in floor so its drop velocity (ram punch 28.56)
+		# neither flips the brute amber once test strikes shred plating below 28.56 nor
+		# stomps the brute mid-test when the ball lands a second later.
+		var ball_pos: Vector3 = _game.player.ball_position()
+		_game.player.reset_to(_game.ctx.terrain.drop_point(ball_pos.x, ball_pos.z, 1.0), Vector3.ZERO)
+		_game.camera.snap(_game.ctx.terrain.entry_heading(1))
 		_game.camera._process(0.016)
 		_combat = _game.ctx.spawner
 		_combat.heft_override = 1.0
