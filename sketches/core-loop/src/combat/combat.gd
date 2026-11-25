@@ -618,7 +618,8 @@ func setup(ctx_ref) -> void:
 	# after the latch is set). A reset point drops the load.
 	ctx.events.grapple_fired.connect(func(anchor: Vector3):
 		_bite_load()
-		_on_grapple_fired_muts(anchor))
+		_on_grapple_fired_muts(anchor)
+		_on_cannon_grapple_fired(anchor))
 	ctx.events.player_died.connect(_on_player_died)
 	_cards = {"balance_due": _run_balance}
 	ctx.events.enemy_struck.connect(_on_card_struck)
@@ -688,11 +689,13 @@ func setup(ctx_ref) -> void:
 		_clear_devices()
 		_clear_cannon_paint()
 		_reset_w47_h1_state()
+		_reset_w47_h2_state()
 		weapon_driver.reset())
 	ctx.events.flow_changed.connect(func(state_name: String):
 		if state_name in ["summary", "title"]:
 			_clear_cannon_paint()
 			_reset_w47_h1_state()
+			_reset_w47_h2_state()
 			weapon_driver.reset())
 	ctx.events.run_started.connect(func(_class_id: String):
 		churn.reset(true)
@@ -728,6 +731,7 @@ func setup(ctx_ref) -> void:
 		_reset_w47_c2_state(true)
 		_reset_grapple_muts_state(true)
 		_reset_w47_h1_state()
+		_reset_w47_h2_state()
 		_cloud = {}
 		_sentry = {}
 		_pulse_left = 0.0
@@ -2039,6 +2043,7 @@ func _weapon_step_context(weapon: String, p: Resource, cadence_rate: float) -> D
 		"managed_commit": is_cards,
 		"slot_ready": ctx.player.abilities.ready(AbilityState.WEAPON, cast_cost),
 		"lob_charging": wg != null and wg.charging,
+		"recoil_airborne": cannon_recoil_airborne(),
 	}
 
 
@@ -2160,6 +2165,12 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 		_note_cross("ricochet_canyon", {"extra_bounces": int(rc_row.get("extra_bounces", 2)), "bolts": fired})
 	if source == "weapon" and breaks_props and weapon == Weapons.CLAW_SWEEP:
 		ctx.break_props(muzzle + forward * (reach * 0.5), reach * 0.5, weapon)
+	var beat3_lunge := false
+	if source == "weapon" and weapon == Weapons.CLAW_SWEEP and String(shot_desc.get("kind", "")) == WeaponDriver.SHOT_BEAT_3:
+		var tarn_claw = get_node_or_null("TarnClaw")
+		if tarn_claw != null and tarn_claw.has_method("trigger_beat3_lunge"):
+			tarn_claw.trigger_beat3_lunge(forward)
+			beat3_lunge = true
 	if rake_follows(source, ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")):
 		_rakes.append({"at": _clock + RAKE_DELAY, "weapon": weapon, "forward": forward,
 			"damage": p.damage * _damage_mod(weapon), "volley": volleys})
@@ -2168,7 +2179,8 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 		"blocked": aim["blocked"], "bolts": fired, "volley": volleys, "sprung": sprung, "fused": pike.get("fuse", false),
 		"kind": String(shot_desc.get("kind", "plain")), "pierce_chip": pierce_chip,
 		"beat": int(shot_desc.get("beat", 0)), "knock_mult": knock_mult, "breaks_props": breaks_props,
-		"sixth_hot": sixth_hot, "instant_charge": bool(shot_desc.get("instant_charge", false))}
+		"sixth_hot": sixth_hot, "instant_charge": bool(shot_desc.get("instant_charge", false)),
+		"beat3_lunge": beat3_lunge}
 	ctx.events.shot_fired.emit(weapon, muzzle, aim["to"])
 
 
@@ -3234,8 +3246,14 @@ func _fire_clamp(f: float, shape: Dictionary) -> void:
 		hit += 1
 	if not pulled.is_empty():
 		_check_gravity_ledger(centre, pulled)
+	var seized_enemy: Node3D = null
+	if not _echoing and not pulled.is_empty() and ctx.run != null and ctx.run.class_def != null and ctx.run.class_def.id == "tarn":
+		var tarn_claw = get_node_or_null("TarnClaw")
+		if tarn_claw != null and tarn_claw.has_method("try_seize"):
+			seized_enemy = tarn_claw.try_seize(pulled)
 	effects.ring(centre, radius, ClassDef.TARN_COLOR)
-	last_burst = {"at": centre, "radius": radius, "damage": damage, "hit": hit, "kind": "clamp", "breaks_props": false}
+	last_burst = {"at": centre, "radius": radius, "damage": damage, "hit": hit, "kind": "clamp",
+		"breaks_props": false, "seized": seized_enemy != null}
 	_forced_source = prev_source
 
 
@@ -3284,6 +3302,8 @@ func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: fl
 
 func _step_cannon(delta: float) -> void:
 	_step_cannon_exposure()
+	_step_cannon_recoil_airborne(delta)
+	_step_cannon_piton()
 	_track_wake()
 	_step_cannon_paint()
 	if ctx.player.abilities.selected == AbilityState.LINE and ctx.player.abilities.id_of(AbilityState.LINE) == "cannon_lane_charge" and ctx.player.kit.hooked:
@@ -3340,7 +3360,8 @@ func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
 			record["volley_hits"] = int(record.get("volley_hits", 0)) + 1
 			record["damage"] = float(record.get("damage", 0.0)) + dealt
 		else:
-			var chip := Weapons.PIERCE_CHIP if bool(options.get("pierce_chip", false)) else CHIP
+			var chip := Weapons.CANNON_AIR_RAIL_CHIP if bool(options.get("overpenetrate", false)) \
+				else (Weapons.PIERCE_CHIP if bool(options.get("pierce_chip", false)) else CHIP)
 			_hit(enemy, "cannon", float(entry["damage"]) * _damage_mod(Weapons.CANNON_LANE), push, Weapons.CANNON_KNOCK, "", entry["source"], "", chip)
 		if not entry.get("recital_checked", false):
 			entry["recital_checked"] = true
@@ -3366,6 +3387,9 @@ func _free_cannon() -> void:
 	_cannon = []
 	_walk = {}
 	_wake = {}
+	_cannon_recoil_airborne = false
+	_cannon_recoil_air_grace = 0.0
+	_cannon_piton = {}
 	_clear_cannon_paint()
 
 
@@ -3429,9 +3453,13 @@ func _step_cannon_paint() -> void:
 	var reach_base: float = float(p.lock_pulse_reach) if float(p.lock_pulse_reach) > 0.0 else float(p.range_m)
 	var width_mult: float = float(p.lock_pulse_width_mult)
 	var color: Color = ClassDef.CANNON_COLOR
+	var air_overpen := false
 	if stage == WeaponDriver.SHOT_RAIL:
 		reach_base = float(p.lock_rail_reach) if float(p.lock_rail_reach) > 0.0 else float(p.range_m)
 		width_mult = float(p.lock_rail_width_mult)
+		if cannon_recoil_airborne():
+			width_mult *= Weapons.CANNON_AIR_RAIL_WIDTH_MULT
+			air_overpen = true
 		color = Palette.ARC
 	elif stage == WeaponDriver.SHOT_BARRAGE:
 		reach_base = float(p.range_m)
@@ -3454,7 +3482,8 @@ func _step_cannon_paint() -> void:
 	ctx.player.indicator.set_shape("cannon_bracket_l", left_bracket)
 	ctx.player.indicator.set_shape("cannon_bracket_r", right_bracket)
 	last_cannon_paint = {"stage": stage, "from": from, "to": to, "ahead": float(plan["ahead"]),
-		"half": half, "width": half * 2.0, "color": color, "bracket_gap": bracket_gap}
+		"half": half, "width": half * 2.0, "color": color, "bracket_gap": bracket_gap,
+		"air_lock_overpen": air_overpen}
 
 
 # The weapon: one Mind lane from the ground under the ball down the aim, per lock release or hold_auto tick.
@@ -3466,12 +3495,14 @@ func _fire_cannon_lane(weapon: String, shot_desc := {}, source := "weapon") -> v
 	var reach_base: float = float(shot_desc.get("reach", Weapons.CANNON_LANE_REACH)) if has_lock_desc else Weapons.CANNON_LANE_REACH
 	var width_mult: float = float(shot_desc.get("width_mult", 1.0)) if has_lock_desc else 1.0
 	var pierce: bool = source == "weapon" and bool(shot_desc.get("pierce", false))
-	var breaks_props: bool = source == "weapon" and bool(shot_desc.get("breaks_props", false))
+	var air_lock_overpen: bool = source == "weapon" and bool(shot_desc.get("air_lock_overpen", false))
+	var overpenetrate: bool = source == "weapon" and (bool(shot_desc.get("overpenetrate", false)) or air_lock_overpen)
+	var breaks_props: bool = source == "weapon" and (bool(shot_desc.get("breaks_props", false)) or air_lock_overpen)
 	var plan := _cannon_lane_plan(reach_base, width_mult, source == "weapon")
 	var aim: Dictionary = plan["aim"]
 	var point: Vector3 = plan["point"]
 	var ball: Vector3 = plan["ball"]
-	var overrides := {"ahead": plan["ahead"], "half": plan["half"], "pierce_chip": pierce}
+	var overrides := {"ahead": plan["ahead"], "half": plan["half"], "pierce_chip": pierce, "overpenetrate": overpenetrate}
 	if shot_kind == WeaponDriver.SHOT_RAIL:
 		overrides["color"] = Palette.SAND
 	var entry := _commit_cannon("lane", plan["target"], plan["centre"], plan["radius"], damage, source, false, overrides)
@@ -3492,7 +3523,14 @@ func _fire_cannon_lane(weapon: String, shot_desc := {}, source := "weapon") -> v
 		var side: Vector3 = Vector3.UP.cross(h.heading as Vector3).normalized() * float(h.half_width)
 		effects.beam((h.centre as Vector3) + side, end + side, ClassDef.CANNON_COLOR, Effects.RING_LIFE)
 		effects.beam((h.centre as Vector3) - side, end - side, ClassDef.CANNON_COLOR, Effects.RING_LIFE)
-	if breaks_props:
+		if air_lock_overpen:
+			effects.beam(h.centre as Vector3, end, Palette.SAND, Effects.RING_LIFE)
+	var breached_props: Array[String] = []
+	if air_lock_overpen:
+		if ctx.destructibles != null and is_instance_valid(ctx.destructibles) and ctx.destructibles.has_method("on_rail_breach"):
+			breached_props = ctx.destructibles.on_rail_breach(
+				h.centre as Vector3, end, float(h.half_width), Weapons.CANNON_AIR_RAIL_MAX_TIER, "cannon_air_rail")
+	elif breaks_props:
 		for blast in _shape_blasts({"kind": "line", "from": h.centre, "to": end, "width": h.half_width * 2.0}):
 			ctx.break_props(blast[0], float(blast[1]), "cannon_rail")
 	if source == "weapon" and String(plan["mutation"]) == "cannon_lane_walk":
@@ -3503,7 +3541,8 @@ func _fire_cannon_lane(weapon: String, shot_desc := {}, source := "weapon") -> v
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": end, "point": point, "blocked": aim["blocked"], "bolts": 0,
 		"volley": volleys, "sprung": false, "kind": shot_kind, "pierce_chip": pierce,
-		"damage": damage, "width_mult": width_mult, "reach": reach_base, "breaks_props": breaks_props}
+		"damage": damage, "width_mult": width_mult, "reach": reach_base, "breaks_props": breaks_props,
+		"air_lock_overpen": air_lock_overpen, "overpenetrate": overpenetrate, "breached_props": breached_props}
 	ctx.events.shot_fired.emit(weapon, muzzle, end)
 
 
@@ -3514,6 +3553,7 @@ static func walk_extends(mutation: String, walk: Dictionary, clock: float) -> bo
 
 
 # The movement: the recoil kicks the ball along the aim; the split lands behind it.
+# While Cannon's explosive piton is staked, the stake cancels recoil kick so it holds its firing lane.
 func _on_cannon_dashed(dir: Vector3) -> void:
 	if ctx.player.abilities.cap(AbilityState.MOVEMENT, "family", "") != "split_lane":
 		return
@@ -3521,6 +3561,21 @@ func _on_cannon_dashed(dir: Vector3) -> void:
 	flat = flat.normalized() if flat.length() > 0.01 else _flat_aim()
 	var centre := _ground_under(ctx.player.ball_position())
 	_commit_cannon("split_lane", centre - flat * 10.0, centre, Weapons.RECOIL_REACH, Weapons.RECOIL_DAMAGE, "special")
+	if cannon_piton_staked():
+		ctx.player.set_velocity_now(Vector3.ZERO, "piton_stake")
+		_cannon_piton["recoil_cancelled"] = true
+		_cannon_recoil_airborne = false
+		_cannon_recoil_air_grace = 0.0
+		last_cannon_piton = {
+			"mode": "stake",
+			"at": _cannon_piton["anchor"],
+			"recoil_cancelled": true,
+			"hits": 0,
+			"walls_broken": [],
+		}
+	else:
+		_cannon_recoil_airborne = true
+		_cannon_recoil_air_grace = Weapons.CANNON_RECOIL_AIR_GRACE_S
 
 
 # The special: the gauge draws the plate's own band as a cone; the release commits it.
@@ -3538,6 +3593,7 @@ func _fire_plate(f: float, shape: Dictionary) -> void:
 
 
 # The smash: after the shared slam, a rush ring about the landing over the nearest enemy.
+# Recoil-Surf Slam Reset (W47-H2): landing cannon_rush immediately resets cannon_recoil.
 func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	if strength < 0.05 or ctx.player.abilities.cap(AbilityState.SMASH, "family", "") != "rush":
 		return
@@ -3553,6 +3609,13 @@ func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 			target = enemy.global_position
 	_commit_cannon("rush", target, landing, Weapons.RUSH_REACH, Weapons.RUSH_DAMAGE * clampf(strength, 0.5, 1.5),
 		"drop_or_slam")
+	var from_recoil_surf := _cannon_recoil_airborne or _cannon_recoil_air_grace > 0.0
+	_cannon_recoil_airborne = false
+	_cannon_recoil_air_grace = 0.0
+	if from_recoil_surf and ctx.player.abilities.cap(AbilityState.MOVEMENT, "family", "") == "split_lane":
+		ctx.player.abilities.grant(AbilityState.MOVEMENT)
+		effects.ring(landing, 3.0, Palette.ANCIENT)
+		last_cannon_recoil_reset = {"at": landing, "clock": _clock}
 	if wake_follows("drop_or_slam", ctx.player.abilities.cap(AbilityState.SMASH, "mutation", "")):
 		_lay_wake(landing)
 
@@ -3643,8 +3706,9 @@ func _cannon_line_body(target: Node3D, fraction: float, mult: float) -> void:
 	_cannon_line_fire(fraction, mult, target)
 
 
-func _cannon_line_world(_anchor: Vector3, fraction: float, mult: float) -> void:
+func _cannon_line_world(anchor: Vector3, fraction: float, mult: float) -> void:
 	_cannon_line_fire(fraction, mult, null)
+	_arm_cannon_piton(anchor, ctx.player.kit.anchor_normal, mult)
 
 
 func _cannon_line_fire(fraction: float, mult: float, target: Node3D) -> void:
@@ -5721,6 +5785,13 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 		# The Mind's hand is a boss part: it takes the mind.* dials in mind_hand.gd, not the mobs dial.
 		if source != "mind_hand":
 			amount *= ChallengeDials.stage_mult("mobs.damage", ctx.run.stage)
+	if ctx.run != null and ctx.run.class_def != null and ctx.run.class_def.id == "tarn":
+		var tarn_claw = get_node_or_null("TarnClaw")
+		if tarn_claw != null and tarn_claw.has_method("frontal_armor_scale"):
+			var armor_mult: float = float(tarn_claw.frontal_armor_scale(shove))
+			if armor_mult < 1.0:
+				amount *= armor_mult
+				shove *= 0.35
 	last_player_hit = {"from": ctx.player.ball_position() - shove, "shove": shove, "source": source, "frame": Engine.get_physics_frames(), "attack": attack}
 	# The set piece's defence: no knockback here; damage x0.2 and the health floor of 1 run
 	# inside ctx.run.damage through its defend_hook (SKILL-BAR section 4).
@@ -5925,6 +5996,7 @@ func _on_player_died() -> void:
 	_reset_w47_c2_state()
 	_reset_grapple_muts_state()
 	_reset_w47_h1_state()
+	_reset_w47_h2_state()
 	_clear_consumables_runtime()
 	if ally_husks != null:
 		ally_husks._reset()
@@ -5978,6 +6050,7 @@ func _start_attempt() -> void:
 	_reset_w47_c2_state(true)
 	_reset_grapple_muts_state(true)
 	_reset_w47_h1_state()
+	_reset_w47_h2_state()
 	_clear_consumables_runtime()
 	if ally_husks != null:
 		ally_husks._reset()
@@ -6291,6 +6364,8 @@ func _on_grapple_released_w47() -> void:
 	_pendulum_swing_charged = false
 	_pendulum_swing_origin = Vector3.INF
 	_on_grapple_released_muts()
+	if not _cannon_piton.is_empty():
+		_detonate_cannon_piton()
 	if not ctx.flow.in_play() or not _has_micro_mutation("long_spool"):
 		return
 	var dur := float(_micro_row("long_spool").get("duration_s", 0.4))
@@ -8109,3 +8184,120 @@ func _step_kest_fuse_trace(delta: float, enemies: Array) -> void:
 	last_kest_trace = HeroFx.scan_kest_sightline(space, eye, forward, enemies, ctx.destructibles, Weapons.KEST_FUSE_TRACE_RANGE)
 	if hfx != null:
 		hfx.set_kest_fuse_trace(last_kest_trace)
+
+
+# --- W47-H2 Hero Baselines Part 2: The Cannon (its) Runtime State -----------------------
+# Zero static mutable state: every field resets cleanly in _reset_w47_h2_state().
+var _cannon_recoil_airborne := false
+var _cannon_recoil_air_grace := 0.0
+var _cannon_piton := {}
+var last_cannon_piton := {}
+var last_cannon_recoil_reset := {}
+
+
+func _reset_w47_h2_state() -> void:
+	_cannon_recoil_airborne = false
+	_cannon_recoil_air_grace = 0.0
+	_cannon_piton = {}
+	last_cannon_piton = {}
+	last_cannon_recoil_reset = {}
+	var tarn_claw = get_node_or_null("TarnClaw")
+	if tarn_claw != null and tarn_claw.has_method("_clear"):
+		tarn_claw._clear()
+
+
+func cannon_recoil_airborne() -> bool:
+	if not _cannon_recoil_airborne or ctx == null or ctx.player == null:
+		return false
+	return not ctx.player.state.grounded or _cannon_recoil_air_grace > 0.0
+
+
+func _step_cannon_recoil_airborne(delta: float) -> void:
+	if _cannon_recoil_air_grace > 0.0:
+		_cannon_recoil_air_grace = maxf(0.0, _cannon_recoil_air_grace - delta)
+	if _cannon_recoil_airborne and _cannon_recoil_air_grace <= 0.0 and ctx != null and ctx.player != null and ctx.player.state.grounded and not ctx.player.kit.slamming:
+		_cannon_recoil_airborne = false
+
+
+func _on_cannon_grapple_fired(anchor: Vector3) -> void:
+	if ctx == null or ctx.player == null or ctx.player.abilities == null:
+		return
+	if ctx.player.abilities.id_of(AbilityState.LINE) != "cannon_lane_charge":
+		return
+	var kit = ctx.player.kit
+	if kit.hooked and not kit.on_body:
+		_arm_cannon_piton(anchor, kit.anchor_normal, float(ctx.player.chain.multiplier()))
+
+
+func _arm_cannon_piton(anchor: Vector3, normal: Vector3, mult := 1.0) -> void:
+	_cannon_piton = {
+		"anchor": anchor,
+		"normal": normal,
+		"staked": true,
+		"mult": maxf(mult, 1.0),
+		"recoil_cancelled": false,
+		"armed_at": _clock,
+	}
+	last_cannon_piton = {
+		"mode": "stake",
+		"at": anchor,
+		"recoil_cancelled": false,
+		"hits": 0,
+		"walls_broken": [],
+	}
+
+
+func cannon_piton_staked() -> bool:
+	return not _cannon_piton.is_empty() and bool(_cannon_piton.get("staked", false)) \
+		and ctx != null and ctx.player != null and ctx.player.kit.hooked and not ctx.player.kit.on_body
+
+
+func cannon_piton_state() -> Dictionary:
+	return _cannon_piton.duplicate()
+
+
+func _step_cannon_piton() -> void:
+	if _cannon_piton.is_empty():
+		return
+	var kit = ctx.player.kit
+	if not kit.hooked or kit.on_body:
+		if String(kit.line_end) == "reset":
+			_cannon_piton = {}
+		else:
+			_detonate_cannon_piton()
+
+
+# Explosive Piton Breach: releasing a staked piton pops its shaped-charge cap at the anchor,
+# striking nearby enemies and breaking Tier 1-3 Heft Destructibles (Destructibles.tla safe).
+func _detonate_cannon_piton() -> Dictionary:
+	if _cannon_piton.is_empty():
+		return {}
+	var piton := _cannon_piton
+	# Clear before breaking props or striking enemies so piece_shattered -> cut_line never re-enters.
+	_cannon_piton = {}
+	var anchor: Vector3 = piton["anchor"]
+	var mult: float = float(piton.get("mult", 1.0))
+	var radius := Weapons.CANNON_PITON_BREACH_RADIUS
+	var broken: Array[String] = []
+	if ctx.destructibles != null and is_instance_valid(ctx.destructibles) and ctx.destructibles.has_method("on_piton_breach"):
+		broken = ctx.destructibles.on_piton_breach(anchor, radius, Weapons.CANNON_PITON_MAX_TIER, "cannon_piton_breach")
+	var dmg: float = Weapons.CANNON_PITON_BREACH_DAMAGE * mult * _damage_mod(Weapons.CANNON_LANE)
+	var hits := 0
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if DamageDoor.dead(enemy) or not in_ring(anchor, radius, enemy):
+			continue
+		var push: Vector3 = enemy.global_position - anchor
+		_hit(enemy, "cannon", dmg, push, Weapons.CANNON_PITON_BREACH_KNOCK, "", "special")
+		hits += 1
+	effects.ring(anchor, radius, Palette.ANCIENT)
+	effects.spark(anchor + Vector3.UP * 0.4, Palette.SAND)
+	last_cannon_piton = {
+		"mode": "breach",
+		"at": anchor,
+		"radius": radius,
+		"hits": hits,
+		"damage": dmg,
+		"walls_broken": broken,
+		"recoil_cancelled": bool(piton.get("recoil_cancelled", false)),
+	}
+	return last_cannon_piton

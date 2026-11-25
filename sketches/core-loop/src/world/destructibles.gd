@@ -511,6 +511,75 @@ func on_blast(at: Vector3, radius: float, source: String, tier_bonus: int = 1, h
 		_shatter(p, near, away.normalized() if away.length() > 0.01 else Vector3.FORWARD, cruise, true, source)
 
 
+# W47-H2: Tarn Clamp-and-Hurl enemy projectile break hook. Smashes intact Heft Destructibles
+# up to +1 tier above Tarn's heft class (never stacked, never re-shattering broken pieces;
+# Destructibles.tla PaysOnce & TierCapNeverStacks safe).
+func on_hurled_enemy(from: Vector3, to: Vector3, heft_class: int, radius: float = 1.8, source: String = "tarn_hurl") -> Array[String]:
+	var broken: Array[String] = []
+	if _pieces.is_empty():
+		return broken
+	var heft := heft_class if heft_class >= 0 else _last_heft
+	var effective := mini(TIER_MAX, heft + 1)
+	var cruise := _live_cruise()
+	var seg_dir := to - from
+	seg_dir.y = 0.0
+	var dir := seg_dir.normalized() if seg_dir.length_squared() > 0.0001 else Vector3.FORWARD
+	for p in _near(from, to, radius):
+		if not p.intact or effective < p.tier:
+			continue
+		var seen := _sweep(p, from, to)
+		if float(seen["dist"]) > radius:
+			continue
+		_shatter(p, seen["at"], dir, cruise, false, source)
+		broken.append(p.id)
+	return broken
+
+
+# W47-H2: The Cannon Air-Lock Overpenetration corridor break hook. Blasts intact Tier 1-3
+# Heft Destructibles along its widened airborne rail (strictly clamped <= 3, once-per-piece
+# through _shatter; Destructibles.tla PaysOnce safe).
+func on_rail_breach(from: Vector3, to: Vector3, half_width: float, max_tier: int = 3, source: String = "cannon_air_rail") -> Array[String]:
+	var broken: Array[String] = []
+	if _pieces.is_empty():
+		return broken
+	var cap_tier := clampi(max_tier, TIER_MIN, 3)
+	var cruise := _live_cruise()
+	var seg_dir := to - from
+	seg_dir.y = 0.0
+	var dir := seg_dir.normalized() if seg_dir.length_squared() > 0.0001 else Vector3.FORWARD
+	var reach := maxf(half_width, 0.5)
+	for p in _near(from, to, reach):
+		if not p.intact or p.tier > cap_tier:
+			continue
+		var seen := _sweep(p, from, to)
+		if float(seen["dist"]) > reach:
+			continue
+		_shatter(p, seen["at"], dir, cruise, false, source)
+		broken.append(p.id)
+	return broken
+
+
+# W47-H2: The Cannon Explosive Piton shaped-charge detonation break hook on release.
+# Blasts intact Tier 1-3 Heft Destructibles within radius (strictly clamped <= 3, once-per-piece
+# through _shatter; Destructibles.tla PaysOnce safe).
+func on_piton_breach(at: Vector3, radius: float, max_tier: int = 3, source: String = "cannon_piton_breach") -> Array[String]:
+	var broken: Array[String] = []
+	if _pieces.is_empty():
+		return broken
+	var cap_tier := clampi(max_tier, TIER_MIN, 3)
+	var cruise := _live_cruise()
+	for p in _near(at, at, radius):
+		if not p.intact or p.tier > cap_tier:
+			continue
+		var near := _closest(p, at)
+		if at.distance_to(near) > radius:
+			continue
+		var away := Vector3(p.centre.x - at.x, 0.0, p.centre.z - at.z)
+		_shatter(p, near, away.normalized() if away.length() > 0.01 else Vector3.FORWARD, cruise, true, source)
+		broken.append(p.id)
+	return broken
+
+
 # ---- the break ----------------------------------------------------------------------------------
 
 func _live_cruise() -> float:

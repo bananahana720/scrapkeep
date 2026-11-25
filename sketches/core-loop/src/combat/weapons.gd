@@ -534,3 +534,37 @@ const KEST_WALL_KICK_LOCK_S := 1.2
 const KEST_FUSE_TRACE_RANGE := 42.0
 const KEST_FUSE_TRACE_HOLD_S := 3.0
 const KEST_FUSE_TRACE_RAYS := 9
+
+# --- W47-H2 Hero Baseline Constants (Tarn & The Cannon) -------------------------------
+# Tarn: Clamp-and-Hurl (0.6 s seize -> 30 m/s aim-vector hurl bowling packs and smashing
+# Heft Destructibles +1 tier above Tarn's heft), Unstoppable 3rd-Beat Lunge (+6 m with
+# brief frontal armor), and Inward-Facing Pendulum Guard/Strafe on claw_drag around heavy
+# anchors/enemies with his worn-steel articulated front claw shielding his face.
+const CLAMP_SEIZE_SECONDS := 0.6
+const CLAMP_HURL_SPEED := 30.0
+const CLAMP_HURL_FLIGHT_SECONDS := 0.75
+const CLAMP_HURL_HOLD_OFFSET := 2.4
+const CLAMP_HURL_MAX_WEIGHT := 2.0
+const CLAMP_HURL_BOWL_RADIUS := 2.2
+const CLAMP_HURL_BOWL_DAMAGE := 24.0
+const CLAMP_HURL_BOWL_KNOCK := 22.0
+const CLAMP_HURL_WALL_RADIUS := 1.8
+const TARN_BEAT3_LUNGE_M := 6.0
+const TARN_BEAT3_LUNGE_S := 0.25
+const TARN_BEAT3_ARMOR_S := 0.45
+const TARN_FRONTAL_ARMOR_MULT := 0.50
+const TARN_PENDULUM_STRAFE_SPEED := 16.0
+
+# The Cannon (its — rebuilt ancient artillery): Air-Lock Overpenetration (1.8x wide rail
+# while airborne from cannon_recoil, piercing every enemy in corridor and blasting Tier 1-3
+# Heft Destructibles), Recoil-Surf Slam Reset (cannon_rush landing resets cannon_recoil),
+# and Explosive Piton Stake (recoil cancel) / Breach (shaped-charge detonation on release
+# breaking Tier 1-3 Heft Destructibles).
+const CANNON_AIR_RAIL_WIDTH_MULT := 1.8
+const CANNON_AIR_RAIL_MAX_TIER := 3
+const CANNON_AIR_RAIL_CHIP := 1.0
+const CANNON_RECOIL_AIR_GRACE_S := 0.15
+const CANNON_PITON_BREACH_RADIUS := 5.5
+const CANNON_PITON_BREACH_DAMAGE := 32.0
+const CANNON_PITON_BREACH_KNOCK := 22.0
+const CANNON_PITON_MAX_TIER := 3

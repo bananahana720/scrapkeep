@@ -1080,6 +1080,7 @@ func _step_lock(delta: float, weapon: String, pattern: Resource, pressed: bool, 
 		return shots
 	var rate_mult: float = maxf(float(context.get("rate_mult", 1.0)), 0.1)
 	var recover_s: float = _recover_cfg_s / rate_mult
+	var recoil_airborne: bool = bool(context.get("recoil_airborne", false))
 
 	if not _lane_painted:
 		if _recover_s <= 0.0 and _window_state == WINDOW_HIT:
@@ -1092,7 +1093,7 @@ func _step_lock(delta: float, weapon: String, pattern: Resource, pressed: bool, 
 			_window_t = 0.0
 			_window_state = WINDOW_WAITING if _window_s.y > _window_s.x else WINDOW_IDLE
 			if not held or released:
-				shots.append(_release_lock(weapon, pattern, recover_s))
+				shots.append(_release_lock(weapon, pattern, recover_s, recoil_airborne))
 			return shots
 		if pressed and _recover_s > 0.0 and _recover_s <= BUFFER_S + EPS:
 			_latch_buffer()
@@ -1111,11 +1112,11 @@ func _step_lock(delta: float, weapon: String, pattern: Resource, pressed: bool, 
 			_window_state = WINDOW_SPENT
 		return shots
 
-	shots.append(_release_lock(weapon, pattern, recover_s))
+	shots.append(_release_lock(weapon, pattern, recover_s, recoil_airborne))
 	return shots
 
 
-func _release_lock(weapon: String, pattern: Resource, recover_s: float) -> Dictionary:
+func _release_lock(weapon: String, pattern: Resource, recover_s: float, recoil_airborne := false) -> Dictionary:
 	var stage := _lock_stage_for(_hold_s)
 	var pulse_dmg: float = maxf(float(pattern.damage), 0.001)
 	var rail_dmg: float = _lock_rail_damage if _lock_rail_damage > 0.0 else pulse_dmg
@@ -1128,12 +1129,17 @@ func _release_lock(weapon: String, pattern: Resource, recover_s: float) -> Dicti
 	var width_mult := _lock_pulse_width_mult
 	var pierce := false
 	var breaks_props := false
+	var air_lock_overpen := false
 	if stage == SHOT_RAIL:
 		dmg = rail_dmg
 		reach = rail_reach
 		width_mult = _lock_rail_width_mult
 		pierce = true
 		breaks_props = _lock_rail_breaks_props
+		if recoil_airborne and weapon == Weapons.CANNON_LANE:
+			width_mult *= Weapons.CANNON_AIR_RAIL_WIDTH_MULT
+			breaks_props = true
+			air_lock_overpen = true
 	elif stage == SHOT_BARRAGE:
 		dmg = barrage_dmg
 		reach = barrage_reach
@@ -1151,6 +1157,8 @@ func _release_lock(weapon: String, pattern: Resource, recover_s: float) -> Dicti
 		"reach": reach,
 		"width_mult": width_mult,
 		"pierce": pierce,
+		"overpenetrate": air_lock_overpen,
+		"air_lock_overpen": air_lock_overpen,
 		"breaks_props": breaks_props,
 		"spread_deg": 0.0,
 	}
