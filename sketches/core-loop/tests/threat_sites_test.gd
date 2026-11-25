@@ -59,7 +59,7 @@ const AUDIT := {
 	"res://src/combat/silt_boil.gd": ["INSTANT"],
 	# 2026-10-17 (stage/alpha-w16): the Dispatcher's tube drop (#59) and the jolt layer's mat (#65).
 	"res://src/combat/dispatcher.gd": ["PROJECTILE"],
-	"res://src/combat/jolt_layer.gd": ["INSTANT"],
+	"res://src/combat/jolt_layer.gd": ["LANE", "INSTANT"],  # 2026-11-25 (W47-E2): Cable Whip Overload lane + primary mat ring.
 	# 2026-10-17 Highdraft roster: the ballast heavy and the gap net, one telegraph each.
 	"res://src/combat/ballast_heavy.gd": ["INSTANT"],
 	"res://src/combat/gap_net.gd": ["LANE"],
