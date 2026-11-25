@@ -4,6 +4,8 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
+const MindDress := preload("res://src/boss/mind_dress.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # Brindle's dress (card BOSS-DRESS). Two pins:
 #
@@ -113,5 +115,27 @@ func _run() -> void:
 		_report("the ring clears the hull", inner > footprint,
 			"ring inner edge %.2f m, hull half diagonal %.2f m" % [inner, footprint])
 	_stripe()
+	_mind_cards()
 	print("boss_dress_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
+
+
+# W49-MAPS: the Mind's dress shows the Foreman's call-in and the HIRED stamp as cards that never
+# pause the tree or catch the mouse, and freeing the dress leaves neither behind.
+func _mind_cards() -> void:
+	var dress = MindDress.new()
+	root.add_child(dress)
+	dress.show_call_in()
+	var call: CanvasLayer = dress.get_node_or_null(MindDress.CALL_IN_NODE)
+	_report("the call-in card is a corner layer that lets clicks through", call != null and not paused
+		and (call.get_child(0) as Control).mouse_filter == Control.MOUSE_FILTER_IGNORE, "layer %s" % [call])
+	dress.dismiss_call_in()
+	_report("the call-in card dismisses", call.is_queued_for_deletion() and dress._call_in_left == 0.0, "")
+	dress.show_hired()
+	var hired: CanvasLayer = dress.get_node_or_null(MindDress.HIRED_NODE)
+	var stamp: Label = hired.find_child("Stamp", true, false) if hired != null else null
+	_report("the HIRED stamp is inked, never Kindness purple", stamp != null and stamp.text == "HIRED" and not paused
+		and stamp.get_theme_color("font_color") != Palette.KINDNESS, "stamp %s" % [stamp])
+	root.remove_child(dress)
+	dress.free()
+	_report("freeing the dress frees both cards", not is_instance_valid(hired) and root.find_child(MindDress.HIRED_NODE, true, false) == null, "")

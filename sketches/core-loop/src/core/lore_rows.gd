@@ -936,6 +936,58 @@ static func kest_rescue_banter() -> Array:
 	return KEST_RESCUE_BANTER
 
 
+# World 3 cold opens and the Mind's two cards (W49-MAPS), kept outside ROWS/CALLS like World 2's
+# so the ROWS hash and the CALLS table stay untouched. Cold opens are keyed by park landmark kind.
+const WORLD_THREE_COLD_OPEN := {
+	"sky_island": {
+		"id": "lore.isle.cold_open",
+		"zone": "3-1",
+		"title": "THE HANGING ISLE",
+		"speaker": "Moss",
+		"line": "Mesas gone gold, cloud sea below. Tally's cage hangs past the nets.",
+		"skippable": true,
+		"duration_s": 3.4,
+	},
+	"spire": {
+		"id": "lore.crown.cold_open",
+		"zone": "3-2",
+		"title": "CROWN WORKS",
+		"speaker": "Moss",
+		"line": "Storm's in. Lightning walks the 330-metre Crown Spire on the beat.",
+		"skippable": true,
+		"duration_s": 3.4,
+	},
+}
+
+# The Foreman calls in on schedule when the Mind's body arrives: a corner card with three deadpan
+# stats and the LIKES line (TONE-BIBLE: the only entry is the player). cue is the soft chime's id.
+const FOREMAN_CALL_IN := {
+	"id": "lore.crown.foreman_call_in",
+	"zone": "3-2",
+	"title": "THE FOREMAN",
+	"line": "Calling as scheduled. You are exactly on time.",
+	"stats": [["SHIFTS RUN", "all of them"], ["WASTE", "designed out"], ["HANDS", "four, for now"]],
+	"likes": ["LIKES", "YOU"],
+	"cue": "foreman_chime",
+	"skippable": true,
+	"duration_s": 3.2,
+}
+
+# Beaten, the Mind is stamped HIRED and takes a place on the crew (STORY-MAP, the Mind row).
+const HIRED_CEREMONY := {
+	"id": "lore.crown.hired",
+	"zone": "3-2",
+	"stamp": "HIRED",
+	"memo": "I am humbled to announce that I have accepted a position on the crew.",
+	"skippable": true,
+	"duration_s": 2.6,
+}
+
+
+static func world_three_cold_open(landmark_kind: String) -> Dictionary:
+	return WORLD_THREE_COLD_OPEN.get(landmark_kind, {})
+
+
 static func waking_intro_line(pilot_id: String) -> String:
 	for row in ROWS:
 		if row.get("kind") == "intro" and row.get("zone") == "2-2" and row.get("pilot", "") == pilot_id:
