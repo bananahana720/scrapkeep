@@ -32,14 +32,16 @@
 #   hand    a right hand: palm up, fingers along -Z, the thumb on the +X side (2026-10-11, w13 KF7c
 #           fix round; KF7c's first pass was a left hand, see FINGERS).
 #
-# The gloves (2026-10-18, design thread): the crew called it the Mind because it did the
-# thinking and they were its hands; the crew is gone, so it wears their work gloves to do their
-# jobs. Canvas backs with stitched seam ridges, pale scuffed leather palm patches and fingertips,
-# and a rolled, frayed cuff at the wrist, vertex colour on the matte "pilot" slot (see GLOVE_SLOT); the green
-# shows only through the split side seams. Each finger's back carries its crew number in chipped
-# white stencil, raised 2 cm (Blender's built-in font, converted to mesh): little to index 04, 03,
-# 02, 01, matching the seams that go out in that order (seam3 is 04 ... seam0 is 01); the thumb,
-# lit last, reads FOREMAN.
+# The Foreman's Glove (W49-MAPS, master bible section 1.3 and rubric B6; replaces the 2026-10-18
+# canvas work gloves): the hand is one monumental seamless casting in dull petrol enamel
+# (Palette.VERDIGRIS #365754) on the ancient_enamel slot, its palm and grip faces darker iron (the
+# underside when it grips a perch), with no stitching, fabric, rivets or fasteners and zero brass;
+# the uranium-glass green (Palette.ANCIENT) shows only in the split side seams. Each finger's back
+# carries its crew number as a crisp raised bone stencil, 2 cm proud (Blender's built-in font,
+# converted to mesh): little to index 04, 03, 02, 01, matching the seams that go out in that order
+# (seam3 is 04 ... seam0 is 01); the thumb, lit last, reads FOREMAN. One flat matte executive-purple
+# takeover panel (Palette.KINDNESS #D936B0, the Foreman's Kindness) sits inset in an iron frame on
+# the back of the hand: the only purple on the body, never lit, never a glow, field or grid.
 #
 # Clips are section 5's table, one glTF animation per row, plus the per-finger and per-knuckle
 # variants of chunk_lost and shrug (chunk_lost is the little finger, the first to go) and the
@@ -127,18 +129,21 @@ ENAMEL = "petrol"
 IRON = common.mix("charcoal", "petrol", 0.25)
 DUST = common.mix("petrol", "sandstone", 0.35)
 UNDER = common.mix("petrol", "charcoal", 0.4)
-CANVAS = common.mix("sandstone", "petrol", 0.42)  # the glove's worn canvas back
-LEATHER = common.mix("sandstone", "bone", 0.5)  # pale scuffed palm patches and fingertips
-STITCH = common.mix("charcoal", "sandstone", 0.3)
-STENCIL = "ffffff"  # chipped white roster paint
-CHIP = common.mix("sandstone", "petrol", 0.55)
+# The Foreman's Glove casting (W49-MAPS). Glove faces are built in GLOVE_MARK, a build-time
+# sentinel that never reaches the GLB: shade_glove() turns it into GLOVE on the back and sides and
+# GLOVE_UNDER on the palm and grip faces after dust() has run (so the glove takes no sandstone dust).
+GLOVE = "petrol"  # Palette.VERDIGRIS #365754, under the enamel cap (HSV value 0.34, saturation 0.38)
+GLOVE_UNDER = IRON  # the darker iron palm and grip faces
+GLOVE_MARK = "123456"
+GLOVE_SLOT = "ancient_enamel"
+STENCIL = "bone"  # Palette bone #D2C5A5, crisp raised roster numbers on the dark enamel
 ROSTER = {0: "01", 1: "02", 2: "03", 3: "04"}  # FINGERS index -> crew number; seam%d goes with it
-# 2026-10-18 review (F4), following the KF7c cuff precedent below: the glove's pale canvas, leather,
-# stitching and stencil paint are lighter than the enamel cap (ROSTER-LOOK, HSV value and saturation
-# <= 0.45), and ancient_enamel would rust-mottle them anyway. They sit on "pilot", a matte
-# vertex-colour slot with no texture, paint or wear in hero_assets.gd; the enamel keeps its dark
-# petrol, iron and dust under the cap.
-GLOVE_SLOT = "pilot"
+# The takeover panel: flat executive purple, matte and unlit. It and the bone stencils are lighter
+# than the enamel cap (ROSTER-LOOK, HSV value and saturation <= 0.45) and ancient_enamel would
+# rust-mottle them, so they sit on "pilot", a matte vertex-colour slot with no emission, paint or
+# wear in hero_assets.gd (the 2026-10-18 F4 precedent).
+KINDNESS = "d936b0"  # Palette.KINDNESS
+FLAT_SLOT = "pilot"
 # KF7c fix round: the cuff rendered as dark as the stalk with a bone vertex colour. ancient_enamel
 # does not let the vertex colour set the value: hero_assets.gd material() gives it palette.gd
 # painted_texture (a 0.66 to 1.0 grey multiply) and enamel_wear (a detail layer that MIXES copper
@@ -275,7 +280,7 @@ def loft(part, rows, slot, color=None, caps=True):
     return part.paint(faces, slot, color)
 
 
-def segment(part, bone, a, b, w0, h0, w1, h1, color=CANVAS, slot=GLOVE_SLOT):
+def segment(part, bone, a, b, w0, h0, w1, h1, color=GLOVE_MARK, slot=GLOVE_SLOT):
     """One finger or thumb segment from a to b (Godot), a chamfered box that tapers."""
     a, b = Vector(a), Vector(b)
     d = (b - a).normalized()
@@ -299,20 +304,6 @@ def seam(part, bone, slot, a, b, out, width):
 
 def right_of(d):
     return d.cross(Vector((0, 1, 0))).normalized()
-
-
-def stitch(part, bone, a, b, right, h):
-    """A stitched seam ridge down the back of a segment: a bead with stitch ticks across it."""
-    a, b = Vector(a), Vector(b)
-    d = (b - a).normalized()
-    back = -right.cross(d).normalized()
-    a0, b0 = a + d * 0.45 + back * (h / 2 + 0.015), b - d * 0.35 + back * (h / 2 + 0.015)
-    part.on(bone, part.beam, GLOVE_SLOT, B(a0), B(b0), 0.07, 0.05, color=STITCH)
-    n = max(2, int((b0 - a0).length / 0.45))
-    for k in range(n + 1):
-        c = a0.lerp(b0, k / n)
-        part.on(bone, part.beam, GLOVE_SLOT, B(c - right * 0.09), B(c + right * 0.09), 0.04, 0.05,
-                color=STITCH)
 
 
 _FONT = {}
@@ -347,16 +338,14 @@ def stencil(part, bone, text, at, along, across, out, size):
         vs = [part.bm.verts.new(B(base + along * (x * size) + across * (y * size) + normal * ((z + 0.5) * depth)))
               for x, y, z in verts]
         faces = []
-        for i, poly in enumerate(polys):
+        for poly in polys:
             try:
                 f = part.bm.faces.new([vs[k] for k in poly])
             except ValueError:
                 continue
             faces.append(f)
-            # Chipped paint: about one face in six shows the canvas through it.
-            chip = (i * 2654435761 + len(text) * 97) % 6 == 0
-            part.paint([f], GLOVE_SLOT, CHIP if chip else STENCIL)
-        return faces
+        # Crisp cast lettering: every face in one bone colour, no chips.
+        return part.paint(faces, FLAT_SLOT, STENCIL)
     part.on(bone, add)
 
 
@@ -382,6 +371,23 @@ def finger_points(x, lengths, fan, droop, root_y):
 PALM = [(2.95, 1.6, 0.42, 0.0, 0.3), (2.4, 2.2, 0.48, 0.0, 0.35), (1.3, 2.7, 0.42, 0.0, 0.3),
         (0.0, 3.0, 0.36, 0.0, 0.3), (-2.2, 3.3, 0.32, 0.0, 0.28), (-3.2, 3.4, 0.32, 0.0, 0.28),
         (-3.75, 3.2, 0.28, 0.0, 0.24)]
+# The Foreman's Kindness (B6): one flat purple plate on the back of the hand at its heel, where the
+# glove meets the cuff, clear of the wrist flare (r 2.0 round the stalk) and the knuckle hardpoints.
+# The plate sits 3 cm under the lip of an iron frame, so it reads as an inset panel in the casting.
+# x and z centre it, w and d size it, hh is the palm's half thickness there, rim the frame's width.
+PANEL = {"x": 0.1, "z": 2.45, "w": 2.2, "d": 0.6, "hh": 0.47, "rim": 0.12}
+
+
+def takeover_panel(part, roll_u, tilt):
+    back = -roll_u  # the back of the hand's outward normal (down in the hang)
+    across = Vector((roll_u.y, -roll_u.x, 0))
+    c = Vector((PANEL["x"], palm_back_y(PANEL["x"], PANEL["hh"]), PANEL["z"]))
+    w, d, rim = PANEL["w"], PANEL["d"], PANEL["rim"]
+    part.on("Palm", part.box, FLAT_SLOT, (w, d, 0.12), loc=B(c + back * 0.01), rot=tilt, color=KINDNESS)
+    for sx, sz, bw, bd in ((0.0, (d + rim) / 2, w + 2 * rim, rim), (0.0, -(d + rim) / 2, w + 2 * rim, rim),
+                           ((w + rim) / 2, 0.0, rim, d), (-(w + rim) / 2, 0.0, rim, d)):
+        part.on("Palm", part.box, "ancient_enamel", (bw, bd, 0.16),
+                loc=B(c + across * sx + Vector((0, 0, sz)) + back * 0.02), rot=tilt, color=IRON)
 
 
 def build_body():
@@ -396,15 +402,9 @@ def build_body():
     for y in (0.8, 1.4):
         p.on("Hand", p.cyl, "ancient_enamel", 1.55, 1.55, 0.12, 12, loc=B((0, y, 0)), color=IRON)
     p.on("Hand", p.cyl, "ancient_enamel", 0.98, 1.08, 0.6, 12, loc=B((0, 1.76, 0)), color=ENAMEL)
-    # The glove's rolled cuff, folded over at the wrist, with frayed canvas tabs hanging below.
-    p.on("Hand", p.cyl, GLOVE_SLOT, 1.2, 1.24, 0.34, 16, loc=B((0, 1.95, 0)), color=CANVAS)
-    p.on("Hand", p.cyl, GLOVE_SLOT, 1.3, 1.3, 0.14, 16, loc=B((0, 2.05, 0)), color=LEATHER)
-    for k in range(14):
-        a = k * math.tau / 14 + 0.11 * ((k * 7) % 3)
-        length = 0.16 + 0.05 * ((k * 5) % 4)
-        p.on("Hand", p.box, GLOVE_SLOT, (0.2, 0.05, length),
-             loc=B((1.2 * math.cos(a), 1.78 - length / 2 + 0.04, 1.2 * math.sin(a))),
-             rot=(0, 0, -a + math.pi / 2), color=CANVAS)
+    # The glove's cast cuff at the wrist: a plain band and a lip, one casting with the hand.
+    p.on("Hand", p.cyl, GLOVE_SLOT, 1.2, 1.24, 0.34, 16, loc=B((0, 1.95, 0)), color=GLOVE_MARK)
+    p.on("Hand", p.cyl, GLOVE_SLOT, 1.3, 1.3, 0.14, 16, loc=B((0, 2.05, 0)), color=GLOVE_MARK)
     p.on("Hand", p.cyl, "ancient_enamel", 1.08, 2.0, 0.36, 12, loc=B((0, 2.24, 0)), color=ENAMEL)
     # Palm plate: the lofted palm, then the thenar pad at the thumb root and the smaller pad
     # opposite, both raised on the palm side at the heel.
@@ -413,23 +413,21 @@ def build_body():
     roll_u = Vector((-math.sin(PALM_ROLL), math.cos(PALM_ROLL), 0))
     rows = [section(Vector((0, PALM_Y0 + lift, z)), roll_r, roll_u, 2 * hw, 2 * hh, ch)
             for z, hw, hh, lift, ch in PALM]
-    p.on("Palm", loft, p, rows, GLOVE_SLOT, CANVAS)
+    p.on("Palm", loft, p, rows, GLOVE_SLOT, GLOVE_MARK)
     tilt = (0, -PALM_ROLL, 0)  # Blender rotation matching the roll about -Z
 
     def top_y(x, hh):
         return PALM_Y0 + x * math.tan(PALM_ROLL) + hh / math.cos(PALM_ROLL)
 
     p.on("Palm", p.ico, GLOVE_SLOT, 1.0, 2, loc=B((1.9, top_y(1.9, 0.42) - 0.1, 1.3)), scale=(0.85, 1.4, 0.4),
-         rot=tilt, color=LEATHER)
+         rot=tilt, color=GLOVE_MARK)
     p.on("Palm", p.ico, GLOVE_SLOT, 1.0, 2, loc=B((-1.8, top_y(-1.8, 0.42) - 0.1, 1.6)), scale=(0.7, 1.0, 0.35),
-         rot=tilt, color=LEATHER)
-    # Scuffed leather patches across the palm and under the knuckle line.
+         rot=tilt, color=GLOVE_MARK)
+    # Cast grip pads across the palm and under the knuckle line.
     for x, z, w, d in ((0.0, -1.2, 3.6, 1.1), (-0.3, -2.75, 5.4, 0.55)):
         p.on("Palm", p.box, GLOVE_SLOT, (w, d, 0.06), loc=B((x, top_y(x, 0.36) + 0.01, z)), rot=tilt,
-             color=LEATHER)
-    # The glove's back seam: a stitched ridge from the cuff to the middle knuckle.
-    p.on("Palm", p.beam, GLOVE_SLOT, B((0, palm_back_y(0, 0.36) - 0.02, 2.3)),
-         B((0, palm_back_y(0, 0.32) - 0.02, -3.0)), 0.12, 0.08, color=STITCH)
+             color=GLOVE_MARK)
+    takeover_panel(p, roll_u, tilt)
     p.on("Palm", p.ring, "ancient_enamel", 1.2, 1.55, 0.18, 12, loc=B((0, top_y(0, 0.36) - 0.03, 0.2)), rot=tilt,
          color=IRON)
     # Knuckle hardpoints on the back: a dome, a dark groove and a green rim, bottoms at 2.05 m.
@@ -460,16 +458,14 @@ def build_body():
             b = pts[s + 1] - d * 0.45
             seam(p, name, slot, a + right * (w0 + w1) / 4, b + right * (w0 + w1) / 4, right, 0.06)
             seam(p, name, slot, a - right * (w0 + w1) / 4, b - right * (w0 + w1) / 4, -right, 0.06)
-            if s:  # segment 0 carries the roster number instead
-                stitch(p, name, pts[s], pts[s + 1], right, (h0 + h1) / 2)
-            if s == 0:
+            if s == 0:  # segment 0 carries the roster number
                 d0 = pts[1] - pts[0]
                 stencil(p, name, ROSTER[fi], pts[0] + d0 * 0.55, d0.normalized(), right, h0 * 0.47, 1.05)
         # The fingertip: a blunt cast cap.
         tip = pts[3]
         d = (pts[3] - pts[2]).normalized()
         p.on(parent, p.ico, GLOVE_SLOT, 0.17, 2, loc=B(tip - d * 0.05), scale=(1.5, 1.2, 1.0),
-             color=LEATHER)
+             color=GLOVE_MARK)
     # Thumb, opposed: out on the -X side from the heel, rising past the palm's plane.
     tp = [Vector(v) for v in THUMB["pts"]]
     parent = "Palm"
@@ -487,7 +483,7 @@ def build_body():
         if s < 2:
             stencil(p, name, ("FORE", "MAN")[s], (tp[s] + tp[s + 1]) / 2, d, right_of(d), THUMB["h"] * k0 * 0.47,
                     0.5)
-    p.on(parent, p.ico, GLOVE_SLOT, 0.3, 2, loc=B(tp[3]), scale=(0.95, 0.85, 0.85), color=LEATHER)
+    p.on(parent, p.ico, GLOVE_SLOT, 0.3, 2, loc=B(tp[3]), scale=(0.95, 0.85, 0.85), color=GLOVE_MARK)
     # The wrist stalk: three ribbed sleeves, each with a dark core that hides in the sleeve
     # above it at rest and bridges the gap when the stalk telescopes down 10 m.
     parent = "Hand"
@@ -531,7 +527,20 @@ def build_body():
         p.on(name, p.cyl, "ancient_light_lens", 0.23, 0.23, 0.08, 8, loc=B(at + Vector((0, 0, -0.18))),
              rot=face_rot)
     dust(p)
+    shade_glove(p)
     return p, bones
+
+
+def shade_glove(part):
+    """The glove casting out of its build sentinel: darker iron on the palm and grip faces (up in
+    the hang, the underside on a perch), petrol enamel on the back and sides."""
+    part.bm.normal_update()
+    mark = common.rgba(GLOVE_MARK)
+    for f in part.bm.faces:
+        c = f.loops[0][part.col]
+        if max(abs(c[i] - mark[i]) for i in range(3)) > 1e-5:
+            continue
+        part.paint([f], GLOVE_SLOT, GLOVE_UNDER if f.normal.z > 0.55 else GLOVE)
 
 
 def dust(part):
