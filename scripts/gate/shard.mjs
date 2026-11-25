@@ -53,7 +53,6 @@ import {
   isBot,
   jobCount,
   scriptErrorCount,
-  smokeBatchSize,
   testScripts,
   testTimeoutMs,
   timeScale,

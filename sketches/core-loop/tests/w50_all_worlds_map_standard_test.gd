@@ -12,6 +12,7 @@ const ParkDefs := preload("res://src/core/park_defs.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
+const GraphTool := preload("res://tools/park_graph.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
 const Secrets := preload("res://src/core/secrets.gd")
@@ -66,9 +67,12 @@ func _check_all_six_parks_and_handovers() -> void:
 		if not map.ok:
 			continue
 		maps[map_id] = map
-		var bake_path := "%s/%s/bake.json" % [ASSET_DIR, map_id]
-		var graph_path := "%s/%s/graph.bin" % [ASSET_DIR, map_id]
+		var out_dir := "%s/%s" % [ASSET_DIR, map_id]
+		var bake_path := "%s/bake.json" % out_dir
+		var graph_path := "%s/graph.bin" % out_dir
 		_t.check("%s has bake.json and graph.bin" % map_id, FileAccess.file_exists(bake_path) and FileAccess.file_exists(graph_path))
+		var graph_stale: Array = GraphTool.freshness(json_path, out_dir, out_dir)
+		_t.eq("%s committed graph is fresh" % map_id, graph_stale, [])
 		var graph = ParkGraph.read(graph_path)
 		_t.check("%s graph readable with nodes" % map_id, graph != null and graph.node_count() > 100)
 		if graph != null:
