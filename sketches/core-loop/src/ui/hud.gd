@@ -34,6 +34,7 @@ const DangerMark := preload("res://src/ui/danger_mark.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const NixieRail := preload("res://src/ui/nixie_rail.gd")
+const Consumables := preload("res://src/build/consumables.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const PickupLines := preload("res://src/ui/pickup_lines.gd")
@@ -287,10 +288,104 @@ var _site = null
 const ARMOR_BAR := 120.0
 const ARMOR_FLASH := 0.35
 const ARMOR_PEAK_FLOOR := 100.0
+# Wordless hardware cartridge bay beside the Nixie buff rail (W47-C1; LEGIBILITY section 13).
+# Zero words, zero labels, zero digits: colour + crisp SVG icon + remaining slot pips only.
+# Hides completely with no rect when empty so resting bottom-band piece counts stay unchanged.
+class ConsumableSlot:
+	extends Control
+
+	const SLOT_SIZE := Vector2(56.0, 68.0)
+	const BORDER := 2.0
+	const ICON_SIZE := 34.0
+	const PIP_RADIUS := 4.0
+	const PIP_GAP := 14.0
+	const PIP_Y := 56.0
+	const STRIPE_H := 5.0
+
+	var set_piece := false:
+		set(value):
+			if set_piece != value:
+				set_piece = value
+				modulate.a = NixieRail.SET_PIECE_ALPHA if value else 1.0
+
+	var _held: Array[String] = []
+	var _capacity := 1
+	var _icon: Texture2D = null
+
+	func _init() -> void:
+		custom_minimum_size = SLOT_SIZE
+		size = SLOT_SIZE
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		visible = false
+
+	func set_belt(held: Array, capacity: int) -> void:
+		var next_cap := clampi(capacity, 1, 2)
+		var next_held: Array[String] = []
+		for item in held:
+			var cid := String(item)
+			if Consumables.is_valid(cid):
+				next_held.append(cid)
+		if next_held == _held and next_cap == _capacity:
+			return
+		_held = next_held
+		_capacity = next_cap
+		_icon = Icons.texture(Consumables.icon_of(_held[0])) if not _held.is_empty() else null
+		visible = not _held.is_empty()
+		queue_redraw()
+
+	func clear() -> void:
+		set_belt([], 1)
+
+	func showing() -> bool:
+		return not _held.is_empty()
+
+	func held_ids() -> Array[String]:
+		return _held.duplicate()
+
+	func slot_capacity() -> int:
+		return _capacity
+
+	func piece_rect() -> Rect2:
+		return Rect2(position, size) if showing() else Rect2()
+
+	func place(right_bottom: Vector2) -> void:
+		position = Vector2(right_bottom.x - size.x, right_bottom.y - size.y)
+
+	func _draw() -> void:
+		if _held.is_empty():
+			return
+		var active_id: String = _held[0]
+		var accent: Color = Consumables.color_of(active_id)
+		var housing := Rect2(Vector2.ZERO, size)
+		var steel := Palette.SLATE.darkened(0.45)
+		var copper := Palette.COPPER
+		var bone := NixieRail.BONE
+		draw_rect(housing, Color(steel.r, steel.g, steel.b, 0.94), true)
+		draw_rect(Rect2(BORDER, BORDER, size.x - BORDER * 2.0, STRIPE_H), accent, true)
+		draw_rect(housing, copper, false, BORDER)
+		if _icon != null:
+			var icon_pos := Vector2((size.x - ICON_SIZE) * 0.5, STRIPE_H + 6.0)
+			draw_texture_rect(_icon, Rect2(icon_pos, Vector2(ICON_SIZE, ICON_SIZE)), false, Color.WHITE)
+		else:
+			draw_circle(Vector2(size.x * 0.5, STRIPE_H + 22.0), 12.0, accent)
+		var pips := maxi(_capacity, _held.size())
+		var span := float(pips - 1) * PIP_GAP
+		var start_x := (size.x - span) * 0.5
+		for i in pips:
+			var center := Vector2(start_x + float(i) * PIP_GAP, PIP_Y)
+			if i < _held.size():
+				var pip_col: Color = bone if i == 0 else Consumables.color_of(_held[i])
+				draw_circle(center, PIP_RADIUS, pip_col)
+			else:
+				draw_circle(center, PIP_RADIUS, steel.darkened(0.35))
+				draw_arc(center, PIP_RADIUS, 0.0, TAU, 16, copper, 1.5)
+
+
 var _armor: Control
 var _cogs: CogChip
 var chain_counter: Control
 var nixie_rail: Control
+var consumable_slot: Control
 # SR6: floating damage numbers, one layer over the world (presentation/damage_numbers.gd).
 var damage_numbers: Control
 # Grey panel pickup lines at the HUD's edge, off the fight (ui/pickup_lines.gd, PF-14).
@@ -381,6 +476,8 @@ func setup(game_ref) -> void:
 	add_child(chain_counter)
 	nixie_rail = NixieRail.new()
 	add_child(nixie_rail)
+	consumable_slot = ConsumableSlot.new()
+	add_child(consumable_slot)
 	damage_numbers = DamageNumbers.new()
 	damage_numbers.project = _project_to_screen
 	damage_numbers.keep_off = func() -> Dictionary:
@@ -1132,13 +1229,15 @@ func layout(size: Vector2) -> void:
 	chain_counter.position = Vector2(ability_bar.position.x + bar_size.x + BOTTOM_GAP, slot_mid - chain_counter.size.y * 0.5)
 	# The tube rail last, right-aligned to the margin and growing leftward (ruling ek).
 	nixie_rail.place(Vector2(size.x - MARGIN, bottom.end.y - NixieRail.FLOOR))
+	var cons_right: float = (nixie_rail.piece_rect().position.x - BOTTOM_GAP) if nixie_rail.showing() else (size.x - MARGIN)
+	consumable_slot.place(Vector2(cons_right, bottom.end.y - NixieRail.FLOOR))
 
 
 # The sizes layout() depends on. Relayout when one changes, not every frame: each
 # extent() call shapes text.
 func _piece_sizes() -> Array:
 	return [_objective.custom_minimum_size, _health.size, _armor.size, maxi(ability_bar.slots.size(), AbilityBar.NUMBERED + 2), _plate_size(),
-		_cogs.size, _armor.visible, _companion.visible]
+		_cogs.size, _armor.visible, _companion.visible, consumable_slot.showing(), nixie_rail.showing(), nixie_rail.piece_rect().size.x]
 
 
 # The slot's plate: a boss plate (about 420 by 44 at 1080p) that the coordinator mounts. Its
@@ -1179,7 +1278,8 @@ func piece_rects() -> Dictionary:
 		"bottom": [_rect_of(ability_bar), _rect_of(_health), _rect_of(_speed), _rect_of(_cogs), _rect_of(chain_counter)]
 			+ ([_rect_of(_armor)] if _armor.visible else [])
 			+ ([_rect_of(_companion)] if _companion.visible else [])
-			+ ([nixie_rail.piece_rect()] if nixie_rail.showing() else []),
+			+ ([nixie_rail.piece_rect()] if nixie_rail.showing() else [])
+			+ ([consumable_slot.piece_rect()] if consumable_slot.showing() else []),
 	}
 
 
@@ -1571,9 +1671,11 @@ func _process(delta: float) -> void:
 		chain_counter.step(delta, 0)
 		chain_counter.visible = false
 		nixie_rail.clear()
+		consumable_slot.clear()
 		return
 	chain_counter.step(delta, game.player.chain.combo)
 	nixie_rail.set_rows(buff_rows())
+	consumable_slot.set_belt(game.run.consumables, game.run.consumable_capacity())
 
 	var run = game.run
 	var goal := objective_reading()
@@ -1642,6 +1744,7 @@ func _process(delta: float) -> void:
 	reticle.cadence_color = tint
 	_step_ultimate(tint)
 	nixie_rail.set_piece = ability_bar.set_piece
+	consumable_slot.set_piece = ability_bar.set_piece
 	if _piece_sizes() != _laid_pieces:
 		layout(size)
 
