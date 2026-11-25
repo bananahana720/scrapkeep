@@ -61,5 +61,6 @@ Render a board-camera still and a top-down still in Blender, Cycles on the CPU (
 
 ## Host adapter
 
+- Antigravity: `/scrapkeep-blockout`. Use `blender_blender` MCP for scene inspection and stills alongside headless Godot ball proofs, and report active Gemini model/tier.
 - Claude Code: `/scrapkeep-blockout`.
-- Report the actual model and `CLAUDE_EFFORT` or its absence.
+- Report the actual model and active effort or tier (or its absence).

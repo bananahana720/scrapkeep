@@ -23,3 +23,7 @@ artifacts/anim-pilot/
 
 # Command receipts written by the pstack capture tool
 .pstack/
+
+# Additional credential file guards
+credentials.json
+service-account.json

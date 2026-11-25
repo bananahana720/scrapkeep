@@ -84,6 +84,20 @@ const contentCases = [
     noBuild: true,
     status: 0,
   },
+  {
+    name: "tooling-no-build alongside configuration and docs",
+    paths: [
+      "GEMINI.md",
+      ".agents/hooks.json",
+      "scripts/check-scope.mjs",
+      "tests/antigravity-hooks.test.js",
+      "tests/fixtures/check-scope/cases.json",
+    ],
+    scope: "tooling-no-build",
+    commands: ["npm test", "npm run check:docs", "npm run check:project"],
+    noBuild: true,
+    status: 0,
+  },
 ];
 
 function git(cwd, ...args) {

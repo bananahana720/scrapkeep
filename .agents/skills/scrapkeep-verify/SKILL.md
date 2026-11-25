@@ -5,7 +5,7 @@ description: Verify a Scrapkeep artifact or change using its documented checks a
 
 # Verify a Scrapkeep artifact
 
-Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `project-guide/handoff/START-HERE.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
+Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md`, `GEMINI.md`, and `project-guide/handoff/START-HERE.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
 
 Verification is scoped to the artifact; a passing unrelated suite cannot qualify it.
 
@@ -23,7 +23,7 @@ Verification is scoped to the artifact; a passing unrelated suite cannot qualify
 | Browser-proof code | `npm run verify`; add CONTRIBUTING's browser checks for UI, input, camera or render changes. Preserve checks for both entries. |
 | Godot game (`sketches/core-loop`) | Focused Godot tests, `npm run sketch:lint`, `npm run sketch:fast -- --base <stage>`, and one independent review per `AGENTS.md` rule 4. |
 
-In Claude Code use supported shell and browser tools. In Codex use the host's available tool APIs and their control restrictions. The same checks and evidence meanings apply in both apps. A missing browser yields a browser-verification gap; successful HTTP serving is not browser behavior.
+In Antigravity use `run_command`, the `browser` subagent or Playwright for browser proofs, `godot_godot` MCP (with `stop_project` before commit), and `scrapkeep-visual-review` for multimodal inspection. In Claude Code use supported shell and browser tools. The same checks and evidence meanings apply across hosts. A missing browser yields a browser-verification gap; successful HTTP serving is not browser behavior.
 
 A change proven with pictures (a board, a before and after pair, rounds until no improvement, frames on the Mac with no window) follows [references/picture-proof.md](references/picture-proof.md) (design choice).
 

@@ -4,7 +4,11 @@ import { fileURLToPath } from "node:url";
 
 const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const uiPaths = [/^index\.html$/, /^orchard\.html$/, /^src\//, /^public\//];
-const noBuildToolingPaths = [/^scripts\/.*\.mjs$/, /^tests\/.*\.test\.js$/];
+const noBuildToolingPaths = [
+  /^scripts\/.*\.mjs$/,
+  /^tests\/.*\.test\.js$/,
+  /^tests\/fixtures\/check-scope\/.*\.json$/,
+];
 // Order matters: the first matching class wins, so sketch, configuration,
 // native and native-player paths are claimed before the broad Markdown rule.
 const classes = [
@@ -23,8 +27,10 @@ const classes = [
       /^\.claude\//,
       /^\.agents\//,
       /^\.codex\//,
+      /^\.gemini\//,
       /^AGENTS\.md$/,
       /^CLAUDE\.md$/,
+      /^GEMINI\.md$/,
       /^\.gitignore$/,
       /^\.env\.example$/,
     ],
@@ -144,7 +150,7 @@ function toolingNoBuild(groups, scriptsOnlyPackage) {
   const tooling = groups.get("tooling");
   if (!tooling) return false;
   const beside = [...groups.keys()].filter(
-    (name) => name !== "tooling" && name !== "documentation-only",
+    (name) => name !== "tooling" && name !== "documentation-only" && name !== "configuration",
   );
   if (beside.length) return false;
   return tooling.every(

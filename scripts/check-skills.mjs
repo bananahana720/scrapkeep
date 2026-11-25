@@ -618,9 +618,7 @@ function parseLessons(content) {
     const line = lines[index];
     const loose = /^- \*\*([^*]+)\*\*/.exec(line);
     if (loose) {
-      const header = /^- \*\*((?:RML|SKL|BLK|VGM|VBD|VWB|VFM)-\d+)\*\*\s*·\s*status:\s*(\S+)/.exec(
-        line,
-      );
+      const header = /^- \*\*([A-Z]{3}-\d+)\*\*\s*·\s*status:\s*(\S+)/.exec(line);
       if (header) {
         current = {
           id: header[1],
@@ -813,9 +811,7 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
 
 // B3: recognises multi-id citations like "(SKL-15, SKL-32)".
 function checkLessonCitations(findings, file, lessonIds) {
-  for (const match of file.content.matchAll(
-    /\(((?:RML|SKL|BLK|VGM|VBD|VWB|VFM)-\d+(?:,\s*(?:RML|SKL|BLK|VGM|VBD|VWB|VFM)-\d+)*)\)/g,
-  )) {
+  for (const match of file.content.matchAll(/\(([A-Z]{3}-\d+(?:,\s*[A-Z]{3}-\d+)*)\)/g)) {
     const line = lineAt(file.content, match.index);
     for (const id of match[1].split(",").map((entry) => entry.trim()))
       if (!lessonIds.has(id))

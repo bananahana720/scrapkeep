@@ -1,6 +1,6 @@
 # Project skills
 
-Each directory here is one skill that Claude Code loads. Claude reaches it through a symlink in `.claude/skills/`. This page says when to add a skill and how to write one.
+Each directory here is one skill that Antigravity loads natively from `.agents/skills/` and Claude Code reaches through a symlink in `.claude/skills/`. This page says when to add a skill and how to write one.
 
 | Skill | Kind | Use it to |
 | --- | --- | --- |
@@ -12,11 +12,13 @@ Each directory here is one skill that Claude Code loads. Claude reaches it throu
 | `scrapkeep-verify-build` | project | check and play the packed Linux build Andrew installs |
 | `scrapkeep-verify-web` | project | drive the Sitting Kit and the two preserved browser proofs in a real browser |
 | `scrapkeep-verify-formal` | project | model-check the run flow and launch swipe under every interruption |
+| `scrapkeep-gemini-workflows` | project | orchestrate Antigravity `run_workflow` pipelines, Gemini tier routing, and card batches |
+| `scrapkeep-visual-review` | project | run Gemini multimodal UI audits, blind `eye.mjs` film reads, and reference sheets |
 | `reactive-model-loop` | portable | design and evaluate a fast model that decides inside a running system |
 
-`reactive-model-loop` is a mirror. Since 2026-09-26 its canonical copy is the A stack plugin (`/home/andrew/.config/astack/plugin/skills/reactive-model-loop`), so every project on both hosts gets it. Change the A stack copy first, then copy it here byte for byte; `python /home/andrew/.config/astack/verify.py --project <this repo>` fails when the two differ.
+`reactive-model-loop` is a portable skill with no project-specific paths or rules; `scripts/check-skills.mjs` enforces that portability boundary.
 
-The three `scrapkeep-verify-*` skills were made with the A stack's `create-verification-skill` (Andrew, 13 November 2026). Each has a `features/` map, one file per player-facing feature, and helper scripts under `scripts/`; `/astack:create-verification-skill maintain` audits a map against the source and the running app. `scrapkeep-verify` still picks which checks qualify a change; these three show a feature working.
+The three `scrapkeep-verify-*` skills each maintain a `features/` map (one file per player-facing feature) and helper scripts under `scripts/`; audit each map directly against source and the running app when features change. `scrapkeep-verify` picks which checks qualify a diff; these three show a feature working.
 
 ## Decide whether it is a skill
 
@@ -80,8 +82,9 @@ Resolve this skill directory through symlinks, then run `git -C <resolved-skill-
 
 ## Host adapter
 
+- Antigravity: `/<name>` (see `GEMINI.md` for Gemini model tiers and `.agents/agents/`).
 - Claude Code: `/<name>`.
-- Report the actual model and `CLAUDE_EFFORT` or its absence.
+- Report the actual model and runtime effort/tier metadata or their absence.
 ```
 
 Lesson format for `.agents/skills/<name>/references/lessons.md`:

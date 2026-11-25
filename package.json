@@ -26,6 +26,7 @@
     "check:docs": "node scripts/check-docs.mjs",
     "check:briefs": "node scripts/brief-check.mjs",
     "check:skills": "node scripts/check-skills.mjs",
+    "check:agents": "node scripts/check-agents.mjs",
     "wave:state": "node scripts/wave-state.mjs",
     "known-failing": "node scripts/known-failing.mjs",
     "gate:shard": "node scripts/gate/shard.mjs",

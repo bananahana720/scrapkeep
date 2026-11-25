@@ -59,9 +59,10 @@ Proof standards:
 
 ## Lessons and updates
 
-[references/lessons.md](references/lessons.md) holds VWB-01 onward. Status is `established`, `provisional` or `retracted`. When a result overturns a lesson, retract it, fill `Overturned by`, change the rule line above in the same commit, and add a changelog row. Keep the feature map honest with `/astack:create-verification-skill maintain`.
+[references/lessons.md](references/lessons.md) holds VWB-01 onward. Status is `established`, `provisional` or `retracted`. When a result overturns a lesson, retract it, fill `Overturned by`, change the rule line above in the same commit, and add a changelog row. Audit `features/` against source when web pages or controls change.
 
 ## Host adapter
 
+- Antigravity: `/scrapkeep-verify-web`. Open captured PNGs with `read_file`, optionally pair the `browser` subagent for exploratory checks alongside Playwright scripts, and report active Gemini model/tier.
 - Claude Code: `/scrapkeep-verify-web`.
-- Report the actual model and `CLAUDE_EFFORT` or its absence.
+- Report the actual model and active effort or tier (or its absence).
