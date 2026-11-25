@@ -254,7 +254,7 @@ const SOURCE_PINS := {
 	# 2026-11-12: re-pinned for the pedestal gem becoming its rung's TierMark shape (W1-26).
 	# 2026-11-24: re-pinned for fire() lid hinge tween, staggered pedestal rise and brass glint burst (W46-ANIM-VFX-FLAIR).
 	# 2026-11-25: re-pinned for _relic_offer() passing include_alt = true so all 12 W50 swap relics can drop in-run.
-	"cracked_cache": ["stand_down()", "76e32b2fd47ec86327316349b28db3cf3b63c6c26e10e20af2d041b437b5362d"],
+	"cracked_cache": ["stand_down()", "aaf96c816d49040ac55ca6b4560139f36458c09e0abda73162a86efddc6322b0"],
 	"bet_crate": ["reach_point()", "dc1b7b8203b6c2018894e88689885c366ed5edd5d928cae60f6370082acb2e16"],
 	"ambush_altar": ["reach_point()", "7a1a73f6c7f2d8fc8645eb7565f763f0fb95d0d7701598998f46905bc9aa6db3"],
 }
