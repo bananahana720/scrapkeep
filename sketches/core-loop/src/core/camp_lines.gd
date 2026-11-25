@@ -28,7 +28,7 @@ const LEDGER := [
 ]
 const WIN := [
 	"Log shows the run won. Log has been wrong before, but it is wearing a clean cuff.",
-	"Hull came back. Moss counted the bolts twice and kept her face still.",
+	"Hull came back. Moss counted the bolts twice and kept their face still.",
 	"Run closed in our favour. Someone put a washer on the fire-pit bench to mark it.",
 	"Return entered in ink. The ink is the good ink.",
 	"Win logged. Nobody cheered; the kettle did, briefly.",

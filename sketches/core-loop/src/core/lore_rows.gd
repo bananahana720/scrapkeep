@@ -942,7 +942,7 @@ const KEST_RESCUE_BANTER := [
 		"id": "lore.dig.kest_rescue.2",
 		"zone": "2-1",
 		"speaker": "Moss",
-		"line": "Kest is clear of the sump. Watch the headframe cables, Swarm's awake.",
+		"line": "Kest is clear of the sump. Watch the headframe cables; Swarm's awake.",
 		"skippable": true,
 		"duration_s": 2.8,
 	},

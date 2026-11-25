@@ -13,7 +13,7 @@ Three closed, watertight graphic-novel GLBs:
                                                       punch-card timer overlay for Patch's raised hands.
 
 Colour discipline (pilots/patch.md §4):
-  Patch's test-card pink (#f29ec4, CVD-safe & distinct from HAZARD #ff5a3c and KINDNESS #d936b0)
+  Patch's test-card pink (#ea7fa0, CVD-safe & distinct from HAZARD #ff5a3c and KINDNESS #d936b0)
   with cold white (#e8f0f2) fallback accent, charcoal, bone, copper & verdigris Keeper hardware.
 
 Run headless:
