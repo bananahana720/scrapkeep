@@ -1,0 +1,40 @@
+{
+ "assets": [
+  {
+   "id": "pilot_patch_anim",
+   "path": "res://assets/models/pilot_patch_anim.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (HIDDEN_PILOTS['line_splicer'], Ruling dl hidden 7th pilot Patch)",
+   "provenance": {
+    "recipe": "tools/blender/pilot_patch.py",
+    "spec": "design-v3/pilots/patch.md & Ruling dl",
+    "note": "Patch, the Line Splicer (hidden 7th pilot): Virginia opossum in verdigris harness holding glowing test-card pink #ea7fa0 telemetry pad with curled pink tail. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "shell_patch",
+   "path": "res://assets/models/world_one/shell_patch.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (HIDDEN_SHELLS['line_splicer'], Ruling dl + Ruling en cutaway-first heroic ball)",
+   "provenance": {
+    "recipe": "tools/blender/pilot_patch.py",
+    "spec": "design-v3/pilots/patch.md, Ruling dl & Ruling en",
+    "note": "Patch cutaway-first heroic Hoberman ball shell (3916T 7D reach=1.70m pod_minZ=-0.37m): rear wok-cut satellite dish, right Patch-Cable splice reel cannon, left Pointer emitter + twin antennae. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "patch_husk_sticker",
+   "path": "res://assets/models/world_one/patch_husk_sticker.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (Patch hand-ownership paw-print sticker + cut cable overlay)",
+   "provenance": {
+    "recipe": "tools/blender/pilot_patch.py",
+    "spec": "design-v3/pilots/patch.md §4",
+    "note": "Patch hand-ownership husk overlay: crisp cold-white circular sticker with test-card pink #ea7fa0 paw print and trailing cut black command cable. Closed watertight procedural bmesh."
+   }
+  }
+ ]
+}

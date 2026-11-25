@@ -1,0 +1,48 @@
+{
+ "assets": [
+  {
+   "id": "station_scrapper",
+   "path": "res://assets/models/stations/station_scrapper.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/fabricators.gd (WorldScrapper jaw-crusher station)",
+   "provenance": {
+    "recipe": "tools/blender/w50_stations.py",
+    "note": "W50 Scrapper station: flared copper intake hopper, twin toothed crusher rollers, side spoked flywheel, glowing AMBER ingot chute with fresh ingot. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "station_part_press",
+   "path": "res://assets/models/stations/station_part_press.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/fabricators.gd (WorldPartPress gantry fabrication press)",
+   "provenance": {
+    "recipe": "tools/blender/w50_stations.py",
+    "note": "W50 Part Press station: bolted cast H-frame gantry, overhead copper hydraulic cylinder and ram, brass pressure accumulators and glowing AMBER fabrication anvil. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "station_tri_terminal",
+   "path": "res://assets/models/stations/station_tri_terminal.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/shop.gd (Moss Tri-Terminal 3-bay kiosk)",
+   "provenance": {
+    "recipe": "tools/blender/w50_stations.py",
+    "note": "W50 Tri-Terminal kiosk: 3-bay Keeper counter with left revealed AMBER lit display bay and middle/right brass-shuttered mystery bays. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "prop_scrap_ingot",
+   "path": "res://assets/models/stations/prop_scrap_ingot.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/fabricators.gd (Scrap Ingot currency prop)",
+   "provenance": {
+    "recipe": "tools/blender/w50_stations.py",
+    "note": "W50 Scrap Ingot: bevelled steel trapezoidal bar bound with copper clamp collar and glowing AMBER tier bar. Closed watertight procedural bmesh."
+   }
+  }
+ ]
+}

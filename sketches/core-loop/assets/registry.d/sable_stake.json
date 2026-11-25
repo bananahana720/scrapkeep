@@ -1,0 +1,15 @@
+{
+ "assets": [
+  {
+   "id": "sable_stake",
+   "path": "res://assets/models/world_one/sable_stake.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (replaces CylinderMesh + TorusMesh W1-23 stand-in on SableStakes)",
+   "provenance": {
+    "recipe": "tools/blender/sable_stake.py",
+    "note": "Sable planted copper survey stake: flanged charcoal foot with 3 radial steel anchor fins, ribbed copper spire, dual MINT #8bf0d3 inductor rings and 3-prong arcing crown. Closed watertight procedural bmesh."
+   }
+  }
+ ]
+}

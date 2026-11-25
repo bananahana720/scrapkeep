@@ -16,6 +16,7 @@ const CLIP_PATH := "res://assets/models/ally_husk/ally_husk_clip.glb"
 const TAG_PATH := "res://assets/models/ally_husk/ally_husk_tag.glb"
 const MAST_PATH := "res://assets/models/ally_husk/ally_husk_mast.glb"
 const LEAD_PATH := "res://assets/models/ally_husk/ally_husk_lead.glb"
+const WRECK_PATH := "res://assets/models/ally_husk/ally_husk_wreck.glb"
 
 const ENEMY_CHASSIS := {
 	"chaser": "res://assets/models/world_one/enemy_chaser.glb",
@@ -162,36 +163,35 @@ static func update_husk_look(look: Dictionary, shift_fraction: float, overclocke
 			pip.visible = shift_fraction > threshold
 
 
-# Ground marker for a 6 s raiseable ordinary Fleet wreck (copper/amber ring + slumped relay body).
+# Ground marker for a 6 s raiseable ordinary Fleet wreck (copper/amber ring + slumped relay body GLB).
 static func build_wreck_marker(parent: Node3D, at: Vector3, radius := 1.0, elite := false) -> Node3D:
 	var root := Node3D.new()
 	root.name = "GhostShiftWreck"
 	root.position = at
 	parent.add_child(root)
 
-	var body := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	var s := 1.15 if elite else 0.90
-	box.size = Vector3(1.1 * s, 0.55 * s, 1.3 * s)
-	body.mesh = box
-	body.position = Vector3(0.0, 0.28 * s, 0.0)
-	body.rotation = Vector3(deg_to_rad(14.0), deg_to_rad(25.0), deg_to_rad(-18.0))
-	body.material_override = Palette.solid(Palette.RUST)
-	root.add_child(body)
+	var s := 1.15 if elite else 0.92
+	var amber_mats: Array = []
+	var wreck := _instantiate_overlay(WRECK_PATH, "WreckBody", amber_mats)
+	if wreck.get_child_count() > 0:
+		wreck.scale = Vector3.ONE * s
+		root.add_child(wreck)
+	else:
+		wreck.queue_free()
+		var body := MeshInstance3D.new()
+		body.name = "WreckFallback"
+		var box := BoxMesh.new()
+		box.size = Vector3(1.1 * s, 0.55 * s, 1.3 * s)
+		body.mesh = box
+		body.position = Vector3(0.0, 0.28 * s, 0.0)
+		body.rotation = Vector3(deg_to_rad(14.0), deg_to_rad(25.0), deg_to_rad(-18.0))
+		body.material_override = Palette.solid(Palette.RUST)
+		root.add_child(body)
 
 	var ring := _build_ring_mesh(maxf(1.2, radius * 1.35), 0.10, Palette.COPPER, 0.85, 34)
 	ring.name = "WreckRing"
 	ring.position = Vector3(0.0, ZONE_LIFT, 0.0)
 	root.add_child(ring)
-
-	var spark := MeshInstance3D.new()
-	var sphere := SphereMesh.new()
-	sphere.radius = 0.20 * s
-	sphere.height = 0.40 * s
-	spark.mesh = sphere
-	spark.position = Vector3(0.0, 0.72 * s, 0.0)
-	spark.material_override = Palette.solid(Palette.AMBER, 2.0, false)
-	root.add_child(spark)
 	return root
 
 

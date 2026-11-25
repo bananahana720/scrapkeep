@@ -95,6 +95,39 @@
     "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
     "note": "Deployed 18 m Sky-Anchor balloon world prop spawned by Anchor Flare. Bone/verdigris ribbed gas-bag, copper crown cap, 360-deg MINT #8bf0d3 grapple bite ring collar, steel tow-eye and SocketBite empty. Closed watertight procedural bmesh."
    }
+  },
+  {
+   "id": "cons_scrap_dice",
+   "path": "res://assets/models/consumables/cons_scrap_dice.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/consumables.gd (W50-ISAAC-ECONOMY)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "note": "W50 Pocket Consumable cartridge: Foreman's Audit Die. Tilted heavy bevelled brass die cradled on a copper gimbal collar with Old Works petrol face insets, bone pips and charcoal corner lugs (zero HAZARD). Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_duplicator_spool",
+   "path": "res://assets/models/consumables/cons_duplicator_spool.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/consumables.gd (W50-ISAAC-ECONOMY)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "note": "W50 Pocket Consumable cartridge: Carbon Tape (Moss/Keeper). Twin protruding copper carbon-tape reels in a bolted verdigris-and-bone cassette housing with glowing AMBER index tab. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_overload_fuse",
+   "path": "res://assets/models/consumables/cons_overload_fuse.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/consumables.gd (W50-ISAAC-ECONOMY)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "note": "W50 Pocket Consumable cartridge: Breaker Fuse (Redjaw/Foundry). Ribbed ceramic insulator core with MINT #8bf0d3 arc-filament bands, heavy copper end-cap ferrules and protruding brass knife-blade contacts (zero HAZARD). Closed watertight procedural bmesh."
+   }
   }
  ]
 }

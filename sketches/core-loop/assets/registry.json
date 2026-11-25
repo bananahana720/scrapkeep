@@ -335,6 +335,50 @@
    }
   },
   {
+   "id": "act_magnet_sling_buoy",
+   "path": "res://assets/models/actives/act_magnet_sling_buoy.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (Magnet Sling deployed cluster anchor buoy)",
+   "provenance": {
+    "recipe": "tools/blender/w50_actives.py",
+    "note": "Fleet Surplus Magnet Sling deployed anchor buoy: weighted charcoal fluke foot, copper horseshoe electromagnet yoke arms and glowing MINT #8bf0d3 core. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "act_magnet_sling_pod",
+   "path": "res://assets/models/actives/act_magnet_sling_pod.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (Magnet Sling dropped/held rack launcher pod)",
+   "provenance": {
+    "recipe": "tools/blender/w50_actives.py",
+    "note": "Heroic Magnet Sling launcher pod: twin forward copper rails, rear brass capacitor drum and glowing MINT #8bf0d3 slug. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "act_slag_mortar_pod",
+   "path": "res://assets/models/actives/act_slag_mortar_pod.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (Slag Mortar dropped/held kiln mortar pod)",
+   "provenance": {
+    "recipe": "tools/blender/w50_actives.py",
+    "note": "Heroic Slag Mortar kiln tube launcher pod: canted iron mortar barrel on bolted recoil trunnions with copper cooling rings and glowing AMBER bore throat. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "act_slag_mortar_shell",
+   "path": "res://assets/models/actives/act_slag_mortar_shell.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (Slag Mortar & Siege Mortar artillery shell)",
+   "provenance": {
+    "recipe": "tools/blender/w50_actives.py",
+    "note": "Redjaw Workshops fluted iron kiln slag mortar shell with copper obturator band, brass impact fuze and glowing AMBER #e5a044 vent slits (zero HAZARD). Closed watertight procedural bmesh."
+   }
+  },
+  {
    "id": "ally_husk_clip",
    "path": "res://assets/models/ally_husk/ally_husk_clip.glb",
    "class": "detail",
@@ -376,6 +420,17 @@
    "provenance": {
     "recipe": "tools/blender/ally_husk_overlay.py",
     "spec": "SCRAPKEEP-REBASELINE-MASTER-BIBLE.md §2.3, §2.5, §6.1, §9 Wave 47D; SCRAPKEEP-REBASELINE-OPUS-CRITIQUE.md Blocker 5 & N9; OPUS-TASTE-AND-MECHANICS-RUBRIC.md §2 Tally Ghost Shift & B6"
+   }
+  },
+  {
+   "id": "ally_husk_wreck",
+   "path": "res://assets/models/ally_husk/ally_husk_wreck.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/ally_husk_look.gd (build_wreck_marker: replaces BoxMesh/SphereMesh placeholder for raiseable 6 s Fleet wreck; warm AMBER #e5a044 spark, zero HAZARD)",
+   "provenance": {
+    "recipe": "tools/blender/ally_husk_overlay.py",
+    "note": "Slumped oxblood Fleet chassis relay husk on bent steel skids with copper terminal lugs and live warm AMBER relay spark. Closed watertight procedural bmesh."
    }
   },
   {
@@ -1664,6 +1719,17 @@
    }
   },
   {
+   "id": "cons_duplicator_spool",
+   "path": "res://assets/models/consumables/cons_duplicator_spool.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/consumables.gd (W50-ISAAC-ECONOMY)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "note": "W50 Pocket Consumable cartridge: Carbon Tape (Moss/Keeper). Twin protruding copper carbon-tape reels in a bolted verdigris-and-bone cassette housing with glowing AMBER index tab. Closed watertight procedural bmesh."
+   }
+  },
+  {
    "id": "cons_foreman_memo",
    "path": "res://assets/models/consumables/cons_foreman_memo.glb",
    "class": "prop",
@@ -1709,6 +1775,28 @@
     "recipe": "tools/blender/consumable_cartridges.py",
     "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
     "note": "Pocket Consumable cartridge: Overclock Punchcard (Fleet Surplus). Corner-notched Hollerith punched brass-bound card cartridge with AMBER #e5a044 relay pin and edge connector teeth. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_overload_fuse",
+   "path": "res://assets/models/consumables/cons_overload_fuse.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/consumables.gd (W50-ISAAC-ECONOMY)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "note": "W50 Pocket Consumable cartridge: Breaker Fuse (Redjaw/Foundry). Ribbed ceramic insulator core with MINT #8bf0d3 arc-filament bands, heavy copper end-cap ferrules and protruding brass knife-blade contacts (zero HAZARD). Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_scrap_dice",
+   "path": "res://assets/models/consumables/cons_scrap_dice.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/consumables.gd (W50-ISAAC-ECONOMY)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "note": "W50 Pocket Consumable cartridge: Foreman's Audit Die. Tilted heavy bevelled brass die cradled on a copper gimbal collar with Old Works petrol face insets, bone pips and charcoal corner lugs (zero HAZARD). Closed watertight procedural bmesh."
    }
   },
   {
@@ -39453,6 +39541,18 @@
    "accepted": true
   },
   {
+   "id": "pilot_patch_anim",
+   "path": "res://assets/models/pilot_patch_anim.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (HIDDEN_PILOTS['line_splicer'], Ruling dl hidden 7th pilot Patch)",
+   "provenance": {
+    "recipe": "tools/blender/pilot_patch.py",
+    "spec": "design-v3/pilots/patch.md & Ruling dl",
+    "note": "Patch, the Line Splicer (hidden 7th pilot): Virginia opossum in verdigris harness holding glowing test-card pink #ea7fa0 telemetry pad with curled pink tail. Closed watertight procedural bmesh."
+   }
+  },
+  {
    "path": "res://assets/models/pilot_rivet_anim.glb",
    "class": "pilot",
    "ships": true,
@@ -39612,6 +39712,50 @@
    "loader": "none (no loader in src/; the loaded shells are under world_one/)"
   },
   {
+   "id": "prop_scrap_ingot",
+   "path": "res://assets/models/stations/prop_scrap_ingot.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/fabricators.gd (Scrap Ingot currency prop)",
+   "provenance": {
+    "recipe": "tools/blender/w50_stations.py",
+    "note": "W50 Scrap Ingot: bevelled steel trapezoidal bar bound with copper clamp collar and glowing AMBER tier bar. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "station_part_press",
+   "path": "res://assets/models/stations/station_part_press.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/fabricators.gd (WorldPartPress gantry fabrication press)",
+   "provenance": {
+    "recipe": "tools/blender/w50_stations.py",
+    "note": "W50 Part Press station: bolted cast H-frame gantry, overhead copper hydraulic cylinder and ram, brass pressure accumulators and glowing AMBER fabrication anvil. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "station_scrapper",
+   "path": "res://assets/models/stations/station_scrapper.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/fabricators.gd (WorldScrapper jaw-crusher station)",
+   "provenance": {
+    "recipe": "tools/blender/w50_stations.py",
+    "note": "W50 Scrapper station: flared copper intake hopper, twin toothed crusher rollers, side spoked flywheel, glowing AMBER ingot chute with fresh ingot. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "station_tri_terminal",
+   "path": "res://assets/models/stations/station_tri_terminal.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/build/shop.gd (Moss Tri-Terminal 3-bay kiosk)",
+   "provenance": {
+    "recipe": "tools/blender/w50_stations.py",
+    "note": "W50 Tri-Terminal kiosk: 3-bay Keeper counter with left revealed AMBER lit display bay and middle/right brass-shuttered mystery bays. Closed watertight procedural bmesh."
+   }
+  },
+  {
    "id": "trebuchet_launcher_arm",
    "path": "res://assets/models/trebuchet_launcher_arm.glb",
    "class": "landmark",
@@ -39741,6 +39885,61 @@
     "recipe": "tools/blender/valve_wheel.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/valve_wheel_101.png",
     "notes": "assets/models/valve_wheel.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "orbital_flywheel_sat",
+   "path": "res://assets/models/vfx/orbital_flywheel_sat.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd & src/combat/orbital_satellites.gd (replaces MultiMesh BoxMesh)",
+   "provenance": {
+    "recipe": "tools/blender/w50_orbitals_relics.py",
+    "note": "1-draw brass/copper toothed flywheel satellite disc with radial counterweight lugs for MultiMeshInstance3D orbital_satellites.gd. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "relic_drill_auger",
+   "path": "res://assets/models/vfx/relic_drill_auger.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (W50 Drill Auger crater breach drillhead)",
+   "provenance": {
+    "recipe": "tools/blender/w50_orbitals_relics.py",
+    "note": "Rivet W1 Drill Auger breaching crater drillhead: heavy tapered steel cone, spiral copper cutter teeth and glowing AMBER friction tip. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "relic_halo_orb",
+   "path": "res://assets/models/vfx/relic_halo_orb.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (W50 Halo Coil orbiting lightning perimeter orbs)",
+   "provenance": {
+    "recipe": "tools/blender/w50_orbitals_relics.py",
+    "note": "Sable W3 Halo Coil orbiting discharge orb: copper equatorial ring, four radial dipole pins and glowing MINT #8bf0d3 core. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "relic_snare_beacon",
+   "path": "res://assets/models/vfx/relic_snare_beacon.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (W50 Updraft Snare apex trap beacon)",
+   "provenance": {
+    "recipe": "tools/blender/w50_orbitals_relics.py",
+    "note": "Kest W3 Updraft Snare apex cage beacon: twin copper collar rings, four vertical anchor struts, wind vanes and floating glowing AMBER snare core. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "relic_voltaic_halo",
+   "path": "res://assets/models/vfx/relic_voltaic_halo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (W50 Voltaic Ring conductive shot halo)",
+   "provenance": {
+    "recipe": "tools/blender/w50_orbitals_relics.py",
+    "note": "Sable W1 Voltaic Ring: outer brass conductor torus, six copper discharge lugs and inner glowing MINT #8bf0d3 arc rim. Closed watertight procedural bmesh."
    }
   },
   {
@@ -40588,6 +40787,18 @@
    }
   },
   {
+   "id": "patch_husk_sticker",
+   "path": "res://assets/models/world_one/patch_husk_sticker.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (Patch hand-ownership paw-print sticker + cut cable overlay)",
+   "provenance": {
+    "recipe": "tools/blender/pilot_patch.py",
+    "spec": "design-v3/pilots/patch.md §4",
+    "note": "Patch hand-ownership husk overlay: crisp cold-white circular sticker with test-card pink #ea7fa0 paw print and trailing cut black command cable. Closed watertight procedural bmesh."
+   }
+  },
+  {
    "id": "pocket_kit",
    "path": "res://assets/models/world_one/pocket_kit.glb",
    "class": "prop",
@@ -41025,6 +41236,17 @@
    }
   },
   {
+   "id": "sable_stake",
+   "path": "res://assets/models/world_one/sable_stake.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (replaces CylinderMesh + TorusMesh W1-23 stand-in on SableStakes)",
+   "provenance": {
+    "recipe": "tools/blender/sable_stake.py",
+    "note": "Sable planted copper survey stake: flanged charcoal foot with 3 radial steel anchor fins, ribbed copper spire, dual MINT #8bf0d3 inductor rings and 3-prong arcing crown. Closed watertight procedural bmesh."
+   }
+  },
+  {
    "id": "scrap_pickups",
    "path": "res://assets/models/world_one/scrap_pickups.glb",
    "class": "chunk",
@@ -41204,6 +41426,18 @@
     "recipe": "tools/blender/world_one/shell_neutral.py",
     "helper": "tools/blender/shell_base.py hoberman()",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/base/base-hero.png and mechanism.png"
+   }
+  },
+  {
+   "id": "shell_patch",
+   "path": "res://assets/models/world_one/shell_patch.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (HIDDEN_SHELLS['line_splicer'], Ruling dl + Ruling en cutaway-first heroic ball)",
+   "provenance": {
+    "recipe": "tools/blender/pilot_patch.py",
+    "spec": "design-v3/pilots/patch.md, Ruling dl & Ruling en",
+    "note": "Patch cutaway-first heroic Hoberman ball shell (3916T 7D reach=1.70m pod_minZ=-0.37m): rear wok-cut satellite dish, right Patch-Cable splice reel cannon, left Pointer emitter + twin antennae. Closed watertight procedural bmesh."
    }
   },
   {
@@ -41871,6 +42105,10 @@
   }
  ],
  "fragment_ids": [
+  "act_magnet_sling_buoy",
+  "act_magnet_sling_pod",
+  "act_slag_mortar_pod",
+  "act_slag_mortar_shell",
   "adit_mouth",
   "adit_mouth_detail1",
   "adit_mouth_detail2",
@@ -41878,6 +42116,7 @@
   "ally_husk_lead",
   "ally_husk_mast",
   "ally_husk_tag",
+  "ally_husk_wreck",
   "ambient_bighorn_lamb",
   "ambient_canyon_wren",
   "ambient_dam_swift",
@@ -42038,10 +42277,13 @@
   "cons_anchor_flare",
   "cons_cap_charge",
   "cons_drop_cradle",
+  "cons_duplicator_spool",
   "cons_foreman_memo",
   "cons_moss_patch",
   "cons_nitro_siphon",
   "cons_overclock_card",
+  "cons_overload_fuse",
+  "cons_scrap_dice",
   "cottonwood_crown",
   "cottonwood_detail1",
   "cottonwood_detail2",
@@ -43508,6 +43750,7 @@
   "net_shoe",
   "net_tile",
   "netcaster_clips",
+  "orbital_flywheel_sat",
   "ore_bin",
   "ore_bin_detail1",
   "ore_bin_detail2",
@@ -43598,12 +43841,14 @@
   "part_tread_plating_tripo",
   "part_vent_baffle_tripo",
   "part_winch_pawl_tripo",
+  "patch_husk_sticker",
   "penstock_run",
   "penstock_run_detail1",
   "penstock_run_detail2",
   "pilot_cannon_anim",
   "pilot_cannon_anim_tripo",
   "pilot_kest_anim_tripo",
+  "pilot_patch_anim",
   "pilot_rivet_anim_tripo",
   "pilot_sable_anim_tripo",
   "pilot_tally_anim",
@@ -43704,6 +43949,7 @@
   "prop_lamp_glass",
   "prop_pot",
   "prop_sail",
+  "prop_scrap_ingot",
   "prop_spool",
   "radio_cache",
   "ram_prow",
@@ -43719,6 +43965,10 @@
   "ramp_flipper_clips",
   "relay_mast",
   "relay_stake_post",
+  "relic_drill_auger",
+  "relic_halo_orb",
+  "relic_snare_beacon",
+  "relic_voltaic_halo",
   "res://assets/models/world_one/kest_clacker.glb",
   "res://assets/models/world_one/rivet_revolvers.glb",
   "res://assets/models/world_one/shell_rivet.glb",
@@ -43733,6 +43983,7 @@
   "rogue_gate_crane",
   "rogue_haul_skip",
   "rubble_cluster",
+  "sable_stake",
   "sand_ground_albedo",
   "sand_ground_ao",
   "sand_ground_height",
@@ -43758,6 +44009,7 @@
   "shell_kest_c5",
   "shell_kest_roost",
   "shell_neutral",
+  "shell_patch",
   "shell_rivet_c2",
   "shell_rivet_c3",
   "shell_rivet_c4",
@@ -43811,6 +44063,9 @@
   "spillway_tunnel",
   "spillway_tunnel_detail1",
   "spillway_tunnel_detail2",
+  "station_part_press",
+  "station_scrapper",
+  "station_tri_terminal",
   "strut_bent",
   "strut_tall",
   "surge_pylon_28",

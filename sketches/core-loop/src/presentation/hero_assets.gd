@@ -99,6 +99,11 @@ const PILOTS := {
 	"tally": "res://assets/models/pilot_tally_anim.glb",
 	"remembered_cannon": "res://assets/models/pilot_cannon_anim.glb",
 }
+# Hidden 7th pilot (Patch, Ruling dl): kept separate from PILOTS/SHELLS so six-pilot roster tests
+# stay pinned while runtime shell/pilot lookup resolves line_splicer seamlessly.
+const HIDDEN_PILOTS := {
+	"line_splicer": "res://assets/models/pilot_patch_anim.glb",
+}
 
 # VD-01 clear sphere slice. Dresses the greybox in the procedural
 # models from tools/blender/ as nodes enter the tree, without editing the gameplay
@@ -124,6 +129,9 @@ const SHELLS := {
 	"tarn": "res://assets/models/world_one/shell_tarn.glb",
 	"tally": "res://assets/models/world_one/shell_tally.glb",
 	"remembered_cannon": "res://assets/models/world_one/shell_cannon.glb",
+}
+const HIDDEN_SHELLS := {
+	"line_splicer": "res://assets/models/world_one/shell_patch.glb",
 }
 # A pilot's weapon model, mounted at identity under the shell's WeaponRing (its origin is the ball
 # centre), so it yaws to the aim and banks with the ring, and the bank hull reads its vertices with
@@ -506,7 +514,7 @@ func attach_player(player: Node3D) -> void:
 
 static func class_id(player: Node) -> String:
 	var def = player.get("class_def")
-	return def.id if def != null and SHELLS.has(def.id) else DEFAULT_CLASS
+	return def.id if def != null and (SHELLS.has(def.id) or HIDDEN_SHELLS.has(def.id)) else DEFAULT_CLASS
 
 
 # The tint an equipped paint gives a pilot's shell, or null for none. A paint applies only
@@ -1158,11 +1166,12 @@ static func _layer_path(base: String, heft_class: int) -> String:
 # default (SHELLS); otherwise it is a shell row's asset id, resolved through paths
 # (Cosmetics.asset_paths(), or a test's own map). "" for an unknown pilot, variant or class.
 static func shell_path(pilot: String, variant: String, heft_class: int, paths: Dictionary) -> String:
-	if not SHELLS.has(pilot) or heft_class < 1 or heft_class > 5:
+	if (not SHELLS.has(pilot) and not HIDDEN_SHELLS.has(pilot)) or heft_class < 1 or heft_class > 5:
 		return ""
+	var default_path := String(SHELLS.get(pilot, HIDDEN_SHELLS.get(pilot, "")))
 	var base := ""
 	if variant == "":
-		base = String(paths.get(pilot, SHELLS[pilot]))
+		base = String(paths.get(pilot, default_path))
 	else:
 		var row := Cosmetics.row(variant)
 		if not row.is_empty() and (row.get("slot", "") != "shell" or row.get("pilot", "") != pilot):
@@ -1793,9 +1802,10 @@ func _fit_pilot(rec: Dictionary) -> void:
 # when the class has no pilot or its scene is unavailable; animator is null when the GLB
 # carries no AnimationPlayer.
 func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictionary:
-	if not PILOTS.has(class_id):
+	var pilot_path := String(PILOTS.get(class_id, HIDDEN_PILOTS.get(class_id, "")))
+	if pilot_path == "":
 		return {}
-	var pilot := _scene(ModelVariants.path(PILOTS[class_id])) as Node3D
+	var pilot := _scene(ModelVariants.path(pilot_path)) as Node3D
 	if pilot == null:
 		return {}
 	pilot.name = "AnimatedPilot"
@@ -1816,7 +1826,7 @@ func _pilot_table(class_id: String) -> Dictionary:
 	if _pilot_tables.has(class_id):
 		return _pilot_tables[class_id]
 	var table := {}
-	var stem := String(PILOTS.get(class_id, "")).get_file().trim_prefix("pilot_").trim_suffix("_anim.glb")
+	var stem := String(PILOTS.get(class_id, HIDDEN_PILOTS.get(class_id, ""))).get_file().trim_prefix("pilot_").trim_suffix("_anim.glb")
 	var path := PILOT_TABLES % stem
 	if stem != "" and FileAccess.file_exists(path):
 		var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))

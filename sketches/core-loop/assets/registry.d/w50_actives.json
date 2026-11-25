@@ -1,0 +1,48 @@
+{
+ "assets": [
+  {
+   "id": "act_magnet_sling_buoy",
+   "path": "res://assets/models/actives/act_magnet_sling_buoy.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (Magnet Sling deployed cluster anchor buoy)",
+   "provenance": {
+    "recipe": "tools/blender/w50_actives.py",
+    "note": "Fleet Surplus Magnet Sling deployed anchor buoy: weighted charcoal fluke foot, copper horseshoe electromagnet yoke arms and glowing MINT #8bf0d3 core. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "act_magnet_sling_pod",
+   "path": "res://assets/models/actives/act_magnet_sling_pod.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (Magnet Sling dropped/held rack launcher pod)",
+   "provenance": {
+    "recipe": "tools/blender/w50_actives.py",
+    "note": "Heroic Magnet Sling launcher pod: twin forward copper rails, rear brass capacitor drum and glowing MINT #8bf0d3 slug. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "act_slag_mortar_shell",
+   "path": "res://assets/models/actives/act_slag_mortar_shell.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (Slag Mortar & Siege Mortar artillery shell)",
+   "provenance": {
+    "recipe": "tools/blender/w50_actives.py",
+    "note": "Redjaw Workshops fluted iron kiln slag mortar shell with copper obturator band, brass impact fuze and glowing AMBER #e5a044 vent slits (zero HAZARD). Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "act_slag_mortar_pod",
+   "path": "res://assets/models/actives/act_slag_mortar_pod.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/w50_asset_hooks.gd (Slag Mortar dropped/held kiln mortar pod)",
+   "provenance": {
+    "recipe": "tools/blender/w50_actives.py",
+    "note": "Heroic Slag Mortar kiln tube launcher pod: canted iron mortar barrel on bolted recoil trunnions with copper cooling rings and glowing AMBER bore throat. Closed watertight procedural bmesh."
+   }
+  }
+ ]
+}
