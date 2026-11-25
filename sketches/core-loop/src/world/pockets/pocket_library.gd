@@ -14,6 +14,11 @@ static var _rows: Array = []
 static var _world_rows: Dictionary = {}
 
 
+static func reset_for_tests() -> void:
+	_rows.clear()
+	_world_rows.clear()
+
+
 # World 1's authored library, kept intact for W1 assignments, golden draws and pocket_library_test.
 static func rows() -> Array:
 	return _loaded().duplicate(true)

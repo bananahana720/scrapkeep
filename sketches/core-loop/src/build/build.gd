@@ -30,6 +30,8 @@ const MakerSets := preload("res://src/build/maker_sets.gd")
 const Panels := preload("res://src/build/panels.gd")
 const PanelShell := preload("res://src/build/panel_shell.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
+const Consumables := preload("res://src/build/consumables.gd")
+const TradePockets := preload("res://src/world/trade_pockets.gd")
 
 # Writer B's module: build and growth. Scrap magnetizes to the ball and sticks to it;
 # drive-through fabricators turn scrap into parts on the roll; the reward gates after
@@ -323,6 +325,10 @@ func setup(ctx_ref) -> void:
 	ctx.events.beacon_unsealed.connect(func(_stage: int): HullMark.lift(ctx.run))
 	ctx.events.enemy_struck.connect(_on_tread_struck)
 	ctx.events.player_died.connect(func(): shop.note_death(ctx.run.cogs))
+	ctx.events.core_gained.connect(_on_core_gained)
+	ctx.events.activity_done.connect(func(_id: String, at: Vector3): Companion.on_yard_cleared(ctx.run, ctx.spawner, at))
+	ctx.events.stage_cleared.connect(_on_stage_cleared_contracts)
+	ctx.events.world_fact.connect(_on_world_fact_overrides)
 	makers.setup()
 
 
@@ -1007,7 +1013,7 @@ func set_element(trick_id: String) -> String:
 	return Synergies.element(trick_id)
 
 
-func _on_part_gained(part_id: String, _source: String) -> void:
+func _on_part_gained(part_id: String, source: String) -> void:
 	recompute()
 	# A copy: a listener's own part gain recomputes and replaces the list.
 	for trick_id in _sets_fresh.duplicate():
@@ -1017,6 +1023,31 @@ func _on_part_gained(part_id: String, _source: String) -> void:
 	var d: Resource = Parts.def(part_id)
 	if d != null and d.effect.get("do", "") == "ballast":
 		ctx.run.add_scrap(int(d.effect.get("mass", 0)), ctx.player.ball_position())
+	if source not in ["duplicator_spool", "alt_loadout", "evolution"] and not Relics.is_relic(part_id) \
+			and not Parts.maxed(part_id, ctx.run.parts):
+		Consumables.try_clone_pickup(ctx, ctx.spawner, "part", part_id, ctx.player.ball_position())
+
+
+func _on_core_gained(source: String, at: Vector3, _total: int) -> void:
+	if source != "duplicator_spool":
+		Consumables.try_clone_pickup(ctx, ctx.spawner, "core", 1, at)
+
+
+func _on_stage_cleared_contracts(_stage: int) -> void:
+	if ctx == null or ctx.run == null or clock == null:
+		return
+	var at: Vector3 = ctx.player.ball_position() if ctx.player != null else Vector3.ZERO
+	TradePockets.settle_overtime_contract(ctx.run, float(clock.stage_seconds), at)
+
+
+func _on_world_fact_overrides(kind: String, _at: Vector3) -> void:
+	if kind != "wall_crumbled" or scrapless() or ctx == null or ctx.run == null:
+		return
+	if not ctx.run.override_on("drops_from_wrecks"):
+		return
+	var picks: Array = Parts.roll(loot_rng, ["common", "rare"], _class_id(), ctx.run.parts, 1)
+	if not picks.is_empty():
+		ctx.run.add_part(picks[0], "wreck_drop")
 
 
 # Scrap Armor reads mass, so a pickup can raise the health ceiling; nothing else in the
@@ -1144,7 +1175,8 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 		return
 	# The stage row's kill_scrap (the slice's 4.0; a row without one pays 1.0) scales a kill on top of the sheet's.
 	var stage_pay := float(ctx.flow.stage_def().get("kill_scrap", 1.0))
-	var amount := int(round(scrap_value * sheet.kill_scrap * stage_pay)) if not scrapless() else 0
+	var double_mult := 2.0 if ctx.run.override_on("double_packs_scrap") else 1.0
+	var amount := int(round(scrap_value * sheet.kill_scrap * stage_pay * double_mult)) if not scrapless() else 0
 	# A kill pays mass as scrap and the wallet as an equal count of 1-cog gears (CG1).
 	if kind == "warden":
 		scrap.drop_line(at, _heading(), WARDEN_LINE, amount, scrap_rng)
@@ -1153,6 +1185,11 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 		scrap.drop(at, amount, scrap_rng)
 		scrap.drop_cogs(at, amount)
 	_drop_panel(kind, at)
+	if kind not in ["warden", "vault"] and not scrapless() and ctx.run.override_on("drops_from_wrecks"):
+		if loot_rng.randf() < 0.15:
+			var wreck_picks: Array = Parts.roll(loot_rng, ["common", "rare"], _class_id(), ctx.run.parts, 1)
+			if not wreck_picks.is_empty():
+				ctx.run.add_part(wreck_picks[0], "wreck_drop")
 	Companion.on_salvage_kill(ctx.run)
 	# A vault pays out a rare part and a bonus core (DEMO-SPEC engagement tiers).
 	if kind == "vault":
@@ -1200,7 +1237,7 @@ func yard_cleared(at: Vector3) -> void:
 	if kill_log.size() < KILL_LOG_CAP:
 		kill_log.append([ctx.flow.stage(), "yard_clear", false, 1.0, false, true, false])
 	scrap.drop_panel(at, Panels.draw(panel_rng, _class_id()))
-	Companion.on_yard_cleared(ctx.run, ctx.get("combat"), at)
+	Companion.on_yard_cleared(ctx.run, ctx.spawner, at)
 
 
 # The overtime pot (overtime.gd, loops.md Spec 2), on top of the yard's own panel (ruling af
@@ -1357,6 +1394,8 @@ func _on_flow_changed(state: String) -> void:
 	var stake_rolls := StakeDevices.warden_gate_bonus_rolls(ctx.run)
 	if stake_rolls > 0:
 		picks += Parts.roll(_offer_rng("challenge_stake"), rarities, _class_id(), ctx.run.parts, stake_rolls, picks, _offered)
+	if ctx.run.override_on("warden_extra_cobalt"):
+		picks += Parts.roll(_offer_rng("override_cobalt"), ["rare"], _class_id(), ctx.run.parts, 1, picks, _offered)
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
 	picks += _hotwire_gate_ids()
@@ -1385,6 +1424,14 @@ func _on_gate_chosen(part_id: String) -> void:
 		var rack = active_rack()
 		if rack != null and not scrapless():
 			rack.take(part_id, ctx.player.ball_position())
+	elif Consumables.is_offer(part_id):
+		if not scrapless():
+			if part_id == Consumables.BELT_OFFER_ID:
+				ctx.run.expand_consumable_belt()
+			else:
+				var cid := Consumables.offer_consumable_id(part_id)
+				if cid != "" and not ctx.run.add_consumable(cid) and ctx.spawner != null and ctx.spawner.has_method("drop_consumable"):
+					ctx.spawner.drop_consumable(cid, ctx.player.ball_position())
 	elif not scrapless():
 		ctx.run.add_part(part_id, "gate")
 	ctx.events.reward_chosen.emit(part_id)

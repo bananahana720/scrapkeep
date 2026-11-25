@@ -214,6 +214,13 @@ func _stock_stage(here: Array) -> void:
 	stocked_for = here
 	stocks += 1
 	rerolls_left = REROLLS_PER_VISIT
+	if ctx != null and ctx.run != null and ctx.run.has_method("override_on") and ctx.run.override_on("shops_and_crates_shut"):
+		shelf = []
+		top = {}
+		consumable_stock = []
+		tri_terminal = []
+		tri_terminal_closed = true
+		return
 	# Seeded by the run and the stage, not bay entries or stocks so far, so hopping in and out of
 	# the bay never picks a later stage's shelf, and a Continue (which starts the count again)
 	# stocks the shelf the first sitting saw.
@@ -733,6 +740,23 @@ func _result(ok: bool, reason: String, line_id := "", part_id := "", cost := 0) 
 # gates get. It moves weight inside a part's offer bucket only, so the shelf's mix of buckets and its
 # rarities, and every price, stay as they were (answer_weights_test).
 func _stock() -> Array:
+	if ctx != null and ctx.run != null and ctx.run.has_method("override_on") and ctx.run.override_on("maker_focused_shelves"):
+		var maker := _focused_maker()
+		if maker != "":
+			var focused_pool := _set_pool(maker, [])
+			if not focused_pool.is_empty():
+				var focused_out: Array = []
+				var focused_odds: Array = OddsReadout.odds_for(SHELF_RARITIES, ctx.run.class_id())
+				var pool_copy := focused_pool.duplicate()
+				for _k in mini(SHELF_SIZE, pool_copy.size()):
+					var idx := _rng.randi_range(0, pool_copy.size() - 1)
+					focused_out.append({"part_id": String(pool_copy[idx]), "sold": false, "odds": focused_odds})
+					pool_copy.remove_at(idx)
+				if focused_out.size() < SHELF_SIZE:
+					var used_ids: Array = focused_out.map(func(e): return e["part_id"])
+					for fill_id in Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, SHELF_SIZE - focused_out.size(), used_ids):
+						focused_out.append({"part_id": fill_id, "sold": false, "odds": focused_odds})
+				return focused_out
 	# The last call's first slot is the nearest maker set's missing piece (set_piece) in place of the
 	# cobalt rung's draw; elsewhere, and when no set is started, the rung as before.
 	var set_pick: String = _set_pick() if last_call() else ""
@@ -796,6 +820,24 @@ func _set_pick() -> String:
 		return ""
 	var pool := _set_pool(String(target["maker"]), [])
 	return pool[_rng.randi_range(0, pool.size() - 1)] if not pool.is_empty() else ""
+
+
+# The maker focused by `code_single_docket`: the pilot's strongest held maker set, else the first set with stock.
+func _focused_maker() -> String:
+	var counted: Dictionary = _set_counts()
+	var best_maker := ""
+	var best_count := 0
+	for maker in MakerSets.SETS:
+		var c := int(counted.get(maker, 0))
+		if c > best_count and not _set_pool(maker, []).is_empty():
+			best_count = c
+			best_maker = maker
+	if best_maker != "":
+		return best_maker
+	for maker in MakerSets.SETS:
+		if not _set_pool(maker, []).is_empty():
+			return maker
+	return ""
 
 
 # The maker's pieces the shelf may stock that the run does not hold yet, in a stable order.

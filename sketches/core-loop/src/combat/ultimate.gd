@@ -784,6 +784,8 @@ func _strike(at: Vector3) -> void:
 func report_landing(record: Dictionary, id: String, at: Vector3, result: Array) -> void:
 	record["landing_hits"] = int(record.get("landing_hits", 0)) + int(result[0])
 	record["damage"] = snappedf(float(record.get("damage", 0.0)) + float(result[1]), 0.01)
+	if float(result[1]) > 0.0:
+		preload("res://src/build/consumables.gd").echo_ultimate(ctx, combat, float(result[1]), at, landing_radius())
 	ctx.events.ultimate_landed.emit(id, at, int(result[0]), float(result[1]))
 
 
@@ -840,7 +842,7 @@ func warden_posture(warden: Node3D, result: Dictionary) -> void:
 	result["shatter"] = false
 	result["crack"] = false
 	_posture_spent[id] = spent + gain
-	warden._apply_posture(result)
+	warden.apply_posture_hit(result)
 
 
 # --- PC-SABLE: cable route, arc rain and a mounted outpost -----------------------------

@@ -81,7 +81,7 @@ func zone_damage(scale := 1.0) -> float:
 
 func _target_spot() -> Vector3:
 	var ball: Vector3 = ctx.player.ball_position()
-	var near: Array = combat._nearest_list(ball, LOCK_REACH, 1)
+	var near: Array = combat.nearest_enemies(ball, LOCK_REACH, 1)
 	if not near.is_empty() and is_instance_valid(near[0]):
 		return (near[0] as Node3D).global_position
 	var forward: Vector3 = ctx.aim_forward()
@@ -136,7 +136,7 @@ func _launch(rack, row: Dictionary, bonus: int, scale: float, source_tag: String
 	var dmg := impact_damage(scale)
 	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
 		if is_instance_valid(enemy) and not enemy.is_dead() and ring.contains(enemy.global_position):
-			combat._hit(enemy, KIND, dmg, enemy.global_position - at, KNOCK, "", source_tag, IMPACT)
+			combat.deal_proc_hit(enemy, KIND, dmg, enemy.global_position - at, KNOCK, "", source_tag, IMPACT)
 	zones.append({
 		"ring": ring,
 		"at": at,
@@ -175,7 +175,7 @@ func step(delta: float) -> void:
 				ctx.build.field.apply(ELEMENT, at, PROC_SOURCE)
 			for enemy in combat.get_tree().get_nodes_in_group("enemy"):
 				if is_instance_valid(enemy) and not enemy.is_dead() and ring.contains(enemy.global_position):
-					combat._hit(enemy, KIND, float(z["damage"]), enemy.global_position - at, 0.0, "", PROC_SOURCE, IMPACT)
+					combat.deal_proc_hit(enemy, KIND, float(z["damage"]), enemy.global_position - at, 0.0, "", PROC_SOURCE, IMPACT)
 		if float(z["left"]) > 0.0:
 			kept.append(z)
 		else:

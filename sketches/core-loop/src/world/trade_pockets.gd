@@ -62,8 +62,10 @@ static func odds(mem: Dictionary, stage: int) -> Dictionary:
 		"safe_share": 0.0 if mem.risk_taken else 1.0 / (1.0 + risk_weight),
 		"refusal_weight": risk_weight, "skip_time": 0.0}
 
-static func draw(mem: Dictionary, stage: int, rng: RandomNumberGenerator, full_health: bool) -> Dictionary:
+static func draw(mem: Dictionary, stage: int, rng: RandomNumberGenerator, full_health: bool, kindness_sealed := false) -> Dictionary:
 	var modifiers := odds(mem, stage)
+	if kindness_sealed:
+		modifiers["safe_share"] = 0.0
 	if rng.randf() >= float(modifiers.chance):
 		return {}
 	var family := "safe" if rng.randf() < float(modifiers.safe_share) else "risk"
@@ -189,7 +191,8 @@ static func stage_site(graph, map, run, layout_seed: int, pool: PackedInt32Array
 	var rng := RandomNumberGenerator.new()
 	# A named layout stream does not advance ctx.rng or any existing draw.
 	rng.seed = hash([layout_seed, run.run_seed, run.stage, "trade_layout"])
-	var offer := draw(run.trade_memory, run.stage, rng, run.hp >= run.max_hp)
+	var sealed_kindness: bool = run != null and run.has_method("override_on") and run.override_on("kindness_sealed")
+	var offer := draw(run.trade_memory, run.stage, rng, run.hp >= run.max_hp, sealed_kindness)
 	var spec := {}
 	if not offer.is_empty():
 		var spot := place(graph, map, rng, pool)

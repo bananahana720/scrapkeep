@@ -374,6 +374,36 @@ func _prepare_next() -> void:
 	_plans[key] = {"task": WorkerThreadPool.add_task(work, false, "natural plan"), "out": out, "rows": _rows_hash(map.park), "snapshot": snapshot}
 
 
+# Pre-warms a park stage's natural-event plan on a worker thread (Rule 7 deep door for EventDirector).
+static func prewarm(terrain, next_stage: int) -> Dictionary:
+	var key := _root_key(terrain, next_stage)
+	var map = terrain.map_for(next_stage) if terrain.has_method("map_for") else null
+	if key == 0 or map == null or not ("park" in map) or map.park.is_empty():
+		return {"key": key, "status": "non_park"}
+	if _plans.has(key):
+		var entry: Dictionary = _plans[key]
+		if entry.has("task") and WorkerThreadPool.is_task_completed(entry.task):
+			_settle(key)
+		return {"key": key, "status": "ready" if not _plans[key].has("task") else "worker_running"}
+	for old in _plans.keys():
+		if not is_instance_id_valid(old) and (not _plans[old].has("task") or WorkerThreadPool.is_task_completed(_plans[old].task)):
+			_settle(old)
+			_plans.erase(old)
+	var snapshot := EventGround.snapshot(terrain, next_stage, false)
+	var park: Dictionary = map.park.duplicate(true)
+	var out := {}
+	var work := func() -> void:
+		snapshot.copy_roofs()
+		out.merge(plan(snapshot, park))
+	_plans[key] = {
+		"task": WorkerThreadPool.add_task(work, false, "natural prewarm"),
+		"out": out,
+		"rows": _rows_hash(map.park),
+		"snapshot": snapshot,
+	}
+	return {"key": key, "status": "worker_started"}
+
+
 # A handler leaves on every stage change, so a plan still running is left for the handler that
 # enters its stage (_planned) or the next poll; activities.gd waits on what is left at teardown.
 static func settle_plans() -> void:

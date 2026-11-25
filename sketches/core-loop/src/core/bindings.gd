@@ -68,16 +68,16 @@ const VERBS := {
 const EXTRA_ACTIONS := {
 	"cl_retry": {"keys": [KEY_R], "pad": JOY_BUTTON_RIGHT_SHOULDER},
 	"cl_pause": {"keys": [KEY_P, KEY_ESCAPE], "pad": JOY_BUTTON_START},
-	"cl_consumable": {"keys": [KEY_C]},
+	"cl_consumable": {"keys": [KEY_C], "pad": JOY_BUTTON_LEFT_STICK},
 	"cl_radio_next": {"keys": [KEY_PERIOD]},
 	"cl_radio_prev": {"keys": [KEY_COMMA]},
 	"cl_radio_skip": {"keys": [KEY_SLASH]},
 	"cl_radio_pin": {"keys": [KEY_SEMICOLON]},
 }
-# Pocket Consumable Belt quick-tap (W47-C1): keyboard C via InputMap + gamepad D-pad Up
-# quick-tap read without colliding with cl_bay_2's InputMap pad uniqueness check.
+# Pocket Consumable Belt quick-tap (W47-C1): keyboard C + gamepad L3 (Left Stick click)
+# via InputMap so it never collides with cl_bay_2 (D-pad Up), supports all controllers, and is remappable.
 const CONSUMABLE_ACTION := "cl_consumable"
-const CONSUMABLE_PAD := JOY_BUTTON_DPAD_UP
+const CONSUMABLE_PAD := JOY_BUTTON_LEFT_STICK
 # The bar slot each select action picks, by its index in Intent.slot_pick.
 const SELECT_ACTIONS := ["cl_bay_1", "cl_bay_2", "cl_bay_3"]
 # The engine's ui_* actions have no pad button, so a pad moves menu focus but cannot press or go
@@ -186,6 +186,10 @@ static func verbs_on(state: String, key: int, button: int) -> Array[String]:
 # Mouse motion and the sticks cannot be bound.
 static var _warned_tokens := {}
 const TRIGGER_AXES := [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]
+
+
+static func reset_for_tests() -> void:
+	_warned_tokens.clear()
 
 
 # "desk" for a key or mouse button, "pad" for a pad button, "axis" for a trigger.

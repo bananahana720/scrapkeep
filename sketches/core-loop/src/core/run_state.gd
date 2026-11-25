@@ -13,6 +13,7 @@ const RunTier := preload("res://src/core/run_tier.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Panels := preload("res://src/build/panels.gd")
 const Consumables := preload("res://src/build/consumables.gd")
+const MetaOptions := preload("res://src/core/meta_options.gd")
 const MAX_HP := 100.0
 const CONSUMABLE_SLOTS_DEFAULT := 1
 const CONSUMABLE_SLOTS_MAX := 2
@@ -91,6 +92,7 @@ var stage_time := 0.0
 var since_damage := 99.0
 var retries := 0
 var over := false
+var bot_driven := false
 # Seam faults the run log should carry, such as a Warden that vanished unbroken.
 var anomalies: Array[Dictionary] = []
 
@@ -297,6 +299,9 @@ func begin(chosen_class: Resource) -> void:
 	retries_spent = {}
 	death_save_spent = false
 	extra = {}
+	for meta_key in ["w50_scrap_ingots", "w50_consumable_state", "w50_trade_contracts", "w50_companion_salvage"]:
+		if has_meta(meta_key):
+			remove_meta(meta_key)
 	_loaded_class_id = ""
 	tree_picks.clear()
 	tree_allowed = 0
@@ -327,14 +332,37 @@ func class_id() -> String:
 	return class_def.id if class_def != null else _loaded_class_id
 
 
+func active_overrides() -> Array:
+	var raw = extra.get("overrides", [])
+	return raw if raw is Array else []
+
+
+func has_override(code_id: String) -> bool:
+	return code_id in active_overrides()
+
+
+func override_on(effect_key: String) -> bool:
+	var active := active_overrides()
+	if active.is_empty():
+		return false
+	for cid in active:
+		var row: Dictionary = MetaOptions.override_row(String(cid))
+		if String(row.get("upside", "")) == effect_key or String(row.get("downside", "")) == effect_key:
+			return true
+	return false
+
+
 # Use the published class: pickup consumers run before the class-change publication.
 func base_max_hp() -> float:
 	var pilot := class_def
 	if pilot == null and _loaded_class_id != "":
 		pilot = preload("res://src/core/class_def.gd").by_id(_loaded_class_id)
-	if pilot == null or pilot.get("base_hp") == null:
-		return MAX_HP
-	return float(pilot.base_hp) + float(pilot.hp_growth) * (_heft_class - 1)
+	var base := MAX_HP
+	if pilot != null and pilot.get("base_hp") != null:
+		base = float(pilot.base_hp) + float(pilot.hp_growth) * (_heft_class - 1)
+	if override_on("hull_half"):
+		return maxf(10.0, round(base * 0.5))
+	return base
 
 
 # One tick of the run's clocks and of hull regen. `rolling` is whether the ball is in the cruise speed tier or
@@ -1035,6 +1063,7 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"panels": panels.duplicate(),
 		"consumables": consumables.duplicate(),
 		"consumable_slots": consumable_slots,
+		"scrap_ingots": preload("res://src/build/fabricators.gd").ingots_to_doc(self),
 		"relics": relics.duplicate(),
 		"kills": kills,
 		"events_won": events_won.duplicate(),
@@ -1116,6 +1145,10 @@ func restore() -> void:
 	panels.assign(_snapshot.get("panels", []))
 	consumables.assign(_snapshot.get("consumables", []))
 	consumable_slots = clampi(int(_snapshot.get("consumable_slots", CONSUMABLE_SLOTS_DEFAULT)), CONSUMABLE_SLOTS_DEFAULT, CONSUMABLE_SLOTS_MAX)
+	if _snapshot.has("scrap_ingots"):
+		preload("res://src/build/fabricators.gd").ingots_from_doc(self, _snapshot["scrap_ingots"])
+	else:
+		preload("res://src/build/fabricators.gd").reset_ingots(self)
 	relics = (_snapshot.get("relics", {}) as Dictionary).duplicate()
 	kills = _snapshot["kills"]
 	events_won.assign(_snapshot["events_won"])
@@ -1189,7 +1222,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs", "consumables": "strs", "consumable_slots": "int", "arrived_core": "int", "cleared": "bool", "pick_opened": "bool", "landed": "bool", "carried_core": "int", "core_seat": "str", "brew": "int", "brew_stage": "int"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs", "consumables": "strs", "consumable_slots": "int", "scrap_ingots": "dict", "arrived_core": "int", "cleared": "bool", "pick_opened": "bool", "landed": "bool", "carried_core": "int", "core_seat": "str", "brew": "int", "brew_stage": "int"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -1260,6 +1293,9 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		doc["consumables"] = Array(consumables)
 	if consumable_slots > CONSUMABLE_SLOTS_DEFAULT:
 		doc["consumable_slots"] = consumable_slots
+	var ingot_doc: Dictionary = preload("res://src/build/fabricators.gd").ingots_to_doc(self)
+	if int(ingot_doc.get("1", 0)) > 0 or int(ingot_doc.get("2", 0)) > 0 or int(ingot_doc.get("3", 0)) > 0:
+		doc["scrap_ingots"] = ingot_doc
 	# Flow writes this doc as a stage begins, after enter_stage ends any ride, so a ride never
 	# needs a key; the core that arrived does. Written only then, so other runs keep their bytes.
 	if arrived_core > 0:
@@ -1370,6 +1406,14 @@ static func validate_entrance_doc(doc) -> String:
 			return "unknown consumable: %s" % str(cons_id)
 	if doc.has("consumable_slots") and (int(doc["consumable_slots"]) < CONSUMABLE_SLOTS_DEFAULT or int(doc["consumable_slots"]) > CONSUMABLE_SLOTS_MAX):
 		return "consumable_slots %d is outside %d..%d" % [int(doc["consumable_slots"]), CONSUMABLE_SLOTS_DEFAULT, CONSUMABLE_SLOTS_MAX]
+	if doc.has("scrap_ingots"):
+		var ingots: Dictionary = doc["scrap_ingots"]
+		for k in ingots:
+			var ks := str(k)
+			if not ks in ["1", "2", "3"]:
+				return "invalid scrap_ingots tier: %s" % ks
+			if not _entrance_kind_ok(ingots[k], "int") or int(ingots[k]) < 0:
+				return "invalid scrap_ingots[%s]" % ks
 	for w in doc["retries_spent"]:
 		if not str(w).is_valid_int():
 			return "retries_spent key %s is not a world id" % str(w)
@@ -1452,6 +1496,10 @@ func from_entrance_doc(doc) -> bool:
 	panels.assign(doc.get("panels", []))
 	consumables.assign(doc.get("consumables", []))
 	consumable_slots = clampi(int(doc.get("consumable_slots", CONSUMABLE_SLOTS_DEFAULT)), CONSUMABLE_SLOTS_DEFAULT, CONSUMABLE_SLOTS_MAX)
+	if doc.has("scrap_ingots"):
+		preload("res://src/build/fabricators.gd").ingots_from_doc(self, doc["scrap_ingots"])
+	else:
+		preload("res://src/build/fabricators.gd").reset_ingots(self)
 	relics = (doc["relics"] as Dictionary).duplicate() if doc.has("relics") else {}
 	kills = int(doc["kills"])
 	events_won.assign(doc["events_won"])

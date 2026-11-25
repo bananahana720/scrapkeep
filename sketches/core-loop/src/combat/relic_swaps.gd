@@ -883,13 +883,7 @@ func _activate_rail_vault(dir: Vector3, mult: float) -> void:
 	# Hot-reloads Rivet's cylinder mid-ride and queues sparks along the haul.
 	var drv = combat.weapon_driver
 	var p: Resource = combat._patterns.get(Weapons.RAPID_LASER)
-	if p != null and (drv._weapon != Weapons.RAPID_LASER or drv._mag <= 0):
-		drv.step(0.0, null, Weapons.RAPID_LASER, p, 0.0)
-	drv.top_up_cylinder()
-	if drv._mag > 0:
-		drv._chamber = drv._mag
-		drv._hot_rounds = drv._mag
-		drv._hot_pierce = true
+	var hot_rounds: int = drv.hot_reload_cylinder(Weapons.RAPID_LASER, p)
 	var flat := Vector3(dir.x, 0.0, dir.z)
 	var heading: Vector3 = flat.normalized() if flat.length_squared() > 0.0001 else combat._flat_aim()
 	var dmg: float = RAIL_SPARK_DAMAGE * mult * combat._damage_mod(Weapons.RAPID_LASER)
@@ -901,7 +895,7 @@ func _activate_rail_vault(dir: Vector3, mult: float) -> void:
 			"side": -1.0 if i % 2 == 0 else 1.0,
 		})
 	combat.effects.ring(ctx.player.ball_position(), 2.6, ClassDef.RIVET_COLOR)
-	_record("rail_vault", {"hot_rounds": drv._hot_rounds, "sparks": RAIL_SPARK_COUNT, "color": ClassDef.RIVET_COLOR})
+	_record("rail_vault", {"hot_rounds": hot_rounds, "sparks": RAIL_SPARK_COUNT, "color": ClassDef.RIVET_COLOR})
 
 
 func _step_rail_sparks(delta: float) -> void:

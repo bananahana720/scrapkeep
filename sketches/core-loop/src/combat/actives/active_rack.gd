@@ -231,6 +231,10 @@ func _release() -> void:
 	ctx.events.active_fired.emit(active_id, ctx.player.ball_position(), count)
 
 
+func recharge(amount: float) -> void:
+	_recharge(amount)
+
+
 func _recharge(amount: float) -> void:
 	var cap := int(_row(active_id)["max_charges"])
 	if charges >= cap:

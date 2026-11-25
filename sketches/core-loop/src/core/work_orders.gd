@@ -559,7 +559,7 @@ static func unpin(profile, id: String) -> bool:
 	return true
 
 
-static func ensure_default_pin(profile, sitting := false) -> Array:
+static func ensure_default_pin(profile, sitting := false, pilot_id := "") -> Array:
 	if profile == null:
 		return []
 	var current := active_ids(profile)
@@ -567,7 +567,16 @@ static func ensure_default_pin(profile, sitting := false) -> Array:
 	if not has_crew:
 		var avail := available_crew(profile, sitting)
 		if not avail.is_empty():
-			pin(profile, String(avail[0]), sitting)
+			var chosen := String(avail[0])
+			if pilot_id != "":
+				var for_pilot := avail.filter(func(id): return String(order(id).get("pilot", "")) == pilot_id)
+				if not for_pilot.is_empty():
+					chosen = String(for_pilot[0])
+				else:
+					var universal := avail.filter(func(id): return String(order(id).get("pilot", "")) == "")
+					if not universal.is_empty():
+						chosen = String(universal[0])
+			pin(profile, chosen, sitting)
 			current = active_ids(profile)
 	return current
 
@@ -655,7 +664,8 @@ static func begin_run(run, profile, bot_driven := false, sitting := false) -> Di
 		if run != null and "extra" in run and run.extra is Dictionary:
 			run.extra.erase(RUN_KEY)
 		return {}
-	var pinned := ensure_default_pin(profile, sitting)
+	var pilot_id: String = String(run.class_id()) if run.has_method("class_id") else ""
+	var pinned := ensure_default_pin(profile, sitting, pilot_id)
 	if pinned.is_empty():
 		if "extra" in run and run.extra is Dictionary:
 			run.extra.erase(RUN_KEY)
@@ -697,7 +707,7 @@ static func eval_fact(tracker: Dictionary, signal_name: String, fact: Dictionary
 	return newly
 
 
-static func close_run(run, profile, tracker: Dictionary = {}, bot_driven := false) -> Dictionary:
+static func close_run(run, profile, tracker: Dictionary = {}, bot_driven := false, sitting := false) -> Dictionary:
 	if bot_driven or profile == null:
 		return {"completed": []}
 	var live := tracker
@@ -710,6 +720,8 @@ static func close_run(run, profile, tracker: Dictionary = {}, bot_driven := fals
 		var remaining: Array = active_ids(profile).filter(func(id): return not completed_ids.has(id))
 		box["pinned"] = remaining
 		_save_camp_box(profile, box)
+	var rot_seed: int = int(run.run_seed) if run != null and "run_seed" in run else int(profile.stat("habit.runs_total"))
+	rotate_shift_offers(profile, rot_seed, sitting)
 	return {"completed": completed_ids}
 
 

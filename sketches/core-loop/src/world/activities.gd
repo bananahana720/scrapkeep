@@ -21,6 +21,7 @@ const StakeDevices := preload("res://src/world/stake_devices.gd")
 const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 const Secrets := preload("res://src/core/secrets.gd")
+const PilotStory := preload("res://src/core/pilot_story.gd")
 const AmbushAltar := preload("res://src/world/ambush_altar.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const FindKit := preload("res://src/world/find_kit.gd")
@@ -681,10 +682,13 @@ func _use_map(map) -> Dictionary:
 func _plan(map, entry_data: Dictionary) -> Dictionary:
 	var out := []
 	var modifier := {}
+	var crates_shut: bool = ctx != null and ctx.run != null and ctx.run.has_method("override_on") and ctx.run.override_on("shops_and_crates_shut")
 	for authored in map.activity_sites:
 		var spec := drawn(authored)
 		var id := String(spec["id"])
 		if not RULES.has(id):
+			continue
+		if crates_shut and id == "cracked_cache":
 			continue
 		# Calm mode spawns nothing, so the ambush and the bounty could never be paid there.
 		if ctx.calm and String(RULES[id]["finishes"]) != "wall_broken":
@@ -713,6 +717,9 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 		# A fast Brindle rout last run: the timed door stands open this run (secrets.gd DOOR).
 		for door_spec in Secrets.door_sites(_graph_map, ctx.get("profile")):
 			out.append({"kind": "door", "id": "cracked_cache", "at": door_spec["at"], "spec": door_spec})
+		# Patch's secret wire rooms (PilotStory.PATCH_TRAIL, secrets.gd patch_wire_sites).
+		for wire_spec in Secrets.patch_wire_sites(_graph_map, hash([ctx.rng.seed, ctx.run.run_seed, "patch_wires"]), ctx.get("codex")):
+			out.append({"kind": "patch_wire", "id": "cracked_cache", "at": wire_spec["at"], "spec": wire_spec, "patch_wire": String(wire_spec["patch_wire"])})
 		# Active shift variants may add standing sites on this map (shift_variants.gd).
 		for variant_spec in ShiftVariants.extra_sites(_graph_map, ctx.run):
 			out.append({"kind": "row", "id": String(variant_spec["id"]), "at": variant_spec["at"], "spec": variant_spec})
@@ -730,6 +737,8 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 			_draw_layout = entry_data.layout
 		modifier = StageModifier.for_stage(ctx.run, ctx.terrain, ctx.run.stage)
 		for drawn_spec in PocketDraw.stage_sites(_graph, map, ctx.run, ctx.rng.seed, trade_spec, _draw_layout, modifier, true):
+			if crates_shut and String(drawn_spec.id) == "cracked_cache":
+				continue
 			if not ctx.calm or RULES[drawn_spec.id].finishes == "wall_broken":
 				out.append({"kind": "drawn", "id": drawn_spec.id, "at": drawn_spec.at, "spec": drawn_spec})
 	return {"sites": out, "modifier": modifier}
@@ -787,6 +796,8 @@ func _build_entry(entry: Dictionary, modifier: Dictionary) -> Site:
 			last_entry_steps.append("find %s %.1f" % [entry.find, (Time.get_ticks_usec() - dressed) / 1000.0])
 		"door":
 			_dress_door(site)
+		"patch_wire":
+			_dress_patch_wire(site, String(entry.patch_wire))
 		"drawn":
 			site.view.set_sight(float(modifier.get("sight_scale", 1.0)))
 			StageModifier.mark_far(modifier, site)
@@ -931,7 +942,8 @@ func _adopt(ahead: Dictionary, i: int, entry: Dictionary) -> Site:
 
 static func _same_entry(a: Dictionary, b: Dictionary) -> bool:
 	return a.kind == b.kind and a.id == b.id and a.at == b.at and hash(a.spec) == hash(b.spec) \
-		and a.get("secret", "") == b.get("secret", "") and a.get("find", "") == b.get("find", "")
+		and a.get("secret", "") == b.get("secret", "") and a.get("find", "") == b.get("find", "") \
+		and a.get("patch_wire", "") == b.get("patch_wire", "")
 
 
 # The entry took what it could: the rest go, and the holder shows and runs, so its sites' bodies join the space now.
@@ -1308,6 +1320,17 @@ func _dress_find(s: Site, find_id: String) -> void:
 		_radio_tell(s)
 	else:
 		_seep_tell(s)
+	_range_tree(s, SITE_VIEW_END_M, s.view)
+
+
+# Patch's secret wire room (PilotStory.PATCH_TRAIL): hidden behind a cracked face with a seep tell.
+func _dress_patch_wire(s: Site, wire_id: String) -> void:
+	var row: Dictionary = PilotStory.PATCH_TRAIL.get(wire_id, {})
+	_hang_board(s, "PatchWire_" + wire_id, String(row.get("name", wire_id)), String(row.get("text", "")))
+	s.set_meta("patch_wire", wire_id)
+	s.set_meta("find", wire_id)
+	s.view.finish()
+	_seep_tell(s)
 	_range_tree(s, SITE_VIEW_END_M, s.view)
 
 
@@ -2517,11 +2540,27 @@ func _break_wall(s: Site) -> void:
 		s.fired_glow.emission = Palette.SAND
 		s.fired_glow.emission_energy_multiplier = CACHE_FIRED_GLOW.energy
 	ctx.events.world_fact.emit("wall_crumbled", s.global_position)
-	if s.has_meta("find"):
+	if s.has_meta("patch_wire"):
+		_found_patch_wire(s)
+	elif s.has_meta("find"):
 		_found(s)
 	elif s.has_meta("door") and ctx.get("codex") != null:
 		ctx.codex.mark_discovered(String(Secrets.DOOR["codex"]["id"]), s.pedestal)
 	_finish(s, s.pedestal)
+
+
+func _found_patch_wire(s: Site) -> void:
+	var wire_id := String(s.get_meta("patch_wire"))
+	var tell: Node = s.wall.get_node_or_null("FindTell")
+	if tell != null:
+		tell.queue_free()
+	WorldFx.fire("secret_found", s.pedestal + Vector3.UP)
+	if ctx.get("codex") != null:
+		ctx.codex.mark_discovered(wire_id, s.pedestal)
+	ctx.events.world_fact.emit(wire_id, s.pedestal)
+	ctx.events.world_fact.emit("patch_wire_found", s.pedestal)
+	if ctx.get("progress") != null and ctx.progress.has_method("settle"):
+		ctx.progress.settle(wire_id)
 
 
 # A field find opened: the OOH burst at the room, and its codex row (the first time, the logbook's

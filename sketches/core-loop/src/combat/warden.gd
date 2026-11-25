@@ -1194,6 +1194,11 @@ func monster_build() -> bool:
 	return pilot_heft() > monster_threshold()
 
 
+# Public door for posture pressure from set pieces, consumables, and counter-hacks (Rule 7).
+func apply_posture_hit(result: Dictionary) -> void:
+	_apply_posture(result)
+
+
 func _apply_posture(result: Dictionary) -> void:
 	# A boss at weak-point dial 1 (spec "weak_judge_all") judges every posture hit, including one that skips
 	# on_struck (the ultimate's set piece, ultimate.gd warden_posture). Off, this is never reached.

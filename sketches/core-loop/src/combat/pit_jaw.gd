@@ -38,8 +38,7 @@ const SPIT_DAMAGE := 9.0
 const SPIT_SHOVE := 5.0
 const BENCH_SKIP_LIFT := 26.0
 const CANNON_RADIUS := 3.2
-# The catch trap's glb stands in until the Bodies thread's world 2 pit jaw lands and replaces this path.
-const BODY := "res://assets/models/world_one/enemy_catch_trap.glb"
+const BODY := "res://assets/models/world_two/enemy_pit_jaw.glb"
 
 var bitten := 0
 var slam_kills := 0

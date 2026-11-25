@@ -374,6 +374,11 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	codex_world = CodexWorld.new()
 	view.set_vault(terrain.vault_point(stage), false)
 	_mark_landing(stage, retry)
+	if ctx.run != null and ctx.run.has_method("override_on") and ctx.run.override_on("cruise_launch_air_reset") and ctx.player != null:
+		var fwd: Vector3 = terrain.entry_heading(stage)
+		fwd.y = 0.0
+		fwd = fwd.normalized() if fwd.length_squared() > 0.01 else Vector3.FORWARD
+		ctx.player.set_velocity_now(fwd * ctx.tuning.f("cruise"))
 
 
 # The arena is not a stage (DESIGN-NOTES spine call 34). The live events close, the
@@ -533,6 +538,22 @@ func _physics_process(delta: float) -> void:
 		player.add_external_accel(flood.external_accel(ball, velocity) + events.push(ball, velocity))
 	if not calm_bay:
 		_step_director(delta)
+	_step_cut_governor(delta, ball, velocity, calm_bay)
+
+
+func _step_cut_governor(delta: float, _ball: Vector3, velocity: Vector3, calm_bay: bool) -> void:
+	if ctx == null or ctx.run == null or not ctx.run.has_method("override_on"):
+		return
+	if ctx.player == null or ctx.player.frozen() or calm_bay:
+		return
+	var cruise: float = ctx.tuning.f("cruise")
+	var flat_speed := Vector2(velocity.x, velocity.z).length()
+	if ctx.run.override_on("cruise_launch_air_reset") and not ctx.player.state.grounded and flat_speed >= cruise:
+		if ctx.player.state.air_actions < 1:
+			ctx.player.state.air_actions = 1
+	if ctx.run.override_on("stall_drains_hull") and ctx.player.state.grounded and flat_speed < cruise * 0.25:
+		if ctx.flow == null or not ctx.flow.start_pick_open():
+			ctx.run.damage(6.0 * delta, "cut_governor")
 
 
 func _on_park_warden_engaged(_stage: int) -> void:
@@ -709,7 +730,7 @@ func _breach_strike(opened: Array[String], at: Vector3, strength: float) -> void
 	for i in breach.under(opened, enemies.map(func(e): return e.global_position)):
 		var enemy: Node3D = enemies[i]
 		var flat := Vector3(enemy.global_position.x - at.x, 0.0, enemy.global_position.z - at.z)
-		ctx.spawner._hit(enemy, "slam", force, flat, force, "", "drop_or_slam", "slam")
+		ctx.spawner.deal_proc_hit(enemy, "slam", force, flat, force, "", "drop_or_slam", "slam")
 
 
 func _on_jumped(_air: bool) -> void:
@@ -811,25 +832,34 @@ func _step_director(delta: float) -> void:
 		if Director.KIND_NAMES[arrival["kind"]] == "dispatcher":
 			terrain.prepare_perches()
 			break
+	var all_elite: bool = ctx.run != null and ctx.run.has_method("override_on") and ctx.run.override_on("all_packs_elite")
+	var double_shift: bool = ctx.run != null and ctx.run.has_method("override_on") and ctx.run.override_on("half_guard_double_count")
+	var hp_mult := 0.5 if double_shift else 1.0
 	for spawn in due:
 		if ctx.calm or ctx.spawner == null:
 			continue
 		var at: Vector2 = spawn["at"]
 		var kind_name: String = Director.KIND_NAMES[spawn["kind"]]
-		var enemy: Node3D
-		if kind_name == "dispatcher":
-			# The Dispatcher perches on a park post near its pack, 6 to 10 m up; none within 40 m, it brings its mast.
-			var perch: Vector3 = terrain.perch_near(Vector3(at.x, 0.0, at.y), ctx.flow.stage())
-			enemy = ctx.spawner.spawn_enemy(kind_name, terrain.drop_point(at.x, at.y, 2.4), String(spawn.get("affix", "")), perch)
-		else:
-			enemy = ctx.spawner.spawn_enemy(kind_name, terrain.drop_point(at.x, at.y, 2.4), String(spawn.get("affix", "")))
-		# The attacker budget reads one pack of one kind as one threat (attack_budget.gd).
-		if enemy != null:
-			enemy.set_meta("pack_seq", int(spawn.get("pack", -1)))
-			locks.note_member(enemy, int(spawn.get("pack", -1)), spawn.get("rider", false))
-		# SG2: every elite-pack member follows the elite rules (elements.gd elite_rules).
-		if spawn.get("elite", false) and enemy != null:
-			enemy.set_meta("elite_pack", true)
+		var affix := String(spawn.get("affix", ""))
+		if all_elite and affix == "":
+			affix = "plated"
+		var copies := 2 if double_shift and kind_name != "dispatcher" else 1
+		for copy_idx in copies:
+			var offset := Vector2(2.6, 0.0) if copy_idx == 1 else Vector2.ZERO
+			var enemy: Node3D
+			if kind_name == "dispatcher":
+				# The Dispatcher perches on a park post near its pack, 6 to 10 m up; none within 40 m, it brings its mast.
+				var perch: Vector3 = terrain.perch_near(Vector3(at.x, 0.0, at.y), ctx.flow.stage())
+				enemy = ctx.spawner.spawn_enemy(kind_name, terrain.drop_point(at.x, at.y, 2.4), affix, perch, hp_mult)
+			else:
+				enemy = ctx.spawner.spawn_enemy(kind_name, terrain.drop_point(at.x + offset.x, at.y + offset.y, 2.4), affix, Vector3.INF, hp_mult)
+			# The attacker budget reads one pack of one kind as one threat (attack_budget.gd).
+			if enemy != null:
+				enemy.set_meta("pack_seq", int(spawn.get("pack", -1)))
+				locks.note_member(enemy, int(spawn.get("pack", -1)), spawn.get("rider", false))
+			# SG2: every elite-pack member follows the elite rules (elements.gd elite_rules).
+			if (spawn.get("elite", false) or all_elite) and enemy != null:
+				enemy.set_meta("elite_pack", true)
 	var pressure: float = minf(1.0, director.pressure(alive) + events.pressure_bonus())
 	if absf(pressure - _pressure) >= PRESSURE_STEP:
 		_pressure = pressure
