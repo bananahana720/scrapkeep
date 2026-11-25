@@ -873,18 +873,19 @@ func _place_copper_benches(batches: Dictionary, sites: ParkSites) -> void:
 			_put(batches, face_path, xf)
 
 
-# Unstable Utah Moab timber/rock support struts along canyon flanks (g14 row 1 canon).
+# Scenic Utah Moab timber/rock support struts along outer canyon flanks (g14 row 1 canon).
+# Kept >= 90 m clear of all park_pit.json destructible_rows so breakables never overlap static props.
 func _place_moab_struts(batches: Dictionary, sites: ParkSites) -> void:
 	var strut_path := _mech("timber_rock_strut.glb")
 	var specs := [
-		{"at": Vector2(-120.0, -255.0), "yaw": deg_to_rad(12.0), "scale": 1.25},
-		{"at": Vector2(155.0, -165.0), "yaw": deg_to_rad(-28.0), "scale": 1.25},
-		{"at": Vector2(215.0, -65.0), "yaw": deg_to_rad(-54.0), "scale": 1.2},
-		{"at": Vector2(-195.0, 55.0), "yaw": deg_to_rad(68.0), "scale": 1.25},
-		{"at": Vector2(-120.0, 125.0), "yaw": deg_to_rad(42.0), "scale": 1.2},
-		{"at": Vector2(125.0, 115.0), "yaw": deg_to_rad(-44.0), "scale": 1.2},
-		{"at": Vector2(75.0, 220.0), "yaw": deg_to_rad(-18.0), "scale": 1.15},
-		{"at": Vector2(-50.0, 265.0), "yaw": deg_to_rad(25.0), "scale": 1.15},
+		{"at": Vector2(-360.0, -345.0), "yaw": deg_to_rad(32.0), "scale": 1.3},
+		{"at": Vector2(-35.0, -295.0), "yaw": deg_to_rad(8.0), "scale": 1.25},
+		{"at": Vector2(265.0, -205.0), "yaw": deg_to_rad(-38.0), "scale": 1.25},
+		{"at": Vector2(355.0, -10.0), "yaw": deg_to_rad(-72.0), "scale": 1.25},
+		{"at": Vector2(-345.0, 145.0), "yaw": deg_to_rad(78.0), "scale": 1.25},
+		{"at": Vector2(265.0, 240.0), "yaw": deg_to_rad(-118.0), "scale": 1.2},
+		{"at": Vector2(-165.0, 315.0), "yaw": deg_to_rad(142.0), "scale": 1.2},
+		{"at": Vector2(135.0, 315.0), "yaw": deg_to_rad(-148.0), "scale": 1.2},
 	]
 	for spec in specs:
 		var at: Vector2 = spec["at"]

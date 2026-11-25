@@ -248,7 +248,10 @@ func dismiss_intro_card() -> void:
 func _input(event: InputEvent) -> void:
 	if _intro_left <= 0.0:
 		return
-	if event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_cancel") or event.is_action_pressed("jump"):
+	var accept := InputMap.has_action("ui_accept") and event.is_action_pressed("ui_accept")
+	var cancel := InputMap.has_action("ui_cancel") and event.is_action_pressed("ui_cancel")
+	var jump := InputMap.has_action("cl_jump") and event.is_action_pressed("cl_jump")
+	if accept or cancel or jump:
 		dismiss_intro_card()
 
 
