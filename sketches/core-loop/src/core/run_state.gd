@@ -12,7 +12,10 @@ const Profile := preload("res://src/core/profile.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Panels := preload("res://src/build/panels.gd")
+const Consumables := preload("res://src/build/consumables.gd")
 const MAX_HP := 100.0
+const CONSUMABLE_SLOTS_DEFAULT := 1
+const CONSUMABLE_SLOTS_MAX := 2
 # A hit that would kill from full health leaves 1.0 instead (coordinator ruling, 19 Oct 02:29Z:
 # at base tier no single hit kills from full). Applies at every tier; the ladder's top step may
 # thin it through `one_shot_guard`. A hit of SCRIPTED_KILL or more is a scripted death (tests and
@@ -73,6 +76,10 @@ var parts: Array[String] = []
 # Grey panels (build/panels.gd), in pickup order: mass, never parts, so maker sets, the shop
 # and the parts digest never see them. The order seats them on the ball (panel_shell.gd).
 var panels: Array[String] = []
+# Pocket Consumable Belt (W47-C1): 1 slot by default, expandable to 2 via belt part/shop.
+var consumables: Array[String] = []
+var consumable_slots := CONSUMABLE_SLOTS_DEFAULT
+var consumable_grace_left := 0.0
 # RL2: the relic held in each kit slot, slot name to relic id. One per slot (Relics.can_hold).
 var relics := {}
 var kills := 0
@@ -255,6 +262,9 @@ func begin(chosen_class: Resource) -> void:
 	pick_opened = false
 	landed = false
 	panels.clear()
+	consumables.clear()
+	consumable_slots = CONSUMABLE_SLOTS_DEFAULT
+	consumable_grace_left = 0.0
 	_heft_class = 1
 	class_rewarded = 1
 	_stage_starts = {}
@@ -335,6 +345,7 @@ func advance(delta: float, rolling := true) -> void:
 	run_time += delta
 	stage_time += delta
 	escape_window_left = maxf(0.0, escape_window_left - maxf(0.0, delta))
+	consumable_grace_left = maxf(0.0, consumable_grace_left - maxf(0.0, delta))
 	since_damage += delta
 	# pilot.regen_* move only on the HARD ladder's top rungs (run_tier.gd LADDER, Andrew 27 Oct option 3).
 	# Where the stage's dial is on, only a rolling ball heals (wave 37 unit D7): the wait after a hit runs at any
@@ -638,6 +649,65 @@ func panel_counts() -> Dictionary:
 	return Panels.counts(panels)
 
 
+# Pocket Consumable Belt (W47-C1): 1 slot default, expandable to 2 via pocket_belt part or shop.
+func consumable_capacity() -> int:
+	var cap := clampi(consumable_slots, CONSUMABLE_SLOTS_DEFAULT, CONSUMABLE_SLOTS_MAX)
+	if Consumables.BELT_PART_ID in parts:
+		cap = CONSUMABLE_SLOTS_MAX
+	return cap
+
+
+func expand_consumable_belt(slots := CONSUMABLE_SLOTS_MAX) -> bool:
+	var target := clampi(slots, CONSUMABLE_SLOTS_DEFAULT, CONSUMABLE_SLOTS_MAX)
+	if consumable_slots >= target:
+		return false
+	consumable_slots = target
+	return true
+
+
+func can_hold_consumable() -> bool:
+	return consumables.size() < consumable_capacity()
+
+
+func has_consumable() -> bool:
+	return not consumables.is_empty()
+
+
+func peek_consumable() -> String:
+	return consumables[0] if not consumables.is_empty() else ""
+
+
+func add_consumable(consumable_id: String, replace_oldest := false) -> bool:
+	if not Consumables.is_valid(consumable_id):
+		return false
+	var cap := consumable_capacity()
+	if consumables.size() >= cap:
+		if not replace_oldest:
+			return false
+		while consumables.size() >= cap:
+			consumables.pop_front()
+	consumables.append(consumable_id)
+	return true
+
+
+func pop_consumable() -> String:
+	if consumables.is_empty():
+		return ""
+	return String(consumables.pop_front())
+
+
+func clear_consumables() -> void:
+	consumables.clear()
+
+
+func grant_consumable_grace(seconds: float) -> void:
+	consumable_grace_left = maxf(consumable_grace_left, maxf(0.0, seconds))
+
+
+func consumable_grace_active() -> bool:
+	return consumable_grace_left > 0.0 and alive()
+
+
 # RL2: holds a relic in its slot and announces it as a relic-rarity find. False, and
 # nothing changes, when the pilot cannot use it or the slot already holds one.
 func add_relic(relic_id: String, source: String) -> bool:
@@ -720,6 +790,8 @@ func heal(amount: float) -> void:
 # the scrap removed spills as recovery clusters and the rest is destroyed.
 func damage(amount: float, source: String) -> void:
 	if not alive() or amount <= 0.0:
+		return
+	if consumable_grace_active() and amount < SCRIPTED_KILL and source != "foreman_memo":
 		return
 	if taken_hook.is_valid():
 		amount *= float(taken_hook.call(source))
@@ -821,6 +893,7 @@ func _try_escape_window() -> void:
 
 func _on_stage_entered(_index: int, retry: bool) -> void:
 	escape_window_left = 0.0
+	consumable_grace_left = 0.0
 	if retry:
 		return
 	var model := Companion.new()
@@ -960,6 +1033,8 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"brew_stage": brew_stage,
 		"parts": parts.duplicate(),
 		"panels": panels.duplicate(),
+		"consumables": consumables.duplicate(),
+		"consumable_slots": consumable_slots,
 		"relics": relics.duplicate(),
 		"kills": kills,
 		"events_won": events_won.duplicate(),
@@ -1017,6 +1092,7 @@ func snapshot_value(key: String):
 
 func restore() -> void:
 	escape_window_left = 0.0
+	consumable_grace_left = 0.0
 	cleared = false
 	landed = false
 	_tier_closed = false
@@ -1038,6 +1114,8 @@ func restore() -> void:
 	brew_stage = int(_snapshot.get("brew_stage", 0))
 	parts.assign(_snapshot["parts"])
 	panels.assign(_snapshot.get("panels", []))
+	consumables.assign(_snapshot.get("consumables", []))
+	consumable_slots = clampi(int(_snapshot.get("consumable_slots", CONSUMABLE_SLOTS_DEFAULT)), CONSUMABLE_SLOTS_DEFAULT, CONSUMABLE_SLOTS_MAX)
 	relics = (_snapshot.get("relics", {}) as Dictionary).duplicate()
 	kills = _snapshot["kills"]
 	events_won.assign(_snapshot["events_won"])
@@ -1111,7 +1189,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs", "arrived_core": "int", "cleared": "bool", "pick_opened": "bool", "landed": "bool", "carried_core": "int", "core_seat": "str", "brew": "int", "brew_stage": "int"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs", "consumables": "strs", "consumable_slots": "int", "arrived_core": "int", "cleared": "bool", "pick_opened": "bool", "landed": "bool", "carried_core": "int", "core_seat": "str", "brew": "int", "brew_stage": "int"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -1178,6 +1256,10 @@ func to_entrance_doc(tree = null) -> Dictionary:
 	# Written only once a panel is held, so a run with none keeps its old document bytes.
 	if not panels.is_empty():
 		doc["panels"] = Array(panels)
+	if not consumables.is_empty():
+		doc["consumables"] = Array(consumables)
+	if consumable_slots > CONSUMABLE_SLOTS_DEFAULT:
+		doc["consumable_slots"] = consumable_slots
 	# Flow writes this doc as a stage begins, after enter_stage ends any ride, so a ride never
 	# needs a key; the core that arrived does. Written only then, so other runs keep their bytes.
 	if arrived_core > 0:
@@ -1283,6 +1365,11 @@ static func validate_entrance_doc(doc) -> String:
 	for panel_id in doc.get("panels", []):
 		if not Panels.ROWS.has(panel_id):
 			return "unknown panel: %s" % panel_id
+	for cons_id in doc.get("consumables", []):
+		if not Consumables.is_valid(String(cons_id)):
+			return "unknown consumable: %s" % str(cons_id)
+	if doc.has("consumable_slots") and (int(doc["consumable_slots"]) < CONSUMABLE_SLOTS_DEFAULT or int(doc["consumable_slots"]) > CONSUMABLE_SLOTS_MAX):
+		return "consumable_slots %d is outside %d..%d" % [int(doc["consumable_slots"]), CONSUMABLE_SLOTS_DEFAULT, CONSUMABLE_SLOTS_MAX]
 	for w in doc["retries_spent"]:
 		if not str(w).is_valid_int():
 			return "retries_spent key %s is not a world id" % str(w)
@@ -1345,6 +1432,7 @@ func from_entrance_doc(doc) -> bool:
 	if validate_entrance_doc(doc) != "":
 		return false
 	escape_window_left = 0.0
+	consumable_grace_left = 0.0
 	run_id = doc["run_id"]
 	_loaded_class_id = doc["class_id"]
 	if class_def != null and class_def.id != _loaded_class_id:
@@ -1362,6 +1450,8 @@ func from_entrance_doc(doc) -> bool:
 	class_rewarded = int(doc["class_rewarded"])
 	parts.assign(doc["parts"])
 	panels.assign(doc.get("panels", []))
+	consumables.assign(doc.get("consumables", []))
+	consumable_slots = clampi(int(doc.get("consumable_slots", CONSUMABLE_SLOTS_DEFAULT)), CONSUMABLE_SLOTS_DEFAULT, CONSUMABLE_SLOTS_MAX)
 	relics = (doc["relics"] as Dictionary).duplicate() if doc.has("relics") else {}
 	kills = int(doc["kills"])
 	events_won.assign(doc["events_won"])

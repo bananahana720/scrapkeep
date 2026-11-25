@@ -68,11 +68,16 @@ const VERBS := {
 const EXTRA_ACTIONS := {
 	"cl_retry": {"keys": [KEY_R], "pad": JOY_BUTTON_RIGHT_SHOULDER},
 	"cl_pause": {"keys": [KEY_P, KEY_ESCAPE], "pad": JOY_BUTTON_START},
+	"cl_consumable": {"keys": [KEY_C]},
 	"cl_radio_next": {"keys": [KEY_PERIOD]},
 	"cl_radio_prev": {"keys": [KEY_COMMA]},
 	"cl_radio_skip": {"keys": [KEY_SLASH]},
 	"cl_radio_pin": {"keys": [KEY_SEMICOLON]},
 }
+# Pocket Consumable Belt quick-tap (W47-C1): keyboard C via InputMap + gamepad D-pad Up
+# quick-tap read without colliding with cl_bay_2's InputMap pad uniqueness check.
+const CONSUMABLE_ACTION := "cl_consumable"
+const CONSUMABLE_PAD := JOY_BUTTON_DPAD_UP
 # The bar slot each select action picks, by its index in Intent.slot_pick.
 const SELECT_ACTIONS := ["cl_bay_1", "cl_bay_2", "cl_bay_3"]
 # The engine's ui_* actions have no pad button, so a pad moves menu focus but cannot press or go
@@ -115,6 +120,10 @@ static func actions() -> Dictionary:
 		out.merge(VERBS[verb]["actions"])
 	out.merge(EXTRA_ACTIONS)
 	return out
+
+
+static func consumable_just_pressed() -> bool:
+	return InputMap.has_action(CONSUMABLE_ACTION) and Input.is_action_just_pressed(CONSUMABLE_ACTION)
 
 
 # The verb that registers `action`, or "" for an action the table does not hold.

@@ -3,6 +3,7 @@ extends Node3D
 const Interact := preload("res://src/world/interact.gd")
 const PropKicks := preload("res://src/presentation/prop_kicks.gd")
 const Kit := preload("res://src/presentation/destructible_kit.gd")
+const Consumables := preload("res://src/build/consumables.gd")
 
 # Heft destructibles (Wave 45, W45-C unit A; design-v3/HEFT-DESTRUCTIBLES.md). A standalone, authored,
 # non-load-bearing prop of tier 1 to 5 that a ball of that heft class or heavier breaks without losing a
@@ -73,6 +74,7 @@ const TIER_SCALE := [0.5, 0.7, 1.0, 1.3, 1.6]
 
 const SCRAP_CAP := 35
 const COG_CAP := 20
+const CONSUMABLE_CAP := 3
 # Tier -> [scrap, cogs]; tier 1 scrap is a 50 percent roll on the piece's own stream.
 const LOOT := {1: [1, 0], 2: [2, 1], 3: [3, 2], 4: [4, 2], 5: [4, 2]}
 const TIER1_CHANCE := 0.5
@@ -97,6 +99,7 @@ const BIG_EXTENT_M := 20.0
 # The loot meter's ceilings for this stage; ctx keys scrap_cap and cog_cap plant others for a test.
 var scrap_cap := SCRAP_CAP
 var cog_cap := COG_CAP
+var consumable_cap := CONSUMABLE_CAP
 
 var _pieces := {}
 var _order: Array[String] = []
@@ -105,11 +108,13 @@ var _refused: Array[Dictionary] = []
 var _breaks: Array[String] = []
 var _scrap_paid := 0
 var _cogs_paid := 0
+var _consumables_paid := 0
 var _shrapnel_hits := 0
 var _clock := 0.0
 var _prev := Vector3.ZERO
 var _have_prev := false
 var _last_heft := 1
+var _swing_heft_bonus := 0
 var _cruise := 14.0
 var _cruise_override := false
 var _ctx: Object = null
@@ -291,9 +296,11 @@ func teardown() -> void:
 	_material = null
 	_scrap_paid = 0
 	_cogs_paid = 0
+	_consumables_paid = 0
 	_shrapnel_hits = 0
 	_clock = 0.0
 	_have_prev = false
+	_swing_heft_bonus = 0
 	_live_serial = 0
 	_ctx = null
 	_tuning = null
@@ -362,6 +369,10 @@ func loot() -> Dictionary:
 	return {"scrap": _scrap_paid, "cogs": _cogs_paid}
 
 
+func consumables_paid() -> int:
+	return _consumables_paid
+
+
 func shrapnel_hits() -> int:
 	return _shrapnel_hits
 
@@ -414,6 +425,7 @@ func on_ball(ball_pos: Vector3, velocity: Vector3, heft_class: int, dt: float = 
 	var heading := flat_v / flat
 	var to := ball_pos + flat_v * dt
 	var reach := WALL_REACH + flat / 30.0
+	var effective_heft := mini(TIER_MAX, heft_class + clampi(_swing_heft_bonus, 0, 1))
 	for p in _near(from, to, reach + BALL_RADIUS):
 		if not p.intact:
 			continue
@@ -422,10 +434,64 @@ func on_ball(ball_pos: Vector3, velocity: Vector3, heft_class: int, dt: float = 
 		var dist: float = seen["dist"]
 		if dist > reach or heading.dot(dir) < HEADING_COS:
 			continue
-		if heft_class >= p.tier and flat >= _bar(p.tier):
+		if effective_heft >= p.tier and flat >= _bar(p.tier):
 			_shatter(p, seen["at"], heading, flat, false)
 		elif dist <= CONTACT_M and flat >= REFUSED_FLOOR * _live_cruise():
 			_refuse(p, seen["at"], heading)
+
+
+# W47-GRAPPLE-MUTS-CODE: Wrecking Flail taut-swing +1 effective Heft tier (strictly clamped 0..1,
+# Destructibles.tla TierCapNeverStacks & PaysOnce safe). Cleared on release and teardown().
+func set_swing_heft_bonus(bonus: int) -> void:
+	_swing_heft_bonus = clampi(bonus, 0, 1)
+
+
+# W47-GRAPPLE-MUTS-CODE: Hot-Wire Arc Cutter segment slice through Tier 1-2 destructibles.
+# Strictly clamped to Tier 1..2 and routed through _shatter() so each piece pays at most once.
+func on_segment_cut(from: Vector3, to: Vector3, max_tier: int = 2, width: float = 1.6, source: String = "hot_wire") -> Array[String]:
+	var broken: Array[String] = []
+	if _pieces.is_empty():
+		return broken
+	var cap_tier := clampi(max_tier, TIER_MIN, 2)
+	var cruise := _live_cruise()
+	var seg_dir := to - from
+	seg_dir.y = 0.0
+	var dir := seg_dir.normalized() if seg_dir.length_squared() > 0.0001 else Vector3.FORWARD
+	for p in _near(from, to, width):
+		if not p.intact or p.tier > cap_tier:
+			continue
+		var seen := _sweep(p, from, to)
+		if float(seen["dist"]) > width:
+			continue
+		_shatter(p, seen["at"], dir, cruise, false, source)
+		broken.append(p.id)
+	return broken
+
+
+# W47-GRAPPLE-MUTS-CODE: Wrecking Flail taut swing check for Heft Destructibles at +1 effective Heft.
+# Strictly clamped to at most +1 tier above heft_class (Destructibles.tla TierCapNeverStacks) and
+# routed through _shatter() so each piece breaks and pays strictly once.
+func on_taut_swing(ball_pos: Vector3, velocity: Vector3, heft_class: int, tier_bonus: int = 1, reach_override: float = -1.0, dt: float = 1.0 / 60.0) -> Array[String]:
+	var broken: Array[String] = []
+	if _pieces.is_empty():
+		return broken
+	var flat_v := Vector3(velocity.x, 0.0, velocity.z)
+	var flat := flat_v.length()
+	if flat < WALL_SPEED:
+		return broken
+	var heading := flat_v / flat
+	var effective := mini(TIER_MAX, heft_class + clampi(tier_bonus, 0, 1))
+	var reach := reach_override if reach_override > 0.0 else (WALL_REACH + flat / 30.0)
+	var to := ball_pos + flat_v * dt
+	for p in _near(ball_pos, to, reach + BALL_RADIUS):
+		if not p.intact or effective < p.tier:
+			continue
+		var seen := _sweep(p, ball_pos, to)
+		if float(seen["dist"]) > reach:
+			continue
+		_shatter(p, seen["at"], heading, flat, false, "wrecking_flail")
+		broken.append(p.id)
+	return broken
 
 
 # A blast the source already resolved: every intact piece whose box the ring reaches breaks when the heft
@@ -433,7 +499,7 @@ func on_ball(ball_pos: Vector3, velocity: Vector3, heft_class: int, dt: float = 
 # ball last reported.
 func on_blast(at: Vector3, radius: float, source: String, tier_bonus: int = 1, heft_class: int = -1) -> void:
 	var heft := heft_class if heft_class >= 0 else _last_heft
-	var effective := heft + clampi(tier_bonus, 0, 1)
+	var effective := TIER_MAX if source == Consumables.CAP_CHARGE else heft + clampi(tier_bonus, 0, 1)
 	var cruise := _live_cruise()
 	for p in _near(at, at, radius):
 		if not p.intact or effective < p.tier:
@@ -558,6 +624,14 @@ func _pay(p: Piece) -> void:
 		_cogs_paid += cogs_n
 		if _scrap != null:
 			_scrap.drop_cogs(spot, cogs_n)
+	# High-tier Heft Destructibles (tiers 3-5) may drop a Pocket Consumable once per piece
+	# (own deterministic stream so scrap/cog rolls stay unchanged; pays strictly once).
+	if p.tier >= 3 and _consumables_paid < consumable_cap:
+		var cons_id := Consumables.roll_for_destructible(_seed, _run_id, _stage, p.id, p.tier)
+		if cons_id != "":
+			_consumables_paid += 1
+			if _combat != null and _combat.has_method("drop_consumable"):
+				_combat.drop_consumable(cons_id, spot)
 
 
 # ---- geometry -----------------------------------------------------------------------------------

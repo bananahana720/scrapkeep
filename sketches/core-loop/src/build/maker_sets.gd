@@ -43,6 +43,33 @@ const SETS := {
 		"text": "The next item each stage comes with a second copy"},
 }
 
+# W47-GRAPPLE-MUTS-CODE: each of the 7 maker sets awakens one single-part-swap grapple mutation
+# once its set piece threshold is reached. Kept beside SETS so MakerSets.SETS stays untouched.
+const GRAPPLE_MUTATIONS := {
+	SPILLWAY: "hot_wire",
+	REDJAW: "det_cord",
+	MOSS: "dragnet_siphon",
+	ROOSTS: "sonic_snap_sling",
+	MIND: "live_bus",
+	WAKING: "tether_slam",
+	FLEET: "wrecking_flail",
+}
+
+
+static func grapple_mutation_for_maker(maker: String) -> String:
+	return String(GRAPPLE_MUTATIONS.get(maker, ""))
+
+
+static func live_grapple_mutations(parts: Array, extra: Array = []) -> Array:
+	var counted := counts(parts, extra)
+	var out: Array = []
+	for maker in SETS:
+		if int(counted.get(maker, 0)) >= int(SETS[maker]["pieces"]):
+			var mut_id := grapple_mutation_for_maker(maker)
+			if mut_id != "" and not mut_id in out:
+				out.append(mut_id)
+	return out
+
 # The maker of a part (Parts.maker_of); actives name theirs in their own rows.
 static func maker_of(part_id: String) -> String:
 	return Parts.maker_of(part_id)

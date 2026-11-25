@@ -1,6 +1,7 @@
 extends "res://src/combat/counter.gd"
 
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 # The ramp-flipper (DESIGN-V2 section 15.4): a crew figure hauling a hinged floor plate.
 # It drops the plate where the ball will roll and the warning is an instant ring over
@@ -22,10 +23,15 @@ const RIDE_KICK := 4.0
 const RIDE_TIER := SpeedTier.FAST
 const HP := 45.0
 
+const DEPLOY_S := 0.14
+const KICK_S := 0.09
+const FOLD_S := 0.18
+
 var flings := 0
 var rides := 0
 var _plate: MeshInstance3D
 var _side := Vector3.RIGHT
+var _fold_t := 0.0
 
 static var _shared: Dictionary = {}
 
@@ -109,13 +115,19 @@ func _commit(_to_ball: Vector3) -> Node3D:
 	if _strafe < 0.0:
 		_side = -_side
 	var ring := _commit_ring(Threat.Type.INSTANT, aim, PLATE_RADIUS, 2.0)
+	_fold_t = 0.0
 	_plate.top_level = true
 	_plate.scale = Vector3.ONE
 	_plate.global_position = ring.center + Vector3.UP * 0.1
+	if world_root != null and is_inside_tree():
+		FxLibrary.burst(world_root, "slam_dust", _plate.global_position, 10)
 	return ring
 
 
 func _go_live() -> void:
+	if world_root != null and is_inside_tree() and _plate != null:
+		FxLibrary.burst(world_root, "brass_spark", _plate.global_position + Vector3.UP * 0.4, 10)
+		FxLibrary.burst(world_root, "slam_dust", _plate.global_position, 8)
 	var ring := telegraph()
 	var player = _player()
 	if ring == null or not ring.contains(_real_ball()) or not player.state.on_floor():
@@ -156,15 +168,31 @@ func _on_end() -> void:
 		_plate.position = Vector3(0.0, CREW_HALF + 0.4, -0.4)
 		_plate.rotation = Vector3.ZERO
 		_plate.scale = Vector3.ONE * 0.4
+		_fold_t = FOLD_S if EnemyMotion.motion_scale > 0.0 else 0.0
 
 
 func _pose() -> void:
-	if _plate == null or not _plate.top_level:
+	if _plate == null:
+		return
+	if not _plate.top_level:
+		if _fold_t > 0.0:
+			_fold_t = maxf(0.0, _fold_t - get_physics_process_delta_time())
+			var r := _fold_t / FOLD_S
+			var eased := r * r
+			_plate.position = Vector3(0.0, CREW_HALF + 0.4 + 0.35 * eased, -0.4 - 0.55 * eased)
+			_plate.rotation = Vector3(-0.45 * eased, 0.0, 0.0)
+			_plate.scale = Vector3.ONE * lerpf(0.4, 0.72, eased)
 		return
 	var tilt := 0.0
 	if phase == Phase.WARN:
-		tilt = 0.25 * clampf(_t / warn_seconds, 0.0, 1.0)
+		var d := clampf(_t / DEPLOY_S, 0.0, 1.0)
+		var settle := 1.0 - pow(1.0 - d, 3.0)
+		_plate.scale = Vector3.ONE * lerpf(0.65, 1.0, settle)
+		var u := clampf(_t / warn_seconds, 0.0, 1.0)
+		tilt = 0.28 * (u * u * (3.0 - 2.0 * u))
 	elif phase == Phase.LIVE:
-		tilt = 0.6
+		_plate.scale = Vector3.ONE
+		var k := clampf(_t / KICK_S, 0.0, 1.0)
+		tilt = lerpf(0.28, 0.65, 1.0 - pow(1.0 - k, 3.0))
 	_plate.rotation = Vector3(0.0, 0.0, 0.0)
 	_plate.rotate(_side.cross(Vector3.UP).normalized() if _side.length() > 0.1 else Vector3.FORWARD, tilt)

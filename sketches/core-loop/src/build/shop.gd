@@ -10,6 +10,7 @@ const OddsReadout := preload("res://src/ui/odds_readout.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
+const Consumables := preload("res://src/build/consumables.gd")
 
 # Moss's workshop economy (DESIGN-V2 section 12): the shelf, the reroll, charge cells,
 # sell-back, the heft-locked top shelf and the conversation loop. It has no geometry:
@@ -22,6 +23,7 @@ const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
 # shop_lines_test fails if a line is missing from that file or runs past 12 words.
 
 const SHELF_SIZE := 3
+const CONSUMABLE_STOCK_SIZE := 2
 const SHELF_RARITIES := ["common", "rare"]
 const TOP_RARITIES := ["relic"]
 const FLOOR_RARITIES := ["rare"]
@@ -124,6 +126,7 @@ var build
 var visit := 0
 var inside := false
 var shelf: Array = []
+var consumable_stock: Array = []
 var top := {}
 var rerolls_left := 0
 var bought_this_visit := 0
@@ -142,6 +145,7 @@ var stocks := 0
 var _stage_stocks := {}
 
 var _rng := RandomNumberGenerator.new()
+var _cons_rng := RandomNumberGenerator.new()
 var _left_empty := false
 var _cheapest_left := 0
 
@@ -155,6 +159,7 @@ func reset_run() -> void:
 	visit = 0
 	inside = false
 	shelf = []
+	consumable_stock = []
 	top = {}
 	stocked_for = []
 	stocks = 0
@@ -211,7 +216,9 @@ func _stock_stage(here: Array) -> void:
 	top = {"part_id": hook["part_id"], "table": hook["table"], "lock_class": lock_class, "sold": false} if hook["part_id"] != "" else {}
 	if not carried.is_empty() and not shelf.any(func(entry): return entry["part_id"] == carried["part_id"]):
 		top = carried
-	_stage_stocks[str(here)] = {"shelf": shelf.duplicate(true), "top": top.duplicate(true), "rng": _rng.state}
+	_cons_rng.seed = hash([SEED, ctx.flow.run_key() if ctx.flow != null else ctx.run.run_seed, ctx.run.world, ctx.run.stage, "consumables"])
+	consumable_stock = _stock_consumables()
+	_stage_stocks[str(here)] = {"shelf": shelf.duplicate(true), "consumables": consumable_stock.duplicate(true), "top": top.duplicate(true), "rng": _rng.state}
 
 
 # The last stage's hook, unsold and still above the ball's class, with the class it asked for;
@@ -246,6 +253,7 @@ func rewind_stage() -> void:
 	stocked_for = here
 	rerolls_left = REROLLS_PER_VISIT
 	shelf = kept["shelf"].duplicate(true)
+	consumable_stock = (kept.get("consumables", []) as Array).duplicate(true)
 	top = kept["top"].duplicate(true)
 	# The draws after the stock come back too, so a retry's reroll is the first attempt's reroll.
 	_rng.state = kept["rng"]
@@ -443,6 +451,90 @@ func buy_charge(slot: String) -> Dictionary:
 	bought_this_visit += 1
 	ctx.run.add_part(offer["part_id"], "shop")
 	return _result(true, OK, "moss.bark.charge", offer["part_id"], offer["price"])
+
+
+# ---- Pocket Consumables (W47-C1): cheap cog cartridges & 2-slot belt expansion ----
+
+func _stock_consumables() -> Array:
+	var out: Array = []
+	var picked: Array = []
+	for i in CONSUMABLE_STOCK_SIZE:
+		var cid := Consumables.roll_id(_cons_rng, picked)
+		if cid == "":
+			break
+		picked.append(cid)
+		out.append({"consumable_id": cid, "sold": false})
+	return out
+
+
+func consumable_price(consumable_id: String) -> int:
+	return int(round(Consumables.price_of(consumable_id) * _price_scale()))
+
+
+func consumable_offers() -> Array:
+	var out: Array = []
+	for i in consumable_stock.size():
+		var entry: Dictionary = consumable_stock[i]
+		var cid := String(entry["consumable_id"])
+		var row: Dictionary = Consumables.row_of(cid)
+		var cost := consumable_price(cid)
+		out.append({
+			"index": i,
+			"consumable_id": cid,
+			"name": String(row.get("name", cid)),
+			"price": cost,
+			"sold": bool(entry["sold"]),
+			"icon": String(row.get("icon", "")),
+			"color": row.get("color", Color.WHITE),
+			"affordable": ctx.run.cogs >= cost,
+			"can_hold": ctx.run.can_hold_consumable(),
+		})
+	return out
+
+
+func buy_consumable(index: int) -> Dictionary:
+	if not inside:
+		return _result(false, CLOSED)
+	if index < 0 or index >= consumable_stock.size() or bool(consumable_stock[index]["sold"]):
+		return _result(false, SOLD_OUT)
+	var cid := String(consumable_stock[index]["consumable_id"])
+	if not ctx.run.can_hold_consumable():
+		return _result(false, CAPPED, "", cid)
+	var cost := consumable_price(cid)
+	if not ctx.run.spend_cogs(cost):
+		return _result(false, CANT_AFFORD, "moss.bark.cant_afford", cid, cost)
+	consumable_stock[index]["sold"] = true
+	bought_this_visit += 1
+	ctx.run.add_consumable(cid)
+	return _result(true, OK, "moss.bark.buy", cid, cost)
+
+
+func belt_offer() -> Dictionary:
+	var cost := int(round(Consumables.BELT_PRICE * _price_scale()))
+	var slots: int = ctx.run.consumable_capacity()
+	var max_slots: int = ctx.run.CONSUMABLE_SLOTS_MAX
+	return {
+		"part_id": Consumables.BELT_PART_ID,
+		"price": cost,
+		"slots": slots,
+		"max_slots": max_slots,
+		"can": slots < max_slots,
+		"affordable": ctx.run.cogs >= cost,
+	}
+
+
+func buy_belt_slot() -> Dictionary:
+	if not inside:
+		return _result(false, CLOSED)
+	var offer := belt_offer()
+	if not bool(offer["can"]):
+		return _result(false, CAPPED, "", Consumables.BELT_PART_ID)
+	var cost := int(offer["price"])
+	if not ctx.run.spend_cogs(cost):
+		return _result(false, CANT_AFFORD, "moss.bark.cant_afford", Consumables.BELT_PART_ID, cost)
+	bought_this_visit += 1
+	ctx.run.expand_consumable_belt()
+	return _result(true, OK, "moss.bark.buy", Consumables.BELT_PART_ID, cost)
 
 
 # ---- Sell-back ----

@@ -23,6 +23,7 @@ extends RefCounted
 # (build.gd). An Evolved part gives nothing while an ingredient is missing.
 
 const Palette := preload("res://src/core/palette.gd")
+const ShotBits := preload("res://src/build/shot_bits.gd")
 
 const CATEGORY := "build"
 # Distinct pieces of one maker that wake its trick. The maker's set bonus needs its own count
@@ -267,3 +268,216 @@ static func evolution_problems(table: Dictionary, grew_from: Dictionary, known: 
 
 static func _holds_all(held: Array, parts: Array) -> bool:
 	return parts.all(func(part_id): return part_id in held)
+
+
+# --- W47-C2: Cross-system build-blossoming synergies (NORTHSTAR §4.4, REBASELINE §7) ---
+# Separate from the 14 maker tricks in ROWS so maker-set counts, AlphaDefs/ParkDefs tables and
+# single-maker callouts stay untouched. Each row pairs two distinct build systems and fires in
+# combat at proc depth 1 (SYNERGY / item_proc, bits 0).
+const CROSS_SYSTEM := {
+	"demolition_derby": {
+		"name": "Demolition Derby",
+		"systems": ["mass", "speed"],
+		"tags": ["mass", "speed"],
+		"color": Palette.AMBER,
+		"text": "Shattering heft props fires a 12 m debris shockwave and refills boost.",
+		"radius_m": 12.0,
+		"damage_base": 24.0,
+		"knock": 10.0,
+	},
+	"pendulum_tesla": {
+		"name": "Pendulum Tesla",
+		"systems": ["anchor", "arc"],
+		"tags": ["anchor", "arc"],
+		"color": Palette.ARC,
+		"text": "A taut harpoon cable zaps swept machines and charges special +15% per swing.",
+		"cable_width_m": 1.8,
+		"damage_base": 18.0,
+		"special_charge_share": 0.15,
+	},
+	"ricochet_canyon": {
+		"name": "Ricochet Canyon",
+		"systems": ["bounce", "split"],
+		"tags": ["bounce", "split"],
+		"color": Palette.COPPER,
+		"text": "Firing while wall-carving adds +2 wall bounces and curves shards toward machines.",
+		"extra_bounces": 2,
+		"home_reach_m": 26.0,
+		"home_turn": 0.75,
+	},
+	"thermobaric_dunk": {
+		"name": "Thermobaric Dunk",
+		"systems": ["heat", "kinetic"],
+		"tags": ["heat", "kinetic"],
+		"color": Palette.RUST,
+		"text": "Air-slamming a heated machine launches nearby machines skyward to detonate on impact.",
+		"launch_radius_m": 10.0,
+		"launch_speed": 14.0,
+		"detonate_radius_m": 6.5,
+		"detonate_damage": 28.0,
+		"pin_timeout_s": 1.6,
+	},
+	"gravity_ledger": {
+		"name": "Gravity Ledger",
+		"systems": ["pull", "mass"],
+		"tags": ["pull", "mass"],
+		"color": Palette.VERDIGRIS,
+		"text": "Pulling two or more machines together crushes them for bonus damage and drops cogs.",
+		"cluster_radius_m": 5.5,
+		"crush_damage": 22.0,
+		"cog_count": 3,
+		"cooldown_s": 0.35,
+	},
+	"catalyst_cartridge": {
+		"name": "Catalyst Cartridge",
+		"systems": ["consumable", "active"],
+		"tags": ["consumable", "active"],
+		"color": Palette.SAND,
+		"text": "Using a pocket consumable adds +40% active charge and fires a free visual burst ring.",
+		"active_charge_gain": 0.40,
+		"burst_radius_m": 8.0,
+	},
+}
+
+
+static func cross_system_ids() -> Array:
+	return CROSS_SYSTEM.keys()
+
+
+static func cross_system_row(id: String) -> Dictionary:
+	return (CROSS_SYSTEM.get(id, {}) as Dictionary).duplicate(true)
+
+
+# Cross-system synergies awake for `held` (part id list), `part_info` (Callable(part_id) -> {tags, bits}),
+# and runtime `context` ({heft_class, mass, has_consumable, has_active, has_pull, ...}), in row order.
+static func cross_system_active(held: Array, part_info: Callable, context := {}) -> Array:
+	var out: Array = []
+	for id in CROSS_SYSTEM:
+		if cross_system_awake(id, held, part_info, context):
+			out.append(id)
+	return out
+
+
+static func cross_system_awake(id: String, held: Array, part_info: Callable, context := {}) -> bool:
+	var row: Dictionary = CROSS_SYSTEM.get(id, {})
+	if row.is_empty():
+		return false
+	var systems: Array = row.get("systems", [])
+	if systems.size() != 2:
+		return false
+	return _pair_awake(String(systems[0]), String(systems[1]), held, part_info, context)
+
+
+static func cross_system_declarations() -> Array:
+	var cards: Array = []
+	for key in CROSS_SYSTEM:
+		var row: Dictionary = CROSS_SYSTEM[key]
+		var systems: Array = row["systems"]
+		cards.append({
+			"id": key,
+			"category": CATEGORY,
+			"name": row["name"],
+			"hint": "%s + %s" % [String(systems[0]).capitalize(), String(systems[1]).capitalize()],
+			"clue": "Pair %s with %s" % [String(systems[0]), String(systems[1])],
+			"text": row["text"],
+			"systems": systems.duplicate(),
+			"tags": row["tags"].duplicate(),
+		})
+	return cards
+
+
+static func cross_system_problems() -> Array:
+	var found: Array = []
+	var pairs := {}
+	for id in CROSS_SYSTEM:
+		var row: Dictionary = CROSS_SYSTEM[id]
+		for key in ["name", "text", "systems", "tags", "color"]:
+			if not row.has(key):
+				found.append("%s missing %s" % [id, key])
+		var systems: Array = row.get("systems", [])
+		if systems.size() != 2 or String(systems[0]) == String(systems[1]):
+			found.append("%s must pair two distinct systems" % id)
+		else:
+			var a := String(systems[0])
+			var b := String(systems[1])
+			var pk := (a + "+" + b) if a < b else (b + "+" + a)
+			if pairs.has(pk):
+				found.append("%s duplicates system pair %s of %s" % [id, pk, pairs[pk]])
+			pairs[pk] = id
+		if String(row.get("text", "")).strip_edges().is_empty():
+			found.append("%s has empty text" % id)
+	return found
+
+
+static func _pair_awake(sys_a: String, sys_b: String, held: Array, part_info: Callable, context: Dictionary) -> bool:
+	var ctx_a := _context_has_system(sys_a, context)
+	var ctx_b := _context_has_system(sys_b, context)
+	if ctx_a and ctx_b:
+		return true
+	var parts_a := {}
+	var parts_b := {}
+	var seen := {}
+	for raw_id in held:
+		var part_id := String(raw_id)
+		if seen.has(part_id):
+			continue
+		seen[part_id] = true
+		var info: Dictionary = part_info.call(part_id) if part_info.is_valid() else {}
+		var tags: Array = info.get("tags", [])
+		var bits: int = int(info.get("bits", 0))
+		if _part_matches_system(sys_a, part_id, tags, bits):
+			parts_a[part_id] = true
+		if _part_matches_system(sys_b, part_id, tags, bits):
+			parts_b[part_id] = true
+	if ctx_a and not parts_b.is_empty():
+		return true
+	if ctx_b and not parts_a.is_empty():
+		return true
+	for pa in parts_a:
+		for pb in parts_b:
+			if pa != pb:
+				return true
+	return false
+
+
+static func _part_matches_system(system: String, part_id: String, tags: Array, bits: int) -> bool:
+	match system:
+		"mass":
+			return "mass" in tags
+		"speed":
+			return "speed" in tags
+		"anchor":
+			return "anchor" in tags
+		"arc":
+			return "arc" in tags or "chain" in tags
+		"bounce":
+			return ShotBits.has(bits, ShotBits.bit("bounce")) or "chain" in tags or "bounce" in tags
+		"split":
+			return ShotBits.has(bits, ShotBits.bit("split")) or "split" in tags
+		"heat":
+			return ShotBits.has(bits, ShotBits.bit("heat")) or "arc" in tags or "heat" in tags
+		"kinetic":
+			return "kinetic" in tags or part_id in ["drop_weight", "fault_hammer", "ram_plow"]
+		"pull":
+			return ShotBits.has(bits, ShotBits.bit("pull")) or "anchor" in tags or "pull" in tags
+		"consumable":
+			return "consumable" in tags
+		"active":
+			return "active" in tags
+	return false
+
+
+static func _context_has_system(system: String, context: Dictionary) -> bool:
+	if context.is_empty():
+		return false
+	match system:
+		"mass":
+			return int(context.get("heft_class", 0)) >= 2 or float(context.get("mass", 0.0)) >= 120.0
+		"pull":
+			return bool(context.get("has_pull", false))
+		"consumable":
+			return bool(context.get("has_consumable", false))
+		"active":
+			return bool(context.get("has_active", false))
+		_:
+			return bool(context.get("has_" + system, false))

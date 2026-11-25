@@ -335,6 +335,50 @@
    }
   },
   {
+   "id": "ally_husk_clip",
+   "path": "res://assets/models/ally_husk/ally_husk_clip.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-TALLY-B-CODE src/presentation/ally_husk_look.gd (Ghost Shift ownership overlay: amber-sparking copper alligator jumper clip attached x2 per raised Fleet husk; sockets socket_bite, socket_spark, socket_lead)",
+   "provenance": {
+    "recipe": "tools/blender/ally_husk_overlay.py",
+    "spec": "SCRAPKEEP-REBASELINE-MASTER-BIBLE.md §2.3, §2.5, §6.1, §9 Wave 47D; SCRAPKEEP-REBASELINE-OPUS-CRITIQUE.md Blocker 5 & N9; OPUS-TASTE-AND-MECHANICS-RUBRIC.md §2 Tally Ghost Shift & B6"
+   }
+  },
+  {
+   "id": "ally_husk_lead",
+   "path": "res://assets/models/ally_husk/ally_husk_lead.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-TALLY-B-CODE src/presentation/ally_husk_look.gd (Ghost Shift ownership overlay: 1.0 m arched insulated copper jumper lead bridge connecting bitten clips to mast; sockets socket_start, socket_end)",
+   "provenance": {
+    "recipe": "tools/blender/ally_husk_overlay.py",
+    "spec": "SCRAPKEEP-REBASELINE-MASTER-BIBLE.md §2.3, §2.5, §6.1, §9 Wave 47D; SCRAPKEEP-REBASELINE-OPUS-CRITIQUE.md Blocker 5 & N9; OPUS-TASTE-AND-MECHANICS-RUBRIC.md §2 Tally Ghost Shift & B6"
+   }
+  },
+  {
+   "id": "ally_husk_mast",
+   "path": "res://assets/models/ally_husk/ally_husk_mast.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-TALLY-B-CODE src/presentation/ally_husk_look.gd (Ghost Shift B6 silhouette breaker: raised amber-sparking copper Jacob's-ladder clip mast & frayed 3-strand trailing copper lead; sockets socket_base, socket_arc_left/right, socket_lead_tip, socket_clip_feed_l/r)",
+   "provenance": {
+    "recipe": "tools/blender/ally_husk_overlay.py",
+    "spec": "SCRAPKEEP-REBASELINE-MASTER-BIBLE.md §2.3, §2.5, §6.1, §9 Wave 47D; SCRAPKEEP-REBASELINE-OPUS-CRITIQUE.md Blocker 5 & N9; OPUS-TASTE-AND-MECHANICS-RUBRIC.md §2 Tally Ghost Shift & B6"
+   }
+  },
+  {
+   "id": "ally_husk_tag",
+   "path": "res://assets/models/ally_husk/ally_husk_tag.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-TALLY-B-CODE src/presentation/ally_husk_look.gd (Ghost Shift ownership overlay: forged oxblood/amber Hollerith punched work-order card tag wedged in work-order slot; sockets socket_slot, socket_tick_0..2)",
+   "provenance": {
+    "recipe": "tools/blender/ally_husk_overlay.py",
+    "spec": "SCRAPKEEP-REBASELINE-MASTER-BIBLE.md §2.3, §2.5, §6.1, §9 Wave 47D; SCRAPKEEP-REBASELINE-OPUS-CRITIQUE.md Blocker 5 & N9; OPUS-TASTE-AND-MECHANICS-RUBRIC.md §2 Tally Ghost Shift & B6"
+   }
+  },
+  {
    "id": "ambient_bighorn_lamb",
    "path": "res://assets/models/ambient/bighorn_lamb.glb",
    "class": "ambient",
@@ -1539,6 +1583,102 @@
    }
   },
   {
+   "id": "cons_anchor_balloon",
+   "path": "res://assets/models/consumables/cons_anchor_balloon.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Deployed 18 m Sky-Anchor balloon world prop spawned by Anchor Flare. Bone/verdigris ribbed gas-bag, copper crown cap, 360-deg MINT #8bf0d3 grapple bite ring collar, steel tow-eye and SocketBite empty. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_anchor_flare",
+   "path": "res://assets/models/consumables/cons_anchor_flare.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Pocket Consumable cartridge: Anchor Flare (Highdraft Roosts). Upright ribbed brass/copper canister + bright mint #8bf0d3 bite ring + copper beacon cap + folded anchor flukes. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_cap_charge",
+   "path": "res://assets/models/consumables/cons_cap_charge.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Pocket Consumable cartridge: Blasting Cap (Redjaw Workshops). Copper/charcoal octagonal demolition satchel + 3 blasting cap studs + steel pull-pin ring; zero HAZARD #ff5a3c. Closed watertight procedural bmesh, canon palette.gd hexes."
+   }
+  },
+  {
+   "id": "cons_drop_cradle",
+   "path": "res://assets/models/consumables/cons_drop_cradle.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "World drop pickup cradle prop for Pocket Consumables. Worn-steel & copper 3-foot ring with warm AMBER #e5a044 offering collar and SocketCartridge empty. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_foreman_memo",
+   "path": "res://assets/models/consumables/cons_foreman_memo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Pocket Consumable cartridge: Foreman's Memo (The Mind). Seamless cast Old Works petrol #365754 casing (zero rivets, zero brass, zero emission) with ONE flat Palette.KINDNESS #d936b0 stripe panel only (B6). Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_moss_patch",
+   "path": "res://assets/models/consumables/cons_moss_patch.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Pocket Consumable cartridge: Moss's Emergency Patch (Keeper). Bolted bone-and-verdigris octagonal repair cartridge with steel cross-rivet clamp, copper center nut and side toggle lever. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_nitro_siphon",
+   "path": "res://assets/models/consumables/cons_nitro_siphon.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Pocket Consumable cartridge: Nitro Siphon (Spillway Works). Pressurized brass/amber glass siphon cartridge with warm golden-amber #e5a044 reservoir, copper cage ribs, intake bell nozzle and pressure gauge. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_overclock_card",
+   "path": "res://assets/models/consumables/cons_overclock_card.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Pocket Consumable cartridge: Overclock Punchcard (Fleet Surplus). Corner-notched Hollerith punched brass-bound card cartridge with AMBER #e5a044 relay pin and edge connector teeth. Closed watertight procedural bmesh."
+   }
+  },
+  {
    "id": "cottonwood_crown",
    "path": "res://assets/models/cottonwood_crown.glb",
    "class": "prop",
@@ -2126,6 +2266,325 @@
     "recipe": "tools/blender/geyser_launcher.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/geyser_launcher_101.png",
     "notes": "assets/models/geyser_launcher.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "grapple_cannon_drive",
+   "path": "res://assets/models/grapple/grapple_cannon_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Cannon G1 drive: recoil anchor winch drum)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_cannon_head",
+   "path": "res://assets/models/grapple/grapple_cannon_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Cannon G1 head: explosive piton with shaped-charge cap)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_cannon_line",
+   "path": "res://assets/models/grapple/grapple_cannon_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Cannon G1 line: armored steel cable 1 m tile)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_cannon_mount",
+   "path": "res://assets/models/grapple/grapple_cannon_mount.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Cannon G1 mount under Pod: side-hub recoil winch bracket and lock dog)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_kest_drive",
+   "path": "res://assets/models/grapple/grapple_kest_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Kest G1 drive: spring reel under perch)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_kest_head",
+   "path": "res://assets/models/grapple/grapple_kest_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Kest G1 head: slotted vane-fluke grapnel)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_kest_line",
+   "path": "res://assets/models/grapple/grapple_kest_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Kest G1 line: light braided aviation wire 1 m tile)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_kest_mount",
+   "path": "res://assets/models/grapple/grapple_kest_mount.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Kest G1 mount under Pod: spring reel frame and line-riding satchel trolley)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_rivet_drive",
+   "path": "res://assets/models/grapple/grapple_rivet_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Rivet G1 drive: heavy capstan spool)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_rivet_head",
+   "path": "res://assets/models/grapple/grapple_rivet_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Rivet G1 head: barbed harpoon with flip-out toggle)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_rivet_line",
+   "path": "res://assets/models/grapple/grapple_rivet_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Rivet G1 line: taut braided steel cable 1 m tile)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_rivet_mount",
+   "path": "res://assets/models/grapple/grapple_rivet_mount.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Rivet G1 mount under Pod/WeaponRing: capstan cradle and level-wind cable guide)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_sable_drive",
+   "path": "res://assets/models/grapple/grapple_sable_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Sable G1 drive: 3 o'clock grapple winch drum)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_sable_head",
+   "path": "res://assets/models/grapple/grapple_sable_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Sable G1 head: forged tow hook with snap latch)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_sable_line",
+   "path": "res://assets/models/grapple/grapple_sable_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Sable G1 line: braided steel cable 1 m tile)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_sable_mount",
+   "path": "res://assets/models/grapple/grapple_sable_mount.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Sable G1 mount under Pod: 3 o'clock bracket, fairlead and brake lever)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_tarn_drive",
+   "path": "res://assets/models/grapple/grapple_tarn_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Tarn G1 drive: Era-2 rear pull drum)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_tarn_head",
+   "path": "res://assets/models/grapple/grapple_tarn_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Tarn G1 head: articulated worn-steel claw launching on cable)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_tarn_line",
+   "path": "res://assets/models/grapple/grapple_tarn_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Tarn G1 line: heavy hemp/wire rope 1 m tile)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_tarn_mount",
+   "path": "res://assets/models/grapple/grapple_tarn_mount.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Tarn G1 mount under Pod/WeaponRing: rear drum frame, pawl and flank fairlead)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "sluice_valve_body",
+   "path": "res://assets/models/grapple/sluice_valve_body.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE Spillway grapple-yank sluice valve binder (recipe_props enamel slot)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_sluice_valve.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g12-w1-setpieces-contraptions-destructibles.png"
+   }
+  },
+  {
+   "id": "sluice_valve_wheel",
+   "path": "res://assets/models/grapple/sluice_valve_wheel.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE Spillway grapple-yank sluice valve binder (recipe_props steel slot; rotates on yank via socket_bite)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_sluice_valve.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g12-w1-setpieces-contraptions-destructibles.png"
+   }
+  },
+  {
+   "id": "grapple_mut_det_cord_line",
+   "path": "res://assets/models/grapple_muts/grapple_mut_det_cord_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Det-Cord Line, burst/split, swaps Line: banded charcoal & brass cord with fuse knots every metre)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_mut_dragnet_siphon_head",
+   "path": "res://assets/models/grapple_muts/grapple_mut_dragnet_siphon_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Dragnet Siphon, salvage, swaps Head: open mesh basket head with salvage rings & mouth bone)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_mut_hot_wire_line",
+   "path": "res://assets/models/grapple_muts/grapple_mut_hot_wire_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Hot-Wire Arc Cutter, heat, swaps Line: amber-orange internal glow + heat-coil ribbing)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_mut_live_bus_head",
+   "path": "res://assets/models/grapple_muts/grapple_mut_live_bus_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Live-Bus Conductor, arc/chain, swaps Head: ceramic/bone insulator bells + copper bus bar, AMBER #E5A044)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_mut_sonic_snap_sling_drive",
+   "path": "res://assets/models/grapple_muts/grapple_mut_sonic_snap_sling_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Sonic Snap-Sling, speed, swaps Drive: coil-spring drum with visible ratchet pawl bone)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_mut_tether_slam_drive",
+   "path": "res://assets/models/grapple_muts/grapple_mut_tether_slam_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Tether-Slam Clutch, pull/kinetic, swaps Drive: heavy flywheel clutch drum with inertia weights)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_mut_wrecking_flail_head",
+   "path": "res://assets/models/grapple_muts/grapple_mut_wrecking_flail_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Wrecking Flail, mass/heft, swaps Head: weighted cast-iron demolition shackle head)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
    }
   },
   {
@@ -40759,7 +41218,7 @@
    "provenance": {
     "recipe": "tools/blender/shell_tally.py",
     "helper": "tools/blender/shell_base.py hoberman()",
-    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/hero.png, chase.png, sheet.png; base/base-hero.png, mechanism.png"
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/hero.png, chase.png, sheet.png; base/base-hero.png, mechanism.png; W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png, g11-universal-grapple-rigs-b.png"
    },
    "exception": {
     "draws": 11
@@ -40775,7 +41234,7 @@
    "provenance": {
     "recipe": "tools/blender/shell_tally.py --variant abacus",
     "helper": "tools/blender/shell_base.py hoberman()",
-    "concept": "CUSTOMIZE.md section 8 (shell_tally_abacus); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png"
+    "concept": "CUSTOMIZE.md section 8 (shell_tally_abacus); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png; W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png, g11-universal-grapple-rigs-b.png"
    },
    "exception": {
     "draws": 11
@@ -40790,7 +41249,7 @@
    "loader": "src/presentation/hero_assets.gd fit_shell_into (heft layer, class II)",
    "provenance": {
     "recipe": "tools/blender/shell_tally_plates.py",
-    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (GAP PANEL)"
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (GAP PANEL); W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png"
    }
   },
   {
@@ -40805,7 +41264,7 @@
    "exception_why": "ROSTER-LOOK section 5: class III adds plates on the Pod part and thicker tread caps on the Core part, two parts and two draws; the coordinator's Hoberman pilot mecha call (docs/decisions.tsv w13-PD 2026-10-10T21:29:13: shell cap 16, class III layer up to 2, other layers 1) admits it",
    "provenance": {
     "recipe": "tools/blender/shell_tally_plates.py",
-    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (GAP PANEL, heft III)"
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (GAP PANEL, heft III); W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png"
    }
   },
   {
@@ -40816,7 +41275,7 @@
    "loader": "src/presentation/hero_assets.gd fit_shell_into (heft layer, class IV)",
    "provenance": {
     "recipe": "tools/blender/shell_tally_plates.py",
-    "concept": "pilots/tally.md section 5 (class IV drum hoods); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png"
+    "concept": "pilots/tally.md section 5 (class IV drum hoods); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png; W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png"
    },
    "exception": {
     "draws": 2
@@ -40831,7 +41290,7 @@
    "loader": "src/presentation/hero_assets.gd fit_shell_into (heft layer, class V; Replace.Flywheel.R and .L)",
    "provenance": {
     "recipe": "tools/blender/shell_tally_plates.py",
-    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (heft V)"
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (heft V); W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png"
    },
    "exception": {
     "draws": 2
@@ -41261,6 +41720,10 @@
   "adit_mouth",
   "adit_mouth_detail1",
   "adit_mouth_detail2",
+  "ally_husk_clip",
+  "ally_husk_lead",
+  "ally_husk_mast",
+  "ally_husk_tag",
   "ambient_bighorn_lamb",
   "ambient_canyon_wren",
   "ambient_dam_swift",
@@ -41414,6 +41877,14 @@
   "compressor_cart_a_lod1_tripo",
   "compressor_cart_a_lod2_tripo",
   "compressor_cart_a_tripo",
+  "cons_anchor_balloon",
+  "cons_anchor_flare",
+  "cons_cap_charge",
+  "cons_drop_cradle",
+  "cons_foreman_memo",
+  "cons_moss_patch",
+  "cons_nitro_siphon",
+  "cons_overclock_card",
   "cottonwood_crown",
   "cottonwood_detail1",
   "cottonwood_detail2",
@@ -42628,6 +43099,33 @@
   "geyser_launcher_drum",
   "geyser_launcher_fittings",
   "geyser_launcher_grate",
+  "grapple_cannon_drive",
+  "grapple_cannon_head",
+  "grapple_cannon_line",
+  "grapple_cannon_mount",
+  "grapple_kest_drive",
+  "grapple_kest_head",
+  "grapple_kest_line",
+  "grapple_kest_mount",
+  "grapple_mut_det_cord_line",
+  "grapple_mut_dragnet_siphon_head",
+  "grapple_mut_hot_wire_line",
+  "grapple_mut_live_bus_head",
+  "grapple_mut_sonic_snap_sling_drive",
+  "grapple_mut_tether_slam_drive",
+  "grapple_mut_wrecking_flail_head",
+  "grapple_rivet_drive",
+  "grapple_rivet_head",
+  "grapple_rivet_line",
+  "grapple_rivet_mount",
+  "grapple_sable_drive",
+  "grapple_sable_head",
+  "grapple_sable_line",
+  "grapple_sable_mount",
+  "grapple_tarn_drive",
+  "grapple_tarn_head",
+  "grapple_tarn_line",
+  "grapple_tarn_mount",
   "great_room_deck",
   "great_room_deck_detail1",
   "great_room_deck_detail2",
@@ -43139,6 +43637,8 @@
   "sluice_shed_a_lod1_tripo",
   "sluice_shed_a_lod2_tripo",
   "sluice_shed_a_tripo",
+  "sluice_valve_body",
+  "sluice_valve_wheel",
   "spil9",
   "spillway_tunnel",
   "spillway_tunnel_detail1",

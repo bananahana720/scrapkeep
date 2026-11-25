@@ -6,6 +6,9 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const TierMark := preload("res://src/build/tier_mark.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Consumables := preload("res://src/build/consumables.gd")
 
 # A cracked wall and the buried cache behind it, the secrets family (LOOP-REDESIGN
 # section 9): a verdigris concrete pocket with a charcoal groove, its open side walled
@@ -78,6 +81,7 @@ void fragment() {
 var state := SEALED
 var offers: Array = []
 var taken := ""
+var consumable_dropped := ""
 # An authored cache can set relic_guaranteed to always hold one; relic_chance is the test seam.
 var relic_guaranteed := false
 var relic_chance := RELIC_CHANCE
@@ -118,6 +122,8 @@ func build() -> void:
 	_build_rim_glow()
 	ctx.events.slammed.connect(_on_slammed)
 	ctx.events.world_fact.connect(_on_world_fact)
+	if ctx.events.has_signal("interact_fired"):
+		ctx.events.interact_fired.connect(_on_interact_fired)
 
 
 # The lane spot is used only inside the play rect (less LANE_EDGE) and on ground that is level over
@@ -245,8 +251,21 @@ func crumble() -> void:
 
 func fire() -> bool:
 	state = PICKING
-	_lid.position += Vector3(0.0, 0.6, -0.4)
-	_lid.rotation.x = -0.9
+	var lid_target := _lid.position + Vector3(0.0, 0.6, -0.4)
+	var animate := EnemyMotion.motion_scale > 0.0 and is_inside_tree()
+	if animate:
+		_lid.rotation.x = -0.06
+		var tw := _lid.create_tween()
+		tw.set_parallel(true)
+		tw.tween_property(_lid, "position", lid_target, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(_lid, "rotation:x", -0.9, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	else:
+		_lid.position = lid_target
+		_lid.rotation.x = -0.9
+	if is_inside_tree():
+		var lid_at := _lid.global_position + Vector3.UP * 0.5
+		FxLibrary.burst(self, "brass_spark", lid_at, 14, Palette.BRASS)
+		FxLibrary.burst(self, "steam_puff", lid_at, 6)
 	offers = Parts.roll(system.luck(id), PICK_RARITIES, ctx.run.class_id(), ctx.run.parts, PICKS)
 	var relic := _relic_offer()
 	if relic != "":
@@ -263,6 +282,13 @@ func fire() -> bool:
 		_inside.append(_on(p, ball))
 		if not shown:
 			continue
+		if animate:
+			var ped: Node3D = p["node"]
+			var top_y := ped.position.y
+			ped.position.y = top_y - 0.85
+			var ptw := ped.create_tween()
+			ptw.tween_interval(float(i) * 0.06)
+			ptw.tween_property(ped, "position:y", top_y, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		var d: Resource = Parts.def(offers[i])
 		var rarity: String = d.rarity if d != null else "common"
 		_set_gem(p["gem"], rarity)
@@ -486,9 +512,31 @@ static func _attach(parts: Array, part_name: String, parent: Node3D) -> MeshInst
 # take() publishes cache_spent at this cache; hearing its own fact, the cache puts its keeper flag up on the roof's
 # front corner, over the open wall, where it reads from every side.
 func _on_world_fact(kind: String, at: Vector3) -> void:
-	if kind != "cache_spent" or at != global_position or flag != null:
+	if kind != "cache_spent" or at != global_position:
+		return
+	_drop_consumable()
+	if flag != null:
 		return
 	flag = raise_flag(self, to_global(Vector3(-HALF_W + 1.2, HEIGHT + 1.0, HALF_D - 0.6)), UiTokens.reduced_motion)
+
+
+func _on_interact_fired(fam: String, device_id: String, _at: Vector3) -> void:
+	if fam == family and device_id == id:
+		_drop_consumable()
+
+
+func _drop_consumable() -> void:
+	if consumable_dropped != "" or system == null:
+		return
+	consumable_dropped = Consumables.roll_id(system.luck(id + ":consumable"))
+	if consumable_dropped != "" and ctx != null and ctx.spawner != null and ctx.spawner.has_method("drop_consumable"):
+		var drop_local := Vector3(0.0, ground_y(Vector3(0.0, 0.0, 0.5)), 0.5)
+		ctx.spawner.drop_consumable(consumable_dropped, to_global(drop_local))
+
+
+func _exit_tree() -> void:
+	if ctx != null and ctx.events != null and ctx.events.has_signal("interact_fired") and ctx.events.interact_fired.is_connected(_on_interact_fired):
+		ctx.events.interact_fired.disconnect(_on_interact_fired)
 
 
 # The keeper flag under parent with its foot at `at` (world), sprung up from its coil unless still, its cloth swaying
