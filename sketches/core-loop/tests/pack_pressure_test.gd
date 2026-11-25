@@ -157,8 +157,8 @@ func _identity() -> void:
 	for key in ["pack.lead_by_stage", "pack.crew_extra_by_stage", "pack.rest_by_stage", "pack.flank_by_stage", "ground.churn_by_stage", "hazard.boil_by_stage"]:
 		_t.eq("01 %s is at its default with no flag" % key, ChallengeDials.value(key), ChallengeDials.DEFAULTS[key])
 	_t.eq("01b silt boils ship on world 1 at strength 2, nowhere else", ChallengeDials.value("hazard.boil_by_stage"), [2.0, 2.0, 0.0, 0.0, 0.0, 0.0])
-	_t.eq("01c the lead ships at half across all stages (wave 37 unit D1)", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
-	_t.eq("02 a dam crew reads the half lead, none of it kept at cruise, and nothing else", PackPressure.crew_row(1), {"lead": 0.5, "lead_cruise": 0.0, "rest": 1.0, "flank": 0.0})
+	_t.eq("01c W46-S1: the lead ships at 0.7 on stage 1 and half on stages 2 to 6", ChallengeDials.value("pack.lead_by_stage"), [0.7, 0.5, 0.5, 0.5, 0.5, 0.5])
+	_t.eq("02 a dam crew reads the 0.7 lead, none of it kept at cruise, and nothing else", PackPressure.crew_row(1), {"lead": 0.7, "lead_cruise": 0.0, "rest": 1.0, "flank": 0.0})
 	_t.eq("02b a Dig crew inherits the half lead and cruise fade", PackPressure.crew_row(3), {"lead": 0.5, "lead_cruise": 0.0, "rest": 1.0, "flank": 0.0})
 	_t.eq("03 no extra chasers", PackPressure.crew_extra(1), 0)
 

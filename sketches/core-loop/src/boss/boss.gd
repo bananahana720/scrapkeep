@@ -566,6 +566,8 @@ func _step_cranes(delta: float, ball: Vector3) -> void:
 			_next_attack = clock + 0.25
 	for i in 2:
 		_step_crane(i, delta, ball)
+		if not ctx.flow.in_play():
+			return
 
 
 # The sector is centred on the ground under the crane's pivot and aimed at the ball's
@@ -613,6 +615,8 @@ func _step_crane(i: int, delta: float, ball: Vector3) -> void:
 			at = _head(h, lerpf(h.a_from, h.a_to, h.live_fraction()), head_r)
 			if not c["caught"] and h.contains(ball) and _swept(h, ball) and not _ball_cruising():
 				_crane_catch(i, ball, at)
+				if not ctx.flow.in_play():
+					return
 		c["hold_at"] = at
 	elif c.get("held", 0) > 0:
 		at = c["hold_at"]
@@ -643,12 +647,12 @@ func _crane_catch(i: int, ball: Vector3, magnet_at: Vector3) -> void:
 	c["caught"] = true
 	catches += 1
 	_tug(ball, magnet_at)
-	if ctx.run.mass < 1.0:
-		return
-	var steal_share := Rules.REEL_STEAL_SHARE if reeling() else Rules.STEAL_SHARE
-	var steal_cap := Rules.REEL_STEAL_MAX if reeling() else Rules.STEAL_MAX
-	var amount := clampi(int(round(ctx.run.mass * steal_share)), Rules.STEAL_MIN, steal_cap)
-	var taken: int = ctx.run.lose_scrap(amount, ball, "crane")
+	var taken := 0
+	if ctx.run.mass >= 1.0:
+		var steal_share := Rules.REEL_STEAL_SHARE if reeling() else Rules.STEAL_SHARE
+		var steal_cap := Rules.REEL_STEAL_MAX if reeling() else Rules.STEAL_MAX
+		var amount := clampi(int(round(ctx.run.mass * steal_share)), Rules.STEAL_MIN, steal_cap)
+		taken = ctx.run.lose_scrap(amount, ball, "crane")
 	if not reeling():
 		ctx.run.damage(ChallengeDials.damage("brindle", Rules.CRANE_DAMAGE, phase), "crane")
 		if not ctx.flow.in_play():
