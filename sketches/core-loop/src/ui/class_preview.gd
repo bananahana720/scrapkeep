@@ -455,12 +455,10 @@ func _build_props() -> void:
 			for i in 3:
 				var card := BoxMesh.new()
 				card.size = Vector3(1.3, 0.14, 1.1)
-				_prop("plate%d" % i, card, Palette.LEDGER, 0.0)
-			_prop("surge", _torus(1.1, 1.25), def.color, 1.8)
-			var stamp := BoxMesh.new()
-			stamp.size = Vector3(1.8, 0.04, 1.8)
-			_prop("stamp", stamp, def.color, 1.2)
-			_prop("slam", _torus(0.9, 1.05), def.color, 1.8)
+				_prop("plate%d" % i, card, Palette.COPPER, 0.0)
+			_prop("surge", _torus(1.1, 1.25), Palette.AMBER, 1.8)
+			_prop("stamp", _torus(0.75, 0.92), Palette.COPPER, 1.2)
+			_prop("slam", _torus(0.9, 1.05), Palette.AMBER, 1.8)
 
 
 func _process(delta: float) -> void:

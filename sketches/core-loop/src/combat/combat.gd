@@ -4110,7 +4110,7 @@ func _run_gather(point: Vector3, valid: bool) -> bool:
 	var at := _floor_at(point + Vector3.UP)
 	plate = {"at": at, "until": _clock + Weapons.GATHER_SECONDS}
 	_gather_tick = 0.0
-	effects.ring(at, Weapons.GATHER_RADIUS, ClassDef.TALLY_COLOR)
+	effects.ring(at, Weapons.GATHER_RADIUS, Palette.COPPER)
 	return true
 
 
@@ -4150,14 +4150,15 @@ func _run_balance(point: Vector3, valid: bool, shot_desc := {}, source := "weapo
 		_ledger_hit(enemy, damage, point, Weapons.LEDGER_KNOCK, source)
 		hits += 1
 		if paid:
-			# PILOT-CADENCE.md §5.3: PAID stamp on the machine in ledger cream (never mint).
-			effects.ring(enemy.global_position, 1.35, Palette.LEDGER_CREAM)
-			effects.spark(enemy.global_position + Vector3.UP * 1.1, Palette.LEDGER_CREAM)
+			# Beat-window wire-tap discharge in warm amber (never mint).
+			effects.ring(enemy.global_position, 1.35, Palette.AMBER)
+			effects.spark(enemy.global_position + Vector3.UP * 1.1, Palette.AMBER)
 		if not is_proc:
 			_settle_ink(enemy)
-	var cue_color: Color = Palette.LEDGER_CREAM if paid else ClassDef.TALLY_COLOR
+	var cue_color: Color = Palette.LEDGER_CREAM if paid else Palette.COPPER
 	effects.ring(point, Weapons.BALANCE_RADIUS, cue_color)
 	if paid:
+		effects.ring(point, Weapons.BALANCE_RADIUS * 0.72, Palette.AMBER)
 		effects.shockwave(point, Weapons.BALANCE_RADIUS, Palette.LEDGER_CREAM)
 	if not is_proc:
 		last_card["hits"] = hits
@@ -4207,7 +4208,7 @@ func _link_clips_world(anchor: Vector3, fraction: float, mult: float) -> void:
 	link_group = _new_link_group(Weapons.CLIP_POST_SECONDS, mult)
 	clip_post = {"at": anchor, "until": _clock + Weapons.CLIP_POST_SECONDS, "shape": _clip_ring(anchor, Weapons.CLIP_POST_RADIUS)}
 	ctx.player.indicator.set_shape("tally_post", clip_post["shape"])
-	effects.ring(anchor, Weapons.CLIP_POST_RADIUS, ClassDef.TALLY_COLOR)
+	effects.ring(anchor, Weapons.CLIP_POST_RADIUS, Palette.COPPER)
 	last_card = {"card": "link_clips", "at": anchor, "hits": 0, "spent": false}
 
 
@@ -4240,7 +4241,7 @@ func _new_link_group(seconds: float, mult: float) -> Dictionary:
 func _add_clip(enemy: Node3D) -> void:
 	(link_group["ids"] as Array).append(enemy.get_instance_id())
 	link_group["until"] = maxf(float(link_group["until"]), _clock + Weapons.LINK_SECONDS)
-	effects.arc(ctx.player.ball_position(), enemy.global_position, ClassDef.TALLY_COLOR)
+	effects.arc(ctx.player.ball_position(), enemy.global_position, Palette.AMBER)
 	_grant_pressure(Weapons.CLIP_PRESSURE)
 
 
@@ -4296,7 +4297,7 @@ func _on_card_struck(enemy: Node3D, kind: String, force: float) -> void:
 		if other == null or not is_instance_valid(other) or other.is_dead():
 			continue
 		var to: Vector3 = other.global_position
-		effects.arc(from, to, ClassDef.TALLY_COLOR)
+		effects.arc(from, to, Palette.AMBER)
 		_ledger_hit(other, damage, from, Weapons.LEDGER_KNOCK, "weapon")
 	if bool(link_group.get("double", false)) and not bool(link_group.get("jumped", false)):
 		link_group["jumped"] = true
@@ -4322,7 +4323,7 @@ func _clip_jump(from: Vector3, damage: float) -> void:
 	if best == null:
 		return
 	link_group["jump_to"] = best.get_instance_id()
-	effects.arc(from, best.global_position, ClassDef.TALLY_COLOR)
+	effects.arc(from, best.global_position, Palette.AMBER)
 	_ledger_hit(best, damage, from, Weapons.LEDGER_KNOCK, "item_proc")
 
 
@@ -4411,7 +4412,7 @@ static func _ink_tick() -> ArrayMesh:
 	material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	material.no_depth_test = true
-	material.albedo_color = ClassDef.TALLY_COLOR
+	material.albedo_color = Palette.AMBER
 	_ink_mesh.surface_set_material(0, material)
 	return _ink_mesh
 
@@ -4476,7 +4477,7 @@ func tally_tech(id: String, _beat: int, ball: Vector3, aim: Vector3, heft: float
 		if ground == null:
 			return 0
 		var radius: float = Weapons.AUDIT_STAMP_RADIUS + float(ultimate._knob("ult_volley", 0))
-		effects.ring(ground, radius, ClassDef.TALLY_COLOR)
+		effects.ring(ground, radius, Palette.COPPER)
 		for enemy in _tally_enemies():
 			if in_ring(ground, radius, enemy):
 				_piece_hit(enemy, Ultimate.VOLLEY_DAMAGE * heft, ground, Weapons.AUDIT_STAMP_KNOCK)
@@ -4486,7 +4487,7 @@ func tally_tech(id: String, _beat: int, ball: Vector3, aim: Vector3, heft: float
 		if knot == null:
 			return 0
 		_fly_plates.append({"at": knot, "until": _clock + Weapons.FLY_PLATE_SECONDS, "tick": 0.0})
-		effects.ring(knot, Weapons.GATHER_RADIUS, ClassDef.TALLY_COLOR)
+		effects.ring(knot, Weapons.GATHER_RADIUS, Palette.COPPER)
 		var near: Array = []
 		for enemy in _tally_enemies():
 			var gap := _flat_gap(enemy.global_position, knot)
@@ -4497,7 +4498,7 @@ func tally_tech(id: String, _beat: int, ball: Vector3, aim: Vector3, heft: float
 			made += _ride_clip(entry[1], cap)
 	else:
 		for enemy in _volley_picks(ball, aim, ultimate.volley_targets()):
-			effects.arc(ball + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, ClassDef.TALLY_COLOR)
+			effects.arc(ball + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, Palette.AMBER)
 			_piece_hit(enemy, Ultimate.VOLLEY_DAMAGE * heft, ball, Weapons.LEDGER_KNOCK)
 			made += _ride_clip(enemy, cap)
 	return made
@@ -4595,7 +4596,7 @@ func tally_peak(id: String, at: Vector3) -> void:
 		_gather_tick = 0.0
 	plate["radius"] = ultimate.landing_radius() + (Weapons.FLY_LANDING_BONUS if id == "plate_flywheel" else 0.0)
 	plate["until"] = _clock + maxf(left, 0.0) + Weapons.GATHER_TICK
-	effects.ring(plate["at"], float(plate["radius"]), ClassDef.TALLY_COLOR)
+	effects.ring(plate["at"], float(plate["radius"]), Palette.COPPER)
 
 
 # The landing: the strike within the radius, then one settle arc to each clip outside it at
@@ -4604,7 +4605,7 @@ func tally_peak(id: String, at: Vector3) -> void:
 func tally_landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	var radius: float = ultimate.landing_radius() + (Weapons.FLY_LANDING_BONUS if id == "plate_flywheel" else 0.0)
 	var amount: float = Ultimate.LANDING_DAMAGE * heft * chain
-	effects.ring(at, radius, ClassDef.TALLY_COLOR)
+	effects.ring(at, radius, Palette.COPPER)
 	ctx.break_props(at, radius, "ultimate")
 	if not link_group.is_empty():
 		link_group["spent"] = true
@@ -4630,7 +4631,7 @@ func tally_landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		var enemy = instance_from_id(cid)
 		if DamageDoor.dead(enemy):
 			continue
-		effects.arc(at + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, ClassDef.TALLY_COLOR)
+		effects.arc(at + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, Palette.AMBER)
 		dealt += _piece_hit(enemy, amount * share, at, Weapons.LEDGER_KNOCK)
 		settled.append(cid)
 	_grant_pressure(ctx.player.abilities.slot(AbilityState.WEAPON).max_charges)

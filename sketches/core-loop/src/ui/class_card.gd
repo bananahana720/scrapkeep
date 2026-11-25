@@ -55,8 +55,8 @@ const CHIP_CAP := 20.0
 const TRADEOFF_H := 48.0
 const WORD_SIZE := UiTokens.CAPTION
 const SHAKE := 0.25
-const HINT_GAP := 4.0
-const HINT_INSET := 8.0
+const HINT_GAP := 2.0
+const HINT_INSET := 4.0
 const LOCK_DIM := 0.4
 const GREY := """shader_type canvas_item;
 uniform float level = 0.4;
@@ -321,10 +321,10 @@ func _build_overlay(width: float, color: Color) -> void:
 	_hint.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	var plate := ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, _serial + 2)
-	plate.content_margin_left = HINT_INSET
-	plate.content_margin_right = HINT_INSET
-	plate.content_margin_top = 4.0
-	plate.content_margin_bottom = 4.0
+	plate.content_margin_left = 6.0
+	plate.content_margin_right = 6.0
+	plate.content_margin_top = 3.0
+	plate.content_margin_bottom = 3.0
 	_hint.add_theme_stylebox_override("normal", plate)
 	_hint.add_theme_constant_override("line_spacing", -2)
 	# The plate spans the card's face, not the padded column, so a six-card hint wraps to fewer lines.

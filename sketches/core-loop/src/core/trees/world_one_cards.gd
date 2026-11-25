@@ -53,14 +53,14 @@ const ROWS := {
 	"t_spare_claw": "Bank two claw pulls.",
 	"t_vice_grip": "Every clamp refills a claw pull.",
 	# Tally, Depth-1 keystones and TL1 to TL6.
-	"tl_petty_cash": "Half cost, half hit, faster beat stamps.",
-	"tl_compound_interest": "Slower beat. Chained stamps climb to 38.",
-	"tl_audit_stamp": "Every stamp slam throws a shockwave.",
-	"tl_steam_bank": "Bank two flywheel surges.",
+	"tl_petty_cash": "Half cost, half hit, faster beat spikes.",
+	"tl_compound_interest": "Slower beat. Chained spikes climb to 38.",
+	"tl_audit_stamp": "Every card-punch slam throws a shockwave.",
+	"tl_steam_bank": "Bank two tape-reel surges.",
 	"tl_through_feed": "Every hit winds your next surge closer.",
 	"tl_line_feed": "Harpoon smashes throw a second shockwave.",
 	"tl_spring_vent": "Each surge refills your air jump.",
-	"tl_corner_plate": "Every gather plate refills a surge.",
+	"tl_corner_plate": "Every dispatch beacon refills a surge.",
 	# Remembered cannon, Depth-1 keystones and C1 to C6.
 	"c_snap_battery": "Quick lock and short wait, lighter lanes.",
 	"c_siege_rail": "Slow lock. 40m rail pierces and breaks props.",
@@ -111,8 +111,8 @@ const SET_PIECE_LINES := {
 	# --- end Tarn ---
 	# --- P-C Tally set piece lines ---
 	"plate_return": "Ride home. Every clip settles on landing.",
-	"plate_audit": "Stamp what you steer over.",
-	"plate_flywheel": "Launch, gather, collect.",
+	"plate_audit": "Punch what you steer over.",
+	"plate_flywheel": "Launch, pull the pack, collect.",
 	"ult_settle": "Clips settle for more on landing.",
 	# --- end Tally ---
 	# --- P-C Cannon set piece lines ---
