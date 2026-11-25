@@ -305,6 +305,7 @@ var _guards := {}
 # special_id -> {geometry: Callable(fraction) -> shape, fire: Callable(fraction, shape)}, or
 # {tap: Callable() -> bool} for a row with no gauge.
 var _specials := {}
+var relic_swaps  # --- W50-ISAAC-RELICS ---
 # The line skill's dispatch table (built in setup) and the load waiting for the next bite:
 # {} or {id, fraction, left}.
 var _line_skills := {}
@@ -619,6 +620,10 @@ func setup(ctx_ref) -> void:
 	orbitals = OrbitalSatellites.new() # --- W50-ISAAC-PARTS ---
 	add_child(orbitals)
 	orbitals.setup(ctx, self)
+	# --- W50-ISAAC-RELICS ---
+	relic_swaps = preload("res://src/combat/relic_swaps.gd").new()
+	add_child(relic_swaps)
+	relic_swaps.setup(ctx, self)
 	# A loaded line skill rides the next bite, body or world (grapple_fired goes out for both,
 	# after the latch is set). A reset point drops the load.
 	ctx.events.grapple_fired.connect(func(anchor: Vector3):
@@ -1920,6 +1925,7 @@ func _physics_process(delta: float) -> void:
 	_step_grapple_mutations(delta, enemies)
 	_step_kinetic_pylon(delta, enemies)
 	_step_kest_fuse_trace(delta, enemies)
+	if relic_swaps != null: relic_swaps.step(delta, enemies)  # --- W50-ISAAC-RELICS ---
 	var shells := get_tree().get_nodes_in_group("enemy_shot")
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	bolts.step(delta, space, enemies, shells)
@@ -2183,6 +2189,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 	if rake_follows(source, ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")):
 		_rakes.append({"at": _clock + RAKE_DELAY, "weapon": weapon, "forward": forward,
 			"damage": p.damage * _damage_mod(weapon), "volley": volleys})
+	if relic_swaps != null: relic_swaps.on_weapon_fire(weapon, source, shot_desc, muzzle, forward, reach, damage)  # --- W50-ISAAC-RELICS ---
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": aim["to"], "point": point,
 		"blocked": aim["blocked"], "bolts": fired, "volley": volleys, "sprung": sprung, "fused": pike.get("fuse", false),
@@ -4395,6 +4402,7 @@ func _run_balance(point: Vector3, valid: bool, shot_desc := {}, source := "weapo
 		last_card["damage"] = damage
 		last_card["paid"] = paid
 		last_card["stamp_color"] = cue_color
+		if relic_swaps != null: relic_swaps.on_ledger_cast(point, damage, shot_desc)  # --- W50-ISAAC-RELICS ---
 	return true
 
 
@@ -6017,6 +6025,7 @@ func _on_player_died() -> void:
 		ally_husks._reset()
 	if orbitals != null: # --- W50-ISAAC-PARTS ---
 		orbitals.reset_attempt()
+	if relic_swaps != null: relic_swaps.reset()  # --- W50-ISAAC-RELICS ---
 	_clear_aftershocks()
 	_rakes.clear()
 	_clear_cannon_paint()
@@ -6073,6 +6082,7 @@ func _start_attempt() -> void:
 		ally_husks._reset()
 	if orbitals != null: # --- W50-ISAAC-PARTS ---
 		orbitals.reset_attempt()
+	if relic_swaps != null: relic_swaps.reset()  # --- W50-ISAAC-RELICS ---
 	if ctx != null and ctx.run != null:
 		_consumable_rng.seed = hash(["consumable_drops", ctx.run.run_seed, ctx.run.stage])
 	_spring_until = -1.0

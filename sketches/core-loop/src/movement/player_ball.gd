@@ -1704,7 +1704,8 @@ static func in_skid_cone(to: Vector3, ahead: Vector3, reach := SKID_REACH, inner
 
 # The vault and slingshot aim cones and the arc slam's face tags, in the class colour.
 func _update_aim_cones(at: Vector3) -> void:
-	if abilities.selected == AbilityState.LINE and abilities.id_of(AbilityState.LINE) == "bank_shot" and kit.hooked:
+	# --- W50-ISAAC-RELICS ---
+	if abilities.selected == AbilityState.LINE and abilities.id_of(AbilityState.LINE) in ["bank_shot", "bank_arc"] and kit.hooked:
 		indicator.set_shape("bank", bank_geometry())
 	else:
 		indicator.clear("bank")

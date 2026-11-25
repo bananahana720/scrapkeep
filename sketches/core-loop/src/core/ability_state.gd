@@ -130,20 +130,26 @@ const UNSTARTED := ""
 # 4), so the six pilot units never edit the same lines.
 const ABILITIES := {
 	"arc_caster": {"icon": "ab_sable_weapon", "cooldown": 0.0, "mounted": "pylon_turret"},
+	"arc_ring": {"icon": "ab_sable_weapon", "cooldown": 0.0, "mounted": "pylon_turret", "pattern": "arc_caster", "mutation": "arc_ring"},
 	"grapple": {"icon": "ab_sable_move", "cooldown": 0.0, "augments": ["grapple", "pylon", "vault"]},
 	"detonation_gauge": {"icon": "ab_sable_special", "cooldown": 5.0, "charge_max": 1.0, "plant_discharge": true},
+	"halo_discharge": {"icon": "ab_sable_special", "cooldown": 5.0, "charge_max": 1.0, "plant_discharge": true, "mutation": "halo_discharge"},
 	"arc_slam": {"icon": "ab_sable_smash", "cooldown": 0.0, "flavour": "arc"},
 	"crater_slam": {"icon": "ab_sable_smash", "cooldown": 0.0, "flavour": "arc", "spends_special": true},
 	"rapid_laser": {"icon": "ab_rivet_weapon", "cooldown": 0.0},
+	"fan_burst": {"icon": "ab_rivet_weapon", "cooldown": 0.0, "pattern": "rapid_laser", "mutation": "fan_burst"},
 	"overdrive_sprint": {"icon": "ab_rivet_move", "cooldown": 5.0, "duration": 2.0, "augments": ["sprint"]},
 	"overdrive_blast": {"icon": "ab_rivet_special", "cooldown": 6.0, "charge_max": 1.0},
 	"point_blank": {"icon": "ab_rivet_special", "cooldown": 6.0, "charge_max": 1.0},
 	"shockwave_skid": {"icon": "ab_rivet_smash", "cooldown": 0.0, "flavour": "skid"},
+	"auger_slam": {"icon": "ab_rivet_smash", "cooldown": 0.0, "flavour": "skid", "mutation": "auger_slam"},
 	"sticky_charge": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6, "lob": 1, "bolts": false},
 	"sticky_rain": {"icon": "ab_kest_weapon", "cooldown": 0.6, "charge_max": 0.6, "lob": 3, "pattern": "sticky_charge", "bolts": false},
 	"smoke_blink": {"icon": "ab_kest_move", "cooldown": 4.0, "augments": ["blink", "glide"], "rocket": true, "cloak": true},
 	"detonation_line": {"icon": "ab_kest_special", "cooldown": 6.0, "charge_max": 0.8},
+	"snare_detonate": {"icon": "ab_kest_special", "cooldown": 6.0, "charge_max": 0.8, "mutation": "snare_detonate"},
 	"demo_slam": {"icon": "ab_kest_smash", "cooldown": 0.0, "flavour": "demo"},
+	"thermite_slam": {"icon": "ab_kest_smash", "cooldown": 0.0, "flavour": "demo", "mutation": "thermite_slam"},
 	"claw_sweep": {"icon": "ab_tarn_weapon", "cooldown": 0.0},
 	"claw_rake": {"icon": "ab_tarn_weapon", "cooldown": 0.0, "pattern": "claw_sweep", "mutation": "claw_rake"},
 	"claw_pull": {"icon": "ab_tarn_move", "cooldown": 3.0, "augments": ["claw_pull"]},
@@ -158,6 +164,7 @@ const ABILITIES := {
 	"cannon_lane_walk": {"icon": "ab_cannon_weapon", "cooldown": 0.0, "family": "lane", "pattern": "cannon_lane", "mutation": "cannon_lane_walk", "bolts": false},
 	"cannon_recoil": {"icon": "ab_cannon_move", "cooldown": 3.5, "augments": ["recoil"], "family": "split_lane"},
 	"cannon_plate": {"icon": "ab_cannon_special", "cooldown": 6.0, "charge_max": 0.8, "family": "plate"},
+	"cannon_mortar": {"icon": "ab_cannon_special", "cooldown": 6.0, "charge_max": 0.8, "family": "plate", "mutation": "cannon_mortar"},
 	"cannon_rush": {"icon": "ab_cannon_smash", "cooldown": 0.0, "flavour": "rush", "family": "rush"},
 	"cannon_rush_wake": {"icon": "ab_cannon_smash", "cooldown": 0.0, "flavour": "rush", "family": "rush", "mutation": "cannon_rush_wake"},
 	# The shared placeholders until wave P-C: one line skill (a 4 m yank on a body, a reel
@@ -166,12 +173,14 @@ const ABILITIES := {
 	"ult_default": {"icon": "ab_sable_reel", "cooldown": 0.0, "paths": ["line", "arc"], "beats": 0},
 	# --- P-C Sable rows (line skill, ultimate, depth-3 variants) -------------------------
 	"bank_shot": {"icon": "ab_sable_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
+	"bank_arc": {"icon": "ab_sable_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0, "mutation": "bank_arc"},
 	"cable_run": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
 	"ball_lightning": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["arc"], "variant_of": "cable_run", "cast": VARIANT_CAST},
 	"outpost": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "cable_run", "cast": VARIANT_CAST},
 	# --- end Sable ---
 	# --- P-C Rivet rows ------------------------------------------------------------------
 	"line_drive": {"icon": "ab_rivet_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
+	"rail_vault": {"icon": "ab_rivet_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0, "mutation": "rail_vault"},
 	"foundry_cutter": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
 	"prism_cutter": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "foundry_cutter", "cast": VARIANT_CAST},
 	"juggernaut_drive": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "foundry_cutter", "cast": VARIANT_CAST},
@@ -179,12 +188,14 @@ const ABILITIES := {
 	# --- P-C Kest rows -------------------------------------------------------------------
 	# 2026-10-11 (PC-KEST round 3): fourteen seconds preserves both fixed bands after the contact cap.
 	"cable_charge": {"icon": "ab_kest_line", "cooldown": 14.0, "line": true, "load_seconds": 4.0},
+	"cable_cluster": {"icon": "ab_kest_line", "cooldown": 14.0, "line": true, "load_seconds": 4.0, "mutation": "cable_cluster"},
 	"windhover": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "hold_beats": 2},
 	"air_raid": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "windhover", "cast": VARIANT_CAST},
 	"minelayer": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "windhover", "cast": VARIANT_CAST},
 	# --- end Kest ---
 	# --- P-C Tarn rows -------------------------------------------------------------------
 	"claw_drag": {"icon": "ab_tarn_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
+	"claw_whirl": {"icon": "ab_tarn_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0, "mutation": "claw_whirl"},
 	"redjaw_rend": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
 	"rake_run": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "redjaw_rend", "cast": VARIANT_CAST, "plant": true},
 	"vice_leap": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "redjaw_rend", "cast": VARIANT_CAST, "plant": true},
@@ -193,6 +204,7 @@ const ABILITIES := {
 	# pilots/tally.md section 3: Balance Due alone spends pressure; Gather Plate and the Ledger
 	# Clip keep their own cooldowns and pay into it; Q's meter is Plate Return's charge.
 	"ledger_reader": {"icon": "ab_tally_weapon", "cooldown": 0.0, "cards": ["balance_due"], "pressure": 3, "bolts": false},
+	"ledger_echo": {"icon": "ab_tally_weapon", "cooldown": 0.0, "cards": ["balance_due"], "pressure": 3, "bolts": false, "pattern": "ledger_reader", "mutation": "ledger_echo"},
 	"gather_plate": {"icon": "ab_tally_gather", "cooldown": 6.0, "cast": 0.3},
 	"link_clips": {"icon": "ab_tally_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
 	"link_double": {"icon": "ab_tally_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0, "mutation": "link_double"},
