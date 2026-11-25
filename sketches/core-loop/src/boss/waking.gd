@@ -118,6 +118,7 @@ var attacks: Array = []
 var landings: Array = []
 var attack_count := 0
 var phase := 1
+var _music_phase_emitted := 1
 var _pending: Array = []
 var _attack_clock := 0.0
 # Challenge dial waking.combo: follow-up attacks still owed after the lead; -1 when none is open.
@@ -183,6 +184,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_seat_warden()
 	_base_plating = warden.plating
 	phase = 1
+	_music_phase_emitted = 1
 	_attack_clock = 0.0
 	_combo_left = -1
 	_dress = WakingDress.attach(self)
@@ -222,6 +224,7 @@ func exit_arena() -> void:
 	_lip_seen = false
 	_banked.clear()
 	_pulse_charging = false
+	_music_phase_emitted = 1
 	super()
 
 
@@ -254,6 +257,10 @@ func _physics_process(delta: float) -> void:
 			_attack_clock = LANDING_ATTACK
 			_combo_left = -1
 	phase = clampi(floors.shattered + 1, 1, WakingAttacks.PIT_PHASE)
+	var next_music_phase := floors.music_phase()
+	if next_music_phase > _music_phase_emitted:
+		_music_phase_emitted = next_music_phase
+		ctx.events.emit_signal("boss_phase_changed", next_music_phase, floors.phase_name())
 	if weak.active():
 		_note_weak()
 		_step_crew()
@@ -703,8 +710,9 @@ func music_state() -> Dictionary:
 		if hold_active():
 			state["held"] = true
 			state["in_phase"] = 1.0
-		# Bedrock and the pit share the top phase: the final act, where the hype version plays.
-		state["phase"] = clampi(floors.shattered + 1, 1, Rules.PHASE_NAMES.size())
+		# Bedrock and the pit share the top phase: the final act, where the +20 BPM anthem plays.
+		state["phase"] = floors.music_phase()
+		state["anthem_bpm_delta"] = floors.anthem_bpm_delta()
 	return state
 
 

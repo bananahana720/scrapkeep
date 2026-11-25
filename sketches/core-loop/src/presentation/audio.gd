@@ -3639,18 +3639,32 @@ func _on_boss_phase_with(phase) -> void:
 	# and play no second clash on top of the entry.
 	if next <= 1:
 		_boss_phase = maxi(next, 1)
-		engine.set_brindle_phase(_boss_phase)
+		_set_boss_phase_section(_boss_phase)
 		phase_music(_boss_phase)
+		return
+	if next <= _boss_phase:
 		return
 	_boss_phase = next
 	_trigger_boss_phase(_boss_phase)
 
 
-# Locks Brindle's +10/+20 BPM anthem drops onto the phase-turn clash beat: when an ACE phase
-# track is booked, the clash stinger lands on that exact drop sample; on the synth band alone,
-# both the synth phase drop and the clash land together on the next beat.
+# Routes phase section updates through the boss state table (Base / +10 BPM / +20 BPM) for all
+# boss tracks, falling back to the legacy chase handler past PhaseMusic.LAST_PHASE.
+func _set_boss_phase_section(phase: int) -> void:
+	if engine == null:
+		return
+	var boss := engine.track
+	if phase <= PhaseMusic.LAST_PHASE and boss in MusicEngine.BOSS_TRACKS:
+		engine.set_boss_state("%s:%d" % [boss, clampi(phase, 1, PhaseMusic.LAST_PHASE)])
+	else:
+		engine.set_brindle_phase(phase)
+
+
+# Locks boss +10/+20 BPM anthem drops onto the phase-turn clash beat: when an ACE phase track
+# is booked, the clash stinger lands on that exact drop sample; on the synth band alone, both
+# the synth phase drop and the clash land together on the next beat.
 func _trigger_boss_phase(phase: int) -> void:
-	engine.set_brindle_phase(phase)
+	_set_boss_phase_section(phase)
 	var plan := phase_music(phase)
 	if plan.has("at"):
 		_clash_at("boss_phase_changed", int(plan["at"]))

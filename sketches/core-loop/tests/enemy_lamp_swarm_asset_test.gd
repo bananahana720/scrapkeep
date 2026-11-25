@@ -5,14 +5,15 @@ extends SceneTree
 const Lamp := preload("res://src/combat/lamp_swarm.gd")
 const T := preload("res://tests/support/t.gd")
 const GLB := "res://assets/models/world_two/enemy_lamp_swarm.glb"
+# 2026-11-25 (W48-COMBAT): re-pinned _commit, _go_live, _live, on_struck for Flash-Focus Beam secondary attack.
 const BASE_FUNCTIONS := {
 	"_configure": "f01911b7165177239f958af9bde28082fffba3b94b77af3e151f08d74bcbcf1a",
 	"_lamp_rest": "b5089114393a2c564ef22e2d7b195ed18258800560c1b0c5dff80ded0ede4f18",
-	"_commit": "0c04e2759aca0e2d010ad483948c3c76e234f4b2dbb275c1507604eefef43ad1",
-	"_go_live": "7e2331fa9290c0563ccc727cb208e090b7f628b08cc5da396da549794f317500",
-	"_live": "bac28ec81b55dc88860da0bc30e6c4ba3b5468b401db14c8901b650992de3e42",
+	"_commit": "6534338e25939ef14213776829b2adf724c92ffeb9b377f833a4128002309152",
+	"_go_live": "3ba54f92ff1a6dbd87953d35a8f72f434aecd671a80678406c612ba10c954efc",
+	"_live": "de7727cdedb16634cecfdfe676ac85a139e683248a9e74ce336333bb86aff8e8",
 	"_meet_bloom": "ab5d59d60849a941ba50cc3dd4368691dc2bd66ddb0b6daa2e6e488a8521d44b",
-	"on_struck": "5c979a5b54628bee4c5a26e7e13458af8896a556b3910640e696de259e01bee7",
+	"on_struck": "26ef0f0456d7e5684a7593501559aa949e1e1b30cc6e91a60c78952b8fd781c9",
 }
 const BASE_CONSTS := {"HP": 35.0, "LAMP_COUNT": 3, "LAMP_RING": 1.3, "LAMP_HEIGHT": 1.6,
 	"LAMP_RADIUS": 0.3, "BLOOM_RADIUS": 9.0, "BLOOM_SPEED": 6.0, "BLOOM_REACH": 3.0,

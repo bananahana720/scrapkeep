@@ -9,6 +9,7 @@ extends "res://src/combat/counter.gd"
 # carving the bank or in the air over the ring is past it.
 
 const FloorRule := preload("res://src/combat/floor_rule.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 const PLATING := 22.0
 const HP := 90.0
@@ -16,16 +17,39 @@ const LEAD := 0.8
 const BORE_RADIUS := 3.0
 const BORE_DAMAGE := 11.0
 const BORE_SHOVE := 7.0
+const PRIMARY_WARN := 1.2
+const PRIMARY_LIVE := 0.2
+
+# Secondary attack (W48-COMBAT): Horizontal Core-Jet. Commits a >= 0.70 s Palette.HAZARD
+# lane straight ahead; baiting the jet into rubble walls / destructibles shatters them to
+# open shortcuts. Only punishes stalling balls on the floor (ruling cu); never stops a
+# moving/cruise or carving ball.
+const JET_WARN := 0.90
+const JET_LIVE := 0.55
+const JET_LENGTH := 18.0
+const JET_WIDTH := 2.6
+const JET_DAMAGE := 10.0
+const JET_SHOVE := 6.0
+const JET_BLAST_RADIUS := 3.2
+const JET_SAMPLE_STEP := 3.0
 
 var plates := 1
 var plates_popped := 0
 var bores := 0
 var stopped := 0
+var core_jets := 0
+var shortcuts_opened := 0
+var next_attack := ""
 var last_bore := {}
+var last_jet := {}
 # Set by _die(): breach.gd reads enemy.bore_fact inside a died handler, where this node is
 # still readable (the died signal fires before queue_free). Empty while the rig lives.
 var bore_fact := {}
 var _absorb := false
+var _core_jet := false
+var _jet_origin := Vector3.ZERO
+var _jet_dir := Vector3.FORWARD
+var _jet_hit := false
 var _plate: MeshInstance3D
 var _bit: MeshInstance3D
 var _bit_rest := Vector3.ZERO
@@ -126,17 +150,89 @@ func absorbs_hit(result: Dictionary) -> bool:
 
 
 func _on_end() -> void:
+	_core_jet = false
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
 	if _bit != null:
 		_bit.position = _bit_rest
 
 
-func _commit(_to_ball: Vector3) -> Node3D:
+func _use_core_jet() -> bool:
+	if next_attack == "core_jet":
+		return true
+	if next_attack == "bore":
+		return false
+	return bores > core_jets
+
+
+func _commit(to_ball: Vector3) -> Node3D:
+	var is_jet := _use_core_jet()
+	_core_jet = is_jet
+	next_attack = ""
+	if is_jet:
+		warn_seconds = JET_WARN
+		live_seconds = JET_LIVE
+		var flat := Vector3(to_ball.x, 0.0, to_ball.z)
+		_jet_dir = flat.normalized() if flat.length() > 0.1 else Vector3.FORWARD
+		_jet_origin = global_position
+		_jet_hit = false
+		_facing(_jet_dir)
+		return _commit_lane(Threat.Type.LANE, global_position, _jet_dir, JET_LENGTH, JET_WIDTH, 3.0)
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
 	var aim: Vector3 = _ball() + target.planar_velocity() * LEAD
 	_facing(aim - global_position)
 	return _commit_ring(Threat.Type.INSTANT, aim, BORE_RADIUS, 2.0)
 
 
+func _open_rubble_shortcuts() -> int:
+	var opened := 0
+	var destructibles = fleet.ctx.destructibles if fleet != null and fleet.ctx != null and "destructibles" in fleet.ctx else null
+	if destructibles != null and is_instance_valid(destructibles) and destructibles.has_method("on_blast"):
+		var before: int = destructibles.break_order().size() if destructibles.has_method("break_order") else 0
+		var dist := JET_SAMPLE_STEP
+		while dist <= JET_LENGTH + 0.01:
+			var pt := _jet_origin + _jet_dir * minf(dist, JET_LENGTH)
+			destructibles.on_blast(pt, JET_BLAST_RADIUS, "drill_core_jet", 5, 5)
+			dist += JET_SAMPLE_STEP
+		if destructibles.has_method("break_order"):
+			opened += maxi(0, destructibles.break_order().size() - before)
+	if is_inside_tree():
+		for wall in get_tree().get_nodes_in_group("rubble_wall"):
+			if not is_instance_valid(wall) or not (wall is Node3D) or wall.get_meta("shortcut_opened", false):
+				continue
+			var rel: Vector3 = (wall as Node3D).global_position - _jet_origin
+			rel.y = 0.0
+			var along := rel.dot(_jet_dir)
+			if along < -1.0 or along > JET_LENGTH + 1.5:
+				continue
+			if (rel - _jet_dir * along).length() <= JET_WIDTH * 0.5 + 1.8:
+				wall.set_meta("shortcut_opened", true)
+				if wall.has_method("open_shortcut"):
+					wall.open_shortcut("drill_core_jet")
+				elif wall.has_method("shatter"):
+					wall.shatter()
+				else:
+					wall.visible = false
+					if wall is CollisionObject3D:
+						(wall as CollisionObject3D).collision_layer = 0
+						(wall as CollisionObject3D).collision_mask = 0
+				opened += 1
+	return opened
+
+
 func _go_live() -> void:
+	if _core_jet:
+		core_jets += 1
+		_jet_hit = false
+		var opened := _open_rubble_shortcuts()
+		shortcuts_opened += opened
+		last_jet = {"from": _jet_origin, "dir": _jet_dir, "length": JET_LENGTH, "width": JET_WIDTH,
+			"opened": opened, "frame": Engine.get_physics_frames()}
+		if opened > 0 and fleet != null:
+			fleet.discover("bore_breach", _jet_origin + _jet_dir * minf(6.0, JET_LENGTH))
+		_jet_hit_check()
+		return
 	bores += 1
 	var ring := telegraph()
 	if ring == null:
@@ -150,6 +246,28 @@ func _go_live() -> void:
 	out.y = 0.0
 	var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
 	hit_player.emit(BORE_DAMAGE, dir * BORE_SHOVE + Vector3.UP * 5.0)
+
+
+func _live(_delta: float) -> bool:
+	if _core_jet:
+		_jet_hit_check()
+	return true
+
+
+func _jet_hit_check() -> void:
+	if _jet_hit:
+		return
+	var tele := telegraph()
+	if tele == null:
+		return
+	var player = _player()
+	var ball := _real_ball()
+	if player == null or not FloorRule.on_floor(player.state) or player.speed_tier() >= SpeedTier.CRUISE:
+		return
+	if tele.contains(ball):
+		_jet_hit = true
+		var side := _jet_dir.cross(Vector3.UP).normalized()
+		hit_player.emit(JET_DAMAGE, side * JET_SHOVE + Vector3.UP * 4.0)
 
 
 func on_struck(kind_hit: String, _part: String, result: Dictionary) -> void:

@@ -4,6 +4,8 @@ const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
+const Dispatcher := preload("res://src/combat/dispatcher.gd")
+const ROSTER_DIG_PATH := "res://src/combat/roster_dig.gd"
 
 # The stage exit. Sealed, a Warden clamps it: the charge shown is how much of the Warden
 # is broken, and sitting in the ring adds nothing. Unsealed, charging starts the moment
@@ -22,6 +24,23 @@ const FRAME_PATH := "res://assets/models/lantern_beacon_frame.glb"
 const LENS_PATH := "res://assets/models/lantern_beacon_lens.glb"
 # Inside the 1.08 m glass even at full charge (scale 1.6).
 const LANTERN_BULB_RADIUS := 0.6
+# World 1 frame-slice budget (<= 8 ms) for tile-draining Dig pit beacon bursts & Jolt shape builds.
+const DIG_DRAIN_BUDGET_USEC := 8000
+
+static var _packed_models: Dictionary = {}
+static var _slot_materials: Dictionary = {}
+static var _shared_mast_cyl: CylinderMesh
+static var _shared_mast_mat: StandardMaterial3D
+static var _shared_lantern_bulb: SphereMesh
+static var _shared_mast_bulb: SphereMesh
+static var _shared_torus: TorusMesh
+static var _roster_dig = null
+
+
+static func _dig_roster():
+	if _roster_dig == null and ResourceLoader.exists(ROSTER_DIG_PATH):
+		_roster_dig = load(ROSTER_DIG_PATH)
+	return _roster_dig
 
 var phase := IDLE
 var progress := 0.0
@@ -41,28 +60,27 @@ var _core: MeshInstance3D
 var _state_views: Array[MeshInstance3D] = []
 var _lens_centre := Vector3.ZERO
 var _clamp_seat: Node3D
+var _last_tint := Color(-1.0, -1.0, -1.0, -1.0)
+var _last_f := -1.0
+var _dig_drain_pending := false
+var _dispatcher_warmed := false
 
 
 func setup() -> void:
+	_last_tint = Color(-1.0, -1.0, -1.0, -1.0)
+	_last_f = -1.0
 	var tint := tint_color()
 	var lantern := authored and _lantern()
 	if not lantern:
 		var mast := MeshInstance3D.new()
-		var cyl := CylinderMesh.new()
-		cyl.top_radius = 0.5
-		cyl.bottom_radius = 1.1
-		cyl.height = MAST_HEIGHT
-		mast.mesh = cyl
-		mast.material_override = Palette.solid(Palette.COPPER)
+		mast.mesh = _mast_mesh()
+		mast.material_override = _mast_material()
 		mast.position = Vector3.UP * MAST_HEIGHT * 0.5
 		add_child(mast)
 
 	_core_material = Palette.solid(tint, 0.5)
 	_core = MeshInstance3D.new()
-	var bulb := SphereMesh.new()
-	bulb.radius = LANTERN_BULB_RADIUS if lantern else 2.0
-	bulb.height = bulb.radius * 2.0
-	_core.mesh = bulb
+	_core.mesh = _bulb_mesh(lantern)
 	_core.material_override = _core_material
 	_core.position = _lens_centre if lantern else Vector3.UP * (MAST_HEIGHT + 1.5)
 	add_child(_core)
@@ -70,13 +88,76 @@ func setup() -> void:
 
 	_ring_material = Palette.unshaded(Color(tint, 0.55))
 	_ring = MeshInstance3D.new()
-	var torus := TorusMesh.new()
-	torus.inner_radius = 0.96
-	torus.outer_radius = 1.0
-	torus.rings = 96
-	_ring.mesh = torus
+	_ring.mesh = _torus_mesh()
 	_ring.material_override = _ring_material
 	add_child(_ring)
+
+
+static func _mast_mesh() -> CylinderMesh:
+	if _shared_mast_cyl == null:
+		_shared_mast_cyl = CylinderMesh.new()
+		_shared_mast_cyl.top_radius = 0.5
+		_shared_mast_cyl.bottom_radius = 1.1
+		_shared_mast_cyl.height = MAST_HEIGHT
+	return _shared_mast_cyl
+
+
+static func _mast_material() -> StandardMaterial3D:
+	if _shared_mast_mat == null:
+		_shared_mast_mat = Palette.solid(Palette.COPPER)
+	return _shared_mast_mat
+
+
+static func _bulb_mesh(lantern: bool) -> SphereMesh:
+	if lantern:
+		if _shared_lantern_bulb == null:
+			_shared_lantern_bulb = SphereMesh.new()
+			_shared_lantern_bulb.radius = LANTERN_BULB_RADIUS
+			_shared_lantern_bulb.height = LANTERN_BULB_RADIUS * 2.0
+		return _shared_lantern_bulb
+	if _shared_mast_bulb == null:
+		_shared_mast_bulb = SphereMesh.new()
+		_shared_mast_bulb.radius = 2.0
+		_shared_mast_bulb.height = 4.0
+	return _shared_mast_bulb
+
+
+static func _torus_mesh() -> TorusMesh:
+	if _shared_torus == null:
+		_shared_torus = TorusMesh.new()
+		_shared_torus.inner_radius = 0.96
+		_shared_torus.outer_radius = 1.0
+		_shared_torus.rings = 48
+	return _shared_torus
+
+
+func _process(_delta: float) -> void:
+	if not _dig_drain_pending:
+		return
+	if drain_dig_burst(DIG_DRAIN_BUDGET_USEC):
+		_dig_drain_pending = false
+
+
+# Arms tile-drained warming of Dig pit enemy assets, Jolt shapes and Dispatcher shared state.
+func begin_dig_drain() -> void:
+	var dig = _dig_roster()
+	_dig_drain_pending = not (_dispatcher_warmed and (dig == null or dig.drain_complete()))
+
+
+# Drains at most budget_usec (default 8 ms) of Dig pit & Dispatcher shape/asset warm-up.
+func drain_dig_burst(budget_usec: int = DIG_DRAIN_BUDGET_USEC) -> bool:
+	var start := Time.get_ticks_usec()
+	var dig = _dig_roster()
+	if not _dispatcher_warmed:
+		Dispatcher.warm_shared()
+		_dispatcher_warmed = true
+		if Time.get_ticks_usec() - start >= budget_usec:
+			return dig == null or dig.drain_complete()
+	if dig == null:
+		return true
+	var remaining := maxi(budget_usec - (Time.get_ticks_usec() - start), 500)
+	var step: Dictionary = dig.tile_drain_step(remaining)
+	return bool(step.get("done", dig.drain_complete()))
 
 
 # The frame and its lens from the authored GLBs, each surface in its material slot; false when
@@ -105,8 +186,11 @@ func _lantern() -> bool:
 			var source := view.mesh.surface_get_material(0)
 			var slot := String(source.resource_name) if source != null else ""
 			var path := String(MaterialSlots.row(slot).get("path", ""))
-			if not path.is_empty() and ResourceLoader.exists(path):
-				view.material_override = load(path)
+			if not path.is_empty():
+				if not _slot_materials.has(path):
+					_slot_materials[path] = load(path) if ResourceLoader.exists(path) else null
+				if _slot_materials[path] != null:
+					view.material_override = _slot_materials[path]
 			if slot == "steel":
 				_state_views.append(view)
 			if root == lens:
@@ -125,9 +209,9 @@ func clamp_seat() -> Node3D:
 
 
 static func _model(path: String) -> Node3D:
-	if not ResourceLoader.exists(path):
-		return null
-	var packed := load(path) as PackedScene
+	if not _packed_models.has(path):
+		_packed_models[path] = load(path) as PackedScene if ResourceLoader.exists(path) else null
+	var packed: PackedScene = _packed_models[path]
 	return packed.instantiate() as Node3D if packed != null else null
 
 
@@ -154,8 +238,11 @@ func place(at: Vector3, seconds: float, ring_radius: float) -> void:
 	phase = IDLE
 	progress = 0.0
 	sealed = true
+	_last_tint = Color(-1.0, -1.0, -1.0, -1.0)
+	_last_f = -1.0
 	_ring.scale = Vector3(radius, 30.0, radius)
 	_ring.position = Vector3.UP * 0.6
+	begin_dig_drain()
 	_refresh()
 
 
@@ -215,10 +302,18 @@ func _refresh() -> void:
 		return
 	var f := fraction()
 	var tint := tint_color()
-	_core_material.albedo_color = tint
-	_core_material.emission = tint
-	_paint_state(tint)
-	_ring_material.albedo_color = Color(tint, _ring_material.albedo_color.a)
-	_core_material.emission_energy_multiplier = 0.5 + f * 6.0
-	_core.scale = Vector3.ONE * (1.0 + f * 0.6)
-	_ring_material.albedo_color.a = 0.35 + f * 0.6
+	var tint_changed := tint != _last_tint
+	var f_changed := not is_equal_approx(f, _last_f)
+	if not tint_changed and not f_changed:
+		return
+	if tint_changed:
+		_last_tint = tint
+		_core_material.albedo_color = tint
+		_core_material.emission = tint
+		_paint_state(tint)
+		_ring_material.albedo_color = Color(tint, 0.35 + f * 0.6)
+	if f_changed:
+		_last_f = f
+		_core_material.emission_energy_multiplier = 0.5 + f * 6.0
+		_core.scale = Vector3.ONE * (1.0 + f * 0.6)
+		_ring_material.albedo_color.a = 0.35 + f * 0.6

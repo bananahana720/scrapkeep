@@ -70,6 +70,33 @@ const PROFILES := {
 		"zone_shape": "lane", "zone_length": 8.4, "zone_width": 3.0, "at_target": false,
 		"radius": 1.3, "half_height": 1.3,
 	},
+	# World 2 Dig ordinary Fleet husks (W48-COMBAT): strictly B6 AMBER #E5A044 AllyZones,
+	# zero HAZARD telegraphs or hostile klaxons.
+	"burrower": {
+		"base_damage": 10.0, "speed": 6.8, "range": 14.0, "warn": 0.70, "live": 0.25, "rest": 1.25,
+		"zone_shape": "ring", "zone_radius": 3.0, "at_target": true,
+		"radius": 0.9, "half_height": 1.1,
+	},
+	"drill_crew": {
+		"base_damage": 11.0, "speed": 4.5, "range": 16.0, "warn": 0.75, "live": 0.30, "rest": 1.45,
+		"zone_shape": "lane", "zone_length": 14.0, "zone_width": 2.8, "at_target": false,
+		"radius": 1.2, "half_height": 1.2,
+	},
+	"lamp_swarm": {
+		"base_damage": 9.0, "speed": 5.5, "range": 15.0, "warn": 0.70, "live": 0.30, "rest": 1.30,
+		"zone_shape": "lane", "zone_length": 14.0, "zone_width": 2.8, "at_target": false,
+		"radius": 1.0, "half_height": 1.4,
+	},
+	"prop_crew": {
+		"base_damage": 12.0, "speed": 4.8, "range": 8.0, "warn": 0.75, "live": 0.25, "rest": 1.35,
+		"zone_shape": "ring", "zone_radius": 5.0, "at_target": false,
+		"radius": 1.1, "half_height": 1.3,
+	},
+	"pit_jaw": {
+		"base_damage": 10.0, "speed": 4.6, "range": 14.0, "warn": 0.70, "live": 0.25, "rest": 1.35,
+		"zone_shape": "ring", "zone_radius": 3.2, "at_target": true,
+		"radius": 1.1, "half_height": 0.9,
+	},
 }
 
 const DEFAULT_PROFILE := {

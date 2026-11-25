@@ -73,6 +73,11 @@ static func choose(seed: int, phase: int, removed := []) -> String:
 	return open[_rng(seed).randi() % open.size()]
 
 
+# Maps any floor/pit phase (1..4) onto the 3-phase boss anthem ruling (1=Base, 2=+10 BPM, 3=+20 BPM).
+static func anthem_phase(phase: int) -> int:
+	return clampi(phase, 1, FAMILIES.size())
+
+
 static func commit(family: String, seed: int, ball: Vector3, velocity: Vector3, center: Vector3, phase: int, radius: float, removed := []) -> Array:
 	match family:
 		"burrow":

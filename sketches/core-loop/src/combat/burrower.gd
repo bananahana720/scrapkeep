@@ -24,12 +24,36 @@ const SINK := 3.0
 const TUNNEL_SPEED := 4.5
 const WARN := 1.0
 const BURST_REACH := 18.0
+const PRIMARY_LIVE := 1.2
+
+# Secondary attack (W48-COMBAT): Wall-Skim Eruption. Commits a >= 0.70 s Palette.HAZARD lane
+# along the rim/floor edge, then vaults airborne across the lane so the player can slam it
+# mid-air for an instant airborne pin. Presses slow/stalling balls on the floor (ruling cu);
+# never stops a moving/cruise or carving ball.
+const WALL_SKIM_WARN := 0.85
+const WALL_SKIM_LIVE := 1.1
+const WALL_SKIM_LENGTH := 16.0
+const WALL_SKIM_WIDTH := 2.8
+const WALL_SKIM_DAMAGE := 9.0
+const WALL_SKIM_SHOVE := 5.0
+const WALL_SKIM_ARC_H := 4.5
+const AIRBORNE_PIN_RADIUS := 3.2
 
 var hidden := true
 var bursts := 0
 var slam_kills := 0
+var wall_skims := 0
+var airborne_pins := 0
+var airborne_skim := false
+var next_attack := ""
+var last_pin := {}
 # The committed ring contained the ball: leaving the floor before the burst is burrow_lane.
 var _ring_had_ball := false
+var _wall_skim := false
+var _skim_origin := Vector3.ZERO
+var _skim_dir := Vector3.FORWARD
+var _skim_base_y := 0.0
+var _skim_hit := false
 var _marker: MeshInstance3D
 var _marker_lip := -1
 static var _shared: Array = []
@@ -126,7 +150,29 @@ func _wants_attack(to_ball: Vector3) -> bool:
 	return to_ball.length() <= attack_range
 
 
-func _commit(_to_ball: Vector3) -> Node3D:
+func _use_wall_skim() -> bool:
+	if next_attack == "wall_skim":
+		return true
+	if next_attack == "burst":
+		return false
+	return bursts > wall_skims
+
+
+func _commit(to_ball: Vector3) -> Node3D:
+	var is_skim := _use_wall_skim()
+	_wall_skim = is_skim
+	next_attack = ""
+	if is_skim:
+		warn_seconds = WALL_SKIM_WARN
+		live_seconds = WALL_SKIM_LIVE
+		var flat := Vector3(to_ball.x, 0.0, to_ball.z)
+		_skim_dir = flat.normalized() if flat.length() > 0.1 else Vector3.FORWARD
+		_skim_origin = global_position
+		_skim_hit = false
+		_facing(_skim_dir)
+		return _commit_lane(Threat.Type.LANE, global_position, _skim_dir, WALL_SKIM_LENGTH, WALL_SKIM_WIDTH, 3.0)
+	warn_seconds = WARN
+	live_seconds = PRIMARY_LIVE
 	var aim: Vector3 = _ball() + target.planar_velocity() * LEAD
 	var reach: Vector3 = aim - global_position
 	reach.y = 0.0
@@ -138,8 +184,17 @@ func _commit(_to_ball: Vector3) -> Node3D:
 	return ring
 
 
-# It tunnelled to the ring during the wind-up and breaks the floor there.
+# It tunnelled to the ring during the wind-up and breaks the floor there; on Wall-Skim
+# Eruption it vaults airborne down its committed lane, exposed to an airborne slam pin.
 func _go_live() -> void:
+	if _wall_skim:
+		_set_hidden(false)
+		airborne_skim = true
+		wall_skims += 1
+		_skim_base_y = Telegraph.ground_under(terrain, global_position) + half_height
+		_skim_origin = global_position
+		_skim_hit = false
+		return
 	var ring := telegraph()
 	if ring != null:
 		global_position = Vector3(ring.center.x, Telegraph.ground_under(terrain, ring.center) + half_height, ring.center.z)
@@ -158,17 +213,68 @@ func _go_live() -> void:
 		fleet.discover("burrow_lane", ball)
 
 
+func _live(_delta: float) -> bool:
+	if not _wall_skim:
+		return true
+	var tele := telegraph()
+	if tele == null:
+		return false
+	var frac := clampf(_t / maxf(WALL_SKIM_LIVE, 0.05), 0.0, 1.0)
+	var horiz := _skim_origin + _skim_dir * (WALL_SKIM_LENGTH * 0.65 * frac)
+	var ground_y := Telegraph.ground_under(terrain, horiz) + half_height
+	global_position = Vector3(horiz.x, ground_y + sin(frac * PI) * WALL_SKIM_ARC_H, horiz.z)
+	if not _skim_hit:
+		var player = _player()
+		var ball := _real_ball()
+		if player != null and FloorRule.on_floor(player.state) and player.speed_tier() < SpeedTier.CRUISE and tele.contains(ball):
+			_skim_hit = true
+			var side := _skim_dir.cross(Vector3.UP).normalized()
+			hit_player.emit(WALL_SKIM_DAMAGE, side * WALL_SKIM_SHOVE + Vector3.UP * (POP * 0.65))
+	return true
+
+
 func _live_motion(_to_ball: Vector3) -> Vector3:
 	return Vector3.ZERO
 
 
 func _on_end() -> void:
+	airborne_skim = false
+	_wall_skim = false
+	warn_seconds = WARN
+	live_seconds = PRIMARY_LIVE
 	if not is_dead():
+		if terrain != null:
+			global_position.y = Telegraph.ground_under(terrain, global_position) + half_height
 		_set_hidden(true)
 
 
+func _pin_airborne(at: Vector3) -> void:
+	if not airborne_skim or is_dead():
+		return
+	airborne_pins += 1
+	airborne_skim = false
+	broken_by = "airborne_pin"
+	if terrain != null:
+		global_position.y = Telegraph.ground_under(terrain, global_position) + half_height
+	last_pin = {"at": global_position, "slam_at": at, "frame": Engine.get_physics_frames()}
+	if fleet != null:
+		fleet.discover("burrow_lane", global_position)
+	take_damage(hp)
+
+
+func on_struck(kind_hit: String, _part: String, _result: Dictionary) -> void:
+	if kind_hit == "slam" and airborne_skim and not is_dead():
+		_pin_airborne(global_position)
+
+
 func _on_slammed(at: Vector3, _strength: float, _flatness: float) -> void:
-	if not hidden or is_dead():
+	if is_dead():
+		return
+	if airborne_skim:
+		if Vector2(at.x - global_position.x, at.z - global_position.z).length() <= AIRBORNE_PIN_RADIUS:
+			_pin_airborne(at)
+		return
+	if not hidden:
 		return
 	if Vector2(at.x - global_position.x, at.z - global_position.z).length() <= MARKER_RADIUS:
 		slam_kills += 1

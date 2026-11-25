@@ -84,6 +84,143 @@ var _pod_launch := Vector3.ZERO
 static var _shared: Array = []
 static var _sockets: Dictionary = {}
 static var _asset_warned := false
+static var _packed_model: PackedScene
+static var _model_checked := false
+static var _body_shape: BoxShape3D
+static var _deck_shape: BoxShape3D
+static var _column_shapes: Dictionary = {}
+static var _mast_meshes: Dictionary = {}
+static var _mast_charcoal: StandardMaterial3D
+static var _mast_rust: StandardMaterial3D
+static var _pod_mesh: CapsuleMesh
+static var _pod_mat: StandardMaterial3D
+static var _special_cues = null
+static var _special_cues_checked := false
+static var _warmed := false
+
+
+# Pre-warms shared GLB, Jolt shapes, mast geometry, pod mesh and cues once so Sinkhole
+# Dispatcher spawns stay under the 8 ms frame budget instead of stalling on first spawn.
+static func warm_shared() -> void:
+	if _warmed:
+		return
+	_warmed = true
+	_parts()
+	_get_body_shape()
+	_get_deck_shape()
+	_get_column_shape(PERCH_HEIGHT)
+	_get_mast_meshes(PERCH_HEIGHT)
+	_get_pod_mesh()
+	_get_pod_mat()
+	_get_special_cues()
+
+
+static func _get_body_shape() -> BoxShape3D:
+	if _body_shape == null:
+		_body_shape = BoxShape3D.new()
+		_body_shape.size = BODY_SIZE
+	return _body_shape
+
+
+static func _get_deck_shape() -> BoxShape3D:
+	if _deck_shape == null:
+		_deck_shape = BoxShape3D.new()
+		_deck_shape.size = DECK_SIZE
+	return _deck_shape
+
+
+static func _get_column_shape(height: float) -> BoxShape3D:
+	var key := roundi(height * 10.0)
+	if not _column_shapes.has(key):
+		var box := BoxShape3D.new()
+		box.size = Vector3(MAST_WIDTH, float(key) * 0.1, MAST_WIDTH)
+		_column_shapes[key] = box
+	return _column_shapes[key] as BoxShape3D
+
+
+static func _get_pod_mesh() -> CapsuleMesh:
+	if _pod_mesh == null:
+		_pod_mesh = CapsuleMesh.new()
+		_pod_mesh.radius = POD_RADIUS
+		_pod_mesh.height = POD_RADIUS * 3.0
+	return _pod_mesh
+
+
+static func _get_pod_mat() -> StandardMaterial3D:
+	if _pod_mat == null:
+		_pod_mat = Palette.solid(Palette.BRASS, 0.6)
+	return _pod_mat
+
+
+static func _get_special_cues():
+	if not _special_cues_checked:
+		_special_cues_checked = true
+		if ResourceLoader.exists(SPECIAL_CUES):
+			_special_cues = load(SPECIAL_CUES)
+	return _special_cues
+
+
+static func _append_box(st: SurfaceTool, size: Vector3, center: Vector3) -> void:
+	var h := size * 0.5
+	var corners := [
+		center + Vector3(-h.x, -h.y, -h.z),
+		center + Vector3(h.x, -h.y, -h.z),
+		center + Vector3(h.x, h.y, -h.z),
+		center + Vector3(-h.x, h.y, -h.z),
+		center + Vector3(-h.x, -h.y, h.z),
+		center + Vector3(h.x, -h.y, h.z),
+		center + Vector3(h.x, h.y, h.z),
+		center + Vector3(-h.x, h.y, h.z),
+	]
+	var quads := [
+		[0, 1, 2, 3, Vector3(0, 0, -1)],
+		[5, 4, 7, 6, Vector3(0, 0, 1)],
+		[4, 0, 3, 7, Vector3(-1, 0, 0)],
+		[1, 5, 6, 2, Vector3(1, 0, 0)],
+		[3, 2, 6, 7, Vector3(0, 1, 0)],
+		[4, 5, 1, 0, Vector3(0, -1, 0)],
+	]
+	for q in quads:
+		st.set_normal(q[4])
+		st.add_vertex(corners[q[0]])
+		st.add_vertex(corners[q[1]])
+		st.add_vertex(corners[q[2]])
+		st.add_vertex(corners[q[0]])
+		st.add_vertex(corners[q[2]])
+		st.add_vertex(corners[q[3]])
+
+
+static func _get_mast_meshes(height: float) -> Dictionary:
+	var key := roundi(height * 10.0)
+	if _mast_meshes.has(key):
+		return _mast_meshes[key]
+	if _mast_charcoal == null:
+		_mast_charcoal = Palette.solid(Palette.CHARCOAL)
+	if _mast_rust == null:
+		_mast_rust = Palette.solid(Palette.RUST)
+	var h := float(key) * 0.1
+	var leg_at := MAST_WIDTH * 0.5 - 0.1
+	var st_frame := SurfaceTool.new()
+	st_frame.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for x in [-leg_at, leg_at]:
+		for z in [-leg_at, leg_at]:
+			_append_box(st_frame, Vector3(0.18, h, 0.18), Vector3(x, -h * 0.5, z))
+	_append_box(st_frame, DECK_SIZE, Vector3(0.0, -DECK_SIZE.y * 0.5, 0.0))
+	var st_rungs := SurfaceTool.new()
+	st_rungs.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rungs := int(h / 1.6)
+	for i in rungs:
+		var y := -h + 0.8 + i * 1.6
+		_append_box(st_rungs, Vector3(MAST_WIDTH, 0.1, 0.1), Vector3(0.0, y, leg_at))
+		_append_box(st_rungs, Vector3(MAST_WIDTH, 0.1, 0.1), Vector3(0.0, y, -leg_at))
+		_append_box(st_rungs, Vector3(0.1, 0.1, MAST_WIDTH), Vector3(leg_at, y, 0.0))
+		_append_box(st_rungs, Vector3(0.1, 0.1, MAST_WIDTH), Vector3(-leg_at, y, 0.0))
+	var entry := {
+		"frame": st_frame.commit(),
+		"rungs": st_rungs.commit() if rungs > 0 else null,
+	}
+	_mast_meshes[key] = entry
+	return entry
 
 
 func _configure(threat: float) -> void:
@@ -109,9 +246,7 @@ func _build_crew() -> void:
 	radius = BODY_SIZE.x * 0.5
 	half_height = FLOOR_DROP
 	var shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = BODY_SIZE
-	shape.shape = box
+	shape.shape = _get_body_shape()
 	add_child(shape)
 	_base_color = Color.WHITE
 	_material = Palette.solid(_base_color)
@@ -161,11 +296,13 @@ func _fallback_body() -> void:
 static func _parts() -> Array:
 	if not _shared.is_empty():
 		return _shared
-	var packed := load(MODEL) as PackedScene if ResourceLoader.exists(MODEL) else null
-	if packed == null:
+	if not _model_checked:
+		_model_checked = true
+		_packed_model = load(MODEL) as PackedScene if ResourceLoader.exists(MODEL) else null
+	if _packed_model == null:
 		_asset_warning()
 		return []
-	var scene := packed.instantiate() as Node3D
+	var scene := _packed_model.instantiate() as Node3D
 	var parts: Array = []
 	for part in ["DispatcherBody", "DispatcherRadar", "DispatcherSignal"]:
 		var mi := scene.find_child(part, true, false) as MeshInstance3D
@@ -173,7 +310,7 @@ static func _parts() -> Array:
 			scene.free()
 			_asset_warning()
 			return []
-		parts.append({"name": part, "mesh": mi.mesh.duplicate(), "xform": _in_scene(mi, scene)})
+		parts.append({"name": part, "mesh": mi.mesh, "xform": _in_scene(mi, scene)})
 	for socket in ["drop_mouth", "Beacon", "RadarPivot", "perch_foot"]:
 		var node := scene.find_child(socket, true, false) as Node3D
 		if node != null:
@@ -221,29 +358,25 @@ func _build_mast(height: float) -> void:
 	add_child(mast)
 	mast.position = Vector3(0.0, -FLOOR_DROP, 0.0)
 	var column := CollisionShape3D.new()
-	var column_box := BoxShape3D.new()
-	column_box.size = Vector3(MAST_WIDTH, height, MAST_WIDTH)
-	column.shape = column_box
+	column.shape = _get_column_shape(height)
 	column.position = Vector3(0.0, -height * 0.5, 0.0)
 	mast.add_child(column)
 	var deck := CollisionShape3D.new()
-	var deck_box := BoxShape3D.new()
-	deck_box.size = DECK_SIZE
-	deck.shape = deck_box
+	deck.shape = _get_deck_shape()
 	deck.position = Vector3(0.0, -DECK_SIZE.y * 0.5, 0.0)
 	mast.add_child(deck)
-	var leg_at := MAST_WIDTH * 0.5 - 0.1
-	for x in [-leg_at, leg_at]:
-		for z in [-leg_at, leg_at]:
-			_box(Vector3(0.18, height, 0.18), Palette.CHARCOAL, Vector3(x, -height * 0.5, z), 0.0, mast)
-	var rungs := int(height / 1.6)
-	for i in rungs:
-		var y := -height + 0.8 + i * 1.6
-		_box(Vector3(MAST_WIDTH, 0.1, 0.1), Palette.RUST, Vector3(0.0, y, leg_at), 0.0, mast)
-		_box(Vector3(MAST_WIDTH, 0.1, 0.1), Palette.RUST, Vector3(0.0, y, -leg_at), 0.0, mast)
-		_box(Vector3(0.1, 0.1, MAST_WIDTH), Palette.RUST, Vector3(leg_at, y, 0.0), 0.0, mast)
-		_box(Vector3(0.1, 0.1, MAST_WIDTH), Palette.RUST, Vector3(-leg_at, y, 0.0), 0.0, mast)
-	_box(DECK_SIZE, Palette.CHARCOAL, Vector3(0.0, -DECK_SIZE.y * 0.5, 0.0), 0.0, mast)
+	var meshes := _get_mast_meshes(height)
+	var frame := MeshInstance3D.new()
+	frame.name = "MastFrame"
+	frame.mesh = meshes["frame"]
+	frame.material_override = _mast_charcoal
+	mast.add_child(frame)
+	if meshes["rungs"] != null:
+		var rungs_view := MeshInstance3D.new()
+		rungs_view.name = "MastRungs"
+		rungs_view.mesh = meshes["rungs"]
+		rungs_view.material_override = _mast_rust
+		mast.add_child(rungs_view)
 
 
 func perch_height() -> float:
@@ -297,8 +430,9 @@ func _commit(to_ball: Vector3) -> Node3D:
 func _voice(tele: Node3D) -> void:
 	super(tele)
 	tele.warn_seconds = WARN
-	if ResourceLoader.exists(SPECIAL_CUES):
-		load(SPECIAL_CUES).tell(self)
+	var cues = _get_special_cues()
+	if cues != null:
+		cues.tell(self)
 	else:
 		special_tell.emit("tell")
 
@@ -390,11 +524,8 @@ func _pose() -> void:
 	if _pod == null:
 		_pod = MeshInstance3D.new()
 		_pod.name = "DispatchPod"
-		var capsule := CapsuleMesh.new()
-		capsule.radius = POD_RADIUS
-		capsule.height = POD_RADIUS * 3.0
-		_pod.mesh = capsule
-		_pod.material_override = Palette.solid(Palette.BRASS, 0.6)
+		_pod.mesh = _get_pod_mesh()
+		_pod.material_override = _get_pod_mat()
 		world_root.add_child(_pod)
 		_pod_launch = Projectile.lob_velocity(_pod_from, ring.center, FLIGHT)
 	var s := clampf(_t - SUCK, 0.0, FLIGHT)

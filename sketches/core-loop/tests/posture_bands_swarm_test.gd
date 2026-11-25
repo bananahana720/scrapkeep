@@ -99,8 +99,13 @@ const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
 # 2026-10-23 (swarm hive option 1, alpha_defs.gd HIVE_HEAVY_RATIO): 24 seeds a side on stage
 # w18 re-pin small 99.54 -> 72.89 s and grown 42.69 -> 33.95 s, 2.15x. Before the tune, the same 24 seeds read
 # small 75.69 s and grown 40.67 s, 1.86x, first stagger 50.32 s; trials in /mnt/project-files/gate/c10-swarm/.
-const EXPECT_SMALL_S := 72.89
-const EXPECT_GROWN_S := 33.95
+# 2026-11-25 (W48-COMBAT, 48-seed sweep on w48/combat-dig-waking with 5 Dig 2-attack kits & PF-42 headframe fix):
+# measured small 68.27 s (was 66.82 s on w45, +1.45 s under Dig 2-attack stall pressure), grown 30.33 s (was
+# 30.38 s on w45, inside 25..45 s GROWN_BAND_S with 5.33 s margin), ratio 2.25x (>= 2.0x SMALL_FACTOR), small
+# first stagger 48.04 s (inside 38.45..58.45 s Mac band), 24/24 low-dwell staggers, 24/24 latch finishes.
+# Re-pinned to the 48-seed measured medians with all design bands and 10% tolerance unchanged.
+const EXPECT_SMALL_S := 68.27
+const EXPECT_GROWN_S := 30.33
 const TOLERANCE := 0.10
 # 2026-10-18: a 4-core, 16 GB cloud sandbox ran all 24 children at once; the kernel killed grown
 # seed 1 for memory (exit 9, no record, counted as a 300 s fight) and every camper hit the 900 s
