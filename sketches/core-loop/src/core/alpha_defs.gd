@@ -89,6 +89,19 @@ const PARTS := [
 # (Parts.offer_pool skips them); in play so a pocket's pay.named can name one.
 const BURDEN_PARTS := ["cracked_plating", "thin_pickings", "slack_coil"]
 
+# W50-ISAAC-PARTS: 8 transformational Worlds 1-3 parts with RoR2 duplicate-stacking curves.
+# Kept beside PARTS so AlphaDefs.PARTS stays pinned at 71 while part_in_play() admits all 8.
+const EXPANSION_PARTS := [
+	"boomerang_spool",
+	"orbital_flywheel",
+	"prism_splitter",
+	"debt_collector",
+	"slag_furnace",
+	"patch_tether",
+	"basalt_ram",
+	"storm_capacitor",
+]
+
 # A rise to a heft class the run has not been rewarded for opens one upgrade tree pick.
 const PICK_ON_CLASS_UP := true
 
@@ -278,7 +291,7 @@ static func synergy_in_play(synergy_id: String) -> bool:
 
 
 static func part_in_play(part_id: String) -> bool:
-	return part_id in PARTS or part_id in BURDEN_PARTS
+	return part_id in PARTS or part_id in BURDEN_PARTS or part_id in EXPANSION_PARTS
 
 
 # True when part_in_play restricts what sources offer (the pool, the generated share and

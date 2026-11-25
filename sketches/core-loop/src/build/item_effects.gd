@@ -34,9 +34,14 @@ const EFFECTS := {
 	"bonus_scrap": "chance", "ping": "", "price_scale": "per", "perk": "", "drone": "chance",
 	"slot_cooldown": "per", "overcharge": "damage", "burden_payout": "per", "pike_fuse": "",
 	"dash_wake": "", "reel_chain": "", "slam_crack": "", "second_bell": "", "line_leash": "",
+	"boomerang_return": "damage_per_stack", "orbital_satellites": "count", "prism_refract": "per_stack",
+	"coin_shot": "scale_per", "slag_zone": "radius_per", "pocket_aura": "per",
+	"seismic_cone": "per_stack", "air_static": "per_stack",
 }
 const PASSIVE_EFFECTS := ["slot_cooldown", "damage_reduction", "price_scale", "hp_per_mass", "perk", "ballast",
-	"vault_cooldown", "vault_charges", "pike_fuse", "dash_wake", "reel_chain", "slam_crack", "second_bell", "line_leash"]
+	"vault_cooldown", "vault_charges", "pike_fuse", "dash_wake", "reel_chain", "slam_crack", "second_bell", "line_leash",
+	"boomerang_return", "orbital_satellites", "prism_refract", "coin_shot", "slag_zone", "pocket_aura",
+	"seismic_cone", "air_static"]
 # The verb items (ABILITY-MUTATIONS.md C3 to C7): each is capped at one copy and hands combat its
 # effect row as written, so these ids fold into `verbs` and nothing else.
 const VERB_EFFECTS := ["dash_wake", "reel_chain", "slam_crack", "second_bell", "line_leash"]
@@ -150,7 +155,7 @@ func refresh(held: Array) -> void:
 	_held_parts = held.duplicate()
 	var index := 0
 	for part_id in order:
-		if Parts.MICRO_MUTATIONS.has(part_id):
+		if Parts.MICRO_MUTATIONS.has(part_id) or Parts.FLAT_MICRO_MUTATIONS.has(part_id):
 			micro_mutations[part_id] = Parts.micro_mutation(part_id)
 		var d: Resource = Parts.def(part_id)
 		if d == null:
@@ -255,6 +260,105 @@ func has_cross_synergy(id: String, context := {}) -> bool:
 
 func cross_synergy_row(id: String) -> Dictionary:
 	return Synergies.cross_system_row(id)
+
+
+# --- W50-ISAAC-PARTS: RoR2 duplicate-stacking queries for the 8 transformational parts ---
+
+func part_copies(part_id: String) -> int:
+	return int(copies.get(part_id, 0))
+
+
+func has_part(part_id: String) -> bool:
+	return part_copies(part_id) > 0
+
+
+func boomerang_stats() -> Dictionary:
+	var n := part_copies("boomerang_spool")
+	if n <= 0:
+		return {}
+	var d: Resource = Parts.def("boomerang_spool")
+	var fx: Dictionary = d.effect
+	var dmg_add := PartDef.Stacking.value("linear", float(fx.get("damage_per_stack", 0.20)), n - 1, float(d.stack_cap))
+	var wid_add := PartDef.Stacking.value("linear", float(fx.get("width_per_stack", 0.25)), n - 1, float(d.stack_cap))
+	return {
+		"stacks": n,
+		"pause_s": float(fx.get("pause_s", 0.15)),
+		"damage_mult": minf(float(fx.get("max_damage_mult", 2.0)), 1.0 + dmg_add),
+		"width_mult": minf(float(fx.get("max_width_mult", 2.25)), 1.0 + wid_add),
+	}
+
+
+func orbital_count() -> int:
+	var n := part_copies("orbital_flywheel")
+	if n <= 0:
+		return 0
+	var d: Resource = Parts.def("orbital_flywheel")
+	var fx: Dictionary = d.effect
+	var cap_n := int(fx.get("max_count", 5))
+	return clampi(int(PartDef.Stacking.value("capped", float(fx.get("count", 1)), n, float(cap_n))), 1, cap_n)
+
+
+func prism_rays() -> int:
+	var n := part_copies("prism_splitter")
+	if n <= 0:
+		return 0
+	var d: Resource = Parts.def("prism_splitter")
+	var fx: Dictionary = d.effect
+	var base_rays := int(fx.get("base_rays", 2))
+	var max_rays := int(fx.get("max_rays", 5))
+	return clampi(base_rays + int(PartDef.Stacking.value("linear", float(fx.get("per_stack", 1)), n, float(d.stack_cap))), base_rays + 1, max_rays)
+
+
+func coin_shot_damage() -> float:
+	var n := part_copies("debt_collector")
+	if n <= 0:
+		return 0.0
+	var d: Resource = Parts.def("debt_collector")
+	var fx: Dictionary = d.effect
+	var scale := PartDef.Stacking.value("hyperbolic", float(fx.get("scale_per", 0.35)), n, float(d.stack_cap))
+	return float(fx.get("damage", 16.0)) * (1.0 + scale * 1.5)
+
+
+func slag_radius(extra_bonus := 0.0) -> float:
+	var n := part_copies("slag_furnace")
+	if n <= 0:
+		return 0.0
+	var d: Resource = Parts.def("slag_furnace")
+	var fx: Dictionary = d.effect
+	var base_r := float(fx.get("base_radius", 3.2))
+	var max_r := float(fx.get("max_radius", 6.5))
+	var frac := PartDef.Stacking.value("hyperbolic", float(fx.get("radius_per", 0.45)), n - 1, float(d.stack_cap))
+	return minf(max_r, base_r + (max_r - base_r) * frac) + maxf(0.0, extra_bonus)
+
+
+func pocket_aura_bonus(has_consumable: bool) -> float:
+	var n := part_copies("patch_tether")
+	if n <= 0 or not has_consumable:
+		return 0.0
+	var d: Resource = Parts.def("patch_tether")
+	var fx: Dictionary = d.effect
+	var cap_b := float(fx.get("cap_bonus", 0.65))
+	return PartDef.Stacking.value("hyperbolic", float(fx.get("per", 0.22)), n, cap_b)
+
+
+func basalt_cone_damage() -> float:
+	var n := part_copies("basalt_ram")
+	if n <= 0:
+		return 0.0
+	var d: Resource = Parts.def("basalt_ram")
+	var fx: Dictionary = d.effect
+	var add := PartDef.Stacking.value("linear", float(fx.get("per_stack", 0.25)), n - 1, float(d.stack_cap))
+	return float(fx.get("damage", 24.0)) * minf(float(fx.get("max_mult", 2.0)), 1.0 + add)
+
+
+func storm_static_mult() -> float:
+	var n := part_copies("storm_capacitor")
+	if n <= 0:
+		return 0.0
+	var d: Resource = Parts.def("storm_capacitor")
+	var fx: Dictionary = d.effect
+	var frac := PartDef.Stacking.value("hyperbolic", float(fx.get("per_stack", 0.35)), n, float(d.stack_cap))
+	return 1.0 + frac * 1.6
 
 
 # All payout copies share one asymptote; the count includes repeated burden parts.

@@ -144,6 +144,34 @@ const EVOLVED_FROM := {
 	"fault_hammer": "thermal_shock",
 }
 
+# W50-ISAAC-PARTS: 3 additional verb-changing evolutions with strictly disjoint ingredient pairs
+# (zero overlap with EVOLUTIONS' 14 ingredients or each other). Kept beside EVOLUTIONS so existing
+# 7-row pins stay intact while runtime evolution helpers merge all 10 cleanly.
+const EVOLUTIONS_W50 := {
+	"gyro_foundry": ["orbital_flywheel", "basalt_ram"],
+	"arc_prism": ["prism_splitter", "galvanic_rounds"],
+	"whiplash_spool": ["boomerang_spool", "long_leash"],
+}
+const EVOLVED_FROM_W50 := {
+	"gyro_foundry": "storm_front",
+	"arc_prism": "live_wire",
+	"whiplash_spool": "lightning_rod",
+}
+
+
+static func all_evolutions() -> Dictionary:
+	var out := EVOLUTIONS.duplicate(true)
+	for into in EVOLUTIONS_W50:
+		out[into] = (EVOLUTIONS_W50[into] as Array).duplicate()
+	return out
+
+
+static func all_evolved_from() -> Dictionary:
+	var out := EVOLVED_FROM.duplicate(true)
+	for into in EVOLVED_FROM_W50:
+		out[into] = EVOLVED_FROM_W50[into]
+	return out
+
 
 # True when the table in use keeps this trick.
 static func in_play(trick_id: String) -> bool:
@@ -218,29 +246,35 @@ static func declarations(maker_name: Callable) -> Array:
 
 # The Evolved parts that should be gained now: both ingredients held, the Evolved part not.
 static func evolutions_ready(held: Array) -> Array:
-	return EVOLUTIONS.keys().filter(func(into): return not into in held and _holds_all(held, EVOLUTIONS[into]))
+	var all := all_evolutions()
+	return all.keys().filter(func(into): return not into in held and _holds_all(held, all[into]))
 
 
 # True while an Evolved part's ingredients are both held; an Evolved part gives nothing otherwise.
 # True for any part that is not an Evolved part.
 static func evolution_live(part_id: String, held: Array) -> bool:
-	return not EVOLUTIONS.has(part_id) or _holds_all(held, EVOLUTIONS[part_id])
+	var all := all_evolutions()
+	return not all.has(part_id) or _holds_all(held, all[part_id])
 
 
 # True while the run holds this Evolved part and both its ingredients: the one call combat makes
 # before an evolution rewrites a verb (design-v3/ABILITY-MUTATIONS.md section 7 D).
 static func evolved_live(part_id: String, held: Array) -> bool:
-	return EVOLUTIONS.has(part_id) and part_id in held and _holds_all(held, EVOLUTIONS[part_id])
+	var all := all_evolutions()
+	return all.has(part_id) and part_id in held and _holds_all(held, all[part_id])
 
 
 # The trick an Evolved part grew out of, or "".
 static func evolution_of(part_id: String) -> String:
-	return EVOLVED_FROM.get(part_id, "")
+	if EVOLVED_FROM.has(part_id):
+		return EVOLVED_FROM[part_id]
+	return EVOLVED_FROM_W50.get(part_id, "")
 
 
 # True for an Evolved part or one of its ingredients.
 static func in_evolution(part_id: String) -> bool:
-	return EVOLUTIONS.has(part_id) or EVOLUTIONS.values().any(func(pair): return part_id in pair)
+	var all := all_evolutions()
+	return all.has(part_id) or all.values().any(func(pair): return part_id in pair)
 
 
 # Admission for an evolution table (Elements.problems' shape): every pair is two distinct parts
@@ -339,27 +373,106 @@ const CROSS_SYSTEM := {
 	},
 }
 
+# --- W50-ISAAC-PARTS: 6 additional cross-system synergies (6 -> 12 total) ---
+# Kept beside CROSS_SYSTEM so synergies_test.gd's 6-row W47 pin stays untouched while all runtime
+# evaluators (cross_system_active, cross_system_awake, cross_system_row, cross_system_problems)
+# operate seamlessly across all 12 rows.
+const CROSS_SYSTEM_W50 := {
+	"overclocked_circuit": {
+		"name": "Overclocked Circuit",
+		"systems": ["speed", "arc"],
+		"tags": ["speed", "arc"],
+		"color": Palette.ARC,
+		"text": "Fast speed overcharges weapon hits into a 9 m arc circuit burst.",
+		"radius_m": 9.0,
+		"damage_base": 20.0,
+		"cooldown_s": 0.45,
+		"min_tier": 2,
+	},
+	"orbital_furnace": {
+		"name": "Orbital Furnace",
+		"systems": ["orbital", "heat"],
+		"tags": ["spiral", "arc"],
+		"color": Palette.COPPER,
+		"text": "Orbiting satellites scorch struck machines and widen molten slag zones.",
+		"bonus_damage_mult": 1.45,
+		"slag_radius_bonus": 1.5,
+	},
+	"scrap_magnetron": {
+		"name": "Scrap Magnetron",
+		"systems": ["magnet", "arc"],
+		"tags": ["mass", "arc"],
+		"color": Palette.VERDIGRIS,
+		"text": "Every 4th scrap or cog pickup fires an 8 m magnetic arc ring.",
+		"pickup_threshold": 4,
+		"radius_m": 8.0,
+		"damage_base": 22.0,
+		"cooldown_s": 0.50,
+	},
+	"railgun_ricochet": {
+		"name": "Railgun Ricochet",
+		"systems": ["pierce", "bounce"],
+		"tags": ["kinetic", "chain"],
+		"color": Palette.LEDGER,
+		"text": "Bounced piercing bolts accelerate +40% and strike +35% harder.",
+		"speed_mult": 1.40,
+		"damage_mult": 1.35,
+		"max_stacks": 2,
+	},
+	"ghost_conductor": {
+		"name": "Ghost Conductor",
+		"systems": ["husk", "arc"],
+		"tags": ["arc", "chain"],
+		"color": Palette.AMBER,
+		"text": "Raised husks tether amber arcs to the ball that zap crossed machines.",
+		"link_width_m": 1.8,
+		"damage_base": 18.0,
+		"tick_cooldown_s": 0.50,
+		"max_links": 4,
+	},
+	"heavy_dividend": {
+		"name": "Heavy Dividend",
+		"systems": ["burden", "mass"],
+		"tags": ["mass", "kinetic"],
+		"color": Palette.BRASS,
+		"text": "Held burdens and high heft add +12% hit payout per burden, up to +60%.",
+		"per_burden": 0.12,
+		"cap_bonus": 0.60,
+	},
+}
 
-static func cross_system_ids() -> Array:
-	return CROSS_SYSTEM.keys()
+
+static func all_cross_system() -> Dictionary:
+	var out := CROSS_SYSTEM.duplicate(true)
+	for key in CROSS_SYSTEM_W50:
+		out[key] = (CROSS_SYSTEM_W50[key] as Dictionary).duplicate(true)
+	return out
+
+
+static func cross_system_ids(include_w50 := true) -> Array:
+	return (CROSS_SYSTEM.keys() + CROSS_SYSTEM_W50.keys()) if include_w50 else CROSS_SYSTEM.keys()
 
 
 static func cross_system_row(id: String) -> Dictionary:
-	return (CROSS_SYSTEM.get(id, {}) as Dictionary).duplicate(true)
+	if CROSS_SYSTEM.has(id):
+		return (CROSS_SYSTEM[id] as Dictionary).duplicate(true)
+	if CROSS_SYSTEM_W50.has(id):
+		return (CROSS_SYSTEM_W50[id] as Dictionary).duplicate(true)
+	return {}
 
 
 # Cross-system synergies awake for `held` (part id list), `part_info` (Callable(part_id) -> {tags, bits}),
-# and runtime `context` ({heft_class, mass, has_consumable, has_active, has_pull, ...}), in row order.
+# and runtime `context` ({heft_class, mass, has_consumable, has_active, has_pull, has_husk, burden_count, ...}), in row order.
 static func cross_system_active(held: Array, part_info: Callable, context := {}) -> Array:
 	var out: Array = []
-	for id in CROSS_SYSTEM:
+	for id in cross_system_ids(true):
 		if cross_system_awake(id, held, part_info, context):
 			out.append(id)
 	return out
 
 
 static func cross_system_awake(id: String, held: Array, part_info: Callable, context := {}) -> bool:
-	var row: Dictionary = CROSS_SYSTEM.get(id, {})
+	var row: Dictionary = cross_system_row(id)
 	if row.is_empty():
 		return false
 	var systems: Array = row.get("systems", [])
@@ -368,10 +481,11 @@ static func cross_system_awake(id: String, held: Array, part_info: Callable, con
 	return _pair_awake(String(systems[0]), String(systems[1]), held, part_info, context)
 
 
-static func cross_system_declarations() -> Array:
+static func cross_system_declarations(include_w50 := false) -> Array:
+	var source: Dictionary = all_cross_system() if include_w50 else CROSS_SYSTEM
 	var cards: Array = []
-	for key in CROSS_SYSTEM:
-		var row: Dictionary = CROSS_SYSTEM[key]
+	for key in source:
+		var row: Dictionary = source[key]
 		var systems: Array = row["systems"]
 		cards.append({
 			"id": key,
@@ -386,11 +500,16 @@ static func cross_system_declarations() -> Array:
 	return cards
 
 
+static func all_cross_system_declarations() -> Array:
+	return cross_system_declarations(true)
+
+
 static func cross_system_problems() -> Array:
 	var found: Array = []
 	var pairs := {}
-	for id in CROSS_SYSTEM:
-		var row: Dictionary = CROSS_SYSTEM[id]
+	var all := all_cross_system()
+	for id in all:
+		var row: Dictionary = all[id]
 		for key in ["name", "text", "systems", "tags", "color"]:
 			if not row.has(key):
 				found.append("%s missing %s" % [id, key])
@@ -455,15 +574,25 @@ static func _part_matches_system(system: String, part_id: String, tags: Array, b
 		"split":
 			return ShotBits.has(bits, ShotBits.bit("split")) or "split" in tags
 		"heat":
-			return ShotBits.has(bits, ShotBits.bit("heat")) or "arc" in tags or "heat" in tags
+			return ShotBits.has(bits, ShotBits.bit("heat")) or "arc" in tags or "heat" in tags or part_id == "slag_furnace"
 		"kinetic":
-			return "kinetic" in tags or part_id in ["drop_weight", "fault_hammer", "ram_plow"]
+			return "kinetic" in tags or part_id in ["drop_weight", "fault_hammer", "ram_plow", "basalt_ram"]
 		"pull":
 			return ShotBits.has(bits, ShotBits.bit("pull")) or "anchor" in tags or "pull" in tags
 		"consumable":
-			return "consumable" in tags
+			return "consumable" in tags or part_id == "patch_tether"
 		"active":
 			return "active" in tags
+		"orbital":
+			return part_id in ["orbital_flywheel", "gyro_foundry"]
+		"magnet":
+			return part_id in ["magnet_spool", "magnet_coil", "scrap_gravity", "debt_collector"]
+		"pierce":
+			return ShotBits.has(bits, ShotBits.bit("pierce")) or "kinetic" in tags or part_id in ["helix_drill", "slag_pike", "horizon_optic"]
+		"husk":
+			return part_id in ["link_clips", "link_double"]
+		"burden":
+			return part_id in ["load_dividend", "debt_collector", "cracked_plating", "thin_pickings", "slack_coil"]
 	return false
 
 
@@ -479,5 +608,9 @@ static func _context_has_system(system: String, context: Dictionary) -> bool:
 			return bool(context.get("has_consumable", false))
 		"active":
 			return bool(context.get("has_active", false))
+		"husk":
+			return bool(context.get("has_husk", false))
+		"burden":
+			return int(context.get("burden_count", 0)) > 0 or bool(context.get("has_burden", false))
 		_:
 			return bool(context.get("has_" + system, false))

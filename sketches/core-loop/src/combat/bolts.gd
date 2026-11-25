@@ -16,6 +16,7 @@ extends Node3D
 
 const Density := preload("res://src/presentation/density.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 const MAX_LIVE := 64
 const PRIORITY := 0
@@ -49,6 +50,13 @@ const BOUNCE_LIFT := 0.05
 const MAX_EXTRA_BOUNCES := 2
 const RICOCHET_HOME_REACH := 26.0
 const RICOCHET_HOME_TURN := 0.75
+# W50-ISAAC-PARTS Boomerang Spool & Railgun Ricochet: strictly bounded single return pass and
+# bounded railgun acceleration cap.
+const BOOMERANG_PAUSE_S := 0.15
+const BOOMERANG_MAX_DAMAGE_MULT := 2.0
+const BOOMERANG_MAX_WIDTH_MULT := 2.25
+const BOOMERANG_RETURN_PIERCE := 4
+const RAILGUN_MAX_BOOSTS := 2
 
 # Called as on_hit.call(bolt: Dictionary, enemy: Node3D, point: Vector3, part: String);
 # part is a weak point id from enemy.weak_points(), or "" for the body.
@@ -175,7 +183,9 @@ func _initial_draw_offset(bolt: Dictionary) -> Vector3:
 # bits it has spent, so a child can neither gain a bit nor use one twice (SI4).
 static func child(parent: Dictionary, overrides: Dictionary) -> Dictionary:
 	var out := parent.duplicate()
-	for key in ["travelled", "age", "shown", "right", "up", "exclude", "draw_origin", "draw_offset", "bounces", "ricochet_curved"]:
+	for key in ["travelled", "age", "shown", "right", "up", "exclude", "draw_origin", "draw_offset", "bounces", "ricochet_curved",
+			"boomerang", "boomerang_pause", "boomerang_returned", "boomerang_pause_s", "boomerang_damage_mult", "boomerang_width_mult", "whiplash_pull",
+			"railgun_ricochet", "railgun_speed_mult", "railgun_damage_mult", "railgun_max_stacks", "railgun_boosts", "railgun_boosted_last"]:
 		out.erase(key)
 	for key in overrides:
 		out[key] = overrides[key]
@@ -268,6 +278,14 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 	# Built once per tick; struck entries refresh in place and dead enemies are skipped lazily.
 	var snapshot: Array = _snapshot(enemies)
 	for bolt in _bolts:
+		# W50-ISAAC-PARTS Boomerang Spool: pause BOOMERANG_PAUSE_S at max range, then whip back once.
+		if float(bolt.get("boomerang_pause", 0.0)) > 0.0:
+			bolt["age"] += delta
+			bolt["boomerang_pause"] = maxf(0.0, float(bolt["boomerang_pause"]) - delta)
+			if float(bolt["boomerang_pause"]) <= 0.0:
+				_flip_boomerang(bolt)
+			survivors.append(bolt)
+			continue
 		var from: Vector3 = bolt["shown"]
 		var before: float = bolt["travelled"]
 		bolt["age"] += delta
@@ -332,6 +350,10 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 				on_stop.call(end, bolt["color"])
 			continue
 		if bolt["travelled"] >= bolt["max_dist"]:
+			if bool(bolt.get("boomerang", false)) and not bool(bolt.get("boomerang_returned", false)):
+				bolt["shown"] = to
+				bolt["boomerang_pause"] = maxf(0.01, float(bolt.get("boomerang_pause_s", BOOMERANG_PAUSE_S)))
+				survivors.append(bolt)
 			continue
 		bolt["shown"] = to
 		survivors.append(bolt)
@@ -375,9 +397,59 @@ func _glance(bolt: Dictionary, at: Vector3, normal: Vector3, used: float, snapsh
 	var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
 	bolt["right"] = dir.cross(up_hint).normalized()
 	bolt["up"] = (bolt["right"] as Vector3).cross(dir).normalized()
+	if bool(bolt.get("railgun_ricochet", false)):
+		var max_boosts := clampi(int(bolt.get("railgun_max_stacks", RAILGUN_MAX_BOOSTS)), 1, RAILGUN_MAX_BOOSTS)
+		var boosts := int(bolt.get("railgun_boosts", 0))
+		if boosts < max_boosts:
+			bolt["railgun_boosts"] = boosts + 1
+			bolt["speed"] = float(bolt["speed"]) * float(bolt.get("railgun_speed_mult", 1.40))
+			bolt["damage"] = float(bolt["damage"]) * float(bolt.get("railgun_damage_mult", 1.35))
+			bolt["color"] = Palette.LEDGER
+			bolt["railgun_boosted_last"] = true
+		else:
+			bolt["railgun_boosted_last"] = false
 	if on_bounce.is_valid():
 		on_bounce.call(bolt, at)
 	return true
+
+
+# W50-ISAAC-PARTS: flips a paused boomerang bolt back along its line strictly once.
+# Returning pass runs as source="item_proc" with bits=0 so proc depth stays strictly 1.
+func _flip_boomerang(bolt: Dictionary) -> void:
+	var back_dir: Vector3 = -(bolt["dir"] as Vector3)
+	if back_dir.length_squared() < 1e-6:
+		back_dir = Vector3.BACK
+	else:
+		back_dir = back_dir.normalized()
+	var dmg_mult := clampf(float(bolt.get("boomerang_damage_mult", 1.0)), 1.0, BOOMERANG_MAX_DAMAGE_MULT)
+	var wid_mult := clampf(float(bolt.get("boomerang_width_mult", 1.0)), 1.0, BOOMERANG_MAX_WIDTH_MULT)
+	bolt["boomerang"] = false
+	bolt["boomerang_returned"] = true
+	bolt["boomerang_pause"] = 0.0
+	bolt["dir"] = back_dir
+	bolt["origin"] = bolt["shown"]
+	bolt["travelled"] = 0.0
+	bolt["exclude"] = []
+	bolt["damage"] = float(bolt["damage"]) * dmg_mult
+	bolt["width_scale"] = float(bolt.get("width_scale", 1.0)) * wid_mult
+	bolt["radius"] = float(bolt["radius"]) * wid_mult
+	bolt["source"] = "item_proc"
+	bolt["bits"] = 0
+	bolt["spent"] = 0
+	bolt["chain_jumps"] = 0
+	bolt["extra_bounces"] = 0
+	bolt["railgun_ricochet"] = false
+	bolt["railgun_boosts"] = 0
+	bolt["railgun_boosted_last"] = false
+	bolt["ricochet_home"] = false
+	bolt["sixth_hot"] = false
+	bolt["pierce"] = maxi(int(bolt.get("pierce", 0)), BOOMERANG_RETURN_PIERCE)
+	bolt["wave_amp"] = 0.0
+	bolt.erase("draw_origin")
+	bolt["draw_offset"] = Vector3.ZERO
+	var up_hint := Vector3.UP if absf(back_dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
+	bolt["right"] = back_dir.cross(up_hint).normalized()
+	bolt["up"] = (bolt["right"] as Vector3).cross(back_dir).normalized()
 
 
 # Ricochet Canyon: curves a bounced direction toward the nearest live, non-excluded machine within reach.

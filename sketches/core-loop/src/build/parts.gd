@@ -322,18 +322,129 @@ const MICRO_MUTATIONS := {
 }
 
 
-# The micro-mutation row for a Tier-1 common part, or {} when it carries none.
+# W50-ISAAC-PARTS: 10 additional flat-part kinetic micro-mutations completing the flat-part sweep.
+# Stored beside MICRO_MUTATIONS so the 6 Tier-1 common rows in MICRO_MUTATIONS (parts_test.gd)
+# and CATALOGUE / Parts.rows() golden digest remain untouched.
+const FLAT_MICRO_MUTATIONS := {
+	"rivet_plating": {
+		"id": "hull_shatter_pulse",
+		"part_id": "rivet_plating",
+		"name": "Rivet Shrapnel",
+		"text": "Taking hull damage pulses 4.5 m steel shrapnel.",
+		"radius_m": 4.5,
+		"damage_base": 14.0,
+		"knock": 7.0,
+		"cooldown_s": 1.0,
+	},
+	"magnet_spool": {
+		"id": "scrap_whip_arc",
+		"part_id": "magnet_spool",
+		"name": "Scrap Whip",
+		"text": "Every 5th scrap whips an arc spark.",
+		"every_scrap": 5,
+		"reach_m": 10.0,
+		"damage_base": 12.0,
+	},
+	"grip_tread": {
+		"id": "brake_skid_flare",
+		"part_id": "grip_tread",
+		"name": "Skid Flare",
+		"text": "Wall-carving sheds a 2.8 m friction flare.",
+		"radius_m": 2.8,
+		"damage_base": 12.0,
+		"knock": 5.0,
+		"cooldown_s": 0.6,
+	},
+	"live_line": {
+		"id": "latch_arc_snap",
+		"part_id": "live_line",
+		"name": "Latch Snap",
+		"text": "Harpoon bites snap a 7 m arc jump.",
+		"reach_m": 7.0,
+		"damage_base": 16.0,
+		"cooldown_s": 0.5,
+	},
+	"vent_baffle": {
+		"id": "boost_exhaust_gust",
+		"part_id": "vent_baffle",
+		"name": "Exhaust Gust",
+		"text": "Boosting vents a 5 m rear steam gust.",
+		"radius_m": 5.0,
+		"damage_base": 12.0,
+		"knock": 9.0,
+	},
+	"winch_pawl": {
+		"id": "winch_haul_jolt",
+		"part_id": "winch_pawl",
+		"name": "Winch Jolt",
+		"text": "Harpoon smashes shock machines within 4.5 m.",
+		"radius_m": 4.5,
+		"damage_base": 16.0,
+		"knock": 7.0,
+	},
+	"spring_shims": {
+		"id": "jump_pad_ripple",
+		"part_id": "spring_shims",
+		"name": "Spring Ripple",
+		"text": "Ground jumps ripple a 4 m shock ring.",
+		"radius_m": 4.0,
+		"damage_base": 10.0,
+		"knock": 6.0,
+		"cooldown_s": 0.5,
+	},
+	"gatling_heart": {
+		"id": "spool_overheat_vent",
+		"part_id": "gatling_heart",
+		"name": "Spool Vent",
+		"text": "Every 12th shot vents a 5.5 m blast.",
+		"every_shots": 12,
+		"radius_m": 5.5,
+		"damage_base": 18.0,
+		"knock": 6.0,
+	},
+	"horizon_optic": {
+		"id": "far_sight_ping",
+		"part_id": "horizon_optic",
+		"name": "Far-Sight Ping",
+		"text": "Hits past 22 m add a 20% piercing ping.",
+		"min_range_m": 22.0,
+		"bonus_share": 0.20,
+		"cooldown_s": 0.6,
+	},
+	"ram_plow": {
+		"id": "plow_wake_cleave",
+		"part_id": "ram_plow",
+		"name": "Plow Cleave",
+		"text": "Fast rams cleave a 4.5 m steel wake.",
+		"radius_m": 4.5,
+		"damage_base": 20.0,
+		"knock": 9.0,
+		"min_tier": 2,
+		"cooldown_s": 0.4,
+	},
+}
+
+
+# The micro-mutation row for a flat part (W47-C2 Tier-1 + W50 sweep), or {} when it carries none.
 static func micro_mutation(part_id: String) -> Dictionary:
-	return (MICRO_MUTATIONS.get(part_id, {}) as Dictionary).duplicate(true)
+	if MICRO_MUTATIONS.has(part_id):
+		return (MICRO_MUTATIONS[part_id] as Dictionary).duplicate(true)
+	if FLAT_MICRO_MUTATIONS.has(part_id):
+		return (FLAT_MICRO_MUTATIONS[part_id] as Dictionary).duplicate(true)
+	return {}
 
 
 static func micro_mutation_ids() -> Array:
 	return MICRO_MUTATIONS.keys()
 
 
+static func all_micro_mutation_ids() -> Array:
+	return MICRO_MUTATIONS.keys() + FLAT_MICRO_MUTATIONS.keys()
+
+
 # True when the held part list carries this part's micro-mutation.
 static func has_micro_mutation(held: Array, part_id: String) -> bool:
-	return MICRO_MUTATIONS.has(part_id) and part_id in held
+	return (MICRO_MUTATIONS.has(part_id) or FLAT_MICRO_MUTATIONS.has(part_id)) and part_id in held
 
 
 # Every active micro-mutation row for the held part list, in table order (deduped across stacks).
@@ -342,6 +453,9 @@ static func active_micro_mutations(held: Array) -> Array:
 	for part_id in MICRO_MUTATIONS:
 		if part_id in held:
 			out.append((MICRO_MUTATIONS[part_id] as Dictionary).duplicate(true))
+	for part_id in FLAT_MICRO_MUTATIONS:
+		if part_id in held:
+			out.append((FLAT_MICRO_MUTATIONS[part_id] as Dictionary).duplicate(true))
 	return out
 
 
@@ -362,6 +476,29 @@ static func micro_mutation_problems() -> Array:
 				found.append("%s micro-mutation missing %s" % [part_id, key])
 		if String(row.get("part_id", "")) != part_id:
 			found.append("%s micro-mutation part_id mismatch" % part_id)
+	return found
+
+
+# Admission check for all 16 flat-part micro-mutations (6 W47-C2 + 10 W50).
+static func all_micro_mutation_problems() -> Array:
+	var found := micro_mutation_problems()
+	var seen_ids := {}
+	for pid in MICRO_MUTATIONS:
+		seen_ids[String(MICRO_MUTATIONS[pid]["id"])] = pid
+	for part_id in FLAT_MICRO_MUTATIONS:
+		if not CATALOGUE.has(part_id):
+			found.append("%s is not in CATALOGUE" % part_id)
+			continue
+		var row: Dictionary = FLAT_MICRO_MUTATIONS[part_id]
+		for key in ["id", "part_id", "name", "text"]:
+			if String(row.get(key, "")).strip_edges().is_empty():
+				found.append("%s flat micro-mutation missing %s" % [part_id, key])
+		if String(row.get("part_id", "")) != part_id:
+			found.append("%s flat micro-mutation part_id mismatch" % part_id)
+		var mid := String(row.get("id", ""))
+		if seen_ids.has(mid):
+			found.append("%s duplicate micro-mutation id %s" % [part_id, mid])
+		seen_ids[mid] = part_id
 	return found
 
 
@@ -755,6 +892,84 @@ const EVOLVED := {
 }
 const VERB_EVOLVED := ["grapeshot_press", "hoar_barrel", "fault_hammer"]
 
+# W50-ISAAC-PARTS: 8 brand-new transformational parts across Worlds 1-3 with RoR2 duplicate-stacking
+# curves (linear & hyperbolic with hard caps). Stored beside CATALOGUE so Parts.rows() keeps its
+# pinned content_registry golden hash intact while Parts.row/def/has/offer_pool/slot_weights admit all 8.
+const EXPANSION_PARTS := {
+	"boomerang_spool": {
+		"maker": "moss", "touches": "fire", "base": "weapon", "name": "Boomerang Spool",
+		"verb": "Shots pause and whip back once", "text": "Bolts pause 0.15s and return once",
+		"rarity": "rare", "tier": 3, "tags": ["anchor", "split"], "bits": [],
+		"stack": "linear", "cap": 5,
+		"effect": {"do": "boomerang_return", "pause_s": 0.15, "damage_per_stack": 0.20, "width_per_stack": 0.25,
+			"max_damage_mult": 2.0, "max_width_mult": 2.25},
+	},
+	"orbital_flywheel": {
+		"maker": "waking", "touches": "roll", "base": "pattern", "name": "Orbital Flywheel",
+		"verb": "Spin scrap satellites around you", "text": "Spawns 1 to 5 speed-scaled satellites",
+		"rarity": "rare", "tier": 3, "tags": ["spiral", "mass"], "bits": [],
+		"stack": "capped", "cap": 5,
+		"effect": {"do": "orbital_satellites", "count": 1, "max_count": 5, "damage": 14.0, "base_radius": 3.0},
+	},
+	"prism_splitter": {
+		"maker": "mind_glass", "touches": "fire", "base": "weapon", "name": "Prism Splitter",
+		"verb": "Plated hits refract copper rays", "text": "Plated hits refract 3 to 5 rays",
+		"rarity": "rare", "tier": 3, "tags": ["arc", "split"], "bits": [],
+		"stack": "linear", "cap": 3,
+		"effect": {"do": "prism_refract", "base_rays": 2, "per_stack": 1, "max_rays": 5,
+			"reach": 10.0, "damage_share": 0.55},
+	},
+	"debt_collector": {
+		"maker": "fleet_surplus", "touches": "roll", "base": "utility", "name": "Debt Collector",
+		"verb": "Cog pickups fire brass coin shots", "text": "Cogs fire a coin shot, 0.35s gap",
+		"rarity": "uncommon", "tier": 2, "tags": ["mass", "kinetic"], "bits": [],
+		"stack": "hyperbolic", "cap": 0.75,
+		"effect": {"do": "coin_shot", "cooldown_s": 0.35, "damage": 16.0, "scale_per": 0.35, "reach": 22.0},
+	},
+	"slag_furnace": {
+		"maker": "redjaw", "touches": "fire", "base": "weapon", "name": "Slag Furnace",
+		"verb": "Every fifth kill drops molten slag", "text": "5th kill drops 4s slag heat zone",
+		"rarity": "rare", "tier": 3, "tags": ["kinetic", "mass"], "bits": ["heat"],
+		"stack": "hyperbolic", "cap": 0.75,
+		"effect": {"do": "slag_zone", "every_kills": 5, "duration_s": 4.0, "base_radius": 3.2,
+			"radius_per": 0.45, "max_radius": 6.5, "dps": 18.0},
+	},
+	"patch_tether": {
+		"maker": "moss", "touches": "roll", "base": "utility", "name": "Patch Tether",
+		"verb": "Held pocket tool boosts hit damage", "text": "Holding a pocket tool adds +18% hit",
+		"rarity": "uncommon", "tier": 2, "tags": ["anchor", "speed"], "bits": [],
+		"stack": "hyperbolic", "cap": 0.65,
+		"effect": {"do": "pocket_aura", "per": 0.22, "cap_bonus": 0.65},
+	},
+	"basalt_ram": {
+		"maker": "waking", "touches": "haul", "base": "weapon", "name": "Basalt Ram",
+		"verb": "Carving or breaking fires seismic cone", "text": "Wall-carves and breaches fire seismic cone",
+		"rarity": "rare", "tier": 3, "world": 2, "tags": ["mass", "kinetic"], "bits": [],
+		"stack": "linear", "cap": 4,
+		"effect": {"do": "seismic_cone", "length": 11.0, "half_angle_deg": 24.0, "damage": 24.0,
+			"per_stack": 0.25, "max_mult": 2.0, "cooldown_s": 0.75},
+	},
+	"storm_capacitor": {
+		"maker": "highdraft_roosts", "touches": "jump", "base": "weapon", "name": "Storm Capacitor",
+		"verb": "Air hits charge landing arc blast", "text": "Air hits bank static, release on land",
+		"rarity": "rare", "tier": 3, "world": 3, "tags": ["arc", "speed"], "bits": [],
+		"stack": "hyperbolic", "cap": 0.75,
+		"effect": {"do": "air_static", "per_hit": 10.0, "max_charges": 8, "per_stack": 0.35, "radius": 8.5},
+	},
+}
+
+# W50-ISAAC-PARTS: 3 additional verb-changing evolutions (strictly disjoint ingredient pairs in
+# Synergies.EVOLUTIONS_W50). Stored beside EVOLVED so W45/evolution_test 7-row pins stay green.
+const EVOLVED_W50 := {
+	"gyro_foundry": {"name": "Gyro Foundry", "verb": "Satellites ring seismic shocks on hit", "text": "Orbital hits ring seismic shocks. From Storm Front.",
+		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["spiral", "mass"], "bits": []},
+	"arc_prism": {"name": "Arc Prism", "verb": "Prism rays fire unplated and arc", "text": "Prism rays chain arc once. From Live Wire.",
+		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["arc", "split"], "bits": []},
+	"whiplash_spool": {"name": "Whiplash Spool", "verb": "Returning bolts pull light machines inward", "text": "Boomerang return drags light machines. From Lightning Rod.",
+		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["anchor", "split"], "bits": []},
+}
+const VERB_EVOLVED_W50 := ["gyro_foundry", "arc_prism", "whiplash_spool"]
+
 static var _defs := {}
 static var _run_ref: WeakRef
 
@@ -790,6 +1005,7 @@ static func _pick_rarity(rng: RandomNumberGenerator, allowed: Array) -> String:
 	return allowed[-1]
 
 static var _rows := {}
+static var _all_rows := {}
 # Seams other modules offer ("spawner.extend_cloak"). A row whose needs is not here is
 # never offered; build fills this at setup from what the live modules answer.
 static var seams := {}
@@ -820,6 +1036,31 @@ static func rows() -> Dictionary:
 	return _rows
 
 
+# Authored rows plus W50-ISAAC-PARTS transformational expansion rows (settled identically).
+static func all_rows() -> Dictionary:
+	if _all_rows.is_empty():
+		for key in rows():
+			_all_rows[key] = rows()[key]
+		for key in EXPANSION_PARTS:
+			_all_rows[key] = _settled(ItemGen.finish(key, EXPANSION_PARTS[key]))
+	return _all_rows
+
+
+static func expansion_ids() -> Array:
+	return EXPANSION_PARTS.keys()
+
+
+static func all_evolved() -> Dictionary:
+	var out := EVOLVED.duplicate(true)
+	for key in EVOLVED_W50:
+		out[key] = EVOLVED_W50[key]
+	return out
+
+
+static func all_verb_evolved() -> Array:
+	return VERB_EVOLVED + VERB_EVOLVED_W50
+
+
 # The one place a row's rarity is settled, authored or generated: an old id resolves
 # through RARITY_ALIASES, and a row whose effects are only percentage scalars cannot sit
 # above common (DEMO-SPEC), so it drops to common.
@@ -843,7 +1084,7 @@ static func row(part_id: String, tier := -1) -> Dictionary:
 
 
 static func _base_row(part_id: String) -> Dictionary:
-	var authored: Dictionary = rows().get(part_id, {})
+	var authored: Dictionary = all_rows().get(part_id, {})
 	if not authored.is_empty():
 		return authored
 	if EVOLVED.has(part_id):
@@ -853,6 +1094,11 @@ static func _base_row(part_id: String) -> Dictionary:
 		if part_id in VERB_EVOLVED:
 			evolved["rarity"] = String(EVOLVED[part_id]["rarity"])
 		return evolved
+	if EVOLVED_W50.has(part_id):
+		var evolved_w50 := _settled(EVOLVED_W50[part_id])
+		if part_id in VERB_EVOLVED_W50:
+			evolved_w50["rarity"] = String(EVOLVED_W50[part_id]["rarity"])
+		return evolved_w50
 	if is_burden(part_id):
 		return _settled(_burden_spec(part_id))
 	if Relics.is_relic(part_id):
@@ -1006,7 +1252,7 @@ static func def(part_id: String) -> Resource:
 
 
 static func has(part_id: String) -> bool:
-	return rows().has(part_id) or EVOLVED.has(part_id) or HOTWIRED.has(part_id) or Relics.is_relic(part_id) \
+	return all_rows().has(part_id) or EVOLVED.has(part_id) or EVOLVED_W50.has(part_id) or HOTWIRED.has(part_id) or Relics.is_relic(part_id) \
 		or is_grapple_mutation_part(part_id) \
 		or (ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty())
 
@@ -1344,7 +1590,7 @@ static func listed_only() -> bool:
 static func offer_pool(class_id: String, rarities: Array) -> Array:
 	rarities = ItemGen.resolve_rarities(rarities)
 	var pool: Array = []
-	var all := rows()
+	var all := all_rows()
 	var listed := listed_only()
 	for key in all:
 		var r: Dictionary = all[key]
@@ -1440,7 +1686,8 @@ static func slot_weights(rarity: String, class_id: String, pool: Array, offered:
 		nudge: Dictionary = {}) -> Dictionary:
 	var kit: Dictionary = KITS[class_id]
 	var open := _uncapped(class_id, pool, offered)
-	var candidates: Array = open.filter(func(key): return rows()[key]["rarity"] == rarity)
+	var all := all_rows()
+	var candidates: Array = open.filter(func(key): return String(all.get(key, {}).get("rarity", "common")) == rarity)
 	if candidates.is_empty():
 		candidates = open
 	if candidates.is_empty():
@@ -1577,7 +1824,7 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 			if not recipe in picks and not recipe in exclude and not stacked_out(recipe, held):
 				picks.append(recipe)
 			continue
-		var bucket: Array = pool.filter(func(key): return rows()[key]["rarity"] == rarity)
+		var bucket: Array = pool.filter(func(key): return String(all_rows().get(key, {}).get("rarity", "common")) == rarity)
 		if bucket.is_empty():
 			bucket = pool
 		var chosen := _weighted(rng, bucket, offered, {}, nudge)
@@ -1656,15 +1903,16 @@ static func maker_nudge(held: Array, pool: Array) -> Dictionary:
 	if not maker_nudge_on:
 		return {}
 	var pieces := {}
+	var table := all_rows()
 	for part_id in held:
-		var maker := String(rows().get(part_id, {}).get("maker", ""))
+		var maker := String(table.get(part_id, {}).get("maker", ""))
 		if maker != "":
 			if not pieces.has(maker):
 				pieces[maker] = {}
 			pieces[maker][part_id] = true
 	var out := {}
 	for part_id in pool:
-		var maker := String(rows().get(part_id, {}).get("maker", ""))
+		var maker := String(table.get(part_id, {}).get("maker", ""))
 		if maker != "" and (pieces.get(maker, {}) as Dictionary).size() >= MAKER_NUDGE_AT and not part_id in held:
 			out[part_id] = MAKER_NUDGE
 	return out

@@ -58,6 +58,7 @@ const Consumables := preload("res://src/build/consumables.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const BallTuning := preload("res://src/movement/tuning.gd")
+const OrbitalSatellites := preload("res://src/combat/orbital_satellites.gd") # --- W50-ISAAC-PARTS ---
 const BallRules := preload("res://src/movement/ball_rules.gd")
 const AllyHusk := preload("res://src/combat/ally_husk.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
@@ -374,6 +375,7 @@ var _fault_layer_count := 0
 var _has_grapeshot := false
 var _has_hoar := false
 var _has_fault := false
+var orbitals # --- W50-ISAAC-PARTS ---
 # W47-C2: transient micro-mutation & cross-system synergy state. Cleared on _start_attempt(),
 # _on_player_died() and run_started so no window, pin or buff ever outlives its attempt.
 var _air_steer_surge_left := 0.0
@@ -614,6 +616,9 @@ func setup(ctx_ref) -> void:
 	ally_husks = AllyHusk.new()
 	add_child(ally_husks)
 	ally_husks.setup(ctx, self)
+	orbitals = OrbitalSatellites.new() # --- W50-ISAAC-PARTS ---
+	add_child(orbitals)
+	orbitals.setup(ctx, self)
 	# A loaded line skill rides the next bite, body or world (grapple_fired goes out for both,
 	# after the latch is set). A reset point drops the load.
 	ctx.events.grapple_fired.connect(func(anchor: Vector3):
@@ -1277,6 +1282,8 @@ func _strike_mult(enemy: Node3D, kind: String, cls: String) -> float:
 		mult *= float(Parts.GRAPPLE_MUTATIONS["live_bus"]["bonus_mult"])
 	if _tether_slam_matches(enemy, kind):
 		mult *= float(Parts.GRAPPLE_MUTATIONS["tether_slam"]["crush_mult"])
+	if orbitals != null: # --- W50-ISAAC-PARTS ---
+		mult *= orbitals.strike_mult(enemy, kind, cls)
 	return mult
 
 
@@ -1921,6 +1928,8 @@ func _physics_process(delta: float) -> void:
 	_step_devices(delta)
 	if ally_husks != null:
 		ally_husks.step(delta, enemies)
+	if orbitals != null: # --- W50-ISAAC-PARTS ---
+		orbitals.step(delta, enemies)
 	wear_trail.step(delta, enemies)
 	PackPressure.observe(ctx.player.planar_velocity(), ctx.player.tuning.f("cruise"))
 	churn.step(delta)
@@ -2550,6 +2559,8 @@ func _bolt_record(weapon: String, p: Resource, entry: Dictionary, muzzle: Vector
 		"bits": bits,
 	}
 	_evolve_record(record, p)
+	if orbitals != null: # --- W50-ISAAC-PARTS ---
+		orbitals.stamp_bolt(record, p)
 	return record
 
 
@@ -2773,6 +2784,8 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 		_resolve_rivet_armor_ricochet(bolt, enemy, point, part)
 	if bolt["chain_jumps"] > 0:
 		_chain(enemy, from, bolt)
+	if orbitals != null: # --- W50-ISAAC-PARTS ---
+		orbitals.on_bolt_hit(bolt, enemy, point, part)
 
 
 # A bounce-bit glance off a wall: the bounce V and its one sound. Not a hit, so it pulls and
@@ -2782,6 +2795,8 @@ func _on_bolt_bounce(bolt: Dictionary, at: Vector3) -> void:
 		_resolve_rivet_wall_ricochet(bolt, at)
 		return
 	_bit_tell(ShotBits.bit("bounce"), bolt, at)
+	if orbitals != null: # --- W50-ISAAC-PARTS ---
+		orbitals.on_bolt_bounce(bolt, at)
 
 
 # The one bit sound for a hit or glance: the first acting bit in ShotBits.NAMES order, read
@@ -6000,6 +6015,8 @@ func _on_player_died() -> void:
 	_clear_consumables_runtime()
 	if ally_husks != null:
 		ally_husks._reset()
+	if orbitals != null: # --- W50-ISAAC-PARTS ---
+		orbitals.reset_attempt()
 	_clear_aftershocks()
 	_rakes.clear()
 	_clear_cannon_paint()
@@ -6054,6 +6071,8 @@ func _start_attempt() -> void:
 	_clear_consumables_runtime()
 	if ally_husks != null:
 		ally_husks._reset()
+	if orbitals != null: # --- W50-ISAAC-PARTS ---
+		orbitals.reset_attempt()
 	if ctx != null and ctx.run != null:
 		_consumable_rng.seed = hash(["consumable_drops", ctx.run.run_seed, ctx.run.stage])
 	_spring_until = -1.0
