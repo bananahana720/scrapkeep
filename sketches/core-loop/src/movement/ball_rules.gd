@@ -3,10 +3,6 @@ extends RefCounted
 const Tuning := preload("res://src/movement/tuning.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
-# Both modes share one rule set: the kinematic ball adds these results to its own
-# velocity, the rigid ball turns the same numbers into impulses and forces. Jump,
-# boost, brake and slope handling therefore cannot drift apart between modes.
-
 
 static func make_probe(owner_body: CollisionObject3D) -> ShapeCast3D:
 	var probe := ShapeCast3D.new()
@@ -26,7 +22,6 @@ static func make_probe(owner_body: CollisionObject3D) -> ShapeCast3D:
 	return probe
 
 
-# The grip clock, once per physics step: full at the fast tier, running down below it.
 static func tick_grip(state, tuning, delta: float) -> void:
 	if state.velocity.length() >= tuning.f("cruise") * SpeedTier.MULTIPLES[SpeedTier.FAST]:
 		state.grip_hold = Tuning.GRIP_PEEL_S
@@ -38,13 +33,10 @@ static func gripping(state, tuning) -> bool:
 	return state.grip_hold > 0.0 and tuning.grip_on()
 
 
-# The lowest contact normal y that counts as ground this step.
 static func ground_dot(state, tuning) -> float:
 	return Tuning.GRIP_SLOPE_DOT if gripping(state, tuning) else Tuning.MAX_SLOPE_DOT
 
 
-# A downward cast misses a wall beside the ball, so while gripping a steep face the probe
-# looks along that face's normal instead. Otherwise it looks at the world's down.
 static func aim_probe(probe: ShapeCast3D, state, tuning) -> void:
 	var dir := Vector3.DOWN
 	if gripping(state, tuning) and state.grounded and state.contact_normal.y < Tuning.GRIP_FORCE_FROM:
@@ -52,8 +44,6 @@ static func aim_probe(probe: ShapeCast3D, state, tuning) -> void:
 	probe.target_position = dir * (Tuning.RADIUS * 0.08 + Tuning.SKIN + 0.06)
 
 
-# The press into a gripped face, as an acceleration along -normal: zero on floors and banks,
-# full from MAX_SLOPE_DOT up the wall and over the lip of an overhang.
 static func downforce(state, tuning) -> Vector3:
 	if not state.grounded or not gripping(state, tuning):
 		return Vector3.ZERO
@@ -62,24 +52,16 @@ static func downforce(state, tuning) -> Vector3:
 	return -n * Tuning.GRIP_DOWNFORCE * state.velocity.length() * weight
 
 
-# The spin a gripping ball rolls along a wall with, or null off one. Matching it keeps the wall's
-# contact from scrubbing the ball's speed into slip (Speed holds); floors and banks, ground
-# without grip, keep the contact's own spin.
 static func carve_spin(state, tuning):
 	if not state.grounded or not gripping(state, tuning) or state.contact_normal.y > Tuning.MAX_SLOPE_DOT:
 		return null
 	return state.contact_normal.cross(state.velocity) / Tuning.RADIUS
 
 
-# The speed along a face that lets a gripping ball take it, or INF when grip is off.
 static func grip_speed(state, tuning) -> float:
 	return tuning.f("cruise") * SpeedTier.MULTIPLES[SpeedTier.FAST] if gripping(state, tuning) else INF
 
 
-# Floors and banks are always ground. A wall is ground only while gripping, and a ball takes
-# a new wall only running along it at grip speed: a head-on hit runs along nothing, so it
-# still bounces (the pipe vault's head-on bounce stays). A wall it already rides holds until
-# the grip clock runs out. Only the world's faces are walls: an enemy's flank never is.
 static func _takes(state, n: Vector3, floor_dot: float, take_speed: float, on_wall: bool, world: bool) -> bool:
 	if n.y <= floor_dot:
 		return false
@@ -104,8 +86,6 @@ static func probe_ground(probe: ShapeCast3D, state, floor_dot := Tuning.MAX_SLOP
 	_set_ground(state, normal if best > -INF else null)
 
 
-# Landing on a wall from the air, or meeting one beside the ball, never shows under a probe
-# that looks down: while gripping, a touched world face is taken by the same rule.
 static func grip_contact(state, tuning, body_state: PhysicsDirectBodyState3D, take_speed: float) -> void:
 	if state.grounded or not gripping(state, tuning):
 		return
@@ -123,9 +103,7 @@ static func grip_contact(state, tuning, body_state: PhysicsDirectBodyState3D, ta
 		_set_ground(state, found)
 
 
-# Of two touched faces equally steep (two upright walls in a corner), the one the ball is moving
-# into harder, then the lower x and z of the normal: the server lists a tick's contacts in the
-# order its threads found them, so "the first one listed" would differ between launches.
+# PhysicsServer3D lists contacts in worker-thread order, so tie-break deterministically.
 static func _faced_first(n: Vector3, other, velocity: Vector3) -> bool:
 	if other == null:
 		return true
@@ -136,8 +114,6 @@ static func _faced_first(n: Vector3, other, velocity: Vector3) -> bool:
 	return n.x < other.x if n.x != other.x else n.z < other.z
 
 
-# A static face of the world. A boss hull is an AnimatableBody3D (a StaticBody3D) in the enemy
-# group, and it stays a body to ram, never a wall to ride.
 static func world_face(collider) -> bool:
 	return collider is StaticBody3D and not (collider as Node).is_in_group("enemy")
 
@@ -171,8 +147,6 @@ static func wish_direction(intent, drive_basis: Basis, state) -> Vector3:
 	return dir
 
 
-# Drive fades out as speed along the input reaches cruise, so it never removes
-# speed the slope or a boost gave you; it only refuses to add more.
 static func drive_head(state, tuning, wish: Vector3) -> float:
 	if wish == Vector3.ZERO:
 		return 0.0
@@ -211,9 +185,6 @@ static func resistance(state, tuning, intent, delta: float) -> Vector3:
 	return -dir * minf(speed, loss)
 
 
-# The quadratic part of resistance alone. The rigid ball pays rolling and brake
-# resistance as forces of its own, and this term as an impulse in the air only; on the
-# ground the rigid ball, the game's authority (TADR-006), keeps its over-cruise speed.
 static func over_speed_drag(state, tuning, delta: float) -> Vector3:
 	var speed: float = state.velocity.length()
 	if speed <= 0.001:
@@ -235,15 +206,12 @@ static func stick(state, delta: float) -> Vector3:
 	var n: Vector3 = state.contact_normal
 	var outward: float = state.velocity.dot(n)
 	if outward > 0.0:
-		# Below the launch speed a crest must not throw you; above it, it should.
 		if state.velocity.length() < Tuning.STICK_SPEED:
 			return -n * minf(outward, Tuning.STICK_ACCEL * delta)
 		return Vector3.ZERO
 	return -n * Tuning.STICK_ACCEL * delta * 0.12
 
 
-# A press during the cooldown is held for Tuning.BOOST_BUFFER and fires on the first tick the cooldown
-# allows, with the same direction, impulse and cooldown as a press on that tick.
 static func boost(state, tuning, intent, wish: Vector3, fallback: Vector3) -> Vector3:
 	if intent.boost_pressed and state.boost_cooldown > 0.0:
 		state.boost_buffer = Tuning.BOOST_BUFFER
@@ -269,8 +237,6 @@ static func jump(state, tuning) -> Vector3:
 		return Vector3.ZERO
 	var n: Vector3 = state.contact_normal if from_ground else Vector3.UP
 	var dir := (n + Vector3.UP).normalized()
-	# Off a gripped wall the ball already climbs faster than the jump, so half up would add
-	# nothing: the jump pushes straight off the face instead.
 	if from_ground and n.y < Tuning.MAX_SLOPE_DOT:
 		dir = n
 	if not from_ground:
@@ -279,7 +245,6 @@ static func jump(state, tuning) -> Vector3:
 	state.coyote = 0.0
 	state.grounded = false
 	state.carving = false
-	# Keep the horizontal run: only the component along the jump direction is set.
 	var along: float = state.velocity.dot(dir)
 	return dir * maxf(0.0, tuning.f("jump_speed") - along)
 

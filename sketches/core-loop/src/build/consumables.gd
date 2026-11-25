@@ -5,10 +5,6 @@ const Augments := preload("res://src/movement/augments.gd")
 const Interact := preload("res://src/world/interact.gd")
 const Roster := preload("res://src/combat/roster.gd")
 
-# Pocket Consumable Belt (W47-C1; SOUTHWEST-SONIC-MECHA-NORTHSTAR section 4.2,
-# SCRAPKEEP-REBASELINE-MASTER-BIBLE section 3.3, LEGIBILITY section 13).
-# Six one-shot hardware cartridges racked on the belt (1 slot default, expandable to 2)
-# and fired instantaneously on quick-tap (C / D-pad Up) with zero movement tax.
 
 const CAP_CHARGE := "cap_charge"
 const NITRO_SIPHON := "nitro_siphon"
@@ -16,8 +12,6 @@ const ANCHOR_FLARE := "anchor_flare"
 const OVERCLOCK_CARD := "overclock_card"
 const FOREMAN_MEMO := "foreman_memo"
 const MOSS_PATCH := "moss_patch"
-# W50-ISAAC-ECONOMY: 3 new Isaac-pattern cartridges (additive ORDER_W50/ROWS_W50 so
-# base 6-cartridge asset/count pins stay intact while all runtime/roll APIs serve all 9).
 const SCRAP_DICE := "scrap_dice"
 const DUPLICATOR_SPOOL := "duplicator_spool"
 const OVERLOAD_FUSE := "overload_fuse"
@@ -54,11 +48,8 @@ const DROP_GROUP := "consumable_drop"
 const BALLOON_GROUP := "consumable_balloon"
 const PICKUP_RADIUS := 2.4
 
-# W47-C1-3D review note: Godot 4.7.2 glTF importer preserves COLOR_0 while leaving
-# vertex_color_use_as_albedo = false on surface 0. Patch these surfaces on instantiation.
 const VERTEX_COLOR_SURFACES: Array[String] = ["paint", "hydraulic", "ancient_enamel"]
 
-# Secondary-counter enemies that may drop a Pocket Consumable on death.
 const SECONDARY_COUNTER_KINDS: Array[String] = [
 	"boom_tender",
 	"jolt_layer",
@@ -79,8 +70,6 @@ const SECONDARY_COUNTER_KINDS: Array[String] = [
 const COUNTER_DROP_CHANCE := 0.35
 const DESTRUCTIBLE_CHANCE := {3: 0.35, 4: 0.55, 5: 0.80}
 
-# Canonical metadata for all 6 cartridges. Zero HAZARD red; Palette.KINDNESS (#D936B0)
-# appears strictly as a flat non-emissive stripe on Foreman's Memo (B6: never a floor glow/grid).
 const ROWS := {
 	CAP_CHARGE: {
 		"id": CAP_CHARGE,
@@ -169,7 +158,6 @@ const ROWS := {
 	},
 }
 
-# Additive W50 cartridges (6 -> 9 total), reusing existing cartridge belt HUD, icons & GLBs.
 const ROWS_W50 := {
 	SCRAP_DICE: {
 		"id": SCRAP_DICE,
@@ -345,8 +333,6 @@ static func roll_id(rng: RandomNumberGenerator, exclude: Array = []) -> String:
 	return pool[rng.randi_range(0, pool.size() - 1)]
 
 
-# ---- W50-ISAAC-ECONOMY: Audit Die, Carbon Tape (1x clone), Breaker Fuse (1x 0.75x echo) --
-
 static func _w50_state(run) -> Dictionary:
 	if run == null:
 		return {"duplicator_left": 0.0, "duplicator_armed": false, "duplicator_clones": 0, "overload_armed": false, "overload_echoes": 0}
@@ -407,7 +393,6 @@ static func fire_w50(cid: String, ctx, combat, at: Vector3) -> Dictionary:
 			if ctx != null and ctx.build != null and ctx.build.get("shop") != null and ctx.build.shop.has_method("audit_reroll"):
 				shop_res = ctx.build.shop.audit_reroll()
 			var gate_rerolls := _audit_reroll_gates(ctx)
-			# Foreman efficiency fee (STORY-MAP §5): only charge if >=1 offer actually rerolled.
 			var paid_cost := "none"
 			if int(shop_res.get("rerolled", 0)) + gate_rerolls > 0 and ctx != null and ctx.run != null:
 				if int(ctx.run.bonus_cores) >= int(row.get("core_cost", 1)):
@@ -493,8 +478,6 @@ static func _audit_reroll_gates(ctx) -> int:
 	return changed
 
 
-# Clones the next pickup/core/consumable collected inside the 12 s Carbon Tape window,
-# strictly ONCE per pop (validates payload first, then disarms atomically before granting).
 static func try_clone_pickup(ctx, combat, kind: String, payload, at := Vector3.ZERO) -> Dictionary:
 	if ctx == null or ctx.run == null:
 		return {"cloned": false}
@@ -534,7 +517,6 @@ static func try_clone_pickup(ctx, combat, kind: String, payload, at := Vector3.Z
 	return {"cloned": true, "kind": kind, "payload": payload, "clones_total": int(st["duplicator_clones"])}
 
 
-# Echoes an Ultimate strike once at 0.75x (item_proc) if Breaker Fuse is armed.
 static func echo_ultimate(ctx, combat, base_damage: float, at: Vector3, radius := 8.0) -> Dictionary:
 	if ctx == null or ctx.run == null or combat == null:
 		return {"echoed": false, "hits": 0}
@@ -551,7 +533,6 @@ static func echo_ultimate(ctx, combat, base_damage: float, at: Vector3, radius :
 	return {"echoed": true, "mult": OVERLOAD_ECHO_MULT, "damage": dmg, "hits": hits, "source": "item_proc"}
 
 
-# Fallback 0.75x item_proc echo for actives without a custom fire_echo() method.
 static func echo_active_fallback(ctx, combat, _active_id: String, mult := OVERLOAD_ECHO_MULT) -> int:
 	if ctx == null or combat == null or ctx.player == null:
 		return 0
@@ -688,8 +669,6 @@ static func spawn_balloon(at: Vector3, duration_s := 15.0, radius := 2.8) -> Anc
 	return balloon
 
 
-# World drop cradle (cons_drop_cradle.glb + cartridge GLB on SocketCartridge).
-# Zero floor glow on Foreman's Memo (B6). Auto-collected on roll-through with zero speed tax.
 class Cradle:
 	extends Node3D
 
@@ -737,9 +716,6 @@ class Cradle:
 		return false
 
 
-# Hovering sky-grapple balloon (Anchor Flare): 18 m overhead for 15 s with 360-degree bite points.
-# Joins Augments.STAKE_GROUP + Augments.ANCHOR_GROUP on STAKE_MASK so Harpoon.target() bites it
-# from every direction and uses the player's single ChainState (G0).
 class AnchorBalloon:
 	extends StaticBody3D
 

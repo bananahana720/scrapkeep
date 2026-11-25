@@ -6,7 +6,6 @@ const Panels := preload("res://src/build/panels.gd")
 const PanelShell := preload("res://src/build/panel_shell.gd")
 const PICKUP_GLB := "res://assets/models/world_one/scrap_pickups.glb"
 const PICKUP_VARIANTS := ["BentPlate", "GearSegment", "PipeStub", "BoltCluster"]
-# The money, in the same kit: a worn steel cog with bone teeth (W1-21).
 const COG_PART := "Cog"
 static var _pickup_mesh_cache: Array[Mesh] = []
 static var _recovery_mesh_cache: Array[Mesh] = []
@@ -23,80 +22,43 @@ static func reset_for_tests() -> void:
 	_pickup_assets.clear()
 	_ground_plates.clear()
 
-# Scrap laid along the terrain's scrap lines. The magnet grows with heft (6 m times the
-# square root of heft, capped at 18 m) and reaches further again the faster you roll,
-# and a piece it catches homes in faster than the ball can outrun it, so taking scrap
-# never asks you to slow down or turn back (momentum is sacred). A caught piece stays
-# caught until it lands on the ball. Pickups never touch the ball's velocity.
 
 const MAGNET_PER_ROOT_HEFT := 6.0
 const MAGNET_CAP := 18.0
-# Extra magnet reach per m/s of ball speed, on top of the capped heft reach, so a fast
-# ball still catches what it passes.
 const MAGNET_PER_SPEED := 0.3
 const COLLECT := 2.0
 const HOME_SPEED := 16.0
 const HOME_OVER_BALL := 1.4
 const SPACING := 8.0
 const MAX_PER_LINE := 14
-# A trail piece floats this far over the ground, as a line's does; the trail is walked in steps this long.
 const TRAIL_OVER_GROUND := 1.4
 const TRAIL_STEP_M := 1.0
 const TRAIL_DROP := 1.0
-# A caught piece swings in on a curve (v3 W11): sideways and up at this share of its
-# homing speed while far, straight in as it closes, so the pull reads as a greedy
-# swirl. The homing term is unchanged, so the pull takes as long as it did.
 const ARC_SIDE := 0.6
 const ARC_LIFT := 0.3
-# Readable cap (SCRAP-LEAK): kills and drops that nobody collects must not grow the scene
-# without bound (SR2's soak reached 21,000 nodes in 10 minutes). Past MAX_PIECES loose
-# pieces or MAX_GEARS loose gears, the oldest uncaught one folds its value into the piece
-# just dropped, so the newest scrap stays where the fight is and no value is lost. The
-# stage layout is never folded (a line's pieces are under the cap, and a trail's are passed
-# over, so a long fight leaves the phrases ahead whole) and nothing here draws rng.
 const MAX_PIECES := 400
 const MAX_GEARS := 200
-# Distant 0.65 m pickups drop out past this range so a park-wide landmark camera does not draw scrap a kilometre away.
 const PICKUP_VIEW_END_M := 300.0
 const PICKUP_VIEW_MARGIN_M := 20.0
-# The live caps; a test's planted control raises them to prove the cap is what holds the count.
 var max_pieces := MAX_PIECES
 var max_gears := MAX_GEARS
 
 var magnet_scale := 1.0
-# The run's heft; build sets it every tick.
 var heft := 1.0
 
-# Recovery clusters (the durability prototype): scrap a hit spilled, each worth several
-# units, ahead of or beside the ball's outgoing line. They sit in _items like any piece, so
-# the magnet and the arc pull work on them, but step() reports them apart in
-# recovered_values, and one nobody reaches expires after RECOVERY_LIFE seconds.
 const RECOVERY_LIFE := 20.0
 const RECOVERY_MAX_CLUSTERS := 6
 const RECOVERY_AHEAD := Vector2(6.0, 16.0)
 const RECOVERY_SIDE := 4.5
-# One cluster taken back, with its scrap value. Audio chimes on it; the mass is still
-# credited by build from recovered_values, and this is no pickup (no scrap_collected).
 signal recovered(value: int)
-# What the last step() collected and let expire, as scrap values.
 var recovered_values: Array[int] = []
 var expired_values: Array[int] = []
 
-# Cogs (CG1): the spend wallet's pickups, steel gears that share the magnet and the arc
-# pull but never add mass. A scrap line lays one gear worth COG_LINE_VALUE beside every
-# COG_LINE_EVERY-th piece, and a kill drops one 1-cog gear per scrap unit it drops, so a
-# run earns about the cogs it once earned as wallet scrap from lines and kills. Gears are
-# placed without the rng, so the loot stream draws what it drew before.
 const COG_LINE_EVERY := 2
 const COG_LINE_VALUE := 2
 const COG_LINE_SIDE := 1.5
 const COG_RING := 1.8
-# What the last step() collected as cogs, one value per gear.
 var cog_values: Array[int] = []
-# Grey panel pickups (build/panels.gd): item -> {id, jackpot}. A panel on the ground is its own kit plate from
-# the ball (panel_shell.gd), lying flat at GROUND_PLATE times the plate's size so it reads from the gameplay
-# camera. They never fold or expire; what
-# the last step() took is in panel_takes, one {id, jackpot, at} per panel.
 var _panels := {}
 var panel_takes: Array[Dictionary] = []
 var _panel_mesh: BoxMesh
@@ -105,11 +67,7 @@ var _panel_column: CylinderMesh
 var _panel_column_material: Material
 const GROUND_PLATE := 2.0
 static var _ground_plates := {}
-# Rib caches (panels waiting at the end of a dead end): a tall thin column that clears the
-# route's skyline, and a two-note chime loop heard from CACHE_HEAR metres.
-# Each maps the panel to the ground it was dropped on.
 var _caches := {}
-# The pieces lay_trail laid (item -> true): the fold passes over them.
 var _trail := {}
 var _cache_column: CylinderMesh
 const CACHE_COLUMN := 14.0
@@ -119,7 +77,6 @@ const SPIN_RANGE := 120.0
 var _value := {}
 var _age := {}
 var _cogs := {}
-# Units a folded piece carries beyond its own one (plain pieces only; gears fold into _cogs).
 var _units := {}
 var _cog_material: Material
 var _cog_mesh: Mesh
@@ -146,8 +103,6 @@ func setup() -> void:
 	_cog_mesh.bottom_radius = 0.45
 	_cog_mesh.height = 0.18
 	_cog_mesh.radial_segments = 8
-	# A grey panel on the ground: a steel plate under a short bone light column, the grey rung's
-	# read from a distance (the ladder page: "short for grey, tall for gold").
 	_panel_mesh = BoxMesh.new()
 	_panel_mesh.size = Vector3(0.9, 0.16, 0.7)
 	_panel_material = Palette.solid(Palette.SLATE, 0.9)
@@ -182,7 +137,6 @@ static func _pickup_material(color: Color) -> ShaderMaterial:
 	return material
 
 
-# The cog's glow: the pickup shader's rim in bone over the steel, softer than the mint field's.
 static func _cog_glow() -> ShaderMaterial:
 	var material := _pickup_material(Palette.SAND)
 	material.set_shader_parameter("rim_energy", 0.9)
@@ -190,8 +144,6 @@ static func _cog_glow() -> ShaderMaterial:
 	return material
 
 
-# A field piece, a recovery cluster and a cog as _add draws them, each pickup variant once (BakeWarm builds
-# them at stage entry, so the run's first kill draws no pickup surface for the first time).
 static func warm_views() -> Array[Node3D]:
 	var views: Array[Node3D] = []
 	var meshes: Array[Mesh] = _pickup_meshes()
@@ -713,13 +665,11 @@ func _add(at: Vector3, mesh: Mesh = null, material: Material = null) -> MeshInst
 	item.mesh = mesh if mesh != null else _mesh
 	item.material_override = material if material != null else _material
 	item.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# Rare kit panels stay unranged so their cache columns remain visible across the park; small scrap and cogs fade at PICKUP_VIEW_END_M.
 	if material != _panel_material:
 		item.visibility_range_end = PICKUP_VIEW_END_M
 		item.visibility_range_end_margin = PICKUP_VIEW_MARGIN_M
 		item.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	if not _pickup_mesh_cache.is_empty() and (mesh == null or mesh == _cluster_mesh):
-		# Position is already seeded by the field; visual selection never draws RNG.
 		var seed_key := "%d:%d:%d" % [roundi(at.x * 1000.0), roundi(at.y * 1000.0), roundi(at.z * 1000.0)]
 		var variant := int(seed_key.hash() % PICKUP_VARIANTS.size())
 		item.mesh = _recovery_mesh_cache[variant] if mesh == _cluster_mesh else _pickup_mesh_cache[variant]

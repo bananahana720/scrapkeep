@@ -3,20 +3,6 @@ extends RefCounted
 const Parts := preload("res://src/build/parts.gd")
 const Relics := preload("res://src/build/relics.gd")
 
-# Maker sets (design page "Makers and Actives", 17 Oct 2026; Andrew tapped "Core now": the set
-# bonuses on the existing items land before the sitting, the 5-piece transformations after it).
-# Every find was made by someone for another job (Bible 5.3): each of the 62 items, Moss's cells,
-# every relic and every active names its maker in its own row ("maker"). Holding SETS[maker]
-# ["pieces"] distinct pieces of one maker turns its bonus on for the rest of the run; maker_
-# bonuses.gd does what each bonus does. A copy of a piece already held is not a second piece:
-# a set is a collection, so it pays for range, and luck still pays through the offer nudge.
-#
-# A maker set is the build's one set rule (systems audit pass D fold, Andrew 11 Nov 2026): two
-# distinct pieces of one maker wake its trick (synergies.gd, Synergies.AT), and SETS[maker]
-# ["pieces"] turn its bonus on. The named synergies and three-part sets that used to sit beside
-# it are those tricks now, and every part on the world 1 list names a maker.
-#
-# Overpowered pays: a set stays on while its pieces are held, and a bonus has no falloff.
 
 const SPILLWAY := "spillway_works"
 const FLEET := "fleet_surplus"
@@ -43,8 +29,6 @@ const SETS := {
 		"text": "The next item each stage comes with a second copy"},
 }
 
-# W47-GRAPPLE-MUTS-CODE: each of the 7 maker sets awakens one single-part-swap grapple mutation
-# once its set piece threshold is reached. Kept beside SETS so MakerSets.SETS stays untouched.
 const GRAPPLE_MUTATIONS := {
 	SPILLWAY: "hot_wire",
 	REDJAW: "det_cord",
@@ -70,7 +54,6 @@ static func live_grapple_mutations(parts: Array, extra: Array = []) -> Array:
 				out.append(mut_id)
 	return out
 
-# The maker of a part (Parts.maker_of); actives name theirs in their own rows.
 static func maker_of(part_id: String) -> String:
 	return Parts.maker_of(part_id)
 
@@ -79,8 +62,6 @@ static func relic_maker(relic_id: String) -> String:
 	return String(Relics.row(relic_id).get("maker", ""))
 
 
-# maker -> distinct pieces held. `parts` is the run's part list (relics are parts in it),
-# `extra` more makers to count once each (the racked active's).
 static func counts(parts: Array, extra: Array = []) -> Dictionary:
 	var seen := {}
 	var out := {}
@@ -100,7 +81,6 @@ static func _count(out: Dictionary, seen: Dictionary, key: String, maker: String
 	out[maker] = int(out.get(maker, 0)) + 1
 
 
-# The bonus ids live for these counts, in SETS order.
 static func live_bonuses(counted: Dictionary) -> Array:
 	var out := []
 	for maker in SETS:
@@ -116,9 +96,6 @@ static func maker_of_bonus(bonus_id: String) -> String:
 	return ""
 
 
-# Problems with the maker fields, one string each; empty when sound. Every authored item row
-# names a known maker, every relic does, and each set can be completed by every pilot from the
-# rows that pilot can be offered.
 static func validate() -> Array:
 	var bad := []
 	for part_id in Parts.rows():
@@ -145,6 +122,5 @@ static func validate() -> Array:
 	return bad
 
 
-# The 62 items (items.gd's table and the three catalogue pattern parts) and Moss's cells.
 static func _is_item(part_id: String) -> bool:
 	return Parts.Items.TABLE.has(part_id) or Parts.Items.CELLS.has(part_id) or part_id in Parts.PATTERN_PARTS

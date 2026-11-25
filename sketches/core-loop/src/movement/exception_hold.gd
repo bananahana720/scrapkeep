@@ -1,15 +1,8 @@
 extends RefCounted
 
-# The ball's collision exceptions, owned in one place so none ends with the ball inside the
-# body. A pass-through (a crush, Rivet's drive through a staggered Warden) excepts a body; when
-# it ends, the exception is held until the ball is clear of that body, polled each physics tick
-# by the ball. Ending it with the ball's centre inside the body left the solver holding the ball
-# at speed 0 for 130 s (BITE-PIN: rivet_kit dropped a re-closed Warden's exception 0.6 m from
-# its axis). After FALLBACK seconds the ball is set beside the body and the exception ends.
 # Bodies are tracked here and checked with is_instance_valid, never read back from the physics
 # server: get_collision_exceptions() errors once an excepted body has been freed.
 
-# Clear means the ball's centre is this far outside the body's shell plus the ball's radius.
 const MARGIN := 0.25
 const FALLBACK := 1.5
 
@@ -18,7 +11,6 @@ var _radius: float
 # instance id -> {"body", "rid"}: the RID ends an exception whose body has been freed, which the
 # physics server would otherwise keep.
 var _held := {}
-# instance id -> seconds its release has waited
 var _pending := {}
 var _query: PhysicsShapeQueryParameters3D
 
@@ -70,7 +62,6 @@ func step(delta: float) -> void:
 			_end(id)
 
 
-# A freed body's exception ends by its RID; the body is never touched.
 func _purge() -> void:
 	for id in _held.keys():
 		if not is_instance_valid(_held[id]["body"]):
@@ -85,7 +76,6 @@ func _end(id: int) -> void:
 		PhysicsServer3D.body_remove_collision_exception(_ball.get_rid(), entry["rid"])
 
 
-# The body's own enabled shapes, CollisionShape3D children and bare shape owners (anchor posts) alike.
 func _shapes(body: Node) -> Array:
 	var out: Array = []
 	var body_3d := body as CollisionObject3D
@@ -102,7 +92,6 @@ func _shapes(body: Node) -> Array:
 	return out
 
 
-# Cylinders, capsules and spheres by centre distance; any other shape by an overlap query.
 func clear_of(body: PhysicsBody3D) -> bool:
 	var at := _ball.global_position
 	for node in _shapes(body):
@@ -138,7 +127,6 @@ func _overlaps(body: PhysicsBody3D, node: Dictionary) -> bool:
 	return false
 
 
-# Out along the line from the body's centre through the ball, keeping height and velocity.
 func _set_beside(body: PhysicsBody3D) -> void:
 	var at := _ball.global_position
 	var reach := 0.0

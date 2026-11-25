@@ -7,33 +7,15 @@ const Palette := preload("res://src/core/palette.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 
-# Drive-through fabricators: hoops standing across the scrap lines. Each shows the part
-# it makes and its price while you approach; roll through the hoop with enough cogs
-# and it spends the cogs and bolts the part on, at full speed. There is no collider,
-# no stop and no menu (momentum is sacred). Short of cogs, you roll through and
-# nothing happens; the hoop says how much more you need. After a sale it restocks
-# with a new part after a short beat.
-#
-# Price is a pure function of the part's tier and how many parts the run holds, so a
-# retry that restores the part list restores the prices too.
 
 const RING := 5.0
 const SINK := 1.5
 const WIDTH := 8.0
-# Every cog price in one table (CG1), so a retune is one edit. A shelf part costs part_base x
-# part_tier[tier] x part_growth^parts_held; the shop's reroll, charge cells and sell-back read
-# the rest. Values from the economy pass (systems audit pass B,
-# docs/systems-audit/economy/README.md), measured on Moss's shelf and his scale.
 const COG_PRICES := {
 	"part_base": 40.0, "part_tier": {1: 1.0, 2: 1.6, 3: 2.6}, "part_growth": 1.06,
 	"reroll_base": 30, "reroll_growth": 1.5, "cell_base": 40, "cell_growth": 1.6, "sell_share": 0.5,
-	# Moss's scale (shop.gd weigh, `--moss-scale=on`). One press weighs up to weigh_lump mass;
-	# every mass_per_cog of it pays one cog, so a sale pays less than the scrap paid on the way in.
 	"weigh_lump": 50, "mass_per_cog": 2.0,
 }
-# Parts priced off Moss's shelf (a trade chest's cogs price, a rack active offer, a legacy
-# hoop) keep the curve from before the economy pass: the pass measured the new part_base on
-# the shelf only, and no bot meets these three (docs/systems-audit/economy/README.md).
 const OFF_SHELF := {"part_base": 10.0, "part_growth": 1.15}
 const RESTOCK := 2.5
 const AVOID_BEACON := 55.0
@@ -42,9 +24,6 @@ const SPACING := 40.0
 const ALONG_LINE := 0.55
 const PROMPT_REACH := 45.0
 
-# RoR2 Scrapper & Part Press (W50-ISAAC-ECONOMY): scrap an ordinary held part into a
-# rarity-matched Scrap Ingot, then feed a matching-tier ingot (first) or another random
-# held ordinary part of the same tier into a World Part Press for a guaranteed duplicate.
 const INGOT_TIERS := [1, 2, 3]
 const INGOT_RARITY := {1: "common", 2: "rare", 3: "relic"}
 const INGOT_NAMES := {1: "Common Scrap Ingot", 2: "Rare Scrap Ingot", 3: "Relic Scrap Ingot"}
@@ -56,21 +35,17 @@ var _stage := 1
 var _fabs: Array[Dictionary] = []
 var _scrappers: Array[Dictionary] = []
 var _presses: Array[Dictionary] = []
-# Build's offer_mark(part_id) -> String; the star line under an offer, or "".
 var mark_for: Callable
 
 
-# Moss's shelf price of a part.
 static func price(part_id: String, parts_held: int) -> int:
 	return int(round(COG_PRICES["part_base"] * COG_PRICES["part_tier"].get(_tier(part_id), 1.0) * pow(COG_PRICES["part_growth"], parts_held)))
 
 
-# A part of `tier` priced off the shelf (OFF_SHELF).
 static func off_shelf_price(tier: int, parts_held: int) -> int:
 	return int(round(OFF_SHELF["part_base"] * COG_PRICES["part_tier"].get(tier, 1.0) * pow(OFF_SHELF["part_growth"], parts_held)))
 
 
-# A legacy hoop's price for a part.
 static func hoop_price(part_id: String, parts_held: int) -> int:
 	return off_shelf_price(_tier(part_id), parts_held)
 
@@ -80,7 +55,6 @@ static func _tier(part_id: String) -> int:
 	return d.tier if d != null else 1
 
 
-# Stands count hoops across the scrap lines, away from the beacon and the spawn.
 func lay_out(terrain, stage: int, class_id: String, rng: RandomNumberGenerator, held: Array) -> void:
 	clear()
 	_rng = rng
@@ -129,13 +103,10 @@ func clear() -> void:
 	_presses.clear()
 
 
-# ---- RoR2 Scrapper + Part Press (3D Printer) ------------------------------------------
-
 static func tier_of(part_id: String) -> int:
 	return clampi(_tier(part_id), INGOT_TIERS[0], INGOT_TIERS[-1])
 
 
-# True only for held ordinary parts (never relics, never welded pattern parts).
 static func can_scrap(part_id: String, run) -> bool:
 	if run == null or part_id == "" or not (part_id in run.parts):
 		return false
@@ -192,8 +163,6 @@ static func ingots_from_doc(run, doc) -> bool:
 	return true
 
 
-# Scraps one held ordinary part into a rarity-matched Scrap Ingot. Removes the part before
-# minting the ingot so a failed removal can never dupe an ingot.
 static func scrap_part(run, part_id: String, build = null) -> Dictionary:
 	if run == null or part_id == "" or run.parts.is_empty():
 		return {"ok": false, "reason": "empty", "part_id": part_id}
@@ -219,9 +188,6 @@ static func scrap_part(run, part_id: String, build = null) -> Dictionary:
 	}
 
 
-# Presses a guaranteed duplicate of `target_part_id`, spending a matching-tier Scrap Ingot
-# first, else sacrificing one random held removable ordinary part of the same tier (never
-# the target itself, preventing free self-swaps/dupes). Deducts fuel before granting.
 static func press_part(run, target_part_id: String, rng: RandomNumberGenerator = null, build = null) -> Dictionary:
 	if run == null or target_part_id == "":
 		return {"ok": false, "reason": "empty", "part_id": target_part_id}
@@ -314,7 +280,6 @@ func records() -> Array[Dictionary]:
 	return _fabs
 
 
-# Places a fabricator at a chosen spot; the tests use it to put one on a known line.
 func add_at(at: Vector3, facing: Vector3, part_id: String) -> Dictionary:
 	return _add(at, facing, [], part_id)
 
@@ -340,8 +305,6 @@ func _roll(held: Array) -> String:
 	return picks[0] if not picks.is_empty() else "hot_rivets"
 
 
-# Returns the part ids bought this tick. The caller spends the cogs through the run
-# state first; buy() is told whether the spend went through. `cogs` is the wallet.
 func step(ball: Vector3, delta: float, cogs: int, held: Array) -> Array[Dictionary]:
 	var crossings: Array[Dictionary] = []
 	for fab in _fabs:
@@ -370,13 +333,10 @@ func sold(fab: Dictionary) -> void:
 
 func _build_hoop(fab: Dictionary) -> void:
 	var node: Node3D = fab["node"]
-	# The authored hoop (recipe row fabricator_hoop): its origin is the ground under the ring, ring centre RING - SINK up,
-	# ring in the node's XY plane, so it stands across the line at IDENTITY. Its steel views wear the hoop's state.
 	var views := RecipeProps.base("fabricator_hoop", node, Transform3D.IDENTITY)
 	RecipeProps.shells("fabricator_hoop", node, Transform3D.IDENTITY)
 	fab["state_views"] = RecipeProps.steel_views(views)
 	_paint_state(fab, false)
-	# Ground chevrons pointing through the hoop both ways say "roll through here".
 	for dir in [-1.0, 1.0]:
 		var chevron := MeshInstance3D.new()
 		var prism := PrismMesh.new()
@@ -395,8 +355,6 @@ func _build_hoop(fab: Dictionary) -> void:
 	glyph.mesh = gem
 	glyph.position = Vector3(0.0, RING - SINK + 1.2, 0.0)
 	node.add_child(glyph)
-	# The price is a screen prompt the HUD keeps in the prompts band (screen_regions.gd),
-	# shown while you approach, so it never sits over the toasts or the objective.
 	var label := WorldPrompt.new()
 	label.name = "Prompt"
 	label.attach(node, Vector3(0.0, RING * 2.0 - SINK, 0.0), PROMPT_REACH)
@@ -446,7 +404,6 @@ func _refresh_label(fab: Dictionary, cogs: int, held: Array) -> void:
 	_paint_state(fab, ready)
 
 
-# The hoop's state on its steel views: amber when you can buy, dark copper when you cannot.
 static func state_tint(ready: bool) -> Color:
 	return Palette.AMBER if ready else Palette.COPPER.darkened(0.3)
 
@@ -456,14 +413,11 @@ func _paint_state(fab: Dictionary, ready: bool) -> void:
 		view.set_instance_shader_parameter("state_tint", state_tint(ready))
 
 
-# The prompt's title at range: the part's name, at most three words.
 static func prompt_title(part_id: String) -> String:
 	var words: PackedStringArray = Parts.display_name(part_id).split(" ", false)
 	return " ".join(words.slice(0, WorldPrompt.TITLE_WORDS))
 
 
-# Everything after the headline's name: the verb and punch, the effect, the price line
-# and the star line.
 static func _detail(text: String) -> String:
 	var lines := Array(text.split("\n", false))
 	if lines.is_empty():

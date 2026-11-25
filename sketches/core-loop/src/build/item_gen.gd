@@ -3,39 +3,9 @@ extends RefCounted
 const Triggers := preload("res://src/build/triggers.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# The item generator: base x affix x element x trigger (I2 section 2, DESIGN-V2 section
-# 7). Every axis is a lookup, never a formula with a hidden constant, so a generated
-# item is as inspectable as a hand-written row.
-#
-# - base: the family archetype. It names the noun, the cat_ icon, the accretion family
-#   and the stat every copy brings (punch for a weapon, health for defense...).
-# - affix: the catalogue's existing tier scaling, set by rarity: +12% common, +50% rare,
-#   and relic doubles.
-# - element: frost, arc, kinetic or none (TADR-009). It colours the effect and applies
-#   the element table where the effect lands.
-# - trigger: one of the twelve kinds, with its effect template.
-#
-# A generated item's id is its recipe, "gen:<base>:<rarity>:<element>:<trigger>", so
-# the run's part list, a retry and the run log all hold something that rebuilds the
-# same item every time, and two copies of one recipe stack like any part.
-#
-# The same generator finishes the authored rows in items.gd: it fills the name, tier,
-# icon, family and tags a row leaves out, and holds every description to eight words.
 
 const PREFIX := "gen"
-# The one tier-weight row (SG13). The roll (pick_rarity) and every readout (odds) read these
-# numbers and no others; RARITY["weight"] below points here. 87 / 10 / 3 are this game's start
-# values, not RoR2's 0.8 / 0.2 / 0.01 (comps/ror2/items-and-stacking.md), which is the shape of
-# the idea only: a visible weight per tier. Evolved stays 0 until a unit rolls it.
 const TIER_WEIGHTS := {"common": 87.0, "rare": 10.0, "relic": 3.0, "evolved": 0.0}
-# The one rarity table (RR1). Every reader resolves a rarity through it: colour, roll
-# weight, stamp glyph, ladder rung 0..3, tier and the affix scale. The colours are the item
-# ladder's rungs (23 Oct 19:28Z; grey is the panels' own): common is the green field kit in
-# field mint, rare the blue fleet grade in cobalt, relic gold in amber (its mint heart is the
-# gate's and the frame's), so the ids keep their meaning and only the read changes; the
-# stamps name the rungs (FIELD KIT, FLEET GRADE, RELIC). Uncommon folded into
-# common and rare_plus became relic; evolved is the top rung, reserved for the two
-# evolutions a later unit builds, so it carries weight 0 and nothing rolls it yet.
 const RARITY := {
 	"common": {"color": Palette.ARC, "weight": TIER_WEIGHTS["common"], "stamp": "FIELD KIT", "rung": 0, "tier": 1, "affix": 1.12},
 	"rare": {"color": Palette.COBALT, "weight": TIER_WEIGHTS["rare"], "stamp": "FLEET GRADE", "rung": 1, "tier": 3, "affix": 1.5},
@@ -43,9 +13,7 @@ const RARITY := {
 	"evolved": {"color": Palette.ANCIENT, "weight": TIER_WEIGHTS["evolved"], "stamp": "EVOLVED", "rung": 3, "tier": 3, "affix": 2.0},
 }
 const RARITIES := ["common", "rare", "relic", "evolved"]
-# Old ids that a saved recipe id or a stale caller may still carry, resolved on read.
 const RARITY_ALIASES := {"uncommon": "common", "rare_plus": "relic", "evolution": "evolved"}
-# Authored uncommon rows keep the tier they had before they folded into common.
 const LEGACY_TIER := {"uncommon": 2}
 const ELEMENTS := ["", "frost", "arc", "kinetic"]
 const MAX_WORDS := 8
@@ -63,7 +31,6 @@ const BASES := {
 	"charge": {"icon": "charge", "family": "class", "tag": "arc", "nouns": ["Cell", "Spool", "Capacitor"],
 		"stat": {"special_charges": [0.0, 0.0, 1.0]}},
 }
-# Pattern transformers need combat to draw them, so the generator never invents one.
 const GENERATED_BASES := ["weapon", "mobility", "defense", "utility", "charge"]
 const PLUS_NOUNS := ["Core", "Heart"]
 const ELEMENT_WORDS := {"frost": "Frost", "arc": "Arc", "kinetic": "Kinetic"}
@@ -72,13 +39,11 @@ const TRIGGER_WORDS := {
 	"on_charge_release": "Charged", "on_cloak_break": "Smoke", "on_land": "Landing", "on_speed_tier_up": "Redline",
 	"on_pickup": "Magnet", "on_damage_taken": "Dented", "timed": "Clockwork",
 }
-# When the effect happens, as the first words of a description.
 const TRIGGER_WHEN := {
 	"on_hit": "On hit", "on_kill": "On kill", "on_smash": "On smash", "on_rebound": "On rebound",
 	"on_vault": "On vault", "on_charge_release": "On release", "on_cloak_break": "Cloak breaks", "on_land": "On landing",
 	"on_speed_tier_up": "Speeding up", "on_pickup": "On pickup", "on_damage_taken": "When hurt", "timed": "Every {every}s",
 }
-# One effect template per trigger; the affix scales its numbers.
 const TEMPLATES := {
 	"on_hit": {"do": "zap", "chance": 0.08, "damage": 6.0, "reach": 10.0},
 	"on_kill": {"do": "burst", "radius": 5.0, "damage": 8.0},
@@ -93,7 +58,6 @@ const TEMPLATES := {
 	"on_damage_taken": {"do": "return_arc", "share": 0.5, "reach": 12.0},
 	"timed": {"do": "arm_hit", "every": 10, "bonus": 0.3},
 }
-# Which numbers the affix scales, and the ceilings it may not pass.
 const SCALED := ["chance", "damage", "gain", "bonus", "share"]
 const CEILINGS := {"chance": 0.25, "gain": 0.2, "bonus": 1.0, "share": 1.0}
 const GEN_CAP := 3
@@ -107,13 +71,11 @@ static func make_id(base: String, rarity: String, element: String, trigger: Stri
 	return ":".join([PREFIX, base, rarity, element if element != "" else "none", trigger])
 
 
-# A rarity id or an old alias to one of RARITIES; "" when it is neither.
 static func resolve_rarity(rarity: String) -> String:
 	var id: String = RARITY_ALIASES.get(rarity, rarity)
 	return id if RARITY.has(id) else ""
 
 
-# A list of rarity ids or aliases as RARITIES ids, no repeats, unknown ids dropped.
 static func resolve_rarities(rarities: Array) -> Array:
 	var out: Array = []
 	for r in rarities:
@@ -123,7 +85,6 @@ static func resolve_rarities(rarities: Array) -> Array:
 	return out
 
 
-# Parses a recipe id; {} when it is not a well-formed recipe.
 static func parse(part_id: String) -> Dictionary:
 	var bits := part_id.split(":")
 	if bits.size() != 5 or bits[0] != PREFIX:
@@ -136,7 +97,6 @@ static func parse(part_id: String) -> Dictionary:
 	return {"base": bits[1], "rarity": rarity, "element": element, "trigger": bits[4]}
 
 
-# A new recipe at this rarity, drawn from rng: a base, an element, a trigger.
 static func roll_id(rng: RandomNumberGenerator, rarity: String) -> String:
 	var base: String = GENERATED_BASES[rng.randi_range(0, GENERATED_BASES.size() - 1)]
 	var element: String = ELEMENTS[rng.randi_range(0, ELEMENTS.size() - 1)]
@@ -144,7 +104,6 @@ static func roll_id(rng: RandomNumberGenerator, rarity: String) -> String:
 	return make_id(base, rarity, element, trigger)
 
 
-# A rarity from the allowed list, weighted by RARITY.
 static func pick_rarity(rng: RandomNumberGenerator, allowed: Array) -> String:
 	allowed = resolve_rarities(allowed)
 	if allowed.is_empty():
@@ -160,14 +119,10 @@ static func pick_rarity(rng: RandomNumberGenerator, allowed: Array) -> String:
 	return allowed[-1]
 
 
-# A rarity's roll weight, from the one weight row.
 static func weight_of(rarity: String) -> float:
 	return float(TIER_WEIGHTS[resolve_rarity(rarity)])
 
 
-# What a table can contain, as the roll sees it: one {rarity, weight, share} per resolved
-# rarity in the table's order, the weight from TIER_WEIGHTS and the share its part of the
-# table's total (0 for every row when the total is 0). An empty or unknown table is [].
 static func odds(allowed: Array) -> Array:
 	var ids := resolve_rarities(allowed)
 	var total := 0.0
@@ -179,7 +134,6 @@ static func odds(allowed: Array) -> Array:
 	return out
 
 
-# The catalogue row for a recipe id, or {} for an id that is not one.
 static func generated_row(part_id: String) -> Dictionary:
 	var recipe := parse(part_id)
 	if recipe.is_empty():
@@ -208,8 +162,6 @@ static func scaled_effect(template: Dictionary, rarity: String) -> Dictionary:
 	return out
 
 
-# "{modifier} {noun}": the element's word, else the trigger's; relic takes Core or
-# Heart as its noun, like Sunforged Core and Rime Heart.
 static func name_for(base: String, rarity: String, element: String, trigger: String) -> String:
 	var modifier: String = ELEMENT_WORDS.get(element, TRIGGER_WORDS.get(trigger, "Plain"))
 	var nouns: Array = PLUS_NOUNS if rarity == "relic" else BASES[base]["nouns"]
@@ -217,7 +169,6 @@ static func name_for(base: String, rarity: String, element: String, trigger: Str
 	return "%s %s" % [modifier, noun]
 
 
-# "{when}, {effect}", held to eight words.
 static func describe(trigger: String, effect: Dictionary) -> String:
 	return clip("%s, %s" % [TRIGGER_WHEN[trigger].format(effect), effect_phrase(effect)])
 
@@ -257,8 +208,6 @@ static func _effect_verb(effect: Dictionary) -> String:
 	return "works"
 
 
-# Past MAX_WORDS a description is cut and ends in an ellipsis; the catalogue test
-# holds every row to it.
 static func clip(text: String) -> String:
 	var words := text.split(" ", false)
 	if words.size() <= MAX_WORDS:
@@ -270,9 +219,6 @@ static func word_count(text: String) -> int:
 	return text.split(" ", false).size()
 
 
-# Fills what an authored or generated row leaves out: name from the id, tier from the
-# rarity (an authored tier wins, so a part promoted a rung keeps its price), family and icon from the base, a tag from the element or the base, and the
-# eight-word ceiling on the description.
 static func finish(part_id: String, spec: Dictionary) -> Dictionary:
 	var row := spec.duplicate(true)
 	var base: String = spec.get("base", "utility")
@@ -301,9 +247,6 @@ static func finish(part_id: String, spec: Dictionary) -> Dictionary:
 	return row
 
 
-# A generated item's base brings its stat every copy (a weapon hits harder, a plate
-# adds health), so every generated part hits harder or helps outright, not only when
-# its trigger fires.
 static func _apply_base_stat(row: Dictionary, b: Dictionary, rarity: String) -> void:
 	var rung: int = RARITY[rarity]["rung"]
 	var stat: Dictionary = b["stat"]

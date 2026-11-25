@@ -1,12 +1,5 @@
 extends RefCounted
 
-# The bowling score, as codex callbacks (DESIGN-V2 section 13, PROGRESSION section 6,
-# callback 2). They ride the pin rule (DESIGN-V2 section 3) and the rebound, and the
-# codex names them only after they happen:
-#   Strike  a pin chain that takes down three within STRIKE_WINDOW.
-#   Spare   an enemy that bounced you, taken down within SPARE_WINDOW of the bounce.
-#   Turkey  three strikes within TURKEY_WINDOW, the same 4 s as Strike Pocket's window.
-# A player who never heard of bowling still sees a fair feat: three down from one knock.
 
 const STRIKE_KILLS := 3
 const STRIKE_WINDOW := 1.2
@@ -26,12 +19,10 @@ const ENTRIES := [
 ]
 
 var clock := 0.0
-# instance id -> {node, t, counted}
 var _pinned := {}
 var _pin_kills: Array[float] = []
 var _bounced := {}
 var _strikes: Array[float] = []
-# What happened this step, for the owner to hand the codex: [[id, at], ...].
 var _found: Array = []
 
 
@@ -53,7 +44,6 @@ func note_rebound(enemy: Node3D) -> void:
 		_bounced[enemy.get_instance_id()] = {"node": enemy, "t": clock, "at": enemy.global_position}
 
 
-# Advances the lane and returns the scores it found: [[id, at], ...].
 func step(delta: float) -> Array:
 	clock += delta
 	_found = []

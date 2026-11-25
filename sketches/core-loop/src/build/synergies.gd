@@ -1,41 +1,15 @@
 extends RefCounted
 
-# Maker tricks and evolutions: the build's combination rules (systems audit pass D, fold 2;
-# Andrew 11 Nov 2026). There is one set rule a player learns: parts of one maker (maker_sets.gd).
-# Two distinct pieces of one maker wake its trick, a rule change below; three turn on its set
-# bonus (maker_bonuses.gd). The tricks are the rule changes the named synergies (hidden tag
-# pairs) and the three-part sets (a second member list) used to make, moved onto the makers so
-# none of them is a hidden list any more. Each row names its maker; a maker has one or two.
-#
-# Each trick changes behaviour, never just a number. Its effects are transformer ids (build or
-# combat act on them), pattern levels, element triggers and dials, folded in by build_sheet.gd.
-# A trick is derived from the part list, never held, so a retry that restores the list restores
-# the tricks. `tags` are the trick's glyphs (EventKinds.cause_glyphs, accretion); `callout` is
-# what the why callout draws when it fires: two of the maker's parts as icons, then three words.
-# A trick with transformers is discovered on its first firing (build.gd _fire). One that only
-# adds an element to an action (a former three-part set) is told when it wakes: a banner in its
-# `color` and a chime in its element (presentation.gd, build.gd set_completed).
-#
-# This file works on maker counts (maker -> distinct pieces held, Parts.maker_counts), so it
-# never needs the catalogue. declarations() is the codex card data (category "build").
-#
-# Evolutions stay part pairs: both ingredients held and the run gains the Evolved part once
-# (build.gd). An Evolved part gives nothing while an ingredient is missing.
 
 const Palette := preload("res://src/core/palette.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 
 const CATEGORY := "build"
-# Distinct pieces of one maker that wake its trick. The maker's set bonus needs its own count
-# (MakerSets.SETS[maker]["pieces"], three for every maker but Moss).
 const AT := 2
 
-# The stage table the build runs on, set by the build at setup. A table's
-# synergy_in_play(id) names the tricks it keeps; null keeps them all.
 static var table = null
 
 const ROWS := {
-	# Spillway Works: the dam's ice road.
 	"ballast_rig": {
 		"name": "Ballast Rig", "maker": "spillway_works", "tags": ["frost"], "color": Palette.RUST,
 		"text": "Your dash trails frost that freezes water into road.",
@@ -46,7 +20,6 @@ const ROWS := {
 		"text": "Shots freeze water where they land, and ice you shatter hits harder.",
 		"elements": {"shot": "frost"}, "dials": {"shatter_damage": 1.5},
 	},
-	# Fleet Surplus: heavy hull, hard rams.
 	"wrecking_ball": {
 		"name": "Wrecking Ball", "maker": "fleet_surplus", "tags": ["speed", "kinetic"],
 		"text": "Rams send out a shockwave that hits everything around the target.",
@@ -59,7 +32,6 @@ const ROWS := {
 		"transformers": ["glacier_hull"],
 		"callout": {"a": "slag_rounds", "b": "rivet_plating", "words": "Landings ring cold"},
 	},
-	# Redjaw Workshops: teeth and splinters.
 	"shrapnel_bloom": {
 		"name": "Shrapnel Bloom", "maker": "redjaw", "tags": ["split", "kinetic"],
 		"text": "Kills burst into shrapnel that hits up to three machines nearby.",
@@ -72,7 +44,6 @@ const ROWS := {
 		"transformers": ["storm_lattice"], "patterns": {"chain_arc": 1},
 		"callout": {"a": "cross_split", "b": "hairline_fracture", "words": "Bolts find neighbours"},
 	},
-	# Mind-glass: the Mind's live current.
 	"tesla_pylon": {
 		"name": "Tesla Pylon", "maker": "mind_glass", "tags": ["anchor", "arc"],
 		"text": "While mounted or hooked, arcs leap from you to the two nearest machines twice a second.",
@@ -84,7 +55,6 @@ const ROWS := {
 		"text": "Every slam bursts an arc, and shots spark where they land.",
 		"elements": {"slam": "arc", "shot": "arc"},
 	},
-	# Highdraft Roosts: speed and air.
 	"pinwheel": {
 		"name": "Pinwheel", "maker": "highdraft_roosts", "tags": ["spiral", "speed"],
 		"text": "At fast speed and above you spin a blade ring that cuts the machines you pass.",
@@ -96,7 +66,6 @@ const ROWS := {
 		"text": "Your dash trails arc that electrifies water.",
 		"elements": {"dash": "arc"},
 	},
-	# Waking-made: the ground answers.
 	"storm_front": {
 		"name": "Storm Front", "maker": "waking", "tags": ["frost", "mass"], "color": Palette.SLATE,
 		"text": "Every slam cracks out a frost ring that freezes water and lays ice.",
@@ -114,7 +83,6 @@ const ROWS := {
 		"transformers": ["linked_spiral"], "found": "A spiral carrying chain links its arcs into a ring.",
 		"callout": {"a": "spiral_wave", "b": "brace_frame", "words": "Spirals link up"},
 	},
-	# Moss's Spares: scrap that bites back.
 	"lightning_rod": {
 		"name": "Lightning Rod", "maker": "moss", "tags": ["arc", "mass"],
 		"text": "Every piece of scrap you pick up sparks an arc at the nearest machine.",
@@ -123,7 +91,6 @@ const ROWS := {
 	},
 }
 
-# Evolved part -> its two ingredient parts (Parts.EVOLVED holds the Evolved rows).
 const EVOLUTIONS := {
 	"breaker_drive": ["double_feed", "hot_rivets"],
 	"bladestorm_rotor": ["spiral_wave", "loose_trigger"],
@@ -133,7 +100,6 @@ const EVOLUTIONS := {
 	"hoar_barrel": ["frost_barb", "rime_rounds"],
 	"fault_hammer": ["echo_locator", "brace_frame"],
 }
-# The trick each evolution grew out of, the name its text ends on ("From Wrecking Ball.").
 const EVOLVED_FROM := {
 	"breaker_drive": "wrecking_ball",
 	"bladestorm_rotor": "pinwheel",
@@ -144,9 +110,6 @@ const EVOLVED_FROM := {
 	"fault_hammer": "thermal_shock",
 }
 
-# W50-ISAAC-PARTS: 3 additional verb-changing evolutions with strictly disjoint ingredient pairs
-# (zero overlap with EVOLUTIONS' 14 ingredients or each other). Kept beside EVOLUTIONS so existing
-# 7-row pins stay intact while runtime evolution helpers merge all 10 cleanly.
 const EVOLUTIONS_W50 := {
 	"gyro_foundry": ["orbital_flywheel", "basalt_ram"],
 	"arc_prism": ["prism_splitter", "galvanic_rounds"],
@@ -173,22 +136,18 @@ static func all_evolved_from() -> Dictionary:
 	return out
 
 
-# True when the table in use keeps this trick.
 static func in_play(trick_id: String) -> bool:
 	return table == null or table.synergy_in_play(trick_id)
 
 
-# The tricks a maker carries that the table keeps, in row order.
 static func of_maker(maker: String) -> Array:
 	return ROWS.keys().filter(func(key): return ROWS[key]["maker"] == maker and in_play(key))
 
 
-# The tricks awake for these maker counts (maker -> distinct pieces), in row order.
 static func active(counted: Dictionary) -> Array:
 	return ROWS.keys().filter(func(key): return in_play(key) and int(counted.get(ROWS[key]["maker"], 0)) >= AT)
 
 
-# The first trick one more distinct piece of `maker` would wake, or "".
 static func completed_by(counted: Dictionary, maker: String) -> String:
 	if maker == "" or int(counted.get(maker, 0)) != AT - 1:
 		return ""
@@ -196,7 +155,6 @@ static func completed_by(counted: Dictionary, maker: String) -> String:
 	return tricks[0] if not tricks.is_empty() else ""
 
 
-# The first trick a first distinct piece of `maker` starts toward, or "" (the lens perk names it).
 static func started_by(counted: Dictionary, maker: String) -> String:
 	if maker == "" or int(counted.get(maker, 0)) != 0:
 		return ""
@@ -204,12 +162,10 @@ static func started_by(counted: Dictionary, maker: String) -> String:
 	return tricks[0] if not tricks.is_empty() else ""
 
 
-# True for a trick that only adds elements to actions: told when it wakes, not when it fires.
 static func told_on_wake(trick_id: String) -> bool:
 	return ROWS.has(trick_id) and ROWS[trick_id].get("transformers", []).is_empty()
 
 
-# The element a trick's rule adds first, "frost" or "arc", or "": what its chime rings in.
 static func element(trick_id: String) -> String:
 	var elements: Dictionary = ROWS.get(trick_id, {}).get("elements", {})
 	if elements.is_empty():
@@ -222,9 +178,6 @@ static func callout(trick_id: String) -> Dictionary:
 	return ROWS.get(trick_id, {}).get("callout", {})
 
 
-# Codex cards, one per trick in play: {id, category, name, hint, clue, text, maker, tags}.
-# maker_name turns a maker id into its display name; the hint says what wakes it, the clue the
-# piece still to find.
 static func declarations(maker_name: Callable) -> Array:
 	var cards: Array = []
 	for key in ROWS:
@@ -244,42 +197,32 @@ static func declarations(maker_name: Callable) -> Array:
 	return cards
 
 
-# The Evolved parts that should be gained now: both ingredients held, the Evolved part not.
 static func evolutions_ready(held: Array) -> Array:
 	var all := all_evolutions()
 	return all.keys().filter(func(into): return not into in held and _holds_all(held, all[into]))
 
 
-# True while an Evolved part's ingredients are both held; an Evolved part gives nothing otherwise.
-# True for any part that is not an Evolved part.
 static func evolution_live(part_id: String, held: Array) -> bool:
 	var all := all_evolutions()
 	return not all.has(part_id) or _holds_all(held, all[part_id])
 
 
-# True while the run holds this Evolved part and both its ingredients: the one call combat makes
-# before an evolution rewrites a verb (design-v3/ABILITY-MUTATIONS.md section 7 D).
 static func evolved_live(part_id: String, held: Array) -> bool:
 	var all := all_evolutions()
 	return all.has(part_id) and part_id in held and _holds_all(held, all[part_id])
 
 
-# The trick an Evolved part grew out of, or "".
 static func evolution_of(part_id: String) -> String:
 	if EVOLVED_FROM.has(part_id):
 		return EVOLVED_FROM[part_id]
 	return EVOLVED_FROM_W50.get(part_id, "")
 
 
-# True for an Evolved part or one of its ingredients.
 static func in_evolution(part_id: String) -> bool:
 	var all := all_evolutions()
 	return all.has(part_id) or all.values().any(func(pair): return part_id in pair)
 
 
-# Admission for an evolution table (Elements.problems' shape): every pair is two distinct parts
-# `known` answers true for, no part sits in two pairs or is itself an Evolved part, and each
-# Evolved part names the trick it grew out of. Returns one line per problem; [] is clean.
 static func evolution_problems(table: Dictionary, grew_from: Dictionary, known: Callable) -> Array:
 	var found: Array = []
 	var owner := {}
@@ -304,10 +247,6 @@ static func _holds_all(held: Array, parts: Array) -> bool:
 	return parts.all(func(part_id): return part_id in held)
 
 
-# --- W47-C2: Cross-system build-blossoming synergies (NORTHSTAR §4.4, REBASELINE §7) ---
-# Separate from the 14 maker tricks in ROWS so maker-set counts, AlphaDefs/ParkDefs tables and
-# single-maker callouts stay untouched. Each row pairs two distinct build systems and fires in
-# combat at proc depth 1 (SYNERGY / item_proc, bits 0).
 const CROSS_SYSTEM := {
 	"demolition_derby": {
 		"name": "Demolition Derby",
@@ -373,10 +312,6 @@ const CROSS_SYSTEM := {
 	},
 }
 
-# --- W50-ISAAC-PARTS: 6 additional cross-system synergies (6 -> 12 total) ---
-# Kept beside CROSS_SYSTEM so synergies_test.gd's 6-row W47 pin stays untouched while all runtime
-# evaluators (cross_system_active, cross_system_awake, cross_system_row, cross_system_problems)
-# operate seamlessly across all 12 rows.
 const CROSS_SYSTEM_W50 := {
 	"overclocked_circuit": {
 		"name": "Overclocked Circuit",
@@ -461,8 +396,6 @@ static func cross_system_row(id: String) -> Dictionary:
 	return {}
 
 
-# Cross-system synergies awake for `held` (part id list), `part_info` (Callable(part_id) -> {tags, bits}),
-# and runtime `context` ({heft_class, mass, has_consumable, has_active, has_pull, has_husk, burden_count, ...}), in row order.
 static func cross_system_active(held: Array, part_info: Callable, context := {}) -> Array:
 	var out: Array = []
 	for id in cross_system_ids(true):

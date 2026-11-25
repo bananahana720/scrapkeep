@@ -2,24 +2,6 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 
-# The player's own skill-shot geometry (VISUAL-LANGUAGE sections 3 and 4). Each layer
-# holds one shape record, and the solid shape drawn is exactly the shape a release
-# commits (RR-01, TH-03); the hit test's forgiveness lives in the rule that resolves the
-# release, never in a bigger drawing. Yours reads as yours: the class colour, a 15%
-# clean fill (never striped), a charcoal keyline under every edge, rounded caps and the
-# class's ticks on the rim. A dashed outline shows the full-charge extent.
-#
-# Shapes (every record also carries color, and may carry ticks, fill and blocked):
-#   ring   {centre, radius, full_radius}     an area; fill > 0 adds the gauge sweep
-#   line   {from, to, width, full_to}        a lane on the ground
-#   arc    {points}                          a lobbed path, dashed
-#   cone   {apex, dir, length, half_angle}   an area a release commits (the cannon's plate), dashed.
-#                                            aim marks a direction the ball would leave along, where
-#                                            no hit lands: one dashed line and a root of fill, both
-#                                            starting `clear` metres out so they stay off the ball
-#   marks  {points}                          small rings on faces (the arc slam's tags)
-# ticks is the class row's shape: ring (pips), chevron or burst (starburst spikes).
-# blocked draws the shape in bone, dashed, with a charcoal cross (RR-03).
 
 const LIFT := 0.12
 const RENDER_PRIORITY := 3
@@ -30,29 +12,17 @@ const EXTENT := 0.06
 const KEYLINE := 0.08
 const DASH := 0.9
 const GAP := 0.6
-# At full the fill breathes on this period through the grace.
 const BREATHE := 0.5
-# A cancelled or knocked shape shrinks into its origin over this long.
 const COLLAPSE := 0.12
 const TICK_STEP_DEG := 30.0
 const TICK_LEN := 0.45
-# How far past its clear edge an aim cone's fill reaches before it has thinned to nothing.
 const AIM_FILL := 1.2
-# An aim mark's root is a strip along its line, this half-width at its foot and at its far end, not
-# the cone's spread: pitched up on a mount the spread stood over the view as a mint sheet (8.5 to
-# 9.6% of the PC's box, against its 8% line; the strip reads 2.8% in the cloud where the spread read
-# 6.1%, and the cloud reads the PC low by up to 1.6).
 const AIM_ROOT := Vector2(0.3, 0.15)
-# An aim mark fades with its distance from the lens: gone at LENS_CLEAR metres, whole at LENS_FULL.
-# A kick off a wall you face points back over the camera, and a line 0.28 m wide drawn a metre from
-# the lens is a bar across the view.
 const LENS_CLEAR := 1.5
 const LENS_FULL := 4.0
 const LAST_SHAPE_CAP := 64
 
 var shapes := {}
-# The last record each layer drew before it was cleared, so a test can compare what
-# was on screen with what the release committed. Bounded so monotonic layer ids never leak.
 var last_shape := {}
 var _collapsing := {}
 
@@ -75,10 +45,7 @@ func _ready() -> void:
 	add_child(_mesh)
 
 
-# The material a record is drawn with. The colours are written in code as the palette's sRGB
-# values, so the material says so: without it the PC's renderer reads them as linear light and
-# draws the charcoal keyline mid grey and the pilot's colour pale. An aim mark's material also
-# fades it near the lens.
+# Palette vertex colors are sRGB; without vertex_color_is_srgb Forward+ reads them as linear light.
 static func material(aim: bool) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -99,9 +66,7 @@ static func is_aim(shape: Dictionary) -> bool:
 	return bool(shape.get("aim", false))
 
 
-# Whether a record puts anything on screen. One that does not (marks with no points yet, an arc of
-# one point) is left out of the mesh: a surface that ends with no vertices is an engine error, and
-# with areas and aim marks on separate surfaces such a record can be alone on its own.
+# ImmediateMesh errors if a surface ends with zero vertices.
 static func draws(shape: Dictionary) -> bool:
 	match String(shape.get("kind", "")):
 		"ring", "line", "cone":
@@ -138,7 +103,6 @@ func clear_all() -> void:
 	last_shape.clear()
 
 
-# A cancel or knock: the shape shrinks into its origin in COLLAPSE seconds and goes.
 func collapse(layer: String) -> void:
 	if shapes.has(layer):
 		_collapsing[layer] = {"shape": shapes[layer], "t": 0.0}
@@ -155,7 +119,6 @@ func collapsing(layer: String) -> bool:
 	return _collapsing.has(layer)
 
 
-# The colours and patterns one record draws with at time `now` (seconds).
 static func style(shape: Dictionary, now: float) -> Dictionary:
 	if shape.get("blocked", false):
 		return {"edge": Palette.SAND, "fill": Color(Palette.SAND, 0.0), "dashed": true, "cross": true}
@@ -167,12 +130,6 @@ static func style(shape: Dictionary, now: float) -> Dictionary:
 	return {"edge": color, "fill": Color(color, fill_alpha), "dashed": kind == "arc" or kind == "cone", "cross": false}
 
 
-# A cone's fill: where along the cone it starts and how far it reaches (shares of its length), and its
-# colour at that far edge. An area a release commits (the cannon's plate) is filled flat from its apex
-# to its end. An aim cone leaves the ball along a line that follows the look, so beside a wall it comes
-# back over the lens: filled flat it lay across the middle of the view as a pale sheet (play finding 7).
-# Its fill is a root that starts at the cone's clear edge and thins to nothing AIM_FILL metres on,
-# whatever the cone's length, a strip AIM_ROOT wide along the line, and the dashed line carries the rest.
 static func cone_fill(shape: Dictionary, fill: Color) -> Dictionary:
 	if not is_aim(shape):
 		return {"from": 0.0, "reach": 1.0, "far": fill}
@@ -181,9 +138,6 @@ static func cone_fill(shape: Dictionary, fill: Color) -> Dictionary:
 	return {"from": from, "reach": minf(1.0, from + AIM_FILL / length), "far": Color(fill, 0.0)}
 
 
-# The ends of a cone's dashed lines. An area wears its two edges and its centre line. An aim cone wears
-# the centre line alone: the kick leaves along exactly that line, and readers of the three-line fan took
-# its spread for a width of travel that does not exist.
 static func cone_tips(shape: Dictionary) -> Array:
 	var apex: Vector3 = shape["apex"]
 	var dir: Vector3 = (shape["dir"] as Vector3).normalized()
@@ -224,7 +178,6 @@ func _process(delta: float) -> void:
 	if shapes.is_empty() and _collapsing.is_empty():
 		return
 	var now := Time.get_ticks_msec() / 1000.0
-	# Two surfaces: areas, then aim marks, whose material fades them near the lens.
 	var drawn := [[], []]
 	for layer in shapes:
 		if draws(shapes[layer]):
@@ -311,7 +264,6 @@ func _draw(shape: Dictionary, now: float) -> void:
 			var near := [apex.lerp(left, body["from"]), apex.lerp(right, body["from"])]
 			var far := [apex.lerp(left, body["reach"]), apex.lerp(right, body["reach"])]
 			if is_aim(shape):
-				# The root hugs the line rather than the cone's spread (see AIM_ROOT).
 				var foot := apex + dir * length * float(body["from"])
 				var tip := apex + dir * length * float(body["reach"])
 				near = [foot + side * AIM_ROOT.x, foot - side * AIM_ROOT.x]
@@ -326,8 +278,6 @@ func _draw(shape: Dictionary, now: float) -> void:
 				_anchor = point
 				_circle(point, 0.6, EDGE, edge, false, 1.0)
 
-
-# --- primitives, all laid flat and lifted, with the charcoal keyline under edges -----
 
 func _triangle(a: Vector3, b: Vector3, c: Vector3, color: Color) -> void:
 	for v in [a, b, c]:
@@ -353,7 +303,6 @@ static func _around(angle: float) -> Vector3:
 	return Vector3(sin(angle), 0.0, -cos(angle))
 
 
-# A flat strip from a to b, keyline first, with a rounded cap at each end.
 func _ribbon(a: Vector3, b: Vector3, width: float, color: Color, keyline := true) -> void:
 	var along := b - a
 	var flat := Vector3(along.x, 0.0, along.z)
@@ -385,7 +334,6 @@ func _dashed(a: Vector3, b: Vector3, width: float, color: Color) -> void:
 		t = end + GAP
 
 
-# The rim, clockwise from 12 o'clock over `sweep` of a turn.
 func _circle(centre: Vector3, radius: float, width: float, color: Color, dashed: bool, sweep: float) -> void:
 	var count := maxi(2, int(SEGMENTS * clampf(sweep, 0.0, 1.0)))
 	var step := TAU * clampf(sweep, 0.0, 1.0) / float(count)
@@ -417,7 +365,6 @@ static func _lane_side(from: Vector3, to: Vector3) -> Vector3:
 	return along.cross(Vector3.UP).normalized() if along.length_squared() > 0.0001 else Vector3.RIGHT
 
 
-# The class's mark on the rim: Sable's pips, Rivet's chevrons, Kest's starburst spikes.
 func _ring_ticks(centre: Vector3, radius: float, ticks: String, color: Color) -> void:
 	if ticks == "":
 		return
@@ -471,7 +418,6 @@ func _tick(at: Vector3, out: Vector3, ticks: String, color: Color) -> void:
 			_ribbon(mid - rake + slant, mid + rake - slant, EXTENT, color, false)
 
 
-# RR-03's blocked mark: a charcoal cross where the shot would have gone.
 func _cross(at: Vector3) -> void:
 	var a := Vector3(0.6, 0.0, 0.6)
 	var b := Vector3(0.6, 0.0, -0.6)

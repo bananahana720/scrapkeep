@@ -25,56 +25,34 @@ const CombatRules := preload("res://src/combat/combat.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const ExceptionHold := preload("res://src/movement/exception_hold.gd")
 
-# Rigid physics only (TADR-006; entry 6 kept it for its arcade weight). The ball owns
-# movement and publishes each movement fact on the bus; what a collision does to an
-# enemy's health is combat's, so a contact is handed on through struck().
 
 const STOMP := "stomp"
 const RAM := "ram"
 const SLAM := "slam"
-# The bow sensor reaches this far past the shell, so a crush is decided before contact.
 const BOW_REACH := 1.0
-# How long a crushed enemy is ignored by the ball's collider while it dies.
 const CRUSH_PASS := 0.3
-# A contact is a stomp when the ball was coming down faster than this onto an enemy
-# below its centre.
 const STOMP_SPEED := 3.0
-# A held pull the sprint ignores says so at most this often, not every tick.
 const CC_IGNORED_GAP_MS := 250
-# The arc slam tags steep faces this close for this long, for a vault.
 const FACE_TAG_REACH := 12.0
 const FACE_TAG_SECONDS := 2.0
 const FACE_TAG_RAYS := 16
-# Rivet's skid pushes enemies in this cone ahead of the ball, and each one it reaches
-# pays back this much sprint recharge.
 const SKID_REACH := 10.0
 const SKID_CONE := 0.35
-# Inside this the skid hits whatever the heading (the ring around the ball).
 const SKID_INNER := 1.5
 const SKID_REFUND := 0.5
-# Tarn's rend turns the slam's outward shove into an inward pull this strong, so the
-# crowd lands in claw reach.
 const REND_PULL := 0.8
-# Gutter Heart (rend_drag): a machine no heavier than the ball slides to the crater centre over
-# this long; a heavier one holds. Machines move, the ball's own motion is never touched.
 const DRAG_SECONDS := 0.4
 const AIM_CONE_LENGTH := 5.0
 const AIM_CONE_HALF := 0.3
-# An aim mark starts this far from the ball's centre, clear of the cage, so it never draws over the ball.
 const AIM_CONE_CLEAR := 1.3
-# How long a transient line state stands before the steady one is published again.
 const DRY_FIRE_HOLD := 0.25
 const LET_GO_HOLD := 0.15
 const BROKE_HOLD := 0.3
 const LANDS_HOLD := 0.1
-# Planar speed (m/s) at or under which a grounded ball has nothing for the brake to slow (MG-10).
 const REFUSE_REST := 0.5
-# A line or mount on a piece's face counts as on the piece within this many metres when it breaks.
 const SHATTER_MARGIN := 0.25
 
 signal shockwave(position: Vector3, strength: float)
-# A physical contact the ball made, for combat to turn into damage. Local, not the bus:
-# the bus fact is enemy_struck, which combat publishes once the hit is resolved.
 signal struck(enemy: Node3D, kind: String, force: float)
 
 var tuning
@@ -82,74 +60,37 @@ var events
 var state := BallState.new()
 var kit := AugmentKit.new()
 var abilities = kit.abilities
-# The run's upgrade picks (upgrade_tree.gd): offered at class select and each workshop.
 var tree = kit.tree
-# The class this ball is fitted as; null before a run (the kit is then the engineer's).
 var class_def: Resource
-# The skill-shot geometry, player-owned and drawn in the class colour.
 var indicator: Node3D
 var intent := Intent.new()
 var source = Intent.Source.new()
 var drive_basis := Basis.IDENTITY
 var spawn_point := Vector3.ZERO
-# Presentation turns this off when it draws its own squash and stretch.
 var builtin_squash := true
-# Asks combat whether a contact would kill outright: (enemy, kind, force) -> bool.
-# game.gd wires it to ctx.spawner.would_crush once combat is set up.
 var crush_check := Callable()
-# Answers the heft the ball plays at; combat wires it to its heft(). 1.0 when unwired.
 var heft_of := Callable()
-# Answers the run's scrap mass alone, without parts; combat wires it. Unwired, mass reads 0.
 var mass_of := Callable()
-# Restores Tally's pressure by a count (the stamp landing); combat wires it to _grant_pressure.
 var pressure_grant := Callable()
-# A body a ram or crush just killed keeps flying as a hulk that bowls what is ahead of it
-# (enemy, direction, knock); combat wires it to bowl_hulk. Unwired, a kill bowls nothing.
 var hulk_launch := Callable()
-# E's first claim (world's interact system, claims(face_in_reach: bool) -> bool): true
-# when an interactable takes this press, so it never also plants a pylon.
 var interact_claim := Callable()
-# E's other reader, the talk bubble (the HUD wires it, () -> bool): true while a line on screen
-# takes the interact key, so a press that turns it is never refused.
 var talk_claim := Callable()
-# The arc slam's tagged faces: [{point, left}].
 var face_tags: Array = []
 var _cc_ignored_at := {}
-# Seconds of crowd-control immunity granted from outside the sprint (Unstoppable).
 var immune_left := 0.0
-# The landing each smash flavour adds to the shared slam.
 var _smashes := {}
-# Gutter Heart slides in flight, by enemy instance id: {enemy, to, t}.
 var _drags := {}
-# The enemy a harpoon smash is landing on while that landing's strikes resolve; combat reads it.
 var smash_landing: Node3D
-# The harpoon chain; this player is its only writer (HOOK-CHAIN.md).
 var chain := ChainState.new()
-# The dunk charge (dunk.gd): this player stores it from an air slam and ticks its clock; combat
-# spends it on a reel impact; the glow and the cue read its signals.
 var dunk := Dunk.new()
-# Heat on the shell (redline.gd, behind --heat): this player fills it from speed and skims and
-# spends it on its own contacts; combat reads its taken scale; the shell, the sound and the pad
-# read its signals.
 var redline := Redline.new()
-# The chain's multiplier while a smash landing resolves; 1.0 otherwise.
 var _landing_mult := 1.0
-# The skill bar's router (design-v3/SKILL-BAR.md section 1). set_piece_phase answers the
-# ultimate's phase (idle, windup, flight, recover); the ultimate unit sets it, and unset it
-# reads idle. line_load_of answers combat.line_load(); combat wires it.
 var set_piece_phase := Callable()
 var line_load_of := Callable()
-# The release latch: after a snap back with left click still down, the weapon ignores left
-# click until it comes up, so a held cast never rolls into weapon fire.
 var _fire_latched := false
-# Left click as the source polled it this tick, before the router moves it to slot 2 or 3. A
-# cast's snap back lands after the router cleared fire_*, so the latch reads this.
 var _click_held := false
 
 var _rigid
-# The draw rig. _visual_root follows the shown position and never rotates; _juice is
-# free for presentation (squash, stretch, trails); _mesh rolls; _roll_mount rolls with
-# the mesh for anything that should stick to the ball's surface, like accreted scrap.
 var _visual_root: Node3D
 var _pod_mount: Node3D
 var _juice: Node3D
@@ -160,10 +101,6 @@ var _wings_material: StandardMaterial3D
 var _pylon: Node3D
 var _plate: MeshInstance3D
 var _roll := Basis.IDENTITY
-# Keep-spin (MOTION-SPEC row 210): a mid-air velocity set forces a floor-roll spin on the
-# body, which the lattice would draw as a mid-air wheel and a snap. The body keeps that spin
-# (its friction and torque feed translation, so it is physics), and the lattice instead
-# carries its own spin through the set, drawn only. A grounded hand-off lets it go.
 const SPIN_AIR_DAMP := 0.25
 const SPIN_HELD_DAMP := 2.5
 var _spin_on := false
@@ -175,19 +112,14 @@ var _spin_freeze := false
 var _spin_offset := Basis.IDENTITY
 var _frozen := false
 var _was_hooked := false
-# Ctrl's raw state last tick, and whether a body line has claimed the press still held.
 var _brake_was_held := false
 var _ctrl_claimed := false
-# The line state last published (LINE_ROWS id), what it named, and how long a transient one
-# still stands. _line_standing says a latch or smash was published and has not ended yet.
 var _line_state := ""
 var _line_target = null
 var _line_anchor := Vector3.ZERO
 var _line_hold := 0.0
 var _line_standing := false
 var _bow: Area3D
-# The speed bank (SQ9, Tuning.BANK_ROWS): {row, t, bonus0, bonus} while one runs, else empty.
-# bonus is the planar speed the bank has added and not yet taken back.
 var speed_bank := {}
 var _speed_bank_airborne := false
 var _speed_bank_jumped := false
@@ -195,19 +127,13 @@ enum BankMove { NONE, JUMP, SLIDE, SLIDE_FLIGHT }
 var _speed_bank_chosen := BankMove.NONE
 var _speed_bank_move_held := false
 var _speed_bank_brake_held := false
-# The grounded rest before a roll start: ticks the ball has sat grounded below BANK_REST,
-# and whether the brake held it on any of them.
 var _speed_bank_rest_ticks := 0
 var _speed_bank_rest_braked := false
 var _bow_check_queued := false
 var _crushing := {}
-# Every collision exception the ball takes goes through here, so none ends with the ball inside.
 var exceptions
-# The stage's heft destructibles and the Callable that answers the run's heft class (bind_destructibles).
 var _destructibles: Node = null
 var _destructibles_class := Callable()
-# W47-H1 Kest baseline Air-Draw Glide Hang (0.45x gravity for 1.2 s while holding sticky_charge
-# airborne), spire vault off cable_charge latches, and high vertical wall-kick boost.
 var air_draw_active := false
 var air_draw_left := Weapons.KEST_AIR_DRAW_MAX_S
 var _kest_wall_kick_faces := {}
@@ -256,11 +182,8 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 		redline.reset_counts()
 		tree.world_one = tuning.world_one()
 		tree.open_checkpoint())
-	# The workshop visits after stages 1 to 3 each open one more pick: world's bay opens
-	# it on entry, or at the stage's clear when the bay was skipped (world.gd).
 	events.stage_entered.connect(func(_stage: int, _retry: bool): abilities.refill())
 	events.stage_content_cleared.connect(func(_reason: String): abilities.refill())
-	# The selection goes home on a cast and at every reset point (SKILL-BAR section 1).
 	events.slot_cast.connect(func(_slot: String, _id: String, _at: Vector3): snap_slots("cast"))
 	events.ultimate_started.connect(func(_id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float):
 		snap_slots("ultimate"))
@@ -291,7 +214,6 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_juice = Node3D.new()
 	_juice.name = "Juice"
 	_visual_root.add_child(_juice)
-	# Level sibling of Juice for the cockpit: takes the juice offset, never its basis.
 	_pod_mount = Node3D.new()
 	_pod_mount.name = "PodMount"
 	_visual_root.add_child(_pod_mount)
@@ -321,7 +243,6 @@ func body() -> RigidBody3D:
 	return _rigid
 
 
-# Kept for code copied from the mobility kit, which had two bodies.
 func active_body() -> RigidBody3D:
 	return _rigid
 
@@ -330,9 +251,6 @@ func ball_position() -> Vector3:
 	return _rigid.global_position
 
 
-# Where the ball is drawn this frame. With physics interpolation on (F3) that is the
-# body's interpolated transform, so the visuals and the camera move every frame
-# instead of stepping at the 90 Hz physics rate; with it off it is the raw position.
 func shown_transform() -> Transform3D:
 	if is_inside_tree() and get_tree().physics_interpolation and not _rigid.placing:
 		return _rigid.get_global_transform_interpolated()
@@ -343,13 +261,10 @@ func shown_position() -> Vector3:
 	return shown_transform().origin
 
 
-# Presentation hooks. The juice node is presentation's to transform and parent to;
-# the spine never writes it. The roll mount turns with the ball's surface.
 func juice_node() -> Node3D:
 	return _juice
 
 
-# Where HeroPod mounts: follows the juice position, ignores its squash and shell scale.
 func pod_mount() -> Node3D:
 	return _pod_mount
 
@@ -370,17 +285,12 @@ func planar_velocity() -> Vector3:
 	return Vector3(state.velocity.x, 0.0, state.velocity.z)
 
 
-# A frozen ball takes no push: a killing blow's shove lands after the death has frozen
-# it, and must not wait for the retry (FIXWAVE spine, the stale shove).
 func add_external_accel(accel: Vector3) -> void:
 	if _frozen:
 		return
 	_rigid.external_accel += accel
 
 
-# Screens freeze the ball so a title or death screen never lets it roll off; unfreezing
-# hands back exactly the velocity given, which is how a launch carries between stages.
-# Freezing drops any push already handed over this tick.
 func set_frozen(frozen: bool) -> void:
 	_frozen = frozen
 	_rigid.set_active(not frozen)
@@ -423,19 +333,12 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	_rigid.teleport(point, velocity)
 
 
-# A ride, a launch, a deflect or a throw sets the velocity outright, and a harpoon line
-# would fight it, so it lets go. The set piece passes the cause "ultimate", which publishes
-# no "broke" (SKILL-BAR section 4, line cut cause).
 func set_velocity_now(velocity: Vector3, cause := "launched") -> void:
 	cut_line(cause)
 	_clear_speed_bank()
 	_rigid.set_velocity_now(velocity)
 
 
-# Runs from the body's velocity_setting signal, before every velocity set however it is made
-# (a ride tick, a reel, a fling, a launch). Airborne, the lattice starts (or keeps) its own
-# spin from the body's spin of this moment; a set on consecutive ticks is a held ride, which
-# decays toward 0. Grounded, the hand-off ends the carry.
 func _keep_spin() -> void:
 	var tick := Engine.get_physics_frames()
 	if state.grounded:
@@ -446,22 +349,17 @@ func _keep_spin() -> void:
 	if _spin_on:
 		return
 	_spin_on = true
-	# The seed reads the basis the draw reads, and settles a landing freeze this frame has not
-	# drawn yet, so a grounded set then an airborne one inside a frame cannot overwrite it.
 	_settle_offset(_body_basis())
 	_spin_basis = (_body_basis() * _spin_offset).orthonormalized()
 	_spin_omega = _rigid.angular_velocity
 
 
-# A grounded hand-off: the lattice takes the body's spin at once. Its orientation is frozen
-# as an offset from the body's, so nothing turns to catch up.
 func _spin_end() -> void:
 	if _spin_on:
 		_spin_on = false
 		_spin_freeze = true
 
 
-# The body orientation the lattice is drawn against: the same (interpolated) one _process reads.
 func _body_basis() -> Basis:
 	return shown_transform().basis.orthonormalized()
 
@@ -478,7 +376,6 @@ func _spin_clear() -> void:
 	_spin_offset = Basis.IDENTITY
 
 
-# The basis the lattice draws: the body's times the frozen offset, unless a carried spin runs.
 func _drawn_basis(body_basis: Basis, delta: float) -> Basis:
 	body_basis = body_basis.orthonormalized()
 	if _spin_on and state.grounded and Engine.get_physics_frames() - _spin_set_tick > 1:
@@ -494,8 +391,6 @@ func _drawn_basis(body_basis: Basis, delta: float) -> Basis:
 	return (body_basis * _spin_offset).orthonormalized()
 
 
-# PC-SABLE: the hand-off bypasses RMB's Coil Hook fling. A committed smash keeps its
-# pivot until the paid contact publishes harpoon_smashed.
 var _bank_pending := {}
 var bank_last := {}
 var _bank_logging_deferred := false
@@ -507,7 +402,6 @@ func bank_geometry() -> Dictionary:
 	return _aim_cone(at, launch.normalized(), AIM_CONE_LENGTH * (1.0 + launch.length() / Augments.LAUNCH_CEILING), {"speed": launch.length()})
 
 
-# The record of an aim mark: the line the ball would leave `at` along, `length` metres of it.
 func _aim_cone(at: Vector3, dir: Vector3, length: float, more := {}) -> Dictionary:
 	var shape := {"kind": "cone", "aim": true, "apex": at, "dir": dir, "length": length, "half_angle": AIM_CONE_HALF, "clear": AIM_CONE_CLEAR}
 	shape.merge(more)
@@ -534,15 +428,12 @@ func _bank_release(anchor: Vector3) -> void:
 	events.dismounted.emit(launch)
 
 
-# The set piece's landing pays the chain as a paid smash does: returns the multiplier and
-# publishes the chain's end.
 func pay_chain(at: Vector3) -> float:
 	var paid: Dictionary = chain.pay()
 	_publish_chain(paid["events"], null, at)
 	return float(paid["mult"])
 
 
-# True while the set piece rides (wind-up to recovery).
 func in_set_piece() -> bool:
 	if not set_piece_phase.is_valid():
 		return false
@@ -550,8 +441,6 @@ func in_set_piece() -> bool:
 	return phase != "idle" and phase != ""
 
 
-# Fits the class's movement kit, smash and ability slots. Everyone keeps jump, double
-# jump, boost and the smash; only the class's own movement augments are on.
 func fit_class(def: Resource) -> void:
 	class_def = def
 	air_draw_active = false
@@ -563,13 +452,10 @@ func fit_class(def: Resource) -> void:
 	_refit()
 
 
-# W47-H1 Kest: refreshes her 1.2 s Air-Draw Glide Hang budget.
 func refresh_air_draw() -> void:
 	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
 
 
-# W47-H1 Kest: clean upward vault off a cable_charge spire latch into Air-Draw Glide Hang
-# without cutting her standing grapple line or losing horizontal speed.
 func apply_spire_vault(anchor: Vector3) -> bool:
 	if class_def == null or class_def.id != "demolitions_caster" or _frozen:
 		return false
@@ -582,14 +468,11 @@ func apply_spire_vault(anchor: Vector3) -> bool:
 	return true
 
 
-# A pick lands on the live kit: its slot ops, then the movement kit and smash flavour
-# the (maybe swapped) slots name. Nothing else about the slots is reset.
 func _on_tree_picked(n: Dictionary) -> void:
 	UpgradeTree.apply_pick(abilities, n)
 	_refit()
 
 
-# The movement kit the movement slot's row names, the smash flavour, the class colour.
 func _refit() -> void:
 	if class_def == null:
 		kit.fit(Augments.DEFAULT_MOVEMENT, "")
@@ -599,8 +482,6 @@ func _refit() -> void:
 	_paint_effects()
 
 
-# Everything the player's own action lights (pylon plate, glide vane) glows in the
-# class colour: class colour means yours (VISUAL-LANGUAGE section 2).
 func _paint_effects() -> void:
 	var color := class_color()
 	_wings_material.albedo_color = Color(color, 0.75)
@@ -611,7 +492,6 @@ func class_color() -> Color:
 	return class_def.color if class_def != null else ClassDef.SABLE_COLOR
 
 
-# A skill-shot record dressed as yours: the class colour and the class's rim ticks.
 func yours(shape: Dictionary) -> Dictionary:
 	shape["color"] = class_color()
 	shape["ticks"] = class_def.shape if class_def != null else "ring"
@@ -622,9 +502,6 @@ func heft() -> float:
 	return float(heft_of.call()) if heft_of.is_valid() else 1.0
 
 
-# The stage's heft destructibles (world calls this on each stage entry, and with null at its end): the ball's
-# blasts (slam, Redline) reach them with the class `class_of` answers, and a piece that breaks lets go of any
-# line, mount or aim that stood on it the same tick.
 func bind_destructibles(pieces: Node, class_of := Callable()) -> void:
 	if is_instance_valid(_destructibles) and _destructibles.piece_shattered.is_connected(_on_piece_shattered):
 		_destructibles.piece_shattered.disconnect(_on_piece_shattered)
@@ -640,8 +517,6 @@ func _break_props(at: Vector3, radius: float, source: String) -> void:
 		_destructibles.on_blast(at, radius, source, 1, int(_destructibles_class.call()) if _destructibles_class.is_valid() else -1)
 
 
-# True when `point` lies in the piece that just broke (its own oriented box when the module can say, else the
-# world box), grown by a quarter metre so a face the line or mount sat on still counts.
 func _point_in_shattered(bounds: AABB, point: Vector3) -> bool:
 	var id: String = _destructibles.last_shattered_id() if is_instance_valid(_destructibles) else ""
 	if id != "":
@@ -649,8 +524,6 @@ func _point_in_shattered(bounds: AABB, point: Vector3) -> bool:
 	return bounds.grow(SHATTER_MARGIN).has_point(point)
 
 
-# A world line, a pylon mount or a harpoon aim that rested on the piece cannot outlive it: the line is cut, the
-# mount is dropped and the aim is cleared on the tick of the break, so a press the same tick finds no surface.
 func _on_piece_shattered(bounds: AABB) -> void:
 	if kit.hooked and not kit.on_body and _point_in_shattered(bounds, kit.anchor):
 		cut_line("shattered")
@@ -664,12 +537,6 @@ func _on_piece_shattered(bounds: AABB) -> void:
 		kit.aim = Augments.no_aim()
 
 
-# The one door for crowd control: a knock, the Warden's pulse and magnet, Brindle's
-# shoves, and wave 3's pits, tethers and nets. Rivet's sprint ignores all of it and
-# says so (true means it landed). An interrupting hit force-cancels every charging
-# gauge with nothing spent and collapses the indicator; a steady pull (a magnet's tug)
-# is still a stop the sprint ignores, but it does not wipe a charge every tick. The
-# shove, an acceleration like add_external_accel's, is applied here.
 func crowd_control(kind: String, shove := Vector3.ZERO, interrupts := true) -> bool:
 	if _frozen:
 		return false
@@ -691,21 +558,16 @@ func crowd_control(kind: String, shove := Vector3.ZERO, interrupts := true) -> b
 	return true
 
 
-# Crowd control slides off for this long (Unstoppable's boosted window).
 func grant_immunity(seconds: float) -> void:
 	immune_left = maxf(immune_left, seconds)
 
 
-# The stomp and rebound refresh, one rule so they never disagree: one air jump and one
-# charge of the class movement ability (for Sable, the last face it kicked).
 func refresh_air() -> void:
 	state.air_actions = 1
 	abilities.grant(AbilityState.MOVEMENT)
 	kit.refresh_vault()
 
 
-# The rope is a hard max-length constraint on the ball, so it is anchored where the
-# ball is standing when it is fired, not where the camera ray started.
 func grapple_to(point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> void:
 	if not kit.on(Augments.GRAPPLE):
 		return
@@ -721,7 +583,6 @@ func grapple_to(point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> 
 		and not body.is_in_group(Augments.WORLD_ANCHOR_GROUP), state.grounded), body, point)
 
 
-# A flail strike on another enemy is a chain link (POLES-FLAILS section 5; flail.gd).
 func link_chain(body: Node3D) -> void:
 	_publish_chain(chain.link(true, state.grounded), body, body.global_position)
 
@@ -731,8 +592,6 @@ func release_grapple() -> void:
 	kit.drop_line()
 
 
-# A hostile hold that lands, or a ride or launch, cuts the harpoon line; `cause` is what the
-# line_state_changed signal names, and the release cue is grapple_released.
 func cut_line(cause := "hold") -> void:
 	_clear_speed_bank()
 	kit.drop_line(cause)
@@ -742,8 +601,6 @@ func grapple_range() -> float:
 	return tuning.f("rope_range")
 
 
-# The pilot's active slot-3 line skill id (bank_shot, line_drive, cable_charge, claw_drag,
-# link_clips, cannon_lane_charge). Hardware rig binding reads this single door (G1).
 func active_line_id() -> String:
 	if abilities != null:
 		var slot_id := String(abilities.id_of(AbilityState.LINE))
@@ -754,8 +611,6 @@ func active_line_id() -> String:
 	return "line_reel"
 
 
-# Read-only snapshot of the pilot's ONE standing harpoon line and ONE ChainState for hardware rig
-# presentation and tests (Rules G0, G1, TADR-008). Never widens write access to kit or chain.
 func grapple_rig_state() -> Dictionary:
 	return {
 		"class_id": String(class_def.id) if class_def != null else "",
@@ -816,13 +671,6 @@ func _clear_speed_bank() -> void:
 	_speed_bank_chosen = BankMove.NONE
 
 
-# Only a chosen jump or ground brake/slide can pay its next landing. External
-# motion clears that eligibility. A fresh stick input from a free rest banks
-# immediately: the ball sat grounded below BANK_REST before the press, and the brake
-# held it on none of those ticks. A braked stop is a placed ball, so a timed launch
-# from it (the dam sheet's foot) starts clean; a press before the first grounded rest
-# after a reset is not a start from rest.
-# Air pauses decay; a ground jump spends it using the original per-pilot curve.
 func _tick_speed_bank(delta: float) -> void:
 	var landed := false
 	var jumped := _speed_bank_jumped
@@ -838,8 +686,6 @@ func _tick_speed_bank(delta: float) -> void:
 		_speed_bank_rest_ticks = 0
 		_speed_bank_rest_braked = false
 		return
-	# The bank reads a gripped wall as the air it was before grip: planar speed on a climb is
-	# near zero, and a rest there would let a roll start push the ball along the wall.
 	var floored: bool = state.grounded and state.contact_normal.y > Tuning.MAX_SLOPE_DOT
 	var planar := planar_velocity()
 	var speed := planar.length()
@@ -854,8 +700,6 @@ func _tick_speed_bank(delta: float) -> void:
 	for i in _rigid._probe.get_collision_count():
 		if _rigid._probe.get_collision_normal(i).y > Tuning.MAX_SLOPE_DOT:
 			probe_grounded = true
-	# Grounding consumes the chosen flight even when the impact is too gentle to
-	# publish landed. Jump changes state.grounded before the probe leaves ground.
 	if _speed_bank_chosen != BankMove.NONE:
 		if not probe_grounded:
 			_speed_bank_airborne = true
@@ -910,7 +754,6 @@ func _tick_speed_bank(delta: float) -> void:
 		_clear_speed_bank()
 
 
-# Match the added spin to the contact plane as well as the planar impulse.
 func _bank_push(planar: Vector3, dv: float) -> void:
 	if absf(dv) < 0.0001 or planar.length_squared() < 0.0001:
 		return
@@ -922,8 +765,6 @@ func _bank_push(planar: Vector3, dv: float) -> void:
 	state.velocity += push
 
 
-# The slot states the ability bar reads that no spend or gauge sets: the grapple is
-# active while hooked, and the smash is an air move, so on the ground it is unavailable.
 func _mark_slots() -> void:
 	if kit.on(Augments.GRAPPLE) and kit.movement_id == Augments.GRAPPLE:
 		abilities.slot(AbilityState.MOVEMENT).active = kit.hooked
@@ -939,22 +780,14 @@ func _charging() -> bool:
 		or abilities.casting != AbilityState.UNSTARTED
 
 
-# --- The skill bar's router (design-v3/SKILL-BAR.md sections 1 and 2) -------------------
-# Runs right after the poll and before the grammar, on the player's physics tick, which runs
-# ahead of combat's (the player is added to the tree first), so combat reads the routed
-# fields on the same tick.
 func _route_slots(delta: float) -> void:
 	_click_held = intent.fire_held
-	# The latch lasts only until the click comes up, whichever slot is picked meanwhile, so
-	# a stale latch never eats a later click.
 	if _fire_latched and not intent.fire_held:
 		_fire_latched = false
 		intent.fire_released = false
 	if in_set_piece():
 		_swallow_for_set_piece()
 		return
-	# The timeout runs before the click is routed: a click on the tick the pick goes stale is
-	# the weapon's, never both a slot cast and a weapon shot.
 	if abilities.tick_selection(delta, abilities.charging()):
 		snap_slots("timeout", intent.fire_held and not intent.fire_pressed)
 	if intent.slot_pick >= 0 and intent.slot_pick < AbilityState.BAR.size():
@@ -974,7 +807,6 @@ func _route_slots(delta: float) -> void:
 		_clear_fire()
 
 
-# During the set piece only the roll (steering), Space (bail) and Q (recall) reach the ball.
 func _swallow_for_set_piece() -> void:
 	var move := intent.move
 	var jump_pressed := intent.jump_pressed
@@ -993,9 +825,6 @@ func _clear_fire() -> void:
 	intent.fire_released = false
 
 
-# A number key. The home key, or the picked number again, is the undo: any gauge on the
-# picked slot drops and the selection goes home. Another number drops whatever gauge charges
-# (a picked slot's, or Kest's slot-1 sticky gauge) and picks the new slot if it is ready.
 func _pick(slot: String) -> void:
 	var held: String = abilities.selected
 	if slot == AbilityState.WEAPON or slot == held:
@@ -1020,11 +849,9 @@ func _pick(slot: String) -> void:
 	events.slot_selected.emit(slot, "swap" if swapped else "pick")
 
 
-# Drops a picked slot's charging gauge with nothing spent. True when one was charging.
 func _drop_gauge(slot: String, reason: String) -> bool:
 	var gauge = abilities.gauge(slot)
 	if gauge == null or not gauge.cancel():
-		# A slot with a cast time drops its running cast the same way (FIELDS-AND-CASTS section 4).
 		if abilities.casting != slot or abilities.cancel_cast() == "":
 			return false
 	indicator.collapse(slot)
@@ -1036,9 +863,6 @@ func _line_loaded() -> bool:
 	return line_load_of.is_valid() and not (line_load_of.call() as Dictionary).is_empty()
 
 
-# The one door for a snap back to slot 1 (SKILL-BAR section 1): publishes slot_selected with
-# the reason when the selection moves, and latches left click if it is still down. The
-# timeout passes its own reading: a click pressed on the timeout tick is fresh, not held.
 func snap_slots(reason: String, latch := true) -> void:
 	if not abilities.snap_back(reason):
 		return
@@ -1047,15 +871,11 @@ func snap_slots(reason: String, latch := true) -> void:
 	events.slot_selected.emit(AbilityState.WEAPON, reason)
 
 
-# Right mouse is the line for every pilot, except while the special or the slingshot charges:
-# then its press cancels the charge and moves nothing. Shift is the one go verb of the
-# pilot (Sable's boost, Rivet's sprint, Kest's blink) and Ctrl hauls the line in.
 func _read_grammar() -> void:
 	_read_shift()
 	if intent.harpoon_pressed and _charging():
 		intent.harpoon_pressed = false
 		intent.cancel_pressed = true
-		# A cancelled cast ends the intent: the pick goes home (SKILL-BAR section 1).
 		snap_slots("cancel")
 	_read_ctrl()
 	if _frozen or not kit.on(Augments.GRAPPLE):
@@ -1066,20 +886,15 @@ func _read_grammar() -> void:
 		_fling()
 		_pole_exit()
 		release_grapple()
-	# Rope Anchor: winching up to the wall with Ctrl plants the pylon there.
 	if tree.knob("winch_mount") and kit.hooked and kit.winching and not kit.mounted \
 			and ball_position().distance_to(kit.anchor) <= Augments.MIN_ROPE + 2.5:
 		intent.mount_pressed = true
 
 
-# The movement chip's key: Shift for every pilot. Sable's chip is her boost, since her movement
-# row is the harpoon and the harpoon has no slot (SKILL-BAR section 1).
 func _burst_key() -> String:
 	return Bindings.label("boost")
 
 
-# The pilot's class burst is on Shift (Rivet's sprint, Kest's blink, Tarn's claw pull, Tally's flywheel surge, the remembered cannon's recoil); Sable's Shift is the boost.
-# The keyboard fills shift_*; a scripted source fills boost_* and movement_* itself.
 func _burst_pilot() -> bool:
 	return kit.on(Augments.SPRINT) or kit.on(Augments.BLINK) or kit.on(Augments.CLAW_PULL) or kit.on(Augments.SURGE) \
 		or kit.on(Augments.RECOIL)
@@ -1105,10 +920,6 @@ func _fail(verb: String, reason: String) -> void:
 	events.verb_failed.emit(verb, reason, ball_position())
 
 
-# Whether pressing the verb would succeed on this tick: "harpoon" bites, "haul" commits a
-# smash (on a Warden line only inside its stagger) or winches, "boost" is Shift's verb for this pilot, "interact" is E where it would mount
-# the pylon or an interactable would take the press, "jump" is Space where it would jump,
-# air-jump or launch the slingshot.
 func verb_ready(verb: String) -> bool:
 	match verb:
 		"harpoon":
@@ -1136,7 +947,6 @@ func verb_ready(verb: String) -> bool:
 	return false
 
 
-# E would mount the pylon on this tick, and no interactable takes the press first.
 func mount_ready() -> bool:
 	return not _frozen and not kit.mounted and kit.on(Augments.PYLON) and kit.mount_block <= 0.0 and face_in_reach() \
 			and (mobility_started() or not (interact_claim.is_valid() and interact_claim.call(true)))
@@ -1167,8 +977,6 @@ func _press_harpoon() -> void:
 	_fail("harpoon", reason)
 
 
-# Why Ctrl cannot commit the haul on this latched body line: a flail hangs behind the ball, a
-# stake only holds the rope, and a Warden opens to the haul only inside its stagger.
 func _haul_refusal() -> String:
 	if kit.grip == "flail":
 		return "flail"
@@ -1177,22 +985,16 @@ func _haul_refusal() -> String:
 	return "unstaggered"
 
 
-# A standing line owns Ctrl, so Ctrl is not the slam or the brake while this is true.
 func line_stands() -> bool:
 	return kit.hooked
 
 
-# Ctrl hauls the line in. On a latched body it commits the smash; on the world it winches
-# while held. While any line stands it is neither the brake nor the slam, until it is let
-# go: a haul can never plant or brake inside the crowd it flew into.
 func _read_ctrl() -> void:
 	var edge: bool = intent.brake_held and not _brake_was_held
 	_brake_was_held = intent.brake_held
 	var on_body: bool = kit.hooked and kit.on_body
 	kit.winching = kit.hooked and not on_body and intent.brake_held
 	if edge and not _frozen:
-		# Mounted or planted, the ball is held: a smash committed now would freeze under the
-		# hold and then overwrite the slingshot's launch (verb_ready("haul") already says no).
 		if on_body and kit.line_state == Augments.LINE_LATCHED and Augments.holding(kit):
 			_fail("haul", "busy")
 		elif on_body and kit.line_state == Augments.LINE_LATCHED and Augments.haul_open(kit):
@@ -1211,9 +1013,6 @@ func _read_ctrl() -> void:
 		intent.brake_held = false
 
 
-# Ctrl with no line has nothing to do (MG-10): the ball sits on the ground below REFUSE_REST with
-# nothing to brake, or it is in the air with no slam to start. Held, planted or in the set piece,
-# the hold owns the press. The refusal is a cue only; the brake still reads the key as before.
 func _ctrl_idle() -> bool:
 	if Augments.holding(kit) or in_set_piece():
 		return false
@@ -1229,23 +1028,17 @@ func _emit_line(id: String, target: Node3D, at: Vector3, cause := "", hold := 0.
 	events.line_state_changed.emit(id, target, at, cause)
 
 
-# Chain events go straight to the bus: _emit_line would take over the steady line state
-# that _publish_line tracks, and a chain fact is not a line state.
 func _publish_chain(emitted: Array, target: Node3D, at: Vector3) -> void:
 	for e in emitted:
 		events.line_state_changed.emit(e["id"], target, at, e["cause"])
 
 
-# During the set piece the chain clock is frozen: no grace runs out and no landing ends it
-# until the set piece's own landing pays it (SKILL-BAR section 4, landing strike).
 func _tick_chain(delta: float) -> void:
 	if in_set_piece():
 		return
 	_publish_chain(chain.tick(delta, state.grounded, kit.hooked), null, ball_position())
 
 
-# Publishes how the line that stood has ended: a let-go or a break with its cause. A landing,
-# a reset or the set piece's own cut (cause "ultimate") publishes nothing here.
 const QUIET_ENDS := ["landed", "reset", "ultimate", "bank", ""]
 
 
@@ -1267,10 +1060,6 @@ func _line_target_alive() -> Node3D:
 	return _line_target if is_instance_valid(_line_target) else null
 
 
-# Publishes each change of the line's state. A standing line is read from the kit; its end
-# is read from kit.line_end, which the kit's own rules set when they cut it. A smash landing
-# publishes itself (_finish_landing). A transient state holds for its own beat before the
-# steady one comes back.
 func _publish_line(delta: float) -> void:
 	_line_hold = maxf(0.0, _line_hold - delta)
 	if kit.hooked:
@@ -1301,10 +1090,6 @@ func _publish_line(delta: float) -> void:
 		_emit_line(steady, target, kit.aim.get("point", ball_position()))
 
 
-# E is interact everywhere (LOOP-REDESIGN section 9): the interactable E has locked takes
-# the press, else it stays Sable's mount at a face. A lock farther than the interact
-# reach yields to a face she could mount, and a mobility move already under way (the
-# hook in, a slam plant, the slingshot drawing) keeps E. Mounted, E always drops off.
 func _route_interact() -> void:
 	if not intent.mount_pressed or kit.mounted or mobility_started() or not interact_claim.is_valid():
 		return
@@ -1313,7 +1098,6 @@ func _route_interact() -> void:
 		intent.mount_pressed = false
 		intent.interact_pressed = true
 	elif not _frozen and not face and not (talk_claim.is_valid() and talk_claim.call()):
-		# Nothing in reach takes E and no face could hold a pylon (MG-10): a quiet refusal.
 		_fail("interact", "nothing")
 
 
@@ -1321,25 +1105,18 @@ func mobility_started() -> bool:
 	return (kit.hooked and kit.on(Augments.PYLON)) or kit.plant_time > 0.0 or kit.slingshot.charging
 
 
-# The pylon's own test (Augments.mount_face, the one the mount asks): a steep face within the
-# ball's reach, or the wall the hook is in when the ball is close to it, at the kit's mount_reach.
 func face_in_reach() -> bool:
 	if not is_inside_tree():
 		return false
 	return not Augments.mount_face(kit, get_world_3d().direct_space_state, ball_position()).is_empty()
 
 
-# Mass-S: under --world-one-builds a pilot who took the depth-1 pick has the mass launch verb.
-# q is heft turned back into mass (the run's mass at 1/450 heft each; a class IV heft of 3.2
-# is 990) and read only; sampling it spends nothing, and the kit never lets it near steering.
 func _read_mass() -> void:
 	kit.mass_on = tuning != null and tuning.world_one() and tree.knob("mass_launch")
 	var mass := maxf(0.0, float(mass_of.call())) if kit.mass_on and mass_of.is_valid() else 0.0
 	kit.mass_q = clampf(mass / Augments.MASS_FULL, 0.0, 1.0)
 
 
-# Letting go of a pole slingshots you on along the tangent (POLES-FLAILS section 4): a share
-# of the speed across the line is added along it, never past the soft cap.
 func _pole_exit() -> void:
 	if not Augments.pole_line(kit):
 		return
@@ -1351,7 +1128,6 @@ func _pole_exit() -> void:
 	_rigid.set_velocity_now(Augments.pole_exit(v, to_body.normalized(), share))
 
 
-# Coil Hook: letting go of the rope throws you on along your swing.
 func _fling() -> void:
 	var fling: float = tree.knob("grapple_fling")
 	if not kit.hooked or fling <= 0.0:
@@ -1390,9 +1166,6 @@ static func _align_up(normal: Vector3) -> Basis:
 	return Basis(right, up, right.cross(up))
 
 
-# The Katamari moment: fodder the ball now outweighs is rolled straight through. The
-# sensor sees it a metre early, combat confirms the hit would kill, and the collider
-# ignores that enemy while it dies, so the pass costs no speed, knock or hit-stop.
 func _build_bow() -> void:
 	_bow = Area3D.new()
 	_bow.name = "Bow"
@@ -1410,7 +1183,6 @@ func _build_bow() -> void:
 
 
 func _on_bow_entered(_body: Node3D) -> void:
-	# Batch the server's unordered notifications before assigning seeded kill payouts.
 	if not _bow_check_queued:
 		_bow_check_queued = true
 		_flush_bow.call_deferred()
@@ -1421,8 +1193,6 @@ func _flush_bow() -> void:
 	_recheck_bow()
 
 
-# Rechecked every tick for whatever is inside the bow, so an enemy the ball grows or
-# speeds into outweighing mid-overlap is still rolled up.
 func _recheck_bow() -> void:
 	if _bow == null or _frozen or state.tier < SpeedTier.CRUISE:
 		return
@@ -1457,8 +1227,6 @@ func _try_crush(body: Node3D) -> void:
 	get_tree().create_timer(CRUSH_PASS, false, true).timeout.connect(_end_crush.bind(id))
 
 
-# Bound by id: the crushed enemy is usually freed by now, and a freed exception
-# leaves the physics server with it. One that lives is let go once the ball is clear of it.
 func _end_crush(id: int) -> void:
 	_crushing.erase(id)
 	var body := instance_from_id(id)
@@ -1482,7 +1250,6 @@ func _build_augment_visuals() -> void:
 	_wings.visible = false
 	add_child(_wings)
 
-	# A scrap post: the pylon the pilot drives into the face, the ball riding its end.
 	_pylon = Node3D.new()
 	_pylon.name = "Pylon"
 	var post := MeshInstance3D.new()
@@ -1507,7 +1274,6 @@ func _build_augment_visuals() -> void:
 	add_child(_pylon)
 
 
-# The pylon node, so presentation can animate the plant and eject without owning it.
 func pylon_node() -> Node3D:
 	return _pylon
 
@@ -1529,9 +1295,6 @@ func _update_augment_visuals(at: Vector3) -> void:
 				_wings.global_basis = Basis.looking_at(flat_aim.normalized(), Vector3.UP)
 
 
-# The strength the bus carries for a slam that lands at `speed` m/s: 1.0 at 30 m/s, never
-# under 0.4 or over 1.6, scaled by how flat the ground was.
-# The slam's reach: the shared radius plus the build's flat area (Splash Skirt panels).
 func slam_radius() -> float:
 	return Augments.SLAM_RADIUS + tuning.add("area_radius")
 
@@ -1540,12 +1303,6 @@ static func slam_strength(speed: float, flatness := 1.0) -> float:
 	return clampf(speed / 30.0, 0.4, 1.6) * flatness
 
 
-# The shockwave carries the same flatness as the plant: a full thump on flat ground,
-# next to nothing when the slam went into a launch.
-# Every class slams the same way; the landing then takes the class's flavour.
-# The body's own slam (cast in the air, landed on the ground) is the one that feeds the dunk
-# charge: the shared slam first, then its damage, flavour and the pilot's colour stored. The
-# harpoon's smash landing calls _on_slammed directly and stores nothing.
 func _on_rigid_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	_on_slammed(at, speed, flatness)
 	var strength := slam_strength(speed, flatness)
@@ -1583,7 +1340,6 @@ func _smash_demo(at: Vector3, _speed: float) -> void:
 	events.demo_slammed.emit(at)
 
 
-# The shared slam already struck these enemies; the rend only pulls, so no second strike.
 func _smash_rend(at: Vector3, speed: float) -> void:
 	if abilities.cap(AbilityState.SMASH, "mutation", "") == "rend_drag":
 		_drag_in(at)
@@ -1601,9 +1357,6 @@ func _smash_rend(at: Vector3, speed: float) -> void:
 		enemy.flash()
 
 
-# Rend drag: every machine in the disc no heavier than the ball (Grip.heft_of, the weight rule of
-# POLES-FLAILS) starts a slide to the centre; a heavier one took the slam and holds. One inward
-# pull per landing, and nothing here reads or writes the ball's velocity.
 func _drag_in(at: Vector3) -> void:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.has_method("is_dead") and enemy.is_dead():
@@ -1615,9 +1368,6 @@ func _drag_in(at: Vector3) -> void:
 		enemy.flash()
 
 
-# Closes each dragged machine's gap to the centre by the slide's share of this frame, so the
-# shove of the shared slam cannot carry it off the line and it arrives at DRAG_SECONDS. A body
-# the world blocks stops where it stands.
 func _step_drags(delta: float) -> void:
 	for id in _drags.keys():
 		var drag: Dictionary = _drags[id]
@@ -1639,8 +1389,6 @@ func _step_drags(delta: float) -> void:
 			_drags.erase(id)
 
 
-# The shared slam already struck these enemies as "slam"; the stamp turns each one it
-# reached into a pressure point and strikes nothing again.
 func _smash_stamp(at: Vector3, _speed: float) -> void:
 	var count := 0
 	for enemy in get_tree().get_nodes_in_group("enemy"):
@@ -1652,7 +1400,6 @@ func _smash_stamp(at: Vector3, _speed: float) -> void:
 		pressure_grant.call(count)
 
 
-# Sable's arc slam marks every steep face within FACE_TAG_REACH for a vault.
 func _tag_faces(at: Vector3) -> int:
 	face_tags.clear()
 	var space: PhysicsDirectSpaceState3D = _rigid.get_world_3d().direct_space_state
@@ -1673,9 +1420,6 @@ func _tick_face_tags(delta: float) -> void:
 	face_tags = face_tags.filter(func(tag): return tag["left"] > 0.0)
 
 
-# Rivet's skid knocks what is ahead of the ball forward and refunds sprint per hit. reach and
-# inner default to the Shockwave Skid's; the Breach Skid (rivet_kit.gd) reads the same cone
-# through in_skid_cone at 1.5 x the class landing radius and a 2.5 m ring.
 func _skid_push(at: Vector3, strength: float, reach := SKID_REACH, inner := SKID_INNER) -> int:
 	var ahead := planar_velocity()
 	ahead = ahead.normalized() if ahead.length() > 0.5 else Vector3.FORWARD
@@ -1694,7 +1438,6 @@ func _skid_push(at: Vector3, strength: float, reach := SKID_REACH, inner := SKID
 	return hits
 
 
-# The skid's cone: within reach and inside the inner ring, or within reach and ahead.
 static func in_skid_cone(to: Vector3, ahead: Vector3, reach := SKID_REACH, inner := SKID_INNER) -> bool:
 	var flat := Vector3(to.x, 0.0, to.z)
 	if flat.length() > reach:
@@ -1702,9 +1445,7 @@ static func in_skid_cone(to: Vector3, ahead: Vector3, reach := SKID_REACH, inner
 	return flat.length() <= inner or flat.normalized().dot(ahead) >= SKID_CONE
 
 
-# The vault and slingshot aim cones and the arc slam's face tags, in the class colour.
 func _update_aim_cones(at: Vector3) -> void:
-	# --- W50-ISAAC-RELICS ---
 	if abilities.selected == AbilityState.LINE and abilities.id_of(AbilityState.LINE) in ["bank_shot", "bank_arc"] and kit.hooked:
 		indicator.set_shape("bank", bank_geometry())
 	else:
@@ -1725,7 +1466,6 @@ func _update_aim_cones(at: Vector3) -> void:
 		indicator.set_shape("faces", yours({"kind": "marks", "points": face_tags.map(func(tag): return tag["point"])}))
 
 
-# A kit rule's fact goes on the bus; a dropped slingshot charge also collapses its cone.
 func _on_kit_fact(kind: String, args: Array) -> void:
 	if kind == "gauge_cancelled":
 		indicator.collapse("slingshot")
@@ -1740,9 +1480,6 @@ func _on_pylon_planted(at: Vector3, banked_speed: float) -> void:
 	_push_enemies(at, Augments.MOUNT_REPEL_RADIUS, Augments.MOUNT_REPEL_KNOCK * tree.knob("plant_repel"), "")
 
 
-# A redline shell's blast (redline.gd detonated and cooked_off): every enemy inside its radius
-# takes a slam at `force` with the slam's falloff, through the same push and strike path, so the
-# ring drawn, the knock and the damage are one shape.
 func _redline_blast(at: Vector3, force: float) -> void:
 	if force <= 0.0:
 		return
@@ -1750,7 +1487,6 @@ func _redline_blast(at: Vector3, force: float) -> void:
 	_push_enemies(at, Redline.BLAST_RADIUS, force, SLAM, Contact.heft_knock(heft()))
 
 
-# knock_mult scales the shove only; the strike keeps force, so damage is unchanged.
 func _push_enemies(at: Vector3, radius: float, force: float, kind: String, knock_mult := 1.0) -> int:
 	var hits := 0
 	for enemy in get_tree().get_nodes_in_group("enemy"):
@@ -1761,7 +1497,6 @@ func _push_enemies(at: Vector3, radius: float, force: float, kind: String, knock
 		away.y = 0.0
 		away = away.normalized() if away.length() > 0.01 else Vector3.FORWARD
 		var falloff := 1.0 - reach / radius
-		# Heft adds throw up to the knock ceiling, never under the plain shove.
 		enemy.knock(away + Vector3.UP * 0.5, minf(force * falloff * knock_mult, maxf(force * falloff, Contact.KNOCK_CEILING)))
 		enemy.flash()
 		hits += 1
@@ -1770,8 +1505,6 @@ func _push_enemies(at: Vector3, radius: float, force: float, kind: String, knock
 	return hits
 
 
-# The motion the ball had going into a contact: of the velocities recently handed to the
-# solver, the one closing fastest on the enemy. The live velocity is already the bounce.
 func pre_contact_velocity(toward: Vector3) -> Vector3:
 	var best: Vector3 = state.velocity
 	var closing := -INF
@@ -1783,10 +1516,6 @@ func pre_contact_velocity(toward: Vector3) -> Vector3:
 	return best
 
 
-# The public way for a module to report a contact the RigidBall never sees, such as a boss
-# weak part outside the enemy group. The normal points from the body to the ball, full 3D, as
-# RigidBall reports it, so a drop onto the body from above reads as a stomp. Omitted or zero, it is
-# derived as RigidBall derives it; a given normal is normalized.
 # `body` is untyped on purpose: a typed Node3D argument errors at the call when the body is freed.
 func touch_body(body, normal := Vector3.ZERO) -> void:
 	if not is_instance_valid(body) or not body is Node3D:
@@ -1808,8 +1537,6 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 	var away := Vector3(to_enemy.x, 0.0, to_enemy.z)
 	away = away.normalized() if away.length() > 0.01 else Vector3.FORWARD
 	if before.y < -STOMP_SPEED and normal.y > 0.3:
-		# The one mechanic worth keeping from the orchard: a descending rebound
-		# gives the air jump back, so bouncing is a way to keep a line going.
 		refresh_air()
 		kit.rewind_left = 0.0
 		state.impact = maxf(state.impact, -before.y)
@@ -1821,12 +1548,10 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 	elif _rebounds_off(enemy) and before.dot(normal) < -Contact.MIN_CLOSING:
 		_rebound(enemy, normal, before, planar, away)
 	elif SpeedTier.of(planar, tuning.tier_cruise()) >= SpeedTier.CRUISE:
-		# Swarm drones keep the plain shove: the rack's scatter and refold timing sets the hive's posture pace.
 		var shove: float = Augments.RAM_KNOCK * _landing_mult if enemy.get("swarm") != null else Contact.ram_knock(Augments.RAM_KNOCK, planar, heft(), _landing_mult)
 		enemy.knock(away + Vector3.UP * 0.35, shove)
 		enemy.flash()
 		shockwave.emit(enemy.global_position, 1.0)
-		# Planar speed, the same measure punch_now and the crush check use (one query).
 		struck.emit(enemy, RAM, _landing_force(RAM, planar))
 		_bowl_if_killed(enemy, away, shove)
 		redline.spend(RAM, ball_position(), _landing_force(RAM, planar))
@@ -1835,7 +1560,6 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 	smash_landing = null
 
 
-# A ram that killed hands its shove to the hulk, which bowls on along the ball's travel.
 func _bowl_if_killed(enemy: Node3D, direction: Vector3, shove: float) -> void:
 	if not hulk_launch.is_valid() or not is_instance_valid(enemy) or not enemy.has_method("is_dead") or not enemy.is_dead():
 		return
@@ -1843,9 +1567,6 @@ func _bowl_if_killed(enemy: Node3D, direction: Vector3, shove: float) -> void:
 	hulk_launch.call(enemy, Vector3(direction.x, 0.0, direction.z), shove / maxf(float(weight) if weight != null else 1.0, 0.1))
 
 
-# The first contact of a committed haul lets the line go, so the ordinary contact (stomp,
-# rebound or ram) resolves on a free ball, and starts the rewind before it: a kill or a
-# stomp inside that contact re-seats the hook at once.
 func _begin_landing(enemy: Node3D) -> bool:
 	if Augments.landing_body(kit) != enemy:
 		return false
@@ -1857,8 +1578,6 @@ func _begin_landing(enemy: Node3D) -> bool:
 	return true
 
 
-# A landing contact's force, raised so the damage combat derives from it is the chain's
-# multiplier times the plain landing (combat's rows are linear in force: a + force * b).
 func _landing_force(kind: String, force: float) -> float:
 	if _landing_mult == 1.0 or not CombatRules.STRIKE_DAMAGE.has(kind):
 		return force
@@ -1866,9 +1585,6 @@ func _landing_force(kind: String, force: float) -> float:
 	return (_landing_mult * (row[0] + force * row[1]) - row[0]) / row[1]
 
 
-# What the haul adds to that contact: the smash's shockwave, pins and this pilot's
-# flavour at the speed the line closed at, then the fact. The struck body already took the
-# landing contact; the shockwave strikes it again.
 func _finish_landing(enemy: Node3D, closing: float) -> void:
 	_on_slammed(ball_position(), closing, 1.0)
 	var landed_on: Node3D = enemy if is_instance_valid(enemy) else null
@@ -1883,8 +1599,6 @@ func _finish_landing(enemy: Node3D, closing: float) -> void:
 	_landing_mult = 1.0
 
 
-# Only a body that says what it weighs can bounce you; a boss piece without a weight
-# keeps the plain ram.
 func _rebounds_off(enemy: Node3D) -> bool:
 	var weight = enemy.get("weight")
 	if kit.sprinting and tree.knob("sprint_no_rebound"):
@@ -1892,9 +1606,6 @@ func _rebounds_off(enemy: Node3D) -> bool:
 	return weight != null and Contact.rebounds(float(weight), heft(), kit.sprinting)
 
 
-# The bowling-ball rebound off something at least your weight: the incoming velocity
-# reflected with restitution, one refresh, and the ram still lands if you were rolling
-# fast enough for one.
 func _rebound(enemy: Node3D, normal: Vector3, before: Vector3, planar: float, away: Vector3) -> void:
 	var out := Contact.rebound_velocity(before, normal, tuning.f("jump_speed"))
 	set_velocity_now(out)
@@ -1910,8 +1621,6 @@ func _rebound(enemy: Node3D, normal: Vector3, before: Vector3, planar: float, aw
 	events.enemy_rebounded.emit(enemy, out.length())
 
 
-# W47-H1 Kest Air-Draw Glide Hang: holding sticky_charge while airborne softens gravity
-# to 0.45x for up to 1.2 s so Kest can line up clean mid-air arc shots off walls and spires.
 func _step_kest_air_draw(delta: float) -> void:
 	if class_def == null or class_def.id != "demolitions_caster" or _frozen:
 		air_draw_active = false
@@ -1933,8 +1642,6 @@ func _step_kest_air_draw(delta: float) -> void:
 		air_draw_active = false
 
 
-# W47-H1 Kest baseline high wall-kick boost: airborne beside a steep canyon face, Space kicks
-# cleanly upward and off the wall with extra vertical lift and refreshes Air-Draw Glide Hang.
 func _step_kest_wall_kick(delta: float) -> void:
 	for k in _kest_wall_kick_faces.keys():
 		_kest_wall_kick_faces[k] = float(_kest_wall_kick_faces[k]) - delta

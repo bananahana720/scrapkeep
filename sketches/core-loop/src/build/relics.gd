@@ -1,15 +1,5 @@
 extends RefCounted
 
-# Relics, the relic rung of the part ladder (systems audit pass D, fold 1; Andrew 11 Nov 2026).
-# A relic is a part: the run holds it in its part list as part_id(relic_id) ("relic:<id>"), the
-# ladder shows it at rarity relic, and it counts toward its maker's set like any part. What
-# sets it apart is its effect: it rewrites exactly one kit slot for the one pilot it fits, and a
-# run holds one relic per slot. Rows are pure data: `swap` puts another ability row in the slot,
-# `cooldown` multiplies the slot's cooldown scale, `charges` adds to its bank cap. AbilityState
-# owns what an ability row does; build.gd (sync_relics) applies the row named here.
-#
-# Before the fold a relic sat in RunState.relics (slot to relic id), outside the part list. A
-# save written then still loads: build.gd adopts that map into the part list on stage entry.
 
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -21,12 +11,10 @@ const MIN_PER_PILOT := 2
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
 const VALID_MAKERS := ["waking", "spillway_works", "fleet_surplus", "highdraft_roosts", "mind_glass", "redjaw", "moss"]
 const VALID_WORLDS := [1, 2, 3]
-# Rivet's kit rows; Tarn, Tally and the remembered cannon have their own rows in each world.
 const RIVET := ["runner_gunner"]
 const SUFFIX := {AbilityState.WEAPON: "_weapon", AbilityState.MOVEMENT: "_move",
 	AbilityState.SPECIAL: "_special", AbilityState.SMASH: "_smash", AbilityState.LINE: "_line"}
 
-# The category icon a relic shows, by the slot it rewrites.
 const ICON_FOR_SLOT := {AbilityState.WEAPON: "damage", AbilityState.MOVEMENT: "mobility",
 	AbilityState.SPECIAL: "charge", AbilityState.SMASH: "defense", AbilityState.LINE: "utility"}
 
@@ -67,7 +55,6 @@ const ROWS := {
 		"pilots": ["remembered_cannon"], "slot": AbilityState.WEAPON, "swap": "cannon_lane_walk", "world": 1},
 	"rush_wake": {"maker": "waking", "name": "Rush Wake", "text": "Rush landings leave a lane behind",
 		"pilots": ["remembered_cannon"], "slot": AbilityState.SMASH, "swap": "cannon_rush_wake", "world": 1},
-	# World 2, the Dig.
 	"spare_cell": {"maker": "moss", "name": "Spare Cell", "text": "Bank a second discharge",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "charges": 1, "world": 2},
 	"pit_coil": {"maker": "waking", "name": "Pit Coil", "text": "Bank Shot refills 30% sooner",
@@ -92,7 +79,6 @@ const ROWS := {
 		"pilots": ["remembered_cannon"], "slot": AbilityState.MOVEMENT, "charges": 1, "world": 2},
 	"brace_spring": {"maker": "waking", "name": "Brace Spring", "text": "Plate refills 30% sooner",
 		"pilots": ["remembered_cannon"], "slot": AbilityState.SPECIAL, "cooldown": 0.7, "world": 2},
-	# World 3, Highdraft.
 	"crown_cell": {"maker": "mind_glass", "name": "Crown Cell", "text": "Bank two more discharges",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "charges": 2, "world": 3},
 	"storm_crater": {"maker": "highdraft_roosts", "name": "Storm Crater", "text": "Bank a second Bank Shot",
@@ -119,12 +105,7 @@ const ROWS := {
 		"pilots": ["remembered_cannon"], "slot": AbilityState.SPECIAL, "charges": 1, "world": 3},
 }
 
-# W50-ISAAC-RELICS: 6 World 1 kit-swap relics completing Sable/Rivet/Kest symmetry (9 -> 15 W1
-# swaps) plus 6 World 2 & World 3 transformational kit-swap relics (RoR2 alternate loadouts).
-# Kept additive beside ROWS so baseline per-world offer counts stay pinned while runtime lookups
-# (has, row, part_of, relic_of, part_row, eligible with include_alt, all_rows, validate) serve all.
 const ALT_ROWS := {
-	# World 1 symmetry swaps (Sable, Rivet, Kest).
 	"arc_sling": {"maker": "highdraft_roosts", "name": "Arc Sling", "text": "Bank exit leaves a live chord arc",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.LINE, "swap": "bank_arc", "world": 1},
 	"voltaic_ring": {"maker": "mind_glass", "name": "Voltaic Ring", "text": "Blazing shots fire a brass conductive halo",
@@ -137,7 +118,6 @@ const ALT_ROWS := {
 		"pilots": ["demolitions_caster"], "slot": AbilityState.SMASH, "swap": "thermite_slam", "world": 1},
 	"zip_cluster": {"maker": "highdraft_roosts", "name": "Zip Cluster", "text": "Trolley drops three micro-charges along the wire",
 		"pilots": ["demolitions_caster"], "slot": AbilityState.LINE, "swap": "cable_cluster", "world": 1},
-	# World 2 & World 3 transformational kit-swap relics (RoR2 Survivor Alternate Loadouts).
 	"wrecking_chain": {"maker": "redjaw", "name": "Wrecking Chain", "text": "Claw drag whips grabbed machine 180 degrees",
 		"pilots": ["tarn"], "slot": AbilityState.LINE, "swap": "claw_whirl", "world": 2, "alt_loadout": true},
 	"tape_loop": {"maker": "spillway_works", "name": "Tape Loop", "text": "Splice pulse echoes once 0.3 s later",
@@ -214,12 +194,10 @@ static func slot_of(relic_id: String) -> String:
 	return String(row(relic_id).get("slot", ""))
 
 
-# The relic's id in a part list; "" for an unknown relic.
 static func part_of(relic_id: String) -> String:
 	return PREFIX + relic_id if has(relic_id) else ""
 
 
-# The relic a part id stands for, or "" for any other part.
 static func relic_of(part_id: String) -> String:
 	if not part_id.begins_with(PREFIX):
 		return ""
@@ -231,7 +209,6 @@ static func is_relic(part_id: String) -> bool:
 	return relic_of(part_id) != ""
 
 
-# Slot to relic id for the relics in a part list. The first relic in a slot holds it.
 static func held(parts: Array) -> Dictionary:
 	var out := {}
 	for part_id in parts:
@@ -241,8 +218,6 @@ static func held(parts: Array) -> Dictionary:
 	return out
 
 
-# The relic's part row, read by Parts.def: the relic rung, its one pilot, its maker. It carries
-# no stat effect: the slot rewrite is build.gd's (sync_relics), so nothing folds twice.
 static func part_row(part_id: String) -> Dictionary:
 	var id := relic_of(part_id)
 	if id == "":
@@ -261,10 +236,6 @@ static func fits(relic_id: String, pilot: String) -> bool:
 	return pilot in row(relic_id).get("pilots", [])
 
 
-# Relic ids a pilot may still find: the pilot's rows whose slot holds nothing yet, in
-# table order. `held` is slot to relic id (held(parts)). A relic whose swap the upgrade tree already gave
-# (`tree`, optional) is not offered: it would change nothing. `world` keeps the rows of that
-# world only; 0 keeps every world's. Set `include_alt` true to include W50 swap/loadout relics.
 static func eligible(pilot: String, held: Dictionary, tree = null, world := 0, include_alt := false) -> Array:
 	var table: Dictionary = all_rows() if include_alt else ROWS
 	var out := []
@@ -280,12 +251,10 @@ static func eligible(pilot: String, held: Dictionary, tree = null, world := 0, i
 	return out
 
 
-# The one-per-slot rule: a relic is refused while its slot is held.
 static func can_hold(relic_id: String, pilot: String, held: Dictionary) -> bool:
 	return fits(relic_id, pilot) and not held.has(slot_of(relic_id))
 
 
-# The ability row a slot would hold under the relic, or "" when it keeps the slot's own.
 static func swap_of(relic_id: String) -> String:
 	return String(row(relic_id).get("swap", ""))
 
@@ -298,8 +267,6 @@ static func _kit_slot(pilot: String, slot: String) -> String:
 		AbilityState.SPECIAL: def.special_id, AbilityState.SMASH: def.smash_id, AbilityState.LINE: def.line_id}.get(slot, "")
 
 
-# Problems with the table, one string each; empty when it is sound.
-# Validates both ROWS and ALT_ROWS by default; pass a custom dictionary to test mutations.
 static func validate(rows = null) -> Array:
 	var table: Dictionary = all_rows() if rows == null else rows
 	var bad := []
@@ -345,7 +312,6 @@ static func validate(rows = null) -> Array:
 	return bad
 
 
-# Validates ALT_ROWS specifically as lateral swap-only relics (no cooldown scalars or extra charges).
 static func validate_alt(rows: Dictionary = ALT_ROWS) -> Array:
 	var bad := []
 	for id in rows:
