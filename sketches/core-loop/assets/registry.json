@@ -2129,6 +2129,248 @@
    }
   },
   {
+   "id": "grapple_cannon_drive",
+   "path": "res://assets/models/grapple/grapple_cannon_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Cannon G1 drive: recoil anchor winch drum)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_cannon_head",
+   "path": "res://assets/models/grapple/grapple_cannon_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Cannon G1 head: explosive piton with shaped-charge cap)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_cannon_line",
+   "path": "res://assets/models/grapple/grapple_cannon_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Cannon G1 line: armored steel cable 1 m tile)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_cannon_mount",
+   "path": "res://assets/models/grapple/grapple_cannon_mount.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Cannon G1 mount under Pod: side-hub recoil winch bracket and lock dog)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_kest_drive",
+   "path": "res://assets/models/grapple/grapple_kest_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Kest G1 drive: spring reel under perch)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_kest_head",
+   "path": "res://assets/models/grapple/grapple_kest_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Kest G1 head: slotted vane-fluke grapnel)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_kest_line",
+   "path": "res://assets/models/grapple/grapple_kest_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Kest G1 line: light braided aviation wire 1 m tile)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_kest_mount",
+   "path": "res://assets/models/grapple/grapple_kest_mount.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Kest G1 mount under Pod: spring reel frame and line-riding satchel trolley)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_rivet_drive",
+   "path": "res://assets/models/grapple/grapple_rivet_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Rivet G1 drive: heavy capstan spool)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_rivet_head",
+   "path": "res://assets/models/grapple/grapple_rivet_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Rivet G1 head: barbed harpoon with flip-out toggle)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_rivet_line",
+   "path": "res://assets/models/grapple/grapple_rivet_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Rivet G1 line: taut braided steel cable 1 m tile)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_rivet_mount",
+   "path": "res://assets/models/grapple/grapple_rivet_mount.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Rivet G1 mount under Pod/WeaponRing: capstan cradle and level-wind cable guide)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_sable_drive",
+   "path": "res://assets/models/grapple/grapple_sable_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Sable G1 drive: 3 o'clock grapple winch drum)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_sable_head",
+   "path": "res://assets/models/grapple/grapple_sable_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Sable G1 head: forged tow hook with snap latch)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_sable_line",
+   "path": "res://assets/models/grapple/grapple_sable_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Sable G1 line: braided steel cable 1 m tile)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_sable_mount",
+   "path": "res://assets/models/grapple/grapple_sable_mount.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Sable G1 mount under Pod: 3 o'clock bracket, fairlead and brake lever)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png"
+   }
+  },
+  {
+   "id": "grapple_tarn_drive",
+   "path": "res://assets/models/grapple/grapple_tarn_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Tarn G1 drive: Era-2 rear pull drum)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_tarn_head",
+   "path": "res://assets/models/grapple/grapple_tarn_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Tarn G1 head: articulated worn-steel claw launching on cable)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_tarn_line",
+   "path": "res://assets/models/grapple/grapple_tarn_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Tarn G1 line: heavy hemp/wire rope 1 m tile)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_tarn_mount",
+   "path": "res://assets/models/grapple/grapple_tarn_mount.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE grapple rig binder (Tarn G1 mount under Pod/WeaponRing: rear drum frame, pawl and flank fairlead)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_rigs.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "sluice_valve_body",
+   "path": "res://assets/models/grapple/sluice_valve_body.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE Spillway grapple-yank sluice valve binder (recipe_props enamel slot)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_sluice_valve.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g12-w1-setpieces-contraptions-destructibles.png"
+   }
+  },
+  {
+   "id": "sluice_valve_wheel",
+   "path": "res://assets/models/grapple/sluice_valve_wheel.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "W47-GRAPPLE-CODE Spillway grapple-yank sluice valve binder (recipe_props steel slot; rotates on yank via socket_bite)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_sluice_valve.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g12-w1-setpieces-contraptions-destructibles.png"
+   }
+  },
+  {
    "id": "anchor_collar",
    "path": "res://assets/models/highdraft/anchor_collar.glb",
    "class": "prop",
@@ -42628,6 +42870,26 @@
   "geyser_launcher_drum",
   "geyser_launcher_fittings",
   "geyser_launcher_grate",
+  "grapple_cannon_drive",
+  "grapple_cannon_head",
+  "grapple_cannon_line",
+  "grapple_cannon_mount",
+  "grapple_kest_drive",
+  "grapple_kest_head",
+  "grapple_kest_line",
+  "grapple_kest_mount",
+  "grapple_rivet_drive",
+  "grapple_rivet_head",
+  "grapple_rivet_line",
+  "grapple_rivet_mount",
+  "grapple_sable_drive",
+  "grapple_sable_head",
+  "grapple_sable_line",
+  "grapple_sable_mount",
+  "grapple_tarn_drive",
+  "grapple_tarn_head",
+  "grapple_tarn_line",
+  "grapple_tarn_mount",
   "great_room_deck",
   "great_room_deck_detail1",
   "great_room_deck_detail2",
@@ -43139,6 +43401,8 @@
   "sluice_shed_a_lod1_tripo",
   "sluice_shed_a_lod2_tripo",
   "sluice_shed_a_tripo",
+  "sluice_valve_body",
+  "sluice_valve_wheel",
   "spil9",
   "spillway_tunnel",
   "spillway_tunnel_detail1",
