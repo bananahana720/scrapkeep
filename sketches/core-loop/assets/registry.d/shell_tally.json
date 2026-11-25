@@ -9,7 +9,7 @@
    "provenance": {
     "recipe": "tools/blender/shell_tally.py",
     "helper": "tools/blender/shell_base.py hoberman()",
-    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/hero.png, chase.png, sheet.png; base/base-hero.png, mechanism.png"
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/hero.png, chase.png, sheet.png; base/base-hero.png, mechanism.png; W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png, g11-universal-grapple-rigs-b.png"
    },
    "exception": {
     "draws": 11
@@ -25,7 +25,7 @@
    "provenance": {
     "recipe": "tools/blender/shell_tally.py --variant abacus",
     "helper": "tools/blender/shell_base.py hoberman()",
-    "concept": "CUSTOMIZE.md section 8 (shell_tally_abacus); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png"
+    "concept": "CUSTOMIZE.md section 8 (shell_tally_abacus); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png; W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png, g11-universal-grapple-rigs-b.png"
    },
    "exception": {
     "draws": 11

@@ -40759,7 +40759,7 @@
    "provenance": {
     "recipe": "tools/blender/shell_tally.py",
     "helper": "tools/blender/shell_base.py hoberman()",
-    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/hero.png, chase.png, sheet.png; base/base-hero.png, mechanism.png"
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/hero.png, chase.png, sheet.png; base/base-hero.png, mechanism.png; W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png, g11-universal-grapple-rigs-b.png"
    },
    "exception": {
     "draws": 11
@@ -40775,7 +40775,7 @@
    "provenance": {
     "recipe": "tools/blender/shell_tally.py --variant abacus",
     "helper": "tools/blender/shell_base.py hoberman()",
-    "concept": "CUSTOMIZE.md section 8 (shell_tally_abacus); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png"
+    "concept": "CUSTOMIZE.md section 8 (shell_tally_abacus); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png; W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png, g11-universal-grapple-rigs-b.png"
    },
    "exception": {
     "draws": 11
@@ -40790,7 +40790,7 @@
    "loader": "src/presentation/hero_assets.gd fit_shell_into (heft layer, class II)",
    "provenance": {
     "recipe": "tools/blender/shell_tally_plates.py",
-    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (GAP PANEL)"
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (GAP PANEL); W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png"
    }
   },
   {
@@ -40805,7 +40805,7 @@
    "exception_why": "ROSTER-LOOK section 5: class III adds plates on the Pod part and thicker tread caps on the Core part, two parts and two draws; the coordinator's Hoberman pilot mecha call (docs/decisions.tsv w13-PD 2026-10-10T21:29:13: shell cap 16, class III layer up to 2, other layers 1) admits it",
    "provenance": {
     "recipe": "tools/blender/shell_tally_plates.py",
-    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (GAP PANEL, heft III)"
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (GAP PANEL, heft III); W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png"
    }
   },
   {
@@ -40816,7 +40816,7 @@
    "loader": "src/presentation/hero_assets.gd fit_shell_into (heft layer, class IV)",
    "provenance": {
     "recipe": "tools/blender/shell_tally_plates.py",
-    "concept": "pilots/tally.md section 5 (class IV drum hoods); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png"
+    "concept": "pilots/tally.md section 5 (class IV drum hoods); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png; W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png"
    },
    "exception": {
     "draws": 2
@@ -40831,7 +40831,7 @@
    "loader": "src/presentation/hero_assets.gd fit_shell_into (heft layer, class V; Replace.Flywheel.R and .L)",
    "provenance": {
     "recipe": "tools/blender/shell_tally_plates.py",
-    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (heft V)"
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (heft V); W47-TALLY-A-3D g06-pilots-trio-b-tarn-tally-cannon.png"
    },
    "exception": {
     "draws": 2
