@@ -23,6 +23,8 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const Field := preload("res://src/build/scrap_field.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 
 # Writer E's module: Admiral Brindle and the Requisition in the Slag Bowl (DEMO-SPEC
@@ -1581,8 +1583,12 @@ func _step_scooter(delta: float) -> void:
 		scooter.global_position = at
 		if f >= 1.0:
 			_eject["landed"] = true
+			_eject["puff_t"] = 0.0
 			BossModel.play(_scooter_anim, "chase")
 			scooter.set_solid(true)
+			if is_instance_valid(arena):
+				FxLibrary.burst(arena, "slam_dust", to, 14)
+				FxLibrary.burst(arena, "brass_spark", to + Vector3.UP * 0.4, 10)
 			var ball_angle: float = arena.angle_of(ctx.player.ball_position())
 			_eject["dir"] = -signf(angle_difference(_eject["angle"], ball_angle))
 			if _eject["dir"] == 0.0:
@@ -1592,7 +1598,14 @@ func _step_scooter(delta: float) -> void:
 	_eject["angle"] += _eject["dir"] * speed / Rules.SCOOTER_RING * delta
 	var at: Vector3 = arena.point_at(_eject["angle"], Rules.SCOOTER_RING, 0.7)
 	var ahead: Vector3 = Arena.tangent(_eject["angle"]) * _eject["dir"]
-	scooter.global_transform = Transform3D(Basis.looking_at(ahead, Vector3.UP), at)
+	var slowed: bool = clock < float(_eject.get("slow_until", -1.0))
+	var roll := sin(clock * 24.0) * 0.14 * EnemyMotion.motion_scale if slowed else 0.0
+	scooter.global_transform = Transform3D(Basis.looking_at(ahead, Vector3.UP) * Basis(Vector3.FORWARD, roll), at)
+	_eject["puff_t"] = float(_eject.get("puff_t", 0.0)) + delta
+	if float(_eject["puff_t"]) >= 0.22 and is_instance_valid(arena):
+		_eject["puff_t"] = 0.0
+		var tail := at - ahead.normalized() * 1.6 + Vector3.UP * 0.5
+		FxLibrary.burst(arena, "steam_puff", tail, 4)
 
 
 func scooter_speed() -> float:
@@ -1616,6 +1629,8 @@ func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 		_defeat("stomp" if kind == "stomp" or _from_above(scooter) else kind, scooter.global_position, scooter.last_damage_source)
 	else:
 		_eject["slow_until"] = clock + Rules.SCOOTER_SLOW_SECONDS
+		if is_instance_valid(arena):
+			FxLibrary.burst(arena, "brass_spark", scooter.global_position + Vector3.UP * 0.6, 12)
 
 
 # The one way Brindle dies: the catch takes the last chunk. `source` is the killing

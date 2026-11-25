@@ -3,6 +3,7 @@ extends "res://src/combat/counter.gd"
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
 const SwingArc := preload("res://src/combat/swing_arc.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 # The plated brute (DESIGN-V2 section 10): a mini-Warden, bolted plate layers visibly
 # one layer more than any other crew. It keeps the Warden's plating grammar (a punch
@@ -332,6 +333,58 @@ func _go_live() -> void:
 	hit_player.emit(float(affix.damage) if _affix_attack else SLAM_DAMAGE, dir * slam_shove + Vector3.UP * 3.0)
 
 
+class FlungPlate extends Node3D:
+	const LIFE := 0.72
+	const GRAVITY := 24.0
+	var vel := Vector3.ZERO
+	var spin := Vector3.ZERO
+	var floor_y := -INF
+	var _t := 0.0
+
+	func _physics_process(delta: float) -> void:
+		_t += delta
+		vel.y -= GRAVITY * delta
+		global_position += vel * delta
+		if global_position.y < floor_y:
+			global_position.y = floor_y
+			vel.y = absf(vel.y) * 0.35
+			vel.x *= 0.65
+			vel.z *= 0.65
+		rotation += spin * delta * EnemyMotion.motion_scale
+		var fade := clampf((_t - LIFE * 0.55) / (LIFE * 0.45), 0.0, 1.0)
+		var s := maxf(0.01, 1.0 - fade)
+		scale = Vector3.ONE * s
+		if _t >= LIFE:
+			queue_free()
+
+
+func _fling_plate() -> void:
+	if _plate == null or world_root == null or not is_inside_tree():
+		return
+	var at := _plate.global_position
+	FxLibrary.burst(world_root, "brass_spark", at, 14)
+	FxLibrary.burst(world_root, "plate_chunks", at, 10)
+	if _plate.mesh == null or _plate.mesh is PrimitiveMesh:
+		return
+	var flung := FlungPlate.new()
+	flung.name = "FlungBrutePlate"
+	world_root.add_child(flung)
+	flung.global_transform = _plate.global_transform
+	var view := MeshInstance3D.new()
+	view.name = "PlateShard"
+	view.mesh = _plate.mesh
+	view.material_override = _plate.material_override
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	flung.add_child(view)
+	var out := global_position - _real_ball()
+	out.y = 0.0
+	var dir := out.normalized() if out.length() > 0.1 else -global_basis.z
+	flung.vel = dir * 9.5 + Vector3.UP * 8.5 + global_basis.x * 2.5
+	flung.spin = Vector3(11.0, 6.5, -8.0)
+	if terrain != null and terrain.has_method("height"):
+		flung.floor_y = float(terrain.height(at.x, at.z)) + 0.15
+
+
 func on_struck(_kind: String, _part: String, result: Dictionary) -> void:
 	bounty_woken = true
 	bounty_met = true
@@ -342,6 +395,7 @@ func on_struck(_kind: String, _part: String, result: Dictionary) -> void:
 		plates_popped += 1
 		_absorb = true
 		if _plate != null:
+			_fling_plate()
 			_plate.visible = false
 
 

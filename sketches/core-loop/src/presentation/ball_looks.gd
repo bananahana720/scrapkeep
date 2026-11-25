@@ -448,9 +448,9 @@ static func keep_window(view: MeshInstance3D, surface: int, mat: Material) -> Ma
 		cut.next_pass = _gated(worn.next_pass) if _variant(mat) == "bands" else worn.next_pass
 		twins[key] = cut
 		# The swap back finds the material the look dressed the surface with.
-		var back := "%d:%d" % [surface, (worn.get_meta(SOURCE_META) as Object).get_instance_id()]
-		if not twins.has(back):
-			twins[back] = worn
+		var back_key := "%d:%d" % [surface, (worn.get_meta(SOURCE_META) as Object).get_instance_id()]
+		if not twins.has(back_key):
+			twins[back_key] = worn
 		view.set_meta(TWINS_META, twins)
 	return twins[key]
 
