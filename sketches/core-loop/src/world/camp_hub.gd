@@ -37,6 +37,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const PilotStory := preload("res://src/core/pilot_story.gd")
+const ScrapbookStore := preload("res://src/core/scrapbook_store.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
@@ -500,6 +501,7 @@ func _build_ground() -> void:
 		collider.transform = segment
 		ground.add_child(collider)
 		var view := MeshInstance3D.new()
+		view.name = "Berm%d" % i
 		var box_mesh := BoxMesh.new()
 		box_mesh.size = box.size
 		box_mesh.material = berm_material
@@ -652,6 +654,12 @@ func _build_stations() -> void:
 	if console != null:
 		# The radio mast stands at the console's back left corner (stations.py console()).
 		add_station("radio", console.global_transform * Vector3(-2.6, 1.0, -0.8), "Radio", "key_r", 3.0, func(): screens.toggle_radio())
+	var board: Node3D = _pieces.get("camp_shift_board")
+	if board != null:
+		add_station("dispatch", board.global_position + Vector3(0.0, 1.0, 0.0), "Work orders", "key_o", 3.5, func(): screens.toggle_work_orders())
+	var tarp: Node3D = _pieces.get("camp_tarp")
+	if tarp != null:
+		add_station("logbook", tarp.global_position + Vector3(0.0, 1.0, 0.0), "Logbook", "key_l", 3.5, func(): screens.toggle_logbook())
 	var pen: Node3D = _pieces.get("camp_pet_pen")
 	if pen != null:
 		add_zone("pet", pen.global_transform * Vector3(0.0, 1.0, 2.0), 6.0, _pet_react)
@@ -931,7 +939,8 @@ func _quip_from(class_id: String) -> void:
 	var flying_id := String(flying_def.id) if flying_def != null else ""
 	var codex = game.get("codex") if game != null else null
 	var pair_blocked := _pair_played_this_walk or (game != null and bool(game.get("bot_driven")))
-	var beat := PilotStory.pick_camp_beat(flying_id, class_id, crew_standing(), camp_store, codex, [], walks, pair_blocked)
+	var pages := _journal_pages()
+	var beat := PilotStory.pick_camp_beat(flying_id, class_id, crew_standing(), camp_store, codex, pages, walks, pair_blocked)
 	if beat.is_empty():
 		return
 	_quipped[class_id] = true
@@ -956,6 +965,14 @@ func _quip_from(class_id: String) -> void:
 	_show_quip(speaker, words, voice_s)
 	_face_ball(figure)
 	pilot_quipped.emit(speaker, String(beat["id"]), words)
+
+
+# Saved run-log pages from the camp scrapbook, passed to PilotStory camp beats.
+func _journal_pages() -> Array:
+	var dir: String = game.storage_dir if game != null and game.get("storage_dir") != null else ""
+	if dir == "":
+		return []
+	return ScrapbookStore.new(dir).summaries()
 
 
 # The pilot turns the short way round until their face is to the ball, and cheers. A pilot model faces its local -Z

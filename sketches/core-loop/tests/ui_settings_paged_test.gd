@@ -118,7 +118,7 @@ func _run() -> void:
 		"display": ["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing", "wide_picture", "back"],
 		"controls": ["jump", "pad_jump", "fire", "pad_fire", "harpoon", "pad_harpoon", "haul", "pad_haul", "boost", "pad_boost",
 			"select_1", "pad_select_1", "select_2", "pad_select_2", "select_3", "pad_select_3", "ultimate", "pad_ultimate",
-			"interact", "pad_interact", "reset", "back"],
+			"active", "pad_active", "interact", "pad_interact", "reset", "back"],
 		"look": ["stick_sensitivity", "invert_y", "stick_deadzone", "mouse_sensitivity", "aim_assist", "back"],
 		"feel": ["music", "effects", "shake", "hitstop", "ceremony", "back"],
 	}

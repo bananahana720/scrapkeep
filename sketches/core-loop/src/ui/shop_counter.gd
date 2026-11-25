@@ -5,6 +5,7 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Parts := preload("res://src/build/parts.gd")
+const Relics := preload("res://src/build/relics.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -15,6 +16,9 @@ const ShopTile := preload("res://src/ui/shop_tile.gd")
 const CompanionPanel := preload("res://src/ui/companion_panel.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Consumables := preload("res://src/build/consumables.gd")
+const Fabricators := preload("res://src/build/fabricators.gd")
+const TradePockets := preload("res://src/world/trade_pockets.gd")
 
 # Moss's counter: the shop's verbs as stamped plates on one charcoal panel. It reads
 # the shop's records (CONTRACTS, Moss's shop) and calls its verbs; every answer goes out
@@ -100,16 +104,17 @@ func _init() -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_wallet.add_child(spacer)
-	# The faces wear their verbs' row shapes: buying is shop_bought's diamond, selling
-	# shop_sold's chevron.
-	for f in [["buy", "shop_bought"], ["sell", "shop_sold"]]:
+	# The faces wear their verbs' row shapes: buying (diamond), cartridges & tri-terminal (core),
+	# scrapper & part press (square), selling (chevron).
+	for f in [["buy", "shop_bought", "Buy"], ["stock", "shop_charge", "Belt and terminal"],
+			["fab", "shop_rerolled", "Scrapper and press"], ["sell", "shop_sold", "Sell"]]:
 		var b := Button.new()
 		b.icon = Icons.shape(String(EventKinds.LOOT_ROWS[f[1]]["shape"]))
 		b.expand_icon = true
 		b.custom_minimum_size = Vector2(UiTokens.TARGET, UiTokens.TARGET)
 		b.focus_mode = Control.FOCUS_ALL
 		b.toggle_mode = true
-		b.accessibility_name = String(f[0]).capitalize()
+		b.accessibility_name = String(f[2])
 		b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		b.add_theme_color_override("icon_normal_color", Color(EventKinds.LOOT_ROWS[f[1]]["color"], 0.6))
 		b.add_theme_color_override("icon_pressed_color", EventKinds.LOOT_ROWS[f[1]]["color"])
@@ -240,6 +245,10 @@ func refresh() -> void:
 		_faces[f].set_pressed_no_signal(f == face)
 	if face == "sell":
 		_build_sell()
+	elif face == "stock":
+		_build_stock()
+	elif face == "fab":
+		_build_fab()
 	else:
 		_build_buy()
 	_set_live(_open)
@@ -296,6 +305,102 @@ func _build_buy() -> void:
 		_tile(lower, {"kind": "cell", "slot": offer["slot"], "part_id": offer["part_id"], "icon": slot.get("icon", offer["icon"]),
 			"key": slot.get("key", ""), "color": _class_color(), "cells": offer["cells"], "cap": offer["cap"],
 			"price": offer["price"], "state": state}, CELL_TILE)
+
+
+func _build_stock() -> void:
+	# Row 1: Tri-Terminal (3-choice multi-shop; pick one closes the other two).
+	var tri_row := _row()
+	for offer in shop.tri_terminal_offers():
+		var state := "sold" if bool(offer["sold"]) or bool(offer["closed"]) else ("ok" if bool(offer["affordable"]) else "poor")
+		var revealed := bool(offer.get("revealed", true))
+		_tile(tri_row, {
+			"kind": "tri", "index": offer["index"], "part_id": offer["part_id"], "icon": offer["icon"],
+			"rarity": offer["rarity"], "element_icon": offer["element_icon"], "trigger_icon": offer["trigger_icon"],
+			"price": offer["price"], "state": state, "revealed": revealed, "headline": offer.get("headline", ""),
+			"name": String(offer.get("name", "")) if revealed else "Sealed crate",
+		}, SHELF_TILE)
+	# Row 2: Pocket Consumables (2 cartridges) + Pocket Belt (2nd slot) + Trade Contracts.
+	var belt_row := _row()
+	for offer in shop.consumable_offers():
+		var state := "sold" if bool(offer["sold"]) else ("capped" if not bool(offer["can_hold"]) else ("ok" if bool(offer["affordable"]) else "poor"))
+		var cid := String(offer["consumable_id"])
+		var crow := Consumables.row_of(cid)
+		_tile(belt_row, {
+			"kind": "consumable", "index": offer["index"], "consumable_id": cid,
+			"name": String(offer["name"]), "headline": String(crow.get("headline", "")),
+			"icon": String(offer["icon"]), "color": offer["color"], "price": int(offer["price"]), "state": state,
+		}, CELL_TILE)
+	var belt: Dictionary = shop.belt_offer()
+	if not belt.is_empty():
+		var b_state := "capped" if not bool(belt["can"]) else ("ok" if bool(belt["affordable"]) else "poor")
+		_tile(belt_row, {
+			"kind": "belt", "name": "Pocket Belt", "icon": "cons_pocket_belt",
+			"cells": int(belt["slots"]), "cap": int(belt["max_slots"]),
+			"color": Palette.AMBER, "price": int(belt["price"]), "state": b_state,
+		}, CELL_TILE)
+	var ot_row := TradePockets.contract_of(TradePockets.OVERTIME_CONTRACT)
+	var c_state := TradePockets._contract_state(game.run)
+	var ot_signed := bool(c_state.get("overtime_signed", false))
+	_tile(belt_row, {
+		"kind": "contract_overtime", "name": String(ot_row.get("name", "Overtime Contract")),
+		"headline": String(ot_row.get("line", "")), "icon": "res_timer",
+		"color": Palette.COPPER, "price": 0, "state": "spent" if ot_signed else "ok",
+	}, CELL_TILE)
+	var auc_row := TradePockets.contract_of(TradePockets.SALVAGE_AUCTION)
+	var min_bid := int(auc_row.get("min_bid", 40))
+	_tile(belt_row, {
+		"kind": "contract_auction", "name": String(auc_row.get("name", "Scrap Auction")),
+		"headline": String(auc_row.get("line", "")), "icon": "obj_vault",
+		"color": Palette.SAND, "price": min_bid, "state": "ok" if game.run.cogs >= min_bid else "poor",
+	}, CELL_TILE)
+
+
+func _build_fab() -> void:
+	# Held Scrap Ingots strip (wordless tier pips + counts).
+	var ingots: Dictionary = shop.ingot_counts()
+	var ingot_row := _row()
+	for spec in [[1, "common", Palette.STEEL], [2, "rare", Palette.COBALT], [3, "relic", Palette.AMBER]]:
+		var tier: int = spec[0]
+		var count: int = int(ingots.get(tier, 0))
+		_tile(ingot_row, {
+			"kind": "ingot_readout", "tier": tier, "rarity": spec[1], "count": count,
+			"name": "%s ingots" % String(spec[1]).capitalize(), "color": spec[2], "price": -1, "state": "ok" if count > 0 else "poor",
+		}, Vector2(96.0, 56.0))
+	# Row 1: Scrapper (convert held ordinary parts into rarity-matched Scrap Ingots).
+	var scrap_row := _row()
+	var seen_scrap := {}
+	for part_id in game.run.parts:
+		if seen_scrap.has(part_id) or scrap_row.get_child_count() >= SELL_COLUMNS:
+			continue
+		seen_scrap[part_id] = true
+		var can := Fabricators.can_scrap(part_id, game.run)
+		var rec := _part_rec("scrap", part_id, -1, "ok" if can else "welded")
+		rec["tier"] = Fabricators.tier_of(part_id)
+		_tile(scrap_row, rec, SELL_TILE)
+	# Row 2: Part Press (duplicate a held ordinary part using matching ingot or spare same-tier part).
+	var press_row := _row()
+	var seen_press := {}
+	for part_id in game.run.parts:
+		if seen_press.has(part_id) or press_row.get_child_count() >= SELL_COLUMNS:
+			continue
+		seen_press[part_id] = true
+		var d: Resource = Parts.def(part_id)
+		if d == null or Relics.is_relic(part_id) or String(d.rarity) == "relic":
+			continue
+		var tier := Fabricators.tier_of(part_id)
+		var has_ingot: bool = int(ingots.get(tier, 0)) > 0
+		var has_spare := false
+		for held_id in game.run.parts:
+			var sid := String(held_id)
+			if sid != part_id and Fabricators.tier_of(sid) == tier and Fabricators.can_scrap(sid, game.run):
+				has_spare = true
+				break
+		var capped := Parts.maxed(part_id, game.run.parts) or Parts.stacked_out(part_id, game.run.parts)
+		var st := "capped" if capped else ("ok" if (has_ingot or has_spare) else "poor")
+		var rec := _part_rec("press", part_id, -1, st)
+		rec["tier"] = tier
+		rec["uses_ingot"] = has_ingot
+		_tile(press_row, rec, SELL_TILE)
 
 
 func _build_sell() -> void:
@@ -373,6 +478,29 @@ func press(tile) -> void:
 		"brew":
 			result = shop.buy_brew()
 			fact = "shop_charge"
+		"tri":
+			result = shop.buy_tri_terminal(int(rec["index"]))
+			fact = "shop_bought"
+		"consumable":
+			result = shop.buy_consumable(int(rec["index"]))
+			fact = "shop_bought"
+		"belt":
+			result = shop.buy_belt_slot()
+			fact = "shop_bought"
+		"scrap":
+			result = shop.scrap_to_ingot(String(rec["part_id"]))
+			fact = "shop_sold"
+		"press":
+			result = shop.press_duplicate(String(rec["part_id"]))
+			fact = "shop_bought"
+		"contract_overtime":
+			result = TradePockets.sign_overtime_contract(game.run)
+			fact = "shop_charge"
+		"contract_auction":
+			result = TradePockets.bid_salvage_auction(game.run, int(rec["price"]))
+			fact = "shop_bought"
+		"ingot_readout":
+			return
 		"pick":
 			pick_wanted.emit()
 			return
@@ -452,9 +580,40 @@ func _update_detail() -> void:
 	var text := ""
 	if at.x >= 0:
 		var control = _grid()[at.x][at.y]
-		if control is ShopTile and control.rec.has("part_id"):
-			text = _detail_line(control.rec)
+		if control is ShopTile:
+			text = _tile_detail(control.rec)
 	_detail.text = text
+
+
+func _tile_detail(rec: Dictionary) -> String:
+	var kind := String(rec.get("kind", ""))
+	match kind:
+		"consumable":
+			var hl := String(rec.get("headline", "")).replace(": ", ". ")
+			return "%s. %s" % [String(rec.get("name", "")), hl]
+		"belt":
+			return "Pocket Belt. Hold two cartridges at once."
+		"tri":
+			if not bool(rec.get("revealed", true)):
+				return "Sealed crate. Pick one of three and the other two shut."
+			return _detail_line(rec)
+		"scrap":
+			var pname := Parts.display_name(String(rec.get("part_id", "")))
+			if String(rec.get("state", "")) == "welded":
+				return "%s is welded and cannot be scrapped." % pname
+			return "Scrap %s for one matching ingot." % pname
+		"press":
+			var pname := Parts.display_name(String(rec.get("part_id", "")))
+			return "Press a second %s with a matching ingot or spare part." % pname
+		"ingot_readout":
+			return "%s held %d." % [String(rec.get("name", "Ingots")), int(rec.get("count", 0))]
+		"contract_overtime":
+			return "%s. %s" % [String(rec.get("name", "Overtime Contract")), String(rec.get("headline", ""))]
+		"contract_auction":
+			return "%s. Bid %d cogs for a yard crate." % [String(rec.get("name", "Scrap Auction")), int(rec.get("price", 40))]
+	if rec.has("part_id"):
+		return _detail_line(rec)
+	return ""
 
 
 # The line under the plates: the part's name, then its effect sentence with the numbers it holds.

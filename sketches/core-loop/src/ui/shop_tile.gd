@@ -136,10 +136,36 @@ func _draw() -> void:
 				var at := Rect2(Vector2(centre.x - side * 0.5, icon_rect.end.y + 6.0), Vector2(side, side))
 				draw_texture_rect(Icons.texture(seat), at, false, Icons.tint(seat, Color(Palette.SAND, dim)))
 				draw_line(at.position + Vector2(0.0, side), at.position + Vector2(side, 0.0), Color(Palette.HAZARD, dim), 3.0, true)
-		"cell", "brew":
+		"cell", "brew", "belt":
 			var icon_id := String(rec.get("icon", ""))
 			draw_texture_rect(Icons.texture(icon_id), icon_rect.grow(-8.0), false, Icons.tint(icon_id, Color(rec.get("color", Palette.SAND), dim)))
 			_pips(Vector2(centre.x, icon_rect.end.y + 2.0), int(rec.get("cells", 0)), int(rec.get("cap", 2)), dim)
+		"consumable":
+			var accent: Color = rec.get("color", Palette.SAND)
+			draw_rect(Rect2(6.0, 6.0, size.x - 12.0, 5.0), Color(accent, dim))
+			var icon_id := String(rec.get("icon", ""))
+			draw_texture_rect(Icons.texture(icon_id), icon_rect.grow(-6.0), false, Icons.tint(icon_id, Color(accent, dim)))
+		"tri":
+			if bool(rec.get("revealed", true)):
+				_framed(icon_rect, dim)
+			else:
+				var frame: Dictionary = RARITY.get(String(rec.get("rarity", "common")), RARITY["common"])
+				draw_rect(icon_rect.grow(4.0), Color(frame["color"], dim), false, 2.0)
+				UiDraw.text(self, centre.x - UiDraw.width("?", UiTokens.HEADING) * 0.5, centre.y, "?", UiTokens.HEADING, Color(Palette.SAND, dim))
+		"ingot_readout":
+			var frame: Dictionary = RARITY.get(String(rec.get("rarity", "common")), RARITY["common"])
+			var box_r := Rect2(Vector2(10.0, 12.0), Vector2(30.0, 30.0))
+			draw_rect(box_r, Color(frame["color"], dim), false, 2.5)
+			draw_texture_rect(Icons.texture("res_scrap_ingot"), box_r.grow(-4.0), false, Icons.tint("res_scrap_ingot", Color(frame["color"], dim)))
+			UiDraw.text(self, 48.0, 27.0, str(int(rec.get("count", 0))), PRICE_FONT, Color(Palette.SAND, dim), true)
+		"scrap", "press":
+			_framed(icon_rect, dim)
+			var badge_icon := "obj_scrapper" if String(rec.get("kind", "")) == "scrap" else "obj_part_press"
+			var badge_r := Rect2(Vector2(size.x - 24.0, 6.0), Vector2(18.0, 18.0))
+			draw_texture_rect(Icons.texture(badge_icon), badge_r, false, Icons.tint(badge_icon, Color(Palette.AMBER, dim)))
+		"contract_overtime", "contract_auction":
+			var icon_id := String(rec.get("icon", "res_timer"))
+			draw_texture_rect(Icons.texture(icon_id), icon_rect.grow(-8.0), false, Icons.tint(icon_id, Color(rec.get("color", Palette.SAND), dim)))
 		_:
 			_framed(icon_rect, dim)
 			if int(rec.get("set_pieces", 0)) > 0:

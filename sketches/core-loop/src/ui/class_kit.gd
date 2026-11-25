@@ -3,6 +3,8 @@ extends RefCounted
 const AbilityState := preload("res://src/core/ability_state.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const Bindings := preload("res://src/core/bindings.gd")
+const MetaOptions := preload("res://src/core/meta_options.gd")
+const Relics := preload("res://src/build/relics.gd")
 
 # What a pilot offers, read off its class row: the ability id in each slot names the
 # icon (ability_state.gd), the slot names the verb whose key the bindings table holds, and
@@ -177,6 +179,36 @@ static func slot_verb(slot: String, def) -> String:
 
 static func card_keys(def) -> Array[Dictionary]:
 	return keys(def).filter(func(k): return k["card"])
+
+
+# Card keys with any equipped per-pilot alternate loadout swaps applied for `profile`.
+static func card_keys_for(def, profile = null, sitting := false) -> Array[Dictionary]:
+	var base := card_keys(def)
+	if def == null or profile == null:
+		return base
+	var equipped := MetaOptions.equipped_alt_loadouts(profile, String(def.id), false, sitting)
+	if equipped.is_empty():
+		return base
+	var out: Array[Dictionary] = []
+	for rec in base:
+		var copy := rec.duplicate(true)
+		var slot := String(copy.get("slot", ""))
+		if equipped.has(slot):
+			var alt_id := String(equipped[slot])
+			var alt := MetaOptions.alt_loadout(alt_id)
+			var relic := Relics.row(String(alt.get("relic", "")))
+			var swap_id := String(relic.get("swap", ""))
+			if swap_id != "":
+				var ab: Dictionary = AbilityState.ABILITIES.get(swap_id, {})
+				copy["ability"] = swap_id
+				if ab.has("icon"):
+					copy["icon"] = String(ab["icon"])
+				copy["words"] = WORDS.get(swap_id, String(alt.get("name", swap_id.replace("_", " "))))
+				copy["swapped"] = true
+				copy["alt_id"] = alt_id
+				copy["alt_name"] = String(alt.get("name", ""))
+		out.append(copy)
+	return out
 
 
 static func by_key(def) -> Dictionary:

@@ -16,6 +16,9 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
+const WorkOrdersPage := preload("res://src/ui/work_orders_page.gd")
+const LogbookPage := preload("res://src/ui/logbook_page.gd")
+const ScrapbookStore := preload("res://src/core/scrapbook_store.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const CampMenu := preload("res://src/ui/camp_menu.gd")
 const CampScrapbook := preload("res://src/ui/camp_scrapbook.gd")
@@ -155,6 +158,8 @@ var _footer
 var _breath_row: Button
 var _help
 var _achievements
+var _work_orders
+var _logbook
 var _settings
 var _camp
 var _jukebox
@@ -263,7 +268,17 @@ func setup(game_ref) -> void:
 	_achievements.visible = false
 	# Back closes the page directly: over the camp walk the A hotkey is the trophy wall's, not the page's.
 	_achievements.back.pressed.connect(toggle_achievements)
+	_achievements.work_orders_requested.connect(_open_work_orders_from_achievements)
+	_achievements.logbook_requested.connect(_open_logbook_from_achievements)
 	_content.add_child(_achievements)
+	_work_orders = WorkOrdersPage.new()
+	_work_orders.visible = false
+	_work_orders.back_requested.connect(toggle_work_orders)
+	_content.add_child(_work_orders)
+	_logbook = LogbookPage.new()
+	_logbook.visible = false
+	_logbook.back.pressed.connect(toggle_logbook)
+	_content.add_child(_logbook)
 	_settings = SettingsPages.new()
 	_settings.visible = false
 	_settings.setup(game, "key_esc")
@@ -277,6 +292,8 @@ func setup(game_ref) -> void:
 	_camp = CampMenu.new()
 	_camp.visible = false
 	_camp.button_for("launch").pressed.connect(_press.bind("key_space"))
+	_camp.button_for("work_orders").pressed.connect(toggle_work_orders)
+	_camp.button_for("logbook").pressed.connect(toggle_logbook)
 	_camp.button_for("achievements").pressed.connect(_press.bind("key_a"))
 	_camp.button_for("settings").pressed.connect(_press.bind("key_s"))
 	_camp.back.pressed.connect(_press.bind("key_k"))
@@ -428,6 +445,8 @@ func _on_flow_changed(state: String) -> void:
 	_state = state
 	_help.visible = false
 	_achievements.visible = false
+	_work_orders.visible = false
+	_logbook.visible = false
 	_settings.visible = false
 	_camp.visible = false
 	_jukebox.visible = false
@@ -499,7 +518,7 @@ func _on_flow_changed(state: String) -> void:
 				pass
 			for card in _deck:
 				_choices.add_child(card)
-				card.bind_profile(game.ctx.profile)
+				card.bind_profile(game.ctx.profile, game.tuning != null and game.tuning.sitting())
 				_lock_card(card)
 			_queue_level()
 			_footer.setup([{"cap": "key_enter", "say": "Enter"}, {"say": "start"}])
@@ -515,7 +534,7 @@ func _on_flow_changed(state: String) -> void:
 			# has the run's last word (STORY-MAP, "Call-ins"). The memo stands on its own plate.
 			var memo := ""
 			if said != "" and game.flow.death_tip != "":
-				memo = DeathCause.memo(game.run.run_seed, game.run.stage, said, game.ctx.profile, [], game.run)
+				memo = DeathCause.memo(game.run.run_seed, game.run.stage, said, game.ctx.profile, _journal_pages(), game.run)
 			var tip_line := DeathTips.shown(game.flow.death_tip) if game.flow.death_tip != "" else ""
 			if memo == "" and tip_line != "":
 				said += "\n" + tip_line
@@ -544,7 +563,7 @@ func _on_flow_changed(state: String) -> void:
 			if not game.flow.run_won and game.flow.death_cause != "":
 				body += "\n" + game.flow.death_cause
 				if game.flow.death_tip != "":
-					memo = DeathCause.memo(game.run.run_seed, game.run.stage, game.flow.death_cause, game.ctx.profile, [], game.run)
+					memo = DeathCause.memo(game.run.run_seed, game.run.stage, game.flow.death_cause, game.ctx.profile, _journal_pages(), game.run)
 			var after := PackedStringArray()
 			# The trade pockets' odds are a tuning readout (recency, safe share, refusal weight), so
 			# only a --dev launch prints them; a played run's summary keeps to the run.
@@ -734,7 +753,7 @@ func _prologue_input(event: InputEvent) -> void:
 # H on the title swaps its body and actions for the how-to-play page, and back.
 func toggle_help() -> void:
 	_close_camp_silently()
-	if _state != "title" or _achievements.visible or _settings.visible:
+	if _state != "title" or _achievements.visible or _settings.visible or _work_orders.visible or _logbook.visible:
 		return
 	_help.visible = not _help.visible
 	_actions.visible = not _help.visible
@@ -756,7 +775,7 @@ func help_open() -> bool:
 # A on the title swaps its body and actions for the achievements page, and back.
 func toggle_achievements() -> void:
 	_close_camp_silently()
-	if _state != "title" or _help.visible or _settings.visible:
+	if _state != "title" or _help.visible or _settings.visible or _work_orders.visible or _logbook.visible:
 		return
 	_achievements.visible = not _achievements.visible
 	_actions.visible = not _achievements.visible
@@ -770,11 +789,62 @@ func toggle_achievements() -> void:
 	_fade(true)
 
 
+func toggle_work_orders() -> void:
+	_close_camp_silently()
+	if _state != "title" or _help.visible or _achievements.visible or _settings.visible or _logbook.visible:
+		return
+	_work_orders.visible = not _work_orders.visible
+	_actions.visible = not _work_orders.visible
+	if _work_orders.visible:
+		_work_orders.refresh(game.ctx.profile, game.tuning != null and game.tuning.sitting())
+		_show("", Palette.AMBER, "")
+		_sync_walk()
+		_work_orders.focus_first()
+	else:
+		_back_to_base()
+	_fade(true)
+
+
+func toggle_logbook() -> void:
+	_close_camp_silently()
+	if _state != "title" or _help.visible or _achievements.visible or _settings.visible or _work_orders.visible:
+		return
+	_logbook.visible = not _logbook.visible
+	_actions.visible = not _logbook.visible
+	if _logbook.visible:
+		_logbook.refresh(game.ctx.codex, game.ctx.profile, game.tuning != null and game.tuning.sitting(), _journal_pages())
+		_show("", Palette.AMBER, "")
+		_sync_walk()
+		_logbook.focus_first()
+	else:
+		_back_to_base()
+	_fade(true)
+
+
+func _open_work_orders_from_achievements() -> void:
+	if _achievements.visible:
+		_achievements.visible = false
+	toggle_work_orders()
+
+
+func _open_logbook_from_achievements() -> void:
+	if _achievements.visible:
+		_achievements.visible = false
+	toggle_logbook()
+
+
+func _journal_pages() -> Array:
+	var dir: String = game.storage_dir if game != null and game.get("storage_dir") != null else ""
+	if dir == "":
+		return []
+	return ScrapbookStore.new(dir).summaries()
+
+
 # S on the title swaps its body and actions for the settings page, and back. It never
 # pauses the game or touches the mouse; Esc only goes back.
 func toggle_settings() -> void:
 	_close_camp_silently()
-	if _state != "title" or _help.visible or _achievements.visible:
+	if _state != "title" or _help.visible or _achievements.visible or _work_orders.visible or _logbook.visible:
 		return
 	_settings.visible = not _settings.visible
 	_actions.visible = not _settings.visible
@@ -793,7 +863,7 @@ func toggle_settings() -> void:
 # K on the title opens the camp: a walk through the 3D camp (camp_hub.gd) with a key-hint strip, and K again
 # leaves it. The stations open their pages from their zones; each page's Back returns to the walk.
 func toggle_camp() -> void:
-	if _state != "title" or _help.visible or _achievements.visible or _settings.visible:
+	if _state != "title" or _help.visible or _achievements.visible or _settings.visible or _work_orders.visible or _logbook.visible:
 		return
 	if _walking:
 		if not walk_live():
@@ -866,7 +936,7 @@ func walk_live() -> bool:
 # A page covers the walk: Help, Achievements, Settings, Jukebox, Mixtapes, Customize, the Companion panel or a page a
 # feature opened with open_walk_page().
 func page_open() -> bool:
-	if _help.visible or _achievements.visible or _settings.visible or _jukebox.visible or _radio.visible:
+	if _help.visible or _achievements.visible or _work_orders.visible or _logbook.visible or _settings.visible or _jukebox.visible or _radio.visible:
 		return true
 	if _camp.customize != null and _camp.customize.visible:
 		return true
@@ -1203,6 +1273,22 @@ func achievements_page():
 	return _achievements
 
 
+func work_orders_open() -> bool:
+	return _work_orders.visible
+
+
+func work_orders_page():
+	return _work_orders
+
+
+func logbook_open() -> bool:
+	return _logbook.visible
+
+
+func logbook_page():
+	return _logbook
+
+
 # Pilot select opens on the first pilot the profile can take (w37 film PF-40), on arrival and when the prologue ends: an
 # open card names each key's icon and the role, so the closed cards' icon rows read by example, and the arrows walk to a
 # locked card's unlock words. The focus waits a frame, for the cards to be in the row.
@@ -1235,7 +1321,7 @@ func refresh_lab_row() -> void:
 
 
 func overlay_open() -> bool:
-	return _help.visible or _achievements.visible or _camp.visible or _walking or _jukebox.visible or _radio.visible or ending_open()
+	return _help.visible or _achievements.visible or _work_orders.visible or _logbook.visible or _camp.visible or _walking or _jukebox.visible or _radio.visible or ending_open()
 
 
 func ending_open() -> bool:
@@ -1349,6 +1435,14 @@ func _input(event: InputEvent) -> void:
 		if _settings.handle(event):
 			get_viewport().set_input_as_handled()
 		return
+	if _work_orders.visible or _logbook.visible:
+		if _backs(event):
+			if _work_orders.visible:
+				toggle_work_orders()
+			else:
+				toggle_logbook()
+			get_viewport().set_input_as_handled()
+		return
 	if _radio.visible or _jukebox.visible:
 		if _backs(event):
 			if _radio.visible:
@@ -1388,6 +1482,10 @@ func _input(event: InputEvent) -> void:
 	if code == KEY_C and _state == "summary":
 		if not game.workshop().companion_panel.is_open():
 			_press("key_c")
+	elif code == KEY_O and _state == "title" and not overlay_open() and not _settings.visible:
+		toggle_work_orders()
+	elif code == KEY_L and _state == "title" and not overlay_open() and not _settings.visible:
+		toggle_logbook()
 	elif code == KEY_ESCAPE and (_help.visible or _achievements.visible):
 		if _help.visible:
 			toggle_help()
@@ -1771,7 +1869,7 @@ func _fade(show: bool) -> void:
 
 
 func _layout_backdrop() -> void:
-	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _settings.visible or _camp.visible or _walking or _jukebox.visible or _radio.visible)
+	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _work_orders.visible or _logbook.visible or _settings.visible or _camp.visible or _walking or _jukebox.visible or _radio.visible)
 	_veil.anchor_bottom = 0.5 if title_deck else 1.0
 	_content.anchor_bottom = _veil.anchor_bottom
 	_content.add_theme_constant_override("separation", 18 if title_deck else 26)
@@ -1889,6 +1987,10 @@ func button_for(action: String) -> Button:
 	if action == "back":
 		if _settings.visible:
 			return _settings.back
+		if _work_orders.visible:
+			return _work_orders.back
+		if _logbook.visible:
+			return _logbook.back
 		if _camp.visible:
 			return _camp.back
 		if _jukebox.visible:
