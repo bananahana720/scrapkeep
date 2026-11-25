@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const FloodCycle := preload("res://src/world/flood_cycle.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const SluiceValves := preload("res://src/world/sluice_valves.gd")
 
 # The water a stage's basin fills with. Its shape comes from the map's basin record,
 # so each stage floods its own bowl, and the push, the plane you see and the "water"
@@ -16,6 +17,8 @@ const WET_DEPTH := 2.5
 # The director's clock for this stage; null when the stage has no flood.
 var cycle: FloodCycle
 var basin := {}
+# W1 Spillway grapple-yank sluice valves (g12), synced on stage entry/clear.
+var sluice_valves: SluiceValves
 
 var _floor_y := 0.0
 var _plane: MeshInstance3D
@@ -57,12 +60,22 @@ func setup() -> void:
 	_lamp.light_energy = 0.0
 	add_child(_lamp)
 
+	sluice_valves = SluiceValves.new()
+	add_child(sluice_valves)
+
 
 # A new stage's bowl. floor_y is the basin floor under its centre; mast is the klaxon's
 # foot on dry ground at the rim.
 func configure(basin_record: Dictionary, floor_y: float, mast: Vector3) -> void:
 	basin = basin_record
 	_floor_y = floor_y
+	if sluice_valves != null:
+		var host_ctx = _resolve_ctx()
+		var stage_live: bool = host_ctx != null and host_ctx.get("world") != null and host_ctx.world.get("events") != null
+		if stage_live:
+			sluice_valves.sync_stage(host_ctx)
+		else:
+			sluice_valves.clear_valves()
 	visible = not basin.is_empty() and cycle != null
 	if not visible:
 		return
@@ -116,3 +129,12 @@ func external_accel(point: Vector3, velocity: Vector3) -> Vector3:
 	var to_centre := Vector3(centre.x - point.x, 0.0, centre.y - point.z)
 	var current := to_centre.normalized() if to_centre.length() > 1.0 else Vector3.ZERO
 	return -velocity * DRAG * wet + current * CURRENT * wet + Vector3.UP * LIFT * wet
+
+
+func _resolve_ctx():
+	var p := get_parent()
+	while p != null:
+		if "ctx" in p and p.get("ctx") != null:
+			return p.get("ctx")
+		p = p.get_parent()
+	return null
