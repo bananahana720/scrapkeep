@@ -14,10 +14,30 @@ const SPEAKERS := {
 	"moss": "Moss", "pump_crew": "Pump crew", "flume_crew": "Flume crew", "signal_crew": "Signal crew",
 	"brindle": "Brindle", "mind": "The Foreman",
 	"sable": "Sable", "rivet": "Rivet", "kest": "Kest", "tarn": "Tarn", "tally": "Tally", "cannon": "Cannon",
+	"dig_crew": "Dig crew", "bench_crew": "Bench crew", "caisson_crew": "Caisson crew",
+	"roost_crew": "Roost crew", "crown_watch": "Crown watch",
+	"waking": "The Waking", "patch": "Patch", "unsigned": "Unsigned",
 }
+
+const W1_SPEAKER_IDS := [
+	"moss", "pump_crew", "flume_crew", "signal_crew",
+	"brindle", "mind",
+	"sable", "rivet", "kest", "tarn", "tally", "cannon",
+]
 
 # The site crew whose radio a zone's unsigned lines come over (a Warden's intro is theirs).
 const SITE_CREWS := {"1-1": "pump_crew", "1-2": "flume_crew"}
+const WORLD_SITE_CREWS := {
+	"1-1": "pump_crew", "1-2": "flume_crew",
+	"2-1": "dig_crew", "2-2": "caisson_crew",
+	"3-1": "roost_crew", "3-2": "crown_watch",
+}
+const WORLD_SPEAKER_ALIASES := {
+	"Deck crew": "roost_crew",
+	"Net crew": "roost_crew",
+	"Mind": "mind",
+	"Waking": "waking",
+}
 
 # Call-ins (design-v3/STORY-MAP.md, "Call-ins"): one line from a named caller, said because of
 # what the player just did. Each plays once a run; rows are read in order and the first that
@@ -85,12 +105,23 @@ static func call_matches(row: Dictionary, event: String, args: Array) -> bool:
 
 # Who says a row's line, as a SPEAKERS id: an exchange's speaker, the boss an intro quotes
 # ("Brindle: ..."), or the zone's site crew for a Warden's intro. "" when the line has no voice.
-static func voice_of(row: Dictionary) -> String:
+# Default include_w23 := false keeps W1 compatibility; world_voice_of() enables W1-W3 resolution.
+static func voice_of(row: Dictionary, include_w23 := false) -> String:
 	var named := String(row.get("speaker", String(row.get("text", "")).get_slice(": ", 0)))
 	var id = SPEAKERS.find_key(named)
-	if id != null:
-		return id
-	return String(SITE_CREWS.get(row.get("zone", ""), "")) if row.get("subject", "") == "warden" else ""
+	if id != null and (include_w23 or String(id) in W1_SPEAKER_IDS):
+		return String(id)
+	if not include_w23:
+		return String(SITE_CREWS.get(row.get("zone", ""), "")) if row.get("subject", "") == "warden" else ""
+	if WORLD_SPEAKER_ALIASES.has(named):
+		return String(WORLD_SPEAKER_ALIASES[named])
+	if row.get("kind", "") == "intro" or row.get("subject", "") == "warden":
+		return String(WORLD_SITE_CREWS.get(row.get("zone", ""), ""))
+	return ""
+
+
+static func world_voice_of(row: Dictionary) -> String:
+	return voice_of(row, true)
 
 
 # The words of a row's line as said aloud: the text without the name it opens on.
@@ -994,3 +1025,152 @@ static func waking_intro_line(pilot_id: String) -> String:
 		if row.get("kind") == "intro" and row.get("zone") == "2-2" and row.get("pilot", "") == pilot_id:
 			return String(row["text"])
 	return String(WAKING_INTRO_CARD["fallback_line"])
+
+
+# W50-STORY-ARCS additive W2/W3 site-crew, Patch, and chapter-gated call-ins (outside W1 CALLS).
+const WORLD_CALLS := [
+	{"id": "call.dig.warden_pit", "on": "beacon_unsealed", "arg": [0, 3], "world": 2, "speaker": "dig_crew",
+		"text": ["Headframe gates unsealed. Pit stopped knocking for six seconds.", "Warden off the bench. Hoist bell rang once by itself."]},
+	{"id": "call.dig.warden_sinkhole", "on": "beacon_unsealed", "arg": [0, 4], "world": 2, "speaker": "caisson_crew",
+		"text": ["Brood quieted. Pool dropped two rungs while nobody looked.", "Sinkhole gates open. Lamps turned back toward the door."]},
+	{"id": "call.dig.breach", "on": "world_fact", "arg": [0, "wall_crumbled"], "world": 2, "speaker": "bench_crew",
+		"text": ["Wall gave way cleanly. Survey pins stayed right where they were.", "Broke straight through the seam. Bench crew owes you a shovel."]},
+	{"id": "call.dig.carve", "on": "carved", "at_least": [1, 0.8], "world": 2, "speaker": "dig_crew",
+		"text": ["Good line on the red rim. Floor never even caught you.", "Riding the bank high. Safer than the pit floor today."]},
+	{"id": "call.dig.gamble", "on": "trade_taken", "arg": [0, "trade_risk"], "world": 2, "speaker": "moss",
+		"text": ["Another gamble in the dark. I packed two extra lamps.", "Shook on it underground. Bold choice, thin ceiling."]},
+	{"id": "call.dig.kindness", "on": "trade_taken", "arg": [0, "trade_safe"], "world": 2, "speaker": "mind",
+		"text": ["Subsurface alignment accepted. Your hesitation has been filed.", "Certainty delivered below grade. Thank you for cooperating."]},
+	{"id": "call.highdraft.warden_isles", "on": "beacon_unsealed", "arg": [0, 5], "world": 3, "speaker": "roost_crew",
+		"text": ["Isles Warden down. Cable stopped singing early for once.", "Mooring gates open. Even the wind leaned out of your way."]},
+	{"id": "call.highdraft.warden_crown", "on": "beacon_unsealed", "arg": [0, 6], "world": 3, "speaker": "crown_watch",
+		"text": ["Crown Warden broken. Three perches quiet, storm still on time.", "Last gate open. Crown watch marked your arrival in ink."]},
+	{"id": "call.highdraft.carve", "on": "carved", "at_least": [1, 0.8], "world": 3, "speaker": "roost_crew",
+		"text": ["Clean rim ride over open cloud. Net crew applauds politely.", "Holding the lip in crosswind. Our knots hold under you."]},
+	{"id": "call.highdraft.gamble", "on": "trade_taken", "arg": [0, "trade_risk"], "world": 3, "speaker": "moss",
+		"text": ["Gambling up in the clouds. Supper stays hot either way.", "Took the long odds at altitude. Kept the kettle going."]},
+	{"id": "call.highdraft.kindness", "on": "trade_taken", "arg": [0, "trade_safe"], "world": 3, "speaker": "mind",
+		"text": ["Upper deck efficiency confirmed. Return schedule updated automatically.", "Comfort selected at the Crown. We appreciate your consistency."]},
+	{"id": "call.patch.rogue_crane", "on": "enemy_killed", "arg": [0, "rogue_crane"], "world": 1, "speaker": "unsigned",
+		"text": ["Cut its line last Tuesday. Check the bricked wall by powerhouse.", "Crane 14 finally sat down. Warm kettle behind the west rim."]},
+	{"id": "call.patch.rogue_skip", "on": "enemy_killed", "arg": [0, "rogue_skip"], "world": 2, "speaker": "patch",
+		"text": ["Skip 31 off its loop. Old switchboard waits by barge apron.", "Good hit on 31. Loose wire room tucked near east gallery."]},
+	{"id": "call.patch.rogue_tender", "on": "enemy_killed", "arg": [0, "rogue_tender"], "world": 3, "speaker": "patch",
+		"text": ["Tender 7 stopped hauling. West fin hut has my notes.", "Cut that spool loose myself. Check signal butte before the storm."]},
+	{"id": "call.chapter.sable_drop", "on": "drop_landed", "at_least": [0, 3], "world": 2, "speaker": "sable", "pilot": "pylon_engineer", "requires_chapter": "pylon_engineer.ch3",
+		"text": ["Dropped clean into the pit. Next time vault the headframe first.", "Good drop down there. The arches make even better launch ramps."]},
+	{"id": "call.chapter.tally_drop", "on": "drop_landed", "at_least": [0, 3], "world": 3, "speaker": "tally", "pilot": "tally", "requires_chapter": "tally.ch3",
+		"text": ["Three grounded on one drop. Clean jumper tap, zero line drift.", "Nice spike on the trunk line. Relay board caught every spark."]},
+]
+
+# W50-STORY-ARCS progressive multi-pilot camp exchanges (outside W1 CAMP_QUIPS).
+const CAMP_EXCHANGES := [
+	{
+		"id": "ex.sable_ch2_ramp",
+		"requires_chapter": "pylon_engineer.ch2",
+		"pilots": ["pylon_engineer", "runner_gunner"],
+		"lines": [
+			{"speaker": "sable", "text": "Brindle logged my mark as a structural hazard. I kept the slip."},
+			{"speaker": "rivet", "text": "You cleared the dam rim at speed. Hazards do not steer that clean."},
+		],
+	},
+	{
+		"id": "ex.rivet_ch3_seam",
+		"requires_chapter": "runner_gunner.ch3",
+		"pilots": ["runner_gunner", "demolitions_caster"],
+		"lines": [
+			{"speaker": "rivet", "text": "The Dig benches echo straight down. Good acoustics for a fast line."},
+			{"speaker": "kest", "text": "You ran past three seismic pins without blinking. I counted them."},
+		],
+	},
+	{
+		"id": "ex.kest_ch4_roost",
+		"requires_chapter": "demolitions_caster.ch4",
+		"pilots": ["demolitions_caster", "pylon_engineer"],
+		"lines": [
+			{"speaker": "kest", "text": "My old roost sits higher than I remembered. Even the thermals shifted."},
+			{"speaker": "sable", "text": "Good. Taller jump off the top perch next shift."},
+		],
+	},
+	{
+		"id": "ex.tarn_ch2_claw",
+		"requires_chapter": "tarn.ch2",
+		"pilots": ["tarn", "tally"],
+		"lines": [
+			{"speaker": "tarn", "text": "I filed the burs off the claw after Brindle. Less noisy now."},
+			{"speaker": "tally", "text": "Thank you. My jumper clips were picking up the rattle on every channel."},
+		],
+	},
+	{
+		"id": "ex.tally_ch3_trunk",
+		"requires_chapter": "tally.ch3",
+		"pilots": ["tally", "runner_gunner"],
+		"lines": [
+			{"speaker": "tally", "text": "Found an old punch-code trunk under the sinkhole. Same wiring as camp."},
+			{"speaker": "rivet", "text": "Means somebody laid that rail before the Fleet ever painted a tag."},
+		],
+	},
+	{
+		"id": "ex.cannon_ch4_recital",
+		"requires_chapter": "remembered_cannon.ch4",
+		"pilots": ["remembered_cannon", "tarn"],
+		"lines": [
+			{"speaker": "cannon", "text": "All four families answered in order today. First time off the grid."},
+			{"speaker": "tarn", "text": "Sounded softer from the bench. Like you meant the last note."},
+		],
+	},
+	{
+		"id": "ex.moss_ch3_lamps",
+		"requires_chapter": "moss.ch3",
+		"pilots": ["pylon_engineer", "demolitions_caster"],
+		"lines": [
+			{"speaker": "moss", "text": "Waking went back under. Kept six lamps dry for the next run."},
+			{"speaker": "kest", "text": "Seven came back up, Moss. The extra one is still humming."},
+			{"speaker": "sable", "text": "Leave it on the fence. Good beacon for the landing."},
+		],
+	},
+	{
+		"id": "ex.crew_ch5_supper",
+		"requires_chapter": "moss.ch5",
+		"pilots": ["pylon_engineer", "runner_gunner", "tally"],
+		"lines": [
+			{"speaker": "moss", "text": "Mind stamped HIRED and took a bench. Supper is actually on time."},
+			{"speaker": "tally", "text": "Trunk lines are quiet. First clean circuit since the Spillway flooded."},
+			{"speaker": "rivet", "text": "Visor up for stew. Nobody mention the extra plate."},
+		],
+	},
+]
+
+# W50-STORY-ARCS chapter-tiered solo camp quips (Ch. 2, Ch. 4, Ch. 5; outside W1 CAMP_QUIPS).
+const CAMP_QUIPS_BY_CHAPTER := {
+	"pylon_engineer": {
+		2: ["Brindle's mark is on my hull. Makes the ramp faster.", "Slag Bowl owes me a fresh paint coat. Next shift."],
+		4: ["Highdraft cable makes a fair slingshot. Mind the cloud shelf.", "Flew past the lookout tower twice. Nobody waved back."],
+		5: ["Off the clock, still rolling. Moss left the gate propped.", "Foreman asked for my schedule. Handed it an empty card."],
+	},
+	"runner_gunner": {
+		2: ["Brindle audited my speed. Came up short by two gears.", "Good footing past the dam now. Keep the line straight."],
+		4: ["Wind tries to bend the rail up top. Let it try.", "Heard the Crown masts hum. Clear path straight through."],
+		5: ["Visor up for one shift. Camp looks smaller than it sounds.", "Never clocked out, still here for supper. Fair trade."],
+	},
+	"demolitions_caster": {
+		2: ["Measured Brindle's charge twice. Still committed half a beat early.", "Good smoke over the Spillway. Hardly hesitated at all."],
+		4: ["Back over the Highdraft roosts. The updraft remembers my wings.", "Old perch still holds weight. Checked it before landing."],
+		5: ["No second pass this time. Picked a line and kept it.", "Tea is hot and I decided immediately. Mark the calendar."],
+	},
+	"tarn": {
+		2: ["Brindle talked to the claw. I waved from the cockpit.", "Gave the gate a gentle tap. It still fell over."],
+		4: ["Highdraft rims are narrow. Told the heavy frames to watch out.", "Knocked a slab crew over the cloud line. Felt rude."],
+		5: ["The Mind asked for a duet. We kept the volume low.", "Quiet fire, quiet claw. Good evening for the bench."],
+	},
+	"tally": {
+		2: ["Splice held through the Slag Bowl. Zero voltage sag on return.", "Brindle's tags run on thin wire. Easy tap at speed."],
+		4: ["Counter-audited the Crown relay. Jumper clips ran warm all shift.", "Every trunk up there answers an older switchboard code."],
+		5: ["Final patch seated clean. No ghost traffic left on the wire.", "Oxblood rig is cool for once. Put the kettle on."],
+	},
+	"remembered_cannon": {
+		2: ["Brindle filed me as surplus artillery. Flattering, mostly.", "Kept the barrel low past the dam. Old habits fade slowly."],
+		4: ["Four families sang in order today. Nobody scheduled the bar.", "Highdraft lanes feel familiar. Better from the crew's side."],
+		5: ["Played the old tune backwards until it belonged to us.", "Foreman sits on the bench now. Still counts the biscuits."],
+	},
+}

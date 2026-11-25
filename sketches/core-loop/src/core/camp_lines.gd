@@ -76,17 +76,52 @@ const STREAK_WIN := [
 
 const OUTCOME_LOSS := [LOSS_1, LOSS_2, LOSS_3]
 
+# W50-STORY-ARCS additive story-state pools (selected only when a 3rd story_state arg reports progress).
+const ORDER_DONE := [
+	"Work order stamped and clipped to the brass rail. Moss signed the bottom corner.",
+	"Shift slip filed on the board. One fewer job waiting on the hook.",
+	"Order closed clean. The rail hangs a fraction straighter this evening.",
+]
+const LICENSE_UP := [
+	"Maker license stamped up a grade. Shelf clerks stopped asking for a supervisor.",
+	"Fresh stamp on the maker ticket. Better bins open at the next counter.",
+	"License moved up the rail. Moss moved the spare crate onto the front bench.",
+]
+const CHAPTER_BEAT := [
+	"New hole punched in the crew card. Even the Foreman's clock skipped a beat.",
+	"Another chapter clipped into the shift log. Bench chatter ran past supper.",
+	"Time card came back heavier. Nobody threw the old stub away.",
+]
+const PATCH_WALL_NOTE := [
+	"Three wire rooms found, one chalk paw by the fire pit. Kettle still warm.",
+	"Somebody left a coiled jumper cable on the bench. Signed in chalk, no name.",
+	"All three cut lines accounted for. The camp radio tuned itself before dawn.",
+]
+const HARD_CLEAR := [
+	"Overtime shift cleared on the first bell. The ledger needed a thicker pen.",
+	"Hard rung logged and stamped. Nobody asked if the ball needed a rest.",
+	"Overtime ribbon pinned over the fire pit. Moss poured the good tea.",
+]
+
 
 static func all_lines() -> Array:
 	var out: Array = []
-	for group in [FIRST, LEDGER, WIN, LOSS_1, LOSS_2, LOSS_3, NEW_PILOT, STREAK_LOSS, STREAK_WIN]:
+	for group in [
+		FIRST, LEDGER, WIN, LOSS_1, LOSS_2, LOSS_3, NEW_PILOT, STREAK_LOSS, STREAK_WIN,
+		ORDER_DONE, LICENSE_UP, CHAPTER_BEAT, PATCH_WALL_NOTE, HARD_CLEAR,
+	]:
 		out.append_array(group)
 	return out
 
 
 # The line for a scrapbook, newest page first. `stats` is the profile's stats map, read
-# only when there are no pages.
-static func line_for(pages: Array, stats := {}) -> String:
+# only when there are no pages. Optional `story_state` selects W50 progression pools while
+# keeping 1- and 2-arg callers byte-identical.
+static func line_for(pages: Array, stats := {}, story_state := {}) -> String:
+	if not story_state.is_empty():
+		var story_line := _story_line(pages, story_state)
+		if story_line != "":
+			return story_line
 	if pages.is_empty():
 		var played := float(stats.get("stages_cleared", 0.0)) + float(stats.get("deaths", 0.0)) + float(stats.get("kills", 0.0))
 		return _pick(LEDGER if played > 0.0 else FIRST, "stats-%d" % int(played))
@@ -104,6 +139,28 @@ static func line_for(pages: Array, stats := {}) -> String:
 		return _pick(WIN, seed_text)
 	var world := clampi(int(last.get("world", 1)), 1, OUTCOME_LOSS.size())
 	return _pick(OUTCOME_LOSS[world - 1], seed_text)
+
+
+static func _story_line(pages: Array, story_state: Dictionary) -> String:
+	var base := "story"
+	if not pages.is_empty():
+		var last: Dictionary = pages[0]
+		base = String(last.get("run_id", "")) if String(last.get("run_id", "")) != "" else "%s/%s" % [last.get("pilot", ""), last.get("stage_reached", 0)]
+	if bool(story_state.get("patch_wires_all", false)):
+		return _pick(PATCH_WALL_NOTE, base + ":patch")
+	var hard_clear := int(story_state.get("hard_clear", 0))
+	if hard_clear > 0:
+		return _pick(HARD_CLEAR, "%s:hard:%d" % [base, hard_clear])
+	var chapter_punched = story_state.get("chapter_punched", {})
+	if chapter_punched is Dictionary and int((chapter_punched as Dictionary).get("num", 0)) >= 3:
+		return _pick(CHAPTER_BEAT, "%s:ch:%s" % [base, String((chapter_punched as Dictionary).get("id", ""))])
+	var licenses_up = story_state.get("licenses_up", [])
+	if licenses_up is Array and not (licenses_up as Array).is_empty():
+		return _pick(LICENSE_UP, "%s:lic:%s" % [base, String((licenses_up as Array)[0])])
+	var order_done = story_state.get("order_done", [])
+	if order_done is Array and not (order_done as Array).is_empty():
+		return _pick(ORDER_DONE, "%s:ord:%s" % [base, String((order_done as Array)[0])])
+	return ""
 
 
 # A page's outcome: the run-end thread's "outcome" field, else the older won flag.
