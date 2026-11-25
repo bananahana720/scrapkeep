@@ -392,9 +392,10 @@ func _build_primitive_shell() -> void:
 func _paint_shell() -> void:
 	var tints := _tints()
 	if not _shell_rec.is_empty():
-		_shell_rec["tints"] = tints
-	_painter.paint(_core, tints)
-	_painter.paint(_pod, tints)
+		_painter.repaint_shell(_shell_rec, tints)
+	else:
+		_painter.paint(_core, tints)
+		_painter.paint(_pod, tints)
 	if _pilot != null:
 		_painter.paint(_pilot, {"class": def.color})
 

@@ -43,7 +43,7 @@ const NODES := [
 		"swap": {"ultimate": "plate_audit"}},
 	{"id": "tl_plate_rack", "name": "Plate Rack", "effect": "Flywheel Throw. Two beacons, extra husk, shot bits.", "class_id": "tally", "stack_rule": "capped", "key": "special",
 		"icon": "ab_tally_ult", "tags": ["sustain"], "charges": {"special": 1},
-		"proc": [{"on": "special_used", "do": "refund_special", "scale": 0.0, "gap": 0.5, "ghost_shift": "seat_and_bits"}],
+		"proc": [{"on": "special_used", "do": "refund_special", "scale": 0.25, "gap": 0.5, "ghost_shift": "seat_and_bits"}],
 		"swap": {"ultimate": "plate_flywheel"}},
 	{"id": "tl_return_slip", "name": "Relay Pulse", "effect": "Audit Trail. Beacons blast; husks pop, inherit bits.", "class_id": "tally", "stack_rule": "capped", "key": "special",
 		"icon": "ab_tally_ult", "tags": ["close", "burst"], "proc": [{"on": "special_used", "do": "blast", "scale": 0.5, "gap": 1.0, "ghost_shift": "severance_and_bits"}],

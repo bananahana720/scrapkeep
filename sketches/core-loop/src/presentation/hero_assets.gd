@@ -1421,6 +1421,18 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	return rec
 
 
+# Repaints an already-fitted shell record and reapplies its ball look (cutaway window) and ink outline.
+func repaint_shell(rec: Dictionary, tints: Dictionary) -> void:
+	if rec.is_empty():
+		return
+	rec["tints"] = tints
+	paint(rec.core, tints)
+	paint(rec.pod, tints)
+	BallLooks.dress(ball_look(), rec)
+	InkOutline.apply(rec.core, "pilot")
+	InkOutline.apply(rec.pod, "pilot")
+
+
 # Shows layers up to heft_class; animates the change when animate is true. Class up: each new
 # holder shows and its meshes slam in from HEFT_SLAM_FROM outward. Class down: each lost
 # holder's meshes fling outward, then the holder hides and the meshes return to rest.
