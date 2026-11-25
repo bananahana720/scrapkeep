@@ -36,6 +36,10 @@ case "${1:-}" in
   doctor)
     bad=0
     say() { printf '%-5s %s\n' "$1" "$2"; [ "$1" = FAIL ] && bad=1; return 0; }
+    if [ "$(uname -s)" != "Linux" ]; then
+      say FAIL "packed Linux x86_64 binary cannot execute on $(uname -s) (verified-unreachable on macOS)"
+      exit 1
+    fi
     exe="${2:-$(latest)}"
     head="$(git -C "$repo" rev-parse HEAD)"
     say INFO "checkout $repo at ${head:0:8} on $(git -C "$repo" rev-parse --abbrev-ref HEAD)"

@@ -1,6 +1,6 @@
 # Game verification map
 
-This directory is the maintained source for verifying what a player meets in the Godot game at `sketches/core-loop`. Read this index before driving the game, then use the matching feature file as the recipe. Every step file under `steps/` passed on stage `stage/alpha-w40` at 6d4320b8 on 13 November 2026, in a cloud box.
+This directory is the maintained source for verifying what a player meets in the Godot game at `sketches/core-loop`. Read this index before driving the game, then use the matching feature file as the recipe. Every step file under `steps/` passed at `46576920` on 25 November 2026 (macOS offscreen `--embedded` Metal).
 
 ## Baseline preconditions
 
@@ -30,12 +30,13 @@ Each feature file has an H1, one paragraph on what the player sees, then four H2
 
 ## Features
 
-- [Launch and menus](./launch-and-menus.md): boot card, title opening, title menu, Help, Achievements.
-- [Start a run](./start-a-run.md): prologue, pilot select, kit pick, start pick, rolling in stage 1.
-- [Settings](./settings.md): the four settings pages and a choice kept on disk.
+- [Launch and menus](./launch-and-menus.md): boot card, title opening, title menu, Help, Achievements, and hotkeys to Work orders (O) and Logbook (L).
+- [Work orders and logbook](./work-orders-and-logbook.md): Work Orders (O: Orders, Licenses, Overrides) and the 5-tab Logbook (L: Entries, Crew arcs, Chemistry, Wire trail, Foreman).
+- [Start a run](./start-a-run.md): prologue, pilot select (including Alt Loadouts on L), kit pick, start pick (RunTier ladder and active overrides), rolling in stage 1, and ConsumableSlot HUD.
+- [Settings](./settings.md): the four settings pages (Display, Controls with Active and Cartridge conflict names, Look, Feel) and a choice kept on disk.
 - [Pause and notes](./pause-and-notes.md): the pause menu and the held Tab pages.
 - [Save and continue](./save-and-continue.md): quit from the pause menu, Continue on the next launch.
-- [Launch switches](./launch-switches.md): the ball look, the Tripo models and the Stocktake yard, each proven on against off.
-- [A whole run](./whole-run.md): Warden, gates, the next stage, Brindle, death and the summary, played by the repo's own bot and filmed.
+- [Launch switches](./launch-switches.md): the ball look (cutaway default vs today), the Tripo models and the Stocktake yard, each proven as a pair.
+- [A whole run](./whole-run.md): Wardens, gates, the next stage, worlds 1-3 (Brindle, the Waking, the Mind) or sitting world 1, death and the summary, played by the repo's own bot and filmed.
 
-Not mapped yet: Camp (K on the title), Moss's bay and shop, the companion panel, pad input, the reward ceremony. Add a file when a change touches one.
+Not mapped yet: Camp (`K` on the title), Moss's bay and 4-face `ShopCounter` (`buy`, `stock` for tri-terminal/consumables/Pocket Belt, `fab` for Scrapper/Press ingots, `sell`), in-run `ConsumableSlot` cartridge use (`C`), the companion panel (`M`), pad input, the reward ceremony. Add a file when a change touches one.

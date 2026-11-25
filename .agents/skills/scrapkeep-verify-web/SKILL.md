@@ -34,7 +34,7 @@ Each feature has one Playwright script; run it with `node`, with an optional evi
 
 A script exits 0 only when every check held, the page threw no error and at least one check ran. Handles are element ids and data attributes the pages already carry (`#gate`, `#pips button`, `.vbtn[data-v="notyet"]`, `button[data-choice="veto"]`, `#start`, `#help`), never coordinates. To prove a change, copy the feature's script, add the clicks and checks for it with `proof.check(step, seen, ok)` and `proof.shot(label)` from the drive library, and read [features/](features/README.md) first: a proof through one entry point is incomplete when the map lists others.
 
-Chromium is `CHROMIUM_PATH`, else the cloud's preinstalled browser, else `/usr/bin/chromium`. Do not run `playwright install`.
+Chromium is `CHROMIUM_PATH`, else the cloud's preinstalled browser (`/opt/pw-browsers/chromium`), else `/usr/bin/chromium`, else `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` on macOS. Do not run `playwright install`.
 
 ## Evidence
 

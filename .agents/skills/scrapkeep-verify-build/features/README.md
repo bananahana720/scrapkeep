@@ -1,10 +1,10 @@
 # Packed build verification map
 
-This directory is the maintained source for verifying the packed Linux game, the thing a player installs. Read this index before driving a build, then use the matching feature file. The drives named here passed on a cloud test build of stage `stage/alpha-w40` at 6d4320b8 on 13 November 2026.
+This directory is the maintained source for verifying the packed Linux game, the thing a player installs. Read this index before driving a build, then use the matching feature file. The drives named here passed on a cloud test build of stage `stage/alpha-w40` at 6d4320b8 on 13 November 2026; source and script audits were reconciled at `46576920` on 25 November 2026 (live Linux x86_64 execution is `verified-unreachable` on macOS).
 
 ## Baseline preconditions
 
-- Run from the repository root with `B=.agents/skills/scrapkeep-verify-build/scripts/build.sh`.
+- Run from the repository root with `B=.agents/skills/scrapkeep-verify-build/scripts/build.sh` on a Linux x86_64 host (cloud box or Linux PC; on macOS, running `core-loop.x86_64` is `verified-unreachable`).
 - A build exists (`$B export` in the cloud, or `VERIFY_BUILD_EXE` naming a PC package) and `$B doctor` exits 0.
 - Each drive starts as a new player with an empty save folder under its evidence folder.
 - Never run a packed game against Andrew's save folder, and never install anything on the PC without his go-ahead.

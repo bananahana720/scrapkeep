@@ -10,8 +10,7 @@ tap_until E no_text "FIRST SHIFT" 90
 until text "Sable" 10
 key 1
 until text "Rig your kit" 60
-key 1
-until text "Take one" 30
+until read launch_take == null or not launch_take.busy() 30
 key 1
 until read not get_tree().paused 30
 down W

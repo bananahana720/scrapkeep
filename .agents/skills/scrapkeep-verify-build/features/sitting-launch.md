@@ -1,17 +1,17 @@
 # The sitting launch
 
-The app menu entry's second action, "Scrapkeep sitting", launches the game with `--profile=sitting`: all six pilots are open on a new save, and the loop mechanics Andrew wants at the sitting are on. The default launch opens Sable only.
+The app menu entry's sitting action, `"Scrapkeep sitting (all pilots, save untouched)"`, launches the game with `--profile=sitting`: all six pilots are open on a new save, world 1 is pinned (`stages=2`), and the loop mechanics Andrew wants at the sitting are on. A sibling action, `"Scrapkeep sitting (fresh profile, unlocks earned)"`, launches with `--profile=sitting-earned`. The default launch opens Sable only and runs all three worlds (`stages=6`).
 
 ## Sub-features
 
-- `SL-1` `--profile=sitting` prints `SCRAPKEEP_MENU_READY ... profile=sitting pilots=6/6`.
+- `SL-1` `--profile=sitting` prints `SCRAPKEEP_MENU_READY ... profile=sitting pilots=6/6 stages=2`.
 - `SL-2` Pilot select shows six open cards, and a second pilot's key starts a run as that pilot.
-- `SL-3` Control: the default launch prints `pilots=1/6`, shows five locks, and the second pilot's key starts nothing.
+- `SL-3` Control: the default launch prints `pilots=1/6 stages=6`, shows five locks, and the second pilot's key starts nothing.
 - `SL-4` The sitting launch never writes the player's real save.
 
 ## How to get to it (user POV)
 
-- Right-click "Scrapkeep" in the launcher and pick "Scrapkeep sitting"; or run `./core-loop.x86_64 -- --profile=sitting`.
+- Right-click "Scrapkeep" in the launcher and pick `"Scrapkeep sitting (all pilots, save untouched)"`; or run `./core-loop.x86_64 -- --profile=sitting`.
 
 ## Driving it with build.sh
 

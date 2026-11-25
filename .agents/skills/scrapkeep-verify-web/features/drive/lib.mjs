@@ -17,7 +17,13 @@ export async function drive(name, steps, { viewport = { width: 1440, height: 900
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(folder)) throw new Error(`bad evidence name '${folder}' (letters, digits, . _ - only)`);
   const out = path.join(repo, "artifacts/local/verify-web", folder);
   mkdirSync(out, { recursive: true });
-  const executablePath = process.env.CHROMIUM_PATH || ["/opt/pw-browsers/chromium", "/usr/bin/chromium"].find((file) => existsSync(file));
+  const executablePath =
+    process.env.CHROMIUM_PATH ||
+    [
+      "/opt/pw-browsers/chromium",
+      "/usr/bin/chromium",
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    ].find((file) => existsSync(file));
   const browser = await chromium.launch({ executablePath, headless: true, args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
   const page = await browser.newPage({ viewport });
   const rows = [];

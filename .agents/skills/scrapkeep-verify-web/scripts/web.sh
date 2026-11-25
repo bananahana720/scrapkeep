@@ -18,7 +18,13 @@ kit_port="${VERIFY_WEB_KIT_PORT:-8799}"
 verdicts="$run/verdicts.json"
 
 # A pid file holds "<pid> <the process's start time>", so a pid reused by another process is never taken for ours.
-started_at() { sed 's/.*) //' "/proc/$1/stat" 2>/dev/null | cut -d' ' -f20; }
+started_at() {
+  if [ -r "/proc/$1/stat" ]; then
+    sed 's/.*) //' "/proc/$1/stat" 2>/dev/null | cut -d' ' -f20
+  else
+    ps -o lstart= -p "$1" 2>/dev/null | tr -s ' ' '_' | sed 's/^_//;s/_$//'
+  fi
+}
 pid_of() { cut -d' ' -f1 "$run/$1.pid"; }
 alive() { local pid start; [ -f "$run/$1.pid" ] && read -r pid start < "$run/$1.pid" && [ -n "$start" ] && [ "$(started_at "$pid")" = "$start" ]; }
 answers() { curl -fs --noproxy '*' -o /dev/null --max-time 3 "$1"; }
@@ -51,7 +57,12 @@ case "${1:-}" in
     served="$(curl -fsS --noproxy '*' --max-time 3 "http://127.0.0.1:$kit_port/api/build" 2>/dev/null | sed -n 's/.*"sha":"\([0-9a-f]*\)".*/\1/p')"
     if [ "$served" = "$head" ]; then say OK "the Sitting Kit on $kit_port names this checkout's commit"; else say FAIL "the Sitting Kit on $kit_port names '${served:0:8}', not ${head:0:8}"; fi
     say INFO "the kit writes verdicts to $verdicts, never artifacts/local/sitting-kit/verdicts.json (Andrew's)"
-    if command -v chromium >/dev/null || [ -x /opt/pw-browsers/chromium ] || [ -n "${CHROMIUM_PATH:-}" ]; then say OK "a Chromium is present"; else say FAIL "no Chromium: set CHROMIUM_PATH"; fi
+    pw_chrome="$(cd "$repo" && node -e 'import("playwright").then(p => process.stdout.write(p.chromium.executablePath() || ""))' 2>/dev/null || true)"
+    if command -v chromium >/dev/null || [ -x /opt/pw-browsers/chromium ] || [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ] || { [ -n "$pw_chrome" ] && [ -x "$pw_chrome" ]; } || [ -n "${CHROMIUM_PATH:-}" ]; then
+      say OK "a Chromium is present"
+    else
+      say FAIL "no Chromium: set CHROMIUM_PATH"
+    fi
     exit $bad
     ;;
   stop)

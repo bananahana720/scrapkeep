@@ -1,5 +1,6 @@
 # A new run under the launch switches the caller passes after --, then what the game says it loaded.
-# Launch with: -- --no-intro [--ball-look=gyro|bell|cutaway] [--models=tripo] [--stocktake=on]
+# Launch with: -- --no-intro [--ball-look=today|gyro|bell|cutaway] [--models=tripo] [--stocktake=on]
+# Note: ball_look defaults to cutaway, so pass --ball-look=today on the off-control drive.
 # Run it once with the switch and once without: the two pictures and the two sets of rows are the proof.
 until clickable "Settings" 120
 until read get_node_or_null("/root/Boot") == null 30
@@ -9,8 +10,7 @@ tap_until E no_text "FIRST SHIFT" 90
 until text "Sable" 10
 key 1
 until text "Rig your kit" 60
-key 1
-until text "Take one" 30
+until read launch_take == null or not launch_take.busy() 30
 key 1
 until read not get_tree().paused 30
 until play 30

@@ -1,6 +1,6 @@
 # Web verification map
 
-This directory is the maintained source for verifying Scrapkeep's browser pages. Read this index before driving a page, then use the matching feature file as the recipe. Every drive under `drive/` passed on stage `stage/alpha-w40` at 6d4320b8 on 13 November 2026, in a cloud box.
+This directory is the maintained source for verifying Scrapkeep's browser pages. Read this index before driving a page, then use the matching feature file as the recipe. Every drive under `drive/` passed at `46576920` on 25 November 2026.
 
 ## Baseline preconditions
 
