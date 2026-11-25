@@ -70,6 +70,7 @@ func _run() -> void:
 	_check_g1_all_six_pilots_and_glb_contracts()
 	_check_drive_turn_payout_and_rewind()
 	_check_actuator_bones_for_all_pilots()
+	_check_actuator_world_space_directions()
 	_check_tally_copper_palette_law()
 	_check_tadr008_committed_geometry_before_hit()
 	_check_real_player_ball_snapshot()
@@ -283,6 +284,167 @@ func _drive_pilot(class_id: String) -> Dictionary:
 	ev.free()
 	stub.free()
 	return {"dry": dry_state, "hooked": hooked_state, "skill": skill_state, "released": released_state}
+
+
+func _check_actuator_world_space_directions() -> void:
+	# 1. Rivet guide slides horizontally along Godot -Z (Blender +Y), never vertically along Godot Y.
+	var rivet_stub := StubPlayer.new()
+	root.add_child(rivet_stub)
+	rivet_stub.setup_class(_class_by_id("runner_gunner"))
+	var rivet_ev := GameEvents.new()
+	var rivet_rig := GrappleRig.new()
+	root.add_child(rivet_rig)
+	rivet_rig.setup_standalone(rivet_stub, rivet_ev)
+	var g_idx := rivet_rig.mount_skeleton.find_bone("guide")
+	var g_rest := rivet_rig.mount_skeleton.get_bone_global_pose(g_idx).origin
+	var anchor := Vector3(0.0, 3.0, -12.0)
+	Augments.attach(rivet_stub.kit, rivet_stub.pos, anchor, Vector3.BACK, null)
+	rivet_ev.grapple_fired.emit(anchor)
+	rivet_rig.step(DT)
+	rivet_rig.step(DT)
+	var g_delta := rivet_rig.mount_skeleton.get_bone_global_pose(g_idx).origin - g_rest
+	t.check("rivet guide slides horizontally along Godot Z (zero vertical Y drift)",
+		absf(g_delta.z) > 0.005 and absf(g_delta.y) < 0.0005 and absf(g_delta.x) < 0.0005,
+		"delta=%s" % str(g_delta))
+	rivet_rig.free()
+	rivet_ev.free()
+	rivet_stub.free()
+
+	# 2. Kest trolley slides forward along Godot -Z (zero vertical drift) & flukes fold radially inward.
+	var kest_stub := StubPlayer.new()
+	root.add_child(kest_stub)
+	kest_stub.setup_class(_class_by_id("demolitions_caster"))
+	var kest_ev := GameEvents.new()
+	var kest_rig := GrappleRig.new()
+	root.add_child(kest_rig)
+	kest_rig.setup_standalone(kest_stub, kest_ev)
+	var tr_idx := kest_rig.mount_skeleton.find_bone("trolley")
+	var tr_rest := kest_rig.mount_skeleton.get_bone_global_pose(tr_idx).origin
+	var f_rest_dirs: Array[Vector3] = []
+	for k in 3:
+		var f_idx := kest_rig.head_skeleton.find_bone("fluke.%d" % k)
+		var phi := float(GrappleRig.KEST_FLUKE_PHIS[k])
+		# Blender radial (cos(phi), 0, sin(phi)) maps in Godot skeleton space to (cos(phi), sin(phi), 0).
+		var tip_local := Vector3(cos(phi), 0.0, sin(phi)) * 0.25
+		f_rest_dirs.append(kest_rig.head_skeleton.get_bone_global_pose(f_idx) * tip_local)
+	kest_ev.line_state_changed.emit("dry_fire", null, kest_stub.pos, "")
+	kest_rig.step(DT)
+	var f_axes: Array[Quaternion] = []
+	var flukes_converged := true
+	for k in 3:
+		var f_idx := kest_rig.head_skeleton.find_bone("fluke.%d" % k)
+		var phi := float(GrappleRig.KEST_FLUKE_PHIS[k])
+		var tip_local := Vector3(cos(phi), 0.0, sin(phi)) * 0.25
+		var p_after: Vector3 = kest_rig.head_skeleton.get_bone_global_pose(f_idx) * tip_local
+		var p_before: Vector3 = f_rest_dirs[k]
+		# Folding -50 deg about tg tilts the radial tip inward/backward along shaft (distinct per fluke).
+		f_axes.append(kest_rig.head_skeleton.get_bone_pose_rotation(f_idx))
+		if Vector2(p_after.x, p_after.y).length() >= Vector2(p_before.x, p_before.y).length():
+			flukes_converged = false
+	var flukes_distinct := not f_axes[0].is_equal_approx(f_axes[1]) and not f_axes[1].is_equal_approx(f_axes[2]) and not f_axes[0].is_equal_approx(f_axes[2])
+	t.check("kest flukes fold radially inward about 3 distinct tangent axes", flukes_converged and flukes_distinct,
+		"converged=%s distinct=%s" % [flukes_converged, flukes_distinct])
+	Augments.attach(kest_stub.kit, kest_stub.pos, anchor, Vector3.BACK, null)
+	kest_ev.grapple_fired.emit(anchor)
+	kest_ev.line_skill_fired.emit("cable_charge", null, anchor, "world")
+	kest_rig.step(0.15)
+	var tr_delta := kest_rig.mount_skeleton.get_bone_global_pose(tr_idx).origin - tr_rest
+	t.check("kest trolley slides forward along Godot -Z (zero vertical drift)",
+		tr_delta.z < -0.02 and absf(tr_delta.y) < 0.0005 and absf(tr_delta.x) < 0.0005,
+		"delta=%s" % str(tr_delta))
+	kest_rig.free()
+	kest_ev.free()
+	kest_stub.free()
+
+	# 3. Tarn talons clamp radially inward (toward -rad) about 3 distinct tangent axes.
+	var tarn_stub := StubPlayer.new()
+	root.add_child(tarn_stub)
+	tarn_stub.setup_class(_class_by_id("tarn"))
+	var tarn_ev := GameEvents.new()
+	var tarn_rig := GrappleRig.new()
+	root.add_child(tarn_rig)
+	tarn_rig.setup_standalone(tarn_stub, tarn_ev)
+	var t_before: Array[Vector3] = []
+	for k in 3:
+		var t_idx := tarn_rig.head_skeleton.find_bone("talon.%d" % k)
+		var tip_local := Vector3(0.0, 0.25, 0.0)
+		t_before.append(tarn_rig.head_skeleton.get_bone_global_pose(t_idx) * tip_local)
+	Augments.attach(tarn_stub.kit, tarn_stub.pos, anchor, Vector3.BACK, null)
+	tarn_ev.grapple_fired.emit(anchor)
+	tarn_rig.step(DT)
+	var t_axes: Array[Quaternion] = []
+	var talons_inward := true
+	for k in 3:
+		var t_idx := tarn_rig.head_skeleton.find_bone("talon.%d" % k)
+		var phi := float(GrappleRig.TARN_TALON_PHIS[k])
+		# Blender radial (cos(phi), 0, sin(phi)) maps in Godot skeleton space to (cos(phi), sin(phi), 0).
+		var rad_godot := Vector3(cos(phi), sin(phi), 0.0)
+		var tip_local := Vector3(0.0, 0.25, 0.0)
+		var p_after: Vector3 = tarn_rig.head_skeleton.get_bone_global_pose(t_idx) * tip_local
+		var p_before: Vector3 = t_before[k]
+		t_axes.append(tarn_rig.head_skeleton.get_bone_pose_rotation(t_idx))
+		# Clamping +35 deg about tg rotates the +Y talon tip strictly inward toward -rad_godot.
+		if (p_after - p_before).dot(rad_godot) >= -0.05:
+			talons_inward = false
+	var talons_distinct := not t_axes[0].is_equal_approx(t_axes[1]) and not t_axes[1].is_equal_approx(t_axes[2]) and not t_axes[0].is_equal_approx(t_axes[2])
+	t.check("tarn talons clamp radially inward about 3 distinct tangent axes", talons_inward and talons_distinct,
+		"inward=%s distinct=%s" % [talons_inward, talons_distinct])
+	tarn_rig.free()
+	tarn_ev.free()
+	tarn_stub.free()
+
+	# 4. Sable lever rotates about Godot Z axis (Blender Y).
+	var sab_stub := StubPlayer.new()
+	root.add_child(sab_stub)
+	sab_stub.setup_class(_class_by_id("pylon_engineer"))
+	var sab_ev := GameEvents.new()
+	var sab_rig := GrappleRig.new()
+	root.add_child(sab_rig)
+	sab_rig.setup_standalone(sab_stub, sab_ev)
+	var lev_idx := sab_rig.mount_skeleton.find_bone("lever")
+	var lev_rest_basis := sab_rig.mount_skeleton.get_bone_global_pose(lev_idx).basis
+	Augments.attach(sab_stub.kit, sab_stub.pos, anchor, Vector3.BACK, null)
+	sab_ev.grapple_fired.emit(anchor)
+	sab_rig.step(DT)
+	var lev_rel := lev_rest_basis.inverse() * sab_rig.mount_skeleton.get_bone_global_pose(lev_idx).basis
+	t.check("sable lever rotates about Godot Z axis (Blender Y)",
+		absf(lev_rel.y.y) > 0.999 and absf(lev_rel.x.z) > 0.25,
+		"lev_rel_y=%s lev_rel_x=%s" % [str(lev_rel.y), str(lev_rel.x)])
+	sab_rig.free()
+	sab_ev.free()
+	sab_stub.free()
+
+	# 4. Cannon cap pops backward off tail along Godot +Z (Blender -Y) and lock rotates about Godot Z axis.
+	var can_stub := StubPlayer.new()
+	root.add_child(can_stub)
+	can_stub.setup_class(_class_by_id("remembered_cannon"))
+	var can_ev := GameEvents.new()
+	var can_rig := GrappleRig.new()
+	root.add_child(can_rig)
+	can_rig.setup_standalone(can_stub, can_ev)
+	var cap_idx := can_rig.head_skeleton.find_bone("cap")
+	var lock_idx := can_rig.mount_skeleton.find_bone("lock")
+	var cap_rest := can_rig.head_skeleton.get_bone_global_pose(cap_idx).origin
+	var lock_rest_basis := can_rig.mount_skeleton.get_bone_global_pose(lock_idx).basis
+	Augments.attach(can_stub.kit, can_stub.pos, anchor, Vector3.BACK, null)
+	can_ev.grapple_fired.emit(anchor)
+	can_rig.step(DT)
+	var lock_rel := lock_rest_basis.inverse() * can_rig.mount_skeleton.get_bone_global_pose(lock_idx).basis
+	# Bone-local Y maps to Godot -Z, so global Z column stays invariant (|dot(z, z)| ~ 1) while X/Y roll.
+	t.check("cannon lock rotates about Godot Z axis (Blender Y)",
+		absf(lock_rel.y.y) > 0.999 and absf(lock_rel.x.z) > 0.35,
+		"lock_rel_y=%s lock_rel_x=%s" % [str(lock_rel.y), str(lock_rel.x)])
+	can_stub.kit.drop_line("let_go")
+	can_ev.grapple_released.emit()
+	can_ev.line_state_changed.emit("let_go", null, anchor, "")
+	can_rig.step(DT)
+	var cap_delta := can_rig.head_skeleton.get_bone_global_pose(cap_idx).origin - cap_rest
+	t.check("cannon cap pops backward off tail along Godot +Z (zero vertical drift)",
+		cap_delta.z > 0.15 and absf(cap_delta.y) < 0.0005 and absf(cap_delta.x) < 0.0005,
+		"delta=%s" % str(cap_delta))
+	can_rig.free()
+	can_ev.free()
+	can_stub.free()
 
 
 func _check_tally_copper_palette_law() -> void:

@@ -130,6 +130,9 @@ func build_from_specs(specs: Array, ground_fn: Callable, cruise_speed := 14.0, c
 func clear_valves() -> void:
 	for v in valves:
 		_drop_hazard(v)
+		var sheet := v.get("sheet") as Node
+		if sheet != null and is_instance_valid(sheet):
+			sheet.queue_free()
 		var holder := v.get("holder") as Node
 		if holder != null and is_instance_valid(holder):
 			holder.queue_free()

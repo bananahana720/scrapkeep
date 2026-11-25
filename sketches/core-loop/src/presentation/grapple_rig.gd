@@ -107,6 +107,12 @@ const AIM_RING_RADIUS := 0.72
 const AIM_LINE_HALF := 0.045
 const LOCK_RING_RADIUS := 0.85
 
+# Radial tangent angles matching tools/blender/grapple_rigs.py (Kest.flukes / Tarn.talons).
+# In every grapple_*.glb armature the root bone carries -90 deg about X, so child bone-local
+# space is Blender space (+X right, +Y forward along Godot -Z, +Z up = Godot +Y).
+const KEST_FLUKE_PHIS := [PI * 0.5, PI * 0.5 + TAU / 3.0, PI * 0.5 + 2.0 * TAU / 3.0]
+const TARN_TALON_PHIS := [deg_to_rad(48.0), deg_to_rad(132.0), deg_to_rad(270.0)]
+
 var ctx
 var player
 var hero_assets
@@ -870,14 +876,14 @@ func _step_actuators(state: Dictionary, _line_active: bool) -> void:
 		"sable":
 			var lever_deg := -18.0 if hooked else 0.0
 			var latch_deg := 55.0 * release_t
-			_pose_bone_rot(mount_skeleton, _mount_rest, "lever", Vector3(0.0, 0.0, -1.0), deg_to_rad(lever_deg))
+			_pose_bone_rot(mount_skeleton, _mount_rest, "lever", Vector3.UP, deg_to_rad(lever_deg))
 			_pose_bone_rot(head_skeleton, _head_rest, "latch", Vector3.RIGHT, deg_to_rad(latch_deg))
 			summary["lever_deg"] = lever_deg
 			summary["latch_deg"] = latch_deg
 		"rivet":
 			var guide_m := 0.09 * sin(drive_angle)
 			var toggle_deg := 90.0 if hooked else 0.0
-			_pose_bone_slide(mount_skeleton, _mount_rest, "guide", Vector3(0.0, 0.0, -guide_m))
+			_pose_bone_slide(mount_skeleton, _mount_rest, "guide", Vector3(0.0, guide_m, 0.0))
 			_pose_bone_rot(head_skeleton, _head_rest, "toggle", Vector3.RIGHT, deg_to_rad(toggle_deg))
 			summary["guide_m"] = guide_m
 			summary["toggle_deg"] = toggle_deg
@@ -885,24 +891,28 @@ func _step_actuators(state: Dictionary, _line_active: bool) -> void:
 			var in_flight := _dry_age >= 0.0
 			var fluke_deg := -50.0 if in_flight else 0.0
 			var trolley_m := 0.24 * skill_t if _skill_pulse_age >= 0.0 else (0.08 if hooked else 0.0)
-			_pose_bone_slide(mount_skeleton, _mount_rest, "trolley", Vector3(0.0, 0.0, -trolley_m))
-			for bone_name in ["fluke.0", "fluke.1", "fluke.2"]:
-				_pose_bone_rot(head_skeleton, _head_rest, bone_name, Vector3.RIGHT, deg_to_rad(fluke_deg))
+			_pose_bone_slide(mount_skeleton, _mount_rest, "trolley", Vector3(0.0, trolley_m, 0.0))
+			for k in KEST_FLUKE_PHIS.size():
+				var phi := float(KEST_FLUKE_PHIS[k])
+				var tg := Vector3(-sin(phi), 0.0, cos(phi))
+				_pose_bone_rot(head_skeleton, _head_rest, "fluke.%d" % k, tg, deg_to_rad(fluke_deg))
 			summary["trolley_m"] = trolley_m
 			summary["fluke_deg"] = fluke_deg
 		"tarn":
 			var pawl_deg := 20.0 if absf(drive_omega) > 0.25 else 0.0
 			var talon_deg := 35.0 if hooked else 0.0
 			_pose_bone_rot(mount_skeleton, _mount_rest, "pawl", Vector3.RIGHT, deg_to_rad(pawl_deg))
-			for bone_name in ["talon.0", "talon.1", "talon.2"]:
-				_pose_bone_rot(head_skeleton, _head_rest, bone_name, Vector3.RIGHT, deg_to_rad(talon_deg))
+			for k in TARN_TALON_PHIS.size():
+				var phi := float(TARN_TALON_PHIS[k])
+				var tg := Vector3(-sin(phi), 0.0, cos(phi))
+				_pose_bone_rot(head_skeleton, _head_rest, "talon.%d" % k, tg, deg_to_rad(talon_deg))
 			summary["pawl_deg"] = pawl_deg
 			summary["talon_deg"] = talon_deg
 		"cannon":
 			var lock_deg := -25.0 if hooked else 0.0
 			var cap_m := 0.25 * maxf(release_t, 1.0 - skill_t if _skill_pulse_age >= 0.0 else 0.0)
-			_pose_bone_rot(mount_skeleton, _mount_rest, "lock", Vector3(0.0, 0.0, -1.0), deg_to_rad(lock_deg))
-			_pose_bone_slide(head_skeleton, _head_rest, "cap", Vector3(0.0, 0.0, cap_m))
+			_pose_bone_rot(mount_skeleton, _mount_rest, "lock", Vector3.UP, deg_to_rad(lock_deg))
+			_pose_bone_slide(head_skeleton, _head_rest, "cap", Vector3(0.0, -cap_m, 0.0))
 			summary["lock_deg"] = lock_deg
 			summary["cap_m"] = cap_m
 		"tally":

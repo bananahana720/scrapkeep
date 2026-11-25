@@ -92,6 +92,7 @@ func _run() -> void:
 	_check_player_hook_yank_and_chain_pivot()
 	_check_tadr008_warn_floor_and_double_edged_wash()
 	_check_park_flood_tla_never_holds_under_parked_ball()
+	await _check_clear_valves_frees_sheets_and_hazards()
 	_check_dam_and_flume_specs_and_reset()
 	quit(t.verdict())
 
@@ -267,6 +268,22 @@ func _check_park_flood_tla_never_holds_under_parked_ball() -> void:
 		if String(v["state"]) == "ready":
 			break
 	t.eq("valve recharges cleanly to ready", String(v["state"]), "ready")
+	sv.free()
+
+
+func _check_clear_valves_frees_sheets_and_hazards() -> void:
+	var sv := SluiceValves.new()
+	root.add_child(sv)
+	sv.build_from_specs([_valve_spec("leak_a"), _valve_spec("leak_b")], Callable(self, "_flat_ground"), CRUISE, null)
+	sv.yank("leak_a")
+	for _i in 70:
+		sv.step(DT, Vector3(0.0, 1.0, 14.0), Vector3.ZERO, null, false)
+		if String(sv.valve_of("leak_a")["state"]) == "surging":
+			break
+	t.check("mid-surge has holder, sheet and hazard children", sv.get_child_count() >= 4, "children=%d" % sv.get_child_count())
+	sv.clear_valves()
+	await process_frame
+	t.eq("clear_valves frees every holder, FloodWashSheet, and Hazard (zero leaked children)", sv.get_child_count(), 0)
 	sv.free()
 
 
