@@ -497,3 +497,40 @@ const CLOAK_HOLD_MAX := 6.0
 const SENTRY_REACH := 30.0
 const SENTRY_RATE := 0.6
 const OVERDRIVE_MAX := 6.0
+
+# --- W47-H1 Hero Baseline Constants (Sable, Rivet, Kest) ------------------------------
+# Sable: Kinetic Orbit Pylon (zero camping — automatic mint arcs only while moving >= cruise)
+# and Vault-Kick instant max-charge window on next arc_caster bolt.
+const KINETIC_PYLON_LIFE_S := 10.0
+const KINETIC_PYLON_ORBIT_RADIUS := 16.0
+const KINETIC_PYLON_VAULT_RADIUS := 6.0
+const KINETIC_PYLON_OVERCHARGE_S := 4.0
+const KINETIC_PYLON_ORBIT_RAD := 0.75
+const KINETIC_PYLON_ARC_RADIUS := 18.0
+const KINETIC_PYLON_ARC_TARGETS := 2
+const KINETIC_PYLON_ARC_DAMAGE := 12.0
+const KINETIC_PYLON_ARC_CADENCE := 0.55
+const KINETIC_PYLON_FAST_CADENCE := 0.45
+const KINETIC_PYLON_BLAZING_CADENCE := 0.35
+const VAULT_INSTANT_CHARGE_S := 4.0
+
+# Rivet: Southwest Ricochet 6th hot round (rock/armor -> nearest enemy/weak point, once)
+# and existing map rail/zip grind (+20% top speed while firing twin revolvers; strictly G0).
+const RIVET_RICOCHET_REACH := 32.0
+const RIVET_RICOCHET_DAMAGE_MULT := 1.0
+const RIVET_RICOCHET_SPEED := 220.0
+const RIVET_RAIL_SPEED_MULT := 1.20
+const RIVET_RAIL_SNAP_RADIUS := 5.5
+
+# Kest: Air-Draw Glide Hang (0.45x gravity for 1.2 s), spire vault off cable_charge,
+# baseline high wall-kick boost, and direct-sightline amber fuse-spark trace (zero wall-hack).
+const KEST_AIR_DRAW_GRAVITY := 0.45
+const KEST_AIR_DRAW_MAX_S := 1.2
+const KEST_SPIRE_VAULT_UP := 13.5
+const KEST_WALL_KICK_MULT := 1.45
+const KEST_WALL_KICK_UP_MULT := 1.35
+const KEST_WALL_KICK_CAP := 36.0
+const KEST_WALL_KICK_LOCK_S := 1.2
+const KEST_FUSE_TRACE_RANGE := 42.0
+const KEST_FUSE_TRACE_HOLD_S := 3.0
+const KEST_FUSE_TRACE_RAYS := 9

@@ -22,6 +22,7 @@ const ChainState := preload("res://src/combat/chain.gd")
 const Dunk := preload("res://src/combat/dunk.gd")
 const Redline := preload("res://src/combat/redline.gd")
 const CombatRules := preload("res://src/combat/combat.gd")
+const Weapons := preload("res://src/combat/weapons.gd")
 const ExceptionHold := preload("res://src/movement/exception_hold.gd")
 
 # Rigid physics only (TADR-006; entry 6 kept it for its arcade weight). The ball owns
@@ -205,6 +206,14 @@ var exceptions
 # The stage's heft destructibles and the Callable that answers the run's heft class (bind_destructibles).
 var _destructibles: Node = null
 var _destructibles_class := Callable()
+# W47-H1 Kest baseline Air-Draw Glide Hang (0.45x gravity for 1.2 s while holding sticky_charge
+# airborne), spire vault off cable_charge latches, and high vertical wall-kick boost.
+var air_draw_active := false
+var air_draw_left := Weapons.KEST_AIR_DRAW_MAX_S
+var _kest_wall_kick_faces := {}
+var _kest_wall_aim := {}
+var last_kest_wall_kick := {}
+var last_spire_vault := {}
 
 
 func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
@@ -404,6 +413,12 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	_line_target = null
 	_line_hold = 0.0
 	_line_standing = false
+	air_draw_active = false
+	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
+	_kest_wall_kick_faces.clear()
+	_kest_wall_aim = {}
+	last_kest_wall_kick = {}
+	last_spire_vault = {}
 	_rigid.external_accel = Vector3.ZERO
 	_rigid.teleport(point, velocity)
 
@@ -539,9 +554,32 @@ func in_set_piece() -> bool:
 # jump, boost and the smash; only the class's own movement augments are on.
 func fit_class(def: Resource) -> void:
 	class_def = def
+	air_draw_active = false
+	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
+	_kest_wall_kick_faces.clear()
+	_kest_wall_aim = {}
 	tree.reset(def.id if def != null else "")
 	abilities.fit(class_def)
 	_refit()
+
+
+# W47-H1 Kest: refreshes her 1.2 s Air-Draw Glide Hang budget.
+func refresh_air_draw() -> void:
+	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
+
+
+# W47-H1 Kest: clean upward vault off a cable_charge spire latch into Air-Draw Glide Hang
+# without cutting her standing grapple line or losing horizontal speed.
+func apply_spire_vault(anchor: Vector3) -> bool:
+	if class_def == null or class_def.id != "demolitions_caster" or _frozen:
+		return false
+	var v: Vector3 = state.velocity
+	v.y = maxf(v.y, Weapons.KEST_SPIRE_VAULT_UP)
+	_rigid.set_velocity_now(v)
+	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
+	state.air_actions = maxi(state.air_actions, 1)
+	last_spire_vault = {"anchor": anchor, "vy": v.y}
+	return true
 
 
 # A pick lands on the live kit: its slot ops, then the movement kit and smash flavour
@@ -754,6 +792,8 @@ func _physics_process(delta: float) -> void:
 	_tick_speed_bank(delta)
 	if intent.jump_pressed:
 		state.jump_buffer = Tuning.JUMP_BUFFER
+	_step_kest_wall_kick(delta)
+	_step_kest_air_draw(delta)
 	_rigid.drive_basis = drive_basis
 	state.refresh_tier(tuning.f("cruise"))
 	if _was_hooked and not kit.hooked:
@@ -1477,12 +1517,16 @@ func _update_augment_visuals(at: Vector3) -> void:
 	if kit.mounted:
 		_pylon.global_transform = Transform3D(_align_up(kit.mount_normal), kit.mount_face)
 
-	_wings.visible = kit.gliding
-	if kit.gliding:
+	_wings.visible = kit.gliding or air_draw_active
+	if _wings.visible:
 		_wings.global_position = at
 		var heading := Vector3(state.velocity.x, 0.0, state.velocity.z)
 		if heading.length() > 0.5:
 			_wings.global_basis = Basis.looking_at(heading.normalized(), Vector3.UP)
+		else:
+			var flat_aim := Vector3(-drive_basis.z.x, 0.0, -drive_basis.z.z)
+			if flat_aim.length() > 0.01:
+				_wings.global_basis = Basis.looking_at(flat_aim.normalized(), Vector3.UP)
 
 
 # The strength the bus carries for a slam that lands at `speed` m/s: 1.0 at 30 m/s, never
@@ -1664,8 +1708,9 @@ func _update_aim_cones(at: Vector3) -> void:
 		indicator.set_shape("bank", bank_geometry())
 	else:
 		indicator.clear("bank")
-	if not kit.vault_aim.is_empty():
-		indicator.set_shape("vault", _aim_cone(at, kit.vault_aim["dir"], AIM_CONE_LENGTH))
+	var vault_aim: Dictionary = kit.vault_aim if not kit.vault_aim.is_empty() else _kest_wall_aim
+	if not vault_aim.is_empty():
+		indicator.set_shape("vault", _aim_cone(at, vault_aim["dir"], AIM_CONE_LENGTH))
 	else:
 		indicator.clear("vault")
 	if kit.mounted and not kit.slingshot_aim.is_empty():
@@ -1862,3 +1907,86 @@ func _rebound(enemy: Node3D, normal: Vector3, before: Vector3, planar: float, aw
 		_bowl_if_killed(enemy, away, Contact.ram_knock(Augments.RAM_KNOCK, planar, heft(), _landing_mult))
 		redline.spend(RAM, ball_position(), _landing_force(RAM, planar))
 	events.enemy_rebounded.emit(enemy, out.length())
+
+
+# W47-H1 Kest Air-Draw Glide Hang: holding sticky_charge while airborne softens gravity
+# to 0.45x for up to 1.2 s so Kest can line up clean mid-air arc shots off walls and spires.
+func _step_kest_air_draw(delta: float) -> void:
+	if class_def == null or class_def.id != "demolitions_caster" or _frozen:
+		air_draw_active = false
+		return
+	if state.grounded:
+		air_draw_active = false
+		air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
+		return
+	if kit.slamming or Augments.holding(kit) or in_set_piece():
+		air_draw_active = false
+		return
+	var wg = abilities.gauge(AbilityState.WEAPON)
+	var drawing: bool = (wg != null and wg.charging) or (abilities.selected == AbilityState.WEAPON and intent.fire_held)
+	if drawing and air_draw_left > 0.0:
+		air_draw_active = true
+		air_draw_left = maxf(0.0, air_draw_left - delta)
+		add_external_accel(Vector3.UP * tuning.f("gravity") * (1.0 - Weapons.KEST_AIR_DRAW_GRAVITY))
+	else:
+		air_draw_active = false
+
+
+# W47-H1 Kest baseline high wall-kick boost: airborne beside a steep canyon face, Space kicks
+# cleanly upward and off the wall with extra vertical lift and refreshes Air-Draw Glide Hang.
+func _step_kest_wall_kick(delta: float) -> void:
+	for k in _kest_wall_kick_faces.keys():
+		_kest_wall_kick_faces[k] = float(_kest_wall_kick_faces[k]) - delta
+		if float(_kest_wall_kick_faces[k]) <= 0.0:
+			_kest_wall_kick_faces.erase(k)
+	_kest_wall_aim = {}
+	if class_def == null or class_def.id != "demolitions_caster" or _frozen or state.grounded \
+			or kit.hooked or Augments.holding(kit) or in_set_piece() or not is_inside_tree():
+		return
+	var face := _kest_steep_face()
+	if face.is_empty():
+		return
+	var key := Augments.face_key(face["point"], face["normal"])
+	if float(_kest_wall_kick_faces.get(key, 0.0)) > 0.0:
+		return
+	var n: Vector3 = (face["normal"] as Vector3).normalized()
+	var look: Vector3 = -drive_basis.z
+	var along := look - n * look.dot(n)
+	var dir := (Vector3.UP * 0.78 + n * 0.48 + (along.normalized() * 0.35 if along.length_squared() > 0.01 else Vector3.ZERO)).normalized()
+	var jump_spd: float = tuning.f("jump_speed")
+	var incoming: float = state.velocity.length()
+	var speed := minf(Weapons.KEST_WALL_KICK_CAP, maxf(jump_spd * Weapons.KEST_WALL_KICK_MULT, incoming * 1.15))
+	var launch := dir * speed
+	launch.y = maxf(launch.y, jump_spd * Weapons.KEST_WALL_KICK_UP_MULT)
+	_kest_wall_aim = {"point": face["point"], "normal": n, "dir": launch.normalized(), "speed": launch.length()}
+	if state.jump_buffer <= 0.0 and not intent.jump_pressed:
+		return
+	state.jump_buffer = 0.0
+	state.coyote = 0.0
+	intent.jump_pressed = false
+	_kest_wall_kick_faces[key] = Weapons.KEST_WALL_KICK_LOCK_S
+	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
+	_rigid.set_velocity_now(launch)
+	last_kest_wall_kick = {"point": face["point"], "normal": n, "velocity": launch}
+	_on_kit_fact("vault_kicked", [face["point"], launch.length()])
+	events.jumped.emit(true)
+
+
+func _kest_steep_face() -> Dictionary:
+	var space: PhysicsDirectSpaceState3D = _rigid.get_world_3d().direct_space_state
+	var origin := ball_position()
+	var reach := Tuning.RADIUS + Augments.FACE_REACH
+	var best := {}
+	var best_tilt := Augments.FACE_MAX_TILT
+	for i in Augments.FACE_RAYS:
+		var ang := TAU * float(i) / float(Augments.FACE_RAYS)
+		var dir := Vector3(cos(ang), 0.0, sin(ang))
+		var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(origin, origin + dir * reach, Augments.WORLD_MASK))
+		if hit.is_empty():
+			continue
+		var n: Vector3 = (hit["normal"] as Vector3).normalized()
+		var tilt := absf(n.y)
+		if tilt < best_tilt:
+			best_tilt = tilt
+			best = {"point": hit["position"], "normal": n}
+	return best

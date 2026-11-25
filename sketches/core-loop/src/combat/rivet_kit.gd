@@ -17,6 +17,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
 const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
+const ChainState := preload("res://src/combat/chain.gd")
 
 const SET_PIECES := ["foundry_cutter", "prism_cutter", "juggernaut_drive"]
 const BEAM_PIECES := ["foundry_cutter", "prism_cutter"]
@@ -173,6 +174,14 @@ var ctx
 var pulses: Array = []
 # The haul in progress: {ride, anchor, seconds}, or {}.
 var haul := {}
+# W47-H1 Rivet existing map rail/zip grind (strictly existing map cables, pipes, canal lips,
+# and trestle rails — strictly G0 single ChainState, zero temporary two-anchor standing rail-line).
+var rail_ride := {}
+var last_rail_ride := {}
+var _rail_regrab_cd := 0.0
+var _cached_stage := -999
+var _cached_rails: Array = []
+var _extra_rails: Array = []
 # What the last line cast did, for the audio row: {on, delay or seconds}.
 var last_cue := {}
 var last_punch := {}
@@ -345,6 +354,12 @@ func on_world(anchor: Vector3, _fraction: float, _mult: float) -> void:
 	var ball: Vector3 = player.ball_position()
 	var stop := haul_stop(anchor)
 	var d := stop - ball
+	var rail_hit := RideRail.find_nearest_rail(map_rails(), anchor, d, Weapons.RIVET_RAIL_SNAP_RADIUS)
+	if not rail_hit.is_empty():
+		combat.weapon_driver.top_up_cylinder()
+		_start_rail_ride(rail_hit, "haul")
+		last_cue = {"on": "world", "seconds": float(rail_ride["ride"].flight)}
+		return
 	if d.length() < 0.05:
 		player.kit.drop_line("let_go")
 		return
@@ -359,6 +374,7 @@ func on_world(anchor: Vector3, _fraction: float, _mult: float) -> void:
 	ride.flight = d.length() / speed + RideRail.LET_GO
 	ride.release_speed = speed
 	ride.heading = _flat(d).normalized() if _flat(d).length() > 0.01 else Vector3.FORWARD
+	ride.allow_fire = true
 	ride.active = true
 	haul = {"ride": ride, "anchor": anchor, "seconds": ride.flight}
 	last_cue = {"on": "world", "seconds": ride.flight}
@@ -366,6 +382,96 @@ func on_world(anchor: Vector3, _fraction: float, _mult: float) -> void:
 	player.grant_immunity(ride.flight + Weapons.LINE_HAUL_GRACE)
 	player.body().set_velocity_now(ride.velocity)
 	player.indicator.set_shape("rivet_haul", player.yours({"kind": "line", "from": ball, "to": stop, "full_to": stop, "width": 1.0, "fill": 1.0}))
+
+
+# Existing map zip cables, pipes, canal lips, and trestle rails for this stage (strictly G0:
+# Rivet never spawns a temporary two-anchor standing rail-line).
+func map_rails() -> Array:
+	var stage_idx := int(ctx.flow.stage()) if ctx != null and ctx.flow != null and ctx.flow.has_method("stage") else -1
+	if stage_idx != _cached_stage:
+		_cached_stage = stage_idx
+		_cached_rails.clear()
+		if ctx != null and ctx.terrain != null and ctx.terrain.has_method("map"):
+			_cached_rails = RideRail.extract_map_rails(ctx.terrain.map())
+	if _extra_rails.is_empty():
+		return _cached_rails
+	return _cached_rails + _extra_rails
+
+
+func set_extra_rails(rails: Array) -> void:
+	_extra_rails = rails.duplicate(true)
+
+
+func _start_rail_ride(hit: Dictionary, via: String) -> void:
+	var player = ctx.player
+	var ball: Vector3 = player.ball_position()
+	var planar: float = player.planar_velocity().length()
+	var sprint_top := float(player.tuning.f("cruise")) * Augments.SPRINT_CRUISE
+	var top_base := maxf(Weapons.LINE_HAUL_SPEED, sprint_top) if via == "haul" else sprint_top
+	var ride = RideRail.rivet_grind(hit, ball, planar, top_base)
+	rail_ride = {"ride": ride, "hit": hit, "via": via, "spark_t": 0.0}
+	last_rail_ride = {
+		"id": String(hit.get("id", "")),
+		"kind": String(hit.get("kind", "rail")),
+		"via": via,
+		"speed": float(ride.release_speed),
+		"allow_fire": bool(ride.allow_fire),
+		"chain_cap": ChainState.MAX_CHAINS_PER_PILOT,
+	}
+	player.grant_immunity(ride.flight + Weapons.LINE_HAUL_GRACE)
+	player.body().set_velocity_now(ride.velocity)
+	player.indicator.set_shape("rivet_rail", player.yours({
+		"kind": "line",
+		"from": ride.origin,
+		"to": ride.target,
+		"full_to": ride.target,
+		"width": 1.0,
+		"fill": 1.0,
+	}))
+	combat.effects.spark(hit["closest"], Palette.AMBER)
+	ctx.events.emit_signal("world_fact", "ride_grapple_line", hit["closest"])
+
+
+func _step_rail_grind(delta: float) -> void:
+	_rail_regrab_cd = maxf(0.0, _rail_regrab_cd - delta)
+	var player = ctx.player
+	if not rail_ride.is_empty():
+		if not _rivet() or player.in_set_piece() or player.intent.jump_pressed \
+				or (String(rail_ride.get("via", "")) == "sprint" and not player.kit.sprinting):
+			_end_rail_ride(false)
+			return
+		var ride = rail_ride["ride"]
+		var v = ride.step(delta)
+		if v == null:
+			_end_rail_ride(true)
+			return
+		player.body().set_velocity_now(v)
+		rail_ride["spark_t"] = float(rail_ride.get("spark_t", 0.0)) + delta
+		if float(rail_ride["spark_t"]) >= 0.08:
+			rail_ride["spark_t"] = 0.0
+			combat.effects.spark(player.ball_position() - Vector3.UP * 0.65, Palette.AMBER)
+		return
+	if not _rivet() or not player.kit.sprinting or not haul.is_empty() or player.in_set_piece() or _rail_regrab_cd > 0.0:
+		return
+	var ball: Vector3 = player.ball_position()
+	var vel: Vector3 = player.planar_velocity()
+	var heading := vel.normalized() if vel.length() > 0.5 else _flat(combat._flat_aim()).normalized()
+	var hit := RideRail.find_nearest_rail(map_rails(), ball, heading, Weapons.RIVET_RAIL_SNAP_RADIUS)
+	if not hit.is_empty():
+		_start_rail_ride(hit, "sprint")
+
+
+func _end_rail_ride(arrived: bool) -> void:
+	if not rail_ride.is_empty():
+		var ride = rail_ride["ride"]
+		if arrived:
+			ctx.player.body().set_velocity_now(ride.velocity)
+		if String(rail_ride.get("via", "")) == "haul" and ctx.player.kit.hooked:
+			ctx.player.kit.drop_line("let_go")
+	rail_ride = {}
+	_rail_regrab_cd = 0.45
+	if ctx != null and ctx.player != null and ctx.player.indicator != null:
+		ctx.player.indicator.clear("rivet_rail")
 
 
 func _step_pulses(delta: float) -> void:
@@ -1744,6 +1850,7 @@ func step(delta: float) -> void:
 	_warm_terrain()
 	_step_pulses(delta)
 	_step_haul(delta)
+	_step_rail_grind(delta)
 	_step_preview()
 	_step_piece(delta)
 	_step_late()
@@ -1830,10 +1937,16 @@ func _clear() -> void:
 	pulses.clear()
 	if not haul.is_empty():
 		_end_haul(false)
+	if not rail_ride.is_empty():
+		_end_rail_ride(false)
+	_rail_regrab_cd = 0.0
+	_cached_stage = -999
+	_cached_rails.clear()
+	_extra_rails.clear()
 	last_punch = {}
 	_clear_piece()
 	_scar_left = 0.0
 	if ctx != null:
-		for layer in ["rivet_line", "rivet_arrival", "rivet_haul", "rivet_scar", "rivet_breach", "rivet_wave", "rivet_ram"]:
+		for layer in ["rivet_line", "rivet_arrival", "rivet_haul", "rivet_rail", "rivet_scar", "rivet_breach", "rivet_wave", "rivet_ram"]:
 			ctx.player.indicator.clear(layer)
 			volume_indicator.clear(layer)
