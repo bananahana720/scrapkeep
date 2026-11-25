@@ -251,6 +251,30 @@ func _p3_work_order_and_license_lifecycle() -> void:
 	_t.check("P3 Patch issuer reads Unsigned before wo_patch_2",
 		WorkOrders.issuer_label("wo_patch_1", reloaded) == "Unsigned", WorkOrders.issuer_label("wo_patch_1", reloaded))
 
+	# Repeatable rotating Shift Order across two consecutive runs:
+	# same-run duplicate pays once; second run pays again and advances Maker License to Tier 2 -> Tier 3.
+	_t.check("P3 pin repeatable Shift Order so_w1_moss_gamble for run 1", WorkOrders.pin(store, "so_w1_moss_gamble"), "")
+	bus.run_started.emit(SABLE)
+	bus.trade_taken.emit("trade_risk", Vector3.ZERO)
+	bus.trade_taken.emit("trade_risk", Vector3.ZERO) # same-run duplicate MUST NOT double-pay
+	bus.run_ended.emit(true)
+	var shift_completions_r1 := wo_events.filter(func(e): return e[0] == "so_w1_moss_gamble").size()
+	_t.eq("P3 shift order pays once inside run 1", shift_completions_r1, 1)
+	_t.eq("P3 shift stat is 1 after run 1", int(store.stat("license.shift.moss")), 1)
+	_t.check("P3 shift order is NOT permanently settled in profile.settled", not store.is_settled("order:so_w1_moss_gamble"), "")
+	_t.eq("P3 Moss Maker License advances to Tier 2 (Yard Ticket)", WorkOrders.license_tier("moss", store), 2)
+	_t.check("P3 license:moss:2 settled", store.is_settled("license:moss:2"), "")
+
+	_t.check("P3 re-pin so_w1_moss_gamble for run 2", WorkOrders.pin(store, "so_w1_moss_gamble"), "")
+	bus.run_started.emit(SABLE)
+	bus.trade_taken.emit("trade_risk", Vector3.ZERO)
+	bus.run_ended.emit(true)
+	var shift_completions_r2 := wo_events.filter(func(e): return e[0] == "so_w1_moss_gamble").size()
+	_t.eq("P3 shift order repeats and emits again on run 2", shift_completions_r2, 2)
+	_t.eq("P3 license.shift.moss reaches 2 across consecutive runs", int(store.stat("license.shift.moss")), 2)
+	_t.eq("P3 Moss Maker License reaches Tier 3 (Full License)", WorkOrders.license_tier("moss", store), 3)
+	_t.check("P3 license:moss:3 settled", store.is_settled("license:moss:3"), "")
+
 	listener.free()
 	bus.free()
 
@@ -293,6 +317,18 @@ func _p4_alt_loadouts_and_override_codes() -> void:
 	_t.check("P4 toggling code_glass_rail again turns it OFF",
 		MetaOptions.toggle_override(reload_ov, "code_glass_rail") and MetaOptions.active_overrides(reload_ov) == ["code_double_shift"],
 		str(MetaOptions.active_overrides(reload_ov)))
+
+	# Sitting-mode read parity: locked overrides/alt loadouts toggled with sitting=true read back with sitting=true.
+	var sit_store := _fresh()
+	_t.check("P4 sitting toggle_override allows locked code", MetaOptions.toggle_override(sit_store, "code_glass_rail", true), "")
+	_t.eq("P4 sitting active_overrides reads back toggled code", MetaOptions.active_overrides(sit_store, false, true), ["code_glass_rail"])
+	_t.eq("P4 sitting override_effects reads back toggled code", MetaOptions.override_effects(sit_store, false, true).size(), 1)
+	_t.eq("P4 non-sitting active_overrides still filters locked code", MetaOptions.active_overrides(sit_store, false, false), [])
+	_t.check("P4 sitting equip_alt_loadout allows locked alt", MetaOptions.equip_alt_loadout(sit_store, "alt_sable_crater", true), "")
+	_t.eq("P4 sitting equipped_alt_loadouts reads back equipped alt",
+		MetaOptions.equipped_alt_loadouts(sit_store, SABLE, false, true), {"smash": "alt_sable_crater"})
+	_t.eq("P4 non-sitting equipped_alt_loadouts still filters locked alt",
+		MetaOptions.equipped_alt_loadouts(sit_store, SABLE, false, false), {})
 
 
 # Predicate 5: Bot Invariance & Fresh Profile Purity.

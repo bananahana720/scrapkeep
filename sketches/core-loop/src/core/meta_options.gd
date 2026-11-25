@@ -307,7 +307,7 @@ static func override_open(id: String, profile, sitting := false) -> bool:
 	return _unlock_met(OVERRIDE_CODES[id]["unlock"], profile, sitting)
 
 
-static func active_overrides(profile, bot_driven := false) -> Array[String]:
+static func active_overrides(profile, bot_driven := false, sitting := false) -> Array[String]:
 	var out: Array[String] = []
 	if bot_driven or profile == null:
 		return out
@@ -318,7 +318,7 @@ static func active_overrides(profile, bot_driven := false) -> Array[String]:
 	if not (raw is Array):
 		return out
 	for id in OVERRIDE_CODES:
-		if raw.has(id) and override_open(id, profile):
+		if raw.has(id) and override_open(id, profile, sitting):
 			out.append(id)
 	return out
 
@@ -343,9 +343,9 @@ static func toggle_override(profile, id: String, sitting := false) -> bool:
 	return true
 
 
-static func override_effects(profile, bot_driven := false) -> Array[Dictionary]:
+static func override_effects(profile, bot_driven := false, sitting := false) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	for id in active_overrides(profile, bot_driven):
+	for id in active_overrides(profile, bot_driven, sitting):
 		var r: Dictionary = OVERRIDE_CODES[id]
 		out.append({"id": id, "upside": String(r["upside"]), "downside": String(r["downside"])})
 	return out
@@ -402,7 +402,7 @@ static func alt_loadout_open(id: String, profile, sitting := false) -> bool:
 	return _unlock_met(ALT_LOADOUTS[id]["unlock"], profile, sitting)
 
 
-static func equipped_alt_loadouts(profile, pilot_id: String, bot_driven := false) -> Dictionary:
+static func equipped_alt_loadouts(profile, pilot_id: String, bot_driven := false, sitting := false) -> Dictionary:
 	if bot_driven or profile == null or pilot_id == "":
 		return {}
 	var all_raw = _camp_get(profile, CAMP_ALT_LOADOUTS_KEY, {})
@@ -417,7 +417,7 @@ static func equipped_alt_loadouts(profile, pilot_id: String, bot_driven := false
 		if alt_id == "" or not ALT_LOADOUTS.has(alt_id):
 			continue
 		var r: Dictionary = ALT_LOADOUTS[alt_id]
-		if String(r["pilot"]) == pilot_id and String(r["slot"]) == String(slot) and alt_loadout_open(alt_id, profile):
+		if String(r["pilot"]) == pilot_id and String(r["slot"]) == String(slot) and alt_loadout_open(alt_id, profile, sitting):
 			out[String(slot)] = alt_id
 	return out
 

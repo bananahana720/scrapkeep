@@ -49,6 +49,7 @@ var _active_rows := {}
 var _codex
 var _board_before: Array = []
 var _wo_tracker := {}
+var _wo_shift_paid := {}
 var _story_chapter_hook := Callable()
 
 
@@ -64,6 +65,7 @@ func setup(events, run, profile, now := Callable(), codex = null) -> void:
 	_now = now if now.is_valid() else Callable(Time, "get_unix_time_from_system")
 	_board_before = ShiftBoard.stamped_ids(profile)
 	_wo_tracker = {}
+	_wo_shift_paid = {}
 	_active_rows = Achievements.all_rows() if rows == Achievements.ROWS else rows
 	_rows_on.clear()
 	for id in _active_rows:
@@ -397,6 +399,10 @@ func _fact(signal_name: String, names: Array, values: Array) -> void:
 		_won = false
 		_board_before = ShiftBoard.stamped_ids(_profile)
 		board_line = ""
+		_wo_shift_paid.clear()
+		if _run != null:
+			for sid in WorkOrders.SHIFT_ORDERS:
+				_run.settled.erase(WorkOrders.SETTLE_ORDER_PREFIX + String(sid))
 		_wo_tracker = WorkOrders.begin_run(_run, _profile, _is_bot_driven())
 	elif signal_name == "run_ended":
 		_won = bool(fact.get("won", false))
@@ -457,11 +463,19 @@ func _complete_work_order_now(order_id: String) -> Dictionary:
 	if row.is_empty():
 		return {}
 	var settle_key := WorkOrders.SETTLE_ORDER_PREFIX + order_id
-	if _is_settled(settle_key):
-		return {}
+	var is_shift := String(row.get("track", "")) == "shift"
 	var maker := String(row.get("maker", ""))
 	var tier_before := WorkOrders.license_tier(maker, _profile)
-	settle(settle_key, false)
+	if is_shift:
+		if _wo_shift_paid.has(order_id) or (_run != null and _run.settled.has(settle_key)):
+			return {}
+		_wo_shift_paid[order_id] = true
+		if _run != null and not _run.settled.has(settle_key):
+			_run.settled.append(settle_key)
+	else:
+		if _is_settled(settle_key):
+			return {}
+		settle(settle_key, false)
 	var pays: Dictionary = row.get("pays", {})
 	for kind in pays:
 		var target := String(pays[kind])
@@ -470,7 +484,7 @@ func _complete_work_order_now(order_id: String) -> Dictionary:
 				_profile.open_option(target)
 			"tune":
 				_profile.hear_tune(target)
-	if String(row.get("track", "")) == "shift" and maker != "":
+	if is_shift and maker != "":
 		_profile.add_stat(WorkOrders.LICENSE_SHIFT_STAT_PREFIX + maker, 1.0)
 	var tier_after := WorkOrders.license_tier(maker, _profile)
 	var new_tiers: Array[int] = []

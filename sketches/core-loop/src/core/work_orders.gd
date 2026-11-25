@@ -43,8 +43,8 @@ const CREW_ORDERS := {
 		"name": "First Docket", "text": "Break a Warden and clear a Spillway stage.",
 		"track": "crew", "issuer": "moss", "maker": "moss", "world": 1,
 		"objective": {"all": [
-			{"on": "beacon_unsealed", "count": 1},
-			{"on": "stage_cleared", "count": 1},
+			{"on": "beacon_unsealed", "count": 1, "need": {"world": 1}},
+			{"on": "stage_cleared", "count": 1, "need": {"world": 1}},
 		]},
 		"pays": {"item": "momentum_thief"},
 	},
@@ -217,7 +217,7 @@ const CREW_ORDERS := {
 	"wo_cannon_3": {
 		"name": "Hard Proof", "text": "Win a hard run flying the Cannon.",
 		"track": "crew", "issuer": "remembered_cannon", "maker": "mind_glass", "world": 3,
-		"pilot": "remembered_cannon", "requires": ["wo_cannon_2"],
+		"pilot": "remembered_cannon", "min_tier": 1, "requires": ["wo_cannon_2"],
 		"objective": {"on": "run_ended", "where": {"won": true}, "count": 1, "need": {"pilot": "remembered_cannon", "min_tier": 1}},
 		"pays": {"tune": "secret-highdraft-rain"},
 	},
