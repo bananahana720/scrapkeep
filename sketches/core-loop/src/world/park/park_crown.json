@@ -4,7 +4,17 @@
  "size_m": 1600,
  "time_of_day": "dusk",
  "spawn": {"at": [8, -720], "heading_deg": 0},
+ "atlas": {"origin": [0, 1600], "heading_deg": 0},
+ "exit": {"kind": "launch", "speed_cruise": 1.0, "opens": "warden_broken"},
+ "arrives": {"kind": "land", "speed_cruise": 1.0, "from": "islands gate"},
  "play_rect": [-600, -780, 1200, 1520],
+ "approach": {"to": "mind_sky_deck", "smoke": [0, 1400], "far_card": {"at": [0, 1180], "to": "mind_sky_deck", "size": [380, 150], "yaw_deg": 0}},
+ "district_rows": [
+  {"id": "bajada_flats", "name": "Bajada Storm Flats", "rect": [-600, -780, 1200, 500], "grade": "crown_bajada"},
+  {"id": "hoodoo_lightning", "name": "Hoodoo Lightning Field", "rect": [-600, -280, 1200, 520], "grade": "crown_hoodoos"},
+  {"id": "spire_forecourt", "name": "Crown Spire Forecourt", "rect": [-600, 240, 1200, 500], "grade": "crown_spire"}
+ ],
+ "cable_rows": [],
  "landmark": {"id": "crown_spire", "kind": "spire", "at": [0, 470], "size": [50, 330, 50], "yaw_deg": 0, "recipe": "landmark_spire", "budget": "hero_landmark", "sight_top": [0, 330, 470], "sight_share": 0.85, "beacon": [0, 470], "reach_m": 120, "warden": {"family": "mind", "mounting": "spires", "harpoon_anchor": true, "anchor": [0, 18, 515], "path": [[0, 18, 515], [39, 18, 447.5], [-39, 18, 447.5]], "bowl_floor": -12, "hardpoints": 3}, "bay_dock": {"at": [0, 600], "facing_deg": 0}, "gate_slots": [{"at": [-20, 670], "facing_deg": 0}, {"at": [0, 670], "facing_deg": 0}, {"at": [20, 670], "facing_deg": 0}], "light": "ancient_beam", "music": "landmark_hum", "fragment": "ancient_crown_count"},
  "waymarks": ["drop_in", "turnstone", "split_spire", "landmark"],
  "routes": [
@@ -330,7 +340,11 @@
   {"id": "hoodoo_chimney", "kind": "thermal", "site": "hoodoo_forest", "recipe": "", "at": [-60, -140], "radius": 6.0, "height": 70.0},
   {"id": "signal_updraft", "kind": "thermal", "site": "signal_butte", "recipe": "", "at": [-366, 300], "radius": 6.0, "height": 200.0},
   {"id": "storm_kite_line", "kind": "cable", "site": "signal_butte", "recipe": "", "from": [-366, 195.0, 300], "to": [-150, 7.9, 420], "radius": 4.5, "floor": 18.0},
-  {"id": "needle_wire", "kind": "cable", "site": "needles", "recipe": "", "from": [-40, 25.6, 110], "to": [-176, 21.1, 193], "radius": 6.0, "floor": 18.0}
+  {"id": "needle_wire", "kind": "cable", "site": "needles", "recipe": "", "from": [-40, 25.6, 110], "to": [-176, 21.1, 193], "radius": 6.0, "floor": 18.0},
+  {"id": "bajada_storm_wire", "kind": "cable", "site": "bajada", "recipe": "", "from": [60, 116.0, -440], "to": [165, 62.5, -280], "radius": 5.5, "floor": 18.0},
+  {"id": "hoodoo_thermal_wire", "kind": "cable", "site": "hoodoo_forest", "recipe": "", "from": [-70, 62.0, -130], "to": [-20, 42.0, 20], "radius": 5.5, "floor": 18.0},
+  {"id": "needle_thermal_wire", "kind": "cable", "site": "needles", "recipe": "", "from": [-150, 32.0, 165], "to": [-95, -2.0, 390], "radius": 5.5, "floor": 18.0},
+  {"id": "gauntlet_dunk_wire", "kind": "cable", "site": "gauntlet_west", "recipe": "", "from": [220, 26.0, 220], "to": [100, -2.5, 430], "radius": 5.5, "floor": 18.0}
  ],
  "weather_rows": [
   {"id": "dusk_storm", "kind": "thunderstorm", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.004, "color": "#6b5a6e"}, "sky": "storm_build", "sound": "storm_bed", "music_layer": "", "event_odds": {}, "handling": "none"},
@@ -339,12 +353,18 @@
  "activity_rows": [
   {"id": "camp_signal", "activity": "enemy_camp", "site": "bajada", "at": [0, -120], "pack": ["line_cutter", "line_cutter", "kite_drone"], "pay": {"named": "rivet_plating"}},
   {"id": "cache_turnstone", "activity": "cracked_cache", "site": "turnstone_scree", "at": [-232, -306], "pack": [], "pay": {"rarities": ["rare"]}},
-  {"id": "bounty_gauntlet", "activity": "hauler_bounty", "site": "gauntlet_toe", "at": [200, 30], "pack": [], "pay": {"rarities": ["common", "rare"]}}
+  {"id": "bounty_gauntlet", "activity": "hauler_bounty", "site": "gauntlet_toe", "at": [200, 30], "pack": [], "pay": {"rarities": ["common", "rare"]}},
+  {"id": "hoodoo_storm_relay", "activity": "hold_the_relay", "site": "bajada", "at": [160, -380], "pack": ["line_cutter", "kite_drone", "kite_drone"], "pay": {"rarities": ["common", "rare"]}},
+  {"id": "spire_thermal_cache", "activity": "cracked_cache", "site": "crown_bowl", "at": [230, 460], "pack": [], "pay": {"rarities": ["rare"]}, "bar": "blazing"}
  ],
  "wear_rows": [
   {"id": "bajada_drop_ruts", "points": [[0, -670], [0, -480], [0, -372], [0, -330], [110, -200], [55, -32], [0, 40]], "width_m": 6.5},
   {"id": "east_wash_ruts", "points": [[0, -330], [190, -230], [185, -75], [0, 40]], "width_m": 6.0},
   {"id": "crown_approach_ruts", "points": [[0, 40], [0, 180], [0, 292], [0, 400]], "width_m": 6.0}
+ ],
+ "survival_rows": [
+  {"id": "bajada_storm_yard", "form": "yard", "at": [-180, -450]},
+  {"id": "east_wash_muster", "form": "muster", "at": [260, -20]}
  ],
  "destructible_rows": [
   {"id": "gauntlet_crate_wall_w", "tier": 2, "at": [149.5, -5.57, 343.0], "size": [3.6, 2.6, 1.4], "yaw_deg": 0},
@@ -352,6 +372,12 @@
   {"id": "gauntlet_crates", "tier": 1, "at": [312.5, 0.75, 332.0], "size": [2.0, 1.5, 2.0], "yaw_deg": 0},
   {"id": "gauntlet_toe_crib", "tier": 2, "at": [230.0, 33.08, 40.0], "size": [3.4, 2.6, 1.4], "yaw_deg": 0},
   {"id": "bajada_camp_crates", "tier": 1, "at": [25.5, 53.08, -147.5], "size": [2.0, 1.5, 2.0], "yaw_deg": 0},
-  {"id": "turnstone_scree_crib", "tier": 2, "at": [-257.5, 71.94, -315.5], "size": [3.2, 2.4, 1.4], "yaw_deg": 0}
+  {"id": "turnstone_scree_crib", "tier": 2, "at": [-257.5, 71.94, -315.5], "size": [3.2, 2.4, 1.4], "yaw_deg": 0},
+  {"id": "watch_butte_crates", "tier": 1, "at": [-120.0, 200.91, -650.0], "size": [2.0, 1.5, 2.0], "yaw_deg": 0},
+  {"id": "bajada_west_barricade", "tier": 2, "at": [-300.0, 81.2, -440.0], "size": [3.4, 2.4, 1.4], "yaw_deg": 20},
+  {"id": "hoodoo_west_bulkhead", "tier": 3, "at": [-210.0, 54.0, -150.0], "size": [3.6, 2.8, 1.5], "yaw_deg": -15},
+  {"id": "alcove_flank_crib", "tier": 2, "at": [-390.0, 38.56, -10.0], "size": [3.4, 2.6, 1.4], "yaw_deg": 30},
+  {"id": "needles_rim_wall", "tier": 3, "at": [-210.0, -3.49, 370.0], "size": [3.8, 2.6, 1.4], "yaw_deg": 40},
+  {"id": "crown_forecourt_housing", "tier": 4, "at": [-120.0, -6.97, 580.0], "size": [3.0, 3.0, 3.0], "yaw_deg": 0}
  ]
 }

@@ -4,7 +4,17 @@
  "size_m": 1600,
  "time_of_day": "golden",
  "spawn": {"at": [0, -720], "heading_deg": 0},
+ "atlas": {"origin": [0, 0], "heading_deg": 0},
+ "exit": {"kind": "launch", "speed_cruise": 1.0, "opens": "warden_broken"},
+ "arrives": {"kind": "land", "speed_cruise": 0.9, "from": "dig ascent"},
  "play_rect": [-560, -780, 1120, 1540],
+ "approach": {"to": "mind_sky_deck", "smoke": [0, 2600], "far_card": {"at": [0, 1280], "to": "park_crown", "size": [420, 160], "yaw_deg": 0}},
+ "district_rows": [
+  {"id": "acoma_mesas", "name": "Acoma Approach Mesas", "rect": [-560, -780, 1120, 440], "grade": "islands_mesas"},
+  {"id": "shiprock_fins", "name": "Shiprock Fin Crossing", "rect": [-560, -340, 1120, 500], "grade": "islands_fins"},
+  {"id": "gypsum_net", "name": "Gypsum Net Span", "rect": [-560, 160, 1120, 600], "grade": "islands_net"}
+ ],
+ "cable_rows": [],
  "landmark": {"id": "hanging_isle", "kind": "sky_island", "at": [0, 520], "size": [180, 318, 180], "yaw_deg": 0, "recipe": "landmark_sky_island", "budget": "hero_landmark", "sight_top": [0, 400, 520], "sight_share": 0.85, "beacon": [0, 530], "reach_m": 120, "warden": {"mounting": "under_island", "anchor": [0, 66, 520], "path": [], "hardpoints": 3, "family": "mind", "harpoon_anchor": true}, "bay_dock": {"at": [0, 650], "facing_deg": 0}, "gate_slots": [{"at": [-20, 720], "facing_deg": 0}, {"at": [0, 720], "facing_deg": 0}, {"at": [20, 720], "facing_deg": 0}], "light": "ancient_beam", "music": "landmark_hum", "fragment": "ancient_keel_grip"},
  "waymarks": ["drop_in", "saddle", "anvil_rock", "landmark"],
  "routes": [
@@ -502,7 +512,11 @@
   {"id": "lookout_line", "kind": "cable", "site": "lookout_mesa", "recipe": "", "from": [200, 236.5, -600], "to": [95, 202.1, -392], "radius": 6.0, "floor": 18.0},
   {"id": "bench_line", "kind": "cable", "site": "ore_bench", "recipe": "", "from": [310, 160.9, -180], "to": [250, 127.4, -40], "radius": 6.0, "floor": 18.0},
   {"id": "chute_line", "kind": "cable", "site": "ore_adit", "recipe": "", "from": [260, 117.1, -20], "to": [216, 98.7, 158], "radius": 6.0, "floor": 18.0},
-  {"id": "wing_line", "kind": "cable", "site": "east_wing", "recipe": "", "from": [180, 84.7, 200], "to": [66, 81.5, 306], "radius": 6.0, "floor": 18.0}
+  {"id": "wing_line", "kind": "cable", "site": "east_wing", "recipe": "", "from": [180, 84.7, 200], "to": [66, 81.5, 306], "radius": 6.0, "floor": 18.0},
+  {"id": "fin_thermal_tram", "kind": "cable", "site": "twin_fins", "recipe": "", "from": [-90, 178.0, -210], "to": [-215, 127.0, -40], "radius": 5.5, "floor": 18.0},
+  {"id": "mooring_anvil_tram", "kind": "cable", "site": "mooring_mesa", "recipe": "", "from": [-190, 124.0, 10], "to": [-30, 113.5, 60], "radius": 5.5, "floor": 18.0},
+  {"id": "lens_dunk_cable", "kind": "cable", "site": "lens_rocks", "recipe": "", "from": [320, 82.0, 360], "to": [120, 52.0, 470], "radius": 5.5, "floor": 18.0},
+  {"id": "west_wing_signal_cable", "kind": "cable", "site": "west_wing", "recipe": "", "from": [-310, 96.0, 260], "to": [-130, 52.0, 460], "radius": 5.5, "floor": 18.0}
  ],
  "weather_rows": [
   {"id": "golden_air", "kind": "clear", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0025, "color": "#f0c08e"}, "sky": "clear", "sound": "high_wind_bed", "music_layer": "", "event_odds": {}, "handling": "none"},
@@ -512,7 +526,9 @@
   {"id": "camp_anvil", "activity": "enemy_camp", "site": "anvil_rock", "at": [0, 104], "pack": ["ballast_heavy", "ballast_heavy", "line_cutter"], "pay": {"named": "rivet_plating"}},
   {"id": "cache_east_wing", "activity": "cracked_cache", "site": "east_wing", "at": [210, 236], "pack": [], "pay": {"rarities": ["rare"]}},
   {"id": "bounty_ore_bench", "activity": "hauler_bounty", "site": "ore_bench", "at": [186, -60], "pack": [], "pay": {"rarities": ["common", "rare"]}},
-  {"id": "saddle_relay", "activity": "hold_the_relay", "site": "saddle_shelf", "at": [-135, -475], "pack": ["line_cutter", "kite_drone", "kite_drone"], "pay": {"rarities": ["common", "rare"]}}
+  {"id": "saddle_relay", "activity": "hold_the_relay", "site": "saddle_shelf", "at": [-135, -475], "pack": ["line_cutter", "kite_drone", "kite_drone"], "pay": {"rarities": ["common", "rare"]}},
+  {"id": "net_span_cache", "activity": "cracked_cache", "site": "net_post_run", "at": [-80, 260], "pack": [], "pay": {"rarities": ["rare"]}, "bar": "blazing"},
+  {"id": "ore_chute_surge", "activity": "surge_run", "site": "ore_chute", "at": [110, -124], "route": "east", "pack": [], "pay": {"rarities": ["common", "rare"]}}
  ],
  "rescue_rows": [
   {"id": "tally_cage", "site": "mooring_mesa", "at": [-290, 30], "face": [0.84, -0.54], "quest": "isles", "pilot": "tally", "prompt": "free the bookkeeper"}
@@ -522,12 +538,22 @@
   {"id": "tram_bench_ruts", "points": [[118, -398], [200, -290], [290, -150], [196, -62], [110, 0], [0, 46]], "width_m": 6.0},
   {"id": "net_deck_ruts", "points": [[0, 46], [0, 200], [0, 330], [0, 450]], "width_m": 6.0}
  ],
+ "survival_rows": [
+  {"id": "west_shelf_yard", "form": "yard", "at": [-220, -260]},
+  {"id": "east_net_muster", "form": "muster", "at": [150, 260]}
+ ],
  "destructible_rows": [
   {"id": "tramway_trestle_bulkhead", "tier": 2, "at": [194.0, 179.33, -296.0], "size": [3.4, 2.6, 1.4], "yaw_deg": 0},
   {"id": "ore_bench_trestle_w", "tier": 2, "at": [336.0, 155.85, -170.0], "size": [3.6, 2.8, 1.4], "yaw_deg": 0},
   {"id": "ore_bench_trestle_e", "tier": 3, "at": [376.0, 145.89, -104.0], "size": [4.0, 3.0, 1.5], "yaw_deg": 0},
   {"id": "ore_bench_crates", "tier": 1, "at": [350.0, 169.64, -240.0], "size": [2.0, 1.5, 2.0], "yaw_deg": 0},
   {"id": "adit_bulkhead", "tier": 3, "at": [274.0, 117.36, -26.5], "size": [4.0, 3.0, 1.5], "yaw_deg": 0},
-  {"id": "west_shelf_crates", "tier": 1, "at": [-330.0, 177.31, -280.0], "size": [2.0, 1.5, 2.0], "yaw_deg": 45}
+  {"id": "west_shelf_crates", "tier": 1, "at": [-330.0, 177.31, -280.0], "size": [2.0, 1.5, 2.0], "yaw_deg": 45},
+  {"id": "lookout_rim_crates", "tier": 1, "at": [-170.0, 230.51, -580.0], "size": [2.0, 1.5, 2.0], "yaw_deg": 15},
+  {"id": "lookout_stair_barricade", "tier": 2, "at": [-170.0, 216.9, -510.0], "size": [3.4, 2.4, 1.4], "yaw_deg": -20},
+  {"id": "fin_west_hoodoo_bulkhead", "tier": 3, "at": [-170.0, 163.53, -210.0], "size": [3.6, 2.8, 1.5], "yaw_deg": 10},
+  {"id": "mooring_rim_crib", "tier": 2, "at": [-350.0, 116.12, 0.0], "size": [3.4, 2.6, 1.4], "yaw_deg": 35},
+  {"id": "roost_apron_wall", "tier": 3, "at": [-350.0, 70.91, 360.0], "size": [3.8, 2.6, 1.4], "yaw_deg": -30},
+  {"id": "net_span_housing", "tier": 4, "at": [-350.0, 45.5, 500.0], "size": [3.0, 3.0, 3.0], "yaw_deg": 0}
  ]
 }
