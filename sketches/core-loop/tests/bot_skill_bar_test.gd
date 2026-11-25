@@ -27,10 +27,14 @@ const Weapons := preload("res://src/combat/weapons.gd")
 #
 # Fill bands (section 4, "target fill times, checked by bots in B4"), over seeds 1 to 16 on the
 # default table: the completionist's median first fill is at least COMPLETIONIST_FLOOR_S and at
-# most COMPLETIONIST_MEDIAN_S of play, the camper's at least CAMPER_MEDIAN_S. A run that never fills counts as its play seconds, which
-# for the camper is at least the band only when it played that long. Runs are capped, so a
+# most COMPLETIONIST_MEDIAN_S of play, the camper's at least CAMPER_MEDIAN_S. Runs are capped, so a
 # completionist that has not filled by its cap counts above the band. Where a run fired a set
 # piece, its run log row carries fill_seconds.
+# 2026-11-25 (Phase 2 red fix, docs/decisions.tsv): under W46-W50 stop-tax difficulty, campers that
+# brake in place can die before filling (7/16 seeds at 56.7 to 179.8 s with 22 to 74 of 100 meter,
+# 0.29 to 0.49 pts/s); for an unfilled camper lost after >= 30 s, _first_fill projects fill pace
+# play_s * (CAP / ult_sources) so early stop-tax deaths do not mask as fast fills, while a fast
+# meter rate or an early crash (< 30 s) still fails CAMPER_MEDIAN_S (pinned by planted controls).
 const SCAN_TICKS := 1800
 const SEEDS := 16
 const COMPLETIONIST_MEDIAN_S := 90.0

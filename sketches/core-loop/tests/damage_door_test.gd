@@ -29,7 +29,7 @@ const KILL_EVERY := 10
 const DEFLECT_EVERY := 7
 const CYCLES := 100
 const BIG := 1.0e9
-const EXPECTED_CHECKS := 31
+const EXPECTED_CHECKS := 35
 
 var _t := T.new("damage_door_test")
 var _game
@@ -95,6 +95,7 @@ func _run_checks() -> void:
 	_check_order(combat, door)
 	_check_bypass(combat, door)
 	_check_respawn(combat, door)
+	_check_deferred_procs(combat, door)
 	_clear()
 	_t.eq("every check ran", _t.checks + 1, EXPECTED_CHECKS)
 	quit(_t.verdict())
@@ -286,6 +287,61 @@ func _check_respawn(combat, door) -> void:
 	_t.eq("companion unchanged", after["companion"], before["companion"])
 	_t.check("the companion stayed seated", Companion.seated(after["companion"], Companion.CONDUCTIVE_PRIMER) == "primer_mesh",
 		"%s" % [after["companion"]])
+
+
+func _check_deferred_procs(combat, door) -> void:
+	var trigger := _spawn("chaser", Vector3(4.0, 0.0, 0.0), true)
+	var doomed := _spawn("chaser", Vector3(5.0, 0.0, 2.0), true)
+	var doomed_ref := [doomed]
+	var survivor := _spawn("chaser", Vector3(5.0, 0.0, -2.0), true)
+	var survivor_hp: float = survivor.hp
+	var armed := [true]
+	var depth2 := [false]
+	var on_struck := func(_e: Node3D, _k: String, _f: float) -> void:
+		if armed[0] and door.in_pass():
+			armed[0] = false
+			if doomed_ref[0] != null and is_instance_valid(doomed_ref[0]):
+				combat.deal_proc_hit(doomed_ref[0], combat.SYNERGY, 25.0, Vector3.RIGHT, 2.0)
+			combat.deal_proc_hit(survivor, combat.SYNERGY, 25.0, Vector3.RIGHT, 2.0)
+		elif depth2[0] and door.in_pass():
+			depth2[0] = false
+			combat.deal_proc_hit(survivor, combat.SYNERGY, 25.0, Vector3.RIGHT, 2.0)
+	_game.ctx.events.enemy_struck.connect(on_struck)
+	combat.strike(trigger, "arc", 10.0, "", "weapon")
+	var queued: int = (combat.get("_deferred_procs") as Array).size()
+	var intact_before_drain: bool = is_equal_approx(float(survivor.hp), survivor_hp)
+	_spawned.erase(doomed)
+	doomed_ref[0] = null
+	doomed.free()
+	depth2[0] = true
+	combat._step_deferred_procs()
+	_t.check("re-entrant proc queues inside pass_hit, skips freed enemy, hits survivor, stays 1-deep",
+		queued == 2 and intact_before_drain and float(survivor.hp) < survivor_hp
+		and (combat.get("_deferred_procs") as Array).is_empty(),
+		"queued %d, hp %.1f -> %.1f, left %d" % [queued, survivor_hp, float(survivor.hp), (combat.get("_deferred_procs") as Array).size()])
+	armed[0] = true
+	combat.strike(trigger, "arc", 10.0, "", "weapon")
+	var before_death: int = (combat.get("_deferred_procs") as Array).size()
+	combat._on_player_died()
+	_t.check("player death clears queued deferred procs",
+		before_death == 1 and (combat.get("_deferred_procs") as Array).is_empty(),
+		"before %d, after %d" % [before_death, (combat.get("_deferred_procs") as Array).size()])
+	armed[0] = true
+	combat.strike(trigger, "arc", 10.0, "", "weapon")
+	var before_run: int = (combat.get("_deferred_procs") as Array).size()
+	_game.ctx.events.run_started.emit("pylon_engineer")
+	_t.check("run_started clears queued deferred procs",
+		before_run == 1 and (combat.get("_deferred_procs") as Array).is_empty(),
+		"before %d, after %d" % [before_run, (combat.get("_deferred_procs") as Array).size()])
+	var hp_guard: float = survivor.hp
+	armed[0] = true
+	combat.strike(trigger, "arc", 10.0, "", "weapon")
+	_game.ctx.run.hp = 0.0
+	combat._step_deferred_procs()
+	_t.check("dead run drops deferred procs without striking",
+		is_equal_approx(float(survivor.hp), hp_guard) and (combat.get("_deferred_procs") as Array).is_empty(),
+		"hp %.1f -> %.1f, left %d" % [hp_guard, float(survivor.hp), (combat.get("_deferred_procs") as Array).size()])
+	_game.ctx.events.enemy_struck.disconnect(on_struck)
 
 
 func _spawn(kind: String, offset: Vector3, tank: bool) -> Node3D:

@@ -295,6 +295,7 @@ var _cloak_held := 0.0
 var _actions := {}
 var door := DamageDoor.new()
 var _deferred_procs: Array = []
+var _draining_procs := false
 var _pressure_chasers := 0
 var churn
 var boils
@@ -494,6 +495,7 @@ func setup(ctx_ref) -> void:
 		_guards.clear()
 		_clamped = {}
 		_rakes = []
+		_deferred_procs.clear()
 		_clear_aftershocks()
 		_heated = {}
 		_escape = {}
@@ -2368,6 +2370,8 @@ static func heat_hit(state: Dictionary, id: int, now: float) -> Dictionary:
 
 func deal_proc_hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, part := "", source := "item_proc", impact := "", chip := CHIP) -> void:
 	if door.in_pass():
+		if _draining_procs:
+			return
 		_deferred_procs.append({"enemy": enemy, "kind": kind, "damage": damage, "direction": direction,
 			"knock": knock, "part": part, "source": source, "impact": impact, "chip": chip})
 		return
@@ -2377,14 +2381,19 @@ func deal_proc_hit(enemy: Node3D, kind: String, damage: float, direction: Vector
 func _step_deferred_procs() -> void:
 	if _deferred_procs.is_empty():
 		return
+	if ctx != null and ctx.run != null and not ctx.run.alive():
+		_deferred_procs.clear()
+		return
 	var batch := _deferred_procs
 	_deferred_procs = []
+	_draining_procs = true
 	for entry in batch:
-		var enemy: Node3D = entry["enemy"]
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+		var enemy = entry["enemy"]
+		if DamageDoor.dead(enemy):
 			continue
 		_hit(enemy, entry["kind"], float(entry["damage"]), entry["direction"], float(entry["knock"]),
 			entry["part"], entry["source"], entry["impact"], float(entry["chip"]))
+	_draining_procs = false
 
 
 func nearest_enemies(at: Vector3, reach: float, limit: int) -> Array:
@@ -5251,6 +5260,7 @@ func _on_player_died() -> void:
 	if relic_swaps != null: relic_swaps.reset()
 	_clear_aftershocks()
 	_rakes.clear()
+	_deferred_procs.clear()
 	_clear_cannon_paint()
 	weapon_driver.reset()
 
