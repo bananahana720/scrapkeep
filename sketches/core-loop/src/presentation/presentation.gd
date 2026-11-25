@@ -8,6 +8,7 @@ const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const LineView := preload("res://src/presentation/line_view.gd")
+const GrappleRig := preload("res://src/presentation/grapple_rig.gd")
 const StatusMarks := preload("res://src/presentation/status_marks.gd")
 const ArmourMarks := preload("res://src/presentation/armour_marks.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
@@ -67,6 +68,7 @@ var vfx
 var machine_fx
 var player_fx
 var line_view
+var grapple_rig
 var status_marks
 var armour_marks
 var banner
@@ -130,6 +132,9 @@ func setup(ctx_ref) -> void:
 	hero_assets = HeroAssets.new()
 	add_child(hero_assets)
 	hero_assets.setup(ctx)
+	grapple_rig = GrappleRig.new()
+	add_child(grapple_rig)
+	grapple_rig.setup(ctx, hero_assets, line_view)
 	var companion_body := CompanionBody.new()
 	add_child(companion_body)
 	companion_body.setup(ctx)

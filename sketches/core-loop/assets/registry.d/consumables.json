@@ -1,0 +1,100 @@
+{
+ "assets": [
+  {
+   "id": "cons_cap_charge",
+   "path": "res://assets/models/consumables/cons_cap_charge.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Pocket Consumable cartridge: Blasting Cap (Redjaw Workshops). Copper/charcoal octagonal demolition satchel + 3 blasting cap studs + steel pull-pin ring; zero HAZARD #ff5a3c. Closed watertight procedural bmesh, canon palette.gd hexes."
+   }
+  },
+  {
+   "id": "cons_nitro_siphon",
+   "path": "res://assets/models/consumables/cons_nitro_siphon.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Pocket Consumable cartridge: Nitro Siphon (Spillway Works). Pressurized brass/amber glass siphon cartridge with warm golden-amber #e5a044 reservoir, copper cage ribs, intake bell nozzle and pressure gauge. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_anchor_flare",
+   "path": "res://assets/models/consumables/cons_anchor_flare.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Pocket Consumable cartridge: Anchor Flare (Highdraft Roosts). Upright ribbed brass/copper canister + bright mint #8bf0d3 bite ring + copper beacon cap + folded anchor flukes. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_overclock_card",
+   "path": "res://assets/models/consumables/cons_overclock_card.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Pocket Consumable cartridge: Overclock Punchcard (Fleet Surplus). Corner-notched Hollerith punched brass-bound card cartridge with AMBER #e5a044 relay pin and edge connector teeth. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_foreman_memo",
+   "path": "res://assets/models/consumables/cons_foreman_memo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Pocket Consumable cartridge: Foreman's Memo (The Mind). Seamless cast Old Works petrol #365754 casing (zero rivets, zero brass, zero emission) with ONE flat Palette.KINDNESS #d936b0 stripe panel only (B6). Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_moss_patch",
+   "path": "res://assets/models/consumables/cons_moss_patch.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Pocket Consumable cartridge: Moss's Emergency Patch (Keeper). Bolted bone-and-verdigris octagonal repair cartridge with steel cross-rivet clamp, copper center nut and side toggle lever. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_drop_cradle",
+   "path": "res://assets/models/consumables/cons_drop_cradle.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "World drop pickup cradle prop for Pocket Consumables. Worn-steel & copper 3-foot ring with warm AMBER #e5a044 offering collar and SocketCartridge empty. Closed watertight procedural bmesh."
+   }
+  },
+  {
+   "id": "cons_anchor_balloon",
+   "path": "res://assets/models/consumables/cons_anchor_balloon.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/consumables.gd (W47-C1-CODE)",
+   "provenance": {
+    "recipe": "tools/blender/consumable_cartridges.py",
+    "concept_reference": "g13-pocket-consumables-salvage-drops.png (W47-C1-3D)",
+    "note": "Deployed 18 m Sky-Anchor balloon world prop spawned by Anchor Flare. Bone/verdigris ribbed gas-bag, copper crown cap, 360-deg MINT #8bf0d3 grapple bite ring collar, steel tow-eye and SocketBite empty. Closed watertight procedural bmesh."
+   }
+  }
+ ]
+}

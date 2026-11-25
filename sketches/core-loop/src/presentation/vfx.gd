@@ -14,6 +14,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const KillMark := preload("res://src/presentation/kill_mark.gd")
+const HeroFx := preload("res://src/presentation/hero_fx.gd")
 
 # World-space effects. Each glyph takes its colour and silhouette from the fact's
 # event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
@@ -105,6 +106,8 @@ var trails := true
 var pops := PopGate.new()
 # A kill's own mark (FX-01, Andrew's pick 12 Nov 2026: the ink burst, and a time card on elites).
 var kill_mark: KillMark
+# W47-H1 hero-baseline world-space marks (Sable pylon ring, Rivet hot-round tracer, Kest sightline fuse trace).
+var hero_fx: HeroFx
 var _fill_scale := 1.0
 # What the governor steers toward, recounted every 1 / Density.SAMPLE_HZ seconds.
 var _density_target := 0.0
@@ -173,6 +176,9 @@ func setup(ctx_ref) -> void:
 	root.name = "PresentationFx"
 	ctx.root.add_child(root)
 	_build_glyphs()
+	hero_fx = HeroFx.new()
+	root.add_child(hero_fx)
+	hero_fx.setup()
 	for i in SPARKLE_POOL:
 		_sparkles.append(_make_sparkle())
 	_build_bursts()
@@ -414,6 +420,8 @@ func clear() -> void:
 	_chain = 0
 	if kill_mark != null:
 		kill_mark.clear()
+	if hero_fx != null:
+		hero_fx.clear()
 	_trail_points.clear()
 	_streaks.clear()
 	pops.clear()

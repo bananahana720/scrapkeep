@@ -11,6 +11,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const Consumables := preload("res://src/build/consumables.gd")
 
 # The roll-through reward gates after the beacon. Two arches stand ahead of the ball on
 # its line; rolling through one takes its part. There is no collider and no menu, so
@@ -198,6 +199,10 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 		if ActiveOffers.is_offer(part_id):
 			var row: Dictionary = active_row.call(ActiveOffers.active_of(part_id)) if active_row.is_valid() else {}
 			offers.append(ActiveOffers.gate_record(part_id, row).merged({"at": at, "facing": facing, "width": WIDTH}))
+			_gates.append(_build_gate(at, facing, offers[-1]))
+			continue
+		if Consumables.is_offer(part_id):
+			offers.append(Consumables.gate_record(part_id).merged({"at": at, "facing": facing, "width": WIDTH}))
 			_gates.append(_build_gate(at, facing, offers[-1]))
 			continue
 		var d: Resource = Parts.offer_def(part_id, _held)

@@ -1,23 +1,25 @@
 """Tally's four heft layers (unit PD-TALLY; ROSTER-LOOK sections 0.3 and 5, pilots/tally.md
-section 5): square cream stamped plates with rows of punched holes, hung from the upright Pod
-just inside the lattice (outer face 0.905 m at the centre, corners under the 0.94 m inner face),
-each stamped with the class's tally strokes.
+section 5), rebuilt for the wire-tapper (unit W47-TALLY-A-3D, 24 Nov 2026; master bible section
+2.3 B1: punched copper-bus plates and reel hoods bolt over the gaps from I to V): square
+copper-faced relay bus plates with rows of punched holes, hung from the upright Pod just inside
+the lattice (outer face 0.905 m at the centre, corners under the 0.94 m inner face), each stamped
+in charcoal with its class's Roman numeral.
 
-  II   six plates in the lower gaps, below Z -0.35; two strokes
-  III  plates in the side gaps (three strokes), and thicker six-sided tread caps on every hub
+  II   six plates in the lower gaps, below Z -0.35; stamped II
+  III  plates in the side gaps (III), and thicker six-sided tread caps on every hub
        (the layer's Core part, so the class costs two draws; registry exception)
-  IV   plates in most gaps (four strokes) and the two drum hoods (own mesh, DrumHoods), curved square plates over the
-       top half of each drum; the drum faces, the pressure read, stay open
-  V    every remaining non-sight gap (the crossed five-bar gate) and the heavy drums: 30 percent
-       wider with a second tape reel, outline break 0.20 m (own mesh, HeavyDrums). Replace.Flywheel.R and .L hide the
-       light drums while the class shows (CUSTOMIZE section 6, Replace.<name>).
+  IV   plates in most gaps (IV) and the two reel hoods (own mesh, DrumHoods), curved bone
+       (aluminium) plates over the top half of each tape deck; the deck faces stay open
+  V    every remaining non-sight gap (V) and the heavy tape decks: copper flanges, brown tape and
+       a second reel ring, outline break 0.20 m (own mesh, HeavyDrums). Replace.Flywheel.R and .L
+       hide the light decks while the class shows (CUSTOMIZE section 6, Replace.<name>).
 
 No plate enters the sight cone from the head to the chase eyes or the front sight line to the
 face, the side gaps the drum brackets pass through stay open, and nothing passes radius 1.0
 below Z -0.6. Each class is one mesh on one paint surface per part.
 
 Pictures: artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (GAP PANEL and heft
-I, III, V panels) and hero.png.
+I, III, V panels) and hero.png; the grounded sheet g06-pilots-trio-b-tarn-tally-cannon.png.
 
 Run it as shell_tally.py's header runs that recipe (the same 12 GiB prlimit and two threads),
 with this script's path and the optional arguments -- [--outdir <dir>].
@@ -49,10 +51,10 @@ BRACKET_DIRS = (Vector((1, 0, 0.12)).normalized(), Vector((-1, 0, 0.12)).normali
 # A plate's corner reaches 13.3 degrees off its gap centre; the nearest side gaps sit 19 degrees
 # from the bracket line, so 15 keeps every plate clear of the arm (0.018 m radius) by 0.09 m.
 BRACKET_CLEAR = math.radians(15)
-# Class V heavy drums (they replace the light drums): petrol flanges and a second tape reel, on
+# Class V heavy drums (they replace the light drums): copper flanges and a second tape reel, on
 # the light drum's axis and inner face. E2-05 grew the light drums to the 1.70 m weapon reach
 # and the carrier bank's slope law, so the heavy drum gains only what still fits (0.01 m of
-# radius) and reads heavier by its reel and petrol flanges; its rim stays inside the light
+# radius) and reads heavier by its reel and copper flanges; its rim stays inside the light
 # drum's index shoe.
 HEAVY_R = st.DRUM_R + 0.01
 HEAVY_DEPTH = st.DRUM_DEPTH - 0.01
@@ -117,9 +119,19 @@ def quad(p, centre, u, v, hu, hv, colour):
     return p.paint([p.bm.faces.new(vs)], "paint", colour)
 
 
+# Each class's Roman numeral as charcoal strokes on the plate face: (offset along e1, slant) per
+# stroke, slant in radians from upright; a V is two strokes leaning in to meet at the foot.
+NUMERALS = {
+    2: ((-0.015, 0.0), (0.015, 0.0)),
+    3: ((-0.03, 0.0), (0.0, 0.0), (0.03, 0.0)),
+    4: ((-0.04, 0.0), (0.004, -0.32), (0.036, 0.32)),
+    5: ((-0.016, -0.32), (0.016, 0.32)),
+}
+
+
 def plate(p, d, strokes):
-    """One square stamped plate facing along d: a cream slab, two rows of four punched holes and
-    the class's strokes (charcoal) on the outer face, its edges rubbed (charcoal rim)."""
+    """One square relay bus plate facing along d: a copper-faced slab, two rows of four punched
+    holes and the class's Roman numeral (charcoal) on the outer face, its edges and back charcoal."""
     e1, e2 = sb._frame(d)
     n = d.normalized()
     centre = n * (PANEL_OUT - PANEL_THICK / 2)
@@ -132,23 +144,18 @@ def plate(p, d, strokes):
     top = p.bm.faces.new(hi)
     bottom = p.bm.faces.new(list(reversed(lo)))
     sides = [p.bm.faces.new((lo[k], lo[(k + 1) % 4], hi[(k + 1) % 4], hi[k])) for k in range(4)]
-    p.paint([top], "paint", st.CREAM)
-    p.paint([bottom], "paint", "petrol")
+    p.paint([top], "paint", "copper")
+    p.paint([bottom], "paint", "charcoal")
     p.paint(sides, "paint", "charcoal")
     face = n * (PANEL_OUT + 0.0015)
     for row in (-1, 1):
         for k in range(4):
             c = face + e1 * (-0.09 + 0.06 * k) + e2 * (row * 0.085)
             quad(p, c, e1, e2, 0.011, 0.011, "charcoal")
-    # Tally strokes: n upright bars; class V crosses four with a slash (the five-bar gate).
-    count = min(strokes, 4)
-    for k in range(count):
-        c = face + e1 * (-0.045 + 0.03 * k)
-        quad(p, c + n * 0.0005, e1, e2, 0.006, 0.045, "charcoal")
-    if strokes >= 5:
-        slash_u = (e1 + e2 * 0.6).normalized()
-        slash_v = n.cross(slash_u)
-        quad(p, face + n * 0.001, slash_u, slash_v, 0.075, 0.006, "oxide")
+    for dx, slant in NUMERALS[strokes]:
+        up = (e2 * math.cos(slant) + e1 * math.sin(slant)).normalized()
+        across = up.cross(n)
+        quad(p, face + e1 * dx + n * 0.0005, across, up, 0.006, 0.045, "charcoal")
 
 
 def caps(p, rng):
@@ -165,7 +172,7 @@ def hoods(p):
     for side in (1, -1):
         x = side * (HOOD_FROM + depth / 2)
         p.ring("paint", r_in, r_out, depth, 6, loc=(x, 0, st.DRUM_Z), rot=(0, math.pi / 2, 0),
-               color=st.CREAM, arc=(math.pi / 2, 3 * math.pi / 2))
+               color="bone", arc=(math.pi / 2, 3 * math.pi / 2))
 
 
 def heavy(p):

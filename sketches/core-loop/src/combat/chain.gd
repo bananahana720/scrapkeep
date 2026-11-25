@@ -13,6 +13,8 @@ const LINK := "chain_link"
 const PIVOT := "chain_pivot"
 const END := "chain_end"
 const MISS := "chain_miss"
+# Rule G0: strictly one ChainState per pilot; universal HOOK-CHAIN stays available to all 6 pilots.
+const MAX_CHAINS_PER_PILOT := 1
 
 # The multiplier a combo pays: 1 + PER_LINK for each link beyond the first, counted up to
 # COMBO_CAP links. A combo of 1 pays x1.0, exactly the game without a chain.
@@ -36,6 +38,9 @@ var miss_left := 0.0
 var finished: Array = []
 var best_combo := 0
 var misses := 0
+# W47-GRAPPLE-MUTS-CODE: active single-part-swap mutation slots ("head"|"line"|"drive" -> mut_id)
+# carried on the pilot's ONE ChainState (Rule G0: zero second standing line or chain).
+var mutations := {}
 
 var _active := false
 var _pivot_run := 0
@@ -46,6 +51,35 @@ var _airborne := false
 
 func active() -> bool:
 	return _active
+
+
+func set_mutations(slots: Dictionary) -> void:
+	mutations.clear()
+	for slot in ["head", "line", "drive"]:
+		if not slots.has(slot):
+			continue
+		var v: Variant = slots[slot]
+		var mut_id := String(v["id"]) if v is Dictionary else String(v)
+		if mut_id != "":
+			mutations[slot] = mut_id
+
+
+func active_mutations() -> Dictionary:
+	return mutations.duplicate()
+
+
+# Read-only view of the one ChainState for hardware rig presentation and tests (G0).
+func snapshot() -> Dictionary:
+	return {
+		"active": _active,
+		"combo": combo,
+		"links": links,
+		"pivots": pivots,
+		"multiplier": multiplier(),
+		"grace_left": grace_left,
+		"miss_left": miss_left,
+		"mutations": mutations.duplicate(),
+	}
 
 
 # Damage and knock multiplier for a smash landing now.
@@ -138,6 +172,7 @@ func reset() -> void:
 	finished.clear()
 	best_combo = 0
 	misses = 0
+	mutations.clear()
 	_active = false
 	_pivot_run = 0
 	_airborne = false

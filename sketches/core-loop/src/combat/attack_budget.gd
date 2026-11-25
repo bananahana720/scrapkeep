@@ -49,6 +49,15 @@ const DEFEND_RADIUS := 40.0
 const PACK_META := "pack_seq"
 # The physics frame a clocked-out unit may attack again (foreman.gd: its crew, when it dies).
 const CLOCKED_OUT_META := "clocked_out_until"
+# Dedicated Ally-Husk attack budget (W47-TALLY-B-CODE): raised Ghost-Shift husks take turns
+# through their own cap and beat gap, completely separate from the hostile enemy attacker budget
+# so allies never consume enemy slots or starve enemy threat readability.
+const ALLY_ATTACKING := "ally_attack_budget"
+const ALLY_WAITING := "ally_attack_budget_wait"
+const ALLY_LAST_META := "ally_attack_budget_last"
+const ALLY_START := 2
+const ALLY_LATE := 3
+const ALLY_MIN_GAP := 0.25
 
 
 # The curve: world 1 with a fresh ball is START; each heft class and each world past the
@@ -177,3 +186,79 @@ static func _ticket(unit: Node) -> Array:
 
 static func _before(a: Array, b: Array) -> bool:
 	return a[0] < b[0] or (a[0] == b[0] and a[1] < b[1])
+
+
+# --- Dedicated Ally-Husk attack budget (W47-TALLY-B-CODE) ---------------------------------
+
+static func ally_cap_at(heft_class: int) -> int:
+	return ALLY_LATE if heft_class >= 5 else ALLY_START
+
+
+static func ally_attackers(tree: SceneTree) -> int:
+	return tree.get_nodes_in_group(ALLY_ATTACKING).size() if tree != null else 0
+
+
+static func ask_ally(unit: Node, heft_class := 1) -> bool:
+	if unit == null or not is_instance_valid(unit):
+		return false
+	if unit.is_in_group(ALLY_ATTACKING):
+		return true
+	if not unit.is_inside_tree() or _off(unit):
+		return true
+	var tree := unit.get_tree()
+	_queue_ally(unit)
+	if ally_cap_at(heft_class) - ally_attackers(tree) <= 0:
+		return false
+	if not _ally_gap_open(tree):
+		return false
+	var mine := _ally_ticket(unit)
+	for other in tree.get_nodes_in_group(ALLY_WAITING):
+		if other != unit and _before(_ally_ticket(other), mine):
+			return false
+	unit.remove_from_group(ALLY_WAITING)
+	unit.add_to_group(ALLY_ATTACKING)
+	tree.root.set_meta(ALLY_LAST_META, Engine.get_physics_frames())
+	return true
+
+
+static func withdraw_ally(unit: Node) -> void:
+	if unit != null and is_instance_valid(unit) and unit.is_in_group(ALLY_WAITING):
+		unit.remove_from_group(ALLY_WAITING)
+
+
+static func release_ally(unit: Node) -> void:
+	if unit != null and is_instance_valid(unit) and unit.is_in_group(ALLY_ATTACKING):
+		unit.remove_from_group(ALLY_ATTACKING)
+
+
+static func reset_ally(tree: SceneTree) -> void:
+	if tree == null:
+		return
+	for node in tree.get_nodes_in_group(ALLY_ATTACKING):
+		if is_instance_valid(node):
+			node.remove_from_group(ALLY_ATTACKING)
+	for node in tree.get_nodes_in_group(ALLY_WAITING):
+		if is_instance_valid(node):
+			node.remove_from_group(ALLY_WAITING)
+	if tree.root != null and tree.root.has_meta(ALLY_LAST_META):
+		tree.root.remove_meta(ALLY_LAST_META)
+
+
+static func ally_gap_frames() -> int:
+	return ceili(ALLY_MIN_GAP * Engine.physics_ticks_per_second / Engine.time_scale - 0.0001)
+
+
+static func _ally_gap_open(tree: SceneTree) -> bool:
+	if tree == null or tree.root == null or not tree.root.has_meta(ALLY_LAST_META):
+		return true
+	return Engine.get_physics_frames() - int(tree.root.get_meta(ALLY_LAST_META)) >= ally_gap_frames()
+
+
+static func _queue_ally(unit: Node) -> void:
+	if not unit.is_in_group(ALLY_WAITING):
+		unit.set_meta(ALLY_WAITING, Engine.get_physics_frames())
+		unit.add_to_group(ALLY_WAITING)
+
+
+static func _ally_ticket(unit: Node) -> Array:
+	return [int(unit.get_meta(ALLY_WAITING, 0)), unit.get_instance_id()]

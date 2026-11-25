@@ -1,7 +1,9 @@
 extends Node
 
 const AbilityState := preload("res://src/core/ability_state.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
+const Weapons := preload("res://src/combat/weapons.gd")
 
 const DRAG_SPEED := 30.0
 const BITE_SECONDS := 0.1
@@ -24,6 +26,14 @@ var drag := {}
 var tow: Array = []
 var hurls: Array = []
 var rake_shapes: Array = []
+# W47-H2 Tarn baseline runtime state (zero static mutable state; cleared in _clear()).
+var seized := {}
+var clamp_hurls: Array = []
+var last_clamp_hurl := {}
+var beat3_lunge := {}
+var last_beat3_lunge := {}
+var pendulum_guard := {}
+var last_armor_block := {}
 var _rakes: Array = []
 var _vice := {}
 var _dragged := {}
@@ -64,7 +74,9 @@ func setup(owner) -> void:
 	ctx.events.player_died.connect(_clear)
 	ctx.events.line_state_changed.connect(func(_state: String, _target: Node3D, _at: Vector3, _cause: String):
 		if not drag.is_empty() and not _line_matches():
-			_stop_drag())
+			_stop_drag()
+		if not pendulum_guard.is_empty() and not _pendulum_matches():
+			_stop_pendulum_guard())
 	ctx.events.ultimate_started.connect(func(id: String, _path: String, from: Vector3, _to: Vector3, _seconds: float):
 		if id in SET_PIECES:
 			_clear_piece()
@@ -108,8 +120,13 @@ func _hold(enemy: Node3D) -> void:
 func _release(enemy: Node3D) -> void:
 	tow.erase(enemy)
 	hurls = hurls.filter(func(h): return h["enemy"] != enemy)
+	clamp_hurls = clamp_hurls.filter(func(h): return h["enemy"] != enemy)
+	if not seized.is_empty() and seized.get("enemy") == enemy:
+		seized = {}
 	if not drag.is_empty() and drag["target"] == enemy:
 		_stop_drag()
+	if not pendulum_guard.is_empty() and pendulum_guard.get("anchor_body") == enemy:
+		_stop_pendulum_guard()
 
 
 func _enemies() -> Array:
@@ -161,6 +178,7 @@ func on_body(target: Node3D, _fraction: float, mult: float) -> void:
 			combat._hit(target, "claw", DRAG_DAMAGE * mult, Vector3.ZERO, 0.0, "", "special")
 			_mark(target, DRAG_MARK)
 		combat._reel_burst(target.global_position, 1.0, mult)
+		_start_pendulum_guard(target, target.global_position, false)
 		return
 	drag = {"target": target, "from": target.global_position, "mult": mult, "bite": BITE_SECONDS, "time": 0.0, "world": false}
 	_hold(target)
@@ -171,6 +189,7 @@ func on_world(anchor: Vector3, _fraction: float, mult: float) -> void:
 	_stop_drag()
 	drag = {"target": null, "from": anchor, "at": anchor, "mult": mult, "bite": BITE_SECONDS, "time": 0.0, "world": true, "hit": {}}
 	ctx.player.indicator.set_shape("tarn_drag", _corridor(anchor, _arrival(anchor), SLAB_HALF_WIDTH))
+	_start_pendulum_guard(null, anchor, true)
 
 
 func _line_matches() -> bool:
@@ -194,6 +213,9 @@ func _physics_process(delta: float) -> void:
 
 func step(delta: float) -> void:
 	_step_drag(delta)
+	_step_pendulum_guard(delta)
+	_step_clamp_hurl(delta)
+	_step_beat3_lunge(delta)
 	_step_piece(delta)
 	for id in _cards.keys():
 		var entry: Dictionary = _cards[id]
@@ -473,7 +495,288 @@ func _clear_piece() -> void:
 
 func _clear() -> void:
 	_stop_drag()
+	_stop_pendulum_guard()
+	seized = {}
+	clamp_hurls.clear()
+	last_clamp_hurl = {}
+	beat3_lunge = {}
+	last_beat3_lunge = {}
+	last_armor_block = {}
 	_clear_piece()
 	for rec in _rakes:
 		ctx.player.indicator.clear(rec["layer"])
 	_rakes.clear()
+
+
+# --- W47-H2: Clamp-and-Hurl, Unstoppable 3rd-Beat Lunge & Inward Pendulum Guard/Strafe ---
+# Worn-steel articulated mechanical claw only (Call #4; inward pendulum guard).
+
+func _seizable(enemy) -> bool:
+	if not _alive(enemy) or _protected(enemy):
+		return false
+	var w = enemy.get("weight")
+	if w == null:
+		return false
+	return float(w) <= maxf(Weapons.CLAMP_HURL_MAX_WEIGHT, tow_limit(_class()))
+
+
+# Seizes the nearest light/medium enemy caught by clamp for 0.6 s, then hurls it down aim at 30 m/s.
+func try_seize(candidates: Array) -> Node3D:
+	if not seized.is_empty():
+		_launch_seized()
+	var ball: Vector3 = ctx.player.ball_position()
+	var best: Node3D = null
+	var best_d := INF
+	for enemy in candidates:
+		if not _seizable(enemy):
+			continue
+		var d: float = (enemy as Node3D).global_position.distance_to(ball)
+		if d < best_d:
+			best_d = d
+			best = enemy
+	if best == null:
+		return null
+	seized = {
+		"enemy": best,
+		"left": Weapons.CLAMP_SEIZE_SECONDS,
+		"elapsed": 0.0,
+		"heft": _class(),
+		"claw_material": "worn_steel",
+	}
+	_hold(best)
+	return best
+
+
+func _launch_seized() -> Dictionary:
+	if seized.is_empty():
+		return {}
+	var enemy = seized.get("enemy")
+	var heft_at_seize: int = int(seized.get("heft", _class()))
+	seized = {}
+	if not _alive(enemy):
+		return {}
+	var aim: Vector3 = combat._flat_aim()
+	if aim.length_squared() < 0.0001:
+		aim = Vector3.FORWARD
+	var weight: float = maxf(1.0, float(enemy.get("weight")) if enemy.get("weight") != null else 1.0)
+	if enemy.has_method("open_ring_out"):
+		enemy.open_ring_out()
+	if enemy.has_method("knock"):
+		enemy._knock = Vector3.ZERO
+		enemy.knock(aim + Vector3.UP * 0.12, Weapons.CLAMP_HURL_SPEED * weight)
+	var rec := {
+		"enemy": enemy,
+		"dir": aim,
+		"speed": Weapons.CLAMP_HURL_SPEED,
+		"left": Weapons.CLAMP_HURL_FLIGHT_SECONDS,
+		"heft": heft_at_seize,
+		"hit": {},
+		"bowled": 0,
+		"walls_broken": [],
+		"claw_material": "worn_steel",
+	}
+	clamp_hurls.append(rec)
+	_hold(enemy)
+	last_clamp_hurl = {
+		"enemy_id": enemy.get_instance_id(),
+		"dir": aim,
+		"speed": Weapons.CLAMP_HURL_SPEED,
+		"heft": heft_at_seize,
+		"bowled": 0,
+		"walls_broken": [],
+		"claw_material": "worn_steel",
+	}
+	combat.effects.spark(enemy.global_position + Vector3.UP * 0.6, ClassDef.TARN_COLOR)
+	return last_clamp_hurl
+
+
+func _step_clamp_hurl(delta: float) -> void:
+	if not seized.is_empty():
+		var held = seized.get("enemy")
+		if not _alive(held):
+			seized = {}
+		else:
+			seized["elapsed"] = float(seized["elapsed"]) + delta
+			seized["left"] = float(seized["left"]) - delta
+			if float(seized["left"]) <= 0.0:
+				_launch_seized()
+			elif float(seized["elapsed"]) >= 0.06:
+				var aim: Vector3 = combat._flat_aim()
+				var hold_pos: Vector3 = ctx.player.ball_position() + aim * Weapons.CLAMP_HURL_HOLD_OFFSET
+				hold_pos.y = held.global_position.y
+				held.global_position = held.global_position.move_toward(hold_pos, 22.0 * delta)
+	if clamp_hurls.is_empty():
+		return
+	var live_enemies := _enemies()
+	var dmg: float = Weapons.CLAMP_HURL_BOWL_DAMAGE * combat._damage_mod(Weapons.CLAW_SWEEP)
+	for h in clamp_hurls.duplicate():
+		var enemy = h["enemy"]
+		if not _alive(enemy):
+			clamp_hurls.erase(h)
+			continue
+		h["left"] = float(h["left"]) - delta
+		var dir: Vector3 = h["dir"]
+		var speed: float = float(h["speed"])
+		var prev_pos: Vector3 = enemy.global_position
+		var step_dt: float = maxf(delta, 0.001)
+		var lookahead: Vector3 = prev_pos + dir * (speed * step_dt + Weapons.CLAMP_HURL_WALL_RADIUS * 0.5)
+		if ctx.destructibles != null and is_instance_valid(ctx.destructibles) and ctx.destructibles.has_method("on_hurled_enemy"):
+			var broken: Array[String] = ctx.destructibles.on_hurled_enemy(
+				prev_pos, lookahead, int(h["heft"]), Weapons.CLAMP_HURL_WALL_RADIUS, "tarn_hurl")
+			if not broken.is_empty():
+				for bid in broken:
+					if not (h["walls_broken"] as Array).has(bid):
+						(h["walls_broken"] as Array).append(bid)
+				last_clamp_hurl["walls_broken"] = (h["walls_broken"] as Array).duplicate()
+		enemy.velocity = Vector3(dir.x * speed, enemy.velocity.y, dir.z * speed)
+		enemy.move_and_slide()
+		var after_pos: Vector3 = enemy.global_position
+		var sweep_end: Vector3 = after_pos if after_pos.distance_squared_to(prev_pos) > 0.0001 else lookahead
+		for other in live_enemies:
+			if other == enemy or not _alive(other):
+				continue
+			var oid: int = other.get_instance_id()
+			if (h["hit"] as Dictionary).has(oid):
+				continue
+			if _segment_gap(prev_pos, sweep_end, other.global_position) <= Weapons.CLAMP_HURL_BOWL_RADIUS:
+				(h["hit"] as Dictionary)[oid] = true
+				h["bowled"] = int(h["bowled"]) + 1
+				last_clamp_hurl["bowled"] = int(h["bowled"])
+				if _protected(other):
+					combat.strike(other, "claw", dmg, "", "special")
+				else:
+					combat._hit(other, "claw", dmg, dir + Vector3.UP * 0.25, Weapons.CLAMP_HURL_BOWL_KNOCK, "", "special", "clamp")
+				combat.flung.emit(other)
+		if float(h["left"]) <= 0.0:
+			clamp_hurls.erase(h)
+
+
+# Unstoppable 3rd-Beat Lunge: +6 m forward lunge with CC immunity and brief frontal armor.
+func trigger_beat3_lunge(aim_dir: Vector3) -> Dictionary:
+	var flat := Vector3(aim_dir.x, 0.0, aim_dir.z)
+	var dir: Vector3 = flat.normalized() if flat.length_squared() > 0.0001 else combat._flat_aim()
+	var lunge_speed := Weapons.TARN_BEAT3_LUNGE_M / maxf(Weapons.TARN_BEAT3_LUNGE_S, 0.01)
+	var current: Vector3 = ctx.player.state.velocity
+	var keep_speed := maxf(Vector2(current.x, current.z).length(), lunge_speed)
+	ctx.player.grant_immunity(Weapons.TARN_BEAT3_ARMOR_S)
+	ctx.player.set_velocity_now(Vector3(dir.x * keep_speed, current.y, dir.z * keep_speed), "tarn_lunge")
+	beat3_lunge = {
+		"dir": dir,
+		"left": Weapons.TARN_BEAT3_LUNGE_S,
+		"armor_left": Weapons.TARN_BEAT3_ARMOR_S,
+		"speed": keep_speed,
+		"start": ctx.player.ball_position(),
+		"moved": 0.0,
+		"unstoppable": true,
+		"claw_material": "worn_steel",
+	}
+	last_beat3_lunge = {
+		"dir": dir,
+		"target_m": Weapons.TARN_BEAT3_LUNGE_M,
+		"armor_s": Weapons.TARN_BEAT3_ARMOR_S,
+		"unstoppable": true,
+		"moved": 0.0,
+		"claw_material": "worn_steel",
+	}
+	combat.effects.ring(ctx.player.ball_position(), 2.4, ClassDef.TARN_COLOR)
+	return last_beat3_lunge
+
+
+func _step_beat3_lunge(delta: float) -> void:
+	if beat3_lunge.is_empty():
+		return
+	var dir: Vector3 = beat3_lunge["dir"]
+	if float(beat3_lunge["left"]) > 0.0:
+		beat3_lunge["left"] = maxf(0.0, float(beat3_lunge["left"]) - delta)
+		var speed: float = float(beat3_lunge["speed"])
+		var cur: Vector3 = ctx.player.state.velocity
+		ctx.player.set_velocity_now(Vector3(dir.x * speed, cur.y, dir.z * speed), "tarn_lunge")
+		var start_pos: Vector3 = beat3_lunge["start"]
+		var rel: Vector3 = ctx.player.ball_position() - start_pos
+		rel.y = 0.0
+		beat3_lunge["moved"] = maxf(float(beat3_lunge["moved"]), rel.dot(dir))
+		last_beat3_lunge["moved"] = float(beat3_lunge["moved"])
+	beat3_lunge["armor_left"] = maxf(0.0, float(beat3_lunge["armor_left"]) - delta)
+	if float(beat3_lunge["left"]) <= 0.0 and float(beat3_lunge["armor_left"]) <= 0.0:
+		beat3_lunge = {}
+
+
+# Inward-Facing Pendulum Guard/Strafe on claw_drag around heavy anchors/enemies.
+# Front worn-steel articulated mechanical claw shields Tarn's face toward the anchor.
+func _start_pendulum_guard(anchor_body: Node3D, anchor_pos: Vector3, is_world: bool) -> void:
+	var ball: Vector3 = ctx.player.ball_position()
+	var to_anchor := anchor_pos - ball
+	to_anchor.y = 0.0
+	var facing: Vector3 = to_anchor.normalized() if to_anchor.length_squared() > 0.0001 else combat._flat_aim()
+	pendulum_guard = {
+		"active": true,
+		"anchor_body": anchor_body,
+		"anchor": anchor_pos,
+		"world": is_world,
+		"facing": facing,
+		"shield_mult": Weapons.TARN_FRONTAL_ARMOR_MULT,
+		"claw_material": "worn_steel",
+	}
+
+
+func _stop_pendulum_guard() -> void:
+	pendulum_guard = {}
+
+
+func _pendulum_matches() -> bool:
+	if pendulum_guard.is_empty():
+		return false
+	var kit = ctx.player.kit
+	if not kit.hooked:
+		return false
+	if bool(pendulum_guard["world"]):
+		return not kit.on_body
+	var body = pendulum_guard.get("anchor_body")
+	return kit.on_body and is_instance_valid(kit.anchor_body) and kit.anchor_body == body and _alive(body)
+
+
+func _step_pendulum_guard(delta: float) -> void:
+	if pendulum_guard.is_empty():
+		return
+	if not _pendulum_matches():
+		_stop_pendulum_guard()
+		return
+	var anchor_pos: Vector3 = (pendulum_guard["anchor_body"] as Node3D).global_position if not bool(pendulum_guard["world"]) else ctx.player.kit.anchor
+	pendulum_guard["anchor"] = anchor_pos
+	var ball: Vector3 = ctx.player.ball_position()
+	var to_anchor := anchor_pos - ball
+	to_anchor.y = 0.0
+	var facing: Vector3 = to_anchor.normalized() if to_anchor.length_squared() > 0.0001 else combat._flat_aim()
+	pendulum_guard["facing"] = facing
+	var strafe_input: float = float(ctx.player.intent.move.x) if ctx.player.intent != null else 0.0
+	if absf(strafe_input) > 0.05:
+		var tangent := Vector3(-facing.z, 0.0, facing.x) * signf(strafe_input)
+		var desired := tangent * Weapons.TARN_PENDULUM_STRAFE_SPEED
+		var cur_flat := Vector3(ctx.player.state.velocity.x, 0.0, ctx.player.state.velocity.z)
+		var delta_v := desired - cur_flat.project(tangent)
+		ctx.player.add_external_accel(delta_v / maxf(delta, 0.016))
+
+
+# Returns the frontal damage multiplier (0.50 when shielded from the front, else 1.0).
+func frontal_armor_scale(shove: Vector3) -> float:
+	var guard_dir := Vector3.ZERO
+	var guard_source := ""
+	if not beat3_lunge.is_empty() and float(beat3_lunge.get("armor_left", 0.0)) > 0.0:
+		guard_dir = beat3_lunge["dir"]
+		guard_source = "beat3_lunge"
+	elif not pendulum_guard.is_empty() and _pendulum_matches():
+		guard_dir = pendulum_guard["facing"]
+		guard_source = "pendulum_guard"
+	if guard_source == "":
+		return 1.0
+	var incoming := Vector3(-shove.x, 0.0, -shove.z)
+	if incoming.length_squared() > 0.0001 and incoming.normalized().dot(guard_dir) < 0.0:
+		return 1.0
+	last_armor_block = {
+		"source": guard_source,
+		"mult": Weapons.TARN_FRONTAL_ARMOR_MULT,
+		"facing": guard_dir,
+		"claw_material": "worn_steel",
+	}
+	combat.effects.spark(ctx.player.ball_position() + guard_dir * 1.1, ClassDef.TARN_COLOR)
+	return Weapons.TARN_FRONTAL_ARMOR_MULT

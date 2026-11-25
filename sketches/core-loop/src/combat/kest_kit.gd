@@ -173,6 +173,11 @@ func _cable(at: Vector3, rider: Node3D) -> void:
 	_sound("cable_kest_fizz", false, pow(2.0, float(maxi(ctx.player.chain.combo - 1, 0)) / 12.0))
 	if travel <= 0.0:
 		_set_cable()
+	if rider == null:
+		ctx.player.refresh_air_draw()
+		if at.y > ctx.player.ball_position().y + 1.0:
+			ctx.player.apply_spire_vault(at)
+	combat.refresh_kest_fuse_trace()
 	ctx.player.indicator.set_shape("kest_cable", cable_geometry(1.0))
 
 
@@ -195,14 +200,21 @@ func _end_cable() -> void:
 	if cable.is_empty():
 		return
 	var c := cable
+	var was_world: bool = c.get("_body") == null
+	var anchor_pt: Vector3 = c.get("_anchor", Vector3.ZERO)
 	cable = {}
 	ctx.player.indicator.clear("kest_cable")
+	var rocket_before: float = combat._rocket_left
 	if payloads.charges.has(c):
 		if not c.get("_set", false):
 			# A cable ending during travel still pays once at its committed anchor.
 			c["pos"] = c["_anchor"]
 			c["damage"] = CABLE_DAMAGE * ctx.player.chain.multiplier()
 		_detonate_payload(_take_payload(c))
+	if was_world and ctx != null and ctx.player != null:
+		ctx.player.refresh_air_draw()
+		if combat._rocket_left <= rocket_before and not ctx.player.state.grounded:
+			ctx.player.apply_spire_vault(anchor_pt)
 
 
 func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:

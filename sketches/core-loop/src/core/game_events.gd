@@ -251,6 +251,19 @@ signal trade_taken(kind: String, at: Vector3)
 signal maker_set_completed(maker: String, bonus: String)
 signal overflow_cashed(active_id: String, pieces: int)
 
+# Pocket Consumable Belt (W47-C1): registered as a user signal so combat, synergies
+# (catalyst_cartridge) and listeners connect to events.consumable_used(consumable_id, at)
+# while GameEvents.signal_names() stays aligned with the spine's EventKinds table.
+var consumable_used: Signal
+
+
+func _init() -> void:
+	add_user_signal("consumable_used", [
+		{"name": "consumable_id", "type": TYPE_STRING},
+		{"name": "at", "type": TYPE_VECTOR3},
+	])
+	consumable_used = Signal(self, &"consumable_used")
+
 
 static func signal_names() -> PackedStringArray:
 	var names := PackedStringArray()

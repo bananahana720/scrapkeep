@@ -111,6 +111,8 @@ var _breaks_props := false
 var _beat_breaks_props := false
 var _hit_seq := 0
 var _pending_pulses: Array = []
+# W47-H1 Sable Vault-Kick instant max-charge window on next arc_caster bolt (0.0 s charge time).
+var _instant_charge_left := 0.0
 
 
 # Advances trigger timers by `delta` and interprets `intent` for `weapon` under `pattern`.
@@ -266,6 +268,15 @@ func set_lob_charging(active: bool) -> void:
 	_lob_charging = active
 
 
+# Sable Vault-Kick (W47-H1): arms an instant max-charge (0.0 s charge wait) on her next
+# arc_caster bolt. If a hold is already armed, snaps it straight to full charge.
+func arm_instant_max_charge(duration_s := Weapons.VAULT_INSTANT_CHARGE_S) -> void:
+	_instant_charge_left = maxf(_instant_charge_left, maxf(duration_s, 0.0))
+	if _trigger == Pattern.TRIGGER_TAP_CHARGE and _charge_armed:
+		_charging = true
+		_charge = 1.0
+
+
 # Returns the driver to rest (PILOT-CADENCE.md section 2.2): zero cooldown, full plain
 # chamber, no charge, beat zero, no window open, no painted lane.
 func reset(pattern: Resource = null) -> void:
@@ -283,6 +294,7 @@ func reset(pattern: Resource = null) -> void:
 	_charge = 0.0
 	_charging = false
 	_charge_armed = false
+	_instant_charge_left = 0.0
 	_lob_charging = false
 	_snap_token = 0
 	_snap_hold_lock = false
@@ -310,6 +322,7 @@ func interrupt(reason: String) -> void:
 			_charge = 0.0
 			_charging = false
 			_charge_armed = false
+			_instant_charge_left = 0.0
 			_pending_pulses.clear()
 			_lob_charging = false
 			_snap_hold_lock = false
@@ -359,6 +372,8 @@ func state_snapshot() -> Dictionary:
 		"charge": _charge,
 		"charging": _charging,
 		"charge_armed": _charge_armed,
+		"instant_charge": _instant_charge_left > 0.0,
+		"instant_charge_left": _instant_charge_left,
 		"lob_charging": _lob_charging,
 		"snap_locked": _snap_hold_lock,
 		"snap_token": _snap_token,
@@ -548,7 +563,8 @@ func _latch_buffer() -> void:
 
 func _fire_press_round(weapon: String, floor_s: float, fan: bool, rate_mult: float) -> Dictionary:
 	var is_hot := _hot_rounds > 0
-	var pierce := is_hot and _hot_rounds == 1 and _hot_pierce
+	var sixth_hot := is_hot and _hot_rounds == 1
+	var pierce := sixth_hot and _hot_pierce
 	if _mag > 0:
 		_chamber = maxi(0, _chamber - 1)
 	if is_hot:
@@ -574,7 +590,7 @@ func _fire_press_round(weapon: String, floor_s: float, fan: bool, rate_mult: flo
 	else:
 		_cooldown = next_floor
 	return {"kind": kind, "weapon": weapon, "damage_mult": mult, "pierce": pierce, "spread_deg": spread,
-		"hot": is_hot, "fan": fan, "breaks_props": _breaks_props}
+		"hot": is_hot, "sixth_hot": sixth_hot, "fan": fan, "breaks_props": _breaks_props}
 
 
 func _update_reload_window() -> void:
@@ -612,6 +628,8 @@ func _step_tap_charge(delta: float, weapon: String, pattern: Resource, pressed: 
 		_recover_s = maxf(0.0, _recover_s - delta)
 		if _recover_s <= EPS:
 			_recover_s = 0.0
+	if _instant_charge_left > 0.0:
+		_instant_charge_left = maxf(0.0, _instant_charge_left - delta)
 	if pattern == null:
 		return shots
 	var rate_mult: float = maxf(float(context.get("rate_mult", 1.0)), 0.1)
@@ -621,6 +639,18 @@ func _step_tap_charge(delta: float, weapon: String, pattern: Resource, pressed: 
 
 	if pressed:
 		if _cooldown <= 0.0 and _recover_s <= 0.0:
+			if _instant_charge_left > 0.0 and weapon == Weapons.ARC_CASTER:
+				_instant_charge_left = 0.0
+				_emit_charged_shot(weapon, 1.0, true, shots)
+				_cooldown = floor_s
+				_recover_s = _recover_cfg_s
+				_buffered = false
+				_buffer_s = 0.0
+				_charge_armed = false
+				_charging = false
+				_charge = 0.0
+				_hold_s = 0.0
+				return shots
 			shots.append({"kind": SHOT_SPARK, "weapon": weapon, "damage_mult": 1.0,
 				"spark_count": _spark_count, "pierce": false, "spread_deg": 0.0, "breaks_props": _breaks_props})
 			_cooldown = floor_s
@@ -636,6 +666,18 @@ func _step_tap_charge(delta: float, weapon: String, pattern: Resource, pressed: 
 			if wait_s <= BUFFER_S + EPS:
 				_latch_buffer()
 	elif _buffered and _cooldown <= 0.0 and _recover_s <= 0.0:
+		if _instant_charge_left > 0.0 and weapon == Weapons.ARC_CASTER:
+			_instant_charge_left = 0.0
+			_emit_charged_shot(weapon, 1.0, true, shots)
+			_cooldown = floor_s
+			_recover_s = _recover_cfg_s
+			_buffered = false
+			_buffer_s = 0.0
+			_charge_armed = false
+			_charging = false
+			_charge = 0.0
+			_hold_s = 0.0
+			return shots
 		shots.append({"kind": SHOT_SPARK, "weapon": weapon, "damage_mult": 1.0,
 			"spark_count": _spark_count, "pierce": false, "spread_deg": 0.0, "breaks_props": _breaks_props})
 		_cooldown = floor_s
@@ -660,24 +702,11 @@ func _step_tap_charge(delta: float, weapon: String, pattern: Resource, pressed: 
 						_charge = 1.0
 		else:
 			if _charging and _charge >= _charge_min:
-				var base_mult: float = _charge_bolt_mult if _charge_bolt_mult > 0.0 else Weapons.charge_bolt_mult(weapon)
-				var pulses: int = maxi(_charge_pulses, 1)
-				var pulse_mult: float = (base_mult * _charge) / float(pulses)
-				var charged_shot := {
-					"kind": SHOT_CHARGED, "weapon": weapon, "damage_mult": pulse_mult,
-					"pierce": _charge_pierce > 0, "pierce_pass": _charge_pierce,
-					"no_chain": _charge_no_chain, "breaks_props": _breaks_props,
-					"spread_deg": 0.0, "charge": _charge,
-				}
-				shots.append(charged_shot)
-				if pulses > 1:
-					var span: float = maxf(_charge_pulse_span_s, 0.0)
-					var step_s: float = span / float(pulses - 1)
-					var cap: int = Pattern.MAX_CHARGE_PULSES * 2
-					for k in range(1, pulses):
-						if _pending_pulses.size() >= cap:
-							break
-						_pending_pulses.append({"delay": step_s * float(k), "shot": charged_shot.duplicate()})
+				var was_instant := _instant_charge_left > 0.0 and weapon == Weapons.ARC_CASTER
+				var release_charge := 1.0 if was_instant else _charge
+				if was_instant:
+					_instant_charge_left = 0.0
+				_emit_charged_shot(weapon, release_charge, was_instant, shots)
 				_recover_s = _recover_cfg_s
 			_charge_armed = false
 			_charging = false
@@ -686,6 +715,27 @@ func _step_tap_charge(delta: float, weapon: String, pattern: Resource, pressed: 
 	elif not held:
 		_hold_s = 0.0
 	return shots
+
+
+func _emit_charged_shot(weapon: String, charge_value: float, instant: bool, shots: Array) -> void:
+	var base_mult: float = _charge_bolt_mult if _charge_bolt_mult > 0.0 else Weapons.charge_bolt_mult(weapon)
+	var pulses: int = maxi(_charge_pulses, 1)
+	var pulse_mult: float = (base_mult * charge_value) / float(pulses)
+	var charged_shot := {
+		"kind": SHOT_CHARGED, "weapon": weapon, "damage_mult": pulse_mult,
+		"pierce": _charge_pierce > 0, "pierce_pass": _charge_pierce,
+		"no_chain": _charge_no_chain, "breaks_props": _breaks_props,
+		"spread_deg": 0.0, "charge": charge_value, "instant_charge": instant,
+	}
+	shots.append(charged_shot)
+	if pulses > 1:
+		var span: float = maxf(_charge_pulse_span_s, 0.0)
+		var step_s: float = span / float(pulses - 1)
+		var cap: int = Pattern.MAX_CHARGE_PULSES * 2
+		for k in range(1, pulses):
+			if _pending_pulses.size() >= cap:
+				break
+			_pending_pulses.append({"delay": step_s * float(k), "shot": charged_shot.duplicate()})
 
 
 func _step_lob_snap(delta: float, weapon: String, pattern: Resource, pressed: bool, held: bool, released: bool, context: Dictionary) -> Array:
@@ -1030,6 +1080,7 @@ func _step_lock(delta: float, weapon: String, pattern: Resource, pressed: bool, 
 		return shots
 	var rate_mult: float = maxf(float(context.get("rate_mult", 1.0)), 0.1)
 	var recover_s: float = _recover_cfg_s / rate_mult
+	var recoil_airborne: bool = bool(context.get("recoil_airborne", false))
 
 	if not _lane_painted:
 		if _recover_s <= 0.0 and _window_state == WINDOW_HIT:
@@ -1042,7 +1093,7 @@ func _step_lock(delta: float, weapon: String, pattern: Resource, pressed: bool, 
 			_window_t = 0.0
 			_window_state = WINDOW_WAITING if _window_s.y > _window_s.x else WINDOW_IDLE
 			if not held or released:
-				shots.append(_release_lock(weapon, pattern, recover_s))
+				shots.append(_release_lock(weapon, pattern, recover_s, recoil_airborne))
 			return shots
 		if pressed and _recover_s > 0.0 and _recover_s <= BUFFER_S + EPS:
 			_latch_buffer()
@@ -1061,11 +1112,11 @@ func _step_lock(delta: float, weapon: String, pattern: Resource, pressed: bool, 
 			_window_state = WINDOW_SPENT
 		return shots
 
-	shots.append(_release_lock(weapon, pattern, recover_s))
+	shots.append(_release_lock(weapon, pattern, recover_s, recoil_airborne))
 	return shots
 
 
-func _release_lock(weapon: String, pattern: Resource, recover_s: float) -> Dictionary:
+func _release_lock(weapon: String, pattern: Resource, recover_s: float, recoil_airborne := false) -> Dictionary:
 	var stage := _lock_stage_for(_hold_s)
 	var pulse_dmg: float = maxf(float(pattern.damage), 0.001)
 	var rail_dmg: float = _lock_rail_damage if _lock_rail_damage > 0.0 else pulse_dmg
@@ -1078,12 +1129,17 @@ func _release_lock(weapon: String, pattern: Resource, recover_s: float) -> Dicti
 	var width_mult := _lock_pulse_width_mult
 	var pierce := false
 	var breaks_props := false
+	var air_lock_overpen := false
 	if stage == SHOT_RAIL:
 		dmg = rail_dmg
 		reach = rail_reach
 		width_mult = _lock_rail_width_mult
 		pierce = true
 		breaks_props = _lock_rail_breaks_props
+		if recoil_airborne and weapon == Weapons.CANNON_LANE:
+			width_mult *= Weapons.CANNON_AIR_RAIL_WIDTH_MULT
+			breaks_props = true
+			air_lock_overpen = true
 	elif stage == SHOT_BARRAGE:
 		dmg = barrage_dmg
 		reach = barrage_reach
@@ -1101,6 +1157,8 @@ func _release_lock(weapon: String, pattern: Resource, recover_s: float) -> Dicti
 		"reach": reach,
 		"width_mult": width_mult,
 		"pierce": pierce,
+		"overpenetrate": air_lock_overpen,
+		"air_lock_overpen": air_lock_overpen,
 		"breaks_props": breaks_props,
 		"spread_deg": 0.0,
 	}

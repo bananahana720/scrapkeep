@@ -74,7 +74,7 @@ const WORDS := {
 	"heft_up": {"text": "KACHUNK", "size": 1.0},
 	"fused": {"text": "FUSED", "size": 1.0},
 	"ultimate": {"text": "KRA-KOOM", "size": 1.3},
-	"paid": {"text": "PAID", "size": 0.9},
+	"paid": {"text": "SHORT", "size": 0.9},
 	"wham": {"text": "WHAM", "size": 1.0},
 	"strike": {"text": "STRIKE", "size": 1.1},
 	"beat": {"text": "BWAP", "size": 0.64},
@@ -111,7 +111,7 @@ const PILOT_WORDS := {
 	"runner_gunner": {"smash": "PING"},
 	"demolitions_caster": {"slam": "BOOM", "rocket": "BOOM"},
 	"tarn": {"smash": "GRRAK", "slam": "KRASH"},
-	"tally": {"smash": "KA-CHING"},
+	"tally": {"smash": "KA-CHUNK"},
 	"remembered_cannon": {"launch": "KA-THOOM", "smash": "THOOM"},
 }
 const WORD_POOL := 4
@@ -672,7 +672,7 @@ func _words_by_id(id: String) -> Dictionary:
 	return {}
 
 
-# Tally stamps PAID when two or more go down together.
+# Tally shorts the line when two or more go down together.
 func _on_killed(_kind: String, at: Vector3, _scrap: int) -> void:
 	if _pilot_id() != "tally":
 		return
@@ -680,7 +680,7 @@ func _on_killed(_kind: String, at: Vector3, _scrap: int) -> void:
 	while not _kill_times.is_empty() and _clock - float(_kill_times[0]) > 0.25:
 		_kill_times.pop_front()
 	if _kill_times.size() == 2:
-		word("paid", at + Vector3.UP * 1.8, Palette.LEDGER)
+		word("paid", at + Vector3.UP * 1.8, Palette.AMBER)
 
 
 func clear() -> void:
