@@ -1176,6 +1176,7 @@ static func set_motion_statics(on: bool) -> void:
 	ClassPreview.reduced_motion = on
 	BossPlate.reduced_motion = on
 	WorldFx.preferred = on
+	preload("res://src/presentation/spillway_scenery.gd").set_water_calm(on)
 	preload("res://src/presentation/flourish_player.gd").reduced_motion = on
 
 

@@ -126,5 +126,6 @@ Decisions the pack makes that he can strike. Each is a default, not a question.
 - [isaac/](isaac/README.md): floor generation, rooms, items and synergies, pacing and trades, [data tables](isaac/data-tables.md).
 - [gunfire/](gunfire/README.md): stage anatomy, run pacing and economy, weapons and inscriptions, scrolls and synergies, elements and fusion, heroes and ascensions, enemies and bosses, production budgets, data tables, provenance.
 - [roboquest/](roboquest/README.md): stage anatomy, movement and feel, classes and perks, weapons and affixes, enemies and telegraphs, enemy design grammar (separable extra with the CC0 base-mesh shortlist), production budgets, data tables, provenance.
+- [speed3d/](speed3d/README.md): draft speed-platformer study (CS-04, 19 Nov, Sonic 3D series from public writing only): multi-height forks, notice before commitment, set pieces between control stretches, and ten proposed speed checks.
 - [difficulty/](difficulty/SUMMARY.md): cross-game difficulty reference for the Challenge lane (18 October 2026): boss time to kill, tells, punish windows, hit size, phases, mob and elite scaling and each difficulty ladder for all four games, with suggested Scrapkeep ranges in the summary.
 - [maps-compared.md](maps-compared.md): the four-game map comparison, completed under CS-03.

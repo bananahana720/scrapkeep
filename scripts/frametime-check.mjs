@@ -40,17 +40,12 @@ import { holdQuietSync } from "./sketch-smoke.mjs";
 // takes a slot until the game exits (a new sketch:fast still runs its lint and node checks before it waits). A
 // reading killed by a signal leaves a hold that dies with its process. It does not see a running gate, nightly run, red team, band read or export, so
 // do not start a reading during one. Grading a log (--log=) takes no hold; FRAMETIME_NO_QUIET=1 skips it.
-// --capture=engine|mangohud picks how frames are caught (captureMode). Without it: MangoHud when
-// mangohud is on PATH, else the engine on macOS (no MangoHud there), else MangoHud's install note.
-// The engine capture launches $GODOT_BIN --path sketches/core-loop (or --exe=<a packed build's
-// binary>) windowed, with Godot's --disable-vsync unless --keep-vsync, and the game's own frame log
-// (src/core/frame_log.gd, --frame-log=<csv>) on the same warmup and seconds; the CSV it writes is
-// read as MangoHud's is. Each such run has scratch XDG data under the run folder, so its saves
-// start empty; on macOS HOME moves there too, so the shader and pipeline caches also start empty
-// and shader compiles fall in the log unless the warmup covers them. Without --exe the engine runs
-// the project as a debug run, so that reading is not comparable with a packed build's. --hud has no engine overlay and is refused there.
-// --home=<dir> (engine capture) reuses an earlier run's scratch HOME, a folder under artifacts/local/,
-// so on macOS its shader and pipeline caches and its user:// carry over (engineHome).
+// Direct capture on macOS is refused before spawn. Use display-run.mjs --offscreen
+// with a qualified probe to draw there. --log=<csv> reads saved captures on every platform.
+// On Linux, --capture=mangohud (the default) uses MangoHud. --capture=engine launches
+// GODOT_BIN or --exe with the game's own frame log, windowed and vsync off unless
+// --keep-vsync. --home=<dir> reuses scratch data under artifacts/local/. The engine has
+// no --hud overlay. Record whether the target is the debug editor or a packed build.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const exportRoot = path.join(root, "artifacts/local/core-loop-export");
@@ -451,6 +446,12 @@ export function main(
   const args = parseArgs(argv);
   const outDir = path.join(out, stamp());
   if (args.log) return analyse(path.resolve(args.log), args, outDir);
+  if (platform === "darwin") {
+    console.error(
+      "Mac frame capture requires a qualified probe through scripts/gate/display-run.mjs --offscreen. Use --log=<csv> to grade a saved capture.",
+    );
+    return 2;
+  }
   if (captureMode(args, platform, env.PATH) === "engine")
     return engineCapture(args, env, outDir, platform, quiet);
 

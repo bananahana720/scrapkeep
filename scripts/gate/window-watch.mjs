@@ -6,6 +6,27 @@ import { createInterface } from "node:readline";
 const SAMPLER = `
 ObjC.import("AppKit");
 ObjC.import("CoreGraphics");
+// Darwin libproc supplies the PID, parent PID and process group in the first three
+// uint32 fields of proc_bsdshortinfo (sys/proc_info.h). Reuse one buffer per sampler.
+ObjC.bindFunction("proc_pidinfo", ["int", ["int", "int", "unsigned long long", "void *", "int"]]);
+ObjC.bindFunction("calloc", ["unsigned int *", ["size_t", "size_t"]]);
+const PROC_PIDT_SHORTBSDINFO = 13;
+const infoSize = 64; // sizeof(struct proc_bsdshortinfo)
+const info = $.calloc(1, infoSize);
+function foregroundFamily(front) {
+  const frontAncestors = [];
+  let frontGroup;
+  let pid = front;
+  while (pid > 1) {
+    const size = $.proc_pidinfo(pid, PROC_PIDT_SHORTBSDINFO, 0, info, infoSize);
+    if (size !== infoSize || info[0] !== pid) throw Error("cannot read foreground process ancestry");
+    if (pid === front) frontGroup = info[2];
+    pid = info[1];
+    if (pid === front || frontAncestors.includes(pid)) throw Error("invalid foreground process ancestry");
+    frontAncestors.push(pid);
+  }
+  return {frontAncestors, frontGroup};
+}
 const stdout = $.NSFileHandle.fileHandleWithStandardOutput;
 const clock = $.NSProcessInfo.processInfo;
 const period = 0.05;
@@ -24,6 +45,7 @@ while (true) {
   const windows = ObjC.deepUnwrap(ObjC.castRefToObject(cf));
   const front = Number($.NSWorkspace.sharedWorkspace.frontmostApplication.processIdentifier);
   if (!Array.isArray(windows) || !windows.length || !(front > 0)) throw Error("window server unreadable");
+  const family = foregroundFamily(front);
   const visible = new Set();
   const godot = new Set();
   for (const w of windows) {
@@ -35,7 +57,7 @@ while (true) {
   }
   const now = clock.systemUptime;
   const missed = Math.max(0, Math.floor((now - next) / period));
-  const row = {at: Date.now(), front, visible: Array.from(visible), godot: Array.from(godot), missed};
+  const row = {at: Date.now(), front, ...family, visible: Array.from(visible), godot: Array.from(godot), missed};
   stdout.writeData($(JSON.stringify(row) + "\\n").dataUsingEncoding($.NSUTF8StringEncoding));
   next += (missed + 1) * period;
   // Service workspace notifications between snapshots so frontmostApplication stays current.
@@ -63,7 +85,10 @@ export function windowCounts(samples, pid) {
   let maxGapMs = 0;
   for (const [i, s] of samples.entries()) {
     if (i > 0) {
-      if (s.front === pid && samples[i - 1].front !== pid) frontmostChanges++;
+      // launch() gives the capture its own group. A child can start another group,
+      // so also check the foreground process’s ancestry at the time of the sample.
+      const inCapture = s.front === pid || s.frontGroup === pid || s.frontAncestors?.includes(pid);
+      if (s.front !== samples[i - 1].front && inCapture) frontmostChanges++;
       maxGapMs = Math.max(maxGapMs, s.at - samples[i - 1].at);
       missed += s.missed;
     }

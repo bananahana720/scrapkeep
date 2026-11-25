@@ -19,6 +19,7 @@ static var _prop_materials := {}
 
 static func reset_for_tests() -> void:
 	prop_shader_path = PROP_SHADER_PATH
+	set_water_calm(false)
 
 
 static func dress_props(parent: Node, keep: Node = null) -> void:
@@ -274,8 +275,11 @@ static func build(stage_root: Node3D) -> Node3D:
 	_batch(scenery, "SandstoneShoulders", cliff.commit(), [Transform3D.IDENTITY], Color("b37d50"))
 	_dam_detail(scenery)
 	_batch(scenery, "ValvePennants", box, banners, Color("6e8982"))
-	_batch(scenery, "SpillSheets", _water_edge_mesh("SpillSheets", box), water, Color.WHITE)
-	_batch(scenery, "Tailrace", _water_edge_mesh("Tailrace", box), pools, Color.WHITE)
+	var sheets := _water_edge_mesh("SpillSheets", box)
+	var tailrace := _water_edge_mesh("Tailrace", box)
+	_batch(scenery, "SpillSheets", sheets, water, Color.WHITE)
+	_batch(scenery, "Tailrace", tailrace, pools, Color.WHITE)
+	(scenery.get_node("Tailrace").material_override as ShaderMaterial).set_shader_parameter("drift", tailrace_drift(sheets, tailrace))
 	_batch(scenery, "WaterMist", puff, mist, Color("bcd4da"))
 	_batch(scenery, "CablesAndGyros", box, cables, Color("c7b18c"))
 	_batch(scenery, "CableCars", box, cabins, Color("537b72"))
@@ -534,6 +538,51 @@ static func _cottonwood_shells(group: Node3D, trees: Array, from: int, to: int) 
 		holder.transform = cottonwood_frame(trees[i])
 		for shell in RecipeProps.shells("cottonwood", holder, Transform3D.IDENTITY):
 			GraphicsPreset.register_scenery(shell)
+
+
+# The water runs (spill_water.gdshader): down the slope of each face, faster the steeper it is,
+# and where a face is flat it drifts by the surface's drift uniform. flow_at is the shader's
+# vertex flow in GDScript, so tests/water_flow_test.gd can check it on the built meshes.
+const WATER_FALL_SPEED := 2.4
+# Below WATER_LEVEL (sine of the slope) a face is level water and only drifts; the fall fades in
+# up to WATER_SLOPED. Same values as LEVEL and SLOPED in the shader.
+const WATER_LEVEL := 0.05
+const WATER_SLOPED := 0.15
+const WATER_VERTICAL := 0.98
+# The tailrace's drift away from the falls, m/s: still water barely moves.
+const TAILRACE_DRIFT := 0.35
+# The water_flow_scale shader global under reduced motion: the water runs slower, never stops.
+const CALM_FLOW := 0.35
+static var flow_scale := 1.0
+
+
+static func flow_at(normal: Vector3, drift: Vector2) -> Vector3:
+	var n := normal.normalized()
+	var steep := sqrt(maxf(0.0, 1.0 - n.y * n.y))
+	var downhill := Vector3(n.x * n.y, n.y * n.y - 1.0, n.z * n.y)
+	var sloped := smoothstep(WATER_LEVEL, WATER_SLOPED, steep)
+	var fall_dir := downhill.lerp(Vector3.DOWN, smoothstep(0.95, WATER_VERTICAL, steep))
+	return fall_dir * WATER_FALL_SPEED * sloped + Vector3(drift.x, 0.0, drift.y) * (1.0 - sloped)
+
+
+# How far the shader's pattern has been carried at time_s.
+static func flow_offset(normal: Vector3, drift: Vector2, time_s: float) -> Vector3:
+	return flow_at(normal, drift) * time_s * flow_scale
+
+
+# Away from the falls, level: from the spill sheets' middle to the tailrace's.
+static func tailrace_drift(sheets: Mesh, tailrace: Mesh) -> Vector2:
+	var from := sheets.get_aabb().get_center()
+	var to := tailrace.get_aabb().get_center()
+	var away := Vector2(to.x - from.x, to.z - from.z)
+	return away.normalized() * TAILRACE_DRIFT if away.length() > 0.01 else Vector2.ZERO
+
+
+# The one place reduced motion reaches the water. The dummy renderer a headless run uses
+# stores no globals, so flow_scale keeps the value for tests and flow_offset.
+static func set_water_calm(on: bool) -> void:
+	flow_scale = CALM_FLOW if on else 1.0
+	RenderingServer.global_shader_parameter_set("water_flow_scale", flow_scale)
 
 
 static func _water_edge_mesh(node_name: String, fallback: Mesh) -> Mesh:

@@ -38,3 +38,7 @@ threat_fill_scale={
 "type": "float",
 "value": 1.0
 }
+water_flow_scale={
+"type": "float",
+"value": 1.0
+}

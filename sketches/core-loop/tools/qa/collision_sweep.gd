@@ -17,8 +17,13 @@ extends SceneTree
 #
 # --area=arena finishes stage 2 into Brindle's Slag Bowl and sweeps the bowl, its ground being the bowl's own surface.
 #
-# Writes <out>/<area>-s<seed>.json (every flagged shape with its bare points) and prints a summary table.
+# The report includes every bare sample in "places", even on shapes below the flagged-area cutoff.
+# A place gives the owner and the centre and size of the sample bounds in world metres.
+# Filtered reports have a -partial suffix with their filter hash; incomplete reads have an -unavailable suffix.
+# --area=wall_fixture checks matching, near and missing wall meshes. --plant-wall hides the matching mesh.
 
+const OffscreenWindow := preload("res://tools/offscreen_window.gd")
+const UndrawnPlaces := preload("res://tools/qa/undrawn_places.gd")
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -64,6 +69,7 @@ var ball_body: RigidBody3D
 
 
 func _initialize() -> void:
+	OffscreenWindow.apply(root)
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--area="):
 			area = a.trim_prefix("--area=")
@@ -107,6 +113,40 @@ func _physics(n: int) -> void:
 
 func _run() -> void:
 	seed(run_seed)
+	if area == "wall_fixture":
+		game = Node3D.new()
+		root.add_child(game)
+		_add_fixture_wall("Park_QAWall_Matched", 2000.0, 0.0, not OS.get_cmdline_user_args().has("--plant-wall"))
+		_add_fixture_wall("Park_QAWall_Near", 2010.0, 1.05, true)
+		_add_fixture_wall("Park_QAWall_Missing", 2020.0, 0.0, false)
+		if OS.get_cmdline_user_args().has("--preview-wall"):
+			var preview := SubViewport.new()
+			preview.own_world_3d = true
+			game.add_child(preview)
+			var mesh: MeshInstance3D = game.get_node("Park_QAWall_Matched").find_children("*", "MeshInstance3D", true, false)[0]
+			var at := mesh.global_transform
+			mesh.reparent(preview)
+			mesh.global_transform = at
+		var camera := Camera3D.new()
+		camera.cull_mask = 1
+		game.add_child(camera)
+		camera.position = Vector3(2005, 5, 2009)
+		camera.look_at(Vector3(2005, 4, 2000))
+		if OS.get_cmdline_user_args().has("--frame"):
+			var light := DirectionalLight3D.new()
+			game.add_child(light)
+			light.rotation_degrees = Vector3(-40, 35, 0)
+			camera.environment = Environment.new()
+			camera.environment.background_mode = Environment.BG_SKY
+			camera.environment.sky = Sky.new()
+			camera.environment.sky.sky_material = ProceduralSkyMaterial.new()
+		ground_fn = func(_x: float, _z: float) -> float: return 0.0
+		if not await _save_frame_if_requested():
+			quit(1)
+			return
+		await _physics(2)
+		await _sweep_map("")
+		return
 	game = Game.new()
 	game.test_mode = true
 	game.table = "park"
@@ -117,6 +157,7 @@ func _run() -> void:
 	if bot_policy != "":
 		await _run_bot()
 		return
+	var places_unavailable := ""
 	game.ctx.calm = true
 	game.player.source = Intent.Scripted.new()
 	game.run.run_seed_override = run_seed
@@ -171,6 +212,8 @@ func _run() -> void:
 		while waited < 3000 and not (terrain.rows_ready(stage_index) and terrain.is_ready(stage_index) and game.flow.state_name() == "stage"):
 			await process_frame
 			waited += 1
+		if not (terrain.rows_ready(stage_index) and terrain.is_ready(stage_index) and game.flow.state_name() == "stage"):
+			places_unavailable = "the park stage did not finish loading"
 		var pp = game.presentation.park_props
 		if pp != null:
 			pp.finish()
@@ -180,17 +223,42 @@ func _run() -> void:
 		_terrain_check(stage_index)
 		quit(0)
 		return
-	game.player.body().freeze = true
-	game.player.body().global_position = Vector3(0.0, -5000.0, 0.0)
+	if not await _save_frame_if_requested():
+		quit(1)
+		return
+	ball_body = game.player.body()
+	ball_body.freeze = true
+	ball_body.global_position = Vector3(0.0, -5000.0, 0.0)
 	await _physics(2)
+	await _sweep_map(places_unavailable)
+
+
+# Keep the rider view before the sweep parks the ball below the map.
+func _save_frame_if_requested() -> bool:
+	if not OS.get_cmdline_user_args().has("--frame"):
+		return true
+	if DisplayServer.get_name() == "headless":
+		return false
+	await RenderingServer.frame_post_draw
+	var frame := root.get_texture().get_image()
+	if frame == null or frame.is_empty() or DirAccess.make_dir_recursive_absolute(out_dir) != OK:
+		return false
+	return frame.save_png(out_dir.path_join("view.png")) == OK
+
+
+func _sweep_map(places_unavailable: String) -> void:
 	var blockers := _blockers()
 	var made := _visual_bodies(blockers)
 	await _physics(3)
 	space = game.get_world_3d().direct_space_state
 	var flagged: Array = []
+	var bare_by_owner := {}
 	var totals := {"shapes": 0, "samples": 0, "bare": 0, "invisible": 0}
 	for b: Dictionary in blockers:
-		var r := _sweep_shape(b)
+		var owner := _owner_label(b["body"])
+		if not bare_by_owner.has(owner):
+			bare_by_owner[owner] = PackedVector3Array()
+		var r := _sweep_shape(b, bare_by_owner[owner])
 		totals["shapes"] += 1
 		totals["samples"] += int(r["samples"])
 		totals["bare"] += int(r["bare"])
@@ -202,10 +270,30 @@ func _run() -> void:
 		body.queue_free()
 	if identity_multimeshes > 0:
 		printerr("collision_sweep: %d MultiMeshes read every instance at one transform (headless renderer?): run under xvfb-run --rendering-driver opengl3" % identity_multimeshes)
-	var report := {"area": area, "identity_multimeshes": identity_multimeshes, "seed": run_seed, "step": step, "tol": tol, "near_m": NEAR_M, "visual_meshes": visual_count,
+	if area != "wall_fixture" and DisplayServer.get_name() == "headless":
+		places_unavailable = "map places require a real renderer for MultiMesh transforms"
+	elif identity_multimeshes > 0 or visual_count == 0 or blockers.is_empty() or totals["samples"] == 0:
+		places_unavailable = "incomplete blocker or visual geometry"
+	var filters := PackedStringArray()
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--centre=") or arg.begins_with("--radius=") or arg.begins_with("--owner="):
+			filters.append(arg)
+	var stem := "%s-s%d" % [area, run_seed]
+	if not filters.is_empty():
+		stem += "-partial-" + " ".join(filters).sha256_text().left(10)
+	if not places_unavailable.is_empty():
+		stem += "-unavailable"
+	var report := {"area": area, "filters": filters, "max_samples_per_shape": max_samples, "identity_multimeshes": identity_multimeshes, "seed": run_seed, "step": step, "tol": tol, "near_m": NEAR_M, "visual_meshes": visual_count,
 		"band": [BAND_LOW, BAND_HIGH], "totals": totals, "flagged": flagged}
+	if places_unavailable.is_empty():
+		report["places"] = UndrawnPlaces.cluster(bare_by_owner, step)
+		print("collision_sweep: %d undrawn places" % report["places"].size())
+	else:
+		report["places"] = null
+		report["places_unavailable"] = places_unavailable
+		printerr("collision_sweep: no place count: " + places_unavailable)
 	DirAccess.make_dir_recursive_absolute(out_dir)
-	var path := out_dir.path_join("%s-s%d.json" % [area, run_seed])
+	var path := out_dir.path_join(stem + ".json")
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(report, "  "))
 	f.close()
@@ -224,12 +312,36 @@ func _run() -> void:
 	report_owners = by_owner
 	for o in by_owner:
 		print("  owner %-44s shapes %3d  inv %8.1f m2  bare %8.1f m2  | rolling band inv %7.1f bare %7.1f" % [o.left(44), by_owner[o][0], by_owner[o][1], by_owner[o][2], by_owner[o][3], by_owner[o][4]])
-	var of := FileAccess.open(out_dir.path_join("%s-s%d-owners.json" % [area, run_seed]), FileAccess.WRITE)
+	var of := FileAccess.open(out_dir.path_join(stem + "-owners.json"), FileAccess.WRITE)
 	of.store_string(JSON.stringify(by_owner, "  "))
 	of.close()
 	for r: Dictionary in flagged.slice(0, 40):
 		print("  %-58s inv %7.1f m2  bare %7.1f m2  at %s  (%s)" % [String(r["owner"]).left(58), r["invisible_band_m2"], r["bare_band_m2"], str(r["worst"]), r["shape"]])
 	quit(0)
+
+
+func _add_fixture_wall(label: String, x: float, mesh_offset_z: float, drawn: bool) -> void:
+	var wall := StaticBody3D.new()
+	wall.name = label
+	wall.position = Vector3(x, 4, 2000)
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(4, 2, 0.5)
+	var collider := CollisionShape3D.new()
+	collider.shape = shape
+	wall.add_child(collider)
+	var view := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = shape.size
+	view.mesh = mesh
+	view.position.z = mesh_offset_z
+	view.visible = drawn
+	if label == "Park_QAWall_Matched":
+		if OS.get_cmdline_user_args().has("--layer-zero-wall"):
+			view.layers = 0
+		elif OS.get_cmdline_user_args().has("--camera-masked-wall"):
+			view.layers = 2
+	wall.add_child(view)
+	game.add_child(wall)
 
 
 func _in_area(p: Vector3) -> bool:
@@ -240,7 +352,7 @@ func _in_area(p: Vector3) -> bool:
 func _blockers() -> Array:
 	var out: Array = []
 	var skipped := {}
-	var ball = game.player.body()
+	var ball := ball_body
 	for node in game.find_children("*", "CollisionObject3D", true, false):
 		if node is Area3D or node == ball:
 			continue
@@ -288,6 +400,11 @@ func _shape_faces(shape: Shape3D) -> PackedVector3Array:
 	return mesh.get_faces() if mesh != null else PackedVector3Array()
 
 
+func _rider_can_see(view: GeometryInstance3D) -> bool:
+	var camera := root.get_camera_3d()
+	return camera != null and view.get_world_3d() == camera.get_world_3d() and view.is_visible_in_tree() and (view.layers & camera.cull_mask) != 0
+
+
 # Drawn meshes near any blocker, copied as baked trimeshes onto VISUAL_LAYER.
 func _visual_bodies(blockers: Array) -> Array:
 	var cell := 32.0
@@ -310,13 +427,13 @@ func _visual_bodies(blockers: Array) -> Array:
 	var holder := Node3D.new()
 	holder.name = "SweepVisuals"
 	game.add_child(holder)
-	var player_node: Node = game.player
+	var player_node: Node = game.player if ball_body != null else null
 	var made: Array = [holder]
 	for node in game.find_children("*", "GeometryInstance3D", true, false):
 		var gi := node as GeometryInstance3D
-		if not gi.is_visible_in_tree() or gi.visibility_range_begin > NEAR_BEGIN_M:
+		if not _rider_can_see(gi) or gi.visibility_range_begin > NEAR_BEGIN_M:
 			continue
-		if player_node.is_ancestor_of(gi) or holder.is_ancestor_of(gi):
+		if (player_node != null and player_node.is_ancestor_of(gi)) or holder.is_ancestor_of(gi):
 			continue
 		var items: Array = []
 		if gi is MeshInstance3D and (gi as MeshInstance3D).mesh != null:
@@ -376,7 +493,7 @@ func _instances(view: MultiMeshInstance3D) -> Array:
 	return out
 
 
-func _sweep_shape(b: Dictionary) -> Dictionary:
+func _sweep_shape(b: Dictionary, bare_positions: PackedVector3Array) -> Dictionary:
 	var shape: Shape3D = b["shape"]
 	var body: CollisionObject3D = b["body"]
 	var xf: Transform3D = b["xf"]
@@ -448,6 +565,7 @@ func _sweep_shape(b: Dictionary) -> Dictionary:
 			if _enclosed(p, n):
 				continue
 			bare += 1
+			bare_positions.append(p)
 			probe.radius = NEAR_M
 			var none_near := space.intersect_shape(q, 1).is_empty()
 			# The gap to the drawn surface: the first of GAPS that reaches it, NEAR_M when only NEAR_M does, "none" past it.
@@ -686,7 +804,7 @@ func _watch_contacts() -> void:
 func _drawn_near(body: Node, p: Vector3) -> bool:
 	var top: Node = body.get_parent() if body.get_parent() != null else body
 	for node in [body] + top.find_children("*", "GeometryInstance3D", true, false):
-		if node is GeometryInstance3D and (node as GeometryInstance3D).is_visible_in_tree():
+		if node is GeometryInstance3D and _rider_can_see(node):
 			var gi := node as GeometryInstance3D
 			if (gi.global_transform * gi.get_aabb()).grow(tol).has_point(p):
 				return true

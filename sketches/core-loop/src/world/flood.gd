@@ -1,6 +1,8 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const ModelKit := preload("res://src/world/model_kit.gd")
+const SIREN_MAST := preload("res://assets/models/world_one/poi_siren_mast.glb")
 const FloodCycle := preload("res://src/world/flood_cycle.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const SluiceValves := preload("res://src/world/sluice_valves.gd")
@@ -23,30 +25,41 @@ var sluice_valves: SluiceValves
 var _floor_y := 0.0
 var _plane: MeshInstance3D
 var _quad: PlaneMesh
-var _mast: MeshInstance3D
+var _mast: Node3D
 var _lamp: OmniLight3D
 var _lamp_mesh: MeshInstance3D
 var _lamp_material: StandardMaterial3D
 
 
 func setup() -> void:
+	# The title has no basin. configure() sets the first map position and visibility together.
+	visible = false
 	_plane = MeshInstance3D.new()
 	_quad = PlaneMesh.new()
+	_plane.name = "WaterSurface"
 	_plane.mesh = _quad
 	_plane.material_override = Palette.water(Palette.water_tone())
 	add_child(_plane)
 
-	_mast = MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = 0.5
-	cyl.bottom_radius = 0.7
-	cyl.height = 16.0
-	_mast.mesh = cyl
-	_mast.material_override = Palette.solid(Palette.RUST)
+	# The muster siren's model is six metres high with its origin at the foot.
+	_mast = Node3D.new()
+	_mast.name = "KlaxonMast"
+	_mast.scale = Vector3.ONE * (16.0 / 6.0)
 	add_child(_mast)
+	if ModelKit.whole(SIREN_MAST.resource_path, _mast) == null:
+		var fallback := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = 0.5 / (16.0 / 6.0)
+		cyl.bottom_radius = 0.7 / (16.0 / 6.0)
+		cyl.height = 6.0
+		fallback.mesh = cyl
+		fallback.material_override = Palette.solid(Palette.RUST)
+		fallback.position = Vector3.UP * 3.0
+		_mast.add_child(fallback)
 
 	_lamp_material = Palette.solid(Palette.AMBER, 1.0)
 	_lamp_mesh = MeshInstance3D.new()
+	_lamp_mesh.name = "KlaxonBulb"
 	var bulb := SphereMesh.new()
 	bulb.radius = 1.5
 	bulb.height = 3.0
@@ -84,7 +97,7 @@ func configure(basin_record: Dictionary, floor_y: float, mast: Vector3) -> void:
 	_quad.size = basin["plane_size"]
 	var centre: Vector2 = basin["plane_centre"]
 	_plane.position = Vector3(centre.x, _floor_y, centre.y)
-	_mast.position = mast + Vector3.UP * 8.0
+	_mast.position = mast
 	_lamp_mesh.position = mast + Vector3.UP * 17.0
 	_lamp.position = _lamp_mesh.position
 
