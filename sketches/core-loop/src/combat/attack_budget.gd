@@ -158,6 +158,31 @@ static func release(unit: Node) -> void:
 		unit.remove_from_group(ATTACKING)
 
 
+# Whether a unit that already holds an attacking slot (or checks the inter-warning floor before
+# chaining a secondary tell) may open a new warning now without breaching MIN_GAP (0.2 s).
+static func gap_open_for(unit: Node) -> bool:
+	if clocked_out(unit):
+		return false
+	if not unit.is_inside_tree() or _off(unit):
+		return true
+	var tree := unit.get_tree()
+	if defends_hive(unit, tree):
+		return true
+	return _gap_open(tree) or _joins_volley(unit, tree)
+
+
+# Records a warning beat opened by a unit that already holds a slot (e.g. a secondary tell
+# chained from an active hold), so no distinct unit warns within MIN_GAP after it.
+static func mark_warn(unit: Node) -> void:
+	if not unit.is_inside_tree() or _off(unit):
+		return
+	var tree := unit.get_tree()
+	if defends_hive(unit, tree):
+		return
+	tree.root.set_meta(LAST_META, Engine.get_physics_frames())
+	tree.root.set_meta(VOLLEY_META, volley_of(unit))
+
+
 # MIN_GAP in physics steps: a step is 1 / ticks per second of game time, scaled by time_scale.
 static func gap_frames() -> int:
 	return ceili(MIN_GAP * Engine.physics_ticks_per_second / Engine.time_scale - 0.0001)

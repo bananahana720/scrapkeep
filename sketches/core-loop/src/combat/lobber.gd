@@ -2,6 +2,7 @@ extends "res://src/combat/enemy.gd"
 
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 # The lobber stands and shells. Its job is to make a predictable line expensive: its
 # muzzle glows for TELEGRAPH seconds, then it commits a landing ring LEAD of the way
@@ -17,6 +18,22 @@ const LEAD := 0.5
 const HP := 26.0
 const SCRAP := 4
 const BODY_PAINT := Palette.RUST
+# Secondary attack (W47-E1): Bung-Cluster Fan. Triggered when the player closes < 10 m or
+# stalls behind cover. 0.85 s whistle commits a 35-degree HAZARD fan and lobs 3 short-range
+# bungs; rolling fast into ANY 1 bung chain-bats the other 2 for a 3x chain blast.
+const CLUSTER_RANGE := 10.0
+const CLUSTER_COVER_RANGE := 28.0
+const CLUSTER_COVER_SPEED := 9.0
+const CLUSTER_TELEGRAPH := 0.85
+const CLUSTER_SPREAD_DEG := 35.0
+const CLUSTER_COUNT := 3
+const CLUSTER_FLIGHT := 1.15
+const CLUSTER_MIN_DIST := 4.0
+const CLUSTER_MAX_DIST := 14.0
+const CHAIN_BLAST_RADIUS := 7.0
+const CHAIN_BLAST_DAMAGE := 40.0
+const CHAIN_BAT_MIN_SPEED := 14.0
+const COVER_MASK := 1
 
 signal fired(origin: Vector3, landing: Vector3, flight: float)
 # Emitted right after fired, once the shell exists: the shell's own committed landing-ring
@@ -24,12 +41,19 @@ signal fired(origin: Vector3, landing: Vector3, flight: float)
 signal released(ring: Dictionary)
 
 var shots := 0
+var cluster_shots := 0
+var chain_detonations := 0
 # The wind-up, 0 to 1: the value the muzzle glow is drawn from and the attack facts read.
 var charge := 0.0
 var recovery_seconds := TelegraphRecord.RECOVERY
 var recover_left := 0.0
 
 var _clock := 0.0
+var _cluster_active := false
+var _cluster_clock := 0.0
+var _cluster_dir := Vector3.FORWARD
+var _cluster_dist := 8.0
+var _cluster_tele: Node3D
 var _muzzle: MeshInstance3D
 var _muzzle_material: StandardMaterial3D
 # Test control: only the body pose is disabled; bulb, attack and reactions still run.
@@ -135,25 +159,50 @@ func recovering() -> bool:
 	return recover_left > 0.0
 
 
+func is_clustering() -> bool:
+	return _cluster_active
+
+
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
 	_move(delta, Vector3.ZERO)
 	if not _in_play() or target == null or not is_on_floor():
+		if _cluster_active:
+			_cancel_cluster()
+		else:
+			AttackBudget.withdraw(self)
 		_pose(0.0)
 		return
 	var to_ball: Vector3 = _ball() - global_position
 	if to_ball.length_squared() > SHOT_RANGE * SHOT_RANGE:
+		if _cluster_active:
+			_cancel_cluster()
+		else:
+			AttackBudget.withdraw(self)
 		_clock = 0.0
 		_show_charge(0.0)
+		return
+	if _cluster_active:
+		_step_cluster(delta)
 		return
 	_clock += delta
 	# Clocked out (its Foreman fell): the muzzle does not start to glow; a glow already lit fires.
 	if charge <= 0.0 and AttackBudget.clocked_out(self):
+		AttackBudget.withdraw(self)
 		_clock = minf(_clock, CYCLE - TELEGRAPH)
 	if recovering():
+		AttackBudget.withdraw(self)
 		recover_left = maxf(0.0, recover_left - delta)
 		_show_charge(0.0)
 		return
+	# When the idle cooldown expires, check secondary trigger (< 10 m or stalling behind cover).
+	if charge <= 0.0 and _clock >= CYCLE - TELEGRAPH and _wants_cluster(to_ball):
+		if AttackBudget.ask(self):
+			_begin_cluster(to_ball)
+		else:
+			_clock = CYCLE - TELEGRAPH
+		return
+	AttackBudget.withdraw(self)
 	_show_charge(clampf((_clock - (CYCLE - TELEGRAPH)) / TELEGRAPH, 0.0, 1.0))
 	if _clock < CYCLE:
 		return
@@ -169,6 +218,197 @@ func _physics_process(delta: float) -> void:
 	recover_left = recovery_seconds
 	fired.emit(muzzle_point(), landing, FLIGHT)
 	released.emit(_shell_ring())
+
+
+# Bung-Cluster Fan triggers when player closes < 10 m or stalls behind static cover.
+func _wants_cluster(to_ball: Vector3) -> bool:
+	var flat_dist := Vector2(to_ball.x, to_ball.z).length()
+	if flat_dist < CLUSTER_RANGE:
+		return true
+	if flat_dist > CLUSTER_COVER_RANGE:
+		return false
+	var speed := 0.0
+	if target != null and target.has_method("planar_velocity"):
+		var pv: Vector3 = target.planar_velocity()
+		speed = Vector2(pv.x, pv.z).length()
+	if speed >= CLUSTER_COVER_SPEED:
+		return false
+	return _behind_cover()
+
+
+func _behind_cover() -> bool:
+	if not is_inside_tree() or get_world_3d() == null:
+		return false
+	var from := muzzle_point()
+	var to := _ball() + Vector3.UP * 0.5
+	if from.distance_to(to) < 2.5:
+		return false
+	var query := PhysicsRayQueryParameters3D.create(from, to, COVER_MASK)
+	query.exclude = [get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return false
+	return (hit["position"] as Vector3).distance_to(to) > 2.0
+
+
+func _begin_cluster(to_ball: Vector3) -> void:
+	_cluster_active = true
+	_cluster_clock = 0.0
+	var flat := Vector3(to_ball.x, 0.0, to_ball.z)
+	_cluster_dir = flat.normalized() if flat.length() > 0.05 else Vector3.FORWARD
+	_cluster_dist = clampf(flat.length(), CLUSTER_MIN_DIST, CLUSTER_MAX_DIST)
+	_clear_cluster_tele()
+	_cluster_tele = Telegraph.secondary_wedge(world_root, terrain, Threat.Type.INSTANT, global_position,
+		_cluster_dir, _cluster_dist + 3.0, CLUSTER_SPREAD_DEG * 0.5 + 6.0, CLUSTER_TELEGRAPH)
+	_cluster_tele.owner_voice = "clank"
+	_cluster_tele.mechanic_tag = "vault_rise"
+	if world_root != null and is_inside_tree():
+		FxLibrary.burst(world_root, "steam_puff", muzzle_point(), 6)
+
+
+func _step_cluster(delta: float) -> void:
+	_cluster_clock += delta
+	var prog := clampf(_cluster_clock / CLUSTER_TELEGRAPH, 0.0, 1.0)
+	_show_charge(prog)
+	if is_instance_valid(_cluster_tele):
+		_cluster_tele.set_progress(prog)
+	if _cluster_clock < CLUSTER_TELEGRAPH:
+		return
+	_fire_cluster()
+
+
+func _fire_cluster() -> void:
+	_clear_cluster_tele()
+	_cluster_active = false
+	_cluster_clock = 0.0
+	_clock = 0.0
+	_show_charge(0.0)
+	_pose(1.0)
+	recover_left = recovery_seconds
+	AttackBudget.release(self)
+	var half_rad := deg_to_rad(CLUSTER_SPREAD_DEG * 0.5)
+	var bungs: Array = []
+	var before_ids := {}
+	if is_inside_tree():
+		for s in get_tree().get_nodes_in_group("enemy_shot"):
+			before_ids[s.get_instance_id()] = true
+	var dist := _cluster_dist
+	if target != null:
+		var now_flat := Vector3(_ball().x - global_position.x, 0.0, _ball().z - global_position.z)
+		if now_flat.length() > 1.0:
+			dist = clampf(now_flat.length(), CLUSTER_MIN_DIST, CLUSTER_MAX_DIST)
+	for i in CLUSTER_COUNT:
+		var frac := (float(i) / float(maxi(CLUSTER_COUNT - 1, 1))) * 2.0 - 1.0
+		var dir := _cluster_dir.rotated(Vector3.UP, half_rad * frac)
+		var aim := global_position + dir * dist
+		var landing := Vector3(aim.x, Telegraph.ground_under(terrain, aim), aim.z)
+		fired.emit(muzzle_point(), landing, CLUSTER_FLIGHT)
+	if is_inside_tree():
+		for s in get_tree().get_nodes_in_group("enemy_shot"):
+			if not before_ids.has(s.get_instance_id()) and s.get("lobber") == self:
+				bungs.append(s)
+	shots += 1
+	cluster_shots += 1
+	released.emit(_shell_ring())
+	if bungs.size() >= 2 and world_root != null and is_inside_tree():
+		var watcher := ClusterWatcher.new()
+		watcher.name = "BungClusterWatcher"
+		world_root.add_child(watcher)
+		watcher.bind(self, bungs, target, world_root)
+
+
+func _cancel_cluster() -> void:
+	_cluster_active = false
+	_cluster_clock = 0.0
+	_clear_cluster_tele()
+	AttackBudget.release(self)
+	AttackBudget.withdraw(self)
+	AttackBudget.release(self)
+	AttackBudget.withdraw(self)
+
+
+func _clear_cluster_tele() -> void:
+	if is_instance_valid(_cluster_tele):
+		_cluster_tele.queue_free()
+	_cluster_tele = null
+
+
+# Watches one 3-bung fan cluster: batting any 1 bung fast chain-bats the remaining siblings
+# and triggers a 3x chain blast that wipes nearby chaff, even if the lobber dies mid-flight.
+class ClusterWatcher extends Node:
+	var _lobber: WeakRef
+	var _bungs: Array = []
+	var _target
+	var _root: Node
+	var _chained := false
+
+	func bind(owner_lobber: Node3D, bungs: Array, target_ref, root_ref: Node) -> void:
+		_lobber = weakref(owner_lobber)
+		_target = target_ref
+		_root = root_ref
+		for b in bungs:
+			_bungs.append(weakref(b))
+
+	func _physics_process(_delta: float) -> void:
+		var alive: Array = []
+		var any_returned := false
+		for ref in _bungs:
+			var shell = (ref as WeakRef).get_ref()
+			if shell != null and is_instance_valid(shell):
+				alive.append(shell)
+				if bool(shell.get("returned")):
+					any_returned = true
+		if alive.is_empty():
+			queue_free()
+			return
+		if any_returned and not _chained:
+			if _bat_was_fast():
+				_trigger_chain(alive)
+			else:
+				_chained = true
+
+	func _bat_was_fast() -> bool:
+		if _target == null:
+			return false
+		var player = _target.get("player") if "player" in _target else _target
+		if player == null or not is_instance_valid(player) or not player.has_method("planar_velocity"):
+			return false
+		var pv: Vector3 = player.planar_velocity()
+		return Vector2(pv.x, pv.z).length() >= CHAIN_BAT_MIN_SPEED
+
+	func _trigger_chain(alive: Array) -> void:
+		_chained = true
+		var owner_lobber = _lobber.get_ref() if _lobber != null else null
+		if owner_lobber != null and is_instance_valid(owner_lobber):
+			owner_lobber.chain_detonations += 1
+		for shell in alive:
+			if not bool(shell.get("returned")) and shell.has_method("bat"):
+				shell.bat()
+			if shell.has_signal("returned_landed") and not shell.returned_landed.is_connected(_on_chain_landed):
+				shell.returned_landed.connect(_on_chain_landed, CONNECT_ONE_SHOT)
+
+	func _on_chain_landed(shell: Node3D) -> void:
+		if not is_inside_tree():
+			return
+		var at: Vector3 = shell.landing if "landing" in shell else shell.global_position
+		if _root != null and is_instance_valid(_root):
+			FxLibrary.burst(_root, "brass_spark", at, 12)
+			FxLibrary.burst(_root, "spark_core", at, 12, Palette.AMBER)
+		var combat = _target.get("combat") if _target != null and "combat" in _target else null
+		for enemy in get_tree().get_nodes_in_group("enemy"):
+			if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+				continue
+			var offset: Vector3 = enemy.global_position - at
+			if Vector2(offset.x, offset.z).length() > CHAIN_BLAST_RADIUS:
+				continue
+			var push := Vector3(offset.x, 0.0, offset.z)
+			push = push.normalized() if push.length() > 0.05 else Vector3.FORWARD
+			if enemy.has_method("knock"):
+				enemy.knock(push + Vector3.UP * 0.35, 10.0)
+			if combat != null and is_instance_valid(combat) and combat.has_method("strike"):
+				combat.strike(enemy, "shell", CHAIN_BLAST_DAMAGE)
+			elif enemy.has_method("take_damage"):
+				enemy.take_damage(CHAIN_BLAST_DAMAGE)
 
 
 # The descriptor of the ring the shell just committed: the newest of this lobber's shells.
@@ -235,10 +475,12 @@ func _pose(progress := -1.0) -> void:
 
 
 func _die() -> void:
+	_cancel_cluster()
 	_pose(0.0)
 	super._die()
 
 
 func _exit_tree() -> void:
+	_cancel_cluster()
 	_pose(0.0)
 	super._exit_tree()
