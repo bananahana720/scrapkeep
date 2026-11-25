@@ -6,7 +6,9 @@ const Palette := preload("res://src/core/palette.gd")
 const GLB := "res://assets/models/world_one/enemy_ramp_flipper.glb"
 # 2026-10-23 w19 Spillway roster: the sluice flap's speed ride (RIDE_KICK, RIDE_TIER, _ride) and its
 # codex discovery, design-v3/SPILLWAY-ROSTER.md; was f81182dc.
-const BASE_MECHANIC_SHA := "494ee927447c73bfebbf5280eed9022831eebd0060327c5801826ffdc5cc0c84"
+# 2026-11-24 W46-ANIM-VFX-FLAIR: eased deploy/kick/fold plate pose (DEPLOY_S, KICK_S, FOLD_S, _fold_t)
+# and presentation VFX bursts in _commit/_go_live; gameplay mechanics unchanged; was 494ee927.
+const BASE_MECHANIC_SHA := "7a672f2fd645f8f78e43fceff6d79f681985f9a69a2ee1a9d0f69ce57a312c1a"
 const BASE_CONSTS := {"PLATE_RADIUS": 3.6, "LEAD": .9, "TILT": .35, "FLING_UP": 30.0,
 	"FLING_SIDE": 22.0, "RIDE_UP": 9.0, "HP": 45.0}
 const BASE_VALUES := {"radius": .8, "half_height": 1.1, "weight": 1.2, "scrap_value": 4,
@@ -107,6 +109,9 @@ func _mechanic_source(source: String) -> String:
 
 
 func _base(enemy: Node3D) -> void:
+	var source := FileAccess.get_file_as_string("res://src/combat/ramp_flipper.gd")
+	_check(_mechanic_source(source).sha256_text() == BASE_MECHANIC_SHA, "base source literals and all non-mesh code unchanged")
+	# Shared combat files are not pinned here; the merge-time fence owns shared-file changes (2026-10-13, ENEMY-PINS).
 	var constants: Dictionary = enemy.get_script().get_script_constant_map()
 	for key in BASE_CONSTS:
 		_check(constants.has(key) and is_equal_approx(float(constants[key]), BASE_CONSTS[key]), "base constant %s = %s" % [key, BASE_CONSTS[key]])

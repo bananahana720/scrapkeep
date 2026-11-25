@@ -13,6 +13,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Interactables := preload("res://src/world/interactables.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 
 # Registered interactable for paying a works sluice valve's scrap price through world.interact.
@@ -1534,8 +1535,8 @@ func _step_sluice_valve(s: Dictionary, delta: float, motion: Dictionary, facts: 
 			if is_inside_tree():
 				for frac in [0.1, 0.38, 0.68, 0.94]:
 					var spot := lane_from + lane_dir * (lane_len * float(frac)) + Vector3.UP * 0.9
-					_FxLib.burst(self, "steam_puff", spot, 8, Color("e8efe9"))
-					_FxLib.burst(self, "slam_dust", spot, 6)
+					FxLibrary.burst(self, "steam_puff", spot, 8, Color("e8efe9"))
+					FxLibrary.burst(self, "slam_dust", spot, 6)
 			_apply_surge(s, h, motion)
 			if h.is_done():
 				_enter_sluice_charge(s)
@@ -1897,9 +1898,6 @@ static func _needle(needle: MeshInstance3D, g: float) -> void:
 	needle.rotation.z = -lerpf(-2.1, 2.1, clampf(g, 0.0, 1.0))
 
 
-const _FxLib := preload("res://src/presentation/fx_library.gd")
-
-
 func _puff(at: Vector3, size: float) -> void:
 	var node := MeshInstance3D.new()
 	var s := SphereMesh.new()
@@ -1912,7 +1910,7 @@ func _puff(at: Vector3, size: float) -> void:
 	add_child(node)
 	_puffs.append({"node": node, "left": PUFF_SECONDS, "size": size})
 	if is_inside_tree():
-		_FxLib.burst(self, "steam_puff", at, 8)
+		FxLibrary.burst(self, "steam_puff", at, 8)
 
 
 func _dashed_ring(at: Vector3, radius: float) -> void:

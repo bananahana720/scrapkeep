@@ -3,6 +3,7 @@ extends "res://src/combat/counter.gd"
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
 const SwingArc := preload("res://src/combat/swing_arc.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 # The plated brute (DESIGN-V2 section 10): a mini-Warden, bolted plate layers visibly
 # one layer more than any other crew. It keeps the Warden's plating grammar (a punch
@@ -330,9 +331,6 @@ func _go_live() -> void:
 	out.y = 0.0
 	var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
 	hit_player.emit(float(affix.damage) if _affix_attack else SLAM_DAMAGE, dir * slam_shove + Vector3.UP * 3.0)
-
-
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 
 class FlungPlate extends Node3D:

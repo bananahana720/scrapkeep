@@ -214,6 +214,16 @@ func _carried_parts() -> void:
 	_t.check("the away-tool death clip scatters and frees its holder",
 		parent.get_node_or_null("DeathScatter") != null and not is_instance_valid(holder))
 	await _frames(Engine.physics_ticks_per_second)
+	var ramp = _spawn("ramp_flipper")
+	await _frames(2)
+	var ramp_parent: Node = ramp.get_parent()
+	ramp._plate.top_level = true
+	ramp.take_damage(ramp.hp + 1.0)
+	var ramp_holder: Node = ramp_parent.get_node_or_null("DeathClip")
+	_t.check("a ramp flipper killed with its plate deployed hides the away plate and plays its death clip",
+		ramp_holder != null and not ramp._plate.visible and ramp_parent.get_node_or_null("DeathScatter") == null)
+	await _frames(int(ceil(0.5 * Engine.physics_ticks_per_second)) + 4)
+	await _frames(Engine.physics_ticks_per_second)
 
 
 # Death plays its clip on the look, then the usual break-up scatters it and frees the holder.

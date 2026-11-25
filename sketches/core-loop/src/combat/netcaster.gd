@@ -93,7 +93,7 @@ void fragment() {
 	mat.set_shader_parameter("brass_col", Palette.BRASS)
 	mat.set_shader_parameter("ink_col", Palette.CHARCOAL)
 	mat.set_shader_parameter("charge", 0.35)
-	mat.set_shader_parameter("motion", 1.0)
+	mat.set_shader_parameter("motion", 0.0 if FlashGuard.on or EnemyMotion.motion_scale <= 0.0 else 1.0)
 	return mat
 
 
