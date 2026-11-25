@@ -72,24 +72,34 @@ export function parseWaveFacts(text) {
     if (value === undefined) problems.push('the table has no "' + name + '" row');
     return value ?? "";
   };
-  const promotion = /^wave (\d+), main ([0-9a-f]{7,40}), #(\d+)$/.exec(need("last promotion"));
+  const promotion = /^wave (\d+), main ([0-9a-f]{7,40}), (?:#(\d+)|(direct))$/.exec(
+    need("last promotion"),
+  );
   if (promotion) {
     facts.wave = Number(promotion[1]);
     facts.mainSha = promotion[2];
-    facts.pr = Number(promotion[3]);
+    if (promotion[4]) {
+      facts.direct = true;
+    } else {
+      facts.pr = Number(promotion[3]);
+    }
   } else if (rows.has("last promotion"))
     problems.push(
-      '"Last promotion" must read "wave <N>, main <sha>, #<PR>", not "' +
+      '"Last promotion" must read "wave <N>, main <sha>, #<PR>" or "wave <N>, main <sha>, direct", not "' +
         rows.get("last promotion") +
         '"',
     );
-  const stage = /^stage\/alpha-w(\d+)$/.exec(need("open stage"));
+  const openStageValue = need("open stage");
+  const stage = /^stage\/alpha-w(\d+)$/.exec(openStageValue);
   if (stage) facts.stage = Number(stage[1]);
-  else if (rows.has("open stage")) problems.push('"Open stage" must read "stage/alpha-w<N>"');
-  const board = /^#(\d+)$/.exec(need("live board"));
+  else if (openStageValue === "main") facts.flatMain = true;
+  else if (rows.has("open stage"))
+    problems.push('"Open stage" must read "stage/alpha-w<N>" or "main"');
+  const liveBoardValue = need("live board");
+  const board = /^#(\d+)$/.exec(liveBoardValue);
   if (board) facts.board = Number(board[1]);
-  else if (rows.has("live board"))
-    problems.push('"Live board" must be one issue number, such as "#633"');
+  else if (liveBoardValue !== "none" && rows.has("live board"))
+    problems.push('"Live board" must be one issue number, such as "#633", or "none"');
   facts.redTeam = need("red team");
   if (rows.has("red team") && !RED_TEAM_ROTATION.includes(facts.redTeam))
     problems.push('"Red team" must be one of ' + RED_TEAM_ROTATION.join(", "));
@@ -105,7 +115,7 @@ const fixCommand =
 export function compareWithGit(facts, promotion, options = {}) {
   const problems = [];
   if (facts.wave === undefined) return problems;
-  if (facts.stage !== undefined && facts.stage !== facts.wave + 1)
+  if (!facts.flatMain && facts.stage !== undefined && facts.stage !== facts.wave + 1)
     problems.push(
       "Open stage is stage/alpha-w" +
         facts.stage +
@@ -128,6 +138,17 @@ export function compareWithGit(facts, promotion, options = {}) {
   if (facts.wave < promotion.wave) {
     const oneBehindAtPromotion = options.headIsPromotion && facts.wave === promotion.wave - 1;
     if (!oneBehindAtPromotion) problems.push(behind);
+    return problems;
+  }
+  if (facts.direct) {
+    if (options.isAncestor && !options.isAncestor(facts.mainSha))
+      problems.push(
+        "Last promotion names main " +
+          facts.mainSha +
+          " for wave " +
+          facts.wave +
+          ", which is not a commit in this history",
+      );
     return problems;
   }
   if (facts.wave === promotion.wave) {
@@ -184,6 +205,9 @@ export function nextRedTeam(current) {
 }
 
 export function renderWaveFacts(facts) {
+  const promoSuffix = facts.direct ? ", direct" : ", #" + facts.pr;
+  const openStage = facts.flatMain ? "main" : "stage/alpha-w" + facts.stage;
+  const liveBoard = facts.board === undefined ? "none" : "#" + facts.board;
   return [
     FACTS_HEADING,
     "",
@@ -193,11 +217,10 @@ export function renderWaveFacts(facts) {
       facts.wave +
       ", main " +
       facts.mainSha.slice(0, 8) +
-      ", #" +
-      facts.pr +
+      promoSuffix +
       " |",
-    "| Open stage | stage/alpha-w" + facts.stage + " |",
-    "| Live board | #" + facts.board + " |",
+    "| Open stage | " + openStage + " |",
+    "| Live board | " + liveBoard + " |",
     "| Red team | " + facts.redTeam + " |",
     "| Compare against | " + facts.compare + " |",
   ].join("\n");

@@ -222,7 +222,7 @@ const watchedTools = new Map([
       "tools/offscreen_probe.gd":
         "156464df4c44b25ba4f903f6786557bdff94a71b89f033744c0021f5d734819b",
       "tools/dam_look_capture.gd":
-        "157820aa32157a3dfb1374f852acdc8c0659d87b02307c1ed58377ad7a59c6b4",
+        "7573ff8e14d4d770c580c2c023bacf348968b2756a287001b082552cc6640f13",
       "tools/offscreen_window.gd":
         "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d",
     },

@@ -6,15 +6,22 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 | Fact | Value |
 | --- | --- |
-| Last promotion | wave 46, main 866dc4b0, #1279 |
-| Open stage | stage/alpha-w47 |
-| Live board | #1280 |
-| Red team | first-timer |
-| Compare against | w46-ruling-eo-fast-close (48-seed baseline w46-s1-ba46f103 on ahana; prior full gate w45-dc88e552) |
+| Last promotion | wave 50, main fc9680f8, direct |
+| Open stage | main |
+| Live board | none |
+| Red team | cautious |
+| Compare against | w50-pre-alpha-fc9680f8 (prior 48-seed baseline w46-s1-ba46f103 on ahana) |
 
-The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
+Under [ruling ep](DECISIONS.md), work runs directly in flat `main` mode (`Open stage` is `main`, `Live board` is `none`) instead of per-wave `stage/alpha-w<N>` stacking. For legacy wave promotions, the stage log (`git log --first-parent origin/stage/alpha-w<N>`) held the stack queue and `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` rotated the table. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch.
 
-## Now (25 Nov 2026, wave 46 fast-closing under ruling eo)
+## Now (25 Nov 2026, pre-alpha flattened on main under ruling ep)
+
+**Waves 47-50 and open branches flatten onto `main` as a unified pre-alpha baseline under [ruling ep](DECISIONS.md)** across Phases 1-3 (`fc9680f8` plus this gate close):
+- **Phase 1 unified pre-UI & W44 wins:** Flattened `w50/pre-ui-unified` (Stages A-D across 26 `w47/*`–`w50/*` branches + `stage/alpha-w47`), rebased `aifirstify_repo_gemini_workflows` (`.agents/` skills, hooks, workflows and `check:agents`), and folded audited W44 wins (`water-flows`, `area-blueprint` reconciled under ruling `ep`, `audit-launch-ring-ramp`, `W1-131`, `W1-137a`, `W1-143b`, `W1-144-mac-launch`). Worlds 1–3 are unparked in `game.gd` and Patch (7th pilot) is active behind `HIDDEN_PILOTS`/`HIDDEN_SHELLS`.
+- **Phase 2 art, assets & Stage D UI:** Landed Stage D UI plus 3 UI bug fixes, 21 W50 GLBs, 38 SVGs, and Patch's hidden trail with 0 stand-ins.
+- **Phase 3 hygiene, formal models & verification:** Enforced repo-wide `/no-comments` with invariants encoded in types, assertions and tests ([CONTRIBUTING.md](../../CONTRIBUTING.md)), verified 11/11 TLA+ formal models synced at `465769205` under `.agents/skills/scrapkeep-verify-formal/`, maintained the verify skills, synced `E22` (`line_cutter`) telegraph record `0.75 s` against `W49-COMBAT` (`81b3786f9`) in `telegraph_record.gd` and `LEGIBILITY.md`, closed the 2 W50 icon placeholders (`el_heat.svg` generated, dead `obj_press` alias removed -> `placeholder-gate` PASS 0), re-pinned `dam_look_capture.gd` SHA in `display-run.mjs`, taught `budget_audit` clip-only GLBs, and restored `posture_bands_mind_test` on [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) for World 3 posture calibration after `W47-H1` merged (`75/76` `sketch:fast` Godot tests PASS, 0 untracked reds).
+
+### Earlier (25 Nov 2026, wave 46 fast-closing under ruling eo)
 
 **Wave 46 closes fast on the Mac Studio (25 Nov) under [ruling eo](DECISIONS.md)** (approved by Andrew for active multi-wave development before Waves 47-50+) after stacking Wave 46A/46B (`#1264`–`#1276`, PR `#1278` `W46-ANIM-VFX-FLAIR`, and PR `#1277` `W46-S1` World 1 calibration):
 - **Wave 46A stacked units (`#1264`–`#1276` -> `892332498`):** Sound V4 arbiter/DJ, poteto perf enhancements, Spillway/Flume park calibration prep, pilot cutaway weapons/VFX/model passes, `boss.gd` & combat fixes, and Wave 46A gate cleanup.
@@ -59,7 +66,7 @@ Gate assumptions for Andrew (overturnable at the sitting): (1) P3 Mend Ward allo
 
 **Wave 44 closes on the Mac Studio (20 Nov)** after stacking the CI speed stack (PRs 1174 to 1178: parallel PR CI with concurrency cancel, blobless checkout and seeded caches; oxlint + oxfmt replacing prettier; 23x faster `check:docs`; LPT-balanced Godot sharding and affected selection; tracked `<9s` pre-push hook), the audit fixes reviewed `PASS+NOTES` on the wave board (PRs 1165 to 1170 and 1172: reward-gate jump pickup, full-hull mend guard, unmeasured-stop-tax labels in `bot_fairness_test`, incoming-event edge markers, slam-lesson line guard, dynamic Interact prompt binding, audit records), and the two paused bot/reactor branches (`w44/brindle-bot-camera` lens crosshair aim and `w44/reactor-bands-lead` 9-seed reactor bands). Excluded from wave 44: PR 1171 (parked/fail), PR 1173 (awaits Andrew's nod on `AGENTS.md` rule 11 / its draft ruling `eg`), PR 1120 (parked), and open promise-card PRs 1144 to 1158.
 
-**Wave 45 rulings (21 Nov):** ef (sitting gated on the 35 active `gate` rows; only ready promise drafts 1144 to 1158 retarget), eg (build diversity and ability mutations before the sitting build; wave 46 tunes and cuts it) and eh (heft-scaled destructibles; props only) are in [DECISIONS.md](DECISIONS.md), rows W45-A to W45-D in [BACKLOG.md](../../BACKLOG.md). **Pull request 1173 (`w44/area-blueprint`) stays parked and unmerged**: it edits `AGENTS.md` rule 11 and `ORCHESTRATOR.md` without Andrew's approval of that rule edit, and worlds 2 and 3 stay parked (ruling at). If unparked it needs a rebase onto `stage/alpha-w45` and fresh ruling letters, since its draft ef and eg now clash.
+**Wave 45 rulings (21 Nov):** ef (sitting gated on the 35 active `gate` rows; only ready promise drafts 1144 to 1158 retarget), eg (build diversity and ability mutations before the sitting build; wave 46 tunes and cuts it) and eh (heft-scaled destructibles; props only) are in [DECISIONS.md](DECISIONS.md), rows W45-A to W45-D in [BACKLOG.md](../../BACKLOG.md). **Pull request 1173 (`w44/area-blueprint`) stays parked and unmerged**: it edits `AGENTS.md` rule 11 and `ORCHESTRATOR.md` without Andrew's approval of that rule edit, and worlds 2 and 3 stay parked (ruling at). If unparked it needs a rebase onto `stage/alpha-w45` and fresh ruling letters, since its draft ef and eg now clash. *(Update 25 Nov: `w44/area-blueprint` was later audited and folded into `main` without the unapproved rule edits under [ruling ep](DECISIONS.md).)*
 
 **Pre-promotion review (20 Nov, `f42a22574..212fb8e0b` game code):** `PASS+NOTES` with zero blockers (ruling `cu`, `cx`, deep modules, save/reward integrity and `res://tools/` boundaries all clear). Two non-blocking follow-ups for wave 45: (1) `edge_markers.gd:165-167` skips `ARMED` visibility on non-park participatory offers, (2) `edge_markers.gd:492-493, 501` `arrow_slide` clamping at viewport corners.
 

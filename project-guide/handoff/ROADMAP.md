@@ -7,7 +7,7 @@ The roadmap is ordered by what has to be true, not by dates. Wave numbers keep c
 ## Where we are
 
 - **Goal (16 Oct, unchanged):** a finished-feeling Linux alpha, accepted at one sitting: 11 areas marked with no "Not yet", no open blocker, frame times in budget, zero placeholders.
-- **Priority (23 Oct, ruling at):** world 1 first. Worlds 2 and 3 start nothing new until the world 1 sitting is done.
+- **Priority (25 Nov, ruling ep):** `ruling at` is lifted under [ruling ep](DECISIONS.md). Worlds 1–3 are unparked (`game.gd`), Waves 47–50 Stages A–D are flattened onto `main` as a unified pre-alpha baseline ahead of human sittings, and Patch (7th pilot) is active behind the hidden trail (`HIDDEN_PILOTS`/`HIDDEN_SHELLS`). World 1 still leads Andrew's first sitting before the full-alpha sitting.
 - **Where the wave stands, the last measures and each open pull request:** [STATE.md](STATE.md). This page keeps only the order of what is left.
 
 ## Phase 1: the world 1 sitting
