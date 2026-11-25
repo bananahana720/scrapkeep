@@ -125,6 +125,7 @@ func _initialize() -> void:
 			_report(zone + " " + subject + " intro", intros[zone][subject] == 1, "%d intros; need one" % intros[zone][subject])
 	_calls()
 	_camp_quips()
+	_world_three()
 	print("lore_rows_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -248,3 +249,31 @@ func _camp_quips() -> void:
 	for row in LoreRows.CAMP_QUIPS:
 		openers[(row["text"] as Array).find(LoreRows.camp_quip_text(row, 1))] = true
 	_report("pilots on one visit spread over their lists", openers.size() > 1, str(openers.keys()))
+
+
+# W49-MAPS: World 3's cold opens and the Mind's two cards live outside ROWS, keyed by landmark kind;
+# lines stay under the intro cap, skippable, with no em dash or exclamation mark (LEGIBILITY section 13, W6).
+func _world_three() -> void:
+	var row_ids := {}
+	for row in LoreRows.ROWS:
+		row_ids[row["id"]] = true
+	var plain := func(text: String) -> bool: return not text.contains("\u2014") and not text.contains("!") and not text.contains(" - ")
+	for kind in ["sky_island", "spire"]:
+		var card := LoreRows.world_three_cold_open(kind)
+		var line := String(card.get("line", ""))
+		var words := line.split(" ", false).size()
+		_report("world 3 cold open " + kind, card.get("zone") == ("3-1" if kind == "sky_island" else "3-2") and card.get("speaker") == "Moss"
+			and card.get("skippable") == true and float(card.get("duration_s", 0.0)) > 0.0 and not row_ids.has(card.get("id")),
+			"%s %s" % [card.get("id"), card.get("zone")])
+		_report("world 3 cold open line " + kind, words > 0 and words <= LoreRows.INTRO_LINE_WORD_CAP and plain.call(line) and plain.call(String(card.get("title", ""))),
+			"%d words: %s" % [words, line])
+	_report("unknown landmark has no cold open", LoreRows.world_three_cold_open("headframe").is_empty(), "headframe")
+	var call: Dictionary = LoreRows.FOREMAN_CALL_IN
+	var call_words := String(call["line"]).split(" ", false).size()
+	_report("foreman call-in card", call["title"] == "THE FOREMAN" and call["stats"].size() == 3 and call["likes"] == ["LIKES", "YOU"]
+		and call["skippable"] == true and float(call["duration_s"]) >= 2.5 and float(call["duration_s"]) <= 4.0
+		and String(call["cue"]) != "" and not row_ids.has(call["id"]), str(call["stats"]))
+	_report("foreman call-in line", call_words <= LoreRows.INTRO_LINE_WORD_CAP and plain.call(String(call["line"])), "%d words" % call_words)
+	var hired: Dictionary = LoreRows.HIRED_CEREMONY
+	_report("hired ceremony card", hired["stamp"] == "HIRED" and hired["memo"] == "I am humbled to announce that I have accepted a position on the crew."
+		and hired["skippable"] == true and float(hired["duration_s"]) >= 2.0 and float(hired["duration_s"]) <= 3.5 and not row_ids.has(hired["id"]), String(hired["memo"]))

@@ -11,9 +11,12 @@ const T := preload("res://tests/support/t.gd")
 const StageBeats := preload("res://src/core/stage_beats.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
+const LoreRows := preload("res://src/core/lore_rows.gd")
+const Worlds := preload("res://src/core/worlds.gd")
+const VictoryLap := preload("res://src/world/victory_lap.gd")
 
 # The number of checks this file makes. A run that makes any other number fails.
-const EXPECTED := 100
+const EXPECTED := 114
 const TAIL := 20
 
 var _nodes: Array[Node] = []
@@ -35,6 +38,7 @@ func _initialize() -> void:
 	_audit(t)
 	_bot_column(t)
 	_report(t)
+	_world_three(t)
 	if t.checks != EXPECTED:
 		t.check("check count", false, "ran %d checks, expected %d" % [t.checks, EXPECTED])
 	for node in _nodes:
@@ -341,3 +345,46 @@ func _bot_column(t) -> void:
 			t.eq("bot child %d beat ticks sum to the total" % i, StageBeats.sum_ticks(row), int(row["total"]))
 			t.check("bot child %d spent ticks arriving and finding" % i, row["ticks"]["arrive"] > 0 and row["ticks"]["find"] + row["ticks"]["loot"] > 0, "%s" % [row["ticks"]])
 	t.check("the same seed logs the same beat timings to the frame", logs.size() == 2 and StageBeats.same_timings(logs[0], logs[1]) and logs[0].size() == 1, "")
+
+
+# W49-MAPS: World 3's story beats are data keyed by landmark kind, each skippable and non-blocking,
+# and every card a beat names exists in LoreRows. 14 checks.
+func _world_three(t) -> void:
+	for beat in StageBeats.WORLD_THREE_BEATS:
+		var owner_path := String(beat["owner"])
+		t.check("%s is skippable, non-blocking and owned by a src script" % beat["id"],
+			beat["skippable"] == true and beat["blocking"] == false and owner_path.begins_with("res://src/") and owner_path.ends_with(".gd"), owner_path)
+	t.eq("the HIRED stamp belongs to the Mind's dress", StageBeats.world_three_beat("hired_stamp").get("owner"), "res://src/boss/mind_dress.gd")
+	t.eq("an unknown World 3 beat is empty", StageBeats.world_three_beat("nope"), {})
+	var ids := func(kind: String) -> Array: return StageBeats.world_three_beats_for_landmark(kind).map(func(b): return b["id"])
+	t.eq("the Hanging Isle has its cold open", ids.call("sky_island"), ["isle_cold_open"])
+	t.eq("the spire holds the rest in order", ids.call("spire"),
+		["crown_cold_open", "golden_dusk_crossfade", "foreman_call_in", "hired_stamp", "free_roll_bowl"])
+	var cards := {
+		"isle_cold_open": LoreRows.world_three_cold_open("sky_island").get("id", "?"),
+		"crown_cold_open": LoreRows.world_three_cold_open("spire").get("id", "?"),
+		"foreman_call_in": LoreRows.FOREMAN_CALL_IN["id"],
+		"hired_stamp": LoreRows.HIRED_CEREMONY["id"],
+	}
+	var unresolved := []
+	for beat in StageBeats.WORLD_THREE_BEATS:
+		if String(beat["lore_id"]) != String(cards.get(beat["id"], "")):
+			unresolved.append(beat["id"])
+	t.check("every World 3 beat's card exists in LoreRows", unresolved.is_empty(), str(unresolved))
+	var fade: Dictionary = StageBeats.LAUNCH_CROSSFADE
+	t.check("the crossfade runs isle to spire over six seconds",
+		fade["from_landmark"] == "sky_island" and fade["to_landmark"] == "spire" and is_equal_approx(float(fade["seconds"]), 6.0), str(fade))
+	var gold: Color = fade["from_tint"]
+	var dusk: Color = fade["to_tint"]
+	var gold_hue := gold.h * 360.0
+	var dusk_hue := dusk.h * 360.0
+	var hazard_hue := Color("ff5a3c").h * 360.0
+	var mint_hue := Color("8bf0d3").h * 360.0
+	var clear := absf(gold_hue - hazard_hue) > 20.0 and absf(gold_hue - mint_hue) > 40.0 and absf(dusk_hue - mint_hue) > 40.0 \
+		and not (dusk_hue >= 300.0 and dusk_hue <= 330.0) and not (gold_hue >= 300.0 and gold_hue <= 330.0)
+	t.check("golden hour to blue-violet dusk, clear of hazard, mint and Kindness",
+		gold_hue > 30.0 and gold_hue < 60.0 and dusk_hue > 220.0 and dusk_hue < 290.0 and clear
+		and is_equal_approx(gold.a, 0.42) and dusk.a == 0.0, "gold %.0f deg a %.2f, dusk %.0f deg a %.2f" % [gold_hue, gold.a, dusk_hue, dusk.a])
+	var free_roll: Dictionary = Worlds.ENDING.get("free_roll", {})
+	t.check("the ending's free roll matches the victory lap's clock",
+		is_equal_approx(float(free_roll.get("seconds", 0.0)), VictoryLap.SECONDS) and free_roll.get("skippable") == true and free_roll.get("blocking") == false, str(free_roll))

@@ -57,6 +57,8 @@ const ENDING := {
 		"Tally laid the three leaves beside the repair sheet. The torn edges fit.",
 	],
 	"sign": "Return trip entered. We filled in the time ourselves. Filed by the bay crew.",
+	# The free roll in the crater bowl after the fly-over; seconds matches victory_lap.gd SECONDS.
+	"free_roll": {"seconds": 60.0, "skippable": true, "blocking": false},
 }
 
 static func row(world: int) -> Dictionary:

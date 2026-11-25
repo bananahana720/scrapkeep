@@ -285,3 +285,94 @@ static func world_two_beat(id: String) -> Dictionary:
 
 static func world_two_beats_for_landmark(landmark_kind: String) -> Array:
 	return WORLD_TWO_BEATS.filter(func(beat): return beat["landmark"] == landmark_kind)
+
+
+# World 3 curated story beats (W49-MAPS), the same shape as WORLD_TWO_BEATS: non-blocking, skippable,
+# keyed by park landmark kind (stage 5's sky_island, stage 6's spire), never by map id or boss id.
+# lore_id names the LoreRows card a beat shows; a beat with no card (the light crossfade, the free
+# roll) leaves it empty.
+const WORLD_THREE_BEATS := [
+	{
+		"id": "isle_cold_open",
+		"landmark": "sky_island",
+		"zone": "3-1",
+		"trigger": "stage_entered",
+		"owner": "res://src/presentation/highdraft_fx.gd",
+		"lore_id": "lore.isle.cold_open",
+		"skippable": true,
+		"blocking": false,
+	},
+	{
+		"id": "crown_cold_open",
+		"landmark": "spire",
+		"zone": "3-2",
+		"trigger": "stage_entered",
+		"owner": "res://src/presentation/highdraft_fx.gd",
+		"lore_id": "lore.crown.cold_open",
+		"skippable": true,
+		"blocking": false,
+	},
+	{
+		"id": "golden_dusk_crossfade",
+		"landmark": "spire",
+		"zone": "3-2",
+		"trigger": "stage_entered",
+		"owner": "res://src/presentation/highdraft_fx.gd",
+		"lore_id": "",
+		"skippable": true,
+		"blocking": false,
+	},
+	{
+		"id": "foreman_call_in",
+		"landmark": "spire",
+		"zone": "3-2",
+		"trigger": "boss_intro",
+		"owner": "res://src/boss/mind_dress.gd",
+		"lore_id": "lore.crown.foreman_call_in",
+		"skippable": true,
+		"blocking": false,
+	},
+	{
+		"id": "hired_stamp",
+		"landmark": "spire",
+		"zone": "3-2",
+		"trigger": "boss_defeated",
+		"owner": "res://src/boss/mind_dress.gd",
+		"lore_id": "lore.crown.hired",
+		"skippable": true,
+		"blocking": false,
+	},
+	{
+		"id": "free_roll_bowl",
+		"landmark": "spire",
+		"zone": "3-2",
+		"trigger": "boss_defeated",
+		"owner": "res://src/world/victory_lap.gd",
+		"lore_id": "",
+		"skippable": true,
+		"blocking": false,
+	},
+]
+
+# One day per run: the islands are golden hour, the Crown is dusk. Crossing from the isle to the
+# spire, a screen tint fades from warm gold to a clear blue-violet over `seconds`. Both hues stay
+# clear of HAZARD (#FF5A3C, about 8 degrees), the live mint (#8BF0D3) and the Kindness purple band
+# (300 to 330 degrees): the gold sits near 38 degrees, the violet near 251.
+const LAUNCH_CROSSFADE := {
+	"from_landmark": "sky_island",
+	"to_landmark": "spire",
+	"seconds": 6.0,
+	"from_tint": Color("e8b45a", 0.42),
+	"to_tint": Color("5a4f8c", 0.0),
+}
+
+
+static func world_three_beat(id: String) -> Dictionary:
+	for beat in WORLD_THREE_BEATS:
+		if beat["id"] == id:
+			return beat
+	return {}
+
+
+static func world_three_beats_for_landmark(kind: String) -> Array:
+	return WORLD_THREE_BEATS.filter(func(beat): return beat["landmark"] == kind)
