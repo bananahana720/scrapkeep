@@ -5,7 +5,7 @@ description: "Check by TLA+ model, kept beside this skill, the promises Scrapkee
 
 # Check the run flow against its model
 
-Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `docs/project/README.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
+Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `project-guide/handoff/START-HERE.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
 
 This skill owns one formal check. A test plays the orders of events someone wrote down. This check tries every order of the steps in `models/RunFlow.tla`, a small model of a run from the title to its summary and of the launch swipe (the comic panel that covers the cut between stages). It does not replace a test: `scrapkeep-verify` still picks the tests for a diff, and a model result says nothing about feel, timing in seconds or drawing.
 
@@ -101,14 +101,7 @@ Run it with `bash $F/models/make-hazard-configs.sh`, then each `hazard-*.cfg` as
 
 ## The flood model
 
-Another model, `models/ParkFlood.tla`, checks a park flood from its announcement to its end in `sketches/core-loop/src/world/event_director.gd` (`_park_step_live`, `_park_capacity`, `_park_can_end`), with the ball free to roll into or out of any basin between any two ticks. Its rules:
-
-- **FullWaterNeverHeld.** Water that has risen for its whole fill time is stepped on every tick, ball or no ball, while its live time runs and after it while the ball keeps the flood from ending (finding PF-2, closed by 60e2fccf5).
-- **FullWaterFreesItsSlot.** Full water with no live time stops counting against the ground cap.
-- **NeverRisesUnderBall** and **NeverEndsUnderBall.** Water does not rise for the first 2 s of the ball in its basin, grounded or not (the bounded wait), and does not end while the ball is in its basin.
-- **HoldEnds.** The wait is bounded: rising water always finishes rising, ball or no ball (finding PF-1, closed by W1-148).
-- **WithinCap.** No more unsettled ground events are live than the cap allows.
-- **FloodEnds** and **AnnouncedLands.** Once the ball stays out, every live flood ends and every announced one lands.
+Another model, `models/ParkFlood.tla`, checks a park flood from its announcement to its end in `sketches/core-loop/src/world/event_director.gd` (`_park_step_live`, `_park_capacity`, `_park_can_end`), with the ball free to roll into or out of any basin between any two ticks. Its rules: `FullWaterNeverHeld` (water risen for its full fill time steps every tick, ball or no ball, during and past its live time; PF-2 closed by `60e2fccf5`), `FullWaterFreesItsSlot` (full water with no live time stops counting against the ground cap), `NeverRisesUnderBall` and `NeverEndsUnderBall` (water waits up to 2 s under a ball in its basin and never ends under one), `HoldEnds` (the wait is bounded; PF-1 closed by W1-148), `WithinCap`, and `FloodEnds` / `AnnouncedLands` (once the ball stays out, every live flood ends and every announced one lands).
 
 Run `bash $F/models/make-flood-configs.sh`, then plain TLC on each `flood-*.cfg` with `ParkFlood.tla`. [references/flood-coverage.md](references/flood-coverage.md) maps each step and guard to the code and lists what each config must report, and [references/flood-findings.md](references/flood-findings.md) holds the findings, one of them open (PF-3). `node scripts/gate/model-receipts.mjs --out <dir> --row flood-never-held` writes its receipt.
 
@@ -136,7 +129,7 @@ Run `bash $F/models/make-yardlock-configs.sh`, then plain TLC on each `yardlock-
 
 ## The deferred effects model
 
-`models/DeferredEffects.tla` (FV-3) checks what `sketches/core-loop/src/combat/combat.gd` holds now and fires later (Rake Heart returns, Fault Hammer aftershocks, Second Bell tolls, Backwash strips, Twin Discharge echoes, pending casts and bites, the Slag Pike count, guard links, heat, exposure marks) and the shot bits `sketches/core-loop/src/combat/bolts.gd` carries through a split or a bounce, across every stage entry, retry, arena clear, death, quit and new run. Its rules: `ProcDepthOne` (nothing a proc fires queues or fires another proc), `NoEchoAcrossAttempt` (nothing an attempt queued fires in another, and play never starts holding one) and `ShotBitsCap` (at most three bits, one split, one glance, children that never pull again or carry hoar, no exposure mark without its row). Run `bash $F/models/make-deferred-configs.sh`, then plain TLC on each `deferred-*.cfg`; [references/deferred-coverage.md](references/deferred-coverage.md) maps the steps and guards, [references/deferred-findings.md](references/deferred-findings.md) holds the findings (none open), and `--row deferred-effects-safe` writes the receipt.
+`models/DeferredEffects.tla` (FV-3) checks what `sketches/core-loop/src/combat/combat.gd` holds now and fires later (Rake Heart returns, Fault Hammer aftershocks, Second Bell tolls, Backwash strips, Twin Discharge echoes, pending casts and bites, DamageDoor-deferred procs via `sketches/core-loop/src/combat/damage_door.gd`, det-cord queues, the Slag Pike count, guard links, heat, exposure marks) and the shot bits `sketches/core-loop/src/combat/bolts.gd` carries through a split or a bounce, across every stage entry, retry, arena clear, death, quit and new run. Its rules: `ProcDepthOne` (nothing a proc fires queues or fires another proc), `NoEchoAcrossAttempt` (nothing an attempt queued fires in another, and play never starts holding one) and `ShotBitsCap` (at most three bits, one split, one glance, children that never pull again or carry hoar, no exposure mark without its row). Run `bash $F/models/make-deferred-configs.sh`, then plain TLC on each `deferred-*.cfg`; [references/deferred-coverage.md](references/deferred-coverage.md) maps the steps and guards, [references/deferred-findings.md](references/deferred-findings.md) holds the findings (none open), and `--row deferred-effects-safe` writes the receipt.
 
 ## The Brindle reel, sound arbiter and weapon cadence models
 

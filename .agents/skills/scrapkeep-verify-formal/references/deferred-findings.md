@@ -4,7 +4,7 @@ Each finding is a break of `models/DeferredEffects.tla` that replayed on the rea
 
 ## Open
 
-None. `deferred-today` (the code at e362998b2) holds `ProcDepthOne`, `NoEchoAcrossAttempt` and `ShotBitsCap` in 2,196,005 distinct states (TLC 2.19, tla2tools 1.7.4, 8 workers, Mac Studio, 21 November 2026), every one of its twenty `deferred-broken-*` plants breaks the rule it names, and all 39 `deferred-reach-*` probes break, so every step fires.
+None. `deferred-today` (the code at `465769205`, including `_deferred_procs`, `_draining_procs`, `DamageDoor.in_pass()`, and `_det_cord_queue`) holds `ProcDepthOne`, `NoEchoAcrossAttempt` and `ShotBitsCap` in 9,955,877 distinct states (TLC 2.19, tla2tools 1.7.4, 12 workers, Mac Studio, 25 November 2026; up from 2,196,005 at `e362998b2`), every one of its twenty-four `deferred-broken-*` plants breaks the rule it names, and its `deferred-reach-*` probes break.
 
 ## Closed before the model
 

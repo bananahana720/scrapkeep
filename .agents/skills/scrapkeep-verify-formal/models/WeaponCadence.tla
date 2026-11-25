@@ -86,8 +86,8 @@ Windows == {"idle", "waiting", "open", "spent", "hit"}
 InterruptKinds == {"none", "jam", "ult", "mount", "swap", "pause"}
 WiredBoundaries == {"stage_entry", "stage_retry", "arena_entry", "arena_retry",
                     "lap", "death", "new_run", "continue"}
-Acts == {"none", "plain_fire", "reload", "notch_hit", "early_spend", "top_up",
-         "spark", "charged_bolt", "mount_drop", "ult_interrupt", "boundary_reset",
+Acts == {"none", "plain_fire", "reload", "notch_hit", "early_spend", "top_up", "hot_reload",
+         "spark", "charged_bolt", "instant_charge_arm", "mount_drop", "ult_interrupt", "boundary_reset",
          "jam_fire", "proc_no_touch", "stamp_refund",
          "kest_throw", "kest_snap", "kest_detline",
          "tarn_beat3",
@@ -129,6 +129,7 @@ VARIABLES
     charge_armed,          \* BOOLEAN (Sable hold armed by spark press)
     charging,              \* BOOLEAN (Sable charge actively filling)
     charge,                \* 0..ChargeMax (Sable charge level)
+    instant_charge,        \* BOOLEAN (Sable Spire Vault instant max-charge window, ARC_CASTER only)
     lob_charging,          \* BOOLEAN (Kest lob gauge open and aiming)
     snap_hold_lock,        \* BOOLEAN (Kest snap press hold-lock blocking gauge open until release)
     live_charge,           \* BOOLEAN (Kest live thrown charge associated with current snap window)
@@ -156,7 +157,7 @@ VARIABLES
 
 vars == <<flow, paused, jammed, weapon, cooldown, recover, press_held, hold_t,
           buffered, chamber, hot_rounds, reloading, reload_t, charge_armed,
-          charging, charge, lob_charging, snap_hold_lock, live_charge,
+          charging, charge, instant_charge, lob_charging, snap_hold_lock, live_charge,
           beat, beat_t, lane_painted, window, window_t, pressure,
           just_crossed_boundary, after_interrupt, steps_since_interrupt,
           press_shots, window_pays, early_pressed, shot_outside_play,
@@ -180,6 +181,7 @@ AtRest ==
     /\ ~charging
     /\ ~charge_armed
     /\ charge = 0
+    /\ ~instant_charge
     /\ ~lob_charging
     /\ ~snap_hold_lock
     /\ ~live_charge
@@ -208,6 +210,7 @@ TypeOK ==
     /\ charge_armed \in BOOLEAN
     /\ charging \in BOOLEAN
     /\ charge \in 0..ChargeMax
+    /\ instant_charge \in BOOLEAN
     /\ lob_charging \in BOOLEAN
     /\ snap_hold_lock \in BOOLEAN
     /\ live_charge \in BOOLEAN
@@ -247,6 +250,7 @@ ResetDriver(w) ==
     /\ charge_armed' = FALSE
     /\ charging' = FALSE
     /\ charge' = 0
+    /\ instant_charge' = FALSE
     /\ lob_charging' = FALSE
     /\ snap_hold_lock' = FALSE
     /\ live_charge' = FALSE
@@ -276,6 +280,7 @@ Init ==
     /\ charge_armed = FALSE
     /\ charging = FALSE
     /\ charge = 0
+    /\ instant_charge = FALSE
     /\ lob_charging = FALSE
     /\ snap_hold_lock = FALSE
     /\ live_charge = FALSE
@@ -335,7 +340,7 @@ StepRivet(inp) ==
        /\ press_held' = held
        /\ just_crossed_boundary' = FALSE
        /\ UNCHANGED <<flow, paused, jammed, weapon, recover, hold_t,
-                      charge_armed, charging, charge, lob_charging,
+                      charge_armed, charging, charge, instant_charge, lob_charging,
                       snap_hold_lock, live_charge, beat, beat_t, lane_painted,
                       window_t, pressure, stuck_holding, proc_mutated_driver,
                       snap_opened_gauge, beat_skip_pay, grew_without_roll,
@@ -498,7 +503,34 @@ TopUpCylinder ==
                          hot_rounds, cooldown, after_interrupt, steps_since_interrupt>>
     /\ last_act' = "top_up"
     /\ UNCHANGED <<flow, paused, jammed, weapon, recover, press_held, hold_t,
-                   buffered, charge_armed, charging, charge, lob_charging,
+                   buffered, charge_armed, charging, charge, instant_charge, lob_charging,
+                   snap_hold_lock, live_charge, beat, beat_t, lane_painted,
+                   window_t, pressure, press_shots, shot_outside_play,
+                   stuck_holding, proc_mutated_driver, snap_opened_gauge,
+                   beat_skip_pay, grew_without_roll, last_cost, last_refund>>
+
+\* Rivet relic swap hot reload: weapon_driver.gd hot_reload_cylinder()
+HotReloadCylinder ==
+    /\ flow = "play" /\ ~paused
+    /\ weapon = "rivet"
+    /\ (reloading \/ chamber < Mag \/ hot_rounds < Mag)
+    /\ just_crossed_boundary' = FALSE
+    /\ chamber' = Mag
+    /\ hot_rounds' = Mag
+    /\ IF reloading THEN
+          /\ reloading' = FALSE
+          /\ reload_t' = 0
+          /\ window' = "idle"
+          /\ window_pays' = 0
+          /\ early_pressed' = FALSE
+          /\ cooldown' = 0
+          /\ TrackProgress(TRUE)
+       ELSE
+          /\ UNCHANGED <<reloading, reload_t, window, window_pays, early_pressed,
+                         cooldown, after_interrupt, steps_since_interrupt>>
+    /\ last_act' = "hot_reload"
+    /\ UNCHANGED <<flow, paused, jammed, weapon, recover, press_held, hold_t,
+                   buffered, charge_armed, charging, charge, instant_charge, lob_charging,
                    snap_hold_lock, live_charge, beat, beat_t, lane_painted,
                    window_t, pressure, press_shots, shot_outside_play,
                    stuck_holding, proc_mutated_driver, snap_opened_gauge,
@@ -533,9 +565,10 @@ StepSable(inp) ==
              /\ TrackProgress(FALSE)
              /\ last_act' = "none"
              /\ UNCHANGED <<cooldown, recover, hold_t, buffered, charge_armed,
-                            charging, charge, shot_outside_play>>
+                            charging, charge, instant_charge, shot_outside_play>>
           ELSE
              LET fireSpark == readyNow /\ (pressed \/ buffered)
+                 instantNow == fireSpark /\ instant_charge /\ weapon = "sable_ball"
                  waitTicks == IF cdNext > recNext THEN cdNext ELSE recNext
                  bufferSpark == ~readyNow /\ pressed /\ waitTicks <= BufferTicks
                  armedAfterSpark == IF fireSpark THEN held ELSE charge_armed
@@ -546,7 +579,19 @@ StepSable(inp) ==
                  bufAfterSpark == IF fireSpark THEN FALSE
                                   ELSE IF bufferSpark THEN TRUE ELSE FALSE
              IN
-             IF armedAfterSpark THEN
+             IF instantNow THEN
+                /\ cooldown' = FloorTicks
+                /\ recover' = RecoverTicks
+                /\ buffered' = FALSE
+                /\ charge_armed' = FALSE
+                /\ charging' = FALSE
+                /\ charge' = 0
+                /\ hold_t' = 0
+                /\ instant_charge' = FALSE
+                /\ shot_outside_play' = (shot_outside_play \/ OutsidePlay)
+                /\ TrackProgress(TRUE)
+                /\ last_act' = "charged_bolt"
+             ELSE IF armedAfterSpark THEN
                 IF held /\ ~released THEN
                    IF fireSpark THEN
                       /\ cooldown' = cdAfterSpark
@@ -556,6 +601,7 @@ StepSable(inp) ==
                       /\ charging' = chargingAfterSpark
                       /\ charge' = chargeAfterSpark
                       /\ hold_t' = holdAfterSpark
+                      /\ instant_charge' \in IF instant_charge THEN {TRUE, FALSE} ELSE {FALSE}
                       /\ shot_outside_play' = (shot_outside_play \/ OutsidePlay)
                       /\ TrackProgress(TRUE)
                       /\ last_act' = IF jammed THEN "jam_fire" ELSE "spark"
@@ -565,6 +611,7 @@ StepSable(inp) ==
                       /\ recover' = recNext
                       /\ buffered' = bufAfterSpark
                       /\ charge_armed' = TRUE
+                      /\ instant_charge' \in IF instant_charge THEN {TRUE, FALSE} ELSE {FALSE}
                       /\ IF holdAfterSpark = 0 THEN
                             /\ hold_t' = 1
                             /\ charging' = FALSE
@@ -586,6 +633,8 @@ StepSable(inp) ==
                    /\ charging' = FALSE
                    /\ charge' = 0
                    /\ hold_t' = 0
+                   /\ instant_charge' \in IF fireBolt /\ weapon = "sable_ball" THEN {FALSE}
+                                          ELSE IF instant_charge THEN {TRUE, FALSE} ELSE {FALSE}
                    /\ shot_outside_play' = (shot_outside_play \/ ((fireSpark \/ fireBolt) /\ OutsidePlay))
                    /\ TrackProgress(readyNow)
                    /\ last_act' = IF fireBolt THEN "charged_bolt"
@@ -599,9 +648,29 @@ StepSable(inp) ==
                 /\ charging' = FALSE
                 /\ charge' = 0
                 /\ hold_t' = 0
+                /\ instant_charge' \in IF instant_charge THEN {TRUE, FALSE} ELSE {FALSE}
                 /\ shot_outside_play' = (shot_outside_play \/ (fireSpark /\ OutsidePlay))
                 /\ TrackProgress(readyNow)
                 /\ last_act' = IF fireSpark THEN (IF jammed THEN "jam_fire" ELSE "spark") ELSE "none"
+
+\* Sable Spire Vault instant max-charge: weapon_driver.gd arm_instant_max_charge()
+ArmInstantCharge ==
+    /\ flow = "play" /\ ~paused
+    /\ weapon = "sable_ball"
+    /\ ~instant_charge
+    /\ instant_charge' = TRUE
+    /\ charging' = IF charge_armed THEN TRUE ELSE charging
+    /\ charge' = IF charge_armed THEN ChargeMax ELSE charge
+    /\ just_crossed_boundary' = FALSE
+    /\ last_act' = "instant_charge_arm"
+    /\ UNCHANGED <<flow, paused, jammed, weapon, cooldown, recover, press_held,
+                   hold_t, buffered, chamber, hot_rounds, reloading, reload_t,
+                   charge_armed, lob_charging, snap_hold_lock, live_charge,
+                   beat, beat_t, lane_painted, window, window_t, pressure,
+                   after_interrupt, steps_since_interrupt, press_shots,
+                   window_pays, early_pressed, shot_outside_play,
+                   stuck_holding, proc_mutated_driver, snap_opened_gauge,
+                   beat_skip_pay, grew_without_roll, last_cost, last_refund>>
 
 \* ---------------------------------------------------------------------------
 \* 3. Kest ("kest", trigger "lob_snap"): weapon_driver.gd _step_lob_snap &
@@ -631,7 +700,7 @@ StepKest(inp) ==
        /\ just_crossed_boundary' = FALSE
        /\ UNCHANGED <<flow, paused, jammed, weapon, recover, chamber,
                       hot_rounds, reloading, reload_t, charge_armed, charging,
-                      charge, beat, beat_t, lane_painted, pressure,
+                      charge, instant_charge, beat, beat_t, lane_painted, pressure,
                       press_shots, stuck_holding, proc_mutated_driver,
                       beat_skip_pay, grew_without_roll, last_cost, last_refund>>
        /\ IF jamFrozen THEN
@@ -788,7 +857,7 @@ KestDetonationLine ==
           /\ last_act' = "none"
     /\ UNCHANGED <<flow, paused, jammed, weapon, cooldown, recover, press_held,
                    hold_t, buffered, chamber, hot_rounds, reloading, reload_t,
-                   charge_armed, charging, charge, lob_charging, snap_hold_lock,
+                   charge_armed, charging, charge, instant_charge, lob_charging, snap_hold_lock,
                    beat, beat_t, lane_painted, pressure, after_interrupt,
                    steps_since_interrupt, press_shots, shot_outside_play,
                    stuck_holding, proc_mutated_driver, snap_opened_gauge,
@@ -809,7 +878,7 @@ KestChargePlainDetonate ==
     /\ last_act' = "none"
     /\ UNCHANGED <<flow, paused, jammed, weapon, cooldown, recover, press_held,
                    hold_t, buffered, chamber, hot_rounds, reloading, reload_t,
-                   charge_armed, charging, charge, lob_charging, snap_hold_lock,
+                   charge_armed, charging, charge, instant_charge, lob_charging, snap_hold_lock,
                    beat, beat_t, lane_painted, pressure, after_interrupt,
                    steps_since_interrupt, press_shots, shot_outside_play,
                    stuck_holding, proc_mutated_driver, snap_opened_gauge,
@@ -836,7 +905,7 @@ StepTarn(inp) ==
        /\ just_crossed_boundary' = FALSE
        /\ UNCHANGED <<flow, paused, jammed, weapon, hold_t, chamber,
                       hot_rounds, reloading, reload_t, charge_armed, charging,
-                      charge, lob_charging, snap_hold_lock, live_charge,
+                      charge, instant_charge, lob_charging, snap_hold_lock, live_charge,
                       lane_painted, pressure, stuck_holding,
                       proc_mutated_driver, snap_opened_gauge,
                       grew_without_roll, last_cost, last_refund>>
@@ -1017,7 +1086,7 @@ StepTally(inp) ==
        /\ just_crossed_boundary' = FALSE
        /\ UNCHANGED <<flow, paused, jammed, weapon, recover, hold_t, chamber,
                       hot_rounds, reloading, reload_t, charge_armed, charging,
-                      charge, lob_charging, snap_hold_lock, live_charge,
+                      charge, instant_charge, lob_charging, snap_hold_lock, live_charge,
                       beat, beat_t, lane_painted, stuck_holding,
                       proc_mutated_driver, snap_opened_gauge, beat_skip_pay>>
        /\ IF jamFrozen THEN
@@ -1092,7 +1161,7 @@ TallyRollRefill ==
     /\ last_act' = "none"
     /\ UNCHANGED <<flow, paused, jammed, weapon, cooldown, recover, press_held,
                    hold_t, buffered, chamber, hot_rounds, reloading, reload_t,
-                   charge_armed, charging, charge, lob_charging, snap_hold_lock,
+                   charge_armed, charging, charge, instant_charge, lob_charging, snap_hold_lock,
                    live_charge, beat, beat_t, lane_painted, window, window_t,
                    after_interrupt, steps_since_interrupt, press_shots,
                    window_pays, early_pressed, shot_outside_play, stuck_holding,
@@ -1117,7 +1186,7 @@ StepCannon(inp) ==
        /\ just_crossed_boundary' = FALSE
        /\ UNCHANGED <<flow, paused, jammed, weapon, cooldown, chamber,
                       hot_rounds, reloading, reload_t, charge_armed, charging,
-                      charge, lob_charging, snap_hold_lock, live_charge,
+                      charge, instant_charge, lob_charging, snap_hold_lock, live_charge,
                       beat, beat_t, pressure, press_shots, window_pays,
                       early_pressed, stuck_holding, proc_mutated_driver,
                       snap_opened_gauge, beat_skip_pay, grew_without_roll,
@@ -1221,7 +1290,7 @@ ProcVolley ==
                          charge_armed, lob_charging, snap_hold_lock,
                          live_charge, beat, beat_t, lane_painted>>
     /\ UNCHANGED <<flow, paused, jammed, weapon, recover, press_held, hold_t,
-                   reloading, reload_t, window_t, pressure, after_interrupt,
+                   reloading, reload_t, instant_charge, window_t, pressure, after_interrupt,
                    steps_since_interrupt, press_shots, window_pays,
                    early_pressed, stuck_holding, snap_opened_gauge,
                    beat_skip_pay, grew_without_roll, last_cost, last_refund>>
@@ -1244,7 +1313,7 @@ ToggleJam ==
        /\ last_act' = "none"
        /\ UNCHANGED <<flow, paused, weapon, cooldown, recover, press_held,
                       hold_t, buffered, chamber, hot_rounds, reloading,
-                      reload_t, charge_armed, charging, charge, lob_charging,
+                      reload_t, charge_armed, charging, charge, instant_charge, lob_charging,
                       snap_hold_lock, live_charge, beat, beat_t, lane_painted,
                       window, window_t, pressure, press_shots, window_pays,
                       early_pressed, shot_outside_play, stuck_holding,
@@ -1265,7 +1334,7 @@ TogglePause ==
        /\ last_act' = "none"
        /\ UNCHANGED <<flow, jammed, weapon, cooldown, recover, press_held,
                       hold_t, buffered, chamber, hot_rounds, reloading,
-                      reload_t, charge_armed, charging, charge, lob_charging,
+                      reload_t, charge_armed, charging, charge, instant_charge, lob_charging,
                       snap_hold_lock, live_charge, beat, beat_t, lane_painted,
                       window, window_t, pressure, press_shots, window_pays,
                       early_pressed, shot_outside_play, stuck_holding,
@@ -1286,10 +1355,11 @@ InterruptUltimate ==
              /\ charge' = 0
              /\ charging' = FALSE
              /\ charge_armed' = FALSE
+             /\ instant_charge' = FALSE
              /\ lob_charging' = FALSE
              /\ snap_hold_lock' = FALSE
           ELSE
-             /\ UNCHANGED <<charge, charging, charge_armed, lob_charging, snap_hold_lock>>
+             /\ UNCHANGED <<charge, charging, charge_armed, instant_charge, lob_charging, snap_hold_lock>>
        /\ IF GuardLockInterruptClears THEN
              /\ lane_painted' = FALSE
           ELSE
@@ -1341,7 +1411,7 @@ InterruptMount ==
              /\ UNCHANGED <<after_interrupt, steps_since_interrupt>>
        /\ last_act' = IF charge_armed \/ charging THEN "mount_drop" ELSE "none"
        /\ UNCHANGED <<flow, paused, jammed, cooldown, recover, press_held,
-                      chamber, hot_rounds, reloading, reload_t, lob_charging,
+                      chamber, hot_rounds, reloading, reload_t, instant_charge, lob_charging,
                       snap_hold_lock, live_charge, beat, beat_t, lane_painted,
                       window, window_t, pressure, press_shots, window_pays,
                       early_pressed, shot_outside_play, proc_mutated_driver,
@@ -1389,7 +1459,7 @@ BoundaryWired ==
               \* Planted fault: attempt boundary omits weapon_driver.reset().
               /\ UNCHANGED <<cooldown, recover, press_held, hold_t, buffered,
                              chamber, hot_rounds, reloading, reload_t,
-                             charge_armed, charging, charge, lob_charging,
+                             charge_armed, charging, charge, instant_charge, lob_charging,
                              snap_hold_lock, live_charge, beat, beat_t,
                              lane_painted, window, window_t, press_shots,
                              window_pays, early_pressed, after_interrupt,
@@ -1418,7 +1488,7 @@ QuitToTitle ==
        ELSE
           /\ UNCHANGED <<cooldown, recover, press_held, hold_t, buffered,
                          chamber, hot_rounds, reloading, reload_t,
-                         charge_armed, charging, charge, lob_charging,
+                         charge_armed, charging, charge, instant_charge, lob_charging,
                          snap_hold_lock, live_charge, beat, beat_t,
                          lane_painted, window, window_t, press_shots,
                          window_pays, early_pressed, after_interrupt,
@@ -1438,6 +1508,8 @@ Next ==
             StepRivet(inp) \/ StepSable(inp) \/ StepKest(inp)
             \/ StepTarn(inp) \/ StepTally(inp) \/ StepCannon(inp))
     \/ TopUpCylinder
+    \/ HotReloadCylinder
+    \/ ArmInstantCharge
     \/ KestDetonationLine
     \/ KestChargePlainDetonate
     \/ TallyRollRefill

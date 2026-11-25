@@ -8,14 +8,16 @@ dcfg() {
   local name=$1 rules=$2
   shift 2
   # Plain variables, not an associative array, so the system bash 3.2 on macOS runs it.
-  local keys="MaxAtt ShotSets MaxShotBits HoarHeld TickInPlay AttemptClearsEcho AttemptClearsCast AttemptClearsGuards AttemptClearsPike AttemptClearsBolts RakeNeedsWeapon PikeNeedsWeapon ProcCarriesNoBits PikeCapsBits EchoBare TollBare ShockBare ReelBare ChildSpendsSplit ChildSpendsPull ChildDropsHoar BounceSpends ContactDropsMark DeathDropsMark"
+  local keys="MaxAtt ShotSets MaxShotBits HoarHeld TickInPlay AttemptClearsEcho AttemptClearsCast AttemptClearsGuards AttemptClearsPike AttemptClearsBolts AttemptClearsDefProc AttemptClearsDetCord RakeNeedsWeapon PikeNeedsWeapon ProcCarriesNoBits PikeCapsBits EchoBare TollBare ShockBare ReelBare DrainStopsNestProc DetCordBare ChildSpendsSplit ChildSpendsPull ChildDropsHoar BounceSpends ContactDropsMark DeathDropsMark"
   # The code at the sync commit. Two shot sets cover every pair of bits the split, pierce, pull, bounce and heat
   # rows name; the second is full, so a Slag Pike fuse must drop a bit to add pierce.
   local c_MaxAtt=2 c_MaxShotBits=3 c_HoarHeld=TRUE
   local c_ShotSets='{{"pierce", "split", "pull"}, {"bounce", "split", "heat"}}'
   local c_TickInPlay=TRUE c_AttemptClearsEcho=TRUE c_AttemptClearsCast=TRUE c_AttemptClearsGuards=TRUE
-  local c_AttemptClearsPike=TRUE c_AttemptClearsBolts=TRUE c_RakeNeedsWeapon=TRUE c_PikeNeedsWeapon=TRUE
+  local c_AttemptClearsPike=TRUE c_AttemptClearsBolts=TRUE c_AttemptClearsDefProc=TRUE c_AttemptClearsDetCord=TRUE
+  local c_RakeNeedsWeapon=TRUE c_PikeNeedsWeapon=TRUE
   local c_ProcCarriesNoBits=TRUE c_PikeCapsBits=TRUE c_EchoBare=TRUE c_TollBare=TRUE c_ShockBare=TRUE c_ReelBare=TRUE
+  local c_DrainStopsNestProc=TRUE c_DetCordBare=TRUE
   local c_ChildSpendsSplit=TRUE c_ChildSpendsPull=TRUE c_ChildDropsHoar=TRUE c_BounceSpends=TRUE
   local c_ContactDropsMark=TRUE c_DeathDropsMark=TRUE
   local kv key v
@@ -49,6 +51,8 @@ dcfg broken-keepcast "NoEchoAcrossAttempt" AttemptClearsCast=FALSE
 dcfg broken-keepguards "NoEchoAcrossAttempt" AttemptClearsGuards=FALSE
 dcfg broken-keeppike "NoEchoAcrossAttempt" AttemptClearsPike=FALSE
 dcfg broken-keepbolts "NoEchoAcrossAttempt" AttemptClearsBolts=FALSE
+dcfg broken-keepdefproc "NoEchoAcrossAttempt" AttemptClearsDefProc=FALSE
+dcfg broken-keepdetcord "NoEchoAcrossAttempt" AttemptClearsDetCord=FALSE
 dcfg broken-rakeproc "ProcDepthOne" RakeNeedsWeapon=FALSE
 dcfg broken-pikeproc "ProcDepthOne" PikeNeedsWeapon=FALSE
 dcfg broken-procbits "ProcDepthOne" ProcCarriesNoBits=FALSE
@@ -56,6 +60,8 @@ dcfg broken-echoagain "ProcDepthOne" EchoBare=FALSE
 dcfg broken-tollagain "ProcDepthOne" TollBare=FALSE
 dcfg broken-shockagain "ProcDepthOne" ShockBare=FALSE
 dcfg broken-reelagain "ProcDepthOne" ReelBare=FALSE
+dcfg broken-nestproc "ProcDepthOne" DrainStopsNestProc=FALSE
+dcfg broken-detcordagain "ProcDepthOne" DetCordBare=FALSE
 dcfg broken-childsplit "ShotBitsCap" ChildSpendsSplit=FALSE
 dcfg broken-childpull "ShotBitsCap" ChildSpendsPull=FALSE
 dcfg broken-childhoar "ShotBitsCap" ChildDropsHoar=FALSE
@@ -66,7 +72,8 @@ dcfg broken-deathmark "ShotBitsCap" DeathDropsMark=FALSE
 # Probes: every one must break, or an action can no longer fire. One probe per config, because a break stops the
 # checker.
 for probe in EnterStage ContentCleared NewRun Death ToTitle Press ProcVolley Slam Special Dash CastBegins BiteLoads \
-  ReelChain GuardLink GuardUnlink RakeFires ShockLands BellTolls EchoFires StripStrikes CastLands BiteFires PikeRead \
+  ReelChain QueueDefProc DetCordQueues GuardLink GuardUnlink RakeFires ShockLands BellTolls EchoFires StripStrikes \
+  CastLands BiteFires DefProcFires DetCordFires PikeRead \
   PikeFuse BoltSplits BoltPierces BoltStops BoltGlances BoltWall BoltSpent HoarChild Spawn Expose Lapses DropExpired \
   ContactRead FoeDies CorpseFreed KeptOverDeath; do
   dcfg "reach-$probe" "Probe$probe"
