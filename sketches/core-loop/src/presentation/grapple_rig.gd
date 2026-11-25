@@ -4,6 +4,7 @@ const Augments := preload("res://src/movement/augments.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Parts := preload("res://src/build/parts.gd")
 
 # W47-GRAPPLE-CODE: 4-part hardware grapple rig presenter (Rules G0, G1, TADR-008).
 #
@@ -132,7 +133,12 @@ var socket_drive: Node3D
 var socket_line: Node3D
 var socket_head: Node3D
 var mount_skeleton: Skeleton3D
+var drive_skeleton: Skeleton3D
 var head_skeleton: Skeleton3D
+
+# W47-GRAPPLE-MUTS-CODE: active single-part-swap mutation ids per slot ("head"|"line"|"drive").
+var active_mutations := {}
+var _mutation_override := {}
 
 # Drive kinematics telemetry (local +X axle spin: + payout, - rewind/winch/haul).
 var drive_angle := 0.0
@@ -155,6 +161,7 @@ var _committed_state := {
 var _scene_cache := {}
 var _materials := {}
 var _mount_rest := {}
+var _drive_rest := {}
 var _head_rest := {}
 var _tally_jaws: Array[Node3D] = []
 var _was_hooked := false
@@ -290,6 +297,78 @@ static func glb_paths_for(pilot_stem: String) -> Dictionary:
 	}
 
 
+static func _reset() -> void:
+	pass
+
+
+static func mutation_glb_path(mut_id: String) -> String:
+	var row := Parts.grapple_mutation(mut_id)
+	return String(row.get("glb_path", ""))
+
+
+static func _normalize_mutations(raw: Dictionary) -> Dictionary:
+	var out := {}
+	for slot in Parts.GRAPPLE_SWAP_SLOTS:
+		if not raw.has(slot):
+			continue
+		var v: Variant = raw[slot]
+		var mid := Parts.grapple_mutation_id_of(String(v["id"]) if v is Dictionary else String(v))
+		if mid == "":
+			continue
+		var row: Dictionary = Parts.GRAPPLE_MUTATIONS[mid]
+		if String(row["swaps"]) == slot:
+			out[slot] = mid
+	return out
+
+
+func set_mutations(slots: Dictionary) -> void:
+	_mutation_override = _normalize_mutations(slots)
+	_sync_pilot()
+
+
+func set_mutation(mut_id: String) -> void:
+	var row := Parts.grapple_mutation(mut_id)
+	if row.is_empty():
+		_mutation_override = {}
+	else:
+		_mutation_override = {String(row["swaps"]): String(row["id"])}
+	_sync_pilot()
+
+
+func clear_mutation_override() -> void:
+	_mutation_override.clear()
+	_sync_pilot()
+
+
+func swapped_slots() -> Array:
+	var keys := active_mutations.keys()
+	keys.sort()
+	return keys
+
+
+func mutation_for(slot: String) -> String:
+	return String(active_mutations.get(slot, ""))
+
+
+func _desired_mutations(state: Dictionary) -> Dictionary:
+	if not _mutation_override.is_empty():
+		return _mutation_override.duplicate()
+	var chain_snap: Variant = state.get("chain", {})
+	if chain_snap is Dictionary:
+		var chain_muts: Variant = (chain_snap as Dictionary).get("mutations", {})
+		if chain_muts is Dictionary and not (chain_muts as Dictionary).is_empty():
+			return _normalize_mutations(chain_muts as Dictionary)
+	if ctx != null:
+		var build_mod: Variant = ctx.get("build")
+		var fx: Variant = build_mod.get("effects") if build_mod != null else null
+		if fx != null and fx.has_method("active_grapple_mutations"):
+			return _normalize_mutations(fx.active_grapple_mutations())
+		var run_ref: Variant = ctx.get("run")
+		if run_ref != null and "parts" in run_ref:
+			return _normalize_mutations(Parts.active_grapple_mutations(run_ref.parts))
+	return {}
+
+
 func parts() -> Dictionary:
 	return {
 		"class_id": active_class_id,
@@ -303,7 +382,10 @@ func parts() -> Dictionary:
 		"socket_line": socket_line,
 		"socket_head": socket_head,
 		"mount_skeleton": mount_skeleton,
+		"drive_skeleton": drive_skeleton,
 		"head_skeleton": head_skeleton,
+		"active_mutations": active_mutations.duplicate(),
+		"swapped_slots": swapped_slots(),
 		"rig_count": 1 if mount_node != null else 0,
 	}
 
@@ -404,15 +486,18 @@ func _sync_pilot() -> void:
 	var want_line := String(state.get("line_id", ""))
 	if want_class == "":
 		want_class = String(LINE_ID_TO_CLASS.get(want_line, "pylon_engineer"))
-	if want_class == active_class_id and mount_node != null and is_instance_valid(mount_node):
+	var want_muts := _desired_mutations(state)
+	if want_class == active_class_id and want_muts == active_mutations and mount_node != null and is_instance_valid(mount_node):
 		active_line_id = want_line if want_line != "" else String(spec_for(want_class)["line_id"])
 		return
-	_build_rig(want_class, want_line)
+	_build_rig(want_class, want_line, want_muts)
 
 
 func _clear_rig() -> void:
 	for node in [mount_node, line_node, head_node]:
 		if node != null and is_instance_valid(node):
+			if node.get_parent() != null:
+				node.get_parent().remove_child(node)
 			node.queue_free()
 	mount_node = null
 	drive_node = null
@@ -422,28 +507,36 @@ func _clear_rig() -> void:
 	socket_line = null
 	socket_head = null
 	mount_skeleton = null
+	drive_skeleton = null
 	head_skeleton = null
 	_mount_rest.clear()
+	_drive_rest.clear()
 	_head_rest.clear()
 	_tally_jaws.clear()
 
 
-func _build_rig(class_id: String, line_id: String) -> void:
+func _build_rig(class_id: String, line_id: String, muts := {}) -> void:
 	_clear_rig()
 	_ensure_containers()
 	var spec := spec_for(class_id, line_id)
 	active_class_id = class_id
 	active_line_id = line_id if line_id != "" else String(spec["line_id"])
+	active_mutations = muts.duplicate()
 	mount_frame_path = String(spec["frame"])
 	if String(spec["kind"]) == "glb":
-		_build_glb_rig(String(spec["pilot"]))
+		_build_glb_rig(String(spec["pilot"]), active_mutations)
 	else:
-		_build_tally_hardware()
+		_build_tally_hardware(active_mutations)
 	reset()
 
 
-func _build_glb_rig(pilot_stem: String) -> void:
+func _build_glb_rig(pilot_stem: String, muts := {}) -> void:
 	var paths := glb_paths_for(pilot_stem)
+	for slot in Parts.GRAPPLE_SWAP_SLOTS:
+		if muts.has(slot):
+			var mp := mutation_glb_path(String(muts[slot]))
+			if mp != "":
+				paths[slot] = mp
 	mount_node = _instantiate_glb(String(paths["mount"]), "GrappleMount")
 	if mount_node == null:
 		mount_node = Node3D.new()
@@ -484,21 +577,32 @@ func _build_glb_rig(pilot_stem: String) -> void:
 		head_node.name = "GrappleHead"
 	add_child(head_node)
 
-	mount_skeleton = mount_node.find_child("MountRig", true, false) as Skeleton3D
-	if mount_skeleton == null:
-		var skels := mount_node.find_children("*", "Skeleton3D", true, false)
-		mount_skeleton = skels[0] as Skeleton3D if not skels.is_empty() else null
-	head_skeleton = head_node.find_child("HeadRig", true, false) as Skeleton3D
-	if head_skeleton == null:
-		var hskels := head_node.find_children("*", "Skeleton3D", true, false)
-		head_skeleton = hskels[0] as Skeleton3D if not hskels.is_empty() else null
+	_bind_skeletons()
+
+
+func _bind_skeletons() -> void:
+	mount_skeleton = _find_skeleton(mount_node, "MountRig")
+	drive_skeleton = _find_skeleton(drive_node, "DriveRig")
+	head_skeleton = _find_skeleton(head_node, "HeadRig")
 	_capture_rest(mount_skeleton, _mount_rest)
+	_capture_rest(drive_skeleton, _drive_rest)
 	_capture_rest(head_skeleton, _head_rest)
+
+
+static func _find_skeleton(root: Node, preferred: String) -> Skeleton3D:
+	if root == null:
+		return null
+	var skel := root.find_child(preferred, true, false) as Skeleton3D
+	if skel != null:
+		return skel
+	var skels := root.find_children("*", "Skeleton3D", true, false)
+	return skels[0] as Skeleton3D if not skels.is_empty() else null
 
 
 # Tally's copper alligator-clamp and sheathed copper patch-lead hardware riding cleanly alongside
 # shell_tally.glb: warm COPPER + AMBER + CHARCOAL sheath only (zero HAZARD, KINDNESS or ANCIENT).
-func _build_tally_hardware() -> void:
+# Single-part-swap grapple mutations swap ONLY their target slot (drive, line, or head) cleanly.
+func _build_tally_hardware(muts := {}) -> void:
 	var copper_mat := _hardware_material("tally_copper", Palette.COPPER, 0.65, 0.35, 0.0)
 	var amber_mat := _hardware_material("tally_amber", Palette.AMBER, 0.25, 0.45, 0.35)
 	var sheath_mat := _hardware_material("tally_sheath", Palette.CHARCOAL, 0.1, 0.85, 0.0)
@@ -530,75 +634,85 @@ func _build_tally_hardware() -> void:
 	socket_head.position = Vector3(0.42, 0.08, -0.84)
 	mount_node.add_child(socket_head)
 
-	drive_node = Node3D.new()
-	drive_node.name = "GrappleDrive"
+	if muts.has("drive"):
+		drive_node = _instantiate_glb(mutation_glb_path(String(muts["drive"])), "GrappleDrive")
+	if drive_node == null:
+		drive_node = Node3D.new()
+		drive_node.name = "GrappleDrive"
+		var spool := MeshInstance3D.new()
+		spool.name = "TallyLeadSpool"
+		var sm := CylinderMesh.new()
+		sm.top_radius = 0.14
+		sm.bottom_radius = 0.14
+		sm.height = 0.12
+		spool.mesh = sm
+		spool.rotation.z = PI * 0.5
+		spool.material_override = copper_mat
+		drive_node.add_child(spool)
+		var spoke := MeshInstance3D.new()
+		spoke.name = "TallySpoolMarker"
+		var km := BoxMesh.new()
+		km.size = Vector3(0.14, 0.24, 0.04)
+		spoke.mesh = km
+		spoke.material_override = amber_mat
+		drive_node.add_child(spoke)
 	socket_drive.add_child(drive_node)
-	var spool := MeshInstance3D.new()
-	spool.name = "TallyLeadSpool"
-	var sm := CylinderMesh.new()
-	sm.top_radius = 0.14
-	sm.bottom_radius = 0.14
-	sm.height = 0.12
-	spool.mesh = sm
-	spool.rotation.z = PI * 0.5
-	spool.material_override = copper_mat
-	drive_node.add_child(spool)
-	var spoke := MeshInstance3D.new()
-	spoke.name = "TallySpoolMarker"
-	var km := BoxMesh.new()
-	km.size = Vector3(0.14, 0.24, 0.04)
-	spoke.mesh = km
-	spoke.material_override = amber_mat
-	drive_node.add_child(spoke)
 
-	line_node = Node3D.new()
-	line_node.name = "GrappleLine"
+	if muts.has("line"):
+		line_node = _instantiate_glb(mutation_glb_path(String(muts["line"])), "GrappleLine")
+	if line_node == null:
+		line_node = Node3D.new()
+		line_node.name = "GrappleLine"
+		var lead := MeshInstance3D.new()
+		lead.name = "TallyPatchLead"
+		var lm := CylinderMesh.new()
+		lm.top_radius = 0.045
+		lm.bottom_radius = 0.045
+		lm.height = 1.0
+		lead.mesh = lm
+		lead.rotation.x = PI * 0.5
+		lead.position = Vector3(0.0, 0.0, -0.5)
+		lead.material_override = sheath_mat
+		line_node.add_child(lead)
+		var stripe := MeshInstance3D.new()
+		stripe.name = "TallyCopperCore"
+		var cm := BoxMesh.new()
+		cm.size = Vector3(0.06, 0.06, 1.0)
+		stripe.mesh = cm
+		stripe.position = Vector3(0.0, 0.0, -0.5)
+		stripe.material_override = copper_mat
+		line_node.add_child(stripe)
 	line_node.visible = false
 	add_child(line_node)
-	var lead := MeshInstance3D.new()
-	lead.name = "TallyPatchLead"
-	var lm := CylinderMesh.new()
-	lm.top_radius = 0.045
-	lm.bottom_radius = 0.045
-	lm.height = 1.0
-	lead.mesh = lm
-	lead.rotation.x = PI * 0.5
-	lead.position = Vector3(0.0, 0.0, -0.5)
-	lead.material_override = sheath_mat
-	line_node.add_child(lead)
-	var stripe := MeshInstance3D.new()
-	stripe.name = "TallyCopperCore"
-	var cm := BoxMesh.new()
-	cm.size = Vector3(0.06, 0.06, 1.0)
-	stripe.mesh = cm
-	stripe.position = Vector3(0.0, 0.0, -0.5)
-	stripe.material_override = copper_mat
-	line_node.add_child(stripe)
 
-	head_node = Node3D.new()
-	head_node.name = "GrappleHead"
+	if muts.has("head"):
+		head_node = _instantiate_glb(mutation_glb_path(String(muts["head"])), "GrappleHead")
+	if head_node == null:
+		head_node = Node3D.new()
+		head_node.name = "GrappleHead"
+		var boot := MeshInstance3D.new()
+		boot.name = "TallyClampBoot"
+		var boot_m := BoxMesh.new()
+		boot_m.size = Vector3(0.16, 0.14, 0.22)
+		boot.mesh = boot_m
+		boot.position = Vector3(0.0, 0.0, -0.10)
+		boot.material_override = amber_mat
+		head_node.add_child(boot)
+		for side_sign: float in [1.0, -1.0]:
+			var jaw := Node3D.new()
+			jaw.name = "JawTop" if side_sign > 0.0 else "JawBot"
+			jaw.position = Vector3(0.0, side_sign * 0.04, -0.18)
+			var tooth := MeshInstance3D.new()
+			var tm := BoxMesh.new()
+			tm.size = Vector3(0.12, 0.05, 0.28)
+			tooth.mesh = tm
+			tooth.position = Vector3(0.0, 0.0, -0.14)
+			tooth.material_override = copper_mat
+			jaw.add_child(tooth)
+			head_node.add_child(jaw)
+			_tally_jaws.append(jaw)
 	add_child(head_node)
-	var boot := MeshInstance3D.new()
-	boot.name = "TallyClampBoot"
-	var boot_m := BoxMesh.new()
-	boot_m.size = Vector3(0.16, 0.14, 0.22)
-	boot.mesh = boot_m
-	boot.position = Vector3(0.0, 0.0, -0.10)
-	boot.material_override = amber_mat
-	head_node.add_child(boot)
-	for side_sign: float in [1.0, -1.0]:
-		var jaw := Node3D.new()
-		jaw.name = "JawTop" if side_sign > 0.0 else "JawBot"
-		jaw.position = Vector3(0.0, side_sign * 0.04, -0.18)
-		var tooth := MeshInstance3D.new()
-		var tm := BoxMesh.new()
-		tm.size = Vector3(0.12, 0.05, 0.28)
-		tooth.mesh = tm
-		tooth.position = Vector3(0.0, 0.0, -0.14)
-		tooth.material_override = copper_mat
-		jaw.add_child(tooth)
-		head_node.add_child(jaw)
-		_tally_jaws.append(jaw)
+	_bind_skeletons()
 
 
 func _instantiate_glb(path: String, label: String) -> Node3D:
@@ -618,24 +732,39 @@ func _instantiate_glb(path: String, label: String) -> Node3D:
 	return root
 
 
+# Duplicates mesh and builds per-instance slot materials so shared PackedScene resources are
+# never mutated. Wires `amber_glow` alongside `hydraulic`/`paint`, preserving baked vertex colors
+# and emissive AMBER #E5A044 (lightened 0.20, energy 1.65) on Hot-Wire and Live-Bus.
 func _paint_tree(root: Node) -> void:
 	for node in root.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D
 		if mi.mesh == null:
 			continue
-		for i in mi.mesh.get_surface_count():
-			var orig := mi.mesh.surface_get_material(i)
-			var slot := String(orig.resource_name) if orig != null else ""
-			var mat := _slot_material(slot)
+		var mesh_copy := mi.mesh.duplicate() as Mesh
+		if mesh_copy == null:
+			continue
+		for i in mesh_copy.get_surface_count():
+			var orig := mesh_copy.surface_get_material(i)
+			var slot := String(orig.resource_name).to_lower() if orig != null else ""
+			var mat := _make_slot_material(slot)
 			if mat != null:
-				mi.set_surface_override_material(i, mat)
+				mesh_copy.surface_set_material(i, mat)
+		mi.mesh = mesh_copy
 
 
-func _slot_material(slot_name: String) -> StandardMaterial3D:
-	if _materials.has(slot_name):
-		return _materials[slot_name]
+static func _make_slot_material(slot_name: String) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
+	mat.resource_name = slot_name
 	match slot_name:
+		"amber_glow":
+			mat.albedo_color = Color.WHITE
+			mat.vertex_color_use_as_albedo = true
+			mat.vertex_color_is_srgb = true
+			mat.metallic = 0.15
+			mat.roughness = 0.35
+			mat.emission_enabled = true
+			mat.emission = Palette.AMBER.lightened(0.20)
+			mat.emission_energy_multiplier = 1.65
 		"hydraulic":
 			mat.albedo_color = Color.WHITE
 			mat.vertex_color_use_as_albedo = true
@@ -658,7 +787,6 @@ func _slot_material(slot_name: String) -> StandardMaterial3D:
 			mat.vertex_color_is_srgb = true
 			mat.metallic = 0.35
 			mat.roughness = 0.45
-	_materials[slot_name] = mat
 	return mat
 
 
@@ -921,7 +1049,41 @@ func _step_actuators(state: Dictionary, _line_active: bool) -> void:
 				_tally_jaws[0].rotation.x = deg_to_rad(jaw_deg)
 				_tally_jaws[1].rotation.x = -deg_to_rad(jaw_deg)
 			summary["jaw_deg"] = jaw_deg
+	_step_mutation_actuators(state, hooked, _line_active, summary)
 	_last_actuator = summary
+
+
+# Drives the 4 skinned single-part-swap mutation actuator bones strictly in bone-local Blender
+# space (+X right = Vector3.RIGHT, +Y forward along Godot -Z = Vector3.UP, +Z up = Vector3.BACK).
+func _step_mutation_actuators(state: Dictionary, hooked: bool, line_active: bool, summary: Dictionary) -> void:
+	if active_mutations.is_empty():
+		return
+	var head_mut := String(active_mutations.get("head", ""))
+	var drive_mut := String(active_mutations.get("drive", ""))
+	match head_mut:
+		"dragnet_siphon":
+			var mouth_deg := -42.0 if (hooked or line_active) else 0.0
+			_pose_bone_rot(head_skeleton, _head_rest, "mouth", Vector3.RIGHT, deg_to_rad(mouth_deg))
+			summary["mouth_deg"] = mouth_deg
+		"live_bus":
+			var clamp_deg := 22.0 if hooked else 0.0
+			_pose_bone_rot(head_skeleton, _head_rest, "jaw.0", Vector3.BACK, deg_to_rad(-clamp_deg))
+			_pose_bone_rot(head_skeleton, _head_rest, "jaw.1", Vector3.BACK, deg_to_rad(clamp_deg))
+			summary["jaw0_deg"] = -clamp_deg
+			summary["jaw1_deg"] = clamp_deg
+		"wrecking_flail":
+			var flail_deg := 0.0
+			if hooked or line_active:
+				var vel_v: Vector3 = state.get("velocity", Vector3.ZERO) as Vector3
+				var raw_swing := clampf(drive_omega / 18.0, -1.0, 1.0) * 20.0 + clampf(vel_v.length() / 20.0, 0.0, 1.0) * 8.0
+				flail_deg = clampf(raw_swing if absf(raw_swing) > 0.5 else 16.0, -28.0, 28.0)
+			_pose_bone_rot(head_skeleton, _head_rest, "flail", Vector3.RIGHT, deg_to_rad(flail_deg))
+			summary["flail_deg"] = flail_deg
+	if drive_mut == "sonic_snap_sling":
+		var active_spin := hooked or absf(drive_omega) > 0.25
+		var pawl_deg := 22.0 * (0.45 + 0.55 * absf(sin(drive_angle * 7.0))) if active_spin else 0.0
+		_pose_bone_rot(drive_skeleton, _drive_rest, "pawl", Vector3.RIGHT, deg_to_rad(pawl_deg))
+		summary["pawl_deg"] = pawl_deg
 
 
 static func _pose_bone_rot(skeleton: Skeleton3D, rest_map: Dictionary, bone_name: String, axis: Vector3, angle: float) -> void:
@@ -960,6 +1122,8 @@ func _draw_committed_geometry(state: Dictionary, fairlead: Vector3) -> void:
 	var target = state.get("anchor_body") if hooked else aim.get("body")
 	var phase := "latched" if hooked else "aim"
 	var color: Color = EventKinds.line_color("latched_world") if hooked else EventKinds.line_color("locked")
+	if hooked and (String(active_mutations.get("line", "")) == "hot_wire" or String(active_mutations.get("head", "")) == "live_bus"):
+		color = Palette.AMBER
 	_committed_material.albedo_color = Color(color.r, color.g, color.b, 0.85 if hooked else 0.72)
 
 	var span := point - fairlead

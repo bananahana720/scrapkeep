@@ -7,6 +7,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ElementField := preload("res://src/build/element_field.gd")
 const BuffLedger := preload("res://src/core/buff_ledger.gd")
+const MakerSets := preload("res://src/build/maker_sets.gd")
 
 # What held items do (v2 W4 loot). refresh() folds the part list into two tables: the
 # passive numbers (charges, cooldowns, damage taken, prices, perks) and, per trigger
@@ -68,6 +69,9 @@ var verbs := {}
 # W47-C2: active Tier-1 common-part micro-mutations (part_id -> row) and held parts snapshot for
 # cross-system synergy queries. Refreshed in refresh() and cleared in reset_run().
 var micro_mutations := {}
+# W47-GRAPPLE-MUTS-CODE: active single-part-swap grapple mutations (slot -> row, id -> row).
+var grapple_mutations := {}
+var grapple_mutation_ids := {}
 var _held_parts: Array = []
 # Numbers the fuzzer and the tests read.
 var procs := {}
@@ -138,6 +142,11 @@ func refresh(held: Array) -> void:
 	pike = {}
 	verbs = {}
 	micro_mutations = {}
+	grapple_mutations = Parts.active_grapple_mutations(held, MakerSets.live_grapple_mutations(held))
+	grapple_mutation_ids = {}
+	for slot in grapple_mutations:
+		var gm: Dictionary = grapple_mutations[slot]
+		grapple_mutation_ids[String(gm["id"])] = gm
 	_held_parts = held.duplicate()
 	var index := 0
 	for part_id in order:
@@ -209,6 +218,24 @@ func micro_mutation(part_id: String) -> Dictionary:
 
 func active_micro_mutations() -> Array:
 	return Parts.active_micro_mutations(_held_parts)
+
+
+# W47-GRAPPLE-MUTS-CODE: deep query interface for active single-part-swap grapple mutations.
+func active_grapple_mutations() -> Dictionary:
+	return grapple_mutations.duplicate(true)
+
+
+func has_grapple_mutation(mut_id: String) -> bool:
+	return grapple_mutation_ids.has(Parts.grapple_mutation_id_of(mut_id))
+
+
+func grapple_mutation(mut_id: String) -> Dictionary:
+	var mid := Parts.grapple_mutation_id_of(mut_id)
+	return (grapple_mutation_ids.get(mid, {}) as Dictionary).duplicate(true)
+
+
+func grapple_mutation_for_slot(slot: String) -> Dictionary:
+	return (grapple_mutations.get(slot, {}) as Dictionary).duplicate(true)
 
 
 static func part_synergy_info(part_id: String) -> Dictionary:
@@ -302,6 +329,8 @@ func reset_run() -> void:
 	_last_word_used = false
 	procs = {}
 	micro_mutations = {}
+	grapple_mutations = {}
+	grapple_mutation_ids = {}
 	_held_parts = []
 
 

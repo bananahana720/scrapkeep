@@ -389,6 +389,18 @@ var last_micro_mutation := {}
 var last_cross_synergy := {}
 var _micro_counts := {}
 var _cross_counts := {}
+# W47-GRAPPLE-MUTS-CODE: transient runtime state for the 7 single-part-swap grapple mutations.
+# All queues, timers, and marks clear on _start_attempt(), _on_player_died(), and run_started
+# (DeferredEffects.tla NoEchoAcrossAttempt & ProcDepthOne).
+var _hot_wire_cd := {}
+var _det_cord_queue: Array = []
+var _tether_live := {}
+var _live_bus_charged_until := -1.0
+var _live_bus_charges := 0
+var _tether_slam_armed := {}
+var _grapple_mut_counts := {}
+var last_grapple_mut := {}
+var _active_grapple_slots := {}
 # The heat bit (ShotBits "heat", design-v3/ABILITY-MUTATIONS.md B3, starting values): a heated
 # bolt leaves the machine it hits glowing for HEAT_GLOW seconds, and a heated hit on a glowing
 # machine deals HEAT_BONUS, at most once per machine per HEAT_GLOW seconds. instance id ->
@@ -596,7 +608,9 @@ func setup(ctx_ref) -> void:
 	actives.setup(ctx, self)
 	# A loaded line skill rides the next bite, body or world (grapple_fired goes out for both,
 	# after the latch is set). A reset point drops the load.
-	ctx.events.grapple_fired.connect(func(_anchor: Vector3): _bite_load())
+	ctx.events.grapple_fired.connect(func(anchor: Vector3):
+		_bite_load()
+		_on_grapple_fired_muts(anchor))
 	ctx.events.player_died.connect(_on_player_died)
 	_cards = {"balance_due": _run_balance}
 	ctx.events.enemy_struck.connect(_on_card_struck)
@@ -698,6 +712,7 @@ func setup(ctx_ref) -> void:
 		_pike_last = -INF
 		_clear_verb_items()
 		_reset_w47_c2_state(true)
+		_reset_grapple_muts_state(true)
 		_cloud = {}
 		_sentry = {}
 		_pulse_left = 0.0
@@ -848,7 +863,8 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 		_drop_exposed(_arc_key(id))
 		_boss_add_ids.erase(id)
 		_pendulum_zapped.erase(id)
-		_pulled_recent.erase(id))
+		_pulled_recent.erase(id)
+		_hot_wire_cd.erase(id))
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_lobber_fired.bind(enemy))
 	# A kill-first special gets its special_tell signal before its listeners hear it arrive.
@@ -1059,6 +1075,7 @@ func _door_events(hit: Dictionary) -> void:
 	_detect_after(enemy, hit["kind"], result)
 	_record_delivered(enemy, hit["kind"], hit["removed"], result["dealt"],
 		hit["source"] if hit["source"] != "" else _forced_source)
+	_consume_grapple_mut_strike(hit)
 
 
 func _hook_primer_mesh(hit: Dictionary) -> void:
@@ -1234,6 +1251,10 @@ func _strike_mult(enemy: Node3D, kind: String, cls: String) -> float:
 		mult *= Companion.PRIMER_COIL_MULT
 	if _arc_marked(enemy):
 		mult *= 1.0 + ARC_MARK_FRACTION
+	if live_bus_charged() and cls != "debris" and kind != "live_bus":
+		mult *= float(Parts.GRAPPLE_MUTATIONS["live_bus"]["bonus_mult"])
+	if _tether_slam_matches(enemy, kind):
+		mult *= float(Parts.GRAPPLE_MUTATIONS["tether_slam"]["crush_mult"])
 	return mult
 
 
@@ -1867,6 +1888,7 @@ func _physics_process(delta: float) -> void:
 	var enemies := get_tree().get_nodes_in_group("enemy")
 	_step_verb_items(enemies)
 	_step_cross_synergies(delta, enemies)
+	_step_grapple_mutations(delta, enemies)
 	var shells := get_tree().get_nodes_in_group("enemy_shot")
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	bolts.step(delta, space, enemies, shells)
@@ -5843,6 +5865,7 @@ func _on_player_died() -> void:
 	_bite_pending = false
 	_clear_verb_items()
 	_reset_w47_c2_state()
+	_reset_grapple_muts_state()
 	_clear_consumables_runtime()
 	_clear_aftershocks()
 	_rakes.clear()
@@ -5892,6 +5915,7 @@ func _start_attempt() -> void:
 	_pike_last = -INF
 	_clear_verb_items()
 	_reset_w47_c2_state(true)
+	_reset_grapple_muts_state(true)
 	_clear_consumables_runtime()
 	if ctx != null and ctx.run != null:
 		_consumable_rng.seed = hash(["consumable_drops", ctx.run.run_seed, ctx.run.stage])
@@ -5941,6 +5965,7 @@ func _refresh_evolutions() -> void:
 
 func _on_build_recomputed(_categories: Array) -> void:
 	_refresh_evolutions()
+	_sync_grapple_mutations()
 
 
 func _rebuild_patterns() -> void:
@@ -5948,6 +5973,7 @@ func _rebuild_patterns() -> void:
 			and not ctx.build.stat_cache.recomputed.is_connected(_on_build_recomputed):
 		ctx.build.stat_cache.recomputed.connect(_on_build_recomputed)
 	_refresh_evolutions()
+	_sync_grapple_mutations()
 	var ids := active_transformers()
 	var lattice_falloff := 0.0
 	# Combat hears part_gained before Build. Derive from the current held list so a
@@ -5985,7 +6011,7 @@ func _clear_buff(id: String) -> void:
 
 
 func _clear_combat_buffs() -> void:
-	for id in ["overdrive", "cloak", "spring", "pike",
+	for id in ["overdrive", "cloak", "spring", "pike", "grapple_mut_live_bus",
 			"consumable_nitro_siphon", "consumable_anchor_flare",
 			"consumable_overclock_card", "consumable_foreman_memo"]:
 		_clear_buff(id)
@@ -6200,6 +6226,7 @@ func _on_grapple_released_w47() -> void:
 	_pendulum_zapped.clear()
 	_pendulum_swing_charged = false
 	_pendulum_swing_origin = Vector3.INF
+	_on_grapple_released_muts()
 	if not ctx.flow.in_play() or not _has_micro_mutation("long_spool"):
 		return
 	var dur := float(_micro_row("long_spool").get("duration_s", 0.4))
@@ -6511,6 +6538,617 @@ func on_consumable_used(consumable_id: String, at := Vector3.INF) -> Dictionary:
 	}
 	_note_cross("catalyst_cartridge", result)
 	return result
+
+
+# --- W47-GRAPPLE-MUTS-CODE: 7 Single-Part-Swap Grapple Build Mutations ----------------
+# Every mutation swaps strictly ONE hardware part (Head, Line, or Drive; Rule G1) on the
+# player's ONE ChainState (Rule G0) and consumes the committed tether geometry (TADR-008).
+# All deferred procs stay strictly depth-1 (SYNERGY / item_proc / bits 0) and clear on
+# _start_attempt(), _on_player_died(), and run_started (DeferredEffects.tla & Destructibles.tla).
+
+func _reset_grapple_muts_state(clear_counts := false) -> void:
+	_hot_wire_cd.clear()
+	_det_cord_queue.clear()
+	_tether_live.clear()
+	_live_bus_charged_until = -1.0
+	_live_bus_charges = 0
+	_tether_slam_armed.clear()
+	_clear_buff("grapple_mut_live_bus")
+	if ctx != null and ctx.destructibles != null and ctx.destructibles.has_method("set_swing_heft_bonus"):
+		ctx.destructibles.set_swing_heft_bonus(0)
+	if clear_counts:
+		_grapple_mut_counts.clear()
+		last_grapple_mut = {}
+
+
+func _sync_grapple_mutations() -> void:
+	if ctx == null:
+		return
+	var slots := {}
+	var build_mod = ctx.build
+	var fx = build_mod.get("effects") if build_mod != null else null
+	if fx != null and fx.has_method("active_grapple_mutations") and ctx.run != null:
+		if fx.get("_held_parts") != ctx.run.parts:
+			fx.refresh(ctx.run.parts)
+		slots = fx.active_grapple_mutations()
+	elif ctx.run != null:
+		slots = Parts.active_grapple_mutations(ctx.run.parts)
+	_active_grapple_slots = slots
+	if ctx.player != null and ctx.player.get("chain") != null and ctx.player.chain.has_method("set_mutations"):
+		ctx.player.chain.set_mutations(slots)
+
+
+func active_grapple_mutations() -> Dictionary:
+	_sync_grapple_mutations()
+	return _active_grapple_slots.duplicate(true)
+
+
+func has_grapple_mutation(mut_id: String) -> bool:
+	var mid := Parts.grapple_mutation_id_of(mut_id)
+	if mid == "":
+		return false
+	for slot in _active_grapple_slots:
+		var row: Variant = _active_grapple_slots[slot]
+		if row is Dictionary and String((row as Dictionary).get("id", "")) == mid:
+			return true
+	return false
+
+
+func _grapple_mut_row(mut_id: String) -> Dictionary:
+	var mid := Parts.grapple_mutation_id_of(mut_id)
+	for slot in _active_grapple_slots:
+		var row: Variant = _active_grapple_slots[slot]
+		if row is Dictionary and String((row as Dictionary).get("id", "")) == mid:
+			return row as Dictionary
+	return {}
+
+
+func grapple_mut_count(mut_id: String) -> int:
+	return int(_grapple_mut_counts.get(Parts.grapple_mutation_id_of(mut_id), 0))
+
+
+func live_bus_charged() -> bool:
+	return _live_bus_charges > 0 and _clock < _live_bus_charged_until
+
+
+func det_cord_pending() -> int:
+	return _det_cord_queue.size()
+
+
+func wrecking_flail_taut_active() -> bool:
+	if not has_grapple_mutation("wrecking_flail") or ctx == null or ctx.player == null:
+		return false
+	var kit = ctx.player.kit
+	if kit == null or not kit.hooked:
+		return false
+	return _tether_is_taut(kit, ctx.player.ball_position(), kit.anchor)
+
+
+func _note_grapple_mut(mut_id: String, details := {}) -> void:
+	_grapple_mut_counts[mut_id] = int(_grapple_mut_counts.get(mut_id, 0)) + 1
+	var entry := details.duplicate()
+	entry["id"] = mut_id
+	entry["at_clock"] = _clock
+	last_grapple_mut = entry
+
+
+func _tether_is_taut(kit, ball: Vector3, anchor: Vector3) -> bool:
+	if kit == null or not kit.hooked:
+		return false
+	var dist := ball.distance_to(anchor)
+	if dist < 1.0:
+		return false
+	return dist >= kit.rope * 0.80 or kit.winching or kit.line_state == Augments.LINE_SMASH \
+		or ctx.player.state.velocity.length() >= 4.0
+
+
+static func is_pendulum_apex(ball: Vector3, anchor: Vector3, vel: Vector3, min_y: float, hook_time: float, crossed_bottom: bool) -> bool:
+	if hook_time < 0.05:
+		return false
+	if ball.y >= anchor.y - 0.5:
+		return false
+	var planar := Vector2(vel.x, vel.z).length()
+	if planar < 4.0:
+		return false
+	return crossed_bottom or (absf(vel.y) <= 6.5 and ball.y <= min_y + 1.8)
+
+
+func _on_grapple_fired_muts(anchor: Vector3) -> void:
+	if ctx == null or ctx.flow == null or not ctx.flow.in_play():
+		return
+	_sync_grapple_mutations()
+	_hot_wire_cd.clear()
+	var ball: Vector3 = ctx.player.ball_position()
+	var vel: Vector3 = ctx.player.state.velocity
+	var kit = ctx.player.kit
+	var body: Node3D = kit.anchor_body if kit != null and is_instance_valid(kit.anchor_body) else null
+	_tether_live = {
+		"from": ball,
+		"to": anchor,
+		"body": body,
+		"hook_time": 0.0,
+		"min_y": ball.y,
+		"prev_vy": vel.y,
+		"crossed_bottom": false,
+		"prev_smash": kit != null and kit.line_state == Augments.LINE_SMASH,
+		"prev_winch": kit != null and kit.winching,
+		"live_bus_checked": false,
+	}
+	_try_charge_live_bus(body, anchor, ball)
+
+
+func _try_charge_live_bus(body: Node3D, anchor: Vector3, ball: Vector3) -> void:
+	if not has_grapple_mutation("live_bus"):
+		return
+	if bool(_tether_live.get("live_bus_checked", false)):
+		return
+	_tether_live["live_bus_checked"] = true
+	if not _is_powered_world_prop(body, anchor):
+		return
+	var row := _grapple_mut_row("live_bus")
+	var dur := float(row.get("charge_duration_s", 8.0))
+	_live_bus_charges = 1
+	_live_bus_charged_until = _clock + dur
+	_post_buff("grapple_mut_live_bus", {
+		"icon": "cat_damage",
+		"tone": Palette.AMBER,
+		"duration_s": dur,
+		"left_s": dur,
+		"kind": BuffLedger.KIND_TIMER,
+		"stacks": 1,
+		"max_stacks": 1,
+	})
+	effects.arc(anchor, ball, Palette.AMBER)
+	effects.spark(ball, Palette.AMBER)
+	_note_grapple_mut("live_bus", {"stage": "charge", "anchor": anchor, "color": Palette.AMBER})
+
+
+func _is_powered_world_prop(body: Node3D, anchor: Vector3) -> bool:
+	if is_instance_valid(body):
+		if body.is_in_group("sluice_valve_bite") or body.has_meta("sluice_valve_id"):
+			return true
+		if body.is_in_group("powered_prop") or bool(body.get_meta("powered", false)):
+			return true
+		if body.is_in_group(Augments.ANCHOR_GROUP) or body.is_in_group(Augments.WORLD_ANCHOR_GROUP) \
+				or body.is_in_group(Augments.STAKE_GROUP) or body.is_in_group(Consumables.BALLOON_GROUP):
+			return true
+		var bname := body.name.to_lower()
+		for kw in ["sluice", "valve", "relay", "mast", "pylon", "conduit", "warden"]:
+			if kw in bname:
+				return true
+	# Proximity fallback for static relay/sluice world geometry latched without a distinct body group.
+	if ctx != null and ctx.root != null:
+		for grp in ["sluice_valve_bite", "powered_prop", Augments.STAKE_GROUP, Augments.WORLD_ANCHOR_GROUP]:
+			for node in get_tree().get_nodes_in_group(grp):
+				if node is Node3D and is_instance_valid(node) and (node as Node3D).global_position.distance_to(anchor) <= 4.0:
+					return true
+	return false
+
+
+func _on_grapple_released_muts() -> void:
+	_hot_wire_cd.clear()
+	if ctx != null and ctx.destructibles != null and ctx.destructibles.has_method("set_swing_heft_bonus"):
+		ctx.destructibles.set_swing_heft_bonus(0)
+	if _tether_live.is_empty():
+		return
+	var snap := _tether_live
+	_tether_live = {}
+	if ctx == null or ctx.flow == null or not ctx.flow.in_play():
+		return
+	_sync_grapple_mutations()
+	var from: Vector3 = snap.get("from", ctx.player.ball_position())
+	var to: Vector3 = snap.get("to", from)
+	# 2. Det-Cord Line: enqueue sequenced shaped charges down the released tether path (depth-1).
+	if has_grapple_mutation("det_cord"):
+		_enqueue_det_cord(from, to)
+	# 4. Sonic Snap-Sling: pendulum apex release grants +12 m/s Blazing burst + Air-Jump refresh.
+	if has_grapple_mutation("sonic_snap_sling"):
+		var ball: Vector3 = ctx.player.ball_position()
+		var vel: Vector3 = ctx.player.state.velocity
+		if is_pendulum_apex(ball, to, vel, float(snap.get("min_y", ball.y)),
+				float(snap.get("hook_time", 0.0)), bool(snap.get("crossed_bottom", false))):
+			_fire_sonic_snap_sling(ball, vel)
+
+
+func _enqueue_det_cord(from: Vector3, to: Vector3) -> void:
+	var span := from.distance_to(to)
+	if span < 1.5:
+		return
+	var row := _grapple_mut_row("det_cord")
+	var spacing := maxf(1.0, float(row.get("spacing_m", 3.5)))
+	var max_nodes := clampi(int(row.get("max_nodes", 6)), 2, 8)
+	var count := clampi(int(ceil(span / spacing)), 2, max_nodes)
+	var step_delay := float(row.get("step_delay_s", 0.06))
+	var radius := float(row.get("blast_radius_m", 4.2))
+	var dmg := maxf(float(row.get("damage_base", 22.0)), _weapon_hit() * 0.9) * heft()
+	var knock := float(row.get("knock", 9.0))
+	for i in count:
+		var frac := float(i + 1) / float(count + 1)
+		_det_cord_queue.append({
+			"at": from.lerp(to, frac),
+			"due": _clock + float(i) * step_delay,
+			"radius": radius,
+			"damage": dmg,
+			"knock": knock,
+			"index": i,
+		})
+	_note_grapple_mut("det_cord", {"stage": "queued", "nodes": count, "from": from, "to": to})
+
+
+func _step_det_cord(enemies: Array) -> void:
+	if _det_cord_queue.is_empty():
+		return
+	var i := 0
+	while i < _det_cord_queue.size():
+		var entry: Dictionary = _det_cord_queue[i]
+		if _clock < float(entry["due"]):
+			i += 1
+			continue
+		# Remove before detonating so a node never fires twice (DeferredEffects.tla ProcDepthOne).
+		_det_cord_queue.remove_at(i)
+		var at: Vector3 = entry["at"]
+		var radius := float(entry["radius"])
+		var dmg := float(entry["damage"])
+		var knock := float(entry["knock"])
+		effects.shockwave(at, radius, Palette.BRASS)
+		effects.spark(at, Palette.AMBER)
+		var hits := 0
+		for enemy in enemies:
+			if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+				continue
+			if enemy.global_position.distance_to(at) > radius + _hull(enemy):
+				continue
+			_hit(enemy, SYNERGY, dmg, enemy.global_position - at, knock, "", "item_proc", "proc")
+			hits += 1
+		if ctx.destructibles != null and ctx.destructibles.has_method("on_blast"):
+			var hc: int = ctx.run.heft_class() if ctx.run != null and ctx.run.has_method("heft_class") else 1
+			ctx.destructibles.on_blast(at, radius, "det_cord", 1, hc)
+		_note_grapple_mut("det_cord", {"stage": "detonate", "at": at, "hits": hits, "index": int(entry["index"])})
+
+
+func _fire_sonic_snap_sling(ball: Vector3, vel: Vector3) -> void:
+	var row := _grapple_mut_row("sonic_snap_sling")
+	var burst := float(row.get("burst_speed", 12.0))
+	var flat := Vector3(vel.x, 0.0, vel.z)
+	var cur_speed := flat.length()
+	var dir := flat.normalized() if cur_speed > 0.1 else _flat_aim()
+	var cruise: float = ctx.player.tuning.f("cruise")
+	var blazing_floor: float = cruise * float(SpeedTier.MULTIPLES[SpeedTier.BLAZING])
+	var target_speed := minf(Augments.POLE_EXIT_CAP, maxf(cur_speed + burst, blazing_floor))
+	target_speed = maxf(target_speed, cur_speed + burst)
+	ctx.player.set_velocity_now(Vector3(dir.x * target_speed, maxf(vel.y, 2.0), dir.z * target_speed), "sonic_snap_sling")
+	ctx.player.refresh_air()
+	effects.ring(ball, 4.0, Palette.COPPER)
+	effects.spark(ball, Palette.AMBER)
+	_note_grapple_mut("sonic_snap_sling", {
+		"before_speed": cur_speed,
+		"after_speed": target_speed,
+		"delta_speed": target_speed - cur_speed,
+		"air_refreshed": true,
+	})
+
+
+func _step_grapple_mutations(delta: float, enemies: Array) -> void:
+	_sync_grapple_mutations()
+	_step_det_cord(enemies)
+	if _live_bus_charges > 0 and _clock >= _live_bus_charged_until:
+		_live_bus_charges = 0
+		_live_bus_charged_until = -1.0
+		_clear_buff("grapple_mut_live_bus")
+	if not _tether_slam_armed.is_empty() and _clock >= float(_tether_slam_armed.get("until", -1.0)):
+		_tether_slam_armed.clear()
+	var kit = ctx.player.kit
+	if kit == null or not kit.hooked:
+		if ctx.destructibles != null and ctx.destructibles.has_method("set_swing_heft_bonus"):
+			ctx.destructibles.set_swing_heft_bonus(0)
+		if not _tether_live.is_empty():
+			_on_grapple_released_muts()
+		return
+	var ball: Vector3 = ctx.player.ball_position()
+	var anchor: Vector3 = kit.anchor
+	var vel: Vector3 = ctx.player.state.velocity
+	var body: Node3D = kit.anchor_body if is_instance_valid(kit.anchor_body) else null
+	if _tether_live.is_empty():
+		_tether_live = {
+			"from": ball,
+			"to": anchor,
+			"body": body,
+			"hook_time": 0.0,
+			"min_y": ball.y,
+			"prev_vy": vel.y,
+			"crossed_bottom": false,
+			"prev_smash": false,
+			"prev_winch": false,
+			"live_bus_checked": false,
+		}
+	var prev_vy := float(_tether_live.get("prev_vy", vel.y))
+	_tether_live["from"] = ball
+	_tether_live["to"] = anchor
+	_tether_live["body"] = body
+	_tether_live["hook_time"] = float(_tether_live.get("hook_time", 0.0)) + delta
+	_tether_live["min_y"] = minf(float(_tether_live.get("min_y", ball.y)), ball.y)
+	if prev_vy < -0.5 and vel.y >= -6.5:
+		_tether_live["crossed_bottom"] = true
+	_tether_live["prev_vy"] = vel.y
+	_try_charge_live_bus(body, anchor, ball)
+
+	var taut := _tether_is_taut(kit, ball, anchor)
+	if has_grapple_mutation("hot_wire") and taut:
+		_step_hot_wire(ball, anchor, enemies)
+	if has_grapple_mutation("dragnet_siphon"):
+		_step_dragnet_siphon(delta, ball, anchor)
+	if has_grapple_mutation("tether_slam"):
+		_step_tether_slam(ball, anchor, kit, enemies)
+	if has_grapple_mutation("wrecking_flail"):
+		_step_wrecking_flail(delta, ball, anchor, kit, taut, enemies)
+	elif ctx.destructibles != null and ctx.destructibles.has_method("set_swing_heft_bonus"):
+		ctx.destructibles.set_swing_heft_bonus(0)
+
+
+# 1. Hot-Wire Arc Cutter: AMBER #E5A044 taut sweep slicing ordinary enemies, boom floats, and Tier 1-2 props.
+func _step_hot_wire(ball: Vector3, anchor: Vector3, enemies: Array) -> void:
+	var row := _grapple_mut_row("hot_wire")
+	var width := float(row.get("line_width_m", 1.6))
+	var float_reach := float(row.get("float_reach_m", 2.2))
+	var cd := float(row.get("hit_cooldown_s", 0.35))
+	var dmg := maxf(float(row.get("damage_base", 24.0)), _weapon_hit() * 1.15) * heft()
+	var sliced_enemies := 0
+	var popped_floats := 0
+	for enemy in enemies:
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
+		var kind := _spawn_kind_of(enemy)
+		if kind == "boom_tender":
+			var popped_arr = enemy.get("popped")
+			if popped_arr is Array and enemy.has_method("float_position"):
+				for fi in popped_arr.size():
+					if bool(popped_arr[fi]):
+						continue
+					var fpos: Vector3 = enemy.float_position(fi)
+					var c_pt := Geometry3D.get_closest_point_to_segment(fpos, ball, anchor)
+					if c_pt.distance_to(fpos) <= float_reach:
+						popped_arr[fi] = true
+						enemy.pops += 1
+						if enemy.has_method("_pop_float"):
+							enemy._pop_float(fi)
+						if enemy.has_method("_pay"):
+							enemy._pay(fpos)
+						effects.spark(fpos + Vector3.UP * 0.5, Palette.AMBER)
+						popped_floats += 1
+		if _fights_posture(enemy) or _target_class(enemy) in ["Warden", "boss"]:
+			continue
+		var eid: int = enemy.get_instance_id()
+		if _clock < float(_hot_wire_cd.get(eid, -INF)):
+			continue
+		var closest := Geometry3D.get_closest_point_to_segment(enemy.global_position, ball, anchor)
+		if closest.distance_to(enemy.global_position) > width + _hull(enemy):
+			continue
+		_hot_wire_cd[eid] = _clock + cd
+		effects.arc(closest, enemy.global_position + Vector3.UP * 0.5, Palette.AMBER)
+		effects.spark(closest, Palette.AMBER)
+		_hit(enemy, SYNERGY, dmg, enemy.global_position - closest, 6.0, "", "item_proc", "proc")
+		if is_instance_valid(enemy) and not (enemy.has_method("is_dead") and enemy.is_dead()):
+			_heated[eid] = {"glow": _clock + HEAT_GLOW, "ready": float(_heated.get(eid, {}).get("ready", -INF))}
+		sliced_enemies += 1
+	var cut_props: Array[String] = []
+	if ctx.destructibles != null and ctx.destructibles.has_method("on_segment_cut"):
+		cut_props = ctx.destructibles.on_segment_cut(ball, anchor, int(row.get("max_destructible_tier", 2)), width, "hot_wire")
+		for pid in cut_props:
+			var b: AABB = ctx.destructibles.bounds_of(pid)
+			effects.spark(b.get_center(), Palette.AMBER)
+	if sliced_enemies > 0 or popped_floats > 0 or not cut_props.is_empty():
+		_note_grapple_mut("hot_wire", {
+			"enemies": sliced_enemies,
+			"floats": popped_floats,
+			"props": cut_props,
+			"color": Palette.AMBER,
+		})
+
+
+# 3. Dragnet Siphon: tether span vacuums scrap, cogs, and W47-C1 pocket consumable cradles within 5 m.
+func _step_dragnet_siphon(delta: float, ball: Vector3, anchor: Vector3) -> void:
+	var row := _grapple_mut_row("dragnet_siphon")
+	var radius := float(row.get("vacuum_radius_m", 5.0))
+	var pull_speed := float(row.get("pull_speed", 26.0))
+	var pulled_scrap := 0
+	var pulled_consumables := 0
+	var scrap = ctx.build.get("scrap") if ctx.build != null else null
+	if scrap != null:
+		var items_val = scrap.get("_items")
+		var caught_val = scrap.get("_caught")
+		if items_val is Array:
+			for item in items_val:
+				if not is_instance_valid(item) or not (item is Node3D):
+					continue
+				var n := item as Node3D
+				var closest := Geometry3D.get_closest_point_to_segment(n.global_position, ball, anchor)
+				if closest.distance_to(n.global_position) <= radius:
+					n.global_position = n.global_position.move_toward(ball, pull_speed * delta)
+					if caught_val is Dictionary and not (caught_val as Dictionary).has(item):
+						(caught_val as Dictionary)[item] = 1.0
+					pulled_scrap += 1
+	if ctx.run != null and ctx.run.has_method("can_hold_consumable") and ctx.run.can_hold_consumable():
+		for cradle in _consumable_drops:
+			if not is_instance_valid(cradle) or cradle.collected:
+				continue
+			var closest := Geometry3D.get_closest_point_to_segment(cradle.global_position, ball, anchor)
+			if closest.distance_to(cradle.global_position) <= radius:
+				cradle.global_position = cradle.global_position.move_toward(ball, pull_speed * delta)
+				pulled_consumables += 1
+	if pulled_scrap > 0 or pulled_consumables > 0:
+		_note_grapple_mut("dragnet_siphon", {"scrap_pulled": pulled_scrap, "consumables_pulled": pulled_consumables})
+
+
+# 6. Tether-Slam Clutch: Smash while tethered yanks target/prop and ball to mid-point for 2x crush slam.
+func _step_tether_slam(ball: Vector3, anchor: Vector3, kit, enemies: Array) -> void:
+	var is_smash: bool = kit.line_state == Augments.LINE_SMASH
+	var is_winch: bool = bool(kit.winching)
+	var prev_smash := bool(_tether_live.get("prev_smash", false))
+	var prev_winch := bool(_tether_live.get("prev_winch", false))
+	_tether_live["prev_smash"] = is_smash
+	_tether_live["prev_winch"] = is_winch
+	if (is_smash and not prev_smash) or (is_winch and not prev_winch):
+		trigger_tether_slam()
+	elif not _tether_slam_armed.is_empty():
+		var mid: Vector3 = _tether_slam_armed.get("mid", anchor)
+		var target = _tether_slam_armed.get("target")
+		var meet_at: Vector3 = target.global_position if is_instance_valid(target) else mid
+		if ball.distance_to(meet_at) <= 3.2:
+			_detonate_tether_slam_midpoint(meet_at, enemies)
+
+
+func trigger_tether_slam() -> Dictionary:
+	if ctx == null or ctx.player == null or ctx.player.kit == null or not ctx.player.kit.hooked:
+		return {}
+	if not has_grapple_mutation("tether_slam"):
+		return {}
+	var kit = ctx.player.kit
+	var row := _grapple_mut_row("tether_slam")
+	var ball: Vector3 = ctx.player.ball_position()
+	var target: Node3D = kit.anchor_body if is_instance_valid(kit.anchor_body) else null
+	var target_pos: Vector3 = target.global_position if target != null else kit.anchor
+	var mid := (ball + target_pos) * 0.5
+	var yank_speed := float(row.get("yank_speed", 24.0))
+	var to_mid := mid - ball
+	if to_mid.length_squared() > 0.01:
+		var spd := maxf(ctx.player.state.velocity.length(), yank_speed)
+		var dv: Vector3 = to_mid.normalized() * spd - ctx.player.state.velocity
+		ctx.player.add_external_accel(dv * 60.0)
+	var yanked_target := false
+	if target != null and target.is_in_group("enemy") and not _fights_posture(target) and _target_class(target) != "boss":
+		var pull_dir := mid - target.global_position
+		if pull_dir.length_squared() > 0.01:
+			var weight = target.get("weight")
+			if target.has_method("knock"):
+				target.knock(pull_dir.normalized() + Vector3.UP * 0.2, yank_speed * (float(weight) if weight != null else 1.0))
+			target.global_position = target.global_position.lerp(mid, 0.5)
+			yanked_target = true
+			_check_gravity_ledger(mid, [target])
+	var armed_window := float(row.get("armed_window_s", 1.2))
+	_tether_slam_armed = {
+		"target": target,
+		"mid": mid,
+		"until": _clock + armed_window,
+		"mult": float(row.get("crush_mult", 2.0)),
+	}
+	effects.ring(mid, 3.0, Palette.COPPER)
+	var result := {"mid": mid, "yanked_target": yanked_target, "mult": float(_tether_slam_armed["mult"])}
+	_note_grapple_mut("tether_slam", {"stage": "yank", "mid": mid, "yanked_target": yanked_target})
+	return result
+
+
+func _detonate_tether_slam_midpoint(at: Vector3, enemies: Array) -> void:
+	var row := _grapple_mut_row("tether_slam")
+	var mult := float(_tether_slam_armed.get("mult", row.get("crush_mult", 2.0)))
+	var radius := float(row.get("slam_radius_m", 8.0))
+	var base_dmg := maxf(float(row.get("damage_base", 32.0)), punch_of("slam", Augments.SLAM_KNOCK))
+	var dmg := base_dmg * mult
+	var knock := float(row.get("knock", 16.0))
+	# Clear before striking so crush resolves strictly once (depth-1).
+	_tether_slam_armed.clear()
+	effects.shockwave(at, radius, Palette.COPPER)
+	var hits := 0
+	for enemy in enemies:
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
+		if enemy.global_position.distance_to(at) > radius + _hull(enemy):
+			continue
+		_hit(enemy, SYNERGY, dmg, enemy.global_position - at, knock, "", "item_proc", "proc")
+		hits += 1
+	if ctx.destructibles != null and ctx.destructibles.has_method("on_blast"):
+		var hc: int = ctx.run.heft_class() if ctx.run != null and ctx.run.has_method("heft_class") else 1
+		ctx.destructibles.on_blast(at, radius, "tether_slam", 1, hc)
+	_note_grapple_mut("tether_slam", {"stage": "crush", "at": at, "mult": mult, "hits": hits})
+
+
+func _tether_slam_matches(enemy: Node3D, kind: String) -> bool:
+	if _tether_slam_armed.is_empty() or _clock >= float(_tether_slam_armed.get("until", -1.0)):
+		return false
+	if not (kind in CONTACT_KINDS):
+		return false
+	var target = _tether_slam_armed.get("target")
+	return target == null or target == enemy
+
+
+# 7. Wrecking Flail (Andrew Call #4): taut swing through Heft Destructibles/armor adds +1 effective Heft tier.
+func _step_wrecking_flail(delta: float, ball: Vector3, _anchor: Vector3, _kit, taut: bool, enemies: Array) -> void:
+	var row := _grapple_mut_row("wrecking_flail")
+	var bonus := clampi(int(row.get("heft_bonus", 1)), 0, 1) if taut else 0
+	if ctx.destructibles != null and ctx.destructibles.has_method("set_swing_heft_bonus"):
+		ctx.destructibles.set_swing_heft_bonus(bonus)
+	if not taut:
+		return
+	var vel: Vector3 = ctx.player.state.velocity
+	var reach := float(row.get("swing_reach_m", 3.2))
+	var hc: int = ctx.run.heft_class() if ctx.run != null and ctx.run.has_method("heft_class") else 1
+	var broken: Array[String] = []
+	if ctx.destructibles != null and ctx.destructibles.has_method("on_taut_swing"):
+		broken = ctx.destructibles.on_taut_swing(ball, vel, hc, bonus, reach, delta)
+		for pid in broken:
+			var b: AABB = ctx.destructibles.bounds_of(pid)
+			effects.ring(b.get_center(), 3.2, Palette.STEEL)
+			effects.spark(b.get_center(), Palette.AMBER)
+	var shredded := 0
+	var flat_speed := Vector2(vel.x, vel.z).length()
+	if flat_speed >= float(row.get("min_speed", 8.0)):
+		var shred_amt := float(row.get("armor_shred_bonus", 25.0))
+		for enemy in enemies:
+			if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+				continue
+			if enemy.global_position.distance_to(ball) > reach + _hull(enemy):
+				continue
+			var had_armor := false
+			if "plates" in enemy and int(enemy.plates) > 0:
+				enemy.plates = maxi(0, int(enemy.plates) - 1)
+				had_armor = true
+			if enemy.has_method("plating_for") and float(enemy.plating_for("ram", "")) > 0.0:
+				_add_shred(enemy, shred_amt)
+				had_armor = true
+			if had_armor:
+				effects.spark(enemy.global_position + Vector3.UP * 0.5, Palette.AMBER)
+				shredded += 1
+	if not broken.is_empty() or shredded > 0:
+		_note_grapple_mut("wrecking_flail", {"broken": broken, "shredded": shredded, "effective_heft": mini(Destructibles.TIER_MAX, hc + bonus)})
+
+
+func _consume_grapple_mut_strike(hit: Dictionary) -> void:
+	var enemy: Node3D = hit["enemy"]
+	var kind: String = hit["kind"]
+	var cls: String = hit["cls"]
+	var dealt := float(hit["result"].get("dealt", 0.0))
+	if live_bus_charged() and cls != "debris" and kind != "live_bus" and dealt > 0.0:
+		var row := _grapple_mut_row("live_bus")
+		var bonus_flat := float(row.get("bonus_flat", 24.0))
+		var arc_r := float(row.get("arc_radius_m", 8.0))
+		# Spend charge before any side-effect so it discharges strictly once (depth-1).
+		_live_bus_charges = 0
+		_live_bus_charged_until = -1.0
+		_clear_buff("grapple_mut_live_bus")
+		var at: Vector3 = hit["at"]
+		effects.arc(ctx.player.ball_position() + Vector3.UP * 0.5, at + Vector3.UP * 0.5, Palette.AMBER)
+		effects.ring(at, 4.5, Palette.AMBER)
+		var arced_to: Node3D = null
+		for other in get_tree().get_nodes_in_group("enemy"):
+			if other == enemy or not is_instance_valid(other) or (other.has_method("is_dead") and other.is_dead()):
+				continue
+			if _fights_posture(other):
+				continue
+			if other.global_position.distance_to(at) <= arc_r:
+				arced_to = other
+				break
+		if arced_to != null:
+			effects.arc(at + Vector3.UP * 0.5, arced_to.global_position + Vector3.UP * 0.5, Palette.AMBER)
+			_trail_deal(arced_to, bonus_flat, "live_bus", "item_proc")
+		_note_grapple_mut("live_bus", {"stage": "discharge", "at": at, "dealt": dealt, "arced": arced_to != null, "color": Palette.AMBER})
+	if _tether_slam_matches(enemy, kind) and dealt > 0.0:
+		var mult := float(_tether_slam_armed.get("mult", 2.0))
+		_tether_slam_armed.clear()
+		effects.shockwave(hit["at"], 6.0, Palette.COPPER)
+		_note_grapple_mut("tether_slam", {"stage": "contact_crush", "at": hit["at"], "mult": mult, "dealt": dealt})
+	if wrecking_flail_taut_active() and kind in CONTACT_KINDS and is_instance_valid(enemy):
+		_add_shred(enemy, float(_grapple_mut_row("wrecking_flail").get("armor_shred_bonus", 25.0)))
+		if "plates" in enemy and int(enemy.plates) > 0:
+			enemy.plates = maxi(0, int(enemy.plates) - 1)
 
 
 # --- W47-C1 Pocket Consumable Belt runtime ------------------------------------------

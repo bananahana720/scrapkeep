@@ -38,6 +38,9 @@ var miss_left := 0.0
 var finished: Array = []
 var best_combo := 0
 var misses := 0
+# W47-GRAPPLE-MUTS-CODE: active single-part-swap mutation slots ("head"|"line"|"drive" -> mut_id)
+# carried on the pilot's ONE ChainState (Rule G0: zero second standing line or chain).
+var mutations := {}
 
 var _active := false
 var _pivot_run := 0
@@ -50,6 +53,21 @@ func active() -> bool:
 	return _active
 
 
+func set_mutations(slots: Dictionary) -> void:
+	mutations.clear()
+	for slot in ["head", "line", "drive"]:
+		if not slots.has(slot):
+			continue
+		var v: Variant = slots[slot]
+		var mut_id := String(v["id"]) if v is Dictionary else String(v)
+		if mut_id != "":
+			mutations[slot] = mut_id
+
+
+func active_mutations() -> Dictionary:
+	return mutations.duplicate()
+
+
 # Read-only view of the one ChainState for hardware rig presentation and tests (G0).
 func snapshot() -> Dictionary:
 	return {
@@ -60,6 +78,7 @@ func snapshot() -> Dictionary:
 		"multiplier": multiplier(),
 		"grace_left": grace_left,
 		"miss_left": miss_left,
+		"mutations": mutations.duplicate(),
 	}
 
 
@@ -153,6 +172,7 @@ func reset() -> void:
 	finished.clear()
 	best_combo = 0
 	misses = 0
+	mutations.clear()
 	_active = false
 	_pivot_run = 0
 	_airborne = false

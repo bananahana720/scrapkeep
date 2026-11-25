@@ -261,3 +261,45 @@ const CELLS := {
 	"cell_smash": {"maker": "moss", "base": "charge", "rarity": "uncommon", "stack": "capped", "cap": 2, "tags": ["mass"], "shop_only": true,
 		"name": "Smash Cell", "verb": "Smash cell adds a charge", "text": "+1 smash charge", "charges": {"smash": 1}},
 }
+
+# W47-GRAPPLE-MUTS-CODE: Cobalt/rare/evolved part -> single-part-swap grapple mutation id (Master Bible §3.2).
+# Kept separate from TABLE and CELLS so Parts.rows() digest, build_catalogue_test, and maker_sets_case stay pinned.
+const GRAPPLE_MUTATION_MAP := {
+	# Hot-Wire Arc Cutter (heat · swaps Line)
+	"sunforged_core": "hot_wire",
+	"overpressure": "hot_wire",
+	"spark_tread": "hot_wire",
+	# Det-Cord Line (burst/split · swaps Line)
+	"warhead_slug": "det_cord",
+	"clean_break": "det_cord",
+	"fan_spread": "det_cord",
+	"grapeshot_press": "det_cord",
+	# Dragnet Siphon (salvage · swaps Head)
+	"salvage_drone": "dragnet_siphon",
+	"scrap_gravity": "dragnet_siphon",
+	"cache_key": "dragnet_siphon",
+	# Sonic Snap-Sling (speed · swaps Drive)
+	"slipstream": "sonic_snap_sling",
+	"gatling_heart": "sonic_snap_sling",
+	"jet_vent": "sonic_snap_sling",
+	"bladestorm_rotor": "sonic_snap_sling",
+	# Live-Bus Conductor (arc/chain · swaps Head)
+	"galvanic_rounds": "live_bus",
+	"overcharge_coil": "live_bus",
+	"storm_mast": "live_bus",
+	"grounding_spike": "live_bus",
+	# Tether-Slam Clutch (pull/kinetic · swaps Drive)
+	"barbed_reel": "tether_slam",
+	"faultline_cap": "tether_slam",
+	"fault_hammer": "tether_slam",
+	"breaker_drive": "tether_slam",
+	# Wrecking Flail (mass/heft · swaps Head, Andrew Call #4)
+	"ram_plow": "wrecking_flail",
+	"heavy_breech": "wrecking_flail",
+	"crush_guard": "wrecking_flail",
+	"hoar_barrel": "wrecking_flail",
+}
+
+
+static func grapple_mutation_of(part_id: String) -> String:
+	return String(GRAPPLE_MUTATION_MAP.get(part_id, ""))

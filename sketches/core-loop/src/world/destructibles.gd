@@ -114,6 +114,7 @@ var _clock := 0.0
 var _prev := Vector3.ZERO
 var _have_prev := false
 var _last_heft := 1
+var _swing_heft_bonus := 0
 var _cruise := 14.0
 var _cruise_override := false
 var _ctx: Object = null
@@ -299,6 +300,7 @@ func teardown() -> void:
 	_shrapnel_hits = 0
 	_clock = 0.0
 	_have_prev = false
+	_swing_heft_bonus = 0
 	_live_serial = 0
 	_ctx = null
 	_tuning = null
@@ -423,6 +425,7 @@ func on_ball(ball_pos: Vector3, velocity: Vector3, heft_class: int, dt: float = 
 	var heading := flat_v / flat
 	var to := ball_pos + flat_v * dt
 	var reach := WALL_REACH + flat / 30.0
+	var effective_heft := mini(TIER_MAX, heft_class + clampi(_swing_heft_bonus, 0, 1))
 	for p in _near(from, to, reach + BALL_RADIUS):
 		if not p.intact:
 			continue
@@ -431,10 +434,64 @@ func on_ball(ball_pos: Vector3, velocity: Vector3, heft_class: int, dt: float = 
 		var dist: float = seen["dist"]
 		if dist > reach or heading.dot(dir) < HEADING_COS:
 			continue
-		if heft_class >= p.tier and flat >= _bar(p.tier):
+		if effective_heft >= p.tier and flat >= _bar(p.tier):
 			_shatter(p, seen["at"], heading, flat, false)
 		elif dist <= CONTACT_M and flat >= REFUSED_FLOOR * _live_cruise():
 			_refuse(p, seen["at"], heading)
+
+
+# W47-GRAPPLE-MUTS-CODE: Wrecking Flail taut-swing +1 effective Heft tier (strictly clamped 0..1,
+# Destructibles.tla TierCapNeverStacks & PaysOnce safe). Cleared on release and teardown().
+func set_swing_heft_bonus(bonus: int) -> void:
+	_swing_heft_bonus = clampi(bonus, 0, 1)
+
+
+# W47-GRAPPLE-MUTS-CODE: Hot-Wire Arc Cutter segment slice through Tier 1-2 destructibles.
+# Strictly clamped to Tier 1..2 and routed through _shatter() so each piece pays at most once.
+func on_segment_cut(from: Vector3, to: Vector3, max_tier: int = 2, width: float = 1.6, source: String = "hot_wire") -> Array[String]:
+	var broken: Array[String] = []
+	if _pieces.is_empty():
+		return broken
+	var cap_tier := clampi(max_tier, TIER_MIN, 2)
+	var cruise := _live_cruise()
+	var seg_dir := to - from
+	seg_dir.y = 0.0
+	var dir := seg_dir.normalized() if seg_dir.length_squared() > 0.0001 else Vector3.FORWARD
+	for p in _near(from, to, width):
+		if not p.intact or p.tier > cap_tier:
+			continue
+		var seen := _sweep(p, from, to)
+		if float(seen["dist"]) > width:
+			continue
+		_shatter(p, seen["at"], dir, cruise, false, source)
+		broken.append(p.id)
+	return broken
+
+
+# W47-GRAPPLE-MUTS-CODE: Wrecking Flail taut swing check for Heft Destructibles at +1 effective Heft.
+# Strictly clamped to at most +1 tier above heft_class (Destructibles.tla TierCapNeverStacks) and
+# routed through _shatter() so each piece breaks and pays strictly once.
+func on_taut_swing(ball_pos: Vector3, velocity: Vector3, heft_class: int, tier_bonus: int = 1, reach_override: float = -1.0, dt: float = 1.0 / 60.0) -> Array[String]:
+	var broken: Array[String] = []
+	if _pieces.is_empty():
+		return broken
+	var flat_v := Vector3(velocity.x, 0.0, velocity.z)
+	var flat := flat_v.length()
+	if flat < WALL_SPEED:
+		return broken
+	var heading := flat_v / flat
+	var effective := mini(TIER_MAX, heft_class + clampi(tier_bonus, 0, 1))
+	var reach := reach_override if reach_override > 0.0 else (WALL_REACH + flat / 30.0)
+	var to := ball_pos + flat_v * dt
+	for p in _near(ball_pos, to, reach + BALL_RADIUS):
+		if not p.intact or effective < p.tier:
+			continue
+		var seen := _sweep(p, ball_pos, to)
+		if float(seen["dist"]) > reach:
+			continue
+		_shatter(p, seen["at"], heading, flat, false, "wrecking_flail")
+		broken.append(p.id)
+	return broken
 
 
 # A blast the source already resolved: every intact piece whose box the ring reaches breaks when the heft
