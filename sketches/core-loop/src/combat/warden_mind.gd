@@ -1,33 +1,5 @@
 extends RefCounted
 
-# The Mind's hand as a Warden (design-v3/wardens/mind.md sections 3, 4 and 8, unit KF4): the
-# per-kind driver warden.gd loads for every park Warden of the mind family (its "The per-kind
-# hook" header). It answers mount_offset with the body's offset from home and moves nothing
-# else in the world; the ball feels it only through the paths the game already has: the
-# harpoon line rides the moving hardpoints (augments.gd _ride_anchor) and the shrug cuts it.
-#
-# - under_island (stage 5): the pendulum tilt. Each pulse tips the Hanging Isle TILT_DEGREES
-#   toward the ball about a pivot PIVOT_HEIGHT above the tip, so the hand swings away from the
-#   ball: out over SWING_OUT (sine ease out, about 27 m/s at the start) and back over
-#   SWING_BACK (ease in and out), home 4 s after the pulse. The island itself is a landmark
-#   node KD5 owns; this driver publishes the tilt (island_tilted, island_tilt_deg, tilt_away)
-#   and the sink for it to read. A stagger is the grip falter: over FALTER_SECONDS the island
-#   sinks ISLAND_SINK and the lens drops LENS_DROP; the knuckle hardpoints ride the island, so
-#   they sink only ISLAND_SINK. When the stagger ends both rise again.
-# - spires (stage 6, choir): the perch flight. The hand takes off every PERCH_CYCLE (the choir's
-#   ADAPT_CYCLE) and flies FLIGHT_SECONDS to the next perch on an arc ARC_RISE above them. It
-#   never charges in flight (charge_allowed); a perch clock that runs out during a charge waits
-#   for the pulse and takes off on the next tick. A stagger stops the clock; one in flight
-#   knocks the hand to the bowl floor over KNOCK_SECONDS, and when the stagger ends it climbs
-#   to the nearest perch over CLIMB_SECONDS. The perches are the spec's "path" (absolute
-#   points, the first is where the Warden stands) or PERCH_OFFSETS from home; the floor is the
-#   spec's "bowl_floor" (absolute y) or BOWL_DROP below the perch anchor.
-# Neither drop goes below the ground under the body (warden.terrain): mounted in the park the
-# hand hangs far above its floor and drops the full distance, while a Warden still standing on
-# the ground (the alpha table's stages before KD5 and KD6 hang it) keeps its open lens in reach.
-# Every attack publishes its cue on the tick its charge starts and its landing on the tick it
-# lands (attack_cue, attack_landed), with ROWS holding each one's charge, recovery and cooldown.
-
 signal island_tilted(degrees: float, away: Vector3)
 signal took_off(from_perch: int, to_perch: int)
 signal landed(perch: int)
@@ -47,26 +19,17 @@ const ARC_RISE := 9.0
 const KNOCK_SECONDS := 1.0
 const CLIMB_SECONDS := 2.0
 const BOWL_DROP := 30.0
-# The three perches of park_crown, from the first ([0, 515], [39, 447.5], [-39, 447.5]).
 const PERCH_OFFSETS := [Vector3.ZERO, Vector3(39.0, 0.0, -67.5), Vector3(-39.0, 0.0, -67.5)]
-# Seconds per attack: the charge (cue to landing), the recovery after it and the cooldown before
-# the next charge. The pulse and the tilt share the Warden's charge (warden.gd PULSE_TELEGRAPH);
-# the tilt recovers through its swing; the knock-down's charge is the fall and its recovery the
-# stagger (boss_posture.gd STAGGER_SECONDS, 4 s) plus the climb.
 const ROWS := {
 	"pulse": {"charge": 2.0, "recovery": 0.0, "cooldown": 4.0},
 	"tilt": {"charge": 2.0, "recovery": SWING_OUT + SWING_BACK, "cooldown": 0.0},
 	"knock_down": {"charge": KNOCK_SECONDS, "recovery": 4.0 + CLIMB_SECONDS, "cooldown": 0.0},
 }
 
-# under_island: the island's tilt now (degrees), the flat direction the hand swings toward,
-# how far the island has sunk and the lens has dropped.
 var island_tilt_deg := 0.0
 var tilt_away := Vector3.ZERO
 var island_sink := 0.0
 var lens_drop := 0.0
-# spires: "perched", "flight", "knocked", "down" or "climb"; the perch held or last left; the
-# perch clock; the perches and the floor as offsets from home.
 var phase := "perched"
 var perch := 0
 var perch_clock := 0.0
@@ -168,7 +131,6 @@ func _read(warden) -> void:
 	_room = maxf(0.0, -_ground_offset(warden, Vector3.ZERO))
 
 
-# The lowest offset the body may take over `offset`'s point: standing on the ground there.
 func _ground_offset(warden, offset: Vector3) -> float:
 	var at: Vector3 = warden.home + offset
 	if warden.terrain == null or not warden.terrain.has_method("height"):
@@ -187,8 +149,6 @@ static func _point(entry):
 	return null
 
 
-# --- under_island: the pendulum tilt -----------------------------------------------------
-
 func _island(warden, delta: float) -> Vector3:
 	island_tilt_deg = _tilt()
 	var angle := deg_to_rad(island_tilt_deg)
@@ -201,7 +161,6 @@ func _island(warden, delta: float) -> Vector3:
 	return swing + Vector3.DOWN * lens_drop
 
 
-# Degrees: out over SWING_OUT, back over SWING_BACK, then level.
 func _tilt() -> float:
 	if _swing_at < 0.0:
 		return 0.0
@@ -214,9 +173,6 @@ func _tilt() -> float:
 	return 0.0
 
 
-# The body carries the lens down; the knuckles stay with the island, so their offsets rise by
-# what the lens dropped beyond the island's sink. Offsets set elsewhere (a mounting row, a test)
-# become the new base.
 func _knuckles(warden, lift: float) -> void:
 	if warden.hardpoints != _placed:
 		_base_hardpoints = warden.hardpoints.duplicate()
@@ -228,8 +184,6 @@ func _knuckles(warden, lift: float) -> void:
 	warden.hardpoints = placed
 	_placed = placed
 
-
-# --- spires: the perch flight ------------------------------------------------------------
 
 func _spires(warden, delta: float) -> Vector3:
 	var staggered: bool = warden.staggered()
@@ -297,6 +251,5 @@ static func _flat(v: Vector3) -> Vector3:
 	return Vector3(v.x, 0.0, v.z)
 
 
-# Whether the hand is off its perch: flying, knocked down, lying on the floor or climbing.
 func flying() -> bool:
 	return phase != "perched"

@@ -7,31 +7,6 @@ const Enemy := preload("res://src/combat/enemy.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
-# The Warden's body as a landmark, visual only: nothing here collides, and every
-# number the fight uses stays in warden.gd. It has to answer "what do I break?" from
-# the 14 m entry drop, 150 m out, so it is a Furnace Fleet clamp about 7 m tall and
-# 8 m across, wrapped round the beacon mast's base.
-#
-# - Four heavy jaw plates carry the plating tint, large and lit: amber means your
-#   punch breaks through, slate means not yet (enemy.gd _paint_plate).
-# - A glowing core sits in the clamp's mouth, visible through the gaps. It brightens
-#   as the pulse charges and goes live while the Warden is staggered. This is the shared
-#   clamp's own core, lit the same for every family. The point a stagger opens is
-#   warden.family_point() (core, queen or lens by family, warden.gd:170-171), placed by
-#   warden_kit.gd's point_offset, and the choir's lens moves among three seats
-#   (warden.gd:176-177).
-# - Above it floats one badge, turned to face the camera: an integrity ring that
-#   fills with the beacon charge (the share of the Warden broken), and inside it the
-#   objective's diamond. Both wear beacon_charge_changed's colour from event_kinds,
-#   the row the objective line reads once the fight starts, so the line and the world
-#   agree. The badge keeps a readable size out to the drop; the diamond fades out
-#   inside 20 m, where the Warden itself fills the view.
-# - The posture rule drives the look: the cracks are the guard, in the neutral colour,
-#   the jaws lean open and the core goes live while staggered, and the ring is hidden.
-
-# A rolling ball never reaches above 2 m, and below 2 m nothing here extends past the
-# collider's 2.8 m radius, so the body the player sees is the body the ball meets.
-
 const JAW_COUNT := 4
 const JAW_RADIUS := 3.1
 const JAW_SIZE := Vector3(2.6, 5.2, 0.7)
@@ -52,9 +27,6 @@ const MARKER_FADE_FAR := 20.0
 const MARKER_FADE_NEAR := 12.0
 const BADGE_PRIORITY := 30
 const TURN_RATE := 3.0
-# Each seam is a zigzag of strokes across a jaw's outer face: [x, y, tilt] in the
-# plate's frame, the plate's centre at 0. A seam lights once the strip passes its
-# threshold.
 const SEAM_STROKES := [
 	[[-0.5, 1.4, 0.7], [0.1, 0.9, -0.5], [0.55, 0.3, 0.6]],
 	[[0.6, -0.4, -0.8], [0.0, -1.0, 0.4], [-0.55, -1.6, -0.6]],
@@ -62,20 +34,15 @@ const SEAM_STROKES := [
 ]
 const SEAM_WIDTH := 0.1
 const SEAM_LENGTH := 0.9
-# On the posture rule the seams are the guard: level n lights at SEAM_STEP times n and
-# seals again as the guard drains below it, in the neutral role colour.
 const SEAM_STEP := 25.0
 const POSTURE_SEAM_GLOW_MIN := 1.0
 const POSTURE_SEAM_GLOW_MAX := 2.6
-# A staggered posture Warden's jaws each lean this far further out from their bottom edge,
-# so two opposite jaws stand 2 x JAW_OPEN_DEGREES further apart. The opening springs fast
-# and closes slower.
 const JAW_OPEN_DEGREES := 14.0
 const JAW_OPEN_RATE := 9.0
 const JAW_CLOSE_RATE := 4.0
 const OPEN_CORE_GLOW := 2.6
 
-# The seam strokes' shader, held for the session as enemy.gd holds the plating's.
+# Godot frees a shader when its last material is freed; hold a session reference.
 static var _seam_shader: Material
 var warden
 var body_material: StandardMaterial3D
@@ -90,7 +57,6 @@ var _lit_material: StandardMaterial3D
 var _dim_material: StandardMaterial3D
 var _marker_material: StandardMaterial3D
 var _seam_material: StandardMaterial3D
-# Per seam level, the stroke nodes on every jaw.
 var _seams: Array = []
 var _jaw_plates: Array = []
 var _jaw_bottom := Vector3.ZERO
@@ -112,17 +78,14 @@ func build(owner_warden, half_height: float) -> void:
 	_build_badge()
 
 
-# True when this Warden fights on the posture rule (the plate carries its health).
 func posture_fight() -> bool:
 	return warden != null and warden.has_method("fight") and warden.fight() == "posture"
 
 
-# How far the jaws stand open, 0 at rest to 1 fully sprung.
 func jaw_open() -> float:
 	return _open
 
 
-# How many seam levels are lit now.
 func lit_levels() -> int:
 	var count := 0
 	for level in _seams.size():
@@ -167,14 +130,12 @@ func _build_collar() -> void:
 	deck.bottom_radius = COLLAR_RADIUS - 0.2
 	deck.height = DECK_HEIGHT - COLLAR_HEIGHT
 	_mesh(deck, body_material, Vector3.UP * (_ground + (COLLAR_HEIGHT + DECK_HEIGHT) * 0.5))
-	# A riveted band where the jaws bite, above anything a rolling ball can touch.
 	var band := TorusMesh.new()
 	band.inner_radius = JAW_RADIUS - 0.35
 	band.outer_radius = JAW_RADIUS + 0.35
 	_mesh(band, body_material, Vector3.UP * (_ground + JAW_BOTTOM + 0.3))
 
 
-# The jaws turn as one, so a gap (and the core behind it) faces you.
 func _build_jaws() -> void:
 	_jaws = Node3D.new()
 	_jaws.name = "Jaws"
@@ -187,18 +148,15 @@ func _build_jaws() -> void:
 		var plate := BoxMesh.new()
 		plate.size = JAW_SIZE
 		var jaw := _mesh(plate, plate_material, Vector3(JAW_RADIUS, _ground + JAW_BOTTOM + JAW_SIZE.y * 0.5, 0.0), pivot)
-		# Width runs round the mast, thickness out from it; the top leans outward.
 		jaw.rotation = Vector3(JAW_TILT, PI * 0.5, 0.0)
 		_jaw_plates.append(jaw)
 		_jaw_bottom = jaw.position - jaw.basis * Vector3(0.0, JAW_SIZE.y * 0.5, 0.0)
 		_build_seams(jaw)
-		# A heavy lip on top of each jaw, reaching inward like a clamp's teeth.
 		var lip := BoxMesh.new()
 		lip.size = Vector3(1.4, 0.6, JAW_SIZE.x + 0.3)
 		_mesh(lip, body_material, Vector3(JAW_RADIUS - 0.2, _ground + JAW_BOTTOM + JAW_SIZE.y + 0.1, 0.0), pivot)
 
 
-# The plate's +z is its outer face; strokes sit just proud of it, so they never clip.
 func _build_seams(jaw: Node3D) -> void:
 	if _seam_material == null:
 		_seam_material = _glow(EventKinds.role_color("neutral"), POSTURE_SEAM_GLOW_MIN)
@@ -217,8 +175,6 @@ func _build_seams(jaw: Node3D) -> void:
 			_seams[level].append(seam)
 
 
-# The core's colour at rest: the beacon row's, except on the posture rule, where the live
-# colour belongs to an open core alone.
 func _rest_core_color() -> Color:
 	return EventKinds.role_color("neutral") if posture_fight() else EventKinds.color("beacon_charge_changed")
 
@@ -231,8 +187,6 @@ func _build_core() -> void:
 	_mesh(sphere, _core_material, Vector3.UP * (_ground + CORE_HEIGHT))
 
 
-# The badge: an integrity ring of segments and the objective diamond, in one node that
-# turns to face the camera every frame.
 func _build_badge() -> void:
 	_badge = Node3D.new()
 	_badge.name = "Badge"
@@ -242,7 +196,6 @@ func _build_badge() -> void:
 	_lit_material = _badge_material(tint, 1.0)
 	_dim_material = _badge_material(Palette.CHARCOAL, 0.7)
 	for i in BADGE_SEGMENTS:
-		# Clockwise from the top, like a dial filling.
 		var angle := PI * 0.5 - TAU * (i + 0.5) / BADGE_SEGMENTS
 		var box := BoxMesh.new()
 		box.size = Vector3(0.36, TAU * BADGE_RADIUS / BADGE_SEGMENTS * 0.78, 0.12)
@@ -260,7 +213,6 @@ func _build_badge() -> void:
 	quad.size = Vector2.ONE * MARKER_SIZE
 	var marker := _mesh(quad, _marker_material, Vector3.ZERO, _badge)
 	marker.rotation.z = PI * 0.25
-	# The plate carries a posture Warden's health, so the ring is not drawn.
 	if posture_fight():
 		for segment in _segments:
 			(segment as MeshInstance3D).visible = false
@@ -289,13 +241,11 @@ func _turn_jaws(delta: float) -> void:
 	var facing: Vector3 = warden.flat_to_ball()
 	if facing.length() < 0.5:
 		return
-	# Gaps sit at angle 0 in the jaw frame; turn that gap toward the facing.
 	var want := -atan2(facing.z, facing.x)
 	_jaws.rotation.y = lerp_angle(_jaws.rotation.y, want, 1.0 - exp(-TURN_RATE * delta))
 
 
 func _update_core() -> void:
-	# Kept low enough that the core keeps its colour instead of blowing out to white.
 	var energy: float = FlashGuard.spike(1.2, 1.2 + 2.0 * warden.charge_fraction())
 	if posture_fight():
 		var live := EventKinds.state_color("open")
@@ -306,8 +256,6 @@ func _update_core() -> void:
 	_core_material.emission_energy_multiplier = energy
 
 
-# The jaws lean out while the core is open and close after it, from their bottom edge so
-# nothing dips under the 2 m line.
 func _update_open(delta: float) -> void:
 	if not posture_fight():
 		return
@@ -319,8 +267,6 @@ func _update_open(delta: float) -> void:
 		(jaw as Node3D).position = _jaw_bottom + (jaw as Node3D).basis * Vector3(0.0, JAW_SIZE.y * 0.5, 0.0)
 
 
-# Combat's hit flash lights the body amber; a posture Warden shows no amber, so its flash
-# keeps its size and loses the colour.
 func _update_body_glow() -> void:
 	if posture_fight():
 		body_material.emission = EventKinds.role_color("neutral")
@@ -349,7 +295,6 @@ func _update_seams() -> void:
 	_update_guard_seams()
 
 
-# The guard as cracks: one more level at each quarter, sealing as the guard drains.
 func _update_guard_seams() -> void:
 	var guard: float = warden.posture()
 	for level in _seams.size():

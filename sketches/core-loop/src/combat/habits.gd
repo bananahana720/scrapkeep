@@ -1,20 +1,9 @@
 extends RefCounted
 
-# What the player keeps doing this run, read from the bus: the Mind's hands adapt to it
-# (DESIGN-V2 section 10, STORY-THREADS T5) and the director weights packs to test it
-# (section 15.5). Counts decay with a HALF_LIFE, so "most used" means lately, and every
-# count resets on run_started: the Mind learns within a run only (Andrew, primer
-# question 6). Memory across runs stays a hook, off.
-
 const HALF_LIFE := 45.0
-# The Mind adapts only once a habit has been used this many times, lately.
 const MIN_HABIT := 3.0
-# A laser volley lands many small hits; each counts this much, so a gun reads as one
-# verb among the others rather than drowning them.
 const WEAPON_HIT := 0.25
 
-# habit -> the strike kinds a brace against it hardens, and the trigger icon the
-# Mind's lens shows while it counters it (VISUAL-LANGUAGE section 11).
 const BRACES := {
 	"ram": {"kinds": ["ram"], "icon": "trg_on_speed_tier_up"},
 	"rebound": {"kinds": ["ram", "stomp"], "icon": "trg_on_rebound"},
@@ -24,8 +13,6 @@ const BRACES := {
 	"weapon": {"kinds": ["runner", "arc", "turret", "sticky", "shell", "claw", "ledger", "cannon"], "icon": "trg_on_hit"},
 	"special": {"kinds": ["line", "runner", "arc", "turret", "claw", "ledger", "cannon"], "icon": "trg_on_charge_release"},
 }
-# The habits that are movement, not a way to hit: the director reads them for air or
-# speed builds; the Mind does not brace against them.
 const MOVES := ["jump", "air", "boost", "grapple", "glide"]
 const WEAPON_KINDS := ["runner", "arc", "turret", "sticky", "shell", "claw", "ledger", "cannon"]
 
@@ -66,7 +53,6 @@ func count(habit: String) -> float:
 	return float(counts.get(habit, 0.0))
 
 
-# The brace-able habit used most lately, or "" while none has reached MIN_HABIT.
 func top() -> String:
 	var best := ""
 	var best_count := MIN_HABIT - 0.001
@@ -77,7 +63,6 @@ func top() -> String:
 	return best
 
 
-# Every habit's share of the total, 0 to 1, for the director's build read.
 func shares() -> Dictionary:
 	var total := 0.0
 	for habit in counts:

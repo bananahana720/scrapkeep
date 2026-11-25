@@ -1,13 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-# The burrower (world 2 row, roster_dig.gd): a Fleet crew that hides under the floor and
-# shows only a flat surface marker. It hunts a ball that is on the floor (FloorRule) and under
-# cruise: its wind-up commits a ring where the ball is heading, and LIVE it bursts up under
-# that ring, pops a ball still on the floor there into the air, and stands surfaced and
-# rammable for live_seconds. A ball carving a bank or wall, or in the air, is out of its reach
-# (design-v3/WORLD-ROSTERS.md, Andrew's "Commit" tap). A slam that lands on the marker while
-# it is hidden kills it, so a lip drop onto the marker is the clean kill.
-
 const FloorRule := preload("res://src/combat/floor_rule.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
@@ -19,17 +11,11 @@ const BURST_DAMAGE := 10.0
 const POP := 9.0
 const SHOVE := 3.0
 const SINK := 3.0
-# It tunnels at TUNNEL_SPEED while it roams, and during the wind-up it digs to the ring, which is
-# never farther than BURST_REACH from it: at most BURST_REACH / WARN m/s under the floor.
 const TUNNEL_SPEED := 4.5
 const WARN := 1.0
 const BURST_REACH := 18.0
 const PRIMARY_LIVE := 1.2
 
-# Secondary attack (W48-COMBAT): Wall-Skim Eruption. Commits a >= 0.70 s Palette.HAZARD lane
-# along the rim/floor edge, then vaults airborne across the lane so the player can slam it
-# mid-air for an instant airborne pin. Presses slow/stalling balls on the floor (ruling cu);
-# never stops a moving/cruise or carving ball.
 const WALL_SKIM_WARN := 0.85
 const WALL_SKIM_LIVE := 1.1
 const WALL_SKIM_LENGTH := 16.0
@@ -47,7 +33,6 @@ var airborne_pins := 0
 var airborne_skim := false
 var next_attack := ""
 var last_pin := {}
-# The committed ring contained the ball: leaving the floor before the burst is burrow_lane.
 var _ring_had_ball := false
 var _wall_skim := false
 var _skim_origin := Vector3.ZERO

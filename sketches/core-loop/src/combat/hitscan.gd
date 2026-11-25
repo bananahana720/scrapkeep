@@ -1,15 +1,5 @@
 extends RefCounted
 
-# The shared aim query every weapon reads (v2's zap, generalized). Two rays:
-# the camera's centre ray finds what the crosshair is on, then a ray from the ball to
-# that point finds what the shot actually reaches, so cover between the ball and the
-# target stops the shot even when the camera can see past it. The reticle marks the
-# same centre ray, so what it shows is what the shot is sent at (TADR-008).
-#
-# The centre ray starts level with the ball rather than at the lens: anything between
-# the camera and the ball (a wall behind a mounted pylon, an enemy on your tail) is
-# behind the shooter and must not catch the aim. That matters most in the shoulder view.
-
 const WORLD := 1
 const WORLD_AND_ENEMIES := 5
 
@@ -33,7 +23,6 @@ static func aim(space: PhysicsDirectSpaceState3D, aim_from: Vector3, aim_dir: Ve
 	return {"point": point, "to": to, "blocked": blocked, "on_enemy": not sight.is_empty() and (sight["collider"] as Node).is_in_group("enemy")}
 
 
-# Kept for any caller that wants a single instant hit: the first enemy the shot reaches.
 static func cast(space: PhysicsDirectSpaceState3D, aim_from: Vector3, aim_dir: Vector3,
 		origin: Vector3, reach: float, mask := WORLD_AND_ENEMIES) -> Dictionary:
 	var target := aim_from + aim_dir.normalized() * reach

@@ -5,36 +5,6 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 
-# The swarm remnant's per-kind driver (unit KF3, design-v3/wardens/swarm.md sections 3 and 4).
-# warden.gd loads it for every park Warden of the swarm family (spec "harpoon_anchor": true,
-# no "mount_driver"; warden.gd "The per-kind hook"). The swarm carries: both mechanisms move
-# the fight up and down, and neither adds a posture number.
-#
-# - headframe (stage 3): the hive rides the hoist on a CYCLE of 12 s: DWELL low at the collar,
-#   MOVE up RISE metres, DWELL high under the tipple deck, MOVE back down. A charge starts only
-#   PULSE_TELEGRAPH before a dwell ends (charge_allowed), so the pulse lands on each dwell's last
-#   tick and the 6 s pulse cycle locks to the hoist. A stagger brakes the hoist: the hive drops
-#   to the collar over BRAKE_DROP, stays there for the stagger, and the cycle starts again from
-#   the low dwell when it ends. A ball latched through RIDE_MIN of the rise is thrown at the
-#   stop: the line drops off the grip cell ("shrugged") and the ball keeps the hoist's upward
-#   speed, so the ride throws it toward the tipple deck (the section 4 throw); the hoist_ride
-#   fact fires. A ball that latches at the high dwell hangs there for the line fight.
-# - sinkhole (stage 4, brood): the nest never moves. Each chunk lost raises the pool floor
-#   POOL_STEP: the pool_swell fact telegraphs it for SWELL_SECONDS, then the floor rises over
-#   RISE_SECONDS. The rise waits while the ball is grounded on the pool (terrain_event.gd's hold
-#   rule); after HOLD_FALLBACK held seconds the swell lifts the ball LIFT m/s straight up through
-#   crowd_control, as the pulse does, planar speed untouched, and the floor rises under the
-#   airborne ball. The floor is a collider this driver moves, built only where the terrain
-#   under the pool's centre lies at or below the first floor (a park pit); elsewhere the floor
-#   is kept as numbers alone. Where the pool is: spec "pool_centre" and "pool_floor", else
-#   POOL_OFFSET from the nest and POOL_BELOW_NEST under it (the stage 4 page's numbers).
-# - The lamp guard (brood): the cruise-or-faster ram that kills the last lamp pays the rack's
-#   25 posture once per guard, through the same judge the rack uses (warden.gd judge_hit
-#   "guard_rack"), because lamp_swarm has no formation for warden.gd's rack rule to read.
-# - The snip is the swarm's shrug: warden.gd cuts the flaring line on the pulse with the
-#   ball's velocity kept plus the lift. snip_progress() is the drones' walk up the rope for the
-#   look (the charge's fill); the driver changes nothing else about the cut.
-
 const HEADFRAME := "headframe"
 const SINKHOLE := "sinkhole"
 const DWELL := 4.0
@@ -43,15 +13,12 @@ const CYCLE := 2.0 * (DWELL + MOVE)
 const RISE := 30.0
 const BRAKE_DROP := 0.9
 const RIDE_MIN := 1.0
-# Height above the ground under the hive at which floor rams can no longer reach it (PF-42).
 const HEADFRAME_FLOOR_REACH := 5.0
-# The ball must still be rising at least this fast at the stop to be thrown.
 const THROW_SPEED := 5.0
 const POOL_STEP := 5.0
 const POOL_BELOW_NEST := 21.0
 const POOL_OFFSET := Vector3(0.0, 0.0, -38.0)
 const POOL_RADIUS := 40.0
-# A grounded ball this close above the floor stands on the pool.
 const POOL_ON_FLOOR := 3.0
 const SWELL_SECONDS := 2.0
 const RISE_SECONDS := 3.0
@@ -61,10 +28,8 @@ const POOL_THICKNESS := 1.0
 const HOIST_FACT := "hoist_ride"
 const SWELL_FACT := "pool_swell"
 const LAMP_GUARD := "lamp_swarm"
-# The kill and the ram that made it are a frame or two apart (strike, then the step).
 const LAMP_RAM_FRAMES := 3
 
-# The hoist: the cycle clock, the hive's height over the collar, the brake-drop, the ride.
 var clock := 0.0
 var height := 0.0
 var dropping := false
@@ -75,7 +40,6 @@ var _last_mount := 0.0
 var _ride := 0.0
 var _prev_clock := 0.0
 
-# The pool: where it is, its floor now and where it is going, the swell, the hold.
 var pool_centre := Vector3.ZERO
 var pool_radius := POOL_RADIUS
 var pool_floor := 0.0
@@ -89,7 +53,6 @@ var _pool_ready := false
 var _slab: Node3D
 var _post_break_target = null
 
-# The lamp guard.
 var lamp_pays := 0
 var _lamp_guard = null
 var _lamp: Node3D
@@ -98,7 +61,6 @@ var _lamp_ram_frame := -100
 var _listening := false
 
 
-# The body's offset from home at the mounting clock (warden.gd _step_mounting).
 func mount_offset(warden, mount_clock: float) -> Vector3:
 	var dt := maxf(0.0, mount_clock - _last_mount)
 	_last_mount = mount_clock
@@ -120,9 +82,6 @@ func mount_offset(warden, mount_clock: float) -> Vector3:
 		clock = 0.0
 		_prev_clock = 0.0
 	var next := clock + dt
-	# A dwell ends on its pulse: while a charge is in flight the hoist holds at the dwell's
-	# end, so a pulse a tick late (the warden's float clocks) never lands on a moving hive
-	# and the next window finds the pulse clock ready.
 	if warden.state_name() == "charging":
 		for dwell_end in [DWELL, 2.0 * DWELL + MOVE]:
 			if clock <= dwell_end and next > dwell_end:
@@ -132,7 +91,6 @@ func mount_offset(warden, mount_clock: float) -> Vector3:
 	return Vector3.UP * height
 
 
-# The hive's height over the collar at a point of the cycle.
 static func height_at(t: float) -> float:
 	if t < DWELL:
 		return 0.0
@@ -143,15 +101,11 @@ static func height_at(t: float) -> float:
 	return RISE * maxf(0.0, 1.0 - (t - 2.0 * DWELL - MOVE) / MOVE)
 
 
-# A charge starts only on the tick that leaves exactly PULSE_TELEGRAPH of a dwell, so the
-# pulse lands on the dwell's last tick. Off the hoist every charge may start.
 func charge_allowed(warden) -> bool:
 	if warden.mounting != HEADFRAME:
 		return true
 	if dropping:
 		return false
-	# Half a tick early to two and a half late, so a pulse clock a float's width short of
-	# ready on the window's tick still starts the charge; the dwell then waits for the pulse.
 	var tick := 1.0 / Engine.physics_ticks_per_second
 	for dwell_end in [DWELL, 2.0 * DWELL + MOVE]:
 		var late: float = warden.pulse_telegraph(warden.stage) - (dwell_end - clock)
@@ -168,8 +122,6 @@ func step(warden, delta: float) -> void:
 		_step_pool(warden, delta)
 	_step_lamp(warden)
 
-
-# --- The hoist ride ------------------------------------------------------------------
 
 func _step_hoist(warden, delta: float) -> void:
 	var lined: bool = warden.lined_hardpoint() >= 0
@@ -211,9 +163,6 @@ func _throw(warden) -> void:
 	_fact(warden, HOIST_FACT, at)
 
 
-# --- The pool --------------------------------------------------------------------------
-
-# Places the pool outright (a test or a mounting row): its centre, its first floor, its radius.
 func set_pool(centre: Vector3, floor_y: float, radius := POOL_RADIUS) -> void:
 	if is_instance_valid(_slab):
 		_slab.queue_free()
@@ -300,10 +249,6 @@ func _build_slab(warden) -> void:
 	parent.add_child(body)
 	body.global_position = Vector3(pool_centre.x, pool_floor - POOL_THICKNESS * 0.5, pool_centre.z)
 	_slab = body
-	# PF-43: When the Warden exits because it was broken (chunks_left == 0), keep SwarmPoolFloor
-	# alive so the final chunk floods pool_floor flush to gallery_ring (y -100) and free it on
-	# stage unload instead. Non-break exits (stage unload before break, retry, or mock Wardens
-	# without chunks_left) still free the slab immediately so zero leaks occur.
 	SignalLifetime.listen(body, warden.tree_exiting, func():
 		if not is_instance_valid(body):
 			return
@@ -379,7 +324,6 @@ func _step_pool_rise(target, delta: float) -> void:
 		_slab.global_position.y = pool_floor - POOL_THICKNESS * 0.5
 
 
-# How far the swell has run, 0 to 1, or 0 when none; read by the look.
 func swell_fraction() -> float:
 	return clampf(1.0 - swell_left / SWELL_SECONDS, 0.0, 1.0) if swell_left >= 0.0 else 0.0
 
@@ -399,7 +343,6 @@ func _ball_on_pool_target(target) -> bool:
 			and ball.y - pool_floor <= POOL_ON_FLOOR
 
 
-# The fallback: the swell pops a ball that would not leave the floor, straight up, as the pulse does.
 func _lift(warden, delta: float) -> void:
 	_lift_target(warden.target, delta)
 
@@ -409,8 +352,6 @@ func _lift_target(target, delta: float) -> void:
 			and target.crowd_control("pool_swell", Vector3.UP * LIFT / maxf(delta, 0.0001)):
 		lifts += 1
 
-
-# --- The lamp guard ----------------------------------------------------------------------
 
 func _listen(warden) -> void:
 	if _listening or warden.fleet == null:
@@ -443,9 +384,6 @@ func _step_lamp(warden) -> void:
 		warden._apply_posture(warden.judge_hit("guard_rack", 0.0, false, 0))
 
 
-# --- The snip and the facts --------------------------------------------------------------
-
-# How far the drones have walked up the lined rope, 0 to 1 (the charge's fill), for the look.
 func snip_progress(warden) -> float:
 	return warden.shrug_flare() if warden.flaring_hardpoint() >= 0 else 0.0
 

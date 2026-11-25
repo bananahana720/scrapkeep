@@ -1,29 +1,11 @@
 extends RefCounted
 
-# The Warden's posture fight as one rule object with no scene access (LEGIBILITY section 4).
-# Hits fill a posture bar; at 100 the Warden staggers for STAGGER_SECONDS and a contact
-# then hits the open core; a shattering contact removes one of CHUNKS health chunks.
-# judge() answers what a hit would do and changes nothing, apply() is the one place a hit
-# changes state, step() runs the drain and the stagger clock.
-
 const BASE := {"ram": 30.0, "stomp": 30.0, "slam": 30.0}
 const SMASH_BASE := 45.0
 const OTHER_BASE := 1.5
 const OTHER_BASE_CHARGING := 3.0
 const MULT_MIN := 0.2
-# Overpowered pays (Andrew's tap "Lift the ceiling", 17 Oct 22:04Z): a monster build's hit counts
-# up to 3x the plating it meets (MULT_MAX), so it staggers a Warden well under the 45-70 s an
-# ordinary pilot takes; it was 1.5x. The hull bosses keep 1.5 in boss_rules.gd POSTURE.
-# Who is a monster (coordinator ruling (B) on #222, 21 Oct): a run whose heft is strictly above the
-# library's top-bucket maximum heft for that fight (monster_heft.gd, generated from lib-base; the
-# Waking and the Mind have their own). A Warden tells the rule on every hit (set_monster). A rule
-# never told is ordinary: it fails closed to ORDINARY_RATIO.
 const MULT_MAX := 3.0
-# A row's "hit_cap" caps one hit's gain while its ratio is ordinary (at most ORDINARY_RATIO);
-# from there the cap climbs to FULL at mult_max, so one plain smash never fills the bar but a
-# monster build's still can. Without the key a hit may fill it, as before. With
-# "hit_cap_until_stagger" the cap holds only until the first stagger, so the later chunks
-# fill at the row's own pace.
 const ORDINARY_RATIO := 1.5
 const DRAIN_DELAY := 3.0
 const DRAIN_RATE := 12.0
@@ -33,23 +15,16 @@ const HEAVY_CHUNKS := 2
 const SHATTER_TIER := 2
 const FULL := 100.0
 
-# The numbers this rule runs on. A stage row's "posture" dictionary overrides any of them
-# by key; a missing key keeps the constant above. "curve" is the exponent on the clamped
-# ratio and "ram_shatters" says whether a ram at SHATTER_TIER shatters an open core.
 var base := BASE.duplicate()
 var smash_base := SMASH_BASE
 var other_base := OTHER_BASE
 var other_base_charging := OTHER_BASE_CHARGING
 var mult_min := MULT_MIN
-# The live ceiling: starts ordinary (see set_monster), the row's mult_top for a monster build.
 var mult_max := ORDINARY_RATIO
-# The row's own ceiling, what a monster build reaches (a row's "mult_max", else MULT_MAX).
 var mult_top := MULT_MAX
 var drain_delay := DRAIN_DELAY
 var drain_rate := DRAIN_RATE
-# Set by a mounted driver before step; zero keeps the ordinary idle clock and drain.
 var contact_drain_delay := 0.0
-# Multiplier on drain_rate set by a mounted driver (e.g. 0.0 while a hoisted hive is out of floor reach).
 var drain_rate_scale := 1.0
 var stagger_seconds := STAGGER_SECONDS
 var shatter_tier := SHATTER_TIER
@@ -59,11 +34,6 @@ var contact_gain_scale := 0.0
 var contact_gain_floor := 0.0
 var hit_cap := FULL
 var hit_cap_until_stagger := false
-# A row's "heavy_ratio": a stagger opened by a ram whose punch met at least this times the plating is
-# heavy, and a smashing ram that shatters its core takes HEAVY_CHUNKS chunks (the stage 3 hive, Andrew's
-# option 1, 23 Oct: a grown build bowls through it harder). A stagger opened any other way, a slam, stomp
-# or other smash, and a crack paying off in a later stagger take one. Without the key (0) every shatter
-# takes one chunk.
 var heavy_ratio := 0.0
 
 var posture := 0.0
@@ -73,7 +43,6 @@ var stagger_frame := -1
 var idle := 0.0
 var chunks := CHUNKS
 var cracked := false
-# The stagger the crack was made in: it pays off only in a later one.
 var crack_stagger := -1
 var shattered_this_stagger := false
 var shatter_frame := -1
@@ -107,21 +76,17 @@ func _init(numbers := {}) -> void:
 	heavy_ratio = float(numbers.get("heavy_ratio", 0.0))
 
 
-# The ceiling an ordinary pilot meets: the row's, but never past ORDINARY_RATIO.
 func ordinary_ceiling() -> float:
 	return minf(mult_top, ORDINARY_RATIO)
 
 
-# Whether the pilot is a monster build for the next judge: only then does mult_max reach mult_top.
-# Read per hit so a pilot who grows past the threshold mid-fight earns the lift.
 func set_monster(on: bool) -> void:
 	mult_max = mult_top if on else ordinary_ceiling()
+	assert(mult_max <= mult_top)
 
 
-# hit: {kind, punch, plating, smash, tier, charging, frame, hp, max_hp}. The answer is
-# combat's resolve() shape (punch, plating, full, dealt, part) plus shred, gain, glance,
-# shatter, crack and contact.
 func judge(hit: Dictionary) -> Dictionary:
+	assert(posture >= 0.0 and chunks >= 0)
 	var kind := String(hit.get("kind", ""))
 	var punch := float(hit.get("punch", 0.0))
 	var plating := float(hit.get("plating", 0.0))
@@ -152,12 +117,9 @@ func judge(hit: Dictionary) -> Dictionary:
 	return result
 
 
-# The most one hit at this ratio may add (see ORDINARY_RATIO).
 func cap_for(ratio: float) -> float:
-	# When mult_top <= ORDINARY_RATIO (a hull boss) a row's hit_cap is disabled.
 	if hit_cap >= FULL or mult_top <= ORDINARY_RATIO or (hit_cap_until_stagger and staggers > 0):
 		return FULL
-	# An ordinary pilot (mult_max held at the ordinary ceiling) always meets the ordinary cap.
 	var t := clampf((minf(ratio, mult_max) - ORDINARY_RATIO) / (mult_top - ORDINARY_RATIO), 0.0, 1.0)
 	return lerpf(hit_cap, FULL, t)
 
@@ -206,6 +168,7 @@ func apply(result: Dictionary, frame: int) -> void:
 		heavy_stagger = heavy_ratio > 0.0 and result.get("kind", "") == "ram" and plating > 0.0 \
 				and float(result.get("punch", 0.0)) / plating >= heavy_ratio
 		staggers += 1
+	assert(chunks >= 0 and chunks <= CHUNKS and posture >= 0.0 and posture <= FULL)
 
 
 func step(delta: float) -> void:

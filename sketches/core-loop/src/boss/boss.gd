@@ -5,16 +5,9 @@ const Arena := preload("res://src/boss/arena.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const Target := preload("res://src/boss/boss_target.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
-# How far ahead of the hull's nose the ram still hits; the lane publishes its front this far
-# out, so the dodge watch lands the ram where the damage does.
 const CHARGE_REACH := 1.5
-# A charge that is not a ram stops this far short of the point where its nose would bury in the bank.
 const CHARGE_RIM_CLEAR := 1.0
-# A led lane clipped shorter than this is no charge (a hull resting at the bank with the led point beyond it
-# would clip to nothing or less): that charge is aimed at the ball, as the stage aimed it.
 const CHARGE_MIN_LANE := 4.0
-# Clearance kept outside the solid hull box plus ball radius when a pickup lands inside the hull
-# or the moving hull drives over one, so no pickup sits unreachable for PICKUP_LIFE.
 const PICKUP_HULL_MARGIN := 0.25
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -29,35 +22,12 @@ const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 
-# Writer E's module: Admiral Brindle and the Requisition in the Slag Bowl (DEMO-SPEC
-# Brindle, BOSS-BRINDLE). Flow calls enter_arena(entry_velocity) after stage 3's
-# launch; everything from there to boss_defeated happens here. The hull is fought as a
-# posture Warden (boss_posture.gd, BossContract.TARGET): hits fill its bar, a full bar
-# staggers him and opens the cockpit, and a contact in the opening cracks, then
-# shatters, one of four chunks. Each weak point opens to one verb and adds to the bar,
-# and every attack is a committed hazard that is drawn before it can hit.
-#
-# Each shattered chunk ends a phase, but never before its set piece has played, so the
-# fight lasts at least 75 s however hard the ball hits. A chunk lost early holds the
-# phase until its set piece ends: a grown ball routs him, it does not skip him. The
-# fourth chunk is the scooter, taken by the catch.
-#
-# Phases ratchet (fight_phases.gd, Andrew 23 Oct): from the Furnace on, a lead attack is
-# answered by a cued follow-up. The Furnace's reprise fills the other slag ring as the
-# first drains; the Scuttle's hook turn re-aims a charge that ended short of the rim. Each
-# sounds the ratchet cue first and then draws a short tell. A wall stun ends a hook turn
-# like any combo, so baiting the second charge into the bank is the practised answer.
-# Phases two and three open with a transition beat: the turn animation plays, the hull
-# takes no posture and no attack commits until it ends (FightPhases.in_transition).
-
 enum { IDLE, FIGHT, EJECT, DEFEATED }
 const STATE_NAMES := ["idle", "fight", "eject", "defeated"]
 const CHASE_PHASE := 4
 const CHASE_NAME := "chase"
 const RESCUE_DEPTH := 10.0
-# A rescue point keeps at least this far from the Requisition's centre.
 const RESCUE_CLEAR := 14.0
-# The plate's colour when your punch is short of the live plating: combat's slate.
 const PLATE_SHORT := Color("9fb0bf")
 static var _pickup_materials := {}
 static var _pickup_mesh: Mesh
@@ -67,15 +37,12 @@ var state := IDLE
 var phase := 0
 var hp := Rules.MAX_HP
 var max_hp := Rules.MAX_HP
-# Seconds since arena entry, and since the current phase began.
 var clock := 0.0
 var phase_clock := 0.0
 var arena
 var ship
 var scooter
-# The scooter model's clips (eject, then chase), when its GLB loaded.
 var _scooter_anim: AnimationPlayer
-# The committed hazards still drawn or live; tests read them to check every hit.
 var hazards: Array = []
 var stuns := 0
 var clashes := 0
@@ -84,16 +51,12 @@ var catches := 0
 var _delta := 1.0 / 90.0
 var _next_attack := 0.0
 var _crane_turn := 0
-# Challenge dial brindle.combo: follow-up attacks still owed after the lead; -1 when none is open.
 var _combo_left := -1
 var _cranes: Array = [{}, {}]
 var _pickups: Array = []
 var _slag_turn := 0
 var _next_lobber := 0.0
 var _lobbers: Array = []
-# The phase 3 charge's states, kept as strings because tests and the bot read them. Every
-# write goes through these names, and _step_charges sends an unknown one back to rest, so a
-# misspelt state can never strand the Scuttle mid-charge.
 const CHARGE_REST := "rest"
 const CHARGE_BRACE := "brace"
 const CHARGE_RUN := "run"
@@ -101,44 +64,26 @@ const CHARGE_RECOVER := "recover"
 const CHARGE_STUN := "stun"
 const CHARGE_HOOK := "hook"
 var _charge := {}
-# The hook charge's hazard id, the brace cue's once-only key (an identity, kept out of _charge
-# so no arithmetic on the charge reads it).
 var _hook_token := 0
 var _grace := {}
 var _eject := {}
 var _ship_angle := 0.0
 var _crest: Node3D
-# Drone pads marked before the drone arrives: [{at, marker, age}].
 var _drones: Array = []
-# While set, the hull ignores the ball: a charge hit's shove must clear the lane before
-# the bow can touch it again.
 var _ghost_until := -1.0
 var _posture := BossPosture.new(Rules.POSTURE)
 var _phases: FightPhases
-# The Furnace's owed reprise ring: {at, cue_at, cued, turn}; empty when none is owed.
 var _reprise := {}
-# The Scuttle's hint (take_hint): tries that came up short this phase, the best punch the
-# ball has shown in it, and the fight clock the hint may next show at.
 var _short_tries := 0
 var _scuttle_punch := 0.0
 var _hint_next := 0.0
-# The reel's paid hits this phase and the fight clock of the last one (Rules.REEL_*).
 var _reel_hits := 0
 var _reel_last := -INF
-# The phase beat's preview (FX-03): the next phase's signature mark in the harmless bone style,
-# drawn through the transition beat and cleared when it ends; null when none shows.
 var _preview: Node3D
-# W1-105 (A11): the Furnace reprise's harmless preview band, drawn for FightPhases.CUE_LEAD
-# while the ratchet cue plays and cleared when the reprise commits or cancels.
 var _reprise_preview: Node3D
-# Fight clock of the last committed attack (used to keep reel gaps <= Rules.REEL_MAX_GAP)
-# and whether the previous tick was reeling (to clamp a pending phase 2 timer on reel entry).
 var _last_commit_at := -INF
 var _was_reeling := false
-# Planted fault seam for tests/brindle_reel_test.gd only ("stop" or "no_brace"); always "" in play.
 var _reel_plant := ""
-# Brindle's cobalt pick (ruling ap, W49-COMBAT): rare/cobalt gate pair opened in the Slag Bowl
-# on rout when continuing into World 2, alongside Admiral's Crest.
 var brindle_cobalt_offers: Array = []
 var brindle_cobalt_picked := ""
 var _cobalt_gates: Node3D = null
@@ -175,11 +120,6 @@ func active() -> bool:
 	return state == FIGHT or state == EJECT
 
 
-# --- Entry and exit ------------------------------------------------------------------
-
-# Builds the Slag Bowl, puts the ball on it keeping its horizontal speed (raised to
-# cruise if it arrives slower, a gift), and starts phase 1. Calling it again, as the
-# arena retry does, tears the old fight down first.
 func enter_arena(entry_velocity: Vector3) -> void:
 	exit_arena()
 	arena = Arena.take_ahead()
@@ -215,23 +155,19 @@ func _place_ball(entry_velocity: Vector3) -> void:
 	var at: Vector3 = arena.entry_point()
 	ctx.player.reset_to(at, velocity)
 	ctx.camera.snap(heading)
-	# Ruling cv: the fall into the bowl is marked with landing rings and a pad, as a stage's arrival is.
 	var world = ctx.root.get("world") if ctx.root != null else null
 	if world != null and world.has_method("mark_arrival"):
 		var ground: RefCounted = arena.ground_query()
 		world.mark_arrival(at, velocity, Callable(ground, "height"))
 
 
-# The heading the ball enters the bowl on, for the launch into it to turn to in flight (flow.arrival_heading_after).
 func arrival_heading() -> Vector3:
 	return Arena.arrival_heading()
 
 
-# Frees everything the fight built. The ball, the run and the crest are left alone.
 func exit_arena() -> void:
 	for lobber in _lobbers:
 		if is_instance_valid(lobber):
-			# Freed at the frame's end, and its ground is the bowl, which leaves the tree below.
 			lobber.set_physics_process(false)
 			lobber.queue_free()
 	_lobbers.clear()
@@ -268,8 +204,6 @@ func _on_flow_changed(flow_state: String) -> void:
 		exit_arena()
 		state = IDLE
 
-
-# --- The tick ------------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
 	if active() and ctx.flow.state_name() == "boss":
@@ -323,10 +257,6 @@ func _maybe_turn_phase() -> void:
 		_begin_eject()
 
 
-# What the music follows in the fight: how full the posture bar is toward the stagger
-# that breaks this phase's chunk (1 once it is broken), whether the phase is held on a
-# broken chunk, and how much of the phase's minimum time has run. Empty outside phases
-# 1 to 3.
 func music_state() -> Dictionary:
 	if phase < 1 or phase > 3:
 		return {}
@@ -342,26 +272,18 @@ func _chunks_lost() -> int:
 	return BossPosture.CHUNKS - _posture.chunks
 
 
-# This phase's chunk is broken and its set piece has not finished playing.
 func _held() -> bool:
 	return state == FIGHT and _chunks_lost() >= phase
 
 
-# The hold banks: its hits fill the bar the next phase opens with (Rules.HELD_BANK).
 func banking() -> bool:
 	return _held() and phase < 3 and not _in_transition()
 
 
-# The reel (W1-61, ruling ed): a held phase past its transition beat. Brindle keeps attacking
-# at a slowed cadence, and a hull hit sheds scrap and fills the ultimate (_reel_hit). Effects
-# and bots read this.
 func reeling() -> bool:
 	return _held() and not _in_transition()
 
 
-# A ball contact on the hull in the reel (weapon fire sheds nothing): at most one per Rules.REEL_GAP and Rules.REEL_HITS a phase sheds
-# Rules.REEL_SCRAP as pickups between the hull and the ball and publishes boss_reeled, which
-# the ultimate meter pays.
 func _reel_hit() -> void:
 	if not reeling() or _reel_hits >= Rules.REEL_HITS or clock - _reel_last < Rules.REEL_GAP:
 		return
@@ -384,12 +306,10 @@ func _reel_hit() -> void:
 	_publish("boss_reeled", [Vector3(mid.x, arena.ground(mid), mid.z), Rules.REEL_SCRAP])
 
 
-# How much of the bar a hold can bank, 0 to 1, for the plate's mark.
 func bank_cap() -> float:
 	return Rules.HELD_BANK / BossPosture.FULL
 
 
-# A hit on a held hull: it breaks nothing, and its gain stops at the bank's cap.
 func _bank(result: Dictionary) -> void:
 	result["gain"] = clampf(float(result.get("gain", 0.0)), 0.0, maxf(0.0, Rules.HELD_BANK - _posture.posture)) if banking() else 0.0
 	result["crack"] = false
@@ -435,8 +355,6 @@ func _enter_phase(next: int) -> void:
 	_show_preview(next)
 
 
-# Harmless bone-style annulus preview shared by the Furnace phase beat (FX-03) and the cued
-# slag reprise (W1-105 / A11): never hurts, never joins Threat.GROUP or hazards.
 func _bone_ring(id: String, band: Vector2, warn_s: float, floor_s := -1.0) -> Node3D:
 	var h = Hazard.new()
 	h.ground = arena.ground
@@ -448,10 +366,6 @@ func _bone_ring(id: String, band: Vector2, warn_s: float, floor_s := -1.0) -> No
 	return h
 
 
-# FX-03: through the beat that opens the Furnace or the Scuttle, while no attack can commit, the
-# phase's signature mark draws once in the harmless bone style (threat_grammar.gd, a dashed
-# outline): the slag ring its first lead fills, or a charge lane from the hull's nose toward the
-# ball. It never hurts and is never a threat; it shows the new rule before it is live.
 func _show_preview(next: int) -> void:
 	_clear_preview()
 	if not _in_transition() or not next in [2, 3]:
@@ -477,7 +391,6 @@ func preview() -> Node3D:
 	return _preview if is_instance_valid(_preview) else null
 
 
-# W1-105 (A11): harmless bone-style preview band for the cued Furnace reprise slag ring.
 func reprise_preview() -> Node3D:
 	return _reprise_preview if is_instance_valid(_reprise_preview) else null
 
@@ -515,9 +428,6 @@ func _clear_preview() -> void:
 	_preview = null
 
 
-# Test and dev hook: the fight as if the earlier phases had just been won. The chunks left are
-# set, not only lowered, so a jump back to an earlier phase opens it with its own chunk whole:
-# a chunk already broken would hold the phase and start the reel (W1-61), not the fight.
 func jump_to_phase(next: int) -> void:
 	if not active():
 		return
@@ -530,15 +440,11 @@ func jump_to_phase(next: int) -> void:
 		_enter_phase(next)
 
 
-# --- Phase 1: the Requisition and its cranes ------------------------------------------
-
 func _move_ship_on_circle(delta: float) -> void:
 	_ship_angle += Rules.CIRCLE_SPEED / Rules.CIRCLE_RADIUS * delta
 	ship.move_to(arena.point_at(_ship_angle, Rules.CIRCLE_RADIUS), Arena.tangent(_ship_angle))
 
 
-# The delay to the next crane or slag attack: the normal one, or WARN_GAP while the
-# brindle.combo dial still owes follow-ups.
 func _paced(normal: float) -> float:
 	_combo_left = ChallengeDials.combo_step("brindle", _combo_left)
 	if _combo_left > 0:
@@ -547,8 +453,6 @@ func _paced(normal: float) -> float:
 	return normal
 
 
-# The rest before the next charge: WARN_GAP while a combo is owed, else CHARGE_REST scaled
-# (slowed during a reel, ruling ed).
 func _rest_time() -> float:
 	if _combo_left > 0:
 		return ChallengeDials.WARN_GAP
@@ -561,8 +465,6 @@ func _rest_time() -> float:
 
 func _step_cranes(delta: float, ball: Vector3) -> void:
 	_move_ship_on_circle(delta)
-	# Entering a reel clamps a pre-existing normal crane timer so a high period_mult dial cannot
-	# open a gap over REEL_MAX_GAP.
 	if reeling() and not _was_reeling and _reel_plant != "stop":
 		var base_period := ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1)
 		_next_attack = minf(_next_attack, clock + minf(base_period * Rules.REEL_PERIOD_MULT, Rules.REEL_MAX_GAP))
@@ -583,8 +485,6 @@ func _step_cranes(delta: float, ball: Vector3) -> void:
 			return
 
 
-# The sector is centred on the ground under the crane's pivot and aimed at the ball's
-# bearing when it commits; it does not follow the ball after that.
 func _commit_crane(i: int, ball: Vector3) -> bool:
 	var c: Dictionary = _cranes[i]
 	if c.has("hazard") and is_instance_valid(c["hazard"]) and not c["hazard"].is_done():
@@ -646,8 +546,6 @@ func _head(h, angle: float, r: float) -> Vector3:
 	return Vector3(p.x, h.centre.y + 3.5, p.z)
 
 
-# True when the magnet crossed the ball's bearing this tick: the part of the committed
-# sector the sweep has just passed through.
 func _swept(h, ball: Vector3) -> bool:
 	var span := absf(h.a_to - h.a_from)
 	var margin := 1.0 / maxf(1.0, Vector2(ball.x - h.centre.x, ball.z - h.centre.z).length())
@@ -675,8 +573,6 @@ func _crane_catch(i: int, ball: Vector3, magnet_at: Vector3) -> void:
 	var h = c["hazard"]
 	var r := Vector2(ball.x - h.centre.x, ball.z - h.centre.z).length()
 	if reeling():
-		# While reeling, the magnet swings stolen scrap out toward the outer floor so camping
-		# under the hull sheds excess scrap armour unless the player chases the trail or shoots it.
 		r = clampf(maxf(r + 12.0, 30.0), 30.0, Arena.FLOOR_R - 4.0)
 	var start: float = atan2(ball.z - h.centre.z, ball.x - h.centre.x)
 	var sweep := signf(h.a_to - h.a_from)
@@ -694,8 +590,6 @@ func _crane_catch(i: int, ball: Vector3, magnet_at: Vector3) -> void:
 	c["drip"] = 0.0
 
 
-# Lifts the ball and pulls it a little toward the magnet. It adds to the ball's motion
-# and never cancels it, so a catch costs scrap, not momentum.
 func _tug(ball: Vector3, magnet_at: Vector3) -> void:
 	if ctx.calm:
 		return
@@ -705,10 +599,7 @@ func _tug(ball: Vector3, magnet_at: Vector3) -> void:
 	ctx.player.crowd_control("brindle_tug", (Vector3.UP * Rules.TUG_LIFT + pull * Rules.TUG_PULL) / step, false)
 
 
-# Applies a one-shot velocity shove through the player's crowd-control gate. Writing the
-# resulting velocity directly onto the body instead of dividing dv by _delta keeps the
-# knockback exact across Engine.time_scale transitions (a hit-stop ending on the next physics
-# step otherwise multiplies dv by 1 / HIT_STOP_SCALE, and a hit-stop starting attenuates it).
+# Keep Engine.time_scale transitions from skewing knockback (dividing by _delta during hit-stop scales by 1/HIT_STOP_SCALE).
 func _shove_ball(kind: String, dv: Vector3, interrupts := true) -> void:
 	if not dv.is_finite() or dv == Vector3.ZERO:
 		return
@@ -737,7 +628,6 @@ func _drip(c: Dictionary) -> void:
 	ship.cue("magnet_hold_drip", int(c["dripped"]))
 
 
-# A shot on a magnet that still holds scrap drops the rest in one pile under it.
 func _drop_held(i: int) -> void:
 	var c: Dictionary = _cranes[i]
 	var rest := 0
@@ -770,9 +660,6 @@ func _inside_hull(at: Vector3) -> bool:
 	return absf(loc.x) < ext.x and absf(loc.z) < ext.y
 
 
-# Keeps every arena pickup outside the Requisition's solid hull footprint while staying on
-# the playable floor (for shed/reel piles) or inside the bowl wall. Pickups already clear
-# of the hull keep their exact spot.
 func _clear_of_hull(at: Vector3, floor_only: bool) -> Vector3:
 	if not is_instance_valid(ship) or not is_instance_valid(arena) or not _inside_hull(at):
 		return at
@@ -892,8 +779,6 @@ func _step_trail(ball: Vector3) -> void:
 			p["at"] = moved
 			node.global_position = Vector3(moved.x, moved.y - 0.9, moved.z)
 		if ball.distance_to(p["at"]) <= Rules.PICKUP_REACH:
-			# A shed pile is the ball's own armour coming back, as a stage spill cluster pays:
-			# mass only, through recover_mass, with no wallet scrap, cogs or pickup event.
 			if p["source"] == "shed":
 				ctx.run.recover_mass(p["value"])
 				var field = ctx.build.get("scrap") if ctx.get("build") != null else null
@@ -916,7 +801,6 @@ func _step_trail(ball: Vector3) -> void:
 	_pickups = kept
 
 
-# A phase break sheds a ring of scrap around the ship, on the ground, to roll up.
 func _spill_break() -> void:
 	var at: Vector3 = ship.global_position
 	for k in Rules.BREAK_PICKUPS:
@@ -925,11 +809,6 @@ func _spill_break() -> void:
 		_place_pickup(Vector3(p.x, arena.ground(p) + 0.9, p.z), value, "spill")
 
 
-# An armour hit in the bowl spills the way a stage hit does (ruling aw): the hit's spill
-# share lands as "shed" piles in a fan ahead of the ball, so a stripped ball can roll its
-# mass back up instead of stalling at heft 1.0. A shed pile pays back like a stage spill
-# cluster (recover_mass: mass only) and, unreached after PICKUP_LIFE, counts as expired.
-# False when no fight is on, and the caller destroys the spill as before.
 func take_spill(from: Vector3, heading: Vector3, spill: int) -> bool:
 	if not active() or not is_instance_valid(arena) or spill <= 0:
 		return false
@@ -949,8 +828,6 @@ func take_spill(from: Vector3, heading: Vector3, spill: int) -> bool:
 	return true
 
 
-# The scrap field is stage content and idles in the arena, so a drone killed here drops
-# its scrap as a pickup where it died.
 func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 	if not active() or kind != "lobber" or not is_instance_valid(arena):
 		return
@@ -961,8 +838,6 @@ func pickups_left() -> Array:
 	return _pickups.map(func(p): return {"at": p["at"], "value": p["value"], "source": p["source"]})
 
 
-# --- Phase 2: the furnace --------------------------------------------------------------
-
 func _step_furnace(delta: float) -> void:
 	var here: Vector3 = ship.global_position
 	var to_centre := Vector3(arena.global_position.x - here.x, 0.0, arena.global_position.z - here.z)
@@ -971,8 +846,6 @@ func _step_furnace(delta: float) -> void:
 		var move := minf(to_centre.length(), Rules.CIRCLE_SPEED * delta)
 		var at := here + to_centre.normalized() * move
 		ship.move_to(Vector3(at.x, arena.ground(at), at.z), ship.heading)
-	# Entering a reel clamps a long pending normal slag timer so no gap over 6 s opens, while
-	# honouring any reprise whose sound cue has already started.
 	if reeling() and not _was_reeling and _reel_plant != "stop":
 		if _reprise.is_empty() or not bool(_reprise.get("cued", false)):
 			_reprise = {}
@@ -993,7 +866,6 @@ func _step_furnace(delta: float) -> void:
 			_slag_turn += 1
 			var gap := ChallengeDials.period("brindle", Rules.SLAG_GAP, 2)
 			if _follow_ups() > 0:
-				# The reprise fills the next ring in the rotation the moment this one drains.
 				var at := clock + slag_warn + lead_live
 				var reprise_slot := _slag_turn % 3
 				var reprise_live := Rules.REEL_SLAG_LIVE if reprise_slot == 2 else Rules.SLAG_LIVE
@@ -1002,14 +874,11 @@ func _step_furnace(delta: float) -> void:
 				_next_attack = at + FightPhases.CUED_WARN + reprise_live + gap
 			else:
 				_next_attack = clock + _paced(slag_warn + lead_live + gap)
-	# Drones wait for the ship to park, so a pad is never swept by the hull.
 	if parked and clock >= _next_lobber and not _in_transition() and not (reeling() and _reel_plant == "stop"):
 		_next_lobber = clock + (Rules.LOBBER_PERIOD * Rules.REEL_PERIOD_MULT if reeling() else Rules.LOBBER_PERIOD)
 		_launch_lobber()
 
 
-# Maps the ball's bowl radius onto the Furnace band that covers it: close vent (< 16 m),
-# Ring A (16..25.5 m) or Ring B (>= 25.5 m).
 func _ball_slag_slot(ball: Vector3) -> int:
 	var r: float = arena.radius_of(ball)
 	if r < Arena.RING_A.x:
@@ -1019,9 +888,6 @@ func _ball_slag_slot(ball: Vector3) -> int:
 	return 1
 
 
-# Reel slag rings target the band under the ball, stepping to an adjacent free band if that ring
-# is already active (turn 0 stays Arena.RING_A to match the FX-03 phase preview). Normal Furnace
-# leads rotate A, B and the close vent in _step_furnace.
 func _pick_slag_slot(ball: Vector3, turn: int) -> int:
 	if turn == 0:
 		return 0
@@ -1059,9 +925,6 @@ func _slag_id(turn: int) -> String:
 			return "slag_ring_inner"
 
 
-# Commits slag ring `turn` (turn 0 ring A, turn 1 ring B, then rotating A, B and the close
-# furnace vent band around the hull) and returns its warn. A cued ring draws the short tell its
-# ratchet cue paid for.
 func _commit_slag(turn: int, cued: bool, live_override := -1.0) -> float:
 	var band := _slag_band(turn)
 	var id := _slag_id(turn)
@@ -1100,8 +963,6 @@ func _follow_ups() -> int:
 func _step_reprise() -> void:
 	if _reprise.is_empty():
 		return
-	# A reel drops an uncued reprise (the reel's own slag cadence takes over, or the stop plant
-	# halts attacks); an already-cued reprise always keeps its cue's promise.
 	if reeling() and not _reprise["cued"]:
 		_reprise = {}
 		return
@@ -1119,9 +980,6 @@ func _step_reprise() -> void:
 			_next_attack = minf(_next_attack, clock + Rules.REEL_SLAG_PERIOD)
 
 
-# Lobber drones drop off the deck onto a pad marked DRONE_WARN ahead, off the hull's side
-# away from the ball. They are combat's lobbers with combat's telegraphs; their ground
-# is the bowl's, so their shells land on the arena floor, not the parked stage below.
 func _launch_lobber() -> void:
 	if ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
 		return
@@ -1134,7 +992,6 @@ func _launch_lobber() -> void:
 	at = Vector3(at.x, arena.ground(at), at.z)
 	var marker = Hazard.new()
 	marker.ground = arena.ground
-	# Bone, the harmless field: the pad hurts nothing, and amber is the player's own ring.
 	marker.color = Palette.SAND
 	marker.commit_annulus("drone_pad", Hazard.Threat.Type.INSTANT, at, Vector2(0.0, 2.5), 0.0, Rules.DRONE_WARN, Rules.DRONE_WAIT)
 	arena.add_child(marker)
@@ -1194,7 +1051,6 @@ func _slag_hit(h, ball: Vector3, skim := false) -> void:
 		_reel_sear(ball, "brindle_slag")
 	var dmg := ChallengeDials.damage("brindle", Rules.SLAG_DAMAGE, phase) * (Rules.SKIM_SLAG_MULT if skim else 1.0)
 	ctx.run.damage(dmg, "brindle_slag")
-	# A killing hit ends the run inside damage(), and flow tears the arena down before it returns.
 	if not ctx.flow.in_play():
 		return
 	_grace[h.get_instance_id()] = clock + Rules.SLAG_GRACE
@@ -1202,8 +1058,6 @@ func _slag_hit(h, ball: Vector3, skim := false) -> void:
 		return
 	var r: float = arena.radius_of(ball)
 	var out := Vector3(ball.x - arena.global_position.x, 0.0, ball.z - arena.global_position.z).normalized()
-	# The close furnace vent ring wraps the hull, so bouncing outward always clears it instead of
-	# knocking the ball back into the hull and re-trapping it on the ring.
 	var toward := out if h.attack_id == "slag_ring_inner" or r >= (h.r_in + h.r_out) * 0.5 else -out
 	var across: Vector3 = Vector3.UP.cross(out)
 	var way := toward
@@ -1216,9 +1070,6 @@ func _slag_hit(h, ball: Vector3, skim := false) -> void:
 	_shove_ball("brindle_slag", Vector3.UP * up + way * Rules.SLAG_BOUNCE_OUT)
 
 
-# Whether a ball launched from `from` at `launch` flies until it lands without meeting
-# anything solid (a ramp's end face, a mast, the hull): a bounce the game chooses must
-# not end in a stop the player never chose.
 func _clear_arc(from: Vector3, launch: Vector3) -> bool:
 	var space: PhysicsDirectSpaceState3D = arena.get_world_3d().direct_space_state
 	var sphere := SphereShape3D.new()
@@ -1245,15 +1096,11 @@ func _clear_arc(from: Vector3, launch: Vector3) -> bool:
 	return true
 
 
-# --- Phase 3: scuttle the flagship ------------------------------------------------------
-
 func _step_charges(delta: float, ball: Vector3) -> void:
 	_scuttle_punch = maxf(_scuttle_punch, ctx.flow.punch_now())
 	match _charge.get("state", CHARGE_REST):
 		CHARGE_REST, CHARGE_RECOVER, CHARGE_STUN, CHARGE_HOOK:
 			if _charge["state"] == CHARGE_HOOK:
-				# The hook turn starts on its cue: the hull digs in and swings its bow round after
-				# the ball, so the short tell that follows has only the last of the turn left.
 				if _reel_plant != "no_brace" and not ship.bracing():
 					ship.set_hook_brace(true, _hook_token)
 				_turn_ship(_aim_at(ball), Rules.CHARGE_TURN_RATE, delta)
@@ -1287,17 +1134,11 @@ func _step_charges(delta: float, ball: Vector3) -> void:
 			_charge = {"state": CHARGE_REST, "timer": _rest_time()}
 
 
-# Where a charge committed now would point: at the ball, or straight on when the ball is
-# too close to the ship's centre to give a bearing.
 func _aim_at(ball: Vector3) -> Vector3:
 	var to_ball := Vector3(ball.x - ship.global_position.x, 0.0, ball.z - ship.global_position.z)
 	return to_ball.normalized() if to_ball.length() > 2.0 else ship.heading
 
 
-# Swings the bow toward `heading` in place, by at most `rate` radians a second. The hull
-# never takes a heading in one tick: it is a 14 m kinematic box, and a ball leaning on its
-# flank takes a one-tick turn as a 300 to 500 m/s kick (or, amidships, is swallowed by the
-# hull and held inside it).
 func _turn_ship(heading: Vector3, rate: float, delta: float) -> void:
 	var owed := Vector2(ship.heading.x, ship.heading.z).angle_to(Vector2(heading.x, heading.z))
 	var step := clampf(owed, -rate * delta, rate * delta)
@@ -1305,9 +1146,6 @@ func _turn_ship(heading: Vector3, rate: float, delta: float) -> void:
 	ship.move_to(ship.global_position, heading if arrives else (ship.heading as Vector3).rotated(Vector3.UP, -step))
 
 
-# The wind-up: the hull turns to its committed lane inside the tell, at CHARGE_TURN_RATE or
-# as much faster as it takes to be square in the lane CHARGE_TURN_SETTLE before the lane can
-# hurt. The lane itself was laid at the commit and never moves.
 func _brace_turn(delta: float) -> void:
 	var h = _charge["hazard"]
 	var heading: Vector3 = _charge["heading"]
@@ -1318,13 +1156,6 @@ func _brace_turn(delta: float) -> void:
 	_turn_ship(heading, maxf(Rules.CHARGE_TURN_RATE, owed / time_left), delta)
 
 
-# A cued charge is the Scuttle's hook turn: its ratchet cue sounded CUE_LEAD ago, so it
-# draws the short tell, and it never leads a combo or a second hook turn.
-#
-# The lane leads a ball that holds a line (PackPressure.lead_aim): it is laid where the ball's roll
-# carries it by the time the hull's nose gets there, so a straight line is met and a turn inside the
-# tell escapes. A turning, slow or stopped ball is aimed at where it is, and so is every ball on the
-# hook turn's short cued tell. The aim reads the ball's position and roll from the player itself.
 func _commit_charge(cued := false) -> void:
 	if not cued:
 		_combo_left = ChallengeDials.combo_step("brindle", _combo_left)
@@ -1333,15 +1164,10 @@ func _commit_charge(cued := false) -> void:
 	var warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.CHARGE_WARN, Hazard.MIN_WARN)
 	var ball: Vector3 = ctx.player.ball_position()
 	var to_ball := Vector3(ball.x - from.x, 0.0, ball.z - from.z)
-	# Whether it rams the bank is judged from where the ball is, as before the lead: a led point far out
-	# would make almost every outward line a ram and hand the ball a free stun. A ram is aimed at the ball
-	# and runs to the bank; any other charge keeps its led aim and ends short of the bank. So the flag, the
-	# lane, the stun and the wind-up sound all agree.
 	var ball_heading := _aim_at(ball)
 	var into_wall := to_ball.length() + Rules.CHARGE_OVERSHOOT >= _travel_to_rim(from, ball_heading)
 	var aim := ball
 	if not into_wall:
-		# The nose hurts from half a hull and its reach ahead of the centre, so it meets the ball that much sooner.
 		aim = PackPressure.lead_aim(ctx.player, from, warn, Rules.CHARGE_SPEED, half + CHARGE_REACH, half + Tuning.RADIUS)
 	var to_aim := Vector3(aim.x - from.x, 0.0, aim.z - from.z)
 	var heading := ball_heading if into_wall else _aim_at(aim)
@@ -1357,20 +1183,16 @@ func _commit_charge(cued := false) -> void:
 		h.cued = true
 	h.commit_lane("charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
 		Requisition.HULL.y + 0.5, warn, length / Rules.CHARGE_SPEED + 0.2)
-	# Only the hull's nose hurts once the lane is live, and it starts at the ship.
 	h.lane_front = half + CHARGE_REACH
 	_add_hazard(h)
 	_last_commit_at = clock
 	ship.set_hook_brace(false)
-	# The hull keeps its heading at the commit: _brace_turn owns the turn onto this one.
 	ship.cue("charge_warn", h.get_instance_id())
 	_charge = {"state": CHARGE_BRACE, "hazard": h, "from": from, "heading": heading, "length": length,
 		"into_wall": into_wall, "travelled": 0.0, "cued": cued}
 	_publish("boss_attack_telegraphed", ["charge_wall" if into_wall else "charge", h.warn_seconds])
 
 
-# How far the ship's centre can travel along `heading` before its nose buries in the
-# bank at CHARGE_STOP_R, which keeps every corner of the hull clear of the rim wall.
 func _travel_to_rim(from: Vector3, heading: Vector3) -> float:
 	var p := Vector2(from.x - arena.global_position.x, from.z - arena.global_position.z)
 	var d := Vector2(heading.x, heading.z)
@@ -1407,7 +1229,6 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 			_discover(CodexEntries.WALL_BAIT, ship.global_position)
 		elif will_hook:
 			_note_missed_charge()
-			# The hook turn: the cue sounds as the hull digs in, the lane draws CUE_LEAD later.
 			_phases.cue("charge")
 			if _reel_plant != "no_brace":
 				ship.set_hook_brace(true, h.get_instance_id())
@@ -1419,8 +1240,6 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 			_charge = {"state": CHARGE_RECOVER, "timer": Rules.CHARGE_RECOVER}
 
 
-# A charge hit shoves the ball sideways out of the lane and up, never along it, so the
-# hull can never carry the ball into the wall.
 func _charge_hit(h, ball: Vector3, skim := false) -> void:
 	if not skim:
 		_reel_sear(ball, "brindle_charge")
@@ -1442,8 +1261,6 @@ func _charge_hit(h, ball: Vector3, skim := false) -> void:
 	_ghost_until = clock + Rules.CHARGE_GRACE
 
 
-# The hull takes the ball back only once the grace is over and the ball is clear of it,
-# so the exception never ends with the ball inside the hull.
 func _step_ghost() -> void:
 	if _ghost_until < 0.0 or clock < _ghost_until:
 		return
@@ -1457,7 +1274,7 @@ func _step_ghost() -> void:
 
 
 func _stun(seconds: float) -> void:
-	_combo_left = -1  # a punish window ends any combo
+	_combo_left = -1
 	if is_instance_valid(ship):
 		ship.set_hook_brace(false)
 	if _charge.has("hazard") and is_instance_valid(_charge["hazard"]):
@@ -1472,18 +1289,11 @@ func stunned() -> bool:
 	return state == FIGHT and phase == 3 and _charge.get("state", "") == CHARGE_STUN
 
 
-# --- The Scuttle's hint ---------------------------------------------------------------
-
-# A charge ran out with no stun. It counts as a try that came up short only for a ball whose
-# punch has stayed under the hull's plating all phase: that build cannot hit its way in.
 func _note_missed_charge() -> void:
 	if _scuttle_punch < Rules.HULL_PLATING:
 		_short_tries += 1
 
 
-# A hit on the closed hull that its plating turned. Like a missed charge, it is a short try
-# only while the ball's best punch of the phase is under the plating: a heavy build's stray
-# light hit is not one.
 func _note_glance(target, part: String, result: Dictionary) -> void:
 	if state != FIGHT or phase != 3 or target.role != "hull" or part.begins_with("cap_") or stunned() or _posture.staggered:
 		return
@@ -1493,13 +1303,6 @@ func _note_glance(target, part: String, result: Dictionary) -> void:
 		_short_tries += 1
 
 
-# The hint the fight asks the HUD for right now, "" for none; taking it starts its gap (the
-# HUD polls this when its toast row is free and shows the UI row there). In the Scuttle a
-# build whose punch is short of the plating has one way in: a stun, and for a light build
-# that is a charge baited into the rim wall. The hint is owed once a try has come up short
-# (a hit the plating turned, or a charge that ran out), repeats every SCUTTLE_HINT_GAP
-# seconds, and stops for the fight at the first stun, which is the lesson learned, or once
-# the ball's punch has met the plating.
 func take_hint() -> String:
 	if state != FIGHT or phase != 3 or stuns > 0 or _short_tries <= 0 or clock < _hint_next:
 		return ""
@@ -1514,8 +1317,6 @@ func take_hint() -> String:
 func charging() -> bool:
 	return state == FIGHT and phase == 3 and _charge.get("state", "") == CHARGE_RUN
 
-
-# --- The eject and the chase -------------------------------------------------------
 
 func _begin_eject() -> void:
 	_cancel_hazards()
@@ -1552,16 +1353,9 @@ func _begin_eject() -> void:
 	_publish("boss_attack_telegraphed", ["eject", Rules.EJECT_FLIGHT])
 
 
-# The scooter drives off the landing at SCOOTER_SPEED and leaves the catch circle after about 0.32 s,
-# so the mark stays live no longer than that.
 const EJECT_MARK_LIVE := 0.3
 
 
-# The scooter's landing spot, marked on the ground from the cue until it lands. The eject
-# hurts nothing: what the mark covers is the catch, the SCOOTER_TOUCH circle the ball must
-# be inside, so it draws in the harmless bone style (like the phase previews) and goes live
-# on the step the scooter lands. It is stepped here, not with the slag hazards, because a
-# live ring in that list hits the ball.
 func _commit_eject_mark(angle: float) -> void:
 	var to: Vector3 = arena.point_at(angle, Rules.SCOOTER_RING, 0.7)
 	var h = Hazard.new()
@@ -1636,9 +1430,6 @@ func scooter_landed() -> bool:
 	return state == EJECT and _eject.get("landed", false)
 
 
-# The catch is a contact: a ram, a stomp or a slam with the ball on the landed scooter
-# wins. Anything else, a shot or a strike from afar that borrows a contact kind, slows
-# him for a moment, which is how a gunner sets up the catch.
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 	if enemy == null or enemy != scooter or not scooter_landed():
 		return
@@ -1650,9 +1441,6 @@ func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 			FxLibrary.burst(arena, "brass_spark", scooter.global_position + Vector3.UP * 0.6, 12)
 
 
-# The one way Brindle dies: the catch takes the last chunk. `source` is the killing
-# piece's damage tag ("spark" for a wear-trail patch), so run_state can tell build that
-# the kill procs nothing, as combat's own kills do.
 func _defeat(kind: String, at: Vector3, source := "") -> void:
 	if state == DEFEATED:
 		return
@@ -1670,22 +1458,14 @@ func _defeat(kind: String, at: Vector3, source := "") -> void:
 	_sync_crest()
 	_offer_cobalt_pick()
 	ctx.flow.boss_active = false
-	# A freed ship ends its own lift in the camera, and a freed object cannot be passed as a Node3D.
 	if is_instance_valid(ship):
 		ctx.camera.clear_contact_subject(ship)
-		# No step runs after the catch, so a shove still in its grace would leave the hull cut away over the ball.
 		ship.follow_shoved_rider(null)
-	# The scooter stays in sight through boss_defeated, so the fall plays where he was caught
-	# (machine_fx reads a visible scooter before the ship); it is hidden once the event is out.
 	_publish("boss_defeated")
 	if is_instance_valid(scooter):
 		scooter.visible = false
 
 
-# Restores Brindle's rare/cobalt pick (ruling ap, W49-COMBAT) when continuing into World 2 while
-# keeping Admiral's Crest. Opens two cobalt arches in the Slag Bowl during the victory beat and
-# records a single idempotent fallback in run.extra["brindle_cobalt_pending"] so neither a fast
-# victory-beat exit nor quit-and-Continue loses or double-grants the pick.
 func _offer_cobalt_pick() -> void:
 	_close_cobalt_gates()
 	brindle_cobalt_offers = []
@@ -1738,7 +1518,6 @@ func _close_cobalt_gates() -> void:
 	_cobalt_gates = null
 
 
-# The admiral's crest rides on the ball for as long as the run holds the part.
 func _sync_crest() -> void:
 	var wanted: bool = ctx.run.parts.has(Rules.CREST_PART)
 	if wanted and not is_instance_valid(_crest):
@@ -1767,8 +1546,6 @@ func crest() -> Node3D:
 	return _crest if is_instance_valid(_crest) else null
 
 
-# --- Hazards --------------------------------------------------------------------------
-
 func _new_hazard():
 	var h = Hazard.new()
 	h.ground = arena.ground
@@ -1783,8 +1560,6 @@ func _add_hazard(h) -> void:
 	hazards.append(h)
 
 
-# Scrap a magnet still holds is dripped out along its trail at once: only phase 1 steps
-# the cranes, so a hold left at the phase end would never be paid back.
 func _cancel_hazards() -> void:
 	_clear_preview()
 	_clear_reprise_preview()
@@ -1799,8 +1574,6 @@ func _cancel_hazards() -> void:
 			h.queue_free()
 	hazards.clear()
 	_reprise = {}
-	# A drone pad is phase 2's attack: one still marked at the phase turn would drop its lobber
-	# into the next phase once the transition beat ends. Lobbers already down stay.
 	for d in _drones:
 		if is_instance_valid(d["marker"]):
 			d["marker"].queue_free()
@@ -1816,7 +1589,6 @@ func active_hazards() -> Array:
 	return hazards.filter(func(h): return is_instance_valid(h) and not h.is_done())
 
 
-# Ages every hazard once per tick, runs the slag rings' hits and frees what is done.
 func _step_hazards(delta: float, ball: Vector3) -> void:
 	var kept: Array = []
 	for h in hazards:
@@ -1827,7 +1599,6 @@ func _step_hazards(delta: float, ball: Vector3) -> void:
 				and (not h.cued or h.age >= h.warn_seconds + 0.025):
 			if h.contains(ball) and clock >= _grace.get(h.get_instance_id(), -1.0):
 				_slag_hit(h, ball, _ball_cruising())
-				# A killing ring ended the run and exit_arena cleared the list: keep it cleared.
 				if not ctx.flow.in_play():
 					return
 			elif _on_crust(h, ball):
@@ -1844,15 +1615,10 @@ func _on_crust(h, ball: Vector3) -> bool:
 	return r >= h.r_in and r <= h.r_out and ball.y - arena.ground(ball) <= h.reach and arena.is_quenched(ball, clock)
 
 
-# --- The rescue ------------------------------------------------------------------------
-
-# Below this the ball has fallen out of the bowl. Flow asks it in the boss state.
 func floor_y() -> float:
 	return arena.global_position.y - RESCUE_DEPTH if is_instance_valid(arena) else -INF
 
 
-# A safe point on the banked ring at the bearing the ball left from: outside both slag
-# channels by construction, and turned aside until the Requisition is clear of it.
 func rescue_point(near = null) -> Vector3:
 	var from: Vector3 = near if near is Vector3 else ctx.player.ball_position()
 	if not is_instance_valid(arena):
@@ -1866,10 +1632,6 @@ func rescue_point(near = null) -> Vector3:
 	return arena.point_at(angle, Arena.RESCUE_R, 2.0)
 
 
-# Flow rescues a fall below floor_y(). This catches the one it cannot see in time: a
-# ball flying out over the rim, which would take over a second to fall that far. It
-# goes back on the ring riding it the way it was going round, with its horizontal speed
-# kept.
 func _rescue(ball: Vector3) -> void:
 	if arena.contains(ball):
 		return
@@ -1879,8 +1641,6 @@ func _rescue(ball: Vector3) -> void:
 	var at := rescue_point(ball)
 	ctx.player.reset_to(at, Arena.tangent(arena.angle_of(at)) * speed * (turning if turning != 0.0 else 1.0))
 
-
-# --- The enemy protocol, answered for every piece (boss_target.gd forwards here) -------
 
 func target_live(target) -> bool:
 	match target.role:
@@ -1922,9 +1682,6 @@ func hit_mult(target, kind: String, part: String) -> float:
 	return 1.0
 
 
-# A stomp or slam with the ball on the piece, or a ram the ball made coming down on top
-# of it. The ball's position settles it, so a strike that only borrows the "slam" kind
-# (build's synergies) cannot open a cap from the floor.
 func _landing(target, kind: String) -> bool:
 	if kind in Rules.CAP_KINDS:
 		return _over(target) and ctx.player.ball_position().y >= target.global_position.y - 0.5
@@ -1935,7 +1692,6 @@ func _from_above(target) -> bool:
 	return ctx.player.ball_position().y - target.global_position.y >= Rules.ABOVE and _over(target)
 
 
-# A stomp or slam on the deck lands on the vent cap it is over, as the Warden's caps do.
 func contact_part(target, _ball: Vector3, kind: String) -> String:
 	if target.role != "hull" or phase != 2:
 		return ""
@@ -1958,9 +1714,6 @@ func _cap(part: String):
 	return ship.caps[0]
 
 
-# The clash: a ram into the charging bow that meets plating 150 stops the charge. Then
-# the hit moves the posture bar: a hull hit by the rule judge_hit() answered (or, from
-# a striker that skipped it, judged here), a weak point's hit as pressure on the bar.
 func on_struck(target, kind: String, part: String, result: Dictionary) -> void:
 	if target.role == "hull" and kind == "ram" and charging() \
 			and float(result.get("punch", 0.0)) >= float(result.get("plating", INF)):
@@ -1979,8 +1732,6 @@ func on_struck(target, kind: String, part: String, result: Dictionary) -> void:
 		_pressure(kind, result)
 
 
-# Health falls only by the chunks the posture rule shattered; `amount` moves nothing.
-# hp is read back from the chunk count, so the delivered-damage ledger sees one per chunk.
 func take_damage(target, _amount: float, full: bool, part: String) -> float:
 	if state != FIGHT or not target_live(target):
 		return 0.0
@@ -2004,10 +1755,6 @@ func take_damage(target, _amount: float, full: bool, part: String) -> float:
 	return before - hp
 
 
-# --- The posture fight on the hull (boss_posture.gd; boss_target.gd forwards here) ----
-
-# Only the hull is fought on posture. The magnets, caps and scooter keep combat's
-# plating rule, which their crane, furnace and chase mechanics read.
 func fight(target) -> String:
 	return "posture" if target.role == "hull" else "plating"
 
@@ -2036,9 +1783,6 @@ func chunk_cracked() -> bool:
 	return _posture.cracked
 
 
-# What the rule says a hit on the hull does, or {} for any other piece so combat's own
-# rule runs. Out of a stagger a slam on a vent cap meets the cap's plating; in one any
-# contact meets the open cockpit. A held phase answers with the hit and what it banks.
 func judge_hit(target, kind: String, punch: float, smash: bool, tier: int) -> Dictionary:
 	if target.role != "hull" or state != FIGHT:
 		return {}
@@ -2054,8 +1798,6 @@ func judge_hit(target, kind: String, punch: float, smash: bool, tier: int) -> Di
 	return result
 
 
-# A weak point's full hit adds to the hull's bar as the rule would weigh it on a body of
-# that plating. It never touches the open cockpit: only a contact on the hull does.
 func _pressure(kind: String, result: Dictionary) -> void:
 	if _posture.staggered or (_held() and not banking()) or _in_transition() or not bool(result.get("full", false)):
 		return
@@ -2069,8 +1811,6 @@ func _pressure(kind: String, result: Dictionary) -> void:
 func _apply_posture(result: Dictionary) -> void:
 	var before := _posture_signature()
 	var was_staggered: bool = _posture.staggered
-	# A hit is judged before its strike is published and applied after: the bank's stop is
-	# measured again here, against the bar as it stands now.
 	if _held() or _in_transition():
 		result = result.duplicate()
 		_bank(result)
@@ -2082,7 +1822,6 @@ func _apply_posture(result: Dictionary) -> void:
 func _step_posture(delta: float) -> void:
 	var before := _posture_signature()
 	var was_staggered: bool = _posture.staggered
-	# A banked bar is kept: it does not drain through the hold or the beat after it.
 	if (_held() or _in_transition()) and not _posture.staggered:
 		_posture.idle = 0.0
 	_posture.step(delta)
@@ -2094,21 +1833,16 @@ func _posture_signature() -> Array:
 	return [floori(_posture.posture), _posture.staggered, _posture.chunks, _posture.cracked]
 
 
-# The hull's bar moved: the same bus signal a Warden's does, so the stagger chord plays and
-# the plate and ring redraw. The run log ignores a body that carries a boss.
 func _publish_posture(before: Array) -> void:
 	if before != _posture_signature() and is_instance_valid(ship) and is_instance_valid(ship.hull):
 		ctx.events.posture_changed.emit(ship.hull, _posture.posture, _posture.staggered)
 
 
-# A stagger opens the cockpit for its window; from Scuttle on the cockpit stays open.
 func _sync_stagger(was_staggered: bool) -> void:
 	if _posture.staggered == was_staggered or not is_instance_valid(ship):
 		return
 	ship.cockpit_open(_posture.staggered or phase >= 3)
 
-
-# --- Readout, publishing, codex ---------------------------------------------------------
 
 func hull_plating_now() -> float:
 	if not active() or not is_instance_valid(ship):
@@ -2119,8 +1853,6 @@ func hull_plating_now() -> float:
 	return plating
 
 
-# The name plate's words. The objective line carries the numbers, so the plate names
-# who and the plating; its colour says whether your punch beats that plating.
 func readout_text() -> String:
 	if state == EJECT:
 		return "BRINDLE · on the run"
@@ -2139,26 +1871,14 @@ func _update_readout() -> void:
 	ship.set_readout(readout_text(), Palette.AMBER if beats else PLATE_SHORT, anchor, 2.5 if anchor != null else Requisition.PLATE_LIFT)
 
 
-# --- Live state for the HUD (flow's objective and gap lines read these) --------------
-
-# The objective plate's reading of the fight (ui/hud.gd, core/objectives.gd): the phase whose
-# verb the plate names (CHASE_PHASE is the scooter) and whether the cockpit is the place to hit
-# now: a stagger in any phase (the weak points pay nothing through it, _pressure), or a stun in
-# Scuttle. A stagger does not hold a Scuttle charge back, so while one is coming down its lane the
-# cockpit does not count as open: the lane is what the player must read.
 func plate_reading() -> Dictionary:
 	return {"phase": phase if active() else 0, "open": (stunned() or staggered()) and not charge_coming()}
 
 
-# A Scuttle charge is committed: its lane is drawn (the tell) or he is running it.
 func charge_coming() -> bool:
 	return state == FIGHT and phase == 3 and _charge.get("state", "") in [CHARGE_BRACE, CHARGE_RUN]
 
 
-# Where the fight sends the player now, for the HUD to mark (ui/edge_markers.gd), each {at, what}
-# with what naming the thing (objectives.gd TAGS): the crane magnets in the Requisition, the vent
-# caps in the Furnace, the cockpit while it is open, the scooter in the chase. Baiting a charge
-# names no one place, so it marks none.
 func plate_targets() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if state == EJECT and is_instance_valid(scooter):
@@ -2175,8 +1895,6 @@ func plate_targets() -> Array[Dictionary]:
 	return out
 
 
-# What the player should do right now, in the objective line's voice. Flow shows it as
-# the whole objective line, so fight states end with punch against the live plating.
 func objective_text() -> String:
 	match state:
 		EJECT:
@@ -2199,20 +1917,16 @@ func objective_text() -> String:
 	return ""
 
 
-# The plating of what the player should hit now: the hull's live plating in the fight
-# (120, 150 on a charging bow, 0 while stunned) and the scooter's 0 in the chase.
 func live_plating() -> float:
 	if state == EJECT or state == DEFEATED:
 		return 0.0
 	return hull_plating_now()
 
 
-# The punch that counts against live_plating(): only a ram can clash with the bow.
 func live_punch() -> float:
 	return ram_punch_now() if charging() else ctx.flow.punch_now()
 
 
-# Combat's ram-only punch when it has one, else the ram punch built from its punch_of.
 func ram_punch_now() -> float:
 	var spawner = ctx.spawner
 	if spawner != null and spawner.has_method("ram_punch_now"):
@@ -2222,8 +1936,6 @@ func ram_punch_now() -> float:
 	return spawner.punch_of("ram", ctx.player.planar_velocity().length())
 
 
-# The arena-ground seam: the bowl's floor under a point, which combat's telegraphs and
-# lobber aim use while flow.in_arena. Outside a fight it falls back to the terrain.
 func ground_height_at(point: Vector3) -> float:
 	if is_instance_valid(arena):
 		return arena.ground(point)
@@ -2232,8 +1944,6 @@ func ground_height_at(point: Vector3) -> float:
 	return point.y
 
 
-# Combat tints plated pieces by punch_now() against their plating. A charging bow only
-# answers a ram, so its tint is decided by the ram punch alone.
 func tint_for(target, suggested: String) -> String:
 	if target.role == "hull" and charging():
 		return "amber" if ram_punch_now() >= hull_plating_now() else "slate"

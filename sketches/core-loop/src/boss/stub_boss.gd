@@ -9,22 +9,12 @@ const WeakPoints := preload("res://src/boss/weak_points.gd")
 const WeakPart := preload("res://src/boss/weak_part.gd")
 const Augments := preload("res://src/movement/augments.gd")
 
-# The stand-in fight for a boss whose own fight is not written yet. The Waking (waking.gd)
-# and the Mind (mind.gd) extend this file and run its fight until theirs land; test doubles
-# use it directly. It answers BossContract.MODULE the way Brindle does, but the whole fight
-# is one posture Warden on a flat pad: hits fill its bar, a full bar staggers it and opens
-# its core, and a contact on the open core takes one of four chunks. The last chunk is the
-# win. Flow builds this module itself, so setup never claims ctx.boss; flow points ctx.boss
-# here only while this module's arena is the one entered.
-
 enum { IDLE, FIGHT, DEFEATED }
 const PAD_RADIUS := 36.0
 const PAD_THICK := 2.0
-# The ball lands this far from the Warden, rolling at it.
 const ENTRY_R := 26.0
 const ENTRY_LIFT := 2.0
 const RESCUE_DEPTH := 10.0
-# The Warden's numbers when the spawner has no warden_spec for this stage.
 const FALLBACK_SPEC := {"plating": 120.0, "hp": 1200.0}
 
 var ctx
@@ -32,38 +22,20 @@ var state := IDLE
 var clock := 0.0
 var pad: StaticBody3D
 var warden: Node3D
-# The Warden's posture as last published; the stub has no fleet to publish it for the Warden.
 var _posture_seen: Array = []
-# The fight's PHASE_MIN_SECONDS (Brindle's, boss_rules.gd), times the dial <boss>.phase_min_by_phase
-# (a multiplier, identity 1.0): a chunk lost before its phase has lasted that many seconds holds the
-# phase, and the Warden's bar fills only to warden.gd HOLD_CAP (_apply_posture asks hold_active; every hit
-# still lands, none staggers) until the minimum has passed; the next contact then staggers (a bolt, or a bar
-# drained in the hold, may take more). A subclass names its dial prefix in _hold_boss() and its seconds in
-# _hold_minimums(); "" turns the hold off.
 var _phase_started := 0.0
 var _phase_open_at := 0.0
 var _chunks_lost_seen := 0
-# Whether the build was a monster build when the fight began (warden.gd monster_build, latched at entry).
-# The hold's exemption reads this, not the live heft, which climbs with the scrap picked up in the fight.
 var _entry_monster := false
-# Per fight (reset at entry): seconds held, and seconds the hold was the binding constraint: from the
-# first frame of a hold with the bar at the cap to the hold's end, even if the bar later drains below the
-# cap (the build had already earned the break once).
 var hold_s := 0.0
 var hold_bound_s := 0.0
 var _hold_capped := false
-# The fight's weak points (#241): off (the identity) unless the dial <boss>.weak_points is on at entry.
 var weak = WeakPoints.off()
-# The ids opened this fight, oldest first, so the most recently opened point that is still open is the one a hit counts on.
 var _weak_opened: Array = []
-# The physical parts (weak_part.gd) standing now, by point id; empty at dial 0 and for a boss with no hatches.
 var _part_nodes := {}
-# Part ids the ball was inside the reach of last tick, so a contact counts once per touch.
 var _touching := {}
-# The part whose contact is being paid right now ("" outside _on_player_struck), and the physics frame of the last such payment.
 var _paying := ""
 var _paid_frame := -1
-# Point id to the physics frame its last counted reel landed on: one reel per landing per point.
 var _reel_frame := {}
 
 
@@ -141,39 +113,30 @@ func _physics_process(delta: float) -> void:
 		_publish_posture()
 
 
-# The dial prefix of this boss's phase_min_by_phase ("waking", "mind"); "" means no hold.
 func _hold_boss() -> String:
 	return ""
 
 
-# The weak points this boss offers when its dial is on: [{id, seal_hp, removes}].
 func _weak_parts() -> Array:
 	return []
 
 
-# Whether the ball can get at a part now; a buried part is not touched. The Waking overrides it.
 func _part_reachable(_id: String) -> bool:
 	return true
 
 
-# The attack families broken points have taken away (the Mind answers by its own count).
 func _removed_families() -> Array:
 	return weak.removed_families()
 
 
-# Whether the dial <boss>.weak_points is on, read the one way: enter_arena builds the rule from it, and the
-# Warden's spec (built before the rule exists) reads it for the dial-1-only rows.
 func _weak_dial_on() -> bool:
 	return _hold_boss() != "" and ChallengeDials.value(_hold_boss() + ".weak_points") >= 0.5
 
 
-# Whether this fight runs with weak points: the dial is on and the boss offers some.
 func _weak_wanted() -> bool:
 	return _weak_dial_on() and not _weak_parts().is_empty()
 
 
-# A tell opens a point; true when it was shut. An open that happens shows (the part), sounds (weak_point_opened)
-# and holds at least WeakPoints.OPEN_MIN. quiet skips the event for a point whose owner announces it itself.
 func _open_weak(id: String, quiet := false) -> bool:
 	var opened: bool = weak.open(id, clock)
 	if opened:
@@ -185,7 +148,6 @@ func _open_weak(id: String, quiet := false) -> bool:
 	return opened
 
 
-# Where a point is in the world: its part, else the Warden.
 func _weak_position(id: String) -> Vector3:
 	var part = _part_nodes.get(id)
 	if is_instance_valid(part):
@@ -193,45 +155,33 @@ func _weak_position(id: String) -> Vector3:
 	return warden.global_position if is_instance_valid(warden) else Vector3.ZERO
 
 
-# The ids of the weak points open now, the most recently opened last, for the bot.
 func weak_open() -> Array:
 	return _weak_opened.filter(func(id): return weak.state(id) == WeakPoints.OPEN)
 
 
-# The standing part for a point id, or null.
 func weak_part(id: String) -> Node3D:
 	var part = _part_nodes.get(id)
 	return part if is_instance_valid(part) else null
 
 
-# The point id a hit lands on, "" for the Warden's body. part is what combat named for the strike; a boss whose
-# points are not bodies (the Mind's seats) overrides this to judge by where the ball is.
 func _weak_point_for(part: String, _kind: String) -> String:
 	return part if part != "" and weak.has(part) else ""
 
 
-# What a verb the boss braces is worth against an open point (the Mind's plate); 1.0 here.
 func _brace_scale(_kind: String) -> float:
 	return 1.0
 
 
-# Warden.on_struck's hook (and _apply_posture's, for a hit that did not come through on_struck): chips or keeps a
-# hit's posture gain by the weak-point rule. The part argument is "" in production (on_struck always passes ""); the
-# point is _paying (the part's id, set by _on_player_struck) or, for a boss that judges by position, _weak_point_for;
-# the Warden's body is no point, so a contact on it pays the chip. Off returns the same object.
 func _weak_judge(result: Dictionary, part := "", kind := "") -> Dictionary:
 	if not weak.active():
 		return result
 	var frame := Engine.get_physics_frames()
 	var out := result.duplicate()
-	# A part's landing pays once, through _on_player_struck: the same landing's other contact (the SLAM push after
-	# the ram) adds nothing to the bar.
 	if _paying == "" and frame == _paid_frame and bool(result.get("contact", false)):
 		out["gain"] = 0.0
 		return out
 	var id: String = _paying if _paying != "" else _weak_point_for(part, kind)
 	var reel := bool(result.get("reel", false))
-	# One reel per landing per point: a smash landing strikes twice (the contact, then the SLAM shockwave).
 	if reel and id != "" and int(_reel_frame.get(id, -1)) == frame:
 		reel = false
 	var hit := {"point": id, "reel": reel, "punch": float(result.get("punch", 0.0)), "gain": float(result.get("gain", 0.0))}
@@ -242,7 +192,6 @@ func _weak_judge(result: Dictionary, part := "", kind := "") -> Dictionary:
 		if reel and id != "":
 			_reel_frame[id] = frame
 		scale *= _brace_scale(kind)
-	# The hit event is the one signal for a seal worn or broken: the event table has no separate break event.
 	if float(answer["damage"]) > 0.0 or bool(answer["broke"]):
 		ctx.events.boss_weak_point_hit.emit(id)
 		_sync_part(id)
@@ -250,9 +199,6 @@ func _weak_judge(result: Dictionary, part := "", kind := "") -> Dictionary:
 	return out
 
 
-# --- The parts -----------------------------------------------------------------------------
-
-# Adds a part for a point at a world position, its cover facing the way given (toward the arena).
 func _add_part(id: String, at: Vector3, facing: Vector3) -> Node3D:
 	var part := WeakPart.new()
 	part.setup(id, facing)
@@ -287,8 +233,6 @@ func _free_part(id: String) -> void:
 		part.queue_free()
 
 
-# Mirrors the rule's state onto the part. A part that shuts or breaks under a latched, uncommitted line lets it go;
-# a committed haul keeps homing and lands on a closed part (and pays the chip).
 func _sync_part(id: String) -> void:
 	var part = _part_nodes.get(id)
 	if not is_instance_valid(part):
@@ -302,9 +246,6 @@ func _sync_part(id: String) -> void:
 		ctx.player.release_grapple()
 
 
-# Every tick: the parts follow the rule (a re-seal needs no caller), and a ball that has just reached a part
-# touches it once, through the ball's public contact entry (player_ball.gd touch_body), which derives the 3D contact
-# normal the way RigidBall does, so a committed haul lands and a drop from above stomps.
 func _step_parts() -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	for id in _part_nodes.keys():
@@ -320,10 +261,6 @@ func _step_parts() -> void:
 		_touching[id] = near
 
 
-# The ball's contact on a part reaches combat as a posture hit on the Warden that names the part's id, so it
-# resolves like any other contact (judge_hit, the weak rule, _apply_posture's HOLD_CAP) and pays the bar once. The
-# part takes nothing. smash_landing names the part for the length of a landing, so the redirected strike is told it
-# is a reel landing too. A staggered Warden is not struck through a part: the open core is the only target then.
 func _on_player_struck(enemy: Node3D, kind: String, force: float) -> void:
 	if state != FIGHT or not is_instance_valid(warden) or not is_instance_valid(enemy) or warden.staggered() \
 			or ctx.spawner == null or not ctx.spawner.has_method("strike"):
@@ -344,13 +281,10 @@ func _on_player_struck(enemy: Node3D, kind: String, force: float) -> void:
 	_paid_frame = Engine.get_physics_frames()
 
 
-# The seconds each phase must last, one per chunk (the last is unused).
 func _hold_minimums() -> Array:
 	return []
 
 
-# Notes a chunk lost since the last look: the phase it ended began at _phase_started, and the next
-# opens at the later of now and that start plus the dial's seconds for the phase just played.
 func _hold_update() -> void:
 	if _hold_boss() == "" or not is_instance_valid(warden):
 		return
@@ -375,40 +309,27 @@ func _hold_meter(delta: float) -> void:
 		hold_bound_s += delta
 
 
-# True while held with the bar at the cap: the break waits only for the minimum.
 func hold_capped() -> bool:
 	return hold_active() and is_instance_valid(warden) and warden.posture() >= Warden.HOLD_CAP - 0.001
 
 
-# Seconds until the held phase opens (0 when not held).
 func hold_left() -> float:
 	return maxf(0.0, _phase_open_at - clock) if hold_active() else 0.0
 
 
-# Reads the build's monster status now and keeps it for the hold. Called at entry; tests call it after
-# they set a Warden's monster_heft.
 func latch_monster() -> void:
 	_entry_monster = is_instance_valid(warden) and warden.monster_build()
 
 
-# True while a lost chunk's phase has not yet played its minimum: the Warden is closed. A build that
-# was a monster build at entry (latch_monster) is never held, so an overpowered build still breaks the
-# fight faster than an ordinary one; an ordinary build stays held however much heft it picks up.
 func hold_active() -> bool:
 	_hold_update()
 	return clock < _phase_open_at and not _entry_monster
 
 
-# The chunks the fight reads as left: a held chunk still counts, so the phase, the floor and the
-# attacks wait for the minimum. Identical to warden.chunks_left() when nothing is held.
 func shown_chunks_left() -> int:
 	return warden.chunks_left() + (1 if hold_active() else 0)
 
 
-# A stage Warden publishes posture_changed and weak_point_opened through its fleet; the
-# stub's has none, so the stub does it on the same signature, as Brindle does for his hull.
-# That is what the ring, the stagger chord and the plate's redraw listen for. The run log
-# ignores it because the arena is open (run_log's _in_arena).
 func _publish_posture() -> void:
 	if not is_instance_valid(warden) or not warden.has_method("posture"):
 		return
@@ -428,8 +349,6 @@ func _posture_signature() -> Array:
 	return [floori(warden.posture()), warden.staggered(), warden.chunks_left(), warden.chunk_cracked()]
 
 
-# The boss row this fight names and narrates: the current world's row as flow reads it. A
-# boss that extends the stub answers its own Worlds.BOSSES row instead.
 func _row() -> Dictionary:
 	return ctx.flow.boss_row(ctx.stages.world_of(ctx.run.stage))
 
@@ -443,11 +362,9 @@ func _warden_spec() -> Dictionary:
 	spec["lesson"] = "plate"
 	spec["family"] = Roster.REACTOR
 	spec["reach"] = PAD_RADIUS
-	# The arena Warden has no fleet, so it reads the pilot's heft from here (Warden.pilot_heft).
 	if _hold_boss() != "":
 		spec["posture_hold"] = Callable(self, "hold_active")
 		spec["weak_judge"] = Callable(self, "_weak_judge")
-		# Dial 1: the Warden judges every posture hit (the ultimate's too), not only the ones through on_struck.
 		if _weak_wanted():
 			spec["weak_judge_all"] = true
 	spec["heft"] = func() -> float: return float(ctx.run.heft()) if ctx != null and ctx.run != null else 0.0
@@ -500,8 +417,6 @@ func _discover(id: String, at: Vector3) -> void:
 		ctx.codex.mark_discovered(id, at)
 
 
-# --- The terrain the Warden stands on, and combat's arena ground -----------------------
-
 func _top() -> float:
 	return pad.global_position.y + PAD_THICK * 0.5 if is_instance_valid(pad) else -INF
 
@@ -521,8 +436,6 @@ func ground_height_at(point: Vector3) -> float:
 		return ctx.terrain.height(point.x, point.z)
 	return point.y
 
-
-# --- Flow's arena rescue and the HUD's live read ----------------------------------------
 
 func floor_y() -> float:
 	return _top() - RESCUE_DEPTH

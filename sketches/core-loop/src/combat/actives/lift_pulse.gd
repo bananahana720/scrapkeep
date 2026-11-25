@@ -3,33 +3,18 @@ extends RefCounted
 const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# The Lift Pulse (Highdraft Roosts): a cargo lift fan turned sideways. A fire commits one cone
-# along the aim, draws it (a shimmer ring round the fan and the cone's edges: the tell) and shoves
-# every machine inside it straight away from the ball. The knock grows with each heft class, so
-# light pilots push chasers and a heavy ball throws heavies off an island edge ("Ring-outs",
-# 17 Oct). Damage is small: the island edge does the killing (that rule lives with the enemies).
-# Only machines inside the drawn cone are hit.
-#
-# It stacks into a strong build: weapon damage mods and punch scale the hit, Spiral Wave widens
-# the cone, Cross Split adds an echo pulse per level through the same cone, Chain Arc jumps from
-# each machine the first pulse hits, and a full ultimate meter's overflow pieces each add knock.
-
 const RANGE := 10.0
-# Degrees either side of the aim.
 const HALF_ANGLE := 35.0
 const SPREAD_PER_LEVEL := 10.0
 const MAX_HALF_ANGLE := 75.0
-# A machine this far above or below the ball is on another level and out of the cone.
 const HEIGHT_BAND := 3.0
 const BASE_DAMAGE := 6.0
 const KNOCK := 18.0
 const KNOCK_PER_CLASS := 12.0
-# Share of extra knock each banked overflow piece adds.
 const BONUS_KNOCK := 0.2
 const ECHO_GAP := 0.2
 const ECHO_SHARE := 0.6
 const FAN_RADIUS := 1.6
-# The cone's edges are drawn as short strokes so the arcs barely jitter: a shimmer, not a bolt.
 const EDGE_STEP := 1.25
 const CHAIN_RANGE := 8.0
 const CHAIN_FALLOFF := 0.7
@@ -40,7 +25,6 @@ const SOURCE := "special"
 
 var ctx
 var combat
-# Committed pulses still to land: {"cone", "at" (seconds until it lands), "share"}.
 var echoes: Array = []
 var pulses := 0
 var chain_hits := 0
@@ -74,7 +58,6 @@ func half_angle() -> float:
 	return minf(HALF_ANGLE + SPREAD_PER_LEVEL * float(_pattern("spiral_wave")), MAX_HALF_ANGLE)
 
 
-# The cone a fire commits: the fan at the ball, facing the flat aim. Drawing and hitting both read it.
 func cone(bonus: int) -> Dictionary:
 	var forward: Vector3 = ctx.aim_forward()
 	forward.y = 0.0
@@ -110,8 +93,6 @@ func fire(_rack, _row: Dictionary, bonus: int) -> int:
 	return 1 + echo_count
 
 
-# Chain Arc from one struck machine: each jump takes the nearest unvisited machine still inside
-# the committed cone, so a chain never lands outside the drawn warning.
 func _chain(shape: Dictionary, first: Node3D, jumps: int) -> void:
 	var visited := [first]
 	var at: Vector3 = first.global_position
@@ -149,7 +130,6 @@ func step(delta: float) -> void:
 	echoes = waiting
 
 
-# One pulse through a committed cone: draw it, then shove every live machine inside it.
 func _pulse(shape: Dictionary, share: float) -> Array:
 	pulses += 1
 	_draw(shape)

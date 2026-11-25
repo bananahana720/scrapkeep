@@ -3,20 +3,6 @@ extends "res://src/combat/counter.gd"
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
-# The netcaster (DESIGN-V2 section 10): two masts with a crackling net strung between.
-# It raises an electric field over where the ball is heading: an instant ring whose
-# height band is tall, because only the air is its business. Live, a ball inside the
-# field and airborne (at least NET_FLOOR above the ground, not touching it) is netted
-# and held hanging: its fall and its drift are cancelled while the net holds. A grounded
-# ball rolls under it, so a net can be baited: stay low until it drops. A double jump, a
-# glide or a smash tears it.
-#
-# Secondary attack (W47-E2): Snap-Trap Ceiling Drop. If the player camps grounded beneath
-# an active net for > CAMP_THRESHOLD (1.5 s), the netcaster primes a 0.80 s mast-lean
-# crackle (Palette.HAZARD ground ring) collapsing the net onto slow grounded balls.
-# Smashing or boosting through the dropping net triggers Conductive Tear: a 10 m EMP arc
-# stripping nearby shields (Linker cables, Deflector braces, Brute plates) and jam fields.
-
 const FIELD_RADIUS := 5.5
 const FIELD_TOP := 10.0
 const NET_FLOOR := 1.2
@@ -80,12 +66,6 @@ func _configure(threat: float) -> void:
 	attack_range = 24.0
 
 
-# C16 dressing (enemy_netcaster.glb). The counter's capsule crew and the two cylinder masts are
-# replaced by the glb's crew, masts, crossbar, sill and stays (the collider _add_capsule laid
-# stays). The net stays the runtime hazard box below, untouched: the glb frames its 2.4 x 1.6 m
-# window and adds no geometry inside it. The glb is read once; every netcaster shares its mesh
-# and adds only its own flashing body material as a surface override. The resting body is the
-# Fleet oxide _add_capsule already set (RUST), so the hit flash and the event colour are unchanged.
 static var _warned_asset := false
 static var _shared: Dictionary = {}
 

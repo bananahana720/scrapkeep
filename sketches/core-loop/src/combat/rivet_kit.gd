@@ -1,11 +1,5 @@
 extends Node
 
-# Rivet's kit beyond the gun (design-v3/pilots/rivet.md sections 2.3 and 3): Line Drive on slot 3
-# and the three Foundry Cutter set pieces on Q, all landing in the Breach Skid. combat.gd
-# registers line_row() in its Rivet block; ultimate.gd's Rivet rows call tech, peak and landing
-# here. Every number is a Weapons.LINE_*, CUTTER_*, FULL_CUT_*, BREACH_*, PRISM_* or DRIVE_*
-# constant. Everything Rivet does runs in a straight line and turns back into forward speed.
-
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
@@ -26,24 +20,15 @@ const SHAPE_DISPATCH := {
 	"prism_cutter": ["tech", "peak", "landing"],
 	"juggernaut_drive": ["tech", "peak", "landing", "drive_step"],
 }
-# Discoveries (section 8; CUSTOMIZE section 3 change 3): ten punches landed in one stage, thirty
-# ignored holds and knocks in one run, a beam cutting three. Full Breach is no discovery: its
-# grant reads ultimate_landed's hits for foundry_cutter (CUSTOMIZE.md:356, :412).
 const LINE_TRUE_PUNCHES := 10
 const SHRUG_HITS := 30
 const CUTTER_CARD_CUTS := 3
-# A pin this soon after a punch is that punch's pin (enemy_pinned names only the victim).
 const PIN_WINDOW := 1.5
-# The thrown-direction arrow the preview draws from a punched machine (section 2.3).
 const ARROW_LENGTH := 6.0
 
 class VolumeIndicator extends Indicator:
-	# A scar runs to thousands of triangles, so each layer's are built once, in world space, as
-	# packed arrays, and reach the mesh in one batch moved by _p's lift (and collapse) as one
-	# transform: an ImmediateMesh call per vertex cost more than the carve.
 	var scar_mesh := ArrayMesh.new()
 	var _drawn_shapes := {}
-	# layer -> {shape, vertices, colors}
 	var _built := {}
 	static var _strip_unit := PackedVector3Array([Vector3(1, 0, 0), Vector3(1, 0, 1), Vector3(-1, 0, 1), Vector3(1, 0, 0), Vector3(-1, 0, 1), Vector3(-1, 0, 0)])
 	static var _cap_unit := _cap_points(EDGE * 0.5)
@@ -93,15 +78,10 @@ class VolumeIndicator extends Indicator:
 			return
 		super.set_shape(layer, shape)
 
-	# _p for every vertex at once: scaled by k into the origin, then lifted.
 	static func _placed(drawn: Dictionary, k: float) -> PackedVector3Array:
 		var origin: Vector3 = drawn["shape"]["origin"]
 		return Transform3D(Basis.from_scale(Vector3.ONE * k), origin * (1.0 - k) + Vector3.UP * LIFT) * (drawn["vertices"] as PackedVector3Array)
 
-	# The fills, then every keyline, then every strip and cap, so the charcoal keyline sits under
-	# every edge. A part's edge belongs to two of its faces and its corners to three or more, so
-	# each edge and each corner is drawn once, where the scar drew 40 triangles a face edge. The
-	# colours are taken once: a volume record has no "fill" to breathe with.
 	static func _build(shape: Dictionary, now: float) -> Dictionary:
 		var look := style(shape, now)
 		var fill: Color = look["fill"]
@@ -157,7 +137,6 @@ class VolumeIndicator extends Indicator:
 		colors.append_array(edge_colors)
 		return {"shape": shape, "vertices": vertices, "colors": colors}
 
-	# _cap's eight triangles about the origin.
 	static func _cap_points(radius: float) -> PackedVector3Array:
 		var points := PackedVector3Array()
 		for i in 8:
@@ -170,19 +149,14 @@ class VolumeIndicator extends Indicator:
 var volume_indicator: VolumeIndicator
 var combat
 var ctx
-# Punches running down the cable: {target, force, mult, dir, left}.
 var pulses: Array = []
-# The haul in progress: {ride, anchor, seconds}, or {}.
 var haul := {}
-# W47-H1 Rivet existing map rail/zip grind (strictly existing map cables, pipes, canal lips,
-# and trestle rails — strictly G0 single ChainState, zero temporary two-anchor standing rail-line).
 var rail_ride := {}
 var last_rail_ride := {}
 var _rail_regrab_cd := 0.0
 var _cached_stage := -999
 var _cached_rails: Array = []
 var _extra_rails: Array = []
-# What the last line cast did, for the audio row: {on, delay or seconds}.
 var last_cue := {}
 var last_punch := {}
 var beam_shapes: Array = []
@@ -202,8 +176,6 @@ static func ultimate_row(owner, id: String) -> Dictionary:
 	return {"tech": func(beat, ball, aim, mult): return owner.get_node("RivetKit").tech(id, beat, ball, aim, mult),
 		"peak": func(at): owner.get_node("RivetKit").peak(id, at),
 		"landing": func(at, heft, chain): return owner.get_node("RivetKit").landing(id, at, heft, chain)}
-# The aim the last beat read (ctx.aim_forward() on that tick); the peak, which gets only a
-# point, cuts along it.
 var _last_aim := Vector3.ZERO
 var _clock := 0.0
 var _piece := ""
@@ -290,29 +262,22 @@ static func _flat(v: Vector3) -> Vector3:
 	return Vector3(v.x, 0.0, v.z)
 
 
-# The ram force whose punch is `punch` now: punch_of("ram", f) is linear in f, so this inverts
-# it exactly (heft, the sprint and the winch scale included).
 func ram_force(punch: float) -> float:
 	var base: float = combat.punch_of("ram", 0.0)
 	var per: float = combat.punch_of("ram", 1.0) - base
 	return (punch - base) / per if per > 0.0001 else 0.0
 
 
-# The slam force whose punch is `punch` (the slam row has no base term).
 func slam_force(punch: float) -> float:
 	var per: float = combat.punch_of("slam", 1.0)
 	return punch / per if per > 0.0001 else 0.0
 
 
-# --- Line Drive -----------------------------------------------------------------------
-
-# The committed throw direction: along the cable, away from the ball.
 func punch_dir(target: Node3D) -> Vector3:
 	var d := _flat(target.global_position - ctx.player.ball_position())
 	return d.normalized() if d.length() > 0.01 else _flat(combat._flat_aim()).normalized()
 
 
-# The punch's ram force: max(floor, share x the ball's planar speed).
 func punch_force() -> float:
 	return maxf(Weapons.LINE_PUNCH_FLOOR, Weapons.LINE_PUNCH_SHARE * ctx.player.planar_velocity().length())
 
@@ -323,8 +288,6 @@ func haul_stop(anchor: Vector3) -> Vector3:
 	return anchor - d.normalized() * Augments.MIN_ROPE if d.length() > Augments.MIN_ROPE else ball
 
 
-# The preview a tap draws from the pick to the click: on a body the 6 m throw arrow from the
-# machine down the cable, on a world anchor the rod to the arrival point 2.5 m short.
 func geometry(_fraction: float) -> Dictionary:
 	var kit = ctx.player.kit
 	var ball: Vector3 = ctx.player.ball_position()
@@ -378,14 +341,11 @@ func on_world(anchor: Vector3, _fraction: float, _mult: float) -> void:
 	ride.active = true
 	haul = {"ride": ride, "anchor": anchor, "seconds": ride.flight}
 	last_cue = {"on": "world", "seconds": ride.flight}
-	# Crowd control slides off for the haul plus the grace; damage still lands (the sprint's rule).
 	player.grant_immunity(ride.flight + Weapons.LINE_HAUL_GRACE)
 	player.body().set_velocity_now(ride.velocity)
 	player.indicator.set_shape("rivet_haul", player.yours({"kind": "line", "from": ball, "to": stop, "full_to": stop, "width": 1.0, "fill": 1.0}))
 
 
-# Existing map zip cables, pipes, canal lips, and trestle rails for this stage (strictly G0:
-# Rivet never spawns a temporary two-anchor standing rail-line).
 func map_rails() -> Array:
 	var stage_idx := int(ctx.flow.stage()) if ctx != null and ctx.flow != null and ctx.flow.has_method("stage") else -1
 	if stage_idx != _cached_stage:
@@ -480,20 +440,15 @@ func _step_pulses(delta: float) -> void:
 		if float(rec["left"]) > 0.0:
 			continue
 		pulses.erase(rec)
-		# A target freed while the pulse ran cannot be assigned to a typed local; drop the pulse.
 		if not is_instance_valid(rec["target"]):
 			continue
 		var target: Node3D = rec["target"]
 		var kit = ctx.player.kit
-		# The pulse runs down the cable: a line cut before it arrives carries nothing.
 		if not _alive(target) or not kit.hooked or not kit.on_body or kit.anchor_body != target:
 			continue
 		_punch(target, float(rec["force"]), float(rec["mult"]), rec["dir"])
 
 
-# The punch lands: a ram through punch_of("ram", f) x the chain multiplier, knock 34 along the
-# cable with the overdrive impact's lift. A Warden's closed guard takes posture only, capped; an
-# open core takes one ram contact and never shatters; a boss takes half and is not moved.
 func _punch(target: Node3D, force: float, mult: float, dir: Vector3) -> void:
 	var punch: float = combat.punch_of("ram", force) * mult
 	if _warden(target):
@@ -502,7 +457,6 @@ func _punch(target: Node3D, force: float, mult: float, dir: Vector3) -> void:
 		if not target.staggered():
 			result["gain"] = minf(float(result.get("gain", 0.0)), Weapons.LINE_WARDEN_POSTURE)
 			result["crack"] = false
-			# The shared glance fact drives both the slate burst and the low clank.
 			ctx.events.strike_deflected.emit(target, "ram", float(result["punch"]), float(result["plating"]))
 		target._apply_posture(result)
 	elif _boss(target):
@@ -537,7 +491,6 @@ func _step_haul(_delta: float) -> void:
 	_end_haul(true)
 
 
-# Arrival: the line lets go 2.5 m short and the ball keeps the haul's speed (a ride never cuts it).
 func _end_haul(arrived: bool) -> void:
 	if arrived:
 		ctx.player.body().set_velocity_now(haul["ride"].velocity)
@@ -569,8 +522,6 @@ func _on_cc_ignored(_kind: String) -> void:
 		_discover("rivet_shrugged", "", ctx.player.ball_position())
 
 
-# --- Foundry Cutter and its variants --------------------------------------------------
-
 func _heading() -> Vector3:
 	var ult = combat.ultimate
 	if ult != null and ult._ride != null:
@@ -578,7 +529,6 @@ func _heading() -> Vector3:
 	return combat._flat_aim()
 
 
-# The lens faces forward: the aim's yaw is clamped CUTTER_CLAMP_DEG off the travel heading.
 func beam_dir(aim: Vector3, heading := Vector3.ZERO) -> Vector3:
 	var h := _flat(heading if heading != Vector3.ZERO else _heading()).normalized()
 	var flat := _flat(aim)
@@ -615,9 +565,6 @@ func _commit_beam(from: Vector3, dir: Vector3, length: float, width: float) -> D
 		"kind": "line", "rivet_shape": true, "from": from, "to": endpoint, "full_to": endpoint, "fill": 1.0})
 
 
-# Every area hit selects from its committed record, including its terrain planes. The tests'
-# copy is shallow: the record's cells are committed and never rewritten, and a deep copy of a
-# level Breach's carve cost a tenth of its landing tick.
 func select(shape: Dictionary) -> Array:
 	selected_shapes.append(shape.duplicate())
 	var picks: Array = []
@@ -633,9 +580,6 @@ func select(shape: Dictionary) -> Array:
 	return picks
 
 
-# Each closed cell's box, for skipping the cells a machine is nowhere near: a hit inside a
-# cell or within hull of its faces is inside the box grown by hull. BOX_MARGIN covers the
-# plane tolerance the containment test allows.
 const BOX_MARGIN := 0.01
 
 
@@ -753,7 +697,6 @@ func _clip_faces(faces: Array, at: Vector3, normal: Vector3) -> Array:
 			var b: Vector3 = face[(i + 1) % face.size()]
 			var da := (a - at).dot(normal)
 			var db := (b - at).dot(normal)
-			# Use the same coplanar classification for keeping vertices and crossing edges.
 			da = 0.0 if absf(da) <= 0.0001 else da
 			db = 0.0 if absf(db) <= 0.0001 else db
 			if da <= 0.0:
@@ -825,8 +768,6 @@ func _bounds_distance(bounds: AABB, plane: Dictionary) -> Vector2:
 	return Vector2(centre - radius, centre + radius)
 
 
-# The cell's nearest and farthest signed distance from the plane: its box's when that settles
-# which side it is on, else its vertices'. Negating the normal negates and swaps both exactly.
 func _extent(cell: Dictionary, plane: Dictionary) -> Vector2:
 	var interval := _bounds_distance(cell["bounds"], plane)
 	if interval.x >= -0.0001 or interval.y <= 0.0001:
@@ -844,7 +785,6 @@ func _clip_cell(cell: Dictionary, plane: Dictionary) -> Dictionary:
 	var interval := _extent(cell, plane)
 	var low := interval.x
 	var high := interval.y
-	# A coplanar remnant has no volume and must not become a hull-forgiveness face.
 	if low >= -0.0001:
 		return _pack_cell([], [])
 	if high <= 0.0001:
@@ -856,9 +796,7 @@ func _clip_cell(cell: Dictionary, plane: Dictionary) -> Dictionary:
 	return _pack_cell(_clip_faces(cell["faces"], plane["at"], plane["normal"]), cell["planes"] + [plane])
 
 
-# Subtract a convex shadow, retaining disjoint convex parts outside its half-spaces.
 func _subtract_shadow(cell: Dictionary, shadow: Array, hull_boundary := false) -> Array:
-	# Drawn volume stops at terrain first. Hull forgiveness also needs the silhouette caps.
 	var planes: Array = shadow if hull_boundary else [shadow.back()] + shadow.slice(0, shadow.size() - 1)
 	for plane in planes:
 		if (not hull_boundary or not plane.get("solid", false)) and (_bounds_distance(cell["bounds"], plane).x >= -0.0001 or _all_outside(cell["vertices"], plane)):
@@ -868,8 +806,6 @@ func _subtract_shadow(cell: Dictionary, shadow: Array, hull_boundary := false) -
 	for index in planes.size():
 		var plane: Dictionary = planes[index]
 		var solid: bool = hull_boundary and bool(plane.get("solid", false))
-		# Wholly inside a plane leaves nothing outside it and the rest unchanged; wholly outside
-		# empties the rest. Both are what the two clips below would return.
 		if not solid:
 			var side := _extent(remaining, plane)
 			if side.x >= -0.0001 and not hull_boundary:
@@ -898,12 +834,6 @@ func _all_outside(vertices: Array, plane: Dictionary) -> bool:
 	return true
 
 
-# True when the part of cell inside plane would pass every later plane wholly inside it, so the
-# loop above would only skip them and return lit: then that part, which nothing keeps, is not
-# clipped (a level Breach's floor cut, the stand's whole carve, took two clips a part). The part's
-# corners are at most the cell's corners inside plane and its edges' crossings, made as _clip_faces
-# makes them; each later plane must hold them all, and a corner REST_DEPTH inside plane and inside
-# that plane by the tolerance stays in the part, so the part cannot read as wholly outside it.
 const REST_DEPTH := 0.05
 
 
@@ -963,23 +893,13 @@ func _face_shadow(origin: Vector3, face: Array) -> Array:
 		if normal.dot(centre - origin) > 0.0:
 			normal = -normal
 		planes.append({"at": origin, "normal": normal, "terrain": true})
-	# Partition the silhouette first; its contact plane cannot restrict exposed hulls outside it.
 	planes.append(contact)
 	return planes
 
 
-# The park's convex wedge colliders carry points, rather than triangle faces. Parks place the
-# same few wedges hundreds of times, and the face search is quartic in the points (about 100 ms a
-# wedge), so the faces are kept by point list for the life of the process. Readers map them
-# into world space and never write them. A wedge not kept yet is searched on the terrain
-# worker (_terrain_entry), never on the main thread: the warm-up meeting a stage's new wedges
-# held one physics tick for 400 to 900 ms on the 4080 (board #934, 13 Nov 2026).
 static var _convex_cache := {}
 static var _convex_lock := Mutex.new()
-# One lock per point list being searched, so a warm-up that meets 200 placements of a new wedge
-# searches it once: the other workers wait on that search and read the kept faces.
 static var _convex_searching := {}
-# Searches run, and those run on the main thread, for the hitch guard's counts.
 static var convex_searches := 0
 static var convex_searches_on_main := 0
 
@@ -1088,23 +1008,17 @@ func _collider_faces(shape: Shape3D) -> Array:
 	return faces
 
 
-# Discover actual terrain faces across the whole volume, not sparse rays in each cell.
-# Include the hull margin in the query so forgiveness cannot reach uncommitted cover.
 func _commit_terrain(origin: Vector3, cells: Array, shadows: Array, hull: Array = []) -> Array:
 	return _carve(origin, cells, shadows, hull, _terrain_near(origin, cells))
 
 
-# Carves the cells by found, _terrain_near's faces for them.
 func _carve(origin: Vector3, cells: Array, shadows: Array, hull: Array, found: Dictionary) -> Array:
 	if found.has("unreadable"):
-		# Still record the shadows of the faces found so far.
 		_shade(origin, TerrainFaces.merge(found["faces"]), cells, shadows, hull)
 		return []
 	return _shade(origin, TerrainFaces.merge(found["faces"]), cells, shadows, hull)
 
 
-# The terrain faces near the cells, with "unreadable" set when a shape there has none the carve
-# can read.
 func _terrain_near(origin: Vector3, cells: Array) -> Dictionary:
 	var bounds := AABB(origin, Vector3.ZERO)
 	for cell in cells:
@@ -1139,8 +1053,6 @@ func _terrain_near(origin: Vector3, cells: Array) -> Dictionary:
 					continue
 				var transform := collider.global_transform * collider.shape_owner_get_transform(owner)
 				for i in collider.shape_owner_get_shape_count(owner):
-					# The face boxes decide what is near; a debug mesh's box costs a park tile
-					# 120 ms the first time.
 					var entry := _terrain_entry(collider.shape_owner_get_shape(owner, i), transform)
 					if entry.is_empty() or not terrain.readable(entry):
 						return {"faces": faces, "unreadable": true}
@@ -1148,7 +1060,6 @@ func _terrain_near(origin: Vector3, cells: Array) -> Dictionary:
 	return {"faces": faces}
 
 
-# The shape's cached world faces (TerrainFaces), or {} for a shape the carve cannot read.
 func _terrain_entry(shape: Shape3D, transform: Transform3D) -> Dictionary:
 	var entry := terrain.cached(shape, transform)
 	if not entry.is_empty():
@@ -1161,12 +1072,6 @@ func _terrain_entry(shape: Shape3D, transform: Transform3D) -> Dictionary:
 	return terrain.request(shape, transform, local_faces)
 
 
-# Subtracts each face's shadow in face order, exactly as one _subtract_shadow pass per face
-# would; a cell's parts depend on that cell alone, so each cell takes every face in turn. A
-# shadow that a plane of a part, its box or the hull clears by a margin would leave that part
-# unchanged, so it skips the clip. Every part lies inside the cells' first box, and the
-# caller's hull planes are planes every cell lies behind. Shadows too thin for a margin skip by
-# their reach instead (FRUSTUM_MARGIN).
 func _shade(origin: Vector3, faces: Array, cells: Array, shadows: Array, hull: Array) -> Array:
 	var cuts := _cuts(origin, faces, cells, shadows, hull)
 	if cuts.is_empty():
@@ -1177,8 +1082,6 @@ func _shade(origin: Vector3, faces: Array, cells: Array, shadows: Array, hull: A
 	return lit
 
 
-# The faces' shadows that can change a cell, as [face, shadow, clearance, extent, frustum, span];
-# every shadow is recorded in shadows.
 func _cuts(origin: Vector3, faces: Array, cells: Array, shadows: Array, hull: Array) -> Array:
 	var reach := AABB()
 	for i in cells.size():
@@ -1214,7 +1117,6 @@ func _cell_cuts(cuts: Array, cell: Dictionary) -> Array:
 	return cuts.filter(func(cut): return (cut[5] as AABB).intersects(bounds))
 
 
-# Parts tested against a shadow so far: the late carve's measure of work done (LATE_WORK).
 var _shade_work := 0
 
 
@@ -1235,12 +1137,6 @@ func _shade_cell(origin: Vector3, cuts: Array, parts: Array) -> Array:
 	return parts
 
 
-# Grazing terrain (a bumpy floor seen from just above it) gives shadows whose corners are too
-# ill-conditioned for a clearance (MIN_DET), so those skip on reach instead. Every part lies
-# within far of the origin, so the shadow that can meet it is the frustum between the face and
-# the face pushed out along the origin's rays past far (scaled from its nearest point). A part
-# whose box misses the frustum's box, or that has a plane with the whole frustum FRUSTUM_MARGIN
-# outside it, keeps its volume, give or take the clip tolerance's sliver.
 const FRUSTUM_MARGIN := 0.001
 
 
@@ -1248,7 +1144,7 @@ func _frustum(origin: Vector3, face: Array, far: float) -> Array:
 	var near := INF
 	for i in range(1, face.size() - 1):
 		near = minf(near, origin.distance_to(_closest_triangle(origin, face[0], face[i], face[i + 1])))
-	# 5% over, for float32 error in near when a face's plane passes close to the origin.
+	# Godot Vector3 uses float32; 5% margin prevents near-origin clipping underflow.
 	var push := far / maxf(near, 0.000001) * 1.05 + 1.0
 	var points: Array = []
 	for v in face:
@@ -1271,9 +1167,7 @@ func _frustum_outside(planes: Array, frustum: Array) -> bool:
 	return false
 
 
-# Clipping keeps points up to SLACK past each plane (0.0001 tolerance plus float32 error), which
-# loosens the shadow; a corner on three unit planes moves at most 3 * SLACK / |det| (Cramer's rule).
-# A plane clears the shadow when every corner is that far, plus CLEAR_MARGIN, past it.
+# Godot Vector3 float32 clipping tolerance.
 const SLACK := 0.0002
 const CLEAR_MARGIN := 0.01
 const MIN_DET := 0.001
@@ -1290,8 +1184,6 @@ func _clearance(face: Array, shadow: Array) -> float:
 	return CLEAR_MARGIN + 3.0 * SLACK / det if det >= MIN_DET else INF
 
 
-# The shadow is every point origin + s * (v - origin) for v on the face and s >= 1. It lies past
-# a plane when each face corner is the clearance past it and no corner's ray turns back toward it.
 func _plane_clears(at: Vector3, normal: Vector3, origin: Vector3, face: Array, clearance: float) -> bool:
 	for v in face:
 		if (v - at).dot(normal) < clearance or (v - origin).dot(normal) < 0.0:
@@ -1306,7 +1198,6 @@ func _planes_clear(planes: Array, origin: Vector3, face: Array, clearance: float
 	return false
 
 
-# The box's six planes, read from the face's own box (extent).
 func _box_clears(box: AABB, extent: AABB, origin: Vector3, clearance: float) -> bool:
 	var low := box.position
 	var high := box.end
@@ -1348,7 +1239,6 @@ func _sector_cells(origin: Vector3, dir: Vector3, reach: float, half: float, wid
 		"hull": [{"at": origin + up * slab, "normal": up}, {"at": origin - up * slab, "normal": -up}]}
 
 
-# The sector's committed record once its cells are carved.
 func _sector_shape(sector: Dictionary, cells: Array, shadows: Array, centre := {}) -> Dictionary:
 	if centre.is_empty():
 		centre = _commit_beam(sector["origin"], sector["direction"], sector["length"], sector["width"])
@@ -1373,8 +1263,6 @@ func _clear_beams() -> void:
 	beam_shapes = []
 
 
-# One beam or wave hit. A Warden fills posture as gun bolts do, at half, under the set piece's
-# cap; a boss takes half; a machine is cut with no knock.
 func _beam_hit(enemy: Node3D, damage: float, from: Vector3) -> void:
 	_cut[enemy.get_instance_id()] = true
 	if _warden(enemy):
@@ -1396,7 +1284,6 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 	_last_aim = aim
 	if id == "juggernaut_drive":
 		return _bow_wave(ball)
-	# The middle beat is the peak's alone: it cuts there, once.
 	if _peak_beat(beat):
 		return 0
 	var extra := int(_knob("ult_volley", 0))
@@ -1420,7 +1307,6 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 	return hits
 
 
-# Juggernaut Drive's beat: a chevron bow wave throws machines beside the path ahead outward.
 func _bow_wave(ball: Vector3) -> int:
 	var heading := _flat(_heading()).normalized()
 	var side := Vector3(-heading.z, 0.0, heading.x)
@@ -1470,18 +1356,9 @@ func _peak_aim() -> Vector3:
 	return _last_aim if _last_aim != Vector3.ZERO else ctx.aim_forward()
 
 
-# Full Cut: the beam widens and sweeps FULL_CUT_DEG, half to each side of the aim, out to
-# FULL_CUT_REACH; every machine it crosses takes FULL_CUT_DAMAGE x heft once, no pierce cap.
-# The carve tests up to about 19,000 parts against terrain shadows (133 ms in the cloud, a tick
-# of 100 to 450 ms in a park), so it runs on a worker and the cut lands CUT_TICKS later (55 ms,
-# the Breach's "Beat later"), on the same tick every time so a seed replays. The terrain is
-# gathered here, on the peak tick, so the cut is the ground as it stood then. cut_ticks 0 carves
-# and lands on the peak tick, as before (a test's switch).
 const CUT_TICKS := LATE_TICKS
 var cut_ticks := CUT_TICKS
-# Cuts carving, oldest first: {task, due, sector, at, heft, record, out: {cells, shadows}}.
 var _cuts_due: Array = []
-# The worker's own kit, so its carve counts work apart from the main thread's Breach (_shade_work).
 var _carver = null
 
 
@@ -1519,7 +1396,6 @@ func _land_cut(shape: Dictionary, at: Vector3, heft: float) -> int:
 	return hits
 
 
-# Lands each cut on its due tick, waiting for its carve when the worker is still on it.
 func _step_cuts(now := Engine.get_physics_frames()) -> void:
 	while not _cuts_due.is_empty() and now >= int(_cuts_due[0]["due"]):
 		var job: Dictionary = _cuts_due.pop_front()
@@ -1531,21 +1407,16 @@ func _step_cuts(now := Engine.get_physics_frames()) -> void:
 			record["volley_hits"] = int(record.get("volley_hits", 0)) + hits
 
 
-# Drops every cut still carving, with its hits.
 func _drop_cuts() -> void:
 	for job in _cuts_due:
 		WorkerThreadPool.wait_for_task_completion(job["task"])
 	_cuts_due = []
 
 
-# The Breach Skid reach: 1.5 x the class landing radius, plus ult_radius.
 func breach_reach() -> float:
 	return Weapons.BREACH_REACH_SCALE * float(Ultimate.LANDING_RADIUS[_class() - 1]) + float(_knob("ult_radius", 0.0))
 
 
-# The Breach Skid: no plant. A forward cone along the path's heading hits for 60 x heft x chain,
-# throws machines forward (x ult_pins) so they pin, exits flat at the banked speed and hands back
-# a sprint charge. It counts as a slam for a burrower's marker and a drill crew's rig.
 func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	selected_shapes.clear()
 	var heading := _flat(_heading()).normalized()
@@ -1560,8 +1431,6 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		result = _breach(_late_shape(late), at, heading, reach, pins, damage)
 	else:
 		_late.append(late)
-	# Exit flat along the heading at the banked speed: the ride's release keeps its speed and
-	# loses the fall (A2-CRITIC: no floor; the speed gift is Sable's alone).
 	var ride = combat.ultimate._ride if combat.ultimate != null else null
 	if ride != null:
 		ride.mode = RideRail.LINE
@@ -1581,7 +1450,6 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	return result
 
 
-# The Breach Skid's hits on its carved sector: [hits, damage dealt].
 func _breach(shape: Dictionary, at: Vector3, heading: Vector3, reach: float, pins: float, damage: float) -> Array:
 	carve_stats["breach_hits"] += 1
 	var hits := 0
@@ -1602,73 +1470,31 @@ func _breach(shape: Dictionary, at: Vector3, heading: Vector3, reach: float, pin
 	return [hits, dealt]
 
 
-# The Breach Skid's carve shades its cells in order until it has tested LATE_WORK parts against
-# shadows in a tick (about 30 us of shading each, in the cloud and on Andrew's 4080 alike). A light carve
-# finishes on the landing tick and hits there. A heavy one (bumpy or curved ground) carries on a
-# tick at a time and hits once it is done, and never before LATE_TICKS (about 55 ms) after the
-# landing (Andrew's "Beat later" and "Spread every Breach", 2026-10-18). Work is counted, never
-# timed, so a replay is the same on any machine. The cells' parts join in cell order, as _shade
-# joins them, so the shape is the same as a carve made at once. LATE_WORK is sized from the 4080's
-# whole share tick: 1.5 shares a frame must stay under 16.7 ms, so a share at most 11.1 ms. Its worst
-# share tick was 11.4 ms at 200 parts (rows 23 and 27) and 19.1 ms at 290; 11.4 ms over 200 parts,
-# the tick's fixed cost included, is 0.057 ms a part, so 182 holds about 10.4 ms (a share can pass
-# its budget by part of a cell, at 200 as here). The p3 slope (1247 parts, 21 degrees) then hits 7
-# ticks (78 ms) after landing, as it did at 200, inside Andrew's "Smooth, 0.11 s" (2026-10-18); the
-# heaviest slopes stay over it (scrapkeep#137, row 27).
 const LATE_TICKS := 5
 const LATE_WORK := 182
-# The landing tick also gathers the faces and cuts, about as much again as a share, so its
-# share is smaller; flat ground (one part a cell, 96 cells) and a shallow bowl (158) still carve
-# and hit there. A
-# later carve's hits (selection and drawing) take a tick of their own after its last share.
-# Both keep a carve tick inside the frame's headroom on Andrew's 4080 (coordinator, 2026-10-18).
 const LANDING_WORK := 160
-# Level ground (Andrew's ruling, 18 Oct 2026, coordinator comment 6260010878 on #149, option B: "a
-# Breach on level park ground hits on the landing tick"; a 2 to 4 ms frame bump is allowed). A Breach
-# is on level ground when the face it lands on is within LEVEL_GROUND_DEG of straight up. The
-# park's ground is 2 m cells, never one plane, so such a landing also flattens its near-level faces
-# into larger polygons (TerrainFaces.merge_level: normals within LEVEL_TOLERANCE_DEG, every corner
-# within LEVEL_DEVIATION m of the region's plane) and its landing share is LEVEL_LANDING_WORK
-# parts (the coordinator's ruling 3, option A, the stand-sized budget; it does not follow LATE_WORK). A level carve that fits hits on the landing
-# tick; one that still needs more takes the late path. Andrew's stand: 859 parts become 101; of 80
-# sampled level park sites, 72 % fit (scrapkeep#73-B).
-# 5 degrees, against the park's 2 m cells (360,000 sampled, scrapkeep#73-B): 85 % are under 5, only
-# 0.3 % lie between 5 and 6 and 14 % are over 10, so the line sits in a gap in the ground, above
-# Andrew's stand (3.43) and the park's rolling 2 to 3.5 degrees, below every real slope. Steeper
-# landings are untouched: the plain merge, LANDING_WORK, a share a tick, the hit after the last
-# share and never before LATE_TICKS. Decided from the faces, never timed.
 const LEVEL_GROUND_DEG := 5.0
 const LEVEL_TOLERANCE_DEG := 2.0
 const LEVEL_DEVIATION := 0.05
 const LEVEL_LANDING_WORK := 400
 
-# The latest Breach carve landing() made, for a timing run to read its level, shares and work.
 var last_landing := {}
 
-# The tick's work budget; a test lowers it to see the stages.
 var late_work := LATE_WORK
 
 
-# The parts a Breach may test on its landing tick: LANDING_WORK, or on level ground
-# LEVEL_LANDING_WORK, in proportion when a test lowers late_work (a lowered late_work lowers both).
 func landing_work(level: bool) -> int:
 	if level:
 		return maxi(1, roundi(float(late_work) * LEVEL_LANDING_WORK / LATE_WORK))
 	return mini(late_work, LANDING_WORK)
 
 
-# True when the face under `at` is within LEVEL_GROUND_DEG of straight up.
 func level_ground(faces: Array, at: Vector3) -> bool:
 	var normal := TerrainFaces.ground_normal(faces, at)
 	return normal.y >= cos(deg_to_rad(LEVEL_GROUND_DEG))
 
-# Breach carves waiting to hit, oldest first: {centre, start, due, sector, cell_cuts, next,
-# shaded, lit, level, work, shadows, id, at, heading, reach, pins, damage, record}, with result once carved.
 var _late: Array = []
 
-# What the carve did, so a timing run can prove it fired (lesson 34): full_cut commits, Breach
-# carves started, ones that finished on their first share (flat: the landing tick) or took more
-# (slope), ones with nothing to cut, shares taken and hits delivered.
 var carve_stats := {"full_cut": 0, "breach_started": 0, "breach_flat": 0, "breach_slope": 0, "breach_uncut": 0, "shares": 0, "breach_hits": 0}
 
 
@@ -1698,8 +1524,6 @@ func _carve_late(id: String, at: Vector3, heading: Vector3, reach: float, pins: 
 	return late
 
 
-# One tick's share of the carve, budget parts at most (late_work when negative); true once
-# it is done.
 func _shade_late(late: Dictionary, budget := -1) -> bool:
 	if late.has("result"):
 		return true
@@ -1726,7 +1550,6 @@ func _late_shape(late: Dictionary) -> Dictionary:
 	return _sector_shape(late["sector"], late["result"], late["shadows"], late["centre"])
 
 
-# Each waiting carve takes one share per tick after its landing tick.
 func _step_late(now := Engine.get_physics_frames()) -> void:
 	for late in _late:
 		if now > int(late["start"]) and now > int(late["shaded"]) and not late.has("result"):
@@ -1740,8 +1563,6 @@ func _step_late(now := Engine.get_physics_frames()) -> void:
 			combat.ultimate.report_landing(late["record"], late["id"], late["at"], result)
 
 
-# Drops every late carve and its hits. report: each still closes its set piece's landing, with
-# no hits, so ultimate_landed fires once per strike.
 func _drop_late(report := false) -> void:
 	var dropped := _late
 	_late = []
@@ -1750,8 +1571,6 @@ func _drop_late(report := false) -> void:
 			combat.ultimate.report_landing(late["record"], late["id"], late["at"], [0, 0.0])
 
 
-# Juggernaut Drive's flight: every machine whose hull passes within the corridor of the ball's
-# centre is rammed once, knock half outward and half forward; machines never stop the ball.
 func _step_piece(delta: float) -> void:
 	_shoulder = maxf(0.0, _shoulder - delta)
 	if _scar_left > 0.0:
@@ -1779,7 +1598,6 @@ func drive_step(ball: Vector3) -> int:
 	for enemy in _enemies():
 		var to := _flat(enemy.global_position - ball)
 		var closed_guard: bool = _warden(enemy) and not enemy.staggered()
-		# A guard that closes on the ball keeps passing it until the ball is clear (BITE-PIN).
 		if closed_guard and _excepted.has(enemy):
 			held.release(enemy)
 			_excepted.erase(enemy)
@@ -1807,7 +1625,6 @@ func drive_step(ball: Vector3) -> int:
 	return rams
 
 
-# Held by the ball until it is clear of each body, never dropped with the ball inside one.
 func _release_exceptions() -> void:
 	var held = ctx.player.exceptions if ctx != null and ctx.player != null else null
 	for enemy in _excepted:
@@ -1816,10 +1633,6 @@ func _release_exceptions() -> void:
 	_excepted.clear()
 
 
-# --- Discoveries ----------------------------------------------------------------------
-
-# A pilot card takes a later physics tick than the framework card it extends (B6's rule); ""
-# extends none and waits only for the next tick.
 func _discover(id: String, after: String, at: Vector3) -> void:
 	_cards[id] = {"after": after, "at": at, "queued": Engine.get_physics_frames()}
 
@@ -1836,8 +1649,6 @@ func _step_cards() -> void:
 			_card_frame = frame
 			break
 
-
-# --- The tick -------------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
 	if ctx == null or ctx.flow == null or not ctx.flow.in_play():
@@ -1858,8 +1669,6 @@ func step(delta: float) -> void:
 	_step_cards()
 
 
-# Caches the static terrain around the ball on workers ahead of the carve, which otherwise
-# waits for the build (TerrainFaces).
 const WARM_EVERY := 45
 const WARM_REACH := 60.0
 
@@ -1878,7 +1687,6 @@ func _notification(what: int) -> void:
 			_carver = null
 
 
-# Warm-up cycles run, for a hitch guard: while Rivet stands, terrain.builds should stop growing.
 var warm_cycles := 0
 
 

@@ -1,15 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-# The winch drone (DESIGN-V2 section 10): a rotor with a winch drum slung beneath. It
-# hovers HOVER metres up, out of ramming reach, so a gun or a jump is how you reach it.
-# Its warning is a lane down its cable's line toward the ball; when it fills, a ball
-# the lane contains is hooked and winched toward the pack (the middle of the other
-# enemies near it, or the drone itself when it flies alone) at PULL for up to WINCH
-# seconds, through the hold bound (holds.gd). A jump, a boost or a smash snaps the cable,
-# and so does planar speed at SNAP_SPEED, which kicks the ball forward; so does killing the
-# drone. It draws no cable of its own (holds.gd draws the binding), so strain() is the
-# reading a cable glow would take.
-
 const HOVER := 5.5
 const CLIMB := 4.0
 const LANE_LENGTH := 20.0
@@ -31,11 +21,7 @@ var _spin := Vector2.ZERO
 var _coast_from := Vector2.ZERO
 var _aim_angle := 0.0
 var _level_from := 0.0
-# Numeric control seam: disabling the body pose touches no combat state.
 var windup_pose_enabled := true
-# The rotor idles at IDLE_SPIN rad/s whenever the drone is not attacking: slow enough that the wind-up's
-# spin-up (up to 2 * 3.25 * TAU rad/s at release) always reads as faster from a quarter of the way in.
-# The angle is a function of the physics frame count, so a repeated _pose call in one tick agrees.
 const IDLE_SPIN := 4.0
 var _idle_from := 0
 var _spin_base := 0.0
@@ -57,11 +43,6 @@ func _configure(threat: float) -> void:
 	row["breaks"] = (row["breaks"] as Array) + ["speed"]
 
 
-# C18 dressing (enemy_winch_drone.glb): a small Fleet oxide crew under one flat 16-sided rotor
-# (1.6 m radius, 2.0 m up) with a cable drum hung low on a central hanger, the cable's exit
-# clear ahead of it. e11_cable_guide pitches the assembly and spins drum and rotor. The glb is read
-# once and its meshes are shared; each drone adds only its own flashing body material, set on the
-# glb's fleet_paint surface (Fleet oxide, RUST).
 static var _warned_asset := false
 static var _shared: Array = []
 
@@ -151,7 +132,6 @@ func _on_broken(_method: String) -> void:
 		fleet.discover("cable_snap", _real_ball())
 
 
-# How taut the cable is, 0 to 1: the ball's planar speed over the speed that snaps it.
 func strain() -> float:
 	var player = _player()
 	if player == null:
@@ -159,7 +139,6 @@ func strain() -> float:
 	return clampf(player.planar_velocity().length() / SNAP_SPEED, 0.0, 1.0)
 
 
-# Where it winches you: the middle of the other enemies within PACK_REACH, or itself.
 func pack_centre() -> Vector3:
 	var sum := Vector3.ZERO
 	var count := 0
@@ -185,8 +164,6 @@ func _move(delta: float, desired: Vector3) -> void:
 func _pose() -> void:
 	if _aim == null:
 		return
-	# WARN uses only counter.gd's clock. LIVE starts at the endpoint on the release tick.
-	# The local +Z cable direction pitches down around +X; reaction_pivot stays owned by enemy.gd.
 	if not windup_pose_enabled:
 		_aim.transform = Transform3D.IDENTITY
 		_rotor.transform = _rotor_rest
@@ -194,7 +171,6 @@ func _pose() -> void:
 		return
 	if phase == Phase.WARN:
 		if _pose_phase == Phase.ROAM:
-			# During the coast, _spin owns the current angle; the idle clock has not resumed yet.
 			_spin_base = _spin.y if _recovering else _idle_angle()
 		var progress := clampf(_warn_progress(), 0.0, 1.0)
 		_aim_angle = deg_to_rad(32.0) * smoothstep(0.0, 1.0, progress)
@@ -209,7 +185,6 @@ func _pose() -> void:
 			_level_from = _aim_angle
 			_recovering = true
 		if _recovering:
-			# _end resets _t. Coast forwards to whole turns, then hand the rotor back to the idle turn.
 			var recovery := clampf(_t / 0.25, 0.0, 1.0)
 			_aim_angle = _level_from * (1.0 - smoothstep(0.0, 1.0, recovery))
 			var stops := Vector2(ceilf(_coast_from.x / TAU), ceilf(_coast_from.y / TAU)) * TAU

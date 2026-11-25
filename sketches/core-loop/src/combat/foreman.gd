@@ -1,21 +1,5 @@
 extends "res://src/combat/enemy.gd"
 
-# The Foreman (design-v3/ENEMY-PRIORITY.md section 4, lever 3): a kill-first buffer. The lobber's
-# cart with a punch clock and a twin steam-horn mast, standing over its crew. It never attacks,
-# so it never asks the attacker budget and lays no threat warning; its crew attack as they would.
-#
-# - Its crew is its director pack (pack_seq, set by world.gd on the same frame), claimed on its
-#   first tick; a Foreman spawned outside a pack claims the unclaimed enemies within CLAIM_RADIUS.
-#   A thin tether runs from a reel on its mast to each crew member while both stand.
-# - Every WIPE_EVERY seconds it wipes its crew's plating shred (combat.wipe_shred), so a pack you
-#   are grinding down closes up again. The horn blasts one beat (129 BPM) before each wipe:
-#   SpecialCues.tell(self) on that frame, the signal brass lit until the wipe.
-# - Kill it and its crew clocks out for CLOCK_OUT seconds: none of them starts an attack
-#   (attack_budget.gd clocked_out). The SHIFT OVER stamp and steam sigh on its death are
-#   machine_fx's and special_voice's (the special cues branch, PR #58).
-# - A kill while its crew still stands is the codex trick "shift_over".
-
-# Loaded, not preloaded, until the special cues branch lands; then this becomes a preload.
 const SPECIAL_CUES := "res://src/combat/special_cues.gd"
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
@@ -29,8 +13,6 @@ signal overtime_primed(ally: Node3D)
 
 const SpecialRig := preload("res://src/presentation/special_rig.gd")
 const MODEL := "res://assets/models/world_one/enemy_foreman.glb"
-# Start values (ENEMY-PRIORITY lever 3, the priority proof's model row): health the model was
-# read on, a 5 s wipe, a 1.5 s clock-out.
 const HP := 120.0
 const SCRAP := 6
 const WIPE_EVERY := 5.0
@@ -38,9 +20,6 @@ const BEAT := 60.0 / 129.0
 const HORN_LEAD := BEAT
 const CLOCK_OUT := 1.5
 const CLAIM_RADIUS := 30.0
-# Overtime Sync Whistle (W47-E3): 0.90 s twin steam blasts when a tethered ally drops < 50% HP.
-# Interrupting during the whistle shatters plating across the entire tethered squad; completing it
-# primes the injured ally for an immediate strike. Obeys AttackBudget and 0.2 s inter-warning gap.
 const OVERTIME_HP_SHARE := 0.5
 const OVERTIME_WARN := 0.90
 const OVERTIME_COOLDOWN := 6.0
@@ -50,14 +29,11 @@ const OVERTIME_BLAST_DAMAGE := 8.0
 const OVERTIME_BLAST_SHOVE := 10.0
 const OVERTIME_INTERRUPT_KNOCK := 6.0
 const OVERTIME_INTERRUPT_DAMAGE := 15.0
-# Quick sync (STORY-MAP.md, WORLD1-DEMO-CATALYST.md): the horn snaps nearby chasers into a tight
-# ball-facing arc ahead of the Shift Boss in one beat, then releases them to press together.
 const FORMATION_RADIUS := 6.5
 const FORMATION_SLOT_RADIUS := 3.8
 const FORMATION_ARC := PI * 0.65
 const SYNC_REACH := CLAIM_RADIUS
 const SYNC_BEAT_MARGIN := 0.85
-# The lobber's 2.4 m footprint, raised to cover the clock cabinet (Y -2 to 3.6, enemy_foreman.py).
 const BODY_SIZE := Vector3(2.4, 5.6, 2.4)
 const BODY_CENTER := Vector3(0.0, 0.8, 0.0)
 const TETHER_FALLBACK := Vector3(0.0, 4.2, 0.0)
@@ -123,8 +99,6 @@ func _build_body() -> void:
 		return
 	_signal_material = Palette.solid(Palette.BRASS, 0.0)
 	_signal_material.vertex_color_use_as_albedo = true
-	# On screen the glb's own scene stands in, so its idle, tell and break clips play; the
-	# sockets, collider and special_tell signal are as before (a headless run copies meshes).
 	var model := SpecialRig.seat(self, _visual_parent(), MODEL, "foreman")
 	for part in parts:
 		var mi: MeshInstance3D = model.find_child(part.name, true, false) as MeshInstance3D if model != null else null
@@ -146,7 +120,6 @@ func _build_body() -> void:
 			_reels.append(_sockets[socket])
 
 
-# A body that still reads as the Foreman if the model is missing: the cabinet, the mast, the horn.
 func _fallback_body() -> void:
 	var pivot := _visual_parent()
 	_base_color = Palette.RUST
@@ -199,7 +172,6 @@ static func _parts() -> Array:
 	return _shared
 
 
-# A node's transform in the model's root space, read before the scene is in a tree.
 static func _in_scene(node: Node3D, scene: Node3D) -> Transform3D:
 	var xform := node.transform
 	var ancestor := node.get_parent()
@@ -243,8 +215,6 @@ static func _ring_material() -> StandardMaterial3D:
 	return _sync_ring_material
 
 
-# The tethers: one line mesh in world space, redrawn each tick from the reels to the crew,
-# plus a shared brass ribbon on the ground shown only during the one-beat horn sync.
 func _build_tethers() -> void:
 	_tether_mesh = ImmediateMesh.new()
 	_tethers = MeshInstance3D.new()
@@ -281,7 +251,6 @@ func _physics_process(delta: float) -> void:
 	if standing_crew().is_empty():
 		if _overtime_active:
 			_cancel_overtime()
-		# A pack-less Foreman keeps looking for hands until it has some.
 		if not _in_pack() and Engine.get_physics_frames() % Engine.physics_ticks_per_second == 0:
 			_claim()
 		_clock = 0.0
@@ -473,7 +442,6 @@ func take_damage(amount: float) -> float:
 	return super(amount)
 
 
-# The crew: the Foreman's director pack, or with no pack every unclaimed enemy within reach.
 func _claim() -> void:
 	var pack := int(get_meta(AttackBudget.PACK_META, -1))
 	for other in get_tree().get_nodes_in_group("enemy"):
@@ -506,8 +474,6 @@ func standing_crew() -> Array:
 	return crew
 
 
-# The horn: the special's tell, on the beat before the wipe. Picture and sound start here,
-# and nearby chasers snap into a tight formation ahead of the Shift Boss in that beat.
 func _horn() -> void:
 	horns += 1
 	if ResourceLoader.exists(SPECIAL_CUES):
@@ -539,7 +505,6 @@ func _snap_formation() -> void:
 	forward.y = 0.0
 	forward = forward.normalized() if forward.length_squared() > 0.001 else Vector3.FORWARD
 	var right := Vector3(-forward.z, 0.0, forward.x)
-	# Order left-to-right relative to the ball direction so chasers never cross paths on the snap.
 	chasers.sort_custom(func(a: Node3D, b: Node3D) -> bool:
 		var da := a.global_position - global_position
 		var db := b.global_position - global_position
@@ -566,7 +531,6 @@ func _snap_formation() -> void:
 
 func _wipe() -> void:
 	wipes += 1
-	# A pack-less Foreman takes on whoever has walked into reach since.
 	if not _in_pack():
 		_claim()
 	var combat = _combat()
@@ -607,7 +571,6 @@ func _show_signal(level: float) -> void:
 			_sync_ring.scale = Vector3(pulse, 1.0, pulse)
 
 
-# The clock's one hand ticks a twelfth of a turn on every beat (the presence loop's tick).
 func _tick_hand(_delta: float) -> void:
 	if _hand == null:
 		return
@@ -635,7 +598,6 @@ func _draw_tethers() -> void:
 	_tether_mesh.surface_end()
 
 
-# Killed with its crew standing: the trick fires and the crew clocks out.
 func _die() -> void:
 	if _overtime_active:
 		_interrupt_overtime()
@@ -656,7 +618,6 @@ func _die() -> void:
 	crew.clear()
 	if _tether_mesh != null:
 		_tether_mesh.clear_surfaces()
-	# The tethers are not debris: the death scatter takes every visible mesh.
 	if _tethers != null:
 		_tethers.visible = false
 	if _sync_ring != null:
@@ -664,7 +625,6 @@ func _die() -> void:
 	super._die()
 
 
-# Freed without dying (a stage teardown): its crew are nobody's hands any more.
 func _exit_tree() -> void:
 	if _overtime_active:
 		_cancel_overtime()

@@ -1,14 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-# The bola thrower (DESIGN-V2 section 10): a crew figure with a bola spinning overhead.
-# It throws at where the ball will be in FLIGHT seconds: a projectile reticle on the
-# landing point under a dotted flight trace (W2's grammar, set_flight), and the bola
-# flies that exact arc, slowly, so a read is always possible. If the landing ring holds
-# the ball when the bola lands it wraps it: a sting of damage, then cords that bleed its
-# speed and drag it down out of the air for up to WRAP seconds. A jump, a boost or a
-# smash bursts the cords. As the director's punisher it lands on a ball another unit
-# holds.
-
 const FLIGHT := 1.3
 const RING_RADIUS := 3.2
 const RING_REACH := 5.0
@@ -31,7 +22,6 @@ func _configure(threat: float) -> void:
 	_set_health(HP * threat)
 	scrap_value = 4
 	weight = 1.0
-	# At TELL_FLOOR (challenge_dials.gd): the whirl is the throw's tell.
 	warn_seconds = 0.6
 	live_seconds = FLIGHT + WRAP
 	rest_seconds = 3.2
@@ -39,16 +29,8 @@ func _configure(threat: float) -> void:
 	keep_near = 14.0
 
 
-# C13 dressing (enemy_bola_thrower.glb). The counter's capsule crew is replaced by the glb's
-# crew and raised arm (the collider _add_capsule laid stays) and the bola is the glb's tilted
-# hoop with a weighted end each side. The glb is read once; every thrower shares its meshes and
-# adds only its own flashing body material as a surface override (the hoop's hazard material
-# is one shared resource, as the base gave every bola the same look).
 const SPIN := 0.25
 const WIND_SPIN := 0.35
-# The hoop's ring axis (the glb's local +Y) is seated 58 degrees off vertical toward a diagonal, so
-# front, side and rear cameras each look at the opening at about 0.6 of full face-on. The whirl is
-# about the ring's own axis, so the opening never rolls edge-on.
 const SEAT_AXIS := Vector3(0.6, 0.53, 0.6)
 
 static var _warned_asset := false
@@ -113,7 +95,6 @@ func _commit(_to_ball: Vector3) -> Node3D:
 	return ring
 
 
-# The reticle stays open through the wind-up and closes over the flight.
 func _warn_progress() -> float:
 	return 0.0
 
@@ -122,7 +103,6 @@ func _go_live() -> void:
 	_landed = false
 
 
-# The loop leaves the crew keeping the seat it had, so it reads open in flight too.
 func _take_flight() -> void:
 	_flight_basis = global_basis * _seat()
 	_bola.top_level = true
@@ -140,7 +120,6 @@ func _live(_delta: float) -> bool:
 		return true
 	if not _landed:
 		_landed = true
-		# The flight never takes the ring to its end, so the landing is drawn as the bola arrives.
 		ring.land()
 		_bola.top_level = false
 		_bola.position = Vector3(0.0, CREW_HALF + 1.1, 0.0)
@@ -164,9 +143,6 @@ func _on_end() -> void:
 		_bola.basis = _seat() * Basis(Vector3.UP, _spin)
 
 
-# The loop whirls faster through the wind-up, easing with the warning's own progress
-# (WARN phase, _t / warn_seconds); it reads that clock and adds none. The whirl is about the
-# ring's own axis, in flight as well, so the opening stays open on every camera.
 func _pose() -> void:
 	if _bola != null:
 		var wind := clampf(_t / warn_seconds, 0.0, 1.0) if phase == Phase.WARN else 0.0

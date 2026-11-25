@@ -1,21 +1,5 @@
 extends Node
 
-# W50-ISAAC-RELICS: Deep module (Rule 7) owning runtime behaviour, committed geometry,
-# anti-loop guards, and lifecycle resets for all 12 new World 1–3 kit-swap relics:
-#   W1 symmetry swaps (6): arc_sling (bank_arc), voltaic_ring (arc_ring),
-#     fan_cylinder (fan_burst), drill_auger (auger_slam),
-#     thermite_dive (thermite_slam), zip_cluster (cable_cluster).
-#   W2/W3 transformational swaps / RoR2 alternate loadouts (6):
-#     wrecking_chain (claw_whirl), tape_loop (ledger_echo), siege_mortar (cannon_mortar),
-#     halo_coil (halo_discharge), slotted_rail (rail_vault), updraft_snare (snare_detonate).
-#
-# Invariants enforced here:
-# - Proc depth strictly 1: every follow-up / echo / secondary strike fires as `item_proc` (`bits = 0`).
-# - Single repeat per cause: no swap re-arms itself or refunds its own cost.
-# - Zero movement lockout: never writes the ball's velocity, never adds `plant` or cast times.
-# - Zero HAZARD player colour: all marks use pilot colour or Palette.BRASS / COPPER / AMBER / ARC / LEDGER_CREAM / ANCIENT.
-# - Zero static mutable state: all transient timers/records reset on attempt, stage, death, and run end.
-
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -28,14 +12,12 @@ const Palette := preload("res://src/core/palette.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 
-# --- Sable: Arc Sling (bank_arc) ---
 const ARC_CHORD_DURATION := 2.5
 const ARC_CHORD_TICK := 0.25
 const ARC_CHORD_WIDTH := 2.4
 const ARC_CHORD_DAMAGE := 9.0
 const ARC_CHORD_CAP := 3
 
-# --- Sable: Voltaic Ring (arc_ring) ---
 const HALO_RANGE := 24.0
 const HALO_LIFE := 0.85
 const HALO_RADIUS_MIN := 1.2
@@ -43,7 +25,6 @@ const HALO_RADIUS_MAX := 3.6
 const HALO_DAMAGE_MULT := 0.65
 const HALO_CAP := 6
 
-# --- Rivet: Fan Cylinder (fan_burst) ---
 const FAN_STAGGER_S := 0.05
 const FAN_SPREAD_DEG := 3.5
 const FAN_FOLLOW_MULT := 0.55
@@ -51,14 +32,12 @@ const FAN_SIXTH_MULT := 1.4
 const FAN_SIXTH_BOUNCES := 2
 const FAN_CYLINDER_ROUNDS := 6
 
-# --- Rivet: Drill Auger (auger_slam) ---
 const AUGER_RADIUS := 4.5
 const AUGER_DURATION := 1.6
 const AUGER_TICK := 0.4
 const AUGER_DAMAGE := 10.0
 const AUGER_CAP := 2
 
-# --- Kest: Thermite Dive (thermite_slam) ---
 const THERMITE_GLIDE_GRACE := 1.2
 const THERMITE_DETONATE_RADIUS := 14.0
 const THERMITE_SEAM_LENGTH := 14.0
@@ -67,11 +46,9 @@ const THERMITE_SEAM_DURATION := 2.0
 const THERMITE_SEAM_TICK := 0.4
 const THERMITE_SEAM_DAMAGE := 9.0
 
-# --- Kest: Zip Cluster (cable_cluster) ---
 const CLUSTER_COUNT := 3
 const CLUSTER_DAMAGE_MULT := 0.75
 
-# --- Tarn (W2): Wrecking Chain (claw_whirl) ---
 const WHIRL_DURATION := 0.45
 const WHIRL_ARC_RAD := PI
 const WHIRL_RADIUS_MIN := 3.5
@@ -80,11 +57,9 @@ const WHIRL_BOWL_RADIUS := 2.4
 const WHIRL_BOWL_DAMAGE := 18.0
 const WHIRL_BOWL_KNOCK := 22.0
 
-# --- Tally (W2): Tape Loop (ledger_echo) ---
 const TAPE_ECHO_DELAY := 0.3
 const TAPE_ECHO_MULT := 0.65
 
-# --- Cannon (W3): Siege Mortar (cannon_mortar) ---
 const MORTAR_REACH_MIN := 10.0
 const MORTAR_REACH_MAX := 26.0
 const MORTAR_RADIUS := 6.5
@@ -93,7 +68,6 @@ const MORTAR_STAGGER_S := 0.22
 const MORTAR_DAMAGE_MIN := 18.0
 const MORTAR_DAMAGE_MAX := 32.0
 
-# --- Sable (W3): Halo Coil (halo_discharge) ---
 const ORBIT_ORBS := 3
 const ORBIT_RADIUS := 5.5
 const ORBIT_SPEED := 3.6
@@ -102,13 +76,11 @@ const ORBIT_HIT_RADIUS := 2.2
 const ORBIT_HIT_CD := 0.45
 const ORBIT_DAMAGE := 11.0
 
-# --- Rivet (W2): Slotted Rail (rail_vault) ---
 const RAIL_SPARK_COUNT := 4
 const RAIL_SPARK_GAP := 0.15
 const RAIL_SPARK_DAMAGE := 9.0
 const RAIL_SPARK_RANGE := 22.0
 
-# --- Kest (W3): Updraft Snare (snare_detonate) ---
 const SNARE_APEX_LIFT := 5.5
 const SNARE_DURATION := 1.4
 const SNARE_APEX_DAMAGE := 10.0
@@ -136,8 +108,6 @@ var last_swap := {}
 var swap_counts := {}
 
 
-# --- Static pure anti-loop & colour guards ---------------------------------------------
-
 static func voltaic_follows(source: String, mutation: String, blazing: bool) -> bool:
 	return source == "weapon" and mutation == "arc_ring" and blazing
 
@@ -162,8 +132,6 @@ static func player_color_safe(c: Color) -> bool:
 	return not Color(c.r, c.g, c.b, 1.0).is_equal_approx(Color(Palette.HAZARD.r, Palette.HAZARD.g, Palette.HAZARD.b, 1.0))
 
 
-# --- Setup & lifecycle -----------------------------------------------------------------
-
 func setup(ctx_ref, combat_ref) -> void:
 	name = "RelicSwaps"
 	ctx = ctx_ref
@@ -179,7 +147,6 @@ func setup(ctx_ref, combat_ref) -> void:
 
 
 func _register_dispatches() -> void:
-	# New line skills (4).
 	combat._line_skills["bank_arc"] = {
 		"on_body": _bank_arc_body,
 		"on_world": _bank_arc_world,
@@ -200,7 +167,6 @@ func _register_dispatches() -> void:
 		"on_world": _rail_vault_world,
 		"geometry": _rail_vault_geometry,
 	}
-	# New specials (3).
 	combat._specials["halo_discharge"] = {
 		"geometry": func(f: float): return combat._discharge_geometry(f),
 		"fire": _fire_halo_discharge,
@@ -257,8 +223,6 @@ func _is_blazing(shot_desc: Dictionary) -> bool:
 	return SpeedTier.of(planar, cruise) >= SpeedTier.BLAZING
 
 
-# --- Main physics step -----------------------------------------------------------------
-
 func step(delta: float, enemies: Array) -> void:
 	if ctx == null or combat == null or ctx.player == null:
 		return
@@ -284,8 +248,6 @@ func _track_glide(delta: float) -> void:
 	elif _glide_left > 0.0:
 		_glide_left = maxf(0.0, _glide_left - delta)
 
-
-# --- 1. Sable W1: Arc Sling (bank_arc) -------------------------------------------------
 
 func _bank_arc_body(target: Node3D, fraction: float, mult: float) -> void:
 	if Augments.anchor_line(target):
@@ -346,8 +308,6 @@ func _step_arc_chords(delta: float, enemies: Array) -> void:
 			kept.append(c)
 	_arc_chords = kept
 
-
-# --- 2 & 3. Weapon hooks: Voltaic Ring (arc_ring) & Fan Cylinder (fan_burst) ----------
 
 func on_weapon_fire(weapon: String, source: String, shot_desc: Dictionary, muzzle: Vector3, forward: Vector3, reach: float, damage: float) -> void:
 	if source != "weapon" or ctx == null or ctx.player == null:
@@ -465,8 +425,6 @@ func _step_fan_queue(delta: float) -> void:
 	_fan_queue = kept
 
 
-# --- 4. Rivet W1: Drill Auger (auger_slam) ---------------------------------------------
-
 func _on_skid_smashed(at: Vector3, _hits: int) -> void:
 	if ctx == null or ctx.player == null or not ctx.flow.in_play():
 		return
@@ -485,7 +443,6 @@ func _on_skid_smashed(at: Vector3, _hits: int) -> void:
 		"ticks_fired": 0,
 		"color": ClassDef.RIVET_COLOR,
 	})
-	# +1 heft breach obeying HEFT-DESTRUCTIBLES.md hard +1 tier cap (never +2).
 	ctx.break_props(at, AUGER_RADIUS, "auger_slam")
 	combat.effects.ring(at, AUGER_RADIUS, ClassDef.RIVET_COLOR)
 	combat.effects.ring(at, AUGER_RADIUS * 0.55, Palette.COPPER)
@@ -515,8 +472,6 @@ func _step_augers(delta: float, enemies: Array) -> void:
 	_augers = kept
 
 
-# --- 5. Kest W1: Thermite Dive (thermite_slam) -----------------------------------------
-
 func _on_demo_slammed(at: Vector3) -> void:
 	if ctx == null or ctx.player == null or not ctx.flow.in_play() or _thermite_detonating:
 		return
@@ -540,7 +495,6 @@ func _on_demo_slammed(at: Vector3) -> void:
 	})
 	combat.effects.beam(at + Vector3.UP * 0.25, to_pt + Vector3.UP * 0.25, ClassDef.KEST_COLOR, 0.35)
 	combat.effects.ring(at, THERMITE_DETONATE_RADIUS, Palette.AMBER)
-	# Auto-detonate already-stuck charges within 14 m (skipping fresh drop_or_slam minis from this tick).
 	_thermite_detonating = true
 	var detonated := 0
 	var candidates: Array = []
@@ -594,8 +548,6 @@ func _step_seams(delta: float, enemies: Array) -> void:
 	_seams = kept
 
 
-# --- 6. Kest W1: Zip Cluster (cable_cluster) -------------------------------------------
-
 func _cable_cluster_body(body: Node3D, fraction: float, mult: float) -> void:
 	var start: Vector3 = ctx.player.ball_position()
 	var anchor: Vector3 = ctx.player.kit.anchor
@@ -622,8 +574,6 @@ func _drop_wire_cluster(from_pt: Vector3, to_pt: Vector3, mult: float) -> void:
 		dropped += 1
 	_record("cable_cluster", {"from": from_pt, "to": to_pt, "dropped": dropped, "color": ClassDef.KEST_COLOR})
 
-
-# --- 7. Tarn W2: Wrecking Chain (claw_whirl) -------------------------------------------
 
 func _tarn_claw():
 	return combat.get_node_or_null("TarnClaw")
@@ -716,8 +666,6 @@ func _step_whirls(delta: float, enemies: Array) -> void:
 	_whirls = kept
 
 
-# --- 8. Tally W2: Tape Loop (ledger_echo) ----------------------------------------------
-
 func on_ledger_cast(point: Vector3, damage: float, _shot_desc: Dictionary) -> void:
 	if ctx == null or ctx.player == null:
 		return
@@ -755,8 +703,6 @@ func _step_tape_echoes(delta: float) -> void:
 		_record("ledger_echo_landed", {"point": pt, "hits": hits, "damage": dmg, "source": "item_proc", "color": ClassDef.TALLY_COLOR})
 	_tape_echoes = kept
 
-
-# --- 9. Cannon W3: Siege Mortar (cannon_mortar) ----------------------------------------
 
 func _mortar_geometry(f: float) -> Dictionary:
 	var reach := AbilityState.Gauge.scaled(f, MORTAR_REACH_MIN, MORTAR_REACH_MAX)
@@ -806,8 +752,6 @@ func _step_mortars(delta: float) -> void:
 	_mortars = kept
 
 
-# --- 10. Sable W3: Halo Coil (halo_discharge) ------------------------------------------
-
 func _fire_halo_discharge(f: float, shape: Dictionary) -> void:
 	combat._fire_discharge(f, shape)
 	var dmg: float = ORBIT_DAMAGE * combat._damage_mod(Weapons.PYLON_TURRET)
@@ -854,8 +798,6 @@ func _step_orbit_halo(delta: float, enemies: Array) -> void:
 				_orbit_halo["hits"] = int(_orbit_halo["hits"]) + 1
 
 
-# --- 11. Rivet W2: Slotted Rail (rail_vault) -------------------------------------------
-
 func _rail_vault_geometry(fraction: float) -> Dictionary:
 	var row: Dictionary = combat._line_skills.get("line_drive", {})
 	if row.has("geometry"):
@@ -880,7 +822,6 @@ func _rail_vault_world(anchor: Vector3, fraction: float, mult: float) -> void:
 
 
 func _activate_rail_vault(dir: Vector3, mult: float) -> void:
-	# Hot-reloads Rivet's cylinder mid-ride and queues sparks along the haul.
 	var drv = combat.weapon_driver
 	var p: Resource = combat._patterns.get(Weapons.RAPID_LASER)
 	var hot_rounds: int = drv.hot_reload_cylinder(Weapons.RAPID_LASER, p)
@@ -921,8 +862,6 @@ func _step_rail_sparks(delta: float) -> void:
 		combat.effects.spark(muzzle, ClassDef.RIVET_COLOR)
 	_rail_sparks = kept
 
-
-# --- 12. Kest W3: Updraft Snare (snare_detonate) ---------------------------------------
 
 func _fire_snare_detonate(f: float, shape: Dictionary) -> void:
 	combat._fire_line(f, shape)

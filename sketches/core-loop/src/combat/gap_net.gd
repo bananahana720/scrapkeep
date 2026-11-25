@@ -4,29 +4,6 @@ const IslandEdge := preload("res://src/combat/island_edge.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
-# The gap net (roster_highdraft.gd): the Spillway netcaster re-homed to the Highdraft (Andrew,
-# "Re-home a few", 2026-10-17 20:03:01Z). On its first tick the crew finds the nearest rim and
-# the far rim across that gap, sets its post on the near rim and its second post on the far one,
-# and hangs a live net across the gap's middle, square to the crossing, from one to the other.
-#
-# It works the counter loop: the net charges (a lane under it, warn_seconds), stands live for
-# live_seconds, then hangs slack for rest_seconds. Live, an airborne ball that crosses it slower
-# than TEAR_SPEED is slung back the way it came (the normal part of its velocity reflected at
-# SLING_KEEP, the line cut); one crossing at TEAR_SPEED or faster rips it. A grounded ball, or one
-# under the band, passes. The crew is the near post: kill it and the net is gone.
-#
-# Secondary attack (W49-COMBAT): Dual-Layer Shock Net. Commits a >= 0.75 s Palette.HAZARD lane
-# and energises a dual-layer shock curtain across the gap. Ripping it at Blazing grants a 3.0 s
-# electric aura carried onto the next island that zaps nearby machines and adds a forward kick.
-#
-# The post stands on a rim, so a knock that carries it POST_FALL below where it was strung drops
-# the whole net, as a kill (a ring-out, like the heavies').
-#
-# With no gap in reach (a flat stage) it hangs the net NET_WIDTH across its own spot, its foot
-# NET_FLOOR above the ground, so it still only catches the air.
-#
-# Grown remix: on a gap at least DEEP_GAP long it hangs a second net STACK_GAP behind the first.
-
 const HP := 70.0
 const RIM_DROP := 4.0
 const FIND_REACH := 30.0
@@ -53,10 +30,6 @@ const ELECTRIC_AURA_SECONDS := 3.0
 const ELECTRIC_AURA_RADIUS := 5.5
 const ELECTRIC_AURA_DAMAGE := 18.0
 const ELECTRIC_AURA_KICK := 4.0
-# E33's wind-up (event_kinds.gd, e33_net_crackle; coordinator call 2026-10-18, "no silent
-# wind-ups"): through the charge the slack net crackles, flashing to its live tint in bursts that
-# come faster and longer as the charge fills, and shivers CRACKLE_SHAKE along its normal. It goes
-# solid live on the strike. Presentation only: the lane, the band and the timing are unchanged.
 const CRACKLE_RATE := 5.0
 const CRACKLE_RATE_GAIN := 15.0
 const CRACKLE_SHAKE := 0.08
@@ -136,7 +109,6 @@ var shock_rips := 0
 var shock_layer_active := false
 var next_attack := ""
 var last_shock_rip := {}
-# Each net: {center, normal, side, low, high, live (not torn), last (signed side last tick), mesh}.
 var nets: Array = []
 var post_b := Vector3.INF
 var gap_length := 0.0
@@ -202,8 +174,6 @@ func _physics_process(delta: float) -> void:
 		_track_sides()
 
 
-# --- Stringing ---------------------------------------------------------------------------------
-
 func _string() -> void:
 	_strung = true
 	_post_y = global_position.y
@@ -232,8 +202,6 @@ func _string() -> void:
 	_hang(Vector3(center.x, level, center.z), facing, level + NET_FLOOR, level + FLAT_TOP)
 
 
-# The net's mesh is the body's 2 m span tile repeated across NET_WIDTH and stretched from `low`
-# to `high`, or one flat box when the body is missing.
 func _hang(center: Vector3, normal: Vector3, low: float, high: float) -> void:
 	var side := normal.cross(Vector3.UP).normalized()
 	var mesh := Node3D.new()
@@ -275,8 +243,6 @@ func _build_post_b() -> void:
 	add_child(post)
 	post.global_position = post_b + Vector3.UP * POST_HEIGHT * 0.5
 
-
-# --- The loop ----------------------------------------------------------------------------------
 
 func _wants_attack(to_ball: Vector3) -> bool:
 	return _live_nets() > 0 and _nearest_net_distance() <= attack_range
@@ -408,7 +374,6 @@ func _on_end() -> void:
 	_paint(false)
 
 
-# E33's pose, e33_net_crackle: the charging net flickers live in quickening bursts and shivers.
 func _pose() -> void:
 	var charging := phase == Phase.WARN and not is_dead()
 	if not charging:
@@ -454,8 +419,6 @@ func _tint(mesh: Node3D, material: Material) -> void:
 	for piece in mesh.get_children():
 		(piece as MeshInstance3D).material_override = material
 
-
-# --- Geometry ----------------------------------------------------------------------------------
 
 func _side_of(net: Dictionary, at: Vector3) -> float:
 	return (at - (net["center"] as Vector3)).dot(net["normal"])
@@ -514,6 +477,5 @@ static func _parts() -> Array:
 	return _shared
 
 
-# A fixed post: it never walks, and only a knock moves it.
 func _roam(_to_ball: Vector3) -> Vector3:
 	return Vector3.ZERO

@@ -4,24 +4,6 @@ const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 
-# One swarm-remnant formation (DESIGN-V2 section 10, drones): many identical flat
-# drones that are nothing alone and a threat in formation. The formation is the state,
-# and every drone reads it; it steps once per physics frame, whichever drone asks first.
-#
-# - FORMING: the drones fly to their slots in a rack standing off from the ball (a
-#   guard swarm stands between its home and the ball). The rack is a bowling rack,
-#   apex toward you: a 1-2-3 of six, or the hive's full 1-2-3-4 of ten.
-# - LOCKED: every drone is in its slot; the lead commits a lane from the rack toward
-#   the ball (W2's lane, the unison buzz snapping into the quartal chord) for LOCK_WARN.
-# - DIVING: the rack flies down its lane at DIVE_SPEED; the first drone to reach a
-#   ball the lane contains stings it, once per dive for the whole rack, and the rack
-#   peels off to re-form rather than ploughing through the ball.
-# - SCATTERED: a ball bowling through the rack at speed, or a hard knock on any drone,
-#   breaks it. The drones are knocked outward and for FOLLOW seconds follow the
-#   nearest moving mass, which is the ball: seamless, buzzing, and still hostile. Led
-#   into another enemy, a follower hits it as a pin (callback C11, "Awaiting
-#   operator"). Then they fall silent and re-form.
-
 enum State { FORMING, LOCKED, DIVING, SCATTERED }
 
 const RACK := [1, 2, 3]
@@ -46,7 +28,6 @@ var drones: Array = []
 var state := State.FORMING
 var centre := Vector3.ZERO
 var facing := Vector3.FORWARD
-# A guard swarm's home (the hive Warden), or null for a free swarm.
 var home = null
 var rows: Array = RACK
 var fleet
@@ -54,7 +35,6 @@ var t := 0.0
 var scatters := 0
 var dives := 0
 var locks := 0
-# Whether this dive has stung already: a rack is one threat, so it hurts once.
 var stung := false
 var recovery_seconds := TelegraphRecord.RECOVERY
 var recover_left := 0.0
@@ -102,8 +82,6 @@ func recovering() -> bool:
 	return recover_left > 0.0
 
 
-# A rack recovering from a dive, or scattered and following, flies high over the ball,
-# so it never ploughs into it; it comes down to strike height to form up and dive.
 func flying_high() -> bool:
 	return state == State.SCATTERED or (state == State.FORMING and _rest > 0.0)
 
@@ -112,7 +90,6 @@ func lane() -> Node3D:
 	return _lane if is_instance_valid(_lane) else null
 
 
-# A drone's slot in the rack: row r counts back from the apex, which points at the ball.
 func slot(index: int) -> Vector3:
 	if recovering() and index < drones.size() and is_instance_valid(drones[index]):
 		return drones[index].global_position
@@ -198,7 +175,6 @@ func end_dive() -> void:
 
 
 func _reform() -> void:
-	# Hive guard dives retain the Warden clock; only free pack swarms share recovery.
 	recover_left = recovery_seconds if state == State.DIVING and home == null else 0.0
 	_clear_lane()
 	state = State.FORMING
@@ -229,8 +205,6 @@ func _clear_lane() -> void:
 	_lane = null
 
 
-# Where the rack stands: off from the ball toward where it is, or between its home and
-# the ball for a guard.
 func _post(ball: Vector3) -> Vector3:
 	if home is Vector3:
 		var out := Vector3(ball.x - home.x, 0.0, ball.z - home.z)

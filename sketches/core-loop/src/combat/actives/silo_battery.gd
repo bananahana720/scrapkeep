@@ -5,27 +5,11 @@ const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 
-# The Silo Battery (Fleet Surplus): a requisition silo bolted to the hull. It marks a zone,
-# then the sky answers. The press starts a 0.5 s wind-up and begin() commits the target rings
-# on the ground (amber: the player's own), one on each of the nearest machines and the rest
-# ahead along the aim. When the wind-up ends the hatch opens and the shells fall for FALL
-# seconds; each lands as one strike on every machine inside its ring. The rings are
-# telegraph.gd nodes, so the drawing and the hit test are the same committed geometry: a
-# machine that walks out of its ring before the landing takes nothing. Chain Arc's jumps from a
-# struck machine are the build's own reach, like the rockets' chains, and may leave the rings.
-#
-# It stacks into a strong build ("Overpowered pays"): one more ring per heft class above the
-# first, one per Cross Split level, and one per overflow piece banked when the press began;
-# overflow banked during the wind-up drops extra shells into the rings already shown. Weapon
-# damage mods and punch scale every strike, and Chain Arc makes each struck machine jump.
-
 const RINGS := 3
 const RADIUS := 3.0
 const BASE_DAMAGE := 30.0
-# Seconds from the hatch opening to the landing; the sound's whistles fall over it.
 const FALL := 0.45
 const LOCK_REACH := 30.0
-# Rings with no machine to mark land ahead along the aim, AHEAD metres out, SPREAD apart.
 const AHEAD := 9.0
 const SPREAD := 6.5
 const KNOCK := 12.0
@@ -38,9 +22,7 @@ const SOURCE := "special"
 
 var ctx
 var combat
-# Committed rings, each {"ring": telegraph node, "at": centre, "shells": count}.
 var rings: Array = []
-# Seconds left before the shells land; < 0 while none are falling.
 var falling := -1.0
 var strikes := 0
 var _bonus_at_begin := 0
@@ -84,9 +66,7 @@ func damage() -> float:
 	return (BASE_DAMAGE + punch) * ctx.tuning.mod("weapon_damage")
 
 
-# The wind-up's tell: commits every ring the strike will use.
 func begin(rack, row: Dictionary) -> void:
-	# A charge that refilled during the fall never cancels the strike already falling.
 	if falling >= 0.0:
 		_land()
 	clear()
@@ -98,7 +78,6 @@ func begin(rack, row: Dictionary) -> void:
 		rings.append({"ring": ring, "at": ring.center, "shells": 1})
 
 
-# The hatch opens: the shells leave for the rings begin() showed. Returns the shells launched.
 func fire(rack, row: Dictionary, bonus: int) -> int:
 	if rings.is_empty():
 		begin(rack, row)
@@ -152,7 +131,6 @@ func _land() -> void:
 	clear()
 
 
-# Ring centres: the nearest machines first, then a fan ahead along the aim.
 func _centres(count: int) -> Array:
 	var ball: Vector3 = ctx.player.ball_position()
 	var out: Array = []

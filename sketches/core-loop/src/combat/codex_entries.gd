@@ -1,11 +1,5 @@
 extends RefCounted
 
-# Combat's codex entries: category "enemy" (DEMO-SPEC, the codex as a treasure hunt).
-# Each is a trick the player can pull on an enemy. The card shows the name, the hint
-# and the clue before discovery and the text after. combat.gd declares them through
-# ctx.codex.declare(entry) at setup and detects each one in its own code. Frost tricks
-# (a frozen chaser shattered by a ram) wait for build's frost state to exist.
-
 const CATEGORY := "enemy"
 const OWNER := "A combat"
 
@@ -40,7 +34,6 @@ const ENTRIES := [
 		"clue": "a slingshot + a kill",
 		"text": "Kill a machine within a second of slingshotting off a pylon.",
 	},
-	# v2 W7 enemies: the counters' opportunities and the ancients' secrets.
 	{
 		"id": "tether_snap", "name": "Slingshot Snap",
 		"hint": "A line is only as strong as what it holds.",
@@ -95,7 +88,6 @@ const ENTRIES := [
 		"clue": "a pit jaw's open ring + a slam from above",
 		"text": "A jaw in the floor that bites a ball rolling over it; carve round it on the wall, or slam it shut from above.",
 	},
-	# The Spillway roster (design-v3/SPILLWAY-ROSTER.md): each Flow kind's speed answer.
 	{
 		"id": "mat_slip", "name": "Slip the Mat",
 		"hint": "A live mat only bites a ball that dawdles.",
@@ -204,8 +196,6 @@ const ENTRIES := [
 		"clue": "a swatter's paddle + a boost while it has you",
 		"text": "The paddle never hurts. It bats you along its sweep. Boost inside the knock and the knock becomes your speed, or jump the low paddle.",
 	},
-	# 2026-10-08 (wave 10, ST4): the rest of the roster that spawns: the alpha packs' and elite's
-	# Fleet crews, and the Warden with one entry per variant whose trick differs.
 	{
 		"id": "heavy_roll", "name": "Too Heavy to Hold",
 		"hint": "A pit sized for a pebble cannot hold a boulder.",
@@ -248,8 +238,6 @@ const ENTRIES := [
 		"clue": "a choir Warden's open lens + a move it has not braced",
 		"text": "A staggered choir Warden braces against your most-used move; hit it with a different one while its lens is open.",
 	},
-	# The skill bar's framework entries (SKILL-BAR section 7, wave P-B unit B6). Each pilot owns
-	# one marked block below for its line-skill and set-piece entries (section 12, item 4).
 	{
 		"id": "loaded_line", "name": "Loaded Line",
 		"hint": "A skill can wait for the rope.",
@@ -292,13 +280,10 @@ const ENTRIES := [
 		"clue": "an arc hit on a Spillway crew",
 		"text": "Spillway crews come out of the channel soaked. Arc does 125% to them and everything else lands as normal.",
 	},
-	# --- P-C Sable entries ---
 	{"id": "bank_shot", "name": "Bank Shot", "hint": "The line can turn you as well as pull you.", "clue": "a standing line + pick 3", "text": "Pick 3 and click while a line stands. You whip round the anchor and leave toward your aim, faster than you came."},
 	{"id": "cable_run", "name": "Cable Run", "hint": "Everything she drives into the air is somewhere to hook.", "clue": "a full ring", "text": "Your ultimate rides a cable and drives a stake on every beat. The stakes hold a line for six seconds after landing."},
 	{"id": "switchback", "name": "Switchback", "hint": "Your own stakes hold a line as well as any wall.", "clue": "a standing stake + Bank Shot", "text": "Bank Shot off a stake your Cable Run left behind."},
 	{"id": "sable_cable_runs", "name": "Cable Runner", "hint": "A good route is worth repeating.", "clue": "three Cable Run landings in one run", "text": "Land three Cable Runs in one run to earn Cable Stitch."},
-	# --- end Sable ---
-	# --- P-C Rivet entries ---
 	{"id": "rivet_line_drive", "name": "Line Drive", "hint": "The cable carries more than you.",
 		"clue": "Rivet + pick 3 + a line on a machine", "text": "Pick 3 and click with a line on a machine. The winch throws it into whatever stands behind. On a wall it hauls you in and nothing holds you. With no line, the next hook carries it."},
 	{"id": "rivet_foundry_cutter", "name": "Foundry Cutter", "hint": "Measured twice. Firing once.",
@@ -307,15 +292,11 @@ const ENTRIES := [
 		"clue": "ten Line Drive punches + one stage", "text": "Land ten Line Drive punches in one stage to earn the Swarf Curl."},
 	{"id": "rivet_shrugged", "name": "Shrugged Off", "hint": "Crowd control is fuel.",
 		"clue": "Rivet + thirty ignored holds and knocks + one run", "text": "Shrug off thirty holds and knocks in one run to earn the Welding Hood."},
-	# --- end Rivet ---
-	# --- P-C Kest entries ---
 	{"id": "kest_cable_charge", "name": "Cable Charge", "hint": "Your line can carry more than you.", "clue": "pick 3 + a click while hooked, or just before the hook", "text": "Pick 3 and click. A charge runs down your line and sets on what the hook caught. Let go and it blows. With no line out, the next hook carries it."},
 	{"id": "kest_windhover", "name": "Windhover", "hint": "There. Give it a moment.", "clue": "a full ring + open sky over where you aim", "text": "Your ultimate lobs you up over where you aim. You hang there for two beats while your mortar shells the ground below, then you stoop straight down onto it."},
 	{"id": "kest_blast_vault", "name": "Blast Vault", "hint": "The wall you blow can throw you.", "clue": "a Cable Charge on a wall + let go close + jump held", "text": "Charge a wall through your line, reel in, and let go within a few metres holding jump. The blast throws you up and away, and your chain keeps its grace."},
 	{"id": "kest_homecoming", "name": "Homecoming", "hint": "The wind knows your feathers.", "clue": "Kest + the Highdraft", "text": "Fly Kest into her home roosts in world three."},
 	{"id": "kest_tick_tick_boom", "name": "Tick, Tick, Boom", "hint": "Watch the whole pack before you commit.", "clue": "Windhover + eight different machines", "text": "Strike eight different machines with the charges and landing of one Windhover."},
-	# --- end Kest ---
-	# --- P-C Tarn entries ---
 	{"id": "tarn_claw_drag", "name": "Claw Drag", "hint": "Why go to them when the line can bring them?",
 		"clue": "a hooked machine + pick 3 + a click", "text": "Pick 3 and click to send a claw down the cable. Light machines arrive clamped in claw reach. Too heavy, and you climb it instead. On a wall it rips a slab loose."},
 	{"id": "tarn_redjaw_rend", "name": "Redjaw Rend", "hint": "A full ring and a line to ride. Take company.",
@@ -324,8 +305,6 @@ const ENTRIES := [
 		"clue": "ten different machines + claw drag + one stage", "text": "Drag ten machines into claw reach in one stage to earn Claw Marks."},
 	{"id": "tarn_hold_still", "name": "Hold Still", "hint": "The machine, I mean.",
 		"clue": "three hostile holds + Redjaw Rend + one run", "text": "Break three hostile holds with Redjaw Rend in one run to earn the Steady Cap."},
-	# --- end Tarn ---
-	# --- P-C Tally entries ---
 	{"id": "tally_skim", "name": "Live Tap", "hint": "One splice wires three machines onto a live circuit.",
 		"clue": "a harpoon hook + Jumper Splice on three machines", "text": "Cast Jumper Splice on a standing line, or load it before the hook. Clips three machines for one pressure each. Hit one and the circuit arcs to the rest."},
 	{"id": "tally_books_balanced", "name": "Circuit Settled", "hint": "Every clip stays wired. Land and discharge the circuit.",
@@ -334,8 +313,6 @@ const ENTRIES := [
 		"clue": "Jumper Splice + ten casts + one stage", "text": "Fire Jumper Splice ten times in one stage to earn Punch Tape."},
 	{"id": "tally_eyeshade", "name": "Eyeshade", "hint": "Twenty wired clips, one hostile audit at a time.",
 		"clue": "twenty settled clips + Hostile Audit + one run", "text": "Settle twenty clips with Hostile Audit in one run to earn the Eyeshade."},
-	# --- end Tally ---
-	# --- P-C Cannon entries ---
 	{"id": "cannon_lane_charge", "name": "Lane Charge", "hint": "The cable already shows where it goes.", "clue": "a standing line + pick 3", "text": "Pick 3 while the harpoon holds something. The cable becomes a lane that fires through the machine and twelve metres on, or out of a wall. Chains make it hit harder."},
 	{"id": "cannon_fire_mission", "name": "Fire Mission", "hint": "A gun can fire itself.", "clue": "a full ring + open ground ahead", "text": "Your ultimate fires you along an arc. Each beat calls a family below you. Every call lands on the same beat as you."},
 	{"id": "cannon_creeping_barrage", "name": "Creeping Barrage", "hint": "Some fire walks ahead of you.", "clue": "a line + the barrage", "text": "Ride a line. Every beat lays a lane across your path one beat before you reach it."},
@@ -344,38 +321,26 @@ const ENTRIES := [
 	{"id": "cannon_time_on_target", "name": "Time on Target", "hint": "Everything at once.", "clue": "Fire Mission + a crowd", "text": "Every shell you called landed on the same beat, on eight machines."},
 	{"id": "cannon_old_tune", "name": "Old Tune", "hint": "It got your tune wrong all fight.", "clue": "the Mind + its own gun", "text": "The Mind played your tune back wrong. Its own gun played it right."},
 	{"id": "mind_quiet_gun", "name": "The Quiet Gun", "hint": "One of its guns never fired.", "clue": "the Mind's rim, listening", "text": "A gun on the rim never fired. It learned one note each time the Mind showed a new attack."},
-	# --- end Cannon ---
 ]
 
 
-# Each entry's roster kind (the Warden's with its variant, "" for any enemy) and the script
-# whose code fires it. tests/codex_coverage_test.gd reads this to prove every kind that can
-# spawn has a trick that can fire.
 const DETECTORS := {
-	# --- P-C Rivet detectors ---
 	"rivet_line_drive": {"kind": "", "script": "res://src/combat/rivet_kit.gd"},
 	"rivet_foundry_cutter": {"kind": "", "script": "res://src/combat/rivet_kit.gd"},
 	"rivet_line_true": {"kind": "", "script": "res://src/combat/rivet_kit.gd"},
 	"rivet_shrugged": {"kind": "", "script": "res://src/combat/rivet_kit.gd"},
-	# --- end Rivet ---
-	# --- P-C Sable detectors ---
 	"bank_shot": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"switchback": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"cable_run": {"kind": "", "script": "res://src/combat/ultimate.gd"},
 	"sable_cable_runs": {"kind": "", "script": "res://src/combat/ultimate.gd"},
-	# --- end Sable ---
-	# --- P-C Tarn detectors ---
 	"tarn_claw_drag": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},
 	"tarn_redjaw_rend": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},
 	"tarn_dragged": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},
 	"tarn_hold_still": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},
-	# --- end Tarn ---
-	# --- P-C Tally detectors ---
 	"tally_skim": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"tally_books_balanced": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"tally_punch_tape": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"tally_eyeshade": {"kind": "", "script": "res://src/combat/combat.gd"},
-	# --- end Tally ---
 	"shell_return": {"kind": "lobber", "script": "res://src/combat/combat.gd"},
 	"counter_ram": {"kind": "chaser", "script": "res://src/combat/combat.gd"},
 	"chain": {"kind": "", "script": "res://src/combat/combat.gd"},
@@ -422,7 +387,6 @@ const DETECTORS := {
 	"set_piece_breakout": {"kind": "", "script": "res://src/combat/ultimate.gd"},
 	"armour_plated": {"kind": "drill_crew", "script": "res://src/combat/combat.gd"},
 	"armour_wet": {"kind": "chaser", "script": "res://src/combat/combat.gd"},
-	# --- P-C Cannon detectors ---
 	"cannon_lane_charge": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"cannon_fire_mission": {"kind": "", "script": "res://src/combat/ultimate.gd"},
 	"cannon_creeping_barrage": {"kind": "", "script": "res://src/combat/ultimate.gd"},
@@ -431,7 +395,6 @@ const DETECTORS := {
 	"cannon_time_on_target": {"kind": "", "script": "res://src/combat/ultimate.gd"},
 	"cannon_old_tune": {"kind": "", "script": "res://src/boss/mind.gd"},
 	"mind_quiet_gun": {"kind": "", "script": "res://src/boss/mind.gd"},
-	# --- end Cannon ---
 	"kest_cable_charge": {"kind": "", "script": "res://src/combat/kest_kit.gd"},
 	"kest_windhover": {"kind": "", "script": "res://src/combat/kest_kit.gd"},
 	"kest_blast_vault": {"kind": "", "script": "res://src/combat/kest_kit.gd"},
@@ -440,9 +403,6 @@ const DETECTORS := {
 }
 
 
-# 2026-10-04 (wave 9): entries whose in-play detector has not landed yet. Their hints show in
-# the codex; combat_codex_test's "every entry discovered in one run" check skips them until the
-# enemy that fires each one exists. Remove an id here when its detector lands.
 const DETECTOR_PENDING := []
 
 

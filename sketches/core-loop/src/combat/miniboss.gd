@@ -1,47 +1,15 @@
 extends "res://src/combat/enemy.gd"
 
-# The miniboss, a heavy scrap warden that events can drop into a stage through
-# ctx.spawner.spawn_enemy("miniboss", at). It fights in a readable loop:
-#
-#   stalk -> leap slam  -> weak window -> stalk -> charge -> weak window -> ...
-#
-# - Leap slam: a ring is committed at where you will be when it lands if you hold a line,
-#   else where you are (PackPressure.lead_aim); it crouches, then leaps and lands on the
-#   ring's centre when the ring has filled. Only the ring hurts.
-# - Charge: a long lane is committed toward you, led the same way; it braces, then charges
-#   down it. Only the lane hurts, and only where its body is.
-# - Weak window: after each attack it is stuck and vented. The armour plates swing
-#   open, the core swells and glows, and a halo spins over it. Its plating drops to 0,
-#   so every hit lands in full. Outside the window its plating is 1.25 times the stage
-#   Warden's (spec "plating", set by the spawner), so a small punch only chips 20%: the
-#   same grammar as every plated target. The fight's rhythm is: read the telegraph,
-#   dodge on the move, punish the window.
-#
-# Weight: WEIGHT divides every shove, so rams rock it and slams nudge it; it cannot be
-# knocked during a leap or a charge.
-#
-# Phase two (Andrew 19:02Z and 19:11Z 23 Oct; fight_phases.gd): the hit that takes it under
-# FightPhases.MINI_TURN of its health turns it. For the transition beat it rears and
-# shudders, takes no damage and commits nothing; any committed attack is dropped. Then its
-# wind-ups run at PHASE_TWO_WIND (never under the tell floor), and every slam chains into
-# a charge with no weak window between: the ratchet cue (attack_cued) sounds CUE_LEAD
-# before the lane is drawn, and the lane's brace is the cued tell, CUED_WARN. The charge
-# still vents. The turn publishes fight_phase_changed, which moves its anthem to
-# "miniboss-heavy" on the next downbeat.
-
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
 const HP := 600.0
-# Used only when the spawner passes no plating (1.25 x a stage-1 Warden's 30).
 const DEFAULT_PLATING := 38.0
 const SCRAP := 24
 const WEIGHT := 5.0
 const RADIUS := 2.3
-# How close the body must come to the ball to hit it; the lane's running-body mark reads the same.
 const HIT_REACH := RADIUS + 1.6
 const HALF_HEIGHT := 3.45
-# How near the ball's centre can come to the body's before the body stops it; PackPressure.lead_aim cuts its lead there.
 const BODY_CONTACT := RADIUS + Tuning.RADIUS
 const WALK := 5.5
 const STALK := 1.6
@@ -51,8 +19,6 @@ const SLAM_RADIUS := 7.0
 const SLAM_HEIGHT := 9.0
 const SLAM_DAMAGE := 24.0
 const SLAM_SHOVE := 9.0
-# _slam_spot: the world layer it checks, how far short of a wall the body lands (its radius and a margin),
-# the height its ray runs above the ground, and how far above and below the spot it looks for ground.
 const WORLD_LAYER := 1
 const LEAP_CLEAR := RADIUS + 0.5
 const LEAP_RAY_LIFT := 0.5
@@ -71,15 +37,11 @@ enum State { STALK, SLAM_CROUCH, SLAM_LEAP, CHARGE_BRACE, CHARGE, WEAK, TURN, CU
 
 var state := State.STALK
 var phase := 1
-# This phase's wind-ups, read by the miniboss WindupRows row (E03 slam, E04 charge). The
-# cued charge's brace is set when the cue ends.
 var slam_crouch := SLAM_CROUCH
 var charge_brace := CHARGE_BRACE
 var attacks := 0
 var weak_windows := 0
 var hits_landed := 0
-# The ATTACK_ROWS id of the hit hit_player is emitting, for the RUN OVER cause line: the slam
-# lands at the end of the leap, the charge while its lane runs.
 var landed_attack: String:
 	get:
 		return "E04" if state == State.CHARGE else "E03"
@@ -100,11 +62,6 @@ var _armour: MeshInstance3D
 static var _shared: Dictionary = {}
 static var _asset_warned := false
 static var _hazard_stripe: StandardMaterial3D
-# One row per pose, so each reads without a label (LEGIBILITY.md:52). `body` moves the
-# body by a fraction of its standing height (HALF_HEIGHT); `lean` pitches it forward;
-# `splay` and `tuck` move the feet out and up; `shield_in` and `shield_drop` pull the
-# shields in and down; `hazard` paints the shield faces with the threat stripe, which
-# belongs to attacks (D3 SHEET.md:31), so only the pose that aims the charge carries it.
 const POSES := {
 	"stalk": {"body": 0.0, "lean": 0.0, "splay": 0.0, "tuck": 0.0, "shield_in": 0.0, "shield_drop": 0.0, "hazard": false},
 	"slam_crouch": {"body": -0.3, "lean": 0.0, "splay": 0.6, "tuck": 0.0, "shield_in": 0.45, "shield_drop": 0.0, "hazard": false},
@@ -142,12 +99,10 @@ func state_name() -> String:
 	return ["stalk", "slam_crouch", "slam_leap", "charge_brace", "charge", "weak", "turn", "cue"][state]
 
 
-# The phase hook. Entering a phase it is already in, or an earlier one, does nothing.
 func enter_phase(next: int) -> void:
 	if next <= phase:
 		return
 	phase = mini(next, FightPhases.MINI_MAX)
-	# The slam's tell is crouch plus leap (its ring fills over both), so the floor is on the sum.
 	slam_crouch = maxf(ChallengeDials.TELL_FLOOR - SLAM_LEAP, SLAM_CROUCH * PHASE_TWO_WIND)
 	charge_brace = maxf(ChallengeDials.TELL_FLOOR, CHARGE_BRACE * PHASE_TWO_WIND)
 	_clear_telegraph()
@@ -156,7 +111,6 @@ func enter_phase(next: int) -> void:
 		_reaction_bus.fight_phase_changed.emit(kind, phase, FightPhases.MINI_MAX)
 
 
-# The turn takes no damage; the hit that crosses the turn share turns it.
 func take_damage(amount: float) -> float:
 	if state == State.TURN:
 		return 0.0
@@ -166,12 +120,10 @@ func take_damage(amount: float) -> float:
 	return removed
 
 
-# A hit in the turn removes nothing, so combat marks it absorbed and no damage number rises.
 func absorbs_hit(_result: Dictionary) -> bool:
 	return state == State.TURN
 
 
-# Nor can it die in the turn, so a crush there would pass the ball into a live body.
 func crushable() -> bool:
 	return state != State.TURN
 
@@ -255,7 +207,6 @@ func _enter(next: int) -> void:
 	_clock = 0.0
 
 
-# Slam first, then charge, alternating. Each attack commits its geometry up front.
 func _begin_attack(to_ball: Vector3) -> void:
 	attacks += 1
 	if _next_attack == 0:
@@ -274,10 +225,6 @@ func _begin_attack(to_ball: Vector3) -> void:
 	_next_attack = 1 - _next_attack
 
 
-# Where a slam led to `led` may land. The leap sets the body's position with no collision check, so it
-# is never sent through a wall or off the stage: a ray from the ball toward the led point stops LEAP_CLEAR
-# short of the first thing on the world layer, and a ray down there must find ground. Otherwise the slam
-# lands on the ball, as an unled one does.
 func _slam_spot(led: Vector3) -> Vector3:
 	var ball := _ball()
 	var flat := Vector3(led.x - ball.x, 0.0, led.z - ball.z)
@@ -299,8 +246,6 @@ func _slam_spot(led: Vector3) -> Vector3:
 	return Vector3(at.x, ball.y, at.z)
 
 
-# After the slam lands: in phase two the charge follows at once behind the ratchet cue;
-# otherwise, and after every charge, it vents.
 func _after_slam() -> void:
 	if phase < 2:
 		_open_weak_window()
@@ -485,8 +430,6 @@ func _model_pose(delta: float) -> void:
 			var raise := 1.0 - smoothstep(0.55, 1.0, leap)
 			fists = Vector3(0.0, 1.8 * raise - 0.6 * (1.0 - raise), -0.5)
 			foot_angle = -0.6 * raise
-			# The body springs a body height clear of the ground; once the arc carries it
-			# that high, the arc is the lift and the pose adds nothing.
 			lift = maxf(0.0, float(row.body) * HALF_HEIGHT * raise * smoothstep(0.0, 0.15, leap) - _leap_clearance())
 			foot_up = lift + float(row.tuck) * raise
 		State.CHARGE_BRACE:
@@ -495,7 +438,6 @@ func _model_pose(delta: float) -> void:
 		State.CHARGE:
 			fists = Vector3(0.0, 0.3, -0.85)
 		State.TURN:
-			# Rears with fists up and shudders: the turn reads as a wind-up to something bigger.
 			t = clampf(_clock / 0.3, 0.0, 1.0)
 			fists = Vector3(0.0, 1.4, 0.2) * t
 			lift = TURN_SHAKE * sin(_clock * 60.0) * (1.0 - _clock / FightPhases.TRANSITION_SECONDS)
@@ -525,7 +467,6 @@ func _model_pose(delta: float) -> void:
 			var desired := basis.get_rotation_quaternion()
 			basis = Basis(current.slerp(desired, 1.0 - exp(-14.0 * delta))) if delta > 0.0 else Basis(desired)
 		elif bone_name == "MinibossHalo":
-			# The vent ring rides the core socket, on its axis, so it frames what to hit.
 			pos = _pose_rig.transform.affine_inverse() * socket
 			basis = body_basis * Basis(Vector3.UP, _clock * 5.0) * rest.basis
 			size = Vector3.ONE if weak else Vector3.ZERO
@@ -544,14 +485,12 @@ func _model_pose(delta: float) -> void:
 	_model_plate_material.albedo_color = Palette.SLATE
 
 
-# Height of the body's soles above the ground under it.
 func _leap_clearance() -> float:
 	if terrain == null or not is_inside_tree():
 		return 0.0
 	return maxf(0.0, global_position.y - HALF_HEIGHT - terrain.height(global_position.x, global_position.z))
 
 
-# The threat stripe the telegraphs paint (Threat.Painter.stripe_texture), lit as a surface.
 static func hazard_stripe() -> StandardMaterial3D:
 	if _hazard_stripe == null:
 		_hazard_stripe = StandardMaterial3D.new()
@@ -591,7 +530,6 @@ func _build_armour() -> void:
 	_halo.position = Vector3.UP * (HALF_HEIGHT + 1.4)
 	_halo.visible = false
 	_visual_parent().add_child(_halo)
-	# A lit crown of spikes: the silhouette says "boss" from 100 m before its size does.
 	for i in 5:
 		var angle := TAU * i / 5.0
 		var spike := CylinderMesh.new()
@@ -601,15 +539,11 @@ func _build_armour() -> void:
 		_accent(spike, Palette.COPPER, 1.8, Vector3(cos(angle) * 1.3, HALF_HEIGHT + 0.5, sin(angle) * 1.3))
 
 
-# The weak window reads three ways at once: the plates swing open (shape), the core
-# swells and burns bright (colour and size), and a halo spins overhead (motion).
 func _pose(delta: float) -> void:
 	if _pose_rig != null:
 		_model_pose(delta)
 	else:
 		_primitive_pose(delta)
-	# Face the ball while stalking or bracing, so the core is toward the player. A null or
-	# freed target leaves the facing where it is (F008).
 	if not is_instance_valid(target):
 		return
 	if state in [State.STALK, State.CHARGE_BRACE, State.WEAK, State.SLAM_CROUCH, State.TURN, State.CUE]:

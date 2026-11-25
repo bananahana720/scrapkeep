@@ -2,15 +2,6 @@ extends RefCounted
 
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
-# World 3, the Highdraft: Fleet crews that work the air and the lines above it. Rows in
-# roster.gd's shape plus "script", the kind's behaviour file, and "world". A row is
-# declared here before its script exists; Roster.built(kind) turns true the moment the
-# file does. The new rows carry their chassis column here (roster.gd merges CHASSIS over
-# nothing it lacks) and "grown", the remix a grown pilot meets (design-v3/WORLD-ROSTERS.md).
-#
-# The Highdraft's verb is the air: nothing to stand on. Heavies die by ring-out, not by
-# damage (Andrew, "Ring-outs", 2026-10-17 20:03:50Z); the netcaster comes home as the gap
-# net ("Re-home a few", 20:03:01Z). anchor_crew stays declared but is out of the packs.
 const HIGHDRAFT_KINDS := ["line_cutter", "kite_drone", "ballast_heavy", "gap_net"]
 
 const ROWS := {
@@ -42,8 +33,6 @@ const ROWS := {
 }
 
 
-# A grown pilot (heft class GROWN_CLASS and up) meets each row's "grown" remix. Read from the
-# director, which world.gd keeps at run.heft_class() every tick; no director means not grown.
 const GROWN_CLASS := 3
 
 

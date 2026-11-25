@@ -6,10 +6,6 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Elements := preload("res://src/build/elements.gd")
 
-# Magnet Sling (Fleet Surplus): deploys a committed anchor buoy that pulls nearby machines
-# into a tight cluster over PULL_SECONDS, then snaps inward for a single item_proc burst.
-# Note: keep every draw call strictly routed through ActiveFx.peak().
-
 const RADIUS := 8.0
 const BONUS_RADIUS := 0.65
 const PULL_SECONDS := 0.55
@@ -26,7 +22,6 @@ const SOURCE := "item_proc"
 
 var ctx
 var combat
-# Live anchor buoys pulling before snap: {"ring": telegraph, "at": Vector3, "radius": float, "left": float, "damage": float, "pulled": int}
 var buoys: Array = []
 var snaps := 0
 var total_pulled := 0

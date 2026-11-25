@@ -2,21 +2,6 @@ extends "res://src/combat/counter.gd"
 
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
-# The hooker (DESIGN-V2 section 10): a harpoon gun on a tall anchor post. The warning is
-# a lane from the post toward the ball; when it fills, a ball the lane contains is
-# harpooned and tethered to the post's head. The line has the length it caught you at
-# and reels in: roll away and it pulls you back toward the anchor. It snaps when you
-# boost, when you outrun it (planar speed at SNAP_SPEED), or at once when your heft is
-# at or above its rating. A snap slings you forward: growth and speed are the counter.
-# Flow (design-v3/SPILLWAY-ROSTER.md): the Spillway's grapple lesson is hook posts, so a
-# harpoon bite on any post or wall also snaps the tether (the "hook" break, holds.gd kicks you
-# along your new line). Being caught is a pendulum you can choose to leave by your own line.
-#
-# Secondary attack (W47-E1): Pendulum Reel-Whip. When the ball stays tethered > 1.0 s or
-# circles behind the post, the hooker lets out a 0.75 s winch-reverse shriek and commits a
-# 150-degree HAZARD whip arc. Boosting or grapple-switching at the whip's crest snaps the
-# anchor for a 1.5x speed catapult onto upper canyon ledges.
-
 const LANE_LENGTH := 24.0
 const LANE_WIDTH := 2.4
 const POST_HEIGHT := 4.2
@@ -122,11 +107,6 @@ func telegraph() -> Node3D:
 	return super.telegraph()
 
 
-# C14 dressing (enemy_hooker.glb). The counter's capsule crew is replaced by the glb's crew,
-# post and anchor crown (the collider _add_capsule laid stays); the harpoon rides its own
-# node at the cradle. The glb is read once; every hooker shares its meshes and adds only its
-# own flashing body material as a surface override. The resting body is the Fleet oxide
-# _add_capsule already set (RUST), so the hit flash and the event colour are unchanged.
 const COCK := 0.45
 const THRUST := 0.3
 
@@ -184,10 +164,6 @@ static func _parts() -> Dictionary:
 	return _shared
 
 
-# The harpoon cocks back along its own axis over the warning, easing with the warning's own
-# progress (WARN phase, _warn_progress()), lunges forward while the line is live and settles
-# in the roam. During Pendulum Reel-Whip, the harpoon swings across the 150-degree whip arc
-# without moving anchor() or the post.
 func _pose() -> void:
 	if _harpoon == null:
 		return
@@ -329,7 +305,6 @@ func _arm_tether_whip() -> void:
 	_whip_armed = true
 	_whip_clock = 0.0
 	_whip_crest_rewarded = false
-	# Free the spent tether lane without closing attack_facts before Phase.LIVE finishes.
 	if is_instance_valid(_telegraph):
 		_telegraph.queue_free()
 	_telegraph = null
@@ -395,8 +370,6 @@ func _try_behind_whip_catapult(method: String) -> void:
 	_end()
 
 
-# Catapult Snap-Sling: boosting or grapple-switching at the whip's crest snaps the anchor
-# for a 1.5x speed catapult + upward lift onto upper canyon ledges and staggers the Hooker.
 func _grant_catapult(method: String) -> void:
 	_whip_crest_rewarded = true
 	catapult_snaps += 1

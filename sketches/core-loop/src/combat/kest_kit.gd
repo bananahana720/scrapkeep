@@ -1,7 +1,5 @@
 extends "res://src/combat/ultimate.gd"
 
-# 2026-10-11 (PC-KEST): B3's carrier does not implement hold or hold-peak timing.
-# Kest supplies those legs here; every other pilot retains Ultimate's runner.
 const Sticky := preload("res://src/combat/sticky.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Devices := preload("res://src/core/devices.gd")
@@ -157,7 +155,6 @@ func _cable(at: Vector3, rider: Node3D) -> void:
 	_end_cable()
 	var loaded := _loaded_cable
 	_loaded_cable = false
-	# A load arrives with the hook; a cast on a standing line travels at 60 m/s.
 	var travel: float = 0.0 if loaded else ctx.player.ball_position().distance_to(at) / CABLE_SPEED
 	cable = payloads.drop(ctx.player.ball_position() if travel > 0.0 else at,
 		CABLE_DAMAGE, CABLE_RADIUS, INF, INF)
@@ -207,7 +204,6 @@ func _end_cable() -> void:
 	var rocket_before: float = combat._rocket_left
 	if payloads.charges.has(c):
 		if not c.get("_set", false):
-			# A cable ending during travel still pays once at its committed anchor.
 			c["pos"] = c["_anchor"]
 			c["damage"] = CABLE_DAMAGE * ctx.player.chain.multiplier()
 		_detonate_payload(_take_payload(c))

@@ -4,28 +4,6 @@ const IslandEdge := preload("res://src/combat/island_edge.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
-# The ballast heavy (roster_highdraft.gd, design-v3/WORLD-ROSTERS.md): a slab crew that posts up
-# on an island rim. Damage barely touches it (DAMAGE_TAKEN of every hit, on a deep pool), but a
-# knock that carries it RING_DROP below the rim it stood on finishes it: a ring-out (Andrew,
-# "Ring-outs", 2026-10-17 20:03:50Z). The throw is PR #43's ram knock divided by its weight.
-#
-# - Planted it weighs PLANT_WEIGHT: a small ball rebounds off it (contact.gd), a grown one
-#   (heft 2.2 and up, class 3) rams it a few metres, enough from the rim.
-# - Before it slams it braces for warn_seconds, an interruptible cast. Braced, and through the
-#   stagger a hard knock leaves it in, it weighs BRACE_WEIGHT, so any ram at cruise lands in
-#   full and throws it about 10 m (blazing, about 20 m).
-# - The slam is a ring round it that shoves the ball outward, toward the edge it guards.
-# - Secondary attack (W49-COMBAT): Anchor-Stake Counter-Tug. Commits a >= 0.75 s Palette.HAZARD
-#   lane while driving a tensioned anchor stake behind it toward the island. Slow stalling balls
-#   inside the lane feel a tug; moving/carving balls are never stopped (ruling cu). Rolling over
-#   the stake during the tug snaps the line and catapults the Heavy straight off its cliff!
-# - It never walks off a rim on its own, and walks to the nearest rim within SEEK to post up.
-#   With no rim in reach (the net deck, a flat stage) it is beached: it drops its ballast and
-#   takes damage in full on BEACHED_HP, so no stage ever holds one nobody can finish.
-# - Grown remix: on posting up it stakes a cable STAKE_BACK behind it, toward the island. The
-#   cable reels it back to its post from one ring-out and snaps doing it; a ball that rolls
-#   over the stake (the island side) cuts it first.
-
 const HP := 900.0
 const WALK := 3.0
 const DAMAGE_TAKEN := 0.1
@@ -67,9 +45,7 @@ var next_attack := ""
 var last_catapult := {}
 var beached := false
 var posted := false
-# The rim this heavy guards: {at, dir, dist} from IslandEdge, or {} while none is known.
 var rim := {}
-# The ground height and point of the last settled footing; a fall RING_DROP below it rings out.
 var perch_y := INF
 var perch_at := Vector3.ZERO
 var stake: Node3D
@@ -159,8 +135,6 @@ func _ring_out() -> void:
 	ring_out()
 
 
-# It keeps its own ring-out above (the stake reels it back), so enemy.gd's general rule
-# stays off for it; ring_out() still gives it the shared tell, sound and kill credit.
 func _rings_out(_grounded: bool) -> bool:
 	return false
 
@@ -173,7 +147,6 @@ func _read_rim() -> void:
 		_beach()
 
 
-# No rim to ring it out over: the ballast comes off and it is an ordinary heavy.
 func _beach() -> void:
 	beached = true
 	hp = minf(hp, BEACHED_HP * float(spec.get("stage_threat", 1.0)))
@@ -212,8 +185,6 @@ func _roam(to_ball: Vector3) -> Vector3:
 	return to.normalized() * walk_speed
 
 
-# Its own feet never carry it off a rim: a step that would fall is dropped. Knockback is not
-# its feet, so a knock still carries it over.
 func _move(delta: float, desired: Vector3) -> void:
 	if desired.length_squared() > 0.0 and IslandEdge.falls_ahead(terrain, global_position, desired, EDGE_GUARD, RING_DROP * 0.5):
 		desired = Vector3.ZERO
@@ -281,7 +252,6 @@ func _live(_delta: float) -> bool:
 		var player = _player()
 		var ball := _real_ball()
 		if lane != null and player != null and lane.contains(ball):
-			# Ruling cu: only press slow/stalling balls; never stop a moving/cruise or carving ball.
 			if player.state.grounded and not player.state.carving and player.speed_tier() < SpeedTier.CRUISE:
 				var pull := global_position - ball
 				pull.y = 0.0
@@ -303,7 +273,6 @@ func _on_end() -> void:
 
 func _pose() -> void:
 	var lift := clampf(_t / warn_seconds, 0.0, 1.0) if phase == Phase.WARN else 0.0
-	# The body's brake claws bite the deck through the brace (the recipe's 0.3 m drop).
 	if _brakes != null:
 		_brakes.position.y = _brakes_y - BRAKE_DROP * lift
 	if _slab == null or beached:
@@ -311,8 +280,6 @@ func _pose() -> void:
 	_slab.position.y = CREW_HALF + 0.6 + 1.0 * lift
 	_slab.rotation.x = -0.3 * lift
 
-
-# --- Grown remix & Anchor-Stake Counter-Tug stake cable -------------------------------------
 
 func _plant_stake() -> void:
 	if staked or rim.is_empty() or not RosterHighdraft.grown(self):

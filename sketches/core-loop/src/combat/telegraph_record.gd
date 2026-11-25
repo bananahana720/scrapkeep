@@ -2,45 +2,9 @@ extends RefCounted
 
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
-# The pack-kind telegraph record (W13-INTEGRATION-3 SQ1): one row per pack-kind attack, in
-# the four fields every Roboquest attack shares (comps/roboquest/enemies-and-telegraphs.md,
-# "The telegraph grammar"): pre-shoot, recovery, cooldown, radius; plus the marker class
-# the danger draws as (comps/gunfire/enemies-and-bosses.md, telegraph-marker-vocabulary) and
-# the band class its wind-up is read against. BIBLE.md "A committed attack means what it
-# shows": prepare, commit, execute, recover.
-#
-# - pre_shoot: seconds from the tick the committed geometry first exists to the first tick
-#   it can hurt. For a counter.gd kind that is its warn_seconds; the chaser's wind-up; the
-#   lobber's shell flight (its floor ring commits at release); the swarm's lock.
-#   tests/telegraph_timing_pack_test.gd measures it over 50 solo spawns per kind.
-# - recovery: the vulnerable tail after the attack ends. Every ordinary attack reads the one
-#   value RECOVERY, including chaser, lobber and free swarm remnant attacks. Warden attacks
-#   are on WARDEN_EXCEPTIONS.
-# - cooldown: seconds after the recovery before the unit may warn again. A counter.gd kind's
-#   recovery stands inside its rest_seconds, so cooldown = rest_seconds - RECOVERY and the
-#   attack cadence is unchanged.
-# - radius: the committed shape's size, the ring's or wedge's radius, or a lane's half width
-#   (its length is in `length`, documentation only; 0 when it follows the ball).
-# - marker: "circle" for an area (a ring or a wedge), "line" for a lunge or a lane, "text"
-#   for a delayed hit. Read from the committed geometry (marker_of); no pack kind draws a
-#   text marker today.
-# - band: the class band its pre_shoot is read against (BANDS), from its attack type
-#   (band_of). A pre_shoot outside its band carries a logged `reason`; none is under
-#   REACTION_FLOOR. Warns are never moved to fit a band (memo 2 row 31a: rejected).
-# - recovery_before: the recovery the kind had before this record (3d161ff): counter.gd
-#   kinds roamed on the tick their attack ended.
-#
-# design-v3/LEGIBILITY.md section 2 lists the same marker and band classes per kind;
-# tests/pack_telegraph_record_test.gd holds the two equal.
-
-# Start value: Roboquest's recovery median, 0.75 s for every attack type
-# (comps/roboquest/enemies-and-telegraphs.md:61, "Recovery, all types"). The lab tunes it.
 const RECOVERY := 0.75
-# The lab's reaction floor (comps/gunfire/enemies-and-bosses.md:89, target 0.4 s).
 const REACTION_FLOOR := 0.4
-# Telegraph and damage areas overlap at least this share (comps/gunfire/enemies-and-bosses.md:89).
 const OVERLAP_FLOOR := 0.95
-# Start values: Roboquest's pre-shoot bands by class (comps/roboquest/enemies-and-telegraphs.md:57-60).
 const BANDS := {
 	"area_burst": [0.25, 0.5],
 	"projectile": [0.75, 0.75],
@@ -101,8 +65,6 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": "A tube drop: the ring stands through the 0.45 s suck-up and the pod's 0.75 s flight, the lobber's grammar on a shorter arc. Cooldown is escalation step 0; unanswered drops climb to 2.5 s (step 1) and 1.0 s (step 2)."},
 	"E27": {"kind": "jolt_layer", "pre_shoot": 1.0, "cooldown": 3.25, "radius": 6.0, "length": 0.0, "marker": "circle", "band": "area_burst",
 		"recovery_before": 0.0, "reason": "A field, not a burst: the mat's first jolt lands a full pulse after it goes live, each pulse read over its own 0.5 s lead (FIELDS-AND-CASTS section 2.3)."},
-	# E25 to E29 are taken by the specials' branches; the world roster kinds start at E30
-	# (design-v3/WORLD-ROSTERS.md).
 	"E30": {"kind": "pit_jaw", "pre_shoot": 1.0, "cooldown": 3.25, "radius": 2.4, "length": 0.0, "marker": "circle", "band": "area_burst",
 		"recovery_before": 0.0, "reason": HOLD_REASON},
 	"E31": {"kind": "prop_crew", "pre_shoot": 1.0, "cooldown": 0.0, "radius": 3.3, "length": 0.0, "marker": "circle", "band": "area_burst",
@@ -111,20 +73,14 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": "The brace is the answer window: 1.1 s with the slab up, light enough that a cruise ram throws it off the rim."},
 	"E33": {"kind": "gap_net", "pre_shoot": 1.0, "cooldown": 1.25, "radius": 0.6, "length": 14.0, "marker": "line", "band": "ray",
 		"recovery_before": 0.0, "reason": "A net that charges for 1.0 s and holds 3.5 s, then hangs slack for 2.0 s: cross in the slack or faster than it holds."},
-	# E34 to E39 are the rogue mini-bosses' (#385); E40 is the Spillway's boom tender.
 	"E40": {"kind": "boom_tender", "pre_shoot": 1.1, "cooldown": 3.25, "radius": 1.5, "length": 8.4, "marker": "line", "band": "ray",
 		"recovery_before": 0.0, "reason": "The lamps light out along the boom for 1.1 s, then it swings through the lane for 0.6 s: leave the lane, or bowl through it at FAST tier and pop the floats."},
 }
 
-# Pack attacks the player starts and the unit never repeats: no cycle to measure, so the
-# record's cooldown is 0 and the recovery check does not apply. Keyed by the ATTACK_ROWS id.
 const PLAYER_STARTED := {
 	"E31": "Prop crew roof drop: a ram on the prop starts it once; the crew has no attack of its own (design-v3/WORLD-ROSTERS.md).",
 }
 
-# Warden attacks keep their own timing (KF2 to KF4 report each one's charge, recovery and
-# cooldown in tests/telegraph_timing_<kind>_test.gd; decisions.tsv 486c). Keyed by the
-# ATTACK_ROWS id, or "<family>:<attack>" for a driver attack with no row of its own.
 const WARDEN_EXCEPTIONS := {
 	"W01": "Reactor Warden pulse: the posture chassis' own cycle (telegraph_timing_reactor_test).",
 	"W02": "Hive Warden pulse: the posture chassis' own cycle (telegraph_timing_swarm_test).",
@@ -140,7 +96,6 @@ const WARDEN_EXCEPTIONS := {
 }
 
 
-# The attack id a pack kind owns; "" when it has none.
 static func id_of(kind: String) -> String:
 	for id in ROWS:
 		if String(ROWS[id]["kind"]) == kind:
@@ -152,7 +107,6 @@ static func row_of(kind: String) -> Dictionary:
 	return ROWS.get(id_of(kind), {})
 
 
-# Every pack-kind attack ends in the shared recovery.
 static func recovery(_kind: String) -> float:
 	return RECOVERY
 
@@ -161,8 +115,6 @@ static func cooldown(kind: String) -> float:
 	return float(row_of(kind).get("cooldown", 0.0))
 
 
-# The band class an attack type is read against: a ring or a wave is an area burst, a
-# thrown shot a projectile, a lane a ray.
 static func band_of(threat_type: int) -> String:
 	match threat_type:
 		Threat.Type.PROJECTILE:
@@ -172,12 +124,10 @@ static func band_of(threat_type: int) -> String:
 	return "area_burst"
 
 
-# The marker class a committed descriptor draws: a lane is a line, a ring or a wedge a circle.
 static func marker_of(descriptor: Dictionary) -> String:
 	return "line" if String(descriptor.get("form", "")) == "lane" else "circle"
 
 
-# The committed shape's size the radius field records: r_out, or a lane's half width.
 static func size_of(descriptor: Dictionary) -> float:
 	if String(descriptor.get("form", "")) == "lane":
 		return float(descriptor.get("half_width", 0.0))

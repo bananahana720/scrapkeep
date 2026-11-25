@@ -1,14 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-# A reactor relic (DESIGN-V2 section 10, nuclear war): a squat cast dome with a
-# cooling-tower waist and three thick vent stacks, dull petrol enamel with Cherenkov
-# seams. It is slow and still, and its hazard is the ground. It opens a meltdown vent
-# ahead of the ball: an instant ring that charges for CHARGE seconds while the Geiger
-# tick speeds up (vent_charging carries the charge time, so presentation can pace the
-# tick and the reactor pedal on it), then erupts. The eruption hurts and lifts a ball
-# the ring contains, and leaves a fallout crater: the same ring, burning for CRATER
-# seconds, that stings a ball each time it rolls in, without ever slowing it.
-
 const VENT_RADIUS := 5.5
 const LEAD := 1.0
 const CHARGE := 2.4
@@ -210,7 +201,6 @@ func _live(_delta: float) -> bool:
 	return true
 
 
-# A vent swells before it erupts: the stacks lengthen with the charge.
 func _pose() -> void:
 	var swell := clampf(_t / warn_seconds, 0.0, 1.0) if phase == Phase.WARN else 0.0
 	for i in _stacks.size():

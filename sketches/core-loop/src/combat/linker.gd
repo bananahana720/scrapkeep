@@ -1,54 +1,24 @@
 extends "res://src/combat/counter.gd"
 
-# The Linker (design-v3/ENEMY-PRIORITY.md 4 lever 7c and 4a): a kill-first emplacement that
-# never attacks. It holds a dish on a 3.6 m boom over a partner, joined to it by a cable, and
-# while the cable is taut that partner shrugs off every hit that meets the dish. The answer is
-# kill order and the jungle gym, never a health bar:
-# - cut the cable: a bolt on the cable, a ball rolling through it, or a harpoon bite on the
-#   Linker (the line catches the cable and the yank snaps it). The dish drops for good;
-# - or flank: the dish turns toward the ball at DISH_TURN, so carving round it, coming over
-#   the top (a stomp or slam, or any hit from above DISH_CLEAR) or hitting from behind lands;
-# - or kill the Linker itself: it stands behind its partner, unguarded.
-#
-# What the dish blocks is what the dish shows: one cone, BLOCK_HALF either side of the dish's
-# aim, which turns the model's dish (combat.gd resolve asks blocks(); damage and the picture
-# read the same yaw). A blocked hit deals nothing and adds no shred; it publishes
-# strike_deflected like any plate the punch fell short of.
-#
-# It never warns, holds or strikes, so it takes no attacker budget (PR #15) and adds no
-# warning to the 0.2 s gap rule. Its tell is the brace: the cable snaps taut, special_tell
-# fires "tell" on that frame (design-v3/MACHINE-VFX.md) with SpecialCues.tell (the linker_tell
-# sound), and the cable stays lit while it holds. A partner that dies frees it; it looks for the next
-# one after RELINK_S. Partners are the heaviest live pack enemy within LINK_RANGE that no
-# other Linker holds; never another Linker, a cache, a Warden or a boss piece.
-
 signal special_tell(moment: String)
 
 const MODEL := "res://assets/models/world_one/enemy_linker.glb"
 const DamageDoor := preload("res://src/combat/damage_door.gd")
-# The specials' cue layer (CONTRACTS.md "Special cues", stacked on PR #51): tell() on the
-# tell's first frame plays the linker_tell render; presence and death are its own. Read when
-# it is in the build.
 const CUES := "res://src/combat/special_cues.gd"
 const HP := 120.0
 const BOOM := 3.6
 const BRACE_SLACK := 1.2
-# A braced dish lets go only this much further out, so a partner on the edge does not re-tell.
 const LET_GO_MARGIN := 1.0
 const LINK_RANGE := 18.0
 const RELINK_S := 1.0
 const SCAN_S := 0.5
 const DISH_TURN := deg_to_rad(110.0)
 const BLOCK_HALF := deg_to_rad(70.0)
-# Above this height over the partner's centre a hit has come over the dish's rim.
 const DISH_CLEAR := 2.4
-# The plating a blocked hit reports to strike_deflected; nothing beats it.
 const DISH_PLATING := 999.0
 const CABLE_RADIUS := 0.6
 const CABLE_TOUCH := 1.2
 const IDLE_CLIPS := {"idle": true, "braced": true}
-# Seconds a clip eases in from the pose before it (AnimationPlayer's blend table; a queued
-# clip follows it too). Tells, loops and returns blend; `cut` is a hit read and stays at 0.
 const BLENDS := {"idle": {"brace": 0.12, "slack": 0.12, "braced": 0.12}, "brace": {"braced": 0.1},
 	"braced": {"slack": 0.12, "idle": 0.12}, "slack": {"idle": 0.15, "brace": 0.12}}
 
@@ -57,11 +27,9 @@ var braced := false
 var cut := false
 var braces := 0
 var cut_by := ""
-# The dish's aim, a world yaw about +Y: 0 faces +Z, as the model's dish does at rest.
 var dish_yaw := 0.0
 
 var _combat
-# Set from a link until it is let go; a freed partner still reads as linked here.
 var _linked := false
 var _scan := 0.0
 var _relink := 0.0
@@ -88,7 +56,6 @@ func _wants_attack(_to_ball: Vector3) -> bool:
 	return false
 
 
-# Walk to the seat behind the partner, the boom's length away on the side away from the ball.
 func _roam(_to_ball: Vector3) -> Vector3:
 	if not _alive(partner):
 		return Vector3.ZERO
@@ -123,7 +90,6 @@ func _physics_process(delta: float) -> void:
 	var to_partner: Vector3 = partner.global_position - global_position
 	to_partner.y = 0.0
 	if to_partner.length() > 0.1:
-		# The boom reaches along local +X: turn the whole body so its tip sits over the partner.
 		rotation.y = atan2(-to_partner.z, to_partner.x)
 	_turn_dish(delta)
 	var off_seat := absf(to_partner.length() - BOOM)
@@ -143,20 +109,14 @@ func _turn_dish(delta: float) -> void:
 	dish_yaw += clampf(wrapf(want - dish_yaw, -PI, PI), -DISH_TURN * delta, DISH_TURN * delta)
 
 
-# --- The guard combat reads -------------------------------------------------------------
-
 func guarding(enemy: Node3D) -> bool:
 	return braced and holds_partner(enemy)
 
 
-# Linked to this enemy, braced or not: no other Linker may take it.
 func holds_partner(enemy: Node3D) -> bool:
 	return not cut and not _dead and enemy == partner
 
 
-# True when a hit of this kind on the partner meets the dish: the ball is inside the dish's
-# cone and below its rim. Over the top (a stomp, a slam, or anything from above DISH_CLEAR)
-# or from outside the cone, it lands.
 func blocks(kind: String) -> bool:
 	if not _alive(partner) or not guarding(partner):
 		return false
@@ -179,9 +139,6 @@ func dish_dir() -> Vector3:
 	return Vector3(sin(dish_yaw), 0.0, cos(dish_yaw))
 
 
-# --- The cable --------------------------------------------------------------------------
-
-# The two ends the effects layer draws arcs along (MACHINE-VFX contract): base, dish.
 func cable_ends() -> Array:
 	return [_socket_at("cable_base"), _socket_at("cable_dish")]
 
@@ -217,7 +174,6 @@ func cut_cable(how: String) -> void:
 	cut_by = how
 	_unlink()
 	special_tell.emit("cut")
-	# The codex trick "cable_cut": the dish drops for good.
 	if fleet != null and is_instance_valid(fleet):
 		fleet.discover("cable_cut", global_position)
 	if _anim != null and _anim.has_animation("cut"):
@@ -227,8 +183,6 @@ func cut_cable(how: String) -> void:
 	if is_instance_valid(_cable) and _skeleton == null:
 		_cable.visible = false
 
-
-# --- Linking ----------------------------------------------------------------------------
 
 func _find_partner() -> Node3D:
 	var best: Node3D = null
@@ -297,8 +251,6 @@ static func _alive(enemy) -> bool:
 	return not DamageDoor.dead(enemy)
 
 
-# --- The body ---------------------------------------------------------------------------
-
 func _build_tool() -> void:
 	_crew.free()
 	_crew = null
@@ -347,7 +299,6 @@ func _build_model() -> void:
 			_sockets[socket] = node
 
 
-# No body asset: a post, a boom along +X and a dish at its tip, the same sockets as the recipe.
 func _build_greybox() -> void:
 	_model = Node3D.new()
 	_model.name = "LinkerGreybox"
@@ -378,7 +329,6 @@ func _add_socket(socket: String, parent: Node3D, at: Vector3) -> void:
 	_sockets[socket] = node
 
 
-# The greybox cable is one thin box from the base to the dish, refitted as the dish turns.
 func _fit_greybox_cable() -> void:
 	if _model == null or _model.name != "LinkerGreybox" or not _model.is_inside_tree():
 		return
@@ -399,7 +349,6 @@ func _socket_at(socket: String) -> Vector3:
 	return node.global_position
 
 
-# The dish's yaw relative to the body: the model's dish faces local +Z at rest.
 func _aim_model() -> void:
 	var relative := wrapf(dish_yaw - rotation.y, -PI, PI)
 	if _skeleton != null and _aim_bone >= 0:
@@ -418,8 +367,6 @@ func _light_cable(on: bool) -> void:
 	_cable_material.emission_energy_multiplier = PLATE_GLOW_LIVE if on else 0.0
 
 
-# The glb carries no loop flag, so idle and braced would play once and freeze: loop them
-# here, and set how long each switch eases. Reduced motion adds no looping ambient motion.
 func _ease_clips() -> void:
 	for clip in IDLE_CLIPS:
 		if _anim.has_animation(clip) and EnemyMotion.motion_scale > 0.0:
@@ -438,8 +385,6 @@ func _play(clip: String, then := "") -> void:
 		_anim.queue(then)
 
 
-# The static body's cut: the dish falls off its hinge and rolls a little way like a lost
-# hubcap (4a's tone gag), then stays where it lies.
 func _drop_dish() -> void:
 	if not is_instance_valid(_dish):
 		return

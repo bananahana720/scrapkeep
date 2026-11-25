@@ -2,14 +2,6 @@ extends "res://src/combat/counter.gd"
 
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
-# The swatter (DESIGN-V2 section 15.4): a crew figure behind a long low paddle arm. The
-# warning is a wedge swept by the paddle, low (PADDLE_REACH), so a jump clears it. When
-# it fills the paddle swings: a ball the wedge contains is batted along the sweep, a
-# hard sideways knock that throws it off its line but never slows it, and for BAT
-# seconds the knock owns the ball. Boost inside that time and you ride it: the knock
-# becomes your speed, with the break refund. The paddle never damages; its punishment
-# is the line it takes from you, usually into its pack.
-
 const SWEEP_RADIUS := 7.5
 const SWEEP_HALF_DEG := 55.0
 const PADDLE_REACH := 1.6
@@ -20,10 +12,6 @@ const HP := 45.0
 const PRIMARY_WARN := 0.8
 const PRIMARY_LIVE := BAT + 0.05
 
-# Secondary attack (W47-E2): Overhead Sky-Spank. Triggered when the player jumps Primary
-# or hovers below SKY_MAX_H above ground inside sweep reach. 0.75 s vertical paddle cock
-# (Palette.HAZARD aerial ring); air-slamming onto the rising paddle springs the ball
-# (+SKY_VAULT_BOOST m/s) and stuns the Swatter's gears.
 const SKY_WARN := 0.75
 const SKY_LIVE := 0.45
 const SKY_RADIUS := 7.0
@@ -90,7 +78,6 @@ func _build_tool() -> void:
 				_paddle = mi
 			else:
 				mi.name = "SwatterBody"
-				# A body mesh with no fleet_paint surface keeps its own finish (F012).
 				if part.body >= 0:
 					mi.set_surface_override_material(part.body, _material)
 		return

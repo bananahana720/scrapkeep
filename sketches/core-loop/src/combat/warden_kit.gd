@@ -4,23 +4,9 @@ const Palette := preload("res://src/core/palette.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
-# The family kit on the Warden's shared clamp (DESIGN-V2 section 11, VISUAL-LANGUAGE
-# section 11), visual only: nothing here collides. The clamp is one base; the kit says
-# which cause of the collapse woke under this stage. Enamel stays dull petrol and only
-# the Cherenkov seams glow; a weak point opening is its seam blazing.
-#
-# - reactor: three vent stacks round the deck and the core dome on top. The dome's seam
-#   blazes while the core stands open in a stagger.
-# - swarm: a crown of hive cells and the queen cell in the middle, dark behind its
-#   shutters until the guard swarm scatters, then lit and swollen in a stagger.
-# - mind: a jointed arm rising from the deck to a lens cluster that always follows the
-#   ball and opening wide while the core stands open.
-
 const DECK := 2.2
 const SEAM_DIM := 0.8
 const SEAM_OPEN := 5.0
-# The body's lens (the Lens bone) from the Warden's centre: 8 m under it in the island hang, and
-# in the perch the grip 0.086 m over it and the lens 6 m over the grip (mind hero_assets rows).
 const MIND_BODY_POINTS := {"under_island": Vector3(0.0, -8.0, 0.0), "spires": Vector3(0.0, 6.086, 0.0)}
 
 var warden
@@ -119,10 +105,6 @@ func _build_mind() -> void:
 	_open_node = _mesh(glass, _seam_material, Vector3.ZERO, _lens)
 
 
-# Where the kit's weak point sits, relative to the Warden. A park mind (KF8a) wears the
-# warden_mind.glb body, whose lens hangs under the island (MIND_BODY_POINTS under_island) or
-# stands over the perch grip with the perch clip held (spires); the reactor and swarm bodies put
-# their WeakPoint where the kit's already is.
 func point_offset() -> Vector3:
 	match family:
 		Roster.REACTOR:
@@ -136,8 +118,6 @@ func point_offset() -> Vector3:
 	return Vector3.UP * DECK
 
 
-# Whether this mind fights in the body (a park Warden on a mind mounting); hero_assets.gd
-# dresses the same Wardens with warden_mind.glb.
 func mind_body() -> bool:
 	return family == Roster.MIND and warden != null and bool(warden.get("harpoon_anchor")) \
 			and MIND_BODY_POINTS.has(String(warden.get("mounting")))

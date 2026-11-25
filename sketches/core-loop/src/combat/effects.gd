@@ -6,40 +6,23 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 
-# Combat's own short-lived marks: chain arcs, blast rings, impact sparks and straight beams. They show
-# where a committed hit landed, for a fraction of a second, drawn as thin lines at
-# PRIORITY, below every enemy telegraph (principle 4: our effects never hide a threat).
-# Presentation (writer C) owns the rest of the juice; these are the minimum a greybox
-# needs to read what the weapons did. Jitter has its own stream, independent of the
-# run's seeded stream and engine consumers of global randomness.
-
 const PRIORITY := 1
 const ARC_LIFE := 0.16
 const RING_LIFE := 0.24
 const SPARK_LIFE := 0.12
 const ARC_SEGMENTS := 7
 const RING_SEGMENTS := 40
-# Flair: the one shape a shot bit draws where it acts, and the verb evolutions' payoffs. Each is
-# a few straight lines in its own colour (a bit's ShotBits.TABLE row, never the hazard colour).
-# All are P5 player effects (FEEL-READABILITY.md 1.1): the density governor's band thins their
-# alpha and life in a crowd, and a bit shape's size too; a payoff's radius is the committed one and
-# never shrinks. Reduce flashes cuts them to FlashGuard's information share. Bit shapes hold at most
-# BIT_CAP (the hit-spark budget, FEEL-READABILITY.md 1.2) and each payoff kind PAYOFF_CAP, each
-# dropping its own oldest, so neither a burst of hits nor a volley of crystals erases an aftershock. Each mark's lines come from
-# flair_lines(), the one place its shape is worked out.
 const BIT_LIFE := 0.16
 const PAYOFF_LIFE := 0.3
 const BIT_CAP := 12
 const PAYOFF_CAP := 8
 const FLAIR_CLASS := "P5"
 const BIT_ALPHA := 1.0
-# A payoff peaks no brighter than the blast ring it stands for (ring_alpha).
 const PAYOFF_ALPHA := 0.7
 const BIT_REACH := 1.4
 const FROST_POINTS := 6
 const FROST_REACH := 0.8
 const QUAKE_SEGMENTS := 32
-# A brighter brass for the pop a pressed (Grapeshot) split throws, before Reduce flashes.
 const PRESS_POP := 0.4
 
 var _arcs: Array = []
@@ -64,8 +47,6 @@ func setup() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.vertex_color_use_as_albedo = true
-	# The colours written into the mesh are the palette's sRGB values: the switch makes the PC's renderer read them so,
-	# not as linear light, which washed the rings and arcs out (tools/vertex_colour_probe.gd --marks=1, W46-13).
 	mat.vertex_color_is_srgb = true
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.render_priority = PRIORITY
@@ -90,17 +71,11 @@ func spark(at: Vector3, color: Color) -> void:
 	set_process(true)
 
 
-# A straight line that fades over `life` seconds: a lance's committed path, drawn once.
 func beam(from: Vector3, to: Vector3, color: Color, life: float) -> void:
 	_beams.append({"from": from, "to": to, "color": color, "life": life, "span": life})
 	set_process(true)
 
 
-# The one shape for a shot bit acting at `point` on a shot flying along `dir`. `aim` is the
-# bit's second direction: for pull the way to the ball (the tether points there), for bounce the
-# way the shot came in (the V's other arm). `fork_deg` is the split's angle each side of the line;
-# a fork tighter than the plain split's is a pressed one (Grapeshot) and pops a brighter flash.
-# A pull with no way to the ball draws nothing.
 func bit_hit(bit_name: String, point: Vector3, dir: Vector3, aim := Vector3.ZERO, fork_deg := Bolts.SPLIT_ANGLE_DEG) -> void:
 	if not ShotBits.TABLE.has(bit_name) or (bit_name == "pull" and _flat(aim).length_squared() < 0.0001):
 		return
@@ -108,14 +83,10 @@ func bit_hit(bit_name: String, point: Vector3, dir: Vector3, aim := Vector3.ZERO
 		"color": ShotBits.TABLE[bit_name]["color"]}, BIT_ALPHA, BIT_LIFE, BIT_CAP)
 
 
-# Hoar Barrel's frost landing: a six-armed ice crystal where the shot struck, inside the frost
-# ring the element field draws round the machine (element_field.gd frost_patch).
 func frost_flash(at: Vector3) -> void:
 	_add_flair({"kind": "frost", "at": at, "color": Palette.ICE}, PAYOFF_ALPHA, PAYOFF_LIFE, PAYOFF_CAP)
 
 
-# Fault Hammer's aftershock: a darkened pilot-colour rim on exactly `radius`, the ring the
-# aftershock struck, and a full-bright ring in the pilot's colour running out to meet it.
 func shockwave(at: Vector3, radius: float, color: Color) -> void:
 	_add_flair({"kind": "quake", "at": at, "radius": radius, "color": color}, PAYOFF_ALPHA, PAYOFF_LIFE, PAYOFF_CAP)
 
@@ -124,7 +95,6 @@ static func is_bit_mark(entry: Dictionary) -> bool:
 	return String(entry["kind"]) in ShotBits.NAMES
 
 
-# The group a mark shares its cap with: every bit shape together, each payoff kind alone.
 static func cap_group(entry: Dictionary) -> String:
 	return "bit" if is_bit_mark(entry) else String(entry["kind"])
 
@@ -153,7 +123,6 @@ func clear() -> void:
 	set_process(false)
 
 
-# Live marks drawn this frame across every combat effect pool.
 func live_mark_count() -> int:
 	return _arcs.size() + _rings.size() + _sparks.size() + _beams.size() + _flair.size()
 
@@ -189,8 +158,6 @@ func _process(delta: float) -> void:
 	_mesh.surface_end()
 
 
-# The alpha each mark draws at now. Every mark scales by its colour's own alpha, so a caller
-# that dims a colour (Reduce flashes, a fading trail) dims what is drawn.
 static func arc_alpha(entry: Dictionary) -> float:
 	return entry["color"].a * clampf(entry["life"] / ARC_LIFE, 0.0, 1.0)
 
@@ -211,7 +178,6 @@ static func flair_alpha(entry: Dictionary) -> float:
 	return FlashGuard.info(entry["color"].a * float(entry["shade"]) * clampf(entry["life"] / entry["span"], 0.0, 1.0))
 
 
-# The brightest alpha any live mark draws at now.
 func brightest() -> float:
 	var best := 0.0
 	for entry in _arcs:
@@ -243,7 +209,6 @@ func _line(a: Vector3, b: Vector3, color: Color) -> void:
 	_mesh.surface_add_vertex(b)
 
 
-# A jagged bolt of lightning, re-jittered every frame so it crackles while it lasts.
 func _draw_arc(entry: Dictionary) -> void:
 	var from: Vector3 = entry["from"]
 	var to: Vector3 = entry["to"]
@@ -260,7 +225,6 @@ func _draw_arc(entry: Dictionary) -> void:
 		previous = point
 
 
-# A blast ring that grows to its committed radius as it fades.
 func _draw_ring(entry: Dictionary) -> void:
 	var life := clampf(entry["life"] / RING_LIFE, 0.0, 1.0)
 	var radius: float = entry["radius"] * lerpf(1.0, 0.55, life)
@@ -283,7 +247,6 @@ func _draw_spark(entry: Dictionary) -> void:
 	_line(at - Vector3.BACK * size, at + Vector3.BACK * size, color)
 
 
-# A flair mark's lines now, each [from, to, colour]: its shape at its age, scaled by its size.
 static func flair_lines(entry: Dictionary) -> Array:
 	var grown := 1.0 - clampf(entry["life"] / entry["span"], 0.0, 1.0)
 	var at: Vector3 = entry["at"]
@@ -292,7 +255,6 @@ static func flair_lines(entry: Dictionary) -> Array:
 	var out: Array = []
 	match String(entry["kind"]):
 		"pierce":
-			# A streak punched through the body and a chevron at its tip, both along the line.
 			var dir := _unit(entry["dir"], Vector3.FORWARD)
 			var side := _side(dir)
 			var tip := at + dir * reach * lerpf(0.7, 1.15, grown)
@@ -300,14 +262,12 @@ static func flair_lines(entry: Dictionary) -> Array:
 			out.append([tip, tip - dir * reach * 0.35 + side * reach * 0.25, color])
 			out.append([tip, tip - dir * reach * 0.35 - side * reach * 0.25, color])
 		"bounce":
-			# A V on the wall: one arm back the way the shot came, one out the way it left.
 			var leave := _unit(entry["dir"], Vector3.FORWARD)
 			var came := _unit(entry["aim"], -leave.rotated(Vector3.UP, deg_to_rad(70.0)))
 			out.append([at, at + came * reach * 0.8, color])
 			out.append([at, at + leave * reach * lerpf(0.8, 1.1, grown), color])
 			_cross(out, at, reach * 0.12, color)
 		"split":
-			# Two forks fanned about the shot's up axis at the split's own angle.
 			var dir := _unit(entry["dir"], Vector3.FORWARD)
 			var up := _side(dir).cross(dir).normalized()
 			var fork := deg_to_rad(float(entry["fork_deg"]))
@@ -320,7 +280,6 @@ static func flair_lines(entry: Dictionary) -> Array:
 					var ray := dir.rotated(up, TAU * i / 8.0)
 					out.append([at + ray * reach * 0.12, at + ray * reach * lerpf(0.3, 0.45, grown), pop])
 		"pull":
-			# A tether drawn in toward the ball, its arrowhead pointing there.
 			var toward := _unit(_flat(entry["aim"]), Vector3.BACK)
 			var side := _side(toward)
 			var head := at + toward * reach * lerpf(0.8, 1.2, grown)
@@ -328,13 +287,11 @@ static func flair_lines(entry: Dictionary) -> Array:
 			out.append([head, head - toward * reach * 0.3 + side * reach * 0.22, color])
 			out.append([head, head - toward * reach * 0.3 - side * reach * 0.22, color])
 		"heat":
-			# Embers rising off the struck body; the glow ring is combat's own heat ring.
 			for i in 6:
 				var a := TAU * i / 6.0
 				var ray := Vector3(cos(a), 1.4, sin(a)).normalized()
 				out.append([at + ray * reach * 0.15, at + ray * reach * lerpf(0.45, 0.7, grown), color])
 		"frost":
-			# A six-armed crystal on the machine: each arm with a barb either side near its tip.
 			var arm := FROST_REACH * lerpf(0.8, 1.0, grown)
 			var centre := at
 			for i in FROST_POINTS:
@@ -346,7 +303,6 @@ static func flair_lines(entry: Dictionary) -> Array:
 				for barb in [-1.0, 1.0]:
 					out.append([knot, knot + out_dir.rotated(Vector3.UP, deg_to_rad(45.0) * barb) * arm * 0.3, color])
 		"quake":
-			# The darkened pilot rim stays on the committed radius; the pilot's ring runs out to meet it.
 			var radius := float(entry["radius"])
 			var eased := 1.0 - pow(1.0 - grown, 2.0)
 			_circle(out, at, radius * lerpf(0.3, 0.92, eased), color)
@@ -362,7 +318,6 @@ static func _unit(v: Vector3, fallback: Vector3) -> Vector3:
 	return v.normalized() if v.length_squared() > 0.0001 else fallback
 
 
-# A direction square to `dir` along the ground (or across it, for a shot straight up or down).
 static func _side(dir: Vector3) -> Vector3:
 	var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
 	return dir.cross(up_hint).normalized()

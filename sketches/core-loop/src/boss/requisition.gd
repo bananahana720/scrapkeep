@@ -10,11 +10,6 @@ const BakeLook := preload("res://src/presentation/bake_look.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
-# The Requisition: a rolling furnace-fortress several times the ball's height, with
-# Brindle's glass cockpit on its stern. This node is its body and its pieces, and it
-# decides nothing: boss.gd moves it, swings its cranes and asks its pieces what they
-# are. Its hull is kinematic, so it shoves the ball with weight and is never pushed.
-
 const HULL := Vector3(9.0, 5.0, 14.0)
 const DECK := 5.0
 const CAP_SPOTS := [Vector3(0.0, 5.4, -4.5), Vector3(-2.6, 5.4, 0.8), Vector3(2.6, 5.4, 0.8)]
@@ -22,20 +17,13 @@ const CRANE_PIVOTS := [Vector3(-4.5, 7.5, -2.0), Vector3(4.5, 7.5, 2.0)]
 const MAGNET_REST := 6.0
 const MAGNET_HANG := 4.5
 const CAP_SIZE := Vector3(2.2, 0.8, 2.2)
-# Brindle's name plate shows while the camera is within this of its anchor: the bowl's
-# whole width, so it never drops out mid-fight.
 const PLATE_REACH := 160.0
 const PLATE_LIFT := DECK + 4.0
-# The charge shove's cutaway: a camera body whose box, grown by CUTAWAY_MARGIN, meets the column CUTAWAY_COLUMN metres
-# up from the rider turns every mesh it stands for to this transparency.
 const CUTAWAY_TRANSPARENCY := 0.88
 const CUTAWAY_COLUMN := 12.0
 const CUTAWAY_MARGIN := 1.0
-# The fortress and its scooter (recipes in tools/blender/bosses). The primitives below stay
-# built and are only hidden when the model loads, so a missing GLB leaves the old boxes.
 const MODEL := "res://assets/models/bosses/boss_brindle.glb"
 const SCOOTER_MODEL := "res://assets/models/bosses/boss_brindle_scooter.glb"
-# Test seam: a test points these at a missing file to prove the primitive fallback builds.
 static var model_path := MODEL
 static var scooter_path := SCOOTER_MODEL
 
@@ -44,11 +32,8 @@ static func reset_for_tests() -> void:
 	drop_ahead()
 	model_path = MODEL
 	scooter_path = SCOOTER_MODEL
-# The model parts the loader needs; a model that lacks any of them is dropped, not half used.
-# The model parts drawn_boxes() lists.
 const BODY_PARTS := ["Hull", "BowRam", "CockpitShield", "CraneMasts", "CraneElbowPort", "CraneElbowStarboard", "DeckDressing",
 	"Armour0", "Armour1", "Armour2", "Armour3"]
-# The drums and hatches on the hull's sides: one box together, in the hull's own frame.
 const FITTING_PARTS := ["DrumL0", "DrumL1", "DrumL2", "DrumL3", "DrumR0", "DrumR1", "DrumR2", "DrumR3", "HatchL", "HatchR"]
 const MODEL_PARTS := ["Hull", "CockpitShield", "CraneMasts", "CranePort", "CraneStarboard", "CableSpans", "MagnetSocketPort",
 	"MagnetSocketStarboard", "MagnetPort", "MagnetStarboard", "Cap0", "Cap1", "Cap2", "Armour0", "Armour1", "Armour2", "Armour3"]
@@ -57,9 +42,6 @@ var hull
 var magnets: Array = []
 var caps: Array = []
 var heading := Vector3.FORWARD
-# Brindle's internal readout prompt: kept updated for tests and telemetry, never placed by
-# hud.place_prompts() in the bottom prompts band (where TITLE_WORDS=3 truncated it into
-# "BRINDLE · plating/bow/on" over the player ball, PF-54; BossPlate owns Brindle's HUD readout).
 var plate: WorldPrompt
 
 var _cables: Array = []
@@ -68,7 +50,6 @@ var _cap_meshes: Array = []
 var _plates: Array = []
 var _cockpit: MeshInstance3D
 var _hull_prim_mat: StandardMaterial3D
-# The model and its parts, when it loaded; null model means the primitives are the body.
 var model: Node3D
 var _prims: Array = []
 var _anim: AnimationPlayer
@@ -83,9 +64,7 @@ var _model_bow_ram: MeshInstance3D
 var _model_shield: Node3D
 var _bracing := false
 var _pending_hides := {}
-# [node, local AABB] of each drawn part, found once (drawn_boxes).
 var _drawn_parts: Array = []
-# One camera-only body per drawn box, [body, node, local AABB], so the chase camera meets what is drawn.
 var _camera_bodies: Array = []
 var _shoved_rider: Node3D
 
@@ -143,12 +122,9 @@ func build(boss) -> void:
 	_build_camera_bodies()
 
 
-# The chase camera's arm and lift probe see layer 4 only for the ship, not the layer-3 hull (the
-# placeholder box is hidden when the model loads). The bodies follow their drawn parts each physics tick.
 func _build_camera_bodies() -> void:
 	drawn_boxes()
 	for part in _drawn_parts:
-		# A cable's 0.25 m swing across the arm would snap the lens in; other readers still see it in drawn_boxes().
 		if part[0] in _cables:
 			continue
 		var body := ChaseCamera.camera_body()
@@ -161,8 +137,6 @@ func _build_camera_bodies() -> void:
 	_follow_drawn_parts()
 
 
-# During a charge shove the rider can pass through the hull. Each camera body standing over the ball goes
-# see-through whole, with every mesh it stands for (so the hull goes with its fittings), and the rest stay opaque.
 func follow_shoved_rider(rider: Node3D) -> void:
 	_shoved_rider = rider
 	_follow_drawn_parts()
@@ -189,8 +163,6 @@ func _follow_drawn_parts() -> void:
 		if not size.is_equal_approx(row[3]):
 			(shape.shape as BoxShape3D).size = size
 			row[3] = size
-		# The close chase lens is above the ball. A one-radius column covers
-		# the moving cage even when the arm pivot trails the sideways shove.
 		var covering := false
 		if is_instance_valid(_shoved_rider):
 			var ball := body.to_local(_shoved_rider.global_position)
@@ -206,7 +178,6 @@ func _follow_drawn_parts() -> void:
 static func _cable_mesh() -> ArrayMesh:
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	# Alternating collars give the working cable a ribbed profile along local Z.
 	for band in 6:
 		var z0 := -0.5 + band / 6.0
 		var z1 := -0.5 + (band + 1) / 6.0
@@ -224,17 +195,6 @@ static func _cable_mesh() -> ArrayMesh:
 	return surface.commit()
 
 
-# The ship's drawn body as a short list of oriented boxes, [Transform3D, AABB] pairs, each part's own
-# box in its own frame, so a turned ship keeps tight boxes (one world box around a 9 x 14 m hull grows
-# to 16.5 x 16.5 m at 45 degrees). The loaded model's body parts are listed (BODY_PARTS: the hull and bow
-# ram, the cockpit shield, the crane masts and elbows, the deck dressing, the armour panels; one box for
-# the drums and hatches on the hull's sides) with the crane cables, which are drawn outside every
-# piece's own shape. Without the model: the hull piece's primitives, the cockpit and the crane posts.
-# Left out: the magnets, caps and sockets (strike pieces of their own, in group "enemy"), the name plate
-# and the posture ring. The parts and their local boxes are found once; a call reads each part's live
-# transform and skips a hidden one (a shed armour panel, folded cranes). The hull piece's own box is the
-# 9 x 5 x 14 m placeholder, hidden by render layer when the model loads, so it is not what the ship looks
-# like. player_fx keeps hit words off these boxes (PF-26). Empty before the build.
 func drawn_boxes() -> Array:
 	if _drawn_parts.is_empty():
 		_find_drawn_parts()
@@ -265,7 +225,6 @@ func _find_drawn_parts() -> void:
 				fittings = local if not any else fittings.merge(local)
 				any = true
 		if any:
-			# The drums turn with the idle clip, so their box is grown past a drum's corners.
 			_drawn_parts.append([hull_mesh, fittings.grow(0.6), fitting_meshes])
 	else:
 		for prim in _prims:
@@ -280,7 +239,6 @@ func _find_drawn_parts() -> void:
 				_drawn_parts.append([node, box])
 
 
-# Places the ship with its bow along `dir`, on whatever ground is under it.
 func move_to(at: Vector3, dir: Vector3) -> void:
 	var flat := Vector3(dir.x, 0.0, dir.z)
 	if flat.length() > 0.01:
@@ -292,7 +250,6 @@ func pivot(i: int) -> Vector3:
 	return to_global(CRANE_PIVOTS[i])
 
 
-# Where a magnet hangs when its crane is idle: out past the side of the hull, below its pivot.
 func magnet_rest(i: int) -> Vector3:
 	var p: Vector3 = CRANE_PIVOTS[i]
 	var out := Vector3(signf(p.x) * MAGNET_REST, p.y - MAGNET_HANG + 2.0, p.z)
@@ -329,10 +286,8 @@ func show_cranes(on: bool) -> void:
 func open_caps(open: bool) -> void:
 	for mesh in _cap_meshes:
 		(mesh as MeshInstance3D).position.y = 0.25 if open else 0.0
-	# The glow lives on the cap's tint material, which its target owns, so a hit hands it back.
 	for cap in caps:
 		cap.set_rest_glow(Palette.HAZARD, 1.2 if open else 0.0)
-	# The model's caps lift with the enter_furnace clip; the glow is the same tint material.
 
 
 func shed_armour() -> void:
@@ -341,9 +296,6 @@ func shed_armour() -> void:
 	_show_model_parts("armour", _model_armour, false, "enter_scuttle")
 
 
-# The phase-entry clips fold the model's cranes, blow its armour off and flip its shield; hiding those parts
-# on the entry frame cut the clip before it was seen, so a hide waits for the clip to end, on the
-# player's own clock, or for another clip to cut it. Showing is immediate and cancels a pending hide.
 func _show_model_parts(group: String, parts: Array, on: bool, clip: String) -> void:
 	_pending_hides.erase(group)
 	var waits := not on and clip != "" and _anim != null and _anim.has_animation(clip)
@@ -354,8 +306,6 @@ func _show_model_parts(group: String, parts: Array, on: bool, clip: String) -> v
 	_pending_hides[group] = {"parts": parts, "clip": clip}
 
 
-# animation_finished (ended) or animation_started (another clip took over): hides waiting on
-# `clip` run, as do those whose clip was cut by a different one.
 func _flush_hides(clip: StringName, ended: bool) -> void:
 	for group in _pending_hides.keys():
 		var row: Dictionary = _pending_hides[group]
@@ -367,12 +317,10 @@ func _flush_hides(clip: StringName, ended: bool) -> void:
 				(part as Node3D).visible = false
 
 
-# Where the cockpit sits on the stern, for the HUD's pointer (boss.gd plate_targets).
 func cockpit_point() -> Vector3:
 	return _cockpit.global_position
 
 
-# `clip` names a phase-entry clip that flips the model's shield away; the hide waits for it.
 func cockpit_open(open: bool, clip := "") -> void:
 	_cockpit.visible = not open
 	if _model_shield != null:
@@ -387,11 +335,6 @@ func set_readout(text: String, color: Color, anchor: Node3D = null, lift := PLAT
 		plate.attach(to, Vector3.UP * lift, PLATE_REACH)
 
 
-# Loads the fortress GLB over the primitives. Any missing part drops the model, so a broken
-# or older GLB leaves the primitive fortress exactly as it was.
-# The dressing below casts parts without checking: every MODEL_PARTS node must exist, the
-# Armour and Cap parts the material arrays reach must be meshes, and CableSpans a Node3D. A
-# model that misses any keeps the primitive body instead of crashing on the boss-entry frame.
 static func model_fits(loaded: Node, plates: int, caps: int) -> bool:
 	for part in MODEL_PARTS:
 		if loaded.find_child(part, true, false) == null:
@@ -423,7 +366,6 @@ func _dress() -> void:
 		_anim.animation_finished.connect(_flush_hides.bind(true))
 		_anim.animation_started.connect(_flush_hides.bind(false))
 		_anim.animation_finished.connect(_resume_idle)
-		# Cap lift is the enter_furnace beat; the dip a later clip would reset it to is not.
 		BossModel.strip_tracks(_anim, "Cap0", ["drone_deploy"])
 		BossModel.strip_tracks(_anim, "Cap1", ["drone_deploy"])
 		BossModel.strip_tracks(_anim, "Cap2", ["drone_deploy"])
@@ -432,12 +374,9 @@ func _dress() -> void:
 	_model_cranes = [model.find_child("CraneMasts", true, false), model.find_child("CranePort", true, false),
 		model.find_child("CraneStarboard", true, false), model.find_child("MagnetSocketPort", true, false),
 		model.find_child("MagnetSocketStarboard", true, false)]
-	# The procedural cable spans the real distance; the model's static span would double it.
 	(model.find_child("CableSpans", true, false) as Node3D).visible = false
 	_model_magnets = [model.find_child("MagnetSocketPort", true, false), model.find_child("MagnetSocketStarboard", true, false)]
 	_model_magnet_meshes = [model.find_child("MagnetPort", true, false), model.find_child("MagnetStarboard", true, false)]
-	# The plating tint (slate or amber) and the hit flash live on the same materials the
-	# primitive plates and caps used, laid over the model's steel surface so the read survives.
 	for i in _plate_mats.size():
 		var panel := model.find_child("Armour%d" % i, true, false) as MeshInstance3D
 		panel.set_surface_override_material(0, _plate_mats[i])
@@ -447,15 +386,10 @@ func _dress() -> void:
 	_cue("idle_roll", 0)
 
 
-# Plays a clip once per (clip, token), so a per-frame caller never restarts it; a new token,
-# such as a new committed hazard, plays it again. A missing clip is a quiet no-op.
 func cue(clip: String, token := 0) -> void:
 	_cue(clip, token)
 
 
-# W1-106 (A11): visible hull brace ahead of the Scuttle's hook turn. Crouches and pitches the
-# drawn fortress bow-down, plays the charge_warn pull-back clip, and lights the BowRam's M4
-# signal lip in HAZARD so the brace reads on High and Low presets without moving any collider.
 const BRACE_DROP := 0.35
 const BRACE_PITCH := -0.075
 const BRACE_GLOW := 3.0
@@ -490,22 +424,16 @@ func _cue(clip: String, token: int, tag := "") -> void:
 	BossModel.play(_anim, clip)
 
 
-# A one-shot cue that ran out with nothing queued behind it hands the drums back to the idle
-# roll, so they stop freezing after the first crane. Reduced motion adds no idle, as for the
-# enemies; the cue key is left alone, so no cue replays.
 func _resume_idle(clip: StringName) -> void:
-	# The hull the pilot has ejected from lies empty, so its drums stay still.
 	if EnemyMotion.motion_scale <= 0.0 or clip in [&"idle_roll", &"eject"] or _anim.assigned_animation != clip:
 		return
 	BossModel.play(_anim, "idle_roll")
 
 
-# The phase's entry clip: the idle roll, the furnace's open caps, the scuttle's shed armour.
 func cue_phase(phase: int) -> void:
 	_cue(["idle_roll", "enter_furnace", "enter_scuttle"][clampi(phase, 1, 3) - 1], phase)
 
 
-# The scooter that leaves the hull. Null when the model is missing: the caller keeps its box.
 static func dress_scooter(parent: Node3D) -> AnimationPlayer:
 	var loaded := _take_ahead(scooter_path)
 	if loaded == null:
@@ -518,18 +446,12 @@ static func dress_scooter(parent: Node3D) -> AnimationPlayer:
 	return player
 
 
-# The fortress and the scooter, read and instanced ahead by warm(), by file path until _dress or
-# dress_scooter takes them: loading and dressing the fortress took 31 ms of the boss-entry
-# frame on the cloud. Each instance already owns its clips.
 static var _ahead := {}
 static var _ahead_reads := {}
-# A model warm() is dressing: path -> [its instance, the views still to colour and dress].
 static var _dressing := {}
 
 
-# A step of that work a call, while the world's last stage runs (boss.gd's warm_arena); true
-# once both are ready. A played game reads the files on a loader thread; headless reads them
-# here, since the dummy rasterizer's mesh RIDs are not thread-safe (as mind_dress.gd).
+# Godot's headless dummy rasterizer mesh RIDs are not thread-safe; keep loads on the main thread.
 static func warm() -> bool:
 	for path in [model_path, scooter_path]:
 		if _ahead.has(path):
@@ -548,8 +470,6 @@ static func warm() -> bool:
 					return false
 				_ahead_reads[path] = ResourceLoader.load_threaded_get(path) if status == ResourceLoader.THREAD_LOAD_LOADED else null
 			return false
-		# The instance, then its colour and the bake's look a view a call: the model dressed whole in
-		# one call was a 71-77 ms frame on the 4080 at the flume Warden's engage.
 		if not _dressing.has(path):
 			var scene := BossModel.load_scene(path, false)
 			_dressing[path] = [scene, scene.find_children("*", "MeshInstance3D", true, false) if scene != null else []]
@@ -559,7 +479,6 @@ static func warm() -> bool:
 			var view: MeshInstance3D = views.pop_back()
 			BossModel.colour_view(view)
 			BakeLook.warm_view(view)
-			# The ink line's welded copy of what dress() will draw, made here a view a frame, not all at once at the end.
 			if view.mesh != null:
 				InkOutline.hull(BakeLook.tangent_safe(view.mesh))
 			return false
@@ -569,7 +488,6 @@ static func warm() -> bool:
 	return true
 
 
-# Frees what warm() holds outside the tree, when the run that read it goes.
 static func drop_ahead() -> void:
 	for scene in _ahead.values():
 		if is_instance_valid(scene):
@@ -599,7 +517,6 @@ static func _instance(path: String) -> Node3D:
 	return _finish(scene)
 
 
-# A coloured scene dressed by the bake's look and a Warden's ink line, with its own clips.
 static func _finish(scene: Node3D) -> Node3D:
 	if scene != null:
 		BakeLook.dress(scene)

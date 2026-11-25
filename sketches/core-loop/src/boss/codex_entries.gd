@@ -1,8 +1,5 @@
 extends RefCounted
 
-# Brindle's four tricks, category "enemy" (DEMO-SPEC, the codex as a treasure hunt).
-# boss.gd declares them at setup and marks each one where it detects it.
-
 const CATEGORY := "enemy"
 const OWNER := "E boss"
 
@@ -50,7 +47,6 @@ const MIND_SPLIT_LANE := "mind_split_lane"
 const MIND_RUSH := "mind_rush"
 const MIND_PLATE := "mind_plate"
 
-# Future fights declare their own rows through for_boss(); ENTRIES stays Brindle's pin.
 const WAKING := [
 	{
 		"id": WAKING_FLOOR_DROP, "name": "Going Down",

@@ -9,29 +9,12 @@ const Weapons := preload("res://src/combat/weapons.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Stakes := preload("res://src/combat/stakes.gd")
 
-# The set piece on Q (design-v3/SKILL-BAR.md section 4). The meter's one writer: it listens
-# to the bus for the sources of section 4 and pays them into `meter`, which the ability
-# record carries for the HUD and bots (AbilityState.meter, AbilityState.ultimate()).
-#
-# A Q at a full meter plans the path once (plan), commits it (start) and rides it on the
-# physics tick: wind-up WINDUP s, the flight on a RideRail carrier, a landing strike, then
-# RECOVER s. Q in the wind-up recalls with a full refund; Space in flight bails (spent, no
-# landing); a stage change, a death or a run end aborts (spent; a retry restores the meter
-# with the rest of the stage-entry state). The router (player_ball.gd) swallows every key
-# but the roll, Space and Q while phase() is not idle.
-#
-# Each ultimate is a row in _ult_rows: {tech: Callable(beat, ball, aim, heft_mult) -> int
-# (hits), peak: Callable(at), landing: Callable(at, heft_mult, chain_mult) -> Array [hits,
-# damage]}, plus the optional target: Callable(ball, aim) -> Dictionary of section 12, item 2.
-# combat.gd registers the shared ult_default row; wave P-C fills one marked block per pilot.
-
 const IDLE := "idle"
 const WINDUP := "windup"
 const FLIGHT := "flight"
 const RECOVER := "recover"
 
 const WINDUP_SECONDS := 0.35
-# A planting wind-up (a row's `plant`) brakes the ball's planar speed to a stop within this long.
 const PLANT_STOP_SECONDS := 0.15
 
 var _plant_from := 0.0
@@ -40,7 +23,6 @@ const FLIGHT_SPEED := 18.0
 const FLIGHT_MIN := 1.6
 const FLIGHT_MAX := 3.2
 const FLIGHT_NO_MUSIC := 2.4
-# With the music off the flight still keeps a beat for its volleys: this many to 2.4 s.
 const NO_MUSIC_BEATS := 7
 const RAIL_SEARCH := 12.0
 const HOP_HEIGHT := 8.0
@@ -54,47 +36,27 @@ const VOLLEY_BIAS_DEG := 25.0
 const LANDING_DAMAGE := 60.0
 const LANDING_KNOCK := 26.0
 const ENCORE_REACH := 30.0
-# Heft class I to V.
 const HEFT_MULT := [1.0, 1.15, 1.30, 1.45, 1.60]
 const ARC_REACH := [40.0, 47.0, 55.0, 62.0, 70.0]
 const LANDING_RADIUS := [6.0, 7.0, 8.0, 9.0, 10.0]
 const DAMAGE_TAKEN := 0.2
-# On a closed Warden guard one set piece adds at most this much posture, volleys and landing
-# together (section 12, item 7); 70 since Andrew's tap "Lift the ceiling" (17 Oct 22:04Z),
-# was 45. Volleys on a Warden deal half damage; a boss takes half.
 const WARDEN_POSTURE_CAP := 70.0
-# The lift is for monster builds (DECISIONS section 5: "Monster builds stagger Wardens faster ...
-# Ordinary pilots still take 45-70 s"): for any other pilot the cap is the old 45 (warden_cap).
 const WARDEN_POSTURE_CAP_ORDINARY := 45.0
 const WARDEN_VOLLEY := 0.5
 const BOSS_MULT := 0.5
 const CONTACT_GAP := 0.5
-# The ball strays this far from the drawn point when something on the path stopped it: the
-# flight ends there as a landing.
 const BLOCKED := 2.5
 const GRAVITY := 26.0
 
 var ctx
 var combat
 var meter := UltimateMeter.new()
-# Seconds per beat of the music playing, 0 with none; audio wires it.
 var beat_seconds := Callable()
-# A world rail entry near a point: Callable(point) -> {entry, to} or {}; the world wires it
-# when it has rails. Unwired, no rail path is offered.
 var rail_query := Callable()
-# ultimate_id -> row (see the header). P-C fills its own marked block.
 var _ult_rows := {
-	# --- P-C Sable ultimate ---
 	"cable_run": {"tech": _sable_tech, "peak": _sable_peak, "landing": _sable_landing, "release": _sable_release},
 	"ball_lightning": {"tech": _lightning_tech, "peak": _lightning_peak, "landing": _lightning_landing, "release": _sable_release},
 	"outpost": {"tech": _sable_tech, "peak": _sable_peak, "landing": _outpost_landing, "release": _sable_release},
-	# --- end Sable ---
-	# --- P-C Rivet ultimate ---
-	# Rows are installed from RivetKit.SHAPE_DISPATCH in setup.
-	# --- end Rivet ---
-	# --- P-C Kest ultimate ---
-	# --- end Kest ---
-	# --- P-C Tarn ultimate ---
 	"redjaw_rend": {"tech": func(beat, ball, aim, mult): return combat.get_node("TarnClaw").tech("redjaw_rend", beat, ball, aim, mult),
 		"peak": func(at): combat.get_node("TarnClaw").peak("redjaw_rend", at),
 		"landing": func(at, heft, chain): return combat.get_node("TarnClaw").landing("redjaw_rend", at, heft, chain)},
@@ -104,10 +66,6 @@ var _ult_rows := {
 	"vice_leap": {"tech": func(beat, ball, aim, mult): return combat.get_node("TarnClaw").tech("vice_leap", beat, ball, aim, mult),
 		"peak": func(at): combat.get_node("TarnClaw").peak("vice_leap", at),
 		"landing": func(at, heft, chain): return combat.get_node("TarnClaw").landing("vice_leap", at, heft, chain)},
-	# --- end Tarn ---
-	# --- P-C Tally ultimate ---
-	# pilots/tally.md section 3; combat.gd's Tally block holds the rows' code and the
-	# tally_books_balanced detection (the landing counts its settles there).
 	"plate_return": {"target": func(ball, aim): return combat.tally_target("plate_return", ball, aim),
 		"tech": func(beat, ball, aim, mult): return combat.tally_tech("plate_return", beat, ball, aim, mult),
 		"peak": func(at): combat.tally_peak("plate_return", at),
@@ -120,14 +78,10 @@ var _ult_rows := {
 		"tech": func(beat, ball, aim, mult): return combat.tally_tech("plate_flywheel", beat, ball, aim, mult),
 		"peak": func(at): combat.tally_peak("plate_flywheel", at),
 		"landing": func(at, heft, chain): return combat.tally_landing("plate_flywheel", at, heft, chain)},
-	# --- end Tally ---
-	# --- P-C Cannon ultimate ---
 	"cannon_fire_mission": {"tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing},
 	"cannon_creeping_barrage": {"tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing},
 	"cannon_plate_mortar": {"target": _cannon_mortar_target, "tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing},
-	# --- end Cannon ---
 }
-# The last plan started, as drawn. Read only outside.
 var last_plan := {}
 
 var _phase := IDLE
@@ -152,18 +106,15 @@ var _staggered := {}
 var _chunks := {}
 var _was_full := false
 var _fill_since := 0.0
-# Seconds from the last empty meter to the last full one, for the run log's fill_seconds.
 var _record_fill := 0.0
 
 
 func setup(ctx_ref, combat_ref) -> void:
 	ctx = ctx_ref
 	combat = combat_ref
-	# --- P-C Rivet ultimate ---
 	var rivet = load("res://src/combat/rivet_kit.gd")
 	for id in rivet.SHAPE_DISPATCH:
 		_ult_rows[id] = rivet.ultimate_row(combat, id)
-	# --- end Rivet ---
 	stakes = Stakes.new()
 	ctx.root.add_child(stakes)
 	stakes.setup(ctx, combat, self)
@@ -172,8 +123,6 @@ func setup(ctx_ref, combat_ref) -> void:
 	name = "Ultimate"
 	ctx.player.abilities.meter = meter
 	ctx.player.set_piece_phase = Callable(self, "phase")
-	# The defence runs inside RunState.damage, the one choke point every hit passes (a boss's
-	# slag, charge and the Mind's attacks call it directly).
 	ctx.run.defend_hook = Callable(self, "defend")
 	ctx.run.ride_hook = Callable(self, "active")
 	var ev = ctx.events
@@ -204,7 +153,6 @@ func setup(ctx_ref, combat_ref) -> void:
 	ev.run_ended.connect(func(_won: bool): _abort("stage"))
 
 
-# Registers a row (combat.gd's ult_default; a pilot unit uses its own marked block instead).
 func register(id: String, row: Dictionary) -> void:
 	_ult_rows[id] = row
 
@@ -227,8 +175,6 @@ func _on_stage_entered(_stage: int, retry: bool) -> void:
 		meter.mark_entry()
 
 
-# Moss's last-call kettle (shop.gd brew, W1-73): the cogs fed at the world's last till arrive
-# in the boss fight as a head start on the meter, at every arrival in that arena.
 func _pour_brew() -> void:
 	var shop = ctx.build.get("shop") if ctx.build != null else null
 	var points: float = shop.pour_brew() if shop != null else 0.0
@@ -237,8 +183,6 @@ func _pour_brew() -> void:
 		_check_full()
 
 
-# --- The meter --------------------------------------------------------------------------
-
 func _feed(source: String, amount := 1.0) -> void:
 	if not _fills():
 		return
@@ -246,16 +190,12 @@ func _feed(source: String, amount := 1.0) -> void:
 		_check_full()
 
 
-# A harpoon link beyond a chain's first pays once per enemy per UltimateMeter.CHAIN_LINK_GAP
-# (UltimateMeter.chain_link).
 func _feed_link(target: Node3D) -> void:
 	var id := target.get_instance_id() if is_instance_valid(target) else 0
 	if meter.chain_link(id, int(ctx.player.chain.combo), _fills()) > 0.0:
 		_check_full()
 
 
-# The meter fills in play only: not in the bay, not between screens (a ceremony pauses the
-# tree), and never during a set piece (the meter is locked then).
 func _fills() -> bool:
 	if ctx.flow == null or not ctx.flow.in_play():
 		return false
@@ -299,9 +239,6 @@ func _ult_id() -> String:
 	return String(ctx.player.abilities.ultimate_id)
 
 
-# --- Q ----------------------------------------------------------------------------------
-
-# Why a Q press would be refused now: "" (it would start), "busy" or "uncharged".
 func can_start() -> String:
 	if active() or ctx.flow == null or not ctx.flow.in_play() or ctx.flow.state_name() == "launch" or ctx.player.frozen():
 		return "busy"
@@ -312,8 +249,6 @@ func can_start() -> String:
 	return ""
 
 
-# A Q press with this aim ({origin, forward}, optionally harpoon: the lock record). Recalls in
-# the wind-up; otherwise starts, or is refused with its verb_failed reason, which it returns.
 func press(aim := {}) -> String:
 	if _phase == WINDUP:
 		recall()
@@ -349,9 +284,6 @@ func _knob(knob: String, fallback):
 	return fallback
 
 
-# The path, planned once with the harpoon's own target query, in the row's `paths` order
-# (default line, rail, arc), then the hop. Returns {path, from, to, target, beats, seconds,
-# flight, legs}; seconds is the wind-up plus the flight.
 func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 	var row := _row()
 	var heft := _heft_index()
@@ -361,13 +293,9 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 	var custom: Dictionary = _ult_rows.get(_ult_id(), {})
 	if custom.has("target"):
 		found = (custom["target"] as Callable).call(ball, aim)
-	# The row's own order (ult_default: line then arc); `paths` overrides it for a caller that
-	# plans another row's order (a variant preview, a test).
 	var order: Array = paths if not paths.is_empty() else row.get("paths", ["line", "rail", "arc"])
 	var harpoon: Dictionary = aim.get("harpoon", kit.aim)
 	var point = _aim_point(aim, reach + RAIL_SEARCH)
-	# The row's order decides: a row that lists arc before line takes the arc even with a
-	# line standing (section 4, "unless the pilot's sheet reorders paths").
 	for path in order:
 		if not found.is_empty():
 			break
@@ -400,8 +328,6 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 		var each := flight / maxi(beats, 1)
 		beats += extra
 		flight += extra * each
-	# One leg by default (section 12, item 1). A rail is two: a short arc onto the entry, then
-	# the rail itself; only the last leg ends in a landing strike.
 	var legs := [{"mode": mode, "to": to, "beats": beats, "seconds": flight, "strike": true}]
 	if mode == "rail":
 		var first := maxi(1, beats / 3)
@@ -412,8 +338,6 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 		"flight": flight, "seconds": windup_seconds() + flight, "legs": legs}
 
 
-# The flight seconds for a path length: length / 18 m/s clamped to 1.6 to 3.2 s, then whole
-# beats of the music so the landing falls on a beat, kept inside the clamp. 2.4 s with none.
 static func round_flight(length: float, beat: float) -> float:
 	if beat <= 0.0:
 		return FLIGHT_NO_MUSIC
@@ -447,7 +371,6 @@ func _aim_point(aim: Dictionary, reach: float):
 	return hit["position"] if not hit.is_empty() else from + (aim["forward"] as Vector3).normalized() * reach
 
 
-# Ground (a walkable face) at the aim point within reach of the ball, or null.
 func _ground_hit(aim: Dictionary, reach: float):
 	var space := _space()
 	if space == null or not aim.has("origin"):
@@ -469,16 +392,12 @@ func _space() -> PhysicsDirectSpaceState3D:
 	return ctx.root.get_world_3d().direct_space_state
 
 
-# Commits a plan: spends the meter, breaks every hold, cuts the line without a "broke",
-# draws the path and starts the wind-up.
 func start(p: Dictionary) -> void:
 	if p.is_empty() or not meter.spend():
 		return
 	_id = _ult_id()
 	if _sable():
 		stakes.begin()
-		# Breaking the mount also breaks a slingshot held on it: a gauge left charging would
-		# keep _charging() true and turn every harpoon press into a cancel.
 		ctx.player.kit.mounted = false
 		ctx.player.kit.slingshot.cancel()
 		_lightning_peaks = 0
@@ -496,11 +415,8 @@ func start(p: Dictionary) -> void:
 	_posture_spent = {}
 	_peaked = false
 	_offset = 0.0
-	# The line goes with the cause "ultimate", which publishes nothing, as a landing does; the
-	# set piece draws its own cable to B.
 	if ctx.player.kit.hooked:
 		ctx.player.cut_line("ultimate")
-	# The breakout row: the holds node breaks every hold on ultimate_started, below.
 	if ctx.spawner != null and ctx.spawner.fleet.holds.holding():
 		combat._discover("set_piece_breakout", ctx.player.ball_position())
 	_record = {"id": _id, "path": p["path"], "seconds": snappedf(float(p["seconds"]), 0.001), "heft_class": _heft_index() + 1,
@@ -524,9 +440,6 @@ func _draw_path(p: Dictionary) -> void:
 		from = leg["to"]
 
 
-# The wind-up is Q's cast (design-v3/FIELDS-AND-CASTS.md section 4, Andrew's "Big ones only"
-# 2026-10-17 19:56:59Z): a row's `cast` when it names one (the stronger depth-3 variants),
-# else WINDUP_SECONDS.
 func windup_seconds() -> float:
 	return float(AbilityState.ABILITIES.get(_ult_id(), {}).get("cast", WINDUP_SECONDS))
 
@@ -535,15 +448,10 @@ func winding_up() -> bool:
 	return _phase == WINDUP
 
 
-# Whether this Q's wind-up plants the pilot (Tarn's and the Cannon's variants).
 func plants() -> bool:
 	return bool(AbilityState.ABILITIES.get(_ult_id(), {}).get("plant", false))
 
 
-# The plant is the pilot's own heavy stance, the one cast that stops the ball, and only while
-# its wind-up runs. The planar speed brakes linearly from the speed at the press to zero over
-# PLANT_STOP_SECONDS and is held there, the pilot's drive included; the fall stays as it is.
-# The line was already cut at the start, so the cause "ultimate" cuts nothing new.
 func _plant() -> void:
 	var v: Vector3 = ctx.player.state.velocity
 	var flat := Vector3(v.x, 0.0, v.z)
@@ -555,7 +463,6 @@ func _plant() -> void:
 	ctx.player.set_velocity_now(Vector3(flat.x, v.y, flat.z), "ultimate")
 
 
-# Q in the wind-up: cancel with a full refund. A field's jolt calls it too (jolt_layer.gd).
 func recall() -> void:
 	if _phase != WINDUP:
 		return
@@ -566,7 +473,6 @@ func recall() -> void:
 	_end("recall", true)
 
 
-# Space in flight: leave the path now with the current velocity. Spent, no landing strike.
 func bail() -> void:
 	if _phase != FLIGHT:
 		return
@@ -580,7 +486,6 @@ func _abort(reason: String) -> void:
 	_outpost_encore = false
 	if _phase == IDLE:
 		return
-	# Already landed: the recovery just ends; there is nothing left to cancel.
 	if _phase == RECOVER:
 		_phase = IDLE
 		meter.locked = false
@@ -595,8 +500,6 @@ func _end(reason: String, refunded: bool) -> void:
 	ctx.run.set_meta("ultimate_record", _record)
 	ctx.events.ultimate_cancelled.emit(_id, reason, refunded)
 
-
-# --- The ride ---------------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
 	if ctx == null or ctx.run.class_def == null:
@@ -652,8 +555,6 @@ func _begin_flight() -> void:
 	ctx.player.set_velocity_now(_ride.velocity_at(0.0), "ultimate")
 
 
-# A RideRail held to exactly the drawn leg over its seconds: a straight line, an arc, or the
-# hop straight up HOP_HEIGHT and down on the same spot.
 func _carrier(from: Vector3, leg: Dictionary):
 	var to: Vector3 = leg["to"]
 	var seconds: float = maxf(0.2, float(leg["seconds"]))
@@ -684,7 +585,6 @@ func _carrier(from: Vector3, leg: Dictionary):
 func _fly(delta: float) -> void:
 	var player = ctx.player
 	var ball: Vector3 = player.ball_position()
-	# Something on the path stopped the ball: the flight ends there as a landing.
 	if _leg_time > 0.1 and ball.distance_to(_expected) > BLOCKED:
 		_land(ball)
 		return
@@ -700,7 +600,6 @@ func _fly(delta: float) -> void:
 			_peak(player.ball_position())
 	var v = null
 	if _sable() or _id.begins_with("cannon_"):
-		# RideRail normally releases 40 ms early; a stake route holds until its final beat.
 		_ride.time += delta
 		if _ride.time < _ride.flight:
 			v = _ride.velocity_at(_ride.time)
@@ -709,7 +608,6 @@ func _fly(delta: float) -> void:
 	if v == null:
 		_land(_ride.target)
 		return
-	# Steering: up to CORRIDOR either side of the drawn path.
 	var side := Vector3(-_ride.heading.z, 0.0, _ride.heading.x)
 	var want: float = clampf(_offset + float(player.intent.move.x) * STEER_SPEED * delta, -CORRIDOR, CORRIDOR)
 	var steer: float = (want - _offset) / delta if delta > 0.0 else 0.0
@@ -737,7 +635,6 @@ func _land(at: Vector3) -> void:
 	var legs: Array = _plan["legs"]
 	var leg: Dictionary = legs[_leg]
 	_leg += 1
-	# ult_encore: a second leg if a target sits within 30 m of the landing.
 	if _leg == legs.size() and _knob("ult_encore", false) and (not _sable() or (_leg == 1 and _id != "outpost")) and not (_id.begins_with("cannon_") and _cannon_encore):
 		var next = _encore_target(at)
 		if next != null:
@@ -758,7 +655,6 @@ func _land(at: Vector3) -> void:
 	ctx.run.set_meta("ultimate_record", _record)
 
 
-# The landing strike: it pays the chain multiplier and ends the chain as a paid smash does.
 func _strike(at: Vector3) -> void:
 	var chain_links: int = ctx.player.chain.combo
 	var mult: float = ctx.player.pay_chain(at)
@@ -766,7 +662,6 @@ func _strike(at: Vector3) -> void:
 	var result: Array = [0, 0.0]
 	if row.has("landing"):
 		result = (row["landing"] as Callable).call(at, HEFT_MULT[_heft_index()], mult)
-	# A third entry means the row hits later and reports then (Rivet's late carve).
 	if result.size() < 3:
 		report_landing(_record, _id, at, result)
 	if _id == "cable_run" and _leg >= (_plan.get("legs", []) as Array).size():
@@ -780,7 +675,6 @@ func _strike(at: Vector3) -> void:
 		combat._discover("set_piece_cash_in", at)
 
 
-# A landing's [hits, damage] into its own set piece's record, and the landed event.
 func report_landing(record: Dictionary, id: String, at: Vector3, result: Array) -> void:
 	record["landing_hits"] = int(record.get("landing_hits", 0)) + int(result[0])
 	record["damage"] = snappedf(float(record.get("damage", 0.0)) + float(result[1]), 0.01)
@@ -802,9 +696,6 @@ func _encore_target(at: Vector3):
 	return best
 
 
-# --- Helpers the rows share ---------------------------------------------------------------
-
-# The landing radius for this heft class, with ult_radius.
 func landing_radius() -> float:
 	return LANDING_RADIUS[_heft_index()] + float(_knob("ult_radius", 0.0))
 
@@ -813,27 +704,20 @@ func volley_targets() -> int:
 	return VOLLEY_TARGETS + int(_knob("ult_volley", 0))
 
 
-# Damage taken during the set piece: x0.2 and never below 1 health. The amount to take.
 func defend(amount: float, hp: float) -> float:
 	if not active():
 		return amount
 	return clampf(amount * DAMAGE_TAKEN, 0.0, maxf(0.0, hp - 1.0))
 
 
-# The most one set piece adds on a closed Warden guard: 70 for a monster build (heft above the
-# fight's library top-bucket maximum, coordinator ruling (B) on #222, 21 Oct), else 45.
 static func warden_cap(monster: bool) -> float:
 	return WARDEN_POSTURE_CAP if monster else WARDEN_POSTURE_CAP_ORDINARY
 
 
-# warden_cap for a Warden node; one that cannot say reads as no monster, so 45.
 static func cap_for_warden(warden: Node) -> float:
 	return warden_cap(warden.monster_build() if warden.has_method("monster_build") else false)
 
 
-# Posture a hit on a closed Warden guard may still add in this set piece: the cap counts
-# volleys and landing together. Applies `result` (the Warden's own judge) with its gain cut
-# to what is left.
 func warden_posture(warden: Node3D, result: Dictionary) -> void:
 	var id := warden.get_instance_id()
 	var spent := float(_posture_spent.get(id, 0.0))
@@ -845,7 +729,6 @@ func warden_posture(warden: Node3D, result: Dictionary) -> void:
 	warden.apply_posture_hit(result)
 
 
-# --- PC-SABLE: cable route, arc rain and a mounted outpost -----------------------------
 var stakes
 var _sable_runs := 0
 var _lightning_peaks := 0
@@ -877,8 +760,6 @@ func _sable_damage(at: Vector3, radius: float, damage: float, limit := 64, landi
 	return [hits, dealt]
 
 
-# A Q landing's ring: the props it reaches break (+1 class) and the machines in it take the damage, both from the
-# one radius the caller resolved.
 func _landing_damage(at: Vector3, radius: float, damage: float) -> Array:
 	ctx.break_props(at, radius, "ultimate")
 	return _sable_damage(at, radius, damage)
@@ -975,8 +856,6 @@ func _sable_release(at: Vector3, release: Vector3) -> Vector3:
 func _outpost_depart(velocity: Vector3) -> void:
 	if not _outpost_encore or _clock > _outpost_until or velocity.length() < 0.1:
 		return
-	# The encore is a second flight from rest only: never over a live wind-up or flight, and
-	# never out of play or with the ball frozen (the same doors can_start keeps).
 	if _phase != IDLE and _phase != RECOVER:
 		return
 	if ctx.flow == null or not ctx.flow.in_play() or ctx.player.frozen():
@@ -998,7 +877,6 @@ func _outpost_depart(velocity: Vector3) -> void:
 	_begin_flight()
 
 
-# --- PC-CANNON: calls keep their original clock even after a bail or collision ----------
 var _cannon_id := ""
 var _cannon_due := -1.0
 var _cannon_calls := 0
@@ -1029,8 +907,6 @@ func _cannon_mortar_target(_ball: Vector3, aim: Dictionary) -> Dictionary:
 	return {"path": "arc", "to": ground} if ground != null else {"path": "hop", "to": ctx.player.ball_position()}
 
 
-# Subtract the carrier's deliberate arc height before probing the floor: twelve metres
-# means a missing island below the flight's ground path, rather than the lob's own apex.
 func _cannon_projection(ball: Vector3) -> Vector3:
 	if _ride != null and _ride.mode == RideRail.ARC:
 		var t := clampf(_ride.time, 0.0, _ride.flight)
@@ -1136,7 +1012,6 @@ func _cannon_landing(at: Vector3, heft: float, chain: float) -> Array:
 		damage += combat._cannon_set_piece_hit(enemy, LANDING_DAMAGE * heft * chain * scale, at, true, mortar, _cannon_budget)
 		hits += 1
 	var discovery := _cannon_id
-	# B6's framework card gets the first landing. The pilot card waits for a later one.
 	if ctx.codex != null and ctx.codex.known("set_piece"):
 		match discovery:
 			"cannon_fire_mission":
@@ -1150,8 +1025,6 @@ func _cannon_landing(at: Vector3, heft: float, chain: float) -> Array:
 	if _cannon_id == "cannon_creeping_barrage":
 		var heading: Vector3 = _ride.heading if _ride != null else Vector3.FORWARD
 		_cannon_call("lane", at, at + heading * 24.4, combat._clock + _beat_len, heft)
-	# The framework appended the encore before calling landing. Its second leg is four
-	# beats, carries this variant's tech and lands at half damage; never append a third.
 	if _leg < _plan["legs"].size():
 		var leg: Dictionary = _plan["legs"][_leg]
 		leg["mode"] = "line" if _cannon_id == "cannon_creeping_barrage" else "arc"

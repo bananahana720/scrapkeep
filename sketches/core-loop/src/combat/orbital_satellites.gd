@@ -7,23 +7,6 @@ const ShotBits := preload("res://src/build/shot_bits.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Grip := preload("res://src/movement/grip.gd")
 
-# W50-ISAAC-PARTS deep combat module (Rule 7):
-# Owns all runtime state, committed geometry, and depth-1 item_proc behaviours for:
-# - Orbital Flywheel scrap satellites (MultiMesh, SpeedTier-scaled radius & angular speed, 1..5 stacks)
-# - Molten Slag Furnace ground zones (committed copper-amber rings, 4.0 s, heat tag)
-# - All 10 flat-part micro-mutations (rivet_plating, magnet_spool, grip_tread, live_line,
-#   vent_baffle, winch_pawl, spring_shims, gatling_heart, horizon_optic, ram_plow)
-# - All 8 transformational parts (boomerang_spool, orbital_flywheel, prism_splitter,
-#   debt_collector, slag_furnace, patch_tether, basalt_ram, storm_capacitor)
-# - All 3 verb-changing evolutions (gyro_foundry, arc_prism, whiplash_spool)
-# - All 6 W50 cross-system synergies (overclocked_circuit, orbital_furnace, scrap_magnetron,
-#   railgun_ricochet, ghost_conductor, heavy_dividend)
-#
-# Strict contracts:
-# - Every proc hit fires as source == "item_proc" (proc depth strictly 1, never recursive).
-# - Zero Palette.HAZARD marks anywhere in player-owned visuals (Rule 8 / B6).
-# - All transient timers, counters, cooldowns, zones, and charges reset on every attempt & death.
-
 const MAX_SATELLITES := 5
 const ORBIT_BASE_RADIUS := 3.1
 const ORBIT_TIER_RADIUS_STEP := 0.55
@@ -421,8 +404,6 @@ func _fx_shockwave(at: Vector3, radius: float, color: Color) -> void:
 		combat.effects.shockwave(at, radius, color)
 
 
-# --- Per-tick step: Orbitals, Molten Slag Zones, Ghost Conductor tethers ----------------
-
 func step(delta: float, enemies: Array) -> void:
 	_clock += delta
 	if not _in_play():
@@ -617,8 +598,6 @@ func _step_ghost_conductor(enemies: Array) -> void:
 				_deal_proc(e, dmg, hpos - ball, 3.0)
 				_note_proc("ghost_conductor", {"damage": dmg, "links": linked})
 
-
-# --- Combat hooks: bolts & strikes ------------------------------------------------------
 
 func stamp_bolt(record: Dictionary, p: Resource) -> void:
 	if String(record.get("source", "")) != "weapon":
@@ -835,8 +814,6 @@ func strike_mult(_enemy: Node3D, _kind: String, cls: String) -> float:
 		mult *= 1.0 + minf(cap, float(burdens) * per)
 	return mult
 
-
-# --- Event handlers (all depth-1 item_proc) ---------------------------------------------
 
 func _on_cogs_collected(amount: int, _total: int) -> void:
 	if amount <= 0 or not _in_play():

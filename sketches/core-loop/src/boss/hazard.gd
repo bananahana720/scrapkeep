@@ -4,22 +4,9 @@ const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const WarningBound := preload("res://src/combat/warning_bound.gd")
 
-# One committed attack area: a crane's sweep, a slag ring or a charge lane. It is laid
-# once, when the attack commits, and the drawing and every hit test read the same
-# numbers, so what the player sees is what can hit them (TADR-008). WARN lasts at
-# least 1.0 s, or warn_floor for a cued follow-up (fight_phases.gd: its ratchet cue
-# sounded CUE_LEAD earlier); a hit is possible only while LIVE and only where contains()
-# is true.
-#
-# Its attack type draws it in the grammar combat's telegraphs share (threat_grammar.gd):
-# a crane's sweep is a WAVE whose front stands at the magnet's real bearing, a slag ring
-# is INSTANT, a charge is a LANE. A WAVE hazard is a sector sweep: its front is the
-# offset front() returns, the same span x live_fraction() the boss's sweep test reads.
-
 enum Shape { SECTOR, ANNULUS, LANE }
 enum { WARN, LIVE, DONE }
 
-# On the step the warning ends and the hazard starts to hurt: the lane's tear plays here.
 signal went_live
 
 const MIN_WARN := 1.0
@@ -33,52 +20,29 @@ var shape := Shape.ANNULUS
 var state := WARN
 var age := 0.0
 var warn_seconds := MIN_WARN
-# Set before commit: a cued follow-up lowers it to FightPhases.CUED_WARN and sets cued.
 var warn_floor := MIN_WARN
 var cued := false
 var live_seconds := 1.0
-# SECTOR and ANNULUS: the floor centre. LANE: where the lane starts.
 var centre := Vector3.ZERO
 var r_in := 0.0
 var r_out := 0.0
-# SECTOR: the sweep runs from a_from to a_to (radians about +y, atan2(z, x)).
 var a_from := 0.0
 var a_to := 0.0
-# LANE: flat unit heading, how far it reaches behind the start, its length and half width.
 var heading := Vector3.FORWARD
 var back := 0.0
 var length := 0.0
 var half_width := 0.0
-# How high above the ground under the ball the area reaches; a jump can clear it.
 var reach := 3.0
-# (point) -> float: the ground height under a point.
 var ground := Callable()
-# ANNULUS: (point) -> bool, true where the ring is quenched and safe.
 var excluded := Callable()
-# Brindle's hazards arrive tinted BRASS (the boss_attack_telegraphed row). Danger still
-# draws in HAZARD; the brass becomes the owner's rim tick (VISUAL-LANGUAGE.md section 4).
-# AMBER marks a spot that is not a threat (a drone pad).
 var color := Palette.HAZARD
-# Sound ids layered over the type's warn sound: the owner's timbre (Fleet or ancient)
-# and a unit's mechanic tag (SOUND-STORY.md section 3). Set them right after commit;
-# presentation reads them at the end of the frame the threat was declared.
 var owner_voice := ""
 var mechanic_tag := ""
-# live_fraction() before the latest step, so a sweep can test only what it just crossed.
 var prev_fraction := 0.0
 
 var _painter
-# ANNULUS: which of its drawn segments are open (quenched) right now.
 var _open: Array[bool] = []
-# The world box of everything the painter can draw (WarningBound), cut once, right after the
-# first FULL paint: in _ready, or, for an annulus that starts with spans quenched, on the first
-# step that leaves none quenched (later quenches only remove drawn spans, so the full paint's
-# meshes hold every later one). Empty until then, so warning_rects walks the meshes. Only a
-# hostile hazard gets one; the first read after a repainting step grows it (_grow_bound). The
-# committed numbers never change after commit and nothing moves a hazard, so it is never recut.
 var _bound := AABB()
-# A step repainted since the box last took the meshes in; bound_merges counts the mesh walks
-# that took (tests/warning_bound_containment_test.gd: idle steps cost none).
 var _bound_stale := false
 var bound_merges := 0
 
@@ -167,8 +131,6 @@ func step(delta: float) -> void:
 	_grow_bound()
 
 
-# ANNULUS: whether the drawing covers a point. A quenched span is left undrawn, so the
-# crust under it shows through and no telegraph has to be painted over.
 func draws(point: Vector3) -> bool:
 	var r := _flat(point - centre).length()
 	if shape != Shape.ANNULUS or r < r_in or r > r_out:
@@ -187,9 +149,6 @@ func _open_segments() -> Array[bool]:
 	return open
 
 
-# LANE: how far along the lane, from its start, the thing that hurts has run while live (Brindle's
-# hull nose), or -1 for a lane that hurts all along at once. Only the drawing and the dodge watch
-# read it; contains() keeps the whole committed lane.
 var lane_front := -1.0
 
 
@@ -205,22 +164,16 @@ func seconds_until_live() -> float:
 	return maxf(0.0, warn_seconds - age)
 
 
-# 0 at the start of LIVE, 1 at its end.
 func live_fraction() -> float:
 	return clampf((age - warn_seconds) / maxf(0.001, live_seconds), 0.0, 1.0)
 
 
-# WAVE: how far the sweep's front has turned from a_from, in radians; -1 while it warns.
 func front() -> float:
 	if state == WARN:
 		return -1.0
 	return absf(a_to - a_from) * live_fraction()
 
 
-# The landing on the step the warning ends (FX-05, as Telegraph.land does for a crew mark): the
-# ink crack ring and dust kick, and an INSTANT's solid flash, drawn from descriptor(), the
-# numbers contains() reads. Nothing for a harmless mark, a wave's sweep (its front is its
-# landing) or a hazard outside the tree.
 func land() -> void:
 	if not is_inside_tree() or not is_hostile():
 		return
@@ -237,7 +190,6 @@ func ground_at(point: Vector3) -> float:
 	return ground.call(point) if ground.is_valid() else centre.y
 
 
-# The committed geometry. Every hit this area makes is inside it.
 func contains(point: Vector3) -> bool:
 	var above := point.y - ground_at(point)
 	if above > reach or above < -2.0:
@@ -261,7 +213,6 @@ func contains(point: Vector3) -> bool:
 	return false
 
 
-# SECTOR: how far along the sweep a point sits, in radians from a_from.
 func sweep_offset(point: Vector3) -> float:
 	var d := _flat(point - centre)
 	var angle := atan2(d.z, d.x)
@@ -269,12 +220,10 @@ func sweep_offset(point: Vector3) -> float:
 	return wrapf((angle - a_from) * dir, -PI, PI)
 
 
-# A ball of radius 1 m touches the sector a little before its centre enters it.
 func _angle_margin(r: float) -> float:
 	return 1.0 / maxf(r, 1.0)
 
 
-# LANE: the flat axis across the lane.
 func side() -> Vector3:
 	return Vector3.UP.cross(heading).normalized()
 
@@ -291,7 +240,6 @@ static func _flat(v: Vector3) -> Vector3:
 	return Vector3(v.x, 0.0, v.z)
 
 
-# The committed numbers the drawing reads: the same fields contains() reads.
 func descriptor() -> Dictionary:
 	var d := {"type": type, "tone": Palette.HAZARD if color == Palette.BRASS else color, "centre": centre, "reach": reach, "progress": clampf(age / warn_seconds, 0.0, 1.0),
 		"live": state == LIVE}
@@ -302,9 +250,6 @@ func descriptor() -> Dictionary:
 			d.merge({"form": "radial", "r_in": r_in, "r_out": r_out, "a0": a_from, "a1": a_to})
 		Shape.ANNULUS:
 			d.merge({"form": "radial", "r_in": r_in, "r_out": r_out, "a0": 0.0, "a1": TAU, "open": _open,
-				# Classic only: under haze a hostile live slag takes fill_tint's dark scorched core (one live
-				# look for every INSTANT, ATTACK-READS.md B02). Nothing else reads live_tone; quenched
-				# holes are left out of the geometry, so they stay clear.
 				"live_tone": color.lerp(MOLTEN, 0.5)})
 		Shape.LANE:
 			d.merge({"form": "lane", "dir": heading, "back": back, "length": length, "half_width": half_width})
@@ -333,13 +278,6 @@ func painter():
 	return _painter
 
 
-# The conservative world box of everything this hazard's painter draws at any progress: the
-# full footprint, the fence up to `reach`, the lift, a sweep's chevrons ahead of its front
-# (WarningBound). It is cut in _ready. A read after a step also takes the painter's current
-# meshes in (see _grow_bound), so the cache only grows. The box is empty (AABB()) before the
-# painter is built and once the hazard is DONE. finish() sets DONE without a repaint, so the
-# painter is hidden only on the next step; until then the caller's mesh walk still finds its
-# meshes, which is conservative.
 func screen_bound_box() -> AABB:
 	if _painter == null or state == DONE:
 		return AABB()
@@ -350,10 +288,6 @@ func screen_bound_box() -> AABB:
 	return _bound
 
 
-# The motion marks are repainted every step, on ground the first paint did not sample (a fill
-# ring's inner edge, a sweep's spoke and chevrons, a lane's run strip). A step only marks the
-# box stale; screen_bound_box() takes the meshes' box in when it is read, so the box holds every
-# mesh drawn up to the read and a step that nobody reads after costs nothing.
 func _grow_bound() -> void:
 	if _bound.size != Vector3.ZERO:
 		_bound_stale = true
@@ -365,8 +299,6 @@ func _cut_bound() -> void:
 	_bound = WarningBound.box(descriptor(), WarningBound.mesh_box(_painter))
 
 
-# Static layers redraw only when the shape changes (a quench opens or closes a span);
-# the moving front, brackets or running fill and the fill's tint follow every step.
 func _paint(reshaped: bool) -> void:
 	if _painter == null:
 		return

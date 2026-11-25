@@ -7,48 +7,12 @@ const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const CrewLamp := preload("res://src/presentation/crew_lamp.gd")
 
-# What every Fleet reinforcement shares (DESIGN-V2 section 10): an animal crew with its
-# anti-ball tool as the biggest shape, and one loop, roam -> warn -> live -> rest.
-#
-# - Warn commits the unit's telegraph with W2's grammar and dresses it with the Fleet's
-#   voice and the unit's mechanic tag (roster.gd), so the danger draws and sounds on the
-#   frame it is declared. Nothing holds the ball before its warning has run.
-# - Live is the unit's own mechanic (a subclass's _live). A hold goes through the holds
-#   node, which owns the crowd-control door, tenacity and breaking free.
-# - A hard hit in the warning (a knock at the unit's interrupt speed) breaks the attack
-#   and staggers the unit for STAGGER_WINDOW, the same window on every pack kind: it
-#   stands open, walks nowhere and starts nothing. impact_resist is the per-kind dial
-#   for how hard that hit must be; the Warden keeps its own posture break.
-# - A hold the player breaks by their own action ends the live phase for good: the pit
-#   shatters, the net tears, the cable snaps. It never re-catches on the next tick.
-# - An attack that ran its live phase ends in recovery (BIBLE "A committed attack means
-#   what it shows": prepare, commit, execute, recover): for recovery_seconds, the one value
-#   every ordinary attack reads from telegraph_record.gd, the unit stands where it struck
-#   and starts nothing. The recovery runs inside rest_seconds, so the cadence is unchanged.
-# - A unit ready to attack asks the attacker budget (attack_budget.gd, SQ2) for one of its
-#   slots first; refused, it keeps circling and waits its turn. The slot goes back when
-#   the attack ends, however it ends.
-#
-# Subclasses set the dials in _configure(), build the tool in _build_tool(), commit the
-# telegraph in _commit() and run the mechanic in _live(delta) -> bool (false ends it).
-
 enum Phase { ROAM, WARN, LIVE }
 
 const INTERRUPT := 10.0
-# A crew builds to its walking speed over this many seconds and eases to a stop or a turn the
-# same way (W1-84): it starts and stops with weight instead of jumping to full speed in one tick.
-# Roaming only: a warning stands the crew still from its first tick, so the telegraph and the body agree.
 const STRIDE_RAMP := 0.15
-# Kinds that set their own body yaw every tick, so the gait's turn would fight it.
 const GAIT_SKIP := ["linker"]
-# One interrupt window for every ordinary pack kind (W13-INTEGRATION-3 SQ3). Start value
-# from comps/roboquest/enemies-and-telegraphs.md:11 (1.25 s on nearly every row there).
 const STAGGER_WINDOW := 1.25
-# Interrupt priority (W13-INTEGRATION-3 SR3): one integer per state, judged by the rule the
-# ability rows use (AbilityState.strongest): an interrupt lands only when strictly stronger.
-# A hard knock (2) breaks the warning (1) but not the live phase (3); only the player breaking
-# the hold (4) ends a live phase early. Roam (0) takes no interrupt call: a knock there stays a
-# knock, never a stagger.
 const STATE_PRIORITY := [0, 1, 3]
 const KNOCK_PRIORITY := 2
 const BREAK_PRIORITY := 4
@@ -61,14 +25,10 @@ var holds
 var fleet
 var row := {}
 var phase := Phase.ROAM
-# Telegraphs committed and holds started, for tests and the balance read.
 var warned := 0
 var caught := 0
-# The last warning's committed seconds, for the telegraph-before-hold check.
 var last_warn := 0.0
-# Set when the player broke this unit's hold; the live phase ends on the next tick.
 var broken_by := ""
-# Holds started in this live phase; a one-shot tool (a cup, a net) catches once.
 var caught_live := 0
 
 var walk_speed := 3.8
@@ -80,15 +40,9 @@ var live_seconds := 1.0
 var rest_seconds := 3.0
 var first_rest := 1.5
 var interruptible := true
-# The per-kind dial on the interrupt: a knock must reach INTERRUPT * impact_resist.
 var impact_resist := 1.0
-# Seconds left in the stagger window, and staggers taken, for tests and presentation.
-# Not stagger_left/staggered(): those names mark a posture fighter (boss_contract.gd,
-# combat.gd's Ram Prow guard), and a pack kind must still take the prow shove.
 var stun_left := 0.0
 var staggers := 0
-# The vulnerable tail after an attack (W13-INTEGRATION-3 SQ1): the shared record value, and
-# the seconds of it left. Not a phase of its own: state_name() still reads "roam".
 var recovery_seconds := TelegraphRecord.RECOVERY
 var recover_left := 0.0
 
@@ -96,9 +50,7 @@ var _t := 0.0
 var _rest := 0.0
 var _strafe := 1.0
 var _crew: MeshInstance3D
-# The roaming velocity the crew has built up (STRIDE_RAMP).
 var _stride := Vector3.ZERO
-# The crew's head lamp, its eye (CrewLamp, W1-83); null for a kind with none.
 var _eye: Node3D
 
 
@@ -111,14 +63,11 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	fleet = spec.get("fleet")
 	if holds != null:
 		holds.released.connect(_on_hold_released)
-	# The bot supplies its own spawn-order sign; otherwise the sign follows this run's spawn order.
 	_strafe = float(get_meta("bot_strafe")) if has_meta("bot_strafe") else _spawn_order_sign()
-	# Tool ratings keep raw stage threat; only initialized HP reads the health dial.
 	var stage_threat: float = spec.get("stage_threat", threat)
 	_configure(stage_threat)
 	if spec.has("stage_threat"):
 		_set_health(max_hp / stage_threat * threat)
-	# A unit always closes to where its attack reaches before it circles.
 	keep_far = minf(keep_far, attack_range * 0.9)
 	_rest = first_rest
 	_build_crew()
@@ -133,8 +82,6 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 			_reaction_bus.near_miss.connect(_on_missed)
 
 
-# Each counter setup in a run takes the next serial from world_root, so runtime identity never
-# reaches gameplay: the sign alternates +1, -1, ... in spawn order. No root falls back to +1.
 func _spawn_order_sign() -> float:
 	if world_root == null:
 		return 1.0
@@ -147,7 +94,6 @@ func state_name() -> String:
 	return ["roam", "warn", "live"][phase]
 
 
-# The knock speed that breaks this unit's warning; INF when nothing does.
 func interrupt_speed() -> float:
 	return INTERRUPT * impact_resist if interruptible else INF
 
@@ -156,7 +102,6 @@ func state_priority() -> int:
 	return STATE_PRIORITY[phase]
 
 
-# The index of the interrupt in `priorities` that lands on this state this tick, else -1.
 func resolve_interrupt(priorities: Array) -> int:
 	return AbilityState.strongest(state_priority(), priorities)
 
@@ -168,8 +113,6 @@ func stunned() -> bool:
 func recovering() -> bool:
 	return recover_left > 0.0
 
-
-# --- Subclass hooks -------------------------------------------------------------------
 
 func _configure(threat: float) -> void:
 	_set_health(40.0 * threat)
@@ -195,9 +138,6 @@ func _warn_progress() -> float:
 	return _t / warn_seconds
 
 
-# How far the wind-up has run, 0 to 1, on its own clock; -1 outside a warning. The telegraph's
-# fill is _warn_progress, which a kind may hold (the bola's reticle stays open); the body's
-# wind-up pose reads this instead.
 func windup_run() -> float:
 	return clampf(_t / maxf(warn_seconds, 0.001), 0.0, 1.0) if phase == Phase.WARN else -1.0
 
@@ -214,9 +154,6 @@ func _pose() -> void:
 	pass
 
 
-# Pack pressure lead (pack_pressure.gd; identity without --pack-pressure): roam toward and size up the ball's
-# roll SEEK_LEAD_S ahead along its curve, scaled by the spec's lead. A kind that aims its warn from the offset
-# it is handed (the hooker, boom tender, deflector, anchor crew) lays it toward that roll; it is committed as ever.
 const SEEK_LEAD_S := 1.0
 
 
@@ -239,8 +176,6 @@ func _roam(to_ball: Vector3) -> Vector3:
 		return -toward * walk_speed
 	return toward.cross(Vector3.UP) * _strafe * walk_speed * 0.5
 
-
-# --- The loop -------------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
@@ -296,14 +231,11 @@ func _physics_process(delta: float) -> void:
 		_eye.watch(delta, _t / maxf(warn_seconds, 0.001) if phase == Phase.WARN else (1.0 if phase == Phase.LIVE else 0.0))
 
 
-# The roaming velocity this tick: `desired` reached at the crew's own rate, walk_speed in STRIDE_RAMP.
 func _ramp(delta: float, desired: Vector3) -> Vector3:
 	_stride = _stride.move_toward(desired, maxf(walk_speed, desired.length()) / STRIDE_RAMP * delta)
 	return _stride
 
 
-# The stride keeps only what the body did: a knock that carried it, or a wall or edge that stopped
-# it, is where the next build-up starts, so it never snaps back to full speed out of either.
 func _strode() -> void:
 	var moved := Vector3(velocity.x, 0.0, velocity.z)
 	if _knocked_speed() >= 1.0 or moved.length() < _stride.length():
@@ -329,14 +261,11 @@ func _warn(to_ball: Vector3) -> void:
 	warned += 1
 	broken_by = ""
 	phase = Phase.WARN
-	# Every wind-up drops the roaming look and glance, also for kinds that commit without _facing.
 	if _gait != null:
 		_gait.hold()
 	_t = 0.0
 
 
-# The Fleet's voice and this unit's mechanic tag over the type's warn sound (SOUND-STORY
-# section 3): the type says what kind of danger, the voice who, the tag which unit.
 func _voice(tele: Node3D) -> void:
 	var motif := _motif()
 	tele.owner_voice = Roster.voiced(String(Roster.faction(faction)["voice"]), motif)
@@ -350,8 +279,6 @@ func _motif() -> String:
 	return String(player.class_def.motif)
 
 
-# The player broke this unit's hold by their own action. The unit's tool is spent for
-# this attack; a subclass may answer (the ramp's ride, the tether's sling).
 func _on_hold_released(source_id: int, _kind: String, reason: String) -> void:
 	if source_id != get_instance_id() or not reason in holds.PLAYER_BREAKS:
 		return
@@ -373,8 +300,6 @@ func prime_attack() -> void:
 	stun_left = 0.0
 
 
-# The warning broke under a hard hit: the attack ends and the unit stands open for the
-# shared window. Nothing here touches the ball; its knock carries it as before.
 func _stagger() -> void:
 	_end()
 	staggers += 1
@@ -383,7 +308,6 @@ func _stagger() -> void:
 
 
 func _end() -> void:
-	# Only an attack that went live recovers; a broken or empty warning does not.
 	recover_left = recovery_seconds if phase == Phase.LIVE else 0.0
 	_facts_end(false)
 	if holds != null and holds.held(self):
@@ -395,8 +319,6 @@ func _end() -> void:
 	_t = 0.0
 	_rest = rest_seconds * float(spec.get("rest_scale", 1.0)) * float(spec.get("pressure", {}).get("rest", 1.0))
 
-
-# --- Holds ----------------------------------------------------------------------------
 
 func _catch(max_seconds := 0.0, shove := Vector3.ZERO, anchor = null) -> bool:
 	if holds == null:
@@ -422,9 +344,6 @@ func _release(reason := "left") -> void:
 		holds.release(self, reason)
 
 
-# --- Noticing (W1-85) ------------------------------------------------------------------
-# A crew reads as a crew when it notices things. Looks only, from facts already on the bus,
-# and only where the gait draws (never headless), so no clock, body or outcome moves.
 const NOTICE_DOWN := 12.0
 const NOTICE_HIT := 18.0
 const NOTICE_MISS := 25.0
@@ -434,7 +353,6 @@ func _noticing() -> bool:
 	return _gait != null and not _dead and EnemyMotion.active()
 
 
-# A crewmate going down nearby: the head turns to it for a beat and the body flinches away.
 func _on_crew_down(_kind: String, at: Vector3, _scrap: int) -> void:
 	var from := Vector3(at.x - global_position.x, 0.0, at.z - global_position.z)
 	if not _noticing() or from.length() > NOTICE_DOWN or from.length() < 0.5:
@@ -445,13 +363,11 @@ func _on_crew_down(_kind: String, at: Vector3, _scrap: int) -> void:
 		react("flinch", -from, false, false)
 
 
-# The ball took a hit: every crew in sight gives a small hop.
 func _on_ball_hit(_amount: float, _source: String) -> void:
 	if _noticing() and _flat_to_ball().length() <= NOTICE_HIT:
 		_gait.hop()
 
 
-# The ball slipped an attack: the nearest crew whose attack just struck lurches after it.
 func _on_missed(_threat_kind: String, at: Vector3) -> void:
 	if not _noticing() or not _just_struck() or global_position.distance_to(at) > NOTICE_MISS:
 		return
@@ -467,17 +383,10 @@ func _just_struck() -> bool:
 	return phase == Phase.LIVE or recovering()
 
 
-# The real ball, not what the sight sees: a hold is tested against where the ball is.
 func _real_ball() -> Vector3:
 	return holds.player.ball_position() if holds != null else _ball()
 
 
-# Where the ball's roll carries it in `seconds` along its present curve (PackPressure.predict), at
-# most `reach` metres on from where it is, at its own height: the spot a kind that lays its threat
-# across the ball's line aims at (W1-66). The lead fades toward cruise as the crews' does (the row's
-# pressure lead_cruise, PackPressure.lead_now), so a ball that slows and holds a line is met and a ball
-# at cruise is aimed at where it is: stopping still costs more than rolling (bot_fairness_test F2).
-# A target that cannot say its velocity is aimed at as it stands.
 func _ahead(seconds: float, reach: float) -> Vector3:
 	var at := _ball()
 	if target == null or not target.has_method("planar_velocity"):
@@ -503,10 +412,6 @@ func _exit_tree() -> void:
 	super._exit_tree()
 
 
-# --- The ancients' cast body ---------------------------------------------------------
-
-# An ancient's material (VISUAL-LANGUAGE section 11): dull petrol enamel under the cap,
-# no fasteners, and Cherenkov-blue seams as the only light.
 func _enamel() -> StandardMaterial3D:
 	var mat := Palette.solid(Roster.ANCIENT_ENAMEL)
 	mat.metallic = 0.2
@@ -518,11 +423,6 @@ func _seam(size: Vector3, at: Vector3, parent: Node3D = self) -> MeshInstance3D:
 	return _box(size, Roster.ANCIENT_LIGHT, at, 2.2, parent)
 
 
-# --- The crew -------------------------------------------------------------------------
-
-# An animal crew in Fleet paint with one brass requisition tag (VISUAL-LANGUAGE section
-# 11; every crew figure is an animal, primer ruling 13): a rust body, a head with two
-# ears, and the tag on the chest. The tool a subclass builds is always bigger.
 func _build_crew() -> void:
 	radius = CREW_RADIUS
 	half_height = CREW_HALF
@@ -573,6 +473,5 @@ func _settle_look() -> void:
 		_eye.go_out()
 
 
-# The body yaw that faces `to_ball`: the tool on +Z.
 func _facing_yaw(to_ball: Vector3) -> float:
 	return atan2(to_ball.x, to_ball.z)

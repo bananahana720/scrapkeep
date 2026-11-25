@@ -1,16 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-# The prop crew (roster_dig.gd, world 2; design-v3/WORLD-ROSTERS.md): a Dig crew that
-# shores a cracked roof over its own pack. It walks to where its pack mates stand and holds
-# a timber prop up under a roof frame. It never attacks. Any ball contact on the crew (a
-# ram, a stomp, a slam) knocks the prop out, and the roof comes down on everything under
-# it: every enemy in the disc takes ROOF_DAMAGE, the crew too if the ram left it under, and the ball,
-# but only while it is on the floor (floor_rule.gd). Ram it from the wall side and the roof
-# lands on its pack and never on you.
-#
-# The fall is its own node (rubble_fall.gd) on the world root, so a ram that kills the crew
-# still brings the roof down. It waits for the shared warning gap before it warns.
-
 const RubbleFall := preload("res://src/world/events/rubble_fall.gd")
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
@@ -18,30 +7,19 @@ const FloorRule := preload("res://src/combat/floor_rule.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 const HP := 60.0
-# The body (tools/blender/world_two/enemy_prop_crew.py, PR #64) carries a 5.2 m by 4.0 m
-# canopy whose underside is 3.3 m above the floor, centred behind the crew; the disc is the
-# circle round it, so everything under the timber is inside the hit.
 const BODY_PATH := "res://assets/models/world_two/enemy_prop_crew.glb"
 const ROOF_RADIUS := 3.3
 const ROOF_HEIGHT := 3.3
 const CANOPY_CENTRE := Vector3(0.0, 0.0, -1.3)
 const ROOF_WARN := 1.0
-# Roof damage is per point of stage threat, like enemy health, so the roof crushes the
-# Dig's ordinary pack (burrower 45, drill crew 90 per threat) whatever the stage.
 const ROOF_DAMAGE := 120.0
 const ROOF_BALL_DAMAGE := 12.0
 const ROOF_SHOVE := Vector3(0.0, 4.0, 0.0)
-# Where the crew looks for its pack, and how close it stands to their middle.
 const GATHER_M := 22.0
 const SETTLE_M := 2.5
 const WALK := 3.4
 const PROP_OFFSET := Vector3(0.75, 0.0, 0.35)
 
-# Secondary attack (W48-COMBAT): Jack-Hammer Shockwave. Fires only when a ball stalls/camps
-# on the floor within JACK_RANGE for STALL_TRIGGER_S (ruling cu; never stops a moving/carving
-# ball). Commits a >= 0.70 s Palette.HAZARD INSTANT ring obeying AttackBudget + 0.2 s gap.
-# Wall-ramming the crew (from off-floor/bank/carve, >= FAST ram, or mid-shockwave ram)
-# triggers a 2x ceiling collapse on the pack.
 const JACK_RANGE := 11.0
 const JACK_RADIUS := 5.5
 const JACK_WARN := 0.85
@@ -96,10 +74,6 @@ func _build_tool() -> void:
 	add_child(_roof)
 
 
-# The body's three meshes: PropCrewBody flashes with the enemy, PropShore is the prop (its
-# origin at its foot, so a knock pivots it there) and PropCanopy goes into ShoredRoof, a
-# holder at the canopy_centre socket and the canopy's underside, so the fall drops it by
-# its middle.
 func _build_body(parts: Dictionary) -> void:
 	_crew.free()
 	_crew = null
@@ -160,7 +134,6 @@ static func _parts() -> Dictionary:
 	return _shared
 
 
-# A node's transform relative to the scene root, outside the tree.
 static func _local_to(root_node: Node, node: Node) -> Transform3D:
 	var xf := Transform3D.IDENTITY
 	var walk: Node = node
@@ -171,8 +144,6 @@ static func _local_to(root_node: Node, node: Node) -> Transform3D:
 	return xf
 
 
-# A shoring frame, not a slab: four timbers round a cracked plate, so a camera above still
-# reads the pack under it.
 func _build_roof() -> Node3D:
 	var roof := Node3D.new()
 	roof.name = "ShoredRoof"
@@ -225,8 +196,6 @@ func _on_end() -> void:
 	warn_seconds = ROOF_WARN
 
 
-# It walks to its pack, not to the ball; alone, it keeps its distance like any crew.
-# Also tracks floor-stalling proximity for Jack-Hammer Shockwave (ruling cu).
 func _roam(to_ball: Vector3) -> Vector3:
 	var dt := get_physics_process_delta_time()
 	var player = _player()
@@ -239,7 +208,6 @@ func _roam(to_ball: Vector3) -> Vector3:
 	var mates := pack_centre()
 	if mates == Vector3.INF:
 		return super._roam(to_ball)
-	# It stands so its roof, not itself, is over the middle of its pack.
 	var to := mates - roof_centre()
 	to.y = 0.0
 	if to.length() <= SETTLE_M:
@@ -247,7 +215,6 @@ func _roam(to_ball: Vector3) -> Vector3:
 	return to.normalized() * walk_speed
 
 
-# The middle of the other living enemies within GATHER_M, or INF when there are none.
 func pack_centre() -> Vector3:
 	if not is_inside_tree():
 		return Vector3.INF
@@ -291,9 +258,6 @@ func on_struck(kind_hit: String, _part: String, _result: Dictionary) -> void:
 		knock_prop(mult)
 
 
-# The prop goes and the roof falls. Returns the fall, or null when the prop was already out.
-# A wall-ram (off-floor/carve, fast ram, or interrupting Jack-Hammer Shockwave) doubles
-# ceiling collapse damage and widens the rubble drop radius on its pack.
 func knock_prop(collapse_mult := 1.0) -> Node3D:
 	if not prop_up or world_root == null:
 		return null
@@ -309,15 +273,12 @@ func knock_prop(collapse_mult := 1.0) -> Node3D:
 	slab.get_parent().remove_child(slab)
 	slab.position = at
 	slab.basis = turn
-	# E31's pose (event_kinds.gd, e31_prop_kicked): the prop knocked out from under the roof.
 	if _prop != null:
 		if _prop_from_glb:
 			_prop.rotation.x = PI * 0.4
 		else:
 			_prop.rotation.z = PI * 0.4
 	var fall = RubbleFall.new()
-	# The fall outlives the crew, so its hit goes straight to combat's player-hit path and
-	# its discovery to the fleet, never through this node.
 	var ball_hit := Callable()
 	if fleet != null and fleet.combat != null:
 		ball_hit = Callable(fleet.combat, "_on_player_hit").bind(ROOF_BALL_DAMAGE, ROOF_SHOVE, kind)
@@ -340,8 +301,6 @@ func knock_prop(collapse_mult := 1.0) -> Node3D:
 	return fall
 
 
-# Made in a static function, so the callable holds the fleet and not this crew, which the
-# roof usually kills before it lands.
 static func _crush_discovery(fleet_ref) -> Callable:
 	return func(at: Vector3) -> void:
 		if fleet_ref != null and is_instance_valid(fleet_ref):

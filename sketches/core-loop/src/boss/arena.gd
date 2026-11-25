@@ -6,16 +6,8 @@ const BowlDress := preload("res://src/presentation/arena_bowl_dress.gd")
 const StandCrew := preload("res://src/presentation/stand_crew.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
-# The crane mast, its boom and the vent nozzle (tools/blender/world_one/slag_bowl_kit.py), each about its centre.
 const KIT := "res://assets/models/world_one/slag_bowl_kit.glb"
 const KIT_PARTS := ["CraneMast", "CraneBoom", "VentNozzle"]
-
-# The Slag Bowl: a foundry bowl about 124 m across, built ahead during stage 3's beacon, placed when
-# the fight starts and freed when it ends. A flat inner floor with two slag channels,
-# a banked outer ring that is the fight's momentum lane, a rim wall a pylon plants on,
-# two deck ramps and two kickers for height, four crane masts to grapple, and four rim
-# water vents that quench slag into crust. Everything is on the world layer (1), so the
-# grapple, the pylon and the camera read it like terrain.
 
 const FLOOR_R := 44.0
 const BANK_R := 60.0
@@ -42,19 +34,12 @@ const KICKER_HALF_WIDTH := 3.0
 const WEDGE_FRAME := "wedge_frame"
 const VENT_ANGLES := [60.0, 120.0, 240.0, 300.0]
 const VENT_R := 43.0
-const VENT_SPAN := 0.4363323  # 25 degrees either side of the vent
-# Ruling cv: the entry's tangent faces 115, 25 degrees off the flume gate's 90 (the rail turns the rest in flight).
-# A bearing in 240 to 300 keeps it inside the hand-over's 30; 245 is the one there whose straight run onto the bank
-# passes outside the 270 kicker and away from the 240 and 300 vent pads, as the old 210 did.
+const VENT_SPAN := 0.4363323
 const ENTRY_ANGLE := 245.0
 const ENTRY_R := 41.0
 const ENTRY_LIFT := 3.0
-# The bowl's entry point lies this far past the finished stage's exit gate, along its facing: about where the
-# launch's 0.6 s flight carries a ball at 20 m/s.
 const ENTRY_AHEAD := 12.0
-# The rescue puts the ball on the bank here: past the slag channels and the floor.
 const RESCUE_R := 50.0
-# The bowl floats this far above the highest ground under it.
 const CLEARANCE := 30.0
 
 var _quenched_until := [0.0, 0.0, 0.0, 0.0]
@@ -62,8 +47,6 @@ var _vent_ready_at := [0.0, 0.0, 0.0, 0.0]
 var _crusts := {}
 
 
-# Above the finished stage's beacon, pulled inward until the whole bowl is inside the
-# map, and high enough that no ground pokes through it.
 static func place(terrain, stage: int) -> Vector3:
 	var at := Vector3.ZERO
 	if terrain != null and terrain.has_method("beacon_point"):
@@ -71,8 +54,6 @@ static func place(terrain, stage: int) -> Vector3:
 	return _settle(terrain, Vector2(at.x, at.z))
 
 
-# Brindle's bowl (ruling cv): ahead of the finished stage's exit gate, so the launch out of it lands where it aimed,
-# on the entry's tangent. A map that states no exit row keeps the bowl over its beacon (place()).
 static func place_ahead(terrain, stage: int) -> Vector3:
 	var rows := {}
 	if terrain != null and terrain.has_method("map_for"):
@@ -84,8 +65,6 @@ static func place_ahead(terrain, stage: int) -> Vector3:
 	return _settle(terrain, centre_ahead(rows["exit"]))
 
 
-# The bowl's centre in the finished stage's frame (x, z) that puts its entry point ENTRY_AHEAD along the exit row's
-# heading (ParkMap.handover()). Pure, so the hand-over test reads the same placement.
 static func centre_ahead(exit: Dictionary) -> Vector2:
 	var heading := deg_to_rad(float(exit["heading_deg"]))
 	var entry: Vector2 = Vector2(exit["at"]) + Vector2(sin(heading), cos(heading)) * ENTRY_AHEAD
@@ -119,7 +98,6 @@ static func _inside(terrain, flat: Vector2, reach: float) -> bool:
 	return true
 
 
-# The bowl's greybox checkers, drawn ahead by boss.gd's warm_arena; Palette keeps one of each.
 const CHECKERS := [[Palette.CHARCOAL, Color("30302c")], [Palette.SANDSTONE, Palette.COPPER],
 	[Palette.RUST, Palette.CHARCOAL], [Palette.AMBER, Palette.CHARCOAL]]
 
@@ -127,9 +105,6 @@ const CHECKERS := [[Palette.CHARCOAL, Color("30302c")], [Palette.SANDSTONE, Pale
 static var _looks_warm := false
 
 
-# Flow calls this a physics tick at a time while Brindle's world's last stage runs: a step a call
-# of the Requisition's models, the bowl's looks and kits, then the bowl itself, off the boss-entry frame.
-# True once done.
 static func warm_ahead() -> bool:
 	if _ahead_bowl != null and _ahead_bowl.built():
 		return true
@@ -150,7 +125,6 @@ static func reset_for_tests() -> void:
 	drop_ahead()
 
 
-# The checkers, then the neutral plate looks the dressing (arena_bowl_dress.gd) and the floor paint, a few rows a call.
 static func warm_looks() -> bool:
 	if not _looks_warm:
 		for pair in CHECKERS:
@@ -177,7 +151,6 @@ static func dir(angle: float) -> Vector3:
 	return Vector3(cos(angle), 0.0, sin(angle))
 
 
-# The ground under a world point: the floor, or the bank's height at that radius.
 func ground(point: Vector3) -> float:
 	return global_position.y + surface_height(radius_of(point))
 
@@ -194,16 +167,10 @@ func point_at(angle: float, r: float, lift := 0.0) -> Vector3:
 	return global_position + dir(angle) * r + Vector3.UP * (surface_height(r) + lift)
 
 
-# The counter-clockwise tangent at an angle, flat and unit length.
 static func tangent(angle: float) -> Vector3:
 	return Vector3(-sin(angle), 0.0, cos(angle))
 
 
-# How the bowl is entered and left (wave 36, ruling cv), in the bowl's own frame (origin at its centre), as ParkMap.handover()
-# states a park stage's. The bowl hangs ahead of the finished stage's exit gate (place_ahead()), so its atlas origin is
-# centre_ahead() of that stage's exit row.
-# The way out to world 2 is parked until after the sitting. The arrival speed is the share of cruise boss.gd
-# _place_ball sets: the carried speed, never under cruise.
 static func handover() -> Dictionary:
 	var angle := deg_to_rad(ENTRY_ANGLE)
 	var heading := tangent(angle)
@@ -224,19 +191,14 @@ func entry_heading() -> Vector3:
 	return arrival_heading()
 
 
-# The heading a ball enters the bowl on, wherever it is placed: the launch into it turns to this in flight.
 static func arrival_heading() -> Vector3:
 	return tangent(deg_to_rad(ENTRY_ANGLE))
 
 
-# Inside the bowl's footprint, out to just past the rim wall.
 func contains(point: Vector3) -> bool:
 	return radius_of(point) <= BANK_R + WALL_THICK + 4.0
 
 
-# The terrain API's ground queries, answered by the bowl. Combat's drones read their
-# ground from the terrain they were given; in the arena that has to be this, not the
-# parked stage map 30 m below.
 class Ground:
 	extends RefCounted
 
@@ -245,8 +207,6 @@ class Ground:
 	func _init(bowl_ref) -> void:
 		bowl = bowl_ref
 
-	# A query can outlive the bowl: a downed drone's brass tag or death scatter keeps it after
-	# exit_arena frees the arena, so a freed bowl reads as no floor (-INF), the tag's own sentinel.
 	func height(x: float, z: float) -> float:
 		return bowl.ground(Vector3(x, 0.0, z)) if is_instance_valid(bowl) else -INF
 
@@ -261,8 +221,6 @@ func ground_query() -> RefCounted:
 	return Ground.new(self)
 
 
-# --- Vents and quenching -------------------------------------------------------------
-
 func vent_at(point: Vector3) -> int:
 	if point.y - ground(point) > 2.5:
 		return -1
@@ -273,7 +231,6 @@ func vent_at(point: Vector3) -> int:
 	return -1
 
 
-# Returns true when the vent fired (it was off cooldown).
 func quench(vent: int, now: float) -> bool:
 	if now < _vent_ready_at[vent]:
 		return false
@@ -310,13 +267,9 @@ func _show_crust(vent: int, on: bool) -> void:
 		_add_band(st, band, mid - VENT_SPAN, mid + VENT_SPAN, 10, 0.12)
 	var mat := Palette.unshaded(Color(0.42, 0.4, 0.38, 0.95))
 	mat.no_depth_test = true
-	# Under every telegraph (40) and its keylines (39), which are opaque and would cover the safe span:
-	# the live slag leaves the quenched span undrawn instead.
 	mat.render_priority = 38
 	_crusts[vent] = _mesh_node(st, mat, "Crust_%d" % vent)
 
-
-# --- Build ---------------------------------------------------------------------------
 
 func _ready() -> void:
 	name = "SlagBowl"
@@ -326,9 +279,6 @@ func _ready() -> void:
 	StandCrew.bind_bowl(self)
 
 
-# The bowl a piece a call: its geometry is local, so it builds off the tree too; only the yard's bus
-# waits for the tree (_ready). Flow's warm builds one ahead a piece a physics tick (warm_ahead); the
-# fight's entry takes it whole (take_ahead) instead of building it on its entry frame. True once built.
 var _built := 0
 var _body: StaticBody3D
 
@@ -362,7 +312,6 @@ func build_step() -> bool:
 				_vent(deg_to_rad(a))
 		5:
 			BowlDress.build(self)
-			# The yard's fans take their clipboards (W46-12); nothing when the yard kit is missing.
 			StandCrew.build(self)
 		_:
 			return true
@@ -377,7 +326,6 @@ func built() -> bool:
 const LAST_STEP := 5
 
 
-# The bowl warm_ahead built, or a new one built on its entry.
 static var _ahead_bowl: Node3D
 
 
@@ -461,7 +409,6 @@ func _mast(body: StaticBody3D, angle: float) -> void:
 	bar.position = base + Vector3.UP * (MAST_HEIGHT - 0.4)
 	bar.rotation.y = -angle + PI * 0.5
 	body.add_child(bar)
-	# The kit's mast and boom where the colliders stand (a cylinder and a box when the kit is missing).
 	var pole_mesh := ModelKit.part(KIT, KIT_PARTS, "CraneMast", self)
 	if pole_mesh == null:
 		pole_mesh = MeshInstance3D.new()
@@ -487,8 +434,6 @@ func _mast(body: StaticBody3D, angle: float) -> void:
 	bar_mesh.rotation = bar.rotation
 
 
-# A ramp or kicker: a wedge that rises from 0 at `foot` to `top` over `length` along
-# `forward`. Its leading edge is flush with the floor, so rolling onto it costs nothing.
 func _wedge(body: StaticBody3D, foot: Vector3, forward: Vector3, length: float, top: float, half: float, label: String) -> void:
 	var f := Vector3(forward.x, 0.0, forward.z).normalized()
 	var s := Vector3.UP.cross(f).normalized() * half
@@ -508,7 +453,6 @@ func _wedge(body: StaticBody3D, foot: Vector3, forward: Vector3, length: float, 
 	for p in [points[0], points[4], points[2], points[1], points[3], points[5]]:
 		st.add_vertex(p)
 	var node := _mesh_node(st, Palette.striped(CHECKERS[3][0], CHECKERS[3][1]), label)
-	# The wedge's own frame (origin at the foot centre on the floor, +Z up the slope), the one point the dress places a recipe at.
 	node.set_meta(WEDGE_FRAME, Transform3D(Basis(Vector3.UP.cross(f), Vector3.UP, f), foot))
 
 

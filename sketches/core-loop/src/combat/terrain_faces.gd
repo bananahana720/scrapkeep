@@ -1,18 +1,9 @@
 extends RefCounted
 
-# Rivet's carve (rivet_kit._commit_terrain) subtracts one shadow per terrain face, so a flat floor
-# of 2 m triangles costs hundreds of clips for one plane. merge() joins coplanar faces into convex
-# polygons first (their hull when they tile it, else neighbours across shared edges): the union
-# of their shadows is the same volume, so the carved shape and who it hits stay the same and only
-# the scar's inner edge lines change (Andrew's "Fewer lines", 2026-10-17 21:30Z).
-
-# Faces this close to one plane are coplanar; a vertex this close to the line through its
-# neighbours is dropped, as the merged edge passes through it.
 const PLANE_TOLERANCE := 0.0001
 const LINE_TOLERANCE := 0.0001
 
 
-# Faces in first-seen order of their planes; a face that cannot join stays as it was.
 static func merge(faces: Array) -> Array:
 	var groups := {}
 	var keys: Array = []
@@ -43,17 +34,6 @@ static func merge(faces: Array) -> Array:
 	return merged
 
 
-# --- Level ground ---------------------------------------------------------------------------
-# A park's ground is a heightfield of 2 m cells, never exactly coplanar, so merge() leaves a
-# stand's 214 faces nearly as they are and a Breach there carves for five ticks. merge_level()
-# is merge() and then flattens the near-level polygons: those within level_deg of straight up.
-# A region grows from its first polygon across shared corners while each polygon's normal is
-# within tolerance_deg of the first's and every corner is within deviation of the first
-# polygon's plane. The region's corners then slide along the plane normal onto that plane (at
-# most `deviation`), which makes its polygons exactly coplanar, and they merge as merge() does
-# a coplanar group: their hull when they tile it, else convex pieces. Everything steeper, and a
-# region of one polygon, is returned as it was, so a slope's faces, shadows and carve stay as
-# merge() made them.
 static func merge_level(faces: Array, level_deg: float, tolerance_deg: float, deviation: float) -> Array:
 	var polys := merge(faces)
 	var up_cos := cos(deg_to_rad(level_deg))
@@ -68,7 +48,6 @@ static func merge_level(faces: Array, level_deg: float, tolerance_deg: float, de
 			normal += ((poly[k] as Vector3) - poly[0]).cross((poly[k + 1] as Vector3) - poly[0])
 		normal = normal.normalized() if normal.length_squared() > 1e-12 else Vector3.ZERO
 		normals.append(normal)
-		# Either winding is ground; a region keeps its first polygon's.
 		if absf(normal.y) < up_cos:
 			continue
 		candidates.append(index)
@@ -129,8 +108,6 @@ static func _within(poly: Array, normal: Vector3, offset: float, deviation: floa
 
 
 
-# The upward normal of the highest face under a point (at most `above` over its surface), or
-# Vector3.ZERO when there is none: the ground a Breach lands on.
 static func ground_normal(faces: Array, at: Vector3, above := 0.6) -> Vector3:
 	var best := -INF
 	var normal := Vector3.ZERO
@@ -157,8 +134,6 @@ static func ground_normal(faces: Array, at: Vector3, above := 0.6) -> Vector3:
 	return normal
 
 
-# A mesh's faces never overlap, so when their areas add up to their convex hull's they tile it
-# and the hull is their union: one polygon, found without walking edges. [] otherwise.
 const AREA_TOLERANCE := 0.001
 
 
@@ -200,8 +175,6 @@ static func _on_plane(face: Array, normal: Vector3, offset: float) -> bool:
 	return true
 
 
-# Each polygon absorbs neighbours across shared edges (b -> a in one, a -> b in the other) while
-# the union stays convex.
 static func _merge_plane(faces: Array, normal: Vector3) -> Array:
 	var polys: Array = []
 	for face in faces:
@@ -258,8 +231,6 @@ static func _unindex(edges: Dictionary, poly: Array, p: int) -> void:
 			from.erase(b)
 
 
-# poly's edge k (a -> b) meets other's b -> a: walk poly from b round to a, then other from a
-# round to b, without repeating either. Empty when the union is not strictly convex.
 static func _splice(poly: Array, k: int, other: Array, normal: Vector3) -> Array:
 	var a: Vector3 = poly[k]
 	var b: Vector3 = poly[(k + 1) % poly.size()]
@@ -295,31 +266,16 @@ static func _splice(poly: Array, k: int, other: Array, normal: Vector3) -> Array
 			return []
 	return joined
 
-
-# --- The per-shape cache --------------------------------------------------------------------
-# A terrain shape's world-space faces and a bucket grid of their boxes, built once on a worker,
-# so each carve reads only the faces near it instead of every triangle of a park tile. A carve
-# uses the finished build, waiting for it if needed, so a bot replay never depends on timing.
-
 const BUCKET := 16.0
-# A build nobody has read for this many ticks is dropped. Parks share one Shape3D across many
-# colliders and a moved body leaves its old placements behind, so entries are kept per shape
-# and transform and aged out instead of replaced.
 const STALE_TICKS := 450
 
-# instance id -> {transform -> {shape (WeakRef), task, result: {faces, boxes, grid}, used}}
 var _entries := {}
 var _watched := {}
-# Counters for a hitch guard: builds started (a cache miss) and cached() reads that found one.
 var builds := 0
 var hits := 0
-# A planted control: the old keying, one build per shape, replaced when the shape is placed
-# anywhere else. A park's shared shapes then rebuild every warm-up cycle (the 100-175 ms tick).
 var keep_one_placement := false
 
 
-# local_faces: the shape's faces in its own space, an Array of vertex Arrays, a
-# PackedVector3Array of triangles (a trimesh), or a Callable the worker calls for either.
 func request(shape: Shape3D, transform: Transform3D, local_faces) -> Dictionary:
 	var id := shape.get_instance_id()
 	var entry := cached(shape, transform)
@@ -340,7 +296,6 @@ func request(shape: Shape3D, transform: Transform3D, local_faces) -> Dictionary:
 	return entry
 
 
-# The entry for this shape at this transform, or {} when it has none yet.
 func cached(shape: Shape3D, transform: Transform3D) -> Dictionary:
 	var entry: Dictionary = (_entries.get(shape.get_instance_id(), {}) as Dictionary).get(transform, {})
 	if entry.is_empty() or entry["shape"].get_ref() != shape:
@@ -350,7 +305,6 @@ func cached(shape: Shape3D, transform: Transform3D) -> Dictionary:
 	return entry
 
 
-# The faces whose box meets box, in the shape's order.
 func faces_near(entry: Dictionary, box: AABB) -> Array:
 	_wait(entry)
 	var result: Dictionary = entry["result"]
@@ -373,8 +327,6 @@ func faces_near(entry: Dictionary, box: AABB) -> Array:
 	return near
 
 
-# False when the shape gave no faces the carve can read (a build from a Callable can only tell
-# once it has run).
 func readable(entry: Dictionary) -> bool:
 	_wait(entry)
 	return not (entry["result"]["faces"] as Array).is_empty()
@@ -386,7 +338,6 @@ func _wait(entry: Dictionary) -> void:
 		entry.erase("task")
 
 
-# Waits for every build, so none runs past its kit.
 func finish() -> void:
 	for placements in _entries.values():
 		for entry in placements.values():
@@ -395,8 +346,6 @@ func finish() -> void:
 				entry.erase("task")
 
 
-# Drops builds whose shape is gone, so freed stages do not pin their faces, and builds nobody
-# has read for STALE_TICKS. A build still running is left for a later prune.
 func prune() -> void:
 	var now := Engine.get_physics_frames()
 	for id in _entries.keys():
@@ -425,8 +374,6 @@ func _forget(id: int) -> void:
 	_entries.erase(id)
 
 
-# The shape's faces in world space. local_faces is a PackedVector3Array of triangles, an Array
-# of polygons, or a Callable that returns either (a search too slow for the main thread).
 static func _world(local_faces, transform: Transform3D):
 	if local_faces is Callable:
 		local_faces = (local_faces as Callable).call()
