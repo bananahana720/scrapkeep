@@ -2,28 +2,11 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 
-# Shot bits (SI4, W13-INTEGRATION-3.md; comps/isaac/items-and-synergies.md:89). A closed
-# set of five behaviour bits. Each part adds zero to two of them (MAX_PART_BITS), a shot
-# carries the OR of its held parts' bits, at most MAX_SHOT_BITS of them, and a child
-# bolt copies its parent's set (bolts.gd child()). TADR-008 line 24 declines a general
-# framework, so this is one closed table: a new bit is a row here and a code change in
-# combat, never a script.
-#
-# A set is an int mask. Read it with set operations only (has, union, without, count);
-# never compare two sets with == or !=, so a wider set can never break a comparison.
-#
-# TABLE is the one record per bit: the colour the bolt's tell draws, the sound its hit
-# plays and the rule it adds. Sight and sound read the same row (tells()), so they
-# cannot drift apart. Colours are palette constants and never HAZARD, which only
-# telegraphs own (bolts.gd). Sounds are sfx_bank.gd recipe ids.
 
 const NAMES := ["pierce", "bounce", "split", "pull", "heat"]
 const BITS := {"pierce": 1, "bounce": 2, "split": 4, "pull": 8, "heat": 16}
 const ALL := 31
 const MAX_PART_BITS := 2
-# Bits past the third are dropped in held order (the earliest held part wins) and
-# reported, so the shot stays readable (BIBLE.md:552; the comps note's unbounded stack
-# is what this refuses).
 const MAX_SHOT_BITS := 3
 
 const TABLE := {
@@ -39,12 +22,9 @@ const TABLE := {
 		"rule": "Leaves what it hits glowing; a second heated hit adds a little damage"},
 }
 
-# Which bit a part's tag gives (a part carries one or two tags, so at most two bits).
-# Tags not listed (frost, spiral, speed) give none.
 const TAG_BITS := {"kinetic": "pierce", "mass": "pierce", "chain": "bounce", "split": "split",
 	"anchor": "pull", "arc": "heat"}
 
-# Every pair of distinct bits, by pair_key(), and what the two do together.
 const PAIRS := {
 	"pierce+bounce": "Pierces bodies, glances off walls; both apply",
 	"pierce+split": "Splits on the first body, and the children keep piercing",
@@ -71,7 +51,6 @@ static func union(a: int, b: int) -> int:
 	return a | b
 
 
-# The bits of a that are not in b.
 static func without(a: int, b: int) -> int:
 	return a & ~b
 
@@ -88,8 +67,6 @@ static func names(mask: int) -> Array:
 	return NAMES.filter(func(name): return has(mask, BITS[name]))
 
 
-# A part's bits: the explicit list a row names (null when it names none), else its
-# tags through TAG_BITS; at most MAX_PART_BITS, in table order.
 static func part_mask(tags: Array, explicit = null) -> int:
 	var wanted := 0
 	if explicit is Array:
@@ -105,8 +82,6 @@ static func part_mask(tags: Array, explicit = null) -> int:
 	return out
 
 
-# A shot from its held parts' masks, in held order: the OR, capped at MAX_SHOT_BITS.
-# Returns {"bits": the shot's set, "dropped": bits held but past the cap}.
 static func shot(part_masks: Array) -> Dictionary:
 	var bits := 0
 	var dropped := 0
@@ -122,13 +97,10 @@ static func shot(part_masks: Array) -> Dictionary:
 	return {"bits": bits, "dropped": without(dropped, bits)}
 
 
-# The bits of a set the live game honours: the tuning knob shot_bits_live is that mask
-# (ABILITY-MUTATIONS.md B4, rolled out a pair at a time).
 static func live(mask: int, live_mask: int) -> int:
 	return mask & live_mask
 
 
-# One tell per set bit, read off its single TABLE row: colour, sound and rule together.
 static func tells(mask: int) -> Array:
 	var out: Array = []
 	for name in names(mask):
@@ -145,7 +117,6 @@ static func pair_outcome(a: String, b: String, pairs: Dictionary = PAIRS) -> Str
 	return String(pairs.get(pair_key(a, b), ""))
 
 
-# Pairs of distinct bits in the set with no declared outcome.
 static func unspecified_pairs(mask: int, pairs: Dictionary = PAIRS) -> int:
 	var held := names(mask)
 	var n := 0
@@ -156,7 +127,6 @@ static func unspecified_pairs(mask: int, pairs: Dictionary = PAIRS) -> int:
 	return n
 
 
-# Rows missing a colour, a sound or a rule, one line each; [] is clean.
 static func table_problems(table: Dictionary) -> Array:
 	var out: Array = []
 	for name in NAMES:

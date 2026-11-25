@@ -9,20 +9,9 @@ const ElementField := preload("res://src/build/element_field.gd")
 const BuffLedger := preload("res://src/core/buff_ledger.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 
-# What held items do (v2 W4 loot). refresh() folds the part list into two tables: the
-# passive numbers (charges, cooldowns, damage taken, prices, perks) and, per trigger
-# kind, the items that answer it. resolve() answers one commitment inside a trigger
-# pass (triggers.gd); it only strikes, knocks, grants and heals through the seams the
-# build already uses, so an item can never do what a part could not.
-#
-# The effect ids are a closed table (EFFECTS). Each names the number its copies stack
-# (STACK_KEY) under the part's stack rule; a row naming an id outside the table fails
-# the catalogue test, never the run.
 
-# A slot's hard ceiling on stocked charges, items and Moss's cells together.
 const MAX_CHARGES := 4
 const SLOTS := ["weapon", "movement", "special", "smash"]
-# The weapon's per-hit damage items scale from (build_sheet.BASE_HIT).
 const BASE_HIT := 14.0
 const EFFECTS := {
 	"zap": "chance", "burst": "chance", "extra_hit": "chance", "speed": "gain", "air_jump": "",
@@ -42,17 +31,13 @@ const PASSIVE_EFFECTS := ["slot_cooldown", "damage_reduction", "price_scale", "h
 	"vault_cooldown", "vault_charges", "pike_fuse", "dash_wake", "reel_chain", "slam_crack", "second_bell", "line_leash",
 	"boomerang_return", "orbital_satellites", "prism_refract", "coin_shot", "slag_zone", "pocket_aura",
 	"seismic_cone", "air_static"]
-# The verb items (ABILITY-MUTATIONS.md C3 to C7): each is capped at one copy and hands combat its
-# effect row as written, so these ids fold into `verbs` and nothing else.
 const VERB_EFFECTS := ["dash_wake", "reel_chain", "slam_crack", "second_bell", "line_leash"]
 const DOMINO_MAX_PER_WINDOW := 3
 const PING_RADIUS := 9.0
 
 var build
-# id -> copies held.
 var copies := {}
 var burden_count := 0
-# kind -> [{id, def, copies, index}], in the order the items were first taken.
 var by_kind := {}
 var timed: Array = []
 var charges := {}
@@ -65,20 +50,12 @@ var hp_mass_cap := 0.0
 var perks := {}
 var vault_cooldown_scale := 1.0
 var vault_charges := 0
-# Slag Pike's row (every, cap_mult, range_mult, idle_s) while it is held, else empty. Combat reads
-# it once per weapon press through pike_fuse() and owns the volley counter (combat.gd _fire).
 var pike := {}
-# The held verb items: effect id -> its row's numbers (item_effects.gd VERB_EFFECTS). Combat reads
-# one through verb_row() at the moment its verb fires and owns every live strip, arc and bell.
 var verbs := {}
-# W47-C2: active Tier-1 common-part micro-mutations (part_id -> row) and held parts snapshot for
-# cross-system synergy queries. Refreshed in refresh() and cleared in reset_run().
 var micro_mutations := {}
-# W47-GRAPPLE-MUTS-CODE: active single-part-swap grapple mutations (slot -> row, id -> row).
 var grapple_mutations := {}
 var grapple_mutation_ids := {}
 var _held_parts: Array = []
-# Numbers the fuzzer and the tests read.
 var procs := {}
 
 var _clock := 0.0
@@ -92,8 +69,6 @@ var _rebounds: Array[float] = []
 var _rebound_window := 4.0
 var _rebound_need := 3
 var _last_word_used := false
-# Last Word armed its hit and has not paid it yet: a stage change that drops the armed hit
-# gives the once back, so the item is never spent on a bonus that never landed.
 var _last_word_pending := false
 var _ward_used := false
 var _brace_until := 0.0
@@ -104,7 +79,6 @@ var _drone_until := 0.0
 var _drone_magnet := 1.0
 var _domino_marks := {}
 var _domino_count := 0
-# One per domino draw that reaches the roll; the roll never reads an object id (scrap_field's catch serial).
 var _domino_serial := 0
 
 
@@ -116,7 +90,6 @@ static func stack_key(effect_id: String) -> String:
 	return EFFECTS.get(effect_id, "")
 
 
-# The effect's stacked number for this many copies under the part's rule.
 static func stacked(d: Resource, key: String, n: int) -> float:
 	if key == "" or not d.effect.has(key):
 		return 0.0
@@ -201,18 +174,14 @@ func refresh(held: Array) -> void:
 		by_kind[kind] = list
 
 
-# Slag Pike's table while held, empty otherwise: the one call combat makes (a copy, never the live row).
 func pike_fuse() -> Dictionary:
 	return pike.duplicate()
 
 
-# A held verb item's numbers by effect id (dash_wake, reel_chain, slam_crack, second_bell,
-# line_leash), {} while the build does not hold it: the one call combat makes, a copy.
 func verb_row(effect_id: String) -> Dictionary:
 	return (verbs.get(effect_id, {}) as Dictionary).duplicate(true)
 
 
-# W47-C2: deep query interface for the 6 common-part micro-mutations and 6 cross-system synergies.
 func has_micro_mutation(part_id: String) -> bool:
 	return micro_mutations.has(part_id)
 
@@ -225,7 +194,6 @@ func active_micro_mutations() -> Array:
 	return Parts.active_micro_mutations(_held_parts)
 
 
-# W47-GRAPPLE-MUTS-CODE: deep query interface for active single-part-swap grapple mutations.
 func active_grapple_mutations() -> Dictionary:
 	return grapple_mutations.duplicate(true)
 
@@ -261,8 +229,6 @@ func has_cross_synergy(id: String, context := {}) -> bool:
 func cross_synergy_row(id: String) -> Dictionary:
 	return Synergies.cross_system_row(id)
 
-
-# --- W50-ISAAC-PARTS: RoR2 duplicate-stacking queries for the 8 transformational parts ---
 
 func part_copies(part_id: String) -> int:
 	return int(copies.get(part_id, 0))
@@ -361,15 +327,10 @@ func storm_static_mult() -> float:
 	return 1.0 + frac * 1.6
 
 
-# All payout copies share one asymptote; the count includes repeated burden parts.
-# Scale the ceiling curve rather than clamp it, so every finite count stays below the cap.
 func burden_payout(d: Resource, n: int) -> float:
 	return d.stack_cap * PartDef.Stacking.value(d.stack_rule, float(d.effect["per"]), burden_count * n, 0.0)
 
 
-# Charges and cooldowns onto the ball's ability state. A raised cap arrives stocked:
-# Moss's "second cell's in" means a charge you can spend now. The vault kick is not a
-# slot; its two items reach it only through the ball's seams, when they exist.
 func apply_abilities(player) -> void:
 	if player == null or player.get("abilities") == null:
 		return
@@ -378,8 +339,6 @@ func apply_abilities(player) -> void:
 		player.set_vault_cooldown_scale(vault_cooldown_scale)
 	if player.has_method("set_vault_charges"):
 		player.set_vault_charges(1 + vault_charges)
-	# The item layer is a delta on the slot: a tree pick's extra charge or faster cooldown
-	# stays under whatever the items add.
 	for slot in SLOTS:
 		var s = abilities.slot(slot)
 		var base: int = s.max_charges - s.item_charges
@@ -395,7 +354,6 @@ func apply_abilities(player) -> void:
 		s.item_scale = scale
 
 
-# Extra health from scrap_armor for this much mass.
 func mass_health(mass: float) -> float:
 	if hp_per_mass <= 0.0:
 		return 0.0
@@ -442,8 +400,6 @@ func magnet_boost() -> float:
 	return _drone_magnet if _clock < _drone_until else 1.0
 
 
-# Timed items post a TIMED commitment on their own clock; the pass then answers only
-# that item (the commitment's source is its id).
 func tick(delta: float, bus) -> void:
 	_clock += delta
 	for entry in timed:
@@ -485,8 +441,6 @@ func _sync_rebound_buff() -> void:
 	})
 
 
-# A pin combat resolved (enemy_pinned). The smash-armed items answer it in the next
-# step, never inside the handler.
 func note_pin(victim: Node3D, damage: float) -> void:
 	if is_instance_valid(victim):
 		_pins.append({"victim": victim, "damage": damage, "at": victim.global_position})
@@ -529,7 +483,6 @@ func _count(id: String) -> void:
 	procs[id] = procs.get(id, 0) + 1
 
 
-# One effect. Returns true when it did something.
 func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: float, item_index: int) -> bool:
 	var ctx = build.ctx
 	var element: String = fx.get("element", d.element)
@@ -539,7 +492,6 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			var weapon_scale: float = build.sheet.mod("weapon_damage")
 			if bonus <= 0.0 or weapon_scale <= 0.0 or c.amount <= 0.0 or not is_instance_valid(c.enemy):
 				return false
-			# The commitment is already weapon-scaled; item_hit applies that scale once.
 			build.item_hit(c.enemy, c.amount * bonus / weapon_scale, element)
 			return true
 		"zap":
@@ -662,7 +614,6 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			build.item_hit(near[0], c.amount * power, "arc")
 			return true
 		"heal_back":
-			# Armour mode resolves the glance inside run.damage (deflect_for).
 			if ctx.run.armor_mode:
 				return false
 			ctx.run.heal(c.amount * fx.get("share", 1.0))
@@ -685,7 +636,6 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			})
 			return true
 		"floor_hp":
-			# Armour mode holds the floor inside run.damage (ward_floor_for).
 			if ctx.run.armor_mode:
 				return false
 			var floor_hp: float = ctx.run.max_hp * fx.get("floor", 0.2)
@@ -722,19 +672,12 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 	return false
 
 
-# Blunts damage taken: the passive reduction, then a brace window. Both heal back part
-# of a hit already applied, so they never undo a killing blow.
-# The brace window's share for a hit from `source`; run.damage folds it in before the
-# scrap layer in armour mode.
 func brace_share_for(source: String) -> float:
 	if _clock < _brace_until and (_brace_source == "" or source == _brace_source):
 		return _brace_share
 	return 0.0
 
 
-# Deflect plates in armour mode: run.damage asks whether this hit glances off, before the
-# scrap layer. The roll is deterministic from the clock and a hit count, and a glance
-# counts as the item's proc.
 func deflect_for(_source: String) -> bool:
 	_hit_seq += 1
 	for entry in by_kind.get(Triggers.Kind.ON_DAMAGE_TAKEN, []):
@@ -748,8 +691,6 @@ func deflect_for(_source: String) -> bool:
 	return false
 
 
-# A ward in armour mode: given the hull a hit would leave, the hull to hold instead. It
-# works once a stage and only when the hit would take the hull under the floor.
 func ward_floor_for(hp_after: float) -> float:
 	if _ward_used:
 		return hp_after
@@ -766,8 +707,6 @@ func ward_floor_for(hp_after: float) -> float:
 	return hp_after
 
 
-# The earned save: the hull a killing hit leaves, or 0.0 when no spare frame is held or it is
-# spent. run_state keeps the once-per-run flag; this only says what the frame is worth.
 func death_save_hull() -> float:
 	if not perks.has("death_save") or build.ctx.run.death_save_spent:
 		return 0.0
@@ -784,8 +723,6 @@ func _soften(c) -> void:
 	var ctx = build.ctx
 	if not ctx.run.alive():
 		return
-	# Armour mode runs the passive reduction and the brace inside run.damage (the damage
-	# order), before the scrap, so nothing is healed back here.
 	if ctx.run.armor_mode:
 		return
 	var share: float = damage_reduction
@@ -818,7 +755,6 @@ func _surge(gain: float, cap_speed: float, c) -> bool:
 	return true
 
 
-# Knocks every pinnable enemy near at outward and a little up, fast enough to pin.
 func _scatter(at: Vector3, radius: float, speed: float) -> bool:
 	var any := false
 	for enemy in build.enemies_near(at, radius, 6):
@@ -852,7 +788,6 @@ func _ping(target: String) -> bool:
 	return true
 
 
-# The smash-armed items answer each pin combat resolved while their window is open.
 func _step_pins() -> void:
 	if _pins.is_empty():
 		return
@@ -891,11 +826,6 @@ func _step_pins() -> void:
 					_domino(id, d, n, victim)
 
 
-# A pin hitting a pin may chain once more: the victim is flung at its nearest
-# neighbour. The pin that fling causes carries the domino bit in its chain mask, so it may not
-# domino again (Triggers.chain_allows), and a window allows at most DOMINO_MAX_PER_WINDOW. The
-# roll is the pin's own deterministic draw, from the clock and this run's domino serial, so two
-# runs with the same inputs roll the same dominoes whatever ids their objects were given.
 func _domino(id: String, d: Resource, n: int, victim: Node3D) -> void:
 	var key: int = victim.get_instance_id()
 	var mark: Dictionary = _domino_marks.get(key, {})

@@ -1,33 +1,11 @@
 extends RefCounted
 
-# The v2 item pool (I2 section 3, accepted by DESIGN-V2 section 7): 62 items in six
-# families. Cross Split, Spiral Wave and Chain Arc already live in parts.gd's catalogue,
-# so this table holds the other 59. Each row is compact on purpose: the generator
-# (item_gen.gd) fills in the name, the tier, the icon category, the tags it lacks and
-# the word-count discipline, the same way it builds a procedural item, so an authored
-# row and a generated one are the same shape.
-#
-# base      the family archetype: weapon, pattern, mobility, defense, utility, charge.
-# trigger   "" (passive) or one of Triggers.NAMES.
-# stack     linear, hyperbolic or capped; cap is the ceiling for the last two.
-# effect    {"do": id, ...}: item_effects.gd's closed effect table.
-# charges   ability slot to extra max_charges per copy.
-# class     only this class is offered the part.
-# needs     the other module's seam it waits on; the part is never offered without it.
-# maker     the workshop that made it (maker_sets.gd): its set counts the row as a piece.
-# touches   the Bindings verb the part changes. 2026-10-15 (wave 14 SQ19b): set on the rows the
-#           alpha list offers (build_synergy_test); each keeps the row's offer bucket
-#           (Parts.bucket_of): fire only on weapon rows, special only on skill rows.
-#
-# Where I2's effect needs a hook no unit owns yet, the row keeps I2's intent with the
-# nearest build-owned effect, and DESIGN-NOTES v2 W4 names each adaptation.
 
 const SABLE := "pylon_engineer"
 const RIVET := "runner_gunner"
 const KEST := "demolitions_caster"
 
 const TABLE := {
-	# Charge-stockpile (8).
 	"cap_relay": {"maker": "spillway_works", "touches": "special", "base": "charge", "rarity": "uncommon", "stack": "capped", "cap": 3, "tags": ["arc"],
 		"verb": "Special banks one extra charge", "text": "+1 special charge", "charges": {"special": 1}},
 	"vault_battery": {"maker": "moss", "base": "charge", "rarity": "rare", "stack": "capped", "cap": 2, "tags": ["anchor", "speed"],
@@ -49,7 +27,6 @@ const TABLE := {
 		"tags": ["speed"], "verb": "Speeding up refills a movement charge", "text": "Speeding up refills a movement charge",
 		"effect": {"do": "grant_charge", "slot": "movement", "every": 6.0}},
 
-	# Momentum and bowling (8), tagged bwl for the balance report.
 	"pin_setter": {"maker": "redjaw", "touches": "fire", "base": "weapon", "rarity": "uncommon", "trigger": "on_smash", "stack": "linear", "cap": 3,
 		"tags": ["kinetic"], "punch": 5.0, "bwl": true, "verb": "Post-smash, knocked machines hit 50% harder", "text": "After a smash, knocked machines hit 50% harder",
 		"effect": {"do": "pin_bonus", "bonus": 0.5, "window": 1.5}},
@@ -74,7 +51,6 @@ const TABLE := {
 		"tags": ["kinetic", "mass"], "bwl": true, "verb": "Landing relaunches nearby knocked machines", "text": "Landing near a knocked machine relaunches it",
 		"effect": {"do": "relaunch_pin", "radius": 7.0, "speed": 10.0, "window": 2.0}},
 
-	# Weapon-pattern transformers: three new (the other three are catalogue rows).
 	"fan_spread": {"maker": "highdraft_roosts", "touches": "fire", "base": "pattern", "rarity": "rare", "stack": "linear", "cap": 3, "tags": ["split"],
 		"needs": "spawner.fan_spread", "verb": "Fan shots into a cone", "text": "shots fan into a 5-round cone",
 		"patterns": {"fan_spread": 1}},
@@ -84,11 +60,9 @@ const TABLE := {
 	"helix_drill": {"maker": "waking", "touches": "fire", "base": "pattern", "rarity": "rare", "stack": "linear", "cap": 3, "tags": ["spiral", "kinetic"],
 		"needs": "spawner.helix_drill", "verb": "Shots corkscrew through two machines", "text": "shots corkscrew through two machines",
 		"patterns": {"helix_drill": 1}},
-	# Wave 45 U6 (ABILITY-MUTATIONS.md C2): a ring of bolts around the aim line instead of a fan.
 	"halo_rig": {"maker": "highdraft_roosts", "touches": "fire", "base": "pattern", "rarity": "uncommon", "stack": "linear", "cap": 3, "tags": ["split"],
 		"verb": "Fires shots in a wide ring", "text": "Adds 6 ring bolts at 55% damage",
 		"patterns": {"halo": 1}},
-	# Wave 46 E2-09 (END-TO-END-EXPANSION-PLAN.md §4.7): pure-data weapon cadence transformers.
 	"brass_drum": {"maker": "fleet_surplus", "touches": "fire", "base": "pattern", "rarity": "uncommon", "stack": "capped", "cap": 2, "tags": ["speed", "split"],
 		"verb": "More rounds, faster fire", "text": "Adds 4 rounds, +35% fire rate, 72% damage",
 		"patterns": {"brass_drum": 1}},
@@ -96,7 +70,6 @@ const TABLE := {
 		"verb": "Heavy slow shots break props", "text": "55% rate, 180% damage, 2x knock, breaks props",
 		"patterns": {"heavy_breech": 1}},
 
-	# Designed happy accidents (5): rare, capped, fun because they are bounded.
 	"scrap_geyser": {"maker": "spillway_works", "base": "utility", "rarity": "rare", "trigger": "on_pickup", "stack": "capped", "cap": 1,
 		"tags": ["mass", "kinetic"], "happy": true, "verb": "4% of pickups knock machines away", "text": "4% of pickups blast nearby machines away",
 		"effect": {"do": "scrap_burst", "chance": 0.04, "radius": 7.0, "speed": 11.0}},
@@ -113,15 +86,12 @@ const TABLE := {
 		"tags": ["chain", "kinetic"], "punch": 10.0, "happy": true, "verb": "A knocked machine may knock another",
 		"text": "20% chance a knocked machine knocks another", "effect": {"do": "domino", "chance": 0.2, "speed": 10.0, "window": 1.5}},
 
-	# Damage (10).
 	"hairline_fracture": {"maker": "redjaw", "touches": "fire", "base": "weapon", "rarity": "common", "trigger": "on_hit", "stack": "linear", "cap": 5,
 		"tags": ["kinetic"], "punch": 3.0, "verb": "Hits sometimes land twice", "text": "+6% chance a hit lands twice",
 		"effect": {"do": "extra_hit", "chance": 0.06, "mult": 1.0}},
 	"barrage_spring": {"maker": "redjaw", "touches": "fire", "base": "weapon", "rarity": "uncommon", "trigger": "on_kill", "stack": "capped", "cap": 1,
 		"tags": ["speed", "split"], "punch": 6.0, "verb": "Kills refill a weapon charge", "text": "A kill refills a weapon charge",
 		"effect": {"do": "grant_charge", "slot": "weapon", "every": 1.0}},
-	# Wave 45 U6 (ABILITY-MUTATIONS.md C1): a cadence you roll through, never a hold. Volley five lights the
-	# muzzle ring, volley six is one thick piercing bolt (combat.gd _fire; the table is item_effects.gd pike).
 	"slag_pike": {"maker": "fleet_surplus", "touches": "fire", "base": "weapon", "rarity": "rare", "stack": "capped", "cap": 1, "tags": ["kinetic"],
 		"verb": "Every sixth volley fuses into one", "text": "Every 6th volley fuses into one, max 6x",
 		"effect": {"do": "pike_fuse", "every": 6, "cap_mult": 6.0, "range_mult": 1.25, "idle_s": 3.0}},
@@ -149,7 +119,6 @@ const TABLE := {
 		"tags": ["mass", "kinetic"], "punch": 12.0, "verb": "Under 25% health, next hit doubles", "text": "Under 25% health, next hit doubles",
 		"effect": {"do": "last_word", "below": 0.25, "bonus": 1.0}},
 
-	# Mobility (8).
 	"light_frame": {"maker": "highdraft_roosts", "base": "mobility", "rarity": "common", "stack": "linear", "cap": 5, "tags": ["speed"],
 		"verb": "Cruise 6% faster", "text": "+6% cruise speed", "mods": {"cruise": 1.06}},
 	"glide_vane": {"maker": "highdraft_roosts", "touches": "jump", "base": "mobility", "rarity": "uncommon", "stack": "linear", "cap": 3, "tags": ["speed", "frost"],
@@ -172,7 +141,6 @@ const TABLE := {
 	"low_rider": {"maker": "highdraft_roosts", "base": "mobility", "rarity": "common", "stack": "linear", "cap": 5, "tags": ["speed", "mass"],
 		"verb": "Cruise 5% faster", "text": "+5% cruise speed", "mods": {"cruise": 1.05}},
 
-	# Defense (9).
 	"rivet_seam": {"maker": "fleet_surplus", "touches": "roll", "base": "defense", "rarity": "common", "stack": "linear", "cap": 6, "tags": ["mass"],
 		"verb": "Max health up 15", "text": "+15 max health", "max_hp_bonus": 15.0},
 	"shock_liner": {"maker": "spillway_works", "base": "defense", "rarity": "uncommon", "trigger": "on_damage_taken", "element": "arc", "stack": "capped",
@@ -195,13 +163,10 @@ const TABLE := {
 	"warden_ward": {"maker": "fleet_surplus", "base": "defense", "rarity": "rare_plus", "trigger": "on_damage_taken", "stack": "capped", "cap": 1,
 		"tags": ["mass", "anchor"], "verb": "One 20% health floor per stage", "text": "Once a stage, low hits heal to 20%",
 		"effect": {"do": "floor_hp", "floor": 0.2}},
-	# The earned save (wave 19, "No free retry"): a killing hit leaves you at 20% health, once a run.
-	# The flag lives in the run doc (run_state death_save_spent); the hook is build's death_save_hull.
 	"spare_frame": {"maker": "fleet_surplus", "base": "defense", "rarity": "rare_plus", "stack": "capped", "cap": 1,
 		"tags": ["mass", "anchor"], "verb": "Survive one killing hit a run", "text": "Once per run, survive death at 20% health",
 		"effect": {"do": "perk", "perk": "death_save", "floor": 0.2}},
 
-	# Utility (8).
 	"magnet_coil": {"maker": "fleet_surplus", "touches": "roll", "base": "utility", "rarity": "common", "stack": "linear", "cap": 4, "tags": ["mass", "anchor"],
 		"verb": "Scrap magnet reaches further", "text": "Scrap magnet reaches 30% further", "magnet": 1.3},
 	"cache_key": {"maker": "fleet_surplus", "touches": "roll", "base": "utility", "rarity": "uncommon", "trigger": "on_kill", "stack": "capped", "cap": 3,
@@ -224,10 +189,6 @@ const TABLE := {
 		"verb": "Clock shows your split against best", "text": "Clock shows a split against best",
 		"effect": {"do": "perk", "perk": "par"}},
 
-	# Verb items (5), wave 45 U7 (ABILITY-MUTATIONS.md C3 to C7): each rewrites one verb by name. Every
-	# follow-up strike is item_proc and carries no shot bits (section 8), so "bits" is empty on each row
-	# even where a tag would map to one. The numbers live in the effect; combat reads them through
-	# item_effects.gd verb_row() (the strip, the arc, the crack, the bell and the load).
 	"backwash": {"maker": "spillway_works", "touches": "boost", "base": "mobility", "rarity": "uncommon", "stack": "capped", "cap": 1,
 		"tags": ["kinetic"], "bits": [], "verb": "Dashes leave a strip behind", "text": "Dashes lay a 4 m strip at 40%",
 		"effect": {"do": "dash_wake", "length": 4.0, "width": 2.0, "mult": 0.4, "life": 1.5, "knock": 4.0}},
@@ -246,10 +207,6 @@ const TABLE := {
 		"effect": {"do": "line_leash", "load_mult": 2.0}},
 }
 
-# Moss's charge cells (DESIGN-V2 section 12): the stockpile path you pay for. A cell is
-# a part, so it rides the run's part list (a retry restores it), adds heft like any
-# part and can be sold back. Only Moss sells them; the pool never rolls one. Two per
-# slot at most from the shop.
 const CELLS_FOR := {"weapon": "cell_weapon", "movement": "cell_movement", "special": "cell_special", "smash": "cell_smash"}
 const CELLS := {
 	"cell_weapon": {"maker": "moss", "base": "charge", "rarity": "uncommon", "stack": "capped", "cap": 2, "tags": ["mass"], "shop_only": true,
@@ -262,38 +219,29 @@ const CELLS := {
 		"name": "Smash Cell", "verb": "Smash cell adds a charge", "text": "+1 smash charge", "charges": {"smash": 1}},
 }
 
-# W47-GRAPPLE-MUTS-CODE: Cobalt/rare/evolved part -> single-part-swap grapple mutation id (Master Bible §3.2).
-# Kept separate from TABLE and CELLS so Parts.rows() digest, build_catalogue_test, and maker_sets_case stay pinned.
 const GRAPPLE_MUTATION_MAP := {
-	# Hot-Wire Arc Cutter (heat · swaps Line)
 	"sunforged_core": "hot_wire",
 	"overpressure": "hot_wire",
 	"spark_tread": "hot_wire",
-	# Det-Cord Line (burst/split · swaps Line)
 	"warhead_slug": "det_cord",
 	"clean_break": "det_cord",
 	"fan_spread": "det_cord",
 	"grapeshot_press": "det_cord",
-	# Dragnet Siphon (salvage · swaps Head)
 	"salvage_drone": "dragnet_siphon",
 	"scrap_gravity": "dragnet_siphon",
 	"cache_key": "dragnet_siphon",
-	# Sonic Snap-Sling (speed · swaps Drive)
 	"slipstream": "sonic_snap_sling",
 	"gatling_heart": "sonic_snap_sling",
 	"jet_vent": "sonic_snap_sling",
 	"bladestorm_rotor": "sonic_snap_sling",
-	# Live-Bus Conductor (arc/chain · swaps Head)
 	"galvanic_rounds": "live_bus",
 	"overcharge_coil": "live_bus",
 	"storm_mast": "live_bus",
 	"grounding_spike": "live_bus",
-	# Tether-Slam Clutch (pull/kinetic · swaps Drive)
 	"barbed_reel": "tether_slam",
 	"faultline_cap": "tether_slam",
 	"fault_hammer": "tether_slam",
 	"breaker_drive": "tether_slam",
-	# Wrecking Flail (mass/heft · swaps Head, Andrew Call #4)
 	"ram_plow": "wrecking_flail",
 	"heavy_breech": "wrecking_flail",
 	"crush_guard": "wrecking_flail",

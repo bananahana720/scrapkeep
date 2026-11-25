@@ -4,36 +4,17 @@ const MakerSets := preload("res://src/build/maker_sets.gd")
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# What a completed maker set does (maker_sets.gd counts the pieces). Build owns this: refresh()
-# recounts the run's parts (relics among them) and racked active, step() runs the timed bonuses, and the bus
-# handlers and one damage-door hook run the rest. Every bonus strikes through build.item_hit (a
-# synergy strike that never procs an item) or combat's wear-trail bypass, so no bonus feeds
-# another in a loop. A set completing is announced once a run on the bus as cause_armed
-# ("set_" + bonus), and each firing as cause_fired, so the run log counts them and presentation
-# can give them a look of their own.
-#
-# Bench Teeth lays its teeth along the ball's carve line: BallState.carving once wall grip (#61)
-# adds it, and until then the ball's own fast ground roll (the same fallback the Waking's
-# carving_now() uses). lay_tooth() is open to any other carve source.
 
-# Full Pressure: the steam ring an active vents.
 const STEAM_RADIUS := 7.0
 const STEAM_DAMAGE := 8.0
 const STEAM_KNOCK := 18.0
-# Rounded Up: hits round up to the next multiple of this.
 const ROUND_TO := 5.0
-# Bench Teeth: a tooth every TOOTH_SPACING metres of fast ground roll, at speed tier
-# TOOTH_TIER or above; each lives TOOTH_LIFE seconds and bites a machine within TOOTH_REACH
-# once per TOOTH_REBITE seconds.
 const TOOTH_SPACING := 2.2
-const TOOTH_TIER := 1
 const TOOTH_LIFE := 3.0
 const TOOTH_REACH := 1.6
 const TOOTH_DAMAGE := 10.0
 const TOOTH_REBITE := 0.5
 const MAX_TEETH := 30
-# Tremor: a landing at or above TREMOR_MIN impact ripples TREMOR_RADIUS plus TREMOR_GROWTH per
-# point of impact, up to TREMOR_MAX metres; damage scales with the impact over TREMOR_REF.
 const TREMOR_MIN := 4.0
 const TREMOR_RADIUS := 4.5
 const TREMOR_GROWTH := 0.25
@@ -42,8 +23,6 @@ const TREMOR_DAMAGE := 14.0
 const TREMOR_REF := 8.0
 const TREMOR_KNOCK := 12.0
 const TREMOR_GAP := 0.35
-# Noticed: a crit's splinter strikes SPLINTER_SHARE of the crit SPLINTER_DELAY later, the same
-# machine or the nearest within SPLINTER_REACH; at most SPLINTER_PER_SECOND.
 const SPLINTER_DELAY := 0.3
 const SPLINTER_SHARE := 0.5
 const SPLINTER_REACH := 7.0
@@ -53,7 +32,6 @@ const MOSS_SOURCES_SKIPPED := ["spare", "evolution"]
 
 var build
 var ctx
-# maker -> distinct pieces held.
 var counted := {}
 var live: Array = []
 var fires := {}
@@ -102,10 +80,8 @@ func has(bonus_id: String) -> bool:
 	return bonus_id in live
 
 
-# Recounts the pieces when the parts or the racked active changed. Cheap when nothing did.
 func refresh() -> void:
 	var active := _racked_maker()
-	# The parts themselves, not their count: a retry or a sale can swap one part for another.
 	var signature := "%d|%s" % [ctx.run.parts.hash(), active]
 	if signature == _signature:
 		return
@@ -118,7 +94,6 @@ func refresh() -> void:
 			_on_completed(bonus_id)
 
 
-# The open-frame rule the active rack asks at release: fired in the air, an active fires twice.
 func fires_twice() -> bool:
 	return has("open_frame") and ctx.player != null and not bool(ctx.player.state.grounded)
 
@@ -172,8 +147,6 @@ func _clear_flight() -> void:
 	_rolled = 0.0
 
 
-# ---- Full Pressure (Spillway Works) ----
-
 func _on_active_fired(_active_id: String, at: Vector3, _count: int) -> void:
 	if not has("full_pressure") or not ctx.flow.in_play():
 		return
@@ -192,16 +165,12 @@ func _on_active_fired(_active_id: String, at: Vector3, _count: int) -> void:
 	note_fire("full_pressure", null, at)
 
 
-# ---- Rounded Up (Fleet Surplus) and Noticed (Mind-glass): one door hook ----
-
 func _on_door_hit(hit: Dictionary) -> void:
 	var enemy = hit.get("enemy")
 	var result: Dictionary = hit.get("result", {})
 	if not is_instance_valid(enemy) or result.is_empty():
 		return
 	var dealt := float(result.get("dealt", 0.0))
-	# A target no player hit hurts (a crew fitter) gets neither bonus. A plate that takes a hit whole is not one:
-	# Rounded Up's top-up still lands through it (coordinator ruling, 24 Oct: no nerf in a small lane).
 	if dealt <= 0.0 or (enemy.has_method("takes_no_damage") and enemy.takes_no_damage()):
 		return
 	if has("noticed") and String(hit.get("kind", "")) != "synergy" and _is_crit(enemy, result) \
@@ -216,8 +185,6 @@ func _on_door_hit(hit: Dictionary) -> void:
 			fires["rounded_up"] = int(fires.get("rounded_up", 0)) + 1
 
 
-# The crit rule juice.gd and the damage numbers use (DamageNumbers.is_crit): a weak point
-# softer than the body plating, or a dealt figure above the punch.
 func _is_crit(enemy: Node3D, result: Dictionary) -> bool:
 	var dealt := float(result.get("dealt", 0.0))
 	var body := float(ctx.spawner.plating_of(enemy)) if ctx.spawner.has_method("plating_of") else -INF
@@ -241,12 +208,9 @@ func _step_splinters() -> void:
 		var fx = _effects()
 		if fx != null:
 			fx.arc(s["where"] + Vector3.UP * 1.5, target.global_position + Vector3.UP * 0.6, Palette.VERDIGRIS)
-		# item_hit applies the weapon multiplier; the crit's dealt figure already carries it.
 		build.item_hit(target, float(s["damage"]) / maxf(0.01, build.sheet.mod("weapon_damage")))
 		note_fire("noticed", target, target.global_position)
 
-
-# ---- Bench Teeth (Redjaw Workshops) ----
 
 func _step_teeth(delta: float) -> void:
 	for tooth in _teeth:
@@ -280,10 +244,7 @@ func _step_teeth(delta: float) -> void:
 
 
 func _carving() -> bool:
-	var state = ctx.player.state
-	if "carving" in state:
-		return bool(state.carving)
-	return bool(state.grounded) and int(state.tier) >= TOOTH_TIER
+	return bool(ctx.player.state.carving)
 
 
 func lay_tooth(at: Vector3) -> void:
@@ -299,8 +260,6 @@ func lay_tooth(at: Vector3) -> void:
 func teeth() -> Array:
 	return _teeth.duplicate(true)
 
-
-# ---- Tremor (Waking-made) ----
 
 func _on_landed(impact: float) -> void:
 	if not has("tremor") or impact < TREMOR_MIN or _clock < _tremor_ready or not ctx.flow.in_play():
@@ -324,10 +283,6 @@ func _on_landed(impact: float) -> void:
 	note_fire("tremor", null, at)
 
 
-# ---- Packed a Spare (Moss's Spares, 2 pieces) ----
-
-# The piece that completes the set is not its own spare: the set must already have been live
-# before this part's recount (a nested part_gained, an evolution grant, may have recounted first).
 func _on_part_gained(part_id: String, source: String) -> void:
 	var was_live := _live_without(part_id, MakerSets.MOSS)
 	refresh()
@@ -338,7 +293,6 @@ func _on_part_gained(part_id: String, source: String) -> void:
 	note_fire("packed_a_spare", null, ctx.player.ball_position())
 
 
-# True when maker's set is complete without one copy of part_id: the set held before it came.
 func _live_without(part_id: String, maker: String) -> bool:
 	var parts: Array = ctx.run.parts.duplicate()
 	parts.erase(part_id)

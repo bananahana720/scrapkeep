@@ -11,29 +11,18 @@ signal pylon_planted(at: Vector3, banked_speed: float)
 signal pylon_ejected(velocity: Vector3)
 signal jumped(air: bool)
 signal boosted(direction: Vector3)
-# A fact one of the kit's static rules left: the bus signal's name and its arguments.
 signal kit_fact(kind: String, args: Array)
 signal landed(impact: float)
-# The ball met a world face that is not a floor at `speed` m/s of closing (Contact.bump_closing):
-# `at` is the contact point and `normal` points from the face to the ball.
 signal bumped(at: Vector3, normal: Vector3, speed: float)
 
 var tuning
 var state
 var drive_basis := Basis.IDENTITY
-# Draw-side hooks (MOTION-SPEC row 210). Emitted before the body takes a velocity set, and
-# before a teleport, so the drawn lattice can keep its spin through the forced floor roll the
-# set applies below. Nothing here reads or changes the body.
 signal velocity_setting
 signal teleporting
 var intent
 var kit
-# Pushes from the world (the flood's drag and current), an acceleration in m/s^2. The
-# owner adds to it every physics tick and the ball spends and clears it once per step.
 var external_accel := Vector3.ZERO
-# The velocity handed to the solver on each of the last few ticks, newest last. A
-# contact report arrives after the solver has already bounced the ball, so a contact
-# is sized from these, not from the velocity it now has.
 const VELOCITY_HISTORY := 4
 var recent_velocities: Array[Vector3] = []
 
@@ -43,18 +32,10 @@ var _pending_velocity = null
 var _active := false
 var _last_fall_speed := 0.0
 var _settle_interpolation := 0
-# True from a teleport until its interpolation reset has run. In that gap the interpolated
-# transform still points at the old spot, so whoever draws from the ball reads the raw one
-# (PlayerBall.shown_transform): a lens snapped in the same breath lands on the new spot.
 var placing := false
-# A carve shorter than this is a seam hop, not a ride, and publishes nothing (systems audit
-# pass C: carving was the one verb with no bus fact, so sound, the pad and the tricks book
-# could not answer it). A start value; the carve itself is ball_rules' state.carving.
 const CARVE_MIN_S := 0.3
 var _carve_s := 0.0
 var _bump_wait := 0.0
-# Enemy contacts by instance id: in the contact list last tick, first met this tick and not yet
-# reported (in order), and reported this tick.
 var _touching := {}
 var _met: Array = []
 var _told := {}
@@ -101,8 +82,6 @@ func set_active(active: bool) -> void:
 	sleeping = false
 
 
-# A shove divided by a zero physics delta, or any other NaN, must never reach the body: once
-# the ball's position is NaN no rescue can find it again. A non-finite velocity reads as rest.
 static func _finite(v: Vector3) -> Vector3:
 	return v if v.is_finite() else Vector3.ZERO
 
@@ -124,12 +103,8 @@ func teleport(to: Vector3, new_velocity: Vector3) -> void:
 		push_warning("rigid_ball: teleport to a non-finite point refused")
 		return
 	_pending_position = to
-	# The body takes its new place and speed now, so whoever reads the ball back in the same breath
-	# (a lens snap, a rescue check, a ride that catches it) finds it there, moving as placed. A
-	# frozen ball is a static body, which would read a speed as a conveyor's, so it waits for the
-	# thaw. _integrate_forces sets the same point and speed again on the next tick, so the ball
-	# leaves the spot on the tick it always did. The deferred reset runs before the next draw, so
-	# no frame slides from the old spot.
+	# A frozen RigidBody3D acts like a static body and reads linear_velocity as a conveyor speed.
+	# Deferred reset_physics_interpolation prevents a streak from the old spot before the next draw.
 	if is_inside_tree():
 		global_position = to
 	else:
@@ -181,9 +156,6 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	else:
 		_probe.global_transform = Transform3D(Basis.IDENTITY, origin)
 		Rules.aim_probe(_probe, state, tuning)
-	# Sable's vault kick and a falling slam own the faces the ball meets in the air, so a
-	# wall is taken from the air only without them; carving up from the floor still grips,
-	# and inside the coyote time a one-tick hop off a seam re-takes the wall.
 	var take_speed := Rules.grip_speed(state, tuning)
 	if not state.grounded and state.coyote <= 0.0 and kit != null and (kit.on(Augments.VAULT) or kit.slamming):
 		take_speed = INF
@@ -200,8 +172,6 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 		wish = Rules.wish_direction(intent, drive_basis, state)
 		if wish != Vector3.ZERO:
 			var head := Rules.drive_head(state, tuning, wish) * Rules.drive_scale(state, tuning, intent)
-			# Torque is the honest way to drive a sphere; a small central force keeps it
-			# from feeling like the ball is fighting its own contact patch.
 			body_state.apply_torque(Vector3.UP.cross(wish) * tuning.f("rigid_torque") * head)
 			body_state.apply_central_force(wish * tuning.f("drive_accel") * 0.3 * mass * head)
 
@@ -211,28 +181,18 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 		elif state.grounded:
 			body_state.apply_central_force(-state.velocity.normalized() * tuning.f("rolling_resistance") * mass)
 
-		# The over-speed drag is an air rule on this ball (HOOK-FIX, 2026-10-09). On the ground
-		# it pays only the rolling and brake forces above: that is the ball Andrew chose in play
-		# for its speed and momentum (TADR-006 D1), and the designed rides up to the sky layer
-		# and the two-hook apex need that momentum (stage_layers_test, bot_chain_hand_test).
 		if not state.grounded:
 			body_state.apply_central_impulse(Rules.over_speed_drag(state, tuning, delta) * mass)
 
 		if external_accel != Vector3.ZERO:
 			body_state.apply_central_force(external_accel * mass)
 
-		# A ride that lifts the ball off its face (the reactor's sheet, a chute's assist) wins:
-		# the press would hold the ball on the face the ride is carrying it up and away from.
 		var press := Rules.downforce(state, tuning)
 		if press != Vector3.ZERO and external_accel.dot(state.contact_normal) <= 0.0:
 			body_state.apply_central_force(press * mass)
 	external_accel = Vector3.ZERO
 
-	# The augments run before jump and boost so a pylon jump or a vault kick can claim
-	# the same key without the base rule firing as well.
 	Augments.apply(kit, state, tuning, intent, drive_basis, body_state)
-	# The augments write the body's velocity directly; one that went non-finite reads as rest
-	# here, as the entry check above does, so the state never carries NaN for a tick.
 	if not body_state.linear_velocity.is_finite():
 		body_state.linear_velocity = Vector3.ZERO
 	_publish_kit(body_state)
@@ -263,8 +223,6 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	_remember(state.velocity)
 
 
-# The hardest new world-face contact this tick, sized from the velocity the solver was handed
-# (the contact arrives after the solver has bounced the ball), published once per BUMP_GAP_S.
 func _watch_bumps(body_state: PhysicsDirectBodyState3D, origin: Vector3, delta: float) -> void:
 	_bump_wait = maxf(0.0, _bump_wait - delta)
 	if _bump_wait > 0.0 or recent_velocities.is_empty():
@@ -288,7 +246,6 @@ func _watch_bumps(body_state: PhysicsDirectBodyState3D, origin: Vector3, delta: 
 	bumped.emit(at, normal, best)
 
 
-# A carve that ends leaves one fact on the kit, published with the kit's others this tick.
 func _track_carve(at: Vector3, delta: float) -> void:
 	if state.carving:
 		_carve_s += delta
@@ -304,8 +261,6 @@ func _remember(velocity: Vector3) -> void:
 		recent_velocities.pop_front()
 
 
-# The augments are static rules with no signals of their own; they leave a flag on the
-# kit and the ball turns each flag into one published fact.
 func _publish_kit(body_state: PhysicsDirectBodyState3D) -> void:
 	if kit == null:
 		return
@@ -325,11 +280,7 @@ func _publish_kit(body_state: PhysicsDirectBodyState3D) -> void:
 			kit_fact.emit(fact[0], fact[1])
 
 
-# The enemies the ball first meets this tick, put in an order the game's own state sets: the
-# body a committed haul is landing on, then the nearest, then scene-tree order. The physics
-# server lists a tick's contacts in the order its worker threads found them, and body_entered
-# follows that list, so two launches of one seed could report the same two bodies in either
-# order; a haul through a pair then landed on its body or was spent on the bystander by chance.
+# PhysicsServer3D reports contacts and body_entered in worker-thread order; sort deterministically.
 func _note_enemies(body_state: PhysicsDirectBodyState3D) -> void:
 	var now := {}
 	_met.clear()
@@ -346,10 +297,6 @@ func _note_enemies(body_state: PhysicsDirectBodyState3D) -> void:
 		_met.sort_custom(Contact.meets_first.bind(body_state.transform.origin, Augments.landing_body(kit)))
 
 
-# body_entered arrives once per new body, right after _integrate_forces, in the server's order.
-# The first one reports every enemy met this tick in the ball's order; the rest find theirs told.
-# A body the server names that the ball's own list missed (a boss whose contact moved between
-# two of its shapes) is told when its signal arrives, after the ordered ones.
 func _on_body_entered(body: Node) -> void:
 	var met := _met.duplicate()
 	_met.clear()

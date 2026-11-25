@@ -3,16 +3,6 @@ extends RefCounted
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# A rarity's shape, so colour never carries a tier alone (VISUAL-LANGUAGE sections 2 and 5).
-# The rungs follow the reward gate's toppers (tools/blender/reward_gate.py) and the shop's
-# frames: each rung up adds a feature, and no two rungs share a silhouette.
-#
-#   common   bar      a plain slab; on a ball piece, no foot at all (copper hardware)
-#   rare     diamond  one bold rhombus
-#   relic    star     four points and the gauge bezel's mint bolt heads (a mint heart upright)
-#   evolved  crown    a ring of points, the ancients' seam pattern standing up
-#
-# mark() is the upright one on a pedestal; foot() is the flat one a part piece stands on.
 const SHAPES := {"common": "bar", "rare": "diamond", "relic": "star", "evolved": "crown"}
 const CROWN_POINTS := 5
 
@@ -22,7 +12,6 @@ static func shape_of(rarity: String) -> String:
 	return SHAPES[id if id != "" else "common"]
 
 
-# The upright mark, about size metres tall, centred on its origin.
 static func mark(rarity: String, mat: Material, size := 1.0) -> Node3D:
 	var shape := shape_of(rarity)
 	var root := Node3D.new()
@@ -41,7 +30,6 @@ static func mark(rarity: String, mat: Material, size := 1.0) -> Node3D:
 	return root
 
 
-# The flat foot under a ball piece, its +Y out of the shell. Common has none.
 static func foot(rarity: String, mat: Material, size := 1.0) -> Node3D:
 	var shape := shape_of(rarity)
 	if shape == "bar":
@@ -56,7 +44,6 @@ static func foot(rarity: String, mat: Material, size := 1.0) -> Node3D:
 				var arm := _add(root, _plate(0.56 * size, 0.06 * size), mat)
 				arm.scale = Vector3(1.0, 1.0, 0.3)
 				arm.rotation.y = yaw
-			# The bezel's bolt heads at 45 degrees, in the relic's mint heart colour.
 			var bolt := Palette.solid(Palette.ARC, 3.0)
 			for k in 4:
 				var a := PI * 0.25 + PI * 0.5 * k
@@ -68,7 +55,6 @@ static func foot(rarity: String, mat: Material, size := 1.0) -> Node3D:
 	return root
 
 
-# A ring with CROWN_POINTS cones standing on it.
 static func _crown(root: Node3D, radius: float, tall: float, band: float, mat: Material, base: Vector3) -> void:
 	var torus := TorusMesh.new()
 	torus.inner_radius = radius - band
@@ -101,7 +87,6 @@ static func _box(size: Vector3) -> BoxMesh:
 	return box
 
 
-# An octahedron: four sides around, a point top and bottom.
 static func _rhombus(radius: float, height: float) -> SphereMesh:
 	var gem := SphereMesh.new()
 	gem.radius = radius
@@ -120,7 +105,6 @@ static func _sphere(radius: float) -> SphereMesh:
 	return s
 
 
-# A flat four-sided plate, corners on the axes.
 static func _plate(radius: float, thick: float) -> CylinderMesh:
 	var plate := CylinderMesh.new()
 	plate.top_radius = radius

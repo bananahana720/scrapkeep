@@ -7,55 +7,27 @@ const Synergies := preload("res://src/build/synergies.gd")
 const TierMark := preload("res://src/build/tier_mark.gd")
 const ModelVariants := preload("res://src/presentation/model_variants.gd")
 
-# Scrap becomes your build, on the ball. Mass (DEMO-SPEC heft) shows as chunks stuck
-# to the surface, and each part as a piece of hardware whose shape says its family and
-# whose foot and colour say its rarity (TierMark: none, diamond, star, crown). Spending compacts scrap into a part: the wallet drops
-# but mass does not, so a fabricator purchase bolts a part on and takes no chunk off.
-# Only a theft (scrap_lost) takes chunks, and they fly off toward the thief. The whole
-# shell grows a step per heft class; the collider never does. This node lives under
-# the ball's roll_node(), so everything rolls with the surface. It is drawn from
-# run.mass, run.parts and the heft class every time, so a retry redraws the restored
-# build exactly.
-#
-# Visual budget: at most MAX_CHUNKS chunks and MAX_PIECES pieces; at heft class V the
-# hardware stands at most about 1.1 m off the collider, so the build never hides the
-# ball's line or a threat.
 
 const MAX_CHUNKS := 36
 const MAX_PIECES := 24
 const CHUNK_PER_ROOT_SCRAP := 2.2
 const POP_SCALE := 1.9
 const POP_RATE := 12.0
-# The shell's scale per heft class above I, and how long a stolen chunk flies.
 const SHELL_PER_CLASS := 0.07
 const FLING_SECONDS := 0.45
-# Hoberman shells (ROSTER-LOOK section 5): chunks clamp onto the lattice, a hub or a strut,
-# instead of floating in its open gaps, and the gap panels carry the growth read, so the shell
-# does not scale per class. The layout mirrors tools/blender/shell_base.lattice_layout() in Godot
-# axes (Blender x, y, z is Godot x, z, -y): 12 five-way hubs, 20 three-way hubs, 60 links,
-# turned LATTICE_TWIST about the vertical. Chunk centres sit at LATTICE_SEAT, just outside the
-# strut mid surface at LATTICE_HUB_RADIUS.
 const LATTICE_SHELL_PER_CLASS := 0.0
 const LATTICE_TWIST := 72.0 * PI / 180.0
 const LATTICE_HUB_RADIUS := 0.9575
 const LATTICE_SEAT := 0.99
 
-# The ladder's rung colours on the ball's part pieces, except common: a common piece stays
-# copper hardware, so mint (Sable's and the field's) never coats the shell. Rare pieces are
-# the cobalt parts that hang on the shell (fleet grade), relics amber.
 const RARITY_COLORS := {
 	"common": Palette.COPPER,
 	"rare": Palette.COBALT,
-	# Red is only for what hurts you (DESIGN-V2 section 11).
 	"relic": Palette.AMBER,
 	"evolved": Palette.ANCIENT,
 }
 const ICE := Color("c8f0ff")
-# A part's own shape, shown only with --models=tripo (tools/tripo/README.md): one untextured mesh,
-# base at the origin, +Y out of the shell, at most 0.65 m tall and 0.6 m across (tripo_part.py). The
-# rarity colour still paints it.
 const PART_GLB := "res://assets/models/item_parts/part_%s_tripo.glb"
-# One colour per tag, so a synergy's ring says what it is made of.
 const TAG_COLORS := {
 	"frost": ICE, "arc": Palette.ARC, "kinetic": Palette.COPPER, "split": Palette.SAND,
 	"spiral": Palette.AMBER, "chain": Palette.ARC, "anchor": Palette.VERDIGRIS,
@@ -70,7 +42,6 @@ var _chunk_mesh: BoxMesh
 var _chunk_material: StandardMaterial3D
 var _flung: Array[Dictionary] = []
 var _shell_class := 1
-# True while the ball wears a Hoberman shell; set_lattice() re-seats the chunks.
 var lattice := false
 static var _layout := {}
 static var _part_meshes := {}
@@ -99,13 +70,11 @@ func set_lattice(on: bool) -> void:
 		_chunks[i].position = chunk_point(i)
 
 
-# Where chunk index sits: on the unit-sphere spread, or clamped onto the lattice.
 func chunk_point(index: int) -> Vector3:
 	var dir := _slot(index, MAX_CHUNKS)
 	return lattice_snap(dir) * LATTICE_SEAT if lattice else dir * 1.02
 
 
-# {hubs: unit directions, five-way first; links: [five-way index, three-way index]}.
 static func lattice_layout() -> Dictionary:
 	if not _layout.is_empty():
 		return _layout
@@ -141,7 +110,6 @@ static func lattice_layout() -> Dictionary:
 	return _layout
 
 
-# The point of the lattice (a hub or a strut's arc) nearest dir, as a unit direction.
 static func lattice_snap(dir: Vector3) -> Vector3:
 	var d := dir.normalized()
 	var layout := lattice_layout()
@@ -178,7 +146,6 @@ func shell_class() -> int:
 	return _shell_class
 
 
-# Idempotent: draws exactly this mass, part list, synergy set and heft class.
 func show_build(mass: float, parts: Array, synergies: Array, heft_class := 1) -> void:
 	_shell_class = heft_class
 	scale = Vector3.ONE * shell_scale(heft_class, lattice)
@@ -199,8 +166,6 @@ func show_build(mass: float, parts: Array, synergies: Array, heft_class := 1) ->
 		halo.visible = key in synergies
 
 
-# A theft: the outermost count chunks leave the ball and fly to at (world space) under
-# fx_parent, then vanish. The caller redraws after, so the counts stay in step.
 func fling(count: int, at: Vector3, fx_parent: Node3D) -> void:
 	for i in mini(count, _chunks.size()):
 		var chunk: MeshInstance3D = _chunks.pop_back()
@@ -215,8 +180,6 @@ func flung_count() -> int:
 	return _flung.size()
 
 
-# A point on the unit sphere, spread evenly by index (golden-angle spiral), so the same
-# index always lands in the same spot.
 static func _slot(index: int, count: int, phase := 0.0) -> Vector3:
 	var y := 1.0 - (float(index) + 0.5) / float(count) * 2.0
 	var r := sqrt(maxf(0.0, 1.0 - y * y))
@@ -251,14 +214,12 @@ func _rebuild_pieces(parts: Array) -> void:
 		var dir := _slot(i, MAX_PIECES, 1.1)
 		piece.position = dir * 1.0
 		piece.basis = _facing(dir)
-		# The newest piece pops like a chunk does.
 		if i == shown - 1:
 			piece.scale = Vector3.ONE * POP_SCALE
 		add_child(piece)
 		_pieces.append(piece)
 
 
-# A basis whose +Y points out of the ball along dir.
 static func _facing(dir: Vector3) -> Basis:
 	var up := dir.normalized()
 	var side := Vector3.RIGHT if absf(up.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
@@ -269,7 +230,6 @@ static func _facing(dir: Vector3) -> Basis:
 func _piece(part_id: String) -> Node3D:
 	var d: Resource = Parts.def(part_id)
 	var family: String = d.family if d != null else "stat"
-	# An old id (uncommon, rare_plus) wears the rung it folds into.
 	var rarity: String = ItemGen.resolve_rarity(d.rarity) if d != null else ""
 	if rarity == "":
 		rarity = "common"
@@ -331,13 +291,11 @@ func _piece(part_id: String) -> Node3D:
 	return root
 
 
-# The part's own mesh in the rarity material, or null when the switch is off or it has none.
 static func _own_shape(part_id: String, mat: Material) -> MeshInstance3D:
 	var path := ModelVariants.only(PART_GLB % part_id)
 	if path == "":
 		return null
 	if not _part_meshes.has(path):
-		# A file that exists can still fail to load; the part then keeps its family primitive.
 		var packed := load(path) as PackedScene
 		var mesh: Mesh = null
 		if packed != null:
@@ -368,7 +326,6 @@ func _box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, yaw: float)
 	parent.add_child(node)
 
 
-# Round, so a tier foot's points stand clear of it.
 func _disc(parent: Node3D, radius: float, thick: float, at: Vector3, mat: Material) -> void:
 	var node := MeshInstance3D.new()
 	var cyl := CylinderMesh.new()
@@ -409,10 +366,6 @@ func _ball(parent: Node3D, radius: float, at: Vector3, mat: Material) -> void:
 	parent.add_child(node)
 
 
-# One ring per live synergy, each at its own tilt and radius and coloured by its
-# first tag, so up to eight stay separable. Storm Lattice is a gyroscope cage and
-# Thermal Shock a thick frosted coil. They roll with the ball, so a synergy is on
-# screen all run (the "ring added to the ball" on discovery).
 func _build_halo(synergy_id: String) -> Node3D:
 	var halo := Node3D.new()
 	halo.name = "Halo_" + synergy_id

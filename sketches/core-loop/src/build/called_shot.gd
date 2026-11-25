@@ -6,21 +6,6 @@ const LoopTally := preload("res://src/core/loop_tally.gd")
 const Parts := preload("res://src/build/parts.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
-# Called Shot (docs/design/loops.md Spec 3; Andrew approved the top three loops on 11 Nov 2026
-# 18:42Z and asked for them before the sitting): call the finisher that breaks this Warden.
-# Behind `--called-shot=on` (off by default). Owned by build.gd, which asks it one thing: the
-# gate's rarities (gate_rarities), where the call is settled.
-#
-# - The window. For CALL_WINDOW_S after the Warden wakes, holding haul with no line out while the
-#   camera looks at the Warden shows a stamp over it after CYCLE_S, and turns to the next every
-#   CYCLE_S: DUNK, CHAIN, BOWL. Letting go calls the one showing; a tap shorter than CYCLE_S calls
-#   nothing. One call a Warden.
-# - The break. DUNK is met by a dunk spent on the Warden; CHAIN by a smash whose landing pays a
-#   chain of CHAIN_COMBO or more on it; BOWL by a ram at blazing or a flung body. A cause counts for
-#   CAUSE_S, so the hit that breaks it and the cause it carries need not land in the same frame.
-# - The pay. Met: both gate cards cobalt or better (no common rung). Missed: one of this stage's
-#   bonus cores burns, so the gate drops a rung (assumption: with none held it costs nothing more;
-#   the cobalt floor stays). No call: the game as it was.
 
 const VERBS := ["DUNK", "CHAIN", "BOWL"]
 const CALL_WINDOW_S := 4.0
@@ -29,8 +14,6 @@ const AIM_DOT := 0.8
 const CHAIN_COMBO := 4
 const CAUSE_S := 0.4
 const STAMP_UP_M := 7.0
-# Paper white with an ink outline: no pilot or warning colour, so the call never reads as a threat
-# (LEGIBILITY section 1) and every pilot's call looks the same.
 const STAMP_INK := Color(0.97, 0.95, 0.9)
 
 var ctx
@@ -78,15 +61,12 @@ func clear() -> void:
 	_stamp = null
 
 
-# The verb a hold of `seconds` shows, or "" before the first CYCLE_S.
 static func showing(seconds: float) -> String:
 	if seconds < CYCLE_S:
 		return ""
 	return VERBS[int(floor(seconds / CYCLE_S) - 1.0) % VERBS.size()]
 
 
-# The gate's rarities for this stage's cores, after the call is settled: a met call lifts both
-# cards off the common rung; a missed one burns a core first. build.gd's gate roll asks this.
 func gate_rarities() -> Array:
 	settle()
 	var rarities: Array = Parts.gate_rarities(ctx.run.gate_tier_bonus())
@@ -96,8 +76,6 @@ func gate_rarities() -> Array:
 	return lifted if not lifted.is_empty() else ["rare"]
 
 
-# Judges the call once, at the gate: met when the call's cause touched the Warden in the last
-# CAUSE_S before it broke.
 func settle() -> void:
 	if state != "called" or verdict != "":
 		return
@@ -134,7 +112,6 @@ func _physics_process(delta: float) -> void:
 	if state == "window":
 		_step_window(delta)
 	_follow()
-	# Only an open window or a standing call needs the clock; the rest of the stage costs nothing.
 	if state != "window" and state != "called":
 		set_physics_process(false)
 
@@ -154,7 +131,6 @@ func _step_window(delta: float) -> void:
 		changed.emit(state, called)
 
 
-# Letting go in the window calls what shows; a held stamp at the window's end still calls on release.
 func _release() -> void:
 	var verb := showing(held_s)
 	held_s = 0.0
@@ -177,7 +153,6 @@ func _line_free() -> bool:
 func _aiming() -> bool:
 	if not is_instance_valid(_warden) or ctx.camera == null:
 		return is_instance_valid(_warden)
-	# On the ground plane: the chase lens looks down at the ball, so its pitch is not the aim.
 	var to: Vector3 = _warden.global_position - ctx.aim_origin()
 	var look: Vector3 = ctx.aim_forward()
 	var to_flat := Vector2(to.x, to.z)
@@ -192,13 +167,10 @@ func _on_struck(enemy: Node3D, kind: String, _force: float) -> void:
 		_note(enemy, "BOWL")
 
 
-# The stamp's word while it shows, else "".
 func stamp_text() -> String:
 	return _stamp.text if _stamp != null and _stamp.visible else ""
 
 
-# A smash pays the chain as its landing begins, before the contact strikes the Warden
-# (player_ball _begin_landing): the paid end names the Warden and carries the combo it paid at.
 func _on_line_state(id: String, target: Node3D, _at: Vector3, cause: String) -> void:
 	if state == "called" and id == "chain_end" and cause == "paid" and ctx.player.chain.last_paid_combo() >= CHAIN_COMBO:
 		_note(target, "CHAIN")
@@ -208,8 +180,6 @@ func _note(enemy: Node3D, verb: String) -> void:
 	if state == "called" and enemy == _warden:
 		_causes[verb] = _clock
 
-
-# --- The stamp over the Warden ------------------------------------------------------------
 
 func _show(verb: String, inked: bool) -> void:
 	if verb == "":
@@ -230,7 +200,6 @@ func _show(verb: String, inked: bool) -> void:
 		_follow()
 	_stamp.visible = true
 	_stamp.text = verb
-	# An outline while it turns; STAMP_INK once called.
 	_stamp.modulate = STAMP_INK if inked else Color(1.0, 1.0, 1.0, 0.0)
 	_stamp.outline_modulate = Color(0.08, 0.08, 0.08, 1.0) if inked else Color(1.0, 1.0, 1.0, 0.9)
 

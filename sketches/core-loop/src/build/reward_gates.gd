@@ -13,29 +13,6 @@ const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 
-# The roll-through reward gates after the beacon. Two arches stand ahead of the ball on
-# its line; rolling through one takes its part. There is no collider and no menu, so
-# choosing never costs speed. If you roll past both, they are put ahead of you again
-# rather than waiting behind you.
-#
-# Each gate says what it gives while you approach: the part's name, then (when there is room) its effect in
-# one line, and a star line when it would complete a named synergy ("* completes Storm Lattice *") or is a
-# known ingredient ("* ingredient: ??? *"); prompt_parts builds them. Rarity shows twice: the arch's colour and the topper's shape
-# (a bar for common, a star for rare, a tall star with a mint
-# heart for relic), so colour never carries it alone. Red is only for what hurts
-# you (DESIGN-V2 section 11), so relic is mint with its own heart. A hot-wired offer adds an amber stripe.
-#
-# v2 W4: a gate also reads without words, as its family glyph (cat_), trigger glyph
-# (trg_) and element glyph (el_) beside the topper, the same ids the shop and the
-# cards use; a gate whose part completes a synergy pulses.
-#
-# The name is a screen prompt (WorldPrompt, owner_placed) that its own gate places every frame at the
-# gate's projected crossbar point, with the gate's column inside its sign (PF-22).
-# An edge sign opens inward from the crossbar. One type size, the name on one row or two when
-# its room is narrow; the effect lines under a one-row name when they fit the room. When names would still
-# overlap, the gate farther from the ball hides its name only (fit_names), with hysteresis so the set of
-# named gates does not flip with a pixel of camera sway. The groups "word_keep_clear" (sound words) and
-# "speech_keep_clear" (the speech bubble) carry keep_clear_rects(), the shown names' screen rects.
 
 signal chosen(part_id: String)
 
@@ -44,35 +21,17 @@ const SPREAD := 9.0
 const WIDTH := 8.0
 const HEIGHT := 7.0
 const MISSED_BEYOND := 20.0
-# The ball's centre may be this far below a gate's base and still count, for a gate on a slope.
 const SLOPE_BELOW := 4.0
 const LOST_BEYOND := 110.0
-# Gates go downhill of the ball, never up a bank (momentum is sacred): candidate
-# headings are tried nearest the ball's own line first, at these distances and
-# spreads, and the first whose gate spots and approach lines stay at or below the
-# ground under the ball (within CLIMB_TOLERANCE) wins. If none does, the candidate that
-# climbs least is used.
 const TURN_STEPS := [0.0, 20.0, -20.0, 40.0, -40.0, 60.0, -60.0, 90.0, -90.0, 120.0, -120.0, 150.0, -150.0, 180.0]
 const DISTANCES := [AHEAD, 30.0, 24.0, 18.0]
 const SPREADS := [SPREAD, 6.0]
 const CLIMB_TOLERANCE := 0.75
 const PATH_SAMPLES := 6
-# A candidate is also rejected when a static prop (a kerb, a bench, anything built by a
-# map's build_props, or an element hazard like ice) stands across its approach or its
-# roll-out: an unforeseen stop is exactly what momentum is sacred forbids. The probe is
-# a ball-sized sphere swept on the physics layer terrain and props share (layer 1); the
-# terrain's own "Ground" bodies are excluded by RID so only real obstacles count. A
-# blocked candidate is penalised, never returned outright, unless every candidate is
-# blocked, in which case the least-blocked one is used and a warning is pushed once.
 const PROBE_RADIUS := 1.0
 const RUN_OUT := 6.0
 const BLOCK_PENALTY := 1000.0
-# How far a gate stood past the map's slot row may sit off the slots' mean ground (_slot_plan).
 const SLOT_LINE_DROP := 1.5
-# The name's top stands this far under the crossbar point. A name or effect line is "room" wide: the
-# distance to the nearest other gate's column less NAME_GAP. A shown name stays until it overlaps another by
-# at all, and a hidden one returns only with NAME_HOLD px clear. The effect lines come back only with
-# DETAIL_BACK px to spare, and a name goes back to one row only with ROWS_BACK px to spare.
 const NAME_DROP := 6.0
 const NAME_GAP := 12.0
 const NAME_HOLD := 32.0
@@ -83,22 +42,17 @@ const KEEP_CLEAR_GROUP := "word_keep_clear"
 const SPEECH_KEEP_CLEAR_GROUP := "speech_keep_clear"
 
 var offers: Array = []
-# Build's offer_mark(part_id) -> String; the star line under an offer, or "".
 var mark_for: Callable
-# Build's active row lookup (id) -> Dictionary, for an active offer (ActiveOffers): one more arch
-# beside the parts, tagged with its maker, that racks the active on F instead of adding a part.
 var active_row: Callable
 
 var _terrain
 var _ball := Vector3.INF
 var _name_rects: Array[Rect2] = []
 var _name_frame := -1
-# Per gate index: whether its name and its effect lines were shown last frame (the hysteresis).
 var _shown := {}
 var _detail := {}
 var _rows := {}
 var _above := {}
-# Asked each frame: is the game in play? Build sets it from flow. Names hide when it is not.
 var playing := Callable()
 var _ids: Array = []
 var _held: Array = []
@@ -106,14 +60,12 @@ var _last_side := {}
 var _gates: Array[Node3D] = []
 var _spin := 0.0
 var _warned_blocked := false
-# Gates standing on the map's slots never move to follow the ball, so they open from both sides.
 var _fixed := false
 
 
 func _init() -> void:
 	add_to_group(KEEP_CLEAR_GROUP)
 	add_to_group(SPEECH_KEEP_CLEAR_GROUP)
-	# Runs through a pause only to hide the names, so a menu over the world is not wearing them.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 
@@ -122,8 +74,6 @@ func setup(terrain) -> void:
 	visible = false
 
 
-# Returns the published offers: part_id, at (ground centre), facing (the way through)
-# and width, plus name, text, rarity, tier and synergy for anything that draws them.
 func open(part_ids: Array, ball: Vector3, heading: Vector3, held: Array = []) -> Array:
 	_ids = part_ids
 	_held = held.duplicate()
@@ -149,8 +99,6 @@ func is_open() -> bool:
 	return not offers.is_empty()
 
 
-# Returns true when the gates moved, so the owner can publish the new offers. Gates on the
-# map's slots stay put when the ball passes them all.
 func step(ball: Vector3, heading: Vector3) -> bool:
 	if offers.is_empty():
 		return false
@@ -160,7 +108,6 @@ func step(ball: Vector3, heading: Vector3) -> bool:
 		var offer: Dictionary = offers[i]
 		var rel: Vector3 = ball - offer["at"]
 		var along: float = rel.dot(offer["facing"])
-		# Across the way through, on the ground plane: a jumping ball's height is not a sideways miss.
 		var side: float = absf(rel.dot((offer["facing"] as Vector3).cross(Vector3.UP).normalized()))
 		var was: float = _last_side.get(i, along)
 		_last_side[i] = along
@@ -207,8 +154,6 @@ func _build_offer_record(part_id: String, at: Vector3, facing: Vector3) -> Dicti
 	}
 
 
-# Rerolls standing part gates in place to same-or-higher tier (Foreman's Audit Die) and
-# rebuilds _ids, offer records, 3D arches, and prompts cleanly in sync.
 func reroll_offers(rng: RandomNumberGenerator, class_id: String, held: Array) -> int:
 	if offers.is_empty():
 		return 0
@@ -284,8 +229,6 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 		_gates.append(_build_gate(at, facing, rec))
 
 
-# The gate spots for count gates: {facing, spots, climb}. Climb is the most any gate
-# spot or approach sample rises above the ground under the ball.
 func choose_placement(ball: Vector3, heading: Vector3) -> Dictionary:
 	var count := maxi(1, _ids.size())
 	var fixed := _slot_plan(count)
@@ -312,15 +255,6 @@ func choose_placement(ball: Vector3, heading: Vector3) -> Dictionary:
 	return best
 
 
-# A map with gate slots stands its gates there whatever the ball does. With fewer gates
-# than slots the outermost slots are used, and a single gate takes the middle one. A map
-# with one slot (the pit, the sinkhole) stands more gates in a row centred on it, across its
-# facing, 2 * SPREAD apart: the ordinary placement put the sinkhole's two gates on its bowl's
-# rim, 4 m up a bank from a ball at the bottom. More gates than several slots stand on the
-# slots' own line, centred on the row at the slots' spacing (a quick Warden break's third part
-# beside the hot-wired one puts four gates on the dam's three slots), unless a spot past the
-# row stands off the slots' ground by more than SLOT_LINE_DROP (a Highdraft island's edge), when
-# the ordinary placement takes them.
 func _slot_plan(count: int) -> Dictionary:
 	var m = _terrain.map() if _terrain.has_method("map") else null
 	if m == null or not "gate_slots" in m or (m.gate_slots as Array).is_empty():
@@ -373,12 +307,6 @@ func _candidate(ball: Vector3, ground: float, facing: Vector3, distance: float, 
 	return result
 
 
-# The RIDs of the active stage's ground bodies, so the shape probe below can tell "a
-# static prop is in the way" from "the ground itself is under the sphere". Both are
-# StaticBody3D on the same physics layer (map_spillway.gd's box()/cylinder() helpers
-# never set a layer of their own). Old maps name their single body "Ground"; parks
-# put their tiles under that node. No RID means no exclusion, never a query
-# that silently forbids every candidate.
 func _prop_probe_exclude() -> Array:
 	if _terrain == null or not _terrain.has_method("geometry_root"):
 		return []
@@ -396,12 +324,6 @@ func _prop_probe_exclude() -> Array:
 	return exclude
 
 
-# A ball-sized sphere swept from `from` to `to`, both raised to the terrain height at
-# that x/z plus PROBE_RADIUS so the sweep sits where the ball actually rolls. Anything
-# on layer 1 other than the excluded terrain body blocks: a kerb, a bench, an ice slab.
-# Runs only once in the tree, since choose_placement always runs from open()/step()
-# after build.gd has parented this node (build.gd setup()); off the tree there is no
-# physics space to ask, so nothing is reported blocked rather than failing the plan.
 func _segment_blocked(from_xz: Vector3, to_xz: Vector3, exclude: Array) -> bool:
 	if not is_inside_tree():
 		return false
@@ -429,8 +351,6 @@ static func rarity_color(rarity: String) -> Color:
 	return ItemGen.RARITY[id]["color"] if id != "" else ItemGen.RARITY["common"]["color"]
 
 
-# Brindle's cobalt pick (ruling ap, restored in W49-COMBAT): rolls guaranteed rare/cobalt offers
-# when continuing from World 1 into World 2, preferring behaviour-changing rares first.
 static func roll_cobalt_boss_picks(rng: RandomNumberGenerator, class_id: String, held: Array, count := 2) -> Array:
 	var plain: Array = Parts.offer_pool(class_id, ["rare"]).filter(func(key): return not Parts.changes_behaviour(key))
 	var picks: Array = Parts.roll(rng, ["rare"], class_id, held, count, plain)
@@ -440,15 +360,11 @@ static func roll_cobalt_boss_picks(rng: RandomNumberGenerator, class_id: String,
 	return picks
 
 
-# The glyphs a gate wears, left to right: family, trigger, element.
 static func glyph_ids(offer: Dictionary) -> Array:
 	return [offer.get("icon", ""), offer.get("trigger_icon", ""), offer.get("element_icon", "")] \
 		.filter(func(id): return id != "")
 
 
-# The prompt's structured parts: the name (at most three words), and under it the effect line
-# (the row's text, with "+N punch" added when the text lacks it; the verb only when there is no
-# text, because verb and text said the same thing) and the star line.
 static func prompt_parts(offer: Dictionary) -> Dictionary:
 	var words: PackedStringArray = String(offer.get("name", "")).split(" ", false)
 	var title := " ".join(words.slice(0, WorldPrompt.TITLE_WORDS))
@@ -514,8 +430,6 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	return gate
 
 
-# The gate's name: its own prompt, sized and placed each frame (_place_names). Its measurements are what
-# fit_names reads: the name on one row and on two, and the effect lines.
 static func _name_prompt(offer: Dictionary, tint: Color) -> Label:
 	var parts := prompt_parts(offer)
 	var prompt := WorldPrompt.new()
@@ -546,8 +460,6 @@ static func _name_prompt(offer: Dictionary, tint: Color) -> Label:
 	return prompt
 
 
-# The hot-wired flag, drawn as a thin diagonal amber band across the topper. It does not
-# change the rarity or its colour.
 static func _stripe() -> MeshInstance3D:
 	var band := MeshInstance3D.new()
 	band.name = "Stripe"
@@ -590,8 +502,6 @@ func _process(delta: float) -> void:
 	_place_names()
 
 
-# The shown names' rects in viewport pixels, for the words that stamp on screen (KEEP_CLEAR_GROUP) and
-# the speech bubble (SPEECH_KEEP_CLEAR_GROUP) to keep off. A gate behind the camera or off the screen's sides, or whose name is hidden, has none.
 func keep_clear_rects() -> Array[Rect2]:
 	if offers.is_empty():
 		return []
@@ -600,8 +510,6 @@ func keep_clear_rects() -> Array[Rect2]:
 	return _name_rects.duplicate()
 
 
-# What a taken part looks like on the launch take: its name, its family glyph id and its rarity colour. {} for an id that
-# names no part.
 static func taken_look(part_id: String) -> Dictionary:
 	if ActiveOffers.is_offer(part_id):
 		var row := ActiveDefs.row(ActiveOffers.active_of(part_id))
@@ -619,7 +527,6 @@ static func taken_look(part_id: String) -> Dictionary:
 	}
 
 
-# Puts every gate's name at its own crossbar point for this frame.
 func _place_names() -> void:
 	_name_frame = Engine.get_process_frames()
 	_name_rects.clear()
@@ -630,7 +537,6 @@ func _place_names() -> void:
 			var hidden := gate.get_node_or_null("Name") as Label
 			if hidden != null:
 				hidden.visible = false
-		# _shown and _rows stay: the same names return with the play, not only once each has 32 px clear.
 		return
 	var from: Vector3 = _ball if _ball.is_finite() else (cam.global_position if cam != null else Vector3.ZERO)
 	var entries: Array = []
@@ -672,19 +578,6 @@ func _place_names() -> void:
 		_name_rects.append(got["rect"])
 
 
-# Which names show and how, a pure rule over screen numbers. Each entry: index (the gate's), col (its crossbar
-# point on screen), dist (from the ball), w1 and h1 (the name on one row), w2 and h2 (on two), dw and dh (its
-# effect lines, widths including padding), was_shown and was_detail (last frame). A name hangs under its
-# column, centred until a screen edge requires the sign to open inward. A name wider than its room (the distance to the nearest other gate's
-# column less NAME_GAP) takes two rows before anything hides; the effect lines show only under a one-row name
-# and only when they fit the room. Nearest gates first (distance in NAME_TIE_M steps, then a name already shown,
-# then the lower index, so a tie never depends on sort order): a name whose rect would overlap one placed by
-# at all (a hidden name: by less than NAME_HOLD px of clear room) hides, and that gate's name only. A name on two rows
-# goes back to one only with ROWS_BACK px to spare (was_rows). `space` is the room the names may use, the screen
-# between the top and bottom HUD bands. A name whose crossbar point is above the room drops straight down its own
-# column to just under it, and returns to the point below the room. A name that would run off the room's bottom
-# hangs above its crossbar instead, and comes back below only with NAME_HOLD px to spare (was_above).
-# Returns, per entry in order, {shown, rows, detail, above, rect}.
 static func fit_names(entries: Array, space := Rect2(Vector2.ZERO, Vector2.INF)) -> Array:
 	var bottom := space.end.y
 	var order: Array = range(entries.size())
@@ -742,7 +635,6 @@ static func fit_names(entries: Array, space := Rect2(Vector2.ZERO, Vector2.INF))
 	return out
 
 
-# How far two rects overlap: the smaller of their overlaps along x and y, negative by the clear room when apart.
 static func _overlap(a: Rect2, b: Rect2) -> float:
 	var ix := minf(a.end.x, b.end.x) - maxf(a.position.x, b.position.x)
 	var iy := minf(a.end.y, b.end.y) - maxf(a.position.y, b.position.y)

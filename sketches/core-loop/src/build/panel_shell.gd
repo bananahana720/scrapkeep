@@ -3,40 +3,16 @@ extends Node3D
 const Panels := preload("res://src/build/panels.gd")
 const Accretion := preload("res://src/build/accretion.gd")
 
-# Grey panels on the ball (IL-01 card section 5). Each held panel bolts into a socket on the
-# gyro sphere: 32 sockets in the geodesic layout the Hoberman shell already uses (12 five-way
-# hubs and 20 three-way hubs, Accretion.lattice_layout), panels 33 to 64 as a second course
-# over the first, 65 and up as riveted plate courses. The socket order and each plate's wear
-# patina seed from the run, so two runs with the same stats grow into different-looking balls;
-# hue never moves, only the steel's value, because colour carries meaning.
-#
-# Fixed outline (22 Oct): everything is visual overhang inside the hardware envelope, at most
-# MAX_OVERHANG off the radius-1.0 collider (Accretion's hardware stands up to about 1.1 m at
-# class V), and DRAW_BUDGET plates beside Accretion.MAX_PIECES. Panels past the budget still
-# count; they just draw no more plates. One MultiMesh per silhouette, two surfaces each (bone
-# face, steel hardware), so 24 draw calls at most whatever the stack. The pickup pop widens
-# the face only, never its height, so a popping plate stays inside the envelope.
-#
-# Each silhouette is a kit plate (plate_mesh) built from its reference sheet, one per stat.
-#
-# This node lives under the ball's roll_node() beside Accretion and rolls with the surface.
-# It never scales with heft class: the courses are the growth read.
 
 const SOCKETS := 32
 const DRAW_BUDGET := 128
-# Course radii off the ball centre: the first course sits on the shell, the second bolts over
-# it, plate courses step out from there.
 const COURSE_RADIUS := [1.03, 1.11]
 const PLATE_COURSE_FROM := 1.19
 const PLATE_COURSE_STEP := 0.07
-# The tallest plate feature above its socket radius (the fin, 0.24 m), for the envelope check.
 const PLATE_HEIGHT := 0.3
 const MAX_OVERHANG := 0.6
-# The face is drawn PLATE_FACE times the sheets' 0.45 m across (height unchanged): at the
-# sheets' size three to five plates did not read from the gameplay camera (panel_capture.gd).
 const PLATE_FACE := 1.5
 const PLATE_GLB := "res://assets/models/item_panels/panel_%s.glb"
-# The patina's value spread either side of white, multiplied over the plates' baked tones.
 const PATINA := 0.14
 const POP_SCALE := 1.8
 const POP_RATE := 12.0
@@ -55,7 +31,6 @@ func _init() -> void:
 	name = "PanelShell"
 
 
-# The 32 socket directions, five-way hubs first.
 static func sockets() -> Array[Vector3]:
 	if _sockets.is_empty():
 		for hub in Accretion.lattice_layout()["hubs"]:
@@ -69,8 +44,6 @@ static func course_radius(course: int) -> float:
 	return PLATE_COURSE_FROM + PLATE_COURSE_STEP * (course - COURSE_RADIUS.size())
 
 
-# Plates drawn for a stack: the budget caps it, and so does the envelope (a course whose top
-# would stand past MAX_OVERHANG is never started).
 static func drawn_count(held: int) -> int:
 	var cap := 0
 	while cap < DRAW_BUDGET and course_radius(cap / SOCKETS) + PLATE_HEIGHT <= 1.0 + MAX_OVERHANG:
@@ -78,7 +51,6 @@ static func drawn_count(held: int) -> int:
 	return mini(held, cap)
 
 
-# The furthest any drawn plate stands from the ball centre, for a stack of `held`.
 static func extent(held: int) -> float:
 	var n := drawn_count(held)
 	if n == 0:
@@ -86,7 +58,6 @@ static func extent(held: int) -> float:
 	return course_radius((n - 1) / SOCKETS) + PLATE_HEIGHT
 
 
-# Idempotent: draws exactly this pickup order under this run seed.
 func show_panels(held: Array, run_seed: int) -> void:
 	if run_seed != _seed or _order.is_empty():
 		_reseed(run_seed)
@@ -132,8 +103,6 @@ func draw_calls() -> int:
 	return calls
 
 
-# Where pickup `index` sits, in this node's space: its course's radius along its seeded socket,
-# +Y pointing out of the ball.
 func seat(index: int, scale_by := 1.0) -> Transform3D:
 	var course := index / SOCKETS
 	var slot: int = _order[index % SOCKETS]
@@ -142,8 +111,6 @@ func seat(index: int, scale_by := 1.0) -> Transform3D:
 	return Transform3D(basis * Basis.from_scale(Vector3(PLATE_FACE * scale_by, 1.0, PLATE_FACE * scale_by)), dir * course_radius(course))
 
 
-# The mean direction of every drawn plate of this panel id, for the build read's labels;
-# ZERO when none is drawn.
 func centroid(panel_id: String) -> Vector3:
 	var sum := Vector3.ZERO
 	for i in drawn_count(_shown.size()):
@@ -156,9 +123,6 @@ func _reseed(run_seed: int) -> void:
 	_seed = run_seed
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([run_seed, "panel_shell"])
-	# Farthest-first from a seeded socket: each next plate takes the free socket furthest from
-	# every plate already on, so a small stack spreads round the ball and some of it faces the
-	# camera whichever way the ball has rolled. Ties break on the seeded stream.
 	var socket_dirs := sockets()
 	_order = [rng.randi_range(0, SOCKETS - 1)]
 	var near := []
@@ -184,7 +148,6 @@ func _reseed(run_seed: int) -> void:
 	_shown = []
 
 
-# Patina: a value-only shade (wear), seeded per pickup index; hue never moves.
 func _patina(index: int) -> Color:
 	var v := float(hash([_seed, index, "patina"]) % 1000) / 999.0
 	var shade := clampf(1.0 - PATINA + v * PATINA, 0.0, 1.0)
@@ -206,7 +169,6 @@ func _view(silhouette: String) -> MultiMeshInstance3D:
 	return view
 
 
-# A basis whose +Y points out of the ball along dir.
 static func _facing(dir: Vector3) -> Basis:
 	var up := dir.normalized()
 	var side := Vector3.RIGHT if absf(up.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
@@ -214,11 +176,6 @@ static func _facing(dir: Vector3) -> Basis:
 	return Basis(side, up, side.cross(up))
 
 
-# The kit plate for a silhouette: assets/models/item_panels/panel_<silhouette>.glb, built by
-# tools/blender/item_panels.py from its reference sheet (docs/art/reference/item_panels/; Range
-# Sight from its written spec). Two vertex-colour surfaces, `panel_face` (bone, rope, rubber) and
-# `panel_hardware` (steel and charcoal fittings); the patina multiplies over both. Cached per
-# silhouette; a missing plate is an error, never a stand-in.
 static func plate_mesh(silhouette: String) -> Mesh:
 	if _meshes.has(silhouette):
 		return _meshes[silhouette]

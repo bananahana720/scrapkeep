@@ -5,28 +5,15 @@ const Parts := preload("res://src/build/parts.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 
-# SI5 stat cache (W13-INTEGRATION-3 SI5; comps/isaac/items-and-synergies.md). The build's
-# derived sheet, kept between part-list changes. Each part declares the sheet categories
-# it touches (PartDef.stat_touches); sync() compares, per category, the held parts that
-# touch it, and refolds only the categories whose list changed. A category refold runs the
-# same loop in the same order as BuildSheet.from_parts, so the result is the full
-# recompute's, bit for bit (tests/stat_cache_test.gd holds that over 1,000 random builds).
-# Removing a part refolds its categories without it, so a respec drops the derived bonus
-# (BIBLE.md:564). A change of run tier or synergy table refolds everything, since both
-# change what a part id means.
 
-# Emitted after a sync that refolded anything, with the categories it refolded.
 signal recomputed(categories: Array)
 
 const CATEGORIES := PartDef.STAT_CATEGORIES
-# The categories a synergy row can feed besides its own (transformers and dials).
 const ROW_FED := ["mods", "patterns", "elements"]
 
-# Category refolds since this cache was made, and the categories the last sync refolded.
 var recomputes := 0
 var last_dirty: Array = []
 var _sheet: RefCounted
-# The awake maker tricks, in from_parts order.
 var _live: Array = []
 var _held: Array = []
 var _tier := -1
@@ -38,8 +25,6 @@ func _init() -> void:
 	_sheet = BuildSheet.new()
 
 
-# The sheet for held, refolding only what changed since the last sync. Returns a copy the
-# caller may adjust (build.gd adds Scrap Armor to max_hp_bonus) without touching the cache.
 func sync(held: Array) -> RefCounted:
 	var tier := Parts.active_tier()
 	var dirty: Array = []
@@ -69,7 +54,6 @@ func sync(held: Array) -> RefCounted:
 	return copy()
 
 
-# A detached copy of the cached sheet.
 func copy() -> RefCounted:
 	var out: RefCounted = BuildSheet.new()
 	for p in _sheet.get_property_list():
@@ -80,7 +64,6 @@ func copy() -> RefCounted:
 	return out
 
 
-# The held ids, in order, whose part declares category.
 static func _touching(held: Array, category: String) -> Array:
 	var out: Array = []
 	for part_id in held:
@@ -90,9 +73,6 @@ static func _touching(held: Array, category: String) -> Array:
 	return out
 
 
-# The awake maker tricks, then their transformers and dials. A held Evolved part counts only
-# while both its ingredients are held, so a change in which ones count refolds their categories;
-# a changed trick list refolds the categories rows feed.
 func _refold_synergy(held: Array, dirty: Array, before: Array) -> void:
 	var old_rows: Array = _live.duplicate()
 	var old_evolved := _evolved_live(before)
@@ -120,18 +100,14 @@ func _refold_synergy(held: Array, dirty: Array, before: Array) -> void:
 					dirty.append(category)
 
 
-# The held Evolved parts whose ingredients are both held.
 static func _evolved_live(held: Array) -> Array:
 	return Synergies.EVOLUTIONS.keys().filter(func(part_id): return part_id in held and Synergies.evolution_live(part_id, held))
 
 
-# The trick rows from_parts folds, in its order.
 func _rows() -> Array:
 	return _live.map(func(key): return Synergies.ROWS[key])
 
 
-# The defs from_parts folds, in held order: an Evolved part only while its pair is held, no copy
-# past a linear or capped row's stack_cap, and a levelled row once at its held level.
 func _counted(held: Array) -> Array:
 	var out: Array = []
 	var copies := {}
@@ -152,7 +128,6 @@ func _counted(held: Array) -> Array:
 	return out
 
 
-# One category from nothing, folded part by part then row by row as from_parts does.
 func _refold(category: String, counted: Array) -> void:
 	last_dirty.append(category)
 	match category:

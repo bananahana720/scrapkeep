@@ -3,8 +3,6 @@ extends RefCounted
 enum { WALK, CRUISE, FAST, BLAZING }
 
 const NAMES := ["walk", "cruise", "fast", "blazing"]
-# Tiers are multiples of the tuned cruise speed, so moving the cruise slider moves
-# every speed-driven effect with it.
 const MULTIPLES := [0.0, 0.55, 1.15, 1.9]
 const COLORS := [Color(0.65, 0.72, 0.8), Color(0.55, 0.9, 0.7), Color(1.0, 0.85, 0.35), Color(1.0, 0.98, 0.90)]
 

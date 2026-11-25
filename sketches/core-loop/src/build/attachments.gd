@@ -1,31 +1,14 @@
 extends RefCounted
 
-# The weapon-local attachment layer (SQ11, W13-INTEGRATION-3.md; comps/roboquest/
-# weapons-and-affixes.md:79 and :95). A pilot's one weapon carries a loadout: its tier and
-# the attachments fitted to it. The tier sets how many attachments fit (0 to 3) and the top
-# tier adds a second fire mode, named before anything is equipped. Attachments sit beside the
-# player-global parts (build_sheet.gd): parts tune every weapon through tuning mods, while an
-# attachment only scales its own weapon's Pattern fields, and weapons.gd reads them.
-#
-# BIBLE.md:552: the effect is rebuilt from current selections. A loadout is plain data and
-# mods() folds it from scratch each read, so removing an attachment stops its contribution
-# and swaps never accumulate. Every attachment multiplies; none adds, which keeps a global
-# perk's DPS share the same on every weapon (attachment_layer_test).
-#
-# BIBLE.md:432 and :552: compatibility is explicit, so each row names the weapons it fits.
-# Tiers are words (Tier I to IV), never a colour ladder, and the layer carries no price.
-# Every number here is a start value for play.
 
 const MIN_COUNT := 0
 const MAX_COUNT := 3
 const TOP_TIER := 4
-# Tier to the attachment count range it rolls, inclusive.
 const TIER_COUNT := {1: [0, 0], 2: [1, 1], 3: [1, 2], 4: [2, 3]}
 const TIER_WORDS := {1: "Tier I", 2: "Tier II", 3: "Tier III", 4: "Tier IV"}
 
 const PILOT_WEAPONS := ["arc_caster", "rapid_laser", "sticky_charge", "claw_sweep", "ledger_reader", "cannon_lane"]
 
-# id -> name, shown text, the Pattern fields it multiplies, the weapons it fits.
 const ROWS := {
 	"bored_chamber": {"name": "Bored Chamber", "text": "+15% weapon damage",
 		"mods": {"damage": 1.15}, "fits": PILOT_WEAPONS},
@@ -47,8 +30,6 @@ const ROWS := {
 		"mods": {"damage": 1.1, "speed": 1.15}, "fits": ["sticky_charge"]},
 }
 
-# The top tier's second fire mode per pilot weapon: what it does, in words, and the Pattern
-# fields it scales over the attached primary.
 const SECOND_MODES := {
 	"arc_caster": {"name": "Lance Arc", "text": "one slow bolt with a field twice as wide, hitting twice as hard",
 		"mods": {"rate": 0.4, "bolt_radius": 2.0, "damage": 2.0}},
@@ -65,12 +46,10 @@ const SECOND_MODES := {
 }
 
 
-# A loadout with no attachments yet.
 static func empty(weapon_id: String, tier: int) -> Dictionary:
 	return {"weapon": weapon_id, "tier": clampi(tier, 1, TOP_TIER), "attachments": []}
 
 
-# The attachment ids that fit a weapon, in a stable order.
 static func fitting(weapon_id: String) -> Array:
 	var out: Array = []
 	for id in ROWS:
@@ -84,8 +63,6 @@ static func capacity(loadout: Dictionary) -> int:
 	return int(TIER_COUNT[int(loadout.get("tier", 1))][1])
 
 
-# A new loadout with the attachment fitted; unchanged when it does not fit, is already on,
-# or the tier's count is full.
 static func equip(loadout: Dictionary, attachment_id: String) -> Dictionary:
 	var out := loadout.duplicate(true)
 	var held: Array = out["attachments"]
@@ -95,14 +72,12 @@ static func equip(loadout: Dictionary, attachment_id: String) -> Dictionary:
 	return out
 
 
-# A new loadout without the attachment.
 static func unequip(loadout: Dictionary, attachment_id: String) -> Dictionary:
 	var out := loadout.duplicate(true)
 	(out["attachments"] as Array).erase(attachment_id)
 	return out
 
 
-# A random weapon of this tier: a count inside the tier's range, distinct fitting attachments.
 static func roll(weapon_id: String, tier: int, rng: RandomNumberGenerator) -> Dictionary:
 	var out := empty(weapon_id, tier)
 	var limits: Array = TIER_COUNT[int(out["tier"])]
@@ -116,7 +91,6 @@ static func roll(weapon_id: String, tier: int, rng: RandomNumberGenerator) -> Di
 	return out
 
 
-# The Pattern field multipliers a loadout gives its own weapon, folded from scratch.
 static func mods(loadout: Dictionary) -> Dictionary:
 	var out := {}
 	for id in loadout.get("attachments", []):
@@ -126,7 +100,6 @@ static func mods(loadout: Dictionary) -> Dictionary:
 	return out
 
 
-# The second mode row a loadout carries; {} below the top tier.
 static func second_mode(loadout: Dictionary) -> Dictionary:
 	if int(loadout.get("tier", 1)) < TOP_TIER:
 		return {}
