@@ -118,12 +118,40 @@ func setup(site: Dictionary, cruise: float, park: Dictionary, ground: Callable) 
 		add_child(g)
 		_gates.append(g)
 	_front = MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = FRONT_SIZE
-	_front.mesh = box
-	_front.material_override = Palette.water(Palette.VERDIGRIS.lerp(Palette.ARC, 0.5))
+	_front.name = "SluiceFront"
+	var water := Palette.VERDIGRIS.lerp(Palette.ARC, 0.5)
+	_front.mesh = _breaking_front(water)
+	var material := Palette.water(water)
+	material.vertex_color_use_as_albedo = true
+	material.vertex_color_is_srgb = true
+	material.albedo_color = Color(1.0, 1.0, 1.0, material.albedo_color.a)
+	_front.material_override = material
 	_front.visible = false
 	add_child(_front)
+
+
+# The toe, breaking lip and trailing sheet all travel with the course's front.
+# Heights vary across the lip, with the tallest crest at the original warning height.
+static func _breaking_front(water: Color) -> ArrayMesh:
+	var crest_heights := [0.65, 0.88, 0.78, 1.0, 0.83, 0.92, 0.68]
+	var profile := [Vector2(-0.5, 0), Vector2(-0.35, 0.7), Vector2(-0.42, 1),
+		Vector2(-0.08, 0.86), Vector2(0.5, 0)]
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in crest_heights.size():
+		var x := FRONT_SIZE.x * (float(i) / (crest_heights.size() - 1) - 0.5)
+		for j in profile.size():
+			var p: Vector2 = profile[j]
+			var y := FRONT_SIZE.y * (p.y * float(crest_heights[i]) - 0.5)
+			surface.set_color(water.lerp(Palette.SAND, 0.78) if j == 2 else water)
+			surface.add_vertex(Vector3(x, y, p.x * FRONT_SIZE.z))
+			if i > 0 and j > 0:
+				var right := i * profile.size() + j
+				var left := right - profile.size()
+				for index in [left - 1, right - 1, left, left, right - 1, right]:
+					surface.add_index(index)
+	surface.generate_normals()
+	return surface.commit()
 
 
 # The gates onto the decks themselves, by ray, once the stage's colliders stand (the course is built with the stage, on

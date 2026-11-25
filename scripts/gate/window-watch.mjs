@@ -6,6 +6,27 @@ import { createInterface } from "node:readline";
 const SAMPLER = `
 ObjC.import("AppKit");
 ObjC.import("CoreGraphics");
+// Darwin libproc supplies the PID, parent PID and process group in the first three
+// uint32 fields of proc_bsdshortinfo (sys/proc_info.h). Reuse one buffer per sampler.
+ObjC.bindFunction("proc_pidinfo", ["int", ["int", "int", "unsigned long long", "void *", "int"]]);
+ObjC.bindFunction("calloc", ["unsigned int *", ["size_t", "size_t"]]);
+const PROC_PIDT_SHORTBSDINFO = 13;
+const infoSize = 64; // sizeof(struct proc_bsdshortinfo)
+const info = $.calloc(1, infoSize);
+function foregroundFamily(front) {
+  const frontAncestors = [];
+  let frontGroup;
+  let pid = front;
+  while (pid > 1) {
+    const size = $.proc_pidinfo(pid, PROC_PIDT_SHORTBSDINFO, 0, info, infoSize);
+    if (size !== infoSize || info[0] !== pid) throw Error("cannot read foreground process ancestry");
+    if (pid === front) frontGroup = info[2];
+    pid = info[1];
+    if (pid === front || frontAncestors.includes(pid)) throw Error("invalid foreground process ancestry");
+    frontAncestors.push(pid);
+  }
+  return {frontAncestors, frontGroup};
+}
 const stdout = $.NSFileHandle.fileHandleWithStandardOutput;
 const clock = $.NSProcessInfo.processInfo;
 const period = 0.05;
@@ -24,6 +45,7 @@ while (true) {
   const windows = ObjC.deepUnwrap(ObjC.castRefToObject(cf));
   const front = Number($.NSWorkspace.sharedWorkspace.frontmostApplication.processIdentifier);
   if (!Array.isArray(windows) || !windows.length || !(front > 0)) throw Error("window server unreadable");
+  const family = foregroundFamily(front);
   const visible = new Set();
   const godot = new Set();
   for (const w of windows) {
@@ -35,7 +57,7 @@ while (true) {
   }
   const now = clock.systemUptime;
   const missed = Math.max(0, Math.floor((now - next) / period));
-  const row = {at: Date.now(), front, visible: Array.from(visible), godot: Array.from(godot), missed};
+  const row = {at: Date.now(), front, ...family, visible: Array.from(visible), godot: Array.from(godot), missed};
   stdout.writeData($(JSON.stringify(row) + "\\n").dataUsingEncoding($.NSUTF8StringEncoding));
   next += (missed + 1) * period;
   // Service workspace notifications between snapshots so frontmostApplication stays current.
@@ -45,17 +67,13 @@ while (true) {
 
 function bounded(promise, ms) {
   let timer;
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error("window watcher timed out")), ms);
-    }),
-  ]).finally(() => clearTimeout(timer));
+  return Promise.race([promise, new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error("window watcher timed out")), ms);
+  })]).finally(() => clearTimeout(timer));
 }
 
 export function windowCounts(samples, pid) {
-  if (!Number.isInteger(pid) || samples.length < 2)
-    throw new Error("window watcher lacks a process or samples");
+  if (!Number.isInteger(pid) || samples.length < 2) throw new Error("window watcher lacks a process or samples");
   let frontmostChanges = 0;
   let onScreen = 0;
   let targetOnScreen = 0;
@@ -63,55 +81,37 @@ export function windowCounts(samples, pid) {
   let maxGapMs = 0;
   for (const [i, s] of samples.entries()) {
     if (i > 0) {
-      if (s.front === pid && samples[i - 1].front !== pid) frontmostChanges++;
+      // launch() gives the capture its own group. A child can start another group,
+      // so also check the foreground process’s ancestry at the time of the sample.
+      const inCapture = s.front === pid || s.frontGroup === pid || s.frontAncestors?.includes(pid);
+      if (s.front !== samples[i - 1].front && inCapture) frontmostChanges++;
       maxGapMs = Math.max(maxGapMs, s.at - samples[i - 1].at);
       missed += s.missed;
     }
     if (s.visible.includes(pid)) targetOnScreen++;
     if (s.visible.includes(pid) || s.godot.length) onScreen++;
   }
-  return {
-    samples: samples.length,
-    firstMs: samples[0].at,
-    lastMs: samples.at(-1).at,
-    periodMs: 50,
-    maxGapMs,
-    missed,
-    onScreen,
-    targetOnScreen,
-    frontmostChanges,
-  };
+  return { samples: samples.length, firstMs: samples[0].at, lastMs: samples.at(-1).at,
+    periodMs: 50, maxGapMs, missed, onScreen, targetOnScreen, frontmostChanges };
 }
 
 // The first reading precedes spawn, and a new reading brackets exit. Failure to sample
 // never becomes a receipt with zero windows. The positive control must match the child's PID.
 function startSampler() {
-  return spawn("/usr/bin/osascript", ["-l", "JavaScript", "-e", SAMPLER], {
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  return spawn("/usr/bin/osascript", ["-l", "JavaScript", "-e", SAMPLER], { stdio: ["ignore", "pipe", "pipe"] });
 }
 
 export async function watchDrawnRun(run, start = startSampler) {
   const child = start();
   const controller = new AbortController();
-  const stop = () => {
-    controller.abort();
-    child.kill();
-  };
-  const onInterrupt = (signal) => {
-    process.exitCode = signal === "SIGINT" ? 130 : 143;
-    stop();
-  };
+  const stop = () => { controller.abort(); child.kill(); };
+  const onInterrupt = signal => { process.exitCode = signal === "SIGINT" ? 130 : 143; stop(); };
   process.on("SIGINT", onInterrupt);
   process.on("SIGTERM", onInterrupt);
   process.on("exit", stop);
   let error = "";
-  child.on("error", (e) => {
-    error = e.message;
-  });
-  child.stderr.setEncoding("utf8").on("data", (s) => {
-    error += s;
-  });
+  child.on("error", e => { error = e.message; });
+  child.stderr.setEncoding("utf8").on("data", s => { error += s; });
   const lines = createInterface({ input: child.stdout });
   const rows = lines[Symbol.asyncIterator]();
   const samples = [];
@@ -124,16 +124,8 @@ export async function watchDrawnRun(run, start = startSampler) {
   try {
     await bounded(read(), 5000);
     const observing = (async () => {
-      do {
-        await bounded(read(), 1500);
-      } while (exitMs === undefined || samples.at(-1).at <= exitMs);
-    })().then(
-      () => null,
-      (e) => {
-        controller.abort();
-        return e;
-      },
-    );
+      do { await bounded(read(), 1500); } while (exitMs === undefined || samples.at(-1).at <= exitMs);
+    })().then(() => null, e => { controller.abort(); return e; });
     const result = await run(controller.signal);
     exitMs = Date.now();
     const failure = await bounded(observing, 3000);

@@ -60,6 +60,7 @@ Starts when world 1's verdicts are in and his fixes are routed.
    - Item rungs: cobalt is the top ordinary rung in every world for the alpha (ruling bn); Brindle's cobalt pick returns.
    - Perf parked from world 1: sinkhole Dispatcher 265-277 ms, EventFamilies.build 69 ms at stage 5, Dig pit beacon bursts, Jolt shape builds.
    - Difficulty bands in all six stages and the HARD replay ladder across worlds (not a cut candidate, 21 Oct).
+   - Every area of the Dig and the Highdraft authored to [the area blueprint](../../sketches/core-loop/design-v3/park/AREA-BLUEPRINT.md) (Andrew, 19 Nov): a purpose, a reason to be there (something to find, work or set off, or a job as a breather), a high and a low route where the ground forks, a board and reference sheets before a model. Rows AB-01 to AB-09 in [BACKLOG.md](../../BACKLOG.md#area-blueprint).
 4. **Full-alpha sitting.** Title to the Mind's end through all six stages, the camp, pilot paint and 18 cosmetics, all six systems, the AppImage from the app menu. Accepted on 11 areas with no "Not yet", no blocker, frames in budget, zero placeholders.
 
 The 11 areas: core feel; Wardens and bosses; in-run growth; progression across runs; pilots; stages and world; look; sound and music; clarity; difficulty and pacing; stability.

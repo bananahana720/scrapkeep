@@ -228,6 +228,15 @@ const PROBE = "res://tools/offscreen_probe.gd";
 // does not qualify a tool. The probe inherits the dam capture, so pin both scripts.
 const watchedTools = new Map([
   [
+    "res://tools/water_flow_stills.gd",
+    {
+      "tools/water_flow_stills.gd":
+        "ff44fb28395b723f5b76599d55326bba172b55a52c9498ab316bf33d06ce121c",
+      "tools/offscreen_window.gd":
+        "c9da9cb92150ed33095b65a3c2f0dce419b6c2c4736990743226a8f9efd83f4d",
+    },
+  ],
+  [
     PROBE,
     {
       // proof/W1-131 at 2c2dfa665, artifacts/proof/W1-131a/capture.json

@@ -1,5 +1,6 @@
 extends SceneTree
 
+const UndrawnPlaces := preload("res://tools/qa/undrawn_places.gd")
 const Game := preload("res://src/game.gd")
 const CampHub := preload("res://src/world/camp_hub.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
@@ -16,6 +17,7 @@ const T := preload("res://tests/support/t.gd")
 
 # [stage, x, y, z] of each spot, y above the surface to drop onto.
 const HUNG_SPOTS := [[1, -199.5, 30.0, 445.0]]
+const WALL_FILTER := "--owner=Park_QAWall_Near"
 
 var _t := T.new("invisible_walls_test")
 
@@ -82,9 +84,121 @@ func _run() -> void:
 	var hulls := ParkRecipes.anchor_hulls(row, fit)
 	_t.eq("one hull per band", hulls.size(), fit.size())
 	game.free()
+	_cluster_samples()
+	_wall_sweep()
 	for spot: Array in HUNG_SPOTS:
 		_roll_out(spot)
 	quit(_t.verdict())
+
+
+func _cluster_samples() -> void:
+	# The middle sample bridges the two ends, crossing zero and a cell boundary.
+	var points := PackedVector3Array([Vector3(-1, 2, 0), Vector3(1, 2, 0), Vector3(0, 2, 0), Vector3(6, 2, 0)])
+	var places := UndrawnPlaces.cluster({"A": points, "B": PackedVector3Array([points[0]])}, 0.75)
+	_t.eq("one connected patch, one distant patch and one different owner", places.size(), 3)
+	if places.size() == 3:
+		_t.eq("the connected patch spans its three samples", places[0],
+			{"owner": "A", "samples": 3, "position": [0.0, 2.0, 0.0], "size": [2.0, 0.0, 0.0]})
+		_t.eq("the distant patch is the single sample at x=6", places[1],
+			{"owner": "A", "samples": 1, "position": [6.0, 2.0, 0.0], "size": [0.0, 0.0, 0.0]})
+		_t.eq("the other owner keeps its coincident sample", places[2]["owner"], "B")
+
+
+func _wall_sweep() -> void:
+	var out := OS.get_user_data_dir().path_join("wall-sweep-" + Crypto.new().generate_random_bytes(12).hex_encode())
+	var created := DirAccess.make_dir_absolute(out)
+	if not _t.check("the wall fixture creates its own report directory", created == OK, error_string(created)):
+		return
+	var partial_stem := "wall_fixture-s1-partial-" + WALL_FILTER.sha256_text().left(10)
+	_check_wall_reports(out, partial_stem)
+
+	_remove_wall_reports(out, ["wall_fixture-s1", partial_stem])
+
+
+func _remove_wall_reports(out: String, stems: Array) -> void:
+	# Both sweeps can leave an unavailable report if the fixture fails to load.
+	for stem: String in stems:
+		for suffix: String in [".json", "-owners.json", "-unavailable.json", "-unavailable-owners.json"]:
+			var path := out.path_join(stem + suffix)
+			if FileAccess.file_exists(path):
+				_t.eq("remove fixture report " + path.get_file(), DirAccess.remove_absolute(path), OK)
+	_t.eq("remove the empty wall fixture directory", DirAccess.remove_absolute(out), OK)
+
+
+func _check_wall_reports(out: String, partial_stem: String) -> void:
+	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
+		"--script", "res://tools/qa/collision_sweep.gd", "--", "--area=wall_fixture", "--step=0.15", "--out=%s" % out])
+	if OS.get_environment("PLANT") == "invisible_wall":
+		args.append("--plant-wall")
+	var output := []
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	var path := out.path_join("wall_fixture-s1.json")
+	if not _t.check("wall fixture wrote its report", code == 0 and FileAccess.file_exists(path), str(code)):
+		print("\n".join(output))
+		return
+	var full_report := FileAccess.get_file_as_string(path)
+	var report = JSON.parse_string(full_report)
+	if not _t.check("the sweep sampled all three physical walls", report is Dictionary and report.get("totals", {}).get("shapes") == 3
+			and report["totals"]["samples"] > 0 and report.get("places") is Array):
+		return
+	var counts := {}
+	var invisible := 0
+	var counted := 0
+	for place in report["places"]:
+		var owner: String = place["owner"]
+		counts[owner] = int(counts.get(owner, 0)) + 1
+		counted += int(place["samples"])
+		if owner == "Park_QAWall_Missing" or (owner == "Park_QAWall_Matched" and args.has("--plant-wall")):
+			invisible += int(place["samples"])
+	_t.eq("the matching wall has no undrawn place", counts.get("Park_QAWall_Matched", 0), 0)
+	_t.eq("the 0.4 m miss with a mesh within 1.5 m is one place", counts.get("Park_QAWall_Near", 0), 1)
+	_t.eq("the planted invisible wall is one place", counts.get("Park_QAWall_Missing", 0), 1)
+	_t.eq("the inventory accounts for every bare sample", counted, int(report["totals"]["bare"]))
+	_t.eq("only the missing meshes have no geometry within 1.5 m", invisible, int(report["totals"]["invisible"]))
+	args.append(WALL_FILTER)
+	output.clear()
+	code = OS.execute(OS.get_executable_path(), args, output, true)
+	var partial_file := partial_stem + ".json"
+	if _t.check("the filtered sweep has its own report", code == 0 and FileAccess.file_exists(out.path_join(partial_file))):
+		var partial = JSON.parse_string(FileAccess.get_file_as_string(out.path_join(partial_file)))
+		_t.eq("filtered report records its owner filter", partial["filters"], [WALL_FILTER])
+		_t.eq("filtered report covers one collider", int(partial["totals"]["shapes"]), 1)
+	else:
+		print("\n".join(output))
+	_t.check("the full map report survives a filtered sweep", FileAccess.get_file_as_string(path) == full_report)
+	print("RECEIPT %s" % JSON.stringify({"places_by_owner": counts, "bare_samples": counted,
+		"invisible_samples": report["totals"]["invisible"]}))
+
+	# The game hides substituted meshes with layers=0 while keeping them in the scene tree.
+	# A nonzero layer outside the rider camera's mask is equally absent from its view.
+	for flag: String in ["--layer-zero-wall", "--camera-masked-wall", "--preview-wall"]:
+		var control_dir := out.path_join(flag.trim_prefix("--"))
+		var created := DirAccess.make_dir_absolute(control_dir)
+		if not _t.check("each visibility control creates a fresh directory", created == OK, error_string(created)):
+			continue
+		_check_hidden_wall(control_dir, flag, int(report["totals"]["samples"]))
+		_remove_wall_reports(control_dir, ["wall_fixture-s1"])
+
+
+func _check_hidden_wall(out: String, flag: String, expected_samples: int) -> void:
+	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
+		"--script", "res://tools/qa/collision_sweep.gd", "--", "--area=wall_fixture", "--step=0.15", "--out=%s" % out, flag])
+	var output := []
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	var path := out.path_join("wall_fixture-s1.json")
+	if not _t.check("visibility control wrote its own report " + flag, code == 0 and FileAccess.file_exists(path), str(code)):
+		print("\n".join(output))
+		return
+	var report = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not _t.check("visibility control measured places " + flag, report is Dictionary and report.get("places") is Array):
+		return
+	var owners := []
+	for place in report["places"]:
+		owners.append(place["owner"])
+	owners.sort()
+	_t.eq("rider-hidden mesh counts as a third place " + flag, owners,
+		["Park_QAWall_Matched", "Park_QAWall_Missing", "Park_QAWall_Near"])
+	_t.eq("same collider samples in both visibility readings", int(report["totals"]["samples"]), expected_samples)
 
 
 # Rolls out of spot from 8 sides (tools/spot_sweep.gd --leave=1): no probe may hang or stick, and the drop must land.
