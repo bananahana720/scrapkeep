@@ -1,0 +1,81 @@
+{
+ "assets": [
+  {
+   "id": "highdraft_w3_shiprock_dike",
+   "path": "res://assets/models/highdraft/w3_shiprock_dike.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored New Mexico Shiprock volcanic dike wall fin, black basalt with iron-stained talus (W49-MAPS)"
+   }
+  },
+  {
+   "id": "highdraft_w3_tram_tower",
+   "path": "res://assets/models/highdraft/w3_tram_tower.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored Fleet timber A-frame aerial ore tramway tower with sheave wheels (W49-MAPS)"
+   }
+  },
+  {
+   "id": "highdraft_w3_ore_bucket",
+   "path": "res://assets/models/highdraft/w3_ore_bucket.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored aerial tramway ore bucket on its cable carriage (W49-MAPS)"
+   }
+  },
+  {
+   "id": "highdraft_w3_balanced_hoodoo",
+   "path": "res://assets/models/highdraft/w3_balanced_hoodoo.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored Chaco bajada balanced hoodoo, banded red-orange pillar under a caprock (W49-MAPS)"
+   }
+  },
+  {
+   "id": "highdraft_w3_lightning_rod",
+   "path": "res://assets/models/highdraft/w3_lightning_rod.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored Lightning Field lattice mast with a muted copper grounding rod and grounding line (W49-MAPS)"
+   }
+  },
+  {
+   "id": "highdraft_w3_kite_ring",
+   "path": "res://assets/models/highdraft/w3_kite_ring.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored kite-tether thermal updraft ring, ochre-banded hoop with tethered box kites (W49-MAPS)"
+   }
+  },
+  {
+   "id": "highdraft_w3_deck_post",
+   "path": "res://assets/models/highdraft/w3_deck_post.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/arena_mind_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored Crown Sky-Deck iron bounce-cable post with ochre saddle (W49-MAPS)"
+   }
+  }
+ ]
+}

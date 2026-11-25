@@ -3,6 +3,7 @@ extends Node3D
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
+const LoreRows := preload("res://src/core/lore_rows.gd")
 const RUPTURE_SECONDS := 0.45
 const BURST_SECONDS := 0.85
 const GRIT_REACH := 22.0
@@ -18,6 +19,9 @@ static func reset_for_tests() -> void:
 var available := false
 var lamp_views: Array[MultiMeshInstance3D] = []
 var faces: Array[Vector3] = []
+var cable_pulses: Array = []
+var skylight_shafts: Array = []
+var card_colours := {}
 var ruptures: Array = []
 var bursts: Array = []
 var grit: Array[GPUParticles3D] = []
@@ -36,6 +40,13 @@ var _ambient := true
 var _grit_on := true
 var _frozen := false
 var _played := {}
+var _cold_open_shown := false
+var _card_layer: CanvasLayer
+var _card_root: Control
+var _card_title: Label
+var _card_line: Label
+var _card_queue: Array = []
+var _card_left := 0.0
 
 
 func prepare(stage_root: Node3D, map: RefCounted) -> void:
@@ -71,6 +82,8 @@ func bind_context(ctx, stage: int) -> void:
 		ctx.events.world_fact.connect(_on_world_fact)
 		ctx.events.stage_entered.connect(_on_stage_entered)
 		ctx.events.stage_content_cleared.connect(_on_content_cleared)
+		if ctx.events.has_signal("rescue_completed"):
+			ctx.events.rescue_completed.connect(_on_rescue_completed)
 		ctx.terrain.stage_freed.connect(_on_stage_freed)
 	_on_stage_entered(stage, false)
 
@@ -85,6 +98,9 @@ func _on_stage_freed(stage: int) -> void:
 			[_ctx.events.stage_content_cleared, _on_content_cleared], [_ctx.terrain.stage_freed, _on_stage_freed]]:
 		if row[0].is_connected(row[1]):
 			row[0].disconnect(row[1])
+	if _ctx.events.has_signal("rescue_completed") and _ctx.events.rescue_completed.is_connected(_on_rescue_completed):
+		_ctx.events.rescue_completed.disconnect(_on_rescue_completed)
+	_dismiss_cards()
 	active = false
 	set_process(false)
 
@@ -97,6 +113,26 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	clear()
 	active = stage == _stage
 	_sync_dressing()
+	if active and not _cold_open_shown and _map != null and "park" in _map:
+		var landmark_kind := String(_map.park.get("landmark", {}).get("kind", ""))
+		var card := LoreRows.world_two_cold_open(landmark_kind)
+		if not card.is_empty():
+			_cold_open_shown = true
+			_enqueue_card(String(card["title"]), "%s: %s" % [String(card["speaker"]), String(card["line"])], float(card["duration_s"]))
+
+
+func _on_rescue_completed(quest_id: String) -> void:
+	if not active or _map == null or not ("park" in _map):
+		return
+	var matched := false
+	for row in _map.park.get("rescue_rows", []):
+		if String(row.get("quest", "")) == quest_id:
+			matched = true
+			break
+	if not matched:
+		return
+	for beat in LoreRows.kest_rescue_banter():
+		_enqueue_card(String(beat["speaker"]).to_upper(), String(beat["line"]), float(beat["duration_s"]))
 
 
 func _deactivate() -> void:
@@ -135,6 +171,9 @@ func lamp_material(slot: String, fallback: Material) -> Material:
 
 
 func _on_world_fact(kind: String, at: Vector3) -> void:
+	if kind == "piece_shattered" and active and available:
+		_spawn_strut_dust(at)
+		return
 	if kind != "breach_opened" or not active or not available or not "breach_plates" in _map:
 		return
 	for plate in _map.breach_plates:
@@ -203,9 +242,13 @@ static func _burst_count(kind: String) -> int:
 
 
 func _process(delta: float) -> void:
-	if _frozen or not available or not active:
+	if _frozen or not active:
 		return
 	_clock += delta
+	_tick_cards(delta)
+	_tick_wayfinding_fx()
+	if not available:
+		return
 	if _ambient:
 		for view in lamp_views:
 			view.set_instance_shader_parameter("fx_time", _clock)
@@ -225,6 +268,145 @@ func _process(delta: float) -> void:
 		if burst["age"] >= BURST_SECONDS:
 			burst["node"].queue_free()
 			bursts.erase(burst)
+
+
+func _tick_wayfinding_fx() -> void:
+	for row in cable_pulses:
+		var node: MeshInstance3D = row["node"]
+		if not is_instance_valid(node):
+			continue
+		var wave := 0.5 + 0.5 * sin(_clock * 3.8 - float(row["phase"]))
+		var s := float(row["base_scale"]) * (0.72 + 0.58 * wave)
+		node.scale = Vector3(s, s, s)
+	for row in skylight_shafts:
+		var node: MeshInstance3D = row["node"]
+		if not is_instance_valid(node):
+			continue
+		var shimmer := 0.85 + 0.15 * sin(_clock * 1.4 + float(row["phase"]))
+		if node.material_override is ShaderMaterial:
+			(node.material_override as ShaderMaterial).set_shader_parameter("alpha_scale", float(row["base_alpha"]) * shimmer)
+		elif node.material_override is StandardMaterial3D:
+			(node.material_override as StandardMaterial3D).albedo_color.a = float(row["base_alpha"]) * shimmer
+
+
+func _spawn_strut_dust(at: Vector3) -> void:
+	var burst := Node3D.new()
+	burst.name = "DigStrutDust_%d" % bursts.size()
+	add_child(burst)
+	burst.global_position = at
+	var p := FxLibrary.build("dig_dust")
+	p.name = "Dust"
+	p.set_meta("kind", "dust")
+	burst.add_child(p)
+	FxLibrary.fire(p, "dig_dust", "breach_opened", _burst_count("dust"), burst.global_position + p.position)
+	p.amount_ratio = _burst_count("dust") / float(p.amount)
+	bursts.append({"node": burst, "age": 0.0})
+
+
+# Guard 4: non-blocking, skippable World 2 cold-open card & Kest rescue banter strip.
+func _enqueue_card(title: String, line: String, duration_s: float) -> void:
+	_card_queue.append({"title": title, "line": line, "duration_s": duration_s})
+	if _card_left <= 0.0:
+		_advance_card()
+
+
+func _advance_card() -> void:
+	if _card_queue.is_empty():
+		_dismiss_cards()
+		return
+	var next: Dictionary = _card_queue.pop_front()
+	_ensure_card_ui()
+	_card_title.text = String(next["title"])
+	_card_line.text = String(next["line"])
+	_card_left = float(next["duration_s"])
+	if is_instance_valid(_card_root):
+		_card_root.visible = true
+		_card_root.modulate.a = 1.0
+
+
+func _ensure_card_ui() -> void:
+	if is_instance_valid(_card_layer):
+		return
+	_card_layer = CanvasLayer.new()
+	_card_layer.name = "DigStoryCard"
+	_card_layer.layer = 35
+	add_child(_card_layer)
+
+	_card_root = Control.new()
+	_card_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_card_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_card_layer.add_child(_card_root)
+
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	panel.offset_left = 28.0
+	panel.offset_right = 560.0
+	panel.offset_top = -124.0
+	panel.offset_bottom = -28.0
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bg_col: Color = card_colours.get("bg", Color(0.14, 0.16, 0.16, 1.0))
+	var border_col: Color = card_colours.get("border", Kit.dressing_colour("dig_spent"))
+	var title_col: Color = card_colours.get("title", Color(0.90, 0.63, 0.27, 1.0))
+	var line_col: Color = card_colours.get("line", Color(0.82, 0.77, 0.65, 1.0))
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(bg_col, 0.86)
+	style.border_color = border_col
+	style.border_width_left = 5
+	style.border_width_top = 1
+	style.border_width_right = 1
+	style.border_width_bottom = 1
+	style.content_margin_left = 16.0
+	style.content_margin_right = 16.0
+	style.content_margin_top = 10.0
+	style.content_margin_bottom = 10.0
+	panel.add_theme_stylebox_override("panel", style)
+	_card_root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(box)
+
+	_card_title = Label.new()
+	_card_title.add_theme_font_size_override("font_size", 18)
+	_card_title.add_theme_color_override("font_color", title_col)
+	box.add_child(_card_title)
+
+	_card_line = Label.new()
+	_card_line.add_theme_font_size_override("font_size", 15)
+	_card_line.add_theme_color_override("font_color", line_col)
+	_card_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_card_line)
+
+
+func _tick_cards(delta: float) -> void:
+	if _card_left <= 0.0:
+		return
+	_card_left -= delta
+	if _card_left <= 0.0:
+		_advance_card()
+	elif is_instance_valid(_card_root) and _card_left < 0.4:
+		_card_root.modulate.a = clampf(_card_left / 0.4, 0.0, 1.0)
+
+
+func _dismiss_cards() -> void:
+	_card_queue.clear()
+	_card_left = 0.0
+	if is_instance_valid(_card_layer):
+		_card_layer.free()
+	_card_layer = null
+	_card_root = null
+	_card_title = null
+	_card_line = null
+
+
+func _input(event: InputEvent) -> void:
+	if _card_left <= 0.0:
+		return
+	var accept := InputMap.has_action("ui_accept") and event.is_action_pressed("ui_accept")
+	var cancel := InputMap.has_action("ui_cancel") and event.is_action_pressed("ui_cancel")
+	var jump := InputMap.has_action("cl_jump") and event.is_action_pressed("cl_jump")
+	if accept or cancel or jump:
+		_advance_card()
 
 
 static func _pose(rupture: Dictionary, seconds: float) -> void:
@@ -276,6 +458,7 @@ func freeze_rupture(seconds: float = 0.18) -> void:
 
 
 func clear() -> void:
+	_dismiss_cards()
 	for row in ruptures + bursts:
 		if is_instance_valid(row["node"]):
 			row["node"].free()

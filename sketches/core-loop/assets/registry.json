@@ -777,6 +777,39 @@
    }
   },
   {
+   "id": "boss_waking_drill_crown",
+   "path": "res://assets/models/bosses/waking_drill_crown.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/boss/waking_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored cast petrol-enamel excavator drill crown with uranium-green seams (W48-MAPS)"
+   }
+  },
+  {
+   "id": "boss_waking_hatch_frame",
+   "path": "res://assets/models/bosses/waking_hatch_frame.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/arena_waking_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored Old Works petrol-enamel service hatch frame with uranium-green seams (W48-MAPS)"
+   }
+  },
+  {
+   "id": "boss_waking_rim_coping",
+   "path": "res://assets/models/bosses/waking_rim_coping.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/arena_waking_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored static shaft rim coping in AMBER/bone/charcoal with zero 45-deg HAZARD stripes (W48-MAPS)"
+   }
+  },
+  {
    "id": "camp_barrel",
    "path": "res://assets/models/camp/camp_barrel.glb",
    "class": "prop",
@@ -2013,6 +2046,28 @@
    }
   },
   {
+   "id": "dig_timber_rock_strut",
+   "path": "res://assets/models/dig_mechanical/timber_rock_strut.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored Moab unstable timber-framed rock support strut per g14 (W48-MAPS)"
+   }
+  },
+  {
+   "id": "dig_basalt_column_rib",
+   "path": "res://assets/models/dig_stone/basalt_column_rib.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored NM El Malpais hexagonal volcanic basalt column cluster (W48-MAPS)"
+   }
+  },
+  {
    "id": "bed_cut",
    "path": "res://assets/models/dig_stone/bed_cut.glb",
    "class": "landform",
@@ -2068,6 +2123,17 @@
    }
   },
   {
+   "id": "dig_copper_vein_face",
+   "path": "res://assets/models/dig_stone/copper_vein_face.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored oxidized turquoise-patina copper bench face (W48-MAPS)"
+   }
+  },
+  {
    "id": "cut_face_long",
    "path": "res://assets/models/dig_stone/cut_face_long.glb",
    "class": "landform",
@@ -2087,6 +2153,17 @@
    "provenance": {
     "recipe": "tools/blender/dig_stone/cut_face_scoop.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "dig_moab_arch",
+   "path": "res://assets/models/dig_stone/moab_arch.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_w2_kit.py",
+    "source": "authored Utah Moab natural red-rock sandstone arch rib (W48-MAPS)"
    }
   },
   {
@@ -3044,6 +3121,83 @@
    "provenance": {
     "recipe": "tools/blender/highdraft/lift.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "highdraft_w3_balanced_hoodoo",
+   "path": "res://assets/models/highdraft/w3_balanced_hoodoo.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored Chaco bajada balanced hoodoo, banded red-orange pillar under a caprock (W49-MAPS)"
+   }
+  },
+  {
+   "id": "highdraft_w3_deck_post",
+   "path": "res://assets/models/highdraft/w3_deck_post.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/arena_mind_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored Crown Sky-Deck iron bounce-cable post with ochre saddle (W49-MAPS)"
+   }
+  },
+  {
+   "id": "highdraft_w3_kite_ring",
+   "path": "res://assets/models/highdraft/w3_kite_ring.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored kite-tether thermal updraft ring, ochre-banded hoop with tethered box kites (W49-MAPS)"
+   }
+  },
+  {
+   "id": "highdraft_w3_lightning_rod",
+   "path": "res://assets/models/highdraft/w3_lightning_rod.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored Lightning Field lattice mast with a muted copper grounding rod and grounding line (W49-MAPS)"
+   }
+  },
+  {
+   "id": "highdraft_w3_ore_bucket",
+   "path": "res://assets/models/highdraft/w3_ore_bucket.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored aerial tramway ore bucket on its cable carriage (W49-MAPS)"
+   }
+  },
+  {
+   "id": "highdraft_w3_shiprock_dike",
+   "path": "res://assets/models/highdraft/w3_shiprock_dike.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored New Mexico Shiprock volcanic dike wall fin, black basalt with iron-stained talus (W49-MAPS)"
+   }
+  },
+  {
+   "id": "highdraft_w3_tram_tower",
+   "path": "res://assets/models/highdraft/w3_tram_tower.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/w3_kit.py",
+    "source": "authored Fleet timber A-frame aerial ore tramway tower with sheave wheels (W49-MAPS)"
    }
   },
   {
@@ -41799,7 +41953,10 @@
   "boss_mind_kit_MindCastWear.png",
   "boss_pickup",
   "boss_waking_base",
+  "boss_waking_drill_crown",
+  "boss_waking_hatch_frame",
   "boss_waking_kit",
+  "boss_waking_rim_coping",
   "breach_lip",
   "breach_lip_detail1",
   "breach_lip_detail2",
@@ -42067,6 +42224,10 @@
   "decal_snail_shell_mask.png",
   "decal_thimble_mask.png",
   "deflector_clips",
+  "dig_basalt_column_rib",
+  "dig_copper_vein_face",
+  "dig_moab_arch",
+  "dig_timber_rock_strut",
   "dprop_crown_billing_booth_a",
   "dprop_crown_billing_booth_a_lod1",
   "dprop_crown_billing_booth_a_lod2",
@@ -43136,6 +43297,13 @@
   "haulage_bed",
   "haulage_bed_detail1",
   "haulage_bed_detail2",
+  "highdraft_w3_balanced_hoodoo",
+  "highdraft_w3_deck_post",
+  "highdraft_w3_kite_ring",
+  "highdraft_w3_lightning_rod",
+  "highdraft_w3_ore_bucket",
+  "highdraft_w3_shiprock_dike",
+  "highdraft_w3_tram_tower",
   "hooker_clips",
   "impeller_hub",
   "impeller_rim_sector",

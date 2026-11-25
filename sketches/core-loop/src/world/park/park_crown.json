@@ -340,5 +340,18 @@
   {"id": "camp_signal", "activity": "enemy_camp", "site": "bajada", "at": [0, -120], "pack": ["line_cutter", "line_cutter", "kite_drone"], "pay": {"named": "rivet_plating"}},
   {"id": "cache_turnstone", "activity": "cracked_cache", "site": "turnstone_scree", "at": [-232, -306], "pack": [], "pay": {"rarities": ["rare"]}},
   {"id": "bounty_gauntlet", "activity": "hauler_bounty", "site": "gauntlet_toe", "at": [200, 30], "pack": [], "pay": {"rarities": ["common", "rare"]}}
+ ],
+ "wear_rows": [
+  {"id": "bajada_drop_ruts", "points": [[0, -670], [0, -480], [0, -372], [0, -330], [110, -200], [55, -32], [0, 40]], "width_m": 6.5},
+  {"id": "east_wash_ruts", "points": [[0, -330], [190, -230], [185, -75], [0, 40]], "width_m": 6.0},
+  {"id": "crown_approach_ruts", "points": [[0, 40], [0, 180], [0, 292], [0, 400]], "width_m": 6.0}
+ ],
+ "destructible_rows": [
+  {"id": "gauntlet_crate_wall_w", "tier": 2, "at": [149.5, -5.57, 343.0], "size": [3.6, 2.6, 1.4], "yaw_deg": 0},
+  {"id": "gauntlet_crate_wall_e", "tier": 3, "at": [331.5, 1.5, 331.0], "size": [4.0, 3.0, 1.5], "yaw_deg": 0},
+  {"id": "gauntlet_crates", "tier": 1, "at": [312.5, 0.75, 332.0], "size": [2.0, 1.5, 2.0], "yaw_deg": 0},
+  {"id": "gauntlet_toe_crib", "tier": 2, "at": [230.0, 33.08, 40.0], "size": [3.4, 2.6, 1.4], "yaw_deg": 0},
+  {"id": "bajada_camp_crates", "tier": 1, "at": [25.5, 53.08, -147.5], "size": [2.0, 1.5, 2.0], "yaw_deg": 0},
+  {"id": "turnstone_scree_crib", "tier": 2, "at": [-257.5, 71.94, -315.5], "size": [3.2, 2.4, 1.4], "yaw_deg": 0}
  ]
 }

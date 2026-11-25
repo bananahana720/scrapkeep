@@ -4,17 +4,69 @@ const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const WeakPoints := preload("res://src/boss/weak_points.gd")
 const STONE_DIR := "res://assets/models/dig_stone/"
 const MECH_DIR := "res://assets/models/dig_mechanical/"
+const BOSS_DIR := "res://assets/models/bosses/"
 static var stone_dir := STONE_DIR
 static var mech_dir := MECH_DIR
+static var boss_dir := BOSS_DIR
 
 
 static func reset_for_tests() -> void:
 	stone_dir = STONE_DIR
 	mech_dir = MECH_DIR
+	boss_dir = BOSS_DIR
 const STONE_FILES := ["cut_face_long.glb", "cut_face_scoop.glb"]
 const MECH_FILES := ["lamp_curve_module.glb", "strut_tall.glb", "strut_bent.glb", "shell_crescent.glb", "shell_saddle.glb"]
+const RIM_COPING_FILE := "waking_rim_coping.glb"
+const HATCH_FRAME_FILE := "waking_hatch_frame.glb"
+# Guard 3: Static collapsing-shaft rim banks render cast ribbed steel plates with an orthogonal
+# AMBER (#E5A044) / BONE (#D2C5A5) / CHARCOAL (#242A28) upper coping band — ZERO 45-degree HAZARD stripes!
+const RIM_BANK_SHADER_CODE := """
+shader_type spatial;
+render_mode diffuse_burley, cull_disabled;
+
+uniform sampler2D tex_tone : source_color, repeat_enable;
+uniform sampler2D tex_grain : source_color, repeat_enable;
+uniform vec4 base_color : source_color;
+uniform vec4 seam_color : source_color;
+uniform vec4 petrol_color : source_color;
+uniform vec4 bone_color : source_color;
+uniform vec4 amber_color : source_color;
+uniform float panel_pitch = 4.0;
+uniform float seam_width = 0.12;
+varying vec3 local_at;
+
+void vertex() {
+	local_at = VERTEX;
+}
+
+void fragment() {
+	vec2 p = local_at.xz;
+	float angle = atan(p.y, p.x);
+	float tone = texture(tex_tone, p * 0.035).r;
+	float grain = texture(tex_grain, p * 0.4).r;
+	// Quarter-pipe vertical rib plates (24 orthogonal sectors around the 36 m shaft rim, y = 1.0..7.0).
+	float sector = mod(angle + 3.14159265, 6.28318530 / 24.0) / (6.28318530 / 24.0);
+	float rib_seam = 1.0 - smoothstep(0.035, 0.07, min(sector, 1.0 - sector));
+	float horiz_seam = 1.0 - smoothstep(0.05, 0.11, abs(fract(local_at.y * 0.5) - 0.5));
+	float bank_mask = smoothstep(1.15, 2.05, local_at.y);
+	float coping_band = smoothstep(5.85, 6.25, local_at.y);
+	// Orthogonal coping bays: charcoal plate, bone lip, central amber marker — never 45-deg hazard stripes.
+	float amber_bay = step(0.32, sector) * step(sector, 0.68);
+	float bone_bay = step(0.14, sector) * step(sector, 0.86) * (1.0 - amber_bay);
+	vec3 floor_col = base_color.rgb * (0.78 + tone * 0.18 + grain * 0.08);
+	vec3 cast_wall = mix(seam_color.rgb * 1.35, petrol_color.rgb * 0.88, 0.42) * (0.82 + tone * 0.16 + grain * 0.08);
+	cast_wall = mix(cast_wall, seam_color.rgb * 0.60, max(rib_seam * 0.78, horiz_seam * 0.56));
+	vec3 coping_col = mix(seam_color.rgb * 1.05, bone_color.rgb * 0.88, bone_bay);
+	coping_col = mix(coping_col, amber_color.rgb * 0.96, amber_bay);
+	vec3 bank_col = mix(cast_wall, coping_col, coping_band);
+	ALBEDO = mix(floor_col, bank_col, bank_mask);
+	ROUGHNESS = mix(0.92, 0.72, bank_mask);
+	METALLIC = mix(0.0, 0.18, bank_mask);
+}
+"""
 const ENV_PROPERTIES := ["background_mode", "background_color", "ambient_light_source", "ambient_light_color", "ambient_light_energy", "reflected_light_source", "fog_enabled", "fog_density", "fog_light_color", "fog_light_energy", "fog_sun_scatter"]
 const WARNING := "arena_waking_dress: assets missing or malformed; keeping greybox"
 # The boss camera has a 12 m arm beyond the 36 m floor; rock and machines leave it room.
@@ -40,12 +92,14 @@ const FLOOR_PLATE_COLOR := Color("c8cdcf")
 var module
 var _parts := {}
 var _materials := {}
+var _coping_ring_mesh: ArrayMesh
 var _reactor_light: OmniLight3D
 var _core_key: SpotLight3D
 var _light_pool: Node3D
 var _dress_lights := []
 var _floor_pools := []
 var _light_values := {}
+var _dressed_parts := {}
 
 
 static func attach(owner_module):
@@ -90,17 +144,37 @@ func _prepare() -> bool:
 	floor_material.set_shader_parameter("panel_pitch", FLOOR_PLATE_PITCH)
 	floor_material.set_shader_parameter("seam_width", FLOOR_SEAM_WIDTH)
 	_materials["floor"] = floor_material
-	for slot in ["steel", "enamel", "glass"]:
+	var rim_shader := Shader.new()
+	rim_shader.code = RIM_BANK_SHADER_CODE
+	var rim_material := ShaderMaterial.new()
+	rim_material.shader = rim_shader
+	rim_material.set_shader_parameter("tex_tone", stone.get_shader_parameter("tex_tone"))
+	rim_material.set_shader_parameter("tex_grain", stone.get_shader_parameter("tex_grain"))
+	rim_material.set_shader_parameter("base_color", FLOOR_PLATE_COLOR)
+	rim_material.set_shader_parameter("seam_color", Palette.CHARCOAL)
+	rim_material.set_shader_parameter("petrol_color", Palette.VERDIGRIS)
+	rim_material.set_shader_parameter("bone_color", Palette.SAND)
+	rim_material.set_shader_parameter("amber_color", Palette.AMBER)
+	rim_material.set_shader_parameter("panel_pitch", FLOOR_PLATE_PITCH)
+	rim_material.set_shader_parameter("seam_width", FLOOR_SEAM_WIDTH)
+	_materials["rim_bank"] = rim_material
+	for slot in ["steel", "enamel", "glass", "ancient_enamel", "ancient_light"]:
 		var material := StandardMaterial3D.new()
 		material.resource_name = slot
-		material.vertex_color_use_as_albedo = true
-		material.roughness = 0.82 if slot == "steel" else 0.87
-		material.metallic = 0.22 if slot == "steel" else 0.0
+		material.vertex_color_use_as_albedo = slot != "ancient_light"
+		material.roughness = 0.82 if slot == "steel" else (0.66 if slot == "ancient_enamel" else 0.87)
+		material.metallic = 0.22 if slot == "steel" else (0.16 if slot == "ancient_enamel" else 0.0)
 		if slot == "glass":
 			material.roughness = 0.38
 			material.emission_enabled = true
 			material.emission = DigScenery.LAMP_LIGHT
 			material.emission_energy_multiplier = 0.25
+		elif slot == "ancient_light":
+			material.albedo_color = Palette.ANCIENT
+			material.roughness = 0.30
+			material.emission_enabled = true
+			material.emission = Palette.ANCIENT
+			material.emission_energy_multiplier = 2.2
 		_materials[slot] = material
 	for file in STONE_FILES:
 		if not _load_parts(stone_dir + file):
@@ -108,7 +182,31 @@ func _prepare() -> bool:
 	for file in MECH_FILES:
 		if not _load_parts(mech_dir + file):
 			return false
+	# Optional W48 sculpted rim coping and hatch frames (keep greybox fallback clean when absent).
+	if _load_parts(boss_dir + RIM_COPING_FILE):
+		_coping_ring_mesh = _build_coping_ring_mesh()
+	_load_parts(boss_dir + HATCH_FRAME_FILE)
 	return true
+
+
+# Bakes 24 15-degree coping blocks into one static ArrayMesh ring (no MultiMesh under FloorDressing).
+func _build_coping_ring_mesh() -> ArrayMesh:
+	var parts: Array = _parts.get(RIM_COPING_FILE, [])
+	if parts.is_empty():
+		return null
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for sector in 24:
+		var rot := Transform3D(Basis(Vector3.UP, sector * TAU / 24.0), Vector3.ZERO)
+		for part in parts:
+			var mesh: Mesh = part["mesh"]
+			var xf: Transform3D = rot * (part["local"] as Transform3D)
+			for s in mesh.get_surface_count():
+				st.append_from(mesh, s, xf)
+	var ring := st.commit()
+	if ring != null and ring.get_surface_count() > 0:
+		ring.surface_set_material(0, _materials["steel"])
+	return ring
 
 
 func _load_parts(path: String) -> bool:
@@ -246,9 +344,20 @@ func _floor(body: StaticBody3D, node_name: String) -> void:
 	skin.position.y = module.PAD_THICK * 0.5 + 0.015
 	body.add_child(skin)
 	# Floor arcs had no gameplay state; the pit remains readable through its walls and lights.
+	# RimBankMesh takes the Guard 3 ribbed cast-steel + AMBER/bone/charcoal coping shader (ZERO 45-deg HAZARD).
 	for child in body.get_children():
 		if child is MeshInstance3D:
-			child.material_override = _materials["floor"]
+			child.material_override = _materials["rim_bank"] if child.name == "RimBankMesh" else _materials["floor"]
+	if _coping_ring_mesh != null:
+		var coping := MeshInstance3D.new()
+		coping.name = "RimCopingRing"
+		coping.mesh = _coping_ring_mesh
+		coping.material_override = _materials["steel"]
+		coping.position = Vector3(0.0, 5.95, 0.0)
+		coping.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		skin.add_child(coping)
+	if node_name == "PitDressing":
+		_add_pit_abyss_glow(skin)
 	var pools := _light_pool.get_node_or_null(String(body.name)) as Node3D
 	if pools == null:
 		pools = Node3D.new()
@@ -336,6 +445,80 @@ func _flush(parent: Node3D, batches: Dictionary) -> void:
 
 func _physics_process(_delta: float) -> void:
 	_follow_reactor()
+	_dress_weak_parts()
+
+
+# Warm industrial amber shaft-abyss underglow below the lowest pad (w2-boss-the-waking.png).
+func _add_pit_abyss_glow(skin: Node3D) -> void:
+	var quad := QuadMesh.new()
+	quad.size = Vector2(96.0, 96.0)
+	var sh := Shader.new()
+	sh.code = """
+shader_type spatial;
+render_mode unshaded, cull_disabled, blend_add, depth_draw_never;
+uniform vec4 glow_color : source_color;
+void fragment() {
+	vec2 d = UV * 2.0 - 1.0;
+	float r = length(d);
+	float core = smoothstep(1.0, 0.08, r);
+	ALBEDO = glow_color.rgb * (0.55 + 0.65 * core);
+	ALPHA = core * core * 0.42;
+}
+"""
+	var mat := ShaderMaterial.new()
+	mat.shader = sh
+	mat.set_shader_parameter("glow_color", Palette.AMBER)
+	var glow := MeshInstance3D.new()
+	glow.name = "PitAbyssGlow"
+	glow.mesh = quad
+	glow.material_override = mat
+	glow.rotation.x = -PI * 0.5
+	glow.position = Vector3(0.0, -18.0, 0.0)
+	glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	skin.add_child(glow)
+
+
+# Dresses Waking WeakPart hatches with sculpted petrol-enamel frames (replacing greybox Frame* boxes)
+# while keeping colliders, WeakPart.lit_colors() and BROKEN torn-rim cues exact.
+func _dress_weak_parts() -> void:
+	var hatch_parts: Array = _parts.get(HATCH_FRAME_FILE, [])
+	if hatch_parts.is_empty() or module == null or not is_instance_valid(module):
+		return
+	var nodes = module.get("_part_nodes")
+	if not (nodes is Dictionary):
+		return
+	for id in nodes:
+		var part = nodes[id]
+		if not is_instance_valid(part):
+			_dressed_parts.erase(id)
+			continue
+		var holder := part.get_node_or_null("SculptedHatchFrame") as Node3D
+		if holder == null:
+			holder = Node3D.new()
+			holder.name = "SculptedHatchFrame"
+			for p in hatch_parts:
+				var mi := MeshInstance3D.new()
+				var mesh: Mesh = p["mesh"]
+				mi.mesh = mesh
+				mi.transform = p["local"]
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				var src := mesh.surface_get_material(0) if mesh.get_surface_count() > 0 else null
+				var is_seam := src != null and String(src.resource_name) == "ancient_light"
+				mi.name = "HatchSeams" if is_seam else "HatchSurround"
+				mi.material_override = _materials["ancient_light"] if is_seam else _materials["ancient_enamel"]
+				holder.add_child(mi)
+			part.add_child(holder)
+			_dressed_parts[id] = holder
+		var broken: bool = int(part.state) == WeakPoints.BROKEN
+		var open: bool = int(part.state) == WeakPoints.OPEN
+		holder.visible = not broken
+		var seams := holder.get_node_or_null("HatchSeams") as MeshInstance3D
+		if seams != null:
+			seams.visible = open
+		for edge_name in ["FrameTop", "FrameBottom", "FrameLeft", "FrameRight"]:
+			var box := part.get_node_or_null(edge_name) as MeshInstance3D
+			if box != null:
+				box.visible = broken and edge_name != "FrameRight"
 
 
 func _follow_reactor() -> void:

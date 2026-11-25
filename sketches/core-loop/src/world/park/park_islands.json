@@ -516,5 +516,18 @@
  ],
  "rescue_rows": [
   {"id": "tally_cage", "site": "mooring_mesa", "at": [-290, 30], "face": [0.84, -0.54], "quest": "isles", "pilot": "tally", "prompt": "free the bookkeeper"}
+ ],
+ "wear_rows": [
+  {"id": "slickrock_haul_ruts", "points": [[0, -690], [0, -606], [-60, -516], [0, -390], [0, -220], [0, -106], [0, 46]], "width_m": 6.5},
+  {"id": "tram_bench_ruts", "points": [[118, -398], [200, -290], [290, -150], [196, -62], [110, 0], [0, 46]], "width_m": 6.0},
+  {"id": "net_deck_ruts", "points": [[0, 46], [0, 200], [0, 330], [0, 450]], "width_m": 6.0}
+ ],
+ "destructible_rows": [
+  {"id": "tramway_trestle_bulkhead", "tier": 2, "at": [194.0, 179.33, -296.0], "size": [3.4, 2.6, 1.4], "yaw_deg": 0},
+  {"id": "ore_bench_trestle_w", "tier": 2, "at": [336.0, 155.85, -170.0], "size": [3.6, 2.8, 1.4], "yaw_deg": 0},
+  {"id": "ore_bench_trestle_e", "tier": 3, "at": [376.0, 145.89, -104.0], "size": [4.0, 3.0, 1.5], "yaw_deg": 0},
+  {"id": "ore_bench_crates", "tier": 1, "at": [350.0, 169.64, -240.0], "size": [2.0, 1.5, 2.0], "yaw_deg": 0},
+  {"id": "adit_bulkhead", "tier": 3, "at": [274.0, 117.36, -26.5], "size": [4.0, 3.0, 1.5], "yaw_deg": 0},
+  {"id": "west_shelf_crates", "tier": 1, "at": [-330.0, 177.31, -280.0], "size": [2.0, 1.5, 2.0], "yaw_deg": 45}
  ]
 }

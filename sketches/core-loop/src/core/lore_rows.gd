@@ -874,3 +874,123 @@ const ROWS := [
 		"text": "Mind: You were my gun. Now you play my song backwards.",
 	},
 ]
+
+# World 2 narrative cards & rescue banter (Guard 4, W48-MAPS): kept outside ROWS/CALLS so
+# World 1's golden ROWS hash and 7-signal CALLS table stay untouched. Keyed by park landmark kind.
+const WORLD_TWO_COLD_OPEN := {
+	"headframe": {
+		"id": "lore.dig.cold_open",
+		"zone": "2-1",
+		"title": "THE DIG — RED RIM",
+		"speaker": "Moss",
+		"line": "Five copper benches down to the headframe. Keep your speed on the red rock.",
+		"skippable": true,
+		"duration_s": 3.4,
+	},
+	"sinkhole": {
+		"id": "lore.sinkhole.cold_open",
+		"zone": "2-2",
+		"title": "THE SINKHOLE — MALPAIS",
+		"speaker": "Moss",
+		"line": "Black basalt tubes all the way to the skylight. Follow the green wire.",
+		"skippable": true,
+		"duration_s": 3.4,
+	},
+}
+
+const KEST_RESCUE_BANTER := [
+	{
+		"id": "lore.dig.kest_rescue.1",
+		"zone": "2-1",
+		"speaker": "Kest",
+		"line": "Bolt jammed three shifts ago. Good thing you roll heavier than the Fleet.",
+		"skippable": true,
+		"duration_s": 2.8,
+	},
+	{
+		"id": "lore.dig.kest_rescue.2",
+		"zone": "2-1",
+		"speaker": "Moss",
+		"line": "Kest is clear of the sump. Watch the headframe cables — Swarm's awake.",
+		"skippable": true,
+		"duration_s": 2.8,
+	},
+]
+
+const WAKING_INTRO_CARD := {
+	"id": "lore.dig_depths.waking_card",
+	"zone": "2-2",
+	"title": "THE WAKING",
+	"subtitle": "COLLAPSING SHAFT EXCAVATOR",
+	"fallback_line": "Three floors down. Stay on the rim.",
+	"skippable": true,
+	"duration_s": 2.4,
+}
+
+
+static func world_two_cold_open(landmark_kind: String) -> Dictionary:
+	return WORLD_TWO_COLD_OPEN.get(landmark_kind, {})
+
+
+static func kest_rescue_banter() -> Array:
+	return KEST_RESCUE_BANTER
+
+
+# World 3 cold opens and the Mind's two cards (W49-MAPS), kept outside ROWS/CALLS like World 2's
+# so the ROWS hash and the CALLS table stay untouched. Cold opens are keyed by park landmark kind.
+const WORLD_THREE_COLD_OPEN := {
+	"sky_island": {
+		"id": "lore.isle.cold_open",
+		"zone": "3-1",
+		"title": "THE HANGING ISLE",
+		"speaker": "Moss",
+		"line": "Mesas gone gold, cloud sea below. Tally's cage hangs past the nets.",
+		"skippable": true,
+		"duration_s": 3.4,
+	},
+	"spire": {
+		"id": "lore.crown.cold_open",
+		"zone": "3-2",
+		"title": "CROWN WORKS",
+		"speaker": "Moss",
+		"line": "Storm's in. Lightning walks the 330-metre Crown Spire on the beat.",
+		"skippable": true,
+		"duration_s": 3.4,
+	},
+}
+
+# The Foreman calls in on schedule when the Mind's body arrives: a corner card with three deadpan
+# stats and the LIKES line (TONE-BIBLE: the only entry is the player). cue is the soft chime's id.
+const FOREMAN_CALL_IN := {
+	"id": "lore.crown.foreman_call_in",
+	"zone": "3-2",
+	"title": "THE FOREMAN",
+	"line": "Calling as scheduled. You are exactly on time.",
+	"stats": [["SHIFTS RUN", "all of them"], ["WASTE", "designed out"], ["HANDS", "four, for now"]],
+	"likes": ["LIKES", "YOU"],
+	"cue": "foreman_chime",
+	"skippable": true,
+	"duration_s": 3.2,
+}
+
+# Beaten, the Mind is stamped HIRED and takes a place on the crew (STORY-MAP, the Mind row).
+const HIRED_CEREMONY := {
+	"id": "lore.crown.hired",
+	"zone": "3-2",
+	"stamp": "HIRED",
+	"memo": "I am humbled to announce that I have accepted a position on the crew.",
+	"skippable": true,
+	# Inside flow.gd VICTORY_SECONDS (2.5 s), so the stamp finishes before the arena hands over to the ending.
+	"duration_s": 2.4,
+}
+
+
+static func world_three_cold_open(landmark_kind: String) -> Dictionary:
+	return WORLD_THREE_COLD_OPEN.get(landmark_kind, {})
+
+
+static func waking_intro_line(pilot_id: String) -> String:
+	for row in ROWS:
+		if row.get("kind") == "intro" and row.get("zone") == "2-2" and row.get("pilot", "") == pilot_id:
+			return String(row["text"])
+	return String(WAKING_INTRO_CARD["fallback_line"])

@@ -1,9 +1,9 @@
 {
-  "bake_sha256": "02cecfed664093f85e07176c84755cf37381e80a188ce2b63749dae3ae1e93b9",
+  "bake_sha256": "39368f9ca188117da9bec4f4b8db09fab07b2341933d5974e2738021bf5b3ec8",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1107957,
-  "edges": 314153,
+  "bytes": 1108599,
+  "edges": 314154,
   "first_failed": "",
   "flags": {
     "deck": 16,
@@ -15,13 +15,13 @@
   },
   "full_visit_m": 2041,
   "full_visit_ratio": "1.588",
-  "graph_sha256": "a8df7113b187f5ac3e0dca733aa3fdd6de035c15b9d200f3ef3f6059dd6990a0",
+  "graph_sha256": "93924c9164d64e2c3bfa14fbad849c51b4ef9d085a30f5b377d1673f2ebf8cb9",
   "line_errors": [],
   "line_path_nodes": 112,
   "longest_est_m": 3256,
   "map": "park_pit",
   "nodes": 40417,
-  "park_sha256": "19c6b42f816cb2bbed7e80141a4ae7257d2429af1254fb3966f49a97899bcb8b",
+  "park_sha256": "1e8c4e9c39930d93e52a669eb26ebf46055667ef3db827855e1bdc47e2770d65",
   "pockets": [
     {
       "clear_ring": [],
@@ -132,7 +132,7 @@
     }
   ],
   "reward_ratio": "0.702",
-  "ride_edges": 21,
+  "ride_edges": 22,
   "routes": {
     "barge_ramp": [],
     "bench_dive": [],
@@ -190,7 +190,7 @@
         "viable": true
       },
       {
-        "cost": 2120.9,
+        "cost": 2120.8,
         "d_landmark": 625.7,
         "name": "slickrock_10",
         "on_route": false,
@@ -198,7 +198,7 @@
         "viable": true
       },
       {
-        "cost": 1901.9,
+        "cost": 1901.8,
         "d_landmark": 691.6,
         "name": "slickrock_7",
         "on_route": false,
@@ -214,7 +214,7 @@
         "viable": true
       },
       {
-        "cost": 1518.8,
+        "cost": 1518.7,
         "d_landmark": 435.1,
         "name": "winze_east",
         "on_route": false,
@@ -657,7 +657,7 @@
     "count": 115,
     "crossings": {
       "drop": 41,
-      "ride": 18,
+      "ride": 19,
       "walk": 128
     },
     "hidden": [
