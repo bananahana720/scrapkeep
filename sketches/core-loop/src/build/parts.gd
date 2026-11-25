@@ -406,7 +406,7 @@ const GRAPPLE_MUTATIONS := {
 		"maker_pieces": 3,
 		"asset_id": "grapple_mut_det_cord_line",
 		"glb_path": GRAPPLE_MUT_MODEL_DIR + "grapple_mut_det_cord_line.glb",
-		"color": Palette.BRASS,
+		"color": Palette.COPPER,
 		"uses_amber_glow": false,
 		"actuator_bones": [],
 		"text": "Release detonates sequenced shaped charges down the tether path.",
@@ -589,7 +589,7 @@ static func has_grapple_mutation(held: Array, mut_id: String, maker_muts: Array 
 
 static func grapple_mutation_problems() -> Array:
 	var found: Array = []
-	var forbidden := [Palette.HAZARD, Palette.KINDNESS, Palette.ANCIENT]
+	var allowed := [Palette.AMBER, Palette.COPPER, Palette.STEEL, Palette.SAND, Palette.VERDIGRIS, Palette.BONE]
 	for mid in GRAPPLE_MUTATIONS:
 		var row: Dictionary = GRAPPLE_MUTATIONS[mid]
 		if String(row.get("id", "")) != mid:
@@ -599,9 +599,13 @@ static func grapple_mutation_problems() -> Array:
 		if String(row.get("glb_path", "")).strip_edges().is_empty():
 			found.append("%s missing glb_path" % mid)
 		var col: Color = row.get("color", Color.BLACK)
-		for f: Color in forbidden:
-			if col.is_equal_approx(f):
-				found.append("%s uses forbidden colour" % mid)
+		var ok := false
+		for a: Color in allowed:
+			if col.is_equal_approx(a):
+				ok = true
+				break
+		if not ok:
+			found.append("%s uses disallowed colour" % mid)
 		if mid in ["hot_wire", "live_bus"] and not col.is_equal_approx(Palette.AMBER):
 			found.append("%s must use Palette.AMBER" % mid)
 	return found
