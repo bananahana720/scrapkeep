@@ -72,6 +72,7 @@ func _run() -> void:
 	_game.screens.prologue_enabled = false
 
 	await _check_work_orders_licenses_overrides()
+	await _check_overlay_viewport_bounds()
 	await _check_w2_w3_shift_board_and_camp_stations()
 	await _check_pilot_alt_loadouts_and_briefing()
 	await _check_logbook_story_surfaces()
@@ -117,6 +118,20 @@ func _check_work_orders_licenses_overrides() -> void:
 	_t.eq("pad RB switches Work Orders to overrides tab", page.active_tab, "overrides")
 	_t.eq("all 6 Foreman Override Codes rendered", page.override_rows.size(), MetaOptions.OVERRIDE_CODES.size())
 	_t.eq("all 4 Head Starts rendered", page.head_start_rows.size(), MetaOptions.ids().size())
+	for cid in MetaOptions.override_ids():
+		var row_text := String(page.override_rows[cid].text)
+		_t.check("locked override %s shows readable unlock hint" % cid,
+			not row_text.ends_with("\nLocked.") and not row_text.contains("wo_") and not row_text.contains("waking_stilled") and not row_text.contains("mind_quieted") and not row_text.contains("Patch"),
+			row_text)
+	_t.check("code_glass_rail unlock hint names order and achievement",
+		String(page.override_rows["code_glass_rail"].text).contains("Glass Rail order") and String(page.override_rows["code_glass_rail"].text).contains("Waking Stilled"),
+		String(page.override_rows["code_glass_rail"].text))
+	_t.check("code_single_docket unlock hint names No Favors order",
+		String(page.override_rows["code_single_docket"].text).contains("No Favors order"),
+		String(page.override_rows["code_single_docket"].text))
+	_t.check("code_double_shift unlock hint names West Signal and Mind Quieted",
+		String(page.override_rows["code_double_shift"].text).contains("West Signal order") and String(page.override_rows["code_double_shift"].text).contains("Mind Quieted"),
+		String(page.override_rows["code_double_shift"].text))
 	_t.check("locked override code refuses toggle", not page.press_override("code_glass_rail") and MetaOptions.active_overrides(profile).is_empty())
 
 	# Unlock an override code and toggle ON/OFF.
@@ -137,6 +152,51 @@ func _check_work_orders_licenses_overrides() -> void:
 	Push.key(root, KEY_ESCAPE)
 	await _frames(2)
 	_t.check("Esc closes Work Orders back to title", not screens.work_orders_open() and _game.flow.state_name() == "title")
+
+
+func _check_overlay_viewport_bounds() -> void:
+	var screens = _game.screens
+	var orig_size := root.size
+	var orig_scale := root.content_scale_size
+	for res in [Vector2i(1600, 900), Vector2i(1280, 720)]:
+		root.size = res
+		root.content_scale_size = res
+		await _frames(4)
+		var view: Rect2 = root.get_visible_rect()
+
+		Push.key(root, KEY_O)
+		await _frames(4)
+		var wo = screens.work_orders_page()
+		_t.check("Work Orders keeps content bounded at %s" % res,
+			screens._content.size.y <= view.size.y + 0.5 and view.encloses(wo.back.get_global_rect()),
+			"content=%s back=%s view=%s" % [screens._content.size, wo.back.get_global_rect(), view])
+		Push.key(root, KEY_ESCAPE)
+		await _frames(4)
+
+		Push.key(root, KEY_L)
+		await _frames(4)
+		var lb = screens.logbook_page()
+		_t.check("Logbook keeps content bounded at %s" % res,
+			screens._content.size.y <= view.size.y + 0.5 and view.encloses(lb.back.get_global_rect()),
+			"content=%s back=%s view=%s" % [screens._content.size, lb.back.get_global_rect(), view])
+		Push.key(root, KEY_ESCAPE)
+		await _frames(4)
+
+		_game._screen_key(KEY_A)
+		await _frames(4)
+		var ach = screens.achievements_page()
+		_t.check("Achievements footer stays visible after Work Orders and Logbook at %s" % res,
+			screens._content.size.y <= view.size.y + 0.5
+			and view.encloses(ach.back.get_global_rect())
+			and view.encloses(ach.orders_button.get_global_rect())
+			and view.encloses(ach.logbook_button.get_global_rect()),
+			"content=%s back=%s orders=%s logbook=%s view=%s" % [
+				screens._content.size, ach.back.get_global_rect(), ach.orders_button.get_global_rect(), ach.logbook_button.get_global_rect(), view])
+		Push.key(root, KEY_ESCAPE)
+		await _frames(4)
+	root.size = orig_size
+	root.content_scale_size = orig_scale
+	await _frames(4)
 
 
 func _check_w2_w3_shift_board_and_camp_stations() -> void:

@@ -19,7 +19,6 @@ signal back_requested
 const TABS := ["orders", "licenses", "overrides"]
 const TAB_WORDS := {"orders": "Orders", "licenses": "Licenses", "overrides": "Overrides"}
 const WIDTH := 980.0
-const SCROLL_H := 520.0
 const HEADER_SERIAL := 57
 const OVERRIDE_SERIAL := 71
 const HINT_PARTS_TOGGLE := [
@@ -60,6 +59,11 @@ func _init() -> void:
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_theme_constant_override("separation", UiTokens.GAP_M)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var top_pad := Control.new()
+	top_pad.custom_minimum_size.y = UiTokens.GAP_L
+	top_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(top_pad)
 
 	var header := PanelContainer.new()
 	header.name = "DispatchHeader"
@@ -116,7 +120,7 @@ func _init() -> void:
 	plate.name = "BodyPlate"
 	plate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	plate.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	plate.custom_minimum_size = Vector2(WIDTH, SCROLL_H)
+	plate.custom_minimum_size = Vector2(WIDTH, 0.0)
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var body_box = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, HEADER_SERIAL + 3)
 	body_box.set_content_margin_all(UiTokens.GAP_M)
@@ -151,6 +155,11 @@ func _init() -> void:
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	back.pressed.connect(func(): back_requested.emit())
 	foot.add_child(back)
+
+	var bottom_pad := Control.new()
+	bottom_pad.custom_minimum_size.y = UiTokens.GAP_L
+	bottom_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bottom_pad)
 
 
 func refresh(profile, sitting := false) -> void:
@@ -280,6 +289,8 @@ func _build_pinned_strip() -> void:
 func _clip_card(slot_name: String, order_id: String, serial: int) -> PanelContainer:
 	var card := PanelContainer.new()
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var card_w := (WIDTH - UiTokens.GAP_M) * 0.5
+	card.custom_minimum_size = Vector2(card_w, 0.0)
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var plate = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
 	plate.tape = 0.5
@@ -300,6 +311,7 @@ func _clip_card(slot_name: String, order_id: String, serial: int) -> PanelContai
 	col.add_child(_label(String(row.get("name", order_id)), UiTokens.BODY, Palette.LEDGER_CREAM))
 	var line := _label(String(row.get("text", "")), UiTokens.CAPTION, Palette.SAND)
 	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	line.custom_minimum_size = Vector2(card_w - UiTokens.GAP_S * 4.0, 0.0)
 	col.add_child(line)
 	return card
 
@@ -455,10 +467,9 @@ func _build_overrides_body() -> void:
 		btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if open else Control.CURSOR_ARROW
 		btn.custom_minimum_size = Vector2(WIDTH - 56.0, 62.0)
 		var state := "Armed" if on else ("Ready" if open else "Locked")
-		var grant := String(row.get("grant", ""))
 		var body_line := "%s  Downside %s" % [String(row.get("text", "")), String(row.get("downside_text", ""))]
 		if not open:
-			body_line = _grant_hint(grant)
+			body_line = _unlock_hint(row.get("unlock", {}))
 		btn.text = "%s   %s\n%s" % [String(row.get("name", cid)), state, body_line]
 		btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		btn.add_theme_font_override("font", UiFonts.face(UiTokens.Hand.OLD_WORKS))
@@ -512,16 +523,26 @@ func _build_overrides_body() -> void:
 		_focus_ring.append(box)
 
 
-func _grant_hint(grant: String) -> String:
-	if grant.begins_with("order:"):
-		var oid := grant.trim_prefix("order:")
-		var orow: Dictionary = WorkOrders.order(oid)
-		if not orow.is_empty():
-			return "Complete %s to open this code." % String(orow.get("name", oid))
-	var arow := Achievements.row(grant)
-	if not arow.is_empty():
-		return String(arow.get("text", "Locked."))
-	return "Locked."
+func _unlock_hint(unlock: Variant) -> String:
+	if not (unlock is Dictionary) or unlock.is_empty():
+		return "Locked."
+	var parts: Array[String] = []
+	for key in ["order", "or_order", "earned", "or_earned"]:
+		if not unlock.has(key):
+			continue
+		var target := String(unlock[key])
+		if key == "order" or key == "or_order":
+			var orow: Dictionary = WorkOrders.order(target)
+			if not orow.is_empty():
+				parts.append("complete %s order" % String(orow.get("name", target)))
+		else:
+			var arow: Dictionary = Achievements.row(target)
+			if not arow.is_empty():
+				parts.append("earn %s" % String(arow.get("name", target)))
+	if parts.is_empty():
+		return "Locked."
+	var joined := " or ".join(parts)
+	return joined.left(1).to_upper() + joined.substr(1) + "."
 
 
 func _pay_words(pays: Dictionary) -> String:

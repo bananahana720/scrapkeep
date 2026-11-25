@@ -159,6 +159,7 @@ func setup(game_ref) -> void:
 	_wordmark = Wordmark.dress(_title)
 	_wordmark.visible = false
 	_content.sort_children.connect(_fit_band)
+	_content.minimum_size_changed.connect(_clamp_content)
 	get_viewport().size_changed.connect(_fit_name)
 	_mark = _label(UiTokens.HEADING)
 	_mark.add_theme_color_override("font_color", Palette.AMBER)
@@ -649,12 +650,15 @@ func toggle_help() -> void:
 	_close_camp_silently()
 	if _state != "title" or _achievements.visible or _settings.visible or _work_orders.visible or _logbook.visible:
 		return
-	_help.visible = not _help.visible
-	_actions.visible = not _help.visible
-	if _help.visible:
+	var opening: bool = not _help.visible
+	if opening:
+		_actions.visible = false
 		_show("", Palette.AMBER, "")
+		_help.visible = true
 		_help.page_button.grab_focus()
 	else:
+		_help.visible = false
+		_actions.visible = true
 		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
 		var help_button = button_for("help")
 		if help_button != null:
@@ -670,14 +674,17 @@ func toggle_achievements() -> void:
 	_close_camp_silently()
 	if _state != "title" or _help.visible or _settings.visible or _work_orders.visible or _logbook.visible:
 		return
-	_achievements.visible = not _achievements.visible
-	_actions.visible = not _achievements.visible
-	if _achievements.visible:
+	var opening: bool = not _achievements.visible
+	if opening:
+		_actions.visible = false
+		_show("", Palette.AMBER, "")
+		_achievements.visible = true
 		_achievements.refresh(game.ctx.profile, game.progress, game.tuning != null and game.tuning.sitting())
 		_achievements.back.set_key("key_esc")
-		_show("", Palette.AMBER, "")
 		_sync_walk()
 	else:
+		_achievements.visible = false
+		_actions.visible = true
 		_back_to_base()
 	_fade(true)
 
@@ -686,14 +693,17 @@ func toggle_work_orders() -> void:
 	_close_camp_silently()
 	if _state != "title" or _help.visible or _achievements.visible or _settings.visible or _logbook.visible:
 		return
-	_work_orders.visible = not _work_orders.visible
-	_actions.visible = not _work_orders.visible
-	if _work_orders.visible:
-		_work_orders.refresh(game.ctx.profile, game.tuning != null and game.tuning.sitting())
+	var opening: bool = not _work_orders.visible
+	if opening:
+		_actions.visible = false
 		_show("", Palette.AMBER, "")
+		_work_orders.visible = true
+		_work_orders.refresh(game.ctx.profile, game.tuning != null and game.tuning.sitting())
 		_sync_walk()
 		_work_orders.focus_first()
 	else:
+		_work_orders.visible = false
+		_actions.visible = true
 		_back_to_base()
 	_fade(true)
 
@@ -702,14 +712,17 @@ func toggle_logbook() -> void:
 	_close_camp_silently()
 	if _state != "title" or _help.visible or _achievements.visible or _settings.visible or _work_orders.visible:
 		return
-	_logbook.visible = not _logbook.visible
-	_actions.visible = not _logbook.visible
-	if _logbook.visible:
-		_logbook.refresh(game.ctx.codex, game.ctx.profile, game.tuning != null and game.tuning.sitting(), _journal_pages())
+	var opening: bool = not _logbook.visible
+	if opening:
+		_actions.visible = false
 		_show("", Palette.AMBER, "")
+		_logbook.visible = true
+		_logbook.refresh(game.ctx.codex, game.ctx.profile, game.tuning != null and game.tuning.sitting(), _journal_pages())
 		_sync_walk()
 		_logbook.focus_first()
 	else:
+		_logbook.visible = false
+		_actions.visible = true
 		_back_to_base()
 	_fade(true)
 
@@ -737,15 +750,18 @@ func toggle_settings() -> void:
 	_close_camp_silently()
 	if _state != "title" or _help.visible or _achievements.visible or _work_orders.visible or _logbook.visible:
 		return
-	_settings.visible = not _settings.visible
-	_actions.visible = not _settings.visible
-	if _settings.visible:
-		_settings.refresh()
+	var opening: bool = not _settings.visible
+	if opening:
+		_actions.visible = false
 		_show("", Palette.AMBER, "")
+		_settings.visible = true
+		_settings.refresh()
 		_settings.focus("fullscreen")
 		refresh_lab_row()
 		_sync_walk()
 	else:
+		_settings.visible = false
+		_actions.visible = true
 		_breath_row.visible = false
 		_back_to_base()
 	_fade(true)
@@ -1674,8 +1690,22 @@ func _fade(show: bool) -> void:
 
 func _layout_backdrop() -> void:
 	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _work_orders.visible or _logbook.visible or _settings.visible or _camp.visible or _walking or _jukebox.visible or _radio.visible)
+	_veil.anchor_left = 0.0
+	_veil.anchor_top = 0.0
+	_veil.anchor_right = 1.0
 	_veil.anchor_bottom = 0.5 if title_deck else 1.0
+	_veil.offset_left = 0.0
+	_veil.offset_top = 0.0
+	_veil.offset_right = 0.0
+	_veil.offset_bottom = 0.0
+	_content.anchor_left = 0.0
+	_content.anchor_top = 0.0
+	_content.anchor_right = 1.0
 	_content.anchor_bottom = _veil.anchor_bottom
+	_content.offset_left = 0.0
+	_content.offset_top = 0.0
+	_content.offset_right = 0.0
+	_content.offset_bottom = 0.0
 	_content.add_theme_constant_override("separation", 18 if title_deck else 26)
 	_veil.color = Color(Palette.CHARCOAL, 1.0 if title_deck else 0.84)
 	_fit_band()
@@ -1684,6 +1714,15 @@ func _layout_backdrop() -> void:
 func _fit_name() -> void:
 	var height := minf(WORDMARK_H, _screen().y * WORDMARK_SHARE)
 	_title.custom_minimum_size = Vector2(height * Wordmark.ASPECT, height) if _wordmark.visible else Vector2.ZERO
+
+
+func _clamp_content() -> void:
+	if _content == null:
+		return
+	if _content.offset_right > _content.offset_left:
+		_content.offset_right = _content.offset_left
+	if _content.offset_bottom > _content.offset_top:
+		_content.offset_bottom = _content.offset_top
 
 
 func _fit_band() -> void:
