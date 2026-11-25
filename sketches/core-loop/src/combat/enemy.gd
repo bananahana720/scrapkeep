@@ -237,6 +237,16 @@ static func is_ordinary_kind(enemy_kind: String) -> bool:
 	return not _NON_ORDINARY.has(enemy_kind) and not _Roster.is_boss_piece(enemy_kind)
 
 
+# Whether a defeated enemy may leave a 6 s Ghost-Shift husk (W47-TALLY-B-CODE): ordinary Fleet
+# machines only — never Wardens, bosses, Rogues, ancient machines, ring-outs, or Fleet spectators.
+func is_fleet_husk_eligible() -> bool:
+	if ringed_out or is_in_group("spectator"):
+		return false
+	if not is_ordinary_kind(kind):
+		return false
+	return _Roster.has(kind) and _Roster.faction_of(kind) == _Roster.FLEET
+
+
 func _ordinary_reaction() -> bool:
 	if kind != _ordinary_kind:
 		_ordinary_kind = kind

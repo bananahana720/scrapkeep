@@ -60,7 +60,7 @@ const ROWS := {
 	"tl_through_feed": "Every hit winds your next surge closer.",
 	"tl_line_feed": "Harpoon smashes throw a second shockwave.",
 	"tl_spring_vent": "Each surge refills your air jump.",
-	"tl_corner_plate": "Every dispatch beacon refills a surge.",
+	"tl_corner_plate": "Beacons refill a surge and raise Ghost-Shift husks.",
 	# Remembered cannon, Depth-1 keystones and C1 to C6.
 	"c_snap_battery": "Quick lock and short wait, lighter lanes.",
 	"c_siege_rail": "Slow lock. 40m rail pierces and breaks props.",

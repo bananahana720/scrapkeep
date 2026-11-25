@@ -59,6 +59,8 @@ const Bindings := preload("res://src/core/bindings.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const BallTuning := preload("res://src/movement/tuning.gd")
 const BallRules := preload("res://src/movement/ball_rules.gd")
+const AllyHusk := preload("res://src/combat/ally_husk.gd")
+const AttackBudget := preload("res://src/combat/attack_budget.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -117,7 +119,7 @@ const SYNERGY := "synergy"
 # piece threw it, so the delivered-damage ledger keeps one bucket instead of one per piece. It is not a ball
 # contact, so Redline (SPEND_KINDS) never spends on it.
 const DEBRIS := "debris"
-const FIGHT_GROUPS := ["enemy", "enemy_shot", "telegraph"]
+const FIGHT_GROUPS := ["enemy", "enemy_shot", "telegraph", "ally_husk", "ally_zone"]
 const CHIP := 0.2
 # The spec's values, used only for a warden field a stage def is missing.
 const WARDEN_FALLBACK := [
@@ -480,6 +482,8 @@ var flail
 var ultimate
 # The active slot on F (src/combat/actives), behind --actives.
 var actives
+# W47-TALLY-B-CODE Ghost Shift ally-husk manager (src/combat/ally_husk.gd).
+var ally_husks
 var last_player_hit := {}
 var _hit_attack := ""
 var last_impact := {}
@@ -606,6 +610,9 @@ func setup(ctx_ref) -> void:
 	actives = preload("res://src/combat/actives/active_rack.gd").new()
 	add_child(actives)
 	actives.setup(ctx, self)
+	ally_husks = AllyHusk.new()
+	add_child(ally_husks)
+	ally_husks.setup(ctx, self)
 	# A loaded line skill rides the next bite, body or world (grapple_fired goes out for both,
 	# after the latch is set). A reset point drops the load.
 	ctx.events.grapple_fired.connect(func(anchor: Vector3):
@@ -619,8 +626,11 @@ func setup(ctx_ref) -> void:
 		var smash = ctx.player.abilities
 		if smash.cap(AbilityState.SMASH, "flavour", "") != "stamp":
 			_grant_pressure(1)
-		elif smash.cap(AbilityState.SMASH, "mutation", "") == "stamp_ink":
-			_book_ink(at))
+		else:
+			if smash.cap(AbilityState.SMASH, "mutation", "") == "stamp_ink":
+				_book_ink(at)
+			if ally_husks != null and ghost_shift_unlocked():
+				ally_husks.refresh_all_shifts())
 	_wire_tally()
 	_actions = _proc_actions()
 	# Every bus fact any tree's procs listen for, connected once; the tree decides who fires.
@@ -864,7 +874,9 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 		_boss_add_ids.erase(id)
 		_pendulum_zapped.erase(id)
 		_pulled_recent.erase(id)
-		_hot_wire_cd.erase(id))
+		_hot_wire_cd.erase(id)
+		if ally_husks != null and ghost_shift_unlocked():
+			ally_husks.record_wreck(enemy))
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_lobber_fired.bind(enemy))
 	# A kill-first special gets its special_tell signal before its listeners hear it arrive.
@@ -1895,6 +1907,8 @@ func _physics_process(delta: float) -> void:
 	for charge in sticky.step(delta, space, enemies):
 		_detonate(charge)
 	_step_devices(delta)
+	if ally_husks != null:
+		ally_husks.step(delta, enemies)
 	wear_trail.step(delta, enemies)
 	PackPressure.observe(ctx.player.planar_velocity(), ctx.player.tuning.f("cruise"))
 	churn.step(delta)
@@ -4033,6 +4047,8 @@ func _reset_cards() -> void:
 	_clear_ink()
 	tally_last_settle = {}
 	_tally_cards = {}
+	if ally_husks != null:
+		ally_husks._reset()
 
 
 func _wire_tally() -> void:
@@ -4040,7 +4056,9 @@ func _wire_tally() -> void:
 	# Flywheel Surge pays SURGE_PRESSURE (A2-CRITIC); the surge is Tally's only dashed source.
 	ev.dashed.connect(func(_dir: Vector3):
 		if ctx.player.abilities.id_of(AbilityState.MOVEMENT) == "flywheel_surge":
-			_grant_pressure(Weapons.SURGE_PRESSURE))
+			_grant_pressure(Weapons.SURGE_PRESSURE)
+			if ally_husks != null and ghost_shift_unlocked():
+				ally_husks.start_surge_overclock())
 	ev.line_skill_fired.connect(func(id: String, _target: Node3D, at: Vector3, _on: String):
 		if not id in CLIP_IDS:
 			return
@@ -4218,6 +4236,8 @@ func _run_gather(point: Vector3, valid: bool) -> bool:
 	plate = {"at": at, "until": _clock + Weapons.GATHER_SECONDS}
 	_gather_tick = 0.0
 	effects.ring(at, Weapons.GATHER_RADIUS, Palette.COPPER)
+	if ally_husks != null and ghost_shift_unlocked():
+		ally_husks.raise_in_radius(at, Weapons.GATHER_RADIUS)
 	return true
 
 
@@ -4306,6 +4326,8 @@ func _step_clip_preview() -> void:
 func _link_clips_body(target: Node3D, _fraction: float, mult: float) -> void:
 	_clear_clip_post()
 	_link_from(target, mult, _clip_ring(target.global_position, Weapons.LINK_NEIGHBOUR_REACH))
+	if ally_husks != null and ghost_shift_unlocked() and is_instance_valid(target):
+		ally_husks.raise_drive_by(target.global_position)
 
 
 # On the world: the default reel burst, and a clip post that clips the first CLIP_POST_MAX
@@ -4317,6 +4339,8 @@ func _link_clips_world(anchor: Vector3, fraction: float, mult: float) -> void:
 	ctx.player.indicator.set_shape("tally_post", clip_post["shape"])
 	effects.ring(anchor, Weapons.CLIP_POST_RADIUS, Palette.COPPER)
 	last_card = {"card": "link_clips", "at": anchor, "hits": 0, "spent": false}
+	if ally_husks != null and ghost_shift_unlocked():
+		ally_husks.raise_drive_by(anchor)
 
 
 # Clips `first` and up to LINK_NEIGHBOURS live enemies inside `shape` (default: the clip ring
@@ -4608,6 +4632,8 @@ func tally_tech(id: String, _beat: int, ball: Vector3, aim: Vector3, heft: float
 			effects.arc(ball + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, Palette.AMBER)
 			_piece_hit(enemy, Ultimate.VOLLEY_DAMAGE * heft, ball, Weapons.LEDGER_KNOCK)
 			made += _ride_clip(enemy, cap)
+	if ally_husks != null and ghost_shift_unlocked():
+		ally_husks.raise_in_radius(ball, Ultimate.VOLLEY_RADIUS)
 	return made
 
 
@@ -4742,6 +4768,8 @@ func tally_landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		dealt += _piece_hit(enemy, amount * share, at, Weapons.LEDGER_KNOCK)
 		settled.append(cid)
 	_grant_pressure(ctx.player.abilities.slot(AbilityState.WEAPON).max_charges)
+	if ally_husks != null and ghost_shift_unlocked():
+		ally_husks.command_charge(at)
 	_fly_plates = []
 	_fly_pulled = false
 	tally_last_settle = {"at": at, "hits": hits, "settles": settled.size(), "ids": settled}
@@ -5360,6 +5388,8 @@ func _grant_special(abilities) -> void:
 
 
 func _refund_special(abilities, scale: float) -> void:
+	if scale <= 0.0:
+		return
 	var pool: String = abilities.pool_of(AbilityState.SPECIAL)
 	if pool == AbilityState.SPECIAL:
 		abilities.refund(AbilityState.SPECIAL, scale)
@@ -5868,6 +5898,8 @@ func _on_player_died() -> void:
 	_reset_w47_c2_state()
 	_reset_grapple_muts_state()
 	_clear_consumables_runtime()
+	if ally_husks != null:
+		ally_husks._reset()
 	_clear_aftershocks()
 	_rakes.clear()
 	_clear_cannon_paint()
@@ -5918,6 +5950,8 @@ func _start_attempt() -> void:
 	_reset_w47_c2_state(true)
 	_reset_grapple_muts_state(true)
 	_clear_consumables_runtime()
+	if ally_husks != null:
+		ally_husks._reset()
 	if ctx != null and ctx.run != null:
 		_consumable_rng.seed = hash(["consumable_drops", ctx.run.run_seed, ctx.run.stage])
 	_spring_until = -1.0
@@ -7612,3 +7646,86 @@ func _clear_consumables_runtime() -> void:
 	_consumable_drops.clear()
 	for id in ["consumable_nitro_siphon", "consumable_anchor_flare", "consumable_overclock_card", "consumable_foreman_memo"]:
 		_clear_buff(id)
+
+
+# --- W47-TALLY-B-CODE Ghost Shift Tree Queries & Ally-Husk Strikes -------------------------
+
+func _ghost_shift_ops() -> Array:
+	var out: Array = []
+	if ctx == null or ctx.player == null or ctx.player.tree == null:
+		return out
+	for p in ctx.player.tree.procs():
+		var gs := String(p.get("ghost_shift", ""))
+		if gs != "" and not out.has(gs):
+			out.append(gs)
+	return out
+
+
+func ghost_shift_unlocked() -> bool:
+	return not _ghost_shift_ops().is_empty()
+
+
+func ghost_shift_extra_seats() -> int:
+	return 1 if _ghost_shift_ops().has("seat_and_bits") else 0
+
+
+func ghost_shift_has_severance() -> bool:
+	return _ghost_shift_ops().has("severance_and_bits")
+
+
+func ghost_shift_inherits_bits() -> bool:
+	var ops := _ghost_shift_ops()
+	return ops.has("seat_and_bits") or ops.has("severance_and_bits")
+
+
+# Resolves one raised Ghost-Shift husk attack on a live enemy as `persistent_actor` (depth-1,
+# never re-entering player weapon procs or DeferredEffects queues), respecting Warden
+# noncontact posture, Boss 0.5x chip, and depth-3 ShotBits inheritance.
+func ally_husk_hit(_husk: Node3D, enemy: Node3D, damage: float, origin: Vector3, shot_bits := 0) -> float:
+	if enemy == null or not is_instance_valid(enemy) or DamageDoor.dead(enemy):
+		return 0.0
+	var final_damage := damage
+	var chip := CHIP
+	var knock := Weapons.LEDGER_KNOCK
+	if ShotBits.has(shot_bits, ShotBits.bit("heat")):
+		var heat := _heat(enemy, enemy.global_position)
+		final_damage *= float(heat["mult"])
+	if ShotBits.has(shot_bits, ShotBits.bit("pierce")):
+		chip = Weapons.PIERCE_CHIP
+	if ShotBits.has(shot_bits, ShotBits.bit("bounce")):
+		knock *= 1.35
+	var pull_dir := Vector3.ZERO
+	var pull_mag := 0.0
+	if ShotBits.has(shot_bits, ShotBits.bit("pull")):
+		pull_mag = pull_force(heft(), Grip.heft_of(enemy), 0)
+		var toward: Vector3 = origin - enemy.global_position
+		toward.y = 0.0
+		if pull_mag > 0.0 and toward.length() > 0.01:
+			pull_dir = toward.normalized()
+			knock = 0.0
+	var dealt := 0.0
+	if (enemy.has_method("_apply_posture") and enemy.has_method("staggered")) or _target_class(enemy) == "boss":
+		dealt = _ult_hit(enemy, "ledger", final_damage, origin, false)
+	elif not (enemy.has_method("knock") and enemy.has_method("flash")):
+		strike(enemy, "ledger", final_damage, "", "persistent_actor", "", chip)
+		dealt = final_damage
+	else:
+		_hit(enemy, "ledger", final_damage, enemy.global_position - origin, knock, "", "persistent_actor", "", chip)
+		dealt = final_damage
+	if pull_mag > 0.0 and pull_dir != Vector3.ZERO and is_instance_valid(enemy) and not enemy.is_dead():
+		enemy.knock(pull_dir, pull_mag)
+	if ShotBits.has(shot_bits, ShotBits.bit("split")):
+		# Single depth-1 split spark to 1 nearest neighbor within 6 m (bits=0, never cascades).
+		var best: Node3D = null
+		var best_d := 6.0
+		for other in get_tree().get_nodes_in_group("enemy"):
+			if other == enemy or not is_instance_valid(other) or DamageDoor.dead(other):
+				continue
+			var d: float = other.global_position.distance_to(enemy.global_position)
+			if d <= best_d:
+				best_d = d
+				best = other
+		if best != null:
+			effects.arc(enemy.global_position + Vector3.UP * 0.8, best.global_position + Vector3.UP * 0.8, Palette.AMBER)
+			ally_husk_hit(_husk, best, damage * 0.5, enemy.global_position, 0)
+	return dealt
