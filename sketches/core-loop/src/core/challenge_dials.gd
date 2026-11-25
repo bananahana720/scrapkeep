@@ -86,7 +86,7 @@ const DEFAULTS := {
 	# 30% of a 120 hull, and the fight asks for more dodges, not one-shot luck. Eight random-policy runs a side
 	# (seeds 2860 to 2867, PR 787): the worst minute at Brindle took a median 40% of max hull before and 71% after,
 	# against 76% to 79% at the dam Warden. Every run that reached Brindle cleared it.
-	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [2.0, 3.5, 3.0, 1.0],
+	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [2.5, 3.2, 2.5, 1.0],
 	"brindle.period_mult": 1.0, "brindle.period_by_phase": [0.6, 0.35, 0.5, 1.0],
 	"brindle.tell_mult": 1.0, "brindle.punish_mult": 1.0, "brindle.combo": 0.0,
 	# Fight phases (fight_phases.gd, Andrew 23 Oct 19:02Z): cued follow-ups after each lead attack, per
