@@ -8,8 +8,6 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const MODEL := "res://assets/models/world_one/rescue_cage.glb"
-# The keeper's scarf (tools/blender/camp/keeper_marks.py) tied round a freed cage's front right post, its tails hanging
-# out past the corner the pilot walks out by. Dressing only: no collider, no group, shown once the cage is open.
 const SCARF := "res://assets/models/world_one/rescue_keeper_scarf.glb"
 const SCARF_AT := Vector3(1.4, 2.55, 1.4)
 const REQUIRED := ["CageFrame", "CageGate", "CageLatch", "CageSeat"]
@@ -17,7 +15,6 @@ const PILOT_QUESTS := {"rivet": "runner_gunner", "dig": "demolitions_caster"}
 const UNLOCK_CLIP := "unlock"
 const IDLE_CLIP := "idle_loop"
 const POSE_BLEND_FREED := "big_cheer"
-# Crossfade between cage poses, and the pilot's walk out to where the freed cage opens.
 const POSE_BLEND := 0.15
 const FREE_MOVE := 0.45
 static var model_path := MODEL
@@ -25,13 +22,6 @@ static var scarf_path := SCARF
 static var _shared := {}
 static var _warned := {}
 
-# The world rescues (DESIGN-V3, pilots): a caged pilot on a map, freed by the player. The
-# map says where (StageMap.rescue_sites: id, at, quest, prompt, and optionally pilot, the class id
-# sitting in the cage; without it PILOT_QUESTS names one by quest), the cage is an ally-family device
-# in the interact system's hold consent, and finishing it emits rescue_completed(quest) on
-# the bus; the profile layer earns the pilot's row from that fact. A quest is rescued once
-# per run: a stage entry, so a retry, rebuilds an unfinished cage and keeps a freed one
-# open. A new run clears the record.
 
 const BREAK_SECONDS := 2.0
 const RING_RADIUS := 4.0
@@ -42,8 +32,6 @@ var cages: Array = []
 var _done := {}
 
 
-# One cage. Hold E (the ally family's hold) to start the lock breaking; it gives way after
-# BREAK_SECONDS whether or not E stays held, with the ring filling as the gauge.
 class Cage extends "res://src/world/device.gd":
 	var quest := ""
 	var owner_site
@@ -58,9 +46,6 @@ class Cage extends "res://src/world/device.gd":
 	var _signal: StandardMaterial3D
 	var _animator: AnimationPlayer
 	var _pose := ""
-	# True once the lock was seen breaking, so a spent cage was freed in front of the player
-	# (not rebuilt spent on a retry): the pilot plays unlock (PILOT-CLIPS section 1.4) instead of
-	# big_cheer when its GLB has it, then idle_loop. tick() stays as pinned.
 	var _freed_now := false
 	var _free_tween: Tween
 	var _scarf: Node3D
@@ -146,7 +131,6 @@ class Cage extends "res://src/world/device.gd":
 				_animator.animation_finished.connect(_on_pilot_clip_done)
 
 	func _on_pilot_clip_done(clip: StringName) -> void:
-		# A pilot without an unlock clip would hold big_cheer's last frame; ease back to idle.
 		var cheer_done := String(clip) == POSE_BLEND_FREED and spent
 		if (String(clip) == UNLOCK_CLIP or cheer_done) and _animator.has_animation(IDLE_CLIP):
 			_pose = IDLE_CLIP
@@ -197,8 +181,6 @@ class Cage extends "res://src/world/device.gd":
 		_latch.rotation.z = fill * PI * 0.5 if breaking else 0.0
 		_signal.albedo_color = Palette.ARC if spent else (Palette.SAND if breaking else Palette.SLATE)
 		_signal.emission_enabled = true
-		# No per-cage light: cages are freed on every stage change, and a freed light
-		# crashes Godot 4.7.2's renderer on the next sealed boss entry. The signal glows instead.
 		_signal.emission = Palette.ARC if spent else Interactables.color(family)
 		_signal.emission_energy_multiplier = 1.0 if spent else (1.2 + fill * 2.0 if breaking else 0.6)
 		if _pilot != null:
@@ -215,8 +197,6 @@ class Cage extends "res://src/world/device.gd":
 			_pose = pose
 			_animator.play(pose, blend)
 
-	# While caged the pilot follows the break gauge; on release it eases out to the freed spot
-	# (landing in place under reduced motion) instead of teleporting.
 	func _place_pilot(fill: float) -> void:
 		if not spent:
 			if _free_tween != null:
@@ -243,7 +223,6 @@ class Cage extends "res://src/world/device.gd":
 	func gauge() -> float:
 		return progress / BREAK_SECONDS if breaking else -1.0
 
-	# The site row's prompt (StageMap.rescue_sites "prompt"), so each cage names who it holds.
 	func terms() -> String:
 		return String(spec.get("prompt", "free the pilot"))
 
@@ -269,7 +248,6 @@ class Cage extends "res://src/world/device.gd":
 		owner_site.complete(quest)
 
 
-# A fresh copy of the scarf's views under one holder, or null when its file is missing (the cage then stands without it).
 static func _scarf() -> Node3D:
 	var packed: PackedScene
 	if _shared.has(scarf_path):
@@ -368,7 +346,6 @@ func setup(ctx_ref, interact_ref) -> void:
 func _on_stage_entered(_stage: int, retry: bool) -> void:
 	clear()
 	if retry:
-		# A retry rewinds run scrap to stage entry, so salvage-only variant cages re-arm alongside it.
 		for quest in _done.keys():
 			if ShiftVariants.cage_salvage_scrap(String(quest)) > 0:
 				_done.erase(quest)
@@ -403,7 +380,6 @@ func is_done(quest: String) -> bool:
 	return bool(_done.get(quest, false))
 
 
-# Every cage still holding its pilot, as [{quest, at}] with at the cage's foot.
 func waiting() -> Array:
 	var out := []
 	for c in cages:
@@ -419,7 +395,6 @@ func cage(quest: String):
 	return null
 
 
-# The one place a rescue finishes: once per quest per run.
 func complete(quest: String) -> void:
 	if is_done(quest):
 		return

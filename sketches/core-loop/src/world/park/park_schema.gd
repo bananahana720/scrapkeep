@@ -1,12 +1,5 @@
 extends RefCounted
 
-# The park file's rules (design-v3/PARK.md section 2, checks in 2.10). validate() returns one
-# error per broken rule as {"id": row id, "rule": rule key, "detail": text}, so a test or a
-# tool names the row to fix. An empty array means the park loads.
-#
-# Rule keys: missing, type, enum, duplicate, reference, waymarks, mounting, pack, family,
-# lead_floor, water_depth, handling, recipe, home_landform, guardrail, line, music_layer,
-# cable, district, approach.
 
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -26,8 +19,6 @@ const LANDFORMS := ["slot_canyon", "arroyo", "dry_wash", "slickrock", "canal", "
 	"sinkhole", "cenote_pool", "flooded_shaft", "cliff_dwelling", "mesa_rim", "butte", "spire",
 	"hoodoo_field", "saguaro_stand", "travertine_terrace", "horseshoe_bend", "river_canyon", "gooseneck",
 	"meteor_crater", "sky_island"]
-# net_weaver: the Highdraft's animals who string the nets, posts and balloon lifts (Andrew's "Now, light" tap,
-# 2026-10-17; stage 6 page section 15 asked for their id).
 const SOCIETIES := ["none", "hohokam", "ancestral_puebloan", "mining", "dam_era", "fleet", "ancient", "net_weaver"]
 const VERBS := ["roll", "pump", "grind", "launch", "drop", "swing", "glide", "lift", "bank", "slam", "cast"]
 const STAMPS := ["", "wash", "channel", "ridge", "mesa", "butte", "spire", "bowl", "terrace", "crater",
@@ -36,7 +27,6 @@ const BUDGETS := ["landform", "park_large", "hero_landmark", "detail"]
 const LANDMARK_KINDS := ["dam", "penstock_tower", "headframe", "sinkhole", "sky_island", "spire"]
 const LIGHTS := ["ancient_beam", ""]
 
-# Each event kind allows one family (section 5).
 const EVENT_FAMILY := {
 	"flood_fill": "natural", "drain": "natural", "cave_in": "natural", "collapse": "natural",
 	"impact": "natural", "flash_flood": "natural", "lightning": "natural",
@@ -46,16 +36,11 @@ const EVENT_FAMILY := {
 const EVENT_KINDS := ["flood_fill", "drain", "cave_in", "collapse", "impact", "flash_flood", "lightning",
 	"fleet_landing", "machine_eruption", "boiler_burst", "reactor_blow", "lift_cage", "zipline_drop", "sluice_surge"]
 const FAMILIES := ["natural", "fleet", "ancient", "industrial"]
-# Telegraph floors (section 5 rule 1): a hazard with no ground change, a ground change, and a
-# Fleet landing or an ancient eruption. A row changes the ground when its kind reshapes the
-# ground or water, or when its effect swaps in an overlay.
 const LEAD_HAZARD_S := 3.0
 const LEAD_GROUND_S := 5.0
 const LEAD_ARRIVAL_S := 8.0
 const GROUND_KINDS := ["flood_fill", "drain", "cave_in", "collapse", "impact", "flash_flood"]
 const ARRIVAL_FAMILIES := ["fleet", "ancient"]
-# Section 5 rule 2: event water is at most the pool depth a ball rolls out of. A collapse's or a
-# cave-in's depth_m is a cut in the ground, not water, so the cap reads only water rows.
 const MAX_EVENT_WATER_M := 1.2
 const WATER_KINDS := ["flood_fill", "flash_flood", "drain"]
 const PHASES := ["engaged", "stagger", "chunk_1", "chunk_2", "chunk_3", "broken"]
@@ -64,7 +49,6 @@ const VESSELS := ["drill_barge", "dropship"]
 
 const HOME_BREAK := ["ram", "slam", "smash", "damage"]
 
-# The keys contraptions.gd reads for each kind (its _build_* and reset()).
 const CONTRAPTION_KEYS := {
 	"barge": ["a", "b", "size", "travel", "dwell", "offset"],
 	"lift": ["at", "radius", "rise", "charge", "offset"],
@@ -80,12 +64,9 @@ const CONTRAPTION_KEYS := {
 const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal", "cinder", "glaze", "sluice_valve"]
 const CONTRAPTION_RECIPES := ["", "gauge", "geyser_vent", "cannon", "trebuchet", "lift_platform", "barge"]
 
-# Activity presentation uses an ACTIVITY_ROWS key or the kind's existing cue.view alias.
 const ACTIVITY_KINDS := ["enemy_camp", "surge_run", "ambush_altar", "cracked_cache", "hauler_bounty", "movement_course", "arena", "elite_arena", "objective_limit", "round_arena", "ambush", "scattered_marks", "hold_the_relay"]
 const WEATHER_KINDS := ["clear", "monsoon", "dust_squall", "heat_shimmer", "cave_mist", "cloud_deck", "thunderstorm"]
 
-# The park recipe registry until KC0 folds the park recipes into assets/registry.json: the
-# starting recipe ids of section 4 and the six hero landmarks. Ids in the asset registry count too.
 const RECIPES := [
 	"half_pipe_concrete", "slot_canyon_flow", "wash_dropin_lip",
 	"canal_lip", "flume_span", "penstock_run", "pipeline_rail",
@@ -103,30 +84,22 @@ const RECIPES := [
 	"skylight_lip", "tube_mouth_lip", "breach_lip", "miners_cap", "great_room_deck", "haulage_bed",
 ]
 const GREYBOX := "greybox:"
-# The ground scatter dresses the row (park_recipes.gd SENSOR_ONLY, with LANDMARK).
 const SCATTER := "scatter"
 const REGISTRY_PATH := "res://assets/registry.json"
 
-# The real-culture guardrail (section 4): these rows house no home, carry only ref_ fragments,
-# and are never the site of a ground-changing or destructive event.
 const GUARDED_SOCIETIES := ["hohokam", "ancestral_puebloan"]
 const GUARDED_EVENT_KINDS := ["cave_in", "collapse", "impact", "machine_eruption", "fleet_landing", "lift_cage", "zipline_drop",
 	"boiler_burst", "reactor_blow"]
 const REF_PREFIX := "ref_"
 
-# One Warden kind per world after KF0 (section 7), and each kind's two mountings. The stage rows
-# in alpha_defs.gd keep the old families until KF0 lands, so the kind is read by world here.
 const WORLD_KINDS := {1: "reactor", 2: "swarm", 3: "mind"}
 const WORLD_ANCIENTS := {1: "reactor_relic", 2: "swarm_remnant", 3: "mind_hand"}
-# Packs the park stage rows add at KD0 (src/core/park_defs.gd, not yet written): the stage 6
-# page's crown_hands (design-v3/park/stages/6-park_crown.md section 7). KD0 moves them to its rows.
 const KD0_PACKS := {6: ["crown_hands"]}
 const MOUNTINGS := {
 	"reactor": ["dam_face", "flume"],
 	"swarm": ["headframe", "sinkhole"],
 	"mind": ["under_island", "spires"],
 }
-# The stage each park map replaces (section 6); the fixture borrows stage 1's row.
 const MAP_STAGE := {
 	"park_dam": 1, "park_flume": 2, "park_pit": 3, "park_sinkhole": 4, "park_islands": 5, "park_crown": 6,
 	"park_test": 1,
@@ -137,7 +110,6 @@ const LANDMARK := "landmark"
 const MIN_WAYMARKS := 3
 const MAX_WAYMARKS := 5
 
-# Pilot lines (section 8, "The lines").
 const PILOTS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
 const LINE_BAND := "PARK.md section 8"
 
@@ -147,10 +119,6 @@ const TOP_FIELDS := {
 	"home_rows": "a", "contraption_rows": "a", "weather_rows": "a", "activity_rows": "a",
 }
 const SPAWN_FIELDS := {"at": "v2", "heading_deg": "n"}
-# Optional at the top (wave 36, ruling cv): how the stage is left ("exit") and entered ("arrives"), and where its
-# own frame sits in the world 1 atlas. The exit's place and heading are the middle gate slot's, the arrival's are
-# the spawn's, so ParkMap.handover() reads each fact once. speed_cruise is a share of cruise speed. HANDOVER_PAIRS
-# says which arrival kind an exit kind pairs with (a launch lands, a slide is a slide).
 const HANDOVER_PAIRS := {"launch": "land", "slide": "slide", "door": "door", "drop": "drop"}
 const HANDOVER_OPENS := ["warden_broken", "boss_defeated"]
 const ATLAS_FIELDS := {"origin": "v2", "heading_deg": "n"}
@@ -161,43 +129,16 @@ const PARK_FIELDS := {
 	"size": "v3", "yaw_deg": "n", "verb": VERBS, "ride_fact": "s", "home": "s", "recipe": "s",
 	"stamp": STAMPS, "hole": "b", "budget": BUDGETS, "routes": "a", "fragment": "s",
 }
-# Optional on a park row, absent on every row that places as before: "seat" seats a GLB recipe on the ground at its
-# entry and exit (park_recipes.gd seat_fit); "tile" repeats a shorter GLB recipe end to end, each copy seated on the
-# ground at its own ends (park_recipes.gd tile_fit); "drape" stands a ground-conforming GLB on the seat of its stamp
-# (park_recipes.gd fits_drape, seat), with no `y`, so the graph reads no deck.
 const FITS := ["seat", "tile", "drape"]
-# Optional on a park row: explicit map standard point 5 cover tag (park_recipes.gd COVER_KINDS).
 const COVERS := ["hard", "soft", "surface"]
-# Optional on a park row: "clear_view" keeps trees out of the strip behind the row's rear edge, so a ball
-# arriving over the row sees what lies past it (spillway_scenery.gd, park_sites.gd in_clear_view). depth_m is how
-# far back from the rear edge, half_width_m how far either side of the row's centre line.
 const CLEAR_VIEW_FIELDS := {"depth_m": "n", "half_width_m": "n"}
-# Optional on a park row: "music_layer" names a layer_* WORLD_ROWS kind its ride sensor publishes on entry, beside its
-# ride fact; a row with recipe "" gets a listening sensor of its footprint and nothing else (park_recipes.gd
-# place_layer). The music bakes each layer's sound_next; until then its stand-in sound plays.
 const MUSIC_LAYER_PREFIX := "layer_"
-# Optional at the top: "rescue_rows", the stage's caged pilots (rescue_site.gd). pilot is the ClassDef id sitting in
-# the cage, so who is rescued is data; quest is what rescue_completed carries (the achievement rows key on it).
 const RESCUE_FIELDS := {"id": "s", "site": "s", "at": "v2", "face": "v2", "quest": "s", "pilot": "s", "prompt": "s"}
-# Optional at the top: "wear_rows", the worn haul lanes painted into the ground tint (park_terrain.gd paint_wear). points
-# is a polyline of two or more [x, z] metres in any direction; width_m is the lane's full width in metres.
 const WEAR_FIELDS := {"id": "s", "points": "a", "width_m": "n"}
-# Optional at the top: "survival_rows", the places a survival count can stand (survival_count.gd FORMS names the
-# form; activities.gd builds one row of a form a run, and only with --stocktake=on). They are not activity rows, so
-# nothing that reads the stage's activities sees them.
 const SURVIVAL_FIELDS := {"id": "s", "form": ["yard", "muster", "ring"], "at": "v2"}
-# Optional at the top: "approach", the last of the floor line dressed as the way to the boss's bowl
-# (bowl_approach.gd, only with --approach=on). to names the bowl; smoke is where its furnace stands, which may be
-# off the map, in the direction the stage's launch leaves; optional far_card places a flat horizon card along the
-# exit line outside play_rect (design-v3/WAYFINDING.md sections 2.1 and 6).
 const APPROACH_FIELDS := {"to": "s", "smoke": "v2"}
 const FAR_CARD_FIELDS := {"at": "v2", "to": "s"}
-# Optional at the top (design-v3/WAYFINDING.md sections 3 and 6, ruling ek): command cables from the clamp to crew
-# homes, ordered by pip 1..N where N is the park gate's packs in lock_rows.gd (0 packs -> no cables).
 const CABLE_FIELDS := {"id": "s", "pip": "n", "to": "s", "via": "a"}
-# Optional at the top (design-v3/WAYFINDING.md sections 2.2, 6 and 7, ruling ek): non-overlapping park districts.
-# World 1 names are checked against design-v3/NAMES.md ("Places in world 1"); parked worlds 2 and 3 accept any
-# unique non-empty name until their name tables land, with no code change.
 const DISTRICT_NAMES := [
 	"Intake Catwalks", "Spillway Apron", "Sunken Pump Yard",
 	"Weir Bobsled", "Trestle Span", "Headhouse Overlook",
@@ -236,10 +177,9 @@ const ROUTE_FIELDS := {"id": "s", "from": "s", "to": "s", "via": "a"}
 
 static var _registry_ids: Dictionary = {}
 static var _registry_read := false
+static var _registry_lock := Mutex.new()
 
 
-# The stage row facts the park cross-checks: stage, world, Warden kind, and the world's pack ids.
-# Empty for a map with no stage.
 static func stage_context(map_id: String) -> Dictionary:
 	var stage := int(MAP_STAGE.get(map_id, 0))
 	if stage == 0:
@@ -257,14 +197,11 @@ static func stage_context(map_id: String) -> Dictionary:
 		for pack in KD0_PACKS.get(int(row["stage"]), []):
 			if not packs.has(pack):
 				packs.append(pack)
-	# The director's ancient pack, named by the world's ancient kind.
 	packs.append(WORLD_ANCIENTS[world])
 	return {"stage": stage, "world": world, "warden_family": WORLD_KINDS[world], "packs": packs,
 		"gate_packs": int(LockRows.row(map_id).get("gate", {}).get("packs", 0))}
 
 
-# Parse a park or line file. {"data": Dictionary, "errors": Array}; a file that is not a JSON
-# object is one "parse" error on the id "file".
 static func read_file(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {"data": {}, "errors": [_error("file", "parse", "no file at " + path)]}
@@ -327,7 +264,6 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	var landmark: Dictionary = park["landmark"]
 	_landmark(out, landmark, ctx)
 
-	# Places a route or a waymark may name: the drop-in, the landmark, a park row or an activity.
 	var places := {DROP_IN: true, LANDMARK: true}
 	for id in rows:
 		places[id] = true
@@ -361,7 +297,6 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	for id in activities:
 		_site(out, id, activities[id], rows)
 		_activity_pack(out, id, activities[id])
-		# A surge course runs down a park route's rows (surge_course.gd path).
 		if activities[id]["activity"] == "surge_run" and not routes.has(activities[id].get("route")):
 			_add(out, id, "reference", "a surge_run names a park route, not %s" % str(activities[id].get("route")))
 		if activities[id].has("face") and not (_typed(activities[id]["face"], "v2") and _v2_len(activities[id]["face"]) > 0.0):
@@ -382,9 +317,6 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	return out
 
 
-# Pilot lines for one stage (assets/park/<map_id>/lines.json) against its park file: every line
-# starts at drop_in, names the stage's waymarks in order, ends at landmark, and its bar points
-# at the section 8 bands.
 static func validate_lines(lines: Dictionary, park: Dictionary) -> Array:
 	var out := []
 	if not _fields(out, "lines", lines, {"map": "s", "stage": "n", "pilots": "o", "floor": "o"}):
@@ -410,7 +342,6 @@ static func validate_lines(lines: Dictionary, park: Dictionary) -> Array:
 			_add(out, pilot, "line", "bar.band is %s, expected %s" % [bar["band"], LINE_BAND])
 	if _fields(out, "floor", lines["floor"], {"waypoints": "a"}):
 		_line_path(out, "floor", lines["floor"]["waypoints"], waymarks)
-		# Optional: the floor line's scrap, laid to the beat (park_map.gd scrap_trail).
 		if lines["floor"].has("scrap") and _fields(out, "floor.scrap", lines["floor"]["scrap"], {"spacing_m": "n", "phrase": "n", "rest": "n"}):
 			var scrap: Dictionary = lines["floor"]["scrap"]
 			var whole := float(scrap["phrase"]) == floorf(float(scrap["phrase"])) and float(scrap["rest"]) == floorf(float(scrap["rest"]))
@@ -576,9 +507,6 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 		if not routes.has(route):
 			_add(out, id, "reference", "route %s is no route" % str(route))
 	_recipe(out, id, row["recipe"])
-	# The optional park row fields. "fit" opts a GLB row in to park_recipes.gd's seat fit (PARK-SEAT, 2026-10-16) or
-	# its tile fit (PARK-TILE, 2026-10-16) or its drape fit (dam kit, 2026-10-17). "rider" sets a GLB down beside the row
-	# whose jib turns when its "on" fact first fires (the dam's crest crane, 2026-10-18).
 	if row.has("fit"):
 		if not FITS.has(row["fit"]):
 			_add(out, id, "enum", "fit %s is not in its list" % str(row["fit"]))
@@ -586,8 +514,6 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 			_add(out, id, "fit", "fit %s needs a GLB recipe, not %s" % [row["fit"], str(row["recipe"])])
 	if row.has("cover") and not COVERS.has(row["cover"]):
 		_add(out, id, "enum", "cover %s is not in its list" % str(row["cover"]))
-	# Optional: "off_spine": true keeps the row's graph zone an off-spine dead end for the rib pay rate
-	# (director.off_spine), whatever the graph reads (ruling bd).
 	if row.has("off_spine") and not row["off_spine"] is bool:
 		_add(out, id, "type", "off_spine %s is no bool" % str(row["off_spine"]))
 	if row.has("clear_view"):
@@ -598,10 +524,6 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 		var layer = row["music_layer"]
 		if not layer is String or not String(layer).begins_with(MUSIC_LAYER_PREFIX) or not EventKinds.WORLD_ROWS.has(layer):
 			_add(out, id, "music_layer", "music_layer %s is no %s* WORLD_ROWS kind" % [str(layer), MUSIC_LAYER_PREFIX])
-	# Optional: "hide_on" names a natural collapse or impact event row (EventKinds.HIDING_NATURAL_KINDS) with an
-	# effect.swap. event_ground.gd hides the row's placed node (and so its collider) while that swap is live and shows
-	# it again on revert. Industrial and ancient events re-prepare on every activation, cave entries never reach
-	# apply_swap and the other natural kinds build no swap entry, so the contract stops short of them.
 	if row.has("hide_on"):
 		var event_id = row["hide_on"]
 		if not event_id is String or not events.has(event_id):
@@ -638,7 +560,6 @@ static func _event_row(out: Array, id: String, row: Dictionary, rows: Dictionary
 	_trigger(out, id, row["trigger"], false)
 	if row["trigger"].get("on") == "activity" and not activities.has(row["trigger"].get("value")):
 		_add(out, id, "reference", "trigger activity %s is no activity row" % str(row["trigger"].get("value")))
-	# The sluice is the surge course's water (activities.gd): it opens only when that course's ring is rolled into.
 	if kind == "sluice_surge" and row["trigger"].get("on") != "activity":
 		_add(out, id, "trigger", "a sluice_surge opens on its surge_run activity, not on %s" % str(row["trigger"].get("on")))
 	if _fields(out, id, row["telegraph"], TELEGRAPH_FIELDS):
@@ -676,14 +597,9 @@ static func _lead_floor(row: Dictionary) -> float:
 	return LEAD_HAZARD_S
 
 
-# combat.gd spawn_enemy turns an unknown kind into a chaser with only a warning, and an enemy camp
-# with an empty pack never starts, so its pay is unreachable.
 const SET_PIECE_KINDS := ["miniboss", "warden", "vault"]
 
 
-# W1-70: an activity row may list alternatives, one drawn per run (activities.gd drawn). An alternative names its
-# own activity and pack and keeps the row's place, site, pay and pocket role (PARK.md 2.12), so every map check
-# that reads the row holds whichever is drawn: a camp stays a camp, a risk stays a risk, the pay ladder stands.
 static func _activity_alts(out: Array, id: String, row: Dictionary) -> void:
 	var alts = row["alts"]
 	if not (alts is Array and not (alts as Array).is_empty()):
@@ -707,8 +623,6 @@ static func _activity_alts(out: Array, id: String, row: Dictionary) -> void:
 		_activity_pack(out, label, alt)
 
 
-# The pocket role an alternative must keep (park_placement.gd's kinds, not preloaded: it preloads this file), "" for a
-# kind that cannot vary: a cache has an assigned interior, a surge course its route and sluice, a relay its stake post.
 static func _alt_role(kind: String) -> String:
 	if kind == "enemy_camp":
 		return "online"
@@ -785,17 +699,17 @@ static func _recipe(out: Array, id: String, recipe: String) -> void:
 
 
 static func _registry() -> Dictionary:
-	if _registry_read:
-		return _registry_ids
-	_registry_read = true
-	var read := read_file(REGISTRY_PATH)
-	for row in read["data"].get("assets", []):
-		if row is Dictionary and row.get("id") is String:
-			_registry_ids[row["id"]] = true
+	_registry_lock.lock()
+	if not _registry_read:
+		var read := read_file(REGISTRY_PATH)
+		for row in read["data"].get("assets", []):
+			if row is Dictionary and row.get("id") is String:
+				_registry_ids[row["id"]] = true
+		_registry_read = true
+	_registry_lock.unlock()
 	return _registry_ids
 
 
-# The park row a row's site names, or {} with a reference error.
 static func _site(out: Array, id: String, row: Dictionary, rows: Dictionary) -> Dictionary:
 	if rows.has(row["site"]):
 		return rows[row["site"]]
@@ -803,8 +717,6 @@ static func _site(out: Array, id: String, row: Dictionary, rows: Dictionary) -> 
 	return {}
 
 
-# Check every row of one table; returns the well-formed rows keyed by id. A malformed row
-# reports its errors and is left out of the reference checks.
 static func _rows(out: Array, park: Dictionary, table: String, spec: Dictionary) -> Dictionary:
 	var by_id := {}
 	var index := 0
@@ -824,7 +736,6 @@ static func _rows(out: Array, park: Dictionary, table: String, spec: Dictionary)
 	return by_id
 
 
-# True when every field is present with its type; enum lists imply a string.
 static func _fields(out: Array, id: String, value, spec: Dictionary) -> bool:
 	if not value is Dictionary:
 		_add(out, id, "type", "expected an object")

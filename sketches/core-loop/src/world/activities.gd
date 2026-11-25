@@ -35,36 +35,14 @@ const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const SurgeCourse := preload("res://src/world/surge_course.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 
-# A surge course's ring was rolled into (its row id): the world opens the park's sluice row on it.
 signal sluice_opened(row_id: String)
-# The course was won or lost: the world ends the sluice row early.
 signal sluice_closed(row_id: String)
 
-# The standing activities (LEGIBILITY sections 7 and 9, wave R3): optional things on a map that
-# stand lit from the stage's first frame, finish on an action the player already knows and pay
-# one part at the spot. No timer, no prompt, no key. The map says where (StageMap.activity_sites),
-# EventKinds.ACTIVITY_ROWS says how a site looks and sounds, RULES says how it starts, what
-# finishes it and what it pays. A site whose id has no rule is not built (surge_run has no site
-# on the Reach). A stage entry, so a retry and a new run too, builds every site unfinished; a
-# finished site stays finished until the next stage entry.
-#
-# starts:   "ring" (the ball inside `ring` metres), "none" (nothing starts it) or
-#           "near_or_hit" (the ball inside `wake` metres, or the brute is hit).
-# finishes: "pack_dead" (every enemy the ring spawned is dead), "wall_broken" (the cache's wall
-#           goes to a ram at RAM_MIN_PER_CRUISE x cruise or a slam of at least that strength) or "brute_dead".
-# pay:      `scrap` (180, so three activities lift the ball two heft classes), taken with one
-#           part from `rarities` or an authored `named` part id, as a pickup at `where`: the altar, the pedestal or the
-#           place the brute fell, or the relay's mast. A roll with no part pays the scrap when the activity finishes. part_gained carries `source`, which is not in
-#           EventKinds.CEREMONY_SOURCES, so no ceremony pauses the game for it. The first activity finished
-#           in a stage entry also adds the next companion piece (Companion.DROP_ORDER) to the run, unequipped.
 const PAY_RARITIES := ["common", "rare"]
 const PAY_SCRAP := 180
-# A pocket interior's cover block and entrance bollard (pocket_kit.glb), the block built 4 by 3 by 4 m.
 const POCKET_KIT := "res://assets/models/world_one/pocket_kit.glb"
 const POCKET_PARTS := ["PocketBlock", "PocketPost"]
 const POCKET_BLOCK := Vector3(4.0, 3.0, 4.0)
-# Site architecture and small ground props fade out past these distances so a park-wide landmark view does not
-# draw pockets, caches, wards and lore plates a kilometre away. Wayfinding beacon columns (ActivityView) stay unranged.
 const SITE_VIEW_END_M := 420.0
 const PROP_VIEW_END_M := 360.0
 const VIEW_MARGIN_M := 30.0
@@ -112,8 +90,6 @@ const RULES := {
 	},
 	"enemy_camp": {
 		"starts": "ring", "ring": 8.0, "pack": ["chaser", "chaser", "chaser"], "finishes": "pack_dead",
-		# The on-line pocket's common roll (PARK.md 2.12; ruling bu, 2026-11-09: a camp pays from the pool,
-		# where it always paid Hot Rivets). A park row may still author a named part.
 		"pay": {"scrap": PAY_SCRAP, "rarities": ["common"], "source": "activity_camp", "where": "camp"},
 	},
 	"ambush_altar": {
@@ -123,52 +99,25 @@ const RULES := {
 	"cracked_cache": {
 		"starts": "none", "ring": 5.0, "finishes": "wall_broken", "face": Vector2(0.0, -1.0),
 		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_cache", "where": "pedestal"},
-		# A bump under the ram's bar answers with the roll's refused cue (ruling p), so the face reads as
-		# "faster", not as solid: from `floor` x cruise up to the bar, in these worlds, once a face every
-		# `gap_s` of play. Under the floor (a ball resting on or easing into the face) it stays quiet.
 		"refused": {"worlds": [1], "floor": 0.4, "gap_s": 3.0},
 	},
-	# Hold the Relay in a park (W13 SR10): a stake post `post_out` metres outside the ring, past the
-	# miniboss zone, on the side facing the stage's drop-in, takes 0 to 4 stacks before the ball rolls into the ring; the
-	# ring then charges by hold_relay.gd's rule. The relay's pack credit (`waves` buys of `pack`)
-	# and its miniboss count are both times 1 + k, and it pays 1 + k part rolls. Packs come every
-	# `wave_s` while it charges and never two inside `pack_gap_s`; what the relay stands at once,
-	# minibosses included, stays inside the attacker budget (relay_budget). Minibosses come from
-	# `miniboss_at` in steps of `miniboss_step` of the charge. A loss frees the stake after
-	# `retry_s`.
 	"hold_the_relay": {
 		"starts": "ring", "ring": HoldRelay.RULE["radius"], "finishes": "relay", "pack": ["chaser", "chaser", "lobber"],
 		"waves": 3, "wave_s": 6.0, "pack_gap_s": 0.5, "miniboss_at": 0.35, "miniboss_step": 0.12,
 		"post_out": 26.0, "retry_s": 12.0, "budget": {"start": 6, "per_class": 1, "per_world": 2, "cap": 12},
 		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_relay", "where": "relay"},
 	},
-	# The Stocktake yard (BACKLOG W1-101; survival_count.gd owns the counts, their clocks and the pay ladder): one of
-	# the park's survival_rows of this `form`, drawn by the run's seed, and only with --stocktake=on. Rolling into
-	# the ring starts count 1. A count's machines climb in on the ring's edge one every `arrive_s`. With the gate
-	# open the ring turns the live colour, and rolling out of it from inside banks the pay (scrap and cores at once,
-	# parts on a pickup in the ball's path); staying takes the next count. `out_s` outside the ring with the gate
-	# shut, or the ball destroyed, forfeits it all. It wears the bounty's marker row under its own word.
 	"stocktake_yard": {
 		"starts": "ring", "ring": 40.0, "finishes": "count", "pack": [], "form": "yard", "arrive_s": 0.4, "out_s": 4.0,
 		"pay_ahead_m": 12.0, "pay": {"scrap": 0, "rarities": [], "source": "activity_yard", "where": "gate"},
 		"cue": {"view": "hauler_bounty", "word": "Stocktake"},
 	},
-	# The Stocktake muster (BACKLOG W1-101, the form that comes to the ball): the yard's rule on ground that travels.
-	# One run in `one_in`, by the run's seed. When the ball comes within `call_m` of the park's muster row a siren
-	# announces it, and `siren_s` later the ring lands where the ball is and count 1 climbs in. The ring then rides
-	# survival_count.gd's loop (FORMS muster), setting off the way the ball was heading. Gate, bank and forfeit are
-	# the yard's.
 	"stocktake_muster": {
 		"starts": "ring", "ring": 24.0, "finishes": "count", "pack": [], "form": "muster", "arrive_s": 0.4, "out_s": 4.0,
 		"one_in": 3, "call_m": 100.0, "siren_s": 6.0,
 		"pay_ahead_m": 12.0, "pay": {"scrap": 0, "rarities": [], "source": "activity_yard", "where": "gate"},
 		"cue": {"view": "hauler_bounty", "word": "Stocktake"},
 	},
-	# The surge course in a park (surge_course.gd): rolling into the ring by the head of the activity row's `route`
-	# opens the sluice (the park's sluice_surge event row, triggered on this row), and when the gate lands the water
-	# chases the ball down the route's grind rows through the gates. A ring with no sluice heard opens anyway after
-	# `fallback_s`. Taking every gate before the front pays one part into the ball's path; a loss re-arms after
-	# `retry_s`. The front only ever pushes the ball on (EventDirector.never_brake) and never hurts it.
 	"surge_run": {
 		"starts": "ring", "ring": 7.0, "finishes": "surge", "fallback_s": 10.0, "retry_s": 12.0,
 		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_surge", "where": "ball"},
@@ -182,19 +131,11 @@ const RULES := {
 
 const PICKUP_REACH := 1.7
 const PICKUP_HEIGHT := 3.0
-# The activity kinds that stand a survival count (survival_count.gd), each on a park survival_rows row of its form.
-# Ground inside the ring may stand this far off an even slope through the ring's centre, and that slope may be this
-# steep (rise over run; survey_posts.gd stands its posts on no steeper).
 const RING_RISE_M := 10.0
 const RING_SLOPE := 0.45
-# A travelling ring keeps this far past another site's own ring: a pocket's walls and cover stand outside its ring.
 const SITE_PAD_M := 20.0
-# How far apart the ground inside a ring is read for a rise.
 const RING_READ_M := 6.0
-# A muster whose siren has ended waits this long for the ball to reach ground a ring fits on, then stands down; it
-# can be called again once the ball has been out of its call range.
 const MUSTER_WAIT_S := 20.0
-# A contraption row with no size of its own (a valve, a lift, a launcher) is taken as this wide a disc.
 const CONTRAPTION_M := 6.0
 const SURVIVAL_KINDS := ["stocktake_yard", "stocktake_muster"]
 const RING_HEIGHT := 8.0
@@ -202,62 +143,31 @@ const BRUTE_DROP := 2.4
 const SPAWN_CLEARANCE := 2.4
 const PACK_TURN := PI / 6.0
 
-# The cache's pocket: the cracked face, two side walls, a back wall and the pedestal, in the
-# site's frame with +z out through the face.
 const WALL_HALF_W := 6.0
 const WALL_DEPTH := 8.0
 const WALL_HEIGHT := 6.0
 const WALL_SINK := 3.0
 const WALL_REACH := 3.0
-# The ball touching the face: its centre one radius (Tuning.RADIUS 1.0) and a little more off it.
 const WALL_CONTACT := 1.2
 const SLAM_REACH := 7.0
-# `slammed` carries the ball's own strength for the landing (player.slam_strength), not a speed.
-# A slam breaks the wall at SLAM_MIN_PER_CRUISE times the strength of a flat landing at cruise speed,
-# a landing at cruise. It stays at full cruise, over the ram's bar: slam_strength floors at 0.4, so a bar
-# at 0.85 x cruise (strength 0.397) would let any flat landing break the wall.
 const SLAM_MIN_PER_CRUISE := 1.0
-# A ram breaks the wall at RAM_MIN_PER_CRUISE times cruise into the face. A held stick climbs toward
-# cruise and never quite reaches it on a run-up (12.6-13.8 m/s over 10-22 m, 14.0 only after 30 m),
-# so with the bar at cruise itself only the speed bank's roll start or a burst broke the wall: a player
-# already rolling at full speed bumped the face (cautious red team, 26 Oct). A nudge stays under it.
 const RAM_MIN_PER_CRUISE := 0.85
-# A park row's `bar` raises a cache wall to a speed tier (W1-76, Shift's job in world 1): only a ram into
-# the face at that tier of the unmodded cruise breaks it, and a slam never does. The streaks read the
-# modded cruise, so a cruise item can break the wall before they turn (overpowered pays, 24 Oct ruling).
-# Under the bar the refused cue still answers, so the face reads as "faster".
 const BARS := {"blazing": SpeedTier.BLAZING}
 const PEDESTAL_BACK := 4.0
 const CACHE_LANE_OFFSET := 6.0
-# The first-win room's log line on the back wall, on a dark crew board of its own: the fired wall
-# glows sand (CACHE_FIRED_GLOW), so text straight on it washes out. The board sits above the ball's
-# eye line, clear of the centre prompts and the beacon's beam, and its wrap keeps it inside the
-# board at Label3D's 0.005 m per pixel.
 const ROOM_LOG_HEIGHT := 4.5
 const ROOM_LOG_WIDTH_PX := 1240.0
 const ROOM_BOARD_SIZE := Vector2(7.0, 1.5)
-# The room's tell from outside, for a sharp eye only: a crew chalk tally on the cracked face and one
-# work glove hung on a nail beside it (the crew were the Mind's hands, worlds.gd). An ordinary cracked
-# cache has neither. Both sit on the face, not the ground: Terrain3D's drawn floor can stand above the
-# collider by more than a glove's height, which buried a glove laid on the ground.
 const ROOM_TALLY_AT := Vector3(3.6, 1.3, 0.52)
 const ROOM_TALLY_STROKE := Vector2(0.14, 1.1)
 const ROOM_GLOVE_AT := Vector3(2.3, 2.3, 0.5)
 const ROOM_GLOVE_SCALE := 1.6
-# The back wall's own glow once the wall is fired. No light: a per-site OmniLight3D freed on
-# a stage change made Godot 4.7.2 Forward+ segfault on the next boss entry (GPU only), as the
-# wave 9 cage light did.
 const CACHE_FIRED_GLOW := {"energy": 0.8}
-# A field find's tells: seep streaks on the cracked face (x, y, width in metres) and the radio aerial.
 const FIND_SEEP_STREAKS := [Vector3(-2.6, 0.4, 0.5), Vector3(-1.9, 0.1, 0.3), Vector3(2.2, 0.6, 0.4)]
 const FIND_AERIAL_M := 3.2
-# The timed door's punch clock plate, square, on the cracked face.
 const DOOR_CLOCK_M := 1.6
-# One wet material for every seep streak.
 static var _find_wet: StandardMaterial3D
 
-# How near the ball must be to a site it has started for the site to be the one at hand, and how
-# far it must roll before a site that was at hand lets go (at_hand).
 const AT_HAND_M := 80.0
 const LET_GO_M := 100.0
 
@@ -272,49 +182,23 @@ var _graph
 var _graph_map := ""
 var _draw_layout := {}
 var _draw_map := ""
-# The SI3 row this stage's draw applied, {} for none; the stage card shows the same row.
 var stage_modifier := {}
 var _mark_pools := {}
-# A park map's stage-entry data (SWAP-HITCH): the baked graph, the trade-pocket candidates and,
-# for a map played past stage 1, the pocket-draw layout. All three read only the graph and the
-# map's authored rows, so a worker builds them for the next stage's map while this one plays,
-# from a copy taken on the main thread, and hands them back as plain data. Map id -> {"task",
-# "out"} while the worker runs, then {"pool", "layout"}; the graph goes to shared_graph.
 var _prep := {}
-# One read graph per path for the game's readers (activities, audio's parameter sampler). Main
-# thread only: a search writes the graph's own heap, so a worker reads a private graph and hands
-# it in through _adopt_graph. Here, not in park_graph.gd, whose source the baked graphs hash.
 static var _shared_graphs := {}
-# The main-thread time of the last stage_entered handler, for stage_entry_budget_test.
 var last_entry_usec := 0
-# That handler's parts, each "part ms" (clear, then a site id per _build), so the test can name what a slow entry built.
 var last_entry_steps := PackedStringArray()
-# The next stage's sites, built during a launch's flight under a hidden, disabled holder (the flume entry's longest
-# part, 37 ms of 105 on the 4080): {"stage", "holder", "plan", "built", "grounds"}, {} when none. The entry takes each
-# one whose plan entry it would build again, and ground under it reads the same, and builds the rest as before.
 var _ahead := {}
-# Where _build_site puts a site: this node, or the ahead holder while it builds.
 var _site_parent: Node = null
-# The flight plans this many ticks after the launch, and builds from the tick after: the launch frame stays the kick's.
 const AHEAD_PLAN_TICKS := 2
-# The main-thread time of the flight's plan, for tests.
 var last_ahead_plan_usec := 0
-# The flight's builds, each "id ms", as last_entry_steps.
 var last_ahead_steps := PackedStringArray()
-# How many sites the entry took from the ahead build, for tests.
 var last_entry_adopted := 0
-# The holders whose sites this stage adopted.
 var _holders: Array = []
-# This stage entry's mend wards and lore plates (W45 P3).
 var wards: Array = []
 var plates: Array = []
-# The trade interior's block material, built once instead of a checker texture a block;
-# dress_props reads its two colours and replaces it, so every block can share it.
 static var _interior_block: StandardMaterial3D
 static var _wall: PhysicsMaterial
-# True on the Game's own instance (setup ran), whose _exit_tree is the Game's teardown. A
-# contraption's cache helper (contraptions.gd) leaves with its stage root on a stage exit, and
-# releasing the shared caches there dropped the next stage's plans before its retry (SWAP-HITCH-3).
 var _owns_shared := false
 
 const POCKET_HEAL_SHARE := 0.15
@@ -323,10 +207,7 @@ const POCKET_SAFE_M := 4.0
 const POCKET_DAMAGE_PER_S := 8.0
 const MARK_SPACING_M := 80.0
 const MARK_POOL_SIZE := 16
-# A charging relay reports its progress when it has moved this far (event_director's step).
 const RELAY_PROGRESS_STEP := 0.01
-# The head-gate crew's lines on the ring's word, in the crew-log voice (design-v3/TONE-BIBLE.md: deadpan words, no
-# jokes about the rider; the siren and the water carry the noise). Their post stands beside the ring (props flume_c01).
 const SURGE_WORDS := {
 	"open": "Head gate: wheel turning. Stay ahead of the water.",
 	"won": "Head gate log: wheel shut. One ball through, flume dry.",
@@ -334,10 +215,8 @@ const SURGE_WORDS := {
 }
 
 
-# One standing activity: its rule, its look, its state and, once it has finished, its pay.
 class Site extends Node3D:
 	var id := ""
-	# The park row it stands at ("" for a site no row authors).
 	var row_id := ""
 	var rule := {}
 	var view
@@ -368,7 +247,6 @@ class Site extends Node3D:
 	var heal_paid := false
 	var tier_label: Label3D
 	var difficulty := 1.0
-	# The physics frame of this face's last refused cue (RULES cracked_cache refused).
 	var refused_frame := -1
 	var round := 0
 	var round_elements: Array = []
@@ -401,18 +279,13 @@ class Site extends Node3D:
 	var surge_wait := 0.0
 	var surge_shown := -1.0
 	var yard
-	# The machines of the counts sent so far that have yet to climb in: [kind, health scale] each.
 	var yard_owed: Array = []
 	var yard_wait := 0.0
 	var yard_out := 0.0
-	# The ball has been inside the ring with this gate open, so crossing out is its choice to bank.
 	var yard_may_bank := false
-	# A muster: called (its siren has sounded), the seconds of siren left before it lands (under 0, the seconds it
-	# has waited for ground a ring fits on), and stood down (it found none; the ball must leave before a new call).
 	var yard_called := false
 	var yard_siren := -1.0
 	var yard_stood := false
-	# The yard's stand and gate (stocktake_dress.gd), or null.
 	var yard_dress
 	var yard_mast: Node3D
 
@@ -420,16 +293,10 @@ class Site extends Node3D:
 		for enemy in pack + minibosses:
 			if is_instance_valid(enemy):
 				enemy.queue_free()
-		# The muster's mast stands under the sites' parent, not under this site, so it goes with it here.
 		if is_instance_valid(yard_mast):
 			yard_mast.queue_free()
 
 
-# A mend ward (W45 P3, secrets.gd WARDS): a keeper's lamp post and a ground ring in a dead end off every line. The ball
-# rolling into the ring wakes its guard; while the ball holds inside, the ring fills over CHARGE_S and drains at
-# DRAIN outside it; full, it mends HEAL_SHARE of the hull, once a stage entry. Ruling cu: the mend asks the ball to
-# stop while a pack presses it, so a ward whose guard never stood (calm, or ground that refused every spawn) never
-# fills. step() is the whole rule; activities.gd spawns the guard and pays the mend.
 class MendWard extends Node3D:
 	const RING_M := 5.0
 	const GUARD_M := 9.0
@@ -445,7 +312,6 @@ class MendWard extends Node3D:
 	var guard: Array = []
 	var fill: MeshInstance3D
 
-	# One tick: "wake" the tick the ball first enters, "mend" the tick the ring fills, else "".
 	func step(delta: float, inside: bool) -> String:
 		if paid:
 			return ""
@@ -471,21 +337,14 @@ class MendWard extends Node3D:
 				enemy.queue_free()
 
 
-# A lore plate (W45 P3, secrets.gd PLATES): a flush disc at a row's fragment, set on the surface the ball rolls on
-# there and tilted to it (terrain.gd top_surface). Unread, an amber face stands proud of a charcoal rim and glows
-# faintly: the dark rim reads on pale ground, the amber on dark. The ball rolling over it files its field note once;
-# the face then sinks flush and goes to bare copper. touch() is the rule: true only the first time.
 class LorePlate extends Node3D:
 	const REACH_M := 2.6
 	const HEIGHT_M := 3.0
-	# A ball centre this far under the face still counts (a ball on the face rides 1 m over it); deeper is a ball
-	# rolling under the deck the plate sits on.
 	const BELOW_M := 0.25
 
 	var note := ""
 	var read := false
 	var seated := false
-	# The ground under it moved (terrain surface_changed): it sits where it was until top_surface answers again.
 	var reseat := false
 	var at := Vector2.ZERO
 	var face: MeshInstance3D
@@ -512,10 +371,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.slammed.connect(func(at: Vector3, strength: float, _flatness: float): _slammed(at, strength))
 	ctx.events.world_fact.connect(_on_world_fact)
 	ctx.events.player_died.connect(_forfeit_yards)
-	# The trade devices' plate finish neutralises its texture pixel by pixel on first use (about
-	# 55 ms, SWAP-HITCH-2); Palette caches it, so it is made here rather than on a stage entry.
 	Palette.look_texture("rusted-salvaged-plate-worn", true)
-	# The polish bake's shade ramp is drawn pixel by pixel too, on the first enemy spawn's frame.
 	BakeLook.ramp()
 	_prepare_stage(1)
 
@@ -525,7 +381,6 @@ func _exit_tree() -> void:
 		_settle(id)
 	if not _owns_shared:
 		return
-	# No static keeps a map, mesh, shape or material once the Game is freed.
 	load("res://src/world/director.gd").release_parks()
 	load("res://src/world/events/natural.gd").release_plans()
 	load("res://src/presentation/set_dressing.gd").release_shared()
@@ -534,8 +389,6 @@ func _exit_tree() -> void:
 	_wall = null
 
 
-# Waits once on a map's entry-data worker and takes its results. worker_layout records that the
-# worker computed the layout, so a test can tell it from one _enter_stage computes later.
 func _settle(id: String) -> void:
 	if not _prep.has(id) or not _prep[id].has("task"):
 		return
@@ -545,7 +398,6 @@ func _settle(id: String) -> void:
 	_prep[id] = {"pool": done.pool, "layout": done.layout, "worker_layout": not done.layout.is_empty()}
 
 
-# Starts the worker for a stage's map when the terrain has that stage (a test double may not).
 func _prepare_stage(stage_number: int) -> void:
 	var terrain = ctx.terrain
 	if terrain == null or not "maps" in terrain or not terrain.has_method("map_for"):
@@ -558,23 +410,17 @@ static func graph_path(map_id: String) -> String:
 	return "res://assets/park/%s/graph.bin" % map_id
 
 
-# The game's copy of a baked graph, read once per path (about 50 ms a map) and shared by every
-# reader, which treats it as read-only. ParkGraph.read still gives a private copy.
 static func shared_graph(path: String):
 	if not _shared_graphs.has(path):
 		_shared_graphs[path] = ParkGraph.read(path) if FileAccess.file_exists(path) else null
 	return _shared_graphs[path]
 
 
-# A graph a worker read for this path becomes the shared one, unless one is already shared.
 static func _adopt_graph(path: String, graph) -> void:
 	if graph != null and _shared_graphs.get(path) == null:
 		_shared_graphs[path] = graph
 
 
-# Starts the worker for a park map's entry data, the pocket-draw layout included (every stage
-# draws, the dam too). The worker reads its own graph and a deep copy of the rows, so no live
-# object is shared with it.
 func _prepare_map(map) -> void:
 	if map == null or not "park" in map or map.park.is_empty():
 		return
@@ -585,24 +431,18 @@ func _prepare_map(map) -> void:
 	var out := {}
 	var path := graph_path(id)
 	_prep[id] = {"task": WorkerThreadPool.add_task(func(): out.merge(prepare_data(path, rows, true)), false, "activities prep " + id), "out": out}
-	# The director's read of the same map (its rows and corridor reader) goes on a worker too.
 	load("res://src/world/director.gd").prepare_park(id)
 
 
-# The pure part of a park map's stage entry, safe on a worker: no node, no tree, no shared graph.
 static func prepare_data(path: String, map, layout: bool) -> Dictionary:
 	var graph = ParkGraph.read(path) if FileAccess.file_exists(path) else null
 	if graph == null:
 		return {"graph": null, "pool": PackedInt32Array(), "layout": {}}
-	# The zone member lists fill on their first read, the entry tick's rib cache spots (7 ms on the
-	# cloud at the flume, scrapkeep#494), so the worker fills them while the graph is still its own.
 	if graph.zone_count() > 0:
 		graph.zone_nodes(0)
 	return {"graph": graph, "pool": TradePockets.candidates(graph, map), "layout": PocketDraw.prepare_world(graph, map) if layout else {}}
 
 
-# This map's entry data, waiting on its worker when one is still running (a stage reached before
-# its worker finished), or computed here when none was started (a direct use in a test).
 func _entry_data(map) -> Dictionary:
 	var id := String(map.park.map)
 	_settle(id)
@@ -627,12 +467,10 @@ func _enter_stage(retry: bool) -> void:
 	stage_modifier = {}
 	last_entry_adopted = 0
 	_site_parent = null
-	# A retry does not re-arm the piece, so dying cannot farm one.
 	if not retry:
 		_piece_paid = false
 	var map = ctx.terrain.map()
 	var entry_data := _use_map(map)
-	# The next stage's worker starts now, so it has this whole stage to finish.
 	if "stage" in ctx.terrain:
 		_prepare_stage(int(ctx.terrain.stage) + 1)
 	if not "activity_sites" in map:
@@ -664,7 +502,6 @@ func _enter_stage(retry: bool) -> void:
 	_pending_stage = true
 
 
-# The map's graph and its worker's entry data become this stage's.
 func _use_map(map) -> Dictionary:
 	_graph = null
 	_graph_map = ""
@@ -677,8 +514,6 @@ func _use_map(map) -> Dictionary:
 	return {}
 
 
-# Every site a stage entry builds, in build order, with what the build does after it, and the stage's modifier.
-# The draws write the run's caches (trade offers, pocket draws) as they always have; nothing here makes a node.
 func _plan(map, entry_data: Dictionary) -> Dictionary:
 	var out := []
 	var modifier := {}
@@ -690,7 +525,6 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 			continue
 		if crates_shut and id == "cracked_cache":
 			continue
-		# Calm mode spawns nothing, so the ambush and the bounty could never be paid there.
 		if ctx.calm and String(RULES[id]["finishes"]) != "wall_broken":
 			continue
 		var map_id := _graph_map if _graph_map != "" else String(ctx.stages.of(ctx.terrain.stage).get("map", ""))
@@ -711,16 +545,12 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 		var sitting: bool = tuning != null and tuning.has_method("sitting") and tuning.sitting()
 		for room_spec in Secrets.stage_room_sites(_graph_map, ctx.get("profile"), sitting):
 			out.append({"kind": "room", "id": "cracked_cache", "at": room_spec["at"], "spec": room_spec, "secret": String(room_spec["secret"])})
-		# The run's own seed picks the spots, so the next run moves them and a replay keeps them.
 		for find_spec in Secrets.find_sites(_graph_map, hash([ctx.rng.seed, ctx.run.run_seed, "field_finds"])):
 			out.append({"kind": "find", "id": "cracked_cache", "at": find_spec["at"], "spec": find_spec, "find": String(find_spec["find"])})
-		# A fast Brindle rout last run: the timed door stands open this run (secrets.gd DOOR).
 		for door_spec in Secrets.door_sites(_graph_map, ctx.get("profile")):
 			out.append({"kind": "door", "id": "cracked_cache", "at": door_spec["at"], "spec": door_spec})
-		# Patch's secret wire rooms (PilotStory.PATCH_TRAIL, secrets.gd patch_wire_sites).
 		for wire_spec in Secrets.patch_wire_sites(_graph_map, hash([ctx.rng.seed, ctx.run.run_seed, "patch_wires"]), ctx.get("codex")):
 			out.append({"kind": "patch_wire", "id": "cracked_cache", "at": wire_spec["at"], "spec": wire_spec, "patch_wire": String(wire_spec["patch_wire"])})
-		# Active shift variants may add standing sites on this map (shift_variants.gd).
 		for variant_spec in ShiftVariants.extra_sites(_graph_map, ctx.run):
 			out.append({"kind": "row", "id": String(variant_spec["id"]), "at": variant_spec["at"], "spec": variant_spec})
 	if _graph != null:
@@ -744,9 +574,6 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 	return {"sites": out, "modifier": modifier}
 
 
-# The survival site of `kind` (SURVIVAL_KINDS) this run stands on `map`, or {} for none: --stocktake=on, not calm, a
-# world with a roster, and one of the map's rows of the kind's form drawn by the run's seed, so a replay or a retry
-# stands the same one. A kind with `one_in` stands on one run in that many, by the same seed.
 func survival_spec(map, kind: String) -> Dictionary:
 	var tuning = ctx.get("tuning")
 	if tuning == null or tuning.option("stocktake") != "on" or ctx.calm or not "survival_sites" in map:
@@ -760,13 +587,10 @@ func survival_spec(map, kind: String) -> Dictionary:
 	return rows[posmod(hash([ctx.rng.seed, ctx.run.run_seed, "survival_" + form]), rows.size())]
 
 
-# The site this run builds for an authored spec (W1-70): the spec itself, or one of its alts (park_map.gd), drawn
-# from the run's seed and the row, so a replay or a retry draws the same and the next run may not.
 func drawn(spec: Dictionary) -> Dictionary:
 	return variant(spec, hash([ctx.rng.seed, ctx.run.run_seed, "site_variants"]))
 
 
-# drawn for a given seed. An alt brings its own kind and pack; the place, row, pay and the rest stay the spec's.
 static func variant(spec: Dictionary, seed: int) -> Dictionary:
 	var alts: Array = spec.get("alts", [])
 	var pick := posmod(hash([seed, String(spec.get("row", ""))]), alts.size() + 1)
@@ -779,12 +603,10 @@ static func variant(spec: Dictionary, seed: int) -> Dictionary:
 	return out
 
 
-# What a site kind's marker calls it ("Arena", "Pickup course"), "" for a kind whose cue has no word.
 static func called(id: String) -> String:
 	return String(RULES.get(id, {}).get("cue", {}).get("word", ""))
 
 
-# One planned site, built and dressed as its kind asks. Interact does not know it yet (_arm).
 func _build_entry(entry: Dictionary, modifier: Dictionary) -> Site:
 	var site := _build(entry.id, entry.at, entry.spec)
 	match String(entry.kind):
@@ -804,7 +626,6 @@ func _build_entry(entry: Dictionary, modifier: Dictionary) -> Site:
 	return site
 
 
-# An ahead site's devices and stake post join Interact as the entry takes it (an entry's own build registers them).
 func _arm(site: Site) -> void:
 	var interact: Node = ctx.root.get_node("Interact")
 	for device in site.trade_devices:
@@ -813,10 +634,6 @@ func _arm(site: Site) -> void:
 		interact.register(site.stake_post)
 
 
-# ---- Built during the launch's flight ----
-
-# A launch toward the next park stage (not a world's last, whose launch goes to its boss) starts that stage's sites,
-# where stages are built on workers (a played game, a frame-capture bot run). Bots and tests build at entry as before.
 func _on_launched(_velocity: Vector3) -> void:
 	_drop_ahead()
 	var flow = ctx.get("flow")
@@ -825,8 +642,6 @@ func _on_launched(_velocity: Vector3) -> void:
 	_start_ahead(ctx.run.stage + 1)
 
 
-# A world boss's victory starts the next world's first stage the same way: that stage is entered from the arena
-# with no launch, and building its sites on the entry tick was about 5 ms of the Dig's (cloud, 13 Nov 2026).
 func _on_flow_changed(state: String) -> void:
 	if state != "victory":
 		return
@@ -848,19 +663,16 @@ func _start_ahead(stage: int) -> void:
 	var holder := Node3D.new()
 	holder.name = "AheadSites_%d" % stage
 	holder.visible = false
-	# Disabled: nothing under it processes, and its bodies stay out of the space until the entry takes them.
 	holder.process_mode = Node.PROCESS_MODE_DISABLED
 	add_child(holder)
 	_ahead = {"stage": stage, "holder": holder, "plan": {}, "built": [], "grounds": [], "run": _run_key(), "wait": AHEAD_PLAN_TICKS}
 
 
-# The flight's plan, AHEAD_PLAN_TICKS after the launch: the launch's own frame (the kick) carries nothing of it.
 func _plan_ahead() -> void:
 	var stage: int = _ahead.stage
 	var map = ctx.terrain.map_for(stage)
 	var started := Time.get_ticks_usec()
 	last_ahead_steps = PackedStringArray()
-	# The run's caches as the entry will find them: run_state.enter_stage refuses the offers left unanswered.
 	var memory: Dictionary = ctx.run.trade_memory
 	var draws: Dictionary = ctx.run.pocket_draw_cache
 	ctx.run.trade_memory = memory.duplicate(true)
@@ -876,12 +688,10 @@ func _plan_ahead() -> void:
 		_drop_ahead()
 
 
-# What a site's build reads of the run besides its plan: device prices and pocket rewards (parts, health, class).
 func _run_key() -> int:
 	return hash([ctx.run.parts, ctx.run.max_hp, ctx.run.class_id(), ctx.run.heft_class()])
 
 
-# One ahead site a physics tick, while the flight lasts.
 func _step_ahead() -> void:
 	var i: int = _ahead.built.size()
 	var entry: Dictionary = _ahead.plan.sites[i]
@@ -895,13 +705,10 @@ func _step_ahead() -> void:
 	_site_parent = null
 	last_entry_steps = steps
 	last_ahead_steps.append("%s %.1f" % [entry.id, (Time.get_ticks_usec() - started) / 1000.0])
-	# A build that failed appends nothing: the entry builds the rest.
 	if _ahead.built.size() <= i:
 		_ahead.plan.sites.resize(i)
 
 
-# Runs fn as though the stage were already `stage`: the run's and the terrain's stage, the terrain's overlays as the
-# stage starts them, and this stage's graph and draw layout; all put back after.
 func _as_stage(stage: int, map, fn: Callable) -> void:
 	var saved := [ctx.run.stage, ctx.terrain.stage, ctx.terrain.overlays.duplicate(), _graph, _graph_map, _draw_layout, _draw_map, _mark_pools]
 	ctx.run.stage = stage
@@ -911,7 +718,6 @@ func _as_stage(stage: int, map, fn: Callable) -> void:
 		ctx.terrain.overlays.append_array(map.start_overlays)
 	_mark_pools = {}
 	_graph_map = String(map.park.map)
-	# The worker's graph first: shared_graph alone would read the map's graph again on this tick (about 50 ms).
 	_settle(_graph_map)
 	_graph = shared_graph(graph_path(_graph_map))
 	fn.call()
@@ -925,8 +731,6 @@ func _as_stage(stage: int, map, fn: Callable) -> void:
 	_mark_pools = saved[7]
 
 
-# The ahead site for plan entry i when the flight built it from the same entry over the same ground. It stays under
-# its holder (moving it would take every node out of the tree and back); null to build it here.
 func _adopt(ahead: Dictionary, i: int, entry: Dictionary) -> Site:
 	if ahead.is_empty() or i >= ahead.built.size() or i >= ahead.plan.sites.size() or ahead.run != _run_key():
 		return null
@@ -946,16 +750,12 @@ static func _same_entry(a: Dictionary, b: Dictionary) -> bool:
 		and a.get("patch_wire", "") == b.get("patch_wire", "")
 
 
-# The entry took what it could: the rest go, and the holder shows and runs, so its sites' bodies join the space now.
-# It stays this stage's, freed with its sites by clear().
 func _uncover(ahead: Dictionary) -> void:
 	var taken := sites.filter(func(site): return is_instance_valid(site) and site.get_parent() == ahead.holder)
 	if taken.is_empty():
 		_free_holder(ahead)
 		return
-	# Every other child goes, a failed build's part-made site too.
 	for child in ahead.holder.get_children():
-		# A site's furniture that stands beside it (a muster's siren mast) stays with its site.
 		if not child in taken and not taken.any(func(site): return site.yard_mast == child):
 			ahead.holder.remove_child(child)
 			child.queue_free()
@@ -1004,8 +804,6 @@ func clear() -> void:
 	_pending_stage = false
 
 
-# The sites a player is offered now: built, not done, shown (a muster is hidden until it lands) and not a field
-# find, which is found, never pointed at. The markers and the HUD's count read this.
 func on_offer() -> Array:
 	return sites.filter(func(s) -> bool: return is_instance_valid(s) and not s.done and not s.has_meta("find") and s.visible)
 
@@ -1017,7 +815,6 @@ func site(id: String) -> Site:
 	return null
 
 
-# Enemies the activities keep standing that the director's cap does not count.
 func standing() -> int:
 	var n := 0
 	for s in sites:
@@ -1026,7 +823,6 @@ func standing() -> int:
 	return n
 
 
-# Whether `enemy` is one of the brutes standing() counts.
 func keeps(enemy: Node) -> bool:
 	for s in sites:
 		if s.brute == enemy:
@@ -1066,18 +862,14 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 		s.rule["pack"] = spec.get("pack", s.rule["pack"])
 	elif id in ["hold_the_relay", "ambush_altar"] and not spec.get("pack", []).is_empty():
 		s.rule["pack"] = spec.pack.duplicate()
-	# PARK.md 2.12: the park row authors the pay ladder (rarities, or a named part that wins when the
-	# table offers it). Scrap, source and where stay the rule's own, so the heft pace never moves.
 	for key in ["rarities", "named"]:
 		if spec_pay.has(key):
 			s.rule["pay"][key] = spec_pay[key]
-	# A field find faces out of its dead end (secrets.gd FINDS spots); a park row may set its own face.
 	if spec.has("face"):
 		s.rule["face"] = spec["face"]
 	if BARS.has(spec.get("bar", "")):
 		s.rule = s.rule.duplicate(true)
 		s.rule["bar_tier"] = BARS[spec["bar"]]
-	# A card 2 extra (PARK.md 2.12) is a second site beside the stage's own of its kind: it rolls apart (_luck_id).
 	if spec.get("extra", "") == "card_2":
 		s.set_meta("extra", String(spec.get("row", id)))
 	s.name = "Activity_" + id
@@ -1100,13 +892,11 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 		"stocktake_yard", "stocktake_muster":
 			s.yard = SurvivalCount.new(ctx.stages.world_of(ctx.run.stage), String(s.rule["form"]))
 			s.view.say(String(s.rule.cue.word))
-			# A form that comes to the ball shows nothing until it lands; its only furniture is the siren mast at its row.
 			s.visible = not s.rule.has("siren_s")
 			var onward: Vector2 = ctx.terrain.map().beacon - Vector2(s.global_position.x, s.global_position.z)
 			if s.visible:
 				s.yard_dress = StocktakeDress.attach(s, float(s.rule["ring"]), onward, ctx.terrain.height)
 			else:
-				# The mast stands where the muster is called, under the sites' parent: the site itself is hidden.
 				s.yard_mast = StocktakeDress.mast(s.get_parent(), Vector2(s.global_position.x, s.global_position.z), onward, ctx.terrain.height)
 		"surge_run":
 			_build_surge(s, spec)
@@ -1175,9 +965,6 @@ func _build_interior(s: Site) -> void:
 	var root := Node3D.new()
 	root.name = "Interior_" + String(s.interior.id)
 	s.add_child(root)
-	# Each block and bollard wears the pocket kit's model (tools/blender/world_one/pocket_kit.py), scaled from
-	# its nominal size; a block's model sits under an unscaled holder so its collider (added on entry)
-	# keeps the authored size. A missing kit keeps the striped boxes.
 	for block in s.interior.terrain:
 		var size := Vector3(block.size[0], block.size[1], block.size[2])
 		var at := Vector3(block.at[0], size.y * 0.5, block.at[1])
@@ -1201,15 +988,9 @@ func _build_interior(s: Site) -> void:
 				post.material_override = _solid(EventKinds.activity_color(s.view.id))
 			else:
 				_mesh_box(root, Vector3(0.3, 2.0, 0.3), post_at, _solid(EventKinds.activity_color(s.view.id)))
-	# The interior builds after the site's own dressing pass, so it dresses its own blocks (2026-10-14).
 	load("res://src/presentation/spillway_scenery.gd").dress_props(root)
 
 
-# Interior blocks and the cache's walls are plain vertical box faces. On the default wall
-# material the ball's friction (0.9) held a glancing 20 m/s strike to a third of its speed: a dead
-# stop (PARK-PIPEVAULT, stage-5 pipe vault). A frictionless wall slides a glancing hit along it. Its
-# small bounce (0.3, on top of the ball's) lifts a 22 degree strike above the half-speed dead-stop
-# line (bounce 0 left it at 36%) while a head-on hit still rebounds under 40% of its speed.
 func _wall_material() -> PhysicsMaterial:
 	if _wall == null:
 		_wall = PhysicsMaterial.new()
@@ -1259,10 +1040,6 @@ func _build_cache(s: Site) -> void:
 		_greybox_cache(s)
 
 
-# The pocket wears the cracked cache's model over colliders of its own, as built: the shell without
-# its roof, stretched to this pocket's sink and depth (its inner back face on the back collider's),
-# the fracture panel on the wall's body and the model's pedestal. False, with nothing built, when the
-# model is missing.
 func _model_cache(s: Site) -> bool:
 	var shell := CrackedCache.model_part("CacheShell", s)
 	if shell == null:
@@ -1299,20 +1076,14 @@ func _greybox_cache(s: Site) -> void:
 		_mesh_box(s, Vector3(1.0, tall, WALL_DEPTH), Vector3(side * (WALL_HALF_W + 0.5), mid, -WALL_DEPTH * 0.5), concrete, true)
 	var back := _mesh_box(s, Vector3(WALL_HALF_W * 2.0 + 2.0, tall, 1.0), Vector3(0.0, mid, -WALL_DEPTH - 0.5), concrete, true)
 	_mesh_cylinder(s, 0.8, 0.6, s.to_local(s.pedestal) + Vector3.UP * 0.3, _solid(Palette.CHARCOAL))
-	# Finish only: the same workshop materials the Spillway props wear; colliders stay as built.
 	load("res://src/presentation/spillway_scenery.gd").dress_props(s, s.view)
-	# The dressed finish shader carries no emission, so the glow is this site's own additive
-	# overlay on its back wall (the model's: its shell), dark until the wall is fired.
 	(back.get_child(1) as GeometryInstance3D).material_overlay = s.fired_glow
 
 
-# A field find (secrets.gd FINDS): the crew board inside, and its family's tell on the face. Its
-# codex row is declared here, so the logbook knows it before the first find.
 func _dress_find(s: Site, find_id: String) -> void:
 	var f: Dictionary = Secrets.FINDS[find_id]
 	_hang_board(s, "Find_" + find_id, String(f["name"]), String(f["log"]))
 	s.set_meta("find", find_id)
-	# A secret shows no beacon column, glyph, ring or word: its tell is what gives it away.
 	s.view.finish()
 	if ctx.get("codex") != null:
 		ctx.codex.declare(f["codex"])
@@ -1323,7 +1094,6 @@ func _dress_find(s: Site, find_id: String) -> void:
 	_range_tree(s, SITE_VIEW_END_M, s.view)
 
 
-# Patch's secret wire room (PilotStory.PATCH_TRAIL): hidden behind a cracked face with a seep tell.
 func _dress_patch_wire(s: Site, wire_id: String) -> void:
 	var row: Dictionary = PilotStory.PATCH_TRAIL.get(wire_id, {})
 	_hang_board(s, "PatchWire_" + wire_id, String(row.get("name", wire_id)), String(row.get("log", "")))
@@ -1334,8 +1104,6 @@ func _dress_patch_wire(s: Site, wire_id: String) -> void:
 	_range_tree(s, SITE_VIEW_END_M, s.view)
 
 
-# The crack's tell: a dark wet streak down the cracked face under a slow glint, and a drip heard
-# from Secrets.DRIP_HEAR_M. Both go with the face when it breaks.
 func _seep_tell(s: Site) -> void:
 	if _find_wet == null:
 		_find_wet = _solid(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.35))
@@ -1356,8 +1124,6 @@ func _seep_tell(s: Site) -> void:
 	s.wall.add_child(_find_sound("find_drip", Secrets.DRIP_HEAR_M))
 
 
-# The timed door: the foreman's board inside and a brass punch clock on the face, stopped short of
-# the whistle. It keeps its beacon, since it was earned; its codex row is declared here.
 func _dress_door(s: Site) -> void:
 	_hang_board(s, "Door_clock", String(Secrets.DOOR["name"]), String(Secrets.DOOR["log"]))
 	s.set_meta("door", true)
@@ -1370,7 +1136,6 @@ func _dress_door(s: Site) -> void:
 	_mesh_box(clock, Vector3(DOOR_CLOCK_M, DOOR_CLOCK_M, 0.1), Vector3.ZERO, _solid(Palette.BRASS))
 	_mesh_box(clock, Vector3(DOOR_CLOCK_M - 0.3, DOOR_CLOCK_M - 0.3, 0.06), Vector3(0.0, 0.0, 0.06), _solid(Palette.LEDGER))
 	var ink := _solid(Palette.CHARCOAL)
-	# Hands at five to twelve: the hour hand straight up, the minute hand a little short of it.
 	var hour := _mesh_box(clock, Vector3(0.1, DOOR_CLOCK_M * 0.3, 0.04), Vector3(0.0, DOOR_CLOCK_M * 0.15, 0.1), ink)
 	hour.name = "HourHand"
 	var minute := Node3D.new()
@@ -1381,10 +1146,7 @@ func _dress_door(s: Site) -> void:
 	_range_tree(s, SITE_VIEW_END_M, s.view)
 
 
-# The radio's tell: a short whip aerial over the roof line and the tune through the wall, heard from
-# Secrets.RADIO_HEAR_M. The aerial stays; the sound goes with the face.
 func _radio_tell(s: Site) -> void:
-	# The model's aerial is clamped to the side wall's top; the plain one stood inside the pocket's rim.
 	var aerial: Node3D = FindKit.part("FindAerial", s)
 	if aerial != null:
 		aerial.position = Vector3(WALL_HALF_W + 0.5, WALL_HEIGHT, -1.0)
@@ -1408,8 +1170,6 @@ func _find_sound(id: String, reach: float) -> AudioStreamPlayer3D:
 	return p
 
 
-# A first-win room's crew-log line (secrets.gd ROOMS), on a crew board fixed inside its back wall, so it
-# reads only once the cracked face is down and the ball is in the room; and its two quiet tells outside.
 func _hang_room_log(s: Site, room_id: String) -> void:
 	var room: Dictionary = Secrets.room_by_id(room_id)
 	_hang_board(s, "Secret_" + room_id, String(room["name"]), String(room["log"]))
@@ -1422,8 +1182,6 @@ func _hang_room_log(s: Site, room_id: String) -> void:
 func _hang_board(s: Site, site_name: String, title: String, text: String) -> void:
 	s.name = site_name
 	var board_z := -WALL_DEPTH + 0.06
-	# The model's frame and plate stand on the back wall: their back face on its origin, the plate's
-	# face where the plain plate's was. The plate is painted one flat dark under the log line.
 	var frame: Node3D = FindKit.part("FindBoardFrame", s)
 	var board: Node3D = FindKit.part("FindBoard", s)
 	if frame != null and board != null:
@@ -1452,8 +1210,6 @@ func _hang_board(s: Site, site_name: String, title: String, text: String) -> voi
 	s.add_child(label)
 
 
-# Four strokes and the bar through them, chalked on the cracked face: the crew's count of a shift
-# that came back. It goes with the face when the wall breaks.
 func _chalk_tally(wall: Node3D) -> void:
 	var chalk := _solid(Palette.LEDGER)
 	var tally := Node3D.new()
@@ -1468,13 +1224,10 @@ func _chalk_tally(wall: Node3D) -> void:
 	bar.rotation.z = -1.05
 
 
-# One work glove, fingers down on a nail in the cracked face, as the crew hang them at a shift's end: a
-# chunky leather palm, four rounded fingers, a thumb and a canvas cuff. It goes with the face.
 func _hang_glove(s: Site) -> void:
 	var glove := Node3D.new()
 	glove.name = "RoomGlove"
 	glove.position = ROOM_GLOVE_AT + Vector3(0.0, 0.0, 0.1 * ROOM_GLOVE_SCALE + 0.02)
-	# Hung fingers down, then slanted a little across the face.
 	glove.basis = (Basis(Vector3.BACK, 0.22) * Basis(Vector3.RIGHT, -PI * 0.5)).scaled(Vector3.ONE * ROOM_GLOVE_SCALE)
 	s.wall.add_child(glove)
 	var leather := _solid(Palette.COPPER)
@@ -1502,9 +1255,6 @@ func _hang_glove(s: Site) -> void:
 	_mesh_box(glove, Vector3(0.05, 0.45, 0.05), Vector3(0.0, 0.0, 0.5), _solid(Palette.CHARCOAL))
 
 
-# A site's parts repeat from site to site and stage to stage, so their flat materials and meshes are
-# made once and shared by key (each new one built its shader or arrays on the stage entry frame).
-# Nothing writes to a shared one.
 static var _parts := {}
 
 
@@ -1533,7 +1283,6 @@ func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid 
 	return body
 
 
-# A bare wall collider: the box shape is its first child, any drawn face comes after.
 func _wall_body(parent: Node3D, size: Vector3, at: Vector3) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	var shape := CollisionShape3D.new()
@@ -1618,14 +1367,6 @@ func _planar(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
 
 
-# The side site the ball is at, or null: one it has started and has neither finished nor lost,
-# while the ball is within AT_HAND_M of it. A surge's water carries the ball down its course, so a
-# live surge is at hand wherever the ball is; a bounty is its hauler, once the ball has met it. A
-# trade spot is started by standing near it and nothing else, so it is never at hand: its own
-# label and offer say what it is. The site that was at hand (`held`) stays so until it is finished
-# or the ball is LET_GO_M from it, so the goal never flickers at the edge of a site's reach or
-# between two sites. A site is on offer at the site until then (LEGIBILITY.md, "An activity is on
-# offer"), and the objective plate names only the one at hand (ui/hud.gd objective_reading).
 func at_hand(ball: Vector3, held: Site = null) -> Site:
 	if is_instance_valid(held) and _hand_metres(held, ball) <= LET_GO_M:
 		return held
@@ -1639,7 +1380,6 @@ func at_hand(ball: Vector3, held: Site = null) -> Site:
 	return best
 
 
-# The metres from the ball to a site that can be at hand, INF for one that cannot.
 func _hand_metres(s: Site, ball: Vector3) -> float:
 	if not is_instance_valid(s) or s.done or s.failed or not s.started or s.has_meta("find") or s.rule.finishes == "trade":
 		return INF
@@ -1823,7 +1563,6 @@ func _cue(s: Site, phase: String) -> void:
 	var presentation: Node = ctx.root.get_node_or_null("Presentation")
 	if presentation != null:
 		presentation.audio.play(kind)
-		# The site's own tune (an arena's), read by id; audio decides whether it has one.
 		if presentation.audio.has_method("activity_cue"):
 			presentation.audio.activity_cue(s.id, phase)
 	if is_instance_valid(s.phase_view):
@@ -1979,8 +1718,6 @@ static func mark_candidates(graph) -> Array:
 	var anchor := PackedInt32Array([nodes[0]])
 	var from_anchor: PackedByteArray = graph.reach(anchor)
 	var to_anchor: PackedFloat32Array = graph.search(anchor, true)
-	# All marks must be mutually reachable, including directed ride/drop edges.
-	# The entry drop need not be reachable again after the ball leaves it.
 	nodes = nodes.filter(func(n): return from_anchor[n] != 0 and is_finite(to_anchor[n]))
 	for i in mini(MARK_POOL_SIZE, nodes.size()):
 		pool.append(nodes[roundi(float(i) * (nodes.size() - 1) / (MARK_POOL_SIZE - 1))])
@@ -2001,16 +1738,12 @@ static func draw_marks(graph, seed_value: int, pool: Array = []) -> Array:
 		candidates[j] = swap
 	var marks := []
 	for n in candidates:
-		# Difference in shortest spawn distances is a lower bound on path separation;
-		# unlike Euclidean spacing, it preserves the park's authored path measure.
 		if marks.all(func(other): return absf(graph.d_spawn_node(n) - graph.d_spawn_node(other)) >= MARK_SPACING_M):
 			marks.append(n)
 			if marks.size() == count:
 				return marks
 	return marks
 
-
-# ---- The ambush ----
 
 func _watch_ambush(s: Site, ball: Vector3) -> void:
 	if not s.started:
@@ -2033,8 +1766,6 @@ func _spawn_pack(s: Site) -> void:
 		return
 	var kinds: Array = s.rule["pack"]
 	s.pack.clear()
-	# The ring's first spot lies 30 degrees past the point opposite the ball's entry, so none of the
-	# three stands within 4 m of the ball's straight line through the ring.
 	var entry: Vector3 = ctx.player.ball_position() - s.global_position
 	var first := atan2(entry.z, entry.x) + PI + PACK_TURN
 	for i in kinds.size():
@@ -2055,8 +1786,6 @@ static func _alive(pack: Array) -> int:
 			n += 1
 	return n
 
-
-# ---- The relay ----
 
 func _build_relay(s: Site) -> void:
 	var at := Vector2(s.global_position.x, s.global_position.z)
@@ -2084,8 +1813,6 @@ func relay_miniboss_count(s: Site) -> int:
 	return int(round(s.relay.miniboss_credit(1.0)))
 
 
-# The attacker budget the relay stands inside: a start, one more per heft class past the first
-# and two per world past the first, capped.
 func relay_budget(s: Site) -> int:
 	var b: Dictionary = s.rule["budget"]
 	var world: int = ctx.stages.world_of(ctx.run.stage)
@@ -2127,7 +1854,6 @@ func _watch_relay(s: Site, delta: float, ball: Vector3) -> void:
 	var cost := relay_pack_cost(s)
 	var room := relay_budget(s) - relay_standing(s)
 	var due: int = mini(relay_miniboss_count(s), int(floor((relay.progress() - float(s.rule["miniboss_at"])) / float(s.rule["miniboss_step"]))) + 1)
-	# A wave is one pack per stack plus one, each pack_gap_s after the last, every wave_s.
 	if s.relay_wave_s <= 0.0 and s.relay_wave_left == 0 and s.relay_credit >= cost - 0.0001:
 		s.relay_wave_left = relay.stakes + 1
 		s.relay_wave_s = float(s.rule["wave_s"])
@@ -2164,7 +1890,6 @@ func _build_surge(s: Site, spec: Dictionary) -> void:
 	s.surge_row = String(spec.get("row", s.id))
 
 
-# The sluice's gate landed on the bar (the park row's land fact): every course still waiting goes live.
 func _on_world_fact(kind: String, _at: Vector3) -> void:
 	if kind != "sluice_landed":
 		return
@@ -2213,7 +1938,6 @@ func _watch_surge(s: Site, delta: float, ball: Vector3) -> void:
 		sluice_closed.emit(s.surge_row)
 		_finish(s, ball)
 		s.view.word.text = SURGE_WORDS.won
-		# The course pays into the ball's path: the pickup sits where the ball is, so it is taken on the next frame.
 		s.inside_pickup = false
 	elif outcome == "lost":
 		s.surge_live = false
@@ -2238,9 +1962,6 @@ func _relay_pack(s: Site, ball: Vector3) -> void:
 	s.relay_gap_s = float(s.rule["pack_gap_s"])
 
 
-# ---- The Stocktake yard ----
-
-# Machines the yard still has to beat: the ones up and the ones yet to climb in.
 func yard_standing(s: Site) -> int:
 	return _alive(s.pack) + s.yard_owed.size()
 
@@ -2286,7 +2007,6 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 		s.yard_out = 0.0
 		s.yard_may_bank = yard.gate_open
 	elif yard.gate_open:
-		# A floor cleared from outside the ring banks nothing by itself: the ball rolls in, then out.
 		if s.yard_may_bank:
 			_yard_pay(s, yard.leave(), ball)
 	else:
@@ -2295,10 +2015,6 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 			_yard_forfeit(s)
 
 
-# The muster comes to the ball: within `call_m` of its row the siren announces it, and `siren_s` later its ring
-# lands on the ground under the ball. True on the frame it lands. It neither calls nor lands on a ball the Warden
-# has engaged: the siren waits, and a ball that goes to the fight is not followed in. The announcement names no
-# place (the ring lands wherever the ball is by then), so no edge marker points at one.
 func _muster_lands(s: Site, delta: float, ball: Vector3) -> bool:
 	if ctx.flow.engaged():
 		return false
@@ -2310,9 +2026,6 @@ func _muster_lands(s: Site, delta: float, ball: Vector3) -> bool:
 			s.yard_siren = float(s.rule["siren_s"])
 			ctx.events.event_announced.emit(s.id, s.yard_siren, Vector3.INF)
 		return false
-	# The ring lands when the siren ends, or as soon after as the ball is on ground a ring fits on: never on another
-	# fight's ground, the Warden's, a rock rise or the map's edge (ground_fault). The wait runs the siren below zero to
-	# -MUSTER_WAIT_S, where the muster stands down as if never called.
 	s.yard_siren -= delta
 	if s.yard_siren > 0.0:
 		return false
@@ -2326,19 +2039,10 @@ func _muster_lands(s: Site, delta: float, ball: Vector3) -> bool:
 	return true
 
 
-# True when a ring of `ring` metres fits on every one of `points` in turn (ground_fault() finds none).
 func clear_ground(points: PackedVector2Array, ring: float, but: Site = null) -> bool:
 	return ground_fault(points, ring, but) == ""
 
 
-# Why a ring of `ring` metres does not fit on `points` in turn, or "" when it does. "edge": off the play area.
-# "taken": on a fight's own ground or the Warden's ring (ParkMap.fight_sites()), on a place a contraption row names,
-# or within SITE_PAD_M of another site standing this run (a drawn pocket too; `but` is the asking site). "rise":
-# the ground inside the ring is not one even slope: two reads straight across the centre from each other stand
-# RING_RISE_M off the line through the centre between them (a butte, a mesa, a pit), or the slope between them is
-# over RING_SLOPE. Read every RING_READ_M across a lone point's ring and round the outer part of a lap's (its
-# neighbours read the middle), so a wall or a drop between two points of a lap is inside a ring that reads it.
-# Water and hole cells are not looked at.
 func ground_fault(points: PackedVector2Array, ring: float, but: Site = null) -> String:
 	var map = ctx.terrain.map()
 	var keep := _keep_off(map)
@@ -2371,7 +2075,6 @@ func ground_fault(points: PackedVector2Array, ring: float, but: Site = null) -> 
 				return "taken"
 		for k in reads.size():
 			under[k] = p + reads[k]
-		# Each read is followed by the one straight across the centre from it (reads come in opposite pairs).
 		var across: PackedFloat64Array = ctx.terrain.heights(under)
 		for k in range(0, across.size(), 2):
 			var lump: float = absf(across[k] + across[k + 1] - 2.0 * centres[i])
@@ -2381,9 +2084,6 @@ func ground_fault(points: PackedVector2Array, ring: float, but: Site = null) -> 
 	return ""
 
 
-# What a map's own rows keep a travelling ring off, each {"at", "r"} for a disc or {"at", "half", "yaw_deg", "r"} for
-# a box with `r` the pad past it: each fight site's ground, and every place a contraption row names on the ground (its
-# own spot, a valve's door and cache, a cable's two ends, a launcher's landing), none of which is in the height grid.
 func _keep_off(map) -> Array:
 	if map != _keep_map:
 		_keep_map = map
@@ -2405,14 +2105,12 @@ func _keep_off(map) -> Array:
 	return _keep_rows.duplicate()
 
 
-# The standing count's machines join the ones owed, at that count's strength.
 func _yard_owe(s: Site) -> void:
 	var strength: float = s.yard.strength(s.yard.count)
 	for kind in s.yard.pack(s.yard.count):
 		s.yard_owed.append([kind, strength])
 
 
-# The next owed machine climbs in on the ring's edge, across the yard from the ball, each a step round from the last.
 func _yard_arrive(s: Site, ball: Vector3) -> void:
 	var owed: Array = s.yard_owed.pop_front()
 	var entry: Vector3 = ball - s.global_position
@@ -2424,8 +2122,6 @@ func _yard_arrive(s: Site, ball: Vector3) -> void:
 	s.yard_wait = float(s.rule["arrive_s"])
 
 
-# The ball left through the open gate: `pay` (SurvivalCount.pay) is banked. Scrap and cores land at once; the
-# parts, one roll a rarity listed, wait on a pickup in the ball's path.
 func _yard_pay(s: Site, pay: Dictionary, ball: Vector3) -> void:
 	s.reward_parts = []
 	var rarities: Array = pay.get("rarities", [])
@@ -2449,7 +2145,6 @@ func _yard_pay(s: Site, pay: Dictionary, ball: Vector3) -> void:
 	_finish(s, at)
 
 
-# The one ending that pays nothing. The machines stay up: they are the field's now.
 func _yard_forfeit(s: Site) -> void:
 	s.yard.forfeit()
 	s.yard_owed = []
@@ -2460,15 +2155,12 @@ func _yard_forfeit(s: Site) -> void:
 	ctx.events.event_ended.emit(s.id, "lost")
 
 
-# A destroyed ball forfeits every yard it has started and not banked, wherever it fell: the count is the ball's.
 func _forfeit_yards() -> void:
 	for s in sites:
 		if is_instance_valid(s) and s.yard != null and s.started and not s.done:
 			_yard_forfeit(s)
 
 
-# Each miniboss lands in the relay's miniboss zone, seeded per relay and per arrival, so a
-# stage retry puts them where they were.
 func _relay_miniboss(s: Site) -> void:
 	var zone: Array = s.relay.miniboss_zone()
 	var rng := RandomNumberGenerator.new()
@@ -2483,8 +2175,6 @@ func _relay_miniboss(s: Site) -> void:
 	s.relay_gap_s = float(s.rule["pack_gap_s"])
 
 
-# ---- The cache ----
-
 func _watch_wall(s: Site, ball: Vector3) -> void:
 	var v: Vector3 = ctx.player.state.velocity
 	var toward := -(v.x * s.global_basis.z.x + v.z * s.global_basis.z.z)
@@ -2498,7 +2188,6 @@ func _watch_wall(s: Site, ball: Vector3) -> void:
 		_refuse_ram(s, toward)
 
 
-# A bump under the bar: the roll's refused cue, once a face per gap, in the worlds the rule names.
 func _refuse_ram(s: Site, toward: float) -> void:
 	var cue: Dictionary = s.rule.get("refused", {})
 	if cue.is_empty() or toward < ctx.tuning.f("cruise") * float(cue["floor"]):
@@ -2512,7 +2201,6 @@ func _refuse_ram(s: Site, toward: float) -> void:
 	ctx.events.verb_failed.emit("roll", "under_bar", ctx.player.ball_position())
 
 
-# The speed into a cache's face that breaks its wall: RAM_MIN_PER_CRUISE x cruise, or a row bar's tier.
 func ram_bar(s: Site) -> float:
 	if s.rule.has("bar_tier"):
 		return ctx.tuning.tier_cruise() * SpeedTier.MULTIPLES[int(s.rule["bar_tier"])]
@@ -2563,8 +2251,6 @@ func _found_patch_wire(s: Site) -> void:
 		ctx.progress.settle(wire_id)
 
 
-# A field find opened: the OOH burst at the room, and its codex row (the first time, the logbook's
-# own burst and the find tune; synergy_discovered carries it to audio.gd).
 func _found(s: Site) -> void:
 	var f: Dictionary = Secrets.FINDS[String(s.get_meta("find"))]
 	var tell: Node = s.wall.get_node_or_null("FindTell")
@@ -2574,8 +2260,6 @@ func _found(s: Site) -> void:
 	if ctx.get("codex") != null:
 		ctx.codex.mark_discovered(String(f["codex"]["id"]), s.pedestal)
 
-
-# ---- The bounty ----
 
 func _spawn_bounty(s: Site) -> void:
 	var at: Vector3 = ctx.terrain.drop_point(s.global_position.x, s.global_position.z, BRUTE_DROP)
@@ -2597,12 +2281,6 @@ func _bounty_died(s: Site, where: Vector3) -> void:
 	_finish(s, Vector3(where.x, ctx.terrain.height(where.x, where.z), where.z))
 
 
-# ---- The pay ----
-
-# What the stand pays from, read by the pay below and by the readout before commit: `named` is
-# the authored part when the table offers it ("" otherwise), `rarities` the table the roll
-# draws from, or the named part's own tier. A named part the table does not offer
-# (not in ctx.stages.part_in_play) rolls like any other pay.
 func pay_table(s: Site) -> Dictionary:
 	var pay: Dictionary = s.rule["pay"]
 	if pay.has("named"):
@@ -2612,9 +2290,6 @@ func pay_table(s: Site) -> Dictionary:
 	return {"named": "", "rarities": ItemGen.resolve_rarities(pay.get("rarities", ["common"]))}
 
 
-# What a stand shows before the ball commits (SG13): the rarities its pay can hold, each with
-# its weight from ItemGen.TIER_WEIGHTS, and the readout line for them. A named part is a sure
-# thing, so it shows its own tier at 100%.
 func stand_odds(s: Site) -> Dictionary:
 	var table := pay_table(s)
 	var odds: Array = ItemGen.odds(table["rarities"]) if table["named"] != "" \
@@ -2641,6 +2316,7 @@ func stand_odds(s: Site) -> Dictionary:
 func _finish(s: Site, at: Vector3) -> void:
 	if s.done:
 		return
+	assert(s.rule.has("pay"), "activities: rule missing pay for '%s'" % s.id)
 	s.done = true
 	for hazard in s.hazards:
 		hazard.stop()
@@ -2699,9 +2375,6 @@ func _pay_piece() -> void:
 	_piece_paid = true
 
 
-# The rule's scrap, through the run's own add_scrap so it grows the ball and publishes a class up.
-# The same amount lands in the cog wallet (CG2, one cog per scrap unit as on kills), so the
-# activity still pays what it paid when scrap was the money.
 func _pay_scrap(s: Site, at: Vector3) -> void:
 	var amount := int(s.rule["pay"].get("scrap", 0))
 	if amount > 0:
@@ -2709,9 +2382,6 @@ func _pay_scrap(s: Site, at: Vector3) -> void:
 		ctx.run.add_cogs(amount)
 
 
-# A field find, a first-win room, the timed door, a card 2 extra, a sealed room or a drawn pocket rolls on its own
-# stream, so it never pays the part the stage's ordinary site of its kind pays; every other site keeps its id, and so
-# its rolls.
 func _luck_id(s: Site) -> String:
 	if s.has_meta("find"):
 		return "%s:%s" % [s.id, s.get_meta("find")]
@@ -2719,14 +2389,10 @@ func _luck_id(s: Site) -> String:
 		return "%s:%s" % [s.id, s.get_meta("room")]
 	if s.has_meta("door"):
 		return "%s:timed_door" % s.id
-	# A card 2 extra and a room a valve or cracked wall seals (contraptions.gd) stand beside the stage's own
-	# cracked cache; on its stream they paid the same part.
 	if s.has_meta("extra"):
 		return "%s:%s" % [s.id, s.get_meta("extra")]
 	if s.has_meta("sealed"):
 		return "%s:%s" % [s.id, s.get_meta("sealed")]
-	# A drawn pocket rolls apart from the stage's authored site of its kind, or the two paid the same part:
-	# a drawn vault and the stage's own cache did on 23 of 40 dam runs and 24 of 40 flume runs (2026-11-09).
 	if s.drawn:
 		return "%s:%s" % [s.id, s.interior.id]
 	return s.id
@@ -2743,7 +2409,6 @@ func _roll_many(id: String, rarities: Array, count: int) -> Array:
 	return Parts.roll(rng, rarities, ctx.run.class_id(), ctx.run.parts, count)
 
 
-# A pickup takes the ball that rolls onto it, not one already standing there when it appeared.
 func _watch_pickup(s: Site, ball: Vector3) -> void:
 	if s.pickup == null or s.pickup_taken:
 		return
@@ -2765,12 +2430,6 @@ func _watch_pickup(s: Site, ball: Vector3) -> void:
 	s.inside_pickup = now
 
 
-# ---- The far rung (W45 P3) ----
-
-# An authored cache on the pay ladder's far rung (park_placement.gd PAY_FAR: cobalt only, the larger detour) is a
-# dead end worth the ride: it pays a cobalt weapon, from the pilot's own kit when the kit names weapons. The rung
-# never moves (ruling bn: cobalt is the top ordinary rung), so relic never enters; the count, the scrap and the
-# stream stay the site's own. A field find, a room, the timed door and a drawn pocket keep their rolls.
 const FAR_RUNG := ["rare"]
 
 
@@ -2781,8 +2440,6 @@ func far_rung(s: Site) -> bool:
 	return table["named"] == "" and table["rarities"] == FAR_RUNG
 
 
-# The far rung's pool for a pilot: the cobalt weapons it may be offered and does not hold at the top, its kit's
-# own first. Sorted, so a seed draws the same part.
 static func far_pool(class_id: String, held: Array) -> Array:
 	var weapons: Array = Parts.offer_pool(class_id, FAR_RUNG).filter(func(key) -> bool:
 		var r: Dictionary = Parts.rows().get(key, {})
@@ -2796,9 +2453,6 @@ func _far_roll(s: Site) -> String:
 	return _far_pick(s, far_pool(ctx.run.class_id(), ctx.run.parts))
 
 
-# Seeded by the park row, so two far caches in one stage (the Dam's rim and incline caches share the cache's luck id)
-# roll apart; a site no row authors keeps its luck id. A pool with nothing left in it (no pilot's is today: every
-# cobalt weapon is unlevelled, so none is ever held at the top) rolls the rung itself.
 func _far_pick(s: Site, pool: Array) -> String:
 	var stream := s.row_id if s.row_id != "" else _luck_id(s)
 	if pool.is_empty():
@@ -2808,16 +2462,11 @@ func _far_pick(s: Site, pool: Array) -> String:
 	return String(pool[rng.randi_range(0, pool.size() - 1)])
 
 
-# ---- Mend wards and lore plates (W45 P3) ----
-
 const WARD_POST := Vector3(0.9, 2.4, 0.9)
-# The post's model (tools/blender/world_one/mend_ward_post.py, W46-18): a keeper's lamp post on a slate plinth, built to
-# WARD_POST with its origin on the ground. A missing file keeps the slate box.
 const WARD_MODEL := "res://assets/models/world_one/mend_ward_post.glb"
 const WARD_RING_H := 0.08
 const PLATE_RADIUS := 1.1
 const PLATE_H := 0.1
-# The lit face: its radius, and how far it stands proud of the rim until it is read.
 const PLATE_FACE_RADIUS := 0.78
 const PLATE_FACE_RAISE := 0.06
 const PLATE_GLOW := 0.6
@@ -2878,7 +2527,6 @@ func _build_plate(spec: Dictionary) -> LorePlate:
 	face.height = PLATE_H
 	p.face.mesh = face
 	p.add_child(p.face)
-	# A known note's plate is spent from the start: the disc is the fact, not a prompt.
 	p.read = ctx.get("codex") != null and ctx.codex.known(p.note)
 	_show_plate(p)
 	_seat_plate(p)
@@ -2886,10 +2534,6 @@ func _build_plate(spec: Dictionary) -> LorePlate:
 	return p
 
 
-# The plate stands on the surface a ball rolling there stands on, tilted to it. Until the stage's colliders can be
-# asked (the rows still placing, or the stage just brought up), it waits hidden, and the next tick asks again. When
-# an event moves the ground (_on_surface_changed), it keeps its seat, shown and readable, until terrain answers,
-# then takes the new one: read or not, it files nothing and plays nothing.
 func _seat_plate(p: LorePlate) -> void:
 	var seat: Dictionary = ctx.terrain.top_surface(p.at.x, p.at.y, PLATE_RADIUS * 1.08)
 	if seat.is_empty():
@@ -2906,7 +2550,6 @@ func _on_surface_changed() -> void:
 			p.reseat = true
 
 
-# Unread, the amber face stands proud and glows; read, it sinks flush with the rim and goes to bare copper.
 func _show_plate(p: LorePlate) -> void:
 	if p.read:
 		p.face.material_override = _solid(Palette.COPPER)
@@ -2933,8 +2576,6 @@ func _watch_ward(w: MendWard, delta: float, ball: Vector3) -> void:
 	w.fill.scale = Vector3(s, 1.0, s)
 
 
-# The ward's guard: PACK on GUARD_M round the ward, the first opposite the way the ball came in, so the pack closes
-# on a ball that stops. Calm spawns nothing, and the ward then never fills.
 func _raise_guard(w: MendWard, ball: Vector3) -> void:
 	if ctx.calm or ctx.spawner == null:
 		return
@@ -2954,9 +2595,6 @@ func _ward_cue(kind: String) -> void:
 		presentation.audio.play(kind)
 
 
-# The ball's centre within REACH_M of the plate's axis, and from BELOW_M under its face to HEIGHT_M over it, both
-# read in the plate's own tilt: a ball on a sloped plate is over it, and one under a deck plate (on the ground or
-# against the deck's underside) is not.
 func _watch_plate(p: LorePlate, ball: Vector3) -> void:
 	if not is_instance_valid(p):
 		return
@@ -2972,8 +2610,6 @@ func _watch_plate(p: LorePlate, ball: Vector3) -> void:
 	read_plate(p)
 
 
-# The ball rolled over a plate: the codex files its note (its quiet record, then the HUD's note pulse), the lore
-# chime plays, and the face sinks to bare copper. True when this touch filed it.
 func read_plate(p: LorePlate) -> bool:
 	if not p.touch():
 		return false

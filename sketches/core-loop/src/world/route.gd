@@ -1,7 +1,5 @@
 extends RefCounted
 
-# A path on the ground plane measured by distance along it. The surge front, the
-# hauler and the gates all place themselves by one number, metres along the route.
 
 var points := PackedVector2Array()
 var lengths := PackedFloat32Array()
@@ -37,7 +35,6 @@ func tangent(distance: float) -> Vector2:
 	return (points[points.size() - 1] - points[points.size() - 2]).normalized()
 
 
-# Distance along the route of the point nearest to p, and how far off the route p is.
 func project(p: Vector2) -> Vector2:
 	var best_d := 0.0
 	var best_off := INF

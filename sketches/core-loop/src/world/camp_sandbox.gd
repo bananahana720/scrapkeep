@@ -13,25 +13,6 @@ const Miniboss := preload("res://src/combat/miniboss.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const PICKER := "res://src/ui/camp_enemy_picker.gd"
 
-# The camp's any-enemy sandbox: the call box at the practice yard calls one enemy of any kind
-# the pilot has met onto a grate, up to CAP at once, and the enemies fight the ball for real.
-# Nothing here is a run. It never calls the spawner's spawn_enemy (which wires a kill into the
-# run, a hit into the run's health and a fleet pack into the director); it builds the enemy the
-# way the spawner does and wires the three things it needs itself:
-#
-# - the ground: the yard's own flat floor (YardGround), not the stage terrain under the camp;
-# - the ball's hits: a small hull of this sandbox's own (HULL), never run.damage, so no
-#   player_hit or player_died goes out and no scrap spills. At 0 the ball is put back at the
-#   yard's entry with the hull full again, no penalty;
-# - the lobber's shell, which combat would otherwise wire to the run.
-#
-# A kill is not recorded (no run kills, no enemy_killed), so the run log, achievements and
-# the saved stats never see the yard. The enemy_spawned fact is published, so the enemy's
-# presentation (wind-up glyphs, status marks, audio) works; the picker's met-marking listens
-# to that fact too, and a called enemy is by definition already met.
-# Not spawnable: the stage Warden and the vault (they read the stage and the beacon), and every
-# boss (a boss is a module that owns an arena, not an enemy to drop on a grate).
-# Everything despawns when the ball leaves the yard, when the walk ends, or on "Clear yard".
 
 const CAP := 4
 const HULL := 100.0
@@ -44,8 +25,6 @@ const STATION_RADIUS := 3.5
 const EXCLUDED := ["warden", "vault"]
 const BASE_KINDS := ["chaser", "lobber", "miniboss"]
 
-# Where a kind turns up, in the crew log's voice. A kind not listed here is described from
-# its roster row (where_met).
 const WHERE := {
 	"chaser": "Spillway Works, stage one. It will find you first.",
 	"lobber": "Spillway Works, stage one. Posts its mail from a distance.",
@@ -65,13 +44,10 @@ var ground := YardGround.new()
 var live: Array[Node3D] = []
 var hull := HULL
 var wrecks := 0
-# How many times the yard has been emptied by clear() (the call box's "Clear yard", leaving the yard, the walk
-# ending), which is not a kill: the ring ends a count on it (camp_ring.gd).
 var clears := 0
 var walking := false
 var inside := false
 var page_open := false
-# Tests set this to stand in for the saved list of met kinds; null reads the save.
 var met_override = null
 
 var _shells: Array[Node3D] = []
@@ -84,7 +60,6 @@ var _frozen_here := false
 var _via_screens := false
 
 
-# The camp hub calls this once after it is built.
 static func attach(camp_hub) -> void:
 	var sandbox := new()
 	sandbox.name = "CampSandbox"
@@ -113,10 +88,6 @@ func _picker():
 	return load(PICKER)
 
 
-# --- Which kinds, in what words --------------------------------------------------------------
-
-# The enemy kinds the box can call, in picker order: the first roster's three, then the rest
-# of the roster as declared, each only when its behaviour exists.
 static func kinds() -> Array:
 	var out: Array = []
 	for kind in BASE_KINDS:
@@ -155,9 +126,6 @@ static func where_met(kind: String) -> String:
 	return "Not on the manifest."
 
 
-# --- Spawning --------------------------------------------------------------------------------
-
-# Why a kind cannot be called right now: "", or in_run, away, unknown, locked or full.
 func refusal(kind: String) -> String:
 	if game.flow.in_play():
 		return "in_run"
@@ -178,7 +146,6 @@ func live_count() -> int:
 	return live.size()
 
 
-# Calls one enemy of a kind onto a free grate. Null when refused (see refusal).
 func spawn(kind: String) -> Node3D:
 	if refusal(kind) != "":
 		return null
@@ -190,9 +157,6 @@ func spawn(kind: String) -> Node3D:
 	return enemy
 
 
-# Stands one enemy of a kind on the yard's floor at `at`, at `health` times its health, wired to this yard's hull.
-# The call box's own limits (met kinds, the cap, the grates) are spawn()'s; the ring's counts come in here
-# (camp_ring.gd). More health is health only: what the machine's tools do stays at stage one's numbers.
 func stand(kind: String, at: Vector3, health := 1.0) -> Node3D:
 	var enemy := _make(kind)
 	ctx.root.add_child(enemy)
@@ -206,7 +170,6 @@ func stand(kind: String, at: Vector3, health := 1.0) -> Node3D:
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_fired.bind(enemy))
 	enemy.died.connect(func(_where: Vector3, _scrap: int): _forget(enemy))
-	# A yard machine: the picker's met-marking skips anything that carries this.
 	enemy.set_meta("sandbox_slot", true)
 	live.append(enemy)
 	ctx.events.enemy_spawned.emit(enemy, kind)
@@ -214,7 +177,6 @@ func stand(kind: String, at: Vector3, health := 1.0) -> Node3D:
 	return enemy
 
 
-# The hull is whole again.
 func mend() -> void:
 	hull = HULL
 	changed.emit()
@@ -231,8 +193,6 @@ func _make(kind: String) -> Node3D:
 	return combat.fleet.make(kind)
 
 
-# The spec the spawner would build (fleet.dress and the spawner's own), at stage one's numbers
-# and without the director's tier scales.
 func _spec_for(kind: String) -> Dictionary:
 	var plating := float(combat.warden_spec(1)["plating"])
 	var spec := {"rest_scale": 1.0}
@@ -245,7 +205,6 @@ func _spec_for(kind: String) -> Dictionary:
 		if Fleet.PLATING_SCALE.has(kind):
 			spec["plating"] = float(roundi(Fleet.PLATING_SCALE[kind] * plating))
 		if kind == "swarm_remnant":
-			# A lone drone with a formation of its own: the yard's cap counts bodies.
 			spec["swarm"] = Swarm.new(combat.fleet)
 	return spec
 
@@ -254,12 +213,10 @@ func _is_live() -> bool:
 	return walking and inside and not page_open
 
 
-# True while the yard's machines fight: on the walk, the ball inside the fence and the call box's page shut.
 func fighting() -> bool:
 	return _is_live()
 
 
-# Sends every called enemy home.
 func clear() -> void:
 	for enemy in live:
 		_free(enemy)
@@ -301,7 +258,6 @@ func _prune() -> void:
 	_shells = _shells.filter(func(shell): return is_instance_valid(shell) and not shell.is_queued_for_deletion())
 
 
-# The lobber's shell, wired the way combat does it but to this hull.
 func _on_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D) -> void:
 	var shell := Projectile.new()
 	ctx.root.add_child(shell)
@@ -312,9 +268,6 @@ func _on_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D)
 	_shells.append(shell)
 
 
-# --- The ball in the yard ---------------------------------------------------------------------
-
-# An enemy's committed hit. The hull takes it and the ball takes the shove; the run does not.
 func _on_hit(amount: float, shove: Vector3, _source: String) -> void:
 	if not _is_live():
 		return
@@ -331,7 +284,6 @@ func hurt(amount: float) -> void:
 	changed.emit()
 
 
-# The ball is wrecked: back at the entry with a full hull. Nothing is charged.
 func wreck() -> void:
 	wrecks += 1
 	hull = HULL
@@ -373,14 +325,10 @@ func _on_walk_left() -> void:
 	hull = HULL
 
 
-# --- The picker page ---------------------------------------------------------------------------
-
 func _met() -> Array:
 	return met_override if met_override != null else _picker().met_of(game)
 
 
-# The call box was used. Opens the picker through the walk's page entry point when screens
-# has one (open_walk_page(page, on_close)), else on a layer of its own.
 func open_picker() -> void:
 	if page_open or not walking:
 		return
@@ -395,7 +343,6 @@ func open_picker() -> void:
 	if _via_screens:
 		game.screens.open_walk_page(_page, _close_page)
 		if _page.get_parent() == null:
-			# The walk is not live (another page is up): nothing opened.
 			_page.free()
 			_page = null
 			return
@@ -444,7 +391,6 @@ func _close_page() -> void:
 	_page = null
 
 
-# The yard's floor as the enemies and their telegraphs read it: flat, at the grate's height.
 class YardGround extends RefCounted:
 	var floor_y := 0.0
 

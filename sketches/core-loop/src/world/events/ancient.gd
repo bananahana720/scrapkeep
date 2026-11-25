@@ -7,7 +7,6 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 var world
 var _prepared := {}
 var _overlay_map: EventGround.OverlayMap
-# The stage's swap overlays, projected on a worker from setup (EventGround.plan_overlays).
 var _plan := {}
 
 

@@ -8,7 +8,6 @@ const SCRIPTS := {
 }
 
 
-# Each file provides setup(world), handle(action, row, context), and release().
 static func build(world, director) -> Dictionary:
 	var handlers := {}
 	var map = world.terrain.map()

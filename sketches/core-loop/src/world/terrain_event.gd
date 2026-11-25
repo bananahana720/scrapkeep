@@ -1,25 +1,9 @@
 extends RefCounted
 
-# One terrain-changing event (DESIGN-V2 section 9): a cave-in that seals one tunnel and
-# opens another, or an impact that leaves a crater bowl. Pure and seeded, stepped by
-# the event director like the flood and the squall.
-#
-# The order is fixed: it is announced (the telegraph and the stinger), the telegraph
-# runs its lead, and only then does the ground change. If the ball is inside the new
-# geometry's footprint when the lead runs out, the change holds, telegraph full, until
-# the ball is clear, so a change can never close over it. The change itself is one
-# swap of a finished collider on one tick. Riding the new feature pays a milestone.
-#
-# Facts, in the event director's shapes:
-#   {"kind": "announced", "id", "seconds"}  {"kind": "world", "fact", "at"}
-#   {"kind": "terrain_swap", "id", "at"}   {"kind": "started", "id"}
-#   {"kind": "milestone", "id", "at"}      {"kind": "ended", "id", "outcome"}
 
 enum { WAITING, ANNOUNCED, HOLDING, CHANGED, DONE }
 const PHASE_NAMES := ["waiting", "announced", "holding", "changed", "done"]
-# How long the new feature pays a milestone for riding it.
 const RIDE_WINDOW := 90.0
-# Riding means this long on the feature, above its floor, at this share of cruise.
 const RIDE_SECONDS := 0.4
 const RIDE_SPEED := 0.7
 const RIDE_LIFT := 1.0
@@ -30,7 +14,6 @@ var footprint: Array = []
 var ride_zone := {}
 var phase := WAITING
 var timer := 0.0
-# Stage seconds at announce and at swap, for the tests.
 var announced_at := -1.0
 var swapped_at := -1.0
 var held := 0.0
@@ -55,7 +38,6 @@ func phase_name() -> String:
 	return PHASE_NAMES[phase]
 
 
-# The telegraph's fill, 0 to 1, linear over the lead, held full while waiting on a clear ball.
 func fill() -> float:
 	match phase:
 		ANNOUNCED:
@@ -131,7 +113,6 @@ func _swap(facts: Array) -> void:
 		facts.append({"kind": "world", "fact": "route_opened", "at": _at3(ride_zone.get("centre", centre()))})
 
 
-# On the new feature: inside its ride band, lifted off its floor, at speed.
 func _riding(ball: Vector3, velocity: Vector3) -> bool:
 	if ride_zone.is_empty():
 		return false

@@ -1,14 +1,5 @@
 extends "res://src/world/device.gd"
 
-# The travel family as a generic device (LOOP-REDESIGN section 9): an amber approach
-# lane LANE_LENGTH long ending at a mouth, armed by E anywhere in the lane and fired as
-# the ball crosses the mouth, at any speed. What firing does belongs to the owner: it
-# passes on_fire(ball, velocity), which starts its own ride (writer L1's lift throws the
-# ball to the shelf). Interact.travel() builds and registers one.
-#
-# A ride banks the speed the ball crossed with and gives it back, never less: pass
-# `banked` as RideRail.arc()'s planar_in, whose release returns the ball's own planar
-# speed or the ride's floor, whichever is higher (ride_rail.gd).
 
 var banked := 0.0
 var on_fire := Callable()
@@ -27,7 +18,6 @@ func setup_travel(ctx_ref, system_ref, device_id: String, roll_ref, fire_callabl
 	setup(ctx_ref, system_ref, {"id": device_id})
 
 
-# The lane on the ground in amber, dashes pointing the way in, and a bar across the mouth.
 func build() -> void:
 	_lane = Node3D.new()
 	add_child(_lane)

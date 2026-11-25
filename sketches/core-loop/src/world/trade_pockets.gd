@@ -12,16 +12,11 @@ const POOL_FLOOR := 0.2
 const CURSE_CHANCE := 1.0 / 7.0
 const SACRIFICE_CHANCE := 1.0 / 7.0
 const FULL_HEALTH_BUMP := 0.25
-# What a trade spot is called at its door (ruling ci): the risky family is the keeper's gamble and
-# the safe one the foreman's kindness, each with one line in its owner's voice. The rules and
-# odds are as built, so neither line promises a better or a worse price.
 const DOOR_WORDS := {
 	"risk": {"name": "Keeper's gamble", "line": "Nobody makes you."},
 	"safe": {"name": "Foreman's kindness", "line": "A small efficiency fee. You're welcome."},
 }
 
-# W50-ISAAC-ECONOMY: Two deeper analog Trade Counter contracts (additive, leaving the 8 physical
-# pocket interiors in `pockets/w1/` and `trade_pockets_test.gd` untouched).
 const OVERTIME_CONTRACT := "overtime_contract"
 const SALVAGE_AUCTION := "salvage_auction"
 const CONTRACT_META := "w50_trade_contracts"
@@ -105,13 +100,10 @@ static func decide(mem: Dictionary, offer: Dictionary, took: bool) -> void:
 	elif not took:
 		mem.last_refused = offer.stage
 
-# The head of the door label: whose offer this is, the counter's name, then the owner's line.
 static func door_words(offer: Dictionary, counter: String) -> String:
 	var row: Dictionary = DOOR_WORDS[String(offer.family)]
 	return "%s: %s\n%s" % [row.name, counter, row.line]
 
-# The two devices a trade spot stands. owner is whose spot it is (stake_devices.gd OWNERS draws the body):
-# the keeper's gamble is bolted and chalked, the foreman's kindness is cast and wears World 1's one purple.
 static func devices(offer: Dictionary) -> Array:
 	var risk: bool = offer.family == "risk"
 	var owner := "gamble" if risk else "kindness"
@@ -119,7 +111,6 @@ static func devices(offer: Dictionary) -> Array:
 		"pay": "health" if risk else "cores", "owner": owner},
 		{"device": "trade_chest", "tier": int(offer.get("tier", 1)), "pay": "health" if risk else "cogs", "owner": owner}]
 
-# Curse lowers the rarer tier weights, but never below the sourced 0.2 floor.
 static func curse_tier(rng: RandomNumberGenerator) -> int:
 	var weights := [1.0, 0.5, POOL_FLOOR]
 	var roll := rng.randf() * 1.7
@@ -133,8 +124,6 @@ static func doors(map) -> Array:
 	var out := []
 	for row in map.park.activity_rows:
 		out.append({"id": String(row.id), "at": Vector2(row.at[0], row.at[1])})
-	# A sealed cache's door: a valve's sinking door, or the cracked wall that stands across the room's mouth
-	# (contraptions.gd sealed_wall; not preloaded here, as activities.gd preloads this file).
 	for row in map.park.contraption_rows:
 		if row.has("door"):
 			out.append({"id": String(row.id), "at": Vector2(row.door.at[0], row.door.at[1])})
@@ -147,7 +136,6 @@ static func candidates(graph, map) -> PackedInt32Array:
 	var blocked: Array = doors(map)
 	for spec in map.activity_sites:
 		blocked.append({"at": spec.at})
-	# Keep the entire largest interior off the route and outside the authored clear rings.
 	var lines := {}
 	for n in graph.node_count():
 		if graph.flags(n) & Graph.LINE != 0:
@@ -189,7 +177,6 @@ static func stage_site(graph, map, run, layout_seed: int, pool: PackedInt32Array
 	if run.trade_memory.offers.has(key):
 		return run.trade_memory.offers[key].duplicate(true)
 	var rng := RandomNumberGenerator.new()
-	# A named layout stream does not advance ctx.rng or any existing draw.
 	rng.seed = hash([layout_seed, run.run_seed, run.stage, "trade_layout"])
 	var sealed_kindness: bool = run != null and run.has_method("override_on") and run.override_on("kindness_sealed")
 	var offer := draw(run.trade_memory, run.stage, rng, run.hp >= run.max_hp, sealed_kindness)
@@ -286,8 +273,6 @@ static func validate_doc(doc, entrance: int) -> String:
 	return ""
 
 
-# ---- W50-ISAAC-ECONOMY: Overtime Contract & Salvage Auction ---------------------------
-
 static func contract_ids() -> Array[String]:
 	return [OVERTIME_CONTRACT, SALVAGE_AUCTION]
 
@@ -314,7 +299,6 @@ static func _contract_state(run) -> Dictionary:
 	return raw
 
 
-# Public read-only query helper (Rule 7): returns a fresh snapshot without mutating run meta.
 static func contract_status(run) -> Dictionary:
 	if run == null:
 		return {"stage": 0, "overtime_signed": false, "overtime_settled": false, "auction_spent": false, "auctions_won": 0}

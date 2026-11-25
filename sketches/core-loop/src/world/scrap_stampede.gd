@@ -2,9 +2,6 @@ extends RefCounted
 
 const Route := preload("res://src/world/route.gd")
 
-# Scrap Stampede: roll into the ring by the pump house and a loaded scrap hauler
-# bolts down its escape route. Ram it three times before it gets away; every hit
-# knocks scrap loose, and it runs a little faster each time it is hit.
 
 const HITS := 3
 const CATCH := 3.6

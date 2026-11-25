@@ -1,51 +1,5 @@
 extends RefCounted
 
-# The spawn director: pure scheduling with no node of its own. The stage hands it a
-# delta, the live enemy count and where the ball is going, and gets due spawns back.
-# A headless test steps a whole stage in a loop instead of in real seconds.
-#
-# Honesty rules (demo spec, Director honesty):
-# - Enemy HP comes from stage threat only, at every run tier (ruling al). The opt-in run
-#   tier adds capped per-world damage and rest dials; the clock never toughens an enemy.
-# - The clock's tier is clamped at the stage's last tier (+2; +3 on world 1, clock_tiers()), and every rise, the beacon spike included, is
-#   recorded for the world to announce with threat_rose. Nothing rises silently.
-# - 60% of spawns land ahead of the ball, within 35 degrees of where it is rolling,
-#   60 to 90 m out; the rest on the flanks. None lands within 25 m of the ball, and
-#   each shows a ground ring for 1 s before its body arrives.
-#
-# v2 W7 enemies: pack composition (DESIGN-V2 sections 10.5 and 15.4-15.5).
-# - The difficulty clock gates reinforcements. At tick 0 every spawn is a chaser or a
-#   lobber; from tick 1 a share of the spawn slots become packs, PACK_PER_TICK a tick,
-#   and each tick past the Warden break (while the spike is on) adds PAST_BREAK_STEP.
-# - A tagged pack pairs a controller with a punisher (PACKS): the enemy synergies. Its
-#   members arrive together, on one ring timer, so combat reads them as one pack and
-#   publishes pack_arrived with the faction.
-# - New counters unlock as the ticks rise: UNLOCK_BASE by stage, UNLOCK_PER_TICK more a
-#   tick, in the roster's order (combat/roster.gd COUNTERS). A pack is drawn only once
-#   both its members are unlocked.
-# - The stage's ancient family arrives as its own pack, ANCIENT_SHARE of the packs.
-# - Weighting tests the build: `build` is combat's build_read() (class, habit shares,
-#   W3's upgrade-tree branch tags through TAG_AXES). Each pack's weight is 1 + BUILD_TILT times how
-#   strongly the build leans on the axis the pack tests, so the build's own axis comes
-#   up to twice as often and every other unlocked pack still comes: fair, never a hard
-#   counter. With no build read every pack weighs the same.
-# - HP reads stage threat only; the clock adds packs, never toughness.
-#
-# Authored packs (slice table): with `authored` set, every arrival is one whole pack from
-# that list and nothing else spawns: no single draws, no unlock clock, no ancient share. Packs
-# are drawn uniformly (but for the nemesis lean below) and never the same twice in a row; the
-# `elite_arrival`-th arrival is the `elite` pack, once. Pacing stays the director's own, and
-# a pack arrives only when the cap has room for all of it.
-#
-# Pressure (GP3): the stage row's "pressure" (alpha_defs.gd PRESSURE) times the Breath row
-# (BREATH, keyed by the tuning's breath option) multiplies the constants below, never replaces
-# them: pack_scale the crowd cap and pack share, interval_scale the spawn interval, elite_rate
-# the chance a later authored arrival is the elite again. A row with no pressure reads 1.0.
-#
-# 2026-10-18 (w17 nemesis): the one build tilt an authored table keeps. From Nemesis.FROM_WORLD
-# a pack that holds a kind pressing the pilot's nemesis axis (combat/nemesis.gd) weighs
-# Nemesis.PACK_WEIGHT against 1.0 for the rest, in both draws. World one, an unknown class and an
-# empty build weigh nothing, so those draws stay the uniform pick, RNG call for call.
 enum { CHASER, LOBBER }
 
 const Roster := preload("res://src/combat/roster.gd")
@@ -87,19 +41,11 @@ const UNLOCK_PER_TICK := 2
 const ANCIENT_SHARE := 0.25
 const BUILD_TILT := 1.0
 const PACK_SPREAD := 4.5
-# A habit's share of play and the build axes it leans on; a class adds its own axis.
 const HABIT_AXES := {"ram": ["contact", "speed", "heft"], "rebound": ["contact"], "stomp": ["contact", "air"],
 	"smash": ["contact"], "vault": ["air"], "weapon": ["weapon"], "special": ["weapon"], "jump": ["air"],
 	"air": ["air"], "boost": ["speed", "steer"], "grapple": ["steer"], "glide": ["air"]}
-# Keyed by ClassDef id (what fleet.gd build_read() reads from run.class_def.id), one row per
-# pilot. 2026-10-17 CLASS-TILT: the wave-3 keys were display names, so no real run ever matched.
-# Tarn, Tally and the Cannon are new rows, a design call for Andrew's veto:
-#   tarn  contact: claw melee, clamp and rend slam live at arm's length.
-#   tally  weapon: the ledger reader and link clips are a caster's aimed fire.
-#   remembered_cannon  heft: plate, rush ring and recoil are about mass and holding ground.
 const CLASS_AXIS := {"pylon_engineer": "steer", "runner_gunner": "speed", "demolitions_caster": "air",
 	"tarn": "contact", "tally": "weapon", "remembered_cannon": "heft"}
-# W3's upgrade-tree tags (upgrade_tree.gd TAGS) and the axes each leans on.
 const TAG_AXES := {"air": ["air"], "burst": ["weapon"], "close": ["contact"], "ranged": ["weapon"],
 	"mobility": ["steer", "speed"], "mounted": ["weapon"], "sustain": ["heft"], "cc_immune": ["speed"],
 	"traps": ["contact"], "stealth": ["weapon"]}
@@ -112,41 +58,26 @@ const MIN_INTERVAL := 1.5
 const FIRST_SPAWN := 4.0
 const HEFT_CAP_STEP := 2
 const HARD_CAP := 24
-# The cap counts an enemy only while it is within HOLD_M of the ball. A pack the ball has rolled past stays where
-# it is, but it no longer holds a slot (13 Nov 2026: the dam's drop-in pack, passed at 4 s, held 3 of the 6
-# slots and the director refused every pack from 10 s to 47 s). The Warden never holds one. A director pack member
-# past LEAVE_M gives up and leaves (world.gd director_held): a completionist's detours otherwise stranded 15 to 25
-# enemies across the park. Past FAR_CEILING enemies alive in all, nothing more comes.
 const HOLD_M := 150.0
 const LEAVE_M := 260.0
 const NEVER_HOLDS := ["warden"]
 const FAR_CEILING := 32
 const ARRIVAL := 1.0
 const AHEAD_SHARE := 0.6
-const AHEAD_CONE := 0.6108652  # 35 degrees
+const AHEAD_CONE := 0.6108652
 const AHEAD_RANGE := Vector2(60.0, 90.0)
 const FLANK_RANGE := Vector2(45.0, 70.0)
 const MIN_GAP := 25.0
-# A ballast heavy arrives on the post of a rim within RIM_SEEK of its pack spot, so a ram can
-# ring it out (Andrew, "Ring-outs", 2026-10-17); with none in reach it keeps the spot (beached).
 const RIM_SEEK := 24.0
 const SLOW := 3.0
 const TRIES := 8
 const HOME_WINDOW := Vector2(60.0, 250.0)
-# Routes with a fight on them (13 Nov 2026): a crew home is in the window only while it lies within HOME_CONE of the
-# ball's heading, so a crew on a route the ball did not take no longer draws every pack there. A free pack ahead lands
-# beside the riding line the ball is on: a line point LINE_AHEAD m ahead inside AHEAD_CONE, LINE_SIDE m off it.
-const HOME_CONE := 0.8726646  # 50 degrees
+const HOME_CONE := 0.8726646
 const LINE_AHEAD := Vector2(60.0, 100.0)
 const LINE_SIDE := Vector2(12.0, 20.0)
-# Pilot line points sit up to about 95 m apart; _line_spot walks each segment in steps this long.
 const LINE_STEP := 10.0
-# Past the stage's elite arrival, the chance at elite_rate 1.0 that an authored arrival is the
-# elite pack again; never two elites in a row.
 const ELITE_REPEAT := 0.1
 const PRESSURE_KEYS := ["pack_scale", "interval_scale", "elite_rate", "posture_curve", "boss_phase_scale"]
-# Breath as a gameplay setting, keyed by the same option values the music reads. The authored
-# PRESSURE rows are the default game: hard (the default) and raw read 1.0 on every key; gentle eases.
 const BREATH_NORMAL := {"pack_scale": 1.0, "interval_scale": 1.0, "elite_rate": 1.0, "posture_curve": 1.0, "boss_phase_scale": 1.0}
 const BREATH := {
 	"raw": BREATH_NORMAL,
@@ -161,57 +92,32 @@ var credits := 0.0
 var credits_accrued := 0.0
 var credits_spent := 0.0
 var spike := false
-# The stage's threat: more enemies alive, arriving sooner, and base enemy HP.
 var threat := 1.0
 var world := 1
-# The run stage (1 to 6) of the row given to use_row(), for the per-stage challenge dials; 0 before
-# a row, which reads every by_stage dial as 1.0.
 var dial_stage := 0
-# Pack pressure B: how many extra chasers the last _place_pack queued (combat/pack_pressure.gd).
 var extras_placed := 0
 var dial_steps := StageDefs.RUN_TIER_DIAL_STEPS
-# From run.heft_class(): a heavier ball earns a bigger crowd to roll through.
 var heft_class := 1
 var play_rect := Rect2(-150.0, -150.0, 300.0, 300.0)
-# The stage's height source (height(x, z)), set by world.gd; null leaves rim placement off.
 var terrain = null
-# A traversal test needs the stage without the fight in it.
 var paused := false
-# Spawns whose ground ring is showing: {"kind": int, "at": Vector2, "left": float}.
 var arrivals: Array[Dictionary] = []
-# The stage (1 to 3), for the unlock base and the ancient family; 0 reads it from the
-# threat dial, which stage_defs sets per stage. A row given to use_row() wins over both.
 var stage := 0
-# The stage row's unlock_base and ancient, once use_row() has been called; {} reads the guess.
 var _row := {}
-# The stage row's pressure multipliers and the Breath option, set by use_row().
 var pressure_row := {}
 var breath := ""
-# combat's build_read(): {class, habits: {habit: share}, branch_tags: [axis]}.
 var build := {}
-# Every pack composed, in order: {id, kinds, tests}. For tests and the balance read.
 var packs: Array[Dictionary] = []
-# The stage table's authored packs ({id, kinds}), its elite pack and the arrival that is the
-# elite. Empty `authored` keeps the director's own rules.
 var authored: Array = []
 var elite := {}
 var elite_arrival := 0
-# Pack kind names KIND_NAMES lacks, each warned once and never spawned.
 var unknown_kinds := {}
 
 var _timer := FIRST_SPAWN
-# Breathers (map audit unit 7; breather_rows.gd through ParkMap.breathers()): circles on the riding lines where no
-# pack is placed. While the ball is inside one, with no crew home in the window, the timer's ticks are banked and credit
-# income keeps accruing. Each breather gives BREATH_S of quiet a stage, about the 6 s a ball at cruise takes to cross
-# 120 m; past that, or once the ball leaves, packs come as before and the bank pays out one tick every RELEASE_GAP, a
-# tick the room cannot take staying banked. A breather moves pressure later, not away (ruling cu); the one loss is a
-# tick on the approach that finds no spot outside it, as any tick with no spot is spent. A ball parked in one gets
-# BREATH_S of quiet, not a stage's.
 const BREATH_S := 8.0
 const RELEASE_GAP := 0.25
 var breathers: Array = []
 var banked := 0
-# Seconds of quiet each breather has given this stage, by id.
 var breath_used := {}
 var _release := 0.0
 var _rng := RandomNumberGenerator.new()
@@ -229,26 +135,18 @@ var _park_map
 var _park_graph
 var _graph_path := ""
 var _corridors
-# read_park results by map id, shared by every director: {"task", "out"} while a worker reads one,
-# then {"park"} (SWAP-HITCH-2: the read cost 58 to 85 ms a stage entry).
 static var _parks := {}
 var _home_sites := {}
 var _forward_homes: Array[Dictionary] = []
 var _stopped_kinds := {}
 
 
-# The stage table's say on what a stage sends: the row's own packs, elite and elite arrival win
-# over the table's.
 func author(def: Dictionary, stages) -> void:
 	authored = _packs_of(def, stages)
 	elite = _elite_of(def, stages)
 	elite_arrival = int(def["elite_arrival"] if def.has("elite_arrival") else stages.elite_arrival())
 
 
-# Every kind author() hands the director for that row, once each: the packs' in the order they
-# name them, then the elite's. What an authored stage can send, for a caller that readies kinds
-# before play (BakeWarm). A row with no packs leaves the director to its own rules, and the kinds
-# those pick are not named here.
 static func kinds_sent(def: Dictionary, stages) -> Array:
 	var out := []
 	for pack: Dictionary in _packs_of(def, stages) + [_elite_of(def, stages)]:
@@ -282,8 +180,6 @@ func tier() -> int:
 	return mini(int(stage_time / TIER_SECONDS), clock_tiers(dial_stage))
 
 
-# The clock's last tier on a stage: ChallengeDials mobs.clock_tiers_by_stage, MAX_TIME_TIERS for a director
-# with no stage row. World 1 climbs to +3 (wave 37 unit D3); the run clock (build/run_clock.gd) reads the same dial.
 static func clock_tiers(stage: int) -> int:
 	return maxi(0, roundi(ChallengeDials.by_stage_or("mobs.clock_tiers_by_stage", stage, MAX_TIME_TIERS)))
 
@@ -292,8 +188,6 @@ func effective_tier() -> int:
 	return tier() + (SPIKE_TIERS if spike else 0)
 
 
-# The clock has no part in these dials. Tier 0 keeps the original values exactly.
-# Every run tier reads the stage threat alone: difficulty never raises enemy health (ruling al, the HARD ladder).
 func hp_scale() -> float:
 	return threat
 
@@ -327,25 +221,21 @@ func lobber_share() -> float:
 	return clampf(0.15 + effective_tier() * ChallengeDials.by_stage_or("mobs.lobber_share_step_by_stage", dial_stage, 0.07), 0.0, 0.5)
 
 
-# 0 with nothing alive and nothing coming, 1 at the cap during a beacon spike.
 func pressure(alive_count: int) -> float:
 	var crowd := clampf(float(alive_count) / float(maxi(1, cap())), 0.0, 1.0)
 	return clampf(crowd * 0.7 + (0.3 if spike else 0.0) + minf(0.2, tier() * 0.05), 0.0, 1.0)
 
 
-# The level threat_rose announces: the effective tier.
 func level() -> int:
 	return effective_tier()
 
 
-# Every rise of the level since the last call, in order.
 func take_threat_rises() -> Array[int]:
 	var out := _rises
 	_rises = []
 	return out
 
 
-# Returns the spawns whose arrival ring has run its second: {"kind", "at": Vector2}.
 func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := Vector2.ZERO,
 		forward := Vector2(0.0, 1.0)) -> Array[Dictionary]:
 	stage_time += delta
@@ -398,9 +288,6 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 	return due
 
 
-# One timer tick's pack: an authored arrival, or a pack or a single at spawn_spot. alive is every enemy up or falling
-# due this tick. False only when the room cannot take the pack (full, or short of an authored pack's whole size), so a
-# banked tick waits for room; a tick with no spot is spent, as the timer always spent one.
 func _timer_pack(alive: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> bool:
 	if alive + arrivals.size() >= cap():
 		return false
@@ -423,17 +310,14 @@ func _timer_pack(alive: int, ball: Vector2, velocity: Vector2, forward: Vector2)
 	return true
 
 
-# Whether an enemy of `kind` at `at` holds one of the cap's slots with the ball at `ball`.
 static func holds(kind: String, at: Vector2, ball: Vector2) -> bool:
 	return not NEVER_HOLDS.has(kind) and at.distance_to(ball) <= HOLD_M
 
 
-# Whether a director pack member at `at` has been left far enough behind to leave the stage.
 static func leaves(at: Vector2, ball: Vector2) -> bool:
 	return at.distance_to(ball) > LEAVE_M
 
 
-# The count advance() is given: `held` enemies near the ball, or the hard cap once `total` alive reach FAR_CEILING.
 static func held_count(held: int, total: int) -> int:
 	return HARD_CAP if total >= FAR_CEILING else held
 
@@ -533,11 +417,7 @@ func _draw_credit() -> Dictionary:
 	return pool[-1]
 
 
-# One pack's members side by side across the line from the ball, on one ring timer.
-# room: the cap's room the caller checked the pack against; pack pressure B's extra chasers fit inside it.
 func _place_pack(at: Vector2, kinds: Array, ball: Vector2, is_elite := false, room := 0) -> int:
-	# Pack pressure B (pack_pressure.gd; 0 without --pack-pressure): extra chasers join a crew, last, as far as
-	# the room allows. extras_placed tells the credit path not to charge for them.
 	extras_placed = 0
 	var extra := mini(PackPressure.crew_extra(dial_stage), room - kinds.size())
 	if extra > 0 and kinds.size() >= 2:
@@ -599,8 +479,6 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2, is_elite := false, ro
 	return queued
 
 
-# The post of the nearest rim to `spot` that stays in the play rect and MIN_GAP from the ball,
-# where a ballast heavy stands (ballast_heavy.gd); `spot` itself when there is none.
 func rim_spot(spot: Vector2, ball: Vector2) -> Vector2:
 	if terrain == null:
 		return spot
@@ -613,8 +491,6 @@ func rim_spot(spot: Vector2, ball: Vector2) -> Vector2:
 	return spot
 
 
-# An authored arrival: the pack due next waits until the cap has room for all of it. False while it waits (no room);
-# true once the tick is used, placed or with no spot found.
 func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> bool:
 	if _next_pack.is_empty():
 		_next_pack = _draw_authored()
@@ -659,8 +535,6 @@ func _draw_authored() -> Dictionary:
 	return pool[-1]
 
 
-# {pack id: Nemesis.PACK_WEIGHT} for the pool's packs that press the pilot's nemesis axis, or {}
-# when none do (world one, no class, or no matching pack): callers then keep the uniform pick.
 func _nemesis_weights(pool: Array) -> Dictionary:
 	var lean := {}
 	if world < Nemesis.FROM_WORLD:
@@ -674,11 +548,6 @@ func _nemesis_weights(pool: Array) -> Dictionary:
 	return lean
 
 
-# --- v2 W7 enemies: pack composition -------------------------------------------------
-
-# The world hands the director the stage's table row on stage entry: its counter unlock
-# level and its ancient enemy come from the row, so a stage past the third reads its own. The
-# row's pressure and the Breath option scale the pacing (scale()).
 func use_row(row: Dictionary, breath_option := "", tier_reader := Callable()) -> void:
 	if tier_reader.is_valid():
 		set_run_tier_reader(tier_reader)
@@ -715,34 +584,25 @@ func _read_homes(map_id: String) -> void:
 		var home: Dictionary = row.duplicate(true)
 		home.broken = false
 		homes.append(home)
-	# The graph is the game's shared copy (Activities.shared_graph), taken on first use: by then
-	# activities has adopted the one its worker read for this map, so the entry reads none.
 	var graph_path := "res://assets/park/%s/graph.bin" % map_id
 	if FileAccess.file_exists(graph_path):
 		_graph_path = graph_path
 	_corridors = park.corridors
 
 
-# A park map's parsed rows and its corridor reader (KE1 owns both the pilot-line reader and the
-# corridor clearance), read once a process and read-only after: {"map", "corridors"}, or {} for a
-# map that is not a park or fails its schema. Pure, so a worker can read it (prepare_park).
 static func read_park(map_id: String) -> Dictionary:
 	var path := "res://src/world/park/%s.json" % map_id
 	if not map_id.begins_with("park_") or not FileAccess.file_exists(path):
 		return {}
-	# Runtime loads avoid the schema's preload of Director forming a cycle.
 	var map = load("res://src/world/park/park_map.gd").new(path)
 	if not map.ok:
 		return {}
 	return {"map": map, "corridors": load("res://src/world/event_director.gd").new(0, {}, map, 0.0, Callable())}
 
 
-# Starts a worker reading a park map the game will enter (activities.gd asks for the next stage's).
 static func prepare_park(map_id: String) -> void:
 	if _parks.has(map_id) or not map_id.begins_with("park_"):
 		return
-	# The schema's registry and the recipes' origins fill lazily and set their read flag first, so
-	# the main thread fills them before a worker can be their first reader.
 	load("res://src/world/park/park_schema.gd")._registry()
 	load("res://src/world/park/park_recipes.gd").origin("")
 	var out := {}
@@ -756,7 +616,6 @@ static func _park_for(map_id: String) -> Dictionary:
 	return _parks[map_id].park
 
 
-# Waits once on a park read still running, so the read is never waited on twice or left open.
 static func settle_park(map_id: String) -> void:
 	if _parks.has(map_id) and _parks[map_id].has("task"):
 		WorkerThreadPool.wait_for_task_completion(_parks[map_id].task)
@@ -768,7 +627,6 @@ static func settle_parks() -> void:
 		settle_park(map_id)
 
 
-# Teardown: waits on every read, then lets the parsed maps go with the Game.
 static func release_parks() -> void:
 	settle_parks()
 	_parks.clear()
@@ -785,12 +643,6 @@ func _graph():
 	return _park_graph
 
 
-# Grey panels' rib read (IL-01, the map veto pass's ribs and pockets): 1 where `at` stands
-# in an off-spine dead end, a graph anchor zone (one way in) that holds no line or Warden
-# node, or in the zone of a park row tagged "off_spine": true; 0 elsewhere; -1 when the stage
-# has no zone data (no graph, or a version 1 graph), so the caller pays the plain rate and logs
-# the case rather than guessing. The tag holds whatever the graph reads (ruling bd): a terrain
-# fix that opens a way into a tagged row's zone does not change what its kills pay.
 func off_spine(at: Vector3) -> int:
 	var graph = _graph()
 	if graph == null or graph.zone_count() == 0:
@@ -806,25 +658,10 @@ func off_spine(at: Vector3) -> int:
 	return 1 if _rib_zones.has(graph.zone_of(graph.nearest(at))) else 0
 
 
-# The park's rows tagged "off_spine": true.
 static func tagged_off_spine(park: Dictionary) -> Array:
 	return park.get("park_rows", []).filter(func(row): return row.get("off_spine", false) == true)
 
 
-# Grey panels' rib caches (IL-01, coordinator ruling 23 Oct: exploring pays): up to `count`
-# spots, one per off-route dead end with door ground (anchors() rank > 0), drawn without
-# repeats from a stream seeded by `seed`. Each spot is the zone's door node furthest from the
-# spawn: the end of the dead end. The draw takes dead ends a player hunting the park would roll
-# into first: at most RIB_DETOUR_MAX_M over the drop-in to landmark path, and at least
-# RIB_LANDMARK_CLEAR_M of path short of the landmark (a cache in the Warden's yard is met on the
-# way out of the fight, not found). On the flume half the dead ends are the outer washes,
-# 500 to 1,300 m off the line, where a 14 m column and a 45 m chime reach nobody: no bot or player
-# run took a cache there (25 Oct, seeds 1-4). A door node on a line or a grind line's deck (the
-# siphon span's trough, 40 m over the wash) is never the spot: the explorer stood under that cache. A map with too few
-# such ends tops up from the rest, least detour first. Empty where the map has no graph.
-# A dead end counts once it has RIB_MIN_DOORS door nodes, per park (ruling az, 30 Oct): the flume's
-# near ends are small benches and pockets of 3 to 15 door nodes, so at the graph's own 16 only three
-# far-west ends qualified and every seed drew the same three (the explorer took 2 of 51).
 const RIB_DETOUR_MAX_M := 300.0
 const RIB_LANDMARK_CLEAR_M := 120.0
 const RIB_MIN_DOORS := {"park_flume": 3}
@@ -842,12 +679,10 @@ func rib_cache_spots(count: int, seed: int) -> Array[Vector3]:
 	return rib_spots(graph, spawn, count, seed, grind_rows(park), rib_min_doors(String(park.get("map", ""))))
 
 
-# The door nodes a dead end needs to hold a rib cache on this park (RIB_MIN_DOORS, else the graph's own).
 static func rib_min_doors(map_id: String) -> int:
 	return int(RIB_MIN_DOORS.get(map_id, ParkGraph.ANCHOR_MIN_DOOR_NODES))
 
 
-# The park's grind lines by row id: their decks are ridden, not stood on.
 static func grind_rows(park: Dictionary) -> Dictionary:
 	var out := {}
 	for row in park.get("park_rows", []):
@@ -856,9 +691,6 @@ static func grind_rows(park: Dictionary) -> Dictionary:
 	return out
 
 
-# rib_cache_spots on a given park graph, the drop-in at `spawn` (INF: no detour rule), never on a
-# node of a line or of a deck in `grind` (grind_rows), on off-route dead ends of `min_doors` door nodes
-# or more.
 static func rib_spots(graph, spawn: Vector2, count: int, seed: int, grind := {},
 		min_doors := ParkGraph.ANCHOR_MIN_DOOR_NODES) -> Array[Vector3]:
 	var out: Array[Vector3] = []
@@ -906,7 +738,6 @@ func home_live(id: String) -> bool:
 	return false
 
 
-# Every live crew home and where it stands: [{id, at: Vector2}] (site_markers.gd puts a steam plume over each).
 func live_homes() -> Array:
 	var out := []
 	for home in homes:
@@ -963,13 +794,10 @@ func _window_homes(ball: Vector2, heading := Vector2.ZERO) -> Array[Dictionary]:
 	return out
 
 
-# Whether `to` lies within `cone` radians of `heading`; true with no heading.
 static func facing(heading: Vector2, to: Vector2, cone: float) -> bool:
 	return heading == Vector2.ZERO or to == Vector2.ZERO or absf(heading.angle_to(to)) <= cone
 
 
-# A spot beside the riding line ahead of the ball, or INF: a point on a pilot line LINE_AHEAD away inside AHEAD_CONE of
-# `heading`, moved LINE_SIDE to one side, and safe (off every corridor, out of breathers).
 func _line_spot(ball: Vector2, heading: Vector2) -> Vector2:
 	var ahead: Array[Vector2] = []
 	for line in _corridors.pilot_lines():
@@ -994,9 +822,6 @@ func _line_spot(ball: Vector2, heading: Vector2) -> Vector2:
 	return Vector2.INF
 
 
-
-# `riders` gains each member placed only because it rides with a housed crew (no home of its
-# own in the window); the Warden clamp counts that crew without them (stage_locks.gd).
 func _home_pack_spots(kinds: Array, ball: Vector2, side: Vector2, riders := {}) -> Dictionary:
 	var spots := {}
 	var assigned: Array[Vector2] = []
@@ -1038,8 +863,6 @@ func _home_pack_spots(kinds: Array, ball: Vector2, side: Vector2, riders := {}) 
 					assigned.append(spot)
 		if crew_home.is_empty() and indices.any(func(i: int) -> bool: return spots.has(i)):
 			crew_home = home
-	# A member whose kind has no home in the window rides with the crew from the crew's home
-	# (the first window home when the whole pack is homeless), never stripped from it.
 	var housed_crew := not crew_home.is_empty()
 	if not housed_crew:
 		crew_home = _forward_homes[0]
@@ -1083,9 +906,6 @@ func _home_spot(home: Dictionary, ball: Vector2, preferred := Vector2.ZERO, assi
 	return Vector2.INF
 
 
-# Whether the ball's free packs wait this tick, spending delta of its breather's BREATH_S: it is inside a breather with
-# quiet left and no live crew home is in the window ahead. A crew home is an authored fight the map places (and
-# park_breath_test measures); a breather quiets only the director's own packs.
 func _breathe(delta: float, ball: Vector2, heading := Vector2.ZERO) -> bool:
 	var id := breather_at(ball)
 	if id == "" or float(breath_used.get(id, 0.0)) >= BREATH_S:
@@ -1096,7 +916,6 @@ func _breathe(delta: float, ball: Vector2, heading := Vector2.ZERO) -> bool:
 	return true
 
 
-# The id of the breather `p` stands in, "" for none.
 func breather_at(p: Vector2) -> String:
 	for b in breathers:
 		if p.distance_to(b["at"]) <= float(b["radius_m"]):
@@ -1104,7 +923,6 @@ func breather_at(p: Vector2) -> String:
 	return ""
 
 
-# Whether `p` stands inside one of the stage's breathers.
 func in_breather(p: Vector2) -> bool:
 	return breather_at(p) != ""
 
@@ -1114,14 +932,12 @@ func _park_safe(spot: Vector2) -> bool:
 		return false
 	for line in _corridors.pilot_lines():
 		for i in range(1, line.size()):
-			# A point footprint uses ParkMap's same segment/margin predicate as KE1.
 			var point := {"at": [spot.x, spot.y], "size": [0.0, 0.0, 0.0], "yaw_deg": 0.0}
 			if _park_map.footprint_contains(point, line[i - 1], _corridors.PARK_CORRIDOR_M, line[i]):
 				return false
 	return true
 
 
-# One pressure key's multiplier: the stage row's times the Breath row's, 1.0 where either is silent.
 func scale(key: String) -> float:
 	var breath_row: Dictionary = BREATH.get(breath, BREATH_NORMAL)
 	return float(pressure_row.get(key, 1.0)) * float(breath_row.get(key, 1.0))
@@ -1147,13 +963,10 @@ func stage_now() -> int:
 	return 2 if threat <= 1.6 else 3
 
 
-# Ticks past the Warden break: counted from the moment the spike came on, the first at
-# once. 0 while the spike is off.
 func past_break_ticks() -> int:
 	return int(_spike_time / TIER_SECONDS) + 1 if spike else 0
 
 
-# The share of spawn slots that become packs: 0 at tick 0, the clock's gate.
 func reinforcement_weight() -> float:
 	var ticks := effective_tier()
 	if ticks <= 0:
@@ -1166,7 +979,6 @@ func unlocked_counters() -> Array:
 	return COUNTERS.slice(0, n)
 
 
-# The tagged packs whose members are all unlocked now.
 func open_packs() -> Array:
 	var unlocked := unlocked_counters()
 	var out := []
@@ -1181,7 +993,6 @@ func open_packs() -> Array:
 	return out
 
 
-# How strongly the build leans on each axis, 0 to 1 (the strongest is 1).
 func build_axes() -> Dictionary:
 	var axes := {}
 	var habits: Dictionary = build.get("habits", {})
@@ -1207,8 +1018,6 @@ func pack_weight(id: String, axes := build_axes()) -> float:
 	return 1.0 + BUILD_TILT * float(axes.get(PACKS[id]["tests"], 0.0))
 
 
-# One pack's kinds: the stage's ancient, or a tagged controller-and-punisher pair drawn
-# by build weight. Empty when nothing is unlocked yet.
 func compose() -> Array:
 	var open := open_packs()
 	if open.is_empty() and effective_tier() <= 0:
@@ -1234,7 +1043,6 @@ func compose() -> Array:
 	return kinds
 
 
-# Where the ball is going: its velocity once it moves, else where it faces. Breathers and spawns read the same one.
 static func _heading(velocity: Vector2, forward: Vector2) -> Vector2:
 	return velocity.normalized() if velocity.length() > SLOW else forward.normalized()
 

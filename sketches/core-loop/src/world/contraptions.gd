@@ -16,9 +16,6 @@ const Interactables := preload("res://src/world/interactables.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 
-# Registered interactable for paying a works sluice valve's scrap price through world.interact.
-# Uses the ally family (cost: scrap, consent: hold) so an accidental tap never spends scrap, and
-# draws only the family glyph + gauge (zero new words on screen, ruling cx).
 class SluicePayDevice extends "res://src/world/device.gd":
 	var owner_contraptions
 	var valve_id := ""
@@ -53,21 +50,6 @@ class SluicePayDevice extends "res://src/world/device.gd":
 		return owner_contraptions != null and is_instance_valid(owner_contraptions) \
 			and owner_contraptions.pay_sluice(valve_id)
 
-# The gorge's contraptions, built from the map's specs and run from world's physics
-# tick (DESIGN-V2 section 9, VISUAL-LANGUAGE section 11). Every one is a momentum tool
-# you ride, never a stop: a launcher that is not ready lets you roll through, a lift
-# you are not on never holds you, and a door only stands where a valve opens it.
-# Each shows its cycle on a bone gauge whose needle sweeps linearly, puffs steam at the
-# fire moment, and reports a world fact with its own sound.
-#
-# step() returns facts for world to publish or apply:
-#   {"kind": "ride", "ride": RideRail}           hold the ball to this rail
-#   {"kind": "fact", "fact": String, "at": Vector3}   a WORLD_ROWS kind
-#   {"kind": "codex", "id": String, "at": Vector3}
-#   {"kind": "accel", "accel": Vector3}           a push to add this tick (a thermal)
-#   {"kind": "carry", "accel": Vector3}           the barge under the ball accelerating
-#   {"kind": "drag", "accel": Vector3}            a cinder floor slowing a ball that rolls on it
-#   {"kind": "carry", "accel": Vector3}           also a glazed wall band speeding a ball that carves it
 
 const GAUGE_REACH := 60.0
 const RAM_REACH := 2.8
@@ -76,11 +58,6 @@ const THERMAL_LIFT := 34.0
 const THERMAL_GAP := 1.5
 const WALL_REACH := 3.6
 const WALL_SPEED := 8.0
-# Works sluice valve (W46-04, W1-142, ruling cu): a ram at speed, a slam, or a scrap payment
-# opens it. After SURGE_WARN_S of visible lane warning (>= SURGE_MIN_WARN, 0.6 s fairness floor)
-# it sends a surge down its fixed lane: throws crews, breaks destructible props (props only,
-# Q-P22), and hurts and tosses a ball below cruise (SpeedTier.CRUISE). A ball rolling through at
-# cruise or faster rides out unhurt. Fires once per charge and pays nothing twice.
 const SURGE_WARN_S := 1.0
 const SURGE_MIN_WARN := 0.6
 const SURGE_LIVE_S := 0.6
@@ -96,34 +73,17 @@ const SURGE_BALL_LIFT := 8.0
 const SURGE_SOURCE := "works_surge"
 const DOOR_SINK := 6.5
 const DOOR_SECONDS := 0.6
-# The valve door model (tools/blender/world_one/valve_door.py), built 12 by 6 by 1 m and scaled to each door.
 const DOOR_MODEL := "res://assets/models/world_one/valve_door.glb"
 const DOOR_MODEL_SIZE := Vector3(12.0, 6.0, 1.0)
 const CABLE_REST := 1.0
 const PUFF_SECONDS := 0.7
-# How hard a ball the player is not steering keeps station on a barge, per second of
-# relative speed: the ball's own rolling resistance and drag act against the world,
-# not the deck, and would otherwise let it creep aft (measured: 6.6 m per crossing).
 const KEEP_STATION := 4.0
-# A cinder floor (the sinkhole's "Wall pays", 2026-10-17): strips of loose cinder down the middle of a tube's floor take
-# drag (share of planar speed per second) from a ball rolling on them. Only a ball within CINDER_REACH of the ground
-# counts, so a ball carving the wall above the strip, or in the air, is never slowed.
 const CINDER_REACH := 1.4
-# A glazed wall (the same pass): the polish band up a tube's walls, ancient lava glass, pushes a ball carving it `push`
-# m/s/s along its planar travel, from 4 m/s up to the spec's `cap`. With #61's wall grip, carving lost speed against the
-# floor and every pilot's floor line beat its wall line by 3 to 18 s; the glaze is what makes the wall the fast line.
 const GLAZE_FROM := 4.0
-# The glaze's tell while it pushes: a glaze_skim fact (WORLD_ROWS: a pale wave and a skimming zip) on the first tick
-# and every GLAZE_GAP seconds after, so the band reads and sounds like a slick surface, not an invisible hand.
 const GLAZE_GAP := 1.2
 const CINDER_SHADER := preload("res://assets/materials/dig_stone/cinder.gdshader")
 const CINDER_GRAIN := preload("res://assets/textures/packed-sand-floor.webp")
 
-# The park's contraption skins (design-v3/PARK.md section 4, KC9): a spec with a `recipe` key draws that recipe's GLBs in
-# place of the code primitive; a spec without one, or whose GLBs are missing, draws the primitive it always drew. The
-# skin changes the picture only: colliders, positions, cycles and gauges stay the code's. Each GLB wears the enamel slot
-# (recipe_props.gd) and takes its visibility ranges from its budget class in assets/asset_budgets.json, as park_recipes.gd.
-# Origins: the lift and barge at the body centre, a launcher at its mouth point, the gauge on the ground under its post.
 const SKIN_DIR := "res://assets/models/park/contraptions/"
 const SKIN_META := "contraption_recipe"
 const SKIN_ID_META := "contraption_id"
@@ -135,31 +95,16 @@ const SKINS := {
 	"trebuchet": {"budget": "landform", "base": ["trebuchet"], "shells": ["trebuchet_detail1", "trebuchet_detail2"], "arm": ["trebuchet_arm"]},
 	"barge": {"budget": "landform", "base": ["barge"], "shells": ["barge_detail1", "barge_detail2"]},
 }
-# The recipe a launcher style wears; a spec naming another recipe for its style draws the primitive.
 const STYLE_RECIPE := {"cannon": "cannon", "trebuchet": "trebuchet", "geyser": "geyser_vent"}
-# The lift plate radius and the barge plan the GLBs are drawn at; the skin is scaled to the spec's radius and size in X and Z.
 const SKIN_LIFT_RADIUS := 4.5
-# A lift is a cap on a solid drum (wave 37 lift-drum), so nothing gets under a raised plate and a ball that meets a raised
-# lift glances off a pillar. LIFT_PROFILE is the cap's top outline at SKIN_LIFT_RADIUS, (radius, height) about the body,
-# scaled in X and Z with the skin: flat to 2.7, then 1 in 6 down to the rim at 4.5 (a ball crossing the plate at rest rolls
-# over the rim). The drum is the last point's radius from its height down, flush with the rim: no part of the lift is wider
-# than what is under it, so a sinking lift has no underside to come down on a ball. The cap reads by colour (the charcoal
-# collar under the rim). The collider, the code's drawn plate and drum, and tools/blender/park/contraptions/lift_platform.py's
-# skin all come from these numbers.
 const LIFT_PROFILE := [Vector2(0.0, 0.5), Vector2(2.7, 0.5), Vector2(4.5, 0.2)]
 const LIFT_SIDES := 32
-# The plate collider reaches LIFT_PLATE_FLOOR under the body origin, inside the drum, as deep as the plate always was: a fast
-# firing plate cannot carry a ball resting on it down through its cap into the drum in one tick.
 const LIFT_PLATE_FLOOR := -0.5
-# At rest the plate's top sits 0.05 m over the foot; at full rise the drum still reaches LIFT_DRUM_BELOW m under the foot.
 const LIFT_REST_SINK := 0.45
 const LIFT_DRUM_BELOW := 2.5
-# The drawn drum's charcoal bands: LIFT_BAND m tall every LIFT_BAND_EVERY m, and a collar twice as tall under the rim.
 const LIFT_BAND := 0.35
 const LIFT_BAND_EVERY := 2.5
 const SKIN_BARGE_SIDE := 14.0
-# Code-built contraption parts and local valve/dial fittings fade out past these ranges, matching the skinned
-# contraption budgets (detail base_end 250 m for gauges, 420 m for lifts, valves, rings and walls).
 const PART_VIEW_END_M := 420.0
 const DIAL_VIEW_END_M := 250.0
 const PART_VIEW_MARGIN_M := 30.0
@@ -169,10 +114,7 @@ var ground: Callable
 var cruise := 14.0
 var gravity := 26.0
 
-# How far under the cable the ball hangs while it rides (MOTION-SPEC cableway row): the held path ends here
-# below the cable end, which leaves the ball centre 1.1 m over a 2.4 m landing end.
 const CABLE_HANG := 1.3
-# The ride never lands the ball centre closer than this to the ground under the cable end.
 const CABLE_LAND_CLEAR := 1.05
 
 var barges: Array[Dictionary] = []
@@ -185,13 +127,9 @@ var walls: Array[Dictionary] = []
 var thermals: Array[Dictionary] = []
 var cinders: Array[Dictionary] = []
 var glazes: Array[Dictionary] = []
-# Planted fault hook for tests/works_surge_test.gd only; gameplay never sets this.
 var test_no_warn := false
-# One material for every cinder band, so the glow lights the whole floor at once.
 var _cinder_mat: ShaderMaterial = null
 var _cinder_glow := 0.0
-# False while a map's contraptions wait for a loop mode (the Spillway's return lift in
-# v2): world neither steps nor shows them.
 var live := true
 
 var _puffs: Array[Dictionary] = []
@@ -209,7 +147,6 @@ var _hook_mat: Material
 var _steam_mat: Material
 var _cache_rules
 var _puff_rng := RandomNumberGenerator.new()
-# Specs begin() took that are not built yet.
 var _unbuilt: Array = []
 
 
@@ -217,8 +154,6 @@ func _init() -> void:
 	_puff_rng.seed = 0x50FF
 
 
-# How far under its end the ride hangs: CABLE_HANG, less where the ground is close, so the landing centre
-# stays CABLE_LAND_CLEAR over it (zero where the cable end itself is that close: today's target).
 static func cable_hang(end_y: float, ground_y: float) -> float:
 	return clampf(end_y - ground_y - CABLE_LAND_CLEAR, 0.0, CABLE_HANG)
 
@@ -228,9 +163,6 @@ func setup(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void
 	finish()
 
 
-# The same build a piece at a time, so a park stage built ahead adds its devices over frames
-# (world.gd): begin() takes the specs, build_next() builds one, finish() builds the rest in
-# order and resets. The result is setup()'s.
 func begin(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void:
 	map = map_ref
 	ground = ground_ref
@@ -285,10 +217,6 @@ func finish() -> void:
 	reset()
 
 
-# The devices that seal a cache room: a valve whose door sinks, or a cracked wall that crumbles
-# across the room's open face. Either one files its codex row when it opens the room. A wall seals
-# its room only when the cache names the face it opens through (sealed_wall): the islands' older
-# saddle_seam row carries a cache with no face and is still a plain wall (its world 3 pass is owed).
 func _sealed() -> Array:
 	return valves.filter(func(d): return d["spec"].has("cache")) + walls.filter(func(d): return sealed_wall(d["spec"]))
 
@@ -297,8 +225,6 @@ static func sealed_wall(spec: Dictionary) -> bool:
 	return spec.get("cache") is Dictionary and spec["cache"].has("face")
 
 
-# World attaches this owner beneath a stage root. Only cache-bearing specs need the
-# game's existing context; standalone contraption geometry keeps its four-argument API.
 func _setup_caches() -> void:
 	if _sealed().is_empty():
 		return
@@ -316,7 +242,6 @@ func _setup_caches() -> void:
 			_cache_rules.ctx.codex.declare(d["spec"]["codex"])
 
 
-# Back to the stage start: cycles on their seeded offsets, doors shut, walls whole.
 func reset() -> void:
 	for b in barges:
 		b["time"] = b["spec"]["offset"]
@@ -359,23 +284,16 @@ func reset() -> void:
 			child.free()
 	_thermal_quiet = 0.0
 	_glaze_quiet = 0.0
-	# Cache side walls are rebuilt by reset; finish them along with this zone's devices.
 	if map.get_script().resource_path == "res://src/world/map_reach.gd":
 		load("res://src/presentation/spillway_scenery.gd").dress_props(self)
 
 
-# A sealing device's cache room, rebuilt shut. The device is this room's face: the valve's door, or
-# the cracked wall standing across the room's mouth (cache "face", out of the room, as a park
-# cracked_cache row's). The room keeps its side walls, pedestal, seeded part roll and pickup rule,
-# without an activity prompt or marker.
 func _seal_cache(d: Dictionary) -> void:
 	if _cache_rules == null:
 		return
 	if is_instance_valid(d.get("cache_site")):
 		d["cache_site"].free()
 	d.erase("cache_site")
-	# Activities builds on the active terrain. A parked zone must not put
-	# its pocket's colliders on the currently active zone's ground.
 	if _cache_rules.ctx.terrain.map() != map:
 		return
 	var cache: Dictionary = d["spec"]["cache"]
@@ -390,7 +308,6 @@ func _seal_cache(d: Dictionary) -> void:
 	d["cache_site"] = s
 
 
-# The device opened its cache room: the part goes on the pedestal and the codex row is filed.
 func _open_cache(d: Dictionary, at: Vector3, facts: Array) -> void:
 	if _cache_rules == null or not d.has("cache_site"):
 		return
@@ -404,15 +321,11 @@ func note_slam(at: Vector3) -> void:
 	_slams.append(at)
 
 
-# Optional context binding for standalone tests or callers without an ancestor holding `ctx`.
-# Accepts a Context object or a Dictionary with any of {run, player, destructibles, interact, root, calm}.
 func bind_context(ctx_ref: Variant) -> void:
 	_ctx = ctx_ref
 	_register_sluice_devices()
 
 
-# One small call to pay a sluice valve's scrap price and arm its warning. Returns true only
-# when the stage is active, the valve is ready, price > 0, and the scrap spend succeeded.
 func pay_sluice(id: String, run_ref: Variant = null) -> bool:
 	if not _sluice_active():
 		return false
@@ -422,7 +335,6 @@ func pay_sluice(id: String, run_ref: Variant = null) -> bool:
 	return false
 
 
-# Read-only snapshot of a sluice valve's state for callers and tests (never reach into internals).
 func sluice_state(id: String) -> Dictionary:
 	for s in sluice_valves:
 		if String(s["spec"]["id"]) == id:
@@ -447,7 +359,6 @@ func sluice_state(id: String) -> Dictionary:
 	return {}
 
 
-# Published telegraphs for tools/bot_fairness.gd (group "world_telegraphs").
 func telegraphs(ball: Vector3) -> Array:
 	var out: Array = []
 	if not _sluice_active():
@@ -465,8 +376,6 @@ func _sluice_active() -> bool:
 	return live and is_inside_tree() and is_visible_in_tree()
 
 
-# True when flood.sluice_valves (W47-GRAPPLE-CODE) owns this valve id on the live stage, so the
-# legacy contraptions.gd ram/slam/pay trigger cannot double-fire alongside grapple-yank sluices.
 func _delegated_to_grapple_sluice(id: String) -> bool:
 	var world_ref = _ctx_field("world")
 	if world_ref == null or not is_instance_valid(world_ref):
@@ -480,7 +389,6 @@ func _delegated_to_grapple_sluice(id: String) -> bool:
 	return not (sv.valve_of(id) as Dictionary).is_empty()
 
 
-# One physics tick. riding is true while world already holds the ball to a rail.
 func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, steering := false) -> Array:
 	var facts := []
 	if not _pending_facts.is_empty():
@@ -526,7 +434,6 @@ func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, ste
 		if riding or c["rest"] > 0.0 or ball.distance_to(c["from"]) > c["spec"]["radius"]:
 			continue
 		c["rest"] = CABLE_REST
-		# The ball hangs HANG below the cable and rides it down; the line view draws the hanger up to the cable.
 		var end: Vector3 = c["to"]
 		var hang := cable_hang(end.y, (ground.call(end.x, end.z, 0.0) as Vector3).y)
 		var ride = RideRail.line("grapple_line", ball, end - Vector3.UP * hang, planar, c["spec"]["floor"])
@@ -577,7 +484,6 @@ func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, ste
 	return facts
 
 
-# The cinders' telegraph (world.gd _step_cinder, cinder_heat.gd): 0 cold, 1 at the end of the grace, an ember glow.
 func set_cinder_glow(glow: float) -> void:
 	if _cinder_mat == null or is_equal_approx(glow, _cinder_glow):
 		return
@@ -585,12 +491,10 @@ func set_cinder_glow(glow: float) -> void:
 	_cinder_mat.set_shader_parameter("glow", glow)
 
 
-# A puff of steam where a hot ball leaves the cinders.
 func steam(at: Vector3) -> void:
 	_puff(at + Vector3.UP * 0.5, 2.5)
 
 
-# A cinder spec's strips are [x, z, yaw_deg, length, half_width] on the ground; each draws as a dark grit band.
 func _build_cinder(spec: Dictionary) -> Dictionary:
 	if _cinder_mat == null:
 		_cinder_mat = ShaderMaterial.new()
@@ -619,9 +523,6 @@ func _build_cinder(spec: Dictionary) -> Dictionary:
 	return {"spec": spec, "strips": strips}
 
 
-# A glaze spec's strips are [x, z, yaw_deg, length, inner, outer]: the band between inner and outer metres off the
-# tube's centre line, both walls. The wash models draw it (tools/blender/park/sinkhole_tubes.py's polished band); a
-# spec with "sheen": true sits on a wall no model polishes (the dam's culvert), so it draws its own wet band.
 func _build_glaze(spec: Dictionary) -> Dictionary:
 	var strips := []
 	for s: Array in spec["strips"]:
@@ -632,8 +533,6 @@ func _build_glaze(spec: Dictionary) -> Dictionary:
 	return {"spec": spec, "strips": strips}
 
 
-# The sheen: a polished band laid on the ground over each strip's two walls, dashed along its length, so the fast line
-# reads as a slick lane before the glaze_skim tell plays. A mesh built in code that follows the ground, not a primitive.
 const SHEEN_STEP_M := 6.0
 const SHEEN_ACROSS_M := 2.0
 const SHEEN_LIFT := 0.06
@@ -663,10 +562,8 @@ func _glaze_sheen(strips: Array) -> void:
 						var v: float = lerpf(float(strip["inner"]), float(strip["outer"]), corner.y / cols) * sign_v
 						var p: Vector2 = strip["centre"] + along * u + side * v
 						quad.append((ground.call(p.x, p.y, 0.0) as Vector3) + Vector3.UP * SHEEN_LIFT)
-					# Alternate rows light and dark, so the band reads as dashes running down the line.
 					st.set_color(Palette.VERDIGRIS.lightened(0.35) if r % 2 == 0 else Palette.VERDIGRIS)
 					for tri: Array in [[quad[0], quad[1], quad[2]], [quad[0], quad[2], quad[3]]]:
-						# Godot faces the normal against (b - a) x (c - a): keep every triangle facing up.
 						if (tri[1] - tri[0]).cross(tri[2] - tri[0]).y > 0.0:
 							tri = [tri[0], tri[2], tri[1]]
 						for p3: Vector3 in tri:
@@ -727,9 +624,6 @@ func _process(delta: float) -> void:
 			(s["wheel"] as Node3D).rotation.z += delta * 4.0
 
 
-# A stage parked out of sight (terrain.gd _park, park_all) mid-warning or mid-surge drops its surge, so no
-# hazard stays in Threat.GROUP for near_miss.gd to mark in the arena or the next run's stage 1. The valve
-# goes to its recharge, as after a surge; the next stage entry resets it.
 func _notification(what: int) -> void:
 	if what != NOTIFICATION_VISIBILITY_CHANGED or is_visible_in_tree():
 		return
@@ -751,16 +645,10 @@ static func _at_mouth(ball: Vector3, mouth: Vector3, radius: float) -> bool:
 	return Vector2(ball.x - mouth.x, ball.z - mouth.z).length() <= radius and absf(ball.y - mouth.y) < 3.0
 
 
-# ---- Skins ----
-
 static func _recipe_of(spec: Dictionary) -> String:
 	return String(spec.get("recipe", ""))
 
 
-# The views of the recipe's GLB files under parent at xform, named Skin_<recipe>_<node>, in the enamel slot, tagged with
-# SKIN_META and SKIN_ID_META, with the budget class's visibility ranges (base_end for the base, the class's shell ranges for
-# shells, the first file's shell range index by order). files names GLBs of the recipe row's `part` ("base", "arm") and
-# shells the row's shell files. [] when any named file is missing, with nothing added, so the caller draws the primitive.
 static func _skin_views(spec: Dictionary, recipe: String, parent: Node3D, xform: Transform3D, part := "base", shells := true) -> Array[MeshInstance3D]:
 	var out: Array[MeshInstance3D] = []
 	var row: Dictionary = SKINS.get(recipe, {})
@@ -825,7 +713,6 @@ static func _node_in(node: Node3D, top: Node) -> Transform3D:
 	return xf
 
 
-# Turns the GLB's +Z onto a launcher's aim.
 static func _aim_basis(aim: Vector3) -> Basis:
 	return Basis(Vector3.UP, atan2(aim.x, aim.z))
 
@@ -847,8 +734,6 @@ static func _range_tree(root: Node, end_m := PART_VIEW_END_M) -> void:
 		_range_tree(child, end_m)
 
 
-# ---- Barges ----
-
 func _build_barge(spec: Dictionary) -> Dictionary:
 	var body := AnimatableBody3D.new()
 	body.name = spec["id"]
@@ -859,13 +744,9 @@ func _build_barge(spec: Dictionary) -> Dictionary:
 	box.size = size
 	shape.shape = box
 	body.add_child(shape)
-	# The deck node owns the barge's picture and its drawn lean (_place_barge); the recipe views ride it, the recipe
-	# floor (y +1.0 at the GLB origin) on the collider top. The recipe's low wall has no collider: the ball can clip it.
-	# The striped box stays only when the recipe's base GLBs are missing.
 	var deck := MeshInstance3D.new()
 	body.add_child(deck)
 	var floor_at := Transform3D(Basis.IDENTITY, Vector3(0.0, size.y * 0.5 - 1.0, 0.0))
-	# A row that names the park barge skin draws it, scaled to the row's plan; every other row draws what it drew before.
 	var skin_at := Transform3D(Basis.from_scale(Vector3(size.x / SKIN_BARGE_SIDE, 1.0, size.z / SKIN_BARGE_SIDE)), floor_at.origin)
 	if _recipe_of(spec) == "barge" and not _skin_views(spec, "barge", deck, skin_at).is_empty():
 		pass
@@ -880,11 +761,6 @@ func _build_barge(spec: Dictionary) -> Dictionary:
 	return {"spec": spec, "body": body, "deck": deck, "time": 0.0, "tilt": Vector2.ZERO, "last": Vector3.INF, "velocity": Vector3.ZERO}
 
 
-# A ball resting on a deck rides it. A rolling sphere on a deck that accelerates lags
-# it by 5/7 of the deck's change of speed and rolls off (measured: 42 m of drift over
-# one crossing), so while the ball rests on a barge it is given the barge's own
-# acceleration, which for a rolling sphere makes it keep station exactly. Once the
-# ball leaves the deck, by rolling or jumping, it is on its own.
 func on_barge(b: Dictionary, ball: Vector3) -> bool:
 	var body: AnimatableBody3D = b["body"]
 	var size: Vector3 = b["spec"]["size"]
@@ -893,7 +769,6 @@ func on_barge(b: Dictionary, ball: Vector3) -> bool:
 		and local.y > size.y * 0.5 and local.y < size.y * 0.5 + 1.8
 
 
-# Where a barge is at time t along its lane: dwell at a, travel, dwell at b, travel back.
 static func barge_offset(spec: Dictionary, t: float) -> float:
 	var travel: float = spec["travel"]
 	var dwell: float = spec["dwell"]
@@ -908,8 +783,6 @@ static func barge_offset(spec: Dictionary, t: float) -> float:
 	return 1.0 - smoothstep(0.0, 1.0, (s - 2.0 * dwell - travel) / travel)
 
 
-# The scripted settle: a barge leans a few degrees toward the ball's weight, a pure
-# function of where the ball sits on the deck, so a test can hold it to a number.
 const BARGE_TILT := 3.0
 
 
@@ -932,15 +805,12 @@ func _place_barge(b: Dictionary, ball: Vector3) -> void:
 	var tilt: Vector2 = b["tilt"]
 	var body: AnimatableBody3D = b["body"]
 	body.transform = Transform3D(Basis.IDENTITY, at)
-	# The lean is drawn, not simulated: a tilted collider would roll the ball off.
 	(b["deck"] as MeshInstance3D).basis = Basis.from_euler(Vector3(tilt.x, 0.0, tilt.y))
 
 
 func barge_position(index: int) -> Vector3:
 	return barges[index]["body"].global_position
 
-
-# ---- Lifts ----
 
 func _build_lift(spec: Dictionary) -> Dictionary:
 	var at: Vector2 = spec["at"]
@@ -964,7 +834,6 @@ func _build_lift(spec: Dictionary) -> Dictionary:
 	hull.points = plate_points
 	plate_shape.shape = hull
 	body.add_child(plate_shape)
-	# The drum: the outline's last point, down to LIFT_DRUM_BELOW under the foot at full rise.
 	var drum_r: float = outline[outline.size() - 1].x
 	var drum_top: float = outline[outline.size() - 1].y
 	var drum_len := float(spec["rise"]) + LIFT_DRUM_BELOW - LIFT_REST_SINK + drum_top
@@ -993,8 +862,6 @@ func _build_lift(spec: Dictionary) -> Dictionary:
 	return {"spec": spec, "body": body, "home": home, "needle": needle, "cycle": null}
 
 
-# The drum as drawn: copper, a charcoal collar under the plate and a charcoal band every LIFT_BAND_EVERY m, flush with the
-# collider (two meshes, in the contraptions' own copper and charcoal materials).
 func _drum_view(r: float, top: float, length: float) -> Node3D:
 	var copper := SurfaceTool.new()
 	var charcoal := SurfaceTool.new()
@@ -1024,8 +891,6 @@ func _drum_view(r: float, top: float, length: float) -> Node3D:
 	return view
 
 
-# Turns an outline of (radius, height) points, top to bottom, round the Y axis in LIFT_SIDES steps: flat across each outline
-# segment, round the axis, faces out.
 static func _lathe(st: SurfaceTool, outline: Array) -> void:
 	for i in outline.size() - 1:
 		var p0: Vector2 = outline[i]
@@ -1056,8 +921,6 @@ func lift_top(index: int) -> float:
 	return lifts[index]["body"].global_position.y + 0.5
 
 
-# ---- Launchers ----
-
 func _build_launcher(spec: Dictionary) -> Dictionary:
 	var at: Vector2 = spec["at"]
 	var mouth: Vector3 = ground.call(at.x, at.y, 1.0)
@@ -1075,7 +938,6 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 	var target: Vector3 = spec["target"]
 	var aim := Vector3(target.x - mouth.x, 0.0, target.z - mouth.z).normalized()
 	var arm: MeshInstance3D = null
-	# A row whose recipe is its style's skin draws the GLB where the primitives below would go. The amber ring stays code.
 	var style: String = spec["style"]
 	var skin_xf := Transform3D(_aim_basis(aim), mouth)
 	var skinned := false
@@ -1085,7 +947,6 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 		"cannon" when skinned:
 			pass
 		"trebuchet" when skinned:
-			# The arm is a pivot the code poses each step (_launcher_pose); its GLB hangs from the pivot.
 			arm = MeshInstance3D.new()
 			arm.name = "TrebuchetArm"
 			arm.position = mouth - aim * 6.0 + Vector3.UP * 10.5
@@ -1124,8 +985,6 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 			band.basis = barrel.basis
 			root.add_child(band)
 		"steam_lift":
-			# The v3 loop's return (map_spillway.gd): the gorge lift's striped plate and
-			# copper piston, as a launcher that throws the ball back to the shelf.
 			var plate := MeshInstance3D.new()
 			var pm := CylinderMesh.new()
 			pm.top_radius = float(spec["radius"]) - 0.8
@@ -1176,7 +1035,6 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 	return {"spec": spec, "root": root, "mouth": mouth, "aim": aim, "needle": needle, "arm": arm, "cycle": null}
 
 
-# The trebuchet's arm cocks back as it charges; the geyser's column swells.
 func _launcher_pose(l: Dictionary) -> void:
 	var arm: MeshInstance3D = l["arm"]
 	if arm == null:
@@ -1191,8 +1049,6 @@ func _launcher_pose(l: Dictionary) -> void:
 		"cannon":
 			arm.scale = Vector3(1.0 + 0.08 * g, 1.0 - 0.14 * g, 1.0 + 0.08 * g)
 
-
-# ---- The grapple line ----
 
 func _build_cable(spec: Dictionary) -> Dictionary:
 	var from: Vector3 = spec["from"]
@@ -1220,14 +1076,9 @@ func _build_cable(spec: Dictionary) -> Dictionary:
 	return {"spec": spec, "from": from, "to": to, "rest": 0.0}
 
 
-# ---- Valves ----
-
 func _build_valve(spec: Dictionary) -> Dictionary:
 	var at: Vector2 = spec["at"]
 	var foot: Vector3 = ground.call(at.x, at.y, 0.0)
-	# The authored valve (RecipeProps rows valve_wheel and valve_wheel_mount): the wheel frame rides the
-	# "wheel" handle that smash and reset turn; the mount frame's two views stand still at the foot, directly
-	# under this node, so the valve keeps three children before its door and collider paths hold.
 	var wheel := Node3D.new()
 	wheel.name = String(spec["id"]) + "_wheel"
 	wheel.position = foot + Vector3.UP * 1.6
@@ -1318,8 +1169,6 @@ func _step_valve(v: Dictionary, delta: float, ball: Vector3, planar: float, fact
 		if Vector2(ball.x, ball.z).distance_to(vat) > float(vent["radius"]):
 			facts.append({"kind": "codex", "id": "do_not_open_until_clear", "at": at})
 
-
-# ---- Works sluice valves (W46-04) ----
 
 func _build_sluice_valve(spec: Dictionary) -> Dictionary:
 	var id := String(spec["id"])
@@ -1487,7 +1336,6 @@ func _arm_sluice(s: Dictionary, facts: Array, paid: bool) -> bool:
 	h.ground = func(point: Vector3) -> float: return (g.call(point.x, point.z, 0.0) as Vector3).y
 	var warn := 0.0
 	if test_no_warn:
-		# Tiny epsilon avoids 0.0/0.0 NaN in Hazard.descriptor() while still going live on tick 0.
 		h.warn_floor = 0.0001
 		warn = 0.0001
 	else:
@@ -1631,7 +1479,6 @@ func _apply_surge(s: Dictionary, h: Hazard, motion: Dictionary) -> void:
 		player_ref.set_velocity_now(velocity + toss, SURGE_SOURCE)
 
 
-# Breaks intact destructible props inside the committed lane (props only, Q-P22; never deforms terrain).
 func _break_lane_props(h: Hazard) -> int:
 	var props = _ctx_field("destructibles")
 	if props == null or not is_instance_valid(props) or not props.has_method("ids") or not props.has_method("on_blast"):
@@ -1759,8 +1606,6 @@ static func _vec2_of(value: Variant, fallback := Vector2.ZERO) -> Vector2:
 	return fallback
 
 
-# ---- The cracked wall (Rivet) ----
-
 func _build_wall(spec: Dictionary) -> Dictionary:
 	var at: Vector2 = spec["at"]
 	var foot: Vector3 = ground.call(at.x, at.y, 0.0)
@@ -1772,9 +1617,6 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 	box.size = size
 	shape.shape = box
 	body.add_child(shape)
-	# Two of the cracked cache's fracture panels (CrackedCache: a slab with its charcoal fault line) back to
-	# back, each fitted to half the collider's depth, so the wall reads cracked from either approach; the
-	# striped box with three cracks stays as the fallback.
 	var panel := CrackedCache.model_part("CacheWall", body)
 	if panel != null:
 		var aabb := panel.mesh.get_aabb()
@@ -1811,10 +1653,6 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 	return {"spec": spec, "body": body, "home": body.position, "broken": false}
 
 
-# Only Rivet's overdrive sprint crumbles it, the tick before contact, so the ball never
-# meets it as a wall. Anyone else meets a plain wall, which they can see. A wall whose
-# spec sets "break_at_cruise" crumbles for any ball at 0.85 x cruise or faster (the cracked face's
-# bar, Activities.RAM_MIN_PER_CRUISE, so a held roll at full speed counts).
 func _step_wall(w: Dictionary, ball: Vector3, velocity: Vector3, kit, facts: Array) -> void:
 	if w["broken"]:
 		if _cache_rules != null and w.has("cache_site"):
@@ -1838,7 +1676,6 @@ func _step_wall(w: Dictionary, ball: Vector3, velocity: Vector3, kit, facts: Arr
 	body.visible = false
 	facts.append({"kind": "fact", "fact": "wall_crumbled", "at": centre})
 	facts.append({"kind": "fact", "fact": "route_opened", "at": centre})
-	# A wall that seals a cache room opens a dead end, not a tunnel: it files the room's row, not sprint_through.
 	if sealed_wall(w["spec"]):
 		_open_cache(w, centre, facts)
 	else:
@@ -1846,8 +1683,6 @@ func _step_wall(w: Dictionary, ball: Vector3, velocity: Vector3, kit, facts: Arr
 	for k in 5:
 		_puff(centre + Vector3(_puff_rng.randf_range(-3.0, 3.0), _puff_rng.randf_range(-1.5, 2.0), _puff_rng.randf_range(-1.0, 1.0)), 2.5)
 
-
-# ---- Thermals (Kest) ----
 
 func _build_thermal(spec: Dictionary) -> Dictionary:
 	var at: Vector2 = spec["at"]
@@ -1873,10 +1708,6 @@ func _build_thermal(spec: Dictionary) -> Dictionary:
 	return {"spec": spec, "base": base}
 
 
-# ---- Shared visuals ----
-
-# A bone gauge dial on a post; returns the needle to turn.
-# A row with one of the park's skins draws the gauge skin for the post, face and redline; the needle stays code.
 func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
 	if SKINS.has(_recipe_of(spec)) and not _skin_views(spec, "gauge", self, Transform3D(Basis.IDENTITY, at)).is_empty():
 		var needle := MeshInstance3D.new()
@@ -1929,7 +1760,6 @@ func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
 	return needle
 
 
-# The needle sweeps linearly from -120 to +120 degrees: it measures time.
 static func _needle(needle: MeshInstance3D, g: float) -> void:
 	needle.rotation.z = -lerpf(-2.1, 2.1, clampf(g, 0.0, 1.0))
 

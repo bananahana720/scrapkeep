@@ -1,19 +1,14 @@
 extends RefCounted
 
-# A kit of separately placed model parts in one GLB (field finds, the radio cache): each named mesh
-# loads once, wears a vertex-coloured material for its slot, and is handed out as a new view. A kit
-# missing its file or any required part hands out nothing, so its caller keeps its plain shapes.
 
 const ROUGH := {"device_metal": 0.68, "device_marks": 0.85}
 
-# A whole model's far versions swap in past these distances, when the files stand beside it.
 const LOD_M := [60.0, 150.0]
 
 static var _kits: Dictionary = {}
 static var _flat: StandardMaterial3D
 
 
-# A new view of the named part on parent, or null when the kit is missing or malformed.
 static func part(path: String, required: Array, part_name: String, parent: Node3D) -> MeshInstance3D:
 	var mesh: Mesh = _meshes(path, required).get(part_name)
 	if mesh == null:
@@ -25,9 +20,6 @@ static func part(path: String, required: Array, part_name: String, parent: Node3
 	return view
 
 
-# A new view on parent of a GLB that is one mesh with flat vertex colours and no texture (the world 1 point of
-# interest props), wearing one shared vertex-colour material as park_props.gd's props do; null when the file is
-# missing, so its caller keeps its plain shapes. A `<stem>_lod1.glb` and `_lod2.glb` beside it take over at LOD_M.
 static func whole(path: String, parent: Node3D) -> MeshInstance3D:
 	var first: MeshInstance3D = null
 	var stems := [path, path.replace(".glb", "_lod1.glb"), path.replace(".glb", "_lod2.glb")]

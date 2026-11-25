@@ -1,15 +1,5 @@
 extends Node3D
 
-# Rock coming down from a Dig roof: the prop crew's shored roof once its prop is knocked
-# out, or a cave-in over the hole a burrower surfaced through. One committed INSTANT disc
-# (hazard.gd) draws the warning and is the only thing the fall can hit. It waits for the
-# shared warning gap (warning_gap.gd) before it commits, so it never starts within 0.2 s of
-# another warning. The fall lands once, on its first live tick:
-# - the ball, only while it is on the floor (floor_rule.gd, Andrew's "Commit"): a ball
-#   carving a wall, on a bank or in the air is under nothing. The hit never touches the
-#   ball's velocity, so the fall never stops it;
-# - every enemy inside the disc, for enemy_damage (0 spares them).
-# The slab the owner hands over drops from its height to the floor across the warning.
 
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
@@ -27,20 +17,13 @@ var centre := Vector3.ZERO
 var radius := 4.0
 var warn_s := Hazard.MIN_WARN
 var enemy_damage := 0.0
-# Anything with height(x, z): the ground under a point. Null reads the centre's height.
 var terrain
-# The player node: state (grounded, contact_normal) and ball_position().
 var player
-# () -> void, called once when the fall lands on a ball that is on the floor.
 var on_ball := Callable()
 var voice := ""
 var tag := ""
-# (at: Vector3) -> void, called once when the fall crushes an enemy other than spare_id
-# (the crew that shored the roof); the prop crew reveals its codex entry through it.
 var on_crush := Callable()
 var spare_id := 0
-# Foley ids (foley_audio.gd): warn_sound starts with the warning; land_sound starts
-# land_lead seconds before the roof lands, so its own impact falls on the landing.
 var warn_sound := ""
 var land_sound := ""
 var land_lead := 0.0
@@ -48,7 +31,6 @@ var _land_played := false
 var hazard: Hazard
 var crushed: Array = []
 var hit_ball := false
-# Physics frames this fall waited for the warning gap before it committed.
 var waited := 0
 
 var _slab: Node3D

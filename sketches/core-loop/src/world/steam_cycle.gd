@@ -1,14 +1,5 @@
 extends RefCounted
 
-# A contraption's cycle, the one clock its gauge needle, its sound and its firing all
-# read (VISUAL-LANGUAGE section 11: a bone dial whose needle sweeps linearly).
-#
-# PERIODIC (a steam lift): the needle sweeps while the piston rests, the piston fires
-# up at full, holds, and sinks back. Nothing waits for the ball; you read the needle
-# and time your roll across the plate.
-# ON_DEMAND (a launcher): the needle sweeps while it charges, then holds at the red
-# line until a ball rolls in; it fires the tick the ball arrives. A ball that arrives
-# while it charges rolls on through, so a launcher is never a stop.
 
 enum { CHARGING, READY, FIRING, HOLDING, RETURNING }
 const PERIODIC := "periodic"
@@ -30,8 +21,6 @@ func _init(mode_id := PERIODIC, charge_seconds := 3.0, offset := 0.0) -> void:
 	t = clampf(offset, 0.0, charge)
 
 
-# One tick. Returns "fired" on the tick a periodic piston fires, "ready" on the tick a
-# launcher reaches the red line, "charging" on the tick it starts to charge, else "".
 func step(delta: float) -> String:
 	t += delta
 	match phase:
@@ -64,7 +53,6 @@ func step(delta: float) -> String:
 	return ""
 
 
-# A launcher fires only from the red line. True when it fired.
 func trigger() -> bool:
 	if mode != ON_DEMAND or phase != READY:
 		return false
@@ -73,7 +61,6 @@ func trigger() -> bool:
 	return true
 
 
-# The needle, 0 to 1: linear through the charge, pinned at 1 while ready or lifted.
 func gauge() -> float:
 	match phase:
 		CHARGING:
@@ -84,8 +71,6 @@ func gauge() -> float:
 			return clampf(1.0 - t / sink, 0.0, 1.0)
 
 
-# The piston's extension, 0 at rest to 1 at the top. The rise eases out, so the plate
-# leaves fast and the ball keeps the push as it tops out.
 func extension() -> float:
 	match phase:
 		FIRING:
@@ -100,7 +85,6 @@ func extension() -> float:
 	return 0.0
 
 
-# Seconds until the next firing, for a periodic cycle; 0 while it is up.
 func seconds_to_fire() -> float:
 	if phase == CHARGING:
 		return charge - t

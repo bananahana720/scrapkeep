@@ -1,10 +1,5 @@
 extends "res://src/world/device.gd"
 
-# An ambush altar, the opt-in fight family (LOOP-REDESIGN section 9): a copper post
-# with a brass cap and bone band. Hold E and a pack arrives
-# now, round the ring; clear it inside SECONDS and it pays a bonus core. While it runs
-# the prompt's gauge is the time left; once it is done, it is spent for the stage.
-# Nothing here stops the ball: the post has no collider and the pack comes to you.
 
 const SECONDS := 30.0
 const RING := 10.0
@@ -35,9 +30,6 @@ func build() -> void:
 		_build_greybox()
 
 
-# The altar's model on parent: the verdigris post, its bone band and the brass cap, which is returned
-# so its owner can turn or hide it. Null, with nothing built, when the model is missing; the park's
-# altar sites (activities.gd) wear it too.
 static func dress(parent: Node3D) -> MeshInstance3D:
 	var parts := _parts()
 	if parts.is_empty():

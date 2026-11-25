@@ -1,30 +1,5 @@
 extends Node
 
-# The walkable camp: the hub ring built from assets/models/camp/*.glb, placed by camp_layout.gd (the port of
-# tools/blender/camp/layout.py). The title's K opens it as a walk mode of the camp page (screens.gd toggle_camp): the
-# player's ball rolls round the plaza and the stations, each station is a ball-only Area3D zone with a prompt card, and
-# its key opens the station's existing page. The flow stays on the title; the run logic never sees the walk.
-#
-# Where it stands: the whole hub sits at HUB_ORIGIN, far from every stage's terrain (the stages are inside a 1.6 km
-# square about the origin, the bay is at y -2000), so nothing overlaps and the ball can never roll onto a stage. The
-# ChaseCamera far plane is 700 m, so a stage is never drawn from here.
-#
-# What it builds, once, on the first walk: every GLB piece (its drawn views, its detail shells with fade ranges, and its
-# "-col" mesh as a world-layer StaticBody3D, all through park_recipes.gd's helpers), a ground disc and rim berm, the
-# cottonwoods, Moss's jukebox and hover barge (recipe_props.gd), a light at chosen light_* sockets, and the zones.
-#
-# Living camp (W46-14), refreshed on every walk from the profile: the freed pilots stand round the fire pit (all but the
-# one the gate launches), each saying one line on the caller plate as the ball rolls past (pilot_quipped hands the
-# caller id and the words to whoever voices them), and every B-side found stands as a record sleeve in the bin by Moss's
-# jukebox. All of it is drawn only: no collider, no target, the layout and its solids as they were.
-#
-# Public API for the features that plug in (camp_skee.gd, camp_trial.gd, camp_sandbox.gd and the like):
-#   root          the hub's top node, at HUB_ORIGIN; layout coordinates are local to it.
-#   piece(id)     the placed instance of a GLB stem ("camp_skee_lane"), or null.
-#   socket(id, n) the global Transform3D of socket n on piece id (IDENTITY when absent).
-#   add_station() a zone, prompt card and key; add_zone() the same without a prompt.
-#   walk_entered / walk_left, ball, game.
-#   FEATURES      preloads, each with `static func attach(hub)`, called once after the hub is built.
 
 const Recipes := preload("res://src/world/park/park_recipes.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
@@ -46,7 +21,6 @@ const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
-# Features that plug into the hub. Each is a script with `static func attach(hub)`.
 const FEATURES: Array = [
 	preload("res://src/world/camp_skee.gd"),
 	preload("res://src/world/camp_trial.gd"),
@@ -57,28 +31,19 @@ const FEATURES: Array = [
 
 const GLB_DIR := "res://assets/models/camp/"
 const HUB_ORIGIN := Vector3(3000.0, 0.0, 3000.0)
-# The ground is deliberate: a sandstone disc under and round the whole camp, with its own collision, so the plaza
-# model only has to cover the ring. Its rim is a berm of wall segments so the ball cannot roll off into nothing.
 const GROUND_R := 270.0
 const GROUND_THICK := 4.0
 const BERM_SEGMENTS := 72
 const BERM_HEIGHT := 6.0
 const BERM_DEPTH := 10.0
 const BERM_STAGGER_M := 0.06
-# The detail shells fade out by distance, like the park's (asset_budgets.json park_large shells).
 const SHELL_RANGES := [[150.0, 20.0], [60.0, 8.0]]
 const ZONE_RADIUS := 2.5
 const FALL_BELOW := -25.0
 const MAX_LIGHTS := 24
-# A solid prop collides up to here: a cottonwood's trunk and root flare, not its crown (boughs start at 4 m).
 const SOLID_TOP_M := 4.0
-# The pieces that have detail shells beside them.
 const SHELLED := ["camp_launch_gate", "camp_lockers", "camp_moss_stall", "camp_skee_lane"]
-# Pieces laid flat on the plaza or the sandstone disc: their floors share the plaza's plane where they overlap it, so their
-# drawn views stand one surface layer up (park_recipes.gd SURFACE_LAYER_M) and do not z-fight (clip audit, 30 Oct).
 const ON_PLAZA := ["camp_shortcut", "camp_skee_lane", "camp_trial_track"]
-# Lights: piece stem -> [socket names, kind]. The lamp posts and the fire pit light the plaza; the stall, the wall, the
-# console, the gate and the lane keep two or three each; the rest of their bulbs stay emissive enamel.
 const LIGHTS := {
 	"camp_lamp_post": [["light_0"], "lamp"],
 	"camp_fire_pit": [["light_0"], "fire"],
@@ -94,30 +59,19 @@ const LIGHT_KINDS := {
 	"marquee": {"color": Color("e5a044"), "energy": 2.6, "range": 20.0},
 }
 
-# The crew round the fire: one spot per roster place, [bearing, radius] in the layout's terms (camp_layout.gd), about
-# the fire pit at bearing 160 and the benches either side of it, so the ball's way through the plaza stays open. A
-# pilot stands at their own spot every walk. The ball within CREW_ZONE_M has them say their line, once a walk.
 const CREW_SPOTS := [[148.0, 12.0], [172.0, 12.0], [138.0, 16.5], [182.0, 16.5], [160.0, 21.5], [160.0, 9.6]]
 const CREW_ZONE_M := 6.0
 const CREW_SCALE := 1.6
 const CREW_FIRE := [160.0, 15.0]
-# Past this the crew is not drawn (they are a few hundred triangles' worth of skin each, not a landmark).
 const CREW_FADE_M := 80.0
 const CREW_FADE_MARGIN_M := 10.0
-# The loop a standing pilot idles in (the freed pilot's idle at the rescue cage, rescue_site.gd), each pilot CREW_OFFSET_S
-# further into it than the last so the crew never moves in unison (that is the Foreman's look), and the clip they
-# strike when they speak, back to the idle after.
 const CREW_IDLE_CLIP := "idle_loop"
 const CREW_TALK_CLIP := "big_cheer"
 const CREW_OFFSET_S := 0.7
-# A quip's card stays QUIP_HOLD_S plus QUIP_PER_WORD_S a word, then fades over QUIP_FADE_S.
 const QUIP_HOLD_S := 2.2
 const QUIP_PER_WORD_S := 0.28
 const QUIP_FADE_S := 0.3
 const QUIP_WIDTH := 330.0
-# The record bins by the jukebox, in the jukebox socket's frame (+Z its face): BIN_AT is the first bin's centre, the
-# next stand BIN_STEP along. A bin stands on legs BIN_LIFT high, a shelf at the cabinet's side, and holds BIN_SLOTS
-# sleeves upright, SLEEVE_STEP apart, leaning back, so their tops and the front one's face show over its walls.
 const BIN_AT := Vector3(1.9, 0.0, 0.9)
 const BIN_LIFT := 0.55
 const BIN_STEP := Vector3(0.0, 0.0, 1.35)
@@ -127,8 +81,6 @@ const BIN_SIZE := Vector3(0.66, 0.3, 1.2)
 const SLEEVE_SIDE := 0.5
 const SLEEVE_STEP := 0.045
 const SLEEVE_LEAN := 0.16
-# Sleeve colours: album-cover pop from the palette, none of them a colour that means a thing in play (no hazard red,
-# no relic amber, no reward cobalt or arc, never the Kindness purple). A sleeve's colour is its id's, the same every walk.
 const SLEEVE_INKS := [Palette.COPPER, Palette.BRASS, Palette.VERDIGRIS, Palette.OLD_VERDIGRIS, Palette.SAND,
 	Palette.LEDGER_CREAM, Palette.SLATE, Palette.TURQUOISE, Palette.APRICOT, Palette.SODIUM, Palette.RUST]
 
@@ -136,20 +88,16 @@ signal walk_entered
 signal walk_left
 signal station_entered(id: String)
 signal station_left(id: String)
-# A freed pilot in the camp said their line: who (a LoreRows.SPEAKERS id, what a voice reads), the quip row's id and
-# the words on the plate. The line is silent until something that voices callers hooks this.
 signal pilot_quipped(speaker: String, row_id: String, words: String)
 
 var game
 var ball
-# The store that keeps the camp's records; game.gd hands it in (the profile layer stays out of src/world).
 var camp_store
 var root: Node3D
 var built := false
 var walking := false
 var pet_reactions := 0
 var light_count := 0
-# Walks taken this session: a quip's line steps through its list by it.
 var walks := 0
 
 var _pieces := {}
@@ -164,7 +112,6 @@ var _pet_home := Vector3.ZERO
 var _pet_tween: Tween
 var _look_owner: Node3D
 var _spawn := Vector3.ZERO
-# The crew: class id -> the figure's holder; who has spoken this walk; the quip card and its plate.
 var _crew := {}
 var _quipped := {}
 var _pair_played_this_walk := false
@@ -173,7 +120,6 @@ var _quip_tile
 var _quip_label: Label
 var _quip_hold := 0.0
 var _quip_tween: Tween
-# The records: the bins' and the sleeves' MultiMeshes, and the ids standing in them, in the order they were found.
 var _bins: MultiMeshInstance3D
 var _sleeves: MultiMeshInstance3D
 var _shelved: Array = []
@@ -186,13 +132,10 @@ func setup(game_ref) -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 
 
-# --- the public API ---
-
 func piece(id: String) -> Node3D:
 	return _pieces.get(id)
 
 
-# Sockets already warned about, so a missing one warns once.
 var _missing_sockets := {}
 
 func socket(id: String, socket_name: String) -> Transform3D:
@@ -201,7 +144,6 @@ func socket(id: String, socket_name: String) -> Transform3D:
 		return Transform3D.IDENTITY
 	var marker := holder.get_node_or_null("Sockets/" + socket_name) as Node3D
 	if marker == null:
-		# camp_hub_test checks every socket a feature reads; this is the release-build net.
 		if not _missing_sockets.has(id + "/" + socket_name):
 			_missing_sockets[id + "/" + socket_name] = true
 			push_warning("camp_hub: %s has no socket %s; placing at the origin" % [id, socket_name])
@@ -214,13 +156,10 @@ func has_socket(id: String, socket_name: String) -> bool:
 	return holder != null and holder.get_node_or_null("Sockets/" + socket_name) != null
 
 
-# A zone with a prompt card and a key. `at` is a global position; radius is the sphere's, metres; key is a Keycap id
-# ("key_m"); on_press runs when the key, the card or the pad's confirm button is pressed inside the zone.
 func add_station(id: String, at: Vector3, label: String, key: String, radius: float, on_press: Callable) -> void:
 	_zones[id] = {"label": label, "key": key, "on_press": on_press, "area": _make_zone(id, at, radius), "enter": Callable()}
 
 
-# A station's prompt word, changed after it is built (the gate names the pilot it launches).
 func set_label(id: String, label: String) -> void:
 	if not _zones.has(id) or _zones[id]["label"] == label:
 		return
@@ -228,12 +167,9 @@ func set_label(id: String, label: String) -> void:
 	_refresh_prompts()
 
 
-# A zone with no prompt: it only reports the ball coming and going.
 func add_zone(id: String, at: Vector3, radius: float, on_enter := Callable(), on_exit := Callable()) -> void:
 	_zones[id] = {"label": "", "key": "", "on_press": Callable(), "area": _make_zone(id, at, radius), "enter": on_enter, "exit": on_exit}
 
-
-# --- zone queries, for the screens, the pad and the tests ---
 
 func zone_ids() -> Array:
 	return _zones.keys()
@@ -252,7 +188,6 @@ func inside(id: String) -> bool:
 	return id in _inside
 
 
-# The keycode of the first prompted zone the ball is in, KEY_NONE when none: the pad's confirm button presses it.
 func confirm_key() -> int:
 	for id in _inside:
 		var key: String = _zones[id]["key"]
@@ -261,7 +196,6 @@ func confirm_key() -> int:
 	return KEY_NONE
 
 
-# Runs the press of the prompted zone the ball is in whose key is keycode. False when none matches.
 func press_key(keycode: int) -> bool:
 	for id in _inside:
 		var key: String = _zones[id]["key"]
@@ -285,13 +219,10 @@ func prompts_shown() -> bool:
 	return _prompts != null and _prompts.visible and _prompt_box.get_child_count() > 0
 
 
-# Whether the prompt cards show: off while a page covers the walk.
 func set_prompts_visible(shown: bool) -> void:
 	if _prompts != null:
 		_prompts.visible = shown and walking
 
-
-# --- the walk ---
 
 func enter_walk() -> void:
 	if walking:
@@ -385,8 +316,6 @@ func _physics_process(_delta: float) -> void:
 		_place_ball()
 
 
-# --- building ---
-
 func ensure_built() -> void:
 	if built:
 		return
@@ -415,7 +344,6 @@ func to_global_spawn() -> Vector3:
 	return at
 
 
-# One GLB placed under root at xf (layout space): views, shells, collision and socket markers.
 func _place(stem: String, xf: Transform3D, with_shells := false, key := "") -> Node3D:
 	var path := ModelVariants.path(GLB_DIR + stem + ".glb")
 	var scenes := Recipes._load(path)
@@ -491,7 +419,6 @@ func _build_ground() -> void:
 	var chord := TAU * GROUND_R / BERM_SEGMENTS * 1.08
 	for i in BERM_SEGMENTS:
 		var angle := TAU * i / BERM_SEGMENTS
-		# Neighbours overlap by the chord's 8%, so odd segments stand BERM_STAGGER_M taller: two tops in one plane z-fight.
 		var tall := BERM_HEIGHT + BERM_STAGGER_M * float(i % 2)
 		var at := Vector3(sin(angle) * (GROUND_R - BERM_DEPTH * 0.5), tall * 0.5, -cos(angle) * (GROUND_R - BERM_DEPTH * 0.5))
 		var segment := Transform3D(Basis(Vector3.UP, -angle), at)
@@ -519,7 +446,6 @@ func _place_layout() -> void:
 	for sid in glbs:
 		var st: Dictionary = Layout.station(sid)
 		_place(glbs[sid], Layout.place(st.at, st.yaw), glbs[sid] in SHELLED)
-	# Moss's jukebox stands at the stall's jukebox socket; his hover barge is parked out past the ring.
 	var jukebox_at := socket("camp_moss_stall", "jukebox")
 	_prop("moss_jukebox", Transform3D(jukebox_at.basis, to_local_point(jukebox_at.origin)), true)
 	_prop("moss_hover_barge", Layout.place(Layout.BARGE_AT, deg_to_rad(Layout.BARGE_YAW_DEG)), false)
@@ -550,8 +476,6 @@ func _place_layout() -> void:
 			camp_fx.position = (_pieces["camp_fire_pit"] as Node3D).position + Vector3(0.0, 0.5, 0.0)
 
 
-# Stands a loose piece's lowest drawn point on the plaza's collider below it (the plaza's top, not y 0: a fixed 0.3 m left
-# the wrench floating 0.12 m and the tire in the plaza's lip; clip audit, 30 Oct). A piece with no plaza under it stays.
 func _seat(holder: Node3D) -> void:
 	if holder == null or not _pieces.has("camp_plaza"):
 		return
@@ -564,7 +488,6 @@ func _seat(holder: Node3D) -> void:
 		holder.position.y += top - foot
 
 
-# The plaza collider's highest face over local point at (x, z), -INF where none is.
 func plaza_top(at: Vector2) -> float:
 	var top := -INF
 	var plaza: Node3D = _pieces["camp_plaza"]
@@ -588,9 +511,6 @@ func to_local_point(global_point: Vector3) -> Vector3:
 	return global_point - HUB_ORIGIN
 
 
-# A picture-driven recipe prop (recipe_props.gd) at xf under root: its base views and shells, and for a solid one a hull
-# collider round the first base mesh (a cabinet, a trunk) up to SOLID_TOP_M. A box round the whole mesh took a tree's
-# boughs down to the ground: 8.4 by 6.6 m of invisible wall round a 1.2 m trunk (tools/qa/collision_sweep.gd, 30 Oct).
 func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 	var holder := Node3D.new()
 	holder.name = "Prop_" + key
@@ -608,9 +528,7 @@ func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 	_pieces[key] = holder
 
 
-# The hull of the first view's triangles cut at SOLID_TOP_M, in its holder's space (park_recipes.gd _band_hull), or null.
 static func solid_hull(view: MeshInstance3D) -> ConvexPolygonShape3D:
-	# A base view that is not a mesh, or carries none, has no hull: the piece stands without a solid.
 	if view == null or view.mesh == null:
 		return null
 	var tris := PackedVector3Array()
@@ -653,7 +571,6 @@ func _build_stations() -> void:
 		add_station("jukebox", cabinet.global_position + Vector3(0.0, 1.0, 0.0), "Jukebox", "key_j", 3.0, func(): screens.toggle_jukebox())
 	var console: Node3D = _pieces.get("camp_settings_console")
 	if console != null:
-		# The radio mast stands at the console's back left corner (stations.py console()).
 		add_station("radio", console.global_transform * Vector3(-2.6, 1.0, -0.8), "Radio", "key_r", 3.0, func(): screens.toggle_radio())
 	var board: Node3D = _pieces.get("camp_shift_board")
 	if board != null:
@@ -672,8 +589,6 @@ func _station(id: String, stem: String, socket_name: String, label: String, key:
 		return
 	add_station(id, socket(stem, socket_name).origin + offset, label, key, radius, on_press)
 
-
-# --- zones ---
 
 func _make_zone(id: String, at: Vector3, radius: float) -> Area3D:
 	var area := Area3D.new()
@@ -726,8 +641,6 @@ func _on_exit(body: Node3D, id: String) -> void:
 	station_left.emit(id)
 
 
-# --- the prompt cards ---
-
 func _build_prompts() -> void:
 	_prompts = CanvasLayer.new()
 	_prompts.name = "CampPrompts"
@@ -766,7 +679,6 @@ func _build_prompts() -> void:
 	_prompts.add_child(_clock)
 
 
-# The walk HUD's one-line clock, top centre, for a live trial lap; "" hides it.
 func set_clock(text: String) -> void:
 	if _clock == null:
 		return
@@ -802,9 +714,6 @@ func card_for(id: String) -> Button:
 	return _prompt_buttons.get(id)
 
 
-# --- the pet ---
-
-# Rolling into the pen: the pet hops toward the ball, turns to it and chirps (the companion's ready chirp).
 func _pet_react() -> void:
 	if _pet == null or not is_instance_valid(_pet):
 		return
@@ -845,11 +754,6 @@ func _pet_react() -> void:
 		audio.chirp("primer_set")
 
 
-# --- the crew round the fire ---
-
-# Who stands this walk: every pilot the profile has freed, but the one the gate launches (the ball is them). A pilot
-# is built at their spot the first walk they stand, and shown or hidden after; a hidden one's quip zone stops listening,
-# and every walk starts with the crew facing the fire.
 func _stand_crew() -> void:
 	var flying = game.gate_pilot() if game.has_method("gate_pilot") else null
 	var classes: Array = game.flow.classes if game.flow != null else []
@@ -865,7 +769,6 @@ func _stand_crew() -> void:
 			_face_fire(figure)
 
 
-# The pilots standing now, by class id.
 func crew_standing() -> Array:
 	return _crew.keys().filter(func(id): return (_crew[id] as Node3D).visible)
 
@@ -879,8 +782,6 @@ func crew_spot(index: int) -> Vector3:
 	return Layout.at(spot[0], spot[1])
 
 
-# One pilot: the pilot's own model at rest (hero_assets.gd fit_pilot_into, as the title's deck builds them), painted in
-# their colour, facing the fire, standing on the plaza, faded out past CREW_FADE_M, and their quip zone.
 func _build_figure(def, index: int) -> Node3D:
 	var holder := Node3D.new()
 	holder.name = "Crew_" + String(def.id)
@@ -918,8 +819,6 @@ func _build_figure(def, index: int) -> Node3D:
 	return holder
 
 
-# Sets a figure's lowest drawn point on the plaza under it (or the sandstone disc's top where no plaza is). The figure's
-# views sit deep under its holder, so this reads them in the hub's frame, where _seat reads direct children.
 func _stand_on_plaza(holder: Node3D) -> void:
 	var to_hub := root.global_transform.affine_inverse()
 	var foot := INF
@@ -931,7 +830,6 @@ func _stand_on_plaza(holder: Node3D) -> void:
 		holder.position.y += (top if top > -INF else 0.0) - foot
 
 
-# The ball rolled up to a standing pilot: their line goes up on the plate, once a walk, and they turn to the ball.
 func _quip_from(class_id: String) -> void:
 	var figure: Node3D = _crew.get(class_id)
 	if not walking or figure == null or not figure.visible or _quipped.has(class_id):
@@ -960,7 +858,6 @@ func _quip_from(class_id: String) -> void:
 		var second: Dictionary = lines[1]
 		var reply_who := String(LoreRows.SPEAKERS.get(String(second["speaker"]), String(second["speaker"])))
 		words = "%s\n%s: %s" % [String(lines[0]["text"]), reply_who, String(second["text"])]
-	# The voice goes first, so the plate's talking bars run for as long as the call-in really speaks.
 	var audio = game.audio() if game != null and game.has_method("audio") else null
 	var voice_s: float = audio.call_in("camp_quip", speaker, words) if audio != null else 0.0
 	_show_quip(speaker, words, voice_s)
@@ -972,7 +869,6 @@ var _cached_journal_pages: Array = []
 var _cached_journal_pages_ready := false
 
 
-# Saved run-log pages from the camp scrapbook, cached per camp walk for PilotStory camp beats.
 func _journal_pages() -> Array:
 	if _cached_journal_pages_ready:
 		return _cached_journal_pages
@@ -985,8 +881,6 @@ func _journal_pages() -> Array:
 	return _cached_journal_pages
 
 
-# The pilot turns the short way round until their face is to the ball, and cheers. A pilot model faces its local -Z
-# (so _build_figure turns it PI past the yaw that points -Z away from the fire); yaw atan2(-x, -z) points -Z along (x, z).
 func _face_ball(figure: Node3D) -> void:
 	var to_ball: Vector3 = root.global_basis.inverse() * (ball.ball_position() - figure.global_position)
 	if Vector2(to_ball.x, to_ball.z).length() > 0.01:
@@ -1000,13 +894,11 @@ func _face_ball(figure: Node3D) -> void:
 			(animator as AnimationPlayer).queue(CREW_IDLE_CLIP)
 
 
-# Back to the spot's own yaw, facing the fire, any turn still running dropped.
 func _face_fire(figure: Node3D) -> void:
 	_turn(figure).kill()
 	figure.rotation.y = float(figure.get_meta("rest_yaw", figure.rotation.y))
 
 
-# A figure's one turn: the one before it is killed, so two turns never fight over the yaw.
 func _turn(figure: Node3D) -> Tween:
 	var last = figure.get_meta("turn") if figure.has_meta("turn") else null
 	if last is Tween and (last as Tween).is_valid():
@@ -1015,8 +907,6 @@ func _turn(figure: Node3D) -> Tween:
 	figure.set_meta("turn", turn)
 	return turn
 
-
-# --- the quip card: the caller plate (caller_tile.gd, the call-ins' own) beside a line, upper left ---
 
 func _build_quip() -> void:
 	_quip = Control.new()
@@ -1078,7 +968,6 @@ func _end_quip(now: bool) -> void:
 		_quip_tile.clear())
 
 
-# The line on the plate now, "" when none is up; and who says it.
 func quip_words() -> String:
 	return _quip_label.text if _quip != null and _quip.visible else ""
 
@@ -1087,9 +976,6 @@ func quip_caller() -> String:
 	return String(_quip_tile.speaker) if _quip != null and _quip.visible else ""
 
 
-# --- the records: found B-sides as sleeves in the bins by Moss's jukebox ---
-
-# The bins and the sleeves are two MultiMeshes, one draw each, whatever the count. Each walk restocks them.
 func _build_records() -> void:
 	var cabinet: Node3D = _pieces.get("moss_jukebox")
 	if cabinet == null:
@@ -1099,7 +985,6 @@ func _build_records() -> void:
 	cabinet.add_child(shelf)
 	_bins = _multi("Bins", bin_mesh(), _record_material("record_bin", false), shelf)
 	_sleeves = _multi("Sleeves", sleeve_mesh(), _record_material("record_sleeve", true), shelf)
-	# A sleeve's shadow falls inside its bin, where the bin's own already is.
 	_sleeves.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
@@ -1116,8 +1001,6 @@ func _multi(node_name: String, mesh: Mesh, material: Material, parent: Node3D) -
 	return view
 
 
-# The B-sides the camp's records hold, in the order they were found: a jukebox record that is no rare pressing, or
-# a radio take of the b-side tier (radio_takes.gd track).
 func found_b_sides() -> Array:
 	var ids: Array = camp_store.tune_ids() if camp_store != null and camp_store.has_method("tune_ids") else []
 	return ids.filter(func(id): return String(RadioTakes.track(String(id)).get("tier", "")) == "b-side")
@@ -1142,18 +1025,15 @@ func _shelve_records() -> void:
 		var slot := i % BIN_SLOTS
 		var bin_at := BIN_AT + BIN_STEP * floori(float(i) / BIN_SLOTS)
 		var z := -BIN_SIZE.z * 0.5 + 0.08 + SLEEVE_STEP * slot
-		# Each sleeve stands on the bin floor, its face to the jukebox's front, the next one behind it.
 		var at := bin_at + Vector3(0.0, BIN_LIFT + 0.05, z)
 		_sleeves.multimesh.set_instance_transform(i, Transform3D(lean, at))
 		_sleeves.multimesh.set_instance_color(i, sleeve_ink(String(_shelved[i])))
 
 
-# A record's sleeve colour: its id's pick from SLEEVE_INKS, the same every walk.
 static func sleeve_ink(id: String) -> Color:
 	return SLEEVE_INKS[absi(hash(id)) % SLEEVE_INKS.size()]
 
 
-# A bin: an open crate, BIN_SIZE outside, its walls 4 cm, on four legs BIN_LIFT high, centred on x and z, feet at y 0.
 static func bin_mesh() -> ArrayMesh:
 	return RecipeProps.piece("camp_record_bin", func(st: SurfaceTool):
 		var h := BIN_SIZE * 0.5
@@ -1173,8 +1053,6 @@ static func bin_mesh() -> ArrayMesh:
 			RecipeProps.add_hull(st, RecipeProps.bevel_box(Vector3(-h.x, y0, z0), Vector3(h.x, y0 + BIN_SIZE.y * (0.6 if sz > 0.0 else 1.0), z0 + wall), 0.012)))
 
 
-# A sleeve: a thin square card, face +Z and -Z, standing on its bottom edge, a printed band across its face a shade
-# darker, and the record's black edge showing over the top. One material, so the tint comes from the instance.
 static func sleeve_mesh() -> ArrayMesh:
 	return RecipeProps.piece("camp_record_sleeve", func(st: SurfaceTool):
 		var s := SLEEVE_SIDE

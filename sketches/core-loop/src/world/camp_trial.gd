@@ -1,21 +1,5 @@
 extends Node3D
 
-# The camp's time trial. A station at the track's start socket arms the clock and puts the
-# player's ball a few metres behind the start line. The clock runs from the ball crossing the
-# line to its crossing the same line again after it has been through checkpoint_0..3 in order
-# (ball-only sensors; a skipped one means no finish). The time is drawn on the arch's timer
-# panel. The lap earns bronze, silver or gold, which light the arch's three lamps. The best
-# lap's path is kept in the profile (camp_records.gd) and replayed on the next lap as a
-# translucent ball, a ghost of your own best. Before a first lap the authored ghost_00..31
-# sockets show as a faint dotted guide line.
-#
-# MEDALS. A scripted bot lap (tests/camp_trial_test.gd: Intent.Scripted on the game's own ball over
-# the committed track collision, a standing start 4 m behind the line, drive held, no boost) ran
-# 12.6 s and 13.5 s on 17 Oct 2026 with two braking thresholds; the reference is 13.0 s. The bot
-# aims at the authored ghost line, because aiming straight at the checkpoints cuts turn 1 and
-# leaves the deck. Gold is the reference, silver is x1.15 and bronze x1.35, to the half second.
-# A human who carves the banked turns and takes the kicker clean can beat gold; a ball that
-# bounces off the walls lands bronze.
 
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -27,16 +11,15 @@ const BALL_LAYER := 2
 
 const CHECKPOINTS := 4
 const CHECK_RADIUS := 6.5
-const LINE_HALF := 5.5      # the start line is crossed within this of the socket across the track
-const STAGE_BEHIND := 4.0   # the armed ball waits this far back along the track
-const LAP_CAP := 119.0      # seconds; the ghost holds 120 s at 10 Hz
-const WANDER := 80.0        # metres from the track's centre that abandons the lap
+const LINE_HALF := 5.5
+const STAGE_BEHIND := 4.0
+const LAP_CAP := 119.0
+const WANDER := 80.0
 const GHOST_STEP := 1.0 / float(Records.GHOST_HZ)
 
-# Medal times in milliseconds, from the measured bot lap above.
 const GOLD_MS := 13000
-const SILVER_MS := 15000    # 13.0 x 1.15 = 14.95
-const BRONZE_MS := 17500    # 13.0 x 1.35 = 17.55
+const SILVER_MS := 15000
+const BRONZE_MS := 17500
 const MEDALS := ["bronze", "silver", "gold"]
 
 enum State { IDLE, ARMED, RUNNING, DONE }
@@ -48,21 +31,20 @@ var recorder := Recorder.new()
 var timer_label: Label3D
 var ghost_mesh: MeshInstance3D
 var guide: MultiMeshInstance3D
-var lamps := {}  # medal -> {"bulb": MeshInstance3D, "mat": StandardMaterial3D}; a lit lamp glows by emission (no runtime lights, lint L6)
+var lamps := {}
 
-var _inv := Transform3D.IDENTITY  # world to track space
+var _inv := Transform3D.IDENTITY
 var _sensors: Array[Area3D] = []
-var _line := Vector3.ZERO         # the start/finish socket in track space
+var _line := Vector3.ZERO
 var _prev := Vector3.ZERO
-var _staging := Vector3.ZERO      # where the armed ball waits, track space
-var _staged := false              # the ball has arrived there (a teleport lands a tick late)
+var _staging := Vector3.ZERO
+var _staged := false
 var _ghost: PackedVector3Array = PackedVector3Array()
 var _ghost_total := 0.0
 var _after := 0.0
-var last_result := {}             # {"ms", "medal", "best"} of the lap just run
+var last_result := {}
 
 
-# The clock and its order rules, with no scene.
 class Run:
 	var state := State.IDLE
 	var time := 0.0
@@ -75,7 +57,6 @@ class Run:
 		next = 0
 		splits = []
 
-	# `lead` is how much of the tick that crossed the line is already past it.
 	func start(lead := 0.0) -> bool:
 		if state != State.ARMED:
 			return false
@@ -89,7 +70,6 @@ class Run:
 		if state == State.RUNNING:
 			time += delta
 
-	# A checkpoint counts only when it is the next one; anything else is ignored.
 	func checkpoint(index: int) -> bool:
 		if state != State.RUNNING or index != next:
 			return false
@@ -97,8 +77,6 @@ class Run:
 		next += 1
 		return true
 
-	# The finish line counts only after the last checkpoint. `lead` is the part of this
-	# tick already past the line.
 	func finish(lead := 0.0) -> bool:
 		if state != State.RUNNING or next < CHECKPOINTS:
 			return false
@@ -114,8 +92,6 @@ class Run:
 		return roundi(time * 1000.0)
 
 
-# Samples a path at GHOST_HZ of lap time: point k is the position at k * 0.1 s, then the
-# last point is the finish. Positions are in track space.
 class Recorder:
 	var points := PackedVector3Array()
 	var _taken := 0
@@ -138,7 +114,6 @@ const CLASS_TAG := "camp_trial"
 
 
 static func attach(hub_ref) -> void:
-	# A missing GLB leaves the feature out, as camp_hub._place does for the piece itself.
 	for stem in [TRACK, ARCH]:
 		if hub_ref.piece(stem) == null:
 			push_warning("%s: camp piece %s is missing; left out" % [CLASS_TAG, stem])
@@ -149,7 +124,6 @@ static func attach(hub_ref) -> void:
 	trial.setup(hub_ref)
 
 
-# Which medal a lap time earns, "" for none.
 static func medal_for(ms: int) -> String:
 	if ms <= 0:
 		return ""
@@ -162,18 +136,15 @@ static func medal_for(ms: int) -> String:
 	return ""
 
 
-# The lamps a medal lights: gold lights all three.
 static func lamps_for(medal: String) -> Array:
 	var at := MEDALS.find(medal)
 	return MEDALS.slice(0, at + 1) if at >= 0 else []
 
 
-# 0:58.20 for 58200 ms.
 static func format_ms(ms: int) -> String:
 	return "%d:%05.2f" % [ms / 60000, float(ms % 60000) / 1000.0]
 
 
-# The ghost's position `seconds` into the lap: its points are spread evenly over the lap.
 static func ghost_at(points: PackedVector3Array, seconds: float, total: float) -> Vector3:
 	if points.is_empty():
 		return Vector3.ZERO
@@ -184,8 +155,6 @@ static func ghost_at(points: PackedVector3Array, seconds: float, total: float) -
 	return points[i].lerp(points[mini(i + 1, points.size() - 1)], f - float(i))
 
 
-# True when the ball went from behind a line (greater z) to ahead of it between two ticks,
-# inside the line's width. Returns the part of the tick still to run after the crossing.
 static func crossed(prev: Vector3, cur: Vector3, line: Vector3) -> float:
 	if not (prev.z > line.z and cur.z <= line.z):
 		return -1.0
@@ -214,8 +183,6 @@ func setup(hub_ref, records_ref = null) -> void:
 		hub.walk_left.connect(_on_walk_left)
 
 
-# World code does not reach the profile layer (profile_purity_test P2-4), so the one that builds
-# the hub hands the store in as hub.camp_store. Without it the records last for the session.
 func _profile():
 	return hub.get("camp_store") if hub != null else null
 
@@ -306,7 +273,6 @@ func _build_ghost() -> void:
 	hub.root.add_child(ghost_mesh)
 
 
-# The authored line, 32 small dots at the ball's riding height.
 func _build_guide() -> void:
 	var multi := MultiMesh.new()
 	multi.transform_format = MultiMesh.TRANSFORM_3D
@@ -347,7 +313,6 @@ func _ball_body() -> Node3D:
 	return hub.ball.body() if hub != null and hub.ball != null else null
 
 
-# The player pressed the station: the ball waits behind the line, the clock waits for it.
 func arm() -> void:
 	if run.state == State.ARMED or run.state == State.RUNNING:
 		return
@@ -369,7 +334,6 @@ func _physics_process(delta: float) -> void:
 	_sync_clock()
 
 
-# The walk HUD's lap line (the arch's timer cannot be read from the far straight): the live lap, then the result.
 func _sync_clock() -> void:
 	if hub == null or not hub.has_method("set_clock"):
 		return
@@ -397,7 +361,6 @@ func _step(delta: float) -> void:
 	var lead := -1.0
 	if run.state == State.ARMED:
 		if not _staged:
-			# The teleport lands a tick late: the old position must not count as a crossing.
 			if local.distance_to(_staging) > 2.5:
 				return
 			_staged = true

@@ -1,24 +1,5 @@
 extends Node
 
-# The Hanging Isle moves (ISLE-TIP, Andrew 2026-10-16; port note P5 of LANDMARK-CARDS.md card 5): this
-# rig sits under park_islands' landmark node, whose origin is the tilt pivot (park_recipes.gd landmark_datum),
-# and every physics tick applies the tilt and sink the stage-5 hand's driver publishes (warden_mind.gd
-# island_tilt_deg, tilt_away, island_sink). The tilt turns the node TILT about tilt_away x UP, so the tip
-# swings toward tilt_away by the same offset the driver gives the hand; the sink lowers it.
-#
-# The tip's lowest 49 m collide through landmark_sky_island_tip.glb on an IsleTip (below): an
-# AnimatableBody3D on the world layer that rides the node, so the ball rolls off it and the harpoon bites it
-# as a moving anchor (augments.gd WORLD_ANCHOR_GROUP), the line riding the bitten point. A synced
-# AnimatableBody3D follows only its own transform, never a moving parent's, and holds its node at the last
-# physics state until the next step; so the tip is top_level, unsynced, and the rig sets it to the node's
-# transform every tick, which moves it as a kinematic body at once.
-#
-# The tether (PW1-TETHER, Andrew 2026-10-16): the GLB's "tether" view, a chain authored TETHER_LENGTH long
-# down local -Y from the tip, is re-aimed every tick from the tip to the hand's grip (GRIP above the
-# Warden), so it stays taut while the hand swings and stretches when the lens drops in a stagger. With no
-# hand (a calm stage, or after the Warden breaks) it hangs at rest. TETHER_GIRTH thickens it across its
-# length so it reads from the bowl. The tether is a view only: it never blocks the rope or a lock's sight
-# line (tests/isle_tip_test.gd probes both).
 
 const Augments := preload("res://src/movement/augments.gd")
 
@@ -28,13 +9,11 @@ const TETHER_GIRTH := 2.0
 const GRIP := Vector3(0.0, 3.0, 0.0)
 const TIP_LOCAL := Vector3(0.0, -118.0, 0.0)
 const MOUNTING := "under_island"
-# How often a rig with no hand looks for one, in seconds.
 const SEEK_EVERY := 0.5
 
 
 class IsleTip:
 	extends AnimatableBody3D
-	# The bite, in this body's space; and how fast it moved last tick.
 	var _bite := Vector3.ZERO
 	var _velocity := Vector3.ZERO
 	var _was := Transform3D.IDENTITY
@@ -66,8 +45,6 @@ var sink := 0.0
 var _seek_left := 0.0
 
 
-# Hangs a rig under node (the landmark at its pivot) with tip_shape (the tip GLB's trimesh at its place in the
-# node, or null for a stand-in with no tip model). Returns the rig.
 static func attach(node: Node3D, tip_shape: CollisionShape3D = null) -> Node:
 	var rig = load("res://src/world/park/isle_rig.gd").new()
 	rig.name = "IsleRig"
@@ -111,7 +88,6 @@ func _physics_process(delta: float) -> void:
 		tip.track(delta)
 
 
-# Sets the node to the driver's tilt and sink (none: at rest) and re-aims the tether.
 func pose(driver) -> void:
 	tilt_deg = float(driver.island_tilt_deg) if driver != null else 0.0
 	sink = float(driver.island_sink) if driver != null else 0.0
@@ -128,12 +104,10 @@ func pose(driver) -> void:
 	_aim_tether()
 
 
-# Where the tip is now, in the world.
 func tip_point() -> Vector3:
 	return landmark.global_transform * TIP_LOCAL
 
 
-# Where the tether's lower end belongs: the hand's grip, or its rest place on the node.
 func grip_point() -> Vector3:
 	if _has_hand():
 		return warden.global_position + GRIP
@@ -165,8 +139,6 @@ func _driver():
 	return driver if driver != null and "island_tilt_deg" in driver else null
 
 
-# The stage-5 hand under the isle: an anchor Warden mounted under_island whose driver publishes the tilt,
-# nearest the pivot's column. null when there is none.
 static func find_hand(tree: SceneTree, pivot: Vector3) -> Node3D:
 	if tree == null:
 		return null

@@ -7,21 +7,11 @@ const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 
-# The surge course in a park (activities.gd surge_run): the Reach's Surge Run (surge_run.gd) laid
-# down a park route's line rows. The ring stands beside the head of the line; rolling in opens the
-# sluice (the park's sluice_surge event row, so the siren lands on the bar), and the water then
-# chases the ball down the line through the gates. What is drawn is the model: the next gate glows,
-# the rest stand in sand, and the front is a wall of water the width of the line.
 
-# A gate's deck is found by a ray from this far above its row's top to this far below it.
 const RAY_ABOVE_M := 3.0
 const RAY_BELOW_M := 60.0
 const FRONT_SIZE := Vector3(12.0, 4.0, 3.0)
-# The ring stands off the head, so the water opens further back than the Reach's: a ball that rolls from the ring to the
-# head while the siren winds starts the deck ahead of the front, with room to reach cruise before it closes.
 const FRONT_START := -40.0
-# And it runs at cruise, not the Reach's 1.15 cruise: the line drops 40 m off the weir deck's end onto the gap reach and
-# turns 85 degrees there, which costs a rider seconds the flat Reach never asks for.
 const FRONT_SPEED := 1.0
 
 var model
@@ -32,9 +22,6 @@ var _gates: Array[MeshInstance3D] = []
 var _front: MeshInstance3D
 
 
-# The route's grind rows (the flume's water channel), each a straight segment through its at along its yaw and
-# length, chained so each runs away from where the last one ended (the first from `start`). rows[i] names the row of
-# the segment from points[i] to points[i + 1]; a link between two rows takes the next row's id.
 static func path(park: Dictionary, route_id: String, start: Vector2) -> Dictionary:
 	var rows := {}
 	for row in park.get("park_rows", []):
@@ -68,10 +55,6 @@ static func path(park: Dictionary, route_id: String, start: Vector2) -> Dictiona
 	return {"points": points, "rows": names}
 
 
-# Each gate's deck height, from the row its stretch of the route runs on, so a gate where two decks cross in plan takes
-# its own deck's height. The row's top (its y plus its height; a raised row's graph nodes stand at its base, and a work
-# deck's top slopes) is where a ray looks down from; what it hits is the deck. With no world to ray, the row's top; with
-# no y on the row, the ground there.
 static func heights(model_ref, rows: PackedStringArray, park: Dictionary, ground: Callable, space: PhysicsDirectSpaceState3D = null) -> Array[float]:
 	var tops := {}
 	for row in park.get("park_rows", []):
@@ -98,8 +81,6 @@ static func heights(model_ref, rows: PackedStringArray, park: Dictionary, ground
 
 func setup(site: Dictionary, cruise: float, park: Dictionary, ground: Callable) -> void:
 	name = "SurgeCourse"
-	# The course hangs under its ring's site but draws in world space: a node made top_level keeps the global
-	# transform it had (the site's), so it is reset, as the pocket hazards are (activities.gd).
 	top_level = true
 	transform = Transform3D.IDENTITY
 	var ring: Vector2 = site.ring
@@ -130,8 +111,6 @@ func setup(site: Dictionary, cruise: float, park: Dictionary, ground: Callable) 
 	add_child(_front)
 
 
-# The toe, breaking lip and trailing sheet all travel with the course's front.
-# Heights vary across the lip, with the tallest crest at the original warning height.
 static func _breaking_front(water: Color) -> ArrayMesh:
 	var crest_heights := [0.65, 0.88, 0.78, 1.0, 0.83, 0.92, 0.68]
 	var profile := [Vector2(-0.5, 0), Vector2(-0.35, 0.7), Vector2(-0.42, 1),
@@ -154,8 +133,6 @@ static func _breaking_front(water: Color) -> ArrayMesh:
 	return surface.commit()
 
 
-# The gates onto the decks themselves, by ray, once the stage's colliders stand (the course is built with the stage, on
-# its rows' tops; activities.gd calls this as the course goes live).
 func settle() -> void:
 	if not is_inside_tree():
 		return
@@ -183,10 +160,6 @@ func show_live(live: bool, pulse: float) -> void:
 		_front.basis = Basis.looking_at(Vector3(t.x, 0.0, t.y), Vector3.UP)
 
 
-# A point `ahead` metres down the line from where the ball is, on the deck: a rider who aims here stays on the
-# line's centre between gates (the bot's target; aiming straight at a gate far down a bent line walks off the deck).
-# Behind the head, the line runs on back along its first heading, so a rider coming in from the side lines up before
-# the deck (the flume's trough is entered from its end).
 func lead_point(ball: Vector3, ahead: float) -> Vector3:
 	var flat := Vector2(ball.x, ball.z)
 	var head: Vector2 = model.route.points[0]
@@ -197,7 +170,6 @@ func lead_point(ball: Vector3, ahead: float) -> Vector3:
 	return Vector3(p.x, model.deck_height(maxf(d, 0.0)), p.y)
 
 
-# The next gate, where a ball on the course aims.
 func next_gate_point() -> Vector3:
 	var i: int = clampi(model.next_gate, 0, model.gates.size() - 1)
 	return Vector3(model.gates[i].x, model.gate_heights[i], model.gates[i].y)

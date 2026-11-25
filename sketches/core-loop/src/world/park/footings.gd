@@ -1,34 +1,15 @@
 extends RefCounted
 
-# Concrete footings under steel that hangs in the air. TABLE is keyed by recipe name and lists the
-# recipe's soles, the points in the piece's own space where a leg or a tower end meets the air.
-# The ground under each sole decides: a footing is cast only where the gap is more than
-# the entry's "min_gap" (OFF_GROUND_M unless it says otherwise), so a new row of a listed recipe
-# needs no entry here. A sole that an authored ride line passes stays bare (fit's ridden callable).
-# Each piece gets one mesh and one collision shape, both in the placed node's space.
-#
-# "tiled" recipes put their soles on every tile copy; the first station of a tile is the last of
-# the one before, so that pair shares one foundation across the seam. A recipe with "end_inset"
-# has a sole near each end of the piece's length, that far in from the end, and no stations.
-# "flare" is how far the concrete base grows past the sole: clamp(lift + rate * drop, min, max)
-# on x and on z.
 const Tuning := preload("res://src/movement/tuning.gd")
 const OFF_GROUND_M := 0.3
-# A tower end with less than a ball's width under it is no underpass, and the towers that hang that
-# low keep their own look; only an end the ball could roll under is cast down.
 const TOWER_MIN_GAP_M := Tuning.RADIUS * 2.0
-# A sole casts no footing when an authored ride line passes within the base's corner distance, a ball's radius and
-# this much more of it: concrete that a rolling ball would meet is left out, and the leg hangs as it did.
 const LINE_CLEARANCE_M := 0.3
-# Test-only fault: when true, a ridden sole is cast anyway. Nothing in src/ sets it; tests/park_flume_piers_test.gd does.
 static var plant_ignore_lines := false
 const SAMPLES_ACROSS := [-1.0, -0.5, 0.0, 0.5, 1.0]
 const SAMPLES_ALONG := [-1.0, 0.0, 1.0]
 const CONCRETE := preload("res://assets/materials/gpw_workshop.gdshader")
 const WEAR_MARGIN := Vector3.ONE
 
-# The flume's grapple towers stand across cut banks. Their authored mesh, grapple face and ride
-# sensor keep their height, and the footing stays inside the tower's own footprint.
 const TOWER := {
 	"tiled": false,
 	"x": [0.0],
@@ -45,9 +26,6 @@ const TOWER := {
 	"color": Color("877b68"),
 }
 
-# The iron bents of the tiled trough end 6 m below its origin. The soles are the leg feet in
-# flume_works.py's frame2 and spec_flume. The base stays narrow enough to roll under the central
-# span, even where the weir foot has a 30 m drop.
 const TABLE := {
 	"flume_reach_120": {
 		"tiled": true,
@@ -68,9 +46,6 @@ const TABLE := {
 }
 
 
-# The footings of one placed piece: {"view": MeshInstance3D, "shape": CollisionShape3D}, or {} when
-# nothing hangs. frame is the piece's node transform; at_origin and tiles are in the node's space. ridden(at: Vector2,
-# reach_m: float) -> bool says whether an authored line passes within reach_m of a world x, z; such a sole is not footed.
 static func fit(row: Dictionary, frame: Transform3D, at_origin: Transform3D, tiles: Array[Transform3D], ground: Callable, ridden := Callable()) -> Dictionary:
 	var recipe := String(row.get("recipe", ""))
 	if not TABLE.has(recipe) or not ground.is_valid():
@@ -108,8 +83,6 @@ static func fit(row: Dictionary, frame: Transform3D, at_origin: Transform3D, til
 	material.set_shader_parameter("base_color", entry["color"])
 	surface.set_material(material)
 	var mesh := surface.commit()
-	# The workshop's corner wear assumes one piece centred on its own origin. Keep its grain and
-	# form seams here, with the wear beyond the bounds of this batched mesh.
 	var bounds := mesh.get_aabb()
 	material.set_shader_parameter("half_extents", bounds.position.abs().max(bounds.end.abs()) + WEAR_MARGIN)
 	var view := MeshInstance3D.new()
@@ -121,7 +94,6 @@ static func fit(row: Dictionary, frame: Transform3D, at_origin: Transform3D, til
 	return {"view": view, "shape": shape}
 
 
-# Where along the piece its soles sit: the entry's own stations, or one near each end of the row's length.
 static func _stations(entry: Dictionary, row: Dictionary) -> Array:
 	if entry.has("stations"):
 		return entry["stations"]
@@ -129,8 +101,6 @@ static func _stations(entry: Dictionary, row: Dictionary) -> Array:
 	return [-reach, reach]
 
 
-# One frustum from the sole down to the lowest ground under its base, embedded into the hillside.
-# The steel keeps its own height: only the concrete is added.
 static func _cast(surface: SurfaceTool, entry: Dictionary, frame: Transform3D, ground: Callable, sole: Vector3, depth: float, ridden: Callable) -> bool:
 	var at := frame * sole
 	var drop := at.y - float(ground.call(at.x, at.z))

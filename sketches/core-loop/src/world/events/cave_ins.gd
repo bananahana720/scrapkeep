@@ -1,19 +1,5 @@
 extends Node3D
 
-# Cave-ins where a burrower surfaces (design-v3/WORLD-ROSTERS.md, the Dig): a burrower that
-# breaks up through the floor leaves the roof over its hole cracked, and the rock comes down
-# there. One rubble fall (rubble_fall.gd) per surfacing, centred on the hole, warned for
-# WARN_S and hitting the ball only while it is on the floor (Andrew's "Commit": a carving
-# ball is safe). It never touches the ball's velocity, so it never stops the ball.
-#
-# Live only in a park that houses burrowers (a home row whose enemy is burrower), so it is
-# the Dig's own event and follows the burrowers wherever their homes put them. At most
-# MAX_LIVE falls at once and none within GAP_S of the last, so the burrower's own burst and
-# the rock that follows it read as two beats, never a pile. A cave-in adds no attacker: it
-# spawns nothing and takes no budget slot; its warning keeps the shared 0.2 s gap.
-#
-# It reads two facts every burrower carries, its burst count and whether it is hidden, so
-# the burrower's own file needs no hook.
 
 const Palette := preload("res://src/core/palette.gd")
 const RubbleFall := preload("res://src/world/events/rubble_fall.gd")
@@ -23,7 +9,6 @@ const WARN_S := 1.2
 const DAMAGE := 6
 const GAP_S := 4.0
 const MAX_LIVE := 1
-# A ball with no scrap left to lose is lifted, as the other event families do.
 const LIFT_MPS := 6.0
 
 var world
@@ -48,8 +33,6 @@ func setup(world_ref) -> void:
 			active = true
 
 
-# The warning disc of each live fall as [{id, cause, covers}], cause the one lose_scrap is called with. The bot's fairness
-# record reads this (tools/bot_fairness.gd).
 func telegraphs(ball: Vector3) -> Array:
 	var out: Array = []
 	for fall in _live:
@@ -58,7 +41,6 @@ func telegraphs(ball: Vector3) -> Array:
 	return out
 
 
-# A park family (families.gd) with no rows of its own: the director never calls it.
 func handle(_action: String, _row: Dictionary, _ctx: Dictionary) -> void:
 	pass
 
@@ -77,8 +59,6 @@ func _physics_process(delta: float) -> void:
 			surface_at(burrower.global_position)
 
 
-# True on the tick a burrower breaks the floor: its burst count rose, or it went from hidden
-# to shown.
 func _surfaced(burrower) -> bool:
 	var id: int = burrower.get_instance_id()
 	var now := {"bursts": int(burrower.get("bursts") if burrower.get("bursts") != null else 0),
@@ -88,8 +68,6 @@ func _surfaced(burrower) -> bool:
 	return now.bursts > was.bursts or (was.hidden and not now.hidden)
 
 
-# Starts a cave-in over `at`, or returns null when one is already live or the last was too
-# recent.
 func surface_at(at: Vector3) -> Node3D:
 	if _live.size() >= MAX_LIVE or _since_last < GAP_S:
 		return null
@@ -144,4 +122,3 @@ func release() -> void:
 	_seen.clear()
 	world = null
 	active = false
-

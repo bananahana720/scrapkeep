@@ -1,17 +1,5 @@
 extends Node3D
 
-# The camp's skee-ball lane. A station at the lane's foot starts a game of nine balls, the
-# player's own ball is put on the start bar, and whatever it lands in is the score: a ball-only
-# sensor in each cup (the radii in tools/blender/camp/skee.py) or the return gutter, worth 0.
-# The ball goes back to the bar after each one. The running score and balls left are drawn on
-# the scoreboard's amber face; the best total is kept in the profile (camp_records.gd).
-# Nine balls is the arcade count and keeps a game near two minutes at the lane's pace.
-#
-# Skill, from scripts/cloud/skee_lab: cruising lands the 10 cup, a boost reaches the 20 and
-# the 50, and the 30, 40 and 100 cups need steering.
-#
-# Lane space: the piece's own frame (foot at the origin, the board up -Z). Leaving the lane
-# is a ball past the gutter's open end or off the cabinet's sides.
 
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -19,9 +7,8 @@ const Records := preload("res://src/world/camp_records.gd")
 
 const PIECE := "camp_skee_lane"
 const BALLS := 9
-const BALL_LAYER := 2  # the player's ball is the only body on layer 2 (player_ball / rigid_ball)
+const BALL_LAYER := 2
 
-# Opening radius from the recipe header, the score and the word the cup says.
 const CUPS := {
 	"cup_10": {"points": 10, "radius": 2.0, "word": "CLUNK!"},
 	"cup_20": {"points": 20, "radius": 1.4, "word": "TOCK!"},
@@ -35,21 +22,16 @@ const GUTTER_WORD := "FWUP."
 const DEAD_WORD := "THUNK."
 const GUTTER_RADIUS := 1.2
 
-# A cup counts a ball whose centre sits this close to the cup's floor centre (the pocket is
-# 1.5 m deep and the ball radius 1, so a ball rolling across the mouth is 2.5 m away).
 const SEAT_DISTANCE := 1.6
 const GUTTER_ACROSS := 1.0
 const GUTTER_HEIGHT := 1.0
 const SEAT_TIME := 0.06
 const SETTLE_TIME := 1.1
-# A teleport lands a tick late; the old position is not read for this long after a serve.
 const GRACE := 0.25
 const BEAT_TIME := 2.5
-# A ball that has left the bar and then lies still this long is a dead ball, scored 0.
 const STILL_SPEED := 0.4
 const STILL_TIME := 6.0
 const LEFT_BAR := 3.0
-# Leaving the lane: past the gutter's open end (z 3.5) or beyond the cabinet.
 const LEAVE_Z := 5.0
 const LEAVE_X := 9.0
 const LEAVE_Y := -4.0
@@ -63,8 +45,8 @@ var phase := Phase.IDLE
 var score_label: Label3D
 
 var _lane_xf := Transform3D.IDENTITY
-var _sensors := {}  # id -> Area3D (cups and "return")
-var _seated := {}   # id -> seconds the ball has sat in it
+var _sensors := {}
+var _seated := {}
 var _settle := 0.0
 var _after := 0.0
 var _rolled := false
@@ -72,7 +54,6 @@ var _still := 0.0
 var _grace := 0.0
 
 
-# One game's books. Pure, so the scoring is tested with no scene.
 class Match:
 	var balls_total := BALLS
 	var balls_left := BALLS
@@ -95,7 +76,6 @@ class Match:
 	func over() -> bool:
 		return balls_left <= 0
 
-	# The scoreboard text: running score and balls left.
 	func board() -> String:
 		return "SCORE %d   BALLS %d" % [score, balls_left]
 
@@ -104,7 +84,6 @@ const CLASS_TAG := "camp_skee"
 
 
 static func attach(hub_ref) -> void:
-	# A missing GLB leaves the feature out, as camp_hub._place does for the piece itself.
 	for stem in [PIECE]:
 		if hub_ref.piece(stem) == null:
 			push_warning("%s: camp piece %s is missing; left out" % [CLASS_TAG, stem])
@@ -115,7 +94,6 @@ static func attach(hub_ref) -> void:
 	lane.setup(hub_ref)
 
 
-# The points a cup is worth, 0 for the gutter and anything else.
 static func points_for(id: String) -> int:
 	return int(CUPS[id]["points"]) if CUPS.has(id) else 0
 
@@ -135,13 +113,10 @@ func setup(hub_ref, records_ref = null) -> void:
 		hub.walk_left.connect(_on_walk_left)
 
 
-# World code does not reach the profile layer (profile_purity_test P2-4), so the one that builds
-# the hub hands the store in as hub.camp_store. Without it the records last for the session.
 func _profile():
 	return hub.get("camp_store") if hub != null else null
 
 
-# A sphere sensor that sees only the ball's layer.
 func _sensor(socket: String, radius: float) -> Area3D:
 	var area := Area3D.new()
 	area.name = "Sensor_" + socket
@@ -172,7 +147,6 @@ func _board_label() -> Label3D:
 	label.double_sided = false
 	label.no_depth_test = false
 	hub.root.add_child(label)
-	# The face looks toward the plaza (+Z in lane space); sit a hand in front of it.
 	var face: Transform3D = hub.socket(PIECE, "score")
 	label.global_transform = Transform3D(_lane_xf.basis, face.origin + _lane_xf.basis.z * 0.25)
 	return label
@@ -191,7 +165,6 @@ func start_game() -> void:
 	score_label.text = match_state.board()
 
 
-# The next ball goes on the start bar, at rest.
 func _serve() -> void:
 	phase = Phase.PLAYING
 	_rolled = false
@@ -240,7 +213,6 @@ func _sense(body: Node3D, delta: float) -> void:
 			return
 
 
-# Whether a ball centre is deep enough in a sensor to count.
 func _seats(id: String, at: Vector3) -> bool:
 	var floor_at: Vector3 = _sensors[id].global_position
 	if id == "return":
@@ -262,7 +234,6 @@ func _watch_still(body: Node3D, local: Vector3, delta: float) -> void:
 		land("dead")
 
 
-# The ball ended in `id` (a cup id, "return" or "dead"): book it, say so and rest a beat.
 func land(id: String) -> void:
 	if phase != Phase.PLAYING:
 		return
@@ -285,8 +256,6 @@ func _after_settle() -> void:
 		_serve()
 
 
-# Closes the game: a finished one keeps its best; leaving early (`left`) books nothing
-# beyond what was scored, and still counts the total.
 func end_game(left: bool) -> void:
 	if phase == Phase.IDLE:
 		return
@@ -297,7 +266,6 @@ func end_game(left: bool) -> void:
 		score_label.text = "GAME OVER   %d" % total
 	else:
 		score_label.text = "FINAL %d   BEST %d" % [total, records.skee_best()]
-		# Back to the foot so the next game starts from the station.
 		hub.ball.reset_to(hub.socket(PIECE, "interact").origin, Vector3.ZERO)
 	if fresh and total > 0:
 		_say("NEW BEST!", hub.socket(PIECE, "score").origin + Vector3.DOWN * 3.0, true)
@@ -312,7 +280,6 @@ func _on_walk_left() -> void:
 		end_game(true)
 
 
-# A comic word that pops up at a point and fades: bigger for the 100 cups.
 func _say(word: String, at: Vector3, big: bool) -> void:
 	var label := Label3D.new()
 	label.text = word

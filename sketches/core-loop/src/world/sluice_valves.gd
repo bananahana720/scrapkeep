@@ -13,28 +13,6 @@ class ValveBiteBody extends StaticBody3D:
 	func anchor_point(_point: Vector3, _from = null) -> Vector3:
 		return global_position
 
-# W47-GRAPPLE-CODE: W1 Spillway grapple-yank sluice valves (g12, TADR-008, ParkFlood.tla).
-#
-# Deep module owning the Spillway Dam & Flume grapple-yank sluice valves without touching
-# contraptions.gd or event_director.gd.
-#
-# Hardware contract (tools/blender/grapple_sluice_valve.py):
-#   sluice_valve_body.glb   slot `enamel`, origin on ground, wheel side faces Godot +Z,
-#                           socket_hub at (0, 1.95, 0.32)
-#   sluice_valve_wheel.glb  slot `steel`, origin at hub, turns about local Godot Z,
-#                           socket_bite at (0, 1.07, 0) (amber bite ring at 12 o'clock)
-#
-# Gameplay contract:
-#   - Hooking the bite ring mid-swing (WORLD_ANCHOR_GROUP + ANCHOR_GROUP on WORLD_MASK;
-#     preserves universal HOOK-CHAIN as a world pivot) yanks the wheel open about local Z.
-#   - TADR-008: Commits a visible Threat.Type.LANE Hazard with warn >= WARN_MIN_S (0.6 s)
-#     BEFORE any flood-wash damage or push occurs.
-#   - Double-edged wash: damages & throws locked yard crews and ordinary Fleet enemies inside
-#     the committed lane (sparing set pieces/Wardens), breaks destructible props once per wash,
-#     and washes/pushes a slow or parked ball (SpeedTier < CRUISE) while sparing any ball
-#     rolling at cruise or faster (ruling cu).
-#   - ParkFlood.tla compliance: strictly finite cycle ready -> warning -> surging -> draining
-#     -> charging -> ready. Full water (surging) NEVER holds indefinitely under a parked ball.
 
 const BODY_PATH := "res://assets/models/grapple/sluice_valve_body.glb"
 const WHEEL_PATH := "res://assets/models/grapple/sluice_valve_wheel.glb"
@@ -404,7 +382,6 @@ func _drop_hazard(v: Dictionary) -> void:
 	v["hazard"] = null
 
 
-# Direct yank entry point (for grapple-yank triggers and deterministic unit tests).
 func yank(valve_id: String) -> bool:
 	var v := valve_of(valve_id)
 	if v.is_empty():
@@ -527,7 +504,6 @@ func _step_valve(v: Dictionary, delta: float, motion: Dictionary, kit, facts: Ar
 				_enter_drain(v)
 
 		"surging":
-			# ParkFlood.tla invariant: finite surge window; NEVER pauses or holds full water under a parked ball.
 			v["wheel_angle"] = move_toward(float(v["wheel_angle"]), WHEEL_OPEN_RAD, WHEEL_OPEN_RATE * delta)
 			wheel.rotation.z = float(v["wheel_angle"])
 			v["surge_elapsed"] = float(v["surge_elapsed"]) + delta
@@ -608,7 +584,6 @@ func _apply_wash(v: Dictionary, h: Hazard, motion: Dictionary) -> void:
 		return
 	if not h.contains(ball):
 		return
-	# Ruling cu: difficulty presses a slow/stopped ball and never stops a ball rolling at cruise+.
 	if SpeedTier.of(planar, cruise) >= SpeedTier.CRUISE:
 		return
 	v["ball_hit"] = true

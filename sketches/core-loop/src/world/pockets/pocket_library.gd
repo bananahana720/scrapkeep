@@ -19,17 +19,14 @@ static func reset_for_tests() -> void:
 	_world_rows.clear()
 
 
-# World 1's authored library, kept intact for W1 assignments, golden draws and pocket_library_test.
 static func rows() -> Array:
 	return _loaded().duplicate(true)
 
 
-# Authored pockets for one world (1, 2 or 3); [] for an unknown world.
 static func rows_for_world(world: int) -> Array:
 	return _loaded_world(world).duplicate(true)
 
 
-# Every authored pocket across all worlds in world order (1, 2, 3).
 static func all_rows() -> Array:
 	var out: Array = []
 	for world in [1, 2, 3]:
@@ -45,8 +42,6 @@ static func world_for_map(map_id: String) -> int:
 	return 0
 
 
-# The parsed World 1 rows themselves, read once; callers copy what they hand out (a whole deep copy per site lookup cost about
-# 1 ms each on a stage entry).
 static func _loaded() -> Array:
 	if _rows.is_empty():
 		_rows = _loaded_world(1)

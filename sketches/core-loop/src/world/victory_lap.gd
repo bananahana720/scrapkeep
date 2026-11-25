@@ -6,19 +6,6 @@ const Palette := preload("res://src/core/palette.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
-# The victory lap (Andrew's design answer Q16, 2026-10-17 22:12Z: "60 s free roll", over a closing camera shot).
-# After the Mind falls and the crew's fly-over plays (ending_sequence.gd), the ball drops over the rim of Meteor Crater,
-# the crater_ending bowl, with the run's whole build still on it. Nothing in the bowl can hurt it and nothing ends the
-# lap but the clock: no enemies, no hazards, no fail state (flow ignores a death in the lap). The bowl is a 60 m deep
-# half-pipe and the floor's middle is the old vent, which throws the ball up harder the faster it comes in; its light
-# column is the eye line from the rim. The lap counts what a strong build does there (top speed, best air, laps of the
-# wall) and answers each new record with a drawn word and a flare over the rim (principle 5, overpowered pays). The
-# narrator opens, the crew log keeps its dry notes, the swing's crash lands ten seconds out, the last three seconds
-# count down, and the stats ride into the credits, which roll over this same bowl.
-#
-# The bowl's geometry is EndingSequence.CRATER_ROW placed with its collider, centred on the node. Its shape comes from
-# tools/blender/park/crater.py (stamp radius F 235 m, depth 60 m): the floor is a paraboloid to 0.8 F, the rim crest
-# stands 12 m up at 0.85 F, and the ejecta apron ends at 1.5 F, where the GLB ends.
 
 signal finished
 
@@ -27,11 +14,9 @@ const F := 235.0
 const DEPTH := 60.0
 const BOWL_R := 0.8 * F
 const CREST_R := 0.85 * F
-# Past this radius, or this far under the floor, the ball has left the crater; it comes back over the north rim.
 const EDGE_R := 1.42 * F
 const FALL_Y := -DEPTH - 30.0
 const ENTRY_LIFT := 14.0
-# The wall band where travel around the centre counts toward a rim lap.
 const WALL_FROM := 0.35 * F
 const WALL_TO := 1.0 * F
 const AIR_WORD := 1.2
@@ -47,10 +32,8 @@ const FLARE_SECONDS := 2.2
 const WORD_SECONDS := 1.6
 const CAPTION_FIRST := 10.0
 const CAPTION_EVERY := 10.0
-# TONE-READ: the narrator opens and the narrator winks; the crew log in between stays dry (tone bible, rule 4).
 const OPENER := "Meanwhile, at a very old hole."
 const CRASH := "This is the sad part."
-# The lap's own crew log, after the fly-over read the worlds' lines; the washer is the Highdraft log's, still rolling.
 const LOG := [
 	"Crew log: crater floor clear. Somebody left the vent on.",
 	"Crew log: no machines down here. The hole is older than all of them.",
@@ -84,7 +67,6 @@ var _word_left := 0.0
 var _flares: Array = []
 
 
-# Places the bowl and its vent. False when the bowl did not place, so flow can end the run the old way.
 func build(ctx_ref) -> bool:
 	ctx = ctx_ref
 	name = "VictoryLap"
@@ -96,12 +78,10 @@ func build(ctx_ref) -> bool:
 	return true
 
 
-# The centre of the bowl's floor plan, at ground level.
 func centre() -> Vector3:
 	return global_position
 
 
-# The ball comes in over the north rim heading for the middle, at least at cruise speed: a lap starts rolling.
 func begin(carried: Vector3) -> void:
 	var cruise: float = ctx.tuning.f("cruise") if ctx.tuning != null else 12.0
 	var speed := maxf(Vector2(carried.x, carried.z).length(), cruise)
@@ -125,7 +105,6 @@ func seconds_left() -> float:
 	return maxf(0.0, SECONDS - clock)
 
 
-# One physics tick. True once the clock has run out.
 func step(delta: float) -> bool:
 	if _done:
 		return true
@@ -154,7 +133,6 @@ func stats() -> Dictionary:
 		"records": records.size(), "rescues": rescues}
 
 
-# Into the vent, the ball leaves straight up at VENT_LIFT plus a share of its rolling speed, keeping that speed.
 func _vent(ball: Vector3, flat: Vector2, delta: float) -> void:
 	_vent_cool = maxf(0.0, _vent_cool - delta)
 	if _vent_cool > 0.0 or flat.length() > VENT_R or ball.y > centre().y - DEPTH + VENT_ABOVE:
@@ -207,8 +185,6 @@ func _record(word: String, color: Color) -> void:
 	_show_word(word, color, WORD_SECONDS, 46)
 	_flare(color, _over_rim())
 
-
-# --- The overlay --------------------------------------------------------------------
 
 func _caption_rows() -> Array:
 	var rows: Array = [{"at": 0.6, "text": OPENER}]
@@ -280,7 +256,6 @@ func _step_overlay(delta: float) -> void:
 		_count.modulate.a = clampf(fmod(left, 1.0) / 0.3, 0.0, 1.0)
 
 
-# The rim above the ball's bearing, where a record's flare goes up so it is seen from the floor.
 func _over_rim() -> Vector3:
 	var ball: Vector3 = ctx.player.ball_position()
 	var out := Vector2(ball.x - centre().x, ball.z - centre().z)
@@ -288,7 +263,6 @@ func _over_rim() -> Vector3:
 	return centre() + Vector3(out.x * CREST_R, DEPTH * 0.2 + 6.0, out.y * CREST_R)
 
 
-# The vent: a lit ring on the floor's middle under a pale column tall enough to clear the rim.
 func _build_vent() -> void:
 	var vent := Node3D.new()
 	vent.name = "Vent"
@@ -326,14 +300,12 @@ func _glow(color: Color, energy: float, alpha: float) -> StandardMaterial3D:
 	return material
 
 
-# A flare: a lit ball that climbs and fades.
 func _flare(color: Color, at: Vector3) -> void:
 	var mesh := MeshInstance3D.new()
 	var sphere := SphereMesh.new()
 	sphere.radius = 2.4
 	sphere.height = 4.8
 	mesh.mesh = sphere
-	# A flare is a brightness spike, so it reads the reduce-flashes toggle (VISUAL-LANGUAGE.md section 8).
 	var material := _glow(color, FlashGuard.spike(1.0, 6.0), 0.99)
 	mesh.material_override = material
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

@@ -21,10 +21,7 @@ const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const StormSeek := preload("res://src/world/events/storm_seek.gd")
 const SiltBoil := preload("res://src/combat/silt_boil.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
-# Flood foam (WorldFx set "spill_flood") rides the water in pieces this long along the footprint's long
-# axis, each at its own surface height, so foam follows a wash's slope; at most FOAM_PIECES a flood.
 const FOAM_SET := "spill_flood"
-# The parks whose floods foam: the Spillway's own water (the Dig and the Highdraft keep plain water).
 const FOAM_PARKS := ["park_dam", "park_flume"]
 const FOAM_PIECE_M := 30.0
 const FOAM_PIECES := 4
@@ -34,11 +31,6 @@ const KINDS := {
 	"flood_fill": {}, "drain": {}, "cave_in": {}, "collapse": {}, "flash_flood": {},
 	"impact": {"lift_mps": 8.0}, "lightning": {"lift_mps": 8.0},
 }
-# The Spillway's hazards hit enemies too (W44, HazardHits). A strike (an impact, lightning, a storm's sought
-# strike) takes ENEMY_STRIKE_DAMAGE from each enemy in its circle, once an activation. A flood never stops a
-# rolling ball (ruling cu): water FLOOD_DEEP_M deep at an enemy's feet sweeps it outward and takes
-# FLOOD_ENEMY_DAMAGE each FLOOD_SWEEP_S, and a ball that sits below cruise in water that deep for
-# FLOOD_TAX_AFTER_S loses FLOOD_TAX scrap, then again each FLOOD_TAX_EVERY_S it stays slow there.
 const ENEMY_STRIKE_DAMAGE := 40.0
 const ENEMY_TOSS := 14.0
 const FLOOD_DEEP_M := 0.4
@@ -62,21 +54,12 @@ var _original_flood
 var _audio
 var _world_sound := Callable()
 var _next_checked := false
-# Whether this park's hazards hit enemies and its storms seek a stalled ball (HazardHits.applies).
 var hits_enemies := false
 var seek := StormSeek.new()
-# Natural plans (plan()) by park stage root, the instance id of terrain's geometry root for the
-# stage, so a rebuilt stage plans again: {"task", "out"} while a worker plans the next stage, then
-# {"plan"}. Shared across handlers because each stage's handler is freed on the next entry. A
-# stage's handler starts the worker for the next stage once that stage's ground is built.
 static var _plans := {}
-# The worker projecting the marks of a plan made on the main thread: {"key", "task", "out"}, else
-# empty. Static like _plans, so a retry before it is done picks it up instead of starting another.
 static var _marks_job := {}
 
 
-# A local rise has its own projected surface and foam. The basin's klaxon mast and light
-# belong to the stage flood and never signal a local event.
 class WaterView:
 	extends Node3D
 	var site := {}
@@ -100,8 +83,6 @@ class WaterView:
 		_plane.position = Vector3.UP * depth_m
 
 
-
-# Terrain's material queries use the same surfaces the Flood nodes draw.
 class WaterField:
 	extends RefCounted
 	var surfaces: Array = []
@@ -122,7 +103,6 @@ class WaterField:
 		return _surface_y > -INF
 	func surface_y() -> float:
 		return _surface_y
-
 
 
 func setup(world_ref) -> void:
@@ -147,7 +127,6 @@ func setup(world_ref) -> void:
 	_plan_marks(planned)
 	hits_enemies = HazardHits.applies_to(world.ctx.get("run"))
 	world.terrain.flood = _water_field
-	# Replace the generic world's sound listener for this stage, preserving its other cues.
 	var presentation = world.ctx.root.get("presentation")
 	if presentation != null:
 		_audio = presentation.audio
@@ -159,10 +138,6 @@ func setup(world_ref) -> void:
 				break
 
 
-# Where each natural row stands and the ground surfaces it projects (330 to 1,040 ms a stage for the
-# floods and collapses, SWAP-HITCH-2), as plain data: world is the live world or an
-# EventGround.Snapshot, park the map's park rows, and neither is written, so a worker can run it.
-# Surfaces carry mesh arrays only; _finish builds their meshes on the main thread.
 static func plan(world, park: Dictionary) -> Dictionary:
 	var terrain = world.terrain
 	var sites := {}
@@ -189,7 +164,6 @@ static func plan(world, park: Dictionary) -> Dictionary:
 			if row.kind == "collapse":
 				entry.target = _collapse_surface(world, row, geometry, entry.surface, true)
 		elif EventGround.kind_of_span(row):
-			# The flume's hollow trestle: its deck and its dropped deck (69 ms of the stage entry on the cloud).
 			var span_site := EventGround.span_site(park, site)
 			entry.span = EventGround.span_surface(span_site, 0.0, true)
 			entry.target = EventGround.span_surface(span_site, maxf(0.0, float(row.effect.depth_m)), true)
@@ -197,12 +171,6 @@ static func plan(world, park: Dictionary) -> Dictionary:
 	return out
 
 
-# Each natural row's telegraph and landing marks, projected from its planned geometry (up to about
-# 1 s each for a flash flood's wash, so never on the main thread in play). A landed impact sits on
-# its own overlay (planned[id].landed, its profile), which the worker lays on the snapshot's ground:
-# the islands' isle_shed projected it live on its landing tick, 1.18 s on the cloud. A landed collapse's mark sits on
-# its target surface (planned[id].target), which the worker reads like the live _mark does (the
-# flume's hollow trestle took 437 ms on the cloud to project live on its landing tick). Pure like plan().
 static func plan_marks(world, park: Dictionary, planned: Dictionary) -> Dictionary:
 	var out := {}
 	for row in park.event_rows:
@@ -215,8 +183,6 @@ static func plan_marks(world, park: Dictionary, planned: Dictionary) -> Dictiona
 			landed.marker_surface = planned[row.id].target
 			out[row.id].land = _mark_surfaces(world, row, landed, true, null, true)
 		elif row.kind == "impact" and planned[row.id].has("landed") and world is EventGround.Snapshot:
-			# The live mark reads the overlay through terrain.height and again, unclipped, through the
-			# overlay map; the marker surface stands in for the second read.
 			var profile: Dictionary = planned[row.id].landed
 			var landed := geometry.duplicate()
 			landed.marker_surface = profile.surface
@@ -240,9 +206,6 @@ static func _finish_marks(marks: Dictionary) -> void:
 			surface.finish()
 
 
-# This stage's plan: the one a worker made while the previous stage played, the one the last entry
-# made (a retry), or one made here. A stage whose cave roof has dropped, or whose rows changed since
-# the plan (a test fixture edits them), plans on its live ground.
 func _planned() -> Dictionary:
 	var terrain = world.terrain
 	var key := _root_key(terrain, terrain.stage)
@@ -258,9 +221,6 @@ func _planned() -> Dictionary:
 	return planned
 
 
-# Starts a worker on the stage's marks, from a snapshot of its ground as entered, unless its cached
-# plan has them (a retry); _take_marks hands them over once it is done, and a mark wanted before
-# then is projected live.
 func _plan_marks(planned: Dictionary) -> void:
 	var terrain = world.terrain
 	var key := _root_key(terrain, terrain.stage)
@@ -269,16 +229,11 @@ func _plan_marks(planned: Dictionary) -> void:
 	if planned.values().any(func(entry): return entry.has("marks")) or _marks_job.get("key", 0) == key:
 		return
 	_settle_marks()
-	# The snapshot the stage was planned from, as it was entered (pristine), else one taken now.
 	var snapshot: EventGround.Snapshot = _plans[key].get("snapshot")
 	_plans[key].erase("snapshot")
 	if snapshot == null:
 		snapshot = EventGround.snapshot(world.terrain, world.terrain.stage)
 	var park: Dictionary = _original_map.park.duplicate(true)
-	# The prepared geometry, which the overlay setup may have given a span's marker surface. The worker
-	# shares the marker and target surfaces: nothing writes a surface once it is built (a collapse's
-	# progress and a lowered roof make new ones), and copying the trestle's two took 85 ms of the
-	# flume's entry on the cloud.
 	var geometry := {}
 	for id in _prepared:
 		geometry[id] = {"geometry": _prepared[id].geometry.duplicate(true)}
@@ -303,7 +258,6 @@ func _take_marks() -> void:
 			_prepared[id].marks = marks[id]
 
 
-# Waits on the marks worker, finishes its meshes and stores them in the plan they belong to.
 static func _settle_marks() -> Dictionary:
 	if _marks_job.is_empty():
 		return {}
@@ -327,7 +281,6 @@ static func _rows_hash(park: Dictionary) -> int:
 	return hash([park.park_rows, park.event_rows])
 
 
-# The plan key of a built park stage on the game's terrain, or 0 (a test double, an old map).
 static func _root_key(terrain, index: int) -> int:
 	if not "_cave_roofs" in terrain or index < 1 or index > terrain.maps.size():
 		return 0
@@ -346,8 +299,6 @@ static func _settle(key: int) -> void:
 	_plans[key] = {"plan": planned, "rows": _plans[key].rows, "worker": true, "snapshot": _plans[key].get("snapshot")}
 
 
-# Once the next stage's ground is built (world.gd starts it when the Warden wakes), its plan runs on
-# a worker from a snapshot of that ground and a copy of its rows.
 func _prepare_next() -> void:
 	if _next_checked or world == null:
 		return
@@ -360,7 +311,6 @@ func _prepare_next() -> void:
 	var map = terrain.map_for(next)
 	if key == 0 or _plans.has(key) or not "park" in map or map.park.is_empty():
 		return
-	# A freed stage's plan goes once its worker is done; one still running waits for a later poll.
 	for old in _plans.keys():
 		if not is_instance_id_valid(old) and (not _plans[old].has("task") or WorkerThreadPool.is_task_completed(_plans[old].task)):
 			_settle(old)
@@ -374,7 +324,6 @@ func _prepare_next() -> void:
 	_plans[key] = {"task": WorkerThreadPool.add_task(work, false, "natural plan"), "out": out, "rows": _rows_hash(map.park), "snapshot": snapshot}
 
 
-# Pre-warms a park stage's natural-event plan on a worker thread (Rule 7 deep door for EventDirector).
 static func prewarm(terrain, next_stage: int) -> Dictionary:
 	var key := _root_key(terrain, next_stage)
 	var map = terrain.map_for(next_stage) if terrain.has_method("map_for") else null
@@ -404,15 +353,12 @@ static func prewarm(terrain, next_stage: int) -> Dictionary:
 	return {"key": key, "status": "worker_started"}
 
 
-# A handler leaves on every stage change, so a plan still running is left for the handler that
-# enters its stage (_planned) or the next poll; activities.gd waits on what is left at teardown.
 static func settle_plans() -> void:
 	for key in _plans.keys():
 		_settle(key)
 	_settle_marks()
 
 
-# Teardown: waits on every plan, then drops them, meshes and shapes with them.
 static func release_plans() -> void:
 	settle_plans()
 	_plans.clear()
@@ -459,7 +405,6 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 			_end(row)
 
 
-# The storm's seek reads the ball every tick of the stage, so a ball that stalled before a storm broke is sought.
 func _physics_process(delta: float) -> void:
 	if world == null or not hits_enemies:
 		return
@@ -473,8 +418,6 @@ func _physics_process(delta: float) -> void:
 	seek.observe(delta, ball, player.planar_velocity(), _cruise())
 
 
-# Where the silt does not boil (the reward gates, the launch, an engaged Warden's ring: SiltBoil.exempt) and the
-# calm bay, where the director is not stepped, a storm does not seek.
 func _seek_exempt(ball: Vector3) -> bool:
 	var flow = world.ctx.get("flow")
 	if flow != null and SiltBoil.exempt(flow, ball):
@@ -483,7 +426,6 @@ func _seek_exempt(ball: Vector3) -> bool:
 	return bay != null and bay.inside
 
 
-# The ball's cruise speed, or 0 where there is no tuning (a test double): then no speed reads as slow.
 func _cruise() -> float:
 	var tuning = world.ctx.player.get("tuning")
 	return float(tuning.f("cruise")) if tuning != null else 0.0
@@ -565,8 +507,6 @@ func _land_water(row: Dictionary, state: Dictionary) -> void:
 	_water_field.refresh()
 
 
-# Foam anchors over a flood's footprint, split along its long axis (geometry.half and yaw, the
-# footprint's own frame), each fitted to its piece. Children of the water view, so they go with it.
 func _foam(water: Node3D, geometry: Dictionary) -> Array:
 	var half: Vector2 = geometry.half
 	var long_x := half.x >= half.y
@@ -590,8 +530,6 @@ func _foam(water: Node3D, geometry: Dictionary) -> Array:
 	return out
 
 
-# Sets each foam piece on its live surface; churn is how much of the rise is left (1 thick, 0 calm).
-# A piece over no surface, or on water drained to nothing, hides (and so takes no anchor slot).
 static func _ride_foam(state: Dictionary, churn: float) -> void:
 	var water = state.water
 	for a: Node3D in state.get("foam", []):
@@ -607,8 +545,6 @@ func _rectangle(low: Vector2, high: Vector2) -> Array:
 	return [low, Vector2(high.x, low.y), high, Vector2(low.x, high.y)]
 
 
-# Clip each shape to the terrain's actual 2 m triangles before projecting. The resulting
-# triangles, including their interiors, share terrain.gd's b-c diagonal and interpolation.
 func _project_surface(geometry: Dictionary, shapes: Array, offset := Callable(), water := false, baseline: WaterSurface = null) -> WaterSurface:
 	return EventGround.project_surface(world, geometry, shapes, offset, water, baseline, _overlay_map, ArrayMesh.new())
 
@@ -679,7 +615,6 @@ func _hazard(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 	_strike_ball(row, ctx.ball)
 
 
-# The strike circle the lightning and impact marks draw (plan(): strike_m round the site point).
 static func _in_strike(state: Dictionary, point: Vector3) -> bool:
 	var radius: float = state.geometry.strike_m
 	var at: Vector3 = state.geometry.at
@@ -695,8 +630,6 @@ func _strike_ball(row: Dictionary, ball: Vector3) -> void:
 		world.ctx.player.set_velocity_now(velocity, "natural_event")
 
 
-# A live storm's sought strike (StormSeek): the lightning mark's cue as its ring starts to fill, the landing cue
-# where it strikes, and the ball and every enemy inside that ring struck as it strikes.
 func _seek(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 	var told := seek.tells
 	var ball: Vector3 = ctx.ball
@@ -711,9 +644,6 @@ func _seek(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 		_publish("lightning_mark", seek.pending().centre)
 
 
-# What tells the ball about each hazard of this stage that takes its scrap, as [{id, cause, covers}]: the mark of a live
-# strike (lightning, impact) over the circle it strikes, a flood's water over its basin, and the storm's sought ring.
-# The cause is the one lose_scrap is called with. The bot's fairness record reads this (tools/bot_fairness.gd).
 func telegraphs(ball: Vector3) -> Array:
 	var out: Array = []
 	for id in active:
@@ -734,7 +664,6 @@ func _publish(kind: String, at: Vector3) -> void:
 		world.ctx.events.world_fact.emit(kind, at)
 
 
-# A live flood (FLOOD_* above): sweeps the enemies standing in its deep water and taxes a ball that sits slow in it.
 func _flood(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 	var water = state.water
 	if not hits_enemies or water == null:
@@ -762,7 +691,6 @@ func _flood(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 
 func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	var surfaces: Dictionary = _prepared[row.id].marks.get("land" if landed else "telegraph", {}) if _prepared.has(row.id) else {}
-	# A landed collapse's or impact's own overlay is down by now, and its planned mark already sits on it.
 	var own: String = _prepared[row.id].get("swap", "") + "_after" if landed and row.kind in ["collapse", "impact"] and _prepared.has(row.id) else ""
 	if surfaces.is_empty() or not _ground_as_planned(surfaces, own):
 		if landed and row.kind == "collapse":
@@ -797,12 +725,6 @@ func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	return mark
 
 
-# True while the ground under a planned mark is the one the plan projected on: no lowered cave roof
-# and no overlay down near it, so the planned mark matches one projected now. A mark reads the ground
-# only in the cells its faces cover and their neighbours (EventGround.project_surface, Surface.height),
-# and a roof or overlay changes it only in its own surface's cells, so a change two cells clear of the
-# mark leaves it as planned. Projecting a mark live costs up to about 250 ms (a flash flood's), and
-# once any roof or overlay was down every later mark of the stage was projected live (scrapkeep#241).
 func _ground_as_planned(surfaces: Dictionary, own := "") -> bool:
 	var changed := []
 	var terrain = world.terrain
@@ -810,7 +732,6 @@ func _ground_as_planned(surfaces: Dictionary, own := "") -> bool:
 		for roof in terrain._cave_roofs.get(terrain.stage - 1, {}).values():
 			if roof.surface != roof.baseline:
 				changed.append(roof.baseline)
-	# The live map, not this handler's: another family's swap (a boiler burst) installs its own.
 	var m = terrain.map()
 	if m is OverlayMap:
 		for id in terrain.overlays:
@@ -831,11 +752,9 @@ func _ground_as_planned(surfaces: Dictionary, own := "") -> bool:
 	return true
 
 
-# The cells the mark reads beyond its own (the neighbours Surface.height looks in, and one more).
 const MARK_GROUND_CELLS := 2
 
 
-# rect grown to hold every cell of surface (one past its last, so a single cell has size 1).
 static func _merge_cells(rect: Rect2i, surface) -> Rect2i:
 	if surface == null:
 		return rect
@@ -845,9 +764,6 @@ static func _merge_cells(rect: Rect2i, surface) -> Rect2i:
 	return rect
 
 
-# A mark's projected surfaces by node name: Style, CrawlingCrack for a dust crack and Footprint for
-# all but lightning. Pure in world (the live world or an EventGround.Snapshot), so a worker can
-# project them (deferred, finished on the main thread by _finish).
 static func _mark_surfaces(world, row: Dictionary, geometry: Dictionary, landed: bool, overlay_map: OverlayMap, deferred := false) -> Dictionary:
 	var spec: Dictionary = Kinds.world_row(EventDirector.PARK_LAND_FACTS[row.telegraph.form] if landed else row.telegraph.form)
 	var half: Vector2 = geometry.half

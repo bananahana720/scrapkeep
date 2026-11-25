@@ -2,15 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 
-# Small rideable surfaces built once and never rebuilt: the crater rim, rubble mounds,
-# the landmark's crown dish and the workshop barge's deck. Each is one trimesh body
-# made at stage build time, so a terrain event swaps a finished collider in (moving a
-# body is cheap) instead of cooking a trimesh mid-frame (DESIGN-NOTES D call on the
-# ~34 ms swap). Winding is clockwise from above, the face a trimesh collides on.
 
-
-# A disc or annulus in polar rings around centre. height(r, angle) is the surface's
-# local height; base(x, z) is the ground under it in the parent's space.
 static func polar(parent: Node3D, name: String, centre: Vector3, r0: float, r1: float, rings: int, segments: int,
 		height: Callable, base: Callable, tint: Color) -> StaticBody3D:
 	var verts := PackedVector3Array()
@@ -35,8 +27,6 @@ static func polar(parent: Node3D, name: String, centre: Vector3, r0: float, r1: 
 	return _body(parent, name, centre, verts, colors, indices)
 
 
-# A height grid over a rectangle centred on the origin of a node the caller places:
-# height(u, v) in local metres, u along x and v along z.
 static func grid(parent: Node3D, name: String, size: Vector2, step: float, height: Callable, tint: Callable) -> StaticBody3D:
 	var nx := int(ceil(size.x / step))
 	var nz := int(ceil(size.y / step))

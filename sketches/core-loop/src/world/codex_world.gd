@@ -1,21 +1,5 @@
 extends RefCounted
 
-# The world's codex entries (category "world"): terrain and element tricks the player
-# can find, declared as data and detected here. The detector is pure: the world feeds
-# it what just happened, already read against the terrain and the ball, and it answers
-# with the entries that fired. The codex owns saving, the burst and the bus fact.
-#
-# Notes the world sends, with the fields each needs:
-#   "element"  {"behaviour", "material", "at"}   an element resolved on a surface
-#   "kill"     {"at", "in_water"}                  an enemy died
-#   "gate"     {"id", "at", "tier"}                an event gate was taken at a speed tier
-#   "airborne" {"at", "off_kicker"}                the ball left the ground
-#   "slam"     {"at"}                              a slam landed
-#   "jump"     {"at", "tailwind"}                  a jump with the squall at the ball's back
-#   "grounded" {"at", "over_water"}                the ball is rolling on something over the flood
-#   "footing"  {"at", "on"}                        each grounded tick on a map with a net deck:
-#                                                  "deck", "island" (stone tops, bridges, ramps) or "barge"
-#   "thermal"  {"at"}                              a thermal column is lifting the ball this tick
 
 const ENTRIES := [
 	{"id": "live_wire_flood", "category": "world", "name": "Live Wire",
@@ -38,7 +22,6 @@ const ENTRIES := [
 		"hint": "The flood can hold you up, briefly, if it is cold enough.",
 		"clue": "Frost + flood water + rolling across",
 		"text": "Freezing the flood and using the ice as a shortcut across it."},
-	# v2 W6 world: callbacks that ride the gorge's contraptions and Moss's barge.
 	{"id": "steam_thermal", "category": "world", "name": "Thermal",
 		"hint": "Warm air rises. So does anything gliding in it.",
 		"clue": "Glide + steam vent",
@@ -55,13 +38,10 @@ const ENTRIES := [
 		"hint": "The barge's rim is a track. There is a par.",
 		"clue": "Moss's rim track under par",
 		"text": "A lap of the workshop barge's rim under par. The nomads build every camp as a marble run, with streets banked and tiers joined by chutes."},
-	# The Reach's secret cache (SC2): map_reach.gd's valve spec carries this row.
 	{"id": "reach_pressure_cache", "category": "world", "name": "Pressure keeps the change",
 		"hint": "A cracked wheel beside a copper door.",
 		"clue": "Ram the valve on the Reach's west shelf + the copper door",
 		"text": "A rolling ram turns the old valve. Behind the sinking door, the crew's spare parts wait."},
-	# The Dig's breach plate fires from world.gd when a slam opens one; the three Highdraft
-	# rows fire from note() on the "footing" and "thermal" notes world.gd sends.
 	{"id": "breach_plate", "category": "world", "name": "Down Payment",
 		"hint": "Some floors are waiting for a heavier answer.",
 		"clue": "The Dig's marked breach plate + a slam through to the floor below",
@@ -81,8 +61,6 @@ const ENTRIES := [
 ]
 
 
-# The script whose code fires each row. tests/codex_coverage_test.gd reads it: every row
-# has one, and that script names the row's id where it fires.
 const DETECTORS := {
 	"live_wire_flood": "res://src/world/codex_world.gd",
 	"surge_slingshot": "res://src/world/codex_world.gd",
@@ -113,14 +91,9 @@ const HAMMER_SECONDS := 3.0
 const ICE_SECONDS := 12.0
 const ICE_REACH := 10.0
 const BLAZING := 3
-# A fall off an island counts if the deck is reached this soon after the ball left the stone.
 const NET_FALL_SECONDS := 6.0
-# A thermal ride counts if an island is reached this soon after the column last lifted the
-# ball, standing at least THERMAL_RISE above where the ride began.
 const THERMAL_SECONDS := 8.0
 const THERMAL_RISE := 2.0
-# A barge ride counts if the ball steps onto an island within STEP_OFF_SECONDS of leaving the
-# deck, at least CROSSING metres (planar) from where it boarded.
 const STEP_OFF_SECONDS := 2.0
 const CROSSING := 12.0
 
@@ -130,13 +103,10 @@ var fired: Array[String] = []
 var _electrified: Array = []
 var _frozen: Array = []
 var _kicked_at := -INF
-# The net deck: the last footing, and when the ball left an island top for the air.
 var _footing := ""
 var _left_island_at := -INF
-# The thermal ride: the lowest point and the last tick of the current ride.
 var _thermal_from := INF
 var _thermal_at := -INF
-# The barge ride: where the ball boarded, and the last tick it stood on the deck.
 var _boarded_at := Vector3.INF
 var _barge_at := -INF
 
@@ -215,7 +185,6 @@ func _recent(marks: Array, seconds: float, at: Vector3, reach: float) -> bool:
 	return false
 
 
-# Each entry fires once per stage attempt here; the codex decides what a repeat means.
 func _fire(id: String, at: Vector3, out: Array) -> void:
 	if id in fired:
 		return

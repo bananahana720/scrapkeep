@@ -2,14 +2,6 @@ extends "res://src/world/stage_map.gd"
 
 const Features := preload("res://src/world/features.gd")
 
-# Zone 1-1, the Spillway: the wave-1 shelves, chutes, flooding basin and
-# dry east bypass, laid on a fall line. You drop onto a deck on the top shelf, roll
-# down the west chute and meet the Warden in a banked bowl at the foot of the riser.
-# Its own event is the Scrap Stampede: a hauler bolts from the pump house, down the
-# east chute and into the basin, and you run it down. The vault sits on a plinth on
-# the top shelf, east of the line. The Weir's pumpable halfpipe cuts the approach
-# to the west chute, a relay mesa shoulders it on the east, and a dry causeway
-# follows the same descent on the west. All three meet the existing ground.
 
 const TOP_H := 30.0
 const MID_H := 15.0
@@ -34,8 +26,6 @@ const BYPASS_X := 140.0
 const BYPASS_FLAT := 9.0
 const BYPASS_OUTER := 22.0
 const PUMP_HOUSE := Vector2(34.0, -148.0)
-# The fall line: a drop deck on the top shelf, down the west chute, into the beacon
-# bowl at the foot of the riser.
 const SPAWN := Vector2(-62.0, -160.0)
 const BEACON := Vector2(-46.0, -12.0)
 const DECK := {"top": 10.0, "foot": 44.0, "height": 10.0}
@@ -54,7 +44,6 @@ const CAUSEWAY_X := -94.0
 const CAUSEWAY_Z := Vector2(-132.0, -18.0)
 const CAUSEWAY_H := 6.0
 
-# Where a world rescue stands, each {"id", "quest", "at", "face"} (rescue_site.gd). Only maps that have one declare it.
 var rescue_sites: Array = []
 
 
@@ -66,7 +55,6 @@ func _init() -> void:
 	beacon_floor = MID_H
 	vault = Vector2(-5.0, -130.0)
 	play_rect = Rect2(-105.0, -178.0, 257.0, 356.0)
-	# Wide cameras see this floor from 60 m and more: few, large pieces, so rubble reads as rubble.
 	scatter["relief"] = {"sub": 2, "amp": 0.12, "period": 3.0, "shade": 0.35, "seed": "relief_spillway"}
 	scatter["kit"] = [
 		{"kind": "rock", "density": 0.3, "scale": Vector2(0.9, 1.9), "slope": 0.8, "bury": 0.4, "seed": "scatter_spillway_boulder", "mesh": "kit:rubble", "slot": "stone"},
@@ -76,7 +64,6 @@ func _init() -> void:
 	]
 	basin = {"centre": BASIN_CENTRE, "radius": 95.0, "depth": 7.0,
 		"plane_size": Vector2(300.0, 130.0), "plane_centre": Vector2(0.0, 120.0)}
-	# Every line runs along the fall line from the drop deck down the west chute.
 	scrap_lines = [
 		[Vector2(-60.0, -142.0), Vector2(-57.0, -104.0)],
 		[Vector2(-62.0, -78.0), Vector2(-60.0, -36.0)],
@@ -96,7 +83,6 @@ func _init() -> void:
 	}
 	unique_events = ["scrap_stampede", "hold_the_relay"]
 	activity_sites = [{"id": "enemy_camp", "at": Vector2(96.0, -120.0), "pack": ["chaser", "chaser", "chaser"], "pay": {"named": "hot_rivets"}}]
-	# The world-one runner's cage on the open top shelf, east of the pump house: flat ground clear of every route and site.
 	rescue_sites = [{"id": "rivet_cage", "quest": "rivet", "prompt": "free the runner", "at": Vector2(60.0, -150.0), "face": Vector2(-1.0, 0.0)}]
 
 
@@ -138,8 +124,6 @@ func material_at(x: float, z: float) -> String:
 		or _causeway(x, z) > 0.5 or _halfpipe(x, z) < _shelf(z) - 0.5 else "sand"
 
 
-# The shared quarter-circle cut, with an eased head along the fall line. Its steep
-# transverse lips remain pumpable; the longitudinal entry has no vertical seam.
 static func _halfpipe(x: float, z: float) -> float:
 	var floor_h := Features.halfpipe(x, z, PIPE_X, PIPE_Z.x, PIPE_Z.y, _shelf, PIPE_DEPTH, PIPE_FADE)
 	if floor_h == INF:
@@ -147,8 +131,6 @@ static func _halfpipe(x: float, z: float) -> float:
 	return lerpf(_shelf(z), floor_h, smoothstep(PIPE_Z.x - PIPE_DEPTH, PIPE_Z.x - PIPE_DEPTH + PIPE_HEAD_FADE, z))
 
 
-# The Weir's causeway span weight (7 m flat half-width, 12 m shoulder), fitted to
-# the Spillway's bypass profile so it bridges the shelf riser instead of copying it.
 static func _causeway(x: float, z: float) -> float:
 	return (1.0 - smoothstep(7.0, 12.0, absf(x - CAUSEWAY_X))) \
 		* smoothstep(CAUSEWAY_Z.x, CAUSEWAY_Z.x + 32.0, z) \
@@ -165,8 +147,6 @@ static func _bowl(x: float, z: float) -> float:
 	return -BASIN_BOWL * (1.0 - smoothstep(25.0, 85.0, d)) * smoothstep(52.0, 70.0, z)
 
 
-# The deck is flat on every shelf and inclined only across the risers, so the
-# bypass never floats above the ground it is supposed to connect.
 static func _bypass_deck(z: float) -> float:
 	if z >= 105.0:
 		return BASIN_H
@@ -213,8 +193,6 @@ static func _chute(c: Dictionary, x: float, z: float) -> Array:
 	if w <= 0.0:
 		return [0.0, 0.0]
 	var t: float = clampf(inverse_lerp(c["z0"], c["z1"], z), 0.0, 1.0)
-	# Mostly linear: a smoothstepped floor is flat at both ends, and a fast lane
-	# that does not pitch over until its middle never gets the ball moving.
 	var deck: float = lerpf(c["h0"], c["h1"], lerpf(t, smoothstep(0.0, 1.0, t), 0.3)) - CHUTE_SINK
 	var arc: float = minf(adx, CHUTE_R)
 	var cross: float = CHUTE_BOWL - sqrt(CHUTE_BOWL * CHUTE_BOWL - arc * arc)
@@ -234,18 +212,15 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 	for dx in [-7.0, 7.0]:
 		cylinder(parent, 1.9, 9.0, house + Vector3(dx, 16.0, -4.0), copper)
 
-	# Kerbs flank each chute mouth so the fast lane reads as an entrance, not a dip.
 	for c in CHUTES:
 		var mouth_z: float = c["z0"] - 3.0
 		for side in [-1.0, 1.0]:
 			var kx: float = c["x"] + side * (CHUTE_R + 3.0)
 			box(parent, Vector3(2.0, 2.4, 16.0), ground.call(kx, mouth_z, 0.4), rust)
 
-	# Two mid-shelf benches, clear of the beacon bowl: low lips to launch off.
 	box(parent, Vector3(26.0, 3.0, 9.0), ground.call(24.0, 22.0, 0.6), concrete)
 	box(parent, Vector3(26.0, 3.0, 9.0), ground.call(66.0, 2.0, 0.6), concrete)
 
-	# The relay's tangent walls leave its downhill shoulder open to roll back in.
 	for i in 4:
 		var angle := PI * 0.25 + i * PI * 0.5
 		var at := RELAY + Vector2(cos(angle), sin(angle)) * (MESA_TOP + 2.0)
