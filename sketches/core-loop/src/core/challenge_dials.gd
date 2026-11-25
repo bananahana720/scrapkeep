@@ -35,8 +35,8 @@ const ZEROS6 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # 6 s gap (wave 39): at 5.1 s a ball rolling at cruise lost hull faster per second than one stopped (bot_fairness
 # F2 stop tax 1.05 pooled over six seeds, line 2.0; 3.71 at 6 s), so speed stopped being safety on the first
 # stage. A ladder rung multiplies on top of these.
-const PULSE_DAMAGE_W1 := [3.0, 2.5, 1.0, 1.0, 1.0, 1.0]
-const SLAG_DAMAGE_W1 := [1.0, 3.0, 1.0, 1.0, 1.0, 1.0]
+const PULSE_DAMAGE_W1 := [4.0, 4.5, 1.0, 1.0, 1.0, 1.0]
+const SLAG_DAMAGE_W1 := [1.0, 4.5, 1.0, 1.0, 1.0, 1.0]
 const PULSE_CYCLE_W1 := [1.0, 0.85, 1.0, 1.0, 1.0, 1.0]
 # The Wardens escalate (W1-67, gameplay critique finding 5): each chunk the Warden has lost multiplies its
 # pulse cycle by this, so the fight tightens as it goes (5.1 s, 4.59, 4.13, 3.72 on the flume). The tell is
@@ -64,7 +64,7 @@ const LEAD_CRUISE_W1 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # (8 wins of 12 against the base's 4); at x2 with all seven units it reads 3 of 12, 7 deaths, 1.72 hits a
 # second before armour against the base's 1.47 and the same hull lost a run (178). Hit size again, for the
 # reason above. A stalled ball's boil now hits 40 (10 x strength 2 x 2).
-const MOBS_DAMAGE_W1 := [3.5, 2.5, 1.0, 1.0, 1.0, 1.0]
+const MOBS_DAMAGE_W1 := [2.6, 2.5, 1.0, 1.0, 1.0, 1.0]
 # Chasers run at 9 m/s, up from 4.8 (wave 37 unit D2, ruling cu call 4: faster than walking pace,
 # slower than cruise). A ball that stops or dawdles is run down; a ball at cruise (14 m/s) is never caught by
 # running. The lunge, its lane and its wind-up are as they were. Stages 3 to 6 inherit the stage 2 baseline.
@@ -126,9 +126,9 @@ const DEFAULTS := {
 	# The Warden's counter-pulse (warden.gd): a second core ring committed inside a stagger. Damage is an
 	# absolute value per stage (0 = off, the default: nothing is built or rolled); the telegraph is floored at
 	# TELL_FLOOR; the delay is seconds into the stagger before it starts charging.
-	"warden.counter_damage_by_stage": [0.0, 30.0, 0.0, 0.0, 0.0, 0.0],
+	"warden.counter_damage_by_stage": ZEROS6,
 	"warden.counter_telegraph_by_stage": [0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
-	"warden.counter_delay_by_stage": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+	"warden.counter_delay_by_stage": ONES6,
 	# The difficulty clock's last tier per stage (director.gd clock_tiers, build/run_clock.gd tiers): the clock
 	# rises one tier each Director.TIER_SECONDS up to this count. World 1 climbs a third tier, at 135 s (wave 37
 	# unit D3, ruling cu): staying longer means a bigger crowd, shorter gaps and more lobbers. Every rise is
