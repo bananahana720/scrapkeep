@@ -59,6 +59,7 @@ func _physics_process(_delta: float) -> bool:
 	_check_marks_and_discovery()
 	_check_thermal_shock()
 	_check_evolution_makers()
+	_check_cross_system()
 	print("build_synergy_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
@@ -298,3 +299,10 @@ func _check_evolution_makers() -> void:
 	_report("each new evolution wakes its own trick", wrong.is_empty() and makers.keys() == ["redjaw", "spillway_works", "waking"]
 		and mixed.is_empty(),
 		"%d verb evolutions over makers %s; wrong %s; planted Redjaw + Spillway pair wakes %s" % [Parts.VERB_EVOLVED.size(), makers.keys(), wrong, mixed])
+
+
+func _check_cross_system() -> void:
+	var problems := Synergies.cross_system_problems()
+	var decls := Synergies.cross_system_declarations()
+	_report("cross-system synergies table clean", problems.is_empty() and Synergies.CROSS_SYSTEM.size() == 6 and decls.size() == 6,
+		"%d cross-system rows, %d declarations, problems=%s" % [Synergies.CROSS_SYSTEM.size(), decls.size(), problems])
