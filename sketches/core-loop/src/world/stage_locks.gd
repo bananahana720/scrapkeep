@@ -6,34 +6,6 @@ const Palette := preload("res://src/core/palette.gd")
 const Overtime := preload("res://src/world/overtime.gd")
 const WaveCross := preload("res://src/world/wave_cross.gd")
 
-# The Spillway's pacing locks (lock_rows.gd): the park Warden's gate and the yard's arena lock.
-# Both are rows; a map with no row is untouched, and so is every table but the park table.
-#
-# The gate. flow.gate is this module, and combat hands the park Warden posture_gate =
-# locked(): while it answers true a hit lands, shows and drains nothing, and the bar never
-# fills, so no stagger opens the core. The clamp shows what it wants where you look: a hazard
-# collar round the Warden and one pip per pack it asks for, lit brass as each pack goes down,
-# and a hit on a shut clamp answers with a dull clank (warden_gate_refused) that never sounds
-# like progress. A pack counts once every member it arrived with is dead; a member that left
-# alive (a despawn) spoils it, and a lone arrival is not a pack. A rider (a member with no home
-# in the window that came with a housed crew, director.gd _home_pack_spots) neither holds nor
-# spoils the count: the crew counts once its housed members are dead (ruling w, 24 Oct), while
-# the rider still fights and drops. A pack of riders alone counts like any other.
-#
-# The lock. Once, on level ground and inside the row's circle round the beacon, the yard shuts:
-# a hazard wall rises round the ball with a slam that falls (arena_locked), the crew lands
-# ahead on the ring, and the wall springs a ball back that tries to leave. A wave down, the next
-# whistles in (arena_wave) from further round the ring; the last wave down, or the row's max_s,
-# opens it on climbing bells (arena_unlocked), and the whole crew counts as one of the gate's
-# packs. Its crew rolls no panels; the yard broken to its last wave pays one at its
-# centre (build.gd yard_cleared), as an Isaac room pays on clear. The Warden already awake skips it, so the lock never lands in its fight.
-# Level ground (LOCK_LEVEL_DOT): a ball riding a slope into the circle shuts the yard at the slope's foot,
-# not on it, so the ring never lands on a riding line where its wall would throw the ball back up the hill
-# (PF-46: the dam's construction incline is 23 degrees and crosses 200 m from the beacon mid-slope).
-# Inside LOCK_ANY_SLOPE_SHARE of the circle any ground arms it (a slope, a gripped wall), so a ball
-# that never finds level ground still shuts the yard before the Warden.
-#
-# StageLocks.active = false (bot_run --locks=0) turns both off for a base measure on one binary.
 
 static var active := true
 
@@ -61,7 +33,6 @@ var ctx
 var row := {}
 var cleared := 0
 var gate_open := true
-# "" no lock, "armed" waiting for the ball, "locked" the yard is shut, "spent" done for the attempt.
 var lock_state := ""
 var lock_centre := Vector3.ZERO
 var lock_left := 0.0
@@ -84,7 +55,6 @@ var _collar: Node3D
 var _pips: Array[MeshInstance3D] = []
 var _pip_lit: StandardMaterial3D
 var _pip_dark: StandardMaterial3D
-# Reservoir: a won yard's bell, pot and sluice (overtime.gd, behind --overtime).
 var overtime: Node3D
 
 
@@ -104,12 +74,10 @@ func setup(ctx_ref) -> void:
 	overtime.setup(ctx)
 
 
-# The park Warden's posture_gate: true while its clamp holds the guard shut.
 func locked() -> bool:
 	return not gate_open
 
 
-# Whether this stage's park Warden has a clamp (read when combat builds its spec).
 func has_gate() -> bool:
 	return not gate_row().is_empty()
 
@@ -126,10 +94,6 @@ func packs_wanted() -> int:
 	return int(gate_row().get("packs", 0))
 
 
-# How many of this stage's gate pips are lit (0 to packs_wanted()): the packs broken so far while
-# the clamp holds, or all packs_wanted() once the clamp opens by any path (packs, enemy camp,
-# 75 s clock, or unseal), so command cables read one count and every cable dies with the clamp
-# (design-v3/WAYFINDING.md section 3). 0 when the stage has no gate.
 func pips_lit() -> int:
 	var total := packs_wanted()
 	if total <= 0:
@@ -141,20 +105,14 @@ func lock_active() -> bool:
 	return lock_state == "locked"
 
 
-# The yard is still ahead of the ball: its lock is armed or shut, so its clear is still to come.
-# Stage 1's start pick waits for it (flow.gd show_start_card; W1-63, W1-77).
 func yard_ahead() -> bool:
 	return lock_state in ["armed", "locked"]
 
 
-# The live crew of the shut yard.
 func crew_alive() -> Array:
 	return _crew.map(func(ref: WeakRef): return ref.get_ref()).filter(func(enemy): return _alive(enemy))
 
 
-# How much of the shut yard's crew is down, 0 to 1, over every wave's members (0 while the yard
-# is open): the yard row's bar on the plate. The row said "Break the yard crew" with no count of
-# what was left (w37 film 020-022, PF-39).
 func yard_fraction() -> float:
 	if not lock_active():
 		return 0.0
@@ -171,14 +129,10 @@ func yard_fraction() -> float:
 	return clampf(float(down) / float(total), 0.0, 1.0) if total > 0 else 0.0
 
 
-# The living member of the shut yard's crew nearest the ball, or null: the yard row's edge marker.
 func yard_crew(ball: Vector3) -> Node3D:
 	return _nearest(crew_alive(), ball, INF) if lock_active() else null
 
 
-# What a hand that reads the tells goes for: the yard's crew while it is shut; while the clamp is
-# shut, its crew (clamp_crew), as a player reads the pips and finishes a crew rather than hitting
-# whatever is nearest; with no crew that can still count, the nearest enemy inside reach; else null.
 func foe_for(ball: Vector3, reach := INF) -> Node3D:
 	if lock_active():
 		return _nearest(crew_alive(), ball, reach)
@@ -191,10 +145,6 @@ func foe_for(ball: Vector3, reach := INF) -> Node3D:
 			and String(enemy.get("kind")) not in ["warden", "vault", ""]), ball, reach)
 
 
-# The member of the crew inside reach nearest to lighting a pip while the clamp is shut (each living
-# member it still needs costs CREW_MEMBER_M of distance), or null: the bot hand's target and the
-# clamp row's edge marker (w23 cautious red team: the row said "break the crews" with nothing
-# pointing at them).
 func clamp_crew(ball: Vector3, reach := INF) -> Node3D:
 	if not locked():
 		return null
@@ -208,8 +158,6 @@ func clamp_crew(ball: Vector3, reach := INF) -> Node3D:
 	return best
 
 
-# The living housed members of every director pack that can still light a pip: not counted,
-# not spoiled, of MIN_PACK or more, with someone left standing.
 func _open_crews() -> Array:
 	var out := []
 	for seq in _packs:
@@ -227,8 +175,6 @@ func _open_crews() -> Array:
 	return out
 
 
-# Whether the pack has a housed member, so its riders stand aside from the count; a pack of
-# riders alone counts like any other.
 static func _housed(pack: Dictionary) -> bool:
 	return pack["members"].any(func(member: Dictionary) -> bool: return not member["rider"])
 
@@ -244,7 +190,6 @@ static func _nearest(pool: Array, ball: Vector3, reach: float) -> Node3D:
 	return best
 
 
-# The objective line while a lock holds the stage, or "".
 func objective() -> String:
 	if lock_active():
 		return "Yard locked: break its crew."
@@ -253,7 +198,6 @@ func objective() -> String:
 	return ""
 
 
-# Every director arrival that came as a pack (world.gd _step_director).
 func note_member(enemy: Node3D, seq: int, rider := false) -> void:
 	if seq < 0 or enemy == null or row.is_empty():
 		return
@@ -261,8 +205,6 @@ func note_member(enemy: Node3D, seq: int, rider := false) -> void:
 		_packs[seq] = {"members": [], "counted": false, "spoiled": false}
 	var member := {"ref": weakref(enemy), "dead": false, "rider": rider}
 	_packs[seq]["members"].append(member)
-	# Marked on the death itself: _die frees the body the same frame, so a kill that lands after
-	# this module's tick would read as a despawn by the next one.
 	if enemy.has_signal("died"):
 		enemy.died.connect(func(_at: Vector3, _scrap: int): member["dead"] = true, CONNECT_ONE_SHOT)
 
@@ -417,8 +359,6 @@ func _step_lock(delta: float) -> void:
 					_land_wave()
 
 
-# Whether the yard shuts this tick: grounded inside the circle on level ground, or on any ground
-# inside the inner share of it.
 static func lock_arms(grounded: bool, normal_y: float, dist: float, within_m: float) -> bool:
 	if not grounded or dist > within_m:
 		return false
@@ -442,9 +382,6 @@ func _lock(ball: Vector3, beacon: Vector3) -> void:
 	_land_wave()
 
 
-# The yard's sentry (the lock row's "sentry"): once, the first time the ball is on the ground inside
-# its circle, one enemy lands `ahead_m` up the ball's line to the beacon and `side_m` off it. It is
-# a plain enemy, no crew and no pack, so the yard's shells are met on the way in.
 func _land_sentry(ball: Vector3, beacon: Vector3) -> void:
 	var sentry: Dictionary = lock_row().get("sentry", {})
 	if _sentry_landed or sentry.is_empty() or _flat(ball, beacon) > float(sentry.get("within_m", 0.0)) or not ctx.can_spawn():
@@ -457,9 +394,6 @@ func _land_sentry(ball: Vector3, beacon: Vector3) -> void:
 		_sentry = weakref(enemy)
 
 
-# The yard shuts: a sentry still standing outside the wall packs up and goes, since the ball cannot reach
-# it until the yard opens (and a lobber left there shelled the ring for the whole lock, so a light ball
-# reached the Warden lighter still: random seed 2864 stalled there). One inside the ring stays and fights.
 func _retire_sentry(radius: float) -> void:
 	var enemy = _sentry.get_ref() if _sentry != null else null
 	_sentry = null
@@ -471,8 +405,6 @@ func _waves() -> Array:
 	return lock_row().get("waves", [])
 
 
-# One wave of the crew on the ring: the first ahead, each later one turned WAVE_TURN further
-# round, so the yard keeps the ball turning. The whole crew is one pack id for the attack budget.
 func _land_wave() -> void:
 	var kinds: Array = _waves()[_wave] if _wave < _waves().size() else []
 	var seq := LOCK_SEQ + int(ctx.run.stage)
@@ -488,7 +420,6 @@ func _land_wave() -> void:
 			_crew.append(weakref(enemy))
 
 
-# Where wave `wave` of the crew lands: the ground point of each member on the ring.
 func _wave_spots(wave: int) -> Array[Vector3]:
 	var kinds: Array = _waves()[wave] if wave < _waves().size() else []
 	var radius := float(lock_row().get("radius_m", 26.0))
@@ -501,9 +432,6 @@ func _wave_spots(wave: int) -> Array[Vector3]:
 	return out
 
 
-# The wave whistle's twin (arena_wave): a cross, held up where the crew drops from, at each spot the
-# next wave lands on, closing as the landing nears. It starts with the whistle and is gone the tick
-# the crew lands, so a muted player sees where and when. WaveCross owns how it looks.
 func _mark_wave() -> void:
 	_drop_wave_marks()
 	_wave_marks = WaveCross.mark(self, _wave_spots(_wave + 1), _wave_wait)
@@ -522,13 +450,10 @@ func _drop_wave_marks() -> void:
 func _unlock(won: bool) -> void:
 	lock_state = "spent"
 	lock_won = won
-	# A yard that ran out its max_s lets its survivors out as plain enemies: killed on the open
-	# map they roll a panel like any kill (ruling af covers kills inside the lock).
 	for enemy in crew_alive():
 		enemy.remove_meta("yard_crew")
 	ctx.events.world_fact.emit("arena_unlocked", lock_centre)
 	_drop_wall()
-	# The whole crew broken pays one panel (build.gd yard_cleared), and is one of the clamp's packs.
 	if won and ctx.get("build") != null and ctx.build.has_method("yard_cleared"):
 		ctx.build.yard_cleared(lock_centre)
 	if won:
@@ -536,13 +461,9 @@ func _unlock(won: bool) -> void:
 	if won and not gate_open:
 		cleared += 1
 		ctx.events.world_fact.emit("warden_gate_pip", ctx.player.ball_position())
-	# The yard is over, won or run out: stage 1's start pick, which waited for it, comes up now,
-	# after the yard's panel and the overtime offer are on the ground.
 	ctx.flow.show_start_card()
 
 
-# The wall springs a ball back once it is past the ring, harder the further and faster it goes;
-# a ball that still got WALL_SLACK past it has its outward speed turned back.
 func _hold_ball() -> void:
 	var radius := float(lock_row().get("radius_m", 26.0))
 	var ball: Vector3 = ctx.player.ball_position()
@@ -559,7 +480,6 @@ func _hold_ball() -> void:
 	ctx.player.add_external_accel(-n * minf(WALL_ACCEL_CAP, WALL_SPRING * (dist - radius) + WALL_DAMP * maxf(outward, 0.0)))
 
 
-# How solid the fence is at its foot.
 const FENCE_ALPHA := 0.3
 
 
@@ -588,18 +508,12 @@ func _build_wall(radius: float) -> void:
 	band.rings = 96
 	rim.mesh = band
 	rim.material_override = Palette.unshaded(Color(Palette.SAND, 0.55))
-	# On the ground, where the fence is strongest: on top, over a fence faded to nothing, three of
-	# three blind readers took the floating bone band for a stray line.
 	rim.position = Vector3.UP * 1.3
 	_wall.add_child(rim)
 	_wall_rise = 0.0
 	_wall.scale = Vector3(1.0, 0.01, 1.0)
 
 
-# The lock wall is a fence, not a threat: it hurts nothing, it only holds you in the yard. HAZARD is
-# for hostile danger areas and nothing else (VISUAL-LANGUAGE section 2), and 11 of 12 blind readers
-# took the red wall for a mistake or an unexplained warning (sight's danger read, 10 Nov 2026). Worn
-# bone, strongest at the ground and gone at the top, so it stands as a fence line and not a sheet.
 static func _fence_material() -> StandardMaterial3D:
 	var mat := Palette.unshaded(Color(1.0, 1.0, 1.0, 0.99))
 	var ramp := Gradient.new()
@@ -622,7 +536,6 @@ func _drop_wall() -> void:
 	_wall = null
 
 
-# The clamp's tell follows the Warden: a hazard collar at its base and the pips over it.
 func _dress_collar() -> void:
 	if gate_open or not is_instance_valid(ctx.flow.warden):
 		return

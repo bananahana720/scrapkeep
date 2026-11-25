@@ -1,21 +1,9 @@
 extends RefCounted
 
-# The camp's saved records: the skee-ball best score, the time trial's best lap and its
-# ghost. They live in one dictionary, profile.camp() / set_camp() ("camp" in profile.json,
-# added inside schema 4 like "radio": an old save has no key and reads as {}). A profile
-# without those methods (a build before that key landed) keeps the skee best in the stats
-# map, which merges by max; the trial and its ghost then last for the session only.
-#
-#   {"skee_best": 340, "trial": {"best_ms": 61240, "ghost": {...}}, "ring": {"pylon_engineer": 7}}
-#
-# The ghost is the best lap's ball path at GHOST_HZ in the track's own space, quantised to
-# centimetres and stored as the first point ("p0") followed by per-sample deltas ("d", one
-# comma-joined string of x y z triples, so the pretty-printed profile keeps it on one line).
-# A lap that would need more than GHOST_MAX_SAMPLES points is not recorded.
 
 const SKEE_STAT := "camp_skee_best"
 const GHOST_HZ := 10
-const GHOST_MAX_SAMPLES := 1200  # two minutes at 10 Hz, 3600 small integers at most
+const GHOST_MAX_SAMPLES := 1200
 
 var profile
 var _mem := {}
@@ -47,7 +35,6 @@ func skee_best() -> int:
 	return best
 
 
-# True when score beat the saved best (and was saved).
 func submit_skee(score: int) -> bool:
 	if score <= skee_best():
 		return false
@@ -62,13 +49,11 @@ func submit_skee(score: int) -> bool:
 	return true
 
 
-# The camp ring's best count for a pilot (camp_ring.gd), 0 when there is none.
 func ring_best(pilot: String) -> int:
 	var ring = _doc().get("ring", {})
 	return int(ring.get(pilot, 0)) if ring is Dictionary else 0
 
 
-# True when `count` beat that pilot's best (and was saved).
 func submit_ring(pilot: String, count: int) -> bool:
 	if count <= ring_best(pilot):
 		return false
@@ -82,13 +67,10 @@ func submit_ring(pilot: String, count: int) -> bool:
 	return true
 
 
-# The best lap in milliseconds, 0 when there is none.
 func trial_best_ms() -> int:
 	return int(_doc().get("trial", {}).get("best_ms", 0))
 
 
-# Stores the lap when it is the first or beats the best. points are track-space Vector3s
-# sampled at GHOST_HZ from the start line. Returns true when it became the new best.
 func submit_trial(ms: int, points: PackedVector3Array) -> bool:
 	var best := trial_best_ms()
 	if ms <= 0 or (best > 0 and ms >= best):

@@ -7,19 +7,14 @@ const FloodCycle := preload("res://src/world/flood_cycle.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const SluiceValves := preload("res://src/world/sluice_valves.gd")
 
-# The water a stage's basin fills with. Its shape comes from the map's basin record,
-# so each stage floods its own bowl, and the push, the plane you see and the "water"
-# material all read the one surface height.
 
 const DRAG := 2.6
 const CURRENT := 6.0
 const LIFT := 12.0
 const WET_DEPTH := 2.5
 
-# The director's clock for this stage; null when the stage has no flood.
 var cycle: FloodCycle
 var basin := {}
-# W1 Spillway grapple-yank sluice valves (g12), synced on stage entry/clear.
 var sluice_valves: SluiceValves
 
 var _floor_y := 0.0
@@ -32,7 +27,6 @@ var _lamp_material: StandardMaterial3D
 
 
 func setup() -> void:
-	# The title has no basin. configure() sets the first map position and visibility together.
 	visible = false
 	_plane = MeshInstance3D.new()
 	_quad = PlaneMesh.new()
@@ -41,7 +35,6 @@ func setup() -> void:
 	_plane.material_override = Palette.water(Palette.water_tone())
 	add_child(_plane)
 
-	# The muster siren's model is six metres high with its origin at the foot.
 	_mast = Node3D.new()
 	_mast.name = "KlaxonMast"
 	_mast.scale = Vector3.ONE * (16.0 / 6.0)
@@ -77,8 +70,6 @@ func setup() -> void:
 	add_child(sluice_valves)
 
 
-# A new stage's bowl. floor_y is the basin floor under its centre; mast is the klaxon's
-# foot on dry ground at the rim.
 func configure(basin_record: Dictionary, floor_y: float, mast: Vector3) -> void:
 	basin = basin_record
 	_floor_y = floor_y
@@ -92,8 +83,6 @@ func configure(basin_record: Dictionary, floor_y: float, mast: Vector3) -> void:
 	visible = not basin.is_empty() and cycle != null
 	if not visible:
 		return
-	# Sized to the bowl: a plane that overhangs the map is visible from anywhere as
-	# a floating slab.
 	_quad.size = basin["plane_size"]
 	var centre: Vector2 = basin["plane_centre"]
 	_plane.position = Vector3(centre.x, _floor_y, centre.y)
@@ -108,7 +97,6 @@ func surface_y() -> float:
 	return _floor_y + cycle.depth(basin["depth"])
 
 
-# Draws the committed water level; the director advances the clock.
 func render() -> void:
 	if not visible:
 		return
@@ -132,8 +120,6 @@ func submersion(point: Vector3) -> float:
 	return clampf((surface_y() - point.y) / WET_DEPTH, 0.0, 1.0)
 
 
-# Drag plus an inward current: the water is a speed tax that also sweeps you
-# toward the middle of the basin.
 func external_accel(point: Vector3, velocity: Vector3) -> Vector3:
 	var wet := submersion(point)
 	if wet <= 0.0:

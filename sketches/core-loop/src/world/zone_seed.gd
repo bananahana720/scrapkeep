@@ -3,9 +3,6 @@ extends RefCounted
 const ZoneSchema := preload("res://src/world/zone_schema.gd")
 
 
-# Test-time placement, not a runtime content builder. Keep authored slots and use
-# only this map's activity positions and event rings for missing optional slots.
-# No sites means no invented placement; invalid authored values stay diagnostic.
 static func fill(map, seed: int) -> Dictionary:
 	var result := ZoneSchema.slots(map)
 	var candidates := _sites(map)
@@ -44,7 +41,6 @@ static func _sites(map) -> Array:
 				var row = events[id]
 				if id is String and not id.is_empty() and row is Dictionary and row.get("ring") is Vector2:
 					candidates.append({"id": id, "at": row["ring"]})
-	# Stable ordering even when a dictionary was built in a different insertion order.
 	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		if a["id"] != b["id"]:
 			return a["id"] < b["id"]

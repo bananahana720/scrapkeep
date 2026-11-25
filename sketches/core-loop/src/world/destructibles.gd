@@ -5,29 +5,6 @@ const PropKicks := preload("res://src/presentation/prop_kicks.gd")
 const Kit := preload("res://src/presentation/destructible_kit.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 
-# Heft destructibles (Wave 45, W45-C unit A; design-v3/HEFT-DESTRUCTIBLES.md). A standalone, authored,
-# non-load-bearing prop of tier 1 to 5 that a ball of that heft class or heavier breaks without losing a
-# metre per second, and a lighter ball meets as a plain wall. The module owns the registry, the tier rule,
-# the collider switch, the debris pool and the stage's loot meter; callers make three calls and listen to
-# one signal:
-#
-#   build(map_or_rows, ctx)           once a stage: register rows, build colliders now, visuals in slices
-#   on_ball(pos, velocity, heft, dt)  once a physics tick from the world tick
-#   on_blast(at, radius, source, ...) from each blast source with the ring it already resolved
-#   piece_shattered(bounds)           every break, the world box of the piece, for world-line release
-#
-# Two states and nothing between: intact (a layer-1 StaticBody3D and one opaque mesh) or shattered (the
-# collider disabled, the mesh hidden, a few scripted shards that shrink to SPECK). The break is decided the
-# tick before the solver meets the piece, so the ball keeps its speed. Heft is read, never written.
-#
-# ctx is the game's Context, or a Dictionary carrying any of these keys (a key wins over the Context
-# field): root (the node to join when not yet in the tree), cruise, run_seed, run_id, stage, scrap (drop,
-# drop_cogs), combat (strike), refused (Callable(at) for the roll's refused cue), enemies (Callable ->
-# Array), owned_ids (ids a contraption owns), no_visuals (--bot-no-visuals=1). Without a key the Context's
-# own refs answer: tuning.f("cruise"), rng.seed, run.run_id, run.stage, build.scrap, spawner, events.
-# A break sends one world_fact("piece_shattered") at its point on events, plays its family's sound at that point
-# (ctx "sfx", Callable(id, at)) and lands its tier's weight (ctx "weight", Callable(tier, at), else the game's
-# presentation.juice.on_piece_shattered); the sound and the weight are never built under --bot-no-visuals=1.
 
 signal piece_shattered(bounds: AABB)
 
@@ -35,18 +12,12 @@ const CELL_M := 12.0
 const BUILD_SLICE_USEC := 3000
 const WORLD_LAYER := 1
 const BALL_RADIUS := 1.0
-# cracked_cache.gd WALL_REACH; the reach grows by flat / 30 so it stays a tick ahead of the solver at any speed.
 const WALL_REACH := 3.0
-# contraptions.gd WALL_SPEED: the sprint bar a tier 1 piece asks.
 const WALL_SPEED := 8.0
-# activities.gd RAM_MIN_PER_CRUISE: the bar tiers 2 to 5 ask, the same the cracked face uses.
 const RAM_MIN_PER_CRUISE := 0.85
-# activities.gd "refused" rule: the floor under which a bump stays silent and the gap between cues.
 const REFUSED_FLOOR := 0.4
 const REFUSED_GAP_S := 3.0
-# A ball this close (centre to the piece's surface) is touching it for the refused cue.
 const CONTACT_M := BALL_RADIUS + 0.5
-# The ball must be heading within 60 degrees of the nearest point of a piece for it to count as meeting it.
 const HEADING_COS := 0.5
 const JUMP_RESET_M := 20.0
 
@@ -59,7 +30,6 @@ const CHIPS_MAX := 3
 const SHARD_POOL := PropKicks.LIVE_CAP
 const PUFF_POOL := 8
 const NODE_CEILING := 32
-# enemy_motion.gd SPECK: pieces shrink to it and never fade alpha.
 const SPECK := 0.01
 const SHARD_LIFE := Vector2(0.7, 1.2)
 const SHARD_CARRY := 0.5
@@ -75,7 +45,6 @@ const TIER_SCALE := [0.5, 0.7, 1.0, 1.3, 1.6]
 const SCRAP_CAP := 35
 const COG_CAP := 20
 const CONSUMABLE_CAP := 3
-# Tier -> [scrap, cogs]; tier 1 scrap is a 50 percent roll on the piece's own stream.
 const LOOT := {1: [1, 0], 2: [2, 1], 3: [3, 2], 4: [4, 2], 5: [4, 2]}
 const TIER1_CHANCE := 0.5
 
@@ -85,18 +54,14 @@ const TERRAIN_KINDS := ["terrain", "heightfield", "landform", "ground", "bank", 
 const FOOTING_PREFIXES := ["flume_bent_", "flume_ride_pier_"]
 const FOOTING_KINDS := ["world_anchor", "hoodoo", "saguaro"]
 const SOFT_TAGS := ["plant", "soft", "foliage"]
-# park_schema.gd GUARDED_SOCIETIES.
 const GUARDED_SOCIETIES := ["hohokam", "ancestral_puebloan"]
 
 const FAMILY_BY_TIER := Kit.FAMILY_BY_TIER
 const SHARD_SIZE := 0.35
-# Crate and barricade meshes under BIG_EXTENT_M fade past VIEW_END_M so far landmark views skip distant scatter;
-# giant breakable walls (e.g. a 64 m pond wall) stay unranged.
 const VIEW_END_M := 320.0
 const VIEW_MARGIN_M := 30.0
 const BIG_EXTENT_M := 20.0
 
-# The loot meter's ceilings for this stage; ctx keys scrap_cap and cog_cap plant others for a test.
 var scrap_cap := SCRAP_CAP
 var cog_cap := COG_CAP
 var consumable_cap := CONSUMABLE_CAP
@@ -174,10 +139,6 @@ class Shard extends RefCounted:
 	var puff := false
 
 
-# ---- the registry -------------------------------------------------------------------------------
-
-# The reason a row may not be a destructible, or "" when it may. `taken` holds the ids already spoken for
-# (a registered piece, a contraption's id). One home for the exclusions of the spec's section 2.2.
 static func validate_row(row: Dictionary, taken: Dictionary = {}) -> String:
 	var id := String(row.get("id", ""))
 	if id == "":
@@ -227,9 +188,6 @@ static func validate_row(row: Dictionary, taken: Dictionary = {}) -> String:
 	return ""
 
 
-# Registers the stage's rows (an Array of rows, or a map Dictionary whose "destructible_rows" holds them),
-# builds every collider now so a ball never meets a gap, and queues the meshes, the shard pool and the
-# materials as slices of BUILD_SLICE_USEC (finish_build() runs the rest at once).
 func build(map_or_rows: Variant, ctx: Variant) -> void:
 	teardown()
 	_exiting = false
@@ -266,7 +224,6 @@ func is_built() -> bool:
 	return _queue.is_empty()
 
 
-# Frees every collider, mesh and pooled node and forgets the stage: nothing outlives it.
 func teardown() -> void:
 	for piece in _pieces.values():
 		var p := piece as Piece
@@ -313,8 +270,6 @@ func _exit_tree() -> void:
 	teardown()
 
 
-# ---- reads --------------------------------------------------------------------------------------
-
 func ids() -> Array[String]:
 	return _order.duplicate()
 
@@ -345,7 +300,6 @@ func bounds_of(id: String) -> AABB:
 	return (_pieces[id] as Piece).bounds if _pieces.has(id) else AABB()
 
 
-# True when `point` lies inside the piece's oriented box grown by `margin`, intact or shattered.
 func contains_point(id: String, point: Vector3, margin: float = 0.0) -> bool:
 	if not _pieces.has(id):
 		return false
@@ -355,12 +309,10 @@ func contains_point(id: String, point: Vector3, margin: float = 0.0) -> bool:
 	return absf(local.x) <= reach.x and absf(local.y) <= reach.y and absf(local.z) <= reach.z
 
 
-# Rows the stage refused: [{id, reason}].
 func refusals() -> Array[Dictionary]:
 	return _refused.duplicate()
 
 
-# The ids in the order they broke.
 func break_order() -> Array[String]:
 	return _breaks.duplicate()
 
@@ -385,7 +337,6 @@ func live_puffs() -> int:
 	return _live_of(_puffs)
 
 
-# Every pooled node (shards and dust puffs): at most NODE_CEILING.
 func pool_nodes() -> Array[MeshInstance3D]:
 	var out: Array[MeshInstance3D] = []
 	for list in [_shards, _puffs]:
@@ -402,12 +353,6 @@ func material() -> StandardMaterial3D:
 	return _material
 
 
-# ---- the ball -----------------------------------------------------------------------------------
-
-# One call a physics tick. Sweeps the ball's forward segment [last position, position + flat velocity x dt]
-# against the intact pieces within WALL_REACH + flat / 30, and shatters the ones the ball's class and speed
-# break. Anything else the ball meets is a wall; a bump at or over REFUSED_FLOOR x cruise answers with the
-# chip and the refused cue, once a piece per REFUSED_GAP_S.
 func on_ball(ball_pos: Vector3, velocity: Vector3, heft_class: int, dt: float = 1.0 / 60.0) -> void:
 	_clock += dt
 	_last_heft = heft_class
@@ -440,14 +385,10 @@ func on_ball(ball_pos: Vector3, velocity: Vector3, heft_class: int, dt: float = 
 			_refuse(p, seen["at"], heading)
 
 
-# W47-GRAPPLE-MUTS-CODE: Wrecking Flail taut-swing +1 effective Heft tier (strictly clamped 0..1,
-# Destructibles.tla TierCapNeverStacks & PaysOnce safe). Cleared on release and teardown().
 func set_swing_heft_bonus(bonus: int) -> void:
 	_swing_heft_bonus = clampi(bonus, 0, 1)
 
 
-# W47-GRAPPLE-MUTS-CODE: Hot-Wire Arc Cutter segment slice through Tier 1-2 destructibles.
-# Strictly clamped to Tier 1..2 and routed through _shatter() so each piece pays at most once.
 func on_segment_cut(from: Vector3, to: Vector3, max_tier: int = 2, width: float = 1.6, source: String = "hot_wire") -> Array[String]:
 	var broken: Array[String] = []
 	if _pieces.is_empty():
@@ -468,9 +409,6 @@ func on_segment_cut(from: Vector3, to: Vector3, max_tier: int = 2, width: float 
 	return broken
 
 
-# W47-GRAPPLE-MUTS-CODE: Wrecking Flail taut swing check for Heft Destructibles at +1 effective Heft.
-# Strictly clamped to at most +1 tier above heft_class (Destructibles.tla TierCapNeverStacks) and
-# routed through _shatter() so each piece breaks and pays strictly once.
 func on_taut_swing(ball_pos: Vector3, velocity: Vector3, heft_class: int, tier_bonus: int = 1, reach_override: float = -1.0, dt: float = 1.0 / 60.0) -> Array[String]:
 	var broken: Array[String] = []
 	if _pieces.is_empty():
@@ -494,9 +432,6 @@ func on_taut_swing(ball_pos: Vector3, velocity: Vector3, heft_class: int, tier_b
 	return broken
 
 
-# A blast the source already resolved: every intact piece whose box the ring reaches breaks when the heft
-# class plus the bonus (at most +1, never stacked) meets its tier. heft_class below zero reads the class the
-# ball last reported.
 func on_blast(at: Vector3, radius: float, source: String, tier_bonus: int = 1, heft_class: int = -1) -> void:
 	var heft := heft_class if heft_class >= 0 else _last_heft
 	var effective := TIER_MAX if source == Consumables.CAP_CHARGE else heft + clampi(tier_bonus, 0, 1)
@@ -511,9 +446,6 @@ func on_blast(at: Vector3, radius: float, source: String, tier_bonus: int = 1, h
 		_shatter(p, near, away.normalized() if away.length() > 0.01 else Vector3.FORWARD, cruise, true, source)
 
 
-# W47-H2: Tarn Clamp-and-Hurl enemy projectile break hook. Smashes intact Heft Destructibles
-# up to +1 tier above Tarn's heft class (never stacked, never re-shattering broken pieces;
-# Destructibles.tla PaysOnce & TierCapNeverStacks safe).
 func on_hurled_enemy(from: Vector3, to: Vector3, heft_class: int, radius: float = 1.8, source: String = "tarn_hurl") -> Array[String]:
 	var broken: Array[String] = []
 	if _pieces.is_empty():
@@ -535,9 +467,6 @@ func on_hurled_enemy(from: Vector3, to: Vector3, heft_class: int, radius: float 
 	return broken
 
 
-# W47-H2: The Cannon Air-Lock Overpenetration corridor break hook. Blasts intact Tier 1-3
-# Heft Destructibles along its widened airborne rail (strictly clamped <= 3, once-per-piece
-# through _shatter; Destructibles.tla PaysOnce safe).
 func on_rail_breach(from: Vector3, to: Vector3, half_width: float, max_tier: int = 3, source: String = "cannon_air_rail") -> Array[String]:
 	var broken: Array[String] = []
 	if _pieces.is_empty():
@@ -559,9 +488,6 @@ func on_rail_breach(from: Vector3, to: Vector3, half_width: float, max_tier: int
 	return broken
 
 
-# W47-H2: The Cannon Explosive Piton shaped-charge detonation break hook on release.
-# Blasts intact Tier 1-3 Heft Destructibles within radius (strictly clamped <= 3, once-per-piece
-# through _shatter; Destructibles.tla PaysOnce safe).
 func on_piton_breach(at: Vector3, radius: float, max_tier: int = 3, source: String = "cannon_piton_breach") -> Array[String]:
 	var broken: Array[String] = []
 	if _pieces.is_empty():
@@ -579,8 +505,6 @@ func on_piton_breach(at: Vector3, radius: float, max_tier: int = 3, source: Stri
 		broken.append(p.id)
 	return broken
 
-
-# ---- the break ----------------------------------------------------------------------------------
 
 func _live_cruise() -> float:
 	if not _cruise_override and is_instance_valid(_tuning):
@@ -631,8 +555,6 @@ func _refuse(p: Piece, at: Vector3, dir: Vector3) -> void:
 		_cue.call(at)
 
 
-# One outward check from the break: at most SHRAPNEL_MAX enemies within SHRAPNEL_M, inside the 90 degree cone
-# around the travel direction (any direction for a blast), each knocked and struck once as a "debris" hit.
 func _shrapnel(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool) -> void:
 	var found: Array = []
 	for enemy in _enemy_list():
@@ -670,8 +592,6 @@ func _is_scrapless() -> bool:
 	return false
 
 
-# The piece pays once at the break from its own spot, from its own stream, clamped to what the stage's
-# meter still has room for. Past the cap it still shatters and hits and drops nothing.
 func _pay(p: Piece) -> void:
 	if _is_scrapless():
 		return
@@ -693,8 +613,6 @@ func _pay(p: Piece) -> void:
 		_cogs_paid += cogs_n
 		if _scrap != null:
 			_scrap.drop_cogs(spot, cogs_n)
-	# High-tier Heft Destructibles (tiers 3-5) may drop a Pocket Consumable once per piece
-	# (own deterministic stream so scrap/cog rolls stay unchanged; pays strictly once).
 	if p.tier >= 3 and _consumables_paid < consumable_cap:
 		var cons_id := Consumables.roll_for_destructible(_seed, _run_id, _stage, p.id, p.tier)
 		if cons_id != "":
@@ -703,15 +621,11 @@ func _pay(p: Piece) -> void:
 				_combat.drop_consumable(cons_id, spot)
 
 
-# ---- geometry -----------------------------------------------------------------------------------
-
 func _closest(p: Piece, point: Vector3) -> Vector3:
 	var local := p.basis.inverse() * (point - p.centre)
 	return p.centre + p.basis * local.clamp(-p.half, p.half)
 
 
-# The nearest the segment from to `to` comes to the piece: {dist, at (the box's nearest point), dir (flat, from
-# that sample of the ball to the box)}.
 func _sweep(p: Piece, from: Vector3, to: Vector3) -> Dictionary:
 	var steps := maxi(1, ceili(from.distance_to(to) / 0.5))
 	var best := {"dist": INF, "at": p.centre, "dir": Vector3.ZERO}
@@ -802,8 +716,6 @@ func _build_collider(p: Piece) -> void:
 	p.shape = shape
 
 
-# ---- visuals, built in slices -------------------------------------------------------------------
-
 func _queue_visuals() -> void:
 	_queue.append(_make_material)
 	for id in _order:
@@ -834,7 +746,6 @@ func _make_material() -> void:
 	_material = Kit.material()
 
 
-# One mesh per (tier, size): two crates of one size share a mesh, so the stage builds each shape once.
 func _make_mesh(p: Piece) -> void:
 	if p.intact and is_instance_valid(p.body):
 		var node := MeshInstance3D.new()
@@ -876,8 +787,6 @@ func _make_pooled(list: Array, puff: bool) -> void:
 	list.append(s)
 
 
-# ---- the shards: scripted, never a body, never a fade --------------------------------------------
-
 func _live_of(list: Array) -> int:
 	var n := 0
 	for entry in list:
@@ -886,7 +795,6 @@ func _live_of(list: Array) -> int:
 	return n
 
 
-# One pooled node thrown from `at`. A full pool reuses its oldest live node, which finishes at once.
 func _throw(list: Array, p: Piece, at: Vector3, dir: Vector3, speed: float, family: String, chip: bool = false) -> void:
 	if list.is_empty():
 		return
@@ -956,8 +864,6 @@ func _run_fx(delta: float) -> void:
 			s.node.scale = Vector3.ONE * clampf(1.0 - s.t / s.life, SPECK, 1.0)
 
 
-# ---- ctx ----------------------------------------------------------------------------------------
-
 func last_shattered_id() -> String:
 	return _breaks[-1] if not _breaks.is_empty() else ""
 
@@ -1000,9 +906,6 @@ func _bind(ctx: Variant) -> void:
 	_fx.seed = hash("destructibles_fx")
 
 
-# The shatter sound: ctx "sfx" (Callable(id, at)), or the game's audio (ctx.presentation.audio or
-# ctx.root.presentation.audio, matching game.gd:128 / world.gd:507) when present. Silent with neither,
-# and never built under --bot-no-visuals=1.
 func _sfx_of(ctx: Variant) -> Callable:
 	if _no_visuals:
 		return Callable()
@@ -1019,8 +922,6 @@ func _sfx_of(ctx: Variant) -> Callable:
 	return Callable()
 
 
-# The break's weight (hit-stop, shake, kick by tier): ctx "weight" (Callable(tier, at)), or the game's juice
-# (presentation.juice, found as the sound's audio is). None with neither, and never under --bot-no-visuals=1.
 func _weight_of(ctx: Variant) -> Callable:
 	if _no_visuals:
 		return Callable()

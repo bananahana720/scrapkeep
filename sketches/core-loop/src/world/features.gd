@@ -1,12 +1,6 @@
 extends RefCounted
 
-# The momentum vocabulary as pure height shapes. Each returns a height offset (or a
-# carved floor) for one ground sample, so a map composes them by adding or taking the
-# lower of two heights, and the ball never meets a seam between features.
 
-
-# A ramp that rises toward its lip and drops away behind it. The rise is concave, so
-# it launches rather than bumps. dir is the way you ride it, flat and unit length.
 static func kicker(x: float, z: float, at: Vector2, dir: Vector2, length: float, width: float, lip: float) -> float:
 	var rel := Vector2(x, z) - at
 	var u := rel.dot(dir)
@@ -23,9 +17,6 @@ static func kicker(x: float, z: float, at: Vector2, dir: Vector2, length: float,
 	return rise * side
 
 
-# A berm on an arc: a concave face rising to its crest at radius + width, so a ball
-# riding the inside of the arc is held on a bank. from_deg and to_deg bound the arc
-# (atan2 of z, x around the centre); the ends fade so you can ride in and out.
 static func banked_arc(x: float, z: float, centre: Vector2, radius: float, width: float, bank: float,
 		from_deg: float, to_deg: float) -> float:
 	var rel := Vector2(x, z) - centre
@@ -46,12 +37,6 @@ static func banked_arc(x: float, z: float, centre: Vector2, radius: float, width
 	return h * ends
 
 
-# A sunken channel along z with a quarter-circle section, so its walls steepen past
-# 60 degrees near the top: a halfpipe you pump across and a face a pylon bites.
-# Returns the floor height to take the lower of, or INF outside the channel. The head
-# is a rounded drop-in. With fade_out above zero the far end shallows out over that
-# many metres and stays open, so a chute hands you on at speed instead of ending in
-# a quarter-pipe wall.
 static func halfpipe(x: float, z: float, cx: float, z0: float, z1: float, top: Callable, depth: float,
 		fade_out := 0.0) -> float:
 	var adx := absf(x - cx)
@@ -70,11 +55,6 @@ static func halfpipe(x: float, z: float, cx: float, z0: float, z1: float, top: C
 	return float(top.call(zc)) - (depth - rise) * scale
 
 
-# The beacon's bowl: a flat floor for the Warden inside BOWL_FLAT, then a bank that
-# climbs at about 24 degrees out past the 45 m ring to BOWL_RIM, so a missed pass
-# rolls back in. Inside the rim the bowl is the ground; past it the bowl blends back
-# into h by BOWL_OUT. Put the beacon at the foot of the fall line and the uphill side
-# stays a descent.
 const BOWL_FLAT := 28.0
 const BOWL_RIM := 47.0
 const BOWL_OUT := 62.0
@@ -96,14 +76,11 @@ static func beacon_bowl(x: float, z: float, centre: Vector2, floor_h: float, h: 
 	return lerpf(floor_h + bowl_bank(minf(d, BOWL_RIM)), h, smoothstep(BOWL_RIM, BOWL_OUT, d))
 
 
-# A flat-topped mound with smooth shoulders, to roll up and over.
 static func mesa(x: float, z: float, centre: Vector2, top_radius: float, foot_radius: float, height: float) -> float:
 	var d := Vector2(x, z).distance_to(centre)
 	return height * (1.0 - smoothstep(top_radius, foot_radius, d))
 
 
-# A smooth downhill between two heights, mostly linear so it keeps pulling, with its
-# ends eased so the ball meets it without a crease.
 static func descent(s: float, s0: float, s1: float, h0: float, h1: float) -> float:
 	var t := clampf(inverse_lerp(s0, s1, s), 0.0, 1.0)
 	return lerpf(h0, h1, lerpf(t, smoothstep(0.0, 1.0, t), 0.45))

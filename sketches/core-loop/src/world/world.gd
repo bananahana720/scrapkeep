@@ -30,20 +30,12 @@ const RogueDirector := preload("res://src/world/rogue_director.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
-# The stage Warden's fight for the bus's fight phases (fight_phase_changed): phase 1 from the engage, one more for
-# each chunk its guard loses short of the break, so the four chunks are four phases.
 const WARDEN_FIGHT := "warden"
 
-# Writer D's module: the stage geometry, the event director, stage events and the
-# launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
-# director, publishes what they committed, and applies the world's pushes. The
-# rules live in the pure models; this file only wires them to the bus, the run and
-# the ball.
 
 const PRESSURE_STEP := 0.05
 const MINIBOSS_KIND := "miniboss"
 const MINIBOSS_FALLBACK := "chaser"
-# Above the tallest rogue's half height at its largest site scale (3.6 m x 1.25).
 const ROGUE_CLEARANCE := 4.8
 const VAULT_KIND := "vault"
 const TAILWIND := 0.7
@@ -57,46 +49,30 @@ var events
 var event_families := {}
 var _park_warden_staggered := false
 var _park_warden_chunks := 4
-# The Warden fight's phase published this attempt (0 before the engage); it only climbs.
 var _warden_phase := 0
 var view
 var launch
-# Where the last miniboss was asked for, for tests and the field notes.
 var last_miniboss_at := Vector3.INF
-# This attempt's rogue fleet machine (rogue_director.gd): the plan until it wakes, then the
-# machine it spawned.
 var rogue_plan := {}
 var rogue: Node3D
-# The stage's plated vault while it stands, else null.
 var vault: Node3D
 var codex_world := CodexWorld.new()
-# Every world codex entry fired this session, in order: {"id", "at"}.
 var discoveries: Array = []
 
-# v2 W6: the gorge's contraptions per stage index, the terrain events' telegraphs,
-# Moss's bay, and the contraption ride the ball is held to (a RideRail), if any.
 var contraptions := {}
-# Stage number -> Contraptions still adding devices after its park ground was built ahead (_on_stage_built).
 var _building := {}
 var terrain_view
 var bay
 var ride
-# v3: the interact key's system and the stage's interactables (interact.gd).
 var interact
-# The Spillway's Warden gate and arena lock (stage_locks.gd).
 var locks
-# The map's standing activities (activities.gd).
 var activities
 var survey_posts: Node3D
 var bowl_approach: Node3D
-# The map's world rescue (rescue_site.gd).
 var rescue
-# What Moss said last (the shop's result record), for the shop UI.
 var bay_bark := {}
-# The height band the ball last settled in, and each terrain swap's cost.
 var layer := ""
 var swap_log: Array[Dictionary] = []
-# The stage map's breakable floors (breach.gd), or null on a map without them.
 var breach
 
 var _stage_seed := 0
@@ -105,23 +81,15 @@ var _skylight_clock := 0.0
 var _glide_clock := 0.0
 var _air_clock := 0.0
 var _bay_calm := false
-# Stages whose between-stage upgrade pick has been opened this run.
 var _picks_opened := {}
-# Stages whose pick the world-one profile is holding for a calm moment (the ball airborne).
 var _picks_waiting: Array[int] = []
-# Upgrade picks owed for new heft classes (the slice table), held until the ball is calm.
 var _class_picks_owed := 0
 var _pressure := -1.0
-# Seconds since the director last took combat's build_read(); it walks habits and the tree, so
-# it refreshes about once a second, not every tick. Starts due so the first step reads it.
 const BUILD_REFRESH := 1.0
 var _build_clock := BUILD_REFRESH
 var _vault_pending := false
 var _was_grounded := true
-# A barge carried the ball this tick (contraptions.gd's "carry" fact), for the net deck's footing note.
 var _on_barge := false
-# The sinkhole's floor is lava (cinder_heat.gd): the dwell on the cinder floor, and whether the ball touched it this tick
-# (contraptions.gd's "drag" fact).
 var cinder_heat := CinderHeat.new()
 var _on_cinder := false
 
@@ -130,10 +98,7 @@ func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "World"
 	terrain = Terrain.new(ctx.stages)
-	# A park row's ride sensor publishes on the game bus (KB9; park_recipes.gd _sensor).
 	terrain.publish = ctx.events.world_fact.emit
-	# MENU-READY (measured 2026-10-18, exported build, cloud headless): building stage 1's park
-	# ground in setup held the menu for about 2 of its 6 s. A played game builds it behind the menu.
 	terrain.build(ctx.root, ctx.root.get("ground_behind_menu") == true)
 	ctx.terrain = terrain
 	_wire_terrain()
@@ -157,8 +122,6 @@ func setup(ctx_ref) -> void:
 	ctx.player.interact_claim = interact.claims
 	director = Director.new(ctx.rng.randi())
 	_author_director()
-	# The mark pipelines compile here, off the first stage entry; an entry re-warms only after the
-	# telegraph row flips the look (Threat.follow_row).
 	Threat.follow_row(ctx.tuning)
 	Threat.Painter.warm_up(ctx.root)
 	ctx.events.stage_entered.connect(_on_stage_entered)
@@ -182,19 +145,15 @@ func setup(ctx_ref) -> void:
 	ctx.events.beacon_unsealed.connect(_on_park_warden_broken)
 	for entry in CodexWorld.ENTRIES:
 		ctx.codex.declare(entry)
-	# After this module's own stage_entered handler, so the map is already the stage's.
 	activities = Activities.new()
 	ctx.root.add_child(activities)
 	activities.setup(ctx)
-	# Survey posts along the floor line (--posts=on): after the map is the stage's, as activities are.
 	survey_posts = SurveyPosts.new()
 	ctx.root.add_child(survey_posts)
 	survey_posts.setup(ctx)
-	# The approach to the boss's bowl on the last of the floor line (--approach=on).
 	bowl_approach = BowlApproach.new()
 	ctx.root.add_child(bowl_approach)
 	bowl_approach.setup(ctx)
-	# A surge course opens the park's sluice row and, won or lost, ends it.
 	activities.sluice_opened.connect(func(row_id: String):
 		if events != null:
 			events.notify_activity(row_id))
@@ -223,10 +182,6 @@ func _setup_gorge() -> void:
 	terrain.bay = bay
 
 
-# The next park stage builds from the moment this stage's Warden wakes, so the launch lands on
-# ground already built (KB4b); a stage with no Warden (ctx.calm) starts it when its gates open.
-# prepare() is a no-op for an old map or a stage already built or building. A stage terrain
-# frees takes its contraptions with it, so the cache entry goes too and a rebuild adds new ones.
 func _wire_terrain() -> void:
 	terrain.stage_freed.connect(_on_stage_freed)
 	terrain.stage_built.connect(_on_stage_built)
@@ -246,13 +201,6 @@ func _on_stage_freed(stage: int) -> void:
 	_building.erase(stage)
 
 
-# A park stage built ahead on worker threads adds its contraptions a device a frame from here
-# (_process), not all in its entry frame, while it is parked out of sight and only while the
-# current stage is calm (flow.calm()): the next build starts at the Warden's engage, and a device
-# a frame on top of the fight pushed its heavy frames further (4080 rows, cf07ff61). A bot run that builds
-# stages whole keeps the entry build: when its static bodies join the physics world moves the
-# solver, so a seed replays only if they join on the same tick. A stage on show (stage 1 under the
-# title) keeps it too, so no device appears in view piece by piece.
 func _on_stage_built(stage: int) -> void:
 	if not terrain.built_threaded(stage) or contraptions.has(stage) or _building.has(stage):
 		return
@@ -268,7 +216,6 @@ func _on_stage_built(stage: int) -> void:
 
 
 func _process(_delta: float) -> void:
-	# Without a flow (a test) the steps run every frame, as ParkBuild's do.
 	if ctx == null or (ctx.flow != null and not ctx.flow.calm()):
 		return
 	for stage in _building:
@@ -284,9 +231,6 @@ func _process(_delta: float) -> void:
 		return
 
 
-# Contraptions for every stage whose ground is built and that has none yet. Setup covers
-# the first world; a later world's are added on the entry that builds its ground, so
-# asking for them never forces a build.
 func _add_contraptions() -> void:
 	var g: float = ctx.tuning.f("gravity")
 	var cruise: float = ctx.tuning.f("cruise")
@@ -311,7 +255,6 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	if retry:
 		_class_picks_owed = 0
 	Threat.follow_row(ctx.tuning)
-	# Compile every threat mark pipeline before play (Threat.Painter.warm_up), once a look.
 	Threat.Painter.warm_up(ctx.root)
 	if events != null:
 		_publish(events.end_all())
@@ -335,9 +278,6 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	if contraptions.has(stage):
 		contraptions[stage].reset()
 	layer = ""
-	# A retry replays the same stage: same event plan, same miniboss spots. The draw happens on
-	# every entry, so the stage's stream (Flow.seed_stage_stream) is at the same place for the
-	# fabricators and scrap that roll after it, retry or not.
 	var drawn: int = ctx.rng.randi()
 	if not retry or _stage_seed == 0:
 		_stage_seed = drawn
@@ -367,8 +307,6 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	terrain_view.rebuild(events)
 	last_miniboss_at = Vector3.INF
 	_pressure = -1.0
-	# Combat clears the stage's enemies in its own stage_entered handler, after this
-	# one, so the vault goes in on the first tick of play instead.
 	vault = null
 	_vault_pending = ctx.stages.has_vault()
 	codex_world = CodexWorld.new()
@@ -382,10 +320,6 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_cut_gov_air_refilled = false
 
 
-# The arena is not a stage (DESIGN-NOTES spine call 34). The live events close, the
-# director, the flood and the launch rail stop, and every stage map is parked until
-# the next stage_entered rebuilds the stage. Flow publishes this on arena entry and on
-# every arena retry.
 func _on_stage_content_cleared(_reason: String) -> void:
 	_release_destructibles()
 	if events != null:
@@ -412,8 +346,6 @@ func _on_stage_content_cleared(_reason: String) -> void:
 	_pressure = -1.0
 
 
-# The stage's heft destructibles (destructibles.gd): one instance a stage entry, rebuilt on a retry and freed with the
-# stage. A map with no destructible_rows hosts none, so nothing is built, ticked or hashed for it.
 func _host_destructibles(map) -> void:
 	_release_destructibles()
 	var rows := _destructible_rows(map)
@@ -446,7 +378,6 @@ static func _destructible_rows(map) -> Array:
 	return []
 
 
-# The ids the stage's contraptions already own, which a destructible row may not take.
 static func _contraption_ids(map) -> Array:
 	var ids: Array = []
 	if "contraptions" in map:
@@ -458,7 +389,6 @@ static func _contraption_ids(map) -> Array:
 func _mark_landing(stage: int, retry: bool) -> void:
 	launch.clear_landing()
 	launch.gravity = ctx.tuning.f("gravity")
-	# Ruling cv: this stage's launch turns in flight to the heading the place after it is entered on.
 	var next: Vector3 = ctx.flow.arrival_heading_after(stage) if ctx.flow != null and ctx.flow.has_method("arrival_heading_after") else Vector3.ZERO
 	launch.aim(next, ctx.camera)
 	var entry: Vector3
@@ -476,7 +406,6 @@ func _mark_landing(stage: int, retry: bool) -> void:
 	launch.mark_landing(entry, velocity, Callable(terrain, "height"))
 
 
-# Landing rings and a pad for an arrival that is not a stage entry (the Slag Bowl's), over its own ground.
 func mark_arrival(entry: Vector3, velocity: Vector3, height: Callable) -> void:
 	launch.clear_landing()
 	launch.gravity = ctx.tuning.f("gravity")
@@ -526,7 +455,6 @@ func _physics_process(delta: float) -> void:
 		for fact in contraptions[ctx.flow.stage()].step(delta, ball, velocity, player.kit, ride != null or launch.flying(), steering):
 			_contraption_fact(fact)
 		_step_cinder(delta, ball)
-	# After the contraption step, so a ride that boarded this tick has its hanger on the boarding frame.
 	_show_ride()
 	if bay.in_yard(ball):
 		_free_cooldowns()
@@ -575,23 +503,21 @@ func _on_park_warden_posture(enemy: Node3D, _posture: float, staggered: bool) ->
 	if events != null and staggered and not _park_warden_staggered:
 		events.notify_warden_phase("stagger")
 	_park_warden_staggered = staggered
-	# Never back up: a drained bar does not pulse the same chunk twice.
 	var phase_left: int = enemy.phase_chunks_left() if enemy.has_method("phase_chunks_left") else enemy.chunks_left()
 	var left: int = mini(_park_warden_chunks, phase_left)
 	for lost in range(4 - _park_warden_chunks + 1, 4 - left + 1):
 		if lost <= 3 and events != null:
 			events.notify_warden_phase("chunk_%d" % lost)
 	_park_warden_chunks = left
-	# A full guard is the engage's phase 1, published by the engage: a reading alone (a spawn's) opens no fight.
 	if left < BossPosture.CHUNKS:
 		_warden_phase_to(BossPosture.CHUNKS - maxi(left, 1) + 1)
 
 
-# Publishes each Warden fight phase up to `phase` not yet published this attempt, once each, so the band
-# and the screen hear every chunk the guard lost; a reading that loses nothing publishes nothing.
 func _warden_phase_to(phase: int) -> void:
+	assert(phase >= _warden_phase, "world: warden phase must not decrease (%d < %d)" % [phase, _warden_phase])
 	while _warden_phase < mini(phase, BossPosture.CHUNKS):
 		_warden_phase += 1
+		assert(_warden_phase <= BossPosture.CHUNKS)
 		ctx.events.fight_phase_changed.emit(WARDEN_FIGHT, _warden_phase, BossPosture.CHUNKS)
 
 
@@ -631,9 +557,6 @@ func _publish(facts: Array) -> void:
 				bus.world_fact.emit(fact["fact"], fact["at"])
 
 
-# Where an announced event lands, on the ground: the park row's site, the terrain change's
-# centre or the offer's ring, or Vector3.INF for one with no single place (the weather, the
-# flood, a squall).
 func _announced_at(fact: Dictionary) -> Vector3:
 	if not fact.has("at") or fact.get("family", "") == "weather":
 		return Vector3.INF
@@ -643,8 +566,6 @@ func _announced_at(fact: Dictionary) -> Vector3:
 	return at
 
 
-# The miniboss arrives where the director's seeded stream put it, on the ground and
-# inside the playable floor. A combat module without the kind gets a chaser instead.
 func _spawn_miniboss(at: Vector2) -> void:
 	var rect: Rect2 = terrain.map().play_rect
 	var x := clampf(at.x, rect.position.x, rect.end.x)
@@ -657,8 +578,6 @@ func _spawn_miniboss(at: Vector2) -> void:
 		ctx.spawner.spawn_enemy(MINIBOSS_FALLBACK, last_miniboss_at)
 
 
-# The rogue wakes once, when the ball first nears its site, never in the calm bay or on a
-# ride or launch; it lands on the site's centre inside the playable floor, sized to the disc.
 func _watch_rogue(ball: Vector3) -> void:
 	if not RogueDirector.wakes(rogue_plan, ball):
 		return
@@ -674,8 +593,6 @@ func _watch_rogue(ball: Vector3) -> void:
 		rogue.fit_site(float(plan.radius_m))
 
 
-# The world codex: read what just happened against the ground and the ball, hand it
-# to the detector, and pass anything that fired to the codex.
 func _watch_ground(delta: float, ball: Vector3) -> void:
 	codex_world.advance(delta)
 	var grounded: bool = ctx.player.state.grounded
@@ -683,7 +600,6 @@ func _watch_ground(delta: float, ball: Vector3) -> void:
 		_discover(codex_world.note("airborne", {"at": ball, "off_kicker": terrain.map().near_kicker_lip(Vector2(ball.x, ball.z))}))
 	elif grounded and flood.in_basin(ball) and flood.surface_y() > terrain.height(ball.x, ball.z):
 		_discover(codex_world.note("grounded", {"at": ball, "over_water": true}))
-	# The Highdraft's footing: the barge under the ball, the net deck, or stone.
 	var map = terrain.map()
 	if grounded and map.has_method("net_deck_height"):
 		var on := "barge" if _on_barge else ("deck" if map.material_at(ball.x, ball.z) == "net" else "island")
@@ -692,7 +608,6 @@ func _watch_ground(delta: float, ball: Vector3) -> void:
 	_was_grounded = grounded
 
 
-# The floor is lava: dwell on the cinder floor glows, then burns in pulses (cinder_heat.gd), never in calm.
 func _step_cinder(delta: float, ball: Vector3) -> void:
 	var heat := cinder_heat.step(delta, _on_cinder and not ctx.calm, ctx.run.hp)
 	contraptions[ctx.flow.stage()].set_cinder_glow(float(heat["glow"]))
@@ -714,9 +629,6 @@ func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 		contraptions[ctx.flow.stage()].note_slam(at)
 	if ctx.flow.in_stage():
 		_discover(codex_world.note("slam", {"at": at}))
-	# A slam landing breaks the plate under it, sends one breach_opened fact per plate
-	# (its WORLD_ROWS row carries the crack-and-fall cue) and lands on whatever stands
-	# in the pit below.
 	if breach != null and ctx.flow.in_stage():
 		var opened: Array[String] = breach.slam(at)
 		for id in opened:
@@ -727,8 +639,6 @@ func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 			_breach_strike(opened, at, strength)
 
 
-# The slam goes through the broken plates onto the tier below: every live enemy inside
-# their rects and more than 2 m under the landing takes the slam as a contact hit.
 func _breach_strike(opened: Array[String], at: Vector3, strength: float) -> void:
 	const Augments := preload("res://src/movement/augments.gd")
 	var enemies := get_tree().get_nodes_in_group("enemy").filter(func(e):
@@ -756,15 +666,12 @@ func _on_element_resolved(_element: String, material: String, behaviour: String,
 		_discover(codex_world.note("element", {"material": material, "behaviour": behaviour, "at": at}))
 
 
-# The codex publishes synergy_discovered and grants the burst; the world only reports.
 func _discover(fired: Array) -> void:
 	for entry in fired:
 		discoveries.append(entry)
 		ctx.codex.mark_discovered(entry["id"], entry["at"])
 
 
-# The plated vault off the fall line. Never in calm, and a combat module without the
-# kind (a null return) simply leaves the spot empty.
 func _spawn_vault() -> void:
 	if not ctx.stages.has_vault() or ctx.calm or not ctx.can_spawn():
 		return
@@ -775,19 +682,14 @@ func _spawn_vault() -> void:
 		view.set_vault(at, true, ctx.spawner.plating_of(node) if ctx.spawner.has_method("plating_of") else -1.0)
 
 
-# The stage's authored packs, if it has any; the director spawns nothing else then. A row's
-# own packs, elite and elite_arrival win over the table's.
 func _author_director(def := {}) -> void:
 	director.author(def, ctx.stages)
 
 
-# The enemy count the director is given: the group less the activities' standing enemies.
 func director_alive() -> int:
 	return maxi(0, get_tree().get_nodes_in_group("enemy").size() - activities.standing())
 
 
-# Director pack members left past director.gd LEAVE_M leave, out of sight: no death, no scrap, no kill counted.
-# Yard and overtime crews (yard_crew) and elite packs always stay.
 func _dismiss_left_packs() -> void:
 	var at: Vector3 = ctx.player.ball_position()
 	var ball := Vector2(at.x, at.z)
@@ -802,7 +704,6 @@ func _dismiss_left_packs() -> void:
 			enemy.queue_free()
 
 
-# What the director's cap counts: the enemies near the ball (director.gd HOLD_M), less the activities' own.
 func director_held() -> int:
 	var at: Vector3 = ctx.player.ball_position()
 	var ball := Vector2(at.x, at.z)
@@ -812,7 +713,6 @@ func director_held() -> int:
 		if not enemy is Node3D or activities.keeps(enemy):
 			continue
 		total += 1
-		# A body in the group without a kind (a test's stand-in) counts as an ordinary enemy.
 		var kind = enemy.get("kind")
 		if Director.holds(String(kind) if kind != null else "", Vector2(enemy.global_position.x, enemy.global_position.z), ball):
 			held += 1
@@ -855,16 +755,13 @@ func _step_director(delta: float) -> void:
 			var offset := Vector2(2.6, 0.0) if copy_idx == 1 else Vector2.ZERO
 			var enemy: Node3D
 			if kind_name == "dispatcher":
-				# The Dispatcher perches on a park post near its pack, 6 to 10 m up; none within 40 m, it brings its mast.
 				var perch: Vector3 = terrain.perch_near(Vector3(at.x, 0.0, at.y), ctx.flow.stage())
 				enemy = ctx.spawner.spawn_enemy(kind_name, terrain.drop_point(at.x, at.y, 2.4), affix, perch, hp_mult)
 			else:
 				enemy = ctx.spawner.spawn_enemy(kind_name, terrain.drop_point(at.x + offset.x, at.y + offset.y, 2.4), affix, Vector3.INF, hp_mult)
-			# The attacker budget reads one pack of one kind as one threat (attack_budget.gd).
 			if enemy != null:
 				enemy.set_meta("pack_seq", int(spawn.get("pack", -1)))
 				locks.note_member(enemy, int(spawn.get("pack", -1)), spawn.get("rider", false))
-			# SG2: every elite-pack member follows the elite rules (elements.gd elite_rules).
 			if (spawn.get("elite", false) or all_elite) and enemy != null:
 				enemy.set_meta("elite_pack", true)
 	var pressure: float = minf(1.0, director.pressure(alive) + events.pressure_bonus())
@@ -873,9 +770,6 @@ func _step_director(delta: float) -> void:
 		ctx.events.pressure_changed.emit(pressure)
 
 
-# The stage exit: the moment a gate is taken the ball is fired up the launch rail
-# with its horizontal speed kept, and a slow ball is pushed up to cruise along the rail,
-# which is a gift, not a cost.
 func _on_reward_chosen(_part_id: String) -> void:
 	var player = ctx.player
 	launch.gravity = ctx.tuning.f("gravity")
@@ -888,9 +782,6 @@ func _on_reward_chosen(_part_id: String) -> void:
 	ctx.events.launched.emit(velocity)
 
 
-# ---- v2 W6: contraptions, terrain changes, layers and Moss's bay ----
-
-# The ride holds the ball to its path each tick, then lets go with the speed it banked.
 func _hold_ride(delta: float) -> void:
 	var v = ride.step(delta)
 	if v != null:
@@ -900,7 +791,6 @@ func _hold_ride(delta: float) -> void:
 	ride = null
 
 
-# The line view draws the cable ride's hanger from the ride the ball is on; null clears it.
 func _show_ride() -> void:
 	var presentation = ctx.root.get("presentation") if ctx.root != null else null
 	if presentation != null and presentation.get("line_view") != null:
@@ -921,11 +811,9 @@ func _contraption_fact(fact: Dictionary) -> void:
 				ctx.player.add_external_accel(fact["accel"])
 			_discover(codex_world.note("thermal", {"at": ctx.player.ball_position()}))
 		"drag":
-			# A cinder floor slowing a rolling ball (contraptions.gd _build_cinder); a push of the world, so it holds in calm too.
 			ctx.player.add_external_accel(fact["accel"])
 			_on_cinder = FloorRule.on_floor(ctx.player.state)
 		"carry":
-			# The deck's own frame, not a world push, so it holds in calm too.
 			ctx.player.add_external_accel(fact["accel"])
 			_on_barge = true
 
@@ -951,7 +839,6 @@ func _bay_fact(fact: Dictionary) -> void:
 			_mark(fact["id"], fact["at"])
 
 
-# The shop seam: W4's economy (CONTRACTS "Loot and shop") when build carries one.
 func _shop():
 	var b = ctx.build_module() if ctx.has_method("build_module") else ctx.get("build")
 	if b == null or not "shop" in b:
@@ -959,8 +846,6 @@ func _shop():
 	return b.shop
 
 
-# The practice yard: whatever the ball spends there comes straight back, so a slot is
-# never left cooling while you are inside the yard's lines.
 func _free_cooldowns() -> void:
 	var abilities = ctx.player.abilities
 	for name in AbilityState.SLOTS:
@@ -984,10 +869,6 @@ func _mark(id: String, at: Vector3) -> void:
 	ctx.codex.mark_discovered(id, at)
 
 
-# The ball settles into a height band only on the ground, so a jump never flickers
-# the music. A change says which ride carried it there: the marble-run chutes, the
-# skylight halfpipe, or a drop or glide off a ledge. The grapple line and the
-# launchers announce themselves when they fire.
 func _watch_layer(delta: float, ball: Vector3) -> void:
 	var m = terrain.map()
 	if not m.has_method("layer_at"):
@@ -1040,26 +921,15 @@ func _on_flow_changed(state: String) -> void:
 		bay.undock()
 
 
-# The workshop visit after each stage opens the upgrade tree's next pick (W3), once per
-# stage per run: on boarding the bay, or at the stage's clear if the bay was skipped,
-# so no pick is lost and a retried visit never opens a second one. Under --world-one-builds
-# only the first stage of each world opens one (stages 1, 3 and 5 on the six-stage tables),
-# so allowed reads 2, 3 and 4 and a run that clears stage 5 holds its fourth pick before
-# the final boss (BIBLE.md:538); the cap per world still bounds it. A pick that falls due
-# while the ball is airborne waits for the next calm frame (grounded, or in the bay), so
-# the choice screen never pauses a jump.
 func _open_pick(stage: int) -> void:
 	var tree = ctx.player.tree if "tree" in ctx.player else null
 	if tree == null:
 		return
 	tree.max_depth = UpgradeTree.depth_cap(ctx.stages.world_of(ctx.run.stage)) if ctx.tuning.world_one() else UpgradeTree.DEPTHS
 	tree.world_one = ctx.tuning.world_one() and ctx.stages.world_of(ctx.run.stage) == 1
-	# A Continue from a cleared stage (SA-F1) whose pick opened before the launch.
 	if _picks_opened.has(stage) or (ctx.run.pick_opened and stage == ctx.run.stage):
 		return
 	if ctx.tuning.world_one():
-		# One stage-checkpoint pick per world, at its first stage; the cap itself is
-		# enforced by the tree's open_checkpoint.
 		if not _first_of_world(stage):
 			return
 	elif stage >= tree.max_depth:
@@ -1076,10 +946,6 @@ func _first_of_world(stage: int) -> bool:
 	return stage <= 1 or ctx.stages.world_of(stage - 1) != ctx.stages.world_of(stage)
 
 
-# The slice table: each heft class the run has not been rewarded for opens one pick, so a
-# rise from class I to III owes two. A drop and re-rise owes nothing, and a retry puts the
-# rewarded class back with the rest of the run state. The pick waits for a grounded ball
-# and no live Warden fight, since an open pick pauses the tree.
 func _on_class_rise(heft_class: int, _heft: float) -> void:
 	if not ctx.stages.PICK_ON_CLASS_UP or heft_class <= ctx.run.class_rewarded:
 		return

@@ -2,21 +2,7 @@ extends "res://src/world/map_gorge.gd"
 
 const CodexWorld := preload("res://src/world/codex_world.gd")
 
-# The slice table's Cable Reach: the gorge's own ground, towers, bridges and tunnels, with
-# three authored lines of chained rides from the spawn to the Warden. Sable glides down the
-# deck, rides a banked sweeper round the west shelf and dives down an open ramp through the
-# old tunnel w1 notch into the trough; Rivet and Kest take the cable down the east shelf, and Rivet breaks
-# the cracked wall into tunnel e1 while Kest runs the skylight halfpipe and a new berm onto
-# the bowl's bank. Both low lines share one kicker on the bowl's north bank that throws the
-# ball at the Warden. The Warden's site has four swing pillars, and the reward gates stand
-# in a fixed row south of it where the workshop bay always docks. The barges, lifts, cannon,
-# trebuchet, geyser, sky dish and terrain events are not built here. One valve opens a
-# cache pocket off the west shelf; the three-stage game's gorge is unchanged (map_gorge.gd).
 
-# Sable's strand: a sweeper on the west shelf, one left-hand turn of radius SWEEP_LINE about
-# SWEEP_CENTRE from the deck's edge to the line of tunnel w1, with a banked arc on its outside,
-# then the dive. The ball's own line is the circle of radius SWEEP_LINE; the berm's crest sits
-# on it. The glide from the spawn lands near (-28,-118) and runs west into the berm's entry.
 const SWEEP_CENTRE := Vector2(-32.3, -78.0)
 const SWEEP_LINE := 68.0
 const SWEEP_ARC := 58.0
@@ -29,11 +15,6 @@ const SWEEP_END := -228.6
 const SWEEP_STEP := 5.0
 const MOUTH := Vector2(-58.0, -10.0)
 
-# The dive: tunnel w1's axis opened into a ramp. It leaves the shelf 45 m before the tunnel's
-# mouth, where the sweeper ends, steepens over DIVE_EASE_IN metres to about 23 degrees, holds
-# that, and flattens over DIVE_EASE_OUT metres onto the trough floor at 60 m past the mouth,
-# so a ball arriving at 28 to 40 m/s is carried down it and leaves it low and level. DIVE_HALF
-# is the flat half width, DIVE_SIDE the blend out to the old ground.
 const DIVE_DIR := Vector2(0.74986, 0.66161)
 const DIVE_FROM := -45.0
 const DIVE_TO := 60.0
@@ -66,10 +47,6 @@ const CABLE_RADIUS := 4.5
 const THERMAL_A := Vector2(80.0, -12.0)
 const THERMAL_B := Vector2(44.0, 132.0)
 
-# The spawn launch: the flank under the 16 m drop is steepened between LAUNCH_FROM and
-# LAUNCH_TO by LAUNCH_DROP metres and eased back to the old flank by LAUNCH_BACK_TO, across
-# the whole width (a function of z only, so there is no scarp), so the landing turns the fall
-# into rolling speed toward any of the three lines.
 const LAUNCH_DROP := 3.5
 const LAUNCH_FROM := -158.0
 const LAUNCH_TO := -135.0
@@ -80,8 +57,6 @@ const OPEN_TUNNELS := ["w1", "e1"]
 
 const POST_HEIGHT := 16.0
 const PILLAR_HEIGHT := 20.0
-# Each {"at": Vector2, "height": float}: the posts this map adds or keeps, all footed at
-# ground - 0.5 like every other post.
 const POSTS := [
 	{"at": Vector2(-136.0, -86.0), "height": POST_HEIGHT},
 	{"at": Vector2(46.0, -143.0), "height": POST_HEIGHT},
@@ -105,9 +80,6 @@ const WALLS := [
 
 
 var _dive_floor := PackedFloat32Array()
-# The relic cache (interact.gd), behind the valve's secret pocket: down the slope past its back
-# wall, on the first level trough floor, so the ball that found the valve rolls onto it next.
-# Unlike a valve or activity cache, it always holds a relic.
 var relic_spot := SECRET_CACHE + Vector2(0.0, 48.0)
 
 
@@ -147,8 +119,6 @@ func _init() -> void:
 	_reach_specs()
 
 
-# ---- The shape ----
-
 func sample(x: float, z: float) -> Array:
 	var kept := marble_path
 	marble_path = []
@@ -164,8 +134,6 @@ func sample(x: float, z: float) -> Array:
 	return [h, s[1]]
 
 
-# The dive's floor height each metre from DIVE_FROM: the slope is eased in and out and the
-# whole curve scaled to fall from the shelf to the trough floor.
 func _build_dive() -> void:
 	var length := DIVE_TO - DIVE_FROM
 	var count := int(length) + 1
@@ -202,8 +170,6 @@ func overlay_height(_id: String, _x: float, _z: float, _ground: float) -> float:
 	return -INF
 
 
-# The sweeper's line as a polyline, so the ride fact and the gorge's channel helpers still
-# find the run; the straight run to the tunnel's mouth closes it.
 func _marble_points() -> Array:
 	var pts := []
 	var steps := int(absf(SWEEP_END - SWEEP_START) / SWEEP_STEP)
@@ -214,8 +180,6 @@ func _marble_points() -> Array:
 	pts.append(Vector3(MOUTH.x, flank(MOUTH.y), MOUTH.y))
 	return pts
 
-
-# ---- Contraption specs ----
 
 func _reach_specs() -> void:
 	var wall := {}
@@ -235,8 +199,6 @@ func _reach_specs() -> void:
 			"codex": CodexWorld.entry("reach_pressure_cache")},
 	]
 
-
-# ---- Props ----
 
 func build_props(parent: Node3D, ground: Callable) -> void:
 	var rust := Palette.solid(Palette.RUST)
@@ -282,7 +244,6 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 	spawn_seam.material_override = spawn_seam_material
 
 
-# The gorge's landmark without the satellite that stands on the dive's line.
 func _landmark(parent: Node3D, ground: Callable, enamel: Material, light: Material, copper: Material, rust: Material) -> void:
 	var foot: Vector3 = ground.call(TOWER.x, TOWER.z, 0.0)
 	cylinder(parent, TOWER_RADIUS, TOWER_HEIGHT, foot + Vector3.UP * TOWER_HEIGHT * 0.5, enamel)
@@ -316,8 +277,6 @@ func _landmark(parent: Node3D, ground: Callable, enamel: Material, light: Materi
 	parent.add_child(omni)
 
 
-# The gorge's tunnel roofs without those on an authored line: the dive (w1) and Rivet's
-# tunnel (e1) are open to the sky, since a ball arriving in flight meets a roof as a wall.
 func _tunnel_roofs(parent: Node3D, ground: Callable, mat: Material) -> void:
 	for id in TUNNELS:
 		if id in OPEN_TUNNELS:

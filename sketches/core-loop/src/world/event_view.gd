@@ -6,13 +6,6 @@ const EventDirector := preload("res://src/world/event_director.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
-# Draws the stage's events from the director's models and nothing else, so what you
-# see is the state the rules use. A participatory event stands a beam over its start
-# ring in the event colour, visible from anywhere on the stage, with its name and
-# "roll in" on a sign; nothing here has a collider, so no event can block a line.
-# The sky holds at most three pillars: the beacon's (spine), one event's and the
-# vault's. Only the first open offer shows its beam, and a beam fades out as the
-# ball or the lens closes within 20 m, so a pillar points the way and never hides the fight.
 
 const BEAM_HEIGHT := 70.0
 const GATE_RADIUS := 6.0
@@ -29,7 +22,6 @@ var player
 
 var _vault_pillar: MeshInstance3D
 var _vault_anchor: Node3D
-# The vault's screen prompt (src/ui/world_prompt.gd); its text is empty with no vault.
 var vault_prompt
 var _arrival_rings: Array[MeshInstance3D] = []
 
@@ -61,8 +53,6 @@ func setup(terrain_ref, player_ref = null) -> void:
 	add_child(_dust_wall)
 
 
-# The haze starts from the fog the world row left on the environment, so a world's own depth fog
-# survives every rebuild and clear. WorldLook calls this after it enters a world's row.
 func record_fog() -> void:
 	if terrain != null and terrain.environment != null:
 		_base_fog = terrain.environment.fog_density
@@ -79,8 +69,6 @@ func rebuild(director_ref) -> void:
 	_apply_fog(0.0)
 
 
-# Nothing of the stage's events stays drawn: beams, arrival rings, the vault pillar,
-# the dust wall and the squall's haze.
 func clear() -> void:
 	director = null
 	for entry in _offer_nodes:
@@ -155,8 +143,6 @@ func _build_relay(entry: Dictionary, model) -> void:
 	var foot := _ground(model.relay)
 	var coil_mat := Palette.solid(Palette.ARC, 0.3)
 	entry["coil_mat"] = coil_mat
-	# The dressed mast (tools/blender/world_one/relay_stake.py): a lattice tower with its coil's orb 17 m
-	# up, where the primitive coil sat. The primitives stand in only when the GLB is missing.
 	if ResourceLoader.exists(RELAY_MAST):
 		var dressed := (load(RELAY_MAST) as PackedScene).instantiate() as Node3D
 		var glow := dressed.find_child("CoilGlow", true, false) as MeshInstance3D
@@ -206,7 +192,6 @@ func _build_hauler(entry: Dictionary) -> void:
 	entry["hauler"] = hauler
 
 
-# The surge run's gate ring, standing on the ground at `ground`, facing along `along`.
 static func gate_ring(ground: Vector3, along: Vector2) -> MeshInstance3D:
 	var g := MeshInstance3D.new()
 	var torus := TorusMesh.new()
@@ -215,7 +200,6 @@ static func gate_ring(ground: Vector3, along: Vector2) -> MeshInstance3D:
 	g.mesh = torus
 	g.material_override = Palette.solid(Palette.SAND, 0.6)
 	g.position = ground + Vector3.UP * (GATE_RADIUS - 1.0)
-	# The torus lies in its local XZ plane; stand it up facing along the route.
 	g.basis = Basis.looking_at(Vector3(along.x, 0.0, along.y), Vector3.UP) * Basis(Vector3.RIGHT, PI * 0.5)
 	return g
 
@@ -232,8 +216,6 @@ static func _pillar(color: Color) -> MeshInstance3D:
 	return beam
 
 
-# A ground ring in the enemy colour for every spawn the director has placed but not
-# yet delivered, so nothing arrives that you could not have seen coming.
 func show_arrivals(arrivals: Array) -> void:
 	while _arrival_rings.size() < arrivals.size():
 		var ring := MeshInstance3D.new()
@@ -254,8 +236,6 @@ func show_arrivals(arrivals: Array) -> void:
 			ring.scale = Vector3.ONE * lerpf(0.4, 1.0, clampf(left, 0.0, 1.0))
 
 
-# The vault's pillar and its prompt stand while its vault does. The prompt says what
-# breaking it pays and the plating that guards it (plating below 0 when unknown).
 func set_vault(at: Vector3, standing: bool, plating := -1.0) -> void:
 	_vault_pillar.visible = standing
 	_vault_pillar.position = at + Vector3.UP * BEAM_HEIGHT * 0.5
@@ -288,8 +268,6 @@ func _fade(beam: MeshInstance3D) -> void:
 	if not beam.visible or player == null:
 		return
 	var d := _flat_to(beam, player.ball_position())
-	# The lens trails the ball by the camera's arm, so a pillar the ball has passed stands in front of the lens
-	# again: measured from the ball alone, it faded back in and the lens flew through it (an amber wash).
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 	if cam != null:
 		d = minf(d, _flat_to(beam, cam.global_position))
@@ -355,8 +333,6 @@ func _update_surge(entry: Dictionary, model, live: bool, pulse: float) -> void:
 		entry["status"].position = _ground(model.gates[model.next_gate]) + Vector3.UP * (GATE_RADIUS * 2.0 + 1.5)
 
 
-# The squall is seen before it is felt: a dust wall walks in from upwind for the
-# whole lead, then the air thickens to a haze that never hides a threat at combat range.
 func _update_squall() -> void:
 	var squall = director.squall
 	if squall == null:

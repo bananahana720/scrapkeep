@@ -10,15 +10,6 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 
-# A cracked wall and the buried cache behind it, the secrets family (LOOP-REDESIGN
-# section 9): a verdigris concrete pocket with a charcoal groove, its open side walled
-# off by a cracked face. The wall is the ask. Meet it at BREAK_SPEED, or sprinting at
-# SPRINT_SPEED, or land a smash beside it, and it crumbles the tick before contact, so
-# the ball keeps its speed; slower, it is a wall. The sealed cache's gauge is how fast
-# you are coming at the wall, so the ring filling says what the wall wants.
-#
-# Inside, E opens the chest (the one place on the map you stop on purpose) and three
-# parts rise on pedestals; roll onto one to take it and the others sink.
 
 const BREAK_SPEED := 18.0
 const SPRINT_SPEED := 8.0
@@ -30,32 +21,18 @@ const HEIGHT := 6.0
 const SINK := 1.5
 const PICKS := 3
 const PICK_RARITIES := ["common", "rare"]
-# Left of the chest, the chest itself, right of it: along the back wall, so the ball
-# that stopped to open it is clear of all three.
 const PEDESTALS := [Vector3(-4.0, 0.0, -3.0), Vector3(0.0, 0.0, -3.5), Vector3(4.0, 0.0, -3.0)]
 const PEDESTAL_REACH := 1.7
-# RL2: the chance a cache's last pedestal holds a relic for a slot the pilot has not
-# filled (a part on the relic rung) instead of an ordinary part. Drawn from the device's own luck stream under another key,
-# so the parts roll above it consumes exactly what it did before relics.
 const RELIC_CHANCE := 0.2
 const LANE_OFFSET := 6.0
 const LANE_EDGE := 4.0
 const LANE_LEVEL_SPAN := 2.0
 const LANE_LEVEL_RISE := 1.0
-# The shell's own warm glow, brighter once the wall is fired. No light: a per-cache
-# OmniLight3D freed with the cache on a stage change made Godot 4.7.2 Forward+ segfault on
-# the next boss entry (GPU only), as the wave 9 cage light did.
 const RIM_STRIP := 0.2
 const RIM_GLOW := {"sealed": 1.6, "fired": 2.4}
 
 enum { SEALED, OPEN, PICKING, TAKEN }
 
-# The keeper flag a spent cache puts up (W46 E1-15, design-v3/WAYFINDING.md section 4): its visited mark, so a player
-# circling back reads a finished cache from one still open. A six-turn copper spring pole and a square of sand cloth
-# tied on with copper rope (tools/blender/world_one/keeper_flag.py), never mint: mint means press now, and a spent cache
-# asks for nothing. The model is authored at real size (0.6 by 0.4 m cloth) and stands at FLAG_SCALE, the device's own
-# storybook scale (its chest is 2 m wide), so it reads from the chase camera. It springs up from its coil over
-# FLAG_SETTLE_S, then its cloth sways in a vertex wind; under reduced motion it stands still. No light, no collider.
 const FLAG_MODEL := "res://assets/models/world_one/keeper_flag.glb"
 const FLAG_SCALE := 3.0
 const FLAG_SETTLE_S := 0.8
@@ -82,7 +59,6 @@ var state := SEALED
 var offers: Array = []
 var taken := ""
 var consumable_dropped := ""
-# An authored cache can set relic_guaranteed to always hold one; relic_chance is the test seam.
 var relic_guaranteed := false
 var relic_chance := RELIC_CHANCE
 var _wall: Node3D
@@ -91,14 +67,10 @@ var _rim_glow: StandardMaterial3D
 var _roof: GeometryInstance3D
 var _pedestals: Array = []
 var _inside: Array = []
-# The keeper flag once the cache is spent (raise_flag), else null.
 var flag: Node3D
 const MODEL := "res://assets/models/world_one/cracked_cache.glb"
 const REQUIRED := ["CacheShell", "CacheRoof", "CacheWall", "CacheChest", "CacheLid", "CachePedestal"]
 static var _shared: Array = []
-# VX3: the shell and chest wear the workshop finish (concrete and painted metal), whose
-# chipped edges give the pocket a lighter rim. The finish multiplies the vertex colours, so the
-# amber signpost painted into them stays amber.
 const FINISH := {"device_concrete": 0, "device_metal": 1}
 static var _loaded := false
 
@@ -126,8 +98,6 @@ func build() -> void:
 		ctx.events.interact_fired.connect(_on_interact_fired)
 
 
-# The lane spot is used only inside the play rect (less LANE_EDGE) and on ground that is level over
-# LANE_LEVEL_SPAN metres; otherwise the cache stays where the map placed it.
 static func lane_clear(rect: Rect2, at: Vector3, height: Callable) -> bool:
 	if not rect.grow(-LANE_EDGE).has_point(Vector2(at.x, at.z)):
 		return false
@@ -390,10 +360,6 @@ func _build_model(parts: Array) -> void:
 	_lid.position = chest + Vector3.UP * 1.35
 
 
-# The workshop finish shader carries no emission, so the glow is this cache's own additive
-# overlay on its shell (greybox: the roof), one material per cache.
-# The warm rim is a thin additive strip along the shell's top front edge, on its own mesh. An overlay on
-# the whole shell washed the teal workshop finish to near white (wave 12). No Light3D anywhere.
 func _build_rim_glow() -> void:
 	_rim_glow = StandardMaterial3D.new()
 	_rim_glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
@@ -418,7 +384,6 @@ func _build_rim_glow() -> void:
 	add_child(strip)
 
 
-# Mesh-local size for the workshop shader's edge chips; meshes need not be centred.
 static func _finish_size(vertices: PackedVector3Array) -> Vector3:
 	var reach := Vector3.ZERO
 	for at in vertices:
@@ -491,8 +456,6 @@ static func _parts() -> Array:
 	return _shared
 
 
-# One named part of the model on parent, or null when the model is missing. The park's cracked
-# pockets (activities.gd) wear the shell, wall and pedestal over colliders of their own.
 static func model_part(part_name: String, parent: Node3D) -> MeshInstance3D:
 	return _attach(_parts(), part_name, parent)
 
@@ -509,8 +472,6 @@ static func _attach(parts: Array, part_name: String, parent: Node3D) -> MeshInst
 	return null
 
 
-# take() publishes cache_spent at this cache; hearing its own fact, the cache puts its keeper flag up on the roof's
-# front corner, over the open wall, where it reads from every side.
 func _on_world_fact(kind: String, at: Vector3) -> void:
 	if kind != "cache_spent" or at != global_position:
 		return
@@ -539,9 +500,6 @@ func _exit_tree() -> void:
 		ctx.events.interact_fired.disconnect(_on_interact_fired)
 
 
-# The keeper flag under parent with its foot at `at` (world), sprung up from its coil unless still, its cloth swaying
-# unless still; null when the model is missing. One call for every finished cache: this device's own, and the park's
-# cracked pockets (site_markers.gd, on their activity_done). Freed with parent.
 static func raise_flag(parent: Node3D, at: Vector3, still := false) -> Node3D:
 	var packed: PackedScene = load(FLAG_MODEL) as PackedScene if ResourceLoader.exists(FLAG_MODEL) else null
 	var raised: Node3D = packed.instantiate() as Node3D if packed != null else null

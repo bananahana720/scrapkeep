@@ -2,10 +2,6 @@ extends RefCounted
 
 const Route := preload("res://src/world/route.gd")
 
-# Surge Run: roll into the ring and the sluice gates open behind you. A wall of water
-# chases you down the route and the gates ahead must be taken in order before the
-# front reaches each one. The front is the timer you can see, and riding just ahead
-# of it pushes you on, so the surge is a threat and a tailwind in one body.
 
 const GATE_COUNT := 6
 const GATE_RADIUS := 7.5
@@ -16,7 +12,6 @@ const PUSH_BEHIND := 6.0
 const PUSH_AHEAD := 14.0
 const PUSH_WIDTH := 16.0
 const GRACE := 2.0
-# A park course's gates stand on a line's deck, so a ball on the ground under it takes none (activities.gd).
 const GATE_HEIGHT := 8.0
 
 var id := "surge_run"
@@ -27,13 +22,10 @@ var gates: Array[Vector2] = []
 var gate_distances: Array[float] = []
 var next_gate := 0
 var front := FRONT_START
-# Where the front starts, behind the head (a park course starts it further back: surge_course.gd).
 var front_start := FRONT_START
 var front_speed := 16.0
 var elapsed := 0.0
-# Fraction of the run at which a miniboss arrives; below zero for none.
 var miniboss_at := -1.0
-# Each gate's deck height, or empty for the ground-level Reach, where only the plan counts.
 var gate_heights: Array[float] = []
 
 
@@ -70,7 +62,6 @@ func step(delta: float, ball: Vector3, _velocity: Vector3) -> String:
 	return ""
 
 
-# Riding the front: a push along the route while you are at the wall of water.
 func push(ball: Vector3, velocity: Vector3) -> Vector3:
 	var p: Vector2 = route.project(Vector2(ball.x, ball.z))
 	if p.y > PUSH_WIDTH or p.x < front - PUSH_BEHIND or p.x > front + PUSH_AHEAD:
@@ -85,7 +76,6 @@ func push(ball: Vector3, velocity: Vector3) -> Vector3:
 	return along * PUSH
 
 
-# The deck's height this far along, between the gates' heights (the first and last hold past the ends).
 func deck_height(distance: float) -> float:
 	if gate_heights.is_empty():
 		return 0.0
@@ -117,7 +107,6 @@ func front_tangent() -> Vector2:
 	return route.tangent(maxf(front, 0.0))
 
 
-# Where a miniboss may arrive: somewhere ahead on the run, off to its side.
 func miniboss_zone() -> Array:
 	return [route.at(route.total * 0.75), Vector2(12.0, 26.0)]
 

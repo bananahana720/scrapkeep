@@ -1,55 +1,5 @@
 extends RefCounted
 
-# The stage graph (design-v3/PARK.md 2.11, K-UNITS KB8): the stage's one measured space. Built
-# by tools/park_graph.gd from the park file and its bake, read here from graph.bin. Every
-# system that asks "how far along the stage" asks this graph: the spawn and pocket checks
-# (2.12), the director's home arrivals (a home is ahead when its site's d_landmark is smaller
-# than the ball's), the traversal tool's progress_m.
-#
-# Nodes. The ground lattice comes first: one node per 8 m on the bake's 2 m grid (every fourth
-# vertex), 201 by 201, row-major (z, then x), node (I, J) at x = -800 + 8 I, z = -800 + 8 J, at
-# the ground height, or on a hole cell at the under.bin floor. Then the decks: for each park row
-# whose y is not null, in file order, its own lattice of 8 m steps along and across its yaw,
-# centred on its footprint, at that y. node_row(n) names the deck row, "" for the ground.
-#
-# Edges are directed, kept as CSR in both directions, each with its length in path metres and
-# the park or contraption row id of a ride edge ("" for ground). d_landmark and d_spawn are the
-# two distance fields the tool stores, INF where no path reaches.
-#
-# Flags are this graph's own bits; none are copied from any game (research/comps/
-# pocket-placement.md:58).
-#
-# Zones (SQ13, version 2). The stage is also cut into landform zones, the coarse grain beside the
-# 8 m nodes (research/comps/pocket-placement.md:49: zones decide the story of the stage, nodes
-# decide the physics). Every node belongs to exactly one zone: zone_of(n), never -1 in a version 2
-# file. A zone is one connected piece of one landform: a park row's footprint (the smallest
-# footprint wins where rows overlap), a deck row's lattice, or the open ground between landforms
-# (one zone per connected piece, so a wall across the plain makes two). Anchor_field rows are
-# furniture and the one background row that covers most of the square is the open ground; neither
-# makes a zone of its own. A piece under ZONE_FRAGMENT_NODES that is not the largest of its
-# landform joins the zone it shares most edges with. tools/park_graph.gd bakes the zones and their
-# crossings into graph.bin; zones(), crossings() and anchors() read them.
-#
-# A crossing joins two zones in one move: `walk` is a ground boundary walkable both ways (at
-# least ZONE_MIN_LINKS node links each way), `ride` is one ride edge row (a kicker, a cable, a
-# lift) from one zone to the other, `drop` is a ground boundary walkable one way only (a ledge
-# edge, at least ZONE_MIN_LINKS links), from the higher zone to the lower. A zone's entrances are
-# the zones that reach it in one move (walk either way, ride in, drop in); a way out is not an
-# entrance. `degree` is the entrance count. An anchor is a zone of degree 1: one way in, the
-# analog of a dead end (comps pocket-placement.md step 3).
-#
-# Zone record (zones()): id, name, kind (landform, deck, under, open), row ("" for open), nodes,
-# cx and cz (mean position, 0.1 m), line (holds a line node), warden (holds a warden-ring node),
-# door_ok (door_ok node count), d_spawn and d_landmark (the least path metres over the zone's
-# nodes, the entry cost; -1 when unreachable), degree, entrances and exits (zone ids, ascending),
-# openings (walk plus ride crossings touching the zone: the gaps a filler could close), drops
-# (drop crossings touching it).
-# Crossing record (crossings()): a, b, kind, row ("" unless ride), links; a ride and a drop run
-# from a to b, a walk is listed with a < b.
-# Anchor record (anchors()): zone, name, cost (the zone's d_spawn), d_landmark, on_route (the zone
-# holds a line or warden node), viable (door_nodes at least ANCHOR_MIN_DOOR_NODES), door_nodes,
-# rank (1 for the costliest viable off-route anchor, 0 for an anchor that is on the route or has
-# too few door nodes).
 
 const Stamps := preload("res://src/world/park/park_stamps.gd")
 
@@ -71,7 +21,6 @@ const DOOR_OK := 16
 const SIGHT_OK := 32
 const UNDER := 64
 const DECK := 128
-# Zones (SQ13), start values.
 const ZONE_MIN_LINKS := 2
 const ZONE_BACKGROUND_SHARE := 0.5
 const ZONE_FRAGMENT_NODES := 16
@@ -100,7 +49,6 @@ var node_zone := PackedInt32Array()
 var zone_table := []
 var crossing_table := []
 var _members := []
-# The search heap, (distance, node) pairs, ordered by distance then node.
 var _hd := PackedFloat32Array()
 var _hn := PackedInt32Array()
 
@@ -192,7 +140,6 @@ func to_bytes() -> PackedByteArray:
 	return s.data_array
 
 
-# JSON reads every number as a float: the zone tables hold ints, restored here.
 static func _normalize_zones(raw: Array) -> Array:
 	var out := []
 	for z in raw:
@@ -226,7 +173,6 @@ static func _ints(s: StreamPeerBuffer, n: int) -> PackedInt32Array:
 	return s.get_data(4 * n)[1].to_int32_array()
 
 
-# Builds the reverse CSR from the forward one (stable: sources in node order).
 func reverse() -> void:
 	var n := px.size()
 	roff = PackedInt32Array()
@@ -276,8 +222,6 @@ func flag_names(node: int) -> PackedStringArray:
 	return out
 
 
-# --- Zones (SQ13) ---
-
 func zones() -> Array:
 	return zone_table
 
@@ -290,12 +234,10 @@ func zone_count() -> int:
 	return zone_table.size()
 
 
-# The zone of a node, -1 when the file has no zones (a version 1 graph).
 func zone_of(node: int) -> int:
 	return node_zone[node] if node < node_zone.size() else -1
 
 
-# The id of the zone with this name, -1 for none.
 func zone_named(zone_name: String) -> int:
 	for z in zone_table:
 		if z["name"] == zone_name:
@@ -303,7 +245,6 @@ func zone_named(zone_name: String) -> int:
 	return -1
 
 
-# The nodes of a zone in node order.
 func zone_nodes(zone: int) -> PackedInt32Array:
 	if _members.is_empty():
 		for k in zone_table.size():
@@ -314,7 +255,6 @@ func zone_nodes(zone: int) -> PackedInt32Array:
 	return _members[zone]
 
 
-# The door_ok nodes of a zone, in node order.
 func zone_door_nodes(zone: int) -> PackedInt32Array:
 	var out := PackedInt32Array()
 	for n in zone_nodes(zone):
@@ -323,9 +263,6 @@ func zone_door_nodes(zone: int) -> PackedInt32Array:
 	return out
 
 
-# Every zone of degree 1 that the spawn reaches, the costliest (greatest d_spawn) first, ties to
-# the lower zone id. rank counts the off-route anchors with a door_ok node from 1; an anchor on
-# the route or without a door has rank 0.
 func anchors() -> Array:
 	var out := []
 	for z in zone_table:
@@ -342,15 +279,12 @@ func anchors() -> Array:
 	return out
 
 
-# The ground lattice index under (x, z), clamped to the square.
 static func lattice_index(x: float, z: float) -> int:
 	var i := clampi(roundi((x + HALF_M) / STEP_M), 0, SIDE - 1)
 	var j := clampi(roundi((z + HALF_M) / STEP_M), 0, SIDE - 1)
 	return j * SIDE + i
 
 
-# A Vector2 is a point on the ground plane: the ground (or tunnel floor) node under it. A
-# Vector3 is a point in space: the nearest node of any kind, decks included.
 func nearest(at) -> int:
 	if at is Vector2:
 		return lattice_index(at.x, at.y)
@@ -362,7 +296,6 @@ func nearest(at) -> int:
 		if d < best_d:
 			best_d = d
 			best = n
-	# Ground nodes round the lattice point under p can be nearer in 3D on a slope.
 	var c := lattice_index(p.x, p.z)
 	var ci := c % SIDE
 	var cj := c / SIDE
@@ -380,7 +313,6 @@ func nearest(at) -> int:
 	return best
 
 
-# The node of `nodes` nearest p in 3D; ties go to the lower index. -1 for an empty set.
 func nearest_in(nodes: PackedInt32Array, p: Vector3) -> int:
 	var best := -1
 	var best_d := INF
@@ -421,9 +353,6 @@ func d_spawn_node(node: int) -> float:
 	return d_from[node]
 
 
-# Dijkstra from every source at 0. reverse walks edges backwards, so the result is the distance
-# TO the sources. Stops past cutoff, or once stop_at is settled. Ties settle the lower node
-# first, so the result never depends on insertion order.
 func search(sources: PackedInt32Array, reverse := false, cutoff := INF, stop_at := -1) -> PackedFloat32Array:
 	var n := px.size()
 	var dist := PackedFloat32Array()
@@ -461,7 +390,6 @@ func search(sources: PackedInt32Array, reverse := false, cutoff := INF, stop_at 
 	return dist
 
 
-# Dijkstra that also keeps each node's predecessor, for the line path.
 func search_prev(source: int) -> Dictionary:
 	var n := px.size()
 	var dist := PackedFloat32Array()
@@ -492,7 +420,6 @@ func search_prev(source: int) -> Dictionary:
 	return {"dist": dist, "prev": prev}
 
 
-# Every node reachable from the sources, one byte per node.
 func reach(sources: PackedInt32Array) -> PackedByteArray:
 	var seen := PackedByteArray()
 	seen.resize(px.size())
@@ -558,9 +485,6 @@ func _pop() -> void:
 		k = m
 
 
-# --- Footprints: which nodes stand for a park row, a disc or a box. ---
-
-# A route as the place ids it passes: from, the via rows, to, with repeats collapsed.
 static func route_sequence(route: Dictionary) -> PackedStringArray:
 	var seq := PackedStringArray()
 	for id in [route["from"]] + Array(route["via"]) + [route["to"]]:
@@ -569,7 +493,6 @@ static func route_sequence(route: Dictionary) -> PackedStringArray:
 	return seq
 
 
-# Ground lattice nodes in the axis-aligned box lo..hi.
 func box_nodes(lo: Vector2, hi: Vector2) -> PackedInt32Array:
 	var out := PackedInt32Array()
 	if lo.x > HALF_M or lo.y > HALF_M or hi.x < -HALF_M or hi.y < -HALF_M:
@@ -584,7 +507,6 @@ func box_nodes(lo: Vector2, hi: Vector2) -> PackedInt32Array:
 	return out
 
 
-# Ground lattice nodes within radius of p, and always the one under p, in node order.
 func disc_nodes(p: Vector2, radius: float) -> PackedInt32Array:
 	var out := PackedInt32Array()
 	for o in box_nodes(p - Vector2(radius, radius), p + Vector2(radius, radius)):
@@ -597,7 +519,6 @@ func disc_nodes(p: Vector2, radius: float) -> PackedInt32Array:
 	return out
 
 
-# Ground lattice nodes inside a park_stamps.gd frame's footprint.
 func inside_nodes(f: Dictionary) -> PackedInt32Array:
 	var box := Stamps.bounds(f)
 	var out := PackedInt32Array()
@@ -607,8 +528,6 @@ func inside_nodes(f: Dictionary) -> PackedInt32Array:
 	return out
 
 
-# A park row's nodes: its deck (count nodes from start) when it has y, else the ground lattice
-# nodes inside its footprint, else the node under its centre.
 func footprint_nodes(row: Dictionary, start: int, count: int) -> PackedInt32Array:
 	if row["y"] != null:
 		var deck := PackedInt32Array()
@@ -621,7 +540,6 @@ func footprint_nodes(row: Dictionary, start: int, count: int) -> PackedInt32Arra
 	return out
 
 
-# The node a point on a site row stands on: the site's deck when it has y, else the ground.
 func site_node(park: Dictionary, row_index: Dictionary, deck_start: PackedInt32Array, deck_count: PackedInt32Array, p: Vector2, site: String) -> int:
 	if row_index.has(site):
 		var k: int = row_index[site]

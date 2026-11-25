@@ -1,9 +1,5 @@
 extends RefCounted
 
-# The dust squall: an ambient weather front. It is seen coming (a dust wall on the
-# horizon for the whole lead), thickens the air to a readable haze and blows across
-# the stage. The director drops any part of the wind that would oppose the ball's
-# motion, so a headwind costs nothing and a tailwind is free speed.
 
 const RAMP := 3.0
 const WIND := 5.0
@@ -26,7 +22,6 @@ func begin(seconds: float) -> void:
 	live = true
 
 
-# Returns true once the squall has blown through.
 func step(delta: float) -> bool:
 	if not live:
 		return false

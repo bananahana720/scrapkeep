@@ -7,8 +7,6 @@ const Rows := preload("res://src/core/event_kinds.gd")
 const ActivityView := preload("res://src/world/activity_view.gd")
 const FOG_ALPHA := 0.14
 
-# A local electrical veil uses KE1's natural hazard row. Its safe disc and outer box
-# are committed together on telegraph; the shader and the damage query read that record.
 class Map extends RefCounted:
 	var park := {}
 

@@ -9,33 +9,9 @@ const StageMap := preload("res://src/world/stage_map.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
-# The bay's props and the dock cradle (tools/blender/world_one/bay_kit.py), each built about where it stands.
 const KIT := "res://assets/models/world_one/bay_kit.glb"
 const KIT_PARTS := ["BayCabin", "BayBellFrame", "BayBell", "BayMarbleToy", "BayYardWall", "BayPost", "BayPin", "CradleCup", "CradleMast"]
 
-# Moss's workshop bay (DESIGN-V2 sections 12 and 15): a hover barge that docks over the
-# reward gates after each Warden break, a pit stop on the marble run. Opt-in: a steam
-# cradle stands beside the gate row, and rolling past it leaves the bay behind.
-#
-# The cradle banks the ball's speed like the pylon mount and throws it up onto the
-# deck; the launch pad at the deck's bow throws it back down in front of a gate with
-# that banked speed returned, along the gates' own facing. Both throws are the stage
-# launch's rail maths (ride_rail.gd). Nothing on the barge stops the ball: its rim is a
-# banked lap track, and rolling off the side just drops you back to the gates.
-#
-# The barge docks behind and above the gate row, never past it and within the gates'
-# 110 m hold (build/reward_gates.gd LOST_BEYOND), so the gates stay where they are
-# while you are aboard and cannot be taken from up here.
-#
-# Aboard: Moss's shutter and hatch (he is never seen), the shelf, the locked hook with
-# its pressure dial, the chipped mug and the plant in a tin; a practice yard where
-# abilities cost no cooldown; a bell, a jukebox that flips the lounge, a marble-run
-# toy; and the timed lap round the rim with its codex callback.
-#
-# step() returns facts:
-#   {"kind": "entered", "banked": float}   {"kind": "left", "velocity": Vector3}
-#   {"kind": "ride", "ride": RideRail}     {"kind": "fact", "fact", "at", ...}
-#   {"kind": "codex", "id", "at"}
 
 const TRACK_L := 10.0
 const TRACK_R := 14.0
@@ -45,8 +21,6 @@ const RIM := 4.0
 const LIFT := 46.0
 const BACK := 30.0
 const FLIGHT := 3.0
-# The pad's throw flies longer so it clears the deck's banked rim by about 19 m; at 3 s
-# it grazed the rim top and the rail ran out against it.
 const FLIGHT_OUT := 3.6
 const RIDE_LIFT := 14.0
 const EXIT_LEAD := 10.0
@@ -67,12 +41,10 @@ const TOY_REACH := 2.2
 const TOY_REST := 0.8
 const MARBLE_STEPS := 5
 const MARBLE_STEP_SECONDS := 0.32
-# Racked to the yard's side, off the straight line from the landing to the pad.
 const PINS := [Vector2(7.0, -5.0), Vector2(8.0, -5.8), Vector2(8.0, -4.2), Vector2(9.0, -6.6), Vector2(9.0, -5.0), Vector2(9.0, -3.4)]
 const PIN_RESET := 3.0
 const FALL_OFF := 6.0
 const PARK := Vector3(0.0, -2000.0, 0.0)
-# Legacy bay.gd docking boundary inside terrain.gd's 200 m half-width.
 const MAP_LIMIT := 185.0
 
 var docked := false
@@ -121,10 +93,6 @@ func setup(g: float, cruise_speed: float) -> void:
 	undock()
 
 
-# ---- Docking ----
-
-# Docks behind and above the gate row the offers describe. Returns false when no spot
-# fits inside the map, and the bay simply stays away this time.
 func dock(offers: Array, height: Callable, space: PhysicsDirectSpaceState3D, map: RefCounted = null) -> bool:
 	if offers.is_empty() or inside:
 		if inside and not offers.is_empty():
@@ -195,7 +163,6 @@ func _aim_exit(offers: Array) -> void:
 
 static func _on_map(p: Vector3, map: RefCounted = null) -> bool:
 	if map is ParkMap and map.ok and map.park.has("play_rect"):
-		# park_map.gd reads this playable rectangle from the active park JSON's play_rect.
 		var rect: Rect2 = map.play_rect
 		if rect.position.is_finite() and rect.size.is_finite() and rect.end.is_finite() and rect.size.x > 0.0 and rect.size.y > 0.0:
 			return p.x > rect.position.x and p.x < rect.end.x and p.z > rect.position.y and p.z < rect.end.y
@@ -230,8 +197,6 @@ func undock() -> void:
 		pin.freeze = true
 
 
-# ---- Reads ----
-
 func deck_y() -> float:
 	return _barge.global_position.y
 
@@ -250,7 +215,6 @@ func on_deck(p: Vector3) -> bool:
 	return docked and absf(uv.x) <= DECK_U and absf(uv.y) <= DECK_V and p.y > deck_y() - 2.0
 
 
-# True only aboard, inside the yard's painted lines.
 func in_yard(p: Vector3) -> bool:
 	return inside and on_deck(p) and YARD.has_point(to_deck(p))
 
@@ -267,8 +231,6 @@ func pad_point() -> Vector3:
 	return deck_point(PAD, 1.0)
 
 
-# The deck: a flat stadium inside, a shallow trough, then a banked outer wall to the
-# rim. The lap runs in the trough and rides the bank round both ends.
 static func deck_height(u: float, v: float) -> float:
 	var d := Vector2(u, v).distance_to(Vector2(clampf(u, -TRACK_L, TRACK_L), 0.0))
 	var o := d - TRACK_R
@@ -280,8 +242,6 @@ static func deck_height(u: float, v: float) -> float:
 		return RIM * pow((o - 2.0) / 5.0, 2.0)
 	return RIM
 
-
-# ---- The tick ----
 
 func step(delta: float, ball: Vector3, velocity: Vector3, riding: bool) -> Array:
 	var facts := []
@@ -394,8 +354,6 @@ func _animate(delta: float) -> void:
 			_marble.position = Vector3(MARBLE_TOY.x - 0.9, 2.1, MARBLE_TOY.y - 0.6)
 
 
-# ---- Building the barge ----
-
 func _build_deck() -> void:
 	var tint := func(u: float, v: float) -> Color:
 		var o := Vector2(u, v).distance_to(Vector2(clampf(u, -TRACK_L, TRACK_L), 0.0)) - TRACK_R
@@ -409,7 +367,6 @@ func _build_deck() -> void:
 	var deck := LocalMesh.grid(_barge, "BayDeck", Vector2(DECK_U * 2.0, DECK_V * 2.0), 1.0, deck_height, tint)
 	var deck_view := deck.get_child(1) as MeshInstance3D
 	deck_view.material_override = _paint(Color.WHITE, 1, Vector3.ZERO, deck_view.material_override)
-	# The authored hull and thrusters (RecipeProps row moss_hover_barge), authored in the Barge frame: deck centred, +X is u.
 	RecipeProps.base("moss_hover_barge", _barge, Transform3D.IDENTITY)
 	RecipeProps.shells("moss_hover_barge", _barge, Transform3D.IDENTITY)
 	for corner in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
@@ -432,9 +389,6 @@ func _build_deck() -> void:
 	_barge.add_child(line)
 
 
-# Moss is never seen: a closed shutter with a hatch at ball height, a counter, the
-# shelf of three, the locked hook under its pressure dial, a chipped mug and a plant
-# in a tin (VISUAL-BOARD f06).
 func _build_cabin() -> void:
 	var cabin := StaticBody3D.new()
 	cabin.name = "MossCabin"
@@ -512,7 +466,6 @@ func _build_cabin() -> void:
 		_barge.add_child(leaf)
 
 
-# The three rarity tokens on Moss's shelf: glowing marks in the rarity colours.
 func _shelf_parts(front: float) -> void:
 	var rarities := [Palette.ARC, Palette.COBALT, Palette.AMBER]
 	for k in 3:
@@ -543,7 +496,6 @@ func _build_toys() -> void:
 		_bell.material_override = _paint(Palette.BRASS.lerp(Palette.COPPER, 0.5))
 		_bell.position = bell_at
 		_barge.add_child(_bell)
-	# The authored jukebox (RecipeProps row moss_jukebox): floor centre at its origin, grille facing -z.
 	var juke_at := Transform3D(Basis.IDENTITY, Vector3(JUKEBOX.x, 0.0, JUKEBOX.y + 1.6))
 	RecipeProps.base("moss_jukebox", _barge, juke_at)
 	RecipeProps.shells("moss_jukebox", _barge, juke_at)
@@ -564,8 +516,6 @@ func _build_toys() -> void:
 	_visual(Vector3(2.4, 0.1, 2.4), Vector3(MARBLE_TOY.x, 0.05, MARBLE_TOY.y), _paint(Palette.SAND, 3, Vector3(2.4, 0.1, 2.4)))
 
 
-# The practice yard: painted bone lines, a pylon face, a grapple post and a rack of
-# pins to bowl through.
 func _build_yard() -> void:
 	var wall := StaticBody3D.new()
 	wall.name = "YardWall"
@@ -693,7 +643,6 @@ func _cradle_prompt() -> void:
 	anchor.add_child(_prompt)
 
 
-# A view of one bay kit part on parent at `at`, or null when the kit is missing (the caller draws its plain shapes).
 func _model(part: String, parent: Node3D, at: Vector3) -> MeshInstance3D:
 	var view := ModelKit.part(KIT, KIT_PARTS, part, parent)
 	if view != null:

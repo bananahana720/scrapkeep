@@ -1,9 +1,5 @@
 extends RefCounted
 
-# The flood is a clock, not a pile of booleans: one phase plus its elapsed time
-# answers "is the klaxon on", "how high is the water" and "has it ever receded".
-# The dry spell is the director's to set, so the water ebbs and flows on a seeded
-# rhythm per stage instead of one fixed loop.
 enum { DRY, WARNING, RISING, HIGH, FALLING }
 
 const PHASE_NAMES := ["dry", "klaxon", "rising", "flooded", "draining"]
@@ -13,7 +9,6 @@ const HIDDEN_BELOW := 1.5
 var phase := DRY
 var elapsed := 0.0
 var floods := 0
-# How long each dry spell lasts; the first one can differ so a stage opens calm.
 var dry_seconds := 57.0
 var first_dry := 57.0
 
@@ -37,7 +32,6 @@ func fraction() -> float:
 	return clampf(elapsed / duration(phase), 0.0, 1.0)
 
 
-# Metres above the basin floor; negative means the plane is parked out of sight.
 func depth(full: float) -> float:
 	match phase:
 		RISING:

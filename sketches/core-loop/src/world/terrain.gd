@@ -20,104 +20,54 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const PerchPoints := preload("res://src/world/perch_points.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 
-# A park map id (`--table=park`, park_defs.gd) reads its park file: src/world/park/<id>.json once a
-# stage unit (KD1 to KD6) lands it, else the stage-1 stand-in under assets/park/ (KD0). A park id
-# with neither stands on the old map of the same stage, so the table still runs end to end.
-# A park file's ground is park_terrain.gd (KB4, PARK.md section 3): its bake as Terrain3D regions
-# and a tiled trimesh over the 1.6 km square. A park stage is never built with its world: the
-# first stage builds at setup, a later one when first read or from prepare(), which builds it
-# on worker threads. world.gd calls prepare(stage + 1) when the stage's Warden is engaged (or its
-# gates open on a stage with no Warden), so the launch finds the next stage built (KB4b); use()
-# frees any park stage that is neither active nor next, so at most two are resident.
 const PARK_FILES := ["res://src/world/park/%s.json", "res://assets/park/%s_stage1.json"]
 const MAPS := {"spillway": Spillway, "gorge": Gorge, "reach": Reach, "dig": Dig, "highdraft": Highdraft, "dig_deep": DigDeep, "highdraft_crown": HighdraftCrown}
 
-# Owned by writer D (world). The spine reads only the terrain API block below.
-#
-# Each stage is its own map. The first world's stages are built once at setup (every
-# stage of a one-world table), so a stage change is a cheap swap inside the stage_entered
-# handler and never a hitch in the launch. A later world's stages are built, all together,
-# the first time anything reads one of them (_ensure). Height
-# queries read the built grid and interpolate the same two triangles per cell the
-# collider uses, so what the spine, combat and build ask about the ground is exactly
-# the ground the ball rolls on.
 
 const HALF := 200.0
 const STEP := 2.0
 const CELLS := int(2.0 * HALF / STEP)
 const SIDE := CELLS + 1
-# Steeper than PylonBite.FACE (the normal's y below it) takes the pylon tint: the ball's
-# pylon bites a face that leans less than 60 degrees off vertical (augments.gd).
 const PYLON_FACE := PylonBite.FACE
 const PARK_DEPTH := 5000.0
 
 var maps: Array = []
 var stage := 1
-# The flood the world runs, so material_at can say "water" where it is.
 var flood
 var environment: Environment
-# Moss's bay (bay.gd), set by world, for the read-only bay queries below.
 var bay
-# The active stage's live overlay heights (terrain changes that have landed, and the
-# rubble standing before a cave-in), by the map's overlay ids.
 var overlays: Array[String] = []
 
-# Each stage number outside the table is logged once through this (a test sets a sink so the
-# errors can be read; with none set it is a push_error), then clamped as before.
 var range_errors := {}
 var error_sink: Callable
 
-# Per global stage (index stage - 1): the stage's root (null until built) and its grid
-# (empty until built). The world of each row, so a read can build its whole world.
 var _roots: Array = []
 var _heights: Array[PackedFloat32Array] = []
 var _worlds: Array[int] = []
 var _parent: Node3D
-# The physics frame use() last brought a stage up in (top_surface waits SETTLE_FRAMES past it).
 var _used_frame := -1000
-# The physics frame of the last surface_moved(): top_surface waits SETTLE_FRAMES after it, as after use().
 var _changed_frame := -1000
 var _arena := false
-# Per global stage: whether it stands on a park file, its park ground node (null until built
-# or preparing), and its hole cells and their floors (empty off the park).
 var _is_park: Array[bool] = []
 var _grounds: Array = []
 var _holes: Array[PackedByteArray] = []
 var _under: Array[PackedFloat32Array] = []
 var _cave_roofs := {}
 var _placement_holes := {}
-# Two Terrain3D render nodes made at setup (park_terrain.gd make_render), each lent to one
-# resident park stage; _render_owner holds the stage index using each, or -1.
 var _render: Array[Node3D] = []
 var _render_owner: Array[int] = []
-# The last use()'s main-thread cost, and how many frames a park stage times after its swap
-# (park_terrain.gd meter); PARK.md section 9 caps a frame at 33 ms.
 var last_use_usec := 0
 const SWAP_METER_FRAMES := 120
-# Where a park stage's ride sensors publish (park_recipes.gd _sensor): publish(kind, at). world.gd sets the game
-# bus's world_fact.emit before build(); with none set the rows place without sensors.
 var publish: Callable
-# Per global stage: whether its park ground builds on worker threads, so its rows place the same way (KB9).
 var _threaded: Array[bool] = []
-# Per stage index: {"tops": [Vector3], "blockers": [zone]} for perch_near, derived on the first ask.
 var _perches := {}
-# A park stage's perch lists read on a worker once its ground is built (_perch_read_ahead): {i: {task, out}}.
 var _perch_ahead := {}
-# The active park stage's perch lists read again with its overlays down, on a worker, once a Dispatcher is on
-# its way (prepare_perches): {i: {sig, task, out}}.
 var _perch_patch := {}
 
-# A park stage left memory (_free_stage), by stage number, so a module that hung nodes on its
-# root (world.gd's contraptions) drops them.
 signal stage_freed(index: int)
-# A park stage's ground and props were built and its rows started placing, by stage number.
 signal stage_built(index: int)
-# The ground of the current stage moved where top_surface reads it: an event's swap landed or reverted, a collapse's
-# sheet or a cave roof stepped (event_ground.gd, through surface_moved). top_surface answers {} for SETTLE_FRAMES
-# after, and then the new surface.
 signal surface_changed
 
-# A first stage built behind the menu (build threaded_first).
 var _threaded_first := false
 
 
@@ -125,7 +75,6 @@ func _init(table = StageDefs) -> void:
 	var parks := _read_parks_together(table)
 	for row in table.DEFS:
 		var id := String(row["map"])
-		# A park id that repeats in the table gets its own map past the first, as before.
 		maps.append(parks.get(id) if parks.has(id) else map_named(id, int(row["stage"])))
 		parks.erase(id)
 		_is_park.append(maps[-1] is ParkMap)
@@ -138,9 +87,6 @@ func _init(table = StageDefs) -> void:
 		_threaded.append(false)
 
 
-# MENU-READY: the park table's six park files are read and checked at setup, 105 to 185 ms one after
-# another on the cloud. Read them on worker threads at once instead; a park that fails its schema is
-# left to map_named, which reports it as before.
 static func _read_parks_together(table) -> Dictionary:
 	var paths := {}
 	for row in table.DEFS:
@@ -151,7 +97,6 @@ static func _read_parks_together(table) -> Dictionary:
 			if FileAccess.file_exists(pattern % id):
 				paths[id] = pattern % id
 				break
-	# Read once on first need and marked read before they are filled: fill them here, so no worker sees one half built.
 	ParkSchema._registry()
 	ParkRecipes.origin("")
 	if paths.size() < 2:
@@ -159,10 +104,7 @@ static func _read_parks_together(table) -> Dictionary:
 	var ids: Array = paths.keys()
 	var read := []
 	read.resize(ids.size())
-	# Godot 4.7.2 fills an untyped operator's cache the first time its line runs, and readers take no lock: two
-	# workers on the same cold line can call a half-written cache and crash (a rare SIGABRT at Game setup). The
-	# first stage's park reads here first, which runs every line the other parks share once before any worker
-	# does (a line coverage read of the six parks found no shared operator line left cold); the rest read at once.
+	# Godot 4.7.2 caches untyped operators lazily without locking; warm ParkMap once before WorkerThreadPool reads it.
 	read[0] = ParkMap.new(paths[ids[0]])
 	var task := WorkerThreadPool.add_group_task(func(n: int): read[n + 1] = ParkMap.new(paths[ids[n + 1]]), ids.size() - 1, -1, true, "park files")
 	WorkerThreadPool.wait_for_group_task_completion(task)
@@ -195,7 +137,6 @@ func map() -> RefCounted:
 	return maps[stage - 1]
 
 
-# The world the current stage is in (1 Spillway, 2 the Dig, 3 the Highdraft).
 func world() -> int:
 	return _worlds[_index(stage)]
 
@@ -204,8 +145,6 @@ func map_for(index: int) -> RefCounted:
 	return maps[_index(index)]
 
 
-# threaded_first builds a park first stage on worker threads too, as prepare() does, so a played
-# game shows its menu without waiting on it (MENU-READY); any read of the ground finishes it.
 func build(parent: Node3D, threaded_first := false) -> void:
 	_parent = parent
 	_threaded_first = threaded_first
@@ -223,30 +162,23 @@ func build(parent: Node3D, threaded_first := false) -> void:
 				_build_stage(i)
 
 
-# True once this stage's ground and props exist.
 func is_built(index: int) -> bool:
 	return is_ready(index)
 
 
-# True once this stage's ground and props exist; a park stage still building on worker threads
-# is not ready.
 func is_ready(index: int) -> bool:
 	var i := _index(index)
 	return _roots[i] != null and (not _is_park[i] or _grounds[i].is_ready())
 
 
-# True when this park stage was built on worker threads (a played game or a frame-capture bot run).
 func built_threaded(index: int) -> bool:
 	return _threaded[_index(index)]
 
 
-# The park ground node of a park stage (park_terrain.gd), or null.
 func park_ground(index: int) -> Node3D:
 	return _grounds[_index(index)]
 
 
-# Starts building a park stage on worker threads; the main thread only adds the finished
-# pieces a few a frame. A no-op for an old map or a stage already built or building.
 func prepare(index: int) -> void:
 	var i := _index(index)
 	if not _is_park[i] or _roots[i] != null or _parent == null:
@@ -254,17 +186,10 @@ func prepare(index: int) -> void:
 	_build_park_stage(i, _worker_builds())
 
 
-# A played game builds park stages on worker threads and attaches them inside a wall-clock
-# budget. A bot run (SimClock.ticks) builds them whole in the calling frame instead: the
-# frame a threaded build finishes on depends on CPU load, and the static bodies it adds to
-# the shared physics world move the solver's results, so a seed stops replaying.
 static func _worker_builds() -> bool:
 	return threaded_in_bot_runs or not SimClock.ticks
 
 
-# Frame-capture bot runs (tools/bot_run.gd --threaded-stages=1) build park stages threaded
-# as a played game does, so the next stage's one-frame build is not in the capture. Only
-# that build moves; the hit-stop clock stays on ticks. The seed no longer replays exactly.
 static var threaded_in_bot_runs := false
 
 
@@ -289,7 +214,6 @@ func _build_stage(i: int) -> void:
 	holder.process_mode = Node.PROCESS_MODE_DISABLED if _arena else Node.PROCESS_MODE_INHERIT
 
 
-# Stage i's root name, taken back from a freed root the Reaper has not renamed yet.
 func _hold_name(i: int) -> String:
 	var stage_name := "Stage%d" % (i + 1)
 	var old := _parent.get_node_or_null(NodePath(stage_name)) if _parent != null else null
@@ -298,8 +222,6 @@ func _hold_name(i: int) -> String:
 	return stage_name
 
 
-# A park stage: the holder enters the tree parked, then its ground builds, at once (threaded
-# false) or on worker threads, and the props follow when the ground is done.
 func _build_park_stage(i: int, threaded: bool) -> void:
 	var m = maps[i]
 	var holder := Node3D.new()
@@ -317,7 +239,6 @@ func _build_park_stage(i: int, threaded: bool) -> void:
 		_render_owner[slot] = i
 	ground.start(String(m.title), m, threaded, _render[slot] if slot >= 0 else null)
 	_show_render()
-	# A stage that is not processing (the arena) still has to finish when it is read.
 	holder.process_mode = Node.PROCESS_MODE_DISABLED if _arena else Node.PROCESS_MODE_INHERIT
 
 
@@ -348,7 +269,6 @@ func _on_park_built(i: int) -> void:
 			_under[i][k] = floor_y
 			_placement_holes[i][k] = 0
 	maps[i].build_props(_roots[i], ground_callable(i + 1))
-	# The park rows (KB9): every row naming a recipe, with its collider and ride sensor, placed on the height() floor.
 	if maps[i] is ParkMap:
 		ParkRecipes.build_placed(_roots[i], maps[i].park, _park_floor_at.bind(_heights[i], _placement_holes[i], _under[i]), publish, _threaded[i], maps[i].line_within)
 	Scatter.build_chunked(_roots[i], maps[i], ground_callable(i + 1), _worker_builds())
@@ -356,21 +276,16 @@ func _on_park_built(i: int) -> void:
 	stage_built.emit(i + 1)
 
 
-# A park stage's placed rows (park_recipes.gd Placer, "ParkRows" under its root), or null.
 func park_rows(index: int) -> Node:
 	var root: Node3D = _roots[_index(index)]
 	return root.get_node_or_null("ParkRows") if root != null else null
 
 
-# True once a park stage's rows are all placed (an old map has none to place).
 func rows_ready(index: int) -> bool:
 	var rows := park_rows(index)
 	return not _is_park[_index(index)] or (rows != null and rows.is_ready())
 
 
-# Builds the whole world a stage belongs to, if any of it is not built yet, and returns
-# the stage's clamped index. Every read of the ground goes through here. A park stage builds
-# alone, or finishes its worker build on the spot when it is read before it is done.
 func _ensure(index: int) -> int:
 	var i := _index(index)
 	if _roots[i] == null:
@@ -382,23 +297,15 @@ func _ensure(index: int) -> int:
 				if _worlds[j] == _worlds[i] and _roots[j] == null and not _is_park[j]:
 					_build_stage(j)
 	elif _is_park[i] and not _grounds[i].is_ready():
-		# The first stage read before it was built (a run started on the menu) places its rows now
-		# too; a next stage's rows still place across the swap.
 		if i == 0 and _threaded_first:
 			_threaded[i] = false
 		_grounds[i].finish()
 	return i
 
 
-# Swap the active stage's geometry in. Synchronous, so the flow's spawn and beacon
-# queries straight after stage_entered read the new stage. The idle stages stay in the
-# physics world, hidden and parked far below: moving a body is cheap, while adding a
-# trimesh back to the world rebuilds its tree (measured at about 34 ms a swap).
 func use(index: int) -> void:
 	var started := Time.get_ticks_usec()
 	_used_frame = Engine.get_physics_frames()
-	# Park stages that are neither the target nor its next leave first, so a target that is
-	# not resident (a new run back on stage 1) finds a free Terrain3D render node to draw into.
 	var target := _index(index)
 	for i in _roots.size():
 		if _roots[i] != null and _is_park[i] and i != target and i != target + 1:
@@ -420,23 +327,17 @@ func use(index: int) -> void:
 	last_use_usec = Time.get_ticks_usec() - started
 
 
-# Only the active park stage's Terrain3D node draws (none in the arena).
 func _show_render() -> void:
 	for n in _render.size():
 		_render[n].visible = not _arena and _render_owner[n] == stage - 1
 
 
-# A park stage leaves memory (neither active nor next); a later read builds it again. Its
-# Terrain3D node goes back to the pool, regions and all, until the next stage replaces them.
 func _free_stage(i: int) -> void:
 	var slot := _render_owner.find(i)
 	if slot >= 0:
 		_render_owner[slot] = -1
-	# A ground still attaching must not add one more region to the render node it just gave up
-	# in the frames before queue_free lands; the stage that takes the node may already own it.
 	if _grounds[i] != null:
 		_grounds[i].set_process(false)
-	# A bot run frees it whole, as before: removals at a load-dependent frame would move the shared physics world.
 	if _worker_builds():
 		Reaper.take(_roots[i])
 	else:
@@ -454,9 +355,6 @@ func _free_stage(i: int) -> void:
 	stage_freed.emit(i + 1)
 
 
-# The arena is not a stage: every map is hidden and its colliders leave the physics
-# world until the next use(). Putting a trimesh back rebuilds its tree, which an arena
-# entry or a T replay can afford and a launch swap cannot, so only this path does it.
 func park_all() -> void:
 	_arena = true
 	for root in _roots:
@@ -472,18 +370,11 @@ static func _park(root: Node3D, parked: bool) -> void:
 	root.position = Vector3.DOWN * PARK_DEPTH if parked else Vector3.ZERO
 
 
-# A freed stage's nodes leave a few a frame, parked and hidden meanwhile: one queue_free of a whole park stage (2917
-# shapes) cost 33-50 ms in the swap frame headless (park_swap_test, artifacts/local/c9). take() disables the root, so
-# nothing under it processes and its bodies leave the space at once; then deepest first, a physics body whole, the root last.
 class Reaper extends Node:
 	const BUDGET_USEC := 3000
 
 	static func take(root: Node3D) -> void:
-		# Hidden and disabled is enough: its bodies leave the space, so it stays where it stood rather
-		# than moving every body and transform under it on the swap tick (scrapkeep#494).
 		root.visible = false
-		# One switch stops the whole stage (its bodies leave the space with it): two propagate_calls over a park
-		# stage's ~20k nodes cost 29 ms in the swap frame, this 9.5 (bot run, stage 1 to 2). The Reaper runs ALWAYS.
 		root.process_mode = Node.PROCESS_MODE_DISABLED
 		var reaper := Reaper.new()
 		reaper.name = "Reaper"
@@ -503,18 +394,13 @@ class Reaper extends Node:
 			var node: Node = root.get_child(root.get_child_count() - 1)
 			while node.get_child_count() > 0 and not node is CollisionObject3D:
 				node = node.get_child(node.get_child_count() - 1)
-			# A scripted node can be locked by its own pending work (the scatter refuses free()), so it leaves the
-			# tree now and is deleted at the frame's end, as queue_free always did.
+			# Godot locks scripted nodes with pending calls against synchronous free(); detach and queue_free them.
 			if node.get_script() != null:
 				node.get_parent().remove_child(node)
 				node.queue_free()
 			else:
 				node.free()
 
-	# A stage built again (a new run's stage 1) takes the name back while this one empties. The rename
-	# tells every node under the root its path changed, 10 ms over a park stage's ~20k nodes on the swap
-	# tick on the cloud (scrapkeep#494), so it waits for the Reaper's first frame, or for a stage built
-	# under the same name before then (_hold_name).
 	static func yield_name(root: Node) -> void:
 		if not String(root.name).begins_with("Freed"):
 			root.name = "Freed%s" % root.name
@@ -524,8 +410,6 @@ func geometry_root(index: int) -> Node3D:
 	return _roots[_ensure(index)]
 
 
-# The terrain API the spine and the other modules read through ctx.terrain (see
-# CONTRACTS.md).
 func height(x: float, z: float) -> float:
 	var h := _floor(_ensure(stage), x, z)
 	if overlays.is_empty():
@@ -537,10 +421,6 @@ func height(x: float, z: float) -> float:
 	return h
 
 
-# height() at many (x, z) points at once, each answer equal to height()'s. A telegraph paints over about
-# 500 points a ring, and a Warden pulse's two rings through height() one point at a time were 20 ms of a
-# flume frame on the cloud. The stage and map are looked up once, and an overlay whose footprint disc
-# misses the points' bounds is left out, as its overlay_height answers -INF there.
 func heights(points: PackedVector2Array) -> PackedFloat64Array:
 	var out := PackedFloat64Array()
 	out.resize(points.size())
@@ -570,8 +450,6 @@ func heights(points: PackedVector2Array) -> PackedFloat64Array:
 	return out
 
 
-# height() with no overlay: the ground a ball rolling under an overlay deck (a landed ramp
-# whose sheet spans a gap) stands on.
 func floor_height(x: float, z: float) -> float:
 	return _floor(_ensure(stage), x, z)
 
@@ -580,24 +458,8 @@ func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 	return Vector3(x, height(x, z) + clearance, z)
 
 
-# The surface a ball rolling at (x, z) stands on now, as {"point", "normal"}: the highest permanent face within
-# SURFACE_REACH_M over height(), else height() and its slope. Permanent means a body this module built for the
-# stage that nothing moves every tick or breaks: the ground's own tiles and the placed park rows' decks and props
-# (_is_surface). A moving body or a row the placer marks as moving (ParkRecipes.moves), a destructible, a door, a
-# device, a mast and an ice slab never answer. A row an event swaps out answers while it is in place; parked, the
-# ray misses it, and a landed overlay sheet or a cave roof answers through height(), which carries them, so no
-# face below height() counts. When an event moves the ground, surface_changed says so.
-# With a radius, the normal is the plane that fits that surface over the disc of that radius, and the point lies
-# on the plane under (x, z), lowered to the disc's lowest sample, so a flat disc set on it stands proud nowhere.
-# {} while the stage's colliders are not yet where a query finds them: its rows still placing, or under
-# SETTLE_FRAMES physics frames since use() brought the stage up from parking or since surface_moved() (a moved
-# body answers from its old place until the next step); ask again on a later tick.
 const SURFACE_REACH_M := 40.0
-# How far under height() a face may sit and still be the ground's (a tile's trimesh against height()'s
-# triangles).
 const SURFACE_BELOW_M := 0.05
-# Faces a ray steps through before it gives up and answers height(): stacked doors, crates and pieces can sit
-# over a deck.
 const SURFACE_SKIPS := 8
 const SETTLE_FRAMES := 2
 const SURFACE_RING := 16
@@ -612,7 +474,6 @@ func top_surface(x: float, z: float, radius := 0.0) -> Dictionary:
 	var centre := _surface_hit(space, x, z)
 	if radius <= 0.0:
 		return centre
-	# A least-squares plane y = a + b dx + c dz through the centre and a ring of samples.
 	var samples: Array[Vector3] = [centre.point]
 	for k in SURFACE_RING:
 		var angle := TAU * float(k) / float(SURFACE_RING)
@@ -630,7 +491,6 @@ func top_surface(x: float, z: float, radius := 0.0) -> Dictionary:
 		szz += (p.z - z) * (p.z - z)
 		sxy += (p.x - x) * (p.y - mean_y)
 		szy += (p.z - z) * (p.y - mean_y)
-	# The ring is symmetric about (x, z), so the cross terms vanish and each slope is its own ratio.
 	var b := sxy / sxx
 	var c := szy / szz
 	var lowest := INF
@@ -639,8 +499,6 @@ func top_surface(x: float, z: float, radius := 0.0) -> Dictionary:
 	return {"point": Vector3(x, mean_y + lowest, z), "normal": Vector3(-b, 1.0, -c).normalized()}
 
 
-# An event moved the current stage's ground (event_ground.gd calls this where a swap lands or reverts and where a
-# collapse's sheet or a cave roof steps): top_surface waits SETTLE_FRAMES, and surface_changed tells its readers.
 func surface_moved() -> void:
 	_changed_frame = Engine.get_physics_frames()
 	surface_changed.emit()
@@ -663,12 +521,6 @@ func _surface_hit(space: PhysicsDirectSpaceState3D, x: float, z: float) -> Dicti
 	return {"point": Vector3(x, ground, z), "normal": normal}
 
 
-# A collider top_surface stands a thing on: a plain static body under a node this module built for the current
-# stage (the park ground's tiles, _grounds; the placed park rows, park_rows; an old map's Ground body), and not
-# under a row the placer marks as moving (ParkRecipes.moves: the hanging isle, which its rig poses every tick).
-# Every other world-layer body hangs elsewhere (enemies, masts, the boss arena, the element field's ice,
-# activities' devices and caches, the destructibles, the barge: the game root; contraptions' doors, barges and
-# lifts: their own node under the stage root) or moves (an AnimatableBody3D, such as the isle's tip).
 func _is_surface(collider: Object) -> bool:
 	if not (collider is StaticBody3D) or collider is AnimatableBody3D or ParkRecipes.moves(collider as Node):
 		return false
@@ -684,25 +536,16 @@ func _is_surface(collider: Object) -> bool:
 	return false
 
 
-# A perch top for the Dispatcher within PerchPoints.RANGE_M of `point`: a park post top or a landform
-# top, 6 to 10 m up and clear of colliders (perch_points.gd); Vector3.INF when the stage has none,
-# and the Dispatcher builds its own mast. `salt` varies the pick; one salt always picks the same.
 func perch_near(point: Vector3, salt := 0) -> Vector3:
 	var m = map()
 	if not (m is ParkMap) or not m.ok:
 		return Vector3.INF
 	var i := _index(stage)
 	if not _perches.has(i):
-		# Built first, so a stage the ask builds queues its read and this takes it.
 		_ensure(stage)
 		var ahead := _take_perch_ahead(i)
-		# A worker read made for other overlays is left to settle as the stage leaves the tree.
 		var patch: Dictionary = _perch_patch.get(i, {})
 		_perch_patch.erase(i)
-		# The worker read the bare ground; height() matches it only while no overlay or cave roof stands on it.
-		# With overlays down (a landed slide or lip), only the ledges near them are read again: the whole read
-		# on the main thread was an 870 ms frame on the cloud at the Dig's first Dispatcher.
-		# A cave roof the worker read stands in its snapshot; one lowered since (a cave-in) changes the ground.
 		var discs = _overlay_discs(m) if not ahead.is_empty() and EventGround.pristine(self, i + 1) else null
 		if discs != null and (discs as Array).is_empty():
 			_perches[i] = ahead
@@ -718,10 +561,6 @@ func perch_near(point: Vector3, salt := 0) -> Vector3:
 	return PerchPoints.pick(_perches[i]["tops"], point, height, _perches[i]["blockers"], salt, _perches[i]["ledges"])
 
 
-# A Dispatcher is on its way (an arrival a second out). With overlays down on the active park stage, its ledges
-# near them are read again on a worker now, over the bare read's floor with those overlays down, as height()
-# reads them; perch_near takes the result while the overlays and roofs are still the ones read. Read in the
-# spawn frame, it was about 100 ms on the cloud at the Spillway's first Dispatcher with two slides down.
 func prepare_perches() -> void:
 	var m = map()
 	if not (m is ParkMap) or not m.ok or overlays.is_empty():
@@ -732,8 +571,6 @@ func prepare_perches() -> void:
 	var discs = _overlay_discs(m)
 	if discs == null:
 		return
-	# Nothing here waits: a read still running (the bare one, or a patch for overlays since changed, as a
-	# filling collapse changes its surface every step) is asked about again on a later step.
 	var ahead: Dictionary = _perch_ahead[i]
 	if not _read_done(ahead):
 		return
@@ -744,8 +581,6 @@ func prepare_perches() -> void:
 	_settle_perch_read(ahead)
 	if ahead.out.is_empty():
 		return
-	# The roofs are copied on the worker: one lowered meanwhile replaces its surface, so the copy reads the
-	# old one, and the pristine check at the take drops the result.
 	var snap := EventGround.snapshot(self, i + 1, false)
 	for id in overlays:
 		snap = snap.with_profile({"site": m.profiles[id].site, "surface": m.profiles[id].surface})
@@ -755,7 +590,6 @@ func prepare_perches() -> void:
 	_settle_on_exit(_roots[i], patch)
 
 
-# The overlays down and the surface each stands on: a patched read is good only for the same list.
 func _overlay_sig(m) -> Array:
 	return overlays.map(func(id: String) -> Array: return [id, m.profiles[id].surface] if m.profiles.has(id) else [id])
 
@@ -768,12 +602,10 @@ static func _queue_perch_patch(park: Dictionary, snap: RefCounted, bare_found: A
 		true, "perch patch")
 
 
-# Whether a worker perch read has finished (or was never queued), so settling it does not wait.
 static func _read_done(read: Dictionary) -> bool:
 	return not read.has("task") or WorkerThreadPool.is_task_completed(read.task)
 
 
-# Waits on a stage's patched perch read and drops it; the entry ({sig, out}), or {} when none was queued.
 func _take_perch_patch(i: int) -> Dictionary:
 	if not _perch_patch.has(i):
 		return {}
@@ -783,8 +615,6 @@ func _take_perch_patch(i: int) -> Dictionary:
 	return patch
 
 
-# A disc (Vector3 x, z, radius) around each overlay down, for PerchPoints.patched_ledges; null when an
-# overlay's footprint is unknown (not an OverlayMap profile), and the whole read runs again.
 func _overlay_discs(m) -> Variant:
 	var discs: Array = []
 	for id in overlays:
@@ -795,24 +625,17 @@ func _overlay_discs(m) -> Variant:
 	return discs
 
 
-# The first perch read of a stage walked every landform sample's rings through height(): 80 to 390 ms of one
-# frame by park (stage 6 about 300 ms in a played run, PR #372). Read them on a worker as soon as the ground
-# is built, over the stage's floor as height() reads it with no overlay down (EventGround.snapshot: the ground
-# and its cave roofs); perch_near takes them while no roof has been lowered since, reading again only near overlays.
 func _perch_read_ahead(i: int) -> void:
 	var m = maps[i]
 	if not (m is ParkMap) or not m.ok or _perch_ahead.has(i) or _perches.has(i):
 		return
 	var out := {}
-	# The next stage is not active, so its roofs are copied on the worker (see EventGround.snapshot).
 	var ahead := {"out": out, "task": _queue_perch_read(m.park, EventGround.snapshot(self, i + 1, false), out)}
 	_perch_ahead[i] = ahead
 	_settle_on_exit(_roots[i], ahead)
 
 
-# Static, so the worker holds no reference to this terrain: it reads only the park and the floor snapshot (copies of the roofs).
 static func _queue_perch_read(park: Dictionary, floor_snapshot: RefCounted, out: Dictionary) -> int:
-	# A lambda holds the snapshot; a bound method would not keep it alive.
 	var ground := func(x: float, z: float) -> float: return floor_snapshot.terrain.height(x, z)
 	return WorkerThreadPool.add_task(func():
 		floor_snapshot.copy_roofs()
@@ -821,8 +644,6 @@ static func _queue_perch_read(park: Dictionary, floor_snapshot: RefCounted, out:
 		true, "perch read")
 
 
-# A task left unwaited when the engine quits aborts the process: the stage's root waits on its read as it
-# leaves the tree, which a quit and a teardown both do, whether or not this terrain is still referenced.
 static func _settle_on_exit(root: Node, ahead: Dictionary) -> void:
 	root.tree_exiting.connect(func(): _settle_perch_read(ahead), CONNECT_ONE_SHOT)
 
@@ -833,7 +654,6 @@ static func _settle_perch_read(ahead: Dictionary) -> void:
 		ahead.erase("task")
 
 
-# Waits on a stage's worker perch read and drops it; its lists, or {} when none was read.
 func _take_perch_ahead(i: int) -> Dictionary:
 	if not _perch_ahead.has(i):
 		return {}
@@ -876,10 +696,6 @@ func rescue_point(near: Vector3) -> Vector3:
 	return drop_point(clampf(near.x, r.position.x, r.end.x), clampf(near.z, r.position.y, r.end.y), 3.0)
 
 
-# For the element and material table (TADR-009, owned by build): what lies at or
-# under this point, as {"material", "surface_y"}, or {} off the map. Where the flood
-# stands over the ground, the answer is its water at the live surface height, so a
-# frost or arc resolves against the same surface the ball floats on.
 func material_at(point: Vector3) -> Dictionary:
 	if not contains(point):
 		return {}
@@ -891,9 +707,6 @@ func material_at(point: Vector3) -> Dictionary:
 	return {"material": map().material_at(point.x, point.z), "surface_y": ground}
 
 
-# v2 W6 world: the landmark's light (INF on a map without one), the height band a
-# point is in ("sky", "shelf", "undercroft", or "" on a map without bands), and the
-# bay's reads for the shop UI and the lounge.
 func landmark_point(index: int) -> Vector3:
 	var m = map_for(index)
 	return m.landmark if "landmark" in m else Vector3.INF
@@ -927,7 +740,6 @@ func ground_callable(index: int) -> Callable:
 	return _ground_at.bind(_heights[i])
 
 
-# The stage's ground at (x, z): the grid's two triangles, or a hole cell's floor beneath.
 func cave_roof(id: String) -> Dictionary:
 	return _cave_roofs.get(stage - 1, {}).get(id, {})
 
@@ -947,7 +759,6 @@ static func _retained_park_height(heights: PackedFloat32Array, holes: PackedByte
 	var grid := Vector2((x + ParkTerrain.HALF) / ParkTerrain.STEP, (z + ParkTerrain.HALF) / ParkTerrain.STEP)
 	var cell := Vector2i(floori(grid.x), floori(grid.y))
 	var result := -INF
-	# The footprint is closed: a rim edge or corner can belong to four ground cells.
 	for delta in [Vector2i.ZERO, Vector2i.LEFT, Vector2i.UP, Vector2i(-1, -1)]:
 		var at: Vector2i = cell + delta
 		if at.x < 0 or at.y < 0 or at.x >= ParkTerrain.CELLS or at.y >= ParkTerrain.CELLS:
@@ -976,7 +787,6 @@ static func _park_ground_at(x: float, z: float, clearance: float, heights: Packe
 	return Vector3(x, _park_height(heights, holes, under, x, z) + clearance, z)
 
 
-# height()'s floor as (x, z) -> float, for park_recipes.gd placement (safe on a worker thread).
 static func _park_floor_at(x: float, z: float, heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array) -> float:
 	return _park_height(heights, holes, under, x, z)
 
@@ -993,8 +803,6 @@ func _index(index: int) -> int:
 	return clampi(index, 1, maps.size()) - 1
 
 
-# Test doubles append maps and the original per-stage arrays themselves (dig_zone_test and
-# others); the park arrays catch up here so those doubles keep working.
 func _pad_rows() -> void:
 	while _is_park.size() < maps.size():
 		_is_park.append(maps[_is_park.size()] is ParkMap)
@@ -1014,8 +822,6 @@ func _range_error(index: int) -> void:
 		push_error(text)
 
 
-# The grid is the old maps' 201 by 201 or a park's 801 by 801 (park_terrain.gd), told apart by
-# its size; both are 2 m cells centred on the origin.
 static func _grid_height(heights: PackedFloat32Array, x: float, z: float) -> float:
 	var half := HALF
 	var cells := CELLS
@@ -1043,8 +849,6 @@ static func _ground_at(x: float, z: float, clearance: float, heights: PackedFloa
 	return Vector3(x, _grid_height(heights, x, z) + clearance, z)
 
 
-# The map's scatter rows, added after every other child of the stage so the nodes' sibling order
-# (and every path a test or a tool keys on it) stays what it was.
 static func _build_scatter(holder: Node3D, m: RefCounted, heights: PackedFloat32Array) -> void:
 	var scatter: Dictionary = m.get("scatter") if m.get("scatter") is Dictionary else {}
 	if (scatter.get("kit", []) as Array).is_empty():
@@ -1056,7 +860,6 @@ static func _build_scatter(holder: Node3D, m: RefCounted, heights: PackedFloat32
 	Scatter.build(holder, m, ground)
 
 
-# The relief view's height at (x, z): the collider's grid plus the same seeded noise the view mesh draws.
 static func _relief_at(x: float, z: float, clearance: float, heights: PackedFloat32Array, noise: FastNoiseLite, amp: float) -> Vector3:
 	return Vector3(x, _grid_height(heights, x, z) + noise.get_noise_2d(x, z) * amp + clearance, z)
 
@@ -1102,7 +905,6 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 			var front: float = heights[idx + (SIDE if j < SIDE - 1 else 0)]
 			var n := Vector3(left - right, 2.0 * STEP, back - front).normalized()
 			normals[idx] = n
-			# Form mirrors function: any face a pylon can bite reads as concrete.
 			if n.y < PYLON_FACE:
 				colors[idx] = colors[idx].lerp(pylon_tint, PylonBite.weight(n.y))
 
@@ -1115,8 +917,6 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 			var b := a + 1
 			var c := a + SIDE
 			var d := c + 1
-			# Clockwise from above is Godot's front-face winding, and a trimesh
-			# collider only collides on its front faces.
 			indices[w] = a
 			indices[w + 1] = b
 			indices[w + 2] = c
@@ -1135,8 +935,6 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 
-	# The collider keeps the 2 m grid; a map with a relief row draws a finer, noisier view.
-	# A map without a scatter table (a test double) has no relief and no scatter row.
 	var scatter: Dictionary = m.get("scatter") if m.get("scatter") is Dictionary else {}
 	var relief: Dictionary = scatter.get("relief", {})
 	var view := MeshInstance3D.new()
@@ -1153,9 +951,6 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 	return heights
 
 
-# The visual ground at STEP / sub: the collider's own triangles (the same diagonal per sub-cell,
-# so each vertex lies on the coarse face) plus a seeded noise offset under amp metres, with the
-# coarse colours interpolated and the dips shaded.
 static func _relief_mesh(row: Dictionary, heights: PackedFloat32Array, coarse: PackedColorArray) -> ArrayMesh:
 	var sub: int = row["sub"]
 	var amp: float = row["amp"]

@@ -2,23 +2,12 @@ extends RefCounted
 
 const Launch := preload("res://src/world/launch.gd")
 
-# One contraption ride on the stage launch's rail maths (launch.gd arc_point): the
-# cannon, the trebuchet, the geyser, the bay's cradle and pad, and the grapple line.
-# The ball is held to the drawn path every tick, so nothing it clips on the way can
-# cost it speed, and it lets go just before the path meets its landing.
-#
-# Speed is banked and returned, like the pylon mount. The flight's own planar speed is
-# chosen so the arc lands on the target (the ball's speed, raised to the ride's floor,
-# capped so a very fast ball still comes down on the pad instead of over the horizon);
-# on letting go the ball gets back its own planar speed, or the floor if that was
-# higher. A ride can keep or gift speed and never cut it.
 
 const ARC := "arc"
 const LINE := "line"
 const MIN_LIFT := 4.0
 const MAX_LIFT := 95.0
 const LET_GO := 0.04
-# W47-H1 Rivet existing map rail/zip grind: +20% top speed while firing twin revolvers (strictly G0).
 const RIVET_GRIND_SPEED_MULT := 1.20
 const RAIL_SNAP_RADIUS := 5.5
 const RAIL_LIFT_M := 1.05
@@ -27,28 +16,20 @@ var kind := ""
 var mode := ARC
 var origin := Vector3.ZERO
 var target := Vector3.ZERO
-# The velocity at t = 0 (arc) or the constant velocity (line).
 var velocity := Vector3.ZERO
 var gravity := 26.0
-# Seconds from origin to the landing.
 var flight := 0.0
 var time := 0.0
-# The planar speed the ball gets back on letting go, and the heading it goes out on.
 var release_speed := 0.0
 var heading := Vector3.FORWARD
 var active := false
-# A cable ride's cable ends (the grapple line), for the line view's hanger; unset on every other ride.
 var cable_from := Vector3.ZERO
 var cable_to := Vector3.ZERO
-# W47-H1 Rivet existing-rail metadata: true lets Rivet keep firing his twin revolvers while riding.
 var allow_fire := false
 var rail_kind := ""
 var rail_id := ""
 
 
-# An arc from origin down onto target. planar_in is the ball's own planar speed.
-# opts: "flight_planar" flies the arc at that planar speed whatever the ball's, and
-# "release_heading" sends the ball out along it instead of along the arc.
 static func arc(kind_id: String, from: Vector3, to: Vector3, planar_in: float, floor_speed: float, min_flight: float,
 		g: float, opts := {}) -> RefCounted:
 	var ride = load("res://src/world/ride_rail.gd").new()
@@ -83,8 +64,6 @@ static func arc(kind_id: String, from: Vector3, to: Vector3, planar_in: float, f
 	return ride
 
 
-# A straight rail from origin to target (the grapple line): constant velocity along it,
-# with its planar part equal to the ball's speed raised to the floor.
 static func line(kind_id: String, from: Vector3, to: Vector3, planar_in: float, floor_speed: float) -> RefCounted:
 	var ride = load("res://src/world/ride_rail.gd").new()
 	ride.kind = kind_id
@@ -119,7 +98,6 @@ func velocity_at(t: float) -> Vector3:
 	return velocity + Vector3.DOWN * gravity * t
 
 
-# The velocity to hold the ball to this tick, or null on the tick it lets go.
 func step(delta: float):
 	if not active:
 		return null
@@ -130,11 +108,6 @@ func step(delta: float):
 	return velocity_at(time)
 
 
-# What the ball leaves with: its banked planar speed along the heading, and the arc's
-# own fall capped at SET_DOWN, so the rail sets the ball down a moment above its
-# landing instead of throwing it at the ground. A hard vertical touchdown turns planar
-# speed into friction (measured: the bay's pad landed at 57 m/s down and kept 9 of 22
-# m/s), which is a stop the player never chose.
 const SET_DOWN := 10.0
 
 
@@ -143,14 +116,10 @@ func release_velocity() -> Vector3:
 	return heading * release_speed + Vector3.UP * vy
 
 
-# W47-H1 Rivet existing map rail/zip extractor: reads ONLY existing map zip cables, pipes,
-# canal lips, flume spans, and trestle rails from `map` (strictly G0 — zero temporary player-created
-# two-anchor standing rail-lines).
 static func extract_map_rails(map) -> Array:
 	var out: Array = []
 	if map == null:
 		return out
-	# 1. Existing zip cables from map.contraptions (rim_zip, domes_zip, intake_zip, grapple_line).
 	var contraptions_list = map.get("contraptions")
 	if contraptions_list is Array:
 		for c in contraptions_list:
@@ -170,7 +139,6 @@ static func extract_map_rails(map) -> Array:
 				"floor": float(c.get("floor", 18.0)),
 				"width": maxf(2.5, float(c.get("radius", 4.0))),
 			})
-	# 2. Existing pipes, canal lips, flume spans, and trestle rails from park_rows.
 	var park_data = map.get("park")
 	if park_data is Dictionary and park_data.has("park_rows"):
 		for row in park_data["park_rows"]:
@@ -188,7 +156,6 @@ static func extract_map_rails(map) -> Array:
 			var at_raw = row.get("at", null)
 			if sz == Vector3.INF or not (at_raw is Array) or at_raw.size() < 2:
 				continue
-			# Skip vertical support piers/towers; keep rideable horizontal/sloped spans.
 			var span_len := maxf(absf(sz.x), absf(sz.z))
 			var cross_w := minf(absf(sz.x), absf(sz.z))
 			if span_len < 6.0 or sz.y > span_len:
@@ -241,8 +208,6 @@ static func _to_vec3(raw) -> Vector3:
 	return Vector3.INF
 
 
-# Finds the closest existing map rail/zip/pipe/canal lip/trestle within `max_dist` of `point`
-# and resolves the forward travel end aligned with `heading`.
 static func find_nearest_rail(rails: Array, point: Vector3, heading: Vector3, max_dist := RAIL_SNAP_RADIUS) -> Dictionary:
 	var best := {}
 	var best_d := max_dist
@@ -289,7 +254,6 @@ static func find_nearest_rail(rails: Array, point: Vector3, heading: Vector3, ma
 	return best
 
 
-# Builds Rivet's existing-rail/zip grind RideRail (+20% top speed, twin revolvers stay live).
 static func rivet_grind(rail_hit: Dictionary, ball: Vector3, planar_in: float, top_speed_base: float) -> RefCounted:
 	var rail: Dictionary = rail_hit["rail"]
 	var start: Vector3 = rail_hit["closest"] + Vector3.UP * RAIL_LIFT_M

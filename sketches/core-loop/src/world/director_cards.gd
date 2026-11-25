@@ -1,17 +1,13 @@
 extends RefCounted
 
-# Calibrated against the stage-1 park interval arm over 20 seeds at fixed tiers 0 and 2.
 const I0 := 1.20
 const K := 0.08
 const ELITE_MULTIPLIER := 2.0
-# A relay stake of k (W13 SR10) multiplies that relay's pack and miniboss credit by 1 + k.
 const RELAY_STAKE_MAX := 4
-# The interval arm and settled rewards share the selected run's row.
 const RUN_TIERS := {
 	0: {"cap_weight": 1.0, "interval_weight": 1.0, "event_core_multiplier": 1.0, "rare_weight": 1.0},
 	1: {"cap_weight": 1.25, "interval_weight": 0.8, "event_core_multiplier": 1.25, "rare_weight": 1.25,
 		"elite_stats": {"plating": 30.0}},
-	# The HARD ladder's upper rungs (run_tier.gd LADDER): more crowd and pace, and pay stepping to PAY_GAIN_CAP.
 	2: {"cap_weight": 1.3, "interval_weight": 0.77, "event_core_multiplier": 1.3, "rare_weight": 1.3,
 		"elite_stats": {"plating": 30.0}},
 	3: {"cap_weight": 1.35, "interval_weight": 0.74, "event_core_multiplier": 1.35, "rare_weight": 1.35,
@@ -21,7 +17,6 @@ const RUN_TIERS := {
 	5: {"cap_weight": 1.45, "interval_weight": 0.68, "event_core_multiplier": 1.5, "rare_weight": 1.5,
 		"elite_stats": {"plating": 30.0}},
 }
-# stage_cap bounds members of this kind in one purchase, separately from the shared alive cap.
 const CARDS := {
 	"chaser": {"cost": 1, "weight": 1.0, "stage_cap": 4},
 	"lobber": {"cost": 2, "weight": 1.0, "stage_cap": 3},
@@ -54,7 +49,6 @@ const CARDS := {
 	"gap_net": {"cost": 3, "weight": 1.0, "stage_cap": 2},
 	"jolt_layer": {"cost": 3, "weight": 1.0, "stage_cap": 2},
 	"boom_tender": {"cost": 4, "weight": 1.0, "stage_cap": 2},
-	# A kill-first spawner: it drops a chaser every 8 s, its budget ask caps what it adds, though two can stand at once (cost 4, a deflector's).
 	"dispatcher": {"cost": 4, "weight": 1.0, "stage_cap": 1},
 }
 

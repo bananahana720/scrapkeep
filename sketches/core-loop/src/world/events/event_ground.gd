@@ -10,11 +10,8 @@ class Surface:
 	extends RefCounted
 	var mesh: ArrayMesh
 	var vertices := PackedVector3Array()
-	# The normals the mesh was built with, kept so lowering a roof never reads them back.
 	var normals := PackedVector3Array()
 	var cells := {}
-	# A surface a worker projected carries its mesh arrays here until finish() builds the mesh on
-	# the main thread (no worker touches the rendering server).
 	var arrays := []
 	func finish() -> Surface:
 		if mesh == null:
@@ -23,7 +20,6 @@ class Surface:
 			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 		arrays = []
 		return self
-	# The vertices and cells alone, for a worker's private copy of a cave roof.
 	func copy() -> Surface:
 		var out := Surface.new()
 		out.vertices = vertices.duplicate()
@@ -55,7 +51,6 @@ class OverlayMap:
 	var swaps := {}
 	var profiles := {}
 	var source
-	# The terrain's surface_moved, told whenever this map moves the ground: a swap, a collapse's sheet, a cave roof.
 	var surface_moved := Callable()
 	func moved() -> void:
 		if surface_moved.is_valid():
@@ -69,8 +64,6 @@ class OverlayMap:
 		if is_instance_valid(entry.before):
 			entry.before.position = entry.before_home + Vector3.DOWN * Gorge.SWAP_PARK if changed else entry.before_home
 			entry.before.visible = false if changed else entry.before_visible
-		# Rows that declared hide_on for this swap's event leave the way the site row does: parked down with their
-		# own collider (the StaticBody3D is a child of the Park_ node), then home again on revert.
 		for hidden in entry.get("hidden", []):
 			if is_instance_valid(hidden.node):
 				hidden.node.position = hidden.home + Vector3.DOWN * Gorge.SWAP_PARK if changed else hidden.home
@@ -92,10 +85,6 @@ class OverlayMap:
 		return p.surface.height(Vector2(x, z))
 
 
-# A park stage's floor as plain data, read by project_surface on a worker thread in place of the live
-# terrain (SWAP-HITCH-2). It answers the terrain calls project_surface, _water_ground and the natural
-# plan make, through terrain.gd's own static functions, for a stage entered with no overlay down,
-# which is every park stage on entry. Built on the main thread by snapshot().
 class Ground:
 	extends RefCounted
 	var stage := 1
@@ -104,7 +93,6 @@ class Ground:
 	var _holes: Array = []
 	var _under: Array = []
 	var _roofs: Array = []
-	# Overlays down on this ground, {site, surface} each, read as terrain.height reads OverlayMap.overlay_height.
 	var _profiles: Array = []
 	var _terrain: Script
 	func map() -> RefCounted:
@@ -119,7 +107,6 @@ class Ground:
 		return 0
 	func _grid_height(heights: PackedFloat32Array, x: float, z: float) -> float:
 		return _terrain._grid_height(heights, x, z)
-	# terrain.gd _floor for a park stage: the highest cave roof over the retained ground, else the floor.
 	func _floor(_i: int, x: float, z: float) -> float:
 		var roof_y := -INF
 		for roof: Surface in _roofs:
@@ -133,13 +120,11 @@ class Snapshot:
 	extends RefCounted
 	var terrain: Ground
 	var _copied := true
-	# The worker's first step for a snapshot taken with copy_now false.
 	func copy_roofs() -> void:
 		if _copied:
 			return
 		terrain._roofs = terrain._roofs.map(func(roof: Surface) -> Surface: return roof.copy())
 		_copied = true
-	# This ground with one more overlay down (an OverlayMap profile: {site, surface}), sharing its arrays.
 	func with_profile(profile: Dictionary) -> Snapshot:
 		var ground := Ground.new()
 		ground._heights = terrain._heights
@@ -154,10 +139,6 @@ class Snapshot:
 		return out
 
 
-# A built park stage's ground for a worker: the stage's grids (copy on write, never written after the
-# build) and private copies of its cave roofs. Main thread only. copy_now false leaves the roof copies
-# (85 ms on the flume, on the cloud) to the worker's copy_roofs, for a stage that is not the active one:
-# nothing lowers its roofs until it is entered, and the entry waits on the worker first.
 static func snapshot(terrain, index: int, copy_now := true) -> Snapshot:
 	var i := index - 1
 	var ground := Ground.new()
@@ -173,7 +154,6 @@ static func snapshot(terrain, index: int, copy_now := true) -> Snapshot:
 	return out
 
 
-# True when no cave roof of the stage has been lowered, so its floor is the one it was built with.
 static func pristine(terrain, index: int) -> bool:
 	for roof in terrain._cave_roofs.get(index - 1, {}).values():
 		if roof.surface != roof.baseline:
@@ -185,7 +165,6 @@ static func _rectangle(low: Vector2, high: Vector2) -> Array:
 	return [low, Vector2(high.x, low.y), high, Vector2(low.x, high.y)]
 
 
-# deferred leaves the mesh to Surface.finish, for a worker.
 static func project_surface(world, geometry: Dictionary, shapes: Array, offset := Callable(), water := false, baseline: Surface = null, overlay_map: OverlayMap = null, mesh: ArrayMesh = null, deferred := false) -> Surface:
 	if overlay_map == null and world.terrain.map() is OverlayMap:
 		overlay_map = world.terrain.map()
@@ -204,8 +183,6 @@ static func project_surface(world, geometry: Dictionary, shapes: Array, offset :
 			var normal := (vertices[k + 2] - vertices[k]).cross(vertices[k + 1] - vertices[k]).normalized()
 			normals.append_array([normal, normal, normal])
 	else:
-		# Neighbouring shapes and faces share corners and vertices, so each ground read is made once
-		# per point (a burst's 32 fan slices overlap the same cells); the output is unchanged.
 		var corners := {}
 		var grounds := {}
 		var markers := {}
@@ -333,7 +310,6 @@ static func _water_ground(world, point: Vector2) -> float:
 	var ground: float = world.terrain.height(point.x, point.y)
 	if world.terrain.has_method("_floor"):
 		ground = world.terrain._floor(world.terrain._ensure(world.terrain.stage), point.x, point.y)
-	# Lower shared seam vertices to either hole floor, so neither adjoining cell exceeds the cap.
 	if "_holes" in world.terrain:
 		var terrain = world.terrain
 		for delta in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2.ONE]:
@@ -392,7 +368,7 @@ static func cave_roof(heights: PackedFloat32Array, holes: PackedByteArray, site:
 static func _roof_cell_collider(faces: PackedVector3Array) -> CollisionShape3D:
 	var collider := CollisionShape3D.new()
 	var origin := faces[0]
-	# Cell-local meshes keep Jolt's compressed vertices on the shared grid edges.
+	# Cell-local meshes keep Jolt's compressed vertices aligned on shared grid edges.
 	var local := PackedVector3Array()
 	for vertex in faces:
 		local.append(vertex - origin)
@@ -418,13 +394,9 @@ static func roof_body(owner: Node, surface: Surface, single_collider := true) ->
 	return {"body": body, "baseline": surface, "surface": surface}
 
 
-# The collider a surface's mesh would give (Mesh.create_trimesh_shape), built from the vertices it
-# was made from (mesh_surface indexes them in order as a triangle list), snapped to 0.1 mm as the
-# engine's triangle mesh snaps them (equal on 30,000 random vertices). Reading a mesh back stalls a
-# real GPU until every frame in flight is done (the headless renderer copies it for free), and a
-# collapse fill or a cave-in drop made one every physics tick.
 const TRIMESH_SNAP := Vector3(0.0001, 0.0001, 0.0001)
 
+# Mesh.create_trimesh_shape() stalls real GPUs waiting on in-flight frames; build ConcavePolygonShape3D with Godot's 0.1 mm trimesh snap instead.
 static func trimesh(surface: Surface) -> ConcavePolygonShape3D:
 	if surface.vertices.is_empty():
 		return null
@@ -456,7 +428,6 @@ static func lower_roof(roof: Dictionary, drop: float) -> void:
 		moved.call()
 
 
-# The placed nodes of every park row that names this event in hide_on, found once here and kept on the swap entry.
 static func hidden_rows(world, event_id: String) -> Array:
 	var out := []
 	var park = world.terrain.map().get("park")
@@ -472,8 +443,6 @@ static func hidden_rows(world, event_id: String) -> Array:
 	return out
 
 
-# A second event on a live swap key adds its hide_on nodes only while the swap is idle, and never the same node twice:
-# a node added mid-swap would record its parked home and stay hidden after the last revert.
 static func _share_hidden(entry: Dictionary, found: Array, id: String) -> void:
 	if not entry.has("hidden") or found.is_empty():
 		return
@@ -485,8 +454,6 @@ static func _share_hidden(entry: Dictionary, found: Array, id: String) -> void:
 			entry.hidden.append(item)
 
 
-# prepared holds surfaces the caller projected ahead (natural.gd plan: "surface", "target") and the
-# collider shape a previous entry made ("shape", written back here), so a stage entry skips them.
 static func prepare_overlay(world, owner: Node, row: Dictionary, record: Dictionary, collapse_target := Callable(), prepared := {}) -> OverlayMap:
 	var id: String = str(row.effect.get("swap", row.id))
 	if id == "":
@@ -500,7 +467,6 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 		record.overlay_map = overlay_map
 		return overlay_map
 	if overlay_map == null:
-		# A copy of the loaded map's fields (deep, as the park file's own read gave), not a second read of it.
 		overlay_map = OverlayMap.new("")
 		for property in current.get_property_list():
 			if int(property.usage) & (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_SCRIPT_VARIABLE) and property.name != "script":
@@ -571,9 +537,6 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	return overlay_map
 
 
-# A collapse or impact overlay's ground before it lands: the stage's floor, raised by the impact's
-# crater rim or the rubble profile. Collider vertices and terrain.height use this identical surface
-# function. A span collapse uses span_surface instead.
 static func overlay_surface(world, kind: String, geometry: Dictionary, deferred := false) -> Surface:
 	var half: Vector2 = geometry.half
 	var radius := minf(half.x, half.y)
@@ -591,10 +554,6 @@ static func overlay_surface(world, kind: String, geometry: Dictionary, deferred 
 		false, null, null, null, deferred)
 
 
-# A stage's industrial or ancient swap overlays, projected on a worker from its ground as entered:
-# each was projected on the main thread at its row's telegraph or landing, 450-500 ms on the islands
-# on the cloud (scrapkeep#241). items: [{id, kind, geometry}] keyed by row id. A stage entered with
-# an overlay down, or not a built park stage, plans nothing.
 static func plan_overlays(world, items: Array) -> Dictionary:
 	var terrain = world.terrain
 	if items.is_empty() or not "_cave_roofs" in terrain or not terrain.overlays.is_empty():
@@ -614,9 +573,6 @@ static func plan_overlays(world, items: Array) -> Dictionary:
 		"roofs": terrain._cave_roofs.get(stage - 1, {}).values().map(func(roof): return roof.surface), "reach": reach}
 
 
-# prepare_overlay's prepared for row id from plan: its surface while the ground is still the one it
-# was planned on (the same stage, no overlay down, no cave roof lowered since), else {} and the caller
-# projects it live. Waits on the worker if it is still running.
 static func planned_overlay(world, plan: Dictionary, id: String) -> Dictionary:
 	var terrain = world.terrain
 	if plan.is_empty() or terrain.stage != plan.stage or not plan.get("reach", {}).has(id) or _overlay_under(world, plan.reach[id]):
@@ -632,12 +588,6 @@ static func planned_overlay(world, plan: Dictionary, id: String) -> Dictionary:
 	return {"surface": surface}
 
 
-# Whether an overlay down now reaches ground the plan read: a plan projected over the ground as
-# entered still holds where no overlay's footprint meets its rectangle. overlay_height answers only
-# inside the footprint, and project_surface reads a profile's surface, which every swap projects
-# over its site's own rectangle. The rectangle's corner reads reach a grid step past it, so the
-# footprint grows by two. The dam's boiler lands with the toe vents' lip down across the dam, and
-# before this its swap projected on the main thread (53.7-55.5 ms frames on the 4080, #522 rows).
 static func _overlay_under(world, reach: Rect2) -> bool:
 	var m = world.terrain.map()
 	for overlay: String in world.terrain.overlays:
@@ -652,7 +602,6 @@ static func _overlay_under(world, reach: Rect2) -> bool:
 	return false
 
 
-# The world XZ box around a rectangle of half extents `half` turned by `yaw` about `at`.
 static func _rect_bounds(at: Vector3, half: Vector2, yaw: float) -> Rect2:
 	var centre := Vector2(at.x, at.z)
 	var bounds := Rect2(centre, Vector2.ZERO)
@@ -729,12 +678,10 @@ static func restore_map(world, overlay_map: OverlayMap) -> void:
 	world.terrain.maps[world.terrain.stage - 1] = overlay_map.source
 
 
-
 static func kind_of_span(row: Dictionary) -> bool:
 	return row.kind == "collapse" and row.effect.get("swap", "") == "trestle_ramp"
 
 
-# A span collapse's site: the event's footprint at the deck height of the reach it spans.
 static func span_site(park: Dictionary, event_site: Dictionary) -> Dictionary:
 	var span: Dictionary = park.park_rows.filter(func(r): return r.id == "flume_hollow_reach")[0]
 	var site := event_site.duplicate(true)
@@ -743,7 +690,6 @@ static func span_site(park: Dictionary, event_site: Dictionary) -> Dictionary:
 	return site
 
 
-# deferred leaves the mesh to Surface.finish, for a worker (natural.gd plan).
 static func span_surface(site: Dictionary, depth_m: float, deferred := false) -> Surface:
 	var surface := Surface.new()
 	var half := ParkMap.footprint_half_extents(site)

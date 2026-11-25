@@ -1,10 +1,5 @@
 extends RefCounted
 
-# Readability floor for warnings that are not a counter's own attack (the prop crew's roof,
-# a burrower's cave-in): two distinct threats never start their warnings within MIN_GAP of
-# each other. It reads and stamps the same root metas as the attacker budget (PR #15,
-# attack_budget.gd), so with the budget in, every warning shares one clock; without it,
-# these warnings still keep the gap among themselves.
 
 const MIN_GAP := 0.2
 const LAST_META := "attack_budget_last"
@@ -21,8 +16,6 @@ static func open(tree: SceneTree) -> bool:
 	return Engine.get_physics_frames() - int(tree.root.get_meta(LAST_META)) >= gap_frames()
 
 
-# Marks a warning starting now. The volley is this source alone, so no pack mate of the last
-# counter warning can join its beat inside the gap.
 static func stamp(tree: SceneTree, source: Object) -> void:
 	if tree == null:
 		return

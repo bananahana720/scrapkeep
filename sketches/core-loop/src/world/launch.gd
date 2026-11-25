@@ -3,33 +3,20 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
-# The stage exit is a cannon shot. Taking a gate fires the ball up a rail: a line of
-# rings drawn along the exact arc it will fly, which it threads for the whole flight,
-# so its velocity is held to that arc and nothing it clips on the way out can cost
-# it speed. The next stage shows where it will come down with a second rail of rings
-# onto a landing hill that turns the fall back into forward speed.
 
 const LIFT := 24.0
-# A ball slower than the floor is pushed up to it along the rail over this long, so the
-# cannon accelerates it rather than snapping its speed (the whole flight is 0.6 s).
 const FLOOR_RAMP := 0.5
 const RINGS := 7
 const RING_RADIUS := 3.2
-# The rail's rings sit this far apart in flight time, inside flow's 0.6 s of flight.
 const RING_FIRST := 0.08
 const RING_STEP := 0.075
 const LANDING_RINGS := 6
 const LANDING_STEP := 0.02
 const LANDING_LIMIT := 4.0
-# A ring goes this long after the ball's flight time through it (the rail's and the landing's).
 const THREADED := 0.05
-# Ruling cv: the rail turns the ball, and the camera with it, from the launch's heading to the heading the next
-# place is entered on (aim), over this long from the launch, inside flow's 0.6 s of flight, so the first frame
-# after the cut faces the way the last one before it did. The turn only rotates: the speed along the rail is kept.
 const TURN_TIME := 0.45
 
 var gravity := 26.0
-# Where the last landing mark says the ball will come down.
 var landing_point := Vector3.INF
 
 var _origin := Vector3.ZERO
@@ -39,23 +26,17 @@ var _flying := false
 var _time := 0.0
 var _rings: Array[MeshInstance3D] = []
 var _landing: Array[MeshInstance3D] = []
-# Each landing ring's flight time from the entry, and the fall's clock: a ring retires once the ball
-# has threaded it, as the rail's rings do, so none is left standing across the view down the run.
 var _landing_due: Array[float] = []
 var _fall := 0.0
 var _pad: MeshInstance3D
 var _pad_time := 0.0
-# The heading the next place is entered on (flat, unit) and the camera the rail turns with it; zero is no turn.
 var _turn_to := Vector3.ZERO
 var _camera = null
-# This flight's turn of the ball and of the camera's yaw, in radians, and how much of the camera's is given.
 var _turn := 0.0
 var _view_turn := 0.0
 var _view_given := 0.0
 
 
-# Horizontal speed kept exactly, raised to a floor if slow, plus the lift. Pure, so a
-# test can hold the rule to its number without a scene.
 static func launch_velocity(current: Vector3, floor_speed: float, fallback_heading: Vector3) -> Vector3:
 	var flat := Vector3(current.x, 0.0, current.z)
 	if flat.length() < floor_speed:
@@ -98,21 +79,16 @@ func _ring(mat: Material, radius: float) -> MeshInstance3D:
 	return ring
 
 
-# The first velocity the rail sets: the ball's own horizontal speed with the lift.
 static func rail_start(current: Vector3) -> Vector3:
 	return Vector3(current.x, 0.0, current.z) + Vector3.UP * LIFT
 
 
-# The next launch turns in flight to this heading, and turns the camera's yaw with it (ruling cv). Set on every stage
-# entry for the place after it; a zero heading switches the turn off.
 func aim(heading: Vector3, camera = null) -> void:
 	var flat := Vector3(heading.x, 0.0, heading.z)
 	_turn_to = flat.normalized() if flat.length() > 0.01 else Vector3.ZERO
 	_camera = camera
 
 
-# velocity is the launch (floor-raised); from is the ball's own start. The rail eases
-# the horizontal part from one to the other over FLOOR_RAMP, and turns it onto the aimed heading over TURN_TIME.
 func fire(origin: Vector3, velocity: Vector3, from := Vector3.INF) -> void:
 	_origin = origin
 	_velocity = velocity
@@ -130,7 +106,6 @@ func fire(origin: Vector3, velocity: Vector3, from := Vector3.INF) -> void:
 		_place_ring(_rings[i], path_point(origin, _from, velocity, gravity, _turn, t), rail_velocity(_from, velocity, gravity, _turn, t))
 
 
-# The share of the turn given by t seconds into the flight.
 static func turned_share(t: float) -> float:
 	return smoothstep(0.0, TURN_TIME, t)
 
@@ -139,17 +114,11 @@ static func turned_flat(flat: Vector3, turn: float, t: float) -> Vector3:
 	return flat.rotated(Vector3.UP, turn * turned_share(t)) if turn != 0.0 else flat
 
 
-# The one curve the rail flies: the horizontal part eased from from to velocity over FLOOR_RAMP and turned over
-# TURN_TIME, with the lift falling under gravity. The flight step and the rings both read it.
 static func rail_velocity(from: Vector3, velocity: Vector3, g: float, turn: float, t: float) -> Vector3:
 	var flat := Vector3(from.x, 0.0, from.z).lerp(Vector3(velocity.x, 0.0, velocity.z), smoothstep(0.0, FLOOR_RAMP, t))
 	return turned_flat(flat, turn, t) + Vector3.UP * (velocity.y - g * t)
 
 
-# Where the real ball is t seconds into the rail, summed tick by tick. The body integrates each tick's move with
-# the velocity it held when the tick began, minus the one tick of gravity the body adds before it moves, and takes
-# the rail's new velocity only after it (measured in launch_ring_real_ball_test). So a slice holds the curve's
-# velocity at its start, and the first slice holds the ball's own horizontal speed with no lift.
 static func path_point(origin: Vector3, from: Vector3, velocity: Vector3, g: float, turn: float, t: float) -> Vector3:
 	var tick := 1.0 / Engine.physics_ticks_per_second
 	var at := origin
@@ -165,7 +134,6 @@ static func path_point(origin: Vector3, from: Vector3, velocity: Vector3, g: flo
 	return at
 
 
-# The velocity the rail holds the ball to this tick, or null once it lets go. The camera turns by the same share.
 func rail(delta: float):
 	if not _flying:
 		return null
@@ -190,8 +158,6 @@ func flying() -> bool:
 	return _flying
 
 
-# Mark the next stage's landing: rings along the fall from the entry point, and a pad
-# where it meets the ground. height is the new stage's ground query.
 func mark_landing(entry: Vector3, velocity: Vector3, height: Callable) -> Vector3:
 	var t := 0.0
 	var at := entry
@@ -231,7 +197,6 @@ func _process(delta: float) -> void:
 			clear_landing()
 
 
-# How many landing rings still stand, for tests and captures.
 func landing_rings() -> int:
 	return _landing.filter(func(ring: MeshInstance3D): return ring.visible).size()
 

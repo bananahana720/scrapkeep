@@ -1,12 +1,5 @@
 extends "res://src/world/device.gd"
 
-# The relay's stake post (W13 SR10): the copper mast and arc coil that stand outside a park
-# relay's ring. Hold E to add one stack, up to the most, then one more hold clears the stake. The
-# prompt names what the hold does before it commits; rolling into the ring starts the
-# charge and locks the stake (hold_relay.gd), so the post stands spent while it runs.
-# The dressed post (tools/blender/world_one/relay_stake.py) shows the stake: one glass ring lights
-# per stack, low to high, and the hand-height dial's needle steps one mark per stack, 0 to 4. The
-# primitive mast and coil stand in only when the GLB is missing. Nothing here stops the ball.
 
 const Cards := preload("res://src/world/director_cards.gd")
 
@@ -73,7 +66,6 @@ func reach_point() -> Vector3:
 	return global_position + Vector3.UP * 2.0
 
 
-# Open between charges; a won relay's post is spent (activities.gd) and takes no more stakes.
 func ready_now() -> bool:
 	return relay != null and not spent and not relay.charging()
 
@@ -93,7 +85,6 @@ func fire() -> bool:
 	return true
 
 
-# The lit rings and the dial needle: k stacks light the lowest k rings and turn the needle k marks.
 func _show_stakes(k: int) -> void:
 	for i in _ring_mats.size():
 		_ring_mats[i].emission_enabled = i < k
@@ -102,7 +93,6 @@ func _show_stakes(k: int) -> void:
 		_needle.rotation.z = -STAKE_SWEEP * float(k)
 
 
-# The coil brightens with each stack and while the relay charges.
 func tick(_delta: float) -> void:
 	if relay == null or _coil_mat == null:
 		return

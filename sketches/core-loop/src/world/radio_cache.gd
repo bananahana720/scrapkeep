@@ -8,11 +8,6 @@ const MODEL := "res://assets/models/world_one/radio_cache.glb"
 const REQUIRED := ["RadioMast", "RadioLamp", "RadioPulse"]
 const LAMP_AT := Vector3(0.0, 2.66, 0.05)
 
-# A Signal cache: a small antenna mast with a dish and a blinking lamp, standing at a deliberate
-# spot in a park (catalogue rows whose found rule is {"on": "cache"}). Rolling within REACH of it
-# collects its take through radio_deck.cache_found. The spots' coordinates live in
-# assets/radio/cache_spots.json, by take id, filled in by the park-dressing work; a take with no
-# spot yet has no cache in the world. spawn_for builds every unfound cache of the stage's map.
 
 const SPOTS := "res://assets/radio/cache_spots.json"
 const REACH := 3.5
@@ -33,7 +28,6 @@ static func spots() -> Dictionary:
 	return parsed.get("spots", {}) if parsed is Dictionary else {}
 
 
-# The caches of a map not yet found, as [take id, position] pairs.
 static func wanted(map_id: String, found: Callable, table: Dictionary = {}) -> Array:
 	if table.is_empty():
 		table = spots()
@@ -70,8 +64,6 @@ func _ready() -> void:
 		_build_plain()
 
 
-# The crew mast model (W1-23, tools/blender/world_one/radio_cache.py): the lamp sits on the dish's
-# feed horn and the pulse ring widens round the dish. False, with nothing built, when it is missing.
 func _build_model() -> bool:
 	if ModelKit.part(MODEL, REQUIRED, "RadioMast", self) == null:
 		return false
@@ -108,9 +100,6 @@ func _build_plain() -> void:
 	add_child(_ring)
 
 
-# Every cache is the same mast, dish, lamp and ring, so the meshes and materials are made once
-# and shared: a primitive mesh builds its arrays and a material its shader on first use, which
-# was 1.5 ms a cache on the stage entry frame.
 static var _parts := {}
 
 static func _make_parts() -> Dictionary:
@@ -164,15 +153,11 @@ func _process(delta: float) -> void:
 func _physics_process(_delta: float) -> void:
 	if player == null or not is_instance_valid(player) or deck == null:
 		return
-	# The game hands over its PlayerBall, a node that never leaves the origin (its body moves under
-	# it): the ball's place at the tick is ball_position().
 	var ball: Vector3 = player.ball_position() if player.has_method("ball_position") else player.global_position
 	if ball.distance_to(global_position + Vector3.UP) <= REACH:
 		collect()
 
 
-# The cache goes once the deck has its take on file; while the deck refuses (the run is not in
-# play) it stays where it is.
 func collect() -> bool:
 	var ok: bool = deck != null and deck.cache_found(take_id)
 	if ok:

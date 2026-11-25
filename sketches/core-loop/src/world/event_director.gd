@@ -11,21 +11,6 @@ const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
-# The event director for one stage (TADR-010): pure, stepped with a delta, drawing
-# from its own seeded stream. It composes the ambient events (the flood, the dust
-# squall) and the participatory ones you opt into, and returns what happened as fact
-# records; the world publishes them. Every event is announced with a lead before it
-# can touch the player, and a participatory event only goes live when the player
-# rolls into its ring, so skipping one costs nothing and never holds the exit.
-#
-# Fact records, in order of occurrence:
-#   {"kind": "announced", "id", "seconds"}   {"kind": "started", "id"}
-#   {"kind": "ended", "id", "outcome"}       {"kind": "milestone", "id", "at": Vector2}
-#   {"kind": "miniboss", "id", "at": Vector2} {"kind": "scrap", "amount", "at": Vector3}
-#   {"kind": "gate", "id", "at": Vector2}     an event gate was taken
-#   {"kind": "progress", "id", "fraction"}    a live event's progress moved (0 to 1)
-#   {"kind": "terrain_swap", "id", "at"}      a terrain change lands this tick (v2 W6)
-#   {"kind": "world", "fact", "at": Vector3}  a world_fact for the bus (v2 W6)
 
 enum { WAITING, ANNOUNCED, ARMED, LIVE, COOLDOWN, DONE }
 enum { SQUALL_CALM, SQUALL_WARNING, SQUALL_LIVE }
@@ -42,10 +27,8 @@ const SQUALL_FIRST := Vector2(25.0, 45.0)
 const SQUALL_GAP := Vector2(50.0, 80.0)
 const FLOOD_FIRST := Vector2(30.0, 50.0)
 const FLOOD_DRY := Vector2(45.0, 65.0)
-# A surge run on a stage this threatening brings a miniboss mid-surge.
 const SURGE_MINIBOSS_THREAT := 2.0
 const SURGE_MINIBOSS_AT := 0.5
-# A live event reports its progress when it has moved at least this far.
 const PROGRESS_STEP := 0.01
 const PARK_QUIET_S := 20.0
 const PARK_TRAVEL_S := 2.0
@@ -53,13 +36,7 @@ const PARK_CORRIDOR_M := 8.0
 const PARK_BAR_S := 240.0 / 172.0
 const PARK_GROUND_CAP := 2
 const PARK_FAMILY_CAP := 1
-# A sum of tick lengths lands a hair under its target at most tick rates, so a park
-# clock counts as arrived within this slack. Without it a full flood or a finished
-# collapse still reads as under way and waits under a rider who rolls in.
 const PARK_CLOCK_SLACK_S := 0.00000001
-# A rising flood waits for a grounded ball in its basin so the water never changes under a ball with no
-# warning (design-v3/PARK.md rule 2, the hold rule). The wait is spent after this much of the flood's live
-# time; then the water rises around the ball and natural.gd's deep-water tax reads it (W1-148, ruling cu).
 const PARK_FLOOD_HOLD_CAP_S := 2.0
 const PARK_LAND_FACTS := {
 	"ground_slump": "ground_slump_landed",
@@ -73,9 +50,6 @@ const PARK_LAND_FACTS := {
 	"sluice_siren": "sluice_landed",
 }
 
-# Stage 4->5 launch rail pre-warm (W49-COMBAT, ROADMAP perf fix): pre-loads EventFamilies scripts
-# and warms NaturalEvents' worker plan for the upcoming park stage off the entry frame, eliminating
-# the 69 ms Stage 5 EventFamilies.build entry hitch.
 const FAMILIES_SCRIPT_PATH := "res://src/world/events/families.gd"
 const NATURAL_SCRIPT_PATH := "res://src/world/events/natural.gd"
 static var _prewarmed_stages := {}
@@ -132,7 +106,6 @@ var stage_time := 0.0
 var flood: FloodCycle
 var squall: DustSquall
 var offers: Array[Dictionary] = []
-# v2 W6: the stage's terrain-changing events (terrain_event.gd), ambient like the flood.
 var terrain: Array = []
 
 var _squall_phase := SQUALL_CALM
@@ -171,7 +144,6 @@ func _init(seed_value: int, def: Dictionary, map, cruise: float, height: Callabl
 	_build_terrain(mix, map, cruise, height)
 
 
-# Drawn after every other event's, so adding them left the older events' seeds alone.
 func _build_terrain(mix: Dictionary, map, cruise: float, height: Callable) -> void:
 	if not "terrain_sites" in map:
 		return
@@ -328,9 +300,6 @@ func _advance_offer(offer: Dictionary, delta: float, ball: Vector3, velocity: Ve
 					offer["timer"] = RETRY_COOLDOWN
 
 
-# A live event's own progress (0 to 1, from its model) as a fact whenever it has moved
-# by PROGRESS_STEP since the last one, and always on reaching 1, so the music can
-# follow the event the player is actually playing. The first live tick reports too.
 func _note_progress(offer: Dictionary, facts: Array) -> void:
 	var p: float = clampf(offer["model"].progress(), 0.0, 1.0)
 	var shown: float = offer.get("shown_progress", -1.0)
@@ -339,8 +308,6 @@ func _note_progress(offer: Dictionary, facts: Array) -> void:
 		facts.append({"kind": "progress", "id": offer["id"], "fraction": p})
 
 
-# Seeded, so the same stage attempt puts the miniboss in the same place and another
-# seed puts it somewhere else.
 func _miniboss_spot(model) -> Vector2:
 	var zone: Array = model.miniboss_zone()
 	var angle := rng.randf() * TAU
@@ -348,9 +315,6 @@ func _miniboss_spot(model) -> Vector2:
 	return (zone[0] as Vector2) + Vector2(cos(angle), sin(angle)) * dist
 
 
-# Everything the events push the ball with this tick: the surge's tailwind and the
-# squall's wind. They may steer and help and never brake, so the part of the push
-# that would oppose the ball's motion is dropped here, once, for every event.
 func push(ball: Vector3, velocity: Vector3) -> Vector3:
 	var total := Vector3.ZERO
 	for offer in offers:
@@ -379,7 +343,6 @@ func spike() -> bool:
 	return false
 
 
-# What the events add to the music's pressure on top of the spawn director's.
 func pressure_bonus() -> float:
 	var bonus := 0.0
 	for offer in offers:
@@ -402,8 +365,6 @@ func offer(id: String) -> Dictionary:
 	return {}
 
 
-# The stage is ending under whatever is live: close each one so music and HUD layers
-# do not hang open into the next stage.
 func end_all() -> Array:
 	var facts := []
 	if not _park.is_empty():
@@ -427,10 +388,8 @@ func end_all() -> Array:
 	return facts
 
 
-# Park families implement behaviour through one callable: (action, row, context).
-# Actions are telegraph, land, step and end. The engine owns facts and scheduling;
-# hooks receive copies, and a zero-live_s event stays live until stage teardown.
 func register_family(family: String, handler: Callable) -> void:
+	assert(handler.is_valid(), "event_director: invalid handler for family '%s'" % family)
 	_park_families[family] = handler
 
 
@@ -438,9 +397,6 @@ func set_clock_tier(effective_tier: int) -> void:
 	_park_tier = effective_tier
 
 
-# Fight phases are pulses, including each stagger. A blocked pulse remains queued
-# for its row; it is consumed on announcement, never remembered as a fight state.
-# The park's pilot lines as Vector2 point lists ([] off the park table): where the director lands route packs.
 func pilot_lines() -> Array:
 	return _park_pilot_lines
 
@@ -454,7 +410,6 @@ func notify_warden_phase(phase: String) -> void:
 			state.pending += 1
 
 
-# An activity row's ring was rolled into: a row it triggers is queued once, like a fight phase.
 func notify_activity(row_id: String) -> void:
 	for state in _park_states:
 		var trigger: Dictionary = state.row.trigger
@@ -462,8 +417,6 @@ func notify_activity(row_id: String) -> void:
 			state.pending += 1
 
 
-# The activity a row opens on is over (a surge course won or lost): its live rows end now, as finish_row ends them,
-# and a row still announced or held ends too, so it never lands on a course that is already over.
 func finish_activity(row_id: String) -> Array:
 	var facts := []
 	for state in _park_states:
@@ -631,8 +584,6 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 	if expired and _park_can_end(state):
 		_park_end(state, facts)
 		return
-	# Past its live time a flood that cannot end (a ball parked in its water) keeps running in full: the
-	# hold cap, the sweep and the rise go on, so a parked ball is never held on dry ground (PF-2).
 	var dt := delta if expired or live_s <= 0.0 else minf(delta, maxf(0.0, live_s - float(state.live_elapsed_s)))
 	if not expired:
 		state.live_elapsed_s += dt
@@ -679,8 +630,6 @@ func _park_half(state: Dictionary, site: Dictionary) -> Vector2:
 	return half
 
 
-# Rising water with a ball standing in its footprint, grounded or not: the time the cap counts. A ball that hops
-# in place is still in the water's way, so hopping cannot hold a flood off.
 func _park_in_footprint(state: Dictionary, ball: Vector3) -> bool:
 	if state.weather or not _park_rising(state):
 		return false
@@ -688,8 +637,6 @@ func _park_in_footprint(state: Dictionary, ball: Vector3) -> bool:
 	return ParkMap.footprint_contains(site, Vector2(ball.x, ball.z), 0.0, Vector2.INF, _park_half(state, site))
 
 
-# A flood that has waited PARK_FLOOD_HOLD_CAP_S for a ball in its footprint stops waiting while it still rises
-# (only the step gate reads this: a flood still never ends under a ball, _park_can_end).
 static func _park_hold_spent(state: Dictionary) -> bool:
 	return state.phase == LIVE and float(state.waited_s) >= PARK_FLOOD_HOLD_CAP_S - PARK_CLOCK_SLACK_S and _park_rising(state)
 

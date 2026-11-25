@@ -1,28 +1,5 @@
 extends RefCounted
 
-# Mini-boss sites and risk-line rows of one park (assets/park/<map>/sites.json, schema
-# scrapkeep-sites/1), kept beside the park file so authoring them never stales the park's bake or
-# graph (both hash the park JSON). validate() returns one string per broken rule; empty means the
-# file holds. The graph rules run only when a ParkGraph is passed.
-#
-# A mini-boss site is a disc the director may drop a fight into: 2 to 3 per park, one per third of
-# the run at most, named for the world's WORLD_ANCIENTS kind (a placeholder while the roster is
-# open, Q-P25). Its disc must sit on open, reachable ground off the landmark footprint,
-# hold no event row, and cost no more than DETOUR_MAX_M over the drop-in to landmark path.
-# d_spawn is the forward path to a node from the drop-in, d_landmark the path from a node to the
-# landmark beacon (a reverse search), so d_spawn + d_landmark is the cost of going through it.
-#
-# A risk row names a route, the hazards on it and the reward at its end. It is an option off the
-# line everyone rides, so the route is not the park's main route, and the risk and the reward are
-# met only on this line. Every hazard is a telegraphed event row whose site is in the route's via,
-# and at least one sits off the shared path (the waymarks, the main route's rows, drop_in and
-# landmark); a hazard may also lie on an alternative route. The reward belongs to this line alone:
-# outside the shared path and outside every alternative route (another route with the same from
-# and to, its via and ends). Dam and flume have no main route, so for them "not main" rests on
-# the waymarks alone. A 2-row park needs two distinct lines:
-# neither row's via may sit inside the other's.
-# Skipping the line must never strand the ball, so the route needs an alternative with the same
-# from and to.
 
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
@@ -33,10 +10,7 @@ const SITES_MIN := 2
 const SITES_MAX := 3
 const RISK_MIN := 1
 const RISK_MAX := 2
-# A park row's centre sits at most this far from a site it is named for: about three disc radii,
-# so "near" names a landform the player sees from the disc, not one across the map.
 const NEAR_MAX_M := 150.0
-# Islands early and mid measure 20 to 22 m of open ground; anything tighter has no room to fight.
 const RADIUS_MIN_M := 20.0
 const RING_SHARE := 0.75
 const RING_POINTS := 8
@@ -115,8 +89,6 @@ static func _sites(out: Array, list, park: Dictionary, graph: ParkGraph) -> void
 				out.append("%s: %s" % [id, miss])
 
 
-# The graph facts of one site: the centre node, whether the ring is clear, the two path legs and
-# the detour. misses lists each rule the graph breaks.
 static func measure(site: Dictionary, park: Dictionary, graph: ParkGraph) -> Dictionary:
 	var at := Vector2(float(site["at"][0]), float(site["at"][1]))
 	var radius := float(site["radius_m"])
@@ -149,7 +121,6 @@ static func measure(site: Dictionary, park: Dictionary, graph: ParkGraph) -> Dic
 	return {"node": node, "out_m": out_m, "in_m": in_m, "detour_m": detour, "misses": misses}
 
 
-# The ground nodes under the landmark's footprint, as a set.
 static func footprint(park: Dictionary, graph: ParkGraph) -> Dictionary:
 	var landmark: Dictionary = park["landmark"].duplicate()
 	landmark["stamp"] = ""
@@ -159,7 +130,6 @@ static func footprint(park: Dictionary, graph: ParkGraph) -> Dictionary:
 	return set
 
 
-# Event rows whose site row lies inside the disc, so a fight is not stacked on a hazard.
 static func hazards_in_disc(site: Dictionary, park: Dictionary) -> Array:
 	var rows := _index(park.get("park_rows", []))
 	var at := Vector2(float(site["at"][0]), float(site["at"][1]))

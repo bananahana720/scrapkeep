@@ -1,17 +1,5 @@
 extends "res://src/world/device.gd"
 
-# A double-or-nothing crate, the risk-bet family (LOOP-REDESIGN section 9): a brass
-# crate with a bone band and an odds dial on a post, half mint (heads) and half rust
-# (tails). Hold E to stake every bonus core you carry this stage: heads doubles them,
-# tails burns them. The stake is on the prompt from the moment E locks the crate, before
-# the hold starts. The result lands as three beats: the drum roll while the needle
-# spins (interact_armed), the clunk as it stops on its half (interact_fired), then the
-# crack of a win or the dry refusal of a loss (bet_resolved) as the cores move.
-#
-# One committed wager per crate per stage: once it lands the crate is spent. Its luck is
-# the interact system's stream for this crate, run and stage, which a stage restart
-# replays, so restarting to bet again lands the same way and fishing pays nothing.
-# With no core to stake it is not ready: the dial shows, the keycap does not.
 
 const Altar := preload("res://src/world/ambush_altar.gd")
 const ODDS := 0.5

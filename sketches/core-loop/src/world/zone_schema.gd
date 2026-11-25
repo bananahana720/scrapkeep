@@ -2,21 +2,14 @@ extends RefCounted
 
 const Spillway := preload("res://src/world/map_spillway.gd")
 
-# Test-time slot vocabulary. Positions use the maps' ground-plane Vector2 (x, z).
-# bay is a nonempty Array of {at: Vector2}; activity_sites adds a nonempty String id.
-# hard_points is an Array of {at: Vector2}; relic_spot is one Vector2.
 const REQUIRED := ["spawn", "beacon", "vault", "bay"]
 const OPTIONAL := ["activity_sites", "hard_points", "relic_spot"]
-# Spillway authors these launch benches only in build_props; the schema test checks
-# their actual box positions. Reach authors its workshop docking row in gate_slots.
 const SPILLWAY_BENCHES := [
 	{"at": Vector2(24.0, 22.0)},
 	{"at": Vector2(66.0, 2.0)},
 ]
 
 
-# Snapshot only slot data, with legacy maps adapted here rather than changed.
-# Explicit bay data wins; a map double never inherits a bay from another position.
 static func slots(map) -> Dictionary:
 	var result := {}
 	for id in REQUIRED + OPTIONAL:
@@ -32,8 +25,6 @@ static func slots(map) -> Dictionary:
 	return result.duplicate(true)
 
 
-# Missing required fields return their bare ids. Malformed fields return
-# "<id>: expected <shape>" in vocabulary order. Empty optional arrays are absent.
 static func validate(map) -> Array:
 	var issues := []
 	var data := slots(map)

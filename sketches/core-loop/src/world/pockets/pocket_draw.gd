@@ -10,24 +10,8 @@ const RogueDirector := preload("res://src/world/rogue_director.gd")
 const Secrets := preload("res://src/core/secrets.gd")
 const CREDITS := 150
 const CHANCE := 0.25
-# World 1's parks hold a drawn pocket to rules the door rules do not carry: level ground, and clear
-# of the rescue cage and the rogue sites (2026-11-09, with the dam's first draw, ruling bu). Worlds 2 and 3 are not listed: the level rule alone would cut the
-# islands' pockets from 1,116 to 487 over 400 run seeds, which is a call for their own pass (ruling at).
 const TIDY := ["park_dam", "park_flume"]
-# Level ground: the graph nodes under the footprint, and one step round it, rise no more than this.
-# An open node says only that nothing roofs it, so an anchor can sit on a dome's flank or a canyon
-# wall. Measured over 400 run seeds a park with no such rule: 190 of the dam's 438 pockets and 244 of
-# the flume's 435 stood across more than 5 m of rise (the flume's worst 111 m, down a canyon wall),
-# while every spot on a floor or bench rose 4.5 m or less.
 const LEVEL_M := 5.0
-# W50 W2/W3 level-ground safety tolerances, tuned per park so steep pit walls and floating island
-# cliffs are rejected without starving valid anchors:
-#   park_pit:      1648 / 1946 anchors <= 5.0 m (85%)
-#   park_sinkhole: 1446 / 1770 anchors <= 5.0 m (82%)
-#   park_islands:  >= 613 / 847 anchors <= 8.5 m (72%, vs 147 at 5.0 m)
-#   park_crown:    468 / 672 anchors <= 8.0 m (70%)
-# Kept beside TIDY (accessed via prepare_world / prepare(..., true)) so existing W1-W3 no-modifier
-# golden hashes stay intact until w50-final-sync re-pins them.
 const TIDY_W2W3 := {
 	"park_pit": 5.0,
 	"park_sinkhole": 5.0,
@@ -103,7 +87,6 @@ static func prepare(graph, map, include_w2w3 := false) -> Dictionary:
 		if graph.flags(n) & Graph.LINE != 0:
 			line.append(n)
 			routes[n] = 1
-	# Keep a connected path for every authored route step, including ride edges.
 	var index := Placement.Index.new(graph, map.park)
 	var steps := {}
 	for route in map.park.routes:
@@ -130,9 +113,6 @@ static func prepare(graph, map, include_w2w3 := false) -> Dictionary:
 	var doors := Trade.doors(map)
 	var level_limit: float = tidy_level_m(String(map.park.map), include_w2w3)
 	var tidy: bool = level_limit >= 0.0
-	# Clear of a rescue cage and of every secret's spot by the door ring, and outside every rogue site's
-	# disc: without these the dam's spot at (72, -584) stood 16 m from Rivet's cage, (144, 64) reached
-	# into the mid rogue site and a pocket at (-248, 192) covered the west rim bench's cracked face.
 	var keep_out := []
 	if tidy:
 		for row in map.park.get("rescue_rows", []):
@@ -187,8 +167,6 @@ static func prepare(graph, map, include_w2w3 := false) -> Dictionary:
 	out.anchors.sort_custom(func(a, b): return out.from_line[a.node] < out.from_line[b.node])
 	return out
 
-# Every spot a secret can stand on in this park, whether or not this run or profile opens it: the
-# field finds' spots, the first-win and stage rooms, and the timed door.
 static func secret_spots(map_id: String) -> Array:
 	var out := []
 	for find in Secrets.FINDS.values():
@@ -221,21 +199,16 @@ static func _fits(prepared: Dictionary, entry: Dictionary, spot: Dictionary, pla
 			return false
 	return true
 
-# A drawn pocket pays what its activity's rule pays, kept to the far ladder (rare). A rule that pays
-# the on-line common roll (the camp, PARK.md 2.12) keeps it: the far filter would leave it nothing.
 static func _owned_pay(entry: Dictionary) -> Dictionary:
 	var pay: Dictionary = load("res://src/world/activities.gd").RULES[entry.activity].pay.duplicate(true)
 	if not pay.has("named") and not Placement._within(pay.rarities, Placement.PAY_ONLINE):
 		pay.rarities = pay.rarities.filter(func(r): return r in Placement.PAY_FAR)
 	return pay
 
-# A pocket whose pay is common only (the camp): never the only pocket drawn, the first picked, or
-# the owner of the greatest detour.
 static func _common_pay(entry: Dictionary) -> bool:
 	var pay := _owned_pay(entry)
 	return not Placement._within(Placement._pay(pay).rarities, Placement.PAY_FAR)
 
-# modifier is the stage's SI3 row (stage_modifier.gd), {} for none; {} draws exactly as before.
 static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerator, trade := {}, anchors: Array = [], modifier := {}, world := 0) -> Dictionary:
 	var result := {"sites": [], "metrics": {"initial_credits": CREDITS, "remaining_credits": CREDITS, "failed_placements": 0, "refunded_credits": 0, "chance_opportunities": 0, "chance_hits": 0, "anchors": prepared.anchors.size()}}
 	if stage < 1 or stage > Park.COUNT or map.park.map != Park.of(stage).map:
@@ -264,13 +237,11 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 		available -= cost(chosen)
 		pool.erase(chosen)
 	picked.sort_custom(func(a, b): return cost(a) > cost(b) or (cost(a) == cost(b) and a.id < b.id))
-	# Far Haul tries every one of the farthest few anchors, farthest first.
 	var far_haul: bool = anchors.is_empty() and modifier.get("far", false)
 	var chance := 1.0 if far_haul else CHANCE
 	var candidates: Array = anchors.duplicate() if not anchors.is_empty() else prepared.anchors.duplicate()
 	if far_haul:
 		candidates = Modifier.far_anchors(prepared)
-	# Alternate near-first and far-first traversals on the private stage stream.
 	elif anchors.is_empty() and rng.randi_range(0, 1) == 1:
 		candidates.reverse()
 	var pending := false
@@ -301,7 +272,6 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 		result.sites.append(spec)
 		picked.pop_front()
 		pending = false
-	# A common reward cannot own the greatest detour, even when rolls allow rare.
 	var far := -INF
 	for spec in result.sites:
 		if not _common_pay(spec.interior):
@@ -365,8 +335,6 @@ static func from_doc(doc: Dictionary) -> Dictionary:
 	for entry in Library.all_rows():
 		library[entry.id] = entry
 	for key in doc:
-		# A save from before the dam drew (2026-11-09, ruling bu) holds an empty stage 1 draw. It is dropped,
-		# so a Continue on the dam draws the pocket its stage modifier acts on.
 		if key == "1" and doc[key].sites.is_empty():
 			continue
 		var sites := []

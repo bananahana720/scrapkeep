@@ -1,44 +1,10 @@
 extends RefCounted
 
-# The height stamps the park bake applies (design-v3/PARK.md 2.2 `stamp`, section 3). Pure
-# functions: tools/park_bake.gd calls them on its grids; the runtime never evaluates a stamp.
-#
-# Frame. A row's piece axes come from its `at`, `yaw_deg` and `size` [length, height, width]:
-# u runs along the yaw (0 faces +z, turning toward +x) and v across it, both scaled so the
-# footprint is -0.5..0.5 on each. Elliptic stamps use r = length of (2u, 2v), 1 on the rim.
-#
-# Composition. The base plain is y 0 and rows apply in file order, each adding its offset to
-# what is there (PARK.md 2.1: stamps raise or cut it). A raise is positive, a cut negative,
-# zero outside the footprint, so a mesa stamped on a ramp rides the slope. A row's `y` places
-# its recipe, never its stamp.
-#
-# Ramp. A `ramp` falls by its height from its start (u -0.5) to its end (u +0.5) along its yaw:
-# offset h at the start, 0 at the end (the convention park/stages/1-park_dam.md section 2
-# proposes, adopted here).
-#
-# Shapes, each a starting value to tune in play:
-#   plateau  rectangle, +h, sheer edge (one grid step of slope).
-#   mesa     rectangle, +h, sides slope over 30 percent of h inward from the edge.
-#   ridge    rectangle, +h along the centre line, falling as 1 - (2v)^2 across; the ends slope
-#            over half the width.
-#   butte    ellipse, +h, sides over the outer 15 percent of the radius.
-#   spire    ellipse, +h, a smoothstep cone over the outer 60 percent of the radius.
-#   wash     rectangle, -h, a half-pipe: flat floor over the middle 40 percent of the width,
-#            curved walls; the ends open over min(width, length / 4) so a ball rolls in and out.
-#   channel  rectangle, -h, steep walls over min(20 percent of h, a quarter of the width); ends
-#            open like a wash.
-#   bowl     ellipse, -h * (1 - r^2).
-#   crater   ellipse, a bowl -h inside r 0.8 and a rim raised 0.2 h peaking at r 0.85.
-#   sinkhole ellipse, -h inside r 0.9, a near-vertical wall to 0 at the rim.
-#   terrace  rectangle, a stepped cut -h in n = max(1, round(h / 20)) benches of equal depth,
-#            each bench a ring of equal width over the outer half (a 4 m bench is one flat cut).
 
 const TERRACE_STEP_M := 20.0
 
-# The material slots surface.bin stores, one byte per 2 m cell (PARK.md section 3, Materials).
 const SURFACE_SLOTS := ["sand", "sandstone", "concrete", "tailings", "basalt", "net"]
 const SURFACE_DEFAULT := 0
-# Each landform's slot; the net slot is reserved for the net deck recipe (never the colour map).
 const LANDFORM_SURFACE := {
 	"arroyo": 0, "dry_wash": 0, "saguaro_stand": 0,
 	"slot_canyon": 1, "slickrock": 1, "mesa_rim": 1, "butte": 1, "spire": 1, "hoodoo_field": 1,
@@ -57,7 +23,6 @@ static func surface_slot(landform: String) -> int:
 	return int(LANDFORM_SURFACE.get(landform, -1))
 
 
-# A row's frame, computed once per row: centre, axes, size and stamp kind.
 static func frame(row: Dictionary) -> Dictionary:
 	var a := deg_to_rad(float(row["yaw_deg"]))
 	var size: Array = row["size"]
@@ -73,7 +38,6 @@ static func frame(row: Dictionary) -> Dictionary:
 	}
 
 
-# The axis-aligned box [min_x, min_z, max_x, max_z] that holds the footprint.
 static func bounds(f: Dictionary) -> Array:
 	var hl: Vector2 = f["along"] * f["length"] * 0.5
 	var hw: Vector2 = f["across"] * f["width"] * 0.5
@@ -83,13 +47,11 @@ static func bounds(f: Dictionary) -> Array:
 	return [c.x - ex, c.y - ez, c.x + ex, c.y + ez]
 
 
-# The point's (u, v) in the row's frame; inside the rectangle when both are within 0.5.
 static func local(f: Dictionary, x: float, z: float) -> Vector2:
 	var rel: Vector2 = Vector2(x, z) - (f["at"] as Vector2)
 	return Vector2(rel.dot(f["along"]) / f["length"], rel.dot(f["across"]) / f["width"])
 
 
-# Whether (x, z) lies in the footprint: the rectangle, or the inscribed ellipse for elliptic stamps.
 static func inside(f: Dictionary, x: float, z: float) -> bool:
 	var p := local(f, x, z)
 	if f["ellipse"]:
@@ -97,7 +59,6 @@ static func inside(f: Dictionary, x: float, z: float) -> bool:
 	return absf(p.x) <= 0.5 and absf(p.y) <= 0.5
 
 
-# The stamp's height offset at (x, z), zero outside its footprint.
 static func offset(f: Dictionary, x: float, z: float) -> float:
 	var p := local(f, x, z)
 	var u := p.x
@@ -126,7 +87,6 @@ static func offset(f: Dictionary, x: float, z: float) -> float:
 		return 0.0
 	if absf(u) > 0.5 or absf(v) > 0.5:
 		return 0.0
-	# Distances in metres from the point to the footprint's side edges and end edges.
 	var side_m := (0.5 - absf(v)) * width
 	var end_m := (0.5 - absf(u)) * length
 	match f["stamp"]:

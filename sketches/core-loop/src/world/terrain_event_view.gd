@@ -3,15 +3,6 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
-# Draws each terrain event's telegraph from its model and nothing else, in the W2
-# grammar (VISUAL-LANGUAGE sections 4 and 11): hostile HAZARD, 45-degree stripes over a
-# charcoal keyline, a fill that measures time linearly, and an edge drawn exactly where
-# the new collider will stand.
-#   Cave-in: an instant fill closing in from the edge over the 3 s crumble, with grit
-#     falling from the roof edge, then one solid flash on the swap.
-#   Impact: a dotted flight trace down from the sky and four brackets closing on the
-#     landing circle, meeting at the swap; the chunk rides the trace in the last beat.
-# Nothing here has a collider.
 
 const FLASH_SECONDS := 0.12
 const TRACE_DOTS := 14
@@ -127,8 +118,6 @@ func _draw(e: Dictionary, delta: float) -> void:
 			g.position = Vector3(cos(a) * r * 0.6, 9.0 * (1.0 - fall), sin(a) * r * 0.6)
 
 
-# The four brackets stand off the landing circle and close linearly onto it; the
-# chunk comes down the trace in the last quarter and meets the ground on the swap.
 func _draw_impact(e: Dictionary, f: float) -> void:
 	var r: float = e["radius"]
 	var reach := r * (1.0 + 1.2 * (1.0 - f))
@@ -183,7 +172,6 @@ static func _flat_ring(parent: Node3D, radius: float, width: float, mat: Materia
 	return ring
 
 
-# A bracket: two bars meeting at a corner, HAZARD on a charcoal keyline.
 static func _bracket(parent: Node3D) -> Node3D:
 	var node := Node3D.new()
 	for side in [Vector3(2.0, 0.0, 0.0), Vector3(0.0, 0.0, 2.0)]:
@@ -206,8 +194,6 @@ static func _bracket(parent: Node3D) -> Node3D:
 	return node
 
 
-# 45-degree HAZARD and charcoal stripes at 35% fill, mapped in world space so the pitch
-# stays 0.5 m whatever the ring's size.
 static func _stripe_material() -> StandardMaterial3D:
 	var image := Image.create_empty(64, 64, false, Image.FORMAT_RGBA8)
 	for y in 64:

@@ -1,6 +1,5 @@
 extends Node3D
 
-# Each row draws and damages with one committed Hazard, then lands its shared ground swap.
 
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
@@ -13,24 +12,19 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const Palette := preload("res://src/core/palette.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
-# Cones use [length, width]. The ring uses an [x, z] footprint with a safe eye.
 const FALLOUT_EYE_FRACTION := 0.4
 const SHAPES := {
 	"steam_cone": {"form": "cone"}, "arc_steam_cone": {"form": "cone"},
 	"burner_flare": {"form": "cone"},
 	"fallout_ring": {"form": "ring", "inner_fraction": FALLOUT_EYE_FRACTION},
 }
-# Reach above the ground, the same for every shape this family commits.
 const REACH_M := 3.0
-# What a steam cone or a fallout ring takes from each enemy it catches (the silt boil's enemy damage).
 const ENEMY_DAMAGE := 25.0
 
 var world
-# row id -> {hazard, site, at, hit, swap}
 var active := {}
 var _sites := {}
 var _overlay_map: EventGround.OverlayMap
-# The stage's swap overlays, projected on a worker from setup (EventGround.plan_overlays).
 var _plan := {}
 var _hits_enemies := false
 
@@ -51,7 +45,6 @@ func setup(world_ref) -> void:
 
 
 func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
-	# The sluice commits no hazard: its water is the surge course's front (activities.gd), which never hurts.
 	if row.kind == "sluice_surge":
 		return
 	match action:
@@ -79,7 +72,6 @@ func _telegraph(row: Dictionary) -> void:
 	var lead := float(row.telegraph.lead_s)
 	var live := float(row.live_s)
 	if spec.form == "cone":
-		# The cone points along the site's local +x, which is world angle -yaw in the x-z plane.
 		var axis := -deg_to_rad(float(site.yaw_deg))
 		var spread := atan2(float(size[1]) * 0.5, float(size[0]))
 		hazard.commit_sector(row.id, Threat.Type.INSTANT, at, Vector2(0.0, float(size[0])),
@@ -91,8 +83,6 @@ func _telegraph(row: Dictionary) -> void:
 	active[row.id] = {"hazard": hazard, "kind": row.kind, "site": site, "at": at, "hit": false, "struck": {}, "swap": "", "overlay_record": {}}
 
 
-# The committed Hazard of each live row as [{id, cause, covers}], cause the one lose_scrap is called with (the row's kind).
-# The bot's fairness record reads this (tools/bot_fairness.gd).
 func telegraphs(ball: Vector3) -> Array:
 	var out: Array = []
 	for id in active:
@@ -108,7 +98,6 @@ func _land(row: Dictionary, ctx: Dictionary) -> void:
 	if state.is_empty():
 		return
 	var hazard: Hazard = state.hazard
-	# The warning ends at land: the hazard is live from this moment for live_s.
 	hazard.warn_seconds = hazard.age
 	var swap := String(row.effect.get("swap", ""))
 	if swap != "":
@@ -194,9 +183,6 @@ func _geometry(site: Dictionary, at := Vector3.INF) -> Dictionary:
 		"yaw": deg_to_rad(float(site.yaw_deg)), "strike_m": 0.0}
 
 
-# The shared damage path (natural.gd's strike): lose_scrap for the row's damage, once per
-# activation, and a vertical lift when no scrap is left to take. In the Spillway every enemy the live
-# hazard contains is struck too, once per activation, thrown out from its centre (HazardHits).
 func _strike(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 	var hazard: Hazard = state.hazard
 	if not hazard.is_live():

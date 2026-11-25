@@ -3,16 +3,6 @@ extends Node3D
 const ModelKit := preload("res://src/world/model_kit.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# Survey posts (BACKLOG W1-103): something small to do on the ride between sites, behind `--posts=on` (off by
-# default). A row is five survey posts beside the floor line, one a beat of the scrap trail (the trail's own
-# spacing), alternating left and right, so a ball that weaves takes all five. A post the ball touches at speed is
-# knocked flat; all five inside SET_S throw a line of scrap ahead of the ball. Nothing stops the ball, nothing has
-# a collider (a knock is a touch at speed, as overtime.gd's bell is), no marker points at a row and a missed row
-# costs nothing. (Not Sable's stakes, src/combat/stakes.gd, nor the relay's stake: these are posts.)
-#
-# Where rows stand is a pure function of the stage's floor line, its sites and the run's seed (rows()): a slot every
-# EVERY_M of line, kept on two runs in three, slid along the line to the first stretch that is rolled ground, runs
-# straight and is clear of every site. So a run's rows differ from the last run's and a replay keeps them.
 
 const STAKE := "res://assets/models/world_one/poi_survey_stake.glb"
 const POSTS := 5
@@ -20,12 +10,10 @@ const SIDE_M := 2.4
 const FIRST_M := 130.0
 const EVERY_M := 260.0
 const SLIDES := [0.0, 20.0, -20.0, 40.0, -40.0, 60.0, -60.0]
-# A row keeps this far from every site (and FIGHT_PAD_M outside every fight's own extent), and its ground rises or falls no more than this a metre of run.
 const CLEAR_M := 70.0
 const FIGHT_PAD_M := 10.0
 const SLOPE := 0.45
 const MARGIN_M := 10.0
-# The line may turn this much across a row, in radians.
 const TURN := 0.35
 const KEEP_OF := 3
 const TOUCH_M := 1.7
@@ -38,7 +26,6 @@ const HEIGHT_M := 3.2
 const FALL_S := 0.25
 
 var ctx
-# The rows standing this stage: {"posts": [Node3D], "down": [bool], "hit": int, "clock": float, "paid": bool}.
 var standing: Array = []
 var sets_paid := 0
 
@@ -53,9 +40,6 @@ func setup(context) -> void:
 	set_physics_process(false)
 
 
-# Where a run's rows stand on a line: [{"posts": [Vector3 on the ground], "heading": Vector2}], in line order.
-# `points` is the line in plan, `spacing` the distance between posts, `gaps` the stretches of the line a built ramp
-# covers ([from, to] in metres along it), `clear_of` what a row keeps away from (keep_clear()'s rows), and `ground` a Callable (x, z) -> height.
 static func rows(points: PackedVector2Array, spacing: float, gaps: Array, clear_of: Array, ground: Callable, seed_value: int) -> Array:
 	var out := []
 	if points.size() < 2 or spacing <= 0.0:
@@ -78,7 +62,6 @@ static func rows(points: PackedVector2Array, spacing: float, gaps: Array, clear_
 	return out
 
 
-# The row whose first post stands `from` metres along the line, or {} where the stretch does not suit one.
 static func _row(points: PackedVector2Array, from: float, spacing: float, gaps: Array, clear_of: Array, ground: Callable) -> Dictionary:
 	var run := spacing * (POSTS - 1)
 	if from < MARGIN_M or gaps.any(func(g: Array) -> bool: return from - MARGIN_M <= g[1] and from + run + MARGIN_M >= g[0]):
@@ -110,7 +93,6 @@ static func _row(points: PackedVector2Array, from: float, spacing: float, gaps: 
 	return {"posts": posts, "heading": first["heading"]}
 
 
-# The plan position and unit heading `d` metres along a line (the approach to the boss's bowl reads lines with it too).
 static func along(points: PackedVector2Array, d: float) -> Dictionary:
 	var left := maxf(0.0, d)
 	for i in range(1, points.size()):
@@ -139,7 +121,6 @@ func _build(stage: int) -> void:
 	_rng.seed = hash([ctx.rng.seed, ctx.run.run_seed, stage, "survey_posts"])
 	var ground := func(x: float, z: float) -> float: return ctx.terrain.height(x, z)
 	var clear := keep_clear(map)
-	# Rows keep off the approach to the boss's bowl where one stands (loaded here: that script reads this one).
 	var approach = load("res://src/world/bowl_approach.gd")
 	if approach.on(ctx):
 		var planned: Dictionary = approach.plan_for(map, ground)
@@ -161,10 +142,6 @@ func _build(stage: int) -> void:
 	set_physics_process(not standing.is_empty())
 
 
-# What a map's rows keep away from, as rows() takes it: the Warden's beacon and every activity, rescue and survival
-# site by CLEAR_M ({"at", "r"}), and every fight site (a crew home, an event's ground, a fighting activity's ring, the
-# yard lock: ParkMap.fight_sites()) by its own ground and FIGHT_PAD_M ({"at", "r"} for a ring, {"at", "half",
-# "yaw_deg", "r"} for a box, r being the pad).
 static func keep_clear(map) -> Array:
 	var out: Array = [{"at": map.beacon, "r": CLEAR_M}]
 	for table in ["activity_sites", "rescue_sites", "survival_sites"]:
@@ -181,7 +158,6 @@ static func keep_clear(map) -> Array:
 	return out
 
 
-# True when plan point `p` is inside what a keep_clear() row keeps clear.
 static func near(row: Dictionary, p: Vector2) -> bool:
 	var local: Vector2 = p - row["at"]
 	if not row.has("half"):
@@ -204,7 +180,6 @@ func _physics_process(delta: float) -> void:
 	if standing.is_empty() or ctx.player == null:
 		return
 	var ball: Vector3 = ctx.player.ball_position()
-	# Speed along the ground: a ball falling straight down beside a post knocks nothing.
 	var velocity: Vector3 = ctx.player.planar_velocity()
 	for row in standing:
 		if row["paid"]:
@@ -227,14 +202,12 @@ func _physics_process(delta: float) -> void:
 				_throw(ball, velocity.normalized())
 
 
-# The set's scrap, a piece every few metres ahead of the ball, each seated on the ground it lands on.
 func _throw(from: Vector3, heading: Vector3) -> void:
 	for i in SET_SCRAP:
 		var spot := from + heading * THROW_M * (i + 0.5) / SET_SCRAP
 		ctx.build.scrap.drop(ctx.terrain.drop_point(spot.x, spot.z, 0.0), 1, _rng)
 
 
-# The post falls the way the ball was going and stays down.
 func _knock(row: Dictionary, index: int, velocity: Vector3) -> void:
 	row["down"][index] = true
 	row["hit"] += 1
@@ -245,11 +218,8 @@ func _knock(row: Dictionary, index: int, velocity: Vector3) -> void:
 	tween.tween_property(post, "global_transform:basis", fallen, FALL_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 
 
-# One post: a thick striped survey pole with an amber pennant that faces up and down the line, built about its
-# foot. Sized to read from the chase camera at speed.
 func _post() -> Node3D:
 	var post := Node3D.new()
-	# The survey stake's model, its pivot at the foot; the plain pole and pennant when the file is missing.
 	if ModelKit.whole(STAKE, post) != null:
 		return post
 	var pole := MeshInstance3D.new()

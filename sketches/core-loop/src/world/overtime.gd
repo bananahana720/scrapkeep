@@ -6,24 +6,6 @@ const Palette := preload("res://src/core/palette.gd")
 const LoopTally := preload("res://src/core/loop_tally.gd")
 const WaveCross := preload("res://src/world/wave_cross.gd")
 
-# Reservoir (docs/design/loops.md Spec 2; Andrew approved the top three loops on 11 Nov 2026
-# 18:42Z and asked for them before the sitting): a keeper's gamble on a won yard. Behind
-# `--overtime=on` (off by default), on a lock row that names an `overtime` block (the dam yard).
-#
-# - The bell. A won yard lights a keeper's bell beside it. A ram at the cracked-face bar
-#   (Activities.RAM_MIN_PER_CRUISE x cruise) rings it: one overtime wave lands on the yard's ring
-#   (the row's last wave plus one plated brute) and the pot and the reservoir both rise a notch.
-#   Three rings at most; it rings while a wave still stands. Nobody makes you (ruling ci).
-# - The pot. A net on a post across the yard. A ram cashes it (build.gd overtime_paid) and no more
-#   overtime comes; a wave still standing stays.
-# - The sluice. A wheel upstream. A ram opens it: SLUICE_WARN_S of whistle, then a sheet of water
-#   runs across the yard along the row's flow, longer for every notch. Machines in it are carried
-#   and soaked (enemy.gd soak: wet, so arc hits them at the wet row); the ball in it is carried at
-#   FLOOD_CARRY x cruise. An arc hit on a soaked machine jumps once to every soaked machine within
-#   ARC_JUMP_M. One sluice a yard.
-#
-# Blockout: the bell, the net and the wheel are code-built shapes with no collider (a ram is a
-# touch at speed), so no park file changes; art and colliders come after the sitting.
 
 const MAX_RINGS := 3
 const PROP_SIDE_M := 9.0
@@ -87,8 +69,6 @@ func enabled() -> bool:
 		and ctx.player.tuning.option("overtime") == "on"
 
 
-# The yard at `at` was won (stage_locks.gd _unlock). `facing` is the yard's heading toward the
-# beacon; `lock` its lock row.
 func offer(at: Vector3, facing: float, lock: Dictionary) -> void:
 	clear()
 	_row = lock.get("overtime", {}).duplicate()
@@ -129,7 +109,6 @@ func clear() -> void:
 	set_physics_process(false)
 
 
-# What the pot pays now: {panels, rares, cores}.
 static func pot_for(count: int) -> Dictionary:
 	return {"panels": 1 if count >= 1 else 0, "rares": (1 if count >= 2 else 0) + (1 if count >= 3 else 0),
 		"cores": 1 if count >= 3 else 0}
@@ -147,7 +126,6 @@ func ring() -> bool:
 	return true
 
 
-# The pot pays what the rings put in it; an empty pot has nothing to cash.
 func cash() -> bool:
 	if state != "offered" or rings <= 0:
 		return false
@@ -174,13 +152,11 @@ func open_sluice() -> bool:
 	return true
 
 
-# Where a prop stands ("bell", "pot" or "sluice"), or Vector3.INF when the yard offers none.
 func prop_at(id: String) -> Vector3:
 	var node: Node3D = {"bell": _bell, "pot": _pot, "sluice": _wheel}.get(id)
 	return node.global_position if _props != null and node != null and is_instance_valid(node) else Vector3.INF
 
 
-# What the sheet shows: "" (nothing), "warning" (a pale ring on the ground) or "flooding".
 func water_shown() -> String:
 	if _water == null or not _water.visible:
 		return ""
@@ -236,8 +212,6 @@ func _step_sluice(delta: float) -> void:
 				_show_water(false)
 
 
-# The sheet carries the ball toward FLOOD_CARRY x cruise along the flow, and knocks and soaks
-# every machine in the yard on a short beat.
 func _carry(delta: float) -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	if _flat(ball, centre) <= radius:
@@ -259,8 +233,6 @@ func _carry(delta: float) -> void:
 				_soaked.append(weakref(enemy))
 
 
-# An arc hit on a soaked machine jumps once to every other soaked machine within ARC_JUMP_M,
-# at ARC_JUMP_SHARE of its force. The jumps are struck while _conducting, so they never jump again.
 func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
 	if _conducting or state == "" or DamageFamilies.family(kind) != DamageFamilies.ARC:
 		return
@@ -295,10 +267,8 @@ func _land_wave() -> void:
 		var enemy = ctx.spawner.spawn_enemy(String(kinds[i]), drops[i])
 		if enemy is Node3D:
 			enemy.set_meta("pack_seq", OVERTIME_SEQ + rings)
-			# The pot pays for the crew, as the yard does (ruling af): no panel roll per kill.
 			enemy.set_meta("yard_crew", true)
 			_crew.append(weakref(enemy))
-	# The whistle sounds as the crew lands here, so its cross holds at the drop spots for a beat.
 	WaveCross.mark(self, drops, 0.0, WAVE_CROSS_HOLD_S)
 	ctx.events.world_fact.emit("arena_wave", centre)
 
@@ -315,8 +285,6 @@ static func _flat(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
 
 
-# --- Blockout props -------------------------------------------------------------------------
-
 func _build_props() -> void:
 	_props = Node3D.new()
 	_props.name = "OvertimeProps"
@@ -332,7 +300,6 @@ func _build_props() -> void:
 	dome.material_override = Palette.unshaded(Palette.BRASS)
 	dome.position = Vector3.UP * 3.6
 	_bell.add_child(dome)
-	# The bell's price: one brass band a ring left, struck off as it rings.
 	for i in MAX_RINGS:
 		var band := MeshInstance3D.new()
 		var torus := TorusMesh.new()
@@ -353,7 +320,6 @@ func _build_props() -> void:
 	_pot.material_override = Palette.unshaded(Palette.SAND)
 	_pot.position = Vector3.UP * 3.4
 	pot_post.add_child(_pot)
-	# What the next ring would make the pot: a pale shell round it.
 	_pot_next = MeshInstance3D.new()
 	_pot_next.mesh = net
 	var ghost := Palette.unshaded(Color(Palette.SAND, 0.25))
@@ -371,7 +337,6 @@ func _build_props() -> void:
 	wheel.position = Vector3.UP * 3.0
 	wheel.rotation = Vector3(PI * 0.5, 0.0, 0.0)
 	_wheel.add_child(wheel)
-	# The sheet is the circle it acts in (_carry): the same radius, drawn pale through the warning.
 	_water = MeshInstance3D.new()
 	_water.name = "SluiceWater"
 	var disc := CylinderMesh.new()
@@ -405,7 +370,6 @@ func _post(id: String, at: Vector3, color: Color) -> Node3D:
 	return node
 
 
-# The pot swells with each ring, so the stake reads from across the yard.
 func _dress_pot() -> void:
 	if _pot != null:
 		_pot.scale = Vector3.ONE * (1.0 + 0.45 * rings)

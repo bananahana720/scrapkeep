@@ -1,8 +1,5 @@
 extends RefCounted
 
-# SQ15. A socket owns every directed node link through one opening, and one KC0 filler
-# row covering those links. Stage closure is an overlay; the authored graph stays intact.
-# A caller supplies authored sockets rather than guessing a doorway from a zone centroid.
 const Graph := preload("res://src/world/park/park_graph.gd")
 const Stamps := preload("res://src/world/park/park_stamps.gd")
 const SEEDS := 1000
@@ -72,8 +69,6 @@ static func validate(graph, sockets: Array) -> Array:
 	return errors
 
 
-# Segment/box intersection in the same rotated footprint KC0 places. Checking segments,
-# rather than endpoint flags, catches a wide wall straddling the route between lattice nodes.
 static func _intersects(frame: Dictionary, a: Vector3, b: Vector3) -> bool:
 	var pa := Stamps.local(frame, a.x, a.z)
 	var pb := Stamps.local(frame, b.x, b.z)
@@ -137,7 +132,6 @@ static func _safe(graph, row: Dictionary, shortest: Array = []) -> bool:
 static func stage(layout: Dictionary, seed_value: int, arm: String) -> Dictionary:
 	var base = layout["graph"]
 	var sockets: Array = layout["sockets"]
-	# Compile footprints once for both arms; changed geometry or graph bytes invalidate it.
 	var cache_key := [base.to_bytes(), JSON.stringify(sockets, "", true)]
 	if layout.get("_closure_key", []) != cache_key:
 		layout["_closure_plan"] = _compile(base, sockets)
@@ -176,7 +170,6 @@ static func stage(layout: Dictionary, seed_value: int, arm: String) -> Dictionar
 			if s["a"] != z and s["b"] != z:
 				continue
 			var other: int = s["b"] if s["a"] == z else s["a"]
-			# A keeper must enter and leave the pocket, and cannot depend on another pocket.
 			var enters := false
 			var leaves := false
 			for link in s["links"]:
@@ -255,7 +248,6 @@ static func _compile(base, sockets: Array) -> Dictionary:
 	for socket in sockets:
 		var blocked := {}
 		var frame := _frame(socket["filler"])
-		# The solid also blocks incidental same-zone links through its footprint.
 		for a in base.node_count():
 			for e in range(base.off[a], base.off[a + 1]):
 				var b: int = base.to[e]
@@ -337,7 +329,6 @@ static func _zone_table(graph) -> void:
 			row["d_landmark"] = -1.0
 
 
-# Exact shortest tour, with directed distances from the closed graph. 2^8 states at the cap.
 static func _full_visit(graph, pockets: Array) -> float:
 	var count := pockets.size()
 	if count == 0:
@@ -364,10 +355,6 @@ static func _full_visit(graph, pockets: Array) -> float:
 	return best
 
 
-# Paired lab, not one of the six authored park maps. 8 m ground links, a two-lane open
-# route and 3..8 side landforms, each with two mouths. Main zones have 2..4 openings.
-# The fixed arm uses the authored per-seed connector mask, independent of the pocket draw.
-# The socket arm adapts that same geometry to the draw. Nothing copies a commercial layout.
 static func template(seed_value: int) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
@@ -397,7 +384,6 @@ static func template(seed_value: int) -> Dictionary:
 		pocket_zones.append(z)
 		var centre := start + (i + 1) * 160
 		var depth := rng.randi_range(12, 16) * 8
-		# Room floor, >=16 eligible door nodes. Its two corridors belong to this landform.
 		for x in range(centre - 24, centre + 33, 8):
 			for y in range(depth, depth + 33, 8):
 				builder.node(x, y, z, Graph.OPEN | Graph.DOOR_OK | Graph.SIGHT_OK)

@@ -1,13 +1,5 @@
 extends RefCounted
 
-# The workshop barge's timed lap: once round the banked rim track, touching its four
-# marks in any order and coming back to the start (DESIGN-V2 section 15: a small
-# optional mini-game with a codex callback). Pure: the bay hands it the ball's deck
-# position and speed each tick and publishes what it answers. It never stops or holds
-# the ball; leaving the track just lets the lap lapse.
-#
-# Facts: {"kind": "lap_started"}, {"kind": "lap_checkpoint", "index"},
-#        {"kind": "lap_finished", "seconds", "best", "under_par"}
 
 const PAR := 9.0
 const MARK_RADIUS := 5.5

@@ -1,21 +1,5 @@
 extends Node3D
 
-# The Fleet's park arrivals, one per world (design-v3/WORLD-ROSTERS.md), each a different way
-# in, never a reskin of the others:
-# - fleet_landing (the Spillway): telegraph projects the footprint decal; land raises a
-#   grounded greybox hull and wakes its home.
-# - lift_cage (the Dig): the crew comes up out of the pit. The decal is the shaft mouth and
-#   the cage climbs the shaft through the warning; land tops it out and wakes the home. The
-#   Dig's answer is from above: a slam inside the topped-out cage sends it back down the
-#   shaft with its crew, and the home is broken.
-# - zipline_drop (the Highdraft): the crew rides a trolley down a cable from the barge. The
-#   cable is drawn from its anchor to the landing through the warning; a ball that flies
-#   through the line before land cuts it and the drop never arrives. Land knocks every
-#   enemy near the landing outward, toward the island edges.
-# None of them touches the ball. Each brings its crew only by waking its home, so the
-# director's crowd cap and the attacker budget count every crew it brings ("Budget holds").
-# This node also hosts the burrowers' cave-ins (cave_ins.gd): Fleet crews' effects on the
-# world all live here.
 
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -26,14 +10,11 @@ const KINDS := ["fleet_landing", "lift_cage", "zipline_drop"]
 const CAGE_HEIGHT_M := 3.6
 const SHAFT_DEPTH_M := 6.0
 const CAGE_DROP_S := 1.2
-# The cage starts climbing once this share of the warning has passed.
 const CAGE_CLIMB_FROM := 0.35
-# A slam this far above or below the shaft mouth still lands in the cage.
 const CAGE_SLAM_REACH_M := 3.0
 const ZIP_DEFAULT_ANCHOR := [-60.0, 0.0]
 const ZIP_DEFAULT_UP_M := 30.0
 const ZIP_LAND_UP_M := 2.5
-# A ball in the air within this of the cable cuts it.
 const ZIP_CUT_M := 1.8
 const ZIP_IMPACT_EXTRA_M := 6.0
 const ZIP_KNOCK := 22.0
@@ -94,7 +75,6 @@ func _vessel(row: Dictionary) -> Node3D:
 	var surface = EventGround.project_surface(world, geometry, [rectangle])
 	var mark := Node3D.new()
 	mark.set_meta("row_id", row.id)
-	# The vertices are stored relative to the mark's base, so the mark sits on the ground at its own height.
 	mark.position = Vector3.UP * base
 	var mesh := MeshInstance3D.new()
 	mesh.name = "Vessel"
@@ -112,7 +92,6 @@ func _set_down(row: Dictionary) -> void:
 	mesh.material_override = Palette.unshaded(Palette.SLATE)
 
 
-# Extrude the projected triangles so the hull's entire underside follows the terrain.
 func _hull(floor_mesh: ArrayMesh) -> ArrayMesh:
 	var floor_vertices: PackedVector3Array = floor_mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
 	var vertices := PackedVector3Array()
@@ -152,8 +131,6 @@ func _end(row: Dictionary) -> void:
 	active.erase(row.id)
 
 
-# --- The Dig: the lift cage ------------------------------------------------------------
-
 func _lift(action: String, row: Dictionary, _ctx: Dictionary) -> void:
 	match action:
 		"telegraph":
@@ -176,8 +153,6 @@ func _lift(action: String, row: Dictionary, _ctx: Dictionary) -> void:
 			_end(row)
 
 
-# An open frame: four posts, a floor and a crown, sized to the footprint and yawed with the
-# site, so the crew inside reads and a ball passes through the bars.
 func _cage(row: Dictionary) -> Node3D:
 	var site: Dictionary = _sites[row.site]
 	var footprint: Array = row.effect.footprint_m
@@ -236,7 +211,6 @@ func _step_cage(state: Dictionary, delta: float) -> void:
 	cage.position.y = -lerpf(CAGE_HEIGHT_M + SHAFT_DEPTH_M, CAGE_HEIGHT_M * 0.25, f)
 
 
-# The bus's slammed fact: a slam inside a topped-out cage sends it back down with its crew.
 func on_slammed(at: Vector3, _strength := 0.0, _flatness := 0.0) -> void:
 	for id in active:
 		var state: Dictionary = active[id]
@@ -259,8 +233,6 @@ func footprint_has(row: Dictionary, point: Vector2) -> bool:
 	var local := (point - Vector2(float(site.at[0]), float(site.at[1]))).rotated(deg_to_rad(float(site.yaw_deg)))
 	return absf(local.x) <= float(footprint[0]) * 0.5 and absf(local.y) <= float(footprint[1]) * 0.5
 
-
-# --- The Highdraft: the zipline drop ----------------------------------------------------
 
 func _zipline(action: String, row: Dictionary, _ctx: Dictionary) -> void:
 	match action:
@@ -287,8 +259,6 @@ func _zipline(action: String, row: Dictionary, _ctx: Dictionary) -> void:
 			_end(row)
 
 
-# The cable's two ends in world space: the barge anchor (the site plus effect.anchor_m, at
-# effect.anchor_up_m over the landing's ground) and a point over the landing.
 func zip_ends(row: Dictionary) -> Array:
 	var site: Dictionary = _sites[row.site]
 	var at := Vector2(float(site.at[0]), float(site.at[1]))
@@ -343,7 +313,6 @@ func _step_line(state: Dictionary, delta: float) -> void:
 		cut_line(state)
 
 
-# Whether a ball at `ball` is on the cable between its anchor and its landing end.
 static func cuts(from: Vector3, to: Vector3, ball: Vector3) -> bool:
 	return Geometry3D.get_closest_point_to_segment(ball, from, to).distance_to(ball) <= ZIP_CUT_M
 
@@ -363,8 +332,6 @@ func cut_line(state: Dictionary) -> void:
 	world.director.break_home(state.row.effect.home)
 
 
-# The trolley hits the landing: every living enemy within the footprint plus a margin is
-# knocked straight out from the landing, toward the island's edge. Returns how many.
 func _impact(row: Dictionary, at: Vector3) -> int:
 	if not is_inside_tree():
 		return 0
@@ -396,4 +363,3 @@ func release() -> void:
 		bus.slammed.disconnect(on_slammed)
 	_sites.clear()
 	world = null
-

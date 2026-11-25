@@ -3,24 +3,6 @@ extends "res://src/world/stage_map.gd"
 const Features := preload("res://src/world/features.gd")
 const LocalMesh := preload("res://src/world/local_mesh.gd")
 
-# Stage 2, the Cable Reach: one gorge in three heights, built around the dam-works
-# tower cluster (DESIGN-V2 sections 8, 9 and 15; design-v2/I3-vertical-stage.md).
-#
-#   Sky (above 40 m): the rim deck you drop onto, two hover barges over the void, the
-#     cable tower, and the crown dish on the landmark.
-#   Shelf (14 to 40 m): the west and east shelves either side of the gorge, the
-#     marble run, the cannon, the trebuchet, the bridges over the canal.
-#   Undercroft (below 14 m): the canal along the gorge floor, roofed by the bridges
-#     and the wall tunnels, the steam lifts, the geyser, and the Warden's bowl.
-#
-# The heightmap is single-valued, so the sky is props over the void, the undercroft
-# reads as underground because of the roofs over it, and height() always answers the
-# lowest surface: the ball on a bridge or a barge is simply above it. Five transitions
-# keep momentum between the heights: the grapple line and the glide drop (sky to
-# shelf), the marble-run chutes (sky to shelf), the skylight halfpipe (shelf to
-# undercroft) and the geyser (undercroft to sky). The fall line from the deck to the
-# beacon is a descent all the way, so a ball that does nothing clever still rolls
-# down to the Warden.
 
 const ANCIENT := Palette.ANCIENT
 const SPAWN := Vector2(0.0, -160.0)
@@ -33,8 +15,6 @@ const WALL := 12.0
 const SKY_Y := 40.0
 const UNDER_Y := 14.0
 
-# The dam-works: cast ancient towers with steampunk repairs grown over them, and the
-# crown dish on the main tower's east side, a sky bowl the geyser and trebuchet land in.
 const TOWER := Vector3(-88.0, 0.0, 14.0)
 const TOWER_RADIUS := 8.0
 const TOWER_HEIGHT := 92.0
@@ -49,13 +29,11 @@ const DISH_FLAT := 6.0
 const DISH_RIM := 4.8
 const DISH_EXIT := PI * 0.5
 
-# The marble run: sky deck to west shelf, banked by its own U section at each turn.
 const MARBLE := [Vector2(-94.0, -122.0), Vector2(-120.0, -98.0), Vector2(-122.0, -72.0), Vector2(-100.0, -54.0),
 	Vector2(-78.0, -44.0), Vector2(-66.0, -30.0)]
 const MARBLE_HALF := 5.0
 const MARBLE_WALL := 4.0
 
-# Tunnels through the gorge walls, each running downstream so it keeps you rolling.
 const TUNNELS := {
 	"w1": [Vector2(-58.0, -10.0), Vector2(-24.0, 20.0)],
 	"w2": [Vector2(-58.0, 44.0), Vector2(-24.0, 74.0)],
@@ -65,13 +43,10 @@ const TUNNELS := {
 const TUNNEL_HALF := 4.5
 const TUNNEL_WALL := 3.0
 
-# The skylight halfpipe down the east shelf into the undercroft.
 const SKYLIGHT_X := 74.0
 const SKYLIGHT_Z := Vector2(24.0, 96.0)
 const SKYLIGHT_DEPTH := 6.0
 
-# Both stand low enough in the view from the drop that the Warden in the bowl stays in
-# sight under them (world_warden_flow_test; a bridge at z 4 cut that line).
 const BRIDGES := [Vector2(30.0, 38.0), Vector2(46.0, 54.0)]
 
 const IMPACT := Vector2(112.0, 0.0)
@@ -87,18 +62,11 @@ const PUMP_HOUSE := Vector2(118.0, 58.0)
 const REACTOR_VENT := Vector2(76.0, -78.0)
 const REACTOR_RING := 6.0
 
-# The landmark's light, the one point every layer can find.
 var landmark := Vector3.ZERO
-# Contraption specs: contraptions.gd builds and runs them.
 var contraptions: Array = []
-# Terrain-change sites for the event director: id -> {"footprint": [{centre, radius}],
-# "lead", "first", "ride": {centre, radius, inner}}.
 var terrain_sites := {}
-# Pre-built colliders for each terrain change: id -> {"before": [Node3D], "after": [Node3D]}.
 var swaps := {}
-# Which overlay heights are live at stage start.
 var start_overlays: Array[String] = ["cave_in_before"]
-# The rideable pieces a transition belongs to, for the ride facts.
 var marble_path: Array = []
 
 
@@ -116,14 +84,10 @@ func _init() -> void:
 		[Vector2(0.0, -150.0), Vector2(0.0, -112.0)],
 		[Vector2(0.0, -80.0), Vector2(0.0, -30.0)],
 		[Vector2(-4.0, -10.0), Vector2(-4.0, 50.0)],
-		# Two lures toward the steam lifts, the trough's way up to the shelves; both lie
-		# within 25 m of the fall line, where every fabricator must stand (world_route_test).
 		[Vector2(-8.0, -96.0), Vector2(-22.0, -64.0)],
 		[Vector2(8.0, -40.0), Vector2(22.0, -24.0)],
 	]
 	sites = {
-		# The Surge Run sweeps west across the rim deck, off the fall line, and hands the
-		# ball straight into the marble run's mouth: a side trip that ends on a ride.
 		"surge_run": {
 			"ring": Vector2(-44.0, -164.0),
 			"route": PackedVector2Array([
@@ -144,9 +108,6 @@ func _init() -> void:
 	}
 
 
-# ---- The shape ----
-
-# The shelf and deck profile along the fall line, for the whole width outside the gorge.
 static func flank(z: float) -> float:
 	if z < -102.0:
 		return Features.descent(z, -166.0, -102.0, 58.0, 44.0)
@@ -169,7 +130,6 @@ static func trough_half(z: float) -> float:
 	return lerpf(TROUGH_HALF, TROUGH_WIDE, smoothstep(56.0, 100.0, z))
 
 
-# The ground before the features: deck and shelves, with the gorge cut into them.
 static func gorge(x: float, z: float) -> float:
 	var f := flank(z)
 	if z < LIP_Z:
@@ -231,7 +191,6 @@ func material_at(x: float, z: float) -> String:
 	return "sand"
 
 
-# Which height band a point is in: the gorge sounds and reads by height.
 static func layer_at(p: Vector3) -> String:
 	if p.y > SKY_Y:
 		return "sky"
@@ -240,9 +199,6 @@ static func layer_at(p: Vector3) -> String:
 	return "shelf"
 
 
-# A U-section channel along a polyline of [x, z] points, its floor descending
-# linearly by arc length from the first point's height to the last's (each point's
-# y). Returns [height, weight]: weight 1 inside the channel, easing to 0 over 8 m.
 static func _polyline_channel(x: float, z: float, pts: Array, half: float, wall: float) -> Array:
 	var p := Vector2(x, z)
 	var best := INF
@@ -293,9 +249,6 @@ func _tunnel_mid(id: String) -> Vector2:
 	return (ends[0] as Vector2).lerp(ends[1], 0.45)
 
 
-# The ground the swaps raise, as live heights: terrain.height() takes the higher of
-# the grid and every live overlay, so what the ball rides and what the rules ask about
-# the ground agree once a change has landed.
 func overlay_height(id: String, x: float, z: float, ground: float) -> float:
 	match id:
 		"cave_in_before":
@@ -321,7 +274,6 @@ static func rubble_profile(r: float) -> float:
 	return RUBBLE_HEIGHT * (1.0 - pow(clampf(r / RUBBLE_RADIUS, 0.0, 1.0), 2.0))
 
 
-# The crater: a dished floor rising to a rim, then an outer slope back to the ground.
 static func crater_profile(r: float) -> float:
 	if r <= CRATER_FLOOR:
 		return 0.0
@@ -337,8 +289,6 @@ static func dish_profile(r: float, angle: float) -> float:
 	var off := absf(wrapf(angle - DISH_EXIT, -PI, PI))
 	return rim * smoothstep(deg_to_rad(12.0), deg_to_rad(26.0), off)
 
-
-# ---- Contraption specs ----
 
 func _specs() -> void:
 	var lip := flank(LIP_Z)
@@ -369,20 +319,16 @@ func _specs() -> void:
 	]
 
 
-# Where a tunnel's mouth is on the shelf side: a door or a wall stands across it there.
 func _tunnel_door(id: String) -> Vector2:
 	var ends: Array = TUNNELS[id]
 	return (ends[0] as Vector2).lerp(ends[1], 0.16)
 
 
-# The yaw that turns a slab's long side across the tunnel.
 func _tunnel_turn(id: String) -> float:
 	var ends: Array = TUNNELS[id]
 	var d: Vector2 = (ends[1] as Vector2) - (ends[0] as Vector2)
 	return -atan2(d.y, d.x) + PI * 0.5
 
-
-# ---- Props ----
 
 func build_props(parent: Node3D, ground: Callable) -> void:
 	var rust := Palette.solid(Palette.RUST)
@@ -390,7 +336,6 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 	var enamel := Palette.solid(Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.15))
 	var light := Palette.solid(ANCIENT, 2.4)
 	var concrete := Palette.striped(Palette.CHARCOAL, Palette.VERDIGRIS)
-	# The drop deck: a lit apron so the landing reads.
 	box(parent, Vector3(18.0, 1.0, 10.0), ground.call(spawn.x, spawn.y - 6.0, -0.3), Palette.striped(Palette.AMBER, Palette.CHARCOAL))
 	_landmark(parent, ground, enamel, light, copper, rust)
 	_dish(parent, ground, enamel, copper)
@@ -398,7 +343,6 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 	_tunnel_roofs(parent, ground, concrete)
 	_skylight_roof(parent, ground, concrete)
 	_cable_tower(parent, ground)
-	# Kerbs flank the marble run's drop-in and the cannon: the run reads as a structure.
 	var start: Vector3 = marble_path[0]
 	for side in [-1.0, 1.0]:
 		box(parent, Vector3(2.0, 2.2, 8.0), Vector3(start.x + side * (MARBLE_HALF + 2.0), start.y + 0.8, start.z - 4.0), rust, 0.75)
@@ -430,7 +374,6 @@ func _landmark(parent: Node3D, ground: Callable, enamel: Material, light: Materi
 		var f: Vector3 = ground.call(at.x, at.y, 0.0)
 		cylinder(parent, s["radius"], s["height"], f + Vector3.UP * float(s["height"]) * 0.5, enamel)
 		_seams(parent, f, s["radius"], s["height"], light)
-		# A steampunk repair: a copper pipe run up the side and a rust catwalk ring.
 		_visual_cylinder(parent, 0.7, float(s["height"]) * 0.8, f + Vector3(float(s["radius"]) + 0.6, float(s["height"]) * 0.4, 0.0), copper)
 		_ring(parent, f + Vector3.UP * float(s["height"]) * 0.6, float(s["radius"]) + 1.4, rust)
 	for k in 3:
@@ -453,7 +396,6 @@ func _landmark(parent: Node3D, ground: Callable, enamel: Material, light: Materi
 	parent.add_child(omni)
 
 
-# Thin charcoal-grooved Cherenkov seams down a cast tower: the only light it gives.
 func _seams(parent: Node3D, foot: Vector3, radius: float, height_m: float, light: Material) -> void:
 	for k in 4:
 		var a := k * PI * 0.5 + 0.4
@@ -504,13 +446,6 @@ func _bridges(parent: Node3D, mat: Material) -> void:
 			_visual_box(parent, Vector3(2.4, top - foot, 2.4), Vector3(x, (top + foot) * 0.5, zc), mat)
 
 
-# A slab over each wall tunnel where it runs deep under the shelf. Each end sits on
-# the shelf-side ground just beyond the tunnel's carve, a touch below it, so a ball
-# rolling across the shelf drops onto the roof instead of meeting its edge; toward the
-# trough the slab's far side is a drop, never a kerb. (It followed flank(z), the shelf's
-# nominal height, and stood up to 2.3 m proud of the real ground beside it: a kerb
-# across a gate approach, found by stage_gate_sweep_test. Following the uncarved
-# gorge() instead dropped the lower end into the trough wall and pinned Rivet inside.)
 const ROOF_SIDE := 8.5
 const ROOF_SINK := 0.3
 
@@ -534,8 +469,6 @@ func _tunnel_roofs(parent: Node3D, ground: Callable, mat: Material) -> void:
 		body.basis = Basis.looking_at(along.normalized(), Vector3.UP)
 
 
-# The roofs stand over the halfpipe's level stretch: over its steep drop a level slab
-# left 0.3 m of headroom and pinned the ball (stage_transitions_test).
 const SKYLIGHT_ROOFS := [40.0, 52.0]
 
 
@@ -554,7 +487,6 @@ func _skylight_roof(parent: Node3D, ground: Callable, mat: Material) -> void:
 func _cable_tower(parent: Node3D, ground: Callable) -> void:
 	var foot: Vector3 = ground.call(48.0, -108.0, -0.5)
 	grapple_post(parent, foot, 32.0)
-	# The lower post stands beside the line's end, never on the line the ball leaves along.
 	grapple_post(parent, ground.call(106.0, -46.0, -0.5), 12.0)
 
 
@@ -578,7 +510,6 @@ func _reactor_vent(parent: Node3D, ground: Callable, enamel: Material, light: Ma
 	parent.add_child(seam)
 
 
-# The terrain events' finished colliders, built now and parked until their swap.
 func _swaps(parent: Node3D, ground: Callable) -> void:
 	var base := func(x: float, z: float) -> float: return (ground.call(x, z, 0.0) as Vector3).y
 	var rubble_tint := Palette.SANDSTONE.lerp(Palette.RUST, 0.35)
@@ -614,8 +545,6 @@ func _swaps(parent: Node3D, ground: Callable) -> void:
 const SWAP_PARK := 400.0
 
 
-# Puts a terrain change's colliders in or out. Moving a finished body is the whole
-# cost, so the change lands on one tick with no trimesh cooked.
 func apply_swap(id: String, changed: bool) -> void:
 	if not swaps.has(id):
 		return
@@ -628,8 +557,6 @@ func apply_swap(id: String, changed: bool) -> void:
 		node.position = home + Vector3.DOWN * SWAP_PARK if changed else home
 		node.visible = not changed
 
-
-# ---- Small visual helpers (no collider) ----
 
 static func _visual_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material) -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()

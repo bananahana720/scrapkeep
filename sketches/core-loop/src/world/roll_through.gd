@@ -2,14 +2,6 @@ extends RefCounted
 
 const Interactables := preload("res://src/world/interactables.gd")
 
-# Roll-through consent for a travel device (LOOP-REDESIGN section 9). E pressed inside
-# the approach lane arms it; the device fires when the ball crosses its mouth, at any
-# speed, so nothing asks the ball to stop. A ball that leaves the lane, or crosses the
-# mouth's plane wide of it, disarms it and nothing else happens: a miss costs nothing.
-#
-# The lane runs LANE_LENGTH back from the mouth against `heading`, the way you ride in.
-# The crossing is tested on the segment the ball moved this tick, so a 40 m/s ball that
-# jumps half a metre past the plane between ticks still fires.
 
 var mouth := Vector3.ZERO
 var heading := Vector3.FORWARD
@@ -44,8 +36,6 @@ func arm() -> void:
 	armed = true
 
 
-# One tick of the ball from `from` to `to`. True on the tick an armed ball crosses the
-# mouth; the device then fires once and must be armed again.
 func step(from: Vector3, to: Vector3) -> bool:
 	if not armed or from == Vector3.INF:
 		return false
