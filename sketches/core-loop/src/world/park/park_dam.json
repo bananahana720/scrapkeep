@@ -39,7 +39,9 @@
   {"id": "crest_line", "from": "the_eye", "to": "toe_apron", "via": ["the_eye", "pipeline_bridge", "east_bench_flats", "east_abutment", "crest_rail"]},
   {"id": "face", "from": "toe_apron", "to": "landmark", "via": ["toe_apron", "dam_face_quarter", "gate_piers"]},
   {"id": "powerhouse_floor", "from": "toe_apron", "to": "landmark", "via": ["toe_apron", "powerhouse", "dam_face_quarter", "gate_piers"]},
-  {"id": "roof_ramp_line", "from": "toe_apron", "to": "landmark", "via": ["toe_apron", "powerhouse", "powerhouse_roof_ramp", "dam_face_quarter", "gate_piers"]}
+  {"id": "roof_ramp_line", "from": "toe_apron", "to": "landmark", "via": ["toe_apron", "powerhouse", "powerhouse_roof_ramp", "dam_face_quarter", "gate_piers"]},
+  {"id": "east_flank_loop", "from": "the_eye", "to": "toe_apron", "via": ["east_rim_bench", "east_basin_ramp", "east_tailwater_basin", "powerhouse"]},
+  {"id": "west_basin_dunk", "from": "the_eye", "to": "toe_apron", "via": ["west_rim_bench", "west_basin_ramp", "west_tailwater_basin", "service_ledge", "plunge_pool"]}
  ],
  "park_rows": [
   {"id": "canyon_country", "element": "ground", "landform": "slickrock", "society": "none", "at": [0, 0], "y": null, "size": [1600, 100, 1600], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
@@ -51,6 +53,10 @@
   {"id": "shelf_sag_corner_4", "element": "ground", "landform": "slickrock", "society": "none", "at": [650, 110], "y": null, "size": [320, 3, 640], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "bowl", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "river_canyon", "element": "ground", "landform": "river_canyon", "society": "none", "at": [0, 415], "y": null, "size": [450, -100, 400], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": ["incline_line"], "fragment": ""},
   {"id": "canyon_descent", "element": "ground", "landform": "river_canyon", "society": "none", "at": [0, 305], "y": null, "size": [230, 100, 400], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "west_tailwater_basin", "element": "ground", "landform": "river_canyon", "society": "none", "at": [-362, 555], "y": null, "size": [170, -64, 320], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": ["west_basin_dunk"], "fragment": ""},
+  {"id": "west_basin_ramp", "element": "ground", "landform": "river_canyon", "society": "none", "at": [-366, 414], "y": null, "size": [108, -64, 180], "yaw_deg": 180, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["west_basin_dunk"], "fragment": ""},
+  {"id": "east_tailwater_basin", "element": "ground", "landform": "river_canyon", "society": "none", "at": [352, 555], "y": null, "size": [170, -64, 300], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": ["east_flank_loop"], "fragment": ""},
+  {"id": "east_basin_ramp", "element": "ground", "landform": "river_canyon", "society": "none", "at": [362, 414], "y": null, "size": [108, -64, 180], "yaw_deg": 180, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["east_flank_loop"], "fragment": ""},
   {"id": "top_shelf_deck", "element": "drop", "landform": "slickrock", "society": "dam_era", "at": [-150, -690], "y": null, "size": [44, 10, 30], "yaw_deg": 30, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "mesa", "hole": false, "budget": "landform", "routes": ["shelf"], "fragment": "dam_era_survey_deck"},
   {"id": "slickrock_domes", "element": "bank", "landform": "slickrock", "society": "none", "at": [-110, -520], "y": null, "size": [260, 1, 240], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:bank", "stamp": "bowl", "hole": false, "budget": "landform", "routes": ["shelf"], "fragment": ""},
   {"id": "dome_1", "element": "bank", "landform": "slickrock", "society": "none", "at": [-230, -690], "y": null, "size": [40, 16, 40], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:bank", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
@@ -225,7 +231,10 @@
   {"id": "intake_zip", "kind": "cable", "site": "lobber_ledge", "recipe": "", "from": [-151.0, 99.0, 199.5], "to": [-185, 26.4, 452], "radius": 5.0, "floor": 22.0},
   {"id": "culvert_glaze", "kind": "glaze", "site": "west_wash", "recipe": "", "strips": [[-102.5, -75.0, 16.8, 340.0, 10.0, 18.0]], "push": 6.0, "cap": 30.0, "sheen": true},
   {"id": "apron_sluice", "kind": "sluice_valve", "site": "toe_apron", "recipe": "", "at": [66, 494], "lane": {"from": [66, 504], "to": [66, 572], "half_width": 5.0, "reach": 4.0}, "charge": 16.0, "price": 20},
-  {"id": "pump_yard_sluice", "kind": "sluice_valve", "site": "east_bench_flats", "recipe": "", "at": [176, 492], "lane": {"from": [172, 478], "to": [138, 478], "half_width": 7.0, "reach": 7.0}, "charge": 14.0, "price": 20}
+  {"id": "pump_yard_sluice", "kind": "sluice_valve", "site": "east_bench_flats", "recipe": "", "at": [176, 492], "lane": {"from": [172, 478], "to": [138, 478], "half_width": 7.0, "reach": 7.0}, "charge": 14.0, "price": 20},
+  {"id": "apron_overlook_geyser", "kind": "launcher", "site": "toe_apron", "recipe": "geyser_vent", "style": "geyser", "at": [84, 448], "radius": 3.5, "target": [120, 22.0, 515], "floor": 18.0, "min_flight": 2.0, "charge": 3.0},
+  {"id": "east_basin_cannon", "kind": "launcher", "site": "east_tailwater_basin", "recipe": "cannon", "style": "cannon", "at": [310, 520], "radius": 4.0, "target": [215, 102.0, 320], "floor": 34.0, "min_flight": 2.6, "charge": 2.5},
+  {"id": "west_basin_cannon", "kind": "launcher", "site": "west_tailwater_basin", "recipe": "cannon", "style": "cannon", "at": [-310, 520], "radius": 4.0, "target": [-235, 99.0, 340], "floor": 34.0, "min_flight": 2.6, "charge": 2.5}
  ],
  "weather_rows": [
   {"id": "dawn_still", "kind": "clear", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0006, "color": "#a3bdd0"}, "sky": "clear", "sound": "canyon_dawn_bed", "music_layer": "", "event_odds": {}, "handling": "none"},
