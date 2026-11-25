@@ -2,10 +2,6 @@ extends RefCounted
 
 const Bindings := preload("res://src/core/bindings.gd")
 
-# The one lookup for the key a verb shows on screen: the InputMap is the source, so a
-# rebinding shows at once. `device` is "kbm" or "pad", set by Game.note_device from
-# every input event. Without the action in the InputMap (a unit test with no game) the
-# bindings table's glyph answers.
 
 static var device := "kbm"
 
@@ -16,7 +12,6 @@ const PAD_BUTTONS := {
 	JOY_BUTTON_DPAD_DOWN: "pad_dd",
 }
 const PAD_TRIGGERS := {JOY_AXIS_TRIGGER_LEFT: "pad_lt", JOY_AXIS_TRIGGER_RIGHT: "pad_rt"}
-# The sticks stand for the roll and look verbs; on the keyboard these keep their table glyph.
 const PAD_STICKS := {"roll": "pad_ls", "look": "pad_rs"}
 
 
@@ -24,7 +19,6 @@ static func is_pad() -> bool:
 	return device == "pad"
 
 
-# The glyph id a verb draws now: key_<name>, key_lmb, key_rmb or a pad_ id.
 static func of(verb: String) -> String:
 	if not Bindings.VERBS.has(verb):
 		return ""
@@ -35,8 +29,6 @@ static func of(verb: String) -> String:
 	return of_action(actions.keys()[0], table)
 
 
-# The glyph id of an action that is no verb (cl_retry), or `fallback` where the InputMap has
-# no event of this device for it.
 static func of_action(action: String, fallback: String) -> String:
 	if not InputMap.has_action(action):
 		return fallback

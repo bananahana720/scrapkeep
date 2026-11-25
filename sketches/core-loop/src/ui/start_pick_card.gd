@@ -16,14 +16,10 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const MetaOptions := preload("res://src/core/meta_options.gd")
 
-# The card draws the offer and emits choices. Flow owns the input routes and RunState
-# owns grants and the win check. The noninteractive default preserves SG9's draw-only use.
 
 const ICON := 40.0
 const KEY := 26.0
 const FONT := UiTokens.LABEL
-# The effect line under a tile's name (StartPicks row "effect"), and how far each line sits
-# from the tile's middle.
 const EFFECT_FONT := UiTokens.CAPTION
 const NAME_RISE := 10.0
 const EFFECT_DROP := 15.0
@@ -33,16 +29,8 @@ const PAD := 10.0
 const PIP := 5.0
 const KEYS := ["key_1", "key_2", "key_3"]
 const REROLL_KEY := "key_v"
-# In the run's briefing (workshop.gd) the card has the paused screen to itself, so its tiles draw
-# this much larger than the in-play strip.
 const BRIEFING_SCALE := 1.4
 const UNLOCK_WORDS := "A win opens harder runs"
-# The HARD ladder on the card (a profile with a rung opened): the word, one pip per rung and four
-# gauges (RunTier.meters). At rest the gauges are the selected rung's and only its pip carries a
-# numeral. The pip the focus or the mouse came to last is the rung looked at: it shows its numeral, the
-# gauges read it, and its contract (RunTier.contract_lines) is written under them, so the numbers
-# reach a pad, a keyboard and a mouse the same way before the press. Sizes are the card's own,
-# unscaled in the briefing.
 const TIER_WORD := "Tier"
 const RUNG := 34.0
 const RUNG_GAP := 10.0
@@ -55,11 +43,8 @@ const METER_GAP := 24.0
 const CONTRACT_ROW := 108.0
 const CONTRACT_STEP := 21.0
 const CONTRACT_FONT := UiTokens.CAPTION
-# The interactive card's height under the tiles: the words and the reroll, or the ladder with room
-# for a looked-at rung's contract.
 const CONTROLS_H := 120.0
 const LADDER_H := 146.0
-# The interactive card's least width; the ladder's is wide enough for the top rung's threat line.
 const CONTROLS_W := 780.0
 const LADDER_W := 840.0
 const REROLL_SIZE := Vector2(138.0, 38.0)
@@ -69,24 +54,16 @@ var _tile_rects: Array[Rect2] = []
 var _rerolls := 0
 var _color := Palette.SAND
 var _interactive := false
-# True in the run's briefing (set_briefing): larger tiles, and the reroll centred when no tier is offered.
 var _briefing := false
 var _profile
 var _run
-# The opened rungs' pips, by tier.
 var _tier_buttons := {}
-# The rung looked at: the opened pip the focus or the mouse came to last, -1 with neither on a pip.
 var _looked := -1
-# Whether a screen over the card owns the input now (flow.gd _start_card_covered); unset, nothing does.
 var covered := Callable()
 var reroll_button: Button
-# The tiles' buttons, in tile order (interactive only).
 var _tile_buttons: Array[Button] = []
-# One Keeper plate per tile, cut by its place in the row.
 var _frames: Array = []
-# What the last draw put down: the tiles' frames and each gauge's colour, for a check of the drawn colours.
 var _drawn := {"frames": [], "gauges": []}
-
 
 
 func _init() -> void:
@@ -95,7 +72,6 @@ func _init() -> void:
 	visible = false
 	set_process_input(false)
 	set_process_unhandled_input(false)
-	# In-run flourishes keep clear of the card while it shows (flourish_player.gd AVOID_GROUP).
 	add_to_group("flourish_avoid")
 
 
@@ -114,7 +90,6 @@ func set_briefing(on: bool) -> void:
 	_briefing = on
 
 
-# The tile metrics' scale: 1 for the in-play strip, BRIEFING_SCALE in the briefing.
 func _k() -> float:
 	return BRIEFING_SCALE if _briefing else 1.0
 
@@ -152,10 +127,6 @@ func showing() -> bool:
 	return visible
 
 
-# Whether the card needs the cursor: only while it offers a choice the mouse alone can make, the
-# run tier before stage 1's Warden closes it on a profile with a rung unlocked. Picks and the
-# reroll have keys, so a fresh profile's card, or one holding its tier, leaves the mouse to aim
-# (w22 first-timer red team: a freed cursor had left mouse look dead until a pick).
 func wants_pointer() -> bool:
 	return _interactive and visible and _run != null and _run.run_tier_open() and offered_tiers().size() > 1
 
@@ -220,7 +191,6 @@ func _active_override_names() -> PackedStringArray:
 	return out
 
 
-# Where the words and buttons under the tiles and their pips begin.
 func _controls_top() -> float:
 	return (ICON + PAD * 2.0 + PIP * 3.0) * _k()
 
@@ -252,15 +222,11 @@ func _looked_tier() -> int:
 	return _looked if _tier_buttons.has(_looked) else -1
 
 
-# The focus or the mouse came to a pip: whichever came last is the look, so a mouse over one rung
-# reads that rung while the focus still sits on the rung picked before, and the stick takes it back.
 func _look(tier: int) -> void:
 	_looked = tier
 	queue_redraw()
 
 
-# The focus or the mouse left a pip. The look stays while the other of the two is still on it, and
-# otherwise falls back to the pip under the focus.
 func _look_away(tier: int, by_mouse: bool) -> void:
 	var pip: Button = _tier_buttons.get(tier)
 	if _looked == tier and pip != null and is_instance_valid(pip) and not (pip.has_focus() if by_mouse else pip.is_hovered()):
@@ -268,7 +234,6 @@ func _look_away(tier: int, by_mouse: bool) -> void:
 	queue_redraw()
 
 
-# The pip under the focus, by tier; -1 with the focus elsewhere.
 func _focused_tier() -> int:
 	for tier in _tier_buttons:
 		if is_instance_valid(_tier_buttons[tier]) and _tier_buttons[tier].has_focus():
@@ -276,13 +241,11 @@ func _focused_tier() -> int:
 	return -1
 
 
-# The rung the gauges read: the one looked at, else the one selected.
 func _shown_tier() -> int:
 	var looked := _looked_tier()
 	return looked if looked >= 0 else _run.selected_run_tier()
 
 
-# The numerals drawn on the pips, in rung order: the selected rung's and the looked-at rung's.
 func _numerals() -> PackedStringArray:
 	var tiers := [_run.selected_run_tier()]
 	if _looked_tier() >= 0 and not _looked_tier() in tiers:
@@ -291,8 +254,6 @@ func _numerals() -> PackedStringArray:
 	return PackedStringArray(tiers.map(func(tier): return str(tier)))
 
 
-# A fresh profile has no rung to pick, so the card names only how to open one: HARD's threat, pay
-# and held tier wait for the first unlock (w22 first-timer red team watch 6).
 func ladder_open() -> bool:
 	return RunTier.top_unlocked(_profile) >= RunTier.HARD
 
@@ -305,17 +266,14 @@ func offered_tiers() -> Array:
 	return StartPicks.offered_tiers(_profile)
 
 
-# An opened rung's pip; null for a rung the profile has not opened, or with no ladder on the card.
 func tier_button(tier: int) -> Button:
 	return _tier_buttons.get(tier)
 
 
-# Whether the card shows the ladder: a rung opened and the choice not yet closed by stage 1's Warden.
 func ladder_shown() -> bool:
 	return _interactive and visible and _run != null and ladder_open() and _run.run_tier_open()
 
 
-# The ladder row, left to right: the word, the pips, then the reroll with its key cap.
 func _ladder_width() -> float:
 	return UiDraw.width(TIER_WORD, UiTokens.BODY) + GAP + _pips_width() + 40.0 + KEY + GAP + REROLL_SIZE.x
 
@@ -349,9 +307,7 @@ func _label(words: String, y: float) -> void:
 	add_child(label)
 
 
-# centred is for a card that offers no tier beside it (the briefing on a profile with no rung, or a held tier).
 func _reroll(y: float, centred := false) -> void:
-	# The V key is a drawn cap left of the button (_draw), as the tiles' keys are.
 	var alone := centred and _briefing
 	var x := size.x * 0.5 - 80.0 if alone else size.x * 0.5 + 122.0
 	_reroll_at(Vector2(x, y + 60.0), Vector2(160.0 if alone else REROLL_SIZE.x, REROLL_SIZE.y))
@@ -363,7 +319,6 @@ func _reroll_at(at: Vector2, extent_value: Vector2) -> void:
 
 
 func _controls() -> void:
-	# A pick redraws the card (flow.show_start_card): the focus stays on the rung it was on.
 	var held := _focused_tier()
 	for child in get_children():
 		remove_child(child)
@@ -386,16 +341,12 @@ func _controls() -> void:
 		_reroll(y, true)
 		return
 	if not _run.run_tier_open():
-		# Closed when stage 1's Warden engages (run_state.gd _tier_closed): the card names the tier the run holds.
 		_label(_held_words(), y)
 		_reroll(y, true)
 		return
-	# The ladder: a pip for each rung the profile has opened takes the press; the pips, the locked rungs,
-	# the gauges and a looked-at rung's contract are drawn (_draw_ladder).
 	for tier_value in offered_tiers():
 		var pip := _button(_pip_centre(tier_value) - Vector2(RUNG, RUNG) * 0.5, Vector2(RUNG, RUNG), "", func(): tier_requested.emit(tier_value))
 		pip.flat = true
-		# The looked-at ring is drawn (_draw_ladder), so the button's own focus box stays off.
 		pip.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 		pip.focus_entered.connect(_look.bind(tier_value))
 		pip.mouse_entered.connect(_look.bind(tier_value))
@@ -408,8 +359,6 @@ func _controls() -> void:
 	_reroll_at(Vector2(last.x + RUNG * 0.5 + 40.0 + KEY + GAP, last.y - REROLL_SIZE.y * 0.5), REROLL_SIZE)
 
 
-# The buttons the focus walks, left to right as they read: the tiles, then the ladder's pips and
-# Reroll, leaving out any that cannot be pressed.
 func _focus_ring() -> Array:
 	var ring: Array = _tile_buttons.duplicate()
 	var tiers: Array = _tier_buttons.keys()
@@ -419,8 +368,6 @@ func _focus_ring() -> Array:
 	return ring.filter(func(button): return button != null and is_instance_valid(button) and not button.disabled)
 
 
-# The briefing's focus moves: left and right step along the ring; with nothing focused the first
-# step lands on the first tile (or the ring's last button, stepping left).
 func step_focus(direction: int) -> void:
 	var ring := _focus_ring()
 	if ring.is_empty() or not visible:
@@ -439,9 +386,6 @@ func focused_tile() -> int:
 	return -1
 
 
-# Confirm presses whichever of the card's buttons holds the focus (a tile, the reroll, a tier).
-# With none focused a key does nothing, and the pad's press only lands the focus on the first tile,
-# so a confirm held from the page before takes nothing.
 func confirm(pad := false) -> void:
 	if not visible or not is_inside_tree():
 		return
@@ -452,8 +396,6 @@ func confirm(pad := false) -> void:
 		step_focus(1)
 
 
-# The briefing's focus keys, for the keyboard and the pad: A and D or left and right step the
-# focus, confirm presses what it holds.
 func _focus_key(event: InputEvent) -> bool:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
@@ -495,7 +437,6 @@ func _input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
-# The frames and gauge colours the last draw put down: {"frames": [StyleBox], "gauges": [Color]}.
 func drawn_marks() -> Dictionary:
 	return _drawn.duplicate(true)
 
@@ -510,7 +451,6 @@ func _draw() -> void:
 		_put_frame(_frames[index], rect)
 		var mid := h * 0.5
 		var cx := rect.position.x + PAD * k
-		# A drawn cap, so the key's number shows (a key's own SVG imports as a blank cap, keycap.gd).
 		Keycap.draw(self, Vector2(cx + KEY * k * 0.5, mid), tile["key"], Palette.SAND, KEY * k)
 		cx += (KEY + GAP) * k
 		draw_texture_rect(Icons.texture(tile["icon"]), Rect2(Vector2(cx, mid - ICON * k * 0.5), Vector2(ICON, ICON) * k), false,
@@ -532,7 +472,6 @@ func _draw() -> void:
 		var ov_line := "   ".join(overrides)
 		var ov_y := size.y - 14.0
 		UiDraw.text(self, (size.x - UiDraw.width(ov_line, CONTRACT_FONT)) * 0.5, ov_y, ov_line, CONTRACT_FONT, Palette.AMBER)
-	# One pip per reroll left, centred under the tiles: a spent reroll leaves an outline.
 	for i in StartPicks.REROLLS:
 		var at := Vector2(size.x * 0.5 + (i - (StartPicks.REROLLS - 1) * 0.5) * PIP * k * 3.0, h + PIP * k * 1.5)
 		if i < _rerolls:
@@ -541,17 +480,11 @@ func _draw() -> void:
 			draw_arc(at, PIP * k, 0.0, TAU, 16, Color(_color, 0.5), 1.5)
 
 
-# A tile's frame, drawn and noted in one step so the record is what was drawn.
 func _put_frame(box: StyleBox, rect: Rect2) -> void:
 	draw_style_box(box, rect)
 	_drawn.frames.append(box)
 
 
-# The ladder as drawn: the selected rung is a filled disc in the pilot's colour, an opened rung a
-# sand ring and a locked rung a faint one. Under it the gauges of the rung looked at, or of the
-# selected rung: hazard for what the works gains, the Keeper's ink for what is the pilot's. A gauge is faint up to
-# the base tier's mark and bright past it; a gauge short of the mark (the top rungs' regen) leaves the
-# lost length as a hazard outline. Under the gauges, the looked-at rung's contract in words.
 func _draw_ladder() -> void:
 	var row_y := _controls_top() + LADDER_ROW
 	var selected: int = _run.selected_run_tier()

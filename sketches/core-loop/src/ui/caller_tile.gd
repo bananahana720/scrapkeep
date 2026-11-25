@@ -8,23 +8,6 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 
-# Who is on the line (Andrew, 9 November 2026: callers pop up in the HUD and talk, cute). A
-# small plate beside the speech bubble (moss_bubble.gd) with the caller's mark and a name tag
-# across its head (the tag runs on over the bubble's top edge, a name plate on a dialogue box),
-# so one glance says who is talking before a word is read. The plate's shape says whose hands
-# the caller is, the colour says which of them:
-#
-#   keeper  a Keeper's cut plate (scrap_frame.gd): the site crews in their site's colour, never
-#           brass or mint, a freed pilot in the pilot's own screen colour with the pilot's emblem
-#   hatch   Moss, who is never seen (DESIGN-V2 sections 12 and 15): the slot of his hatch and
-#           his two mitts on its lip
-#   fleet   Brindle in the Fleet's hand (scrap_frame.gd): a brass bezel on iron oxide, one
-#           notched corner and a rubber stamp
-#   works   the old works: a hard-cornered lozenge in the ancients' green, scanned
-#
-# While the caller's voice lasts the plate babbles: it hops and tilts on the syllables and the
-# three bars by the name move. Reduced motion keeps it still. One call, present(); the bubble
-# owns where the plate sits and when it goes.
 
 const SIDE := 68.0
 const TAG_H := 20.0
@@ -36,13 +19,9 @@ const HOP := 4.0
 const TILT := 0.07
 const BARS := 3
 const POP_IN := 0.16
-# The name tag's words: whichever of these holds more contrast on the caller's colour, 4.5:1 or more
-# on every caller's (deep charcoal on Rivet's copper, ledger cream on Tarn's rust).
 const TAG_INKS := [Color("121514"), Palette.LEDGER_CREAM]
-# How far the name tag leans, none with reduced motion.
 const TAG_TILT := -0.035
 
-# Callers who are not pilots: whose hands, the mark and the colour. A pilot is found by class id.
 const CALLERS := {
 	"moss": {"hands": "hatch", "icon": "", "color": Palette.SANDSTONE},
 	"pump_crew": {"hands": "keeper", "icon": "obj_fabricator", "color": Palette.COPPER},
@@ -58,16 +37,13 @@ const CALLERS := {
 	"mind": {"hands": "works", "icon": "fac_mind", "color": Palette.ANCIENT},
 }
 
-# Reduced motion (the bubble keeps it current with its own): the plate stands still.
 static var reduced_motion := false
 
-# The roster's class rows, so a pilot's plate wears the pilot's colour and emblem.
 var pilots: Array = []
 var speaker := ""
 var caller_name := ""
 var _look := {}
 var _voice := 0.0
-# The hand frames for the caller up now (_hand_plates), and the frames the last draw put down.
 var _framed: Array = []
 var _drawn: Array = []
 var _age := 0.0
@@ -80,20 +56,15 @@ func _init() -> void:
 	visible = false
 
 
-# The look of a caller: {hands, icon, color}, empty for one this plate cannot draw (the bubble
-# then says the name in its words, as before).
 func look_of(id: String) -> Dictionary:
 	if CALLERS.has(id):
 		return CALLERS[id]
 	for def in pilots:
-		# A pilot is named by class id or by the name they answer to ("sable").
 		if def != null and (String(def.id) == id or String(def.display_name).to_lower() == id):
 			return {"hands": "keeper", "icon": Icons.class_icon_id(String(def.id)), "color": ClassDef.screen_color(def.color)}
 	return {}
 
 
-# The caller comes up: who, the name on the tag, and the seconds the voice lasts. False for a
-# caller with no look; the plate then stays down.
 func present(id: String, shown_name: String, voice_s := 0.0) -> bool:
 	_look = look_of(id)
 	speaker = id if not _look.is_empty() else ""
@@ -115,14 +86,12 @@ func clear() -> void:
 	set_process(false)
 
 
-# The voice was cut short (a fight hushes a call): the plate stands still until it goes.
 func quiet() -> void:
 	_voice = 0.0
 	set_process(false)
 	queue_redraw()
 
 
-# The caller's colour, for the bubble's edge.
 func tint() -> Color:
 	return _look.get("color", Palette.SAND)
 
@@ -135,7 +104,6 @@ func hands() -> String:
 	return String(_look.get("hands", ""))
 
 
-# The frames the last draw put down (ScrapFrame boxes, in order), for a check of the drawn colours.
 func drawn_frames() -> Array:
 	return _drawn.duplicate()
 
@@ -173,7 +141,6 @@ func _draw() -> void:
 		var mark := SIDE * 0.56
 		draw_texture_rect(Icons.texture(icon), Rect2(Vector2(-mark, -mark) * 0.5, Vector2(mark, mark)), false, Icons.tint(icon, color))
 		if _look["hands"] == "works":
-			# The old works' picture is scanned: lines cross it and one of them travels.
 			var half := SIDE * 0.5 - EDGE
 			for i in 7:
 				var y := -half + (i + 0.5) * (2.0 * half / 7.0)
@@ -185,21 +152,17 @@ func _draw() -> void:
 	if not framed:
 		var closed := plate.duplicate()
 		closed.append(closed[0])
-		# A charcoal keyline under the coloured edge: copper on the Spillway's sand is no edge at all.
 		draw_polyline(closed, Palette.CHARCOAL, EDGE + KEYLINE * 2.0)
 		draw_polyline(closed, color, EDGE)
 	draw_set_transform(Vector2.ZERO)
 	_draw_tag(color, live, beat)
 
 
-# A frame about the centre, drawn and noted in one step so the record is what was drawn.
 func _put_frame(box: StyleBox) -> void:
 	draw_style_box(box, Rect2(-Vector2(SIDE, SIDE) * 0.5, Vector2(SIDE, SIDE)))
 	_drawn.append(box)
 
 
-# The scrap_frame hand the caller's plate is drawn in: the Keeper's or the Fleet's; -1 for the
-# hatch and the old works, which draw their own outline (_plate).
 func _frame_hand() -> int:
 	match hands():
 		"keeper":
@@ -209,9 +172,6 @@ func _frame_hand() -> int:
 	return -1
 
 
-# The caller's plate in its hand, cut by the speaker's serial and built once per call: a plate with a
-# charcoal keyline (copper on the Spillway's sand is no edge at all), then its coloured edge and the
-# hand's marks (a Keeper's rivets and halftone, the Fleet's bezel and stamp).
 func _hand_plates(color: Color) -> Array:
 	var which := _frame_hand()
 	var serial := speaker.hash()
@@ -228,7 +188,6 @@ func _hand_plates(color: Color) -> Array:
 	return [under, edge]
 
 
-# The plate's outline about its centre, for a caller with no hand frame (_hand_plates).
 func _plate(whose: String) -> PackedVector2Array:
 	var h := SIDE * 0.5
 	var out := PackedVector2Array()
@@ -245,14 +204,12 @@ func _plate(whose: String) -> PackedVector2Array:
 	return out
 
 
-# Moss: the dark slot of the hatch, its lid lifting as he talks, and two mitts on the lip.
 func _draw_hatch(color: Color, live: bool, beat: float) -> void:
 	var w := SIDE * 0.74
 	var open := 15.0 + (absf(sin(beat * 0.5)) * 6.0 if live else 0.0)
 	var lip := 9.0
 	draw_rect(Rect2(-w * 0.5, lip - open, w, open), Color.BLACK)
 	draw_rect(Rect2(-w * 0.5, lip - open, w, open), Color(color, 0.5), false, 2.0)
-	# The lid above the slot and the sill under it.
 	draw_line(Vector2(-w * 0.5 - 3.0, lip - open), Vector2(w * 0.5 + 3.0, lip - open), color, 4.0)
 	draw_line(Vector2(-w * 0.5 - 5.0, lip), Vector2(w * 0.5 + 5.0, lip), color, 5.0)
 	for side in [-1.0, 1.0]:
@@ -270,8 +227,6 @@ func _draw_hatch(color: Color, live: bool, beat: float) -> void:
 			draw_line(Vector2(x, at.y + 2.0), Vector2(x, at.y + 9.0), Palette.SANDSTONE, 3.5)
 
 
-# The name tag across the plate's head, in the caller's colour, and the voice bars after it.
-# Its words are the TAG_INKS ink that reads best on that colour.
 func _draw_tag(color: Color, live: bool, beat: float) -> void:
 	if caller_name == "":
 		return
@@ -294,7 +249,6 @@ func _draw_tag(color: Color, live: bool, beat: float) -> void:
 	draw_set_transform(Vector2.ZERO)
 
 
-# The words' colour on a name tag of `color`: the TAG_INKS ink with the most contrast on it.
 static func tag_ink(color: Color) -> Color:
 	var best: Color = TAG_INKS[0]
 	for ink in TAG_INKS:

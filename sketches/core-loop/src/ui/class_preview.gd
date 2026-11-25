@@ -12,33 +12,13 @@ const ModelKit := preload("res://src/world/model_kit.gd")
 const YARD_KIT := "res://assets/models/world_one/bay_kit.glb"
 const WorldGrade := preload("res://src/presentation/world_grade.gd")
 
-# The class card's portrait and live ability preview: the pilot's real hero shell
-# (hero_assets.gd's glb, painted by its own paint()) in a tiny world of its own. The
-# framing follows the visual track's key art (storyboards 10 to 12): the sphere large
-# in the upper part, caught mid-action, over a quiet dark floor the card's words sit on.
-# At rest the card holds one frame of the pilot's signature move, gently bobbing, the
-# pilot turned three-quarters to you. While the card is open the camera pulls back and
-# the whole move loops, the camera trailing the sphere at mid range: Sable hooks a wall pylon, swings on the taut line and launches
-# like a cannonball; Rivet sprints through a crowd with the laser firing, then blasts;
-# Kest lobs sticky charges, blinks out in smoke, draws the line and rides its own blast
-# up, then glides down on its vanes. The remembered cannon calls a lane, kicks back on a
-# split, plates, then rushes and rings the ground. Tally lays three ledger plates in a
-# climbing stair, hops them, spins up the flywheel and stamps the slam. The motion is scripted here, not the game's ball
-# and abilities, which need the whole run around them; the model, colours and shapes
-# are the game's (ring, chevron, burst, lane).
 
 const LOOP := 3.6
-# The menu stages' exposure under the run's grade (Grading G4, #254). Measured under llvmpipe: the
-# AgX exposure at which each pilot's preview keeps its old Filmic mean L* crossed at 1.65 to 2.21
-# (tally the high end, its pale plates compress under AgX); 1.75 is the median, within 1 L* for five
-# pilots, -3.6 for tally. The customize bench's crossings sit near 1.70, so it shares the value.
 const MENU_EXPOSURE := 1.75
-# The loop phase each card holds at rest: the key art's moment.
 const REST := {"pylon_engineer": 0.54, "runner_gunner": 0.3, "demolitions_caster": 0.64, "tarn": 0.3,
 	"remembered_cannon": 0.22, "tally": 0.3}
 const BOB := 0.08
 const REST_SPIN := 2.5
-# How far the resting pilot turns from its heading toward the camera.
 const FACE_CAMERA := 0.55
 const NEAR_OFFSET := Vector3(-0.3, 0.5, 5.0)
 const NEAR_LOOK := Vector3(0.0, -0.75, 0.0)
@@ -52,23 +32,18 @@ const WALL_X := -2.8
 const ANCHOR := Vector3(-2.45, 3.4, 0.0)
 const TETHER := 2.7
 
-# Reduced motion (Game.set_reduced_motion keeps it current): the cap and charge pulses hold at rest.
 static var reduced_motion := false
 
 var def: Resource
-# 0 at rest, 1 fully open; the card eases it.
 var open := 0.0
 var clock := 0.0
 var ball: Node3D
-# An equipped paint's cosmetic id; colours only the shell's paint slot, never the class accent.
 var paint_id := "":
 	set(value):
 		paint_id = value
 		if _core != null:
 			_sync_variant()
 			_paint_shell()
-# The equipped shell variant's asset id, "" for the default cage. Setting it refits the shell
-# through HeroAssets.fit_shell_into, the game's own loader (CUSTOMIZE.md section 7).
 var variant := "":
 	set(value):
 		if value == variant:
@@ -76,7 +51,6 @@ var variant := "":
 		variant = value
 		if _core != null and _shell_rec.size() > 0:
 			_refit_shell()
-# The heft class shown, 1 to 5; layers show up to it.
 var heft_class := 1:
 	set(value):
 		heft_class = clampi(value, 1, 5)
@@ -98,33 +72,24 @@ var _time := 0.0
 var _painter
 var _animator: AnimationPlayer
 var _focused := false
-# The clip the last first-focus started ("" when none), for tests and tools.
 var last_focus_clip := ""
-# Where the once-per-profile unlock is recorded (ui_profile.gd); resolved from the game when unset.
 var ui_profile = null
 var antic
 var look_weight := 0.0
 var _look := {"yaw": 0.0, "pitch": 0.2, "dist": LOOK_DIST}
 var _look_idle := LOOK_HOLD
 var look_dragging := false
-# --profile=sitting: the unlock plays on the first focus of every launch instead.
 var sitting := false
 const UNLOCK_CLIP := "unlock"
 const UNLOCK_SEEN := "unlock_clip_"
 const BASE_BLEND: float = PilotReactions.BASE_BLEND
-# At rest the pilot climbs out and does their bit (pilot_antics.gd) every ANTIC_PERIOD seconds,
-# each card on its own phase so a row of cards never moves in step; never in the first period,
-# so a card you just opened on shows its still first.
 const ANTIC_PERIOD := 9.0
-# Look closer: drag with the right mouse button or the right stick to orbit the pilot, wheel
-# (while dragging) to zoom; the view drifts back LOOK_HOLD seconds after you let go.
 const LOOK_DIST := 3.2
 const LOOK_NEAR := 1.4
 const LOOK_FAR := 6.0
 const LOOK_HOLD := 1.4
 const LOOK_RATE := 6.0
 const LOOK_DRAG := 0.009
-# Classes whose unlock played this launch under --profile=sitting.
 static var _sitting_unlocks := {}
 
 
@@ -164,8 +129,6 @@ func playing() -> bool:
 	return open > 0.5
 
 
-# Back to how a new preview stands: closed, its clock at zero (no antic for a period), the pilot seated and the look
-# let go, the camera at rest.
 func reset() -> void:
 	open = 0.0
 	clock = 0.0
@@ -179,9 +142,7 @@ func reset() -> void:
 		antic.apply(-1.0)
 	seat_pilot()
 	if ball != null:
-		# A card dealt away mid-antic comes back at rest, not on the frame it left on.
 		if def != null and HeroAssets.SHELLS.has(def.id):
-			# Two poses, as _init does, so the pod's heading is the rest move's and not the jump back.
 			_pose(_rest_phase() - 0.01)
 			_pose(_rest_phase())
 		_follow = ball.position
@@ -212,9 +173,6 @@ func _build_stage() -> void:
 	_mesh(_torus(FLOOR - 0.06, FLOOR + 0.02), _mat(tint, 1.0), Vector3.ZERO).name = "TurntableRim"
 
 
-# The lights of a UI preview's own world: the sun and, with rim, a class-tinted rim from behind.
-# Both are directional and live under a SubViewport with own_world_3d that its screen owns, so
-# no stage change frees them (lint L6). The customize page's live preview takes the sun only.
 static func preview_lights(viewport: Node, tint: Color, rim_light: bool) -> Array:
 	var made: Array = []
 	var sun := DirectionalLight3D.new()
@@ -224,8 +182,6 @@ static func preview_lights(viewport: Node, tint: Color, rim_light: bool) -> Arra
 	viewport.add_child(sun)
 	made.append(sun)
 	if rim_light:
-		# The class-tinted rim from behind is directional: the preview closes with its screen, and a
-		# positional light freed with it is the stage-freed light class.
 		var rim := DirectionalLight3D.new()
 		rim.name = "PreviewRim"
 		rim.rotation_degrees = WorldLook.PREVIEW.rim_rotation
@@ -243,7 +199,6 @@ func _build_shell() -> void:
 	ball = Node3D.new()
 	ball.name = "Shell"
 	_viewport.add_child(ball)
-	# The game's one loader path (hero_assets.gd fit_shell_into): base, heft layers, variant.
 	_shell_rec = _painter.fit_shell_into(ball, def.id, variant, heft_class, _tints())
 	if _shell_rec.is_empty():
 		_build_primitive_shell()
@@ -253,7 +208,6 @@ func _build_shell() -> void:
 	_fit_pilot()
 
 
-# Swaps the shell for the current variant, keeping the ball and its pose.
 func _refit_shell() -> void:
 	if antic != null:
 		antic.seat()
@@ -275,8 +229,6 @@ func _refit_shell() -> void:
 	_paint_shell()
 
 
-# The card's profile, read from the nearest ancestor that holds one (class_card.gd _profile),
-# so the card shows the equipped variant without the card knowing about variants.
 func _sync_variant() -> void:
 	var node := get_parent()
 	while node != null:
@@ -297,8 +249,6 @@ func _tints() -> Dictionary:
 	return tints
 
 
-# The game's pilot for this class (hero_assets.gd fit_pilot_into), seated the way
-# gameplay seats it between reactions (seat_pilot).
 func _fit_pilot() -> void:
 	var fitted: Dictionary = _painter.fit_pilot_into(_pod, def.id, def.color)
 	if fitted.is_empty():
@@ -309,16 +259,10 @@ func _fit_pilot() -> void:
 	seat_pilot()
 
 
-# PILOT-CLIPS section 3 rule 9: the card shows a living pilot, idle_loop from its first frame
-# (the same still as before) when the GLB has it; else animator stopped, bones at rest pose.
-# Returns the clip now playing, or "".
 func seat_pilot() -> String:
 	return PilotReactions.seat_idle(_animator, _pilot)
 
 
-# PILOT-CLIPS section 1.4: the first focus after the pilot unlocks plays unlock, once per
-# profile (ui_profile seen/mark_seen, id unlock_clip_<class>), or once per launch under
-# --profile=sitting; then the pilot goes back to idle_loop. Returns the clip it started, or "".
 func focus_clip() -> String:
 	if _animator == null or _pilot == null or def == null or not _animator.has_animation(UNLOCK_CLIP) or not _unlock_due():
 		return ""
@@ -329,7 +273,6 @@ func focus_clip() -> String:
 	return UNLOCK_CLIP
 
 
-# The card opening (open past half, as playing() reads it) is a focus; each opening asks once.
 func track_focus() -> void:
 	if playing() and not _focused:
 		_focused = true
@@ -363,7 +306,6 @@ func _unlock_due() -> bool:
 	return true
 
 
-# The launch's tuning and the HUD's profile, from the game above the card, unless set already.
 func _resolve_launch() -> void:
 	var node := get_parent()
 	while node != null:
@@ -462,7 +404,6 @@ func _process(delta: float) -> void:
 	if ball == null:
 		return
 	_time += delta
-	# Before track_focus: seating a pilot stops its animator, which would cut a first-focus unlock.
 	_step_antic()
 	track_focus()
 	_step_look(delta)
@@ -492,7 +433,6 @@ func _frame(k: float) -> void:
 			smoothstep(0.0, 1.0, look_weight))
 
 
-# The rest-pose antic: off while the card is open (the signature move owns the ball then).
 func _step_antic() -> void:
 	if antic == null:
 		return
@@ -532,7 +472,6 @@ func look_zoom(step: float) -> void:
 	_look_idle = 0.0
 
 
-# Poses the scene at loop phase t, 0 to 1.
 func _pose(t: float) -> void:
 	for prop in _props.values():
 		prop.visible = false
@@ -582,7 +521,6 @@ func _sable(t: float) -> void:
 		ball.position = land.lerp(start, _span(t, 0.88, 1.0))
 
 
-# The pendulum under the wall anchor: theta 0 hangs straight down, positive swings out.
 static func _swing(theta: float) -> Vector3:
 	return ANCHOR + Vector3(sin(theta), -cos(theta), 0.25 * sin(theta)) * TETHER
 
@@ -599,7 +537,6 @@ func _rivet(t: float) -> void:
 			_line("bolt%d" % i, muzzle + Vector3(6.0 * f, 0.0, 0.0), muzzle + Vector3(6.0 * f + 1.3, 0.0, 0.0))
 	for i in 3:
 		var home: Vector3 = dummies[i]
-		# When the eased sprint reaches this dummy.
 		var since := t - lerpf(0.1, 0.5, sqrt(_span(home.x, start.x, stop.x)))
 		if since < 0.0:
 			_show("dummy%d" % i, home)
@@ -707,8 +644,6 @@ func _cannon(t: float) -> void:
 		_show("ring", landing + Vector3(0.0, -0.8, 0.0), Vector3.ONE * lerpf(0.8, 4.0, f), 1.0 - f)
 
 
-# Tally: three card strokes climb a stair of ledger plates (Gather, Link, Balance Due),
-# the flywheel surges on the top step, then the stamp slams down and bounces.
 func _tally(t: float) -> void:
 	var start := Vector3(-3.0, 1.0, 0.4)
 	var tops := [Vector3(-1.6, 0.45, 0.4), Vector3(-0.3, 0.95, 0.4), Vector3(1.0, 1.45, 0.4)]
@@ -752,7 +687,6 @@ func _roll() -> void:
 		return
 	var axis := Vector3.UP.cross(step / dist)
 	_core.transform.basis = Basis(axis, dist) * _core.transform.basis
-	# The pod faces -z (hero_assets.gd _steer_pod).
 	_heading = atan2(-step.x, -step.z)
 	_pod.rotation.y = lerp_angle(_pod.rotation.y, _heading, 0.25)
 
@@ -767,7 +701,6 @@ func _show(id: String, at: Vector3, scale_by := Vector3.ONE, alpha := 1.0, spin 
 		(prop.material_override as StandardMaterial3D).albedo_color.a = alpha
 
 
-# Stretches a unit stick from a to b.
 func _line(id: String, a: Vector3, b: Vector3) -> void:
 	var prop: MeshInstance3D = _props[id]
 	var span := b - a
@@ -781,8 +714,6 @@ func _line(id: String, a: Vector3, b: Vector3) -> void:
 	(prop.material_override as StandardMaterial3D).albedo_color.a = 1.0
 
 
-# These are the practice pieces Moss sets out in his bay. Pose the holder so the
-# mesh keeps its fitted size as the post grows or a pin tumbles.
 func _yard_piece(part: String, size: Vector3, fallback: PrimitiveMesh, color: Color) -> Node3D:
 	var holder := Node3D.new()
 	holder.name = part
@@ -848,7 +779,6 @@ static func _sphere(radius: float) -> SphereMesh:
 	return mesh
 
 
-# A unit-tall rod, stretched by _line.
 static func _stick(radius: float) -> CylinderMesh:
 	var mesh := CylinderMesh.new()
 	mesh.top_radius = radius
@@ -857,7 +787,6 @@ static func _stick(radius: float) -> CylinderMesh:
 	return mesh
 
 
-# A flat chevron on the ground, pointing +x: Rivet's shape.
 static func _chevron() -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -870,7 +799,6 @@ static func _chevron() -> ArrayMesh:
 	return st.commit()
 
 
-# Three crossed bars: Kest's starburst, the class row's `burst` shape.
 static func _burst() -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)

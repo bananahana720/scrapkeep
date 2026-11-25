@@ -15,16 +15,9 @@ const CosmeticPresentation := preload("res://src/presentation/cosmetic_presentat
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const WorldGrade := preload("res://src/presentation/world_grade.gd")
 
-# The customize page, mouse first (design-v3/CUSTOMIZE.md section 7): a live preview of the
-# ball you will ride on the left, built by the game's own loader; on the right the pilot strip,
-# the slot list grouped by owner and a card grid for the chosen slot, with a hover line that
-# names a locked card's grant and progress. Hover tries a look on without saving; a click
-# equips and saves. Keyboard and pad keep today's flows: up and down move between the pilot
-# row and the slot rows, left and right cycle owned items, Enter equips, Esc goes back.
 
 signal back_requested
 
-# Slot rows, grouped by owner in the order the page shows them.
 const GROUPS := [
 	["BALL", ["paint", "shell", "trail", "decal"]],
 	["PILOT", ["outfit"]],
@@ -33,11 +26,9 @@ const GROUPS := [
 ]
 const SLOT_WORDS := {"paint": "Paint", "shell": "Shell", "trail": "Trail", "decal": "Decal", "outfit": "Outfit",
 	"companion_paint": "Paint", "companion_skin": "Skin", "bay_decor": "Decoration"}
-# Every row the page can show, in keyboard order; order() drops slots with nothing that fits.
 const ORDER := ["pilot", "paint", "shell", "trail", "decal", "outfit", "companion_paint", "companion_skin", "bay_decor", "back"]
 const HEFT_WORDS := ["I", "II", "III", "IV", "V"]
 
-# Layout (start values, section 7).
 const PREVIEW_SHARE := 0.55
 const MARGIN := 24.0
 const HEADER_H := 56.0
@@ -48,7 +39,6 @@ const GROUP_H := 20.0
 const PORTRAIT := 48.0
 const HEFT_H := 64.0
 const HOVER_H := 58.0
-# Timing (start values, section 7).
 const SLIDE_SECONDS := 0.22
 const SWAP_SECONDS := 0.12
 const POP_SECONDS := 0.18
@@ -58,7 +48,6 @@ const HOP_SECONDS := 0.25
 const CROSSFADE_SECONDS := 0.08
 const SEEN_AFTER := 0.6
 const STEP_SECONDS := 0.4
-# The live preview's camera and turntable (ROSTER-LOOK section 3, the close camera).
 const CAM_DISTANCE := 3.6
 const CAM_MIN := 3.0
 const CAM_MAX := 5.0
@@ -73,15 +62,10 @@ var back: Button
 var pilot := "pylon_engineer"
 var assets := Cosmetics.asset_paths()
 var resolver := Cosmetics.new()
-# The saved reduced-motion setting: no turntable spin, no shake, no hop; changes cross-fade.
 var reduced_motion := false
-# The slot whose cards the grid shows.
 var slot := "paint"
-# A hovered owned card's look, tried on the preview and never saved: {slot, id} or {}.
 var trying := {}
-# The heft class the preview shows: the pinned pip, or a hovered one.
 var heft_pinned := 1
-# Saves of the seen marks this page made; close() saves at most once per opening.
 var seen_saves := 0
 var cards: Array = []
 
@@ -109,7 +93,6 @@ var _seen_dirty := false
 var _intro_shown := {}
 var _intro_left := -1.0
 var _intro_class := 1
-# The live preview.
 var _container: SubViewportContainer
 var _viewport: SubViewport
 var _pivot: Node3D
@@ -127,7 +110,6 @@ var _spin_wait := 0.0
 class Card:
 	extends Button
 	var id := ""
-	# worn, owned, new, locked, hidden
 	var state := "owned"
 	var tint := Palette.SAND
 	var words := ""
@@ -154,7 +136,6 @@ class Card:
 		add_theme_stylebox_override("pressed", lit)
 		add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 
-	# What the card writes under its swatch: the drawn "?" says a hidden one, so it writes nothing (S6).
 	func caption() -> String:
 		return "" if state == "hidden" else words
 
@@ -246,8 +227,6 @@ func _init() -> void:
 	_slot_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_column.add_child(_slot_list)
 	for group in GROUPS:
-		# Each group's title says whose slot its rows are (BALL, PILOT, SPIL-9, BAY): Outfit and Decoration
-		# read as a ball's or the companion's without it.
 		var heading := _label(group[0], UiTokens.CAPTION)
 		heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		heading.add_theme_color_override("font_color", Palette.SANDSTONE)
@@ -290,8 +269,6 @@ func _notification(what: int) -> void:
 			_decal_view.free()
 
 
-# One camp-menu call installs the entry and its child page. The page takes input before
-# its screen host, so Esc returns to camp and cannot also close the camp behind it.
 static func attach(camp) -> void:
 	var page = load("res://src/ui/customize_page.gd").new()
 	page._camp = camp
@@ -310,7 +287,6 @@ static func attach(camp) -> void:
 			page.close())
 
 
-# A slot row: the menu plate without a key cap; the mint dot draws on its right end.
 func _slot_row() -> Button:
 	var row := Button.new()
 	row.focus_mode = Control.FOCUS_ALL
@@ -342,12 +318,6 @@ func _label(words: String, font_size: int) -> Label:
 	return label
 
 
-# --- the live preview ---------------------------------------------------------------
-#
-# Its own world, drawn only while visible. One DirectionalLight3D and one WorldEnvironment,
-# made here when the page attaches and kept until quit; no item adds a light. The painter is a
-# HeroAssets that never enters the tree, so it never dresses a second copy of the world.
-
 func _build_preview() -> void:
 	_container = SubViewportContainer.new()
 	_container.name = "LivePreview"
@@ -370,9 +340,7 @@ func _build_preview() -> void:
 	WorldGrade.menu(env, ClassPreview.MENU_EXPOSURE)
 	world.environment = env
 	_viewport.add_child(world)
-	# The one sun, from the class card's listed preview-light helper (lint L6).
 	ClassPreview.preview_lights(_viewport, Palette.SAND, false)
-	# Moss's bench: a low drum the ball sits on.
 	var bench := MeshInstance3D.new()
 	var drum := CylinderMesh.new()
 	drum.top_radius = 1.5
@@ -416,7 +384,6 @@ func _preview_input(event: InputEvent) -> void:
 		_pivot.rotation.y += deg_to_rad(event.relative.x * DRAG_DEGREES)
 
 
-# The look the preview shows for a slot: a hovered card's, else what is worn.
 func look(for_slot: String) -> String:
 	if trying.get("slot", "") == for_slot:
 		return String(trying.get("id", ""))
@@ -427,8 +394,6 @@ func preview_heft() -> int:
 	return _intro_class if _intro_left >= 0.0 else heft_pinned
 
 
-# Builds the ball you will ride with the game's own helpers: fit_shell_into, fit_pilot_into,
-# fit_outfit and the decal through the game's CosmeticPresentation.
 func refresh_preview(animate := true) -> void:
 	if _painter == null:
 		return
@@ -511,8 +476,6 @@ func _stop_intro() -> void:
 			_painter.set_heft_class(_rec, heft_pinned, false)
 
 
-# --- open, close and the data the page edits ------------------------------------------
-
 func _open_from_camp() -> void:
 	var screens = _camp.get_parent().get_parent()
 	_game = screens.game
@@ -554,8 +517,6 @@ func open(profile, progress = null) -> void:
 			create_tween().tween_property(self, "position:x", 0.0, SLIDE_SECONDS).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
-# A recorded counter is a lower bound, never an estimated lifetime total. Use the
-# largest compatible counter, since multiple rows may count the same event.
 static func backfill(profile, progress) -> int:
 	if profile == null or progress == null:
 		return 0
@@ -597,7 +558,6 @@ static func equip(profile, owner: String, slot_id: String, id: String) -> bool:
 	return profile.save()
 
 
-# The rows a slot can show for the current pilot, pending art left out.
 func shown_ids(slot_id: String) -> Array:
 	var out: Array = []
 	for id in Cosmetics.for_slot(slot_id, pilot):
@@ -606,7 +566,6 @@ func shown_ids(slot_id: String) -> Array:
 	return out
 
 
-# A slot shows only when a row fits the pilot, so an empty kind never shows an empty tab.
 func slot_shown(slot_id: String) -> bool:
 	return not shown_ids(slot_id).is_empty()
 
@@ -634,8 +593,6 @@ func selected(slot_id: String) -> String:
 	return CosmeticWear.worn(_profile, Cosmetics.owner_for(pilot, slot_id), slot_id)
 
 
-# Presentation reads this result, not the raw saved id. An empty row means no trail,
-# no shell decal, default SPIL-9 enamel, or the pilot's unmodified ball paint.
 func effective(slot_id: String) -> Dictionary:
 	return resolver.resolve(selected(slot_id), assets)
 
@@ -729,8 +686,6 @@ func card_for(id: String) -> Button:
 	return null
 
 
-# The hover line for a card: an owned item's name, a locked item's grant and progress, or the
-# hidden line with no progress.
 func hover_text(card) -> String:
 	if card.state == "hidden":
 		return "Hidden. Keep playing."
@@ -839,7 +794,6 @@ func press(id: String) -> void:
 		_step(id, 1)
 
 
-# A mouse click on a row: a slot row shows its cards, the pilot row cycles, Back closes.
 func _row_clicked(id: String) -> void:
 	if id in Cosmetics.SLOTS:
 		rows[id].grab_focus()
@@ -863,7 +817,6 @@ func _step(id: String, direction: int) -> void:
 	refresh()
 
 
-# Close saves the seen marks once, then the page goes at once so Esc never waits.
 func close() -> void:
 	if _seen_dirty and _profile != null and _profile.can_save:
 		_profile.save()
@@ -931,14 +884,10 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-# --- layout and per-frame work --------------------------------------------------------
-
 func _screen() -> Vector2:
 	return get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1600.0, 900.0)
 
 
-# Places every control for a screen size: the preview takes 55% of the width; the cards are
-# 132 px in 4 columns at 1920 wide and 3 at 1280 (fewer when the column is narrower).
 func layout(screen: Vector2) -> void:
 	size = screen
 	_backdrop.position = Vector2.ZERO
@@ -990,8 +939,6 @@ func _process(delta: float) -> void:
 	_age_new_marks(delta)
 
 
-# A new card loses its mark after 0.6 s on screen; the mark joins seen in memory and close()
-# writes it once.
 func _age_new_marks(delta: float) -> void:
 	if _profile == null:
 		return

@@ -1,7 +1,5 @@
 extends RefCounted
 
-# Tarn's upgrade tree: claw in close. Heap order as in rivet.gd. The left half sharpens
-# the claw (Rend); the right half pulls, clamps and breaks free (Anchor).
 
 const NODES := [
 	{"id": "t_long_claw", "name": "Long Claw", "effect": "Claw sweeps reach two metres farther", "key": "weapon",
@@ -99,9 +97,6 @@ const NODES := [
 ]
 
 
-# World-one Depth-1 opposite-feel keystones (PILOT-CADENCE.md §§6.1-6.2, E2-09).
-# Left root: Saw Flurry (t_long_claw moves to slot 2 in place of t_twin_talons; t_heavy_paw stays at slot 3).
-# Right root: Guillotine (t_anchor_line moves to slot 4 in place of t_spare_claw; t_vice_grip stays at slot 5).
 const SAW_FLURRY := {"id": "t_saw_flurry", "name": "Saw Flurry", "effect": "Fast light sweeps. Every fifth hit pierces.", "key": "weapon",
 	"icon": "ab_tarn_weapon", "tags": ["close", "sustain"],
 	"pattern": {"claw_sweep": {"set": {"window_s": [0.20, 0.44], "pierce_every": 5},

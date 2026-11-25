@@ -1,6 +1,5 @@
 extends RefCounted
 
-# The bus can survive the Node a captured listener serves.
 static func listen(owner: Node, bus: Signal, callback: Callable) -> void:
 	if bus.is_connected(callback):
 		return

@@ -25,7 +25,6 @@ func setup(tuning_ref) -> void:
 	title.add_theme_font_size_override("font_size", UiTokens.BODY)
 	box.add_child(title)
 
-	# Two columns: the v2 knobs took the table past what one column fits in 900 px.
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 16)

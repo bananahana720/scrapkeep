@@ -7,14 +7,6 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 
-# The stage card: the stage's icon and name, faded in over the launch and out after the
-# drop, with the stage's modifier (SI3) on a second line when it has one. It only draws: it takes no input and never pauses anything, so the ball keeps
-# every bit of the speed it launched with (principle 1).
-#
-# The second line is the Foreman's memo (StageModifier.memo), so it sits on an old-works plate (LEGIBILITY
-# section 14.3): cast glass, no fastener, no lean, the uranium-green seam along its foot, the works' face.
-# A cursed run's line is the crew's (a keeper's gamble come due), so it stays in the card's own words above
-# the plate, a mark laid on the works' card. The card fades in a straight line.
 
 const ICON := 44.0
 const FONT := UiTokens.HEADING
@@ -24,16 +16,10 @@ const GAP := 14.0
 const FADE_IN := 0.25
 const HOLD := 1.4
 const FADE_OUT := 0.4
-# The name and its line are read mid-drop, over the yard (PF-08 found them too faint): the words
-# are lightened toward bone and wear a heavy outline, so they keep MIN_CONTRAST against the
-# outline's ink wherever the card lands. LEGIBILITY.md sets no number for a line in play, so the
-# floor is WCAG's 7:1 for large text, held by tests/run_opening_test.gd.
 const BONE := Color("f3ecdc")
 const LIGHTEN := 0.5
 const TEXT_OUTLINE := 10
 const MIN_CONTRAST := 7.0
-# The memo plate: its words in the old works' face, padded clear of the edge and the seam, and how the
-# card's line joins its parts (StageModifier.card_line).
 const MEMO_PAD := Vector2(UiTokens.GAP_L, UiTokens.GAP_S)
 const SEAM_ROOM := float(UiTokens.GAP_S)
 const SEPARATOR := "  /  "
@@ -53,7 +39,6 @@ func _init() -> void:
 	modulate.a = 0.0
 
 
-# The card's second line in its two voices: "crew", the cursed run's line, and "memo", the Foreman's rest.
 static func voices(card_line: String) -> Dictionary:
 	var crew := PackedStringArray()
 	var memo := PackedStringArray()
@@ -70,12 +55,10 @@ func memo_text() -> String:
 	return String(voices(line)["memo"])
 
 
-# The memo plate's style box: the old works' hand, never the Kindness's seam.
 func memo_box() -> StyleBox:
 	return _memo_box
 
 
-# The memo plate's size: its words in the works' face, the pad round them and the seam's room under them.
 func memo_size() -> Vector2:
 	var memo := memo_text()
 	if memo.is_empty():
@@ -85,12 +68,10 @@ func memo_size() -> Vector2:
 		+ MEMO_PAD * 2.0 + Vector2(0.0, SEAM_ROOM)
 
 
-# The colour the card's words are drawn in: the stage's tint lightened toward bone.
 static func word_colour(tint: Color) -> Color:
 	return Color(tint.lerp(BONE, LIGHTEN), 1.0)
 
 
-# WCAG contrast ratio of two opaque colours.
 static func contrast(a: Color, b: Color) -> float:
 	var la := _luminance(a)
 	var lb := _luminance(b)
@@ -144,7 +125,6 @@ func show_card(icon: String, text: String, tint: Color, subline := "") -> void:
 	queue_redraw()
 
 
-# Keeps a card that is already up on screen for another full hold.
 func extend() -> void:
 	if visible:
 		show_card(icon_id, title, color, line)
@@ -181,7 +161,6 @@ func _draw() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT, -1, LINE_FONT, UiTokens.HANDS[UiTokens.Hand.OLD_WORKS].ink)
 
 
-# One line of the card's words: left edge x, middle y.
 func _words(x: float, y: float, value: String, font_size: int) -> void:
 	var font := UiFonts.bold()
 	var at := Vector2(x, y + (font.get_ascent(font_size) - font.get_descent(font_size)) * 0.5)

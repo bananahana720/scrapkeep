@@ -5,27 +5,16 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
-# Grey panel pickup lines ("SIGHT +4% WEAPON RANGE") at the HUD's edge (PF-14): they rise from
-# the top of the bottom band at its left, over the speed and cogs readouts, never over an enemy or
-# a gate's feet as the pop at the ball did. presentation/panel_fx.gd decides what each line says,
-# its tint and its row, and when it shows (inside POP_LIFE of the pickup's sound, PF-19); this
-# draws where. A line slams in, holds, rises GAP_M and fades its last FADE seconds. Less motion
-# drops the slam and the rise.
 
-# HEADING keeps the letters 2.6 percent of the view's height, over the 2.5 percent floor the pop's
-# taste call set (design-v3/SIGHT-PERSONA.md section 7); a lower step would fail it.
 const FONT := UiTokens.HEADING
 const ROW := 40.0
 const RISE := float(UiTokens.GAP_M)
 const SLAM := 0.08
-# The slam's swell stays under ROW, so a slamming line never reaches the row above.
 const SWELL := 1.15
 const FADE := 0.25
 const OUTLINE := 6
-# The column's width: the longest pop at FONT ("LOUVRE +5% FIRE RATE"), with room.
 const WIDTH := 480.0
 
-# [words, tint, row, age, life] per line on show.
 var lines: Array = []
 
 
@@ -43,7 +32,6 @@ func show_line(words: String, tint: Color, row: int, life: float) -> void:
 	queue_redraw()
 
 
-# Seats the column at the left margin, its bottom on the bottom band's top edge.
 func layout(size_now: Vector2, rows: int) -> void:
 	var bottom := ScreenRegions.rect("bottom", size_now)
 	size = Vector2(WIDTH, ROW * rows + RISE)
@@ -61,7 +49,6 @@ func showing() -> bool:
 	return not lines.is_empty()
 
 
-# The screen rect the lines on show cover (as wide as the widest), else an empty rect.
 func rect() -> Rect2:
 	if not visible or not showing():
 		return Rect2()

@@ -6,59 +6,33 @@ const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 
-# A screen-space prompt attached to a point in the world, such as a reward gate's
-# offer or a fabricator's price. At range it shows an icon and a title of at most three
-# words; within its detail_range of the ball (DETAIL_RANGE unless its owner says otherwise) it
-# adds the detail lines. The HUD places every prompt each frame (ScreenRegions): inside the
-# prompts band, or on its anchor when it is a sign, and tells it whether the ball is near.
-#
-# Owners pass structured parts with set_parts(title, detail, icon). Until they do, the
-# text they set is parsed (parse()): the first line is the title, the rest the detail.
-# The Label keeps that text as the owner wrote it and draws nothing itself; this script
-# draws the icon, title and detail.
 
 const DETAIL_RANGE := 12.0
 const TITLE_WORDS := 3
 const TITLE_SIZE := UiTokens.BODY
 const DETAIL_SIZE := UiTokens.CAPTION
-# A reward gate's name (owner_placed) reads from across the yard: its cap height is at least 14 px on a
-# 1280x720 window, where the 1600x900 canvas draws at 0.8 and a capital is 0.714 of the font size.
-# 25 is off the type scale on purpose: reading at distance; an exception recorded on pull request 1064.
 const SIGN_NAME_SIZE := 25
 const SIGN_DETAIL_SIZE := UiTokens.BODY
 const SIGN_PAD := 4.0
 const ICON := 24.0
 const ICON_GAP := 6.0
 const LINE_GAP := 2.0
-# A parsed prompt's icon: the vault by its title, a fabricator by its price in cogs,
-# and anything else is a reward gate's offer.
 const TITLE_ICONS := {"vault": "obj_vault", "fabricating...": "obj_fabricator",
 	"scrapper": "obj_scrapper", "press": "obj_part_press", "overtime": "res_timer", "auction": "res_scrap"}
 const PRICE_WORD := " cogs"
 const DEFAULT_ICON := "obj_gate"
-# The node the prompt follows, the offset above it, and how far away it still shows.
 var anchor: Node3D
 var offset := Vector3.ZERO
 var reach := 60.0
-# How close the ball must be for the detail lines. An owner whose detail is what the player
-# chooses by (a reward gate, picked by steering at it from across the yard) sets it to its reach.
 var detail_range := DETAIL_RANGE
-# Set by the HUD each frame: the ball is within detail_range of the anchor.
 var near := false
-# A prompt its owner places each frame, for a reward gate's name: one type size (SIGN_NAME_SIZE), the name
-# on one row or two (name_rows), the effect lines under it only while detail_shown, no icon. The HUD never
-# places or hides it.
 var owner_placed := false
-# The crossbar column relative to the left side of an owner-placed gate sign.
 var crossbar_x := INF
 var name_rows := PackedStringArray()
 var detail_shown := false
 var _structured := false
 var _parts := {"title": "", "detail": "", "icon": DEFAULT_ICON}
 var _parsed_from := ""
-# v3 interact (world/device.gd): the key drawn before the icon ("" for none), a
-# not-ready device's gauge round the icon (-1 for none), and whether the icon alone
-# is a prompt, so the family glyph shows at range with no words.
 var keycap := ""
 var gauge := -1.0
 var _glyph := false
@@ -91,7 +65,6 @@ func set_parts(title_text: String, detail_text := "", icon_id := DEFAULT_ICON) -
 	queue_redraw()
 
 
-# An interactable's prompt: icon "" hides it; words "" is the glyph alone.
 func set_interact(icon_id: String, words: String, key: String, fill: float) -> void:
 	assert(key == "" or words != "", "a key prompt needs a word beside its icon (PF-03)")
 	_structured = true
@@ -101,8 +74,6 @@ func set_interact(icon_id: String, words: String, key: String, fill: float) -> v
 	_parts = {"title": words, "detail": "", "icon": icon_id if icon_id != "" else DEFAULT_ICON}
 
 
-# The first line is the title and the rest the detail. A title with a colon keeps what
-# comes before it; past three words the rest moves to the front of the detail.
 static func parse(source: String) -> Dictionary:
 	var lines := Array(source.strip_edges().split("\n", false))
 	if lines.is_empty():
@@ -164,7 +135,6 @@ func detail_size() -> int:
 	return SIGN_DETAIL_SIZE if owner_placed else DETAIL_SIZE
 
 
-# A gate name's rows: the name on one row, or two split at the space nearest its middle (one word cannot split).
 static func split_name(title: String) -> PackedStringArray:
 	var at := -1
 	var middle := title.length() * 0.5
@@ -184,7 +154,6 @@ func _cap_width() -> float:
 	return Keycap.size_of(keycap, ICON).x + ICON_GAP if keycap != "" else 0.0
 
 
-# The width of the icon and title row at a title size: what the draw lays out.
 func _title_row_width(size: int) -> float:
 	return _cap_width() + ICON + ICON_GAP + UiFonts.bold().get_string_size(String(parts()["title"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 
@@ -193,8 +162,6 @@ func _line_width(line: String, size: int) -> float:
 	return UiFonts.bold().get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 
 
-# The rows the draw lays out, as {line, size, width}: the title row (its width includes the key cap
-# and icon) and the detail lines. The rectangle's words, text_width and _draw all read these.
 func drawn_rows() -> Array:
 	var lines := shown_lines()
 	if owner_placed:
@@ -227,7 +194,6 @@ func shown_extent() -> Vector2:
 	return _extent_of(title_size(), shown_lines(), minf(text_width() + 8.0, ScreenRegions.PROMPT_WIDTH))
 
 
-# The widest row the draw lays out, for a reader that checks the words stay inside the rectangle.
 func text_width() -> float:
 	var width := 0.0
 	for row in drawn_rows():
@@ -240,7 +206,6 @@ func _process(_delta: float) -> void:
 		queue_redraw()
 
 
-# A gate's name: its rows centred in the rectangle, name rows in the prompt's colour, effect lines under them.
 func _draw_owned(font: Font, color: Color, outline: Color, extent: Vector2) -> void:
 	var y := 0.0
 	var names := maxi(1, name_rows.size())

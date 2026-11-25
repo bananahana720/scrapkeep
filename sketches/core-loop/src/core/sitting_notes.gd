@@ -1,25 +1,5 @@
 extends Node
 
-# --sitting-notes: the build takes notes while a person plays (ruling cg, Andrew, 9 Nov 2026), so
-# a sitting leaves a record that does not depend on what the player remembers. Nothing shows on
-# screen and nothing is played back. Without the flag this node is never made.
-#
-# One file a launch, user://sitting-notes/notes-<UTC start>.ndjson, one JSON row a line. Every row
-# has "t" (seconds since the notes started), "utc" and "kind":
-#   start      the build's facts: executable, window, refresh rate, physics rate, the hitch limit
-#   stuck, hung, wedged, fell, objective, blank, bar   the play watch's rows (src/core/play_watch.gd).
-#              A stuck row is also what a person standing still for 8 s in play writes: read it
-#              with the place.
-#   hitch      frames that each took hitch_ms or longer, one row a burst (frames within BURST_GAP_S
-#              of each other, cut every BURST_MAX_S): how many, the worst and the total, where and
-#              in which flow state.
-#              A frame while the window is not focused is not counted.
-#   mark       the player pressed MARK_KEY (F8), or clicked both sticks together on a pad: "look
-#              here". Carries the place, the objective plate's words and the frame rate.
-#   end        the watch's counts and the marks, with the longest stretches the plate stood empty
-#              (blank_max_s) and the hull bar stood off the hull (bar_off_max_s), as the game closes
-# Cost: one clock read a frame, the watch's reads a physics tick, the plate read once a second.
-# It only reads the game, and each row is closed onto disk as it is written, so a crash keeps them.
 
 const PlayWatch := preload("res://src/core/play_watch.gd")
 const SafeStore := preload("res://src/core/safe_store.gd")
@@ -29,10 +9,8 @@ const HITCH_FLAG := "--sitting-notes-hitch="
 const DIR := "user://sitting-notes"
 const MARK_KEY := KEY_F8
 const MARK_PAD := [JOY_BUTTON_LEFT_STICK, JOY_BUTTON_RIGHT_STICK]
-# A frame this long or longer is a hitch: three frames lost at 144 Hz, one and a half at 60.
 const HITCH_MS := 25.0
 const BURST_GAP_S := 0.5
-# Slow frames that never let up are written this often, so the row does not wait for them to end.
 const BURST_MAX_S := 5.0
 const READ_S := 1.0
 
@@ -58,7 +36,6 @@ static func wanted() -> bool:
 
 func _ready() -> void:
 	name = "SittingNotes"
-	# Marks and hitches count in a pause and in the workshop too.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with(HITCH_FLAG):
@@ -101,8 +78,6 @@ func _process(delta: float) -> void:
 		_read = 0.0
 
 
-# One frame's length, at at_s seconds since the notes started. A hitch opens or joins a burst;
-# a burst is written once BURST_GAP_S has passed without another.
 func frame(ms: float, at_s: float) -> void:
 	if not _burst.is_empty() and at_s - float(_burst["last"]) > BURST_GAP_S:
 		_close_burst()
@@ -144,7 +119,6 @@ func _input(event: InputEvent) -> void:
 			mark()
 
 
-# "Look here": the player wants this moment read afterwards.
 func mark() -> void:
 	marks += 1
 	var row := {"kind": "mark", "n": marks}
@@ -155,7 +129,6 @@ func mark() -> void:
 	_note(row)
 
 
-# Where the game is now: the stage, its clock, the ball and the flow state. Empty before a run.
 func _where() -> Dictionary:
 	if game == null or game.flow == null:
 		return {}
@@ -166,7 +139,6 @@ func _where() -> Dictionary:
 	return out
 
 
-# Every row goes through here: the watch's rows keep their own fields and gain the two clocks.
 func _note(row: Dictionary) -> void:
 	if not _open:
 		return
@@ -174,7 +146,6 @@ func _note(row: Dictionary) -> void:
 	out.merge(row, true)
 	var err := SafeStore.append_line(path, JSON.stringify(out))
 	if err != OK:
-		# One failed line ends the notes: a sitting must not fill the console with the same error.
 		_open = false
 		push_error("sitting notes: cannot write %s (%s)" % [path, error_string(err)])
 

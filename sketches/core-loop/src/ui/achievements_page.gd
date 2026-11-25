@@ -11,20 +11,6 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
-# The title's list of every achievement, in table order (Achievements.ROWS): an amber
-# star, the name and the date for an earned row; a slate ring, the name and the words
-# to do for one not earned yet. A hidden row stays "???" and "Keep playing." until it is
-# earned. A first-win secret row (secrets.gd PAINT_ROWS) is left out until it is earned, so a
-# fresh profile sees no hint of it. A row with a count shows how far along it is, from Progress.count_of. Nothing
-# is written twice: every word is a table row. Back presses A, as A opened it.
-# Above the list stands the shift board (shift_board.gd): how many stamps, the next rung and what it
-# opens, and the time card's holes, so the wall always names one thing to go and do next.
-#
-# The board is the one mixed surface (LEGIBILITY section 14.3): an old-works split-flap board the Keepers
-# reclaimed. Its frame is cast, with the uranium-green seam; the count and the time card are flap rows in
-# the works' mono face that settle left to right in a straight line (at once with less motion); the next
-# rung is the Keepers' chalk over it. A row that signed on a pilot carries a three-hole timecard stamped
-# HIRED (PAID is Tally's alone).
 
 const COLUMNS := 2
 const ROW_WIDTH := 600.0
@@ -33,7 +19,6 @@ const PLATE_PAD := 10.0
 const HIDDEN_NAME := "???"
 const HIDDEN_TEXT := "Keep playing."
 const BOARD_SERIAL := 49
-# A flap row settles over FLAP_SECONDS, each row FLAP_STAGGER after the one above.
 const FLAP_SECONDS := 0.36
 const FLAP_STAGGER := 0.08
 const HIRED := "HIRED"
@@ -81,8 +66,6 @@ func _init() -> void:
 	_board.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_board.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_board_frame.add_child(_board)
-	# The list stands on its own plate in the middle of the screen, as wide as its two columns, so
-	# the camp behind does not read through the words and the scroll bar sits beside the list.
 	_plate = PanelContainer.new()
 	_plate.name = "Plate"
 	_plate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -132,7 +115,6 @@ func _init() -> void:
 	add_child(bottom)
 
 
-# Rebuilds the list from the saved profile and the progress node's counters.
 func refresh(profile, progress, sitting := false) -> void:
 	for child in _grid.get_children():
 		_grid.remove_child(child)
@@ -149,7 +131,6 @@ func refresh(profile, progress, sitting := false) -> void:
 	_focus_first.call_deferred()
 
 
-# The board's three lines, for a test and for the strip: the stamp count, the next rung, the card.
 static func board_lines(profile, sitting := false) -> PackedStringArray:
 	var read := ShiftBoard.reading(profile, sitting)
 	var out := PackedStringArray()
@@ -166,7 +147,6 @@ static func board_lines(profile, sitting := false) -> PackedStringArray:
 	return out
 
 
-# Built shift variants shown on the board, each paired with the rung that opens it.
 static func variant_entries(profile, sitting := false) -> Array:
 	return ShiftVariants.board_entries(profile, sitting)
 
@@ -243,8 +223,6 @@ func _fill_world_acts(profile, sitting: bool) -> void:
 	_board.add_child(strip)
 
 
-# A split-flap row: the works' mono face in the works' ink on a dark flap cell, hinged at its middle. The
-# summary's chase plate sets its rung the same way.
 static func flap(text: String, font_size: int) -> Label:
 	var works: Dictionary = UiTokens.HANDS[UiTokens.Hand.OLD_WORKS]
 	var label := _word(text, UiFonts.face(UiTokens.Hand.OLD_WORKS, true), font_size, works.ink)
@@ -259,7 +237,6 @@ static func flap(text: String, font_size: int) -> Label:
 	return label
 
 
-# The flap's split, shown as a hinge at each end of the cell in the margin, so it never strikes a letter.
 static func _hinges(label: Label) -> void:
 	var works: Dictionary = UiTokens.HANDS[UiTokens.Hand.OLD_WORKS]
 	var y := label.size.y * 0.5
@@ -268,7 +245,6 @@ static func _hinges(label: Label) -> void:
 	label.draw_line(Vector2(label.size.x - reach, y), Vector2(label.size.x, y), works.edge, 2.0)
 
 
-# The Keepers' chalk on the board: their poster face in ledger cream, laid over the cast frame with no cell.
 static func chalk(text: String, font_size := UiTokens.BODY) -> Label:
 	return _word(text, UiFonts.face(UiTokens.Hand.KEEPER), font_size, UiTokens.HANDS[UiTokens.Hand.KEEPER].ink)
 
@@ -284,8 +260,6 @@ static func _word(text: String, font: Font, font_size: int, color: Color) -> Lab
 	return label
 
 
-# The flap rows settle left to right in a straight line, one after another; with less motion, or off the
-# tree, they stand settled at once.
 func _settle(flaps: Array[Label]) -> void:
 	if _flaps != null:
 		_flaps.kill()
@@ -300,7 +274,6 @@ func _settle(flaps: Array[Label]) -> void:
 		_flaps.tween_property(flaps[i], "visible_ratio", 1.0, FLAP_SECONDS).set_delay(FLAP_STAGGER * i)
 
 
-# Whether an achievement row is the one that signs on a pilot: a HIRED rung's grant row.
 static func hires(id: String) -> bool:
 	for rung in ShiftBoard.RUNGS.values():
 		if String(rung["stamp"]) == HIRED and String((rung["when"] as Dictionary).get("earned", "")) == id:
@@ -308,7 +281,6 @@ static func hires(id: String) -> bool:
 	return false
 
 
-# A three-hole timecard stamped HIRED: a cream card, three punched holes along its top, the stamp under them.
 func _timecard() -> Control:
 	var card := Control.new()
 	card.name = "Timecard"
@@ -437,7 +409,6 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-# The words one row shows, for a test and for the row itself: name, text, and state.
 static func reading(id: String, profile, progress) -> Dictionary:
 	var data := Achievements.row(id)
 	var earned: bool = profile != null and profile.earned(id)
@@ -487,7 +458,6 @@ func _row(id: String, profile, progress) -> Control:
 	box.add_child(words)
 	var shade := Palette.SAND if earned else Palette.SLATE
 	words.add_child(_label(read["name"], UiTokens.LABEL, Palette.AMBER if earned else shade))
-	# A long line wraps inside its row, so both columns keep one width and the list fits a 1280 window.
 	var text := _label(read["text"], UiTokens.BODY, Color(shade, 0.9))
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	words.add_child(text)
@@ -503,15 +473,12 @@ func _row(id: String, profile, progress) -> Control:
 	return box
 
 
-# An empty first and last child, so the row's 12 px separation stands between its focus outline
-# and what the row holds.
 func _pad() -> Control:
 	var pad := Control.new()
 	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return pad
 
 
-# Where the list's plate sits on screen, for the layout checks.
 func list_rect() -> Rect2:
 	return _plate.get_global_rect()
 

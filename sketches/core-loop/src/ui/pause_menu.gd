@@ -13,29 +13,6 @@ const Keycap := preload("res://src/ui/keycap.gd")
 const BuildRead := preload("res://src/ui/build_read.gd")
 const SettingRow := preload("res://src/ui/setting_row.gd")
 
-# The pause menu and its settings (DESIGN-V2 section 14.1). P, Esc or a pad's Start
-# opens it in play and closes it again. The column is six rows, Resume, New run, Field
-# notes, Radio, Settings and Quit, each a ChoiceButton with its key's cap, so the mouse, the
-# keys and a pad reach every choice: W/S or the arrows move the focus, Enter or Space takes
-# the focused row. The field notes row pins the notes open until the next key or click.
-#
-# It pauses through game.toggle_pause() and never opens while the workshop holds the
-# player (the game's menu_held meta), so it cannot stack on the pick or the counter. The
-# start card's tier choice also sets menu_held to keep the cursor free, but pause opens over
-# it, and closing leaves the cursor with the card.
-# Closing restores the tree pause the pick still holds. Volumes go to the mixer through
-# audio.set_volume() and are kept per viewer in settings.json (settings_store.gd). The volume
-# and comfort rows (Music, Effects, Screen shake, Hit-stop, Find cards) live on the Feel tab of
-# settings_pages.gd, which the title shows too; this menu only applies the saved levels at launch.
-# With --dev and --music=ace the Breath row (B) flips the Warden open's held breath, raw, hard or
-# gentle, and the open sounding now changes with it, so it can be judged mid-fight.
-# The Radio row (V) turns the pilot radio off and back on to its last station
-# (radio_deck.gd), the same stop as Off on the HUD dial; off silences the music alone.
-# The Settings row (O) swaps the column for settings_pages.gd (Display, Controls, Look and Feel
-# pages, opening on the page last used) and Back, Esc or P returns to the column with
-# Settings focused.
-# A line under the title says why the game paused itself (auto_pause.gd: a dropped pad); it is
-# hidden while empty and cleared when the menu closes.
 
 const LAYER := 6
 const FADE_IN := 0.16
@@ -50,23 +27,10 @@ const ROWS := [
 	{"id": "settings", "key": "key_o", "words": "Settings"},
 	{"id": "quit", "key": "key_x", "words": "Quit"},
 ]
-# The rows that carry a value: Radio wears a pip (filled on, ring off) and Breath its level as right-hand text.
 const VALUE_ROWS := ["radio", "breath"]
-# The keys that turn the notes a page while they are pinned; any other key unpins them.
 const NOTES_KEYS := [KEY_Q, KEY_E, KEY_TAB]
-# Quit is X held QUIT_HOLD seconds, with a ring filling round its keycap like the retry hold
-# (design-v3/SKILL-BAR.md section 5). Q is the ultimate now, the most-pressed key in a fight,
-# and muscle memory pressing it on an open menu must never end a run. A click on the row, or
-# Enter on it focused, asks first (ARM_WORDS); while it asks, a tap of X is the second press.
 const QUIT_KEY := KEY_X
 const QUIT_HOLD := 0.6
-# New run and Quit end the run in hand, so a press of either row (its key, a click, Enter or a pad's A)
-# only arms it: the row asks in ARM_WORDS, worded in the hazard colour, and the same press again inside
-# ARM_SECONDS does it. Any other row, a focus move, the menu closing or the time running out disarms it.
-# ARM_GUARD keeps a double click from being both presses. The X hold is already a confirm and asks nothing;
-# a tap of X answers a Quit row that is already asking.
-# Hades' Give Up and Slay the Spire's Abandon Run both ask before the pause menu ends a run; N is also
-# "New run" on the death and summary screens, so a tap from habit must not cost a live one.
 const ARM_WORDS := {"restart": "Scrap this run? Press again", "quit": "Quit to desktop? Press again"}
 const ARM_SECONDS := 3.0
 const ARM_GUARD := 0.35
@@ -98,7 +62,6 @@ func _init() -> void:
 	name = "PauseMenu"
 
 
-# game.gd adds this layer as its child; it sets itself up from its parent.
 func _ready() -> void:
 	if game == null:
 		setup(get_parent())
@@ -150,7 +113,6 @@ func setup(game_ref) -> void:
 	_quit_ring.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_quit_ring.draw.connect(_draw_quit_ring)
 	_rows["quit"].add_child(_quit_ring)
-	# The build read sits left of the column: the ball turning with its panels, and the stat lines.
 	build_read = BuildRead.new()
 	_root.add_child(build_read)
 	_root.resized.connect(_lay_build)
@@ -166,7 +128,6 @@ func setup(game_ref) -> void:
 			close())
 
 
-# The viewer's saved levels go to the mixer at launch; a level never set keeps its default.
 func apply_saved() -> void:
 	SettingsPages.apply_saved(game)
 
@@ -179,7 +140,6 @@ func notes_pinned() -> bool:
 	return _notes_pinned
 
 
-# The line under the title; "" takes it down.
 func note(text: String) -> void:
 	_note.text = text
 	_note.visible = text != ""
@@ -212,7 +172,6 @@ func can_open() -> bool:
 	return game.flow.in_play() and not _screen_holds() and not game.notes_held()
 
 
-# menu_held, unless only the start card's tier choice holds it (workshop.gd card_holds_only).
 func _screen_holds() -> bool:
 	if not game.menu_held():
 		return false
@@ -270,8 +229,6 @@ func press(id: String) -> void:
 	confirm(id)
 
 
-# The row's own action with no ask: press() calls it once a row that asks is confirmed, and the X hold
-# calls it for Quit.
 func confirm(id: String) -> void:
 	if not _open:
 		return
@@ -308,14 +265,10 @@ func confirm(id: String) -> void:
 			_rows[id].grab_focus()
 
 
-# Same rule as hold-R (game.step_restart_hold): with a store, a restart never abandons the victory
-# lap's credits.
 func _restart_shut() -> bool:
 	return game.flow.store != null and game.flow.state == game.flow.LAP
 
 
-# True on the press that confirms an armed row. The first press arms it and answers false, and so does a
-# press inside ARM_GUARD of the arming.
 func _confirms(id: String) -> bool:
 	if _armed == id:
 		return _armed_for >= ARM_GUARD
@@ -346,12 +299,10 @@ func _row_words(id: String) -> String:
 	return String(ROWS[_order.find(id)]["words"])
 
 
-# The row that is asking, "" when none is.
 func armed() -> String:
 	return _armed
 
 
-# One tick of the ask: it lapses after ARM_SECONDS, or when the focus leaves its row.
 func step_arm(delta: float) -> void:
 	if _armed == "":
 		return
@@ -360,7 +311,6 @@ func step_arm(delta: float) -> void:
 		_disarm()
 
 
-# The settings page takes the column's place; the first page's rows stay built, only hidden.
 func _enter_settings() -> void:
 	_in_settings = true
 	for id in _order:
@@ -393,7 +343,6 @@ func _show_build() -> void:
 	_lay_build()
 
 
-# The build read takes the gutter left of the centred column at the screen's own size.
 func _lay_build() -> void:
 	lay_build(_root.size if _root.size != Vector2.ZERO else _root.get_viewport_rect().size)
 
@@ -402,7 +351,6 @@ func lay_build(screen: Vector2) -> void:
 	build_read.layout(screen, (screen.x - column_width()) * 0.5)
 
 
-# The widest row of the centred column.
 func column_width() -> float:
 	var width := WIDTH
 	for id in _order:
@@ -410,7 +358,6 @@ func column_width() -> float:
 	return width
 
 
-# What a value row shows, as data: its label, its right-hand text and its pip state (see SettingRow.data).
 func read(id: String) -> Dictionary:
 	var node = _rows.get(id)
 	if node is SettingRow:
@@ -461,13 +408,11 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-# X down starts the quit hold and X up drops it; step_quit fills it.
 func _quit_key(event: InputEvent) -> bool:
 	if not (event is InputEventKey and event.physical_keycode == QUIT_KEY):
 		return false
 	if event.echo:
 		return true
-	# The asking row says "press again" beside this keycap, so a tap of X answers it.
 	if event.pressed and _armed == "quit":
 		press("quit")
 		if _armed == "":
@@ -479,7 +424,6 @@ func _quit_key(event: InputEvent) -> bool:
 	return true
 
 
-# One tick of the quit hold: QUIT_HOLD seconds of X down quits.
 func step_quit(delta: float) -> void:
 	if not _open or not _quit_down:
 		return
@@ -491,12 +435,10 @@ func step_quit(delta: float) -> void:
 		confirm("quit")
 
 
-# The hold's share, 0 to 1, for the ring and the tests.
 func quit_fill() -> float:
 	return clampf(_quit_held / QUIT_HOLD, 0.0, 1.0)
 
 
-# The ring round the quit row's X keycap, filling clockwise from twelve while X is held.
 func _draw_quit_ring() -> void:
 	var fill := quit_fill()
 	if fill <= 0.0:
@@ -510,7 +452,6 @@ func _draw_quit_ring() -> void:
 
 
 func _toggles(event: InputEvent) -> bool:
-	# The game registers cl_pause (P and Escape, Start); without it, the fixed keys and button.
 	if InputMap.has_action("cl_pause"):
 		return event.is_action_pressed("cl_pause", false)
 	if event is InputEventKey:
@@ -590,7 +531,6 @@ func _audio():
 	return game.audio() if game != null else null
 
 
-# A short UI note: open on the root, close a fifth up, a volume step on its rung.
 func _cue(pitch: float) -> void:
 	var audio = _audio()
 	if audio != null and audio.has_method("play"):

@@ -69,7 +69,7 @@ Use `npm run asset:inspect` before admitting an exported GLB or assembling parts
 
 Use native JavaScript ES modules, two-space indentation, double quotes, semicolons, and `oxfmt` / `oxlint` on files you change. Avoid repository-wide formatting while fixing one issue. Keep functions and data near their actual callers; introduce shared code when both entries need the same behavior, not merely similar names.
 
-Gameplay constants belong in the simulation. Detailed values stay in code and the integration contract rather than being copied into every document. Explain a non-obvious invariant in a comment; do not narrate routine code. Add tests for a concrete failure or gameplay invariant, and name the behavior they establish.
+Gameplay constants belong in the simulation. Detailed values stay in code and the integration contract rather than being copied into every document. Encode invariants into static types, `assert(...)`, unit tests, or `sketch-lint` rules rather than prose; comments survive only for unchangeable external Godot, OS, driver, or hardware quirks and machine-parsed headers (such as `# lint:` or test block markers). Add tests for a concrete failure or gameplay invariant, and name the behavior they establish.
 
 Use an ADR for a durable module boundary, delivery/runtime choice, or data/asset ownership decision. Amend its status or supersede it when the decision changes. Product feature ideas go in the backlog first. The source-of-truth map prevents a new session summary from replacing accepted requirements.
 

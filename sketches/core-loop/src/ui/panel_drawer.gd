@@ -3,9 +3,6 @@ extends CanvasLayer
 const Panels := preload("res://src/build/panels.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
-# The grey panels' debug drawer (IL-01 card section 8; dev only): it opens and closes with
-# the F1 tuning panel, grants any panel at the ball with one click, and sets the kill-drop
-# rate live as a multiple of the drop row, so a feel test takes seconds.
 
 const SCALES := [0.0, 0.5, 1.0, 2.0, 5.0, 14.0]
 

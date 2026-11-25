@@ -4,10 +4,6 @@ const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
-# Text, bars and panels shared by the HUD's drawn readouts, so every number wears the
-# same outline, every gauge the same track and every plate the same cut steel
-# (VISUAL-LANGUAGE.md section 7: charcoal at 88%, chamfered corners, a petrol inner
-# line, a bone bolt dot at each corner).
 
 const OUTLINE := Color(0.0, 0.0, 0.0, 0.85)
 const TRACK := Color(0.14, 0.16, 0.16, 0.85)
@@ -19,7 +15,6 @@ static func width(text: String, font_size: int, numbers := false) -> float:
 	return UiFonts.width(text, font_size, numbers)
 
 
-# Draws text with its left edge at x and its middle at y; returns its width.
 static func text(canvas: CanvasItem, x: float, y: float, value: String, font_size: int, color: Color, numbers := false) -> float:
 	var font := UiFonts.mono() if numbers else UiFonts.bold()
 	var at := Vector2(x, y + (font.get_ascent(font_size) - font.get_descent(font_size)) * 0.5)
@@ -28,7 +23,6 @@ static func text(canvas: CanvasItem, x: float, y: float, value: String, font_siz
 	return width(value, font_size, numbers)
 
 
-# A centred bold label that ignores the mouse, for the pages' text rows.
 static func label(font_size: int, color: Color, words := "") -> Label:
 	var node := Label.new()
 	node.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -40,7 +34,6 @@ static func label(font_size: int, color: Color, words := "") -> Label:
 	return node
 
 
-# An icon wearing the outline the words wear, so it holds on pale ground as they do.
 static func icon(canvas: CanvasItem, texture: Texture2D, rect: Rect2, tint: Color) -> void:
 	for i in 8:
 		canvas.draw_texture_rect(texture, Rect2(rect.position + Vector2.RIGHT.rotated(TAU * i / 8.0) * ICON_EDGE, rect.size), false, OUTLINE)

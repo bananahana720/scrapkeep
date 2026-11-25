@@ -9,30 +9,12 @@ const Radio := preload("res://src/core/radio.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 
-# The pilot radio on the HUD, in the top band's right corner (screen_regions.gd): a knob whose
-# needle points at the station, the call sign in the station's colour, the track on air, and
-# four meter bars that are the band's own layers (drums, bass, keys, lead) as the run drives
-# them, so the dial shows the music following speed and combo. A change swells it for SWELL
-# seconds with the station's name and blurb and stamps a drawn KSSHT on the turn (the tone
-# bible's comic-book pillar); then it settles back to a chip. Off draws the knob dark and the
-# bars flat. radio_deck.gd owns the state; this only reads deck.reading().
-# While the radio's first-meet tip is up (field_tips.gd calls teach), the dial hangs its own keys
-# under the plate for TEACH seconds: back, next and skip, each cap with a drawn arrow, read from
-# the InputMap so a rebinding shows. A toast cannot draw a keycap; the dial can.
-# The words are news, not furniture (PF-19: the panel stood up all run, its line past its edge).
-# The chip shows its words for PEEK seconds when they change (a run's start, a new signal, a turn)
-# and then folds to the knob and the meter bars, which still carry the station and the band. Every
-# line it draws is cut to the plate's width with an ellipsis, so no word runs past its edge.
 
 const CHIP := Vector2(320.0, 46.0)
-# Folded: the knob and the meter bars, no words.
 const FOLDED := Vector2(84.0, 46.0)
 const PEEK := 4.0
 const ELLIPSIS := "…"
 const FITS_KEPT := 64
-# Swollen, the plate holds the station's name and its blurb on up to BLURB_LINES lines, wrapped
-# at a word: a blurb stopped mid-word read as broken (w37 film 012, "played however th"). The
-# plate still ends inside the top band (screen_regions.gd) at 900 px high.
 const SWOLLEN := Vector2(380.0, 110.0)
 const BLURB_LINES := 2
 const NAME_Y := 60.0
@@ -41,12 +23,10 @@ const MARGIN := 18.0
 const SWELL := 2.6
 const STAMP := 0.5
 const WORD := "KSSHT!"
-# music_engine.gd's layer indices: kick, bass, keys, lead.
 const METER := [3, 5, 0, 6]
 const LAYERS := 4
 const TEACH := 4.0
 const TEACH_KEY_H := 24.0
-# [action, fallback glyph, arrow]: the arrow is drawn, -1 back, 1 next, 2 skip (a double arrow).
 const TEACH_KEYS := [["cl_radio_prev", "key_comma", -1], ["cl_radio_next", "key_period", 1], ["cl_radio_skip", "key_slash", 2]]
 
 var deck
@@ -78,7 +58,6 @@ func teaching() -> bool:
 	return _teach > 0.0
 
 
-# How many lines `blurb` takes on the swollen plate, wrapped at a word.
 static func blurb_lines(blurb: String) -> int:
 	var font := UiFonts.bold()
 	return roundi(font.get_multiline_string_size(blurb, HORIZONTAL_ALIGNMENT_LEFT, SWOLLEN.x - 24.0, UiTokens.CAPTION).y / font.get_height(UiTokens.CAPTION))
@@ -88,20 +67,16 @@ func swollen() -> bool:
 	return _swell > 0.0
 
 
-# Whether the chip shows its words: swollen, teaching its keys, or inside PEEK of a change.
 func says() -> bool:
 	return swollen() or teaching() or _peek > 0.0
 
 
-# The size the chip is headed for: swollen, with its words, or folded to the knob and bars.
 func target_size() -> Vector2:
 	if swollen():
 		return SWOLLEN
 	return CHIP if says() else FOLDED
 
 
-# `text` cut at the end with an ellipsis so it fits `width` at `font_size`; whole when it fits.
-# Each answer is kept by (text, width, size), so a plate that is not changing shapes no text.
 static func fit(text: String, width: float, font_size: int) -> String:
 	width = floorf(width)
 	if width <= 0.0:
@@ -133,7 +108,6 @@ static func tint(name: String) -> Color:
 func _process(delta: float) -> void:
 	visible = deck != null and deck._live()
 	if not visible:
-		# Away between runs: the next run's first words are news again, even if they match the last.
 		_said = ""
 		_peek = 0.0
 		return
@@ -151,7 +125,6 @@ func _process(delta: float) -> void:
 		var want := 0.0
 		if engine != null and not _read.get("off", false):
 			want = clampf(float(engine.layer_gain(METER[i])), 0.0, 1.0)
-			# A small kick on each beat so the bars breathe with the band.
 			var beat: int = maxi(1, engine.beat_len())
 			want *= 0.75 + 0.25 * (1.0 - float(engine.clock % beat) / beat)
 		_bars[i] = move_toward(_bars[i], want, delta * 6.0)
@@ -171,7 +144,6 @@ func _draw() -> void:
 	var plate := Rect2(Vector2.ZERO, size)
 	draw_rect(plate, Color(Palette.CHARCOAL, 0.86))
 	draw_rect(plate, edge, false, 2.0)
-	# The knob, its needle on the station's place round the dial.
 	var knob := Vector2(23.0, 23.0)
 	draw_circle(knob, 15.0, Palette.CABLE)
 	draw_circle(knob, 12.0, Color(0.08, 0.09, 0.09) if off else color.darkened(0.45))
@@ -183,7 +155,6 @@ func _draw() -> void:
 	var x := 46.0
 	var meter_w := 4.0 * 7.0
 	var line_w := size.x - x - meter_w - 18.0
-	# The words draw only once the plate has opened far enough to hold some of them.
 	if says() and line_w >= UiFonts.width("MMM", UiTokens.CAPTION):
 		var pin_w := UiFonts.width("PIN", UiTokens.CAPTION) + 8.0 if _read.get("pinned", false) else 0.0
 		var call := fit(String(_read.get("call", "")), line_w - pin_w, UiTokens.BODY)
@@ -214,8 +185,6 @@ func _draw() -> void:
 		draw_set_transform(Vector2.ZERO)
 
 
-# The dial's keys under the plate, from its left edge (the notes' Tab cap sits under its right),
-# each cap followed by its arrow, fading out over the last half second.
 func _draw_keys(color: Color) -> void:
 	var a := clampf(_teach / 0.5, 0.0, 1.0)
 	var y := size.y + 8.0 + TEACH_KEY_H * 0.5

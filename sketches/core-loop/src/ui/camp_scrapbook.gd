@@ -1,15 +1,5 @@
 extends Control
 
-# The camp scrapbook: the saved comic pages (scrapbook_store.gd), newest first, leafed
-# through with page-turn keys or the pad. It stands at the plaza's fire pit (station
-# "scrapbook", key B) and is opened over the walk with screens.open_walk_page; Back, Esc
-# or pad B close it there. Entering the walk also shows one dry crew-log line
-# (camp_lines.gd) on a small card that fades and never takes input.
-#
-# Keys: Right, Page Down, E or the pad's right shoulder or d-pad right turn to an older
-# page; Left, Page Up, Q or the left shoulder or d-pad left turn to a newer one.
-#
-# The drawing is one hook, _page_view(page) -> Control; the default is the comic page.
 
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
@@ -29,12 +19,10 @@ const LINE_SECONDS := 5.0
 const LINE_GROUP := "camp_line"
 const LINE_FADE := 1.2
 const PAGE_H := 560.0
-# [Q] [E] turn, [Esc] back: the keys the book answers, drawn as caps.
 const HINT_PARTS := [{"cap": "key_q", "say": "Q"}, {"cap": "key_e", "say": "E"}, {"say": "turn"}, {"cap": "key_esc", "say": "Esc"}, {"say": "back"}]
 
 var pages: Array = []
 var index := 0
-# The shelf the pages came from; the pictures of a page load from it only when that page is shown.
 var store
 
 var _view: Control
@@ -47,7 +35,6 @@ var _holder: Control
 func _init() -> void:
 	name = "CampScrapbook"
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	# The walk's page slot is a column that sizes a child by its minimum: without one the book is 0 px tall.
 	custom_minimum_size = Vector2(0.0, PAGE_H)
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -62,7 +49,6 @@ func _init() -> void:
 	_count.offset_top = 22.0
 	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(_count)
-	# The page-turn and way-out keys as keycaps (credits_hint.gd), never typed letters.
 	_hint = CreditsHint.new()
 	_hint.name = "Keys"
 	_hint.setup(HINT_PARTS)
@@ -78,14 +64,12 @@ func _init() -> void:
 	add_child(_empty)
 
 
-# Loads pages (newest first) and shows the newest.
 func show_pages(list: Array) -> void:
 	pages = list
 	index = 0
 	_rebuild()
 
 
-# Turn by `step` pages (+1 older, -1 newer), stopping at the ends. True when it moved.
 func turn(step: int) -> bool:
 	var next := clampi(index + step, 0, maxi(0, pages.size() - 1))
 	if next == index:
@@ -95,7 +79,6 @@ func turn(step: int) -> bool:
 	return true
 
 
-# The drawing hook: one Control for one page.
 func _page_view(page: Dictionary) -> Control:
 	var view := ComicPage.new()
 	view.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -149,8 +132,6 @@ func _label(font_size: int, color: Color) -> Label:
 	return label
 
 
-# --- Camp wiring (hub contract; see FEATURES-COMMON) ---
-
 static func attach(hub) -> void:
 	var game = hub.game
 	var dir: String = game.storage_dir if game != null and game.get("storage_dir") != null else "user://"
@@ -165,8 +146,6 @@ static func attach(hub) -> void:
 		book.show_pages(store.summaries())
 		game.screens.open_walk_page(book)
 	hub.add_station(STATION_ID, at, STATION_LABEL, STATION_KEY, STATION_RADIUS, open)
-	# The book joins the screens' content only when first opened; a hub that leaves the tree
-	# before that would strand it, so free it then.
 	hub.tree_exiting.connect(func():
 		if is_instance_valid(book) and book.get_parent() == null:
 			book.free())
@@ -181,15 +160,11 @@ static func attach(hub) -> void:
 			for key in ["stages_cleared", "deaths", "kills"]:
 				stats[key] = profile.stat(key)
 		show_line(layer, CampLines.line_for(store.summaries(), stats)))
-	# The line belongs to the camp: leaving the walk (K, or the gate's launch into the dam) takes it down with the hub.
 	hub.walk_left.connect(func():
 		for card in layer.get_children():
 			card.queue_free())
 
 
-# A small caption card at the bottom left that fades out after LINE_SECONDS. It is in LINE_GROUP,
-# so a page that opens over the walk can take it down while the page is read (screens._sync_walk). It ignores the
-# mouse and holds no focus, so it never blocks input. Returns the card.
 static func show_line(layer: Node, text: String) -> Control:
 	var card := PanelContainer.new()
 	card.name = "CampLine"

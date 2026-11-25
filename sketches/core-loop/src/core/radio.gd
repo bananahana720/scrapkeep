@@ -1,19 +1,5 @@
 extends RefCounted
 
-# The pilot's radio, carried on the HUD through every run (design-v3/sound/RADIO.md). A dial of
-# stations from the catalogue (radio_takes.gd) with Off first: KEEP Live is the adaptive score
-# itself, Auto scans the found tracks that fit the world, the content stations air the takes
-# found for them, and Mixtape plays the player's own lists. decide says what the band plays now;
-# the deck (radio_deck.gd) carries it out. Nothing here touches audio, the clock or the save.
-#
-# The rules, in order:
-#   Off silences the music bus only; hits and musical answers keep sounding.
-#   A tune the player has not heard yet cuts in, so collecting never stalls behind the radio.
-#   A boss's final phase always has the air, even over a pin; the pin plays again after.
-#   A boss or a Warden keeps its own score unless the track on air is pinned.
-#   Auto steps aside for every live moment, like a DJ watching the room.
-#   A station with nothing found on it plays the score under its call sign: no signal yet.
-# A track holds the air for AIRTIME seconds, then the station moves on; skip moves on now.
 
 const RadioTakes := preload("res://src/core/radio_takes.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
@@ -39,7 +25,6 @@ var _premiere_from := ""
 var _cursor := {}
 
 
-# The dial, Off first, then the catalogue's stations in order.
 static func dial() -> Array:
 	return [OFF] + RadioTakes.station_ids()
 
@@ -52,14 +37,6 @@ static func station_name(id: String) -> String:
 	return "Radio off" if id == OFF else String(RadioTakes.station(id).get("name", id))
 
 
-# What the band plays now. context:
-#   found  ids the profile holds (records and takes)
-#   boss   a boss fight is on
-#   finale the boss is in its final phase (the Eurodance final where there is one)
-#   world  1 to 3 in a run, 0 elsewhere
-#   fresh  the score is playing, or about to play, a tune the player has not heard
-#   moment a place or moment tune is live (a landmark, an event, a miniboss): Auto steps aside
-# Returns {"play": "silence" | "score" | "track", "id", "why"}.
 func decide(context: Dictionary) -> Dictionary:
 	if station == OFF:
 		return _plan("silence", "", "off")
@@ -88,8 +65,6 @@ func _plan(play: String, id: String, reason: String) -> Dictionary:
 	return {"play": play, "id": id, "why": reason}
 
 
-# The tracks a station airs for this player, in order: its found takes and records; for Auto,
-# every found track of the world (camp and every-run tracks too); for Mixtape, the list's found ids.
 func rotation_of(id: String, context: Dictionary) -> Array:
 	var found: Array = context.get("found", [])
 	var have := {}
@@ -112,7 +87,6 @@ func rotation_of(id: String, context: Dictionary) -> Array:
 	return ids
 
 
-# Seconds of play; true when the station moved on to its next track.
 func tick(delta: float, context: Dictionary) -> bool:
 	if track == "" or station in [OFF, LIVE] or why != "on_air":
 		return false
@@ -130,7 +104,6 @@ func tick(delta: float, context: Dictionary) -> bool:
 	return true
 
 
-# The next track on the station, wrapping. Unpins.
 func skip(context: Dictionary) -> String:
 	var rotation := rotation_of(station, context)
 	pinned = false
@@ -164,7 +137,6 @@ func tune(id: String) -> void:
 		_last_on = id
 
 
-# Off and back on to the station it was on.
 func toggle_off() -> String:
 	tune(_last_on if station == OFF else OFF)
 	return station
@@ -175,9 +147,6 @@ func toggle_pin() -> bool:
 	return pinned
 
 
-# A fresh find goes straight on air on its own station, for one airing, then the dial goes
-# back where it was. Off stays off. The dial holds still through a boss or Warden fight (context.boss),
-# so the take is filed but the radio does not move itself under the player.
 func premiere(id: String, context := {}) -> bool:
 	var home := RadioTakes.station_of(id)
 	if station == OFF or home == "" or not home in dial() or bool(context.get("boss", false)):
@@ -189,8 +158,6 @@ func premiere(id: String, context := {}) -> bool:
 	_aired = 0.0
 	return true
 
-
-# --- Mixtapes -------------------------------------------------------------------------
 
 func current_mixtape() -> Dictionary:
 	return mixtapes[clampi(mixtape, 0, mixtapes.size() - 1)]
@@ -224,7 +191,6 @@ func remove_from(list: int, id: String) -> bool:
 	return true
 
 
-# Moves a track one place up (-1) or down (+1) in its list.
 func nudge(list: int, id: String, step: int) -> bool:
 	if list < 0 or list >= mixtapes.size():
 		return false
@@ -249,14 +215,10 @@ func shuffle_mixtape(list: int, rng: RandomNumberGenerator) -> void:
 		ids[j] = keep
 
 
-# --- Save -----------------------------------------------------------------------------
-
 func to_dict() -> Dictionary:
 	return {"station": station, "last_on": _last_on, "mixtape": mixtape, "mixtapes": mixtapes.duplicate(true)}
 
 
-# Runs during game start, so every value is type-checked before it is read: a field of the wrong
-# type falls back to its default instead of erroring in a cast.
 func from_dict(saved: Dictionary) -> void:
 	var known := RadioTakes.all_ids()
 	var lists: Array = []

@@ -1,13 +1,6 @@
 class_name WorkOrders
 extends RefCounted
 
-# Goal-driven run intent & Maker Licenses (W50-PLAYER-SYSTEMS, w50-player-story-spec.md §6.2).
-# Owns 24 authored Crew Orders (3 per cast), 12 rotating Shift Orders (W1-W3 + HARD), and
-# 7 Maker Licenses (Temp Pass -> Yard Ticket -> Full License). Two active clips ride the
-# camp's brass rail (Slot 0: Crew Order, Slot 1: Shift Order); zero-friction ensure_default_pin()
-# pins the next available Crew Order on launch. Pure declarative GameEvents matching, zero
-# polling, zero new bus signals, strict bot invariance, and Schema-4 persistence via profile.camp(),
-# profile.settled, and profile.stats.
 
 const ClassDef := preload("res://src/core/class_def.gd")
 const Items := preload("res://src/build/items.gd")
@@ -35,10 +28,7 @@ const PAY_KINDS := ["item", "tune", "option", "override_code", "alt_loadout", "l
 const LICENSE_PAY_KINDS := ["item", "plaque"]
 const NEED_KEYS := ["world", "pilot", "min_tier", "no_kindness"]
 
-# 24 Authored Crew Orders (3 per cast: Moss, Sable, Rivet, Kest, Tarn, Tally, Cannon, Patch).
-# Every active pays target resolves strictly against live W50_BASE_SHA registries.
 const CREW_ORDERS := {
-	# Moss (moss)
 	"wo_moss_1": {
 		"name": "First Docket", "text": "Break a Warden and clear a Spillway stage.",
 		"track": "crew", "issuer": "moss", "maker": "moss", "world": 1,
@@ -65,7 +55,6 @@ const CREW_ORDERS := {
 		"objective": {"on": "boss_defeated", "count": 1, "need": {"world": 3}},
 		"pays": {"option": "shelf_preview"},
 	},
-	# Sable (spillway_works)
 	"wo_sable_1": {
 		"name": "Spillway Line", "text": "Fire a line skill and break a Spillway Warden.",
 		"track": "crew", "issuer": "pylon_engineer", "maker": "spillway_works", "world": 1,
@@ -93,7 +82,6 @@ const CREW_ORDERS := {
 		"objective": {"on": "beacon_unsealed", "count": 1, "need": {"world": 3, "pilot": "pylon_engineer"}},
 		"pays": {"override_code": "code_glass_rail"},
 	},
-	# Rivet (fleet_surplus)
 	"wo_rivet_1": {
 		"name": "Drum Run", "text": "Fire Line Drive and break a kill-first special.",
 		"track": "crew", "issuer": "runner_gunner", "maker": "fleet_surplus", "world": 1,
@@ -121,7 +109,6 @@ const CREW_ORDERS := {
 		]},
 		"pays": {"override_code": "code_single_docket"},
 	},
-	# Kest (highdraft_roosts)
 	"wo_kest_1": {
 		"name": "Bench Drop", "text": "Land a slam or break a Dig Warden flying Kest.",
 		"track": "crew", "issuer": "demolitions_caster", "maker": "highdraft_roosts", "world": 2,
@@ -146,7 +133,6 @@ const CREW_ORDERS := {
 		"objective": {"on": "beacon_unsealed", "count": 1, "need": {"world": 3, "pilot": "demolitions_caster"}},
 		"pays": {"override_code": "code_cut_governor"},
 	},
-	# Tarn (redjaw)
 	"wo_tarn_1": {
 		"name": "Heavy Frame", "text": "Shatter three pieces or break a special flying Tarn.",
 		"track": "crew", "issuer": "tarn", "maker": "redjaw", "world": 1,
@@ -171,7 +157,6 @@ const CREW_ORDERS := {
 		"objective": {"on": "enemy_killed", "where": {"kind": "ballast_heavy"}, "count": 2, "need": {"world": 3, "pilot": "tarn"}},
 		"pays": {"override_code": "code_full_roster"},
 	},
-	# Tally (waking)
 	"wo_tally_1": {
 		"name": "Trunk Tap", "text": "Fire link clips and land an ultimate flying Tally.",
 		"track": "crew", "issuer": "tally", "maker": "waking", "world": 1,
@@ -199,7 +184,6 @@ const CREW_ORDERS := {
 		"objective": {"on": "beacon_unsealed", "count": 1, "need": {"world": 3, "pilot": "tally"}},
 		"pays": {"override_code": "code_open_manifest"},
 	},
-	# The Cannon (mind_glass)
 	"wo_cannon_1": {
 		"name": "Proof Shot", "text": "Shatter two pieces in the Highdraft flying the Cannon.",
 		"track": "crew", "issuer": "remembered_cannon", "maker": "mind_glass", "world": 3,
@@ -221,7 +205,6 @@ const CREW_ORDERS := {
 		"objective": {"on": "run_ended", "where": {"won": true}, "count": 1, "need": {"pilot": "remembered_cannon", "min_tier": 1}},
 		"pays": {"tune": "secret-highdraft-rain"},
 	},
-	# Patch (moss; shown as Unsigned until wo_patch_2 is settled)
 	"wo_patch_1": {
 		"name": "Loose Wire", "text": "Find a Signal cache or down Crane Fourteen.",
 		"track": "crew", "issuer": "patch", "maker": "moss", "world": 1,
@@ -253,7 +236,6 @@ const CREW_ORDERS := {
 	},
 }
 
-# 12 Rotating Shift Orders (W1, W2, W3, HARD) across all 7 makers.
 const SHIFT_ORDERS := {
 	"so_w1_spillway_warden": {
 		"name": "Spillway Sweep", "text": "Break a Spillway Warden in one run.",
@@ -330,8 +312,6 @@ const SHIFT_ORDERS := {
 	},
 }
 
-# 7 Maker Licenses (MakerSets.SETS x 3 tiers: Temp Pass -> Yard Ticket -> Full License).
-# Opens verified free universal items or non-power plaque markers; zero passive combat stats.
 const LICENSES := {
 	"spillway_works": {
 		1: {"name": "Temp Pass", "pays": {"plaque": "license:spillway_works:1"}},

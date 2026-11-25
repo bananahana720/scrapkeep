@@ -1,6 +1,5 @@
 extends RefCounted
 
-# The Bible palette, so a greybox still reads as steam-cyberpunk Southwest.
 const SAND := Color("d2c5a5")
 const SANDSTONE := Color("c6a274")
 const RUST := Color("9b513a")
@@ -9,60 +8,32 @@ const CHARCOAL := Color("242a28")
 const VERDIGRIS := Color("365754")
 const AMBER := Color("e5a044")
 const ARC := Color("8bf0d3")
-# Fleet-grade cobalt, the item ladder's blue rung (23 Oct 19:28Z): the Cherenkov blue measured on
-# 9 Oct at dE 31 or more from every palette colour in all vision types, free since ANCIENT moved.
 const COBALT := Color("3d8bff")
-# Uranium-glass green: the ancients' light (Andrew, 2026-10-09, over Cherenkov blue). Deuteranopes
-# read it as Brindle's BRASS, so every ancient seam also carries a pattern cue (material_slots.gd,
-# the `pattern` field).
 const ANCIENT := Color("9dff3c")
-# Cable runs and hoses: darker than CHARCOAL's panels so a coil never reads as white plastic.
 const CABLE := Color("2a3231")
-# Outside the greybox palette on purpose: a klaxon has to read as nothing else on screen.
 const HAZARD := Color("ff5a3c")
-# Admiral Brindle's brass: every boss fact wears it.
 const BRASS := Color("d9b44a")
-# Tally's ledger-paper cream: a pilot's colour, kept off the hostile hues.
 const LEDGER := Color("e6d9b8")
-# "Not yet": out of range, a glancing hit, a locked thing. Cool, so no warm colour shares it.
 const SLATE := Color("6f7f8f")
-# Slate as a word on the moving world (the event warning line): the same cool hue, light enough to
-# hold 4.5 to 1 inside the HUD's dark outline, which SLATE (5.1 to 1 against pure black) cannot (UA-04).
 const SLATE_INK := Color("a3b3c3")
-# Worn steel: the cog, the money, and the grey panels' hardware (W1-21). Neutral and light, so it is
-# neither Brindle's brass nor the relic's amber to any eye, nor slate's cool "not yet".
 const STEEL := Color("9aa0a0")
-# Weathered steel uprights, warmer and lighter than STEEL: the Slag Bowl's crane masts against its copper ramps.
 const MAST_STEEL := Color("b7b6a3")
-# Frost and ice reads in models and icons (VISUAL-LANGUAGE section 2 extension).
 const ICE := Color("c8f0ff")
-# Icon-only inks (tools/icons/generate_icons.py): ash for Redjaw, the ledger page's light, and the older verdigris.
 const REDJAW_ASH := Color("5e5a54")
 const LEDGER_CREAM := Color("f7f1e3")
 const OLD_VERDIGRIS := Color("4f7f7a")
-# The one purple thing in World 1: the Foreman's Kindness, the safe trade spot (ruling ci). The Mind's purple
-# (world_look.gd CONSUMED_GLOW), hue 315, so purple means the Mind wherever it shows. Read by W46-14's body only.
 const KINDNESS := Color("d936b0")
-# A sodium floodlight's light, for Dam Night Shift (W46-13): warmer and paler than AMBER (the relic), far from HAZARD.
 const SODIUM := Color("ffc070")
-# World 1's first two acts of light (WORLD1-DEMO-CATALYST.md C1; world_look.gd TIME_ROWS dawn and morning): light
-# colours for suns and ambients, never a surface meaning. The dam's cool desert dawn: violet-indigo canyon shade under a
-# low apricot sun. The flume's morning: turquoise sky and water light.
 const DAWN_VIOLET := Color("a8a4de")
 const APRICOT := Color("ffac74")
 const TURQUOISE := Color("a4d6d0")
-# One brass (SIGHT-PERSONA.md section 6 item 7): satin, never glossy, and enough diffuse left that a horn bell or a tag
-# does not drop dark in dawn shade. Every brass surface takes it: Palette.solid(BRASS, ...) and BakeLook.dress's brass slots.
 const BRASS_FINISH := {"roughness": 0.5, "metallic": 0.35, "specular": 0.5}
 
 
-# The colour of "your verb works on this right now". Mint for every pilot until a swatch
-# card lets Rivet and Kest have their own; the pilot's class colour stays for identity.
 static func live(_class_def = null) -> Color:
 	return ARC
 
 
-# One shared texture per checker: drawing one pixel by pixel cost 4 ms of the boss-entry frame.
 static var _checkers := {}
 
 
@@ -85,7 +56,6 @@ static func checker_texture(a: Color, b: Color, cells := 8, size := 128) -> Imag
 	return _checkers[key]
 
 
-# Neutral painted value variation multiplies the existing surface-role vertex tint.
 static var _painted_textures := {}
 
 
@@ -114,12 +84,8 @@ static func painted_texture(size := 256, ground := false) -> ImageTexture:
 	return texture
 
 
-# Look pass 3 albedo maps live in assets/textures as small webp files and load once at
-# as imported resources (the committed .import files turn mipmaps on), so exports carry them.
 static var _look_textures := {}
 
-# neutral: keeps the map's value pattern but mutes its hue and lifts its mean to about
-# 0.85, for surfaces whose colour already comes from vertex colours (no double tint).
 static func look_texture(id: String, neutral := false) -> Texture2D:
 	var key := id + (":neutral" if neutral else "")
 	if _look_textures.has(key):
@@ -140,8 +106,6 @@ static func look_texture(id: String, neutral := false) -> Texture2D:
 	return _neutral_done(key, job)
 
 
-# A neutral look texture a few rows a call, so a warm can make one off the frame that first draws it:
-# the whole 512 px map takes a 60-80 ms call on the cloud. True once look_texture(id, true) is ready.
 const LOOK_ROWS_PER_CALL := 32
 static var _look_jobs := {}
 
@@ -154,7 +118,6 @@ static func warm_look(id: String) -> bool:
 		var source := load("res://assets/textures/%s.webp" % id) as Texture2D
 		var job := _neutral_job(source) if source != null else {}
 		if job.is_empty():
-			# Missing or unreadable: the fallback stands in, warned once, not re-read every warm tick.
 			_look_textures[key] = look_texture(id, true)
 			return true
 		_look_jobs[key] = job
@@ -206,7 +169,6 @@ const SLOT_TABLE := preload("res://src/presentation/material_slots.gd")
 static var _slot_materials := {}
 
 
-# A slot param that names a palette constant ("HAZARD") resolves to its Color.
 static func _slot_value(value):
 	if value is String:
 		var constants: Dictionary = (load("res://src/core/palette.gd") as GDScript).get_script_constant_map()
@@ -215,7 +177,6 @@ static func _slot_value(value):
 	return value
 
 
-# The role's shared material, built once from its material_slots.gd row.
 static func slot_material(role: String) -> Material:
 	if _slot_materials.has(role):
 		return _slot_materials[role]
@@ -261,18 +222,14 @@ static func _standard_slot(row: Dictionary) -> StandardMaterial3D:
 	return mat
 
 
-# terrain.gd:351 calls this: the ground role (sand floor, rock on steep faces).
 static func ground_material() -> ShaderMaterial:
 	return slot_material("ground") as ShaderMaterial
 
 
-# The Highdraft's padded net edge: amber on charcoal bands, so it reads against the cream catch floor
-# by value as well as hue. highdraft_scenery.net_edge_material returns it.
 static func nosing_material() -> StandardMaterial3D:
 	return slot_material("nosing") as StandardMaterial3D
 
 
-# Rock only, no sand: cliff and mesa batches that must not take the floor's vertex tint.
 static func rock_material() -> ShaderMaterial:
 	return slot_material("rock") as ShaderMaterial
 
@@ -285,13 +242,10 @@ static func ball_material() -> StandardMaterial3D:
 	return mat
 
 
-# `grain` false for a material that maps its own UV1 texture (a mask, an icon) or draws a flat
-# read (an unshaded line): the grain's world-triplanar UVs would re-map that texture.
 static func solid(color: Color, emit := 0.0, grain := true) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
 	mat.roughness = 0.8
-	# The flat-colour signature dress_material_test counts on a box, whatever surface it wears.
 	mat.set_meta("palette_solid", true)
 	if color == BRASS:
 		brass_finish(mat)
@@ -304,7 +258,6 @@ static func solid(color: Color, emit := 0.0, grain := true) -> StandardMaterial3
 	return mat
 
 
-# Gives `mat` the one satin brass finish in place; its colour and glow stay the caller's.
 static func brass_finish(mat: StandardMaterial3D) -> void:
 	mat.roughness = BRASS_FINISH.roughness
 	mat.metallic = BRASS_FINISH.metallic
@@ -322,7 +275,6 @@ static func striped(a: Color, b: Color) -> StandardMaterial3D:
 	return mat
 
 
-# 45 degree bands, `a` at pixel (0, 0) and `b` at (size / 4, 0), the two places dress_props samples.
 static func stripe_texture(a: Color, b: Color, size := 64) -> ImageTexture:
 	var image := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
 	var band := size / 4
@@ -333,14 +285,10 @@ static func stripe_texture(a: Color, b: Color, size := 64) -> ImageTexture:
 	return ImageTexture.create_from_image(image)
 
 
-# Hostile means HAZARD plus 45 degree stripes (VISUAL-LANGUAGE.md): one material, shared by every
-# hazard surface, so the stripe pitch and the two colours cannot drift between props.
 static func hazard_stripe() -> StandardMaterial3D:
 	return slot_material("hazard_stripe") as StandardMaterial3D
 
 
-# The colour of water: verdigris leaning mint. Plain mint is kept for "your verb works here"
-# and the common reward (colour_meanings.gd), so standing water never borrows it.
 static func water_tone() -> Color:
 	return VERDIGRIS.lerp(ARC, 0.35)
 
@@ -373,10 +321,6 @@ static var _sky_task := -1
 static var _sky_out := {}
 static var _sky_waiting: Array[PanoramaSkyMaterial] = []
 
-# The painted panorama: the ending's sky, and the sky every stage shows until its look sets its own.
-# Painting it takes 0.4 to 0.5 s of GDScript (cloud, exported build), so the boot (terrain.gd
-# _build_sky) asks for it with paint_later: the material comes back bare and the worker's image
-# fills it on the main thread when done. workshop_sky waits for a paint already running.
 static func workshop_sky() -> PanoramaSkyMaterial:
 	if _sky_texture == null:
 		if _sky_task >= 0:
@@ -391,7 +335,6 @@ static func workshop_sky() -> PanoramaSkyMaterial:
 static func workshop_sky_later() -> PanoramaSkyMaterial:
 	if _sky_texture != null:
 		return workshop_sky()
-	# Until the paint lands the sky is the panorama's horizon colour, not black.
 	var horizon := Image.create_empty(1, 1, false, Image.FORMAT_RGB8)
 	horizon.fill(Color("e6c898"))
 	var material := _sky_material(ImageTexture.create_from_image(horizon))
@@ -399,15 +342,13 @@ static func workshop_sky_later() -> PanoramaSkyMaterial:
 	if _sky_task < 0:
 		var out := {}
 		_sky_out = out
-		# High priority: queued behind the band's renders it could land seconds into play (PR #386; the 4080 hitch is inferred).
 		_sky_task = WorkerThreadPool.add_task(func():
 			out["image"] = _paint_workshop_sky()
 			_fill_waiting_skies.call_deferred(), true, "workshop sky")
 	return material
 
 
-# A paint left unwaited when the engine quits aborts the process: the node that shows the sky (terrain.gd's
-# WorldEnvironment) finishes it as it leaves the tree, which a quit does.
+# Unwaited WorkerThreadPool tasks abort Godot on process exit.
 static func settle_sky_on_exit(owner: Node) -> void:
 	owner.tree_exiting.connect(func():
 		if _sky_task >= 0:
@@ -474,9 +415,6 @@ const HDRI_SKY := "res://assets/sky/kloofendal_48d_partly_cloudy_puresky_2k.hdr"
 const TIME_SKY := preload("res://src/presentation/time_sky.gdshader")
 static var _hdri_sky: Sky
 
-# The Poly Haven partly cloudy sky, one Sky for every world row that names "hdri". Its material is
-# the time-of-day sky (time_sky.gdshader): the stage's time row sets its grade through the lighting
-# stack (world_look.gd sky_rows), and its defaults draw the panorama unchanged.
 static func hdri_sky() -> Sky:
 	if _hdri_sky == null:
 		_hdri_sky = Sky.new()
@@ -497,11 +435,6 @@ static var _grain_normal: ImageTexture
 static var _grain_rough: ImageTexture
 static var _grime: ImageTexture
 
-# How a painted solid answers light, without touching its colour role: a fine hammered grain in
-# the normals and roughness (so highlights break up instead of sliding across a flat face) and
-# broad grime blotches a few shades darker (so no two faces of one prop share a value, as
-# VISUAL-LANGUAGE "Scrappy" asks). World triplanar, so the grain is the same size on a bolt and
-# a barge, and props with no UVs still wear it. One set of textures serves every solid.
 const GRAIN_METRES := 0.5
 const GRIME_METRES := 3.5
 
@@ -553,7 +486,6 @@ static func surface_grain(mat: StandardMaterial3D) -> void:
 	mat.uv2_scale = Vector3.ONE / GRIME_METRES
 
 
-# Takes surface_grain off again, for a model that brings its own surface (BakeLook).
 static func smooth(mat: StandardMaterial3D) -> void:
 	if mat.normal_texture != _grain_normal or _grain_normal == null:
 		return
@@ -595,11 +527,6 @@ static func enamel_wear(mat: StandardMaterial3D) -> void:
 static var _target_surfaces := {}
 static var _target_clutter := {}
 
-# The clutter kit's slots carry their colour in vertex colours (the paint slot) and the
-# slot's albedo. The target copy is the clutter shader: albedo times vertex colour, fully
-# rough, a contact shade at the foot, and the screen-space protection every other dressing
-# piece has. It keeps the slot name; the kit's own resources stay untouched, and one copy
-# serves every instance.
 static func target_clutter_material(original: Material) -> ShaderMaterial:
 	var key := original.get_instance_id()
 	if _target_clutter.has(key):
@@ -611,9 +538,6 @@ static func target_clutter_material(original: Material) -> ShaderMaterial:
 	_target_clutter[key] = mat
 	return mat
 
-# The shipped look per role. Ground and rock are the slot materials themselves (the sandstone
-# shader); a role whose slot is a prebuilt resource (the Dig's stone) keeps its original; the dam
-# wraps its imported surface. The role string is the contract with GraphicsPreset._apply_material.
 static func target_surface_material(role: String, original: Material) -> ShaderMaterial:
 	if is_slot_resource(original):
 		return original as ShaderMaterial
@@ -635,7 +559,6 @@ static func target_surface_material(role: String, original: Material) -> ShaderM
 	return mat
 
 
-# True for a prebuilt slot resource (the Dig stone and mechanicals): GraphicsPreset should keep these.
 static func is_slot_resource(original: Material) -> bool:
 	for role in SLOT_TABLE.SLOTS:
 		var row: Dictionary = SLOT_TABLE.SLOTS[role]

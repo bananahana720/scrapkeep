@@ -5,45 +5,6 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
-# First-meet tips (HELP-REFRESH, alpha-status WHATS-LEFT row 8): the field rules no key prompt
-# carries, said once on a profile as a toast at the first calm moment after the player first
-# meets them: held while a fight is live and while another toast or tip holds the screen.
-#   grip       a real carve ends (events.carved, CARVE_MIN_S or more) that touched a wall: a
-#              face steeper than MAX_SLOPE_DOT. A carve is any slope past CARVE_DOT (about 25
-#              degrees), so a dune or a ramp carves too; neither is the wall the tip speaks of.
-#   jam        a field's pulse jams the special and line slots (abilities.jams)
-#   cast       a slot first starts casting (abilities.casting)
-#   radio      the dial is up and the run has cleared a stage (events.stage_cleared)
-#   stake      the ball comes within STAKE_REACH of a relay's stake post
-#   companion  SPIL-9's halo gauge fills (combat.companion_assist_full)
-#   active     an active is racked and the run has met a fight: a hit taken or a kill
-#   dunk       an air slam first stores a dunk charge (player.dunk.stored_count rises)
-#   ultimate   the ultimate meter is full while no fight is live (the first calm frame of it; a
-#              meter that filled in a fight is met once the fight is down). Its tip points at the bar.
-# Pacing (systems audit pass E, docs/systems-audit/first-15): the first OPENING seconds of a
-# run's play teach rolling, so at most one tip goes up in them; the rest wait. Radio, active and
-# cast are met where they matter, not on the drop. The radio's tip points at the dial, which draws
-# its own keys while the tip is up (radio_dial.gd teach), since a toast cannot draw a keycap.
-# Radio and active (WAIT_FOR_PICK) wait while stage 1's start-pick card is up or the launch take
-# that reveals it still plays (both a player's only): the drop already carries the card, so neither
-# is met, and one already waiting leaves the queue, until the pick is taken (w22 first-timer red
-# team watch 5). Their verbs stay met, so they queue again on the next calm frame.
-# In a run's opening every tip waits for its turn (opening.gd): the title and Moss go first.
-# The HUD shows one toast at a time and a newer one replaces it, so a met tip joins `pending`
-# and goes up only when the toast slot is empty and no other tip is up: one tip per toast
-# lifetime.
-# A tip counts as told only after its toast has been on screen for MIN_SHOWN: then it emits
-# events.prompt_shown("tip_<id>"), which scripts/first-timer.mjs reads as a teach, and files
-# itself in the profile's seen list so it never repeats. A tip whose toast leaves sooner (another
-# toast replaced it, or a fight took it down) goes back to the front of `pending`.
-# A fight keeps its word budget (ui_word_budget_test): while fight_live() no tip goes up and a
-# tip still on screen is taken down. Tips also wait through the reward choice and the launch
-# (flow.calm(), in every world), so the choice and the launch read alone. Words come from the game's own: the Warden's slots are
-# numbers, and no tip types a key: a toast is a plain Label that cannot draw a keycap, so a tip that needs
-# a key points at the mark that draws it (the mast's prompt, the bar slot, the notes) and keys can be rebound.
-# A new run (events.run_started) clears the queue and takes down the tip on screen: each was
-# met in the old run's moment (its pilot's cast slot, a stake post, a rack, a halo), so it waits
-# to be met again rather than show out of context; nothing untold is marked seen.
 
 const TIPS := {
 	"grip": "Stay fast against a wall and it holds you.",
@@ -59,17 +20,13 @@ const TIPS := {
 const WAIT_FOR_PICK := ["radio", "active"]
 const STAKE_REACH := 30.0
 const SEEN_PREFIX := "tip_"
-# Seconds a tip's toast must stay on screen before it counts as told (the fade in is 0.12 s).
 const MIN_SHOWN := 0.4
-# Seconds of a run's play in which at most one tip goes up.
 const OPENING := 20.0
 
 var game
 var profile
 var hud
-# Met tips waiting for the toast slot, in the order they go up.
 var pending: Array[String] = []
-# The tip whose toast is up (or held behind the stage card); "" when none.
 var showing := ""
 var _shown_for := 0.0
 var _told := false
@@ -80,7 +37,6 @@ var _run_time := 0.0
 var _opening_tips := 0
 var _cleared := false
 var _fought := false
-# The carve under way has touched a wall (a contact normal at or below MAX_SLOPE_DOT).
 var _walled := false
 var _was_carving := false
 
@@ -145,8 +101,6 @@ func _physics_process(delta: float) -> void:
 		_put_up(pending.pop_front())
 
 
-# A fight holds the screen while this stage's Warden is engaged and not yet broken (flow
-# unseals on the break) or while flow is in Brindle's arena (BOSS until the boss falls).
 static func fight_live(flow) -> bool:
 	return (flow.engaged() and flow.sealed) or flow.state_name() == "boss"
 
@@ -157,7 +111,6 @@ static func start_card_up(game_ref) -> bool:
 	return (card != null and card.showing()) or (take != null and take.busy())
 
 
-# A new carve starts unwalled; any tick of it on a wall face marks it.
 func _track_wall(state) -> void:
 	if state.carving and not _was_carving:
 		_walled = false
@@ -172,12 +125,10 @@ func _on_carved(_at: Vector3, _seconds: float, _speed: float) -> void:
 	_walled = false
 
 
-# The opening has told its one tip (a tip taken down untold does not count): the next waits until OPENING seconds of play have passed.
 func opening_full() -> bool:
 	return _run_time < OPENING and _opening_tips >= 1
 
 
-# A met verb joins the back of the queue, once.
 func meet(id: String) -> void:
 	if seen(id) or id == showing or not TIPS.has(id) or pending.has(id):
 		return
@@ -210,8 +161,6 @@ func _put_up(id: String) -> void:
 	hud.toast(TIPS[id], Palette.SAND, "diamond", 3)
 
 
-# Counts the showing tip's time on screen; past MIN_SHOWN it is told. Once its toast is gone the
-# slot frees, and a tip gone before it was told waits again at the front of the queue.
 func _step_showing(delta: float) -> void:
 	if showing == "":
 		return
@@ -230,7 +179,6 @@ func _step_showing(delta: float) -> void:
 	_release()
 
 
-# A fight or a reward choice takes the showing tip down until the next quiet stretch of play.
 func _withdraw() -> void:
 	if showing == "":
 		return
@@ -246,7 +194,6 @@ func _release() -> void:
 	_shown_for = 0.0
 
 
-# The companion's signal lives on combat, which can come up after the HUD: join it once.
 func _wire() -> void:
 	if _wired:
 		return

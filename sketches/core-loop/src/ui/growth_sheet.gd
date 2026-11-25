@@ -7,16 +7,10 @@ const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
-# Tab's "how you grow" page as a flow: scrap rolls into heft, heft makes the punch that
-# beats a Warden's plating, and three side roads feed it (parts from the reward gates,
-# the upgrade tree's fork of cards, Moss's counter). Each node wears the colour and
-# shape of the event row that announces it in play, and dots run along the arrows so
-# the direction reads without words.
 
 const R := 44.0
 const ICON := 46.0
 const FONT := UiTokens.BODY
-# id -> {at, icon, kind, words}; kind is the event_kinds row whose colour and shape it wears.
 const NODES := {
 	"scrap": {"at": Vector2(90.0, 84.0), "icon": "res_mass", "kind": "scrap_collected", "words": "roll scrap"},
 	"heft": {"at": Vector2(390.0, 84.0), "icon": "res_heft", "kind": "heft_class_changed", "words": "heft grows"},
@@ -91,12 +85,10 @@ func _node(id: String, node: Dictionary) -> void:
 		draw_texture_rect(Icons.shape(shape), Rect2(at + Vector2(R * 0.55, -R * 1.05), Vector2(18.0, 18.0)), false, color)
 	var font := UiFonts.bold()
 	var words: String = node["words"]
-	# The top row reads above its nodes, so the side roads rising into it cross no words.
 	var below: bool = at.y > 150.0
 	ScrapFrame.stamp(self, words, font, FONT, Palette.SAND, Color(color, 0.55), id.hash(), Vector2(at.x, at.y + (R + 22.0 if below else -R - 24.0)))
 
 
-# One of the tree's fork cards, tilted.
 func _card(at: Vector2, tilt: float, color: Color) -> void:
 	draw_set_transform(at, tilt, Vector2.ONE)
 	var rect := Rect2(Vector2(-13.0, -19.0), Vector2(26.0, 38.0))
@@ -106,7 +98,6 @@ func _card(at: Vector2, tilt: float, color: Color) -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-# Moss talks: a speech bubble with the scrap cog she trades for.
 func _bubble(at: Vector2, color: Color) -> void:
 	var rect := Rect2(at - Vector2(24.0, 20.0), Vector2(48.0, 32.0))
 	var box := StyleBoxFlat.new()

@@ -1,24 +1,5 @@
 extends RefCounted
 
-# The shift board: what a player's first world 1 runs open, in the order a new player meets
-# them, and the time card that makes every finished run move one mark (design-v3/FIRST-HOUR.md).
-# It stands at the camp's trophy wall. Pure reads of the profile: a rung is stamped when its
-# grant row is earned (or its tune heard), so the board never stores a stamp of its own and a
-# profile that earned a row before the board existed shows it stamped. The time card is the one
-# number it adds, the profile stat PUNCH_STAT.
-#
-# A rung:
-# name   3 words or fewer, the stamp's caption
-# text   what to do, 12 words or fewer, shown while it is the next rung
-# when   exactly one of {"earned": achievements.gd row id} or {"tune": tune_rows.gd id}
-# stamp  the word inked on the board when it lands (HIRED for a pilot, LOGGED for a mark or an item)
-# pays   what it opens, for the board's words only: {"pilot"|"cosmetic"|"item"|"tune"|"option": id}.
-#        The grant itself is the achievement row's reward, so the two must agree (validate).
-# pilot  optional: the pilot whose mark this is; the board shows it only once that pilot is open
-#
-# Items opened here join the run's offer pool on the next run (Parts.opened_items, set at
-# run_started by game.gd). They are rows the park table does not list, so a fresh profile's
-# pool and every bot run stay exactly as they were.
 
 const Achievements := preload("res://src/core/achievements.gd")
 const Items := preload("res://src/build/items.gd")
@@ -60,10 +41,6 @@ const RUNGS := {
 		"when": {"earned": "brindle_mark_cannon"}, "stamp": "LOGGED", "pays": {"item": "scrap_geyser"}},
 }
 
-# The time card. A finished run (won or lost, never abandoned) that stamps no rung and broke at
-# least min_kills machines punches one hole; every holes punches pays the next card, in order.
-# A card pays an item into the pool, the same way a mark does. Past the last card the card keeps
-# punching and pays nothing, and the board says so.
 const TIME_CARD := {"holes": 3, "min_kills": 5}
 const CARDS := [
 	{"name": "First Card", "pays": {"item": "spring_hull"}},
@@ -71,15 +48,6 @@ const CARDS := [
 	{"name": "Third Card", "pays": {"item": "rebound_skin"}},
 ]
 
-# Seeds for the layered variation that comes after the world 1 core (Andrew, 23 Oct: stage
-# variants, run modifiers and unlock-gated anticipation in the spirit of Isaac's variant floors).
-# ShiftVariants (src/core/shift_variants.gd) asks open_seeds() which are open and plays only the
-# built ones. Each names the rung that opens it, so the player sees it coming on the board.
-# A seed shows to the player only once its variant or modifier is built (Andrew, 12 Nov 2026, card on
-# W1-72): a teaser for something stamping the rung would not deliver is a broken promise.
-# kind   stage_variant or run_modifier
-# gate   the rung id that opens it
-# text   what it would be, 12 words or fewer
 const SEED_KINDS := ["stage_variant", "run_modifier"]
 const SEEDS := {
 	"dam_night_shift": {"kind": "stage_variant", "gate": "brindle_routed",
@@ -92,8 +60,6 @@ const SEEDS := {
 		"text": "Short crew means no dam shop and a cache instead."},
 }
 
-# W50 World 2 (Act II: The Dig), World 3 (Act III: The Highdraft), and Patch hidden rungs.
-# Kept beside W1 RUNGS/CARDS/SEEDS so W1 tests and fresh profiles stay byte-identical.
 const WORLD_RUNGS := {
 	"dig_warden": {"name": "Swarm Breaker", "text": "Break a Swarm Warden in the Dig.", "act": 2, "gate_rung": "brindle_routed",
 		"when": {"earned": "dig_warden_broken"}, "stamp": "LOGGED", "pays": {"mark": "dig_warden"}},
@@ -178,8 +144,6 @@ static func stamped_ids(profile) -> Array:
 	return RUNGS.keys().filter(func(id): return stamped(id, profile))
 
 
-# A mark row for a pilot the profile cannot fly yet stays off the board, so a new player sees
-# only the marks they can chase. The sitting opens every pilot, and the caller says so.
 static func shown(id: String, profile, sitting := false) -> bool:
 	var pilot := String(RUNGS[id].get("pilot", ""))
 	if pilot == "" or sitting:
@@ -188,7 +152,6 @@ static func shown(id: String, profile, sitting := false) -> bool:
 	return (def != null and def.starter) or (profile != null and profile.has_pilot(pilot))
 
 
-# The first shown rung not yet stamped, in table order, or "" when the board is full.
 static func next_rung(profile, sitting := false) -> String:
 	for id in RUNGS:
 		if shown(id, profile, sitting) and not stamped(id, profile):
@@ -204,15 +167,12 @@ static func cards_paid(profile) -> int:
 	return mini(punches(profile) / int(TIME_CARD["holes"]), CARDS.size())
 
 
-# Holes on the card in hand: 0 to holes - 1, or holes once every card has paid.
 static func holes_on_card(profile) -> int:
 	if cards_paid(profile) >= CARDS.size():
 		return int(TIME_CARD["holes"])
 	return punches(profile) % int(TIME_CARD["holes"])
 
 
-# Every item the board has opened for this profile: stamped marks, paid cards, world rungs,
-# world cards, and completed Work Orders / Maker Licenses (deduped, board order).
 static func opened_items(profile, bot_driven := false) -> Array:
 	var out: Array = []
 	for id in RUNGS:
@@ -301,7 +261,6 @@ static func open_world_seeds(profile) -> Array:
 	return WORLD_SEEDS.keys().filter(func(id): return world_rung_stamped(String(WORLD_SEEDS[id]["gate"]), profile))
 
 
-# Every item the board could ever open, board order.
 static func all_items() -> Array:
 	var out: Array = []
 	for id in RUNGS:
@@ -317,8 +276,6 @@ static func open_seeds(profile) -> Array:
 	return SEEDS.keys().filter(func(id): return stamped(String(SEEDS[id]["gate"]), profile))
 
 
-# What a finished run did to the board, as one line for the summary: the rungs it stamped, else
-# the hole it punched, else why it did neither. before is stamped_ids at run_started.
 static func run_line(before: Array, profile, punched: bool) -> String:
 	var fresh: Array = stamped_ids(profile).filter(func(id): return not id in before)
 	if not fresh.is_empty():
@@ -335,8 +292,6 @@ static func run_line(before: Array, profile, punched: bool) -> String:
 	return ""
 
 
-# The rungs a run stamped, as a plain sentence for the summary: what the player did, by the rungs'
-# own names, in board order. Clocked In is the first finished shift and is not a deed to list.
 static func _deeds_sentence(ids: Array) -> String:
 	var deeds := PackedStringArray()
 	for id in ids:
@@ -349,7 +304,6 @@ static func _deeds_sentence(ids: Array) -> String:
 	return "You %smarked off %s on the shift board." % ["clocked in and " if clocked else "", list]
 
 
-# The board as the camp shows it: the stamp count, the next rung's name and words, and the card.
 static func reading(profile, sitting := false) -> Dictionary:
 	var shown_ids: Array = RUNGS.keys().filter(func(id): return shown(id, profile, sitting))
 	var done: Array = shown_ids.filter(func(id): return stamped(id, profile))
@@ -403,7 +357,6 @@ static func _words(s: String) -> int:
 	return s.split(" ", false).size()
 
 
-# rows: rungs. grants: achievement rows. tunes: tune ids. Returns the problems, empty when sound.
 static func validate(rows: Dictionary, grants: Dictionary, tunes: Array) -> Array:
 	var problems: Array = []
 	var items_seen := {}

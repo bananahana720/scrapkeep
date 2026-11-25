@@ -7,12 +7,6 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 
-# Moss's jukebox, a camp page on J: the records found in play, filed on four shelves (camp,
-# then each world), and a turntable that plays the one picked. A found record shows its
-# name and sleeve note; one not yet heard is a blank slate sleeve with a dry hint of where
-# it plays. Space, Enter, a click or pad A on a sleeve puts it on (again lifts the needle);
-# 1, 2 and 3 set the dial from idle to full tilt, which builds the band as speed does in
-# play; J, Esc or pad B go back to the camp. screens.gd routes the keys; audio.gd plays.
 
 const SHELF_COLORS := [Palette.AMBER, Palette.COPPER, Palette.SANDSTONE, Palette.LEDGER]
 const DETENTS := ["Idle", "Cruise", "Full tilt"]
@@ -51,8 +45,6 @@ func _init() -> void:
 	deck.custom_minimum_size = Vector2(DECK, DECK)
 	deck.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	body.add_child(deck)
-	# The crate scrolls once the shelves outgrow a 720 px screen; focus pulls the picked sleeve
-	# into view.
 	var crate := ScrollContainer.new()
 	crate.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	crate.follow_focus = true
@@ -95,9 +87,6 @@ func _init() -> void:
 	buttons.add_child(back)
 
 
-# Found and blank sleeves, the count, the dial and what is on the deck, from the profile's
-# tunes and the band.
-# A shut secret (TuneRows.shut) not yet found has no sleeve and no place in the count.
 static func reading(profile, playing := "", detent := 2, sitting := false) -> Dictionary:
 	var found: Array = []
 	var shown: Array = []
@@ -138,7 +127,6 @@ func focus_first() -> void:
 	_sleeves[first if first != "" else TuneRows.ids()[0]].grab_focus()
 
 
-# The sleeve with keyboard or pad focus, or "" when none has it.
 func focused_id() -> String:
 	var owner := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
 	for id in _sleeves:
@@ -180,8 +168,6 @@ func _show_note(id: String) -> void:
 		_note.add_theme_color_override("font_color", UiTokens.quiet())
 
 
-# A record sleeve in the crate: a small disc in the shelf's colour, then the name. A blank
-# sleeve is slate with ???; a rare record is edged in brass; the one on the deck in mint.
 class Sleeve extends Button:
 	var row: Dictionary
 	var tint: Color
@@ -228,9 +214,6 @@ class Sleeve extends Button:
 		draw_circle(c, 2.0, Palette.CHARCOAL)
 
 
-# The deck: a platter, the record on it with its label in the shelf's colour, and a tone arm
-# that swings onto the groove when a record plays. On a needle drop a drawn sound word
-# stamps on beside it (the tone bible's comic-book pillar) and fades within a beat.
 class Turntable extends Control:
 	const RPM := 33.333
 	const STAMP := 0.6
@@ -286,8 +269,6 @@ class Turntable extends Control:
 		draw_circle(c, 4.0, Palette.SAND)
 		var pivot := Vector2(s.x * 0.88, s.y * 0.16)
 		var length := r * 1.3
-		# At rest the arm hangs off the record's right edge; playing, it swings in until the
-		# needle sits on the outer groove.
 		var rest := deg_to_rad(95.0)
 		var on := rest
 		while on < deg_to_rad(170.0) and (pivot + Vector2(cos(on), sin(on)) * length).distance_to(c) > r * 0.8:

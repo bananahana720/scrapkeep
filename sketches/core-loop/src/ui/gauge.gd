@@ -5,20 +5,6 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
-# One HUD readout: an icon, an optional short label (a count, in mono digits) and an
-# optional bar. Health is a tank gauge (a tick every quarter) and scrap a count. Below
-# its warning share the gauge's edge turns iron oxide and pulses at 1 Hz. A drop in the bar
-# leaves the lost slice standing in the hit colour for LOSS_HOLD seconds and then drains it
-# over LOSS_DRAIN, so a hit shows which bar took it and how much went.
-#
-# A bar can carry a caption: one small word under its left end, in the bar's own colour,
-# saying what the bar holds. Of 24 blind readers of one still (10 Nov 2026), none of the 12
-# shown the armour bar without its word took it for armour and all 12 shown the word did. The caption is part of the gauge's extent, and
-# bar_mid() is the line the icon and bar sit on, so a caller centres on the bar, not the box.
-#
-# A capped bar (set_cap) has lost the top of its range for the run: the stretch past the cap is
-# a welded ink plate the fill can never reach, held by a brass bracket at the cap, so a bar full
-# to the cap reads short of whole.
 
 const ICON := 26.0
 const BAR_H := 12.0
@@ -41,13 +27,9 @@ var ticks := false
 var caption := ""
 var warn := false
 var warn_color := Color.WHITE
-# The share of the bar the reading can reach; 1.0 when nothing is welded off.
 var cap := 1.0
-# The plate's edge: the plate line, or the colour of what lifts the weld (the HUD's hull bar edges
-# a marked hull in the Warden's colour, because the Warden break lifts it).
 var cap_edge := UiTokens.LINE
 var _clock := 0.0
-# The share the bar stood at before its last drop, and the seconds its slice has left.
 var _lost_from := -1.0
 var _lost_left := 0.0
 
@@ -63,7 +45,6 @@ func _init(icon := "", width_of_bar := 0.0, quarter_ticks := false, word := "") 
 
 
 func set_reading(value: float, tint: Color, text := "", warning := false, warning_color := Color.WHITE) -> void:
-	# Called every frame by the HUD: shape and redraw only when a shown value changed.
 	if value == fraction and tint == color and text == label and warning == warn and warning_color == warn_color:
 		return
 	if bar_width > 0.0 and fraction >= 0.0 and value >= 0.0 and value < fraction:
@@ -97,12 +78,10 @@ func extent() -> Vector2:
 	return Vector2(w, ICON + (CAPTION_LINE if caption != "" else 0.0))
 
 
-# The line the icon and the bar are centred on, from the gauge's top.
 func bar_mid() -> float:
 	return ICON * 0.5
 
 
-# A new run's first reading is no loss from the last run's: forget the bar and its slice.
 func clear() -> void:
 	fraction = -1.0
 	_lost_from = -1.0
@@ -110,7 +89,6 @@ func clear() -> void:
 	queue_redraw()
 
 
-# Where the lost slice ends, as a share of the bar: the bar's own share once it has drained.
 func lost_edge() -> float:
 	if _lost_left <= 0.0 or _lost_from <= fraction:
 		return fraction
@@ -121,7 +99,6 @@ func drawn_words() -> PackedStringArray:
 	var words := PackedStringArray()
 	if label != "":
 		words.append(label)
-	# The caption is drawn with the bar, so it is a word only once the bar has a reading.
 	if caption != "" and fraction >= 0.0:
 		words.append(caption)
 	return words
@@ -137,7 +114,6 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var mid := bar_mid()
-	# Outlined: on flat pale sand the PC saw the health and armour icons vanish beside their words.
 	UiDraw.icon(self, Icons.texture(icon_id), Rect2(Vector2(0.0, mid - ICON * 0.5), Vector2(ICON, ICON)), Icons.tint(icon_id, color))
 	var x := ICON + GAP
 	if label != "":
@@ -162,10 +138,6 @@ func _draw() -> void:
 		draw_rect(bar.grow(2.5), Color(warn_color, 0.35 + 0.65 * beat), false, 2.5)
 
 
-# The welded stretch: an ink plate from the cap to the bar's end, edged in the plate line, a
-# brass bracket standing proud of the bar at the cap, and a weld mark (a cross) on the plate.
-# The cross is the weld's own shape: under red-green colour blindness the plate's edge and
-# the armour bar beside it read as one colour (UI finding UF-07), and no other bar is crossed.
 func _draw_weld(bar: Rect2) -> void:
 	var at := bar.position.x + bar.size.x * cap
 	var plate := Rect2(Vector2(at, bar.position.y), Vector2(bar.end.x - at, BAR_H))
@@ -179,8 +151,6 @@ func _draw_weld(bar: Rect2) -> void:
 	draw_rect(Rect2(Vector2(at - 2.0, bar.position.y - reach), Vector2(4.0, BAR_H + reach * 2.0)), UiTokens.ACCENT)
 
 
-# Where the weld's cross sits: a square in the plate's middle, clear of its edge. A plate too
-# narrow to hold one gets none, because a cramped cross reads as noise.
 static func weld_mark(plate: Rect2) -> Rect2:
 	var side := plate.size.y - WELD_INSET * 2.0
 	if side <= 0.0 or plate.size.x < side + WELD_INSET * 2.0:

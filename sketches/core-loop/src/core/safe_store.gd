@@ -1,10 +1,5 @@
 extends RefCounted
 
-# Shared file handling for the user:// stores (codex, UI profile, settings, reward
-# ceremony). A save goes through a temp file in the same directory and a rename, so a
-# save cut short leaves the old file whole. A load that cannot parse keeps the file as a
-# .bad copy, so the next save cannot replace it with an empty store.
-
 
 static func tmp_path(path: String) -> String:
 	return "%s.%d.tmp" % [path, OS.get_process_id()]
@@ -27,9 +22,6 @@ static func write_atomic(path: String, text: String) -> Error:
 	return err
 
 
-# Adds one line to a log, making the file if it is missing. A log is the one store that is
-# not replaced whole: each line is closed onto disk as it is written, so a crash keeps every
-# line before it (the sitting notes, src/core/sitting_notes.gd).
 static func append_line(path: String, line: String) -> Error:
 	var file := FileAccess.open(path, FileAccess.READ_WRITE if FileAccess.file_exists(path) else FileAccess.WRITE)
 	if file == null:
@@ -41,10 +33,6 @@ static func append_line(path: String, line: String) -> Error:
 	return err if err != OK else (OK if stored else FAILED)
 
 
-# The parsed value when the text is JSON of the wanted type (TYPE_DICTIONARY or
-# TYPE_ARRAY), else null. A dictionary is also checked against `shape` (key -> SHAPE_*):
-# a listed key that is present with the wrong type makes the whole file unreadable, so a
-# loader never meets a value it cannot handle and a later save cannot drop what it skipped.
 static func parse(text: String, type: int, shape := {}) -> Variant:
 	var json := JSON.new()
 	if json.parse(text) != OK:
@@ -86,8 +74,6 @@ static func _all(items: Array, type: int, alt := -1) -> bool:
 	return true
 
 
-# Moves an unreadable file aside and returns where it went, or "" when it could not; a
-# caller that gets "" must not save over the file.
 static func quarantine(path: String) -> String:
 	var bad := path + ".bad"
 	var n := 1

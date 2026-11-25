@@ -17,11 +17,9 @@ const CAPTIONS := {
 	"radio": "Change the pilot's station.",
 	"halo": "Your next ram calls in SPIL-9, your companion.",
 }
-# The help page's picture pages, in the order its page button walks them.
 const PAGES := [["breach", "lift", "companion"], ["grip", "cast", "jam"], ["stake", "radio", "halo"]]
 const RADIO_ACTIONS := ["cl_radio_prev", "cl_radio_next", "cl_radio_skip", "cl_radio_pin"]
 const PICTURE_SIZE := Vector2(410.0, 158.0)
-# The torch's 0.3 s and the battery and quake's 0.5 s (active_defs.gd); the rest fire at once.
 const CAST_TIMES := "0.3-0.5 s"
 
 var mechanic := ""
@@ -89,7 +87,6 @@ func drawn_words() -> PackedStringArray:
 	return PackedStringArray()
 
 
-# The radio's keys from the live bindings: comma, period, slash and semicolon until rebound.
 static func radio_key(action: String) -> String:
 	return Glyphs.of_action(action, "key_" + OS.get_keycode_string(Bindings.EXTRA_ACTIONS[action]["keys"][0]).to_lower())
 
@@ -98,7 +95,6 @@ func _breach() -> void:
 	var stone := Palette.SANDSTONE.darkened(0.3)
 	_plate(Rect2(22, 109, 101, 27), stone)
 	_plate(Rect2(275, 109, 113, 27), stone)
-	# Two torn halves leave a visible shaft; the crack and the downward path share the opening.
 	var left := PackedVector2Array([Vector2(122, 105), Vector2(177, 110), Vector2(164, 120), Vector2(139, 118)])
 	var right := PackedVector2Array([Vector2(215, 112), Vector2(275, 104), Vector2(257, 118), Vector2(231, 123)])
 	draw_colored_polygon(left, Palette.COPPER)
@@ -116,7 +112,6 @@ func _breach() -> void:
 func _lift() -> void:
 	_plate(Rect2(24, 124, 100, 12), Palette.VERDIGRIS)
 	_plate(Rect2(282, 34, 104, 16), Palette.VERDIGRIS)
-	# A vent, rising air and a bank onto the upper island, rather than a jump arrow.
 	_plate(Rect2(148, 135, 85, 8), Palette.COPPER)
 	for i in 3:
 		var points := PackedVector2Array()
@@ -133,7 +128,6 @@ func _lift() -> void:
 
 
 func _companion() -> void:
-	# Three families feed two sockets. The unused family stays visibly outside the chassis.
 	var body := Rect2(154, 29, 101, 42)
 	draw_style_box(ScrapFrame.plate(Palette.VERDIGRIS.lightened(0.3), 9, Palette.VERDIGRIS, 2), body)
 	draw_arc(Vector2(204, 76), 40, 0.2, PI - 0.2, 24, Color(Palette.SAND, 0.5), 2.0, true)
@@ -145,7 +139,6 @@ func _companion() -> void:
 	for at in centers:
 		draw_rect(Rect2(at - Vector2(23, 18), Vector2(46, 36)), Palette.VERDIGRIS.darkened(0.3))
 		draw_rect(Rect2(at - Vector2(23, 18), Vector2(46, 36)), Palette.COPPER, false, 2.0)
-	# Primer coil, ram brace and escape corridor: each has a working shape.
 	for i in 3:
 		draw_arc(centers[0], 6 + i * 4, -PI * 0.75, PI * 0.75, 16, Palette.ARC, 2.0, true)
 	draw_polyline(PackedVector2Array([centers[1] + Vector2(-13, -9), centers[1] + Vector2(10, -9), centers[1] + Vector2(17, 0), centers[1] + Vector2(10, 9), centers[1] + Vector2(-13, 9)]), Palette.COPPER, 4.0, true)
@@ -158,8 +151,6 @@ func _companion() -> void:
 
 
 func _grip() -> void:
-	# A fast ball curves off the floor and runs up along the wall's face, speed lines trailing
-	# parallel to it; a head-on hit would still bounce, so the path meets the wall tangent.
 	_plate(Rect2(22, 124, 300, 14), Palette.VERDIGRIS)
 	_plate(Rect2(322, 14, 30, 124), Palette.SANDSTONE.darkened(0.3))
 	_ball(Vector2(110, 106), 17.0)
@@ -173,8 +164,6 @@ func _grip() -> void:
 
 
 func _cast() -> void:
-	# Press F, a ring fills round the ball (a big active's wind-up, timed underneath), then the
-	# shot leaves.
 	Keycap.draw(self, Vector2(52, 79), Bindings.glyph("active"), Palette.SAND, 26.0)
 	_arrow(Vector2(78, 79), Vector2(118, 79), Palette.SAND)
 	_ball(Vector2(172, 79), 20.0)
@@ -188,8 +177,6 @@ func _cast() -> void:
 
 
 func _jam() -> void:
-	# Inside the pulsing field Q's half-filled wind-up is struck through; its charge comes back
-	# (jolt_layer.gd _recall_q).
 	draw_circle(Vector2(150, 79), 64, Color(Palette.ARC, 0.12))
 	draw_arc(Vector2(150, 79), 64, 0.0, TAU, 40, Color(Palette.ARC, 0.7), 2.0, true)
 	draw_arc(Vector2(150, 79), 48, 0.0, TAU, 32, Color(Palette.ARC, 0.4), 2.0, true)
@@ -203,7 +190,6 @@ func _jam() -> void:
 
 
 func _stake() -> void:
-	# The post with its E, three stake chips stacking up, and the ring on the ground ahead.
 	_plate(Rect2(22, 124, 366, 12), Palette.VERDIGRIS)
 	_plate(Rect2(60, 44, 18, 80), Palette.COPPER)
 	Keycap.draw(self, Vector2(69, 28), Bindings.glyph("interact"), Palette.SAND, 24.0)
@@ -217,7 +203,6 @@ func _stake() -> void:
 
 
 func _radio() -> void:
-	# The HUD knob and its four keys in dial order: back, next, skip, pin.
 	draw_circle(Vector2(96, 79), 40, Palette.CHARCOAL)
 	draw_arc(Vector2(96, 79), 40, 0.0, TAU, 32, Palette.COPPER, 3.0, true)
 	for i in 7:
@@ -232,7 +217,6 @@ func _radio() -> void:
 
 
 func _halo() -> void:
-	# SPIL-9's halo in segments, all lit; the next ram (the ball into a plate) calls the assist.
 	var spil := Vector2(92, 74)
 	for i in 12:
 		var start := TAU * i / 12.0 - PI * 0.5

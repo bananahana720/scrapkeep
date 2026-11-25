@@ -14,41 +14,21 @@ const GAUGE_RING := 24.0
 const GAUGE_WIDTH := 3.0
 const HARPOON_RING := 19.0
 const HARPOON_WIDTH := 2.5
-# Reduced motion (Game.set_reduced_motion keeps it current): a dry fire no longer shakes the reticle.
 static var reduced_motion := false
 const DRY_SHAKE := 3.0
 const DRY_SHAKE_TIME := 0.25
 const SHAKE_HZ := 40.0
-# The ultimate meter (design-v3/SKILL-BAR.md section 5): an arc METER_GAP outside the gauge
-# ring, METER_WIDTH thick, sweeping METER_SWEEP clockwise round a gap centred on six o'clock,
-# where the Q keycap (METER_Q_H tall) sits once the meter is full.
-# The dark under an unfilled gauge or meter: ink at this alpha, so the field shows through.
 const BACKING_ALPHA := 0.55
 const METER_GAP := float(UiTokens.GAP_M)
 const METER_WIDTH := 4.0
 const METER_SWEEP := TAU * 0.75
 const METER_Q_H := 20.0
-# The full meter breathes at 1 Hz; the hook lock pulses at 2 Hz, so the two never read alike.
 const BREATH_HZ := 1.0
 const BREATH_DEPTH := 0.12
-# The pilot rides in view inside the ball (ball_looks.gd: the cutaway's window faces the
-# camera), and at the resting camera the aim point sits on the pilot's head. While the reticle
-# is over the pilot its dark tracks and fills drop to BACK_OVER of their strength and its lines
-# to LINE_OVER, so the rider shows through and the readings stay; the aim point itself stays
-# whole, and the reticle never leaves the camera's centre ray. PILOT_SHARE is the part of the
-# ball's radius the pilot shows through; the change runs over BAND px so it never pops.
 const BACK_OVER := 0.2
 const LINE_OVER := 0.6
 const PILOT_SHARE := 0.65
 const BAND := 20.0
-# The weapon's timing instrument (PILOT-CADENCE section 5.3, LEGIBILITY section 14.1) sits inside
-# the reticle's ring at INSTRUMENT_R, round the aim point and clear of it: no mark comes nearer the
-# centre than DOT_CLEAR px, so the centre dot is never covered. Each pilot's instrument has its own
-# silhouette, so the six part in greyscale: Rivet six discs round the ring (a hot round a size
-# larger in his copper, a spent one a dim open ring); Sable an arc on a dark track, her full-charge
-# tick cutting a dark gap through it; Kest one chevron at twelve pointing in; Tarn three bars on a
-# cross's arms (nine, three, then twelve); Tally one square at twelve; the Cannon two brackets
-# either side of the aim point. Each mark sits on a dark backing.
 const INSTRUMENT_R := 10.0
 const DOT_CLEAR := 4.0
 const CHAMBER_R := 2.0
@@ -60,23 +40,14 @@ const SWEEP_WIDTH := 1.5
 const NOTCH_WIDTH := 4.0
 const NOTCH_EDGE := 3.0
 const FULL_TICK := 4.0
-# A hit the driver does not hold for a set time (Kest's snap, Tally's PAID) shows for HIT_FLASH s,
-# timed here from the moment the reticle first sees it (cadence_hit). The flash is a still frame,
-# so reduced motion keeps it.
 const HIT_FLASH := 0.25
-# Kest's chevron: apex KEST_APEX px above the aim point, arms out KEST_HALF to KEST_TOP.
 const KEST_APEX := 7.0
 const KEST_TOP := 13.0
 const KEST_HALF := 4.5
-# Tarn's pips: bars on the cross, PIP_LONG along the arm and PIP_WIDE across it, centred
-# on INSTRUMENT_R; the beat-three hit pip is PIP_HIT times larger.
 const PIP_LONG := 6.0
 const PIP_WIDE := 3.5
 const PIP_HIT := 1.35
-# Tally's square: SQUARE_HALF px either side of a centre on the ring at twelve.
 const SQUARE_HALF := 3.0
-# The Cannon's brackets: the inner face sits BRACKET_FLUSH px from the aim point when the lock is
-# flush and BRACKET_OPEN when open, BRACKET_H px either side of the horizon, serifs BRACKET_SERIF in.
 const BRACKET_FLUSH := 6.5
 const BRACKET_OPEN := 12.0
 const BRACKET_H := 4.5
@@ -84,32 +55,18 @@ const BRACKET_SERIF := 2.0
 const BRACKET_HIT := 1.4
 const MARK_BACK := 2.0
 
-# The reticle carries no words: its shape and colour are the aim state (AimStyle), and
-# a grapple target in reach adds the right-mouse key glyph beside it (key_glyphs.gd).
-# While a hold-gauge-release shot charges, a ring round it fills clockwise from twelve,
-# linearly, in the class colour, and closes when the gauge is full. The one exception is the
-# full ultimate meter's Q keycap in the arc's gap, drawn here only while the Q prompt is not
-# (key_glyphs.gd), so Q is never drawn twice.
 var player
 var camera: Camera3D
 var gauge := 0.0
 var gauge_color := Color.WHITE
-# The inner ring is the harpoon's readiness: 1 when a press would bite, filling as the hook docks
-# after a smash. It reads the kit's own rewind, so a kill that refunds it fills the ring at once.
 var harpoon_fill := 1.0
-# The ultimate meter, 0 to 1, as the HUD reads it (AbilitySlots.ultimate_of); during the set
-# piece it is the flight still to run. meter_full is the one ready fact every layer reads.
 var meter := 0.0
 var meter_full := false
 var meter_active := false
 var meter_color := Color.WHITE
-# The Q prompt draws the keycap in the gap this tick.
 var hide_q := false
-# The weapon's cadence this tick, as WeaponDriver.state_snapshot() publishes it, and the pilot's
-# class colour; the reticle reads nothing else of the weapon (cadence_marks).
 var cadence := {}
 var cadence_color := Color.WHITE
-# The latest hit the reticle has seen (cadence_hit) and how long ago it landed.
 var _hit_seen := []
 var _hit_age := INF
 var _shake_left := 0.0
@@ -158,7 +115,6 @@ func setup(player_ref, camera_ref: Camera3D) -> void:
 		player.events.line_state_changed.connect(_on_line_state)
 
 
-# The only thing the reticle knows is the aim record the fire action also uses.
 func reading() -> Dictionary:
 	return player.kit.aim
 
@@ -263,40 +219,31 @@ static func meter_radius() -> float:
 	return GAUGE_RING + METER_GAP
 
 
-# The meter arc's start and end angles for a fill (screen angles: 0 at three o'clock, growing
-# clockwise). It starts left of the gap and fills clockwise over twelve to the gap's far side.
 static func meter_span(fill: float) -> Vector2:
 	var start := PI * 0.5 + (TAU - METER_SWEEP) * 0.5
 	return Vector2(start, start + METER_SWEEP * clampf(fill, 0.0, 1.0))
 
 
-# The fill is the class colour (identity); where the class colour is the live mint itself, the
-# fill draws in sand-light bare metal, so mint still means only "ready" (SKILL-BAR section 12).
 static func meter_fill_color(class_color: Color) -> Color:
 	if Color(class_color, 1.0).is_equal_approx(EventKinds.role_color("live")):
 		return EventKinds.role_color("neutral").lightened(0.25)
 	return class_color
 
 
-# The rim turns live mint at full ("your verb works now"); below full it is a dark track.
 static func meter_rim(full: bool) -> Color:
 	return EventKinds.role_color("live") if full else Color(UiTokens.INK, BACKING_ALPHA)
 
 
-# The full meter's width scale at `t` seconds into the breath: one breath a second.
 static func breathe(t: float) -> float:
 	return 1.0 + BREATH_DEPTH * sin(TAU * BREATH_HZ * t)
 
 
-# How far the reticle is over the pilot, 0 clear to 1 on them: `apart` px from the aim point to
-# the centre of a pilot `pilot_px` in radius.
 static func over_pilot(apart: float, pilot_px: float) -> float:
 	if pilot_px <= 0.0:
 		return 0.0
 	return smoothstep(0.0, 1.0, (pilot_px + RING + BAND - apart) / BAND)
 
 
-# The same, this frame, from where the ball sits on screen.
 func cover(centre: Vector2) -> float:
 	if camera == null or not player.has_method("shown_position"):
 		return 0.0
@@ -326,7 +273,6 @@ func _on_line_state(state: String, _target: Node3D, _at: Vector3, _cause: String
 		_shake_clock = 0.0
 
 
-# One minus the rewind left over the rewind time, from the kit.
 func harpoon_readiness() -> float:
 	var total: float = player.tuning.harpoon_rewind() if player.get("tuning") != null else 0.0
 	if total <= 0.0:
@@ -334,7 +280,6 @@ func harpoon_readiness() -> float:
 	return clampf(1.0 - player.kit.rewind_left / total, 0.0, 1.0)
 
 
-# The screen the reticle covers: its outermost ring, the ultimate meter, round the centre it is drawn at.
 func rect() -> Rect2:
 	if not is_visible_in_tree():
 		return Rect2()
@@ -343,14 +288,12 @@ func rect() -> Rect2:
 	return Rect2(centre - Vector2(r, r), Vector2(r, r) * 2.0)
 
 
-# How far a dry fire has pushed the reticle off the centre, in pixels: at most DRY_SHAKE.
 func shake_offset() -> Vector2:
 	if reduced_motion or _shake_left <= 0.0:
 		return Vector2.ZERO
 	return Vector2(sin(_shake_clock * TAU * SHAKE_HZ) * DRY_SHAKE, 0.0)
 
 
-# The aim found nothing in reach but the centre ray meets a surface beyond the line's reach.
 func _out_of_range(aim: Dictionary) -> bool:
 	if camera == null or not camera.is_inside_tree() or not player.kit.on(Augments.GRAPPLE):
 		return false
@@ -363,8 +306,6 @@ func _out_of_range(aim: Dictionary) -> bool:
 	return not hit.is_empty() and (hit["position"] as Vector3).distance_to(player.shown_position()) > player.grapple_range()
 
 
-# What the reticle draws for an aim style. While a line stands it is a dot: the latch is shown
-# on the thing it bit, and a lock mark beside it would say "can hook" and "hooked" at once.
 func drawn_shape(style: Dictionary) -> String:
 	if player.kit.hooked:
 		return "dot"
@@ -383,8 +324,6 @@ func _draw() -> void:
 		centre = _drawn_centre
 	else:
 		style = AimStyle.of(aim, _out_of_range(aim))
-		# The reticle marks the camera's centre ray, which is the viewport centre whatever
-		# size layout gave this control.
 		centre = get_viewport_rect().size * 0.5 + shake_offset()
 		_cover = cover(centre)
 	var color: Color = style["color"]
@@ -410,8 +349,6 @@ func _draw() -> void:
 		"hollow_ring":
 			draw_arc(centre, RING, 0.0, TAU, 40, _thin(color), 2.5)
 		"brackets":
-			# An enemy the harpoon would bite: the snap line to the body. The brackets on the body
-			# are the line view's, in the world, so there is one set and it pulses.
 			var at := centre
 			if camera != null and not camera.is_position_behind(aim["point"]):
 				at = camera.unproject_position(aim["point"])
@@ -421,7 +358,6 @@ func _draw() -> void:
 			var at := centre
 			if camera != null and not camera.is_position_behind(aim["point"]):
 				at = camera.unproject_position(aim["point"])
-			# The snap line shows the magnet pulling the hook off your aim onto the target.
 			draw_line(centre, at, Color(color, 0.6), 1.5)
 			draw_circle(centre, 2.0, color)
 			var points := PackedVector2Array([
@@ -439,9 +375,6 @@ func _back(c: Color) -> Color:
 	return Color(c, c.a * lerpf(1.0, BACK_OVER, _cover))
 
 
-# The ultimate meter: nothing at 0, so the aim stays clear until the first point; then a dark
-# track over the whole sweep, the fill in the class colour, and at full a mint rim, a 1 Hz
-# breath and the Q keycap in the gap.
 func _draw_meter(centre: Vector2) -> void:
 	if meter <= 0.0 and not meter_full:
 		return
@@ -460,9 +393,6 @@ func _draw_meter(centre: Vector2) -> void:
 		Keycap.draw(self, centre + Vector2(0.0, r), q_glyph(), meter_rim(true), METER_Q_H)
 
 
-# What of a cadence snapshot the instrument draws, so the reticle redraws when a mark would change
-# and not for a timer it does not show. Empty for a trigger with no instrument here. `hit_age` is
-# the seconds since the latest hit cadence_hit names landed.
 static func cadence_key(snap: Dictionary, hit_age := 0.0) -> Array:
 	match String(snap.get("trigger", "")):
 		"press":
@@ -484,9 +414,6 @@ static func cadence_key(snap: Dictionary, hit_age := 0.0) -> Array:
 	return []
 
 
-# A hit the driver does not hold for a set time, named so the reticle can time its flash: Kest's
-# snap (the throw's token while its window reads hit) and Tally's PAID (the streak, which each PAID
-# raises). Empty when there is none.
 static func cadence_hit(snap: Dictionary) -> Array:
 	match String(snap.get("trigger", "")):
 		"lob_snap":
@@ -498,12 +425,6 @@ static func cadence_hit(snap: Dictionary) -> Array:
 	return []
 
 
-# The instrument for a cadence snapshot, as marks round the aim point (offsets in px, screen
-# angles: 0 at three o'clock, growing clockwise). Each mark is a "disc", "ring", "arc", "line",
-# "poly" (a polyline, `closed` or not) or "fill" (a solid polygon), names its `role`, and its
-# `layer`: "back" for a dark backing (thinned by _back over the pilot), "line" for a reading
-# (thinned by _thin). Mint marks only the press-now moment; the pilot's colour marks what the press
-# makes; slate is a window spent; nothing is brass.
 static func cadence_marks(snap: Dictionary, class_color: Color, hit_age := 0.0) -> Array:
 	match String(snap.get("trigger", "")):
 		"press":
@@ -521,11 +442,6 @@ static func cadence_marks(snap: Dictionary, class_color: Color, hit_age := 0.0) 
 	return []
 
 
-# Rivet: a cylinder of chambers clockwise from twelve in firing order. A spent chamber is a hollow
-# ring, a loaded one a bone disc, a hot round a larger disc in the pilot's colour (copper: a hot
-# round is what the notch press made, PILOT-CADENCE section 5.2). While the cylinder reloads the
-# chambers give way to a sweep round the same ring and the notch on it: brackets while it waits,
-# solid mint while a press would hit it, solid slate once it is spent.
 static func _rivet_marks(snap: Dictionary, class_color: Color) -> Array:
 	var marks: Array = []
 	var bone := EventKinds.role_color("neutral")
@@ -573,9 +489,6 @@ static func _rivet_marks(snap: Dictionary, class_color: Color) -> Array:
 	return marks
 
 
-# Sable: an empty arc on a dark track at rest, filling clockwise from twelve with the charge in her
-# colour (meter_fill_color keeps mint off the fill), and at full charge while held one mint tick
-# across twelve: let go now. The bolt leaving empties the charge, so the arc empties with it.
 static func _sable_marks(snap: Dictionary, class_color: Color) -> Array:
 	var r := INSTRUMENT_R
 	var marks: Array = [
@@ -591,10 +504,6 @@ static func _sable_marks(snap: Dictionary, class_color: Color) -> Array:
 	return marks
 
 
-# Kest: nothing at rest or while the window waits, so the aim stays clear. While the live charge's
-# snap window is open one mint chevron at twelve points in (the cue holds when the charge is off
-# screen); a snap lands as a solid bone chevron edged in her amber for HIT_FLASH s; a window spent
-# leaves a thin slate chevron until the charge goes.
 static func _kest_reading(snap: Dictionary, hit_age: float) -> String:
 	match String(snap.get("window", "")):
 		"open":
@@ -629,11 +538,6 @@ static func _kest_marks(reading: String, class_color: Color) -> Array:
 	]
 
 
-# Tarn: three bars on a cross's arms, beat one at nine, beat two at three, beat three at twelve.
-# Hollow at rest; a beat landed fills its bar bone; while beat three's window is open its bar is
-# mint; the hit fills it larger in his colour, edged bone so a dark colour still reads, with the
-# first two still full, and all three clear when he recovers; a window spent turns bar three slate
-# and clears the count.
 static func _tarn_reading(snap: Dictionary) -> Array:
 	match String(snap.get("window", "")):
 		"open":
@@ -672,7 +576,6 @@ static func _tarn_marks(reading: Array, class_color: Color) -> Array:
 	return marks
 
 
-# A bar `long` px along the ray at `angle` and `wide` px across it, centred on INSTRUMENT_R.
 static func _bar(angle: float, long: float, wide: float) -> PackedVector2Array:
 	var along := Vector2.from_angle(angle)
 	var across := along.orthogonal() * wide * 0.5
@@ -681,8 +584,6 @@ static func _bar(angle: float, long: float, wide: float) -> PackedVector2Array:
 	return PackedVector2Array([near - across, far - across, far + across, near + across])
 
 
-# Tally: one hollow square at twelve at rest; while the PAID window is open it is a heavier mint
-# square; PAID fills it in her colour, ledger cream, for HIT_FLASH s; a window spent fills it slate.
 static func _tally_reading(snap: Dictionary, hit_age: float) -> String:
 	match String(snap.get("window", "")):
 		"open":
@@ -709,16 +610,11 @@ static func _tally_marks(reading: String, class_color: Color) -> Array:
 	return marks
 
 
-# A square `half` px either side of the ring's twelve o'clock.
 static func _square(half: float) -> PackedVector2Array:
 	var c := Vector2(0.0, -INSTRUMENT_R)
 	return PackedVector2Array([c + Vector2(-half, -half), c + Vector2(half, -half), c + Vector2(half, half), c + Vector2(-half, half)])
 
 
-# The Cannon: two brackets either side of the aim point mirror the ones on the ground lane. Open
-# and dim at rest; closing in bone while the lane is painted; flush and mint while a release would
-# fire the Rail; after the Rail, flush bone and BRACKET_HIT times taller with a thin edge in his
-# uranium green while he recovers; held past the lock, slate and opening again for the Barrage.
 static func _cannon_reading(snap: Dictionary) -> Array:
 	if bool(snap.get("painted", false)):
 		match String(snap.get("lock_stage", "")):
@@ -760,8 +656,6 @@ static func _cannon_marks(reading: Array, class_color: Color) -> Array:
 	return marks
 
 
-# The nearest a mark comes to the aim point, in px. Every line here is radial with flat ends, so
-# its nearest point is its inner end; a polyline or polygon is measured to its nearest edge.
 static func mark_reach(mark: Dictionary) -> float:
 	match String(mark["shape"]):
 		"disc", "ring":

@@ -1,29 +1,5 @@
 extends Node
 
-# The run-end comic page's moments (Andrew's Q11, 17 Oct 2026: "Page plus camp scrapbook").
-# It listens to the bus, keeps the best candidate of each moment kind with a viewport still,
-# and at run_ended folds them into one page document of 4 to 6 panels in run order. The camp
-# thread owns drawing pages and the scrapbook store; this file owns what goes on a page.
-#
-# Page document (schema 1), the contract the scrapbook reads:
-#   {schema, run_id, ended_unix, pilot, pilot_name, won, outcome, stage_reached, world,
-#    world_name, title, panels: [4..6 panel rows in run order]}
-# outcome is "won" or "lost": a page folds only at run_ended, so a run abandoned mid-way
-# makes none.
-#   panel: {kind, t, stage, world, world_name, caption, sfx, size, facts, shot}
-# kind is one of KINDS. caption is the narrator box (TONE-BIBLE: deadpan words, loud
-# pictures), sfx the drawn sound word ("" for none), size a layout hint (wide, tall,
-# square), facts a small dict of numbers, shot an Image (SHOT_WIDTH wide, null headless or
-# when no still was taken). save() hands the page to the scrapbook; page_ready tells the
-# summary screen it can draw it. At run_ended the save runs on a worker: writing the stills and
-# the page took 78 to 82 ms of the 4080's 316 ms victory frame (scrapkeep#241), and the summary
-# draws the page from memory. saved_path() waits for it.
-#
-# A Continued run starts its moments at the resume (run_started resets them), so its opening
-# is the stage it resumed on.
-#
-# Every run has an opening and a finale; the middle takes up to four of the rest by PRIORITY,
-# and the ledger and top speed always exist, so a page is never under four panels.
 
 signal page_ready(page: Dictionary)
 
@@ -35,33 +11,22 @@ const SafeStore := preload("res://src/core/safe_store.gd")
 
 const SCHEMA := 1
 const DIR := "scrapbook"
-# The camp's scrapbook store and page drawing (camp hub thread); both optional until merged.
 const STORE_PATH := "res://src/core/scrapbook_store.gd"
 const MIN_PANELS := 4
 const MAX_PANELS := 6
 const SHOT_WIDTH := 480
-# A still is a frame readback; keep them rare. A better candidate of the same kind replaces
-# the held one only by this margin, and never sooner than SHOT_GAP seconds after any still.
 const SHOT_GAP := 1.0
-# The share of the frame a still keeps, clear of the HUD's bars (top 12%, bottom 22%).
 const SHOT_CROP := Rect2(0.08, 0.12, 0.84, 0.66)
 const BETTER_BY := 1.25
-# The opening still waits this long into the first stage so the ball is in the world.
 const OPENING_AFTER := 1.5
-# A hit that leaves the hull at or under this share is a near-death.
 const NEAR_DEATH := 0.35
 const FINALE_RUNUP := 3.0
 const SAME_BEAT := 3.0
-# Whole-run tallies, not beats: never crowded out by the same-beat rule.
 const SUMMARY_KINDS := ["top_speed", "ledger"]
 const KINDS := ["opening", "key_item", "biggest_hit", "set_piece", "near_death", "boss_stagger", "top_speed", "ledger", "finale"]
-# Middle panels, most wanted first.
 const PRIORITY := ["boss_stagger", "biggest_hit", "near_death", "key_item", "set_piece", "top_speed", "ledger"]
 const SIZES := {"opening": "wide", "finale": "wide", "boss_stagger": "tall"}
 
-# Narrator boxes: a tired comic-book narrator over loud pictures. One line per kind is
-# picked by the run id, so a run's page reads the same every time it is opened.
-# TONE-READ: run-end captions, every line awaits Andrew's read.
 const CAPTIONS := {
 	"opening": ["Meanwhile, at %s.", "%s. Another shift.", "Our story begins at %s. Again."],
 	"key_item": ["%s acquired. It fit. Mostly.", "%s. Nobody read the manual.", "Found: %s. Signed for it."],
@@ -87,16 +52,10 @@ var player
 var flow
 var stages
 var storage_dir := "user://"
-# Stills need a renderer; tests may switch them off on a display, and --no-stills (a user arg
-# after --) switches them off for a timing run: each still reads the whole frame back from the GPU.
 var stills := not ("--no-stills" in OS.get_cmdline_user_args())
-# Stills read back so far, so a timing run can show the switch fired (lesson 34).
 var shots_taken := 0
-# The last page finished by run_ended, and where save() put it ("" when unsaved, or until the
-# save's worker is done: read it through saved_path()).
 var last_page := {}
 var last_page_path := ""
-# The run_ended save's WorkerThreadPool task (-1 for none) and the path it returns.
 var _save_task := -1
 var _save_out := {}
 
@@ -106,7 +65,6 @@ var _pending_death := {}
 var _boss_down := {}
 var _opening_due := false
 var _shot_wait := 0.0
-# Stills asked for and not yet read back (frame_post_draw).
 var _grabs_pending := 0
 var _top_speed := 0.0
 
@@ -159,12 +117,9 @@ func _physics_process(delta: float) -> void:
 		var planar := Vector2(v.x, v.z).length()
 		if planar > _top_speed:
 			_top_speed = planar
-			# The still waits for a lead worth framing, not every new decimal.
 			_offer("top_speed", planar, {"speed": snappedf(planar, 0.1)})
 
 
-# Whether a still has been asked for and not yet read back: the frame it photographs has not
-# drawn. The summary screen waits on this, so a death's picture is of the death.
 func still_pending() -> bool:
 	return _grabs_pending > 0
 
@@ -192,7 +147,6 @@ func _on_player_hit(_amount: float, _source: String) -> void:
 		return
 	var share: float = run.hp / run.max_hp
 	if share <= NEAR_DEATH:
-		# Lower is better: the score is how close to zero it came.
 		_offer("near_death", 1.0 - share, {"hull": roundi(share * 100.0)})
 
 
@@ -216,8 +170,6 @@ func _on_posture_changed(enemy: Node3D, _posture: float, staggered: bool) -> voi
 	if not staggered or was:
 		return
 	var boss := flow != null and bool(flow.get("in_arena"))
-	# An arena boss outranks any park Warden and a later world an earlier one; within one
-	# fight the first stagger holds, the turn of the fight rather than the last blow.
 	_offer("boss_stagger", (200.0 if boss else 100.0) + _world_of(int(run.stage)), {"boss": boss, "who": _stagger_name(enemy, boss)}, true)
 
 
@@ -227,7 +179,6 @@ func _on_boss_defeated() -> void:
 
 
 func _on_run_ended(won: bool) -> void:
-	# A still asked for this frame (the final death's) lands after it draws; fold after that.
 	if _grabs_pending > 0:
 		await RenderingServer.frame_post_draw
 	var finale: Dictionary
@@ -238,7 +189,6 @@ func _on_run_ended(won: bool) -> void:
 	finale = finale.duplicate()
 	finale["kind"] = "finale"
 	finale["caption_kind"] = "won" if won else "lost"
-	# On a loss the last few hits before the end are the finale's own run-up, not a panel.
 	if not won and _best.has("near_death") and float(finale["t"]) - float(_best["near_death"]["t"]) < FINALE_RUNUP:
 		_best.erase("near_death")
 	var ledger := _moment("ledger", 1.0, {"kills": int(run.kills), "scrap": int(run.scrap)})
@@ -249,12 +199,8 @@ func _on_run_ended(won: bool) -> void:
 	page_ready.emit(last_page)
 
 
-# The page from the held moments: opening and finale bracket up to four middle panels by
-# PRIORITY, every panel in run order.
 func build_page(won: bool, finale: Dictionary) -> Dictionary:
 	var middle: Array = []
-	# A candidate on the same beat as a chosen panel (a stagger and the hit that caused it,
-	# a hit a breath before the finale) yields to the next kind, so the page has range.
 	var taken: Array = [float(finale["t"])]
 	for kind in PRIORITY:
 		if _best.has(kind) and middle.size() < MAX_PANELS - 2:
@@ -263,7 +209,6 @@ func build_page(won: bool, finale: Dictionary) -> Dictionary:
 				continue
 			taken.append(t)
 			middle.append(_best[kind])
-	# The ledger is always held; a run too short for anything else still clocked a top speed.
 	if middle.size() < MIN_PANELS - 2 and not _best.has("top_speed"):
 		middle.append(_moment("top_speed", 0.0, {"speed": snappedf(_top_speed, 0.1)}))
 	middle.sort_custom(func(a, b): return float(a["t"]) < float(b["t"]))
@@ -272,7 +217,6 @@ func build_page(won: bool, finale: Dictionary) -> Dictionary:
 		rows.append(_best["opening"])
 	else:
 		rows.append(_moment("opening", 1.0, {}).merged({"t": 0.0, "stage": _first_stage(), "world": _world_of(_first_stage())}, true))
-	# Starting parts can land before the opening still; the opening still opens the page.
 	if not middle.is_empty() and float(middle[0]["t"]) < float(rows[0]["t"]):
 		rows[0] = rows[0].merged({"t": float(middle[0]["t"])}, true)
 	rows.append_array(middle)
@@ -314,7 +258,6 @@ func _panel(row: Dictionary) -> Dictionary:
 	}
 
 
-# Where the last run_ended page was saved, waiting for its worker if it is still writing.
 func saved_path() -> String:
 	if _save_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_save_task)
@@ -324,8 +267,6 @@ func saved_path() -> String:
 	return last_page_path
 
 
-# save() on a worker. The store is made here (it loads a script); the worker writes a copy of the
-# page, whose stills it only reads.
 func _save_later(page: Dictionary) -> void:
 	saved_path()
 	var store = load(STORE_PATH).new(storage_dir) if ResourceLoader.exists(STORE_PATH) else null
@@ -339,10 +280,6 @@ func _exit_tree() -> void:
 	saved_path()
 
 
-# Saves through the camp's scrapbook store (scrapbook_store.gd) when the build has it; until
-# then the same layout by hand: <storage_dir>/scrapbook/<run_id>.json, each still beside it as
-# <run_id>_<i>.png named in its panel's shot. Returns the JSON's path, or "". store is one made
-# ahead on the main thread (a worker save), or null to make it here.
 func save(page: Dictionary, store = null) -> String:
 	if store == null and ResourceLoader.exists(STORE_PATH):
 		store = load(STORE_PATH).new(storage_dir)
@@ -370,8 +307,6 @@ func save(page: Dictionary, store = null) -> String:
 	return path
 
 
-# A candidate of one kind: kept when it beats the held one (by BETTER_BY when the held one
-# already has a still), and given a still when the gap allows.
 func _offer(kind: String, score: float, facts: Dictionary, rare := false) -> void:
 	var held: Dictionary = _best.get(kind, {})
 	if not held.is_empty():
@@ -394,8 +329,6 @@ func _moment(kind: String, score: float, facts: Dictionary) -> Dictionary:
 		"facts": facts, "shot": null}
 
 
-# The still is read after the frame that shows the moment has drawn. A rare moment (a
-# stagger, a death, a boss down) skips the gap.
 func _grab_into(row: Dictionary, rare := false) -> void:
 	if not stills or (_shot_wait > 0.0 and not rare) or AppShell.headless() or not is_inside_tree():
 		return
@@ -411,7 +344,6 @@ func _grab_into(row: Dictionary, rare := false) -> void:
 		shots_taken += 1
 		if image == null or image.is_empty():
 			return
-		# The HUD's top and bottom bands are not part of the picture.
 		var size := Vector2(image.get_size())
 		image = image.get_region(Rect2i(Vector2i(size * SHOT_CROP.position), Vector2i(size * SHOT_CROP.size)))
 		var h := maxi(1, roundi(float(SHOT_WIDTH) * image.get_height() / maxf(1.0, image.get_width())))

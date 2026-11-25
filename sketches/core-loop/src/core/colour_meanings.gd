@@ -1,16 +1,8 @@
 extends RefCounted
 
-# What each palette colour means (VISUAL-LANGUAGE.md section 2, "Palette roles"), as rows the
-# effects read and colour_meanings_test checks. palette.gd owns the hex values; this file owns
-# what a colour is allowed to say. UI colours are src/ui/ui_tokens.gd's.
-#
-# A new effect asks for a meaning, not a colour: ColourMeanings.of("danger"). A new world's
-# effects are rows that name meanings, so a colour change is one row here.
 
 const Palette := preload("res://src/core/palette.gd")
 
-# One meaning, one palette constant. "yours" is the pilot's class colour (class_def.gd rows),
-# so it is not a constant; "reward" is the item ladder, by rung.
 const MEANINGS := {
 	"danger": "HAZARD",
 	"live": "ARC",
@@ -24,10 +16,6 @@ const REWARD_RUNGS := {
 	"relic": "AMBER",
 }
 
-# Colours whose meaning is reserved, and the kinds of code that must never draw them.
-# A domain is a kind of code: what the player's own verbs make, an enemy's body and parts,
-# or a reward. colour_meanings_test fails a reserved colour in a forbidden domain unless a
-# KNOWN row below names that file and colour.
 const RESERVED := {
 	"HAZARD": {"meaning": "danger", "never": ["player", "reward"]},
 	"ANCIENT": {"meaning": "ancient", "never": ["player", "reward"]},
@@ -36,8 +24,6 @@ const RESERVED := {
 	"COBALT": {"meaning": "reward", "never": ["enemy"]},
 }
 
-# Which source files belong to a domain. `extends` names base scripts: every script whose
-# extends chain reaches one is in the domain, so a new enemy or pilot kit joins by itself.
 const DOMAINS := {
 	"player": {
 		"extends": ["res://src/combat/ultimate.gd"],
@@ -65,11 +51,6 @@ const DOMAINS := {
 	},
 }
 
-# Today's overloads, counted on cand/w40 f4e04867 and widened by review (12 Nov 2026; effects-critique.md E6).
-# kind "overload" is a row to burn down: fixing the file means deleting its row, and the test
-# fails a row whose file no longer uses the colour. kind "ruled" is a standing exception with
-# its source. Rows for AMBER and COPPER are listed overloads the domain scan cannot see (those
-# colours carry several meanings by design); the test still checks each site exists.
 const KNOWN := [
 	{"path": "res://src/presentation/damage_numbers.gd", "colour": "ANCIENT", "kind": "overload",
 		"why": "frost damage numbers are ancient green; frost is ICE"},
@@ -120,7 +101,6 @@ const KNOWN := [
 ]
 
 
-# The colour a meaning draws in. "yours" needs the pilot's class row.
 static func of(meaning: String, class_def = null) -> Color:
 	if meaning == "yours":
 		return class_def.color if class_def != null else Palette.live()

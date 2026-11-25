@@ -5,20 +5,12 @@ const SafeStore := preload("res://src/core/safe_store.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const Parts := preload("res://src/build/parts.gd")
 
-# The codex: one registry of every synergy, trick and interaction the demo knows,
-# saved across runs (the demo's only meta-progression, DEMO-SPEC). Owners declare
-# their entries at setup and call the mutators when one fires; the codex publishes the
-# bus fact, grants the treasure burst once per entry per run, and writes the developer
-# log, so the UI, the stinger and the log read one record. Storage failures never
-# throw: the codex keeps working in memory, noting a save failure in last_error and a
-# log append failure in log_error.
 
 const CATEGORIES := ["build", "world", "enemy", "npc", "coop"]
 const STATE_FILE := "codex.json"
 const LOG_FILE := "codex-log.ndjson"
 const STATUSES := ["none", "unencountered", "new", "available"]
 
-# A new field note became known; the id is a LoreRows field_note row.
 signal lore_found(id: String)
 
 var events
@@ -37,11 +29,8 @@ var _found_category := {}
 var _run_seen := {}
 var _run_found := {}
 var _run_discoveries: Array[String] = []
-# What this stage attempt discovered. A retry rewinds the run to the stage start,
-# burst scrap included, so it rewinds these too and they can fire and pay again.
 var _attempt_seen: Array[String] = []
 var _attempt_found: Array[String] = []
-# Stage 3's attempt, set aside when the arena begins its own.
 var _stage_seen_before_arena: Array[String] = []
 var _stage_found_before_arena: Array[String] = []
 var _warned := {}
@@ -64,7 +53,6 @@ func setup(events_ref, run_ref, flow_ref, dir: String) -> void:
 	_connect_lore()
 
 
-# Idempotent: a second declare of the same id updates its words, never duplicates it.
 func declare(entry: Dictionary) -> void:
 	var id := String(entry.get("id", ""))
 	if id == "":
@@ -122,8 +110,6 @@ func name_of(id: String) -> String:
 	return id.replace("_", " ").capitalize()
 
 
-# An undeclared id (warned at discovery) files under build everywhere: the bus fact,
-# the log line and the pages read the same category.
 func category_of(id: String) -> String:
 	return _entries[id]["category"] if _entries.has(id) else "build"
 
@@ -199,9 +185,6 @@ func completion(category: String) -> float:
 	return float(got) / float(listed.size())
 
 
-# A named entry fired. The first time in a run it publishes synergy_discovered, grants
-# the treasure burst at the spot and logs; first_time says whether the saved codex had
-# never seen it. Returns that same first_time.
 func mark_discovered(id: String, at := Vector3.ZERO, participants: Array = ["player"]) -> bool:
 	var first_time := not _discovered.has(id)
 	if first_time:
@@ -222,8 +205,6 @@ func mark_discovered(id: String, at := Vector3.ZERO, participants: Array = ["pla
 	return first_time
 
 
-# A trick told when it wakes (its own banner and chime, build.gd set_completed) becomes known
-# like a discovery, without the discovery's card, chime or burst. Returns whether it was new.
 func mark_known(id: String, participants: Array = ["player"]) -> bool:
 	var first_time := not _discovered.has(id)
 	if first_time:
@@ -237,8 +218,6 @@ func mark_known(id: String, participants: Array = ["player"]) -> bool:
 	return first_time
 
 
-# A lore plate filed its field note: known as mark_known makes it (the run's list and its log line), and the HUD's
-# note pulse the first time the profile has it. Returns whether it was new.
 func file_note(id: String) -> bool:
 	if not mark_known(id):
 		return false
@@ -246,8 +225,6 @@ func file_note(id: String) -> bool:
 	return true
 
 
-# An unnamed interaction fired: the first time in a run it logs and chimes. Returns
-# whether the saved Found list had never seen it.
 func mark_found(text: String, category := "world", participants: Array = ["player"]) -> bool:
 	var first_time := not text in _found
 	if first_time:
@@ -273,8 +250,6 @@ func _on_run_started(_class_id: String) -> void:
 	_stage_found_before_arena = []
 
 
-# A stage retry (R, or T replaying stage 3 from its start) rewinds everything since
-# the stage began, the arena attempt included.
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	var profile = _profile()
 	if run != null and profile != null:
@@ -288,8 +263,6 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_stage_found_before_arena = []
 
 
-# The arena is its own attempt. Entering it sets the stage-3 attempt aside, so an arena
-# retry rewinds only what the fight discovered; a T replay still rewinds both.
 func _on_stage_content_cleared(reason: String) -> void:
 	if reason == "arena":
 		_stage_seen_before_arena.append_array(_attempt_seen)
@@ -310,9 +283,6 @@ func _rewind(seen: Array, found: Array) -> void:
 		_run_found.erase(text)
 
 
-# The seven lore moments, one bus signal each: a standing activity done, a cracked wall
-# opened, a rescue freed, a relic taken, a Warden's guard broken (rising edge of its
-# stagger), the Warden killed (the beacon unsealing) and the stage cleared.
 func _connect_lore() -> void:
 	events.activity_done.connect(func(_id: String, _at: Vector3): _lore_moment())
 	events.world_fact.connect(func(kind: String, _at: Vector3):
@@ -351,8 +321,6 @@ func _enter_zone(stage: int) -> void:
 			_mark_lore(row["id"], false)
 
 
-# The next unknown note of this zone in row order, else the earliest unknown note of an
-# earlier zone. A full codex does nothing.
 func _lore_moment() -> void:
 	var zones: Array[String] = []
 	for row in LoreRows.ROWS:
@@ -399,8 +367,6 @@ func _log(fields: Dictionary) -> void:
 
 
 func append_line(path: String, text: String) -> bool:
-	# RunLog already writes through this adapter. Keep its schema owner untouched while
-	# adding SR12's shared run snapshot to death, completion and abandonment records.
 	if path.get_file() == "runs.ndjson" and run != null:
 		var line = JSON.parse_string(text)
 		if line is Dictionary:

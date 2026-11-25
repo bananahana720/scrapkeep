@@ -1,9 +1,5 @@
 extends RefCounted
 
-# Rivet's upgrade tree: run and gun, unstoppable. Heap order as in sable.gd. The left
-# half guns on the move (Gunline); the right half cannot be stopped (Juggernaut). Depth 3
-# swaps Q to Prism Cutter or Juggernaut Drive (one of each per pair); depth 4 turns one
-# ultimate knob (design-v3/pilots/rivet.md section 3). Every node keeps its own perk.
 
 const NODES := [
 	{"id": "r_gunline", "name": "Gunline", "effect": "The laser fires twin bolts", "key": "weapon",
@@ -100,9 +96,6 @@ const NODES := [
 ]
 
 
-# World-one Depth-1 opposite-feel keystones (PILOT-CADENCE.md §§6.1-6.2, E2-09).
-# Left root: Fan the Hammer (r_gunline moves to slot 2 in place of r_tracer; r_run_gun stays at slot 3).
-# Right root: Big Iron (r_juggernaut moves to slot 4 in place of r_ram_fins; r_second_wind stays at slot 5).
 const FAN_HAMMER := {"id": "r_fan_hammer", "name": "Fan the Hammer", "effect": "Twelve light rounds. Hold to fan fire.", "key": "weapon",
 	"icon": "ab_rivet_weapon", "tags": ["ranged"],
 	"pattern": {"rapid_laser": {"set": {"fan": true}, "mul": {"mag": 2.0, "damage": 0.5, "floor_s": 0.5}}}}

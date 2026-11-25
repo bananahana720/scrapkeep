@@ -8,28 +8,6 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
-# The lessons no verb prompt carries (FIRST-TIMER audit, scripts/first-timer.mjs): the drive
-# keys at the ball on a new save's first drops, the slam on a Warden's open core, and the
-# plating read. The first two wear the key glyph's sand cap and the live colour like
-# ui/key_glyphs.gd; all three retire the same way, after RETIRE_AFTER uses on the profile
-# (ui_profile.gd glyph_uses).
-#
-#   roll  W A S D (the stick on a pad) and DRIVE beside the ball, from the drop until the run has
-#         DRIVE_LEARNED seconds of steering; a run that gets there is one use. It never shows once
-#         the stage's Warden is engaged, so a fight keeps its word budget (ui_word_budget_test).
-#   slam  while the Warden is staggered: Space Ctrl SLAM over the core on the ground (jump, then
-#         slam), Ctrl SLAM alone in the air; nothing while a line stands, which owns Ctrl. A slam within SLAM_REACH of the open core is one use.
-#   plate no words (ruling cx; gameplay critique finding 7, W1-68). A strike that glances off a
-#         slate rim makes that rim beat (the target's flare_glance()) and stretches three speed
-#         lines in the live colour from the ball, away from the target, longer the further the
-#         punch fell short: come back faster. Each glance shows it for PLATE_SHOW seconds; the
-#         first strike that beats plating once it has shown is its one use.
-#
-# The drive row ends left of the ball so the ball verbs' prompts (key_glyphs BALL_OFFSET, to the
-# right) stay clear; the slam row is centred over the core. Rules run on the physics tick, the
-# screen placement in _process, redrawn only when it changes, as key_glyphs does.
-#
-# Each lesson emits events.prompt_shown on its rising edge, as the verb prompts do.
 
 const RETIRE_AFTER := {"roll": 3, "slam": 3, "plate": 1}
 const DRIVE_LEARNED := 1.5
@@ -39,7 +17,6 @@ const DRIVE_WORD := "DRIVE"
 const SLAM_WORD := "SLAM"
 const CORE_LIFT := Vector3(0.0, 3.0, 0.0)
 const SLAM_REACH := 8.0
-# The drive row's right end, from the ball: mirrors key_glyphs.BALL_OFFSET to the left.
 const BALL_OFFSET := Vector2(-24.0, -34.0)
 const KEY_H := 28.0
 const GAP := 6.0
@@ -47,28 +24,21 @@ const WORD_SIZE := UiTokens.BODY
 const PLATE_SHOW := 1.4
 const STREAK_GROW := 0.18
 const STREAK_FADE := 0.35
-# The middle line's length from a near miss to a hit with no speed in it; the outer two are shorter.
 const STREAK_SHORT := UiTokens.TARGET
 const STREAK_LONG := UiTokens.TARGET * 2.5
 const STREAK_SPREAD := UiTokens.GAP_S
-# Where the lines start: this far outside the ball's edge on screen.
 const STREAK_LEAD := UiTokens.GAP_S
-# Each line's width at its head; it tapers to a point at its tail.
 const STREAK_WIDTH := UiTokens.GAP_S
 
 var game
 var profile
-# The lessons shown this tick: [{id, world, offset, align ("end" or "centre"), parts: [{key} or {word}]}].
 var shown: Array = []
 var _placed: Array = []
 var _steered := 0.0
 var _drive_done := false
 var _was_drawn := {}
-# The plating lesson's last glance: {target, short (0 to 1 of the plating the punch missed), left, age}.
 var _glance := {}
-# The ball contact enemy_struck just announced: {id, hit (combat's settled resolve record)}.
 var _contact := {}
-# The lesson has shown this session, so the next strike that beats plating retires it.
 var _plate_shown := false
 
 
@@ -97,7 +67,6 @@ func retired(id: String) -> bool:
 	return profile.uses(id) >= RETIRE_AFTER[id]
 
 
-# The flow's Warden is staggered: its core is open to a smash.
 func core_open() -> bool:
 	var warden = game.flow.warden if is_instance_valid(game.flow.warden) else null
 	return warden != null and warden.has_method("staggered") and warden.staggered()
@@ -137,16 +106,11 @@ func step(delta: float) -> void:
 	_was_drawn = drawn_now
 
 
-# A ball contact glancing off a slate rim (the tint combat._tint() keeps) starts or restarts the
-# plating lesson: a contact's punch is the ball's speed, so more speed is the answer. A weapon's
-# glance, a Warden's untinted guard and a dish guard no speed beats (combat's "guarded") teach
-# nothing here.
 func _on_glanced(enemy: Node3D, _kind: String, punch: float, plating: float) -> void:
 	if game == null or not game.flow.in_play() or retired("plate") or not is_instance_valid(enemy):
 		return
 	if enemy.get("tint_state") != "slate":
 		return
-	# combat announces enemy_struck just before strike_deflected: _on_struck kept this hit.
 	var hit: Dictionary = _contact.get("hit", {}) if _contact.get("id", 0) == enemy.get_instance_id() else {}
 	if hit.is_empty() or bool(hit.get("guarded", false)):
 		return
@@ -170,8 +134,6 @@ func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
 		_glance = {}
 
 
-# A ball contact's settled hit, or {} for any other strike. Asked inside the strike's own
-# announce, combat's resolve() answers with that hit; `force` is the bus's figure for it.
 func _settled(enemy: Node3D, kind: String, force: float) -> Dictionary:
 	var spawner = game.ctx.spawner if game.get("ctx") != null else null
 	if spawner == null or not spawner.has_method("resolve") or not kind in spawner.CONTACT_KINDS:
@@ -179,12 +141,10 @@ func _settled(enemy: Node3D, kind: String, force: float) -> Dictionary:
 	return spawner.resolve(enemy, kind, force)
 
 
-# The three speed lines' screen geometry.
 func _streak(cam: Camera3D, ball_world: Vector3) -> Dictionary:
 	var target: Node3D = _glance["target"]
 	var ball := cam.unproject_position(ball_world)
 	var radius := ball.distance_to(cam.unproject_position(ball_world + cam.global_basis.x * Tuning.RADIUS))
-	# Away from the target along the ground, then onto the screen: the run-up a faster hit needs.
 	var ground := ball_world - target.global_position
 	ground.y = 0.0
 	var away := Vector2.DOWN
@@ -199,7 +159,6 @@ func _streak(cam: Camera3D, ball_world: Vector3) -> Dictionary:
 		"alpha": fade}
 
 
-# The four drive keys as bound on the keyboard, or the one stick glyph on a pad.
 func _drive_parts() -> Array:
 	var parts: Array = []
 	if Glyphs.is_pad():
@@ -211,7 +170,6 @@ func _drive_parts() -> Array:
 	return parts
 
 
-# Shows a lesson only where its anchor is in front of the camera and inside the view.
 func _add(id: String, world: Vector3, offset: Vector2, align: String, parts: Array) -> void:
 	var camera = game.get("camera")
 	if camera != null:
@@ -249,7 +207,6 @@ func _physics_process(delta: float) -> void:
 	step(delta)
 
 
-# Where each shown lesson's row starts on screen: [{at, parts}].
 func _placements() -> Array:
 	var out := []
 	var camera = game.get("camera") if game != null else null
@@ -260,7 +217,6 @@ func _placements() -> Array:
 		if cam.is_position_behind(lesson["world"]):
 			continue
 		if lesson["align"] == "streak":
-			# _process can run between physics ticks: the glance may have ended or its target gone.
 			if not _glance.is_empty() and is_instance_valid(_glance["target"]):
 				out.append(_streak(cam, lesson["world"]))
 			continue
@@ -297,7 +253,6 @@ func _draw() -> void:
 				x += UiFonts.width(word, WORD_SIZE) + GAP * 2.0
 
 
-# Comic speed lines trailing the ball: the middle one longest, each tapering to nothing at its tail.
 func _draw_streak(streak: Dictionary, live: Color) -> void:
 	var dir: Vector2 = streak["dir"]
 	var side := dir.orthogonal()

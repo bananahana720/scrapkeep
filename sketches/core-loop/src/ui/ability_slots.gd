@@ -5,14 +5,6 @@ const Bindings := preload("res://src/core/bindings.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const Icons := preload("res://src/ui/icons.gd")
 
-# The ability bar's one input (CONTRACTS, Ability slots): an ordered array of slot
-# records in the bar's order (design-v3/SKILL-BAR.md section 5): the numbered slots 1, 2
-# and 3 (weapon, special, line skill), then the chips (movement on Shift, smash on Ctrl).
-# The ball's ability state publishes them (player.abilities.slots(), W3) in its own SLOTS
-# order; this puts them in the bar's and names the icon and key the way the Icons contract
-# does: an icon that names no picture becomes ab_<pilot>_<role>, the pilot being the class
-# row's display name, a numbered slot's key is the key its select action holds (key_1 until
-# rebound), and a key label (Shift) becomes its key glyph id (key_shift).
 
 const FIELDS := ["id", "icon", "key", "cooldown_frac", "charges", "max_charges", "state"]
 const STATES := ["ready", "cooling", "active", "unavailable"]
@@ -43,7 +35,6 @@ func slots(game) -> Array:
 	if rack != null:
 		var record: Dictionary = rack.slot_record()
 		if not record.is_empty():
-			# The cap the active's verb shows now: F on the keyboard, D-pad down on the pad.
 			record["key"] = Glyphs.of("active")
 			out.append(record)
 	if valid(out):
@@ -71,11 +62,6 @@ static func normalized(record: Dictionary, def) -> Dictionary:
 	return out
 
 
-# Q's record for the HUD: {id, icon, key, fill, state} off player.abilities.ultimate(), the
-# fill 0 to 1 and the state charging, ready or active. This is the HUD's one door to the
-# ultimate meter. B3 (src/core/ultimate_meter.gd) fills player.abilities.meter; until it lands,
-# or with no player, the record reads empty and charging at 0, so the HUD draws an empty arc
-# and no Q.
 static func ultimate_of(game) -> Dictionary:
 	var empty := {"id": "", "icon": "", "key": Glyphs.of("ultimate"), "fill": 0.0, "state": "charging"}
 	var player = game.get("player") if game != null else null
@@ -90,12 +76,10 @@ static func ultimate_of(game) -> Dictionary:
 	return out
 
 
-# The meter's fill, 0 to 1: 0.0 while no ultimate meter exists yet (B3's seam).
 static func meter_fill(game) -> float:
 	return float(ultimate_of(game)["fill"])
 
 
-# The pilot's name in icon ids: sable, rivet, kest.
 static func pilot_of(def) -> String:
 	return String(def.display_name).to_lower() if def != null else ""
 
@@ -105,7 +89,6 @@ static func slot(id: String, icon: String, key: String, cooldown_frac: float, ch
 		"charges": charges, "max_charges": max_charges, "state": state, "gauge": 0.0}
 
 
-# The charging hold's fill, 0 to 1, for the reticle ring: the fullest gauge on the bar.
 static func gauge_of(list: Array) -> float:
 	var best := 0.0
 	for entry in list:

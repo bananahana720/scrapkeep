@@ -7,13 +7,6 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const Sandbox := preload("res://src/world/camp_sandbox.gd")
 
-# The camp's enemy picker, the page the dispatch box opens (camp_sandbox.gd owns the yard).
-# Every kind the pilot has met in a run is a plain row; a kind not yet met is a dim name with
-# a dark disc, and its note says where it turns up. A met row calls that enemy onto a grate in
-# the sandbox yard (up to Sandbox.CAP at a time); "Clear yard" sends them all home; Back, Esc
-# or pad B closes the page. The page reads and writes which kinds have been met through the
-# player's saved stats ("met.<kind>"), the one place this feature touches the save; the yard
-# itself never writes it.
 
 const MET_PREFIX := "met."
 const ROW_SIZE := Vector2(250.0, 40.0)
@@ -21,7 +14,6 @@ const COLUMNS := 3
 const LIST_H := 330.0
 const NOTE_FONT := UiTokens.BODY
 const ROW_GAP := 8
-# The note spans the grid exactly: three rows and the two gaps between them.
 const NOTE_W := (ROW_SIZE.x + ROW_GAP) * COLUMNS - ROW_GAP
 const NOTE_OPEN := "Pick a crew to send to the grate. Four at a time; the box does not argue."
 
@@ -69,8 +61,6 @@ func _init() -> void:
 		row.focus_entered.connect(_show_note.bind(kind))
 		_grid.add_child(row)
 		_rows[kind] = row
-	# The note keeps to the list's width (a line across the whole screen reads as one long
-	# line) and holds the height of the longest note, so the buttons never move under a focus.
 	_note = UiDraw.label(NOTE_FONT, Palette.SAND)
 	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_note.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -91,9 +81,6 @@ func _init() -> void:
 	refresh([], 0)
 
 
-# --- What the save holds -------------------------------------------------------------
-
-# The kinds with a "met" mark in these stats. A null save has met nothing.
 static func met_kinds(saved) -> Array:
 	var out: Array = []
 	if saved == null:
@@ -104,12 +91,10 @@ static func met_kinds(saved) -> Array:
 	return out
 
 
-# The kinds this game's save has met.
 static func met_of(game) -> Array:
 	return met_kinds(game.ctx.profile) if game != null and game.ctx != null else []
 
 
-# True the first time a kind is marked met. Saves only when the save can be written.
 static func mark_met(saved, kind: String) -> bool:
 	if saved == null or kind == "" or saved.stat(MET_PREFIX + kind) > 0.0:
 		return false
@@ -119,8 +104,6 @@ static func mark_met(saved, kind: String) -> bool:
 	return true
 
 
-# Marks every enemy a run spawns as met. The sandbox spawns without the bus fact, so a
-# called enemy never marks itself.
 static func watch(game) -> void:
 	if game == null or game.events == null or game.has_meta("met_watch"):
 		return
@@ -130,9 +113,6 @@ static func watch(game) -> void:
 			mark_met(game.ctx.profile, kind))
 
 
-# --- The page ----------------------------------------------------------------------------
-
-# The rows for these met kinds, in picker order: {kind, name, met, where}.
 static func reading(met: Array) -> Array:
 	var out: Array = []
 	for kind in Sandbox.kinds():
@@ -195,7 +175,6 @@ func note_text() -> String:
 	return _note.text
 
 
-# The yard as [live, cap]: the pips' filled and total count.
 func yard_pips() -> Vector2i:
 	return Vector2i(_live.live, _live.cap)
 
@@ -225,7 +204,6 @@ func _show_note(kind: String) -> void:
 	_note.add_theme_color_override("font_color", color)
 
 
-# A kind's note: where it turns up when not met, that the yard is full, or its own line.
 static func _note_for(kind: String, met: bool, full: bool) -> String:
 	if not met:
 		return "Not met yet. %s" % Sandbox.where_met(kind)
@@ -234,7 +212,6 @@ static func _note_for(kind: String, met: bool, full: bool) -> String:
 	return "%s. %s" % [Sandbox.name_of(kind), Sandbox.line_of(kind)]
 
 
-# The most lines any note the page can show takes, wrapped at the note's width.
 static func _most_note_lines() -> int:
 	var font := UiFonts.bold()
 	var tallest := font.get_multiline_string_size(NOTE_OPEN, HORIZONTAL_ALIGNMENT_CENTER, NOTE_W, NOTE_FONT).y
@@ -244,7 +221,6 @@ static func _most_note_lines() -> int:
 	return maxi(1, roundi(tallest / font.get_height(NOTE_FONT)))
 
 
-# The yard as one pip a slot: amber filled, slate empty (a count drawn, not worded).
 class YardPips extends Control:
 	const SIDE := 16.0
 	const GAP := 8.0
@@ -266,8 +242,6 @@ class YardPips extends Control:
 			draw_circle(Vector2(SIDE * 0.5 + i * (SIDE + GAP), size.y * 0.5), SIDE * 0.5, Palette.AMBER if i < live else Palette.SLATE)
 
 
-# One enemy kind in the list: a disc and the name. A kind not yet met is slate, with a dark
-# disc as its silhouette; a kind the yard cannot take right now is edged in copper.
 class Row extends Button:
 	var kind := ""
 	var met := false

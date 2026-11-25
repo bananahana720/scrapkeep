@@ -82,7 +82,6 @@ func _init() -> void:
 	_popup.add_child(panel)
 	var column := VBoxContainer.new()
 	panel.add_child(column)
-	# Back with the Esc keycap, as the other pages do; the button keeps the mouse able to close.
 	var close := ChoiceButton.new("back", "key_esc", "Back")
 	close.name = "Back"
 	close.pressed.connect(_popup.hide)
@@ -117,7 +116,6 @@ func popup_visible() -> bool:
 	return _popup.visible
 
 
-# Esc (ui_cancel) closes the popup; returns whether it did.
 func close_on_key(event: InputEvent) -> bool:
 	if _popup.visible and event.is_action_pressed("ui_cancel"):
 		_popup.hide()
@@ -133,9 +131,6 @@ func visible_text() -> String:
 	return "\n".join(_rows.find_children("*", "Label", true, false).map(func(label): return label.text))
 
 
-# kept: the shot's bits (Build.shot_bits), each drawn as its chip; dropped: the bits held past
-# the cap (Build.dropped_shot_bits), each its chip struck through after them, so a struck chip
-# sits beside the whole ones it lost to. No words (design-v3/ABILITY-MUTATIONS.md B2).
 func show_build(held: Array, loadout := {}, dropped: Array = [], kept: Array = []) -> void:
 	_data = describe(held)
 	_data["shot_bits"] = kept.duplicate()
@@ -180,7 +175,6 @@ func _label(words: String) -> Label:
 	return label
 
 
-# One part as one row: its icon, its words, and pips where the part has a copy cap.
 func _part_row(row: Dictionary) -> void:
 	var box := HBoxContainer.new()
 	box.name = "Part_" + String(row["id"])
@@ -201,7 +195,6 @@ func _part_row(row: Dictionary) -> void:
 		var pips := PipRow.new(int(row["pips"]["filled"]), int(row["pips"]["total"]))
 		pips.name = "Pips"
 		box.add_child(pips)
-		# Copies past the cap: the full row, then how many more are held.
 		if int(row["over"]) > 0:
 			var extra := _label("+%d" % int(row["over"]))
 			extra.name = "Over"
@@ -209,14 +202,11 @@ func _part_row(row: Dictionary) -> void:
 			extra.add_theme_font_size_override("font_size", UiTokens.CAPTION)
 			box.add_child(extra)
 	elif row["at_cap"]:
-		# A part with no copy count that has reached its ceiling: one filled pip, the full-row look.
 		var mark := PipRow.new(1, 1)
 		mark.name = "CapMark"
 		box.add_child(mark)
 
 
-# One shot bit as a chip: a ring and a glyph in the bit's ShotBits colour, struck through
-# corner to corner when the bit is held past the cap. Shape and colour carry it, no words.
 class BitChip extends Control:
 	var bit := ""
 	var struck := false
@@ -260,7 +250,6 @@ class BitChip extends Control:
 			draw_line(c + Vector2(-r, r) * 0.85, c + Vector2(r, -r) * 0.85, Palette.SAND, 2.5)
 
 
-# Filled and empty round pips: how many copies are held out of how many count.
 class PipRow extends Control:
 	var filled := 0
 	var total := 0
@@ -281,8 +270,6 @@ class PipRow extends Control:
 				draw_arc(at, PIP - 1.0, 0.0, TAU, 20, Palette.SAND, 1.5)
 
 
-# SQ11: the weapon's attachments in words. How many it holds out of its most, each fitted
-# attachment, and at the top tier the second mode.
 static func describe_attachments(loadout: Dictionary) -> String:
 	var tier := int(loadout.get("tier", 1))
 	var limits: Array = Attachments.TIER_COUNT[tier]
@@ -297,7 +284,6 @@ static func describe_attachments(loadout: Dictionary) -> String:
 	return words
 
 
-# What a tier gives a weapon, shown before anything is equipped.
 static func preview_tier(weapon_id: String, tier: int) -> String:
 	var limits: Array = Attachments.TIER_COUNT[clampi(tier, 1, Attachments.TOP_TIER)]
 	var words := "%s %s holds %s attachments" % [_weapon_words(weapon_id), Attachments.TIER_WORDS[clampi(tier, 1, Attachments.TOP_TIER)], _range_words(limits)]
@@ -315,8 +301,6 @@ static func _weapon_words(weapon_id: String) -> String:
 	return weapon_id.capitalize()
 
 
-# SG3, comps/gunfire/elements-and-fusion.md:69. Totals come from the same
-# sheet and effect fold as combat; the other game's resistance number is not used.
 static func describe(held: Array) -> Dictionary:
 	var sheet = BuildSheet.from_parts(held)
 	var effects = ItemEffects.new(null)
@@ -349,7 +333,6 @@ static func describe(held: Array) -> Dictionary:
 		var d = Parts.def(id)
 		if d == null:
 			continue
-		# SG15: a levelled part reads as its held level's numbers, once.
 		var levelled: bool = not d.levels.is_empty()
 		if levelled:
 			d = Parts.def_at(id, Parts.level_of(id, held))
@@ -374,7 +357,6 @@ static func describe(held: Array) -> Dictionary:
 	return {"pools": pools, "parts": rows}
 
 
-# A pool row says only what changed, as the stat and its signed change ("Weapon damage +12%").
 static func _pool(out: Dictionary, key: String, pool: String, total: float, cap := -1.0) -> void:
 	var neutral := 1.0 if pool == "multiplying" else 0.0
 	var change := "" if is_equal_approx(total, neutral) else _change(key, pool, total)
@@ -382,7 +364,6 @@ static func _pool(out: Dictionary, key: String, pool: String, total: float, cap 
 		"text": "" if change == "" else "%s %s" % [_stat_words(key), change]}
 
 
-# The player's number for a total: a multiplier reads as its percent change, a share as a percent.
 static func _change(key: String, pool: String, total: float) -> String:
 	if pool == "multiplying":
 		return _signed((total - 1.0) * 100.0, "%")
@@ -400,8 +381,6 @@ static func _signed(value: float, unit: String) -> String:
 	return ("+" if value >= 0.0 else "") + shown + unit
 
 
-# One part, one plain row: its name, a count when above one and no pips carry it, then
-# what it gives, kept within ROW_WORDS words. A part with no number says its own line.
 static func _part_words(d: Resource, copies: int, bonuses: Array) -> String:
 	var head: String = d.display_name if copies <= 1 else "%s x%d" % [d.display_name, copies]
 	var given: Array = []
@@ -439,7 +418,6 @@ static func _sheet_cap(d: Resource, per: float, multiplying: bool) -> float:
 	return pow(per, int(d.stack_cap)) if multiplying else per * int(d.stack_cap)
 
 
-# A levelled part's held level, folded once, against its top level's numbers as the cap.
 static func _level_bonuses(d: Resource, id: String) -> Array:
 	var top: Resource = Parts.def_at(id, PartDef.MAX_LEVEL)
 	var out := {}

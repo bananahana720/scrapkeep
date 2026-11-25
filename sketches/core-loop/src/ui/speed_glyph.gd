@@ -4,13 +4,10 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
-# The speed tier as chevrons: none lit at walk, one at cruise, two fast, three blazing,
-# each tier in its own SpeedTier colour, so speed reads by count before colour.
 
 const CHEVRON := float(UiTokens.GAP_XL)
 const STEP := float(UiTokens.GAP_L)
 const SLOTS := 3
-# An unlit chevron: the words colour, faint enough that lit ones count at a glance.
 const UNLIT_ALPHA := 0.22
 
 var tier := 0

@@ -1,12 +1,5 @@
 extends RefCounted
 
-# Tally's upgrade tree: book every contact. Heap order as in rivet.gd. The left half stamps
-# and feeds the ledger (Ledger); the right half drives the surge and the plate (Flywheel).
-# Depth-2 names are DESIGN-V3's (Tally's program cards, D13).
-# Indices 6 and 14 take procs, not pressure charges (PLAN B): pressure stays 3, 4 with the shop part.
-# Wave P-C (pilots/tally.md section 3): every depth-3 node keeps its op and swaps Q to Audit Trail
-# or Flywheel Throw (siblings always one of each); every depth-4 node keeps its op and turns one
-# set-piece knob, Tally's own ult_settle among them. Keys stay on the slot the kept op touches.
 
 const NODES := [
 	{"id": "tl_audit_stamp", "name": "Audit Punch", "effect": "Card-punch slams send out a shockwave", "key": "smash",
@@ -100,9 +93,6 @@ const NODES := [
 ]
 
 
-# World-one Depth-1 opposite-feel keystones (PILOT-CADENCE.md §§6.1-6.2, E2-09).
-# Left root: Short Tap (tl_through_feed stays at slot 2; tl_audit_stamp moves to slot 3 in place of tl_line_feed).
-# Right root: Stacked Load (tl_steam_bank moves to slot 4 in place of tl_spring_vent; tl_corner_plate stays at slot 5).
 const PETTY_CASH := {"id": "tl_petty_cash", "name": "Short Tap", "effect": "Half cost, half hit, faster beat spikes.", "key": "weapon",
 	"icon": "ab_tally_weapon", "tags": ["close", "sustain"],
 	"pattern": {"ledger_reader": {"set": {"cast_cost": 0.5, "floor_s": 0.25, "window_s": [0.25, 0.45], "refund": 0.25},

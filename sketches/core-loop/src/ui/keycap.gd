@@ -4,10 +4,6 @@ const Icons := preload("res://src/ui/icons.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
-# A drawn key, named by its key glyph id (key_f, key_lmb, key_1). The ability bar, the
-# contextual glyphs, the callouts, the restart meter and the menu buttons all draw keys
-# here, so a key looks the same wherever it asks. A mouse button draws its SVG; every
-# other key is a drawn keycap (a charcoal cap with a thicker bottom lip and its label).
 
 const MOUSE := ["key_lmb", "key_rmb"]
 const LABELS := {"key_ctrl": "Ctrl", "key_space": "Space", "key_shift": "Shift", "key_tab": "Tab",
@@ -15,11 +11,8 @@ const LABELS := {"key_ctrl": "Ctrl", "key_space": "Space", "key_shift": "Shift",
 	"pad_lt": "LT", "pad_rt": "RT", "pad_ls": "L", "pad_rs": "R", "pad_start": "Start",
 	"key_comma": ",", "key_period": ".", "key_slash": "/", "key_semicolon": ";",
 	"pad_dl": "D-pad left", "pad_du": "D-pad up", "pad_dr": "D-pad right", "pad_dd": "D-pad down"}
-# Pad caps drawn round: the face buttons and the sticks. The shoulders, triggers and Start
-# are rounded caps like the keys.
 const PAD_ROUND := ["pad_a", "pad_b", "pad_x", "pad_y", "pad_ls", "pad_rs"]
 const PAD := 7.0
-# D-pad caps are a picture, not letters: a dim cross with the pressed arm lit, pointing its way.
 const DPAD := {"pad_dl": Vector2.LEFT, "pad_du": Vector2.UP, "pad_dr": Vector2.RIGHT, "pad_dd": Vector2.DOWN}
 
 
@@ -31,14 +24,10 @@ static func from_svg(key: String) -> bool:
 	return is_mouse(key)
 
 
-# The letters on the cap: key_f reads F, key_space reads Space.
 static func label(key: String) -> String:
 	return LABELS.get(key, key.trim_prefix("key_").to_upper())
 
 
-# A cap's letters are words, so they are never smaller than the smallest type step. A caller
-# that asks for a cap too short to hold them gets one that does (cap_height): the letters plus
-# ROOM for the cap's top and bottom edges. Taller caps scale their letters by LETTER.
 const LETTER := 0.58
 const ROOM := 5.0
 const MIN_H := UiTokens.CAPTION + ROOM
@@ -63,15 +52,12 @@ static func size_of(key: String, height := 24.0) -> Vector2:
 	return Vector2(maxf(height, w + PAD * 2.0), height)
 
 
-# Draws the key centred on `at` in `color` and returns its rect.
 static func draw(canvas: CanvasItem, at: Vector2, key: String, color: Color, height := 24.0) -> Rect2:
 	var size := size_of(key, height)
 	var rect := Rect2(at - size * 0.5, size)
 	if not is_mouse(key) and not DPAD.has(key):
 		height = cap_height(height)
-	# Only the mouse glyphs draw from their SVG. Every key SVG spells its letter with
-	# <text>, which Godot's SVG import drops, so a key drawn from its file came out as a
-	# blank cap (seen in the alpha captures on F, 1, 2, N, Q and Tab).
+	# Godot's SVG importer drops <text> elements, so key glyphs draw in code instead of SVG.
 	if from_svg(key):
 		var side := height
 		canvas.draw_texture_rect(Icons.texture(key), Rect2(at - Vector2(side, height) * 0.5, Vector2(side, height)), false, Icons.tint(key, color))
@@ -95,7 +81,6 @@ static func draw(canvas: CanvasItem, at: Vector2, key: String, color: Color, hei
 
 
 static func _draw_dpad(canvas: CanvasItem, at: Vector2, lit: Vector2, color: Color, height: float) -> void:
-	# A thin, faint cross and one wide, full-ink arm, so the lit way reads at the bar's small caps.
 	var arm := height * 0.18
 	var lit_arm := height * 0.32
 	var reach := height * 0.38
@@ -107,6 +92,5 @@ static func _draw_dpad(canvas: CanvasItem, at: Vector2, lit: Vector2, color: Col
 	canvas.draw_rect(Rect2(at.min(tip) - across * lit_arm * 0.5, lit.abs() * reach + across * lit_arm), color)
 
 
-# What a player reads off the key: its label, or nothing for a mouse glyph or a D-pad picture.
 static func words(key: String) -> PackedStringArray:
 	return PackedStringArray() if is_mouse(key) or DPAD.has(key) else PackedStringArray([label(key)])

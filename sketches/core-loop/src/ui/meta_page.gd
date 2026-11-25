@@ -9,12 +9,6 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
-# The between-run head starts (SG12), in table order (MetaOptions.ROWS): the level line on
-# top, then one row per node. An opened node shows an amber star, its name and what it gives;
-# a closed one a slate ring, its name, what it gives and, as its note, the one-run thing that
-# opens it (its grant row's text). Nothing is bought here, so no row shows a price. Every word
-# is a table row. Back sits on Esc. The achievements page's colours and shapes, so a star means
-# the same thing on both pages.
 
 const ROW_WIDTH := 640.0
 
@@ -55,7 +49,6 @@ func _init() -> void:
 	add_child(back)
 
 
-# Rebuilds the page from the saved profile.
 func refresh(profile, sitting := false) -> void:
 	_profile = profile
 	_sitting = sitting
@@ -123,7 +116,6 @@ static func level_text_for(profile) -> String:
 	return "Head starts: %d of %d" % [opened, MetaOptions.ids().size()]
 
 
-# The words one row shows, for a test and for the row itself.
 static func reading(id: String, profile) -> Dictionary:
 	var data := MetaOptions.row(id)
 	var open: bool = profile != null and profile.has_option(id)

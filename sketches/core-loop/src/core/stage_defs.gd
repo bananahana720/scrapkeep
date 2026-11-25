@@ -2,14 +2,11 @@ extends RefCounted
 
 const Worlds := preload("res://src/core/worlds.gd")
 
-# World one uses the alpha's two posture rows and Brindle. Re-export the constants
-# so row tuning cannot drift between the default and explicitly selected alpha.
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const BOSS := AlphaDefs.BOSS
 const COUNT := AlphaDefs.COUNT
 const DEFS := AlphaDefs.DEFS
 
-# Each opt-in world adds a step; Director clamps each quantity at its own limit.
 const RUN_TIER_DIAL_STEPS := {"damage": 0.1, "aggression": 0.1}
 
 
@@ -21,7 +18,6 @@ static func is_last(stage: int) -> bool:
 	return stage >= COUNT
 
 
-# World helpers (worlds.gd): which world a stage belongs to and where it ends.
 static func world_of(stage: int) -> int:
 	return Worlds.world_of(DEFS, stage)
 
@@ -50,8 +46,6 @@ static func is_run_last(stage: int) -> bool:
 	return Worlds.is_run_last(DEFS, stage)
 
 
-# 2026-10-04: the default table takes the whole alpha ruleset. Every helper and constant below
-# answers from AlphaDefs so the two tables cannot drift.
 static func synergy_in_play(synergy_id: String) -> bool:
 	return AlphaDefs.synergy_in_play(synergy_id)
 

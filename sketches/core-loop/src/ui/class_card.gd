@@ -15,33 +15,12 @@ const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const MetaOptions := preload("res://src/core/meta_options.gd")
 
-# A class choice that sells its pilot. At rest: the hero shell turning on a plinth in
-# the class colour, the class emblem and name, the fantasy line, a
-# difficulty mark, and the pilot's keys as ability icons over keycaps. Hover or focus
-# opens it: the card lifts, the others step back, the preview plays the signature
-# move, and each key gains its two words and the role line fades in. Those words show
-# only on the open card, so the screen stays calm until you ask about one pilot.
-# Colour and shape come from the class row, keys and icons from class_kit.gd. The frame
-# is scrap (scrap_frame.gd): a riveted plate taped at the top, the role line on a stamped
-# tag, keycaps from mismatched sets; the words, icons and letters stay crisp.
-#
-# A locked pilot (set_locked) keeps the card clickable but wears a slate plate, a dimmed
-# grey preview and a lock where the role glyph sits; its hint, the achievement that
-# unlocks it, shows with the other details when the card is open, and a click shakes it.
-# An unlocked card also shows its paint (bind_profile): a swatch and name over the
-# preview's foot, cycled by a click on the swatch or P while the card is open. The cycle
-# holds only paints this profile owns, plus none, and each pick is saved.
-#
-# The mouse opens a card by hovering it (hover takes focus, so there is one open card).
-# The arrows move focus and Enter or Space picks it; the number keys pick at once
-# (game._screen_key). With nothing focused, the first arrow focuses a card.
 
 const KEY_H := 28.0
-const MIN_ICON_SIDE := 28.0  # the smallest a key icon may shrink to at six cards (roster ruling R-B)
+const MIN_ICON_SIDE := 28.0
 const HEIGHT := 648.0
 const PAD := 18.0
 const PREVIEW_H := 260.0
-# A row too tall for the card takes height from the preview, never below this.
 const PREVIEW_MIN := 150.0
 const LIFT := 0.06
 const BACK := 0.04
@@ -52,7 +31,6 @@ const MOUSE_CAP := 36.0
 const PIP := 9.0
 const CHIP_ICON := 24.0
 const CHIP_CAP := 20.0
-# Two lines of the smallest type step, on the spacing scale.
 const TRADEOFF_H := 48.0
 const WORD_SIZE := UiTokens.CAPTION
 const SHAKE := 0.25
@@ -68,7 +46,6 @@ void fragment() {
 """
 
 
-# A small padlock in the role glyph's slot.
 class LockGlyph extends Control:
 	var tint := Color.WHITE
 
@@ -81,8 +58,6 @@ class LockGlyph extends Control:
 		draw_rect(Rect2(w * 0.14, h * 0.48, w * 0.72, h * 0.44), tint)
 
 
-# The square paint swatch; a click on it cycles the paint. The square draws at FACE px in the middle of a
-# TARGET px control, so the click target meets the 44 px floor (UA-09) without a bigger square.
 class Swatch extends Control:
 	const FACE := 26.0
 	const TARGET := 44.0
@@ -100,12 +75,10 @@ class Swatch extends Control:
 			clicked.emit()
 			accept_event()
 
-# Reduced motion (Game.set_reduced_motion keeps it current): a locked card no longer shakes.
 static var reduced_motion := false
 
 var def: Resource
 var key := ""
-# How open the card is, 0 to 1, eased toward has_focus().
 var openness := 0.0
 var preview
 var _details: Array[CanvasItem] = []
@@ -172,7 +145,6 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	_build_overlay(width, color)
 	box.add_child(_name_row(color, width))
 	var role := _tagged(_text(ClassKit.role_line(def), UiTokens.CAPTION, Color(Palette.SAND, 0.8)), color, _serial + 1)
-	# A tag wider than the card wraps at the card's inner width instead of widening the column.
 	if role.get_combined_minimum_size().x > width - 2.0 * PAD:
 		role.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		role.custom_minimum_size.x = width - 2.0 * PAD
@@ -180,7 +152,6 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	box.add_child(role)
 	_details.append(role)
 	var line := _text(ClassKit.fantasy(def), UiTokens.BODY, Palette.SAND)
-	# Two lines tall on every card, so the key rows line up across the three.
 	line.custom_minimum_size = Vector2(0.0, 58.0)
 	line.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_line = line
@@ -197,10 +168,6 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	tradeoff_slot.add_child(_tradeoff)
 	_tradeoff.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_details.append(_tradeoff)
-	# Two rows (design-v3/SKILL-BAR.md section 5): the bar as it plays (1, 2, 3, Q), then the
-	# chips (RMB, Shift, Ctrl) and the Space extras, one short line of icons. The keycaps are the
-	# same on every card, so they read on the open card only, beside the words; the icons sell
-	# the pilot at rest.
 	var keys := VBoxContainer.new()
 	keys.alignment = BoxContainer.ALIGNMENT_BEGIN
 	keys.add_theme_constant_override("separation", 4)
@@ -230,17 +197,14 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	_apply()
 
 
-# The bar row's keys and the chip row's, then any Space extra, as {key, icon, words}.
 func keys_shown() -> Array:
 	return _cells.map(func(c): return {"key": c["key"], "icon": c["icon"], "words": c["words"]})
 
 
-# The keys of each row: [[the bar], [the chips and extras]].
 func key_rows() -> Array:
 	return _rows_shown.duplicate(true)
 
 
-# The key cells, both rows, for layout checks.
 func key_cells() -> Array:
 	var out := []
 	if _keys_row == null:
@@ -262,8 +226,6 @@ func fantasy_label() -> Label:
 	return _line
 
 
-# True once the containers have given the column its width. Before that first sort a wrapped
-# line measures one letter wide, so its height is no height to level a row by.
 func laid_out() -> bool:
 	return _box == null or (_box.size.x > 1.0 and _line.size.x > 1.0)
 
@@ -272,16 +234,12 @@ func tradeoff_text() -> String:
 	return _tradeoff.text if _tradeoff != null else ""
 
 
-# How far the built column runs past the card's floor; zero when it fits.
 func overflow() -> float:
 	if _box == null:
 		return 0.0
 	return maxf(0.0, _box.get_combined_minimum_size().y - (HEIGHT - (PAD + KEY_H + 8.0) - PAD))
 
 
-# The preview gives up height so the column fits. The row passes one value to every card
-# so every key row ends on the same bottom edge (the rows start at different heights because
-# the role and fantasy text above them wrap differently).
 func shrink_preview(by: float) -> void:
 	if preview == null or by <= 0.0:
 		return
@@ -300,8 +258,6 @@ func is_open() -> bool:
 	return has_focus()
 
 
-# Back to how a new card stands: closed, unshaken, full size and colour, its pilot seated and the look let go. A card
-# kept for the next pilot select (screens.gd's deck) is reset as it leaves the screen.
 func reset() -> void:
 	openness = 0.0
 	_shake = 0.0
@@ -315,11 +271,6 @@ func words() -> String:
 	return "%s, %s. %s" % [def.display_name, ClassKit.role_line(def), ClassKit.fantasy(def)] if def != null else ""
 
 
-# The foot of the preview: the locked hint, or the paint swatch and name. Both are card
-# details, so they read only on the open card and the calm screen keeps its word count.
-# The hint sits on a plate whose bottom edge is pinned to the preview's foot and grows upward
-# over the greyed shell as it wraps, so at six cards its four or five lines never reach the
-# name and the tag below the preview (PF-40).
 func _build_overlay(width: float, color: Color) -> void:
 	var top := PAD + KEY_H + 8.0 + PREVIEW_H - 40.0
 	var span := Vector2(width - 2.0 * PAD, 34.0)
@@ -333,7 +284,6 @@ func _build_overlay(width: float, color: Color) -> void:
 	plate.content_margin_bottom = 3.0
 	_hint.add_theme_stylebox_override("normal", plate)
 	_hint.add_theme_constant_override("line_spacing", -2)
-	# The plate spans the card's face, not the padded column, so a six-card hint wraps to fewer lines.
 	_hint.position.x = HINT_INSET
 	_hint.size.x = width - 2.0 * HINT_INSET
 	_hint.visible = false
@@ -389,20 +339,16 @@ func _build_overlay(width: float, color: Color) -> void:
 	_details.append(_alt_row)
 
 
-# The hint's plate ends HINT_GAP above the preview's foot; the plate's height is the wrapped
-# text's own, grown upward (grow_vertical), so a longer hint covers more shell, never the name.
 func _seat_hint() -> void:
 	var foot := PAD + KEY_H + 8.0 + _preview_h - HINT_GAP
 	_hint.offset_bottom = foot
 	_hint.offset_top = foot - 34.0
 
 
-# The locked hint's plate as drawn, in global coordinates (zero size while it is hidden).
 func hint_rect() -> Rect2:
 	return _hint.get_global_rect() if _hint.visible else Rect2()
 
 
-# A locked pilot's card: still clickable (the gate refuses it), but slate, grey and quiet.
 func set_locked(is_locked: bool, hint := "") -> void:
 	locked = is_locked
 	hint_text = hint
@@ -440,7 +386,6 @@ func set_locked(is_locked: bool, hint := "") -> void:
 	_apply()
 
 
-# The profile whose owned paints and alt loadouts this card may offer. The preview wears the equipped paint.
 func bind_profile(profile, sitting := false) -> void:
 	_profile = profile
 	_sitting = sitting
@@ -525,7 +470,6 @@ func _refresh_alt_cells() -> void:
 			(cell["label_node"] as Label).text = words if gap < 0 else words.left(gap) + "\n" + words.substr(gap + 1)
 
 
-# Paint ids this profile may wear on this pilot, none first: a starter row or a saved one.
 func paint_options() -> Array:
 	var out: Array = [""]
 	for id in Cosmetics.for_slot("paint", def.id):
@@ -534,8 +478,6 @@ func paint_options() -> Array:
 	return out
 
 
-# Whether the card draws a paint row: the profile owns a paint beyond the starters, or one is worn.
-# A fresh profile has nothing to choose here (the customize page still lists the starters).
 func owns_paint() -> bool:
 	if _profile == null or def == null:
 		return false
@@ -547,12 +489,10 @@ func owns_paint() -> bool:
 	return false
 
 
-# The equipped paint id, or "" when none or one this profile does not own.
 func paint_shown() -> String:
 	return CosmeticWear.worn(_profile, def.id, "paint")
 
 
-# The next owned paint (or none), equipped and saved.
 func cycle_paint() -> String:
 	if locked or not owns_paint():
 		return ""
@@ -579,10 +519,6 @@ func _show_paint() -> void:
 	_swatch.queue_redraw()
 
 
-# What a locked pilot's card says: the class row's unlock label, with the lifetime count when
-# the rule's achievement row needs more than one; a def made without unlock reads its id's row.
-# Empty for a starter or a pilot with no label,
-# so the card says only "Locked" and never something false. progress may be null (count 0).
 static func unlock_hint(def, progress) -> String:
 	if def.starter:
 		return ""
@@ -626,8 +562,6 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
-# Look closer at the pilot (class_preview.gd): right-drag or the right stick orbits, the wheel
-# zooms while the right button is held. Locked pilots can be looked at too.
 func _look_input(event: InputEvent) -> bool:
 	if preview == null or not preview.has_method("look_drag"):
 		return false
@@ -671,8 +605,6 @@ func _name_row(color: Color, width: float) -> HBoxContainer:
 	_lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lock.visible = false
 	row.add_child(_lock)
-	# The name never wraps: it takes the heading step, or the label step when that does not fit
-	# beside the 28 px glyph and gap.
 	var font_size := UiTokens.HEADING
 	if UiFonts.bold().get_string_size(def.display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x + 38.0 > width - 2.0 * PAD:
 		font_size = UiTokens.LABEL
@@ -683,9 +615,6 @@ func _name_row(color: Color, width: float) -> HBoxContainer:
 	return row
 
 
-# Cells share the row evenly while every keycap fits its share. When the caps outgrow it
-# (six cards), the cells without a wide cap narrow first, then every cap steps down 5%
-# (a lettered cap stops at Keycap.MIN_H, the height that still holds readable letters).
 func _fit_cells(records: Array, cell_w: float, room: float) -> Dictionary:
 	var scale := 1.0
 	while scale > 0.5 and _caps_width(records, scale, 0.0) > room:
@@ -707,9 +636,6 @@ func _cap_height(key_name: String) -> float:
 	return MOUSE_CAP if Keycap.is_mouse(key_name) else CELL_CAP
 
 
-# A chip: a small icon over, on the open card, a small keycap, and no words, so the row under
-# the bar stays short and the six-card row keeps its floor (roster_test R8). The chips are the
-# shared grammar (harpoon, go verb, smash); the field notes' Keys page names them in words.
 func _chip(record: Dictionary, color: Color, _cap_scale: float) -> VBoxContainer:
 	var cell := VBoxContainer.new()
 	cell.add_theme_constant_override("separation", UiTokens.GAP_XS)
@@ -747,15 +673,12 @@ func _cell(record: Dictionary, color: Color, width: float, cap_scale := 1.0) -> 
 	cell.add_child(icon)
 	var cap := KeycapView.new(record["key"], ScrapFrame.wear(color, _serial + record["key"].hash()), _cap_height(record["key"]) * cap_scale)
 	cap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	# Letter caps sit in the mouse cap's height, so every key's words start on one line.
 	cap.custom_minimum_size.y = maxf(cap.custom_minimum_size.y, MOUSE_CAP)
 	cell.add_child(cap)
 	_details.append(cap)
-	# Every key's words stack on two lines, so no label wraps on its own and the row reads even.
 	var words: String = record["words"]
 	var gap := words.find(" ")
 	var label := _text(words if gap < 0 else words.left(gap) + "\n" + words.substr(gap + 1), WORD_SIZE, Palette.SAND)
-	# The words hold the type scale's smallest step; a word wider than its cell wraps, clipped at two lines.
 	label.custom_minimum_size.y = UiFonts.bold().get_height(WORD_SIZE) * 2.0
 	label.max_lines_visible = 2
 	cell.add_child(label)
@@ -776,8 +699,6 @@ func _text(value: String, font_size: int, color: Color) -> Label:
 	return label
 
 
-# The preview ends on a flat rule in the plate's line colour (no gradients), so the words below sit
-# on the card's own ground.
 func _fade(width: float) -> ColorRect:
 	var rule := ColorRect.new()
 	rule.color = UiTokens.LINE
@@ -787,8 +708,6 @@ func _fade(width: float) -> ColorRect:
 	return rule
 
 
-# The key art's sky: two flat bands behind the sphere, a lit sky over a warm floor tinted by the
-# pilot's colour. Flat fills only (no gradients); the opened card lifts the floor's tint.
 func _backdrop(tint: Color) -> void:
 	var top := PAD + KEY_H + 8.0
 	var rect := Rect2(Vector2(PAD, top), Vector2(size.x - 2.0 * PAD, _preview_h))
@@ -799,16 +718,10 @@ func _backdrop(tint: Color) -> void:
 	draw_rect(Rect2(rect.position + Vector2(0.0, mid), Vector2(rect.size.x, rect.size.y - mid)), warm)
 
 
-# A Keeper plate (LEGIBILITY.md section 14.3): every state shares the card's serial, so the plate
-# keeps its cuts, rivets, tape and lean when it lights up. The edge is the pilot's colour, the one
-# "yours" accent.
 func _frame(edge: Color, width: int, fill := true) -> StyleBox:
 	return keeper_plate(edge, _serial, width, fill)
 
 
-# The Keeper's plate under a card (this one and the tree pick's): its serial's cuts and lean, the
-# given edge and a strip of tape along the top. Without fill it is a focus ring drawn over the normal
-# plate: the edge alone, so the plate's rivets, dots and tape are not drawn twice.
 static func keeper_plate(edge: Color, serial: int, width: int, fill := true) -> StyleBox:
 	var box = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
 	box.border_color = edge
@@ -822,7 +735,6 @@ static func keeper_plate(edge: Color, serial: int, width: int, fill := true) -> 
 	return box
 
 
-# A label hugging its words on a stamped tag edged in the class colour.
 func _tagged(label: Label, color: Color, serial: int) -> Label:
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -837,7 +749,6 @@ func _on_hover() -> void:
 		grab_focus()
 
 
-# With no card focused, the first arrow or accept lands on a card instead of nowhere.
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_visible_in_tree() or get_index() != 0 or get_viewport().gui_get_focus_owner() != null:
 		return
@@ -864,7 +775,6 @@ func _process(delta: float) -> void:
 func _apply() -> void:
 	var k := smoothstep(0.0, 1.0, openness)
 	var rival := _rival_open()
-	# From the middle, so an open card grows by half its lift into each gap: from the foot it rose into the pilot line.
 	pivot_offset = size * 0.5
 	scale = Vector2.ONE * (1.0 + LIFT * k - (BACK if rival else 0.0))
 	modulate = Color(0.62, 0.62, 0.62) if rival else Color.WHITE

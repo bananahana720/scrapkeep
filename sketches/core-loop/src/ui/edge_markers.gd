@@ -12,113 +12,46 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 
-# Edge markers: while the Warden (or the beacon, once it has no Warden) or an open
-# reward gate is off screen, a chevron on the edge of the play view points at it, with
-# its objective glyph behind. Closer targets draw bigger. No words: the glyph is the
-# objective plate's own (objectives.gd, through objective_id) and the colour is the
-# target's event_kinds row.
-#
-# While the Warden's clamp is shut (the plate's "Clamp shut: break the crews" row), one more
-# chevron points at the crew nearest to lighting a pip, in the fleet's hazard colour with the
-# plate's glyph; the Warden's marker keeps the Warden's glyph then.
-#
-# One more kind (SQ16): a discovered hidden-pocket door (a valve's door or a cracked wall)
-# shows an amber chevron while the ball is inside POCKET_RANGE of it with a clear ray to it.
-# PARK.md:265 sets the range at 240 m (sight_ok), never the comps note's 60 m (memo 2, row 29a).
-# It is a pointer, not a map: no panel, no list, and no marker once the door is open.
-#
-# An event on its way to one place (a park event's site, a terrain change, an offer's ring)
-# points the same way through its lead, in the warning colour with the event glyph, so the
-# warning says where as well as what (PF-16: "Dome Lightning incoming" named the event and not
-# its place). Once the place is in view it wears brackets in the same colour instead, with no tag:
-# the warning line names it, the brackets say where (W1-04). The world publishes the place with the
-# announcement; the mark goes when the event starts or ends or the stage or run resets, not when its
-# lead runs out, since the director holds an announced event for clear ground. The weather and the
-# flood have no one place and get none.
-#
-# In a fight whose row names a thing (Brindle's arena, the Spillway's two mounted Wardens) the
-# markers point at that thing (boss.gd and warden_reactor.gd plate_targets: the crane magnets, the
-# vent caps, the open cockpit, the scooter, the water sheet's foot, the relic to latch). Nothing
-# else on the screen says which part of the scene a row means, so these targets keep a mark in
-# view too: brackets round the thing and, where there is room, a tag with its name or the next
-# move there (objectives.gd TAGS). The plate is the plan; the mark is the
-# next move, on the thing itself. A chevron over the thing was tried first and nobody saw it
-# (second first-timer film, PF-17).
-#
-# A mark is only as true as the picture under it (PC film of PR 729): a thing behind a wall, a
-# pillar, the ground or Brindle's wreck wears its brackets faint and no tag, so the brackets never
-# claim a wall is the scooter; with no room it is left out, never sent to the edge, since it is in
-# view. A comic panel up over the play (Brindle's arrival close-up) or the start pick card takes
-# no mark either: the marks belong to the play view, and the panel shows another camera.
 
 const SIDE_INSET := 0.035
 const BAND_CLEARANCE := 16.0
 const ICON_BACK := 1.9
 const MIN_SIZE := 13.0
 const MAX_SIZE := 30.0
-# The farthest an arrow slides along the edge to clear a sign; past it the arrow stays and is drawn
-# over the sign, since the only pointer to an off-screen gate must not go.
 const ARROW_SLIDE_MAX := 160.0
-# The clear room a slid arrow needs before it moves to a spot or home, so a pixel of camera sway
-# never toggles it (reward_gates.gd NAME_HOLD does the same for a name).
 const ARROW_HOLD := 12.0
 const NEAR := 25.0
 const FAR := 180.0
-# Hidden-pocket doors (W13-INTEGRATION-2.md row 29a; PARK.md:248, :265): the sight_ok range, the eye
-# height the ray starts from, the ray's sample spacing and the marker's height above the door's
-# ground. The range check adds a hair for float32 positions, so a door at exactly 240 m counts.
 const POCKET_RANGE := 240.0
 const POCKET_EYE_M := 2.0
 const POCKET_STEP_M := 4.0
 const POCKET_DOOR_LIFT := 1.5
 const POCKET_RANGE_SLACK := 0.01
 const CLAMP_ROW := "break_clamp_crews"
-# A marked target in view. Its box's half-size is the screen size of MARK_RADIUS_M at the target,
-# kept between MARK_MIN and MARK_MAX; the brackets breathe by MARK_PULSE of it at MARK_HZ.
 const MARK_RADIUS_M := 1.6
 const MARK_MIN := 24.0
 const MARK_MAX := 56.0
 const MARK_STROKE := 4.0
 const MARK_PULSE := 0.08
 const MARK_HZ := 1.2
-# A thing counts as seen when the ray from the camera stops within SIGHT_SLACK_M of it (its own
-# ground, its own mount); a thing behind something else wears HIDDEN_ALPHA of its colour and no
-# tag. The avoided panels are grown by AVOID_GROW pixels, for their tilt.
 const SIGHT_SLACK_M := 2.5
 const HIDDEN_ALPHA := 0.35
 const AVOID_GROW := 16.0
-# The tag: its font size, the padding of its chip, and the gap between the chip and the brackets.
 const TAG_FONT := UiTokens.BODY
 const TAG_PAD := Vector2(8.0, 4.0)
 const TAG_GAP := 6.0
-# How far a tag's chip may slide along off the ball, as a share of its own width: its stem still
-# meets the brackets' column.
 const TAG_SLIDE := 0.45
-# The gap a slid chip keeps from what it slid off, so rounding never leaves it touching.
 const TAG_CLEAR := 2.0
-# The rows of a mounted Warden's fight whose thing the driver names (warden_reactor.gd plate_targets).
 const MOUNT_ROWS := ["ride_sheet", "line_fight"]
 
 var game
-# The objective row the plate shows now and the glyph it wears, set by the HUD each frame.
 var objective_id := ""
 var objective_icon := ""
-# Whether the Warden fight is engaged, set by the HUD each frame; activity markers hide while it is.
 var engaged := false
-# Whether the yard lock holds the ball, set by the HUD each frame; every stage marker points past
-# its wall then, so only the nearest yard crew member gets a marker until it opens.
 var yard_locked := false
 var gate_points: Array[Vector3] = []
-# What a mark's tag must stay off, in screen space, set by the HUD each frame: the ball and the
-# readouts that ride on it. A part behind the ball is still marked (its brackets tell the truth),
-# but its name over the ball read as if the ball were the target (w37 film 081-082, PF-35).
 var keep_clear: Array[Rect2] = []
-# The choice written on each reward arch, in screen space, set by the HUD each frame while the
-# gates stand. The off-screen arrow slides along the edge off them, and never hides for them: a mark
-# outranks a word.
 var sign_rects: Array[Rect2] = []
-# Pocket doors the player has had in view inside POCKET_RANGE (pocket_doors' key to true). A door
-# is discovered once and stays so for the run; an undiscovered door never gets a marker.
 var discovered := {}
 var _doors_cache: Array[Dictionary] = []
 var _doors_map_id := 0
@@ -142,10 +75,7 @@ var _targets_stage := -1
 var _targets_overlays: Array = []
 var _targets_cache: Array[Dictionary] = []
 var _shown: Array[Dictionary] = []
-# How far each off-screen arrow stands from its own spot along the edge, by the point it names.
 var _slide := {}
-# Events announced with a place and not started: {event_id: {at}}. An entry stands from its announcement
-# to its start or end, however long the event waits to land, so there is no countdown to keep.
 var _incoming := {}
 
 
@@ -153,7 +83,6 @@ func setup(game_ref) -> void:
 	game = game_ref
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# Over the key prompts and the damage numbers: a mark is the fight's goal, and both sit where it does.
 	z_index = 1
 	game.events.reward_offered.connect(func(offers: Array):
 		gate_points.clear()
@@ -162,23 +91,19 @@ func setup(game_ref) -> void:
 	game.events.flow_changed.connect(func(state: String):
 		if state != "gates":
 			gate_points.clear())
-	# Door keys repeat across runs, so a new run forgets what the last one found.
 	game.events.run_started.connect(func(_class_id: String):
 		discovered.clear()
 		_incoming.clear()
 		_reset_pocket_caches())
 	game.events.event_announced.connect(note_incoming)
-	# A retry or a new stage ends what was announced without an end for each event.
 	game.events.stage_entered.connect(func(_stage: int, _retry: bool):
 		_incoming.clear()
 		_reset_pocket_caches())
-	# The arena and the lap clear the stage's content with no stage change and no end per event.
 	game.events.stage_content_cleared.connect(func(_reason: String): _incoming.clear())
 	game.events.event_started.connect(func(id: String): _incoming.erase(id))
 	game.events.event_ended.connect(func(id: String, _outcome: String): _incoming.erase(id))
 
 
-# An event announced `seconds` ahead of landing at `at`; one with no lead or no place is not marked.
 func note_incoming(event_id: String, seconds: float, at: Vector3) -> void:
 	if seconds > 0.0 and at.is_finite():
 		_incoming[event_id] = {"at": at}
@@ -186,7 +111,6 @@ func note_incoming(event_id: String, seconds: float, at: Vector3) -> void:
 		_incoming.erase(event_id)
 
 
-# Kept for callers that still step the marker each frame: an incoming mark has no clock to advance.
 func step_incoming(_delta: float) -> void:
 	pass
 
@@ -198,23 +122,18 @@ func incoming_targets() -> Array[Dictionary]:
 	return out
 
 
-# What the markers point at now: {at, kind, icon}, kind naming the event_kinds row and
-# icon the plate's glyph for the row in force.
 func targets() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var flow = game.flow
 	match flow.state_name():
 		"stage", "beacon":
 			if yard_locked:
-				# The yard's wall holds the ball: every stage marker points past it, so only the crew
-				# member nearest is marked, off screen behind the ball (PF-39).
 				var member = _yard_crew()
 				if member != null:
 					out.append({"at": member.global_position, "kind": "pack_arrived", "icon": Objectives.glyph("break_yard_crew")})
 				return out
 			var marks := _mount_marks()
 			out.append_array(marks)
-			# A mark on the Warden itself stands in for the Warden's own marker.
 			if is_instance_valid(flow.warden) and marks.any(func(mark): return mark["at"].is_equal_approx(flow.warden.global_position)):
 				pass
 			elif flow.sealed and is_instance_valid(flow.warden):
@@ -242,7 +161,6 @@ func targets() -> Array[Dictionary]:
 	return out
 
 
-# The marked targets of a mounted Warden's fight, while the plate shows that fight's row.
 func _mount_marks() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var warden = game.flow.warden
@@ -257,15 +175,12 @@ func _mount_marks() -> Array[Dictionary]:
 	return out
 
 
-# The activity sites still standing (activities.gd on_offer()).
 func unfinished_sites() -> Array:
 	if game == null or game.world == null or game.world.activities == null:
 		return []
 	return game.world.activities.on_offer()
 
 
-# Each caged pilot still waiting (rescue_site.gd waiting()), in the cage's own ally colour and glyph: the
-# plate's detour row names the cage first, and this is where it is.
 func cage_targets() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var rescue = game.world.get("rescue") if game != null and game.world != null else null
@@ -277,8 +192,6 @@ func cage_targets() -> Array[Dictionary]:
 	return out
 
 
-# The hidden-pocket doors of a map: a valve's door or a cracked wall, each {id, key, at (x, z), kind}.
-# The key names a door by id and place, so it holds across maps.
 static func pocket_doors(map) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if map == null or not "contraptions" in map:
@@ -297,8 +210,6 @@ static func pocket_doors(map) -> Array[Dictionary]:
 	return out
 
 
-# One amber target per door that is discovered, not done, inside POCKET_RANGE of the ball and
-# seen over the ground from the ball's eye. ground is (x, z) to height.
 static func pocket_targets(doors: Array, found: Dictionary, ball: Vector3, ground: Callable) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for door in doors:
@@ -315,8 +226,6 @@ static func pocket_targets(doors: Array, found: Dictionary, ball: Vector3, groun
 	return out
 
 
-# True when no ground between the two points rises above the ray, sampled every POCKET_STEP_M
-# and stopping short of the far end so the door's own slope never hides it.
 static func sight_clear(ground: Callable, from: Vector3, to: Vector3) -> bool:
 	var span := from.distance_to(to)
 	var steps := int(span / POCKET_STEP_M)
@@ -370,7 +279,6 @@ func _discovered_sig() -> Vector2i:
 	return Vector2i(discovered.size(), bits)
 
 
-# The pocket targets for the stage in play, doors the player has opened left out.
 func _pocket_targets_now() -> Array[Dictionary]:
 	if discovered.is_empty() or game == null or game.world == null or game.player == null:
 		return _EMPTY_TARGETS
@@ -404,7 +312,6 @@ func _pocket_targets_now() -> Array[Dictionary]:
 	return _targets_cache
 
 
-# Latches every door that is in view, in range and in sight as discovered. Called each frame.
 func note_pockets(size: Vector2) -> void:
 	if game == null or game.world == null or game.player == null or not game.flow.in_play():
 		return
@@ -447,7 +354,6 @@ func _all_found(doors: Array[Dictionary]) -> bool:
 	return true
 
 
-# Ids of the stage's doors already opened or broken: a valve's id, a wall's id.
 static func _opened_ids(contraptions) -> Dictionary:
 	var out := {}
 	if contraptions == null:
@@ -461,20 +367,14 @@ static func _opened_ids(contraptions) -> Dictionary:
 	return out
 
 
-# The glyph a marked target wears at the view's edge: the plate's own now (an open cockpit turns
-# it), or the row's when the HUD has handed none.
 func _row_icon() -> String:
 	return objective_icon if objective_icon != "" else Objectives.glyph(objective_id)
 
 
-# The plate's glyph for the Warden and beacon markers; the activity row's own glyph belongs
-# to the activity markers, so it never stands in for the Warden's.
-# While the clamp row shows, its glyph rides the crew marker and the Warden's keeps its own.
 func _glyph(fallback: String) -> String:
 	return Objectives.glyph(objective_id) if objective_id not in ["", "find_activity", CLAMP_ROW] else fallback
 
 
-# While the plate shows the clamp row, the crew nearest to lighting a pip (stage_locks.gd clamp_crew).
 func _clamp_crew() -> Node3D:
 	var gate = game.flow.get("gate")
 	if objective_id != CLAMP_ROW or gate == null or not gate.has_method("clamp_crew") or game.player == null:
@@ -489,7 +389,6 @@ func _yard_crew() -> Node3D:
 	return gate.yard_crew(game.player.shown_position())
 
 
-# The play view markers stay inside: clear of the top, toast and bottom bands.
 static func view_rect(size: Vector2) -> Rect2:
 	var top := ScreenRegions.rect("toasts", size).end.y + BAND_CLEARANCE
 	var bottom := ScreenRegions.rect("bottom", size).position.y - BAND_CLEARANCE
@@ -497,11 +396,6 @@ static func view_rect(size: Vector2) -> Rect2:
 	return Rect2(inset, top, size.x - 2.0 * inset, bottom - top)
 
 
-# One record per off-screen target: {at (screen), dir, size, color, icon}. A target with `mark`
-# has one in view as well: {box, color, tag}, brackets round the box, with targets whose boxes
-# touch sharing one pair of brackets, and the tag on the box nearest the middle of the view. Where
-# a mark would run under the top or the bottom band its targets go to the play view's edge like
-# any other.
 func markers(size: Vector2) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if game == null or not game.flow.in_play():
@@ -522,10 +416,6 @@ func markers(size: Vector2) -> Array[Dictionary]:
 			_group(groups, {"box": Rect2(projected - Vector2(half, half), Vector2(half, half) * 2.0),
 				"color": color if seen else Color(color, color.a * HIDDEN_ALPHA),
 				"tag": String(target.get("tag", "")) if seen else "", "seen": seen, "targets": [target]})
-	# Every group wears its tag where there is room for it, the seen groups first and the group
-	# nearest the middle of the view first among them: over the brackets, else under them, else not
-	# at all. A group with no room even for its brackets sends its targets to the edge; one under a
-	# comic panel or the start pick card is not drawn.
 	var room := mark_view(size)
 	var centre := size * 0.5
 	groups.sort_custom(func(a, b):
@@ -569,7 +459,6 @@ func markers(size: Vector2) -> Array[Dictionary]:
 		var near := clampf((ball.distance_to(at) - NEAR) / (FAR - NEAR), 0.0, 1.0)
 		var tip := _on_edge(view, centre, dir)
 		var span := lerpf(MAX_SIZE, MIN_SIZE, near)
-		# Both the arrowhead and the glyph behind it slide off the choice written on the arch.
 		var offset := arrow_slide(view, tip, dir, span, sign_rects, float(_slide.get(target["at"], 0.0)))
 		slid_now[target["at"]] = offset
 		tip += _edge_tangent(view, tip) * offset
@@ -579,16 +468,11 @@ func markers(size: Vector2) -> Array[Dictionary]:
 	return out
 
 
-# The unit direction along the edge `tip` stands on: down a side, across the top or bottom.
 static func _edge_tangent(view: Rect2, tip: Vector2) -> Vector2:
 	var on_side := absf(tip.x - view.position.x) < 0.5 or absf(tip.x - view.end.x) < 0.5
 	return Vector2.DOWN if on_side else Vector2.RIGHT
 
 
-# How far along its edge an arrow at `tip` stands from `tip` to stay off every sign, given `held`,
-# where it stood last frame. It stays put while its spot is clear (home returns only with
-# ARROW_HOLD px clear), else takes the nearest spot within ARROW_SLIDE_MAX with ARROW_HOLD px
-# clear, else the nearest merely clear, else stays where it was and is drawn over the sign.
 static func arrow_slide(view: Rect2, tip: Vector2, dir: Vector2, span: float, signs: Array[Rect2], held: float) -> float:
 	if signs.is_empty():
 		return 0.0
@@ -613,7 +497,6 @@ static func arrow_slide(view: Rect2, tip: Vector2, dir: Vector2, span: float, si
 	return clampf(held, low, high)
 
 
-# Viewport bounds of the arrow tip, its two fins and the square objective glyph.
 static func edge_footprint(tip: Vector2, dir: Vector2, span: float) -> Rect2:
 	var icon := tip - dir * span * ICON_BACK
 	var fin := Vector2(-dir.y, dir.x) * span * 0.8
@@ -622,10 +505,6 @@ static func edge_footprint(tip: Vector2, dir: Vector2, span: float) -> Rect2:
 	return bounds.expand(tip).expand(root + fin).expand(root - fin).grow(1.0)
 
 
-# Whether the camera sees the thing at `at`: the world ray to it (Hitscan.WORLD; the ball is on
-# its own layer) meets nothing short of SIGHT_SLACK_M before it. A live Brindle part and a Warden's
-# body are on the enemy layer, so they never hide their own parts; Brindle's wreck turns world at
-# the eject and hides the scooter like any wall.
 func in_sight(cam: Camera3D, at: Vector3) -> bool:
 	if not cam.is_inside_tree():
 		return true
@@ -635,8 +514,6 @@ func in_sight(cam: Camera3D, at: Vector3) -> bool:
 	return hit.is_empty() or hit["position"].distance_to(at) <= SIGHT_SLACK_M
 
 
-# The screen held by a comic panel or the start pick card (flourish_player.gd AVOID_GROUP), grown
-# for their tilt.
 func avoid_rects() -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	if not is_inside_tree():
@@ -647,8 +524,6 @@ func avoid_rects() -> Array[Rect2]:
 	return out
 
 
-# Adds a mark to the groups: into every group of its tag whose box touches it, as one box. The
-# box grows as it takes groups in, so the pass repeats until it takes none.
 static func _group(groups: Array[Dictionary], mark: Dictionary) -> void:
 	var took := true
 	while took:
@@ -662,8 +537,6 @@ static func _group(groups: Array[Dictionary], mark: Dictionary) -> void:
 	groups.append(mark)
 
 
-# Where a mark may stand: the screen between the top band and the bottom band. The toasts band is
-# sky in most fights, and a marked thing can be up there (Brindle's scooter), so a mark may too.
 static func mark_view(size: Vector2) -> Rect2:
 	var top := ScreenRegions.rect("top", size).end.y + BAND_CLEARANCE
 	var bottom := ScreenRegions.rect("bottom", size).position.y - BAND_CLEARANCE
@@ -671,7 +544,6 @@ static func mark_view(size: Vector2) -> Rect2:
 	return Rect2(inset, top, size.x - 2.0 * inset, bottom - top)
 
 
-# The screen each mark in view takes, brackets and tag, for the words to keep off.
 func drawn_rects() -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	for marker in _shown:
@@ -680,7 +552,6 @@ func drawn_rects() -> Array[Rect2]:
 	return out
 
 
-# Only the tags' chips: a damage number may stand in the brackets, on its target, but not on a tag.
 func tag_rects() -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	for marker in _shown:
@@ -689,7 +560,6 @@ func tag_rects() -> Array[Rect2]:
 	return out
 
 
-# The tags drawn now, for the HUD's word budget (word_budget.gd).
 func drawn_words() -> PackedStringArray:
 	var out := PackedStringArray()
 	for marker in _shown:
@@ -698,10 +568,6 @@ func drawn_words() -> PackedStringArray:
 	return out
 
 
-# Where a mark's tag goes: {under, shift}, or {} for no tag. Over the brackets, else under them;
-# on either side the chip slides along by the least that keeps it off everything in `clear` (the
-# ball and its readouts; the brackets themselves may stand over the ball), up to TAG_SLIDE of its
-# own width, so its stem still meets the brackets' column.
 static func tag_place(box: Rect2, tag: String, room: Rect2, taken: Array[Rect2], clear: Array[Rect2]) -> Dictionary:
 	for under in [false, true]:
 		var chip := tag_rect(box, tag, under)
@@ -718,20 +584,15 @@ static func tag_place(box: Rect2, tag: String, room: Rect2, taken: Array[Rect2],
 	return {}
 
 
-# Whether a mark with its tag over (or under) its brackets, slid along by `shift`, has room, and
-# the tag's chip stays off everything in `clear`.
 static func tag_free(box: Rect2, tag: String, under: bool, room: Rect2, taken: Array[Rect2], clear: Array[Rect2], shift := 0.0) -> bool:
 	var chip := tag_rect(box, tag, under, shift)
 	return _free(mark_rect(box, tag, under, shift), room, taken) and not clear.any(func(other: Rect2): return other.intersects(chip))
 
 
-# Whether a mark may take this screen: inside the room and over no mark already placed.
 static func _free(rect: Rect2, room: Rect2, taken: Array[Rect2]) -> bool:
 	return room.encloses(rect) and not taken.any(func(other: Rect2): return other.intersects(rect))
 
 
-# A mark's box moved the least it takes to stand in the room, while the thing's middle stays
-# inside the brackets (Brindle's scooter flies at the top band's edge); otherwise as it was.
 static func _slid(box: Rect2, room: Rect2) -> Rect2:
 	var grown := mark_rect(box, "")
 	var move := Vector2(maxf(room.position.x - grown.position.x, 0.0) + minf(room.end.x - grown.end.x, 0.0),
@@ -741,14 +602,11 @@ static func _slid(box: Rect2, room: Rect2) -> Rect2:
 	return Rect2(box.position + move, box.size)
 
 
-# The screen a mark takes: its brackets at their widest, and its tag's chip over them (under
-# them when the room over them is taken).
 static func mark_rect(box: Rect2, tag: String, under := false, shift := 0.0) -> Rect2:
 	var out := box.grow(maxf(box.size.x, box.size.y) * 0.5 * MARK_PULSE + MARK_STROKE)
 	return out.merge(tag_rect(box, tag, under, shift)) if tag != "" else out
 
 
-# The tag's chip: centred over the brackets, or under them, slid along by `shift`.
 static func tag_rect(box: Rect2, tag: String, under := false, shift := 0.0) -> Rect2:
 	var chip := Vector2(UiDraw.width(tag, TAG_FONT), UiFonts.bold().get_height(TAG_FONT)) + TAG_PAD * 2.0
 	var off := maxf(box.size.x, box.size.y) * 0.5 * MARK_PULSE + MARK_STROKE + TAG_GAP
@@ -782,7 +640,6 @@ func _process(delta: float) -> void:
 		return
 	note_pockets(get_viewport_rect().size)
 	var now := markers(get_viewport_rect().size)
-	# A mark breathes, so it is drawn every frame while one is up.
 	var breathing := false
 	for marker in now:
 		if marker.has("box"):
@@ -812,8 +669,6 @@ func _draw() -> void:
 		draw_texture_rect(Icons.texture(marker["icon"]), Rect2(icon_at - Vector2(s, s) * 0.5, Vector2(s, s)), false, Icons.tint(marker["icon"], color))
 
 
-# A mark in view: four corner brackets round the box, inked dark under the row's colour so they
-# hold on any ground, and the tag on a dark chip over them with a stem down to the brackets.
 func _draw_mark(marker: Dictionary) -> void:
 	var color: Color = marker["color"]
 	var rest: Rect2 = marker["box"]
@@ -831,7 +686,6 @@ func _draw_mark(marker: Dictionary) -> void:
 		return
 	var under: bool = marker.get("under", false)
 	var chip := tag_rect(rest, tag, under, float(marker.get("shift", 0.0)))
-	# The stem leaves the chip as near the brackets' middle as the chip reaches.
 	var stem_x := clampf(rest.get_center().x, chip.position.x + 8.0, chip.end.x - 8.0)
 	var stem := Vector2(stem_x, chip.position.y if under else chip.end.y)
 	var point := -1.0 if under else 1.0

@@ -20,24 +20,17 @@ const ESTABLISH_SECONDS := 2.0
 const LINE_SECONDS := 5.0
 const CREDITS_SECONDS := 18.0
 const CREDITS_LINE_SECONDS := 4.5
-# The credits roll stops this far above the screen bottom; the skip hint owns the band beneath.
 const HINT_BAND := 72.0
 const SKIP_HINT := [{"say": "Any key skips to the summary"}]
 const PRELUDE_HINT := [{"say": "Any key skips to the victory lap"}]
-# After the victory lap the roll opens straight on the credits; a press mashed at the lap's end waits this long.
 const SKIP_GUARD := 0.75
 const TOTAL_SECONDS := WORLD_SECONDS * 3.0 + CREDITS_SECONDS
 const WORLD_DRESSING := {1: "SpillwayScenery", 2: "DigScenery", 3: "HighdraftScenery"}
-# KC10 (PARK.md section 6, 13 item 6): the credits' set is Meteor Crater, the crater_ending bowl (400 m, stamp radius
-# 235 m, lip scale 0.7647). The row's at is the footprint centre; its GLB origin sits at the entry lip, so at [0, 0]
-# with size[0] = 2 * 235 * 0.7647 puts the bowl's middle at the world origin. The camera drops from high over the
-# rim (about 220 m out, 95 m up) toward the bowl's middle during the credits.
 const CRATER_ROW := {"id": "row_crater_ending", "element": "crater_bowl", "recipe": "crater_ending", "budget": "park_large",
 	"at": [0.0, 0.0], "y": 0.0, "yaw_deg": 0.0, "size": [359.4, 60.0, 359.4]}
 const CRATER_CAM_FROM := Vector3(-160.0, 240.0, -300.0)
 const CRATER_CAM_TO := Vector3(-40.0, 95.0, -215.0)
 const CRATER_LOOK := Vector3(0.0, -20.0, 0.0)
-# TONE-READ: Credits. The thanks belongs to the person who made the return trip.
 const CREDITS := "SCRAPKEEP\n\nCreator and director\nAndrew\n\nMade with\nGodot and Blender\n\nMusic\nACE-Step\n\nAI collaborators\nClaude and Codex\n\nThank you for bringing the crew home."
 
 var active := false
@@ -74,14 +67,10 @@ var crater: Node3D
 var cannon_answered := false
 var cannon_answer_at := -1.0
 var _crater_placed := false
-# Holds the loaded crater scenes so the cache keeps them for the placement on the credits roll.
 var _crater_files: Array = []
 var _crater_requests: Array[String] = []
-# Headless only: crater GLBs load on the main thread at placement instead of on a loader thread.
 var _crater_serial := false
-# The victory lap's stats (flow.lap_stats); non-empty means the sequence opened on the credits over the bowl.
 var lap := {}
-# The Q16 ending's first act: only the fly-over plays, and finished hands over to the victory lap.
 var prelude := false
 var _opened_at := 0.0
 
@@ -106,14 +95,11 @@ func start(game_ref, lap_stats := {}, prelude_only := false) -> void:
 	prepare_usec = Time.get_ticks_usec() - began
 	active = true
 	if not lap.is_empty():
-		# The lap already played the crew log and the bowl; the roll starts on the credits.
 		_credits.text = credits_text(lap)
 		world_index = 2
 		elapsed = WORLD_SECONDS * 3.0
 		_opened_at = elapsed
 	advance(0.0)
-	# run_ended already selects the summary music through the audio director. Calling
-	# its menu API also covers a sequence started from an already-settled summary.
 	var audio = game.audio()
 	if audio != null:
 		audio._flush_flow()
@@ -172,7 +158,6 @@ func _build_view() -> void:
 	_copy.offset_bottom = -65.0
 	_copy.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_copy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# KC10: a veil lighter than before, so the crater bowl reads under the roll (tune in play).
 	_credits_back = _backing(0.0, 1.0, Color(Palette.CHARCOAL, 0.6))
 	_credits_back.visible = false
 	_credits_clip = Control.new()
@@ -202,7 +187,6 @@ func _build_view() -> void:
 	skip_hint.offset_bottom = 0.0
 	skip_hint.setup(SKIP_HINT)
 	add_child(skip_hint)
-	# The copy stays above the credit roll; the hint band and its keycaps stay above the copy.
 	move_child(_credits_band, -1)
 	move_child(_copy, -1)
 	move_child(_hint_band, -1)
@@ -210,7 +194,6 @@ func _build_view() -> void:
 	_cut = _backing(0.0, 1.0, Color(Palette.CHARCOAL, 0.0))
 
 
-# The credits with the lap's own block above the thanks: a strong build sees its numbers in the roll.
 static func credits_text(stats: Dictionary) -> String:
 	var block := "Victory lap\nTop speed %d m/s · Best air %.1f s · Rim laps %d" % [int(stats.get("top_speed", 0.0)),
 		float(stats.get("best_air", 0.0)), int(stats.get("rim_laps", 0))]
@@ -250,8 +233,6 @@ func _backing(top: float, bottom: float, color: Color) -> ColorRect:
 func _build_worlds() -> void:
 	for row in Worlds.ROWS:
 		var stage: int = game.ctx.stages.first_of(int(row.id))
-		# Terrain caches sibling zones before their presentation is built.
-		# The deepest dressed stage wins, so a run through the Dig's two zones ends on the pit.
 		var cached := 0
 		var dressed := false
 		for def in game.ctx.stages.DEFS:
@@ -278,17 +259,7 @@ func _build_worlds() -> void:
 		holder.visible = false
 
 
-# KC10: Meteor Crater is the credits' set only. Its holder sits in this viewport's own scene, never in a stage's terrain.
-# start() only requests the GLBs on a thread, so the timed prepare window stays free of the bowl's load; the bowl is
-# placed on the first credits frame after the load finishes, and its -col collider is stripped so the sequence stays
-# physics free (the test's _physics_free check).
-# Headless only: the headless display server installs the dummy rasterizer, whose mesh RID owner is not thread-safe
-# (Godot 4.7.2 servers/rendering/dummy/storage/mesh_storage.h:50, RID_Owner<DummyMesh> without THREAD_SAFE). A
-# loader-thread mesh_allocate races the main thread's queued mesh_initialize and snapshot meshes ("Attempting to
-# initialize the wrong RID", core/templates/rid_owner.h:240). There the GLBs load serially on the main thread at
-# placement. Real renderers keep the threaded load: their mesh owners are thread-safe (renderer_rd mesh_storage.h:181,
-# gles3 mesh_storage.h:254). The rendering driver name still reads "vulkan" under --headless, so the display server
-# name decides.
+# Godot 4.7.2 headless dummy rasterizer RID_Owner<DummyMesh> is not thread-safe and reports driver "vulkan", so AppShell.headless() selects serial loading.
 func _build_crater() -> void:
 	crater = Node3D.new()
 	crater.name = "MeteorCrater"
@@ -313,7 +284,6 @@ func _crater_paths() -> Array:
 	return out.filter(func(path): return ResourceLoader.exists(path))
 
 
-# True once the bowl is placed. Returns false while a crater GLB is still loading, so the roll shows the sky a little longer.
 func _place_crater() -> bool:
 	if _crater_placed:
 		return true
@@ -358,7 +328,6 @@ func _release_crater_requests() -> void:
 	if not _crater_serial:
 		for path in _crater_requests:
 			if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
-				# Collection joins an unfinished load and releases its threaded request.
 				ResourceLoader.load_threaded_get(path)
 	_crater_requests.clear()
 	_crater_files.clear()
@@ -368,17 +337,12 @@ func _exit_tree() -> void:
 	_release_crater_requests()
 
 
-# The Highdraft's ground mesh is the catch floor: an orange and blue grid under the
-# islands. The fly-over shows the islands on the cloud deck, so the floor node is hidden.
 func _hide_grid_floor(holder: Node3D) -> void:
 	var floor_node := holder.find_child("Ground", true, false) as Node3D
 	if floor_node != null:
 		floor_node.visible = false
 
 
-# Copy draw nodes, never scripts, timers, bodies, areas or collision shapes. Inactive
-# terrain roots are hidden and parked at -5000; only their children carry local poses.
-# Any other kind (particles, labels, sprites) becomes a plain holder for its children.
 func _snapshot(source: Node, parent: Node3D, root := false) -> void:
 	if source is Node3D and not root and not source.visible:
 		return
@@ -399,7 +363,6 @@ func _snapshot(source: Node, parent: Node3D, root := false) -> void:
 		multi.multimesh = source.multimesh
 		view = multi
 	elif source is Skeleton3D:
-		# The skeleton's rest pose keeps the pilot recognizable in the cockpit.
 		var skeleton := Skeleton3D.new()
 		for i in source.get_bone_count():
 			skeleton.add_bone(source.get_bone_name(i))
@@ -431,7 +394,6 @@ func _build_uncached(holder: Node3D, stage: int, world: int) -> void:
 	holder.add_child(ground)
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	# A far-camera ground at 8 m resolution; the live terrain grid is never touched.
 	for z in range(-200, 200, 8):
 		for x in range(-200, 200, 8):
 			for corner in [Vector2(x, z), Vector2(x + 8, z), Vector2(x, z + 8),
@@ -450,7 +412,6 @@ func _build_uncached(holder: Node3D, stage: int, world: int) -> void:
 func _dress_world(holder: Node3D, stage: int, world: int) -> void:
 	if holder.has_node(WORLD_DRESSING[world]):
 		return
-	# Gate on the stage's map like the live hooks do; a table can put any map in any world.
 	var map = game.ctx.terrain.map_for(stage)
 	var map_id := String(game.ctx.stages.of(stage).map)
 	if world == 1:
@@ -480,8 +441,6 @@ func _build_crew() -> void:
 	if body != null and body.visible:
 		_snapshot(body, companion, true)
 	else:
-		# A return-trip tableau may show SPIL-9 even before modules were seated.
-		# This is a draw-only stand-in; it does not assemble or grant a companion.
 		var path := CompanionBody.model_path(["ram_prow", "escape_rail"])
 		var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
 		if packed != null:
@@ -556,8 +515,6 @@ func advance(delta: float) -> void:
 	viewport.size = Vector2i(get_viewport_rect().size)
 
 
-# KC10: the credits roll over the crater bowl. The Highdraft worlds hide, the bowl shows, and the camera drops from
-# its start point over the rim toward the bowl's middle as the roll runs (p 0 to 1).
 func _show_crater(p: float) -> void:
 	for holder in worlds:
 		holder.visible = false
@@ -570,7 +527,6 @@ func _show_crater(p: float) -> void:
 	camera.look_at(CRATER_LOOK)
 
 
-# The close lines each get a slot from the start of the roll, then the sign holds to the end.
 func _set_credits_copy(credits_at: float) -> void:
 	var close: Array = Worlds.ENDING.close
 	var slot := int(credits_at / CREDITS_LINE_SECONDS)
@@ -589,7 +545,6 @@ func _enter_world(index: int) -> void:
 	if stage > 0:
 		var map = game.ctx.terrain.map_for(stage)
 		var spot: Vector2 = map.spawn
-		# These are draw-only reunion positions, away from the empty drop-in sand.
 		if index == 0:
 			spot = Vector2(0.0, 196.0)
 		elif index == 1:
@@ -613,9 +568,6 @@ func _enter_world(index: int) -> void:
 	_sun.rotation_degrees = Vector3(-38.0, 118.0, 0.0)
 
 
-# The Highdraft vignette sits in its stage's time of day (one day per run), so the reunion on the
-# islands is lit like the run that reached them: the time row's key, ambient and fog lean, and the
-# painted panorama under that time's grade. A stage-less world falls back to the run's dusk.
 func _highdraft_light(stage: int) -> void:
 	var look := WorldLook.stage_look(stage, 3) if stage > 0 else WorldLook.row(3).merged(WorldLook.TIME_ROWS.dusk, true)
 	var time: String = look.get("time", "dusk")
@@ -632,8 +584,6 @@ func _highdraft_light(stage: int) -> void:
 	_sun.rotation_degrees = look.sun_rotation
 
 
-# Any key, mouse button, pad button or action press skips (Q16: "any input skips"); motion and releases do not. Opened
-# from the lap, the first SKIP_GUARD seconds ignore input, so a press meant for the ball cannot eat the credits.
 func handle(event: InputEvent) -> void:
 	if not lap.is_empty() and elapsed - _opened_at < SKIP_GUARD:
 		return

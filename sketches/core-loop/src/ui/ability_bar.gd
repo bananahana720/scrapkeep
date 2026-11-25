@@ -8,35 +8,6 @@ const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
-# The bottom-centre skill bar (design-v3/SKILL-BAR.md section 5): the numbered slots 1, 2 and 3
-# (weapon, special, line skill), then CHIP_GAP to the right the two chips (Shift and Ctrl) at
-# CHIP_SCALE with no number, one per published slot record (ability_slots.gd), key glyph under
-# each, charge pips under the key. Each state reads by more than colour: ready is a bright
-# solid frame, cooling is a petrol wedge that shrinks clockwise from twelve under a
-# dimmed icon and a sand hand, active is a doubled frame, a 3 px lift and the class tint, unavailable is a
-# faded icon struck through. A slot whose cooldown ends swells once, with a rim flash and its
-# class shape flaring in the class colour. State colours come from event_kinds' v2 W1 UI rows;
-# the icon's accent is the class colour (VISUAL-LANGUAGE.md section 7). A slot whose key a
-# prompt on screen already shows draws no keycap while it does (hide_keys), so one key is
-# never drawn twice.
-#
-# Selection is not the active frame. The selected slot (the one left click casts) wears an
-# inverted keycap (sand fill, charcoal digit) and the mouse glyph above it: the LMB picture,
-# no letters, literally where left click goes. A pick slides the glyph there in GLYPH_SLIDE
-# seconds and a snap-back slides it home; its underline drains over the pick's timeout. A
-# refused pick shakes the slot SHAKE px and flashes slate, and the glyph stays. A loaded line
-# skill wears a hook badge in the class colour on slot 3. During the set piece the bar's marks
-# dim to SET_PIECE_ALPHA, because its keys are swallowed, but each slot keeps a solid plate
-# behind it, so the row reads as switched off and never as gone (w37 film 059, PF-21).
-#
-# A slot that cannot fire shows why (PF-21, w37 film 014 and 022): a cooldown is a clock, the
-# wedge with a sand hand at its edge and the icon over it, so the slot is never a blank grey
-# square; an empty charge that time does not refill (refill "contact", Tally's pressure) is a
-# dashed frame over hollow pips, the same hollow pips its pool slot wears, and no clock.
-#
-# A tip that speaks of a slot ("Your active waits on the bar", w37 film 014, PF-21) is answered
-# by the bar, not by more words: while the HUD names a slot (point_at), a chevron in the class
-# colour bobs over it, pointing down at it. Less motion holds the chevron still.
 
 const SLOT := UiTokens.TARGET
 const GAP := float(UiTokens.GAP_M)
@@ -67,20 +38,15 @@ const POINT_GAP := float(UiTokens.GAP_S)
 const POINT_BOB := 4.0
 const POINT_HZ := 2.0
 
-# Reduced motion (Game.set_reduced_motion keeps it current): a refused pick no longer shakes.
 static var reduced_motion := false
 var slots: Array = []
 var tint := Color.WHITE
-# The class row's shape (ring, chevron, burst): the ready swell and the charge pips wear
-# it, so the bar speaks in the class's motif.
 var motif := "ring"
-# A line skill waits for the next bite (combat.line_load()): slot 3 wears the hook badge.
 var line_loaded := false:
 	set(value):
 		if value != line_loaded:
 			line_loaded = value
 			queue_redraw()
-# The set piece runs: the bar dims, since every key on it is swallowed.
 var set_piece := false:
 	set(value):
 		if value == set_piece:
@@ -89,7 +55,6 @@ var set_piece := false:
 		self_modulate.a = SET_PIECE_ALPHA if value else 1.0
 		_plates.visible = value
 		_plates.queue_redraw()
-# The mouse glyph's centre x in bar space; it slides toward the selected slot's centre.
 var glyph_x := -1.0
 var _glyph_from := 0.0
 var _glyph_to := -1.0
@@ -105,7 +70,6 @@ var _was_pulsing := false
 var _refund_pending := {}
 var _refund_flashes := {}
 var _refund_count := 0
-# The set piece's solid plates behind the dimmed slots: a child, so self_modulate leaves it whole.
 var _plates := Plates.new()
 var _sb_back := StyleBoxFlat.new()
 var _sb_wash := StyleBoxFlat.new()
@@ -139,22 +103,16 @@ class Plates:
 			draw_style_box(back, rects[name])
 
 
-# Whether the set piece's solid plates are up behind the dimmed slots.
 func plates_shown() -> bool:
 	return _plates.visible
 
 
-# Why a slot cannot fire, as the bar draws it: "clock" for a cooldown, "empty" for a drained
-# charge that only contact refills, "" for a slot that can (or is struck through as unavailable).
 static func slot_reason(entry: Dictionary) -> String:
 	if entry.get("state", "") != "cooling":
 		return ""
 	return "empty" if String(entry.get("refill", "time")) == "contact" else "clock"
 
 
-# One word per published slot for a log: what the bar draws it as. ready, cooling (a clock),
-# empty (a drained charge), unavailable or active, and dimmed-for-set-piece for all while the set
-# piece dims the bar. A jam reads unavailable here: the caller that knows the jam says jammed.
 func slot_words() -> Dictionary:
 	var out := {}
 	for entry in slots:
@@ -167,7 +125,6 @@ func slot_words() -> Dictionary:
 	return out
 
 
-# The pips an empty slot shows: its pool's, so a drained slot 2 wears slot 1's empty pips.
 func pool_pips(entry: Dictionary) -> int:
 	var pool := String(entry.get("pool", slot_name(entry)))
 	for other in slots:
@@ -176,8 +133,6 @@ func pool_pips(entry: Dictionary) -> int:
 	return int(entry["max_charges"])
 
 
-# Per-pip fill share (0.0 to 1.0) for a slot: whole charges fill full pips, and optional
-# `charge_frac` (Tally's fractional pressure, PILOT-CADENCE.md §3.5) partially fills the next pip.
 func pip_fills(entry: Dictionary) -> Array[float]:
 	var reason := slot_reason(entry)
 	var max_charges: int = pool_pips(entry) if reason == "empty" else int(entry["max_charges"])
@@ -200,7 +155,6 @@ func pip_fills(entry: Dictionary) -> Array[float]:
 	return fills
 
 
-# The bar's size for `count` published slots: up to NUMBERED numbered slots, the rest chips.
 static func bar_size(count := NUMBERED + 2) -> Vector2:
 	var n := clampi(count, 1, NUMBERED)
 	var chips := maxi(count - NUMBERED, 0)
@@ -218,8 +172,6 @@ static func slot_name(entry: Dictionary) -> String:
 	return String(entry.get("slot", entry.get("id", "")))
 
 
-# Each slot's resting rect in bar space, by slot name: the numbered slots left to right, then
-# the chips CHIP_GAP further on at CHIP_SCALE, centred on the slot row.
 func slot_rects() -> Dictionary:
 	var out := {}
 	var x := 0.0
@@ -253,8 +205,6 @@ func update_slots(list: Array, class_tint: Color, class_shape := "ring") -> void
 		_ring_ready()
 	slots = list
 	if changed:
-		# A deep copy: the reading is compared next frame, and a source that mutates its
-		# entries in place must still look different.
 		_shown = list.duplicate(true)
 		custom_minimum_size = bar_size(list.size())
 		size = custom_minimum_size
@@ -264,9 +214,6 @@ func update_slots(list: Array, class_tint: Color, class_shape := "ring") -> void
 		queue_redraw()
 
 
-# The swell's sound: ability_ready's row resolves to the class's ready pulse, the
-# motif's first note, so the bar is where the class tune is first heard. The bar sits
-# in the HUD, whose game reaches the audio director.
 func _ring_ready() -> void:
 	var hud := get_parent()
 	var game = hud.get("game") if hud != null else null
@@ -276,7 +223,6 @@ func _ring_ready() -> void:
 		audio.play("ability_ready", 0.0, 1.0, "UI")
 
 
-# The key glyphs of the prompts on screen this tick: a slot on one of them hides its keycap.
 func hide_keys(glyphs: Array[String]) -> void:
 	if glyphs == _hidden:
 		return
@@ -284,9 +230,6 @@ func hide_keys(glyphs: Array[String]) -> void:
 	queue_redraw()
 
 
-# The prompts' live glyphs (key_glyphs.shown_glyphs), read wherever the bar answers what it
-# shows, so a prompt that appears on a physics tick hides the bar's cap on that same tick and
-# a key is never drawn twice between the prompt step and the next HUD frame.
 var hidden_source := Callable()
 
 
@@ -340,8 +283,6 @@ func _step_refunds(delta: float) -> void:
 		queue_redraw()
 
 
-# The slot a tip on screen speaks of, by slot name; "" for none. A name the bar does not hold
-# points at nothing.
 func point_at(slot: String) -> void:
 	if slot == _pointed:
 		return
@@ -349,7 +290,6 @@ func point_at(slot: String) -> void:
 	queue_redraw()
 
 
-# The rect of the chevron over the pointed slot in bar space, at its rest (no bob); empty when none.
 func pointer_rect() -> Rect2:
 	var rects := slot_rects()
 	if _pointed == "" or not rects.has(_pointed):
@@ -358,7 +298,6 @@ func pointer_rect() -> Rect2:
 	return Rect2(Vector2(slot.get_center().x - POINT_W * 0.5, slot.position.y - POINT_GAP - POINT_H), Vector2(POINT_W, POINT_H))
 
 
-# A pick the ball refused: the slot shakes and flashes slate for SHAKE_TIME.
 func refuse(slot: String) -> void:
 	_refusals[slot] = SHAKE_TIME
 	queue_redraw()
@@ -385,12 +324,10 @@ func selected_entry() -> Dictionary:
 	return {}
 
 
-# The underline under the mouse glyph: the share of the pick's timeout still to run.
 func underline_share() -> float:
 	return float(selected_entry().get("select_left", 0.0))
 
 
-# Where the glyph is headed: the selected slot's centre, else slot 1's.
 func glyph_target() -> float:
 	var rects := slot_rects()
 	var entry := selected_entry()
@@ -398,9 +335,6 @@ func glyph_target() -> float:
 	return (rects[name] as Rect2).get_center().x if rects.has(name) else 0.0
 
 
-# How a slot draws, as data, so selected and active read apart by more than one cue: the
-# keycap's fill and digit colour, the lift, whether the frame doubles and whether the mouse
-# glyph rides it.
 func slot_look(entry: Dictionary) -> Dictionary:
 	var state: String = entry["state"]
 	var selected: bool = entry.get("selected", false)
@@ -436,8 +370,6 @@ func step(delta: float) -> void:
 	if _glyph_t < GLYPH_SLIDE:
 		_glyph_t = minf(GLYPH_SLIDE, _glyph_t + delta)
 		glyph_x = lerpf(_glyph_from, _glyph_to, smoothstep(0.0, 1.0, _glyph_t / GLYPH_SLIDE))
-	# Only the swell, a refusal, the glide and the draining underline animate on their own;
-	# slot readings redraw in update_slots.
 	if not _pulses.is_empty() or _was_pulsing or refusing or gliding or underline_share() > 0.0 \
 			or (_pointed != "" and not reduced_motion):
 		queue_redraw()
@@ -466,7 +398,6 @@ func _draw() -> void:
 	_draw_pointer()
 
 
-# The chevron over the pointed slot: ink-edged, in the class colour, bobbing toward the slot.
 func _draw_pointer() -> void:
 	var rect := pointer_rect()
 	if not rect.has_area():
@@ -569,8 +500,6 @@ func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:
 					draw_texture_rect_region(tex, dst, src, tint)
 
 
-# A slot's keycap: the shared drawn key, or on the selected slot the inverted cap (sand fill,
-# charcoal digit), so the pick reads on the number itself.
 func _draw_cap(at: Vector2, key: String, look: Dictionary, height: float) -> void:
 	if not look["glyph"] or Keycap.is_mouse(key):
 		Keycap.draw(self, at, key, look["cap_ink"], height)
@@ -589,7 +518,6 @@ func _draw_cap(at: Vector2, key: String, look: Dictionary, height: float) -> voi
 	draw_string(font, Vector2(at.x - UiFonts.width(text, fs) * 0.5, baseline), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, look["cap_ink"])
 
 
-# The mouse glyph over the selected slot, and its underline draining over the timeout.
 func _draw_glyph() -> void:
 	var x := glyph_x if glyph_x >= 0.0 else glyph_target()
 	var w := GLYPH_H * 0.8
@@ -602,11 +530,7 @@ func _draw_glyph() -> void:
 		draw_line(Vector2(x - w * 0.5, y), Vector2(x - w * 0.5 + w * share, y), UiTokens.TEXT, UNDERLINE)
 
 
-# The remaining cooldown as a petrol wedge: it fills the part of the slot still to come back
-# and shrinks clockwise from twelve, linearly, as the ability returns; the icon draws over it.
 func _draw_sweep(rect: Rect2, frac: float) -> void:
-	# A sliver under one degree has no area to triangulate, and a full wedge's first and
-	# last edge points coincide, so both ends are handled without building a polygon.
 	if frac < 1.0 / 360.0:
 		return
 	if frac >= 1.0 - 1.0 / 360.0:
@@ -627,19 +551,15 @@ func _draw_sweep(rect: Rect2, frac: float) -> void:
 		draw_colored_polygon(points, Color(Palette.VERDIGRIS, 0.8))
 
 
-# The clock's hand: a sand line from the slot's centre to the wedge's leading edge, so a
-# cooling slot reads as time running out and not as a slot that is simply grey.
 func _draw_hand(rect: Rect2, frac: float) -> void:
 	if frac < 1.0 / 360.0:
 		return
 	var centre := rect.get_center()
 	var angle := -PI * 0.5 + (1.0 - frac) * TAU
-	# A clock hand is round: it stops inside the slot's rounded corners.
 	draw_line(centre, centre + Vector2(cos(angle), sin(angle)) * (rect.size.x * 0.5 - HAND * 2.0), UiTokens.TEXT, HAND)
 	draw_circle(centre, HAND * 1.5, UiTokens.TEXT)
 
 
-# An empty charge's frame: DASHES dashes a side, so the slot reads as hollow, not as cooling.
 func _draw_dashed(rect: Rect2, color: Color) -> void:
 	var corners := [rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)]
 	for i in 4:

@@ -1,19 +1,5 @@
 extends Control
 
-# One run's comic page (the run-end thread's page dictionary; see scrapbook_store.gd for
-# the keys) drawn as a page: the issue line as the title card, then 4 to 6 inked panels
-# laid out from each panel's size hint, each with a deadpan caption box and, when the panel
-# has a word, an onomatopoeia burst. A panel with a screenshot draws it; without one (a
-# headless run, an old page) the panel is drawn from Palette in the world's colour. A page
-# with no panels still draws: the title and one dry blank panel. A lost run closes on one
-# deliberately melodramatic card that knows it is corny. Palette and UiFonts only.
-#
-#   var cp := ComicPage.new()
-#   cp.custom_minimum_size = Vector2(540, 720)   # 3:4; any size draws, the page letterboxes
-#   parent.add_child(cp)
-#   cp.show_page(page)
-#
-# Pure helpers (layout, words) are static so a test can read them without a tree.
 
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
@@ -25,12 +11,9 @@ const MAX_PANELS := 6
 const INK_COLOR := Color("242a28")
 const BURST_POINTS := 11
 const WIDE_WEIGHT := 0.8
-# The finale carries a lost run's loss card under its caption, both at the 18 px floor.
 const FINALE_WEIGHT := 1.3
 const TALL_WEIGHT := 1.3
 
-# No caption draws under this many px: at the summary's page size the scaled 15 px read as 9 px
-# (the project's floor for bold small type is 18 px, VISUAL-LANGUAGE.md).
 const CAPTION_MIN_FONT := UiTokens.BODY
 const EMPTY_CAPTION := "Page left blank. The pen is in the log, under the kettle."
 
@@ -63,10 +46,6 @@ func show_page(next: Dictionary) -> void:
 	queue_redraw()
 
 
-# --- Structure and words (static) ---
-
-# The panel rows to draw: at most MAX_PANELS well-typed dictionaries; the lone blank panel
-# stands in for a page with none.
 static func rows_of(p: Dictionary) -> Array:
 	var out: Array = []
 	var raw = p.get("panels", [])
@@ -84,10 +63,6 @@ static func size_of(row: Dictionary) -> String:
 	return hint if hint in ["wide", "tall", "square"] else "square"
 
 
-# Rectangles inside `area`, one per row, from the size hints. Panels fill rows in order:
-# a wide panel takes a row alone; two others share one (a tall beside a square is the
-# narrower of the pair); a lone one left over takes its row whole. A row with a tall is
-# taller, one with a wide is shorter. No holes, no overlap, `gutter` between.
 static func layout(rows: Array, area: Rect2, gutter: float) -> Array:
 	var groups: Array = []
 	var i := 0
@@ -130,7 +105,6 @@ static func layout(rows: Array, area: Rect2, gutter: float) -> Array:
 	return out
 
 
-# The melodramatic card for a lost run, "" for a win. Same run, same card.
 static func melodrama(p: Dictionary) -> String:
 	if ScrapbookStore.is_won(p):
 		return ""
@@ -146,9 +120,6 @@ static func title_text(p: Dictionary) -> String:
 
 
 static func subtitle_text(p: Dictionary) -> String:
-	# One plain sentence that always fits: who, where and, for a loss, how it ended. The loss card is
-	# dropped on a small page and the title shows the pilot only when it has no title of its own, so this
-	# line is where a small page says how the run went.
 	var who := String(p.get("pilot_name", ""))
 	var where := String(p.get("world_name", ""))
 	var line := who
@@ -162,7 +133,6 @@ static func subtitle_text(p: Dictionary) -> String:
 	return line
 
 
-# The subtitle's font size: its sentence shrinks until it fits `room`, never under 9 px.
 static func subtitle_font(p: Dictionary, room: float, k: float) -> int:
 	var font := UiFonts.bold()
 	var fs := maxi(9, int(19.0 * k))
@@ -181,8 +151,6 @@ static func world_color(world: int) -> Color:
 	return Palette.VERDIGRIS
 
 
-# --- Drawing ---
-
 func _draw() -> void:
 	var p: Dictionary = page
 	var list: Array = panels if not panels.is_empty() else rows_of(p)
@@ -200,14 +168,10 @@ func _draw() -> void:
 		_draw_panel(rects[j], list[kept[j]], kept[j], k)
 	if card != "" and not rects.is_empty() and card_fits(box, list, kept, card):
 		_card(rects[rects.size() - 1], card, k)
-	# Taped into the Keepers' scrapbook at its two top corners (LEGIBILITY.md section 14.3).
 	for corner in [[box.position, PI * 0.25], [Vector2(box.end.x, box.position.y), -PI * 0.25]]:
 		ScrapFrame.draw_tape(get_canvas_item(), corner[0], corner[1], ScrapFrame.TAPE * maxf(k, 0.5))
 
 
-# The indexes of the rows the page draws. A small page cannot hold six panels' captions at the
-# caption floor, so while any caption (or the finale's loss card) would spill out of its panel the
-# last middle panel is left off, down to the opening, one middle panel and the finale.
 static func fit_rows(box: Rect2, list: Array, card := "") -> Array:
 	var kept: Array = range(list.size())
 	while kept.size() > 3:
@@ -226,8 +190,6 @@ static func captions_fit(box: Rect2, list: Array, kept: Array) -> bool:
 	return true
 
 
-# Whether the loss card sits in the finale clear of the finale's own caption. A page too small for
-# both draws the caption alone: the card is the joke, the caption is the story.
 static func card_fits(box: Rect2, list: Array, kept: Array, card: String) -> bool:
 	var rects := panel_rects(box, kept.map(func(i): return list[i]))
 	var last: Rect2 = rects[rects.size() - 1]
@@ -237,7 +199,6 @@ static func card_fits(box: Rect2, list: Array, kept: Array, card: String) -> boo
 	return last.encloses(plate) and (said == "" or not plate.intersects(caption_rect(last, said, k)))
 
 
-# Where each panel sits on a page drawn into `box` (the page's own rectangle).
 static func panel_rects(box: Rect2, list: Array) -> Array:
 	var k := box.size.x / 720.0
 	var margin := 22.0 * k
@@ -289,7 +250,6 @@ func _draw_panel(r: Rect2, row: Dictionary, index: int, k: float) -> void:
 		_caption(r, caption, k)
 
 
-# The source rectangle that fills `into` from a texture without stretching.
 static func _cover(src: Vector2, into: Vector2) -> Rect2:
 	var want := into.x / maxf(1.0, into.y)
 	var have := src.x / maxf(1.0, src.y)
@@ -331,7 +291,6 @@ static func _clip(a: Vector2, b: Vector2, r: Rect2) -> PackedVector2Array:
 	return PackedVector2Array([a + d * t0, a + d * t1])
 
 
-# A hull ball in ink, so a drawn panel is never empty.
 func _silhouette(r: Rect2) -> void:
 	var c := r.position + Vector2(r.size.x * 0.5, r.size.y * 0.68)
 	var radius := minf(r.size.x, r.size.y) * 0.15
@@ -364,8 +323,6 @@ static func caption_font(k: float) -> int:
 	return maxi(CAPTION_MIN_FONT, int(15.0 * k))
 
 
-# The narrator box inside panel `r`: top left, as wide as its words need up to the panel's width
-# less the 8 k margins, and as tall as the wrapped words. Drawing and the fit test share it.
 static func caption_rect(r: Rect2, text: String, k: float) -> Rect2:
 	var pad := 6.0 * k
 	var width := r.size.x - 16.0 * k
@@ -374,8 +331,6 @@ static func caption_rect(r: Rect2, text: String, k: float) -> Rect2:
 	return Rect2(r.position + Vector2(8.0 * k, 8.0 * k), Vector2(minf(width, sz.x + pad * 2.0), sz.y + pad * 2.0))
 
 
-# A page squeezed under what fit_rows can rescue (a long summary body) shows the picture alone:
-# a caption is drawn only where it lies inside its panel.
 static func caption_shown(r: Rect2, text: String, k: float) -> bool:
 	return text != "" and r.encloses(caption_rect(r, text, k))
 
@@ -389,8 +344,6 @@ func _caption(r: Rect2, text: String, k: float) -> void:
 	draw_multiline_string(UiFonts.bold(), box.position + Vector2(pad, pad + fs), text, HORIZONTAL_ALIGNMENT_LEFT, box.size.x - pad * 2.0, fs, -1, INK_COLOR)
 
 
-# The loss card: ink box on the finale's bottom edge, amber type.
-# The same box on the finale's bottom edge.
 static func card_rect(r: Rect2, text: String, k: float) -> Rect2:
 	var pad := 6.0 * k
 	var width := r.size.x - 16.0 * k

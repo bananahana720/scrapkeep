@@ -1,21 +1,13 @@
 extends RefCounted
 
-# The launch shell the engine owns: the window icon and the boot splash. Godot loads the
-# configured icon from the raw SVG, which an exported pck does not carry, so the window can
-# ship without _NET_WM_ICON. apply() sets it from the imported texture, which is exported,
-# and prints one line that reads the live project settings so the shell is observable in a log.
+# Godot loads the configured icon from the raw SVG, which an exported .pck omits; apply() sets it from the imported texture.
 
 
-# The one headless question: true when no display server draws (the sketch tests, bots, the
-# cloud), false when a window is up. Every caller means one of two things by it. Nothing is seen,
-# so the idles, stills, the boot card and the title intro have no viewer. And the dummy renderer's
-# mesh RIDs are not thread-safe, so mesh loads stay on the main thread. Game code asks here and
-# never spells the display server's name itself; app_shell_test scans src/ for a stray copy.
+# Godot's headless dummy renderer has non-thread-safe mesh RIDs, so callers check headless() to keep mesh loads on the main thread.
 static func headless() -> bool:
 	return DisplayServer.get_name() == "headless"
 
 
-# Sets the window icon and returns "icon WxH", "icon missing" or "icon skipped (headless)".
 static func apply() -> String:
 	var status := set_window_icon(not headless())
 	print(shell_line(status))

@@ -58,8 +58,6 @@ const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
 const LaunchTake := preload("res://src/presentation/launch_take.gd")
 const Opening := preload("res://src/presentation/opening.gd")
-# The camp, the workshop, the pause menu and the met-enemy watch are not on the title's path, so they
-# are loaded when first needed (menu_modules); a played game builds them a few frames after the menu.
 const MENU_PATHS := [
 	"res://src/world/camp_hub.gd",
 	"res://src/ui/camp_enemy_picker.gd",
@@ -69,12 +67,8 @@ const MENU_PATHS := [
 const MENU_STEPS := 4
 const MENU_MODULES_FRAMES_APART := 2
 
-# The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
-# one context to the four modules in a fixed order, then owns input, pause, hit-stop
-# and the tuning dump. Modules never reach past the context; see CONTRACTS.md.
 
 const RESTART_HOLD := 0.5
-# The camp gate's shot (launch_from_gate), m/s: out through the arch and up, so the chase camera rises with it.
 const GATE_OUT := 9.0
 const GATE_UP := 15.0
 const HIT_STOP_MAX := 0.06
@@ -88,32 +82,19 @@ const SliceDefs := preload("res://src/core/slice_defs.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const TABLES := {"default": StageDefs, "slice": SliceDefs, "alpha": AlphaDefs, "park": ParkDefs}
-# A launched game with no --table plays the six parks (KD7), so the app-menu entry reaches them.
-# Headless tests and bot runs (test_mode) keep the legacy maps unless they pick a table;
-# --table=default still reaches those maps from a launch.
 const LAUNCH_TABLE := "park"
 
-# The headless tests drive the same scene with a scripted source and no mouse capture.
 var test_mode := false:
 	set(value):
 		test_mode = value
 		bot_driven = value
-# No human answers a prompt: a bot (tools/bot_driver.gd sets it) or a headless test (test_mode
-# sets it; a test that plays the human clears it after). The hot-wire screen never opens or
-# pauses while it is set.
 var bot_driven := false:
 	set(value):
 		bot_driven = value
 		if run != null:
 			run.bot_driven = value
-# The stage table's id (a key of TABLES), set before the game enters the tree; empty reads
-# --table= from the launch args, and no argument is LAUNCH_TABLE (the default table in test_mode).
 var table := ""
-# Stage 1's park ground builds on worker threads behind the menu (world.gd MENU-READY); on for a
-# played game, and for a test that sets it before the game enters the tree.
 var ground_behind_menu := false
-# The dev keys (F1 tuning panel, F3 interpolation, F4 tuning dump, F6 boss tempo) work only when
-# the game was launched with --dev; a test sets it directly. Modules read ctx.dev.
 var dev := false:
 	set(value):
 		dev = value
@@ -133,18 +114,13 @@ var combat
 var build
 var boss
 var presentation
-# Taken when the game object is created, before any child can draw (see RunState._init).
 var _session_seed := randi() # lint: session seed
 var hud
 var screens
-# The pilot radio (radio_deck.gd): the HUD dial, the takes a run finds, the playlists.
 var radio_deck
-# The comic swipe that hides the cut from pilot select or the camp gate into the dam (launch_take.gd).
 var launch_take
-# A run's opening, one voice at a time (opening.gd): the speakers ask it, and it reads the rest.
 var opening
 var _first_control_said := false
-# The walkable camp (camp_hub.gd). Reading it builds the menu modules if they are not up yet.
 var camp_hub:
 	get:
 		menu_modules()
@@ -157,15 +133,10 @@ var panel
 var keyboard
 var codex
 var run_log
-# The run-end comic page's moments (src/core/run_moments.gd).
 var run_moments
 var progress
 var _progress_ready := false
-# Where the codex and the run log write: user:// in play, a per-process folder the
-# tests clean up when the game leaves the tree.
 var storage_dir := "user://"
-# The run save's file (RS3). Play keeps it at user://run.json; a test names its own file to
-# turn run saves on, and with none set a test runs without them (unlimited death retries).
 var run_store_path := ""
 var _settings_store
 
@@ -173,36 +144,21 @@ var _pause_toggled := false
 var _notes_held := false
 var _restart_held := 0.0
 var _restart_latched := false
-# The summary's input latch: it opens with the summary and stays shut while any input that was
-# held then (a key, mouse button, pad button or trigger) is still held, and while the ending page
-# is up. The victory beat and a death end with the player on Space or the fire button, and a
-# held input must not skip the summary or start a run. A fresh press after the release takes it,
-# with no time lock (wave 19).
 var summary_latched := false
 var _dead_c_latched := false
 var _hit_stopped := false
-# A headless test's stop counts physics ticks, not wall time; -1 is a wall-time stop.
 var _stop_ticks_left := -1
 var _scale_before_stop := 1.0
-# The world's speed under slow_motion (1.0: none).
 var _slow := 1.0
-# The device the player touched last, "kbm" or "pad": the later glyph unit reads this.
 var last_device := "kbm"
-# The saved Frame smoothing wish (settings, Display). interpolating() is what the tree does.
 var frame_smoothing := true
-# The player's Wide picture wish; the root fills only on a played game's window (set_wide_picture).
 var wide_picture := true
-# Loaded at run time only when the pack carries tools/, never preloaded (lint L7 allows this line).
 const SELF_PLAY := "res://tools/self_play.gd"
-# held_glyph()'s answer for a held input that has no keycap to draw.
 const HELD_UNNAMED := "held"
 
 
 func _ready() -> void:
 	_boot("ready")
-	# Physics interpolation is opt-in per body: a node that says nothing is drawn where it is,
-	# as it is with the tree's interpolation off. Only the ball asks (player_ball.gd), and what
-	# follows the ball reads its shown position. set_frame_smoothing turns the tree's on.
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	if not test_mode:
 		AppShell.apply()
@@ -222,9 +178,6 @@ func _ready() -> void:
 	run = RunState.new(events, _session_seed)
 	run.bot_driven = bot_driven
 	tuning = Tuning.new()
-	# Full-alpha progression unlocked (W49-COMBAT, ruling du dropped): a plain played launch
-	# continues past Brindle into The Dig and The Highdraft unless --final-world=1 or a sitting
-	# profile explicitly caps the run at World 1.
 	tuning.apply_cmdline("launch")
 
 	player = PlayerBall.new()
@@ -257,7 +210,6 @@ func _ready() -> void:
 	flow.name = "Flow"
 	add_child(flow)
 	ctx.flow = flow
-	# Before every speaker, so each can hear its turn from its own setup.
 	opening = Opening.new()
 	add_child(opening)
 	opening.setup(self)
@@ -265,18 +217,11 @@ func _ready() -> void:
 		storage_dir = "user://test-%d" % OS.get_process_id()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
 	elif _launch_flag("--self-play"):
-		# A bot's run never touches the player's saves: codex, profile, run log and the run save
-		# all follow storage_dir, so they land in a folder of their own. --self-play-save=<name> names
-		# that folder, so a second launch finds the first one's save (quit, then Continue).
 		storage_dir = "user://self-play-%s" % _self_play_save()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
 	elif tuning != null and tuning.sitting_earned():
-		# The earned sitting plays on a profile of its own, so the player's saves stay as they are
-		# and the first unlock is earned, and kept, as a new player would earn it (W1-78).
 		storage_dir = "user://sitting-earned"
 		DirAccess.make_dir_recursive_absolute(storage_dir)
-		# It starts from the player's own keys, look and volume: a copy, made once, so a change
-		# made in the sitting stays in the sitting.
 		var settings := storage_dir.path_join(SettingsStore.FILE)
 		if not FileAccess.file_exists(settings) and FileAccess.file_exists("user://".path_join(SettingsStore.FILE)):
 			DirAccess.copy_absolute("user://".path_join(SettingsStore.FILE), settings)
@@ -304,7 +249,6 @@ func _ready() -> void:
 	add_child(progress)
 	progress.set_story_chapter_hook(func(trigger_id: String, profile): return PilotStory.chapters_matching_trigger(trigger_id, profile, codex))
 	ctx.progress = progress
-	# Before any module hears run_started, so the run's first offer already sees the board's items.
 	events.run_started.connect(func(_class_id: String): open_board_items())
 
 	_boot("modules")
@@ -324,7 +268,6 @@ func _ready() -> void:
 	_boot("combat")
 	build = _module(Build)
 	events.run_started.connect(_apply_player_run_options)
-	# Wave 4's boss module sets up after build and before presentation when it exists.
 	if ResourceLoader.exists(BOSS_PATH):
 		boss = _module(load(BOSS_PATH))
 	_boot("build_boss")
@@ -337,7 +280,6 @@ func _ready() -> void:
 	assert(ctx.terrain != null, "world.setup(ctx) must set ctx.terrain")
 	assert(ctx.spawner != null, "combat.setup(ctx) must set ctx.spawner")
 	player.struck.connect(func(enemy: Node3D, kind: String, force: float): ctx.spawner.strike(enemy, kind, force))
-	# Read ctx.spawner at call time, so a test double or a late swap is honoured.
 	player.crush_check = func(enemy: Node3D, kind: String, force: float) -> bool:
 		if ctx.spawner == null or not ctx.spawner.has_method("would_crush"):
 			flow.warn_once("would_crush", "game: spawner has no would_crush(); crush pass-through is off")
@@ -377,19 +319,15 @@ func _ready() -> void:
 	var drawer: CanvasLayer = load("res://src/ui/panel_drawer.gd").new()
 	add_child(drawer)
 	drawer.setup(self, panel)
-	# A window that loses focus or a pad that drops out pauses a played run (auto_pause.gd).
 	var auto_pause: Node = load("res://src/ui/auto_pause.gd").new()
 	add_child(auto_pause)
 	auto_pause.setup(self)
-	# Tests and bots build the menu modules here; a played game builds them behind the menu, and
-	# at once if a run or a camp visit starts first.
 	if test_mode:
 		menu_modules()
 	else:
 		events.flow_changed.connect(func(state: String):
 			if state != "title":
 				menu_modules())
-		# A Continue starts a run without leaving class select: the picker's watch must be up for it.
 		events.run_started.connect(func(_class_id: String): menu_modules())
 
 	if not test_mode:
@@ -397,7 +335,6 @@ func _ready() -> void:
 		keyboard.tuning = tuning
 		keyboard.enabled = false
 		player.source = keyboard
-	# The first stage's ground is where the title parks the ball, once it is built (world.gd).
 	if ctx.terrain.is_ready(1):
 		_park_on_title_ground(1)
 	else:
@@ -410,12 +347,10 @@ func _ready() -> void:
 		_menu_wait = MENU_MODULES_FRAMES_APART
 	if _launch_flag("--self-play") and not test_mode:
 		_start_self_play()
-	# --sitting-notes: the build takes notes while a person plays (ruling cg). Never in a test_mode game.
 	if SittingNotes.wanted() and not test_mode:
 		var sitting_notes := SittingNotes.new()
 		sitting_notes.game = self
 		add_child(sitting_notes)
-	# --frame-log=<file>: frame times for scripts/frametime-check.mjs where MangoHud is missing.
 	if FrameLog.wanted() and not test_mode:
 		add_child(FrameLog.new())
 	if _launch_flag("--boot-profile"):
@@ -426,9 +361,6 @@ func _ready() -> void:
 			_boot("frame %d" % (frame + 1))
 
 
-# Builds the camp, the workshop, the pause menu and the met-enemy watch, in four steps (_menu_step).
-# Called by the first reader of game.camp_hub, by workshop(), when a run leaves the title (each
-# finishes what is left at once), and a few frames apart behind the menu, so no one frame loads them all.
 func menu_modules() -> void:
 	while _menu_step < MENU_STEPS:
 		_menu_step_once()
@@ -450,7 +382,6 @@ func _menu_step_once() -> void:
 			hub.setup(self)
 			hub.camp_store = ctx.profile
 		1:
-			# Runs mark the enemies they spawn as met from the start, before the camp is ever opened.
 			script.watch(self)
 		2:
 			add_child(script.new())
@@ -463,7 +394,6 @@ func _menu_script(step: int) -> Script:
 	var path: String = MENU_PATHS[step]
 	if _menu_requested == step:
 		_menu_requested = -1
-		# Blocks only when a forced build (a Start, a camp visit) finds the load still running.
 		var threaded: Script = ResourceLoader.load_threaded_get(path)
 		if threaded != null:
 			return threaded
@@ -475,9 +405,7 @@ func workshop() -> Node:
 	return get_node("Workshop")
 
 
-# Behind the menu, once the boot card is gone: one script at a time loads on the loader's thread
-# (ONE load_threaded_request, polled a frame at a time, never a parallel pair: the preload cycles
-# deadlock), and the main thread only instantiates and sets it up once it has loaded.
+# Poll one ResourceLoader.load_threaded_request at a time; parallel preload requests deadlock in Godot.
 func _step_menu_modules_later() -> void:
 	if _menu_wait < 0 or _menu_step >= MENU_STEPS:
 		return
@@ -506,22 +434,16 @@ func _park_on_title_ground(stage: int) -> void:
 		return
 	if ctx.terrain.stage_built.is_connected(_park_on_title_ground):
 		ctx.terrain.stage_built.disconnect(_park_on_title_ground)
-	# A run started before the ground was built finishes it on entry and places the ball after.
 	if flow.in_play():
 		return
-	# Nor one walking the camp (K before the dam finished building): leaving the walk re-homes
-	# the ball itself. The step check keeps this read from building the menu modules.
 	if _menu_step >= MENU_STEPS and camp_hub != null and camp_hub.get("walking") == true:
 		return
 	player.reset_to(ctx.terrain.spawn_point(1))
 	camera.snap(ctx.terrain.entry_heading(1))
 
 
-# --self-play hands the run to a bot from tools/ (tools/self_play.gd), which the shipped pack
-# leaves out; without it the game says so and quits, rather than waiting for a player.
 func _start_self_play() -> void:
 	var script_path := SELF_PLAY
-	# Test override: --self-play-script=<res path> points the hook elsewhere (a missing path proves exit 2).
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--self-play-script="):
 			script_path = arg.trim_prefix("--self-play-script=")
@@ -534,8 +456,6 @@ func _start_self_play() -> void:
 	add_child(bot)
 
 
-# Moss's jukebox: a tune heard in play long enough is filed in the profile and announced on
-# the HUD's record plate. Tunes the profile holds are never announced again.
 func _listen_for_tunes() -> void:
 	var sound = audio()
 	if sound == null or not sound.has_signal("tune_heard"):
@@ -569,13 +489,10 @@ func _chosen_table():
 	return TABLES[id]
 
 
-# The presentation's audio, or null before the presentation exists.
 func audio():
 	return presentation.get("audio") if presentation != null else null
 
 
-# The fixed order: world first (it sets ctx.terrain), then combat (ctx.spawner), then
-# build and presentation, which only read.
 func _module(script: GDScript) -> Node:
 	var module: Node = script.new()
 	add_child(module)
@@ -583,24 +500,16 @@ func _module(script: GDScript) -> Node:
 	return module
 
 
-# The title's one line on why Continue is not offered (SAFE1); "" when it is, or no run exists.
 func continue_refusal() -> String:
 	return flow.continue_refusal()
 
 
-# A pilot is playable when it is a starter or the profile holds it. Only the keys and card
-# clicks ask; flow.choose_class stays ungated for bots and tests.
-# A sitting run never writes the saved profile: every save path goes through Profile.save, which
-# checks can_save. The launch flag is applied before the profile loads, so this runs once at setup.
 func sitting_save_guard() -> void:
 	if tuning != null and tuning.sitting() and ctx.profile != null:
 		ctx.profile._refuse("sitting profile: this session does not save")
-		# The sitting opens every first-win secret, as it opens every pilot (secrets.gd).
 		Secrets.open_for_sitting(ctx.profile)
 
 
-# The items the shift board opened for this profile join the offer pool for the run about to start
-# (shift_board.gd). A bot or a test keeps the table's own list, so its runs replay as before.
 func open_board_items() -> void:
 	Parts.opened_items = {}
 	if bot_driven or ctx.profile == null:
@@ -647,7 +556,6 @@ func _exit_tree() -> void:
 		return
 	for file in dir.get_files():
 		dir.remove(file)
-	# The scrapbook's pages and stills (run_moments.gd).
 	var book := storage_dir.path_join(RunMoments.DIR)
 	if DirAccess.dir_exists_absolute(book):
 		for file in DirAccess.get_files_at(book):
@@ -657,8 +565,6 @@ func _exit_tree() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	# The listener joins the bus after the first frame, once the scene is built, so a test that
-	# builds its own Progress on this bus in its first frame hears each fact once.
 	if not _progress_ready:
 		_progress_ready = true
 		progress.setup(events, run, ctx.profile, Callable(), codex)
@@ -683,38 +589,28 @@ func _process(delta: float) -> void:
 	step_stick_look(delta)
 
 
-# The right stick turns the camera every frame, captured mouse or not.
 func step_stick_look(delta: float) -> void:
 	var stick := Input.get_vector("cl_look_left", "cl_look_right", "cl_look_up", "cl_look_down")
 	if stick != Vector2.ZERO:
 		camera.look_stick(stick, delta, stick_on_target())
 
 
-# True while the crosshair is on a hookable surface or enemy: the harpoon's aim record, which
-# the physics step refreshes in play, holds a target. Aim assist reads it for the stick only.
 func stick_on_target() -> bool:
 	return player != null and player.kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE
 
 
-# Pushes the saved look settings to the camera; the settings page calls it after each step.
 func apply_look() -> void:
 	camera.apply_look_settings(settings_store())
 
 
-# Hold R in play to restart. One restart per press: after one, or when R was already down
-# outside play (the death screen), the hold waits for R to come up before it counts, so a
-# held R never restarts twice.
 func step_restart_hold(delta: float, r_down: bool) -> void:
 	if not r_down:
 		_restart_latched = false
-	# An R held through a death (or any frame outside play) must be released before it counts:
-	# the retry or new run that follows would otherwise restart again at once.
 	if r_down and not flow.in_play():
 		_restart_latched = true
 	if not flow.in_play() or not r_down or _restart_latched:
 		_restart_held = 0.0
 		return
-	# The victory lap is not a stage to restart: with a store, R never abandons the credits.
 	if flow.store != null and flow.state == flow.LAP:
 		_restart_held = 0.0
 		return
@@ -722,9 +618,6 @@ func step_restart_hold(delta: float, r_down: bool) -> void:
 	if _restart_held >= RESTART_HOLD:
 		_restart_held = 0.0
 		_restart_latched = true
-		# With a run store (the real game) a held R is a restart of the run: a new run as the same
-		# pilot, the open one logged as abandoned, never as a death. A store-less flow (tests,
-		# bots) keeps the stage retry.
 		if flow.store != null:
 			flow.new_run()
 		else:
@@ -735,8 +628,6 @@ func restart_hold_fraction() -> float:
 	return clampf(_restart_held / RESTART_HOLD, 0.0, 1.0)
 
 
-# The single answer to "what would the grapple hit right now". The reticle, the world
-# marker and the ball's RMB grapple all read the record this stores.
 func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 	player.kit.aim = Harpoon.target(player.kit, tuning, get_world_3d().direct_space_state,
 		get_tree().get_nodes_in_group("enemy"), from, forward, player.ball_position())
@@ -744,15 +635,7 @@ func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 	return player.kit.aim
 
 
-# A played game holds the stop for wall time (the timer ignores the time scale). A headless test
-# (test_mode) holds it for the same span in physics ticks instead, floored: the wall timer usually
-# ends the stop on the next tick after it expires, so floor matches its usual count. Godot reads Engine.time_scale
-# once per frame, so the count is exact only while a frame carries one tick; a slow frame that
-# runs several keeps the ticks after the counter ends slowed too. Runs on the sim clock
-# (SimClock.ticks: the bot and sweep tools, all launched at fixed fps) keep the timer, so balance
-# numbers stay put; a test that sets SimClock.ticks itself keeps it too. Juice still admits and
-# trims stops on SimClock.msec() (wall ms unless SimClock.ticks): this fixes a stop's length, not
-# whether one is sent.
+# Godot reads Engine.time_scale once per frame, so tick-based hit-stop precision requires one tick per frame.
 func hit_stop(seconds: float) -> void:
 	if _hit_stopped or seconds <= 0.0 or not flow.in_play():
 		return
@@ -775,13 +658,6 @@ func _end_hit_stop() -> void:
 	_hit_stopped = false
 
 
-# Slow motion: the world runs at `scale` of its speed until asked back to 1.0. The caller owns
-# when (flourish_cues.gd, the close-up at Brindle's entrance, ruling cf) and keeps it to a hand
-# on the controls, so no bot's run or band sees it. It multiplies whatever scale a tool set, and
-# a hit stop inside it lifts back to the slowed speed. Music runs on its own sample clock and
-# does not slow; the sound director is told, and marks the slowing and the return (audio.gd
-# slowed). Physics keeps its 90 ticks a second of wall time (each tick's delta is what
-# shrinks), so motion is drawn as often as at full speed and the smoothing setting is untouched.
 func slow_motion(scale: float) -> void:
 	scale = clampf(scale, SLOW_MOTION_FLOOR, 1.0)
 	if is_equal_approx(scale, _slow):
@@ -805,7 +681,6 @@ func interpolating() -> bool:
 	return get_tree().physics_interpolation
 
 
-# The panel keeps nothing between runs, so F4 records exactly what was being played.
 func dump_tuning() -> String:
 	var values := {}
 	var mods := {}
@@ -835,7 +710,6 @@ func dump_tuning() -> String:
 	return shown
 
 
-# Tab holds the notes open and P toggles; either one pauses the tree.
 func toggle_pause() -> void:
 	_pause_toggled = not _pause_toggled
 	_apply_pause()
@@ -850,7 +724,6 @@ func pause_toggled() -> bool:
 	return _pause_toggled
 
 
-# The ACE music's held breath, raw to hard to gentle: the title's B and the pause row.
 func cycle_breath() -> String:
 	var options: Array = tuning.options_of(Tuning.BREATH_KEY)
 	var style: String = options[(options.find(tuning.option(Tuning.BREATH_KEY)) + 1) % options.size()]
@@ -878,14 +751,11 @@ func _on_flow_changed(_state: String) -> void:
 		keyboard.walk = false
 	capture_mouse(playing)
 	if playing:
-		# A is jump in play and ui_accept in a menu: nothing may keep focus into play.
 		var holder := get_viewport().gui_get_focus_owner()
 		if holder != null:
 			holder.release_focus()
 
 
-# The camp walk (camp_hub.gd) rolls the ball from the title: the keyboard and the captured mouse are live while the
-# walk shows no page, and off while a page covers it. The walk's keyboard only rolls, jumps, boosts and brakes.
 func walk_input(live: bool) -> void:
 	if keyboard != null:
 		keyboard.enabled = live
@@ -893,15 +763,10 @@ func walk_input(live: bool) -> void:
 	capture_mouse(live)
 
 
-# --- the launch take (launch_take.gd): pilot select or the camp gate into the dam as one take ---
-
-# Only a played game shows the take; bots, tests and headless runs start the run at once.
 func _take_live() -> bool:
 	return launch_take.force_live or (not test_mode and not bot_driven and not AppShell.headless())
 
 
-# A stage launch of flight_s asks for the take (flow.gd): the panel closes over the flight's end and on_cover waits under
-# it until flight_over() says so. False when no take plays, and then nothing was called: the caller cuts as it always did.
 func play_launch_take(on_cover: Callable, flight_over: Callable, ready_check: Callable, flight_s: float, taken_part := "") -> bool:
 	if launch_take.busy() or not _take_live():
 		return false
@@ -909,12 +774,10 @@ func play_launch_take(on_cover: Callable, flight_over: Callable, ready_check: Ca
 	return launch_take.play_over_flight(on_cover, flight_over, ready_check, flight_s, taken_part)
 
 
-# The part a gate gave, told to a launch take that began before the gate's event reached flow.
 func stamp_launch_take(part_id: String) -> void:
 	launch_take.stamp_taken(part_id)
 
 
-# A pilot picked on pilot select: the deck camera lifts, the swipe covers, the run starts under it.
 func pick_pilot(index: int) -> void:
 	launch_take.live = _take_live()
 	launch_take.play(func():
@@ -928,7 +791,6 @@ func pick_pilot(index: int) -> void:
 			title_stage.launch_push(LaunchTake.WIND_S + LaunchTake.COVER_S), _dam_drawn)
 
 
-# The pilot the camp gate launches: the last one flown, else the first one open (Sable on a fresh profile).
 func gate_pilot() -> Resource:
 	var last: String = ctx.profile.last_pilot() if ctx.profile != null else ""
 	var first: Resource = null
@@ -947,8 +809,6 @@ func gate_label() -> String:
 	return "Launch as %s" % def.display_name if def != null and def.display_name != "" else "Launch"
 
 
-# Space at the camp's launch gate: the gate fires the ball and the swipe carries it into the dam with the gate's pilot,
-# no pilot select between. A first run (the prologue still due) goes by pilot select as before.
 func launch_from_gate() -> void:
 	var def := gate_pilot()
 	if def == null or screens.prologue_due():
@@ -963,7 +823,6 @@ func launch_from_gate() -> void:
 		flow.launch_from_title(def), _fire_gate, _dam_drawn)
 
 
-# The wind of a gate launch: the walk's keys let go and the ball leaves the gate up and out, the chase camera after it.
 func _fire_gate() -> void:
 	walk_input(false)
 	camp_hub.set_prompts_visible(false)
@@ -981,13 +840,10 @@ func _launch_whoosh() -> void:
 		sound.play("launched")
 
 
-# The swipe holds until the run's stage has its ground built (the title builds the dam's first, world.gd).
 func _dam_drawn() -> bool:
 	return not flow.in_play() or ctx.terrain.is_ready(run.stage)
 
 
-# The release check's line for cold launch to first control (world 1 unit 17: under 20 s on the 4080 export): the first
-# frame of play with the launch take's panel gone. Bots and tests never print it.
 func _say_first_control() -> void:
 	if _first_control_said or bot_driven or not flow.in_play():
 		return
@@ -995,43 +851,34 @@ func _say_first_control() -> void:
 	print("SCRAPKEEP_FIRST_CONTROL ms=%d" % Time.get_ticks_msec())
 
 
-# A run the take starts in a played game has an opening (opening.gd). A bot's take is not live.
 func _begin_opening() -> void:
 	if launch_take.live:
 		opening.begin()
 
 
-# The take is gone: the start-pick card it kept hidden shows, and first control is said.
 func _on_take_finished() -> void:
 	if flow.in_stage():
 		flow.show_start_card()
 	_say_first_control()
 
 
-# Latches the summary against whatever is held right now.
 func arm_summary_latch() -> void:
 	summary_latched = input_held()
 
 
-# True while the summary takes no key: an input held at its opening, or the ending page over it.
 func summary_shut() -> bool:
 	return summary_latched or (screens != null and screens.ending_open())
 
 
-# Releases the latch once nothing is held and the ending page is down.
 func step_summary_latch() -> void:
 	if summary_latched and not (screens != null and screens.ending_open()) and not input_held():
 		summary_latched = false
 
 
-# True while a key, mouse button, pad button or trigger bound to any action is down. Sticks and
-# mouse motion do not count: a drifting stick must not lock a menu.
 func input_held() -> bool:
 	return held_glyph() != ""
 
 
-# The cap id (keycap.gd) of the first such input that is down, "" when none is: the summary's latch cue
-# draws it. An input with no cap of its own (a side mouse button, a pad's Back) answers HELD_UNNAMED.
 func held_glyph() -> String:
 	var pads := Input.get_connected_joypads()
 	var table := Bindings.actions()
@@ -1094,10 +941,6 @@ func _register_actions() -> void:
 			InputMap.action_add_event(ui_action, ui_pad)
 
 
-# A saved binding replaces only the kinds of input it names: keys and mouse buttons together,
-# pad buttons on their own; stick and trigger axes always stay. A saved text that decodes to
-# nothing keeps the defaults (decode warns once per token). Runs once at boot, after
-# storage_dir is settled.
 func apply_saved_bindings() -> void:
 	var store := SettingsStore.new(storage_dir)
 	for action in Bindings.actions():
@@ -1109,10 +952,6 @@ func apply_saved_bindings() -> void:
 		apply_binding(action, decoded)
 
 
-# Puts `events` on `action` in the InputMap: keys and mouse buttons together replace the
-# desk events, pad buttons replace the pad events, a trigger axis replaces the action's
-# trigger, sticks stay. Boot and the settings page
-# both call this, so a live rebind and a saved one cannot differ.
 func apply_binding(action: String, events: Array) -> void:
 	if events.is_empty() or not InputMap.has_action(action):
 		return
@@ -1134,27 +973,20 @@ func apply_binding(action: String, events: Array) -> void:
 		InputMap.action_add_event(action, event)
 
 
-# Clears every saved binding and puts the table's defaults back at once.
 func reset_bindings() -> void:
 	var store = settings_store()
 	for action in store.bindings.keys():
 		store.clear_binding(action)
 	_register_actions()
-	# Recreating the actions put the default deadzone back on the look axes.
 	camera.apply_look_settings(store)
 
 
-# One settings store for the pause menu and the settings page, so neither saves over the
-# other's changes with a stale copy.
 func settings_store():
 	if _settings_store == null:
 		_settings_store = SettingsStore.new(storage_dir)
 	return _settings_store
 
 
-# The saved quality and fullscreen, after the presentation exists. A valid --preset= user
-# argument beats the saved quality, as in GraphicsPreset.bind; the window mode is only
-# touched on a real window. `args` stands in for the user arguments in a test.
 func apply_saved_display(args: Array = []) -> void:
 	var launch: Array = args if not args.is_empty() else Array(OS.get_cmdline_user_args())
 	var saved := SettingsStore.new(storage_dir)
@@ -1168,15 +1000,12 @@ func apply_saved_display(args: Array = []) -> void:
 	set_wide_picture(saved.wide_picture())
 
 
-# 0 High, 1 Low.
 func set_quality(level: int) -> void:
 	var preset := "low" if level == 1 else "high"
 	if GraphicsPreset.current != preset:
 		GraphicsPreset.apply(preset)
 
 
-# All process-wide reduced-motion statics in one place. set_reduced_motion() uses it,
-# and tools/test_batch_driver.gd calls set_motion_statics(false) between batched tests.
 static func set_motion_statics(on: bool) -> void:
 	EnemyMotion.motion_scale = 0.0 if on else 1.0
 	HighdraftFx.preferred = on
@@ -1195,8 +1024,6 @@ static func set_motion_statics(on: bool) -> void:
 	preload("res://src/presentation/flourish_player.gd").reduced_motion = on
 
 
-# Reduced motion: the camera holds still, the hit-edge flash drops to a quarter, enemy idle
-# and the net-deck fx go quiet. Telegraph motion reads none of these, so it keeps its timing.
 func set_reduced_motion(on: bool) -> void:
 	set_motion_statics(on)
 	if is_instance_valid(WorldFx.current):
@@ -1211,8 +1038,6 @@ func set_reduced_motion(on: bool) -> void:
 			node.reduced_motion = on
 
 
-# Reduce flashes: every flash, white pop and strobe reads FlashGuard when it fires, so the
-# switch takes effect on the next flash. Particle emitters that keep running re-read it now.
 func set_reduce_flashes(on: bool) -> void:
 	FlashGuard.on = on
 	if is_inside_tree():
@@ -1220,12 +1045,6 @@ func set_reduce_flashes(on: bool) -> void:
 			FxLibrary.set_heat(p)
 
 
-# Frame smoothing: the ball is drawn between its last two physics ticks, so a display faster
-# or slower than the 90 ticks shows it moving every frame, at most one tick late. Only a game
-# on a window takes the setting. The sim reads the lens (the aim origin) and the lens follows
-# the drawn ball, so a headless bot or a test with smoothing on would not play the run the gate
-# measures. --smoothing=0 or --smoothing=1 beats the setting and that rule, for a capture or a
-# comparison; F3 under --dev flips it for the session.
 func set_frame_smoothing(on: bool) -> void:
 	frame_smoothing = on
 	var smooth := on and not test_mode and _windowed()
@@ -1235,13 +1054,6 @@ func set_frame_smoothing(on: bool) -> void:
 	_smooth(smooth)
 
 
-# Wide picture: on a window wider than 16:9 the picture fills it (the root's content aspect
-# "expand": the 3D view keeps its height and widens, the HUD anchors to the true corners), or keeps
-# the 1600x900 shape with bars ("keep", the project's own setting). A window as wide as 16:9 or
-# narrower (16:10) always keeps: "expand" there would make the view taller and narrower across.
-# Only a game on a window takes the setting: a headless window is not 16:9, so there "expand" would
-# move the HUD and widen the view every test and bot reads. --wide=0 or --wide=1 beats the setting
-# and the played-window rule, for a capture. A resized window is read again.
 func set_wide_picture(on: bool) -> void:
 	wide_picture = on
 	if not is_inside_tree():
@@ -1270,8 +1082,6 @@ func _smooth(on: bool) -> void:
 	if not is_inside_tree() or get_tree().physics_interpolation == on:
 		return
 	get_tree().physics_interpolation = on
-	# The engine's jitter fix evens out tick counts for a picture drawn on the ticks; under
-	# interpolation it only adds error, so it rests while smoothing is on.
 	Engine.physics_jitter_fix = 0.0 if on else float(ProjectSettings.get_setting("physics/common/physics_jitter_fix", 0.5))
 	reset_physics_interpolation()
 
@@ -1282,14 +1092,7 @@ func set_fullscreen(on: bool) -> void:
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if on else DisplayServer.WINDOW_MODE_WINDOWED)
 
 
-# Whether launch puts the window fullscreen. The player's Fullscreen setting decides, and it is
-# on until they turn it off (DECISIONS cb): a monitor's variable refresh only follows a
-# fullscreen window, and a tiled one is drawn on the compositor's clock. A game with no
-# player's save folder (a test, a bot's run) has no wish to follow and keeps the window it was
-# launched with, so a capture or a timing run stays the size its command gave it.
-# --fullscreen=0 or --fullscreen=1 beats the setting and that rule this once and leaves the
-# setting alone, as --smoothing does. Godot's own --windowed cannot do it: the engine keeps the
-# flags it handles to itself, so the game never sees one.
+# Godot consumes --windowed before user args reach GDScript, so --fullscreen=0 overrides the saved setting.
 func launches_fullscreen(wanted: bool, args: Array) -> bool:
 	if "--fullscreen=0" in args or "--fullscreen=1" in args:
 		return args.rfind("--fullscreen=1") > args.rfind("--fullscreen=0")
@@ -1298,17 +1101,12 @@ func launches_fullscreen(wanted: bool, args: Array) -> bool:
 	return wanted
 
 
-# The key a pad press stands for on the title, death and summary screens, or KEY_NONE: A is
-# the screen's primary key (Space on the title; N on death and on the summary), B on the death
-# screen is N, Y there opens class select and X replays, B on the summary opens class select. On the title a focused Control or an
-# open overlay keeps A for the GUI (ui_accept presses the focused button; an overlay swallows it).
 func pad_screen_key(event: InputEvent) -> int:
 	if not (event is InputEventJoypadButton) or not event.pressed:
 		return KEY_NONE
 	var state: String = flow.state_name()
 	if event.button_index == JOY_BUTTON_A:
 		if state == "title":
-			# In the camp walk A presses the station the ball is in, else it is the jump.
 			if screens != null and screens.walk_live():
 				return camp_hub.confirm_key()
 			if screens != null and screens.walking():
@@ -1319,7 +1117,6 @@ func pad_screen_key(event: InputEvent) -> int:
 				return KEY_NONE
 			return KEY_SPACE
 		if state == "summary" or state == "dead":
-			# Once the stick has put the highlight on a button, A presses that button (as on the title).
 			if get_viewport().gui_get_focus_owner() != null:
 				return KEY_NONE
 			return KEY_N
@@ -1337,7 +1134,6 @@ func pad_screen_key(event: InputEvent) -> int:
 	return KEY_NONE
 
 
-# Any key, mouse button or mouse motion is kbm; any pad button or stick past the deadzone is pad.
 func note_device(event: InputEvent) -> void:
 	if event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion:
 		last_device = "kbm"
@@ -1366,7 +1162,6 @@ func mouse_captured() -> bool:
 	return _windowed() and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 
 
-# A menu that wants the cursor free holds it here; the flag is the "menu_held" meta.
 func menu_held() -> bool:
 	return get_meta("menu_held", false)
 
@@ -1375,7 +1170,6 @@ func set_menu_held(held: bool) -> void:
 	set_meta("menu_held", held)
 
 
-# Gives the mouse back to play unless a menu holds it.
 func recapture_mouse() -> void:
 	capture_mouse(flow.in_play() and not menu_held())
 
@@ -1404,10 +1198,6 @@ func _input(event: InputEvent) -> void:
 	if _dev_key(event.physical_keycode):
 		get_viewport().set_input_as_handled()
 		return
-	# Esc frees a captured cursor. With the cursor already free it quits only outside play: in play a
-	# free cursor belongs to a screen that holds the pause menu off (the start card's tier choice, a
-	# workshop screen), and Esc there quit the game mid-run (w22 first-timer red team). The summary's
-	# Esc never gets here: _screen_key sends it to the camp.
 	if event.physical_keycode == KEY_ESCAPE:
 		if mouse_captured():
 			capture_mouse(false)
@@ -1420,7 +1210,6 @@ func _quit() -> void:
 	get_tree().quit()
 
 
-# F1, F3 and F4 are for whoever launched with --dev; without it they do nothing.
 func _dev_key(key: int) -> bool:
 	if not dev:
 		return false
@@ -1439,15 +1228,11 @@ func _dev_key(key: int) -> bool:
 	return false
 
 
-# --boot-profile prints the main-thread clock at each step of setup and over the first frames
-# after the menu (MENU-READY), so a cold launch on real hardware shows where its time goes.
 func _boot(step: String) -> void:
 	if _launch_flag("--boot-profile"):
 		print("SCRAPKEEP_BOOT %s ms=%d" % [step, Time.get_ticks_msec()])
 
 
-# The self-play folder's name: --self-play-save=<one plain folder name, no dot>, else this process's
-# id (tools/self_play.gd quits 2 on a name refused here, so the fallback is never played on).
 static func _self_play_save() -> String:
 	for arg in OS.get_cmdline_user_args():
 		var folder := arg.trim_prefix("--self-play-save=")
@@ -1460,10 +1245,7 @@ static func _launch_flag(flag: String) -> bool:
 	return flag in OS.get_cmdline_args() or flag in OS.get_cmdline_user_args()
 
 
-# One key per choice on every screen outside play. The screens' buttons press these
-# same keys, so a click and a key always do the same thing.
 func _screen_key(key: int) -> bool:
-	# The launch take owns every key until the dam shows: no second pick, no menu under the swipe.
 	if launch_take != null and launch_take.busy():
 		return true
 	match flow.state_name():
@@ -1472,11 +1254,8 @@ func _screen_key(key: int) -> bool:
 				return screens.jukebox_key(key)
 			if screens.radio_open():
 				return screens.radio_key(key)
-			# The camp walk: its keys act only inside a station's zone; the rest roll the ball.
 			if screens.walk_live():
 				return screens.walk_key(key)
-			# A page open over the walk owns the keys (Space and Enter press its focused button through the UI);
-			# no title hotkey may leak through it.
 			if screens.walking():
 				return false
 			if key == KEY_SPACE or key == KEY_ENTER:
@@ -1520,11 +1299,9 @@ func _screen_key(key: int) -> bool:
 				return true
 		"summary":
 			if summary_shut():
-				# The latch turned a press away: its cue says which held input it waits on.
 				if summary_latched:
 					screens.latch_pressed()
 				return true
-			# Esc leaves the summary for the camp, as K does, never the desktop (w23 cautious red team).
 			if key == KEY_K or key == KEY_ESCAPE:
 				screens.open_camp_from_summary()
 				return true

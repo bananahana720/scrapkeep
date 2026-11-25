@@ -1,18 +1,5 @@
 extends RefCounted
 
-# The one screen-layout rule (CONTRACTS, UI regions). Four horizontal bands, as shares
-# of the visible height, that never overlap:
-#   top      screen titles, the objective with its core pips, the run status
-#   toasts   the stage card or one toast (TOAST_ROWS), then a first-run callout or the
-#            hold-R restart meter
-#   prompts  world-attached prompts such as fabricators, placed under their anchor and
-#            clamped inside this band
-#   bottom   the HUD: speed, health, the ability bar, heft and scrap
-# The middle of the screen between toasts and prompts is left to the play view and
-# the reticle, with the contextual key glyphs beside the ball or target and the edge
-# markers at its rim. A reward gate's name is not placed here: its gate puts it at the gate's own
-# crossbar point every frame (reward_gates.gd, PF-22). Everything else that draws text during play
-# asks this file for its band.
 
 const BANDS := {
 	"top": Vector2(0.0, 0.14),
@@ -23,7 +10,6 @@ const BANDS := {
 const ORDER := ["top", "toasts", "prompts", "bottom"]
 const SIDE_MARGIN := 0.06
 const TOAST_ROWS := 1
-# Band prompts only; a reward gate's name is not counted.
 const MAX_PROMPTS := 3
 const PROMPT_WIDTH := 360.0
 const PROMPT_GAP := 12.0
@@ -40,8 +26,6 @@ static func rect(region: String, size: Vector2) -> Rect2:
 	return Rect2(x, size.y * band.x, w, size.y * (band.y - band.x))
 
 
-# Where a prompt of prompt_size goes when its anchor projects to `at`: centred on the
-# anchor's column and just above it, clamped inside the prompts band.
 static func clamp_prompt(at: Vector2, prompt_size: Vector2, size: Vector2) -> Vector2:
 	var band := rect("prompts", size)
 	var x := clampf(at.x - prompt_size.x * 0.5, band.position.x, maxf(band.position.x, band.end.x - prompt_size.x))

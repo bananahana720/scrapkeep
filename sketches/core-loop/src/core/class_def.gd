@@ -2,13 +2,6 @@ extends Resource
 
 const Palette := preload("res://src/core/palette.gd")
 
-# A class is data (TADR-008). One row carries every layer's reading of the character:
-# the four ability ids the bar keys on (weapon, movement, special, smash), which combat,
-# movement and the ability state dispatch by, and the colour, shape and sound the HUD,
-# VFX, audio and icons read. Event rows that belong to one class take its colour from
-# the constants below, so a class looks the same in every layer. The names are
-# candidates from the Bible's class vocabulary (DESIGN-V2 section 2). The pilots are
-# animals, the reigning species after humans were lost.
 
 const SABLE_COLOR := Palette.ARC
 const RIVET_COLOR := Palette.COPPER
@@ -16,9 +9,6 @@ const KEST_COLOR := Palette.AMBER
 const TARN_COLOR := Palette.RUST
 const TALLY_COLOR := Palette.LEDGER
 const CANNON_COLOR := Palette.ANCIENT
-# Sable's colour on a screen. Mint is press now on a screen (LEGIBILITY.md section 14.3), so her
-# cards, tags and plates wear this pale blue, which stays 20 or more CIE76 from every colour that
-# carries a meaning under every sight colour_cvd_test reads; the world keeps SABLE_COLOR.
 const SABLE_SCREEN := Color("a8c8f0")
 
 @export var id := ""
@@ -30,33 +20,16 @@ const SABLE_SCREEN := Color("a8c8f0")
 @export var movement_id := ""
 @export var special_id := ""
 @export var smash_id := ""
-# Slot 3's line skill and Q's ultimate (design-v3/SKILL-BAR.md section 1). Until wave P-C
-# every pilot but Tally carries the shared line_reel, and every pilot ult_default.
 @export var line_id := ""
 @export var ultimate_id := ""
 @export var color := Color.WHITE
-# An event_kinds shape: ring (area), chevron (motion) or burst (explosive, drawn as a
-# starburst). The indicator's rim ticks take it too.
 @export var shape := ""
-# The leitmotif id (SOUND-STORY section 2). The notes, rhythm and instrument live in
-# W5's motif table in harmony.gd under this id; every class cue is built from them.
 @export var motif := ""
-# The synth id the class's cues stand in with until the motif cues are baked.
 @export var sound := ""
 @export var bible_home := ""
 @export var synergy_hooks: PackedStringArray = []
-# How the pilot opens (ruling P-R21): by is one of UNLOCK_BYS, label the locked card's line
-# (at most UNLOCK_LABEL_WORDS words). Only Sable starts open; Rivet opens on the world-one
-# rescue, Kest on the Dig rescue, Tarn after Brindle, Tally after the third ledger leaf and
-# the remembered cannon after the Mind. unlock_row is the one place a by meets achievements.gd.
-# An optional "or" names a second rule that opens the same pilot (Tally: the sky-islands rescue
-# or three ledger leaves, Andrew's "Either path", 2026-10-17); the card's count reads by.
 @export var unlock := {}
-# Playable from a fresh profile: set by make from unlock.by == "start".
 @export var starter := false
-# The baseline (SQ8, design-v3/PILOTS.md section 7): the hull a run starts with and the
-# hull gained per heft class above I, both (start) values stated as ratios to Sable. A
-# heavier hull never grows slower. RunState owns the live base; builds add part bonuses.
 @export var base_hp := 100.0
 @export var hp_growth := 10.0
 
@@ -73,7 +46,6 @@ static func make(row: Dictionary) -> Resource:
 	return def
 
 
-# The achievement row whose earn meets an unlock rule; "" for start or an unknown by.
 static func unlock_row(by: String) -> String:
 	match by:
 		"rescue:rivet":
@@ -91,7 +63,6 @@ static func unlock_row(by: String) -> String:
 	return ""
 
 
-# True when a rule is met; earned answers whether an achievement id is held.
 static func unlock_met(by: String, earned: Callable) -> bool:
 	if by == "start":
 		return true
@@ -99,7 +70,6 @@ static func unlock_met(by: String, earned: Callable) -> bool:
 	return row != "" and bool(earned.call(row))
 
 
-# True when a class row's unlock opens: its by rule, or its optional "or" rule.
 static func unlock_open(unlock: Dictionary, earned: Callable) -> bool:
 	if unlock_met(String(unlock.get("by", "")), earned):
 		return true
@@ -168,6 +138,5 @@ static func by_id(wanted: String) -> Resource:
 	return null
 
 
-# A pilot's colour as a screen draws it: their own, save Sable's mint, which is SABLE_SCREEN.
 static func screen_color(pilot_color: Color) -> Color:
 	return Color(SABLE_SCREEN, pilot_color.a) if Color(pilot_color, 1.0).is_equal_approx(SABLE_COLOR) else pilot_color

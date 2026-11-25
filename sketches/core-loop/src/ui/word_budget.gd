@@ -1,10 +1,5 @@
 extends RefCounted
 
-# Counts the words a player can read on screen right now: every shown Label, Button
-# and RichTextLabel, every control that reports what it draws (drawn_words()), and
-# every Label3D in front of the camera. A word is a whitespace-separated token with a
-# letter or digit in it, so separators and glyphs are free and "3:42" is one word.
-# The HUD's word budget (CONTRACTS, Ability slots and Icons) is measured with this.
 
 const WORLD_REACH := 60.0
 

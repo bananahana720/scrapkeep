@@ -1,10 +1,6 @@
 extends RefCounted
 class_name PilotStory
 
-# Pure-data story engine (W50-STORY-ARCS): owns 40 independent hole-punch chapters (8 casts x 5),
-# the complete 15-pair pilot chemistry matrix (spark -> field -> payoff + Codex synthesis margins),
-# Patch's 2-half Outer-Wilds wire trail across Worlds 1-3, and the Adaptive Foreman Habit Ledger.
-# Zero scene-tree dependencies, zero mutable static state, zero preload of Unit 2 work_orders.gd.
 
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
@@ -68,7 +64,6 @@ const FOREMAN_AXIS_ORDER: Array[String] = [
 	"sig_burst",
 ]
 
-# Rule 8 / LEGIBILITY section 13 lint guard tokens checked by validate().
 const BANNED_SUBSTRINGS := ["!", "\u2014", "\u2013", "...", "\u2026", "\u00b7", "\u2018", "\u2019", "\u201c", "\u201d"]
 const BANNED_WORDS := [
 	"class", "classes", "epic", "powerful", "unleash", "unleashes", "master", "legendary",
@@ -77,9 +72,7 @@ const BANNED_WORDS := [
 ]
 const BANNED_PHRASES := ["scrap mass", "set piece", "q becomes", "hands back", "give back", "gives back", "latch on", "restart run", "run again", "the gauge", "radio song"]
 
-# --- Pillar A: 40 Chapters (8 casts x 5 independent hole-punch chapters) ---
 const CHAPTERS := [
-	# Sable (pylon_engineer)
 	{
 		"id": "pylon_engineer.ch1", "cast": "pylon_engineer", "num": 1, "world": 1,
 		"title": "First Launch",
@@ -120,7 +113,6 @@ const CHAPTERS := [
 		"note": "Sable crossed the Crown at full speed and filled in her own return time on the card. She was halfway back to the dam before the ink dried.",
 		"unlocks_calls": [], "unlocks_exchanges": [],
 	},
-	# Rivet (runner_gunner)
 	{
 		"id": "runner_gunner.ch1", "cast": "runner_gunner", "num": 1, "world": 1,
 		"title": "Never Clocked Out",
@@ -161,7 +153,6 @@ const CHAPTERS := [
 		"note": "The Mind asked to see who listened so closely. Rivet flipped the visor up for three seconds, nodded once, and rolled down for supper.",
 		"unlocks_calls": [], "unlocks_exchanges": [],
 	},
-	# Kest (demolitions_caster)
 	{
 		"id": "demolitions_caster.ch1", "cast": "demolitions_caster", "num": 1, "world": 1,
 		"title": "Knocking Back",
@@ -202,7 +193,6 @@ const CHAPTERS := [
 		"note": "The Mind offered to hold the sky steady forever. Kest dropped her smoke blink without measuring once and took the updraft home.",
 		"unlocks_calls": [], "unlocks_exchanges": [],
 	},
-	# Tarn (tarn)
 	{
 		"id": "tarn.ch1", "cast": "tarn", "num": 1, "world": 1,
 		"title": "Unissued Claw",
@@ -243,7 +233,6 @@ const CHAPTERS := [
 		"note": "The Mind asked for a quiet duet above the storm. Tarn turned the claw idle down low and let the bass finish the bar.",
 		"unlocks_calls": [], "unlocks_exchanges": [],
 	},
-	# Tally (tally — Analog Cyber-Hacker / Dispatch Wire-Tapper; zero "PAID" paper-stamp copy)
 	{
 		"id": "tally.ch1", "cast": "tally", "num": 1, "world": 1,
 		"title": "Trunk Line",
@@ -284,7 +273,6 @@ const CHAPTERS := [
 		"note": "Tally bridged the Crown trunk straight into Moss's camp switchboard. Every relay across three worlds now answers the crew's ring first.",
 		"unlocks_calls": [], "unlocks_exchanges": [],
 	},
-	# The Cannon (remembered_cannon)
 	{
 		"id": "remembered_cannon.ch1", "cast": "remembered_cannon", "num": 1, "world": 1,
 		"title": "Remembered",
@@ -325,7 +313,6 @@ const CHAPTERS := [
 		"note": "The Mind played the crew's song one note wrong for years. Its own gun climbed the spire and played the melody right back.",
 		"unlocks_calls": [], "unlocks_exchanges": [],
 	},
-	# Moss (moss — Crew Spine, non-playable)
 	{
 		"id": "moss.ch1", "cast": "moss", "num": 1, "world": 1,
 		"title": "Packed a Spare",
@@ -366,7 +353,6 @@ const CHAPTERS := [
 		"note": "The Mind returned stamped HIRED and accepted a bowl without filing a schedule. Moss filled in the time in ink by hand.",
 		"unlocks_calls": [], "unlocks_exchanges": ["ex.crew_ch5_supper"],
 	},
-	# Patch (patch — Hidden 7th pilot trail, hidden until Ch. 1 punches)
 	{
 		"id": "patch.ch1", "cast": "patch", "num": 1, "world": 1,
 		"title": "Cut Line",
@@ -409,8 +395,6 @@ const CHAPTERS := [
 	},
 ]
 
-# --- Pillar B: Complete 15-Pair Pilot Chemistry Matrix (6 choose 2 = 15 pairs x 3 beats) ---
-# Canonical pair keys use alphabetical short tokens: cannon, kest, rivet, sable, tally, tarn.
 const PAIRS := {
 	"cannon_kest": {
 		"pilots": ["remembered_cannon", "demolitions_caster"],
@@ -779,7 +763,6 @@ const PAIRS := {
 	},
 }
 
-# --- Pillar C: Patch's 2-Half Outer-Wilds Wire Trail (3 Rogues -> 3 Seeded Wire Rooms) ---
 const PATCH_TRAIL := {
 	"patch.rogue.w1": {
 		"id": "patch.rogue.w1", "kind": "rogue", "world": 1, "category": "npc",
@@ -868,7 +851,6 @@ const PATCH_TRAIL := {
 	},
 }
 
-# --- Pillar D: Adaptive Foreman Habit Ledger (7 Axes, Dormant Runs 1-2, 2-Run Cooldown) ---
 const FOREMAN_AXES := {
 	"chronic_gambler": {
 		"stage_memos": [
@@ -964,10 +946,6 @@ const FOREMAN_AXES := {
 }
 
 
-# ==============================================================================
-# 1. Chapters & Cards
-# ==============================================================================
-
 static func chapters_for(cast_id: String) -> Array:
 	var out: Array = []
 	for row in CHAPTERS:
@@ -1051,8 +1029,6 @@ static func next_chase(pilot_id: String, profile, sitting := false, codex = null
 	return {}
 
 
-# Progress hook: returns [{"cast", "num", "id"}] for every chapter whose accepts reference
-# trigger_id (bare id, "order:<id>", or "codex:<id>") and is now punched on profile/codex.
 static func chapters_matching_trigger(trigger_id: String, profile, codex = null) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if trigger_id == "":
@@ -1124,10 +1100,6 @@ static func _condition_met(expr: String, profile, codex = null) -> bool:
 	return bool(profile.earned(expr)) or bool(profile.is_settled(expr))
 
 
-# ==============================================================================
-# 2. Memory Graph, Codex & Synthesis Hints
-# ==============================================================================
-
 static func codex_declarations() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for pid in pair_ids():
@@ -1193,10 +1165,6 @@ static func synthesis_margin(entry_id: String, known: Callable) -> String:
 	return "\nMargin note: " + note
 
 
-# ==============================================================================
-# 3. 15-Pair Pilot Chemistry & Camp/Run Resolvers
-# ==============================================================================
-
 static func pair_id(class_a: String, class_b: String) -> String:
 	if class_a == class_b:
 		return ""
@@ -1227,10 +1195,6 @@ static func pair_stage(pid: String, known: Callable) -> int:
 	return 0
 
 
-# Priority:
-# (1) unheard 2-line Pair Beat 1 (spark) or Beat 3 (payoff) if not pair_played_this_walk,
-# (2) unheard chapter multi-pilot LoreRows.CAMP_EXCHANGES if all standing and not pair_played_this_walk,
-# (3) chapter-tiered solo quip (LoreRows.CAMP_QUIPS_BY_CHAPTER -> LoreRows.camp_quip).
 static func pick_camp_beat(
 	flying_class: String, approached_class: String, standing_ids: Array,
 	profile, codex, pages: Array, walks: int, pair_played_this_walk: bool
@@ -1262,7 +1226,6 @@ static func pick_camp_beat(
 					"lines": (payoff["lines"] as Array).duplicate(true),
 					"consumes_pair_budget": true,
 				}
-		# (2) Unheard chapter multi-pilot camp exchanges.
 		for ex in LoreRows.CAMP_EXCHANGES:
 			var ex_id := String(ex["id"])
 			var settle_key := SETTLE_EXCHANGE_PREFIX + ex_id
@@ -1285,7 +1248,6 @@ static func pick_camp_beat(
 				"lines": (ex["lines"] as Array).duplicate(true),
 				"consumes_pair_budget": true,
 			}
-	# (3) Chapter-tiered solo quip -> baseline LoreRows.camp_quip.
 	var tiered: Dictionary = LoreRows.CAMP_QUIPS_BY_CHAPTER.get(approached_class, {})
 	if not tiered.is_empty():
 		var mask := punch_mask(approached_class, profile, codex)
@@ -1319,15 +1281,10 @@ static func pick_camp_beat(
 	}
 
 
-# Priority:
-# (1) Patch rogue/wire reaction,
-# (2) Pair Beat-2 call (if !pair_call_used, Beat 1 known, Beat 2 unknown, other pilot unlocked & != flying),
-# (3) LoreRows.WORLD_CALLS (W2/W3 site crews + chapter-gated pilot calls).
 static func pick_run_call(
 	event: String, args: Array, world: int, flying_class: String, run_seed: int,
 	unlocked_classes: Array, profile, codex, played_ids: Dictionary, pair_call_used: bool
 ) -> Dictionary:
-	# (1) Patch rogue/wire reaction.
 	if event == "enemy_killed" and args.size() > 0:
 		var rogue_id := patch_rogue_for_kind(String(args[0]))
 		if rogue_id != "":
@@ -1355,7 +1312,6 @@ static func pick_run_call(
 				"text": LoreRows.call_text({"id": fact_id, "text": node["call"]}, run_seed),
 				"consumes_pair_budget": false,
 			}
-	# (2) Pair Beat-2 call.
 	if not pair_call_used and SHORT_TOKENS.has(flying_class):
 		var known_fn := func(id: String) -> bool: return codex != null and bool(codex.known(id))
 		for pid in pair_ids():
@@ -1388,7 +1344,6 @@ static func pick_run_call(
 				"text": LoreRows.call_text({"id": beat2_id, "text": variants[flying_class]}, run_seed),
 				"consumes_pair_budget": true,
 			}
-	# (3) LoreRows.WORLD_CALLS.
 	for row in LoreRows.WORLD_CALLS:
 		var cid := String(row["id"])
 		if played_ids.has(cid):
@@ -1447,10 +1402,6 @@ static func _all_present(pilots: Array, flying_class: String, standing_ids: Arra
 	return true
 
 
-# ==============================================================================
-# 4. Patch Wire Trail
-# ==============================================================================
-
 static func patch_node(node_id: String) -> Dictionary:
 	if not PATCH_TRAIL.has(node_id):
 		return {}
@@ -1474,10 +1425,6 @@ static func patch_rogue_for_kind(rogue_kind: String) -> String:
 			return String(node_id)
 	return ""
 
-
-# ==============================================================================
-# 5. Adaptive Foreman Habit Ledger
-# ==============================================================================
 
 static func foreman_axis_index(axis: String) -> int:
 	var idx := FOREMAN_AXIS_ORDER.find(axis)
@@ -1563,7 +1510,6 @@ static func foreman_stage_memo(run_seed: int, stage: int, profile, pages: Array,
 	var axis := String(read["axis"])
 	if bool(read["dormant"]) or axis == "":
 		return ""
-	# 50% nominal audit cadence guard (StageModifier.ROWS takes precedence at caller).
 	if posmod(absi(hash([run_seed, stage, "foreman_adapt"])), 2) != 0:
 		return ""
 	var lines: Array = FOREMAN_AXES[axis]["stage_memos"]
@@ -1611,10 +1557,6 @@ static func _read_last_axis(profile) -> String:
 	return foreman_axis_name(int(raw))
 
 
-# ==============================================================================
-# 6. Static Integrity Validator (zero scene tree required)
-# ==============================================================================
-
 static func validate(class_ids: Array, signal_names: Array, speaker_ids: Array) -> Array[String]:
 	return validate_tables(
 		CHAPTERS, PAIRS, PATCH_TRAIL, FOREMAN_AXES,
@@ -1631,7 +1573,6 @@ static func validate_tables(
 	var problems: Array[String] = []
 	if "patch" in class_ids:
 		problems.append("patch must not be in ClassDef class_ids")
-	# 1. Validate 8 casts x 5 chapters = 40 chapters.
 	if chapters.size() != CAST_ORDER.size() * CHAPTERS_PER_CAST:
 		problems.append("chapters: expected %d, got %d" % [CAST_ORDER.size() * CHAPTERS_PER_CAST, chapters.size()])
 	var ch_ids := {}
@@ -1673,7 +1614,6 @@ static func validate_tables(
 		if nums != [1, 2, 3, 4, 5]:
 			problems.append("cast %s: chapters %s != [1, 2, 3, 4, 5]" % [cid, str(nums)])
 
-	# 2. Validate 15-pair chemistry matrix.
 	var expected_pairs := {}
 	for i in PILOT_CAST.size():
 		for j in range(i + 1, PILOT_CAST.size()):
@@ -1735,7 +1675,6 @@ static func validate_tables(
 		if String(payoff.get("links_to", "")) == "":
 			problems.append("pair %s payoff: missing links_to" % pid)
 
-	# 3. Validate Patch 2-half trail (6 nodes: 3 rogues + 3 wires).
 	if patch_trail.size() != 6:
 		problems.append("patch_trail: expected 6 nodes, got %d" % patch_trail.size())
 	for w in [1, 2, 3]:
@@ -1758,7 +1697,6 @@ static func validate_tables(
 			for cline in n.get("call", []):
 				_check_text(problems, "patch %s call" % nid, String(cline), CALL_WORD_CAP, false)
 
-	# 4. Validate Foreman 7 habit axes.
 	if foreman_axes.size() != FOREMAN_AXIS_ORDER.size():
 		problems.append("foreman_axes: expected %d axes, got %d" % [FOREMAN_AXIS_ORDER.size(), foreman_axes.size()])
 	for axis in FOREMAN_AXIS_ORDER:
@@ -1778,7 +1716,6 @@ static func validate_tables(
 		for m in clines:
 			_check_text(problems, "foreman %s crown_line" % axis, String(m), CALL_WORD_CAP, false)
 
-	# 5. Validate LoreRows additive WORLD_CALLS, CAMP_EXCHANGES, CAMP_QUIPS_BY_CHAPTER.
 	if world_calls.size() < 13:
 		problems.append("world_calls: expected at least 13 rows, got %d" % world_calls.size())
 	var wc_ids := {}

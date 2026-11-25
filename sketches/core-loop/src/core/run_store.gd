@@ -1,31 +1,18 @@
 extends RefCounted
 
-# One run document on disk (RS2), so a run can continue from its last zone entrance. Pure file
-# logic: it takes and returns the Dictionary RunState.to_entrance_doc() makes and does not know
-# flow. The file is {"schema", "generation", "run": <entrance doc>}; the writes go through
-# SafeStore like the profile's. The terminal flags live in the run doc as the extra keys
-# "ended" (bool) and "worlds_cleared" (array of world ints); the merge never lowers them.
-# clear() leaves a tombstone {"schema", "generation", "ended": true} instead of a missing
-# file, so a second store still holding an older generation cannot save the ended run back.
 
 const SafeStore := preload("res://src/core/safe_store.gd")
 
 const SCHEMA := 1
 const MIGRATIONS := {0: "_migrate_0"}
 
-# Named causes `save` returns ("" is success); `last_error` has the sentence.
 const REFUSED_NEWER := "newer_schema"
 const REFUSED_QUARANTINE := "quarantine_failed"
 const REFUSED_CHANGED := "changed_on_disk"
 const REFUSED_BACKUP := "backup_failed"
 const REFUSED_WRITE := "write_failed"
 const REFUSED_ENDED := "run_ended"
-# A load sets `refusal` to one of these when the file is there but no run comes back. Only
-# SAVE_BLOCKERS keep refusing saves; the others are cleared by the next save, which starts a
-# new run over the set-aside or ended one.
 const SAVE_BLOCKERS := [REFUSED_NEWER, REFUSED_QUARANTINE]
-# What the title tells the player about a refused run, one line, no paths. last_error keeps
-# the detail for logs.
 const SENTENCES := {
 	REFUSED_NEWER: "This run was saved by a newer version of the game; update it to continue.",
 	REFUSED_QUARANTINE: "The saved run is damaged and could not be set aside, so nothing will be saved until it is removed.",
@@ -38,8 +25,8 @@ var last_error := ""
 var refusal := ""
 var _refusal_why := ""
 
-var _doc := {}  # the run doc last loaded or saved; {} for none
-var _generation := 0  # the file's generation when we last loaded or saved
+var _doc := {}
+var _generation := 0
 var _backup_path := ""
 var _backup_bytes := PackedByteArray()
 
@@ -52,11 +39,6 @@ func generation() -> int:
 	return _generation
 
 
-# The run doc on disk, or {} for no run. A document older than the one held in memory is
-# merged under it (see merge). An unreadable file is moved to .bad and loads as no run
-# (refusal changed_on_disk); a tombstone loads as no run (refusal run_ended); a newer schema
-# is left alone and refuses `save` until clear(). A refused load never deletes or rewrites
-# the file.
 func load() -> Dictionary:
 	var set_aside := refusal == REFUSED_CHANGED
 	last_error = ""
@@ -67,7 +49,6 @@ func load() -> Dictionary:
 	var state: String = read["state"]
 	if state == "missing":
 		_generation = 0
-		# The title asks again after this store moved the file aside; the reason stands until a save.
 		if set_aside:
 			refusal = REFUSED_CHANGED
 			last_error = _refusal_why
@@ -103,8 +84,6 @@ func load() -> Dictionary:
 	return run.duplicate(true)
 
 
-# "" when saved, else the named cause. A file another writer advanced since our load is
-# merged in; a file that cannot be read or is newer is never written over.
 func save(doc: Dictionary) -> String:
 	last_error = ""
 	if SAVE_BLOCKERS.has(refusal):
@@ -151,10 +130,6 @@ func save(doc: Dictionary) -> String:
 	return ""
 
 
-# A new run is about to replace the saved one: its bytes go to "<path>.prev", over an older
-# .prev. Only a readable run of this build's schema range is copied; a missing, ended,
-# unreadable or newer-schema file writes nothing. Never touches path, the held document or
-# the generation. False, with last_error, when the copy could not be written.
 func keep_prev() -> bool:
 	last_error = ""
 	var read := _read()
@@ -171,11 +146,6 @@ func keep_prev() -> bool:
 	return true
 
 
-# Swaps "<path>.prev" back in as the saved run, one generation past the larger of the two
-# files so the generation on disk never goes down; the run it replaces becomes .prev (or .prev
-# is removed when there was none). The held document is forgotten, so the next load() reads
-# the restored run. False, with last_error, when .prev is missing, is not a run document, or a
-# write fails.
 func restore_prev() -> bool:
 	last_error = ""
 	var prev = get_script().new(path + ".prev")
@@ -217,10 +187,6 @@ func restore_prev() -> bool:
 	return true
 
 
-# The run ended: a readable file becomes a tombstone one generation past the newest seen, so
-# a stale store's save is refused (run_ended); a missing file stays missing, and an
-# unreadable or newer-schema file is removed (the way out of a newer-schema refusal). Forgets
-# the held document. True when no run is left on disk.
 func clear() -> bool:
 	var read := _read()
 	var seen := maxi(_generation, int(read.get("generation", 0)))
@@ -247,8 +213,6 @@ func clear() -> bool:
 	return true
 
 
-# Two copies of one run as one: ours with, per world, the larger retries_spent, and the
-# terminal flags ("ended", "worlds_cleared", "death_save_spent") true when either side has them.
 static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	var out := ours.duplicate(true)
 	var spent: Dictionary = out.get("retries_spent", {}).duplicate()
@@ -259,7 +223,6 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 		out["retries_spent"] = spent
 	if bool(theirs.get("ended", false)):
 		out["ended"] = true
-	# The earned save, once spent, stays spent in whichever copy is read.
 	if bool(theirs.get("death_save_spent", false)):
 		out["death_save_spent"] = true
 	var cleared: Array = out.get("worlds_cleared", []).duplicate()
@@ -271,7 +234,6 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	return out
 
 
-# The player's sentence for the last refusal, "" for none.
 func refusal_sentence() -> String:
 	return String(SENTENCES.get(refusal, ""))
 
@@ -283,8 +245,6 @@ func _refuse(cause: String, why: String) -> Dictionary:
 	return {}
 
 
-# The file as a state: missing, unreadable, newer or ok. Ok carries the migrated run doc,
-# its generation, the schema it was written at and the bytes it came from.
 func _read() -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {"state": "missing"}
@@ -314,8 +274,6 @@ func _read() -> Dictionary:
 	return {"state": "ok", "run": parsed["run"], "generation": int(parsed.get("generation", 0)), "from_version": from_version, "bytes": bytes}
 
 
-# v0 kept retries_spent as [world, count] pairs beside the run and had no generation; v1
-# keeps the string-keyed map the entrance doc uses and counts saves.
 func _migrate_0(doc: Dictionary) -> Dictionary:
 	var run: Dictionary = doc.get("run", {}).duplicate(true) if doc.get("run") is Dictionary else {}
 	var pairs = run.get("retries_spent")
@@ -328,9 +286,6 @@ func _migrate_0(doc: Dictionary) -> Dictionary:
 	return {"schema": 1, "generation": int(doc.get("generation", 0)), "run": run}
 
 
-# JSON numbers come back as floats; the two fields the merge compares are whole numbers. False,
-# with the run unchanged past the bad value, when either holds something that is not a number
-# or is the wrong container, so the file is quarantined instead of erroring inside a cast.
 static func _whole_numbers(run: Dictionary) -> bool:
 	if run.has("retries_spent"):
 		if not (run["retries_spent"] is Dictionary):

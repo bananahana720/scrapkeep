@@ -5,13 +5,6 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 
-# One mixer bus or comfort level as a menu row, on the same charcoal plate as a
-# ChoiceButton: a drawn glyph where a choice has its key (a beamed note for music, a
-# speaker for effects, a jittered frame for screen shake, a frozen burst for hit-stop),
-# one word, then a down arrow, ten level segments and an up arrow. A click on an arrow
-# steps a tenth, a click or drag on the segments sets the level there, the wheel steps,
-# and the pause menu steps the focused row with left and right. It changes nothing
-# itself: `changed` carries the new level to whoever owns the bus.
 
 signal changed(level: float)
 
@@ -29,7 +22,6 @@ var glyph := ""
 var level := 0.0
 var _hover := false
 var _dragging := false
-# The settings form's layout (stack): the word above, the field (glyph, arrows, bar) below it.
 var _top := 0.0
 
 
@@ -87,7 +79,6 @@ func _bar_width() -> float:
 	return STEPS * SEG_W + (STEPS - 1) * SEG_GAP
 
 
-# Puts the word above the field, as the settings form lays out every row; LABEL_H is SettingRow's.
 func stack(label_h: float) -> void:
 	_top = label_h
 	custom_minimum_size.y = label_h + HEIGHT
@@ -110,7 +101,6 @@ func down_rect() -> Rect2:
 	return Rect2(bar_rect().position.x - SEG_GAP * 2.0 - ARROW, _top, ARROW, size.y - _top)
 
 
-# The level a click at x on the segments asks for: the segment under it, filled.
 func level_at(x: float) -> float:
 	var bar := bar_rect()
 	var index := floori((x - bar.position.x) / (SEG_W + SEG_GAP))

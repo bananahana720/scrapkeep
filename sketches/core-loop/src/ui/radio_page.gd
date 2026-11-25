@@ -9,12 +9,6 @@ const Radio := preload("res://src/core/radio.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
 const RadioDial := preload("res://src/ui/radio_dial.gd")
 
-# The pilot radio's mixtapes, a camp page on R (design-v3/sound/RADIO.md): the crate on the
-# left is every found track by station (takes and jukebox records), the tape on the right is
-# the current mixtape. Space, Enter, a click or pad A on a crate track adds it to the tape; on a
-# tape track takes it off. Comma and period move the focused tape track up and down, 1 to 6 pick
-# a tape, N starts a new one, X shuffles it, T tunes the radio to it for the next run, and R,
-# Esc or pad B go back to the camp. screens.gd routes the keys; radio_deck.gd holds the radio.
 
 const CRATE := Vector2(470.0, 380.0)
 const ROW := Vector2(440.0, 36.0)
@@ -53,7 +47,6 @@ func _init() -> void:
 	body.add_theme_constant_override("separation", 24)
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(body)
-	# Each column's header is a number beside what it counts: the crate's tracks found, the tape's length.
 	_crate = _column(body)
 	_count = _crate.get_parent().get_parent().get_child(0)
 	_tape = _column(body)
@@ -75,7 +68,6 @@ func _init() -> void:
 		buttons.add_child(b)
 
 
-# A scrolling column under a header label (a number beside what it counts); returns the list inside it.
 func _column(parent: Control) -> VBoxContainer:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
@@ -94,8 +86,6 @@ func _column(parent: Control) -> VBoxContainer:
 	return list
 
 
-# The crate (found tracks, takes first, by dial order), the tapes and the current tape, from
-# the profile's tunes and the radio.
 static func reading(profile, radio) -> Dictionary:
 	var found: Array = []
 	for station in Radio.dial():
@@ -106,7 +96,6 @@ static func reading(profile, radio) -> Dictionary:
 		if profile != null and profile.has_tune(id) and not id in found:
 			found.append(id)
 	var takes := RadioTakes.take_ids().filter(func(id): return profile != null and profile.has_tune(id)).size()
-	# The crate lists every found track, so its count is every track, in the tape header's "n / N".
 	var every: Array = []
 	for station in Radio.dial():
 		for id in RadioTakes.on_station(station):
@@ -160,7 +149,6 @@ func _show_note(id: String) -> void:
 	_note.text = "" if t.is_empty() else "%s. %s" % [t["name"], t.get("sleeve", "")]
 
 
-# "c:<id>" for a focused crate row, "t:<id>" for a tape row, "" for none.
 func focused_id() -> String:
 	var owner := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
 	for id in _rows:
@@ -199,8 +187,6 @@ func note_text() -> String:
 	return _note.text
 
 
-# One track: its station's call sign in the station's colour, then its name; a legend is edged
-# in brass, a crate track already on the tape is dimmed.
 class TrackRow extends Button:
 	var id := ""
 	var taped := false
